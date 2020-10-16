@@ -16,6 +16,10 @@ jobs:
         rustup_toolchain: 1.40.0
 
   steps:
+  - ${{ if eq(parameters.name, 'Linux') }}:
+    - script: sudo apt-get install -y libyaml-dev
+      displayName: Install libyaml
+
   - ${{ if ne(parameters.name, 'Windows') }}:
     - script: |
         curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain $RUSTUP_TOOLCHAIN

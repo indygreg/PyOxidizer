@@ -2627,13 +2627,6 @@ pub mod tests {
     #[cfg(target_os = "linux")]
     #[test]
     fn test_linux_extension_build_with_library() -> Result<()> {
-        // This test fails in Azure for some reason. Possibly missing toolchain
-        // or libyaml dependency?
-        // TODO fix this.
-        if std::env::var("IS_CI") == Ok("1".to_string()) {
-            return Ok(());
-        }
-
         for libpython_link_mode in vec![
             BinaryLibpythonLinkMode::Static,
             BinaryLibpythonLinkMode::Dynamic,
