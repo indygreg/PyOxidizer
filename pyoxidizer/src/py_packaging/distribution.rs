@@ -478,24 +478,12 @@ impl TryFrom<&str> for DistributionFlavor {
 /// The distribution will be written to `dest_dir`.
 pub fn resolve_distribution(
     logger: &slog::Logger,
-    flavor: &DistributionFlavor,
     location: &PythonDistributionLocation,
     dest_dir: &Path,
 ) -> Result<Box<dyn PythonDistribution>> {
-    // TODO is there a way we can define PythonDistribution::from_location()
-    Ok(match flavor {
-        DistributionFlavor::Standalone => Box::new(StandaloneDistribution::from_location(
-            logger, &location, dest_dir,
-        )?) as Box<dyn PythonDistribution>,
-
-        DistributionFlavor::StandaloneStatic => Box::new(StandaloneDistribution::from_location(
-            logger, &location, dest_dir,
-        )?) as Box<dyn PythonDistribution>,
-
-        DistributionFlavor::StandaloneDynamic => Box::new(StandaloneDistribution::from_location(
-            logger, &location, dest_dir,
-        )?) as Box<dyn PythonDistribution>,
-    })
+    Ok(Box::new(StandaloneDistribution::from_location(
+        logger, &location, dest_dir,
+    )?) as Box<dyn PythonDistribution>)
 }
 
 /// Resolve the location of the default Python distribution of a given flavor and build target.
@@ -526,7 +514,7 @@ pub fn default_distribution(
 ) -> Result<Box<dyn PythonDistribution>> {
     let location = default_distribution_location(flavor, target, None)?;
 
-    resolve_distribution(logger, flavor, &location, dest_dir)
+    resolve_distribution(logger, &location, dest_dir)
 }
 
 #[cfg(test)]

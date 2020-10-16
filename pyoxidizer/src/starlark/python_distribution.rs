@@ -51,7 +51,6 @@ use {
 
 /// A Starlark Value wrapper for `PythonDistribution` traits.
 pub struct PythonDistributionValue {
-    flavor: DistributionFlavor,
     pub source: PythonDistributionLocation,
 
     dest_dir: PathBuf,
@@ -63,12 +62,10 @@ pub struct PythonDistributionValue {
 
 impl PythonDistributionValue {
     fn from_location(
-        flavor: DistributionFlavor,
         location: PythonDistributionLocation,
         dest_dir: &Path,
     ) -> PythonDistributionValue {
         PythonDistributionValue {
-            flavor,
             source: location,
             dest_dir: dest_dir.to_path_buf(),
             distribution: None,
@@ -81,7 +78,7 @@ impl PythonDistributionValue {
             return Ok(());
         }
 
-        let dist = resolve_distribution(logger, &self.flavor, &self.source, &self.dest_dir)?;
+        let dist = resolve_distribution(logger, &self.source, &self.dest_dir)?;
         //warn!(logger, "distribution info: {:#?}", dist.as_minimal_info());
 
         self.distribution = Some(Arc::new(dist));
@@ -182,7 +179,6 @@ impl PythonDistributionValue {
             .ok_or(ValueError::IncorrectParameterType)?;
 
         Ok(Value::new(PythonDistributionValue::from_location(
-            flavor,
             location,
             &context.python_distributions_path,
         )))
@@ -221,8 +217,8 @@ impl PythonDistributionValue {
             }
         };
 
-        let flavor = match flavor.as_ref() {
-            "standalone" => DistributionFlavor::Standalone,
+        match flavor.as_ref() {
+            "standalone" => (),
             v => {
                 return Err(ValueError::from(RuntimeError {
                     code: "PYOXIDIZER_BUILD",
@@ -230,7 +226,7 @@ impl PythonDistributionValue {
                     label: "PythonDistribution()".to_string(),
                 }))
             }
-        };
+        }
 
         let raw_context = get_context(type_values)?;
         let context = raw_context
@@ -238,7 +234,6 @@ impl PythonDistributionValue {
             .ok_or(ValueError::IncorrectParameterType)?;
 
         Ok(Value::new(PythonDistributionValue::from_location(
-            flavor,
             distribution,
             &context.python_distributions_path,
         )))
@@ -398,7 +393,6 @@ impl PythonDistributionValue {
             Some(Arc::new(
                 resolve_distribution(
                     &context.logger,
-                    &flavor,
                     &location,
                     &context.python_distributions_path,
                 )
@@ -781,7 +775,6 @@ mod tests {
 
         let x = dist.downcast_ref::<PythonDistributionValue>().unwrap();
         assert_eq!(x.source, wanted);
-        assert_eq!(x.flavor, DistributionFlavor::Standalone);
     }
 
     #[test]
@@ -794,7 +787,6 @@ mod tests {
 
         let x = dist.downcast_ref::<PythonDistributionValue>().unwrap();
         assert_eq!(x.source, wanted);
-        assert_eq!(x.flavor, DistributionFlavor::Standalone);
     }
 
     #[test]
