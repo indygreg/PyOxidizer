@@ -702,14 +702,14 @@ pub mod tests {
         crate::python_distributions::PYTHON_DISTRIBUTIONS,
         crate::testutil::*,
         lazy_static::lazy_static,
-        python_packaging::{
-            location::ConcreteResourceLocation, policy::ExtensionModuleFilter,
-            resource::LibraryDependency,
-        },
+        python_packaging::{location::ConcreteResourceLocation, policy::ExtensionModuleFilter},
         std::collections::BTreeSet,
         std::iter::FromIterator,
         std::ops::DerefMut,
     };
+
+    #[cfg(target_os = "linux")]
+    use python_packaging::resource::LibraryDependency;
 
     lazy_static! {
         pub static ref WINDOWS_TARGET_TRIPLES: Vec<&'static str> =
