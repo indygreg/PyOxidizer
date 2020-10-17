@@ -505,7 +505,7 @@ mod tests {
 
         let resources: Vec<PythonResource> = pip_install(
             &logger,
-            distribution.deref().as_ref(),
+            distribution.deref(),
             LibpythonLinkMode::Dynamic,
             false,
             &["black==19.10b0".to_string()],
@@ -574,8 +574,8 @@ mod tests {
 
             let resources = pip_download(
                 &logger,
-                &**host_dist,
-                &**target_dist,
+                &*host_dist,
+                &*target_dist,
                 false,
                 &["zstandard==0.14.0".to_string()],
             )?;
@@ -650,8 +650,8 @@ mod tests {
 
             let resources = pip_download(
                 &logger,
-                &**host_dist,
-                &**target_dist,
+                &*host_dist,
+                &*target_dist,
                 false,
                 &["numpy==1.19.2".to_string()],
             )?;

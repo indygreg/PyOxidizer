@@ -79,7 +79,7 @@ pub struct StandalonePythonExecutableBuilder {
     host_distribution: Arc<Box<dyn PythonDistribution>>,
 
     /// The Python distribution this executable is targeting.
-    target_distribution: Arc<Box<StandaloneDistribution>>,
+    target_distribution: Arc<StandaloneDistribution>,
 
     /// How libpython should be linked.
     link_mode: LibpythonLinkMode,
@@ -114,7 +114,7 @@ impl StandalonePythonExecutableBuilder {
     #[allow(clippy::too_many_arguments)]
     pub fn from_distribution(
         host_distribution: Arc<Box<dyn PythonDistribution>>,
-        target_distribution: Arc<Box<StandaloneDistribution>>,
+        target_distribution: Arc<StandaloneDistribution>,
         host_triple: String,
         target_triple: String,
         exe_name: String,
@@ -394,7 +394,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         pip_download(
             logger,
             &**self.host_distribution,
-            &**self.target_distribution,
+            &*self.target_distribution,
             verbose,
             args,
         )
@@ -409,7 +409,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
     ) -> Result<Vec<PythonResource>> {
         pip_install(
             logger,
-            &**self.target_distribution,
+            &*self.target_distribution,
             self.link_mode,
             verbose,
             install_args,
@@ -423,7 +423,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         path: &Path,
         packages: &[String],
     ) -> Result<Vec<PythonResource>> {
-        Ok(find_resources(&**self.target_distribution, path, None)?
+        Ok(find_resources(&*self.target_distribution, path, None)?
             .iter()
             .filter_map(|x| {
                 if x.is_in_packages(packages) {
@@ -436,7 +436,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
     }
 
     fn read_virtualenv(&self, _logger: &slog::Logger, path: &Path) -> Result<Vec<PythonResource>> {
-        read_virtualenv(&**self.target_distribution, path)
+        read_virtualenv(&*self.target_distribution, path)
     }
 
     fn setup_py_install(
@@ -449,7 +449,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
     ) -> Result<Vec<PythonResource>> {
         setup_py_install(
             logger,
-            &**self.target_distribution,
+            &*self.target_distribution,
             self.link_mode,
             package_path,
             verbose,

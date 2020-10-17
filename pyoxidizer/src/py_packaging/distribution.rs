@@ -475,7 +475,7 @@ impl TryFrom<&str> for DistributionFlavor {
 }
 
 type DistributionCacheKey = (PathBuf, PythonDistributionLocation);
-type DistributionCacheValue = Arc<Mutex<Option<Arc<Box<StandaloneDistribution>>>>>;
+type DistributionCacheValue = Arc<Mutex<Option<Arc<StandaloneDistribution>>>>;
 
 /// Holds references to resolved PythonDistribution instances.
 #[derive(Debug)]
@@ -498,7 +498,7 @@ impl DistributionCache {
         logger: &slog::Logger,
         location: &PythonDistributionLocation,
         dest_dir: Option<&Path>,
-    ) -> Result<Arc<Box<StandaloneDistribution>>> {
+    ) -> Result<Arc<StandaloneDistribution>> {
         let dest_dir = if let Some(p) = dest_dir {
             p
         } else if let Some(p) = &self.default_dest_dir {
@@ -566,9 +566,9 @@ impl DistributionCache {
         if let Some(dist) = value {
             Ok(dist.clone())
         } else {
-            let dist = Arc::new(Box::new(StandaloneDistribution::from_location(
+            let dist = Arc::new(StandaloneDistribution::from_location(
                 logger, location, &dest_dir,
-            )?));
+            )?);
 
             lock.replace(dist.clone());
 
