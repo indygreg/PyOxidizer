@@ -89,6 +89,8 @@ Other Relevant Changes
 * When PyOxidizer invokes a subprocess and logs its output, stderr
   is now redirected to stdout and logged as a unified stream. Previously,
   stdout was logged and stderr went to the parent process stderr.
+* There now exists :ref:`documentation <packaging_python_executable>`
+  on how to create an executable that behaves like ``python``.
 
 .. _version_0_8_0:
 

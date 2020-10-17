@@ -29,3 +29,4 @@ instructions.
    packaging_static_linking
    packaging_licensing
    packaging_terminfo
+   packaging_python_executable
