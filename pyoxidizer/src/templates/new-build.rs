@@ -4,7 +4,20 @@
 
 /*! Build script to integrate PyOxidizer. */
 
+use embed_resource;
+
 fn main() {
+    let target_family =
+        std::env::var("CARGO_CFG_TARGET_FAMILY").expect("CARGO_CFG_TARGET_FAMILY not defined");
+
+    // Embed the XML manifest enabling long paths into the binary.
+    //
+    // This isn't needed on Windows 10 version 1607 and above, as long paths are
+    // enabled by default. But being explicit provides maximum compatibility.
+    if target_family == "windows" {
+        embed_resource::compile("{{{ program_name }}}-manifest.rc");
+    }
+
     if let Ok(config_rs) = std::env::var("DEP_PYTHONXY_DEFAULT_PYTHON_CONFIG_RS") {
         println!(
             "cargo:rustc-env=PYOXIDIZER_DEFAULT_PYTHON_CONFIG_RS={}",

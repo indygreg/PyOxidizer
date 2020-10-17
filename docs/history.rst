@@ -52,6 +52,8 @@ New Features
   PyOxidizer's code for scanning files for resources. This command can be
   used to debug and triage bugs related to PyOxidizer's custom code for
   finding and handling resources.
+* Executables built on Windows now embed an application manifest that enables
+  long paths support. (#197)
 
 Bug Fixes
 ^^^^^^^^^
