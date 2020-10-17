@@ -31,7 +31,7 @@ use {
         io::Read,
         ops::DerefMut,
         path::{Path, PathBuf},
-        sync::Arc,
+        sync::{Arc, Mutex},
     },
     url::Url,
     uuid::Uuid,
@@ -474,19 +474,20 @@ impl TryFrom<&str> for DistributionFlavor {
     }
 }
 
+type DistributionCacheKey = (PathBuf, PythonDistributionLocation);
+type DistributionCacheValue = Arc<Mutex<Option<Arc<Box<StandaloneDistribution>>>>>;
+
 /// Holds references to resolved PythonDistribution instances.
 #[derive(Debug)]
 pub struct DistributionCache {
-    cache: std::sync::Mutex<
-        HashMap<(PathBuf, PythonDistributionLocation), Arc<Box<StandaloneDistribution>>>,
-    >,
+    cache: Mutex<HashMap<DistributionCacheKey, DistributionCacheValue>>,
     default_dest_dir: Option<PathBuf>,
 }
 
 impl DistributionCache {
     pub fn new(default_dest_dir: Option<&Path>) -> Self {
         Self {
-            cache: std::sync::Mutex::new(HashMap::new()),
+            cache: Mutex::new(HashMap::new()),
             default_dest_dir: default_dest_dir.clone().map(|x| x.to_path_buf()),
         }
     }
@@ -508,27 +509,71 @@ impl DistributionCache {
 
         let key = (dest_dir.to_path_buf(), location.clone());
 
-        {
-            let lock = self
+        // This logic is whack. Surely there's a cleaner way to do this...
+        //
+        // The general problem is instances of this type are Send + Sync. And
+        // we do rely on multiple threads simultaneously accessing it. This
+        // occurs in tests for example, which use a global/static instance to
+        // cache resolved distributions to drastically reduce CPU overhead.
+        //
+        // We need a Mutex of some kind around the HashMap to allow
+        // multi-threaded access. But if that was the only Mutex that existed, we'd
+        // need to hold the Mutex while any thread was resolving a distribution
+        // and this would prevent multi-threaded distribution resolving.
+        //
+        // Or we could release that Mutex after a missing lookup and then each
+        // thread would race to resolve the distribution and insert. That's fine,
+        // but it results in redundancy and wasted CPU (several minutes worth for
+        // debug builds in the test harness).
+        //
+        // What we do instead is have HashMap values be Arc<Mutex<Option<T>>>.
+        // We then perform a 2 phase lookup.
+        //
+        // In the 1st lock, we lock the entire HashMap and do the key lookup.
+        // If it exists, we clone the Arc<T>. Else if it is missing, we insert
+        // a new key with `None` and return a clone of its Arc<T>. Either way,
+        // we have a handle on the Arc<Mutex<Option<T>>> in a populated. We then
+        // release the outer HashMap lock.
+        //
+        // We then lock the inner entry. With that lock hold, we return a clone
+        // of its `Some(T)` entry immediately or proceed to populate it. Only 1
+        // thread can hold this lock, ensuring only 1 thread performs the
+        // value resolution. Multiple threads can resolve different keys in
+        // parallel. By other threads will be blocked resolving a single key.
+
+        let entry = {
+            let mut lock = self
                 .cache
                 .lock()
                 .map_err(|e| anyhow!("cannot obtain distribution cache lock: {}", e))?;
-            if let Some(dist) = lock.get(&key) {
-                return Ok(dist.clone());
+
+            if let Some(value) = lock.get(&key) {
+                value.clone()
+            } else {
+                let value = Arc::new(Mutex::new(None));
+                lock.insert(key.clone(), value.clone());
+
+                value
             }
-        }
+        };
 
-        let dist = Arc::new(Box::new(StandaloneDistribution::from_location(
-            logger, location, &dest_dir,
-        )?));
-
-        let mut lock = self
-            .cache
+        let mut lock = entry
             .lock()
             .map_err(|e| anyhow!("cannot obtain distribution lock: {}", e))?;
-        lock.deref_mut().insert(key, dist.clone());
 
-        Ok(dist)
+        let value = lock.deref_mut();
+
+        if let Some(dist) = value {
+            Ok(dist.clone())
+        } else {
+            let dist = Arc::new(Box::new(StandaloneDistribution::from_location(
+                logger, location, &dest_dir,
+            )?));
+
+            lock.replace(dist.clone());
+
+            Ok(dist)
+        }
     }
 }
 
