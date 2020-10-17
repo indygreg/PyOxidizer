@@ -241,6 +241,21 @@ where
     /// The resource name.
     pub name: Cow<'a, str>,
 
+    /// Whether this resource defines a Python module/package.
+    pub is_module: bool,
+
+    /// Whether this resource defines a builtin extension module.
+    pub is_builtin_extension_module: bool,
+
+    /// Whether this resource defines a frozen Python module.
+    pub is_frozen_module: bool,
+
+    /// Whether this resource defines a Python extension module.
+    pub is_extension_module: bool,
+
+    /// Whether this resource defines a shared library.
+    pub is_shared_library: bool,
+
     /// Whether the Python module is a package.
     pub is_package: bool,
 
@@ -299,21 +314,6 @@ where
 
     /// Mapping of Python package distribution files to relative filesystem paths for those resources.
     pub relative_path_distribution_resources: Option<HashMap<Cow<'a, str>, Cow<'a, Path>>>,
-
-    /// Whether this resource defines a Python module/package.
-    pub is_module: bool,
-
-    /// Whether this resource defines a builtin extension module.
-    pub is_builtin_extension_module: bool,
-
-    /// Whether this resource defines a frozen Python module.
-    pub is_frozen_module: bool,
-
-    /// Whether this resource defines a Python extension module.
-    pub is_extension_module: bool,
-
-    /// Whether this resource defines a shared library.
-    pub is_shared_library: bool,
 }
 
 impl<'a, X> Default for Resource<'a, X>
@@ -324,6 +324,11 @@ where
         Resource {
             flavor: ResourceFlavor::None,
             name: Cow::Borrowed(""),
+            is_module: false,
+            is_builtin_extension_module: false,
+            is_frozen_module: false,
+            is_extension_module: false,
+            is_shared_library: false,
             is_package: false,
             is_namespace_package: false,
             in_memory_source: None,
@@ -342,11 +347,6 @@ where
             relative_path_extension_module_shared_library: None,
             relative_path_package_resources: None,
             relative_path_distribution_resources: None,
-            is_module: false,
-            is_builtin_extension_module: false,
-            is_frozen_module: false,
-            is_extension_module: false,
-            is_shared_library: false,
         }
     }
 }
@@ -368,6 +368,11 @@ where
         Resource {
             flavor: self.flavor,
             name: Cow::Owned(self.name.clone().into_owned()),
+            is_module: self.is_module,
+            is_builtin_extension_module: self.is_builtin_extension_module,
+            is_frozen_module: self.is_frozen_module,
+            is_extension_module: self.is_extension_module,
+            is_shared_library: self.is_shared_library,
             is_package: self.is_package,
             is_namespace_package: self.is_namespace_package,
             in_memory_source: self
@@ -456,11 +461,6 @@ where
                         )
                     }))
                 }),
-            is_module: self.is_module,
-            is_builtin_extension_module: self.is_builtin_extension_module,
-            is_frozen_module: self.is_frozen_module,
-            is_extension_module: self.is_extension_module,
-            is_shared_library: self.is_shared_library,
         }
     }
 }
