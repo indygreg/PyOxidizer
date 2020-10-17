@@ -31,7 +31,7 @@ use {
     std::{
         collections::BTreeMap,
         path::{Path, PathBuf},
-        sync::{Arc, Mutex},
+        sync::Arc,
     },
 };
 
@@ -91,7 +91,7 @@ pub struct EnvironmentContext {
     ///
     /// This exists because constructing a new instance can take a
     /// few seconds in debug builds. And this adds up, especially in tests!
-    pub distribution_cache: Arc<Mutex<DistributionCache>>,
+    pub distribution_cache: Arc<DistributionCache>,
 
     /// Registered build targets.
     ///
@@ -128,7 +128,7 @@ impl EnvironmentContext {
         build_opt_level: &str,
         resolve_targets: Option<Vec<String>>,
         build_script_mode: bool,
-        distribution_cache: Option<Arc<Mutex<DistributionCache>>>,
+        distribution_cache: Option<Arc<DistributionCache>>,
     ) -> Result<EnvironmentContext> {
         let parent = config_path
             .parent()
@@ -143,11 +143,8 @@ impl EnvironmentContext {
         let build_path = parent.join("build");
 
         let python_distributions_path = build_path.join("python_distributions");
-        let distribution_cache = distribution_cache.unwrap_or_else(|| {
-            Arc::new(Mutex::new(DistributionCache::new(Some(
-                &python_distributions_path,
-            ))))
-        });
+        let distribution_cache = distribution_cache
+            .unwrap_or_else(|| Arc::new(DistributionCache::new(Some(&python_distributions_path))));
 
         Ok(EnvironmentContext {
             logger: logger.clone(),

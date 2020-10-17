@@ -12,9 +12,8 @@ use {
     anyhow::{anyhow, Result},
     lazy_static::lazy_static,
     slog::{Drain, Logger},
-    std::ops::DerefMut,
     std::path::PathBuf,
-    std::sync::{Arc, Mutex},
+    std::sync::Arc,
 };
 
 pub fn get_logger() -> Result<slog::Logger> {
@@ -30,8 +29,8 @@ pub fn get_logger() -> Result<slog::Logger> {
 lazy_static! {
     pub static ref DEFAULT_DISTRIBUTION_TEMP_DIR: tempdir::TempDir =
         tempdir::TempDir::new("pyoxidizer-test").expect("unable to create temp directory");
-    pub static ref DISTRIBUTION_CACHE: Arc<Mutex<DistributionCache>> = Arc::new(Mutex::new(
-        DistributionCache::new(Some(DEFAULT_DISTRIBUTION_TEMP_DIR.path()))
+    pub static ref DISTRIBUTION_CACHE: Arc<DistributionCache> = Arc::new(DistributionCache::new(
+        Some(DEFAULT_DISTRIBUTION_TEMP_DIR.path())
     ));
 }
 
@@ -53,11 +52,7 @@ pub fn get_distribution(
 
     let logger = get_logger()?;
 
-    DISTRIBUTION_CACHE
-        .lock()
-        .unwrap()
-        .deref_mut()
-        .resolve_distribution(&logger, &location, Some(&dest_path))
+    DISTRIBUTION_CACHE.resolve_distribution(&logger, &location, Some(&dest_path))
 }
 
 pub fn get_default_distribution() -> Result<Arc<Box<StandaloneDistribution>>> {

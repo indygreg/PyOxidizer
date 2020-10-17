@@ -42,7 +42,6 @@ use {
     },
     std::{
         convert::TryFrom,
-        ops::Deref,
         path::{Path, PathBuf},
         sync::Arc,
     },
@@ -88,15 +87,6 @@ impl PythonDistributionValue {
             self.distribution = Some(Arc::new(
                 context
                     .distribution_cache
-                    .lock()
-                    .map_err(|e| {
-                        ValueError::from(RuntimeError {
-                            code: "PYOXIDIZER_BUILD",
-                            message: format!("cannot lock distribution cache: {}", e),
-                            label: label.to_string(),
-                        })
-                    })?
-                    .deref()
                     .resolve_distribution(&context.logger, &self.source, Some(&self.dest_dir))
                     .map_err(|e| {
                         ValueError::from(RuntimeError {
