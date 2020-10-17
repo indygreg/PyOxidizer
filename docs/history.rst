@@ -41,6 +41,8 @@ Backwards Compatibility Notes
   disable the automatic run-time population of *path configuration* fields.
 * The ``configure_locale`` interpreter configuration setting is enabled
   by default. (#294)
+* The ``pyembed::OxidizedPythonInterpreterConfig`` Rust struct now contains
+  an ``exe`` field holding the path of the currently running executable.
 
 New Features
 ^^^^^^^^^^^^

@@ -600,8 +600,11 @@ impl<'a> TryInto<pyffi::PyConfig> for &'a OxidizedPythonInterpreterConfig<'a> {
         if self.interpreter_config.profile == PythonInterpreterProfile::Isolated
             && self.isolated_auto_set_path_configuration
         {
-            let exe = std::env::current_exe()
-                .map_err(|err| format!("unable to obtain current executable: {}", err))?;
+            if self.exe.is_none() {
+                return Err("current executable not set; must call ensure_origin() 1st".to_string());
+            }
+
+            let exe = self.exe.as_ref().unwrap();
             let origin = exe
                 .parent()
                 .ok_or_else(|| "unable to get current executable directory".to_string())?;

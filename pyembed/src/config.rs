@@ -57,6 +57,9 @@ pub struct ExtensionModule {
 /// hold higher-level configuration for features specific to this crate.
 #[derive(Clone, Debug)]
 pub struct OxidizedPythonInterpreterConfig<'a> {
+    /// The path of the currently executing executable.
+    pub exe: Option<PathBuf>,
+
     /// The filesystem path from which relative paths will be interpreted.
     pub origin: Option<PathBuf>,
 
@@ -156,6 +159,7 @@ pub struct OxidizedPythonInterpreterConfig<'a> {
 impl<'a> Default for OxidizedPythonInterpreterConfig<'a> {
     fn default() -> Self {
         Self {
+            exe: None,
             origin: None,
             interpreter_config: PythonInterpreterConfig {
                 profile: PythonInterpreterProfile::Python,
@@ -180,9 +184,16 @@ impl<'a> Default for OxidizedPythonInterpreterConfig<'a> {
 
 impl<'a> OxidizedPythonInterpreterConfig<'a> {
     pub fn ensure_origin(&mut self) -> Result<&Path, &'static str> {
+        if self.exe.is_none() {
+            self.exe =
+                Some(std::env::current_exe().map_err(|_| "could not obtain current executable")?);
+        }
+
         if self.origin.is_none() {
-            let exe = std::env::current_exe().map_err(|_| "could not obtain current executable")?;
-            let origin = exe
+            let origin = self
+                .exe
+                .as_ref()
+                .unwrap()
                 .parent()
                 .ok_or_else(|| "unable to obtain current executable parent directory")?;
 

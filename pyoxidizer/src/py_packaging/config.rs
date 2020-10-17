@@ -124,6 +124,7 @@ impl EmbeddedPythonConfig {
     ) -> Result<String> {
         let code = format!(
             "pyembed::OxidizedPythonInterpreterConfig {{\n    \
+            exe: None,\n    \
             origin: None,\n    \
             interpreter_config: pyembed::PythonInterpreterConfig {{\n        \
             profile: {},\n        \
