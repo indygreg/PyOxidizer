@@ -37,12 +37,17 @@ Backwards Compatibility Notes
   an ``argv`` field that can be used to control the population of
   ``sys.argv``.
 * The ``pyembed::OxidizedPythonInterpreterConfig`` Rust struct now contains
-  an ``isolated_auto_set_path_configuration`` field that can be used to
-  disable the automatic run-time population of *path configuration* fields.
+  a ``set_missing_path_configuration`` field that can be used to
+  control the automatic run-time population of missing *path configuration*
+  fields.
 * The ``configure_locale`` interpreter configuration setting is enabled
   by default. (#294)
 * The ``pyembed::OxidizedPythonInterpreterConfig`` Rust struct now contains
   an ``exe`` field holding the path of the currently running executable.
+* At run-time, the ``program_name`` and ``home`` fields of the embedded
+  Python interpreter's path configuration are now always set to the
+  currently running executable and its directory, respectively, unless
+  explicit values have been provided.
 
 New Features
 ^^^^^^^^^^^^

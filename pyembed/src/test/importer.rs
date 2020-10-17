@@ -16,6 +16,7 @@ fn new_interpreter<'python, 'interpreter, 'resources>(
     // Otherwise Rust test executable args are parsed as Python args.
     config.interpreter_config.parse_argv = Some(false);
     config.oxidized_importer = true;
+    config.set_missing_path_configuration = false;
     let interp = MainPythonInterpreter::new(config)?;
 
     Ok(interp)
@@ -32,6 +33,7 @@ fn run_py_test(test_filename: &str) -> Result<()> {
     config.oxidized_importer = true;
     config.interpreter_config.run_filename = Some(test_path);
     config.interpreter_config.buffered_stdio = Some(false);
+    config.set_missing_path_configuration = false;
     let mut interp = MainPythonInterpreter::new(config)?;
 
     let exit_code = interp.run_as_main();
@@ -64,6 +66,7 @@ rusty_fork_test! {
         // Otherwise Rust test executable args are parsed as Python args.
         config.interpreter_config.parse_argv = Some(false);
         config.oxidized_importer = true;
+        config.set_missing_path_configuration = false;
         let mut interp = MainPythonInterpreter::new(config).unwrap();
 
         let py = interp.acquire_gil().unwrap();

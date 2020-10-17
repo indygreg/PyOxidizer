@@ -76,9 +76,6 @@ From there, build/run from the config::
    ...
    $ pyoxidizer run
    ...
-   Could not find platform independent libraries <prefix>
-   Could not find platform dependent libraries <exec_prefix>
-   Consider setting $PYTHONHOME to <prefix>[:<exec_prefix>]
    Python 3.8.6 (default, Oct  3 2020, 20:48:20)
    [Clang 10.0.1 ] on linux
    Type "help", "copyright", "credits" or "license" for more information.

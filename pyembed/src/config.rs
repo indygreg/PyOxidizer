@@ -69,14 +69,13 @@ pub struct OxidizedPythonInterpreterConfig<'a> {
     /// Allocator to use for Python's raw allocator.
     pub raw_allocator: Option<PythonRawAllocator>,
 
-    /// Whether to automatically set missing "path configuration" fields in isolated mode.
+    /// Whether to automatically set missing "path configuration" fields.
     ///
-    /// If `.interpreter_config.profile == PythonInterpreterProfile::Isolated` and this
-    /// is `true`, various path configuration
+    /// If `true`, various path configuration
     /// (https://docs.python.org/3/c-api/init_config.html#path-configuration) fields
-    /// will be set automatically if their corresponding `.interpreter_config` fields are
-    /// `None`. For example, `program_name` will be set to the current executable
-    /// and `home` will be set to the executable's directory.
+    /// will be set automatically if their corresponding `.interpreter_config`
+    /// fields are `None`. For example, `program_name` will be set to the current
+    /// executable and `home` will be set to the executable's directory.
     ///
     /// If this is `false`, the default path configuration built into libpython
     /// is used.
@@ -88,7 +87,15 @@ pub struct OxidizedPythonInterpreterConfig<'a> {
     /// files are present, define `packed_resources`, and/or set
     /// `.interpreter_config.module_search_paths` to ensure the interpreter can find
     /// the Python standard library, otherwise the interpreter will fail to start.
-    pub isolated_auto_set_path_configuration: bool,
+    ///
+    /// Without this set or corresponding `.interpreter_config` fields set, you
+    /// may also get run-time errors like
+    /// `Could not find platform independent libraries <prefix>` or
+    /// `Consider setting $PYTHONHOME to <prefix>[:<exec_prefix>]`. If you see
+    /// these errors, it means the automatic path config resolutions built into
+    /// libpython didn't work because the run-time layout didn't match the
+    /// build-time configuration.
+    pub set_missing_path_configuration: bool,
 
     /// Whether to install our custom meta path importer on interpreter init.
     pub oxidized_importer: bool,
@@ -166,7 +173,7 @@ impl<'a> Default for OxidizedPythonInterpreterConfig<'a> {
                 ..PythonInterpreterConfig::default()
             },
             raw_allocator: None,
-            isolated_auto_set_path_configuration: true,
+            set_missing_path_configuration: true,
             oxidized_importer: false,
             filesystem_importer: true,
             packed_resources: None,

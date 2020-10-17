@@ -587,28 +587,16 @@ impl<'a> TryInto<pyffi::PyConfig> for &'a OxidizedPythonInterpreterConfig<'a> {
         let config: pyffi::PyConfig =
             python_interpreter_config_to_py_config(&self.interpreter_config)?;
 
-        // We define a configuration "profile" to dictate overall interpreter
-        // behavior. In "python" mode, we behave like a `python` executable.
-        // In "isolated" mode, we behave like an embedded application.
-        //
-        // In "python" mode, we don't set any config fields unless they were
-        // explicitly defined in the `PythonInterpreterConfig`.
-        //
-        // In "isolated" mode, we automatically fill in various fields as
-        // derived from the environment if allowed to do so. But we never
-        // overwrite values that are explicitly set in the config.
-        if self.interpreter_config.profile == PythonInterpreterProfile::Isolated
-            && self.isolated_auto_set_path_configuration
-        {
-            if self.exe.is_none() {
-                return Err("current executable not set; must call ensure_origin() 1st".to_string());
-            }
+        if self.exe.is_none() {
+            return Err("current executable not set; must call ensure_origin() 1st".to_string());
+        }
+        if self.origin.is_none() {
+            return Err("origin not set; must call ensure_origin() 1st".to_string());
+        }
+        let exe = self.exe.as_ref().unwrap();
+        let origin = self.origin.as_ref().unwrap();
 
-            let exe = self.exe.as_ref().unwrap();
-            let origin = exe
-                .parent()
-                .ok_or_else(|| "unable to get current executable directory".to_string())?;
-
+        if self.set_missing_path_configuration {
             // program_name set to path of current executable.
             if self.interpreter_config.program_name.is_none() {
                 set_config_string_from_path(
