@@ -17,8 +17,8 @@ use {
     crate::py_packaging::{
         distribution::BinaryLibpythonLinkMode,
         distribution::{
-            default_distribution_location, is_stdlib_test_package, resolve_distribution,
-            DistributionFlavor, PythonDistribution, PythonDistributionLocation,
+            default_distribution_location, is_stdlib_test_package, DistributionFlavor,
+            PythonDistribution, PythonDistributionLocation,
         },
     },
     anyhow::{anyhow, Result},
@@ -345,18 +345,21 @@ impl PythonDistributionValue {
             })?;
 
             Some(Arc::new(
-                resolve_distribution(
-                    &context.logger,
-                    &location,
-                    &context.python_distributions_path,
-                )
-                .map_err(|e| {
-                    ValueError::from(RuntimeError {
-                        code: "PYOXIDIZER_BUILD",
-                        message: format!("unable to resolve host Python distribution: {}", e),
-                        label: "to_python_executable".to_string(),
-                    })
-                })?,
+                context
+                    .distribution_cache
+                    .resolve_distribution(
+                        &context.logger,
+                        &location,
+                        Some(&context.python_distributions_path),
+                    )
+                    .map_err(|e| {
+                        ValueError::from(RuntimeError {
+                            code: "PYOXIDIZER_BUILD",
+                            message: format!("unable to resolve host Python distribution: {}", e),
+                            label: "to_python_executable".to_string(),
+                        })
+                    })?
+                    .clone_box(),
             ))
         };
 
