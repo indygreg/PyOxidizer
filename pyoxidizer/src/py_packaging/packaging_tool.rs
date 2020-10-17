@@ -527,7 +527,7 @@ mod tests {
 
         let resources: Vec<PythonResource> = pip_install(
             &logger,
-            distribution.deref().as_ref(),
+            distribution.deref(),
             LibpythonLinkMode::Dynamic,
             false,
             &["cffi==1.14.0".to_string()],
