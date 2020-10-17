@@ -493,7 +493,7 @@ impl DistributionCache {
 
     /// Resolve a `PythonDistribution` given its source and storage locations.
     pub fn resolve_distribution(
-        &mut self,
+        &self,
         logger: &slog::Logger,
         location: &PythonDistributionLocation,
         dest_dir: Option<&Path>,

@@ -42,7 +42,7 @@ use {
     },
     std::{
         convert::TryFrom,
-        ops::DerefMut,
+        ops::Deref,
         path::{Path, PathBuf},
         sync::Arc,
     },
@@ -96,7 +96,7 @@ impl PythonDistributionValue {
                             label: label.to_string(),
                         })
                     })?
-                    .deref_mut()
+                    .deref()
                     .resolve_distribution(&context.logger, &self.source, Some(&self.dest_dir))
                     .map_err(|e| {
                         ValueError::from(RuntimeError {
