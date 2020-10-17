@@ -18,7 +18,7 @@ use {
 
 // A importlib.metadata.Distribution allowing access to package distribution data.
 py_class!(class OxidizedDistribution |py| {
-    data state: Arc<Box<ImporterState>>;
+    data state: Arc<ImporterState>;
     data package: String;
 
     def read_text(&self, filename: &PyString) -> PyResult<PyObject> {
@@ -48,7 +48,7 @@ py_class!(class OxidizedDistribution |py| {
 
 impl OxidizedDistribution {
     fn read_text_impl(&self, py: Python, filename: &PyString) -> PyResult<PyObject> {
-        let state: &Arc<Box<ImporterState>> = self.state(py);
+        let state: &Arc<ImporterState> = self.state(py);
         let package: &str = self.package(py);
         let resources_state = state.get_resources_state();
 
@@ -86,7 +86,7 @@ impl OxidizedDistribution {
     /// The returned object will have keys that name the various bits of
     /// metadata.
     fn metadata_impl(&self, py: Python) -> PyResult<PyObject> {
-        let state: &Arc<Box<ImporterState>> = self.state(py);
+        let state: &Arc<ImporterState> = self.state(py);
         let package: &str = self.package(py);
         let resources_state = state.get_resources_state();
 
@@ -178,7 +178,7 @@ impl OxidizedDistribution {
 /// Find package metadata distributions given search criteria.
 pub(crate) fn find_distributions(
     py: Python,
-    state: Arc<Box<ImporterState>>,
+    state: Arc<ImporterState>,
     name: Option<PyObject>,
     _path: Option<PyObject>,
 ) -> PyResult<PyObject> {
