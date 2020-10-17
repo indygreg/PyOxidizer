@@ -227,7 +227,16 @@ impl TryFrom<u8> for ResourceField {
     }
 }
 
-/// Represents an embedded resource and all its metadata.
+/// Represents an indexed resource.
+///
+/// The resource has a name and type affinity via various `is_*` fields.
+///
+/// The data for the resource may be present in the instance or referenced
+/// via an external filesystem path.
+///
+/// Data fields are `Cow<T>` and can either hold a borrowed reference or
+/// owned data. This allows the use of a single type to both hold
+/// data or reference it from some other location.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Resource<'a, X: 'a>
 where
