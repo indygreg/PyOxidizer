@@ -580,6 +580,7 @@ impl DistributionCache {
 /// Obtain a `PythonDistribution` implementation of a flavor and from a location.
 ///
 /// The distribution will be written to `dest_dir`.
+#[allow(unused)]
 pub fn resolve_distribution(
     logger: &slog::Logger,
     location: &PythonDistributionLocation,
@@ -603,44 +604,9 @@ pub fn default_distribution_location(
     Ok(dist.location)
 }
 
-/// Resolve the default Python distribution for a build target.
-///
-/// `flavor` is the high-level type of distribution.
-/// `target` is a Rust target triple the distribution should target.
-/// `dest_dir` is a directory to extract the distribution to. The distribution will
-/// be extracted to a child directory of this path.
-#[allow(unused)]
-pub fn default_distribution(
-    logger: &slog::Logger,
-    flavor: &DistributionFlavor,
-    target: &str,
-    dest_dir: &Path,
-) -> Result<Box<dyn PythonDistribution>> {
-    let location = default_distribution_location(flavor, target, None)?;
-
-    resolve_distribution(logger, &location, dest_dir)
-}
-
 #[cfg(test)]
 mod tests {
     use {super::*, crate::testutil::*};
-
-    #[test]
-    fn test_default_distribution() -> Result<()> {
-        let logger = get_logger()?;
-        let target = env!("HOST");
-
-        let temp_dir = tempdir::TempDir::new("pyoxidizer-test")?;
-
-        default_distribution(
-            &logger,
-            &DistributionFlavor::Standalone,
-            target,
-            temp_dir.path(),
-        )?;
-
-        Ok(())
-    }
 
     #[test]
     fn test_all_standalone_distributions() -> Result<()> {
