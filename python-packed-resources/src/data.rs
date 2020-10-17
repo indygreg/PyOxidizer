@@ -10,6 +10,9 @@ use std::{borrow::Cow, collections::HashMap, convert::TryFrom, iter::FromIterato
 pub const HEADER_V2: &[u8] = b"pyembed\x02";
 
 /// Defines the type of a resource.
+///
+/// This is deprecated in favor of individual boolean fields on resources
+/// declaring type affinity.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum ResourceFlavor {
     None = 0x00,
@@ -231,6 +234,8 @@ where
     [X]: ToOwned<Owned = Vec<X>>,
 {
     /// The flavor of the resource.
+    ///
+    /// Deprecated in favor of `is_*` fields declaring type affinity.
     pub flavor: ResourceFlavor,
 
     /// The resource name.
