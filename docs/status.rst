@@ -122,6 +122,22 @@ Please file issues at https://github.com/indygreg/PyOxidizer/issues reporting
 known problems with terminal interaction or to request new features for
 terminal interaction, ``terminfo`` database support, etc.
 
+.. _status_standalone_resource_files:
+
+Standalone Resource Files
+-------------------------
+
+Currently, indexed resources are always embedded in built binaries. This
+means that if you are producing multiple binaries, there will be redundant
+copies of resources in each binary.
+
+Eventually, PyOxidizer will support emitting standalone resources files and
+enabling binaries to reference those files. This will enable multiple binaries
+to share the same resource collection.
+
+This functionality exists in the run-time Rust code today. But it isn't turnkey
+and isn't exposed to Starlark.
+
 Lesser Missing Features
 =======================
 

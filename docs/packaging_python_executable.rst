@@ -81,3 +81,22 @@ From there, build/run from the config::
    Type "help", "copyright", "credits" or "license" for more information.
    >>>
 
+
+.. _packaging_python_executable_resource_loading_caveats:
+
+Resource Loading Caveats
+========================
+
+PyOxidizer's configuration defaults are opinionated about how resources
+are loaded by default. In the default configuration, the Python distribution's
+resources are indexed and loaded via ``oxidized_importer`` at run-time.
+This behavior is obviously different from what a standard ``python`` executable
+would do.
+
+If you want the built executable to behave like ``python`` would and use the
+standard library importers, you can disable ``oxidized_importer`` by setting
+:ref:`config_type_python_interpreter_config_oxidized_importer` to ``False``.
+
+Another caveat is that indexed resources are always embedded in the built
+executable. This may bloat the size of the executable. This will eventually
+be addressed by :ref:`status_standalone_resource_files`.
