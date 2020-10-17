@@ -40,20 +40,13 @@ use {
             starlark_signature_extraction, starlark_signatures,
         },
     },
-    std::{
-        convert::TryFrom,
-        path::{Path, PathBuf},
-        sync::Arc,
-    },
+    std::{convert::TryFrom, sync::Arc},
 };
 
 /// A Starlark Value wrapper for `PythonDistribution` traits.
 pub struct PythonDistributionValue {
     /// Where the distribution should be obtained from.
     pub source: PythonDistributionLocation,
-
-    /// Directory where distribution should be extracted.
-    dest_dir: PathBuf,
 
     /// The actual distribution.
     ///
@@ -62,13 +55,9 @@ pub struct PythonDistributionValue {
 }
 
 impl PythonDistributionValue {
-    fn from_location(
-        location: PythonDistributionLocation,
-        dest_dir: &Path,
-    ) -> PythonDistributionValue {
+    fn from_location(location: PythonDistributionLocation) -> PythonDistributionValue {
         PythonDistributionValue {
             source: location,
-            dest_dir: dest_dir.to_path_buf(),
             distribution: None,
         }
     }
@@ -87,7 +76,11 @@ impl PythonDistributionValue {
             self.distribution = Some(Arc::new(
                 context
                     .distribution_cache
-                    .resolve_distribution(&context.logger, &self.source, Some(&self.dest_dir))
+                    .resolve_distribution(
+                        &context.logger,
+                        &self.source,
+                        Some(&context.python_distributions_path),
+                    )
                     .map_err(|e| {
                         ValueError::from(RuntimeError {
                             code: "PYOXIDIZER_BUILD",
@@ -161,25 +154,11 @@ impl PythonDistributionValue {
                 })
             })?;
 
-        let raw_context = get_context(type_values)?;
-        let context = raw_context
-            .downcast_ref::<EnvironmentContext>()
-            .ok_or(ValueError::IncorrectParameterType)?;
-
-        Ok(Value::new(PythonDistributionValue::from_location(
-            location,
-            &context.python_distributions_path,
-        )))
+        Ok(Value::new(PythonDistributionValue::from_location(location)))
     }
 
     /// PythonDistribution()
-    fn from_args(
-        type_values: &TypeValues,
-        sha256: &Value,
-        local_path: &Value,
-        url: &Value,
-        flavor: &Value,
-    ) -> ValueResult {
+    fn from_args(sha256: &Value, local_path: &Value, url: &Value, flavor: &Value) -> ValueResult {
         required_str_arg("sha256", sha256)?;
         optional_str_arg("local_path", local_path)?;
         optional_str_arg("url", url)?;
@@ -216,14 +195,8 @@ impl PythonDistributionValue {
             }
         }
 
-        let raw_context = get_context(type_values)?;
-        let context = raw_context
-            .downcast_ref::<EnvironmentContext>()
-            .ok_or(ValueError::IncorrectParameterType)?;
-
         Ok(Value::new(PythonDistributionValue::from_location(
             distribution,
-            &context.python_distributions_path,
         )))
     }
 
@@ -492,8 +465,8 @@ impl PythonDistributionValue {
 
 starlark_module! { python_distribution_module =>
     #[allow(non_snake_case, clippy::ptr_arg)]
-    PythonDistribution(env env, sha256, local_path=NoneType::None, url=NoneType::None, flavor="standalone") {
-        PythonDistributionValue::from_args(&env, &sha256, &local_path, &url, &flavor)
+    PythonDistribution(sha256, local_path=NoneType::None, url=NoneType::None, flavor="standalone") {
+        PythonDistributionValue::from_args(&sha256, &local_path, &url, &flavor)
     }
 
     PythonDistribution.make_python_packaging_policy(env env, this) {
