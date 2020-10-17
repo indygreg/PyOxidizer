@@ -100,3 +100,10 @@ standard library importers, you can disable ``oxidized_importer`` by setting
 Another caveat is that indexed resources are always embedded in the built
 executable. This may bloat the size of the executable. This will eventually
 be addressed by :ref:`status_standalone_resource_files`.
+
+Binary Portability
+==================
+
+A ``python``-like executable built with PyOxidizer may not *just work*
+when copied to another machine. See :ref:`packaging_binary_compatibility`
+to learn more about the portability of binaries built with PyOxidizer.

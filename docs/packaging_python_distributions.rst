@@ -99,3 +99,29 @@ distribution to produce a single file executable.
 But as soon as you encounter a third party extension module with a
 ``standalone_static`` distribution, you will need to recompile it. And
 this is often unreliable.
+
+.. _packaging_python_distribution_portability:
+
+Binary Portability of Distributions
+===================================
+
+The built-in Python distributions are built in such a way that they should
+run on nearly every system for the platform they target. This means:
+
+* All 3rd party shared libraries are part of the distribution (e.g.
+  ``libssl`` and ``libsqlite3``) and don't need to be provided by the
+  run-time environment.
+* Some distributions are statically linked and have no dependencies on
+  any external shared libraries.
+* On the glibc linked Linux distributions, they use an old glibc version
+  for symbol versions, enabling them to run on Linux distributions created
+  years ago. (The current version is 2.19, which was released in 2014.)
+* Any shared libraries not provided by the distribution are available in
+  base operating system installs. On Linux, example shared libraries include
+  ``libc.so.6`` and ``linux-vdso.so.1``, which are part of the Linux Standard
+  Base Core Configuration and should be present on all conforming Linux
+  distros. On macOS, referenced dylibs include ``libSystem``, which is part
+  of the macOS core install.
+* On macOS, distributions are compiled with ``MACOSX_DEPLOYMENT_TARGET=10.9``
+  so they only used SDK features present on macOS >=10.9, enabling them to
+  run on sufficiently old macOS versions.

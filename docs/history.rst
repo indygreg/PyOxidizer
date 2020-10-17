@@ -98,6 +98,8 @@ Other Relevant Changes
   stdout was logged and stderr went to the parent process stderr.
 * There now exists :ref:`documentation <packaging_python_executable>`
   on how to create an executable that behaves like ``python``.
+* The documentation on binary portability has been overhauled to go in
+  much greater detail.
 
 .. _version_0_8_0:
 
