@@ -23,6 +23,7 @@ use {
         fs::File,
         io::Write,
         path::{Path, PathBuf},
+        sync::Arc,
     },
 };
 
@@ -55,7 +56,7 @@ pub type ResourceAddCollectionContextCallback<'a> = Box<
 /// themselves.
 pub trait PythonBinaryBuilder {
     /// Clone self into a Box'ed trait object.
-    fn clone_box(&self) -> Box<dyn PythonBinaryBuilder>;
+    fn clone_trait(&self) -> Arc<dyn PythonBinaryBuilder>;
 
     /// The name of the binary.
     fn name(&self) -> String;

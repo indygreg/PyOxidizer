@@ -574,7 +574,7 @@ impl PythonExecutable {
     /// PythonExecutable.to_embedded_resources()
     pub fn starlark_to_embedded_resources(&self) -> ValueResult {
         Ok(Value::new(PythonEmbeddedResources {
-            exe: self.exe.clone_box(),
+            exe: self.exe.clone_trait(),
         }))
     }
 

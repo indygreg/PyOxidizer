@@ -1035,8 +1035,8 @@ impl StandaloneDistribution {
 }
 
 impl PythonDistribution for StandaloneDistribution {
-    fn clone_box(&self) -> Box<dyn PythonDistribution> {
-        Box::new(self.clone())
+    fn clone_trait(&self) -> Arc<dyn PythonDistribution> {
+        Arc::new(self.clone())
     }
 
     fn target_triple(&self) -> &str {
@@ -1206,12 +1206,12 @@ impl PythonDistribution for StandaloneDistribution {
         libpython_link_mode: BinaryLibpythonLinkMode,
         policy: &PythonPackagingPolicy,
         config: &EmbeddedPythonConfig,
-        host_distribution: Option<Arc<Box<dyn PythonDistribution>>>,
+        host_distribution: Option<Arc<dyn PythonDistribution>>,
     ) -> Result<Box<dyn PythonBinaryBuilder>> {
         // TODO can we avoid these clones?
         let target_distribution = Arc::new(self.clone());
-        let host_distribution: Arc<Box<dyn PythonDistribution>> =
-            host_distribution.unwrap_or_else(|| Arc::new(Box::new(self.clone())));
+        let host_distribution: Arc<dyn PythonDistribution> =
+            host_distribution.unwrap_or_else(|| Arc::new(self.clone()));
 
         let builder = StandalonePythonExecutableBuilder::from_distribution(
             host_distribution,

@@ -8,10 +8,11 @@ use {
     anyhow::Result,
     slog::warn,
     starlark::values::{Mutable, TypedValue, Value},
+    std::sync::Arc,
 };
 
 pub struct PythonEmbeddedResources {
-    pub exe: Box<dyn PythonBinaryBuilder>,
+    pub exe: Arc<dyn PythonBinaryBuilder>,
 }
 
 impl TypedValue for PythonEmbeddedResources {

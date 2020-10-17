@@ -101,7 +101,7 @@ pub struct PythonDistributionRecord {
 /// Describes a generic Python distribution.
 pub trait PythonDistribution {
     /// Clone self into a Box'ed trait object.
-    fn clone_box(&self) -> Box<dyn PythonDistribution>;
+    fn clone_trait(&self) -> Arc<dyn PythonDistribution>;
 
     /// The Rust machine triple this distribution runs on.
     fn target_triple(&self) -> &str;
@@ -176,7 +176,7 @@ pub trait PythonDistribution {
         libpython_link_mode: BinaryLibpythonLinkMode,
         policy: &PythonPackagingPolicy,
         config: &EmbeddedPythonConfig,
-        host_distribution: Option<Arc<Box<dyn PythonDistribution>>>,
+        host_distribution: Option<Arc<dyn PythonDistribution>>,
     ) -> Result<Box<dyn PythonBinaryBuilder>>;
 
     /// Obtain `PythonExtensionModule` instances present in this distribution.

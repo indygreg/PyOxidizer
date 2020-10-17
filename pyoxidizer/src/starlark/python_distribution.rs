@@ -51,7 +51,7 @@ pub struct PythonDistributionValue {
     /// The actual distribution.
     ///
     /// Populated on first read.
-    pub distribution: Option<Arc<Box<dyn PythonDistribution>>>,
+    pub distribution: Option<Arc<dyn PythonDistribution>>,
 }
 
 impl PythonDistributionValue {
@@ -66,14 +66,14 @@ impl PythonDistributionValue {
         &mut self,
         type_values: &TypeValues,
         label: &str,
-    ) -> Result<Arc<Box<dyn PythonDistribution>>, ValueError> {
+    ) -> Result<Arc<dyn PythonDistribution>, ValueError> {
         if self.distribution.is_none() {
             let raw_context = get_context(type_values)?;
             let context = raw_context
                 .downcast_mut::<EnvironmentContext>()?
                 .ok_or(ValueError::IncorrectParameterType)?;
 
-            self.distribution = Some(Arc::new(
+            self.distribution = Some(
                 context
                     .distribution_cache
                     .resolve_distribution(
@@ -88,8 +88,8 @@ impl PythonDistributionValue {
                             label: label.to_string(),
                         })
                     })?
-                    .clone_box(),
-            ));
+                    .clone_trait(),
+            );
         }
 
         Ok(self.distribution.as_ref().unwrap().clone())
@@ -317,7 +317,7 @@ impl PythonDistributionValue {
                 })
             })?;
 
-            Some(Arc::new(
+            Some(
                 context
                     .distribution_cache
                     .resolve_distribution(
@@ -332,8 +332,8 @@ impl PythonDistributionValue {
                             label: "to_python_executable".to_string(),
                         })
                     })?
-                    .clone_box(),
-            ))
+                    .clone_trait(),
+            )
         };
 
         let mut builder = dist

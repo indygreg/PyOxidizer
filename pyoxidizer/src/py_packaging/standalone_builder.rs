@@ -76,7 +76,7 @@ pub struct StandalonePythonExecutableBuilder {
     exe_name: String,
 
     /// The Python distribution being used to build this executable.
-    host_distribution: Arc<Box<dyn PythonDistribution>>,
+    host_distribution: Arc<dyn PythonDistribution>,
 
     /// The Python distribution this executable is targeting.
     target_distribution: Arc<StandaloneDistribution>,
@@ -113,7 +113,7 @@ pub struct StandalonePythonExecutableBuilder {
 impl StandalonePythonExecutableBuilder {
     #[allow(clippy::too_many_arguments)]
     pub fn from_distribution(
-        host_distribution: Arc<Box<dyn PythonDistribution>>,
+        host_distribution: Arc<dyn PythonDistribution>,
         target_distribution: Arc<StandaloneDistribution>,
         host_triple: String,
         target_triple: String,
@@ -351,8 +351,8 @@ impl StandalonePythonExecutableBuilder {
 }
 
 impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
-    fn clone_box(&self) -> Box<dyn PythonBinaryBuilder> {
-        Box::new(self.clone())
+    fn clone_trait(&self) -> Arc<dyn PythonBinaryBuilder> {
+        Arc::new(self.clone())
     }
 
     fn name(&self) -> String {
@@ -393,7 +393,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
     ) -> Result<Vec<PythonResource>> {
         pip_download(
             logger,
-            &**self.host_distribution,
+            &*self.host_distribution,
             &*self.target_distribution,
             verbose,
             args,
@@ -814,13 +814,13 @@ pub mod tests {
                 .compatible_host_triples()
                 .contains(&self.host_triple)
             {
-                Arc::new(target_distribution.clone_box())
+                target_distribution.clone_trait()
             } else {
                 let host_record = PYTHON_DISTRIBUTIONS
                     .find_distribution(&self.host_triple, &DistributionFlavor::Standalone, None)
                     .ok_or_else(|| anyhow!("could not find host Python distribution"))?;
 
-                Arc::new(get_distribution(&host_record.location)?.clone_box())
+                get_distribution(&host_record.location)?.clone_trait()
             };
 
             let mut policy = target_distribution.create_packaging_policy()?;
