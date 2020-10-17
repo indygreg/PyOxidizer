@@ -41,3 +41,21 @@ like so::
 
    if getattr(sys, 'oxidized', False):
        print('running in PyOxidizer!')
+
+.. _pitfall_incorrect_resource_identification:
+
+Incorrect Resource Identification
+=================================
+
+PyOxidizer has custom code for scanning for and indexing files as specific
+Python resource types. This code is somewhat complex and nuanced and there
+are known bugs that will cause PyOxidizer to fail to identify or classify a
+file appropriately.
+
+To help debug problems with this code, the ``pyoxidizer find-resources``
+command can be employed. See :ref:`cli_find_resources` for more.
+
+.. important::
+
+   Please `file a bug <https://github.com/indygreg/PyOxidizer/issues/new>`_
+   to report problems!

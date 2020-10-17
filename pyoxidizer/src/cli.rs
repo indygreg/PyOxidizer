@@ -72,6 +72,25 @@ This command executes the functionality to derive various artifacts and
 emits special lines that tell the Rust build system how to consume them.
 ";
 
+const RESOURCES_SCAN_ABOUT: &str = "\
+Scan a directory or file for Python resources.
+
+This command invokes the logic used by various PyOxidizer functionality
+walking a directory tree or parsing a file and categorizing seen files.
+
+The directory walking functionality is used by
+`oxidized_importer.find_resources_in_path()` and Starlark methods like
+`PythonExecutable.pip_install()` and
+`PythonExecutable.read_package_root()`.
+
+The file parsing logic is used for parsing the contents of wheels.
+
+This command can be used to debug failures with PyOxidizer's code
+for converting files/directories into strongly typed objects. This
+conversion is critical for properly packaging Python applications and
+bugs can result in incorrect install layouts, missing resources, etc.
+";
+
 pub fn run_cli() -> Result<()> {
     let env = crate::environment::resolve_environment()?;
 
@@ -120,6 +139,34 @@ pub fn run_cli() -> Result<()> {
                         .takes_value(true)
                         .help("The config file target to resolve"),
                 ),
+        )
+        .subcommand(
+            SubCommand::with_name("find-resources")
+                .about("Find resources in a file or directory")
+                .long_about(RESOURCES_SCAN_ABOUT)
+                .setting(AppSettings::ArgRequiredElseHelp)
+                .arg(
+                    Arg::with_name("distributions_dir")
+                        .long("distributions-dir")
+                        .takes_value(true)
+                        .value_name("PATH")
+                        .help("Directory to extract downloaded Python distributions into"),
+                )
+                .arg(
+                    Arg::with_name("scan_distribution")
+                        .long("--scan-distribution")
+                        .help("Scan the Python distribution instead of a path"),
+                )
+                .arg(
+                    Arg::with_name("target_triple")
+                        .long("target-triple")
+                        .takes_value(true)
+                        .default_value(env!("HOST"))
+                        .help("Target triple of Python distribution to use"),
+                )
+                .arg(Arg::with_name("path").value_name("PATH").help(
+                    "Filesystem path to scan for resources. Must be a directory or Python wheel",
+                )),
         )
         .subcommand(
             SubCommand::with_name("init-config-file")
@@ -311,6 +358,33 @@ pub fn run_cli() -> Result<()> {
                 release,
                 verbose,
             )
+        }
+
+        ("find-resources", Some(args)) => {
+            let path = if let Some(value) = args.value_of("path") {
+                Some(Path::new(value))
+            } else {
+                None
+            };
+            let distributions_dir = if let Some(value) = args.value_of("distributions_dir") {
+                Some(Path::new(value))
+            } else {
+                None
+            };
+            let scan_distribution = args.is_present("scan_distribution");
+            let target_triple = args.value_of("target_triple").unwrap();
+
+            if path.is_none() && !scan_distribution {
+                Err(anyhow!("must specify a path or --scan-distribution"))
+            } else {
+                projectmgmt::find_resources(
+                    &logger_context.logger,
+                    path,
+                    distributions_dir,
+                    scan_distribution,
+                    target_triple,
+                )
+            }
         }
 
         ("init-config-file", Some(args)) => {

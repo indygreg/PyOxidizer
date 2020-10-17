@@ -7,12 +7,22 @@
 use {
     crate::project_building::find_pyoxidizer_config_file_env,
     crate::project_layout::{initialize_project, write_new_pyoxidizer_config_file},
-    crate::py_packaging::standalone_distribution::StandaloneDistribution,
+    crate::py_packaging::{
+        distribution::{default_distribution_location, resolve_distribution, DistributionFlavor},
+        standalone_distribution::StandaloneDistribution,
+    },
     crate::starlark::eval::{eval_starlark_config_file, EvalResult},
     anyhow::{anyhow, Result},
-    std::fs::create_dir_all,
-    std::io::{Cursor, Read},
-    std::path::Path,
+    python_packaging::{
+        filesystem_scanning::find_python_resources,
+        resource::{DataLocation, PythonResource},
+        wheel::WheelArchive,
+    },
+    std::{
+        fs::create_dir_all,
+        io::{Cursor, Read},
+        path::Path,
+    },
 };
 
 /// Attempt to resolve the default Rust target for a build.
@@ -144,6 +154,117 @@ pub fn run(
     )?;
 
     res.context.run_target(target)
+}
+
+/// Find resources given a source path.
+pub fn find_resources(
+    logger: &slog::Logger,
+    path: Option<&Path>,
+    distributions_dir: Option<&Path>,
+    scan_distribution: bool,
+    target_triple: &str,
+) -> Result<()> {
+    let distribution_location =
+        default_distribution_location(&DistributionFlavor::Standalone, target_triple, None)?;
+
+    let mut temp_dir = None;
+
+    let extract_path = if let Some(path) = distributions_dir {
+        path
+    } else {
+        temp_dir.replace(tempdir::TempDir::new("python-distribution")?);
+        temp_dir.as_ref().unwrap().path()
+    };
+
+    let dist = resolve_distribution(logger, &distribution_location, extract_path)?;
+
+    if scan_distribution {
+        println!("scanning distribution");
+
+        for ext in dist.iter_extension_modules() {
+            print_resource(&PythonResource::from(ext));
+        }
+        for source in dist.source_modules()? {
+            print_resource(&PythonResource::from(source));
+        }
+        for data in dist.resource_datas()? {
+            print_resource(&PythonResource::from(data));
+        }
+    } else if let Some(path) = path {
+        if path.is_dir() {
+            println!("scanning directory {}", path.display());
+            for resource in
+                find_python_resources(path, dist.cache_tag(), &dist.python_module_suffixes()?)
+            {
+                print_resource(&resource?);
+            }
+        } else if path.is_file() {
+            if let Some(extension) = path.extension() {
+                if extension.to_string_lossy() == "whl" {
+                    println!("parsing {} as a wheel archive", path.display());
+                    let wheel = WheelArchive::from_path(path)?;
+
+                    for resource in
+                        wheel.python_resources(dist.cache_tag(), &dist.python_module_suffixes()?)?
+                    {
+                        print_resource(&resource)
+                    }
+
+                    return Ok(());
+                }
+            }
+
+            println!("do not know how to find resources in {}", path.display());
+        } else {
+            println!("do not know how to find resources in {}", path.display());
+        }
+    } else {
+        println!("do not know what to scan");
+    }
+
+    Ok(())
+}
+
+fn print_resource(r: &PythonResource) {
+    match r {
+        PythonResource::ModuleSource(m) => println!(
+            "PythonModuleSource {{ name: {}, is_package: {}, is_stdlib: {}, is_test: {} }}",
+            m.name, m.is_package, m.is_stdlib, m.is_test
+        ),
+        PythonResource::ModuleBytecode(m) => println!(
+            "PythonModuleBytecode {{ name: {}, is_package: {}, is_stdlib: {}, is_test: {}, bytecode_level: {} }}",
+            m.name, m.is_package, m.is_stdlib, m.is_test, i32::from(m.optimize_level)
+        ),
+        PythonResource::ModuleBytecodeRequest(_) => println!(
+            "PythonModuleBytecodeRequest {{ you should never see this }}"
+        ),
+        PythonResource::PackageResource(r) => println!(
+            "PythonPackageResource {{ package: {}, name: {}, is_stdlib: {}, is_test: {} }}", r.leaf_package, r.relative_name, r.is_stdlib, r.is_test
+        ),
+        PythonResource::PackageDistributionResource(r) => println!(
+            "PythonPackageDistributionResource {{ package: {}, version: {}, name: {} }}", r.package, r.version, r.name
+        ),
+        PythonResource::ExtensionModule(em) => {
+            println!(
+                "PythonExtensionModule {{"
+            );
+            println!("    name: {}", em.name);
+            println!("    is_builtin: {}", em.builtin_default);
+            println!("    has_shared_library: {}", em.shared_library.is_some());
+            println!("    has_object_files: {}", !em.object_file_data.is_empty());
+            println!("    link_libraries: {:?}", em.link_libraries);
+            println!("}}");
+        },
+        PythonResource::EggFile(e) => println!(
+            "PythonEggFile {{ path: {} }}", match &e.data {
+                DataLocation::Path(p) => p.display().to_string(),
+                DataLocation::Memory(_) => "memory".to_string(),
+            }
+        ),
+        PythonResource::PathExtension(_pe) => println!(
+            "PythonPathExtension",
+        ),
+    }
 }
 
 /// Initialize a PyOxidizer configuration file in a given directory.

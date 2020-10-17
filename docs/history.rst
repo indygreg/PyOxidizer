@@ -48,6 +48,10 @@ New Features
 * A ``print(*args)`` function is now exposed to Starlark. This function is
   documented as a Starlark built-in but isn't provided by the Rust Starlark
   implementation by default. So we've implemented it ourselves. (#292)
+* The new ``pyoxidizer find-resources`` command can be used to invoke
+  PyOxidizer's code for scanning files for resources. This command can be
+  used to debug and triage bugs related to PyOxidizer's custom code for
+  finding and handling resources.
 
 Bug Fixes
 ^^^^^^^^^

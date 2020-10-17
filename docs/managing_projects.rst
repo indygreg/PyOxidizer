@@ -189,3 +189,54 @@ are governed by the X11, and GPL-3.0 licenses::
    can be wrong. They do not constitute a legal promise. Paranoid
    individuals may want to double check the license annotations by
    verifying with source code distributions, for example.
+
+.. _cli_find_resources:
+
+Debugging Resource Scanning and Identification with ``find-resources``
+======================================================================
+
+The ``pyoxidizer find-resources`` command can be used to scan for
+resources in a given source and then print information on what's found.
+
+PyOxidizer's packaging functionality scans directories and files and
+classifies them as Python resources which can be operated on. See
+:ref:`packaging_resource_types`. PyOxidizer's run-time importer/loader
+(:ref:`oxidized_importer`) works by reading a pre-built index of known
+resources. This all works in contrast to how Python typically works,
+which is to put a bunch of files in directories and let the built-in
+importer/loader figure it out by dynamically probing for various files.
+
+Because PyOxidizer has introduced structure where it doesn't exist
+in Python and because there are many subtle nuances with how files
+are classified, there can be bugs in PyOxidizer's resource scanning
+code.
+
+The ``pyoxidizer find-resources`` command exists to facilitate
+debugging PyOxidizer's resource scanning code.
+
+Simply give the command a path to a directory or Python wheel archive
+and it will tell you what it discovers. e.g.::
+
+   $ pyoxidizer find-resources dist/oxidized_importer-0.1-cp38-cp38-manylinux1_x86_64.whl
+   parsing dist/oxidized_importer-0.1-cp38-cp38-manylinux1_x86_64.whl as a wheel archive
+   PythonExtensionModule { name: oxidized_importer }
+   PythonPackageDistributionResource { package: oxidized-importer, version: 0.1, name: LICENSE }
+   PythonPackageDistributionResource { package: oxidized-importer, version: 0.1, name: WHEEL }
+   PythonPackageDistributionResource { package: oxidized-importer, version: 0.1, name: top_level.txt }
+   PythonPackageDistributionResource { package: oxidized-importer, version: 0.1, name: METADATA }
+   PythonPackageDistributionResource { package: oxidized-importer, version: 0.1, name: RECORD }
+
+Or give it the path to a ``site-packages`` directory::
+
+   $ pyoxidizer find-resources ~/.pyenv/versions/3.8.6/lib/python3.8/site-packages
+   ...
+
+This command needs to use a Python distribution so it knows what file
+extensions correspond to Python extensions, etc. By default, it will
+download one of the
+:ref:`built-in distributions <packaging_python_distributions>` that is
+compatible with the current machine and use that. You can specify a
+``--distributions-dir`` to use to cache downloaded distributions::
+
+   $ pyoxidizer find-resources --distributions-dir distributions /usr/lib/python3.8
+   ...
