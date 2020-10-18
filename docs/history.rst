@@ -71,6 +71,10 @@ New Features
   ``file_scanner_classify_files`` and ``file_scanner_emit_files`` attributes
   controlling whether file scanning attempts to classify files and whether
   generic file instances are emitted, respectively.
+* The Starlark ``PythonPackagingPolicy`` type now exposes
+  ``include_classified_resources`` and ``include_file_resources`` attributes
+  to control whether certain classes of resources have their ``add_include``
+  attribute set by default.
 
 Bug Fixes
 ^^^^^^^^^

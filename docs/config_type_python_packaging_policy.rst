@@ -160,6 +160,18 @@ Can be used in conjunction with
 
 Default is ``False``.
 
+.. _config_type_python_packaging_policy_include_classified_resources:
+
+``include_classified_resources``
+--------------------------------
+
+(``bool``)
+
+Whether strongly typed, classified non-``File`` resources have their
+``add_include`` attribute set to ``True`` by default.
+
+Default is ``True``.
+
 .. _config_type_python_packaging_policy_include_distribution_sources:
 
 ``include_distribution_sources``
@@ -181,6 +193,18 @@ Default is ``True``.
 
 Whether to add Python package resources for Python packages
 in the Python distribution.
+
+Default is ``False``.
+
+.. _config_type_python_packaging_policy_include_file_resources:
+
+``include_file_resources``
+--------------------------
+
+(``bool``)
+
+Whether :ref:`config_type_file` resources have their ``add_include`` attribute
+set to ``True`` by default.
 
 Default is ``False``.
 

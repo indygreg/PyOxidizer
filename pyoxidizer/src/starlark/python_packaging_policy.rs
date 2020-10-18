@@ -126,6 +126,8 @@ impl TypedValue for PythonPackagingPolicyValue {
             "include_distribution_resources" => {
                 Value::from(self.inner.include_distribution_resources())
             }
+            "include_classified_resources" => Value::from(self.inner.include_non_file_resources()),
+            "include_file_resources" => Value::from(self.inner.include_file_resources()),
             "include_non_distribution_sources" => {
                 Value::from(self.inner.include_non_distribution_sources())
             }
@@ -162,6 +164,8 @@ impl TypedValue for PythonPackagingPolicyValue {
             "file_scanner_emit_files" => true,
             "include_distribution_sources" => true,
             "include_distribution_resources" => true,
+            "include_classified_resources" => true,
+            "include_file_resources" => true,
             "include_non_distribution_sources" => true,
             "include_test" => true,
             "preferred_extension_module_variants" => true,
@@ -207,12 +211,18 @@ impl TypedValue for PythonPackagingPolicyValue {
             "file_scanner_emit_files" => {
                 self.inner.set_file_scanner_emit_files(value.to_bool());
             }
+            "include_classified_resources" => {
+                self.inner.set_include_non_file_resources(value.to_bool());
+            }
             "include_distribution_sources" => {
                 self.inner.set_include_distribution_sources(value.to_bool());
             }
             "include_distribution_resources" => {
                 self.inner
                     .set_include_distribution_resources(value.to_bool());
+            }
+            "include_file_resources" => {
+                self.inner.set_include_file_resources(value.to_bool());
             }
             "include_non_distribution_sources" => {
                 self.inner
@@ -378,6 +388,16 @@ mod tests {
         assert_eq!(value.get_type(), "bool");
         assert!(value.to_bool());
 
+        let value = env.eval("policy.include_classified_resources")?;
+        assert_eq!(value.get_type(), "bool");
+        assert!(value.to_bool());
+
+        let value = env.eval(
+            "policy.include_classified_resources = False; policy.include_classified_resources",
+        )?;
+        assert_eq!(value.get_type(), "bool");
+        assert!(!value.to_bool());
+
         let value = env.eval("policy.include_distribution_sources")?;
         assert_eq!(value.get_type(), "bool");
         assert_eq!(value.to_bool(), policy.include_distribution_sources());
@@ -404,6 +424,15 @@ mod tests {
         let value = env.eval(
             "policy.include_distribution_resources = True; policy.include_distribution_resources",
         )?;
+        assert!(value.to_bool());
+
+        let value = env.eval("policy.include_file_resources")?;
+        assert_eq!(value.get_type(), "bool");
+        assert!(!value.to_bool());
+
+        let value =
+            env.eval("policy.include_file_resources = True; policy.include_file_resources")?;
+        assert_eq!(value.get_type(), "bool");
         assert!(value.to_bool());
 
         let value = env.eval("policy.include_non_distribution_sources")?;
