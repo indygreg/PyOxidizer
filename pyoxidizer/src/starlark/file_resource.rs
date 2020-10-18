@@ -149,7 +149,7 @@ impl TypedValue for FileManifestValue {
     type Holder = Mutable<FileManifestValue>;
     const TYPE: &'static str = "FileManifest";
 
-    fn values_for_descendant_check_and_freeze<'a>(&'a self) -> Box<dyn Iterator<Item = Value>> {
+    fn values_for_descendant_check_and_freeze(&self) -> Box<dyn Iterator<Item = Value>> {
         Box::new(std::iter::empty())
     }
 }
