@@ -195,7 +195,7 @@ impl StandalonePythonExecutableBuilder {
                 allowed_locations,
                 allowed_extension_module_locations,
                 allow_new_builtin_extension_modules,
-                false,
+                packaging_policy.allow_files(),
                 &cache_tag,
             ),
             core_build_context: LibPythonBuildContext::default(),

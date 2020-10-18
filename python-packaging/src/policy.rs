@@ -75,6 +75,14 @@ pub struct PythonPackagingPolicy {
     /// can get overrules by platform-specific capabilities.
     allow_in_memory_shared_library_loading: bool,
 
+    /// Whether untyped files are allowed.
+    ///
+    /// If true, `FileData` instances can be added to the resource collector.
+    ///
+    /// If false, resources must be strongly typed (`PythonModuleSource`,
+    /// `PythonPackageResource`, etc).
+    allow_files: bool,
+
     /// Whether to include source module from the Python distribution.
     include_distribution_sources: bool,
 
@@ -111,6 +119,7 @@ impl Default for PythonPackagingPolicy {
             resources_location: ConcreteResourceLocation::InMemory,
             resources_location_fallback: None,
             allow_in_memory_shared_library_loading: false,
+            allow_files: false,
             include_distribution_sources: true,
             include_non_distribution_sources: true,
             include_distribution_resources: false,
@@ -168,6 +177,16 @@ impl PythonPackagingPolicy {
     /// Set the fallback location for added resources.
     pub fn set_resources_location_fallback(&mut self, location: Option<ConcreteResourceLocation>) {
         self.resources_location_fallback = location;
+    }
+
+    /// Whether to allow untyped `FileData` resources.
+    pub fn allow_files(&self) -> bool {
+        self.allow_files
+    }
+
+    /// Set whether to allow untyped `FileData` resources.
+    pub fn set_allow_files(&mut self, value: bool) {
+        self.allow_files = value;
     }
 
     /// Whether to allow in-memory shared library loading.

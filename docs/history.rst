@@ -65,6 +65,8 @@ New Features
   finding and handling resources.
 * Executables built on Windows now embed an application manifest that enables
   long paths support. (#197)
+* The Starlark ``PythonPackagingPolicy`` type now exposes an ``allow_files``
+  attribute controlling whether files can be added as resources.
 
 Bug Fixes
 ^^^^^^^^^

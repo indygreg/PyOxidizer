@@ -15,6 +15,22 @@ Attributes
 The following sections describe the attributes available on each
 instance.
 
+.. _config_type_python_packaging_policy_allow_files:
+
+``allow_files``
+---------------
+
+(``bool``)
+
+Whether to allow the collection of generic *file* resources.
+
+If false, all collected/packaged resources must be instances of
+concrete resource types (``PythonModuleSource``, ``PythonPackageResource``,
+etc).
+
+If true, generic file resources can be collected and indexed as generic
+files.
+
 .. _config_type_python_packaging_policy_allow_in_memory_shared_library_loading:
 
 ``allow_in_memory_shared_library_loading``
