@@ -375,6 +375,9 @@ pub struct StandaloneDistribution {
     /// Path to Python standard library.
     pub stdlib_path: PathBuf,
 
+    /// Python packages in the standard library providing tests.
+    stdlib_test_packages: Vec<String>,
+
     /// How libpython is linked in this distribution.
     link_mode: StandaloneDistributionLinkMode,
 
@@ -891,6 +894,7 @@ impl StandaloneDistribution {
             version: pi.python_version.clone(),
             python_exe: python_exe_path(dist_dir)?,
             stdlib_path,
+            stdlib_test_packages: pi.python_stdlib_test_packages,
             link_mode,
             python_symbol_visibility: pi.python_symbol_visibility,
             extension_module_loading: pi.python_extension_module_loading,
