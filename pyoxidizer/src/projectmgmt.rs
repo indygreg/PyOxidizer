@@ -182,15 +182,8 @@ pub fn find_resources(
 
     if scan_distribution {
         println!("scanning distribution");
-
-        for ext in dist.iter_extension_modules() {
-            print_resource(&PythonResource::from(ext));
-        }
-        for source in dist.source_modules()? {
-            print_resource(&PythonResource::from(source));
-        }
-        for data in dist.resource_datas()? {
-            print_resource(&PythonResource::from(data));
+        for resource in dist.python_resources() {
+            print_resource(&resource);
         }
     } else if let Some(path) = path {
         if path.is_dir() {

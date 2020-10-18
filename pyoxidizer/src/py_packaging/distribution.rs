@@ -19,7 +19,9 @@ use {
         bytecode::PythonBytecodeCompiler,
         module_util::PythonModuleSuffixes,
         policy::PythonPackagingPolicy,
-        resource::{PythonExtensionModule, PythonModuleSource, PythonPackageResource},
+        resource::{
+            PythonExtensionModule, PythonModuleSource, PythonPackageResource, PythonResource,
+        },
     },
     sha2::{Digest, Sha256},
     slog::warn,
@@ -153,6 +155,9 @@ pub trait PythonDistribution {
         config: &EmbeddedPythonConfig,
         host_distribution: Option<Arc<dyn PythonDistribution>>,
     ) -> Result<Box<dyn PythonBinaryBuilder>>;
+
+    /// Obtain `PythonResource` instances for every resource in this distribution.
+    fn python_resources(&self) -> Vec<PythonResource>;
 
     /// Obtain `PythonExtensionModule` instances present in this distribution.
     ///
