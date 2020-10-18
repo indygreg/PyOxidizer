@@ -69,6 +69,7 @@ impl OxidizedResourceCollector {
             allowed_locations.clone(),
             allowed_locations,
             true,
+            true,
             &cache_tag,
         );
 

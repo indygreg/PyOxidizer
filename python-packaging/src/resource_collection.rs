@@ -631,6 +631,9 @@ pub struct PythonResourceCollector {
     /// built-in.
     allow_new_builtin_extension_modules: bool,
 
+    /// Whether untyped files (`FileData`) can be added.
+    allow_files: bool,
+
     /// Named resources that have been collected.
     resources: BTreeMap<String, PrePackagedResource>,
     /// Bytecode cache tag to use for compiled bytecode modules.
@@ -649,12 +652,14 @@ impl PythonResourceCollector {
         allowed_locations: Vec<AbstractResourceLocation>,
         allowed_extension_module_locations: Vec<AbstractResourceLocation>,
         allow_new_builtin_extension_modules: bool,
+        allow_files: bool,
         cache_tag: &str,
     ) -> Self {
         Self {
             allowed_locations,
             allowed_extension_module_locations,
             allow_new_builtin_extension_modules,
+            allow_files,
             resources: BTreeMap::new(),
             cache_tag: cache_tag.to_string(),
         }
@@ -1460,6 +1465,12 @@ impl PythonResourceCollector {
         file: &FileData,
         location: &ConcreteResourceLocation,
     ) -> Result<()> {
+        if !self.allow_files {
+            return Err(anyhow!(
+                "untyped files are now allowed on this resource collector"
+            ));
+        }
+
         self.check_policy(location.into())?;
 
         let entry =
@@ -2759,6 +2770,7 @@ mod tests {
             vec![AbstractResourceLocation::InMemory],
             vec![],
             false,
+            false,
             DEFAULT_CACHE_TAG,
         );
         r.add_python_module_source(
@@ -2809,6 +2821,7 @@ mod tests {
         let mut r = PythonResourceCollector::new(
             vec![AbstractResourceLocation::InMemory],
             vec![],
+            false,
             false,
             DEFAULT_CACHE_TAG,
         );
@@ -2882,6 +2895,7 @@ mod tests {
         let mut r = PythonResourceCollector::new(
             vec![AbstractResourceLocation::RelativePath],
             vec![],
+            false,
             false,
             DEFAULT_CACHE_TAG,
         );
@@ -2962,6 +2976,7 @@ mod tests {
         let mut r = PythonResourceCollector::new(
             vec![AbstractResourceLocation::InMemory],
             vec![],
+            false,
             false,
             DEFAULT_CACHE_TAG,
         );
@@ -3083,6 +3098,7 @@ mod tests {
             vec![AbstractResourceLocation::InMemory],
             vec![],
             false,
+            false,
             DEFAULT_CACHE_TAG,
         );
         r.add_python_module_bytecode(
@@ -3134,6 +3150,7 @@ mod tests {
         let mut r = PythonResourceCollector::new(
             vec![AbstractResourceLocation::InMemory],
             vec![],
+            false,
             false,
             DEFAULT_CACHE_TAG,
         );
@@ -3188,6 +3205,7 @@ mod tests {
         let mut r = PythonResourceCollector::new(
             vec![AbstractResourceLocation::InMemory],
             vec![],
+            false,
             false,
             DEFAULT_CACHE_TAG,
         );
@@ -3308,6 +3326,7 @@ mod tests {
             vec![AbstractResourceLocation::InMemory],
             vec![],
             false,
+            false,
             DEFAULT_CACHE_TAG,
         );
         r.add_python_module_bytecode_from_source(
@@ -3382,6 +3401,7 @@ mod tests {
         let mut r = PythonResourceCollector::new(
             vec![AbstractResourceLocation::InMemory],
             vec![],
+            false,
             false,
             DEFAULT_CACHE_TAG,
         );
@@ -3504,6 +3524,7 @@ mod tests {
             vec![AbstractResourceLocation::InMemory],
             vec![],
             false,
+            false,
             DEFAULT_CACHE_TAG,
         );
         r.add_python_package_resource(
@@ -3562,6 +3583,7 @@ mod tests {
         let mut r = PythonResourceCollector::new(
             vec![AbstractResourceLocation::RelativePath],
             vec![],
+            false,
             false,
             DEFAULT_CACHE_TAG,
         );
@@ -3637,6 +3659,7 @@ mod tests {
         let mut r = PythonResourceCollector::new(
             vec![AbstractResourceLocation::InMemory],
             vec![],
+            false,
             false,
             DEFAULT_CACHE_TAG,
         );
@@ -3723,6 +3746,7 @@ mod tests {
             vec![AbstractResourceLocation::InMemory],
             vec![],
             false,
+            false,
             DEFAULT_CACHE_TAG,
         );
         r.add_python_package_distribution_resource(
@@ -3781,6 +3805,7 @@ mod tests {
         let mut r = PythonResourceCollector::new(
             vec![AbstractResourceLocation::RelativePath],
             vec![],
+            false,
             false,
             DEFAULT_CACHE_TAG,
         );
@@ -3856,6 +3881,7 @@ mod tests {
         let mut r = PythonResourceCollector::new(
             vec![AbstractResourceLocation::InMemory],
             vec![],
+            false,
             false,
             DEFAULT_CACHE_TAG,
         );
@@ -3937,6 +3963,7 @@ mod tests {
             vec![AbstractResourceLocation::InMemory],
             vec![AbstractResourceLocation::InMemory],
             false,
+            false,
             DEFAULT_CACHE_TAG,
         );
 
@@ -4015,6 +4042,7 @@ mod tests {
             vec![AbstractResourceLocation::InMemory],
             vec![],
             false,
+            false,
             DEFAULT_CACHE_TAG,
         );
 
@@ -4025,6 +4053,7 @@ mod tests {
         let mut c = PythonResourceCollector::new(
             vec![AbstractResourceLocation::InMemory],
             vec![AbstractResourceLocation::InMemory],
+            false,
             false,
             DEFAULT_CACHE_TAG,
         );
@@ -4111,6 +4140,7 @@ mod tests {
             vec![AbstractResourceLocation::RelativePath],
             vec![],
             false,
+            false,
             DEFAULT_CACHE_TAG,
         );
         let res = c.add_python_extension_module(
@@ -4123,6 +4153,7 @@ mod tests {
         let mut c = PythonResourceCollector::new(
             vec![AbstractResourceLocation::RelativePath],
             vec![AbstractResourceLocation::RelativePath],
+            false,
             false,
             DEFAULT_CACHE_TAG,
         );
@@ -4221,6 +4252,7 @@ mod tests {
             vec![AbstractResourceLocation::InMemory],
             vec![],
             false,
+            false,
             DEFAULT_CACHE_TAG,
         );
 
@@ -4286,8 +4318,21 @@ mod tests {
             vec![AbstractResourceLocation::InMemory],
             vec![],
             false,
+            false,
             DEFAULT_CACHE_TAG,
         );
+        assert!(r
+            .add_file_data(
+                &FileData {
+                    path: PathBuf::from("foo/bar.py"),
+                    is_executable: false,
+                    data: DataLocation::Memory(vec![42]),
+                },
+                &ConcreteResourceLocation::InMemory,
+            )
+            .is_err());
+
+        r.allow_files = true;
         r.add_file_data(
             &FileData {
                 path: PathBuf::from("foo/bar.py"),
@@ -4333,6 +4378,7 @@ mod tests {
             vec![AbstractResourceLocation::RelativePath],
             vec![],
             false,
+            true,
             DEFAULT_CACHE_TAG,
         );
         r.add_file_data(
@@ -4390,6 +4436,7 @@ mod tests {
             vec![AbstractResourceLocation::InMemory],
             vec![],
             false,
+            true,
             DEFAULT_CACHE_TAG,
         );
 
@@ -4456,6 +4503,7 @@ mod tests {
         let mut r = PythonResourceCollector::new(
             vec![AbstractResourceLocation::InMemory],
             vec![],
+            false,
             false,
             DEFAULT_CACHE_TAG,
         );
