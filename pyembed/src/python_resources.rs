@@ -894,7 +894,7 @@ impl<'a> PythonResourcesState<'a, u8> {
 
         let mut buffer = Vec::new();
 
-        python_packed_resources::writer::write_packed_resources_v2(&resources, &mut buffer, None)?;
+        python_packed_resources::writer::write_packed_resources_v3(&resources, &mut buffer, None)?;
 
         Ok(buffer)
     }

@@ -48,6 +48,10 @@ Backwards Compatibility Notes
   Python interpreter's path configuration are now always set to the
   currently running executable and its directory, respectively, unless
   explicit values have been provided.
+* The packed resource data version has changed from 2 to 3 in order to
+  support storing arbitrary file data. Support for reading and writing
+  version 2 has been removed. Packed resources blobs will need to be
+  regenerated in order to be compatible with new versions of PyOxidizer.
 
 New Features
 ^^^^^^^^^^^^

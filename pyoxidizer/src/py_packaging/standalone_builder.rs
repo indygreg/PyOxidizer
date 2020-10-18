@@ -666,7 +666,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         }
 
         let mut resources = Vec::new();
-        compiled_resources.write_packed_resources_v1(&mut resources)?;
+        compiled_resources.write_packed_resources(&mut resources)?;
 
         let linking_info = self.resolve_python_linking_info(logger, opt_level)?;
 

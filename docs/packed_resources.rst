@@ -314,6 +314,35 @@ the field. The values of each defined metadata type follow.
    Is shared library flag. This type represents a shared library
    that can be loaded into a process.
 
+``0x1b``
+   Is utf-8 filename data flag. This type represents an arbitrary filename.
+   The resource name is a UTF-8 encoded filename of the file this resource
+   represents. The file's data is either embedded in memory or referred to
+   via a relative path reference.
+
+``0x1c``
+   File data is executable flag.
+
+   If set, the arbitrary file this resource tracks should be marked as
+   executable.
+
+``0x1d``
+   Embedded file data.
+
+   If present, the resource should be a file resource and this field holds its
+   raw file data in memory.
+
+   A ``u64`` containing the length of the embedded data follows this field.
+
+``0x1e``
+   UTF-8 relative path file data.
+
+   If present, the resource should be a file resource and this field defines
+   the relative path containing that file's data. The relative path filename
+   is UTF-8 encoded.
+
+   A ``u32`` denoting the length of the UTF-8 relative path (in bytes) follows.
+
 Resource Flavors
 ----------------
 
@@ -366,6 +395,23 @@ field types denoting resource types should be used instead.
 
 (PyOxidizer removed run-time code looking at field type ``0x02`` when
 this format was introduced.)
+
+``pyembed\x03`` Format
+----------------------
+
+Version 3 of the packed resources data format.
+
+This version introduces field type values ``0x1b`` to ``0x1e``.
+
+These fields provide the ability for a resource to identify itself as
+an arbitrary filename and for the arbitrary file data to be embedded
+within the data structure or referenced via a relative path.
+
+Unlike previous fields that use OS-native encoding of filesystem
+paths (``[u8]`` on POSIX and ``[u16]`` on Windows), the paths for
+these new fields use UTF-8. This can't represent all valid paths on
+all platforms. But it is portable and works for most paths encountered
+in the wild.
 
 Design Considerations
 =====================

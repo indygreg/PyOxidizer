@@ -7,7 +7,7 @@
 use std::{borrow::Cow, collections::HashMap, convert::TryFrom, iter::FromIterator, path::Path};
 
 /// Header value for version 2 of resources payload.
-pub const HEADER_V2: &[u8] = b"pyembed\x02";
+pub const HEADER_V3: &[u8] = b"pyembed\x03";
 
 /// Defines the type of a resource.
 ///
@@ -152,6 +152,10 @@ pub enum ResourceField {
     IsFrozenModule = 0x18,
     IsExtensionModule = 0x19,
     IsSharedLibrary = 0x1a,
+    IsUtf8FilenameData = 0x1b,
+    FileExecutable = 0x1c,
+    FileDataEmbedded = 0x1d,
+    FileDataUtf8RelativePath = 0x1e,
 }
 
 impl Into<u8> for ResourceField {
@@ -184,6 +188,10 @@ impl Into<u8> for ResourceField {
             ResourceField::IsFrozenModule => 0x18,
             ResourceField::IsExtensionModule => 0x19,
             ResourceField::IsSharedLibrary => 0x1a,
+            ResourceField::IsUtf8FilenameData => 0x1b,
+            ResourceField::FileExecutable => 0x1c,
+            ResourceField::FileDataEmbedded => 0x1d,
+            ResourceField::FileDataUtf8RelativePath => 0x1e,
             ResourceField::EndOfEntry => 0xff,
         }
     }
@@ -221,6 +229,10 @@ impl TryFrom<u8> for ResourceField {
             0x18 => Ok(ResourceField::IsFrozenModule),
             0x19 => Ok(ResourceField::IsExtensionModule),
             0x1a => Ok(ResourceField::IsSharedLibrary),
+            0x1b => Ok(ResourceField::IsUtf8FilenameData),
+            0x1c => Ok(ResourceField::FileExecutable),
+            0x1d => Ok(ResourceField::FileDataEmbedded),
+            0x1e => Ok(ResourceField::FileDataUtf8RelativePath),
             0xff => Ok(ResourceField::EndOfEntry),
             _ => Err("invalid field type"),
         }
@@ -264,6 +276,13 @@ where
 
     /// Whether this resource defines a shared library.
     pub is_shared_library: bool,
+
+    /// Whether this resource defines data for an arbitrary file.
+    ///
+    /// If set, `name` is the UTF-8 encoded filename being represented.
+    ///
+    /// The file data should exist in one of the `file_data_*` fields.
+    pub is_utf8_filename_data: bool,
 
     /// Whether the Python module is a package.
     pub is_package: bool,
@@ -323,6 +342,15 @@ where
 
     /// Mapping of Python package distribution files to relative filesystem paths for those resources.
     pub relative_path_distribution_resources: Option<HashMap<Cow<'a, str>, Cow<'a, Path>>>,
+
+    /// Whether this resource's file data should be executable.
+    pub file_executable: bool,
+
+    /// Holds arbitrary file data in memory.
+    pub file_data_embedded: Option<Cow<'a, [X]>>,
+
+    /// Holds arbitrary file data in a relative path encoded in UTF-8.
+    pub file_data_utf8_relative_path: Option<Cow<'a, str>>,
 }
 
 impl<'a, X> Default for Resource<'a, X>
@@ -338,6 +366,7 @@ where
             is_frozen_module: false,
             is_extension_module: false,
             is_shared_library: false,
+            is_utf8_filename_data: false,
             is_package: false,
             is_namespace_package: false,
             in_memory_source: None,
@@ -356,6 +385,9 @@ where
             relative_path_extension_module_shared_library: None,
             relative_path_package_resources: None,
             relative_path_distribution_resources: None,
+            file_executable: false,
+            file_data_embedded: None,
+            file_data_utf8_relative_path: None,
         }
     }
 }
@@ -382,6 +414,7 @@ where
             is_frozen_module: self.is_frozen_module,
             is_extension_module: self.is_extension_module,
             is_shared_library: self.is_shared_library,
+            is_utf8_filename_data: self.is_utf8_filename_data,
             is_package: self.is_package,
             is_namespace_package: self.is_namespace_package,
             in_memory_source: self
@@ -470,6 +503,15 @@ where
                         )
                     }))
                 }),
+            file_executable: self.file_executable,
+            file_data_embedded: self
+                .file_data_embedded
+                .as_ref()
+                .map(|value| Cow::Owned(value.clone().into_owned())),
+            file_data_utf8_relative_path: self
+                .file_data_utf8_relative_path
+                .as_ref()
+                .map(|value| Cow::Owned(value.clone().into_owned())),
         }
     }
 }

@@ -6,7 +6,7 @@
 
 use {
     super::data::{
-        BlobInteriorPadding, BlobSectionField, Resource, ResourceField, ResourceFlavor, HEADER_V2,
+        BlobInteriorPadding, BlobSectionField, Resource, ResourceField, ResourceFlavor, HEADER_V3,
     },
     anyhow::{anyhow, Context, Result},
     byteorder::{LittleEndian, WriteBytesExt},
@@ -108,9 +108,9 @@ impl<'a, X: Clone + 'a> Resource<'a, X>
 where
     [X]: ToOwned<Owned = Vec<X>>,
 {
-    /// Whether the module is meaningful.
+    /// Whether the resource is meaningful.
     ///
-    /// The module is meaningful if it has data attached or is a package.
+    /// The resource is meaningful if it has data attached or is a package.
     pub fn is_meaningful(&self) -> bool {
         self.is_package
             || self.is_namespace_package
@@ -129,6 +129,8 @@ where
             || self.relative_path_extension_module_shared_library.is_some()
             || self.relative_path_package_resources.is_some()
             || self.relative_path_distribution_resources.is_some()
+            || self.file_data_embedded.is_some()
+            || self.file_data_utf8_relative_path.is_some()
     }
 
     /// Compute length of index entry for version 1 payload format.
@@ -244,6 +246,22 @@ where
 
         if self.is_shared_library {
             index += 1;
+        }
+
+        if self.is_utf8_filename_data {
+            index += 1;
+        }
+
+        if self.file_executable {
+            index += 1;
+        }
+
+        if self.file_data_embedded.is_some() {
+            index += 9;
+        }
+
+        if self.file_data_utf8_relative_path.is_some() {
+            index += 5;
         }
 
         // End of index entry.
@@ -393,6 +411,22 @@ where
             ResourceField::IsFrozenModule => 0,
             ResourceField::IsExtensionModule => 0,
             ResourceField::IsSharedLibrary => 0,
+            ResourceField::IsUtf8FilenameData => 0,
+            ResourceField::FileExecutable => 0,
+            ResourceField::FileDataEmbedded => {
+                if let Some(data) = &self.file_data_embedded {
+                    data.len()
+                } else {
+                    0
+                }
+            }
+            ResourceField::FileDataUtf8RelativePath => {
+                if let Some(path) = &self.file_data_utf8_relative_path {
+                    path.as_bytes().len()
+                } else {
+                    0
+                }
+            }
         }
     }
 
@@ -527,6 +561,22 @@ where
             ResourceField::IsFrozenModule => 0,
             ResourceField::IsExtensionModule => 0,
             ResourceField::IsSharedLibrary => 0,
+            ResourceField::IsUtf8FilenameData => 0,
+            ResourceField::FileExecutable => 0,
+            ResourceField::FileDataEmbedded => {
+                if self.file_data_embedded.is_some() {
+                    1
+                } else {
+                    0
+                }
+            }
+            ResourceField::FileDataUtf8RelativePath => {
+                if self.file_data_utf8_relative_path.is_some() {
+                    1
+                } else {
+                    0
+                }
+            }
         };
 
         let overhead = match padding {
@@ -784,6 +834,34 @@ where
                 .context("writing is_shared_library field")?;
         }
 
+        if self.is_utf8_filename_data {
+            dest.write_u8(ResourceField::IsUtf8FilenameData.into())
+                .context("writing is_utf8_filename_data field")?;
+        }
+
+        if self.file_executable {
+            dest.write_u8(ResourceField::FileExecutable.into())
+                .context("writing file_executable field")?;
+        }
+
+        if let Some(data) = &self.file_data_embedded {
+            let l =
+                u64::try_from(data.len()).context("converting embedded file data length to u64")?;
+            dest.write_u8(ResourceField::FileDataEmbedded.into())
+                .context("writing file_data_embedded field")?;
+            dest.write_u64::<LittleEndian>(l)
+                .context("writing file_data_embedded length")?;
+        }
+
+        if let Some(path) = &self.file_data_utf8_relative_path {
+            let l = u32::try_from(path.as_bytes().len())
+                .context("converting embedded file data relative path length to u32")?;
+            dest.write_u8(ResourceField::FileDataUtf8RelativePath.into())
+                .context("writing file_data_utf8_relative_path field")?;
+            dest.write_u32::<LittleEndian>(l)
+                .context("writing file_data_utf_relative_path field")?;
+        }
+
         dest.write_u8(ResourceField::EndOfEntry.into())
             .map_err(|_| anyhow!("error writing end of index entry"))?;
 
@@ -791,9 +869,9 @@ where
     }
 }
 
-/// Write packed resources data, version 2.
+/// Write packed resources data, version 3.
 #[allow(clippy::cognitive_complexity)]
-pub fn write_packed_resources_v2<'a, T: AsRef<Resource<'a, u8>>, W: Write>(
+pub fn write_packed_resources_v3<'a, T: AsRef<Resource<'a, u8>>, W: Write>(
     modules: &[T],
     dest: &mut W,
     interior_padding: Option<BlobInteriorPadding>,
@@ -914,6 +992,12 @@ pub fn write_packed_resources_v2<'a, T: AsRef<Resource<'a, u8>>, W: Write>(
             module,
             ResourceField::RelativeFilesystemDistributionResource,
         );
+        process_field(&mut blob_sections, module, ResourceField::FileDataEmbedded);
+        process_field(
+            &mut blob_sections,
+            module,
+            ResourceField::FileDataUtf8RelativePath,
+        );
     }
 
     for section in blob_sections.values() {
@@ -921,7 +1005,7 @@ pub fn write_packed_resources_v2<'a, T: AsRef<Resource<'a, u8>>, W: Write>(
         blob_index_length += section.index_v1_length();
     }
 
-    dest.write_all(HEADER_V2)?;
+    dest.write_all(HEADER_V3)?;
 
     dest.write_u8(blob_section_count)?;
     dest.write_u32::<LittleEndian>(blob_index_length as u32)?;
@@ -1079,6 +1163,20 @@ pub fn write_packed_resources_v2<'a, T: AsRef<Resource<'a, u8>>, W: Write>(
         }
     }
 
+    for module in modules {
+        if let Some(data) = &module.as_ref().file_data_embedded {
+            dest.write_all(data)?;
+            add_interior_padding(dest)?;
+        }
+    }
+
+    for module in modules {
+        if let Some(path) = &module.as_ref().file_data_utf8_relative_path {
+            dest.write_all(path.as_bytes())?;
+            add_interior_padding(dest)?;
+        }
+    }
+
     Ok(())
 }
 
@@ -1090,9 +1188,9 @@ mod tests {
     fn test_write_empty() -> Result<()> {
         let mut data = Vec::new();
         let resources: Vec<Resource<u8>> = Vec::new();
-        write_packed_resources_v2(&resources, &mut data, None)?;
+        write_packed_resources_v3(&resources, &mut data, None)?;
 
-        let mut expected: Vec<u8> = b"pyembed\x02".to_vec();
+        let mut expected: Vec<u8> = b"pyembed\x03".to_vec();
         // Number of blob sections.
         expected.write_u8(0)?;
         // Length of blob index (end of index marker).
@@ -1119,9 +1217,9 @@ mod tests {
             ..Resource::default()
         };
 
-        write_packed_resources_v2(&[module], &mut data, None)?;
+        write_packed_resources_v3(&[module], &mut data, None)?;
 
-        let mut expected: Vec<u8> = b"pyembed\x02".to_vec();
+        let mut expected: Vec<u8> = b"pyembed\x03".to_vec();
         // Number of blob sections.
         expected.write_u8(1)?;
         // Length of blob index. Start of entry, field type, field value, length field, length, end of entry, end of index.

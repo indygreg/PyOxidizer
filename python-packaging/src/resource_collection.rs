@@ -357,6 +357,10 @@ impl PrePackagedResource {
             is_frozen_module: self.is_frozen_module,
             is_extension_module: self.is_extension_module,
             is_shared_library: self.is_shared_library,
+            is_utf8_filename_data: false,
+            file_executable: false,
+            file_data_embedded: None,
+            file_data_utf8_relative_path: None,
         };
 
         if let Some((prefix, filename, location)) = &self.relative_path_shared_library {
@@ -571,8 +575,8 @@ pub struct CompiledResourcesCollection<'a> {
 
 impl<'a> CompiledResourcesCollection<'a> {
     /// Write resources to packed resources data, version 1.
-    pub fn write_packed_resources_v1<W: std::io::Write>(&self, writer: &mut W) -> Result<()> {
-        python_packed_resources::writer::write_packed_resources_v2(
+    pub fn write_packed_resources<W: std::io::Write>(&self, writer: &mut W) -> Result<()> {
+        python_packed_resources::writer::write_packed_resources_v3(
             &self
                 .resources
                 .values()
