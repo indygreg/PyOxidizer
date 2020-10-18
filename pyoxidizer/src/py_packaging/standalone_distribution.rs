@@ -1385,18 +1385,22 @@ pub mod tests {
     fn test_stdlib_annotations() -> Result<()> {
         let distribution = get_default_distribution()?;
 
-        for module in distribution.source_modules()? {
-            assert!(module.is_stdlib);
+        for resource in distribution.python_resources() {
+            match resource {
+                PythonResource::ModuleSource(module) => {
+                    assert!(module.is_stdlib);
 
-            if module.name.starts_with("test") {
-                assert!(module.is_test);
-            }
-        }
-
-        for resource in distribution.resource_datas()? {
-            assert!(resource.is_stdlib);
-            if resource.leaf_package.starts_with("test") {
-                assert!(resource.is_test);
+                    if module.name.starts_with("test") {
+                        assert!(module.is_test);
+                    }
+                }
+                PythonResource::PackageResource(r) => {
+                    assert!(r.is_stdlib);
+                    if r.leaf_package.starts_with("test") {
+                        assert!(r.is_test);
+                    }
+                }
+                _ => (),
             }
         }
 
