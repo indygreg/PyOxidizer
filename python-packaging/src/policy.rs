@@ -83,6 +83,25 @@ pub struct PythonPackagingPolicy {
     /// `PythonPackageResource`, etc).
     allow_files: bool,
 
+    /// Whether file scanning should emit `PythonResource::File` variants.
+    ///
+    /// If true, this resource variant is emitted when scanning for
+    /// resources. If false, it isn't.
+    ///
+    /// This effectively says whether the file scanner should emit records
+    /// corresponding to the actual file.
+    file_scanner_emit_files: bool,
+
+    /// Whether file scanning should classify files and emit `PythonResource::*`
+    /// variants.
+    ///
+    /// If true, the file scanner will attempt to classify every file as
+    /// a specific resource type and emit a `PythonResource::*` variant
+    /// corresponding to the resource type.
+    ///
+    /// If false, this classification is not performed.
+    file_scanner_classify_files: bool,
+
     /// Whether to include source module from the Python distribution.
     include_distribution_sources: bool,
 
@@ -120,6 +139,8 @@ impl Default for PythonPackagingPolicy {
             resources_location_fallback: None,
             allow_in_memory_shared_library_loading: false,
             allow_files: false,
+            file_scanner_emit_files: false,
+            file_scanner_classify_files: true,
             include_distribution_sources: true,
             include_non_distribution_sources: true,
             include_distribution_resources: false,
@@ -187,6 +208,26 @@ impl PythonPackagingPolicy {
     /// Set whether to allow untyped `FileData` resources.
     pub fn set_allow_files(&mut self, value: bool) {
         self.allow_files = value;
+    }
+
+    /// Whether file scanning should emit `PythonResource::File` variants.
+    pub fn file_scanner_emit_files(&self) -> bool {
+        self.file_scanner_emit_files
+    }
+
+    /// Set whether file scanning should emit `PythonResource::File` variants.
+    pub fn set_file_scanner_emit_files(&mut self, value: bool) {
+        self.file_scanner_emit_files = value;
+    }
+
+    /// Whether file scanning should classify files into `PythonResource::*` variants.
+    pub fn file_scanner_classify_files(&self) -> bool {
+        self.file_scanner_classify_files
+    }
+
+    /// Set whether file scanning should classify files into `PythonResource::*` variants.
+    pub fn set_file_scanner_classify_files(&mut self, value: bool) {
+        self.file_scanner_classify_files = value;
     }
 
     /// Whether to allow in-memory shared library loading.

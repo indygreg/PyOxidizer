@@ -411,6 +411,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         pip_install(
             logger,
             &*self.target_distribution,
+            self.python_packaging_policy(),
             self.link_mode,
             verbose,
             install_args,
@@ -424,20 +425,29 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         path: &Path,
         packages: &[String],
     ) -> Result<Vec<PythonResource>> {
-        Ok(find_resources(&*self.target_distribution, path, None)?
-            .iter()
-            .filter_map(|x| {
-                if x.is_in_packages(packages) {
-                    Some(x.clone())
-                } else {
-                    None
-                }
-            })
-            .collect::<Vec<_>>())
+        Ok(find_resources(
+            &*self.target_distribution,
+            self.python_packaging_policy(),
+            path,
+            None,
+        )?
+        .iter()
+        .filter_map(|x| {
+            if x.is_in_packages(packages) {
+                Some(x.clone())
+            } else {
+                None
+            }
+        })
+        .collect::<Vec<_>>())
     }
 
     fn read_virtualenv(&self, _logger: &slog::Logger, path: &Path) -> Result<Vec<PythonResource>> {
-        read_virtualenv(&*self.target_distribution, path)
+        read_virtualenv(
+            &*self.target_distribution,
+            self.python_packaging_policy(),
+            path,
+        )
     }
 
     fn setup_py_install(
@@ -451,6 +461,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         setup_py_install(
             logger,
             &*self.target_distribution,
+            self.python_packaging_policy(),
             self.link_mode,
             package_path,
             verbose,

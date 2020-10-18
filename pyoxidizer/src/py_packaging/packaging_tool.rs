@@ -17,7 +17,8 @@ use {
     anyhow::{anyhow, Context, Result},
     duct::cmd,
     python_packaging::{
-        filesystem_scanning::find_python_resources, resource::PythonResource, wheel::WheelArchive,
+        filesystem_scanning::find_python_resources, policy::PythonPackagingPolicy,
+        resource::PythonResource, wheel::WheelArchive,
     },
     slog::warn,
     std::{
@@ -179,6 +180,7 @@ pub fn bootstrap_packaging_tools(
 /// Find resources installed as part of a packaging operation.
 pub fn find_resources<'a>(
     dist: &dyn PythonDistribution,
+    policy: &PythonPackagingPolicy,
     path: &Path,
     state_dir: Option<PathBuf>,
 ) -> Result<Vec<PythonResource<'a>>> {
@@ -198,8 +200,8 @@ pub fn find_resources<'a>(
         &path,
         dist.cache_tag(),
         &dist.python_module_suffixes()?,
-        false,
-        true,
+        policy.file_scanner_emit_files(),
+        policy.file_scanner_classify_files(),
     ) {
         let r = r?.to_memory()?;
 
@@ -330,6 +332,7 @@ pub fn pip_download<'a>(
 pub fn pip_install<'a, S: BuildHasher>(
     logger: &slog::Logger,
     dist: &dyn PythonDistribution,
+    policy: &PythonPackagingPolicy,
     libpython_link_mode: LibpythonLinkMode,
     verbose: bool,
     install_args: &[String],
@@ -393,23 +396,25 @@ pub fn pip_install<'a, S: BuildHasher>(
         None => None,
     };
 
-    find_resources(dist, &target_dir, state_dir)
+    find_resources(dist, policy, &target_dir, state_dir)
 }
 
 /// Discover Python resources from a populated virtualenv directory.
 pub fn read_virtualenv<'a>(
     dist: &dyn PythonDistribution,
+    policy: &PythonPackagingPolicy,
     path: &Path,
 ) -> Result<Vec<PythonResource<'a>>> {
     let python_paths = resolve_python_paths(path, &dist.python_major_minor_version());
 
-    find_resources(dist, &python_paths.site_packages, None)
+    find_resources(dist, policy, &python_paths.site_packages, None)
 }
 
 /// Run `setup.py install` against a path and return found resources.
 pub fn setup_py_install<'a, S: BuildHasher>(
     logger: &slog::Logger,
     dist: &dyn PythonDistribution,
+    policy: &PythonPackagingPolicy,
     libpython_link_mode: LibpythonLinkMode,
     package_path: &Path,
     verbose: bool,
@@ -493,7 +498,7 @@ pub fn setup_py_install<'a, S: BuildHasher>(
         "scanning {} for resources",
         python_paths.site_packages.display()
     );
-    find_resources(dist, &python_paths.site_packages, state_dir)
+    find_resources(dist, policy, &python_paths.site_packages, state_dir)
 }
 
 #[cfg(test)]
@@ -512,6 +517,7 @@ mod tests {
         let resources: Vec<PythonResource> = pip_install(
             &logger,
             distribution.deref(),
+            &distribution.create_packaging_policy()?,
             LibpythonLinkMode::Dynamic,
             false,
             &["black==19.10b0".to_string()],
