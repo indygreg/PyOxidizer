@@ -75,6 +75,9 @@ New Features
   ``include_classified_resources`` and ``include_file_resources`` attributes
   to control whether certain classes of resources have their ``add_include``
   attribute set by default.
+* The Starlark ``PythonPackagingPolicy`` type now has a
+  ``set_resources_handling_mode()`` method to quickly apply a mode for
+  resource handling.
 
 Bug Fixes
 ^^^^^^^^^

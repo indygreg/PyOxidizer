@@ -10,7 +10,7 @@ use {
     linked_hash_map::LinkedHashMap,
     python_packaging::{
         location::ConcreteResourceLocation,
-        policy::{ExtensionModuleFilter, PythonPackagingPolicy},
+        policy::{ExtensionModuleFilter, PythonPackagingPolicy, ResourceHandlingMode},
     },
     starlark::{
         environment::TypeValues,
@@ -307,6 +307,22 @@ impl PythonPackagingPolicyValue {
 
         Ok(Value::from(NoneType::None))
     }
+
+    fn starlark_set_resource_handling_mode(&mut self, value: &Value) -> ValueResult {
+        let value = required_str_arg("mode", value)?;
+
+        let mode = ResourceHandlingMode::try_from(value.as_str()).map_err(|e| {
+            ValueError::from(RuntimeError {
+                code: "PYOXIDIZER_BUILD",
+                message: e,
+                label: "set_resource_handling_mode()".to_string(),
+            })
+        })?;
+
+        self.inner.set_resource_handling_mode(mode);
+
+        Ok(Value::from(NoneType::None))
+    }
 }
 
 starlark_module! { python_packaging_policy_module =>
@@ -320,6 +336,13 @@ starlark_module! { python_packaging_policy_module =>
     PythonPackagingPolicy.set_preferred_extension_module_variant(this, name, value) {
         match this.clone().downcast_mut::<PythonPackagingPolicyValue>()? {
             Some(mut policy) => policy.starlark_set_preferred_extension_module_variant(&name, &value),
+            None => Err(ValueError::IncorrectParameterType),
+        }
+    }
+
+    PythonPackagingPolicy.set_resource_handling_mode(this, mode) {
+        match this.clone().downcast_mut::<PythonPackagingPolicyValue>()? {
+            Some(mut policy) => policy.starlark_set_resource_handling_mode(&mode),
             None => Err(ValueError::IncorrectParameterType),
         }
     }
@@ -588,6 +611,23 @@ mod tests {
         let func = policy.derive_context_callbacks[0].clone();
         assert_eq!(func.get_type(), "function");
         assert_eq!(func.to_str(), "my_func(policy, resource)");
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_set_resource_handling_mode() -> Result<()> {
+        let mut env = StarlarkEnvironment::new()?;
+
+        env.eval("dist = default_python_distribution()")?;
+        env.eval("policy = dist.make_python_packaging_policy()")?;
+
+        assert!(env
+            .eval("policy.set_resource_handling_mode('invalid')")
+            .is_err());
+
+        env.eval("policy.set_resource_handling_mode('classify')")?;
+        env.eval("policy.set_resource_handling_mode('files')")?;
 
         Ok(())
     }

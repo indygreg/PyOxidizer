@@ -299,3 +299,33 @@ above for more.
 
 It accepts 2 ``string`` arguments defining the extension module name
 and its preferred variant.
+
+.. _config_type_python_packaging_policy_set_resource_handling_mode:
+
+``PythonPackagingPolicy.set_resource_handling_mode()``
+------------------------------------------------------
+
+This method takes a string argument denoting the *resource handling mode*
+to apply to the policy. This string can have the following values:
+
+``classify``
+   Files are classified as typed resources and handled as such.
+
+   Only classified resources can be added by default.
+
+``files``
+   Files are handled as raw files (as opposed to typed resources).
+
+   Only files can be added by default.
+
+This method is effectively a convenience method for bulk-setting
+multiple attributes on the instance given a behavior mode.
+
+``classify`` will configure the file scanner to emit classified resources,
+configure the ``add_include`` attribute to only be ``True`` on classified
+resources, and will disable the addition of ``File`` resources on resource
+collectors.
+
+``files`` will configure the file scanner to only emit ``File`` resources,
+configure the ``add_include`` attribute to only be ``True`` on ``File``,
+and will allow resource collectors to add ``File`` instances.
