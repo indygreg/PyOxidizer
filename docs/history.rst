@@ -56,8 +56,8 @@ Backwards Compatibility Notes
   ``packed_resources`` field changed from ``Option<&'a [u8]>`` to
   ``Vec<&'a [u8]>`` so multiple resource inputs can be specified.
 * The ``PythonDistribution`` Starlark type no longer has
-  ``package_resources()`` and ``source_modules()`` methods. Use
-  ``PythonDistribution.python_resources()`` instead.
+  ``extension_modules()``, ``package_resources()`` and ``source_modules()``
+  methods. Use ``PythonDistribution.python_resources()`` instead.
 
 New Features
 ^^^^^^^^^^^^

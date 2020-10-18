@@ -8,9 +8,7 @@ use {
         python_executable::PythonExecutable,
         python_interpreter_config::PythonInterpreterConfigValue,
         python_packaging_policy::PythonPackagingPolicyValue,
-        python_resource::{
-            add_context_for_value, python_resource_to_value, PythonExtensionModuleValue,
-        },
+        python_resource::{add_context_for_value, python_resource_to_value},
         util::{optional_str_arg, optional_type_arg, required_str_arg},
     },
     crate::py_packaging::{
@@ -21,7 +19,6 @@ use {
         },
     },
     anyhow::{anyhow, Result},
-    itertools::Itertools,
     python_packaging::{
         policy::PythonPackagingPolicy, resource::PythonResource,
         resource_collection::PythonResourceAddCollectionContext,
@@ -421,17 +418,6 @@ impl PythonDistributionValue {
 
         Ok(Value::from(values))
     }
-
-    /// PythonDistribution.extension_modules()
-    pub fn extension_modules(&mut self, type_values: &TypeValues) -> ValueResult {
-        let dist = self.resolve_distribution(type_values, "resolve_distribution()")?;
-
-        Ok(Value::from(
-            dist.iter_extension_modules()
-                .map(|em| Value::new(PythonExtensionModuleValue::new(em.clone())))
-                .collect_vec(),
-        ))
-    }
 }
 
 starlark_module! { python_distribution_module =>
@@ -457,14 +443,6 @@ starlark_module! { python_distribution_module =>
     PythonDistribution.python_resources(env env, call_stack cs, this) {
         match this.clone().downcast_mut::<PythonDistributionValue>()? {
             Some(mut dist) => dist.python_resources_starlark(&env, cs),
-            None => Err(ValueError::IncorrectParameterType),
-        }
-    }
-
-    #[allow(clippy::ptr_arg)]
-    PythonDistribution.extension_modules(env env, this) {
-        match this.clone().downcast_mut::<PythonDistributionValue>()? {
-            Some(mut dist) => dist.extension_modules(&env),
             None => Err(ValueError::IncorrectParameterType),
         }
     }
@@ -504,7 +482,9 @@ starlark_module! { python_distribution_module =>
 #[cfg(test)]
 mod tests {
     use {
-        super::super::python_resource::{PythonModuleSourceValue, PythonPackageResourceValue},
+        super::super::python_resource::{
+            PythonExtensionModuleValue, PythonModuleSourceValue, PythonPackageResourceValue,
+        },
         super::super::testutil::*,
         super::*,
         crate::py_packaging::distribution::DistributionFlavor,
@@ -678,16 +658,5 @@ mod tests {
             .iter()
             .filter(|v| v.get_type() == PythonPackageResourceValue::TYPE)
             .all(|v| v.get_attr("is_stdlib").unwrap().to_bool()));
-    }
-
-    #[test]
-    fn test_extension_modules() {
-        let mods = starlark_ok("default_python_distribution().extension_modules()");
-        assert_eq!(mods.get_type(), "list");
-
-        for m in mods.iter().unwrap().iter() {
-            assert_eq!(m.get_type(), PythonExtensionModuleValue::TYPE);
-            assert!(m.get_attr("is_stdlib").unwrap().to_bool());
-        }
     }
 }
