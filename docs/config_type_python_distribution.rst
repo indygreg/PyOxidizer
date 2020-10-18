@@ -146,13 +146,6 @@ distribution. Returned values can be
 :ref:`config_type_python_extension_module`,
 :ref:`config_type_python_package_resource`, etc.
 
-``PythonDistribution.source_modules()``
----------------------------------------
-
-Returns a ``list`` of
-:ref:`config_type_python_module_source`
-representing Python source modules present in this distribution.
-
 .. _config_python_distribution_extension_modules:
 
 ``PythonDistribution.extension_modules()``

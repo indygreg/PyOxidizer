@@ -55,7 +55,9 @@ source modules in a directory named ``lib``::
 
    m = FileManifest()
    dist = default_python_distribution()
-   m.add_python_resources(dist.source_modules())
+   for resource in dist.python_resources():
+       if type(resource) == "PythonModuleSource":
+           m.add_python_resource("lib", resource)
 
 ``FileManifest.install()``
 --------------------------

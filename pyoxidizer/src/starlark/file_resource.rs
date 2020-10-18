@@ -629,7 +629,7 @@ mod tests {
 
     #[test]
     fn test_add_python_resources() {
-        starlark_ok("dist = default_python_distribution(); m = FileManifest(); m.add_python_resources('lib', dist.source_modules())");
+        starlark_ok("dist = default_python_distribution(); m = FileManifest(); m.add_python_resources('lib', dist.python_resources())");
     }
 
     #[test]
