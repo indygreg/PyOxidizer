@@ -10,9 +10,9 @@ use {
         python_packaging_policy::PythonPackagingPolicyValue,
         python_resource::{
             add_context_for_value, python_resource_to_value, PythonExtensionModuleValue,
-            PythonModuleSourceValue, PythonPackageResourceValue,
+            PythonModuleSourceValue,
         },
-        util::{optional_str_arg, optional_type_arg, required_bool_arg, required_str_arg},
+        util::{optional_str_arg, optional_type_arg, required_str_arg},
     },
     crate::py_packaging::{
         distribution::BinaryLibpythonLinkMode,
@@ -434,38 +434,6 @@ impl PythonDistributionValue {
         ))
     }
 
-    /// PythonDistribution.package_resources(include_test=false)
-    pub fn package_resources(
-        &mut self,
-        type_values: &TypeValues,
-        include_test: &Value,
-    ) -> ValueResult {
-        let include_test = required_bool_arg("include_test", &include_test)?;
-
-        let dist = self.resolve_distribution(type_values, "resolve_distribution()")?;
-
-        let resources = dist.resource_datas().map_err(|e| {
-            ValueError::from(RuntimeError {
-                code: "PYTHON_DISTRIBUTION",
-                message: e.to_string(),
-                label: e.to_string(),
-            })
-        })?;
-
-        Ok(Value::from(
-            resources
-                .iter()
-                .filter_map(|data| {
-                    if !include_test && dist.is_stdlib_test_package(&data.leaf_package) {
-                        None
-                    } else {
-                        Some(Value::new(PythonPackageResourceValue::new(data.clone())))
-                    }
-                })
-                .collect_vec(),
-        ))
-    }
-
     /// PythonDistribution.source_modules()
     pub fn source_modules(&mut self, type_values: &TypeValues) -> ValueResult {
         let dist = self.resolve_distribution(type_values, "resolve_distribution")?;
@@ -530,14 +498,6 @@ starlark_module! { python_distribution_module =>
         }
     }
 
-    #[allow(clippy::ptr_arg)]
-    PythonDistribution.package_resources(env env, this, include_test=false) {
-        match this.clone().downcast_mut::<PythonDistributionValue>()? {
-            Some(mut dist) => dist.package_resources(&env, &include_test),
-            None => Err(ValueError::IncorrectParameterType),
-        }
-    }
-
     #[allow(non_snake_case, clippy::ptr_arg)]
     PythonDistribution.to_python_executable(
         env env,
@@ -573,7 +533,8 @@ starlark_module! { python_distribution_module =>
 #[cfg(test)]
 mod tests {
     use {
-        super::super::testutil::*, super::*, crate::py_packaging::distribution::DistributionFlavor,
+        super::super::python_resource::PythonPackageResourceValue, super::super::testutil::*,
+        super::*, crate::py_packaging::distribution::DistributionFlavor,
         crate::python_distributions::PYTHON_DISTRIBUTIONS,
     };
 
@@ -754,23 +715,6 @@ mod tests {
         for m in mods.iter().unwrap().iter() {
             assert_eq!(m.get_type(), PythonModuleSourceValue::TYPE);
             assert!(m.get_attr("is_stdlib").unwrap().to_bool());
-        }
-    }
-
-    #[test]
-    fn test_package_resources() {
-        let data_default = starlark_ok("default_python_distribution().package_resources()");
-        let data_tests =
-            starlark_ok("default_python_distribution().package_resources(include_test=True)");
-
-        let default_length = data_default.length().unwrap();
-        let data_length = data_tests.length().unwrap();
-
-        assert!(default_length < data_length);
-
-        for r in data_tests.iter().unwrap().iter() {
-            assert_eq!(r.get_type(), PythonPackageResourceValue::TYPE);
-            assert!(r.get_attr("is_stdlib").unwrap().to_bool());
         }
     }
 

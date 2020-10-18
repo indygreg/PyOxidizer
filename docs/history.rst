@@ -55,6 +55,9 @@ Backwards Compatibility Notes
 * The ``pyembed::OxidizedPythonInterpreterConfig`` Rust struct had its
   ``packed_resources`` field changed from ``Option<&'a [u8]>`` to
   ``Vec<&'a [u8]>`` so multiple resource inputs can be specified.
+* The ``PythonDistribution`` Starlark type no longer has a
+  ``package_resources()`` method. Use
+  ``PythonDistribution.python_resources()`` instead.
 
 New Features
 ^^^^^^^^^^^^

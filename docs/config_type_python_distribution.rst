@@ -153,16 +153,6 @@ Returns a ``list`` of
 :ref:`config_type_python_module_source`
 representing Python source modules present in this distribution.
 
-``PythonDistribution.package_resources()``
-------------------------------------------
-
-Returns a ``list`` of
-:ref:`config_type_python_package_resource`
-representing resource files present in this distribution.
-
-The ``include_test`` boolean argument controls whether resources associated
-with test packages are included.
-
 .. _config_python_distribution_extension_modules:
 
 ``PythonDistribution.extension_modules()``
