@@ -17,8 +17,8 @@ use {
     crate::py_packaging::{
         distribution::BinaryLibpythonLinkMode,
         distribution::{
-            default_distribution_location, is_stdlib_test_package, DistributionFlavor,
-            PythonDistribution, PythonDistributionLocation,
+            default_distribution_location, DistributionFlavor, PythonDistribution,
+            PythonDistributionLocation,
         },
     },
     anyhow::{anyhow, Result},
@@ -432,7 +432,7 @@ impl PythonDistributionValue {
             resources
                 .iter()
                 .filter_map(|data| {
-                    if !include_test && is_stdlib_test_package(&data.leaf_package) {
+                    if !include_test && dist.is_stdlib_test_package(&data.leaf_package) {
                         None
                     } else {
                         Some(Value::new(PythonPackageResourceValue::new(data.clone())))

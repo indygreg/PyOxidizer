@@ -9,9 +9,8 @@ use {
         binary::{LibpythonLinkMode, PythonBinaryBuilder},
         config::{default_raw_allocator, EmbeddedPythonConfig},
         distribution::{
-            is_stdlib_test_package, resolve_python_distribution_from_location,
-            BinaryLibpythonLinkMode, DistributionExtractLock, PythonDistribution,
-            PythonDistributionLocation,
+            resolve_python_distribution_from_location, BinaryLibpythonLinkMode,
+            DistributionExtractLock, PythonDistribution, PythonDistributionLocation,
         },
         distutils::prepare_hacked_distutils,
         standalone_builder::StandalonePythonExecutableBuilder,
@@ -1162,6 +1161,10 @@ impl PythonDistribution for StandaloneDistribution {
         Ok(self.module_suffixes.clone())
     }
 
+    fn stdlib_test_packages(&self) -> Vec<String> {
+        self.stdlib_test_packages.clone()
+    }
+
     fn create_bytecode_compiler(&self) -> Result<Box<dyn PythonBytecodeCompiler>> {
         Ok(Box::new(BytecodeCompiler::new(&self.python_exe)?))
     }
@@ -1263,7 +1266,7 @@ impl PythonDistribution for StandaloneDistribution {
                     is_package,
                     cache_tag: self.cache_tag.clone(),
                     is_stdlib: true,
-                    is_test: is_stdlib_test_package(name),
+                    is_test: self.is_stdlib_test_package(name),
                 })
             })
             .collect()
@@ -1279,7 +1282,7 @@ impl PythonDistribution for StandaloneDistribution {
                     relative_name: name.clone(),
                     data: DataLocation::Path(path.clone()),
                     is_stdlib: true,
-                    is_test: is_stdlib_test_package(&package),
+                    is_test: self.is_stdlib_test_package(&package),
                 });
             }
         }

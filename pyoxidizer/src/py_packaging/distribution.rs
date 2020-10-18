@@ -37,34 +37,6 @@ use {
     uuid::Uuid,
 };
 
-// TODO denote test packages in Python distribution.
-const STDLIB_TEST_PACKAGES: &[&str] = &[
-    "bsddb.test",
-    "ctypes.test",
-    "distutils.tests",
-    "email.test",
-    "idlelib.idle_test",
-    "json.tests",
-    "lib-tk.test",
-    "lib2to3.tests",
-    "sqlite3.test",
-    "test",
-    "tkinter.test",
-    "unittest.test",
-];
-
-pub fn is_stdlib_test_package(name: &str) -> bool {
-    for package in STDLIB_TEST_PACKAGES {
-        let prefix = format!("{}.", package);
-
-        if &name == package || name.starts_with(&prefix) {
-            return true;
-        }
-    }
-
-    false
-}
-
 /// Denotes how a binary should link libpython.
 #[derive(Clone, Debug, PartialEq)]
 pub enum BinaryLibpythonLinkMode {
@@ -151,6 +123,9 @@ pub trait PythonDistribution {
     /// Obtain file suffixes for various Python module flavors.
     fn python_module_suffixes(&self) -> Result<PythonModuleSuffixes>;
 
+    /// Obtain Python packages in the standard library that provide tests.
+    fn stdlib_test_packages(&self) -> Vec<String>;
+
     /// Create a `PythonBytecodeCompiler` from this instance.
     fn create_bytecode_compiler(&self) -> Result<Box<dyn PythonBytecodeCompiler>>;
 
@@ -220,6 +195,19 @@ pub trait PythonDistribution {
     /// This effectively answers whether we can embed a shared library into an
     /// executable and load it without having to materialize it on a filesystem.
     fn supports_in_memory_shared_library_loading(&self) -> bool;
+
+    /// Determine whether a named module is in a known standard library test package.
+    fn is_stdlib_test_package(&self, name: &str) -> bool {
+        for package in self.stdlib_test_packages() {
+            let prefix = format!("{}.", package);
+
+            if name == package || name.starts_with(&prefix) {
+                return true;
+            }
+        }
+
+        false
+    }
 }
 
 /// Multiple threads or processes could race to extract the archive.

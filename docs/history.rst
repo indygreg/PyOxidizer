@@ -123,6 +123,9 @@ Other Relevant Changes
   on how to create an executable that behaves like ``python``.
 * The documentation on binary portability has been overhauled to go in
   much greater detail.
+* The list of standard library test packages is now obtained from the
+  Python distribution metadata instead of a hardcoded list in PyOxidizer's
+  source code.
 
 .. _version_0_8_0:
 
