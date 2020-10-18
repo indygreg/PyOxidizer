@@ -67,6 +67,10 @@ New Features
   long paths support. (#197)
 * The Starlark ``PythonPackagingPolicy`` type now exposes an ``allow_files``
   attribute controlling whether files can be added as resources.
+* The Starlark ``PythonPackagingPolicy`` type now exposes
+  ``file_scanner_classify_files`` and ``file_scanner_emit_files`` attributes
+  controlling whether file scanning attempts to classify files and whether
+  generic file instances are emitted, respectively.
 
 Bug Fixes
 ^^^^^^^^^

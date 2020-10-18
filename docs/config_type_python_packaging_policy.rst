@@ -115,6 +115,51 @@ The following values are recognized:
 
 Default is ``all``.
 
+.. _config_type_python_packaging_policy_file_scanner_classify_files:
+
+``file_scanner_classify_files``
+-------------------------------
+
+(``bool``)
+
+Whether file scanning should attempt to classify files and emit typed
+resources corresponding to the detected file type.
+
+If ``True``, operations that emit resource objects (such as
+:ref:`config_type_python_executable_pip_install`) will emit specific
+types for each resource flavor. e.g. :ref:`config_type_python_module_source`,
+:ref:`config_type_python_extension_module`, etc.
+
+If ``False``, the file scanner does not attempt to classify the type of
+a file and this rich resource types are not emitted.
+
+Can be used in conjunction with
+:ref:`config_type_python_packaging_policy_file_scanner_emit_files`. If both
+are ``True``, there will be a file resource and an optional non-file resource
+for each source file.
+
+Default is ``True``.
+
+.. _config_type_python_packaging_policy_file_scanner_emit_files:
+
+``file_scanner_emit_files``
+---------------------------
+
+(``bool``)
+
+Whether file scanning should emit file resources for each seen file.
+
+If ``True``, operations that emit resource objects (such as
+:ref:`config_type_python_executable_pip_install`) will emit generic file
+instances for each seen file.
+
+If ``False``, the generic file resources are not emitted.
+
+Can be used in conjunction with
+:ref:`config_type_python_packaging_policy_file_scanner_classify_files`.
+
+Default is ``False``.
+
 .. _config_type_python_packaging_policy_include_distribution_sources:
 
 ``include_distribution_sources``

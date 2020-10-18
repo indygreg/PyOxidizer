@@ -118,6 +118,8 @@ impl TypedValue for PythonPackagingPolicyValue {
             "bytecode_optimize_level_one" => Value::from(self.inner.bytecode_optimize_level_one()),
             "bytecode_optimize_level_two" => Value::from(self.inner.bytecode_optimize_level_two()),
             "extension_module_filter" => Value::from(self.inner.extension_module_filter().as_ref()),
+            "file_scanner_classify_files" => Value::from(self.inner.file_scanner_classify_files()),
+            "file_scanner_emit_files" => Value::from(self.inner.file_scanner_emit_files()),
             "include_distribution_sources" => {
                 Value::from(self.inner.include_distribution_sources())
             }
@@ -156,6 +158,8 @@ impl TypedValue for PythonPackagingPolicyValue {
             "bytecode_optimize_level_one" => true,
             "bytecode_optimize_level_two" => true,
             "extension_module_filter" => true,
+            "file_scanner_classify_files" => true,
+            "file_scanner_emit_files" => true,
             "include_distribution_sources" => true,
             "include_distribution_resources" => true,
             "include_non_distribution_sources" => true,
@@ -196,6 +200,12 @@ impl TypedValue for PythonPackagingPolicyValue {
                     })?;
 
                 self.inner.set_extension_module_filter(filter);
+            }
+            "file_scanner_classify_files" => {
+                self.inner.set_file_scanner_classify_files(value.to_bool());
+            }
+            "file_scanner_emit_files" => {
+                self.inner.set_file_scanner_emit_files(value.to_bool());
             }
             "include_distribution_sources" => {
                 self.inner.set_include_distribution_sources(value.to_bool());
@@ -348,6 +358,25 @@ mod tests {
         let value =
             env.eval("policy.extension_module_filter = 'minimal'; policy.extension_module_filter")?;
         assert_eq!(value.to_string(), "minimal");
+
+        let value = env.eval("policy.file_scanner_classify_files")?;
+        assert_eq!(value.get_type(), "bool");
+        assert!(value.to_bool());
+
+        let value = env.eval(
+            "policy.file_scanner_classify_files = False; policy.file_scanner_classify_files",
+        )?;
+        assert_eq!(value.get_type(), "bool");
+        assert!(!value.to_bool());
+
+        let value = env.eval("policy.file_scanner_emit_files")?;
+        assert_eq!(value.get_type(), "bool");
+        assert!(!value.to_bool());
+
+        let value =
+            env.eval("policy.file_scanner_emit_files = True; policy.file_scanner_emit_files")?;
+        assert_eq!(value.get_type(), "bool");
+        assert!(value.to_bool());
 
         let value = env.eval("policy.include_distribution_sources")?;
         assert_eq!(value.get_type(), "bool");
