@@ -743,6 +743,31 @@ impl PythonPathExtension {
     }
 }
 
+/// Represents an arbitrary, unclassified file.
+#[derive(Clone, Debug, PartialEq)]
+pub struct FileData {
+    /// The path of the file being tracked.
+    ///
+    /// Can be relative or absolute.
+    pub path: PathBuf,
+
+    /// Whether the file should have the execute bit set.
+    pub is_executable: bool,
+
+    /// The data in the file.
+    pub data: DataLocation,
+}
+
+impl FileData {
+    pub fn to_memory(&self) -> Result<Self> {
+        Ok(Self {
+            path: self.path.clone(),
+            is_executable: self.is_executable,
+            data: self.data.to_memory()?,
+        })
+    }
+}
+
 /// Represents a resource that can be read by Python somehow.
 #[derive(Clone, Debug, PartialEq)]
 pub enum PythonResource<'a> {
@@ -762,6 +787,8 @@ pub enum PythonResource<'a> {
     EggFile(Cow<'a, PythonEggFile>),
     /// A path extension.
     PathExtension(Cow<'a, PythonPathExtension>),
+    /// An arbitrary file and its data.
+    File(Cow<'a, FileData>),
 }
 
 impl<'a> PythonResource<'a> {
@@ -780,6 +807,7 @@ impl<'a> PythonResource<'a> {
             PythonResource::ExtensionModule(em) => em.name.clone(),
             PythonResource::EggFile(_) => "".to_string(),
             PythonResource::PathExtension(_) => "".to_string(),
+            PythonResource::File(f) => format!("{}", f.path.display()),
         }
     }
 
@@ -793,6 +821,7 @@ impl<'a> PythonResource<'a> {
             PythonResource::ExtensionModule(em) => &em.name,
             PythonResource::EggFile(_) => return false,
             PythonResource::PathExtension(_) => return false,
+            PythonResource::File(_) => return false,
         };
 
         for package in packages {
@@ -819,6 +848,7 @@ impl<'a> PythonResource<'a> {
             PythonResource::ExtensionModule(m) => m.to_memory()?.into(),
             PythonResource::EggFile(e) => e.to_memory()?.into(),
             PythonResource::PathExtension(e) => e.to_memory()?.into(),
+            PythonResource::File(f) => f.to_memory()?.into(),
         })
     }
 }
@@ -916,6 +946,18 @@ impl<'a> From<PythonPathExtension> for PythonResource<'a> {
 impl<'a> From<&'a PythonPathExtension> for PythonResource<'a> {
     fn from(e: &'a PythonPathExtension) -> Self {
         PythonResource::PathExtension(Cow::Borrowed(e))
+    }
+}
+
+impl<'a> From<FileData> for PythonResource<'a> {
+    fn from(f: FileData) -> Self {
+        PythonResource::File(Cow::Owned(f))
+    }
+}
+
+impl<'a> From<&'a FileData> for PythonResource<'a> {
+    fn from(f: &'a FileData) -> Self {
+        PythonResource::File(Cow::Borrowed(f))
     }
 }
 

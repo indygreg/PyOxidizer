@@ -601,7 +601,11 @@ pub fn is_resource_starlark_compatible(resource: &PythonResource) -> bool {
         PythonResource::PackageResource(_) => true,
         PythonResource::PackageDistributionResource(_) => true,
         PythonResource::ExtensionModule(_) => true,
-        _ => false,
+        PythonResource::ModuleBytecode(_) => false,
+        PythonResource::ModuleBytecodeRequest(_) => false,
+        PythonResource::EggFile(_) => false,
+        PythonResource::PathExtension(_) => false,
+        PythonResource::File(_) => false,
     }
 }
 

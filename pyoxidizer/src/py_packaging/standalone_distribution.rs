@@ -853,7 +853,14 @@ impl StandaloneDistribution {
                         return Err(anyhow!("should not have received in-memory source data"))
                     }
                 },
-                _ => {}
+
+                PythonResource::ModuleBytecodeRequest(_) => {}
+                PythonResource::ModuleBytecode(_) => {}
+                PythonResource::PackageDistributionResource(_) => {}
+                PythonResource::ExtensionModule(_) => {}
+                PythonResource::EggFile(_) => {}
+                PythonResource::PathExtension(_) => {}
+                PythonResource::File(_) => {}
             };
         }
 

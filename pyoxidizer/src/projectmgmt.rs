@@ -264,6 +264,9 @@ fn print_resource(r: &PythonResource) {
         PythonResource::PathExtension(_pe) => println!(
             "PythonPathExtension",
         ),
+        PythonResource::File(f) => println!(
+            "File {{ path: {}, is_executable: {} }}", f.path.display(), f.is_executable
+        ),
     }
 }
 

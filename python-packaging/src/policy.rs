@@ -335,6 +335,7 @@ impl PythonPackagingPolicy {
             PythonResource::ExtensionModule(_) => false,
             PythonResource::PathExtension(_) => false,
             PythonResource::EggFile(_) => false,
+            PythonResource::File(_) => false,
         }
     }
 
