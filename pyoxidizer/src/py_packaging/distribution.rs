@@ -16,12 +16,8 @@ use {
     anyhow::{anyhow, Context, Result},
     fs2::FileExt,
     python_packaging::{
-        bytecode::PythonBytecodeCompiler,
-        module_util::PythonModuleSuffixes,
-        policy::PythonPackagingPolicy,
-        resource::{
-            PythonExtensionModule, PythonModuleSource, PythonPackageResource, PythonResource,
-        },
+        bytecode::PythonBytecodeCompiler, module_util::PythonModuleSuffixes,
+        policy::PythonPackagingPolicy, resource::PythonResource,
     },
     sha2::{Digest, Sha256},
     slog::warn,
@@ -158,19 +154,6 @@ pub trait PythonDistribution {
 
     /// Obtain `PythonResource` instances for every resource in this distribution.
     fn python_resources<'a>(&self) -> Vec<PythonResource<'a>>;
-
-    /// Obtain `PythonExtensionModule` instances present in this distribution.
-    ///
-    /// Multiple variants of the same extension module may be returned.
-    fn iter_extension_modules<'a>(
-        &'a self,
-    ) -> Box<dyn Iterator<Item = &'a PythonExtensionModule> + 'a>;
-
-    /// Obtain `SourceModule` instances present in this distribution.
-    fn source_modules(&self) -> Result<Vec<PythonModuleSource>>;
-
-    /// Obtain `ResourceData` instances present in this distribution.
-    fn resource_datas(&self) -> Result<Vec<PythonPackageResource>>;
 
     /// Ensure pip is available to run in the distribution.
     ///

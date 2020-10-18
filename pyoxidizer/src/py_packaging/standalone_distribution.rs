@@ -1283,53 +1283,6 @@ impl PythonDistribution for StandaloneDistribution {
             .collect::<Vec<PythonResource<'a>>>()
     }
 
-    fn iter_extension_modules<'a>(
-        &'a self,
-    ) -> Box<dyn Iterator<Item = &'a PythonExtensionModule> + 'a> {
-        Box::new(
-            self.extension_modules
-                .iter()
-                .map(|(_, exts)| exts.iter())
-                .flatten(),
-        )
-    }
-
-    fn source_modules(&self) -> Result<Vec<PythonModuleSource>> {
-        self.py_modules
-            .iter()
-            .map(|(name, path)| {
-                let is_package = is_package_from_path(&path);
-
-                Ok(PythonModuleSource {
-                    name: name.clone(),
-                    source: DataLocation::Path(path.clone()),
-                    is_package,
-                    cache_tag: self.cache_tag.clone(),
-                    is_stdlib: true,
-                    is_test: self.is_stdlib_test_package(name),
-                })
-            })
-            .collect()
-    }
-
-    fn resource_datas(&self) -> Result<Vec<PythonPackageResource>> {
-        let mut res = Vec::new();
-
-        for (package, inner) in self.resources.iter() {
-            for (name, path) in inner.iter() {
-                res.push(PythonPackageResource {
-                    leaf_package: package.clone(),
-                    relative_name: name.clone(),
-                    data: DataLocation::Path(path.clone()),
-                    is_stdlib: true,
-                    is_test: self.is_stdlib_test_package(&package),
-                });
-            }
-        }
-
-        Ok(res)
-    }
-
     /// Ensure pip is available to run in the distribution.
     fn ensure_pip(&self, logger: &slog::Logger) -> Result<PathBuf> {
         let dist_prefix = self.base_dir.join("python").join("install");
