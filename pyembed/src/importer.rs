@@ -970,14 +970,14 @@ fn oxidized_finder_new(
     }
 
     // If we received a PyObject defining resources data, try to resolve it.
-    let (raw_resources_data, mapped) = if let Some(resources) = &resources_data {
+    let (raw_resource_datas, mapped) = if let Some(resources) = &resources_data {
         let buffer = PyBuffer::get(py, resources)?;
 
         let data = unsafe {
             std::slice::from_raw_parts::<u8>(buffer.buf_ptr() as *const _, buffer.len_bytes())
         };
 
-        (Some(data), None)
+        (vec![data], None)
     } else if let Some(resources_file) = resources_file {
         let path = pyobject_to_pathbuf(py, resources_file)?;
 
@@ -995,13 +995,13 @@ fn oxidized_finder_new(
         // lives at least as long as this slice.
         let data = unsafe { std::slice::from_raw_parts::<u8>(mapped.as_ptr(), mapped.len()) };
 
-        (Some(data), Some(mapped))
+        (vec![data], Some(mapped))
     } else {
-        (None, None)
+        (vec![], None)
     };
 
     resources_state
-        .load(raw_resources_data)
+        .load(&raw_resource_datas)
         .map_err(|err| PyErr::new::<ValueError, _>(py, err))?;
 
     let importer = OxidizedFinder::create_instance(

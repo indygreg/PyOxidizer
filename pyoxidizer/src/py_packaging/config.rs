@@ -313,9 +313,9 @@ impl EmbeddedPythonConfig {
             self.oxidized_importer,
             self.filesystem_importer,
             if let Some(path) = packed_resources_path {
-                format!("Some(include_bytes!(r#\"{}\"#))", path.display())
+                format!("vec![include_bytes!(r#\"{}\"#)]", path.display())
             } else {
-                "None".to_string()
+                "vec![]".to_string()
             },
             self.argvb,
             self.sys_frozen,

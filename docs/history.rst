@@ -52,6 +52,9 @@ Backwards Compatibility Notes
   support storing arbitrary file data. Support for reading and writing
   version 2 has been removed. Packed resources blobs will need to be
   regenerated in order to be compatible with new versions of PyOxidizer.
+* The ``pyembed::OxidizedPythonInterpreterConfig`` Rust struct had its
+  ``packed_resources`` field changed from ``Option<&'a [u8]>`` to
+  ``Vec<&'a [u8]>`` so multiple resource inputs can be specified.
 
 New Features
 ^^^^^^^^^^^^

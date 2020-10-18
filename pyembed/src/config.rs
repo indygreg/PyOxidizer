@@ -111,7 +111,7 @@ pub struct OxidizedPythonInterpreterConfig<'a> {
     /// The format of the data is defined by the ``python-packed-resources``
     /// crate. The data will be parsed as part of initializing the custom
     /// meta path importer during interpreter initialization.
-    pub packed_resources: Option<&'a [u8]>,
+    pub packed_resources: Vec<&'a [u8]>,
 
     /// Extra extension modules to make available to the interpreter.
     ///
@@ -176,7 +176,7 @@ impl<'a> Default for OxidizedPythonInterpreterConfig<'a> {
             set_missing_path_configuration: true,
             oxidized_importer: false,
             filesystem_importer: true,
-            packed_resources: None,
+            packed_resources: vec![],
             extra_extension_modules: None,
             argv: None,
             argvb: false,

@@ -434,7 +434,7 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
 
             if let Some(ref mut resources_state) = self.resources_state {
                 resources_state
-                    .load(self.config.packed_resources)
+                    .load(&self.config.packed_resources)
                     .map_err(|err| NewInterpreterError::Simple(err))?;
 
                 let oxidized_importer = py.import(OXIDIZED_IMPORTER_NAME_STR).map_err(|err| {
