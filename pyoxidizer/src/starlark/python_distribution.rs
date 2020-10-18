@@ -399,6 +399,30 @@ impl PythonDistributionValue {
         Ok(Value::new(PythonExecutable::new(builder, policy)))
     }
 
+    pub fn python_resources_starlark(
+        &mut self,
+        type_values: &TypeValues,
+        call_stack: &mut CallStack,
+    ) -> ValueResult {
+        let dist = self.resolve_distribution(type_values, "resolve_distribution")?;
+        let policy =
+            PythonPackagingPolicyValue::new(dist.create_packaging_policy().map_err(|e| {
+                ValueError::from(RuntimeError {
+                    code: "PYOXIDIZER_BUILD",
+                    message: e.to_string(),
+                    label: "python_resources()".to_string(),
+                })
+            })?);
+
+        let values = dist
+            .python_resources()
+            .iter()
+            .map(|resource| python_resource_to_value(type_values, call_stack, resource, &policy))
+            .collect::<Result<Vec<Value>, ValueError>>()?;
+
+        Ok(Value::from(values))
+    }
+
     /// PythonDistribution.extension_modules()
     pub fn extension_modules(&mut self, type_values: &TypeValues) -> ValueResult {
         let dist = self.resolve_distribution(type_values, "resolve_distribution()")?;
@@ -479,6 +503,13 @@ starlark_module! { python_distribution_module =>
     PythonDistribution.make_python_interpreter_config(env env, this) {
         match this.clone().downcast_mut::<PythonDistributionValue>()? {
             Some(mut dist) => dist.make_python_interpreter_config_starlark(&env),
+            None => Err(ValueError::IncorrectParameterType),
+        }
+    }
+
+    PythonDistribution.python_resources(env env, call_stack cs, this) {
+        match this.clone().downcast_mut::<PythonDistributionValue>()? {
+            Some(mut dist) => dist.python_resources_starlark(&env, cs),
             None => Err(ValueError::IncorrectParameterType),
         }
     }
@@ -680,6 +711,39 @@ mod tests {
     fn test_make_python_interpreter_config() {
         let config = starlark_ok("default_python_distribution().make_python_interpreter_config()");
         assert_eq!(config.get_type(), "PythonInterpreterConfig");
+    }
+
+    #[test]
+    fn test_python_resources() {
+        let resources = starlark_ok("default_python_distribution().python_resources()");
+        assert_eq!(resources.get_type(), "list");
+
+        let values = resources.iter().unwrap().to_vec();
+
+        assert!(values.len() > 100);
+
+        assert!(values
+            .iter()
+            .any(|v| v.get_type() == PythonModuleSourceValue::TYPE));
+        assert!(values
+            .iter()
+            .any(|v| v.get_type() == PythonExtensionModuleValue::TYPE));
+        assert!(values
+            .iter()
+            .any(|v| v.get_type() == PythonPackageResourceValue::TYPE));
+
+        assert!(values
+            .iter()
+            .filter(|v| v.get_type() == PythonModuleSourceValue::TYPE)
+            .all(|v| v.get_attr("is_stdlib").unwrap().to_bool()));
+        assert!(values
+            .iter()
+            .filter(|v| v.get_type() == PythonExtensionModuleValue::TYPE)
+            .all(|v| v.get_attr("is_stdlib").unwrap().to_bool()));
+        assert!(values
+            .iter()
+            .filter(|v| v.get_type() == PythonPackageResourceValue::TYPE)
+            .all(|v| v.get_attr("is_stdlib").unwrap().to_bool()));
     }
 
     #[test]

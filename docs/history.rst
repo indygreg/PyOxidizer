@@ -81,6 +81,8 @@ New Features
 * The Starlark ``PythonPackagingPolicy`` type now has a
   ``set_resources_handling_mode()`` method to quickly apply a mode for
   resource handling.
+* The Starlark ``PythonDistribution`` type now has a ``python_resources()``
+  method for obtaining all Python resources associated with the distribution.
 
 Bug Fixes
 ^^^^^^^^^

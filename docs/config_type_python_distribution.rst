@@ -137,6 +137,15 @@ Examples:
 Methods
 =======
 
+``PythonDistribution.python_resources()``
+-----------------------------------------
+
+Returns a ``list`` of objects representing Python resources in this
+distribution. Returned values can be
+:ref:`config_type_python_module_source`,
+:ref:`config_type_python_extension_module`,
+:ref:`config_type_python_package_resource`, etc.
+
 ``PythonDistribution.source_modules()``
 ---------------------------------------
 
