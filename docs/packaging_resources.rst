@@ -19,25 +19,65 @@ During evaluation of PyOxidizer's Starlark configuration files,
 job is to collect all desired *resources* and then do something with
 them.
 
+.. _packaging_resources_classified_files:
+
+Classified Resources Versus Files
+=================================
+
+All resources in PyOxidizer are ultimately derived from or representable
+by a file or a file-like primitive. For example, a
+:ref:`config_type_python_module_source` is derived from or could be
+manifested as a ``.py`` file.
+
+Various PyOxidizer functionality works by scanning existing files and
+turning those files into *resources*.
+
+This file scanning functionality has two modes of operation: *classified*
+and *files*. In *files* mode, PyOxidizer simply emits resources corresponding
+to the raw files it encounters. In *classified* mode, PyOxidizer attempts to
+*classify* a file as a particular resource and emit a strongly-typed
+resource like :ref:`config_type_python_module_source` or
+:ref:`config_type_python_extension_module`.
+
+*Classified* mode is more powerful because PyOxidizer is able to build
+an *index* of typed resources at packaging time and make this *index*
+available to :ref:`oxidized_importer` at run-time to facilitate faster
+loading of resources.
+
+However, the main downside to *classified* mode is it relies on being able
+to identify files properly and this is unreliable. Python file layouts are
+under-specified and there are many edge cases where PyOxidizer fails to
+properly classify a file. See :ref:`cli_find_resources` for how to identify
+problems here.
+
+In *files* mode, PyOxidizer simply indexes and manages a named file
+and its content. There is far less potential for PyOxidizer to make
+mistakes about a file's type and how it is handled. This means that
+*files* mode often *just works* when *classified* mode doesn't. The main
+downside to *files* mode is that :ref:`oxidized_importer` doesn't have a
+rich index embedded in the built binary, so you will have to rely on
+Python's default filesystem-based importer, which is slower than
+``oxidized_importer``.
+
 .. _packaging_resource_packaging_policy:
 
 Packaging Policies and Adding Resources
 =======================================
 
-The exact mechanism by which *resources* are added to *resource
+The exact mechanism by which *resources* are emitted and added to *resource
 collectors* is influenced by a *packaging policy* (represented by the
-:ref:`config_type_python_packaging_policy` Starlark
-type) and attributes on each resource object influencing how they are
-added.
+:ref:`config_type_python_packaging_policy` Starlark type) and attributes on
+each resource object influencing how they are added.
 
-When a *resource* is created, the *packaging policy* associated with
-the entity creating the *resource* is applied and various ``add_*``
-attributes on the Starlark *resource* types are populated.
+When *resources* are created, the *packaging policy* determines whether
+emitted resources are *classified* or simply *files*. And the *packaging
+policy* is applied to each created resource to populate the initial values
+for the various ``add_*`` attributes on the Starlark *resource* types.
 
 When a resource is added (e.g. by calling
-``PythonExecutable.add_python_resource()``), these attributes are
-consulted and used to influence exactly how that *resource* is
-added/packaged.
+``PythonExecutable.add_python_resource()``), these aforementioned
+``add_*`` attributes are consulted and used to influence exactly how that
+*resource* is added/packaged.
 
 For example, a :ref:`config_type_python_module_source` can set attributes
 indicating to exclude source code and only generate bytecode at
@@ -162,6 +202,39 @@ The primary mechanisms for doing this are:
 
 The following sections give examples of customized packaging
 policies.
+
+.. _packaging_resources_resources_mode:
+
+Changing the Resource Handling Mode
+-----------------------------------
+
+As documented in :ref:`packaging_resources_classified_files`, PyOxidizer
+can operate on *classified* resources or *files*-based resources.
+
+:ref:`config_type_python_packaging_policy_set_resource_handling_mode`
+exists to change the operating mode of a ``PythonPackagingPolicy``
+instance.
+
+.. code-block:: python
+
+   def make_exe():
+       dist = default_python_distribution()
+
+       policy = dist.make_python_packaging_policy()
+
+       # Set policy attributes to only operate on "classified" resource types.
+       # (This is the default.)
+       policy.set_resource_handling_mode("classify")
+
+       # Set policy attributes to only operate on `File` resource types.
+       policy.set_resource_handling_mode("files")
+
+:ref:`config_type_python_packaging_policy_set_resource_handling_mode` is
+just a convenience method for manipulating a collection of attributes on
+``PythonPackagingPolicy`` instances. If you don't like the behavior of
+its pre-defined modes, feel free to adjust attributes to suit your needs.
+You can even configure things to emit both *classified* and *files*
+variants simultaneously!
 
 .. _packaging_resource_default_resource_location:
 
