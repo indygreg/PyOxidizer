@@ -84,6 +84,9 @@ Bug Fixes
   default ``.profile`` value is ``isolated``). This results in Python's
   encodings being more reasonable by default, which helps ensure
   non-ASCII arguments are interpreted properly. (#294)
+* Properly serialize ``module_search_paths`` to Rust code. Before, attempting
+  to set ``PythonInterpreterConfig.module_search_paths`` in Starlark would
+  result in malformed Rust code being generated. (#298)
 
 Other Relevant Changes
 ^^^^^^^^^^^^^^^^^^^^^^

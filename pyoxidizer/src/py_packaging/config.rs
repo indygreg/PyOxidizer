@@ -264,7 +264,7 @@ impl EmbeddedPythonConfig {
             match &self.config.module_search_paths {
                 Some(paths) => {
                     format!(
-                        "Some({})",
+                        "Some(vec![{}])",
                         paths
                             .iter()
                             .map(|p| format_args!("\"{}\"", p.display()).to_string())
@@ -374,6 +374,24 @@ impl EmbeddedPythonConfig {
              pub fn default_python_config<'a>() -> pyembed::OxidizedPythonInterpreterConfig<'a> {{\n{}\n}}\n",
             indented
         ))?;
+
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_serialize_module_search_paths() -> Result<()> {
+        let mut config = EmbeddedPythonConfig::default();
+        config.config.module_search_paths =
+            Some(vec![PathBuf::from("$ORIGIN/lib"), PathBuf::from("lib")]);
+
+        let code = config.to_oxidized_python_interpreter_config_rs(None)?;
+
+        assert!(code.contains("module_search_paths: Some(vec![\"$ORIGIN/lib\", \"lib\"]),"));
 
         Ok(())
     }
