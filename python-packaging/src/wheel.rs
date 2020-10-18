@@ -292,7 +292,7 @@ impl WheelArchive {
         // Other data keys are `headers` and `scripts`, which we don't yet
         // support as resource types.
 
-        PythonResourceIterator::from_data_locations(&inputs, cache_tag, suffixes)
+        PythonResourceIterator::from_data_locations(&inputs, cache_tag, suffixes, false, true)
             .collect::<Result<Vec<_>>>()
     }
 }

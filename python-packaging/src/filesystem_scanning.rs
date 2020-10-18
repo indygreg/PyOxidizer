@@ -11,10 +11,10 @@ use {
         module_util::{is_package_from_path, PythonModuleSuffixes},
         package_metadata::PythonPackageMetadata,
         resource::{
-            BytecodeOptimizationLevel, DataLocation, PythonEggFile, PythonExtensionModule,
-            PythonModuleBytecode, PythonModuleSource, PythonPackageDistributionResource,
-            PythonPackageDistributionResourceFlavor, PythonPackageResource, PythonPathExtension,
-            PythonResource,
+            BytecodeOptimizationLevel, DataLocation, FileData, PythonEggFile,
+            PythonExtensionModule, PythonModuleBytecode, PythonModuleSource,
+            PythonPackageDistributionResource, PythonPackageDistributionResourceFlavor,
+            PythonPackageResource, PythonPathExtension, PythonResource,
         },
     },
     anyhow::Result,
@@ -25,6 +25,20 @@ use {
         path::{Path, PathBuf},
     },
 };
+
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
+
+#[cfg(unix)]
+fn is_executable(metadata: &std::fs::Metadata) -> bool {
+    let permissions = metadata.permissions();
+    permissions.mode() & 0o111 != 0
+}
+
+#[cfg(windows)]
+fn is_executable(_metadata: &std::fs::Metadata) -> bool {
+    false
+}
 
 pub fn walk_tree_files(path: &Path) -> Box<dyn Iterator<Item = walkdir::DirEntry>> {
     let res = walkdir::WalkDir::new(path).sort_by(|a, b| a.file_name().cmp(b.file_name()));
@@ -59,18 +73,31 @@ enum PathItem<'a> {
     ResourceFile(ResourceFile),
 }
 
+#[derive(Debug, PartialEq)]
+struct PathEntry {
+    path: PathBuf,
+    /// Whether we emitted a `PythonResource::File` instance.
+    file_emitted: bool,
+    /// Whether we emitted a non-`PythonResource::File` instance.
+    non_file_emitted: bool,
+}
+
 /// An iterator of `PythonResource`.
 pub struct PythonResourceIterator<'a> {
     root_path: PathBuf,
     cache_tag: String,
     suffixes: PythonModuleSuffixes,
-    paths: Vec<PathBuf>,
+    paths: Vec<PathEntry>,
     /// Content overrides for individual paths.
     ///
     /// This is a hacky way to allow us to abstract I/O.
     path_content_overrides: HashMap<PathBuf, DataLocation>,
     seen_packages: HashSet<String>,
     resources: Vec<ResourceFile>,
+    // Whether to emit `PythonResource::File` entries.
+    emit_files: bool,
+    // Whether to emit non-`PythonResource::File` entries.
+    emit_non_files: bool,
     _phantom: std::marker::PhantomData<&'a ()>,
 }
 
@@ -79,6 +106,8 @@ impl<'a> PythonResourceIterator<'a> {
         path: &Path,
         cache_tag: &str,
         suffixes: &PythonModuleSuffixes,
+        emit_files: bool,
+        emit_non_files: bool,
     ) -> PythonResourceIterator<'a> {
         let res = walkdir::WalkDir::new(path).sort_by(|a, b| a.file_name().cmp(b.file_name()));
 
@@ -92,7 +121,11 @@ impl<'a> PythonResourceIterator<'a> {
                 if path.is_dir() {
                     None
                 } else {
-                    Some(path.to_path_buf())
+                    Some(PathEntry {
+                        path: path.to_path_buf(),
+                        file_emitted: false,
+                        non_file_emitted: false,
+                    })
                 }
             })
             .collect::<Vec<_>>();
@@ -105,6 +138,8 @@ impl<'a> PythonResourceIterator<'a> {
             path_content_overrides: HashMap::new(),
             seen_packages: HashSet::new(),
             resources: Vec::new(),
+            emit_files,
+            emit_non_files,
             _phantom: std::marker::PhantomData,
         }
     }
@@ -114,15 +149,26 @@ impl<'a> PythonResourceIterator<'a> {
         resources: &[(PathBuf, DataLocation)],
         cache_tag: &str,
         suffixes: &PythonModuleSuffixes,
+        emit_files: bool,
+        emit_non_files: bool,
     ) -> PythonResourceIterator<'a> {
         PythonResourceIterator {
             root_path: PathBuf::new(),
             cache_tag: cache_tag.to_string(),
             suffixes: suffixes.clone(),
-            paths: resources.iter().map(|(k, _)| k.clone()).collect::<Vec<_>>(),
+            paths: resources
+                .iter()
+                .map(|(k, _)| PathEntry {
+                    path: k.clone(),
+                    file_emitted: false,
+                    non_file_emitted: false,
+                })
+                .collect::<Vec<_>>(),
             path_content_overrides: HashMap::from_iter(resources.iter().cloned()),
             seen_packages: HashSet::new(),
             resources: Vec::new(),
+            emit_files,
+            emit_non_files,
             _phantom: std::marker::PhantomData,
         }
     }
@@ -475,28 +521,58 @@ impl<'a> Iterator for PythonResourceIterator<'a> {
                 break;
             }
 
+            // If we're emitting PythonResource::File entries and we haven't
+            // done so for this path, do so now.
+            if self.emit_files && !self.paths[0].file_emitted {
+                self.paths[0].file_emitted = true;
+
+                let rel_path = self.paths[0]
+                    .path
+                    .strip_prefix(&self.root_path)
+                    .expect("unable to strip path prefix")
+                    .to_path_buf();
+
+                let is_executable = if let Ok(metadata) = self.paths[0].path.metadata() {
+                    is_executable(&metadata)
+                } else {
+                    false
+                };
+
+                let f = FileData {
+                    path: rel_path,
+                    is_executable,
+                    data: self.resolve_data_location(&self.paths[0].path),
+                };
+
+                return Some(Ok(f.into()));
+            }
+
+            if self.emit_non_files && !self.paths[0].non_file_emitted {
+                self.paths[0].non_file_emitted = true;
+
+                // Because resolve_path is a mutable borrow.
+                let path_temp = self.paths[0].path.clone();
+
+                if let Some(entry) = self.resolve_path(&path_temp) {
+                    // Buffer Resource entries until later.
+                    match entry {
+                        PathItem::ResourceFile(resource) => {
+                            self.resources.push(resource);
+                        }
+                        PathItem::PythonResource(resource) => {
+                            return Some(Ok(resource));
+                        }
+                    }
+                }
+            }
+
+            // We're done emitting variants for this path. Discard it and move
+            // on to next record.
+            //
             // Removing the first element is a bit inefficient. Should we
             // reverse storage / iteration order instead?
-            let path = self.paths.remove(0);
-
-            let entry = self.resolve_path(&path);
-
-            // Try the next directory entry.
-            if entry.is_none() {
-                continue;
-            }
-
-            let entry = entry?;
-
-            // Buffer Resource entries until later.
-            match entry {
-                PathItem::ResourceFile(resource) => {
-                    self.resources.push(resource);
-                }
-                PathItem::PythonResource(resource) => {
-                    return Some(Ok(resource));
-                }
-            }
+            self.paths.remove(0);
+            continue;
         }
 
         loop {
@@ -600,8 +676,10 @@ pub fn find_python_resources<'a>(
     root_path: &Path,
     cache_tag: &str,
     suffixes: &PythonModuleSuffixes,
+    emit_files: bool,
+    emit_non_files: bool,
 ) -> PythonResourceIterator<'a> {
-    PythonResourceIterator::new(root_path, cache_tag, suffixes)
+    PythonResourceIterator::new(root_path, cache_tag, suffixes, emit_files, emit_non_files)
 }
 
 #[cfg(test)]
@@ -642,12 +720,22 @@ mod tests {
 
         write(acme_a_path.join("foo.py"), "# acme.foo")?;
 
-        let resources = PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &DEFAULT_SUFFIXES)
-            .collect::<Result<Vec<_>>>()?;
-        assert_eq!(resources.len(), 4);
+        let resources =
+            PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &DEFAULT_SUFFIXES, true, true)
+                .collect::<Result<Vec<_>>>()?;
+        assert_eq!(resources.len(), 8);
 
         assert_eq!(
             resources[0],
+            FileData {
+                path: PathBuf::from("acme/__init__.py"),
+                is_executable: false,
+                data: DataLocation::Path(acme_path.join("__init__.py")),
+            }
+            .into()
+        );
+        assert_eq!(
+            resources[1],
             PythonModuleSource {
                 name: "acme".to_string(),
                 source: DataLocation::Path(acme_path.join("__init__.py")),
@@ -659,7 +747,16 @@ mod tests {
             .into()
         );
         assert_eq!(
-            resources[1],
+            resources[2],
+            FileData {
+                path: PathBuf::from("acme/a/__init__.py"),
+                is_executable: false,
+                data: DataLocation::Path(acme_a_path.join("__init__.py")),
+            }
+            .into()
+        );
+        assert_eq!(
+            resources[3],
             PythonModuleSource {
                 name: "acme.a".to_string(),
                 source: DataLocation::Path(acme_a_path.join("__init__.py")),
@@ -671,7 +768,16 @@ mod tests {
             .into()
         );
         assert_eq!(
-            resources[2],
+            resources[4],
+            FileData {
+                path: PathBuf::from("acme/a/foo.py"),
+                is_executable: false,
+                data: DataLocation::Path(acme_a_path.join("foo.py")),
+            }
+            .into()
+        );
+        assert_eq!(
+            resources[5],
             PythonModuleSource {
                 name: "acme.a.foo".to_string(),
                 source: DataLocation::Path(acme_a_path.join("foo.py")),
@@ -683,7 +789,16 @@ mod tests {
             .into()
         );
         assert_eq!(
-            resources[3],
+            resources[6],
+            FileData {
+                path: PathBuf::from("acme/bar/__init__.py"),
+                is_executable: false,
+                data: DataLocation::Path(acme_bar_path.join("__init__.py")),
+            }
+            .into()
+        );
+        assert_eq!(
+            resources[7],
             PythonModuleSource {
                 name: "acme.bar".to_string(),
                 source: DataLocation::Path(acme_bar_path.join("__init__.py")),
@@ -785,8 +900,9 @@ mod tests {
         write(acme_bar_pycache_path.join("foo.cpython-38.opt-1.pyc"), "")?;
         write(acme_bar_pycache_path.join("foo.cpython-38.opt-2.pyc"), "")?;
 
-        let resources = PythonResourceIterator::new(tp, "cpython-38", &DEFAULT_SUFFIXES)
-            .collect::<Result<Vec<_>>>()?;
+        let resources =
+            PythonResourceIterator::new(tp, "cpython-38", &DEFAULT_SUFFIXES, false, true)
+                .collect::<Result<Vec<_>>>()?;
         assert_eq!(resources.len(), 18);
 
         assert_eq!(
@@ -986,8 +1102,9 @@ mod tests {
         write(acme_path.join("__init__.py"), "")?;
         write(acme_path.join("bar.py"), "")?;
 
-        let resources = PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &DEFAULT_SUFFIXES)
-            .collect::<Result<Vec<_>>>()?;
+        let resources =
+            PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &DEFAULT_SUFFIXES, false, true)
+                .collect::<Result<Vec<_>>>()?;
         assert_eq!(resources.len(), 2);
 
         assert_eq!(
@@ -1053,8 +1170,8 @@ mod tests {
             ],
         };
 
-        let resources =
-            PythonResourceIterator::new(tp, "cpython-37", &suffixes).collect::<Result<Vec<_>>>()?;
+        let resources = PythonResourceIterator::new(tp, "cpython-37", &suffixes, false, true)
+            .collect::<Result<Vec<_>>>()?;
 
         assert_eq!(resources.len(), 5);
 
@@ -1167,8 +1284,9 @@ mod tests {
         let egg_path = tp.join("foo-1.0-py3.7.egg");
         write(&egg_path, "")?;
 
-        let resources = PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &DEFAULT_SUFFIXES)
-            .collect::<Result<Vec<_>>>()?;
+        let resources =
+            PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &DEFAULT_SUFFIXES, false, true)
+                .collect::<Result<Vec<_>>>()?;
         assert_eq!(resources.len(), 1);
 
         assert_eq!(
@@ -1200,8 +1318,9 @@ mod tests {
         write(package_path.join("__init__.py"), "")?;
         write(package_path.join("bar.py"), "")?;
 
-        let resources = PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &DEFAULT_SUFFIXES)
-            .collect::<Result<Vec<_>>>()?;
+        let resources =
+            PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &DEFAULT_SUFFIXES, false, true)
+                .collect::<Result<Vec<_>>>()?;
         assert_eq!(resources.len(), 2);
 
         assert_eq!(
@@ -1242,8 +1361,9 @@ mod tests {
         let pth_path = tp.join("foo.pth");
         write(&pth_path, "")?;
 
-        let resources = PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &DEFAULT_SUFFIXES)
-            .collect::<Result<Vec<_>>>()?;
+        let resources =
+            PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &DEFAULT_SUFFIXES, false, true)
+                .collect::<Result<Vec<_>>>()?;
         assert_eq!(resources.len(), 1);
 
         assert_eq!(
@@ -1266,8 +1386,9 @@ mod tests {
         let resource_path = tp.join("resource.txt");
         write(&resource_path, "content")?;
 
-        let resources = PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &DEFAULT_SUFFIXES)
-            .collect::<Vec<_>>();
+        let resources =
+            PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &DEFAULT_SUFFIXES, false, true)
+                .collect::<Vec<_>>();
         assert!(resources.is_empty());
 
         Ok(())
@@ -1286,8 +1407,9 @@ mod tests {
         let resource_path = resource_dir.join("resource.txt");
         write(&resource_path, "content")?;
 
-        let resources = PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &DEFAULT_SUFFIXES)
-            .collect::<Result<Vec<_>>>()?;
+        let resources =
+            PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &DEFAULT_SUFFIXES, false, true)
+                .collect::<Result<Vec<_>>>()?;
         assert_eq!(resources.len(), 1);
 
         assert_eq!(
@@ -1320,8 +1442,9 @@ mod tests {
         let resource_path = package_dir.join("resource.txt");
         write(&resource_path, "content")?;
 
-        let resources = PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &DEFAULT_SUFFIXES)
-            .collect::<Result<Vec<_>>>()?;
+        let resources =
+            PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &DEFAULT_SUFFIXES, false, true)
+                .collect::<Result<Vec<_>>>()?;
 
         assert_eq!(resources.len(), 2);
         assert_eq!(
@@ -1366,8 +1489,9 @@ mod tests {
         let resource_path = subdir.join("resource.txt");
         write(&resource_path, "content")?;
 
-        let resources = PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &DEFAULT_SUFFIXES)
-            .collect::<Result<Vec<_>>>()?;
+        let resources =
+            PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &DEFAULT_SUFFIXES, false, true)
+                .collect::<Result<Vec<_>>>()?;
 
         assert_eq!(resources.len(), 2);
         assert_eq!(
@@ -1408,8 +1532,9 @@ mod tests {
         let resource = dist_path.join("file.txt");
         write(&resource, "content")?;
 
-        let resources = PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &DEFAULT_SUFFIXES)
-            .collect::<Result<Vec<_>>>()?;
+        let resources =
+            PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &DEFAULT_SUFFIXES, false, true)
+                .collect::<Result<Vec<_>>>()?;
         assert!(resources.is_empty());
 
         Ok(())
@@ -1428,8 +1553,9 @@ mod tests {
         let resource = dist_path.join("file.txt");
         write(&resource, "content")?;
 
-        let resources = PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &DEFAULT_SUFFIXES)
-            .collect::<Result<Vec<_>>>()?;
+        let resources =
+            PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &DEFAULT_SUFFIXES, false, true)
+                .collect::<Result<Vec<_>>>()?;
         assert!(resources.is_empty());
 
         Ok(())
@@ -1448,8 +1574,9 @@ mod tests {
         let resource = dist_path.join("file.txt");
         write(&resource, "content")?;
 
-        let resources = PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &DEFAULT_SUFFIXES)
-            .collect::<Result<Vec<_>>>()?;
+        let resources =
+            PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &DEFAULT_SUFFIXES, false, true)
+                .collect::<Result<Vec<_>>>()?;
         assert!(resources.is_empty());
 
         Ok(())
@@ -1473,8 +1600,9 @@ mod tests {
         let subdir_resource_path = subdir.join("sub.txt");
         write(&subdir_resource_path, "content")?;
 
-        let resources = PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &DEFAULT_SUFFIXES)
-            .collect::<Result<Vec<_>>>()?;
+        let resources =
+            PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &DEFAULT_SUFFIXES, false, true)
+                .collect::<Result<Vec<_>>>()?;
         assert_eq!(resources.len(), 3);
 
         assert_eq!(
@@ -1532,8 +1660,9 @@ mod tests {
         let subdir_resource_path = subdir.join("sub.txt");
         write(&subdir_resource_path, "content")?;
 
-        let resources = PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &DEFAULT_SUFFIXES)
-            .collect::<Result<Vec<_>>>()?;
+        let resources =
+            PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &DEFAULT_SUFFIXES, false, true)
+                .collect::<Result<Vec<_>>>()?;
         assert_eq!(resources.len(), 3);
 
         assert_eq!(
@@ -1587,6 +1716,8 @@ mod tests {
             &inputs,
             DEFAULT_CACHE_TAG,
             &DEFAULT_SUFFIXES,
+            false,
+            true,
         )
         .collect::<Result<Vec<_>>>()?;
 

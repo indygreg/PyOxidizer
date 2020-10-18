@@ -826,6 +826,8 @@ impl StandaloneDistribution {
             &stdlib_path,
             &pi.python_implementation_cache_tag,
             &module_suffixes,
+            false,
+            true,
         ) {
             match entry? {
                 PythonResource::PackageResource(resource) => {

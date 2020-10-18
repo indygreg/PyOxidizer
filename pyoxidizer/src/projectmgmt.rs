@@ -193,9 +193,13 @@ pub fn find_resources(
     } else if let Some(path) = path {
         if path.is_dir() {
             println!("scanning directory {}", path.display());
-            for resource in
-                find_python_resources(path, dist.cache_tag(), &dist.python_module_suffixes()?)
-            {
+            for resource in find_python_resources(
+                path,
+                dist.cache_tag(),
+                &dist.python_module_suffixes()?,
+                false,
+                true,
+            ) {
                 print_resource(&resource?);
             }
         } else if path.is_file() {

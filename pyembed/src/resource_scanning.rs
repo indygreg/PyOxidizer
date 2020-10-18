@@ -62,7 +62,7 @@ pub(crate) fn find_resources_in_path(py: Python, path: PyObject) -> PyResult<PyO
 
     let mut res: Vec<PyObject> = Vec::new();
 
-    let iter = find_python_resources(&path, &cache_tag, &suffixes);
+    let iter = find_python_resources(&path, &cache_tag, &suffixes, false, true);
 
     for resource in iter {
         let resource = resource.map_err(|e| {

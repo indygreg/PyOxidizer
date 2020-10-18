@@ -194,7 +194,13 @@ pub fn find_resources<'a>(
         HashMap::new()
     };
 
-    for r in find_python_resources(&path, dist.cache_tag(), &dist.python_module_suffixes()?) {
+    for r in find_python_resources(
+        &path,
+        dist.cache_tag(),
+        &dist.python_module_suffixes()?,
+        false,
+        true,
+    ) {
         let r = r?.to_memory()?;
 
         match r {
