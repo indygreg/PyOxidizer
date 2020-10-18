@@ -26,6 +26,7 @@ documentation for every type and function in the Starlark dialect.
    config_filesystem
    config_type_file_content
    config_type_file_manifest
+   config_type_file
    config_type_python_distribution
    config_type_python_embedded_resources
    config_type_python_executable

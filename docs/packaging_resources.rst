@@ -72,8 +72,15 @@ The following Starlark types represent individual resources:
    Typically accessed via ``importlib.metadata``. This is how files in
    ``*.dist-info`` or ``*.egg-info`` directories are represented.
 
+:ref:`config_type_file`
+   Represents a filesystem path and its content.
+
 :ref:`config_type_file_content`
    Represents the content of a filesystem file.
+
+   This is different from :ref:`config_type_file` in that it only
+   represents file content and doesn't have an associated path. (It is
+   likely these 2 types will be merged someday.)
 
 There are also Starlark types that are logically containers for multiple
 resources:

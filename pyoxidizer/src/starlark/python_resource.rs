@@ -7,7 +7,7 @@ use {
     python_packaging::{
         location::ConcreteResourceLocation,
         resource::{
-            PythonExtensionModule, PythonModuleSource, PythonPackageDistributionResource,
+            FileData, PythonExtensionModule, PythonModuleSource, PythonPackageDistributionResource,
             PythonPackageResource, PythonResource,
         },
         resource_collection::PythonResourceAddCollectionContext,
@@ -594,6 +594,90 @@ impl TypedValue for PythonExtensionModuleValue {
     }
 }
 
+/// Starlark value wrapper for `FileData`.
+#[derive(Clone, Debug)]
+pub struct FileValue {
+    pub inner: FileData,
+    pub add_context: Option<PythonResourceAddCollectionContext>,
+}
+
+impl FileValue {
+    pub fn new(file: FileData) -> Self {
+        Self {
+            inner: file,
+            add_context: None,
+        }
+    }
+}
+
+impl ResourceCollectionContext for FileValue {
+    fn add_collection_context(&self) -> &Option<PythonResourceAddCollectionContext> {
+        &self.add_context
+    }
+
+    fn add_collection_context_mut(&mut self) -> &mut Option<PythonResourceAddCollectionContext> {
+        &mut self.add_context
+    }
+
+    fn as_python_resource(&self) -> PythonResource<'_> {
+        PythonResource::from(&self.inner)
+    }
+}
+
+impl TypedValue for FileValue {
+    type Holder = Mutable<FileValue>;
+    const TYPE: &'static str = "File";
+
+    fn values_for_descendant_check_and_freeze(&self) -> Box<dyn Iterator<Item = Value>> {
+        Box::new(std::iter::empty())
+    }
+
+    fn to_str(&self) -> String {
+        format!(
+            "{}<path={}, is_executable={}>",
+            Self::TYPE,
+            self.inner.path_string(),
+            self.inner.is_executable
+        )
+    }
+
+    fn to_repr(&self) -> String {
+        self.to_str()
+    }
+
+    fn get_attr(&self, attribute: &str) -> ValueResult {
+        let v = match attribute {
+            "path" => Value::from(self.inner.path_string()),
+            "is_executable" => Value::from(self.inner.is_executable),
+            attr => {
+                return if self.add_collection_context_attrs().contains(&attr) {
+                    self.get_attr_add_collection_context(attr)
+                } else {
+                    Err(ValueError::OperationNotSupported {
+                        op: UnsupportedOperation::GetAttr(attr.to_string()),
+                        left: Self::TYPE.to_string(),
+                        right: None,
+                    })
+                };
+            }
+        };
+
+        Ok(v)
+    }
+
+    fn has_attr(&self, attribute: &str) -> Result<bool, ValueError> {
+        Ok(match attribute {
+            "path" => true,
+            "is_executable" => true,
+            attr => self.add_collection_context_attrs().contains(&attr),
+        })
+    }
+
+    fn set_attr(&mut self, attribute: &str, value: Value) -> Result<(), ValueError> {
+        self.set_attr_add_collection_context(attribute, value)
+    }
+}
+
 /// Whether a `PythonResource` can be converted to a Starlark value.
 pub fn is_resource_starlark_compatible(resource: &PythonResource) -> bool {
     match resource {
@@ -605,7 +689,7 @@ pub fn is_resource_starlark_compatible(resource: &PythonResource) -> bool {
         PythonResource::ModuleBytecodeRequest(_) => false,
         PythonResource::EggFile(_) => false,
         PythonResource::PathExtension(_) => false,
-        PythonResource::File(_) => false,
+        PythonResource::File(_) => true,
     }
 }
 
@@ -644,6 +728,13 @@ pub fn python_resource_to_value(
             Ok(Value::new(em))
         },
 
+        PythonResource::File(f) => {
+            let mut value = FileValue::new(f.clone().into_owned());
+            policy.apply_to_resource(type_values, call_stack, &mut value)?;
+
+            Ok(Value::new(value))
+        }
+
         _ => {
             panic!("incompatible PythonResource variant passed; did you forget to filter through is_resource_starlark_compatible()?")
         }
@@ -673,6 +764,11 @@ pub fn add_context_for_value(
             .clone()),
         "PythonExtensionModule" => Ok(value
             .downcast_ref::<PythonExtensionModuleValue>()
+            .unwrap()
+            .add_collection_context()
+            .clone()),
+        "File" => Ok(value
+            .downcast_ref::<FileValue>()
             .unwrap()
             .add_collection_context()
             .clone()),

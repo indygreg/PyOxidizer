@@ -28,8 +28,8 @@ If false, all collected/packaged resources must be instances of
 concrete resource types (``PythonModuleSource``, ``PythonPackageResource``,
 etc).
 
-If true, generic file resources can be collected and indexed as generic
-files.
+If true, :ref:`config_type_file` instances can be added to resource
+collectors.
 
 .. _config_type_python_packaging_policy_allow_in_memory_shared_library_loading:
 
@@ -126,7 +126,7 @@ Whether file scanning should attempt to classify files and emit typed
 resources corresponding to the detected file type.
 
 If ``True``, operations that emit resource objects (such as
-:ref:`config_type_python_executable_pip_install`) will emit specific
+:ref:`config_python_executable_pip_install`) will emit specific
 types for each resource flavor. e.g. :ref:`config_type_python_module_source`,
 :ref:`config_type_python_extension_module`, etc.
 
@@ -135,8 +135,8 @@ a file and this rich resource types are not emitted.
 
 Can be used in conjunction with
 :ref:`config_type_python_packaging_policy_file_scanner_emit_files`. If both
-are ``True``, there will be a file resource and an optional non-file resource
-for each source file.
+are ``True``, there will be a :ref:`config_type_file` and an optional non-file
+resource for each source file.
 
 Default is ``True``.
 
@@ -150,10 +150,10 @@ Default is ``True``.
 Whether file scanning should emit file resources for each seen file.
 
 If ``True``, operations that emit resource objects (such as
-:ref:`config_type_python_executable_pip_install`) will emit generic file
-instances for each seen file.
+:ref:`config_python_executable_pip_install`) will emit
+:ref:`config_type_file` instances for each encountered file.
 
-If ``False``, the generic file resources are not emitted.
+If ``False``, :ref:`config_type_file` instances will not be emitted.
 
 Can be used in conjunction with
 :ref:`config_type_python_packaging_policy_file_scanner_classify_files`.

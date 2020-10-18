@@ -47,6 +47,7 @@ use {
     },
 };
 
+// TODO merge this into `FileValue`?
 #[derive(Clone, Debug)]
 pub struct FileContentValue {
     pub content: FileContent,
