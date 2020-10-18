@@ -163,6 +163,8 @@ pub fn find_resources(
     distributions_dir: Option<&Path>,
     scan_distribution: bool,
     target_triple: &str,
+    classify_files: bool,
+    emit_files: bool,
 ) -> Result<()> {
     let distribution_location =
         default_distribution_location(&DistributionFlavor::Standalone, target_triple, None)?;
@@ -197,8 +199,8 @@ pub fn find_resources(
                 path,
                 dist.cache_tag(),
                 &dist.python_module_suffixes()?,
-                false,
-                true,
+                emit_files,
+                classify_files,
             ) {
                 print_resource(&resource?);
             }

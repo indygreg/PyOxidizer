@@ -164,6 +164,16 @@ pub fn run_cli() -> Result<()> {
                         .default_value(env!("HOST"))
                         .help("Target triple of Python distribution to use"),
                 )
+                .arg(
+                    Arg::with_name("no_classify_files")
+                        .long("no-classify-files")
+                        .help("Whether to skip classifying files as typed resources"),
+                )
+                .arg(
+                    Arg::with_name("no_emit_files")
+                        .long("no-emit-files")
+                        .help("Whether to skip emitting File resources"),
+                )
                 .arg(Arg::with_name("path").value_name("PATH").help(
                     "Filesystem path to scan for resources. Must be a directory or Python wheel",
                 )),
@@ -373,6 +383,8 @@ pub fn run_cli() -> Result<()> {
             };
             let scan_distribution = args.is_present("scan_distribution");
             let target_triple = args.value_of("target_triple").unwrap();
+            let classify_files = !args.is_present("no_classify_files");
+            let emit_files = !args.is_present("no_emit_files");
 
             if path.is_none() && !scan_distribution {
                 Err(anyhow!("must specify a path or --scan-distribution"))
@@ -383,6 +395,8 @@ pub fn run_cli() -> Result<()> {
                     distributions_dir,
                     scan_distribution,
                     target_triple,
+                    classify_files,
+                    emit_files,
                 )
             }
         }
