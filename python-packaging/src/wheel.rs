@@ -272,6 +272,8 @@ impl WheelArchive {
         &self,
         cache_tag: &str,
         suffixes: &PythonModuleSuffixes,
+        emit_files: bool,
+        classify_files: bool,
     ) -> Result<Vec<PythonResource<'a>>> {
         // The filesystem scanning code relies on the final install layout.
         // So we need to simulate that.
@@ -292,7 +294,13 @@ impl WheelArchive {
         // Other data keys are `headers` and `scripts`, which we don't yet
         // support as resource types.
 
-        PythonResourceIterator::from_data_locations(&inputs, cache_tag, suffixes, false, true)
-            .collect::<Result<Vec<_>>>()
+        PythonResourceIterator::from_data_locations(
+            &inputs,
+            cache_tag,
+            suffixes,
+            emit_files,
+            classify_files,
+        )
+        .collect::<Result<Vec<_>>>()
     }
 }

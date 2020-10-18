@@ -322,6 +322,9 @@ pub fn pip_download<'a>(
         res.extend(wheel.python_resources(
             taget_dist.cache_tag(),
             &taget_dist.python_module_suffixes()?,
+            // Derive from PythonPackagingPolicy.
+            false,
+            true,
         )?);
     }
 

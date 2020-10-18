@@ -203,9 +203,12 @@ pub fn find_resources(
                     println!("parsing {} as a wheel archive", path.display());
                     let wheel = WheelArchive::from_path(path)?;
 
-                    for resource in
-                        wheel.python_resources(dist.cache_tag(), &dist.python_module_suffixes()?)?
-                    {
+                    for resource in wheel.python_resources(
+                        dist.cache_tag(),
+                        &dist.python_module_suffixes()?,
+                        emit_files,
+                        classify_files,
+                    )? {
                         print_resource(&resource)
                     }
 
