@@ -14,9 +14,10 @@ use {
         module_util::{packages_from_module_name, resolve_path_for_module},
         python_source::has_dunder_file,
         resource::{
-            BytecodeOptimizationLevel, DataLocation, PythonExtensionModule, PythonModuleBytecode,
-            PythonModuleBytecodeFromSource, PythonModuleSource, PythonPackageDistributionResource,
-            PythonPackageResource, PythonResource, SharedLibrary,
+            BytecodeOptimizationLevel, DataLocation, FileData, PythonExtensionModule,
+            PythonModuleBytecode, PythonModuleBytecodeFromSource, PythonModuleSource,
+            PythonPackageDistributionResource, PythonPackageResource, PythonResource,
+            SharedLibrary,
         },
     },
     anyhow::{anyhow, Result},
@@ -81,6 +82,10 @@ pub struct PrePackagedResource {
     pub is_frozen_module: bool,
     pub is_extension_module: bool,
     pub is_shared_library: bool,
+    pub is_utf8_filename_data: bool,
+    pub file_executable: bool,
+    pub file_data_embedded: Option<DataLocation>,
+    pub file_data_utf8_relative_path: Option<(PathBuf, DataLocation)>,
 }
 
 impl PrePackagedResource {
@@ -357,10 +362,22 @@ impl PrePackagedResource {
             is_frozen_module: self.is_frozen_module,
             is_extension_module: self.is_extension_module,
             is_shared_library: self.is_shared_library,
-            is_utf8_filename_data: false,
-            file_executable: false,
-            file_data_embedded: None,
-            file_data_utf8_relative_path: None,
+            is_utf8_filename_data: self.is_utf8_filename_data,
+            file_executable: self.file_executable,
+            file_data_embedded: if let Some(location) = &self.file_data_embedded {
+                Some(Cow::Owned(location.resolve()?))
+            } else {
+                None
+            },
+            file_data_utf8_relative_path: if let Some((path, location)) =
+                &self.file_data_utf8_relative_path
+            {
+                installs.push((path.clone(), location.clone(), self.file_executable));
+
+                Some(Cow::Owned(path.to_string_lossy().to_string()))
+            } else {
+                None
+            },
         };
 
         if let Some((prefix, filename, location)) = &self.relative_path_shared_library {
@@ -1438,6 +1455,53 @@ impl PythonResourceCollector {
         Ok(())
     }
 
+    pub fn add_file_data(
+        &mut self,
+        file: &FileData,
+        location: &ConcreteResourceLocation,
+    ) -> Result<()> {
+        self.check_policy(location.into())?;
+
+        let entry =
+            self.resources
+                .entry(file.path_string())
+                .or_insert_with(|| PrePackagedResource {
+                    name: file.path_string(),
+                    ..PrePackagedResource::default()
+                });
+
+        entry.is_utf8_filename_data = true;
+        entry.file_executable = file.is_executable;
+
+        match location {
+            ConcreteResourceLocation::InMemory => {
+                entry.file_data_embedded = Some(file.data.clone());
+            }
+            ConcreteResourceLocation::RelativePath(prefix) => {
+                entry.file_data_utf8_relative_path =
+                    Some((PathBuf::from(prefix).join(&file.path), file.data.clone()));
+            }
+        }
+
+        Ok(())
+    }
+
+    pub fn add_file_data_with_context(
+        &mut self,
+        file: &FileData,
+        add_context: &PythonResourceAddCollectionContext,
+    ) -> Result<()> {
+        if !add_context.include {
+            return Ok(());
+        }
+
+        self.add_python_resource_with_locations(
+            &file.into(),
+            &add_context.location,
+            &add_context.location_fallback,
+        )
+    }
+
     fn add_python_resource_with_locations(
         &mut self,
         resource: &PythonResource,
@@ -1505,6 +1569,16 @@ impl PythonResourceCollector {
                     }
                 }
             }
+            PythonResource::File(file) => match self.add_file_data(file, location) {
+                Ok(()) => Ok(()),
+                Err(err) => {
+                    if let Some(location) = fallback_location {
+                        self.add_file_data(file, location)
+                    } else {
+                        Err(err)
+                    }
+                }
+            },
             _ => Err(anyhow!("PythonResource variant not yet supported")),
         }
     }
@@ -4200,6 +4274,177 @@ mod tests {
                 in_memory_source: Some(Cow::Owned(vec![1])),
                 in_memory_shared_library: Some(Cow::Owned(vec![2])),
                 ..Resource::default()
+            })
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_add_in_memory_file_data() -> Result<()> {
+        let mut r = PythonResourceCollector::new(
+            vec![AbstractResourceLocation::InMemory],
+            vec![],
+            false,
+            DEFAULT_CACHE_TAG,
+        );
+        r.add_file_data(
+            &FileData {
+                path: PathBuf::from("foo/bar.py"),
+                is_executable: false,
+                data: DataLocation::Memory(vec![42]),
+            },
+            &ConcreteResourceLocation::InMemory,
+        )?;
+
+        assert!(r.resources.contains_key("foo/bar.py"));
+        assert_eq!(
+            r.resources.get("foo/bar.py"),
+            Some(&PrePackagedResource {
+                is_utf8_filename_data: true,
+                name: "foo/bar.py".to_string(),
+                file_data_embedded: Some(DataLocation::Memory(vec![42])),
+                ..PrePackagedResource::default()
+            })
+        );
+
+        let mut compiler = FakeBytecodeCompiler { magic_number: 42 };
+
+        let resources = r.compile_resources(&mut compiler)?;
+
+        assert_eq!(resources.resources.len(), 1);
+        assert_eq!(
+            resources.resources.get("foo/bar.py"),
+            Some(&Resource {
+                is_utf8_filename_data: true,
+                name: Cow::Owned("foo/bar.py".to_string()),
+                file_data_embedded: Some(Cow::Owned(vec![42])),
+                ..Resource::default()
+            })
+        );
+        assert!(resources.extra_files.is_empty());
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_add_relative_path_file_data() -> Result<()> {
+        let mut r = PythonResourceCollector::new(
+            vec![AbstractResourceLocation::RelativePath],
+            vec![],
+            false,
+            DEFAULT_CACHE_TAG,
+        );
+        r.add_file_data(
+            &FileData {
+                path: PathBuf::from("foo/bar.py"),
+                is_executable: false,
+                data: DataLocation::Memory(vec![42]),
+            },
+            &ConcreteResourceLocation::RelativePath("prefix".to_string()),
+        )?;
+
+        assert!(r.resources.contains_key("foo/bar.py"));
+        assert_eq!(
+            r.resources.get("foo/bar.py"),
+            Some(&PrePackagedResource {
+                is_utf8_filename_data: true,
+                name: "foo/bar.py".to_string(),
+                file_data_utf8_relative_path: Some((
+                    PathBuf::from("prefix/foo/bar.py"),
+                    DataLocation::Memory(vec![42])
+                )),
+                ..PrePackagedResource::default()
+            })
+        );
+
+        let mut compiler = FakeBytecodeCompiler { magic_number: 42 };
+
+        let resources = r.compile_resources(&mut compiler)?;
+
+        assert_eq!(resources.resources.len(), 1);
+        assert_eq!(
+            resources.resources.get("foo/bar.py"),
+            Some(&Resource {
+                is_utf8_filename_data: true,
+                name: Cow::Owned("foo/bar.py".to_string()),
+                file_data_utf8_relative_path: Some(Cow::Owned("prefix/foo/bar.py".to_string())),
+                ..Resource::default()
+            })
+        );
+        assert_eq!(
+            resources.extra_files,
+            vec![(
+                PathBuf::from("prefix/foo/bar.py"),
+                DataLocation::Memory(vec![42]),
+                false
+            )]
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_add_file_data_with_context() -> Result<()> {
+        let mut r = PythonResourceCollector::new(
+            vec![AbstractResourceLocation::InMemory],
+            vec![],
+            false,
+            DEFAULT_CACHE_TAG,
+        );
+
+        let file = FileData {
+            path: PathBuf::from("foo/bar.py"),
+            is_executable: true,
+            data: DataLocation::Memory(vec![42]),
+        };
+
+        let mut add_context = PythonResourceAddCollectionContext {
+            include: false,
+            location: ConcreteResourceLocation::InMemory,
+            location_fallback: None,
+            store_source: false,
+            optimize_level_zero: false,
+            optimize_level_one: false,
+            optimize_level_two: false,
+        };
+
+        // include=false is a noop.
+        assert!(r.resources.is_empty());
+        r.add_file_data_with_context(&file, &add_context)?;
+        assert!(r.resources.is_empty());
+
+        // include=true adds the resource.
+        add_context.include = true;
+        r.add_file_data_with_context(&file, &add_context)?;
+        assert_eq!(
+            r.resources.get(&file.path_string()),
+            Some(&PrePackagedResource {
+                name: file.path_string(),
+                is_utf8_filename_data: true,
+                file_executable: true,
+                file_data_embedded: Some(file.data.clone()),
+                ..PrePackagedResource::default()
+            })
+        );
+        r.resources.clear();
+
+        // location_fallback works.
+        r.allowed_locations = vec![AbstractResourceLocation::RelativePath];
+        add_context.location_fallback =
+            Some(ConcreteResourceLocation::RelativePath("prefix".to_string()));
+        r.add_file_data_with_context(&file, &add_context)?;
+        assert_eq!(
+            r.resources.get(&file.path_string()),
+            Some(&PrePackagedResource {
+                name: file.path_string(),
+                is_utf8_filename_data: true,
+                file_executable: true,
+                file_data_utf8_relative_path: Some((
+                    PathBuf::from("prefix").join(file.path_string()),
+                    file.data
+                )),
+                ..PrePackagedResource::default()
             })
         );
 

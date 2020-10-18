@@ -759,6 +759,11 @@ pub struct FileData {
 }
 
 impl FileData {
+    /// Convert the path to a String.
+    pub fn path_string(&self) -> String {
+        self.path.to_string_lossy().to_string()
+    }
+
     pub fn to_memory(&self) -> Result<Self> {
         Ok(Self {
             path: self.path.clone(),
