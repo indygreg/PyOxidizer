@@ -1243,11 +1243,11 @@ impl PythonDistribution for StandaloneDistribution {
         Ok(builder as Box<dyn PythonBinaryBuilder>)
     }
 
-    fn python_resources(&self) -> Vec<PythonResource> {
+    fn python_resources<'a>(&self) -> Vec<PythonResource<'a>> {
         let extension_modules = self
             .extension_modules
             .iter()
-            .map(|(_, exts)| exts.iter().map(|e| PythonResource::from(e)))
+            .map(|(_, exts)| exts.iter().map(|e| PythonResource::from(e.to_owned())))
             .flatten();
 
         let module_sources = self.py_modules.iter().map(|(name, path)| {
@@ -1280,7 +1280,7 @@ impl PythonDistribution for StandaloneDistribution {
         extension_modules
             .chain(module_sources)
             .chain(resource_datas)
-            .collect::<Vec<_>>()
+            .collect::<Vec<PythonResource<'a>>>()
     }
 
     fn iter_extension_modules<'a>(

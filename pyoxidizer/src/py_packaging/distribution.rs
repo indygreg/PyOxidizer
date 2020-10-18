@@ -157,7 +157,7 @@ pub trait PythonDistribution {
     ) -> Result<Box<dyn PythonBinaryBuilder>>;
 
     /// Obtain `PythonResource` instances for every resource in this distribution.
-    fn python_resources(&self) -> Vec<PythonResource>;
+    fn python_resources<'a>(&self) -> Vec<PythonResource<'a>>;
 
     /// Obtain `PythonExtensionModule` instances present in this distribution.
     ///
