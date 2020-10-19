@@ -32,7 +32,7 @@ lazy_static! {
 
 /// Represents a Python wheel archive.
 pub struct WheelArchive {
-    files: HashMap<String, Vec<u8>>,
+    files: HashMap<String, FileData>,
     name_version: String,
 }
 
@@ -63,7 +63,15 @@ impl WheelArchive {
             let mut file = archive.by_index(i)?;
             let mut buffer = Vec::with_capacity(file.size() as usize);
             file.read_to_end(&mut buffer)?;
-            files.insert(file.name().to_string(), buffer);
+            files.insert(
+                file.name().to_string(),
+                FileData {
+                    path: PathBuf::from(file.name()),
+                    // TODO populate.
+                    is_executable: false,
+                    data: DataLocation::Memory(buffer),
+                },
+            );
         }
 
         Ok(Self {
@@ -98,24 +106,24 @@ impl WheelArchive {
     pub fn archive_metadata(&self) -> Result<PythonPackageMetadata> {
         let path = format!("{}/WHEEL", self.dist_info_path());
 
-        let data = self
+        let file = self
             .files
             .get(&path)
             .ok_or_else(|| anyhow!("{} does not exist", path))?;
 
-        PythonPackageMetadata::from_metadata(data)
+        PythonPackageMetadata::from_metadata(&file.data.resolve()?)
     }
 
     /// Obtain the `.dist-info/METADATA` content as a parsed object.
     pub fn metadata(&self) -> Result<PythonPackageMetadata> {
         let path = format!("{}/METADATA", self.dist_info_path());
 
-        let data = self
+        let file = self
             .files
             .get(&path)
             .ok_or_else(|| anyhow!("{} does not exist", path))?;
 
-        PythonPackageMetadata::from_metadata(data)
+        PythonPackageMetadata::from_metadata(&file.data.resolve()?)
     }
 
     /// Obtain the first header value from the archive metadata file.
@@ -181,11 +189,7 @@ impl WheelArchive {
             .iter()
             .filter_map(|(k, v)| {
                 if k.starts_with(&prefix) {
-                    Some(FileData {
-                        path: PathBuf::from(k),
-                        is_executable: false,
-                        data: DataLocation::Memory(v.clone()),
-                    })
+                    Some(v.clone())
                 } else {
                     None
                 }
@@ -203,8 +207,8 @@ impl WheelArchive {
                 if k.starts_with(&prefix) {
                     Some(FileData {
                         path: PathBuf::from(&k[prefix.len()..]),
-                        is_executable: false,
-                        data: DataLocation::Memory(v.clone()),
+                        is_executable: v.is_executable,
+                        data: v.data.clone(),
                     })
                 } else {
                     None
@@ -266,11 +270,7 @@ impl WheelArchive {
                 if k.starts_with(&dist_info_prefix) || k.starts_with(&data_prefix) {
                     None
                 } else {
-                    Some(FileData {
-                        path: PathBuf::from(k),
-                        is_executable: false,
-                        data: DataLocation::Memory(v.clone()),
-                    })
+                    Some(v.clone())
                 }
             })
             .collect::<Vec<_>>()
