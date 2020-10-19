@@ -30,6 +30,8 @@ lazy_static! {
         regex::Regex::new(r"^(?P<namever>(?P<name>.+?)-(?P<ver>.+?))(-(?P<build>\d[^-]*))?-(?P<pyver>.+?)-(?P<abi>.+?)-(?P<plat>.+?)\.whl$").unwrap();
 }
 
+const S_IXUSR: u32 = 64;
+
 /// Represents a Python wheel archive.
 pub struct WheelArchive {
     files: HashMap<String, FileData>,
@@ -67,8 +69,7 @@ impl WheelArchive {
                 file.name().to_string(),
                 FileData {
                     path: PathBuf::from(file.name()),
-                    // TODO populate.
-                    is_executable: false,
+                    is_executable: file.unix_mode().unwrap_or(0) & S_IXUSR != 0,
                     data: DataLocation::Memory(buffer),
                 },
             );
