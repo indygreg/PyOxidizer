@@ -390,7 +390,7 @@ impl PythonPackagingPolicy {
                 self.file_scanner_classify_files = false;
                 self.allow_files = true;
                 self.include_file_resources = true;
-                self.include_classified_resources = false;
+                self.include_classified_resources = true;
             }
         }
     }

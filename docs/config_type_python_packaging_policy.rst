@@ -327,5 +327,5 @@ resources, and will disable the addition of ``File`` resources on resource
 collectors.
 
 ``files`` will configure the file scanner to only emit ``File`` resources,
-configure the ``add_include`` attribute to only be ``True`` on ``File``,
-and will allow resource collectors to add ``File`` instances.
+configure the ``add_include`` attribute to ``True`` on ``File`` and *classified*
+resources, and will allow resource collectors to add ``File`` instances.
