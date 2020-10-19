@@ -91,7 +91,7 @@ pub struct PythonResourceIterator<'a> {
     /// Content overrides for individual paths.
     ///
     /// This is a hacky way to allow us to abstract I/O.
-    path_content_overrides: HashMap<PathBuf, DataLocation>,
+    path_content_overrides: HashMap<PathBuf, FileData>,
     seen_packages: HashSet<String>,
     resources: Vec<ResourceFile>,
     // Whether to emit `PythonResource::File` entries.
@@ -146,7 +146,7 @@ impl<'a> PythonResourceIterator<'a> {
 
     /// Construct an instance from an iterable of `(PathBuf, DataLocation)`.
     pub fn from_data_locations(
-        resources: &[(PathBuf, DataLocation)],
+        resources: &[FileData],
         cache_tag: &str,
         suffixes: &PythonModuleSuffixes,
         emit_files: bool,
@@ -154,8 +154,8 @@ impl<'a> PythonResourceIterator<'a> {
     ) -> PythonResourceIterator<'a> {
         let mut paths = resources
             .iter()
-            .map(|(k, _)| PathEntry {
-                path: k.clone(),
+            .map(|file| PathEntry {
+                path: file.path.clone(),
                 file_emitted: false,
                 non_file_emitted: false,
             })
@@ -167,7 +167,11 @@ impl<'a> PythonResourceIterator<'a> {
             cache_tag: cache_tag.to_string(),
             suffixes: suffixes.clone(),
             paths,
-            path_content_overrides: HashMap::from_iter(resources.iter().cloned()),
+            path_content_overrides: HashMap::from_iter(
+                resources
+                    .iter()
+                    .map(|file| (file.path.clone(), file.clone())),
+            ),
             seen_packages: HashSet::new(),
             resources: Vec::new(),
             emit_files,
@@ -178,7 +182,7 @@ impl<'a> PythonResourceIterator<'a> {
 
     fn resolve_data_location(&self, path: &Path) -> DataLocation {
         match self.path_content_overrides.get(path) {
-            Some(location) => location.clone(),
+            Some(file) => file.data.clone(),
             None => DataLocation::Path(path.to_path_buf()),
         }
     }
@@ -215,8 +219,8 @@ impl<'a> PythonResourceIterator<'a> {
         };
 
         if let Some((metadata_path, location)) = distribution_info {
-            let data = if let Some(location) = self.path_content_overrides.get(&metadata_path) {
-                if let Ok(data) = location.resolve() {
+            let data = if let Some(file) = self.path_content_overrides.get(&metadata_path) {
+                if let Ok(data) = file.data.resolve() {
                     data
                 } else {
                     return None;
@@ -1708,11 +1712,16 @@ mod tests {
     #[test]
     fn test_memory_resources() -> Result<()> {
         let inputs = vec![
-            (
-                PathBuf::from("foo/__init__.py"),
-                DataLocation::Memory(vec![0]),
-            ),
-            (PathBuf::from("foo/bar.py"), DataLocation::Memory(vec![1])),
+            FileData {
+                path: PathBuf::from("foo/__init__.py"),
+                is_executable: false,
+                data: DataLocation::Memory(vec![0]),
+            },
+            FileData {
+                path: PathBuf::from("foo/bar.py"),
+                is_executable: false,
+                data: DataLocation::Memory(vec![1]),
+            },
         ];
 
         let resources = PythonResourceIterator::from_data_locations(

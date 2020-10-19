@@ -9,7 +9,7 @@ use {
         filesystem_scanning::PythonResourceIterator,
         module_util::PythonModuleSuffixes,
         package_metadata::PythonPackageMetadata,
-        resource::{DataLocation, PythonResource},
+        resource::{DataLocation, FileData, PythonResource},
     },
     anyhow::{anyhow, Context, Result},
     lazy_static::lazy_static,
@@ -290,6 +290,15 @@ impl WheelArchive {
 
         // Get resources from data, remapping them to the root.
         inputs.extend(self.data_files());
+
+        let inputs = inputs
+            .iter()
+            .map(|(path, location)| FileData {
+                path: path.clone(),
+                is_executable: false,
+                data: location.clone(),
+            })
+            .collect::<Vec<_>>();
 
         // Other data keys are `headers` and `scripts`, which we don't yet
         // support as resource types.
