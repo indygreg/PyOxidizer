@@ -1,6 +1,6 @@
 [package]
 name = "oxidized-importer"
-version = "0.9.0-pre"
+version = "0.10.0-pre"
 authors = ["Gregory Szorc <gregory.szorc@gmail.com>"]
 edition = "2018"
 license = "Python-2.0 AND MPL-2.0"
@@ -18,11 +18,11 @@ libc = "0.2"
 python3-sys = "0.5.1"
 
 [dependencies.python-packed-resources]
-version = "0.3.0-pre"
+version = "0.4.0-pre"
 path = "../python-packed-resources"
 
 [dependencies.pyembed]
-version = "0.9.0-pre"
+version = "0.10.0-pre"
 path = "../pyembed"
 default-features = false
 features = ["build-mode-extension-module"]

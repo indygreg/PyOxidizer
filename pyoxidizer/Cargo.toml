@@ -1,6 +1,6 @@
 [package]
 name = "pyoxidizer"
-version = "0.9.0"
+version = "0.10.0-pre"
 authors = ["Gregory Szorc <gregory.szorc@gmail.com>"]
 license = "MPL-2.0"
 description = "Package self-contained Python applications"
@@ -60,12 +60,12 @@ walkdir = "2"
 zstd = "0.5"
 
 [dependencies.python-packaging]
-version = "0.2.0"
-#path = "../python-packaging"
+version = "0.3.0-pre"
+path = "../python-packaging"
 
 [dependencies.python-packed-resources]
-version = "0.3.0"
-#path = "../python-packed-resources"
+version = "0.4.0-pre"
+path = "../python-packed-resources"
 
 [dev-dependencies]
 indoc = "0.3"
