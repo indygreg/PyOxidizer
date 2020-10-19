@@ -539,10 +539,12 @@ mod tests {
         let logger = get_logger()?;
 
         let distribution = get_default_dynamic_distribution()?;
+        let policy = distribution.create_packaging_policy()?;
 
         let resources: Vec<PythonResource> = pip_install(
             &logger,
             distribution.deref(),
+            &policy,
             LibpythonLinkMode::Dynamic,
             false,
             &["cffi==1.14.0".to_string()],
