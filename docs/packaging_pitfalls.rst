@@ -59,3 +59,5 @@ command can be employed. See :ref:`cli_find_resources` for more.
 
    Please `file a bug <https://github.com/indygreg/PyOxidizer/issues/new>`_
    to report problems!
+
+See :ref:`packaging_resources_classified_files` for more on this topic.

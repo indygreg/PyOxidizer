@@ -245,6 +245,9 @@ Default is ``in-memory``.
 
 .. _config_type_python_packaging_policy_resources_location_fallback:
 
+``resources_location_fallback``
+-------------------------------
+
 (``string`` or ``None``)
 
 The fallback location that resources should be added to if
