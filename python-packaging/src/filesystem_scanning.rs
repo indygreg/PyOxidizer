@@ -180,6 +180,19 @@ impl<'a> PythonResourceIterator<'a> {
         }
     }
 
+    fn resolve_is_executable(&self, path: &Path) -> bool {
+        match self.path_content_overrides.get(path) {
+            Some(file) => file.is_executable,
+            None => {
+                if let Ok(metadata) = path.metadata() {
+                    is_executable(&metadata)
+                } else {
+                    false
+                }
+            }
+        }
+    }
+
     fn resolve_data_location(&self, path: &Path) -> DataLocation {
         match self.path_content_overrides.get(path) {
             Some(file) => file.data.clone(),
@@ -539,15 +552,9 @@ impl<'a> Iterator for PythonResourceIterator<'a> {
                     .expect("unable to strip path prefix")
                     .to_path_buf();
 
-                let is_executable = if let Ok(metadata) = self.paths[0].path.metadata() {
-                    is_executable(&metadata)
-                } else {
-                    false
-                };
-
                 let f = FileData {
                     path: rel_path,
-                    is_executable,
+                    is_executable: self.resolve_is_executable(&self.paths[0].path),
                     data: self.resolve_data_location(&self.paths[0].path),
                 };
 
@@ -1719,7 +1726,7 @@ mod tests {
             },
             FileData {
                 path: PathBuf::from("foo/bar.py"),
-                is_executable: false,
+                is_executable: true,
                 data: DataLocation::Memory(vec![1]),
             },
         ];
@@ -1728,14 +1735,23 @@ mod tests {
             &inputs,
             DEFAULT_CACHE_TAG,
             &DEFAULT_SUFFIXES,
-            false,
+            true,
             true,
         )
         .collect::<Result<Vec<_>>>()?;
 
-        assert_eq!(resources.len(), 2);
+        assert_eq!(resources.len(), 4);
         assert_eq!(
             resources[0],
+            FileData {
+                path: PathBuf::from("foo/__init__.py"),
+                is_executable: false,
+                data: DataLocation::Memory(vec![0]),
+            }
+            .into()
+        );
+        assert_eq!(
+            resources[1],
             PythonModuleSource {
                 name: "foo".to_string(),
                 source: DataLocation::Memory(vec![0]),
@@ -1747,7 +1763,16 @@ mod tests {
             .into()
         );
         assert_eq!(
-            resources[1],
+            resources[2],
+            FileData {
+                path: PathBuf::from("foo/bar.py"),
+                is_executable: true,
+                data: DataLocation::Memory(vec![1]),
+            }
+            .into()
+        );
+        assert_eq!(
+            resources[3],
             PythonModuleSource {
                 name: "foo.bar".to_string(),
                 source: DataLocation::Memory(vec![1]),
