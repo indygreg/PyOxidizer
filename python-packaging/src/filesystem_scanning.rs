@@ -152,18 +152,21 @@ impl<'a> PythonResourceIterator<'a> {
         emit_files: bool,
         emit_non_files: bool,
     ) -> PythonResourceIterator<'a> {
+        let mut paths = resources
+            .iter()
+            .map(|(k, _)| PathEntry {
+                path: k.clone(),
+                file_emitted: false,
+                non_file_emitted: false,
+            })
+            .collect::<Vec<_>>();
+        paths.sort_by(|a, b| a.path.cmp(&b.path));
+
         PythonResourceIterator {
             root_path: PathBuf::new(),
             cache_tag: cache_tag.to_string(),
             suffixes: suffixes.clone(),
-            paths: resources
-                .iter()
-                .map(|(k, _)| PathEntry {
-                    path: k.clone(),
-                    file_emitted: false,
-                    non_file_emitted: false,
-                })
-                .collect::<Vec<_>>(),
+            paths,
             path_content_overrides: HashMap::from_iter(resources.iter().cloned()),
             seen_packages: HashSet::new(),
             resources: Vec::new(),
