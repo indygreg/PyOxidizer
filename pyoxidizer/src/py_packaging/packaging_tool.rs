@@ -238,6 +238,7 @@ pub fn pip_download<'a>(
     logger: &slog::Logger,
     host_dist: &dyn PythonDistribution,
     taget_dist: &dyn PythonDistribution,
+    policy: &PythonPackagingPolicy,
     verbose: bool,
     args: &[String],
 ) -> Result<Vec<PythonResource<'a>>> {
@@ -322,9 +323,8 @@ pub fn pip_download<'a>(
         res.extend(wheel.python_resources(
             taget_dist.cache_tag(),
             &taget_dist.python_module_suffixes()?,
-            // Derive from PythonPackagingPolicy.
-            false,
-            true,
+            policy.file_scanner_emit_files(),
+            policy.file_scanner_classify_files(),
         )?);
     }
 
@@ -587,10 +587,13 @@ mod tests {
                 target_dist.version
             );
 
+            let policy = target_dist.create_packaging_policy()?;
+
             let resources = pip_download(
                 &logger,
                 &*host_dist,
                 &*target_dist,
+                &policy,
                 false,
                 &["zstandard==0.14.0".to_string()],
             )?;
@@ -663,10 +666,15 @@ mod tests {
                 target_dist.version
             );
 
+            let mut policy = target_dist.create_packaging_policy()?;
+            policy.set_file_scanner_emit_files(true);
+            policy.set_file_scanner_classify_files(true);
+
             let resources = pip_download(
                 &logger,
                 &*host_dist,
                 &*target_dist,
+                &policy,
                 false,
                 &["numpy==1.19.2".to_string()],
             )?;

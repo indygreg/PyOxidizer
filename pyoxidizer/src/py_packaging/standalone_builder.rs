@@ -396,6 +396,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
             logger,
             &*self.host_distribution,
             &*self.target_distribution,
+            self.python_packaging_policy(),
             verbose,
             args,
         )
