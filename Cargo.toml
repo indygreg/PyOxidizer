@@ -1,6 +1,6 @@
 [workspace]
 members = [
-    "oxidized-importer",
+    #"oxidized-importer",
     "pyembed",
     "pyoxidizer",
     "python-packaging",

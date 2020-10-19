@@ -1183,20 +1183,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "oxidized-importer"
-version = "0.9.0-pre"
-dependencies = [
- "anyhow",
- "lazy_static",
- "libc",
- "memory-module-sys",
- "pyembed",
- "python-packed-resources",
- "python3-sys",
- "winapi 0.3.9",
-]
-
-[[package]]
 name = "paste"
 version = "0.1.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1375,7 +1361,7 @@ dependencies = [
 
 [[package]]
 name = "pyembed"
-version = "0.9.0-pre"
+version = "0.9.0"
 dependencies = [
  "anyhow",
  "cpython",
@@ -1384,8 +1370,8 @@ dependencies = [
  "libc",
  "memmap",
  "memory-module-sys",
- "python-packaging",
- "python-packed-resources",
+ "python-packaging 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "python-packed-resources 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "python3-sys",
  "rusty-fork",
  "uuid",
@@ -1394,7 +1380,7 @@ dependencies = [
 
 [[package]]
 name = "pyoxidizer"
-version = "0.9.0-pre"
+version = "0.9.0"
 dependencies = [
  "anyhow",
  "byteorder",
@@ -1417,8 +1403,8 @@ dependencies = [
  "libc",
  "linked-hash-map",
  "path-dedot",
- "python-packaging",
- "python-packed-resources",
+ "python-packaging 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "python-packed-resources 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "reqwest",
  "rustc_version",
  "semver",
@@ -1439,7 +1425,7 @@ dependencies = [
 
 [[package]]
 name = "python-packaging"
-version = "0.2.0-pre"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "byteorder",
@@ -1447,7 +1433,26 @@ dependencies = [
  "itertools 0.9.0",
  "lazy_static",
  "mailparse",
- "python-packed-resources",
+ "python-packed-resources 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "regex",
+ "tempdir",
+ "walkdir 2.3.1",
+ "zip",
+]
+
+[[package]]
+name = "python-packaging"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1b2bf33c094e570f1b7c86c1b2cfce0a88af105a9ac3d574cc54b8ba5edda79a"
+dependencies = [
+ "anyhow",
+ "byteorder",
+ "encoding_rs",
+ "itertools 0.9.0",
+ "lazy_static",
+ "mailparse",
+ "python-packed-resources 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "regex",
  "tempdir",
  "walkdir 2.3.1",
@@ -1456,7 +1461,17 @@ dependencies = [
 
 [[package]]
 name = "python-packed-resources"
-version = "0.3.0-pre"
+version = "0.3.0"
+dependencies = [
+ "anyhow",
+ "byteorder",
+]
+
+[[package]]
+name = "python-packed-resources"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "56e956d8b21cb9cf76288c7d3b45e94760f8b6787a1ac611a8b1bd06cb4c9f82"
 dependencies = [
  "anyhow",
  "byteorder",
