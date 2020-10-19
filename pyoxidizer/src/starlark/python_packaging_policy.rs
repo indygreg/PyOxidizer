@@ -126,7 +126,9 @@ impl TypedValue for PythonPackagingPolicyValue {
             "include_distribution_resources" => {
                 Value::from(self.inner.include_distribution_resources())
             }
-            "include_classified_resources" => Value::from(self.inner.include_non_file_resources()),
+            "include_classified_resources" => {
+                Value::from(self.inner.include_classified_resources())
+            }
             "include_file_resources" => Value::from(self.inner.include_file_resources()),
             "include_non_distribution_sources" => {
                 Value::from(self.inner.include_non_distribution_sources())
@@ -212,7 +214,7 @@ impl TypedValue for PythonPackagingPolicyValue {
                 self.inner.set_file_scanner_emit_files(value.to_bool());
             }
             "include_classified_resources" => {
-                self.inner.set_include_non_file_resources(value.to_bool());
+                self.inner.set_include_classified_resources(value.to_bool());
             }
             "include_distribution_sources" => {
                 self.inner.set_include_distribution_sources(value.to_bool());

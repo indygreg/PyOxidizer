@@ -136,6 +136,9 @@ pub struct PythonPackagingPolicy {
     /// If false, this classification is not performed.
     file_scanner_classify_files: bool,
 
+    /// Whether to classify non-`File` resources as `include = True` by default.
+    include_classified_resources: bool,
+
     /// Whether to include source module from the Python distribution.
     include_distribution_sources: bool,
 
@@ -150,9 +153,6 @@ pub struct PythonPackagingPolicy {
 
     /// Whether to classify `File` resources as `include = True` by default.
     include_file_resources: bool,
-
-    /// Whether to classify non-`File` resources as `include = True` by default.
-    include_non_file_resources: bool,
 
     /// Mapping of target triple to list of extensions that don't work for that triple.
     ///
@@ -181,12 +181,12 @@ impl Default for PythonPackagingPolicy {
             allow_files: false,
             file_scanner_emit_files: false,
             file_scanner_classify_files: true,
+            include_classified_resources: true,
             include_distribution_sources: true,
             include_non_distribution_sources: true,
             include_distribution_resources: false,
             include_test: false,
             include_file_resources: false,
-            include_non_file_resources: true,
             broken_extensions: HashMap::new(),
             bytecode_optimize_level_zero: true,
             bytecode_optimize_level_one: false,
@@ -333,13 +333,13 @@ impl PythonPackagingPolicy {
     }
 
     /// Get whether to classify non-`File` resources as include by default.
-    pub fn include_non_file_resources(&self) -> bool {
-        self.include_non_file_resources
+    pub fn include_classified_resources(&self) -> bool {
+        self.include_classified_resources
     }
 
     /// Set whether to classify non-`File` resources as include by default.
-    pub fn set_include_non_file_resources(&mut self, value: bool) {
-        self.include_non_file_resources = value;
+    pub fn set_include_classified_resources(&mut self, value: bool) {
+        self.include_classified_resources = value;
     }
 
     /// Whether to write bytecode at optimization level 0.
@@ -383,14 +383,14 @@ impl PythonPackagingPolicy {
                 self.file_scanner_classify_files = true;
                 self.allow_files = false;
                 self.include_file_resources = false;
-                self.include_non_file_resources = true;
+                self.include_classified_resources = true;
             }
             ResourceHandlingMode::Files => {
                 self.file_scanner_emit_files = true;
                 self.file_scanner_classify_files = false;
                 self.allow_files = true;
                 self.include_file_resources = true;
-                self.include_non_file_resources = false;
+                self.include_classified_resources = false;
             }
         }
     }
@@ -462,7 +462,7 @@ impl PythonPackagingPolicy {
                 }
             }
             _ => {
-                if !self.include_non_file_resources {
+                if !self.include_classified_resources {
                     return false;
                 }
             }
