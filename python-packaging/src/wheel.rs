@@ -175,13 +175,17 @@ impl WheelArchive {
     ///
     /// The returned `PathBuf` are prefixed with the appropriate `*.dist-info`
     /// directory.
-    pub fn dist_info_files(&self) -> Vec<(PathBuf, DataLocation)> {
+    pub fn dist_info_files(&self) -> Vec<FileData> {
         let prefix = format!("{}/", self.dist_info_path());
         self.files
             .iter()
             .filter_map(|(k, v)| {
                 if k.starts_with(&prefix) {
-                    Some((PathBuf::from(k), DataLocation::Memory(v.clone())))
+                    Some(FileData {
+                        path: PathBuf::from(k),
+                        is_executable: false,
+                        data: DataLocation::Memory(v.clone()),
+                    })
                 } else {
                     None
                 }
@@ -190,17 +194,18 @@ impl WheelArchive {
     }
 
     /// Obtain paths in a `.data/*/` directory.
-    fn data_paths(&self, key: &str) -> Vec<(PathBuf, DataLocation)> {
+    fn data_paths(&self, key: &str) -> Vec<FileData> {
         let prefix = format!("{}.data/{}/", self.name_version, key);
 
         self.files
             .iter()
             .filter_map(|(k, v)| {
                 if k.starts_with(&prefix) {
-                    Some((
-                        PathBuf::from(&k[prefix.len()..]),
-                        DataLocation::Memory(v.clone()),
-                    ))
+                    Some(FileData {
+                        path: PathBuf::from(&k[prefix.len()..]),
+                        is_executable: false,
+                        data: DataLocation::Memory(v.clone()),
+                    })
                 } else {
                     None
                 }
@@ -211,21 +216,21 @@ impl WheelArchive {
     /// Obtain files that should be installed to `purelib`.
     ///
     /// `*.data/purelib/` prefix is stripped from returned `PathBuf`.
-    pub fn purelib_files(&self) -> Vec<(PathBuf, DataLocation)> {
+    pub fn purelib_files(&self) -> Vec<FileData> {
         self.data_paths("purelib")
     }
 
     /// Obtain files that should be installed to `platlib`.
     ///
     /// `*.data/platlib/` prefix is stripped from returned `PathBuf`.
-    pub fn platlib_files(&self) -> Vec<(PathBuf, DataLocation)> {
+    pub fn platlib_files(&self) -> Vec<FileData> {
         self.data_paths("platlib")
     }
 
     /// Obtain files that should be installed to `headers`.
     ///
     /// `*.data/headers/` prefix is stripped from returned `PathBuf`.
-    pub fn headers_files(&self) -> Vec<(PathBuf, DataLocation)> {
+    pub fn headers_files(&self) -> Vec<FileData> {
         self.data_paths("headers")
     }
 
@@ -234,14 +239,14 @@ impl WheelArchive {
     /// `*.data/scripts/` prefix is stripped from returned `PathBuf`.
     ///
     /// TODO support optional argument to rewrite `#!python` shebangs.
-    pub fn scripts_files(&self) -> Vec<(PathBuf, DataLocation)> {
+    pub fn scripts_files(&self) -> Vec<FileData> {
         self.data_paths("scripts")
     }
 
     /// Obtain files that should be installed to `data`.
     ///
     /// `*.data/data/` prefix is stripped from returned `PathBuf`.
-    pub fn data_files(&self) -> Vec<(PathBuf, DataLocation)> {
+    pub fn data_files(&self) -> Vec<FileData> {
         self.data_paths("data")
     }
 
@@ -251,7 +256,7 @@ impl WheelArchive {
     ///
     /// The returned `PathBuf` has the same path as the file in the
     /// wheel archive.
-    pub fn regular_files(&self) -> Vec<(PathBuf, DataLocation)> {
+    pub fn regular_files(&self) -> Vec<FileData> {
         let dist_info_prefix = format!("{}/", self.dist_info_path());
         let data_prefix = format!("{}/", self.data_path());
 
@@ -261,7 +266,11 @@ impl WheelArchive {
                 if k.starts_with(&dist_info_prefix) || k.starts_with(&data_prefix) {
                     None
                 } else {
-                    Some((PathBuf::from(k), DataLocation::Memory(v.clone())))
+                    Some(FileData {
+                        path: PathBuf::from(k),
+                        is_executable: false,
+                        data: DataLocation::Memory(v.clone()),
+                    })
                 }
             })
             .collect::<Vec<_>>()
@@ -290,15 +299,6 @@ impl WheelArchive {
 
         // Get resources from data, remapping them to the root.
         inputs.extend(self.data_files());
-
-        let inputs = inputs
-            .iter()
-            .map(|(path, location)| FileData {
-                path: path.clone(),
-                is_executable: false,
-                data: location.clone(),
-            })
-            .collect::<Vec<_>>();
 
         // Other data keys are `headers` and `scripts`, which we don't yet
         // support as resource types.
