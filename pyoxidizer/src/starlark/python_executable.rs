@@ -8,9 +8,10 @@ use {
         python_embedded_resources::PythonEmbeddedResources,
         python_packaging_policy::PythonPackagingPolicyValue,
         python_resource::{
-            is_resource_starlark_compatible, python_resource_to_value, PythonExtensionModuleValue,
-            PythonModuleSourceValue, PythonPackageDistributionResourceValue,
-            PythonPackageResourceValue, ResourceCollectionContext,
+            is_resource_starlark_compatible, python_resource_to_value, FileValue,
+            PythonExtensionModuleValue, PythonModuleSourceValue,
+            PythonPackageDistributionResourceValue, PythonPackageResourceValue,
+            ResourceCollectionContext,
         },
         target::{BuildContext, BuildTarget, ResolvedTarget, RunMode},
         util::{
@@ -515,6 +516,29 @@ impl PythonExecutable {
         Ok(Value::new(NoneType::None))
     }
 
+    pub fn add_file_data(
+        &mut self,
+        context: &EnvironmentContext,
+        label: &str,
+        file: &FileValue,
+    ) -> ValueResult {
+        info!(
+            &context.logger,
+            "adding file data {}", file.inner.path.display();
+        );
+        self.exe
+            .add_file_data(&file.inner, file.add_collection_context().clone())
+            .map_err(|e| {
+                ValueError::from(RuntimeError {
+                    code: "PYOXIDIZER_BUILD",
+                    message: e.to_string(),
+                    label: label.to_string(),
+                })
+            })?;
+
+        Ok(Value::new(NoneType::None))
+    }
+
     /// PythonExecutable.add_python_resource(resource)
     pub fn starlark_add_python_resource(
         &mut self,
@@ -528,23 +552,27 @@ impl PythonExecutable {
             .ok_or(ValueError::IncorrectParameterType)?;
 
         match resource.get_type() {
-            "PythonModuleSource" => {
+            FileValue::TYPE => {
+                let file = resource.downcast_ref::<FileValue>().unwrap();
+                self.add_file_data(context.deref(), label, file.deref())
+            }
+            PythonModuleSourceValue::TYPE => {
                 let module = resource.downcast_ref::<PythonModuleSourceValue>().unwrap();
                 self.add_python_module_source(context.deref(), label, module.deref())
             }
-            "PythonPackageResource" => {
+            PythonPackageResourceValue::TYPE => {
                 let r = resource
                     .downcast_ref::<PythonPackageResourceValue>()
                     .unwrap();
                 self.add_python_package_resource(context.deref(), label, r.deref())
             }
-            "PythonPackageDistributionResource" => {
+            PythonPackageDistributionResourceValue::TYPE => {
                 let r = resource
                     .downcast_ref::<PythonPackageDistributionResourceValue>()
                     .unwrap();
                 self.add_python_package_distribution_resource(context.deref(), label, r.deref())
             }
-            "PythonExtensionModule" => {
+            PythonExtensionModuleValue::TYPE => {
                 let module = resource
                     .downcast_ref::<PythonExtensionModuleValue>()
                     .unwrap();

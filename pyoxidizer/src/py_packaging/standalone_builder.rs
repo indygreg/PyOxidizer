@@ -27,7 +27,7 @@ use {
         location::AbstractResourceLocation,
         policy::PythonPackagingPolicy,
         resource::{
-            DataLocation, PythonExtensionModule, PythonModuleSource,
+            DataLocation, FileData, PythonExtensionModule, PythonModuleSource,
             PythonPackageDistributionResource, PythonPackageResource, PythonResource,
         },
         resource_collection::{
@@ -610,6 +610,20 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         }
 
         Ok(())
+    }
+
+    fn add_file_data(
+        &mut self,
+        file: &FileData,
+        add_context: Option<PythonResourceAddCollectionContext>,
+    ) -> Result<()> {
+        let add_context = add_context.unwrap_or_else(|| {
+            self.packaging_policy
+                .derive_add_collection_context(&file.into())
+        });
+
+        self.resources_collector
+            .add_file_data_with_context(file, &add_context)
     }
 
     fn filter_resources_from_files(

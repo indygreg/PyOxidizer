@@ -86,6 +86,9 @@ New Features
   resource handling.
 * The Starlark ``PythonDistribution`` type now has a ``python_resources()``
   method for obtaining all Python resources associated with the distribution.
+* Starlark ``File`` instances can now be added to resource collections via
+  ``PythonExecutable.add_python_resource()`` and
+  ``PythonExecutable.add_python_resources()``.
 
 Bug Fixes
 ^^^^^^^^^

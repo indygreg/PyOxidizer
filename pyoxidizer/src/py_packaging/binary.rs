@@ -13,7 +13,7 @@ use {
     python_packaging::{
         policy::PythonPackagingPolicy,
         resource::{
-            PythonExtensionModule, PythonModuleSource, PythonPackageDistributionResource,
+            FileData, PythonExtensionModule, PythonModuleSource, PythonPackageDistributionResource,
             PythonPackageResource, PythonResource,
         },
         resource_collection::{PrePackagedResource, PythonResourceAddCollectionContext},
@@ -198,6 +198,13 @@ pub trait PythonBinaryBuilder {
     fn add_python_extension_module(
         &mut self,
         extension_module: &PythonExtensionModule,
+        add_context: Option<PythonResourceAddCollectionContext>,
+    ) -> Result<()>;
+
+    /// Add a `FileData` to the resource collection.
+    fn add_file_data(
+        &mut self,
+        file: &FileData,
         add_context: Option<PythonResourceAddCollectionContext>,
     ) -> Result<()>;
 
