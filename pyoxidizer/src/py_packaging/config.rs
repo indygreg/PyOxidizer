@@ -267,7 +267,10 @@ impl EmbeddedPythonConfig {
                         "Some(vec![{}])",
                         paths
                             .iter()
-                            .map(|p| format_args!("\"{}\"", p.display()).to_string())
+                            .map(
+                                |p| format_args!("std::path::PathBuf::from(\"{}\")", p.display())
+                                    .to_string()
+                            )
                             .collect::<Vec<String>>()
                             .join(", ")
                     )
@@ -391,7 +394,7 @@ mod tests {
 
         let code = config.to_oxidized_python_interpreter_config_rs(None)?;
 
-        assert!(code.contains("module_search_paths: Some(vec![\"$ORIGIN/lib\", \"lib\"]),"));
+        assert!(code.contains("module_search_paths: Some(vec![std::path::PathBuf::from(\"$ORIGIN/lib\"), std::path::PathBuf::from(\"lib\")]),"));
 
         Ok(())
     }
