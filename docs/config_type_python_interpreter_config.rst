@@ -264,11 +264,6 @@ Accepted values are:
 
    This is roughly equivalent to ``python -m <module>``.
 
-   ``python -m <module>`` has additional functionality compared to
-   PyOxidizer. For example, Python will look for ``<module>.__main__``
-   whereas PyOxidizer does not. Therefore an exact module name must be
-   used.
-
 ``eval:<code>``
    Run Python code via ``eval()``.
 
