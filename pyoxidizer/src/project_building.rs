@@ -3,11 +3,13 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    crate::environment::{canonicalize_path, MINIMUM_RUST_VERSION},
-    crate::project_layout::initialize_project,
-    crate::py_packaging::binary::{EmbeddedPythonContext, PythonBinaryBuilder},
-    crate::starlark::eval::{eval_starlark_config_file, EvalResult},
-    crate::starlark::target::ResolvedTarget,
+    crate::{
+        environment::{canonicalize_path, MINIMUM_RUST_VERSION},
+        project_layout::initialize_project,
+        py_packaging::binary::{EmbeddedPythonContext, PythonBinaryBuilder},
+        starlark::eval::{eval_starlark_config_file, EvalResult},
+        starlark::target::ResolvedTarget,
+    },
     anyhow::{anyhow, Context, Result},
     duct::cmd,
     slog::warn,

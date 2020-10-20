@@ -3,12 +3,10 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    super::analyze,
-    super::environment::PYOXIDIZER_VERSION,
-    super::logging,
-    super::project_building,
-    super::project_layout,
-    super::projectmgmt,
+    crate::{
+        analyze, environment::PYOXIDIZER_VERSION, logging, project_building, project_layout,
+        projectmgmt,
+    },
     anyhow::{anyhow, Result},
     clap::{App, AppSettings, Arg, SubCommand},
     std::path::{Path, PathBuf},

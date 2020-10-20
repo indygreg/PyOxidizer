@@ -5,13 +5,17 @@
 //! Manage PyOxidizer projects.
 
 use {
-    crate::project_building::find_pyoxidizer_config_file_env,
-    crate::project_layout::{initialize_project, write_new_pyoxidizer_config_file},
-    crate::py_packaging::{
-        distribution::{default_distribution_location, resolve_distribution, DistributionFlavor},
-        standalone_distribution::StandaloneDistribution,
+    crate::{
+        project_building::find_pyoxidizer_config_file_env,
+        project_layout::{initialize_project, write_new_pyoxidizer_config_file},
+        py_packaging::{
+            distribution::{
+                default_distribution_location, resolve_distribution, DistributionFlavor,
+            },
+            standalone_distribution::StandaloneDistribution,
+        },
+        starlark::eval::{eval_starlark_config_file, EvalResult},
     },
-    crate::starlark::eval::{eval_starlark_config_file, EvalResult},
     anyhow::{anyhow, Result},
     python_packaging::{
         filesystem_scanning::find_python_resources,

@@ -3,17 +3,18 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    crate::logging::PrintlnDrain,
-    crate::py_packaging::distribution::{
-        DistributionCache, DistributionFlavor, PythonDistributionLocation,
+    crate::{
+        logging::PrintlnDrain,
+        py_packaging::distribution::{
+            DistributionCache, DistributionFlavor, PythonDistributionLocation,
+        },
+        py_packaging::standalone_distribution::StandaloneDistribution,
+        python_distributions::PYTHON_DISTRIBUTIONS,
     },
-    crate::py_packaging::standalone_distribution::StandaloneDistribution,
-    crate::python_distributions::PYTHON_DISTRIBUTIONS,
     anyhow::{anyhow, Result},
     lazy_static::lazy_static,
     slog::{Drain, Logger},
-    std::path::PathBuf,
-    std::sync::Arc,
+    std::{path::PathBuf, sync::Arc},
 };
 
 pub fn get_logger() -> Result<slog::Logger> {

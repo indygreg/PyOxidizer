@@ -9,8 +9,10 @@ use {
     anyhow::{anyhow, Result},
     git2::{Commit, Repository},
     lazy_static::lazy_static,
-    std::env,
-    std::path::{Path, PathBuf},
+    std::{
+        env,
+        path::{Path, PathBuf},
+    },
 };
 
 /// Canonical Git repository for PyOxidizer.

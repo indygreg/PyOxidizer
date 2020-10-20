@@ -8,12 +8,14 @@ use {
     anyhow::Result,
     byteorder::ReadBytesExt,
     lazy_static::lazy_static,
-    std::collections::BTreeMap,
-    std::ffi::CStr,
-    std::fs::File,
-    std::io::{Cursor, Read},
-    std::os::raw::c_char,
-    std::path::{Path, PathBuf},
+    std::{
+        collections::BTreeMap,
+        ffi::CStr,
+        fs::File,
+        io::{Cursor, Read},
+        os::raw::c_char,
+        path::{Path, PathBuf},
+    },
 };
 
 const LSB_SHARED_LIBRARIES: &[&str] = &[
