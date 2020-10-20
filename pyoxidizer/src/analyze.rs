@@ -48,11 +48,15 @@ lazy_static! {
         fedora.push(("27", "2.26"));
         fedora.push(("28", "2.27"));
         fedora.push(("29", "2.28"));
+        fedora.push(("30", "2.29"));
+        fedora.push(("31", "2.30"));
+        fedora.push(("32", "2.31"));
         res.insert("Fedora", fedora);
 
         let mut rhel = DistroVersion::new();
         rhel.push(("6", "2.12"));
         rhel.push(("7", "2.17"));
+        rhel.push(("8", "2.28"));
         res.insert("RHEL", rhel);
 
         let mut opensuse = DistroVersion::new();
@@ -66,6 +70,7 @@ lazy_static! {
         opensuse.push(("42.2", "2.22"));
         opensuse.push(("42.3", "2.22"));
         opensuse.push(("15.0", "2.26"));
+        opensuse.push(("15.1", "2.26"));
         res.insert("OpenSUSE", opensuse);
 
         let mut debian = DistroVersion::new();
@@ -73,6 +78,7 @@ lazy_static! {
         debian.push(("7", "2.13"));
         debian.push(("8", "2.19"));
         debian.push(("9", "2.24"));
+        debian.push(("10", "2.28"));
         res.insert("Debian", debian);
 
         let mut ubuntu = DistroVersion::new();
@@ -82,6 +88,9 @@ lazy_static! {
         ubuntu.push(("18.04", "2.27"));
         ubuntu.push(("18.10", "2.28"));
         ubuntu.push(("19.04", "2.29"));
+        ubuntu.push(("19.10", "2.30"));
+        ubuntu.push(("20.04", "2.31"));
+        ubuntu.push(("20.10", "2.32"));
         res.insert("Ubuntu", ubuntu);
 
         res
@@ -104,11 +113,15 @@ lazy_static! {
         fedora.push(("27", "7.2"));
         fedora.push(("28", "8.0.1"));
         fedora.push(("29", "8.2.1"));
+        fedora.push(("30", "9.0.1"));
+        fedora.push(("31", "9.2.1"));
+        fedora.push(("32", "10.0.1"));
         res.insert("Fedora", fedora);
 
         let mut rhel = DistroVersion::new();
         rhel.push(("6", "4.4"));
         rhel.push(("7", "4.8"));
+        rhel.push(("8", "8.3.1"));
         res.insert("RHEL", rhel);
 
         let mut opensuse = DistroVersion::new();
@@ -129,6 +142,7 @@ lazy_static! {
         debian.push(("7", "4.4"));
         debian.push(("8", "4.8"));
         debian.push(("9", "6.3"));
+        debian.push(("10", "8.3"));
         res.insert("Debian", debian);
 
         let mut ubuntu = DistroVersion::new();
@@ -136,6 +150,8 @@ lazy_static! {
         ubuntu.push(("14.04", "4.4"));
         ubuntu.push(("16.04", "4.7"));
         ubuntu.push(("18.04", "7.3"));
+        ubuntu.push(("20.04", "9.3"));
+        ubuntu.push(("20.10", "10.2"));
         res.insert("Ubuntu", ubuntu);
 
         res

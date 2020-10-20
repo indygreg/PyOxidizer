@@ -31,6 +31,15 @@ Version History
 
 Not yet released.
 
+Backwards Compatibility Notes
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+* A lot of unused Rust functions for running Python code have been
+  removed from the ``pyembed`` crate. The deleted code has not been used
+  since the ``PyConfig`` data structure was adopted for running code during
+  interpreter initialization. The deleted code was reimplementing
+  functionality in CPython and much of it was of questionable quality.
+
 Bug Fixes
 ^^^^^^^^^
 
@@ -49,6 +58,8 @@ Other Relevant Changes
 
 * The Starlark types with special *build* or *run* behavior are now
   explicitly documented.
+* The list of glibc and GCC versions used by popular Linux distributions
+  has been updated.
 
 .. _version_0_9_0:
 

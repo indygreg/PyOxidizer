@@ -15,7 +15,7 @@ use {
 };
 
 #[cfg(not(library_mode = "extension"))]
-use std::ffi::{NulError, OsString};
+use std::ffi::OsString;
 
 #[cfg(target_family = "unix")]
 use std::os::unix::ffi::OsStrExt;
@@ -97,17 +97,6 @@ pub fn osstring_to_bytes(py: Python, s: OsString) -> PyObject {
         let o = pyffi::PyBytes_FromStringAndSize(w.as_ptr() as *const i8, w.len() as isize * 2);
         PyObject::from_owned_ptr(py, o)
     }
-}
-
-#[cfg(all(unix, not(library_mode = "extension")))]
-pub fn path_to_cstring(path: &Path) -> Result<CString, NulError> {
-    CString::new(path.as_os_str().as_bytes())
-}
-
-#[cfg(all(windows, not(library_mode = "extension")))]
-pub fn path_to_cstring(path: &Path) -> Result<CString, NulError> {
-    // This is not ideal...
-    CString::new(path.to_string_lossy().as_bytes())
 }
 
 pub fn path_to_pyobject(py: Python, path: &Path) -> PyResult<PyObject> {
