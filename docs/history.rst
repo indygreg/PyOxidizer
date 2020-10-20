@@ -31,6 +31,11 @@ Version History
 
 Not yet released.
 
+Bug Fixes
+^^^^^^^^^
+
+* Fixed a broken documentation example for ``glob()``. (#300)
+
 .. _version_0_9_0:
 
 0.9.0

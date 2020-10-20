@@ -159,7 +159,7 @@ example:
 
        m.add_python_resource(".", exe)
 
-       templates = glob("/path/to/project/templates/**/*", strip_prefix="/path/to/project/")
+       templates = glob(["/path/to/project/templates/**/*"], strip_prefix="/path/to/project/")
        m.add_manifest(templates)
 
        return m
