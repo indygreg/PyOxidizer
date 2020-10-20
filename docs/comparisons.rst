@@ -17,7 +17,7 @@ new tool, see
    decisions about their use of packaging tools. If you feel the comparisons
    in this document are incomplete or unfair, please
    `file an issue <https://github.com/indygreg/PyOxidizer/issues>`_ so
-   this page can be improved.
+   this page can be improved. Even better, submit a pull request!
 
 .. _compare_pyinstaller:
 
@@ -25,22 +25,29 @@ PyInstaller
 ===========
 
 `PyInstaller <https://www.pyinstaller.org/>`_ is a tool to convert regular
-python scripts to "standalone" executables. The standard packaging produces
+python scripts to *standalone* executables. The standard packaging produces
 a tiny executable and a custom directory structure to host dynamic libraries
 and Python code (zipped compiled bytecode).
+
 ``PyInstaller`` can produce a self-contained executable file containing your
 application, however, at run-time, PyInstaller will extract binary
 files and a custom `ZlibArchive <https://pyinstaller.readthedocs.io/en/latest/advanced-topics.html#zlibarchive>`_
 to a temporary directory then import modules from the filesystem.
-``PyOxidizer`` typically skips this step and loads modules directly from
-memory using zero-copy. This makes ``PyOxidizer`` executables significantly
-faster to start.
 
-Currently a big difference is that ``PyOxidizer`` needs to build all the binary
-dependencies from scratch to facilitate linking into single file,
-``PyInstaller`` can work with normal Python packages with a complex system of
-hooks to find the runtime dependencies, this allow a lot of not easy to build
-packages like PyQt to work out of the box.
+``PyOxidizer`` often skips this step and loads modules directly from
+memory using zero-copy. This makes ``PyOxidizer`` executables significantly
+faster to start when this feature is employed.
+
+When ``PyOxidizer`` is running in single-file mode, it needs to build all
+binary dependencies from source to facilitate static linking. Although this
+behavior is optional and ``PyOxidizer`` can also work with pre-built binary
+Python packages.
+
+A current difference between the tools is that ``PyInstaller`` generally has
+better support for binary dependencies. ``PyInstaller`` knows how to find
+runtime dependencies and allows a lot of not-easy-to-build packages like PyQT
+to work out of the box. With ``PyOxidizer``, you could need to add sufficient
+complexity to its configuration files to get things to work.
 
 .. _compare_py2exe:
 
@@ -55,24 +62,14 @@ The goals of ``py2exe`` and ``PyOxidizer`` are conceptually very similar.
 One major difference between the two is that ``py2exe`` works on just Windows
 whereas ``PyOxidizer`` works on multiple platforms.
 
-One trick that ``py2exe`` employs is that it can load ``libpython`` and
-Python extension modules (which are actually dynamic link libraries) and
-other libraries from memory - not filesystem files. They employ a
-`really clever hack <https://sourceforge.net/p/py2exe/svn/HEAD/tree/trunk/py2exe/source/README-MemoryModule.txt>`_
-to do this! This is similar in nature to what Google does internally with
-a custom build of glibc providing a
-`dlopen_from_offset() <https://sourceware.org/bugzilla/show_bug.cgi?id=11767>`_.
-Essentially, ``py2exe`` embeds DLLs and other entities as *resources*
-in the PE file (the binary executable format for Windows) and is capable
-of loading them from memory. This allows ``py2exe`` to run things from a
-single binary, just like ``PyOxidizer``! The main difference is ``py2exe``
-relies on clever DLL loading tricks rather than ``PyOxidizer``'s approach
-of using custom builds of Python (which exist as a single binary/library)
-to facilitate this. This is a really clever solution and ``py2exe``'s
-authors deserve commendation for pulling this off!
+``py2exe`` and ``PyOxidizer`` both employ a clever trick on Windows that
+allows loading DLLs from memory. This enables DLLs to be embedded in an
+executable so you can ship a single ``.exe`` and not have to worry about
+bundling DLLs as separate files. (``PyOxidizer`` is using the same
+in-memory DLL loading library as ``py2exe``.)
 
 The approach to packaging that ``py2exe`` and ``PyOxidizer`` take is
-substantially different. py2exe embeds itself into ``setup.py`` as a
+substantially different. ``py2exe`` embeds itself into ``setup.py`` as a
 ``distutils`` extension. ``PyOxidizer`` wants to exist at a higher level
 and interact with the output of ``setup.py`` rather than get involved in the
 convoluted mess of ``distutils`` internals. This enables ``PyOxidizer`` to
@@ -125,12 +122,12 @@ running self-contained Python applications that are distributed as zip files.
 
 Shiv requires the target system to have a Python executable and for the target
 to support shebangs in executable files. This is acceptable for controlled
-\*NIX environments. It isn't acceptable for Windows (which doesn't support
-shebangs) nor for environments where you can't guarantee an appropriate
-Python executable is available.
+environments where Python is installed and Python shebangs work. It isn't
+acceptable for environments where you can't guarantee an appropriate Python
+executable is installed/available.
 
-Also, by distributing our own Python interpreter with the application,
-PyOxidizer has stronger guarantees about the run-time environment. For
+By distributing its own Python interpreter with the application,
+``PyOxidizer`` has stronger guarantees about the run-time environment. For
 example, your application can aggressively target the latest Python version.
 Another benefit of distributing your own Python interpreter is you can run a
 Python interpreter with various optimizations, such as profile-guided
@@ -169,7 +166,7 @@ is effective for Linux users.
 
 ``PyOxidizer`` will almost certainly produce a smaller distribution than
 container-based applications. This is because many container-based applications
-contain a lot of extra content that isn't needed by the processes within.
+contain a lot of extra content that isn't needed by the executables within.
 
 ``PyOxidizer`` also doesn't require a container execution environment. Not
 every user has the capability to run certain container formats. However,
@@ -198,7 +195,7 @@ compared to CPython!
 
 Since Nuitka is effectively a new Python interpreter, there are risks to
 running Python in this environment. Some code has dependencies on CPython
-behaviors. There may be subtle bugs are lacking features from Nuitka.
+behaviors. There may be subtle bugs or lacking features from Nuitka.
 However, Nuitka supposedly supports every Python construct, so many
 applications should *just work*.
 
