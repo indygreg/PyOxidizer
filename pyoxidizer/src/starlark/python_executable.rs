@@ -27,7 +27,9 @@ use {
         environment::TypeValues,
         eval::call_stack::CallStack,
         values::{
-            error::{RuntimeError, ValueError, INCORRECT_PARAMETER_TYPE_ERROR_CODE},
+            error::{
+                RuntimeError, UnsupportedOperation, ValueError, INCORRECT_PARAMETER_TYPE_ERROR_CODE,
+            },
             none::NoneType,
             {Mutable, TypedValue, Value, ValueResult},
         },
@@ -80,6 +82,47 @@ impl TypedValue for PythonExecutable {
         &'a self,
     ) -> Box<dyn Iterator<Item = Value> + 'a> {
         Box::new(self.policy.iter().cloned())
+    }
+
+    fn get_attr(&self, attribute: &str) -> ValueResult {
+        match attribute {
+            "windows_subsystem" => Ok(Value::from(self.exe.windows_subsystem())),
+            _ => Err(ValueError::OperationNotSupported {
+                op: UnsupportedOperation::GetAttr(attribute.to_string()),
+                left: Self::TYPE.to_string(),
+                right: None,
+            }),
+        }
+    }
+
+    fn has_attr(&self, attribute: &str) -> Result<bool, ValueError> {
+        Ok(match attribute {
+            "windows_subsystem" => true,
+            _ => false,
+        })
+    }
+
+    fn set_attr(&mut self, attribute: &str, value: Value) -> Result<(), ValueError> {
+        match attribute {
+            "windows_subsystem" => {
+                self.exe
+                    .set_windows_subsystem(value.to_string().as_str())
+                    .map_err(|e| {
+                        ValueError::from(RuntimeError {
+                            code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
+                            message: e.to_string(),
+                            label: format!("{}.{}", Self::TYPE, attribute),
+                        })
+                    })?;
+
+                Ok(())
+            }
+            _ => Err(ValueError::OperationNotSupported {
+                op: UnsupportedOperation::SetAttr(attribute.to_string()),
+                left: Self::TYPE.to_string(),
+                right: None,
+            }),
+        }
     }
 }
 
@@ -976,6 +1019,21 @@ mod tests {
         assert_eq!(x.inner.name, "foo");
         assert!(!x.inner.is_package);
         assert_eq!(x.inner.source.resolve().unwrap(), b"# foo");
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_windows_subsystem() -> Result<()> {
+        let mut env = StarlarkEnvironment::new_with_exe()?;
+
+        let value = env.eval("exe.windows_subsystem")?;
+        assert_eq!(value.get_type(), "string");
+        assert_eq!(value.to_string(), "console");
+
+        let value = env.eval("exe.windows_subsystem = 'windows'; exe.windows_subsystem")?;
+        assert_eq!(value.get_type(), "string");
+        assert_eq!(value.to_string(), "windows");
 
         Ok(())
     }

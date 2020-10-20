@@ -36,6 +36,14 @@ Bug Fixes
 
 * Fixed a broken documentation example for ``glob()``. (#300)
 
+New Features
+^^^^^^^^^^^^
+
+* The ``PythonExecutable`` Starlark type now exposes a
+  ``windows_subsystem`` attribute to control the value of Rust's
+  ``#![windows_subsystem = "..."]`` attribute. Setting this to ``windows``
+  prevents Windows executables from opening a console window when run. (#216)
+
 Other Relevant Changes
 ^^^^^^^^^^^^^^^^^^^^^^
 

@@ -159,8 +159,14 @@ pub fn write_new_build_rs(path: &Path, program_name: &str) -> Result<()> {
 }
 
 /// Write a new main.rs file that runs the embedded Python interpreter.
-pub fn write_new_main_rs(path: &Path) -> Result<()> {
-    let data: BTreeMap<String, String> = BTreeMap::new();
+///
+/// `windows_subsystem` is the value of the `windows_subsystem` Rust attribute.
+pub fn write_new_main_rs(path: &Path, windows_subsystem: &str) -> Result<()> {
+    let mut data: BTreeMap<String, String> = BTreeMap::new();
+    data.insert(
+        "windows_subsystem".to_string(),
+        windows_subsystem.to_string(),
+    );
     let t = HANDLEBARS.render("new-main.rs", &data)?;
 
     println!("writing {}", path.to_str().unwrap());
@@ -343,11 +349,15 @@ pub fn update_new_cargo_toml(path: &Path, pyembed_location: &PyembedLocation) ->
 ///
 /// The created binary application will have the name of the final
 /// path component.
+///
+/// `windows_subsystem` is the value of the `windows_subsystem` compiler
+/// attribute.
 pub fn initialize_project(
     project_path: &Path,
     pyembed_location: &PyembedLocation,
     code: Option<&str>,
     pip_install: &[&str],
+    windows_subsystem: &str,
 ) -> Result<()> {
     let status = std::process::Command::new("cargo")
         .arg("init")
@@ -365,7 +375,7 @@ pub fn initialize_project(
     update_new_cargo_toml(&path.join("Cargo.toml"), pyembed_location)?;
     write_new_cargo_config(&path)?;
     write_new_build_rs(&path.join("build.rs"), name)?;
-    write_new_main_rs(&path.join("src").join("main.rs"))?;
+    write_new_main_rs(&path.join("src").join("main.rs"), windows_subsystem)?;
     write_new_pyoxidizer_config_file(&path, &name, code, pip_install)?;
     write_application_manifest(&path, &name)?;
 

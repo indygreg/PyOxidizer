@@ -108,6 +108,9 @@ pub struct StandalonePythonExecutableBuilder {
 
     /// Path to python executable that can be invoked at build time.
     host_python_exe: PathBuf,
+
+    /// Value for the `windows_subsystem` Rust attribute for generated Rust projects.
+    windows_subsystem: String,
 }
 
 impl StandalonePythonExecutableBuilder {
@@ -202,6 +205,7 @@ impl StandalonePythonExecutableBuilder {
             extension_build_contexts: BTreeMap::new(),
             config,
             host_python_exe,
+            windows_subsystem: "console".to_string(),
         });
 
         builder.add_distribution_core_state()?;
@@ -378,6 +382,16 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
 
     fn target_python_exe_path(&self) -> &Path {
         &self.target_distribution.python_exe_path()
+    }
+
+    fn windows_subsystem(&self) -> &str {
+        &self.windows_subsystem
+    }
+
+    fn set_windows_subsystem(&mut self, value: &str) -> Result<()> {
+        self.windows_subsystem = value.to_string();
+
+        Ok(())
     }
 
     fn iter_resources<'a>(

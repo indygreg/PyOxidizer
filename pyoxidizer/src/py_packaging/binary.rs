@@ -80,6 +80,12 @@ pub trait PythonBinaryBuilder {
     // TODO this should not need to exist if we properly supported cross-compiling.
     fn target_python_exe_path(&self) -> &Path;
 
+    /// The value of the `windows_subsystem` Rust attribute for the generated Rust project.
+    fn windows_subsystem(&self) -> &str;
+
+    /// Set the value of the `windows_subsystem` Rust attribute for generated Rust projects.
+    fn set_windows_subsystem(&mut self, value: &str) -> Result<()>;
+
     /// Obtain an iterator over all resource entries that will be embedded in the binary.
     ///
     /// This likely does not return extension modules that are statically linked

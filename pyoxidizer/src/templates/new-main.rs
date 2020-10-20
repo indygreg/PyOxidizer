@@ -1,3 +1,5 @@
+#![windows_subsystem = "{{{ windows_subsystem }}}"]
+
 use pyembed::MainPythonInterpreter;
 
 // Include an auto-generated file containing the default

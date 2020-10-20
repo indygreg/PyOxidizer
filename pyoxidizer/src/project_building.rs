@@ -271,7 +271,13 @@ pub fn build_python_executable(
     let build_path = temp_dir.path().join("build");
     let artifacts_path = temp_dir.path().join("artifacts");
 
-    initialize_project(&project_path, &pyembed_location, None, &[])?;
+    initialize_project(
+        &project_path,
+        &pyembed_location,
+        None,
+        &[],
+        exe.windows_subsystem(),
+    )?;
 
     let mut build = build_executable_with_rust_project(
         logger,
