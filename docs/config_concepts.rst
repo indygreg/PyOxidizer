@@ -60,16 +60,17 @@ will automatically be called and have their return value passed as an
 argument to the target function depending on it. See
 :ref:`config_register_target` for more.
 
-The value returned by a target function is special. If that value is one
-of the special types defined by our Starlark dialect (e.g.
-:ref:`config_type_python_distribution` or
-:ref:`config_type_python_executable`),
-``PyOxidizer`` will attempt to invoke special functionality depending
-on the run mode. For example, when running ``pyoxidizer build`` to
-*build* a target, ``PyOxidizer`` will invoke any *build* functionality
-on the value returned by a target function, if present. For example,
-a ``PythonExecutable``'s *build* functionality would compile an
-executable binary embedding Python.
+The value returned by a target function is special. Some types defined by
+our Starlark dialect have special *build* or *run* behavior associated
+with them. If you run ``pyoxidizer build`` or ``pyoxidizer run`` against
+a target that returns one of these types, that behavior will be performed.
+
+For example, if you return a :ref:`config_type_python_executable`, the
+*build* behavior is to produce that executable file and the *run* behavior
+is to run that built executable.
+
+See :ref:`config_types_with_target_behavior` for the full list of types
+with registered target behaviors.
 
 .. _config_concept_python_distribution:
 

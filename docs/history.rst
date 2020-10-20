@@ -36,6 +36,12 @@ Bug Fixes
 
 * Fixed a broken documentation example for ``glob()``. (#300)
 
+Other Relevant Changes
+^^^^^^^^^^^^^^^^^^^^^^
+
+* The Starlark types with special *build* or *run* behavior are now
+  explicitly documented.
+
 .. _version_0_9_0:
 
 0.9.0
