@@ -159,6 +159,7 @@ struct PythonJsonMain {
     optimizations: String,
     python_tag: String,
     python_abi_tag: Option<String>,
+    python_config_vars: HashMap<String, String>,
     python_platform_tag: String,
     python_implementation_cache_tag: String,
     python_implementation_hex_version: u64,
@@ -167,6 +168,7 @@ struct PythonJsonMain {
     python_version: String,
     python_major_minor_version: String,
     python_paths: HashMap<String, String>,
+    python_paths_abstract: HashMap<String, String>,
     python_exe: String,
     python_stdlib_test_packages: Vec<String>,
     python_suffixes: HashMap<String, Vec<String>>,
@@ -201,9 +203,9 @@ fn parse_python_json(path: &Path) -> Result<PythonJsonMain> {
                 .as_str()
                 .ok_or_else(|| anyhow!("unable to parse version as a string"))?;
 
-            if version != "5" {
+            if version != "6" {
                 return Err(anyhow!(
-                    "expected version 5 standalone distribution; found version {}",
+                    "expected version 6 standalone distribution; found version {}",
                     version
                 ));
             }

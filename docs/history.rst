@@ -39,6 +39,9 @@ Backwards Compatibility Notes
   since the ``PyConfig`` data structure was adopted for running code during
   interpreter initialization. The deleted code was reimplementing
   functionality in CPython and much of it was of questionable quality.
+* The built-in Python distributions have been updated to use version
+  ``6`` of the standalone distribution format. PyOxidizer only recognizes
+  version ``6`` distributions.
 
 Bug Fixes
 ^^^^^^^^^
@@ -60,6 +63,9 @@ Other Relevant Changes
   explicitly documented.
 * The list of glibc and GCC versions used by popular Linux distributions
   has been updated.
+* The built-in Linux and macOS Python distributions are now compiled with
+  LLVM/Clang 11 (as opposed to 10).
+* The built-in Python distributions now use pip 20.2.4 and setuptools 50.3.2.
 
 .. _version_0_9_0:
 
