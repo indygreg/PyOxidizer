@@ -1365,6 +1365,11 @@ impl PythonDistribution for StandaloneDistribution {
 
         Ok(res)
     }
+
+    fn tcl_library_path_directory(&self) -> Option<String> {
+        // TODO this should probably be exposed from the JSON metadata.
+        Some("tcl8.6".to_string())
+    }
 }
 
 #[cfg(test)]

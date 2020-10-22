@@ -80,6 +80,12 @@ pub trait PythonBinaryBuilder {
     // TODO this should not need to exist if we properly supported cross-compiling.
     fn target_python_exe_path(&self) -> &Path;
 
+    /// The directory to install tcl/tk files into.
+    fn tcl_files_path(&self) -> &Option<String>;
+
+    /// Set the directory to install tcl/tk files into.
+    fn set_tcl_files_path(&mut self, value: Option<String>);
+
     /// The value of the `windows_subsystem` Rust attribute for the generated Rust project.
     fn windows_subsystem(&self) -> &str;
 

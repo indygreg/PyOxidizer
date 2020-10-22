@@ -203,8 +203,12 @@ pub trait PythonDistribution {
     ///
     /// The returned list of files contains relative file names and the locations
     /// of file content. If the files are installed in a new directory, it should
-    /// be possible to use that directory as the value of `TCL_LIBRARY`.
+    /// be possible to use that directory joined with `tcl_library_path_directory`
+    /// as the value of `TCL_LIBRARY`.
     fn tcl_files(&self) -> Result<Vec<(PathBuf, DataLocation)>>;
+
+    /// The name of the directory to use for `TCL_LIBRARY`
+    fn tcl_library_path_directory(&self) -> Option<String>;
 }
 
 /// Multiple threads or processes could race to extract the archive.

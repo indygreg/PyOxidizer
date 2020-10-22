@@ -29,4 +29,5 @@ instructions.
    packaging_static_linking
    packaging_licensing
    packaging_terminfo
+   packaging_tkinter
    packaging_python_executable

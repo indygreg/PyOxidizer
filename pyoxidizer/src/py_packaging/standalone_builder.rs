@@ -111,6 +111,9 @@ pub struct StandalonePythonExecutableBuilder {
 
     /// Value for the `windows_subsystem` Rust attribute for generated Rust projects.
     windows_subsystem: String,
+
+    /// Path to install tcl/tk files into.
+    tcl_files_path: Option<String>,
 }
 
 impl StandalonePythonExecutableBuilder {
@@ -206,6 +209,7 @@ impl StandalonePythonExecutableBuilder {
             config,
             host_python_exe,
             windows_subsystem: "console".to_string(),
+            tcl_files_path: None,
         });
 
         builder.add_distribution_core_state()?;
@@ -392,6 +396,26 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         self.windows_subsystem = value.to_string();
 
         Ok(())
+    }
+
+    fn tcl_files_path(&self) -> &Option<String> {
+        &self.tcl_files_path
+    }
+
+    fn set_tcl_files_path(&mut self, value: Option<String>) {
+        self.tcl_files_path = value;
+
+        self.config.tcl_library = if let Some(path) = &self.tcl_files_path {
+            Some(
+                PathBuf::from("$ORIGIN").join(path).join(
+                    self.target_distribution
+                        .tcl_library_path_directory()
+                        .expect("should have a tcl library path directory"),
+                ),
+            )
+        } else {
+            None
+        };
     }
 
     fn iter_resources<'a>(
@@ -730,6 +754,20 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
                 };
 
                 extra_files.add_file(&manifest_path, &content)?;
+            }
+        }
+
+        if let Some(tcl_files_path) = self.tcl_files_path() {
+            for (path, location) in self.target_distribution.tcl_files()? {
+                let install_path = PathBuf::from(tcl_files_path).join(path);
+
+                extra_files.add_file(
+                    &install_path,
+                    &FileContent {
+                        data: location.resolve()?,
+                        executable: false,
+                    },
+                )?;
             }
         }
 

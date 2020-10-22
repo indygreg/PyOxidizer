@@ -60,6 +60,10 @@ New Features
   ``windows_subsystem`` attribute to control the value of Rust's
   ``#![windows_subsystem = "..."]`` attribute. Setting this to ``windows``
   prevents Windows executables from opening a console window when run. (#216)
+* The ``PythonExecutable`` Starlark type now exposes a ``tcl_files_path``
+  attribute to define a directory to install tcl/tk support files into.
+  Setting this attribute enables the use of the ``tkinter`` Python module
+  with compatible Python distributions. (#25)
 
 Other Relevant Changes
 ^^^^^^^^^^^^^^^^^^^^^^

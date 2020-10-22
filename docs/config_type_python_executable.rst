@@ -17,6 +17,23 @@ Attributes
 
 The following sections describe the attributes available on each instance.
 
+.. _config_type_python_executable_tcl_files_path:
+
+``tcl_files_path``
+------------------
+
+(``Optional[string]``)
+
+Defines a directory relative to that of the built executable in which to
+install tcl/tk files.
+
+If set to a value, tcl/tk files present in the Python distribution being
+used will be installed next to the build executable and the embedded Python
+interpreter will automatically set the ``TCL_LIBRARY`` environment variable
+to load tcl files from this directory.
+
+If ``None`` (the default), no tcl/tk files will be installed.
+
 .. _config_type_python_executable_windows_subsystem:
 
 ``windows_subsystem``

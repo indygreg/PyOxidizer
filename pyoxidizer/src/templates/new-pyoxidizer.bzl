@@ -178,6 +178,16 @@ def make_exe(dist):
         config=python_config,
     )
 
+    # Install tcl/tk support files to a specified directory so the `tkinter` Python
+    # module works.
+    # exe.tcl_files_path = "lib"
+
+    # Make the executable a console application on Windows.
+    # exe.windows_subsystem = "console"
+
+    # Make the executable a non-console application on Windows.
+    # exe.windows_subsystem = "windows"
+
     # Invoke `pip download` to install a single package using wheel archives
     # obtained via `pip download`. `pip_download()` returns objects representing
     # collected files inside Python wheels. `add_python_resources()` adds these

@@ -16,7 +16,7 @@ use {
         target::{BuildContext, BuildTarget, ResolvedTarget, RunMode},
         util::{
             optional_dict_arg, optional_list_arg, required_bool_arg, required_list_arg,
-            required_str_arg,
+            required_str_arg, ToOptional,
         },
     },
     crate::{project_building::build_python_executable, py_packaging::binary::PythonBinaryBuilder},
@@ -86,6 +86,10 @@ impl TypedValue for PythonExecutable {
 
     fn get_attr(&self, attribute: &str) -> ValueResult {
         match attribute {
+            "tcl_files_path" => match self.exe.tcl_files_path() {
+                Some(value) => Ok(Value::from(value.to_string())),
+                None => Ok(Value::from(NoneType::None)),
+            },
             "windows_subsystem" => Ok(Value::from(self.exe.windows_subsystem())),
             _ => Err(ValueError::OperationNotSupported {
                 op: UnsupportedOperation::GetAttr(attribute.to_string()),
@@ -97,6 +101,7 @@ impl TypedValue for PythonExecutable {
 
     fn has_attr(&self, attribute: &str) -> Result<bool, ValueError> {
         Ok(match attribute {
+            "tcl_files_path" => true,
             "windows_subsystem" => true,
             _ => false,
         })
@@ -104,6 +109,11 @@ impl TypedValue for PythonExecutable {
 
     fn set_attr(&mut self, attribute: &str, value: Value) -> Result<(), ValueError> {
         match attribute {
+            "tcl_files_path" => {
+                self.exe.set_tcl_files_path(value.to_optional());
+
+                Ok(())
+            }
             "windows_subsystem" => {
                 self.exe
                     .set_windows_subsystem(value.to_string().as_str())
@@ -1034,6 +1044,23 @@ mod tests {
         let value = env.eval("exe.windows_subsystem = 'windows'; exe.windows_subsystem")?;
         assert_eq!(value.get_type(), "string");
         assert_eq!(value.to_string(), "windows");
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_tcl_files_path() -> Result<()> {
+        let mut env = StarlarkEnvironment::new_with_exe()?;
+
+        let value = env.eval("exe.tcl_files_path")?;
+        assert_eq!(value.get_type(), "NoneType");
+
+        let value = env.eval("exe.tcl_files_path = 'lib'; exe.tcl_files_path")?;
+        assert_eq!(value.get_type(), "string");
+        assert_eq!(value.to_string(), "lib");
+
+        let value = env.eval("exe.tcl_files_path = None; exe.tcl_files_path")?;
+        assert_eq!(value.get_type(), "NoneType");
 
         Ok(())
     }

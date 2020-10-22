@@ -88,6 +88,7 @@ pub struct EmbeddedPythonConfig {
     pub sys_frozen: bool,
     pub sys_meipass: bool,
     pub terminfo_resolution: TerminfoResolution,
+    pub tcl_library: Option<PathBuf>,
     pub write_modules_directory_env: Option<String>,
     pub run_mode: PythonRunMode,
 }
@@ -112,6 +113,7 @@ impl Default for EmbeddedPythonConfig {
             sys_frozen: false,
             sys_meipass: false,
             terminfo_resolution: TerminfoResolution::None,
+            tcl_library: None,
             write_modules_directory_env: None,
             run_mode: PythonRunMode::Repl,
         }
@@ -198,7 +200,7 @@ impl EmbeddedPythonConfig {
             sys_frozen: {},\n    \
             sys_meipass: {},\n    \
             terminfo_resolution: {},\n    \
-            tcl_library: None,\n    \
+            tcl_library: {},\n    \
             write_modules_directory_env: {},\n    \
             run: {},\n\
             }}\n\
@@ -333,6 +335,7 @@ impl EmbeddedPythonConfig {
                     format!("pyembed::TerminfoResolution::Static(r###\"{}\"###", v)
                 }
             },
+            optional_pathbuf_to_string(&self.tcl_library),
             optional_string_to_string(&self.write_modules_directory_env),
             match self.run_mode {
                 PythonRunMode::None => "pyembed::PythonRunMode::None".to_owned(),
