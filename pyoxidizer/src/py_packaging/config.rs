@@ -196,6 +196,7 @@ impl EmbeddedPythonConfig {
             sys_frozen: {},\n    \
             sys_meipass: {},\n    \
             terminfo_resolution: {},\n    \
+            tcl_library: None,\n    \
             write_modules_directory_env: {},\n    \
             run: {},\n\
             }}\n\

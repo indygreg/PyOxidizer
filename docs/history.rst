@@ -42,6 +42,9 @@ Backwards Compatibility Notes
 * The built-in Python distributions have been updated to use version
   ``6`` of the standalone distribution format. PyOxidizer only recognizes
   version ``6`` distributions.
+* The ``pyembed::OxidizedPythonInterpreterConfig`` Rust struct now contains
+  a ``tcl_library`` field to control the value of the `TCL_LIBRARY` environment
+  variable.
 
 Bug Fixes
 ^^^^^^^^^

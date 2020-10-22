@@ -346,6 +346,11 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
             .ensure_origin()
             .map_err(|e| NewInterpreterError::Simple(e))?;
         let origin_string = origin.display().to_string();
+
+        if let Some(tcl_library) = self.config.resolve_tcl_library()? {
+            std::env::set_var("TCL_LIBRARY", tcl_library);
+        }
+
         self.config
             .resolve_module_search_paths()
             .map_err(|e| NewInterpreterError::Simple(e))?;

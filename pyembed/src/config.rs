@@ -150,6 +150,15 @@ pub struct OxidizedPythonInterpreterConfig<'a> {
     /// How to resolve the `terminfo` database.
     pub terminfo_resolution: TerminfoResolution,
 
+    /// Path to use to define the `TCL_LIBRARY` environment variable.
+    ///
+    /// This directory should contain an `init.tcl` file. It is commonly
+    /// a directory named `tclX.Y`. e.g. `tcl8.6`.
+    ///
+    /// `$ORIGIN` in the path is expanded to the directory of the current
+    /// executable.
+    pub tcl_library: Option<PathBuf>,
+
     /// Environment variable holding the directory to write a loaded modules file.
     ///
     /// If this value is set and the environment it refers to is set,
@@ -183,6 +192,7 @@ impl<'a> Default for OxidizedPythonInterpreterConfig<'a> {
             sys_frozen: false,
             sys_meipass: false,
             terminfo_resolution: TerminfoResolution::Dynamic,
+            tcl_library: None,
             write_modules_directory_env: None,
             run: PythonRunMode::Repl,
         }
@@ -254,6 +264,25 @@ impl<'a> OxidizedPythonInterpreterConfig<'a> {
             args.clone()
         } else {
             std::env::args_os().collect::<Vec<_>>()
+        }
+    }
+
+    /// Resolves the value to use for `TCL_LIBRARY`.
+    pub fn resolve_tcl_library(&mut self) -> Result<Option<OsString>, &'static str> {
+        let origin = self.ensure_origin()?;
+        let origin_string = origin.display().to_string();
+
+        if let Some(tcl_library) = &self.tcl_library {
+            let tcl_library = PathBuf::from(
+                tcl_library
+                    .display()
+                    .to_string()
+                    .replace("$ORIGIN", &origin_string),
+            );
+
+            Ok(Some(tcl_library.into_os_string()))
+        } else {
+            Ok(None)
         }
     }
 }

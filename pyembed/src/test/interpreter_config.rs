@@ -364,4 +364,21 @@ rusty_fork_test! {
             b"\xe4\xb8\xad\xe6\x96\x87"
         });
     }
+
+    #[test]
+    fn test_tcl_library_origin() {
+        let mut config = OxidizedPythonInterpreterConfig::default();
+        // Otherwise the Rust arguments are interpreted as Python arguments.
+        config.interpreter_config.parse_argv = Some(false);
+        config.tcl_library = Some(PathBuf::from("$ORIGIN/lib/tcl8.6"));
+
+        let origin = std::env::current_exe()
+            .unwrap()
+            .parent()
+            .unwrap()
+            .to_path_buf();
+
+        let tcl_library = config.resolve_tcl_library().unwrap();
+        assert_eq!(tcl_library, Some(origin.join("lib").join("tcl8.6").into_os_string()));
+    }
 }
