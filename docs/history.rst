@@ -50,6 +50,8 @@ Bug Fixes
 ^^^^^^^^^
 
 * Fixed a broken documentation example for ``glob()``. (#300)
+* Fixed a bug where generated Rust code for `Option<PathBuf>` interpreter
+  configuration fields was not being generated correctly.
 
 New Features
 ^^^^^^^^^^^^

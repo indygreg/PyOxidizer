@@ -51,7 +51,9 @@ fn optional_string_to_string(value: &Option<String>) -> String {
 
 fn optional_pathbuf_to_string(value: &Option<PathBuf>) -> String {
     match value {
-        Some(value) => format_args!("Some(PathBuf::from(\"{}\"", value.display()).to_string(),
+        Some(value) => {
+            format_args!("Some(std::path::PathBuf::from(r\"{}\"))", value.display()).to_string()
+        }
         None => "None".to_string(),
     }
 }
