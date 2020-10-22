@@ -8,7 +8,7 @@ use {
     python_packaging::{
         interpreter::{
             Allocator, BytesWarning, CheckHashPYCsMode, CoerceCLocale, MemoryAllocatorBackend,
-            PythonInterpreterProfile, PythonRunMode, TerminfoResolution,
+            PythonInterpreterProfile, TerminfoResolution,
         },
         resource::BytecodeOptimizationLevel,
     },
@@ -23,12 +23,6 @@ use {
 };
 
 impl ToValue for PythonInterpreterProfile {
-    fn to_value(&self) -> Value {
-        Value::from(self.to_string())
-    }
-}
-
-impl ToValue for PythonRunMode {
     fn to_value(&self) -> Value {
         Value::from(self.to_string())
     }
@@ -203,7 +197,6 @@ impl TypedValue for PythonInterpreterConfigValue {
             "sys_meipass" => Value::from(self.inner.sys_meipass),
             "terminfo_resolution" => self.inner.terminfo_resolution.to_value(),
             "write_modules_directory_env" => self.inner.write_modules_directory_env.to_value(),
-            "run_mode" => self.inner.run_mode.to_value(),
             attr => {
                 return Err(ValueError::OperationNotSupported {
                     op: UnsupportedOperation::GetAttr(attr.to_string()),
@@ -282,7 +275,6 @@ impl TypedValue for PythonInterpreterConfigValue {
             "sys_meipass" => true,
             "terminfo_resolution" => true,
             "write_modules_directory_env" => true,
-            "run_mode" => true,
             _ => false,
         })
     }
@@ -559,16 +551,6 @@ impl TypedValue for PythonInterpreterConfigValue {
             }
             "write_modules_directory_env" => {
                 self.inner.write_modules_directory_env = value.to_optional();
-            }
-            "run_mode" => {
-                self.inner.run_mode =
-                    PythonRunMode::try_from(value.to_string().as_str()).map_err(|e| {
-                        ValueError::from(RuntimeError {
-                            code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
-                            message: e,
-                            label: format!("{}.{}", Self::TYPE, attribute),
-                        })
-                    })?;
             }
             attr => {
                 return Err(ValueError::OperationNotSupported {
@@ -1230,27 +1212,6 @@ mod tests {
         let mut env = get_env()?;
 
         env.eval_assert("config.write_modules_directory_env == None")?;
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_run_mode() -> Result<()> {
-        let mut env = get_env()?;
-
-        env.eval_assert("config.run_mode == 'repl'")?;
-
-        env.eval("config.run_mode = 'module:foo'")?;
-        env.eval_assert("config.run_mode == 'module:foo'")?;
-
-        env.eval("config.run_mode = 'none'")?;
-        env.eval_assert("config.run_mode == 'none'")?;
-
-        env.eval("config.run_mode = 'eval:code'")?;
-        env.eval_assert("config.run_mode == 'eval:code'")?;
-
-        env.eval("config.run_mode = 'file:path'")?;
-        env.eval_assert("config.run_mode == 'file:path'")?;
 
         Ok(())
     }

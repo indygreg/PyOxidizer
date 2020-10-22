@@ -607,17 +607,8 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
     /// `OxidizedPythonInterpreterConfig.run` and return an integer suitable
     /// for use as a process exit code.
     ///
-    /// The `PythonRunMode::Eval`, `PythonRunMode::File`, and
-    /// `PythonRunMode::Module`, and `PythonRunMode::Repl` run modes are
-    /// evaluated via `Py_RunMain()`. `PythonRunMode::None` simply returns 0.
-    ///
     /// `Py_RunMain` is the most robust mechanism to run code, files, or
     /// modules, as `Py_RunMain()` invokes the same APIs that `python` would.
-    /// By contrast, the `run()`, `run_module_as_main()`, `run_code()`,
-    /// `run_file()`, and `run_repl()` functions in the `python_eval` module
-    /// reimplement functionality and may behave subtly different from what
-    /// `python` would do. If you want the evaluation to behave like `python`,
-    /// you should call this function.
     ///
     /// A downside to calling this function is that `Py_RunMain()` will finalize
     /// the interpreter and only gives you an exit code: there is no opportunity

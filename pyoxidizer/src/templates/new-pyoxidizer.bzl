@@ -152,17 +152,14 @@ def make_exe(dist):
     # by the given environment variable.
     # python_config.write_modules_directory_env = "/tmp/oxidized/loaded_modules"
 
-    # Don't run any Python code when the interpreter starts.
-    # python_config.run_mode = 'none'
-
-    # Start a Python REPL when the interpreter starts.
-    # python_config.run_mode = 'repl'
-
     # Evaluate a string as Python code when the interpreter starts.
-    # python_config.run_mode = 'eval:<code>'
+    # python_config.run_command = "<code>"
 
     # Run a Python module as __main__ when the interpreter starts.
-    # python_config.run_mode = 'module:foo.bar'
+    # python_config.run_module = "<module>"
+
+    # Run a Python file when the interpreter starts.
+    # python_config.run_filename = "/path/to/file"
 
     # Produce a PythonExecutable from a Python distribution, embedded
     # resources, and other options. The returned object represents the

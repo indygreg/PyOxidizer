@@ -12,7 +12,7 @@ use {
     python_packaging::{
         interpreter::{
             Allocator, BytesWarning, CheckHashPYCsMode, CoerceCLocale, MemoryAllocatorBackend,
-            PythonInterpreterConfig, PythonInterpreterProfile, PythonRunMode, TerminfoResolution,
+            PythonInterpreterConfig, PythonInterpreterProfile, TerminfoResolution,
         },
         resource::BytecodeOptimizationLevel,
     },
@@ -90,7 +90,6 @@ pub struct EmbeddedPythonConfig {
     pub terminfo_resolution: TerminfoResolution,
     pub tcl_library: Option<PathBuf>,
     pub write_modules_directory_env: Option<String>,
-    pub run_mode: PythonRunMode,
 }
 
 impl Default for EmbeddedPythonConfig {
@@ -115,7 +114,6 @@ impl Default for EmbeddedPythonConfig {
             terminfo_resolution: TerminfoResolution::None,
             tcl_library: None,
             write_modules_directory_env: None,
-            run_mode: PythonRunMode::Repl,
         }
     }
 }
@@ -202,7 +200,6 @@ impl EmbeddedPythonConfig {
             terminfo_resolution: {},\n    \
             tcl_library: {},\n    \
             write_modules_directory_env: {},\n    \
-            run: {},\n\
             }}\n\
             ",
             match self.config.profile {
@@ -337,24 +334,6 @@ impl EmbeddedPythonConfig {
             },
             optional_pathbuf_to_string(&self.tcl_library),
             optional_string_to_string(&self.write_modules_directory_env),
-            match self.run_mode {
-                PythonRunMode::None => "pyembed::PythonRunMode::None".to_owned(),
-                PythonRunMode::Repl => "pyembed::PythonRunMode::Repl".to_owned(),
-                PythonRunMode::Module { ref module } => {
-                    "pyembed::PythonRunMode::Module { module: \"".to_owned()
-                        + module
-                        + "\".to_string() }"
-                }
-                PythonRunMode::Eval { ref code } => {
-                    "pyembed::PythonRunMode::Eval { code: r###\"".to_owned()
-                        + code
-                        + "\"###.to_string() }"
-                }
-                PythonRunMode::File { ref path } => {
-                    format!("pyembed::PythonRunMode::File {{ path: std::path::PathBuf::new(r###\"{}\"###) }}",
-                    path.display())
-                }
-            },
         );
 
         Ok(code)

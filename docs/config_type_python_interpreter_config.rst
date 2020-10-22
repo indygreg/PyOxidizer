@@ -239,46 +239,6 @@ be written to the directory.
 This setting is useful for determining which Python modules are loaded when
 running Python code.
 
-.. _config_type_python_interpreter_config_run_mode:
-
-``run_mode``
-^^^^^^^^^^^^
-
-(``string``)
-
-This attribute controls what the Python interpreter should do after
-initializing.
-
-Accepted values are:
-
-``none``
-   Don't do anything after initialization.
-
-``repl``
-   Run a Python REPL.
-
-   This should be equivalent to ``python``.
-
-``module:<module>``
-   Run a named Python module as ``__main__``.
-
-   This is roughly equivalent to ``python -m <module>``.
-
-``eval:<code>``
-   Run Python code via ``eval()``.
-
-   This should be equivalent to ``python -c <code>``.
-
-   An example value would be ``eval:import mymodule; mymodule.main()``.
-
-``file:<path>``
-   Run Python code in a file.
-
-   This should be equivalent to ``python <path>``.
-
-   The filename is resolved at run-time using whatever mechanism the
-   Python interpreter applies.
-
 .. _config_type_python_interpreter_config_pypreconfig:
 
 Attributes From ``PyPreConfig``

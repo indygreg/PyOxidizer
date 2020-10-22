@@ -24,9 +24,7 @@ use {
     python_packaging::{
         bytecode::{BytecodeCompiler, PythonBytecodeCompiler},
         filesystem_scanning::{find_python_resources, walk_tree_files},
-        interpreter::{
-            PythonInterpreterConfig, PythonInterpreterProfile, PythonRunMode, TerminfoResolution,
-        },
+        interpreter::{PythonInterpreterConfig, PythonInterpreterProfile, TerminfoResolution},
         location::ConcreteResourceLocation,
         module_util::{is_package_from_path, PythonModuleSuffixes},
         policy::PythonPackagingPolicy,
@@ -1213,7 +1211,6 @@ impl PythonDistribution for StandaloneDistribution {
             oxidized_importer: true,
             filesystem_importer: false,
             terminfo_resolution: TerminfoResolution::Dynamic,
-            run_mode: PythonRunMode::Repl,
             ..embedded_default
         })
     }

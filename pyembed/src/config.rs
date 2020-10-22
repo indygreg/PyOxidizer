@@ -7,8 +7,7 @@
 use {
     python3_sys as pyffi,
     python_packaging::interpreter::{
-        PythonInterpreterConfig, PythonInterpreterProfile, PythonRawAllocator, PythonRunMode,
-        TerminfoResolution,
+        PythonInterpreterConfig, PythonInterpreterProfile, PythonRawAllocator, TerminfoResolution,
     },
     std::{
         ffi::{CString, OsString},
@@ -166,10 +165,6 @@ pub struct OxidizedPythonInterpreterConfig<'a> {
     /// the directory specified containing a ``\n`` delimited list of modules
     /// loaded in ``sys.modules``.
     pub write_modules_directory_env: Option<String>,
-
-    /// Defines what code to run by default.
-    ///
-    pub run: PythonRunMode,
 }
 
 impl<'a> Default for OxidizedPythonInterpreterConfig<'a> {
@@ -194,7 +189,6 @@ impl<'a> Default for OxidizedPythonInterpreterConfig<'a> {
             terminfo_resolution: TerminfoResolution::Dynamic,
             tcl_library: None,
             write_modules_directory_env: None,
-            run: PythonRunMode::Repl,
         }
     }
 }

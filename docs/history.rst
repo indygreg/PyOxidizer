@@ -45,6 +45,12 @@ Backwards Compatibility Notes
 * The ``pyembed::OxidizedPythonInterpreterConfig`` Rust struct now contains
   a ``tcl_library`` field to control the value of the `TCL_LIBRARY` environment
   variable.
+* The ``pyembed::OxidizedPythonInterpreterConfig`` Rust struct no longer has
+  a ``run_mode`` field.
+* The ``PythoninterpreterConfig`` Starlark type no longer has a ``run_mode``
+  attribute. To define what code to run at interpreter startup, populate a
+  ``run_*`` attribute or leave all ``None`` with ``.parse_argv = True`` (the
+  default for ``profile = "python"``) to start a REPL.
 
 Bug Fixes
 ^^^^^^^^^

@@ -43,7 +43,7 @@ Then edit the ``pyoxidizer.bzl`` file to have the following:
 
    def make_exe(dist):
        config = dist.make_python_interpreter_config()
-       config.run_mode = "module:black"
+       config.run_module = "black"
 
        exe = dist.to_python_executable(
            name = "black",
@@ -193,7 +193,7 @@ Change your configuration file so ``make_exe()`` looks like the following:
        policy.resources_location_fallback = "filesystem-relative:lib"
 
        python_config = dist.make_python_interpreter_config()
-       python_config.run_mode = "module:black"
+       python_config.run_module = "black"
 
        exe = dist.to_python_executable(
            name = "black",
