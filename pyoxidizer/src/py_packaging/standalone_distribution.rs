@@ -399,7 +399,10 @@ pub struct StandaloneDistribution {
     pub license_path: Option<PathBuf>,
 
     /// Path to Tcl library files.
-    pub tcl_library_path: Option<PathBuf>,
+    tcl_library_path: Option<PathBuf>,
+
+    /// Directories under `tcl_library_path` containing tcl files.
+    tcl_library_paths: Option<Vec<String>>,
 
     /// Object files providing the core Python implementation.
     ///
@@ -905,10 +908,10 @@ impl StandaloneDistribution {
                 None => None,
             },
             tcl_library_path: match pi.tcl_library_path {
-                Some(ref path) => Some(PathBuf::from(path)),
+                Some(ref path) => Some(dist_dir.join("python").join(path)),
                 None => None,
             },
-
+            tcl_library_paths: pi.tcl_library_paths.clone(),
             extension_modules,
             frozen_c,
             includes,
@@ -1330,6 +1333,38 @@ impl PythonDistribution for StandaloneDistribution {
                 .extension_module_loading
                 .contains(&"shared-library".to_string())
     }
+
+    fn tcl_files(&self) -> Result<Vec<(PathBuf, DataLocation)>> {
+        let mut res = vec![];
+
+        if let Some(root) = &self.tcl_library_path {
+            if let Some(paths) = &self.tcl_library_paths {
+                for subdir in paths {
+                    for entry in walkdir::WalkDir::new(root.join(subdir))
+                        .sort_by(|a, b| a.file_name().cmp(b.file_name()))
+                        .into_iter()
+                    {
+                        let entry = entry?;
+
+                        let path = entry.path();
+
+                        if path.is_dir() {
+                            continue;
+                        }
+
+                        let rel_path = path.strip_prefix(&root)?;
+
+                        res.push((
+                            rel_path.to_path_buf(),
+                            DataLocation::Path(path.to_path_buf()),
+                        ));
+                    }
+                }
+            }
+        }
+
+        Ok(res)
+    }
 }
 
 #[cfg(test)]
@@ -1356,6 +1391,23 @@ pub mod tests {
                     }
                 }
                 _ => (),
+            }
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_tcl_files() -> Result<()> {
+        for dist in get_all_standalone_distributions()? {
+            let tcl_files = dist.tcl_files()?;
+
+            if dist.target_triple().contains("pc-windows")
+                && !dist.is_extension_module_file_loadable()
+            {
+                assert!(tcl_files.is_empty());
+            } else {
+                assert!(!tcl_files.is_empty());
             }
         }
 

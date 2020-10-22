@@ -16,8 +16,10 @@ use {
     anyhow::{anyhow, Context, Result},
     fs2::FileExt,
     python_packaging::{
-        bytecode::PythonBytecodeCompiler, module_util::PythonModuleSuffixes,
-        policy::PythonPackagingPolicy, resource::PythonResource,
+        bytecode::PythonBytecodeCompiler,
+        module_util::PythonModuleSuffixes,
+        policy::PythonPackagingPolicy,
+        resource::{DataLocation, PythonResource},
     },
     sha2::{Digest, Sha256},
     slog::warn,
@@ -196,6 +198,13 @@ pub trait PythonDistribution {
 
         false
     }
+
+    /// Obtain support files for tcl/tk.
+    ///
+    /// The returned list of files contains relative file names and the locations
+    /// of file content. If the files are installed in a new directory, it should
+    /// be possible to use that directory as the value of `TCL_LIBRARY`.
+    fn tcl_files(&self) -> Result<Vec<(PathBuf, DataLocation)>>;
 }
 
 /// Multiple threads or processes could race to extract the archive.
