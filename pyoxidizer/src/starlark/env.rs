@@ -26,8 +26,9 @@ use {
         },
     },
     starlark_dialect_build_targets::{
-        optional_list_arg, required_bool_arg, required_str_arg, required_type_arg, BuildContext,
-        BuildTarget, EnvironmentContext, GetStateError, ResolvedTarget,
+        build_targets_module, optional_list_arg, required_bool_arg, required_str_arg,
+        required_type_arg, BuildContext, BuildTarget, EnvironmentContext, GetStateError,
+        ResolvedTarget,
     },
     std::{
         path::{Path, PathBuf},
@@ -592,6 +593,7 @@ pub fn global_environment(
     context: &PyOxidizerEnvironmentContext,
 ) -> Result<(Environment, TypeValues), EnvironmentError> {
     let (mut env, mut type_values) = starlark::stdlib::global_environment();
+    build_targets_module(&mut env, &mut type_values);
     global_module(&mut env, &mut type_values);
     super::file_resource::file_resource_env(&mut env, &mut type_values);
     super::python_distribution::python_distribution_module(&mut env, &mut type_values);
