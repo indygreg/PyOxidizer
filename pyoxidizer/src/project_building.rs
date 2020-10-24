@@ -7,7 +7,7 @@ use {
         environment::{canonicalize_path, MINIMUM_RUST_VERSION},
         project_layout::initialize_project,
         py_packaging::binary::{EmbeddedPythonContext, PythonBinaryBuilder},
-        starlark::eval::{eval_starlark_config_file, EvalResult},
+        starlark::eval::{eval_starlark_config_file, EvaluationContext},
     },
     anyhow::{anyhow, Context, Result},
     duct::cmd,
@@ -320,7 +320,7 @@ pub fn build_pyembed_artifacts(
         return Ok(());
     }
 
-    let mut res: EvalResult = eval_starlark_config_file(
+    let mut res: EvaluationContext = eval_starlark_config_file(
         logger,
         config_path,
         target_triple,

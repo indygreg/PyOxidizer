@@ -14,7 +14,7 @@ use {
             },
             standalone_distribution::StandaloneDistribution,
         },
-        starlark::eval::{eval_starlark_config_file, EvalResult},
+        starlark::eval::{eval_starlark_config_file, EvaluationContext},
     },
     anyhow::{anyhow, Result},
     python_packaging::{
@@ -107,7 +107,7 @@ pub fn build(
     })?;
     let target_triple = resolve_target(target_triple)?;
 
-    let mut res: EvalResult = eval_starlark_config_file(
+    let mut res: EvaluationContext = eval_starlark_config_file(
         logger,
         &config_path,
         &target_triple,
@@ -147,7 +147,7 @@ pub fn run(
         None
     };
 
-    let mut res: EvalResult = eval_starlark_config_file(
+    let mut res: EvaluationContext = eval_starlark_config_file(
         logger,
         &config_path,
         &target_triple,

@@ -14,8 +14,8 @@ use {
     },
 };
 
-/// Represents the result of evaluating a Starlark environment.
-pub struct EvalResult {
+/// Represents a running Starlark environment.
+pub struct EvaluationContext {
     pub env: Environment,
 
     pub context: PyOxidizerEnvironmentContext,
@@ -30,7 +30,7 @@ pub fn evaluate_file(
     verbose: bool,
     resolve_targets: Option<Vec<String>>,
     build_script_mode: bool,
-) -> Result<EvalResult, Diagnostic> {
+) -> Result<EvaluationContext, Diagnostic> {
     let context = PyOxidizerEnvironmentContext::new(
         logger,
         verbose,
@@ -100,7 +100,7 @@ pub fn evaluate_file(
         }),
     }?;
 
-    Ok(EvalResult { env, context })
+    Ok(EvaluationContext { env, context })
 }
 
 /// Evaluate a Starlark configuration file and return its result.
@@ -112,7 +112,7 @@ pub fn eval_starlark_config_file(
     verbose: bool,
     resolve_targets: Option<Vec<String>>,
     build_script_mode: bool,
-) -> Result<EvalResult> {
+) -> Result<EvaluationContext> {
     crate::starlark::eval::evaluate_file(
         logger,
         path,
