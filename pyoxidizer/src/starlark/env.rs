@@ -6,7 +6,6 @@ use {
     crate::py_packaging::distribution::DistributionCache,
     anyhow::{Context, Result},
     path_dedot::ParseDot,
-    slog::warn,
     starlark::{
         environment::{Environment, EnvironmentError, TypeValues},
         values::{
@@ -224,28 +223,6 @@ pub fn get_context(type_values: &TypeValues) -> ValueResult {
         })
 }
 
-/// print(*args)
-fn starlark_print(type_values: &TypeValues, args: &Vec<Value>) -> ValueResult {
-    let raw_context = get_context(type_values)?;
-    let context = raw_context
-        .downcast_ref::<PyOxidizerEnvironmentContext>()
-        .ok_or(ValueError::IncorrectParameterType)?;
-
-    let mut parts = Vec::new();
-    let mut first = true;
-    for arg in args {
-        if !first {
-            parts.push(" ".to_string());
-        }
-        first = false;
-        parts.push(arg.to_string());
-    }
-
-    warn!(context.logger(), "{}", parts.join(""));
-
-    Ok(Value::new(NoneType::None))
-}
-
 /// set_build_path(path)
 fn starlark_set_build_path(type_values: &TypeValues, path: String) -> ValueResult {
     let raw_context = get_context(type_values)?;
@@ -265,10 +242,6 @@ fn starlark_set_build_path(type_values: &TypeValues, path: String) -> ValueResul
 }
 
 starlark_module! { global_module =>
-    print(env env, *args) {
-        starlark_print(&env, &args)
-    }
-
     #[allow(clippy::ptr_arg)]
     set_build_path(env env, path: String) {
         starlark_set_build_path(&env, path)

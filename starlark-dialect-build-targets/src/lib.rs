@@ -472,6 +472,28 @@ pub fn get_context_value(type_values: &TypeValues) -> ValueResult {
         })
 }
 
+/// print(*args)
+fn starlark_print(type_values: &TypeValues, args: &[Value]) -> ValueResult {
+    let raw_context = get_context_value(type_values)?;
+    let context = raw_context
+        .downcast_ref::<EnvironmentContext>()
+        .ok_or(ValueError::IncorrectParameterType)?;
+
+    let mut parts = Vec::new();
+    let mut first = true;
+    for arg in args {
+        if !first {
+            parts.push(" ".to_string());
+        }
+        first = false;
+        parts.push(arg.to_string());
+    }
+
+    warn!(context.logger(), "{}", parts.join(""));
+
+    Ok(Value::new(NoneType::None))
+}
+
 /// register_target(target, callable, depends=None, default=false)
 fn starlark_register_target(
     type_values: &TypeValues,
@@ -626,6 +648,10 @@ fn starlark_resolve_targets(type_values: &TypeValues, call_stack: &mut CallStack
 }
 
 starlark_module! { build_targets_module =>
+    print(env env, *args) {
+        starlark_print(&env, &args)
+    }
+
     register_target(
         env env,
         target: String,
