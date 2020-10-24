@@ -209,21 +209,6 @@ impl PyOxidizerEnvironmentContext {
         Ok(resolved_target)
     }
 
-    /// Build a target, defined optionally.
-    ///
-    /// This will build the default target if `target` is `None`.
-    pub fn build_target(&mut self, target: Option<&str>) -> Result<ResolvedTarget> {
-        let build_target = if let Some(t) = target {
-            t.to_string()
-        } else if let Some(t) = self.core.default_target() {
-            t.to_string()
-        } else {
-            return Err(anyhow!("unable to determine target to build"));
-        };
-
-        self.build_resolved_target(&build_target)
-    }
-
     /// Evaluate a target and run it, if possible.
     pub fn run_resolved_target(&mut self, target: &str) -> Result<()> {
         let resolved_target = self.build_resolved_target(target)?;
