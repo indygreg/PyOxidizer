@@ -320,7 +320,7 @@ pub fn build_pyembed_artifacts(
         return Ok(());
     }
 
-    let mut res: EvaluationContext = eval_starlark_config_file(
+    let mut ctx: EvaluationContext = eval_starlark_config_file(
         logger,
         config_path,
         target_triple,
@@ -335,8 +335,8 @@ pub fn build_pyembed_artifacts(
     )?;
 
     // TODO should we honor only the specified target if one is given?
-    for target in res.context.core.targets_to_resolve() {
-        let resolved: ResolvedTarget = res.context.build_resolved_target(&target)?;
+    for target in ctx.targets_to_resolve() {
+        let resolved: ResolvedTarget = ctx.build_resolved_target(&target)?;
 
         let cargo_metadata = resolved.output_path.join("cargo_metadata.txt");
 

@@ -8,6 +8,7 @@ use {
     codemap::CodeMap,
     codemap_diagnostic::{Diagnostic, Level},
     starlark::{environment::Environment, syntax::dialect::Dialect, values::TypedValue},
+    starlark_dialect_build_targets::ResolvedTarget,
     std::{
         path::Path,
         sync::{Arc, Mutex},
@@ -18,7 +19,35 @@ use {
 pub struct EvaluationContext {
     pub env: Environment,
 
-    pub context: PyOxidizerEnvironmentContext,
+    context: PyOxidizerEnvironmentContext,
+}
+
+impl EvaluationContext {
+    pub fn default_target(&self) -> Option<&str> {
+        self.context.core.default_target()
+    }
+
+    pub fn target_names(&self) -> Vec<&str> {
+        self.context
+            .core
+            .targets()
+            .keys()
+            .map(|x| x.as_str())
+            .collect::<Vec<_>>()
+    }
+
+    /// Obtain targets that should be resolved.
+    pub fn targets_to_resolve(&self) -> Vec<String> {
+        self.context.core.targets_to_resolve()
+    }
+
+    pub fn build_resolved_target(&mut self, target: &str) -> Result<ResolvedTarget> {
+        self.context.build_resolved_target(target)
+    }
+
+    pub fn run_target(&mut self, target: Option<&str>) -> Result<()> {
+        self.context.run_target(target)
+    }
 }
 
 /// Evaluate a Starlark configuration file, returning a low-level result.

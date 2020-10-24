@@ -60,7 +60,7 @@ pub fn list_targets(logger: &slog::Logger, project_path: &Path) -> Result<()> {
     })?;
 
     let target_triple = default_target()?;
-    let res = eval_starlark_config_file(
+    let ctx = eval_starlark_config_file(
         logger,
         &config_path,
         &target_triple,
@@ -70,13 +70,13 @@ pub fn list_targets(logger: &slog::Logger, project_path: &Path) -> Result<()> {
         false,
     )?;
 
-    if res.context.core.default_target().is_none() {
+    if ctx.default_target().is_none() {
         println!("(no targets defined)");
         return Ok(());
     }
 
-    for target in res.context.core.targets().keys() {
-        let prefix = if Some(target.as_str()) == res.context.core.default_target() {
+    for target in ctx.target_names() {
+        let prefix = if Some(target) == ctx.default_target() {
             "*"
         } else {
             ""
@@ -107,7 +107,7 @@ pub fn build(
     })?;
     let target_triple = resolve_target(target_triple)?;
 
-    let mut res: EvaluationContext = eval_starlark_config_file(
+    let mut ctx: EvaluationContext = eval_starlark_config_file(
         logger,
         &config_path,
         &target_triple,
@@ -117,8 +117,8 @@ pub fn build(
         false,
     )?;
 
-    for target in res.context.core.targets_to_resolve() {
-        res.context.build_resolved_target(&target)?;
+    for target in ctx.targets_to_resolve() {
+        ctx.build_resolved_target(&target)?;
     }
 
     Ok(())
@@ -147,7 +147,7 @@ pub fn run(
         None
     };
 
-    let mut res: EvaluationContext = eval_starlark_config_file(
+    let mut ctx: EvaluationContext = eval_starlark_config_file(
         logger,
         &config_path,
         &target_triple,
@@ -157,7 +157,7 @@ pub fn run(
         false,
     )?;
 
-    res.context.run_target(target)
+    ctx.run_target(target)
 }
 
 /// Find resources given a source path.
