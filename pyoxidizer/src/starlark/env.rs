@@ -28,10 +28,9 @@ use {
         },
     },
     starlark_dialect_build_targets::{
-        BuildContext, BuildTarget, GetStateError, ResolvedTarget, Target,
+        BuildContext, BuildTarget, EnvironmentContext, GetStateError, ResolvedTarget,
     },
     std::{
-        collections::BTreeMap,
         path::{Path, PathBuf},
         sync::Arc,
     },
@@ -40,6 +39,8 @@ use {
 /// Holds state for evaluating a Starlark config file.
 #[derive(Debug, Clone)]
 pub struct PyOxidizerEnvironmentContext {
+    pub core: EnvironmentContext,
+
     pub logger: slog::Logger,
 
     /// Whether executing in verbose mode.
@@ -76,28 +77,6 @@ pub struct PyOxidizerEnvironmentContext {
     /// This exists because constructing a new instance can take a
     /// few seconds in debug builds. And this adds up, especially in tests!
     pub distribution_cache: Arc<DistributionCache>,
-
-    /// Registered build targets.
-    ///
-    /// A target consists of a name and a Starlark callable.
-    pub targets: BTreeMap<String, Target>,
-
-    /// Order targets are registered in.
-    pub targets_order: Vec<String>,
-
-    /// Name of default target.
-    pub default_target: Option<String>,
-
-    /// Name of default target to resolve in build script mode.
-    pub default_build_script_target: Option<String>,
-
-    /// List of targets to resolve.
-    pub resolve_targets: Option<Vec<String>>,
-
-    /// Whether we are operating in Rust build script mode.
-    ///
-    /// This will change the default target to resolve.
-    pub build_script_mode: bool,
 }
 
 impl PyOxidizerEnvironmentContext {
@@ -114,6 +93,12 @@ impl PyOxidizerEnvironmentContext {
         build_script_mode: bool,
         distribution_cache: Option<Arc<DistributionCache>>,
     ) -> Result<PyOxidizerEnvironmentContext> {
+        let mut core = EnvironmentContext::new(logger);
+        if let Some(targets) = resolve_targets {
+            core.set_resolve_targets(targets);
+        }
+        core.build_script_mode = build_script_mode;
+
         let parent = config_path
             .parent()
             .with_context(|| "resolving parent directory of config".to_string())?;
@@ -131,6 +116,7 @@ impl PyOxidizerEnvironmentContext {
             .unwrap_or_else(|| Arc::new(DistributionCache::new(Some(&python_distributions_path))));
 
         Ok(PyOxidizerEnvironmentContext {
+            core,
             logger: logger.clone(),
             verbose,
             cwd: parent,
@@ -142,12 +128,6 @@ impl PyOxidizerEnvironmentContext {
             build_path: build_path.clone(),
             python_distributions_path: python_distributions_path.clone(),
             distribution_cache,
-            targets: BTreeMap::new(),
-            targets_order: Vec::new(),
-            default_target: None,
-            default_build_script_target: None,
-            resolve_targets,
-            build_script_mode,
         })
     }
 
@@ -166,57 +146,9 @@ impl PyOxidizerEnvironmentContext {
         Ok(())
     }
 
-    /// Register a named target.
-    pub fn register_target(
-        &mut self,
-        target: String,
-        callable: Value,
-        depends: Vec<String>,
-        default: bool,
-        default_build_script: bool,
-    ) {
-        if !self.targets.contains_key(&target) {
-            self.targets_order.push(target.clone());
-        }
-
-        self.targets.insert(
-            target.clone(),
-            Target {
-                callable,
-                depends,
-                resolved_value: None,
-                built_target: None,
-            },
-        );
-
-        if default || self.default_target.is_none() {
-            self.default_target = Some(target.clone());
-        }
-
-        if default_build_script || self.default_build_script_target.is_none() {
-            self.default_build_script_target = Some(target);
-        }
-    }
-
-    /// Determine what targets should be resolved.
-    ///
-    /// This isn't the full list of targets that will be resolved, only the main
-    /// targets that we will instruct the resolver to resolve.
-    pub fn targets_to_resolve(&self) -> Vec<String> {
-        if let Some(targets) = &self.resolve_targets {
-            targets.clone()
-        } else if self.build_script_mode && self.default_build_script_target.is_some() {
-            vec![self.default_build_script_target.clone().unwrap()]
-        } else if let Some(target) = &self.default_target {
-            vec![target.to_string()]
-        } else {
-            Vec::new()
-        }
-    }
-
     /// Build a resolved target.
     pub fn build_resolved_target(&mut self, target: &str) -> Result<ResolvedTarget> {
-        let resolved_value = if let Some(t) = self.targets.get(target) {
+        let resolved_value = if let Some(t) = self.core.get_target(target) {
             if let Some(t) = &t.built_target {
                 return Ok(t.clone());
             }
@@ -271,7 +203,7 @@ impl PyOxidizerEnvironmentContext {
             _ => Err(anyhow!("could not determine type of target")),
         }?;
 
-        self.targets.get_mut(target).unwrap().built_target = Some(resolved_target.clone());
+        self.core.get_target_mut(target).unwrap().built_target = Some(resolved_target.clone());
 
         Ok(resolved_target)
     }
@@ -282,7 +214,7 @@ impl PyOxidizerEnvironmentContext {
     pub fn build_target(&mut self, target: Option<&str>) -> Result<ResolvedTarget> {
         let build_target = if let Some(t) = target {
             t.to_string()
-        } else if let Some(t) = &self.default_target {
+        } else if let Some(t) = self.core.default_target() {
             t.to_string()
         } else {
             return Err(anyhow!("unable to determine target to build"));
@@ -301,7 +233,7 @@ impl PyOxidizerEnvironmentContext {
     pub fn run_target(&mut self, target: Option<&str>) -> Result<()> {
         let target = if let Some(t) = target {
             t.to_string()
-        } else if let Some(t) = &self.default_target {
+        } else if let Some(t) = self.core.default_target() {
             t.to_string()
         } else {
             return Err(anyhow!("unable to determine target to run"));
@@ -450,7 +382,7 @@ fn starlark_register_target(
         .downcast_mut::<PyOxidizerEnvironmentContext>()?
         .ok_or(ValueError::IncorrectParameterType)?;
 
-    context.register_target(
+    context.core.register_target(
         target.clone(),
         callable.clone(),
         depends.clone(),
@@ -494,7 +426,7 @@ fn starlark_resolve_target(
             .ok_or(ValueError::IncorrectParameterType)?;
 
         // If we have a resolved value for this target, return it.
-        if let Some(v) = if let Some(t) = context.targets.get(&target) {
+        if let Some(v) = if let Some(t) = context.core.get_target(&target) {
             if let Some(v) = &t.resolved_value {
                 Some(v.clone())
             } else {
@@ -508,7 +440,7 @@ fn starlark_resolve_target(
 
         warn!(&context.logger, "resolving target {}", target);
 
-        match &context.targets.get(&target) {
+        match context.core.get_target(&target) {
             Some(v) => Ok((*v).clone()),
             None => Err(ValueError::from(RuntimeError {
                 code: "PYOXIDIZER_BUILD",
@@ -549,7 +481,7 @@ fn starlark_resolve_target(
         .downcast_mut::<PyOxidizerEnvironmentContext>()?
         .ok_or(ValueError::IncorrectParameterType)?;
 
-    if let Some(target_entry) = context.targets.get_mut(&target) {
+    if let Some(target_entry) = context.core.get_target_mut(&target) {
         target_entry.resolved_value = Some(res.clone());
     }
 
@@ -578,7 +510,7 @@ fn starlark_resolve_targets(type_values: &TypeValues, call_stack: &mut CallStack
             .downcast_ref::<PyOxidizerEnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
 
-        context.targets_to_resolve()
+        context.core.targets_to_resolve()
     };
 
     println!("resolving {} targets", targets.len());
@@ -734,14 +666,19 @@ pub mod tests {
             .ok_or(ValueError::IncorrectParameterType)
             .unwrap();
 
-        assert_eq!(context.targets.len(), 1);
-        assert!(context.targets.contains_key("default"));
+        assert_eq!(context.core.targets().len(), 1);
+        assert!(context.core.get_target("default").is_some());
         assert_eq!(
-            context.targets.get("default").unwrap().callable.to_string(),
+            context
+                .core
+                .get_target("default")
+                .unwrap()
+                .callable
+                .to_string(),
             "foo()".to_string()
         );
-        assert_eq!(context.targets_order, vec!["default".to_string()]);
-        assert_eq!(context.default_target, Some("default".to_string()));
+        assert_eq!(context.core.targets_order(), &vec!["default".to_string()]);
+        assert_eq!(context.core.default_target(), Some("default"));
 
         Ok(())
     }
@@ -759,10 +696,10 @@ pub mod tests {
             .ok_or(ValueError::IncorrectParameterType)
             .unwrap();
 
-        assert_eq!(context.targets.len(), 2);
-        assert_eq!(context.default_target, Some("bar".to_string()));
+        assert_eq!(context.core.targets().len(), 2);
+        assert_eq!(context.core.default_target(), Some("bar"));
         assert_eq!(
-            &context.targets.get("bar").unwrap().depends,
+            &context.core.get_target("bar").unwrap().depends,
             &vec!["foo".to_string()],
         );
 

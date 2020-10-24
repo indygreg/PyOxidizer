@@ -6,6 +6,7 @@ use {
     anyhow::{anyhow, Result},
     starlark::values::Value,
     std::{
+        collections::BTreeMap,
         fmt::Formatter,
         path::{Path, PathBuf},
     },
@@ -110,4 +111,130 @@ pub trait BuildContext {
 pub trait BuildTarget {
     /// Build the target, resolving it
     fn build(&mut self, context: &dyn BuildContext) -> Result<ResolvedTarget>;
+}
+
+/// Holds execution context for a Starlark environment.
+#[derive(Clone, Debug)]
+pub struct EnvironmentContext {
+    logger: slog::Logger,
+
+    /// Registered targets.
+    ///
+    /// A target is a name and a Starlark callable.
+    targets: BTreeMap<String, Target>,
+
+    /// Order targets are registered in.
+    targets_order: Vec<String>,
+
+    /// Name of the default target.
+    default_target: Option<String>,
+
+    /// List of targets to resolve.
+    resolve_targets: Option<Vec<String>>,
+
+    // TODO figure out a generic way to express build script mode.
+    /// Name of default target to resolve in build script mode.
+    pub default_build_script_target: Option<String>,
+
+    /// Whether we are operating in Rust build script mode.
+    ///
+    /// This will change the default target to resolve.
+    pub build_script_mode: bool,
+}
+
+impl EnvironmentContext {
+    pub fn new(logger: &slog::Logger) -> Self {
+        Self {
+            logger: logger.clone(),
+            targets: BTreeMap::new(),
+            targets_order: vec![],
+            default_target: None,
+            resolve_targets: None,
+            default_build_script_target: None,
+            build_script_mode: false,
+        }
+    }
+
+    /// Obtain a logger for this instance.
+    pub fn logger(&self) -> &slog::Logger {
+        &self.logger
+    }
+
+    /// Obtain all registered targets.
+    pub fn targets(&self) -> &BTreeMap<String, Target> {
+        &self.targets
+    }
+
+    /// Obtain the default target to resolve.
+    pub fn default_target(&self) -> Option<&str> {
+        self.default_target.as_deref()
+    }
+
+    /// Obtain a named target.
+    pub fn get_target(&self, target: &str) -> Option<&Target> {
+        self.targets.get(target)
+    }
+
+    /// Obtain a mutable named target.
+    pub fn get_target_mut(&mut self, target: &str) -> Option<&mut Target> {
+        self.targets.get_mut(target)
+    }
+
+    /// Set the list of targets to resolve.
+    pub fn set_resolve_targets(&mut self, targets: Vec<String>) {
+        self.resolve_targets = Some(targets);
+    }
+
+    /// Obtain the order that targets were registered in.
+    pub fn targets_order(&self) -> &Vec<String> {
+        &self.targets_order
+    }
+
+    /// Register a named target.
+    pub fn register_target(
+        &mut self,
+        target: String,
+        callable: Value,
+        depends: Vec<String>,
+        default: bool,
+        default_build_script: bool,
+    ) {
+        if !self.targets.contains_key(&target) {
+            self.targets_order.push(target.clone());
+        }
+
+        self.targets.insert(
+            target.clone(),
+            Target {
+                callable,
+                depends,
+                resolved_value: None,
+                built_target: None,
+            },
+        );
+
+        if default || self.default_target.is_none() {
+            self.default_target = Some(target.clone());
+        }
+
+        if default_build_script || self.default_build_script_target.is_none() {
+            self.default_build_script_target = Some(target);
+        }
+    }
+
+    /// Determine what targets should be resolved.
+    ///
+    /// This isn't the full list of targets that will be resolved, only the main
+    /// targets that we will instruct the resolver to resolve.
+    pub fn targets_to_resolve(&self) -> Vec<String> {
+        if let Some(targets) = &self.resolve_targets {
+            targets.clone()
+        } else if self.build_script_mode && self.default_build_script_target.is_some() {
+            vec![self.default_build_script_target.clone().unwrap()]
+        } else if let Some(target) = &self.default_target {
+            vec![target.to_string()]
+        } else {
+            Vec::new()
+        }
+    }
 }

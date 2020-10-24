@@ -70,13 +70,13 @@ pub fn list_targets(logger: &slog::Logger, project_path: &Path) -> Result<()> {
         false,
     )?;
 
-    if res.context.default_target.is_none() {
+    if res.context.core.default_target().is_none() {
         println!("(no targets defined)");
         return Ok(());
     }
 
-    for target in res.context.targets.keys() {
-        let prefix = if Some(target.clone()) == res.context.default_target {
+    for target in res.context.core.targets().keys() {
+        let prefix = if Some(target.as_str()) == res.context.core.default_target() {
             "*"
         } else {
             ""
@@ -117,7 +117,7 @@ pub fn build(
         false,
     )?;
 
-    for target in res.context.targets_to_resolve() {
+    for target in res.context.core.targets_to_resolve() {
         res.context.build_resolved_target(&target)?;
     }
 
