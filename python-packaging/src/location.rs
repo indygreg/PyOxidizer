@@ -81,7 +81,7 @@ impl TryFrom<&str> for ConcreteResourceLocation {
         if value == "in-memory" {
             Ok(Self::InMemory)
         } else {
-            let parts = value.splitn(2, ":").collect::<Vec<_>>();
+            let parts = value.splitn(2, ':').collect::<Vec<_>>();
 
             if parts.len() != 2 {
                 Err(format!("{} is not a valid resource location", value))
