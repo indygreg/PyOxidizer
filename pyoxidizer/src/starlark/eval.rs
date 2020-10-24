@@ -19,7 +19,7 @@ use {
         syntax::dialect::Dialect,
         values::Value,
     },
-    starlark_dialect_build_targets::{BuildTarget, ResolvedTarget},
+    starlark_dialect_build_targets::{BuildTarget, EnvironmentContext, ResolvedTarget},
     std::{
         path::Path,
         sync::{Arc, Mutex},
@@ -33,27 +33,33 @@ pub struct EvaluationContext {
 }
 
 impl EvaluationContext {
-    fn context_value(&self) -> Result<Value> {
+    /// Obtain the `Value` for the build targets context.
+    fn build_targets_context_value(&self) -> Result<Value> {
+        starlark_dialect_build_targets::get_context_value(&self.type_values)
+            .map_err(|_| anyhow!("could not obtain build targets context"))
+    }
+
+    /// Obtain the `Value` for PyOxidizer's context.
+    fn pyoxidizer_context_value(&self) -> Result<Value> {
         get_context(&self.type_values).map_err(|_| anyhow!("could not obtain context"))
     }
 
     pub fn default_target(&self) -> Result<Option<String>> {
-        let raw_context = self.context_value()?;
+        let raw_context = self.build_targets_context_value()?;
         let context = raw_context
-            .downcast_ref::<PyOxidizerEnvironmentContext>()
+            .downcast_ref::<EnvironmentContext>()
             .ok_or_else(|| anyhow!("context has incorrect type"))?;
 
-        Ok(context.core.default_target().map(|x| x.to_string()))
+        Ok(context.default_target().map(|x| x.to_string()))
     }
 
     pub fn target_names(&self) -> Result<Vec<String>> {
-        let raw_context = self.context_value()?;
+        let raw_context = self.build_targets_context_value()?;
         let context = raw_context
-            .downcast_ref::<PyOxidizerEnvironmentContext>()
+            .downcast_ref::<EnvironmentContext>()
             .ok_or_else(|| anyhow!("context has incorrect type"))?;
 
         Ok(context
-            .core
             .targets()
             .keys()
             .map(|x| x.to_string())
@@ -62,22 +68,22 @@ impl EvaluationContext {
 
     /// Obtain targets that should be resolved.
     pub fn targets_to_resolve(&self) -> Result<Vec<String>> {
-        let raw_context = self.context_value()?;
+        let raw_context = self.build_targets_context_value()?;
         let context = raw_context
-            .downcast_ref::<PyOxidizerEnvironmentContext>()
+            .downcast_ref::<EnvironmentContext>()
             .ok_or_else(|| anyhow!("context has incorrect type"))?;
 
-        Ok(context.core.targets_to_resolve())
+        Ok(context.targets_to_resolve())
     }
 
     pub fn build_resolved_target(&mut self, target: &str) -> Result<ResolvedTarget> {
-        let raw_context = self.context_value()?;
+        let raw_context = self.build_targets_context_value()?;
         let mut context = raw_context
-            .downcast_mut::<PyOxidizerEnvironmentContext>()
+            .downcast_mut::<EnvironmentContext>()
             .map_err(|_| anyhow!("unable to obtain mutable context"))?
             .ok_or_else(|| anyhow!("context has incorrect type"))?;
 
-        let resolved_value = if let Some(t) = context.core.get_target(target) {
+        let resolved_value = if let Some(t) = context.get_target(target) {
             if let Some(t) = &t.built_target {
                 return Ok(t.clone());
             }
@@ -91,10 +97,15 @@ impl EvaluationContext {
             return Err(anyhow!("target {} is not registered", target));
         };
 
-        let output_path = context
+        let pyoxidizer_context_value = self.pyoxidizer_context_value()?;
+        let pyoxidizer_context = pyoxidizer_context_value
+            .downcast_ref::<PyOxidizerEnvironmentContext>()
+            .ok_or_else(|| anyhow!("context has incorrect type"))?;
+
+        let output_path = pyoxidizer_context
             .build_path
-            .join(&context.build_target_triple)
-            .join(if context.build_release {
+            .join(&pyoxidizer_context.build_target_triple)
+            .join(if pyoxidizer_context.build_release {
                 "release"
             } else {
                 "debug"
@@ -105,10 +116,10 @@ impl EvaluationContext {
 
         let build_context = PyOxidizerBuildContext {
             logger: context.logger().clone(),
-            host_triple: context.build_host_triple.clone(),
-            target_triple: context.build_target_triple.clone(),
-            release: context.build_release,
-            opt_level: context.build_opt_level.clone(),
+            host_triple: pyoxidizer_context.build_host_triple.clone(),
+            target_triple: pyoxidizer_context.build_target_triple.clone(),
+            release: pyoxidizer_context.build_release,
+            opt_level: pyoxidizer_context.build_opt_level.clone(),
             output_path,
         };
 
@@ -132,7 +143,7 @@ impl EvaluationContext {
             _ => Err(anyhow!("could not determine type of target")),
         }?;
 
-        context.core.get_target_mut(target).unwrap().built_target = Some(resolved_target.clone());
+        context.get_target_mut(target).unwrap().built_target = Some(resolved_target.clone());
 
         Ok(resolved_target)
     }
@@ -145,14 +156,14 @@ impl EvaluationContext {
     }
 
     pub fn run_target(&mut self, target: Option<&str>) -> Result<()> {
-        let raw_context = self.context_value()?;
+        let raw_context = self.build_targets_context_value()?;
         let context = raw_context
-            .downcast_ref::<PyOxidizerEnvironmentContext>()
+            .downcast_ref::<EnvironmentContext>()
             .ok_or_else(|| anyhow!("context has incorrect type"))?;
 
         let target = if let Some(t) = target {
             t.to_string()
-        } else if let Some(t) = context.core.default_target() {
+        } else if let Some(t) = context.default_target() {
             t.to_string()
         } else {
             return Err(anyhow!("unable to determine target to run"));

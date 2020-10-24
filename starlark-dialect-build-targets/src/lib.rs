@@ -7,7 +7,7 @@ use {
     linked_hash_map::LinkedHashMap,
     slog::warn,
     starlark::{
-        environment::TypeValues,
+        environment::{Environment, EnvironmentError, TypeValues},
         eval::call_stack::CallStack,
         values::{
             error::{RuntimeError, ValueError, INCORRECT_PARAMETER_TYPE_ERROR_CODE},
@@ -267,7 +267,7 @@ struct PlaceholderContext {}
 
 impl TypedValue for PlaceholderContext {
     type Holder = Mutable<PlaceholderContext>;
-    const TYPE: &'static str = "PlaceholderContext";
+    const TYPE: &'static str = "BuildTargets";
 
     fn values_for_descendant_check_and_freeze(&self) -> Box<dyn Iterator<Item = Value>> {
         Box::new(std::iter::empty())
@@ -668,5 +668,181 @@ starlark_module! { build_targets_module =>
 
     resolve_targets(env env, call_stack cs) {
         starlark_resolve_targets(&env, cs)
+    }
+}
+
+/// Populate a Starlark environment with our dialect.
+pub fn populate_environment(
+    env: &mut Environment,
+    type_values: &mut TypeValues,
+    context: EnvironmentContext,
+) -> Result<(), EnvironmentError> {
+    build_targets_module(env, type_values);
+
+    env.set(ENVIRONMENT_CONTEXT_SYMBOL, Value::new(context))?;
+
+    // We alias various globals as BuildTargets.* attributes so they are
+    // available via the type object API. This is a bit hacky. But it allows
+    // Rust code with only access to the TypeValues dictionary to retrieve
+    // these symbols.
+    for f in &[
+        "register_target",
+        "resolve_target",
+        "resolve_targets",
+        ENVIRONMENT_CONTEXT_SYMBOL,
+    ] {
+        type_values.add_type_value(PlaceholderContext::TYPE, f, env.get(f)?);
+    }
+
+    Ok(())
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    use {
+        codemap::CodeMap,
+        codemap_diagnostic::{Diagnostic, Emitter},
+        slog::Drain,
+        starlark::syntax::dialect::Dialect,
+    };
+
+    /// A slog Drain that uses println!.
+    pub struct PrintlnDrain {
+        /// Minimum logging level that we're emitting.
+        pub min_level: slog::Level,
+    }
+
+    /// slog Drain that uses println!.
+    impl slog::Drain for PrintlnDrain {
+        type Ok = ();
+        type Err = std::io::Error;
+
+        fn log(
+            &self,
+            record: &slog::Record,
+            _values: &slog::OwnedKVList,
+        ) -> Result<Self::Ok, Self::Err> {
+            if record.level().is_at_least(self.min_level) {
+                println!("{}", record.msg());
+            }
+
+            Ok(())
+        }
+    }
+
+    /// A Starlark execution environment.
+    ///
+    /// Provides convenience wrappers for common functionality.
+    pub struct StarlarkEnvironment {
+        pub env: Environment,
+        pub type_values: TypeValues,
+    }
+
+    impl StarlarkEnvironment {
+        pub fn new() -> Result<Self> {
+            let logger = slog::Logger::root(
+                PrintlnDrain {
+                    min_level: slog::Level::Info,
+                }
+                .fuse(),
+                slog::o!(),
+            );
+
+            let context = EnvironmentContext::new(&logger);
+
+            let (mut env, mut type_values) = starlark::stdlib::global_environment();
+            populate_environment(&mut env, &mut type_values, context)
+                .map_err(|e| anyhow!("error creating Starlark environment: {:?}", e))?;
+
+            Ok(Self { env, type_values })
+        }
+
+        pub fn eval_raw(
+            &mut self,
+            map: &std::sync::Arc<std::sync::Mutex<CodeMap>>,
+            file_loader_env: Environment,
+            code: &str,
+        ) -> Result<Value, Diagnostic> {
+            starlark::eval::simple::eval(
+                &map,
+                "<test>",
+                code,
+                Dialect::Bzl,
+                &mut self.env,
+                &self.type_values,
+                file_loader_env,
+            )
+        }
+
+        /// Evaluate code in the Starlark environment.
+        pub fn eval(&mut self, code: &str) -> Result<Value> {
+            let map = std::sync::Arc::new(std::sync::Mutex::new(CodeMap::new()));
+            let file_loader_env = self.env.clone();
+
+            self.eval_raw(&map, file_loader_env, code)
+                .map_err(|diagnostic| {
+                    let cloned_map_lock = std::sync::Arc::clone(&map);
+                    let unlocked_map = cloned_map_lock.lock().unwrap();
+
+                    let mut buffer = vec![];
+                    Emitter::vec(&mut buffer, Some(&unlocked_map)).emit(&[diagnostic]);
+
+                    anyhow!(
+                        "error running '{}': {}",
+                        code,
+                        String::from_utf8_lossy(&buffer)
+                    )
+                })
+        }
+    }
+
+    #[test]
+    fn test_register_target() -> Result<()> {
+        let mut env = StarlarkEnvironment::new()?;
+        env.eval("def foo(): pass")?;
+        env.eval("register_target('default', foo)")?;
+
+        let context_value = get_context_value(&env.type_values).unwrap();
+        let context = context_value
+            .downcast_ref::<EnvironmentContext>()
+            .ok_or(ValueError::IncorrectParameterType)
+            .unwrap();
+
+        assert_eq!(context.targets().len(), 1);
+        assert!(context.get_target("default").is_some());
+        assert_eq!(
+            context.get_target("default").unwrap().callable.to_string(),
+            "foo()".to_string()
+        );
+        assert_eq!(context.targets_order(), &vec!["default".to_string()]);
+        assert_eq!(context.default_target(), Some("default"));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_register_target_multiple() -> Result<()> {
+        let mut env = StarlarkEnvironment::new()?;
+        env.eval("def foo(): pass")?;
+        env.eval("def bar(): pass")?;
+        env.eval("register_target('foo', foo)")?;
+        env.eval("register_target('bar', bar, depends=['foo'], default=True)")?;
+
+        let context_value = get_context_value(&env.type_values).unwrap();
+        let context = context_value
+            .downcast_ref::<EnvironmentContext>()
+            .ok_or(ValueError::IncorrectParameterType)
+            .unwrap();
+
+        assert_eq!(context.targets().len(), 2);
+        assert_eq!(context.default_target(), Some("bar"));
+        assert_eq!(
+            &context.get_target("bar").unwrap().depends,
+            &vec!["foo".to_string()],
+        );
+
+        Ok(())
     }
 }

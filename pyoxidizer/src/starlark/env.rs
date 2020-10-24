@@ -5,12 +5,10 @@
 use {
     crate::py_packaging::distribution::DistributionCache,
     anyhow::{Context, Result},
-    linked_hash_map::LinkedHashMap,
     path_dedot::ParseDot,
     slog::warn,
     starlark::{
         environment::{Environment, EnvironmentError, TypeValues},
-        eval::call_stack::CallStack,
         values::{
             error::{RuntimeError, ValueError},
             none::NoneType,
@@ -22,8 +20,7 @@ use {
         },
     },
     starlark_dialect_build_targets::{
-        build_targets_module, optional_list_arg, required_bool_arg, required_str_arg,
-        required_type_arg, BuildContext, EnvironmentContext, GetStateError,
+        build_targets_module, required_str_arg, BuildContext, EnvironmentContext, GetStateError,
     },
     std::{
         path::{Path, PathBuf},
@@ -34,7 +31,11 @@ use {
 /// Holds state for evaluating a Starlark config file.
 #[derive(Debug)]
 pub struct PyOxidizerEnvironmentContext {
-    pub core: EnvironmentContext,
+    logger: slog::Logger,
+
+    // TODO remove
+    pub resolve_targets: Option<Vec<String>>,
+    pub build_script_mode: bool,
 
     /// Whether executing in verbose mode.
     pub verbose: bool,
@@ -86,12 +87,6 @@ impl PyOxidizerEnvironmentContext {
         build_script_mode: bool,
         distribution_cache: Option<Arc<DistributionCache>>,
     ) -> Result<PyOxidizerEnvironmentContext> {
-        let mut core = EnvironmentContext::new(logger);
-        if let Some(targets) = resolve_targets {
-            core.set_resolve_targets(targets);
-        }
-        core.build_script_mode = build_script_mode;
-
         let parent = config_path
             .parent()
             .with_context(|| "resolving parent directory of config".to_string())?;
@@ -109,7 +104,9 @@ impl PyOxidizerEnvironmentContext {
             .unwrap_or_else(|| Arc::new(DistributionCache::new(Some(&python_distributions_path))));
 
         Ok(PyOxidizerEnvironmentContext {
-            core,
+            logger: logger.clone(),
+            resolve_targets,
+            build_script_mode,
             verbose,
             cwd: parent,
             config_path: config_path.to_path_buf(),
@@ -124,7 +121,7 @@ impl PyOxidizerEnvironmentContext {
     }
 
     pub fn logger(&self) -> &slog::Logger {
-        &self.core.logger()
+        &self.logger
     }
 
     pub fn set_build_path(&mut self, path: &Path) -> Result<()> {
@@ -257,177 +254,6 @@ fn starlark_print(type_values: &TypeValues, args: &Vec<Value>) -> ValueResult {
     Ok(Value::new(NoneType::None))
 }
 
-/// register_target(target, callable, depends=None, default=false)
-fn starlark_register_target(
-    type_values: &TypeValues,
-    target: &Value,
-    callable: &Value,
-    depends: &Value,
-    default: &Value,
-    default_build_script: &Value,
-) -> ValueResult {
-    let target = required_str_arg("target", &target)?;
-    required_type_arg("callable", "function", &callable)?;
-    optional_list_arg("depends", "string", &depends)?;
-    let default = required_bool_arg("default", &default)?;
-    let default_build_script = required_bool_arg("default_build_script", &default_build_script)?;
-
-    let depends = match depends.get_type() {
-        "list" => depends.iter()?.iter().map(|x| x.to_string()).collect(),
-        _ => Vec::new(),
-    };
-
-    let raw_context = get_context(type_values)?;
-    let mut context = raw_context
-        .downcast_mut::<PyOxidizerEnvironmentContext>()?
-        .ok_or(ValueError::IncorrectParameterType)?;
-
-    context.core.register_target(
-        target.clone(),
-        callable.clone(),
-        depends.clone(),
-        default,
-        default_build_script,
-    );
-
-    Ok(Value::new(NoneType::None))
-}
-
-/// resolve_target(target)
-///
-/// This will return a Value returned from the called function.
-///
-/// If the target is already resolved, its cached return value is returned
-/// immediately.
-///
-/// If the target depends on other targets, those targets will be resolved
-/// recursively before calling the target's function.
-///
-/// This exists as a standalone function and operates against the raw Starlark
-/// `Environment` and has wonky handling of `PyOxidizerEnvironmentContext` instances in
-/// order to avoid nested mutable borrows. If we passed an
-/// `&mut PyOxidizerEnvironmentContext` around then called a Starlark function that performed
-/// a `.downcast_mut()` (which most of them do), we would have nested mutable
-/// borrows and Rust would panic at runtime.
-#[allow(clippy::ptr_arg)]
-fn starlark_resolve_target(
-    type_values: &TypeValues,
-    call_stack: &mut CallStack,
-    target: &Value,
-) -> ValueResult {
-    let target = required_str_arg("target", &target)?;
-
-    // We need the PyOxidizerEnvironmentContext borrow to get dropped before calling
-    // into Starlark or we can get double borrows. Hence the block here.
-    let target_entry = {
-        let raw_context = get_context(type_values)?;
-        let context = raw_context
-            .downcast_ref::<PyOxidizerEnvironmentContext>()
-            .ok_or(ValueError::IncorrectParameterType)?;
-
-        // If we have a resolved value for this target, return it.
-        if let Some(v) = if let Some(t) = context.core.get_target(&target) {
-            if let Some(v) = &t.resolved_value {
-                Some(v.clone())
-            } else {
-                None
-            }
-        } else {
-            None
-        } {
-            return Ok(v);
-        }
-
-        warn!(context.logger(), "resolving target {}", target);
-
-        match context.core.get_target(&target) {
-            Some(v) => Ok((*v).clone()),
-            None => Err(ValueError::from(RuntimeError {
-                code: "PYOXIDIZER_BUILD",
-                message: format!("target {} does not exist", target),
-                label: "resolve_target()".to_string(),
-            })),
-        }?
-    };
-
-    // Resolve target dependencies.
-    let mut args = Vec::new();
-
-    for depend_target in target_entry.depends {
-        let depend_target = Value::new(depend_target);
-        args.push(starlark_resolve_target(
-            type_values,
-            call_stack,
-            &depend_target,
-        )?);
-    }
-
-    let res = target_entry.callable.call(
-        call_stack,
-        type_values,
-        args,
-        LinkedHashMap::new(),
-        None,
-        None,
-    )?;
-
-    // TODO consider replacing the target's callable with a new function that returns the
-    // resolved value. This will ensure a target function is only ever called once.
-
-    // We can't obtain a mutable reference to the context above because it
-    // would create multiple borrows.
-    let raw_context = get_context(type_values)?;
-    let mut context = raw_context
-        .downcast_mut::<PyOxidizerEnvironmentContext>()?
-        .ok_or(ValueError::IncorrectParameterType)?;
-
-    if let Some(target_entry) = context.core.get_target_mut(&target) {
-        target_entry.resolved_value = Some(res.clone());
-    }
-
-    Ok(res)
-}
-
-/// resolve_targets()
-#[allow(clippy::ptr_arg)]
-fn starlark_resolve_targets(type_values: &TypeValues, call_stack: &mut CallStack) -> ValueResult {
-    let resolve_target_fn = type_values
-        .get_type_value(&Value::new(PyOxidizerContext::default()), "resolve_target")
-        .ok_or_else(|| {
-            ValueError::from(RuntimeError {
-                code: "PYOXIDIZER_BUILD",
-                message: "could not find resolve_target() function (this should never happen)"
-                    .to_string(),
-                label: "resolve_targets()".to_string(),
-            })
-        })?;
-
-    // Limit lifetime of PyOxidizerEnvironmentContext borrow to prevent double borrows
-    // due to Starlark calls below.
-    let targets = {
-        let raw_context = get_context(type_values)?;
-        let context = raw_context
-            .downcast_ref::<PyOxidizerEnvironmentContext>()
-            .ok_or(ValueError::IncorrectParameterType)?;
-
-        context.core.targets_to_resolve()
-    };
-
-    println!("resolving {} targets", targets.len());
-    for target in targets {
-        resolve_target_fn.call(
-            call_stack,
-            type_values,
-            vec![Value::new(target)],
-            LinkedHashMap::new(),
-            None,
-            None,
-        )?;
-    }
-
-    Ok(Value::new(NoneType::None))
-}
-
 /// set_build_path(path)
 fn starlark_set_build_path(type_values: &TypeValues, path: &Value) -> ValueResult {
     let path = required_str_arg("path", &path)?;
@@ -454,35 +280,6 @@ starlark_module! { global_module =>
     }
 
     #[allow(clippy::ptr_arg)]
-    register_target(
-        env env,
-        target,
-        callable,
-        depends=NoneType::None,
-        default=false,
-        default_build_script=false
-    ) {
-        starlark_register_target(
-            &env,
-            &target,
-            &callable,
-            &depends,
-            &default,
-            &default_build_script,
-        )
-    }
-
-    #[allow(clippy::ptr_arg)]
-    resolve_target(env env, call_stack cs, target) {
-        starlark_resolve_target(&env, cs, &target)
-    }
-
-    #[allow(clippy::ptr_arg)]
-    resolve_targets(env env, call_stack cs) {
-        starlark_resolve_targets(&env, cs)
-    }
-
-    #[allow(clippy::ptr_arg)]
     set_build_path(env env, path) {
         starlark_set_build_path(&env, &path)
     }
@@ -492,7 +289,22 @@ starlark_module! { global_module =>
 pub fn global_environment(
     context: PyOxidizerEnvironmentContext,
 ) -> Result<(Environment, TypeValues), EnvironmentError> {
+    let mut build_targets_context = EnvironmentContext::new(context.logger());
+
+    if let Some(targets) = &context.resolve_targets {
+        build_targets_context.set_resolve_targets(targets.clone());
+    }
+
+    build_targets_context.build_script_mode = context.build_script_mode;
+
     let (mut env, mut type_values) = starlark::stdlib::global_environment();
+
+    starlark_dialect_build_targets::populate_environment(
+        &mut env,
+        &mut type_values,
+        build_targets_context,
+    )?;
+
     build_targets_module(&mut env, &mut type_values);
     global_module(&mut env, &mut type_values);
     super::file_resource::file_resource_env(&mut env, &mut type_values);
@@ -517,9 +329,6 @@ pub fn global_environment(
     // Rust code with only access to the TypeValues dictionary to retrieve
     // these globals.
     for f in &[
-        "register_target",
-        "resolve_target",
-        "resolve_targets",
         "set_build_path",
         "CONTEXT",
         "CWD",
@@ -535,7 +344,6 @@ pub fn global_environment(
 #[cfg(test)]
 pub mod tests {
     use super::super::testutil::*;
-    use super::*;
 
     #[test]
     fn test_cwd() {
@@ -553,57 +361,5 @@ pub mod tests {
     #[test]
     fn test_print() {
         starlark_ok("print('hello, world')");
-    }
-
-    #[test]
-    fn test_register_target() -> Result<()> {
-        let mut env = StarlarkEnvironment::new()?;
-        env.eval("def foo(): pass")?;
-        env.eval("register_target('default', foo)")?;
-
-        let raw_context = env.eval("CONTEXT")?;
-        let context = raw_context
-            .downcast_ref::<PyOxidizerEnvironmentContext>()
-            .ok_or(ValueError::IncorrectParameterType)
-            .unwrap();
-
-        assert_eq!(context.core.targets().len(), 1);
-        assert!(context.core.get_target("default").is_some());
-        assert_eq!(
-            context
-                .core
-                .get_target("default")
-                .unwrap()
-                .callable
-                .to_string(),
-            "foo()".to_string()
-        );
-        assert_eq!(context.core.targets_order(), &vec!["default".to_string()]);
-        assert_eq!(context.core.default_target(), Some("default"));
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_register_target_multiple() -> Result<()> {
-        let mut env = StarlarkEnvironment::new()?;
-        env.eval("def foo(): pass")?;
-        env.eval("def bar(): pass")?;
-        env.eval("register_target('foo', foo)")?;
-        env.eval("register_target('bar', bar, depends=['foo'], default=True)")?;
-        let raw_context = env.eval("CONTEXT")?;
-        let context = raw_context
-            .downcast_ref::<PyOxidizerEnvironmentContext>()
-            .ok_or(ValueError::IncorrectParameterType)
-            .unwrap();
-
-        assert_eq!(context.core.targets().len(), 2);
-        assert_eq!(context.core.default_target(), Some("bar"));
-        assert_eq!(
-            &context.core.get_target("bar").unwrap().depends,
-            &vec!["foo".to_string()],
-        );
-
-        Ok(())
     }
 }

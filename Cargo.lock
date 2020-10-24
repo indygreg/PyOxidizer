@@ -1985,6 +1985,8 @@ name = "starlark-dialect-build-targets"
 version = "0.1.0-pre"
 dependencies = [
  "anyhow",
+ "codemap",
+ "codemap-diagnostic",
  "linked-hash-map",
  "slog",
  "starlark",
