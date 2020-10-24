@@ -27,7 +27,9 @@ use {
             starlark_signature_extraction, starlark_signatures,
         },
     },
-    starlark_dialect_build_targets::{BuildContext, BuildTarget, ResolvedTarget, Target},
+    starlark_dialect_build_targets::{
+        BuildContext, BuildTarget, GetStateError, ResolvedTarget, Target,
+    },
     std::{
         collections::BTreeMap,
         path::{Path, PathBuf},
@@ -240,7 +242,7 @@ impl EnvironmentContext {
 
         std::fs::create_dir_all(&output_path).context("creating output path")?;
 
-        let context = BuildContext {
+        let context = PyOxidizerBuildContext {
             logger: self.logger.clone(),
             host_triple: self.build_host_triple.clone(),
             target_triple: self.build_target_triple.clone(),
@@ -333,6 +335,58 @@ impl TypedValue for PyOxidizerContext {
 
     fn values_for_descendant_check_and_freeze(&self) -> Box<dyn Iterator<Item = Value>> {
         Box::new(std::iter::empty())
+    }
+}
+
+/// Holds the build context for PyOxidizer's Starlark types.
+pub struct PyOxidizerBuildContext {
+    /// Logger where messages can be written.
+    pub logger: slog::Logger,
+
+    /// Rust target triple for build host.
+    pub host_triple: String,
+
+    /// Rust target triple for build target.
+    pub target_triple: String,
+
+    /// Whether we are building in release mode.
+    ///
+    /// Debug if false.
+    pub release: bool,
+
+    /// Optimization level for Rust compiler.
+    pub opt_level: String,
+
+    /// Where generated files should be written.
+    pub output_path: PathBuf,
+}
+
+impl BuildContext for PyOxidizerBuildContext {
+    fn logger(&self) -> &slog::Logger {
+        &self.logger
+    }
+
+    fn get_state_string(&self, key: &str) -> Result<&str, GetStateError> {
+        match key {
+            "host_triple" => Ok(&self.host_triple),
+            "target_triple" => Ok(&self.target_triple),
+            "opt_level" => Ok(&self.opt_level),
+            _ => Err(GetStateError::InvalidKey(key.to_string())),
+        }
+    }
+
+    fn get_state_bool(&self, key: &str) -> Result<bool, GetStateError> {
+        match key {
+            "release" => Ok(self.release),
+            _ => Err(GetStateError::InvalidKey(key.to_string())),
+        }
+    }
+
+    fn get_state_path(&self, key: &str) -> Result<&Path, GetStateError> {
+        match key {
+            "output_path" => Ok(&self.output_path),
+            _ => Err(GetStateError::InvalidKey(key.to_string())),
+        }
     }
 }
 

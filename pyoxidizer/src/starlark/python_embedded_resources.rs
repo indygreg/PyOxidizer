@@ -25,22 +25,24 @@ impl TypedValue for PythonEmbeddedResources {
 }
 
 impl BuildTarget for PythonEmbeddedResources {
-    fn build(&mut self, context: &BuildContext) -> Result<ResolvedTarget> {
+    fn build(&mut self, context: &dyn BuildContext) -> Result<ResolvedTarget> {
+        let output_path = context.get_state_path("output_path")?;
+
         warn!(
-            &context.logger,
+            context.logger(),
             "writing Python embedded artifacts to {}",
-            context.output_path.display()
+            output_path.display()
         );
 
         let embedded = self
             .exe
-            .to_embedded_python_context(&context.logger, &context.opt_level)?;
+            .to_embedded_python_context(context.logger(), context.get_state_string("opt_level")?)?;
 
-        embedded.write_files(&context.output_path)?;
+        embedded.write_files(output_path)?;
 
         Ok(ResolvedTarget {
             run_mode: RunMode::None,
-            output_path: context.output_path.clone(),
+            output_path: output_path.to_path_buf(),
         })
     }
 }

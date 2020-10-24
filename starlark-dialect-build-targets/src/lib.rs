@@ -5,7 +5,10 @@
 use {
     anyhow::{anyhow, Result},
     starlark::values::Value,
-    std::path::PathBuf,
+    std::{
+        fmt::Formatter,
+        path::{Path, PathBuf},
+    },
 };
 
 /// How a resolved target can be run.
@@ -64,33 +67,47 @@ pub struct Target {
     pub built_target: Option<ResolvedTarget>,
 }
 
-/// Describes context that a target is built in.
-///
-/// This is used to pass metadata to the `BuildTarget::build()` method.
-pub struct BuildContext {
-    /// Logger where messages can be written.
-    pub logger: slog::Logger,
+#[derive(Debug)]
+pub enum GetStateError {
+    /// The requested key is not valid for this context.
+    InvalidKey(String),
+    /// The type of the config key being requested is wrong.
+    WrongType(String),
+    /// There was an error resolving this config key.
+    Resolve((String, String)),
+}
 
-    /// Rust target triple for build host.
-    pub host_triple: String,
+impl std::fmt::Display for GetStateError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::InvalidKey(key) => write!(f, "the requested key '{}' is not valid", key),
+            Self::WrongType(key) => write!(f, "requested the wrong type of key '{}'", key),
+            Self::Resolve((key, message)) => {
+                write!(f, "failed resolving key '{}': {}", key, message)
+            }
+        }
+    }
+}
 
-    /// Rust target triple for build target.
-    pub target_triple: String,
+impl std::error::Error for GetStateError {}
 
-    /// Whether we are building in release mode.
-    ///
-    /// Debug if false.
-    pub release: bool,
+/// Describes a generic context used when a specific target is built.
+pub trait BuildContext {
+    /// Obtain a logger that can be used to log events.
+    fn logger(&self) -> &slog::Logger;
 
-    /// Optimization level for Rust compiler.
-    pub opt_level: String,
+    /// Obtain the string value of a state key.
+    fn get_state_string(&self, key: &str) -> Result<&str, GetStateError>;
 
-    /// Where generated files should be written.
-    pub output_path: PathBuf,
+    /// Obtain the bool value of a state key.
+    fn get_state_bool(&self, key: &str) -> Result<bool, GetStateError>;
+
+    /// Obtain the path value of a state key.
+    fn get_state_path(&self, key: &str) -> Result<&Path, GetStateError>;
 }
 
 /// Trait that indicates a type can be resolved as a target.
 pub trait BuildTarget {
     /// Build the target, resolving it
-    fn build(&mut self, context: &BuildContext) -> Result<ResolvedTarget>;
+    fn build(&mut self, context: &dyn BuildContext) -> Result<ResolvedTarget>;
 }

@@ -137,21 +137,22 @@ impl TypedValue for PythonExecutable {
 }
 
 impl BuildTarget for PythonExecutable {
-    fn build(&mut self, context: &BuildContext) -> Result<ResolvedTarget> {
+    fn build(&mut self, context: &dyn BuildContext) -> Result<ResolvedTarget> {
         // Build an executable by writing out a temporary Rust project
         // and building it.
         let build = build_python_executable(
-            &context.logger,
+            context.logger(),
             &self.exe.name(),
             self.exe.deref(),
-            &context.target_triple,
-            &context.opt_level,
-            context.release,
+            context.get_state_string("target_triple")?,
+            context.get_state_string("opt_level")?,
+            context.get_state_bool("release")?,
         )?;
 
-        let dest_path = context.output_path.join(build.exe_name);
+        let output_path = context.get_state_path("output_path")?;
+        let dest_path = output_path.join(build.exe_name);
         warn!(
-            &context.logger,
+            &context.logger(),
             "writing executable to {}",
             dest_path.display()
         );
@@ -165,7 +166,7 @@ impl BuildTarget for PythonExecutable {
 
         Ok(ResolvedTarget {
             run_mode: RunMode::Path { path: dest_path },
-            output_path: context.output_path.clone(),
+            output_path: output_path.to_path_buf(),
         })
     }
 }

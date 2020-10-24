@@ -108,20 +108,22 @@ impl FileManifestValue {
 }
 
 impl BuildTarget for FileManifestValue {
-    fn build(&mut self, context: &BuildContext) -> Result<ResolvedTarget> {
+    fn build(&mut self, context: &dyn BuildContext) -> Result<ResolvedTarget> {
+        let output_path = context.get_state_path("output_path")?;
+
         warn!(
-            &context.logger,
+            context.logger(),
             "installing files to {}",
-            context.output_path.display()
+            output_path.display()
         );
-        self.manifest.replace_path(&context.output_path)?;
+        self.manifest.replace_path(output_path)?;
 
         // Use the stored run target if available, falling back to the single
         // executable file if non-ambiguous.
         // TODO support defining default run target in data structure.
         let run_mode = if let Some(default) = &self.run_path {
             RunMode::Path {
-                path: context.output_path.join(default),
+                path: output_path.join(default),
             }
         } else {
             let exes = self
@@ -132,7 +134,7 @@ impl BuildTarget for FileManifestValue {
 
             if exes.len() == 1 {
                 RunMode::Path {
-                    path: context.output_path.join(exes[0].0),
+                    path: output_path.join(exes[0].0),
                 }
             } else {
                 RunMode::None
@@ -141,7 +143,7 @@ impl BuildTarget for FileManifestValue {
 
         Ok(ResolvedTarget {
             run_mode,
-            output_path: context.output_path.clone(),
+            output_path: output_path.to_path_buf(),
         })
     }
 }
