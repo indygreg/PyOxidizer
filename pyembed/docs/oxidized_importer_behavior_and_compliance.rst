@@ -48,10 +48,8 @@ While we may make it possible to define ``__file__`` (and ``__cached__``)
 on modules imported from memory someday, we do not yet support this.
 
 ``OxidizedFinder`` does, however, set ``__file__`` and ``__cached__``
-on modules imported from the filesystem. See
-:ref:`packaging_resource_locations` for more on registering files for
-filesystem loading. So, a workaround to restore these missing attributes
-is to avoid in-memory loading.
+on modules imported from the filesystem. So, a workaround to restore
+these missing attributes is to avoid in-memory loading.
 
 .. note::
 

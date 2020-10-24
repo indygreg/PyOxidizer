@@ -1,5 +1,7 @@
 .idea/
 docs/_build/
+docs/oxidized_importer*
+pyembed/docs/_build/
 target/
 venv/
 wheelhouse/

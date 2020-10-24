@@ -44,9 +44,8 @@ exists as a convenience, as working with individual ``OxidizedResource``
 instances can be rather cumbersome.
 
 Instances can be constructed by passing an ``allowed_locations=<list[str]>``
-argument defining locations that resources can be loaded from. The string
-values are the same as recognized by PyOxidizer's config files and are
-documented at :ref:`packaging_resource_default_resource_location`.
+argument defining locations that resources can be loaded from. The accepted
+string values are ``in-memory`` and ``filesystem-relative``.
 
 e.g. to create a collector that only marks resources for in-memory loading:
 

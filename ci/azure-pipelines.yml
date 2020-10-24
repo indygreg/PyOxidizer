@@ -14,6 +14,30 @@ jobs:
     name: Windows
     vmImage: windows-2019
 
+- job: sphinx_pyoxidizer
+  pool:
+    vmImage: ubuntu-18.04
+  steps:
+    - task: UsePythonVersion@0
+      inputs:
+        versionSpec: 3.8
+
+    - script: |
+        python3.8 -m pip install Sphinx==3.2.1
+        make -C docs html
+
+- job: sphinx_pyembed
+  pool:
+    vmImage: ubuntu-18.04
+  steps:
+    - task: UsePythonVersion@0
+      inputs:
+        versionSpec: 3.8
+
+    - script: |
+        python3.8 -m pip install Sphinx==3.2.1
+        make -C pyembed/docs html
+
 - job: wheel_linux
   pool:
     vmImage: ubuntu-18.04

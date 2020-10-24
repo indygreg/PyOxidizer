@@ -127,7 +127,7 @@ The ``OxidizedResourceReader.contents()`` method will return a list of all
 keys in the internal resources index.
 
 ``OxidizedResourceReader`` works the same way for in-memory and
-filesystem-relative :ref:`packaging_resource_locations` because internally
+filesystem-relative resource locations because internally
 both use the same index of resources to drive execution: only the location
 of the resource content varies.
 
@@ -238,9 +238,9 @@ paths to resource files may or may not work with ``oxidized_importer``.
 
 Code utilizing ``__file__`` for resource loading is highly encouraged to switch
 to the ``importlib.resources`` API. If this is not possible, you can change
-packaging settings to move the :ref:`packaging_resource_locations` from
-in-memory to filesystem-relative, as ``__file__`` is set when loading modules
-from the filesystem.
+packaging settings to move the resource locations from in-memory to
+filesystem-relative, as ``__file__`` is set when loading modules from the
+filesystem.
 
 Support for ``pkg_resources``
 =============================
