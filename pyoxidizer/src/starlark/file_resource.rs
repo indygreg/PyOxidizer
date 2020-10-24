@@ -35,8 +35,8 @@ use {
         },
     },
     starlark_dialect_build_targets::{
-        optional_list_arg, optional_str_arg, required_bool_arg, required_list_arg,
-        required_str_arg, required_type_arg, BuildContext, BuildTarget, ResolvedTarget, RunMode,
+        optional_list_arg, optional_str_arg, required_list_arg, required_str_arg,
+        required_type_arg, BuildContext, BuildTarget, ResolvedTarget, RunMode,
     },
     std::{
         collections::HashSet,
@@ -348,9 +348,8 @@ impl FileManifestValue {
     }
 
     /// FileManifest.install(path, replace=true)
-    pub fn install(&self, type_values: &TypeValues, path: &Value, replace: &Value) -> ValueResult {
+    pub fn install(&self, type_values: &TypeValues, path: &Value, replace: bool) -> ValueResult {
         let path = required_str_arg("path", &path)?;
-        let replace = required_bool_arg("replace", &replace)?;
 
         let raw_context = get_context(type_values)?;
         let context = raw_context
@@ -507,9 +506,9 @@ starlark_module! { file_resource_env =>
     }
 
     #[allow(clippy::ptr_arg)]
-    FileManifest.install(env env, this, path, replace=true) {
+    FileManifest.install(env env, this, path, replace: bool = true) {
         match this.clone().downcast_ref::<FileManifestValue>() {
-            Some(manifest) => manifest.install(&env, &path, &replace),
+            Some(manifest) => manifest.install(&env, &path, replace),
             None => Err(ValueError::IncorrectParameterType),
         }
     }

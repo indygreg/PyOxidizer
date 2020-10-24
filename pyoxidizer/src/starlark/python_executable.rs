@@ -35,8 +35,8 @@ use {
         },
     },
     starlark_dialect_build_targets::{
-        optional_dict_arg, optional_list_arg, required_bool_arg, required_list_arg,
-        required_str_arg, BuildContext, BuildTarget, ResolvedTarget, RunMode,
+        optional_dict_arg, optional_list_arg, required_list_arg, required_str_arg, BuildContext,
+        BuildTarget, ResolvedTarget, RunMode,
     },
     std::{
         collections::HashMap,
@@ -180,11 +180,10 @@ impl PythonExecutable {
         call_stack: &mut CallStack,
         name: &Value,
         source: &Value,
-        is_package: &Value,
+        is_package: bool,
     ) -> ValueResult {
         let name = required_str_arg("name", &name)?;
         let source = required_str_arg("source", &source)?;
-        let is_package = required_bool_arg("is_package", &is_package)?;
 
         let module = PythonModuleSource {
             name,
@@ -716,10 +715,10 @@ starlark_module! { python_executable_env =>
         this,
         name,
         source,
-        is_package=false
+        is_package: bool = false
     ) {
         match this.clone().downcast_ref::<PythonExecutable>() {
-            Some(exe) => exe.starlark_make_python_module_source(&env, cs, &name, &source, &is_package),
+            Some(exe) => exe.starlark_make_python_module_source(&env, cs, &name, &source, is_package),
             None => Err(ValueError::IncorrectParameterType),
         }
     }

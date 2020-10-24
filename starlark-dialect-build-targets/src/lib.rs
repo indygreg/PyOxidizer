@@ -323,20 +323,6 @@ pub fn optional_str_arg(name: &str, value: &Value) -> Result<Option<String>, Val
     }
 }
 
-pub fn required_bool_arg(name: &str, value: &Value) -> Result<bool, ValueError> {
-    match value.get_type() {
-        "bool" => Ok(value.to_bool()),
-        t => Err(ValueError::from(RuntimeError {
-            code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
-            message: format!(
-                "function expects an required bool for {}; got type {}",
-                name, t
-            ),
-            label: format!("expected type bool; got {}", t),
-        })),
-    }
-}
-
 pub fn optional_bool_arg(name: &str, value: &Value) -> Result<Option<bool>, ValueError> {
     match value.get_type() {
         "NoneType" => Ok(None),
