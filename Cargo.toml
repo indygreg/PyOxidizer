@@ -5,4 +5,5 @@ members = [
     "pyoxidizer",
     "python-packaging",
     "python-packed-resources",
+    "starlark-dialect-build-targets"
 ]

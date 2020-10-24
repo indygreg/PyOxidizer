@@ -10,7 +10,6 @@ use {
             PythonExtensionModuleValue, PythonModuleSourceValue,
             PythonPackageDistributionResourceValue, PythonPackageResourceValue,
         },
-        target::{BuildContext, BuildTarget, ResolvedTarget, RunMode},
         util::{
             optional_list_arg, optional_str_arg, required_bool_arg, required_list_arg,
             required_str_arg, required_type_arg,
@@ -39,6 +38,7 @@ use {
             starlark_signature_extraction, starlark_signatures,
         },
     },
+    starlark_dialect_build_targets::{BuildContext, BuildTarget, ResolvedTarget, RunMode},
     std::{
         collections::HashSet,
         convert::TryFrom,

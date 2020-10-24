@@ -7,7 +7,6 @@ use {
         file_resource::FileManifestValue,
         python_embedded_resources::PythonEmbeddedResources,
         python_executable::PythonExecutable,
-        target::{BuildContext, BuildTarget, ResolvedTarget},
         util::{optional_list_arg, required_bool_arg, required_str_arg, required_type_arg},
     },
     crate::py_packaging::distribution::DistributionCache,
@@ -28,30 +27,13 @@ use {
             starlark_signature_extraction, starlark_signatures,
         },
     },
+    starlark_dialect_build_targets::{BuildContext, BuildTarget, ResolvedTarget, Target},
     std::{
         collections::BTreeMap,
         path::{Path, PathBuf},
         sync::Arc,
     },
 };
-
-/// Represents a registered target in the Starlark environment.
-#[derive(Debug, Clone)]
-pub struct Target {
-    /// The Starlark callable registered to this target.
-    pub callable: Value,
-
-    /// Other targets this one depends on.
-    pub depends: Vec<String>,
-
-    /// What calling callable returned, if it has been called.
-    pub resolved_value: Option<Value>,
-
-    /// The `ResolvedTarget` instance this target's build() returned.
-    ///
-    /// TODO consider making this an Arc<T> so we don't have to clone it.
-    pub built_target: Option<ResolvedTarget>,
-}
 
 /// Holds state for evaluating a Starlark config file.
 #[derive(Debug, Clone)]

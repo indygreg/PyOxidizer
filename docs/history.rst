@@ -81,6 +81,8 @@ Other Relevant Changes
 * The built-in Linux and macOS Python distributions are now compiled with
   LLVM/Clang 11 (as opposed to 10).
 * The built-in Python distributions now use pip 20.2.4 and setuptools 50.3.2.
+* The Starlark primitives for defining build system targets have been extracted
+  into a new ``starlark-dialect-build-targets`` crate.
 
 .. _version_0_9_0:
 

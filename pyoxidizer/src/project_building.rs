@@ -8,11 +8,11 @@ use {
         project_layout::initialize_project,
         py_packaging::binary::{EmbeddedPythonContext, PythonBinaryBuilder},
         starlark::eval::{eval_starlark_config_file, EvalResult},
-        starlark::target::ResolvedTarget,
     },
     anyhow::{anyhow, Context, Result},
     duct::cmd,
     slog::warn,
+    starlark_dialect_build_targets::ResolvedTarget,
     std::{
         collections::{hash_map::RandomState, HashMap},
         env,

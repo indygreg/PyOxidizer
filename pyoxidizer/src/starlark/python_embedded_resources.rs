@@ -3,11 +3,11 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    super::target::{BuildContext, BuildTarget, ResolvedTarget, RunMode},
     crate::py_packaging::binary::PythonBinaryBuilder,
     anyhow::Result,
     slog::warn,
     starlark::values::{Mutable, TypedValue, Value},
+    starlark_dialect_build_targets::{BuildContext, BuildTarget, ResolvedTarget, RunMode},
     std::sync::Arc,
 };
 

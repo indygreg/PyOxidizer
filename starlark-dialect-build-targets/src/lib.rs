@@ -4,6 +4,7 @@
 
 use {
     anyhow::{anyhow, Result},
+    starlark::values::Value,
     std::path::PathBuf,
 };
 
@@ -43,6 +44,24 @@ impl ResolvedTarget {
             }
         }
     }
+}
+
+/// Represents a registered target in the Starlark environment.
+#[derive(Debug, Clone)]
+pub struct Target {
+    /// The Starlark callable registered to this target.
+    pub callable: Value,
+
+    /// Other targets this one depends on.
+    pub depends: Vec<String>,
+
+    /// What calling callable returned, if it has been called.
+    pub resolved_value: Option<Value>,
+
+    /// The `ResolvedTarget` instance this target's build() returned.
+    ///
+    /// TODO consider making this an Arc<T> so we don't have to clone it.
+    pub built_target: Option<ResolvedTarget>,
 }
 
 /// Describes context that a target is built in.

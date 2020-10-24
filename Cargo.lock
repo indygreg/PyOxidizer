@@ -1427,6 +1427,7 @@ dependencies = [
  "sha2 0.9.1",
  "slog",
  "starlark",
+ "starlark-dialect-build-targets",
  "tar",
  "tempdir",
  "url",
@@ -1977,6 +1978,15 @@ dependencies = [
  "lalrpop",
  "lalrpop-util",
  "linked-hash-map",
+]
+
+[[package]]
+name = "starlark-dialect-build-targets"
+version = "0.1.0-pre"
+dependencies = [
+ "anyhow",
+ "slog",
+ "starlark",
 ]
 
 [[package]]

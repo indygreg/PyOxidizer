@@ -67,5 +67,9 @@ path = "../python-packaging"
 version = "0.4.0-pre"
 path = "../python-packed-resources"
 
+[dependencies.starlark-dialect-build-targets]
+version = "0.1.0-pre"
+path = "../starlark-dialect-build-targets"
+
 [dev-dependencies]
 indoc = "0.3"

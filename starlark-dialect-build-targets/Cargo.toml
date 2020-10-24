@@ -1,0 +1,14 @@
+[package]
+name = "starlark-dialect-build-targets"
+version = "0.1.0-pre"
+authors = ["Gregory Szorc <gregory.szorc@gmail.com>"]
+license = "MPL-2.0"
+readme = "README.md"
+homepage = "https://github.com/indygreg/PyOxidizer"
+repository = "https://github.com/indygreg/PyOxidizer.git"
+edition = "2018"
+
+[dependencies]
+anyhow = "1.0"
+slog = "2.4"
+starlark = "0.3.1"
