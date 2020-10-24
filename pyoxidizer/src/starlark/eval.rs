@@ -51,12 +51,10 @@ impl EvaluationContext {
             release,
             // TODO this should be an argument.
             "0",
-            resolve_targets,
-            build_script_mode,
             None,
         )?;
 
-        let (env, type_values) = global_environment(context)
+        let (env, type_values) = global_environment(context, resolve_targets, build_script_mode)
             .map_err(|e| anyhow!("error creating Starlark environment: {:?}", e))?;
 
         Ok(Self { env, type_values })

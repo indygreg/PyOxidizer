@@ -33,10 +33,6 @@ use {
 pub struct PyOxidizerEnvironmentContext {
     logger: slog::Logger,
 
-    // TODO remove
-    pub resolve_targets: Option<Vec<String>>,
-    pub build_script_mode: bool,
-
     /// Whether executing in verbose mode.
     pub verbose: bool,
 
@@ -83,8 +79,6 @@ impl PyOxidizerEnvironmentContext {
         build_target_triple: &str,
         build_release: bool,
         build_opt_level: &str,
-        resolve_targets: Option<Vec<String>>,
-        build_script_mode: bool,
         distribution_cache: Option<Arc<DistributionCache>>,
     ) -> Result<PyOxidizerEnvironmentContext> {
         let parent = config_path
@@ -105,8 +99,6 @@ impl PyOxidizerEnvironmentContext {
 
         Ok(PyOxidizerEnvironmentContext {
             logger: logger.clone(),
-            resolve_targets,
-            build_script_mode,
             verbose,
             cwd: parent,
             config_path: config_path.to_path_buf(),
@@ -288,14 +280,16 @@ starlark_module! { global_module =>
 /// Obtain a Starlark environment for evaluating PyOxidizer configurations.
 pub fn global_environment(
     context: PyOxidizerEnvironmentContext,
+    resolve_targets: Option<Vec<String>>,
+    build_script_mode: bool,
 ) -> Result<(Environment, TypeValues), EnvironmentError> {
     let mut build_targets_context = EnvironmentContext::new(context.logger());
 
-    if let Some(targets) = &context.resolve_targets {
-        build_targets_context.set_resolve_targets(targets.clone());
+    if let Some(targets) = resolve_targets {
+        build_targets_context.set_resolve_targets(targets);
     }
 
-    build_targets_context.build_script_mode = context.build_script_mode;
+    build_targets_context.build_script_mode = build_script_mode;
 
     let (mut env, mut type_values) = starlark::stdlib::global_environment();
 
