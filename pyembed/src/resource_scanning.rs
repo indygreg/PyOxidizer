@@ -85,7 +85,10 @@ pub(crate) fn find_resources_in_path(py: Python, path: PyObject) -> PyResult<PyO
             PythonResource::PackageDistributionResource(resource) => res.push(
                 PythonPackageDistributionResource::new(py, resource.into_owned())?.into_object(),
             ),
-            _ => {}
+            PythonResource::ModuleBytecodeRequest(_) => {}
+            PythonResource::EggFile(_) => {}
+            PythonResource::PathExtension(_) => {}
+            PythonResource::File(_) => {}
         }
     }
 
