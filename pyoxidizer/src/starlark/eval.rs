@@ -28,11 +28,40 @@ use {
 
 /// Represents a running Starlark environment.
 pub struct EvaluationContext {
-    pub env: Environment,
+    env: Environment,
     type_values: TypeValues,
 }
 
 impl EvaluationContext {
+    pub fn new(
+        logger: &slog::Logger,
+        config_path: &Path,
+        build_target_triple: &str,
+        release: bool,
+        verbose: bool,
+        resolve_targets: Option<Vec<String>>,
+        build_script_mode: bool,
+    ) -> Result<Self> {
+        let context = PyOxidizerEnvironmentContext::new(
+            logger,
+            verbose,
+            config_path,
+            crate::project_building::HOST,
+            build_target_triple,
+            release,
+            // TODO this should be an argument.
+            "0",
+            resolve_targets,
+            build_script_mode,
+            None,
+        )?;
+
+        let (env, type_values) = global_environment(context)
+            .map_err(|e| anyhow!("error creating Starlark environment: {:?}", e))?;
+
+        Ok(Self { env, type_values })
+    }
+
     /// Obtain the `Value` for the build targets context.
     fn build_targets_context_value(&self) -> Result<Value> {
         starlark_dialect_build_targets::get_context_value(&self.type_values)
@@ -183,41 +212,30 @@ pub fn evaluate_file(
     resolve_targets: Option<Vec<String>>,
     build_script_mode: bool,
 ) -> Result<EvaluationContext, Diagnostic> {
-    let context = PyOxidizerEnvironmentContext::new(
+    let mut context = EvaluationContext::new(
         logger,
-        verbose,
         config_path,
-        crate::project_building::HOST,
         build_target_triple,
         release,
-        // TODO this should be an argument.
-        "0",
+        verbose,
         resolve_targets,
         build_script_mode,
-        None,
     )
     .map_err(|e| Diagnostic {
         level: Level::Error,
-        message: e.to_string(),
-        code: Some("environment".to_string()),
-        spans: vec![],
-    })?;
-
-    let (mut env, type_values) = global_environment(context).map_err(|_| Diagnostic {
-        level: Level::Error,
-        message: "error creating environment".to_string(),
+        message: format!("error creating environment: {}", e),
         code: Some("environment".to_string()),
         spans: vec![],
     })?;
 
     let map = Arc::new(Mutex::new(CodeMap::new()));
-    let file_loader_env = env.clone();
+    let file_loader_env = context.env.clone();
     starlark::eval::simple::eval_file(
         &map,
         &config_path.display().to_string(),
         Dialect::Bzl,
-        &mut env,
-        &type_values,
+        &mut context.env,
+        &context.type_values,
         file_loader_env,
     )
     .map_err(|e| {
@@ -233,7 +251,7 @@ pub fn evaluate_file(
         e
     })?;
 
-    Ok(EvaluationContext { env, type_values })
+    Ok(context)
 }
 
 /// Evaluate a Starlark configuration file and return its result.
