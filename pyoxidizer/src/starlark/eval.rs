@@ -114,7 +114,7 @@ pub fn evaluate_file(
         spans: vec![],
     })?;
 
-    let (mut env, type_values) = global_environment(&context).map_err(|_| Diagnostic {
+    let (mut env, type_values) = global_environment(context).map_err(|_| Diagnostic {
         level: Level::Error,
         message: "error creating environment".to_string(),
         code: Some("environment".to_string()),

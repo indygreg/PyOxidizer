@@ -53,7 +53,7 @@ impl StarlarkEnvironment {
             Some(DISTRIBUTION_CACHE.clone()),
         )?;
 
-        let (env, type_values) = global_environment(&context)
+        let (env, type_values) = global_environment(context)
             .map_err(|e| anyhow!("error creating Starlark environment: {:?}", e))?;
 
         Ok(Self { env, type_values })

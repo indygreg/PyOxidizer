@@ -37,7 +37,7 @@ use {
 };
 
 /// Holds state for evaluating a Starlark config file.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct PyOxidizerEnvironmentContext {
     pub core: EnvironmentContext,
 
@@ -576,7 +576,7 @@ starlark_module! { global_module =>
 
 /// Obtain a Starlark environment for evaluating PyOxidizer configurations.
 pub fn global_environment(
-    context: &PyOxidizerEnvironmentContext,
+    context: PyOxidizerEnvironmentContext,
 ) -> Result<(Environment, TypeValues), EnvironmentError> {
     let (mut env, mut type_values) = starlark::stdlib::global_environment();
     build_targets_module(&mut env, &mut type_values);
@@ -585,8 +585,6 @@ pub fn global_environment(
     super::python_distribution::python_distribution_module(&mut env, &mut type_values);
     super::python_executable::python_executable_env(&mut env, &mut type_values);
     super::python_packaging_policy::python_packaging_policy_module(&mut env, &mut type_values);
-
-    env.set("CONTEXT", Value::new(context.clone()))?;
 
     env.set("CWD", Value::from(context.cwd.display().to_string()))?;
     env.set(
@@ -597,6 +595,8 @@ pub fn global_environment(
         "BUILD_TARGET_TRIPLE",
         Value::from(context.build_target_triple.clone()),
     )?;
+
+    env.set("CONTEXT", Value::new(context))?;
 
     // We alias various globals as PyOxidizer.* attributes so they are
     // available via the type object API. This is a bit hacky. But it allows

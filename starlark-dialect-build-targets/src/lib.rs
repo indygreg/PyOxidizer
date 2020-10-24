@@ -128,7 +128,7 @@ pub trait BuildTarget {
 }
 
 /// Holds execution context for a Starlark environment.
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct EnvironmentContext {
     logger: slog::Logger,
 
