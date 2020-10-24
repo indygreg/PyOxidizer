@@ -9,7 +9,6 @@ use {
         python_interpreter_config::PythonInterpreterConfigValue,
         python_packaging_policy::PythonPackagingPolicyValue,
         python_resource::{add_context_for_value, python_resource_to_value},
-        util::{optional_str_arg, optional_type_arg, required_str_arg},
     },
     crate::py_packaging::{
         distribution::BinaryLibpythonLinkMode,
@@ -36,6 +35,7 @@ use {
             starlark_signature_extraction, starlark_signatures,
         },
     },
+    starlark_dialect_build_targets::{optional_str_arg, optional_type_arg, required_str_arg},
     std::{convert::TryFrom, sync::Arc},
 };
 

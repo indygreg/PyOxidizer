@@ -13,10 +13,7 @@ use {
             PythonPackageDistributionResourceValue, PythonPackageResourceValue,
             ResourceCollectionContext,
         },
-        util::{
-            optional_dict_arg, optional_list_arg, required_bool_arg, required_list_arg,
-            required_str_arg, ToOptional,
-        },
+        util::ToOptional,
     },
     crate::{project_building::build_python_executable, py_packaging::binary::PythonBinaryBuilder},
     anyhow::{Context, Result},
@@ -37,7 +34,10 @@ use {
             starlark_signature_extraction, starlark_signatures,
         },
     },
-    starlark_dialect_build_targets::{BuildContext, BuildTarget, ResolvedTarget, RunMode},
+    starlark_dialect_build_targets::{
+        optional_dict_arg, optional_list_arg, required_bool_arg, required_list_arg,
+        required_str_arg, BuildContext, BuildTarget, ResolvedTarget, RunMode,
+    },
     std::{
         collections::HashMap,
         io::Write,

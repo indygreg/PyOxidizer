@@ -3,10 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    super::{
-        python_resource::ResourceCollectionContext,
-        util::{required_str_arg, required_type_arg},
-    },
+    super::python_resource::ResourceCollectionContext,
     linked_hash_map::LinkedHashMap,
     python_packaging::{
         location::ConcreteResourceLocation,
@@ -23,6 +20,7 @@ use {
             Mutable, TypedValue, Value, ValueResult,
         },
     },
+    starlark_dialect_build_targets::{required_str_arg, required_type_arg},
     std::convert::TryFrom,
     std::ops::Deref,
 };

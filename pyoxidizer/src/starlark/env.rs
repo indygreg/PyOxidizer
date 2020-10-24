@@ -4,10 +4,8 @@
 
 use {
     super::{
-        file_resource::FileManifestValue,
-        python_embedded_resources::PythonEmbeddedResources,
+        file_resource::FileManifestValue, python_embedded_resources::PythonEmbeddedResources,
         python_executable::PythonExecutable,
-        util::{optional_list_arg, required_bool_arg, required_str_arg, required_type_arg},
     },
     crate::py_packaging::distribution::DistributionCache,
     anyhow::{anyhow, Context, Result},
@@ -28,7 +26,8 @@ use {
         },
     },
     starlark_dialect_build_targets::{
-        BuildContext, BuildTarget, EnvironmentContext, GetStateError, ResolvedTarget,
+        optional_list_arg, required_bool_arg, required_str_arg, required_type_arg, BuildContext,
+        BuildTarget, EnvironmentContext, GetStateError, ResolvedTarget,
     },
     std::{
         path::{Path, PathBuf},
