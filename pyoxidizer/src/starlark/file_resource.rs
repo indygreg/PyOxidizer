@@ -209,7 +209,7 @@ impl FileManifestValue {
                     None => Err(ValueError::IncorrectParameterType),
                 }?;
                 warn!(
-                    &context.logger,
+                    context.logger(),
                     "adding source module {} to {}", m.name, prefix
                 );
 
@@ -229,7 +229,7 @@ impl FileManifestValue {
                 }?;
 
                 warn!(
-                    &context.logger,
+                    context.logger(),
                     "adding resource file {} to {}",
                     m.symbolic_name(),
                     prefix
@@ -250,7 +250,7 @@ impl FileManifestValue {
                     None => Err(ValueError::IncorrectParameterType),
                 }?;
                 warn!(
-                    &context.logger,
+                    context.logger(),
                     "adding package distribution resource file {}:{} to {}",
                     m.package,
                     m.name,
@@ -272,7 +272,7 @@ impl FileManifestValue {
                 }?;
 
                 warn!(
-                    &context.logger,
+                    context.logger(),
                     "adding extension module {} to {}", extension.name, prefix
                 );
                 extension
@@ -295,13 +295,13 @@ impl FileManifestValue {
                 match resource.downcast_ref::<PythonExecutable>() {
                     Some(exe) => {
                         warn!(
-                            &context.logger,
+                            context.logger(),
                             "adding Python executable {} to {}",
                             exe.exe.name(),
                             prefix
                         );
                         self.add_python_executable(
-                            &context.logger,
+                            context.logger(),
                             &prefix,
                             exe.exe.deref(),
                             &context.build_target_triple,

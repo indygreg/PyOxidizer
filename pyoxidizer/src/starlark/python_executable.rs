@@ -220,7 +220,7 @@ impl PythonExecutable {
 
         let resources = self
             .exe
-            .pip_download(&context.logger, context.verbose, &args)
+            .pip_download(context.logger(), context.verbose, &args)
             .map_err(|e| {
                 ValueError::from(RuntimeError {
                     code: "PIP_INSTALL_ERROR",
@@ -277,7 +277,7 @@ impl PythonExecutable {
 
         let resources = self
             .exe
-            .pip_install(&context.logger, context.verbose, &args, &extra_envs)
+            .pip_install(context.logger(), context.verbose, &args, &extra_envs)
             .map_err(|e| {
                 ValueError::from(RuntimeError {
                     code: "PIP_INSTALL_ERROR",
@@ -324,7 +324,7 @@ impl PythonExecutable {
 
         let resources = self
             .exe
-            .read_package_root(&context.logger, Path::new(&path), &packages)
+            .read_package_root(context.logger(), Path::new(&path), &packages)
             .map_err(|e| {
                 ValueError::from(RuntimeError {
                     code: "PACKAGE_ROOT_ERROR",
@@ -363,7 +363,7 @@ impl PythonExecutable {
 
         let resources = self
             .exe
-            .read_virtualenv(&context.logger, &Path::new(&path))
+            .read_virtualenv(context.logger(), &Path::new(&path))
             .map_err(|e| {
                 ValueError::from(RuntimeError {
                     code: "VIRTUALENV_ERROR",
@@ -438,7 +438,7 @@ impl PythonExecutable {
         let resources = self
             .exe
             .setup_py_install(
-                &context.logger,
+                context.logger(),
                 &package_path,
                 context.verbose,
                 &extra_envs,
@@ -464,7 +464,7 @@ impl PythonExecutable {
             .collect::<Result<Vec<Value>, ValueError>>()?;
 
         warn!(
-            &context.logger,
+            context.logger(),
             "collected {} resources from setup.py install",
             resources.len()
         );
@@ -479,7 +479,7 @@ impl PythonExecutable {
         module: &PythonModuleSourceValue,
     ) -> ValueResult {
         info!(
-            &context.logger,
+            context.logger(),
             "adding Python source module {}", module.inner.name;
         );
         self.exe
@@ -502,7 +502,7 @@ impl PythonExecutable {
         resource: &PythonPackageResourceValue,
     ) -> ValueResult {
         info!(
-            &context.logger,
+            context.logger(),
             "adding Python package resource {}",
             resource.inner.symbolic_name()
         );
@@ -526,7 +526,7 @@ impl PythonExecutable {
         resource: &PythonPackageDistributionResourceValue,
     ) -> ValueResult {
         info!(
-            &context.logger,
+            context.logger(),
             "adding package distribution resource {}:{}",
             resource.inner.package,
             resource.inner.name
@@ -554,7 +554,7 @@ impl PythonExecutable {
         module: &PythonExtensionModuleValue,
     ) -> ValueResult {
         info!(
-            &context.logger,
+            context.logger(),
             "adding extension module {}", module.inner.name
         );
         self.exe
@@ -577,7 +577,7 @@ impl PythonExecutable {
         file: &FileValue,
     ) -> ValueResult {
         info!(
-            &context.logger,
+            context.logger(),
             "adding file data {}", file.inner.path.display();
         );
         self.exe
@@ -695,7 +695,7 @@ impl PythonExecutable {
             .ok_or(ValueError::IncorrectParameterType)?;
 
         self.exe
-            .filter_resources_from_files(&context.logger, &files_refs, &glob_files_refs)
+            .filter_resources_from_files(context.logger(), &files_refs, &glob_files_refs)
             .map_err(|e| {
                 ValueError::from(RuntimeError {
                     code: "RUNTIME_ERROR",

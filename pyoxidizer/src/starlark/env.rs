@@ -41,8 +41,6 @@ use {
 pub struct PyOxidizerEnvironmentContext {
     pub core: EnvironmentContext,
 
-    pub logger: slog::Logger,
-
     /// Whether executing in verbose mode.
     pub verbose: bool,
 
@@ -117,7 +115,6 @@ impl PyOxidizerEnvironmentContext {
 
         Ok(PyOxidizerEnvironmentContext {
             core,
-            logger: logger.clone(),
             verbose,
             cwd: parent,
             config_path: config_path.to_path_buf(),
@@ -129,6 +126,10 @@ impl PyOxidizerEnvironmentContext {
             python_distributions_path: python_distributions_path.clone(),
             distribution_cache,
         })
+    }
+
+    pub fn logger(&self) -> &slog::Logger {
+        &self.core.logger()
     }
 
     pub fn set_build_path(&mut self, path: &Path) -> Result<()> {
@@ -175,7 +176,7 @@ impl PyOxidizerEnvironmentContext {
         std::fs::create_dir_all(&output_path).context("creating output path")?;
 
         let context = PyOxidizerBuildContext {
-            logger: self.logger.clone(),
+            logger: self.logger().clone(),
             host_triple: self.build_host_triple.clone(),
             target_triple: self.build_target_triple.clone(),
             release: self.build_release,
@@ -352,7 +353,7 @@ fn starlark_print(type_values: &TypeValues, args: &Vec<Value>) -> ValueResult {
         parts.push(arg.to_string());
     }
 
-    warn!(&context.logger, "{}", parts.join(""));
+    warn!(context.logger(), "{}", parts.join(""));
 
     Ok(Value::new(NoneType::None))
 }
@@ -438,7 +439,7 @@ fn starlark_resolve_target(
             return Ok(v);
         }
 
-        warn!(&context.logger, "resolving target {}", target);
+        warn!(context.logger(), "resolving target {}", target);
 
         match context.core.get_target(&target) {
             Some(v) => Ok((*v).clone()),

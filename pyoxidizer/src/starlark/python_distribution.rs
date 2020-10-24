@@ -73,7 +73,7 @@ impl PythonDistributionValue {
                 context
                     .distribution_cache
                     .resolve_distribution(
-                        &context.logger,
+                        context.logger(),
                         &self.source,
                         Some(&context.python_distributions_path),
                     )
@@ -317,7 +317,7 @@ impl PythonDistributionValue {
                 context
                     .distribution_cache
                     .resolve_distribution(
-                        &context.logger,
+                        context.logger(),
                         &location,
                         Some(&context.python_distributions_path),
                     )
@@ -334,7 +334,7 @@ impl PythonDistributionValue {
 
         let mut builder = dist
             .as_python_executable_builder(
-                &context.logger,
+                context.logger(),
                 &context.build_host_triple,
                 &context.build_target_triple,
                 &name,
