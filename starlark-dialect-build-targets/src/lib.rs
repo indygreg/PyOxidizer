@@ -473,13 +473,18 @@ pub fn optional_dict_arg(
     required_dict_arg(arg_name, key_type, value_type, value)
 }
 
+const ENVIRONMENT_CONTEXT_SYMBOL: &str = "BUILD_CONTEXT";
+
 /// Obtain the `Value` holding the `EnvironmentContext` for a Starlark environment.
 ///
 /// This is a helper function. The returned `Value` needs to be casted
 /// to have much value.
 pub fn get_context_value(type_values: &TypeValues) -> ValueResult {
     type_values
-        .get_type_value(&Value::new(PlaceholderContext::default()), "BUILD_CONTEXT")
+        .get_type_value(
+            &Value::new(PlaceholderContext::default()),
+            ENVIRONMENT_CONTEXT_SYMBOL,
+        )
         .ok_or_else(|| {
             ValueError::from(RuntimeError {
                 code: "STARLARK_BUILD_CONTEXT",
