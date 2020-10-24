@@ -10,3 +10,5 @@ repository = "https://github.com/indygreg/PyOxidizer.git"
 readme = "README.md"
 
 [dependencies]
+anyhow = "1.0"
+glob = "0.3"

@@ -18,3 +18,5 @@ developed in the same repository, Tugger is a generic, standalone
 Rust crate and utility. It just happens to be developed alongside
 PyOxidizer.
 */
+
+pub mod glob;

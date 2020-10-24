@@ -12,10 +12,7 @@ use {
         },
     },
     crate::{
-        app_packaging::{
-            glob::evaluate_glob,
-            resource::{FileContent, FileManifest},
-        },
+        app_packaging::resource::{FileContent, FileManifest},
         project_building::build_python_executable,
         py_packaging::{binary::PythonBinaryBuilder, resource::AddToFileManifest},
     },
@@ -44,6 +41,7 @@ use {
         ops::Deref,
         path::{Path, PathBuf},
     },
+    tugger::glob::evaluate_glob,
 };
 
 // TODO merge this into `FileValue`?

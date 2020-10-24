@@ -1430,6 +1430,7 @@ dependencies = [
  "starlark-dialect-build-targets",
  "tar",
  "tempdir",
+ "tugger",
  "url",
  "uuid",
  "vergen",
@@ -2246,6 +2247,10 @@ checksum = "59547bce71d9c38b83d9c0e92b6066c4253371f15005def0c30d9657f50c7642"
 [[package]]
 name = "tugger"
 version = "0.2.0-pre"
+dependencies = [
+ "anyhow",
+ "glob",
+]
 
 [[package]]
 name = "typenum"

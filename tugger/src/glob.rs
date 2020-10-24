@@ -7,14 +7,17 @@ use {
     std::path::{Path, PathBuf},
 };
 
-/// Evaluate a file matching glob relative to the current working directory.
-pub fn evaluate_glob(cwd: &Path, pattern: &str) -> Result<Vec<PathBuf>> {
+/// Evaluate a file matching glob relative to the given directory.
+pub fn evaluate_glob<P>(cwd: P, pattern: &str) -> Result<Vec<PathBuf>>
+where
+    P: AsRef<Path>,
+{
     let pattern_path = PathBuf::from(pattern);
 
     let search = if pattern.starts_with('/') || pattern_path.is_absolute() {
         pattern.to_string()
     } else {
-        format!("{}/{}", cwd.display(), pattern)
+        format!("{}/{}", cwd.as_ref().display(), pattern)
     };
 
     let mut res = Vec::new();
