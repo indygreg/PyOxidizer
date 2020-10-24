@@ -4,7 +4,7 @@
 
 use {
     super::{
-        env::{get_context, EnvironmentContext},
+        env::{get_context, PyOxidizerEnvironmentContext},
         python_executable::PythonExecutable,
         python_interpreter_config::PythonInterpreterConfigValue,
         python_packaging_policy::PythonPackagingPolicyValue,
@@ -66,7 +66,7 @@ impl PythonDistributionValue {
         if self.distribution.is_none() {
             let raw_context = get_context(type_values)?;
             let context = raw_context
-                .downcast_mut::<EnvironmentContext>()?
+                .downcast_mut::<PyOxidizerEnvironmentContext>()?
                 .ok_or(ValueError::IncorrectParameterType)?;
 
             self.distribution = Some(
@@ -120,7 +120,7 @@ impl PythonDistributionValue {
 
         let raw_context = get_context(type_values)?;
         let context = raw_context
-            .downcast_ref::<EnvironmentContext>()
+            .downcast_ref::<PyOxidizerEnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
 
         let build_target = match build_target {
@@ -290,7 +290,7 @@ impl PythonDistributionValue {
 
         let raw_context = get_context(type_values)?;
         let context = raw_context
-            .downcast_ref::<EnvironmentContext>()
+            .downcast_ref::<PyOxidizerEnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
 
         let host_distribution = if dist

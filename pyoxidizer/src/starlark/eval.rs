@@ -3,11 +3,11 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    super::env::{global_environment, EnvironmentContext},
+    super::env::{global_environment, PyOxidizerEnvironmentContext},
     anyhow::{anyhow, Result},
     codemap::CodeMap,
     codemap_diagnostic::{Diagnostic, Level},
-    starlark::{environment::Environment, syntax::dialect::Dialect},
+    starlark::{environment::Environment, syntax::dialect::Dialect, values::TypedValue},
     std::{
         path::Path,
         sync::{Arc, Mutex},
@@ -18,7 +18,7 @@ use {
 pub struct EvalResult {
     pub env: Environment,
 
-    pub context: EnvironmentContext,
+    pub context: PyOxidizerEnvironmentContext,
 }
 
 /// Evaluate a Starlark configuration file, returning a low-level result.
@@ -31,7 +31,7 @@ pub fn evaluate_file(
     resolve_targets: Option<Vec<String>>,
     build_script_mode: bool,
 ) -> Result<EvalResult, Diagnostic> {
-    let context = EnvironmentContext::new(
+    let context = PyOxidizerEnvironmentContext::new(
         logger,
         verbose,
         config_path,
@@ -81,7 +81,7 @@ pub fn evaluate_file(
         e
     })?;
 
-    // The EnvironmentContext is cloned as part of evaluation, which is a bit wonky.
+    // The PyOxidizerEnvironmentContext is cloned as part of evaluation, which is a bit wonky.
     // TODO avoid this clone.
     let env_context = env.get("CONTEXT").map_err(|_| Diagnostic {
         level: Level::Error,
@@ -90,11 +90,11 @@ pub fn evaluate_file(
         spans: vec![],
     })?;
 
-    let context = match env_context.downcast_ref::<EnvironmentContext>() {
+    let context = match env_context.downcast_ref::<PyOxidizerEnvironmentContext>() {
         Some(x) => Ok(x.clone()),
         None => Err(Diagnostic {
             level: Level::Error,
-            message: "CONTEXT is not EnvironmentContext".to_string(),
+            message: format!("CONTEXT is not {}", PyOxidizerEnvironmentContext::TYPE),
             code: Some("environment".to_string()),
             spans: vec![],
         }),

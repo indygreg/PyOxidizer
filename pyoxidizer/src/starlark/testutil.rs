@@ -3,7 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    super::env::{get_context, global_environment, EnvironmentContext},
+    super::env::{get_context, global_environment, PyOxidizerEnvironmentContext},
     crate::{logging::PrintlnDrain, testutil::DISTRIBUTION_CACHE},
     anyhow::{anyhow, Result},
     codemap::CodeMap,
@@ -40,7 +40,7 @@ impl StarlarkEnvironment {
         let cwd = std::env::current_dir()?;
         let config_path = cwd.join("dummy");
 
-        let context = EnvironmentContext::new(
+        let context = PyOxidizerEnvironmentContext::new(
             &logger,
             false,
             &config_path,
@@ -136,7 +136,7 @@ impl StarlarkEnvironment {
     pub fn set_target_triple(&mut self, triple: &str) -> Result<()> {
         let raw_context = get_context(&self.type_values).unwrap();
         let mut context = raw_context
-            .downcast_mut::<EnvironmentContext>()
+            .downcast_mut::<PyOxidizerEnvironmentContext>()
             .unwrap()
             .unwrap();
 

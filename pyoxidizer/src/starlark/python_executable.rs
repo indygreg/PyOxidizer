@@ -4,7 +4,7 @@
 
 use {
     super::{
-        env::{get_context, EnvironmentContext},
+        env::{get_context, PyOxidizerEnvironmentContext},
         python_embedded_resources::PythonEmbeddedResources,
         python_packaging_policy::PythonPackagingPolicyValue,
         python_resource::{
@@ -215,7 +215,7 @@ impl PythonExecutable {
 
         let raw_context = get_context(type_values)?;
         let context = raw_context
-            .downcast_ref::<EnvironmentContext>()
+            .downcast_ref::<PyOxidizerEnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
 
         let resources = self
@@ -272,7 +272,7 @@ impl PythonExecutable {
 
         let raw_context = get_context(type_values)?;
         let context = raw_context
-            .downcast_ref::<EnvironmentContext>()
+            .downcast_ref::<PyOxidizerEnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
 
         let resources = self
@@ -319,7 +319,7 @@ impl PythonExecutable {
 
         let raw_context = get_context(type_values)?;
         let context = raw_context
-            .downcast_ref::<EnvironmentContext>()
+            .downcast_ref::<PyOxidizerEnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
 
         let resources = self
@@ -358,7 +358,7 @@ impl PythonExecutable {
 
         let raw_context = get_context(type_values)?;
         let context = raw_context
-            .downcast_ref::<EnvironmentContext>()
+            .downcast_ref::<PyOxidizerEnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
 
         let resources = self
@@ -426,7 +426,7 @@ impl PythonExecutable {
 
         let raw_context = get_context(type_values)?;
         let context = raw_context
-            .downcast_ref::<EnvironmentContext>()
+            .downcast_ref::<PyOxidizerEnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
 
         let package_path = if package_path.is_absolute() {
@@ -474,7 +474,7 @@ impl PythonExecutable {
 
     pub fn add_python_module_source(
         &mut self,
-        context: &EnvironmentContext,
+        context: &PyOxidizerEnvironmentContext,
         label: &str,
         module: &PythonModuleSourceValue,
     ) -> ValueResult {
@@ -497,7 +497,7 @@ impl PythonExecutable {
 
     pub fn add_python_package_resource(
         &mut self,
-        context: &EnvironmentContext,
+        context: &PyOxidizerEnvironmentContext,
         label: &str,
         resource: &PythonPackageResourceValue,
     ) -> ValueResult {
@@ -521,7 +521,7 @@ impl PythonExecutable {
 
     pub fn add_python_package_distribution_resource(
         &mut self,
-        context: &EnvironmentContext,
+        context: &PyOxidizerEnvironmentContext,
         label: &str,
         resource: &PythonPackageDistributionResourceValue,
     ) -> ValueResult {
@@ -549,7 +549,7 @@ impl PythonExecutable {
 
     pub fn add_python_extension_module(
         &mut self,
-        context: &EnvironmentContext,
+        context: &PyOxidizerEnvironmentContext,
         label: &str,
         module: &PythonExtensionModuleValue,
     ) -> ValueResult {
@@ -572,7 +572,7 @@ impl PythonExecutable {
 
     pub fn add_file_data(
         &mut self,
-        context: &EnvironmentContext,
+        context: &PyOxidizerEnvironmentContext,
         label: &str,
         file: &FileValue,
     ) -> ValueResult {
@@ -602,7 +602,7 @@ impl PythonExecutable {
     ) -> ValueResult {
         let raw_context = get_context(type_values)?;
         let context = raw_context
-            .downcast_ref::<EnvironmentContext>()
+            .downcast_ref::<PyOxidizerEnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
 
         match resource.get_type() {
@@ -691,7 +691,7 @@ impl PythonExecutable {
 
         let raw_context = get_context(type_values)?;
         let context = raw_context
-            .downcast_ref::<EnvironmentContext>()
+            .downcast_ref::<PyOxidizerEnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
 
         self.exe

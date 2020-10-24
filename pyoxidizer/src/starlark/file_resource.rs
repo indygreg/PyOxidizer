@@ -4,7 +4,7 @@
 
 use {
     super::{
-        env::{get_context, EnvironmentContext},
+        env::{get_context, PyOxidizerEnvironmentContext},
         python_executable::PythonExecutable,
         python_resource::{
             PythonExtensionModuleValue, PythonModuleSourceValue,
@@ -200,7 +200,7 @@ impl FileManifestValue {
 
         let raw_context = get_context(type_values)?;
         let context = raw_context
-            .downcast_ref::<EnvironmentContext>()
+            .downcast_ref::<PyOxidizerEnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
 
         match resource.get_type() {
@@ -290,7 +290,7 @@ impl FileManifestValue {
             "PythonExecutable" => {
                 let raw_context = get_context(type_values)?;
                 let context = raw_context
-                    .downcast_ref::<EnvironmentContext>()
+                    .downcast_ref::<PyOxidizerEnvironmentContext>()
                     .ok_or(ValueError::IncorrectParameterType)?;
 
                 match resource.downcast_ref::<PythonExecutable>() {
@@ -355,7 +355,7 @@ impl FileManifestValue {
 
         let raw_context = get_context(type_values)?;
         let context = raw_context
-            .downcast_ref::<EnvironmentContext>()
+            .downcast_ref::<PyOxidizerEnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
 
         let dest_path = context.build_path.join(path);
@@ -401,7 +401,7 @@ fn starlark_glob(
 
     let raw_context = get_context(type_values)?;
     let context = raw_context
-        .downcast_ref::<EnvironmentContext>()
+        .downcast_ref::<PyOxidizerEnvironmentContext>()
         .ok_or(ValueError::IncorrectParameterType)?;
 
     let mut result = HashSet::new();
@@ -682,7 +682,7 @@ mod tests {
         env.eval("m.install('myapp')")?;
         let raw_context = env.eval("CONTEXT")?;
         let context = raw_context
-            .downcast_ref::<EnvironmentContext>()
+            .downcast_ref::<PyOxidizerEnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)
             .unwrap();
 

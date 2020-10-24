@@ -39,7 +39,7 @@ use {
 
 /// Holds state for evaluating a Starlark config file.
 #[derive(Debug, Clone)]
-pub struct EnvironmentContext {
+pub struct PyOxidizerEnvironmentContext {
     pub logger: slog::Logger,
 
     /// Whether executing in verbose mode.
@@ -100,7 +100,7 @@ pub struct EnvironmentContext {
     pub build_script_mode: bool,
 }
 
-impl EnvironmentContext {
+impl PyOxidizerEnvironmentContext {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         logger: &slog::Logger,
@@ -113,7 +113,7 @@ impl EnvironmentContext {
         resolve_targets: Option<Vec<String>>,
         build_script_mode: bool,
         distribution_cache: Option<Arc<DistributionCache>>,
-    ) -> Result<EnvironmentContext> {
+    ) -> Result<PyOxidizerEnvironmentContext> {
         let parent = config_path
             .parent()
             .with_context(|| "resolving parent directory of config".to_string())?;
@@ -130,7 +130,7 @@ impl EnvironmentContext {
         let distribution_cache = distribution_cache
             .unwrap_or_else(|| Arc::new(DistributionCache::new(Some(&python_distributions_path))));
 
-        Ok(EnvironmentContext {
+        Ok(PyOxidizerEnvironmentContext {
             logger: logger.clone(),
             verbose,
             cwd: parent,
@@ -311,8 +311,8 @@ impl EnvironmentContext {
     }
 }
 
-impl TypedValue for EnvironmentContext {
-    type Holder = Mutable<EnvironmentContext>;
+impl TypedValue for PyOxidizerEnvironmentContext {
+    type Holder = Mutable<PyOxidizerEnvironmentContext>;
     const TYPE: &'static str = "EnvironmentContext";
 
     fn values_for_descendant_check_and_freeze(&self) -> Box<dyn Iterator<Item = Value>> {
@@ -390,7 +390,7 @@ impl BuildContext for PyOxidizerBuildContext {
     }
 }
 
-/// Obtain the EnvironmentContext for the Starlark execution environment.
+/// Obtain the PyOxidizerContext for the Starlark execution environment.
 pub fn get_context(type_values: &TypeValues) -> ValueResult {
     type_values
         .get_type_value(&Value::new(PyOxidizerContext::default()), "CONTEXT")
@@ -407,7 +407,7 @@ pub fn get_context(type_values: &TypeValues) -> ValueResult {
 fn starlark_print(type_values: &TypeValues, args: &Vec<Value>) -> ValueResult {
     let raw_context = get_context(type_values)?;
     let context = raw_context
-        .downcast_ref::<EnvironmentContext>()
+        .downcast_ref::<PyOxidizerEnvironmentContext>()
         .ok_or(ValueError::IncorrectParameterType)?;
 
     let mut parts = Vec::new();
@@ -447,7 +447,7 @@ fn starlark_register_target(
 
     let raw_context = get_context(type_values)?;
     let mut context = raw_context
-        .downcast_mut::<EnvironmentContext>()?
+        .downcast_mut::<PyOxidizerEnvironmentContext>()?
         .ok_or(ValueError::IncorrectParameterType)?;
 
     context.register_target(
@@ -472,9 +472,9 @@ fn starlark_register_target(
 /// recursively before calling the target's function.
 ///
 /// This exists as a standalone function and operates against the raw Starlark
-/// `Environment` and has wonky handling of `EnvironmentContext` instances in
+/// `Environment` and has wonky handling of `PyOxidizerEnvironmentContext` instances in
 /// order to avoid nested mutable borrows. If we passed an
-/// `&mut EnvironmentContext` around then called a Starlark function that performed
+/// `&mut PyOxidizerEnvironmentContext` around then called a Starlark function that performed
 /// a `.downcast_mut()` (which most of them do), we would have nested mutable
 /// borrows and Rust would panic at runtime.
 #[allow(clippy::ptr_arg)]
@@ -485,12 +485,12 @@ fn starlark_resolve_target(
 ) -> ValueResult {
     let target = required_str_arg("target", &target)?;
 
-    // We need the EnvironmentContext borrow to get dropped before calling
+    // We need the PyOxidizerEnvironmentContext borrow to get dropped before calling
     // into Starlark or we can get double borrows. Hence the block here.
     let target_entry = {
         let raw_context = get_context(type_values)?;
         let context = raw_context
-            .downcast_ref::<EnvironmentContext>()
+            .downcast_ref::<PyOxidizerEnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
 
         // If we have a resolved value for this target, return it.
@@ -546,7 +546,7 @@ fn starlark_resolve_target(
     // would create multiple borrows.
     let raw_context = get_context(type_values)?;
     let mut context = raw_context
-        .downcast_mut::<EnvironmentContext>()?
+        .downcast_mut::<PyOxidizerEnvironmentContext>()?
         .ok_or(ValueError::IncorrectParameterType)?;
 
     if let Some(target_entry) = context.targets.get_mut(&target) {
@@ -570,12 +570,12 @@ fn starlark_resolve_targets(type_values: &TypeValues, call_stack: &mut CallStack
             })
         })?;
 
-    // Limit lifetime of EnvironmentContext borrow to prevent double borrows
+    // Limit lifetime of PyOxidizerEnvironmentContext borrow to prevent double borrows
     // due to Starlark calls below.
     let targets = {
         let raw_context = get_context(type_values)?;
         let context = raw_context
-            .downcast_ref::<EnvironmentContext>()
+            .downcast_ref::<PyOxidizerEnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
 
         context.targets_to_resolve()
@@ -602,7 +602,7 @@ fn starlark_set_build_path(type_values: &TypeValues, path: &Value) -> ValueResul
 
     let raw_context = get_context(type_values)?;
     let mut context = raw_context
-        .downcast_mut::<EnvironmentContext>()?
+        .downcast_mut::<PyOxidizerEnvironmentContext>()?
         .ok_or(ValueError::IncorrectParameterType)?;
 
     context.set_build_path(&PathBuf::from(&path)).map_err(|e| {
@@ -658,7 +658,7 @@ starlark_module! { global_module =>
 
 /// Obtain a Starlark environment for evaluating PyOxidizer configurations.
 pub fn global_environment(
-    context: &EnvironmentContext,
+    context: &PyOxidizerEnvironmentContext,
 ) -> Result<(Environment, TypeValues), EnvironmentError> {
     let (mut env, mut type_values) = starlark::stdlib::global_environment();
     global_module(&mut env, &mut type_values);
@@ -730,7 +730,7 @@ pub mod tests {
 
         let raw_context = env.eval("CONTEXT")?;
         let context = raw_context
-            .downcast_ref::<EnvironmentContext>()
+            .downcast_ref::<PyOxidizerEnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)
             .unwrap();
 
@@ -755,7 +755,7 @@ pub mod tests {
         env.eval("register_target('bar', bar, depends=['foo'], default=True)")?;
         let raw_context = env.eval("CONTEXT")?;
         let context = raw_context
-            .downcast_ref::<EnvironmentContext>()
+            .downcast_ref::<PyOxidizerEnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)
             .unwrap();
 
