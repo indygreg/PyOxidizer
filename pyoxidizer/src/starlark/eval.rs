@@ -3,11 +3,15 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    super::env::{global_environment, PyOxidizerEnvironmentContext},
+    super::env::{get_context, global_environment, PyOxidizerEnvironmentContext},
     anyhow::{anyhow, Result},
     codemap::CodeMap,
     codemap_diagnostic::{Diagnostic, Level},
-    starlark::{environment::Environment, syntax::dialect::Dialect, values::TypedValue},
+    starlark::{
+        environment::{Environment, TypeValues},
+        syntax::dialect::Dialect,
+        values::Value,
+    },
     starlark_dialect_build_targets::ResolvedTarget,
     std::{
         path::Path,
@@ -18,35 +22,65 @@ use {
 /// Represents a running Starlark environment.
 pub struct EvaluationContext {
     pub env: Environment,
-
-    context: PyOxidizerEnvironmentContext,
+    type_values: TypeValues,
 }
 
 impl EvaluationContext {
-    pub fn default_target(&self) -> Option<&str> {
-        self.context.core.default_target()
+    fn context_value(&self) -> Result<Value> {
+        get_context(&self.type_values).map_err(|_| anyhow!("could not obtain context"))
     }
 
-    pub fn target_names(&self) -> Vec<&str> {
-        self.context
+    pub fn default_target(&self) -> Result<Option<String>> {
+        let raw_context = self.context_value()?;
+        let context = raw_context
+            .downcast_ref::<PyOxidizerEnvironmentContext>()
+            .ok_or_else(|| anyhow!("context has incorrect type"))?;
+
+        Ok(context.core.default_target().map(|x| x.to_string()))
+    }
+
+    pub fn target_names(&self) -> Result<Vec<String>> {
+        let raw_context = self.context_value()?;
+        let context = raw_context
+            .downcast_ref::<PyOxidizerEnvironmentContext>()
+            .ok_or_else(|| anyhow!("context has incorrect type"))?;
+
+        Ok(context
             .core
             .targets()
             .keys()
-            .map(|x| x.as_str())
-            .collect::<Vec<_>>()
+            .map(|x| x.to_string())
+            .collect::<Vec<_>>())
     }
 
     /// Obtain targets that should be resolved.
-    pub fn targets_to_resolve(&self) -> Vec<String> {
-        self.context.core.targets_to_resolve()
+    pub fn targets_to_resolve(&self) -> Result<Vec<String>> {
+        let raw_context = self.context_value()?;
+        let context = raw_context
+            .downcast_ref::<PyOxidizerEnvironmentContext>()
+            .ok_or_else(|| anyhow!("context has incorrect type"))?;
+
+        Ok(context.core.targets_to_resolve())
     }
 
     pub fn build_resolved_target(&mut self, target: &str) -> Result<ResolvedTarget> {
-        self.context.build_resolved_target(target)
+        let raw_context = self.context_value()?;
+        let mut context = raw_context
+            .downcast_mut::<PyOxidizerEnvironmentContext>()
+            .map_err(|_| anyhow!("unable to obtain mutable context"))?
+            .ok_or_else(|| anyhow!("context has incorrect type"))?;
+
+        context.build_resolved_target(target)
     }
 
     pub fn run_target(&mut self, target: Option<&str>) -> Result<()> {
-        self.context.run_target(target)
+        let raw_context = self.context_value()?;
+        let mut context = raw_context
+            .downcast_mut::<PyOxidizerEnvironmentContext>()
+            .map_err(|_| anyhow!("unable to obtain mutable context"))?
+            .ok_or_else(|| anyhow!("context has incorrect type"))?;
+
+        context.run_target(target)
     }
 }
 
@@ -110,26 +144,7 @@ pub fn evaluate_file(
         e
     })?;
 
-    // The PyOxidizerEnvironmentContext is cloned as part of evaluation, which is a bit wonky.
-    // TODO avoid this clone.
-    let env_context = env.get("CONTEXT").map_err(|_| Diagnostic {
-        level: Level::Error,
-        message: "CONTEXT not defined".to_string(),
-        code: Some("environment".to_string()),
-        spans: vec![],
-    })?;
-
-    let context = match env_context.downcast_ref::<PyOxidizerEnvironmentContext>() {
-        Some(x) => Ok(x.clone()),
-        None => Err(Diagnostic {
-            level: Level::Error,
-            message: format!("CONTEXT is not {}", PyOxidizerEnvironmentContext::TYPE),
-            code: Some("environment".to_string()),
-            spans: vec![],
-        }),
-    }?;
-
-    Ok(EvaluationContext { env, context })
+    Ok(EvaluationContext { env, type_values })
 }
 
 /// Evaluate a Starlark configuration file and return its result.

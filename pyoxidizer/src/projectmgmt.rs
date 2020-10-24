@@ -70,13 +70,13 @@ pub fn list_targets(logger: &slog::Logger, project_path: &Path) -> Result<()> {
         false,
     )?;
 
-    if ctx.default_target().is_none() {
+    if ctx.default_target()?.is_none() {
         println!("(no targets defined)");
         return Ok(());
     }
 
-    for target in ctx.target_names() {
-        let prefix = if Some(target) == ctx.default_target() {
+    for target in ctx.target_names()? {
+        let prefix = if Some(target.clone()) == ctx.default_target()? {
             "*"
         } else {
             ""
@@ -117,7 +117,7 @@ pub fn build(
         false,
     )?;
 
-    for target in ctx.targets_to_resolve() {
+    for target in ctx.targets_to_resolve()? {
         ctx.build_resolved_target(&target)?;
     }
 

@@ -335,7 +335,7 @@ pub fn build_pyembed_artifacts(
     )?;
 
     // TODO should we honor only the specified target if one is given?
-    for target in ctx.targets_to_resolve() {
+    for target in ctx.targets_to_resolve()? {
         let resolved: ResolvedTarget = ctx.build_resolved_target(&target)?;
 
         let cargo_metadata = resolved.output_path.join("cargo_metadata.txt");
