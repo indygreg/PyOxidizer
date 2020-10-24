@@ -10,5 +10,6 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0"
+linked-hash-map = "0.5"
 slog = "2.4"
 starlark = "0.3.1"

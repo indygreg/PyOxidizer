@@ -4,8 +4,11 @@
 
 use {
     anyhow::{anyhow, Result},
+    linked_hash_map::LinkedHashMap,
+    slog::warn,
     starlark::{
         environment::TypeValues,
+        eval::call_stack::CallStack,
         values::{
             error::{RuntimeError, ValueError, INCORRECT_PARAMETER_TYPE_ERROR_CODE},
             none::NoneType,
@@ -521,6 +524,132 @@ fn starlark_register_target(
     Ok(Value::new(NoneType::None))
 }
 
+/// resolve_target(target)
+///
+/// This will return a Value returned from the called function.
+///
+/// If the target is already resolved, its cached return value is returned
+/// immediately.
+///
+/// If the target depends on other targets, those targets will be resolved
+/// recursively before calling the target's function.
+fn starlark_resolve_target(
+    type_values: &TypeValues,
+    call_stack: &mut CallStack,
+    target: String,
+) -> ValueResult {
+    // The block is here so the borrowed `EnvironmentContext` goes out of
+    // scope before we call into another Starlark function. Without this, we
+    // could get a double borrow.
+    let target_entry = {
+        let raw_context = get_context_value(type_values)?;
+        let context = raw_context
+            .downcast_ref::<EnvironmentContext>()
+            .ok_or(ValueError::IncorrectParameterType)?;
+
+        // If we have a resolved value for this target, return it.
+        if let Some(v) = if let Some(t) = context.get_target(&target) {
+            if let Some(v) = &t.resolved_value {
+                Some(v.clone())
+            } else {
+                None
+            }
+        } else {
+            None
+        } {
+            return Ok(v);
+        }
+
+        warn!(&context.logger, "resolving target {}", target);
+
+        match context.get_target(&target) {
+            Some(v) => Ok((*v).clone()),
+            None => Err(ValueError::from(RuntimeError {
+                code: "BUILD_TARGETS",
+                message: format!("target {} does not exist", target),
+                label: "resolve_target()".to_string(),
+            })),
+        }?
+    };
+
+    // Resolve target dependencies.
+    let mut args = Vec::new();
+
+    for depend_target in target_entry.depends {
+        args.push(starlark_resolve_target(
+            type_values,
+            call_stack,
+            depend_target,
+        )?);
+    }
+
+    let res = target_entry.callable.call(
+        call_stack,
+        type_values,
+        args,
+        LinkedHashMap::new(),
+        None,
+        None,
+    )?;
+
+    // TODO consider replacing the target's callable with a new function that returns the
+    // resolved value. This will ensure a target function is only ever called once.
+
+    // We can't obtain a mutable reference to the context above because it
+    // would create multiple borrows.
+    let raw_context = get_context_value(type_values)?;
+    let mut context = raw_context
+        .downcast_mut::<EnvironmentContext>()?
+        .ok_or(ValueError::IncorrectParameterType)?;
+
+    if let Some(target_entry) = context.get_target_mut(&target) {
+        target_entry.resolved_value = Some(res.clone());
+    }
+
+    Ok(res)
+}
+
+/// resolve_targets()
+fn starlark_resolve_targets(type_values: &TypeValues, call_stack: &mut CallStack) -> ValueResult {
+    let resolve_target_fn = type_values
+        .get_type_value(&Value::new(PlaceholderContext::default()), "resolve_target")
+        .ok_or_else(|| {
+            ValueError::from(RuntimeError {
+                code: "BUILD_TARGETS",
+                message: "could not find resolve_target() function (this should never happen)"
+                    .to_string(),
+                label: "resolve_targets()".to_string(),
+            })
+        })?;
+
+    // Limit lifetime of EnvironmentContext borrow to prevent double borrows
+    // due to Starlark calls below.
+    let targets = {
+        let raw_context = get_context_value(type_values)?;
+        let context = raw_context
+            .downcast_ref::<EnvironmentContext>()
+            .ok_or(ValueError::IncorrectParameterType)?;
+
+        let targets = context.targets_to_resolve();
+        warn!(context.logger(), "resolving {} targets", targets.len());
+
+        targets
+    };
+
+    for target in targets {
+        resolve_target_fn.call(
+            call_stack,
+            type_values,
+            vec![Value::new(target)],
+            LinkedHashMap::new(),
+            None,
+            None,
+        )?;
+    }
+
+    Ok(Value::new(NoneType::None))
+}
+
 starlark_module! { build_targets_module =>
     register_target(
         env env,
@@ -531,5 +660,13 @@ starlark_module! { build_targets_module =>
         default_build_script: bool = false
     ) {
         starlark_register_target(env, target, callable, depends, default, default_build_script)
+    }
+
+    resolve_target(env env, call_stack cs, target: String) {
+        starlark_resolve_target(&env, cs, target)
+    }
+
+    resolve_targets(env env, call_stack cs) {
+        starlark_resolve_targets(&env, cs)
     }
 }
