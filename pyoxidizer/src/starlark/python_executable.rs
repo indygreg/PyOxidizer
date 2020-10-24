@@ -161,8 +161,7 @@ impl BuildTarget for PythonExecutable {
         fh.write_all(&build.exe_data)
             .context(format!("writing {}", dest_path.display()))?;
 
-        crate::app_packaging::resource::set_executable(&mut fh)
-            .context("making binary executable")?;
+        tugger::file_resource::set_executable(&mut fh).context("making binary executable")?;
 
         Ok(ResolvedTarget {
             run_mode: RunMode::Path { path: dest_path },

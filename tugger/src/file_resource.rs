@@ -4,11 +4,12 @@
 
 use {
     anyhow::{anyhow, Context, Result},
-    std::collections::btree_map::Iter,
-    std::collections::{BTreeMap, BTreeSet},
-    std::convert::TryFrom,
-    std::io::Write,
-    std::path::{Path, PathBuf},
+    std::{
+        collections::{btree_map::Iter, BTreeMap, BTreeSet},
+        convert::TryFrom,
+        io::Write,
+        path::{Path, PathBuf},
+    },
 };
 
 #[cfg(unix)]
@@ -171,7 +172,7 @@ impl FileManifest {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, itertools::Itertools};
+    use super::*;
 
     #[test]
     fn test_add() {
@@ -183,7 +184,7 @@ mod tests {
 
         v.add_file(&PathBuf::from("foo"), &f).unwrap();
 
-        let entries = v.entries().collect_vec();
+        let entries = v.entries().collect::<Vec<_>>();
 
         assert_eq!(entries.len(), 1);
         assert_eq!(entries[0].0, &PathBuf::from("foo"));

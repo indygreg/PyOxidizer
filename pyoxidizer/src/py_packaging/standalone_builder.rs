@@ -17,7 +17,6 @@ use {
         },
         standalone_distribution::StandaloneDistribution,
     },
-    crate::app_packaging::resource::{FileContent, FileManifest},
     anyhow::{anyhow, Result},
     lazy_static::lazy_static,
     python_packaging::{
@@ -42,6 +41,7 @@ use {
         sync::Arc,
     },
     tempdir::TempDir,
+    tugger::file_resource::{FileContent, FileManifest},
 };
 
 lazy_static! {

@@ -8,7 +8,6 @@ Defining and manipulating binaries embedding Python.
 
 use {
     super::config::EmbeddedPythonConfig,
-    crate::app_packaging::resource::FileManifest,
     anyhow::Result,
     python_packaging::{
         policy::PythonPackagingPolicy,
@@ -25,6 +24,7 @@ use {
         path::{Path, PathBuf},
         sync::Arc,
     },
+    tugger::file_resource::FileManifest,
 };
 
 /// How a binary should link against libpython.
