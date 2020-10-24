@@ -35,8 +35,8 @@ use {
         },
     },
     starlark_dialect_build_targets::{
-        optional_list_arg, optional_str_arg, required_list_arg, required_type_arg, BuildContext,
-        BuildTarget, ResolvedTarget, RunMode,
+        optional_list_arg, optional_str_arg, required_list_arg, BuildContext, BuildTarget,
+        ResolvedTarget, RunMode,
     },
     std::{
         collections::HashSet,
@@ -169,15 +169,8 @@ impl FileManifestValue {
     }
 
     /// FileManifest.add_manifest(other)
-    pub fn add_manifest(&mut self, other: &Value) -> ValueResult {
-        required_type_arg("other", "FileManifest", other)?;
-
-        let other = match other.downcast_ref::<FileManifestValue>() {
-            Some(other) => Ok(other.manifest.clone()),
-            None => Err(ValueError::IncorrectParameterType),
-        }?;
-
-        self.manifest.add_manifest(&other).map_err(|e| {
+    pub fn add_manifest(&mut self, other: FileManifestValue) -> ValueResult {
+        self.manifest.add_manifest(&other.manifest).map_err(|e| {
             ValueError::from(RuntimeError {
                 code: "PYOXIDIZER_BUILD",
                 message: e.to_string(),
@@ -476,9 +469,9 @@ starlark_module! { file_resource_env =>
     }
 
     #[allow(non_snake_case, clippy::ptr_arg)]
-    FileManifest.add_manifest(this, other) {
+    FileManifest.add_manifest(this, other: FileManifestValue) {
         match this.clone().downcast_mut::<FileManifestValue>()? {
-            Some(mut manifest) => manifest.add_manifest(&other),
+            Some(mut manifest) => manifest.add_manifest(other),
             None => Err(ValueError::IncorrectParameterType),
         }
     }
@@ -526,6 +519,17 @@ mod tests {
 
         let m = m.downcast_ref::<FileManifestValue>().unwrap();
         assert_eq!(m.manifest, FileManifest::default());
+    }
+
+    #[test]
+    fn test_add_file_manifest() -> Result<()> {
+        let mut env = StarlarkEnvironment::new()?;
+        env.eval("m1 = FileManifest()")?;
+        env.eval("m2 = FileManifest()")?;
+
+        env.eval("m1.add_manifest(m2)")?;
+
+        Ok(())
     }
 
     #[test]
