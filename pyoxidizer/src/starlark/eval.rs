@@ -13,7 +13,7 @@ use {
     },
     anyhow::{anyhow, Context, Result},
     codemap::CodeMap,
-    codemap_diagnostic::{Diagnostic, Level},
+    codemap_diagnostic::Diagnostic,
     starlark::{
         environment::{Environment, TypeValues},
         syntax::dialect::Dialect,
@@ -60,6 +60,46 @@ impl EvaluationContext {
             .map_err(|e| anyhow!("error creating Starlark environment: {:?}", e))?;
 
         Ok(Self { env, type_values })
+    }
+
+    /// Evaluate a Starlark configuration file, returning a Diagnostic on error.
+    pub fn evaluate_file_diagnostic(&mut self, config_path: &Path) -> Result<(), Diagnostic> {
+        let map = Arc::new(Mutex::new(CodeMap::new()));
+        let file_loader_env = self.env.clone();
+
+        starlark::eval::simple::eval_file(
+            &map,
+            &config_path.display().to_string(),
+            Dialect::Bzl,
+            &mut self.env,
+            &self.type_values,
+            file_loader_env,
+        )
+        .map_err(|e| {
+            if let Ok(raw_context) = self.build_targets_context_value() {
+                if let Some(context) = raw_context.downcast_ref::<EnvironmentContext>() {
+                    let mut msg = Vec::new();
+                    let raw_map = map.lock().unwrap();
+                    {
+                        let mut emitter =
+                            codemap_diagnostic::Emitter::vec(&mut msg, Some(&raw_map));
+                        emitter.emit(&[e.clone()]);
+                    }
+
+                    slog::error!(context.logger(), "{}", String::from_utf8_lossy(&msg));
+                }
+            }
+
+            e
+        })?;
+
+        Ok(())
+    }
+
+    /// Evaluate a Starlark configuration file, returning an anyhow Result.
+    pub fn evaluate_file(&mut self, config_path: &Path) -> Result<()> {
+        self.evaluate_file_diagnostic(config_path)
+            .map_err(|d| anyhow!(d.message))
     }
 
     /// Obtain the `Value` for the build targets context.
@@ -200,78 +240,4 @@ impl EvaluationContext {
 
         self.run_resolved_target(&target)
     }
-}
-
-/// Evaluate a Starlark configuration file, returning a low-level result.
-pub fn evaluate_file(
-    logger: &slog::Logger,
-    config_path: &Path,
-    build_target_triple: &str,
-    release: bool,
-    verbose: bool,
-    resolve_targets: Option<Vec<String>>,
-    build_script_mode: bool,
-) -> Result<EvaluationContext, Diagnostic> {
-    let mut context = EvaluationContext::new(
-        logger,
-        config_path,
-        build_target_triple,
-        release,
-        verbose,
-        resolve_targets,
-        build_script_mode,
-    )
-    .map_err(|e| Diagnostic {
-        level: Level::Error,
-        message: format!("error creating environment: {}", e),
-        code: Some("environment".to_string()),
-        spans: vec![],
-    })?;
-
-    let map = Arc::new(Mutex::new(CodeMap::new()));
-    let file_loader_env = context.env.clone();
-    starlark::eval::simple::eval_file(
-        &map,
-        &config_path.display().to_string(),
-        Dialect::Bzl,
-        &mut context.env,
-        &context.type_values,
-        file_loader_env,
-    )
-    .map_err(|e| {
-        let mut msg = Vec::new();
-        let raw_map = map.lock().unwrap();
-        {
-            let mut emitter = codemap_diagnostic::Emitter::vec(&mut msg, Some(&raw_map));
-            emitter.emit(&[e.clone()]);
-        }
-
-        slog::error!(logger, "{}", String::from_utf8_lossy(&msg));
-
-        e
-    })?;
-
-    Ok(context)
-}
-
-/// Evaluate a Starlark configuration file and return its result.
-pub fn eval_starlark_config_file(
-    logger: &slog::Logger,
-    path: &Path,
-    build_target_triple: &str,
-    release: bool,
-    verbose: bool,
-    resolve_targets: Option<Vec<String>>,
-    build_script_mode: bool,
-) -> Result<EvaluationContext> {
-    crate::starlark::eval::evaluate_file(
-        logger,
-        path,
-        build_target_triple,
-        release,
-        verbose,
-        resolve_targets,
-        build_script_mode,
-    )
-    .map_err(|d| anyhow!(d.message))
 }

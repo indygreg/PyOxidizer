@@ -14,7 +14,7 @@ use {
             },
             standalone_distribution::StandaloneDistribution,
         },
-        starlark::eval::{eval_starlark_config_file, EvaluationContext},
+        starlark::eval::EvaluationContext,
     },
     anyhow::{anyhow, Result},
     python_packaging::{
@@ -60,7 +60,7 @@ pub fn list_targets(logger: &slog::Logger, project_path: &Path) -> Result<()> {
     })?;
 
     let target_triple = default_target()?;
-    let ctx = eval_starlark_config_file(
+    let mut context = EvaluationContext::new(
         logger,
         &config_path,
         &target_triple,
@@ -70,13 +70,15 @@ pub fn list_targets(logger: &slog::Logger, project_path: &Path) -> Result<()> {
         false,
     )?;
 
-    if ctx.default_target()?.is_none() {
+    context.evaluate_file(&config_path)?;
+
+    if context.default_target()?.is_none() {
         println!("(no targets defined)");
         return Ok(());
     }
 
-    for target in ctx.target_names()? {
-        let prefix = if Some(target.clone()) == ctx.default_target()? {
+    for target in context.target_names()? {
+        let prefix = if Some(target.clone()) == context.default_target()? {
             "*"
         } else {
             ""
@@ -107,7 +109,7 @@ pub fn build(
     })?;
     let target_triple = resolve_target(target_triple)?;
 
-    let mut ctx: EvaluationContext = eval_starlark_config_file(
+    let mut context = EvaluationContext::new(
         logger,
         &config_path,
         &target_triple,
@@ -117,8 +119,10 @@ pub fn build(
         false,
     )?;
 
-    for target in ctx.targets_to_resolve()? {
-        ctx.build_resolved_target(&target)?;
+    context.evaluate_file(&config_path)?;
+
+    for target in context.targets_to_resolve()? {
+        context.build_resolved_target(&target)?;
     }
 
     Ok(())
@@ -147,7 +151,7 @@ pub fn run(
         None
     };
 
-    let mut ctx: EvaluationContext = eval_starlark_config_file(
+    let mut context = EvaluationContext::new(
         logger,
         &config_path,
         &target_triple,
@@ -156,8 +160,9 @@ pub fn run(
         resolve_targets,
         false,
     )?;
+    context.evaluate_file(&config_path)?;
 
-    ctx.run_target(target)
+    context.run_target(target)
 }
 
 /// Find resources given a source path.

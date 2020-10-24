@@ -7,7 +7,7 @@ use {
         environment::{canonicalize_path, MINIMUM_RUST_VERSION},
         project_layout::initialize_project,
         py_packaging::binary::{EmbeddedPythonContext, PythonBinaryBuilder},
-        starlark::eval::{eval_starlark_config_file, EvaluationContext},
+        starlark::eval::EvaluationContext,
     },
     anyhow::{anyhow, Context, Result},
     duct::cmd,
@@ -320,7 +320,7 @@ pub fn build_pyembed_artifacts(
         return Ok(());
     }
 
-    let mut ctx: EvaluationContext = eval_starlark_config_file(
+    let mut context = EvaluationContext::new(
         logger,
         config_path,
         target_triple,
@@ -334,9 +334,11 @@ pub fn build_pyembed_artifacts(
         true,
     )?;
 
+    context.evaluate_file(config_path)?;
+
     // TODO should we honor only the specified target if one is given?
-    for target in ctx.targets_to_resolve()? {
-        let resolved: ResolvedTarget = ctx.build_resolved_target(&target)?;
+    for target in context.targets_to_resolve()? {
+        let resolved: ResolvedTarget = context.build_resolved_target(&target)?;
 
         let cargo_metadata = resolved.output_path.join("cargo_metadata.txt");
 
