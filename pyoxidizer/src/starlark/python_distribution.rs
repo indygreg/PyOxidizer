@@ -35,7 +35,7 @@ use {
             starlark_signature_extraction, starlark_signatures,
         },
     },
-    starlark_dialect_build_targets::{optional_str_arg, optional_type_arg, required_str_arg},
+    starlark_dialect_build_targets::{optional_str_arg, optional_type_arg},
     std::{convert::TryFrom, sync::Arc},
 };
 
@@ -110,11 +110,10 @@ impl PythonDistributionValue {
     /// default_python_distribution(flavor, build_target=None, python_version=None)
     fn default_python_distribution(
         type_values: &TypeValues,
-        flavor: &Value,
+        flavor: String,
         build_target: &Value,
         python_version: &Value,
     ) -> ValueResult {
-        let flavor = required_str_arg("flavor", flavor)?;
         let build_target = optional_str_arg("build_target", build_target)?;
         let python_version = optional_str_arg("python_version", &python_version)?;
 
@@ -154,11 +153,9 @@ impl PythonDistributionValue {
     }
 
     /// PythonDistribution()
-    fn from_args(sha256: &Value, local_path: &Value, url: &Value, flavor: &Value) -> ValueResult {
-        required_str_arg("sha256", sha256)?;
+    fn from_args(sha256: String, local_path: &Value, url: &Value, flavor: String) -> ValueResult {
         optional_str_arg("local_path", local_path)?;
         optional_str_arg("url", url)?;
-        let flavor = required_str_arg("flavor", flavor)?;
 
         if local_path.get_type() != "NoneType" && url.get_type() != "NoneType" {
             return Err(ValueError::from(RuntimeError {
@@ -240,11 +237,10 @@ impl PythonDistributionValue {
         &mut self,
         type_values: &TypeValues,
         call_stack: &mut CallStack,
-        name: &Value,
+        name: String,
         packaging_policy: &Value,
         config: &Value,
     ) -> ValueResult {
-        let name = required_str_arg("name", &name)?;
         optional_type_arg(
             "packaging_policy",
             "PythonPackagingPolicy",
@@ -422,8 +418,8 @@ impl PythonDistributionValue {
 
 starlark_module! { python_distribution_module =>
     #[allow(non_snake_case, clippy::ptr_arg)]
-    PythonDistribution(sha256, local_path=NoneType::None, url=NoneType::None, flavor="standalone") {
-        PythonDistributionValue::from_args(&sha256, &local_path, &url, &flavor)
+    PythonDistribution(sha256: String, local_path=NoneType::None, url=NoneType::None, flavor: String = "standalone".to_string()) {
+        PythonDistributionValue::from_args(sha256, &local_path, &url, flavor)
     }
 
     PythonDistribution.make_python_packaging_policy(env env, this) {
@@ -452,7 +448,7 @@ starlark_module! { python_distribution_module =>
         env env,
         call_stack cs,
         this,
-        name,
+        name: String,
         packaging_policy=NoneType::None,
         config=NoneType::None
     ) {
@@ -460,7 +456,7 @@ starlark_module! { python_distribution_module =>
             Some(mut dist) =>dist.to_python_executable_starlark(
                 &env,
                 cs,
-                &name,
+                name,
                 &packaging_policy,
                 &config,
             ),
@@ -471,11 +467,11 @@ starlark_module! { python_distribution_module =>
     #[allow(clippy::ptr_arg)]
     default_python_distribution(
         env env,
-        flavor="standalone",
+        flavor: String = "standalone".to_string(),
         build_target=NoneType::None,
         python_version=NoneType::None
     ) {
-        PythonDistributionValue::default_python_distribution(&env, &flavor, &build_target, &python_version)
+        PythonDistributionValue::default_python_distribution(&env, flavor, &build_target, &python_version)
     }
 }
 
@@ -506,15 +502,6 @@ mod tests {
 
         let x = dist.downcast_ref::<PythonDistributionValue>().unwrap();
         assert_eq!(x.source, host_distribution.location)
-    }
-
-    #[test]
-    fn test_default_python_distribution_bad_arg() {
-        let err = starlark_nok("default_python_distribution(False)");
-        assert_eq!(
-            err.message,
-            "function expects a string for flavor; got type bool"
-        );
     }
 
     #[test]

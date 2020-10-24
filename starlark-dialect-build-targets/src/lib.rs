@@ -297,17 +297,6 @@ pub fn optional_type_arg(arg_name: &str, arg_type: &str, value: &Value) -> Resul
     }
 }
 
-pub fn required_str_arg(name: &str, value: &Value) -> Result<String, ValueError> {
-    match value.get_type() {
-        "string" => Ok(value.to_str()),
-        t => Err(ValueError::from(RuntimeError {
-            code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
-            message: format!("function expects a string for {}; got type {}", name, t),
-            label: format!("expected type string; got {}", t),
-        })),
-    }
-}
-
 pub fn optional_str_arg(name: &str, value: &Value) -> Result<Option<String>, ValueError> {
     match value.get_type() {
         "NoneType" => Ok(None),

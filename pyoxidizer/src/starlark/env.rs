@@ -20,7 +20,7 @@ use {
         },
     },
     starlark_dialect_build_targets::{
-        build_targets_module, required_str_arg, BuildContext, EnvironmentContext, GetStateError,
+        build_targets_module, BuildContext, EnvironmentContext, GetStateError,
     },
     std::{
         path::{Path, PathBuf},
@@ -247,9 +247,7 @@ fn starlark_print(type_values: &TypeValues, args: &Vec<Value>) -> ValueResult {
 }
 
 /// set_build_path(path)
-fn starlark_set_build_path(type_values: &TypeValues, path: &Value) -> ValueResult {
-    let path = required_str_arg("path", &path)?;
-
+fn starlark_set_build_path(type_values: &TypeValues, path: String) -> ValueResult {
     let raw_context = get_context(type_values)?;
     let mut context = raw_context
         .downcast_mut::<PyOxidizerEnvironmentContext>()?
@@ -272,8 +270,8 @@ starlark_module! { global_module =>
     }
 
     #[allow(clippy::ptr_arg)]
-    set_build_path(env env, path) {
-        starlark_set_build_path(&env, &path)
+    set_build_path(env env, path: String) {
+        starlark_set_build_path(&env, path)
     }
 }
 

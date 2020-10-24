@@ -20,7 +20,7 @@ use {
             Mutable, TypedValue, Value, ValueResult,
         },
     },
-    starlark_dialect_build_targets::{required_str_arg, required_type_arg},
+    starlark_dialect_build_targets::required_type_arg,
     std::convert::TryFrom,
     std::ops::Deref,
 };
@@ -296,21 +296,16 @@ impl PythonPackagingPolicyValue {
 
     fn starlark_set_preferred_extension_module_variant(
         &mut self,
-        name: &Value,
-        value: &Value,
+        name: String,
+        value: String,
     ) -> ValueResult {
-        let name = required_str_arg("name", name)?;
-        let value = required_str_arg("value", value)?;
-
         self.inner
             .set_preferred_extension_module_variant(&name, &value);
 
         Ok(Value::from(NoneType::None))
     }
 
-    fn starlark_set_resource_handling_mode(&mut self, value: &Value) -> ValueResult {
-        let value = required_str_arg("mode", value)?;
-
+    fn starlark_set_resource_handling_mode(&mut self, value: String) -> ValueResult {
         let mode = ResourceHandlingMode::try_from(value.as_str()).map_err(|e| {
             ValueError::from(RuntimeError {
                 code: "PYOXIDIZER_BUILD",
@@ -333,16 +328,20 @@ starlark_module! { python_packaging_policy_module =>
         }
     }
 
-    PythonPackagingPolicy.set_preferred_extension_module_variant(this, name, value) {
+    PythonPackagingPolicy.set_preferred_extension_module_variant(
+        this,
+        name: String,
+        value: String
+    ) {
         match this.clone().downcast_mut::<PythonPackagingPolicyValue>()? {
-            Some(mut policy) => policy.starlark_set_preferred_extension_module_variant(&name, &value),
+            Some(mut policy) => policy.starlark_set_preferred_extension_module_variant(name, value),
             None => Err(ValueError::IncorrectParameterType),
         }
     }
 
-    PythonPackagingPolicy.set_resource_handling_mode(this, mode) {
+    PythonPackagingPolicy.set_resource_handling_mode(this, mode: String) {
         match this.clone().downcast_mut::<PythonPackagingPolicyValue>()? {
-            Some(mut policy) => policy.starlark_set_resource_handling_mode(&mode),
+            Some(mut policy) => policy.starlark_set_resource_handling_mode(mode),
             None => Err(ValueError::IncorrectParameterType),
         }
     }

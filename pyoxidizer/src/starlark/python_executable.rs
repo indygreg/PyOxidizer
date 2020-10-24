@@ -35,8 +35,8 @@ use {
         },
     },
     starlark_dialect_build_targets::{
-        optional_dict_arg, optional_list_arg, required_list_arg, required_str_arg, BuildContext,
-        BuildTarget, ResolvedTarget, RunMode,
+        optional_dict_arg, optional_list_arg, required_list_arg, BuildContext, BuildTarget,
+        ResolvedTarget, RunMode,
     },
     std::{
         collections::HashMap,
@@ -178,13 +178,10 @@ impl PythonExecutable {
         &self,
         type_values: &TypeValues,
         call_stack: &mut CallStack,
-        name: &Value,
-        source: &Value,
+        name: String,
+        source: String,
         is_package: bool,
     ) -> ValueResult {
-        let name = required_str_arg("name", &name)?;
-        let source = required_str_arg("source", &source)?;
-
         let module = PythonModuleSource {
             name,
             source: DataLocation::Memory(source.into_bytes()),
@@ -304,10 +301,9 @@ impl PythonExecutable {
         &self,
         type_values: &TypeValues,
         call_stack: &mut CallStack,
-        path: &Value,
+        path: String,
         packages: &Value,
     ) -> ValueResult {
-        let path = required_str_arg("path", &path)?;
         required_list_arg("packages", "string", &packages)?;
 
         let packages = packages
@@ -351,10 +347,8 @@ impl PythonExecutable {
         &self,
         type_values: &TypeValues,
         call_stack: &mut CallStack,
-        path: &Value,
+        path: String,
     ) -> ValueResult {
-        let path = required_str_arg("path", &path)?;
-
         let raw_context = get_context(type_values)?;
         let context = raw_context
             .downcast_ref::<PyOxidizerEnvironmentContext>()
@@ -390,11 +384,10 @@ impl PythonExecutable {
         &self,
         type_values: &TypeValues,
         call_stack: &mut CallStack,
-        package_path: &Value,
+        package_path: String,
         extra_envs: &Value,
         extra_global_arguments: &Value,
     ) -> ValueResult {
-        let package_path = required_str_arg("package_path", &package_path)?;
         optional_dict_arg("extra_envs", "string", "string", &extra_envs)?;
         optional_list_arg("extra_global_arguments", "string", &extra_global_arguments)?;
 
@@ -713,12 +706,12 @@ starlark_module! { python_executable_env =>
         env env,
         call_stack cs,
         this,
-        name,
-        source,
+        name: String,
+        source: String,
         is_package: bool = false
     ) {
         match this.clone().downcast_ref::<PythonExecutable>() {
-            Some(exe) => exe.starlark_make_python_module_source(&env, cs, &name, &source, is_package),
+            Some(exe) => exe.starlark_make_python_module_source(&env, cs, name, source, is_package),
             None => Err(ValueError::IncorrectParameterType),
         }
     }
@@ -755,11 +748,11 @@ starlark_module! { python_executable_env =>
         env env,
         call_stack cs,
         this,
-        path,
+        path: String,
         packages
     ) {
         match this.clone().downcast_ref::<PythonExecutable>() {
-            Some(exe) => exe.starlark_read_package_root(&env, cs, &path, &packages),
+            Some(exe) => exe.starlark_read_package_root(&env, cs, path, &packages),
             None => Err(ValueError::IncorrectParameterType),
         }
     }
@@ -769,10 +762,10 @@ starlark_module! { python_executable_env =>
         env env,
         call_stack cs,
         this,
-        path
+        path: String
     ) {
         match this.clone().downcast_ref::<PythonExecutable>() {
-            Some(exe) => exe.starlark_read_virtualenv(&env, cs, &path),
+            Some(exe) => exe.starlark_read_virtualenv(&env, cs, path),
             None => Err(ValueError::IncorrectParameterType),
         }
     }
@@ -782,12 +775,12 @@ starlark_module! { python_executable_env =>
         env env,
         call_stack cs,
         this,
-        package_path,
+        package_path: String,
         extra_envs=NoneType::None,
         extra_global_arguments=NoneType::None
     ) {
         match this.clone().downcast_ref::<PythonExecutable>() {
-            Some(exe) => exe.starlark_setup_py_install(&env, cs, &package_path, &extra_envs, &extra_global_arguments),
+            Some(exe) => exe.starlark_setup_py_install(&env, cs, package_path, &extra_envs, &extra_global_arguments),
             None => Err(ValueError::IncorrectParameterType),
         }
     }

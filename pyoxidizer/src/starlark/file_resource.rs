@@ -35,8 +35,8 @@ use {
         },
     },
     starlark_dialect_build_targets::{
-        optional_list_arg, optional_str_arg, required_list_arg, required_str_arg,
-        required_type_arg, BuildContext, BuildTarget, ResolvedTarget, RunMode,
+        optional_list_arg, optional_str_arg, required_list_arg, required_type_arg, BuildContext,
+        BuildTarget, ResolvedTarget, RunMode,
     },
     std::{
         collections::HashSet,
@@ -192,11 +192,9 @@ impl FileManifestValue {
     pub fn add_python_resource(
         &mut self,
         type_values: &TypeValues,
-        prefix: &Value,
+        prefix: String,
         resource: &Value,
     ) -> ValueResult {
-        let prefix = required_str_arg("prefix", &prefix)?;
-
         let raw_context = get_context(type_values)?;
         let context = raw_context
             .downcast_ref::<PyOxidizerEnvironmentContext>()
@@ -335,22 +333,18 @@ impl FileManifestValue {
     pub fn add_python_resources(
         &mut self,
         type_values: &TypeValues,
-        prefix: &Value,
+        prefix: String,
         resources: &Value,
     ) -> ValueResult {
-        required_str_arg("prefix", &prefix)?;
-
         for resource in &resources.iter()? {
-            self.add_python_resource(type_values, &prefix.clone(), &resource)?;
+            self.add_python_resource(type_values, prefix.clone(), &resource)?;
         }
 
         Ok(Value::new(NoneType::None))
     }
 
     /// FileManifest.install(path, replace=true)
-    pub fn install(&self, type_values: &TypeValues, path: &Value, replace: bool) -> ValueResult {
-        let path = required_str_arg("path", &path)?;
-
+    pub fn install(&self, type_values: &TypeValues, path: String, replace: bool) -> ValueResult {
         let raw_context = get_context(type_values)?;
         let context = raw_context
             .downcast_ref::<PyOxidizerEnvironmentContext>()
@@ -490,25 +484,25 @@ starlark_module! { file_resource_env =>
     }
 
     #[allow(clippy::ptr_arg)]
-    FileManifest.add_python_resource(env env, this, prefix, resource) {
+    FileManifest.add_python_resource(env env, this, prefix: String, resource) {
         match this.clone().downcast_mut::<FileManifestValue>()? {
-            Some(mut manifest) => manifest.add_python_resource(&env, &prefix, &resource),
+            Some(mut manifest) => manifest.add_python_resource(&env, prefix, &resource),
             None => Err(ValueError::IncorrectParameterType),
         }
     }
 
     #[allow(clippy::ptr_arg)]
-    FileManifest.add_python_resources(env env, this, prefix, resources) {
+    FileManifest.add_python_resources(env env, this, prefix: String, resources) {
         match this.clone().downcast_mut::<FileManifestValue>()? {
-            Some(mut manifest) => manifest.add_python_resources(&env, &prefix, &resources),
+            Some(mut manifest) => manifest.add_python_resources(&env, prefix, &resources),
             None => Err(ValueError::IncorrectParameterType),
         }
     }
 
     #[allow(clippy::ptr_arg)]
-    FileManifest.install(env env, this, path, replace: bool = true) {
+    FileManifest.install(env env, this, path: String, replace: bool = true) {
         match this.clone().downcast_ref::<FileManifestValue>() {
-            Some(manifest) => manifest.install(&env, &path, replace),
+            Some(manifest) => manifest.install(&env, path, replace),
             None => Err(ValueError::IncorrectParameterType),
         }
     }
