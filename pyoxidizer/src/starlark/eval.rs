@@ -3,8 +3,15 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    super::env::{get_context, global_environment, PyOxidizerEnvironmentContext},
-    anyhow::{anyhow, Result},
+    crate::starlark::{
+        env::{
+            get_context, global_environment, PyOxidizerBuildContext, PyOxidizerEnvironmentContext,
+        },
+        file_resource::FileManifestValue,
+        python_embedded_resources::PythonEmbeddedResources,
+        python_executable::PythonExecutable,
+    },
+    anyhow::{anyhow, Context, Result},
     codemap::CodeMap,
     codemap_diagnostic::{Diagnostic, Level},
     starlark::{
@@ -12,7 +19,7 @@ use {
         syntax::dialect::Dialect,
         values::Value,
     },
-    starlark_dialect_build_targets::ResolvedTarget,
+    starlark_dialect_build_targets::{BuildTarget, ResolvedTarget},
     std::{
         path::Path,
         sync::{Arc, Mutex},
@@ -70,17 +77,88 @@ impl EvaluationContext {
             .map_err(|_| anyhow!("unable to obtain mutable context"))?
             .ok_or_else(|| anyhow!("context has incorrect type"))?;
 
-        context.build_resolved_target(target)
+        let resolved_value = if let Some(t) = context.core.get_target(target) {
+            if let Some(t) = &t.built_target {
+                return Ok(t.clone());
+            }
+
+            if let Some(v) = &t.resolved_value {
+                v.clone()
+            } else {
+                return Err(anyhow!("target {} is not resolved", target));
+            }
+        } else {
+            return Err(anyhow!("target {} is not registered", target));
+        };
+
+        let output_path = context
+            .build_path
+            .join(&context.build_target_triple)
+            .join(if context.build_release {
+                "release"
+            } else {
+                "debug"
+            })
+            .join(target);
+
+        std::fs::create_dir_all(&output_path).context("creating output path")?;
+
+        let build_context = PyOxidizerBuildContext {
+            logger: context.logger().clone(),
+            host_triple: context.build_host_triple.clone(),
+            target_triple: context.build_target_triple.clone(),
+            release: context.build_release,
+            opt_level: context.build_opt_level.clone(),
+            output_path,
+        };
+
+        // TODO surely this can use dynamic dispatch.
+        let resolved_target: ResolvedTarget = match resolved_value.get_type() {
+            "FileManifest" => resolved_value
+                .downcast_mut::<FileManifestValue>()
+                .map_err(|_| anyhow!("object isn't mutable"))?
+                .ok_or_else(|| anyhow!("invalid cast"))?
+                .build(&build_context),
+            "PythonExecutable" => resolved_value
+                .downcast_mut::<PythonExecutable>()
+                .map_err(|_| anyhow!("object isn't mutable"))?
+                .ok_or_else(|| anyhow!("invalid cast"))?
+                .build(&build_context),
+            "PythonEmbeddedResources" => resolved_value
+                .downcast_mut::<PythonEmbeddedResources>()
+                .map_err(|_| anyhow!("object isn't mutable"))?
+                .ok_or_else(|| anyhow!("invalid cast"))?
+                .build(&build_context),
+            _ => Err(anyhow!("could not determine type of target")),
+        }?;
+
+        context.core.get_target_mut(target).unwrap().built_target = Some(resolved_target.clone());
+
+        Ok(resolved_target)
+    }
+
+    /// Evaluate a target and run it, if possible.
+    pub fn run_resolved_target(&mut self, target: &str) -> Result<()> {
+        let resolved_target = self.build_resolved_target(target)?;
+
+        resolved_target.run()
     }
 
     pub fn run_target(&mut self, target: Option<&str>) -> Result<()> {
         let raw_context = self.context_value()?;
-        let mut context = raw_context
-            .downcast_mut::<PyOxidizerEnvironmentContext>()
-            .map_err(|_| anyhow!("unable to obtain mutable context"))?
+        let context = raw_context
+            .downcast_ref::<PyOxidizerEnvironmentContext>()
             .ok_or_else(|| anyhow!("context has incorrect type"))?;
 
-        context.run_target(target)
+        let target = if let Some(t) = target {
+            t.to_string()
+        } else if let Some(t) = context.core.default_target() {
+            t.to_string()
+        } else {
+            return Err(anyhow!("unable to determine target to run"));
+        };
+
+        self.run_resolved_target(&target)
     }
 }
 

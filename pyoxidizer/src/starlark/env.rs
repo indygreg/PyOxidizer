@@ -3,12 +3,8 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    super::{
-        file_resource::FileManifestValue, python_embedded_resources::PythonEmbeddedResources,
-        python_executable::PythonExecutable,
-    },
     crate::py_packaging::distribution::DistributionCache,
-    anyhow::{anyhow, Context, Result},
+    anyhow::{Context, Result},
     linked_hash_map::LinkedHashMap,
     path_dedot::ParseDot,
     slog::warn,
@@ -27,8 +23,7 @@ use {
     },
     starlark_dialect_build_targets::{
         build_targets_module, optional_list_arg, required_bool_arg, required_str_arg,
-        required_type_arg, BuildContext, BuildTarget, EnvironmentContext, GetStateError,
-        ResolvedTarget,
+        required_type_arg, BuildContext, EnvironmentContext, GetStateError,
     },
     std::{
         path::{Path, PathBuf},
@@ -145,87 +140,6 @@ impl PyOxidizerEnvironmentContext {
         self.python_distributions_path = path.join("python_distributions");
 
         Ok(())
-    }
-
-    /// Build a resolved target.
-    pub fn build_resolved_target(&mut self, target: &str) -> Result<ResolvedTarget> {
-        let resolved_value = if let Some(t) = self.core.get_target(target) {
-            if let Some(t) = &t.built_target {
-                return Ok(t.clone());
-            }
-
-            if let Some(v) = &t.resolved_value {
-                v.clone()
-            } else {
-                return Err(anyhow!("target {} is not resolved", target));
-            }
-        } else {
-            return Err(anyhow!("target {} is not registered", target));
-        };
-
-        let output_path = self
-            .build_path
-            .join(&self.build_target_triple)
-            .join(if self.build_release {
-                "release"
-            } else {
-                "debug"
-            })
-            .join(target);
-
-        std::fs::create_dir_all(&output_path).context("creating output path")?;
-
-        let context = PyOxidizerBuildContext {
-            logger: self.logger().clone(),
-            host_triple: self.build_host_triple.clone(),
-            target_triple: self.build_target_triple.clone(),
-            release: self.build_release,
-            opt_level: self.build_opt_level.clone(),
-            output_path,
-        };
-
-        // TODO surely this can use dynamic dispatch.
-        let resolved_target: ResolvedTarget = match resolved_value.get_type() {
-            "FileManifest" => resolved_value
-                .downcast_mut::<FileManifestValue>()
-                .map_err(|_| anyhow!("object isn't mutable"))?
-                .ok_or_else(|| anyhow!("invalid cast"))?
-                .build(&context),
-            "PythonExecutable" => resolved_value
-                .downcast_mut::<PythonExecutable>()
-                .map_err(|_| anyhow!("object isn't mutable"))?
-                .ok_or_else(|| anyhow!("invalid cast"))?
-                .build(&context),
-            "PythonEmbeddedResources" => resolved_value
-                .downcast_mut::<PythonEmbeddedResources>()
-                .map_err(|_| anyhow!("object isn't mutable"))?
-                .ok_or_else(|| anyhow!("invalid cast"))?
-                .build(&context),
-            _ => Err(anyhow!("could not determine type of target")),
-        }?;
-
-        self.core.get_target_mut(target).unwrap().built_target = Some(resolved_target.clone());
-
-        Ok(resolved_target)
-    }
-
-    /// Evaluate a target and run it, if possible.
-    pub fn run_resolved_target(&mut self, target: &str) -> Result<()> {
-        let resolved_target = self.build_resolved_target(target)?;
-
-        resolved_target.run()
-    }
-
-    pub fn run_target(&mut self, target: Option<&str>) -> Result<()> {
-        let target = if let Some(t) = target {
-            t.to_string()
-        } else if let Some(t) = self.core.default_target() {
-            t.to_string()
-        } else {
-            return Err(anyhow!("unable to determine target to run"));
-        };
-
-        self.run_resolved_target(&target)
     }
 }
 
