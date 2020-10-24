@@ -4,7 +4,7 @@
 
 use {
     anyhow::{anyhow, Result},
-    starlark::values::Value,
+    starlark::values::{Mutable, TypedValue, Value},
     std::{
         collections::BTreeMap,
         fmt::Formatter,
@@ -236,5 +236,14 @@ impl EnvironmentContext {
         } else {
             Vec::new()
         }
+    }
+}
+
+impl TypedValue for EnvironmentContext {
+    type Holder = Mutable<EnvironmentContext>;
+    const TYPE: &'static str = "EnvironmentContext";
+
+    fn values_for_descendant_check_and_freeze(&self) -> Box<dyn Iterator<Item = Value>> {
+        Box::new(std::iter::empty())
     }
 }
