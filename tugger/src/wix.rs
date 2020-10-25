@@ -16,8 +16,8 @@ use {
 };
 
 const TOOLSET_URL: &str =
-    "https://github.com/wixtoolset/wix3/releases/download/wix3111rtm/wix311-binaries.zip";
-const TOOLSET_SHA256: &str = "37f0a533b0978a454efb5dc3bd3598becf9660aaf4287e55bf68ca6b527d051d";
+    "https://github.com/wixtoolset/wix3/releases/download/wix3112rtm/wix311-binaries.zip";
+const TOOLSET_SHA256: &str = "2c1888d5d1dba377fc7fa14444cf556963747ff9a0a289a3599cf09da03b9e2e";
 
 const VC_REDIST_X86_URL: &str =
     "https://download.visualstudio.microsoft.com/download/pr/c8edbb87-c7ec-4500-a461-71e8912d25e9/99ba493d660597490cbb8b3211d2cae4/vc_redist.x86.exe";
