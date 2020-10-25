@@ -230,6 +230,7 @@ pub fn global_environment(
     )?;
 
     build_targets_module(&mut env, &mut type_values);
+    tugger::starlark::populate_environment(&mut env, &mut type_values)?;
     super::file_resource::file_resource_env(&mut env, &mut type_values);
     super::python_distribution::python_distribution_module(&mut env, &mut type_values);
     super::python_executable::python_executable_env(&mut env, &mut type_values);

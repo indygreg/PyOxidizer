@@ -2,7 +2,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-#[cfg(test)]
 pub mod testutil;
 
 use {
@@ -186,6 +185,11 @@ impl EnvironmentContext {
     /// Obtain a logger for this instance.
     pub fn logger(&self) -> &slog::Logger {
         &self.logger
+    }
+
+    /// Obtain the current working directory for this context.
+    pub fn cwd(&self) -> &Path {
+        &self.cwd
     }
 
     /// Directory to use for the build path.

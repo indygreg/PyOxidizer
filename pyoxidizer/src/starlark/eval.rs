@@ -7,7 +7,6 @@ use {
         env::{
             get_context, global_environment, PyOxidizerBuildContext, PyOxidizerEnvironmentContext,
         },
-        file_resource::FileManifestValue,
         python_embedded_resources::PythonEmbeddedResources,
         python_executable::PythonExecutable,
     },
@@ -24,6 +23,7 @@ use {
         path::Path,
         sync::{Arc, Mutex},
     },
+    tugger::starlark::file_resource::FileManifestValue,
 };
 
 /// Represents a running Starlark environment.

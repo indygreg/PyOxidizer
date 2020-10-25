@@ -2250,7 +2250,12 @@ name = "tugger"
 version = "0.2.0-pre"
 dependencies = [
  "anyhow",
+ "codemap",
+ "codemap-diagnostic",
  "glob",
+ "slog",
+ "starlark",
+ "starlark-dialect-build-targets",
 ]
 
 [[package]]

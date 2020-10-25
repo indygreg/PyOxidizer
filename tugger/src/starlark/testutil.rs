@@ -3,11 +3,10 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    crate::{populate_environment, EnvironmentContext},
+    crate::starlark::populate_environment,
     anyhow::{anyhow, Result},
     codemap::CodeMap,
     codemap_diagnostic::{Diagnostic, Emitter},
-    slog::Drain,
     starlark::{
         environment::{Environment, TypeValues},
         syntax::dialect::Dialect,
@@ -49,20 +48,8 @@ pub struct StarlarkEnvironment {
 
 impl StarlarkEnvironment {
     pub fn new() -> Result<Self> {
-        let logger = slog::Logger::root(
-            PrintlnDrain {
-                min_level: slog::Level::Info,
-            }
-            .fuse(),
-            slog::o!(),
-        );
-
-        let cwd = std::env::current_dir()?;
-
-        let context = EnvironmentContext::new(&logger, cwd);
-
         let (mut env, mut type_values) = starlark::stdlib::global_environment();
-        populate_environment(&mut env, &mut type_values, context)
+        populate_environment(&mut env, &mut type_values)
             .map_err(|e| anyhow!("error creating Starlark environment: {:?}", e))?;
 
         Ok(Self { env, type_values })
