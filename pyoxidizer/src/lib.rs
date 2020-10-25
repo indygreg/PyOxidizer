@@ -12,7 +12,6 @@ This library exposes that functionality to other tools.
 */
 
 pub mod analyze;
-//pub mod distribution;
 pub mod environment;
 pub mod logging;
 pub mod project_building;
