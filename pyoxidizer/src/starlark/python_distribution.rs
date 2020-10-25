@@ -75,7 +75,7 @@ impl PythonDistributionValue {
                     .resolve_distribution(
                         context.logger(),
                         &self.source,
-                        Some(&context.python_distributions_path),
+                        Some(&context.python_distributions_path()),
                     )
                     .map_err(|e| {
                         ValueError::from(RuntimeError {
@@ -315,7 +315,7 @@ impl PythonDistributionValue {
                     .resolve_distribution(
                         context.logger(),
                         &location,
-                        Some(&context.python_distributions_path),
+                        Some(&context.python_distributions_path()),
                     )
                     .map_err(|e| {
                         ValueError::from(RuntimeError {

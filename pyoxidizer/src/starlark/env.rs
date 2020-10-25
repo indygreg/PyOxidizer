@@ -58,9 +58,6 @@ pub struct PyOxidizerEnvironmentContext {
     /// Base directory to use for build state.
     pub build_path: PathBuf,
 
-    /// Path where Python distributions are written.
-    pub python_distributions_path: PathBuf,
-
     /// Cache of ready-to-clone Python distribution objects.
     ///
     /// This exists because constructing a new instance can take a
@@ -106,7 +103,6 @@ impl PyOxidizerEnvironmentContext {
             build_release,
             build_opt_level: build_opt_level.to_string(),
             build_path: build_path.clone(),
-            python_distributions_path: python_distributions_path.clone(),
             distribution_cache,
         })
     }
@@ -125,9 +121,12 @@ impl PyOxidizerEnvironmentContext {
         .to_path_buf();
 
         self.build_path = path.clone();
-        self.python_distributions_path = path.join("python_distributions");
 
         Ok(())
+    }
+
+    pub fn python_distributions_path(&self) -> PathBuf {
+        self.build_path.join("python_distributions")
     }
 }
 
