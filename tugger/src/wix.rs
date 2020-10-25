@@ -3,7 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    crate::http::download_and_verify,
+    crate::{http::download_and_verify, zipfile::extract_zip},
     anyhow::{anyhow, Result},
     handlebars::Handlebars,
     lazy_static::lazy_static,
@@ -47,35 +47,12 @@ lazy_static! {
     };
 }
 
-fn extract_zip(data: &[u8], path: &Path) -> Result<()> {
-    let cursor = std::io::Cursor::new(data);
-    let mut za = zip::ZipArchive::new(cursor)?;
-
-    for i in 0..za.len() {
-        let mut file = za.by_index(i)?;
-
-        let dest_path = path.join(file.name());
-        let parent = dest_path.parent().unwrap();
-
-        if !parent.exists() {
-            std::fs::create_dir_all(parent)?;
-        }
-
-        let mut b: Vec<u8> = Vec::new();
-        file.read_to_end(&mut b)?;
-        let mut fh = std::fs::File::create(dest_path)?;
-
-        fh.write_all(&b)?;
-    }
-
-    Ok(())
-}
-
 fn extract_wix(logger: &slog::Logger, path: &Path) -> Result<()> {
     warn!(logger, "downloading WiX Toolset...");
     let data = download_and_verify(logger, TOOLSET_URL, TOOLSET_SHA256)?;
+    let cursor = std::io::Cursor::new(data);
     warn!(logger, "extracting WiX...");
-    extract_zip(&data, path)
+    extract_zip(cursor, path)
 }
 
 /*

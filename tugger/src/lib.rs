@@ -25,3 +25,4 @@ pub mod http;
 pub mod starlark;
 pub mod tarball;
 pub mod wix;
+pub mod zipfile;
