@@ -224,18 +224,20 @@ pub fn get_context(type_values: &TypeValues) -> ValueResult {
 
 /// set_build_path(path)
 fn starlark_set_build_path(type_values: &TypeValues, path: String) -> ValueResult {
-    let raw_context = get_context(type_values)?;
-    let mut context = raw_context
+    let pyoxidizer_context_value = get_context(type_values)?;
+    let mut pyoxidizer_context = pyoxidizer_context_value
         .downcast_mut::<PyOxidizerEnvironmentContext>()?
         .ok_or(ValueError::IncorrectParameterType)?;
 
-    context.set_build_path(&PathBuf::from(&path)).map_err(|e| {
-        ValueError::from(RuntimeError {
-            code: "PYOXIDIZER_BUILD",
-            message: e.to_string(),
-            label: "set_build_path()".to_string(),
-        })
-    })?;
+    pyoxidizer_context
+        .set_build_path(&PathBuf::from(&path))
+        .map_err(|e| {
+            ValueError::from(RuntimeError {
+                code: "PYOXIDIZER_BUILD",
+                message: e.to_string(),
+                label: "set_build_path()".to_string(),
+            })
+        })?;
 
     Ok(Value::new(NoneType::None))
 }

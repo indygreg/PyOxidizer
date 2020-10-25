@@ -208,14 +208,18 @@ impl PythonExecutable {
 
         let args: Vec<String> = args.iter()?.iter().map(|x| x.to_string()).collect();
 
-        let raw_context = get_context(type_values)?;
-        let context = raw_context
+        let pyoxidizer_context_value = get_context(type_values)?;
+        let pyoxidizer_context = pyoxidizer_context_value
             .downcast_ref::<PyOxidizerEnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
 
         let resources = self
             .exe
-            .pip_download(context.logger(), context.verbose, &args)
+            .pip_download(
+                pyoxidizer_context.logger(),
+                pyoxidizer_context.verbose,
+                &args,
+            )
             .map_err(|e| {
                 ValueError::from(RuntimeError {
                     code: "PIP_INSTALL_ERROR",
@@ -265,14 +269,19 @@ impl PythonExecutable {
             _ => panic!("should have validated type above"),
         };
 
-        let raw_context = get_context(type_values)?;
-        let context = raw_context
+        let pyoxidizer_context_value = get_context(type_values)?;
+        let pyoxidizer_context = pyoxidizer_context_value
             .downcast_ref::<PyOxidizerEnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
 
         let resources = self
             .exe
-            .pip_install(context.logger(), context.verbose, &args, &extra_envs)
+            .pip_install(
+                pyoxidizer_context.logger(),
+                pyoxidizer_context.verbose,
+                &args,
+                &extra_envs,
+            )
             .map_err(|e| {
                 ValueError::from(RuntimeError {
                     code: "PIP_INSTALL_ERROR",
@@ -311,14 +320,14 @@ impl PythonExecutable {
             .map(|x| x.to_string())
             .collect::<Vec<String>>();
 
-        let raw_context = get_context(type_values)?;
-        let context = raw_context
+        let pyoxidizer_context_value = get_context(type_values)?;
+        let pyoxidizer_context = pyoxidizer_context_value
             .downcast_ref::<PyOxidizerEnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
 
         let resources = self
             .exe
-            .read_package_root(context.logger(), Path::new(&path), &packages)
+            .read_package_root(pyoxidizer_context.logger(), Path::new(&path), &packages)
             .map_err(|e| {
                 ValueError::from(RuntimeError {
                     code: "PACKAGE_ROOT_ERROR",
@@ -348,14 +357,14 @@ impl PythonExecutable {
         call_stack: &mut CallStack,
         path: String,
     ) -> ValueResult {
-        let raw_context = get_context(type_values)?;
-        let context = raw_context
+        let pyoxidizer_context_value = get_context(type_values)?;
+        let pyoxidizer_context = pyoxidizer_context_value
             .downcast_ref::<PyOxidizerEnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
 
         let resources = self
             .exe
-            .read_virtualenv(context.logger(), &Path::new(&path))
+            .read_virtualenv(pyoxidizer_context.logger(), &Path::new(&path))
             .map_err(|e| {
                 ValueError::from(RuntimeError {
                     code: "VIRTUALENV_ERROR",
@@ -415,23 +424,23 @@ impl PythonExecutable {
 
         let package_path = PathBuf::from(package_path);
 
-        let raw_context = get_context(type_values)?;
-        let context = raw_context
+        let pyoxidizer_context_value = get_context(type_values)?;
+        let pyoxidizer_context = pyoxidizer_context_value
             .downcast_ref::<PyOxidizerEnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
 
         let package_path = if package_path.is_absolute() {
             package_path
         } else {
-            PathBuf::from(&context.cwd).join(package_path)
+            PathBuf::from(&pyoxidizer_context.cwd).join(package_path)
         };
 
         let resources = self
             .exe
             .setup_py_install(
-                context.logger(),
+                pyoxidizer_context.logger(),
                 &package_path,
-                context.verbose,
+                pyoxidizer_context.verbose,
                 &extra_envs,
                 &extra_global_arguments,
             )
@@ -455,7 +464,7 @@ impl PythonExecutable {
             .collect::<Result<Vec<Value>, ValueError>>()?;
 
         warn!(
-            context.logger(),
+            pyoxidizer_context.logger(),
             "collected {} resources from setup.py install",
             resources.len()
         );
@@ -591,37 +600,41 @@ impl PythonExecutable {
         resource: &Value,
         label: &str,
     ) -> ValueResult {
-        let raw_context = get_context(type_values)?;
-        let context = raw_context
+        let pyoxidizer_context_value = get_context(type_values)?;
+        let pyoxidizer_context = pyoxidizer_context_value
             .downcast_ref::<PyOxidizerEnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
 
         match resource.get_type() {
             FileValue::TYPE => {
                 let file = resource.downcast_ref::<FileValue>().unwrap();
-                self.add_file_data(context.deref(), label, file.deref())
+                self.add_file_data(pyoxidizer_context.deref(), label, file.deref())
             }
             PythonModuleSourceValue::TYPE => {
                 let module = resource.downcast_ref::<PythonModuleSourceValue>().unwrap();
-                self.add_python_module_source(context.deref(), label, module.deref())
+                self.add_python_module_source(pyoxidizer_context.deref(), label, module.deref())
             }
             PythonPackageResourceValue::TYPE => {
                 let r = resource
                     .downcast_ref::<PythonPackageResourceValue>()
                     .unwrap();
-                self.add_python_package_resource(context.deref(), label, r.deref())
+                self.add_python_package_resource(pyoxidizer_context.deref(), label, r.deref())
             }
             PythonPackageDistributionResourceValue::TYPE => {
                 let r = resource
                     .downcast_ref::<PythonPackageDistributionResourceValue>()
                     .unwrap();
-                self.add_python_package_distribution_resource(context.deref(), label, r.deref())
+                self.add_python_package_distribution_resource(
+                    pyoxidizer_context.deref(),
+                    label,
+                    r.deref(),
+                )
             }
             PythonExtensionModuleValue::TYPE => {
                 let module = resource
                     .downcast_ref::<PythonExtensionModuleValue>()
                     .unwrap();
-                self.add_python_extension_module(context.deref(), label, module.deref())
+                self.add_python_extension_module(pyoxidizer_context.deref(), label, module.deref())
             }
             _ => Err(ValueError::from(RuntimeError {
                 code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
@@ -680,13 +693,13 @@ impl PythonExecutable {
         let files_refs = files.iter().map(|x| x.as_ref()).collect::<Vec<&Path>>();
         let glob_files_refs = glob_files.iter().map(|x| x.as_ref()).collect::<Vec<&str>>();
 
-        let raw_context = get_context(type_values)?;
-        let context = raw_context
+        let pyoxidizer_context_value = get_context(type_values)?;
+        let pyoxidizer_context = pyoxidizer_context_value
             .downcast_ref::<PyOxidizerEnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
 
         self.exe
-            .filter_resources_from_files(context.logger(), &files_refs, &glob_files_refs)
+            .filter_resources_from_files(pyoxidizer_context.logger(), &files_refs, &glob_files_refs)
             .map_err(|e| {
                 ValueError::from(RuntimeError {
                     code: "RUNTIME_ERROR",

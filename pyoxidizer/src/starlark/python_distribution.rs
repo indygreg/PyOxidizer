@@ -64,18 +64,18 @@ impl PythonDistributionValue {
         label: &str,
     ) -> Result<Arc<dyn PythonDistribution>, ValueError> {
         if self.distribution.is_none() {
-            let raw_context = get_context(type_values)?;
-            let context = raw_context
+            let pyoxidizer_context_value = get_context(type_values)?;
+            let pyoxidizer_context = pyoxidizer_context_value
                 .downcast_mut::<PyOxidizerEnvironmentContext>()?
                 .ok_or(ValueError::IncorrectParameterType)?;
 
             self.distribution = Some(
-                context
+                pyoxidizer_context
                     .distribution_cache
                     .resolve_distribution(
-                        context.logger(),
+                        pyoxidizer_context.logger(),
                         &self.source,
-                        Some(&context.python_distributions_path()),
+                        Some(&pyoxidizer_context.python_distributions_path()),
                     )
                     .map_err(|e| {
                         ValueError::from(RuntimeError {
@@ -117,14 +117,14 @@ impl PythonDistributionValue {
         let build_target = optional_str_arg("build_target", build_target)?;
         let python_version = optional_str_arg("python_version", &python_version)?;
 
-        let raw_context = get_context(type_values)?;
-        let context = raw_context
+        let pyoxidizer_context_value = get_context(type_values)?;
+        let pyoxidizer_context = pyoxidizer_context_value
             .downcast_ref::<PyOxidizerEnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
 
         let build_target = match build_target {
             Some(t) => t,
-            None => context.build_target_triple.clone(),
+            None => pyoxidizer_context.build_target_triple.clone(),
         };
 
         let flavor = DistributionFlavor::try_from(flavor.as_str()).map_err(|e| {
@@ -284,21 +284,21 @@ impl PythonDistributionValue {
             }
         }?;
 
-        let raw_context = get_context(type_values)?;
-        let context = raw_context
+        let pyoxidizer_context_value = get_context(type_values)?;
+        let pyoxidizer_context = pyoxidizer_context_value
             .downcast_ref::<PyOxidizerEnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
 
         let host_distribution = if dist
             .compatible_host_triples()
-            .contains(&context.build_host_triple)
+            .contains(&pyoxidizer_context.build_host_triple)
         {
             Some(dist.clone())
         } else {
             let flavor = DistributionFlavor::Standalone;
             let location = default_distribution_location(
                 &flavor,
-                &context.build_host_triple,
+                &pyoxidizer_context.build_host_triple,
                 Some(dist.python_major_minor_version().as_str()),
             )
             .map_err(|e| {
@@ -310,12 +310,12 @@ impl PythonDistributionValue {
             })?;
 
             Some(
-                context
+                pyoxidizer_context
                     .distribution_cache
                     .resolve_distribution(
-                        context.logger(),
+                        pyoxidizer_context.logger(),
                         &location,
-                        Some(&context.python_distributions_path()),
+                        Some(&pyoxidizer_context.python_distributions_path()),
                     )
                     .map_err(|e| {
                         ValueError::from(RuntimeError {
@@ -330,9 +330,9 @@ impl PythonDistributionValue {
 
         let mut builder = dist
             .as_python_executable_builder(
-                context.logger(),
-                &context.build_host_triple,
-                &context.build_target_triple,
+                pyoxidizer_context.logger(),
+                &pyoxidizer_context.build_host_triple,
+                &pyoxidizer_context.build_target_triple,
                 &name,
                 // TODO make configurable
                 BinaryLibpythonLinkMode::Default,

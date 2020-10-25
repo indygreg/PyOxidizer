@@ -188,8 +188,8 @@ impl FileManifestValue {
         prefix: String,
         resource: &Value,
     ) -> ValueResult {
-        let raw_context = get_context(type_values)?;
-        let context = raw_context
+        let pyoxidizer_context_value = get_context(type_values)?;
+        let pyoxidizer_context = pyoxidizer_context_value
             .downcast_ref::<PyOxidizerEnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
 
@@ -200,7 +200,7 @@ impl FileManifestValue {
                     None => Err(ValueError::IncorrectParameterType),
                 }?;
                 warn!(
-                    context.logger(),
+                    pyoxidizer_context.logger(),
                     "adding source module {} to {}", m.name, prefix
                 );
 
@@ -220,7 +220,7 @@ impl FileManifestValue {
                 }?;
 
                 warn!(
-                    context.logger(),
+                    pyoxidizer_context.logger(),
                     "adding resource file {} to {}",
                     m.symbolic_name(),
                     prefix
@@ -241,7 +241,7 @@ impl FileManifestValue {
                     None => Err(ValueError::IncorrectParameterType),
                 }?;
                 warn!(
-                    context.logger(),
+                    pyoxidizer_context.logger(),
                     "adding package distribution resource file {}:{} to {}",
                     m.package,
                     m.name,
@@ -263,7 +263,7 @@ impl FileManifestValue {
                 }?;
 
                 warn!(
-                    context.logger(),
+                    pyoxidizer_context.logger(),
                     "adding extension module {} to {}", extension.name, prefix
                 );
                 extension
@@ -277,39 +277,32 @@ impl FileManifestValue {
                     })
             }
 
-            "PythonExecutable" => {
-                let raw_context = get_context(type_values)?;
-                let context = raw_context
-                    .downcast_ref::<PyOxidizerEnvironmentContext>()
-                    .ok_or(ValueError::IncorrectParameterType)?;
-
-                match resource.downcast_ref::<PythonExecutable>() {
-                    Some(exe) => {
-                        warn!(
-                            context.logger(),
-                            "adding Python executable {} to {}",
-                            exe.exe.name(),
-                            prefix
-                        );
-                        self.add_python_executable(
-                            context.logger(),
-                            &prefix,
-                            exe.exe.deref(),
-                            &context.build_target_triple,
-                            context.build_release,
-                            &context.build_opt_level,
-                        )
-                        .map_err(|e| {
-                            ValueError::from(RuntimeError {
-                                code: "PYOXIDIZER_BUILD",
-                                message: e.to_string(),
-                                label: "add_python_resource".to_string(),
-                            })
+            "PythonExecutable" => match resource.downcast_ref::<PythonExecutable>() {
+                Some(exe) => {
+                    warn!(
+                        pyoxidizer_context.logger(),
+                        "adding Python executable {} to {}",
+                        exe.exe.name(),
+                        prefix
+                    );
+                    self.add_python_executable(
+                        pyoxidizer_context.logger(),
+                        &prefix,
+                        exe.exe.deref(),
+                        &pyoxidizer_context.build_target_triple,
+                        pyoxidizer_context.build_release,
+                        &pyoxidizer_context.build_opt_level,
+                    )
+                    .map_err(|e| {
+                        ValueError::from(RuntimeError {
+                            code: "PYOXIDIZER_BUILD",
+                            message: e.to_string(),
+                            label: "add_python_resource".to_string(),
                         })
-                    }
-                    None => Err(ValueError::IncorrectParameterType),
+                    })
                 }
-            }
+                None => Err(ValueError::IncorrectParameterType),
+            },
 
             t => Err(ValueError::from(RuntimeError {
                 code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
@@ -338,12 +331,12 @@ impl FileManifestValue {
 
     /// FileManifest.install(path, replace=true)
     pub fn install(&self, type_values: &TypeValues, path: String, replace: bool) -> ValueResult {
-        let raw_context = get_context(type_values)?;
-        let context = raw_context
+        let pyoxidizer_context_value = get_context(type_values)?;
+        let pyoxidizer_context = pyoxidizer_context_value
             .downcast_ref::<PyOxidizerEnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
 
-        let dest_path = context.build_path.join(path);
+        let dest_path = pyoxidizer_context.build_path.join(path);
 
         if replace {
             self.manifest.replace_path(&dest_path)
@@ -384,8 +377,8 @@ fn starlark_glob(
         _ => Vec::new(),
     };
 
-    let raw_context = get_context(type_values)?;
-    let context = raw_context
+    let pyoxidizer_context_value = get_context(type_values)?;
+    let pyoxidizer_context = pyoxidizer_context_value
         .downcast_ref::<PyOxidizerEnvironmentContext>()
         .ok_or(ValueError::IncorrectParameterType)?;
 
@@ -393,7 +386,7 @@ fn starlark_glob(
 
     // Evaluate all the includes first.
     for v in include {
-        for p in evaluate_glob(&context.cwd, &v).map_err(|e| {
+        for p in evaluate_glob(&pyoxidizer_context.cwd, &v).map_err(|e| {
             ValueError::from(RuntimeError {
                 code: "PYOXIDIZER_BUILD",
                 message: e.to_string(),
@@ -406,7 +399,7 @@ fn starlark_glob(
 
     // Then apply excludes.
     for v in exclude {
-        for p in evaluate_glob(&context.cwd, &v).map_err(|e| {
+        for p in evaluate_glob(&pyoxidizer_context.cwd, &v).map_err(|e| {
             ValueError::from(RuntimeError {
                 code: "PYOXIDIZER_BUILD",
                 message: e.to_string(),
@@ -676,13 +669,13 @@ mod tests {
 
         env.eval("m.add_python_resource('bin', exe)")?;
         env.eval("m.install('myapp')")?;
-        let raw_context = env.eval("CONTEXT")?;
-        let context = raw_context
+        let pyoxidizer_context_value = get_context(&env.type_values).unwrap();
+        let pyoxidizer_context = pyoxidizer_context_value
             .downcast_ref::<PyOxidizerEnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)
             .unwrap();
 
-        let dest_path = context.build_path.join("myapp");
+        let dest_path = pyoxidizer_context.build_path.join("myapp");
         assert!(dest_path.exists());
 
         // There should be an executable at myapp/bin/testapp[.exe].
