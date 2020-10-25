@@ -1419,7 +1419,6 @@ dependencies = [
  "path-dedot",
  "python-packaging",
  "python-packed-resources",
- "reqwest",
  "rustc_version",
  "semver",
  "serde",
@@ -2253,11 +2252,19 @@ dependencies = [
  "codemap",
  "codemap-diagnostic",
  "glob",
+ "handlebars",
+ "hex",
+ "lazy_static",
+ "reqwest",
+ "sha2 0.9.1",
  "slog",
  "starlark",
  "starlark-dialect-build-targets",
  "tar",
+ "url",
+ "uuid",
  "walkdir 2.3.1",
+ "zip",
 ]
 
 [[package]]

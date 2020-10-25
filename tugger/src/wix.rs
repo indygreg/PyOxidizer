@@ -2,17 +2,18 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use anyhow::{anyhow, Result};
-use handlebars::Handlebars;
-use lazy_static::lazy_static;
-use sha2::Digest;
-use slog::warn;
-use std::collections::BTreeMap;
-use std::io::{BufRead, BufReader, Read, Write};
-use std::path::{Path, PathBuf};
-
-use crate::app_packaging::config::DistributionWixInstaller;
-use crate::app_packaging::state::BuildContext;
+use {
+    crate::http::download_and_verify,
+    anyhow::{anyhow, Result},
+    handlebars::Handlebars,
+    lazy_static::lazy_static,
+    slog::warn,
+    std::{
+        collections::BTreeMap,
+        io::{BufRead, BufReader, Read, Write},
+        path::{Path, PathBuf},
+    },
+};
 
 const TOOLSET_URL: &str =
     "https://github.com/wixtoolset/wix3/releases/download/wix3111rtm/wix311-binaries.zip";
@@ -31,40 +32,19 @@ const VC_REDIST_X64_SHA256: &str =
     "d6cd2445f68815fe02489fafe0127819e44851e26dfbe702612bc0d223cbbc2b";
 
 lazy_static! {
-    static ref HANDLEBARS: Handlebars = {
+    static ref HANDLEBARS: Handlebars<'static> = {
         let mut handlebars = Handlebars::new();
 
         handlebars
-            .register_template_string("main.wxs", include_str!("templates/main.wxs"))
+            .register_template_string("main.wxs", include_str!("templates/wix/main.wxs"))
             .unwrap();
 
         handlebars
-            .register_template_string("bundle.wxs", include_str!("templates/bundle.wxs"))
+            .register_template_string("bundle.wxs", include_str!("templates/wix/bundle.wxs"))
             .unwrap();
 
         handlebars
     };
-}
-
-fn download_and_verify(logger: &slog::Logger, url: &str, hash: &str) -> Result<Vec<u8>> {
-    warn!(logger, "downloading {}", url);
-    let mut response = reqwest::get(url)?;
-
-    let mut data: Vec<u8> = Vec::new();
-    response.read_to_end(&mut data)?;
-
-    warn!(logger, "validating hash...");
-    let mut hasher = sha2::Sha256::new();
-    hasher.input(&data);
-
-    let url_hash = hasher.result().to_vec();
-    let expected_hash = hex::decode(hash)?;
-
-    if expected_hash == url_hash {
-        Ok(data)
-    } else {
-        Err(anyhow!("hash mismatch of downloaded file"))
-    }
 }
 
 fn extract_zip(data: &[u8], path: &Path) -> Result<()> {
@@ -98,6 +78,7 @@ fn extract_wix(logger: &slog::Logger, path: &Path) -> Result<()> {
     extract_zip(&data, path)
 }
 
+/*
 fn app_installer_path(context: &BuildContext) -> PathBuf {
     let arch = match context.target_triple.as_str() {
         "i686-pc-windows-msvc" => "x86",
@@ -108,6 +89,7 @@ fn app_installer_path(context: &BuildContext) -> PathBuf {
         .distributions_path
         .join(format!("{}.{}.msi", context.app_name, arch))
 }
+*/
 
 fn run_heat(
     logger: &slog::Logger,
@@ -159,6 +141,7 @@ fn run_heat(
     }
 }
 
+/*
 fn run_candle(
     logger: &slog::Logger,
     context: &BuildContext,
@@ -208,6 +191,7 @@ fn run_candle(
         Err(anyhow!("error running candle.exe"))
     }
 }
+*/
 
 fn run_light(
     logger: &slog::Logger,
@@ -258,6 +242,7 @@ fn run_light(
     }
 }
 
+/*
 pub fn build_wix_app_installer(
     logger: &slog::Logger,
     context: &BuildContext,
@@ -366,14 +351,16 @@ pub fn build_wix_app_installer(
 
     Ok(())
 }
+*/
 
+/*
 pub fn build_wix_installer(
     logger: &slog::Logger,
     context: &BuildContext,
     wix_config: &DistributionWixInstaller,
 ) -> Result<()> {
     Err(anyhow!("not yet implemented"))
-    /*
+
     // The WiX installer is a unified installer for multiple architectures.
     // So ensure all Windows architectures are built before proceeding. This is
     // a bit hacky and should arguably be handled in a better way. Meh.
@@ -493,5 +480,5 @@ pub fn build_wix_installer(
     )?;
 
     Ok(())
-    */
 }
+    */

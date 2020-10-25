@@ -33,6 +33,7 @@ use {
         path::{Path, PathBuf},
         sync::{Arc, Mutex},
     },
+    tugger::http::get_http_client,
     url::Url,
     uuid::Uuid,
 };
@@ -258,32 +259,6 @@ fn sha256_path(path: &PathBuf) -> Vec<u8> {
     }
 
     hasher.finalize().to_vec()
-}
-
-pub fn get_http_client() -> reqwest::Result<reqwest::blocking::Client> {
-    let mut builder = reqwest::blocking::ClientBuilder::new();
-
-    for (key, value) in std::env::vars() {
-        let key = key.to_lowercase();
-        if key.ends_with("_proxy") {
-            let end = key.len() - "_proxy".len();
-            let schema = &key[..end];
-
-            if let Ok(url) = Url::parse(&value) {
-                if let Some(proxy) = match schema {
-                    "http" => Some(reqwest::Proxy::http(url.as_str())),
-                    "https" => Some(reqwest::Proxy::https(url.as_str())),
-                    _ => None,
-                } {
-                    if let Ok(proxy) = proxy {
-                        builder = builder.proxy(proxy);
-                    }
-                }
-            }
-        }
-    }
-
-    builder.build()
 }
 
 /// Ensure a Python distribution at a URL is available in a local directory.

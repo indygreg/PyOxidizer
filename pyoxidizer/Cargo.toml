@@ -43,7 +43,6 @@ lazy_static = "1.4"
 libc = "0.2"
 linked-hash-map = "0.5"
 path-dedot = "3.0"
-reqwest = { version = "0.10", features = ["blocking"] }
 rustc_version = "0.2"
 semver = "0.9"
 serde = { version = "1.0", features = ["derive"] }
