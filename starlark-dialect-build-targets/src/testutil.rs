@@ -57,7 +57,9 @@ impl StarlarkEnvironment {
             slog::o!(),
         );
 
-        let context = EnvironmentContext::new(&logger);
+        let cwd = std::env::current_dir()?;
+
+        let context = EnvironmentContext::new(&logger, cwd);
 
         let (mut env, mut type_values) = starlark::stdlib::global_environment();
         populate_environment(&mut env, &mut type_values, context)

@@ -5,21 +5,15 @@
 use {
     crate::py_packaging::distribution::DistributionCache,
     anyhow::{Context, Result},
-    path_dedot::ParseDot,
     starlark::{
         environment::{Environment, EnvironmentError, TypeValues},
         values::{
             error::{RuntimeError, ValueError},
-            none::NoneType,
             {Mutable, TypedValue, Value, ValueResult},
-        },
-        {
-            starlark_fun, starlark_module, starlark_parse_param_type, starlark_signature,
-            starlark_signature_extraction, starlark_signatures,
         },
     },
     starlark_dialect_build_targets::{
-        build_targets_module, BuildContext, EnvironmentContext, GetStateError,
+        build_targets_module, get_context_value, BuildContext, EnvironmentContext, GetStateError,
     },
     std::{
         path::{Path, PathBuf},
@@ -55,9 +49,6 @@ pub struct PyOxidizerEnvironmentContext {
     /// Optimization level when building binaries.
     pub build_opt_level: String,
 
-    /// Base directory to use for build state.
-    pub build_path: PathBuf,
-
     /// Cache of ready-to-clone Python distribution objects.
     ///
     /// This exists because constructing a new instance can take a
@@ -87,11 +78,8 @@ impl PyOxidizerEnvironmentContext {
             parent.to_path_buf()
         };
 
-        let build_path = parent.join("build");
-
-        let python_distributions_path = build_path.join("python_distributions");
-        let distribution_cache = distribution_cache
-            .unwrap_or_else(|| Arc::new(DistributionCache::new(Some(&python_distributions_path))));
+        let distribution_cache =
+            distribution_cache.unwrap_or_else(|| Arc::new(DistributionCache::new(None)));
 
         Ok(PyOxidizerEnvironmentContext {
             logger: logger.clone(),
@@ -102,7 +90,6 @@ impl PyOxidizerEnvironmentContext {
             build_target_triple: build_target_triple.to_string(),
             build_release,
             build_opt_level: build_opt_level.to_string(),
-            build_path: build_path.clone(),
             distribution_cache,
         })
     }
@@ -111,22 +98,20 @@ impl PyOxidizerEnvironmentContext {
         &self.logger
     }
 
-    pub fn set_build_path(&mut self, path: &Path) -> Result<()> {
-        let path = if path.is_relative() {
-            self.cwd.join(path)
-        } else {
-            path.to_path_buf()
-        }
-        .parse_dot()?
-        .to_path_buf();
+    pub fn build_path(&self, type_values: &TypeValues) -> Result<PathBuf, ValueError> {
+        let build_targets_context_value = get_context_value(type_values)?;
+        let context = build_targets_context_value
+            .downcast_ref::<EnvironmentContext>()
+            .ok_or(ValueError::IncorrectParameterType)?;
 
-        self.build_path = path.clone();
-
-        Ok(())
+        Ok(context.build_path().to_path_buf())
     }
 
-    pub fn python_distributions_path(&self) -> PathBuf {
-        self.build_path.join("python_distributions")
+    pub fn python_distributions_path(
+        &self,
+        type_values: &TypeValues,
+    ) -> Result<PathBuf, ValueError> {
+        Ok(self.build_path(type_values)?.join("python_distributions"))
     }
 }
 
@@ -222,40 +207,13 @@ pub fn get_context(type_values: &TypeValues) -> ValueResult {
         })
 }
 
-/// set_build_path(path)
-fn starlark_set_build_path(type_values: &TypeValues, path: String) -> ValueResult {
-    let pyoxidizer_context_value = get_context(type_values)?;
-    let mut pyoxidizer_context = pyoxidizer_context_value
-        .downcast_mut::<PyOxidizerEnvironmentContext>()?
-        .ok_or(ValueError::IncorrectParameterType)?;
-
-    pyoxidizer_context
-        .set_build_path(&PathBuf::from(&path))
-        .map_err(|e| {
-            ValueError::from(RuntimeError {
-                code: "PYOXIDIZER_BUILD",
-                message: e.to_string(),
-                label: "set_build_path()".to_string(),
-            })
-        })?;
-
-    Ok(Value::new(NoneType::None))
-}
-
-starlark_module! { global_module =>
-    #[allow(clippy::ptr_arg)]
-    set_build_path(env env, path: String) {
-        starlark_set_build_path(&env, path)
-    }
-}
-
 /// Obtain a Starlark environment for evaluating PyOxidizer configurations.
 pub fn global_environment(
     context: PyOxidizerEnvironmentContext,
     resolve_targets: Option<Vec<String>>,
     build_script_mode: bool,
 ) -> Result<(Environment, TypeValues), EnvironmentError> {
-    let mut build_targets_context = EnvironmentContext::new(context.logger());
+    let mut build_targets_context = EnvironmentContext::new(context.logger(), context.cwd.clone());
 
     if let Some(targets) = resolve_targets {
         build_targets_context.set_resolve_targets(targets);
@@ -272,7 +230,6 @@ pub fn global_environment(
     )?;
 
     build_targets_module(&mut env, &mut type_values);
-    global_module(&mut env, &mut type_values);
     super::file_resource::file_resource_env(&mut env, &mut type_values);
     super::python_distribution::python_distribution_module(&mut env, &mut type_values);
     super::python_executable::python_executable_env(&mut env, &mut type_values);
@@ -294,13 +251,7 @@ pub fn global_environment(
     // available via the type object API. This is a bit hacky. But it allows
     // Rust code with only access to the TypeValues dictionary to retrieve
     // these globals.
-    for f in &[
-        "set_build_path",
-        "CONTEXT",
-        "CWD",
-        "CONFIG_PATH",
-        "BUILD_TARGET_TRIPLE",
-    ] {
+    for f in &["CONTEXT", "CWD", "CONFIG_PATH", "BUILD_TARGET_TRIPLE"] {
         type_values.add_type_value(PyOxidizerContext::TYPE, f, env.get(f)?);
     }
 

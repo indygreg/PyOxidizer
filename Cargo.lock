@@ -1989,6 +1989,7 @@ dependencies = [
  "codemap",
  "codemap-diagnostic",
  "linked-hash-map",
+ "path-dedot",
  "slog",
  "starlark",
 ]

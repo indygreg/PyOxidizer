@@ -336,7 +336,7 @@ impl FileManifestValue {
             .downcast_ref::<PyOxidizerEnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
 
-        let dest_path = pyoxidizer_context.build_path.join(path);
+        let dest_path = pyoxidizer_context.build_path(type_values)?.join(path);
 
         if replace {
             self.manifest.replace_path(&dest_path)
@@ -675,7 +675,10 @@ mod tests {
             .ok_or(ValueError::IncorrectParameterType)
             .unwrap();
 
-        let dest_path = pyoxidizer_context.build_path.join("myapp");
+        let dest_path = pyoxidizer_context
+            .build_path(&env.type_values)
+            .unwrap()
+            .join("myapp");
         assert!(dest_path.exists());
 
         // There should be an executable at myapp/bin/testapp[.exe].

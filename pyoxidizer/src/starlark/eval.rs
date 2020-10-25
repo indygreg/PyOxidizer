@@ -170,7 +170,8 @@ impl EvaluationContext {
             .ok_or_else(|| anyhow!("context has incorrect type"))?;
 
         let output_path = pyoxidizer_context
-            .build_path
+            .build_path(&self.type_values)
+            .map_err(|_| anyhow!("unable to resolve build path"))?
             .join(&pyoxidizer_context.build_target_triple)
             .join(if pyoxidizer_context.build_release {
                 "release"

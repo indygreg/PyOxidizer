@@ -8,6 +8,7 @@ pub mod testutil;
 use {
     anyhow::{anyhow, Result},
     linked_hash_map::LinkedHashMap,
+    path_dedot::ParseDot,
     slog::warn,
     starlark::{
         environment::{Environment, EnvironmentError, TypeValues},
@@ -135,6 +136,12 @@ pub trait BuildTarget {
 pub struct EnvironmentContext {
     logger: slog::Logger,
 
+    /// Current working directory.
+    cwd: PathBuf,
+
+    /// Default output directory.
+    build_path: PathBuf,
+
     /// Registered targets.
     ///
     /// A target is a name and a Starlark callable.
@@ -160,9 +167,13 @@ pub struct EnvironmentContext {
 }
 
 impl EnvironmentContext {
-    pub fn new(logger: &slog::Logger) -> Self {
+    pub fn new(logger: &slog::Logger, cwd: PathBuf) -> Self {
+        let build_path = cwd.join("build");
+
         Self {
             logger: logger.clone(),
+            cwd,
+            build_path,
             targets: BTreeMap::new(),
             targets_order: vec![],
             default_target: None,
@@ -175,6 +186,26 @@ impl EnvironmentContext {
     /// Obtain a logger for this instance.
     pub fn logger(&self) -> &slog::Logger {
         &self.logger
+    }
+
+    /// Directory to use for the build path.
+    pub fn build_path(&self) -> &Path {
+        &self.build_path
+    }
+
+    /// Update the directory to use for the build path.
+    pub fn set_build_path(&mut self, path: &Path) -> Result<()> {
+        let path = if path.is_relative() {
+            self.cwd.join(path)
+        } else {
+            path.to_path_buf()
+        }
+        .parse_dot()?
+        .to_path_buf();
+
+        self.build_path = path;
+
+        Ok(())
     }
 
     /// Obtain all registered targets.
@@ -650,6 +681,24 @@ fn starlark_resolve_targets(type_values: &TypeValues, call_stack: &mut CallStack
     Ok(Value::new(NoneType::None))
 }
 
+/// set_build_path(path)
+fn starlark_set_build_path(type_values: &TypeValues, path: String) -> ValueResult {
+    let context_value = get_context_value(type_values)?;
+    let mut context = context_value
+        .downcast_mut::<EnvironmentContext>()?
+        .ok_or(ValueError::IncorrectParameterType)?;
+
+    context.set_build_path(&PathBuf::from(&path)).map_err(|e| {
+        ValueError::from(RuntimeError {
+            code: "BUILD_TARGETS",
+            message: e.to_string(),
+            label: "set_build_path()".to_string(),
+        })
+    })?;
+
+    Ok(Value::new(NoneType::None))
+}
+
 starlark_module! { build_targets_module =>
     print(env env, *args) {
         starlark_print(&env, &args)
@@ -673,6 +722,10 @@ starlark_module! { build_targets_module =>
     resolve_targets(env env, call_stack cs) {
         starlark_resolve_targets(&env, cs)
     }
+
+    set_build_path(env env, path: String) {
+        starlark_set_build_path(&env, path)
+    }
 }
 
 /// Populate a Starlark environment with our dialect.
@@ -693,6 +746,7 @@ pub fn populate_environment(
         "register_target",
         "resolve_target",
         "resolve_targets",
+        "set_build_path",
         ENVIRONMENT_CONTEXT_SYMBOL,
     ] {
         type_values.add_type_value(PlaceholderContext::TYPE, f, env.get(f)?);
