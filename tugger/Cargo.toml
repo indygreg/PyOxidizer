@@ -16,6 +16,8 @@ codemap-diagnostic = "0.1"
 glob = "0.3"
 slog = "2.4"
 starlark = "0.3.1"
+tar = "0.4"
+walkdir = "2"
 
 [dependencies.starlark-dialect-build-targets]
 version = "0.1.0-pre"

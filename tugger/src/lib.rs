@@ -22,3 +22,4 @@ PyOxidizer.
 pub mod file_resource;
 pub mod glob;
 pub mod starlark;
+pub mod tarball;

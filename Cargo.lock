@@ -2256,6 +2256,8 @@ dependencies = [
  "slog",
  "starlark",
  "starlark-dialect-build-targets",
+ "tar",
+ "walkdir 2.3.1",
 ]
 
 [[package]]
