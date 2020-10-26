@@ -7,6 +7,7 @@ use {
     std::{
         collections::{btree_map::Iter, BTreeMap, BTreeSet},
         convert::TryFrom,
+        ffi::OsStr,
         io::Write,
         path::{Path, PathBuf},
     },
@@ -69,7 +70,8 @@ pub struct FileManifest {
 
 impl FileManifest {
     /// Add a file to the manifest.
-    pub fn add_file(&mut self, path: &Path, content: &FileContent) -> Result<()> {
+    pub fn add_file<P: AsRef<Path>>(&mut self, path: P, content: &FileContent) -> Result<()> {
+        let path = path.as_ref();
         let path_s = path.display().to_string();
 
         if path_s.contains("..") {
@@ -133,6 +135,46 @@ impl FileManifest {
         self.files.iter()
     }
 
+    /// Obtain entries in this manifest grouped by directory.
+    ///
+    /// The returned map has keys corresponding to the relative directory and
+    /// values of files in that directory.
+    ///
+    /// The root directory is modeled by the `None` key.
+    pub fn entries_by_directory(&self) -> BTreeMap<Option<&Path>, BTreeMap<&OsStr, &FileContent>> {
+        let mut res = BTreeMap::new();
+
+        for (path, content) in &self.files {
+            let parent = match path.parent() {
+                Some(p) => {
+                    if p == Path::new("") {
+                        None
+                    } else {
+                        Some(p)
+                    }
+                }
+                None => None,
+            };
+            let filename = path.file_name().unwrap();
+
+            let entry = res.entry(parent).or_insert_with(BTreeMap::new);
+            entry.insert(filename, content);
+
+            // Ensure there are keys for all parents.
+            if let Some(parent) = parent {
+                let mut parent = parent.parent();
+                while parent.is_some() && parent != Some(Path::new("")) {
+                    res.entry(parent).or_insert_with(BTreeMap::new);
+                    parent = parent.unwrap().parent();
+                }
+            }
+        }
+
+        res.entry(None).or_insert_with(BTreeMap::new);
+
+        res
+    }
+
     /// Whether this manifest contains the specified file path.
     pub fn has_path(&self, path: &Path) -> bool {
         self.files.contains_key(path)
@@ -172,7 +214,7 @@ impl FileManifest {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use {super::*, std::iter::FromIterator};
 
     #[test]
     fn test_add() {
@@ -246,5 +288,66 @@ mod tests {
                 PathBuf::from("/tmp/dir1/dir2")
             ]
         )
+    }
+
+    #[test]
+    fn test_entries_by_directory() -> Result<()> {
+        let c = FileContent {
+            data: vec![42],
+            executable: false,
+        };
+
+        let mut m = FileManifest::default();
+        m.add_file(Path::new("root.txt"), &c)?;
+        m.add_file(Path::new("dir0/dir0_file0.txt"), &c)?;
+        m.add_file(Path::new("dir0/child0/dir0_child0_file0.txt"), &c)?;
+        m.add_file(Path::new("dir0/child0/dir0_child0_file1.txt"), &c)?;
+        m.add_file(Path::new("dir0/child1/dir0_child1_file0.txt"), &c)?;
+        m.add_file(Path::new("dir1/child0/dir1_child0_file0.txt"), &c)?;
+
+        let entries = m.entries_by_directory();
+
+        assert_eq!(entries.keys().count(), 6);
+        assert_eq!(
+            entries.keys().collect::<Vec<_>>(),
+            vec![
+                &None,
+                &Some(Path::new("dir0")),
+                &Some(Path::new("dir0/child0")),
+                &Some(Path::new("dir0/child1")),
+                &Some(Path::new("dir1")),
+                &Some(Path::new("dir1/child0")),
+            ]
+        );
+
+        assert_eq!(
+            entries.get(&None).unwrap(),
+            &BTreeMap::from_iter([(OsStr::new("root.txt"), &c),].iter().cloned())
+        );
+        assert_eq!(
+            entries.get(&Some(Path::new("dir0"))).unwrap(),
+            &BTreeMap::from_iter([(OsStr::new("dir0_file0.txt"), &c)].iter().cloned())
+        );
+        assert_eq!(
+            entries.get(&Some(Path::new("dir0/child0"))).unwrap(),
+            &BTreeMap::from_iter(
+                [
+                    (OsStr::new("dir0_child0_file0.txt"), &c),
+                    (OsStr::new("dir0_child0_file1.txt"), &c)
+                ]
+                .iter()
+                .cloned()
+            )
+        );
+        assert_eq!(
+            entries.get(&Some(Path::new("dir0/child1"))).unwrap(),
+            &BTreeMap::from_iter([(OsStr::new("dir0_child1_file0.txt"), &c)].iter().cloned())
+        );
+        assert_eq!(
+            entries.get(&Some(Path::new("dir1/child0"))).unwrap(),
+            &BTreeMap::from_iter([(OsStr::new("dir1_child0_file0.txt"), &c)].iter().cloned())
+        );
+
+        Ok(())
     }
 }

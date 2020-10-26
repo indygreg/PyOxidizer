@@ -8,11 +8,13 @@ description = "Package and distribute applications"
 homepage = "https://github.com/indygreg/PyOxidizer"
 repository = "https://github.com/indygreg/PyOxidizer.git"
 readme = "README.md"
+build = "build.rs"
 
 [dependencies]
 anyhow = "1.0"
 codemap = "0.1"
 codemap-diagnostic = "0.1"
+duct = "0.13"
 handlebars = "3.0"
 glob = "0.3"
 hex = "0.4"
@@ -25,6 +27,7 @@ tar = "0.4"
 url = "2.1"
 uuid = { version = "0.8", features = ["v4", "v5"] }
 walkdir = "2"
+xml-rs = "0.8"
 zip = "0.5"
 
 [dependencies.starlark-dialect-build-targets]

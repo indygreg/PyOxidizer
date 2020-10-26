@@ -2251,6 +2251,7 @@ dependencies = [
  "anyhow",
  "codemap",
  "codemap-diagnostic",
+ "duct",
  "glob",
  "handlebars",
  "hex",
@@ -2264,6 +2265,7 @@ dependencies = [
  "url",
  "uuid",
  "walkdir 2.3.1",
+ "xml-rs",
  "zip",
 ]
 
@@ -2585,6 +2587,12 @@ checksum = "244c3741f4240ef46274860397c7c74e50eb23624996930e484c16679633a54c"
 dependencies = [
  "libc",
 ]
+
+[[package]]
+name = "xml-rs"
+version = "0.8.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b07db065a5cf61a7e4ba64f29e67db906fb1787316516c4e6e5ff0fea1efcd8a"
 
 [[package]]
 name = "zip"
