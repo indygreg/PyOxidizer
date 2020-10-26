@@ -14,30 +14,6 @@ use {
     },
 };
 
-/// A slog Drain that uses println!.
-pub struct PrintlnDrain {
-    /// Minimum logging level that we're emitting.
-    pub min_level: slog::Level,
-}
-
-/// slog Drain that uses println!.
-impl slog::Drain for PrintlnDrain {
-    type Ok = ();
-    type Err = std::io::Error;
-
-    fn log(
-        &self,
-        record: &slog::Record,
-        _values: &slog::OwnedKVList,
-    ) -> Result<Self::Ok, Self::Err> {
-        if record.level().is_at_least(self.min_level) {
-            println!("{}", record.msg());
-        }
-
-        Ok(())
-    }
-}
-
 /// A Starlark execution environment.
 ///
 /// Provides convenience wrappers for common functionality.

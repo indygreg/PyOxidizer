@@ -163,7 +163,7 @@ fn write_file_manifest_to_wix<W: Write, P: AsRef<Path>>(
         };
 
         writer.write(XmlEvent::start_element("Fragment"))?;
-        writer.write(XmlEvent::start_element("DirectoryRef").attr("id", &parent_directory_id))?;
+        writer.write(XmlEvent::start_element("DirectoryRef").attr("Id", &parent_directory_id))?;
 
         // Add <Directory> entries for children directories.
         for (child_id, name) in directories
@@ -368,7 +368,12 @@ impl WiXInstallerBuilder {
     }
 
     /// Produce an MSI installer using the configuration in this builder.
-    pub fn build_msi<P: AsRef<Path>>(&self, logger: &slog::Logger, build_path: P) -> Result<()> {
+    pub fn build_msi<P: AsRef<Path>>(
+        &self,
+        logger: &slog::Logger,
+        build_path: P,
+        output_path: P,
+    ) -> Result<()> {
         let build_path = build_path.as_ref();
 
         let wix_toolset_path = build_path.join("wix-toolset");
@@ -426,6 +431,7 @@ impl WiXInstallerBuilder {
             build_path,
             wixobj_paths.iter(),
             self.variables.iter().map(|(k, v)| (k.clone(), v.clone())),
+            output_path,
         )?;
 
         Ok(())
@@ -495,7 +501,12 @@ impl WiXBundleInstallerBuilder {
     }
 
     /// Produce an executable containing defined components.
-    pub fn build_exe<P: AsRef<Path>>(&self, logger: &slog::Logger, build_path: P) -> Result<()> {
+    pub fn build_exe<P: AsRef<Path>>(
+        &self,
+        logger: &slog::Logger,
+        build_path: P,
+        output_path: P,
+    ) -> Result<()> {
         let build_path = build_path.as_ref();
 
         let wix_toolset_path = build_path.join("wix-toolset");
@@ -541,6 +552,7 @@ impl WiXBundleInstallerBuilder {
             build_path,
             wixobj_paths.iter(),
             self.variables.iter().map(|(k, v)| (k.clone(), v.clone())),
+            output_path,
         )?;
 
         Ok(())
@@ -732,12 +744,13 @@ fn run_candle<P: AsRef<Path>, S: AsRef<str>>(
 /// `wixobjs` is an iterable of paths defining `.wixobj` files to link together.
 ///
 /// `variables` are extra variables to define via `-d<k>[=<v>]`.
-fn run_light<P1: AsRef<Path>, P2: AsRef<Path>, P3: AsRef<Path>, S: AsRef<str>>(
+fn run_light<P1: AsRef<Path>, P2: AsRef<Path>, P3: AsRef<Path>, P4: AsRef<Path>, S: AsRef<str>>(
     logger: &slog::Logger,
     wix_toolset_path: P1,
     build_path: P2,
     wixobjs: impl Iterator<Item = P3>,
     variables: impl Iterator<Item = (S, Option<S>)>,
+    output_path: P4,
 ) -> Result<()> {
     let light_path = wix_toolset_path.as_ref().join("light.exe");
 
@@ -749,6 +762,8 @@ fn run_light<P1: AsRef<Path>, P2: AsRef<Path>, P3: AsRef<Path>, S: AsRef<str>>(
         "WixBalExtension".to_string(),
         "-ext".to_string(),
         "WixUtilExtension".to_string(),
+        "-out".to_string(),
+        output_path.as_ref().display().to_string(),
     ];
 
     for (k, v) in variables {
@@ -788,7 +803,10 @@ fn run_light<P1: AsRef<Path>, P2: AsRef<Path>, P3: AsRef<Path>, S: AsRef<str>>(
 
 #[cfg(test)]
 mod tests {
-    use {super::*, crate::file_resource::FileContent};
+    use {
+        super::*,
+        crate::{file_resource::FileContent, testutil::*},
+    };
 
     #[test]
     fn test_file_manifest_to_wix() -> Result<()> {
@@ -818,6 +836,25 @@ mod tests {
         String::from_utf8(emitter.into_inner().into_inner()?)?;
 
         // TODO validate XML.
+
+        Ok(())
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn test_installer_builder_simple() -> Result<()> {
+        let temp_dir = tempdir::TempDir::new("tugger-test")?;
+
+        let logger = get_logger()?;
+
+        let mut builder = WiXInstallerBuilder::new(env!("HOST").to_string());
+        builder.add_simple_wxs("testapp", "0.1", "manufacturer")?;
+
+        let output_path = temp_dir.path().join("test.msi");
+
+        assert!(builder
+            .build_msi(&logger, temp_dir.path(), &output_path)
+            .is_err());
 
         Ok(())
     }

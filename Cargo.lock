@@ -2262,6 +2262,7 @@ dependencies = [
  "starlark",
  "starlark-dialect-build-targets",
  "tar",
+ "tempdir",
  "url",
  "uuid",
  "walkdir 2.3.1",
