@@ -3,7 +3,11 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    crate::{file_resource::FileManifest, http::download_and_verify, zipfile::extract_zip},
+    crate::{
+        file_resource::{FileContent, FileManifest},
+        http::download_and_verify,
+        zipfile::extract_zip,
+    },
     anyhow::{anyhow, Result},
     duct::cmd,
     handlebars::Handlebars,
@@ -12,6 +16,7 @@ use {
     std::{
         borrow::Cow,
         collections::BTreeMap,
+        convert::TryFrom,
         ffi::OsStr,
         io::{BufRead, BufReader, Write},
         path::{Path, PathBuf},
@@ -259,6 +264,11 @@ pub struct WiXInstallerBuilder {
 
     /// Variables to define when running light.
     variables: BTreeMap<String, Option<String>>,
+
+    /// wxs files defining the WiX installer.
+    ///
+    /// These files will be materialized and processed when building.
+    wxs_files: FileManifest,
 }
 
 impl WiXInstallerBuilder {
@@ -269,6 +279,7 @@ impl WiXInstallerBuilder {
             install_files: FileManifest::default(),
             preprocess_parameters: BTreeMap::new(),
             variables: BTreeMap::new(),
+            wxs_files: FileManifest::default(),
         }
     }
 
@@ -288,6 +299,74 @@ impl WiXInstallerBuilder {
             .insert(key.to_string(), value.map(|x| x.to_string()));
     }
 
+    /// Add content for a `.wxs` file to be processed.
+    ///
+    /// The file data will be materialized at `path` in a build directory.
+    pub fn add_wxs_file_content<P: AsRef<Path>>(
+        &mut self,
+        path: P,
+        content: &FileContent,
+    ) -> Result<()> {
+        self.wxs_files.add_file(path, content)
+    }
+
+    /// Add a `.wxs` file to be processed from a filesystem file.
+    ///
+    /// The file will be copied into the root directory of a staging area
+    /// as part of building. If the file needs to exist in a sub-directory,
+    /// use `add_wxs_file_content()` to explicitly control the installed
+    /// path.
+    pub fn add_wxs_file<P: AsRef<Path>>(&mut self, path: P) -> Result<()> {
+        let content = FileContent::try_from(path.as_ref())?;
+
+        let name = path
+            .as_ref()
+            .file_name()
+            .ok_or_else(|| anyhow!("could not resolve file name"))?;
+
+        self.wxs_files.add_file(PathBuf::from(name), &content)
+    }
+
+    /// Add a simple wxs file defining an installer.
+    ///
+    /// The wxs file is maintained as part of Tugger and contains defaults
+    /// for simple program installs.
+    pub fn add_simple_wxs(
+        &mut self,
+        product_name: &str,
+        version: &str,
+        manufacturer: &str,
+    ) -> Result<()> {
+        let mut data = BTreeMap::new();
+
+        let upgrade_code = self.upgrade_code(product_name);
+
+        data.insert(
+            "product_name",
+            xml::escape::escape_str_attribute(product_name),
+        );
+        data.insert(
+            "upgrade_code",
+            xml::escape::escape_str_attribute(&upgrade_code),
+        );
+        data.insert(
+            "manufacturer",
+            xml::escape::escape_str_attribute(manufacturer),
+        );
+        data.insert("version", xml::escape::escape_str_attribute(version));
+        // path_component_guid
+
+        let t = HANDLEBARS.render("main.wxs", &data)?;
+
+        self.add_wxs_file_content(
+            Path::new("main.wxs"),
+            &FileContent {
+                data: t.into_bytes(),
+                executable: false,
+            },
+        )
+    }
+
     /// Produce an MSI installer using the configuration in this builder.
     pub fn build_msi<P: AsRef<Path>>(&self, logger: &slog::Logger, build_path: P) -> Result<()> {
         let build_path = build_path.as_ref();
@@ -300,6 +379,10 @@ impl WiXInstallerBuilder {
         self.install_files.write_to_path(&stage_path)?;
 
         let wxs_path = build_path.join("wxs");
+
+        // Materialize the registered wxs files.
+        self.wxs_files.write_to_path(&wxs_path)?;
+
         let mut emitter_config = EmitterConfig::new();
         emitter_config.perform_indent = true;
 
@@ -316,16 +399,26 @@ impl WiXInstallerBuilder {
             )?;
         }
 
-        let mut wixobj_paths = vec![];
+        let all_wxs_paths = self
+            .wxs_files
+            .entries()
+            .map(|(p, _)| wxs_path.join(p))
+            .chain(vec![files_wxs_path])
+            .collect::<Vec<_>>();
 
-        wixobj_paths.push(run_candle(
-            logger,
-            &wix_toolset_path,
-            &files_wxs_path,
-            target_triple_to_wix_arch(&self.target_triple),
-            self.preprocess_parameters.iter(),
-            None,
-        )?);
+        let wixobj_paths = all_wxs_paths
+            .iter()
+            .map(|p| {
+                run_candle(
+                    logger,
+                    &wix_toolset_path,
+                    &p,
+                    target_triple_to_wix_arch(&self.target_triple),
+                    self.preprocess_parameters.iter(),
+                    None,
+                )
+            })
+            .collect::<Result<Vec<_>>>()?;
 
         run_light(
             logger,
@@ -336,6 +429,14 @@ impl WiXInstallerBuilder {
         )?;
 
         Ok(())
+    }
+
+    fn upgrade_code(&self, name: &str) -> String {
+        Uuid::new_v5(
+            &Uuid::NAMESPACE_DNS,
+            format!("tugger.installer.{}.{}", name, &self.target_triple).as_bytes(),
+        )
+        .to_string()
     }
 }
 
@@ -685,117 +786,6 @@ fn run_light<P1: AsRef<Path>, P2: AsRef<Path>, P3: AsRef<Path>, S: AsRef<str>>(
     }
 }
 
-/*
-pub fn build_wix_app_installer(
-    logger: &slog::Logger,
-    context: &BuildContext,
-    wix_config: &DistributionWixInstaller,
-    wix_toolset_path: &Path,
-) -> Result<()> {
-    let arch = match context.target_triple.as_str() {
-        "i686-pc-windows-msvc" => "x86",
-        "x86_64-pc-windows-msvc" => "x64",
-        target => return Err(anyhow!("unhandled target triple: {}", target)),
-    };
-
-    let output_path = context.build_path.join("wix").join(arch);
-
-    let mut data = BTreeMap::new();
-    data.insert("product_name", &context.app_name);
-
-    let cargo_package = context
-        .cargo_config
-        .package
-        .clone()
-        .ok_or_else(|| anyhow!("no [package] found in Cargo.toml"))?;
-
-    data.insert("version", &cargo_package.version);
-
-    let manufacturer =
-        xml::escape::escape_str_attribute(&cargo_package.authors.join(", ")).to_string();
-    data.insert("manufacturer", &manufacturer);
-
-    let upgrade_code = if arch == "x86" {
-        if let Some(ref code) = wix_config.msi_upgrade_code_x86 {
-            code.clone()
-        } else {
-            uuid::Uuid::new_v5(
-                &uuid::Uuid::NAMESPACE_DNS,
-                format!("pyoxidizer.{}.app.x86", context.app_name).as_bytes(),
-            )
-            .to_string()
-        }
-    } else if arch == "x64" {
-        if let Some(ref code) = wix_config.msi_upgrade_code_amd64 {
-            code.clone()
-        } else {
-            uuid::Uuid::new_v5(
-                &uuid::Uuid::NAMESPACE_DNS,
-                format!("pyoxidizer.{}.app.x64", context.app_name).as_bytes(),
-            )
-            .to_string()
-        }
-    } else {
-        panic!("unhandled arch: {}", arch);
-    };
-
-    data.insert("upgrade_code", &upgrade_code);
-
-    let path_component_guid = uuid::Uuid::new_v4().to_string();
-    data.insert("path_component_guid", &path_component_guid);
-
-    let app_exe_name = context
-        .app_exe_path
-        .file_name()
-        .unwrap()
-        .to_string_lossy()
-        .to_string();
-    data.insert("app_exe_name", &app_exe_name);
-
-    let app_exe_source = context.app_exe_path.display().to_string();
-    data.insert("app_exe_source", &app_exe_source);
-
-    let t = HANDLEBARS.render("main.wxs", &data)?;
-
-    if output_path.exists() {
-        std::fs::remove_dir_all(&output_path)?;
-    }
-
-    std::fs::create_dir_all(&output_path)?;
-
-    let main_wxs_path = output_path.join("main.wxs");
-    std::fs::write(&main_wxs_path, t)?;
-
-    run_heat(
-        logger,
-        &wix_toolset_path,
-        &output_path,
-        &context.app_path,
-        arch,
-    )?;
-
-    let input_basenames = vec!["main", "appdir"];
-
-    // compile the .wxs files into .wixobj with candle.
-    for basename in &input_basenames {
-        let wxs = format!("{}.wxs", basename);
-        run_candle(logger, context, &wix_toolset_path, &output_path, &wxs)?;
-    }
-
-    // First produce an MSI for our application.
-    let wixobjs = vec!["main.wixobj", "appdir.wixobj"];
-    run_light(
-        logger,
-        &wix_toolset_path,
-        &output_path,
-        &wixobjs,
-        &app_installer_path(context),
-    )?;
-
-    Ok(())
-}
-*/
-
 #[cfg(test)]
 mod tests {
     use {super::*, crate::file_resource::FileContent};
@@ -825,7 +815,7 @@ mod tests {
         let install_prefix = Path::new("/install-prefix");
 
         write_file_manifest_to_wix(&mut emitter, &m, &install_prefix, "root", "prefix")?;
-        let xml = String::from_utf8(emitter.into_inner().into_inner()?)?;
+        String::from_utf8(emitter.into_inner().into_inner()?)?;
 
         // TODO validate XML.
 
