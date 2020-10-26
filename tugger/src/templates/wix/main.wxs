@@ -58,7 +58,7 @@
                 AllowAdvertise="no"
                 Display="expand"
                 Absent="disallow">
-            <ComponentGroupRef Id="AppFiles"/>
+            <ComponentGroupRef Id="{{{product_name}}}.group.ROOT"/>
             <Feature
                     Id="Environment"
                     Title="PATH Environment Variable"

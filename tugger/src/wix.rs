@@ -72,23 +72,17 @@ fn directory_to_id(prefix: &str, path: &Path) -> String {
 const GUID_NAMESPACE: &str = "https://github.com/indygreg/PyOxidizer/tugger/wix";
 
 /// Compute the GUID of a component.
-fn component_guid(prefix: &str, path: &OsStr) -> String {
+fn component_guid(prefix: &str, path: &Path) -> String {
     Uuid::new_v5(
         &Uuid::NAMESPACE_URL,
-        format!(
-            "{}/{}/component/{}",
-            GUID_NAMESPACE,
-            prefix,
-            path.to_string_lossy()
-        )
-        .as_bytes(),
+        format!("{}/{}/component/{}", GUID_NAMESPACE, prefix, path.display()).as_bytes(),
     )
     .to_hyphenated()
     .encode_upper(&mut Uuid::encode_buffer())
     .to_string()
 }
 
-fn component_id(prefix: &str, path: &OsStr) -> String {
+fn component_id(prefix: &str, path: &Path) -> String {
     let guid = component_guid(prefix, path);
 
     format!("{}.component.{}", prefix, guid.to_lowercase())
@@ -114,6 +108,17 @@ fn file_id(prefix: &str, path: &OsStr) -> String {
     let guid = file_guid(prefix, path);
 
     format!("{}.file.{}", prefix, guid.to_lowercase().replace('-', "_"))
+}
+
+fn component_group_id(prefix: &str, path: &Path) -> String {
+    format!(
+        "{}.group.{}",
+        prefix,
+        path.display()
+            .to_string()
+            .replace('/', ".")
+            .replace('-', "_")
+    )
 }
 
 /// Convert a `FileManifest` to WiX XML defining those files.
@@ -204,8 +209,13 @@ fn write_file_manifest_to_wix<W: Write, P: AsRef<Path>>(
 
         // Add `<Component>` for files in this directory.
         for filename in files.keys() {
-            let guid = component_guid(id_prefix, filename);
-            let id = component_id(id_prefix, filename);
+            let rel_path = match directory {
+                Some(d) => d.join(filename),
+                None => PathBuf::from(filename),
+            };
+
+            let guid = component_guid(id_prefix, &rel_path);
+            let id = component_id(id_prefix, &rel_path);
 
             writer.write(
                 XmlEvent::start_element("Component")
@@ -232,6 +242,41 @@ fn write_file_manifest_to_wix<W: Write, P: AsRef<Path>>(
         }
 
         // </DirectoryRef>
+        writer.write(XmlEvent::end_element())?;
+        // </Fragment>
+        writer.write(XmlEvent::end_element())?;
+
+        // Add a <Fragment> to define a component group for this directory tree.
+        writer.write(XmlEvent::start_element("Fragment"))?;
+
+        let component_group_id = match directory {
+            Some(path) => component_group_id(id_prefix, path),
+            None => component_group_id(id_prefix, Path::new(root_directory_id)),
+        };
+
+        writer.write(XmlEvent::start_element("ComponentGroup").attr("Id", &component_group_id))?;
+
+        // Every file in this directory tree is part of this group. We could do
+        // this more efficiently by using <ComponentGroupRef>. But since this is
+        // an auto-generated file, the redundancy isn't too harmful.
+        for p in manifest.entries().filter_map(|(p, _)| {
+            if let Some(base) = directory {
+                if p.starts_with(base) {
+                    Some(p)
+                } else {
+                    None
+                }
+            } else {
+                Some(p)
+            }
+        }) {
+            let component_id = component_id(id_prefix, &p);
+
+            writer.write(XmlEvent::start_element("ComponentRef").attr("Id", &component_id))?;
+            writer.write(XmlEvent::end_element())?;
+        }
+
+        // </ComponentGroup>
         writer.write(XmlEvent::end_element())?;
         // </Fragment>
         writer.write(XmlEvent::end_element())?;
@@ -372,6 +417,7 @@ impl WiXInstallerBuilder {
         &self,
         logger: &slog::Logger,
         build_path: P,
+        id_prefix: &str,
         output_path: P,
     ) -> Result<()> {
         let build_path = build_path.as_ref();
@@ -399,8 +445,8 @@ impl WiXInstallerBuilder {
                 &mut emitter,
                 &self.install_files,
                 &stage_path,
-                "foo",
-                "bar",
+                "ROOT",
+                id_prefix,
             )?;
         }
 
@@ -852,9 +898,7 @@ mod tests {
 
         let output_path = temp_dir.path().join("test.msi");
 
-        assert!(builder
-            .build_msi(&logger, temp_dir.path(), &output_path)
-            .is_err());
+        builder.build_msi(&logger, temp_dir.path(), "testapp", &output_path)?;
 
         Ok(())
     }
