@@ -10,6 +10,12 @@ use {
     url::Url,
 };
 
+/// Defines remote content that can be downloaded securely.
+pub struct RemoteContent {
+    pub url: String,
+    pub sha256: String,
+}
+
 fn sha256_path<P: AsRef<Path>>(path: P) -> Result<Vec<u8>> {
     let mut hasher = sha2::Sha256::new();
     let fh = std::fs::File::open(&path)?;
@@ -56,9 +62,9 @@ pub fn get_http_client() -> reqwest::Result<reqwest::blocking::Client> {
 }
 
 /// Fetch a URL and verify its SHA-256 matches expectations.
-pub fn download_and_verify(logger: &slog::Logger, url: &str, hash: &str) -> Result<Vec<u8>> {
-    warn!(logger, "downloading {}", url);
-    let url = Url::parse(url)?;
+pub fn download_and_verify(logger: &slog::Logger, entry: &RemoteContent) -> Result<Vec<u8>> {
+    warn!(logger, "downloading {}", entry.url);
+    let url = Url::parse(&entry.url)?;
     let client = get_http_client()?;
     let mut response = client.get(url).send()?;
 
@@ -70,7 +76,7 @@ pub fn download_and_verify(logger: &slog::Logger, url: &str, hash: &str) -> Resu
     hasher.update(&data);
 
     let url_hash = hasher.finalize().to_vec();
-    let expected_hash = hex::decode(hash)?;
+    let expected_hash = hex::decode(&entry.sha256)?;
 
     if expected_hash == url_hash {
         Ok(data)
@@ -82,13 +88,12 @@ pub fn download_and_verify(logger: &slog::Logger, url: &str, hash: &str) -> Resu
 /// Ensure a URL with specified hash exists in a local filesystem path.
 pub fn download_to_path<P: AsRef<Path>>(
     logger: &slog::Logger,
-    url: &str,
-    sha256: &str,
+    entry: &RemoteContent,
     dest_path: P,
 ) -> Result<()> {
     let dest_path = dest_path.as_ref();
 
-    let expected_hash = hex::decode(sha256)?;
+    let expected_hash = hex::decode(&entry.sha256)?;
 
     if dest_path.exists() {
         let file_hash = sha256_path(dest_path)?;
@@ -101,7 +106,7 @@ pub fn download_to_path<P: AsRef<Path>>(
         std::fs::remove_file(dest_path)?;
     }
 
-    let data = download_and_verify(logger, url, sha256)?;
+    let data = download_and_verify(logger, entry)?;
     let temp_path = dest_path.with_file_name(format!(
         "{}.tmp",
         dest_path
