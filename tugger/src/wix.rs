@@ -473,8 +473,7 @@ impl WiXInstallerBuilder {
 
     /// Produce an MSI installer using the configuration in this builder.
     pub fn build_msi<P: AsRef<Path>>(&self, logger: &slog::Logger, output_path: P) -> Result<()> {
-        let wix_toolset_path = self.build_path.join("wix-toolset");
-        extract_wix(logger, &wix_toolset_path)?;
+        let wix_toolset_path = extract_wix(logger, &self.build_path)?;
 
         // Materialize FileManifest so we can reference files from WiX.
         self.install_files.write_to_path(&self.stage_path())?;
@@ -591,8 +590,7 @@ impl WiXBundleInstallerBuilder {
     ) -> Result<()> {
         let build_path = build_path.as_ref();
 
-        let wix_toolset_path = build_path.join("wix-toolset");
-        extract_wix(logger, &wix_toolset_path)?;
+        let wix_toolset_path = extract_wix(logger, &build_path)?;
 
         let redist_x86_path = build_path.join("vc_redist.x86.exe");
         let redist_x64_path = build_path.join("vc_redist.x64.exe");
@@ -750,18 +748,23 @@ impl WiXBundleInstallerBuilder {
     }
 }
 
-fn extract_wix<P: AsRef<Path>>(logger: &slog::Logger, path: P) -> Result<()> {
-    warn!(logger, "downloading WiX Toolset...");
-    let dest_path = path
+fn extract_wix<P: AsRef<Path>>(logger: &slog::Logger, dest_dir: P) -> Result<PathBuf> {
+    let zip_path = dest_dir
         .as_ref()
-        .parent()
-        .ok_or_else(|| anyhow!("unable to resolve parent directory"))?
-        .join("wix-toolset.zip");
-    download_to_path(logger, &WIX_TOOLSET, &dest_path)?;
-    let fh = std::fs::File::open(&dest_path)?;
-    let cursor = std::io::BufReader::new(fh);
-    warn!(logger, "extracting WiX...");
-    extract_zip(cursor, path)
+        .join(format!("wix-toolset.{}.zip", &WIX_TOOLSET.sha256[0..16]));
+    let extract_path = dest_dir
+        .as_ref()
+        .join(format!("wix-toolset.{}", &WIX_TOOLSET.sha256[0..16]));
+
+    if !extract_path.exists() {
+        download_to_path(logger, &WIX_TOOLSET, &zip_path)?;
+        let fh = std::fs::File::open(&zip_path)?;
+        let cursor = std::io::BufReader::new(fh);
+        warn!(logger, "extracting WiX...");
+        extract_zip(cursor, &extract_path)?;
+    }
+
+    Ok(extract_path)
 }
 
 /// Run `candle.exe` against a `.wxs` file to produce a `.wixobj` file.
@@ -920,7 +923,7 @@ mod tests {
     fn test_wix_download() -> Result<()> {
         let logger = get_logger()?;
 
-        extract_wix(&logger, &DEFAULT_DOWNLOAD_DIR.join("wix-toolset"))?;
+        extract_wix(&logger, DEFAULT_DOWNLOAD_DIR.as_path())?;
 
         Ok(())
     }
