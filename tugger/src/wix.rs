@@ -892,7 +892,11 @@ fn run_light<P1: AsRef<Path>, P2: AsRef<Path>, P3: AsRef<Path>, P4: AsRef<Path>,
         args.push(format!("{}", p.as_ref().display()));
     }
 
-    warn!(logger, "running light");
+    warn!(
+        logger,
+        "running light to produce {}",
+        output_path.as_ref().display()
+    );
 
     let command = cmd(light_path, args)
         .dir(build_path.as_ref())
