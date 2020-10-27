@@ -32,17 +32,26 @@ const TOOLSET_URL: &str =
     "https://github.com/wixtoolset/wix3/releases/download/wix3112rtm/wix311-binaries.zip";
 const TOOLSET_SHA256: &str = "2c1888d5d1dba377fc7fa14444cf556963747ff9a0a289a3599cf09da03b9e2e";
 
+// Latest versions of the VC++ Redistributable can be found at
+// https://support.microsoft.com/en-us/help/2977003/the-latest-supported-visual-c-downloads.
+// The download URL will redirect to a deterministic artifact, which is what we
+// record here.
+
 const VC_REDIST_X86_URL: &str =
-    "https://download.visualstudio.microsoft.com/download/pr/c8edbb87-c7ec-4500-a461-71e8912d25e9/99ba493d660597490cbb8b3211d2cae4/vc_redist.x86.exe";
+    "https://download.visualstudio.microsoft.com/download/pr/48431a06-59c5-4b63-a102-20b66a521863/CAA38FD474164A38AB47AC1755C8CCCA5CCFACFA9A874F62609E6439924E87EC/VC_redist.x86.exe";
 
 const VC_REDIST_X86_SHA256: &str =
-    "3a43e8a55a3f3e4b73d01872c16d47a19dd825756784f4580187309e7d1fcb74";
+    "caa38fd474164a38ab47ac1755c8ccca5ccfacfa9a874f62609e6439924e87ec";
 
 const VC_REDIST_X64_URL: &str =
-    "https://download.visualstudio.microsoft.com/download/pr/9e04d214-5a9d-4515-9960-3d71398d98c3/1e1e62ab57bbb4bf5199e8ce88f040be/vc_redist.x64.exe";
+    "https://download.visualstudio.microsoft.com/download/pr/48431a06-59c5-4b63-a102-20b66a521863/4B5890EB1AEFDF8DFA3234B5032147EB90F050C5758A80901B201AE969780107/VC_redist.x64.exe";
 
 const VC_REDIST_X64_SHA256: &str =
-    "d6cd2445f68815fe02489fafe0127819e44851e26dfbe702612bc0d223cbbc2b";
+    "4b5890eb1aefdf8dfa3234b5032147eb90f050c5758a80901b201ae969780107";
+
+const VC_REDIST_ARM64_URL: &str = "https://download.visualstudio.microsoft.com/download/pr/48431a06-59c5-4b63-a102-20b66a521863/A950A1C9DB37E2F784ABA98D484A4E0F77E58ED7CB57727672F9DC321015469E/VC_redist.arm64.exe";
+const VC_REDIST_ARM64_SHA256: &str =
+    "a950a1c9db37e2f784aba98d484a4e0f77e58ed7cb57727672f9dc321015469e";
 
 lazy_static! {
     static ref HANDLEBARS: Handlebars<'static> = {
@@ -515,6 +524,9 @@ pub struct WiXBundleInstallerBuilder {
     /// Whether to include an amd64 Visual C++ Redistributable.
     include_vc_redist_x64: bool,
 
+    /// Whether to include an arm64 Visual C++ Redistributable.
+    include_vc_redist_arm64: bool,
+
     /// Keys to define in the preprocessor when running candle.
     preprocess_parameters: BTreeMap<String, String>,
 
@@ -560,6 +572,7 @@ impl WiXBundleInstallerBuilder {
 
         let redist_x86_path = build_path.join("vc_redist.x86.exe");
         let redist_x64_path = build_path.join("vc_redist.x64.exe");
+        let redist_arm64_path = build_path.join("vc_redist.arm64.exe");
 
         if self.include_vc_redist_x86 && !redist_x86_path.exists() {
             warn!(logger, "fetching Visual C++ Redistribution (x86)");
@@ -571,6 +584,12 @@ impl WiXBundleInstallerBuilder {
             warn!(logger, "fetching Visual C++ Redistributable (x64)");
             let data = download_and_verify(logger, VC_REDIST_X64_URL, VC_REDIST_X64_SHA256)?;
             std::fs::write(&redist_x64_path, &data)?;
+        }
+
+        if self.include_vc_redist_arm64 && !redist_arm64_path.exists() {
+            warn!(logger, "fetching Visual C++ Redistribution (arm64)");
+            let data = download_and_verify(logger, VC_REDIST_ARM64_URL, VC_REDIST_ARM64_SHA256)?;
+            std::fs::write(&redist_arm64_path, &data)?;
         }
 
         let mut emitter_config = EmitterConfig::new();
@@ -670,6 +689,25 @@ impl WiXBundleInstallerBuilder {
                     .attr("Compressed", "yes")
                     .attr("PerMachine", "yes")
                     .attr("Permanent", "yes")
+                    .attr("InstallCondition", "VersionNT64")
+                    .attr("InstallCommand", "/install /quiet /norestart")
+                    .attr("RepairCommand", "/repair /quiet /norestart")
+                    .attr("UninstallCommand", "/uninstall /quiet /norestart"),
+            )?;
+
+            // </ExePackage>
+            writer.write(XmlEvent::end_element())?;
+        }
+
+        if self.include_vc_redist_arm64 {
+            writer.write(
+                XmlEvent::start_element("ExePackage")
+                    .attr("Id", "vc_redist.arm64.exe")
+                    .attr("Cache", "no")
+                    .attr("Compressed", "yes")
+                    .attr("PerMachine", "yes")
+                    .attr("Permanent", "yes")
+                    // TODO properly detect ARM64 here.
                     .attr("InstallCondition", "VersionNT64")
                     .attr("InstallCommand", "/install /quiet /norestart")
                     .attr("RepairCommand", "/repair /quiet /norestart")
