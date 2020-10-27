@@ -35,4 +35,5 @@ version = "0.2.0-pre"
 path = "../starlark-dialect-build-targets"
 
 [dev-dependencies]
+msi = "0.2"
 tempdir = "0.3"

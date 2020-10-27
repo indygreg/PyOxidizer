@@ -1001,6 +1001,11 @@ mod tests {
 
         builder.build_msi(&logger, &output_path)?;
 
+        let package = msi::open(&output_path)?;
+
+        let summary_info = package.summary_info();
+        assert_eq!(summary_info.subject(), Some("testapp"));
+
         Ok(())
     }
 }
