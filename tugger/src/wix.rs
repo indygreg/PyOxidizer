@@ -5,7 +5,7 @@
 use {
     crate::{
         file_resource::{FileContent, FileManifest},
-        http::download_and_verify,
+        http::download_to_path,
         zipfile::extract_zip,
     },
     anyhow::{anyhow, Result},
@@ -574,22 +574,34 @@ impl WiXBundleInstallerBuilder {
         let redist_x64_path = build_path.join("vc_redist.x64.exe");
         let redist_arm64_path = build_path.join("vc_redist.arm64.exe");
 
-        if self.include_vc_redist_x86 && !redist_x86_path.exists() {
+        if self.include_vc_redist_x86 {
             warn!(logger, "fetching Visual C++ Redistribution (x86)");
-            let data = download_and_verify(logger, VC_REDIST_X86_URL, VC_REDIST_X86_SHA256)?;
-            std::fs::write(&redist_x86_path, &data)?;
+            download_to_path(
+                logger,
+                VC_REDIST_X86_URL,
+                VC_REDIST_X86_SHA256,
+                &redist_x86_path,
+            )?;
         }
 
-        if self.include_vc_redist_x64 && !redist_x64_path.exists() {
+        if self.include_vc_redist_x64 {
             warn!(logger, "fetching Visual C++ Redistributable (x64)");
-            let data = download_and_verify(logger, VC_REDIST_X64_URL, VC_REDIST_X64_SHA256)?;
-            std::fs::write(&redist_x64_path, &data)?;
+            download_to_path(
+                logger,
+                VC_REDIST_X64_URL,
+                VC_REDIST_X64_SHA256,
+                &redist_x64_path,
+            )?;
         }
 
-        if self.include_vc_redist_arm64 && !redist_arm64_path.exists() {
+        if self.include_vc_redist_arm64 {
             warn!(logger, "fetching Visual C++ Redistribution (arm64)");
-            let data = download_and_verify(logger, VC_REDIST_ARM64_URL, VC_REDIST_ARM64_SHA256)?;
-            std::fs::write(&redist_arm64_path, &data)?;
+            download_to_path(
+                logger,
+                VC_REDIST_ARM64_URL,
+                VC_REDIST_ARM64_SHA256,
+                &redist_arm64_path,
+            )?;
         }
 
         let mut emitter_config = EmitterConfig::new();
@@ -731,8 +743,14 @@ impl WiXBundleInstallerBuilder {
 
 fn extract_wix<P: AsRef<Path>>(logger: &slog::Logger, path: P) -> Result<()> {
     warn!(logger, "downloading WiX Toolset...");
-    let data = download_and_verify(logger, TOOLSET_URL, TOOLSET_SHA256)?;
-    let cursor = std::io::Cursor::new(data);
+    let dest_path = path
+        .as_ref()
+        .parent()
+        .ok_or_else(|| anyhow!("unable to resolve parent directory"))?
+        .join("wix-toolset.zip");
+    download_to_path(logger, TOOLSET_URL, TOOLSET_SHA256, &dest_path)?;
+    let fh = std::fs::File::open(&dest_path)?;
+    let cursor = std::io::BufReader::new(fh);
     warn!(logger, "extracting WiX...");
     extract_zip(cursor, path)
 }

@@ -6,9 +6,27 @@ use {
     anyhow::{anyhow, Result},
     sha2::Digest,
     slog::warn,
-    std::io::Read,
+    std::{io::Read, path::Path},
     url::Url,
 };
+
+fn sha256_path<P: AsRef<Path>>(path: P) -> Result<Vec<u8>> {
+    let mut hasher = sha2::Sha256::new();
+    let fh = std::fs::File::open(&path)?;
+    let mut reader = std::io::BufReader::new(fh);
+
+    let mut buffer = [0; 32768];
+
+    loop {
+        let count = reader.read(&mut buffer)?;
+        if count == 0 {
+            break;
+        }
+        hasher.update(&buffer[..count]);
+    }
+
+    Ok(hasher.finalize().to_vec())
+}
 
 /// Obtain an HTTP client, taking proxy environment variables into account.
 pub fn get_http_client() -> reqwest::Result<reqwest::blocking::Client> {
@@ -59,4 +77,41 @@ pub fn download_and_verify(logger: &slog::Logger, url: &str, hash: &str) -> Resu
     } else {
         Err(anyhow!("hash mismatch of downloaded file"))
     }
+}
+
+/// Ensure a URL with specified hash exists in a local filesystem path.
+pub fn download_to_path<P: AsRef<Path>>(
+    logger: &slog::Logger,
+    url: &str,
+    sha256: &str,
+    dest_path: P,
+) -> Result<()> {
+    let dest_path = dest_path.as_ref();
+
+    let expected_hash = hex::decode(sha256)?;
+
+    if dest_path.exists() {
+        let file_hash = sha256_path(dest_path)?;
+
+        if file_hash == expected_hash {
+            return Ok(());
+        }
+
+        // Hash mismatch. Remove the current file.
+        std::fs::remove_file(dest_path)?;
+    }
+
+    let data = download_and_verify(logger, url, sha256)?;
+    let temp_path = dest_path.with_file_name(format!(
+        "{}.tmp",
+        dest_path
+            .file_name()
+            .ok_or_else(|| anyhow!("unable to obtain file name"))?
+            .to_string_lossy()
+    ));
+
+    std::fs::write(&temp_path, data)?;
+    std::fs::rename(&temp_path, dest_path)?;
+
+    Ok(())
 }
