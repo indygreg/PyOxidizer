@@ -471,8 +471,11 @@ impl WiXInstallerBuilder {
         Ok(())
     }
 
-    /// Produce an MSI installer using the configuration in this builder.
-    pub fn build_msi<P: AsRef<Path>>(&self, logger: &slog::Logger, output_path: P) -> Result<()> {
+    /// Produce an installer using the configuration in this builder.
+    ///
+    /// The output could be an MSI, exe, or other file formats depending on what the
+    /// wxs files define.
+    pub fn build<P: AsRef<Path>>(&self, logger: &slog::Logger, output_path: P) -> Result<()> {
         let wix_toolset_path = extract_wix(logger, &self.build_path)?;
 
         // Materialize FileManifest so we can reference files from WiX.
@@ -552,9 +555,6 @@ pub struct WiXBundleInstallerBuilder {
 
     /// Keys to define in the preprocessor when running candle.
     preprocess_parameters: BTreeMap<String, String>,
-
-    /// Variables to define when running light.
-    variables: BTreeMap<String, Option<String>>,
 }
 
 impl WiXBundleInstallerBuilder {
@@ -581,20 +581,18 @@ impl WiXBundleInstallerBuilder {
         }
     }
 
-    /// Produce an executable containing defined components.
-    pub fn build_exe<P: AsRef<Path>>(
+    /// Add this instance to a `WiXInstallerBuilder`.
+    ///
+    /// Requisite files will be downloaded and this instance will be converted to
+    /// a wxs file and registered with the builder.
+    pub fn add_to_installer_builder(
         &self,
         logger: &slog::Logger,
-        build_path: P,
-        output_path: P,
+        builder: &mut WiXInstallerBuilder,
     ) -> Result<()> {
-        let build_path = build_path.as_ref();
-
-        let wix_toolset_path = extract_wix(logger, &build_path)?;
-
-        let redist_x86_path = build_path.join("vc_redist.x86.exe");
-        let redist_x64_path = build_path.join("vc_redist.x64.exe");
-        let redist_arm64_path = build_path.join("vc_redist.arm64.exe");
+        let redist_x86_path = builder.build_path.join("vc_redist.x86.exe");
+        let redist_x64_path = builder.build_path.join("vc_redist.x64.exe");
+        let redist_arm64_path = builder.build_path.join("vc_redist.arm64.exe");
 
         if self.include_vc_redist_x86 {
             warn!(logger, "fetching Visual C++ Redistribution (x86)");
@@ -614,30 +612,18 @@ impl WiXBundleInstallerBuilder {
         let mut emitter_config = EmitterConfig::new();
         emitter_config.perform_indent = true;
 
-        let bundle_wxs_path = build_path.join("bundle.wxs");
-        {
-            let fh = std::fs::File::create(&bundle_wxs_path)?;
-            let mut emitter = emitter_config.create_writer(fh);
-            self.write_bundle_xml(&mut emitter)?;
+        let buffer = Vec::new();
+        let writer = std::io::BufWriter::new(buffer);
+        let mut emitter = emitter_config.create_writer(writer);
+        self.write_bundle_xml(&mut emitter)?;
+
+        let mut wxs =
+            WxsBuilder::from_data(Path::new("bundle.wxs"), emitter.into_inner().into_inner()?);
+        for (k, v) in &self.preprocess_parameters {
+            wxs.set_preprocessor_parameter(k, v);
         }
 
-        let wixobj_paths = vec![run_candle(
-            logger,
-            &wix_toolset_path,
-            &bundle_wxs_path,
-            "x64",
-            self.preprocess_parameters.iter(),
-            None,
-        )?];
-
-        run_light(
-            logger,
-            &wix_toolset_path,
-            build_path,
-            wixobj_paths.iter(),
-            self.variables.iter().map(|(k, v)| (k.clone(), v.clone())),
-            output_path,
-        )?;
+        builder.add_wxs(wxs);
 
         Ok(())
     }
@@ -1003,7 +989,7 @@ mod tests {
 
         let output_path = temp_dir.path().join("test.msi");
 
-        builder.build_msi(&logger, &output_path)?;
+        builder.build(&logger, &output_path)?;
 
         let package = msi::open(&output_path)?;
 
