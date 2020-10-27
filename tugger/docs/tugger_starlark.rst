@@ -19,3 +19,4 @@ specific to Tugger.
    tugger_starlark_globals
    tugger_starlark_type_file_content
    tugger_starlark_type_file_manifest
+   tugger_starlark_type_wix_installer

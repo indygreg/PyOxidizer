@@ -11,6 +11,7 @@ Tugger.
 pub mod file_resource;
 #[cfg(test)]
 mod testutil;
+pub mod wix_installer;
 
 use starlark::environment::{Environment, EnvironmentError, TypeValues};
 
@@ -20,6 +21,7 @@ pub fn populate_environment(
     type_values: &mut TypeValues,
 ) -> Result<(), EnvironmentError> {
     file_resource::file_resource_module(env, type_values);
+    wix_installer::wix_installer_module(env, type_values);
 
     Ok(())
 }

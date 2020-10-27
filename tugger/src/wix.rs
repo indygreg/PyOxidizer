@@ -393,6 +393,11 @@ impl WiXInstallerBuilder {
         }
     }
 
+    /// Obtain variables that will be used for `light` invocations.
+    pub fn variables(&self) -> std::collections::btree_map::Iter<String, Option<String>> {
+        self.variables.iter()
+    }
+
     /// Set a WiX variable with an optional value.
     ///
     /// These are passed to `light.exe`.
@@ -441,6 +446,11 @@ impl WiXInstallerBuilder {
         self.add_files_manifest_wxs()?;
 
         Ok(())
+    }
+
+    /// Add a `FileManifest` to the set of files to install.
+    pub fn add_install_files_manifest(&mut self, manifest: &FileManifest) -> Result<()> {
+        self.install_files.add_manifest(manifest)
     }
 
     fn stage_path(&self) -> PathBuf {

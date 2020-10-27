@@ -24,3 +24,6 @@ Tugger's Starlark dialect defines the following custom types:
 
 :ref:`tugger_starlark_type_file_manifest`
    Represents a mapping of filenames to file content.
+
+:ref:`tugger_starlark_type_wix_installer`
+   Produce a Windows installer using WiX.
