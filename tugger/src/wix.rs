@@ -914,10 +914,39 @@ fn run_light<P1: AsRef<Path>, P2: AsRef<Path>, P3: AsRef<Path>, P4: AsRef<Path>,
 
 #[cfg(test)]
 mod tests {
-    use {super::*, crate::file_resource::FileContent};
+    use {super::*, crate::file_resource::FileContent, crate::testutil::*};
 
-    #[cfg(windows)]
-    use crate::testutil::*;
+    #[test]
+    fn test_wix_download() -> Result<()> {
+        let logger = get_logger()?;
+
+        extract_wix(&logger, &DEFAULT_DOWNLOAD_DIR.join("wix-toolset"))?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_vcredist_download() -> Result<()> {
+        let logger = get_logger()?;
+
+        download_to_path(
+            &logger,
+            &VC_REDIST_X86,
+            &DEFAULT_DOWNLOAD_DIR.join("vc_redist.x86.exe"),
+        )?;
+        download_to_path(
+            &logger,
+            &VC_REDIST_X64,
+            &DEFAULT_DOWNLOAD_DIR.join("vc_redist.x64.exe"),
+        )?;
+        download_to_path(
+            &logger,
+            &VC_REDIST_ARM64,
+            &DEFAULT_DOWNLOAD_DIR.join("vc_redist.arm64.exe"),
+        )?;
+
+        Ok(())
+    }
 
     #[test]
     fn test_file_manifest_to_wix() -> Result<()> {
