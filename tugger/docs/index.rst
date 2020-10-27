@@ -8,6 +8,6 @@ Tugger is part of the PyOxidizer Project and is developed inside the
 PyOxidizer repository at https://github.com/indygreg/PyOxidizer.
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
 
-   tugger_starlark
+   tugger

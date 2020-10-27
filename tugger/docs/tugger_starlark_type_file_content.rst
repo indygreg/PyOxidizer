@@ -1,4 +1,4 @@
-.. _config_type_file_content:
+.. _tugger_starlark_type_file_content:
 
 ===============
 ``FileContent``

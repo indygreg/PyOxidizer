@@ -1,6 +1,7 @@
 .idea/
 docs/_build/
 docs/oxidized_importer*
+docs/tugger*
 pyembed/docs/_build/
 target/
 tugger/docs/_build/

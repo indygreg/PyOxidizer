@@ -33,6 +33,7 @@ The creator and maintainer of ``PyOxidizer`` is
    oxidized_importer
    packed_resources
    rust
+   tugger
    faq
    status
    comparisons

@@ -10,7 +10,7 @@ Functions for Interacting with the Filesystem
 ==========
 
 The ``glob()`` function resolves file patterns to a
-:ref:`config_type_file_manifest`.
+:ref:`tugger_starlark_type_file_manifest`.
 
 This function accepts the following arguments:
 
@@ -31,4 +31,4 @@ This function accepts the following arguments:
    matched files. ``strip_prefix`` is stripped after ``include``
    and ``exclude`` are processed.
 
-Returns a :ref:`config_type_file_manifest`.
+Returns a :ref:`tugger_starlark_type_file_manifest`.

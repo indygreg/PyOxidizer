@@ -7,9 +7,11 @@ Global Symbols
 This document lists every single global type, variable, and
 function available in PyOxidizer's Starlark execution environment.
 
-In addition to the symbols provided by PyOxidizer's Starlark
-dialect, there are also the
-`Starlark built-ins <https://github.com/bazelbuild/starlark/blob/master/spec.md#built-in-constants-and-functions>`_.
+The Starlark environment contains symbols from the following:
+
+* `Starlark built-ins <https://github.com/bazelbuild/starlark/blob/master/spec.md#built-in-constants-and-functions>`_
+* :ref:`Tugger's Starlark Dialect <tugger_starlark>`
+* PyOxidizer's Dialect (documented below)
 
 .. _config_global_types:
 
@@ -21,13 +23,13 @@ PyOxidizer's Starlark dialect defines the following custom types:
 :ref:`config_type_file`
    Represents a filesystem path and content.
 
-:ref:`config_type_file_content`
+:ref:`tugger_starlark_type_file_content`
    Represents the content of a file on the filesystem.
 
    (Unlike :ref:`config_type_file`, this does not track the filename
    internally.)
 
-:ref:`config_type_file_manifest`
+:ref:`tugger_starlark_type_file_manifest`
    Represents a mapping of filenames to file content.
 
 :ref:`config_type_python_distribution`
@@ -139,7 +141,7 @@ behavior.
 
 The following types have special behavior registered:
 
-:ref:`config_type_file_manifest`
+:ref:`tugger_starlark_type_file_manifest`
    Build behavior is to materialize all files in the file manifest.
 
    Run behavior is to run the last added :ref:`config_type_python_executable`

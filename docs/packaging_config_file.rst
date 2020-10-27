@@ -129,7 +129,7 @@ for more on this topic, including many examples.
 Install Manifests Copy Files Next to Your Application
 =====================================================
 
-The :ref:`config_type_file_manifest` Starlark type represents a
+The :ref:`tugger_starlark_type_file_manifest` Starlark type represents a
 collection of files and their content. When ``FileManifest`` instances are
 returned from a target function, their build action results in their contents
 being manifested in a directory having the name of the build target.
@@ -143,7 +143,7 @@ next to your built executable defined by the ``PythonExecutable`` type.
 The :ref:`glob() <config_glob>` function can be used to discover existing
 files on the filesystem and turn them into a ``FileManifest``. You can then
 return this ``FileManifest`` directory or overlay it onto another
-instance using :ref:`config_file_manifest_add_manifest`. Here's an
+instance using :ref:`tugger_starlark_type_file_manifest_add_manifest`. Here's an
 example:
 
 .. code-block:: python

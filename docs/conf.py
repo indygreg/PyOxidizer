@@ -6,9 +6,12 @@ import pathlib
 import re
 import shutil
 
-EXTERNAL_PREFIXES = ("oxidized_importer",)
+EXTERNAL_PREFIXES = ("oxidized_importer", "tugger")
 
-EXTERNAL_SOURCE_DIRS = (pathlib.Path("pyembed") / "docs",)
+EXTERNAL_SOURCE_DIRS = (
+    pathlib.Path("pyembed") / "docs",
+    pathlib.Path("tugger") / "docs",
+)
 
 HERE = pathlib.Path(os.path.dirname(__file__))
 ROOT = pathlib.Path(os.path.dirname(HERE))
