@@ -544,6 +544,9 @@ pub struct WiXBundleInstallerBuilder {
     /// UUID upgrade code.
     upgrade_code: Option<String>,
 
+    /// Conditions that must be met to perform the install.
+    conditions: Vec<(String, String)>,
+
     /// Whether to include an x86 Visual C++ Redistributable.
     include_vc_redist_x86: bool,
 
@@ -579,6 +582,15 @@ impl WiXBundleInstallerBuilder {
                 .to_string(),
             )
         }
+    }
+
+    /// Define a `<bal:Condition>` that must be satisfied to run this installer.
+    ///
+    /// `message` is the message that will be displayed if the condition is not met.
+    /// `condition` is the condition expression. e.g. `VersionNT = v8.0`.
+    pub fn add_condition(&mut self, message: &str, condition: &str) {
+        self.conditions
+            .push((message.to_string(), condition.to_string()));
     }
 
     /// Add this instance to a `WiXInstallerBuilder`.
@@ -665,6 +677,12 @@ impl WiXBundleInstallerBuilder {
 
         // </BootstrapperApplicationRef>
         writer.write(XmlEvent::end_element())?;
+
+        for (message, condition) in &self.conditions {
+            writer.write(XmlEvent::start_element("bal:Condition").attr("Message", message))?;
+            writer.write(XmlEvent::CData(condition))?;
+            writer.write(XmlEvent::end_element())?;
+        }
 
         writer.write(XmlEvent::start_element("Chain"))?;
 
