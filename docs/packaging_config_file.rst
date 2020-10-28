@@ -140,9 +140,9 @@ layouts*.
 Say you have an existing directory tree of files you want to copy
 next to your built executable defined by the ``PythonExecutable`` type.
 
-The :ref:`glob() <config_glob>` function can be used to discover existing
-files on the filesystem and turn them into a ``FileManifest``. You can then
-return this ``FileManifest`` directory or overlay it onto another
+The :ref:`glob() <tugger_starlark_glob>` function can be used to discover
+existing files on the filesystem and turn them into a ``FileManifest``. You
+can then return this ``FileManifest`` directory or overlay it onto another
 instance using :ref:`tugger_starlark_type_file_manifest_add_manifest`. Here's an
 example:
 

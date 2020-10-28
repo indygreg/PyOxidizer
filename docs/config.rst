@@ -23,7 +23,6 @@ documentation for every type and function in the Starlark dialect.
    config_globals
    config_global_state
    config_target_management
-   config_filesystem
    config_tugger_extensions
    config_type_file
    config_type_python_distribution

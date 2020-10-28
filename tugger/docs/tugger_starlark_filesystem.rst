@@ -1,10 +1,10 @@
-.. _config_filesystem:
+.. _tugger_starlark_filesystem:
 
 =============================================
 Functions for Interacting with the Filesystem
 =============================================
 
-.. _config_glob:
+.. _tugger_starlark_glob:
 
 ``glob()``
 ==========

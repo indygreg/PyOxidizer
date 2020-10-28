@@ -27,3 +27,13 @@ Tugger's Starlark dialect defines the following custom types:
 
 :ref:`tugger_starlark_type_wix_installer`
    Produce a Windows installer using WiX.
+
+.. _tugger_starlark_global_functions:
+
+Global Functions
+================
+
+Tugger's Starlark dialect defines the following global functions:
+
+:ref:`tugger_starlark_glob`
+   Collect files from the filesystem.

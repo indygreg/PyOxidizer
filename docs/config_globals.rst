@@ -113,9 +113,6 @@ PyOxidizer's Starlark dialect defines the following global functions:
    Obtain the default :ref:`config_type_python_distribution`
    for the active build configuration.
 
-:any:`glob() <config_glob>`
-   Collect files from the filesystem.
-
 :any:`register_target() <config_register_target>`
    Register a named :ref:`target <config_processing_targets>` that can
    be built.
