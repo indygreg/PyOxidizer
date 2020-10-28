@@ -114,6 +114,9 @@ pub struct EnvironmentContext {
     /// Default output directory.
     build_path: PathBuf,
 
+    /// Optional path prefix to insert between the build path and the target name.
+    target_build_path_prefix: Option<PathBuf>,
+
     /// Registered targets.
     ///
     /// A target is a name and a Starlark callable.
@@ -146,6 +149,7 @@ impl EnvironmentContext {
             logger: logger.clone(),
             cwd,
             build_path,
+            target_build_path_prefix: None,
             targets: BTreeMap::new(),
             targets_order: vec![],
             default_target: None,
@@ -183,6 +187,23 @@ impl EnvironmentContext {
         self.build_path = path;
 
         Ok(())
+    }
+
+    /// Set the path prefix to use for per-target build paths.
+    ///
+    /// If defined, target build paths are of the form `<build_path>/<prefix>/<target>`.
+    /// Otherwise they are `<build_path>/<target>`.
+    pub fn set_target_build_path_prefix<P: AsRef<Path>>(&mut self, prefix: Option<P>) {
+        self.target_build_path_prefix = prefix.map(|p| p.as_ref().to_path_buf());
+    }
+
+    /// Obtain the directory to use to build a named target.
+    pub fn target_build_path(&self, target: &str) -> PathBuf {
+        if let Some(prefix) = &self.target_build_path_prefix {
+            self.build_path.join(prefix).join(target)
+        } else {
+            self.build_path.join(target)
+        }
     }
 
     /// Obtain all registered targets.

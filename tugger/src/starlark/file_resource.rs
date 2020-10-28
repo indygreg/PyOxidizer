@@ -76,7 +76,7 @@ impl FileManifestValue {
             .downcast_ref::<EnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
 
-        let output_path = context.build_path().join(target);
+        let output_path = context.target_build_path(&target);
 
         warn!(
             context.logger(),

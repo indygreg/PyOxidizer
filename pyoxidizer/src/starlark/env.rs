@@ -117,15 +117,12 @@ impl PyOxidizerEnvironmentContext {
         type_values: &TypeValues,
         target: &str,
     ) -> Result<PathBuf, ValueError> {
-        Ok(self
-            .build_path(type_values)?
-            .join(&self.build_target_triple)
-            .join(if self.build_release {
-                "release"
-            } else {
-                "debug"
-            })
-            .join(target))
+        let build_targets_context_value = get_context_value(type_values)?;
+        let context = build_targets_context_value
+            .downcast_ref::<EnvironmentContext>()
+            .ok_or(ValueError::IncorrectParameterType)?;
+
+        Ok(context.target_build_path(target))
     }
 }
 
@@ -182,6 +179,14 @@ pub fn global_environment(
     }
 
     build_targets_context.build_script_mode = build_script_mode;
+
+    build_targets_context.set_target_build_path_prefix(Some(
+        PathBuf::from(&context.build_target_triple).join(if context.build_release {
+            "release"
+        } else {
+            "debug"
+        }),
+    ));
 
     let (mut env, mut type_values) = starlark::stdlib::global_environment();
 
