@@ -8,7 +8,7 @@ use {
             get_context, global_environment, PyOxidizerBuildContext, PyOxidizerEnvironmentContext,
         },
         python_embedded_resources::PythonEmbeddedResources,
-        python_executable::PythonExecutable,
+        python_executable::PythonExecutableValue,
     },
     anyhow::{anyhow, Context, Result},
     codemap::CodeMap,
@@ -201,7 +201,7 @@ impl EvaluationContext {
                 .ok_or_else(|| anyhow!("invalid cast"))?
                 .build(&build_context),
             "PythonExecutable" => resolved_value
-                .downcast_mut::<PythonExecutable>()
+                .downcast_mut::<PythonExecutableValue>()
                 .map_err(|_| anyhow!("object isn't mutable"))?
                 .ok_or_else(|| anyhow!("invalid cast"))?
                 .build(&build_context),

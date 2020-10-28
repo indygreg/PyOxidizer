@@ -5,7 +5,7 @@
 use {
     super::{
         env::{get_context, PyOxidizerEnvironmentContext},
-        python_executable::PythonExecutable,
+        python_executable::PythonExecutableValue,
         python_resource::{
             PythonExtensionModuleValue, PythonModuleSourceValue,
             PythonPackageDistributionResourceValue, PythonPackageResourceValue,
@@ -165,7 +165,7 @@ pub fn file_manifest_add_python_resource(
                 })
         }
 
-        "PythonExecutable" => match resource.downcast_ref::<PythonExecutable>() {
+        "PythonExecutable" => match resource.downcast_ref::<PythonExecutableValue>() {
             Some(exe) => {
                 warn!(
                     pyoxidizer_context.logger(),

@@ -47,7 +47,7 @@ use {
 };
 
 /// Represents a builder for a Python executable.
-pub struct PythonExecutable {
+pub struct PythonExecutableValue {
     pub exe: Box<dyn PythonBinaryBuilder>,
 
     /// The Starlark Value for the Python packaging policy.
@@ -57,7 +57,7 @@ pub struct PythonExecutable {
     policy: Vec<Value>,
 }
 
-impl PythonExecutable {
+impl PythonExecutableValue {
     pub fn new(exe: Box<dyn PythonBinaryBuilder>, policy: PythonPackagingPolicyValue) -> Self {
         Self {
             exe,
@@ -74,8 +74,8 @@ impl PythonExecutable {
     }
 }
 
-impl TypedValue for PythonExecutable {
-    type Holder = Mutable<PythonExecutable>;
+impl TypedValue for PythonExecutableValue {
+    type Holder = Mutable<PythonExecutableValue>;
     const TYPE: &'static str = "PythonExecutable";
 
     fn values_for_descendant_check_and_freeze<'a>(
@@ -136,7 +136,7 @@ impl TypedValue for PythonExecutable {
     }
 }
 
-impl BuildTarget for PythonExecutable {
+impl BuildTarget for PythonExecutableValue {
     fn build(&mut self, context: &dyn BuildContext) -> Result<ResolvedTarget> {
         // Build an executable by writing out a temporary Rust project
         // and building it.
@@ -171,7 +171,7 @@ impl BuildTarget for PythonExecutable {
 }
 
 // Starlark functions.
-impl PythonExecutable {
+impl PythonExecutableValue {
     /// PythonExecutable.make_python_module_source(name, source, is_package=false)
     pub fn starlark_make_python_module_source(
         &self,
@@ -727,7 +727,7 @@ starlark_module! { python_executable_env =>
         source: String,
         is_package: bool = false
     ) {
-        match this.clone().downcast_ref::<PythonExecutable>() {
+        match this.clone().downcast_ref::<PythonExecutableValue>() {
             Some(exe) => exe.starlark_make_python_module_source(&env, cs, name, source, is_package),
             None => Err(ValueError::IncorrectParameterType),
         }
@@ -740,7 +740,7 @@ starlark_module! { python_executable_env =>
         this,
         args
     ) {
-        match this.clone().downcast_ref::<PythonExecutable>() {
+        match this.clone().downcast_ref::<PythonExecutableValue>() {
             Some(exe) => exe.starlark_pip_download(&env, cs, &args),
             None => Err(ValueError::IncorrectParameterType),
         }
@@ -754,7 +754,7 @@ starlark_module! { python_executable_env =>
         args,
         extra_envs=NoneType::None
     ) {
-        match this.clone().downcast_ref::<PythonExecutable>() {
+        match this.clone().downcast_ref::<PythonExecutableValue>() {
             Some(exe) => exe.starlark_pip_install(&env, cs, &args, &extra_envs),
             None => Err(ValueError::IncorrectParameterType),
         }
@@ -768,7 +768,7 @@ starlark_module! { python_executable_env =>
         path: String,
         packages
     ) {
-        match this.clone().downcast_ref::<PythonExecutable>() {
+        match this.clone().downcast_ref::<PythonExecutableValue>() {
             Some(exe) => exe.starlark_read_package_root(&env, cs, path, &packages),
             None => Err(ValueError::IncorrectParameterType),
         }
@@ -781,7 +781,7 @@ starlark_module! { python_executable_env =>
         this,
         path: String
     ) {
-        match this.clone().downcast_ref::<PythonExecutable>() {
+        match this.clone().downcast_ref::<PythonExecutableValue>() {
             Some(exe) => exe.starlark_read_virtualenv(&env, cs, path),
             None => Err(ValueError::IncorrectParameterType),
         }
@@ -796,7 +796,7 @@ starlark_module! { python_executable_env =>
         extra_envs=NoneType::None,
         extra_global_arguments=NoneType::None
     ) {
-        match this.clone().downcast_ref::<PythonExecutable>() {
+        match this.clone().downcast_ref::<PythonExecutableValue>() {
             Some(exe) => exe.starlark_setup_py_install(&env, cs, package_path, &extra_envs, &extra_global_arguments),
             None => Err(ValueError::IncorrectParameterType),
         }
@@ -808,7 +808,7 @@ starlark_module! { python_executable_env =>
         this,
         resource
     ) {
-        match this.clone().downcast_mut::<PythonExecutable>()? {
+        match this.clone().downcast_mut::<PythonExecutableValue>()? {
             Some(mut exe) => exe.starlark_add_python_resource(
                 &env,
                 &resource,
@@ -824,7 +824,7 @@ starlark_module! { python_executable_env =>
         this,
         resources
     ) {
-        match this.clone().downcast_mut::<PythonExecutable>()? {
+        match this.clone().downcast_mut::<PythonExecutableValue>()? {
             Some(mut exe) => exe.starlark_add_python_resources(
                 &env,
                 &resources,
@@ -840,7 +840,7 @@ starlark_module! { python_executable_env =>
         files=NoneType::None,
         glob_files=NoneType::None)
     {
-        match this.clone().downcast_mut::<PythonExecutable>()? {
+        match this.clone().downcast_mut::<PythonExecutableValue>()? {
             Some(mut exe) => exe.starlark_filter_resources_from_files(&env, &files, &glob_files),
             None => Err(ValueError::IncorrectParameterType),
         }
@@ -848,7 +848,7 @@ starlark_module! { python_executable_env =>
 
     #[allow(clippy::ptr_arg)]
     PythonExecutable.to_embedded_resources(this) {
-        match this.clone().downcast_ref::<PythonExecutable>() {
+        match this.clone().downcast_ref::<PythonExecutableValue>() {
             Some(exe) => exe.starlark_to_embedded_resources(),
             None => Err(ValueError::IncorrectParameterType),
         }
@@ -866,7 +866,7 @@ mod tests {
 
         assert_eq!(exe.get_type(), "PythonExecutable");
 
-        let exe = exe.downcast_ref::<PythonExecutable>().unwrap();
+        let exe = exe.downcast_ref::<PythonExecutableValue>().unwrap();
         assert!(exe
             .exe
             .iter_resources()
@@ -891,7 +891,7 @@ mod tests {
 
         assert_eq!(exe.get_type(), "PythonExecutable");
 
-        let exe = exe.downcast_ref::<PythonExecutable>().unwrap();
+        let exe = exe.downcast_ref::<PythonExecutableValue>().unwrap();
         assert!(exe
             .exe
             .iter_resources()

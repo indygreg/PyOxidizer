@@ -5,7 +5,7 @@
 use {
     super::{
         env::{get_context, PyOxidizerEnvironmentContext},
-        python_executable::PythonExecutable,
+        python_executable::PythonExecutableValue,
         python_interpreter_config::PythonInterpreterConfigValue,
         python_packaging_policy::PythonPackagingPolicyValue,
         python_resource::{add_context_for_value, python_resource_to_value},
@@ -393,7 +393,7 @@ impl PythonDistributionValue {
                 })
             })?;
 
-        Ok(Value::new(PythonExecutable::new(builder, policy)))
+        Ok(Value::new(PythonExecutableValue::new(builder, policy)))
     }
 
     pub fn python_resources_starlark(
