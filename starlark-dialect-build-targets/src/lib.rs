@@ -24,7 +24,6 @@ use {
     },
     std::{
         collections::BTreeMap,
-        fmt::Formatter,
         path::{Path, PathBuf},
     },
 };
@@ -102,45 +101,6 @@ pub struct Target {
     ///
     /// TODO consider making this an Arc<T> so we don't have to clone it.
     pub built_target: Option<ResolvedTarget>,
-}
-
-#[derive(Debug)]
-pub enum GetStateError {
-    /// The requested key is not valid for this context.
-    InvalidKey(String),
-    /// The type of the config key being requested is wrong.
-    WrongType(String),
-    /// There was an error resolving this config key.
-    Resolve((String, String)),
-}
-
-impl std::fmt::Display for GetStateError {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::InvalidKey(key) => write!(f, "the requested key '{}' is not valid", key),
-            Self::WrongType(key) => write!(f, "requested the wrong type of key '{}'", key),
-            Self::Resolve((key, message)) => {
-                write!(f, "failed resolving key '{}': {}", key, message)
-            }
-        }
-    }
-}
-
-impl std::error::Error for GetStateError {}
-
-/// Describes a generic context used when a specific target is built.
-pub trait BuildContext {
-    /// Obtain a logger that can be used to log events.
-    fn logger(&self) -> &slog::Logger;
-
-    /// Obtain the string value of a state key.
-    fn get_state_string(&self, key: &str) -> Result<&str, GetStateError>;
-
-    /// Obtain the bool value of a state key.
-    fn get_state_bool(&self, key: &str) -> Result<bool, GetStateError>;
-
-    /// Obtain the path value of a state key.
-    fn get_state_path(&self, key: &str) -> Result<&Path, GetStateError>;
 }
 
 /// Holds execution context for a Starlark environment.
