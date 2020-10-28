@@ -378,6 +378,9 @@ pub struct WiXInstallerBuilder {
     ///
     /// These files will be materialized and processed when building.
     wxs_files: BTreeMap<PathBuf, WxsBuilder>,
+
+    /// Extra files to install in the build directory.
+    extra_build_files: FileManifest,
 }
 
 impl WiXInstallerBuilder {
@@ -390,6 +393,7 @@ impl WiXInstallerBuilder {
             install_files: FileManifest::default(),
             variables: BTreeMap::new(),
             wxs_files: BTreeMap::new(),
+            extra_build_files: FileManifest::default(),
         }
     }
 
@@ -448,6 +452,25 @@ impl WiXInstallerBuilder {
         Ok(())
     }
 
+    /// Add an extra file to the build environment.
+    ///
+    /// These files will be materialized next to .wxs files.
+    pub fn add_extra_build_file<P: AsRef<Path>>(
+        &mut self,
+        path: P,
+        content: &FileContent,
+    ) -> Result<()> {
+        self.extra_build_files.add_file(path, content)
+    }
+
+    /// Add additional files to be materialized in the build environment.
+    ///
+    /// Files are specified via a `FileManifest` and will be materialized next
+    /// to `.wxs` files.
+    pub fn add_extra_build_files(&mut self, manifest: &FileManifest) -> Result<()> {
+        self.extra_build_files.add_manifest(manifest)
+    }
+
     /// Add a `FileManifest` to the set of files to install.
     pub fn add_install_files_manifest(&mut self, manifest: &FileManifest) -> Result<()> {
         self.install_files.add_manifest(manifest)
@@ -492,6 +515,8 @@ impl WiXInstallerBuilder {
         self.install_files.write_to_path(&self.stage_path())?;
 
         let wxs_path = self.build_path.join("wxs");
+
+        self.extra_build_files.write_to_path(&wxs_path)?;
 
         let mut wixobj_paths = Vec::new();
 

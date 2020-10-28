@@ -41,6 +41,21 @@ Methods
 
 Sections below document methods available on ``WiXInstaller`` instances.
 
+.. _tugger_starlark_wix_installer_add_build_files:
+
+``add_build_files()``
+---------------------
+
+This method registers additional files to make available to the build
+environment. Files will be materialized next to ``.wxs`` files that will
+be processed as part of building the installer.
+
+Accepted arguments are:
+
+``manifest``
+   (``FileManifest``) The file manifest defining additional files to
+   install.
+
 .. _tugger_starlark_wix_installer_add_simple_installer:
 
 ``add_simple_installer()``

@@ -50,6 +50,20 @@ impl WiXInstallerValue {
         Ok(Value::new(WiXInstallerValue { inner: builder }))
     }
 
+    fn add_build_files_starlark(&mut self, manifest: FileManifestValue) -> ValueResult {
+        self.inner
+            .add_extra_build_files(&manifest.manifest)
+            .map_err(|e| {
+                ValueError::from(RuntimeError {
+                    code: "TUGGER",
+                    message: e.to_string(),
+                    label: "add_build_files()".to_string(),
+                })
+            })?;
+
+        Ok(Value::new(NoneType::None))
+    }
+
     fn add_simple_installer_starlark(
         &mut self,
         product_name: String,
@@ -130,6 +144,13 @@ starlark_module! { wix_installer_module =>
     #[allow(non_snake_case)]
     WiXInstaller(env env, id: String) {
         WiXInstallerValue::new_from_args(env, id)
+    }
+
+    WiXInstaller.add_build_files(this, manifest: FileManifestValue) {
+        match this.clone().downcast_mut::<WiXInstallerValue>()? {
+            Some(mut installer) => installer.add_build_files_starlark(manifest),
+            None => Err(ValueError::IncorrectParameterType),
+        }
     }
 
     WiXInstaller.add_simple_installer(
@@ -219,6 +240,17 @@ mod tests {
 
         env.eval("installer = WiXInstaller('myapp')")?;
         env.eval("installer.add_simple_installer('myapp', '0.1', 'author', FileManifest())")?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_add_build_files() -> Result<()> {
+        let mut env = StarlarkEnvironment::new()?;
+
+        env.eval("installer = WiXInstaller('myapp')")?;
+        env.eval("m = FileManifest()")?;
+        env.eval("installer.add_build_files(m)")?;
 
         Ok(())
     }
