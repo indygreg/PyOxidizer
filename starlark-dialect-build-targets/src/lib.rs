@@ -29,7 +29,7 @@ use {
 };
 
 /// How a resolved target can be run.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum RunMode {
     /// Target cannot be run.
     None,
@@ -72,7 +72,7 @@ pub struct ResolvedTargetValue {
 
 impl TypedValue for ResolvedTargetValue {
     type Holder = Mutable<ResolvedTargetValue>;
-    const TYPE: &'static str = "ResolvedTargetValue";
+    const TYPE: &'static str = "ResolvedTarget";
 
     fn values_for_descendant_check_and_freeze(&self) -> Box<dyn Iterator<Item = Value>> {
         Box::new(std::iter::empty())

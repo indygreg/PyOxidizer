@@ -8,7 +8,7 @@ use {
         http::{download_to_path, RemoteContent},
         zipfile::extract_zip,
     },
-    anyhow::{anyhow, Result},
+    anyhow::{anyhow, Context, Result},
     duct::cmd,
     handlebars::Handlebars,
     lazy_static::lazy_static,
@@ -509,14 +509,19 @@ impl WiXInstallerBuilder {
     /// The output could be an MSI, exe, or other file formats depending on what the
     /// wxs files define.
     pub fn build<P: AsRef<Path>>(&self, logger: &slog::Logger, output_path: P) -> Result<()> {
-        let wix_toolset_path = extract_wix(logger, &self.build_path)?;
+        let wix_toolset_path =
+            extract_wix(logger, &self.build_path).context("extracting WiX Toolset")?;
 
         // Materialize FileManifest so we can reference files from WiX.
-        self.install_files.write_to_path(&self.stage_path())?;
+        self.install_files
+            .write_to_path(&self.stage_path())
+            .context("writing install files")?;
 
         let wxs_path = self.build_path.join("wxs");
 
-        self.extra_build_files.write_to_path(&wxs_path)?;
+        self.extra_build_files
+            .write_to_path(&wxs_path)
+            .context("writing extra build files")?;
 
         let mut wixobj_paths = Vec::new();
 
@@ -526,19 +531,23 @@ impl WiXInstallerBuilder {
                 .parent()
                 .ok_or_else(|| anyhow!("could not determine parent directory"))?;
             if !parent.exists() {
-                std::fs::create_dir_all(parent)?;
+                std::fs::create_dir_all(parent)
+                    .context("creating parent directory for wxs file")?;
             }
 
-            std::fs::write(&dest_path, &wxs.data)?;
+            std::fs::write(&dest_path, &wxs.data).context("writing wxs file")?;
 
-            wixobj_paths.push(run_candle(
-                logger,
-                &wix_toolset_path,
-                &dest_path,
-                target_triple_to_wix_arch(&self.target_triple),
-                wxs.preprocessor_parameters.iter(),
-                None,
-            )?);
+            wixobj_paths.push(
+                run_candle(
+                    logger,
+                    &wix_toolset_path,
+                    &dest_path,
+                    target_triple_to_wix_arch(&self.target_triple),
+                    wxs.preprocessor_parameters.iter(),
+                    None,
+                )
+                .context("running candle")?,
+            );
         }
 
         run_light(
@@ -548,7 +557,8 @@ impl WiXInstallerBuilder {
             wixobj_paths.iter(),
             self.variables.iter().map(|(k, v)| (k.clone(), v.clone())),
             output_path,
-        )?;
+        )
+        .context("running light")?;
 
         Ok(())
     }
@@ -788,19 +798,24 @@ impl WiXBundleInstallerBuilder {
 }
 
 fn extract_wix<P: AsRef<Path>>(logger: &slog::Logger, dest_dir: P) -> Result<PathBuf> {
-    let zip_path = dest_dir
-        .as_ref()
-        .join(format!("wix-toolset.{}.zip", &WIX_TOOLSET.sha256[0..16]));
-    let extract_path = dest_dir
-        .as_ref()
-        .join(format!("wix-toolset.{}", &WIX_TOOLSET.sha256[0..16]));
+    let dest_dir = dest_dir.as_ref();
+
+    if !dest_dir.exists() {
+        std::fs::create_dir_all(dest_dir)
+            .with_context(|| format!("creating {}", dest_dir.display()))?;
+    }
+
+    let zip_path = dest_dir.join(format!("wix-toolset.{}.zip", &WIX_TOOLSET.sha256[0..16]));
+    let extract_path = dest_dir.join(format!("wix-toolset.{}", &WIX_TOOLSET.sha256[0..16]));
 
     if !extract_path.exists() {
-        download_to_path(logger, &WIX_TOOLSET, &zip_path)?;
+        download_to_path(logger, &WIX_TOOLSET, &zip_path)
+            .with_context(|| format!("downloading to {}", zip_path.display()))?;
         let fh = std::fs::File::open(&zip_path)?;
         let cursor = std::io::BufReader::new(fh);
         warn!(logger, "extracting WiX...");
-        extract_zip(cursor, &extract_path)?;
+        extract_zip(cursor, &extract_path)
+            .with_context(|| format!("extracting zip to {}", extract_path.display()))?;
     }
 
     Ok(extract_path)

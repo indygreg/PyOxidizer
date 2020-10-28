@@ -3,7 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    anyhow::{anyhow, Result},
+    anyhow::{anyhow, Context, Result},
     sha2::Digest,
     slog::warn,
     std::{io::Read, path::Path},
@@ -106,7 +106,7 @@ pub fn download_to_path<P: AsRef<Path>>(
         std::fs::remove_file(dest_path)?;
     }
 
-    let data = download_and_verify(logger, entry)?;
+    let data = download_and_verify(logger, entry).context("downloading with verification")?;
     let temp_path = dest_path.with_file_name(format!(
         "{}.tmp",
         dest_path
@@ -115,8 +115,14 @@ pub fn download_to_path<P: AsRef<Path>>(
             .to_string_lossy()
     ));
 
-    std::fs::write(&temp_path, data)?;
-    std::fs::rename(&temp_path, dest_path)?;
+    std::fs::write(&temp_path, data).with_context(|| format!("writing {}", temp_path.display()))?;
+    std::fs::rename(&temp_path, dest_path).with_context(|| {
+        format!(
+            "renaming {} to {}",
+            temp_path.display(),
+            dest_path.display()
+        )
+    })?;
 
     Ok(())
 }

@@ -20,12 +20,14 @@ use {
         },
     },
     starlark_dialect_build_targets::{
-        get_context_value, optional_dict_arg, optional_str_arg, EnvironmentContext,
+        get_context_value, optional_dict_arg, optional_str_arg, EnvironmentContext, ResolvedTarget,
+        ResolvedTargetValue, RunMode,
     },
 };
 
 pub struct WiXInstallerValue {
     pub inner: WiXInstallerBuilder,
+    pub filename: String,
 }
 
 impl TypedValue for WiXInstallerValue {
@@ -38,7 +40,7 @@ impl TypedValue for WiXInstallerValue {
 }
 
 impl WiXInstallerValue {
-    fn new_from_args(type_values: &TypeValues, id: String) -> ValueResult {
+    fn new_from_args(type_values: &TypeValues, id: String, filename: String) -> ValueResult {
         let build_context_value = get_context_value(type_values)?;
         let context = build_context_value
             .downcast_ref::<EnvironmentContext>()
@@ -47,7 +49,10 @@ impl WiXInstallerValue {
         // TODO grab target triple properly.
         let builder = WiXInstallerBuilder::new(id, env!("HOST").to_string(), context.build_path());
 
-        Ok(Value::new(WiXInstallerValue { inner: builder }))
+        Ok(Value::new(WiXInstallerValue {
+            inner: builder,
+            filename,
+        }))
     }
 
     fn add_build_files_starlark(&mut self, manifest: FileManifestValue) -> ValueResult {
@@ -132,6 +137,35 @@ impl WiXInstallerValue {
         Ok(Value::new(NoneType::None))
     }
 
+    fn build_starlark(&self, type_values: &TypeValues, target: String) -> ValueResult {
+        let context_value = get_context_value(type_values)?;
+        let context = context_value
+            .downcast_ref::<EnvironmentContext>()
+            .ok_or(ValueError::IncorrectParameterType)?;
+
+        let output_path = context.target_build_path(&target);
+        let installer_path = output_path.join(&self.filename);
+
+        self.inner
+            .build(context.logger(), &installer_path)
+            .map_err(|e| {
+                ValueError::from(RuntimeError {
+                    code: "TUGGER",
+                    message: format!("{:?}", e),
+                    label: "build()".to_string(),
+                })
+            })?;
+
+        Ok(Value::new(ResolvedTargetValue {
+            inner: ResolvedTarget {
+                run_mode: RunMode::Path {
+                    path: installer_path,
+                },
+                output_path,
+            },
+        }))
+    }
+
     fn set_variable_starlark(&mut self, key: String, value: Value) -> ValueResult {
         let value = optional_str_arg("value", &value)?;
         self.inner.set_variable(key, value);
@@ -142,8 +176,8 @@ impl WiXInstallerValue {
 
 starlark_module! { wix_installer_module =>
     #[allow(non_snake_case)]
-    WiXInstaller(env env, id: String) {
-        WiXInstallerValue::new_from_args(env, id)
+    WiXInstaller(env env, id: String, filename: String) {
+        WiXInstallerValue::new_from_args(env, id, filename)
     }
 
     WiXInstaller.add_build_files(this, manifest: FileManifestValue) {
@@ -178,6 +212,13 @@ starlark_module! { wix_installer_module =>
         }
     }
 
+    WiXInstaller.build(env env, this, target: String) {
+        match this.clone().downcast_ref::<WiXInstallerValue>() {
+            Some(installer) => installer.build_starlark(env, target),
+            None => Err(ValueError::IncorrectParameterType),
+        }
+    }
+
     WiXInstaller.set_variable(this, key: String, value) {
         match this.clone().downcast_mut::<WiXInstallerValue>()? {
             Some(mut installer) => installer.set_variable_starlark(key, value),
@@ -194,7 +235,7 @@ mod tests {
     fn test_constructor() -> Result<()> {
         let mut env = StarlarkEnvironment::new()?;
 
-        let installer = env.eval("WiXInstaller('myapp')")?;
+        let installer = env.eval("WiXInstaller('myapp', 'ignored')")?;
         assert_eq!(installer.get_type(), WiXInstallerValue::TYPE);
 
         Ok(())
@@ -204,7 +245,7 @@ mod tests {
     fn test_add_missing_file() -> Result<()> {
         let mut env = StarlarkEnvironment::new()?;
 
-        env.eval("installer = WiXInstaller('myapp')")?;
+        env.eval("installer = WiXInstaller('myapp', 'ignored')")?;
         assert!(env
             .eval("installer.add_wxs_file('does-not-exist')")
             .is_err());
@@ -216,7 +257,7 @@ mod tests {
     fn test_set_variable() -> Result<()> {
         let mut env = StarlarkEnvironment::new()?;
 
-        env.eval("installer = WiXInstaller('myapp')")?;
+        env.eval("installer = WiXInstaller('myapp', 'ignored')")?;
         env.eval("installer.set_variable('foo', None)")?;
         env.eval("installer.set_variable('bar', 'baz')")?;
         let installer_value = env.eval("installer")?;
@@ -238,7 +279,7 @@ mod tests {
     fn test_add_simple_installer() -> Result<()> {
         let mut env = StarlarkEnvironment::new()?;
 
-        env.eval("installer = WiXInstaller('myapp')")?;
+        env.eval("installer = WiXInstaller('myapp', 'ignored')")?;
         env.eval("installer.add_simple_installer('myapp', '0.1', 'author', FileManifest())")?;
 
         Ok(())
@@ -248,9 +289,41 @@ mod tests {
     fn test_add_build_files() -> Result<()> {
         let mut env = StarlarkEnvironment::new()?;
 
-        env.eval("installer = WiXInstaller('myapp')")?;
+        env.eval("installer = WiXInstaller('myapp', 'ignored')")?;
         env.eval("m = FileManifest()")?;
         env.eval("installer.add_build_files(m)")?;
+
+        Ok(())
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn test_build_simple_installer() -> Result<()> {
+        let mut env = StarlarkEnvironment::new()?;
+
+        env.eval("installer = WiXInstaller('myapp', 'myapp.msi')")?;
+        env.eval("installer.add_simple_installer('myapp', '0.1', 'author', FileManifest())")?;
+        let resolved_value = env.eval("installer.build('msi')")?;
+
+        assert_eq!(resolved_value.get_type(), "ResolvedTarget");
+
+        let resolved = resolved_value
+            .downcast_ref::<ResolvedTargetValue>()
+            .unwrap();
+
+        let context_value = get_context_value(&env.type_values).unwrap();
+        let context = context_value.downcast_ref::<EnvironmentContext>().unwrap();
+
+        let build_path = context.build_path();
+        let msi_path = build_path.join("msi").join("myapp.msi");
+
+        assert_eq!(
+            resolved.inner.run_mode,
+            RunMode::Path {
+                path: msi_path.clone()
+            }
+        );
+        assert!(msi_path.exists());
 
         Ok(())
     }

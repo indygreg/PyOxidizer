@@ -34,6 +34,16 @@ the following arguments:
    This value should reflect the name of the entity being installed and should
    be unique to prevent collisions with other installers.
 
+``filename``
+   (``string``) The name of the file that will be built.
+
+   WiX supports generating multiple installer file types depending on the
+   content of the ``.wxs`` files. You will have to provide a filename that
+   is appropriate for the installer type.
+
+   File extensions of ``.msi`` and ``.exe`` are common. If using
+   ``add_simple_installer()``, you will want to provide an ``.msi`` filename.
+
 .. _tugger_starlark_wix_installer_methods:
 
 Methods
