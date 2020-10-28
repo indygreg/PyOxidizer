@@ -114,29 +114,36 @@ impl PyOxidizerEnvironmentContext {
         Ok(self.build_path(type_values)?.join("python_distributions"))
     }
 
-    pub fn get_build_context(
+    pub fn get_output_path(
         &self,
         type_values: &TypeValues,
         target: &str,
-    ) -> Result<PyOxidizerBuildContext> {
-        let output_path = self
-            .build_path(type_values)
-            .map_err(|_| anyhow!("unable to resolve build path"))?
+    ) -> Result<PathBuf, ValueError> {
+        Ok(self
+            .build_path(type_values)?
             .join(&self.build_target_triple)
             .join(if self.build_release {
                 "release"
             } else {
                 "debug"
             })
-            .join(target);
+            .join(target))
+    }
 
+    pub fn get_build_context(
+        &self,
+        type_values: &TypeValues,
+        target: &str,
+    ) -> Result<PyOxidizerBuildContext> {
         Ok(PyOxidizerBuildContext {
             logger: self.logger().clone(),
             host_triple: self.build_host_triple.clone(),
             target_triple: self.build_target_triple.clone(),
             release: self.build_release,
             opt_level: self.build_opt_level.clone(),
-            output_path,
+            output_path: self
+                .get_output_path(type_values, target)
+                .map_err(|_| anyhow!("unable to resolve output path"))?,
         })
     }
 }
