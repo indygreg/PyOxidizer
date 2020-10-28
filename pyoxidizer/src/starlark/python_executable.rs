@@ -5,7 +5,7 @@
 use {
     super::{
         env::{get_context, PyOxidizerEnvironmentContext},
-        python_embedded_resources::PythonEmbeddedResources,
+        python_embedded_resources::PythonEmbeddedResourcesValue,
         python_packaging_policy::PythonPackagingPolicyValue,
         python_resource::{
             is_resource_starlark_compatible, python_resource_to_value, FileValue,
@@ -664,7 +664,7 @@ impl PythonExecutableValue {
 
     /// PythonExecutable.to_embedded_resources()
     pub fn starlark_to_embedded_resources(&self) -> ValueResult {
-        Ok(Value::new(PythonEmbeddedResources {
+        Ok(Value::new(PythonEmbeddedResourcesValue {
             exe: self.exe.clone_trait(),
         }))
     }

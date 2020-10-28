@@ -7,7 +7,7 @@ use {
         env::{
             get_context, global_environment, PyOxidizerBuildContext, PyOxidizerEnvironmentContext,
         },
-        python_embedded_resources::PythonEmbeddedResources,
+        python_embedded_resources::PythonEmbeddedResourcesValue,
         python_executable::PythonExecutableValue,
     },
     anyhow::{anyhow, Context, Result},
@@ -206,7 +206,7 @@ impl EvaluationContext {
                 .ok_or_else(|| anyhow!("invalid cast"))?
                 .build(&build_context),
             "PythonEmbeddedResources" => resolved_value
-                .downcast_mut::<PythonEmbeddedResources>()
+                .downcast_mut::<PythonEmbeddedResourcesValue>()
                 .map_err(|_| anyhow!("object isn't mutable"))?
                 .ok_or_else(|| anyhow!("invalid cast"))?
                 .build(&build_context),

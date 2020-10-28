@@ -11,12 +11,12 @@ use {
     std::sync::Arc,
 };
 
-pub struct PythonEmbeddedResources {
+pub struct PythonEmbeddedResourcesValue {
     pub exe: Arc<dyn PythonBinaryBuilder>,
 }
 
-impl TypedValue for PythonEmbeddedResources {
-    type Holder = Mutable<PythonEmbeddedResources>;
+impl TypedValue for PythonEmbeddedResourcesValue {
+    type Holder = Mutable<PythonEmbeddedResourcesValue>;
     const TYPE: &'static str = "PythonEmbeddedResources";
 
     fn values_for_descendant_check_and_freeze(&self) -> Box<dyn Iterator<Item = Value>> {
@@ -24,7 +24,7 @@ impl TypedValue for PythonEmbeddedResources {
     }
 }
 
-impl BuildTarget for PythonEmbeddedResources {
+impl BuildTarget for PythonEmbeddedResourcesValue {
     fn build(&mut self, context: &dyn BuildContext) -> Result<ResolvedTarget> {
         let output_path = context.get_state_path("output_path")?;
 
