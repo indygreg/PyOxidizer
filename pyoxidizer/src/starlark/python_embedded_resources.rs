@@ -7,7 +7,7 @@ use {
         py_packaging::binary::PythonBinaryBuilder,
         starlark::env::{get_context, PyOxidizerEnvironmentContext},
     },
-    anyhow::Result,
+    anyhow::{anyhow, Result},
     slog::warn,
     starlark::{
         environment::TypeValues,
@@ -20,7 +20,7 @@ use {
             starlark_signature_extraction, starlark_signatures,
         },
     },
-    starlark_dialect_build_targets::{BuildContext, ResolvedTarget, ResolvedTargetValue, RunMode},
+    starlark_dialect_build_targets::{ResolvedTarget, ResolvedTargetValue, RunMode},
     std::sync::Arc,
 };
 
@@ -38,25 +38,31 @@ impl TypedValue for PythonEmbeddedResourcesValue {
 }
 
 impl PythonEmbeddedResourcesValue {
-    fn build(&self, build_context: &dyn BuildContext) -> Result<ResolvedTarget> {
-        let output_path = build_context.get_state_path("output_path")?;
+    fn build(
+        &self,
+        type_values: &TypeValues,
+        target: &str,
+        context: &PyOxidizerEnvironmentContext,
+    ) -> Result<ResolvedTarget> {
+        let output_path = context
+            .get_output_path(type_values, target)
+            .map_err(|_| anyhow!("unable to resolve output path"))?;
 
         warn!(
-            build_context.logger(),
+            context.logger(),
             "writing Python embedded artifacts to {}",
             output_path.display()
         );
 
-        let embedded = self.exe.to_embedded_python_context(
-            build_context.logger(),
-            build_context.get_state_string("opt_level")?,
-        )?;
+        let embedded = self
+            .exe
+            .to_embedded_python_context(context.logger(), &context.build_opt_level)?;
 
         embedded.write_files(&output_path)?;
 
         Ok(ResolvedTarget {
             run_mode: RunMode::None,
-            output_path: output_path.to_path_buf(),
+            output_path,
         })
     }
 
@@ -66,24 +72,16 @@ impl PythonEmbeddedResourcesValue {
             .downcast_ref::<PyOxidizerEnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
 
-        let build_context = pyoxidizer_context
-            .get_build_context(type_values, &target)
-            .map_err(|e| {
-                ValueError::from(RuntimeError {
-                    code: "PYOXIDIZER",
-                    message: e.to_string(),
-                    label: "build()".to_string(),
-                })
-            })?;
-
         Ok(Value::new(ResolvedTargetValue {
-            inner: self.build(&build_context).map_err(|e| {
-                ValueError::from(RuntimeError {
-                    code: "PYOXIDIZER",
-                    message: e.to_string(),
-                    label: "build()".to_string(),
-                })
-            })?,
+            inner: self
+                .build(type_values, &target, &pyoxidizer_context)
+                .map_err(|e| {
+                    ValueError::from(RuntimeError {
+                        code: "PYOXIDIZER",
+                        message: e.to_string(),
+                        label: "build()".to_string(),
+                    })
+                })?,
         }))
     }
 }

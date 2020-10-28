@@ -4,7 +4,7 @@
 
 use {
     crate::py_packaging::distribution::DistributionCache,
-    anyhow::{anyhow, Context, Result},
+    anyhow::{Context, Result},
     starlark::{
         environment::{Environment, EnvironmentError, TypeValues},
         values::{
@@ -12,9 +12,7 @@ use {
             {Mutable, TypedValue, Value, ValueResult},
         },
     },
-    starlark_dialect_build_targets::{
-        build_targets_module, get_context_value, BuildContext, EnvironmentContext, GetStateError,
-    },
+    starlark_dialect_build_targets::{build_targets_module, get_context_value, EnvironmentContext},
     std::{
         path::{Path, PathBuf},
         sync::Arc,
@@ -129,23 +127,6 @@ impl PyOxidizerEnvironmentContext {
             })
             .join(target))
     }
-
-    pub fn get_build_context(
-        &self,
-        type_values: &TypeValues,
-        target: &str,
-    ) -> Result<PyOxidizerBuildContext> {
-        Ok(PyOxidizerBuildContext {
-            logger: self.logger().clone(),
-            host_triple: self.build_host_triple.clone(),
-            target_triple: self.build_target_triple.clone(),
-            release: self.build_release,
-            opt_level: self.build_opt_level.clone(),
-            output_path: self
-                .get_output_path(type_values, target)
-                .map_err(|_| anyhow!("unable to resolve output path"))?,
-        })
-    }
 }
 
 impl TypedValue for PyOxidizerEnvironmentContext {
@@ -172,58 +153,6 @@ impl TypedValue for PyOxidizerContext {
 
     fn values_for_descendant_check_and_freeze(&self) -> Box<dyn Iterator<Item = Value>> {
         Box::new(std::iter::empty())
-    }
-}
-
-/// Holds the build context for PyOxidizer's Starlark types.
-pub struct PyOxidizerBuildContext {
-    /// Logger where messages can be written.
-    pub logger: slog::Logger,
-
-    /// Rust target triple for build host.
-    pub host_triple: String,
-
-    /// Rust target triple for build target.
-    pub target_triple: String,
-
-    /// Whether we are building in release mode.
-    ///
-    /// Debug if false.
-    pub release: bool,
-
-    /// Optimization level for Rust compiler.
-    pub opt_level: String,
-
-    /// Where generated files should be written.
-    pub output_path: PathBuf,
-}
-
-impl BuildContext for PyOxidizerBuildContext {
-    fn logger(&self) -> &slog::Logger {
-        &self.logger
-    }
-
-    fn get_state_string(&self, key: &str) -> Result<&str, GetStateError> {
-        match key {
-            "host_triple" => Ok(&self.host_triple),
-            "target_triple" => Ok(&self.target_triple),
-            "opt_level" => Ok(&self.opt_level),
-            _ => Err(GetStateError::InvalidKey(key.to_string())),
-        }
-    }
-
-    fn get_state_bool(&self, key: &str) -> Result<bool, GetStateError> {
-        match key {
-            "release" => Ok(self.release),
-            _ => Err(GetStateError::InvalidKey(key.to_string())),
-        }
-    }
-
-    fn get_state_path(&self, key: &str) -> Result<&Path, GetStateError> {
-        match key {
-            "output_path" => Ok(&self.output_path),
-            _ => Err(GetStateError::InvalidKey(key.to_string())),
-        }
     }
 }
 

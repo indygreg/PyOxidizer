@@ -16,7 +16,7 @@ use {
         util::ToOptional,
     },
     crate::{project_building::build_python_executable, py_packaging::binary::PythonBinaryBuilder},
-    anyhow::{Context, Result},
+    anyhow::{anyhow, Context, Result},
     python_packaging::resource::{DataLocation, PythonModuleSource},
     slog::{info, warn},
     starlark::{
@@ -35,7 +35,7 @@ use {
         },
     },
     starlark_dialect_build_targets::{
-        optional_dict_arg, optional_list_arg, required_list_arg, BuildContext, ResolvedTarget,
+        optional_dict_arg, optional_list_arg, required_list_arg, ResolvedTarget,
         ResolvedTargetValue, RunMode,
     },
     std::{
@@ -73,22 +73,29 @@ impl PythonExecutableValue {
             .clone()
     }
 
-    pub fn build(&self, build_context: &dyn BuildContext) -> Result<ResolvedTarget> {
+    pub fn build(
+        &self,
+        type_values: &TypeValues,
+        target: &str,
+        context: &PyOxidizerEnvironmentContext,
+    ) -> Result<ResolvedTarget> {
         // Build an executable by writing out a temporary Rust project
         // and building it.
         let build = build_python_executable(
-            build_context.logger(),
+            context.logger(),
             &self.exe.name(),
             self.exe.deref(),
-            build_context.get_state_string("target_triple")?,
-            build_context.get_state_string("opt_level")?,
-            build_context.get_state_bool("release")?,
+            &context.build_target_triple,
+            &context.build_opt_level,
+            context.build_release,
         )?;
 
-        let output_path = build_context.get_state_path("output_path")?;
+        let output_path = context
+            .get_output_path(type_values, target)
+            .map_err(|_| anyhow!("unable to resolve output path"))?;
         let dest_path = output_path.join(build.exe_name);
         warn!(
-            &build_context.logger(),
+            context.logger(),
             "writing executable to {}",
             dest_path.display()
         );
@@ -176,24 +183,16 @@ impl PythonExecutableValue {
             .downcast_ref::<PyOxidizerEnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
 
-        let build_context = pyoxidizer_context
-            .get_build_context(type_values, &target)
-            .map_err(|e| {
-                ValueError::from(RuntimeError {
-                    code: "PYOXIDIZER",
-                    message: e.to_string(),
-                    label: "build()".to_string(),
-                })
-            })?;
-
         Ok(Value::new(ResolvedTargetValue {
-            inner: self.build(&build_context).map_err(|e| {
-                ValueError::from(RuntimeError {
-                    code: "PYOXIDIZER",
-                    message: e.to_string(),
-                    label: "build()".to_string(),
-                })
-            })?,
+            inner: self
+                .build(type_values, &target, &pyoxidizer_context)
+                .map_err(|e| {
+                    ValueError::from(RuntimeError {
+                        code: "PYOXIDIZER",
+                        message: e.to_string(),
+                        label: "build()".to_string(),
+                    })
+                })?,
         }))
     }
 
