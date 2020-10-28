@@ -7,7 +7,6 @@ use {
         file_resource::{FileContent, FileManifest},
         glob::evaluate_glob,
     },
-    anyhow::Result,
     slog::warn,
     starlark::{
         environment::TypeValues,
@@ -22,8 +21,8 @@ use {
         },
     },
     starlark_dialect_build_targets::{
-        get_context_value, optional_list_arg, optional_str_arg, required_list_arg, BuildContext,
-        BuildTarget, EnvironmentContext, ResolvedTarget, RunMode,
+        get_context_value, optional_list_arg, optional_str_arg, required_list_arg,
+        EnvironmentContext, ResolvedTarget, ResolvedTargetValue, RunMode,
     },
     std::{collections::HashSet, convert::TryFrom, path::PathBuf},
 };
@@ -50,16 +49,47 @@ pub struct FileManifestValue {
     pub run_path: Option<PathBuf>,
 }
 
-impl BuildTarget for FileManifestValue {
-    fn build(&mut self, context: &dyn BuildContext) -> Result<ResolvedTarget> {
-        let output_path = context.get_state_path("output_path")?;
+impl TypedValue for FileManifestValue {
+    type Holder = Mutable<FileManifestValue>;
+    const TYPE: &'static str = "FileManifest";
+
+    fn values_for_descendant_check_and_freeze(&self) -> Box<dyn Iterator<Item = Value>> {
+        Box::new(std::iter::empty())
+    }
+}
+
+// Starlark functions.
+impl FileManifestValue {
+    /// FileManifest()
+    fn new_from_args() -> ValueResult {
+        let manifest = FileManifest::default();
+
+        Ok(Value::new(FileManifestValue {
+            manifest,
+            run_path: None,
+        }))
+    }
+
+    fn build_starlark(&self, type_values: &TypeValues, target: String) -> ValueResult {
+        let context_value = get_context_value(type_values)?;
+        let context = context_value
+            .downcast_ref::<EnvironmentContext>()
+            .ok_or(ValueError::IncorrectParameterType)?;
+
+        let output_path = context.build_path().join(target);
 
         warn!(
             context.logger(),
             "installing files to {}",
             output_path.display()
         );
-        self.manifest.replace_path(output_path)?;
+        self.manifest.replace_path(&output_path).map_err(|e| {
+            ValueError::from(RuntimeError {
+                code: "TUGGER",
+                message: e.to_string(),
+                label: "build".to_string(),
+            })
+        })?;
 
         // Use the stored run target if available, falling back to the single
         // executable file if non-ambiguous.
@@ -84,31 +114,11 @@ impl BuildTarget for FileManifestValue {
             }
         };
 
-        Ok(ResolvedTarget {
-            run_mode,
-            output_path: output_path.to_path_buf(),
-        })
-    }
-}
-
-impl TypedValue for FileManifestValue {
-    type Holder = Mutable<FileManifestValue>;
-    const TYPE: &'static str = "FileManifest";
-
-    fn values_for_descendant_check_and_freeze(&self) -> Box<dyn Iterator<Item = Value>> {
-        Box::new(std::iter::empty())
-    }
-}
-
-// Starlark functions.
-impl FileManifestValue {
-    /// FileManifest()
-    fn new_from_args() -> ValueResult {
-        let manifest = FileManifest::default();
-
-        Ok(Value::new(FileManifestValue {
-            manifest,
-            run_path: None,
+        Ok(Value::new(ResolvedTargetValue {
+            inner: ResolvedTarget {
+                run_mode,
+                output_path: output_path.to_path_buf(),
+            },
         }))
     }
 
@@ -263,6 +273,13 @@ starlark_module! { file_resource_module =>
         }
     }
 
+    FileManifest.build(env env, this, target: String) {
+        match this.clone().downcast_ref::<FileManifestValue>() {
+            Some(manifest) => manifest.build_starlark(env, target),
+            None => Err(ValueError::IncorrectParameterType),
+        }
+    }
+
     FileManifest.install(env env, this, path: String, replace: bool = true) {
         match this.clone().downcast_ref::<FileManifestValue>() {
             Some(manifest) => manifest.install(&env, path, replace),
@@ -273,7 +290,7 @@ starlark_module! { file_resource_module =>
 
 #[cfg(test)]
 mod tests {
-    use {super::*, crate::starlark::testutil::*};
+    use {super::*, crate::starlark::testutil::*, anyhow::Result};
 
     #[test]
     fn test_new_file_manifest() {

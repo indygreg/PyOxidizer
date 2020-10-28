@@ -35,8 +35,8 @@ use {
         },
     },
     starlark_dialect_build_targets::{
-        optional_dict_arg, optional_list_arg, required_list_arg, BuildContext, BuildTarget,
-        ResolvedTarget, RunMode,
+        optional_dict_arg, optional_list_arg, required_list_arg, BuildContext, ResolvedTarget,
+        ResolvedTargetValue, RunMode,
     },
     std::{
         collections::HashMap,
@@ -71,6 +71,38 @@ impl PythonExecutableValue {
             .downcast_ref::<PythonPackagingPolicyValue>()
             .unwrap()
             .clone()
+    }
+
+    pub fn build(&self, build_context: &dyn BuildContext) -> Result<ResolvedTarget> {
+        // Build an executable by writing out a temporary Rust project
+        // and building it.
+        let build = build_python_executable(
+            build_context.logger(),
+            &self.exe.name(),
+            self.exe.deref(),
+            build_context.get_state_string("target_triple")?,
+            build_context.get_state_string("opt_level")?,
+            build_context.get_state_bool("release")?,
+        )?;
+
+        let output_path = build_context.get_state_path("output_path")?;
+        let dest_path = output_path.join(build.exe_name);
+        warn!(
+            &build_context.logger(),
+            "writing executable to {}",
+            dest_path.display()
+        );
+        let mut fh = std::fs::File::create(&dest_path)
+            .context(format!("creating {}", dest_path.display()))?;
+        fh.write_all(&build.exe_data)
+            .context(format!("writing {}", dest_path.display()))?;
+
+        tugger::file_resource::set_executable(&mut fh).context("making binary executable")?;
+
+        Ok(ResolvedTarget {
+            run_mode: RunMode::Path { path: dest_path },
+            output_path: output_path.to_path_buf(),
+        })
     }
 }
 
@@ -136,42 +168,35 @@ impl TypedValue for PythonExecutableValue {
     }
 }
 
-impl BuildTarget for PythonExecutableValue {
-    fn build(&mut self, context: &dyn BuildContext) -> Result<ResolvedTarget> {
-        // Build an executable by writing out a temporary Rust project
-        // and building it.
-        let build = build_python_executable(
-            context.logger(),
-            &self.exe.name(),
-            self.exe.deref(),
-            context.get_state_string("target_triple")?,
-            context.get_state_string("opt_level")?,
-            context.get_state_bool("release")?,
-        )?;
-
-        let output_path = context.get_state_path("output_path")?;
-        let dest_path = output_path.join(build.exe_name);
-        warn!(
-            &context.logger(),
-            "writing executable to {}",
-            dest_path.display()
-        );
-        let mut fh = std::fs::File::create(&dest_path)
-            .context(format!("creating {}", dest_path.display()))?;
-        fh.write_all(&build.exe_data)
-            .context(format!("writing {}", dest_path.display()))?;
-
-        tugger::file_resource::set_executable(&mut fh).context("making binary executable")?;
-
-        Ok(ResolvedTarget {
-            run_mode: RunMode::Path { path: dest_path },
-            output_path: output_path.to_path_buf(),
-        })
-    }
-}
-
 // Starlark functions.
 impl PythonExecutableValue {
+    fn starlark_build(&self, type_values: &TypeValues, target: String) -> ValueResult {
+        let pyoxidizer_context_value = get_context(type_values)?;
+        let pyoxidizer_context = pyoxidizer_context_value
+            .downcast_ref::<PyOxidizerEnvironmentContext>()
+            .ok_or(ValueError::IncorrectParameterType)?;
+
+        let build_context = pyoxidizer_context
+            .get_build_context(type_values, &target)
+            .map_err(|e| {
+                ValueError::from(RuntimeError {
+                    code: "PYOXIDIZER",
+                    message: e.to_string(),
+                    label: "build()".to_string(),
+                })
+            })?;
+
+        Ok(Value::new(ResolvedTargetValue {
+            inner: self.build(&build_context).map_err(|e| {
+                ValueError::from(RuntimeError {
+                    code: "PYOXIDIZER",
+                    message: e.to_string(),
+                    label: "build()".to_string(),
+                })
+            })?,
+        }))
+    }
+
     /// PythonExecutable.make_python_module_source(name, source, is_package=false)
     pub fn starlark_make_python_module_source(
         &self,
@@ -718,6 +743,13 @@ impl PythonExecutableValue {
 }
 
 starlark_module! { python_executable_env =>
+    PythonExecutable.build(env env, this, target: String) {
+        match this.clone().downcast_ref::<PythonExecutableValue>() {
+            Some(exe) => exe.starlark_build(env, target),
+            None => Err(ValueError::IncorrectParameterType),
+        }
+    }
+
     #[allow(non_snake_case, clippy::ptr_arg)]
     PythonExecutable.make_python_module_source(
         env env,

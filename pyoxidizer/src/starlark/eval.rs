@@ -3,27 +3,22 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    crate::starlark::{
-        env::{
-            get_context, global_environment, PyOxidizerBuildContext, PyOxidizerEnvironmentContext,
-        },
-        python_embedded_resources::PythonEmbeddedResourcesValue,
-        python_executable::PythonExecutableValue,
-    },
-    anyhow::{anyhow, Context, Result},
+    crate::starlark::env::{global_environment, PyOxidizerEnvironmentContext},
+    anyhow::{anyhow, Result},
     codemap::CodeMap,
     codemap_diagnostic::Diagnostic,
+    linked_hash_map::LinkedHashMap,
     starlark::{
         environment::{Environment, TypeValues},
+        eval::call_stack::CallStack,
         syntax::dialect::Dialect,
         values::Value,
     },
-    starlark_dialect_build_targets::{BuildTarget, EnvironmentContext, ResolvedTarget},
+    starlark_dialect_build_targets::{EnvironmentContext, ResolvedTarget, ResolvedTargetValue},
     std::{
         path::Path,
         sync::{Arc, Mutex},
     },
-    tugger::starlark::file_resource::FileManifestValue,
 };
 
 /// Represents a running Starlark environment.
@@ -106,11 +101,6 @@ impl EvaluationContext {
             .map_err(|_| anyhow!("could not obtain build targets context"))
     }
 
-    /// Obtain the `Value` for PyOxidizer's context.
-    fn pyoxidizer_context_value(&self) -> Result<Value> {
-        get_context(&self.type_values).map_err(|_| anyhow!("could not obtain context"))
-    }
-
     pub fn default_target(&self) -> Result<Option<String>> {
         let raw_context = self.build_targets_context_value()?;
         let context = raw_context
@@ -144,35 +134,6 @@ impl EvaluationContext {
     }
 
     pub fn build_resolved_target(&mut self, target: &str) -> Result<ResolvedTarget> {
-        let build_context = {
-            let pyoxidizer_context_value = self.pyoxidizer_context_value()?;
-            let pyoxidizer_context = pyoxidizer_context_value
-                .downcast_ref::<PyOxidizerEnvironmentContext>()
-                .ok_or_else(|| anyhow!("context has incorrect type"))?;
-
-            let output_path = pyoxidizer_context
-                .build_path(&self.type_values)
-                .map_err(|_| anyhow!("unable to resolve build path"))?
-                .join(&pyoxidizer_context.build_target_triple)
-                .join(if pyoxidizer_context.build_release {
-                    "release"
-                } else {
-                    "debug"
-                })
-                .join(target);
-
-            PyOxidizerBuildContext {
-                logger: pyoxidizer_context.logger().clone(),
-                host_triple: pyoxidizer_context.build_host_triple.clone(),
-                target_triple: pyoxidizer_context.build_target_triple.clone(),
-                release: pyoxidizer_context.build_release,
-                opt_level: pyoxidizer_context.build_opt_level.clone(),
-                output_path,
-            }
-        };
-
-        std::fs::create_dir_all(&build_context.output_path).context("creating output path")?;
-
         let raw_context = self.build_targets_context_value()?;
         let mut context = raw_context
             .downcast_mut::<EnvironmentContext>()
@@ -193,29 +154,36 @@ impl EvaluationContext {
             return Err(anyhow!("target {} is not registered", target));
         };
 
-        // TODO surely this can use dynamic dispatch.
-        let resolved_target: ResolvedTarget = match resolved_value.get_type() {
-            "FileManifest" => resolved_value
-                .downcast_mut::<FileManifestValue>()
-                .map_err(|_| anyhow!("object isn't mutable"))?
-                .ok_or_else(|| anyhow!("invalid cast"))?
-                .build(&build_context),
-            "PythonExecutable" => resolved_value
-                .downcast_mut::<PythonExecutableValue>()
-                .map_err(|_| anyhow!("object isn't mutable"))?
-                .ok_or_else(|| anyhow!("invalid cast"))?
-                .build(&build_context),
-            "PythonEmbeddedResources" => resolved_value
-                .downcast_mut::<PythonEmbeddedResourcesValue>()
-                .map_err(|_| anyhow!("object isn't mutable"))?
-                .ok_or_else(|| anyhow!("invalid cast"))?
-                .build(&build_context),
-            _ => Err(anyhow!("could not determine type of target")),
-        }?;
+        if !resolved_value
+            .has_attr("build")
+            .map_err(|_| anyhow!("unable to call has_attr()"))?
+        {
+            return Err(anyhow!(
+                "{} does not implement build()",
+                resolved_value.get_type()
+            ));
+        }
+        let build = resolved_value.get_attr("build").unwrap();
+        let mut call_stack = CallStack::default();
 
-        context.get_target_mut(target).unwrap().built_target = Some(resolved_target.clone());
+        let resolved_target_value = build
+            .call(
+                &mut call_stack,
+                &self.type_values,
+                vec![Value::from(target)],
+                LinkedHashMap::new(),
+                None,
+                None,
+            )
+            .map_err(|_| anyhow!("error calling build()"))?;
 
-        Ok(resolved_target)
+        let resolved_target = resolved_target_value
+            .downcast_ref::<ResolvedTargetValue>()
+            .unwrap();
+
+        context.get_target_mut(target).unwrap().built_target = Some(resolved_target.inner.clone());
+
+        Ok(resolved_target.inner.clone())
     }
 
     /// Evaluate a target and run it, if possible.

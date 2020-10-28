@@ -67,6 +67,25 @@ impl ResolvedTarget {
     }
 }
 
+pub struct ResolvedTargetValue {
+    pub inner: ResolvedTarget,
+}
+
+impl TypedValue for ResolvedTargetValue {
+    type Holder = Mutable<ResolvedTargetValue>;
+    const TYPE: &'static str = "ResolvedTargetValue";
+
+    fn values_for_descendant_check_and_freeze(&self) -> Box<dyn Iterator<Item = Value>> {
+        Box::new(std::iter::empty())
+    }
+}
+
+impl From<ResolvedTarget> for ResolvedTargetValue {
+    fn from(t: ResolvedTarget) -> Self {
+        Self { inner: t }
+    }
+}
+
 /// Represents a registered target in the Starlark environment.
 #[derive(Debug, Clone)]
 pub struct Target {
@@ -122,12 +141,6 @@ pub trait BuildContext {
 
     /// Obtain the path value of a state key.
     fn get_state_path(&self, key: &str) -> Result<&Path, GetStateError>;
-}
-
-/// Trait that indicates a type can be resolved as a target.
-pub trait BuildTarget {
-    /// Build the target, resolving it
-    fn build(&mut self, context: &dyn BuildContext) -> Result<ResolvedTarget>;
 }
 
 /// Holds execution context for a Starlark environment.

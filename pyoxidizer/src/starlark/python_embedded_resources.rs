@@ -3,11 +3,24 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    crate::py_packaging::binary::PythonBinaryBuilder,
+    crate::{
+        py_packaging::binary::PythonBinaryBuilder,
+        starlark::env::{get_context, PyOxidizerEnvironmentContext},
+    },
     anyhow::Result,
     slog::warn,
-    starlark::values::{Mutable, TypedValue, Value},
-    starlark_dialect_build_targets::{BuildContext, BuildTarget, ResolvedTarget, RunMode},
+    starlark::{
+        environment::TypeValues,
+        values::{
+            error::{RuntimeError, ValueError},
+            {Mutable, TypedValue, Value, ValueResult},
+        },
+        {
+            starlark_fun, starlark_module, starlark_parse_param_type, starlark_signature,
+            starlark_signature_extraction, starlark_signatures,
+        },
+    },
+    starlark_dialect_build_targets::{BuildContext, ResolvedTarget, ResolvedTargetValue, RunMode},
     std::sync::Arc,
 };
 
@@ -24,25 +37,66 @@ impl TypedValue for PythonEmbeddedResourcesValue {
     }
 }
 
-impl BuildTarget for PythonEmbeddedResourcesValue {
-    fn build(&mut self, context: &dyn BuildContext) -> Result<ResolvedTarget> {
-        let output_path = context.get_state_path("output_path")?;
+impl PythonEmbeddedResourcesValue {
+    fn build(&self, build_context: &dyn BuildContext) -> Result<ResolvedTarget> {
+        let output_path = build_context.get_state_path("output_path")?;
 
         warn!(
-            context.logger(),
+            build_context.logger(),
             "writing Python embedded artifacts to {}",
             output_path.display()
         );
 
-        let embedded = self
-            .exe
-            .to_embedded_python_context(context.logger(), context.get_state_string("opt_level")?)?;
+        let embedded = self.exe.to_embedded_python_context(
+            build_context.logger(),
+            build_context.get_state_string("opt_level")?,
+        )?;
 
-        embedded.write_files(output_path)?;
+        embedded.write_files(&output_path)?;
 
         Ok(ResolvedTarget {
             run_mode: RunMode::None,
             output_path: output_path.to_path_buf(),
         })
+    }
+
+    fn build_starlark(&self, type_values: &TypeValues, target: String) -> ValueResult {
+        let pyoxidizer_context_value = get_context(type_values)?;
+        let pyoxidizer_context = pyoxidizer_context_value
+            .downcast_ref::<PyOxidizerEnvironmentContext>()
+            .ok_or(ValueError::IncorrectParameterType)?;
+
+        let build_context = pyoxidizer_context
+            .get_build_context(type_values, &target)
+            .map_err(|e| {
+                ValueError::from(RuntimeError {
+                    code: "PYOXIDIZER",
+                    message: e.to_string(),
+                    label: "build()".to_string(),
+                })
+            })?;
+
+        Ok(Value::new(ResolvedTargetValue {
+            inner: self.build(&build_context).map_err(|e| {
+                ValueError::from(RuntimeError {
+                    code: "PYOXIDIZER",
+                    message: e.to_string(),
+                    label: "build()".to_string(),
+                })
+            })?,
+        }))
+    }
+}
+
+starlark_module! { python_embedded_resources_module =>
+    PythonEmbeddedResources.build(
+        env env,
+        this,
+        target: String
+    ) {
+        match this.clone().downcast_ref::<PythonEmbeddedResourcesValue>() {
+            Some(resources) => resources.build_starlark(env, target),
+            None => Err(ValueError::IncorrectParameterType),
+        }
     }
 }

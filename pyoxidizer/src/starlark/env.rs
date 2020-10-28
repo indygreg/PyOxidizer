@@ -4,7 +4,7 @@
 
 use {
     crate::py_packaging::distribution::DistributionCache,
-    anyhow::{Context, Result},
+    anyhow::{anyhow, Context, Result},
     starlark::{
         environment::{Environment, EnvironmentError, TypeValues},
         values::{
@@ -112,6 +112,32 @@ impl PyOxidizerEnvironmentContext {
         type_values: &TypeValues,
     ) -> Result<PathBuf, ValueError> {
         Ok(self.build_path(type_values)?.join("python_distributions"))
+    }
+
+    pub fn get_build_context(
+        &self,
+        type_values: &TypeValues,
+        target: &str,
+    ) -> Result<PyOxidizerBuildContext> {
+        let output_path = self
+            .build_path(type_values)
+            .map_err(|_| anyhow!("unable to resolve build path"))?
+            .join(&self.build_target_triple)
+            .join(if self.build_release {
+                "release"
+            } else {
+                "debug"
+            })
+            .join(target);
+
+        Ok(PyOxidizerBuildContext {
+            logger: self.logger().clone(),
+            host_triple: self.build_host_triple.clone(),
+            target_triple: self.build_target_triple.clone(),
+            release: self.build_release,
+            opt_level: self.build_opt_level.clone(),
+            output_path,
+        })
     }
 }
 
@@ -233,6 +259,7 @@ pub fn global_environment(
     tugger::starlark::populate_environment(&mut env, &mut type_values)?;
     super::file_resource::file_resource_env(&mut env, &mut type_values);
     super::python_distribution::python_distribution_module(&mut env, &mut type_values);
+    super::python_embedded_resources::python_embedded_resources_module(&mut env, &mut type_values);
     super::python_executable::python_executable_env(&mut env, &mut type_values);
     super::python_packaging_policy::python_packaging_policy_module(&mut env, &mut type_values);
 
