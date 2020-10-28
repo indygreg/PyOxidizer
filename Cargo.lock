@@ -270,15 +270,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "copy_dir"
-version = "0.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6e4281031634644843bd2f5aa9c48cf98fc48d6b083bd90bb11becf10deaf8b0"
-dependencies = [
- "walkdir 0.1.8",
-]
-
-[[package]]
 name = "core-foundation"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1430,9 +1421,9 @@ dependencies = [
  "clap",
  "codemap",
  "codemap-diagnostic",
- "copy_dir",
  "duct",
  "fs2",
+ "fs_extra",
  "git2",
  "glob",
  "goblin",
@@ -1461,7 +1452,7 @@ dependencies = [
  "uuid",
  "vergen",
  "version-compare",
- "walkdir 2.3.1",
+ "walkdir",
  "zstd",
 ]
 
@@ -1478,7 +1469,7 @@ dependencies = [
  "python-packed-resources",
  "regex",
  "tempdir",
- "walkdir 2.3.1",
+ "walkdir",
  "zip",
 ]
 
@@ -2302,7 +2293,7 @@ dependencies = [
  "tempdir",
  "url",
  "uuid",
- "walkdir 2.3.1",
+ "walkdir",
  "xml-rs",
  "zip",
 ]
@@ -2432,16 +2423,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9f200f5b12eb75f8c1ed65abd4b2db8a6e1b138a20de009dacee265a2498f3f6"
 dependencies = [
  "libc",
-]
-
-[[package]]
-name = "walkdir"
-version = "0.1.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c66c0b9792f0a765345452775f3adbd28dde9d33f30d13e5dcc5ae17cf6f3780"
-dependencies = [
- "kernel32-sys",
- "winapi 0.2.8",
 ]
 
 [[package]]

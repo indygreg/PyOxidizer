@@ -17,7 +17,6 @@ use {
     },
     crate::environment::{LINUX_TARGET_TRIPLES, MACOS_TARGET_TRIPLES},
     anyhow::{anyhow, Context, Result},
-    copy_dir::copy_dir,
     duct::cmd,
     lazy_static::lazy_static,
     path_dedot::ParseDot,
@@ -966,7 +965,8 @@ impl StandaloneDistribution {
         if !venv_base.exists() {
             let dist_prefix = self.base_dir.join("python").join("install");
 
-            copy_dir(&dist_prefix, &venv_base).unwrap();
+            let options = fs_extra::dir::CopyOptions::new();
+            fs_extra::dir::copy(&dist_prefix, &venv_base, &options).unwrap();
 
             let dist_prefix_s = dist_prefix.display().to_string();
             warn!(
