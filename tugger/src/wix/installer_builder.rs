@@ -5,7 +5,7 @@
 use {
     crate::{
         file_resource::{FileContent, FileManifest},
-        wix::*,
+        wix::{common::extract_wix, *},
     },
     anyhow::{anyhow, Context, Result},
     std::{

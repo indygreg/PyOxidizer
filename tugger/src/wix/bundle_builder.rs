@@ -3,9 +3,18 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    crate::wix::*,
-    std::{borrow::Cow, collections::BTreeMap},
+    crate::{
+        http::download_to_path,
+        wix::{
+            common::{VC_REDIST_ARM64, VC_REDIST_X64, VC_REDIST_X86},
+            *,
+        },
+    },
+    anyhow::Result,
+    slog::warn,
+    std::{borrow::Cow, collections::BTreeMap, io::Write, path::Path},
     uuid::Uuid,
+    xml::{common::XmlVersion, writer::XmlEvent, EmitterConfig, EventWriter},
 };
 
 /// Entity used to build a WiX bundle installer.
