@@ -4,9 +4,11 @@
 
 mod common;
 mod simple_msi_builder;
+mod wxs_builder;
 
 pub use common::*;
-pub use simple_msi_builder::WiXSimpleMSIBuilder;
+pub use simple_msi_builder::*;
+pub use wxs_builder::*;
 
 use {
     crate::{
@@ -21,7 +23,6 @@ use {
     std::{
         borrow::Cow,
         collections::BTreeMap,
-        convert::TryFrom,
         io::Write,
         path::{Path, PathBuf},
     },
@@ -68,54 +69,6 @@ lazy_static! {
 
         handlebars
     };
-}
-
-/// Entity representing the build context for a .wxs file.
-#[derive(Debug)]
-pub struct WxsBuilder {
-    /// Relative path/filename of this wxs file.
-    path: PathBuf,
-
-    /// Raw content of the wxs file.
-    data: Vec<u8>,
-
-    /// Keys to define in the preprocessor when running candle.
-    preprocessor_parameters: BTreeMap<String, String>,
-}
-
-impl WxsBuilder {
-    /// Create a new instance from data.
-    pub fn from_data<P: AsRef<Path>>(path: P, data: Vec<u8>) -> Self {
-        Self {
-            path: path.as_ref().to_path_buf(),
-            data,
-            preprocessor_parameters: BTreeMap::new(),
-        }
-    }
-
-    /// Create a new instance from a filesystem file.
-    pub fn from_path<P: AsRef<Path>>(path: P) -> Result<Self> {
-        let filename = path
-            .as_ref()
-            .file_name()
-            .ok_or_else(|| anyhow!("unable to determine filename"))?;
-
-        let content = FileContent::try_from(path.as_ref())?;
-
-        Ok(Self {
-            path: PathBuf::from(filename),
-            data: content.data,
-            preprocessor_parameters: BTreeMap::new(),
-        })
-    }
-
-    /// Set a preprocessor parameter value.
-    ///
-    /// These are passed to `candle.exe`.
-    pub fn set_preprocessor_parameter<S: ToString>(&mut self, key: S, value: S) {
-        self.preprocessor_parameters
-            .insert(key.to_string(), value.to_string());
-    }
 }
 
 /// Entity used to build .msi installers using WiX.
@@ -176,7 +129,7 @@ impl WiXInstallerBuilder {
 
     /// Add a wxs file to build.
     pub fn add_wxs(&mut self, wxs: WxsBuilder) {
-        self.wxs_files.insert(wxs.path.clone(), wxs);
+        self.wxs_files.insert(wxs.path().to_path_buf(), wxs);
     }
 
     /// Add an extra file to the build environment.
@@ -265,7 +218,7 @@ impl WiXInstallerBuilder {
                     .context("creating parent directory for wxs file")?;
             }
 
-            std::fs::write(&dest_path, &wxs.data).context("writing wxs file")?;
+            std::fs::write(&dest_path, wxs.data()).context("writing wxs file")?;
 
             wixobj_paths.push(
                 run_candle(
@@ -273,7 +226,7 @@ impl WiXInstallerBuilder {
                     &wix_toolset_path,
                     &dest_path,
                     &arch,
-                    wxs.preprocessor_parameters.iter(),
+                    wxs.preprocessor_parameters(),
                     None,
                 )
                 .context("running candle")?,
