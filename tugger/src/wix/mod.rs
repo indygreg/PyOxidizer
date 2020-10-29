@@ -59,7 +59,7 @@ lazy_static! {
         let mut handlebars = Handlebars::new();
 
         handlebars
-            .register_template_string("bundle.wxs", include_str!("templates/wix/bundle.wxs"))
+            .register_template_string("bundle.wxs", include_str!("templates/bundle.wxs"))
             .unwrap();
 
         handlebars
