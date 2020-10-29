@@ -551,6 +551,11 @@ pub struct WiXSimpleMSIBuilder {
     product_name: String,
     product_version: String,
     product_manufacturer: String,
+    product_codepage: String,
+    product_language: String,
+
+    package_languages: String,
+    package_installer_version: String,
 
     /// Files to materialize in `Program Files`.
     program_files_manifest: FileManifest,
@@ -580,6 +585,10 @@ impl WiXSimpleMSIBuilder {
             product_name: product_name.to_string(),
             product_version: version.to_string(),
             product_manufacturer: manufacturer.to_string(),
+            product_codepage: "1252".to_string(),
+            product_language: "1033".to_string(),
+            package_languages: "1033".to_string(),
+            package_installer_version: "450".to_string(),
             ..Self::default()
         }
     }
@@ -741,15 +750,15 @@ impl WiXSimpleMSIBuilder {
                 .attr("Version", &self.product_version)
                 .attr("Manufacturer", &self.product_manufacturer)
                 .attr("UpgradeCode", &self.get_upgrade_code())
-                .attr("Language", "1033")
-                .attr("Codepage", "1252"),
+                .attr("Language", &self.product_language)
+                .attr("Codepage", &self.product_codepage),
         )?;
 
         let package = XmlEvent::start_element("Package")
             .attr("Id", "*")
             .attr("Manufacturer", &self.product_manufacturer)
-            .attr("InstallerVersion", "450")
-            .attr("Languages", "1033")
+            .attr("InstallerVersion", &self.package_installer_version)
+            .attr("Languages", &self.package_languages)
             .attr("Compressed", "yes")
             .attr("InstallScope", "perMachine")
             .attr("SummaryCodepage", "1252")
