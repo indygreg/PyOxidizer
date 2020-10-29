@@ -5,7 +5,7 @@
 use {
     crate::{
         starlark::file_resource::FileManifestValue,
-        wix::{WiXInstallerBuilder, WxsBuilder},
+        wix::{WiXInstallerBuilder, WiXSimpleMSIBuilder, WxsBuilder},
     },
     starlark::{
         environment::TypeValues,
@@ -71,13 +71,20 @@ impl WiXInstallerValue {
 
     fn add_simple_installer_starlark(
         &mut self,
+        id_prefix: String,
         product_name: String,
         product_version: String,
         product_manufacturer: String,
         program_files: FileManifestValue,
     ) -> ValueResult {
-        self.inner
-            .add_install_files_manifest(&program_files.manifest)
+        let mut builder = WiXSimpleMSIBuilder::new(
+            &id_prefix,
+            &product_name,
+            &product_version,
+            &product_manufacturer,
+        );
+        builder
+            .add_program_files_manifest(&program_files.manifest)
             .map_err(|e| {
                 ValueError::from(RuntimeError {
                     code: "TUGGER",
@@ -86,8 +93,8 @@ impl WiXInstallerValue {
                 })
             })?;
 
-        self.inner
-            .add_simple_wxs(&product_name, &product_version, &product_manufacturer)
+        builder
+            .add_to_installer_builder(&mut self.inner)
             .map_err(|e| {
                 ValueError::from(RuntimeError {
                     code: "TUGGER",
@@ -189,6 +196,7 @@ starlark_module! { wix_installer_module =>
 
     WiXInstaller.add_simple_installer(
         this,
+        id_prefix: String,
         product_name: String,
         product_version: String,
         product_manufacturer: String,
@@ -196,6 +204,7 @@ starlark_module! { wix_installer_module =>
     ) {
         match this.clone().downcast_mut::<WiXInstallerValue>()? {
             Some(mut installer) => installer.add_simple_installer_starlark(
+                id_prefix,
                 product_name,
                 product_version,
                 product_manufacturer,
@@ -280,7 +289,9 @@ mod tests {
         let mut env = StarlarkEnvironment::new()?;
 
         env.eval("installer = WiXInstaller('myapp', 'ignored')")?;
-        env.eval("installer.add_simple_installer('myapp', '0.1', 'author', FileManifest())")?;
+        env.eval(
+            "installer.add_simple_installer('myapp', 'myapp', '0.1', 'author', FileManifest())",
+        )?;
 
         Ok(())
     }
@@ -302,7 +313,9 @@ mod tests {
         let mut env = StarlarkEnvironment::new()?;
 
         env.eval("installer = WiXInstaller('myapp', 'myapp.msi')")?;
-        env.eval("installer.add_simple_installer('myapp', '0.1', 'author', FileManifest())")?;
+        env.eval(
+            "installer.add_simple_installer('myapp', 'myapp', '0.1', 'author', FileManifest())",
+        )?;
         let resolved_value = env.eval("installer.build('msi')")?;
 
         assert_eq!(resolved_value.get_type(), "ResolvedTarget");
