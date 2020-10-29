@@ -23,13 +23,15 @@ use {
 #[derive(Default)]
 pub struct WiXBundleInstallerBuilder {
     /// Name of the bundle.
-    name: String,
+    bundle_name: String,
 
     /// Version of the application.
-    version: String,
+    bundle_version: String,
 
     /// Manufacturer string.
-    manufacturer: String,
+    bundle_manufacturer: String,
+
+    bundle_condition: Option<String>,
 
     /// UUID upgrade code.
     upgrade_code: Option<String>,
@@ -53,9 +55,9 @@ pub struct WiXBundleInstallerBuilder {
 impl WiXBundleInstallerBuilder {
     pub fn new(name: String, version: String, manufacturer: String) -> Self {
         Self {
-            name,
-            version,
-            manufacturer,
+            bundle_name: name,
+            bundle_version: version,
+            bundle_manufacturer: manufacturer,
             ..Self::default()
         }
     }
@@ -67,7 +69,7 @@ impl WiXBundleInstallerBuilder {
             Cow::Owned(
                 Uuid::new_v5(
                     &Uuid::NAMESPACE_DNS,
-                    format!("tugger.bundle.{}", &self.name).as_bytes(),
+                    format!("tugger.bundle.{}", &self.bundle_name).as_bytes(),
                 )
                 .to_string(),
             )
@@ -144,14 +146,20 @@ impl WiXBundleInstallerBuilder {
                 .ns("util", "http://schemas.microsoft.com/wix/UtilExtension"),
         )?;
 
-        // TODO Condition?
-        writer.write(
-            XmlEvent::start_element("Bundle")
-                .attr("Name", &self.name)
-                .attr("Version", &self.version)
-                .attr("Manufacturer", &self.manufacturer)
-                .attr("UpgradeCode", self.upgrade_code().as_ref()),
-        )?;
+        let upgrade_code = self.upgrade_code();
+        let bundle = XmlEvent::start_element("Bundle")
+            .attr("Name", &self.bundle_name)
+            .attr("Version", &self.bundle_version)
+            .attr("Manufacturer", &self.bundle_manufacturer)
+            .attr("UpgradeCode", upgrade_code.as_ref());
+
+        let bundle = if let Some(value) = &self.bundle_condition {
+            bundle.attr("Condition", value)
+        } else {
+            bundle
+        };
+
+        writer.write(bundle)?;
 
         writer.write(
             XmlEvent::start_element("BootstrapperApplicationRef")

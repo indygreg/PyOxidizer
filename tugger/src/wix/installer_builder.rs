@@ -15,7 +15,7 @@ use {
     xml::EmitterConfig,
 };
 
-/// Entity used to build .msi installers using WiX.
+/// Entity used to build installers using the WiX Toolkit.
 pub struct WiXInstallerBuilder {
     /// Prefix to use in generated WiX IDs.
     ///
