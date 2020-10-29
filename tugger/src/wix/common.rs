@@ -421,3 +421,43 @@ pub fn run_light<
         Err(anyhow!("error running light.exe"))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::{
+        file_resource::{FileContent, FileManifest},
+        wix::*,
+    };
+
+    #[test]
+    fn test_file_manifest_to_wix() -> Result<()> {
+        let c = FileContent {
+            data: vec![42],
+            executable: false,
+        };
+
+        let mut m = FileManifest::default();
+        m.add_file(Path::new("root.txt"), &c)?;
+        m.add_file(Path::new("dir0/dir0_file0.txt"), &c)?;
+        m.add_file(Path::new("dir0/child0/dir0_child0_file0.txt"), &c)?;
+        m.add_file(Path::new("dir0/child0/dir0_child0_file1.txt"), &c)?;
+        m.add_file(Path::new("dir0/child1/dir0_child1_file0.txt"), &c)?;
+        m.add_file(Path::new("dir1/child0/dir1_child0_file0.txt"), &c)?;
+
+        let buffer = Vec::new();
+        let buf_writer = std::io::BufWriter::new(buffer);
+
+        let mut config = EmitterConfig::new();
+        config.perform_indent = true;
+        let mut emitter = config.create_writer(buf_writer);
+
+        let install_prefix = Path::new("/install-prefix");
+
+        write_file_manifest_to_wix(&mut emitter, &m, &install_prefix, "root", "prefix")?;
+        String::from_utf8(emitter.into_inner().into_inner()?)?;
+
+        // TODO validate XML.
+
+        Ok(())
+    }
+}
