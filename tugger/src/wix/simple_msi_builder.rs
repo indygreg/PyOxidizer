@@ -532,8 +532,8 @@ mod tests {
 
         let builder = builder.to_installer_builder(env!("HOST"), DEFAULT_TEMP_DIR.path())?;
 
-        assert!(builder.wxs_files.contains_key(&PathBuf::from("main.wxs")));
-        assert_eq!(builder.install_files, m);
+        assert!(builder.wxs_files().contains_key(&PathBuf::from("main.wxs")));
+        assert_eq!(builder.install_files(), &m);
 
         Ok(())
     }
