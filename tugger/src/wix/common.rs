@@ -10,7 +10,6 @@ use {
     },
     anyhow::{anyhow, Context, Result},
     duct::cmd,
-    handlebars::Handlebars,
     lazy_static::lazy_static,
     slog::warn,
     std::{
@@ -50,16 +49,6 @@ lazy_static! {
     pub(crate) static ref VC_REDIST_ARM64: RemoteContent = RemoteContent {
         url: "https://download.visualstudio.microsoft.com/download/pr/48431a06-59c5-4b63-a102-20b66a521863/A950A1C9DB37E2F784ABA98D484A4E0F77E58ED7CB57727672F9DC321015469E/VC_redist.arm64.exe".to_string(),
         sha256: "a950a1c9db37e2f784aba98d484a4e0f77e58ed7cb57727672f9dc321015469e".to_string(),
-    };
-
-    static ref HANDLEBARS: Handlebars<'static> = {
-        let mut handlebars = Handlebars::new();
-
-        handlebars
-            .register_template_string("bundle.wxs", include_str!("templates/bundle.wxs"))
-            .unwrap();
-
-        handlebars
     };
 }
 

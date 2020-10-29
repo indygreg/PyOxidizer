@@ -2357,7 +2357,6 @@ dependencies = [
  "duct",
  "fs2",
  "glob",
- "handlebars",
  "hex",
  "lazy_static",
  "msi",
