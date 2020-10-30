@@ -30,6 +30,10 @@ walkdir = "2"
 xml-rs = "0.8"
 zip = "0.5"
 
+[target.'cfg(unix)'.dependencies]
+# Create doesn't build on Windows. https://github.com/Richterrettich/rpm-rs/pull/30 fixes.
+rpm-rs = "0.6"
+
 [dependencies.starlark-dialect-build-targets]
 version = "0.2.0-pre"
 path = "../starlark-dialect-build-targets"
