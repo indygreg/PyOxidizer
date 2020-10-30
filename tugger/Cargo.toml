@@ -12,6 +12,7 @@ build = "build.rs"
 
 [dependencies]
 anyhow = "1.0"
+chrono = "0.4"
 codemap = "0.1"
 codemap-diagnostic = "0.1"
 duct = "0.13"
