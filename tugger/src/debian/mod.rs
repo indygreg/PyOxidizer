@@ -4,6 +4,8 @@
 
 mod changelog;
 mod control;
+mod deb;
 
 pub use changelog::*;
 pub use control::*;
+pub use deb::*;
