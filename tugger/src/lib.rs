@@ -19,6 +19,7 @@ Rust crate and utility. It just happens to be developed alongside
 PyOxidizer.
 */
 
+pub mod debian;
 pub mod file_resource;
 pub mod glob;
 pub mod http;
