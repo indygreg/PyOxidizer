@@ -6,6 +6,10 @@ mod changelog;
 mod control;
 mod deb;
 
-pub use changelog::*;
-pub use control::*;
-pub use deb::*;
+pub use {
+    changelog::{Changelog, ChangelogEntry},
+    control::{
+        ControlError, ControlField, ControlFieldValue, ControlFile, ControlParagraph, SourceControl,
+    },
+    deb::{write_data_tar, ControlTarBuilder, DebBuilder, DebError},
+};
