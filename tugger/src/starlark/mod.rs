@@ -9,6 +9,7 @@ Tugger.
 */
 
 pub mod file_resource;
+pub mod snapcraft;
 #[cfg(test)]
 mod testutil;
 pub mod wix_installer;
@@ -21,6 +22,7 @@ pub fn populate_environment(
     type_values: &mut TypeValues,
 ) -> Result<(), EnvironmentError> {
     file_resource::file_resource_module(env, type_values);
+    snapcraft::snapcraft_module(env, type_values);
     wix_installer::wix_installer_module(env, type_values);
 
     Ok(())

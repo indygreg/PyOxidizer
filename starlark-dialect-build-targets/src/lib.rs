@@ -24,7 +24,7 @@ use {
     },
     std::{
         borrow::Cow,
-        collections::BTreeMap,
+        collections::{BTreeMap, HashMap},
         os::raw::c_ulong,
         path::{Path, PathBuf},
     },
@@ -601,6 +601,77 @@ impl TryToOptional<Vec<PathBuf>> for Value {
                     .map(|x| PathBuf::from(x.to_string()))
                     .collect::<Vec<_>>(),
             ))
+        }
+    }
+}
+
+impl TryToOptional<HashMap<Cow<'static, str>, Cow<'static, str>>> for Value {
+    fn try_to_optional(
+        &self,
+    ) -> Result<Option<HashMap<Cow<'static, str>, Cow<'static, str>>>, ValueError> {
+        match self.get_type() {
+            "NoneType" => Ok(None),
+            "dict" => {
+                let mut res = HashMap::new();
+
+                for key in &self.iter()? {
+                    let value = self.at(key.clone())?;
+
+                    res.insert(Cow::Owned(key.to_string()), Cow::Owned(value.to_string()));
+                }
+
+                Ok(Some(res))
+            }
+            t => Err(ValueError::from(RuntimeError {
+                code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
+                message: format!("expected dict or NoneType; got {}", t),
+                label: "".to_string(),
+            })),
+        }
+    }
+}
+
+impl TryToOptional<HashMap<Cow<'static, str>, HashMap<Cow<'static, str>, Cow<'static, str>>>>
+    for Value
+{
+    fn try_to_optional(
+        &self,
+    ) -> Result<
+        Option<HashMap<Cow<'static, str>, HashMap<Cow<'static, str>, Cow<'static, str>>>>,
+        ValueError,
+    > {
+        match self.get_type() {
+            "NoneType" => Ok(None),
+            "dict" => {
+                let mut res = HashMap::new();
+
+                for key in &self.iter()? {
+                    let value = self.at(key.clone())?;
+
+                    let value: Option<HashMap<Cow<'static, str>, Cow<'static, str>>> =
+                        value.try_to_optional()?;
+
+                    match value {
+                        Some(v) => {
+                            res.insert(Cow::Owned(key.to_string()), v);
+                        }
+                        None => {
+                            return Err(ValueError::from(RuntimeError {
+                                code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
+                                message: "expected dict[string, string], got None".to_string(),
+                                label: "".to_string(),
+                            }));
+                        }
+                    }
+                }
+
+                Ok(Some(res))
+            }
+            t => Err(ValueError::from(RuntimeError {
+                code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
+                message: format!("expected dict or NoneType; got {}", t),
+                label: "".to_string(),
+            })),
         }
     }
 }

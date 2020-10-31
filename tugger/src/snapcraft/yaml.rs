@@ -182,13 +182,13 @@ impl TryFrom<&str> for BuildAttribute {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct Architectures {
-    build_on: Vec<Architecture>,
+    pub build_on: Vec<Architecture>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    run_on: Vec<Architecture>,
+    pub run_on: Vec<Architecture>,
 }
 
 /// Represents the `apps.<app-name>` entries in a `snapcraft.yaml`.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct SnapApp<'a> {
     pub adapter: Option<Adapter>,
@@ -223,7 +223,7 @@ pub struct SnapApp<'a> {
 }
 
 /// Represents the `parts.<part-name>` entries in a `snapcraft.yaml`.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct SnapPart<'a> {
     pub plugin: Option<Cow<'a, str>>,
@@ -294,6 +294,37 @@ pub struct Snapcraft<'a> {
     pub plugs: HashMap<Cow<'a, str>, HashMap<Cow<'a, str>, Cow<'a, str>>>,
     #[serde(default, skip_serializing_if = "HashMap::is_empty")]
     pub slots: HashMap<Cow<'a, str>, HashMap<Cow<'a, str>, Cow<'a, str>>>,
+}
+
+impl<'a> Snapcraft<'a> {
+    pub fn new(
+        name: Cow<'a, str>,
+        version: Cow<'a, str>,
+        summary: Cow<'a, str>,
+        description: Cow<'a, str>,
+    ) -> Self {
+        Self {
+            name,
+            version,
+            summary,
+            description,
+            title: None,
+            base: None,
+            snap_type: None,
+            confinement: None,
+            icon: None,
+            license: None,
+            grade: None,
+            adopt_info: None,
+            architectures: None,
+            assumes: vec![],
+            passthrough: HashMap::new(),
+            apps: HashMap::new(),
+            parts: HashMap::new(),
+            plugs: HashMap::new(),
+            slots: HashMap::new(),
+        }
+    }
 }
 
 #[cfg(test)]

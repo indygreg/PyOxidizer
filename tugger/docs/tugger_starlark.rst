@@ -20,4 +20,7 @@ specific to Tugger.
    tugger_starlark_filesystem
    tugger_starlark_type_file_content
    tugger_starlark_type_file_manifest
+   tugger_starlark_type_snap_app
+   tugger_starlark_type_snap_part
+   tugger_starlark_type_snap
    tugger_starlark_type_wix_installer
