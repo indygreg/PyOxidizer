@@ -4,11 +4,11 @@
 
 use {
     serde::{Deserialize, Serialize},
-    std::{borrow::Cow, collections::HashMap},
+    std::{borrow::Cow, collections::HashMap, convert::TryFrom},
 };
 
 /// Represents the value of the `type` field.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Type {
     Gadget,
@@ -16,8 +16,16 @@ pub enum Type {
     Base,
 }
 
+impl TryFrom<&str> for Type {
+    type Error = serde_yaml::Error;
+
+    fn try_from(s: &str) -> Result<Self, Self::Error> {
+        serde_yaml::from_str(s)
+    }
+}
+
 /// Represents the value of an architecture in an `architectures` field.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Architecture {
     All,
@@ -29,8 +37,16 @@ pub enum Architecture {
     I386,
 }
 
+impl TryFrom<&str> for Architecture {
+    type Error = serde_yaml::Error;
+
+    fn try_from(s: &str) -> Result<Self, Self::Error> {
+        serde_yaml::from_str(s)
+    }
+}
+
 /// Represents the value of a `confinement` field.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Confinement {
     Strict,
@@ -38,24 +54,48 @@ pub enum Confinement {
     Classic,
 }
 
+impl TryFrom<&str> for Confinement {
+    type Error = serde_yaml::Error;
+
+    fn try_from(s: &str) -> Result<Self, Self::Error> {
+        serde_yaml::from_str(s)
+    }
+}
+
 /// Represents the value of a `grade` field.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Grade {
     Devel,
     Stable,
 }
 
+impl TryFrom<&str> for Grade {
+    type Error = serde_yaml::Error;
+
+    fn try_from(s: &str) -> Result<Self, Self::Error> {
+        serde_yaml::from_str(s)
+    }
+}
+
 /// Represents the value of an `adapter` field.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Adapter {
     None,
     Full,
 }
 
+impl TryFrom<&str> for Adapter {
+    type Error = serde_yaml::Error;
+
+    fn try_from(s: &str) -> Result<Self, Self::Error> {
+        serde_yaml::from_str(s)
+    }
+}
+
 /// Represents the value of a `daemon` field.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Daemon {
     Simple,
@@ -64,8 +104,16 @@ pub enum Daemon {
     Notify,
 }
 
+impl TryFrom<&str> for Daemon {
+    type Error = serde_yaml::Error;
+
+    fn try_from(s: &str) -> Result<Self, Self::Error> {
+        serde_yaml::from_str(s)
+    }
+}
+
 /// Represents the value of a `restart-condition` field.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum RestartCondition {
     OnFailure,
@@ -76,8 +124,16 @@ pub enum RestartCondition {
     Never,
 }
 
+impl TryFrom<&str> for RestartCondition {
+    type Error = serde_yaml::Error;
+
+    fn try_from(s: &str) -> Result<Self, Self::Error> {
+        serde_yaml::from_str(s)
+    }
+}
+
 /// Represents the value of a `source-type` field.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum SourceType {
     Bzr,
@@ -95,8 +151,16 @@ pub enum SourceType {
     SevenZip,
 }
 
+impl TryFrom<&str> for SourceType {
+    type Error = serde_yaml::Error;
+
+    fn try_from(s: &str) -> Result<Self, Self::Error> {
+        serde_yaml::from_str(s)
+    }
+}
+
 /// Represents the values in a `build-attributes` field.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum BuildAttribute {
     Debug,
@@ -106,8 +170,16 @@ pub enum BuildAttribute {
     NoInstall,
 }
 
+impl TryFrom<&str> for BuildAttribute {
+    type Error = serde_yaml::Error;
+
+    fn try_from(s: &str) -> Result<Self, Self::Error> {
+        serde_yaml::from_str(s)
+    }
+}
+
 /// Represents the value of an `architecture` field.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct Architectures {
     build_on: Vec<Architecture>,
@@ -116,7 +188,7 @@ pub struct Architectures {
 }
 
 /// Represents the `apps.<app-name>` entries in a `snapcraft.yaml`.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct SnapApp<'a> {
     pub adapter: Option<Adapter>,
@@ -151,7 +223,7 @@ pub struct SnapApp<'a> {
 }
 
 /// Represents the `parts.<part-name>` entries in a `snapcraft.yaml`.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct SnapPart<'a> {
     pub plugin: Option<Cow<'a, str>>,
@@ -195,7 +267,7 @@ pub struct SnapPart<'a> {
 }
 
 /// Represents a `snapcraft.yaml` file content.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct Snapcraft<'a> {
     pub name: Cow<'a, str>,
@@ -222,4 +294,33 @@ pub struct Snapcraft<'a> {
     pub plugs: HashMap<Cow<'a, str>, HashMap<Cow<'a, str>, Cow<'a, str>>>,
     #[serde(default, skip_serializing_if = "HashMap::is_empty")]
     pub slots: HashMap<Cow<'a, str>, HashMap<Cow<'a, str>, Cow<'a, str>>>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_type_from_str() -> Result<(), serde_yaml::Error> {
+        let t = Type::try_from("gadget")?;
+        assert_eq!(t, Type::Gadget);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_architecture_from_str() -> Result<(), serde_yaml::Error> {
+        assert_eq!(Architecture::try_from("all")?, Architecture::All);
+        assert_eq!(Architecture::try_from("s390x")?, Architecture::S390x);
+        assert_eq!(Architecture::try_from("ppc64el")?, Architecture::Ppc64el);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_source_type_from_str() -> Result<(), serde_yaml::Error> {
+        assert_eq!(SourceType::try_from("7z")?, SourceType::SevenZip);
+
+        Ok(())
+    }
 }
