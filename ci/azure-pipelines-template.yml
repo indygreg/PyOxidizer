@@ -17,8 +17,8 @@ jobs:
 
   steps:
   - ${{ if eq(parameters.name, 'Linux') }}:
-    - script: sudo apt-get install -y libyaml-dev
-      displayName: Install libyaml
+    - script: sudo apt-get install -y libyaml-dev snapcraft
+      displayName: Install extra system packages
 
   - task: UsePythonVersion@0
     inputs:

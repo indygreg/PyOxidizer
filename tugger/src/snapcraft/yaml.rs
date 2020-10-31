@@ -191,13 +191,19 @@ pub struct Architectures {
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct SnapApp<'a> {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub adapter: Option<Adapter>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub autostart: Option<Cow<'a, str>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub command: Option<Cow<'a, str>>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub command_chain: Vec<Cow<'a, str>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub common_id: Option<Cow<'a, str>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub daemon: Option<Daemon>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub desktop: Option<Cow<'a, str>>,
     #[serde(default, skip_serializing_if = "HashMap::is_empty")]
     pub environment: HashMap<Cow<'a, str>, Cow<'a, str>>,
@@ -207,10 +213,15 @@ pub struct SnapApp<'a> {
     pub plugs: Vec<Cow<'a, str>>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub slots: Vec<Cow<'a, str>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub stop_command: Option<Cow<'a, str>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub post_stop_command: Option<Cow<'a, str>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub stop_timeout: Option<Cow<'a, str>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub timer: Option<Cow<'a, str>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub restart_condition: Option<RestartCondition>,
     #[serde(default, skip_serializing_if = "HashMap::is_empty")]
     pub socket: HashMap<Cow<'a, str>, Cow<'a, str>>,
@@ -226,16 +237,23 @@ pub struct SnapApp<'a> {
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct SnapPart<'a> {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub plugin: Option<Cow<'a, str>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub source: Option<Cow<'a, str>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub source_type: Option<SourceType>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub source_checksum: Option<Cow<'a, str>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub source_depth: Option<i64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub source_branch: Option<Cow<'a, str>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub source_commit: Option<Cow<'a, str>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub source_tag: Option<Cow<'a, str>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub source_subdir: Option<Cow<'a, str>>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub after: Vec<Cow<'a, str>>,
@@ -255,12 +273,17 @@ pub struct SnapPart<'a> {
     pub filesets: HashMap<Cow<'a, str>, Vec<Cow<'a, str>>>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub stage: Vec<Cow<'a, str>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub parse_info: Option<Cow<'a, str>>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub prime: Vec<Cow<'a, str>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub override_build: Option<Cow<'a, str>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub override_prime: Option<Cow<'a, str>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub override_pull: Option<Cow<'a, str>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub override_stage: Option<Cow<'a, str>>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub build_attributes: Vec<BuildAttribute>,
@@ -271,24 +294,34 @@ pub struct SnapPart<'a> {
 #[serde(rename_all = "kebab-case")]
 pub struct Snapcraft<'a> {
     pub name: Cow<'a, str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub title: Option<Cow<'a, str>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub base: Option<Cow<'a, str>>,
     pub version: Cow<'a, str>,
     pub summary: Cow<'a, str>,
     pub description: Cow<'a, str>,
-    #[serde(rename = "type")]
+    #[serde(rename = "type", skip_serializing_if = "Option::is_none")]
     pub snap_type: Option<Type>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub confinement: Option<Confinement>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub icon: Option<Cow<'a, str>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub license: Option<Cow<'a, str>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub grade: Option<Grade>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub adopt_info: Option<Cow<'a, str>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub architectures: Option<Architectures>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub assumes: Vec<Cow<'a, str>>,
     #[serde(default, skip_serializing_if = "HashMap::is_empty")]
     pub passthrough: HashMap<Cow<'a, str>, Cow<'a, str>>,
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
     pub apps: HashMap<Cow<'a, str>, SnapApp<'a>>,
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
     pub parts: HashMap<Cow<'a, str>, SnapPart<'a>>,
     #[serde(default, skip_serializing_if = "HashMap::is_empty")]
     pub plugs: HashMap<Cow<'a, str>, HashMap<Cow<'a, str>, Cow<'a, str>>>,
@@ -324,6 +357,16 @@ impl<'a> Snapcraft<'a> {
             plugs: HashMap::new(),
             slots: HashMap::new(),
         }
+    }
+
+    /// Add a named application to this instance.
+    pub fn add_app(&mut self, name: Cow<'a, str>, app: SnapApp<'a>) {
+        self.apps.insert(name, app);
+    }
+
+    /// Add a named part to this instance.
+    pub fn add_part(&mut self, name: Cow<'a, str>, part: SnapPart<'a>) {
+        self.parts.insert(name, part);
     }
 }
 

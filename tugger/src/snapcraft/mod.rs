@@ -4,9 +4,13 @@
 
 /*! Functionality for the Snapcraft packaging format. */
 
+mod builder;
 mod yaml;
 
-pub use yaml::{
-    Adapter, Architecture, Architectures, BuildAttribute, Confinement, Daemon, Grade,
-    RestartCondition, SnapApp, SnapPart, Snapcraft, SourceType, Type,
+pub use {
+    builder::SnapcraftBuilder,
+    yaml::{
+        Adapter, Architecture, Architectures, BuildAttribute, Confinement, Daemon, Grade,
+        RestartCondition, SnapApp, SnapPart, Snapcraft, SourceType, Type,
+    },
 };
