@@ -23,6 +23,7 @@ use {
         },
     },
     std::{
+        borrow::Cow,
         collections::BTreeMap,
         os::raw::c_ulong,
         path::{Path, PathBuf},
@@ -508,6 +509,16 @@ impl ToOptional<String> for Value {
     }
 }
 
+impl ToOptional<Cow<'static, str>> for Value {
+    fn to_optional(&self) -> Option<Cow<'static, str>> {
+        if self.get_type() == "NoneType" {
+            None
+        } else {
+            Some(Cow::Owned(self.to_string()))
+        }
+    }
+}
+
 impl ToOptional<PathBuf> for Value {
     fn to_optional(&self) -> Option<PathBuf> {
         if self.get_type() == "NoneType" {
@@ -541,6 +552,23 @@ impl TryToOptional<Vec<String>> for Value {
 
             Ok(Some(
                 values.iter().map(|x| x.to_string()).collect::<Vec<_>>(),
+            ))
+        }
+    }
+}
+
+impl TryToOptional<Vec<Cow<'static, str>>> for Value {
+    fn try_to_optional(&self) -> Result<Option<Vec<Cow<'static, str>>>, ValueError> {
+        if self.get_type() == "NoneType" {
+            Ok(None)
+        } else {
+            let values = self.to_vec()?;
+
+            Ok(Some(
+                values
+                    .iter()
+                    .map(|x| Cow::Owned(x.to_string()))
+                    .collect::<Vec<_>>(),
             ))
         }
     }
