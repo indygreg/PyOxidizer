@@ -1717,9 +1717,9 @@ dependencies = [
 
 [[package]]
 name = "os_str_bytes"
-version = "2.3.2"
+version = "2.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2ac6fe3538f701e339953a3ebbe4f39941aababa8a3f6964635b24ab526daeac"
+checksum = "afb2e1c3ee07430c2cf76151675e583e0f19985fa6efae47d6848a3e2c824f85"
 
 [[package]]
 name = "oxidized-importer"
@@ -3098,6 +3098,7 @@ dependencies = [
  "os_str_bytes",
  "reqwest",
  "rpm-rs",
+ "serde",
  "sha2 0.9.2",
  "slog",
  "starlark",
