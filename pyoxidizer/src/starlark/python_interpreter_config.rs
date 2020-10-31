@@ -3,7 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    super::util::{ToOptional, ToValue, TryToOptional},
+    super::util::ToValue,
     crate::py_packaging::config::EmbeddedPythonConfig,
     python_packaging::{
         interpreter::{
@@ -19,6 +19,7 @@ use {
         none::NoneType,
         {Mutable, TypedValue, Value, ValueResult},
     },
+    starlark_dialect_build_targets::{ToOptional, TryToOptional},
     std::convert::TryFrom,
 };
 
@@ -85,21 +86,21 @@ impl ToValue for MemoryAllocatorBackend {
     }
 }
 
-impl TryToOptional<BytecodeOptimizationLevel> for Value {
-    fn try_to_optional(&self) -> Result<Option<BytecodeOptimizationLevel>, ValueError> {
-        if self.get_type() == "NoneType" {
-            Ok(None)
-        } else {
-            match self.to_int()? {
-                0 => Ok(Some(BytecodeOptimizationLevel::Zero)),
-                1 => Ok(Some(BytecodeOptimizationLevel::One)),
-                2 => Ok(Some(BytecodeOptimizationLevel::Two)),
-                _ => Err(ValueError::from(RuntimeError {
-                    code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
-                    message: "invalid Python bytecode integer value".to_string(),
-                    label: "PythonInterpreterConfig.optimization_level".to_string(),
-                })),
-            }
+fn bytecode_optimization_level_try_to_optional(
+    v: Value,
+) -> Result<Option<BytecodeOptimizationLevel>, ValueError> {
+    if v.get_type() == "NoneType" {
+        Ok(None)
+    } else {
+        match v.to_int()? {
+            0 => Ok(Some(BytecodeOptimizationLevel::Zero)),
+            1 => Ok(Some(BytecodeOptimizationLevel::One)),
+            2 => Ok(Some(BytecodeOptimizationLevel::Two)),
+            _ => Err(ValueError::from(RuntimeError {
+                code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
+                message: "invalid Python bytecode integer value".to_string(),
+                label: "PythonInterpreterConfig.optimization_level".to_string(),
+            })),
         }
     }
 }
@@ -446,7 +447,8 @@ impl TypedValue for PythonInterpreterConfigValue {
                 }
             }
             "optimization_level" => {
-                self.inner.config.optimization_level = value.try_to_optional()?;
+                self.inner.config.optimization_level =
+                    bytecode_optimization_level_try_to_optional(value)?;
             }
             "parser_debug" => {
                 self.inner.config.parser_debug = value.to_optional();

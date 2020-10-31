@@ -13,7 +13,6 @@ use {
             PythonPackageDistributionResourceValue, PythonPackageResourceValue,
             ResourceCollectionContext,
         },
-        util::ToOptional,
     },
     crate::{project_building::build_python_executable, py_packaging::binary::PythonBinaryBuilder},
     anyhow::{anyhow, Context, Result},
@@ -36,7 +35,7 @@ use {
     },
     starlark_dialect_build_targets::{
         optional_dict_arg, optional_list_arg, required_list_arg, ResolvedTarget,
-        ResolvedTargetValue, RunMode,
+        ResolvedTargetValue, RunMode, ToOptional,
     },
     std::{
         collections::HashMap,

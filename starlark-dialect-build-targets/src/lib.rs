@@ -24,6 +24,7 @@ use {
     },
     std::{
         collections::BTreeMap,
+        os::raw::c_ulong,
         path::{Path, PathBuf},
     },
 };
@@ -481,6 +482,85 @@ pub fn optional_dict_arg(
     }
 
     required_dict_arg(arg_name, key_type, value_type, value)
+}
+
+pub trait ToOptional<T> {
+    fn to_optional(&self) -> Option<T>;
+}
+
+impl ToOptional<bool> for Value {
+    fn to_optional(&self) -> Option<bool> {
+        if self.get_type() == "NoneType" {
+            None
+        } else {
+            Some(self.to_bool())
+        }
+    }
+}
+
+impl ToOptional<String> for Value {
+    fn to_optional(&self) -> Option<String> {
+        if self.get_type() == "NoneType" {
+            None
+        } else {
+            Some(self.to_string())
+        }
+    }
+}
+
+impl ToOptional<PathBuf> for Value {
+    fn to_optional(&self) -> Option<PathBuf> {
+        if self.get_type() == "NoneType" {
+            None
+        } else {
+            Some(PathBuf::from(self.to_string()))
+        }
+    }
+}
+
+pub trait TryToOptional<T> {
+    fn try_to_optional(&self) -> Result<Option<T>, ValueError>;
+}
+
+impl TryToOptional<c_ulong> for Value {
+    fn try_to_optional(&self) -> Result<Option<c_ulong>, ValueError> {
+        if self.get_type() == "NoneType" {
+            Ok(None)
+        } else {
+            Ok(Some(self.to_int()? as c_ulong))
+        }
+    }
+}
+
+impl TryToOptional<Vec<String>> for Value {
+    fn try_to_optional(&self) -> Result<Option<Vec<String>>, ValueError> {
+        if self.get_type() == "NoneType" {
+            Ok(None)
+        } else {
+            let values = self.to_vec()?;
+
+            Ok(Some(
+                values.iter().map(|x| x.to_string()).collect::<Vec<_>>(),
+            ))
+        }
+    }
+}
+
+impl TryToOptional<Vec<PathBuf>> for Value {
+    fn try_to_optional(&self) -> Result<Option<Vec<PathBuf>>, ValueError> {
+        if self.get_type() == "NoneType" {
+            Ok(None)
+        } else {
+            let values = self.to_vec()?;
+
+            Ok(Some(
+                values
+                    .iter()
+                    .map(|x| PathBuf::from(x.to_string()))
+                    .collect::<Vec<_>>(),
+            ))
+        }
+    }
 }
 
 const ENVIRONMENT_CONTEXT_SYMBOL: &str = "BUILD_CONTEXT";
