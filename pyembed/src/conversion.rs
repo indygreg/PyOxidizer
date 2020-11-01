@@ -10,7 +10,7 @@ use {
     cpython::{PyDict, PyErr, PyObject, PyResult, Python},
     python3_sys as pyffi,
     std::collections::HashMap,
-    std::ffi::{CStr, CString, OsStr},
+    std::ffi::{CStr, OsStr},
     std::path::{Path, PathBuf},
 };
 
@@ -18,7 +18,7 @@ use {
 use std::ffi::OsString;
 
 #[cfg(target_family = "unix")]
-use std::os::unix::ffi::OsStrExt;
+use std::{ffi::CString, os::unix::ffi::OsStrExt};
 
 #[cfg(target_family = "windows")]
 use std::os::windows::prelude::OsStrExt;
