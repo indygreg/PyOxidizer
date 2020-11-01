@@ -1386,7 +1386,10 @@ impl PythonResourceCollector {
                             .ok_or_else(|| anyhow!("unable to resolve parent directory"))?
                             .to_path_buf();
 
-                        ConcreteResourceLocation::RelativePath(format!("{}", path.display()))
+                        ConcreteResourceLocation::RelativePath(format!(
+                            "{}",
+                            path.display().to_string().replace('\\', "/")
+                        ))
                     }
                 };
 
@@ -1489,8 +1492,12 @@ impl PythonResourceCollector {
                 entry.file_data_embedded = Some(file.data.clone());
             }
             ConcreteResourceLocation::RelativePath(prefix) => {
-                entry.file_data_utf8_relative_path =
-                    Some((PathBuf::from(prefix).join(&file.path), file.data.clone()));
+                let path = PathBuf::from(prefix).join(&file.path);
+
+                entry.file_data_utf8_relative_path = Some((
+                    PathBuf::from(path.display().to_string().replace('\\', "/")),
+                    file.data.clone(),
+                ));
             }
         }
 
