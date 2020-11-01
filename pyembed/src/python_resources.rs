@@ -879,13 +879,8 @@ impl<'a> PythonResourcesState<'a, u8> {
             .values()
             .filter(|resource| {
                 // This assumes builtins and frozen are mutually exclusive with other types.
-                if resource.is_builtin_extension_module && ignore_builtin {
-                    false
-                } else if resource.is_frozen_module && ignore_frozen {
-                    false
-                } else {
-                    true
-                }
+                !((resource.is_builtin_extension_module && ignore_builtin)
+                    || (resource.is_frozen_module && ignore_frozen))
             })
             .collect::<Vec<&Resource<u8>>>();
 
