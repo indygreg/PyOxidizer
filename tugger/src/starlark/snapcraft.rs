@@ -43,6 +43,18 @@ fn optional_str_hashmap_to_hashmap(
     }
 }
 
+fn optional_vec_str_hashmap_to_vec(
+    value: Value,
+) -> Result<Vec<HashMap<Cow<'static, str>, Cow<'static, str>>>, ValueError> {
+    let v: Option<Vec<HashMap<Cow<'static, str>, Cow<'static, str>>>> = value.try_to_optional()?;
+
+    if let Some(v) = v {
+        Ok(v)
+    } else {
+        Ok(Vec::new())
+    }
+}
+
 impl TryToOptional<Adapter> for Value {
     fn try_to_optional(&self) -> Result<Option<Adapter>, ValueError> {
         if self.get_type() == "NoneType" {
@@ -454,7 +466,7 @@ impl TypedValue for SnapPartValue<'static> {
                 self.inner.build_attributes = value_to_build_attributes(value)?;
             }
             "build_environment" => {
-                self.inner.build_environment = optional_str_vec_to_vec(value)?;
+                self.inner.build_environment = optional_vec_str_hashmap_to_vec(value)?;
             }
             "build_packages" => {
                 self.inner.build_packages = optional_str_vec_to_vec(value)?;
@@ -746,7 +758,7 @@ mod tests {
 
         env.eval("part.after = ['after0', 'after1']")?;
         env.eval("part.build_attributes = ['debug', 'no-patchelf']")?;
-        env.eval("part.build_environment = ['env0', 'env1']")?;
+        env.eval("part.build_environment = [{'env0': 'env1'}]")?;
         env.eval("part.build_packages = ['p0', 'p1']")?;
         env.eval("part.build_snaps = ['snap0', 'snap1']")?;
         env.eval("part.filesets = {'set0': ['val0', 'val1']}")?;
@@ -776,7 +788,9 @@ mod tests {
             SnapPart {
                 after: vec!["after0".into(), "after1".into()],
                 build_attributes: vec![BuildAttribute::Debug, BuildAttribute::NoPatchelf],
-                build_environment: vec!["env0".into(), "env1".into()],
+                build_environment: vec![HashMap::from_iter(
+                    [("env0".into(), "env1".into())].iter().cloned()
+                )],
                 build_packages: vec!["p0".into(), "p1".into()],
                 build_snaps: vec!["snap0".into(), "snap1".into()],
                 filesets: HashMap::from_iter(

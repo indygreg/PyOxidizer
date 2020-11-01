@@ -48,7 +48,7 @@ documentation about what each attribute means.
 ``build_environment``
 ---------------------
 
-(``Optional[list[string]]``)
+(``Optional[list[dict[string, string]]]``)
 
 ``build_packages``
 ------------------

@@ -240,7 +240,7 @@ pub struct SnapPart<'a> {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub after: Vec<Cow<'a, str>>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub build_environment: Vec<Cow<'a, str>>,
+    pub build_environment: Vec<HashMap<Cow<'a, str>, Cow<'a, str>>>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub build_snaps: Vec<Cow<'a, str>>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]

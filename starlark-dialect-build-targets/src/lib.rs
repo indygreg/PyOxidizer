@@ -676,6 +676,56 @@ impl TryToOptional<HashMap<Cow<'static, str>, HashMap<Cow<'static, str>, Cow<'st
     }
 }
 
+impl TryToOptional<Vec<HashMap<Cow<'static, str>, Cow<'static, str>>>> for Value {
+    fn try_to_optional(
+        &self,
+    ) -> Result<Option<Vec<HashMap<Cow<'static, str>, Cow<'static, str>>>>, ValueError> {
+        match self.get_type() {
+            "NoneType" => Ok(None),
+            "list" => {
+                let mut res = Vec::new();
+
+                for item in &self.iter()? {
+                    match item.get_type() {
+                        "dict" => {
+                            let value: Option<HashMap<Cow<'static, str>, Cow<'static, str>>> =
+                                item.try_to_optional()?;
+
+                            match value {
+                                Some(value) => {
+                                    res.push(value);
+                                }
+                                None => {
+                                    return Err(ValueError::from(RuntimeError {
+                                        code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
+                                        message: "expected dict[string, string], got None"
+                                            .to_string(),
+                                        label: "".to_string(),
+                                    }));
+                                }
+                            }
+                        }
+                        t => {
+                            return Err(ValueError::from(RuntimeError {
+                                code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
+                                message: format!("expected dict[string, string], got {}", t),
+                                label: "".to_string(),
+                            }));
+                        }
+                    }
+                }
+
+                Ok(Some(res))
+            }
+            t => Err(ValueError::from(RuntimeError {
+                code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
+                message: format!("expected list or NoneType; got {}", t),
+                label: "".to_string(),
+            })),
+        }
+    }
+}
+
 const ENVIRONMENT_CONTEXT_SYMBOL: &str = "BUILD_CONTEXT";
 
 /// Obtain the `Value` holding the `EnvironmentContext` for a Starlark environment.
