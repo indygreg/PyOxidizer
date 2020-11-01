@@ -53,6 +53,10 @@ Backwards Compatibility Notes
   default for ``profile = "python"``) to start a REPL.
 * Minimum Rust version changed from 1.40 to 1.41 to facilitate using a new
   crate which requires 1.41.
+* The default Cargo features of the ``pyembed`` crate now use the default
+  Python interpreter detection and linking configuration as determined by the
+  ``cpython`` crate. This enables the ``cargo build`` or ``cargo test`` to
+  *just work* without having to explicitly specify features.
 
 Bug Fixes
 ^^^^^^^^^

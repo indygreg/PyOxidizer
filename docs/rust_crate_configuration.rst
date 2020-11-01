@@ -32,6 +32,21 @@ are created and consumed.
 
 The features are described in the following sections.
 
+``build-mode-default``
+----------------------
+
+This is the default build mode. It is enabled by default.
+
+This build mode uses default Python linking behavior and feature detection
+as implemented by the ``cpython`` and ``python3-sys`` crates. It will attempt
+to find a ``python`` in ``PATH`` or from the ``PYTHON_SYS_EXECUTABLE``
+environment variable and dynamically link against it.
+
+This is the default mode for convenience, as it enables the ``pyembed`` crate
+to build in the most environments. However, the built binaries will have a
+dependency against a foreign ``libpython`` and likely aren't suitable for
+distribution.
+
 ``build-mode-standalone``
 -------------------------
 

@@ -39,8 +39,16 @@ winapi = { version = "0.3", features = ["libloaderapi", "memoryapi", "minwindef"
 rusty-fork = "0.3"
 
 [features]
-default = ["build-mode-standalone"]
+default = ["build-mode-default"]
 jemalloc = ["jemalloc-sys"]
+
+# The default build mode.
+#
+# This crate links against whatever Python is picked up by the cpython crate
+# using its default link semantics.
+build-mode-default = [
+    "cpython-link-default",
+]
 
 # Build this crate in isolation, without using PyOxidizer.
 build-mode-standalone = [
