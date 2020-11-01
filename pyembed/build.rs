@@ -120,13 +120,16 @@ fn main() {
     } else if env::var("CARGO_FEATURE_BUILD_MODE_EXTENSION_MODULE").is_ok() {
         library_mode = "extension";
     } else if env::var("CARGO_FEATURE_BUILD_MODE_TEST").is_ok() {
-        println!(
-            "cargo:rustc-env=PYEMBED_TESTS_DIR={}/src/test",
-            env::var("CARGO_MANIFEST_DIR").unwrap()
-        );
     } else {
         panic!("build-mode-* feature not set");
     }
+
+    // We're always able to derive this. So always set it, even though it is likely
+    // only used by test mode.
+    println!(
+        "cargo:rustc-env=PYEMBED_TESTS_DIR={}/src/test",
+        env::var("CARGO_MANIFEST_DIR").unwrap()
+    );
 
     println!("cargo:rustc-cfg=library_mode=\"{}\"", library_mode);
 }
