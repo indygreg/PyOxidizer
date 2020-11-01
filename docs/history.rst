@@ -51,6 +51,8 @@ Backwards Compatibility Notes
   attribute. To define what code to run at interpreter startup, populate a
   ``run_*`` attribute or leave all ``None`` with ``.parse_argv = True`` (the
   default for ``profile = "python"``) to start a REPL.
+* Minimum Rust version changed from 1.40 to 1.41 to facilitate using a new
+  crate which requires 1.41.
 
 Bug Fixes
 ^^^^^^^^^

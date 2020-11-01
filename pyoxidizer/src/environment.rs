@@ -42,7 +42,7 @@ lazy_static! {
     ///
     // Remember to update the CI configuration in ci/azure-pipelines-template.yml
     // when this changes.
-    pub static ref MINIMUM_RUST_VERSION: semver::Version = semver::Version::new(1, 40, 0);
+    pub static ref MINIMUM_RUST_VERSION: semver::Version = semver::Version::new(1, 41, 0);
 
     /// Target triples for Linux.
     pub static ref LINUX_TARGET_TRIPLES: Vec<&'static str> = vec![

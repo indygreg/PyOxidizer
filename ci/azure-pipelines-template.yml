@@ -12,8 +12,8 @@ jobs:
         rustup_toolchain: nightly
       # Remember to update MINIMUM_RUST_VERSION in pyoxidizer/src/environment.rs
       # when this changes.
-      1.40:
-        rustup_toolchain: 1.40.0
+      1.41:
+        rustup_toolchain: 1.41.1
 
   steps:
   - ${{ if eq(parameters.name, 'Linux') }}:
