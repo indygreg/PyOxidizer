@@ -37,9 +37,18 @@ lacking. Sorry for that!
 The most important command for contributors to know how to run is
 ``cargo run --bin pyoxidizer``. This will compile the ``pyoxidizer`` executable
 program and run it. Use it like ``cargo run --bin pyoxidizer -- init
-~/tmp/myapp`` to run ``pyoxidizer init ~/tmp/myapp`` for example. If you
-just run ``cargo build``, it will also build the ``pyapp`` project, which
-is an in-repo project that attempts to use PyOxidizer.
+~/tmp/myapp`` to run ``pyoxidizer init ~/tmp/myapp`` for example.
+
+The ``Cargo.toml`` in the root of the repository defines a Cargo workspace
+containing many crates. If you attempt to ``cargo build`` or ``cargo test``,
+you will likely get errors, as different crates have different, conflicting
+build requirements. The ``oxidized-importer`` crate is particularly troublesome.
+
+Try building/testing everything with
+``cargo build --workspace --exclude oxidized-importer`` or
+``cargo test --workspace --exclude oxidized-importer``. Or just target the crate
+you want by adding the ``-p`` argument. e.g. ``cargo build -p pyembed`` or
+``cargo test -p pyoxidizer``.
 
 Financial Contributions
 =======================
