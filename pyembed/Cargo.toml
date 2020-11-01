@@ -39,11 +39,13 @@ winapi = { version = "0.3", features = ["libloaderapi", "memoryapi", "minwindef"
 rusty-fork = "0.3"
 
 [features]
-default = ["build-mode-standalone", "cpython-link-unresolved-static"]
+default = ["build-mode-standalone"]
 jemalloc = ["jemalloc-sys"]
 
 # Build this crate in isolation, without using PyOxidizer.
-build-mode-standalone = []
+build-mode-standalone = [
+    "cpython-link-unresolved-static",
+]
 
 # Build this crate by executing a `pyoxidizer` executable to build
 # required artifacts.
