@@ -43,14 +43,14 @@ jobs:
         cargo -V
     displayName: Query rust and cargo versions
 
-  - script: cargo build -p pyoxidizer -p python-packed-resources
+  - script: cargo build --workspace --exclude oxidized-importer
     displayName: Build
 
-  - script: cargo test -p pyoxidizer -p python-packed-resources
+  - script: cargo test --workspace --exclude oxidized-importer
     displayName: Test
     env:
       IN_CI: '1'
 
-  - script: cargo clippy -p pyoxidizer -p python-packed-resources -- --allow clippy::cast_ptr_alignment
+  - script: cargo clippy --workspace --exclude oxidized-importer
     displayName: Clippy
     condition: ne( variables['rustup_toolchain'], 'nightly' )
