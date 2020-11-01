@@ -370,7 +370,7 @@ rusty_fork_test! {
         let mut config = OxidizedPythonInterpreterConfig::default();
         // Otherwise the Rust arguments are interpreted as Python arguments.
         config.interpreter_config.parse_argv = Some(false);
-        config.tcl_library = Some(PathBuf::from("$ORIGIN/lib/tcl8.6"));
+        config.tcl_library = Some(PathBuf::from("$ORIGIN").join("lib").join("tcl8.6"));
 
         let origin = std::env::current_exe()
             .unwrap()
