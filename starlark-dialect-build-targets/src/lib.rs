@@ -543,6 +543,20 @@ impl TryToOptional<c_ulong> for Value {
     }
 }
 
+impl TryToOptional<i64> for Value {
+    fn try_to_optional(&self) -> Result<Option<i64>, ValueError> {
+        match self.get_type() {
+            "NoneType" => Ok(None),
+            "int" => Ok(Some(self.to_int()?)),
+            t => Err(ValueError::from(RuntimeError {
+                code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
+                message: format!("expected int or NoneType; got {}", t),
+                label: "".to_string(),
+            })),
+        }
+    }
+}
+
 impl TryToOptional<Vec<String>> for Value {
     fn try_to_optional(&self) -> Result<Option<Vec<String>>, ValueError> {
         if self.get_type() == "NoneType" {
