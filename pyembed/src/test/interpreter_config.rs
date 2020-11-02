@@ -208,7 +208,7 @@ rusty_fork_test! {
         let value_raw = argvb.get_item(py, 0);
         let value_bytes = value_raw.cast_as::<PyBytes>(py).unwrap();
         assert_eq!(
-            value_bytes.data(py),
+            value_bytes.data(py).to_vec(),
             if cfg!(windows) {
                 // UTF-16.
                 b"\x4e\x2d\x65\x87".to_vec()
