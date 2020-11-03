@@ -40,7 +40,7 @@ jobs:
 
   - script: rustup component add clippy
     displayName: Install Clippy
-    condition: ne( variables['rustup_toolchain'], 'nightly' )
+    condition: or( eq( variables['rustup_toolchain'], 'stable' ), eq( variables['rustup_toolchain'], 'stable' ) )
 
   - script: |
         rustc -Vv
@@ -59,4 +59,4 @@ jobs:
 
   - script: cargo clippy --workspace --exclude oxidized-importer
     displayName: Clippy
-    condition: ne( variables['rustup_toolchain'], 'nightly' )
+    condition: or( eq( variables['rustup_toolchain'], 'stable' ), eq( variables['rustup_toolchain'], 'stable' ) )
