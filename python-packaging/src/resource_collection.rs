@@ -1386,10 +1386,9 @@ impl PythonResourceCollector {
                             .ok_or_else(|| anyhow!("unable to resolve parent directory"))?
                             .to_path_buf();
 
-                        ConcreteResourceLocation::RelativePath(format!(
-                            "{}",
-                            path.display().to_string().replace('\\', "/")
-                        ))
+                        ConcreteResourceLocation::RelativePath(
+                            path.display().to_string().replace('\\', "/"),
+                        )
                     }
                 };
 
