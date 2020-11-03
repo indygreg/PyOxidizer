@@ -163,16 +163,14 @@ fn load_dynamic_library(
         py_module
     };
 
-    if py_module.is_null() {
-        if unsafe { pyffi::PyErr_Occurred().is_null() } {
-            return Err(PyErr::new::<SystemError, _>(
-                py,
-                format!(
-                    "initialization of {} failed without raising an exception",
-                    name
-                ),
-            ));
-        }
+    if py_module.is_null() && unsafe { pyffi::PyErr_Occurred().is_null() } {
+        return Err(PyErr::new::<SystemError, _>(
+            py,
+            format!(
+                "initialization of {} failed without raising an exception",
+                name
+            ),
+        ));
     }
 
     // Cast to owned type to help prevent refcount/memory leaks.

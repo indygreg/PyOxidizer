@@ -217,11 +217,11 @@ extern "C" fn custom_free_library(module: HCUSTOMMODULE, _user_data: *mut c_void
         let mut free_module = None;
 
         for (name, module_state) in &memory_state.modules {
-            if module_state.ptr == module {
-                if module_state.ref_count.fetch_sub(1, Ordering::Acquire) == 1 {
-                    free_module = Some(name.to_string());
-                    break;
-                }
+            if module_state.ptr == module
+                && module_state.ref_count.fetch_sub(1, Ordering::Acquire) == 1
+            {
+                free_module = Some(name.to_string());
+                break;
             }
         }
 
