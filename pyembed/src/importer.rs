@@ -97,11 +97,11 @@ fn extension_module_shared_library_create_module(
     // Any error past this point should call `MemoryFreeLibrary()` to unload the
     // library.
 
-    load_dynamic_library(py, sys_modules, spec, name_py, name, module).or_else(|e| {
+    load_dynamic_library(py, sys_modules, spec, name_py, name, module).map_err(|e| {
         unsafe {
             free_library_memory(module);
         }
-        Err(e)
+        e
     })
 }
 
