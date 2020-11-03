@@ -4,6 +4,7 @@
 
 use {
     anyhow::{anyhow, Context, Result},
+    fs2::FileExt,
     sha2::Digest,
     slog::warn,
     std::{io::Read, path::Path},
@@ -95,10 +96,16 @@ pub fn download_to_path<P: AsRef<Path>>(
 
     let expected_hash = hex::decode(&entry.sha256)?;
 
+    let lock_path = dest_path.with_extension("lock");
+    let lock = std::fs::File::create(&lock_path)
+        .with_context(|| format!("creating {}", lock_path.display()))?;
+    lock.lock_exclusive().context("obtaining lock")?;
+
     if dest_path.exists() {
         let file_hash = sha256_path(dest_path)?;
 
         if file_hash == expected_hash {
+            lock.unlock().context("unlocking")?;
             return Ok(());
         }
 
@@ -115,7 +122,7 @@ pub fn download_to_path<P: AsRef<Path>>(
             .to_string_lossy()
     ));
 
-    std::fs::write(&temp_path, data).with_context(|| format!("writing {}", temp_path.display()))?;
+    std::fs::write(&temp_path, &data).context("writing data to temporary file")?;
     std::fs::rename(&temp_path, dest_path).with_context(|| {
         format!(
             "renaming {} to {}",
@@ -123,6 +130,7 @@ pub fn download_to_path<P: AsRef<Path>>(
             dest_path.display()
         )
     })?;
+    lock.unlock().context("unlocking")?;
 
     Ok(())
 }

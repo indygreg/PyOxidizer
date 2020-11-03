@@ -2355,6 +2355,7 @@ dependencies = [
  "codemap",
  "codemap-diagnostic",
  "duct",
+ "fs2",
  "glob",
  "handlebars",
  "hex",
