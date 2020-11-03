@@ -131,7 +131,7 @@ comments removed for brevity):
 
 .. code-block:: python
 
-   def make_exe():
+   def make_exe(dist):
        dist = default_python_distribution()
 
        policy = dist.make_python_packaging_policy()
