@@ -340,7 +340,7 @@ impl EmbeddedPythonConfig {
     }
 
     /// Write a Rust file containing a function for obtaining the default `OxidizedPythonInterpreterConfig`.
-    pub fn write_default_python_confis_rs(
+    pub fn write_default_python_config_rs(
         &self,
         path: &Path,
         packed_resources_path: Option<&Path>,
