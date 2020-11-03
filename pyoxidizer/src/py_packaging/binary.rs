@@ -342,7 +342,7 @@ impl EmbeddedPythonContext {
 
         let config_rs = dest_dir.join("default_python_config.rs");
         self.config
-            .write_default_python_confis_rs(&config_rs, Some(&embedded_resources))?;
+            .write_default_python_config_rs(&config_rs, Some(&embedded_resources))?;
 
         let mut cargo_metadata_lines = Vec::new();
         cargo_metadata_lines.extend(self.linking_info.cargo_metadata.clone());
