@@ -20,7 +20,7 @@ use {
             SharedLibrary,
         },
     },
-    anyhow::{anyhow, Result},
+    anyhow::{anyhow, Context, Result},
     python_packed_resources::data::{Resource, ResourceFlavor},
     std::{
         borrow::Cow,
@@ -1527,7 +1527,10 @@ impl PythonResourceCollector {
     ) -> Result<()> {
         match resource {
             PythonResource::ModuleSource(module) => {
-                match self.add_python_module_source(module, location) {
+                match self
+                    .add_python_module_source(module, location)
+                    .with_context(|| format!("adding PythonModuleSource<{}>", module.name))
+                {
                     Ok(()) => Ok(()),
                     Err(err) => {
                         if let Some(location) = fallback_location {
@@ -1539,7 +1542,11 @@ impl PythonResourceCollector {
                 }
             }
             PythonResource::ModuleBytecodeRequest(module) => {
-                match self.add_python_module_bytecode_from_source(module, location) {
+                match self
+                    .add_python_module_bytecode_from_source(module, location)
+                    .with_context(|| {
+                        format!("adding PythonModuleBytecodeFromSource<{}>", module.name)
+                    }) {
                     Ok(()) => Ok(()),
                     Err(err) => {
                         if let Some(location) = fallback_location {
@@ -1551,7 +1558,10 @@ impl PythonResourceCollector {
                 }
             }
             PythonResource::ModuleBytecode(module) => {
-                match self.add_python_module_bytecode(module, location) {
+                match self
+                    .add_python_module_bytecode(module, location)
+                    .with_context(|| format!("adding PythonModuleBytecode<{}>", module.name))
+                {
                     Ok(()) => Ok(()),
                     Err(err) => {
                         if let Some(location) = fallback_location {
@@ -1563,7 +1573,14 @@ impl PythonResourceCollector {
                 }
             }
             PythonResource::PackageResource(resource) => {
-                match self.add_python_package_resource(resource, location) {
+                match self
+                    .add_python_package_resource(resource, location)
+                    .with_context(|| {
+                        format!(
+                            "adding PythonPackageResource<{}, {}>",
+                            resource.leaf_package, resource.relative_name
+                        )
+                    }) {
                     Ok(()) => Ok(()),
                     Err(err) => {
                         if let Some(location) = fallback_location {
@@ -1575,7 +1592,14 @@ impl PythonResourceCollector {
                 }
             }
             PythonResource::PackageDistributionResource(resource) => {
-                match self.add_python_package_distribution_resource(resource, location) {
+                match self
+                    .add_python_package_distribution_resource(resource, location)
+                    .with_context(|| {
+                        format!(
+                            "adding PythonPackageDistributionResource<{}, {}>",
+                            resource.package, resource.name
+                        )
+                    }) {
                     Ok(()) => Ok(()),
                     Err(err) => {
                         if let Some(location) = fallback_location {
@@ -1586,7 +1610,10 @@ impl PythonResourceCollector {
                     }
                 }
             }
-            PythonResource::File(file) => match self.add_file_data(file, location) {
+            PythonResource::File(file) => match self
+                .add_file_data(file, location)
+                .with_context(|| format!("adding File<{}>", file.path.display()))
+            {
                 Ok(()) => Ok(()),
                 Err(err) => {
                     if let Some(location) = fallback_location {

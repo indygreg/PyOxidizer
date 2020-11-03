@@ -99,7 +99,7 @@ pub fn file_manifest_add_python_resource(
                 .map_err(|e| {
                     ValueError::from(RuntimeError {
                         code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
-                        message: e.to_string(),
+                        message: format!("{:?}", e),
                         label: e.to_string(),
                     })
                 })
@@ -120,7 +120,7 @@ pub fn file_manifest_add_python_resource(
                 .map_err(|e| {
                     RuntimeError {
                         code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
-                        message: e.to_string(),
+                        message: format!("{:?}", e),
                         label: e.to_string(),
                     }
                     .into()
@@ -139,7 +139,7 @@ pub fn file_manifest_add_python_resource(
                 .map_err(|e| {
                     ValueError::from(RuntimeError {
                         code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
-                        message: e.to_string(),
+                        message: format!("{:?}", e),
                         label: e.to_string(),
                     })
                 })
@@ -159,7 +159,7 @@ pub fn file_manifest_add_python_resource(
                 .map_err(|e| {
                     ValueError::from(RuntimeError {
                         code: "PYOXIDIZER_BUILD",
-                        message: e.to_string(),
+                        message: format!("{:?}", e),
                         label: "add_python_resource".to_string(),
                     })
                 })
@@ -185,7 +185,7 @@ pub fn file_manifest_add_python_resource(
                 .map_err(|e| {
                     ValueError::from(RuntimeError {
                         code: "PYOXIDIZER_BUILD",
-                        message: e.to_string(),
+                        message: format!("{:?}", e),
                         label: "add_python_resource".to_string(),
                     })
                 })

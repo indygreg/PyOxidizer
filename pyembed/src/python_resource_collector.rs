@@ -4,7 +4,6 @@
 
 /*! Python functionality for resource collection. */
 
-use python_packaging::location::AbstractResourceLocation;
 use {
     crate::conversion::{path_to_pathlib_path, pyobject_to_pathbuf},
     crate::python_resource_types::{
@@ -12,13 +11,14 @@ use {
         PythonPackageDistributionResource, PythonPackageResource,
     },
     crate::python_resources::resource_to_pyobject,
+    anyhow::Context,
     cpython::exc::{TypeError, ValueError},
     cpython::{
         py_class, ObjectProtocol, PyBytes, PyErr, PyList, PyObject, PyResult, Python, PythonObject,
         ToPyObject,
     },
     python_packaging::bytecode::BytecodeCompiler,
-    python_packaging::location::ConcreteResourceLocation,
+    python_packaging::location::{AbstractResourceLocation, ConcreteResourceLocation},
     python_packaging::resource_collection::{CompiledResourcesCollection, PythonResourceCollector},
     std::{cell::RefCell, convert::TryFrom},
 };
@@ -95,13 +95,15 @@ impl OxidizedResourceCollector {
         match typ.name(py).as_ref() {
             "PythonExtensionModule" => {
                 let module = resource.cast_into::<PythonExtensionModule>(py)?;
+                let repr = module.__repr__(py)?;
 
                 let resource = module.get_resource(py);
 
                 if let Some(location) = &resource.shared_library {
                     collector
                         .add_python_extension_module(&resource, &ConcreteResourceLocation::InMemory)
-                        .map_err(|e| PyErr::new::<ValueError, _>(py, e.to_string()))?;
+                        .with_context(|| format!("adding {}", repr))
+                        .map_err(|e| PyErr::new::<ValueError, _>(py, format!("{:?}", e)))?;
 
                     Ok(py.None())
                 } else {
@@ -113,45 +115,53 @@ impl OxidizedResourceCollector {
             }
             "PythonModuleBytecode" => {
                 let module = resource.cast_into::<PythonModuleBytecode>(py)?;
+                let repr = module.__repr__(py)?;
                 collector
                     .add_python_module_bytecode(
                         &module.get_resource(py),
                         &ConcreteResourceLocation::InMemory,
                     )
-                    .map_err(|e| PyErr::new::<ValueError, _>(py, e.to_string()))?;
+                    .with_context(|| format!("adding {}", repr))
+                    .map_err(|e| PyErr::new::<ValueError, _>(py, format!("{:?}", e)))?;
 
                 Ok(py.None())
             }
             "PythonModuleSource" => {
                 let module = resource.cast_into::<PythonModuleSource>(py)?;
+                let repr = module.__repr__(py)?;
                 collector
                     .add_python_module_source(
                         &module.get_resource(py),
                         &ConcreteResourceLocation::InMemory,
                     )
-                    .map_err(|e| PyErr::new::<ValueError, _>(py, e.to_string()))?;
+                    .with_context(|| format!("adding {}", repr))
+                    .map_err(|e| PyErr::new::<ValueError, _>(py, format!("{:?}", e)))?;
 
                 Ok(py.None())
             }
             "PythonPackageResource" => {
                 let resource = resource.cast_into::<PythonPackageResource>(py)?;
+                let repr = resource.__repr__(py)?;
                 collector
                     .add_python_package_resource(
                         &resource.get_resource(py),
                         &ConcreteResourceLocation::InMemory,
                     )
-                    .map_err(|e| PyErr::new::<ValueError, _>(py, e.to_string()))?;
+                    .with_context(|| format!("adding {}", repr))
+                    .map_err(|e| PyErr::new::<ValueError, _>(py, format!("{:?}", e)))?;
 
                 Ok(py.None())
             }
             "PythonPackageDistributionResource" => {
                 let resource = resource.cast_into::<PythonPackageDistributionResource>(py)?;
+                let repr = resource.__repr__(py)?;
                 collector
                     .add_python_package_distribution_resource(
                         &resource.get_resource(py),
                         &ConcreteResourceLocation::InMemory,
                     )
-                    .map_err(|e| PyErr::new::<ValueError, _>(py, e.to_string()))?;
+                    .with_context(|| format!("adding {}", repr))
+                    .map_err(|e| PyErr::new::<ValueError, _>(py, format!("{:?}", e)))?;
 
                 Ok(py.None())
             }
@@ -173,6 +183,7 @@ impl OxidizedResourceCollector {
         match resource.get_type(py).name(py).as_ref() {
             "PythonExtensionModule" => {
                 let module = resource.cast_into::<PythonExtensionModule>(py)?;
+                let repr = module.__repr__(py)?;
                 let resource = module.get_resource(py);
 
                 collector
@@ -180,51 +191,60 @@ impl OxidizedResourceCollector {
                         &resource,
                         &ConcreteResourceLocation::RelativePath(prefix),
                     )
-                    .map_err(|e| PyErr::new::<ValueError, _>(py, e.to_string()))?;
+                    .with_context(|| format!("adding {}", repr))
+                    .map_err(|e| PyErr::new::<ValueError, _>(py, format!("{:?}", e)))?;
 
                 Ok(py.None())
             }
             "PythonModuleBytecode" => {
                 let module = resource.cast_into::<PythonModuleBytecode>(py)?;
+                let repr = module.__repr__(py)?;
                 collector
                     .add_python_module_bytecode(
                         &module.get_resource(py),
                         &ConcreteResourceLocation::RelativePath(prefix),
                     )
-                    .map_err(|e| PyErr::new::<ValueError, _>(py, e.to_string()))?;
+                    .with_context(|| format!("adding {}", repr))
+                    .map_err(|e| PyErr::new::<ValueError, _>(py, format!("{:?}", e)))?;
 
                 Ok(py.None())
             }
             "PythonModuleSource" => {
                 let module = resource.cast_into::<PythonModuleSource>(py)?;
+                let repr = module.__repr__(py)?;
                 collector
                     .add_python_module_source(
                         &module.get_resource(py),
                         &ConcreteResourceLocation::RelativePath(prefix),
                     )
-                    .map_err(|e| PyErr::new::<ValueError, _>(py, e.to_string()))?;
+                    .with_context(|| format!("adding {}", repr))
+                    .map_err(|e| PyErr::new::<ValueError, _>(py, format!("{:?}", e)))?;
 
                 Ok(py.None())
             }
             "PythonPackageResource" => {
                 let resource = resource.cast_into::<PythonPackageResource>(py)?;
+                let repr = resource.__repr__(py)?;
                 collector
                     .add_python_package_resource(
                         &resource.get_resource(py),
                         &ConcreteResourceLocation::RelativePath(prefix),
                     )
-                    .map_err(|e| PyErr::new::<ValueError, _>(py, e.to_string()))?;
+                    .with_context(|| format!("adding {}", repr))
+                    .map_err(|e| PyErr::new::<ValueError, _>(py, format!("{:?}", e)))?;
 
                 Ok(py.None())
             }
             "PythonPackageDistributionResource" => {
                 let resource = resource.cast_into::<PythonPackageDistributionResource>(py)?;
+                let repr = resource.__repr__(py)?;
                 collector
                     .add_python_package_distribution_resource(
                         &resource.get_resource(py),
                         &ConcreteResourceLocation::RelativePath(prefix),
                     )
-                    .map_err(|e| PyErr::new::<ValueError, _>(py, e.to_string()))?;
+                    .with_context(|| format!("adding {}", repr))
+                    .map_err(|e| PyErr::new::<ValueError, _>(py, format!("{:?}", e)))?;
 
                 Ok(py.None())
             }

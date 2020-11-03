@@ -82,7 +82,7 @@ impl PythonDistributionValue {
                     .map_err(|e| {
                         ValueError::from(RuntimeError {
                             code: "PYOXIDIZER_BUILD",
-                            message: e.to_string(),
+                            message: format!("{:?}", e),
                             label: label.to_string(),
                         })
                     })?
@@ -146,7 +146,7 @@ impl PythonDistributionValue {
             .map_err(|e| {
                 ValueError::from(RuntimeError {
                     code: "PYOXIDIZER_BUILD",
-                    message: e.to_string(),
+                    message: format!("{:?}", e),
                     label: "default_python_distribution()".to_string(),
                 })
             })?;
@@ -202,7 +202,7 @@ impl PythonDistributionValue {
         let policy = dist.create_packaging_policy().map_err(|e| {
             ValueError::from(RuntimeError {
                 code: "PYOXIDIZER_BUILD",
-                message: e.to_string(),
+                message: format!("{:?}", e),
                 label: "make_python_packaging_policy()".to_string(),
             })
         })?;
@@ -217,7 +217,7 @@ impl PythonDistributionValue {
         let config = dist.create_python_interpreter_config().map_err(|e| {
             ValueError::from(RuntimeError {
                 code: "PYOXIDIZER_BUILD",
-                message: e.to_string(),
+                message: format!("{:?}", e),
                 label: "make_python_packaging_policy()".to_string(),
             })
         })?;
@@ -257,7 +257,7 @@ impl PythonDistributionValue {
                 dist.create_packaging_policy().map_err(|e| {
                     ValueError::from(RuntimeError {
                         code: "PYOXIDIZER_BUILD",
-                        message: e.to_string(),
+                        message: format!("{:?}", e),
                         label: "to_python_executable_starlark()".to_string(),
                     })
                 })?,
@@ -274,7 +274,7 @@ impl PythonDistributionValue {
                 dist.create_python_interpreter_config().map_err(|e| {
                     ValueError::from(RuntimeError {
                         code: "PYOXIDIZER_BUILD",
-                        message: e.to_string(),
+                        message: format!("{:?}", e),
                         label: "to_python_executable_starlark()".to_string(),
                     })
                 })?,
@@ -348,7 +348,7 @@ impl PythonDistributionValue {
             .map_err(|e| {
                 ValueError::from(RuntimeError {
                     code: "PYOXIDIZER_BUILD",
-                    message: e.to_string(),
+                    message: format!("{:?}", e),
                     label: "to_python_executable()".to_string(),
                 })
             })?;
@@ -388,7 +388,7 @@ impl PythonDistributionValue {
             .map_err(|e| {
                 ValueError::from(RuntimeError {
                     code: "PYOXIDIZER_BUILD",
-                    message: e.to_string(),
+                    message: format!("{:?}", e),
                     label: "to_python_executable()".to_string(),
                 })
             })?;
@@ -406,7 +406,7 @@ impl PythonDistributionValue {
             PythonPackagingPolicyValue::new(dist.create_packaging_policy().map_err(|e| {
                 ValueError::from(RuntimeError {
                     code: "PYOXIDIZER_BUILD",
-                    message: e.to_string(),
+                    message: format!("{:?}", e),
                     label: "python_resources()".to_string(),
                 })
             })?);

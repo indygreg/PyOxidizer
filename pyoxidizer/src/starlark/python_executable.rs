@@ -120,7 +120,7 @@ impl TypedValue for PythonExecutable {
                     .map_err(|e| {
                         ValueError::from(RuntimeError {
                             code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
-                            message: e.to_string(),
+                            message: format!("{:?}", e),
                             label: format!("{}.{}", Self::TYPE, attribute),
                         })
                     })?;
@@ -447,7 +447,7 @@ impl PythonExecutable {
             .map_err(|e| {
                 ValueError::from(RuntimeError {
                     code: "SETUP_PY_ERROR",
-                    message: e.to_string(),
+                    message: format!("{:?}", e),
                     label: "setup_py_install()".to_string(),
                 })
             })?
@@ -484,10 +484,11 @@ impl PythonExecutable {
         );
         self.exe
             .add_python_module_source(&module.inner, module.add_collection_context().clone())
+            .with_context(|| format!("adding {}", module.to_repr()))
             .map_err(|e| {
                 ValueError::from(RuntimeError {
                     code: "PYOXIDIZER_BUILD",
-                    message: e.to_string(),
+                    message: format!("{:?}", e),
                     label: label.to_string(),
                 })
             })?;
@@ -508,10 +509,11 @@ impl PythonExecutable {
         );
         self.exe
             .add_python_package_resource(&resource.inner, resource.add_collection_context().clone())
+            .with_context(|| format!("adding {}", resource.to_repr()))
             .map_err(|e| {
                 ValueError::from(RuntimeError {
                     code: "PYOXIDIZER_BUILD",
-                    message: e.to_string(),
+                    message: format!("{:?}", e),
                     label: label.to_string(),
                 })
             })?;
@@ -536,10 +538,11 @@ impl PythonExecutable {
                 &resource.inner,
                 resource.add_collection_context().clone(),
             )
+            .with_context(|| format!("adding {}", resource.to_repr()))
             .map_err(|e| {
                 ValueError::from(RuntimeError {
                     code: "PYOXIDIZER_BUILD",
-                    message: e.to_string(),
+                    message: format!("{:?}", e),
                     label: label.to_string(),
                 })
             })?;
@@ -559,10 +562,11 @@ impl PythonExecutable {
         );
         self.exe
             .add_python_extension_module(&module.inner, module.add_collection_context().clone())
+            .with_context(|| format!("adding {}", module.to_repr()))
             .map_err(|e| {
                 ValueError::from(RuntimeError {
                     code: "PYOXIDIZER_BUILD",
-                    message: e.to_string(),
+                    message: format!("{:?}", e),
                     label: label.to_string(),
                 })
             })?;
@@ -582,10 +586,11 @@ impl PythonExecutable {
         );
         self.exe
             .add_file_data(&file.inner, file.add_collection_context().clone())
+            .with_context(|| format!("adding {}", file.to_repr()))
             .map_err(|e| {
                 ValueError::from(RuntimeError {
                     code: "PYOXIDIZER_BUILD",
-                    message: e.to_string(),
+                    message: format!("{:?}", e),
                     label: label.to_string(),
                 })
             })?;
@@ -703,7 +708,7 @@ impl PythonExecutable {
             .map_err(|e| {
                 ValueError::from(RuntimeError {
                     code: "RUNTIME_ERROR",
-                    message: e.to_string(),
+                    message: format!("{:?}", e),
                     label: "filter_from_files()".to_string(),
                 })
             })?;
