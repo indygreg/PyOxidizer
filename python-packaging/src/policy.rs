@@ -582,12 +582,14 @@ impl PythonPackagingPolicy {
                             } else if let Some(ref licenses) = em.licenses {
                                 // We filter through an allow list because it is safer. (No new GPL
                                 // licenses can slip through.)
-                                if licenses.iter().all(|license| {
+                                let all_non_gpl_licenses = licenses.iter().all(|license| {
                                     license
                                         .licenses
                                         .iter()
                                         .all(|license| NON_GPL_LICENSES.contains(&license.as_str()))
-                                }) {
+                                });
+
+                                if all_non_gpl_licenses {
                                     Some(em.clone())
                                 } else {
                                     None
