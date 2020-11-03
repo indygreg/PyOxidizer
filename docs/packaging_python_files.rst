@@ -131,9 +131,7 @@ comments removed for brevity):
 
 .. code-block:: python
 
-   def make_exe():
-       dist = default_python_distribution()
-
+   def make_exe(dist):
        policy = dist.make_python_packaging_policy()
        policy.extension_module_filter = "all"
        policy.include_distribution_sources = True
@@ -183,9 +181,7 @@ following:
 
 .. code-block:: python
 
-   def make_exe():
-       dist = default_python_distribution()
-
+   def make_exe(dist):
        policy = dist.make_python_packaging_policy()
        policy.extension_module_filter = "all"
        policy.include_distribution_sources = True
