@@ -30,7 +30,7 @@ fn path_to_bytes(p: &Path) -> Vec<u8> {
 
 #[cfg(windows)]
 fn path_bytes_length(p: &Path) -> usize {
-    p.as_os_str().encode_wide().collect::<Vec<u16>>().len() * 2
+    p.as_os_str().encode_wide().count() * 2
 }
 
 #[cfg(windows)]
