@@ -369,7 +369,8 @@ impl EmbeddedPythonConfig {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::py_packaging::distribution::{BinaryLibpythonLinkMode, PythonDistribution};
+    use {super::*, crate::testutil::*};
 
     #[test]
     fn test_serialize_module_search_paths() -> Result<()> {
@@ -394,6 +395,106 @@ mod tests {
 
         assert!(code.contains("filesystem_encoding: Some(\"ascii\".to_string()),"));
         assert!(code.contains("filesystem_errors: Some(\"strict\".to_string()),"));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_build_all_fields() -> Result<()> {
+        let logger = get_logger()?;
+        let dist = get_default_distribution()?;
+        let policy = dist.create_packaging_policy()?;
+
+        let config = EmbeddedPythonConfig {
+            config: PythonInterpreterConfig {
+                profile: Default::default(),
+                allocator: Some(Allocator::MallocDebug),
+                configure_locale: Some(true),
+                coerce_c_locale: Some(CoerceCLocale::C),
+                coerce_c_locale_warn: Some(true),
+                development_mode: Some(true),
+                isolated: Some(false),
+                legacy_windows_fs_encoding: Some(false),
+                parse_argv: Some(true),
+                use_environment: Some(true),
+                utf8_mode: Some(true),
+                argv: Some(vec!["foo".into(), "bar".into()]),
+                base_exec_prefix: Some("path".into()),
+                base_executable: Some("path".into()),
+                base_prefix: Some("path".into()),
+                buffered_stdio: Some(false),
+                bytes_warning: Some(BytesWarning::Raise),
+                check_hash_pycs_mode: Some(CheckHashPYCsMode::Always),
+                configure_c_stdio: Some(true),
+                dump_refs: Some(true),
+                exec_prefix: Some("path".into()),
+                executable: Some("path".into()),
+                fault_handler: Some(false),
+                filesystem_encoding: Some("encoding".into()),
+                filesystem_errors: Some("errors".into()),
+                hash_seed: Some(42),
+                home: Some("home".into()),
+                import_time: Some(true),
+                inspect: Some(false),
+                install_signal_handlers: Some(true),
+                interactive: Some(true),
+                legacy_windows_stdio: Some(false),
+                malloc_stats: Some(false),
+                module_search_paths: Some(vec!["lib".into()]),
+                optimization_level: Some(BytecodeOptimizationLevel::One),
+                parser_debug: Some(true),
+                pathconfig_warnings: Some(false),
+                prefix: Some("prefix".into()),
+                program_name: Some("program_name".into()),
+                pycache_prefix: Some("prefix".into()),
+                python_path_env: Some("env".into()),
+                quiet: Some(true),
+                run_command: Some("command".into()),
+                run_filename: Some("filename".into()),
+                run_module: Some("module".into()),
+                show_alloc_count: Some(true),
+                show_ref_count: Some(false),
+                site_import: Some(true),
+                skip_first_source_line: Some(false),
+                stdio_encoding: Some("encoding".into()),
+                stdio_errors: Some("errors".into()),
+                tracemalloc: Some(false),
+                user_site_directory: Some(false),
+                verbose: Some(true),
+                warn_options: Some(vec!["option0".into(), "option1".into()]),
+                write_bytecode: Some(true),
+                x_options: Some(vec!["x0".into(), "x1".into()]),
+            },
+            raw_allocator: MemoryAllocatorBackend::System,
+            oxidized_importer: true,
+            filesystem_importer: true,
+            argvb: true,
+            sys_frozen: true,
+            sys_meipass: true,
+            terminfo_resolution: TerminfoResolution::Dynamic,
+            tcl_library: Some("path".into()),
+            write_modules_directory_env: Some("env".into()),
+        };
+
+        let builder = dist.as_python_executable_builder(
+            &logger,
+            env!("HOST"),
+            env!("HOST"),
+            "all_config_fields",
+            BinaryLibpythonLinkMode::Dynamic,
+            &policy,
+            &config,
+            None,
+        )?;
+
+        crate::project_building::build_python_executable(
+            &logger,
+            "all_config_fields",
+            builder.as_ref(),
+            env!("HOST"),
+            "0",
+            false,
+        )?;
 
         Ok(())
     }
