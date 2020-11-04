@@ -44,7 +44,7 @@ fn optional_bool_to_string(value: &Option<bool>) -> String {
 
 fn optional_string_to_string(value: &Option<String>) -> String {
     match value {
-        Some(value) => format_args!("Some(\"{}\")", value).to_string(),
+        Some(value) => format_args!("Some(\"{}\".to_string())", value).to_string(),
         None => "None".to_string(),
     }
 }
@@ -61,10 +61,10 @@ fn optional_pathbuf_to_string(value: &Option<PathBuf>) -> String {
 fn optional_vec_string_to_string(value: &Option<Vec<String>>) -> String {
     match value {
         Some(value) => format!(
-            "Some({})",
+            "Some(vec![{}])",
             value
                 .iter()
-                .map(|x| format_args!("\"{}\"", x).to_string())
+                .map(|x| format_args!("\"{}\".to_string()", x).to_string())
                 .collect::<Vec<_>>()
                 .join(", ")
         ),
@@ -380,6 +380,20 @@ mod tests {
         let code = config.to_oxidized_python_interpreter_config_rs(None)?;
 
         assert!(code.contains("module_search_paths: Some(vec![std::path::PathBuf::from(\"$ORIGIN/lib\"), std::path::PathBuf::from(\"lib\")]),"));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_serialize_filesystem_fields() -> Result<()> {
+        let mut config = EmbeddedPythonConfig::default();
+        config.config.filesystem_encoding = Some("ascii".to_string());
+        config.config.filesystem_errors = Some("strict".to_string());
+
+        let code = config.to_oxidized_python_interpreter_config_rs(None)?;
+
+        assert!(code.contains("filesystem_encoding: Some(\"ascii\".to_string()),"));
+        assert!(code.contains("filesystem_errors: Some(\"strict\".to_string()),"));
 
         Ok(())
     }

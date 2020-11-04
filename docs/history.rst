@@ -64,6 +64,11 @@ Bug Fixes
 * Fixed a broken documentation example for ``glob()``. (#300)
 * Fixed a bug where generated Rust code for `Option<PathBuf>` interpreter
   configuration fields was not being generated correctly.
+* Fixed serialization of string config options to Rust code that was preventing
+  the following attributes of the ``PythonInterpreterConfig`` Starlark type
+  from working: ``filesystem_encoding``, ``filesystem_errors``, ``python_path_env``,
+  ``run_command``, ``run_module``, ``stdio_encoding``, ``stdio_errors``,
+  ``warn_options``, and ``x_options``. (#309)
 
 New Features
 ^^^^^^^^^^^^
