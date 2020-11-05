@@ -6,8 +6,7 @@
 
 use {
     crate::project_layout::PyembedLocation,
-    anyhow::{anyhow, Result},
-    git2::{Commit, Repository},
+    anyhow::Result,
     lazy_static::lazy_static,
     std::{
         env,
@@ -15,10 +14,17 @@ use {
     },
 };
 
+#[cfg(feature = "git2")]
+use {
+    anyhow::anyhow,
+    git2::{Commit, Repository},
+};
+
 /// Canonical Git repository for PyOxidizer.
 const CANONICAL_GIT_REPO_URL: &str = "https://github.com/indygreg/PyOxidizer.git";
 
 /// Root Git commit for PyOxidizer.
+#[cfg(feature = "git2")]
 const ROOT_COMMIT: &str = "b1f95017c897e0fd3ed006aec25b6886196a889d";
 
 /// Git commit this build of PyOxidizer was produced with.
@@ -67,6 +73,7 @@ lazy_static! {
 /// Find the root Git commit given a starting Git commit.
 ///
 /// This just walks parents until it gets to a commit without any.
+#[cfg(feature = "git2")]
 fn find_root_git_commit(commit: Commit) -> Commit {
     let mut current = commit;
 
@@ -96,6 +103,7 @@ pub fn canonicalize_path(path: &Path) -> Result<PathBuf, std::io::Error> {
 /// Describes the location of the PyOxidizer source files.
 pub enum PyOxidizerSource {
     /// A local filesystem path.
+    #[cfg_attr(not(feature = "git2"), allow(dead_code))]
     LocalPath { path: PathBuf },
 
     /// A Git repository somewhere. Defined by a Git remote URL and a commit string.
@@ -181,6 +189,7 @@ pub fn built_git_url() -> PyOxidizerSource {
     }
 }
 
+#[cfg(feature = "git2")]
 pub fn resolve_environment() -> Result<Environment> {
     let exe_path = PathBuf::from(
         env::current_exe()?
@@ -219,4 +228,11 @@ pub fn resolve_environment() -> Result<Environment> {
     };
 
     Ok(Environment { pyoxidizer_source })
+}
+
+#[cfg(not(feature = "git2"))]
+pub fn resolve_environment() -> Result<Environment> {
+    Ok(Environment {
+        pyoxidizer_source: built_git_url(),
+    })
 }

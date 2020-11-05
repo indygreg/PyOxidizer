@@ -32,7 +32,6 @@ codemap-diagnostic = "0.1"
 duct = "0.13"
 fs2 = "0.4"
 fs_extra = "1.2"
-git2 = "0.13"
 glob = "0.3"
 goblin = "0.2"
 handlebars = "3.0"
@@ -58,6 +57,10 @@ version-compare = "0.0"
 walkdir = "2"
 zstd = "0.5"
 
+[dependencies.git2]
+version = "0.13"
+optional = true
+
 [dependencies.python-packaging]
 version = "0.3.0-pre"
 path = "../python-packaging"
@@ -76,3 +79,6 @@ path = "../tugger"
 
 [dev-dependencies]
 indoc = "0.3"
+
+[features]
+default = ["git2"]
