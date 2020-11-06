@@ -144,6 +144,35 @@ impl EvaluationContext {
     }
 
     pub fn build_resolved_target(&mut self, target: &str) -> Result<ResolvedTarget> {
+        let build_context = {
+            let pyoxidizer_context_value = self.pyoxidizer_context_value()?;
+            let pyoxidizer_context = pyoxidizer_context_value
+                .downcast_ref::<PyOxidizerEnvironmentContext>()
+                .ok_or_else(|| anyhow!("context has incorrect type"))?;
+
+            let output_path = pyoxidizer_context
+                .build_path(&self.type_values)
+                .map_err(|_| anyhow!("unable to resolve build path"))?
+                .join(&pyoxidizer_context.build_target_triple)
+                .join(if pyoxidizer_context.build_release {
+                    "release"
+                } else {
+                    "debug"
+                })
+                .join(target);
+
+            PyOxidizerBuildContext {
+                logger: pyoxidizer_context.logger().clone(),
+                host_triple: pyoxidizer_context.build_host_triple.clone(),
+                target_triple: pyoxidizer_context.build_target_triple.clone(),
+                release: pyoxidizer_context.build_release,
+                opt_level: pyoxidizer_context.build_opt_level.clone(),
+                output_path,
+            }
+        };
+
+        std::fs::create_dir_all(&build_context.output_path).context("creating output path")?;
+
         let raw_context = self.build_targets_context_value()?;
         let mut context = raw_context
             .downcast_mut::<EnvironmentContext>()
@@ -162,33 +191,6 @@ impl EvaluationContext {
             }
         } else {
             return Err(anyhow!("target {} is not registered", target));
-        };
-
-        let pyoxidizer_context_value = self.pyoxidizer_context_value()?;
-        let pyoxidizer_context = pyoxidizer_context_value
-            .downcast_ref::<PyOxidizerEnvironmentContext>()
-            .ok_or_else(|| anyhow!("context has incorrect type"))?;
-
-        let output_path = pyoxidizer_context
-            .build_path(&self.type_values)
-            .map_err(|_| anyhow!("unable to resolve build path"))?
-            .join(&pyoxidizer_context.build_target_triple)
-            .join(if pyoxidizer_context.build_release {
-                "release"
-            } else {
-                "debug"
-            })
-            .join(target);
-
-        std::fs::create_dir_all(&output_path).context("creating output path")?;
-
-        let build_context = PyOxidizerBuildContext {
-            logger: context.logger().clone(),
-            host_triple: pyoxidizer_context.build_host_triple.clone(),
-            target_triple: pyoxidizer_context.build_target_triple.clone(),
-            release: pyoxidizer_context.build_release,
-            opt_level: pyoxidizer_context.build_opt_level.clone(),
-            output_path,
         };
 
         // TODO surely this can use dynamic dispatch.
