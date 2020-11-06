@@ -399,7 +399,9 @@ mod tests {
         Ok(())
     }
 
+    // TODO enable once CI has a linkable Python.
     #[test]
+    #[ignore]
     fn test_build_all_fields() -> Result<()> {
         let logger = get_logger()?;
         let dist = get_default_distribution()?;
