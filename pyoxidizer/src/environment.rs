@@ -15,8 +15,8 @@ use {
     },
 };
 
-/// Canonical Git repository for PyOxidizer.
-const CANONICAL_GIT_REPO_URL: &str = "https://github.com/indygreg/PyOxidizer.git";
+/// URL of Git repository we were built from.
+const GIT_REPO_URL: &str = env!("GIT_REPO_URL");
 
 /// Root Git commit for PyOxidizer.
 const ROOT_COMMIT: &str = "b1f95017c897e0fd3ed006aec25b6886196a889d";
@@ -175,7 +175,7 @@ pub fn built_git_url() -> PyOxidizerSource {
     };
 
     PyOxidizerSource::GitUrl {
-        url: CANONICAL_GIT_REPO_URL.to_owned(),
+        url: GIT_REPO_URL.to_owned(),
         commit,
         tag,
     }

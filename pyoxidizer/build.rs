@@ -7,6 +7,9 @@ use {
     vergen::{generate_cargo_keys, ConstantsFlags},
 };
 
+/// Canonical Git repository for PyOxidizer.
+const CANONICAL_GIT_REPO_URL: &str = "https://github.com/indygreg/PyOxidizer.git";
+
 fn main() {
     let cwd = std::env::current_dir().expect("could not obtain current directory");
 
@@ -25,6 +28,8 @@ fn main() {
     } else {
         None
     };
+
+    println!("cargo:rustc-env=GIT_REPO_URL={}", CANONICAL_GIT_REPO_URL);
 
     println!(
         "cargo:rustc-env=GIT_COMMIT={}",
