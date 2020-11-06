@@ -49,8 +49,6 @@ lazy_static! {
             // Can happen when not run from a Git checkout (such as installing
             // from a crate).
             "" => None,
-            // Can happen if build script could not find Git repository.
-            "UNKNOWN" => None,
             value => Some(value.to_string()),
         }
     };

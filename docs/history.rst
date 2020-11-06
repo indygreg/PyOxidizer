@@ -94,6 +94,11 @@ Other Relevant Changes
 * The built-in Python distributions now use pip 20.2.4 and setuptools 50.3.2.
 * The Starlark primitives for defining build system targets have been extracted
   into a new ``starlark-dialect-build-targets`` crate.
+* The code for resolving how to reference PyOxidizer's Git repository has
+  been rewritten. The resolution is now performed at build time in the
+  pyoxidizer crate's ``build.rs``. There now exist environment variables that
+  can be specified at crate build time that influence how PyOxidizer constructs
+  these references.
 
 .. _version_0_9_0:
 

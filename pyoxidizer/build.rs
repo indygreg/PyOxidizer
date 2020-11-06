@@ -45,10 +45,29 @@ fn find_root_git_commit(commit: Commit) -> Commit {
 fn main() {
     let cwd = std::env::current_dir().expect("could not obtain current directory");
 
+    // Allow PYOXIDIZER_BUILD_GIT_URL to define the Git repository URL.
+    let git_repo_url = if let Ok(url) = std::env::var("PYOXIDIZER_BUILD_GIT_URL") {
+        url
+    } else {
+        CANONICAL_GIT_REPO_URL.to_string()
+    };
+    println!("cargo:rerun-if-env-changed=PYOXIDIZER_BUILD_GIT_URL");
+
+    // Allow PYOXIDIZER_BUILD_FORCE_GIT_SOURCE to force use of a Git install source.
+    let force_git_source = std::env::var("PYOXIDIZER_BUILD_FORCE_GIT_SOURCE").is_ok();
+    println!("cargo:rerun-if-env-changed=PYOXIDIZER_BUILD_FORCE_GIT_SOURCE");
+
+    // Allow PYOXIDIZER_BUILD_FORCE_GIT_COMMIT to override the Git commit.
+    let force_git_commit = std::env::var("PYOXIDIZER_BUILD_FORCE_GIT_COMMIT").ok();
+    println!("cargo:rerun-if-env-changed=PYOXIDIZER_BUILD_FORCE_GIT_COMMIT");
+
+    let mut git_commit = "".to_string();
+    let mut repo_path = "".to_string();
+
     // Various crates that resolve commits and versions from git shell out to `git`.
     // This isn't reliable, especially on Windows. So we use libgit2 to extract data
     // from the git repo, if present.
-    let (repo_path, git_commit) = if let Ok(repo) = Repository::discover(&cwd) {
+    if let Ok(repo) = Repository::discover(&cwd) {
         if let Ok(head_ref) = repo.head() {
             if let Ok(commit) = head_ref.peel_to_commit() {
                 let root = find_root_git_commit(commit.clone());
@@ -57,22 +76,20 @@ fn main() {
                     let path = canonicalize_path(repo.workdir().expect("could not obtain workdir"))
                         .expect("could not canonicalize repo path");
 
-                    (
-                        Some(path.display().to_string()),
-                        Some(format!("{}", commit.id())),
-                    )
-                } else {
-                    (None, None)
+                    repo_path = path.display().to_string();
+                    git_commit = commit.id().to_string();
                 }
-            } else {
-                (None, None)
             }
-        } else {
-            (None, None)
         }
-    } else {
-        (None, None)
-    };
+    }
+
+    if force_git_source {
+        repo_path = "".to_string();
+    }
+
+    if let Some(commit) = force_git_commit {
+        git_commit = commit;
+    }
 
     let pkg_version =
         std::env::var("CARGO_PKG_VERSION").expect("could not obtain CARGO_PKG_VERSION");
@@ -82,7 +99,11 @@ fn main() {
             format!(
                 "{}-{}",
                 pkg_version,
-                git_commit.clone().unwrap_or_else(|| "UNKNOWN".to_string())
+                if git_commit.is_empty() {
+                    "UNKNOWN"
+                } else {
+                    git_commit.as_str()
+                }
             ),
             "".to_string(),
         )
@@ -92,21 +113,10 @@ fn main() {
 
     println!("cargo:rustc-env=PYOXIDIZER_VERSION={}", pyoxidizer_version);
 
-    println!(
-        "cargo:rustc-env=GIT_REPO_PATH={}",
-        repo_path.unwrap_or_else(|| "".to_string())
-    );
-    // TODO detect builds from forks via build.rs environment variable.
-    println!("cargo:rustc-env=GIT_REPO_URL={}", CANONICAL_GIT_REPO_URL);
+    println!("cargo:rustc-env=GIT_REPO_PATH={}", repo_path);
+    println!("cargo:rustc-env=GIT_REPO_URL={}", git_repo_url);
     println!("cargo:rustc-env=GIT_TAG={}", git_tag);
-
-    println!(
-        "cargo:rustc-env=GIT_COMMIT={}",
-        match git_commit {
-            Some(commit) => commit,
-            None => "UNKNOWN".to_string(),
-        }
-    );
+    println!("cargo:rustc-env=GIT_COMMIT={}", git_commit);
 
     println!(
         "cargo:rustc-env=HOST={}",
