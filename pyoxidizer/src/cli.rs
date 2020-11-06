@@ -94,7 +94,7 @@ pub fn run_cli() -> Result<()> {
 
     let matches = App::new("PyOxidizer")
         .setting(AppSettings::ArgRequiredElseHelp)
-        .version(PYOXIDIZER_VERSION.as_str())
+        .version(PYOXIDIZER_VERSION)
         .long_version(env.version_long().as_str())
         .author("Gregory Szorc <gregory.szorc@gmail.com>")
         .long_about("Build and distribute Python applications")

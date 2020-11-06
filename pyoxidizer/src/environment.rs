@@ -24,17 +24,17 @@ const ROOT_COMMIT: &str = "b1f95017c897e0fd3ed006aec25b6886196a889d";
 /// Git commit this build of PyOxidizer was produced with.
 pub const BUILD_GIT_COMMIT: &str = env!("GIT_COMMIT");
 
-/// Semantic version for this build of PyOxidizer. Can correspond to a Git
-/// tag or version string from Cargo.toml.
-pub const BUILD_SEMVER: &str = env!("VERGEN_SEMVER");
+/// Version string of PyOxidizer.
+pub const PYOXIDIZER_VERSION: &str = env!("PYOXIDIZER_VERSION");
 
 lazy_static! {
-    /// Version string of PyOxidizer.
-    pub static ref PYOXIDIZER_VERSION: String = {
-        if env!("CARGO_PKG_VERSION").ends_with("-pre") {
-            format!("{}-{}", env!("CARGO_PKG_VERSION"), BUILD_GIT_COMMIT)
+    /// The Git tag we are built against.
+    pub static ref BUILD_GIT_TAG: Option<String> = {
+        let tag = env!("GIT_TAG");
+        if tag.is_empty() {
+            None
         } else {
-            env!("CARGO_PKG_VERSION").to_string()
+            Some(tag.to_string())
         }
     };
 
@@ -163,15 +163,11 @@ pub fn built_git_url() -> PyOxidizerSource {
         value => Some(value.to_string()),
     };
 
-    // Commit and tag should be mutually exclusive. BUILD_SEMVER could be
-    // derived by a Git tag in some circumstances. More commonly it is
-    // derived from Cargo.toml. The Git tags have ``v`` prefixes.
-    let tag = if commit.is_some() {
+    // Commit and tag should be mutually exclusive.
+    let tag = if commit.is_some() || BUILD_GIT_TAG.is_none() {
         None
-    } else if !BUILD_SEMVER.starts_with('v') {
-        Some("v".to_string() + BUILD_SEMVER)
     } else {
-        Some(BUILD_SEMVER.to_string())
+        BUILD_GIT_TAG.clone()
     };
 
     PyOxidizerSource::GitUrl {

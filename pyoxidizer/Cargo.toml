@@ -19,7 +19,6 @@ path = "src/lib.rs"
 
 [build-dependencies]
 git2 = "0.13"
-vergen = "3"
 
 [dependencies]
 anyhow = "1.0"

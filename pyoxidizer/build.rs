@@ -2,10 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use {
-    git2::Repository,
-    vergen::{generate_cargo_keys, ConstantsFlags},
-};
+use git2::Repository;
 
 /// Canonical Git repository for PyOxidizer.
 const CANONICAL_GIT_REPO_URL: &str = "https://github.com/indygreg/PyOxidizer.git";
@@ -13,8 +10,9 @@ const CANONICAL_GIT_REPO_URL: &str = "https://github.com/indygreg/PyOxidizer.git
 fn main() {
     let cwd = std::env::current_dir().expect("could not obtain current directory");
 
-    // vergen uses `git` to find Git information. But `git` isn't available in
-    // all environments. Let's use libgit2 to reliably find Git info.
+    // Various crates that resolve commits and versions from git shell out to `git`.
+    // This isn't reliable, especially on Windows. So we use libgit2 to extract data
+    // from the git repo, if present.
     let git_commit = if let Ok(repo) = Repository::discover(&cwd) {
         if let Ok(head_ref) = repo.head() {
             if let Ok(commit) = head_ref.peel_to_commit() {
@@ -29,7 +27,25 @@ fn main() {
         None
     };
 
+    let pkg_version =
+        std::env::var("CARGO_PKG_VERSION").expect("could not obtain CARGO_PKG_VERSION");
+
+    let (pyoxidizer_version, git_tag) = if pkg_version.ends_with("-pre") {
+        (
+            format!(
+                "{}-{}",
+                pkg_version,
+                git_commit.clone().unwrap_or_else(|| "UNKNOWN".to_string())
+            ),
+            "".to_string(),
+        )
+    } else {
+        (pkg_version.clone(), format!("v{}", pkg_version))
+    };
+
+    println!("cargo:rustc-env=PYOXIDIZER_VERSION={}", pyoxidizer_version);
     println!("cargo:rustc-env=GIT_REPO_URL={}", CANONICAL_GIT_REPO_URL);
+    println!("cargo:rustc-env=GIT_TAG={}", git_tag);
 
     println!(
         "cargo:rustc-env=GIT_COMMIT={}",
@@ -38,8 +54,6 @@ fn main() {
             None => "UNKNOWN".to_string(),
         }
     );
-
-    generate_cargo_keys(ConstantsFlags::all()).expect("error running vergen");
 
     println!(
         "cargo:rustc-env=HOST={}",
