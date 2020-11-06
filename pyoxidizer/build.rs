@@ -44,6 +44,8 @@ fn main() {
     };
 
     println!("cargo:rustc-env=PYOXIDIZER_VERSION={}", pyoxidizer_version);
+
+    // TODO detect builds from forks via build.rs environment variable.
     println!("cargo:rustc-env=GIT_REPO_URL={}", CANONICAL_GIT_REPO_URL);
     println!("cargo:rustc-env=GIT_TAG={}", git_tag);
 

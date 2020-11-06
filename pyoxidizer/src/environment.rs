@@ -47,6 +47,24 @@ lazy_static! {
         }
     };
 
+    /// Defines the source of this install from Git data embedded in the binary.
+    pub static ref GIT_SOURCE: PyOxidizerSource = {
+        let commit = BUILD_GIT_COMMIT.clone();
+
+        // Commit and tag should be mutually exclusive.
+        let tag = if commit.is_some() || BUILD_GIT_TAG.is_none() {
+            None
+        } else {
+            BUILD_GIT_TAG.clone()
+        };
+
+        PyOxidizerSource::GitUrl {
+            url: GIT_REPO_URL.to_owned(),
+            commit,
+            tag,
+        }
+    };
+
     /// Minimum version of Rust required to build PyOxidizer applications.
     ///
     // Remember to update the CI configuration in ci/azure-pipelines-template.yml
@@ -103,6 +121,7 @@ pub fn canonicalize_path(path: &Path) -> Result<PathBuf, std::io::Error> {
 }
 
 /// Describes the location of the PyOxidizer source files.
+#[derive(Clone, Debug)]
 pub enum PyOxidizerSource {
     /// A local filesystem path.
     LocalPath { path: PathBuf },
@@ -165,24 +184,6 @@ impl Environment {
     }
 }
 
-/// Obtain a PyOxidizerSource pointing to the GitUrl this binary was built with.
-pub fn built_git_url() -> PyOxidizerSource {
-    let commit = BUILD_GIT_COMMIT.clone();
-
-    // Commit and tag should be mutually exclusive.
-    let tag = if commit.is_some() || BUILD_GIT_TAG.is_none() {
-        None
-    } else {
-        BUILD_GIT_TAG.clone()
-    };
-
-    PyOxidizerSource::GitUrl {
-        url: GIT_REPO_URL.to_owned(),
-        commit,
-        tag,
-    }
-}
-
 pub fn resolve_environment() -> Result<Environment> {
     let exe_path = PathBuf::from(
         env::current_exe()?
@@ -209,14 +210,13 @@ pub fn resolve_environment() -> Result<Environment> {
                 // project's Git repository. This commonly happens when running
                 // pyoxidizer as a library from a build script. Fall back to
                 // returning info embedded in the build.
-                built_git_url()
+                GIT_SOURCE.clone()
             }
         }
         Err(_) => {
             // We're not running from a Git repo. Point to the canonical repo for the Git commit
             // baked into the binary.
-            // TODO detect builds from forks via build.rs environment variable.
-            built_git_url()
+            GIT_SOURCE.clone()
         }
     };
 
