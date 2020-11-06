@@ -21,13 +21,22 @@ const GIT_REPO_URL: &str = env!("GIT_REPO_URL");
 /// Root Git commit for PyOxidizer.
 const ROOT_COMMIT: &str = "b1f95017c897e0fd3ed006aec25b6886196a889d";
 
-/// Git commit this build of PyOxidizer was produced with.
-pub const BUILD_GIT_COMMIT: &str = env!("GIT_COMMIT");
-
 /// Version string of PyOxidizer.
 pub const PYOXIDIZER_VERSION: &str = env!("PYOXIDIZER_VERSION");
 
 lazy_static! {
+    /// Git commit this build of PyOxidizer was produced with.
+    pub static ref BUILD_GIT_COMMIT: Option<String> = {
+        match env!("GIT_COMMIT") {
+            // Can happen when not run from a Git checkout (such as installing
+            // from a crate).
+            "" => None,
+            // Can happen if build script could not find Git repository.
+            "UNKNOWN" => None,
+            value => Some(value.to_string()),
+        }
+    };
+
     /// The Git tag we are built against.
     pub static ref BUILD_GIT_TAG: Option<String> = {
         let tag = env!("GIT_TAG");
@@ -138,7 +147,11 @@ impl Environment {
         format!(
             "{}\ncommit: {}\nsource: {}\npyembed crate location: {}",
             env!("CARGO_PKG_VERSION"),
-            BUILD_GIT_COMMIT,
+            if let Some(commit) = BUILD_GIT_COMMIT.as_ref() {
+                commit.as_str()
+            } else {
+                "unknown"
+            },
             match &self.pyoxidizer_source {
                 PyOxidizerSource::LocalPath { path } => {
                     format!("{}", path.display())
@@ -154,14 +167,7 @@ impl Environment {
 
 /// Obtain a PyOxidizerSource pointing to the GitUrl this binary was built with.
 pub fn built_git_url() -> PyOxidizerSource {
-    let commit = match BUILD_GIT_COMMIT {
-        // Can happen when not run from a Git checkout (such as installing
-        // from a crate).
-        "" => None,
-        // Can happen if build script could not find Git repository.
-        "UNKNOWN" => None,
-        value => Some(value.to_string()),
-    };
+    let commit = BUILD_GIT_COMMIT.clone();
 
     // Commit and tag should be mutually exclusive.
     let tag = if commit.is_some() || BUILD_GIT_TAG.is_none() {

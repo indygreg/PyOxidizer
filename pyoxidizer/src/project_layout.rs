@@ -97,7 +97,11 @@ fn populate_template_data(data: &mut TemplateData) {
     let env = super::environment::resolve_environment().unwrap();
 
     data.pyoxidizer_version = Some(PYOXIDIZER_VERSION.to_string());
-    data.pyoxidizer_commit = Some(BUILD_GIT_COMMIT.to_string());
+    data.pyoxidizer_commit = Some(
+        BUILD_GIT_COMMIT
+            .clone()
+            .unwrap_or_else(|| "UNKNOWN".to_string()),
+    );
 
     match env.pyoxidizer_source {
         PyOxidizerSource::LocalPath { path } => {
