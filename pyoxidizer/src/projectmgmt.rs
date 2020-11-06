@@ -10,7 +10,8 @@ use {
         project_layout::{initialize_project, write_new_pyoxidizer_config_file},
         py_packaging::{
             distribution::{
-                default_distribution_location, resolve_distribution, DistributionFlavor,
+                default_distribution_location, resolve_distribution,
+                resolve_python_distribution_archive, DistributionFlavor,
             },
             standalone_distribution::StandaloneDistribution,
         },
@@ -25,7 +26,7 @@ use {
     std::{
         fs::create_dir_all,
         io::{Cursor, Read},
-        path::Path,
+        path::{Path, PathBuf},
     },
 };
 
@@ -344,8 +345,23 @@ pub fn init_rust_project(project_path: &Path) -> Result<()> {
     Ok(())
 }
 
-pub fn python_distribution_extract(dist_path: &str, dest_path: &str) -> Result<()> {
-    let mut fh = std::fs::File::open(Path::new(dist_path))?;
+pub fn python_distribution_extract(
+    download_default: bool,
+    archive_path: Option<&str>,
+    dest_path: &str,
+) -> Result<()> {
+    let dist_path = if let Some(path) = archive_path {
+        PathBuf::from(path)
+    } else if download_default {
+        let location =
+            default_distribution_location(&DistributionFlavor::Standalone, env!("HOST"), None)?;
+
+        resolve_python_distribution_archive(&location, Path::new(dest_path))?
+    } else {
+        return Err(anyhow!("do not know what distribution to operate on"));
+    };
+
+    let mut fh = std::fs::File::open(&dist_path)?;
     let mut data = Vec::new();
     fh.read_to_end(&mut data)?;
     let cursor = Cursor::new(data);

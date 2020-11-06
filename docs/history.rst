@@ -57,6 +57,9 @@ Backwards Compatibility Notes
   Python interpreter detection and linking configuration as determined by the
   ``cpython`` crate. This enables the ``cargo build`` or ``cargo test`` to
   *just work* without having to explicitly specify features.
+* The ``python-distributions-extract`` command now receives the path to an
+  existing distribution archive via the ``--archive-path`` argument instead
+  of an unnamed argument.
 
 Bug Fixes
 ^^^^^^^^^
@@ -81,6 +84,9 @@ New Features
   attribute to define a directory to install tcl/tk support files into.
   Setting this attribute enables the use of the ``tkinter`` Python module
   with compatible Python distributions. (#25)
+* The ``python-distribution-extract`` CLI command now accepts a
+  ``--download-default`` flag to download the default distribution for the
+  current platform.
 
 Other Relevant Changes
 ^^^^^^^^^^^^^^^^^^^^^^

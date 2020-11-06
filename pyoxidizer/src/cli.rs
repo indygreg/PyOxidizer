@@ -289,10 +289,15 @@ pub fn run_cli() -> Result<()> {
             SubCommand::with_name("python-distribution-extract")
                 .about("Extract a Python distribution archive to a directory")
                 .arg(
-                    Arg::with_name("dist_path")
-                        .required(true)
+                    Arg::with_name("download-default")
+                        .long("--download-default")
+                        .help("Download and extract the default distribution for this platform"),
+                )
+                .arg(
+                    Arg::with_name("archive-path")
+                        .long("--archive-path")
                         .value_name("DISTRIBUTION_PATH")
-                        .help("Path to a Python distribution"),
+                        .help("Path to a Python distribution archive"),
                 )
                 .arg(
                     Arg::with_name("dest_path")
@@ -426,10 +431,19 @@ pub fn run_cli() -> Result<()> {
         }
 
         ("python-distribution-extract", Some(args)) => {
-            let dist_path = args.value_of("dist_path").unwrap();
+            let download_default = args.is_present("download-default");
+            let archive_path = args.value_of("archive-path");
             let dest_path = args.value_of("dest_path").unwrap();
 
-            projectmgmt::python_distribution_extract(dist_path, dest_path)
+            if !download_default && archive_path.is_none() {
+                Err(anyhow!("must specify --download-default or --archive-path"))
+            } else if download_default && archive_path.is_some() {
+                Err(anyhow!(
+                    "must only specify one of --download-default or --archive-path"
+                ))
+            } else {
+                projectmgmt::python_distribution_extract(download_default, archive_path, dest_path)
+            }
         }
 
         ("python-distribution-info", Some(args)) => {
