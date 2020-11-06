@@ -15,6 +15,8 @@ use {
     },
 };
 
+const PACKAGE_VERSION: &str = env!("CARGO_PKG_VERSION");
+
 /// URL of Git repository we were built from.
 const GIT_REPO_URL: &str = env!("GIT_REPO_URL");
 
@@ -156,7 +158,7 @@ impl Environment {
             }
             PyOxidizerSource::GitUrl { url, commit, .. } => match commit {
                 Some(commit) => PyembedLocation::Git(url.clone(), commit.clone()),
-                None => PyembedLocation::Version(env!("CARGO_PKG_VERSION").to_string()),
+                None => PyembedLocation::Version(PACKAGE_VERSION.to_string()),
             },
         }
     }
@@ -165,7 +167,7 @@ impl Environment {
     pub fn version_long(&self) -> String {
         format!(
             "{}\ncommit: {}\nsource: {}\npyembed crate location: {}",
-            env!("CARGO_PKG_VERSION"),
+            PACKAGE_VERSION,
             if let Some(commit) = BUILD_GIT_COMMIT.as_ref() {
                 commit.as_str()
             } else {
