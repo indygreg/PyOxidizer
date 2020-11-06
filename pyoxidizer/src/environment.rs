@@ -6,8 +6,7 @@
 
 use {
     crate::project_layout::PyembedLocation,
-    anyhow::{anyhow, Result},
-    git2::{Commit, Repository},
+    anyhow::Result,
     lazy_static::lazy_static,
     std::{
         env,
@@ -20,13 +19,30 @@ const PACKAGE_VERSION: &str = env!("CARGO_PKG_VERSION");
 /// URL of Git repository we were built from.
 const GIT_REPO_URL: &str = env!("GIT_REPO_URL");
 
-/// Root Git commit for PyOxidizer.
-const ROOT_COMMIT: &str = "b1f95017c897e0fd3ed006aec25b6886196a889d";
-
 /// Version string of PyOxidizer.
 pub const PYOXIDIZER_VERSION: &str = env!("PYOXIDIZER_VERSION");
 
 lazy_static! {
+    /// Filesystem path to Git repository we were built from.
+    ///
+    /// Will be None if a path is defined in the environment but not present.
+    pub static ref BUILD_GIT_REPO_PATH: Option<PathBuf> = {
+        match env!("GIT_REPO_PATH") {
+            "" => None,
+            value => {
+                let path = PathBuf::from(value);
+
+                // There is a potential for false positives here. e.g. shared checkout
+                // directories. But hopefully that should be rare.
+                if path.exists() {
+                    Some(path)
+                } else {
+                    None
+                }
+            }
+        }
+    };
+
     /// Git commit this build of PyOxidizer was produced with.
     pub static ref BUILD_GIT_COMMIT: Option<String> = {
         match env!("GIT_COMMIT") {
@@ -91,19 +107,6 @@ lazy_static! {
         "x86_64-pc-windows-gnu",
         "x86_64-pc-windows-msvc",
     ];
-}
-
-/// Find the root Git commit given a starting Git commit.
-///
-/// This just walks parents until it gets to a commit without any.
-fn find_root_git_commit(commit: Commit) -> Commit {
-    let mut current = commit;
-
-    while current.parent_count() != 0 {
-        current = current.parents().next().unwrap();
-    }
-
-    current
 }
 
 pub fn canonicalize_path(path: &Path) -> Result<PathBuf, std::io::Error> {
@@ -187,39 +190,10 @@ impl Environment {
 }
 
 pub fn resolve_environment() -> Result<Environment> {
-    let exe_path = PathBuf::from(
-        env::current_exe()?
-            .parent()
-            .ok_or_else(|| anyhow!("could not resolve parent of current exe"))?,
-    );
-
-    let pyoxidizer_source = match Repository::discover(&exe_path) {
-        Ok(repo) => {
-            let head = repo.head().unwrap();
-            let commit = head.peel_to_commit().unwrap();
-            let root = find_root_git_commit(commit.clone());
-
-            if root.id().to_string() == ROOT_COMMIT {
-                PyOxidizerSource::LocalPath {
-                    path: canonicalize_path(
-                        repo.workdir()
-                            .ok_or_else(|| anyhow!("unable to resolve Git workdir"))?,
-                    )?,
-                }
-            } else {
-                // The pyoxidizer binary is in a directory that is in a Git repo that isn't
-                // pyoxidizer's. This could happen if running `pyoxidizer` from another
-                // project's Git repository. This commonly happens when running
-                // pyoxidizer as a library from a build script. Fall back to
-                // returning info embedded in the build.
-                GIT_SOURCE.clone()
-            }
-        }
-        Err(_) => {
-            // We're not running from a Git repo. Point to the canonical repo for the Git commit
-            // baked into the binary.
-            GIT_SOURCE.clone()
-        }
+    let pyoxidizer_source = if let Some(path) = BUILD_GIT_REPO_PATH.as_ref() {
+        PyOxidizerSource::LocalPath { path: path.clone() }
+    } else {
+        GIT_SOURCE.clone()
     };
 
     Ok(Environment { pyoxidizer_source })
