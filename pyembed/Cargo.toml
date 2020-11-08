@@ -25,8 +25,8 @@ python3-sys = "0.5.1"
 uuid = { version = "0.8", features = ["v4"] }
 
 [dependencies.python-packed-resources]
-version = "0.4.0"
-# path = "../python-packed-resources"
+version = "0.5.0-pre"
+path = "../python-packed-resources"
 
 [dependencies.python-packaging]
 version = "0.3.0"

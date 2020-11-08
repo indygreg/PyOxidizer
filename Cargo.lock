@@ -1168,6 +1168,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "oxidized-importer"
+version = "0.10.0-pre"
+dependencies = [
+ "anyhow",
+ "lazy_static",
+ "libc",
+ "memory-module-sys",
+ "pyembed",
+ "python-packed-resources 0.5.0-pre",
+ "python3-sys",
+ "winapi 0.3.9",
+]
+
+[[package]]
 name = "paste"
 version = "0.1.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1376,7 +1390,7 @@ dependencies = [
  "memmap",
  "memory-module-sys",
  "python-packaging 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "python-packed-resources 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "python-packed-resources 0.5.0-pre",
  "python3-sys",
  "rusty-fork",
  "uuid",
@@ -1409,7 +1423,7 @@ dependencies = [
  "linked-hash-map",
  "path-dedot",
  "python-packaging 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "python-packed-resources 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "python-packed-resources 0.5.0-pre",
  "rustc_version",
  "semver 0.9.0",
  "serde",
@@ -1438,7 +1452,7 @@ dependencies = [
  "itertools 0.9.0",
  "lazy_static",
  "mailparse",
- "python-packed-resources 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "python-packed-resources 0.5.0-pre",
  "regex",
  "tempdir",
  "walkdir",
@@ -1457,7 +1471,7 @@ dependencies = [
  "itertools 0.9.0",
  "lazy_static",
  "mailparse",
- "python-packed-resources 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "python-packed-resources 0.4.0",
  "regex",
  "tempdir",
  "walkdir",
@@ -1467,6 +1481,8 @@ dependencies = [
 [[package]]
 name = "python-packed-resources"
 version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ec87c56c1c01c036d0688dc66c5d444d9bacc44a1161b58fd91955beda79c500"
 dependencies = [
  "anyhow",
  "byteorder",
@@ -1474,9 +1490,7 @@ dependencies = [
 
 [[package]]
 name = "python-packed-resources"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ec87c56c1c01c036d0688dc66c5d444d9bacc44a1161b58fd91955beda79c500"
+version = "0.5.0-pre"
 dependencies = [
  "anyhow",
  "byteorder",
