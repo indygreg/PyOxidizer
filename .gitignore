@@ -3,6 +3,7 @@ docs/_build/
 docs/oxidized_importer*
 pyembed/docs/_build/
 target/
+tugger/docs/_build/
 venv/
 wheelhouse/
 
