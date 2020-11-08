@@ -65,8 +65,8 @@ version = "0.4.0"
 # path = "../python-packed-resources"
 
 [dependencies.starlark-dialect-build-targets]
-version = "0.1.0-pre"
-path = "../starlark-dialect-build-targets"
+version = "0.1.0"
+# path = "../starlark-dialect-build-targets"
 
 [dependencies.tugger]
 version = "0.2.0-pre"
