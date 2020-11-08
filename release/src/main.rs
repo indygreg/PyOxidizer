@@ -379,18 +379,31 @@ fn release_package(root: &Path, workspace_packages: &[String], package: &str) ->
         vec![],
     )
     .context("creating Git commit")?;
+
+    let tag = format!("{}-{}", package, release_version);
+    run_cmd(
+        package,
+        root,
+        "git",
+        vec!["tag".to_string(), "-f".to_string(), tag.clone()],
+        vec![],
+    )
+    .context("creating Git tag")?;
+
     run_cmd(
         package,
         root,
         "git",
         vec![
-            "tag".to_string(),
+            "push".to_string(),
             "-f".to_string(),
-            format!("{}-{}", package, release_version),
+            "--tag".to_string(),
+            "origin".to_string(),
+            tag,
         ],
         vec![],
     )
-    .context("creating Git tag")?;
+    .context("pushing git tag")?;
 
     Ok(())
 }
