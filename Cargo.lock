@@ -1168,20 +1168,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "oxidized-importer"
-version = "0.10.0-pre"
-dependencies = [
- "anyhow",
- "lazy_static",
- "libc",
- "memory-module-sys",
- "pyembed",
- "python-packed-resources",
- "python3-sys",
- "winapi 0.3.9",
-]
-
-[[package]]
 name = "paste"
 version = "0.1.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
