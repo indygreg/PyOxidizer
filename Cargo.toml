@@ -1,10 +1,11 @@
 [workspace]
 members = [
-    "oxidized-importer",
-    "pyembed",
-    "pyoxidizer",
-    "python-packaging",
-    "python-packed-resources",
-    "starlark-dialect-build-targets",
-    "tugger",
+    'oxidized-importer',
+    'pyembed',
+    'pyoxidizer',
+    'python-packaging',
+    'python-packed-resources',
+    'release',
+    'starlark-dialect-build-targets',
+    'tugger',
 ]
