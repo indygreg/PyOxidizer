@@ -252,8 +252,6 @@ fn release_package(root: &Path, workspace_packages: &[String], package: &str) ->
     let version = semver::Version::parse(version).context("parsing package version")?;
     let mut release_version = version.clone();
     release_version.pre.clear();
-    let mut next_version = version.clone();
-    next_version.increment_minor();
 
     if version.is_prerelease() {
         println!("{}: removing pre-release version", package);
@@ -397,6 +395,86 @@ fn release_package(root: &Path, workspace_packages: &[String], package: &str) ->
     Ok(())
 }
 
+fn update_package_version(root: &Path, workspace_packages: &[String], package: &str) -> Result<()> {
+    println!("updating package version for {}", package);
+
+    let manifest_path = root.join(package).join("Cargo.toml");
+    let manifest = Manifest::from_path(&manifest_path)
+        .with_context(|| format!("reading {}", manifest_path.display()))?;
+
+    let version = &manifest
+        .package
+        .ok_or_else(|| anyhow!("no [package]"))?
+        .version;
+
+    println!("{}: existing Cargo.toml version: {}", package, version);
+    let mut next_version = semver::Version::parse(version).context("parsing package version")?;
+    next_version.increment_minor();
+    next_version.pre = vec![semver::AlphaNumeric("pre".to_string())];
+
+    update_cargo_toml_package_version(&manifest_path, &next_version.to_string())
+        .context("updating Cargo.toml package version")?;
+
+    println!(
+        "{}: checking workspace packages for version update",
+        package
+    );
+    for other_package in workspace_packages {
+        let cargo_toml = root.join(other_package).join("Cargo.toml");
+        println!(
+            "{}: {} {}",
+            package,
+            cargo_toml.display(),
+            if update_cargo_toml_dependency_package_version(
+                &cargo_toml,
+                package,
+                &next_version.to_string()
+            )? {
+                "updated"
+            } else {
+                "unchanged"
+            }
+        );
+        println!(
+            "{}: {} {}",
+            package,
+            cargo_toml.display(),
+            if update_cargo_toml_dependency_package_location(
+                &cargo_toml,
+                package,
+                Location::LocalPath
+            )? {
+                "updated"
+            } else {
+                "unchanged"
+            }
+        );
+    }
+
+    println!(
+        "{}: running cargo update to reflect version increment",
+        package
+    );
+    run_cmd(package, &root, "cargo", vec!["update"], vec![]).context("running cargo update")?;
+
+    println!("{}: creating Git commit to reflect version bump", package);
+    run_cmd(
+        package,
+        root,
+        "git",
+        vec![
+            "commit".to_string(),
+            "-a".to_string(),
+            "-m".to_string(),
+            format!("{}: bump version to {}", package, next_version),
+        ],
+        vec![],
+    )
+    .context("creating Git commit")?;
+
+    Ok(())
+}
+
 fn release() -> Result<()> {
     let cwd = std::env::current_dir()?;
 
@@ -463,7 +541,7 @@ fn release() -> Result<()> {
             "re-adding disabled packages from {}",
             workspace_toml.display()
         );
-        let mut packages = workspace_packages.clone();
+        let mut packages = workspace_packages;
         for p in DISABLE_PACKAGES.iter() {
             packages.push(p.to_string());
         }
@@ -471,6 +549,13 @@ fn release() -> Result<()> {
         packages.sort();
 
         write_workspace_toml(&workspace_toml, &packages)?;
+    }
+
+    let workspace_packages = get_workspace_members(&workspace_toml)?;
+
+    for package in RELEASE_ORDER.iter() {
+        update_package_version(repo_root, &workspace_packages, *package)
+            .with_context(|| format!("incrementing version for {}", package))?;
     }
 
     Ok(())
