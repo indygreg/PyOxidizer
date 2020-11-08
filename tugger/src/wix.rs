@@ -851,6 +851,9 @@ fn run_light<P1: AsRef<Path>, P2: AsRef<Path>, P3: AsRef<Path>, P4: AsRef<Path>,
 mod tests {
     use {super::*, crate::file_resource::FileContent};
 
+    #[cfg(windows)]
+    use crate::testutil::*;
+
     #[test]
     fn test_file_manifest_to_wix() -> Result<()> {
         let c = FileContent {
