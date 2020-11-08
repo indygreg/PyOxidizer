@@ -1703,6 +1703,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "cargo_toml",
+ "duct",
  "git2",
  "lazy_static",
  "semver 0.11.0",

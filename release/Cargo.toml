@@ -11,6 +11,7 @@ repository = "https://github.com/indygreg/PyOxidizer.git"
 [dependencies]
 anyhow = "1.0"
 cargo_toml = "0.8"
+duct = "0.13"
 git2 = "0.13"
 lazy_static = "1.4"
 semver = "0.11"

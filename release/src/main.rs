@@ -5,9 +5,11 @@
 use {
     anyhow::{anyhow, Context, Result},
     cargo_toml::Manifest,
+    duct::cmd,
     git2::Repository,
     lazy_static::lazy_static,
     std::{
+        ffi::OsString,
         io::{BufRead, BufReader},
         path::Path,
     },
@@ -128,12 +130,112 @@ fn update_cargo_toml_dependency_package_version(
     Ok(version_changed)
 }
 
-fn release_package(
-    repo: &Repository,
-    root: &Path,
-    workspace_packages: &[String],
+enum Location {
+    LocalPath,
+    Remote,
+}
+
+fn update_cargo_toml_dependency_package_location(
+    path: &Path,
     package: &str,
-) -> Result<()> {
+    location: Location,
+) -> Result<bool> {
+    let local_path = format!("path = \"../{}\"", package);
+
+    let mut lines = Vec::new();
+
+    let fh = std::fs::File::open(path).with_context(|| format!("opening {}", path.display()))?;
+    let reader = BufReader::new(fh);
+
+    let mut seen_dependency_section = false;
+    let mut seen_path = false;
+    let mut changed = false;
+    for line in reader.lines() {
+        let line = line?;
+
+        lines.push(
+            if !seen_dependency_section && line == format!("[dependencies.{}]", package) {
+                seen_dependency_section = true;
+                line
+            } else if seen_dependency_section
+                && !seen_path
+                && (line.starts_with("path = \"") || line.starts_with("# path = \""))
+            {
+                seen_path = true;
+
+                let new_line = match location {
+                    Location::LocalPath => local_path.clone(),
+                    Location::Remote => format!("# {}", local_path),
+                };
+
+                if new_line != line {
+                    changed = true;
+                }
+
+                new_line
+            } else {
+                line
+            },
+        );
+    }
+    lines.push("".to_string());
+
+    let data = lines.join("\n");
+    std::fs::write(path, data)?;
+
+    Ok(changed)
+}
+
+fn run_cmd<S>(
+    package: &str,
+    dir: &Path,
+    program: &str,
+    args: S,
+    ignore_errors: Vec<String>,
+) -> Result<i32>
+where
+    S: IntoIterator,
+    S::Item: Into<OsString>,
+{
+    let mut found_ignore_string = false;
+
+    let command = cmd(program, args)
+        .dir(dir)
+        .stderr_to_stdout()
+        .unchecked()
+        .reader()
+        .context("launching command")?;
+    {
+        let reader = BufReader::new(&command);
+        for line in reader.lines() {
+            let line = line?;
+
+            for s in ignore_errors.iter() {
+                if line.contains(s) {
+                    found_ignore_string = true;
+                }
+            }
+            println!("{}: {}", package, line);
+        }
+    }
+    let output = command
+        .try_wait()
+        .context("waiting on process")?
+        .ok_or_else(|| anyhow!("unable to wait on command"))?;
+
+    let code = output.status.code().unwrap_or(1);
+
+    if output.status.success() || found_ignore_string {
+        Ok(code)
+    } else {
+        Err(anyhow!(
+            "command exited {}",
+            output.status.code().unwrap_or(1)
+        ))
+    }
+}
+
+fn release_package(root: &Path, workspace_packages: &[String], package: &str) -> Result<()> {
     println!("releasing {}", package);
 
     let manifest_path = root.join(package).join("Cargo.toml");
@@ -180,6 +282,118 @@ fn release_package(
         );
     }
 
+    // We need to ensure Cargo.lock reflects any version changes.
+    println!(
+        "{}: running cargo update to ensure proper version string reflected",
+        package
+    );
+    run_cmd(
+        package,
+        &root,
+        "cargo",
+        vec!["update", "-p", package],
+        vec![],
+    )
+    .context("running cargo update")?;
+
+    // We need to perform a Git commit to ensure the working directory is clean, otherwise
+    // Cargo complains. We could run with --allow-dirty. But that exposes us to other dangers,
+    // such as packaging files in the source directory we don't want to package.
+    println!("{}: creating Git commit to reflect release", package);
+    run_cmd(
+        package,
+        root,
+        "git",
+        vec![
+            "commit".to_string(),
+            "-a".to_string(),
+            "-m".to_string(),
+            format!("{}: release version {}", package, release_version),
+        ],
+        vec![],
+    )
+    .context("creating Git commit")?;
+
+    if run_cmd(
+        package,
+        &root.join(package),
+        "cargo",
+        vec!["publish"],
+        vec![format!(
+            "crate version `{}` is already uploaded",
+            release_version
+        )],
+    )
+    .context("running cargo publish")?
+        == 0
+    {
+        println!("{}: sleeping to wait for crates index to update", package);
+        std::thread::sleep(std::time::Duration::from_secs(20));
+    };
+
+    println!(
+        "{}: checking workspace packages for package location updates",
+        package
+    );
+    for other_package in workspace_packages {
+        let cargo_toml = root.join(other_package).join("Cargo.toml");
+        println!(
+            "{}: {} {}",
+            package,
+            cargo_toml.display(),
+            if update_cargo_toml_dependency_package_location(
+                &cargo_toml,
+                package,
+                Location::Remote
+            )? {
+                "updated"
+            } else {
+                "unchanged"
+            }
+        );
+    }
+
+    println!(
+        "{}: running cargo update to ensure proper location reflected",
+        package
+    );
+    run_cmd(
+        package,
+        &root,
+        "cargo",
+        vec!["update", "-p", package],
+        vec![],
+    )
+    .context("running cargo update")?;
+
+    println!("{}: amending Git commit to reflect release", package);
+    run_cmd(
+        package,
+        root,
+        "git",
+        vec![
+            "commit".to_string(),
+            "-a".to_string(),
+            "--amend".to_string(),
+            "-m".to_string(),
+            format!("{}: release version {}", package, release_version),
+        ],
+        vec![],
+    )
+    .context("creating Git commit")?;
+    run_cmd(
+        package,
+        root,
+        "git",
+        vec![
+            "tag".to_string(),
+            "-f".to_string(),
+            format!("{}-{}", package, release_version),
+        ],
+        vec![],
+    )
+    .context("creating Git tag")?;
+
     Ok(())
 }
 
@@ -205,6 +419,24 @@ fn release() -> Result<()> {
         println!("removing packages from {}", workspace_toml.display());
         write_workspace_toml(&workspace_toml, &new_workspace_packages)
             .context("writing workspace Cargo.toml")?;
+
+        println!("running cargo update to reflect workspace change");
+        run_cmd("workspace", repo_root, "cargo", vec!["update"], vec![])
+            .context("cargo update to reflect workspace changes")?;
+        println!("performing git commit to reflect workspace changes");
+        run_cmd(
+            "workspace",
+            repo_root,
+            "git",
+            vec![
+                "commit",
+                "-a",
+                "-m",
+                "release: remove packages from workspace to facilitate release",
+            ],
+            vec![],
+        )
+        .context("git commit to reflect workspace changes")?;
     }
 
     if !new_workspace_packages
@@ -217,9 +449,8 @@ fn release() -> Result<()> {
     }
 
     for package in RELEASE_ORDER.iter() {
-        release_package(&repo, &repo_root, &new_workspace_packages, *package)
+        release_package(&repo_root, &new_workspace_packages, *package)
             .with_context(|| format!("releasing {}", package))?;
-        break;
     }
 
     let workspace_packages = get_workspace_members(&workspace_toml)?;
