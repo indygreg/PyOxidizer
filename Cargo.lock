@@ -1431,10 +1431,10 @@ dependencies = [
  "sha2 0.9.2",
  "slog",
  "starlark",
- "starlark-dialect-build-targets 0.2.0-pre",
+ "starlark-dialect-build-targets",
  "tar",
  "tempdir",
- "tugger 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger",
  "url",
  "uuid",
  "version-compare",
@@ -2017,21 +2017,6 @@ dependencies = [
 
 [[package]]
 name = "starlark-dialect-build-targets"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "643bc79b154b1ebaf6877f45da8d79fff120f8f1ca688792f0ddeb61d7371735"
-dependencies = [
- "anyhow",
- "codemap",
- "codemap-diagnostic",
- "linked-hash-map",
- "path-dedot",
- "slog",
- "starlark",
-]
-
-[[package]]
-name = "starlark-dialect-build-targets"
 version = "0.2.0-pre"
 dependencies = [
  "anyhow",
@@ -2306,7 +2291,7 @@ checksum = "59547bce71d9c38b83d9c0e92b6066c4253371f15005def0c30d9657f50c7642"
 
 [[package]]
 name = "tugger"
-version = "0.2.0"
+version = "0.3.0-pre"
 dependencies = [
  "anyhow",
  "codemap",
@@ -2320,36 +2305,9 @@ dependencies = [
  "sha2 0.9.2",
  "slog",
  "starlark",
- "starlark-dialect-build-targets 0.2.0-pre",
+ "starlark-dialect-build-targets",
  "tar",
  "tempdir",
- "url",
- "uuid",
- "walkdir",
- "xml-rs",
- "zip",
-]
-
-[[package]]
-name = "tugger"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "057b06687cef07ea90a6dde8a49898db6265e1574b406387256fdd7e792a71f3"
-dependencies = [
- "anyhow",
- "codemap",
- "codemap-diagnostic",
- "duct",
- "glob",
- "handlebars",
- "hex",
- "lazy_static",
- "reqwest",
- "sha2 0.9.2",
- "slog",
- "starlark",
- "starlark-dialect-build-targets 0.1.0",
- "tar",
  "url",
  "uuid",
  "walkdir",

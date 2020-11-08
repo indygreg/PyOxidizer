@@ -69,8 +69,8 @@ version = "0.2.0-pre"
 path = "../starlark-dialect-build-targets"
 
 [dependencies.tugger]
-version = "0.2.0"
-# path = "../tugger"
+version = "0.3.0-pre"
+path = "../tugger"
 
 [dev-dependencies]
 indoc = "0.3"
