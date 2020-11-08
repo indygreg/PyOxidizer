@@ -24,6 +24,7 @@ pub mod glob;
 pub mod http;
 pub mod starlark;
 pub mod tarball;
+#[allow(unused)]
 #[cfg(test)]
 mod testutil;
 pub mod wix;
