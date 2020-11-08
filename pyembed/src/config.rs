@@ -10,8 +10,10 @@ use {
         PythonInterpreterConfig, PythonInterpreterProfile, PythonRawAllocator, TerminfoResolution,
     },
     std::{
+        convert::TryFrom,
         ffi::{CString, OsString},
-        path::{Path, PathBuf},
+        ops::Deref,
+        path::PathBuf,
     },
 };
 
@@ -194,32 +196,25 @@ impl<'a> Default for OxidizedPythonInterpreterConfig<'a> {
 }
 
 impl<'a> OxidizedPythonInterpreterConfig<'a> {
-    pub fn ensure_origin(&mut self) -> Result<&Path, &'static str> {
-        if self.exe.is_none() {
-            self.exe =
-                Some(std::env::current_exe().map_err(|_| "could not obtain current executable")?);
-        }
+    /// Create a new type with all values resolved.
+    pub fn resolve(self) -> Result<ResolvedOxidizedPythonInterpreterConfig<'a>, &'static str> {
+        let exe = if let Some(exe) = self.exe {
+            exe
+        } else {
+            std::env::current_exe().map_err(|_| "could not obtain current executable")?
+        };
 
-        if self.origin.is_none() {
-            let origin = self
-                .exe
-                .as_ref()
-                .unwrap()
-                .parent()
-                .ok_or_else(|| "unable to obtain current executable parent directory")?;
+        let origin = if let Some(origin) = self.origin {
+            origin
+        } else {
+            exe.parent()
+                .ok_or("unable to obtain current executable parent directory")?
+                .to_path_buf()
+        };
 
-            self.origin = Some(origin.to_path_buf());
-        }
-
-        Ok(self.origin.as_ref().unwrap())
-    }
-
-    /// Resolve the value to use for module search paths / sys.path.
-    pub fn resolve_module_search_paths(&mut self) -> Result<&Option<Vec<PathBuf>>, &'static str> {
-        let origin = self.ensure_origin()?;
         let origin_string = origin.display().to_string();
 
-        let paths = match &self.interpreter_config.module_search_paths {
+        let module_search_paths = match &self.interpreter_config.module_search_paths {
             Some(paths) => Some(
                 paths
                     .iter()
@@ -231,10 +226,32 @@ impl<'a> OxidizedPythonInterpreterConfig<'a> {
             None => None,
         };
 
-        self.interpreter_config.module_search_paths = paths;
+        let tcl_library = if let Some(tcl_library) = self.tcl_library {
+            Some(PathBuf::from(
+                tcl_library
+                    .display()
+                    .to_string()
+                    .replace("$ORIGIN", &origin_string),
+            ))
+        } else {
+            None
+        };
 
-        Ok(&self.interpreter_config.module_search_paths)
+        Ok(ResolvedOxidizedPythonInterpreterConfig {
+            inner: Self {
+                exe: Some(exe),
+                origin: Some(origin),
+                interpreter_config: PythonInterpreterConfig {
+                    module_search_paths,
+                    ..self.interpreter_config
+                },
+                tcl_library,
+                ..self
+            },
+        })
     }
+
+    // TODO move logic to resolve() or the Resolved type.
 
     /// Resolve `OsString` to use for `sys.argv`.
     ///
@@ -260,23 +277,42 @@ impl<'a> OxidizedPythonInterpreterConfig<'a> {
             std::env::args_os().collect::<Vec<_>>()
         }
     }
+}
 
-    /// Resolves the value to use for `TCL_LIBRARY`.
-    pub fn resolve_tcl_library(&mut self) -> Result<Option<OsString>, &'static str> {
-        let origin = self.ensure_origin()?;
-        let origin_string = origin.display().to_string();
+/// An `OxidizedPythonInterpreterConfig` that has fields resolved.
+pub struct ResolvedOxidizedPythonInterpreterConfig<'a> {
+    inner: OxidizedPythonInterpreterConfig<'a>,
+}
 
-        if let Some(tcl_library) = &self.tcl_library {
-            let tcl_library = PathBuf::from(
-                tcl_library
-                    .display()
-                    .to_string()
-                    .replace("$ORIGIN", &origin_string),
-            );
+impl<'a> Deref for ResolvedOxidizedPythonInterpreterConfig<'a> {
+    type Target = OxidizedPythonInterpreterConfig<'a>;
 
-            Ok(Some(tcl_library.into_os_string()))
-        } else {
-            Ok(None)
-        }
+    fn deref(&self) -> &Self::Target {
+        &self.inner
+    }
+}
+
+impl<'a> TryFrom<OxidizedPythonInterpreterConfig<'a>>
+    for ResolvedOxidizedPythonInterpreterConfig<'a>
+{
+    type Error = &'static str;
+
+    fn try_from(value: OxidizedPythonInterpreterConfig<'a>) -> Result<Self, Self::Error> {
+        value.resolve()
+    }
+}
+
+impl<'a> ResolvedOxidizedPythonInterpreterConfig<'a> {
+    /// Obtain the value for the current executable.
+    pub fn exe(&self) -> &PathBuf {
+        self.inner.exe.as_ref().expect("exe should have a value")
+    }
+
+    /// Obtain the path for $ORIGIN.
+    pub fn origin(&self) -> &PathBuf {
+        self.inner
+            .origin
+            .as_ref()
+            .expect("origin should have a value")
     }
 }

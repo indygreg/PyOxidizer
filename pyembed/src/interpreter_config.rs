@@ -5,7 +5,7 @@
 //! Utilities for configuring a Python interpreter.
 
 use {
-    super::config::OxidizedPythonInterpreterConfig,
+    super::config::ResolvedOxidizedPythonInterpreterConfig,
     libc::{c_int, size_t, wchar_t},
     python3_sys as pyffi,
     python_packaging::{
@@ -233,7 +233,7 @@ fn set_legacy_windows_stdio(config: &mut pyffi::PyConfig, value: bool) {
     config.legacy_windows_stdio = if value { 1 } else { 0 };
 }
 
-impl<'a> OxidizedPythonInterpreterConfig<'a> {
+impl<'a> ResolvedOxidizedPythonInterpreterConfig<'a> {
     /// Whether the run configuration should execute via Py_RunMain().
     pub(crate) fn uses_py_runmain(&self) -> bool {
         self.interpreter_config.run_command.is_some()
@@ -565,7 +565,7 @@ pub fn python_interpreter_config_to_py_config(
     Ok(config)
 }
 
-impl<'a> TryInto<pyffi::PyConfig> for &'a OxidizedPythonInterpreterConfig<'a> {
+impl<'a> TryInto<pyffi::PyConfig> for &'a ResolvedOxidizedPythonInterpreterConfig<'a> {
     type Error = String;
 
     fn try_into(self) -> Result<pyffi::PyConfig, Self::Error> {

@@ -90,15 +90,16 @@ rusty_fork_test! {
         config.interpreter_config.parse_argv = Some(false);
         config.interpreter_config.module_search_paths = Some(vec![PathBuf::from("$ORIGIN/lib")]);
 
+        let config = config.resolve().unwrap();
+
         let origin = std::env::current_exe()
             .unwrap()
             .parent()
             .unwrap()
             .to_path_buf();
 
-        let paths = config.resolve_module_search_paths().unwrap();
         assert_eq!(
-            paths,
+            &config.interpreter_config.module_search_paths,
             &Some(vec![PathBuf::from(format!("{}/lib", origin.display()))])
         );
 
@@ -372,13 +373,15 @@ rusty_fork_test! {
         config.interpreter_config.parse_argv = Some(false);
         config.tcl_library = Some(PathBuf::from("$ORIGIN").join("lib").join("tcl8.6"));
 
+        let config = config.resolve().unwrap();
+
         let origin = std::env::current_exe()
             .unwrap()
             .parent()
             .unwrap()
             .to_path_buf();
 
-        let tcl_library = config.resolve_tcl_library().unwrap();
-        assert_eq!(tcl_library, Some(origin.join("lib").join("tcl8.6").into_os_string()));
+
+        assert_eq!(config.tcl_library, Some(origin.join("lib").join("tcl8.6")));
     }
 }

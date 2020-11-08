@@ -5,7 +5,7 @@
 //! Manage an embedded Python interpreter.
 
 use {
-    super::config::OxidizedPythonInterpreterConfig,
+    super::config::{OxidizedPythonInterpreterConfig, ResolvedOxidizedPythonInterpreterConfig},
     super::conversion::osstring_to_bytes,
     super::importer::{
         initialize_importer, PyInit_oxidized_importer, OXIDIZED_IMPORTER_NAME,
@@ -247,7 +247,7 @@ enum InterpreterState {
 ///
 /// Both the low-level `python3-sys` and higher-level `cpython` crates are used.
 pub struct MainPythonInterpreter<'python, 'interpreter: 'python, 'resources: 'interpreter> {
-    config: OxidizedPythonInterpreterConfig<'resources>,
+    config: ResolvedOxidizedPythonInterpreterConfig<'resources>,
     interpreter_state: InterpreterState,
     interpreter_guard: Option<std::sync::MutexGuard<'interpreter, ()>>,
     raw_allocator: Option<InterpreterRawAllocator>,
@@ -281,6 +281,10 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
     pub fn new(
         config: OxidizedPythonInterpreterConfig<'resources>,
     ) -> Result<MainPythonInterpreter<'python, 'interpreter, 'resources>, NewInterpreterError> {
+        let config: ResolvedOxidizedPythonInterpreterConfig<'resources> = config
+            .try_into()
+            .map_err(|e| NewInterpreterError::Simple(e))?;
+
         match config.terminfo_resolution {
             TerminfoResolution::Dynamic => {
                 if let Some(v) = resolve_terminfo_dirs() {
@@ -341,19 +345,11 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
 
         self.interpreter_state = InterpreterState::Initializing;
 
-        let origin = self
-            .config
-            .ensure_origin()
-            .map_err(|e| NewInterpreterError::Simple(e))?;
-        let origin_string = origin.display().to_string();
+        let origin_string = self.config.origin().display().to_string();
 
-        if let Some(tcl_library) = self.config.resolve_tcl_library()? {
+        if let Some(tcl_library) = &self.config.tcl_library {
             std::env::set_var("TCL_LIBRARY", tcl_library);
         }
-
-        self.config
-            .resolve_module_search_paths()
-            .map_err(|e| NewInterpreterError::Simple(e))?;
 
         set_pyimport_inittab(&self.config);
 
