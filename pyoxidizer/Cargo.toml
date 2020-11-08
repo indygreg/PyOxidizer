@@ -57,8 +57,8 @@ walkdir = "2"
 zstd = "0.5"
 
 [dependencies.python-packaging]
-version = "0.3.0"
-# path = "../python-packaging"
+version = "0.4.0-pre"
+path = "../python-packaging"
 
 [dependencies.python-packed-resources]
 version = "0.5.0-pre"
