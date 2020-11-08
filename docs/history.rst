@@ -33,6 +33,13 @@ Not yet released.
 
 .. _version_0_10_0:
 
+Backwards Compatibility Notes
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+* The minimum Rust version has been changed from 1.41 to 1.45 to facilitate
+  the use of procedural macros.
+
+
 0.10.0
 ------
 

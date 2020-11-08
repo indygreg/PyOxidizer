@@ -84,8 +84,8 @@ lazy_static! {
     /// Minimum version of Rust required to build PyOxidizer applications.
     ///
     // Remember to update the CI configuration in ci/azure-pipelines-template.yml
-    // when this changes.
-    pub static ref MINIMUM_RUST_VERSION: semver::Version = semver::Version::new(1, 41, 0);
+    // and the `Installing Rust` documentation when this changes.
+    pub static ref MINIMUM_RUST_VERSION: semver::Version = semver::Version::new(1, 45, 0);
 
     /// Target triples for Linux.
     pub static ref LINUX_TARGET_TRIPLES: Vec<&'static str> = vec![
