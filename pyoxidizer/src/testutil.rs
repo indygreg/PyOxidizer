@@ -4,6 +4,7 @@
 
 use {
     crate::{
+        environment::BUILD_GIT_REPO_PATH,
         logging::PrintlnDrain,
         py_packaging::distribution::{
             DistributionCache, DistributionFlavor, PythonDistributionLocation,
@@ -14,7 +15,7 @@ use {
     anyhow::{anyhow, Result},
     lazy_static::lazy_static,
     slog::{Drain, Logger},
-    std::{path::PathBuf, sync::Arc},
+    std::{ops::Deref, path::PathBuf, sync::Arc},
 };
 
 pub fn get_logger() -> Result<slog::Logger> {
@@ -38,12 +39,9 @@ lazy_static! {
 pub fn get_distribution(
     location: &PythonDistributionLocation,
 ) -> Result<Arc<StandaloneDistribution>> {
-    // Use Rust's build directory for distributions if available. This
-    // facilitates caching and can make execution much faster.
-    // The logic here is far from robust. Perhaps we should add more
-    // well-defined and controllable location for storing these files?
-    // TODO improve default storage directory detection.
-    let dest_path = if let Ok(manifest_dir) = std::env::var("CARGO_MANIFEST_DIR") {
+    let dest_path = if let Some(build_path) = &BUILD_GIT_REPO_PATH.deref() {
+        build_path.join("target").join("python_distributions")
+    } else if let Ok(manifest_dir) = std::env::var("CARGO_MANIFEST_DIR") {
         PathBuf::from(manifest_dir)
             .join("target")
             .join("python_distributions")
