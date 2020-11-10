@@ -71,7 +71,7 @@ this instance into the constructed ``PythonExecutable``:
 
    def make_exe(dist):
        config = dist.make_python_interpreter_config()
-       config.run_code = "print('hello, world')"
+       config.run_command = "print('hello, world')"
 
        return dist.to_python_executable("myapp", config=config)
 
