@@ -26,6 +26,8 @@ Version History
 
 .. _version_0_10_1:
 
+Released November 9, 2020.
+
 0.10.1
 ------
 
