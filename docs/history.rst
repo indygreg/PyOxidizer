@@ -24,12 +24,28 @@ Blog Posts
 Version History
 ===============
 
+.. _version_0_10_1:
+
+0.10.1
+------
+
+Bug Fixes
+^^^^^^^^^
+
+* Fix a Starlark execution error due to a double borrow of a Starlark
+  value. (#315)
+
 .. _version_0_10_0:
 
 0.10.0
 ------
 
 Released November 8, 2020.
+
+.. danger::
+
+   The 0.10.0 release has a serious Starlark bug preventing PyOxidizer from
+   working correctly in many scenarios. Please use the 0.10.1 release.
 
 Backwards Compatibility Notes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
