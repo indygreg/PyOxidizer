@@ -5,6 +5,7 @@
 use {
     anyhow::{anyhow, Context, Result},
     cargo_toml::Manifest,
+    clap::{App, Arg},
     duct::cmd,
     git2::Repository,
     lazy_static::lazy_static,
@@ -408,7 +409,12 @@ fn release_package(root: &Path, workspace_packages: &[String], package: &str) ->
     Ok(())
 }
 
-fn update_package_version(root: &Path, workspace_packages: &[String], package: &str) -> Result<()> {
+fn update_package_version(
+    root: &Path,
+    workspace_packages: &[String],
+    package: &str,
+    version_bump: VersionBump,
+) -> Result<()> {
     println!("updating package version for {}", package);
 
     let manifest_path = root.join(package).join("Cargo.toml");
@@ -422,7 +428,12 @@ fn update_package_version(root: &Path, workspace_packages: &[String], package: &
 
     println!("{}: existing Cargo.toml version: {}", package, version);
     let mut next_version = semver::Version::parse(version).context("parsing package version")?;
-    next_version.increment_minor();
+
+    match version_bump {
+        VersionBump::Minor => next_version.increment_minor(),
+        VersionBump::Patch => next_version.increment_patch(),
+    }
+
     next_version.pre = vec![semver::AlphaNumeric("pre".to_string())];
 
     update_cargo_toml_package_version(&manifest_path, &next_version.to_string())
@@ -488,7 +499,26 @@ fn update_package_version(root: &Path, workspace_packages: &[String], package: &
     Ok(())
 }
 
+#[derive(Clone, Copy, Debug)]
+enum VersionBump {
+    Minor,
+    Patch,
+}
+
 fn release() -> Result<()> {
+    let matches = App::new("PyOxidizer Releaser")
+        .version("0.1")
+        .author("Gregory Szorc <gregory.szorc@gmail.com>")
+        .about("Perform releases from the PyOxidizer repository")
+        .arg(Arg::with_name("patch").help("Bump the patch version instead of the minor version"))
+        .get_matches();
+
+    let version_bump = if matches.is_present("patch") {
+        VersionBump::Patch
+    } else {
+        VersionBump::Minor
+    };
+
     let cwd = std::env::current_dir()?;
 
     let repo = Repository::discover(&cwd).context("finding Git repository")?;
@@ -567,7 +597,7 @@ fn release() -> Result<()> {
     let workspace_packages = get_workspace_members(&workspace_toml)?;
 
     for package in RELEASE_ORDER.iter() {
-        update_package_version(repo_root, &workspace_packages, *package)
+        update_package_version(repo_root, &workspace_packages, *package, version_bump)
             .with_context(|| format!("incrementing version for {}", package))?;
     }
 
