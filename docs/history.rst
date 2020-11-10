@@ -31,19 +31,33 @@ Version History
 
 Not yet released.
 
-.. _version_0_10_0:
-
 Backwards Compatibility Notes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 * The minimum Rust version has been changed from 1.41 to 1.45 to facilitate
   the use of procedural macros.
 
+.. _version_0_10_1:
+
+0.10.1
+------
+
+Released November 9, 2020.
+
+Bug Fixes
+^^^^^^^^^
+
+.. _version_0_10_0:
 
 0.10.0
 ------
 
 Released November 8, 2020.
+
+.. danger::
+
+   The 0.10.0 release has a serious Starlark bug preventing PyOxidizer from
+   working correctly in many scenarios. Please use the 0.10.1 release.
 
 Backwards Compatibility Notes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

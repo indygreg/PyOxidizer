@@ -226,17 +226,20 @@ impl EvaluationContext {
     }
 
     pub fn run_target(&mut self, target: Option<&str>) -> Result<()> {
-        let raw_context = self.build_targets_context_value()?;
-        let context = raw_context
-            .downcast_ref::<EnvironmentContext>()
-            .ok_or_else(|| anyhow!("context has incorrect type"))?;
+        let target = {
+            // Block to avoid nested borrow of this Value.
+            let raw_context = self.build_targets_context_value()?;
+            let context = raw_context
+                .downcast_ref::<EnvironmentContext>()
+                .ok_or_else(|| anyhow!("context has incorrect type"))?;
 
-        let target = if let Some(t) = target {
-            t.to_string()
-        } else if let Some(t) = context.default_target() {
-            t.to_string()
-        } else {
-            return Err(anyhow!("unable to determine target to run"));
+            if let Some(t) = target {
+                t.to_string()
+            } else if let Some(t) = context.default_target() {
+                t.to_string()
+            } else {
+                return Err(anyhow!("unable to determine target to run"));
+            }
         };
 
         self.run_resolved_target(&target)
