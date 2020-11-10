@@ -229,7 +229,7 @@ to match the following:
 
 .. code-block:: python
 
-   python_config.run_code = "import uuid; print(uuid.uuid4())"
+   python_config.run_command = "import uuid; print(uuid.uuid4())"
 
 We're now telling the interpreter to run the Python statement
 ``eval(import uuid; print(uuid.uuid4())`` when it starts. Test that out::
