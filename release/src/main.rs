@@ -380,7 +380,7 @@ fn release_package(root: &Path, workspace_packages: &[String], package: &str) ->
     )
     .context("creating Git commit")?;
 
-    let tag = format!("{}-{}", package, release_version);
+    let tag = format!("{}/{}", package, release_version);
     run_cmd(
         package,
         root,
