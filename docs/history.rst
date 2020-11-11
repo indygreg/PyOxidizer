@@ -37,12 +37,31 @@ Backwards Compatibility Notes
 * The minimum Rust version has been changed from 1.41 to 1.45 to facilitate
   the use of procedural macros.
 
+.. _version_0_10_2:
+
+0.10.2
+------
+
+Released November 10, 2020.
+
+Bug Fixes
+^^^^^^^^^
+
+* Fixes a version mismatch between the ``pyoxidizer`` and ``pyembed`` crates
+  that could cause builds to fail.
+
 .. _version_0_10_1:
 
 0.10.1
 ------
 
 Released November 9, 2020.
+
+.. danger::
+
+   The 0.10.1 release has a serious bug where the version of the ``pyembed``
+   crate needed to build binaries may not be correct, preventing the build from
+   working. Please use a newer release.
 
 Bug Fixes
 ^^^^^^^^^
@@ -57,7 +76,7 @@ Released November 8, 2020.
 .. danger::
 
    The 0.10.0 release has a serious Starlark bug preventing PyOxidizer from
-   working correctly in many scenarios. Please use the 0.10.1 release.
+   working correctly in many scenarios. Please use a newer release.
 
 Backwards Compatibility Notes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
