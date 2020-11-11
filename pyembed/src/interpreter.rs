@@ -596,35 +596,27 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
         })
     }
 
-    /// Runs the Python interpreter in the context of a main() function.
+    /// Runs `Py_RunMain()`.
     ///
-    /// This will execute whatever is configured by
-    /// `OxidizedPythonInterpreterConfig.run` and return an integer suitable
-    /// for use as a process exit code.
+    /// This will execute whatever is configured by the Python interpreter config
+    /// and return an integer suitable for use as a process exit code.
     ///
-    /// `Py_RunMain` is the most robust mechanism to run code, files, or
-    /// modules, as `Py_RunMain()` invokes the same APIs that `python` would.
-    ///
-    /// A downside to calling this function is that `Py_RunMain()` will finalize
-    /// the interpreter and only gives you an exit code: there is no opportunity
-    /// to inspect the return value or handle an uncaught exception. If you want
-    /// to keep the interpreter alive or inspect the evaluation result, consider
-    /// calling a function in the `python_eval` module.
-    pub fn run_as_main(&mut self) -> i32 {
-        if self.config.uses_py_runmain() {
-            let res = unsafe { pyffi::Py_RunMain() };
+    /// Calling this function will finalize the interpreter and only gives you an
+    /// exit code: there is no opportunity to inspect the return value or handle
+    /// an uncaught exception. If you want to keep the interpreter alive or inspect
+    /// the evaluation result, consider calling a function on the interpreter handle
+    /// that executes code.
+    pub fn py_runmain(&mut self) -> i32 {
+        let res = unsafe { pyffi::Py_RunMain() };
 
-            // Py_RunMain() finalizes the interpreter. So drop our refs and state.
-            self.interpreter_guard = None;
-            self.interpreter_state = InterpreterState::Finalized;
-            self.resources_state = None;
-            self.py = None;
-            self.gil = None;
+        // Py_RunMain() finalizes the interpreter. So drop our refs and state.
+        self.interpreter_guard = None;
+        self.interpreter_state = InterpreterState::Finalized;
+        self.resources_state = None;
+        self.py = None;
+        self.gil = None;
 
-            res
-        } else {
-            0
-        }
+        res
     }
 }
 

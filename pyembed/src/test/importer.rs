@@ -36,7 +36,7 @@ fn run_py_test(test_filename: &str) -> Result<()> {
     config.set_missing_path_configuration = false;
     let mut interp = MainPythonInterpreter::new(config)?;
 
-    let exit_code = interp.run_as_main();
+    let exit_code = interp.py_runmain();
     if exit_code != 0 {
         Err(anyhow!("Python code did not exit successfully"))
     } else {

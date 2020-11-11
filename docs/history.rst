@@ -36,6 +36,8 @@ Backwards Compatibility Notes
 
 * The minimum Rust version has been changed from 1.41 to 1.45 to facilitate
   the use of procedural macros.
+* The ``pyembed::MainPythonInterpreter::run_as_main()`` method has been renamed
+  to ``py_runmain()`` to reflect that it always calls ``Py_RunMain()``.
 
 Bug Fixes
 ^^^^^^^^^

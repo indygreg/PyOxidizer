@@ -233,15 +233,6 @@ fn set_legacy_windows_stdio(config: &mut pyffi::PyConfig, value: bool) {
     config.legacy_windows_stdio = if value { 1 } else { 0 };
 }
 
-impl<'a> ResolvedOxidizedPythonInterpreterConfig<'a> {
-    /// Whether the run configuration should execute via Py_RunMain().
-    pub(crate) fn uses_py_runmain(&self) -> bool {
-        self.interpreter_config.run_command.is_some()
-            || self.interpreter_config.run_filename.is_some()
-            || self.interpreter_config.run_module.is_some()
-    }
-}
-
 pub fn python_interpreter_config_to_py_pre_config(
     value: &PythonInterpreterConfig,
 ) -> Result<pyffi::PyPreConfig, String> {

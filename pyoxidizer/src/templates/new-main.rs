@@ -27,7 +27,7 @@ fn main() {
                 // configuration. If an uncaught Python exception is raised, handle it.
                 // This includes the special SystemExit, which is a request to terminate the
                 // process.
-                interp.run_as_main()
+                interp.py_runmain()
             }
             Err(msg) => {
                 eprintln!("{}", msg);
