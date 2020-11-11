@@ -37,6 +37,21 @@ Backwards Compatibility Notes
 * The minimum Rust version has been changed from 1.41 to 1.45 to facilitate
   the use of procedural macros.
 
+.. _version_0_10_3:
+
+0.10.3
+------
+
+Released November 10, 2020.
+
+Bug Fixes
+^^^^^^^^^
+
+* The ``run_as_main()`` function on embedded Python interpreters now always
+  calls ``Py_RunMain()``. This fixes a regression in previous 0.10 releases
+  that prevented a REPL from running when no explicit ``run_*`` attribute was
+  set on the Python interpreter configuration.
+
 .. _version_0_10_2:
 
 0.10.2
