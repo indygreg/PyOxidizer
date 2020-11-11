@@ -1366,7 +1366,7 @@ dependencies = [
 
 [[package]]
 name = "pyembed"
-version = "0.10.2"
+version = "0.10.3"
 dependencies = [
  "anyhow",
  "cpython",
@@ -1385,7 +1385,7 @@ dependencies = [
 
 [[package]]
 name = "pyoxidizer"
-version = "0.10.2"
+version = "0.10.3"
 dependencies = [
  "anyhow",
  "byteorder",
