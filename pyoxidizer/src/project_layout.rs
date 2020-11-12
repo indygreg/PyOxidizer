@@ -46,7 +46,7 @@ lazy_static! {
         handlebars
             .register_template_string(
                 "new-pyoxidizer.bzl",
-                include_str!("templates/new-pyoxidizer.bzl"),
+                include_str!("templates/new-pyoxidizer.bzl.hbs"),
             )
             .unwrap();
 
