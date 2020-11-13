@@ -379,18 +379,15 @@ mod tests {
             haystack.contains(needle),
             "\n\x1b[31m\x1b[1mexpected to find\x1b[0m\n{}\n\x1b[31m\x1b[1min\x1b[0m\n{}",
             needle,
-            haystack);
+            haystack
+        );
 
         Ok(())
     }
 
-    fn assert_serialize_module_search_paths(
-        paths: &[&str],
-        expected_contents: &str,
-    ) -> Result<()> {
+    fn assert_serialize_module_search_paths(paths: &[&str], expected_contents: &str) -> Result<()> {
         let mut config = EmbeddedPythonConfig::default();
-        config.config.module_search_paths =
-            Some(paths.iter().map(PathBuf::from).collect());
+        config.config.module_search_paths = Some(paths.iter().map(PathBuf::from).collect());
 
         let code = config.to_oxidized_python_interpreter_config_rs(None)?;
         assert_contains(&code, expected_contents)
@@ -435,7 +432,8 @@ mod tests {
 
         assert_contains(
             &code,
-            "tcl_library: Some(std::path::PathBuf::from(\"c:\\\\windows\")),")
+            "tcl_library: Some(std::path::PathBuf::from(\"c:\\\\windows\")),",
+        )
     }
 
     // TODO enable once CI has a linkable Python.
