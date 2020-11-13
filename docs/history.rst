@@ -37,6 +37,13 @@ Backwards Compatibility Notes
 * The minimum Rust version has been changed from 1.41 to 1.45 to facilitate
   the use of procedural macros.
 
+Bug Fixes
+^^^^^^^^^
+
+* Escaping of string and path values when emitting Rust code for the embedded
+  Python interpreter configuration should now be more robust. Previously,
+  special characters (like ``\``) were not escaped properly. (#321)
+
 .. _version_0_10_3:
 
 0.10.3

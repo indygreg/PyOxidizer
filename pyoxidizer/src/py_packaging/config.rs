@@ -44,16 +44,17 @@ fn optional_bool_to_string(value: &Option<bool>) -> String {
 
 fn optional_string_to_string(value: &Option<String>) -> String {
     match value {
-        Some(value) => format_args!("Some(\"{}\".to_string())", value).to_string(),
+        Some(value) => format!("Some(\"{}\".to_string())", value.escape_default()),
         None => "None".to_string(),
     }
 }
 
 fn optional_pathbuf_to_string(value: &Option<PathBuf>) -> String {
     match value {
-        Some(value) => {
-            format_args!("Some(std::path::PathBuf::from(r\"{}\"))", value.display()).to_string()
-        }
+        Some(value) => format!(
+            "Some(std::path::PathBuf::from(\"{}\"))",
+            value.display().to_string().escape_default()
+        ),
         None => "None".to_string(),
     }
 }
@@ -64,7 +65,7 @@ fn optional_vec_string_to_string(value: &Option<Vec<String>>) -> String {
             "Some(vec![{}])",
             value
                 .iter()
-                .map(|x| format_args!("\"{}\".to_string()", x).to_string())
+                .map(|x| format!("\"{}\".to_string()", x.escape_default()))
                 .collect::<Vec<_>>()
                 .join(", ")
         ),
@@ -395,6 +396,18 @@ mod tests {
 
         assert!(code.contains("filesystem_encoding: Some(\"ascii\".to_string()),"));
         assert!(code.contains("filesystem_errors: Some(\"strict\".to_string()),"));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_backslash_in_path() -> Result<()> {
+        let mut config = EmbeddedPythonConfig::default();
+        config.tcl_library = Some(PathBuf::from("c:\\windows"));
+
+        let code = config.to_oxidized_python_interpreter_config_rs(None)?;
+
+        assert!(code.contains("tcl_library: Some(std::path::PathBuf::from(\"c:\\\\windows\")),"));
 
         Ok(())
     }
