@@ -49,12 +49,16 @@ fn optional_string_to_string(value: &Option<String>) -> String {
     }
 }
 
+fn pathbuf_to_string(value: &PathBuf) -> String {
+    format!(
+        "std::path::PathBuf::from(\"{}\")",
+        value.display().to_string().escape_default()
+    )
+}
+
 fn optional_pathbuf_to_string(value: &Option<PathBuf>) -> String {
     match value {
-        Some(value) => format!(
-            "Some(std::path::PathBuf::from(\"{}\"))",
-            value.display().to_string().escape_default()
-        ),
+        Some(value) => format!("Some({})", pathbuf_to_string(value)),
         None => "None".to_string(),
     }
 }
@@ -270,10 +274,7 @@ impl EmbeddedPythonConfig {
                         "Some(vec![{}])",
                         paths
                             .iter()
-                            .map(
-                                |p| format_args!("std::path::PathBuf::from(\"{}\")", p.display())
-                                    .to_string()
-                            )
+                            .map(pathbuf_to_string)
                             .collect::<Vec<String>>()
                             .join(", ")
                     )
@@ -373,17 +374,42 @@ mod tests {
     use crate::py_packaging::distribution::{BinaryLibpythonLinkMode, PythonDistribution};
     use {super::*, crate::testutil::*};
 
-    #[test]
-    fn test_serialize_module_search_paths() -> Result<()> {
-        let mut config = EmbeddedPythonConfig::default();
-        config.config.module_search_paths =
-            Some(vec![PathBuf::from("$ORIGIN/lib"), PathBuf::from("lib")]);
-
-        let code = config.to_oxidized_python_interpreter_config_rs(None)?;
-
-        assert!(code.contains("module_search_paths: Some(vec![std::path::PathBuf::from(\"$ORIGIN/lib\"), std::path::PathBuf::from(\"lib\")]),"));
+    fn assert_contains(haystack: &str, needle: &str) -> Result<()> {
+        assert!(
+            haystack.contains(needle),
+            "\n\x1b[31m\x1b[1mexpected to find\x1b[0m\n{}\n\x1b[31m\x1b[1min\x1b[0m\n{}",
+            needle,
+            haystack);
 
         Ok(())
+    }
+
+    fn assert_serialize_module_search_paths(
+        paths: &[&str],
+        expected_contents: &str,
+    ) -> Result<()> {
+        let mut config = EmbeddedPythonConfig::default();
+        config.config.module_search_paths =
+            Some(paths.iter().map(PathBuf::from).collect());
+
+        let code = config.to_oxidized_python_interpreter_config_rs(None)?;
+        assert_contains(&code, expected_contents)
+    }
+
+    #[test]
+    fn test_serialize_module_search_paths() -> Result<()> {
+        assert_serialize_module_search_paths(
+            &["$ORIGIN/lib", "lib"],
+            "module_search_paths: Some(vec![std::path::PathBuf::from(\"$ORIGIN/lib\"), std::path::PathBuf::from(\"lib\")]),"
+        )
+    }
+
+    #[test]
+    fn test_serialize_module_search_paths_backslash() -> Result<()> {
+        assert_serialize_module_search_paths(
+            &["$ORIGIN\\lib", "lib"],
+            "module_search_paths: Some(vec![std::path::PathBuf::from(\"$ORIGIN\\\\lib\"), std::path::PathBuf::from(\"lib\")]),"
+        )
     }
 
     #[test]
@@ -407,9 +433,9 @@ mod tests {
 
         let code = config.to_oxidized_python_interpreter_config_rs(None)?;
 
-        assert!(code.contains("tcl_library: Some(std::path::PathBuf::from(\"c:\\\\windows\")),"));
-
-        Ok(())
+        assert_contains(
+            &code,
+            "tcl_library: Some(std::path::PathBuf::from(\"c:\\\\windows\")),")
     }
 
     // TODO enable once CI has a linkable Python.
