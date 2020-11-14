@@ -72,5 +72,9 @@ path = "../starlark-dialect-build-targets"
 version = "0.3.0-pre"
 path = "../tugger"
 
+[dependencies.virtual-file-manifest]
+version = "0.1.0-pre"
+path = "../virtual-file-manifest"
+
 [dev-dependencies]
 indoc = "1.0"

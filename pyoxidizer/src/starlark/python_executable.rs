@@ -103,7 +103,7 @@ impl PythonExecutableValue {
         fh.write_all(&build.exe_data)
             .context(format!("writing {}", dest_path.display()))?;
 
-        tugger::file_resource::set_executable(&mut fh).context("making binary executable")?;
+        virtual_file_manifest::set_executable(&mut fh).context("making binary executable")?;
 
         Ok(ResolvedTarget {
             run_mode: RunMode::Path { path: dest_path },

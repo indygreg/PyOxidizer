@@ -4,8 +4,36 @@
 
 use std::{
     borrow::Cow,
+    convert::TryFrom,
     path::{Path, PathBuf},
 };
+
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
+
+#[cfg(unix)]
+pub fn is_executable(metadata: &std::fs::Metadata) -> bool {
+    let permissions = metadata.permissions();
+    permissions.mode() & 0o111 != 0
+}
+
+#[cfg(windows)]
+pub fn is_executable(_metadata: &std::fs::Metadata) -> bool {
+    false
+}
+
+#[cfg(unix)]
+pub fn set_executable(file: &mut std::fs::File) -> Result<(), std::io::Error> {
+    let mut permissions = file.metadata()?.permissions();
+    permissions.set_mode(0o770);
+    file.set_permissions(permissions)?;
+    Ok(())
+}
+
+#[cfg(windows)]
+pub fn set_executable(_file: &mut std::fs::File) -> Result<(), std::io::Error> {
+    Ok(())
+}
 
 /// Represents an abstract location for binary data.
 ///
@@ -54,5 +82,28 @@ impl<'a> From<Vec<u8>> for FileData<'a> {
 impl<'a> From<&'a [u8]> for FileData<'a> {
     fn from(data: &'a [u8]) -> Self {
         Self::Memory(Cow::Borrowed(data))
+    }
+}
+
+/// Represents a virtual file, without an associated path.
+#[derive(Clone, Debug, PartialEq)]
+pub struct FileEntry<'a> {
+    /// The content of the file.
+    pub data: FileData<'a>,
+    /// Whether the file is executable.
+    pub executable: bool,
+}
+
+impl<'a> TryFrom<&Path> for FileEntry<'a> {
+    type Error = std::io::Error;
+
+    fn try_from(path: &Path) -> Result<Self, Self::Error> {
+        let metadata = std::fs::metadata(path)?;
+        let executable = is_executable(&metadata);
+
+        Ok(Self {
+            data: FileData::from(path),
+            executable,
+        })
     }
 }

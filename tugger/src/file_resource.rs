@@ -11,34 +11,8 @@ use {
         io::Write,
         path::{Path, PathBuf},
     },
+    virtual_file_manifest::{is_executable, set_executable},
 };
-
-#[cfg(unix)]
-use std::os::unix::fs::PermissionsExt;
-
-#[cfg(unix)]
-pub fn set_executable(file: &mut std::fs::File) -> Result<()> {
-    let mut permissions = file.metadata()?.permissions();
-    permissions.set_mode(0o770);
-    file.set_permissions(permissions)?;
-    Ok(())
-}
-
-#[cfg(windows)]
-pub fn set_executable(_file: &mut std::fs::File) -> Result<()> {
-    Ok(())
-}
-
-#[cfg(unix)]
-pub fn is_executable(metadata: &std::fs::Metadata) -> bool {
-    let permissions = metadata.permissions();
-    permissions.mode() & 0o111 != 0
-}
-
-#[cfg(windows)]
-pub fn is_executable(_metadata: &std::fs::Metadata) -> bool {
-    false
-}
 
 /// Represents file content, agnostic of storage location.
 #[derive(Clone, Debug, PartialEq)]

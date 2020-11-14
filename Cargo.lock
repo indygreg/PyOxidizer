@@ -2052,6 +2052,7 @@ dependencies = [
  "url",
  "uuid 0.8.1",
  "version-compare",
+ "virtual-file-manifest",
  "walkdir",
  "zstd",
 ]
@@ -3129,6 +3130,7 @@ dependencies = [
  "tempdir",
  "url",
  "uuid 0.8.1",
+ "virtual-file-manifest",
  "walkdir",
  "xml-rs",
  "zip",

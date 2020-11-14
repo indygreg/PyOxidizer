@@ -44,6 +44,10 @@ rpm-rs = "0.6"
 version = "0.2.0-pre"
 path = "../starlark-dialect-build-targets"
 
+[dependencies.virtual-file-manifest]
+version = "0.1.0-pre"
+path = "../virtual-file-manifest"
+
 [dev-dependencies]
 msi = "0.2"
 tempdir = "0.3"
