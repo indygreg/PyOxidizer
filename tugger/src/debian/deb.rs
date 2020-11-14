@@ -8,13 +8,14 @@ The .deb file specification lives at https://manpages.debian.org/unstable/dpkg-d
 */
 
 use {
-    crate::{debian::ControlFile, file_resource::FileManifest},
+    crate::debian::ControlFile,
     os_str_bytes::OsStrBytes,
     std::{
         io::{BufWriter, Cursor, Read, Write},
         path::Path,
         time::SystemTime,
     },
+    virtual_file_manifest::FileManifest,
 };
 
 /// Represents an error related to .deb file handling.
@@ -35,18 +36,18 @@ impl<W> From<std::io::IntoInnerError<W>> for DebError {
 }
 
 /// A builder for a `.deb` package file.
-pub struct DebBuilder<'a> {
-    control_file: ControlFile<'a>,
+pub struct DebBuilder<'control, 'manifest> {
+    control_file: ControlFile<'control>,
 
     /// Files to install as part of the package.
-    install_files: FileManifest,
+    install_files: FileManifest<'manifest>,
 
     mtime: Option<SystemTime>,
 }
 
-impl<'a> DebBuilder<'a> {
+impl<'control, 'manifest> DebBuilder<'control, 'manifest> {
     /// Construct a new instance using a control file.
-    pub fn new(control_file: ControlFile<'a>) -> Self {
+    pub fn new(control_file: ControlFile<'control>) -> Self {
         Self {
             control_file,
             install_files: FileManifest::default(),
@@ -84,8 +85,9 @@ impl<'a> DebBuilder<'a> {
         let mut control_builder =
             ControlTarBuilder::new(self.control_file.clone()).set_mtime(self.mtime);
 
-        for (rel_path, content) in self.install_files.entries() {
-            let mut cursor = Cursor::new(&content.data);
+        for (rel_path, content) in self.install_files.iter_entries() {
+            let data = content.data.resolve()?;
+            let mut cursor = Cursor::new(&data);
             control_builder = control_builder.add_file(rel_path, &mut cursor)?;
         }
 
@@ -256,13 +258,15 @@ pub fn write_data_tar<W: Write>(
     }
 
     // FileManifest is backed by a BTreeMap, so iteration is deterministic.
-    for (rel_path, content) in files.entries() {
+    for (rel_path, content) in files.iter_entries() {
+        let data = content.data.resolve()?;
+
         let mut header = new_tar_header(mtime)?;
         header.set_path(Path::new("./").join(rel_path))?;
         header.set_mode(if content.executable { 0o755 } else { 0o644 });
-        header.set_size(content.data.len() as _);
+        header.set_size(data.len() as _);
         header.set_cksum();
-        builder.append(&header, &*content.data)?;
+        builder.append(&header, &*data)?;
     }
 
     builder.finish()?;
