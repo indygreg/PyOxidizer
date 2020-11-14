@@ -82,7 +82,7 @@ impl<'a> DebBuilder<'a> {
 
         // Second entry is a control.tar with metadata.
         let mut control_builder =
-            ControlTarBuilder::new(self.control_file.clone()).set_mtime(self.mtime.clone());
+            ControlTarBuilder::new(self.control_file.clone()).set_mtime(self.mtime);
 
         for (rel_path, content) in self.install_files.entries() {
             let mut cursor = Cursor::new(&content.data);
