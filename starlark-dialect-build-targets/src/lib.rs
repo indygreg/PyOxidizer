@@ -605,10 +605,10 @@ impl TryToOptional<Vec<PathBuf>> for Value {
     }
 }
 
-impl TryToOptional<HashMap<Cow<'static, str>, Cow<'static, str>>> for Value {
-    fn try_to_optional(
-        &self,
-    ) -> Result<Option<HashMap<Cow<'static, str>, Cow<'static, str>>>, ValueError> {
+type StringHashMap = HashMap<Cow<'static, str>, Cow<'static, str>>;
+
+impl TryToOptional<StringHashMap> for Value {
+    fn try_to_optional(&self) -> Result<Option<StringHashMap>, ValueError> {
         match self.get_type() {
             "NoneType" => Ok(None),
             "dict" => {
@@ -631,15 +631,10 @@ impl TryToOptional<HashMap<Cow<'static, str>, Cow<'static, str>>> for Value {
     }
 }
 
-impl TryToOptional<HashMap<Cow<'static, str>, HashMap<Cow<'static, str>, Cow<'static, str>>>>
-    for Value
-{
+impl TryToOptional<HashMap<Cow<'static, str>, StringHashMap>> for Value {
     fn try_to_optional(
         &self,
-    ) -> Result<
-        Option<HashMap<Cow<'static, str>, HashMap<Cow<'static, str>, Cow<'static, str>>>>,
-        ValueError,
-    > {
+    ) -> Result<Option<HashMap<Cow<'static, str>, StringHashMap>>, ValueError> {
         match self.get_type() {
             "NoneType" => Ok(None),
             "dict" => {
@@ -676,10 +671,8 @@ impl TryToOptional<HashMap<Cow<'static, str>, HashMap<Cow<'static, str>, Cow<'st
     }
 }
 
-impl TryToOptional<Vec<HashMap<Cow<'static, str>, Cow<'static, str>>>> for Value {
-    fn try_to_optional(
-        &self,
-    ) -> Result<Option<Vec<HashMap<Cow<'static, str>, Cow<'static, str>>>>, ValueError> {
+impl TryToOptional<Vec<StringHashMap>> for Value {
+    fn try_to_optional(&self) -> Result<Option<Vec<StringHashMap>>, ValueError> {
         match self.get_type() {
             "NoneType" => Ok(None),
             "list" => {
@@ -688,8 +681,7 @@ impl TryToOptional<Vec<HashMap<Cow<'static, str>, Cow<'static, str>>>> for Value
                 for item in &self.iter()? {
                     match item.get_type() {
                         "dict" => {
-                            let value: Option<HashMap<Cow<'static, str>, Cow<'static, str>>> =
-                                item.try_to_optional()?;
+                            let value: Option<StringHashMap> = item.try_to_optional()?;
 
                             match value {
                                 Some(value) => {
