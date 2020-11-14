@@ -11,12 +11,12 @@ use std::{
 ///
 /// Data can be backed by the filesystem or in memory.
 #[derive(Clone, Debug, PartialEq)]
-pub enum DataLocation<'a> {
+pub enum FileData<'a> {
     Path(PathBuf),
     Memory(Cow<'a, [u8]>),
 }
 
-impl<'a> DataLocation<'a> {
+impl<'a> FileData<'a> {
     /// Resolve the data for this instance.
     ///
     /// If backed by a file, the file will be read.
@@ -39,19 +39,19 @@ impl<'a> DataLocation<'a> {
     }
 }
 
-impl<'a> From<&Path> for DataLocation<'a> {
+impl<'a> From<&Path> for FileData<'a> {
     fn from(path: &Path) -> Self {
         Self::Path(path.to_path_buf())
     }
 }
 
-impl<'a> From<Vec<u8>> for DataLocation<'a> {
+impl<'a> From<Vec<u8>> for FileData<'a> {
     fn from(data: Vec<u8>) -> Self {
         Self::Memory(Cow::Owned(data))
     }
 }
 
-impl<'a> From<&'a [u8]> for DataLocation<'a> {
+impl<'a> From<&'a [u8]> for FileData<'a> {
     fn from(data: &'a [u8]) -> Self {
         Self::Memory(Cow::Borrowed(data))
     }
