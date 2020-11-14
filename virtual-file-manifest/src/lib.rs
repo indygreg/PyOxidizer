@@ -4,6 +4,7 @@
 
 use std::{
     borrow::Cow,
+    collections::{BTreeMap, BTreeSet},
     convert::TryFrom,
     path::{Path, PathBuf},
 };
@@ -141,5 +142,171 @@ impl<'a> File<'a> {
             path: path.as_ref().to_path_buf(),
             entry,
         }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum FileManifestError {
+    IllegalRelativePath(String),
+    IllegalAbsolutePath(String),
+}
+
+impl std::fmt::Display for FileManifestError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::IllegalRelativePath(path) => {
+                f.write_str(&format!("path cannot contain '..': {}", path))
+            }
+            Self::IllegalAbsolutePath(path) => {
+                f.write_str(&format!("path cannot be absolute: {}", path))
+            }
+        }
+    }
+}
+
+impl std::error::Error for FileManifestError {}
+
+/// Represents a collection of files.
+///
+/// Files are keyed by their path. The file content is abstract and can be
+/// backed by multiple sources.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct FileManifest<'a> {
+    files: BTreeMap<PathBuf, FileEntry<'a>>,
+}
+
+impl<'a> FileManifest<'a> {
+    /// Add a `FileEntry` to this manifest under the given path.
+    ///
+    /// The path cannot contain relative paths and must not be absolute.
+    pub fn add_file_entry(
+        &mut self,
+        path: impl AsRef<Path>,
+        entry: impl Into<FileEntry<'a>>,
+    ) -> Result<(), FileManifestError> {
+        let path = path.as_ref();
+        let path_s = path.display().to_string();
+
+        if path_s.contains("..") {
+            return Err(FileManifestError::IllegalRelativePath(path_s));
+        }
+
+        // is_absolute() on Windows doesn't check for leading /.
+        if path_s.starts_with('/') || path.is_absolute() {
+            return Err(FileManifestError::IllegalAbsolutePath(path_s));
+        }
+
+        self.files.insert(path.to_path_buf(), entry.into());
+
+        Ok(())
+    }
+
+    /// Merge the content of another manifest into this one.
+    ///
+    /// All entries from the other manifest are overlayed into this manifest while
+    /// preserving paths exactly. If this manifest already has an entry for a given
+    /// path, it will be overwritten by an entry in the other manifest.
+    pub fn add_manifest(&mut self, other: &Self) -> Result<(), FileManifestError> {
+        for (key, value) in &other.files {
+            self.add_file_entry(key, value.clone())?;
+        }
+
+        Ok(())
+    }
+
+    /// Obtain all relative directories contained within files in this manifest.
+    ///
+    /// The root directory is not represented in the return value.
+    pub fn relative_directories(&self) -> Vec<PathBuf> {
+        let mut dirs = BTreeSet::new();
+
+        for p in self.files.keys() {
+            let mut ans = p.ancestors();
+            ans.next();
+
+            for a in ans {
+                if a.display().to_string() != "" {
+                    dirs.insert(a.to_path_buf());
+                }
+            }
+        }
+
+        dirs.iter().map(|x| x.to_path_buf()).collect()
+    }
+
+    /// Obtain an iterator over paths and file entries in this manifest.
+    pub fn iter_entries(&self) -> std::collections::btree_map::Iter<PathBuf, FileEntry> {
+        self.files.iter()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_add_file_entry() -> Result<(), FileManifestError> {
+        let mut m = FileManifest::default();
+        let f = FileEntry {
+            data: FileData::from(vec![42]),
+            executable: false,
+        };
+
+        m.add_file_entry(Path::new("foo"), f.clone())?;
+
+        let entries = m.iter_entries().collect::<Vec<_>>();
+
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].0, &PathBuf::from("foo"));
+        assert_eq!(entries[0].1, &f);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_add_bad_path() -> Result<(), FileManifestError> {
+        let mut m = FileManifest::default();
+        let f = FileEntry {
+            data: FileData::from(vec![]),
+            executable: false,
+        };
+
+        let res = m.add_file_entry(Path::new("../etc/passwd"), f.clone());
+        assert_eq!(
+            res.err(),
+            Some(FileManifestError::IllegalRelativePath(
+                "../etc/passwd".to_string()
+            ))
+        );
+
+        let res = m.add_file_entry(Path::new("/foo"), f);
+        assert_eq!(
+            res.err(),
+            Some(FileManifestError::IllegalAbsolutePath("/foo".to_string()))
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_relative_directories() -> Result<(), FileManifestError> {
+        let mut m = FileManifest::default();
+        let f = FileEntry {
+            data: FileData::from(vec![]),
+            executable: false,
+        };
+
+        m.add_file_entry(Path::new("foo"), f.clone())?;
+        let dirs = m.relative_directories();
+        assert_eq!(dirs.len(), 0);
+
+        m.add_file_entry(Path::new("dir1/dir2/foo"), f)?;
+        let dirs = m.relative_directories();
+        assert_eq!(
+            dirs,
+            vec![PathBuf::from("dir1"), PathBuf::from("dir1/dir2")]
+        );
+
+        Ok(())
     }
 }
