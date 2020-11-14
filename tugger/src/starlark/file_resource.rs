@@ -267,24 +267,18 @@ starlark_module! { file_resource_module =>
     }
 
     FileManifest.add_manifest(this, other: FileManifestValue) {
-        match this.clone().downcast_mut::<FileManifestValue>()? {
-            Some(mut manifest) => manifest.add_manifest(other),
-            None => Err(ValueError::IncorrectParameterType),
-        }
+        let mut this = this.downcast_mut::<FileManifestValue>().unwrap().unwrap();
+        this.add_manifest(other)
     }
 
     FileManifest.build(env env, this, target: String) {
-        match this.clone().downcast_ref::<FileManifestValue>() {
-            Some(manifest) => manifest.build_starlark(env, target),
-            None => Err(ValueError::IncorrectParameterType),
-        }
+        let this = this.downcast_ref::<FileManifestValue>().unwrap();
+        this.build_starlark(env, target)
     }
 
     FileManifest.install(env env, this, path: String, replace: bool = true) {
-        match this.clone().downcast_ref::<FileManifestValue>() {
-            Some(manifest) => manifest.install(&env, path, replace),
-            None => Err(ValueError::IncorrectParameterType),
-        }
+        let this = this.downcast_ref::<FileManifestValue>().unwrap();
+        this.install(&env, path, replace)
     }
 }
 

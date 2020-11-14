@@ -188,10 +188,8 @@ starlark_module! { wix_installer_module =>
     }
 
     WiXInstaller.add_build_files(this, manifest: FileManifestValue) {
-        match this.clone().downcast_mut::<WiXInstallerValue>()? {
-            Some(mut installer) => installer.add_build_files_starlark(manifest),
-            None => Err(ValueError::IncorrectParameterType),
-        }
+        let mut this = this.downcast_mut::<WiXInstallerValue>().unwrap().unwrap();
+        this.add_build_files_starlark(manifest)
     }
 
     WiXInstaller.add_simple_installer(
@@ -202,37 +200,29 @@ starlark_module! { wix_installer_module =>
         product_manufacturer: String,
         program_files: FileManifestValue
     ) {
-        match this.clone().downcast_mut::<WiXInstallerValue>()? {
-            Some(mut installer) => installer.add_simple_installer_starlark(
-                id_prefix,
-                product_name,
-                product_version,
-                product_manufacturer,
-                program_files,
-            ),
-            None => Err(ValueError::IncorrectParameterType),
-        }
+        let mut this = this.downcast_mut::<WiXInstallerValue>().unwrap().unwrap();
+        this.add_simple_installer_starlark(
+            id_prefix,
+            product_name,
+            product_version,
+            product_manufacturer,
+            program_files,
+        )
     }
 
     WiXInstaller.add_wxs_file(this, path: String, preprocessor_parameters = NoneType::None) {
-        match this.clone().downcast_mut::<WiXInstallerValue>()? {
-            Some(mut installer) => installer.add_wxs_file_starlark(path, preprocessor_parameters),
-            None => Err(ValueError::IncorrectParameterType),
-        }
+        let mut this = this.downcast_mut::<WiXInstallerValue>().unwrap().unwrap();
+        this.add_wxs_file_starlark(path, preprocessor_parameters)
     }
 
     WiXInstaller.build(env env, this, target: String) {
-        match this.clone().downcast_ref::<WiXInstallerValue>() {
-            Some(installer) => installer.build_starlark(env, target),
-            None => Err(ValueError::IncorrectParameterType),
-        }
+        let this = this.downcast_ref::<WiXInstallerValue>().unwrap();
+        this.build_starlark(env, target)
     }
 
     WiXInstaller.set_variable(this, key: String, value) {
-        match this.clone().downcast_mut::<WiXInstallerValue>()? {
-            Some(mut installer) => installer.set_variable_starlark(key, value),
-            None => Err(ValueError::IncorrectParameterType),
-        }
+        let mut this = this.downcast_mut::<WiXInstallerValue>().unwrap().unwrap();
+        this.set_variable_starlark(key, value)
     }
 }
 
