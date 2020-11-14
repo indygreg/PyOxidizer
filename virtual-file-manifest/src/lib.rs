@@ -201,6 +201,18 @@ impl<'a> FileManifest<'a> {
         Ok(())
     }
 
+    /// Add an iterable of `File` to this manifest.
+    pub fn add_files(
+        &mut self,
+        files: impl Iterator<Item = File<'a>>,
+    ) -> Result<(), FileManifestError> {
+        for file in files {
+            self.add_file_entry(file.path, file.entry)?;
+        }
+
+        Ok(())
+    }
+
     /// Merge the content of another manifest into this one.
     ///
     /// All entries from the other manifest are overlayed into this manifest while
@@ -264,6 +276,34 @@ mod tests {
         assert_eq!(entries.len(), 1);
         assert_eq!(entries[0].0, &PathBuf::from("foo"));
         assert_eq!(entries[0].1, &f);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_add_files() -> Result<(), FileManifestError> {
+        let mut m = FileManifest::default();
+
+        let files = vec![
+            File {
+                path: Path::new("foo").into(),
+                entry: FileEntry {
+                    data: FileData::from(vec![42]),
+                    executable: false,
+                },
+            },
+            File {
+                path: Path::new("dir0/file0").into(),
+                entry: FileEntry {
+                    data: FileData::from(vec![42]),
+                    executable: false,
+                },
+            },
+        ];
+
+        m.add_files(files.into_iter())?;
+
+        assert_eq!(m.files.len(), 2);
 
         Ok(())
     }
