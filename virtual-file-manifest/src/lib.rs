@@ -7,6 +7,7 @@ use std::{
     collections::{BTreeMap, BTreeSet},
     convert::TryFrom,
     ffi::OsStr,
+    io::Write,
     path::{Path, PathBuf},
 };
 
@@ -146,10 +147,12 @@ impl<'a> File<'a> {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug)]
 pub enum FileManifestError {
     IllegalRelativePath(String),
     IllegalAbsolutePath(String),
+    NoParentDirectory,
+    IOError(std::io::Error),
 }
 
 impl std::fmt::Display for FileManifestError {
@@ -161,11 +164,19 @@ impl std::fmt::Display for FileManifestError {
             Self::IllegalAbsolutePath(path) => {
                 f.write_str(&format!("path cannot be absolute: {}", path))
             }
+            Self::NoParentDirectory => f.write_str("could not resolve parent directory"),
+            Self::IOError(inner) => inner.fmt(f),
         }
     }
 }
 
 impl std::error::Error for FileManifestError {}
+
+impl From<std::io::Error> for FileManifestError {
+    fn from(err: std::io::Error) -> Self {
+        Self::IOError(err)
+    }
+}
 
 /// Represents a collection of files.
 ///
@@ -263,6 +274,11 @@ impl<'a> FileManifest<'a> {
         dirs
     }
 
+    /// Whether this manifest contains the specified file path.
+    pub fn has_path(&self, path: impl AsRef<Path>) -> bool {
+        self.files.contains_key(path.as_ref())
+    }
+
     /// Obtain an iterator over paths and file entries in this manifest.
     pub fn iter_entries(&self) -> std::collections::btree_map::Iter<PathBuf, FileEntry> {
         self.files.iter()
@@ -311,6 +327,45 @@ impl<'a> FileManifest<'a> {
         res.entry(None).or_insert_with(BTreeMap::new);
 
         res
+    }
+
+    /// Write files in this manifest to the specified path.
+    ///
+    /// Existing files will be replaced if they exist.
+    pub fn materialize_files(&self, dest: impl AsRef<Path>) -> Result<(), FileManifestError> {
+        let dest = dest.as_ref();
+
+        for (k, v) in self.iter_entries() {
+            let dest_path = dest.join(k);
+            let parent = dest_path
+                .parent()
+                .ok_or_else(|| FileManifestError::NoParentDirectory)?;
+
+            std::fs::create_dir_all(parent)?;
+            let mut fh = std::fs::File::create(&dest_path)?;
+            fh.write_all(&v.data.resolve()?)?;
+            if v.executable {
+                set_executable(&mut fh)?;
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Calls `materialize_files()` but removes the destination directory if it exists.
+    ///
+    /// This ensures the content of the destination reflects exactly what's defined
+    /// in this manifest.
+    pub fn materialize_files_with_replace(
+        &self,
+        dest: impl AsRef<Path>,
+    ) -> Result<(), FileManifestError> {
+        let dest = dest.as_ref();
+        if dest.exists() {
+            std::fs::remove_dir_all(dest)?;
+        }
+
+        self.materialize_files(dest)
     }
 }
 
@@ -374,18 +429,18 @@ mod tests {
         };
 
         let res = m.add_file_entry(Path::new("../etc/passwd"), f.clone());
-        assert_eq!(
-            res.err(),
-            Some(FileManifestError::IllegalRelativePath(
-                "../etc/passwd".to_string()
-            ))
-        );
+        let err = res.err().unwrap();
+        match err {
+            FileManifestError::IllegalRelativePath(_) => (),
+            _ => panic!("error does not match expected"),
+        }
 
         let res = m.add_file_entry(Path::new("/foo"), f);
-        assert_eq!(
-            res.err(),
-            Some(FileManifestError::IllegalAbsolutePath("/foo".to_string()))
-        );
+        let err = res.err().unwrap();
+        match err {
+            FileManifestError::IllegalAbsolutePath(_) => (),
+            _ => panic!("error does not match expected"),
+        }
 
         Ok(())
     }
