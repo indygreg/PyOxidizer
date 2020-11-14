@@ -48,10 +48,10 @@ fn optional_str_hashmap_to_hashmap(
     }
 }
 
-fn optional_vec_str_hashmap_to_vec(
-    value: Value,
-) -> Result<Vec<HashMap<Cow<'static, str>, Cow<'static, str>>>, ValueError> {
-    let v: Option<Vec<HashMap<Cow<'static, str>, Cow<'static, str>>>> = value.try_to_optional()?;
+type VecOfStrHashMap = Vec<HashMap<Cow<'static, str>, Cow<'static, str>>>;
+
+fn optional_vec_str_hashmap_to_vec(value: Value) -> Result<VecOfStrHashMap, ValueError> {
+    let v: Option<VecOfStrHashMap> = value.try_to_optional()?;
 
     if let Some(v) = v {
         Ok(v)
