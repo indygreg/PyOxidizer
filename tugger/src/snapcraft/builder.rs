@@ -18,7 +18,7 @@ use {
 };
 
 /// Represents an invocation of the `snapcraft` command.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct SnapcraftInvocation {
     /// Arguments to pass to `snapcraft`.
     pub args: Vec<String>,
@@ -38,11 +38,11 @@ pub struct SnapcraftInvocation {
 ///
 /// When we `build()`, we materialize all the files into a build directory and invoke
 /// `snapcraft` repeatedly until we're complete.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct SnapcraftBuilder<'a> {
-    snap: Snapcraft<'a>,
-    invocations: Vec<SnapcraftInvocation>,
-    install_files: FileManifest,
+    pub(crate) snap: Snapcraft<'a>,
+    pub(crate) invocations: Vec<SnapcraftInvocation>,
+    pub(crate) install_files: FileManifest,
 }
 
 impl<'a> SnapcraftBuilder<'a> {

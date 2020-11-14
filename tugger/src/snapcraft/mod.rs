@@ -8,7 +8,7 @@ mod builder;
 mod yaml;
 
 pub use {
-    builder::SnapcraftBuilder,
+    builder::{SnapcraftBuilder, SnapcraftInvocation},
     yaml::{
         Adapter, Architecture, Architectures, BuildAttribute, Confinement, Daemon, Grade,
         RestartCondition, SnapApp, SnapPart, Snapcraft, SourceType, Type,

@@ -3,21 +3,26 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    crate::snapcraft::{
-        Adapter, Architecture, Architectures, BuildAttribute, Confinement, Daemon, Grade,
-        RestartCondition, SnapApp, SnapPart, Snapcraft, SnapcraftBuilder, SourceType, Type,
+    crate::{
+        snapcraft::{
+            Adapter, Architecture, Architectures, BuildAttribute, Confinement, Daemon, Grade,
+            RestartCondition, SnapApp, SnapPart, Snapcraft, SnapcraftBuilder, SnapcraftInvocation,
+            SourceType, Type,
+        },
+        starlark::file_resource::FileManifestValue,
     },
     starlark::{
         values::{
             error::{RuntimeError, UnsupportedOperation, ValueError},
-            {Mutable, TypedValue, Value},
+            none::NoneType,
+            {Mutable, TypedValue, Value, ValueResult},
         },
         {
             starlark_fun, starlark_module, starlark_parse_param_type, starlark_signature,
             starlark_signature_extraction, starlark_signatures,
         },
     },
-    starlark_dialect_build_targets::{ToOptional, TryToOptional},
+    starlark_dialect_build_targets::{optional_bool_arg, ToOptional, TryToOptional},
     std::{borrow::Cow, collections::HashMap, convert::TryFrom},
 };
 
@@ -686,6 +691,39 @@ impl SnapcraftBuilderValue<'static> {
 
         SnapcraftBuilderValue { inner }
     }
+
+    pub fn add_invocation(&mut self, args: Vec<String>, purge_build: Value) -> ValueResult {
+        let purge_build = optional_bool_arg("purge_build", &purge_build)?;
+
+        match purge_build {
+            Some(purge_build) => {
+                let invocation = SnapcraftInvocation { args, purge_build };
+
+                self.inner = self.inner.clone().add_invocation(invocation);
+            }
+            None => {
+                self.inner = self.inner.clone().add_invocation_args(&args);
+            }
+        }
+
+        Ok(Value::new(NoneType::None))
+    }
+
+    pub fn add_file_manifest(&mut self, manifest: FileManifestValue) -> ValueResult {
+        self.inner = self
+            .inner
+            .clone()
+            .install_manifest(&manifest.manifest)
+            .map_err(|e| {
+                ValueError::Runtime(RuntimeError {
+                    code: "TUGGER_SNAPCRAFT",
+                    message: format!("{:?}", e),
+                    label: "add_file_manifest()".to_string(),
+                })
+            })?;
+
+        Ok(Value::new(NoneType::None))
+    }
 }
 
 starlark_module! { snapcraft_module =>
@@ -713,11 +751,30 @@ starlark_module! { snapcraft_module =>
     SnapcraftBuilder(snap: SnapValue) {
         Ok(Value::new(SnapcraftBuilderValue::new_from_snap_value(snap)))
     }
+
+    #[allow(non_snake_case)]
+    SnapcraftBuilder.add_invocation(this, args: Vec<String>, purge_build = NoneType::None) {
+        let mut this = this.downcast_mut::<SnapcraftBuilderValue>().unwrap().unwrap();
+
+        this.add_invocation(args, purge_build)
+    }
+
+    #[allow(non_snake_case)]
+    SnapcraftBuilder.add_file_manifest(this, manifest: FileManifestValue) {
+        let mut this = this.downcast_mut::<SnapcraftBuilderValue>().unwrap().unwrap();
+
+        this.add_file_manifest(manifest)
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use {super::*, crate::starlark::testutil::*, anyhow::Result, std::iter::FromIterator};
+    use {
+        super::*,
+        crate::{file_resource::FileManifest, starlark::testutil::*},
+        anyhow::Result,
+        std::iter::FromIterator,
+    };
 
     #[test]
     fn test_app_basic() -> Result<()> {
@@ -931,6 +988,61 @@ mod tests {
 
         let builder = env.eval("builder = snap.to_builder(); builder")?;
         assert_eq!(builder.get_type(), "SnapcraftBuilder");
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_snapcraft_builder_add_invocation() -> Result<()> {
+        let mut env = StarlarkEnvironment::new()?;
+
+        env.eval("snap = Snap('name', 'version', 'summary', 'description')")?;
+        let builder_value = env.eval("builder = snap.to_builder(); builder")?;
+        env.eval("builder.add_invocation(['cmd0', 'arg1'])")?;
+        env.eval("builder.add_invocation(['cmd1', 'arg2'], purge_build = True)")?;
+        env.eval("builder.add_invocation(['cmd2'], purge_build = False)")?;
+
+        let builder = builder_value
+            .downcast_ref::<SnapcraftBuilderValue>()
+            .unwrap();
+        assert_eq!(
+            builder.inner,
+            SnapcraftBuilder {
+                snap: Snapcraft::new(
+                    "name".into(),
+                    "version".into(),
+                    "summary".into(),
+                    "description".into()
+                ),
+                invocations: vec![
+                    SnapcraftInvocation {
+                        args: vec!["cmd0".into(), "arg1".into()],
+                        purge_build: true,
+                    },
+                    SnapcraftInvocation {
+                        args: vec!["cmd1".into(), "arg2".into()],
+                        purge_build: true,
+                    },
+                    SnapcraftInvocation {
+                        args: vec!["cmd2".into()],
+                        purge_build: false,
+                    },
+                ],
+                install_files: FileManifest::default(),
+            }
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_snapcraft_builder_add_manifest() -> Result<()> {
+        let mut env = StarlarkEnvironment::new()?;
+
+        env.eval("snap = Snap('name', 'version', 'summary', 'description')")?;
+        env.eval("builder = snap.to_builder()")?;
+        env.eval("manifest = FileManifest()")?;
+        env.eval("builder.add_file_manifest(manifest)")?;
 
         Ok(())
     }
