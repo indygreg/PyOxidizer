@@ -238,6 +238,11 @@ impl<'a> FileManifest<'a> {
     pub fn iter_entries(&self) -> std::collections::btree_map::Iter<PathBuf, FileEntry> {
         self.files.iter()
     }
+
+    /// Obtain an iterator of entries as `File` instances.
+    pub fn iter_files(&self) -> impl std::iter::Iterator<Item = File> {
+        self.files.iter().map(|(k, v)| File::new(k, v.clone()))
+    }
 }
 
 #[cfg(test)]
