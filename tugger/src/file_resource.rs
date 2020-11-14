@@ -186,7 +186,7 @@ impl FileManifest {
     }
 }
 
-impl<'a> TryFrom<virtual_file_manifest::FileManifest<'a>> for FileManifest {
+impl TryFrom<virtual_file_manifest::FileManifest> for FileManifest {
     type Error = anyhow::Error;
 
     fn try_from(other: virtual_file_manifest::FileManifest) -> Result<Self, Self::Error> {

@@ -36,16 +36,16 @@ impl<W> From<std::io::IntoInnerError<W>> for DebError {
 }
 
 /// A builder for a `.deb` package file.
-pub struct DebBuilder<'control, 'manifest> {
+pub struct DebBuilder<'control> {
     control_file: ControlFile<'control>,
 
     /// Files to install as part of the package.
-    install_files: FileManifest<'manifest>,
+    install_files: FileManifest,
 
     mtime: Option<SystemTime>,
 }
 
-impl<'control, 'manifest> DebBuilder<'control, 'manifest> {
+impl<'control> DebBuilder<'control> {
     /// Construct a new instance using a control file.
     pub fn new(control_file: ControlFile<'control>) -> Self {
         Self {

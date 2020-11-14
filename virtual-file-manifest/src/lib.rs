@@ -3,7 +3,6 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use std::{
-    borrow::Cow,
     collections::{BTreeMap, BTreeSet},
     convert::TryFrom,
     ffi::OsStr,
@@ -42,21 +41,21 @@ pub fn set_executable(_file: &mut std::fs::File) -> Result<(), std::io::Error> {
 ///
 /// Data can be backed by the filesystem or in memory.
 #[derive(Clone, Debug, PartialEq)]
-pub enum FileData<'a> {
+pub enum FileData {
     Path(PathBuf),
-    Memory(Cow<'a, [u8]>),
+    Memory(Vec<u8>),
 }
 
-impl<'a> FileData<'a> {
+impl FileData {
     /// Resolve the data for this instance.
     ///
     /// If backed by a file, the file will be read.
-    pub fn resolve(&self) -> Result<Cow<'a, [u8]>, std::io::Error> {
+    pub fn resolve(&self) -> Result<Vec<u8>, std::io::Error> {
         match self {
             Self::Path(p) => {
                 let data = std::fs::read(p)?;
 
-                Ok(Cow::Owned(data))
+                Ok(data)
             }
             Self::Memory(data) => Ok(data.clone()),
         }
@@ -70,34 +69,34 @@ impl<'a> FileData<'a> {
     }
 }
 
-impl<'a> From<&Path> for FileData<'a> {
+impl From<&Path> for FileData {
     fn from(path: &Path) -> Self {
         Self::Path(path.to_path_buf())
     }
 }
 
-impl<'a> From<Vec<u8>> for FileData<'a> {
+impl From<Vec<u8>> for FileData {
     fn from(data: Vec<u8>) -> Self {
-        Self::Memory(Cow::Owned(data))
+        Self::Memory(data)
     }
 }
 
-impl<'a> From<&'a [u8]> for FileData<'a> {
-    fn from(data: &'a [u8]) -> Self {
-        Self::Memory(Cow::Borrowed(data))
+impl From<&[u8]> for FileData {
+    fn from(data: &[u8]) -> Self {
+        Self::Memory(data.into())
     }
 }
 
 /// Represents a virtual file, without an associated path.
 #[derive(Clone, Debug, PartialEq)]
-pub struct FileEntry<'a> {
+pub struct FileEntry {
     /// The content of the file.
-    pub data: FileData<'a>,
+    pub data: FileData,
     /// Whether the file is executable.
     pub executable: bool,
 }
 
-impl<'a> TryFrom<&Path> for FileEntry<'a> {
+impl TryFrom<&Path> for FileEntry {
     type Error = std::io::Error;
 
     fn try_from(path: &Path) -> Result<Self, Self::Error> {
@@ -113,12 +112,12 @@ impl<'a> TryFrom<&Path> for FileEntry<'a> {
 
 /// Represents a virtual file, with an associated path.
 #[derive(Clone, Debug, PartialEq)]
-pub struct File<'a> {
+pub struct File {
     pub path: PathBuf,
-    pub entry: FileEntry<'a>,
+    pub entry: FileEntry,
 }
 
-impl<'a> TryFrom<&Path> for File<'a> {
+impl TryFrom<&Path> for File {
     type Error = std::io::Error;
 
     fn try_from(path: &Path) -> Result<Self, Self::Error> {
@@ -131,15 +130,15 @@ impl<'a> TryFrom<&Path> for File<'a> {
     }
 }
 
-impl<'a> From<File<'a>> for FileEntry<'a> {
-    fn from(f: File<'a>) -> Self {
+impl From<File> for FileEntry {
+    fn from(f: File) -> Self {
         f.entry
     }
 }
 
-impl<'a> File<'a> {
+impl File {
     /// Create a new instance from a path and `FileEntry`.
-    pub fn new(path: impl AsRef<Path>, entry: FileEntry<'a>) -> Self {
+    pub fn new(path: impl AsRef<Path>, entry: FileEntry) -> Self {
         Self {
             path: path.as_ref().to_path_buf(),
             entry,
@@ -183,18 +182,18 @@ impl From<std::io::Error> for FileManifestError {
 /// Files are keyed by their path. The file content is abstract and can be
 /// backed by multiple sources.
 #[derive(Clone, Debug, Default, PartialEq)]
-pub struct FileManifest<'a> {
-    files: BTreeMap<PathBuf, FileEntry<'a>>,
+pub struct FileManifest {
+    files: BTreeMap<PathBuf, FileEntry>,
 }
 
-impl<'a> FileManifest<'a> {
+impl FileManifest {
     /// Add a `FileEntry` to this manifest under the given path.
     ///
     /// The path cannot contain relative paths and must not be absolute.
     pub fn add_file_entry(
         &mut self,
         path: impl AsRef<Path>,
-        entry: impl Into<FileEntry<'a>>,
+        entry: impl Into<FileEntry>,
     ) -> Result<(), FileManifestError> {
         let path = path.as_ref();
         let path_s = path.display().to_string();
@@ -216,7 +215,7 @@ impl<'a> FileManifest<'a> {
     /// Add an iterable of `File` to this manifest.
     pub fn add_files(
         &mut self,
-        files: impl Iterator<Item = File<'a>>,
+        files: impl Iterator<Item = File>,
     ) -> Result<(), FileManifestError> {
         for file in files {
             self.add_file_entry(file.path, file.entry)?;
@@ -285,7 +284,7 @@ impl<'a> FileManifest<'a> {
     }
 
     /// Obtain an iterator of entries as `File` instances.
-    pub fn iter_files(&self) -> impl std::iter::Iterator<Item = File> {
+    pub fn iter_files(&self) -> impl std::iter::Iterator<Item = File> + '_ {
         self.files.iter().map(|(k, v)| File::new(k, v.clone()))
     }
 
