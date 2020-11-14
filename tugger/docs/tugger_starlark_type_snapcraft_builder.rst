@@ -67,3 +67,17 @@ The following arguments are accepted:
 ``manifest``
    (``FileManifest``) A :ref:`tugger_starlark_type_file_manifest` defining
    files to install in the build environment.
+
+.. _tugger_starlark_type_snapcraft_builder_build:
+
+``build()``
+-----------
+
+This method invokes the builder and runs ``snapcraft``.
+
+The following arguments are accepted:
+
+``target``
+   (``String``) The name of the build target.
+
+This method returns a ``ResolvedTarget``. That target is not runnable.

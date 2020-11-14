@@ -12,6 +12,7 @@ use {
         starlark::file_resource::FileManifestValue,
     },
     starlark::{
+        environment::TypeValues,
         values::{
             error::{RuntimeError, UnsupportedOperation, ValueError},
             none::NoneType,
@@ -22,7 +23,10 @@ use {
             starlark_signature_extraction, starlark_signatures,
         },
     },
-    starlark_dialect_build_targets::{optional_bool_arg, ToOptional, TryToOptional},
+    starlark_dialect_build_targets::{
+        get_context_value, optional_bool_arg, EnvironmentContext, ResolvedTarget,
+        ResolvedTargetValue, RunMode, ToOptional, TryToOptional,
+    },
     std::{borrow::Cow, collections::HashMap, convert::TryFrom},
 };
 
@@ -724,6 +728,32 @@ impl SnapcraftBuilderValue<'static> {
 
         Ok(Value::new(NoneType::None))
     }
+
+    pub fn build(&self, type_values: &TypeValues, target: String) -> ValueResult {
+        let context_value = get_context_value(type_values)?;
+        let context = context_value
+            .downcast_ref::<EnvironmentContext>()
+            .ok_or(ValueError::IncorrectParameterType)?;
+
+        let output_path = context.target_build_path(&target);
+
+        self.inner
+            .build(context.logger(), &output_path)
+            .map_err(|e| {
+                ValueError::Runtime(RuntimeError {
+                    code: "TUGGER_SNAPCRAFT",
+                    message: format!("{:?}", e),
+                    label: "build()".to_string(),
+                })
+            })?;
+
+        Ok(Value::new(ResolvedTargetValue {
+            inner: ResolvedTarget {
+                run_mode: RunMode::None,
+                output_path,
+            },
+        }))
+    }
 }
 
 starlark_module! { snapcraft_module =>
@@ -764,6 +794,12 @@ starlark_module! { snapcraft_module =>
         let mut this = this.downcast_mut::<SnapcraftBuilderValue>().unwrap().unwrap();
 
         this.add_file_manifest(manifest)
+    }
+
+    #[allow(non_snake_case)]
+    SnapcraftBuilder.build(env env, this, target: String) {
+        let this = this.downcast_ref::<SnapcraftBuilderValue>().unwrap();
+        this.build(env, target)
     }
 }
 
