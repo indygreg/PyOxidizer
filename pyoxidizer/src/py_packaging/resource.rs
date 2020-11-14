@@ -15,7 +15,7 @@ use {
             PythonPackageResource,
         },
     },
-    tugger::file_resource::{FileContent, FileManifest},
+    virtual_file_manifest::{FileEntry, FileManifest},
 };
 
 pub trait AddToFileManifest {
@@ -25,21 +25,21 @@ pub trait AddToFileManifest {
 
 impl AddToFileManifest for PythonModuleSource {
     fn add_to_file_manifest(&self, manifest: &mut FileManifest, prefix: &str) -> Result<()> {
-        let content = FileContent {
-            data: self.source.resolve()?,
+        let content = FileEntry {
+            data: self.source.resolve()?.into(),
             executable: false,
         };
 
-        manifest.add_file(&self.resolve_path(prefix), &content)?;
+        manifest.add_file_entry(&self.resolve_path(prefix), content)?;
 
         for package in packages_from_module_name(&self.name) {
             let package_path = resolve_path_for_module(prefix, &package, true, None);
 
             if !manifest.has_path(&package_path) {
-                manifest.add_file(
+                manifest.add_file_entry(
                     &package_path,
-                    &FileContent {
-                        data: vec![],
+                    FileEntry {
+                        data: vec![].into(),
                         executable: false,
                     },
                 )?;
@@ -54,13 +54,15 @@ impl AddToFileManifest for PythonPackageResource {
     fn add_to_file_manifest(&self, manifest: &mut FileManifest, prefix: &str) -> Result<()> {
         let dest_path = self.resolve_path(prefix);
 
-        manifest.add_file(
+        manifest.add_file_entry(
             &dest_path,
-            &FileContent {
-                data: self.data.resolve()?,
+            FileEntry {
+                data: self.data.resolve()?.into(),
                 executable: false,
             },
-        )
+        )?;
+
+        Ok(())
     }
 }
 
@@ -68,29 +70,31 @@ impl AddToFileManifest for PythonPackageDistributionResource {
     fn add_to_file_manifest(&self, manifest: &mut FileManifest, prefix: &str) -> Result<()> {
         let dest_path = self.resolve_path(prefix);
 
-        manifest.add_file(
+        manifest.add_file_entry(
             &dest_path,
-            &FileContent {
-                data: self.data.resolve()?,
+            FileEntry {
+                data: self.data.resolve()?.into(),
                 executable: false,
             },
-        )
+        )?;
+
+        Ok(())
     }
 }
 
 impl AddToFileManifest for PythonExtensionModule {
     fn add_to_file_manifest(&self, manifest: &mut FileManifest, prefix: &str) -> Result<()> {
         if let Some(data) = &self.shared_library {
-            manifest.add_file(
+            manifest.add_file_entry(
                 &self.resolve_path(prefix),
-                &FileContent {
-                    data: data.resolve()?,
+                FileEntry {
+                    data: data.resolve()?.into(),
                     executable: true,
                 },
-            )
-        } else {
-            Ok(())
+            )?;
         }
+
+        Ok(())
     }
 }
 
@@ -127,7 +131,7 @@ mod tests {
         }
         .add_to_file_manifest(&mut m, ".")?;
 
-        let entries = m.entries().collect_vec();
+        let entries = m.iter_entries().collect_vec();
         assert_eq!(entries.len(), 2);
         assert_eq!(entries[0].0, &PathBuf::from("./bar.py"));
         assert_eq!(entries[1].0, &PathBuf::from("./foo.py"));
@@ -149,7 +153,7 @@ mod tests {
         }
         .add_to_file_manifest(&mut m, ".")?;
 
-        let entries = m.entries().collect_vec();
+        let entries = m.iter_entries().collect_vec();
         assert_eq!(entries.len(), 1);
         assert_eq!(entries[0].0, &PathBuf::from("./foo/__init__.py"));
 
@@ -170,7 +174,7 @@ mod tests {
         }
         .add_to_file_manifest(&mut m, ".")?;
 
-        let entries = m.entries().collect_vec();
+        let entries = m.iter_entries().collect_vec();
         assert_eq!(entries.len(), 3);
         assert_eq!(entries[0].0, &PathBuf::from("./root/__init__.py"));
         assert_eq!(entries[1].0, &PathBuf::from("./root/parent/__init__.py"));
@@ -193,7 +197,7 @@ mod tests {
         }
         .add_to_file_manifest(&mut m, ".")?;
 
-        let entries = m.entries().collect_vec();
+        let entries = m.iter_entries().collect_vec();
         assert_eq!(entries.len(), 3);
         assert_eq!(entries[0].0, &PathBuf::from("./root/__init__.py"));
         assert_eq!(entries[1].0, &PathBuf::from("./root/parent/__init__.py"));

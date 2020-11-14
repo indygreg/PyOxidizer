@@ -3,10 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    crate::{
-        file_resource::{FileContent, FileManifest},
-        glob::evaluate_glob,
-    },
+    crate::glob::evaluate_glob,
     slog::warn,
     starlark::{
         environment::TypeValues,
@@ -25,12 +22,13 @@ use {
         EnvironmentContext, ResolvedTarget, ResolvedTargetValue, RunMode,
     },
     std::{collections::HashSet, convert::TryFrom, path::PathBuf},
+    virtual_file_manifest::{FileEntry, FileManifest},
 };
 
 // TODO merge this into `FileValue`?
 #[derive(Clone, Debug)]
 pub struct FileContentValue {
-    pub content: FileContent,
+    pub content: FileEntry,
 }
 
 impl TypedValue for FileContentValue {
@@ -83,13 +81,15 @@ impl FileManifestValue {
             "installing files to {}",
             output_path.display()
         );
-        self.manifest.replace_path(&output_path).map_err(|e| {
-            ValueError::from(RuntimeError {
-                code: "TUGGER",
-                message: e.to_string(),
-                label: "build".to_string(),
-            })
-        })?;
+        self.manifest
+            .materialize_files_with_replace(&output_path)
+            .map_err(|e| {
+                ValueError::from(RuntimeError {
+                    code: "TUGGER",
+                    message: e.to_string(),
+                    label: "build".to_string(),
+                })
+            })?;
 
         // Use the stored run target if available, falling back to the single
         // executable file if non-ambiguous.
@@ -101,7 +101,7 @@ impl FileManifestValue {
         } else {
             let exes = self
                 .manifest
-                .entries()
+                .iter_entries()
                 .filter(|(_, c)| c.executable)
                 .collect::<Vec<_>>();
 
@@ -145,9 +145,9 @@ impl FileManifestValue {
         let dest_path = context.build_path().join(path);
 
         if replace {
-            self.manifest.replace_path(&dest_path)
+            self.manifest.materialize_files_with_replace(&dest_path)
         } else {
-            self.manifest.write_to_path(&dest_path)
+            self.manifest.materialize_files(&dest_path)
         }
         .map_err(|e| {
             ValueError::from(RuntimeError {
@@ -219,7 +219,7 @@ fn starlark_glob(
     let mut manifest = FileManifest::default();
 
     for path in result {
-        let content = FileContent::try_from(path.as_path()).map_err(|e| {
+        let content = FileEntry::try_from(path.as_path()).map_err(|e| {
             ValueError::from(RuntimeError {
                 code: "PYOXIDIZER_BUILD",
                 message: e.to_string(),
@@ -241,7 +241,7 @@ fn starlark_glob(
             path.to_path_buf()
         };
 
-        manifest.add_file(&path, &content).map_err(|e| {
+        manifest.add_file_entry(&path, content).map_err(|e| {
             ValueError::from(RuntimeError {
                 code: "PYOXIDIZER_BUILD",
                 message: e.to_string(),

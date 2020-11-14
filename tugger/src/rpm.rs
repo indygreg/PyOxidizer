@@ -3,10 +3,10 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    crate::file_resource::FileManifest,
     anyhow::{anyhow, Context, Result},
     rpm::{RPMFileOptions, RPMPackage},
     std::path::{Path, PathBuf},
+    virtual_file_manifest::FileManifest,
 };
 
 /// Create RPMs.
@@ -49,10 +49,10 @@ impl RPMBuilder {
     /// Populate registered files with the internal RPMBuilder.
     pub fn populate_files(mut self) -> Result<Self> {
         self.files
-            .write_to_path(&self.build_path)
+            .materialize_files(&self.build_path)
             .context("writing RPM data files")?;
 
-        for (rel_path, content) in self.files.entries() {
+        for (rel_path, content) in self.files.iter_entries() {
             let real_path = self.build_path.join(rel_path);
 
             let mut options = RPMFileOptions::new(rel_path.display().to_string());

@@ -3,10 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    crate::{
-        file_resource::{FileContent, FileManifest},
-        snapcraft::Snapcraft,
-    },
+    crate::snapcraft::Snapcraft,
     anyhow::{anyhow, Context, Result},
     duct::cmd,
     slog::warn,
@@ -15,6 +12,7 @@ use {
         io::{BufRead, BufReader},
         path::Path,
     },
+    virtual_file_manifest::{FileEntry, FileManifest},
 };
 
 /// Represents an invocation of the `snapcraft` command.
@@ -85,9 +83,9 @@ impl<'a> SnapcraftBuilder<'a> {
     ) -> Result<Self> {
         let rel_path = path.as_ref().strip_prefix(strip_prefix.as_ref())?;
 
-        let content = FileContent::try_from(path.as_ref())?;
+        let entry = FileEntry::try_from(path.as_ref())?;
 
-        self.install_files.add_file(rel_path, &content)?;
+        self.install_files.add_file_entry(rel_path, entry)?;
 
         Ok(self)
     }
@@ -138,7 +136,7 @@ impl<'a> SnapcraftBuilder<'a> {
         }
 
         self.install_files
-            .write_to_path(build_path)
+            .materialize_files(build_path)
             .with_context(|| format!("installing files to {}", build_path.display()))?;
 
         let snap_path = build_path.join("snap");

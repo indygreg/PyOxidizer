@@ -3,10 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    crate::{
-        file_resource::FileManifest,
-        wix::{WiXInstallerBuilder, WxsBuilder},
-    },
+    crate::wix::{WiXInstallerBuilder, WxsBuilder},
     anyhow::Result,
     std::{
         borrow::Cow,
@@ -14,6 +11,7 @@ use {
         path::{Path, PathBuf},
     },
     uuid::Uuid,
+    virtual_file_manifest::FileManifest,
     xml::{
         common::XmlVersion,
         writer::{EmitterConfig, EventWriter, XmlEvent},
@@ -83,7 +81,9 @@ impl WiXSimpleMSIBuilder {
     /// All files in the provided manifest will be materialized in `Program Files`
     /// by the built installer.
     pub fn add_program_files_manifest(&mut self, manifest: &FileManifest) -> Result<()> {
-        self.program_files_manifest.add_manifest(manifest)
+        self.program_files_manifest.add_manifest(manifest)?;
+
+        Ok(())
     }
 
     /// Set the `<Product UpgradeCode` attribute value.
@@ -513,17 +513,17 @@ impl WiXSimpleMSIBuilder {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, crate::file_resource::FileContent, crate::testutil::*};
+    use {super::*, crate::testutil::*, virtual_file_manifest::FileEntry};
 
     #[test]
     fn test_simple_msi_builder() -> Result<()> {
         let mut builder = WiXSimpleMSIBuilder::new("prefix", "myapp", "0.1", "author");
 
         let mut m = FileManifest::default();
-        m.add_file(
+        m.add_file_entry(
             "foo.txt",
-            &FileContent {
-                data: vec![42],
+            FileEntry {
+                data: vec![42].into(),
                 executable: false,
             },
         )?;
@@ -548,10 +548,10 @@ mod tests {
         let mut builder = WiXSimpleMSIBuilder::new("prefix", "testapp", "0.1", "author");
 
         let mut m = FileManifest::default();
-        m.add_file(
+        m.add_file_entry(
             "foo.txt",
-            &FileContent {
-                data: vec![42],
+            FileEntry {
+                data: vec![42].into(),
                 executable: false,
             },
         )?;

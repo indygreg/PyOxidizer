@@ -20,7 +20,6 @@ PyOxidizer.
 */
 
 pub mod debian;
-pub mod file_resource;
 pub mod glob;
 pub mod http;
 // rpm crate doesn't build on Windows. So conditionally include for now.

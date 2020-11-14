@@ -30,10 +30,8 @@ use {
         },
     },
     std::{ops::Deref, path::Path},
-    tugger::{
-        file_resource::{FileContent, FileManifest},
-        starlark::file_resource::FileManifestValue,
-    },
+    tugger::starlark::file_resource::FileManifestValue,
+    virtual_file_manifest::{FileEntry, FileManifest},
 };
 
 #[allow(clippy::too_many_arguments)]
@@ -48,20 +46,20 @@ fn file_manifest_add_python_executable(
 ) -> Result<()> {
     let build = build_python_executable(logger, &exe.name(), exe, target, opt_level, release)?;
 
-    let content = FileContent {
-        data: build.exe_data.clone(),
+    let content = FileEntry {
+        data: build.exe_data.clone().into(),
         executable: true,
     };
 
     let path = Path::new(&prefix).join(build.exe_name);
-    manifest.manifest.add_file(&path, &content)?;
+    manifest.manifest.add_file_entry(&path, content)?;
 
     // Add any additional files that the exe builder requires.
     let mut extra_files = FileManifest::default();
 
-    for (path, content) in build.binary_data.extra_files.entries() {
+    for (path, entry) in build.binary_data.extra_files.iter_entries() {
         warn!(logger, "adding extra file {} to {}", path.display(), prefix);
-        extra_files.add_file(&Path::new(prefix).join(path), &content)?;
+        extra_files.add_file_entry(&Path::new(prefix).join(path), entry.clone())?;
     }
 
     manifest.manifest.add_manifest(&extra_files)?;
@@ -269,14 +267,14 @@ mod tests {
         let m = env.get("m")?;
         let m = m.downcast_ref::<FileManifestValue>().unwrap();
 
-        let mut entries = m.manifest.entries();
+        let mut entries = m.manifest.iter_entries();
 
         let (p, c) = entries.next().unwrap();
         assert_eq!(p, &PathBuf::from("lib/foo/__init__.py"));
         assert_eq!(
             c,
-            &FileContent {
-                data: vec![],
+            &FileEntry {
+                data: vec![].into(),
                 executable: false,
             }
         );
@@ -285,8 +283,8 @@ mod tests {
         assert_eq!(p, &PathBuf::from("lib/foo/bar.py"));
         assert_eq!(
             c,
-            &FileContent {
-                data: vec![],
+            &FileEntry {
+                data: vec![].into(),
                 executable: false,
             }
         );
@@ -320,14 +318,14 @@ mod tests {
         let m = env.get("m")?;
         let m = m.downcast_ref::<FileManifestValue>().unwrap();
 
-        let mut entries = m.manifest.entries();
+        let mut entries = m.manifest.iter_entries();
         let (p, c) = entries.next().unwrap();
 
         assert_eq!(p, &PathBuf::from("lib/foo/bar/resource.txt"));
         assert_eq!(
             c,
-            &FileContent {
-                data: vec![],
+            &FileEntry {
+                data: vec![].into(),
                 executable: false,
             }
         );

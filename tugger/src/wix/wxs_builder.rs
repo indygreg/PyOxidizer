@@ -3,11 +3,9 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    crate::file_resource::FileContent,
     anyhow::{anyhow, Result},
     std::{
         collections::BTreeMap,
-        convert::TryFrom,
         path::{Path, PathBuf},
     },
 };
@@ -42,11 +40,11 @@ impl WxsBuilder {
             .file_name()
             .ok_or_else(|| anyhow!("unable to determine filename"))?;
 
-        let content = FileContent::try_from(path.as_ref())?;
+        let data = std::fs::read(path.as_ref())?;
 
         Ok(Self {
             path: PathBuf::from(filename),
-            data: content.data,
+            data,
             preprocessor_parameters: BTreeMap::new(),
         })
     }

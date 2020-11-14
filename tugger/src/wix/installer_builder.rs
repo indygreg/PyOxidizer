@@ -3,15 +3,13 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    crate::{
-        file_resource::{FileContent, FileManifest},
-        wix::{common::extract_wix, *},
-    },
+    crate::wix::{common::extract_wix, *},
     anyhow::{anyhow, Context, Result},
     std::{
         collections::BTreeMap,
         path::{Path, PathBuf},
     },
+    virtual_file_manifest::{FileEntry, FileManifest},
     xml::EmitterConfig,
 };
 
@@ -90,9 +88,11 @@ impl WiXInstallerBuilder {
     pub fn add_extra_build_file<P: AsRef<Path>>(
         &mut self,
         path: P,
-        content: &FileContent,
+        content: impl Into<FileEntry>,
     ) -> Result<()> {
-        self.extra_build_files.add_file(path, content)
+        self.extra_build_files.add_file_entry(path, content)?;
+
+        Ok(())
     }
 
     /// Add additional files to be materialized in the build environment.
@@ -100,7 +100,9 @@ impl WiXInstallerBuilder {
     /// Files are specified via a `FileManifest` and will be materialized next
     /// to `.wxs` files.
     pub fn add_extra_build_files(&mut self, manifest: &FileManifest) -> Result<()> {
-        self.extra_build_files.add_manifest(manifest)
+        self.extra_build_files.add_manifest(manifest)?;
+
+        Ok(())
     }
 
     pub fn install_files(&self) -> &FileManifest {
@@ -109,7 +111,9 @@ impl WiXInstallerBuilder {
 
     /// Add a `FileManifest` to the set of files to install.
     pub fn add_install_files_manifest(&mut self, manifest: &FileManifest) -> Result<()> {
-        self.install_files.add_manifest(manifest)
+        self.install_files.add_manifest(manifest)?;
+
+        Ok(())
     }
 
     fn stage_path(&self) -> PathBuf {
@@ -153,13 +157,13 @@ impl WiXInstallerBuilder {
 
         // Materialize FileManifest so we can reference files from WiX.
         self.install_files
-            .write_to_path(&self.stage_path())
+            .materialize_files(&self.stage_path())
             .context("writing install files")?;
 
         let wxs_path = self.build_path.join("wxs");
 
         self.extra_build_files
-            .write_to_path(&wxs_path)
+            .materialize_files(&wxs_path)
             .context("writing extra build files")?;
 
         let mut wixobj_paths = Vec::new();

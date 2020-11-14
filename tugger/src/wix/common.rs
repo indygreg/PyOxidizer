@@ -4,7 +4,6 @@
 
 use {
     crate::{
-        file_resource::FileManifest,
         http::{download_to_path, RemoteContent},
         zipfile::extract_zip,
     },
@@ -18,6 +17,7 @@ use {
         path::{Path, PathBuf},
     },
     uuid::Uuid,
+    virtual_file_manifest::FileManifest,
     xml::{
         common::XmlVersion,
         writer::{EventWriter, XmlEvent},
@@ -256,7 +256,7 @@ pub fn write_file_manifest_to_wix<W: Write, P: AsRef<Path>>(
         // Every file in this directory tree is part of this group. We could do
         // this more efficiently by using <ComponentGroupRef>. But since this is
         // an auto-generated file, the redundancy isn't too harmful.
-        for p in manifest.entries().filter_map(|(p, _)| {
+        for p in manifest.iter_entries().filter_map(|(p, _)| {
             if let Some(base) = directory {
                 if p.starts_with(base) {
                     Some(p)
@@ -483,10 +483,8 @@ pub(crate) fn extract_wix<P: AsRef<Path>>(logger: &slog::Logger, dest_dir: P) ->
 mod tests {
     use {
         super::*,
-        crate::{
-            file_resource::{FileContent, FileManifest},
-            testutil::*,
-        },
+        crate::testutil::*,
+        virtual_file_manifest::{FileEntry, FileManifest},
         xml::EmitterConfig,
     };
 
@@ -524,18 +522,18 @@ mod tests {
 
     #[test]
     fn test_file_manifest_to_wix() -> Result<()> {
-        let c = FileContent {
-            data: vec![42],
+        let c = FileEntry {
+            data: vec![42].into(),
             executable: false,
         };
 
         let mut m = FileManifest::default();
-        m.add_file(Path::new("root.txt"), &c)?;
-        m.add_file(Path::new("dir0/dir0_file0.txt"), &c)?;
-        m.add_file(Path::new("dir0/child0/dir0_child0_file0.txt"), &c)?;
-        m.add_file(Path::new("dir0/child0/dir0_child0_file1.txt"), &c)?;
-        m.add_file(Path::new("dir0/child1/dir0_child1_file0.txt"), &c)?;
-        m.add_file(Path::new("dir1/child0/dir1_child0_file0.txt"), &c)?;
+        m.add_file_entry(Path::new("root.txt"), c.clone())?;
+        m.add_file_entry(Path::new("dir0/dir0_file0.txt"), c.clone())?;
+        m.add_file_entry(Path::new("dir0/child0/dir0_child0_file0.txt"), c.clone())?;
+        m.add_file_entry(Path::new("dir0/child0/dir0_child0_file1.txt"), c.clone())?;
+        m.add_file_entry(Path::new("dir0/child1/dir0_child1_file0.txt"), c.clone())?;
+        m.add_file_entry(Path::new("dir1/child0/dir1_child0_file0.txt"), c.clone())?;
 
         let buffer = Vec::new();
         let buf_writer = std::io::BufWriter::new(buffer);

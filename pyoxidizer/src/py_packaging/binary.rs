@@ -24,7 +24,7 @@ use {
         path::{Path, PathBuf},
         sync::Arc,
     },
-    tugger::file_resource::FileManifest,
+    virtual_file_manifest::FileManifest,
 };
 
 /// How a binary should link against libpython.

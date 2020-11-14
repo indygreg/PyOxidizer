@@ -806,10 +806,8 @@ starlark_module! { snapcraft_module =>
 #[cfg(test)]
 mod tests {
     use {
-        super::*,
-        crate::{file_resource::FileManifest, starlark::testutil::*},
-        anyhow::Result,
-        std::iter::FromIterator,
+        super::*, crate::starlark::testutil::*, anyhow::Result, std::iter::FromIterator,
+        virtual_file_manifest::FileManifest,
     };
 
     #[test]

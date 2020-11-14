@@ -41,7 +41,7 @@ use {
         sync::Arc,
     },
     tempdir::TempDir,
-    tugger::file_resource::{FileContent, FileManifest},
+    virtual_file_manifest::{FileEntry, FileManifest},
 };
 
 lazy_static! {
@@ -724,10 +724,10 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         let mut extra_files = FileManifest::default();
 
         for (path, location, executable) in &compiled_resources.extra_files {
-            extra_files.add_file(
+            extra_files.add_file_entry(
                 path,
-                &FileContent {
-                    data: location.resolve()?,
+                FileEntry {
+                    data: location.resolve()?.into(),
                     executable: *executable,
                 },
             )?;
@@ -748,12 +748,12 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         if self.link_mode == LibpythonLinkMode::Dynamic {
             if let Some(p) = &self.target_distribution.libpython_shared_library {
                 let manifest_path = Path::new(p.file_name().unwrap());
-                let content = FileContent {
-                    data: std::fs::read(&p)?,
+                let content = FileEntry {
+                    data: std::fs::read(&p)?.into(),
                     executable: false,
                 };
 
-                extra_files.add_file(&manifest_path, &content)?;
+                extra_files.add_file_entry(&manifest_path, content)?;
             }
         }
 
@@ -761,10 +761,10 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
             for (path, location) in self.target_distribution.tcl_files()? {
                 let install_path = PathBuf::from(tcl_files_path).join(path);
 
-                extra_files.add_file(
+                extra_files.add_file_entry(
                     &install_path,
-                    &FileContent {
-                        data: location.resolve()?,
+                    FileEntry {
+                        data: location.resolve()?.into(),
                         executable: false,
                     },
                 )?;
