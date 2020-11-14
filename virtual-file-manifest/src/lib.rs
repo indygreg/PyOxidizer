@@ -107,3 +107,39 @@ impl<'a> TryFrom<&Path> for FileEntry<'a> {
         })
     }
 }
+
+/// Represents a virtual file, with an associated path.
+#[derive(Clone, Debug, PartialEq)]
+pub struct File<'a> {
+    pub path: PathBuf,
+    pub entry: FileEntry<'a>,
+}
+
+impl<'a> TryFrom<&Path> for File<'a> {
+    type Error = std::io::Error;
+
+    fn try_from(path: &Path) -> Result<Self, Self::Error> {
+        let entry = FileEntry::try_from(path)?;
+
+        Ok(Self {
+            path: path.to_path_buf(),
+            entry,
+        })
+    }
+}
+
+impl<'a> From<File<'a>> for FileEntry<'a> {
+    fn from(f: File<'a>) -> Self {
+        f.entry
+    }
+}
+
+impl<'a> File<'a> {
+    /// Create a new instance from a path and `FileEntry`.
+    pub fn new(path: impl AsRef<Path>, entry: FileEntry<'a>) -> Self {
+        Self {
+            path: path.as_ref().to_path_buf(),
+            entry,
+        }
+    }
+}
