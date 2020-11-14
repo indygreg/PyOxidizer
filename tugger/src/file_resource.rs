@@ -186,6 +186,25 @@ impl FileManifest {
     }
 }
 
+impl<'a> TryFrom<virtual_file_manifest::FileManifest<'a>> for FileManifest {
+    type Error = anyhow::Error;
+
+    fn try_from(other: virtual_file_manifest::FileManifest) -> Result<Self, Self::Error> {
+        let mut m = FileManifest::default();
+
+        for (k, v) in other.iter_entries() {
+            let content = FileContent {
+                data: v.data.resolve()?.to_vec(),
+                executable: v.executable,
+            };
+
+            m.add_file(k, &content)?;
+        }
+
+        Ok(m)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use {super::*, std::iter::FromIterator};
