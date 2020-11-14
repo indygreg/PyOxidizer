@@ -117,7 +117,7 @@ impl FileManifestValue {
         Ok(Value::new(ResolvedTargetValue {
             inner: ResolvedTarget {
                 run_mode,
-                output_path: output_path.to_path_buf(),
+                output_path,
             },
         }))
     }
