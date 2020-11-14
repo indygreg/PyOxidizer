@@ -23,4 +23,5 @@ specific to Tugger.
    tugger_starlark_type_snap_app
    tugger_starlark_type_snap_part
    tugger_starlark_type_snap
+   tugger_starlark_type_snapcraft_builder
    tugger_starlark_type_wix_installer

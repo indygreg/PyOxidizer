@@ -34,6 +34,9 @@ Tugger's Starlark dialect defines the following custom types:
 :ref:`tugger_starlark_type_snap`
    Represents a ``snapcraft.yaml`` file.
 
+:ref:`tugger_starlark_type_snapcraft_builder`
+   Manages the environment and invocations of the ``snapcraft`` command.
+
 :ref:`tugger_starlark_type_wix_installer`
    Produce a Windows installer using WiX.
 

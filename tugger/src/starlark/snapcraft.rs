@@ -5,7 +5,7 @@
 use {
     crate::snapcraft::{
         Adapter, Architecture, Architectures, BuildAttribute, Confinement, Daemon, Grade,
-        RestartCondition, SnapApp, SnapPart, Snapcraft, SourceType, Type,
+        RestartCondition, SnapApp, SnapPart, Snapcraft, SnapcraftBuilder, SourceType, Type,
     },
     starlark::{
         values::{
@@ -356,7 +356,7 @@ fn value_to_filesets(
     }
 }
 
-#[derive(Default)]
+#[derive(Clone, Debug, Default)]
 pub struct SnapAppValue<'a> {
     pub inner: SnapApp<'a>,
 }
@@ -444,7 +444,7 @@ impl TypedValue for SnapAppValue<'static> {
     }
 }
 
-#[derive(Default)]
+#[derive(Clone, Debug, Default)]
 pub struct SnapPartValue<'a> {
     pub inner: SnapPart<'a>,
 }
@@ -547,6 +547,7 @@ impl TypedValue for SnapPartValue<'static> {
     }
 }
 
+#[derive(Clone, Debug)]
 pub struct SnapValue<'a> {
     pub inner: Snapcraft<'a>,
 }
@@ -664,6 +665,29 @@ impl<'a> SnapValue<'a> {
     }
 }
 
+/// Starlark Value wrapper for `SnapcraftBuilder`.
+#[derive(Clone, Debug)]
+pub struct SnapcraftBuilderValue<'a> {
+    pub inner: SnapcraftBuilder<'a>,
+}
+
+impl TypedValue for SnapcraftBuilderValue<'static> {
+    type Holder = Mutable<SnapcraftBuilderValue<'static>>;
+    const TYPE: &'static str = "SnapcraftBuilder";
+
+    fn values_for_descendant_check_and_freeze(&self) -> Box<dyn Iterator<Item = Value>> {
+        Box::new(std::iter::empty())
+    }
+}
+
+impl SnapcraftBuilderValue<'static> {
+    pub fn new_from_snap_value(value: SnapValue<'static>) -> Self {
+        let inner = SnapcraftBuilder::new(value.inner.clone());
+
+        SnapcraftBuilderValue { inner }
+    }
+}
+
 starlark_module! { snapcraft_module =>
     #[allow(non_snake_case)]
     SnapApp() {
@@ -678,6 +702,16 @@ starlark_module! { snapcraft_module =>
     #[allow(non_snake_case)]
     Snap(name: String, version: String, summary: String, description: String) {
         Ok(Value::new(SnapValue::new_from_args(name, version, summary, description)))
+    }
+
+    #[allow(non_snake_case)]
+    Snap.to_builder(this: SnapValue) {
+        Ok(Value::new(SnapcraftBuilderValue::new_from_snap_value(this)))
+    }
+
+    #[allow(non_snake_case)]
+    SnapcraftBuilder(snap: SnapValue) {
+        Ok(Value::new(SnapcraftBuilderValue::new_from_snap_value(snap)))
     }
 }
 
@@ -894,6 +928,9 @@ mod tests {
         expected.snap_type = Some(Type::Kernel);
 
         assert_eq!(snap.inner, expected);
+
+        let builder = env.eval("builder = snap.to_builder(); builder")?;
+        assert_eq!(builder.get_type(), "SnapcraftBuilder");
 
         Ok(())
     }

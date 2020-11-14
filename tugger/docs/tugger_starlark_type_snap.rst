@@ -138,3 +138,17 @@ documentation about what each attribute means.
 -----------
 
 (``string``)
+
+.. _tugger_starlark_type_snap_methods:
+
+Methods
+=======
+
+``to_builder()``
+----------------
+
+Converts this instance into a :ref:`tugger_starlark_type_snapcraft_builder`.
+
+This method accepts no arguments and returns a
+:ref:`tugger_starlark_type_snapcraft_builder`. It is equivalent to calling
+``SnapcraftBuilder(self)``.
