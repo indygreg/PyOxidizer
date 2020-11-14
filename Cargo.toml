@@ -8,4 +8,5 @@ members = [
     'release',
     'starlark-dialect-build-targets',
     'tugger',
+    'virtual-file-manifest',
 ]

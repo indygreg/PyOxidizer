@@ -1,0 +1,10 @@
+[package]
+name = "virtual-file-manifest"
+version = "0.1.0-pre"
+authors = ["Gregory Szorc <gregory.szorc@gmail.com>"]
+edition = "2018"
+license = "MPL-2.0"
+readme = "README.md"
+description = "Interact with lists of files through a storage-agnostic interface"
+homepage = "https://github.com/indygreg/PyOxidizer"
+repository = "https://github.com/indygreg/PyOxidizer.git"
