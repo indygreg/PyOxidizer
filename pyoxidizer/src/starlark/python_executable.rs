@@ -108,7 +108,7 @@ impl PythonExecutableValue {
 
         Ok(ResolvedTarget {
             run_mode: RunMode::Path { path: dest_path },
-            output_path: output_path.to_path_buf(),
+            output_path,
         })
     }
 }

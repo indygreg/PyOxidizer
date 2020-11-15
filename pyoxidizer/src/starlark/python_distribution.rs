@@ -170,12 +170,12 @@ impl PythonDistributionValue {
         let distribution = if local_path.get_type() != "NoneType" {
             PythonDistributionLocation::Local {
                 local_path: local_path.to_string(),
-                sha256: sha256.to_string(),
+                sha256,
             }
         } else {
             PythonDistributionLocation::Url {
                 url: url.to_string(),
-                sha256: sha256.to_string(),
+                sha256,
             }
         };
 
