@@ -16,10 +16,8 @@ use {
     anyhow::{anyhow, Context, Result},
     fs2::FileExt,
     python_packaging::{
-        bytecode::PythonBytecodeCompiler,
-        module_util::PythonModuleSuffixes,
-        policy::PythonPackagingPolicy,
-        resource::{DataLocation, PythonResource},
+        bytecode::PythonBytecodeCompiler, module_util::PythonModuleSuffixes,
+        policy::PythonPackagingPolicy, resource::PythonResource,
     },
     sha2::{Digest, Sha256},
     slog::warn,
@@ -36,6 +34,7 @@ use {
     tugger::http::get_http_client,
     url::Url,
     uuid::Uuid,
+    virtual_file_manifest::FileData,
 };
 
 /// Denotes how a binary should link libpython.
@@ -206,7 +205,7 @@ pub trait PythonDistribution {
     /// of file content. If the files are installed in a new directory, it should
     /// be possible to use that directory joined with `tcl_library_path_directory`
     /// as the value of `TCL_LIBRARY`.
-    fn tcl_files(&self) -> Result<Vec<(PathBuf, DataLocation)>>;
+    fn tcl_files(&self) -> Result<Vec<(PathBuf, FileData)>>;
 
     /// The name of the directory to use for `TCL_LIBRARY`
     fn tcl_library_path_directory(&self) -> Option<String>;

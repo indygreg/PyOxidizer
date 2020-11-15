@@ -41,6 +41,7 @@ use {
         path::{Path, PathBuf},
         sync::Arc,
     },
+    virtual_file_manifest::FileData,
 };
 
 // This needs to be kept in sync with *compiler.py
@@ -1331,7 +1332,7 @@ impl PythonDistribution for StandaloneDistribution {
                 .contains(&"shared-library".to_string())
     }
 
-    fn tcl_files(&self) -> Result<Vec<(PathBuf, DataLocation)>> {
+    fn tcl_files(&self) -> Result<Vec<(PathBuf, FileData)>> {
         let mut res = vec![];
 
         if let Some(root) = &self.tcl_library_path {
@@ -1351,10 +1352,7 @@ impl PythonDistribution for StandaloneDistribution {
 
                         let rel_path = path.strip_prefix(&root)?;
 
-                        res.push((
-                            rel_path.to_path_buf(),
-                            DataLocation::Path(path.to_path_buf()),
-                        ));
+                        res.push((rel_path.to_path_buf(), path.into()));
                     }
                 }
             }
