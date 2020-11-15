@@ -281,9 +281,8 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
     pub fn new(
         config: OxidizedPythonInterpreterConfig<'resources>,
     ) -> Result<MainPythonInterpreter<'python, 'interpreter, 'resources>, NewInterpreterError> {
-        let config: ResolvedOxidizedPythonInterpreterConfig<'resources> = config
-            .try_into()
-            .map_err(|e| NewInterpreterError::Simple(e))?;
+        let config: ResolvedOxidizedPythonInterpreterConfig<'resources> =
+            config.try_into().map_err(NewInterpreterError::Simple)?;
 
         match config.terminfo_resolution {
             TerminfoResolution::Dynamic => {
