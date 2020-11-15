@@ -26,8 +26,8 @@ use {
         location::AbstractResourceLocation,
         policy::PythonPackagingPolicy,
         resource::{
-            DataLocation, PythonExtensionModule, PythonModuleSource,
-            PythonPackageDistributionResource, PythonPackageResource, PythonResource,
+            PythonExtensionModule, PythonModuleSource, PythonPackageDistributionResource,
+            PythonPackageResource, PythonResource,
         },
         resource_collection::{
             PrePackagedResource, PythonResourceAddCollectionContext, PythonResourceCollector,
@@ -41,7 +41,7 @@ use {
         sync::Arc,
     },
     tempdir::TempDir,
-    virtual_file_manifest::{File, FileEntry, FileManifest},
+    virtual_file_manifest::{File, FileData, FileEntry, FileManifest},
 };
 
 lazy_static! {
@@ -224,7 +224,7 @@ impl StandalonePythonExecutableBuilder {
         for (name, path) in &self.target_distribution.includes {
             self.core_build_context
                 .includes
-                .insert(PathBuf::from(name), DataLocation::Path(path.clone()));
+                .insert(PathBuf::from(name), FileData::Path(path.clone()));
         }
 
         // Add the distribution's object files from Python core to linking context.
@@ -237,7 +237,7 @@ impl StandalonePythonExecutableBuilder {
 
             self.core_build_context
                 .object_files
-                .push(DataLocation::Path(fs_path.clone()));
+                .push(FileData::Path(fs_path.clone()));
         }
 
         for entry in &self.target_distribution.links_core {
@@ -255,8 +255,8 @@ impl StandalonePythonExecutableBuilder {
 
         for location in self.target_distribution.libraries.values() {
             let path = match location {
-                DataLocation::Path(p) => p,
-                DataLocation::Memory(_) => {
+                FileData::Path(p) => p,
+                FileData::Memory(_) => {
                     return Err(anyhow!(
                         "cannot link libraries not backed by the filesystem"
                     ))
@@ -810,7 +810,7 @@ pub mod tests {
                 name: "shared_only".to_string(),
                 init_fn: Some("PyInit_shared_only".to_string()),
                 extension_file_suffix: ".so".to_string(),
-                shared_library: Some(DataLocation::Memory(vec![42])),
+                shared_library: Some(FileData::Memory(vec![42])),
                 object_file_data: vec![],
                 is_package: false,
                 link_libraries: vec![],
@@ -829,7 +829,7 @@ pub mod tests {
                 init_fn: Some("PyInit_object_files_only".to_string()),
                 extension_file_suffix: ".so".to_string(),
                 shared_library: None,
-                object_file_data: vec![DataLocation::Memory(vec![0]), DataLocation::Memory(vec![1])],
+                object_file_data: vec![FileData::Memory(vec![0]), FileData::Memory(vec![1])],
                 is_package: false,
                 link_libraries: vec![],
                 is_stdlib: false,
@@ -846,8 +846,8 @@ pub mod tests {
                 name: "shared_and_object_files".to_string(),
                 init_fn: Some("PyInit_shared_and_object_files".to_string()),
                 extension_file_suffix: ".so".to_string(),
-                shared_library: Some(DataLocation::Memory(b"shared".to_vec())),
-                object_file_data: vec![DataLocation::Memory(vec![0]), DataLocation::Memory(vec![1])],
+                shared_library: Some(FileData::Memory(b"shared".to_vec())),
+                object_file_data: vec![FileData::Memory(vec![0]), FileData::Memory(vec![1])],
                 is_package: false,
                 link_libraries: vec![],
                 is_stdlib: false,
@@ -2410,7 +2410,7 @@ pub mod tests {
                 &resources[0].1,
                 &vec![(
                     PathBuf::from(format!("lib/libcrypto-1_1{}.dll", lib_suffix)),
-                    DataLocation::Path(
+                    FileData::Path(
                         builder
                             .target_distribution
                             .base_dir
@@ -2426,7 +2426,7 @@ pub mod tests {
                 &resources[1].1,
                 &vec![(
                     PathBuf::from(format!("lib/libssl-1_1{}.dll", lib_suffix)),
-                    DataLocation::Path(
+                    FileData::Path(
                         builder
                             .target_distribution
                             .base_dir

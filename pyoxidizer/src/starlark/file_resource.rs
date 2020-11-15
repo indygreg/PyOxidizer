@@ -236,8 +236,9 @@ mod tests {
     use {
         super::super::testutil::*,
         super::*,
-        python_packaging::resource::{DataLocation, PythonModuleSource, PythonPackageResource},
+        python_packaging::resource::{PythonModuleSource, PythonPackageResource},
         std::path::PathBuf,
+        virtual_file_manifest::FileData,
     };
 
     const DEFAULT_CACHE_TAG: &str = "cpython-37";
@@ -251,7 +252,7 @@ mod tests {
 
         let v = Value::new(PythonModuleSourceValue::new(PythonModuleSource {
             name: "foo.bar".to_string(),
-            source: DataLocation::Memory(vec![]),
+            source: FileData::Memory(vec![]),
             is_package: false,
             cache_tag: DEFAULT_CACHE_TAG.to_string(),
             is_stdlib: false,
@@ -304,7 +305,7 @@ mod tests {
         let v = Value::new(PythonPackageResourceValue::new(PythonPackageResource {
             leaf_package: "foo.bar".to_string(),
             relative_name: "resource.txt".to_string(),
-            data: DataLocation::Memory(vec![]),
+            data: FileData::Memory(vec![]),
             is_stdlib: false,
             is_test: false,
         }));

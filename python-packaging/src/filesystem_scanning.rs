@@ -11,8 +11,8 @@ use {
         module_util::{is_package_from_path, PythonModuleSuffixes},
         package_metadata::PythonPackageMetadata,
         resource::{
-            BytecodeOptimizationLevel, DataLocation, PythonEggFile, PythonExtensionModule,
-            PythonModuleBytecode, PythonModuleSource, PythonPackageDistributionResource,
+            BytecodeOptimizationLevel, PythonEggFile, PythonExtensionModule, PythonModuleBytecode,
+            PythonModuleSource, PythonPackageDistributionResource,
             PythonPackageDistributionResourceFlavor, PythonPackageResource, PythonPathExtension,
             PythonResource,
         },
@@ -23,7 +23,7 @@ use {
         ffi::OsStr,
         path::{Path, PathBuf},
     },
-    virtual_file_manifest::{File, FileEntry, FileManifest},
+    virtual_file_manifest::{File, FileData, FileEntry, FileManifest},
 };
 
 #[cfg(unix)]
@@ -144,7 +144,7 @@ impl<'a> PythonResourceIterator<'a> {
         }
     }
 
-    /// Construct an instance from an iterable of `(PathBuf, DataLocation)`.
+    /// Construct an instance from an iterable of `(File)`.
     pub fn from_data_locations(
         resources: &[File],
         cache_tag: &str,
@@ -194,10 +194,10 @@ impl<'a> PythonResourceIterator<'a> {
         }
     }
 
-    fn resolve_data_location(&self, path: &Path) -> DataLocation {
+    fn resolve_file_data(&self, path: &Path) -> FileData {
         match self.path_content_overrides.get(path) {
             Some(file) => file.data.clone().into(),
-            None => DataLocation::Path(path.to_path_buf()),
+            None => FileData::Path(path.to_path_buf()),
         }
     }
 
@@ -263,7 +263,7 @@ impl<'a> PythonResourceIterator<'a> {
                     package: package.to_string(),
                     version: version.to_string(),
                     name,
-                    data: self.resolve_data_location(path),
+                    data: self.resolve_file_data(path),
                 }
                 .into(),
             ));
@@ -355,7 +355,7 @@ impl<'a> PythonResourceIterator<'a> {
                         name: full_module_name,
                         init_fn,
                         extension_file_suffix: ext_suffix.clone(),
-                        shared_library: Some(self.resolve_data_location(path)),
+                        shared_library: Some(self.resolve_file_data(path)),
                         object_file_data: vec![],
                         is_package: is_package_from_path(path),
                         link_libraries: vec![],
@@ -404,7 +404,7 @@ impl<'a> PythonResourceIterator<'a> {
             return Some(PathItem::PythonResource(
                 PythonModuleSource {
                     name: full_module_name,
-                    source: self.resolve_data_location(path),
+                    source: self.resolve_file_data(path),
                     is_package: is_package_from_path(&path),
                     cache_tag: self.cache_tag.clone(),
                     is_stdlib: false,
@@ -505,13 +505,13 @@ impl<'a> PythonResourceIterator<'a> {
         let resource = match rel_path.extension().and_then(OsStr::to_str) {
             Some("egg") => PathItem::PythonResource(
                 PythonEggFile {
-                    data: self.resolve_data_location(path),
+                    data: self.resolve_file_data(path),
                 }
                 .into(),
             ),
             Some("pth") => PathItem::PythonResource(
                 PythonPathExtension {
-                    data: self.resolve_data_location(path),
+                    data: self.resolve_file_data(path),
                 }
                 .into(),
             ),
@@ -557,7 +557,7 @@ impl<'a> Iterator for PythonResourceIterator<'a> {
                     path: rel_path,
                     entry: FileEntry {
                         executable: self.resolve_is_executable(&self.paths[0].path),
-                        data: self.resolve_data_location(&self.paths[0].path).into(),
+                        data: self.resolve_file_data(&self.paths[0].path).into(),
                     },
                 };
 
@@ -671,7 +671,7 @@ impl<'a> Iterator for PythonResourceIterator<'a> {
             return Some(Ok(PythonPackageResource {
                 leaf_package,
                 relative_name,
-                data: self.resolve_data_location(&resource.full_path),
+                data: self.resolve_file_data(&resource.full_path),
                 is_stdlib: false,
                 is_test: false,
             }
@@ -757,7 +757,7 @@ mod tests {
             resources[1],
             PythonModuleSource {
                 name: "acme".to_string(),
-                source: DataLocation::Path(acme_path.join("__init__.py")),
+                source: FileData::Path(acme_path.join("__init__.py")),
                 is_package: true,
                 cache_tag: DEFAULT_CACHE_TAG.to_string(),
                 is_stdlib: false,
@@ -780,7 +780,7 @@ mod tests {
             resources[3],
             PythonModuleSource {
                 name: "acme.a".to_string(),
-                source: DataLocation::Path(acme_a_path.join("__init__.py")),
+                source: FileData::Path(acme_a_path.join("__init__.py")),
                 is_package: true,
                 cache_tag: DEFAULT_CACHE_TAG.to_string(),
                 is_stdlib: false,
@@ -803,7 +803,7 @@ mod tests {
             resources[5],
             PythonModuleSource {
                 name: "acme.a.foo".to_string(),
-                source: DataLocation::Path(acme_a_path.join("foo.py")),
+                source: FileData::Path(acme_a_path.join("foo.py")),
                 is_package: false,
                 cache_tag: DEFAULT_CACHE_TAG.to_string(),
                 is_stdlib: false,
@@ -826,7 +826,7 @@ mod tests {
             resources[7],
             PythonModuleSource {
                 name: "acme.bar".to_string(),
-                source: DataLocation::Path(acme_bar_path.join("__init__.py")),
+                source: FileData::Path(acme_bar_path.join("__init__.py")),
                 is_package: true,
                 cache_tag: DEFAULT_CACHE_TAG.to_string(),
                 is_stdlib: false,
@@ -1136,7 +1136,7 @@ mod tests {
             resources[0],
             PythonModuleSource {
                 name: "acme".to_string(),
-                source: DataLocation::Path(acme_path.join("__init__.py")),
+                source: FileData::Path(acme_path.join("__init__.py")),
                 is_package: true,
                 cache_tag: DEFAULT_CACHE_TAG.to_string(),
                 is_stdlib: false,
@@ -1148,7 +1148,7 @@ mod tests {
             resources[1],
             PythonModuleSource {
                 name: "acme.bar".to_string(),
-                source: DataLocation::Path(acme_path.join("bar.py")),
+                source: FileData::Path(acme_path.join("bar.py")),
                 is_package: false,
                 cache_tag: DEFAULT_CACHE_TAG.to_string(),
                 is_stdlib: false,
@@ -1206,7 +1206,7 @@ mod tests {
                 name: "_cffi_backend".to_string(),
                 init_fn: Some("PyInit__cffi_backend".to_string()),
                 extension_file_suffix: ".cp37-win_amd64.pyd".to_string(),
-                shared_library: Some(DataLocation::Path(cffi_path)),
+                shared_library: Some(FileData::Path(cffi_path)),
                 object_file_data: vec![],
                 is_package: false,
                 link_libraries: vec![],
@@ -1225,7 +1225,7 @@ mod tests {
                 name: "bar".to_string(),
                 init_fn: Some("PyInit_bar".to_string()),
                 extension_file_suffix: ".so".to_string(),
-                shared_library: Some(DataLocation::Path(so_path)),
+                shared_library: Some(FileData::Path(so_path)),
                 object_file_data: vec![],
                 is_package: false,
                 link_libraries: vec![],
@@ -1244,7 +1244,7 @@ mod tests {
                 name: "foo".to_string(),
                 init_fn: Some("PyInit_foo".to_string()),
                 extension_file_suffix: ".pyd".to_string(),
-                shared_library: Some(DataLocation::Path(pyd_path)),
+                shared_library: Some(FileData::Path(pyd_path)),
                 object_file_data: vec![],
                 is_package: false,
                 link_libraries: vec![],
@@ -1263,7 +1263,7 @@ mod tests {
                 name: "markupsafe._speedups".to_string(),
                 init_fn: Some("PyInit__speedups".to_string()),
                 extension_file_suffix: ".cpython-37m-x86_64-linux-gnu.so".to_string(),
-                shared_library: Some(DataLocation::Path(markupsafe_speedups_path)),
+                shared_library: Some(FileData::Path(markupsafe_speedups_path)),
                 object_file_data: vec![],
                 is_package: false,
                 link_libraries: vec![],
@@ -1282,7 +1282,7 @@ mod tests {
                 name: "zstd".to_string(),
                 init_fn: Some("PyInit_zstd".to_string()),
                 extension_file_suffix: ".cpython-37m-x86_64-linux-gnu.so".to_string(),
-                shared_library: Some(DataLocation::Path(zstd_path)),
+                shared_library: Some(FileData::Path(zstd_path)),
                 object_file_data: vec![],
                 is_package: false,
                 link_libraries: vec![],
@@ -1317,7 +1317,7 @@ mod tests {
         assert_eq!(
             resources[0],
             PythonEggFile {
-                data: DataLocation::Path(egg_path)
+                data: FileData::Path(egg_path)
             }
             .into()
         );
@@ -1352,7 +1352,7 @@ mod tests {
             resources[0],
             PythonModuleSource {
                 name: "foo".to_string(),
-                source: DataLocation::Path(package_path.join("__init__.py")),
+                source: FileData::Path(package_path.join("__init__.py")),
                 is_package: true,
                 cache_tag: DEFAULT_CACHE_TAG.to_string(),
                 is_stdlib: false,
@@ -1364,7 +1364,7 @@ mod tests {
             resources[1],
             PythonModuleSource {
                 name: "foo.bar".to_string(),
-                source: DataLocation::Path(package_path.join("bar.py")),
+                source: FileData::Path(package_path.join("bar.py")),
                 is_package: false,
                 cache_tag: DEFAULT_CACHE_TAG.to_string(),
                 is_stdlib: false,
@@ -1394,7 +1394,7 @@ mod tests {
         assert_eq!(
             resources[0],
             PythonPathExtension {
-                data: DataLocation::Path(pth_path)
+                data: FileData::Path(pth_path)
             }
             .into()
         );
@@ -1441,7 +1441,7 @@ mod tests {
             resources[0],
             PythonModuleSource {
                 name: "foo".to_string(),
-                source: DataLocation::Path(tp.join("foo.py")),
+                source: FileData::Path(tp.join("foo.py")),
                 is_package: false,
                 cache_tag: DEFAULT_CACHE_TAG.to_string(),
                 is_stdlib: false,
@@ -1476,7 +1476,7 @@ mod tests {
             resources[0],
             PythonModuleSource {
                 name: "foo".to_string(),
-                source: DataLocation::Path(module_path),
+                source: FileData::Path(module_path),
                 is_package: true,
                 cache_tag: DEFAULT_CACHE_TAG.to_string(),
                 is_stdlib: false,
@@ -1489,7 +1489,7 @@ mod tests {
             PythonPackageResource {
                 leaf_package: "foo".to_string(),
                 relative_name: "resource.txt".to_string(),
-                data: DataLocation::Path(resource_path),
+                data: FileData::Path(resource_path),
                 is_stdlib: false,
                 is_test: false,
             }
@@ -1523,7 +1523,7 @@ mod tests {
             resources[0],
             PythonModuleSource {
                 name: "foo".to_string(),
-                source: DataLocation::Path(module_path),
+                source: FileData::Path(module_path),
                 is_package: true,
                 cache_tag: DEFAULT_CACHE_TAG.to_string(),
                 is_stdlib: false,
@@ -1536,7 +1536,7 @@ mod tests {
             PythonPackageResource {
                 leaf_package: "foo".to_string(),
                 relative_name: "resources/resource.txt".to_string(),
-                data: DataLocation::Path(resource_path),
+                data: FileData::Path(resource_path),
                 is_stdlib: false,
                 is_test: false,
             }
@@ -1637,7 +1637,7 @@ mod tests {
                 package: "black".to_string(),
                 version: "1.2.3".to_string(),
                 name: "METADATA".to_string(),
-                data: DataLocation::Path(metadata_path),
+                data: FileData::Path(metadata_path),
             }
             .into()
         );
@@ -1648,7 +1648,7 @@ mod tests {
                 package: "black".to_string(),
                 version: "1.2.3".to_string(),
                 name: "file.txt".to_string(),
-                data: DataLocation::Path(resource_path),
+                data: FileData::Path(resource_path),
             }
             .into()
         );
@@ -1659,7 +1659,7 @@ mod tests {
                 package: "black".to_string(),
                 version: "1.2.3".to_string(),
                 name: "subdir/sub.txt".to_string(),
-                data: DataLocation::Path(subdir_resource_path),
+                data: FileData::Path(subdir_resource_path),
             }
             .into()
         );
@@ -1697,7 +1697,7 @@ mod tests {
                 package: "black".to_string(),
                 version: "1.2.3".to_string(),
                 name: "PKG-INFO".to_string(),
-                data: DataLocation::Path(metadata_path),
+                data: FileData::Path(metadata_path),
             }
             .into()
         );
@@ -1708,7 +1708,7 @@ mod tests {
                 package: "black".to_string(),
                 version: "1.2.3".to_string(),
                 name: "file.txt".to_string(),
-                data: DataLocation::Path(resource_path),
+                data: FileData::Path(resource_path),
             }
             .into()
         );
@@ -1719,7 +1719,7 @@ mod tests {
                 package: "black".to_string(),
                 version: "1.2.3".to_string(),
                 name: "subdir/sub.txt".to_string(),
-                data: DataLocation::Path(subdir_resource_path),
+                data: FileData::Path(subdir_resource_path),
             }
             .into()
         );
@@ -1771,7 +1771,7 @@ mod tests {
             resources[1],
             PythonModuleSource {
                 name: "foo".to_string(),
-                source: DataLocation::Memory(vec![0]),
+                source: FileData::Memory(vec![0]),
                 is_package: true,
                 cache_tag: DEFAULT_CACHE_TAG.to_string(),
                 is_stdlib: false,
@@ -1794,7 +1794,7 @@ mod tests {
             resources[3],
             PythonModuleSource {
                 name: "foo.bar".to_string(),
-                source: DataLocation::Memory(vec![1]),
+                source: FileData::Memory(vec![1]),
                 is_package: false,
                 cache_tag: DEFAULT_CACHE_TAG.to_string(),
                 is_stdlib: false,

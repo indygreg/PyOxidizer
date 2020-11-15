@@ -5,11 +5,12 @@
 /*! Functionality for building a library containing Python */
 
 use {
-    crate::{licensing::LicenseInfo, resource::DataLocation},
+    crate::licensing::LicenseInfo,
     std::{
         collections::{BTreeMap, BTreeSet},
         path::PathBuf,
     },
+    virtual_file_manifest::FileData,
 };
 
 /// Holds state necessary to build and link a libpython.
@@ -24,10 +25,10 @@ pub struct LibPythonBuildContext {
     /// Include files defining Python headers.
     ///
     /// These are necessary to compile code that references Python types.
-    pub includes: BTreeMap<PathBuf, DataLocation>,
+    pub includes: BTreeMap<PathBuf, FileData>,
 
     /// Object files that will be linked together.
-    pub object_files: Vec<DataLocation>,
+    pub object_files: Vec<FileData>,
 
     /// Filesystem paths to add to linker search path.
     pub library_search_paths: BTreeSet<PathBuf>,

@@ -28,7 +28,7 @@ use {
         module_util::{is_package_from_path, PythonModuleSuffixes},
         policy::PythonPackagingPolicy,
         resource::{
-            DataLocation, LibraryDependency, PythonExtensionModule, PythonExtensionModuleVariants,
+            LibraryDependency, PythonExtensionModule, PythonExtensionModuleVariants,
             PythonModuleSource, PythonPackageResource, PythonResource,
         },
     },
@@ -98,7 +98,7 @@ impl LinkEntry {
             static_library: self
                 .path_static
                 .clone()
-                .map(|p| DataLocation::Path(python_path.join(p))),
+                .map(|p| FileData::Path(python_path.join(p))),
             static_filename: self
                 .path_static
                 .as_ref()
@@ -106,7 +106,7 @@ impl LinkEntry {
             dynamic_library: self
                 .path_dynamic
                 .clone()
-                .map(|p| DataLocation::Path(python_path.join(p))),
+                .map(|p| FileData::Path(python_path.join(p))),
             dynamic_filename: self
                 .path_dynamic
                 .as_ref()
@@ -429,7 +429,7 @@ pub struct StandaloneDistribution {
     ///
     /// Keys are library names, without the "lib" prefix or file extension.
     /// Values are filesystem paths where library is located.
-    pub libraries: BTreeMap<String, DataLocation>,
+    pub libraries: BTreeMap<String, FileData>,
 
     pub py_modules: BTreeMap<String, PathBuf>,
 
@@ -612,7 +612,7 @@ impl StandaloneDistribution {
         let mut extension_modules: BTreeMap<String, PythonExtensionModuleVariants> =
             BTreeMap::new();
         let mut includes: BTreeMap<String, PathBuf> = BTreeMap::new();
-        let mut libraries: BTreeMap<String, DataLocation> = BTreeMap::new();
+        let mut libraries: BTreeMap<String, FileData> = BTreeMap::new();
         let frozen_c: Vec<u8> = Vec::new();
         let mut py_modules: BTreeMap<String, PathBuf> = BTreeMap::new();
         let mut resources: BTreeMap<String, BTreeMap<String, PathBuf>> = BTreeMap::new();
@@ -739,7 +739,7 @@ impl StandaloneDistribution {
                 let object_file_data = entry
                     .objs
                     .iter()
-                    .map(|p| DataLocation::Path(python_path.join(p)))
+                    .map(|p| FileData::Path(python_path.join(p)))
                     .collect();
                 let mut links = Vec::new();
 
@@ -785,7 +785,7 @@ impl StandaloneDistribution {
                     init_fn: Some(entry.init_fn.clone()),
                     extension_file_suffix,
                     shared_library: if let Some(path) = &entry.shared_lib {
-                        Some(DataLocation::Path(python_path.join(path)))
+                        Some(FileData::Path(python_path.join(path)))
                     } else {
                         None
                     },
@@ -843,8 +843,8 @@ impl StandaloneDistribution {
                     resources.get_mut(&resource.leaf_package).unwrap().insert(
                         resource.relative_name.clone(),
                         match &resource.data {
-                            DataLocation::Path(path) => path.to_path_buf(),
-                            DataLocation::Memory(_) => {
+                            FileData::Path(path) => path.to_path_buf(),
+                            FileData::Memory(_) => {
                                 return Err(anyhow!(
                                     "should not have received in-memory resource data"
                                 ))
@@ -853,10 +853,10 @@ impl StandaloneDistribution {
                     );
                 }
                 PythonResource::ModuleSource(source) => match &source.source {
-                    DataLocation::Path(path) => {
+                    FileData::Path(path) => {
                         py_modules.insert(source.name.clone(), path.to_path_buf());
                     }
-                    DataLocation::Memory(_) => {
+                    FileData::Memory(_) => {
                         return Err(anyhow!("should not have received in-memory source data"))
                     }
                 },
@@ -1256,7 +1256,7 @@ impl PythonDistribution for StandaloneDistribution {
         let module_sources = self.py_modules.iter().map(|(name, path)| {
             PythonResource::from(PythonModuleSource {
                 name: name.clone(),
-                source: DataLocation::Path(path.clone()),
+                source: FileData::Path(path.clone()),
                 is_package: is_package_from_path(&path),
                 cache_tag: self.cache_tag.clone(),
                 is_stdlib: true,
@@ -1272,7 +1272,7 @@ impl PythonDistribution for StandaloneDistribution {
                     PythonResource::from(PythonPackageResource {
                         leaf_package: package.clone(),
                         relative_name: name.clone(),
-                        data: DataLocation::Path(path.clone()),
+                        data: FileData::Path(path.clone()),
                         is_stdlib: true,
                         is_test: self.is_stdlib_test_package(&package),
                     })

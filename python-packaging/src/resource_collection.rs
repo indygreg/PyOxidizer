@@ -14,7 +14,7 @@ use {
         module_util::{packages_from_module_name, resolve_path_for_module},
         python_source::has_dunder_file,
         resource::{
-            BytecodeOptimizationLevel, DataLocation, PythonExtensionModule, PythonModuleBytecode,
+            BytecodeOptimizationLevel, PythonExtensionModule, PythonModuleBytecode,
             PythonModuleBytecodeFromSource, PythonModuleSource, PythonPackageDistributionResource,
             PythonPackageResource, PythonResource, SharedLibrary,
         },
@@ -28,28 +28,28 @@ use {
         iter::FromIterator,
         path::PathBuf,
     },
-    virtual_file_manifest::File,
+    virtual_file_manifest::{File, FileData},
 };
 
 /// Represents a single file install.
 ///
 /// Tuple is the relative install path, the data to install, and whether the file
 /// should be executable.
-pub type FileInstall = (PathBuf, DataLocation, bool);
+pub type FileInstall = (PathBuf, FileData, bool);
 
 /// Describes how Python module bytecode will be obtained.
 #[derive(Clone, Debug, PartialEq)]
 pub enum PythonModuleBytecodeProvider {
     /// Bytecode is already available.
-    Provided(DataLocation),
+    Provided(FileData),
     /// Bytecode will be computed from source.
-    FromSource(DataLocation),
+    FromSource(FileData),
 }
 
 /// Represents a Python resource entry before it is packaged.
 ///
 /// Instances hold the same fields as `Resource` except fields holding
-/// content are backed by a `DataLocation` instead of `Vec<u8>`, since
+/// content are backed by a `FileData` instead of `Vec<u8>`, since
 /// we want data resolution to be lazy. In addition, bytecode can either be
 /// provided verbatim or via source.
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -57,26 +57,26 @@ pub struct PrePackagedResource {
     pub name: String,
     pub is_package: bool,
     pub is_namespace_package: bool,
-    pub in_memory_source: Option<DataLocation>,
+    pub in_memory_source: Option<FileData>,
     pub in_memory_bytecode: Option<PythonModuleBytecodeProvider>,
     pub in_memory_bytecode_opt1: Option<PythonModuleBytecodeProvider>,
     pub in_memory_bytecode_opt2: Option<PythonModuleBytecodeProvider>,
-    pub in_memory_extension_module_shared_library: Option<DataLocation>,
-    pub in_memory_resources: Option<BTreeMap<String, DataLocation>>,
-    pub in_memory_distribution_resources: Option<BTreeMap<String, DataLocation>>,
-    pub in_memory_shared_library: Option<DataLocation>,
+    pub in_memory_extension_module_shared_library: Option<FileData>,
+    pub in_memory_resources: Option<BTreeMap<String, FileData>>,
+    pub in_memory_distribution_resources: Option<BTreeMap<String, FileData>>,
+    pub in_memory_shared_library: Option<FileData>,
     pub shared_library_dependency_names: Option<Vec<String>>,
     // (prefix, source code)
-    pub relative_path_module_source: Option<(String, DataLocation)>,
+    pub relative_path_module_source: Option<(String, FileData)>,
     // (prefix, bytecode tag, source code)
     pub relative_path_bytecode: Option<(String, String, PythonModuleBytecodeProvider)>,
     pub relative_path_bytecode_opt1: Option<(String, String, PythonModuleBytecodeProvider)>,
     pub relative_path_bytecode_opt2: Option<(String, String, PythonModuleBytecodeProvider)>,
     // (path, data)
-    pub relative_path_extension_module_shared_library: Option<(PathBuf, DataLocation)>,
-    pub relative_path_package_resources: Option<BTreeMap<String, (PathBuf, DataLocation)>>,
-    pub relative_path_distribution_resources: Option<BTreeMap<String, (PathBuf, DataLocation)>>,
-    pub relative_path_shared_library: Option<(String, PathBuf, DataLocation)>,
+    pub relative_path_extension_module_shared_library: Option<(PathBuf, FileData)>,
+    pub relative_path_package_resources: Option<BTreeMap<String, (PathBuf, FileData)>>,
+    pub relative_path_distribution_resources: Option<BTreeMap<String, (PathBuf, FileData)>>,
+    pub relative_path_shared_library: Option<(String, PathBuf, FileData)>,
     pub is_module: bool,
     pub is_builtin_extension_module: bool,
     pub is_frozen_module: bool,
@@ -84,8 +84,8 @@ pub struct PrePackagedResource {
     pub is_shared_library: bool,
     pub is_utf8_filename_data: bool,
     pub file_executable: bool,
-    pub file_data_embedded: Option<DataLocation>,
-    pub file_data_utf8_relative_path: Option<(PathBuf, DataLocation)>,
+    pub file_data_embedded: Option<FileData>,
+    pub file_data_utf8_relative_path: Option<(PathBuf, FileData)>,
 }
 
 impl PrePackagedResource {
@@ -218,7 +218,7 @@ impl PrePackagedResource {
 
                 installs.push((
                     path.clone(),
-                    DataLocation::Memory(match provider {
+                    FileData::Memory(match provider {
                         PythonModuleBytecodeProvider::FromSource(location) => compiler.compile(
                             &location.resolve()?,
                             &self.name,
@@ -258,7 +258,7 @@ impl PrePackagedResource {
 
                 installs.push((
                     path.clone(),
-                    DataLocation::Memory(match provider {
+                    FileData::Memory(match provider {
                         PythonModuleBytecodeProvider::FromSource(location) => compiler.compile(
                             &location.resolve()?,
                             &self.name,
@@ -298,7 +298,7 @@ impl PrePackagedResource {
 
                 installs.push((
                     path.clone(),
-                    DataLocation::Memory(match provider {
+                    FileData::Memory(match provider {
                         PythonModuleBytecodeProvider::FromSource(location) => compiler.compile(
                             &location.resolve()?,
                             &self.name,
@@ -443,7 +443,7 @@ pub fn populate_parent_packages(
                     if let Some(source) = &entry.in_memory_source {
                         source.clone()
                     } else {
-                        DataLocation::Memory(vec![])
+                        FileData::Memory(vec![])
                     },
                 ));
             }
@@ -453,7 +453,7 @@ pub fn populate_parent_packages(
                     if let Some(source) = &entry.in_memory_source {
                         source.clone()
                     } else {
-                        DataLocation::Memory(vec![])
+                        FileData::Memory(vec![])
                     },
                 ));
             }
@@ -463,7 +463,7 @@ pub fn populate_parent_packages(
                     if let Some(source) = &entry.in_memory_source {
                         source.clone()
                     } else {
-                        DataLocation::Memory(vec![])
+                        FileData::Memory(vec![])
                     },
                 ));
             }
@@ -477,7 +477,7 @@ pub fn populate_parent_packages(
                             if let Some((_, location)) = &entry.relative_path_module_source {
                                 location.clone()
                             } else {
-                                DataLocation::Memory(vec![])
+                                FileData::Memory(vec![])
                             },
                         ),
                     ));
@@ -493,7 +493,7 @@ pub fn populate_parent_packages(
                             if let Some((_, location)) = &entry.relative_path_module_source {
                                 location.clone()
                             } else {
-                                DataLocation::Memory(vec![])
+                                FileData::Memory(vec![])
                             },
                         ),
                     ));
@@ -509,7 +509,7 @@ pub fn populate_parent_packages(
                             if let Some((_, location)) = &entry.relative_path_module_source {
                                 location.clone()
                             } else {
-                                DataLocation::Memory(vec![])
+                                FileData::Memory(vec![])
                             },
                         ),
                     ));
@@ -520,14 +520,14 @@ pub fn populate_parent_packages(
             if let Some((prefix, _)) = &original.relative_path_module_source {
                 entry
                     .relative_path_module_source
-                    .get_or_insert_with(|| (prefix.clone(), DataLocation::Memory(vec![])));
+                    .get_or_insert_with(|| (prefix.clone(), FileData::Memory(vec![])));
             }
 
             // Ditto for in-memory source.
             if original.in_memory_source.is_some() {
                 entry
                     .in_memory_source
-                    .get_or_insert(DataLocation::Memory(vec![]));
+                    .get_or_insert(FileData::Memory(vec![]));
             }
         }
     }
@@ -817,11 +817,10 @@ impl PythonResourceCollector {
         entry.is_module = true;
         entry.is_package = module.is_package;
 
-        // TODO having to resolve the DataLocation here is a bit unfortunate.
+        // TODO having to resolve the FileData here is a bit unfortunate.
         // We could invent a better type to allow the I/O to remain lazy.
-        let bytecode = PythonModuleBytecodeProvider::Provided(DataLocation::Memory(
-            module.resolve_bytecode()?,
-        ));
+        let bytecode =
+            PythonModuleBytecodeProvider::Provided(FileData::Memory(module.resolve_bytecode()?));
 
         match location {
             ConcreteResourceLocation::InMemory => match module.optimize_level {
@@ -1292,7 +1291,7 @@ impl PythonResourceCollector {
             }
 
             for location in &extension_module.object_file_data {
-                build_context.object_files.push(location.clone());
+                build_context.object_files.push(location.clone().into());
             }
 
             self.add_builtin_python_extension_module(extension_module)?;
@@ -1415,11 +1414,11 @@ impl PythonResourceCollector {
 
         match location {
             ConcreteResourceLocation::InMemory => {
-                entry.in_memory_extension_module_shared_library = Some(DataLocation::Memory(data));
+                entry.in_memory_extension_module_shared_library = Some(FileData::Memory(data));
             }
             ConcreteResourceLocation::RelativePath(prefix) => {
                 entry.relative_path_extension_module_shared_library =
-                    Some((module.resolve_path(prefix), DataLocation::Memory(data)));
+                    Some((module.resolve_path(prefix), FileData::Memory(data)));
             }
         }
 
@@ -1779,7 +1778,7 @@ mod tests {
         let pre = PrePackagedResource {
             is_module: true,
             name: "module".to_string(),
-            in_memory_source: Some(DataLocation::Memory(b"source".to_vec())),
+            in_memory_source: Some(FileData::Memory(b"source".to_vec())),
             ..PrePackagedResource::default()
         };
 
@@ -1807,9 +1806,9 @@ mod tests {
         let pre = PrePackagedResource {
             is_module: true,
             name: "module".to_string(),
-            in_memory_bytecode: Some(PythonModuleBytecodeProvider::Provided(
-                DataLocation::Memory(b"bytecode".to_vec()),
-            )),
+            in_memory_bytecode: Some(PythonModuleBytecodeProvider::Provided(FileData::Memory(
+                b"bytecode".to_vec(),
+            ))),
             ..PrePackagedResource::default()
         };
 
@@ -1836,9 +1835,9 @@ mod tests {
         let pre = PrePackagedResource {
             is_module: true,
             name: "module".to_string(),
-            in_memory_bytecode: Some(PythonModuleBytecodeProvider::FromSource(
-                DataLocation::Memory(b"source".to_vec()),
-            )),
+            in_memory_bytecode: Some(PythonModuleBytecodeProvider::FromSource(FileData::Memory(
+                b"source".to_vec(),
+            ))),
             ..PrePackagedResource::default()
         };
 
@@ -1866,7 +1865,7 @@ mod tests {
             is_module: true,
             name: "module".to_string(),
             in_memory_bytecode_opt1: Some(PythonModuleBytecodeProvider::Provided(
-                DataLocation::Memory(b"bytecode".to_vec()),
+                FileData::Memory(b"bytecode".to_vec()),
             )),
             ..PrePackagedResource::default()
         };
@@ -1895,7 +1894,7 @@ mod tests {
             is_module: true,
             name: "module".to_string(),
             in_memory_bytecode_opt1: Some(PythonModuleBytecodeProvider::FromSource(
-                DataLocation::Memory(b"source".to_vec()),
+                FileData::Memory(b"source".to_vec()),
             )),
             ..PrePackagedResource::default()
         };
@@ -1924,7 +1923,7 @@ mod tests {
             is_module: true,
             name: "module".to_string(),
             in_memory_bytecode_opt2: Some(PythonModuleBytecodeProvider::Provided(
-                DataLocation::Memory(b"bytecode".to_vec()),
+                FileData::Memory(b"bytecode".to_vec()),
             )),
             ..PrePackagedResource::default()
         };
@@ -1953,7 +1952,7 @@ mod tests {
             is_module: true,
             name: "module".to_string(),
             in_memory_bytecode_opt2: Some(PythonModuleBytecodeProvider::FromSource(
-                DataLocation::Memory(b"source".to_vec()),
+                FileData::Memory(b"source".to_vec()),
             )),
             ..PrePackagedResource::default()
         };
@@ -1981,9 +1980,7 @@ mod tests {
         let pre = PrePackagedResource {
             is_module: true,
             name: "module".to_string(),
-            in_memory_extension_module_shared_library: Some(DataLocation::Memory(
-                b"library".to_vec(),
-            )),
+            in_memory_extension_module_shared_library: Some(FileData::Memory(b"library".to_vec())),
             ..PrePackagedResource::default()
         };
 
@@ -2009,7 +2006,7 @@ mod tests {
         let mut compiler = FakeBytecodeCompiler { magic_number: 42 };
 
         let mut resources = BTreeMap::new();
-        resources.insert("foo".to_string(), DataLocation::Memory(b"value".to_vec()));
+        resources.insert("foo".to_string(), FileData::Memory(b"value".to_vec()));
 
         let pre = PrePackagedResource {
             is_module: true,
@@ -2043,7 +2040,7 @@ mod tests {
         let mut compiler = FakeBytecodeCompiler { magic_number: 42 };
 
         let mut resources = BTreeMap::new();
-        resources.insert("foo".to_string(), DataLocation::Memory(b"value".to_vec()));
+        resources.insert("foo".to_string(), FileData::Memory(b"value".to_vec()));
 
         let pre = PrePackagedResource {
             is_module: true,
@@ -2079,7 +2076,7 @@ mod tests {
         let pre = PrePackagedResource {
             is_shared_library: true,
             name: "module".to_string(),
-            in_memory_shared_library: Some(DataLocation::Memory(b"library".to_vec())),
+            in_memory_shared_library: Some(FileData::Memory(b"library".to_vec())),
             shared_library_dependency_names: Some(vec!["foo".to_string(), "bar".to_string()]),
             ..PrePackagedResource::default()
         };
@@ -2114,7 +2111,7 @@ mod tests {
             name: "module".to_string(),
             relative_path_module_source: Some((
                 "prefix".to_string(),
-                DataLocation::Memory(b"source".to_vec()),
+                FileData::Memory(b"source".to_vec()),
             )),
             ..PrePackagedResource::default()
         };
@@ -2135,7 +2132,7 @@ mod tests {
             installs,
             vec![(
                 PathBuf::from("prefix/module.py"),
-                DataLocation::Memory(b"source".to_vec()),
+                FileData::Memory(b"source".to_vec()),
                 false
             )]
         );
@@ -2153,7 +2150,7 @@ mod tests {
             relative_path_bytecode: Some((
                 "prefix".to_string(),
                 "tag".to_string(),
-                PythonModuleBytecodeProvider::Provided(DataLocation::Memory(b"bytecode".to_vec())),
+                PythonModuleBytecodeProvider::Provided(FileData::Memory(b"bytecode".to_vec())),
             )),
             ..PrePackagedResource::default()
         };
@@ -2176,7 +2173,7 @@ mod tests {
             installs,
             vec![(
                 PathBuf::from("prefix/foo/__pycache__/bar.tag.pyc"),
-                DataLocation::Memory(
+                FileData::Memory(
                     b"\x2a\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00bytecode"
                         .to_vec()
                 ),
@@ -2197,7 +2194,7 @@ mod tests {
             relative_path_bytecode: Some((
                 "prefix".to_string(),
                 "tag".to_string(),
-                PythonModuleBytecodeProvider::FromSource(DataLocation::Memory(b"source".to_vec())),
+                PythonModuleBytecodeProvider::FromSource(FileData::Memory(b"source".to_vec())),
             )),
             ..PrePackagedResource::default()
         };
@@ -2220,7 +2217,7 @@ mod tests {
             installs,
             vec![(
                 PathBuf::from("prefix/foo/__pycache__/bar.tag.pyc"),
-                DataLocation::Memory(b"bc0source".to_vec()),
+                FileData::Memory(b"bc0source".to_vec()),
                 false
             )]
         );
@@ -2238,7 +2235,7 @@ mod tests {
             relative_path_bytecode_opt1: Some((
                 "prefix".to_string(),
                 "tag".to_string(),
-                PythonModuleBytecodeProvider::Provided(DataLocation::Memory(b"bytecode".to_vec())),
+                PythonModuleBytecodeProvider::Provided(FileData::Memory(b"bytecode".to_vec())),
             )),
             ..PrePackagedResource::default()
         };
@@ -2261,7 +2258,7 @@ mod tests {
             installs,
             vec![(
                 PathBuf::from("prefix/foo/__pycache__/bar.tag.opt-1.pyc"),
-                DataLocation::Memory(
+                FileData::Memory(
                     b"\x2a\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00bytecode"
                         .to_vec()
                 ),
@@ -2282,7 +2279,7 @@ mod tests {
             relative_path_bytecode_opt1: Some((
                 "prefix".to_string(),
                 "tag".to_string(),
-                PythonModuleBytecodeProvider::FromSource(DataLocation::Memory(b"source".to_vec())),
+                PythonModuleBytecodeProvider::FromSource(FileData::Memory(b"source".to_vec())),
             )),
             ..PrePackagedResource::default()
         };
@@ -2305,7 +2302,7 @@ mod tests {
             installs,
             vec![(
                 PathBuf::from("prefix/foo/__pycache__/bar.tag.opt-1.pyc"),
-                DataLocation::Memory(b"bc1source".to_vec()),
+                FileData::Memory(b"bc1source".to_vec()),
                 false
             )]
         );
@@ -2323,7 +2320,7 @@ mod tests {
             relative_path_bytecode_opt2: Some((
                 "prefix".to_string(),
                 "tag".to_string(),
-                PythonModuleBytecodeProvider::Provided(DataLocation::Memory(b"bytecode".to_vec())),
+                PythonModuleBytecodeProvider::Provided(FileData::Memory(b"bytecode".to_vec())),
             )),
             ..PrePackagedResource::default()
         };
@@ -2346,7 +2343,7 @@ mod tests {
             installs,
             vec![(
                 PathBuf::from("prefix/foo/__pycache__/bar.tag.opt-2.pyc"),
-                DataLocation::Memory(
+                FileData::Memory(
                     b"\x2a\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00bytecode"
                         .to_vec()
                 ),
@@ -2367,7 +2364,7 @@ mod tests {
             relative_path_bytecode_opt2: Some((
                 "prefix".to_string(),
                 "tag".to_string(),
-                PythonModuleBytecodeProvider::FromSource(DataLocation::Memory(b"source".to_vec())),
+                PythonModuleBytecodeProvider::FromSource(FileData::Memory(b"source".to_vec())),
             )),
             ..PrePackagedResource::default()
         };
@@ -2390,7 +2387,7 @@ mod tests {
             installs,
             vec![(
                 PathBuf::from("prefix/foo/__pycache__/bar.tag.opt-2.pyc"),
-                DataLocation::Memory(b"bc2source".to_vec()),
+                FileData::Memory(b"bc2source".to_vec()),
                 false
             )]
         );
@@ -2407,7 +2404,7 @@ mod tests {
             name: "module".to_string(),
             relative_path_extension_module_shared_library: Some((
                 PathBuf::from("prefix/ext.so"),
-                DataLocation::Memory(b"data".to_vec()),
+                FileData::Memory(b"data".to_vec()),
             )),
             ..PrePackagedResource::default()
         };
@@ -2430,7 +2427,7 @@ mod tests {
             installs,
             vec![(
                 PathBuf::from("prefix/ext.so"),
-                DataLocation::Memory(b"data".to_vec()),
+                FileData::Memory(b"data".to_vec()),
                 true
             )]
         );
@@ -2447,14 +2444,14 @@ mod tests {
             "foo.txt".to_string(),
             (
                 PathBuf::from("module/foo.txt"),
-                DataLocation::Memory(b"data".to_vec()),
+                FileData::Memory(b"data".to_vec()),
             ),
         );
         resources.insert(
             "bar.txt".to_string(),
             (
                 PathBuf::from("module/bar.txt"),
-                DataLocation::Memory(b"bar".to_vec()),
+                FileData::Memory(b"bar".to_vec()),
             ),
         );
 
@@ -2494,12 +2491,12 @@ mod tests {
             vec![
                 (
                     PathBuf::from("module/bar.txt"),
-                    DataLocation::Memory(b"bar".to_vec()),
+                    FileData::Memory(b"bar".to_vec()),
                     false
                 ),
                 (
                     PathBuf::from("module/foo.txt"),
-                    DataLocation::Memory(b"data".to_vec()),
+                    FileData::Memory(b"data".to_vec()),
                     false
                 ),
             ]
@@ -2515,10 +2512,7 @@ mod tests {
         let mut resources = BTreeMap::new();
         resources.insert(
             "foo.txt".to_string(),
-            (
-                PathBuf::from("foo.txt"),
-                DataLocation::Memory(b"data".to_vec()),
-            ),
+            (PathBuf::from("foo.txt"), FileData::Memory(b"data".to_vec())),
         );
 
         let pre = PrePackagedResource {
@@ -2550,7 +2544,7 @@ mod tests {
             installs,
             vec![(
                 PathBuf::from("foo.txt"),
-                DataLocation::Memory(b"data".to_vec()),
+                FileData::Memory(b"data".to_vec()),
                 false
             )]
         );
@@ -2568,7 +2562,7 @@ mod tests {
             relative_path_shared_library: Some((
                 "prefix".to_string(),
                 PathBuf::from("libfoo.so"),
-                DataLocation::Memory(b"data".to_vec()),
+                FileData::Memory(b"data".to_vec()),
             )),
             ..PrePackagedResource::default()
         };
@@ -2588,7 +2582,7 @@ mod tests {
             installs,
             vec![(
                 PathBuf::from("prefix/libfoo.so"),
-                DataLocation::Memory(b"data".to_vec()),
+                FileData::Memory(b"data".to_vec()),
                 true
             )]
         );
@@ -2604,7 +2598,7 @@ mod tests {
             PrePackagedResource {
                 is_module: true,
                 name: "root.parent.child".to_string(),
-                in_memory_source: Some(DataLocation::Memory(vec![42])),
+                in_memory_source: Some(FileData::Memory(vec![42])),
                 is_package: true,
                 ..PrePackagedResource::default()
             },
@@ -2619,7 +2613,7 @@ mod tests {
                 is_module: true,
                 name: "root.parent".to_string(),
                 is_package: true,
-                in_memory_source: Some(DataLocation::Memory(vec![])),
+                in_memory_source: Some(FileData::Memory(vec![])),
                 ..PrePackagedResource::default()
             })
         );
@@ -2629,7 +2623,7 @@ mod tests {
                 is_module: true,
                 name: "root".to_string(),
                 is_package: true,
-                in_memory_source: Some(DataLocation::Memory(vec![])),
+                in_memory_source: Some(FileData::Memory(vec![])),
                 ..PrePackagedResource::default()
             })
         );
@@ -2647,7 +2641,7 @@ mod tests {
                 name: "root.parent.child".to_string(),
                 relative_path_module_source: Some((
                     "prefix".to_string(),
-                    DataLocation::Memory(vec![42]),
+                    FileData::Memory(vec![42]),
                 )),
                 is_package: true,
                 ..PrePackagedResource::default()
@@ -2663,10 +2657,7 @@ mod tests {
                 is_module: true,
                 name: "root.parent".to_string(),
                 is_package: true,
-                relative_path_module_source: Some((
-                    "prefix".to_string(),
-                    DataLocation::Memory(vec![])
-                )),
+                relative_path_module_source: Some(("prefix".to_string(), FileData::Memory(vec![]))),
                 ..PrePackagedResource::default()
             })
         );
@@ -2676,10 +2667,7 @@ mod tests {
                 is_module: true,
                 name: "root".to_string(),
                 is_package: true,
-                relative_path_module_source: Some((
-                    "prefix".to_string(),
-                    DataLocation::Memory(vec![])
-                )),
+                relative_path_module_source: Some(("prefix".to_string(), FileData::Memory(vec![]))),
                 ..PrePackagedResource::default()
             })
         );
@@ -2696,7 +2684,7 @@ mod tests {
                 is_module: true,
                 name: "root.parent.child".to_string(),
                 in_memory_bytecode: Some(PythonModuleBytecodeProvider::FromSource(
-                    DataLocation::Memory(vec![42]),
+                    FileData::Memory(vec![42]),
                 )),
                 is_package: true,
                 ..PrePackagedResource::default()
@@ -2713,7 +2701,7 @@ mod tests {
                 name: "root.parent".to_string(),
                 is_package: true,
                 in_memory_bytecode: Some(PythonModuleBytecodeProvider::FromSource(
-                    DataLocation::Memory(vec![])
+                    FileData::Memory(vec![])
                 )),
                 ..PrePackagedResource::default()
             })
@@ -2725,7 +2713,7 @@ mod tests {
                 name: "root".to_string(),
                 is_package: true,
                 in_memory_bytecode: Some(PythonModuleBytecodeProvider::FromSource(
-                    DataLocation::Memory(vec![])
+                    FileData::Memory(vec![])
                 )),
                 ..PrePackagedResource::default()
             })
@@ -2744,7 +2732,7 @@ mod tests {
                 name: "foo.bar".to_string(),
                 relative_path_extension_module_shared_library: Some((
                     PathBuf::from("prefix/foo/bar.so"),
-                    DataLocation::Memory(vec![42]),
+                    FileData::Memory(vec![42]),
                 )),
                 ..PrePackagedResource::default()
             },
@@ -2775,7 +2763,7 @@ mod tests {
                 name: "foo.bar".to_string(),
                 relative_path_extension_module_shared_library: Some((
                     PathBuf::from("prefix/foo/bar.so"),
-                    DataLocation::Memory(vec![42]),
+                    FileData::Memory(vec![42]),
                 )),
                 ..PrePackagedResource::default()
             },
@@ -2810,7 +2798,7 @@ mod tests {
         r.add_python_module_source(
             &PythonModuleSource {
                 name: "foo".to_string(),
-                source: DataLocation::Memory(vec![42]),
+                source: FileData::Memory(vec![42]),
                 is_package: false,
                 cache_tag: DEFAULT_CACHE_TAG.to_string(),
                 is_stdlib: false,
@@ -2826,7 +2814,7 @@ mod tests {
                 is_module: true,
                 name: "foo".to_string(),
                 is_package: false,
-                in_memory_source: Some(DataLocation::Memory(vec![42])),
+                in_memory_source: Some(FileData::Memory(vec![42])),
                 ..PrePackagedResource::default()
             })
         );
@@ -2862,7 +2850,7 @@ mod tests {
         r.add_python_module_source(
             &PythonModuleSource {
                 name: "root.parent.child".to_string(),
-                source: DataLocation::Memory(vec![42]),
+                source: FileData::Memory(vec![42]),
                 is_package: true,
                 cache_tag: DEFAULT_CACHE_TAG.to_string(),
                 is_stdlib: false,
@@ -2878,7 +2866,7 @@ mod tests {
                 is_module: true,
                 name: "root.parent.child".to_string(),
                 is_package: true,
-                in_memory_source: Some(DataLocation::Memory(vec![42])),
+                in_memory_source: Some(FileData::Memory(vec![42])),
                 ..PrePackagedResource::default()
             })
         );
@@ -2936,7 +2924,7 @@ mod tests {
         r.add_python_module_source(
             &PythonModuleSource {
                 name: "foo.bar".to_string(),
-                source: DataLocation::Memory(vec![42]),
+                source: FileData::Memory(vec![42]),
                 is_package: false,
                 cache_tag: DEFAULT_CACHE_TAG.to_string(),
                 is_stdlib: false,
@@ -2954,7 +2942,7 @@ mod tests {
                 is_package: false,
                 relative_path_module_source: Some((
                     "prefix".to_string(),
-                    DataLocation::Memory(vec![42])
+                    FileData::Memory(vec![42])
                 )),
                 ..PrePackagedResource::default()
             })
@@ -2991,12 +2979,12 @@ mod tests {
             vec![
                 (
                     PathBuf::from("prefix/foo/__init__.py"),
-                    DataLocation::Memory(vec![]),
+                    FileData::Memory(vec![]),
                     false
                 ),
                 (
                     PathBuf::from("prefix/foo/bar.py"),
-                    DataLocation::Memory(vec![42]),
+                    FileData::Memory(vec![42]),
                     false
                 )
             ]
@@ -3017,7 +3005,7 @@ mod tests {
 
         let module = PythonModuleSource {
             name: "foo".to_string(),
-            source: DataLocation::Memory(vec![42]),
+            source: FileData::Memory(vec![42]),
             is_package: false,
             cache_tag: DEFAULT_CACHE_TAG.to_string(),
             is_stdlib: false,
@@ -3152,9 +3140,9 @@ mod tests {
             Some(&PrePackagedResource {
                 is_module: true,
                 name: "foo".to_string(),
-                in_memory_bytecode: Some(PythonModuleBytecodeProvider::Provided(
-                    DataLocation::Memory(vec![42])
-                )),
+                in_memory_bytecode: Some(PythonModuleBytecodeProvider::Provided(FileData::Memory(
+                    vec![42]
+                ))),
                 is_package: false,
                 ..PrePackagedResource::default()
             })
@@ -3191,7 +3179,7 @@ mod tests {
         r.add_python_module_bytecode_from_source(
             &PythonModuleBytecodeFromSource {
                 name: "foo".to_string(),
-                source: DataLocation::Memory(vec![42]),
+                source: FileData::Memory(vec![42]),
                 optimize_level: BytecodeOptimizationLevel::Zero,
                 is_package: false,
                 cache_tag: DEFAULT_CACHE_TAG.to_string(),
@@ -3208,7 +3196,7 @@ mod tests {
                 is_module: true,
                 name: "foo".to_string(),
                 in_memory_bytecode: Some(PythonModuleBytecodeProvider::FromSource(
-                    DataLocation::Memory(vec![42])
+                    FileData::Memory(vec![42])
                 )),
                 is_package: false,
                 ..PrePackagedResource::default()
@@ -3282,9 +3270,9 @@ mod tests {
                 is_module: true,
                 name: module.name.clone(),
                 is_package: module.is_package,
-                in_memory_bytecode: Some(PythonModuleBytecodeProvider::Provided(
-                    DataLocation::Memory(module.resolve_bytecode()?)
-                )),
+                in_memory_bytecode: Some(PythonModuleBytecodeProvider::Provided(FileData::Memory(
+                    module.resolve_bytecode()?
+                ))),
                 ..PrePackagedResource::default()
             })
         );
@@ -3324,7 +3312,7 @@ mod tests {
                 name: module.name.clone(),
                 is_package: module.is_package,
                 in_memory_bytecode_opt1: Some(PythonModuleBytecodeProvider::Provided(
-                    DataLocation::Memory(module.resolve_bytecode()?)
+                    FileData::Memory(module.resolve_bytecode()?)
                 )),
                 ..PrePackagedResource::default()
             })
@@ -3343,7 +3331,7 @@ mod tests {
                 name: module.name.clone(),
                 is_package: module.is_package,
                 in_memory_bytecode_opt2: Some(PythonModuleBytecodeProvider::Provided(
-                    DataLocation::Memory(module.resolve_bytecode()?)
+                    FileData::Memory(module.resolve_bytecode()?)
                 )),
                 ..PrePackagedResource::default()
             })
@@ -3366,7 +3354,7 @@ mod tests {
         r.add_python_module_bytecode_from_source(
             &PythonModuleBytecodeFromSource {
                 name: "root.parent.child".to_string(),
-                source: DataLocation::Memory(vec![42]),
+                source: FileData::Memory(vec![42]),
                 optimize_level: BytecodeOptimizationLevel::One,
                 is_package: true,
                 cache_tag: DEFAULT_CACHE_TAG.to_string(),
@@ -3383,7 +3371,7 @@ mod tests {
                 is_module: true,
                 name: "root.parent.child".to_string(),
                 in_memory_bytecode_opt1: Some(PythonModuleBytecodeProvider::FromSource(
-                    DataLocation::Memory(vec![42])
+                    FileData::Memory(vec![42])
                 )),
                 is_package: true,
                 ..PrePackagedResource::default()
@@ -3442,7 +3430,7 @@ mod tests {
 
         let mut module = PythonModuleBytecodeFromSource {
             name: "foo".to_string(),
-            source: DataLocation::Memory(vec![42]),
+            source: FileData::Memory(vec![42]),
             optimize_level: BytecodeOptimizationLevel::Zero,
             is_package: false,
             cache_tag: DEFAULT_CACHE_TAG.to_string(),
@@ -3565,7 +3553,7 @@ mod tests {
             &PythonPackageResource {
                 leaf_package: "foo".to_string(),
                 relative_name: "resource.txt".to_string(),
-                data: DataLocation::Memory(vec![42]),
+                data: FileData::Memory(vec![42]),
                 is_stdlib: false,
                 is_test: false,
             },
@@ -3580,7 +3568,7 @@ mod tests {
                 name: "foo".to_string(),
                 is_package: true,
                 in_memory_resources: Some(BTreeMap::from_iter(
-                    [("resource.txt".to_string(), DataLocation::Memory(vec![42]))]
+                    [("resource.txt".to_string(), FileData::Memory(vec![42]))]
                         .iter()
                         .cloned()
                 )),
@@ -3625,7 +3613,7 @@ mod tests {
             &PythonPackageResource {
                 leaf_package: "foo".to_string(),
                 relative_name: "resource.txt".to_string(),
-                data: DataLocation::Memory(vec![42]),
+                data: FileData::Memory(vec![42]),
                 is_stdlib: false,
                 is_test: false,
             },
@@ -3644,7 +3632,7 @@ mod tests {
                         "resource.txt".to_string(),
                         (
                             PathBuf::from("prefix/foo/resource.txt"),
-                            DataLocation::Memory(vec![42])
+                            FileData::Memory(vec![42])
                         )
                     )]
                     .iter()
@@ -3680,7 +3668,7 @@ mod tests {
             resources.extra_files,
             vec![(
                 PathBuf::from("prefix/foo/resource.txt"),
-                DataLocation::Memory(vec![42]),
+                FileData::Memory(vec![42]),
                 false
             ),]
         );
@@ -3701,7 +3689,7 @@ mod tests {
         let resource = PythonPackageResource {
             leaf_package: "foo".to_string(),
             relative_name: "bar.txt".to_string(),
-            data: DataLocation::Memory(vec![42]),
+            data: FileData::Memory(vec![42]),
             is_stdlib: false,
             is_test: false,
         };
@@ -3789,7 +3777,7 @@ mod tests {
                 package: "mypackage".to_string(),
                 version: "1.0".to_string(),
                 name: "resource.txt".to_string(),
-                data: DataLocation::Memory(vec![42]),
+                data: FileData::Memory(vec![42]),
             },
             &ConcreteResourceLocation::InMemory,
         )?;
@@ -3802,7 +3790,7 @@ mod tests {
                 name: "mypackage".to_string(),
                 is_package: true,
                 in_memory_distribution_resources: Some(BTreeMap::from_iter(
-                    [("resource.txt".to_string(), DataLocation::Memory(vec![42]))]
+                    [("resource.txt".to_string(), FileData::Memory(vec![42]))]
                         .iter()
                         .cloned()
                 )),
@@ -3849,7 +3837,7 @@ mod tests {
                 package: "mypackage".to_string(),
                 version: "1.0".to_string(),
                 name: "resource.txt".to_string(),
-                data: DataLocation::Memory(vec![42]),
+                data: FileData::Memory(vec![42]),
             },
             &ConcreteResourceLocation::RelativePath("prefix".to_string()),
         )?;
@@ -3866,7 +3854,7 @@ mod tests {
                         "resource.txt".to_string(),
                         (
                             PathBuf::from("prefix/mypackage-1.0.dist-info/resource.txt"),
-                            DataLocation::Memory(vec![42])
+                            FileData::Memory(vec![42])
                         )
                     )]
                     .iter()
@@ -3902,7 +3890,7 @@ mod tests {
             resources.extra_files,
             vec![(
                 PathBuf::from("prefix/mypackage-1.0.dist-info/resource.txt"),
-                DataLocation::Memory(vec![42]),
+                FileData::Memory(vec![42]),
                 false
             ),]
         );
@@ -3925,7 +3913,7 @@ mod tests {
             package: "foo".to_string(),
             version: "1.0".to_string(),
             name: "resource.txt".to_string(),
-            data: DataLocation::Memory(vec![42]),
+            data: FileData::Memory(vec![42]),
         };
 
         let mut add_context = PythonResourceAddCollectionContext {
@@ -4052,14 +4040,14 @@ mod tests {
             name: "myext".to_string(),
             init_fn: Some("PyInit__myext".to_string()),
             extension_file_suffix: ".so".to_string(),
-            shared_library: Some(DataLocation::Memory(vec![42])),
+            shared_library: Some(FileData::Memory(vec![42])),
             object_file_data: vec![],
             is_package: false,
             link_libraries: vec![LibraryDependency {
                 name: "foo".to_string(),
                 static_library: None,
                 static_filename: None,
-                dynamic_library: Some(DataLocation::Memory(vec![40])),
+                dynamic_library: Some(FileData::Memory(vec![40])),
                 dynamic_filename: Some(PathBuf::from("libfoo.so")),
                 framework: false,
                 system: false,
@@ -4099,7 +4087,7 @@ mod tests {
             Some(&PrePackagedResource {
                 is_extension_module: true,
                 name: "myext".to_string(),
-                in_memory_extension_module_shared_library: Some(DataLocation::Memory(vec![42])),
+                in_memory_extension_module_shared_library: Some(FileData::Memory(vec![42])),
                 shared_library_dependency_names: Some(vec!["foo".to_string()]),
                 ..PrePackagedResource::default()
             })
@@ -4109,7 +4097,7 @@ mod tests {
             Some(&PrePackagedResource {
                 is_shared_library: true,
                 name: "foo".to_string(),
-                in_memory_shared_library: Some(DataLocation::Memory(vec![40])),
+                in_memory_shared_library: Some(FileData::Memory(vec![40])),
                 ..PrePackagedResource::default()
             })
         );
@@ -4150,14 +4138,14 @@ mod tests {
             name: "foo.bar".to_string(),
             init_fn: None,
             extension_file_suffix: ".so".to_string(),
-            shared_library: Some(DataLocation::Memory(vec![42])),
+            shared_library: Some(FileData::Memory(vec![42])),
             object_file_data: vec![],
             is_package: false,
             link_libraries: vec![LibraryDependency {
                 name: "mylib".to_string(),
                 static_library: None,
                 static_filename: None,
-                dynamic_library: Some(DataLocation::Memory(vec![40])),
+                dynamic_library: Some(FileData::Memory(vec![40])),
                 dynamic_filename: Some(PathBuf::from("libmylib.so")),
                 framework: false,
                 system: false,
@@ -4205,7 +4193,7 @@ mod tests {
                 is_package: false,
                 relative_path_extension_module_shared_library: Some((
                     PathBuf::from("prefix/foo/bar.so"),
-                    DataLocation::Memory(vec![42])
+                    FileData::Memory(vec![42])
                 )),
                 shared_library_dependency_names: Some(vec!["mylib".to_string()]),
                 ..PrePackagedResource::default()
@@ -4219,7 +4207,7 @@ mod tests {
                 relative_path_shared_library: Some((
                     "prefix/foo".to_string(),
                     PathBuf::from("libmylib.so"),
-                    DataLocation::Memory(vec![40])
+                    FileData::Memory(vec![40])
                 )),
                 ..PrePackagedResource::default()
             })
@@ -4266,12 +4254,12 @@ mod tests {
             vec![
                 (
                     PathBuf::from("prefix/foo/bar.so"),
-                    DataLocation::Memory(vec![42]),
+                    FileData::Memory(vec![42]),
                     true
                 ),
                 (
                     PathBuf::from("prefix/foo/libmylib.so"),
-                    DataLocation::Memory(vec![40]),
+                    FileData::Memory(vec![40]),
                     true
                 )
             ]
@@ -4293,7 +4281,7 @@ mod tests {
         r.add_python_module_source(
             &PythonModuleSource {
                 name: "foo".to_string(),
-                source: DataLocation::Memory(vec![1]),
+                source: FileData::Memory(vec![1]),
                 is_package: true,
                 cache_tag: DEFAULT_CACHE_TAG.to_string(),
                 is_stdlib: false,
@@ -4305,7 +4293,7 @@ mod tests {
         r.add_shared_library(
             &SharedLibrary {
                 name: "foo".to_string(),
-                data: DataLocation::Memory(vec![2]),
+                data: FileData::Memory(vec![2]),
                 filename: None,
             },
             &ConcreteResourceLocation::InMemory,
@@ -4319,8 +4307,8 @@ mod tests {
                 is_shared_library: true,
                 name: "foo".to_string(),
                 is_package: true,
-                in_memory_source: Some(DataLocation::Memory(vec![1])),
-                in_memory_shared_library: Some(DataLocation::Memory(vec![2])),
+                in_memory_source: Some(FileData::Memory(vec![1])),
+                in_memory_shared_library: Some(FileData::Memory(vec![2])),
                 ..PrePackagedResource::default()
             })
         );
@@ -4386,7 +4374,7 @@ mod tests {
             Some(&PrePackagedResource {
                 is_utf8_filename_data: true,
                 name: "foo/bar.py".to_string(),
-                file_data_embedded: Some(DataLocation::Memory(vec![42])),
+                file_data_embedded: Some(FileData::Memory(vec![42])),
                 ..PrePackagedResource::default()
             })
         );
@@ -4438,7 +4426,7 @@ mod tests {
                 name: "foo/bar.py".to_string(),
                 file_data_utf8_relative_path: Some((
                     PathBuf::from("prefix/foo/bar.py"),
-                    DataLocation::Memory(vec![42])
+                    FileData::Memory(vec![42])
                 )),
                 ..PrePackagedResource::default()
             })
@@ -4462,7 +4450,7 @@ mod tests {
             resources.extra_files,
             vec![(
                 PathBuf::from("prefix/foo/bar.py"),
-                DataLocation::Memory(vec![42]),
+                FileData::Memory(vec![42]),
                 false
             )]
         );
@@ -4554,7 +4542,7 @@ mod tests {
         r.add_python_module_source(
             &PythonModuleSource {
                 name: "foo.bar".to_string(),
-                source: DataLocation::Memory(vec![]),
+                source: FileData::Memory(vec![]),
                 is_package: false,
                 cache_tag: DEFAULT_CACHE_TAG.to_string(),
                 is_stdlib: false,
@@ -4567,7 +4555,7 @@ mod tests {
         r.add_python_module_source(
             &PythonModuleSource {
                 name: "baz".to_string(),
-                source: DataLocation::Memory(Vec::from("import foo; if __file__ == 'ignored'")),
+                source: FileData::Memory(Vec::from("import foo; if __file__ == 'ignored'")),
                 is_package: false,
                 cache_tag: DEFAULT_CACHE_TAG.to_string(),
                 is_stdlib: false,
@@ -4581,7 +4569,7 @@ mod tests {
         r.add_python_module_bytecode_from_source(
             &PythonModuleBytecodeFromSource {
                 name: "bytecode".to_string(),
-                source: DataLocation::Memory(Vec::from("import foo; if __file__")),
+                source: FileData::Memory(Vec::from("import foo; if __file__")),
                 optimize_level: BytecodeOptimizationLevel::Zero,
                 is_package: false,
                 cache_tag: DEFAULT_CACHE_TAG.to_string(),

@@ -100,10 +100,7 @@ impl AddToFileManifest for PythonExtensionModule {
 
 #[cfg(test)]
 mod tests {
-    use {
-        super::*, itertools::Itertools, python_packaging::resource::DataLocation,
-        std::path::PathBuf,
-    };
+    use {super::*, itertools::Itertools, std::path::PathBuf, virtual_file_manifest::FileData};
 
     const DEFAULT_CACHE_TAG: &str = "cpython-37";
 
@@ -113,7 +110,7 @@ mod tests {
 
         PythonModuleSource {
             name: "foo".to_string(),
-            source: DataLocation::Memory(vec![]),
+            source: FileData::Memory(vec![]),
             is_package: false,
             cache_tag: DEFAULT_CACHE_TAG.to_string(),
             is_stdlib: false,
@@ -123,7 +120,7 @@ mod tests {
 
         PythonModuleSource {
             name: "bar".to_string(),
-            source: DataLocation::Memory(vec![]),
+            source: FileData::Memory(vec![]),
             is_package: false,
             cache_tag: DEFAULT_CACHE_TAG.to_string(),
             is_stdlib: false,
@@ -145,7 +142,7 @@ mod tests {
 
         PythonModuleSource {
             name: "foo".to_string(),
-            source: DataLocation::Memory(vec![]),
+            source: FileData::Memory(vec![]),
             is_package: true,
             cache_tag: DEFAULT_CACHE_TAG.to_string(),
             is_stdlib: false,
@@ -166,7 +163,7 @@ mod tests {
 
         PythonModuleSource {
             name: "root.parent.child".to_string(),
-            source: DataLocation::Memory(vec![]),
+            source: FileData::Memory(vec![]),
             is_package: false,
             cache_tag: DEFAULT_CACHE_TAG.to_string(),
             is_stdlib: false,
@@ -189,7 +186,7 @@ mod tests {
 
         PythonModuleSource {
             name: "root.parent.child".to_string(),
-            source: DataLocation::Memory(vec![]),
+            source: FileData::Memory(vec![]),
             is_package: true,
             cache_tag: DEFAULT_CACHE_TAG.to_string(),
             is_stdlib: false,

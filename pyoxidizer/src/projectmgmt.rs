@@ -19,15 +19,14 @@ use {
     },
     anyhow::{anyhow, Result},
     python_packaging::{
-        filesystem_scanning::find_python_resources,
-        resource::{DataLocation, PythonResource},
-        wheel::WheelArchive,
+        filesystem_scanning::find_python_resources, resource::PythonResource, wheel::WheelArchive,
     },
     std::{
         fs::create_dir_all,
         io::{Cursor, Read},
         path::{Path, PathBuf},
     },
+    virtual_file_manifest::FileData,
 };
 
 /// Attempt to resolve the default Rust target for a build.
@@ -269,8 +268,8 @@ fn print_resource(r: &PythonResource) {
         },
         PythonResource::EggFile(e) => println!(
             "PythonEggFile {{ path: {} }}", match &e.data {
-                DataLocation::Path(p) => p.display().to_string(),
-                DataLocation::Memory(_) => "memory".to_string(),
+                FileData::Path(p) => p.display().to_string(),
+                FileData::Memory(_) => "memory".to_string(),
             }
         ),
         PythonResource::PathExtension(_pe) => println!(

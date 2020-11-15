@@ -33,6 +33,10 @@ version = "0.4.0-pre"
 path = "../python-packaging"
 default-features = false
 
+[dependencies.virtual-file-manifest]
+version = "0.1.0-pre"
+path = "../virtual-file-manifest"
+
 [target.'cfg(windows)'.dependencies]
 memory-module-sys = "0.3"
 winapi = { version = "0.3", features = ["libloaderapi", "memoryapi", "minwindef"] }

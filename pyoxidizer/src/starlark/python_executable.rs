@@ -16,7 +16,7 @@ use {
     },
     crate::{project_building::build_python_executable, py_packaging::binary::PythonBinaryBuilder},
     anyhow::{anyhow, Context, Result},
-    python_packaging::resource::{DataLocation, PythonModuleSource},
+    python_packaging::resource::PythonModuleSource,
     slog::{info, warn},
     starlark::{
         environment::TypeValues,
@@ -43,6 +43,7 @@ use {
         ops::Deref,
         path::{Path, PathBuf},
     },
+    virtual_file_manifest::FileData,
 };
 
 /// Represents a builder for a Python executable.
@@ -206,7 +207,7 @@ impl PythonExecutableValue {
     ) -> ValueResult {
         let module = PythonModuleSource {
             name,
-            source: DataLocation::Memory(source.into_bytes()),
+            source: FileData::Memory(source.into_bytes()),
             is_package,
             cache_tag: self.exe.cache_tag().to_string(),
             is_stdlib: false,

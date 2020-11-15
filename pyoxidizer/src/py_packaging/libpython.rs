@@ -8,9 +8,7 @@ Building a native binary containing Python.
 
 use {
     anyhow::{anyhow, Result},
-    python_packaging::{
-        libpython::LibPythonBuildContext, licensing::LicenseInfo, resource::DataLocation,
-    },
+    python_packaging::{libpython::LibPythonBuildContext, licensing::LicenseInfo},
     slog::warn,
     std::{
         collections::BTreeMap,
@@ -18,6 +16,7 @@ use {
         fs::create_dir_all,
         path::{Path, PathBuf},
     },
+    virtual_file_manifest::FileData,
 };
 
 /// Produce the content of the config.c file containing built-in extensions.
@@ -147,12 +146,12 @@ pub fn link_libpython(
 
     for (i, location) in context.object_files.iter().enumerate() {
         match location {
-            DataLocation::Memory(data) => {
+            FileData::Memory(data) => {
                 let out_path = temp_dir_path.join(format!("libpython.{}.o", i));
                 fs::write(&out_path, data)?;
                 build.object(&out_path);
             }
-            DataLocation::Path(p) => {
+            FileData::Path(p) => {
                 build.object(&p);
             }
         }

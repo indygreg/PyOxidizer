@@ -9,7 +9,7 @@ Interacting with distutils.
 use {
     anyhow::{Context, Result},
     lazy_static::lazy_static,
-    python_packaging::resource::{DataLocation, LibraryDependency, PythonExtensionModule},
+    python_packaging::resource::{LibraryDependency, PythonExtensionModule},
     serde::Deserialize,
     slog::warn,
     std::{
@@ -17,6 +17,7 @@ use {
         fs::{create_dir_all, read_dir, read_to_string},
         path::{Path, PathBuf},
     },
+    virtual_file_manifest::FileData,
 };
 
 lazy_static! {
@@ -168,7 +169,7 @@ pub fn read_built_extensions(state_dir: &Path) -> Result<Vec<PythonExtensionModu
 
         // Extension files may not always be written. So ignore errors on missing file.
         let extension_data = if let Ok(data) = std::fs::read(&extension_path) {
-            Some(DataLocation::Memory(data))
+            Some(FileData::Memory(data))
         } else {
             None
         };
@@ -179,7 +180,7 @@ pub fn read_built_extensions(state_dir: &Path) -> Result<Vec<PythonExtensionModu
             let path = PathBuf::from(object_path);
             let data = std::fs::read(&path).context(format!("reading {}", path.display()))?;
 
-            object_file_data.push(DataLocation::Memory(data));
+            object_file_data.push(FileData::Memory(data));
         }
 
         let link_libraries = info

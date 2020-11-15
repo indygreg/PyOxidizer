@@ -2008,6 +2008,7 @@ dependencies = [
  "python3-sys",
  "rusty-fork",
  "uuid 0.8.1",
+ "virtual-file-manifest",
  "winapi 0.3.9",
 ]
 

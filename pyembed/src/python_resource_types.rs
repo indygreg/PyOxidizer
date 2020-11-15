@@ -9,7 +9,7 @@ use {
     cpython::exc::{TypeError, ValueError},
     cpython::{py_class, PyBytes, PyErr, PyObject, PyResult, Python},
     python_packaging::resource::{
-        BytecodeOptimizationLevel, DataLocation, PythonExtensionModule as RawPythonExtensionModule,
+        BytecodeOptimizationLevel, PythonExtensionModule as RawPythonExtensionModule,
         PythonModuleBytecode as RawPythonModuleBytecode,
         PythonModuleSource as RawPythonModuleSource,
         PythonPackageDistributionResource as RawPythonPackageDistributionResource,
@@ -17,6 +17,7 @@ use {
     },
     std::cell::{Ref, RefCell},
     std::convert::TryFrom,
+    virtual_file_manifest::FileData,
 };
 
 py_class!(pub class PythonModuleSource |py| {
@@ -48,7 +49,7 @@ py_class!(pub class PythonModuleSource |py| {
 
     @source.setter def set_source(&self, value: Option<PyObject>) -> PyResult<()> {
         if let Some(value) = value {
-            self.resource(py).borrow_mut().source = DataLocation::Memory(
+            self.resource(py).borrow_mut().source = FileData::Memory(
                 pyobject_to_owned_bytes(py, &value)?
             );
 
@@ -209,7 +210,7 @@ py_class!(pub class PythonPackageResource |py| {
 
     @data.setter def set_data(&self, value: Option<PyObject>) -> PyResult<()> {
         if let Some(value) = value {
-            self.resource(py).borrow_mut().data = DataLocation::Memory(
+            self.resource(py).borrow_mut().data = FileData::Memory(
                 pyobject_to_owned_bytes(py, &value)?
             );
 
@@ -290,7 +291,7 @@ py_class!(pub class PythonPackageDistributionResource |py| {
 
     @data.setter def set_data(&self, value: Option<PyObject>) -> PyResult<()> {
         if let Some(value) = value {
-            self.resource(py).borrow_mut().data = DataLocation::Memory(
+            self.resource(py).borrow_mut().data = FileData::Memory(
                 pyobject_to_owned_bytes(py, &value)?
             );
 
