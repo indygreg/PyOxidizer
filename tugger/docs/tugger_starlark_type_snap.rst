@@ -144,8 +144,8 @@ documentation about what each attribute means.
 Methods
 =======
 
-``to_builder()``
-----------------
+``Snap.to_builder()``
+---------------------
 
 Converts this instance into a :ref:`tugger_starlark_type_snapcraft_builder`.
 

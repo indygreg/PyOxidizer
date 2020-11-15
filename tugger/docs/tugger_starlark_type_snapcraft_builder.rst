@@ -31,8 +31,8 @@ Methods
 
 .. _tugger_starlark_type_snapcraft_builder_add_invocation:
 
-``add_invocation()``
---------------------
+``SnapcraftBuilder.add_invocation()``
+-------------------------------------
 
 This method registers an invocation of ``snapcraft`` with the builder. When
 this instance is built, all registered invocations will be run sequentially.
@@ -51,8 +51,8 @@ The following arguments are accepted:
 
 .. _tugger_starlark_type_snapcraft_builder_add_file_manifest:
 
-``add_file_manifest()``
------------------------
+``SnapcraftBuilder.add_file_manifest()``
+----------------------------------------
 
 This method registers the content of a
 :ref:`tugger_starlark_type_file_manifest` with the build environment for
@@ -70,8 +70,8 @@ The following arguments are accepted:
 
 .. _tugger_starlark_type_snapcraft_builder_build:
 
-``build()``
------------
+``SnapcraftBuilder.build()``
+----------------------------
 
 This method invokes the builder and runs ``snapcraft``.
 

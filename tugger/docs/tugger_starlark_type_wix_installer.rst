@@ -53,8 +53,8 @@ Sections below document methods available on ``WiXInstaller`` instances.
 
 .. _tugger_starlark_wix_installer_add_build_files:
 
-``add_build_files()``
----------------------
+``WiXInstaller.add_build_files()``
+----------------------------------
 
 This method registers additional files to make available to the build
 environment. Files will be materialized next to ``.wxs`` files that will
@@ -68,8 +68,8 @@ Accepted arguments are:
 
 .. _tugger_starlark_wix_installer_add_simple_installer:
 
-``add_simple_installer()``
---------------------------
+``WiXInstaller.add_simple_installer()``
+---------------------------------------
 
 This method will populate the installer configuration with a pre-defined
 and simple/basic configuration suitable for simple applications. The added
@@ -97,8 +97,8 @@ Accepted arguments are:
 
 .. _tugger_starlark_wix_installer_add_wxs_file:
 
-``add_wxs_file()``
-------------------
+``WiXInstaller.add_wxs_file()``
+-------------------------------
 
 Adds an existing ``.wxs`` file to be processed as part of building this
 installer.
@@ -117,8 +117,8 @@ Accepted arguments are:
 
 .. _tugger_starlark_wix_installer_set_variable:
 
-``set_variable()``
-------------------
+``WiXInstaller.set_variable()``
+-------------------------------
 
 Defines a variable to be passed to ``light.exe`` as ``-d`` arguments.
 
