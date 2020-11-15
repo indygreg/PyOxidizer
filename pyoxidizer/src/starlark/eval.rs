@@ -213,3 +213,61 @@ impl EvaluationContext {
         self.run_resolved_target(&target)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use {super::*, crate::testutil::*};
+
+    #[test]
+    fn test_load() -> Result<()> {
+        let temp_dir = tempdir::TempDir::new("pyoxidizer-test")?;
+        let logger = get_logger()?;
+
+        let load_path = temp_dir.path().join("load.bzl");
+        std::fs::write(
+            &load_path,
+            "def make_dist():\n    return default_python_distribution()\n".as_bytes(),
+        )?;
+
+        let main_path = temp_dir.path().join("main.bzl");
+        std::fs::write(
+            &main_path,
+            format!(
+                "load('{}', 'make_dist')\nmake_dist()\n",
+                load_path.display().to_string().escape_default()
+            )
+            .as_bytes(),
+        )?;
+
+        let mut context =
+            EvaluationContext::new(&logger, &main_path, env!("HOST"), false, true, None, false)?;
+
+        // TODO this should work (#328).
+        assert!(context.evaluate_file(&main_path).is_err());
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_register_target() -> Result<()> {
+        let temp_dir = tempdir::TempDir::new("pyoxidizer-test")?;
+        let logger = get_logger()?;
+
+        let config_path = temp_dir.path().join("pyoxidizer.bzl");
+        std::fs::write(&config_path, "def make_dist():\n    return default_python_distribution()\nregister_target('dist', make_dist)\n".as_bytes())?;
+
+        let mut context = EvaluationContext::new(
+            &logger,
+            &config_path,
+            env!("HOST"),
+            false,
+            true,
+            None,
+            false,
+        )?;
+
+        context.evaluate_file(&config_path)?;
+
+        Ok(())
+    }
+}
