@@ -1212,10 +1212,10 @@ impl PythonResourceCollector {
 
         let fallback_in_memory =
             add_context.location_fallback == Some(ConcreteResourceLocation::InMemory);
-        let fallback_filesystem = match &add_context.location_fallback {
-            Some(ConcreteResourceLocation::RelativePath(_)) => true,
-            _ => false,
-        };
+        let fallback_filesystem = matches!(
+            &add_context.location_fallback,
+            Some(ConcreteResourceLocation::RelativePath(_))
+        );
 
         // TODO support this.
         if prefer_filesystem && fallback_in_memory {
