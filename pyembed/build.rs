@@ -85,6 +85,7 @@ fn build_with_pyoxidizer_native(resolve_target: Option<&str>) {
 }
 */
 
+#[allow(clippy::if_same_then_else)]
 fn main() {
     let mut library_mode = "pyembed";
 
