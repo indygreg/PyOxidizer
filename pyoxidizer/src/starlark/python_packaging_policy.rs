@@ -322,10 +322,8 @@ impl PythonPackagingPolicyValue {
 
 starlark_module! { python_packaging_policy_module =>
     PythonPackagingPolicy.register_resource_callback(this, func) {
-        match this.clone().downcast_mut::<PythonPackagingPolicyValue>()? {
-            Some(mut policy) => policy.starlark_register_resource_callback(&func),
-            None => Err(ValueError::IncorrectParameterType),
-        }
+        let mut this = this.downcast_mut::<PythonPackagingPolicyValue>().unwrap().unwrap();
+        this.starlark_register_resource_callback(&func)
     }
 
     PythonPackagingPolicy.set_preferred_extension_module_variant(
@@ -333,17 +331,13 @@ starlark_module! { python_packaging_policy_module =>
         name: String,
         value: String
     ) {
-        match this.clone().downcast_mut::<PythonPackagingPolicyValue>()? {
-            Some(mut policy) => policy.starlark_set_preferred_extension_module_variant(name, value),
-            None => Err(ValueError::IncorrectParameterType),
-        }
+        let mut this = this.downcast_mut::<PythonPackagingPolicyValue>().unwrap().unwrap();
+        this.starlark_set_preferred_extension_module_variant(name, value)
     }
 
     PythonPackagingPolicy.set_resource_handling_mode(this, mode: String) {
-        match this.clone().downcast_mut::<PythonPackagingPolicyValue>()? {
-            Some(mut policy) => policy.starlark_set_resource_handling_mode(mode),
-            None => Err(ValueError::IncorrectParameterType),
-        }
+        let mut this = this.downcast_mut::<PythonPackagingPolicyValue>().unwrap().unwrap();
+        this.starlark_set_resource_handling_mode(mode)
     }
 }
 

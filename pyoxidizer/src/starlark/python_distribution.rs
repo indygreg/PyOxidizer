@@ -428,24 +428,18 @@ starlark_module! { python_distribution_module =>
     }
 
     PythonDistribution.make_python_packaging_policy(env env, this) {
-        match this.clone().downcast_mut::<PythonDistributionValue>()? {
-            Some(mut dist) => dist.make_python_packaging_policy_starlark(&env),
-            None => Err(ValueError::IncorrectParameterType),
-        }
+        let mut this = this.downcast_mut::<PythonDistributionValue>().unwrap().unwrap();
+        this.make_python_packaging_policy_starlark(&env)
     }
 
     PythonDistribution.make_python_interpreter_config(env env, this) {
-        match this.clone().downcast_mut::<PythonDistributionValue>()? {
-            Some(mut dist) => dist.make_python_interpreter_config_starlark(&env),
-            None => Err(ValueError::IncorrectParameterType),
-        }
+        let mut this = this.downcast_mut::<PythonDistributionValue>().unwrap().unwrap();
+        this.make_python_interpreter_config_starlark(&env)
     }
 
     PythonDistribution.python_resources(env env, call_stack cs, this) {
-        match this.clone().downcast_mut::<PythonDistributionValue>()? {
-            Some(mut dist) => dist.python_resources_starlark(&env, cs),
-            None => Err(ValueError::IncorrectParameterType),
-        }
+        let mut this = this.downcast_mut::<PythonDistributionValue>().unwrap().unwrap();
+        this.python_resources_starlark(&env, cs)
     }
 
     #[allow(non_snake_case, clippy::ptr_arg)]
@@ -457,16 +451,14 @@ starlark_module! { python_distribution_module =>
         packaging_policy=NoneType::None,
         config=NoneType::None
     ) {
-        match this.clone().downcast_mut::<PythonDistributionValue>()? {
-            Some(mut dist) =>dist.to_python_executable_starlark(
-                &env,
-                cs,
-                name,
-                &packaging_policy,
-                &config,
-            ),
-            None => Err(ValueError::IncorrectParameterType),
-        }
+        let mut this = this.downcast_mut::<PythonDistributionValue>().unwrap().unwrap();
+        this.to_python_executable_starlark(
+            &env,
+            cs,
+            name,
+            &packaging_policy,
+            &config,
+        )
     }
 
     #[allow(clippy::ptr_arg)]

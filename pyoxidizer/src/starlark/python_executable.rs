@@ -743,10 +743,8 @@ impl PythonExecutableValue {
 
 starlark_module! { python_executable_env =>
     PythonExecutable.build(env env, this, target: String) {
-        match this.clone().downcast_ref::<PythonExecutableValue>() {
-            Some(exe) => exe.starlark_build(env, target),
-            None => Err(ValueError::IncorrectParameterType),
-        }
+        let this = this.downcast_ref::<PythonExecutableValue>().unwrap();
+        this.starlark_build(env, target)
     }
 
     #[allow(non_snake_case, clippy::ptr_arg)]
@@ -758,10 +756,8 @@ starlark_module! { python_executable_env =>
         source: String,
         is_package: bool = false
     ) {
-        match this.clone().downcast_ref::<PythonExecutableValue>() {
-            Some(exe) => exe.starlark_make_python_module_source(&env, cs, name, source, is_package),
-            None => Err(ValueError::IncorrectParameterType),
-        }
+        let this = this.downcast_ref::<PythonExecutableValue>().unwrap();
+        this.starlark_make_python_module_source(&env, cs, name, source, is_package)
     }
 
     #[allow(non_snake_case, clippy::ptr_arg)]
@@ -771,10 +767,8 @@ starlark_module! { python_executable_env =>
         this,
         args
     ) {
-        match this.clone().downcast_ref::<PythonExecutableValue>() {
-            Some(exe) => exe.starlark_pip_download(&env, cs, &args),
-            None => Err(ValueError::IncorrectParameterType),
-        }
+        let this = this.downcast_ref::<PythonExecutableValue>().unwrap();
+        this.starlark_pip_download(&env, cs, &args)
     }
 
     #[allow(non_snake_case, clippy::ptr_arg)]
@@ -785,10 +779,8 @@ starlark_module! { python_executable_env =>
         args,
         extra_envs=NoneType::None
     ) {
-        match this.clone().downcast_ref::<PythonExecutableValue>() {
-            Some(exe) => exe.starlark_pip_install(&env, cs, &args, &extra_envs),
-            None => Err(ValueError::IncorrectParameterType),
-        }
+        let this = this.downcast_ref::<PythonExecutableValue>().unwrap();
+        this.starlark_pip_install(&env, cs, &args, &extra_envs)
     }
 
     #[allow(non_snake_case, clippy::ptr_arg)]
@@ -799,10 +791,8 @@ starlark_module! { python_executable_env =>
         path: String,
         packages
     ) {
-        match this.clone().downcast_ref::<PythonExecutableValue>() {
-            Some(exe) => exe.starlark_read_package_root(&env, cs, path, &packages),
-            None => Err(ValueError::IncorrectParameterType),
-        }
+        let this = this.downcast_ref::<PythonExecutableValue>().unwrap();
+        this.starlark_read_package_root(&env, cs, path, &packages)
     }
 
     #[allow(non_snake_case, clippy::ptr_arg)]
@@ -812,10 +802,8 @@ starlark_module! { python_executable_env =>
         this,
         path: String
     ) {
-        match this.clone().downcast_ref::<PythonExecutableValue>() {
-            Some(exe) => exe.starlark_read_virtualenv(&env, cs, path),
-            None => Err(ValueError::IncorrectParameterType),
-        }
+        let this = this.downcast_ref::<PythonExecutableValue>().unwrap();
+        this.starlark_read_virtualenv(&env, cs, path)
     }
 
     #[allow(non_snake_case, clippy::ptr_arg)]
@@ -827,10 +815,8 @@ starlark_module! { python_executable_env =>
         extra_envs=NoneType::None,
         extra_global_arguments=NoneType::None
     ) {
-        match this.clone().downcast_ref::<PythonExecutableValue>() {
-            Some(exe) => exe.starlark_setup_py_install(&env, cs, package_path, &extra_envs, &extra_global_arguments),
-            None => Err(ValueError::IncorrectParameterType),
-        }
+        let this = this.downcast_ref::<PythonExecutableValue>().unwrap();
+        this.starlark_setup_py_install(&env, cs, package_path, &extra_envs, &extra_global_arguments)
     }
 
     #[allow(non_snake_case, clippy::ptr_arg)]
@@ -839,14 +825,12 @@ starlark_module! { python_executable_env =>
         this,
         resource
     ) {
-        match this.clone().downcast_mut::<PythonExecutableValue>()? {
-            Some(mut exe) => exe.starlark_add_python_resource(
-                &env,
-                &resource,
-                "add_python_resource",
-            ),
-            None => Err(ValueError::IncorrectParameterType),
-        }
+        let mut this = this.downcast_mut::<PythonExecutableValue>().unwrap().unwrap();
+        this.starlark_add_python_resource(
+            &env,
+            &resource,
+            "add_python_resource",
+        )
     }
 
     #[allow(non_snake_case, clippy::ptr_arg)]
@@ -855,13 +839,11 @@ starlark_module! { python_executable_env =>
         this,
         resources
     ) {
-        match this.clone().downcast_mut::<PythonExecutableValue>()? {
-            Some(mut exe) => exe.starlark_add_python_resources(
-                &env,
-                &resources,
-            ),
-            None => Err(ValueError::IncorrectParameterType),
-        }
+        let mut this = this.downcast_mut::<PythonExecutableValue>().unwrap().unwrap();
+        this.starlark_add_python_resources(
+            &env,
+            &resources,
+        )
     }
 
     #[allow(clippy::ptr_arg)]
@@ -871,18 +853,14 @@ starlark_module! { python_executable_env =>
         files=NoneType::None,
         glob_files=NoneType::None)
     {
-        match this.clone().downcast_mut::<PythonExecutableValue>()? {
-            Some(mut exe) => exe.starlark_filter_resources_from_files(&env, &files, &glob_files),
-            None => Err(ValueError::IncorrectParameterType),
-        }
+        let mut this = this.downcast_mut::<PythonExecutableValue>().unwrap().unwrap();
+        this.starlark_filter_resources_from_files(&env, &files, &glob_files)
     }
 
     #[allow(clippy::ptr_arg)]
     PythonExecutable.to_embedded_resources(this) {
-        match this.clone().downcast_ref::<PythonExecutableValue>() {
-            Some(exe) => exe.starlark_to_embedded_resources(),
-            None => Err(ValueError::IncorrectParameterType),
-        }
+        let this = this.downcast_ref::<PythonExecutableValue>().unwrap();
+        this.starlark_to_embedded_resources()
     }
 }
 

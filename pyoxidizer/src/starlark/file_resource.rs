@@ -217,17 +217,13 @@ pub fn file_manifest_add_python_resources(
 
 starlark_module! { file_resource_env =>
     FileManifest.add_python_resource(env env, this, prefix: String, resource) {
-        match this.clone().downcast_mut::<FileManifestValue>()? {
-            Some(mut manifest) => file_manifest_add_python_resource(&mut manifest, &env, prefix, &resource),
-            None => Err(ValueError::IncorrectParameterType),
-        }
+        let mut this = this.downcast_mut::<FileManifestValue>().unwrap().unwrap();
+        file_manifest_add_python_resource(&mut this, &env, prefix, &resource)
     }
 
     FileManifest.add_python_resources(env env, this, prefix: String, resources) {
-        match this.clone().downcast_mut::<FileManifestValue>()? {
-            Some(mut manifest) => file_manifest_add_python_resources(&mut manifest, &env, prefix, &resources),
-            None => Err(ValueError::IncorrectParameterType),
-        }
+        let mut this = this.downcast_mut::<FileManifestValue>().unwrap().unwrap();
+        file_manifest_add_python_resources(&mut this, &env, prefix, &resources)
     }
 }
 

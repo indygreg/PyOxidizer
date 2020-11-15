@@ -92,9 +92,7 @@ starlark_module! { python_embedded_resources_module =>
         this,
         target: String
     ) {
-        match this.clone().downcast_ref::<PythonEmbeddedResourcesValue>() {
-            Some(resources) => resources.build_starlark(env, target),
-            None => Err(ValueError::IncorrectParameterType),
-        }
+        let this = this.downcast_ref::<PythonEmbeddedResourcesValue>().unwrap();
+        this.build_starlark(env, target)
     }
 }
