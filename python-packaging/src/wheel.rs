@@ -188,7 +188,7 @@ impl WheelArchive {
             .iter_files()
             .filter_map(|f| {
                 if f.path.starts_with(&prefix) {
-                    Some(f.clone())
+                    Some(f)
                 } else {
                     None
                 }
@@ -268,7 +268,7 @@ impl WheelArchive {
                 if f.path.starts_with(&dist_info_prefix) || f.path.starts_with(&data_prefix) {
                     None
                 } else {
-                    Some(f.clone())
+                    Some(f)
                 }
             })
             .collect::<Vec<_>>()

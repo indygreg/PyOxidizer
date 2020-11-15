@@ -1291,7 +1291,7 @@ impl PythonResourceCollector {
             }
 
             for location in &extension_module.object_file_data {
-                build_context.object_files.push(location.clone().into());
+                build_context.object_files.push(location.clone());
             }
 
             self.add_builtin_python_extension_module(extension_module)?;
@@ -1487,14 +1487,14 @@ impl PythonResourceCollector {
 
         match location {
             ConcreteResourceLocation::InMemory => {
-                entry.file_data_embedded = Some(file.entry.data.clone().into());
+                entry.file_data_embedded = Some(file.entry.data.clone());
             }
             ConcreteResourceLocation::RelativePath(prefix) => {
                 let path = PathBuf::from(prefix).join(&file.path);
 
                 entry.file_data_utf8_relative_path = Some((
                     PathBuf::from(path.display().to_string().replace('\\', "/")),
-                    file.entry.data.clone().into(),
+                    file.entry.data.clone(),
                 ));
             }
         }

@@ -196,7 +196,7 @@ impl<'a> PythonResourceIterator<'a> {
 
     fn resolve_file_data(&self, path: &Path) -> FileData {
         match self.path_content_overrides.get(path) {
-            Some(file) => file.data.clone().into(),
+            Some(file) => file.data.clone(),
             None => FileData::Path(path.to_path_buf()),
         }
     }
@@ -557,7 +557,7 @@ impl<'a> Iterator for PythonResourceIterator<'a> {
                     path: rel_path,
                     entry: FileEntry {
                         executable: self.resolve_is_executable(&self.paths[0].path),
-                        data: self.resolve_file_data(&self.paths[0].path).into(),
+                        data: self.resolve_file_data(&self.paths[0].path),
                     },
                 };
 
