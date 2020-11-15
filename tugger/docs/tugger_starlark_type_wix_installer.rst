@@ -94,9 +94,9 @@ Accepted arguments are:
 ---------------------------------------
 
 This method will populate the installer configuration with a pre-defined
-and simple/basic configuration suitable for simple applications. The added
-``.wxs`` will produce an MSI that materializes files in the ``Program Files``
-directory.
+and simple/basic configuration suitable for simple applications. This method
+effectively derives a ``.wxs`` which will produce an MSI that materializes
+files in the ``Program Files`` directory.
 
 Accepted arguments are:
 
