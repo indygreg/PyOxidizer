@@ -7,6 +7,7 @@ use {
         starlark::file_resource::FileManifestValue,
         wix::{WiXInstallerBuilder, WiXSimpleMSIBuilder, WxsBuilder},
     },
+    anyhow::Result,
     starlark::{
         environment::TypeValues,
         values::{
@@ -23,6 +24,8 @@ use {
         get_context_value, optional_dict_arg, optional_str_arg, EnvironmentContext, ResolvedTarget,
         ResolvedTargetValue, RunMode,
     },
+    std::{convert::TryFrom, path::Path},
+    virtual_file_manifest::FileEntry,
 };
 
 pub struct WiXInstallerValue {
@@ -63,6 +66,45 @@ impl WiXInstallerValue {
                     code: "TUGGER",
                     message: e.to_string(),
                     label: "add_build_files()".to_string(),
+                })
+            })?;
+
+        Ok(Value::new(NoneType::None))
+    }
+
+    fn resolve_file_entry(&self, path: &Path, force_read: bool) -> Result<FileEntry> {
+        let entry = FileEntry::try_from(path)?;
+
+        Ok(if force_read {
+            entry.to_memory()?
+        } else {
+            entry
+        })
+    }
+
+    fn add_build_file(
+        &mut self,
+        install_path: String,
+        filesystem_path: String,
+        force_read: bool,
+    ) -> ValueResult {
+        let entry = self
+            .resolve_file_entry(Path::new(&filesystem_path), force_read)
+            .map_err(|e| {
+                ValueError::Runtime(RuntimeError {
+                    code: "TUGGER_WIX_INSTALLER",
+                    message: format!("{:?}", e),
+                    label: "add_build_file()".to_string(),
+                })
+            })?;
+
+        self.inner
+            .add_extra_build_file(install_path, entry)
+            .map_err(|e| {
+                ValueError::Runtime(RuntimeError {
+                    code: "TUGGER_WIX_INSTALLER",
+                    message: format!("{:?}", e),
+                    label: "add_build_file()".to_string(),
                 })
             })?;
 
@@ -181,6 +223,16 @@ starlark_module! { wix_installer_module =>
     #[allow(non_snake_case)]
     WiXInstaller(env env, id: String, filename: String) {
         WiXInstallerValue::new_from_args(env, id, filename)
+    }
+
+    WiXInstaller.add_build_file(
+        this,
+        build_path: String,
+        filesystem_path: String,
+        force_read: bool = false
+    ) {
+        let mut this = this.downcast_mut::<WiXInstallerValue>().unwrap().unwrap();
+        this.add_build_file(build_path, filesystem_path, force_read)
     }
 
     WiXInstaller.add_build_files(this, manifest: FileManifestValue) {

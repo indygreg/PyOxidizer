@@ -66,6 +66,28 @@ Accepted arguments are:
    (``FileManifest``) The file manifest defining additional files to
    install.
 
+.. _tugger_starlark_wix_installer.add_build_file:
+
+``WiXInstaller.add_build_file()``
+---------------------------------
+
+This method registers a single additional file to make available to the
+build environment.
+
+Accepted arguments are:
+
+``build_path``
+   (``string``) The relative path to materialize inside the build environment
+
+``filesystem_path``
+   (``string``) The filesystem path of the file to copy into the build environment.
+
+``force_read``
+   (``bool``) Whether to read the content of this file into memory when this
+   function is called.
+
+   Defaults to ``False``.
+
 .. _tugger_starlark_wix_installer_add_simple_installer:
 
 ``WiXInstaller.add_simple_installer()``
