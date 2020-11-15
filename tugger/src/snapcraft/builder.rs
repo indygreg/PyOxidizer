@@ -183,6 +183,7 @@ impl<'a> SnapcraftBuilder<'a> {
 
 #[cfg(test)]
 mod tests {
+    #[cfg(target_os = "linux")]
     use {
         super::*,
         crate::{
