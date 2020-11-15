@@ -73,7 +73,7 @@ impl PythonExecutableValue {
             .clone()
     }
 
-    pub fn build(
+    pub fn build_internal(
         &self,
         type_values: &TypeValues,
         target: &str,
@@ -177,7 +177,7 @@ impl TypedValue for PythonExecutableValue {
 
 // Starlark functions.
 impl PythonExecutableValue {
-    fn starlark_build(&self, type_values: &TypeValues, target: String) -> ValueResult {
+    fn build(&self, type_values: &TypeValues, target: String) -> ValueResult {
         let pyoxidizer_context_value = get_context(type_values)?;
         let pyoxidizer_context = pyoxidizer_context_value
             .downcast_ref::<PyOxidizerEnvironmentContext>()
@@ -185,7 +185,7 @@ impl PythonExecutableValue {
 
         Ok(Value::new(ResolvedTargetValue {
             inner: self
-                .build(type_values, &target, &pyoxidizer_context)
+                .build_internal(type_values, &target, &pyoxidizer_context)
                 .map_err(|e| {
                     ValueError::from(RuntimeError {
                         code: "PYOXIDIZER",
@@ -197,7 +197,7 @@ impl PythonExecutableValue {
     }
 
     /// PythonExecutable.make_python_module_source(name, source, is_package=false)
-    pub fn starlark_make_python_module_source(
+    pub fn make_python_module_source(
         &self,
         type_values: &TypeValues,
         call_stack: &mut CallStack,
@@ -222,7 +222,7 @@ impl PythonExecutableValue {
     }
 
     /// PythonExecutable.pip_download(args)
-    pub fn starlark_pip_download(
+    pub fn pip_download(
         &self,
         type_values: &TypeValues,
         call_stack: &mut CallStack,
@@ -267,7 +267,7 @@ impl PythonExecutableValue {
     }
 
     /// PythonExecutable.pip_install(args, extra_envs=None)
-    pub fn starlark_pip_install(
+    pub fn pip_install(
         &self,
         type_values: &TypeValues,
         call_stack: &mut CallStack,
@@ -329,7 +329,7 @@ impl PythonExecutableValue {
     }
 
     /// PythonExecutable.read_package_root(path, packages)
-    pub fn starlark_read_package_root(
+    pub fn read_package_root(
         &self,
         type_values: &TypeValues,
         call_stack: &mut CallStack,
@@ -375,7 +375,7 @@ impl PythonExecutableValue {
     }
 
     /// PythonExecutable.read_virtualenv(path)
-    pub fn starlark_read_virtualenv(
+    pub fn read_virtualenv(
         &self,
         type_values: &TypeValues,
         call_stack: &mut CallStack,
@@ -412,7 +412,7 @@ impl PythonExecutableValue {
     }
 
     /// PythonExecutable.setup_py_install(package_path, extra_envs=None, extra_global_arguments=None)
-    pub fn starlark_setup_py_install(
+    pub fn setup_py_install(
         &self,
         type_values: &TypeValues,
         call_stack: &mut CallStack,
@@ -623,7 +623,7 @@ impl PythonExecutableValue {
     }
 
     /// PythonExecutable.add_python_resource(resource)
-    pub fn starlark_add_python_resource(
+    pub fn add_python_resource(
         &mut self,
         type_values: &TypeValues,
         resource: &Value,
@@ -674,27 +674,27 @@ impl PythonExecutableValue {
     }
 
     /// PythonExecutable.add_python_resources(resources)
-    pub fn starlark_add_python_resources(
+    pub fn add_python_resources(
         &mut self,
         type_values: &TypeValues,
         resources: &Value,
     ) -> ValueResult {
         for resource in &resources.iter()? {
-            self.starlark_add_python_resource(type_values, &resource, "add_python_resources()")?;
+            self.add_python_resource(type_values, &resource, "add_python_resources()")?;
         }
 
         Ok(Value::new(NoneType::None))
     }
 
     /// PythonExecutable.to_embedded_resources()
-    pub fn starlark_to_embedded_resources(&self) -> ValueResult {
+    pub fn to_embedded_resources(&self) -> ValueResult {
         Ok(Value::new(PythonEmbeddedResourcesValue {
             exe: self.exe.clone_trait(),
         }))
     }
 
     /// PythonExecutable.filter_resources_from_files(files=None, glob_files=None)
-    pub fn starlark_filter_resources_from_files(
+    pub fn filter_resources_from_files(
         &mut self,
         type_values: &TypeValues,
         files: &Value,
@@ -744,7 +744,7 @@ impl PythonExecutableValue {
 starlark_module! { python_executable_env =>
     PythonExecutable.build(env env, this, target: String) {
         let this = this.downcast_ref::<PythonExecutableValue>().unwrap();
-        this.starlark_build(env, target)
+        this.build(env, target)
     }
 
     #[allow(non_snake_case, clippy::ptr_arg)]
@@ -757,7 +757,7 @@ starlark_module! { python_executable_env =>
         is_package: bool = false
     ) {
         let this = this.downcast_ref::<PythonExecutableValue>().unwrap();
-        this.starlark_make_python_module_source(&env, cs, name, source, is_package)
+        this.make_python_module_source(&env, cs, name, source, is_package)
     }
 
     #[allow(non_snake_case, clippy::ptr_arg)]
@@ -768,7 +768,7 @@ starlark_module! { python_executable_env =>
         args
     ) {
         let this = this.downcast_ref::<PythonExecutableValue>().unwrap();
-        this.starlark_pip_download(&env, cs, &args)
+        this.pip_download(&env, cs, &args)
     }
 
     #[allow(non_snake_case, clippy::ptr_arg)]
@@ -780,7 +780,7 @@ starlark_module! { python_executable_env =>
         extra_envs=NoneType::None
     ) {
         let this = this.downcast_ref::<PythonExecutableValue>().unwrap();
-        this.starlark_pip_install(&env, cs, &args, &extra_envs)
+        this.pip_install(&env, cs, &args, &extra_envs)
     }
 
     #[allow(non_snake_case, clippy::ptr_arg)]
@@ -792,7 +792,7 @@ starlark_module! { python_executable_env =>
         packages
     ) {
         let this = this.downcast_ref::<PythonExecutableValue>().unwrap();
-        this.starlark_read_package_root(&env, cs, path, &packages)
+        this.read_package_root(&env, cs, path, &packages)
     }
 
     #[allow(non_snake_case, clippy::ptr_arg)]
@@ -803,7 +803,7 @@ starlark_module! { python_executable_env =>
         path: String
     ) {
         let this = this.downcast_ref::<PythonExecutableValue>().unwrap();
-        this.starlark_read_virtualenv(&env, cs, path)
+        this.read_virtualenv(&env, cs, path)
     }
 
     #[allow(non_snake_case, clippy::ptr_arg)]
@@ -816,7 +816,7 @@ starlark_module! { python_executable_env =>
         extra_global_arguments=NoneType::None
     ) {
         let this = this.downcast_ref::<PythonExecutableValue>().unwrap();
-        this.starlark_setup_py_install(&env, cs, package_path, &extra_envs, &extra_global_arguments)
+        this.setup_py_install(&env, cs, package_path, &extra_envs, &extra_global_arguments)
     }
 
     #[allow(non_snake_case, clippy::ptr_arg)]
@@ -826,7 +826,7 @@ starlark_module! { python_executable_env =>
         resource
     ) {
         let mut this = this.downcast_mut::<PythonExecutableValue>().unwrap().unwrap();
-        this.starlark_add_python_resource(
+        this.add_python_resource(
             &env,
             &resource,
             "add_python_resource",
@@ -840,7 +840,7 @@ starlark_module! { python_executable_env =>
         resources
     ) {
         let mut this = this.downcast_mut::<PythonExecutableValue>().unwrap().unwrap();
-        this.starlark_add_python_resources(
+        this.add_python_resources(
             &env,
             &resources,
         )
@@ -854,13 +854,13 @@ starlark_module! { python_executable_env =>
         glob_files=NoneType::None)
     {
         let mut this = this.downcast_mut::<PythonExecutableValue>().unwrap().unwrap();
-        this.starlark_filter_resources_from_files(&env, &files, &glob_files)
+        this.filter_resources_from_files(&env, &files, &glob_files)
     }
 
     #[allow(clippy::ptr_arg)]
     PythonExecutable.to_embedded_resources(this) {
         let this = this.downcast_ref::<PythonExecutableValue>().unwrap();
-        this.starlark_to_embedded_resources()
+        this.to_embedded_resources()
     }
 }
 
