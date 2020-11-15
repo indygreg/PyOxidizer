@@ -20,6 +20,7 @@ use {
         iter::FromIterator,
         path::{Path, PathBuf},
     },
+    virtual_file_manifest::{File, FileData},
 };
 
 /// Represents an abstract location for binary data.
@@ -43,6 +44,24 @@ impl DataLocation {
     /// Resolve the instance to a Memory variant.
     pub fn to_memory(&self) -> Result<DataLocation> {
         Ok(DataLocation::Memory(self.resolve()?))
+    }
+}
+
+impl From<FileData> for DataLocation {
+    fn from(data: FileData) -> Self {
+        match data {
+            FileData::Memory(data) => Self::Memory(data),
+            FileData::Path(path) => Self::Path(path),
+        }
+    }
+}
+
+impl From<DataLocation> for FileData {
+    fn from(data: DataLocation) -> Self {
+        match data {
+            DataLocation::Memory(data) => FileData::Memory(data),
+            DataLocation::Path(path) => FileData::Path(path),
+        }
     }
 }
 
@@ -743,36 +762,6 @@ impl PythonPathExtension {
     }
 }
 
-/// Represents an arbitrary, unclassified file.
-#[derive(Clone, Debug, PartialEq)]
-pub struct FileData {
-    /// The path of the file being tracked.
-    ///
-    /// Can be relative or absolute.
-    pub path: PathBuf,
-
-    /// Whether the file should have the execute bit set.
-    pub is_executable: bool,
-
-    /// The data in the file.
-    pub data: DataLocation,
-}
-
-impl FileData {
-    /// Convert the path to a String.
-    pub fn path_string(&self) -> String {
-        self.path.to_string_lossy().to_string()
-    }
-
-    pub fn to_memory(&self) -> Result<Self> {
-        Ok(Self {
-            path: self.path.clone(),
-            is_executable: self.is_executable,
-            data: self.data.to_memory()?,
-        })
-    }
-}
-
 /// Represents a resource that can be read by Python somehow.
 #[derive(Clone, Debug, PartialEq)]
 pub enum PythonResource<'a> {
@@ -793,7 +782,7 @@ pub enum PythonResource<'a> {
     /// A path extension.
     PathExtension(Cow<'a, PythonPathExtension>),
     /// An arbitrary file and its data.
-    File(Cow<'a, FileData>),
+    File(Cow<'a, File>),
 }
 
 impl<'a> PythonResource<'a> {
@@ -954,14 +943,14 @@ impl<'a> From<&'a PythonPathExtension> for PythonResource<'a> {
     }
 }
 
-impl<'a> From<FileData> for PythonResource<'a> {
-    fn from(f: FileData) -> Self {
+impl<'a> From<File> for PythonResource<'a> {
+    fn from(f: File) -> Self {
         PythonResource::File(Cow::Owned(f))
     }
 }
 
-impl<'a> From<&'a FileData> for PythonResource<'a> {
-    fn from(f: &'a FileData) -> Self {
+impl<'a> From<&'a File> for PythonResource<'a> {
+    fn from(f: &'a File) -> Self {
         PythonResource::File(Cow::Borrowed(f))
     }
 }

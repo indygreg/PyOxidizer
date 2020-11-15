@@ -26,7 +26,7 @@ use {
         location::AbstractResourceLocation,
         policy::PythonPackagingPolicy,
         resource::{
-            DataLocation, FileData, PythonExtensionModule, PythonModuleSource,
+            DataLocation, PythonExtensionModule, PythonModuleSource,
             PythonPackageDistributionResource, PythonPackageResource, PythonResource,
         },
         resource_collection::{
@@ -41,7 +41,7 @@ use {
         sync::Arc,
     },
     tempdir::TempDir,
-    virtual_file_manifest::{FileEntry, FileManifest},
+    virtual_file_manifest::{File, FileEntry, FileManifest},
 };
 
 lazy_static! {
@@ -652,7 +652,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
 
     fn add_file_data(
         &mut self,
-        file: &FileData,
+        file: &File,
         add_context: Option<PythonResourceAddCollectionContext>,
     ) -> Result<()> {
         let add_context = add_context.unwrap_or_else(|| {

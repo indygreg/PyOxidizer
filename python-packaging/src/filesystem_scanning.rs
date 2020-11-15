@@ -11,19 +11,19 @@ use {
         module_util::{is_package_from_path, PythonModuleSuffixes},
         package_metadata::PythonPackageMetadata,
         resource::{
-            BytecodeOptimizationLevel, DataLocation, FileData, PythonEggFile,
-            PythonExtensionModule, PythonModuleBytecode, PythonModuleSource,
-            PythonPackageDistributionResource, PythonPackageDistributionResourceFlavor,
-            PythonPackageResource, PythonPathExtension, PythonResource,
+            BytecodeOptimizationLevel, DataLocation, PythonEggFile, PythonExtensionModule,
+            PythonModuleBytecode, PythonModuleSource, PythonPackageDistributionResource,
+            PythonPackageDistributionResourceFlavor, PythonPackageResource, PythonPathExtension,
+            PythonResource,
         },
     },
     anyhow::Result,
     std::{
-        collections::{HashMap, HashSet},
+        collections::HashSet,
         ffi::OsStr,
-        iter::FromIterator,
         path::{Path, PathBuf},
     },
+    virtual_file_manifest::{File, FileEntry, FileManifest},
 };
 
 #[cfg(unix)]
@@ -91,7 +91,7 @@ pub struct PythonResourceIterator<'a> {
     /// Content overrides for individual paths.
     ///
     /// This is a hacky way to allow us to abstract I/O.
-    path_content_overrides: HashMap<PathBuf, FileData>,
+    path_content_overrides: FileManifest,
     seen_packages: HashSet<String>,
     resources: Vec<ResourceFile>,
     // Whether to emit `PythonResource::File` entries.
@@ -135,7 +135,7 @@ impl<'a> PythonResourceIterator<'a> {
             cache_tag: cache_tag.to_string(),
             suffixes: suffixes.clone(),
             paths: filtered,
-            path_content_overrides: HashMap::new(),
+            path_content_overrides: FileManifest::default(),
             seen_packages: HashSet::new(),
             resources: Vec::new(),
             emit_files,
@@ -146,12 +146,12 @@ impl<'a> PythonResourceIterator<'a> {
 
     /// Construct an instance from an iterable of `(PathBuf, DataLocation)`.
     pub fn from_data_locations(
-        resources: &[FileData],
+        resources: &[File],
         cache_tag: &str,
         suffixes: &PythonModuleSuffixes,
         emit_files: bool,
         emit_non_files: bool,
-    ) -> PythonResourceIterator<'a> {
+    ) -> Result<PythonResourceIterator<'a>> {
         let mut paths = resources
             .iter()
             .map(|file| PathEntry {
@@ -162,27 +162,28 @@ impl<'a> PythonResourceIterator<'a> {
             .collect::<Vec<_>>();
         paths.sort_by(|a, b| a.path.cmp(&b.path));
 
-        PythonResourceIterator {
+        let mut path_content_overrides = FileManifest::default();
+        for resource in resources {
+            path_content_overrides.add_file_entry(&resource.path, resource.entry.clone())?;
+        }
+
+        Ok(PythonResourceIterator {
             root_path: PathBuf::new(),
             cache_tag: cache_tag.to_string(),
             suffixes: suffixes.clone(),
             paths,
-            path_content_overrides: HashMap::from_iter(
-                resources
-                    .iter()
-                    .map(|file| (file.path.clone(), file.clone())),
-            ),
+            path_content_overrides,
             seen_packages: HashSet::new(),
             resources: Vec::new(),
             emit_files,
             emit_non_files,
             _phantom: std::marker::PhantomData,
-        }
+        })
     }
 
     fn resolve_is_executable(&self, path: &Path) -> bool {
         match self.path_content_overrides.get(path) {
-            Some(file) => file.is_executable,
+            Some(file) => file.executable,
             None => {
                 if let Ok(metadata) = path.metadata() {
                     is_executable(&metadata)
@@ -195,7 +196,7 @@ impl<'a> PythonResourceIterator<'a> {
 
     fn resolve_data_location(&self, path: &Path) -> DataLocation {
         match self.path_content_overrides.get(path) {
-            Some(file) => file.data.clone(),
+            Some(file) => file.data.clone().into(),
             None => DataLocation::Path(path.to_path_buf()),
         }
     }
@@ -552,10 +553,12 @@ impl<'a> Iterator for PythonResourceIterator<'a> {
                     .expect("unable to strip path prefix")
                     .to_path_buf();
 
-                let f = FileData {
+                let f = File {
                     path: rel_path,
-                    is_executable: self.resolve_is_executable(&self.paths[0].path),
-                    data: self.resolve_data_location(&self.paths[0].path),
+                    entry: FileEntry {
+                        executable: self.resolve_is_executable(&self.paths[0].path),
+                        data: self.resolve_data_location(&self.paths[0].path).into(),
+                    },
                 };
 
                 return Some(Ok(f.into()));
@@ -741,10 +744,12 @@ mod tests {
 
         assert_eq!(
             resources[0],
-            FileData {
+            File {
                 path: PathBuf::from("acme/__init__.py"),
-                is_executable: false,
-                data: DataLocation::Path(acme_path.join("__init__.py")),
+                entry: FileEntry {
+                    executable: false,
+                    data: acme_path.join("__init__.py").into(),
+                }
             }
             .into()
         );
@@ -762,10 +767,12 @@ mod tests {
         );
         assert_eq!(
             resources[2],
-            FileData {
+            File {
                 path: PathBuf::from("acme/a/__init__.py"),
-                is_executable: false,
-                data: DataLocation::Path(acme_a_path.join("__init__.py")),
+                entry: FileEntry {
+                    executable: false,
+                    data: acme_a_path.join("__init__.py").into(),
+                }
             }
             .into()
         );
@@ -783,10 +790,12 @@ mod tests {
         );
         assert_eq!(
             resources[4],
-            FileData {
+            File {
                 path: PathBuf::from("acme/a/foo.py"),
-                is_executable: false,
-                data: DataLocation::Path(acme_a_path.join("foo.py")),
+                entry: FileEntry {
+                    executable: false,
+                    data: acme_a_path.join("foo.py").into(),
+                }
             }
             .into()
         );
@@ -804,10 +813,12 @@ mod tests {
         );
         assert_eq!(
             resources[6],
-            FileData {
+            File {
                 path: PathBuf::from("acme/bar/__init__.py"),
-                is_executable: false,
-                data: DataLocation::Path(acme_bar_path.join("__init__.py")),
+                entry: FileEntry {
+                    executable: false,
+                    data: acme_bar_path.join("__init__.py").into(),
+                }
             }
             .into()
         );
@@ -1719,15 +1730,19 @@ mod tests {
     #[test]
     fn test_memory_resources() -> Result<()> {
         let inputs = vec![
-            FileData {
+            File {
                 path: PathBuf::from("foo/__init__.py"),
-                is_executable: false,
-                data: DataLocation::Memory(vec![0]),
+                entry: FileEntry {
+                    executable: false,
+                    data: vec![0].into(),
+                },
             },
-            FileData {
+            File {
                 path: PathBuf::from("foo/bar.py"),
-                is_executable: true,
-                data: DataLocation::Memory(vec![1]),
+                entry: FileEntry {
+                    executable: true,
+                    data: vec![1].into(),
+                },
             },
         ];
 
@@ -1737,16 +1752,18 @@ mod tests {
             &DEFAULT_SUFFIXES,
             true,
             true,
-        )
+        )?
         .collect::<Result<Vec<_>>>()?;
 
         assert_eq!(resources.len(), 4);
         assert_eq!(
             resources[0],
-            FileData {
+            File {
                 path: PathBuf::from("foo/__init__.py"),
-                is_executable: false,
-                data: DataLocation::Memory(vec![0]),
+                entry: FileEntry {
+                    executable: false,
+                    data: vec![0].into(),
+                }
             }
             .into()
         );
@@ -1764,10 +1781,12 @@ mod tests {
         );
         assert_eq!(
             resources[2],
-            FileData {
+            File {
                 path: PathBuf::from("foo/bar.py"),
-                is_executable: true,
-                data: DataLocation::Memory(vec![1]),
+                entry: FileEntry {
+                    executable: true,
+                    data: vec![1].into(),
+                }
             }
             .into()
         );

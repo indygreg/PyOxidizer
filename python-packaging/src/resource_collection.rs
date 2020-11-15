@@ -14,10 +14,9 @@ use {
         module_util::{packages_from_module_name, resolve_path_for_module},
         python_source::has_dunder_file,
         resource::{
-            BytecodeOptimizationLevel, DataLocation, FileData, PythonExtensionModule,
-            PythonModuleBytecode, PythonModuleBytecodeFromSource, PythonModuleSource,
-            PythonPackageDistributionResource, PythonPackageResource, PythonResource,
-            SharedLibrary,
+            BytecodeOptimizationLevel, DataLocation, PythonExtensionModule, PythonModuleBytecode,
+            PythonModuleBytecodeFromSource, PythonModuleSource, PythonPackageDistributionResource,
+            PythonPackageResource, PythonResource, SharedLibrary,
         },
     },
     anyhow::{anyhow, Context, Result},
@@ -29,6 +28,7 @@ use {
         iter::FromIterator,
         path::PathBuf,
     },
+    virtual_file_manifest::File,
 };
 
 /// Represents a single file install.
@@ -631,7 +631,7 @@ pub struct PythonResourceCollector {
     /// built-in.
     allow_new_builtin_extension_modules: bool,
 
-    /// Whether untyped files (`FileData`) can be added.
+    /// Whether untyped files (`File`) can be added.
     allow_files: bool,
 
     /// Named resources that have been collected.
@@ -1464,7 +1464,7 @@ impl PythonResourceCollector {
 
     pub fn add_file_data(
         &mut self,
-        file: &FileData,
+        file: &File,
         location: &ConcreteResourceLocation,
     ) -> Result<()> {
         if !self.allow_files {
@@ -1484,18 +1484,18 @@ impl PythonResourceCollector {
                 });
 
         entry.is_utf8_filename_data = true;
-        entry.file_executable = file.is_executable;
+        entry.file_executable = file.entry.executable;
 
         match location {
             ConcreteResourceLocation::InMemory => {
-                entry.file_data_embedded = Some(file.data.clone());
+                entry.file_data_embedded = Some(file.entry.data.clone().into());
             }
             ConcreteResourceLocation::RelativePath(prefix) => {
                 let path = PathBuf::from(prefix).join(&file.path);
 
                 entry.file_data_utf8_relative_path = Some((
                     PathBuf::from(path.display().to_string().replace('\\', "/")),
-                    file.data.clone(),
+                    file.entry.data.clone().into(),
                 ));
             }
         }
@@ -1505,7 +1505,7 @@ impl PythonResourceCollector {
 
     pub fn add_file_data_with_context(
         &mut self,
-        file: &FileData,
+        file: &File,
         add_context: &PythonResourceAddCollectionContext,
     ) -> Result<()> {
         if !add_context.include {
@@ -1707,6 +1707,7 @@ mod tests {
     use {
         super::*,
         crate::resource::{LibraryDependency, PythonPackageDistributionResourceFlavor},
+        virtual_file_manifest::FileEntry,
     };
 
     const DEFAULT_CACHE_TAG: &str = "cpython-37";
@@ -4356,10 +4357,12 @@ mod tests {
         );
         assert!(r
             .add_file_data(
-                &FileData {
+                &File {
                     path: PathBuf::from("foo/bar.py"),
-                    is_executable: false,
-                    data: DataLocation::Memory(vec![42]),
+                    entry: FileEntry {
+                        executable: false,
+                        data: vec![42].into(),
+                    }
                 },
                 &ConcreteResourceLocation::InMemory,
             )
@@ -4367,10 +4370,12 @@ mod tests {
 
         r.allow_files = true;
         r.add_file_data(
-            &FileData {
+            &File {
                 path: PathBuf::from("foo/bar.py"),
-                is_executable: false,
-                data: DataLocation::Memory(vec![42]),
+                entry: FileEntry {
+                    executable: false,
+                    data: vec![42].into(),
+                },
             },
             &ConcreteResourceLocation::InMemory,
         )?;
@@ -4415,10 +4420,12 @@ mod tests {
             DEFAULT_CACHE_TAG,
         );
         r.add_file_data(
-            &FileData {
+            &File {
                 path: PathBuf::from("foo/bar.py"),
-                is_executable: false,
-                data: DataLocation::Memory(vec![42]),
+                entry: FileEntry {
+                    executable: false,
+                    data: vec![42].into(),
+                },
             },
             &ConcreteResourceLocation::RelativePath("prefix".to_string()),
         )?;
@@ -4473,10 +4480,12 @@ mod tests {
             DEFAULT_CACHE_TAG,
         );
 
-        let file = FileData {
+        let file = File {
             path: PathBuf::from("foo/bar.py"),
-            is_executable: true,
-            data: DataLocation::Memory(vec![42]),
+            entry: FileEntry {
+                executable: true,
+                data: vec![42].into(),
+            },
         };
 
         let mut add_context = PythonResourceAddCollectionContext {
@@ -4503,7 +4512,7 @@ mod tests {
                 name: file.path_string(),
                 is_utf8_filename_data: true,
                 file_executable: true,
-                file_data_embedded: Some(file.data.clone()),
+                file_data_embedded: Some(file.entry.data.clone().into()),
                 ..PrePackagedResource::default()
             })
         );
@@ -4522,7 +4531,7 @@ mod tests {
                 file_executable: true,
                 file_data_utf8_relative_path: Some((
                     PathBuf::from("prefix").join(file.path_string()),
-                    file.data
+                    file.entry.data.into()
                 )),
                 ..PrePackagedResource::default()
             })

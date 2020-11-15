@@ -12,19 +12,18 @@ use {
     python_packaging::{
         policy::PythonPackagingPolicy,
         resource::{
-            FileData, PythonExtensionModule, PythonModuleSource, PythonPackageDistributionResource,
+            PythonExtensionModule, PythonModuleSource, PythonPackageDistributionResource,
             PythonPackageResource, PythonResource,
         },
         resource_collection::{PrePackagedResource, PythonResourceAddCollectionContext},
     },
     std::{
         collections::HashMap,
-        fs::File,
         io::Write,
         path::{Path, PathBuf},
         sync::Arc,
     },
-    virtual_file_manifest::FileManifest,
+    virtual_file_manifest::{File, FileManifest},
 };
 
 /// How a binary should link against libpython.
@@ -213,10 +212,10 @@ pub trait PythonBinaryBuilder {
         add_context: Option<PythonResourceAddCollectionContext>,
     ) -> Result<()>;
 
-    /// Add a `FileData` to the resource collection.
+    /// Add a `File` to the resource collection.
     fn add_file_data(
         &mut self,
-        file: &FileData,
+        file: &File,
         add_context: Option<PythonResourceAddCollectionContext>,
     ) -> Result<()>;
 
@@ -315,15 +314,15 @@ impl EmbeddedPythonContext {
     /// Write out files needed to link a binary.
     pub fn write_files(&self, dest_dir: &Path) -> Result<EmbeddedPythonPaths> {
         let module_names = dest_dir.join("py-module-names");
-        let mut fh = File::create(&module_names)?;
+        let mut fh = std::fs::File::create(&module_names)?;
         fh.write_all(&self.module_names)?;
 
         let embedded_resources = dest_dir.join("packed-resources");
-        let mut fh = File::create(&embedded_resources)?;
+        let mut fh = std::fs::File::create(&embedded_resources)?;
         fh.write_all(&self.resources)?;
 
         let libpython = dest_dir.join(&self.linking_info.libpythonxy_filename);
-        let mut fh = File::create(&libpython)?;
+        let mut fh = std::fs::File::create(&libpython)?;
         fh.write_all(&self.linking_info.libpythonxy_data)?;
 
         let libpyembeddedconfig = if let Some(data) = &self.linking_info.libpyembeddedconfig_data {
@@ -333,7 +332,7 @@ impl EmbeddedPythonContext {
                     .as_ref()
                     .unwrap(),
             );
-            let mut fh = File::create(&path)?;
+            let mut fh = std::fs::File::create(&path)?;
             fh.write_all(data)?;
             Some(path)
         } else {
@@ -360,7 +359,7 @@ impl EmbeddedPythonContext {
         ));
 
         let cargo_metadata = dest_dir.join("cargo_metadata.txt");
-        let mut fh = File::create(&cargo_metadata)?;
+        let mut fh = std::fs::File::create(&cargo_metadata)?;
         fh.write_all(cargo_metadata_lines.join("\n").as_bytes())?;
 
         Ok(EmbeddedPythonPaths {

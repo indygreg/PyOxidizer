@@ -2070,6 +2070,7 @@ dependencies = [
  "python-packed-resources",
  "regex",
  "tempdir",
+ "virtual-file-manifest",
  "walkdir",
  "zip",
 ]

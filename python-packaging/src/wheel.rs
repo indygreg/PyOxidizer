@@ -6,19 +6,17 @@
 
 use {
     crate::{
-        filesystem_scanning::PythonResourceIterator,
-        module_util::PythonModuleSuffixes,
-        package_metadata::PythonPackageMetadata,
-        resource::{DataLocation, FileData, PythonResource},
+        filesystem_scanning::PythonResourceIterator, module_util::PythonModuleSuffixes,
+        package_metadata::PythonPackageMetadata, resource::PythonResource,
     },
     anyhow::{anyhow, Context, Result},
     lazy_static::lazy_static,
     std::{
         borrow::Cow,
-        collections::HashMap,
         io::Read,
         path::{Path, PathBuf},
     },
+    virtual_file_manifest::{File, FileEntry, FileManifest},
     zip::ZipArchive,
 };
 
@@ -34,7 +32,7 @@ const S_IXUSR: u32 = 64;
 
 /// Represents a Python wheel archive.
 pub struct WheelArchive {
-    files: HashMap<String, FileData>,
+    files: FileManifest,
     name_version: String,
 }
 
@@ -59,20 +57,20 @@ impl WheelArchive {
 
         let mut archive = ZipArchive::new(reader)?;
 
-        let mut files = HashMap::new();
+        let mut files = FileManifest::default();
 
         for i in 0..archive.len() {
             let mut file = archive.by_index(i)?;
             let mut buffer = Vec::with_capacity(file.size() as usize);
             file.read_to_end(&mut buffer)?;
-            files.insert(
-                file.name().to_string(),
-                FileData {
-                    path: PathBuf::from(file.name()),
-                    is_executable: file.unix_mode().unwrap_or(0) & S_IXUSR != 0,
-                    data: DataLocation::Memory(buffer),
+
+            files.add_file_entry(
+                Path::new(file.name()),
+                FileEntry {
+                    data: buffer.into(),
+                    executable: file.unix_mode().unwrap_or(0) & S_IXUSR != 0,
                 },
-            );
+            )?;
         }
 
         Ok(Self {
@@ -184,13 +182,13 @@ impl WheelArchive {
     ///
     /// The returned `PathBuf` are prefixed with the appropriate `*.dist-info`
     /// directory.
-    pub fn dist_info_files(&self) -> Vec<FileData> {
+    pub fn dist_info_files(&self) -> Vec<File> {
         let prefix = format!("{}/", self.dist_info_path());
         self.files
-            .iter()
-            .filter_map(|(k, v)| {
-                if k.starts_with(&prefix) {
-                    Some(v.clone())
+            .iter_files()
+            .filter_map(|f| {
+                if f.path.starts_with(&prefix) {
+                    Some(f.clone())
                 } else {
                     None
                 }
@@ -199,17 +197,16 @@ impl WheelArchive {
     }
 
     /// Obtain paths in a `.data/*/` directory.
-    fn data_paths(&self, key: &str) -> Vec<FileData> {
+    fn data_paths(&self, key: &str) -> Vec<File> {
         let prefix = format!("{}.data/{}/", self.name_version, key);
 
         self.files
-            .iter()
-            .filter_map(|(k, v)| {
-                if k.starts_with(&prefix) {
-                    Some(FileData {
-                        path: PathBuf::from(&k[prefix.len()..]),
-                        is_executable: v.is_executable,
-                        data: v.data.clone(),
+            .iter_files()
+            .filter_map(|f| {
+                if f.path.starts_with(&prefix) {
+                    Some(File {
+                        path: PathBuf::from(&f.path.display().to_string()[prefix.len()..]),
+                        entry: f.entry,
                     })
                 } else {
                     None
@@ -221,21 +218,21 @@ impl WheelArchive {
     /// Obtain files that should be installed to `purelib`.
     ///
     /// `*.data/purelib/` prefix is stripped from returned `PathBuf`.
-    pub fn purelib_files(&self) -> Vec<FileData> {
+    pub fn purelib_files(&self) -> Vec<File> {
         self.data_paths("purelib")
     }
 
     /// Obtain files that should be installed to `platlib`.
     ///
     /// `*.data/platlib/` prefix is stripped from returned `PathBuf`.
-    pub fn platlib_files(&self) -> Vec<FileData> {
+    pub fn platlib_files(&self) -> Vec<File> {
         self.data_paths("platlib")
     }
 
     /// Obtain files that should be installed to `headers`.
     ///
     /// `*.data/headers/` prefix is stripped from returned `PathBuf`.
-    pub fn headers_files(&self) -> Vec<FileData> {
+    pub fn headers_files(&self) -> Vec<File> {
         self.data_paths("headers")
     }
 
@@ -244,14 +241,14 @@ impl WheelArchive {
     /// `*.data/scripts/` prefix is stripped from returned `PathBuf`.
     ///
     /// TODO support optional argument to rewrite `#!python` shebangs.
-    pub fn scripts_files(&self) -> Vec<FileData> {
+    pub fn scripts_files(&self) -> Vec<File> {
         self.data_paths("scripts")
     }
 
     /// Obtain files that should be installed to `data`.
     ///
     /// `*.data/data/` prefix is stripped from returned `PathBuf`.
-    pub fn data_files(&self) -> Vec<FileData> {
+    pub fn data_files(&self) -> Vec<File> {
         self.data_paths("data")
     }
 
@@ -261,17 +258,17 @@ impl WheelArchive {
     ///
     /// The returned `PathBuf` has the same path as the file in the
     /// wheel archive.
-    pub fn regular_files(&self) -> Vec<FileData> {
+    pub fn regular_files(&self) -> Vec<File> {
         let dist_info_prefix = format!("{}/", self.dist_info_path());
         let data_prefix = format!("{}/", self.data_path());
 
         self.files
-            .iter()
-            .filter_map(|(k, v)| {
-                if k.starts_with(&dist_info_prefix) || k.starts_with(&data_prefix) {
+            .iter_files()
+            .filter_map(|f| {
+                if f.path.starts_with(&dist_info_prefix) || f.path.starts_with(&data_prefix) {
                     None
                 } else {
-                    Some(v.clone())
+                    Some(f.clone())
                 }
             })
             .collect::<Vec<_>>()
@@ -310,7 +307,7 @@ impl WheelArchive {
             suffixes,
             emit_files,
             classify_files,
-        )
+        )?
         .collect::<Result<Vec<_>>>()
     }
 }

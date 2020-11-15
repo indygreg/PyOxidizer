@@ -75,6 +75,12 @@ impl From<&Path> for FileData {
     }
 }
 
+impl From<PathBuf> for FileData {
+    fn from(path: PathBuf) -> Self {
+        Self::Path(path)
+    }
+}
+
 impl From<Vec<u8>> for FileData {
     fn from(data: Vec<u8>) -> Self {
         Self::Memory(data)
@@ -106,6 +112,15 @@ impl TryFrom<&Path> for FileEntry {
         Ok(Self {
             data: FileData::from(path),
             executable,
+        })
+    }
+}
+
+impl FileEntry {
+    pub fn to_memory(&self) -> Result<Self, std::io::Error> {
+        Ok(Self {
+            data: self.data.to_memory()?,
+            executable: self.executable,
         })
     }
 }
@@ -143,6 +158,19 @@ impl File {
             path: path.as_ref().to_path_buf(),
             entry,
         }
+    }
+
+    /// Obtain an instance that is guaranteed to be backed by memory.
+    pub fn to_memory(&self) -> Result<Self, std::io::Error> {
+        Ok(Self {
+            path: self.path.clone(),
+            entry: self.entry.to_memory()?,
+        })
+    }
+
+    /// Obtain the path to this file as a String.
+    pub fn path_string(&self) -> String {
+        self.path.display().to_string()
     }
 }
 
@@ -276,6 +304,11 @@ impl FileManifest {
     /// Whether this manifest contains the specified file path.
     pub fn has_path(&self, path: impl AsRef<Path>) -> bool {
         self.files.contains_key(path.as_ref())
+    }
+
+    /// Obtain the entry for a given path.
+    pub fn get(&self, path: impl AsRef<Path>) -> Option<&FileEntry> {
+        self.files.get(path.as_ref())
     }
 
     /// Obtain an iterator over paths and file entries in this manifest.

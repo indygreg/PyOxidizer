@@ -111,7 +111,7 @@ pub struct PythonPackagingPolicy {
 
     /// Whether untyped files are allowed.
     ///
-    /// If true, `FileData` instances can be added to the resource collector.
+    /// If true, `File` instances can be added to the resource collector.
     ///
     /// If false, resources must be strongly typed (`PythonModuleSource`,
     /// `PythonPackageResource`, etc).
@@ -242,12 +242,12 @@ impl PythonPackagingPolicy {
         self.resources_location_fallback = location;
     }
 
-    /// Whether to allow untyped `FileData` resources.
+    /// Whether to allow untyped `File` resources.
     pub fn allow_files(&self) -> bool {
         self.allow_files
     }
 
-    /// Set whether to allow untyped `FileData` resources.
+    /// Set whether to allow untyped `File` resources.
     pub fn set_allow_files(&mut self, value: bool) {
         self.allow_files = value;
     }
@@ -622,8 +622,8 @@ impl PythonPackagingPolicy {
 mod tests {
     use {
         super::*,
-        crate::resource::{DataLocation, FileData},
         std::path::PathBuf,
+        virtual_file_manifest::{File, FileEntry},
     };
 
     #[test]
@@ -631,10 +631,12 @@ mod tests {
         let mut policy = PythonPackagingPolicy::default();
         policy.include_file_resources = false;
 
-        let file = FileData {
+        let file = File {
             path: PathBuf::from("foo.py"),
-            is_executable: false,
-            data: DataLocation::Memory(vec![42]),
+            entry: FileEntry {
+                executable: false,
+                data: vec![42].into(),
+            },
         };
 
         let add_context = policy.derive_add_collection_context(&file.clone().into());
