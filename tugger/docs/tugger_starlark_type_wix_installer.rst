@@ -110,6 +110,8 @@ This methods accepts the following arguments:
 
    Defaults to ``False``.
 
+.. _tugger_starlark_type_wix_installer_add_install_files:
+
 ``WiXInstaller.add_install_files()``
 ------------------------------------
 
@@ -119,9 +121,23 @@ by the installer.
 This method accepts the following arguments:
 
 ``manifest``
-   (``FileManifest``) A :ref:`tugger_startlark_type_file_manifest` defining files
+   (``FileManifest``) A :ref:`tugger_starlark_type_file_manifest` defining files
    to materialize in the installation directory. All these files will be installed
    by the installer.
+
+.. _tugger_starlark_type_wix_installer_add_msi_builder:
+
+``WiXInstaller.add_msi_builder()``
+----------------------------------
+
+This method adds a :ref:`tugger_starlark_type_wix_msi_builder` instance to this
+instance, marking it for processing/building.
+
+This method accepts the following arguments:
+
+``builder``
+   (``WiXMSIBuilder``) A :ref:`tugger_starlark_type_wix_msi_builder` representing
+   a ``.wxs`` file to build.
 
 .. _tugger_starlark_type_wix_installer_add_simple_installer:
 

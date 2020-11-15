@@ -13,6 +13,7 @@ pub mod snapcraft;
 #[cfg(test)]
 mod testutil;
 pub mod wix_installer;
+pub mod wix_msi_builder;
 
 use starlark::environment::{Environment, EnvironmentError, TypeValues};
 
@@ -24,6 +25,7 @@ pub fn populate_environment(
     file_resource::file_resource_module(env, type_values);
     snapcraft::snapcraft_module(env, type_values);
     wix_installer::wix_installer_module(env, type_values);
+    wix_msi_builder::wix_msi_builder_module(env, type_values);
 
     Ok(())
 }

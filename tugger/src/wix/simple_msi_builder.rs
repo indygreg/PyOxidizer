@@ -28,7 +28,7 @@ use {
 ///
 /// The MSI installer will materialize registered files in the
 /// `Program Files` directory on the target machine.
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct WiXSimpleMSIBuilder {
     id_prefix: String,
     product_name: String,

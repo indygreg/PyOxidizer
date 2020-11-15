@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        starlark::file_resource::FileManifestValue,
+        starlark::{file_resource::FileManifestValue, wix_msi_builder::WiXMSIBuilderValue},
         wix::{WiXInstallerBuilder, WiXSimpleMSIBuilder, WxsBuilder},
     },
     anyhow::Result,
@@ -156,6 +156,21 @@ impl WiXInstallerValue {
         Ok(Value::new(NoneType::None))
     }
 
+    fn add_msi_builder(&mut self, builder: WiXMSIBuilderValue) -> ValueResult {
+        builder
+            .inner
+            .add_to_installer_builder(&mut self.inner)
+            .map_err(|e| {
+                ValueError::Runtime(RuntimeError {
+                    code: "TUGGER_WIX_INSTALLER",
+                    message: format!("{:?}", e),
+                    label: "add_msi_builder()".to_string(),
+                })
+            })?;
+
+        Ok(Value::new(NoneType::None))
+    }
+
     fn add_simple_installer(
         &mut self,
         id_prefix: String,
@@ -298,6 +313,11 @@ starlark_module! { wix_installer_module =>
     WiXInstaller.add_install_files(this, manifest: FileManifestValue) {
         let mut this = this.downcast_mut::<WiXInstallerValue>().unwrap().unwrap();
         this.add_install_files(manifest)
+    }
+
+    WiXInstaller.add_msi_builder(this, builder: WiXMSIBuilderValue) {
+        let mut this = this.downcast_mut::<WiXInstallerValue>().unwrap().unwrap();
+        this.add_msi_builder(builder)
     }
 
     WiXInstaller.add_simple_installer(
