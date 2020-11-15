@@ -161,7 +161,9 @@ impl WiXSimpleMSIBuilder {
             emitter.into_inner().into_inner()?,
         ));
 
-        builder.add_install_files_manifest(&self.program_files_manifest)?;
+        builder
+            .install_files_mut()
+            .add_manifest(&self.program_files_manifest)?;
         builder.add_files_manifest_wxs("APPLICATIONFOLDER")?;
 
         Ok(())

@@ -109,11 +109,8 @@ impl WiXInstallerBuilder {
         &self.install_files
     }
 
-    /// Add a `FileManifest` to the set of files to install.
-    pub fn add_install_files_manifest(&mut self, manifest: &FileManifest) -> Result<()> {
-        self.install_files.add_manifest(manifest)?;
-
-        Ok(())
+    pub fn install_files_mut(&mut self) -> &mut FileManifest {
+        &mut self.install_files
     }
 
     fn stage_path(&self) -> PathBuf {

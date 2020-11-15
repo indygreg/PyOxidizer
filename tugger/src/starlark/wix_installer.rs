@@ -111,6 +111,51 @@ impl WiXInstallerValue {
         Ok(Value::new(NoneType::None))
     }
 
+    fn add_install_file(
+        &mut self,
+        install_path: String,
+        filesystem_path: String,
+        force_read: bool,
+    ) -> ValueResult {
+        let entry = self
+            .resolve_file_entry(Path::new(&filesystem_path), force_read)
+            .map_err(|e| {
+                ValueError::Runtime(RuntimeError {
+                    code: "TUGGER_WIX_INSTALLER",
+                    message: format!("{:?}", e),
+                    label: "add_install_file()".to_string(),
+                })
+            })?;
+
+        self.inner
+            .install_files_mut()
+            .add_file_entry(install_path, entry)
+            .map_err(|e| {
+                ValueError::Runtime(RuntimeError {
+                    code: "TUGGER_WIX_INSTALLER",
+                    message: format!("{:?}", e),
+                    label: "add_install_file()".to_string(),
+                })
+            })?;
+
+        Ok(Value::new(NoneType::None))
+    }
+
+    fn add_install_files(&mut self, manifest: FileManifestValue) -> ValueResult {
+        self.inner
+            .install_files_mut()
+            .add_manifest(&manifest.manifest)
+            .map_err(|e| {
+                ValueError::Runtime(RuntimeError {
+                    code: "TUGGER_WIX_INSTALLER",
+                    message: format!("{:?}", e,),
+                    label: "add_install_files()".to_string(),
+                })
+            })?;
+
+        Ok(Value::new(NoneType::None))
+    }
+
     fn add_simple_installer(
         &mut self,
         id_prefix: String,
@@ -238,6 +283,21 @@ starlark_module! { wix_installer_module =>
     WiXInstaller.add_build_files(this, manifest: FileManifestValue) {
         let mut this = this.downcast_mut::<WiXInstallerValue>().unwrap().unwrap();
         this.add_build_files(manifest)
+    }
+
+    WiXInstaller.add_install_file(
+        this,
+        install_path: String,
+        filesystem_path: String,
+        force_read: bool = false
+    ) {
+        let mut this = this.downcast_mut::<WiXInstallerValue>().unwrap().unwrap();
+        this.add_install_file(install_path, filesystem_path, force_read)
+    }
+
+    WiXInstaller.add_install_files(this, manifest: FileManifestValue) {
+        let mut this = this.downcast_mut::<WiXInstallerValue>().unwrap().unwrap();
+        this.add_install_files(manifest)
     }
 
     WiXInstaller.add_simple_installer(

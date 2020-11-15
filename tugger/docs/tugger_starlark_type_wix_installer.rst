@@ -11,7 +11,7 @@ The ``WiXInstaller`` type represents a Windows installer built with the
 processing and to turn these into an installer using the ``light.exe`` tool
 in the WiX Toolset.
 
-.. _tugger_starlark_wix_installer_constructors:
+.. _tugger_starlark_type_wix_installer_constructors:
 
 Constructors
 ============
@@ -44,14 +44,14 @@ the following arguments:
    File extensions of ``.msi`` and ``.exe`` are common. If using
    ``add_simple_installer()``, you will want to provide an ``.msi`` filename.
 
-.. _tugger_starlark_wix_installer_methods:
+.. _tugger_starlark_type_wix_installer_methods:
 
 Methods
 =======
 
 Sections below document methods available on ``WiXInstaller`` instances.
 
-.. _tugger_starlark_wix_installer_add_build_files:
+.. _tugger_starlark_type_wix_installer_add_build_files:
 
 ``WiXInstaller.add_build_files()``
 ----------------------------------
@@ -66,7 +66,7 @@ Accepted arguments are:
    (``FileManifest``) The file manifest defining additional files to
    install.
 
-.. _tugger_starlark_wix_installer.add_build_file:
+.. _tugger_starlark_type_wix_installer.add_build_file:
 
 ``WiXInstaller.add_build_file()``
 ---------------------------------
@@ -88,7 +88,42 @@ Accepted arguments are:
 
    Defaults to ``False``.
 
-.. _tugger_starlark_wix_installer_add_simple_installer:
+.. _tugger_starlark_type_wix_installer_add_install_file:
+
+``WiXInstaller.add_install_file()``
+-----------------------------------
+
+Add a file from the filesystem to be installed by the installer.
+
+This methods accepts the following arguments:
+
+``install_path``
+   (``string``) The relative path to materialize inside the installation
+   directory.
+
+``filesystem_path``
+   (``string``) The filesystem path of the file to install.
+
+``force_read``
+   (``bool``) Whether to read the content of this file into memory when this
+   function is called.
+
+   Defaults to ``False``.
+
+``WiXInstaller.add_install_files()``
+------------------------------------
+
+Add files defined in a :ref:`tugger_starlark_type_file_manifest` to be installed
+by the installer.
+
+This method accepts the following arguments:
+
+``manifest``
+   (``FileManifest``) A :ref:`tugger_startlark_type_file_manifest` defining files
+   to materialize in the installation directory. All these files will be installed
+   by the installer.
+
+.. _tugger_starlark_type_wix_installer_add_simple_installer:
 
 ``WiXInstaller.add_simple_installer()``
 ---------------------------------------
@@ -117,7 +152,7 @@ Accepted arguments are:
    (``FileManifest``) Files to materialize in the ``Program Files/<product_name>``
    directory upon install.
 
-.. _tugger_starlark_wix_installer_add_wxs_file:
+.. _tugger_starlark_type_wix_installer_add_wxs_file:
 
 ``WiXInstaller.add_wxs_file()``
 -------------------------------
@@ -137,7 +172,7 @@ Accepted arguments are:
    invoking ``candle.exe`` for this ``.wxs`` file. These effectively constitute
    ``-p`` arguments to ``candle.exe``.
 
-.. _tugger_starlark_wix_installer_set_variable:
+.. _tugger_starlark_type_wix_installer_set_variable:
 
 ``WiXInstaller.set_variable()``
 -------------------------------
