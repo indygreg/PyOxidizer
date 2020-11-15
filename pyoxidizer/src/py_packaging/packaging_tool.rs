@@ -414,6 +414,7 @@ pub fn read_virtualenv<'a>(
 }
 
 /// Run `setup.py install` against a path and return found resources.
+#[allow(clippy::too_many_arguments)]
 pub fn setup_py_install<'a, S: BuildHasher>(
     logger: &slog::Logger,
     dist: &dyn PythonDistribution,
