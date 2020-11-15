@@ -180,6 +180,7 @@ pub enum FileManifestError {
     IllegalAbsolutePath(String),
     NoParentDirectory,
     IOError(std::io::Error),
+    StripPrefix(std::path::StripPrefixError),
 }
 
 impl std::fmt::Display for FileManifestError {
@@ -193,6 +194,7 @@ impl std::fmt::Display for FileManifestError {
             }
             Self::NoParentDirectory => f.write_str("could not resolve parent directory"),
             Self::IOError(inner) => inner.fmt(f),
+            Self::StripPrefix(inner) => inner.fmt(f),
         }
     }
 }
@@ -202,6 +204,12 @@ impl std::error::Error for FileManifestError {}
 impl From<std::io::Error> for FileManifestError {
     fn from(err: std::io::Error) -> Self {
         Self::IOError(err)
+    }
+}
+
+impl From<std::path::StripPrefixError> for FileManifestError {
+    fn from(err: std::path::StripPrefixError) -> Self {
+        Self::StripPrefix(err)
     }
 }
 
@@ -215,6 +223,50 @@ pub struct FileManifest {
 }
 
 impl FileManifest {
+    /// Add a file on the filesystem to the manifest.
+    ///
+    /// The filesystem path must have a prefix specified which will be stripped
+    /// from the manifest path. This prefix must appear in the passed path.
+    ///
+    /// The stored file data is a reference to the file path. So that file must
+    /// outlive this manifest instance.
+    pub fn add_path(
+        &mut self,
+        path: impl AsRef<Path>,
+        strip_prefix: impl AsRef<Path>,
+    ) -> Result<(), FileManifestError> {
+        let path = path.as_ref();
+        let strip_prefix = strip_prefix.as_ref();
+
+        let add_path = path.strip_prefix(strip_prefix)?;
+
+        self.files
+            .insert(add_path.to_path_buf(), FileEntry::try_from(path)?);
+
+        Ok(())
+    }
+
+    /// Add a file on the filesystem to this manifest, reading file data into memory.
+    ///
+    /// This is like `add_path()` except the file is read and its contents stored in
+    /// memory. This ensures that the file can be materialized even if the source file
+    /// is deleted.
+    pub fn add_path_memory(
+        &mut self,
+        path: impl AsRef<Path>,
+        strip_prefix: impl AsRef<Path>,
+    ) -> Result<(), FileManifestError> {
+        let path = path.as_ref();
+        let strip_prefix = strip_prefix.as_ref();
+
+        let add_path = path.strip_prefix(strip_prefix)?;
+
+        let entry = FileEntry::try_from(path)?.to_memory()?;
+        self.files.insert(add_path.to_path_buf(), entry);
+
+        Ok(())
+    }
+
     /// Add a `FileEntry` to this manifest under the given path.
     ///
     /// The path cannot contain relative paths and must not be absolute.
