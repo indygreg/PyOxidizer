@@ -68,7 +68,7 @@ impl FileManifestValue {
         }))
     }
 
-    fn build_starlark(&self, type_values: &TypeValues, target: String) -> ValueResult {
+    fn build(&self, type_values: &TypeValues, target: String) -> ValueResult {
         let context_value = get_context_value(type_values)?;
         let context = context_value
             .downcast_ref::<EnvironmentContext>()
@@ -273,7 +273,7 @@ starlark_module! { file_resource_module =>
 
     FileManifest.build(env env, this, target: String) {
         let this = this.downcast_ref::<FileManifestValue>().unwrap();
-        this.build_starlark(env, target)
+        this.build(env, target)
     }
 
     FileManifest.install(env env, this, path: String, replace: bool = true) {

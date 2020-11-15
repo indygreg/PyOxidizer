@@ -55,7 +55,7 @@ impl WiXInstallerValue {
         }))
     }
 
-    fn add_build_files_starlark(&mut self, manifest: FileManifestValue) -> ValueResult {
+    fn add_build_files(&mut self, manifest: FileManifestValue) -> ValueResult {
         self.inner
             .add_extra_build_files(&manifest.manifest)
             .map_err(|e| {
@@ -69,7 +69,7 @@ impl WiXInstallerValue {
         Ok(Value::new(NoneType::None))
     }
 
-    fn add_simple_installer_starlark(
+    fn add_simple_installer(
         &mut self,
         id_prefix: String,
         product_name: String,
@@ -106,11 +106,7 @@ impl WiXInstallerValue {
         Ok(Value::new(NoneType::None))
     }
 
-    fn add_wxs_file_starlark(
-        &mut self,
-        path: String,
-        preprocessor_parameters: Value,
-    ) -> ValueResult {
+    fn add_wxs_file(&mut self, path: String, preprocessor_parameters: Value) -> ValueResult {
         optional_dict_arg(
             "preprocessor_parameters",
             "string",
@@ -144,7 +140,7 @@ impl WiXInstallerValue {
         Ok(Value::new(NoneType::None))
     }
 
-    fn build_starlark(&self, type_values: &TypeValues, target: String) -> ValueResult {
+    fn build(&self, type_values: &TypeValues, target: String) -> ValueResult {
         let context_value = get_context_value(type_values)?;
         let context = context_value
             .downcast_ref::<EnvironmentContext>()
@@ -173,7 +169,7 @@ impl WiXInstallerValue {
         }))
     }
 
-    fn set_variable_starlark(&mut self, key: String, value: Value) -> ValueResult {
+    fn set_variable(&mut self, key: String, value: Value) -> ValueResult {
         let value = optional_str_arg("value", &value)?;
         self.inner.set_variable(key, value);
 
@@ -189,7 +185,7 @@ starlark_module! { wix_installer_module =>
 
     WiXInstaller.add_build_files(this, manifest: FileManifestValue) {
         let mut this = this.downcast_mut::<WiXInstallerValue>().unwrap().unwrap();
-        this.add_build_files_starlark(manifest)
+        this.add_build_files(manifest)
     }
 
     WiXInstaller.add_simple_installer(
@@ -201,7 +197,7 @@ starlark_module! { wix_installer_module =>
         program_files: FileManifestValue
     ) {
         let mut this = this.downcast_mut::<WiXInstallerValue>().unwrap().unwrap();
-        this.add_simple_installer_starlark(
+        this.add_simple_installer(
             id_prefix,
             product_name,
             product_version,
@@ -212,17 +208,17 @@ starlark_module! { wix_installer_module =>
 
     WiXInstaller.add_wxs_file(this, path: String, preprocessor_parameters = NoneType::None) {
         let mut this = this.downcast_mut::<WiXInstallerValue>().unwrap().unwrap();
-        this.add_wxs_file_starlark(path, preprocessor_parameters)
+        this.add_wxs_file(path, preprocessor_parameters)
     }
 
     WiXInstaller.build(env env, this, target: String) {
         let this = this.downcast_ref::<WiXInstallerValue>().unwrap();
-        this.build_starlark(env, target)
+        this.build(env, target)
     }
 
     WiXInstaller.set_variable(this, key: String, value) {
         let mut this = this.downcast_mut::<WiXInstallerValue>().unwrap().unwrap();
-        this.set_variable_starlark(key, value)
+        this.set_variable(key, value)
     }
 }
 
