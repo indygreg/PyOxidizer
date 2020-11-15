@@ -45,19 +45,6 @@ where ``.wxs`` files are often processed in place: Tugger always makes
 copies to try to ensure results are reproducible and the full build
 environment is captured.
 
-.. _tugger_wix_predefined_templates:
-
-Predefined Installer Templates
-==============================
-
-Tugger contains some pre-defined *templates* for common installer
-functionality and APIs to populate them. These *templates* include:
-
-* A simple MSI installer which will materialize a set of files in the
-  ``Program Files`` directory.
-* A bundle ``.exe`` installer which supports chaining multiple installers
-  and automatically installing the Visual C++ Redistributable.
-
 .. _tugger_wix_files_fragments:
 
 Automatic ``<Fragment>`` Generation for Files
