@@ -44,6 +44,12 @@ Bug Fixes
   Python interpreter configuration should now be more robust. Previously,
   special characters (like ``\``) were not escaped properly. (#321)
 
+New Features
+^^^^^^^^^^^^
+
+* The ``FileManifest`` Starlark type now exposes an ``add_path()`` to add a
+  single file to the manifest.
+
 .. _version_0_10_3:
 
 0.10.3

@@ -21,7 +21,11 @@ use {
         get_context_value, optional_list_arg, optional_str_arg, required_list_arg,
         EnvironmentContext, ResolvedTarget, ResolvedTargetValue, RunMode,
     },
-    std::{collections::HashSet, convert::TryFrom, path::PathBuf},
+    std::{
+        collections::HashSet,
+        convert::TryFrom,
+        path::{Path, PathBuf},
+    },
     virtual_file_manifest::{FileEntry, FileManifest},
 };
 
@@ -129,6 +133,32 @@ impl FileManifestValue {
                 code: "PYOXIDIZER_BUILD",
                 message: e.to_string(),
                 label: "add_manifest()".to_string(),
+            })
+        })?;
+
+        Ok(Value::new(NoneType::None))
+    }
+
+    /// FileManifest.add_path(path, strip_prefix, force_read=False)
+    pub fn add_path(
+        &mut self,
+        path: String,
+        strip_prefix: String,
+        force_read: bool,
+    ) -> ValueResult {
+        let path = Path::new(&path);
+        let strip_prefix = Path::new(&strip_prefix);
+
+        if force_read {
+            self.manifest.add_path_memory(path, strip_prefix)
+        } else {
+            self.manifest.add_path(path, strip_prefix)
+        }
+        .map_err(|e| {
+            ValueError::Runtime(RuntimeError {
+                code: "TUGGER_FILE_MANIFEST",
+                message: format!("{:?}", e),
+                label: "add_path()".to_string(),
             })
         })?;
 
@@ -271,6 +301,11 @@ starlark_module! { file_resource_module =>
         this.add_manifest(other)
     }
 
+    FileManifest.add_path(this, path: String, strip_prefix: String, force_read: bool = false) {
+        let mut this = this.downcast_mut::<FileManifestValue>().unwrap().unwrap();
+        this.add_path(path, strip_prefix, force_read)
+    }
+
     FileManifest.build(env env, this, target: String) {
         let this = this.downcast_ref::<FileManifestValue>().unwrap();
         this.build(env, target)
@@ -284,7 +319,11 @@ starlark_module! { file_resource_module =>
 
 #[cfg(test)]
 mod tests {
-    use {super::*, crate::starlark::testutil::*, anyhow::Result};
+    use {
+        super::*,
+        crate::{starlark::testutil::*, testutil::*},
+        anyhow::Result,
+    };
 
     #[test]
     fn test_new_file_manifest() {
@@ -302,6 +341,51 @@ mod tests {
         env.eval("m2 = FileManifest()")?;
 
         env.eval("m1.add_manifest(m2)")?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_add_path() -> Result<()> {
+        let mut env = StarlarkEnvironment::new()?;
+        let manifest_value = env.eval("m = FileManifest(); m")?;
+
+        let res = env.eval("m.add_path('/does/not/exist', '/does/not')");
+        assert!(res.is_err());
+
+        let temp_file0 = DEFAULT_TEMP_DIR.path().join("test_add_path_0");
+        let temp_file1 = DEFAULT_TEMP_DIR.path().join("test_add_path_1");
+        std::fs::write(&temp_file0, vec![42])?;
+        std::fs::write(&temp_file1, vec![42, 42])?;
+        let parent = temp_file0.parent().unwrap();
+
+        env.eval(&format!(
+            "m.add_path('{}', '{}')",
+            temp_file0.display().to_string().escape_default(),
+            parent.display().to_string().escape_default()
+        ))?;
+        env.eval(&format!(
+            "m.add_path('{}', '{}', force_read = True)",
+            temp_file1.display().to_string().escape_default(),
+            parent.display().to_string().escape_default()
+        ))?;
+
+        let manifest = manifest_value.downcast_ref::<FileManifestValue>().unwrap();
+        assert_eq!(manifest.manifest.iter_files().count(), 2);
+        assert_eq!(
+            manifest.manifest.get("test_add_path_0"),
+            Some(&FileEntry {
+                executable: false,
+                data: temp_file0.into(),
+            })
+        );
+        assert_eq!(
+            manifest.manifest.get("test_add_path_1"),
+            Some(&FileEntry {
+                executable: false,
+                data: vec![42, 42].into(),
+            })
+        );
 
         Ok(())
     }
