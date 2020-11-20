@@ -134,52 +134,56 @@ impl EvaluationContext {
     }
 
     pub fn build_resolved_target(&mut self, target: &str) -> Result<ResolvedTarget> {
-        let raw_context = self.build_targets_context_value()?;
-        let mut context = raw_context
-            .downcast_mut::<EnvironmentContext>()
-            .map_err(|_| anyhow!("unable to obtain mutable context"))?
-            .ok_or_else(|| anyhow!("context has incorrect type"))?;
+        let resolved_value = {
+            let raw_context = self.build_targets_context_value()?;
+            let context = raw_context
+                .downcast_ref::<EnvironmentContext>()
+                .ok_or_else(|| anyhow!("context has incorrect type"))?;
 
-        let resolved_value = if let Some(t) = context.get_target(target) {
-            if let Some(t) = &t.built_target {
-                return Ok(t.clone());
-            }
+            let v = if let Some(t) = context.get_target(target) {
+                if let Some(t) = &t.built_target {
+                    return Ok(t.clone());
+                }
 
-            if let Some(v) = &t.resolved_value {
-                v.clone()
+                if let Some(v) = &t.resolved_value {
+                    v.clone()
+                } else {
+                    return Err(anyhow!("target {} is not resolved", target));
+                }
             } else {
-                return Err(anyhow!("target {} is not resolved", target));
-            }
-        } else {
-            return Err(anyhow!("target {} is not registered", target));
+                return Err(anyhow!("target {} is not registered", target));
+            };
+
+            v
         };
 
-        if !resolved_value
-            .has_attr("build")
-            .map_err(|_| anyhow!("unable to call has_attr()"))?
-        {
-            return Err(anyhow!(
-                "{} does not implement build()",
-                resolved_value.get_type()
-            ));
-        }
-        let build = resolved_value.get_attr("build").unwrap();
+        let build = self
+            .type_values
+            .get_type_value(&resolved_value, "build")
+            .ok_or_else(|| anyhow!("{} does not implement build()", resolved_value.get_type()))?;
+
         let mut call_stack = CallStack::default();
 
         let resolved_target_value = build
             .call(
                 &mut call_stack,
                 &self.type_values,
-                vec![Value::from(target)],
+                vec![resolved_value, Value::from(target)],
                 LinkedHashMap::new(),
                 None,
                 None,
             )
-            .map_err(|_| anyhow!("error calling build()"))?;
+            .map_err(|e| anyhow!("error calling build(): {:?}", e))?;
 
         let resolved_target = resolved_target_value
             .downcast_ref::<ResolvedTargetValue>()
             .unwrap();
+
+        let raw_context = self.build_targets_context_value()?;
+        let mut context = raw_context
+            .downcast_mut::<EnvironmentContext>()
+            .map_err(|_| anyhow!("unable to obtain mutable context"))?
+            .ok_or_else(|| anyhow!("context has incorrect type"))?;
 
         context.get_target_mut(target).unwrap().built_target = Some(resolved_target.inner.clone());
 
