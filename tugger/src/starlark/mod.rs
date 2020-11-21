@@ -17,8 +17,8 @@ pub mod wix_msi_builder;
 
 use starlark::environment::{Environment, EnvironmentError, TypeValues};
 
-/// Populate a Starlark environment with our dialect.
-pub fn populate_environment(
+/// Registers Tugger's Starlark dialect.
+pub fn register_starlark_dialect(
     env: &mut Environment,
     type_values: &mut TypeValues,
 ) -> Result<(), EnvironmentError> {
@@ -27,5 +27,13 @@ pub fn populate_environment(
     wix_installer::wix_installer_module(env, type_values);
     wix_msi_builder::wix_msi_builder_module(env, type_values);
 
+    Ok(())
+}
+
+/// Populate a Starlark environment with variables needed to support this dialect.
+pub fn populate_environment(
+    _env: &mut Environment,
+    _type_values: &mut TypeValues,
+) -> Result<(), EnvironmentError> {
     Ok(())
 }

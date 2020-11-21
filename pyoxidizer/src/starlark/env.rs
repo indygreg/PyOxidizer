@@ -193,7 +193,7 @@ pub fn global_environment(
     starlark_dialect_build_targets::register_starlark_dialect(&mut env, &mut type_values)?;
 
     build_targets_module(&mut env, &mut type_values);
-    tugger::starlark::populate_environment(&mut env, &mut type_values)?;
+    tugger::starlark::register_starlark_dialect(&mut env, &mut type_values)?;
     super::file_resource::file_resource_env(&mut env, &mut type_values);
     super::python_distribution::python_distribution_module(&mut env, &mut type_values);
     super::python_embedded_resources::python_embedded_resources_module(&mut env, &mut type_values);
@@ -205,6 +205,7 @@ pub fn global_environment(
         &mut type_values,
         build_targets_context,
     )?;
+    tugger::starlark::populate_environment(&mut env, &mut type_values)?;
 
     env.set("CWD", Value::from(context.cwd.display().to_string()))?;
     env.set(
