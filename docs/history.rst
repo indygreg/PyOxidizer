@@ -52,6 +52,8 @@ New Features
 
 * The ``FileManifest`` Starlark type now exposes an ``add_path()`` to add a
   single file to the manifest.
+* The ``PythonExecutable`` Starlark type now exposes a ``to_file_manifest()`` to
+  convert the instance to a ``FileManifest``.
 
 .. _version_0_10_3:
 

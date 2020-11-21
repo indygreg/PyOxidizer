@@ -5,6 +5,7 @@
 use {
     super::{
         env::{get_context, PyOxidizerEnvironmentContext},
+        file_resource::file_manifest_add_python_executable,
         python_embedded_resources::PythonEmbeddedResourcesValue,
         python_packaging_policy::PythonPackagingPolicyValue,
         python_resource::{
@@ -43,6 +44,7 @@ use {
         ops::Deref,
         path::{Path, PathBuf},
     },
+    tugger::starlark::file_resource::FileManifestValue,
     virtual_file_manifest::FileData,
 };
 
@@ -693,6 +695,39 @@ impl PythonExecutableValue {
         }))
     }
 
+    /// PythonExecutable.to_file_manifest(prefix)
+    pub fn to_file_manifest(&self, type_values: &TypeValues, prefix: String) -> ValueResult {
+        let pyoxidizer_context_value = get_context(type_values)?;
+        let pyoxidizer_context = pyoxidizer_context_value
+            .downcast_ref::<PyOxidizerEnvironmentContext>()
+            .ok_or(ValueError::IncorrectParameterType)?;
+
+        let manifest_value = FileManifestValue::new_from_args()?;
+        let mut manifest = manifest_value
+            .downcast_mut::<FileManifestValue>()
+            .unwrap()
+            .unwrap();
+
+        file_manifest_add_python_executable(
+            &mut manifest,
+            pyoxidizer_context.logger(),
+            &prefix,
+            self.exe.deref(),
+            &pyoxidizer_context.build_target_triple,
+            pyoxidizer_context.build_release,
+            &pyoxidizer_context.build_opt_level,
+        )
+        .map_err(|e| {
+            ValueError::from(RuntimeError {
+                code: "PYOXIDIZER_PYTHON_EXECUTABLE",
+                message: format!("{:?}", e),
+                label: "to_file_manifest()".to_string(),
+            })
+        })?;
+
+        Ok(manifest_value.clone())
+    }
+
     /// PythonExecutable.filter_resources_from_files(files=None, glob_files=None)
     pub fn filter_resources_from_files(
         &mut self,
@@ -861,6 +896,11 @@ starlark_module! { python_executable_env =>
     PythonExecutable.to_embedded_resources(this) {
         let this = this.downcast_ref::<PythonExecutableValue>().unwrap();
         this.to_embedded_resources()
+    }
+
+    PythonExecutable.to_file_manifest(env env, this, prefix: String) {
+        let this = this.downcast_ref::<PythonExecutableValue>().unwrap();
+        this.to_file_manifest(&env, prefix)
     }
 }
 

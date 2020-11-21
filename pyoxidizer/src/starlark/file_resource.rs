@@ -29,13 +29,13 @@ use {
             starlark_signature_extraction, starlark_signatures,
         },
     },
-    std::{ops::Deref, path::Path},
+    std::path::Path,
     tugger::starlark::file_resource::FileManifestValue,
     virtual_file_manifest::{FileEntry, FileManifest},
 };
 
 #[allow(clippy::too_many_arguments)]
-fn file_manifest_add_python_executable(
+pub fn file_manifest_add_python_executable(
     manifest: &mut FileManifestValue,
     logger: &slog::Logger,
     prefix: &str,
@@ -171,22 +171,23 @@ pub fn file_manifest_add_python_resource(
                     exe.exe.name(),
                     prefix
                 );
-                file_manifest_add_python_executable(
-                    manifest,
-                    pyoxidizer_context.logger(),
-                    &prefix,
-                    exe.exe.deref(),
-                    &pyoxidizer_context.build_target_triple,
-                    pyoxidizer_context.build_release,
-                    &pyoxidizer_context.build_opt_level,
-                )
-                .map_err(|e| {
-                    ValueError::from(RuntimeError {
-                        code: "PYOXIDIZER_BUILD",
-                        message: format!("{:?}", e),
-                        label: "add_python_resource".to_string(),
-                    })
-                })
+                let exe_manifest_value = exe.to_file_manifest(type_values, prefix)?;
+                let exe_manifest = exe_manifest_value
+                    .downcast_ref::<FileManifestValue>()
+                    .unwrap();
+                manifest
+                    .manifest
+                    .add_manifest(&exe_manifest.manifest)
+                    .map_err(|e| {
+                        ValueError::from(RuntimeError {
+                            code: "PYOXIDIZER_BUILD",
+                            message: format!("{:?}", e),
+                            label: "add_python_resource".to_string(),
+                        })
+                    })?;
+                manifest.run_path = exe_manifest.run_path.clone();
+
+                Ok(())
             }
             None => Err(ValueError::IncorrectParameterType),
         },

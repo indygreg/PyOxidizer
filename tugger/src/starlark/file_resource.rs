@@ -63,7 +63,7 @@ impl TypedValue for FileManifestValue {
 // Starlark functions.
 impl FileManifestValue {
     /// FileManifest()
-    fn new_from_args() -> ValueResult {
+    pub fn new_from_args() -> ValueResult {
         let manifest = FileManifest::default();
 
         Ok(Value::new(FileManifestValue {

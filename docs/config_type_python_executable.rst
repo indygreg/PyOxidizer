@@ -293,3 +293,19 @@ Obtains a :ref:`config_type_python_embedded_resources` instance representing
 resources to be made available to the Python interpreter.
 
 See the :ref:`config_type_python_embedded_resources` type documentation for more.
+
+.. _config_python_executable_to_file_manifest:
+
+``PythonExecutable.to_file_manifest()``
+---------------------------------------
+
+This method transforms the ``PythonExecutable`` instance to a ``FileManifest``.
+The ``FileManifest`` is populated with the build executable and any file-based
+resources that are registered with the resource collector. A ``libpython``
+shared library will also be present depending on build settings.
+
+This method accepts the following arguments:
+
+``prefix``
+   (``string``) The directory prefix of files in the ``FileManifest``. Use
+   the empty string for no prefix.
