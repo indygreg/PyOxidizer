@@ -9,6 +9,13 @@ Project History
 Version History
 ===============
 
+.. _tugger_version_0_3_0:
+
+0.3.0
+-----
+
+Not yet released.
+
 .. _tugger_version_0_2_0:
 
 0.2.0
