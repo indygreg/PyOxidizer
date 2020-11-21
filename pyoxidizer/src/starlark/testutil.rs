@@ -9,9 +9,9 @@ use {
     },
     anyhow::{anyhow, Result},
     codemap::CodeMap,
-    codemap_diagnostic::{Diagnostic, Emitter},
+    codemap_diagnostic::Diagnostic,
     slog::Drain,
-    starlark::{environment::Environment, eval, syntax::dialect::Dialect, values::Value},
+    starlark::{environment::Environment, values::Value},
 };
 
 /// A Starlark execution environment.
@@ -67,38 +67,13 @@ impl StarlarkEnvironment {
         file_loader_env: Environment,
         code: &str,
     ) -> Result<Value, Diagnostic> {
-        let (env, type_values) = self.eval.env_mut_and_type_values();
-
-        eval::simple::eval(
-            &map,
-            "<test>",
-            code,
-            Dialect::Bzl,
-            env,
-            type_values,
-            file_loader_env,
-        )
+        self.eval
+            .eval_diagnostic(&map, "<test>", file_loader_env, code)
     }
 
     /// Evaluate code in the Starlark environment.
     pub fn eval(&mut self, code: &str) -> Result<Value> {
-        let map = std::sync::Arc::new(std::sync::Mutex::new(CodeMap::new()));
-        let file_loader_env = self.eval.env().clone();
-
-        self.eval_raw(&map, file_loader_env, code)
-            .map_err(|diagnostic| {
-                let cloned_map_lock = std::sync::Arc::clone(&map);
-                let unlocked_map = cloned_map_lock.lock().unwrap();
-
-                let mut buffer = vec![];
-                Emitter::vec(&mut buffer, Some(&unlocked_map)).emit(&[diagnostic]);
-
-                anyhow!(
-                    "error running '{}': {}",
-                    code,
-                    String::from_utf8_lossy(&buffer)
-                )
-            })
+        self.eval.eval("<test>", code)
     }
 
     pub fn eval_assert(&mut self, code: &str) -> Result<()> {

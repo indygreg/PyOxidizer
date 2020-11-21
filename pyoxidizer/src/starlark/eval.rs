@@ -11,7 +11,7 @@ use {
     },
     anyhow::{anyhow, Result},
     codemap::CodeMap,
-    codemap_diagnostic::Diagnostic,
+    codemap_diagnostic::{Diagnostic, Emitter},
     linked_hash_map::LinkedHashMap,
     starlark::{
         environment::{Environment, TypeValues},
@@ -84,10 +84,6 @@ impl EvaluationContext {
         &self.type_values
     }
 
-    pub fn env_mut_and_type_values(&mut self) -> (&mut Environment, &TypeValues) {
-        (&mut self.env, &self.type_values)
-    }
-
     /// Evaluate a Starlark configuration file, returning a Diagnostic on error.
     pub fn evaluate_file_diagnostic(&mut self, config_path: &Path) -> Result<(), Diagnostic> {
         let map = Arc::new(Mutex::new(CodeMap::new()));
@@ -126,6 +122,45 @@ impl EvaluationContext {
     pub fn evaluate_file(&mut self, config_path: &Path) -> Result<()> {
         self.evaluate_file_diagnostic(config_path)
             .map_err(|d| anyhow!(d.message))
+    }
+
+    /// Evaluate code, returning a `Diagnostic` on error.
+    pub fn eval_diagnostic(
+        &mut self,
+        map: &Arc<Mutex<CodeMap>>,
+        path: &str,
+        file_loader_env: Environment,
+        code: &str,
+    ) -> Result<Value, Diagnostic> {
+        starlark::eval::simple::eval(
+            &map,
+            path,
+            code,
+            Dialect::Bzl,
+            &mut self.env,
+            &self.type_values,
+            file_loader_env,
+        )
+    }
+
+    pub fn eval(&mut self, path: &str, code: &str) -> Result<Value> {
+        let map = std::sync::Arc::new(std::sync::Mutex::new(CodeMap::new()));
+        let file_loader_env = self.env.clone();
+
+        self.eval_diagnostic(&map, path, file_loader_env, code)
+            .map_err(|diagnostic| {
+                let cloned_map_lock = Arc::clone(&map);
+                let unlocked_map = cloned_map_lock.lock().unwrap();
+
+                let mut buffer = vec![];
+                Emitter::vec(&mut buffer, Some(&unlocked_map)).emit(&[diagnostic]);
+
+                anyhow!(
+                    "error running '{}': {}",
+                    code,
+                    String::from_utf8_lossy(&buffer)
+                )
+            })
     }
 
     /// Obtain the `Value` for the build targets context.
