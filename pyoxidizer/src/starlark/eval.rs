@@ -32,7 +32,7 @@ use {
 
 /// Represents a running Starlark environment.
 pub struct EvaluationContext {
-    env: Environment,
+    parent_env: Environment,
     type_values: TypeValues,
 }
 
@@ -60,12 +60,12 @@ impl EvaluationContext {
             distribution_cache,
         )?;
 
-        let (mut env, mut type_values) = starlark::stdlib::global_environment();
+        let (mut parent_env, mut type_values) = starlark::stdlib::global_environment();
 
-        register_starlark_dialect(&mut env, &mut type_values)
+        register_starlark_dialect(&mut parent_env, &mut type_values)
             .map_err(|e| anyhow!("error creating Starlark environment: {:?}", e))?;
         populate_environment(
-            &mut env,
+            &mut parent_env,
             &mut type_values,
             context,
             resolve_targets,
@@ -73,29 +73,32 @@ impl EvaluationContext {
         )
         .map_err(|e| anyhow!("error populating Starlark environment: {:?}", e))?;
 
-        Ok(Self { env, type_values })
+        Ok(Self {
+            parent_env,
+            type_values,
+        })
     }
 
     /// Obtain a named variable from the Starlark environment.
     pub fn get_var(&self, name: &str) -> Result<Value, EnvironmentError> {
-        self.env.get(name)
+        self.parent_env.get(name)
     }
 
     /// Set a named variables in the Starlark environment.
     pub fn set_var(&mut self, name: &str, value: Value) -> Result<(), EnvironmentError> {
-        self.env.set(name, value)
+        self.parent_env.set(name, value)
     }
 
     /// Evaluate a Starlark configuration file, returning a Diagnostic on error.
     pub fn evaluate_file_diagnostic(&mut self, config_path: &Path) -> Result<(), Diagnostic> {
         let map = Arc::new(Mutex::new(CodeMap::new()));
-        let file_loader_env = self.env.clone();
+        let file_loader_env = self.parent_env.clone();
 
         starlark::eval::simple::eval_file(
             &map,
             &config_path.display().to_string(),
             Dialect::Bzl,
-            &mut self.env,
+            &mut self.parent_env,
             &self.type_values,
             file_loader_env,
         )
@@ -133,14 +136,14 @@ impl EvaluationContext {
         path: &str,
         code: &str,
     ) -> Result<Value, Diagnostic> {
-        let file_loader_env = self.env.clone();
+        let file_loader_env = self.parent_env.clone();
 
         starlark::eval::simple::eval(
             &map,
             path,
             code,
             Dialect::Bzl,
-            &mut self.env,
+            &mut self.parent_env,
             &self.type_values,
             file_loader_env,
         )
