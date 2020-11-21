@@ -49,10 +49,28 @@ Methods
 
 Sections below document methods available on ``WiXBundleBuilder`` instances.
 
+.. _tugger_starlark_type_wix_bundle_builder.add_vc_redistributable:
+
+``WiXBundleBuilder.add_vc_redistributable()``
+---------------------------------------------
+
+This method registers the Visual C++ Redistributable to be installed.
+
+This method accepts the following arguments:
+
+``platform``
+   (``string``) The architecture to install for. Valid values are ``x86``,
+   ``x64``, and ``arm64``.
+
+The bundle can contain Visual C++ Redistributables for multiple runtime
+architectures. The bundle installer will only install the Redistributable
+when running on a machine of that architecture. This allows a single bundle
+installer to target multiple architectures.
+
 .. _tugger_starlark_type_wix_bundle_builder.build:
 
 ``WiXBundleBuilder.build()``
--------------------------
+----------------------------
 
 This method will build an exe using the WiX Toolset.
 

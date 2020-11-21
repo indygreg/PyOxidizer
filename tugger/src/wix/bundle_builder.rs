@@ -15,6 +15,7 @@ use {
     std::{
         borrow::Cow,
         collections::BTreeMap,
+        convert::TryFrom,
         fmt::{Display, Formatter},
         io::Write,
         ops::Deref,
@@ -38,6 +39,22 @@ impl Display for VCRedistributablePlatform {
             Self::X64 => "x64",
             Self::Arm64 => "arm64",
         })
+    }
+}
+
+impl TryFrom<&str> for VCRedistributablePlatform {
+    type Error = String;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        match value {
+            "x86" => Ok(Self::X86),
+            "x64" => Ok(Self::X64),
+            "arm64" => Ok(Self::Arm64),
+            _ => Err(format!(
+                "{} is not a valid platform; use 'x86', 'x64', or 'arm64'",
+                value
+            )),
+        }
     }
 }
 

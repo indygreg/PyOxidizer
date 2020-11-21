@@ -3,11 +3,12 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    crate::wix::WiXBundleInstallerBuilder,
+    crate::wix::{VCRedistributablePlatform, WiXBundleInstallerBuilder},
     starlark::{
         environment::TypeValues,
         values::{
             error::{RuntimeError, ValueError},
+            none::NoneType,
             {Mutable, TypedValue, Value, ValueResult},
         },
         {
@@ -18,6 +19,7 @@ use {
     starlark_dialect_build_targets::{
         get_context_value, EnvironmentContext, ResolvedTarget, ResolvedTargetValue, RunMode,
     },
+    std::convert::TryFrom,
 };
 
 #[derive(Clone)]
@@ -50,6 +52,38 @@ impl<'a> WiXBundleBuilderValue<'a> {
             target_triple: env!("HOST").to_string(),
             id_prefix,
         }))
+    }
+
+    /// WiXBundleBuilder.add_vc_redistributable(platform)
+    pub fn add_vc_redistributable(
+        &mut self,
+        type_values: &TypeValues,
+        platform: String,
+    ) -> ValueResult {
+        let platform = VCRedistributablePlatform::try_from(platform.as_str()).map_err(|e| {
+            ValueError::Runtime(RuntimeError {
+                code: "TUGGER_WIX_BUNDLE_BUILDER",
+                message: e.to_string(),
+                label: "add_vc_redistributable()".to_string(),
+            })
+        })?;
+
+        let context_value = get_context_value(type_values)?;
+        let context = context_value
+            .downcast_ref::<EnvironmentContext>()
+            .ok_or(ValueError::IncorrectParameterType)?;
+
+        self.inner
+            .add_vc_redistributable(context.logger(), platform, context.build_path())
+            .map_err(|e| {
+                ValueError::Runtime(RuntimeError {
+                    code: "TUGGER_WIX_BUNDLE_BUILDER",
+                    message: format!("{:?}", e),
+                    label: "add_vc_redistributable()".to_string(),
+                })
+            })?;
+
+        Ok(Value::new(NoneType::None))
     }
 
     /// WiXBundleBuilder.build(target)
@@ -102,6 +136,11 @@ starlark_module! { wix_bundle_builder_module =>
         WiXBundleBuilderValue::new_from_args(id_prefix, name, version, manufacturer)
     }
 
+    WiXBundleBuilder.add_vc_redistributable(env env, this, platform: String) {
+        let mut this = this.downcast_mut::<WiXBundleBuilderValue>().unwrap().unwrap();
+        this.add_vc_redistributable(env, platform)
+    }
+
     WiXBundleBuilder.build(env env, this, target: String) {
         let this = this.downcast_ref::<WiXBundleBuilderValue>().unwrap();
         this.build(env, target)
@@ -122,6 +161,29 @@ mod tests {
         let builder = v.downcast_ref::<WiXBundleBuilderValue>().unwrap();
         assert_eq!(builder.id_prefix, "prefix");
         assert_eq!(builder.target_triple, env!("HOST"));
+
+        Ok(())
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn test_build() -> Result<()> {
+        let mut env = StarlarkEnvironment::new()?;
+
+        env.eval("builder = WiXBundleBuilder('prefix', 'name', '0.1', 'manufacturer')")?;
+        env.eval("builder.add_vc_redistributable('x64')")?;
+        env.eval("builder.build('bundle_builder_test_build')")?;
+
+        let context_value = get_context_value(&env.type_values).unwrap();
+        let context = context_value.downcast_ref::<EnvironmentContext>().unwrap();
+
+        let build_path = context.target_build_path("bundle_builder_test_build");
+        let msi_path = build_path.join("name-0.1.exe");
+
+        assert!(
+            msi_path.exists(),
+            format!("exe exists: {}", msi_path.display())
+        );
 
         Ok(())
     }
