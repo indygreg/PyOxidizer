@@ -3,7 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    super::env::{get_context, PyOxidizerEnvironmentContext},
+    super::env::PyOxidizerEnvironmentContext,
     crate::{
         logging::PrintlnDrain, starlark::eval::EvaluationContext, testutil::DISTRIBUTION_CACHE,
     },
@@ -103,7 +103,7 @@ impl StarlarkEnvironment {
     /// This needs to be called shortly after construction or things won't work
     /// as expected.
     pub fn set_target_triple(&mut self, triple: &str) -> Result<()> {
-        let pyoxidizer_context_value = get_context(self.eval.type_values()).unwrap();
+        let pyoxidizer_context_value = self.eval.pyoxidizer_context_value().unwrap();
         let mut pyoxidizer_context = pyoxidizer_context_value
             .downcast_mut::<PyOxidizerEnvironmentContext>()
             .unwrap()

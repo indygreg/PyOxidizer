@@ -6,7 +6,8 @@ use {
     crate::{
         py_packaging::distribution::DistributionCache,
         starlark::env::{
-            populate_environment, register_starlark_dialect, PyOxidizerEnvironmentContext,
+            populate_environment, register_starlark_dialect, PyOxidizerContext,
+            PyOxidizerEnvironmentContext,
         },
     },
     anyhow::{anyhow, Result},
@@ -17,7 +18,10 @@ use {
         environment::{Environment, TypeValues},
         eval::call_stack::CallStack,
         syntax::dialect::Dialect,
-        values::Value,
+        values::{
+            error::{RuntimeError, ValueError},
+            Value, ValueResult,
+        },
     },
     starlark_dialect_build_targets::{EnvironmentContext, ResolvedTarget, ResolvedTargetValue},
     std::{
@@ -167,6 +171,19 @@ impl EvaluationContext {
     fn build_targets_context_value(&self) -> Result<Value> {
         starlark_dialect_build_targets::get_context_value(&self.type_values)
             .map_err(|_| anyhow!("could not obtain build targets context"))
+    }
+
+    /// Obtain the `Value` for the PyOxidizerContext.
+    pub fn pyoxidizer_context_value(&self) -> ValueResult {
+        self.type_values
+            .get_type_value(&Value::new(PyOxidizerContext::default()), "CONTEXT")
+            .ok_or_else(|| {
+                ValueError::from(RuntimeError {
+                    code: "PYOXIDIZER",
+                    message: "Unable to resolve context (this should never happen)".to_string(),
+                    label: "".to_string(),
+                })
+            })
     }
 
     pub fn default_target(&self) -> Result<Option<String>> {
