@@ -9,7 +9,7 @@ use {
 };
 
 /// Represents an `<MsiPackage>` WiX XML element.
-#[derive(Default)]
+#[derive(Clone, Debug, Default)]
 pub struct MSIPackage<'a> {
     pub id: Option<Cow<'a, str>>,
     pub display_name: Option<Cow<'a, str>>,

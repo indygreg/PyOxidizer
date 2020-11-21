@@ -12,6 +12,7 @@ pub mod file_resource;
 pub mod snapcraft;
 #[cfg(test)]
 mod testutil;
+pub mod wix_bundle_builder;
 pub mod wix_installer;
 pub mod wix_msi_builder;
 
@@ -24,6 +25,7 @@ pub fn register_starlark_dialect(
 ) -> Result<(), EnvironmentError> {
     file_resource::file_resource_module(env, type_values);
     snapcraft::snapcraft_module(env, type_values);
+    wix_bundle_builder::wix_bundle_builder_module(env, type_values);
     wix_installer::wix_installer_module(env, type_values);
     wix_msi_builder::wix_msi_builder_module(env, type_values);
 

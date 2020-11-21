@@ -44,7 +44,7 @@ impl Display for VCRedistributablePlatform {
 /// Entity used to build a WiX bundle installer.
 ///
 /// Bundle installers have multiple components in them.
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct WiXBundleInstallerBuilder<'a> {
     /// Name of the bundle.
     bundle_name: String,
@@ -265,6 +265,10 @@ impl<'a> WiXBundleInstallerBuilder<'a> {
         writer.write(XmlEvent::end_element())?;
 
         Ok(())
+    }
+
+    pub fn default_exe_filename(&self) -> String {
+        format!("{}-{}.exe", self.bundle_name, self.bundle_version)
     }
 }
 

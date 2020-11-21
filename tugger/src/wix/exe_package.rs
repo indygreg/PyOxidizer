@@ -10,7 +10,7 @@ use {
 };
 
 /// Represents the `<ExePackage>` WiX XML element.
-#[derive(Default)]
+#[derive(Clone, Debug, Default)]
 pub struct ExePackage<'a> {
     pub id: Option<Cow<'a, str>>,
     pub name: Option<Cow<'a, str>>,

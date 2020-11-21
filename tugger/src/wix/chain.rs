@@ -5,6 +5,7 @@
 use {crate::wix::*, anyhow::Result, std::io::Write, xml::EventWriter};
 
 /// Represents a child of the `<Chain>` WiX XML element.
+#[derive(Clone, Debug)]
 pub enum ChainElement<'a> {
     ExePackage(ExePackage<'a>),
     MsiPackage(MSIPackage<'a>),

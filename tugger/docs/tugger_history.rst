@@ -24,6 +24,8 @@ New Features
 * The ``WiXMSIBuilder`` Starlark type now exposes ``msi_filename`` and
   ``target_triple`` attributes to customize the output filename and the
   architecture the MSI is built for, respectively.
+* Starlark now exposes a ``WiXBundleBuilder`` type to allow the creation of
+  *bundle installers* using the WiX Toolset.
 
 .. _tugger_version_0_2_0:
 
