@@ -1061,6 +1061,35 @@ pub fn build_target(
     Ok(resolved_target.inner.clone())
 }
 
+/// Runs a named target.
+///
+/// Runs the default target is a target name is not specified.
+pub fn run_target(
+    env: &mut Environment,
+    type_values: &TypeValues,
+    call_stack: &mut CallStack,
+    target: Option<&str>,
+) -> Result<()> {
+    let target = {
+        // Block to avoid nested borrow.
+        let context_value = get_context_value(type_values)
+            .map_err(|e| anyhow!("unable to resolve context value: {:?}", e))?;
+        let context = context_value.downcast_ref::<EnvironmentContext>().unwrap();
+
+        if let Some(t) = target {
+            t.to_string()
+        } else if let Some(t) = context.default_target() {
+            t.to_string()
+        } else {
+            return Err(anyhow!("unable to determine target to run"));
+        }
+    };
+
+    let resolved_target = build_target(env, type_values, call_stack, &target)?;
+
+    resolved_target.run()
+}
+
 #[cfg(test)]
 mod test {
     use super::*;

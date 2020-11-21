@@ -22,7 +22,9 @@ use {
             Value, ValueResult,
         },
     },
-    starlark_dialect_build_targets::{build_target, EnvironmentContext, ResolvedTarget},
+    starlark_dialect_build_targets::{
+        build_target, run_target, EnvironmentContext, ResolvedTarget,
+    },
     std::{
         path::{Path, PathBuf},
         sync::{Arc, Mutex},
@@ -245,31 +247,15 @@ impl EvaluationContext {
         )
     }
 
-    /// Evaluate a target and run it, if possible.
-    pub fn run_resolved_target(&mut self, target: &str) -> Result<()> {
-        let resolved_target = self.build_resolved_target(target)?;
-
-        resolved_target.run()
-    }
-
     pub fn run_target(&mut self, target: Option<&str>) -> Result<()> {
-        let target = {
-            // Block to avoid nested borrow of this Value.
-            let raw_context = self.build_targets_context_value()?;
-            let context = raw_context
-                .downcast_ref::<EnvironmentContext>()
-                .ok_or_else(|| anyhow!("context has incorrect type"))?;
+        let mut call_stack = CallStack::default();
 
-            if let Some(t) = target {
-                t.to_string()
-            } else if let Some(t) = context.default_target() {
-                t.to_string()
-            } else {
-                return Err(anyhow!("unable to determine target to run"));
-            }
-        };
-
-        self.run_resolved_target(&target)
+        run_target(
+            &mut self.child_env,
+            &self.type_values,
+            &mut call_stack,
+            target,
+        )
     }
 }
 
