@@ -12,7 +12,7 @@ use {
             {Mutable, TypedValue, Value, ValueResult},
         },
     },
-    starlark_dialect_build_targets::{build_targets_module, get_context_value, EnvironmentContext},
+    starlark_dialect_build_targets::{get_context_value, EnvironmentContext},
     std::{
         path::{Path, PathBuf},
         sync::Arc,
@@ -167,11 +167,28 @@ pub fn get_context(type_values: &TypeValues) -> ValueResult {
 }
 
 /// Obtain a Starlark environment for evaluating PyOxidizer configurations.
-pub fn global_environment(
+pub fn register_starlark_dialect(
+    env: &mut Environment,
+    type_values: &mut TypeValues,
+) -> Result<(), EnvironmentError> {
+    starlark_dialect_build_targets::register_starlark_dialect(env, type_values)?;
+    tugger::starlark::register_starlark_dialect(env, type_values)?;
+    super::file_resource::file_resource_env(env, type_values);
+    super::python_distribution::python_distribution_module(env, type_values);
+    super::python_embedded_resources::python_embedded_resources_module(env, type_values);
+    super::python_executable::python_executable_env(env, type_values);
+    super::python_packaging_policy::python_packaging_policy_module(env, type_values);
+
+    Ok(())
+}
+
+pub fn populate_environment(
+    env: &mut Environment,
+    type_values: &mut TypeValues,
     context: PyOxidizerEnvironmentContext,
     resolve_targets: Option<Vec<String>>,
     build_script_mode: bool,
-) -> Result<(Environment, TypeValues), EnvironmentError> {
+) -> Result<(), EnvironmentError> {
     let mut build_targets_context = EnvironmentContext::new(context.logger(), context.cwd.clone());
 
     if let Some(targets) = resolve_targets {
@@ -188,24 +205,8 @@ pub fn global_environment(
         }),
     ));
 
-    let (mut env, mut type_values) = starlark::stdlib::global_environment();
-
-    starlark_dialect_build_targets::register_starlark_dialect(&mut env, &mut type_values)?;
-
-    build_targets_module(&mut env, &mut type_values);
-    tugger::starlark::register_starlark_dialect(&mut env, &mut type_values)?;
-    super::file_resource::file_resource_env(&mut env, &mut type_values);
-    super::python_distribution::python_distribution_module(&mut env, &mut type_values);
-    super::python_embedded_resources::python_embedded_resources_module(&mut env, &mut type_values);
-    super::python_executable::python_executable_env(&mut env, &mut type_values);
-    super::python_packaging_policy::python_packaging_policy_module(&mut env, &mut type_values);
-
-    starlark_dialect_build_targets::populate_environment(
-        &mut env,
-        &mut type_values,
-        build_targets_context,
-    )?;
-    tugger::starlark::populate_environment(&mut env, &mut type_values)?;
+    starlark_dialect_build_targets::populate_environment(env, type_values, build_targets_context)?;
+    tugger::starlark::populate_environment(env, type_values)?;
 
     env.set("CWD", Value::from(context.cwd.display().to_string()))?;
     env.set(
@@ -227,7 +228,7 @@ pub fn global_environment(
         type_values.add_type_value(PyOxidizerContext::TYPE, f, env.get(f)?);
     }
 
-    Ok((env, type_values))
+    Ok(())
 }
 
 #[cfg(test)]

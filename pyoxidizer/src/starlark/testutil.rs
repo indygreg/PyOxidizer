@@ -3,7 +3,9 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    super::env::{get_context, global_environment, PyOxidizerEnvironmentContext},
+    super::env::{
+        get_context, populate_environment, register_starlark_dialect, PyOxidizerEnvironmentContext,
+    },
     crate::{logging::PrintlnDrain, testutil::DISTRIBUTION_CACHE},
     anyhow::{anyhow, Result},
     codemap::CodeMap,
@@ -51,8 +53,11 @@ impl StarlarkEnvironment {
             Some(DISTRIBUTION_CACHE.clone()),
         )?;
 
-        let (env, type_values) = global_environment(context, None, false)
-            .map_err(|e| anyhow!("error creating Starlark environment: {:?}", e))?;
+        let (mut env, mut type_values) = starlark::stdlib::global_environment();
+        register_starlark_dialect(&mut env, &mut type_values)
+            .map_err(|e| anyhow!("error registering Starlark dialect: {:?}", e))?;
+        populate_environment(&mut env, &mut type_values, context, None, false)
+            .map_err(|e| anyhow!("error populating Starlark environment: {:?}", e))?;
 
         Ok(Self { env, type_values })
     }
