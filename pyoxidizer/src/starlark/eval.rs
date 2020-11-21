@@ -15,7 +15,7 @@ use {
     codemap_diagnostic::{Diagnostic, Emitter},
     linked_hash_map::LinkedHashMap,
     starlark::{
-        environment::{Environment, TypeValues},
+        environment::{Environment, EnvironmentError, TypeValues},
         eval::call_stack::CallStack,
         syntax::dialect::Dialect,
         values::{
@@ -80,8 +80,14 @@ impl EvaluationContext {
         &self.env
     }
 
-    pub fn env_mut(&mut self) -> &mut Environment {
-        &mut self.env
+    /// Obtain a named variable from the Starlark environment.
+    pub fn get_var(&self, name: &str) -> Result<Value, EnvironmentError> {
+        self.env.get(name)
+    }
+
+    /// Set a named variables in the Starlark environment.
+    pub fn set_var(&mut self, name: &str, value: Value) -> Result<(), EnvironmentError> {
+        self.env.set(name, value)
     }
 
     /// Evaluate a Starlark configuration file, returning a Diagnostic on error.

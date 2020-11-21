@@ -87,13 +87,13 @@ impl StarlarkEnvironment {
     }
 
     pub fn get(&self, name: &str) -> Result<Value> {
-        let value = self.eval.env().get(name).unwrap();
+        let value = self.eval.get_var(name).unwrap();
 
         Ok(value)
     }
 
     pub fn set(&mut self, name: &str, value: Value) -> Result<()> {
-        self.eval.env_mut().set(name, value).unwrap();
+        self.eval.set_var(name, value).unwrap();
 
         Ok(())
     }
