@@ -999,6 +999,68 @@ pub fn populate_environment(
     Ok(())
 }
 
+/// Build a registered target in a Starlark environment.
+pub fn build_target(
+    _env: &mut Environment,
+    type_values: &TypeValues,
+    call_stack: &mut CallStack,
+    target: &str,
+) -> Result<ResolvedTarget> {
+    let resolved_value = {
+        let context_value = get_context_value(type_values)
+            .map_err(|_| anyhow!("unable to resolve context value"))?;
+        let context = context_value
+            .downcast_ref::<EnvironmentContext>()
+            .ok_or_else(|| anyhow!("context has incorrect type"))?;
+
+        let v = if let Some(t) = context.get_target(target) {
+            if let Some(t) = &t.built_target {
+                return Ok(t.clone());
+            }
+
+            if let Some(v) = &t.resolved_value {
+                v.clone()
+            } else {
+                return Err(anyhow!("target {} is not resolved", target));
+            }
+        } else {
+            return Err(anyhow!("target {} is not resolved", target));
+        };
+
+        v
+    };
+
+    let build = type_values
+        .get_type_value(&resolved_value, "build")
+        .ok_or_else(|| anyhow!("{} does not implement build()", resolved_value.get_type()))?;
+
+    let resolved_target_value = build
+        .call(
+            call_stack,
+            type_values,
+            vec![resolved_value, Value::from(target)],
+            LinkedHashMap::new(),
+            None,
+            None,
+        )
+        .map_err(|e| anyhow!("error calling build(): {:?}", e))?;
+
+    let resolved_target = resolved_target_value
+        .downcast_ref::<ResolvedTargetValue>()
+        .unwrap();
+
+    let context_value = get_context_value(type_values)
+        .map_err(|e| anyhow!("unable to resolve context: {:?}", e))?;
+    let mut context = context_value
+        .downcast_mut::<EnvironmentContext>()
+        .map_err(|_| anyhow!("unable to obtain mutable context"))?
+        .ok_or_else(|| anyhow!("context has incorrect type"))?;
+
+    context.get_target_mut(target).unwrap().built_target = Some(resolved_target.inner.clone());
+
+    Ok(resolved_target.inner.clone())
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
