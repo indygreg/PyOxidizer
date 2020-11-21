@@ -51,7 +51,9 @@ pub fn file_manifest_add_python_executable(
         executable: true,
     };
 
-    let path = Path::new(&prefix).join(build.exe_name);
+    let use_prefix = if prefix == "." { "" } else { prefix };
+
+    let path = Path::new(use_prefix).join(build.exe_name);
     manifest.manifest.add_file_entry(&path, content)?;
 
     // Add any additional files that the exe builder requires.
@@ -59,7 +61,7 @@ pub fn file_manifest_add_python_executable(
 
     for (path, entry) in build.binary_data.extra_files.iter_entries() {
         warn!(logger, "adding extra file {} to {}", path.display(), prefix);
-        extra_files.add_file_entry(&Path::new(prefix).join(path), entry.clone())?;
+        extra_files.add_file_entry(&Path::new(use_prefix).join(path), entry.clone())?;
     }
 
     manifest.manifest.add_manifest(&extra_files)?;

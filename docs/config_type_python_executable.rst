@@ -310,6 +310,30 @@ This method accepts the following arguments:
    (``string``) The directory prefix of files in the ``FileManifest``. Use
    ``.`` to denote no prefix.
 
+.. _config_python_executable_to_wix_bundle_builder:
+
+``PythonExecutable.to_wix_bundle_builder()``
+--------------------------------------------
+
+This method transforms the ``PythonExecutable`` instance into a
+:ref:`tugger_starlark_type_wix_bundle_builder` instance. The returned value can
+be used to generate a Windows ``.exe`` installer. This installer will install
+the Visual C++ Redistributable as well as an MSI for the build application.
+
+This method accepts the following arguments:
+
+``id_prefix``
+   See :ref:`tugger_starlark_type_wix_msi_builder_constructors` for usage.
+``product_name``
+   See :ref:`tugger_starlark_type_wix_msi_builder_constructors` for usage.
+``product_version``
+   See :ref:`tugger_starlark_type_wix_msi_builder_constructors` for usage.
+``product_manufacturer``
+   See :ref:`tugger_starlark_type_wix_msi_builder_constructors` for usage.
+
+The returned value can be further customized before it is built. See
+:ref:`tugger_starlark_type_wix_bundle_builder` type documentation for more.
+
 .. _config_python_executable_to_wix_msi_builder:
 
 ``PythonExecutable.to_wix_msi_builder()``

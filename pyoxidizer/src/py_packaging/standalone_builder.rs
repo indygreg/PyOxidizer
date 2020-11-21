@@ -372,6 +372,10 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         self.link_mode
     }
 
+    fn target_triple(&self) -> &str {
+        &self.target_triple
+    }
+
     fn cache_tag(&self) -> &str {
         self.target_distribution.cache_tag()
     }

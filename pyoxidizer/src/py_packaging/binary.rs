@@ -63,6 +63,9 @@ pub trait PythonBinaryBuilder {
     /// How the binary will link against libpython.
     fn libpython_link_mode(&self) -> LibpythonLinkMode;
 
+    /// Rust target triple the binary will run on.
+    fn target_triple(&self) -> &str;
+
     /// Obtain the cache tag to apply to Python bytecode modules.
     fn cache_tag(&self) -> &str;
 

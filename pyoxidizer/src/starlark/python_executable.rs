@@ -44,7 +44,10 @@ use {
         ops::Deref,
         path::{Path, PathBuf},
     },
-    tugger::starlark::{file_resource::FileManifestValue, wix_msi_builder::WiXMSIBuilderValue},
+    tugger::starlark::{
+        file_resource::FileManifestValue, wix_bundle_builder::WiXBundleBuilderValue,
+        wix_msi_builder::WiXMSIBuilderValue,
+    },
     virtual_file_manifest::FileData,
 };
 
@@ -728,6 +731,57 @@ impl PythonExecutableValue {
         Ok(manifest_value.clone())
     }
 
+    /// PythonExecutable.to_wix_bundle_builder(id_prefix, name, version, manufacturer)
+    pub fn to_wix_bundle_builder(
+        &self,
+        type_values: &TypeValues,
+        id_prefix: String,
+        product_name: String,
+        product_version: String,
+        product_manufacturer: String,
+    ) -> ValueResult {
+        let msi_builder_value = self.to_wix_msi_builder(
+            type_values,
+            id_prefix.clone(),
+            product_name.clone(),
+            product_version.clone(),
+            product_manufacturer.clone(),
+        )?;
+        let msi_builder = msi_builder_value
+            .downcast_ref::<WiXMSIBuilderValue>()
+            .unwrap();
+
+        let bundle_builder_value = WiXBundleBuilderValue::new_from_args(
+            id_prefix,
+            product_name,
+            product_version,
+            product_manufacturer,
+        )?;
+        let mut bundle_builder = bundle_builder_value
+            .downcast_mut::<WiXBundleBuilderValue>()
+            .unwrap()
+            .unwrap();
+
+        // Add the VC++ Redistributable for the target platform.
+        match self.exe.target_triple() {
+            "i686-pc-windows-msvc" => {
+                bundle_builder.add_vc_redistributable(type_values, "x86".to_string())?;
+            }
+            "x86_64-pc-windows-msvc" => {
+                bundle_builder.add_vc_redistributable(type_values, "x64".to_string())?;
+            }
+            _ => {}
+        }
+
+        bundle_builder.add_wix_msi_builder(
+            msi_builder.deref().clone(),
+            false,
+            Value::new(NoneType::None),
+        )?;
+
+        Ok(bundle_builder_value.clone())
+    }
+
     /// PythonExecutable.to_wix_msi_builder(id_prefix, product_name, product_version, product_manufacturer)
     pub fn to_wix_msi_builder(
         &self,
@@ -928,6 +982,18 @@ starlark_module! { python_executable_env =>
     PythonExecutable.to_file_manifest(env env, this, prefix: String) {
         let this = this.downcast_ref::<PythonExecutableValue>().unwrap();
         this.to_file_manifest(&env, prefix)
+    }
+
+    PythonExecutable.to_wix_bundle_builder(
+        env env,
+        this,
+        id_prefix: String,
+        product_name: String,
+        product_version: String,
+        product_manufacturer: String
+    ) {
+        let this = this.downcast_ref::<PythonExecutableValue>().unwrap();
+        this.to_wix_bundle_builder(env, id_prefix, product_name, product_version, product_manufacturer)
     }
 
     PythonExecutable.to_wix_msi_builder(
@@ -1159,6 +1225,27 @@ mod tests {
 
         let value = env.eval("exe.tcl_files_path = None; exe.tcl_files_path")?;
         assert_eq!(value.get_type(), "NoneType");
+
+        Ok(())
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn test_to_wix_bundle_builder() -> Result<()> {
+        let mut env = StarlarkEnvironment::new_with_exe()?;
+        env.eval("bundle = exe.to_wix_bundle_builder('id_prefix', 'product_name', '0.1', 'product_manufacturer')")?;
+        env.eval("bundle.build('test_to_wix_bundle_builder')")?;
+
+        let exe_path = env
+            .eval
+            .target_build_path("test_to_wix_bundle_builder")
+            .unwrap()
+            .join("product_name-0.1.exe");
+
+        assert!(
+            exe_path.exists(),
+            format!("exe exists: {}", exe_path.display())
+        );
 
         Ok(())
     }

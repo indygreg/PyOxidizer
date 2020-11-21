@@ -57,6 +57,9 @@ New Features
 * The ``PythonExecutable`` Starlark type now exposes a ``to_wix_msi_builder()``
   method to obtain a ``WiXMSIBuilder``, which can be used to generate an MSI
   installer for the application.
+* The ``PythonExecutable`` Starlark type now exposes a ``to_wix_bundle_builder()``
+  method to obtain a ``WiXBundleBuilder``, which can be used to generate an
+  ``.exe`` installer for the application.
 
 .. _version_0_10_3:
 
