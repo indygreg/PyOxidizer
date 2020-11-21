@@ -11,7 +11,7 @@ use {
     codemap::CodeMap,
     codemap_diagnostic::Diagnostic,
     slog::Drain,
-    starlark::{environment::Environment, values::Value},
+    starlark::values::Value,
 };
 
 /// A Starlark execution environment.
@@ -64,11 +64,9 @@ impl StarlarkEnvironment {
     pub fn eval_raw(
         &mut self,
         map: &std::sync::Arc<std::sync::Mutex<CodeMap>>,
-        file_loader_env: Environment,
         code: &str,
     ) -> Result<Value, Diagnostic> {
-        self.eval
-            .eval_diagnostic(&map, "<test>", file_loader_env, code)
+        self.eval.eval_diagnostic(&map, "<test>", code)
     }
 
     /// Evaluate code in the Starlark environment.
@@ -127,9 +125,8 @@ pub fn starlark_ok(snippet: &str) -> Value {
 pub fn starlark_nok(snippet: &str) -> Diagnostic {
     let mut env = StarlarkEnvironment::new().expect("error creating starlark environment");
     let map = std::sync::Arc::new(std::sync::Mutex::new(CodeMap::new()));
-    let file_loader_env = env.eval.env().clone();
 
-    let res = env.eval_raw(&map, file_loader_env, snippet);
+    let res = env.eval_raw(&map, snippet);
 
     assert!(res.is_err());
 

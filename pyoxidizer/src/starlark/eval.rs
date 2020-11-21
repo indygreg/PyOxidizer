@@ -76,10 +76,6 @@ impl EvaluationContext {
         Ok(Self { env, type_values })
     }
 
-    pub fn env(&self) -> &Environment {
-        &self.env
-    }
-
     /// Obtain a named variable from the Starlark environment.
     pub fn get_var(&self, name: &str) -> Result<Value, EnvironmentError> {
         self.env.get(name)
@@ -135,9 +131,10 @@ impl EvaluationContext {
         &mut self,
         map: &Arc<Mutex<CodeMap>>,
         path: &str,
-        file_loader_env: Environment,
         code: &str,
     ) -> Result<Value, Diagnostic> {
+        let file_loader_env = self.env.clone();
+
         starlark::eval::simple::eval(
             &map,
             path,
@@ -151,9 +148,8 @@ impl EvaluationContext {
 
     pub fn eval(&mut self, path: &str, code: &str) -> Result<Value> {
         let map = std::sync::Arc::new(std::sync::Mutex::new(CodeMap::new()));
-        let file_loader_env = self.env.clone();
 
-        self.eval_diagnostic(&map, path, file_loader_env, code)
+        self.eval_diagnostic(&map, path, code)
             .map_err(|diagnostic| {
                 let cloned_map_lock = Arc::clone(&map);
                 let unlocked_map = cloned_map_lock.lock().unwrap();
