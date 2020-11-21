@@ -25,7 +25,7 @@ use {
     },
     starlark_dialect_build_targets::{EnvironmentContext, ResolvedTarget, ResolvedTargetValue},
     std::{
-        path::Path,
+        path::{Path, PathBuf},
         sync::{Arc, Mutex},
     },
 };
@@ -82,10 +82,6 @@ impl EvaluationContext {
 
     pub fn env_mut(&mut self) -> &mut Environment {
         &mut self.env
-    }
-
-    pub fn type_values(&self) -> &TypeValues {
-        &self.type_values
     }
 
     /// Evaluate a Starlark configuration file, returning a Diagnostic on error.
@@ -184,6 +180,15 @@ impl EvaluationContext {
                     label: "".to_string(),
                 })
             })
+    }
+
+    pub fn build_path(&self) -> Result<PathBuf, ValueError> {
+        let pyoxidizer_context_value = self.pyoxidizer_context_value()?;
+        let pyoxidizer_context = pyoxidizer_context_value
+            .downcast_ref::<PyOxidizerEnvironmentContext>()
+            .ok_or(ValueError::IncorrectParameterType)?;
+
+        pyoxidizer_context.build_path(&self.type_values)
     }
 
     pub fn default_target(&self) -> Result<Option<String>> {
