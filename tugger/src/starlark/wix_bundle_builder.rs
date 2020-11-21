@@ -54,6 +54,13 @@ impl<'a> WiXBundleBuilderValue<'a> {
         }))
     }
 
+    /// WiXBundleBuilder.add_condition(condition, message)
+    pub fn add_condition(&mut self, condition: String, message: String) -> ValueResult {
+        self.inner.add_condition(&message, &condition);
+
+        Ok(Value::new(NoneType::None))
+    }
+
     /// WiXBundleBuilder.add_vc_redistributable(platform)
     pub fn add_vc_redistributable(
         &mut self,
@@ -136,6 +143,11 @@ starlark_module! { wix_bundle_builder_module =>
         WiXBundleBuilderValue::new_from_args(id_prefix, name, version, manufacturer)
     }
 
+    WiXBundleBuilder.add_condition(this, condition: String, message: String) {
+        let mut this = this.downcast_mut::<WiXBundleBuilderValue>().unwrap().unwrap();
+        this.add_condition(condition, message)
+    }
+
     WiXBundleBuilder.add_vc_redistributable(env env, this, platform: String) {
         let mut this = this.downcast_mut::<WiXBundleBuilderValue>().unwrap().unwrap();
         this.add_vc_redistributable(env, platform)
@@ -161,6 +173,16 @@ mod tests {
         let builder = v.downcast_ref::<WiXBundleBuilderValue>().unwrap();
         assert_eq!(builder.id_prefix, "prefix");
         assert_eq!(builder.target_triple, env!("HOST"));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_add_condition() -> Result<()> {
+        let mut env = StarlarkEnvironment::new()?;
+
+        env.eval("builder = WiXBundleBuilder('prefix', 'name', '0.1', 'manufacturer')")?;
+        env.eval("builder.add_condition('condition', 'message')")?;
 
         Ok(())
     }

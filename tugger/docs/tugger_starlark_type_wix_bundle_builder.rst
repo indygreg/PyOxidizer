@@ -49,6 +49,24 @@ Methods
 
 Sections below document methods available on ``WiXBundleBuilder`` instances.
 
+.. _tugger_starlark_type_wix_bundle_builder.add_condition:
+
+``WiXBundleBuilder.add_condition()``
+------------------------------------
+
+Defines a ``<bal:Condition>`` that must be satisfied to run this installer.
+
+See the WiX Toolkit documentation for more.
+
+This method accepts the following arguments:
+
+``condition``
+   (``string``) The condition expression that must be satisfied.
+
+``message``
+   (``string``) The message that will be displayed if the condition is
+   not met.
+
 .. _tugger_starlark_type_wix_bundle_builder.add_vc_redistributable:
 
 ``WiXBundleBuilder.add_vc_redistributable()``
