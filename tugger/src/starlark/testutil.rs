@@ -31,6 +31,8 @@ impl StarlarkEnvironment {
         let context = EnvironmentContext::new(&logger, cwd);
 
         let (mut env, mut type_values) = starlark::stdlib::global_environment();
+        starlark_dialect_build_targets::register_starlark_dialect(&mut env, &mut type_values)
+            .unwrap();
         starlark_dialect_build_targets::populate_environment(&mut env, &mut type_values, context)
             .unwrap();
         populate_environment(&mut env, &mut type_values)

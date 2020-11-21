@@ -190,11 +190,7 @@ pub fn global_environment(
 
     let (mut env, mut type_values) = starlark::stdlib::global_environment();
 
-    starlark_dialect_build_targets::populate_environment(
-        &mut env,
-        &mut type_values,
-        build_targets_context,
-    )?;
+    starlark_dialect_build_targets::register_starlark_dialect(&mut env, &mut type_values)?;
 
     build_targets_module(&mut env, &mut type_values);
     tugger::starlark::populate_environment(&mut env, &mut type_values)?;
@@ -203,6 +199,12 @@ pub fn global_environment(
     super::python_embedded_resources::python_embedded_resources_module(&mut env, &mut type_values);
     super::python_executable::python_executable_env(&mut env, &mut type_values);
     super::python_packaging_policy::python_packaging_policy_module(&mut env, &mut type_values);
+
+    starlark_dialect_build_targets::populate_environment(
+        &mut env,
+        &mut type_values,
+        build_targets_context,
+    )?;
 
     env.set("CWD", Value::from(context.cwd.display().to_string()))?;
     env.set(

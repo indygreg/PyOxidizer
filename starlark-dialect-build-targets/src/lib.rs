@@ -961,14 +961,25 @@ starlark_module! { build_targets_module =>
     }
 }
 
-/// Populate a Starlark environment with our dialect.
+/// Register our Starlark dialect with an environment and type values.
+pub fn register_starlark_dialect(
+    env: &mut Environment,
+    type_values: &mut TypeValues,
+) -> Result<(), EnvironmentError> {
+    build_targets_module(env, type_values);
+
+    Ok(())
+}
+
+/// Populate a Starlark environment with state.
+///
+/// This sets variables (as opposed to type values) and is suitable to call on a child
+/// environment when the parent environment is already frozen.
 pub fn populate_environment(
     env: &mut Environment,
     type_values: &mut TypeValues,
     context: EnvironmentContext,
 ) -> Result<(), EnvironmentError> {
-    build_targets_module(env, type_values);
-
     env.set(ENVIRONMENT_CONTEXT_SYMBOL, Value::new(context))?;
 
     // We alias various globals as BuildTargets.* attributes so they are

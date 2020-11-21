@@ -3,7 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    crate::{populate_environment, EnvironmentContext},
+    crate::{populate_environment, register_starlark_dialect, EnvironmentContext},
     anyhow::{anyhow, Result},
     codemap::CodeMap,
     codemap_diagnostic::{Diagnostic, Emitter},
@@ -62,8 +62,10 @@ impl StarlarkEnvironment {
         let context = EnvironmentContext::new(&logger, cwd);
 
         let (mut env, mut type_values) = starlark::stdlib::global_environment();
-        populate_environment(&mut env, &mut type_values, context)
+        register_starlark_dialect(&mut env, &mut type_values)
             .map_err(|e| anyhow!("error creating Starlark environment: {:?}", e))?;
+        populate_environment(&mut env, &mut type_values, context)
+            .map_err(|e| anyhow!("error populating Starlark environment: {:?}", e))?;
 
         Ok(Self { env, type_values })
     }
