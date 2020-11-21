@@ -44,7 +44,7 @@ use {
         ops::Deref,
         path::{Path, PathBuf},
     },
-    tugger::starlark::file_resource::FileManifestValue,
+    tugger::starlark::{file_resource::FileManifestValue, wix_msi_builder::WiXMSIBuilderValue},
     virtual_file_manifest::FileData,
 };
 
@@ -728,6 +728,33 @@ impl PythonExecutableValue {
         Ok(manifest_value.clone())
     }
 
+    /// PythonExecutable.to_wix_msi_builder(id_prefix, product_name, product_version, product_manufacturer)
+    pub fn to_wix_msi_builder(
+        &self,
+        type_values: &TypeValues,
+        id_prefix: String,
+        product_name: String,
+        product_version: String,
+        product_manufacturer: String,
+    ) -> ValueResult {
+        let manifest_value = self.to_file_manifest(type_values, ".".to_string())?;
+        let manifest = manifest_value.downcast_ref::<FileManifestValue>().unwrap();
+
+        let builder_value = WiXMSIBuilderValue::new_from_args(
+            id_prefix,
+            product_name,
+            product_version,
+            product_manufacturer,
+        )?;
+        let mut builder = builder_value
+            .downcast_mut::<WiXMSIBuilderValue>()
+            .unwrap()
+            .unwrap();
+        builder.add_program_files_manifest(manifest.deref().clone())?;
+
+        Ok(builder_value.clone())
+    }
+
     /// PythonExecutable.filter_resources_from_files(files=None, glob_files=None)
     pub fn filter_resources_from_files(
         &mut self,
@@ -901,6 +928,18 @@ starlark_module! { python_executable_env =>
     PythonExecutable.to_file_manifest(env env, this, prefix: String) {
         let this = this.downcast_ref::<PythonExecutableValue>().unwrap();
         this.to_file_manifest(&env, prefix)
+    }
+
+    PythonExecutable.to_wix_msi_builder(
+        env env,
+        this,
+        id_prefix: String,
+        product_name: String,
+        product_version: String,
+        product_manufacturer: String
+    ) {
+        let this = this.downcast_ref::<PythonExecutableValue>().unwrap();
+        this.to_wix_msi_builder(&env, id_prefix, product_name, product_version, product_manufacturer)
     }
 }
 
@@ -1120,6 +1159,27 @@ mod tests {
 
         let value = env.eval("exe.tcl_files_path = None; exe.tcl_files_path")?;
         assert_eq!(value.get_type(), "NoneType");
+
+        Ok(())
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn test_to_wix_msi_builder() -> Result<()> {
+        let mut env = StarlarkEnvironment::new_with_exe()?;
+        env.eval("msi = exe.to_wix_msi_builder('id_prefix', 'product_name', '0.1', 'product_manufacturer')")?;
+        env.eval("msi.build('test_to_wix_msi_builder')")?;
+
+        let msi_path = env
+            .eval
+            .target_build_path("test_to_wix_msi_builder")
+            .unwrap()
+            .join("product_name-0.1.msi");
+
+        assert!(
+            msi_path.exists(),
+            format!("msi exists: {}", msi_path.display())
+        );
 
         Ok(())
     }

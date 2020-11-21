@@ -204,6 +204,13 @@ impl EvaluationContext {
         pyoxidizer_context.build_path(&self.type_values)
     }
 
+    pub fn target_build_path(&self, target: &str) -> Result<PathBuf> {
+        let context_value = self.build_targets_context_value()?;
+        let context = context_value.downcast_ref::<EnvironmentContext>().unwrap();
+
+        Ok(context.target_build_path(target))
+    }
+
     pub fn default_target(&self) -> Result<Option<String>> {
         let raw_context = self.build_targets_context_value()?;
         let context = raw_context
