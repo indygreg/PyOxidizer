@@ -332,6 +332,8 @@ pub fn build_pyembed_artifacts(
             None
         },
         true,
+        "0",
+        None,
     )?;
 
     context.evaluate_file(config_path)?;

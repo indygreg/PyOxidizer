@@ -3,28 +3,22 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    super::env::{
-        get_context, populate_environment, register_starlark_dialect, PyOxidizerEnvironmentContext,
+    super::env::{get_context, PyOxidizerEnvironmentContext},
+    crate::{
+        logging::PrintlnDrain, starlark::eval::EvaluationContext, testutil::DISTRIBUTION_CACHE,
     },
-    crate::{logging::PrintlnDrain, testutil::DISTRIBUTION_CACHE},
     anyhow::{anyhow, Result},
     codemap::CodeMap,
     codemap_diagnostic::{Diagnostic, Emitter},
     slog::Drain,
-    starlark::{
-        environment::{Environment, TypeValues},
-        eval,
-        syntax::dialect::Dialect,
-        values::Value,
-    },
+    starlark::{environment::Environment, eval, syntax::dialect::Dialect, values::Value},
 };
 
 /// A Starlark execution environment.
 ///
 /// Provides convenience wrappers for common functionality.
 pub struct StarlarkEnvironment {
-    pub env: Environment,
-    pub type_values: TypeValues,
+    pub eval: EvaluationContext,
 }
 
 impl StarlarkEnvironment {
@@ -42,24 +36,19 @@ impl StarlarkEnvironment {
         let cwd = std::env::current_dir()?;
         let config_path = cwd.join("dummy");
 
-        let context = PyOxidizerEnvironmentContext::new(
+        let eval = EvaluationContext::new(
             &logger,
-            false,
             &config_path,
             build_target,
-            build_target,
+            false,
+            false,
+            None,
             false,
             "0",
             Some(DISTRIBUTION_CACHE.clone()),
         )?;
 
-        let (mut env, mut type_values) = starlark::stdlib::global_environment();
-        register_starlark_dialect(&mut env, &mut type_values)
-            .map_err(|e| anyhow!("error registering Starlark dialect: {:?}", e))?;
-        populate_environment(&mut env, &mut type_values, context, None, false)
-            .map_err(|e| anyhow!("error populating Starlark environment: {:?}", e))?;
-
-        Ok(Self { env, type_values })
+        Ok(Self { eval })
     }
 
     /// Create a new environment with `dist` and `exe` variables set.
@@ -78,13 +67,15 @@ impl StarlarkEnvironment {
         file_loader_env: Environment,
         code: &str,
     ) -> Result<Value, Diagnostic> {
+        let (env, type_values) = self.eval.env_mut_and_type_values();
+
         eval::simple::eval(
             &map,
             "<test>",
             code,
             Dialect::Bzl,
-            &mut self.env,
-            &self.type_values,
+            env,
+            type_values,
             file_loader_env,
         )
     }
@@ -92,7 +83,7 @@ impl StarlarkEnvironment {
     /// Evaluate code in the Starlark environment.
     pub fn eval(&mut self, code: &str) -> Result<Value> {
         let map = std::sync::Arc::new(std::sync::Mutex::new(CodeMap::new()));
-        let file_loader_env = self.env.clone();
+        let file_loader_env = self.eval.env().clone();
 
         self.eval_raw(&map, file_loader_env, code)
             .map_err(|diagnostic| {
@@ -121,13 +112,13 @@ impl StarlarkEnvironment {
     }
 
     pub fn get(&self, name: &str) -> Result<Value> {
-        let value = self.env.get(name).unwrap();
+        let value = self.eval.env().get(name).unwrap();
 
         Ok(value)
     }
 
     pub fn set(&mut self, name: &str, value: Value) -> Result<()> {
-        self.env.set(name, value).unwrap();
+        self.eval.env_mut().set(name, value).unwrap();
 
         Ok(())
     }
@@ -137,7 +128,7 @@ impl StarlarkEnvironment {
     /// This needs to be called shortly after construction or things won't work
     /// as expected.
     pub fn set_target_triple(&mut self, triple: &str) -> Result<()> {
-        let pyoxidizer_context_value = get_context(&self.type_values).unwrap();
+        let pyoxidizer_context_value = get_context(self.eval.type_values()).unwrap();
         let mut pyoxidizer_context = pyoxidizer_context_value
             .downcast_mut::<PyOxidizerEnvironmentContext>()
             .unwrap()
@@ -161,7 +152,7 @@ pub fn starlark_ok(snippet: &str) -> Value {
 pub fn starlark_nok(snippet: &str) -> Diagnostic {
     let mut env = StarlarkEnvironment::new().expect("error creating starlark environment");
     let map = std::sync::Arc::new(std::sync::Mutex::new(CodeMap::new()));
-    let file_loader_env = env.env.clone();
+    let file_loader_env = env.eval.env().clone();
 
     let res = env.eval_raw(&map, file_loader_env, snippet);
 

@@ -383,14 +383,14 @@ mod tests {
 
         env.eval("m.add_python_resource('bin', exe)")?;
         env.eval("m.install('myapp')")?;
-        let pyoxidizer_context_value = get_context(&env.type_values).unwrap();
+        let pyoxidizer_context_value = get_context(env.eval.type_values()).unwrap();
         let pyoxidizer_context = pyoxidizer_context_value
             .downcast_ref::<PyOxidizerEnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)
             .unwrap();
 
         let dest_path = pyoxidizer_context
-            .build_path(&env.type_values)
+            .build_path(env.eval.type_values())
             .unwrap()
             .join("myapp");
         assert!(dest_path.exists());

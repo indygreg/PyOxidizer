@@ -3,8 +3,11 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    crate::starlark::env::{
-        populate_environment, register_starlark_dialect, PyOxidizerEnvironmentContext,
+    crate::{
+        py_packaging::distribution::DistributionCache,
+        starlark::env::{
+            populate_environment, register_starlark_dialect, PyOxidizerEnvironmentContext,
+        },
     },
     anyhow::{anyhow, Result},
     codemap::CodeMap,
@@ -30,6 +33,7 @@ pub struct EvaluationContext {
 }
 
 impl EvaluationContext {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         logger: &slog::Logger,
         config_path: &Path,
@@ -38,6 +42,8 @@ impl EvaluationContext {
         verbose: bool,
         resolve_targets: Option<Vec<String>>,
         build_script_mode: bool,
+        build_opt_level: &str,
+        distribution_cache: Option<Arc<DistributionCache>>,
     ) -> Result<Self> {
         let context = PyOxidizerEnvironmentContext::new(
             logger,
@@ -46,9 +52,8 @@ impl EvaluationContext {
             crate::project_building::HOST,
             build_target_triple,
             release,
-            // TODO this should be an argument.
-            "0",
-            None,
+            build_opt_level,
+            distribution_cache,
         )?;
 
         let (mut env, mut type_values) = starlark::stdlib::global_environment();
@@ -65,6 +70,22 @@ impl EvaluationContext {
         .map_err(|e| anyhow!("error populating Starlark environment: {:?}", e))?;
 
         Ok(Self { env, type_values })
+    }
+
+    pub fn env(&self) -> &Environment {
+        &self.env
+    }
+
+    pub fn env_mut(&mut self) -> &mut Environment {
+        &mut self.env
+    }
+
+    pub fn type_values(&self) -> &TypeValues {
+        &self.type_values
+    }
+
+    pub fn env_mut_and_type_values(&mut self) -> (&mut Environment, &TypeValues) {
+        (&mut self.env, &self.type_values)
     }
 
     /// Evaluate a Starlark configuration file, returning a Diagnostic on error.
@@ -255,8 +276,17 @@ mod tests {
             .as_bytes(),
         )?;
 
-        let mut context =
-            EvaluationContext::new(&logger, &main_path, env!("HOST"), false, true, None, false)?;
+        let mut context = EvaluationContext::new(
+            &logger,
+            &main_path,
+            env!("HOST"),
+            false,
+            true,
+            None,
+            false,
+            "0",
+            None,
+        )?;
 
         // TODO this should work (#328).
         assert!(context.evaluate_file(&main_path).is_err());
@@ -280,6 +310,8 @@ mod tests {
             true,
             None,
             false,
+            "0",
+            None,
         )?;
 
         context.evaluate_file(&config_path)?;

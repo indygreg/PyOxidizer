@@ -68,6 +68,8 @@ pub fn list_targets(logger: &slog::Logger, project_path: &Path) -> Result<()> {
         false,
         Some(Vec::new()),
         false,
+        "0",
+        None,
     )?;
 
     context.evaluate_file(&config_path)?;
@@ -117,6 +119,8 @@ pub fn build(
         verbose,
         resolve_targets,
         false,
+        "0",
+        None,
     )?;
 
     context.evaluate_file(&config_path)?;
@@ -159,6 +163,8 @@ pub fn run(
         verbose,
         resolve_targets,
         false,
+        "0",
+        None,
     )?;
     context.evaluate_file(&config_path)?;
 
