@@ -45,6 +45,7 @@ Bug Fixes
 * Escaping of string and path values when emitting Rust code for the embedded
   Python interpreter configuration should now be more robust. Previously,
   special characters (like ``\``) were not escaped properly. (#321)
+* The ``load()`` Starlark function should now work. (#328)
 
 New Features
 ^^^^^^^^^^^^

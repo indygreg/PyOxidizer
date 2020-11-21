@@ -33,6 +33,7 @@ use {
 /// Represents a running Starlark environment.
 pub struct EvaluationContext {
     parent_env: Environment,
+    child_env: Environment,
     type_values: TypeValues,
 }
 
@@ -64,8 +65,13 @@ impl EvaluationContext {
 
         register_starlark_dialect(&mut parent_env, &mut type_values)
             .map_err(|e| anyhow!("error creating Starlark environment: {:?}", e))?;
+
+        // All variables go in a child environment. Upon calling child(), the parent
+        // environment is frozen and no new changes are allowed.
+        let mut child_env = parent_env.child("pyoxidizer");
+
         populate_environment(
-            &mut parent_env,
+            &mut child_env,
             &mut type_values,
             context,
             resolve_targets,
@@ -75,18 +81,19 @@ impl EvaluationContext {
 
         Ok(Self {
             parent_env,
+            child_env,
             type_values,
         })
     }
 
     /// Obtain a named variable from the Starlark environment.
     pub fn get_var(&self, name: &str) -> Result<Value, EnvironmentError> {
-        self.parent_env.get(name)
+        self.child_env.get(name)
     }
 
     /// Set a named variables in the Starlark environment.
     pub fn set_var(&mut self, name: &str, value: Value) -> Result<(), EnvironmentError> {
-        self.parent_env.set(name, value)
+        self.child_env.set(name, value)
     }
 
     /// Evaluate a Starlark configuration file, returning a Diagnostic on error.
@@ -98,7 +105,7 @@ impl EvaluationContext {
             &map,
             &config_path.display().to_string(),
             Dialect::Bzl,
-            &mut self.parent_env,
+            &mut self.child_env,
             &self.type_values,
             file_loader_env,
         )
@@ -136,14 +143,14 @@ impl EvaluationContext {
         path: &str,
         code: &str,
     ) -> Result<Value, Diagnostic> {
-        let file_loader_env = self.parent_env.clone();
+        let file_loader_env = self.child_env.clone();
 
         starlark::eval::simple::eval(
             &map,
             path,
             code,
             Dialect::Bzl,
-            &mut self.parent_env,
+            &mut self.child_env,
             &self.type_values,
             file_loader_env,
         )
@@ -350,8 +357,7 @@ mod tests {
             None,
         )?;
 
-        // TODO this should work (#328).
-        assert!(context.evaluate_file(&main_path).is_err());
+        context.evaluate_file(&main_path)?;
 
         Ok(())
     }
