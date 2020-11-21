@@ -434,7 +434,7 @@ mod tests {
         env.eval(
             "installer.add_simple_installer('myapp', 'myapp', '0.1', 'author', FileManifest())",
         )?;
-        let resolved_value = env.eval("installer.build('msi')")?;
+        let resolved_value = env.eval("installer.build('test_build_simple_installer')")?;
 
         assert_eq!(resolved_value.get_type(), "ResolvedTarget");
 
@@ -445,8 +445,8 @@ mod tests {
         let context_value = get_context_value(&env.type_values).unwrap();
         let context = context_value.downcast_ref::<EnvironmentContext>().unwrap();
 
-        let build_path = context.build_path();
-        let msi_path = build_path.join("msi").join("myapp.msi");
+        let build_path = context.target_build_path("test_build_simple_installer");
+        let msi_path = build_path.join("myapp.msi");
 
         assert_eq!(
             resolved.inner.run_mode,

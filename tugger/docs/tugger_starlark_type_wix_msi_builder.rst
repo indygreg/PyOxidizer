@@ -89,6 +89,15 @@ A URL that will be presented to provide users with help.
 
 Path to a file containing the license for the application being installed.
 
+``msi_filename``
+----------------
+
+(``string``)
+
+The filename to use for the built MSI.
+
+If not set, the default is ``<product_name>-<product_version>.msi``.
+
 ``package_description``
 -----------------------
 
@@ -109,6 +118,13 @@ Keywords for the application being installed.
 (``string``)
 
 Path to a file providing the icon for the installed application.
+
+``target_triple``
+-----------------
+
+(``string``)
+
+The Rust target triple the MSI is being built for.
 
 ``upgrade_code``
 ----------------
@@ -141,3 +157,16 @@ This method accepts the following arguments:
 ``manifest``
    (``FileManifest``) A :ref:`tugger_starlark_type_file_manifest` containing files
    to register for installation.
+
+
+.. _tugger_starlark_type_wix_msi_builder.build:
+
+``WiXMSIBuilder.build()``
+-------------------------
+
+This method will build an MSI using the WiX Toolset.
+
+This method accepts the following arguments:
+
+``target``
+   (``string``) The name of the target being built.

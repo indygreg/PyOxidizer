@@ -169,6 +169,11 @@ impl WiXSimpleMSIBuilder {
         Ok(())
     }
 
+    /// Obtain the default filename to use for the generated MSI.
+    pub fn default_msi_filename(&self) -> String {
+        format!("{}-{}.msi", self.product_name, self.product_version)
+    }
+
     /// Convert to a `WiXInstallerBuilder`.
     ///
     /// This will construct a new `WiXInstallerBuilder` suitable for building

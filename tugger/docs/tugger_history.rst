@@ -16,6 +16,15 @@ Version History
 
 Not yet released.
 
+New Features
+^^^^^^^^^^^^
+
+* The ``WiXMSIBuilder`` Starlark type now implements ``build()`` so it can be
+  used as a target.
+* The ``WiXMSIBuilder`` Starlark type now exposes ``msi_filename`` and
+  ``target_triple`` attributes to customize the output filename and the
+  architecture the MSI is built for, respectively.
+
 .. _tugger_version_0_2_0:
 
 0.2.0
