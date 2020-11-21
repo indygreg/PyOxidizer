@@ -3,7 +3,10 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    crate::wix::{VCRedistributablePlatform, WiXBundleInstallerBuilder},
+    crate::{
+        starlark::wix_msi_builder::WiXMSIBuilderValue,
+        wix::{MSIPackage, VCRedistributablePlatform, WiXBundleInstallerBuilder},
+    },
     starlark::{
         environment::TypeValues,
         values::{
@@ -27,6 +30,7 @@ pub struct WiXBundleBuilderValue<'a> {
     pub inner: WiXBundleInstallerBuilder<'a>,
     pub target_triple: String,
     pub id_prefix: String,
+    build_msis: Vec<WiXMSIBuilderValue>,
 }
 
 impl TypedValue for WiXBundleBuilderValue<'static> {
@@ -51,6 +55,7 @@ impl<'a> WiXBundleBuilderValue<'a> {
             inner,
             target_triple: env!("HOST").to_string(),
             id_prefix,
+            build_msis: vec![],
         }))
     }
 
@@ -93,6 +98,30 @@ impl<'a> WiXBundleBuilderValue<'a> {
         Ok(Value::new(NoneType::None))
     }
 
+    /// WiXBundleBuilder.add_wix_msi_builder(builder)
+    pub fn add_wix_msi_builder(
+        &mut self,
+        builder: WiXMSIBuilderValue,
+        display_internal_ui: bool,
+        install_condition: Value,
+    ) -> ValueResult {
+        let mut package = MSIPackage::default();
+        package.source_file = Some(builder.msi_filename().into());
+
+        if display_internal_ui {
+            package.display_internal_ui = Some("yes".into());
+        }
+
+        if install_condition.get_type() != "NoneType" {
+            package.install_condition = Some(install_condition.to_string().into());
+        }
+
+        self.build_msis.push(builder);
+        self.inner.chain(package.into());
+
+        Ok(Value::new(NoneType::None))
+    }
+
     /// WiXBundleBuilder.build(target)
     pub fn build(&self, type_values: &TypeValues, target: String) -> ValueResult {
         let context_value = get_context_value(type_values)?;
@@ -101,6 +130,11 @@ impl<'a> WiXBundleBuilderValue<'a> {
             .ok_or(ValueError::IncorrectParameterType)?;
 
         let output_path = context.target_build_path(&target);
+
+        // We need to ensure dependent MSIs are built.
+        for builder in self.build_msis.iter() {
+            builder.build(type_values, target.clone())?;
+        }
 
         let builder = self
             .inner
@@ -153,6 +187,16 @@ starlark_module! { wix_bundle_builder_module =>
         this.add_vc_redistributable(env, platform)
     }
 
+    WiXBundleBuilder.add_wix_msi_builder(
+        this,
+        builder: WiXMSIBuilderValue,
+        display_internal_ui: bool = false,
+        install_condition = NoneType::None
+    ) {
+        let mut this = this.downcast_mut::<WiXBundleBuilderValue>().unwrap().unwrap();
+        this.add_wix_msi_builder(builder, display_internal_ui, install_condition)
+    }
+
     WiXBundleBuilder.build(env env, this, target: String) {
         let this = this.downcast_ref::<WiXBundleBuilderValue>().unwrap();
         this.build(env, target)
@@ -200,11 +244,35 @@ mod tests {
         let context = context_value.downcast_ref::<EnvironmentContext>().unwrap();
 
         let build_path = context.target_build_path("bundle_builder_test_build");
-        let msi_path = build_path.join("name-0.1.exe");
+        let exe_path = build_path.join("name-0.1.exe");
 
         assert!(
-            msi_path.exists(),
-            format!("exe exists: {}", msi_path.display())
+            exe_path.exists(),
+            format!("exe exists: {}", exe_path.display())
+        );
+
+        Ok(())
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn test_add_wix_msi_builder() -> Result<()> {
+        let mut env = StarlarkEnvironment::new()?;
+
+        env.eval("msi = WiXMSIBuilder('prefix', 'msi', '0.1', 'manufacturer')")?;
+        env.eval("builder = WiXBundleBuilder('prefix', 'name', '0.1', 'manufacturer')")?;
+        env.eval("builder.add_wix_msi_builder(msi)")?;
+        env.eval("builder.build('bundle_builder_add_wix_msi_builder')")?;
+
+        let context_value = get_context_value(&env.type_values).unwrap();
+        let context = context_value.downcast_ref::<EnvironmentContext>().unwrap();
+
+        let build_path = context.target_build_path("bundle_builder_add_wix_msi_builder");
+        let exe_path = build_path.join("name-0.1.exe");
+
+        assert!(
+            exe_path.exists(),
+            format!("exe exists: {}", exe_path.display())
         );
 
         Ok(())

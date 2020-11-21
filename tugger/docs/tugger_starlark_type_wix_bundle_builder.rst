@@ -85,6 +85,32 @@ architectures. The bundle installer will only install the Redistributable
 when running on a machine of that architecture. This allows a single bundle
 installer to target multiple architectures.
 
+.. _tugger_starlark_type_wix_bundle_builder.add_wix_msi_builder:
+
+``WiXBundleBuilder.add_wix_msi_builder()``
+------------------------------------------
+
+This method adds a :ref:`tugger_starlark_type_wix_msi_builder` to be installed
+by the produced installer.
+
+This method accepts the following arguments:
+
+``builder``
+   (``WiXMSIBuilder``) The :ref:`tugger_starlark_type_wix_msi_builder`
+   representing an MSI to install.
+
+``display_internal_ui``
+   (``Optional[bool]``) Whether to display the UI of the MSI. This is
+   ``False`` by default.
+
+``install_condition``
+   (``Optional[string]``) An expression that must be true for this MSI to
+   be installed.
+
+This method effectively coerces the ``WiXMSIBuilder`` instance to an
+``<MsiPackage>`` element and adds it to the ``<Chain>`` in the bundle XML.
+See the WiX Toolset documentation for more.
+
 .. _tugger_starlark_type_wix_bundle_builder.build:
 
 ``WiXBundleBuilder.build()``

@@ -26,7 +26,7 @@ use {
 pub struct WiXMSIBuilderValue {
     pub inner: WiXSimpleMSIBuilder,
     /// Explicit filename to use for the built MSI.
-    pub msi_filename: Option<String>,
+    msi_filename: Option<String>,
     /// The target architecture we are building for.
     pub target_triple: String,
 }
@@ -141,11 +141,7 @@ impl WiXMSIBuilderValue {
                 })
             })?;
 
-        let msi_path = output_path.join(if let Some(filename) = &self.msi_filename {
-            filename.to_string()
-        } else {
-            self.inner.default_msi_filename()
-        });
+        let msi_path = output_path.join(self.msi_filename());
 
         builder.build(context.logger(), &msi_path).map_err(|e| {
             ValueError::Runtime(RuntimeError {
@@ -161,6 +157,14 @@ impl WiXMSIBuilderValue {
                 output_path,
             },
         }))
+    }
+
+    pub fn msi_filename(&self) -> String {
+        if let Some(filename) = &self.msi_filename {
+            filename.clone()
+        } else {
+            self.inner.default_msi_filename()
+        }
     }
 }
 

@@ -3,6 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
+    crate::wix::ChainElement,
     anyhow::Result,
     std::{borrow::Cow, io::Write},
     xml::writer::{EventWriter, XmlEvent},
@@ -18,6 +19,12 @@ pub struct MSIPackage<'a> {
     pub source_file: Option<Cow<'a, str>>,
     pub display_internal_ui: Option<Cow<'a, str>>,
     pub install_condition: Option<Cow<'a, str>>,
+}
+
+impl<'a> From<MSIPackage<'a>> for ChainElement<'a> {
+    fn from(value: MSIPackage<'a>) -> Self {
+        Self::MsiPackage(value)
+    }
 }
 
 impl<'a> MSIPackage<'a> {
