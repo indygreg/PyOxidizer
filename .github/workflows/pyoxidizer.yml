@@ -1,0 +1,60 @@
+on:
+  - push
+  - pull_request
+jobs:
+  pyoxidizer:
+    strategy:
+      matrix:
+        rust_toolchain:
+          - 'stable'
+          - 'beta'
+          - 'nightly'
+          # Remember to update MINIMUM_RUST_VERSION in pyoxidizer/src/environment.rs
+          # and the `Installing Rust` documentation when this changes.
+          - '1.45.0'
+        os:
+          - 'ubuntu-18.04'
+          - 'macos-10.15'
+          - 'windows-2019'
+    continue-on-error: true
+    runs-on: ${{ matrix.os }}
+    env:
+      IN_CI: '1'
+    steps:
+      - name: Install Linux system packages
+        if: ${{ matrix.os == 'ubuntu-18.04' }}
+        run: |
+          sudo apt-get install -y libyaml-dev snapcraft
+
+      - uses: actions/checkout@v2
+        with:
+          # Needed by build.rs, which needs to walk the Git history to find the
+          # root commit. Without this, a shallow clone (depth=1) is performed.
+          fetch-depth: 0
+
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ matrix.rust_toolchain }}
+          profile: minimal
+
+      - uses: actions-rs/toolchain@v1
+        if: runner.os == 'Linux'
+        with:
+          toolchain: ${{ matrix.rust_toolchain }}
+          profile: minimal
+          target: x86_64-unknown-linux-musl
+
+      # TODO get pyembed working. It needs a working libpython.
+      - name: Build Workspace
+        run: |
+          cargo build --workspace --exclude pyembed --exclude oxidized-importer
+          cargo run --bin pyoxidizer -- --version
+
+      - name: Test Workspace
+        run: |
+          cargo test --workspace --exclude pyembed --exclude oxidized-importer
+
+      - name: Run Clippy
+        if: ${{ matrix.rust_toolchain == 'stable' || matrix.rust_toolchain == 'beta' }}
+        run: |
+          cargo clippy --workspace --exclude pyembed --exclude oxdized-importer

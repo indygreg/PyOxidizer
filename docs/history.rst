@@ -61,6 +61,11 @@ New Features
   method to obtain a ``WiXBundleBuilder``, which can be used to generate an
   ``.exe`` installer for the application.
 
+Other Relevant Changes
+^^^^^^^^^^^^^^^^^^^^^^
+
+* CI has been moved from Azure Pipelines to GitHub Actions.
+
 .. _version_0_10_3:
 
 0.10.3
