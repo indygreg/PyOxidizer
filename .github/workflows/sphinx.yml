@@ -1,0 +1,39 @@
+on:
+  - push
+  - pull_request
+jobs:
+  sphinx_pyoxidizer:
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: '3.8'
+      - name: Run Sphinx
+        run: |
+          python3.8 -m pip install Sphinx==3.2.1
+          make -C docs html
+
+  sphinx_pyembed:
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: '3.8'
+      - name: Run Sphinx
+        run: |
+          python3.8 -m pip install Sphinx==3.2.1
+          make -C pyembed/docs html
+
+  sphinx_tugger:
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: '3.8'
+      - name: Run Sphinx
+        run: |
+          python3.8 -m pip install Sphinx==3.2.1
+          make -C tugger/docs html
