@@ -1,0 +1,86 @@
+on:
+  - push
+  - pull_request
+jobs:
+  wheel_linux:
+    runs-on: ubuntu-18.04
+    env:
+      CIBW_ENVIRONMENT: 'PATH="$PATH:$HOME/.cargo/bin"'
+      CIBW_BEFORE_BUILD: 'ci/install-rust-linux.sh'
+      CIBW_BUILD: 'cp38-manylinux_x86_64'
+      CIBW_BUILD_VERBOSITY: '1'
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+      - uses: actions/setup-python@v2
+        with:
+          python-version: '3.8'
+      - name: Run cibuildwheel
+        run: |
+          python3.8 -m pip install --upgrade pip==20.0.2
+          python3.8 -m pip install cibuildwheel==1.4.1
+          python3.8 -m cibuildwheel --output-dir wheelhouse .
+
+      - name: Upload wheels
+        uses: actions/upload-artifact@v2
+        with:
+          name: wheels
+          path: |
+            wheelhouse
+
+  wheel_macos:
+    runs-on: macos-10.15
+    env:
+      CIBW_BUILD: 'cp38-macosx_x86_64'
+      CIBW_BUILD_VERBOSITY: '1'
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+      - uses: actions/setup-python@v2
+        with:
+          python-version: '3.8'
+      - name: Run cibuildwheel
+        run: |
+          python3.8 -m pip install --upgrade pip==20.0.2
+          python3.8 -m pip install cibuildwheel==1.4.1
+          python3.8 -m cibuildwheel --output-dir wheelhouse .
+
+      - name: Upload wheels
+        uses: actions/upload-artifact@v2
+        with:
+          name: wheels
+          path: |
+            wheelhouse
+
+  wheel_windows:
+    runs-on: windows-2019
+    env:
+      CIBW_BUILD_VERBOSITY: '1'
+      CIBW_BUILD: 'cp38-win_amd64'
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+      - uses: actions/setup-python@v2
+        with:
+          python-version: '3.8'
+      - name: Run cibuildwheel
+        run: |
+          python -m pip install --upgrade pip==20.0.2
+          python -m pip install cibuildwheel==1.4.1
+          python -m cibuildwheel --output-dir wheelhouse .
+
+      - name: Upload wheels
+        uses: actions/upload-artifact@v2
+        with:
+          name: wheels
+          path: |
+            wheelhouse
