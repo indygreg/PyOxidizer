@@ -423,7 +423,7 @@ impl FileManifest {
             let dest_path = dest.join(k);
             let parent = dest_path
                 .parent()
-                .ok_or_else(|| FileManifestError::NoParentDirectory)?;
+                .ok_or(FileManifestError::NoParentDirectory)?;
 
             std::fs::create_dir_all(parent)?;
             let mut fh = std::fs::File::create(&dest_path)?;
