@@ -35,8 +35,8 @@ fn canonicalize_path(path: &Path) -> Result<PathBuf, std::io::Error> {
 fn find_root_git_commit(commit: Commit) -> Commit {
     let mut current = commit;
 
-    while current.parent_count() != 0 {
-        current = current.parents().next().unwrap();
+    while let Ok(parent) = current.parent(0) {
+        current = parent;
     }
 
     current
