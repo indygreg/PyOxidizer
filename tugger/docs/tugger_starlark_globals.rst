@@ -37,8 +37,14 @@ Tugger's Starlark dialect defines the following custom types:
 :ref:`tugger_starlark_type_snapcraft_builder`
    Manages the environment and invocations of the ``snapcraft`` command.
 
+:ref:`tugger_starlark_type_wix_bundle_builder`
+   Produce a Windows exe installer containing multiple installers using WiX.
+
 :ref:`tugger_starlark_type_wix_installer`
    Produce a Windows installer using WiX.
+
+:ref:`tugger_starlark_type_wix_msi_builder`
+   Produce a Windows MSI installer with common installer features using WiX.
 
 .. _tugger_starlark_global_functions:
 
