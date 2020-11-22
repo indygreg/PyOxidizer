@@ -22,7 +22,7 @@ jobs:
       IN_CI: '1'
     steps:
       - name: Install Linux system packages
-        if: ${{ matrix.os == 'ubuntu-20.04' }}
+        if: ${{ runner.os == 'Linux' }}
         run: |
           sudo apt-get install -y libyaml-dev snapcraft
 
