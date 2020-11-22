@@ -20,9 +20,13 @@ jobs:
     runs-on: ${{ matrix.os }}
     env:
       IN_CI: '1'
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      SCCACHE_BUCKET: 'pyoxidizer-sccache'
+      SCCACHE_S3_USE_SSL: '1'
     steps:
       - name: Install Linux system packages
-        if: ${{ runner.os == 'Linux' }}
+        if: runner.os == 'Linux'
         run: |
           sudo apt-get install -y libyaml-dev snapcraft
 
@@ -44,17 +48,67 @@ jobs:
           profile: minimal
           target: x86_64-unknown-linux-musl
 
+      - name: Cache sccache (Windows)
+        id: cache-sccache-windows
+        if: runner.os == 'Windows'
+        uses: actions/cache@v2
+        with:
+          path: C:/Rust/.cargo/bin/sccache.exe
+          key: ${{ runner.os }}-sccache-0
+
+      - name: Install sccache build dependencies (Windows)
+        if: runner.os == 'Windows' && steps.cache-sccache-windows.outputs.cache-hit != 'true'
+        run: |
+          vcpkg integrate install
+          vcpkg install openssl:x64-windows
+
+      - name: Install sccache (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          wget -O sccache.tar.gz https://github.com/mozilla/sccache/releases/download/0.2.13/sccache-0.2.13-x86_64-unknown-linux-musl.tar.gz
+          tar -xvzf sccache.tar.gz
+          mv sccache-0.2.13-x86_64-unknown-linux-musl/sccache /usr/share/rust/.cargo/bin/sccache
+
+      - name: Install sccache (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          wget -O sccache.tar.gz https://github.com/mozilla/sccache/releases/download/0.2.13/sccache-0.2.13-x86_64-apple-darwin.tar.gz
+          tar -xvzf sccache.tar.gz
+          mv sccache-0.2.13-x86_64-apple-darwin/sccache /Users/runner/.cargo/bin/sccache
+
+      - name: Install sccache (Windows)
+        if: steps.cache-sccache-windows.outputs.cache-hit != 'true' && runner.os == 'Windows'
+        # sccache doesn't work with Rust 1.48. https://github.com/mozilla/sccache/issues/887
+        run: |
+          rustup install 1.47.0
+          cargo +1.47.0 install --features 'azure s3' sccache
+
+      - name: Start sccache
+        run: |
+          sccache --start-server
+
       # TODO get pyembed working. It needs a working libpython.
       - name: Build Workspace
+        env:
+          RUSTC_WRAPPER: sccache
         run: |
           cargo build --workspace --exclude pyembed --exclude oxidized-importer
           cargo run --bin pyoxidizer -- --version
 
       - name: Test Workspace
+        env:
+          RUSTC_WRAPPER: sccache
         run: |
           cargo test --workspace --exclude pyembed --exclude oxidized-importer
 
       - name: Run Clippy
         if: ${{ matrix.rust_toolchain == 'stable' || matrix.rust_toolchain == 'beta' }}
+        env:
+          RUSTC_WRAPPER: sccache
         run: |
           cargo clippy --workspace --exclude pyembed --exclude oxdized-importer
+
+      - name: Stop sccache
+        run: |
+          sccache --show-stats
+          sccache --stop-server
