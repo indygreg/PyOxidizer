@@ -30,7 +30,7 @@ pub struct WiXBundleBuilderValue<'a> {
     pub inner: WiXBundleInstallerBuilder<'a>,
     pub target_triple: String,
     pub id_prefix: String,
-    build_msis: Vec<WiXMSIBuilderValue>,
+    pub build_msis: Vec<WiXMSIBuilderValue>,
 }
 
 impl TypedValue for WiXBundleBuilderValue<'static> {

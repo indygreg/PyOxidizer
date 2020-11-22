@@ -78,3 +78,4 @@ path = "../virtual-file-manifest"
 
 [dev-dependencies]
 indoc = "1.0"
+xml-rs = "0.8"

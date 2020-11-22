@@ -2055,6 +2055,7 @@ dependencies = [
  "version-compare",
  "virtual-file-manifest",
  "walkdir",
+ "xml-rs",
  "zstd",
 ]
 

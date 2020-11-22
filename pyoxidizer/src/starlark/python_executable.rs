@@ -17,6 +17,7 @@ use {
     },
     crate::{project_building::build_python_executable, py_packaging::binary::PythonBinaryBuilder},
     anyhow::{anyhow, Context, Result},
+    linked_hash_map::LinkedHashMap,
     python_packaging::resource::PythonModuleSource,
     slog::{info, warn},
     starlark::{
@@ -35,7 +36,7 @@ use {
         },
     },
     starlark_dialect_build_targets::{
-        optional_dict_arg, optional_list_arg, required_list_arg, ResolvedTarget,
+        optional_dict_arg, optional_list_arg, optional_type_arg, required_list_arg, ResolvedTarget,
         ResolvedTargetValue, RunMode, ToOptional,
     },
     std::{
@@ -731,15 +732,20 @@ impl PythonExecutableValue {
         Ok(manifest_value.clone())
     }
 
-    /// PythonExecutable.to_wix_bundle_builder(id_prefix, name, version, manufacturer)
+    /// PythonExecutable.to_wix_bundle_builder(id_prefix, name, version, manufacturer, msi_builder_callback)
+    #[allow(clippy::too_many_arguments)]
     pub fn to_wix_bundle_builder(
         &self,
         type_values: &TypeValues,
+        call_stack: &mut CallStack,
         id_prefix: String,
         product_name: String,
         product_version: String,
         product_manufacturer: String,
+        msi_builder_callback: Value,
     ) -> ValueResult {
+        optional_type_arg("msi_builder_callback", "function", &msi_builder_callback)?;
+
         let msi_builder_value = self.to_wix_msi_builder(
             type_values,
             id_prefix.clone(),
@@ -747,6 +753,18 @@ impl PythonExecutableValue {
             product_version.clone(),
             product_manufacturer.clone(),
         )?;
+
+        if msi_builder_callback.get_type() == "function" {
+            msi_builder_callback.call(
+                call_stack,
+                type_values,
+                vec![msi_builder_value.clone()],
+                LinkedHashMap::new(),
+                None,
+                None,
+            )?;
+        }
+
         let msi_builder = msi_builder_value
             .downcast_ref::<WiXMSIBuilderValue>()
             .unwrap();
@@ -986,14 +1004,24 @@ starlark_module! { python_executable_env =>
 
     PythonExecutable.to_wix_bundle_builder(
         env env,
+        call_stack cs,
         this,
         id_prefix: String,
         product_name: String,
         product_version: String,
-        product_manufacturer: String
+        product_manufacturer: String,
+        msi_builder_callback = NoneType::None
     ) {
         let this = this.downcast_ref::<PythonExecutableValue>().unwrap();
-        this.to_wix_bundle_builder(env, id_prefix, product_name, product_version, product_manufacturer)
+        this.to_wix_bundle_builder(
+            env,
+            cs,
+            id_prefix,
+            product_name,
+            product_version,
+            product_manufacturer,
+            msi_builder_callback
+        )
     }
 
     PythonExecutable.to_wix_msi_builder(
@@ -1225,6 +1253,25 @@ mod tests {
 
         let value = env.eval("exe.tcl_files_path = None; exe.tcl_files_path")?;
         assert_eq!(value.get_type(), "NoneType");
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_to_wix_bundle_builder_callback() -> Result<()> {
+        let mut env = StarlarkEnvironment::new_with_exe()?;
+        env.eval("def modify(msi):\n msi.package_description = 'description'\n")?;
+        let builder_value = env.eval("exe.to_wix_bundle_builder('id_prefix', 'product_name', '0.1', 'manufacturer', msi_builder_callback = modify)")?;
+        let builder = builder_value
+            .downcast_ref::<WiXBundleBuilderValue>()
+            .unwrap();
+
+        assert_eq!(builder.build_msis.len(), 1);
+        let mut writer = xml::EventWriter::new(vec![]);
+        builder.build_msis[0].inner.write_xml(&mut writer)?;
+
+        let xml = String::from_utf8(writer.into_inner())?;
+        assert!(xml.find("Description=\"description\"").is_some());
 
         Ok(())
     }

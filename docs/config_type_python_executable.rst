@@ -330,6 +330,12 @@ This method accepts the following arguments:
    See :ref:`tugger_starlark_type_wix_msi_builder_constructors` for usage.
 ``product_manufacturer``
    See :ref:`tugger_starlark_type_wix_msi_builder_constructors` for usage.
+``msi_builder_callback``
+   (``function``) A callable function that can be used to modify the
+   :ref:`tugger_starlark_type_wix_msi_builder` constructed for the application.
+
+   The function will receive the :ref:`tugger_starlark_type_wix_msi_builder` as
+   its single argument. The return value is ignored.
 
 The returned value can be further customized before it is built. See
 :ref:`tugger_starlark_type_wix_bundle_builder` type documentation for more.
