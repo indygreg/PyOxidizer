@@ -331,11 +331,11 @@ pub fn update_new_cargo_toml(path: &Path, pyembed_location: &PyembedLocation) ->
         pyembed_location.cargo_manifest_fields()
     ));
 
-    content.push_str("\n");
+    content.push('\n');
     content.push_str("[build-dependencies]\n");
     content.push_str("embed-resource = \"1.3\"\n");
 
-    content.push_str("\n");
+    content.push('\n');
     content.push_str("[features]\n");
     content.push_str("default = [\"build-mode-pyoxidizer-exe\"]\n");
     content.push_str("jemalloc = [\"jemallocator-global\", \"pyembed/jemalloc\"]\n");
