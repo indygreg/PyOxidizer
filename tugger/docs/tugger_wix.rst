@@ -51,7 +51,7 @@ Automatic ``<Fragment>`` Generation for Files
 =============================================
 
 Tugger supports automatically generating a ``.wxs`` file with
-``<Fragment>``s describing a set of files. Given a set of input files,
+``<Fragment>``'s describing a set of files. Given a set of input files,
 it will produce a deterministic ``.wxs`` file with ``<DirectoryRef>``
 holding ``<Component>`` and ``<File>`` of every file therein as well
 as ``<ComponentGroup>`` for each distinct directory tree.
