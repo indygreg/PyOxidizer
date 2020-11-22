@@ -75,7 +75,7 @@ impl<'a> WiXBundleBuilderValue<'a> {
         let platform = VCRedistributablePlatform::try_from(platform.as_str()).map_err(|e| {
             ValueError::Runtime(RuntimeError {
                 code: "TUGGER_WIX_BUNDLE_BUILDER",
-                message: e.to_string(),
+                message: e,
                 label: "add_vc_redistributable()".to_string(),
             })
         })?;
