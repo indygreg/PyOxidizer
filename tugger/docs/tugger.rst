@@ -1,3 +1,5 @@
+.. _tugger:
+
 Shipping Applications with ``tugger``
 =====================================
 

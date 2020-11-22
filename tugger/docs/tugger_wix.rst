@@ -9,8 +9,8 @@ collection of tools used for building Windows installers (``.msi``
 files, ``.exe``, etc). The WiX Toolset is incredibly powerful and
 enables building anything from simple to complex installers.
 
-Tugger defines a high-level interface to the WiX Toolset via Rust
-APIs and exposes this functionality to Starlark.
+Tugger defines interfaces to the WiX Toolset via Rust APIs and exposes
+this functionality to Starlark.
 
 .. _tugger_wix_concepts:
 

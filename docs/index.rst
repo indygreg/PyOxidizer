@@ -30,6 +30,7 @@ The creator and maintainer of ``PyOxidizer`` is
    managing_projects
    config
    packaging
+   pyoxidizer_distributing
    oxidized_importer
    packed_resources
    rust

@@ -7,6 +7,8 @@ Extensions to Tugger's Starlark Dialect
 PyOxidizer extends :ref:`Tugger's Starlark dialect <tugger_starlark>`
 with addition methods.
 
+.. _config_type_file_manifest.add_python_resource:
+
 ``FileManifest.add_python_resource()``
 ======================================
 
@@ -25,6 +27,8 @@ Arguments:
 
 This method can be used to place the Python resources derived from another
 type or action in the filesystem next to an application binary.
+
+.. _config_type_file_manifest.add_python_resources:
 
 ``FileManifest.add_python_resources()``
 =======================================
