@@ -389,7 +389,7 @@ impl<'a> PythonResourcesState<'a, u8> {
         let exe = std::env::current_exe().map_err(|_| "unable to obtain current executable")?;
         let origin = exe
             .parent()
-            .ok_or_else(|| "unable to get executable parent")?
+            .ok_or("unable to get executable parent")?
             .to_path_buf();
 
         Ok(Self {
