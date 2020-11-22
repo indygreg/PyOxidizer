@@ -19,13 +19,14 @@ Not yet released.
 New Features
 ^^^^^^^^^^^^
 
-* The ``WiXMSIBuilder`` Starlark type now implements ``build()`` so it can be
-  used as a target.
-* The ``WiXMSIBuilder`` Starlark type now exposes ``msi_filename`` and
-  ``target_triple`` attributes to customize the output filename and the
-  architecture the MSI is built for, respectively.
-* Starlark now exposes a ``WiXBundleBuilder`` type to allow the creation of
-  *bundle installers* using the WiX Toolset.
+* The ``FileManifest`` Starlark type now exposes an ``add_path()`` method.
+* The Starlark dialect now exposes ``SnapApp``, ``Snappart``, and ``Snap`` types
+  representing Snapcraft configuration files.
+* The Starlark dialect now has a ``SnapcraftBuilder`` type that serves as an
+  interface to invoking ``snapcraft``.
+* The Starlark dialect now exposes ``WiXBundleBuilder``, ``WiXInstaller``,
+  and ``WiXMSIBuilder`` types for defining Windows installers using the WiX
+  Toolset.
 
 .. _tugger_version_0_2_0:
 
