@@ -95,22 +95,22 @@ jobs:
           RUSTC_WRAPPER: sccache
         run: |
           rustc --version
-          cargo build --release --workspace --exclude pyembed --exclude oxidized-importer
-          cargo test --release --workspace --exclude pyembed --exclude oxidized-importer --no-run
-          cargo run --release --bin pyoxidizer -- --version
+          cargo build --workspace --exclude pyembed --exclude oxidized-importer
+          cargo test --workspace --exclude pyembed --exclude oxidized-importer --no-run
+          cargo run --bin pyoxidizer -- --version
 
       - name: Test Workspace
         env:
           RUSTC_WRAPPER: sccache
         run: |
-          cargo test --release --workspace --exclude pyembed --exclude oxidized-importer
+          cargo test --workspace --exclude pyembed --exclude oxidized-importer
 
       - name: Run Clippy
         if: ${{ matrix.rust_toolchain == 'stable' || matrix.rust_toolchain == 'beta' }}
         env:
           RUSTC_WRAPPER: sccache
         run: |
-          cargo clippy --release --workspace --exclude pyembed --exclude oxidized-importer
+          cargo clippy --workspace --exclude pyembed --exclude oxidized-importer
 
       - name: Stop sccache
         run: |
