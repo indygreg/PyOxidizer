@@ -16,6 +16,9 @@ build = "build.rs"
 [lib]
 name = "pyoxidizerlib"
 path = "src/lib.rs"
+# The library offers no functionality that the binary doesn't and testing
+# both is redundant and adds overhead. So we disable tests for the library.
+test = false
 
 [build-dependencies]
 git2 = "0.13"
