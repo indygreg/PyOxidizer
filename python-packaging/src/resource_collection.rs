@@ -25,7 +25,6 @@ use {
         borrow::Cow,
         collections::{BTreeMap, BTreeSet, HashMap},
         convert::TryFrom,
-        iter::FromIterator,
         path::PathBuf,
     },
     virtual_file_manifest::{File, FileData},
@@ -689,13 +688,17 @@ impl PythonResourceCollector {
     where
         F: Fn(&PrePackagedResource) -> bool,
     {
-        self.resources = BTreeMap::from_iter(self.resources.iter().filter_map(|(k, v)| {
-            if filter(v) {
-                Some((k.clone(), v.clone()))
-            } else {
-                None
-            }
-        }));
+        self.resources = self
+            .resources
+            .iter()
+            .filter_map(|(k, v)| {
+                if filter(v) {
+                    Some((k.clone(), v.clone()))
+                } else {
+                    None
+                }
+            })
+            .collect();
 
         Ok(())
     }
@@ -1706,6 +1709,7 @@ mod tests {
     use {
         super::*,
         crate::resource::{LibraryDependency, PythonPackageDistributionResourceFlavor},
+        std::iter::FromIterator,
         virtual_file_manifest::FileEntry,
     };
 
