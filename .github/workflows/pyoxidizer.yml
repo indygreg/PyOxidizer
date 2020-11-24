@@ -110,7 +110,7 @@ jobs:
         env:
           RUSTC_WRAPPER: sccache
         run: |
-          cargo clippy --workspace --exclude pyembed --exclude oxidized-importer
+          cargo clippy --release --workspace --exclude pyembed --exclude oxidized-importer
 
       - name: Stop sccache
         run: |
