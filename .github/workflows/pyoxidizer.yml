@@ -112,5 +112,4 @@ jobs:
 
       - name: Stop sccache
         run: |
-          sccache --show-stats
           sccache --stop-server
