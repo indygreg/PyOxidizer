@@ -41,6 +41,7 @@ jobs:
           toolchain: ${{ matrix.rust_toolchain }}
           default: true
           profile: minimal
+          components: clippy
 
       - uses: actions-rs/toolchain@v1
         if: runner.os == 'Linux'
