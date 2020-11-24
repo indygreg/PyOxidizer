@@ -39,6 +39,7 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: ${{ matrix.rust_toolchain }}
+          default: true
           profile: minimal
 
       - uses: actions-rs/toolchain@v1
@@ -92,6 +93,7 @@ jobs:
         env:
           RUSTC_WRAPPER: sccache
         run: |
+          rustc --version
           cargo build --workspace --exclude pyembed --exclude oxidized-importer
           cargo run --bin pyoxidizer -- --version
 
