@@ -83,8 +83,7 @@ impl TryFrom<&str> for TerminfoResolution {
             Ok(Self::Dynamic)
         } else if value == "none" {
             Ok(Self::None)
-        } else if value.starts_with("static:") {
-            let suffix = &value[7..];
+        } else if let Some(suffix) = value.strip_prefix("static:") {
             Ok(Self::Static(suffix.to_string()))
         } else {
             Err(format!(
