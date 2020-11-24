@@ -105,12 +105,12 @@ jobs:
         run: |
           cargo test --workspace --exclude pyembed --exclude oxidized-importer
 
-      - name: Run Clippy
+      - uses: actions-rs/clippy@master
         if: ${{ matrix.rust_toolchain == 'stable' || matrix.rust_toolchain == 'beta' }}
         env:
           RUSTC_WRAPPER: sccache
-        run: |
-          cargo clippy --workspace --exclude pyembed --exclude oxidized-importer
+        with:
+          args: --workspace --exclude pyembed --exclude oxidized-importer
 
       - name: Stop sccache
         run: |
