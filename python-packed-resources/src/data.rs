@@ -438,21 +438,27 @@ where
                 .as_ref()
                 .map(|value| Cow::Owned(value.clone().into_owned())),
             in_memory_package_resources: self.in_memory_package_resources.as_ref().map(|value| {
-                HashMap::from_iter(value.iter().map(|(k, v)| {
-                    (
-                        Cow::Owned(k.clone().into_owned()),
-                        Cow::Owned(v.clone().into_owned()),
-                    )
-                }))
-            }),
-            in_memory_distribution_resources: self.in_memory_distribution_resources.as_ref().map(
-                |value| {
-                    HashMap::from_iter(value.iter().map(|(k, v)| {
+                value
+                    .iter()
+                    .map(|(k, v)| {
                         (
                             Cow::Owned(k.clone().into_owned()),
                             Cow::Owned(v.clone().into_owned()),
                         )
-                    }))
+                    })
+                    .collect()
+            }),
+            in_memory_distribution_resources: self.in_memory_distribution_resources.as_ref().map(
+                |value| {
+                    value
+                        .iter()
+                        .map(|(k, v)| {
+                            (
+                                Cow::Owned(k.clone().into_owned()),
+                                Cow::Owned(v.clone().into_owned()),
+                            )
+                        })
+                        .collect()
                 },
             ),
             in_memory_shared_library: self
@@ -484,24 +490,30 @@ where
                 .map(|value| Cow::Owned(value.clone().into_owned())),
             relative_path_package_resources: self.relative_path_package_resources.as_ref().map(
                 |value| {
-                    HashMap::from_iter(value.iter().map(|(k, v)| {
-                        (
-                            Cow::Owned(k.clone().into_owned()),
-                            Cow::Owned(v.clone().into_owned()),
-                        )
-                    }))
+                    value
+                        .iter()
+                        .map(|(k, v)| {
+                            (
+                                Cow::Owned(k.clone().into_owned()),
+                                Cow::Owned(v.clone().into_owned()),
+                            )
+                        })
+                        .collect()
                 },
             ),
             relative_path_distribution_resources: self
                 .relative_path_distribution_resources
                 .as_ref()
                 .map(|value| {
-                    HashMap::from_iter(value.iter().map(|(k, v)| {
-                        (
-                            Cow::Owned(k.clone().into_owned()),
-                            Cow::Owned(v.clone().into_owned()),
-                        )
-                    }))
+                    value
+                        .iter()
+                        .map(|(k, v)| {
+                            (
+                                Cow::Owned(k.clone().into_owned()),
+                                Cow::Owned(v.clone().into_owned()),
+                            )
+                        })
+                        .collect()
                 }),
             file_executable: self.file_executable,
             file_data_embedded: self
