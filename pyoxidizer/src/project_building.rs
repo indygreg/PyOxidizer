@@ -18,7 +18,6 @@ use {
         env,
         fs::create_dir_all,
         io::{BufRead, BufReader},
-        iter::FromIterator,
         path::{Path, PathBuf},
     },
 };
@@ -167,7 +166,7 @@ pub fn build_executable_with_rust_project(
         args.push(&features);
     }
 
-    let mut envs: HashMap<String, String, RandomState> = HashMap::from_iter(std::env::vars());
+    let mut envs: HashMap<String, String, RandomState> = std::env::vars().collect();
     envs.insert(
         "PYOXIDIZER_ARTIFACT_DIR".to_string(),
         artifacts_path.display().to_string(),

@@ -25,7 +25,6 @@ use {
         collections::{hash_map::RandomState, HashMap},
         hash::BuildHasher,
         io::{BufRead, BufReader},
-        iter::FromIterator,
         path::{Path, PathBuf},
     },
 };
@@ -187,11 +186,10 @@ pub fn find_resources<'a>(
     let mut res = Vec::new();
 
     let built_extensions = if let Some(p) = state_dir {
-        HashMap::from_iter(
-            read_built_extensions(&p)?
-                .iter()
-                .map(|ext| (ext.name.clone(), ext.clone())),
-        )
+        read_built_extensions(&p)?
+            .iter()
+            .map(|ext| (ext.name.clone(), ext.clone()))
+            .collect()
     } else {
         HashMap::new()
     };
@@ -345,7 +343,7 @@ pub fn pip_install<'a, S: BuildHasher>(
 
     dist.ensure_pip(logger)?;
 
-    let mut env: HashMap<String, String, RandomState> = HashMap::from_iter(std::env::vars());
+    let mut env: HashMap<String, String, RandomState> = std::env::vars().collect();
     for (k, v) in dist.resolve_distutils(logger, libpython_link_mode, temp_dir.path(), &[])? {
         env.insert(k, v);
     }
@@ -441,7 +439,7 @@ pub fn setup_py_install<'a, S: BuildHasher>(
 
     std::fs::create_dir_all(&python_paths.site_packages)?;
 
-    let mut envs: HashMap<String, String, RandomState> = HashMap::from_iter(std::env::vars());
+    let mut envs: HashMap<String, String, RandomState> = std::env::vars().collect();
     for (k, v) in dist.resolve_distutils(
         &logger,
         libpython_link_mode,

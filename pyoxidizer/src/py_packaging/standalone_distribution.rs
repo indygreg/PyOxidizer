@@ -37,7 +37,6 @@ use {
     std::{
         collections::{hash_map::RandomState, BTreeMap, HashMap},
         io::{BufRead, BufReader, Read},
-        iter::FromIterator,
         path::{Path, PathBuf},
         sync::Arc,
     },
@@ -292,7 +291,7 @@ pub fn invoke_python(python_paths: &PythonPaths, logger: &slog::Logger, args: &[
 
     info!(logger, "setting PYTHONPATH {}", site_packages_s);
 
-    let mut envs: HashMap<String, String, RandomState> = HashMap::from_iter(std::env::vars());
+    let mut envs: HashMap<String, String, RandomState> = std::env::vars().collect();
     envs.insert("PYTHONPATH".to_string(), site_packages_s);
 
     info!(
