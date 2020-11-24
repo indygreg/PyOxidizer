@@ -105,8 +105,10 @@ impl<'a> WiXBundleBuilderValue<'a> {
         display_internal_ui: bool,
         install_condition: Value,
     ) -> ValueResult {
-        let mut package = MSIPackage::default();
-        package.source_file = Some(builder.msi_filename().into());
+        let mut package = MSIPackage {
+            source_file: Some(builder.msi_filename().into()),
+            ..Default::default()
+        };
 
         if display_internal_ui {
             package.display_internal_ui = Some("yes".into());
