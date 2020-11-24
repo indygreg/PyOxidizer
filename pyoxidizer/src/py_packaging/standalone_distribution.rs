@@ -1127,7 +1127,7 @@ impl PythonDistribution for StandaloneDistribution {
     fn python_abi_tag(&self) -> Option<&str> {
         match &self.python_abi_tag {
             Some(tag) => {
-                if tag == "" {
+                if tag.is_empty() {
                     None
                 } else {
                     Some(tag)
