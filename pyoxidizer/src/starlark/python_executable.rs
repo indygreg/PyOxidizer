@@ -145,11 +145,7 @@ impl TypedValue for PythonExecutableValue {
     }
 
     fn has_attr(&self, attribute: &str) -> Result<bool, ValueError> {
-        Ok(match attribute {
-            "tcl_files_path" => true,
-            "windows_subsystem" => true,
-            _ => false,
-        })
+        Ok(matches!(attribute, "tcl_files_path" | "windows_subsystem"))
     }
 
     fn set_attr(&mut self, attribute: &str, value: Value) -> Result<(), ValueError> {

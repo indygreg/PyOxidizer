@@ -153,26 +153,26 @@ impl TypedValue for PythonPackagingPolicyValue {
     }
 
     fn has_attr(&self, attribute: &str) -> Result<bool, ValueError> {
-        Ok(match attribute {
-            "allow_files" => true,
-            "allow_in_memory_shared_library_loading" => true,
-            "bytecode_optimize_level_zero" => true,
-            "bytecode_optimize_level_one" => true,
-            "bytecode_optimize_level_two" => true,
-            "extension_module_filter" => true,
-            "file_scanner_classify_files" => true,
-            "file_scanner_emit_files" => true,
-            "include_distribution_sources" => true,
-            "include_distribution_resources" => true,
-            "include_classified_resources" => true,
-            "include_file_resources" => true,
-            "include_non_distribution_sources" => true,
-            "include_test" => true,
-            "preferred_extension_module_variants" => true,
-            "resources_location" => true,
-            "resources_location_fallback" => true,
-            _ => false,
-        })
+        Ok(matches!(
+            attribute,
+            "allow_files"
+                | "allow_in_memory_shared_library_loading"
+                | "bytecode_optimize_level_zero"
+                | "bytecode_optimize_level_one"
+                | "bytecode_optimize_level_two"
+                | "extension_module_filter"
+                | "file_scanner_classify_files"
+                | "file_scanner_emit_files"
+                | "include_distribution_sources"
+                | "include_distribution_resources"
+                | "include_classified_resources"
+                | "include_file_resources"
+                | "include_non_distribution_sources"
+                | "include_test"
+                | "preferred_extension_module_variants"
+                | "resources_location"
+                | "resources_location_fallback"
+        ))
     }
 
     fn set_attr(&mut self, attribute: &str, value: Value) -> Result<(), ValueError> {

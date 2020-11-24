@@ -724,10 +724,10 @@ pub fn python_resource_to_value(
 
         PythonResource::ExtensionModule(em) => {
             let mut em = PythonExtensionModuleValue::new(em.clone().into_owned());
-            policy.apply_to_resource(type_values, call_stack,&mut em)?;
+            policy.apply_to_resource(type_values, call_stack, &mut em)?;
 
             Ok(Value::new(em))
-        },
+        }
 
         PythonResource::File(f) => {
             let mut value = FileValue::new(f.clone().into_owned());

@@ -211,73 +211,73 @@ impl TypedValue for PythonInterpreterConfigValue {
     }
 
     fn has_attr(&self, attribute: &str) -> Result<bool, ValueError> {
-        Ok(match attribute {
-            "config_profile" => true,
-            "allocator" => true,
-            "configure_locale" => true,
-            "coerce_c_locale" => true,
-            "coerce_c_locale_warn" => true,
-            "development_mode" => true,
-            "isolated" => true,
-            "legacy_windows_fs_encoding" => true,
-            "parse_argv" => true,
-            "use_environment" => true,
-            "utf8_mode" => true,
-            "base_exec_prefix" => true,
-            "base_executable" => true,
-            "base_prefix" => true,
-            "buffered_stdio" => true,
-            "bytes_warning" => true,
-            "check_hash_pycs_mode" => true,
-            "configure_c_stdio" => true,
-            "dump_refs" => true,
-            "exec_prefix" => true,
-            "executable" => true,
-            "fault_handler" => true,
-            "filesystem_encoding" => true,
-            "filesystem_errors" => true,
-            "hash_seed" => true,
-            "home" => true,
-            "import_time" => true,
-            "inspect" => true,
-            "install_signal_handlers" => true,
-            "interactive" => true,
-            "legacy_windows_stdio" => true,
-            "malloc_stats" => true,
-            "module_search_paths" => true,
-            "optimization_level" => true,
-            "parser_debug" => true,
-            "pathconfig_warnings" => true,
-            "prefix" => true,
-            "program_name" => true,
-            "pycache_prefix" => true,
-            "python_path_env" => true,
-            "quiet" => true,
-            "run_command" => true,
-            "run_filename" => true,
-            "run_module" => true,
-            "show_alloc_count" => true,
-            "show_ref_count" => true,
-            "site_import" => true,
-            "skip_first_source_line" => true,
-            "stdio_encoding" => true,
-            "stdio_errors" => true,
-            "tracemalloc" => true,
-            "user_site_directory" => true,
-            "verbose" => true,
-            "warn_options" => true,
-            "write_bytecode" => true,
-            "x_options" => true,
-            "raw_allocator" => true,
-            "oxidized_importer" => true,
-            "filesystem_importer" => true,
-            "argvb" => true,
-            "sys_frozen" => true,
-            "sys_meipass" => true,
-            "terminfo_resolution" => true,
-            "write_modules_directory_env" => true,
-            _ => false,
-        })
+        Ok(matches!(
+            attribute,
+            "config_profile"
+                | "allocator"
+                | "configure_locale"
+                | "coerce_c_locale"
+                | "coerce_c_locale_warn"
+                | "development_mode"
+                | "isolated"
+                | "legacy_windows_fs_encoding"
+                | "parse_argv"
+                | "use_environment"
+                | "utf8_mode"
+                | "base_exec_prefix"
+                | "base_executable"
+                | "base_prefix"
+                | "buffered_stdio"
+                | "bytes_warning"
+                | "check_hash_pycs_mode"
+                | "configure_c_stdio"
+                | "dump_refs"
+                | "exec_prefix"
+                | "executable"
+                | "fault_handler"
+                | "filesystem_encoding"
+                | "filesystem_errors"
+                | "hash_seed"
+                | "home"
+                | "import_time"
+                | "inspect"
+                | "install_signal_handlers"
+                | "interactive"
+                | "legacy_windows_stdio"
+                | "malloc_stats"
+                | "module_search_paths"
+                | "optimization_level"
+                | "parser_debug"
+                | "pathconfig_warnings"
+                | "prefix"
+                | "program_name"
+                | "pycache_prefix"
+                | "python_path_env"
+                | "quiet"
+                | "run_command"
+                | "run_filename"
+                | "run_module"
+                | "show_alloc_count"
+                | "show_ref_count"
+                | "site_import"
+                | "skip_first_source_line"
+                | "stdio_encoding"
+                | "stdio_errors"
+                | "tracemalloc"
+                | "user_site_directory"
+                | "verbose"
+                | "warn_options"
+                | "write_bytecode"
+                | "x_options"
+                | "raw_allocator"
+                | "oxidized_importer"
+                | "filesystem_importer"
+                | "argvb"
+                | "sys_frozen"
+                | "sys_meipass"
+                | "terminfo_resolution"
+                | "write_modules_directory_env"
+        ))
     }
 
     fn set_attr(&mut self, attribute: &str, value: Value) -> Result<(), ValueError> {
