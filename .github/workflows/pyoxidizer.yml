@@ -96,6 +96,7 @@ jobs:
         run: |
           rustc --version
           cargo build --release --workspace --exclude pyembed --exclude oxidized-importer
+          cargo test --release --workspace --exclude pyembed --exclude oxidized-importer --no-run
           cargo run --release --bin pyoxidizer -- --version
 
       - name: Test Workspace
