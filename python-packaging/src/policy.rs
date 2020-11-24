@@ -14,7 +14,7 @@ use {
         resource_collection::PythonResourceAddCollectionContext,
     },
     anyhow::Result,
-    std::{collections::HashMap, convert::TryFrom, iter::FromIterator},
+    std::{collections::HashMap, convert::TryFrom},
 };
 
 /// Denotes methods to filter extension modules.
@@ -521,14 +521,16 @@ impl PythonPackagingPolicy {
 
             // Always add minimally required extension modules, because things don't
             // work if we don't do this.
-            let ext_variants =
-                PythonExtensionModuleVariants::from_iter(variants.iter().filter_map(|em| {
+            let ext_variants: PythonExtensionModuleVariants = variants
+                .iter()
+                .filter_map(|em| {
                     if em.is_minimally_required() {
                         Some(em.clone())
                     } else {
                         None
                     }
-                }));
+                })
+                .collect();
 
             if !ext_variants.is_empty() {
                 res.push(
@@ -551,15 +553,16 @@ impl PythonPackagingPolicy {
                 }
 
                 ExtensionModuleFilter::NoLibraries => {
-                    let ext_variants = PythonExtensionModuleVariants::from_iter(
-                        variants.iter().filter_map(|em| {
+                    let ext_variants: PythonExtensionModuleVariants = variants
+                        .iter()
+                        .filter_map(|em| {
                             if !em.requires_libraries() {
                                 Some(em.clone())
                             } else {
                                 None
                             }
-                        }),
-                    );
+                        })
+                        .collect();
 
                     if !ext_variants.is_empty() {
                         res.push(
@@ -571,8 +574,9 @@ impl PythonPackagingPolicy {
                 }
 
                 ExtensionModuleFilter::NoGPL => {
-                    let ext_variants = PythonExtensionModuleVariants::from_iter(
-                        variants.iter().filter_map(|em| {
+                    let ext_variants: PythonExtensionModuleVariants = variants
+                        .iter()
+                        .filter_map(|em| {
                             if em.link_libraries.is_empty() {
                                 Some(em.clone())
                             // Public domain is always allowed.
@@ -600,8 +604,8 @@ impl PythonPackagingPolicy {
                                 // and framework libraries to be used.
                                 None
                             }
-                        }),
-                    );
+                        })
+                        .collect();
 
                     if !ext_variants.is_empty() {
                         res.push(
