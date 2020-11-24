@@ -4,7 +4,7 @@
 
 /*! Declares the foundational data primitives inside packed resources data. */
 
-use std::{borrow::Cow, collections::HashMap, convert::TryFrom, iter::FromIterator, path::Path};
+use std::{borrow::Cow, collections::HashMap, convert::TryFrom, path::Path};
 
 /// Header value for version 2 of resources payload.
 pub const HEADER_V3: &[u8] = b"pyembed\x03";
@@ -466,7 +466,12 @@ where
                 .as_ref()
                 .map(|value| Cow::Owned(value.clone().into_owned())),
             shared_library_dependency_names: self.shared_library_dependency_names.as_ref().map(
-                |value| Vec::from_iter(value.iter().map(|x| Cow::Owned(x.clone().into_owned()))),
+                |value| {
+                    value
+                        .iter()
+                        .map(|x| Cow::Owned(x.clone().into_owned()))
+                        .collect()
+                },
             ),
             relative_path_module_source: self
                 .relative_path_module_source
