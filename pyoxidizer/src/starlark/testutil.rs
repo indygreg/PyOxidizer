@@ -14,8 +14,28 @@ use {
     codemap_diagnostic::Diagnostic,
     slog::Drain,
     starlark::values::Value,
-    std::convert::TryInto,
 };
+
+/// Construct a new `EvaluationContextBuilder` suitable for the test environment.
+pub fn test_evaluation_context_builder() -> Result<EvaluationContextBuilder> {
+    let logger = slog::Logger::root(
+        PrintlnDrain {
+            min_level: slog::Level::Info,
+        }
+        .fuse(),
+        slog::o!(),
+    );
+
+    let build_target = crate::project_building::HOST;
+
+    let cwd = std::env::current_dir()?;
+    let config_path = cwd.join("dummy");
+
+    let builder = EvaluationContextBuilder::new(logger, config_path, build_target)
+        .distribution_cache(DISTRIBUTION_CACHE.clone());
+
+    Ok(builder)
+}
 
 /// A Starlark execution environment.
 ///
@@ -26,23 +46,7 @@ pub struct StarlarkEnvironment {
 
 impl StarlarkEnvironment {
     pub fn new() -> Result<Self> {
-        let logger = slog::Logger::root(
-            PrintlnDrain {
-                min_level: slog::Level::Info,
-            }
-            .fuse(),
-            slog::o!(),
-        );
-
-        let build_target = crate::project_building::HOST;
-
-        let cwd = std::env::current_dir()?;
-        let config_path = cwd.join("dummy");
-
-        let eval: EvaluationContext =
-            EvaluationContextBuilder::new(logger, config_path, build_target.to_string())
-                .distribution_cache(DISTRIBUTION_CACHE.clone())
-                .try_into()?;
+        let eval = test_evaluation_context_builder()?.into_context()?;
 
         Ok(Self { eval })
     }
