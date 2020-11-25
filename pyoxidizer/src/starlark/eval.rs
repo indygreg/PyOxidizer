@@ -60,7 +60,8 @@ impl EvaluationContextBuilder {
         }
     }
 
-    pub fn to_context(self) -> Result<EvaluationContext> {
+    /// Transform self into an `EvaluationContext`.
+    pub fn into_context(self) -> Result<EvaluationContext> {
         EvaluationContext::from_builder(self)
     }
 
@@ -373,7 +374,7 @@ mod tests {
         let mut context =
             EvaluationContextBuilder::new(logger, main_path.clone(), env!("HOST").to_string())
                 .verbose(true)
-                .to_context()?;
+                .into_context()?;
         context.evaluate_file(&main_path)?;
 
         Ok(())
@@ -390,7 +391,7 @@ mod tests {
         let mut context: EvaluationContext =
             EvaluationContextBuilder::new(logger, config_path.clone(), env!("HOST").to_string())
                 .verbose(true)
-                .to_context()?;
+                .into_context()?;
         context.evaluate_file(&config_path)?;
 
         Ok(())

@@ -64,7 +64,7 @@ pub fn list_targets(logger: &slog::Logger, project_path: &Path) -> Result<()> {
     let mut context =
         EvaluationContextBuilder::new(logger.clone(), config_path.clone(), target_triple)
             .resolve_targets(vec![])
-            .to_context()?;
+            .into_context()?;
 
     context.evaluate_file(&config_path)?;
 
@@ -110,7 +110,7 @@ pub fn build(
             .release(release)
             .verbose(verbose)
             .resolve_targets_optional(resolve_targets)
-            .to_context()?;
+            .into_context()?;
 
     context.evaluate_file(&config_path)?;
 
@@ -143,7 +143,7 @@ pub fn run(
             .release(release)
             .verbose(verbose)
             .resolve_target_optional(target)
-            .to_context()?;
+            .into_context()?;
 
     context.evaluate_file(&config_path)?;
 
