@@ -13,8 +13,8 @@ use std::{
     io::{BufRead, Write},
 };
 
+#[derive(Debug)]
 pub enum ControlError {
-    UnknownFieldKey(String),
     IOError(std::io::Error),
     ParseError(String),
 }
@@ -24,6 +24,17 @@ impl From<std::io::Error> for ControlError {
         Self::IOError(e)
     }
 }
+
+impl std::fmt::Display for ControlError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::IOError(inner) => write!(f, "I/O error: {}", inner),
+            Self::ParseError(msg) => write!(f, "parse error: {}", msg),
+        }
+    }
+}
+
+impl std::error::Error for ControlError {}
 
 /// A field value in a control file.
 #[derive(Clone, Debug)]
@@ -46,79 +57,16 @@ impl<'a> ControlFieldValue<'a> {
     }
 }
 
-impl<'a> ControlFieldValue<'a> {
-    pub fn from_field(
-        key: &str,
-        value: Cow<'a, str>,
-    ) -> Result<ControlFieldValue<'a>, ControlError> {
-        // TODO should we examine content of string and derive type from that
-        // instead? Perhaps we should store a series of lines instead of a raw
-        // string?
-        match key {
-            // Ordered list from https://www.debian.org/doc/debian-policy/ch-controlfields.html#list-of-fields.
-            "Source" => Ok(ControlFieldValue::Simple(value)),
-            "Maintainer" => Ok(ControlFieldValue::Simple(value)),
-            "Uploaders" => Ok(ControlFieldValue::Folded(value)),
-            "Changed-By" => Ok(ControlFieldValue::Simple(value)),
-            "Section" => Ok(ControlFieldValue::Simple(value)),
-            "Priority" => Ok(ControlFieldValue::Simple(value)),
-            "Package" => Ok(ControlFieldValue::Simple(value)),
-            "Architecture" => Ok(ControlFieldValue::Simple(value)),
-            "Essential" => Ok(ControlFieldValue::Simple(value)),
-            "Depends" => Ok(ControlFieldValue::Folded(value)),
-            "Pre-Depends" => Ok(ControlFieldValue::Folded(value)),
-            "Recommends" => Ok(ControlFieldValue::Folded(value)),
-            "Suggests" => Ok(ControlFieldValue::Folded(value)),
-            "Breaks" => Ok(ControlFieldValue::Folded(value)),
-            "Conflicts" => Ok(ControlFieldValue::Folded(value)),
-            "Provides" => Ok(ControlFieldValue::Folded(value)),
-            "Replaces" => Ok(ControlFieldValue::Folded(value)),
-            "Enhances" => Ok(ControlFieldValue::Folded(value)),
-            "Standards-Version" => Ok(ControlFieldValue::Simple(value)),
-            "Version" => Ok(ControlFieldValue::Simple(value)),
-            "Description" => Ok(ControlFieldValue::Multiline(value)),
-            "Distribution" => Ok(ControlFieldValue::Simple(value)),
-            "Date" => Ok(ControlFieldValue::Simple(value)),
-            "Format" => Ok(ControlFieldValue::Simple(value)),
-            "Urgency" => Ok(ControlFieldValue::Simple(value)),
-            "Changes" => Ok(ControlFieldValue::Multiline(value)),
-            "Binary" => Ok(ControlFieldValue::Folded(value)),
-            "Files" => Ok(ControlFieldValue::Folded(value)),
-            "Closes" => Ok(ControlFieldValue::Simple(value)),
-            "Homepage" => Ok(ControlFieldValue::Simple(value)),
-            "Checksums-Sha1" => Ok(ControlFieldValue::Multiline(value)),
-            "Checksums-Sha256" => Ok(ControlFieldValue::Multiline(value)),
-            "DM-Upload-Allowed" => Ok(ControlFieldValue::Simple(value)),
-            "Vcs-Browser" => Ok(ControlFieldValue::Simple(value)),
-            "Vcs-Arch" => Ok(ControlFieldValue::Simple(value)),
-            "Vcs-Bzr" => Ok(ControlFieldValue::Simple(value)),
-            "Vcs-Cvs" => Ok(ControlFieldValue::Simple(value)),
-            "Vcs-Darcs" => Ok(ControlFieldValue::Simple(value)),
-            "Vcs-Git" => Ok(ControlFieldValue::Simple(value)),
-            "Vcs-Hg" => Ok(ControlFieldValue::Simple(value)),
-            "Vcs-Mtn" => Ok(ControlFieldValue::Simple(value)),
-            "Vcs-Svn" => Ok(ControlFieldValue::Simple(value)),
-            "Package-List" => Ok(ControlFieldValue::Multiline(value)),
-            "Package-Type" => Ok(ControlFieldValue::Simple(value)),
-            "Dgit" => Ok(ControlFieldValue::Folded(value)),
-            "Testsuite" => Ok(ControlFieldValue::Simple(value)),
-            "Rules-Requires-Root" => Ok(ControlFieldValue::Simple(value)),
-
-            // Additional from https://www.debian.org/doc/debian-policy/ch-relationships.html#relationships-between-source-and-binary-packages-build-depends-build-depends-indep-build-depends-arch-build-conflicts-build-conflicts-indep-build-conflicts-arch.
-            "Build-Depends" => Ok(ControlFieldValue::Folded(value)),
-            "Build-Depends-Indep" => Ok(ControlFieldValue::Folded(value)),
-            "Build-Depends-Arch" => Ok(ControlFieldValue::Folded(value)),
-            "Build-Conflicts" => Ok(ControlFieldValue::Folded(value)),
-            "Build-Conflicts-Indep" => Ok(ControlFieldValue::Folded(value)),
-            "Build-Conflicts-Arch" => Ok(ControlFieldValue::Folded(value)),
-
-            // Additional fields from https://www.debian.org/doc/debian-policy/ch-controlfields.html#source-package-control-files-debian-control.
-            "Built-Using" => Ok(ControlFieldValue::Simple(value)),
-
-            // Additional fields from https://www.debian.org/doc/debian-policy/ch-controlfields.html#binary-package-control-files-debian-control.
-            "Installed-Size" => Ok(ControlFieldValue::Simple(value)),
-
-            _ => Err(ControlError::UnknownFieldKey(key.to_string())),
+impl<'a> From<Cow<'a, str>> for ControlFieldValue<'a> {
+    fn from(value: Cow<'a, str>) -> Self {
+        if value.contains('\n') {
+            if value.starts_with(' ') || value.starts_with('\t') {
+                ControlFieldValue::Multiline(value)
+            } else {
+                ControlFieldValue::Folded(value)
+            }
+        } else {
+            ControlFieldValue::Simple(value)
         }
     }
 }
@@ -142,7 +90,7 @@ impl<'a> ControlField<'a> {
     ///
     /// Unknown keys will be rejected.
     pub fn from_string_value(key: Cow<'a, str>, value: Cow<'a, str>) -> Result<Self, ControlError> {
-        let value = ControlFieldValue::from_field(key.as_ref(), value)?;
+        let value = ControlFieldValue::from(value);
 
         Ok(Self { name: key, value })
     }
@@ -361,5 +309,29 @@ impl<'a> SourceControl<'a> {
     /// Obtain an iterator over paragraphs defining binaries.
     pub fn binary_paragraphs(&self) -> impl Iterator<Item = &ControlParagraph<'a>> {
         self.binaries.iter()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use {super::*, anyhow::Result};
+
+    #[test]
+    fn test_parse_system_lists() -> Result<()> {
+        let paths = glob::glob("/var/lib/apt/lists/*_Packages")?
+            .chain(glob::glob("/var/lib/apt/lists/*_Sources")?)
+            .chain(glob::glob("/var/lib/apt/lists/*i18n_Translation-*")?);
+
+        for path in paths {
+            let path = path?;
+
+            eprintln!("parsing {}", path.display());
+            let fh = std::fs::File::open(&path)?;
+            let mut reader = std::io::BufReader::new(fh);
+
+            ControlFile::parse_reader(&mut reader)?;
+        }
+
+        Ok(())
     }
 }
