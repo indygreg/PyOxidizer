@@ -74,7 +74,7 @@ impl<'control> DebBuilder<'control> {
 
         // First entry is a debian-binary file with static content.
         let data: &[u8] = b"2.0\n";
-        let mut header = ar::Header::new(b"debian-history".to_vec(), data.len() as _);
+        let mut header = ar::Header::new(b"debian-binary".to_vec(), data.len() as _);
         header.set_mode(0o644);
         header.set_mtime(self.mtime());
         header.set_uid(0);
