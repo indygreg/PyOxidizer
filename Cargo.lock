@@ -3152,6 +3152,7 @@ dependencies = [
  "os_str_bytes",
  "reqwest",
  "rpm-rs",
+ "semver",
  "serde",
  "serde_yaml",
  "sha2 0.9.2",
@@ -3164,6 +3165,7 @@ dependencies = [
  "uuid 0.8.1",
  "virtual-file-manifest",
  "walkdir",
+ "winapi 0.3.9",
  "xml-rs",
  "zip",
 ]

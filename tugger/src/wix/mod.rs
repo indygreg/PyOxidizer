@@ -12,7 +12,7 @@ mod simple_msi_builder;
 mod wxs_builder;
 
 pub use {
-    bundle_builder::{VCRedistributablePlatform, WiXBundleInstallerBuilder},
+    bundle_builder::WiXBundleInstallerBuilder,
     chain::ChainElement,
     common::{run_candle, run_light, target_triple_to_wix_arch, write_file_manifest_to_wix},
     exe_package::ExePackage,

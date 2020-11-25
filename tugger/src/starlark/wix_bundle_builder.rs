@@ -5,7 +5,8 @@
 use {
     crate::{
         starlark::wix_msi_builder::WiXMSIBuilderValue,
-        wix::{MSIPackage, VCRedistributablePlatform, WiXBundleInstallerBuilder},
+        windows::VCRedistributablePlatform,
+        wix::{MSIPackage, WiXBundleInstallerBuilder},
     },
     starlark::{
         environment::TypeValues,

@@ -31,5 +31,6 @@ pub mod tarball;
 #[allow(unused)]
 #[cfg(test)]
 mod testutil;
+pub mod windows;
 pub mod wix;
 pub mod zipfile;

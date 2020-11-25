@@ -24,6 +24,7 @@ lazy_static = "1.4"
 md5 = "0.7"
 os_str_bytes = "2.3"
 reqwest = { version = "0.10", features = ["blocking"] }
+semver = "0.11"
 serde_yaml = "0.8"
 serde = "1.0"
 sha2 = "0.9"
@@ -39,6 +40,9 @@ zip = "0.5"
 [target.'cfg(unix)'.dependencies]
 # Create doesn't build on Windows. https://github.com/Richterrettich/rpm-rs/pull/30 fixes.
 rpm-rs = "0.6"
+
+[target.'cfg(windows)'.dependencies]
+winapi = { version = "0.3", features = ["combaseapi", "knownfolders", "shlobj", "shtypes"] }
 
 [dependencies.starlark-dialect-build-targets]
 version = "0.2.0-pre"

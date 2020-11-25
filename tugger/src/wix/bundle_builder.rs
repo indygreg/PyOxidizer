@@ -5,6 +5,7 @@
 use {
     crate::{
         http::download_to_path,
+        windows::VCRedistributablePlatform,
         wix::{
             common::{VC_REDIST_ARM64, VC_REDIST_X64, VC_REDIST_X86},
             *,
@@ -12,51 +13,10 @@ use {
     },
     anyhow::{anyhow, Context, Result},
     slog::warn,
-    std::{
-        borrow::Cow,
-        collections::BTreeMap,
-        convert::TryFrom,
-        fmt::{Display, Formatter},
-        io::Write,
-        ops::Deref,
-        path::Path,
-    },
+    std::{borrow::Cow, collections::BTreeMap, io::Write, ops::Deref, path::Path},
     uuid::Uuid,
     xml::{common::XmlVersion, writer::XmlEvent, EmitterConfig, EventWriter},
 };
-
-/// Available VC++ Redistributable platforms we can add to the bundle.
-pub enum VCRedistributablePlatform {
-    X86,
-    X64,
-    Arm64,
-}
-
-impl Display for VCRedistributablePlatform {
-    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-        f.write_str(match self {
-            Self::X86 => "x86",
-            Self::X64 => "x64",
-            Self::Arm64 => "arm64",
-        })
-    }
-}
-
-impl TryFrom<&str> for VCRedistributablePlatform {
-    type Error = String;
-
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
-        match value {
-            "x86" => Ok(Self::X86),
-            "x64" => Ok(Self::X64),
-            "arm64" => Ok(Self::Arm64),
-            _ => Err(format!(
-                "{} is not a valid platform; use 'x86', 'x64', or 'arm64'",
-                value
-            )),
-        }
-    }
-}
 
 /// Entity used to build a WiX bundle installer.
 ///
