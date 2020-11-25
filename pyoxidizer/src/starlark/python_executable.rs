@@ -748,6 +748,9 @@ impl PythonExecutableValue {
             product_name.clone(),
             product_version.clone(),
             product_manufacturer.clone(),
+            // Don't add vcruntime files in bundle installer because we install them
+            // as part of the install chain.
+            false,
         )?;
 
         if msi_builder_callback.get_type() == "function" {
@@ -804,6 +807,7 @@ impl PythonExecutableValue {
         product_name: String,
         product_version: String,
         product_manufacturer: String,
+        add_vcruntime: bool,
     ) -> ValueResult {
         let manifest_value = self.to_file_manifest(type_values, ".".to_string())?;
         let manifest = manifest_value.downcast_ref::<FileManifestValue>().unwrap();
@@ -818,6 +822,25 @@ impl PythonExecutableValue {
             .downcast_mut::<WiXMSIBuilderValue>()
             .unwrap()
             .unwrap();
+
+        // Automatically add the Visual C++ Redistributable files if they are needed.
+        // We do this before .add_program_files_manifest() in case the manifest wants to
+        // override them with explicit copies.
+        if add_vcruntime {
+            if let Some((version, platform)) = self.exe.vc_runtime_requirements() {
+                builder
+                    .inner
+                    .add_visual_cpp_redistributable(&version, platform)
+                    .map_err(|e| {
+                        ValueError::Runtime(RuntimeError {
+                            code: "PYOXIDIZER_PYTHON_EXECUTABLE",
+                            message: format!("{:?}", e),
+                            label: "to_wix_msi_builder()".to_string(),
+                        })
+                    })?;
+            }
+        }
+
         builder.add_program_files_manifest(manifest.deref().clone())?;
 
         Ok(builder_value.clone())
@@ -1029,7 +1052,7 @@ starlark_module! { python_executable_env =>
         product_manufacturer: String
     ) {
         let this = this.downcast_ref::<PythonExecutableValue>().unwrap();
-        this.to_wix_msi_builder(&env, id_prefix, product_name, product_version, product_manufacturer)
+        this.to_wix_msi_builder(&env, id_prefix, product_name, product_version, product_manufacturer, true)
     }
 }
 

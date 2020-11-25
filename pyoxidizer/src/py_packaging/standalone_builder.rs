@@ -41,6 +41,7 @@ use {
         sync::Arc,
     },
     tempdir::TempDir,
+    tugger::windows::VCRedistributablePlatform,
     virtual_file_manifest::{File, FileData, FileEntry, FileManifest},
 };
 
@@ -374,6 +375,29 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
 
     fn target_triple(&self) -> &str {
         &self.target_triple
+    }
+
+    fn vc_runtime_requirements(&self) -> Option<(String, VCRedistributablePlatform)> {
+        let platform = if self.target_triple.starts_with("i686-") {
+            VCRedistributablePlatform::X86
+        } else if self.target_triple.starts_with("x86_64-") {
+            VCRedistributablePlatform::X64
+        } else if self.target_triple.starts_with("aarch64-") {
+            VCRedistributablePlatform::Arm64
+        } else {
+            return None;
+        };
+
+        if let Some(s) = self
+            .target_distribution
+            .crt_features
+            .iter()
+            .find(|s| s.starts_with("vcruntime:"))
+        {
+            Some((s.split(':').nth(1).unwrap()[0..2].to_string(), platform))
+        } else {
+            None
+        }
     }
 
     fn cache_tag(&self) -> &str {
@@ -2801,6 +2825,42 @@ pub mod tests {
                 "PythonExtensionModule for {:?}",
                 libpython_link_mode
             );
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_vcruntime_requirements() -> Result<()> {
+        let host_distribution = get_default_distribution()?;
+
+        for dist in get_all_standalone_distributions()? {
+            let builder = StandalonePythonExecutableBuilder::from_distribution(
+                host_distribution.clone(),
+                dist.clone(),
+                host_distribution.target_triple().to_string(),
+                dist.target_triple().to_string(),
+                "myapp".to_string(),
+                BinaryLibpythonLinkMode::Default,
+                dist.create_packaging_policy()?,
+                dist.create_python_interpreter_config()?,
+            )?;
+
+            let reqs = builder.vc_runtime_requirements();
+
+            if dist.target_triple().contains("windows") && dist.libpython_shared_library.is_some() {
+                let platform = match dist.target_triple() {
+                    "i686-pc-windows-msvc" => VCRedistributablePlatform::X86,
+                    "x86_64-pc-windows-msvc" => VCRedistributablePlatform::X64,
+                    triple => {
+                        return Err(anyhow!("unexpected distribution triple: {}", triple));
+                    }
+                };
+
+                assert_eq!(reqs, Some(("14".to_string(), platform)));
+            } else {
+                assert!(reqs.is_none());
+            }
         }
 
         Ok(())

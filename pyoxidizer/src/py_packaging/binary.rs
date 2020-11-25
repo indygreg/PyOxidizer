@@ -23,6 +23,7 @@ use {
         path::{Path, PathBuf},
         sync::Arc,
     },
+    tugger::windows::VCRedistributablePlatform,
     virtual_file_manifest::{File, FileManifest},
 };
 
@@ -65,6 +66,13 @@ pub trait PythonBinaryBuilder {
 
     /// Rust target triple the binary will run on.
     fn target_triple(&self) -> &str;
+
+    /// Obtain run-time requirements for the Visual C++ Redistributable.
+    ///
+    /// If `None`, there is no dependency on `vcruntimeXXX.dll` files. If `Some`,
+    /// the returned tuple declares the VC++ Redistributable major version string
+    /// (e.g. `14`) and the VC++ Redistributable platform variant that is required.
+    fn vc_runtime_requirements(&self) -> Option<(String, VCRedistributablePlatform)>;
 
     /// Obtain the cache tag to apply to Python bytecode modules.
     fn cache_tag(&self) -> &str;

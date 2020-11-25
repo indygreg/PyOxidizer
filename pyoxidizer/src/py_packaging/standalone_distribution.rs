@@ -457,6 +457,9 @@ pub struct StandaloneDistribution {
 
     /// Suffixes for Python module types.
     module_suffixes: PythonModuleSuffixes,
+
+    /// List of strings denoting C Runtime requirements.
+    pub crt_features: Vec<String>,
 }
 
 impl StandaloneDistribution {
@@ -924,6 +927,7 @@ impl StandaloneDistribution {
             inittab_cflags: pi.build_info.inittab_cflags,
             cache_tag: pi.python_implementation_cache_tag,
             module_suffixes,
+            crt_features: pi.crt_features,
         })
     }
 

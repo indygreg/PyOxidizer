@@ -68,29 +68,30 @@ built with the WiX Toolset. Which one should you use?
 See :ref:`tugger_wix_apis` for a generic overview of this topic. The
 remainder of this documentation will be specific to Python applications.
 
-First, it is is important to call out that unless you are using the
-*static* :ref:`Python distributions <packaging_python_distributions>`,
-binaries built with PyOxidizer will have a run-time dependency on the
-Visual C++ runtime (e.g. ``vcruntime140.dll``). PyOxidizer does
-not explicitly distribute a ``vcruntimeXXX.dll`` file next to your binary
-by default. The MSI installers will not contain a ``vcruntimeXXX.dll``
-unless you explicitly add one in your Starlark configuration file!
+It is is important to call out that unless you are using the *static*
+:ref:`Python distributions <packaging_python_distributions>`, binaries built
+with PyOxidizer will have a run-time dependency on the Visual C++
+Redistributable runtime DLLs (e.g. ``vcruntime140.dll``). Many Windows
+applications have a dependency on these DLLs and most Windows machines have
+installed an application that has installed the required DLLs. So not
+distributing ``vcruntimeXXX.dll`` with your application may *just work*
+most of the time. However, on a fresh Windows installation, these required
+files may not exist. So it is important that they be installed with your
+application.
 
-To install the Visual C++ Redistributable/Runtime, it is recommended to
-use *bundle installer* support in WiX to produce an ``.exe`` installer
-which contains the Visual C++ Redistributable installer as well as your
-application's MSI installer. **This is the most reliably way to install
-the Visual C++ Runtime dependency**.
-:ref:`config_python_executable_to_wix_bundle_builder` will install the
-Visual C++ Redistributable by default and Tugger's
-:ref:`tugger_starlark_type_wix_bundle_builder.add_vc_redistributable` can
-be called to add the Visual C++ Redistributable to bundle installers
-created via Tugger's Starlark primitives.
+When using :ref:`config_python_executable_to_wix_msi_builder` or
+:ref:`config_python_executable_to_wix_bundle_builder`, PyOxidizer
+will automatically add the Visual C++ Redistributable to the installer
+if it is required. However, the method varies. For bundle installers,
+the installer will contain the official ``VC_Redist*.exe`` installer
+and this installer will be executed as part of running your application's
+installer. For MSI installers, Tugger will attempt to locate the
+``vcruntimeXXX.dll`` files on your system (this requires an
+installation of Visual Studio) and copy these files next to your
+built/installed executable.
 
-Many Windows applications have a dependency on the Visual C++ Runtime
-and most Windows machines have installed an application that has installed
-the required DLLs. So forgoing the explicit inclusion of the Visual C++
-Redistributable from installers may *just work* 99% of the time. However,
-on a fresh Windows installation, these required files may not exist, so
-it is recommended to install the Visual C++ Redistributable as part of
-your installer to ensure all dependencies are present.
+If you are not using one of the aforementioned APIs to create your
+installer, you will need to explicitly add the Visual C++ Redistributable
+to your installer.
+The :ref:`tugger_starlark_type_wix_bundle_builder.add_vc_redistributable`
+Starlark method can be called to do this.
