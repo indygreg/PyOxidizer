@@ -252,7 +252,7 @@ impl EvaluationContext {
     }
 
     /// Evaluate code as if it is executing from a path.
-    pub fn eval(&mut self, path: &str, code: &str) -> Result<Value> {
+    pub fn eval_code_with_path(&mut self, path: &str, code: &str) -> Result<Value> {
         let map = std::sync::Arc::new(std::sync::Mutex::new(CodeMap::new()));
 
         self.eval_diagnostic(&map, path, code)
@@ -272,8 +272,8 @@ impl EvaluationContext {
     }
 
     /// Evaluate code with a placeholder value for the filename.
-    pub fn eval_code(&mut self, code: &str) -> Result<Value> {
-        self.eval("<no_file>", code)
+    pub fn eval(&mut self, code: &str) -> Result<Value> {
+        self.eval_code_with_path("<no_file>", code)
     }
 
     /// Obtain the `Value` for the build targets context.

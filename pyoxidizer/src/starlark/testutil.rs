@@ -38,14 +38,14 @@ pub fn test_evaluation_context_builder() -> Result<EvaluationContextBuilder> {
 
 /// Add a PythonExecutable `exe` variable to the Starlark environment.
 pub fn add_exe(eval: &mut EvaluationContext) -> Result<()> {
-    eval.eval_code("dist = default_python_distribution()")?;
-    eval.eval_code("exe = dist.to_python_executable('testapp')")?;
+    eval.eval("dist = default_python_distribution()")?;
+    eval.eval("exe = dist.to_python_executable('testapp')")?;
 
     Ok(())
 }
 
 pub fn eval_assert(eval: &mut EvaluationContext, code: &str) -> Result<()> {
-    let value = eval.eval_code(code)?;
+    let value = eval.eval(code)?;
 
     if value.get_type() != "bool" || !value.to_bool() {
         Err(anyhow!("{} does not evaluate to True", code))
@@ -78,7 +78,7 @@ impl StarlarkEnvironment {
 
     /// Evaluate code in the Starlark environment.
     pub fn eval(&mut self, code: &str) -> Result<Value> {
-        self.eval.eval("<test>", code)
+        self.eval.eval_code_with_path("<test>", code)
     }
 
     pub fn get(&self, name: &str) -> Result<Value> {

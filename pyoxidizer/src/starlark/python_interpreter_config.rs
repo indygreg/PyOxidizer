@@ -575,8 +575,8 @@ mod tests {
     // TODO instantiating a new distribution every call is expensive. Can we cache this?
     fn get_env() -> Result<EvaluationContext> {
         let mut eval = test_evaluation_context_builder()?.into_context()?;
-        eval.eval_code("dist = default_python_distribution()")?;
-        eval.eval_code("config = dist.make_python_interpreter_config()")?;
+        eval.eval("dist = default_python_distribution()")?;
+        eval.eval("config = dist.make_python_interpreter_config()")?;
 
         Ok(eval)
     }
@@ -587,10 +587,10 @@ mod tests {
 
         eval_assert(&mut env, "config.config_profile == 'isolated'")?;
 
-        env.eval_code("config.config_profile = 'python'")?;
+        env.eval("config.config_profile = 'python'")?;
         eval_assert(&mut env, "config.config_profile == 'python'")?;
 
-        env.eval_code("config.config_profile = 'isolated'")?;
+        env.eval("config.config_profile = 'isolated'")?;
         eval_assert(&mut env, "config.config_profile == 'isolated'")?;
 
         Ok(())
@@ -602,28 +602,28 @@ mod tests {
 
         eval_assert(&mut env, "config.allocator == None")?;
 
-        env.eval_code("config.allocator = 'not-set'")?;
+        env.eval("config.allocator = 'not-set'")?;
         eval_assert(&mut env, "config.allocator == 'not-set'")?;
 
-        env.eval_code("config.allocator = 'default'")?;
+        env.eval("config.allocator = 'default'")?;
         eval_assert(&mut env, "config.allocator == 'default'")?;
 
-        env.eval_code("config.allocator = 'debug'")?;
+        env.eval("config.allocator = 'debug'")?;
         eval_assert(&mut env, "config.allocator == 'debug'")?;
 
-        env.eval_code("config.allocator = 'malloc'")?;
+        env.eval("config.allocator = 'malloc'")?;
         eval_assert(&mut env, "config.allocator == 'malloc'")?;
 
-        env.eval_code("config.allocator = 'malloc-debug'")?;
+        env.eval("config.allocator = 'malloc-debug'")?;
         eval_assert(&mut env, "config.allocator == 'malloc-debug'")?;
 
-        env.eval_code("config.allocator = 'py-malloc'")?;
+        env.eval("config.allocator = 'py-malloc'")?;
         eval_assert(&mut env, "config.allocator == 'py-malloc'")?;
 
-        env.eval_code("config.allocator = 'py-malloc-debug'")?;
+        env.eval("config.allocator = 'py-malloc-debug'")?;
         eval_assert(&mut env, "config.allocator == 'py-malloc-debug'")?;
 
-        env.eval_code("config.allocator = None")?;
+        env.eval("config.allocator = None")?;
         eval_assert(&mut env, "config.allocator == None")?;
 
         Ok(())
@@ -743,13 +743,13 @@ mod tests {
 
         eval_assert(&mut env, "config.bytes_warning == None")?;
 
-        env.eval_code("config.bytes_warning = 'warn'")?;
+        env.eval("config.bytes_warning = 'warn'")?;
         eval_assert(&mut env, "config.bytes_warning == 'warn'")?;
 
-        env.eval_code("config.bytes_warning = 'raise'")?;
+        env.eval("config.bytes_warning = 'raise'")?;
         eval_assert(&mut env, "config.bytes_warning == 'raise'")?;
 
-        env.eval_code("config.bytes_warning = None")?;
+        env.eval("config.bytes_warning = None")?;
         eval_assert(&mut env, "config.bytes_warning == None")?;
 
         Ok(())
@@ -906,11 +906,11 @@ mod tests {
         eval_assert(&mut env, "config.module_search_paths == None")?;
         eval_assert(&mut env, "config.filesystem_importer == False")?;
 
-        env.eval_code("config.module_search_paths = []")?;
+        env.eval("config.module_search_paths = []")?;
         eval_assert(&mut env, "config.module_search_paths == []")?;
         eval_assert(&mut env, "config.filesystem_importer == False")?;
 
-        env.eval_code("config.module_search_paths = ['foo']")?;
+        env.eval("config.module_search_paths = ['foo']")?;
         eval_assert(&mut env, "config.module_search_paths == ['foo']")?;
         // filesystem_importer enabled when setting paths.
         eval_assert(&mut env, "config.filesystem_importer == True")?;
@@ -924,13 +924,13 @@ mod tests {
 
         eval_assert(&mut env, "config.optimization_level == None")?;
 
-        env.eval_code("config.optimization_level = 0")?;
+        env.eval("config.optimization_level = 0")?;
         eval_assert(&mut env, "config.optimization_level == 0")?;
 
-        env.eval_code("config.optimization_level = 1")?;
+        env.eval("config.optimization_level = 1")?;
         eval_assert(&mut env, "config.optimization_level == 1")?;
 
-        env.eval_code("config.optimization_level = 2")?;
+        env.eval("config.optimization_level = 2")?;
         eval_assert(&mut env, "config.optimization_level == 2")?;
 
         Ok(())
@@ -1140,10 +1140,10 @@ mod tests {
 
         eval_assert(&mut env, "config.raw_allocator == 'system'")?;
 
-        env.eval_code("config.raw_allocator = 'jemalloc'")?;
+        env.eval("config.raw_allocator = 'jemalloc'")?;
         eval_assert(&mut env, "config.raw_allocator == 'jemalloc'")?;
 
-        env.eval_code("config.raw_allocator = 'rust'")?;
+        env.eval("config.raw_allocator = 'rust'")?;
         eval_assert(&mut env, "config.raw_allocator == 'rust'")?;
 
         Ok(())
@@ -1200,10 +1200,10 @@ mod tests {
 
         eval_assert(&mut env, "config.terminfo_resolution == 'dynamic'")?;
 
-        env.eval_code("config.terminfo_resolution = 'none'")?;
+        env.eval("config.terminfo_resolution = 'none'")?;
         eval_assert(&mut env, "config.terminfo_resolution == 'none'")?;
 
-        env.eval_code("config.terminfo_resolution = 'static:foo'")?;
+        env.eval("config.terminfo_resolution = 'static:foo'")?;
         eval_assert(&mut env, "config.terminfo_resolution == 'static:foo'")?;
 
         Ok(())

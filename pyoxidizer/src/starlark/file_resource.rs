@@ -351,7 +351,7 @@ mod tests {
         });
 
         env.set_var("m", m).unwrap();
-        env.eval_code("m.add_python_resource('bin', exe)")?;
+        env.eval("m.add_python_resource('bin', exe)")?;
 
         Ok(())
     }
@@ -386,8 +386,8 @@ mod tests {
 
         env.set_var("m", m).unwrap();
 
-        env.eval_code("m.add_python_resource('bin', exe)")?;
-        env.eval_code("m.install('myapp')")?;
+        env.eval("m.add_python_resource('bin', exe)")?;
+        env.eval("m.install('myapp')")?;
 
         let dest_path = env.build_path().unwrap().join("myapp");
         assert!(dest_path.exists());

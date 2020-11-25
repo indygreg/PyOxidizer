@@ -1041,7 +1041,7 @@ mod tests {
     fn test_default_values() -> Result<()> {
         let mut env = test_evaluation_context_builder()?.into_context()?;
         add_exe(&mut env)?;
-        let exe = env.eval_code("exe")?;
+        let exe = env.eval("exe")?;
 
         assert_eq!(exe.get_type(), "PythonExecutable");
 
@@ -1083,7 +1083,7 @@ mod tests {
     fn test_make_python_module_source() -> Result<()> {
         let mut env = test_evaluation_context_builder()?.into_context()?;
         add_exe(&mut env)?;
-        let m = env.eval_code("exe.make_python_module_source('foo', 'import bar')")?;
+        let m = env.eval("exe.make_python_module_source('foo', 'import bar')")?;
 
         assert_eq!(m.get_type(), PythonModuleSourceValue::TYPE);
         assert_eq!(m.get_attr("name").unwrap().to_str(), "foo");
@@ -1128,10 +1128,10 @@ mod tests {
                 .build_target_triple(target_triple)
                 .into_context()?;
 
-            env.eval_code("dist = default_python_distribution()")?;
-            env.eval_code("exe = dist.to_python_executable('testapp')")?;
+            env.eval("dist = default_python_distribution()")?;
+            env.eval("exe = dist.to_python_executable('testapp')")?;
 
-            let resources = env.eval_code("exe.pip_download(['pyflakes==2.2.0'])")?;
+            let resources = env.eval("exe.pip_download(['pyflakes==2.2.0'])")?;
 
             assert_eq!(resources.get_type(), "list");
 
@@ -1229,11 +1229,11 @@ mod tests {
         let mut env = test_evaluation_context_builder()?.into_context()?;
         add_exe(&mut env)?;
 
-        let value = env.eval_code("exe.windows_subsystem")?;
+        let value = env.eval("exe.windows_subsystem")?;
         assert_eq!(value.get_type(), "string");
         assert_eq!(value.to_string(), "console");
 
-        let value = env.eval_code("exe.windows_subsystem = 'windows'; exe.windows_subsystem")?;
+        let value = env.eval("exe.windows_subsystem = 'windows'; exe.windows_subsystem")?;
         assert_eq!(value.get_type(), "string");
         assert_eq!(value.to_string(), "windows");
 
@@ -1245,14 +1245,14 @@ mod tests {
         let mut env = test_evaluation_context_builder()?.into_context()?;
         add_exe(&mut env)?;
 
-        let value = env.eval_code("exe.tcl_files_path")?;
+        let value = env.eval("exe.tcl_files_path")?;
         assert_eq!(value.get_type(), "NoneType");
 
-        let value = env.eval_code("exe.tcl_files_path = 'lib'; exe.tcl_files_path")?;
+        let value = env.eval("exe.tcl_files_path = 'lib'; exe.tcl_files_path")?;
         assert_eq!(value.get_type(), "string");
         assert_eq!(value.to_string(), "lib");
 
-        let value = env.eval_code("exe.tcl_files_path = None; exe.tcl_files_path")?;
+        let value = env.eval("exe.tcl_files_path = None; exe.tcl_files_path")?;
         assert_eq!(value.get_type(), "NoneType");
 
         Ok(())
@@ -1262,8 +1262,8 @@ mod tests {
     fn test_to_wix_bundle_builder_callback() -> Result<()> {
         let mut env = test_evaluation_context_builder()?.into_context()?;
         add_exe(&mut env)?;
-        env.eval_code("def modify(msi):\n msi.package_description = 'description'\n")?;
-        let builder_value = env.eval_code("exe.to_wix_bundle_builder('id_prefix', 'product_name', '0.1', 'manufacturer', msi_builder_callback = modify)")?;
+        env.eval("def modify(msi):\n msi.package_description = 'description'\n")?;
+        let builder_value = env.eval("exe.to_wix_bundle_builder('id_prefix', 'product_name', '0.1', 'manufacturer', msi_builder_callback = modify)")?;
         let builder = builder_value
             .downcast_ref::<WiXBundleBuilderValue>()
             .unwrap();
@@ -1283,8 +1283,8 @@ mod tests {
     fn test_to_wix_bundle_builder() -> Result<()> {
         let mut env = test_evaluation_context_builder()?.into_context()?;
         add_exe(&mut env)?;
-        env.eval_code("bundle = exe.to_wix_bundle_builder('id_prefix', 'product_name', '0.1', 'product_manufacturer')")?;
-        env.eval_code("bundle.build('test_to_wix_bundle_builder')")?;
+        env.eval("bundle = exe.to_wix_bundle_builder('id_prefix', 'product_name', '0.1', 'product_manufacturer')")?;
+        env.eval("bundle.build('test_to_wix_bundle_builder')")?;
 
         let exe_path = env
             .target_build_path("test_to_wix_bundle_builder")
@@ -1304,8 +1304,8 @@ mod tests {
     fn test_to_wix_msi_builder() -> Result<()> {
         let mut env = test_evaluation_context_builder()?.into_context()?;
         add_exe(&mut env)?;
-        env.eval_code("msi = exe.to_wix_msi_builder('id_prefix', 'product_name', '0.1', 'product_manufacturer')")?;
-        env.eval_code("msi.build('test_to_wix_msi_builder')")?;
+        env.eval("msi = exe.to_wix_msi_builder('id_prefix', 'product_name', '0.1', 'product_manufacturer')")?;
+        env.eval("msi.build('test_to_wix_msi_builder')")?;
 
         let msi_path = env
             .target_build_path("test_to_wix_msi_builder")
