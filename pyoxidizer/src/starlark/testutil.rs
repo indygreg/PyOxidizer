@@ -68,14 +68,6 @@ impl StarlarkEnvironment {
         Ok(Self { eval })
     }
 
-    pub fn eval_raw(
-        &mut self,
-        map: &std::sync::Arc<std::sync::Mutex<CodeMap>>,
-        code: &str,
-    ) -> Result<Value, Diagnostic> {
-        self.eval.eval_diagnostic(&map, "<test>", code)
-    }
-
     /// Evaluate code in the Starlark environment.
     pub fn eval(&mut self, code: &str) -> Result<Value> {
         self.eval.eval_code_with_path("<test>", code)
@@ -95,19 +87,25 @@ impl StarlarkEnvironment {
 }
 
 pub fn starlark_ok(snippet: &str) -> Value {
-    let mut env = StarlarkEnvironment::new().expect("error creating starlark environment");
+    let mut eval = test_evaluation_context_builder()
+        .unwrap()
+        .into_context()
+        .unwrap();
 
-    let res = env.eval(snippet);
+    let res = eval.eval(snippet);
     assert!(res.is_ok());
 
     res.unwrap()
 }
 
 pub fn starlark_nok(snippet: &str) -> Diagnostic {
-    let mut env = StarlarkEnvironment::new().expect("error creating starlark environment");
+    let mut eval = test_evaluation_context_builder()
+        .unwrap()
+        .into_context()
+        .unwrap();
     let map = std::sync::Arc::new(std::sync::Mutex::new(CodeMap::new()));
 
-    let res = env.eval_raw(&map, snippet);
+    let res = eval.eval_diagnostic(&map, "<nofile>", snippet);
 
     assert!(res.is_err());
 
