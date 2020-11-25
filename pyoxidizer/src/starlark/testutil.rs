@@ -72,18 +72,6 @@ impl StarlarkEnvironment {
     pub fn eval(&mut self, code: &str) -> Result<Value> {
         self.eval.eval_code_with_path("<test>", code)
     }
-
-    pub fn get(&self, name: &str) -> Result<Value> {
-        let value = self.eval.get_var(name).unwrap();
-
-        Ok(value)
-    }
-
-    pub fn set(&mut self, name: &str, value: Value) -> Result<()> {
-        self.eval.set_var(name, value).unwrap();
-
-        Ok(())
-    }
 }
 
 pub fn starlark_ok(snippet: &str) -> Value {

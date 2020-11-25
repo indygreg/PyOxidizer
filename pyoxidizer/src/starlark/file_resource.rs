@@ -258,13 +258,13 @@ mod tests {
             is_test: false,
         }));
 
-        let mut env = StarlarkEnvironment::new()?;
-        env.set("m", m)?;
-        env.set("v", v)?;
+        let mut env = test_evaluation_context_builder()?.into_context()?;
+        env.set_var("m", m).unwrap();
+        env.set_var("v", v).unwrap();
 
         env.eval("m.add_python_resource('lib', v)")?;
 
-        let m = env.get("m")?;
+        let m = env.get_var("m").unwrap();
         let m = m.downcast_ref::<FileManifestValue>().unwrap();
 
         let mut entries = m.manifest.iter_entries();
@@ -309,13 +309,13 @@ mod tests {
             is_test: false,
         }));
 
-        let mut env = StarlarkEnvironment::new()?;
-        env.set("m", m)?;
-        env.set("v", v)?;
+        let mut env = test_evaluation_context_builder()?.into_context()?;
+        env.set_var("m", m).unwrap();
+        env.set_var("v", v).unwrap();
 
         env.eval("m.add_python_resource('lib', v)")?;
 
-        let m = env.get("m")?;
+        let m = env.get_var("m").unwrap();
         let m = m.downcast_ref::<FileManifestValue>().unwrap();
 
         let mut entries = m.manifest.iter_entries();
@@ -358,7 +358,7 @@ mod tests {
 
     #[test]
     fn test_add_python_executable_39() -> Result<()> {
-        let mut env = StarlarkEnvironment::new()?;
+        let mut env = test_evaluation_context_builder()?.into_context()?;
 
         env.eval("dist = default_python_distribution(python_version='3.9')")?;
         env.eval("exe = dist.to_python_executable('testapp')")?;
@@ -368,7 +368,7 @@ mod tests {
             run_path: None,
         });
 
-        env.set("m", m)?;
+        env.set_var("m", m).unwrap();
         env.eval("m.add_python_resource('bin', exe)")?;
 
         Ok(())
