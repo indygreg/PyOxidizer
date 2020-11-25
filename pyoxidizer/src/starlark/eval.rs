@@ -26,10 +26,92 @@ use {
         build_target, run_target, EnvironmentContext, ResolvedTarget,
     },
     std::{
+        convert::TryFrom,
         path::{Path, PathBuf},
         sync::{Arc, Mutex},
     },
 };
+
+/// Builder type to construct `EvaluationContext` instances.
+pub struct EvaluationContextBuilder {
+    logger: slog::Logger,
+    config_path: PathBuf,
+    build_target_triple: String,
+    release: bool,
+    verbose: bool,
+    resolve_targets: Option<Vec<String>>,
+    build_script_mode: bool,
+    build_opt_level: String,
+    distribution_cache: Option<Arc<DistributionCache>>,
+}
+
+impl EvaluationContextBuilder {
+    pub fn new(logger: slog::Logger, config_path: PathBuf, build_target_triple: String) -> Self {
+        Self {
+            logger,
+            config_path,
+            build_target_triple,
+            release: false,
+            verbose: false,
+            resolve_targets: None,
+            build_script_mode: false,
+            build_opt_level: "0".to_string(),
+            distribution_cache: None,
+        }
+    }
+
+    pub fn to_context(self) -> Result<EvaluationContext> {
+        EvaluationContext::from_builder(self)
+    }
+
+    pub fn release(mut self, value: bool) -> Self {
+        self.release = value;
+        self
+    }
+
+    pub fn verbose(mut self, value: bool) -> Self {
+        self.verbose = value;
+        self
+    }
+
+    pub fn resolve_targets_optional(mut self, targets: Option<Vec<impl ToString>>) -> Self {
+        self.resolve_targets = if let Some(targets) = targets {
+            Some(targets.iter().map(|x| x.to_string()).collect())
+        } else {
+            None
+        };
+        self
+    }
+
+    pub fn resolve_targets(mut self, targets: Vec<String>) -> Self {
+        self.resolve_targets = Some(targets);
+        self
+    }
+
+    pub fn resolve_target_optional(mut self, target: Option<impl ToString>) -> Self {
+        self.resolve_targets = if let Some(target) = target {
+            Some(vec![target.to_string()])
+        } else {
+            None
+        };
+        self
+    }
+
+    pub fn resolve_target(mut self, target: impl ToString) -> Self {
+        self.resolve_targets = Some(vec![target.to_string()]);
+        self
+    }
+
+    pub fn build_script_mode(mut self, value: bool) -> Self {
+        self.build_script_mode = value;
+        self
+    }
+
+    pub fn distribution_cache(mut self, cache: Arc<DistributionCache>) -> Self {
+        self.distribution_cache = Some(cache);
+        self
+    }
+}
 
 /// Represents a running Starlark environment.
 pub struct EvaluationContext {
@@ -38,28 +120,25 @@ pub struct EvaluationContext {
     type_values: TypeValues,
 }
 
+impl TryFrom<EvaluationContextBuilder> for EvaluationContext {
+    type Error = anyhow::Error;
+
+    fn try_from(value: EvaluationContextBuilder) -> Result<Self, Self::Error> {
+        Self::from_builder(value)
+    }
+}
+
 impl EvaluationContext {
-    #[allow(clippy::too_many_arguments)]
-    pub fn new(
-        logger: &slog::Logger,
-        config_path: &Path,
-        build_target_triple: &str,
-        release: bool,
-        verbose: bool,
-        resolve_targets: Option<Vec<String>>,
-        build_script_mode: bool,
-        build_opt_level: &str,
-        distribution_cache: Option<Arc<DistributionCache>>,
-    ) -> Result<Self> {
+    pub fn from_builder(builder: EvaluationContextBuilder) -> Result<Self> {
         let context = PyOxidizerEnvironmentContext::new(
-            logger,
-            verbose,
-            config_path,
+            &builder.logger,
+            builder.verbose,
+            &builder.config_path,
             crate::project_building::HOST,
-            build_target_triple,
-            release,
-            build_opt_level,
-            distribution_cache,
+            &builder.build_target_triple,
+            builder.release,
+            &builder.build_opt_level,
+            builder.distribution_cache,
         )?;
 
         let (mut parent_env, mut type_values) = starlark::stdlib::global_environment();
@@ -75,8 +154,8 @@ impl EvaluationContext {
             &mut child_env,
             &mut type_values,
             context,
-            resolve_targets,
-            build_script_mode,
+            builder.resolve_targets,
+            builder.build_script_mode,
         )
         .map_err(|e| anyhow!("error populating Starlark environment: {:?}", e))?;
 
@@ -291,18 +370,10 @@ mod tests {
             .as_bytes(),
         )?;
 
-        let mut context = EvaluationContext::new(
-            &logger,
-            &main_path,
-            env!("HOST"),
-            false,
-            true,
-            None,
-            false,
-            "0",
-            None,
-        )?;
-
+        let mut context =
+            EvaluationContextBuilder::new(logger, main_path.clone(), env!("HOST").to_string())
+                .verbose(true)
+                .to_context()?;
         context.evaluate_file(&main_path)?;
 
         Ok(())
@@ -316,18 +387,10 @@ mod tests {
         let config_path = temp_dir.path().join("pyoxidizer.bzl");
         std::fs::write(&config_path, "def make_dist():\n    return default_python_distribution()\nregister_target('dist', make_dist)\n".as_bytes())?;
 
-        let mut context = EvaluationContext::new(
-            &logger,
-            &config_path,
-            env!("HOST"),
-            false,
-            true,
-            None,
-            false,
-            "0",
-            None,
-        )?;
-
+        let mut context: EvaluationContext =
+            EvaluationContextBuilder::new(logger, config_path.clone(), env!("HOST").to_string())
+                .verbose(true)
+                .to_context()?;
         context.evaluate_file(&config_path)?;
 
         Ok(())

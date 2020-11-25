@@ -15,7 +15,7 @@ use {
             },
             standalone_distribution::StandaloneDistribution,
         },
-        starlark::eval::EvaluationContext,
+        starlark::eval::EvaluationContextBuilder,
     },
     anyhow::{anyhow, Result},
     python_packaging::{
@@ -60,17 +60,11 @@ pub fn list_targets(logger: &slog::Logger, project_path: &Path) -> Result<()> {
     })?;
 
     let target_triple = default_target()?;
-    let mut context = EvaluationContext::new(
-        logger,
-        &config_path,
-        &target_triple,
-        false,
-        false,
-        Some(Vec::new()),
-        false,
-        "0",
-        None,
-    )?;
+
+    let mut context =
+        EvaluationContextBuilder::new(logger.clone(), config_path.clone(), target_triple)
+            .resolve_targets(vec![])
+            .to_context()?;
 
     context.evaluate_file(&config_path)?;
 
@@ -111,17 +105,12 @@ pub fn build(
     })?;
     let target_triple = resolve_target(target_triple)?;
 
-    let mut context = EvaluationContext::new(
-        logger,
-        &config_path,
-        &target_triple,
-        release,
-        verbose,
-        resolve_targets,
-        false,
-        "0",
-        None,
-    )?;
+    let mut context =
+        EvaluationContextBuilder::new(logger.clone(), config_path.clone(), target_triple)
+            .release(release)
+            .verbose(verbose)
+            .resolve_targets_optional(resolve_targets)
+            .to_context()?;
 
     context.evaluate_file(&config_path)?;
 
@@ -149,23 +138,13 @@ pub fn run(
     })?;
     let target_triple = resolve_target(target_triple)?;
 
-    let resolve_targets = if let Some(target) = target {
-        Some(vec![target.to_string()])
-    } else {
-        None
-    };
+    let mut context =
+        EvaluationContextBuilder::new(logger.clone(), config_path.clone(), target_triple)
+            .release(release)
+            .verbose(verbose)
+            .resolve_target_optional(target)
+            .to_context()?;
 
-    let mut context = EvaluationContext::new(
-        logger,
-        &config_path,
-        &target_triple,
-        release,
-        verbose,
-        resolve_targets,
-        false,
-        "0",
-        None,
-    )?;
     context.evaluate_file(&config_path)?;
 
     context.run_target(target)

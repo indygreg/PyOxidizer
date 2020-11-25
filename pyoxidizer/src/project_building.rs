@@ -7,7 +7,7 @@ use {
         environment::{canonicalize_path, MINIMUM_RUST_VERSION},
         project_layout::initialize_project,
         py_packaging::binary::{EmbeddedPythonContext, PythonBinaryBuilder},
-        starlark::eval::EvaluationContext,
+        starlark::eval::{EvaluationContext, EvaluationContextBuilder},
     },
     anyhow::{anyhow, Context, Result},
     duct::cmd,
@@ -15,6 +15,7 @@ use {
     starlark_dialect_build_targets::ResolvedTarget,
     std::{
         collections::{hash_map::RandomState, HashMap},
+        convert::TryInto,
         env,
         fs::create_dir_all,
         io::{BufRead, BufReader},
@@ -319,21 +320,16 @@ pub fn build_pyembed_artifacts(
         return Ok(());
     }
 
-    let mut context = EvaluationContext::new(
-        logger,
-        config_path,
-        target_triple,
-        release,
-        verbose,
-        if let Some(target) = resolve_target {
-            Some(vec![target.to_string()])
-        } else {
-            None
-        },
-        true,
-        "0",
-        None,
-    )?;
+    let mut context: EvaluationContext = EvaluationContextBuilder::new(
+        logger.clone(),
+        config_path.to_path_buf(),
+        target_triple.to_string(),
+    )
+    .release(release)
+    .verbose(verbose)
+    .resolve_target_optional(resolve_target)
+    .build_script_mode(true)
+    .try_into()?;
 
     context.evaluate_file(config_path)?;
 

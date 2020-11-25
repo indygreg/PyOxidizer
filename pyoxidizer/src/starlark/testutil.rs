@@ -5,13 +5,16 @@
 use {
     super::env::PyOxidizerEnvironmentContext,
     crate::{
-        logging::PrintlnDrain, starlark::eval::EvaluationContext, testutil::DISTRIBUTION_CACHE,
+        logging::PrintlnDrain,
+        starlark::eval::{EvaluationContext, EvaluationContextBuilder},
+        testutil::DISTRIBUTION_CACHE,
     },
     anyhow::{anyhow, Result},
     codemap::CodeMap,
     codemap_diagnostic::Diagnostic,
     slog::Drain,
     starlark::values::Value,
+    std::convert::TryInto,
 };
 
 /// A Starlark execution environment.
@@ -36,17 +39,10 @@ impl StarlarkEnvironment {
         let cwd = std::env::current_dir()?;
         let config_path = cwd.join("dummy");
 
-        let eval = EvaluationContext::new(
-            &logger,
-            &config_path,
-            build_target,
-            false,
-            false,
-            None,
-            false,
-            "0",
-            Some(DISTRIBUTION_CACHE.clone()),
-        )?;
+        let eval: EvaluationContext =
+            EvaluationContextBuilder::new(logger, config_path, build_target.to_string())
+                .distribution_cache(DISTRIBUTION_CACHE.clone())
+                .try_into()?;
 
         Ok(Self { eval })
     }
