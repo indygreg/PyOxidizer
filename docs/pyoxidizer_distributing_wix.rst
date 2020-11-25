@@ -63,6 +63,9 @@ Choosing an Installer Creation Method
 Tugger provides multiple Starlark primitives for defining Windows installers
 built with the WiX Toolset. Which one should you use?
 
+See :ref:`tugger_wix_apis` for a generic overview of this topic. The
+remainder of this documentation will be specific to Python applications.
+
 First, it is is important to call out that unless you are using the
 *static* :ref:`Python distributions <packaging_python_distributions>`,
 binaries built with PyOxidizer will have a run-time dependency on the
@@ -89,27 +92,3 @@ Redistributable from installers may *just work* 99% of the time. However,
 on a fresh Windows installation, these required files may not exist, so
 it is recommended to install the Visual C++ Redistributable as part of
 your installer to ensure all dependencies are present.
-
-Tugger supports generating WiX XML files from scratch, with minimal
-configuration. This enables you to produce ``.msi`` or ``.exe`` installers
-without having to concern yourself with WiX XML implementation details.
-
-If your application only needs the limited WiX functionality provided
-by these *builder* interfaces in Tugger (
-:ref:`tugger_starlark_type_wix_bundle_builder` and
-:ref:`tugger_starlark_type_wix_msi_builder`), you are highly encouraged to use
-these interfaces for constructing your WiX-based installer.
-
-Complex applications may outgrow the limited capabilities of the *builder*
-interfaces exposed by Tugger. If this occurs, the
-:ref:`tugger_starlark_type_wix_installer` type can be used to consume
-existing ``.wxs`` XML files. This means that you can still use Tugger for
-invoking WiX, even as your WiX installer becomes more complicated and you
-need to maintain your own custom WiX XML files.
-
-.. note::
-
-   Ideally no WiX installer should be too complicated to be handled by
-   Tugger. If Tugger's functionality is not sufficient, consider
-   `creating an issue <https://github.com/indygreg/PyOxidizer/issues/new>`_
-   to request a feature to close the feature gap.
