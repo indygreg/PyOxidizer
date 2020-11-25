@@ -4,9 +4,11 @@
 Building Windows Installers with the WiX Toolset
 ================================================
 
-Tugger supports building Windows installers (e.g. ``.msi`` and ``.exe`` files)
-with the `WiX Toolset <https://wixtoolset.org/>`_. See :ref:`tugger_wix` for
-the full Tugger documentation of this feature.
+PyOxidizer supports building Windows installers (e.g. ``.msi`` and ``.exe``
+installer files) using the `WiX Toolset <https://wixtoolset.org/>`_.
+PyOxidizer leverages the :ref:`Tugger shipping tool <tugger>` for
+integrating with WiX. See :ref:`tugger_wix` for the full Tugger WiX
+documentation.
 
 Tugger - and PyOxidizer by extension - are able to automatically create
 XML files used by WiX to define installers with common features as well
@@ -21,8 +23,8 @@ functionality that makes building Python application installers simpler. For
 example, instead of manually constructing a WiX installer, you can call
 a method on a Python Starlark type to convert it into an installer.
 
-PyOxidizer provides the following extensions and integrations with Tugger's
-Starlark dialect:
+PyOxidizer provides the following extensions and integrations with
+:ref:`Tugger's Starlark dialect <tugger_starlark>`:
 
 :ref:`config_type_file_manifest.add_python_resource`
    Adds a Python resource type to Tugger's
