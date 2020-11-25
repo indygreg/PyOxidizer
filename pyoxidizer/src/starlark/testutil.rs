@@ -95,22 +95,6 @@ impl StarlarkEnvironment {
 
         Ok(())
     }
-
-    /// Set the target triple we are building for.
-    ///
-    /// This needs to be called shortly after construction or things won't work
-    /// as expected.
-    pub fn set_target_triple(&mut self, triple: &str) -> Result<()> {
-        let pyoxidizer_context_value = self.eval.pyoxidizer_context_value().unwrap();
-        let mut pyoxidizer_context = pyoxidizer_context_value
-            .downcast_mut::<PyOxidizerEnvironmentContext>()
-            .unwrap()
-            .unwrap();
-
-        pyoxidizer_context.build_target_triple = triple.to_string();
-
-        Ok(())
-    }
 }
 
 pub fn starlark_ok(snippet: &str) -> Value {

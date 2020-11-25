@@ -1122,13 +1122,14 @@ mod tests {
     #[test]
     fn test_pip_download_pyflakes() -> Result<()> {
         for target_triple in PYTHON_DISTRIBUTIONS.all_target_triples() {
-            let mut env = StarlarkEnvironment::new()?;
-            env.set_target_triple(target_triple)?;
+            let mut env = test_evaluation_context_builder()?
+                .build_target_triple(target_triple)
+                .into_context()?;
 
-            env.eval("dist = default_python_distribution()")?;
-            env.eval("exe = dist.to_python_executable('testapp')")?;
+            env.eval_code("dist = default_python_distribution()")?;
+            env.eval_code("exe = dist.to_python_executable('testapp')")?;
 
-            let resources = env.eval("exe.pip_download(['pyflakes==2.2.0'])")?;
+            let resources = env.eval_code("exe.pip_download(['pyflakes==2.2.0'])")?;
 
             assert_eq!(resources.get_type(), "list");
 
