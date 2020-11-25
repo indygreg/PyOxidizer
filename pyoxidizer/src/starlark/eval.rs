@@ -128,7 +128,13 @@ impl EvaluationContextBuilder {
     }
 }
 
-/// Represents a running Starlark environment.
+/// Interface to evaluate Starlark configuration files.
+///
+/// This type provides the primary interface for evaluating Starlark
+/// configuration files.
+///
+/// Instances should be constructed from `EvaluationContextBuilder` instances, as
+/// the number of parameters to construct an evaluation context is significant.
 pub struct EvaluationContext {
     parent_env: Environment,
     child_env: Environment,
