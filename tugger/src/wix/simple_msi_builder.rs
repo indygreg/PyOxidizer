@@ -3,8 +3,11 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    crate::wix::{WiXInstallerBuilder, WxsBuilder},
-    anyhow::Result,
+    crate::{
+        windows::{find_visual_cpp_redistributable, VCRedistributablePlatform},
+        wix::{WiXInstallerBuilder, WxsBuilder},
+    },
+    anyhow::{anyhow, Result},
     std::{
         borrow::Cow,
         io::Write,
@@ -82,6 +85,32 @@ impl WiXSimpleMSIBuilder {
     /// by the built installer.
     pub fn add_program_files_manifest(&mut self, manifest: &FileManifest) -> Result<()> {
         self.program_files_manifest.add_manifest(manifest)?;
+
+        Ok(())
+    }
+
+    /// Attempt to add the Visaul C++ Redistributable DLLs to the program files manifest.
+    ///
+    /// This will use `vswhere.exe` to attempt to locate a Visual Studio installation
+    /// and will attempt to find the Visual C++ Redistributable DLLs (`vcruntimeXXX.dll`) in
+    /// that install. Discovered DLLs are materialized in the root directory of the
+    /// program files manifest.
+    ///
+    /// The latest installed version is always used.
+    ///
+    /// As this requires `vswhere.exe` and a Visual Studio installation, this function
+    /// will always error outside of Windows.
+    pub fn add_visual_cpp_redistributable(
+        &mut self,
+        redist_version: &str,
+        platform: VCRedistributablePlatform,
+    ) -> Result<()> {
+        for path in find_visual_cpp_redistributable(redist_version, platform)? {
+            let parent = path
+                .parent()
+                .ok_or_else(|| anyhow!("unable to obtain parent path"))?;
+            self.program_files_manifest.add_path(&path, parent)?;
+        }
 
         Ok(())
     }
@@ -575,6 +604,24 @@ mod tests {
 
         let summary_info = package.summary_info();
         assert_eq!(summary_info.subject(), Some("testapp"));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_add_visual_cpp_redistributable() -> Result<()> {
+        if find_visual_cpp_redistributable("14", VCRedistributablePlatform::X64).is_err() {
+            eprintln!("skipping because VC++ redistributable files could not be located");
+            return Ok(());
+        }
+
+        let mut builder = WiXSimpleMSIBuilder::new("prefix", "testapp", "0.1", "author");
+        builder.add_visual_cpp_redistributable("14", VCRedistributablePlatform::X64)?;
+
+        assert!(builder
+            .program_files_manifest
+            .iter_entries()
+            .any(|(p, _)| p == Path::new("vcruntime140.dll")));
 
         Ok(())
     }

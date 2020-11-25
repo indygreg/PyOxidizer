@@ -17,6 +17,7 @@ use {
 use std::{collections::BTreeMap, os::windows::ffi::OsStringExt};
 
 /// Available VC++ Redistributable platforms we can add to the bundle.
+#[derive(Debug)]
 pub enum VCRedistributablePlatform {
     X86,
     X64,
