@@ -3,7 +3,6 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    super::env::PyOxidizerEnvironmentContext,
     crate::{
         logging::PrintlnDrain,
         starlark::eval::{EvaluationContext, EvaluationContextBuilder},
@@ -37,6 +36,14 @@ pub fn test_evaluation_context_builder() -> Result<EvaluationContextBuilder> {
     Ok(builder)
 }
 
+/// Add a PythonExecutable `exe` variable to the Starlark environment.
+pub fn add_exe(eval: &mut EvaluationContext) -> Result<()> {
+    eval.eval_code("dist = default_python_distribution()")?;
+    eval.eval_code("exe = dist.to_python_executable('testapp')")?;
+
+    Ok(())
+}
+
 pub fn eval_assert(eval: &mut EvaluationContext, code: &str) -> Result<()> {
     let value = eval.eval_code(code)?;
 
@@ -59,16 +66,6 @@ impl StarlarkEnvironment {
         let eval = test_evaluation_context_builder()?.into_context()?;
 
         Ok(Self { eval })
-    }
-
-    /// Create a new environment with `dist` and `exe` variables set.
-    pub fn new_with_exe() -> Result<Self> {
-        let mut env = Self::new()?;
-
-        env.eval("dist = default_python_distribution()")?;
-        env.eval("exe = dist.to_python_executable('testapp')")?;
-
-        Ok(env)
     }
 
     pub fn eval_raw(

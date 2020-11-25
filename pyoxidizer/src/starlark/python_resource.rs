@@ -790,15 +790,16 @@ mod tests {
 
     #[test]
     fn test_source_module_attrs() -> Result<()> {
-        let mut env = StarlarkEnvironment::new_with_exe()?;
+        let mut env = test_evaluation_context_builder()?.into_context()?;
+        add_exe(&mut env)?;
 
-        let dist_value = env.eval("dist")?;
+        let dist_value = env.eval_code("dist")?;
         let dist_ref = dist_value
             .downcast_ref::<PythonDistributionValue>()
             .unwrap();
         let dist = dist_ref.distribution.as_ref().unwrap();
 
-        let mut m = env.eval("exe.make_python_module_source('foo', 'import bar')")?;
+        let mut m = env.eval_code("exe.make_python_module_source('foo', 'import bar')")?;
 
         assert_eq!(m.get_type(), PythonModuleSourceValue::TYPE);
         assert!(m.has_attr("name").unwrap());

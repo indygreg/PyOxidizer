@@ -342,15 +342,16 @@ mod tests {
 
     #[test]
     fn test_add_python_executable() -> Result<()> {
-        let mut env = StarlarkEnvironment::new_with_exe()?;
+        let mut env = test_evaluation_context_builder()?.into_context()?;
+        add_exe(&mut env)?;
 
         let m = Value::new(FileManifestValue {
             manifest: FileManifest::default(),
             run_path: None,
         });
 
-        env.set("m", m)?;
-        env.eval("m.add_python_resource('bin', exe)")?;
+        env.set_var("m", m).unwrap();
+        env.eval_code("m.add_python_resource('bin', exe)")?;
 
         Ok(())
     }
@@ -375,19 +376,20 @@ mod tests {
 
     #[test]
     fn test_install() -> Result<()> {
-        let mut env = StarlarkEnvironment::new_with_exe()?;
+        let mut env = test_evaluation_context_builder()?.into_context()?;
+        add_exe(&mut env)?;
 
         let m = Value::new(FileManifestValue {
             manifest: FileManifest::default(),
             run_path: None,
         });
 
-        env.set("m", m).unwrap();
+        env.set_var("m", m).unwrap();
 
-        env.eval("m.add_python_resource('bin', exe)")?;
-        env.eval("m.install('myapp')")?;
+        env.eval_code("m.add_python_resource('bin', exe)")?;
+        env.eval_code("m.install('myapp')")?;
 
-        let dest_path = env.eval.build_path().unwrap().join("myapp");
+        let dest_path = env.build_path().unwrap().join("myapp");
         assert!(dest_path.exists());
 
         // There should be an executable at myapp/bin/testapp[.exe].
