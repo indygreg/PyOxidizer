@@ -57,7 +57,7 @@ pub struct PyOxidizerEnvironmentContext {
 impl PyOxidizerEnvironmentContext {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
-        logger: &slog::Logger,
+        logger: slog::Logger,
         verbose: bool,
         config_path: &Path,
         build_host_triple: &str,
@@ -80,7 +80,7 @@ impl PyOxidizerEnvironmentContext {
             distribution_cache.unwrap_or_else(|| Arc::new(DistributionCache::new(None)));
 
         Ok(PyOxidizerEnvironmentContext {
-            logger: logger.clone(),
+            logger,
             verbose,
             cwd: parent,
             config_path: config_path.to_path_buf(),

@@ -152,7 +152,7 @@ impl TryFrom<EvaluationContextBuilder> for EvaluationContext {
 impl EvaluationContext {
     pub fn from_builder(builder: EvaluationContextBuilder) -> Result<Self> {
         let context = PyOxidizerEnvironmentContext::new(
-            &builder.logger,
+            builder.logger,
             builder.verbose,
             &builder.config_path,
             crate::project_building::HOST,
