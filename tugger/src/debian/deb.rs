@@ -35,9 +35,68 @@ impl<W> From<std::io::IntoInnerError<W>> for DebError {
     }
 }
 
+/// Compression format to apply to `.deb` files.
+pub enum DebCompression {
+    /// Do not compress contents of `.deb` files.
+    Uncompressed,
+    /// Compress as `.gz` files.
+    Gzip,
+    /// Compress as `.xz` files using a specified compression level.
+    Xz(u32),
+    /// Compress as `.zst` files using a specified compression level.
+    Zstandard(i32),
+}
+
+impl DebCompression {
+    /// Obtain the filename extension for this compression format.
+    pub fn extension(&self) -> &'static str {
+        match self {
+            Self::Uncompressed => "",
+            Self::Gzip => ".gz",
+            Self::Xz(_) => ".xz",
+            Self::Zstandard(_) => ".zst",
+        }
+    }
+
+    /// Compress input data from a reader.
+    pub fn compress(&self, reader: &mut impl Read) -> Result<Vec<u8>, DebError> {
+        let mut buffer = vec![];
+
+        match self {
+            Self::Uncompressed => {
+                std::io::copy(reader, &mut buffer)?;
+            }
+            Self::Gzip => {
+                let header = libflate::gzip::HeaderBuilder::new().finish();
+
+                let mut encoder = libflate::gzip::Encoder::with_options(
+                    &mut buffer,
+                    libflate::gzip::EncodeOptions::new().header(header),
+                )?;
+                std::io::copy(reader, &mut encoder)?;
+                encoder.finish().into_result()?;
+            }
+            Self::Xz(level) => {
+                let mut encoder = xz2::write::XzEncoder::new(buffer, *level);
+                std::io::copy(reader, &mut encoder)?;
+                buffer = encoder.finish()?;
+            }
+            Self::Zstandard(level) => {
+                let mut encoder = zstd::Encoder::new(buffer, *level)?;
+                std::io::copy(reader, &mut encoder)?;
+                buffer = encoder.finish()?;
+            }
+        }
+
+        Ok(buffer)
+    }
+}
+
 /// A builder for a `.deb` package file.
 pub struct DebBuilder<'control> {
     control_file: ControlFile<'control>,
+
+    compression: DebCompression,
 
     /// Files to install as part of the package.
     install_files: FileManifest,
@@ -50,9 +109,18 @@ impl<'control> DebBuilder<'control> {
     pub fn new(control_file: ControlFile<'control>) -> Self {
         Self {
             control_file,
+            compression: DebCompression::Gzip,
             install_files: FileManifest::default(),
             mtime: None,
         }
+    }
+
+    /// Set the compression format to use.
+    ///
+    /// Note all compression formats are supported by all Linux distributions.
+    pub fn set_compression(mut self, compression: DebCompression) -> Self {
+        self.compression = compression;
+        self
     }
 
     fn mtime(&self) -> u64 {
@@ -94,8 +162,14 @@ impl<'control> DebBuilder<'control> {
         let mut control_writer = BufWriter::new(Vec::new());
         control_builder.write(&mut control_writer)?;
         let control_tar = control_writer.into_inner()?;
+        let control_tar = self
+            .compression
+            .compress(&mut std::io::Cursor::new(control_tar))?;
 
-        let mut header = ar::Header::new(b"control.tar".to_vec(), control_tar.len() as _);
+        let mut header = ar::Header::new(
+            format!("control.tar{}", self.compression.extension()).into_bytes(),
+            control_tar.len() as _,
+        );
         header.set_mode(0o644);
         header.set_mtime(self.mtime());
         header.set_uid(0);
@@ -106,9 +180,14 @@ impl<'control> DebBuilder<'control> {
         let mut data_writer = BufWriter::new(Vec::new());
         write_data_tar(&mut data_writer, &self.install_files, self.mtime())?;
         let data_tar = data_writer.into_inner()?;
-        // TODO compress data
+        let data_tar = self
+            .compression
+            .compress(&mut std::io::Cursor::new(data_tar))?;
 
-        let mut header = ar::Header::new(b"data.tar".to_vec(), data_tar.len() as _);
+        let mut header = ar::Header::new(
+            format!("data.tar{}", self.compression.extension()).into_bytes(),
+            data_tar.len() as _,
+        );
         header.set_mode(0o644);
         header.set_mtime(self.mtime());
         header.set_uid(0);
