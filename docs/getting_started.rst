@@ -260,11 +260,11 @@ below where ``exe`` is assigned:
        resource.add_location = "in-memory"
        exe.add_python_resource(resource)
 
-In addition, set the ``python_config.run_code`` attribute to execute ``pyflakes``:
+In addition, set the ``python_config.run_command`` attribute to execute ``pyflakes``:
 
 .. code-block:: python
 
-   python_config.run_code = "from pyflakes.api import main; main()"
+   python_config.run_command = "from pyflakes.api import main; main()"
 
 Now let's try building and running the new configuration::
 
