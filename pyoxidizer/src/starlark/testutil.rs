@@ -37,6 +37,16 @@ pub fn test_evaluation_context_builder() -> Result<EvaluationContextBuilder> {
     Ok(builder)
 }
 
+pub fn eval_assert(eval: &mut EvaluationContext, code: &str) -> Result<()> {
+    let value = eval.eval_code(code)?;
+
+    if value.get_type() != "bool" || !value.to_bool() {
+        Err(anyhow!("{} does not evaluate to True", code))
+    } else {
+        Ok(())
+    }
+}
+
 /// A Starlark execution environment.
 ///
 /// Provides convenience wrappers for common functionality.
@@ -72,16 +82,6 @@ impl StarlarkEnvironment {
     /// Evaluate code in the Starlark environment.
     pub fn eval(&mut self, code: &str) -> Result<Value> {
         self.eval.eval("<test>", code)
-    }
-
-    pub fn eval_assert(&mut self, code: &str) -> Result<()> {
-        let value = self.eval(code)?;
-
-        if value.get_type() != "bool" || !value.to_bool() {
-            Err(anyhow!("{} does not evaluate to True", code))
-        } else {
-            Ok(())
-        }
     }
 
     pub fn get(&self, name: &str) -> Result<Value> {

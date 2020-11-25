@@ -569,29 +569,29 @@ impl TypedValue for PythonInterpreterConfigValue {
 
 #[cfg(test)]
 mod tests {
+    use crate::starlark::eval::EvaluationContext;
     use {super::super::testutil::*, anyhow::Result};
 
     // TODO instantiating a new distribution every call is expensive. Can we cache this?
-    fn get_env() -> Result<StarlarkEnvironment> {
-        let mut env = StarlarkEnvironment::new()?;
+    fn get_env() -> Result<EvaluationContext> {
+        let mut eval = test_evaluation_context_builder()?.into_context()?;
+        eval.eval_code("dist = default_python_distribution()")?;
+        eval.eval_code("config = dist.make_python_interpreter_config()")?;
 
-        env.eval("dist = default_python_distribution()")?;
-        env.eval("config = dist.make_python_interpreter_config()")?;
-
-        Ok(env)
+        Ok(eval)
     }
 
     #[test]
     fn test_profile() -> Result<()> {
         let mut env = get_env()?;
 
-        env.eval_assert("config.config_profile == 'isolated'")?;
+        eval_assert(&mut env, "config.config_profile == 'isolated'")?;
 
-        env.eval("config.config_profile = 'python'")?;
-        env.eval_assert("config.config_profile == 'python'")?;
+        env.eval_code("config.config_profile = 'python'")?;
+        eval_assert(&mut env, "config.config_profile == 'python'")?;
 
-        env.eval("config.config_profile = 'isolated'")?;
-        env.eval_assert("config.config_profile == 'isolated'")?;
+        env.eval_code("config.config_profile = 'isolated'")?;
+        eval_assert(&mut env, "config.config_profile == 'isolated'")?;
 
         Ok(())
     }
@@ -600,31 +600,31 @@ mod tests {
     fn test_allocator() -> Result<()> {
         let mut env = get_env()?;
 
-        env.eval_assert("config.allocator == None")?;
+        eval_assert(&mut env, "config.allocator == None")?;
 
-        env.eval("config.allocator = 'not-set'")?;
-        env.eval_assert("config.allocator == 'not-set'")?;
+        env.eval_code("config.allocator = 'not-set'")?;
+        eval_assert(&mut env, "config.allocator == 'not-set'")?;
 
-        env.eval("config.allocator = 'default'")?;
-        env.eval_assert("config.allocator == 'default'")?;
+        env.eval_code("config.allocator = 'default'")?;
+        eval_assert(&mut env, "config.allocator == 'default'")?;
 
-        env.eval("config.allocator = 'debug'")?;
-        env.eval_assert("config.allocator == 'debug'")?;
+        env.eval_code("config.allocator = 'debug'")?;
+        eval_assert(&mut env, "config.allocator == 'debug'")?;
 
-        env.eval("config.allocator = 'malloc'")?;
-        env.eval_assert("config.allocator == 'malloc'")?;
+        env.eval_code("config.allocator = 'malloc'")?;
+        eval_assert(&mut env, "config.allocator == 'malloc'")?;
 
-        env.eval("config.allocator = 'malloc-debug'")?;
-        env.eval_assert("config.allocator == 'malloc-debug'")?;
+        env.eval_code("config.allocator = 'malloc-debug'")?;
+        eval_assert(&mut env, "config.allocator == 'malloc-debug'")?;
 
-        env.eval("config.allocator = 'py-malloc'")?;
-        env.eval_assert("config.allocator == 'py-malloc'")?;
+        env.eval_code("config.allocator = 'py-malloc'")?;
+        eval_assert(&mut env, "config.allocator == 'py-malloc'")?;
 
-        env.eval("config.allocator = 'py-malloc-debug'")?;
-        env.eval_assert("config.allocator == 'py-malloc-debug'")?;
+        env.eval_code("config.allocator = 'py-malloc-debug'")?;
+        eval_assert(&mut env, "config.allocator == 'py-malloc-debug'")?;
 
-        env.eval("config.allocator = None")?;
-        env.eval_assert("config.allocator == None")?;
+        env.eval_code("config.allocator = None")?;
+        eval_assert(&mut env, "config.allocator == None")?;
 
         Ok(())
     }
@@ -633,7 +633,7 @@ mod tests {
     fn test_configure_locale() -> Result<()> {
         let mut env = get_env()?;
 
-        env.eval_assert("config.configure_locale == True")?;
+        eval_assert(&mut env, "config.configure_locale == True")?;
 
         Ok(())
     }
@@ -642,7 +642,7 @@ mod tests {
     fn test_coerce_c_locale() -> Result<()> {
         let mut env = get_env()?;
 
-        env.eval_assert("config.coerce_c_locale == None")?;
+        eval_assert(&mut env, "config.coerce_c_locale == None")?;
 
         Ok(())
     }
@@ -651,7 +651,7 @@ mod tests {
     fn test_development_mode() -> Result<()> {
         let mut env = get_env()?;
 
-        env.eval_assert("config.development_mode == None")?;
+        eval_assert(&mut env, "config.development_mode == None")?;
 
         Ok(())
     }
@@ -660,7 +660,7 @@ mod tests {
     fn test_isolated() -> Result<()> {
         let mut env = get_env()?;
 
-        env.eval_assert("config.isolated == None")?;
+        eval_assert(&mut env, "config.isolated == None")?;
 
         Ok(())
     }
@@ -669,7 +669,7 @@ mod tests {
     fn test_legacy_windows_fs_encoding() -> Result<()> {
         let mut env = get_env()?;
 
-        env.eval_assert("config.legacy_windows_fs_encoding == None")?;
+        eval_assert(&mut env, "config.legacy_windows_fs_encoding == None")?;
 
         Ok(())
     }
@@ -678,7 +678,7 @@ mod tests {
     fn test_parse_argv() -> Result<()> {
         let mut env = get_env()?;
 
-        env.eval_assert("config.parse_argv == None")?;
+        eval_assert(&mut env, "config.parse_argv == None")?;
 
         Ok(())
     }
@@ -687,7 +687,7 @@ mod tests {
     fn test_use_environment() -> Result<()> {
         let mut env = get_env()?;
 
-        env.eval_assert("config.use_environment == None")?;
+        eval_assert(&mut env, "config.use_environment == None")?;
 
         Ok(())
     }
@@ -696,7 +696,7 @@ mod tests {
     fn test_utf8_mode() -> Result<()> {
         let mut env = get_env()?;
 
-        env.eval_assert("config.utf8_mode == None")?;
+        eval_assert(&mut env, "config.utf8_mode == None")?;
 
         Ok(())
     }
@@ -705,7 +705,7 @@ mod tests {
     fn test_base_exec_prefix() -> Result<()> {
         let mut env = get_env()?;
 
-        env.eval_assert("config.base_exec_prefix == None")?;
+        eval_assert(&mut env, "config.base_exec_prefix == None")?;
 
         Ok(())
     }
@@ -714,7 +714,7 @@ mod tests {
     fn test_base_executable() -> Result<()> {
         let mut env = get_env()?;
 
-        env.eval_assert("config.base_executable == None")?;
+        eval_assert(&mut env, "config.base_executable == None")?;
 
         Ok(())
     }
@@ -723,7 +723,7 @@ mod tests {
     fn test_base_prefix() -> Result<()> {
         let mut env = get_env()?;
 
-        env.eval_assert("config.base_prefix == None")?;
+        eval_assert(&mut env, "config.base_prefix == None")?;
 
         Ok(())
     }
@@ -732,7 +732,7 @@ mod tests {
     fn test_buffered_stdio() -> Result<()> {
         let mut env = get_env()?;
 
-        env.eval_assert("config.buffered_stdio == None")?;
+        eval_assert(&mut env, "config.buffered_stdio == None")?;
 
         Ok(())
     }
@@ -741,16 +741,16 @@ mod tests {
     fn test_bytes_warning() -> Result<()> {
         let mut env = get_env()?;
 
-        env.eval_assert("config.bytes_warning == None")?;
+        eval_assert(&mut env, "config.bytes_warning == None")?;
 
-        env.eval("config.bytes_warning = 'warn'")?;
-        env.eval_assert("config.bytes_warning == 'warn'")?;
+        env.eval_code("config.bytes_warning = 'warn'")?;
+        eval_assert(&mut env, "config.bytes_warning == 'warn'")?;
 
-        env.eval("config.bytes_warning = 'raise'")?;
-        env.eval_assert("config.bytes_warning == 'raise'")?;
+        env.eval_code("config.bytes_warning = 'raise'")?;
+        eval_assert(&mut env, "config.bytes_warning == 'raise'")?;
 
-        env.eval("config.bytes_warning = None")?;
-        env.eval_assert("config.bytes_warning == None")?;
+        env.eval_code("config.bytes_warning = None")?;
+        eval_assert(&mut env, "config.bytes_warning == None")?;
 
         Ok(())
     }
@@ -759,7 +759,7 @@ mod tests {
     fn test_check_hash_pycs_mode() -> Result<()> {
         let mut env = get_env()?;
 
-        env.eval_assert("config.check_hash_pycs_mode == None")?;
+        eval_assert(&mut env, "config.check_hash_pycs_mode == None")?;
 
         Ok(())
     }
@@ -768,7 +768,7 @@ mod tests {
     fn test_configure_c_stdio() -> Result<()> {
         let mut env = get_env()?;
 
-        env.eval_assert("config.configure_c_stdio == None")?;
+        eval_assert(&mut env, "config.configure_c_stdio == None")?;
 
         Ok(())
     }
@@ -777,7 +777,7 @@ mod tests {
     fn test_dump_refs() -> Result<()> {
         let mut env = get_env()?;
 
-        env.eval_assert("config.dump_refs == None")?;
+        eval_assert(&mut env, "config.dump_refs == None")?;
 
         Ok(())
     }
@@ -786,7 +786,7 @@ mod tests {
     fn test_exec_prefix() -> Result<()> {
         let mut env = get_env()?;
 
-        env.eval_assert("config.exec_prefix == None")?;
+        eval_assert(&mut env, "config.exec_prefix == None")?;
 
         Ok(())
     }
@@ -795,7 +795,7 @@ mod tests {
     fn test_executable() -> Result<()> {
         let mut env = get_env()?;
 
-        env.eval_assert("config.executable == None")?;
+        eval_assert(&mut env, "config.executable == None")?;
 
         Ok(())
     }
@@ -804,7 +804,7 @@ mod tests {
     fn test_fault_handler() -> Result<()> {
         let mut env = get_env()?;
 
-        env.eval_assert("config.fault_handler == None")?;
+        eval_assert(&mut env, "config.fault_handler == None")?;
 
         Ok(())
     }
@@ -813,7 +813,7 @@ mod tests {
     fn test_filesystem_encoding() -> Result<()> {
         let mut env = get_env()?;
 
-        env.eval_assert("config.filesystem_encoding == None")?;
+        eval_assert(&mut env, "config.filesystem_encoding == None")?;
 
         Ok(())
     }
@@ -822,7 +822,7 @@ mod tests {
     fn test_filesystem_errors() -> Result<()> {
         let mut env = get_env()?;
 
-        env.eval_assert("config.filesystem_errors == None")?;
+        eval_assert(&mut env, "config.filesystem_errors == None")?;
 
         Ok(())
     }
@@ -831,7 +831,7 @@ mod tests {
     fn test_hash_seed() -> Result<()> {
         let mut env = get_env()?;
 
-        env.eval_assert("config.hash_seed == None")?;
+        eval_assert(&mut env, "config.hash_seed == None")?;
 
         Ok(())
     }
@@ -840,7 +840,7 @@ mod tests {
     fn test_home() -> Result<()> {
         let mut env = get_env()?;
 
-        env.eval_assert("config.home == None")?;
+        eval_assert(&mut env, "config.home == None")?;
 
         Ok(())
     }
@@ -849,7 +849,7 @@ mod tests {
     fn test_import_time() -> Result<()> {
         let mut env = get_env()?;
 
-        env.eval_assert("config.import_time == None")?;
+        eval_assert(&mut env, "config.import_time == None")?;
 
         Ok(())
     }
@@ -858,7 +858,7 @@ mod tests {
     fn test_inspect() -> Result<()> {
         let mut env = get_env()?;
 
-        env.eval_assert("config.inspect == None")?;
+        eval_assert(&mut env, "config.inspect == None")?;
 
         Ok(())
     }
@@ -867,7 +867,7 @@ mod tests {
     fn test_install_signal_handlers() -> Result<()> {
         let mut env = get_env()?;
 
-        env.eval_assert("config.install_signal_handlers == None")?;
+        eval_assert(&mut env, "config.install_signal_handlers == None")?;
 
         Ok(())
     }
@@ -876,7 +876,7 @@ mod tests {
     fn test_interactive() -> Result<()> {
         let mut env = get_env()?;
 
-        env.eval_assert("config.interactive == None")?;
+        eval_assert(&mut env, "config.interactive == None")?;
 
         Ok(())
     }
@@ -885,7 +885,7 @@ mod tests {
     fn test_legacy_windows_stdio() -> Result<()> {
         let mut env = get_env()?;
 
-        env.eval_assert("config.legacy_windows_stdio == None")?;
+        eval_assert(&mut env, "config.legacy_windows_stdio == None")?;
 
         Ok(())
     }
@@ -894,7 +894,7 @@ mod tests {
     fn test_malloc_stats() -> Result<()> {
         let mut env = get_env()?;
 
-        env.eval_assert("config.malloc_stats == None")?;
+        eval_assert(&mut env, "config.malloc_stats == None")?;
 
         Ok(())
     }
@@ -903,17 +903,17 @@ mod tests {
     fn test_module_search_paths() -> Result<()> {
         let mut env = get_env()?;
 
-        env.eval_assert("config.module_search_paths == None")?;
-        env.eval_assert("config.filesystem_importer == False")?;
+        eval_assert(&mut env, "config.module_search_paths == None")?;
+        eval_assert(&mut env, "config.filesystem_importer == False")?;
 
-        env.eval("config.module_search_paths = []")?;
-        env.eval_assert("config.module_search_paths == []")?;
-        env.eval_assert("config.filesystem_importer == False")?;
+        env.eval_code("config.module_search_paths = []")?;
+        eval_assert(&mut env, "config.module_search_paths == []")?;
+        eval_assert(&mut env, "config.filesystem_importer == False")?;
 
-        env.eval("config.module_search_paths = ['foo']")?;
-        env.eval_assert("config.module_search_paths == ['foo']")?;
+        env.eval_code("config.module_search_paths = ['foo']")?;
+        eval_assert(&mut env, "config.module_search_paths == ['foo']")?;
         // filesystem_importer enabled when setting paths.
-        env.eval_assert("config.filesystem_importer == True")?;
+        eval_assert(&mut env, "config.filesystem_importer == True")?;
 
         Ok(())
     }
@@ -922,16 +922,16 @@ mod tests {
     fn test_optimization_level() -> Result<()> {
         let mut env = get_env()?;
 
-        env.eval_assert("config.optimization_level == None")?;
+        eval_assert(&mut env, "config.optimization_level == None")?;
 
-        env.eval("config.optimization_level = 0")?;
-        env.eval_assert("config.optimization_level == 0")?;
+        env.eval_code("config.optimization_level = 0")?;
+        eval_assert(&mut env, "config.optimization_level == 0")?;
 
-        env.eval("config.optimization_level = 1")?;
-        env.eval_assert("config.optimization_level == 1")?;
+        env.eval_code("config.optimization_level = 1")?;
+        eval_assert(&mut env, "config.optimization_level == 1")?;
 
-        env.eval("config.optimization_level = 2")?;
-        env.eval_assert("config.optimization_level == 2")?;
+        env.eval_code("config.optimization_level = 2")?;
+        eval_assert(&mut env, "config.optimization_level == 2")?;
 
         Ok(())
     }
@@ -940,7 +940,7 @@ mod tests {
     fn test_parser_debug() -> Result<()> {
         let mut env = get_env()?;
 
-        env.eval_assert("config.parser_debug == None")?;
+        eval_assert(&mut env, "config.parser_debug == None")?;
 
         Ok(())
     }
@@ -949,7 +949,7 @@ mod tests {
     fn test_pathconfig_warnings() -> Result<()> {
         let mut env = get_env()?;
 
-        env.eval_assert("config.pathconfig_warnings == None")?;
+        eval_assert(&mut env, "config.pathconfig_warnings == None")?;
 
         Ok(())
     }
@@ -958,7 +958,7 @@ mod tests {
     fn test_prefix() -> Result<()> {
         let mut env = get_env()?;
 
-        env.eval_assert("config.prefix == None")?;
+        eval_assert(&mut env, "config.prefix == None")?;
 
         Ok(())
     }
@@ -967,7 +967,7 @@ mod tests {
     fn test_program_name() -> Result<()> {
         let mut env = get_env()?;
 
-        env.eval_assert("config.program_name == None")?;
+        eval_assert(&mut env, "config.program_name == None")?;
 
         Ok(())
     }
@@ -976,7 +976,7 @@ mod tests {
     fn test_pycache_prefix() -> Result<()> {
         let mut env = get_env()?;
 
-        env.eval_assert("config.pycache_prefix == None")?;
+        eval_assert(&mut env, "config.pycache_prefix == None")?;
 
         Ok(())
     }
@@ -985,7 +985,7 @@ mod tests {
     fn test_python_path_env() -> Result<()> {
         let mut env = get_env()?;
 
-        env.eval_assert("config.python_path_env == None")?;
+        eval_assert(&mut env, "config.python_path_env == None")?;
 
         Ok(())
     }
@@ -994,7 +994,7 @@ mod tests {
     fn test_quiet() -> Result<()> {
         let mut env = get_env()?;
 
-        env.eval_assert("config.quiet == None")?;
+        eval_assert(&mut env, "config.quiet == None")?;
 
         Ok(())
     }
@@ -1003,7 +1003,7 @@ mod tests {
     fn test_run_command() -> Result<()> {
         let mut env = get_env()?;
 
-        env.eval_assert("config.run_command == None")?;
+        eval_assert(&mut env, "config.run_command == None")?;
 
         Ok(())
     }
@@ -1012,7 +1012,7 @@ mod tests {
     fn test_run_filename() -> Result<()> {
         let mut env = get_env()?;
 
-        env.eval_assert("config.run_filename == None")?;
+        eval_assert(&mut env, "config.run_filename == None")?;
 
         Ok(())
     }
@@ -1021,7 +1021,7 @@ mod tests {
     fn test_run_module() -> Result<()> {
         let mut env = get_env()?;
 
-        env.eval_assert("config.run_module == None")?;
+        eval_assert(&mut env, "config.run_module == None")?;
 
         Ok(())
     }
@@ -1030,7 +1030,7 @@ mod tests {
     fn test_show_alloc_count() -> Result<()> {
         let mut env = get_env()?;
 
-        env.eval_assert("config.show_alloc_count == None")?;
+        eval_assert(&mut env, "config.show_alloc_count == None")?;
 
         Ok(())
     }
@@ -1039,7 +1039,7 @@ mod tests {
     fn test_show_ref_count() -> Result<()> {
         let mut env = get_env()?;
 
-        env.eval_assert("config.show_ref_count == None")?;
+        eval_assert(&mut env, "config.show_ref_count == None")?;
 
         Ok(())
     }
@@ -1048,7 +1048,7 @@ mod tests {
     fn test_site_import() -> Result<()> {
         let mut env = get_env()?;
 
-        env.eval_assert("config.site_import == None")?;
+        eval_assert(&mut env, "config.site_import == None")?;
 
         Ok(())
     }
@@ -1057,7 +1057,7 @@ mod tests {
     fn test_skip_first_source_line() -> Result<()> {
         let mut env = get_env()?;
 
-        env.eval_assert("config.skip_first_source_line == None")?;
+        eval_assert(&mut env, "config.skip_first_source_line == None")?;
 
         Ok(())
     }
@@ -1066,7 +1066,7 @@ mod tests {
     fn test_stdio_encoding() -> Result<()> {
         let mut env = get_env()?;
 
-        env.eval_assert("config.stdio_encoding == None")?;
+        eval_assert(&mut env, "config.stdio_encoding == None")?;
 
         Ok(())
     }
@@ -1075,7 +1075,7 @@ mod tests {
     fn test_stdio_errors() -> Result<()> {
         let mut env = get_env()?;
 
-        env.eval_assert("config.stdio_errors == None")?;
+        eval_assert(&mut env, "config.stdio_errors == None")?;
 
         Ok(())
     }
@@ -1084,7 +1084,7 @@ mod tests {
     fn test_tracemalloc() -> Result<()> {
         let mut env = get_env()?;
 
-        env.eval_assert("config.tracemalloc == None")?;
+        eval_assert(&mut env, "config.tracemalloc == None")?;
 
         Ok(())
     }
@@ -1093,7 +1093,7 @@ mod tests {
     fn test_user_site_directory() -> Result<()> {
         let mut env = get_env()?;
 
-        env.eval_assert("config.user_site_directory == None")?;
+        eval_assert(&mut env, "config.user_site_directory == None")?;
 
         Ok(())
     }
@@ -1102,7 +1102,7 @@ mod tests {
     fn test_verbose() -> Result<()> {
         let mut env = get_env()?;
 
-        env.eval_assert("config.verbose == None")?;
+        eval_assert(&mut env, "config.verbose == None")?;
 
         Ok(())
     }
@@ -1111,7 +1111,7 @@ mod tests {
     fn test_warn_options() -> Result<()> {
         let mut env = get_env()?;
 
-        env.eval_assert("config.warn_options == None")?;
+        eval_assert(&mut env, "config.warn_options == None")?;
 
         Ok(())
     }
@@ -1120,7 +1120,7 @@ mod tests {
     fn test_write_bytecode() -> Result<()> {
         let mut env = get_env()?;
 
-        env.eval_assert("config.write_bytecode == None")?;
+        eval_assert(&mut env, "config.write_bytecode == None")?;
 
         Ok(())
     }
@@ -1129,7 +1129,7 @@ mod tests {
     fn test_x_options() -> Result<()> {
         let mut env = get_env()?;
 
-        env.eval_assert("config.x_options == None")?;
+        eval_assert(&mut env, "config.x_options == None")?;
 
         Ok(())
     }
@@ -1138,13 +1138,13 @@ mod tests {
     fn test_raw_allocator() -> Result<()> {
         let mut env = get_env()?;
 
-        env.eval_assert("config.raw_allocator == 'system'")?;
+        eval_assert(&mut env, "config.raw_allocator == 'system'")?;
 
-        env.eval("config.raw_allocator = 'jemalloc'")?;
-        env.eval_assert("config.raw_allocator == 'jemalloc'")?;
+        env.eval_code("config.raw_allocator = 'jemalloc'")?;
+        eval_assert(&mut env, "config.raw_allocator == 'jemalloc'")?;
 
-        env.eval("config.raw_allocator = 'rust'")?;
-        env.eval_assert("config.raw_allocator == 'rust'")?;
+        env.eval_code("config.raw_allocator = 'rust'")?;
+        eval_assert(&mut env, "config.raw_allocator == 'rust'")?;
 
         Ok(())
     }
@@ -1153,7 +1153,7 @@ mod tests {
     fn test_oxidized_importer() -> Result<()> {
         let mut env = get_env()?;
 
-        env.eval_assert("config.oxidized_importer == True")?;
+        eval_assert(&mut env, "config.oxidized_importer == True")?;
 
         Ok(())
     }
@@ -1162,7 +1162,7 @@ mod tests {
     fn test_filesystem_importer() -> Result<()> {
         let mut env = get_env()?;
 
-        env.eval_assert("config.filesystem_importer == False")?;
+        eval_assert(&mut env, "config.filesystem_importer == False")?;
 
         Ok(())
     }
@@ -1171,7 +1171,7 @@ mod tests {
     fn test_argvb() -> Result<()> {
         let mut env = get_env()?;
 
-        env.eval_assert("config.argvb == False")?;
+        eval_assert(&mut env, "config.argvb == False")?;
 
         Ok(())
     }
@@ -1180,7 +1180,7 @@ mod tests {
     fn test_sys_frozen() -> Result<()> {
         let mut env = get_env()?;
 
-        env.eval_assert("config.sys_frozen == False")?;
+        eval_assert(&mut env, "config.sys_frozen == False")?;
 
         Ok(())
     }
@@ -1189,7 +1189,7 @@ mod tests {
     fn test_sys_meipass() -> Result<()> {
         let mut env = get_env()?;
 
-        env.eval_assert("config.sys_meipass == False")?;
+        eval_assert(&mut env, "config.sys_meipass == False")?;
 
         Ok(())
     }
@@ -1198,13 +1198,13 @@ mod tests {
     fn test_terminfo_resolution() -> Result<()> {
         let mut env = get_env()?;
 
-        env.eval_assert("config.terminfo_resolution == 'dynamic'")?;
+        eval_assert(&mut env, "config.terminfo_resolution == 'dynamic'")?;
 
-        env.eval("config.terminfo_resolution = 'none'")?;
-        env.eval_assert("config.terminfo_resolution == 'none'")?;
+        env.eval_code("config.terminfo_resolution = 'none'")?;
+        eval_assert(&mut env, "config.terminfo_resolution == 'none'")?;
 
-        env.eval("config.terminfo_resolution = 'static:foo'")?;
-        env.eval_assert("config.terminfo_resolution == 'static:foo'")?;
+        env.eval_code("config.terminfo_resolution = 'static:foo'")?;
+        eval_assert(&mut env, "config.terminfo_resolution == 'static:foo'")?;
 
         Ok(())
     }
@@ -1213,7 +1213,7 @@ mod tests {
     fn test_write_modules_directory_env() -> Result<()> {
         let mut env = get_env()?;
 
-        env.eval_assert("config.write_modules_directory_env == None")?;
+        eval_assert(&mut env, "config.write_modules_directory_env == None")?;
 
         Ok(())
     }
