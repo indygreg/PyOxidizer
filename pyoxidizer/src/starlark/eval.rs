@@ -46,11 +46,15 @@ pub struct EvaluationContextBuilder {
 }
 
 impl EvaluationContextBuilder {
-    pub fn new(logger: slog::Logger, config_path: PathBuf, build_target_triple: String) -> Self {
+    pub fn new(
+        logger: slog::Logger,
+        config_path: impl AsRef<Path>,
+        build_target_triple: impl ToString,
+    ) -> Self {
         Self {
             logger,
-            config_path,
-            build_target_triple,
+            config_path: config_path.as_ref().to_path_buf(),
+            build_target_triple: build_target_triple.to_string(),
             release: false,
             verbose: false,
             resolve_targets: None,
