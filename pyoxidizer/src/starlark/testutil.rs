@@ -54,26 +54,6 @@ pub fn eval_assert(eval: &mut EvaluationContext, code: &str) -> Result<()> {
     }
 }
 
-/// A Starlark execution environment.
-///
-/// Provides convenience wrappers for common functionality.
-pub struct StarlarkEnvironment {
-    pub eval: EvaluationContext,
-}
-
-impl StarlarkEnvironment {
-    pub fn new() -> Result<Self> {
-        let eval = test_evaluation_context_builder()?.into_context()?;
-
-        Ok(Self { eval })
-    }
-
-    /// Evaluate code in the Starlark environment.
-    pub fn eval(&mut self, code: &str) -> Result<Value> {
-        self.eval.eval_code_with_path("<test>", code)
-    }
-}
-
 pub fn starlark_ok(snippet: &str) -> Value {
     let mut eval = test_evaluation_context_builder()
         .unwrap()

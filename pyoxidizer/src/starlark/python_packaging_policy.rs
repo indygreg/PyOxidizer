@@ -350,7 +350,7 @@ mod tests {
 
     #[test]
     fn test_basic() -> Result<()> {
-        let mut env = StarlarkEnvironment::new()?;
+        let mut env = test_evaluation_context_builder()?.into_context()?;
 
         env.eval("dist = default_python_distribution()")?;
         env.eval("policy = dist.make_python_packaging_policy()")?;
@@ -566,7 +566,7 @@ mod tests {
 
     #[test]
     fn test_preferred_extension_module_variants() -> Result<()> {
-        let mut env = StarlarkEnvironment::new()?;
+        let mut env = test_evaluation_context_builder()?.into_context()?;
 
         env.eval("dist = default_python_distribution()")?;
         env.eval("policy = dist.make_python_packaging_policy()")?;
@@ -587,7 +587,7 @@ mod tests {
 
     #[test]
     fn test_register_resource_callback() -> Result<()> {
-        let mut env = StarlarkEnvironment::new()?;
+        let mut env = test_evaluation_context_builder()?.into_context()?;
 
         env.eval("dist = default_python_distribution()")?;
         env.eval("policy = dist.make_python_packaging_policy()")?;
@@ -610,7 +610,7 @@ mod tests {
 
     #[test]
     fn test_set_resource_handling_mode() -> Result<()> {
-        let mut env = StarlarkEnvironment::new()?;
+        let mut env = test_evaluation_context_builder()?.into_context()?;
 
         env.eval("dist = default_python_distribution()")?;
         env.eval("policy = dist.make_python_packaging_policy()")?;

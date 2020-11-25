@@ -1060,7 +1060,7 @@ mod tests {
 
     #[test]
     fn test_no_sources() -> Result<()> {
-        let mut env = StarlarkEnvironment::new()?;
+        let mut env = test_evaluation_context_builder()?.into_context()?;
 
         env.eval("dist = default_python_distribution()")?;
         env.eval("policy = dist.make_python_packaging_policy()")?;
@@ -1095,7 +1095,7 @@ mod tests {
 
     #[test]
     fn test_make_python_module_source_callback() -> Result<()> {
-        let mut env = StarlarkEnvironment::new()?;
+        let mut env = test_evaluation_context_builder()?.into_context()?;
         env.eval("dist = default_python_distribution()")?;
         env.eval("policy = dist.make_python_packaging_policy()")?;
         env.eval(
@@ -1149,7 +1149,7 @@ mod tests {
 
     #[test]
     fn test_pip_install_simple() -> Result<()> {
-        let mut env = StarlarkEnvironment::new()?;
+        let mut env = test_evaluation_context_builder()?.into_context()?;
 
         env.eval("dist = default_python_distribution()")?;
         env.eval("policy = dist.make_python_packaging_policy()")?;
@@ -1190,7 +1190,7 @@ mod tests {
         let extra_path = root.join("extra").join("__init__.py");
         std::fs::write(&extra_path, "# extra")?;
 
-        let mut env = StarlarkEnvironment::new()?;
+        let mut env = test_evaluation_context_builder()?.into_context()?;
         env.eval("dist = default_python_distribution()")?;
         env.eval("policy = dist.make_python_packaging_policy()")?;
         env.eval("policy.include_distribution_sources = False")?;

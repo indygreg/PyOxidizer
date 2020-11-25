@@ -503,7 +503,7 @@ mod tests {
 
     #[test]
     fn test_default_python_distribution_python_38() -> Result<()> {
-        let mut env = StarlarkEnvironment::new()?;
+        let mut env = test_evaluation_context_builder()?.into_context()?;
 
         let dist = env.eval("default_python_distribution(python_version='3.8')")?;
         assert_eq!(dist.get_type(), "PythonDistribution");
@@ -524,7 +524,7 @@ mod tests {
 
     #[test]
     fn test_default_python_distribution_python_39() -> Result<()> {
-        let mut env = StarlarkEnvironment::new()?;
+        let mut env = test_evaluation_context_builder()?.into_context()?;
 
         let dist = env.eval("default_python_distribution(python_version='3.9')")?;
         assert_eq!(dist.get_type(), "PythonDistribution");
