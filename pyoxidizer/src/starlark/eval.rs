@@ -65,6 +65,16 @@ impl EvaluationContextBuilder {
         EvaluationContext::from_builder(self)
     }
 
+    pub fn config_path(mut self, value: impl AsRef<Path>) -> Self {
+        self.config_path = value.as_ref().to_path_buf();
+        self
+    }
+
+    pub fn build_target_triple(mut self, value: impl ToString) -> Self {
+        self.build_target_triple = value.to_string();
+        self
+    }
+
     pub fn release(mut self, value: bool) -> Self {
         self.release = value;
         self
