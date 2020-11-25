@@ -3,12 +3,17 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    crate::{starlark::file_resource::FileManifestValue, wix::WiXSimpleMSIBuilder},
+    crate::{
+        starlark::file_resource::FileManifestValue, windows::VCRedistributablePlatform,
+        wix::WiXSimpleMSIBuilder,
+    },
     anyhow::Result,
     starlark::{
         environment::TypeValues,
         values::{
-            error::{RuntimeError, UnsupportedOperation, ValueError},
+            error::{
+                RuntimeError, UnsupportedOperation, ValueError, INCORRECT_PARAMETER_TYPE_ERROR_CODE,
+            },
             none::NoneType,
             {Mutable, TypedValue, Value, ValueResult},
         },
@@ -20,6 +25,7 @@ use {
     starlark_dialect_build_targets::{
         get_context_value, EnvironmentContext, ResolvedTarget, ResolvedTargetValue, RunMode,
     },
+    std::convert::TryFrom,
 };
 
 #[derive(Clone)]
@@ -122,6 +128,32 @@ impl WiXMSIBuilderValue {
         Ok(Value::new(NoneType::None))
     }
 
+    pub fn add_visual_cpp_redistributable(
+        &mut self,
+        redist_version: String,
+        platform: String,
+    ) -> ValueResult {
+        let platform = VCRedistributablePlatform::try_from(platform.as_str()).map_err(|e| {
+            ValueError::Runtime(RuntimeError {
+                code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
+                message: e,
+                label: "add_visual_cpp_redistributable()".to_string(),
+            })
+        })?;
+
+        self.inner
+            .add_visual_cpp_redistributable(&redist_version, platform)
+            .map_err(|e| {
+                ValueError::Runtime(RuntimeError {
+                    code: "TUGGER_WIX_MSI_BUILDER",
+                    message: format!("{:?}", e),
+                    label: "add_visual_cpp_redistributable()".to_string(),
+                })
+            })?;
+
+        Ok(Value::new(NoneType::None))
+    }
+
     pub fn build(&self, type_values: &TypeValues, target: String) -> ValueResult {
         let context_value = get_context_value(type_values)?;
         let context = context_value
@@ -186,6 +218,16 @@ starlark_module! { wix_msi_builder_module =>
     }
 
     #[allow(non_snake_case)]
+    WiXMSIBuilder.add_visual_cpp_redistributable(
+        this,
+        redist_version: String,
+        platform: String
+    ) {
+        let mut this = this.downcast_mut::<WiXMSIBuilderValue>().unwrap().unwrap();
+        this.add_visual_cpp_redistributable(redist_version, platform)
+    }
+
+    #[allow(non_snake_case)]
     WiXMSIBuilder.build(env env, this, target: String) {
         let this = this.downcast_ref::<WiXMSIBuilderValue>().unwrap();
         this.build(env, target)
@@ -241,6 +283,22 @@ mod tests {
         let msi_path = build_path.join("myapp.msi");
 
         assert!(msi_path.exists());
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_add_visual_cpp_redistributable() -> Result<()> {
+        if crate::windows::find_visual_cpp_redistributable("14", VCRedistributablePlatform::X64)
+            .is_err()
+        {
+            eprintln!("skipping test because Visual C++ Redistributable files not found");
+            return Ok(());
+        }
+
+        let mut env = StarlarkEnvironment::new()?;
+        env.eval("msi = WiXMSIBuilder('prefix', 'name', '0.1', 'manufacturer')")?;
+        env.eval("msi.add_visual_cpp_redistributable('14', 'x64')")?;
 
         Ok(())
     }

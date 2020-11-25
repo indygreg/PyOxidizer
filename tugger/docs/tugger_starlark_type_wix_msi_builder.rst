@@ -158,6 +158,28 @@ This method accepts the following arguments:
    (``FileManifest``) A :ref:`tugger_starlark_type_file_manifest` containing files
    to register for installation.
 
+.. _tugger_starlark_type_wix_msi_builder.add_visual_cpp_redistributable:
+
+``WiXMSIBuilder.add_visual_cpp_redistributable()``
+--------------------------------------------------
+
+This method will locate and add the Visual C++ Redistributable runtime DLL
+files (e.g. ``vcruntime140.dll``) to the *Program Files* manifest in the builder,
+effectively materializing these files in the installed file layout.
+
+This method accepts the following arguments:
+
+``redist_version``
+   (``string``) The version of the Visual C++ Redistributable to search for and
+   add. ``14`` is the version used for Visual Studio 2015, 2017, and 2019.
+
+``platform``
+   (``string``) Identifies the Windows run-time architecture. Must be one of
+   the values ``x86``, ``x64``, or ``arm64``.
+
+This method uses ``vswhere.exe`` to locate the ``vcruntimeXXX.dll`` files inside
+a Visual Studio installation. This should *just work* if a modern version of
+Visual Studio is installed. However, it may fail due to system variance.
 
 .. _tugger_starlark_type_wix_msi_builder.build:
 

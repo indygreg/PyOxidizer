@@ -93,5 +93,7 @@ built/installed executable.
 If you are not using one of the aforementioned APIs to create your
 installer, you will need to explicitly add the Visual C++ Redistributable
 to your installer.
-The :ref:`tugger_starlark_type_wix_bundle_builder.add_vc_redistributable`
-Starlark method can be called to do this.
+The :ref:`tugger_starlark_type_wix_msi_builder.add_visual_cpp_redistributable`
+and :ref:`tugger_starlark_type_wix_bundle_builder.add_vc_redistributable`
+Starlark methods can be called to do this. (PyOxidizer's Starlark methods
+for creating WiX installers effectively call these methods.)
