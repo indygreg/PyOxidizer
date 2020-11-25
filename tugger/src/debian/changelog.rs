@@ -23,10 +23,6 @@ pub struct ChangelogEntry<'a> {
     maintainer_name: Cow<'a, str>,
     maintainer_email: Cow<'a, str>,
     date: DateTime<Local>,
-    /*
-
-
-    */
 }
 
 impl<'a> ChangelogEntry<'a> {
