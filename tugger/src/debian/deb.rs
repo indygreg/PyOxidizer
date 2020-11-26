@@ -115,7 +115,7 @@ impl DebCompression {
 
 /// A builder for a `.deb` package file.
 pub struct DebBuilder<'control> {
-    control_file: ControlFile<'control>,
+    control_builder: ControlTarBuilder<'control>,
 
     compression: DebCompression,
 
@@ -129,7 +129,7 @@ impl<'control> DebBuilder<'control> {
     /// Construct a new instance using a control file.
     pub fn new(control_file: ControlFile<'control>) -> Self {
         Self {
-            control_file,
+            control_builder: ControlTarBuilder::new(control_file),
             compression: DebCompression::Gzip,
             install_files: FileManifest::default(),
             mtime: None,
@@ -138,7 +138,7 @@ impl<'control> DebBuilder<'control> {
 
     /// Set the compression format to use.
     ///
-    /// Note all compression formats are supported by all Linux distributions.
+    /// Not all compression formats are supported by all Linux distributions.
     pub fn set_compression(mut self, compression: DebCompression) -> Self {
         self.compression = compression;
         self
@@ -152,12 +152,56 @@ impl<'control> DebBuilder<'control> {
             .as_secs()
     }
 
+    /// Set the modified time to use on archive members.
+    ///
+    /// If this is called, all archive members will use the specified time, helping
+    /// to make archive content deterministic.
+    ///
+    /// If not called, the current time will be used.
     pub fn set_mtime(mut self, time: Option<SystemTime>) -> Self {
         self.mtime = time;
+        self.control_builder = self.control_builder.set_mtime(time);
         self
     }
 
+    /// Add an extra file to the `control.tar` archive.
+    pub fn extra_control_tar_file(
+        mut self,
+        path: impl AsRef<Path>,
+        entry: impl Into<FileEntry>,
+    ) -> Result<Self, DebError> {
+        self.control_builder = self.control_builder.add_extra_file(path, entry)?;
+        Ok(self)
+    }
+
+    /// Register a file as to be installed by this package.
+    ///
+    /// Filenames should be relative to the filesystem root. e.g.
+    /// `usr/bin/myapp`.
+    ///
+    /// The file content will be added to the `data.tar` archive and registered with
+    /// the `control.tar` archive so its checksum is computed.
+    pub fn install_file(
+        mut self,
+        path: impl AsRef<Path> + Clone,
+        entry: impl Into<FileEntry> + Clone,
+    ) -> Result<Self, DebError> {
+        let entry = entry.into();
+
+        let data = entry.data.resolve()?;
+        let mut cursor = Cursor::new(&data);
+        self.control_builder = self
+            .control_builder
+            .add_data_file(path.clone(), &mut cursor)?;
+
+        self.install_files.add_file_entry(path, entry)?;
+
+        Ok(self)
+    }
+
     /// Write `.deb` file content to a writer.
+    ///
+    /// This effectively materialized the `.deb` package somewhere.
     pub fn write<W: Write>(&self, writer: &mut W) -> Result<(), DebError> {
         let mut ar_builder = ar::Builder::new(writer);
 
@@ -171,17 +215,8 @@ impl<'control> DebBuilder<'control> {
         ar_builder.append(&header, data)?;
 
         // Second entry is a control.tar with metadata.
-        let mut control_builder =
-            ControlTarBuilder::new(self.control_file.clone()).set_mtime(self.mtime);
-
-        for (rel_path, content) in self.install_files.iter_entries() {
-            let data = content.data.resolve()?;
-            let mut cursor = Cursor::new(&data);
-            control_builder = control_builder.add_file(rel_path, &mut cursor)?;
-        }
-
         let mut control_writer = BufWriter::new(Vec::new());
-        control_builder.write(&mut control_writer)?;
+        self.control_builder.write(&mut control_writer)?;
         let control_tar = control_writer.into_inner()?;
         let control_tar = self
             .compression
@@ -311,31 +346,24 @@ impl<'a> ControlTarBuilder<'a> {
     pub fn add_extra_file(
         mut self,
         path: impl AsRef<Path>,
-        reader: &mut impl Read,
-        executable: bool,
+        entry: impl Into<FileEntry>,
     ) -> Result<Self, DebError> {
-        let mut buffer = vec![];
-        reader.read_to_end(&mut buffer)?;
-
-        self.extra_files.add_file_entry(
-            path,
-            FileEntry {
-                data: buffer.into(),
-                executable,
-            },
-        )?;
+        self.extra_files.add_file_entry(path, entry)?;
 
         Ok(self)
     }
 
-    /// Add a file to be indexed.
+    /// Add a data file to be indexed.
+    ///
+    /// This should be called for every file in the corresponding `data.tar`
+    /// archive in the `.deb` archive.
     ///
     /// `path` is the relative path the file will be installed to.
     /// `reader` is a reader to obtain the file content.
     ///
     /// This method has the side-effect of computing the checksum for the path
     /// so a checksums entry can be written.
-    pub fn add_file<P: AsRef<Path>, R: Read>(
+    pub fn add_data_file<P: AsRef<Path>, R: Read>(
         mut self,
         path: P,
         reader: &mut R,
@@ -468,8 +496,14 @@ mod tests {
 
         let builder = ControlTarBuilder::new(control)
             .set_mtime(Some(SystemTime::UNIX_EPOCH))
-            .add_extra_file("prerm", &mut std::io::Cursor::new("some script"), true)?
-            .add_file("usr/bin/myapp", &mut std::io::Cursor::new("data"))?;
+            .add_extra_file(
+                "prerm",
+                FileEntry {
+                    data: vec![42].into(),
+                    executable: true,
+                },
+            )?
+            .add_data_file("usr/bin/myapp", &mut std::io::Cursor::new("data"))?;
 
         let mut buffer = vec![];
         builder.write(&mut buffer)?;
@@ -556,6 +590,47 @@ mod tests {
                 Path::new(&format!("./f{}.txt", "u".repeat(200)))
             );
         }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_write_deb() -> Result<()> {
+        let mut control_para = ControlParagraph::default();
+        control_para.add_field_from_string("Package".into(), "mypackage".into())?;
+        control_para.add_field_from_string("Architecture".into(), "amd64".into())?;
+
+        let mut control = ControlFile::default();
+        control.add_paragraph(control_para);
+
+        let builder = DebBuilder::new(control)
+            .set_compression(DebCompression::Zstandard(3))
+            .install_file(
+                "usr/bin/myapp",
+                FileEntry {
+                    data: vec![42].into(),
+                    executable: true,
+                },
+            )?;
+
+        let mut buffer = vec![];
+        builder.write(&mut buffer)?;
+
+        let mut archive = ar::Archive::new(std::io::Cursor::new(buffer));
+        {
+            let entry = archive.next_entry().unwrap().unwrap();
+            assert_eq!(entry.header().identifier(), b"debian-binary");
+        }
+        {
+            let entry = archive.next_entry().unwrap().unwrap();
+            assert_eq!(entry.header().identifier(), b"control.tar.zst");
+        }
+        {
+            let entry = archive.next_entry().unwrap().unwrap();
+            assert_eq!(entry.header().identifier(), b"data.tar.zst");
+        }
+
+        assert!(archive.next_entry().is_none());
 
         Ok(())
     }
