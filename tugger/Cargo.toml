@@ -56,5 +56,5 @@ version = "0.1.0-pre"
 path = "../virtual-file-manifest"
 
 [dev-dependencies]
-msi = "0.2"
+msi = "0.3"
 tempdir = "0.3"
