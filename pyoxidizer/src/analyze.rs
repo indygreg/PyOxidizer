@@ -5,13 +5,7 @@
 //! Analyze binaries for distribution compatibility.
 
 use {
-    anyhow::Result,
-    std::{
-        collections::BTreeMap,
-        fs::File,
-        io::Read,
-        path::{Path, PathBuf},
-    },
+    std::{collections::BTreeMap, fs::File, io::Read, path::PathBuf},
     tugger::binary_analysis::{
         find_minimum_distro_version, find_undefined_elf_symbols, UndefinedSymbol,
         GCC_VERSIONS_BY_DISTRO, GLIBC_VERSIONS_BY_DISTRO, LSB_SHARED_LIBRARIES,
@@ -150,15 +144,4 @@ pub fn analyze_elf_libraries(libs: &[&str], undefined_symbols: &[UndefinedSymbol
             }
         }
     }
-}
-
-pub fn find_pe_dependencies(data: &[u8]) -> Result<Vec<String>> {
-    let pe = goblin::pe::PE::parse(data)?;
-    Ok(pe.libraries.iter().map(|l| (*l).to_string()).collect())
-}
-
-#[allow(unused)]
-pub fn find_pe_dependencies_path(path: &Path) -> Result<Vec<String>> {
-    let data = std::fs::read(path)?;
-    find_pe_dependencies(&data)
 }

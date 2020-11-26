@@ -10,6 +10,8 @@ mod linux_distro_versions;
 pub use linux_distro_versions::{
     find_minimum_distro_version, GCC_VERSIONS_BY_DISTRO, GLIBC_VERSIONS_BY_DISTRO,
 };
+mod pe;
+pub use pe::{find_pe_dependencies, find_pe_dependencies_path};
 
 /// Shared libraries defined as part of the Linux Shared Base specification.
 pub const LSB_SHARED_LIBRARIES: &[&str] = &[
