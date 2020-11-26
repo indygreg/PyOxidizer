@@ -19,9 +19,22 @@ use {
 };
 
 /// Represents an error related to .deb file handling.
+#[derive(Debug)]
 pub enum DebError {
     IOError(std::io::Error),
+    PathError(String),
 }
+
+impl std::fmt::Display for DebError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::IOError(inner) => write!(f, "I/O error: {}", inner),
+            Self::PathError(msg) => write!(f, "path error: {}", msg),
+        }
+    }
+}
+
+impl std::error::Error for DebError {}
 
 impl From<std::io::Error> for DebError {
     fn from(e: std::io::Error) -> Self {
@@ -209,6 +222,56 @@ fn new_tar_header(mtime: u64) -> Result<tar::Header, DebError> {
     Ok(header)
 }
 
+fn set_header_path(
+    builder: &mut tar::Builder<impl Write>,
+    header: &mut tar::Header,
+    path: &Path,
+    is_directory: bool,
+) -> Result<(), DebError> {
+    // Debian archives in the wild have filenames beginning with `./`. And
+    // paths ending with `/` are directories. However, we cannot call
+    // `header.set_path()` with `./` on anything except the root directory
+    // because it will normalize away the `./` bit. So we set the header field
+    // directly when adding directories and files.
+
+    // We should only be dealing with GNU headers, which simplifies our code a bit.
+    assert!(header.as_ustar().is_none());
+
+    let value = format!(
+        "./{}{}",
+        path.display(),
+        if is_directory { "/" } else { "" }
+    );
+    let value_bytes = value.as_bytes();
+
+    let name_buffer = &mut header.as_old_mut().name;
+
+    // If it fits within the buffer, copy it over.
+    if value_bytes.len() <= name_buffer.len() {
+        name_buffer[0..value_bytes.len()].copy_from_slice(value_bytes);
+    } else {
+        // Else we emit a special entry to extend the filename. Who knew tar
+        // files were this jank.
+        let mut header2 = tar::Header::new_gnu();
+        let name = b"././@LongLink";
+        header2.as_gnu_mut().unwrap().name[..name.len()].clone_from_slice(&name[..]);
+        header2.set_mode(0o644);
+        header2.set_uid(0);
+        header2.set_gid(0);
+        header2.set_mtime(0);
+        header2.set_size(value_bytes.len() as u64 + 1);
+        header2.set_entry_type(tar::EntryType::new(b'L'));
+        header2.set_cksum();
+        let mut data = value_bytes.chain(std::io::repeat(0).take(1));
+        builder.append(&header2, &mut data)?;
+
+        let truncated_bytes = &value_bytes[0..name_buffer.len()];
+        name_buffer[0..truncated_bytes.len()].copy_from_slice(truncated_bytes);
+    }
+
+    Ok(())
+}
+
 /// A builder for a `control.tar` file inside `.deb` packages.
 pub struct ControlTarBuilder<'a> {
     /// The file that will become the `control` file.
@@ -329,7 +392,7 @@ pub fn write_data_tar<W: Write>(
     // And entries for each directory in the tree.
     for directory in files.relative_directories() {
         let mut header = new_tar_header(mtime)?;
-        header.set_path(Path::new("./").join(directory))?;
+        set_header_path(&mut builder, &mut header, &directory, true)?;
         header.set_mode(0o755);
         header.set_size(0);
         header.set_cksum();
@@ -341,7 +404,7 @@ pub fn write_data_tar<W: Write>(
         let data = content.data.resolve()?;
 
         let mut header = new_tar_header(mtime)?;
-        header.set_path(Path::new("./").join(rel_path))?;
+        set_header_path(&mut builder, &mut header, rel_path, false)?;
         header.set_mode(if content.executable { 0o755 } else { 0o644 });
         header.set_size(data.len() as _);
         header.set_cksum();
@@ -351,4 +414,81 @@ pub fn write_data_tar<W: Write>(
     builder.finish()?;
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use {
+        super::*,
+        anyhow::{anyhow, Result},
+        std::path::PathBuf,
+        virtual_file_manifest::FileEntry,
+    };
+
+    #[test]
+    fn test_write_data_tar_one_file() -> Result<()> {
+        let mut manifest = FileManifest::default();
+        manifest.add_file_entry(
+            "foo/bar.txt",
+            FileEntry {
+                data: vec![42].into(),
+                executable: true,
+            },
+        )?;
+
+        let mut buffer = vec![];
+        write_data_tar(&mut buffer, &manifest, 2)?;
+
+        let mut archive = tar::Archive::new(std::io::Cursor::new(buffer));
+
+        for (i, entry) in archive.entries()?.enumerate() {
+            let entry = entry?;
+
+            let path = match i {
+                0 => Path::new("./"),
+                1 => Path::new("./foo/"),
+                2 => Path::new("./foo/bar.txt"),
+                _ => return Err(anyhow!("unexpected archive entry")),
+            };
+
+            assert_eq!(entry.path()?, path, "entry {} path matches", i);
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_write_data_tar_long_path() -> Result<()> {
+        let long_path = PathBuf::from(format!("f{}.txt", "u".repeat(200)));
+
+        let mut manifest = FileManifest::default();
+
+        manifest.add_file_entry(
+            &long_path,
+            FileEntry {
+                data: vec![42].into(),
+                executable: false,
+            },
+        )?;
+
+        let mut buffer = vec![];
+        write_data_tar(&mut buffer, &manifest, 2)?;
+
+        let mut archive = tar::Archive::new(std::io::Cursor::new(buffer));
+
+        for (i, entry) in archive.entries()?.enumerate() {
+            let entry = entry?;
+
+            if i != 1 {
+                continue;
+            }
+
+            assert_eq!(
+                entry.path()?,
+                Path::new(&format!("./f{}.txt", "u".repeat(200)))
+            );
+        }
+
+        Ok(())
+    }
 }
