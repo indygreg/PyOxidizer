@@ -15,7 +15,7 @@ use {
         path::Path,
         time::SystemTime,
     },
-    virtual_file_manifest::FileManifest,
+    virtual_file_manifest::{FileEntry, FileManifest, FileManifestError},
 };
 
 /// Represents an error related to .deb file handling.
@@ -23,6 +23,7 @@ use {
 pub enum DebError {
     IOError(std::io::Error),
     PathError(String),
+    FileManifestError(FileManifestError),
 }
 
 impl std::fmt::Display for DebError {
@@ -30,6 +31,7 @@ impl std::fmt::Display for DebError {
         match self {
             Self::IOError(inner) => write!(f, "I/O error: {}", inner),
             Self::PathError(msg) => write!(f, "path error: {}", msg),
+            Self::FileManifestError(inner) => write!(f, "file manifest error: {}", inner),
         }
     }
 }
@@ -45,6 +47,12 @@ impl From<std::io::Error> for DebError {
 impl<W> From<std::io::IntoInnerError<W>> for DebError {
     fn from(e: std::io::IntoInnerError<W>) -> Self {
         Self::IOError(e.into())
+    }
+}
+
+impl From<FileManifestError> for DebError {
+    fn from(e: FileManifestError) -> Self {
+        Self::FileManifestError(e)
     }
 }
 
@@ -191,7 +199,7 @@ impl<'control> DebBuilder<'control> {
 
         // Third entry is a data.tar with file content.
         let mut data_writer = BufWriter::new(Vec::new());
-        write_data_tar(&mut data_writer, &self.install_files, self.mtime())?;
+        write_deb_tar(&mut data_writer, &self.install_files, self.mtime())?;
         let data_tar = data_writer.into_inner()?;
         let data_tar = self
             .compression
@@ -276,7 +284,11 @@ fn set_header_path(
 pub struct ControlTarBuilder<'a> {
     /// The file that will become the `control` file.
     control: ControlFile<'a>,
+    /// Extra maintainer scripts to install.
+    extra_files: FileManifest,
+    /// Hashes of files that will be installed.
     md5sums: Vec<Vec<u8>>,
+    /// Modified time for tar archive entries.
     mtime: Option<SystemTime>,
 }
 
@@ -285,9 +297,35 @@ impl<'a> ControlTarBuilder<'a> {
     pub fn new(control_file: ControlFile<'a>) -> Self {
         Self {
             control: control_file,
+            extra_files: FileManifest::default(),
             md5sums: vec![],
             mtime: None,
         }
+    }
+
+    /// Add an extra file to the control archive.
+    ///
+    /// This is usually used to add maintainer scripts. Maintainer scripts
+    /// are special scripts like `preinst` and `postrm` that are executed
+    /// during certain activities.
+    pub fn add_extra_file(
+        mut self,
+        path: impl AsRef<Path>,
+        reader: &mut impl Read,
+        executable: bool,
+    ) -> Result<Self, DebError> {
+        let mut buffer = vec![];
+        reader.read_to_end(&mut buffer)?;
+
+        self.extra_files.add_file_entry(
+            path,
+            FileEntry {
+                data: buffer.into(),
+                executable,
+            },
+        )?;
+
+        Ok(self)
     }
 
     /// Add a file to be indexed.
@@ -347,34 +385,28 @@ impl<'a> ControlTarBuilder<'a> {
         self.control.write(&mut control_buffer)?;
         let control_data = control_buffer.into_inner()?;
 
-        let mut builder = tar::Builder::new(writer);
+        let mut manifest = self.extra_files.clone();
+        manifest.add_file_entry(
+            "control",
+            FileEntry {
+                data: control_data.into(),
+                executable: false,
+            },
+        )?;
+        manifest.add_file_entry(
+            "md5sums",
+            FileEntry {
+                data: self.md5sums.concat::<u8>().into(),
+                executable: false,
+            },
+        )?;
 
-        let mut header = new_tar_header(self.mtime())?;
-        header.set_path("control")?;
-        header.set_mode(0o644);
-        header.set_size(control_data.len() as _);
-        header.set_cksum();
-        builder.append(&header, &*control_data)?;
-
-        // Write the md5sums file.
-        let md5sums = self.md5sums.concat::<u8>();
-        let mut header = new_tar_header(self.mtime())?;
-        header.set_path("md5sums")?;
-        header.set_mode(0o644);
-        header.set_size(md5sums.len() as _);
-        header.set_cksum();
-        builder.append(&header, &*md5sums)?;
-
-        // We could also support maintainer scripts. For another day...
-
-        builder.finish()?;
-
-        Ok(())
+        write_deb_tar(writer, &manifest, self.mtime())
     }
 }
 
-/// Write `data.tar` content to a writer.
-pub fn write_data_tar<W: Write>(
+/// Write a tar archive suitable for inclusion in a `.deb` archive.
+pub fn write_deb_tar<W: Write>(
     writer: W,
     files: &FileManifest,
     mtime: u64,
@@ -420,10 +452,46 @@ pub fn write_data_tar<W: Write>(
 mod tests {
     use {
         super::*,
+        crate::debian::ControlParagraph,
         anyhow::{anyhow, Result},
         std::path::PathBuf,
-        virtual_file_manifest::FileEntry,
     };
+
+    #[test]
+    fn test_write_control_tar_simple() -> Result<()> {
+        let mut control_para = ControlParagraph::default();
+        control_para.add_field_from_string("Package".into(), "mypackage".into())?;
+        control_para.add_field_from_string("Architecture".into(), "amd64".into())?;
+
+        let mut control = ControlFile::default();
+        control.add_paragraph(control_para);
+
+        let builder = ControlTarBuilder::new(control)
+            .set_mtime(Some(SystemTime::UNIX_EPOCH))
+            .add_extra_file("prerm", &mut std::io::Cursor::new("some script"), true)?
+            .add_file("usr/bin/myapp", &mut std::io::Cursor::new("data"))?;
+
+        let mut buffer = vec![];
+        builder.write(&mut buffer)?;
+
+        let mut archive = tar::Archive::new(std::io::Cursor::new(buffer));
+
+        for (i, entry) in archive.entries()?.enumerate() {
+            let entry = entry?;
+
+            let path = match i {
+                0 => Path::new("./"),
+                1 => Path::new("./control"),
+                2 => Path::new("./md5sums"),
+                3 => Path::new("./prerm"),
+                _ => return Err(anyhow!("unexpected archive entry")),
+            };
+
+            assert_eq!(entry.path()?, path, "entry {} path matches", i);
+        }
+
+        Ok(())
+    }
 
     #[test]
     fn test_write_data_tar_one_file() -> Result<()> {
@@ -437,7 +505,7 @@ mod tests {
         )?;
 
         let mut buffer = vec![];
-        write_data_tar(&mut buffer, &manifest, 2)?;
+        write_deb_tar(&mut buffer, &manifest, 2)?;
 
         let mut archive = tar::Archive::new(std::io::Cursor::new(buffer));
 
@@ -472,7 +540,7 @@ mod tests {
         )?;
 
         let mut buffer = vec![];
-        write_data_tar(&mut buffer, &manifest, 2)?;
+        write_deb_tar(&mut buffer, &manifest, 2)?;
 
         let mut archive = tar::Archive::new(std::io::Cursor::new(buffer));
 

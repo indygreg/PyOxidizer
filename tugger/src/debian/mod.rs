@@ -11,5 +11,5 @@ pub use {
     control::{
         ControlError, ControlField, ControlFieldValue, ControlFile, ControlParagraph, SourceControl,
     },
-    deb::{write_data_tar, ControlTarBuilder, DebBuilder, DebError},
+    deb::{write_deb_tar, ControlTarBuilder, DebBuilder, DebError},
 };
