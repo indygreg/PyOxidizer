@@ -2021,7 +2021,6 @@ dependencies = [
  "fs_extra",
  "git2",
  "glob",
- "goblin",
  "handlebars",
  "hex",
  "indoc",

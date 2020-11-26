@@ -4,6 +4,8 @@
 
 /*! Functionality for analyzing the content of platform binaries. */
 
+mod audit;
+pub use audit::{analyze_data, analyze_elf_libraries, analyze_file};
 mod elf;
 pub use elf::find_undefined_elf_symbols;
 mod linux_distro_versions;

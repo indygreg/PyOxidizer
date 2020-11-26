@@ -4,8 +4,7 @@
 
 use {
     crate::{
-        analyze, environment::PYOXIDIZER_VERSION, logging, project_building, project_layout,
-        projectmgmt,
+        environment::PYOXIDIZER_VERSION, logging, project_building, project_layout, projectmgmt,
     },
     anyhow::{anyhow, Result},
     clap::{App, AppSettings, Arg, SubCommand},
@@ -348,7 +347,7 @@ pub fn run_cli() -> Result<()> {
         ("analyze", Some(args)) => {
             let path = args.value_of("path").unwrap();
             let path = PathBuf::from(path);
-            analyze::analyze_file(path);
+            tugger::binary_analysis::analyze_file(path);
 
             Ok(())
         }

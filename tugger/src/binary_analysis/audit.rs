@@ -5,11 +5,11 @@
 //! Analyze binaries for distribution compatibility.
 
 use {
-    std::{collections::BTreeMap, fs::File, io::Read, path::PathBuf},
-    tugger::binary_analysis::{
+    crate::binary_analysis::{
         find_minimum_distro_version, find_undefined_elf_symbols, UndefinedSymbol,
         GCC_VERSIONS_BY_DISTRO, GLIBC_VERSIONS_BY_DISTRO, LSB_SHARED_LIBRARIES,
     },
+    std::{collections::BTreeMap, fs::File, io::Read, path::PathBuf},
 };
 
 pub fn analyze_file(path: PathBuf) {
@@ -22,8 +22,8 @@ pub fn analyze_file(path: PathBuf) {
 pub fn analyze_data(buffer: &[u8]) {
     match goblin::Object::parse(buffer).unwrap() {
         goblin::Object::Elf(elf) => {
-            let undefined_symbols: Vec<UndefinedSymbol> =
-                itertools::sorted(find_undefined_elf_symbols(&buffer, &elf).into_iter()).collect();
+            let mut undefined_symbols = find_undefined_elf_symbols(&buffer, &elf);
+            undefined_symbols.sort();
 
             analyze_elf_libraries(&elf.libraries, &undefined_symbols);
         }
@@ -46,7 +46,9 @@ pub fn analyze_elf_libraries(libs: &[&str], undefined_symbols: &[UndefinedSymbol
     println!("Shared Library Dependencies");
     println!("===========================");
 
-    for lib in itertools::sorted(libs) {
+    let mut libs = libs.to_vec();
+    libs.sort_unstable();
+    for lib in libs {
         println!("{}", lib);
 
         if LSB_SHARED_LIBRARIES.contains(&lib) {
