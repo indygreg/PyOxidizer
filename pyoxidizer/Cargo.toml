@@ -21,7 +21,9 @@ path = "src/lib.rs"
 test = false
 
 [build-dependencies]
-git2 = "0.13"
+# We don't need network functionality. So disable default features which
+# pull it in.
+git2 = { version = "0.13", default-features = false }
 
 [dependencies]
 anyhow = "1.0"
