@@ -3144,6 +3144,7 @@ dependencies = [
  "tempdir",
  "url",
  "uuid",
+ "version-compare",
  "virtual-file-manifest",
  "walkdir",
  "winapi 0.3.9",
