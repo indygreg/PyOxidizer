@@ -48,6 +48,7 @@ zstd = "0.5"
 rpm-rs = "0.6"
 
 [target.'cfg(windows)'.dependencies]
+find-winsdk = "0.2"
 winapi = { version = "0.3", features = ["combaseapi", "knownfolders", "shlobj", "shtypes"] }
 
 [dependencies.starlark-dialect-build-targets]
