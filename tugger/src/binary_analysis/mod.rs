@@ -4,6 +4,8 @@
 
 /*! Functionality for analyzing the content of platform binaries. */
 
+mod elf;
+pub use elf::find_undefined_elf_symbols;
 mod linux_distro_versions;
 pub use linux_distro_versions::{
     find_minimum_distro_version, GCC_VERSIONS_BY_DISTRO, GLIBC_VERSIONS_BY_DISTRO,
@@ -20,3 +22,10 @@ pub const LSB_SHARED_LIBRARIES: &[&str] = &[
     "librt.so.1",
     "libutil.so.1",
 ];
+
+#[derive(Debug, Eq, PartialEq, PartialOrd, Ord)]
+pub struct UndefinedSymbol {
+    pub symbol: String,
+    pub filename: Option<String>,
+    pub version: Option<String>,
+}

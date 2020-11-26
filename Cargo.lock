@@ -2011,7 +2011,6 @@ name = "pyoxidizer"
 version = "0.11.0-pre"
 dependencies = [
  "anyhow",
- "byteorder",
  "cargo_toml",
  "cc",
  "clap",
@@ -3119,12 +3118,14 @@ version = "0.3.0-pre"
 dependencies = [
  "anyhow",
  "ar",
+ "byteorder",
  "chrono",
  "codemap",
  "codemap-diagnostic",
  "duct",
  "fs2",
  "glob",
+ "goblin",
  "hex",
  "lazy_static",
  "libflate",
