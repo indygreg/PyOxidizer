@@ -26,6 +26,7 @@ lazy_static = "1.4"
 libflate = "1.0"
 md5 = "0.7"
 os_str_bytes = "2.3"
+rcgen = "0.8"
 reqwest = { version = "0.10", default-features= false, features = ["blocking", "rustls-tls"] }
 semver = "0.11"
 serde_yaml = "0.8"
@@ -60,5 +61,7 @@ version = "0.1.0-pre"
 path = "../virtual-file-manifest"
 
 [dev-dependencies]
+der-parser = "4.1"
 msi = "0.3"
 tempdir = "0.3"
+x509-parser = "0.8"
