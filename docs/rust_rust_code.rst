@@ -21,35 +21,30 @@ for PyOxidizer, such as the implementation of
 a high-level API for initializing a Python interpreter and running code
 in it.
 
-Under the hood, the ``pyembed`` crate uses the ``cpython`` and
-``python3-sys`` crates for interacting with Python's C APIs. ``pyembed``
-exposes the ``Python`` object from ``cpython``, which means that
-once you've initialized a Python interpreter with ``pyembed``, you can
-use all the functionality in ``cpython`` to interact with that
-interpreter.
+See :ref:`pyembed` for full documentation on the ``pyembed`` crate.
+:ref:`pyembed_controlling_python` in particular describes how to interface
+with the embedded Python interpreter.
 
-Initializing a Python Interpreter
-=================================
-
-Initializing an embedded Python interpreter in your Rust process is as simple
-as calling
-``pyembed::MainPythonInterpreter::new(config: OxidizedPythonInterpreterConfig)``.
-
-The hardest part about this is constructing the
-``pyembed::OxidizedPythonInterpreterConfig`` instance.
+The following documentation will be unique to PyOxidizer's use of the
+``pyembed`` crate.
 
 Using the Default ``OxidizedPythonInterpreterConfig``
------------------------------------------------------
+=====================================================
 
-If the ``pyembed`` crate is configured to emit build artifacts (the default),
-its build script will generate a Rust source file containing a
+When using a PyOxidizer-generated Rust project and that project is configured
+to use PyOxidizer to build (the default), that project/crate's build script
+will call into PyOxidizer to emit various build artifacts. This will process
+the PyOxidizer configuration file and write some files somewhere.
+
+One of the files generated is a Rust source file containing a
 ``fn default_python_config() -> pyembed::OxidizedPythonInterpreterConfig`` which
-emits a ``pyembed::OxidizedPythonInterpreterConfig`` using the configuration as
-defined by the utilized PyOxidizer :ref:`configuration file <config_files>`.
-Assuming you are using the boilerplate ``Cargo.toml`` and ``build.rs`` script
-generated with ``pyoxidizer init-rust-project``, the path to this generated
-source file will
-be in the ``PYOXIDIZER_DEFAULT_PYTHON_CONFIG_RS`` environment variable.
+emits a ``pyembed::OxidizedPythonInterpreterConfig`` using the configuration
+from the PyOxidizer configuration file. This configuration is based off the
+:ref:`config_type_python_interpreter_config` defined in the PyOxidizer Starlark
+configuration file.
+
+The crate's build script will set the ``PYOXIDIZER_DEFAULT_PYTHON_CONFIG_RS``
+environment variable to the path to this file, exposing it to Rust code.
 
 This all means that to use the auto-generated
 ``pyembed::OxidizedPythonInterpreterConfig`` instance with your Rust application,
@@ -156,51 +151,3 @@ build artifact/file, likely though ``include_bytes!``.
 
 Finally, setting ``use_custom_importlib = true`` is necessary to enable
 the custom bytecode and meta path importer to be used at run-time.
-
-Using a Python Interpreter
-==========================
-
-Once you've constructed a ``pyembed::MainPythonInterpreter`` instance, you
-can obtain a ``cpython::Python`` instance via ``.acquire_gil()`` and then
-use it:
-
-.. code-block:: rust
-
-   fn do_it(interpreter: &MainPythonInterpreter) -> {
-       let py = interpreter.acquire_gil().unwrap();
-
-       match pyembed::run_code(py, "print('hello, world')") {
-           Ok(_) => print("python code executed successfully"),
-           Err(e) => print("python error: {:?}", e),
-       }
-   }
-
-The ``pyembed`` crate exports various ``run_*`` functions for
-performing high-level evaluation of various primitives (files, modules,
-code strings, etc). See the ``pyembed`` crate's documentation for more.
-
-Since CPython's API relies on static variables (sadly), if you really wanted
-to, you could call out to CPython C APIs directly (probably via the
-bindings in the ``python3-sys`` crate) and they would interact with the
-interpreter started by the ``pyembed`` crate. This is all ``unsafe``, of course,
-so tread at your own peril.
-
-Finalizing the Interpreter
-==========================
-
-``pyembed::MainPythonInterpreter`` implements ``Drop`` and it will call
-``Py_FinalizeEx()`` when called. So to terminate the Python interpreter, simply
-have the ``MainPythonInterpreter`` instance go out of scope or drop it
-explicitly.
-
-A Note on the ``pyembed`` APIs
-==============================
-
-The ``pyembed`` crate is highly tailored towards PyOxidizer's default use
-cases and the APIs are not considered extremely well polished.
-
-While the functionality should work, the ergonomics may not be great.
-
-It is a goal of the PyOxidizer project to support Rust programmers who want
-to embed Python in Rust applications. So contributions to improve the quality
-of the ``pyembed`` crate will likely be greatly appreciated!
