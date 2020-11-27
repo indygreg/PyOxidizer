@@ -5,8 +5,8 @@
 use {
     super::{
         binary::{
-            EmbeddedPythonContext, LibpythonLinkMode, PythonBinaryBuilder, PythonLinkingInfo,
-            ResourceAddCollectionContextCallback,
+            EmbeddedPythonContext, EmbeddedResources, LibpythonLinkMode, PythonBinaryBuilder,
+            PythonLinkingInfo, ResourceAddCollectionContextCallback,
         },
         config::EmbeddedPythonConfig,
         distribution::{BinaryLibpythonLinkMode, PythonDistribution},
@@ -768,9 +768,6 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
             module_names.write_all(b"\n")?;
         }
 
-        let mut resources = Vec::new();
-        compiled_resources.write_packed_resources(&mut resources)?;
-
         let linking_info = self.resolve_python_linking_info(logger, opt_level)?;
 
         if self.link_mode == LibpythonLinkMode::Dynamic {
@@ -803,7 +800,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
             config: self.config.clone(),
             linking_info,
             module_names,
-            resources,
+            resources: EmbeddedResources::Collection(compiled_resources),
             extra_files,
             host_triple: self.host_triple.clone(),
             target_triple: self.target_triple.clone(),
@@ -973,13 +970,6 @@ pub mod tests {
         }
     }
 
-    pub fn get_embedded(logger: &slog::Logger) -> Result<EmbeddedPythonContext> {
-        let options = StandalonePythonExecutableBuilderOptions::default();
-        let exe = options.new_builder()?;
-
-        exe.to_embedded_python_context(logger, "0")
-    }
-
     fn assert_extension_builtin(
         builder: &StandalonePythonExecutableBuilder,
         extension: &PythonExtensionModule,
@@ -1074,7 +1064,10 @@ pub mod tests {
     #[test]
     fn test_write_embedded_files() -> Result<()> {
         let logger = get_logger()?;
-        let embedded = get_embedded(&logger)?;
+        let options = StandalonePythonExecutableBuilderOptions::default();
+        let exe = options.new_builder()?;
+        let embedded = exe.to_embedded_python_context(&logger, "0")?;
+
         let temp_dir = tempdir::TempDir::new("pyoxidizer-test")?;
 
         embedded.write_files(temp_dir.path())?;

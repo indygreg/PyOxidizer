@@ -77,7 +77,7 @@ pub fn find_pyoxidizer_config_file_env(logger: &slog::Logger, start_dir: &Path) 
 }
 
 /// Holds results from building an executable.
-pub struct BuiltExecutable {
+pub struct BuiltExecutable<'a> {
     /// Path to built executable file.
     pub exe_path: Option<PathBuf>,
 
@@ -88,24 +88,24 @@ pub struct BuiltExecutable {
     pub exe_data: Vec<u8>,
 
     /// Holds state generated from building.
-    pub binary_data: EmbeddedPythonContext,
+    pub binary_data: EmbeddedPythonContext<'a>,
 }
 
 /// Build an executable embedding Python using an existing Rust project.
 ///
 /// The path to the produced executable is returned.
 #[allow(clippy::too_many_arguments)]
-pub fn build_executable_with_rust_project(
+pub fn build_executable_with_rust_project<'a>(
     logger: &slog::Logger,
     project_path: &Path,
     bin_name: &str,
-    exe: &dyn PythonBinaryBuilder,
+    exe: &'a (dyn PythonBinaryBuilder + 'a),
     build_path: &Path,
     artifacts_path: &Path,
     target: &str,
     opt_level: &str,
     release: bool,
-) -> Result<BuiltExecutable> {
+) -> Result<BuiltExecutable<'a>> {
     create_dir_all(&artifacts_path)
         .with_context(|| "creating directory for PyOxidizer build artifacts")?;
 
@@ -255,14 +255,14 @@ pub fn build_executable_with_rust_project(
 /// Build a Python executable using a temporary Rust project.
 ///
 /// Returns the binary data constituting the built executable.
-pub fn build_python_executable(
+pub fn build_python_executable<'a>(
     logger: &slog::Logger,
     bin_name: &str,
-    exe: &dyn PythonBinaryBuilder,
+    exe: &'a (dyn PythonBinaryBuilder + 'a),
     target: &str,
     opt_level: &str,
     release: bool,
-) -> Result<BuiltExecutable> {
+) -> Result<BuiltExecutable<'a>> {
     let env = crate::environment::resolve_environment()?;
     let pyembed_location = env.as_pyembed_location();
 

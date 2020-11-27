@@ -8,14 +8,16 @@ Defining and manipulating binaries embedding Python.
 
 use {
     super::config::EmbeddedPythonConfig,
-    anyhow::Result,
+    anyhow::{Context, Result},
     python_packaging::{
         policy::PythonPackagingPolicy,
         resource::{
             PythonExtensionModule, PythonModuleSource, PythonPackageDistributionResource,
             PythonPackageResource, PythonResource,
         },
-        resource_collection::{PrePackagedResource, PythonResourceAddCollectionContext},
+        resource_collection::{
+            CompiledResourcesCollection, PrePackagedResource, PythonResourceAddCollectionContext,
+        },
     },
     std::{
         collections::HashMap,
@@ -297,8 +299,17 @@ pub struct EmbeddedPythonPaths {
     pub cargo_metadata: PathBuf,
 }
 
+/// A reference to compiled resources to use in the binary.
+pub enum EmbeddedResources<'a> {
+    /// Use resources in a given compiled resources collection instance.
+    Collection(CompiledResourcesCollection<'a>),
+
+    /// Use resources at a given path.
+    Path(PathBuf),
+}
+
 /// Holds context necessary to embed Python in a binary.
-pub struct EmbeddedPythonContext {
+pub struct EmbeddedPythonContext<'a> {
     /// The configuration for the embedded interpreter.
     pub config: EmbeddedPythonConfig,
 
@@ -309,7 +320,7 @@ pub struct EmbeddedPythonContext {
     pub module_names: Vec<u8>,
 
     /// Python resources to embed in the binary.
-    pub resources: Vec<u8>,
+    pub resources: EmbeddedResources<'a>,
 
     /// Extra files to install next to produced binary.
     pub extra_files: FileManifest,
@@ -321,16 +332,32 @@ pub struct EmbeddedPythonContext {
     pub target_triple: String,
 }
 
-impl EmbeddedPythonContext {
+impl<'a> EmbeddedPythonContext<'a> {
+    /// Obtain the filesystem path of the packed resources file.
+    pub fn packed_resources_path(&self, dest_dir: impl AsRef<Path>) -> PathBuf {
+        match &self.resources {
+            EmbeddedResources::Collection(_) => dest_dir.as_ref().join("packed-resources"),
+            EmbeddedResources::Path(p) => p.clone(),
+        }
+    }
+
     /// Write out files needed to link a binary.
     pub fn write_files(&self, dest_dir: &Path) -> Result<EmbeddedPythonPaths> {
         let module_names = dest_dir.join("py-module-names");
         let mut fh = std::fs::File::create(&module_names)?;
         fh.write_all(&self.module_names)?;
 
-        let embedded_resources = dest_dir.join("packed-resources");
-        let mut fh = std::fs::File::create(&embedded_resources)?;
-        fh.write_all(&self.resources)?;
+        match &self.resources {
+            EmbeddedResources::Collection(collection) => {
+                let mut writer = std::io::BufWriter::new(std::fs::File::create(
+                    self.packed_resources_path(dest_dir),
+                )?);
+                collection
+                    .write_packed_resources(&mut writer)
+                    .context("writing packed resources")?;
+            }
+            EmbeddedResources::Path(_) => {}
+        }
 
         let libpython = dest_dir.join(&self.linking_info.libpythonxy_filename);
         let mut fh = std::fs::File::create(&libpython)?;
@@ -350,9 +377,11 @@ impl EmbeddedPythonContext {
             None
         };
 
+        let packed_resources_path = self.packed_resources_path(dest_dir);
+
         let config_rs = dest_dir.join("default_python_config.rs");
         self.config
-            .write_default_python_config_rs(&config_rs, Some(&embedded_resources))?;
+            .write_default_python_config_rs(&config_rs, Some(&packed_resources_path))?;
 
         let mut cargo_metadata_lines = Vec::new();
         cargo_metadata_lines.extend(self.linking_info.cargo_metadata.clone());
@@ -375,7 +404,7 @@ impl EmbeddedPythonContext {
 
         Ok(EmbeddedPythonPaths {
             module_names,
-            embedded_resources,
+            embedded_resources: packed_resources_path,
             libpython,
             libpyembeddedconfig,
             config_rs,
