@@ -120,7 +120,7 @@ Next, we tell PyOxidizer to run ``pyflakes`` when the interpreter is executed:
 
 .. code-block:: python
 
-   python_config.run_code = "from pyflakes.api import main; main()"
+   python_config.run_command = "from pyflakes.api import main; main()"
 
 This says to effectively run the Python code
 ``eval(from pyflakes.api import main; main())`` when the embedded interpreter
@@ -139,7 +139,7 @@ comments removed for brevity):
        policy.include_test = False
 
        config = dist.make_python_interpreter_config()
-       config.run_code = "from pyflakes.api import main; main()"
+       config.run_command = "from pyflakes.api import main; main()"
 
        exe = dist.to_python_executable(
            name="pyflakes",
@@ -189,7 +189,7 @@ following:
        policy.include_test = False
 
        config = dist.make_python_interpreter_config()
-       config.run_code = "from myapp import main; main()"
+       config.run_command = "from myapp import main; main()"
 
        exe = dist.to_python_executable(
            name="myapp",
