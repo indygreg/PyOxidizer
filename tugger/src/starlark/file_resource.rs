@@ -26,7 +26,7 @@ use {
         convert::TryFrom,
         path::{Path, PathBuf},
     },
-    virtual_file_manifest::{FileEntry, FileManifest},
+    tugger_file_manifest::{FileEntry, FileManifest},
 };
 
 // TODO merge this into `FileValue`?

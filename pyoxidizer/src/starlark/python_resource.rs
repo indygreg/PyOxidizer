@@ -24,7 +24,7 @@ use {
         },
     },
     std::convert::{TryFrom, TryInto},
-    virtual_file_manifest::File,
+    tugger_file_manifest::File,
 };
 
 #[derive(Clone, Debug)]

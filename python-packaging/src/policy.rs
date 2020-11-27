@@ -627,7 +627,7 @@ mod tests {
     use {
         super::*,
         std::path::PathBuf,
-        virtual_file_manifest::{File, FileEntry},
+        tugger_file_manifest::{File, FileEntry},
     };
 
     #[test]

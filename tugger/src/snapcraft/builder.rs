@@ -12,7 +12,7 @@ use {
         io::{BufRead, BufReader},
         path::Path,
     },
-    virtual_file_manifest::{FileEntry, FileManifest},
+    tugger_file_manifest::{FileEntry, FileManifest},
 };
 
 /// Represents an invocation of the `snapcraft` command.

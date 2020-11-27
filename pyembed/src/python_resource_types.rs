@@ -17,7 +17,7 @@ use {
     },
     std::cell::{Ref, RefCell},
     std::convert::TryFrom,
-    virtual_file_manifest::FileData,
+    tugger_file_manifest::FileData,
 };
 
 py_class!(pub class PythonModuleSource |py| {

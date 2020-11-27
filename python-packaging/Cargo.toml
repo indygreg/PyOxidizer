@@ -26,9 +26,9 @@ zip = { version = "0.5", optional = true }
 version = "0.5.0-pre"
 path = "../python-packed-resources"
 
-[dependencies.virtual-file-manifest]
-version = "0.1.0-pre"
-path = "../virtual-file-manifest"
+[dependencies.tugger-file-manifest]
+version = "0.3.0-pre"
+path = "../tugger-file-manifest"
 
 # We make `wheel` support optional because the `zip` crate has a handful
 # of dependencies that we don't want to bloat the dependency tree with.

@@ -6,7 +6,7 @@ use {
     anyhow::{anyhow, Context, Result},
     rpm::{RPMFileOptions, RPMPackage},
     std::path::{Path, PathBuf},
-    virtual_file_manifest::FileManifest,
+    tugger_file_manifest::FileManifest,
 };
 
 /// Create RPMs.

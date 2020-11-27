@@ -22,8 +22,8 @@ use {
         ResolvedTargetValue, RunMode,
     },
     std::{convert::TryFrom, path::Path},
+    tugger_file_manifest::FileEntry,
     tugger_wix::{WiXInstallerBuilder, WiXSimpleMSIBuilder, WxsBuilder},
-    virtual_file_manifest::FileEntry,
 };
 
 pub struct WiXInstallerValue {

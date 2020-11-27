@@ -9,7 +9,7 @@ use {
         collections::BTreeMap,
         path::{Path, PathBuf},
     },
-    virtual_file_manifest::{FileEntry, FileManifest},
+    tugger_file_manifest::{FileEntry, FileManifest},
     xml::EmitterConfig,
 };
 

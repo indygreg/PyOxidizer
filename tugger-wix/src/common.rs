@@ -16,8 +16,8 @@ use {
         http::{download_to_path, RemoteContent},
         zipfile::extract_zip,
     },
+    tugger_file_manifest::FileManifest,
     uuid::Uuid,
-    virtual_file_manifest::FileManifest,
     xml::{
         common::XmlVersion,
         writer::{EventWriter, XmlEvent},
@@ -484,7 +484,7 @@ mod tests {
     use {
         super::*,
         tugger_common::testutil::*,
-        virtual_file_manifest::{FileEntry, FileManifest},
+        tugger_file_manifest::{FileEntry, FileManifest},
         xml::EmitterConfig,
     };
 

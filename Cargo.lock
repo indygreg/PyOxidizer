@@ -2132,8 +2132,8 @@ dependencies = [
  "python-packed-resources",
  "python3-sys",
  "rusty-fork",
+ "tugger-file-manifest",
  "uuid",
- "virtual-file-manifest",
  "winapi 0.3.9",
 ]
 
@@ -2174,11 +2174,11 @@ dependencies = [
  "tempdir",
  "tugger",
  "tugger-common",
+ "tugger-file-manifest",
  "tugger-windows",
  "url",
  "uuid",
  "version-compare",
- "virtual-file-manifest",
  "walkdir",
  "xml-rs",
  "zstd",
@@ -2197,7 +2197,7 @@ dependencies = [
  "python-packed-resources",
  "regex",
  "tempdir",
- "virtual-file-manifest",
+ "tugger-file-manifest",
  "walkdir",
  "zip",
 ]
@@ -3304,10 +3304,10 @@ dependencies = [
  "tar",
  "tempdir",
  "tugger-common",
+ "tugger-file-manifest",
  "tugger-windows",
  "tugger-wix",
  "version-compare",
- "virtual-file-manifest",
  "walkdir",
 ]
 
@@ -3339,10 +3339,14 @@ dependencies = [
  "md5",
  "os_str_bytes",
  "tar",
- "virtual-file-manifest",
+ "tugger-file-manifest",
  "xz2",
  "zstd",
 ]
+
+[[package]]
+name = "tugger-file-manifest"
+version = "0.3.0-pre"
 
 [[package]]
 name = "tugger-windows"
@@ -3375,10 +3379,10 @@ dependencies = [
  "slog",
  "tempdir",
  "tugger-common",
+ "tugger-file-manifest",
  "tugger-windows",
  "url",
  "uuid",
- "virtual-file-manifest",
  "xml-rs",
 ]
 
@@ -3519,10 +3523,6 @@ name = "version_check"
 version = "0.9.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b5a972e5669d67ba988ce3dc826706fb0a8b01471c088cb0b6110b805cc36aed"
-
-[[package]]
-name = "virtual-file-manifest"
-version = "0.1.0-pre"
 
 [[package]]
 name = "wait-timeout"

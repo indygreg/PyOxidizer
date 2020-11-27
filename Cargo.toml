@@ -9,8 +9,8 @@ members = [
     'starlark-dialect-build-targets',
     'tugger-common',
     'tugger-debian',
+    'tugger-file-manifest',
     'tugger-windows',
     'tugger-wix',
     'tugger',
-    'virtual-file-manifest',
 ]

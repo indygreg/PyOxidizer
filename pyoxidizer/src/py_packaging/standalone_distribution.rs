@@ -40,7 +40,7 @@ use {
         path::{Path, PathBuf},
         sync::Arc,
     },
-    virtual_file_manifest::FileData,
+    tugger_file_manifest::FileData,
 };
 
 // This needs to be kept in sync with *compiler.py

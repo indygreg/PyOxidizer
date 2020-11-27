@@ -27,7 +27,7 @@ use {
         convert::TryFrom,
         path::PathBuf,
     },
-    virtual_file_manifest::{File, FileData},
+    tugger_file_manifest::{File, FileData},
 };
 
 /// Represents a single file install.
@@ -1710,7 +1710,7 @@ mod tests {
         super::*,
         crate::resource::{LibraryDependency, PythonPackageDistributionResourceFlavor},
         std::iter::FromIterator,
-        virtual_file_manifest::FileEntry,
+        tugger_file_manifest::FileEntry,
     };
 
     const DEFAULT_CACHE_TAG: &str = "cpython-37";

@@ -10,7 +10,7 @@ use {
         collections::{BTreeMap, BTreeSet},
         path::PathBuf,
     },
-    virtual_file_manifest::FileData,
+    tugger_file_manifest::FileData,
 };
 
 /// Holds state necessary to build and link a libpython.

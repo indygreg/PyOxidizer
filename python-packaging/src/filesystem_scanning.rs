@@ -23,7 +23,7 @@ use {
         ffi::OsStr,
         path::{Path, PathBuf},
     },
-    virtual_file_manifest::{File, FileData, FileEntry, FileManifest},
+    tugger_file_manifest::{File, FileData, FileEntry, FileManifest},
 };
 
 #[cfg(unix)]

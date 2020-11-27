@@ -10,9 +10,9 @@ use {
         io::Write,
         path::{Path, PathBuf},
     },
+    tugger_file_manifest::FileManifest,
     tugger_windows::{find_visual_cpp_redistributable, VCRedistributablePlatform},
     uuid::Uuid,
-    virtual_file_manifest::FileManifest,
     xml::{
         common::XmlVersion,
         writer::{EmitterConfig, EventWriter, XmlEvent},
@@ -547,7 +547,7 @@ impl WiXSimpleMSIBuilder {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, tugger_common::testutil::*, virtual_file_manifest::FileEntry};
+    use {super::*, tugger_common::testutil::*, tugger_file_manifest::FileEntry};
 
     #[cfg(target_family = "windows")]
     use tugger_windows::{

@@ -23,8 +23,8 @@ use {
         path::{Path, PathBuf},
         sync::Arc,
     },
+    tugger_file_manifest::{File, FileManifest},
     tugger_windows::VCRedistributablePlatform,
-    virtual_file_manifest::{File, FileManifest},
 };
 
 /// How a binary should link against libpython.

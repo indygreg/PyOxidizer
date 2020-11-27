@@ -16,7 +16,7 @@ use {
         io::Read,
         path::{Path, PathBuf},
     },
-    virtual_file_manifest::{File, FileEntry, FileManifest},
+    tugger_file_manifest::{File, FileEntry, FileManifest},
     zip::ZipArchive,
 };
 

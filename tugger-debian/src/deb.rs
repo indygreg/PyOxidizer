@@ -15,7 +15,7 @@ use {
         path::Path,
         time::SystemTime,
     },
-    virtual_file_manifest::{FileEntry, FileManifest, FileManifestError},
+    tugger_file_manifest::{FileEntry, FileManifest, FileManifestError},
 };
 
 /// Represents an error related to .deb file handling.

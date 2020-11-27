@@ -26,7 +26,7 @@ use {
         io::{Cursor, Read},
         path::{Path, PathBuf},
     },
-    virtual_file_manifest::FileData,
+    tugger_file_manifest::FileData,
 };
 
 /// Attempt to resolve the default Rust target for a build.

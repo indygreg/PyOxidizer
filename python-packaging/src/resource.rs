@@ -20,7 +20,7 @@ use {
         iter::FromIterator,
         path::{Path, PathBuf},
     },
-    virtual_file_manifest::{File, FileData},
+    tugger_file_manifest::{File, FileData},
 };
 
 /// An optimization level for Python bytecode.

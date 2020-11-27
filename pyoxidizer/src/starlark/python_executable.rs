@@ -49,7 +49,7 @@ use {
         file_resource::FileManifestValue, wix_bundle_builder::WiXBundleBuilderValue,
         wix_msi_builder::WiXMSIBuilderValue,
     },
-    virtual_file_manifest::FileData,
+    tugger_file_manifest::FileData,
 };
 
 /// Represents a builder for a Python executable.
@@ -110,7 +110,7 @@ impl PythonExecutableValue {
         fh.write_all(&build.exe_data)
             .context(format!("writing {}", dest_path.display()))?;
 
-        virtual_file_manifest::set_executable(&mut fh).context("making binary executable")?;
+        tugger_file_manifest::set_executable(&mut fh).context("making binary executable")?;
 
         Ok(ResolvedTarget {
             run_mode: RunMode::Path { path: dest_path },

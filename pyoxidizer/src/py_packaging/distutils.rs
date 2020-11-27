@@ -17,7 +17,7 @@ use {
         fs::{create_dir_all, read_dir, read_to_string},
         path::{Path, PathBuf},
     },
-    virtual_file_manifest::FileData,
+    tugger_file_manifest::FileData,
 };
 
 lazy_static! {

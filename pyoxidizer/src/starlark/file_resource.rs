@@ -31,7 +31,7 @@ use {
     },
     std::path::Path,
     tugger::starlark::file_resource::FileManifestValue,
-    virtual_file_manifest::{FileEntry, FileManifest},
+    tugger_file_manifest::{FileEntry, FileManifest},
 };
 
 #[allow(clippy::too_many_arguments)]
@@ -237,7 +237,7 @@ mod tests {
         super::*,
         python_packaging::resource::{PythonModuleSource, PythonPackageResource},
         std::path::PathBuf,
-        virtual_file_manifest::FileData,
+        tugger_file_manifest::FileData,
     };
 
     const DEFAULT_CACHE_TAG: &str = "cpython-37";

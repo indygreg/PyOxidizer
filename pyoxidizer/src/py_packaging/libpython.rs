@@ -16,7 +16,7 @@ use {
         fs::create_dir_all,
         path::{Path, PathBuf},
     },
-    virtual_file_manifest::FileData,
+    tugger_file_manifest::FileData,
 };
 
 /// Produce the content of the config.c file containing built-in extensions.

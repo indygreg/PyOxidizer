@@ -27,9 +27,9 @@ path = "../tugger-common"
 version = "0.3.0-pre"
 path = "../tugger-windows"
 
-[dependencies.virtual-file-manifest]
-version = "0.1.0-pre"
-path = "../virtual-file-manifest"
+[dependencies.tugger-file-manifest]
+version = "0.3.0-pre"
+path = "../tugger-file-manifest"
 
 [dev-dependencies]
 msi = "0.3"
