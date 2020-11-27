@@ -2173,6 +2173,7 @@ dependencies = [
  "tar",
  "tempdir",
  "tugger",
+ "tugger-binary-analysis",
  "tugger-common",
  "tugger-file-manifest",
  "tugger-windows",
@@ -3286,11 +3287,9 @@ name = "tugger"
 version = "0.3.0-pre"
 dependencies = [
  "anyhow",
- "byteorder",
  "chrono",
  "codemap",
  "codemap-diagnostic",
- "goblin",
  "lazy_static",
  "msi",
  "rpm-rs",
@@ -3304,8 +3303,18 @@ dependencies = [
  "tugger-snapcraft",
  "tugger-windows",
  "tugger-wix",
- "version-compare",
  "walkdir",
+]
+
+[[package]]
+name = "tugger-binary-analysis"
+version = "0.1.0-pre"
+dependencies = [
+ "anyhow",
+ "byteorder",
+ "goblin",
+ "lazy_static",
+ "version-compare",
 ]
 
 [[package]]

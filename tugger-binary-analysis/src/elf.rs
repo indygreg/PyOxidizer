@@ -3,7 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    crate::binary_analysis::UndefinedSymbol,
+    crate::UndefinedSymbol,
     byteorder::ReadBytesExt,
     std::{ffi::CStr, os::raw::c_char},
 };

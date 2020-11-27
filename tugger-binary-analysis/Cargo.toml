@@ -1,0 +1,17 @@
+[package]
+name = "tugger-binary-analysis"
+version = "0.1.0-pre"
+authors = ["Gregory Szorc <gregory.szorc@gmail.com>"]
+edition = "2018"
+license = "MPL-2.0"
+description = "Inspect platform binaries"
+homepage = "https://github.com/indygreg/PyOxidizer"
+repository = "https://github.com/indygreg/PyOxidizer.git"
+readme = "README.md"
+
+[dependencies]
+anyhow = "1.0"
+byteorder = "1.2"
+goblin = "0.3"
+lazy_static = "1.4"
+version-compare = "0.0"

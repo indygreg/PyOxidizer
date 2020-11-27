@@ -19,7 +19,6 @@ Rust crate and utility. It just happens to be developed alongside
 PyOxidizer.
 */
 
-pub mod binary_analysis;
 // rpm crate doesn't build on Windows. So conditionally include for now.
 #[cfg(unix)]
 pub mod rpm;

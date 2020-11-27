@@ -5,7 +5,7 @@
 //! Analyze binaries for distribution compatibility.
 
 use {
-    crate::binary_analysis::{
+    crate::{
         find_minimum_distro_version, find_undefined_elf_symbols, UndefinedSymbol,
         GCC_VERSIONS_BY_DISTRO, GLIBC_VERSIONS_BY_DISTRO, LSB_SHARED_LIBRARIES,
     },

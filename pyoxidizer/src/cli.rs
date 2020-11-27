@@ -347,7 +347,7 @@ pub fn run_cli() -> Result<()> {
         ("analyze", Some(args)) => {
             let path = args.value_of("path").unwrap();
             let path = PathBuf::from(path);
-            tugger::binary_analysis::analyze_file(path);
+            tugger_binary_analysis::analyze_file(path);
 
             Ok(())
         }

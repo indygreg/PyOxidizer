@@ -12,16 +12,13 @@ build = "build.rs"
 
 [dependencies]
 anyhow = "1.0"
-byteorder = "1.2"
 chrono = "0.4"
 codemap = "0.1"
 codemap-diagnostic = "0.1"
-goblin = "0.3"
 lazy_static = "1.4"
 slog = "2.4"
 starlark = "0.3.1"
 tar = "0.4"
-version-compare = "0.0"
 walkdir = "2"
 
 [target.'cfg(unix)'.dependencies]
