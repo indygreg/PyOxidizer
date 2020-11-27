@@ -1,19 +1,14 @@
-.. _rust_python_extension_modules:
+.. _pyembed_extension_modules:
 
 ====================================
 Adding Extension Modules At Run-Time
 ====================================
 
-Normally, PyOxidizer assembles all extension modules needed for a built
-application and the resources data embedded in the binary describes all
-extension modules.
+A Python extension module is effectively a callable function defined in
+a library somewhere.
 
-The ``pyembed`` crate also supports providing additional extension modules,
-which are defined outside of PyOxidizer configuration files. This feature
-can be useful for Rust applications that want to provide extension
-modules through their own means and don't want to use standard Python
-packaging tools (like ``setup.py``) or PyOxidizer config files for
-building them.
+The ``pyembed`` crate supports registering Python extension modules
+multiple ways.
 
 Statically Linked Extension Modules
 ===================================
@@ -38,14 +33,13 @@ Dynamically Linked Extension Modules
 ====================================
 
 If you have an extension module provided as a shared library (this is typically
-has Python extension modules work), it will be possible to load this
-extension module provided that the build configuration supports loading
-dynamically linked Python extension modules. See
-:ref:`python_extension_module_location_compatibility` for more on this
-topic.
+how Python extension modules work), it will be possible to load this
+extension module provided that the Python interpreter supports loading
+dynamically linked Python extension modules.
 
 There is not yet an explicit Rust API for loading additional dynamically
 linked extension modules. It is theoretically possible to add an entry
 to the parsed embedded resources data structure. The path of least resistance
 is likely to enable the standard filesystem importer and put your shared
-library extension module somewhere on Python's ``sys.path``.
+library extension module somewhere on Python's ``sys.path``. (This is how
+extension modules are typically loaded.)

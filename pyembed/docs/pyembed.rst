@@ -12,3 +12,4 @@ be used to import Python resources (such as module bytecode) from memory.
    :maxdepth: 2
 
    pyembed_crate_configuration
+   pyembed_extension_modules

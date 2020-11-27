@@ -216,8 +216,7 @@ implement said extension module in Rust, either as part of your application's
 Rust crate or as part of a different crate. Either way, you'll need to
 extend the boilerplate Rust project code (see :ref:`extending_rust_projects`)
 and tell it about additional *built-in* extension modules. See
-:ref:`rust_python_extension_modules` for instructions on how to do
-this.
+:ref:`pyembed_extension_modules` for instructions on how to do this.
 
 The tricky part here is implementing your Rust extension module.
 
