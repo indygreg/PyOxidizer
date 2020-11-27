@@ -8,7 +8,7 @@ Defining and manipulating binaries embedding Python.
 
 use {
     super::config::EmbeddedPythonConfig,
-    anyhow::{Context, Result},
+    anyhow::{anyhow, Context, Result},
     python_packaging::{
         policy::PythonPackagingPolicy,
         resource::{
@@ -282,9 +282,6 @@ pub struct PythonLinkingInfo {
 pub struct EmbeddedPythonPaths {
     /// Path to library containing libpython.
     pub libpython: PathBuf,
-
-    /// Path to a library containing an alternate compiled config.c file.
-    pub libpyembeddedconfig: Option<PathBuf>,
 }
 
 /// A reference to compiled resources to use in the binary.
@@ -331,6 +328,17 @@ impl<'a> EmbeddedPythonContext<'a> {
         dest_dir.as_ref().join("default_python_config.rs")
     }
 
+    /// Obtain path to a compiled library containing content of a compiled `config.c` file.
+    ///
+    /// This file contains global data structures for libpython defining extension modules.
+    pub fn python_config_library_path(&self, dest_dir: impl AsRef<Path>) -> Option<PathBuf> {
+        if let Some(filename) = &self.linking_info.libpyembeddedconfig_filename {
+            Some(dest_dir.as_ref().join(filename))
+        } else {
+            None
+        }
+    }
+
     /// Resolve the filesystem path to the file containing cargo: lines.
     ///
     /// The `cargo:` lines will enabling linking with the appropriate libpython.
@@ -356,19 +364,13 @@ impl<'a> EmbeddedPythonContext<'a> {
         let mut fh = std::fs::File::create(&libpython)?;
         fh.write_all(&self.linking_info.libpythonxy_data)?;
 
-        let libpyembeddedconfig = if let Some(data) = &self.linking_info.libpyembeddedconfig_data {
-            let path = dest_dir.join(
-                self.linking_info
-                    .libpyembeddedconfig_filename
-                    .as_ref()
-                    .unwrap(),
-            );
+        if let Some(data) = &self.linking_info.libpyembeddedconfig_data {
+            let path = self.python_config_library_path(&dest_dir).ok_or_else(|| {
+                anyhow!("embedded Python config library data defined without path")
+            })?;
             let mut fh = std::fs::File::create(&path)?;
             fh.write_all(data)?;
-            Some(path)
-        } else {
-            None
-        };
+        }
 
         let config_rs = self.interpreter_config_rs_path(&dest_dir);
         self.config.write_default_python_config_rs(
@@ -394,9 +396,6 @@ impl<'a> EmbeddedPythonContext<'a> {
         let mut fh = std::fs::File::create(self.cargo_metadata_path(&dest_dir))?;
         fh.write_all(cargo_metadata_lines.join("\n").as_bytes())?;
 
-        Ok(EmbeddedPythonPaths {
-            libpython,
-            libpyembeddedconfig,
-        })
+        Ok(EmbeddedPythonPaths { libpython })
     }
 }
