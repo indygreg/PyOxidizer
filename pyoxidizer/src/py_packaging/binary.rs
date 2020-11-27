@@ -280,9 +280,6 @@ pub struct PythonLinkingInfo {
 
 /// Holds filesystem paths to resources required to build a binary embedding Python.
 pub struct EmbeddedPythonPaths {
-    /// File containing embedded resources data.
-    pub embedded_resources: PathBuf,
-
     /// Path to library containing libpython.
     pub libpython: PathBuf,
 
@@ -373,11 +370,11 @@ impl<'a> EmbeddedPythonContext<'a> {
             None
         };
 
-        let packed_resources_path = self.packed_resources_path(dest_dir);
-
         let config_rs = self.interpreter_config_rs_path(&dest_dir);
-        self.config
-            .write_default_python_config_rs(&config_rs, Some(&packed_resources_path))?;
+        self.config.write_default_python_config_rs(
+            &config_rs,
+            Some(&self.packed_resources_path(dest_dir)),
+        )?;
 
         let mut cargo_metadata_lines = Vec::new();
         cargo_metadata_lines.extend(self.linking_info.cargo_metadata.clone());
@@ -398,7 +395,6 @@ impl<'a> EmbeddedPythonContext<'a> {
         fh.write_all(cargo_metadata_lines.join("\n").as_bytes())?;
 
         Ok(EmbeddedPythonPaths {
-            embedded_resources: packed_resources_path,
             libpython,
             libpyembeddedconfig,
         })
