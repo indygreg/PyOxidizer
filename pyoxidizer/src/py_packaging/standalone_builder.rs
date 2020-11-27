@@ -36,7 +36,6 @@ use {
     slog::warn,
     std::{
         collections::{BTreeMap, BTreeSet, HashMap},
-        io::Write,
         path::{Path, PathBuf},
         sync::Arc,
     },
@@ -761,13 +760,6 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
             )?;
         }
 
-        let mut module_names = Vec::new();
-
-        for name in compiled_resources.resources.keys() {
-            module_names.write_all(name.as_bytes())?;
-            module_names.write_all(b"\n")?;
-        }
-
         let linking_info = self.resolve_python_linking_info(logger, opt_level)?;
 
         if self.link_mode == LibpythonLinkMode::Dynamic {
@@ -799,7 +791,6 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         Ok(EmbeddedPythonContext {
             config: self.config.clone(),
             linking_info,
-            module_names,
             resources: EmbeddedResources::Collection(compiled_resources),
             extra_files,
             host_triple: self.host_triple.clone(),

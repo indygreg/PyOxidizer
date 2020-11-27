@@ -38,6 +38,8 @@ Backwards Compatibility Notes
   the use of procedural macros.
 * The ``pyembed::MainPythonInterpreter::run_as_main()`` method has been renamed
   to ``py_runmain()`` to reflect that it always calls ``Py_RunMain()``.
+* The ``py-module-names`` file is no longer written as part of the files
+  comprising an embedded Python interpreter.
 
 Bug Fixes
 ^^^^^^^^^

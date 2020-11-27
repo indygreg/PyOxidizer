@@ -280,9 +280,6 @@ pub struct PythonLinkingInfo {
 
 /// Holds filesystem paths to resources required to build a binary embedding Python.
 pub struct EmbeddedPythonPaths {
-    /// File containing a list of module names.
-    pub module_names: PathBuf,
-
     /// File containing embedded resources data.
     pub embedded_resources: PathBuf,
 
@@ -316,9 +313,6 @@ pub struct EmbeddedPythonContext<'a> {
     /// Information on how to link against Python.
     pub linking_info: PythonLinkingInfo,
 
-    /// Newline delimited list of module names in resources.
-    pub module_names: Vec<u8>,
-
     /// Python resources to embed in the binary.
     pub resources: EmbeddedResources<'a>,
 
@@ -343,10 +337,6 @@ impl<'a> EmbeddedPythonContext<'a> {
 
     /// Write out files needed to link a binary.
     pub fn write_files(&self, dest_dir: &Path) -> Result<EmbeddedPythonPaths> {
-        let module_names = dest_dir.join("py-module-names");
-        let mut fh = std::fs::File::create(&module_names)?;
-        fh.write_all(&self.module_names)?;
-
         match &self.resources {
             EmbeddedResources::Collection(collection) => {
                 let mut writer = std::io::BufWriter::new(std::fs::File::create(
@@ -403,7 +393,6 @@ impl<'a> EmbeddedPythonContext<'a> {
         fh.write_all(cargo_metadata_lines.join("\n").as_bytes())?;
 
         Ok(EmbeddedPythonPaths {
-            module_names,
             embedded_resources: packed_resources_path,
             libpython,
             libpyembeddedconfig,
