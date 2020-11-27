@@ -3,10 +3,6 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    crate::{
-        http::{download_to_path, RemoteContent},
-        zipfile::extract_zip,
-    },
     anyhow::{anyhow, Context, Result},
     duct::cmd,
     lazy_static::lazy_static,
@@ -15,6 +11,10 @@ use {
         ffi::OsStr,
         io::{BufRead, BufReader, Write},
         path::{Path, PathBuf},
+    },
+    tugger_common::{
+        http::{download_to_path, RemoteContent},
+        zipfile::extract_zip,
     },
     uuid::Uuid,
     virtual_file_manifest::FileManifest,

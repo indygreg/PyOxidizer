@@ -21,12 +21,9 @@ PyOxidizer.
 
 pub mod binary_analysis;
 pub mod glob;
-pub mod http;
 // rpm crate doesn't build on Windows. So conditionally include for now.
 #[cfg(unix)]
 pub mod rpm;
 pub mod snapcraft;
 pub mod starlark;
 pub mod tarball;
-pub mod wix;
-pub mod zipfile;

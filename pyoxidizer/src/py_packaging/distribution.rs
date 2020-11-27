@@ -31,7 +31,7 @@ use {
         path::{Path, PathBuf},
         sync::{Arc, Mutex},
     },
-    tugger::http::get_http_client,
+    tugger_common::http::get_http_client,
     url::Url,
     uuid::Uuid,
     virtual_file_manifest::FileData,

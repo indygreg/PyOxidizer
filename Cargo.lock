@@ -2173,6 +2173,7 @@ dependencies = [
  "tar",
  "tempdir",
  "tugger",
+ "tugger-common",
  "tugger-windows",
  "url",
  "uuid",
@@ -3290,17 +3291,13 @@ dependencies = [
  "codemap",
  "codemap-diagnostic",
  "duct",
- "fs2",
  "glob",
  "goblin",
- "hex",
  "lazy_static",
  "msi",
- "reqwest",
  "rpm-rs",
  "serde",
  "serde_yaml",
- "sha2 0.9.2",
  "slog",
  "starlark",
  "starlark-dialect-build-targets",
@@ -3308,13 +3305,10 @@ dependencies = [
  "tempdir",
  "tugger-common",
  "tugger-windows",
- "url",
- "uuid",
+ "tugger-wix",
  "version-compare",
  "virtual-file-manifest",
  "walkdir",
- "xml-rs",
- "zip",
 ]
 
 [[package]]
@@ -3322,9 +3316,15 @@ name = "tugger-common"
 version = "0.3.0-pre"
 dependencies = [
  "anyhow",
+ "fs2",
+ "hex",
  "lazy_static",
+ "reqwest",
+ "sha2 0.9.2",
  "slog",
  "tempdir",
+ "url",
+ "zip",
 ]
 
 [[package]]
@@ -3362,6 +3362,24 @@ dependencies = [
  "winapi 0.3.9",
  "x509-parser",
  "yasna",
+]
+
+[[package]]
+name = "tugger-wix"
+version = "0.3.0-pre"
+dependencies = [
+ "anyhow",
+ "duct",
+ "lazy_static",
+ "msi",
+ "slog",
+ "tempdir",
+ "tugger-common",
+ "tugger-windows",
+ "url",
+ "uuid",
+ "virtual-file-manifest",
+ "xml-rs",
 ]
 
 [[package]]

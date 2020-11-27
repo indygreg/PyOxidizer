@@ -3,7 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    crate::wix::ChainElement,
+    crate::ChainElement,
     anyhow::Result,
     std::{borrow::Cow, io::Write},
     xml::writer::{EventWriter, XmlEvent},

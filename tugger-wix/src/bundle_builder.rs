@@ -4,15 +4,13 @@
 
 use {
     crate::{
-        http::download_to_path,
-        wix::{
-            common::{VC_REDIST_ARM64, VC_REDIST_X64, VC_REDIST_X86},
-            *,
-        },
+        common::{VC_REDIST_ARM64, VC_REDIST_X64, VC_REDIST_X86},
+        *,
     },
     anyhow::{anyhow, Context, Result},
     slog::warn,
     std::{borrow::Cow, collections::BTreeMap, io::Write, ops::Deref, path::Path},
+    tugger_common::http::download_to_path,
     tugger_windows::VCRedistributablePlatform,
     uuid::Uuid,
     xml::{common::XmlVersion, writer::XmlEvent, EmitterConfig, EventWriter},
@@ -251,7 +249,7 @@ impl<'a> WiXBundleInstallerBuilder<'a> {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, crate::wix::WiXBundleInstallerBuilder, tugger_common::testutil::*};
+    use {super::*, crate::WiXBundleInstallerBuilder, tugger_common::testutil::*};
 
     #[test]
     fn test_add_vc_redistributable() -> Result<()> {

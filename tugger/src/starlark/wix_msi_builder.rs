@@ -3,7 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    crate::{starlark::file_resource::FileManifestValue, wix::WiXSimpleMSIBuilder},
+    crate::starlark::file_resource::FileManifestValue,
     anyhow::Result,
     starlark::{
         environment::TypeValues,
@@ -24,6 +24,7 @@ use {
     },
     std::convert::TryFrom,
     tugger_windows::VCRedistributablePlatform,
+    tugger_wix::WiXSimpleMSIBuilder,
 };
 
 #[derive(Clone)]

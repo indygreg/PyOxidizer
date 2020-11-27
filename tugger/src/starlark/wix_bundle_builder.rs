@@ -3,10 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    crate::{
-        starlark::wix_msi_builder::WiXMSIBuilderValue,
-        wix::{MSIPackage, WiXBundleInstallerBuilder},
-    },
+    crate::starlark::wix_msi_builder::WiXMSIBuilderValue,
     starlark::{
         environment::TypeValues,
         values::{
@@ -24,6 +21,7 @@ use {
     },
     std::convert::TryFrom,
     tugger_windows::VCRedistributablePlatform,
+    tugger_wix::{MSIPackage, WiXBundleInstallerBuilder},
 };
 
 #[derive(Clone)]

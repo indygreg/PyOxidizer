@@ -2,7 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use {crate::wix::*, anyhow::Result, std::io::Write, xml::EventWriter};
+use {crate::*, anyhow::Result, std::io::Write, xml::EventWriter};
 
 /// Represents a child of the `<Chain>` WiX XML element.
 #[derive(Clone, Debug)]

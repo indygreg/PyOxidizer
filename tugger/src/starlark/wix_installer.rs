@@ -3,10 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    crate::{
-        starlark::{file_resource::FileManifestValue, wix_msi_builder::WiXMSIBuilderValue},
-        wix::{WiXInstallerBuilder, WiXSimpleMSIBuilder, WxsBuilder},
-    },
+    crate::starlark::{file_resource::FileManifestValue, wix_msi_builder::WiXMSIBuilderValue},
     anyhow::Result,
     starlark::{
         environment::TypeValues,
@@ -25,6 +22,7 @@ use {
         ResolvedTargetValue, RunMode,
     },
     std::{convert::TryFrom, path::Path},
+    tugger_wix::{WiXInstallerBuilder, WiXSimpleMSIBuilder, WxsBuilder},
     virtual_file_manifest::FileEntry,
 };
 
