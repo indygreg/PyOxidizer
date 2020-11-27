@@ -5,3 +5,4 @@ The ``pyembed`` Rust Crate
    :maxdepth: 2
 
    oxidized_importer
+   pyembed

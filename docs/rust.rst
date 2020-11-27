@@ -21,7 +21,6 @@ can be leveraged to build more advanced applications embedding Python.
 
    rust_cargo_source_checkouts
    rust_projects
-   rust_crate_configuration
    rust_rust_code
    rust_python_extension_modules
    rust_porting

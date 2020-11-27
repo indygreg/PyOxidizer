@@ -33,6 +33,7 @@ The creator and maintainer of ``PyOxidizer`` is
    pyoxidizer_distributing
    oxidized_importer
    packed_resources
+   pyembed
    rust
    tugger
    faq
