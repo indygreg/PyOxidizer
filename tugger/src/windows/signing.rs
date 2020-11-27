@@ -4,7 +4,11 @@
 
 /*! Functionality for signing binaries on Windows. */
 
-use std::path::{Path, PathBuf};
+use {
+    anyhow::{anyhow, Result},
+    chrono::SubsecRound,
+    std::path::{Path, PathBuf},
+};
 
 /// Represents an x509 signing certificate backed by a file.
 #[derive(Clone, Debug)]
@@ -80,6 +84,11 @@ pub fn create_self_signed_code_signing_certificate_params(
         .extended_key_usages
         .push(rcgen::ExtendedKeyUsagePurpose::CodeSigning);
     params.is_ca = rcgen::IsCa::Ca(rcgen::BasicConstraints::Unconstrained);
+    // The default is thousands of years in the future. Let's use something more reasonable.
+    params.not_after = chrono::Utc::now()
+        .checked_add_signed(chrono::Duration::days(365))
+        .unwrap()
+        .trunc_subsecs(0);
 
     // KeyUsage(KeyUsage { flags: 1 })
     let mut key_usage =
@@ -96,6 +105,27 @@ pub fn create_self_signed_code_signing_certificate(
     let params = create_self_signed_code_signing_certificate_params(subject_name);
 
     rcgen::Certificate::from_params(params)
+}
+
+/// Serialize a certificate to a PKCS #12 `.pfx` file.
+///
+/// This file format is what is used by `signtool` and other Microsoft tools.
+pub fn certificate_to_pfx(
+    cert: &rcgen::Certificate,
+    password: &str,
+    name: &str,
+) -> Result<Vec<u8>> {
+    let cert_der = cert.serialize_der()?;
+    let key_der = cert.serialize_private_key_der();
+
+    let pfx = p12::PFX::new(&cert_der, &key_der, None, password, name)
+        .ok_or_else(|| anyhow!("unable to convert to pfx"))?;
+
+    let buffer = yasna::construct_der(|writer| {
+        pfx.write(writer);
+    });
+
+    Ok(buffer)
 }
 
 #[cfg(test)]
@@ -208,6 +238,14 @@ mod tests {
             }));
 
         assert_eq!(generated_filtered, powershell_filtered, "extensions match");
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_serialize_pfx() -> Result<()> {
+        let cert = create_self_signed_code_signing_certificate("someone@example.com")?;
+        certificate_to_pfx(&cert, "password", "name")?;
 
         Ok(())
     }

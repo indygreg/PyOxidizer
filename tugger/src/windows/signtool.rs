@@ -217,7 +217,16 @@ impl SigntoolSign {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use {
+        super::*,
+        crate::{
+            testutil::*,
+            windows::{
+                certificate_to_pfx, create_self_signed_code_signing_certificate,
+                FileBasedX509SigningCertificate,
+            },
+        },
+    };
 
     #[test]
     fn test_find_signtool() -> Result<()> {
@@ -229,6 +238,42 @@ mod tests {
         } else {
             assert!(res.is_err());
         }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_sign_executable() -> Result<()> {
+        if cfg!(target_family = "unix") {
+            eprintln!("skipping test because only works on Windows");
+            return Ok(());
+        }
+
+        let logger = get_logger()?;
+        let temp_path = DEFAULT_TEMP_DIR.path().join("test_sign_executable");
+        std::fs::create_dir(&temp_path)?;
+
+        let cert = create_self_signed_code_signing_certificate("tugger@example.com")?;
+        let pfx_data = certificate_to_pfx(&cert, "some_password", "cert_name")?;
+
+        let key_path = temp_path.join("signing.pfx");
+        std::fs::write(&key_path, &pfx_data)?;
+
+        // We sign the current test executable because why not.
+        let sign_path = temp_path.join("test.exe");
+        let current_exe = std::env::current_exe()?;
+        std::fs::copy(&current_exe, &sign_path)?;
+
+        let mut c = FileBasedX509SigningCertificate::new(&key_path);
+        c.set_password("some_password");
+
+        SigntoolSign::new(c.into())
+            .verbose()
+            .debug()
+            .description("tugger test executable")
+            .file_digest_algorithm("sha256")
+            .sign_file(&sign_path)
+            .run(&logger)?;
 
         Ok(())
     }
