@@ -5,6 +5,7 @@ authors = ["Gregory Szorc <gregory.szorc@gmail.com>"]
 edition = "2018"
 license = "MPL-2.0"
 description = "Interfaces to the WiX Toolset to produce Windows installers"
+keywords = ["package", "tugger", "windows", "wix", "wix-toolset"]
 homepage = "https://github.com/indygreg/PyOxidizer"
 repository = "https://github.com/indygreg/PyOxidizer.git"
 readme = "README.md"
