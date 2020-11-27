@@ -3289,13 +3289,13 @@ dependencies = [
  "anyhow",
  "codemap",
  "codemap-diagnostic",
- "rpm-rs",
  "slog",
  "starlark",
  "starlark-dialect-build-targets",
  "tar",
  "tugger-common",
  "tugger-file-manifest",
+ "tugger-rpm",
  "tugger-snapcraft",
  "tugger-windows",
  "tugger-wix",
@@ -3350,6 +3350,15 @@ dependencies = [
 [[package]]
 name = "tugger-file-manifest"
 version = "0.1.0-pre"
+
+[[package]]
+name = "tugger-rpm"
+version = "0.1.0-pre"
+dependencies = [
+ "anyhow",
+ "rpm-rs",
+ "tugger-file-manifest",
+]
 
 [[package]]
 name = "tugger-snapcraft"

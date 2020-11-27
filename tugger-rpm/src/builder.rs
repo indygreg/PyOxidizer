@@ -4,10 +4,12 @@
 
 use {
     anyhow::{anyhow, Context, Result},
-    rpm::{RPMFileOptions, RPMPackage},
     std::path::{Path, PathBuf},
     tugger_file_manifest::FileManifest,
 };
+
+#[cfg(target_family = "unix")]
+use rpm::{RPMFileOptions, RPMPackage};
 
 /// Create RPMs.
 ///

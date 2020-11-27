@@ -19,8 +19,5 @@ Rust crate and utility. It just happens to be developed alongside
 PyOxidizer.
 */
 
-// rpm crate doesn't build on Windows. So conditionally include for now.
-#[cfg(unix)]
-pub mod rpm;
 pub mod starlark;
 pub mod tarball;

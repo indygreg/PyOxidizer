@@ -19,10 +19,6 @@ starlark = "0.3.1"
 tar = "0.4"
 walkdir = "2"
 
-[target.'cfg(unix)'.dependencies]
-# Create doesn't build on Windows. https://github.com/Richterrettich/rpm-rs/pull/30 fixes.
-rpm-rs = "0.6"
-
 [dependencies.starlark-dialect-build-targets]
 version = "0.2.0-pre"
 path = "../starlark-dialect-build-targets"
@@ -30,6 +26,10 @@ path = "../starlark-dialect-build-targets"
 [dependencies.tugger-common]
 version = "0.1.0-pre"
 path = "../tugger-common"
+
+[target.'cfg(target_family = "unix")'.dependencies.tugger-rpm]
+version = "0.1.0-pre"
+path = "../tugger-rpm"
 
 [dependencies.tugger-snapcraft]
 version = "0.1.0-pre"

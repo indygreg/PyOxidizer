@@ -1,0 +1,21 @@
+[package]
+name = "tugger-rpm"
+version = "0.1.0-pre"
+authors = ["Gregory Szorc <gregory.szorc@gmail.com>"]
+edition = "2018"
+license = "MPL-2.0"
+description = "RPM packaging primitives"
+homepage = "https://github.com/indygreg/PyOxidizer"
+repository = "https://github.com/indygreg/PyOxidizer.git"
+readme = "README.md"
+
+[dependencies]
+anyhow = "1.0"
+
+[dependencies.tugger-file-manifest]
+version = "0.1.0-pre"
+path = "../tugger-file-manifest"
+
+[target.'cfg(target_family = "unix")'.dependencies]
+# Crate doesn't build on Windows. https://github.com/Richterrettich/rpm-rs/pull/30 fixes.
+rpm-rs = "0.6"
