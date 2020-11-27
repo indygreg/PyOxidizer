@@ -278,12 +278,6 @@ pub struct PythonLinkingInfo {
     pub cargo_metadata: Vec<String>,
 }
 
-/// Holds filesystem paths to resources required to build a binary embedding Python.
-pub struct EmbeddedPythonPaths {
-    /// Path to library containing libpython.
-    pub libpython: PathBuf,
-}
-
 /// A reference to compiled resources to use in the binary.
 pub enum EmbeddedResources<'a> {
     /// Use resources in a given compiled resources collection instance.
@@ -339,6 +333,13 @@ impl<'a> EmbeddedPythonContext<'a> {
         }
     }
 
+    /// Resolve path to library containing libpython.
+    pub fn libpython_path(&self, dest_dir: impl AsRef<Path>) -> PathBuf {
+        dest_dir
+            .as_ref()
+            .join(&self.linking_info.libpythonxy_filename)
+    }
+
     /// Resolve the filesystem path to the file containing cargo: lines.
     ///
     /// The `cargo:` lines will enabling linking with the appropriate libpython.
@@ -347,7 +348,7 @@ impl<'a> EmbeddedPythonContext<'a> {
     }
 
     /// Write out files needed to link a binary.
-    pub fn write_files(&self, dest_dir: &Path) -> Result<EmbeddedPythonPaths> {
+    pub fn write_files(&self, dest_dir: &Path) -> Result<()> {
         match &self.resources {
             EmbeddedResources::Collection(collection) => {
                 let mut writer = std::io::BufWriter::new(std::fs::File::create(
@@ -360,8 +361,7 @@ impl<'a> EmbeddedPythonContext<'a> {
             EmbeddedResources::Path(_) => {}
         }
 
-        let libpython = dest_dir.join(&self.linking_info.libpythonxy_filename);
-        let mut fh = std::fs::File::create(&libpython)?;
+        let mut fh = std::fs::File::create(self.libpython_path(&dest_dir))?;
         fh.write_all(&self.linking_info.libpythonxy_data)?;
 
         if let Some(data) = &self.linking_info.libpyembeddedconfig_data {
@@ -396,6 +396,6 @@ impl<'a> EmbeddedPythonContext<'a> {
         let mut fh = std::fs::File::create(self.cargo_metadata_path(&dest_dir))?;
         fh.write_all(cargo_metadata_lines.join("\n").as_bytes())?;
 
-        Ok(EmbeddedPythonPaths { libpython })
+        Ok(())
     }
 }
