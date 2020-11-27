@@ -369,8 +369,8 @@ impl<'a> EmbeddedPythonContext<'a> {
         lines
     }
 
-    /// Write out files needed to link a binary.
-    pub fn write_files(&self, dest_dir: &Path) -> Result<()> {
+    /// Ensure the packed resources file is written.
+    pub fn write_packed_resources(&self, dest_dir: impl AsRef<Path>) -> Result<()> {
         match &self.resources {
             EmbeddedResources::Collection(collection) => {
                 let mut writer = std::io::BufWriter::new(std::fs::File::create(
@@ -383,6 +383,11 @@ impl<'a> EmbeddedPythonContext<'a> {
             EmbeddedResources::Path(_) => {}
         }
 
+        Ok(())
+    }
+
+    /// Ensure files required by libpython are written.
+    pub fn write_libpython(&self, dest_dir: impl AsRef<Path>) -> Result<()> {
         let mut fh = std::fs::File::create(self.libpython_path(&dest_dir))?;
         fh.write_all(&self.linking_info.libpythonxy_data)?;
 
@@ -394,13 +399,37 @@ impl<'a> EmbeddedPythonContext<'a> {
             fh.write_all(data)?;
         }
 
+        Ok(())
+    }
+
+    /// Write the file containing the default interpreter configuration Rust struct.
+    pub fn write_interpreter_config_rs(&self, dest_dir: impl AsRef<Path>) -> Result<()> {
         self.config.write_default_python_config_rs(
             self.interpreter_config_rs_path(&dest_dir),
             Some(&self.packed_resources_path(dest_dir)),
         )?;
 
+        Ok(())
+    }
+
+    /// Write file containing cargo metadata lines.
+    pub fn write_cargo_metadata(&self, dest_dir: impl AsRef<Path>) -> Result<()> {
         let mut fh = std::fs::File::create(self.cargo_metadata_path(&dest_dir))?;
         fh.write_all(self.cargo_metadata_lines(dest_dir).join("\n").as_bytes())?;
+
+        Ok(())
+    }
+
+    /// Write out files needed to build a binary against our configuration.
+    pub fn write_files(&self, dest_dir: &Path) -> Result<()> {
+        self.write_packed_resources(&dest_dir)
+            .context("writing packed resources")?;
+        self.write_libpython(&dest_dir)
+            .context("writing libpython")?;
+        self.write_interpreter_config_rs(&dest_dir)
+            .context("writing interpreter config Rust source")?;
+        self.write_cargo_metadata(&dest_dir)
+            .context("writing cargo metadata file")?;
 
         Ok(())
     }
