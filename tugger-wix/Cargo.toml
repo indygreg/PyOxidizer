@@ -1,6 +1,6 @@
 [package]
 name = "tugger-wix"
-version = "0.3.0-pre"
+version = "0.1.0-pre"
 authors = ["Gregory Szorc <gregory.szorc@gmail.com>"]
 edition = "2018"
 license = "MPL-2.0"
@@ -20,15 +20,15 @@ uuid = { version = "0.8", features = ["v4", "v5"] }
 xml-rs = "0.8"
 
 [dependencies.tugger-common]
-version = "0.3.0-pre"
+version = "0.1.0-pre"
 path = "../tugger-common"
 
 [dependencies.tugger-windows]
-version = "0.3.0-pre"
+version = "0.1.0-pre"
 path = "../tugger-windows"
 
 [dependencies.tugger-file-manifest]
-version = "0.3.0-pre"
+version = "0.1.0-pre"
 path = "../tugger-file-manifest"
 
 [dev-dependencies]

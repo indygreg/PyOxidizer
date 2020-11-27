@@ -1,6 +1,6 @@
 [package]
 name = "tugger-windows"
-version = "0.3.0-pre"
+version = "0.1.0-pre"
 authors = ["Gregory Szorc <gregory.szorc@gmail.com>"]
 edition = "2018"
 license = "MPL-2.0"
@@ -25,7 +25,7 @@ find-winsdk = "0.2"
 winapi = { version = "0.3", features = ["combaseapi", "knownfolders", "shlobj", "shtypes"] }
 
 [dependencies.tugger-common]
-version = "0.3.0-pre"
+version = "0.1.0-pre"
 path = "../tugger-common"
 
 [dev-dependencies]

@@ -34,7 +34,7 @@ path = "../python-packaging"
 default-features = false
 
 [dependencies.tugger-file-manifest]
-version = "0.3.0-pre"
+version = "0.1.0-pre"
 path = "../tugger-file-manifest"
 
 [target.'cfg(windows)'.dependencies]

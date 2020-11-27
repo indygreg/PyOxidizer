@@ -3313,7 +3313,7 @@ dependencies = [
 
 [[package]]
 name = "tugger-common"
-version = "0.3.0-pre"
+version = "0.1.0-pre"
 dependencies = [
  "anyhow",
  "fs2",
@@ -3329,7 +3329,7 @@ dependencies = [
 
 [[package]]
 name = "tugger-debian"
-version = "0.3.0-pre"
+version = "0.1.0-pre"
 dependencies = [
  "anyhow",
  "ar",
@@ -3346,11 +3346,11 @@ dependencies = [
 
 [[package]]
 name = "tugger-file-manifest"
-version = "0.3.0-pre"
+version = "0.1.0-pre"
 
 [[package]]
 name = "tugger-windows"
-version = "0.3.0-pre"
+version = "0.1.0-pre"
 dependencies = [
  "anyhow",
  "chrono",
@@ -3370,7 +3370,7 @@ dependencies = [
 
 [[package]]
 name = "tugger-wix"
-version = "0.3.0-pre"
+version = "0.1.0-pre"
 dependencies = [
  "anyhow",
  "duct",
