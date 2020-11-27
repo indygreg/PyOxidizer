@@ -3287,17 +3287,13 @@ name = "tugger"
 version = "0.3.0-pre"
 dependencies = [
  "anyhow",
- "chrono",
  "codemap",
  "codemap-diagnostic",
- "lazy_static",
- "msi",
  "rpm-rs",
  "slog",
  "starlark",
  "starlark-dialect-build-targets",
  "tar",
- "tempdir",
  "tugger-common",
  "tugger-file-manifest",
  "tugger-snapcraft",

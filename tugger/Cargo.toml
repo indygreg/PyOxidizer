@@ -12,10 +12,8 @@ build = "build.rs"
 
 [dependencies]
 anyhow = "1.0"
-chrono = "0.4"
 codemap = "0.1"
 codemap-diagnostic = "0.1"
-lazy_static = "1.4"
 slog = "2.4"
 starlark = "0.3.1"
 tar = "0.4"
@@ -48,8 +46,3 @@ path = "../tugger-wix"
 [dependencies.tugger-file-manifest]
 version = "0.1.0-pre"
 path = "../tugger-file-manifest"
-
-[dev-dependencies]
-msi = "0.3"
-tempdir = "0.3"
-
