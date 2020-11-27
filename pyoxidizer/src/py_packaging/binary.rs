@@ -288,9 +288,6 @@ pub struct EmbeddedPythonPaths {
 
     /// Path to a library containing an alternate compiled config.c file.
     pub libpyembeddedconfig: Option<PathBuf>,
-
-    /// Path to a file containing lines needed to be emitted by a Cargo build script.
-    pub cargo_metadata: PathBuf,
 }
 
 /// A reference to compiled resources to use in the binary.
@@ -335,6 +332,13 @@ impl<'a> EmbeddedPythonContext<'a> {
     /// Obtain the filesystem of the generated Rust source file containing the interpreter configuration.
     pub fn interpreter_config_rs_path(&self, dest_dir: impl AsRef<Path>) -> PathBuf {
         dest_dir.as_ref().join("default_python_config.rs")
+    }
+
+    /// Resolve the filesystem path to the file containing cargo: lines.
+    ///
+    /// The `cargo:` lines will enabling linking with the appropriate libpython.
+    pub fn cargo_metadata_path(&self, dest_dir: impl AsRef<Path>) -> PathBuf {
+        dest_dir.as_ref().join("cargo_metadata.txt")
     }
 
     /// Write out files needed to link a binary.
@@ -390,15 +394,13 @@ impl<'a> EmbeddedPythonContext<'a> {
             config_rs.display()
         ));
 
-        let cargo_metadata = dest_dir.join("cargo_metadata.txt");
-        let mut fh = std::fs::File::create(&cargo_metadata)?;
+        let mut fh = std::fs::File::create(self.cargo_metadata_path(&dest_dir))?;
         fh.write_all(cargo_metadata_lines.join("\n").as_bytes())?;
 
         Ok(EmbeddedPythonPaths {
             embedded_resources: packed_resources_path,
             libpython,
             libpyembeddedconfig,
-            cargo_metadata,
         })
     }
 }
