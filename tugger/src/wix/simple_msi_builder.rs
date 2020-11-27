@@ -551,6 +551,12 @@ impl WiXSimpleMSIBuilder {
 mod tests {
     use {super::*, crate::testutil::*, virtual_file_manifest::FileEntry};
 
+    #[cfg(target_family = "windows")]
+    use crate::windows::{
+        certificate_to_pfx, create_self_signed_code_signing_certificate,
+        FileBasedX509SigningCertificate, SigntoolSign,
+    };
+
     #[test]
     fn test_simple_msi_builder() -> Result<()> {
         let mut builder = WiXSimpleMSIBuilder::new("prefix", "myapp", "0.1", "author");
@@ -574,7 +580,7 @@ mod tests {
         Ok(())
     }
 
-    #[cfg(windows)]
+    #[cfg(target_family = "windows")]
     #[test]
     fn test_simple_msi_builder_build() -> Result<()> {
         let temp_dir = tempdir::TempDir::new("tugger-test")?;
@@ -604,6 +610,22 @@ mod tests {
 
         let summary_info = package.summary_info();
         assert_eq!(summary_info.subject(), Some("testapp"));
+
+        // Also try signing it.
+        let cert = create_self_signed_code_signing_certificate("tugger@example.com")?;
+        let pfx_data = certificate_to_pfx(&cert, "password", "name")?;
+        let key_path = temp_dir.path().join("test_msi_key.pfx");
+        std::fs::write(&key_path, &pfx_data)?;
+
+        let mut c = FileBasedX509SigningCertificate::new(&key_path);
+        c.set_password("password");
+
+        SigntoolSign::new(c.into())
+            .verbose()
+            .debug()
+            .description("simple msi installer")
+            .sign_file(&output_path)
+            .run(&logger)?;
 
         Ok(())
     }
