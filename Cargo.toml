@@ -10,6 +10,7 @@ members = [
     'tugger-common',
     'tugger-debian',
     'tugger-file-manifest',
+    'tugger-snapcraft',
     'tugger-windows',
     'tugger-wix',
     'tugger',

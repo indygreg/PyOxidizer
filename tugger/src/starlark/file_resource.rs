@@ -3,7 +3,6 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    crate::glob::evaluate_glob,
     slog::warn,
     starlark::{
         environment::TypeValues,
@@ -26,6 +25,7 @@ use {
         convert::TryFrom,
         path::{Path, PathBuf},
     },
+    tugger_common::glob::evaluate_glob,
     tugger_file_manifest::{FileEntry, FileManifest},
 };
 

@@ -3,14 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    crate::{
-        snapcraft::{
-            Adapter, Architecture, Architectures, BuildAttribute, Confinement, Daemon, Grade,
-            RestartCondition, SnapApp, SnapPart, Snapcraft, SnapcraftBuilder, SnapcraftInvocation,
-            SourceType, Type,
-        },
-        starlark::file_resource::FileManifestValue,
-    },
+    crate::starlark::file_resource::FileManifestValue,
     starlark::{
         environment::TypeValues,
         values::{
@@ -28,6 +21,11 @@ use {
         ResolvedTargetValue, RunMode, ToOptional, TryToOptional,
     },
     std::{borrow::Cow, collections::HashMap, convert::TryFrom},
+    tugger_snapcraft::{
+        Adapter, Architecture, Architectures, BuildAttribute, Confinement, Daemon, Grade,
+        RestartCondition, SnapApp, SnapPart, Snapcraft, SnapcraftBuilder, SnapcraftInvocation,
+        SourceType, Type,
+    },
 };
 
 fn optional_str_vec_to_vec(value: Value) -> Result<Vec<Cow<'static, str>>, ValueError> {
@@ -64,180 +62,166 @@ fn optional_vec_str_hashmap_to_vec(value: Value) -> Result<VecOfStrHashMap, Valu
     }
 }
 
-impl TryToOptional<Adapter> for Value {
-    fn try_to_optional(&self) -> Result<Option<Adapter>, ValueError> {
-        if self.get_type() == "NoneType" {
-            Ok(None)
-        } else {
-            Ok(Some(Adapter::try_from(self.to_string().as_str()).map_err(
-                |e| {
-                    ValueError::from(RuntimeError {
-                        code: "TUGGER_SNAPCRAFT",
-                        message: e.to_string(),
-                        label: "adapter".to_string(),
-                    })
-                },
-            )?))
-        }
+fn value_to_optional_adapter(value: Value) -> Result<Option<Adapter>, ValueError> {
+    if value.get_type() == "NoneType" {
+        Ok(None)
+    } else {
+        Ok(Some(
+            Adapter::try_from(value.to_string().as_str()).map_err(|e| {
+                ValueError::from(RuntimeError {
+                    code: "TUGGER_SNAPCRAFT",
+                    message: e.to_string(),
+                    label: "adapter".to_string(),
+                })
+            })?,
+        ))
     }
 }
 
-impl TryToOptional<Architectures> for Value {
-    fn try_to_optional(&self) -> Result<Option<Architectures>, ValueError> {
-        match self.get_type() {
-            "NoneType" => Ok(None),
-            "dict" => {
-                let build_on_value = self.at(Value::from("build_on"))?;
-                let run_on_value = self.at(Value::from("run_on"))?;
+fn value_to_optional_architectures(value: Value) -> Result<Option<Architectures>, ValueError> {
+    match value.get_type() {
+        "NoneType" => Ok(None),
+        "dict" => {
+            let build_on_value = value.at(Value::from("build_on"))?;
+            let run_on_value = value.at(Value::from("run_on"))?;
 
-                let build_on_strings: Option<Vec<String>> = build_on_value.try_to_optional()?;
-                let run_on_strings: Option<Vec<String>> = run_on_value.try_to_optional()?;
+            let build_on_strings: Option<Vec<String>> = build_on_value.try_to_optional()?;
+            let run_on_strings: Option<Vec<String>> = run_on_value.try_to_optional()?;
 
-                let mut build_on_arches = Vec::new();
-                if let Some(arches) = build_on_strings {
-                    for v in arches {
-                        build_on_arches.push(Architecture::try_from(v.as_str()).map_err(|e| {
-                            ValueError::from(RuntimeError {
-                                code: "TUGGER_SNAPCRAFT",
-                                message: format!("error parsing architecture string: {}", e),
-                                label: "architectures".to_string(),
-                            })
-                        })?);
-                    }
+            let mut build_on_arches = Vec::new();
+            if let Some(arches) = build_on_strings {
+                for v in arches {
+                    build_on_arches.push(Architecture::try_from(v.as_str()).map_err(|e| {
+                        ValueError::from(RuntimeError {
+                            code: "TUGGER_SNAPCRAFT",
+                            message: format!("error parsing architecture string: {}", e),
+                            label: "architectures".to_string(),
+                        })
+                    })?);
                 }
-
-                let mut run_on_arches = Vec::new();
-                if let Some(arches) = run_on_strings {
-                    for v in arches {
-                        run_on_arches.push(Architecture::try_from(v.as_str()).map_err(|e| {
-                            ValueError::from(RuntimeError {
-                                code: "TUGGER_SNAPCRAFT",
-                                message: format!("error parsing architecture string: {}", e),
-                                label: "architectures".to_string(),
-                            })
-                        })?);
-                    }
-                }
-
-                Ok(Some(Architectures {
-                    build_on: build_on_arches,
-                    run_on: run_on_arches,
-                }))
             }
-            t => Err(ValueError::from(RuntimeError {
-                code: "TUGGER_SNAPCRAFT",
-                message: format!("architectures value must be None or dict; got {}", t),
-                label: "architectures".to_string(),
-            })),
+
+            let mut run_on_arches = Vec::new();
+            if let Some(arches) = run_on_strings {
+                for v in arches {
+                    run_on_arches.push(Architecture::try_from(v.as_str()).map_err(|e| {
+                        ValueError::from(RuntimeError {
+                            code: "TUGGER_SNAPCRAFT",
+                            message: format!("error parsing architecture string: {}", e),
+                            label: "architectures".to_string(),
+                        })
+                    })?);
+                }
+            }
+
+            Ok(Some(Architectures {
+                build_on: build_on_arches,
+                run_on: run_on_arches,
+            }))
         }
+        t => Err(ValueError::from(RuntimeError {
+            code: "TUGGER_SNAPCRAFT",
+            message: format!("architectures value must be None or dict; got {}", t),
+            label: "architectures".to_string(),
+        })),
     }
 }
 
-impl TryToOptional<Confinement> for Value {
-    fn try_to_optional(&self) -> Result<Option<Confinement>, ValueError> {
-        if self.get_type() == "NoneType" {
-            Ok(None)
-        } else {
-            Ok(Some(
-                Confinement::try_from(self.to_string().as_str()).map_err(|e| {
-                    ValueError::from(RuntimeError {
-                        code: "TUGGER_SNAPCRAFT",
-                        message: e.to_string(),
-                        label: "confinement".to_string(),
-                    })
-                })?,
-            ))
-        }
+fn value_to_optional_confinement(value: Value) -> Result<Option<Confinement>, ValueError> {
+    if value.get_type() == "NoneType" {
+        Ok(None)
+    } else {
+        Ok(Some(
+            Confinement::try_from(value.to_string().as_str()).map_err(|e| {
+                ValueError::from(RuntimeError {
+                    code: "TUGGER_SNAPCRAFT",
+                    message: e.to_string(),
+                    label: "confinement".to_string(),
+                })
+            })?,
+        ))
     }
 }
 
-impl TryToOptional<Daemon> for Value {
-    fn try_to_optional(&self) -> Result<Option<Daemon>, ValueError> {
-        if self.get_type() == "NoneType" {
-            Ok(None)
-        } else {
-            Ok(Some(Daemon::try_from(self.to_string().as_str()).map_err(
-                |e| {
-                    ValueError::from(RuntimeError {
-                        code: "TUGGER_SNAPCRAFT",
-                        message: e.to_string(),
-                        label: "daemon".to_string(),
-                    })
-                },
-            )?))
-        }
+fn value_to_optional_daemon(value: Value) -> Result<Option<Daemon>, ValueError> {
+    if value.get_type() == "NoneType" {
+        Ok(None)
+    } else {
+        Ok(Some(Daemon::try_from(value.to_string().as_str()).map_err(
+            |e| {
+                ValueError::from(RuntimeError {
+                    code: "TUGGER_SNAPCRAFT",
+                    message: e.to_string(),
+                    label: "daemon".to_string(),
+                })
+            },
+        )?))
     }
 }
 
-impl TryToOptional<Grade> for Value {
-    fn try_to_optional(&self) -> Result<Option<Grade>, ValueError> {
-        if self.get_type() == "NoneType" {
-            Ok(None)
-        } else {
-            Ok(Some(Grade::try_from(self.to_string().as_str()).map_err(
-                |e| {
-                    ValueError::from(RuntimeError {
-                        code: "TUGGER_SNAPCRAFT",
-                        message: e.to_string(),
-                        label: "grade".to_string(),
-                    })
-                },
-            )?))
-        }
+fn value_to_optional_grade(value: Value) -> Result<Option<Grade>, ValueError> {
+    if value.get_type() == "NoneType" {
+        Ok(None)
+    } else {
+        Ok(Some(Grade::try_from(value.to_string().as_str()).map_err(
+            |e| {
+                ValueError::from(RuntimeError {
+                    code: "TUGGER_SNAPCRAFT",
+                    message: e.to_string(),
+                    label: "grade".to_string(),
+                })
+            },
+        )?))
     }
 }
 
-impl TryToOptional<RestartCondition> for Value {
-    fn try_to_optional(&self) -> Result<Option<RestartCondition>, ValueError> {
-        if self.get_type() == "NoneType" {
-            Ok(None)
-        } else {
-            Ok(Some(
-                RestartCondition::try_from(self.to_string().as_str()).map_err(|e| {
-                    ValueError::from(RuntimeError {
-                        code: "TUGGER_SNAPCRAFT",
-                        message: e.to_string(),
-                        label: "restart_condition".to_string(),
-                    })
-                })?,
-            ))
-        }
+fn value_to_optional_restart_condition(
+    value: Value,
+) -> Result<Option<RestartCondition>, ValueError> {
+    if value.get_type() == "NoneType" {
+        Ok(None)
+    } else {
+        Ok(Some(
+            RestartCondition::try_from(value.to_string().as_str()).map_err(|e| {
+                ValueError::from(RuntimeError {
+                    code: "TUGGER_SNAPCRAFT",
+                    message: e.to_string(),
+                    label: "restart_condition".to_string(),
+                })
+            })?,
+        ))
     }
 }
 
-impl TryToOptional<SourceType> for Value {
-    fn try_to_optional(&self) -> Result<Option<SourceType>, ValueError> {
-        if self.get_type() == "NoneType" {
-            Ok(None)
-        } else {
-            Ok(Some(
-                SourceType::try_from(self.to_string().as_str()).map_err(|e| {
-                    ValueError::from(RuntimeError {
-                        code: "TUGGER_SNAPCRAFT",
-                        message: e.to_string(),
-                        label: "restart_condition".to_string(),
-                    })
-                })?,
-            ))
-        }
+fn value_to_optional_source_type(value: Value) -> Result<Option<SourceType>, ValueError> {
+    if value.get_type() == "NoneType" {
+        Ok(None)
+    } else {
+        Ok(Some(
+            SourceType::try_from(value.to_string().as_str()).map_err(|e| {
+                ValueError::from(RuntimeError {
+                    code: "TUGGER_SNAPCRAFT",
+                    message: e.to_string(),
+                    label: "restart_condition".to_string(),
+                })
+            })?,
+        ))
     }
 }
 
-impl TryToOptional<Type> for Value {
-    fn try_to_optional(&self) -> Result<Option<Type>, ValueError> {
-        if self.get_type() == "NoneType" {
-            Ok(None)
-        } else {
-            Ok(Some(Type::try_from(self.to_string().as_str()).map_err(
-                |e| {
-                    ValueError::from(RuntimeError {
-                        code: "TUGGER_SNAPCRAFT",
-                        message: e.to_string(),
-                        label: "type".to_string(),
-                    })
-                },
-            )?))
-        }
+fn value_to_optional_type(value: Value) -> Result<Option<Type>, ValueError> {
+    if value.get_type() == "NoneType" {
+        Ok(None)
+    } else {
+        Ok(Some(Type::try_from(value.to_string().as_str()).map_err(
+            |e| {
+                ValueError::from(RuntimeError {
+                    code: "TUGGER_SNAPCRAFT",
+                    message: e.to_string(),
+                    label: "type".to_string(),
+                })
+            },
+        )?))
     }
 }
 
@@ -381,7 +365,7 @@ impl TypedValue for SnapAppValue<'static> {
     fn set_attr(&mut self, attribute: &str, value: Value) -> Result<(), ValueError> {
         match attribute {
             "adapter" => {
-                self.inner.adapter = value.try_to_optional()?;
+                self.inner.adapter = value_to_optional_adapter(value)?;
             }
             "autostart" => {
                 self.inner.autostart = value.to_optional();
@@ -396,7 +380,7 @@ impl TypedValue for SnapAppValue<'static> {
                 self.inner.common_id = value.to_optional();
             }
             "daemon" => {
-                self.inner.daemon = value.try_to_optional()?;
+                self.inner.daemon = value_to_optional_daemon(value)?;
             }
             "desktop" => {
                 self.inner.desktop = value.to_optional();
@@ -420,7 +404,7 @@ impl TypedValue for SnapAppValue<'static> {
                 self.inner.post_stop_command = value.to_optional();
             }
             "restart_condition" => {
-                self.inner.restart_condition = value.try_to_optional()?;
+                self.inner.restart_condition = value_to_optional_restart_condition(value)?;
             }
             "slots" => {
                 self.inner.slots = optional_str_vec_to_vec(value)?;
@@ -529,7 +513,7 @@ impl TypedValue for SnapPartValue<'static> {
                 self.inner.source_tag = value.to_optional();
             }
             "source_type" => {
-                self.inner.source_type = value.try_to_optional()?;
+                self.inner.source_type = value_to_optional_source_type(value)?;
             }
             "source" => {
                 self.inner.source = value.to_optional();
@@ -578,7 +562,7 @@ impl TypedValue for SnapValue<'static> {
                 self.inner.apps = value_to_apps(value)?;
             }
             "architectures" => {
-                self.inner.architectures = value.try_to_optional()?;
+                self.inner.architectures = value_to_optional_architectures(value)?;
             }
             "assumes" => {
                 self.inner.assumes = optional_str_vec_to_vec(value)?;
@@ -587,13 +571,13 @@ impl TypedValue for SnapValue<'static> {
                 self.inner.base = value.to_optional();
             }
             "confinement" => {
-                self.inner.confinement = value.try_to_optional()?;
+                self.inner.confinement = value_to_optional_confinement(value)?;
             }
             "description" => {
                 self.inner.description = Cow::Owned(value.to_string());
             }
             "grade" => {
-                self.inner.grade = value.try_to_optional()?;
+                self.inner.grade = value_to_optional_grade(value)?;
             }
             "icon" => {
                 self.inner.icon = value.to_optional();
@@ -643,7 +627,7 @@ impl TypedValue for SnapValue<'static> {
                 self.inner.title = value.to_optional();
             }
             "type" => {
-                self.inner.snap_type = value.try_to_optional()?;
+                self.inner.snap_type = value_to_optional_type(value)?;
             }
             "version" => {
                 self.inner.version = Cow::Owned(value.to_string());
@@ -1040,31 +1024,32 @@ mod tests {
             .downcast_ref::<SnapcraftBuilderValue>()
             .unwrap();
         assert_eq!(
-            builder.inner,
-            SnapcraftBuilder {
-                snap: Snapcraft::new(
-                    "name".into(),
-                    "version".into(),
-                    "summary".into(),
-                    "description".into()
-                ),
-                invocations: vec![
-                    SnapcraftInvocation {
-                        args: vec!["cmd0".into(), "arg1".into()],
-                        purge_build: true,
-                    },
-                    SnapcraftInvocation {
-                        args: vec!["cmd1".into(), "arg2".into()],
-                        purge_build: true,
-                    },
-                    SnapcraftInvocation {
-                        args: vec!["cmd2".into()],
-                        purge_build: false,
-                    },
-                ],
-                install_files: FileManifest::default(),
-            }
+            builder.inner.snap(),
+            &Snapcraft::new(
+                "name".into(),
+                "version".into(),
+                "summary".into(),
+                "description".into()
+            ),
         );
+        assert_eq!(
+            builder.inner.invocations(),
+            &vec![
+                SnapcraftInvocation {
+                    args: vec!["cmd0".into(), "arg1".into()],
+                    purge_build: true,
+                },
+                SnapcraftInvocation {
+                    args: vec!["cmd1".into(), "arg2".into()],
+                    purge_build: true,
+                },
+                SnapcraftInvocation {
+                    args: vec!["cmd2".into()],
+                    purge_build: false,
+                },
+            ]
+        );
+        assert_eq!(builder.inner.install_files(), &FileManifest::default());
 
         Ok(())
     }

@@ -3,7 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    crate::snapcraft::Snapcraft,
+    crate::yaml::Snapcraft,
     anyhow::{anyhow, Context, Result},
     duct::cmd,
     slog::warn,
@@ -51,6 +51,21 @@ impl<'a> SnapcraftBuilder<'a> {
             invocations: vec![],
             install_files: FileManifest::default(),
         }
+    }
+
+    /// Obtain the `Snapcraft` inside this instance.
+    pub fn snap(&self) -> &Snapcraft<'a> {
+        &self.snap
+    }
+
+    /// Obtain the registered snapcraft invocations in this instance.
+    pub fn invocations(&self) -> &Vec<SnapcraftInvocation> {
+        &self.invocations
+    }
+
+    /// Obtain the files to be installed in the build environment.
+    pub fn install_files(&self) -> &FileManifest {
+        &self.install_files
     }
 
     /// Register a new `snapcraft` invocation to run during the build.
@@ -186,12 +201,9 @@ mod tests {
     #[cfg(target_os = "linux")]
     use {
         super::*,
-        crate::{
-            glob::evaluate_glob,
-            snapcraft::{SnapApp, SnapPart},
-            testutil::*,
-        },
+        crate::{SnapApp, SnapPart},
         std::{collections::HashMap, iter::FromIterator},
+        tugger_common::{glob::evaluate_glob, testutil::*},
     };
 
     #[cfg(target_os = "linux")]

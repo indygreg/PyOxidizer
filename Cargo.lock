@@ -3290,14 +3290,10 @@ dependencies = [
  "chrono",
  "codemap",
  "codemap-diagnostic",
- "duct",
- "glob",
  "goblin",
  "lazy_static",
  "msi",
  "rpm-rs",
- "serde",
- "serde_yaml",
  "slog",
  "starlark",
  "starlark-dialect-build-targets",
@@ -3305,6 +3301,7 @@ dependencies = [
  "tempdir",
  "tugger-common",
  "tugger-file-manifest",
+ "tugger-snapcraft",
  "tugger-windows",
  "tugger-wix",
  "version-compare",
@@ -3317,6 +3314,7 @@ version = "0.1.0-pre"
 dependencies = [
  "anyhow",
  "fs2",
+ "glob",
  "hex",
  "lazy_static",
  "reqwest",
@@ -3347,6 +3345,19 @@ dependencies = [
 [[package]]
 name = "tugger-file-manifest"
 version = "0.1.0-pre"
+
+[[package]]
+name = "tugger-snapcraft"
+version = "0.1.0-pre"
+dependencies = [
+ "anyhow",
+ "duct",
+ "serde",
+ "serde_yaml",
+ "slog",
+ "tugger-common",
+ "tugger-file-manifest",
+]
 
 [[package]]
 name = "tugger-windows"
