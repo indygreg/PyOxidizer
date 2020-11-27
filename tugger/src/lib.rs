@@ -28,9 +28,5 @@ pub mod rpm;
 pub mod snapcraft;
 pub mod starlark;
 pub mod tarball;
-#[allow(unused)]
-#[cfg(test)]
-mod testutil;
-pub mod windows;
 pub mod wix;
 pub mod zipfile;

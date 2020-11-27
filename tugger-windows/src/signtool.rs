@@ -3,7 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    crate::windows::X509SigningCertificate,
+    crate::X509SigningCertificate,
     anyhow::{anyhow, Context, Result},
     slog::warn,
     std::{
@@ -13,7 +13,7 @@ use {
 };
 
 #[cfg(target_family = "windows")]
-use crate::windows::find_windows_sdk_current_arch_bin_path;
+use crate::find_windows_sdk_current_arch_bin_path;
 
 /// Describes a timestamp server to use during signing.
 #[derive(Clone, Debug)]
@@ -220,12 +220,10 @@ mod tests {
     use {
         super::*,
         crate::{
-            testutil::*,
-            windows::{
-                certificate_to_pfx, create_self_signed_code_signing_certificate,
-                FileBasedX509SigningCertificate,
-            },
+            certificate_to_pfx, create_self_signed_code_signing_certificate,
+            FileBasedX509SigningCertificate,
         },
+        tugger_common::testutil::*,
     };
 
     #[test]

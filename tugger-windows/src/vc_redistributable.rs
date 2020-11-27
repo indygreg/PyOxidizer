@@ -12,7 +12,7 @@ use {
 };
 
 #[cfg(windows)]
-use {crate::windows::find_vswhere, std::collections::BTreeMap};
+use {crate::find_vswhere, std::collections::BTreeMap};
 
 /// Available VC++ Redistributable platforms we can add to the bundle.
 #[derive(Debug, PartialEq)]

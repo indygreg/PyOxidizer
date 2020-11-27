@@ -41,7 +41,7 @@ use {
         sync::Arc,
     },
     tempdir::TempDir,
-    tugger::windows::VCRedistributablePlatform,
+    tugger_windows::VCRedistributablePlatform,
     virtual_file_manifest::{File, FileData, FileEntry, FileManifest},
 };
 

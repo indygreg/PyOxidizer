@@ -1,0 +1,33 @@
+[package]
+name = "tugger-windows"
+version = "0.3.0-pre"
+authors = ["Gregory Szorc <gregory.szorc@gmail.com>"]
+edition = "2018"
+license = "MPL-2.0"
+description = "Collection of packaging primitives specific to Windows"
+homepage = "https://github.com/indygreg/PyOxidizer"
+repository = "https://github.com/indygreg/PyOxidizer.git"
+readme = "README.md"
+
+[dependencies]
+anyhow = "1.0"
+chrono = "0.4"
+duct = "0.13"
+glob = "0.3"
+p12 = "0.2"
+rcgen = "0.8"
+semver = "0.11"
+slog = "2.4"
+yasna = "0.3"
+
+[target.'cfg(windows)'.dependencies]
+find-winsdk = "0.2"
+winapi = { version = "0.3", features = ["combaseapi", "knownfolders", "shlobj", "shtypes"] }
+
+[dependencies.tugger-common]
+version = "0.3.0-pre"
+path = "../tugger-common"
+
+[dev-dependencies]
+der-parser = "4.1"
+x509-parser = "0.8"

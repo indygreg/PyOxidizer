@@ -3,10 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    crate::{
-        starlark::file_resource::FileManifestValue, windows::VCRedistributablePlatform,
-        wix::WiXSimpleMSIBuilder,
-    },
+    crate::{starlark::file_resource::FileManifestValue, wix::WiXSimpleMSIBuilder},
     anyhow::Result,
     starlark::{
         environment::TypeValues,
@@ -26,6 +23,7 @@ use {
         get_context_value, EnvironmentContext, ResolvedTarget, ResolvedTargetValue, RunMode,
     },
     std::convert::TryFrom,
+    tugger_windows::VCRedistributablePlatform,
 };
 
 #[derive(Clone)]
@@ -289,7 +287,7 @@ mod tests {
 
     #[test]
     fn test_add_visual_cpp_redistributable() -> Result<()> {
-        if crate::windows::find_visual_cpp_redistributable("14", VCRedistributablePlatform::X64)
+        if tugger_windows::find_visual_cpp_redistributable("14", VCRedistributablePlatform::X64)
             .is_err()
         {
             eprintln!("skipping test because Visual C++ Redistributable files not found");

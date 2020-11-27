@@ -5,7 +5,6 @@
 use {
     crate::{
         starlark::wix_msi_builder::WiXMSIBuilderValue,
-        windows::VCRedistributablePlatform,
         wix::{MSIPackage, WiXBundleInstallerBuilder},
     },
     starlark::{
@@ -24,6 +23,7 @@ use {
         get_context_value, EnvironmentContext, ResolvedTarget, ResolvedTargetValue, RunMode,
     },
     std::convert::TryFrom,
+    tugger_windows::VCRedistributablePlatform,
 };
 
 #[derive(Clone)]

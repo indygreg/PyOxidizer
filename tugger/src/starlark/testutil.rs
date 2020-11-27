@@ -3,10 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    crate::{
-        starlark::{populate_environment, register_starlark_dialect},
-        testutil::get_logger,
-    },
+    crate::starlark::{populate_environment, register_starlark_dialect},
     anyhow::{anyhow, Result},
     codemap::CodeMap,
     codemap_diagnostic::{Diagnostic, Emitter},
@@ -16,6 +13,7 @@ use {
         values::Value,
     },
     starlark_dialect_build_targets::EnvironmentContext,
+    tugger_common::testutil::get_logger,
 };
 
 /// A Starlark execution environment.

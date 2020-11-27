@@ -22,10 +22,7 @@ glob = "0.3"
 goblin = "0.3"
 hex = "0.4"
 lazy_static = "1.4"
-p12 = "0.2"
-rcgen = "0.8"
 reqwest = { version = "0.10", default-features= false, features = ["blocking", "rustls-tls"] }
-semver = "0.11"
 serde_yaml = "0.8"
 serde = "1.0"
 sha2 = "0.9"
@@ -37,27 +34,29 @@ uuid = { version = "0.8", features = ["v4", "v5"] }
 version-compare = "0.0"
 walkdir = "2"
 xml-rs = "0.8"
-yasna = "0.3"
 zip = "0.5"
 
 [target.'cfg(unix)'.dependencies]
 # Create doesn't build on Windows. https://github.com/Richterrettich/rpm-rs/pull/30 fixes.
 rpm-rs = "0.6"
 
-[target.'cfg(windows)'.dependencies]
-find-winsdk = "0.2"
-winapi = { version = "0.3", features = ["combaseapi", "knownfolders", "shlobj", "shtypes"] }
-
 [dependencies.starlark-dialect-build-targets]
 version = "0.2.0-pre"
 path = "../starlark-dialect-build-targets"
+
+[dependencies.tugger-common]
+version = "0.3.0-pre"
+path = "../tugger-common"
+
+[dependencies.tugger-windows]
+version = "0.3.0-pre"
+path = "../tugger-windows"
 
 [dependencies.virtual-file-manifest]
 version = "0.1.0-pre"
 path = "../virtual-file-manifest"
 
 [dev-dependencies]
-der-parser = "4.1"
 msi = "0.3"
 tempdir = "0.3"
-x509-parser = "0.8"
+

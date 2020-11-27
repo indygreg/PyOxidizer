@@ -483,7 +483,7 @@ pub(crate) fn extract_wix<P: AsRef<Path>>(logger: &slog::Logger, dest_dir: P) ->
 mod tests {
     use {
         super::*,
-        crate::testutil::*,
+        tugger_common::testutil::*,
         virtual_file_manifest::{FileEntry, FileManifest},
         xml::EmitterConfig,
     };

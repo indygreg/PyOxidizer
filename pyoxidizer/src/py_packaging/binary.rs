@@ -23,7 +23,7 @@ use {
         path::{Path, PathBuf},
         sync::Arc,
     },
-    tugger::windows::VCRedistributablePlatform,
+    tugger_windows::VCRedistributablePlatform,
     virtual_file_manifest::{File, FileManifest},
 };
 

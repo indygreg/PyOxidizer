@@ -8,7 +8,7 @@ use {
 };
 
 #[cfg(windows)]
-use crate::windows::util::get_known_folder_path;
+use crate::util::get_known_folder_path;
 
 /// Attempt to locate vswhere.exe.
 #[cfg(windows)]

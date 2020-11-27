@@ -319,11 +319,7 @@ starlark_module! { file_resource_module =>
 
 #[cfg(test)]
 mod tests {
-    use {
-        super::*,
-        crate::{starlark::testutil::*, testutil::*},
-        anyhow::Result,
-    };
+    use {super::*, crate::starlark::testutil::*, anyhow::Result, tugger_common::testutil::*};
 
     #[test]
     fn test_new_file_manifest() {

@@ -3,16 +3,14 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    crate::{
-        windows::{find_visual_cpp_redistributable, VCRedistributablePlatform},
-        wix::{WiXInstallerBuilder, WxsBuilder},
-    },
+    crate::wix::{WiXInstallerBuilder, WxsBuilder},
     anyhow::{anyhow, Result},
     std::{
         borrow::Cow,
         io::Write,
         path::{Path, PathBuf},
     },
+    tugger_windows::{find_visual_cpp_redistributable, VCRedistributablePlatform},
     uuid::Uuid,
     virtual_file_manifest::FileManifest,
     xml::{
@@ -549,10 +547,10 @@ impl WiXSimpleMSIBuilder {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, crate::testutil::*, virtual_file_manifest::FileEntry};
+    use {super::*, tugger_common::testutil::*, virtual_file_manifest::FileEntry};
 
     #[cfg(target_family = "windows")]
-    use crate::windows::{
+    use tugger_windows::{
         certificate_to_pfx, create_self_signed_code_signing_certificate, is_file_signable,
         FileBasedX509SigningCertificate, SigntoolSign,
     };

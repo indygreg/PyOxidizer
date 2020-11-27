@@ -7,7 +7,9 @@ members = [
     'python-packed-resources',
     'release',
     'starlark-dialect-build-targets',
+    'tugger-common',
     'tugger-debian',
+    'tugger-windows',
     'tugger',
     'virtual-file-manifest',
 ]
