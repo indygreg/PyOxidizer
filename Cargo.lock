@@ -3284,7 +3284,6 @@ name = "tugger"
 version = "0.3.0-pre"
 dependencies = [
  "anyhow",
- "ar",
  "byteorder",
  "chrono",
  "codemap",
@@ -3297,10 +3296,7 @@ dependencies = [
  "goblin",
  "hex",
  "lazy_static",
- "libflate",
- "md5",
  "msi",
- "os_str_bytes",
  "p12",
  "rcgen",
  "reqwest",
@@ -3322,9 +3318,24 @@ dependencies = [
  "winapi 0.3.9",
  "x509-parser",
  "xml-rs",
- "xz2",
  "yasna",
  "zip",
+]
+
+[[package]]
+name = "tugger-debian"
+version = "0.3.0-pre"
+dependencies = [
+ "anyhow",
+ "ar",
+ "chrono",
+ "glob",
+ "libflate",
+ "md5",
+ "os_str_bytes",
+ "tar",
+ "virtual-file-manifest",
+ "xz2",
  "zstd",
 ]
 

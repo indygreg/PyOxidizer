@@ -8,7 +8,7 @@ The .deb file specification lives at https://manpages.debian.org/unstable/dpkg-d
 */
 
 use {
-    crate::debian::ControlFile,
+    crate::ControlFile,
     os_str_bytes::OsStrBytes,
     std::{
         io::{BufWriter, Cursor, Read, Write},
@@ -480,7 +480,7 @@ pub fn write_deb_tar<W: Write>(
 mod tests {
     use {
         super::*,
-        crate::debian::ControlParagraph,
+        crate::ControlParagraph,
         anyhow::{anyhow, Result},
         std::path::PathBuf,
     };

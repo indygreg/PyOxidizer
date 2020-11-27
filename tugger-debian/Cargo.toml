@@ -1,0 +1,28 @@
+[package]
+name = "tugger-debian"
+version = "0.3.0-pre"
+authors = ["Gregory Szorc <gregory.szorc@gmail.com>"]
+edition = "2018"
+license = "MPL-2.0"
+description = "Debian packaging primitives"
+homepage = "https://github.com/indygreg/PyOxidizer"
+repository = "https://github.com/indygreg/PyOxidizer.git"
+readme = "README.md"
+
+[dependencies]
+anyhow = "1.0"
+ar = "0.8"
+chrono = "0.4"
+libflate = "1.0"
+md5 = "0.7"
+os_str_bytes = "2.3"
+tar = "0.4"
+xz2 = "0.1"
+zstd = "0.5"
+
+[dependencies.virtual-file-manifest]
+version = "0.1.0-pre"
+path = "../virtual-file-manifest"
+
+[dev-dependencies]
+glob = "0.3"
