@@ -553,7 +553,7 @@ mod tests {
 
     #[cfg(target_family = "windows")]
     use crate::windows::{
-        certificate_to_pfx, create_self_signed_code_signing_certificate,
+        certificate_to_pfx, create_self_signed_code_signing_certificate, is_file_signable,
         FileBasedX509SigningCertificate, SigntoolSign,
     };
 
@@ -610,6 +610,8 @@ mod tests {
 
         let summary_info = package.summary_info();
         assert_eq!(summary_info.subject(), Some("testapp"));
+
+        assert!(is_file_signable(&output_path)?);
 
         // Also try signing it.
         let cert = create_self_signed_code_signing_certificate("tugger@example.com")?;

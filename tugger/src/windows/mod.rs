@@ -11,8 +11,8 @@ pub use sdk::target_arch_to_windows_sdk_platform_path;
 mod signing;
 pub use signing::{
     certificate_to_pfx, create_self_signed_code_signing_certificate,
-    create_self_signed_code_signing_certificate_params, FileBasedX509SigningCertificate,
-    X509SigningCertificate,
+    create_self_signed_code_signing_certificate_params, is_file_signable,
+    is_signable_binary_header, FileBasedX509SigningCertificate, X509SigningCertificate,
 };
 mod signtool;
 pub use signtool::{find_signtool, SigntoolSign};

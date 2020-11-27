@@ -7,7 +7,10 @@
 use {
     anyhow::{anyhow, Result},
     chrono::SubsecRound,
-    std::path::{Path, PathBuf},
+    std::{
+        io::Read,
+        path::{Path, PathBuf},
+    },
 };
 
 /// Represents an x509 signing certificate backed by a file.
@@ -128,6 +131,43 @@ pub fn certificate_to_pfx(
     Ok(buffer)
 }
 
+/// MSI file magic.
+const CFB_MAGIC_NUMBER: [u8; 8] = [0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1];
+
+/// Whether the bytes passed in look like a file header for a format that is signable.
+///
+/// The passed buffer must be at least 16 bytes long.
+///
+/// This could yield false positives.
+#[allow(clippy::if_same_then_else)]
+pub fn is_signable_binary_header(data: &[u8]) -> bool {
+    if data.len() < 16 {
+        false
+    // DOS header.
+    } else if data[0] == 0x4d && data[1] == 0x5a {
+        true
+    } else {
+        data[0..CFB_MAGIC_NUMBER.len()] == CFB_MAGIC_NUMBER
+    }
+}
+
+/// Determine whether a given filesystem path is signable.
+///
+/// This effectively answers whether the given path is a PE or MSI.
+pub fn is_file_signable(path: impl AsRef<Path>) -> Result<bool> {
+    let path = path.as_ref();
+
+    if path.metadata()?.len() < 16 {
+        return Ok(false);
+    }
+
+    let mut fh = std::fs::File::open(&path)?;
+    let mut buffer: [u8; 16] = [0; 16];
+    fh.read_exact(&mut buffer)?;
+
+    Ok(is_signable_binary_header(&buffer))
+}
+
 #[cfg(test)]
 mod tests {
     use {
@@ -246,6 +286,21 @@ mod tests {
     fn test_serialize_pfx() -> Result<()> {
         let cert = create_self_signed_code_signing_certificate("someone@example.com")?;
         certificate_to_pfx(&cert, "password", "name")?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_is_signable() -> Result<()> {
+        let exe = std::env::current_exe()?;
+
+        let is_signable = is_file_signable(&exe)?;
+
+        if cfg!(target_family = "windows") {
+            assert!(is_signable);
+        } else {
+            assert!(!is_signable);
+        }
 
         Ok(())
     }
