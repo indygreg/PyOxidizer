@@ -344,10 +344,10 @@ impl EmbeddedPythonConfig {
     /// Write a Rust file containing a function for obtaining the default `OxidizedPythonInterpreterConfig`.
     pub fn write_default_python_config_rs(
         &self,
-        path: &Path,
+        path: impl AsRef<Path>,
         packed_resources_path: Option<&Path>,
     ) -> Result<()> {
-        let mut f = std::fs::File::create(&path)?;
+        let mut f = std::fs::File::create(path.as_ref())?;
 
         let indented = self
             .to_oxidized_python_interpreter_config_rs(packed_resources_path)?

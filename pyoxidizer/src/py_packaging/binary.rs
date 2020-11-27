@@ -289,9 +289,6 @@ pub struct EmbeddedPythonPaths {
     /// Path to a library containing an alternate compiled config.c file.
     pub libpyembeddedconfig: Option<PathBuf>,
 
-    /// Path to `config.rs` derived from a `EmbeddedPythonConfig`.
-    pub config_rs: PathBuf,
-
     /// Path to a file containing lines needed to be emitted by a Cargo build script.
     pub cargo_metadata: PathBuf,
 }
@@ -335,6 +332,11 @@ impl<'a> EmbeddedPythonContext<'a> {
         }
     }
 
+    /// Obtain the filesystem of the generated Rust source file containing the interpreter configuration.
+    pub fn interpreter_config_rs_path(&self, dest_dir: impl AsRef<Path>) -> PathBuf {
+        dest_dir.as_ref().join("default_python_config.rs")
+    }
+
     /// Write out files needed to link a binary.
     pub fn write_files(&self, dest_dir: &Path) -> Result<EmbeddedPythonPaths> {
         match &self.resources {
@@ -369,7 +371,7 @@ impl<'a> EmbeddedPythonContext<'a> {
 
         let packed_resources_path = self.packed_resources_path(dest_dir);
 
-        let config_rs = dest_dir.join("default_python_config.rs");
+        let config_rs = self.interpreter_config_rs_path(&dest_dir);
         self.config
             .write_default_python_config_rs(&config_rs, Some(&packed_resources_path))?;
 
@@ -396,7 +398,6 @@ impl<'a> EmbeddedPythonContext<'a> {
             embedded_resources: packed_resources_path,
             libpython,
             libpyembeddedconfig,
-            config_rs,
             cargo_metadata,
         })
     }
