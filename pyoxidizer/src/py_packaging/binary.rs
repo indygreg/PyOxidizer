@@ -347,6 +347,28 @@ impl<'a> EmbeddedPythonContext<'a> {
         dest_dir.as_ref().join("cargo_metadata.txt")
     }
 
+    /// Obtain lines constituting cargo metadata.
+    ///
+    /// These should be printed from a build script. The printed lines enable
+    /// linking with our libpython.
+    pub fn cargo_metadata_lines(&self, dest_dir: impl AsRef<Path>) -> Vec<String> {
+        let mut lines = self.linking_info.cargo_metadata.clone();
+
+        // Tell Cargo where libpythonXY is located.
+        lines.push(format!(
+            "cargo:rustc-link-search=native={}",
+            dest_dir.as_ref().display()
+        ));
+
+        // Give dependent crates the path to the default config file.
+        lines.push(format!(
+            "cargo:default-python-config-rs={}",
+            self.interpreter_config_rs_path(dest_dir).display()
+        ));
+
+        lines
+    }
+
     /// Write out files needed to link a binary.
     pub fn write_files(&self, dest_dir: &Path) -> Result<()> {
         match &self.resources {
@@ -372,29 +394,13 @@ impl<'a> EmbeddedPythonContext<'a> {
             fh.write_all(data)?;
         }
 
-        let config_rs = self.interpreter_config_rs_path(&dest_dir);
         self.config.write_default_python_config_rs(
-            &config_rs,
+            self.interpreter_config_rs_path(&dest_dir),
             Some(&self.packed_resources_path(dest_dir)),
         )?;
 
-        let mut cargo_metadata_lines = Vec::new();
-        cargo_metadata_lines.extend(self.linking_info.cargo_metadata.clone());
-
-        // Tell Cargo where libpythonXY is located.
-        cargo_metadata_lines.push(format!(
-            "cargo:rustc-link-search=native={}",
-            dest_dir.display()
-        ));
-
-        // Give dependent crates the path to the default config file.
-        cargo_metadata_lines.push(format!(
-            "cargo:default-python-config-rs={}",
-            config_rs.display()
-        ));
-
         let mut fh = std::fs::File::create(self.cargo_metadata_path(&dest_dir))?;
-        fh.write_all(cargo_metadata_lines.join("\n").as_bytes())?;
+        fh.write_all(self.cargo_metadata_lines(dest_dir).join("\n").as_bytes())?;
 
         Ok(())
     }
