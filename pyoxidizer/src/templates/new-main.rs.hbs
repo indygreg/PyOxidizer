@@ -1,41 +1,42 @@
 #![windows_subsystem = "{{{ windows_subsystem }}}"]
 
-use pyembed::MainPythonInterpreter;
+use pyembed::{MainPythonInterpreter, OxidizedPythonInterpreterConfig};
 
-// Include an auto-generated file containing the default
-// `pyembed::OxidizedPythonInterpreterConfig` derived by the PyOxidizer
+// Include an auto-generated file defining a
+// `fn default_python_config<'a>() -> pyembed::OxidizedPythonInterpreterConfig<'a>`
+// which returns an `OxidizedPythonInterpreterConfig` derived by the PyOxidizer
 // configuration file.
 //
-// If you do not want to use PyOxidizer to generate this file, simply
-// remove this line and instantiate your own instance of
-// `pyembed::OxidizedPythonInterpreterConfig`.
+// If you do not want your application to use this generated file or wish
+// to explicitly instantiate the `OxidizedPythonInterpreterConfig` used to
+// initialize the embedded Python interpreter, simply remove this line and
+// the call to `default_python_config()` below.
 include!(env!("PYOXIDIZER_DEFAULT_PYTHON_CONFIG_RS"));
 
 fn main() {
     // The following code is in a block so the MainPythonInterpreter is destroyed in an
     // orderly manner, before process exit.
-    let code = {
+    let exit_code = {
         // Load the default Python configuration as derived by the PyOxidizer config
         // file used at build time.
-        let config = default_python_config();
+        let config: OxidizedPythonInterpreterConfig = default_python_config();
 
         // Construct a new Python interpreter using that config, handling any errors
         // from construction.
         match MainPythonInterpreter::new(config) {
             Ok(mut interp) => {
                 // And run it using the default run configuration as specified by the
-                // configuration. If an uncaught Python exception is raised, handle it.
-                // This includes the special SystemExit, which is a request to terminate the
-                // process.
+                // configuration. This calls `Py_RunMain()`, which finalizes the
+                // Python interpreter.
                 interp.py_runmain()
             }
             Err(msg) => {
-                eprintln!("{}", msg);
+                eprintln!("error instantiating embedded Python interpreter: {}", msg);
                 1
             }
         }
     };
 
     // And exit the process according to code execution results.
-    std::process::exit(code);
+    std::process::exit(exit_code);
 }
