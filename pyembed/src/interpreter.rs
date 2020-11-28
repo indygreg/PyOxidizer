@@ -97,31 +97,14 @@ enum InterpreterState {
 ///
 /// Both the low-level `python3-sys` and higher-level `cpython` crates are used.
 pub struct MainPythonInterpreter<'python, 'interpreter: 'python, 'resources: 'interpreter> {
+    // It is possible to have a use-after-free if config is dropped before the
+    // interpreter is finalized/dropped.
     config: ResolvedOxidizedPythonInterpreterConfig<'resources>,
     interpreter_state: InterpreterState,
     interpreter_guard: Option<std::sync::MutexGuard<'interpreter, ()>>,
     raw_allocator: Option<InterpreterRawAllocator>,
     gil: Option<GILGuard>,
     py: Option<Python<'python>>,
-    /// Holds parsed resources state.
-    ///
-    /// The underling data backing this data structure is given an
-    /// explicit lifetime, independent of the GIL. The lifetime should be
-    /// that of this instance and no shorter.
-    ///
-    /// While this type doesn't access this field for any meaningful
-    /// work, we need to hold on to a reference to the parsed resources
-    /// data/state because the importer is storing a pointer to it. The
-    /// reason it is storing a pointer and not a normal &ref is because
-    /// the cpython bindings require that all class data elements be
-    /// 'static. If we stored the PythonResourcesState as a normal Rust
-    /// ref, we would require it be 'static. In reality, resources only
-    /// need to live for the lifetime of the interpreter instance, which
-    /// is shorter than 'static. So we cheat and store a pointer. And to
-    /// ensure the memory behind that pointer isn't freed, we track it
-    /// in this field. We also store the object in a box so it is on the
-    /// heap and not dynamic.
-    resources_state: Option<Box<PythonResourcesState<'resources, u8>>>,
 }
 
 impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpreter, 'resources> {
@@ -152,7 +135,6 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
             raw_allocator: None,
             gil: None,
             py: None,
-            resources_state: None,
         };
 
         res.init()?;
@@ -267,14 +249,19 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
         let py = unsafe { Python::assume_gil_acquired() };
 
         if self.config.oxidized_importer {
-            self.resources_state = Some(Box::new(PythonResourcesState::try_from(&self.config)?));
-
-            let resources_state = self.resources_state.as_mut().unwrap();
+            let resources_state = Box::new(PythonResourcesState::try_from(&self.config)?);
 
             let oxidized_importer = py.import(OXIDIZED_IMPORTER_NAME_STR).map_err(|err| {
                 NewInterpreterError::new_from_pyerr(py, err, "import of oxidized importer module")
             })?;
 
+            // Ownership of the resources state is transferred into the importer, where the Box
+            // is summarily leaked. However, the importer tracks a pointer to the resources state
+            // and will constitute the struct for dropping when it itself is dropped. We could
+            // potentially encounter a use-after-free if the importer is used after self.config
+            // is dropped. However, that would require self to be dropped. And if self is dropped,
+            // there should no longer be a Python interpreter around. So it follows that the
+            // importer state cannot be dropped after self.
             initialize_importer(py, &oxidized_importer, resources_state).map_err(|err| {
                 NewInterpreterError::new_from_pyerr(py, err, "initialization of oxidized importer")
             })?;
@@ -437,7 +424,6 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
         // Py_RunMain() finalizes the interpreter. So drop our refs and state.
         self.interpreter_guard = None;
         self.interpreter_state = InterpreterState::Finalized;
-        self.resources_state = None;
         self.py = None;
         self.gil = None;
 

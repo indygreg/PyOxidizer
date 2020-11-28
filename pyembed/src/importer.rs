@@ -287,7 +287,6 @@ pub(crate) struct ImporterState {
     /// the backing memory instead of forcing all resource data to be backed
     /// by 'static.
     resources_state: PyCapsule,
-    resources_state_owned: bool,
 
     /// Python object that was used to supply resources data.
     _resources_py_object: Option<PyObject>,
@@ -304,8 +303,7 @@ impl ImporterState {
         py: Python,
         importer_module: &PyModule,
         bootstrap_module: &PyModule,
-        resources_state: &'a PythonResourcesState<'a, u8>,
-        resources_state_owned: bool,
+        resources_state: Box<PythonResourcesState<'a, u8>>,
         resources_py_object: Option<PyObject>,
         resources_mmaps: Option<Vec<Box<memmap::Mmap>>>,
     ) -> Result<Self, PyErr> {
@@ -378,7 +376,7 @@ impl ImporterState {
 
         let capsule = unsafe {
             let ptr = pyffi::PyCapsule_New(
-                resources_state as *const PythonResourcesState<u8> as *mut _,
+                &*resources_state as *const PythonResourcesState<u8> as *mut _,
                 std::ptr::null(),
                 None,
             );
@@ -393,6 +391,10 @@ impl ImporterState {
             PyObject::from_owned_ptr(py, ptr).unchecked_cast_into()
         };
 
+        // We store a pointer to the heap memory and take care of destroying
+        // it when we are dropped. So we leak the box.
+        Box::leak(resources_state);
+
         Ok(ImporterState {
             imp_module,
             sys_module,
@@ -406,7 +408,6 @@ impl ImporterState {
             exec_fn,
             optimize_level,
             resources_state: capsule,
-            resources_state_owned,
             _resources_py_object: resources_py_object,
             _resources_mmaps: resources_mmaps,
         })
@@ -446,20 +447,13 @@ impl ImporterState {
 
 impl Drop for ImporterState {
     fn drop(&mut self) {
-        // If we own the PythonResourcesState<u8> encapsulated in a PyCapsule,
-        // cast it back to a Box so it can be dropped.
-        if self.resources_state_owned {
-            let ptr = unsafe {
-                pyffi::PyCapsule_GetPointer(
-                    self.resources_state.as_object().as_ptr(),
-                    std::ptr::null(),
-                )
-            };
+        let ptr = unsafe {
+            pyffi::PyCapsule_GetPointer(self.resources_state.as_object().as_ptr(), std::ptr::null())
+        };
 
-            if !ptr.is_null() {
-                unsafe {
-                    Box::from_raw(ptr as *mut PythonResourcesState<u8>);
-                }
+        if !ptr.is_null() {
+            unsafe {
+                Box::from_raw(ptr as *mut PythonResourcesState<u8>);
             }
         }
     }
@@ -910,7 +904,7 @@ impl OxidizedFinder {
     fn new_from_module_and_resources<'a>(
         py: Python,
         m: &PyModule,
-        resources_state: &PythonResourcesState<'a, u8>,
+        resources_state: Box<PythonResourcesState<'a, u8>>,
     ) -> PyResult<OxidizedFinder> {
         let bootstrap_module = py.import("_frozen_importlib")?;
 
@@ -921,7 +915,6 @@ impl OxidizedFinder {
                 &m,
                 &bootstrap_module,
                 resources_state,
-                false,
                 None,
                 None,
             )?),
@@ -1012,16 +1005,11 @@ fn oxidized_finder_new(
             py,
             &m,
             &bootstrap_module,
-            &resources_state,
-            true,
+            resources_state,
             resources_data,
             mapped,
         )?),
     )?;
-
-    // We effectively transferred ownership of resources_state just above.
-    // So forget about it here.
-    Box::leak(resources_state);
 
     Ok(importer)
 }
@@ -1482,7 +1470,7 @@ fn module_init(py: Python, m: &PyModule) -> PyResult<()> {
 pub(crate) fn initialize_importer<'a>(
     py: Python,
     m: &PyModule,
-    resources_state: &PythonResourcesState<'a, u8>,
+    resources_state: Box<PythonResourcesState<'a, u8>>,
 ) -> PyResult<()> {
     let mut state = get_module_state(py, m)?;
 
