@@ -7,10 +7,14 @@ Management of Python resources.
 */
 
 use {
-    crate::conversion::{
-        path_to_pathlib_path, path_to_pyobject, pyobject_optional_resources_map_to_owned_bytes,
-        pyobject_optional_resources_map_to_pathbuf, pyobject_to_owned_bytes_optional,
-        pyobject_to_pathbuf_optional,
+    crate::{
+        config::ResolvedOxidizedPythonInterpreterConfig,
+        conversion::{
+            path_to_pathlib_path, path_to_pyobject, pyobject_optional_resources_map_to_owned_bytes,
+            pyobject_optional_resources_map_to_pathbuf, pyobject_to_owned_bytes_optional,
+            pyobject_to_pathbuf_optional,
+        },
+        error::NewInterpreterError,
     },
     anyhow::Result,
     cpython::{
@@ -24,6 +28,7 @@ use {
         borrow::Cow,
         cell::RefCell,
         collections::HashMap,
+        convert::TryFrom,
         ffi::CStr,
         iter::FromIterator,
         path::{Path, PathBuf},
@@ -382,6 +387,18 @@ impl<'a> Default for PythonResourcesState<'a, u8> {
             origin: PathBuf::new(),
             resources: HashMap::new(),
         }
+    }
+}
+
+impl<'a> TryFrom<&ResolvedOxidizedPythonInterpreterConfig<'a>> for PythonResourcesState<'a, u8> {
+    type Error = NewInterpreterError;
+
+    fn try_from(config: &ResolvedOxidizedPythonInterpreterConfig) -> Result<Self, Self::Error> {
+        Ok(Self {
+            current_exe: config.exe().clone(),
+            origin: config.origin().clone(),
+            resources: Default::default(),
+        })
     }
 }
 

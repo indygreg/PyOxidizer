@@ -267,10 +267,7 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
         let py = unsafe { Python::assume_gil_acquired() };
 
         if self.config.oxidized_importer {
-            self.resources_state = Some(Box::new(
-                PythonResourcesState::new_from_env()
-                    .map_err(|err| NewInterpreterError::Simple(err))?,
-            ));
+            self.resources_state = Some(Box::new(PythonResourcesState::try_from(&self.config)?));
 
             if let Some(ref mut resources_state) = self.resources_state {
                 resources_state
