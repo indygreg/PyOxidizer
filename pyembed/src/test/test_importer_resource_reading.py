@@ -3,8 +3,8 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 import io
+import os
 import pathlib
-import sys
 import tempfile
 import unittest
 
@@ -47,7 +47,7 @@ class TestImporterResourceReading(unittest.TestCase):
             collector.add_in_memory(r)
 
         f = OxidizedFinder()
-        f.add_resources(collector.oxidize()[0])
+        f.add_resources(collector.oxidize(python_exe=os.environ.get("PYTHON_SYS_EXECUTABLE"))[0])
 
         return f
 

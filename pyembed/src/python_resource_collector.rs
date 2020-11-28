@@ -50,8 +50,8 @@ py_class!(pub class OxidizedResourceCollector |py| {
         self.add_filesystem_relative_impl(py, prefix, resource)
     }
 
-    def oxidize(&self) -> PyResult<PyObject> {
-        self.oxidize_impl(py)
+    def oxidize(&self, python_exe: Option<PyObject> = None) -> PyResult<PyObject> {
+        self.oxidize_impl(py, python_exe)
     }
 });
 
@@ -259,11 +259,17 @@ impl OxidizedResourceCollector {
         }
     }
 
-    fn oxidize_impl(&self, py: Python) -> PyResult<PyObject> {
-        let sys_module = py.import("sys")?;
-        let executable = sys_module.get(py, "executable")?;
+    fn oxidize_impl(&self, py: Python, python_exe: Option<PyObject>) -> PyResult<PyObject> {
+        let python_exe = match python_exe {
+            Some(p) => p,
+            None => {
+                let sys_module = py.import("sys")?;
+                let executable = sys_module.get(py, "executable")?;
 
-        let python_exe = pyobject_to_pathbuf(py, executable)?;
+                executable
+            }
+        };
+        let python_exe = pyobject_to_pathbuf(py, python_exe)?;
 
         let collector = self.collector(py).borrow();
 
