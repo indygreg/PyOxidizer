@@ -12,7 +12,7 @@ use {
         interpreter::{CheckHashPYCsMode, PythonInterpreterConfig, PythonInterpreterProfile},
         resource::BytecodeOptimizationLevel,
     },
-    std::convert::TryInto,
+    std::convert::{TryFrom, TryInto},
     std::ffi::{CStr, CString, OsStr},
     std::path::Path,
 };
@@ -233,53 +233,57 @@ fn set_legacy_windows_stdio(config: &mut pyffi::PyConfig, value: bool) {
     config.legacy_windows_stdio = if value { 1 } else { 0 };
 }
 
-pub fn python_interpreter_config_to_py_pre_config(
-    value: &PythonInterpreterConfig,
-) -> Result<pyffi::PyPreConfig, String> {
-    let mut pre_config = pyffi::PyPreConfig::default();
-    unsafe {
-        match value.profile {
-            PythonInterpreterProfile::Python => {
-                pyffi::PyPreConfig_InitPythonConfig(&mut pre_config)
-            }
-            PythonInterpreterProfile::Isolated => {
-                pyffi::PyPreConfig_InitIsolatedConfig(&mut pre_config)
+impl<'a> TryFrom<&ResolvedOxidizedPythonInterpreterConfig<'a>> for pyffi::PyPreConfig {
+    type Error = String;
+
+    fn try_from(config: &ResolvedOxidizedPythonInterpreterConfig<'a>) -> Result<Self, Self::Error> {
+        let value = &config.interpreter_config;
+
+        let mut pre_config = pyffi::PyPreConfig::default();
+        unsafe {
+            match value.profile {
+                PythonInterpreterProfile::Python => {
+                    pyffi::PyPreConfig_InitPythonConfig(&mut pre_config)
+                }
+                PythonInterpreterProfile::Isolated => {
+                    pyffi::PyPreConfig_InitIsolatedConfig(&mut pre_config)
+                }
             }
         }
-    }
 
-    if let Some(parse_argv) = value.parse_argv {
-        pre_config.parse_argv = if parse_argv { 1 } else { 0 };
-    }
-    if let Some(isolated) = value.isolated {
-        pre_config.isolated = if isolated { 1 } else { 0 };
-    }
-    if let Some(use_environment) = value.use_environment {
-        pre_config.use_environment = if use_environment { 1 } else { 0 };
-    }
-    if let Some(configure_locale) = value.configure_locale {
-        pre_config.configure_locale = if configure_locale { 1 } else { 0 };
-    }
-    if let Some(coerce_c_locale) = value.coerce_c_locale {
-        pre_config.coerce_c_locale = coerce_c_locale as c_int;
-    }
-    if let Some(coerce_c_locale_warn) = value.coerce_c_locale_warn {
-        pre_config.coerce_c_locale_warn = if coerce_c_locale_warn { 1 } else { 0 };
-    }
-    if let Some(legacy_windows_fs_encoding) = value.legacy_windows_fs_encoding {
-        set_windows_fs_encoding(&mut pre_config, legacy_windows_fs_encoding);
-    }
-    if let Some(utf8_mode) = value.utf8_mode {
-        pre_config.utf8_mode = if utf8_mode { 1 } else { 0 };
-    }
-    if let Some(dev_mode) = value.development_mode {
-        pre_config.dev_mode = if dev_mode { 1 } else { 0 };
-    }
-    if let Some(allocator) = value.allocator {
-        pre_config.allocator = allocator as c_int;
-    }
+        if let Some(parse_argv) = value.parse_argv {
+            pre_config.parse_argv = if parse_argv { 1 } else { 0 };
+        }
+        if let Some(isolated) = value.isolated {
+            pre_config.isolated = if isolated { 1 } else { 0 };
+        }
+        if let Some(use_environment) = value.use_environment {
+            pre_config.use_environment = if use_environment { 1 } else { 0 };
+        }
+        if let Some(configure_locale) = value.configure_locale {
+            pre_config.configure_locale = if configure_locale { 1 } else { 0 };
+        }
+        if let Some(coerce_c_locale) = value.coerce_c_locale {
+            pre_config.coerce_c_locale = coerce_c_locale as c_int;
+        }
+        if let Some(coerce_c_locale_warn) = value.coerce_c_locale_warn {
+            pre_config.coerce_c_locale_warn = if coerce_c_locale_warn { 1 } else { 0 };
+        }
+        if let Some(legacy_windows_fs_encoding) = value.legacy_windows_fs_encoding {
+            set_windows_fs_encoding(&mut pre_config, legacy_windows_fs_encoding);
+        }
+        if let Some(utf8_mode) = value.utf8_mode {
+            pre_config.utf8_mode = if utf8_mode { 1 } else { 0 };
+        }
+        if let Some(dev_mode) = value.development_mode {
+            pre_config.dev_mode = if dev_mode { 1 } else { 0 };
+        }
+        if let Some(allocator) = value.allocator {
+            pre_config.allocator = allocator as c_int;
+        }
 
-    Ok(pre_config)
+        Ok(pre_config)
+    }
 }
 
 pub fn python_interpreter_config_to_py_config(
