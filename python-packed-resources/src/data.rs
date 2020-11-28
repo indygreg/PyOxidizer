@@ -405,6 +405,85 @@ impl<'a, X> Resource<'a, X>
 where
     [X]: ToOwned<Owned = Vec<X>>,
 {
+    /// Merge another resource into this one.
+    ///
+    /// Fields from other will overwrite fields from self.
+    pub fn merge_from(&mut self, other: Resource<'a, X>) -> Result<(), &'static str> {
+        if self.name != other.name {
+            return Err("resource names must be identical to perform a merge");
+        }
+
+        self.is_module |= other.is_module;
+        self.is_builtin_extension_module |= other.is_builtin_extension_module;
+        self.is_frozen_module |= other.is_frozen_module;
+        self.is_extension_module |= other.is_extension_module;
+        self.is_shared_library |= other.is_shared_library;
+        self.is_utf8_filename_data |= other.is_utf8_filename_data;
+        self.is_package |= other.is_package;
+        self.is_namespace_package |= other.is_namespace_package;
+        if let Some(value) = other.in_memory_source {
+            self.in_memory_source.replace(value);
+        }
+        if let Some(value) = other.in_memory_bytecode {
+            self.in_memory_bytecode.replace(value);
+        }
+        if let Some(value) = other.in_memory_bytecode_opt1 {
+            self.in_memory_bytecode_opt1.replace(value);
+        }
+        if let Some(value) = other.in_memory_bytecode_opt2 {
+            self.in_memory_bytecode_opt2.replace(value);
+        }
+        if let Some(value) = other.in_memory_extension_module_shared_library {
+            self.in_memory_extension_module_shared_library
+                .replace(value);
+        }
+        if let Some(value) = other.in_memory_package_resources {
+            self.in_memory_package_resources.replace(value);
+        }
+        if let Some(value) = other.in_memory_distribution_resources {
+            self.in_memory_distribution_resources.replace(value);
+        }
+        if let Some(value) = other.in_memory_shared_library {
+            self.in_memory_shared_library.replace(value);
+        }
+        if let Some(value) = other.shared_library_dependency_names {
+            self.shared_library_dependency_names.replace(value);
+        }
+        if let Some(value) = other.relative_path_module_source {
+            self.relative_path_module_source.replace(value);
+        }
+        if let Some(value) = other.relative_path_module_bytecode {
+            self.relative_path_module_bytecode.replace(value);
+        }
+        if let Some(value) = other.relative_path_module_bytecode_opt1 {
+            self.relative_path_module_bytecode_opt1.replace(value);
+        }
+        if let Some(value) = other.relative_path_module_bytecode_opt2 {
+            self.relative_path_module_bytecode_opt2.replace(value);
+        }
+        if let Some(value) = other.relative_path_extension_module_shared_library {
+            self.relative_path_extension_module_shared_library
+                .replace(value);
+        }
+        if let Some(value) = other.relative_path_package_resources {
+            self.relative_path_package_resources.replace(value);
+        }
+        if let Some(value) = other.relative_path_distribution_resources {
+            self.relative_path_distribution_resources.replace(value);
+        }
+        // TODO we should probably store an Option<bool> here so this assignment is
+        // unambiguous.
+        self.file_executable |= other.file_executable;
+        if let Some(value) = other.file_data_embedded {
+            self.file_data_embedded.replace(value);
+        }
+        if let Some(value) = other.file_data_utf8_relative_path {
+            self.file_data_utf8_relative_path.replace(value);
+        }
+
+        Ok(())
+    }
+
     pub fn to_owned(&self) -> Resource<'static, X> {
         Resource {
             flavor: self.flavor,

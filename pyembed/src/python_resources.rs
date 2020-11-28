@@ -28,7 +28,7 @@ use {
     std::{
         borrow::Cow,
         cell::RefCell,
-        collections::HashMap,
+        collections::{hash_map::Entry, HashMap},
         convert::TryFrom,
         ffi::CStr,
         iter::FromIterator,
@@ -878,20 +878,16 @@ impl<'a> PythonResourcesState<'a, u8> {
                 }
             };
 
-            // Module can be defined by embedded resources data. If exists, just
-            // update the big.
-            if let Some(mut entry) = self.resources.get_mut(name_str) {
-                entry.is_builtin_extension_module = true;
-            } else {
-                self.resources.insert(
-                    Cow::Owned(name_str.to_string()),
-                    Resource {
-                        is_builtin_extension_module: true,
-                        name: Cow::Owned(name_str.to_string()),
-                        ..Resource::default()
-                    },
-                );
-            }
+            self.resources
+                .entry(name_str.into())
+                .and_modify(|r| {
+                    r.is_builtin_extension_module = true;
+                })
+                .or_insert_with(|| Resource {
+                    is_builtin_extension_module: true,
+                    name: Cow::Owned(name_str.to_string()),
+                    ..Resource::default()
+                });
         }
 
         Ok(())
@@ -914,26 +910,27 @@ impl<'a> PythonResourcesState<'a, u8> {
                 }
             };
 
-            // Module can be defined by embedded resources data. If exists, just
-            // update the big.
-            if let Some(mut entry) = self.resources.get_mut(name_str) {
-                entry.is_frozen_module = true;
-            } else {
-                self.resources.insert(
-                    Cow::Owned(name_str.to_string()),
-                    Resource {
-                        is_frozen_module: true,
-                        name: Cow::Owned(name_str.to_string()),
-                        ..Resource::default()
-                    },
-                );
-            }
+            self.resources
+                .entry(name_str.into())
+                .and_modify(|r| {
+                    r.is_frozen_module = true;
+                })
+                .or_insert_with(|| Resource {
+                    is_frozen_module: true,
+                    name: Cow::Owned(name_str.to_string()),
+                    ..Resource::default()
+                });
         }
 
         Ok(())
     }
 
     /// Load resources by parsing a blob.
+    ///
+    /// If an existing entry exists, the new entry will be merged into it. Set fields
+    /// on the incoming entry will overrite fields on the existing entry.
+    ///
+    /// If an entry doesn't exist, the resource will be inserted as-is.
     fn load_resources(&mut self, data: &'a [u8]) -> Result<(), &'static str> {
         let resources = python_packed_resources::parser::load_resources(data)?;
 
@@ -944,7 +941,14 @@ impl<'a> PythonResourcesState<'a, u8> {
         for resource in resources {
             let resource = resource?;
 
-            self.resources.insert(resource.name.clone(), resource);
+            match self.resources.entry(resource.name.clone()) {
+                Entry::Occupied(existing) => {
+                    existing.into_mut().merge_from(resource)?;
+                }
+                Entry::Vacant(vacant) => {
+                    vacant.insert(resource);
+                }
+            }
         }
 
         Ok(())
