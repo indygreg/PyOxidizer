@@ -932,16 +932,16 @@ fn oxidized_finder_new(
     }
 
     if let Some(resources) = &resources_data {
-        resources_state.load_from_pyobject(py, resources.clone_ref(py))?;
+        resources_state.index_pyobject(py, resources.clone_ref(py))?;
     } else if let Some(resources_file) = resources_file {
         let path = pyobject_to_pathbuf(py, resources_file)?;
         resources_state
-            .load_from_path(&path)
+            .index_path(&path)
             .map_err(|e| PyErr::new::<ValueError, _>(py, e))?;
     }
 
     resources_state
-        .load_interpreter_builtins()
+        .index_interpreter_builtins()
         .map_err(|err| PyErr::new::<ValueError, _>(py, err))?;
 
     let importer = OxidizedFinder::create_instance(

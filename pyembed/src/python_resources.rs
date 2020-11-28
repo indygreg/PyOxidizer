@@ -420,12 +420,12 @@ impl<'a, 'config: 'a> TryFrom<&ResolvedOxidizedPythonInterpreterConfig<'config>>
 
         for data in &config.packed_resources {
             state
-                .load_resources(data)
+                .index_data(data)
                 .map_err(NewInterpreterError::Simple)?;
         }
 
         state
-            .load_interpreter_builtins()
+            .index_interpreter_builtins()
             .map_err(NewInterpreterError::Simple)?;
 
         Ok(state)
@@ -450,20 +450,37 @@ impl<'a> PythonResourcesState<'a, u8> {
         })
     }
 
-    /// Load resources that are built-in to the Python interpreter.
+    /// Load resources by parsing a blob.
     ///
-    /// If this instance's resources are being used by the sole Python importer,
-    /// this needs to be called to ensure modules required during interpreter
-    /// initialization are indexed and loadable by our importer.
-    pub fn load_interpreter_builtins(&mut self) -> Result<(), &'static str> {
-        self.load_interpreter_builtin_modules()?;
-        self.load_interpreter_frozen_modules()?;
+    /// If an existing entry exists, the new entry will be merged into it. Set fields
+    /// on the incoming entry will overwrite fields on the existing entry.
+    ///
+    /// If an entry doesn't exist, the resource will be inserted as-is.
+    fn index_data(&mut self, data: &'a [u8]) -> Result<(), &'static str> {
+        let resources = python_packed_resources::parser::load_resources(data)?;
+
+        // Reserve space for expected number of incoming items so we can avoid extra
+        // allocations.
+        self.resources.reserve(resources.expected_resources_count());
+
+        for resource in resources {
+            let resource = resource?;
+
+            match self.resources.entry(resource.name.clone()) {
+                Entry::Occupied(existing) => {
+                    existing.into_mut().merge_from(resource)?;
+                }
+                Entry::Vacant(vacant) => {
+                    vacant.insert(resource);
+                }
+            }
+        }
 
         Ok(())
     }
 
     /// Load resources data from a filesystem path.
-    pub fn load_from_path(&mut self, path: impl AsRef<Path>) -> Result<(), String> {
+    pub fn index_path(&mut self, path: impl AsRef<Path>) -> Result<(), String> {
         let path = path.as_ref();
         let f = std::fs::File::open(path).map_err(|e| e.to_string())?;
 
@@ -471,7 +488,7 @@ impl<'a> PythonResourcesState<'a, u8> {
 
         let data = unsafe { std::slice::from_raw_parts::<u8>(mapped.as_ptr(), mapped.len()) };
 
-        self.load_resources(data)?;
+        self.index_data(data)?;
         self.backing_mmaps.push(mapped);
 
         Ok(())
@@ -480,16 +497,92 @@ impl<'a> PythonResourcesState<'a, u8> {
     /// Load resources from packed data stored in a PyObject.
     ///
     /// The `PyObject` must conform to the buffer protocol.
-    pub fn load_from_pyobject(&mut self, py: Python, obj: PyObject) -> PyResult<()> {
+    pub fn index_pyobject(&mut self, py: Python, obj: PyObject) -> PyResult<()> {
         let buffer = PyBuffer::get(py, &obj)?;
 
         let data = unsafe {
             std::slice::from_raw_parts::<u8>(buffer.buf_ptr() as *const _, buffer.len_bytes())
         };
 
-        self.load_resources(data)
+        self.index_data(data)
             .map_err(|msg| PyErr::new::<ValueError, _>(py, msg))?;
         self.backing_py_objects.push(obj);
+
+        Ok(())
+    }
+
+    /// Load `builtin` modules from the Python interpreter.
+    fn index_interpreter_builtin_extension_modules(&mut self) -> Result<(), &'static str> {
+        for i in 0.. {
+            let record = unsafe { pyffi::PyImport_Inittab.offset(i) };
+
+            if unsafe { *record }.name.is_null() {
+                break;
+            }
+
+            let name = unsafe { CStr::from_ptr((*record).name as _) };
+            let name_str = match name.to_str() {
+                Ok(v) => v,
+                Err(_) => {
+                    return Err("unable to parse PyImport_Inittab");
+                }
+            };
+
+            self.resources
+                .entry(name_str.into())
+                .and_modify(|r| {
+                    r.is_builtin_extension_module = true;
+                })
+                .or_insert_with(|| Resource {
+                    is_builtin_extension_module: true,
+                    name: Cow::Owned(name_str.to_string()),
+                    ..Resource::default()
+                });
+        }
+
+        Ok(())
+    }
+
+    /// Load `frozen` modules from the Python interpreter.
+    fn index_interpreter_frozen_modules(&mut self) -> Result<(), &'static str> {
+        for i in 0.. {
+            let record = unsafe { pyffi::PyImport_FrozenModules.offset(i) };
+
+            if unsafe { *record }.name.is_null() {
+                break;
+            }
+
+            let name = unsafe { CStr::from_ptr((*record).name as _) };
+            let name_str = match name.to_str() {
+                Ok(v) => v,
+                Err(_) => {
+                    return Err("unable to parse PyImport_FrozenModules");
+                }
+            };
+
+            self.resources
+                .entry(name_str.into())
+                .and_modify(|r| {
+                    r.is_frozen_module = true;
+                })
+                .or_insert_with(|| Resource {
+                    is_frozen_module: true,
+                    name: Cow::Owned(name_str.to_string()),
+                    ..Resource::default()
+                });
+        }
+
+        Ok(())
+    }
+
+    /// Load resources that are built-in to the Python interpreter.
+    ///
+    /// If this instance's resources are being used by the sole Python importer,
+    /// this needs to be called to ensure modules required during interpreter
+    /// initialization are indexed and loadable by our importer.
+    pub fn index_interpreter_builtins(&mut self) -> Result<(), &'static str> {
+        self.index_interpreter_builtin_extension_modules()?;
+        self.index_interpreter_frozen_modules()?;
 
         Ok(())
     }
@@ -856,99 +949,6 @@ impl<'a> PythonResourcesState<'a, u8> {
         let res = PyList::new(py, &infos);
 
         Ok(res.into_object())
-    }
-
-    /// Load `builtin` modules from the Python interpreter.
-    fn load_interpreter_builtin_modules(&mut self) -> Result<(), &'static str> {
-        for i in 0.. {
-            let record = unsafe { pyffi::PyImport_Inittab.offset(i) };
-
-            if unsafe { *record }.name.is_null() {
-                break;
-            }
-
-            let name = unsafe { CStr::from_ptr((*record).name as _) };
-            let name_str = match name.to_str() {
-                Ok(v) => v,
-                Err(_) => {
-                    return Err("unable to parse PyImport_Inittab");
-                }
-            };
-
-            self.resources
-                .entry(name_str.into())
-                .and_modify(|r| {
-                    r.is_builtin_extension_module = true;
-                })
-                .or_insert_with(|| Resource {
-                    is_builtin_extension_module: true,
-                    name: Cow::Owned(name_str.to_string()),
-                    ..Resource::default()
-                });
-        }
-
-        Ok(())
-    }
-
-    /// Load `frozen` modules from the Python interpreter.
-    fn load_interpreter_frozen_modules(&mut self) -> Result<(), &'static str> {
-        for i in 0.. {
-            let record = unsafe { pyffi::PyImport_FrozenModules.offset(i) };
-
-            if unsafe { *record }.name.is_null() {
-                break;
-            }
-
-            let name = unsafe { CStr::from_ptr((*record).name as _) };
-            let name_str = match name.to_str() {
-                Ok(v) => v,
-                Err(_) => {
-                    return Err("unable to parse PyImport_FrozenModules");
-                }
-            };
-
-            self.resources
-                .entry(name_str.into())
-                .and_modify(|r| {
-                    r.is_frozen_module = true;
-                })
-                .or_insert_with(|| Resource {
-                    is_frozen_module: true,
-                    name: Cow::Owned(name_str.to_string()),
-                    ..Resource::default()
-                });
-        }
-
-        Ok(())
-    }
-
-    /// Load resources by parsing a blob.
-    ///
-    /// If an existing entry exists, the new entry will be merged into it. Set fields
-    /// on the incoming entry will overrite fields on the existing entry.
-    ///
-    /// If an entry doesn't exist, the resource will be inserted as-is.
-    fn load_resources(&mut self, data: &'a [u8]) -> Result<(), &'static str> {
-        let resources = python_packed_resources::parser::load_resources(data)?;
-
-        // Reserve space for expected number of incoming items so we can avoid extra
-        // allocations.
-        self.resources.reserve(resources.expected_resources_count());
-
-        for resource in resources {
-            let resource = resource?;
-
-            match self.resources.entry(resource.name.clone()) {
-                Entry::Occupied(existing) => {
-                    existing.into_mut().merge_from(resource)?;
-                }
-                Entry::Vacant(vacant) => {
-                    vacant.insert(resource);
-                }
-            }
-        }
-
-        Ok(())
     }
 
     /// Serialize resources contained in this data structure.
