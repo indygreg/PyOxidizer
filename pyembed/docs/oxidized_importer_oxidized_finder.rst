@@ -141,6 +141,48 @@ resources data*.
    to use the same version of the ``oxidized_importer`` extension to
    produce and consume this data structure to ensure compatibility.
 
+.. _oxidized_finder_index_bytes:
+
+``index_bytes(self, data: bytes) -> None``
+------------------------------------------
+
+This method parses any bytes-like object and indexes the resources within.
+
+.. _oxidized_finder_index_file_memory_mapped:
+
+``index_file_memory_mapped(self, path: Path) -> None``
+------------------------------------------------------
+
+This method parses the given Path-like argument and indexes the resources
+within. Memory mapped I/O is used to read the file. Rust managed the
+memory map via the ``memmap`` crate: this does not use the Python
+interpreter's memory mapping code.
+
+.. _oxidized_finder_index_interpreter_builtins:
+
+``index_interpreter_builtins(self) -> None``
+--------------------------------------------
+
+This method indexes Python resources that are built-in to the Python
+interpreter itself. This indexes built-in extension modules and frozen
+modules.
+
+.. _oxidized_finder_index_interpreter_builtin_extension_modules:
+
+``index_interpreter_builtin_extension_modules(self) -> None``
+-------------------------------------------------------------
+
+This method will index Python extension modules that are compiled into
+the Python interpreter itself.
+
+.. _oxidized_finder_index_interpreter_frozen_modules:
+
+``index_interpreter_frozen_modules(self) -> None``
+--------------------------------------------------
+
+This method will index Python modules whose bytecode is frozen into
+the Python interpreter itself.
+
 .. _oxidized_finder_indexed_resources:
 
 ``indexed_resources(self) -> List[OxidizedResource]``

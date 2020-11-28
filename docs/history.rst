@@ -64,6 +64,10 @@ New Features
 * The ``PythonExecutable`` Starlark type now exposes a ``to_wix_bundle_builder()``
   method to obtain a ``WiXBundleBuilder``, which can be used to generate an
   ``.exe`` installer for the application.
+* The ``OxidizedFinder`` Python type now exposed various ``index_*`` methods
+  to facilitate loading/indexing of resource data in arbitrary byte buffers
+  or files. You can call these methods multiple times to chain multiple
+  resources blobs together.
 
 Other Relevant Changes
 ^^^^^^^^^^^^^^^^^^^^^^

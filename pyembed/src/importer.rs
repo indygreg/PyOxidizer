@@ -533,6 +533,26 @@ py_class!(class OxidizedFinder |py| {
         oxidized_finder_new(py, resources_data, resources_file, relative_path_origin)
     }
 
+    def index_bytes(&self, data: PyObject) -> PyResult<PyObject> {
+        self.index_bytes_impl(py, data)
+    }
+
+    def index_file_memory_mapped(&self, path: PyObject) -> PyResult<PyObject> {
+        self.index_file_memory_mapped_impl(py, path)
+    }
+
+    def index_interpreter_builtins(&self) -> PyResult<PyObject> {
+        self.index_interpreter_builtins_impl(py)
+    }
+
+    def index_interpreter_builtin_extension_modules(&self) -> PyResult<PyObject> {
+        self.index_interpreter_builtin_extension_modules_impl(py)
+    }
+
+    def index_interpreter_frozen_modules(&self) -> PyResult<PyObject> {
+        self.index_interpreter_frozen_modules_impl(py)
+    }
+
     def indexed_resources(&self) -> PyResult<PyObject> {
         self.indexed_resources_impl(py)
     }
@@ -958,6 +978,56 @@ fn oxidized_finder_new(
 }
 
 impl OxidizedFinder {
+    fn index_bytes_impl(&self, py: Python, data: PyObject) -> PyResult<PyObject> {
+        let resources_state: &mut PythonResourcesState<u8> =
+            self.state(py).get_resources_state_mut();
+        resources_state.index_pyobject(py, data)?;
+
+        Ok(py.None())
+    }
+
+    fn index_file_memory_mapped_impl(&self, py: Python, path: PyObject) -> PyResult<PyObject> {
+        let path = pyobject_to_pathbuf(py, path)?;
+
+        let resources_state: &mut PythonResourcesState<u8> =
+            self.state(py).get_resources_state_mut();
+        resources_state
+            .index_path_memory_mapped(path)
+            .map_err(|e| PyErr::new::<ValueError, _>(py, e))?;
+
+        Ok(py.None())
+    }
+
+    fn index_interpreter_builtins_impl(&self, py: Python) -> PyResult<PyObject> {
+        let resources_state: &mut PythonResourcesState<u8> =
+            self.state(py).get_resources_state_mut();
+        resources_state
+            .index_interpreter_builtins()
+            .map_err(|e| PyErr::new::<ValueError, _>(py, e))?;
+
+        Ok(py.None())
+    }
+
+    fn index_interpreter_builtin_extension_modules_impl(&self, py: Python) -> PyResult<PyObject> {
+        let resources_state: &mut PythonResourcesState<u8> =
+            self.state(py).get_resources_state_mut();
+        resources_state
+            .index_interpreter_builtin_extension_modules()
+            .map_err(|e| PyErr::new::<ValueError, _>(py, e))?;
+
+        Ok(py.None())
+    }
+
+    fn index_interpreter_frozen_modules_impl(&self, py: Python) -> PyResult<PyObject> {
+        let resources_state: &mut PythonResourcesState<u8> =
+            self.state(py).get_resources_state_mut();
+        resources_state
+            .index_interpreter_frozen_modules()
+            .map_err(|e| PyErr::new::<ValueError, _>(py, e))?;
+
+        Ok(py.None())
+    }
+
     fn indexed_resources_impl(&self, py: Python) -> PyResult<PyObject> {
         let resources_state: &PythonResourcesState<u8> = self.state(py).get_resources_state();
 

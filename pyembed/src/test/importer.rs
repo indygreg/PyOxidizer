@@ -124,6 +124,11 @@ rusty_fork_test! {
         run_py_test("test_importer_construction.py").unwrap()
     }
 
+    #[test]
+    fn importer_indexing() {
+        run_py_test("test_importer_indexing.py").unwrap()
+    }
+
     /// Run test_importer_iter_modules.py.
     #[test]
     fn importer_iter_modules_py() {
