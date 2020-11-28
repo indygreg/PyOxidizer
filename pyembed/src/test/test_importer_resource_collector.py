@@ -48,7 +48,9 @@ class TestImporterResourceCollector(unittest.TestCase):
             c.add_in_memory(resource)
 
         f = OxidizedFinder()
-        f.add_resources(c.oxidize(python_exe=os.environ.get("PYTHON_SYS_EXECUTABLE"))[0])
+        f.add_resources(
+            c.oxidize(python_exe=os.environ.get("PYTHON_SYS_EXECUTABLE"))[0]
+        )
 
         resources = [r for r in f.indexed_resources() if r.name == "foo"]
         self.assertEqual(len(resources), 1)
@@ -67,7 +69,9 @@ class TestImporterResourceCollector(unittest.TestCase):
                     c.add_in_memory(resource)
                     c.add_filesystem_relative("", resource)
 
-        resources, file_installs = c.oxidize(python_exe=os.environ.get("PYTHON_SYS_EXECUTABLE"))
+        resources, file_installs = c.oxidize(
+            python_exe=os.environ.get("PYTHON_SYS_EXECUTABLE")
+        )
         f = OxidizedFinder()
         f.add_resources(resources)
 
@@ -93,7 +97,9 @@ class TestImporterResourceCollector(unittest.TestCase):
                             if resource.optimize_level == 0:
                                 c.add_filesystem_relative("lib", resource)
 
-        resources, file_installs = c.oxidize(python_exe=os.environ.get("PYTHON_SYS_EXECUTABLE"))
+        resources, file_installs = c.oxidize(
+            python_exe=os.environ.get("PYTHON_SYS_EXECUTABLE")
+        )
         self.assertEqual(len(resources), len(file_installs))
 
         idx = None

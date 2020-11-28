@@ -48,7 +48,9 @@ class TestImporterModuleLoading(unittest.TestCase):
             collector.add_in_memory(r)
 
         f = OxidizedFinder()
-        f.add_resources(collector.oxidize(python_exe=os.environ.get("PYTHON_SYS_EXECUTABLE"))[0])
+        f.add_resources(
+            collector.oxidize(python_exe=os.environ.get("PYTHON_SYS_EXECUTABLE"))[0]
+        )
 
         return f
 
@@ -73,7 +75,8 @@ class TestImporterModuleLoading(unittest.TestCase):
         self.assertIsNone(spec.loader_state)
         self.assertIsInstance(spec.submodule_search_locations, list)
         self.assertEqual(
-            spec.submodule_search_locations, [os.path.join(sys.argv[0], "my_package")],
+            spec.submodule_search_locations,
+            [os.path.join(sys.argv[0], "my_package")],
         )
 
         # Default module creation semantics for source modules.
@@ -121,7 +124,8 @@ class TestImporterModuleLoading(unittest.TestCase):
         self.assertIsNone(spec.loader_state)
         self.assertIsInstance(spec.submodule_search_locations, list)
         self.assertEqual(
-            spec.submodule_search_locations, [os.path.join(sys.argv[0], "my_package")],
+            spec.submodule_search_locations,
+            [os.path.join(sys.argv[0], "my_package")],
         )
 
         # Default module creation semantics for bytecode modules.

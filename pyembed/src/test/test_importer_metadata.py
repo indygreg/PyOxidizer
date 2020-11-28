@@ -43,7 +43,9 @@ class TestImporterMetadata(unittest.TestCase):
             collector.add_in_memory(r)
 
         f = OxidizedFinder()
-        f.add_resources(collector.oxidize(python_exe=os.environ.get("PYTHON_SYS_EXECUTABLE"))[0])
+        f.add_resources(
+            collector.oxidize(python_exe=os.environ.get("PYTHON_SYS_EXECUTABLE"))[0]
+        )
 
         return f
 
@@ -98,7 +100,9 @@ class TestImporterMetadata(unittest.TestCase):
             collector.add_in_memory(r)
 
         f = OxidizedFinder()
-        f.add_resources(collector.oxidize(python_exe=os.environ.get("PYTHON_SYS_EXECUTABLE"))[0])
+        f.add_resources(
+            collector.oxidize(python_exe=os.environ.get("PYTHON_SYS_EXECUTABLE"))[0]
+        )
 
         dists = f.find_distributions()
         self.assertEqual(len(dists), 1)
