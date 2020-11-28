@@ -5,7 +5,7 @@
 //! Utilities for configuring a Python interpreter.
 
 use {
-    super::config::ResolvedOxidizedPythonInterpreterConfig,
+    crate::{config::ResolvedOxidizedPythonInterpreterConfig, NewInterpreterError},
     libc::{c_int, size_t, wchar_t},
     python3_sys as pyffi,
     python_packaging::{
@@ -234,7 +234,7 @@ fn set_legacy_windows_stdio(config: &mut pyffi::PyConfig, value: bool) {
 }
 
 impl<'a> TryFrom<&ResolvedOxidizedPythonInterpreterConfig<'a>> for pyffi::PyPreConfig {
-    type Error = String;
+    type Error = NewInterpreterError;
 
     fn try_from(config: &ResolvedOxidizedPythonInterpreterConfig<'a>) -> Result<Self, Self::Error> {
         let value = &config.interpreter_config;
@@ -561,19 +561,24 @@ pub fn python_interpreter_config_to_py_config(
 }
 
 impl<'a> TryInto<pyffi::PyConfig> for &'a ResolvedOxidizedPythonInterpreterConfig<'a> {
-    type Error = String;
+    type Error = NewInterpreterError;
 
     fn try_into(self) -> Result<pyffi::PyConfig, Self::Error> {
         // We use the raw configuration as a base then we apply any adjustments,
         // as needed.
         let config: pyffi::PyConfig =
-            python_interpreter_config_to_py_config(&self.interpreter_config)?;
+            python_interpreter_config_to_py_config(&self.interpreter_config)
+                .map_err(NewInterpreterError::Dynamic)?;
 
         if self.exe.is_none() {
-            return Err("current executable not set; must call ensure_origin() 1st".to_string());
+            return Err(NewInterpreterError::Simple(
+                "current executable not set; must call ensure_origin() 1st",
+            ));
         }
         if self.origin.is_none() {
-            return Err("origin not set; must call ensure_origin() 1st".to_string());
+            return Err(NewInterpreterError::Simple(
+                "origin not set; must call ensure_origin() 1st",
+            ));
         }
         let exe = self.exe.as_ref().unwrap();
         let origin = self.origin.as_ref().unwrap();
@@ -586,12 +591,14 @@ impl<'a> TryInto<pyffi::PyConfig> for &'a ResolvedOxidizedPythonInterpreterConfi
                     &config.program_name,
                     &exe,
                     "setting program_name",
-                )?;
+                )
+                .map_err(NewInterpreterError::Dynamic)?;
             }
 
             // PYTHONHOME is set to directory of current executable.
             if self.interpreter_config.home.is_none() {
-                set_config_string_from_path(&config, &config.home, origin, "setting home")?;
+                set_config_string_from_path(&config, &config.home, origin, "setting home")
+                    .map_err(NewInterpreterError::Dynamic)?;
             }
         }
 

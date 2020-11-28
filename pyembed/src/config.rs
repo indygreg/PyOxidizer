@@ -5,6 +5,7 @@
 //! Data structures for configuring a Python interpreter.
 
 use {
+    crate::NewInterpreterError,
     python3_sys as pyffi,
     python_packaging::interpreter::{
         PythonInterpreterConfig, PythonInterpreterProfile, PythonRawAllocator, TerminfoResolution,
@@ -197,18 +198,23 @@ impl<'a> Default for OxidizedPythonInterpreterConfig<'a> {
 
 impl<'a> OxidizedPythonInterpreterConfig<'a> {
     /// Create a new type with all values resolved.
-    pub fn resolve(self) -> Result<ResolvedOxidizedPythonInterpreterConfig<'a>, &'static str> {
+    pub fn resolve(
+        self,
+    ) -> Result<ResolvedOxidizedPythonInterpreterConfig<'a>, NewInterpreterError> {
         let exe = if let Some(exe) = self.exe {
             exe
         } else {
-            std::env::current_exe().map_err(|_| "could not obtain current executable")?
+            std::env::current_exe()
+                .map_err(|_| NewInterpreterError::Simple("could not obtain current executable"))?
         };
 
         let origin = if let Some(origin) = self.origin {
             origin
         } else {
             exe.parent()
-                .ok_or("unable to obtain current executable parent directory")?
+                .ok_or(NewInterpreterError::Simple(
+                    "unable to obtain current executable parent directory",
+                ))?
                 .to_path_buf()
         };
 
@@ -268,7 +274,7 @@ impl<'a> Deref for ResolvedOxidizedPythonInterpreterConfig<'a> {
 impl<'a> TryFrom<OxidizedPythonInterpreterConfig<'a>>
     for ResolvedOxidizedPythonInterpreterConfig<'a>
 {
-    type Error = &'static str;
+    type Error = NewInterpreterError;
 
     fn try_from(value: OxidizedPythonInterpreterConfig<'a>) -> Result<Self, Self::Error> {
         value.resolve()

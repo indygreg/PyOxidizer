@@ -198,8 +198,7 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
     pub fn new(
         config: OxidizedPythonInterpreterConfig<'resources>,
     ) -> Result<MainPythonInterpreter<'python, 'interpreter, 'resources>, NewInterpreterError> {
-        let config: ResolvedOxidizedPythonInterpreterConfig<'resources> =
-            config.try_into().map_err(NewInterpreterError::Simple)?;
+        let config: ResolvedOxidizedPythonInterpreterConfig<'resources> = config.try_into()?;
 
         match config.terminfo_resolution {
             TerminfoResolution::Dynamic => {
@@ -270,8 +269,7 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
         set_pyimport_inittab(&self.config);
 
         // Pre-configure Python.
-        let pre_config =
-            pyffi::PyPreConfig::try_from(&self.config).map_err(NewInterpreterError::Dynamic)?;
+        let pre_config = pyffi::PyPreConfig::try_from(&self.config)?;
 
         unsafe {
             let status = pyffi::Py_PreInitialize(&pre_config);
@@ -314,9 +312,7 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
             }
         }
 
-        let mut py_config: pyffi::PyConfig = (&self.config)
-            .try_into()
-            .map_err(NewInterpreterError::Dynamic)?;
+        let mut py_config: pyffi::PyConfig = (&self.config).try_into()?;
 
         // Enable multi-phase initialization. This allows us to initialize
         // our custom importer before Python attempts any imports.
