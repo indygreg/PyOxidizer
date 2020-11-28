@@ -385,6 +385,9 @@ where
     /// Holding a reference to these prevents them from being gc'd and for
     /// memory referenced by `self.resources` from being freed.
     backing_py_objects: Vec<PyObject>,
+
+    /// Holds memory mapped file instances that resources data came from.
+    backing_mmaps: Vec<Box<memmap::Mmap>>,
 }
 
 impl<'a> Default for PythonResourcesState<'a, u8> {
@@ -394,6 +397,7 @@ impl<'a> Default for PythonResourcesState<'a, u8> {
             origin: PathBuf::new(),
             resources: HashMap::new(),
             backing_py_objects: vec![],
+            backing_mmaps: vec![],
         }
     }
 }
@@ -411,6 +415,7 @@ impl<'a, 'config: 'a> TryFrom<&ResolvedOxidizedPythonInterpreterConfig<'config>>
             origin: config.origin().clone(),
             resources: Default::default(),
             backing_py_objects: vec![],
+            backing_mmaps: vec![],
         };
 
         state
@@ -435,6 +440,7 @@ impl<'a> PythonResourcesState<'a, u8> {
             origin,
             resources: Default::default(),
             backing_py_objects: vec![],
+            backing_mmaps: vec![],
         })
     }
 
@@ -451,6 +457,21 @@ impl<'a> PythonResourcesState<'a, u8> {
         Ok(())
     }
 
+    /// Load resources data from a filesystem path.
+    pub fn load_from_path(&mut self, path: impl AsRef<Path>) -> Result<(), String> {
+        let path = path.as_ref();
+        let f = std::fs::File::open(path).map_err(|e| e.to_string())?;
+
+        let mapped = Box::new(unsafe { memmap::Mmap::map(&f) }.map_err(|e| e.to_string())?);
+
+        let data = unsafe { std::slice::from_raw_parts::<u8>(mapped.as_ptr(), mapped.len()) };
+
+        self.load_resources(data)?;
+        self.backing_mmaps.push(mapped);
+
+        Ok(())
+    }
+
     /// Load resources from packed data stored in a PyObject.
     ///
     /// The `PyObject` must conform to the buffer protocol.
@@ -461,7 +482,7 @@ impl<'a> PythonResourcesState<'a, u8> {
             std::slice::from_raw_parts::<u8>(buffer.buf_ptr() as *const _, buffer.len_bytes())
         };
 
-        self.load(&[data])
+        self.load_resources(data)
             .map_err(|msg| PyErr::new::<ValueError, _>(py, msg))?;
         self.backing_py_objects.push(obj);
 

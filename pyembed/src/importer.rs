@@ -27,7 +27,7 @@ use {
         resource_scanning::find_resources_in_path,
     },
     cpython::{
-        exc::{FileNotFoundError, IOError, ImportError, ValueError},
+        exc::{FileNotFoundError, ImportError, ValueError},
         {
             py_class, py_fn, ObjectProtocol, PyBytes, PyCapsule, PyClone, PyDict, PyErr, PyList,
             PyModule, PyObject, PyResult, PyString, PyTuple, Python, PythonObject, ToPyObject,
@@ -286,12 +286,6 @@ pub(crate) struct ImporterState {
     /// the backing memory instead of forcing all resource data to be backed
     /// by 'static.
     resources_state: PyCapsule,
-
-    /// Holds memory mapped file instances that resources data came from.
-    ///
-    /// We need to hold a reference to this because resources_state was
-    /// constructed from a &[u8] backed by it.
-    _resources_mmaps: Option<Vec<Box<memmap::Mmap>>>,
 }
 
 impl ImporterState {
@@ -300,7 +294,6 @@ impl ImporterState {
         importer_module: &PyModule,
         bootstrap_module: &PyModule,
         resources_state: Box<PythonResourcesState<'a, u8>>,
-        resources_mmaps: Option<Vec<Box<memmap::Mmap>>>,
     ) -> Result<Self, PyErr> {
         let decode_source = importer_module.get(py, "decode_source")?;
 
@@ -403,7 +396,6 @@ impl ImporterState {
             exec_fn,
             optimize_level,
             resources_state: capsule,
-            _resources_mmaps: resources_mmaps,
         })
     }
 
@@ -909,7 +901,6 @@ impl OxidizedFinder {
                 &m,
                 &bootstrap_module,
                 resources_state,
-                None,
             )?),
         )?;
 
@@ -931,23 +922,6 @@ fn oxidized_finder_new(
     let m = py.import(OXIDIZED_IMPORTER_NAME_STR)?;
     let bootstrap_module = py.import("_frozen_importlib")?;
 
-    // The PythonResourcesState is a bit more complex.
-    //
-    // It loads resources data from a memory location and stores references
-    // to that memory address. That means resources data passed in must live
-    // for at least as long as the PythonResourcesState / ImporterState /
-    // OxidizedFinder instances or else we could have an unsafety issue.
-    //
-    // To make matters more complex, ImporterState stores the reference to
-    // PythonResourcesState as a PyCapsule to avoid 'static lifetime restrictions.
-    //
-    // Our solution to this predicament is to stash a reference to the
-    // PyObject holding the resources data and an opaque object holding
-    // our PythonResourcesState on the returned instance. This ensures that
-    // the memory backing this finder instance lives at least as long as the
-    // finder itself.
-
-    // It needs to live on the heap to ensure that the memory address is constant.
     let mut resources_state = Box::new(
         PythonResourcesState::new_from_env().map_err(|err| PyErr::new::<ValueError, _>(py, err))?,
     );
@@ -957,36 +931,18 @@ fn oxidized_finder_new(
         resources_state.origin = pyobject_to_pathbuf(py, py_origin)?;
     }
 
-    // If we received a PyObject defining resources data, try to resolve it.
-    let (raw_resource_datas, mapped) = if let Some(resources) = &resources_data {
-        resources_state.load_from_pyobject(py, resources.clone_ref(py))?;
+    resources_state
+        .load(&[])
+        .map_err(|err| PyErr::new::<ValueError, _>(py, err))?;
 
-        (vec![], None)
+    if let Some(resources) = &resources_data {
+        resources_state.load_from_pyobject(py, resources.clone_ref(py))?;
     } else if let Some(resources_file) = resources_file {
         let path = pyobject_to_pathbuf(py, resources_file)?;
-
-        let f = std::fs::File::open(&path).map_err(|e| {
-            PyErr::new::<IOError, _>(py, format!("unable to open resources file: {}", e))
-        })?;
-
-        let mapped = Box::new(unsafe { memmap::Mmap::map(&f) }.map_err(|e| {
-            PyErr::new::<IOError, _>(py, format!("unable to memory map resources file: {}", e))
-        })?);
-
-        // We "leak" a pointer to the memory mapped data and create a slice from it
-        // so we don't have a reference to a borrowed value, which the borrow checker
-        // would complain about. But when we do this, we need to stash the Mmap so it
-        // lives at least as long as this slice.
-        let data = unsafe { std::slice::from_raw_parts::<u8>(mapped.as_ptr(), mapped.len()) };
-
-        (vec![data], Some(vec![mapped]))
-    } else {
-        (vec![], None)
-    };
-
-    resources_state
-        .load(&raw_resource_datas)
-        .map_err(|err| PyErr::new::<ValueError, _>(py, err))?;
+        resources_state
+            .load_from_path(&path)
+            .map_err(|e| PyErr::new::<ValueError, _>(py, e))?;
+    }
 
     let importer = OxidizedFinder::create_instance(
         py,
@@ -995,7 +951,6 @@ fn oxidized_finder_new(
             &m,
             &bootstrap_module,
             resources_state,
-            mapped,
         )?),
     )?;
 
