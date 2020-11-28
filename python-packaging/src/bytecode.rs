@@ -80,16 +80,21 @@ impl BytecodeCompiler {
         let stdin = command
             .stdin
             .as_mut()
-            .ok_or_else(|| anyhow!("unable to get stdin"))?;
+            .ok_or_else(|| anyhow!("unable to get stdin"))
+            .context("obtaining stdin")?;
 
-        stdin.write_all(b"magic_number\n")?;
-        stdin.flush()?;
+        stdin
+            .write_all(b"magic_number\n")
+            .context("writing magic_number command request")?;
+        stdin.flush().context("flushing")?;
 
         let stdout = command
             .stdout
             .as_mut()
             .ok_or_else(|| anyhow!("unable to get stdou"))?;
-        let magic_number = stdout.read_u32::<LittleEndian>()?;
+        let magic_number = stdout
+            .read_u32::<LittleEndian>()
+            .context("reading magic number")?;
 
         Ok(BytecodeCompiler {
             _temp_dir: temp_dir,
