@@ -390,15 +390,25 @@ impl<'a> Default for PythonResourcesState<'a, u8> {
     }
 }
 
-impl<'a> TryFrom<&ResolvedOxidizedPythonInterpreterConfig<'a>> for PythonResourcesState<'a, u8> {
+impl<'a, 'config: 'a> TryFrom<&ResolvedOxidizedPythonInterpreterConfig<'config>>
+    for PythonResourcesState<'a, u8>
+{
     type Error = NewInterpreterError;
 
-    fn try_from(config: &ResolvedOxidizedPythonInterpreterConfig) -> Result<Self, Self::Error> {
-        Ok(Self {
+    fn try_from(
+        config: &ResolvedOxidizedPythonInterpreterConfig<'config>,
+    ) -> Result<Self, Self::Error> {
+        let mut state = Self {
             current_exe: config.exe().clone(),
             origin: config.origin().clone(),
             resources: Default::default(),
-        })
+        };
+
+        state
+            .load(&config.packed_resources)
+            .map_err(NewInterpreterError::Simple)?;
+
+        Ok(state)
     }
 }
 
