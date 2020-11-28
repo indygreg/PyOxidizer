@@ -143,21 +143,56 @@ impl PythonBytecodeCompiler for BytecodeCompiler {
         stdin.write_all(source).context("writing source code")?;
         stdin.flush().context("flushing")?;
 
-        let mut len_s = String::new();
+        let mut code_s = String::new();
         reader
-            .read_line(&mut len_s)
-            .context("reading output size line")?;
+            .read_line(&mut code_s)
+            .context("reading result code")?;
+        let code_s = code_s.trim_end();
+        let code = code_s.parse::<u8>().unwrap();
 
-        let len_s = len_s.trim_end();
-        let bytecode_len = len_s.parse::<u64>().unwrap();
+        match code {
+            0 => {
+                let mut len_s = String::new();
+                reader
+                    .read_line(&mut len_s)
+                    .context("reading output size line")?;
 
-        let mut bytecode: Vec<u8> = Vec::new();
-        reader
-            .take(bytecode_len)
-            .read_to_end(&mut bytecode)
-            .context("reading bytecode result")?;
+                let len_s = len_s.trim_end();
+                let bytecode_len = len_s.parse::<u64>().unwrap();
 
-        Ok(bytecode)
+                let mut bytecode: Vec<u8> = Vec::new();
+                reader
+                    .take(bytecode_len)
+                    .read_to_end(&mut bytecode)
+                    .context("reading bytecode result")?;
+
+                Ok(bytecode)
+            }
+            1 => {
+                let mut len_s = String::new();
+                reader
+                    .read_line(&mut len_s)
+                    .context("reading error string length line")?;
+
+                let len_s = len_s.trim_end();
+                let error_len = len_s.parse::<u64>().unwrap();
+
+                let mut error_data = vec![];
+                reader
+                    .take(error_len)
+                    .read_to_end(&mut error_data)
+                    .context("reading error message")?;
+
+                Err(anyhow!(
+                    "compiling error: {}",
+                    String::from_utf8(error_data)?
+                ))
+            }
+            _ => Err(anyhow!(
+                "unexpected result code from compile command: {}",
+                code
+            )),
+        }
     }
 }
 
