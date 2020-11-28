@@ -149,8 +149,7 @@ impl PythonBytecodeCompiler for BytecodeCompiler {
 impl Drop for BytecodeCompiler {
     fn drop(&mut self) {
         let stdin = self.command.stdin.as_mut().expect("failed to get stdin");
-        stdin.write_all(b"exit\n").expect("write failed");
-        stdin.flush().expect("flush failed");
+        let _ = stdin.write_all(b"exit\n").and_then(|()| stdin.flush());
 
         self.command.wait().expect("compiler process did not exit");
     }
