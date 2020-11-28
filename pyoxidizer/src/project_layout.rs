@@ -25,23 +25,23 @@ lazy_static! {
         handlebars
             .register_template_string(
                 "application-manifest.rc",
-                include_str!("templates/application-manifest.rc"),
+                include_str!("templates/application-manifest.rc.hbs"),
             )
             .unwrap();
         handlebars
-            .register_template_string("exe.manifest", include_str!("templates/exe.manifest"))
+            .register_template_string("exe.manifest", include_str!("templates/exe.manifest.hbs"))
             .unwrap();
         handlebars
-            .register_template_string("new-build.rs", include_str!("templates/new-build.rs"))
+            .register_template_string("new-build.rs", include_str!("templates/new-build.rs.hbs"))
             .unwrap();
         handlebars
             .register_template_string(
                 "new-cargo-config",
-                include_str!("templates/new-cargo-config"),
+                include_str!("templates/new-cargo-config.hbs"),
             )
             .unwrap();
         handlebars
-            .register_template_string("new-main.rs", include_str!("templates/new-main.rs"))
+            .register_template_string("new-main.rs", include_str!("templates/new-main.rs.hbs"))
             .unwrap();
         handlebars
             .register_template_string(
