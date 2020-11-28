@@ -87,7 +87,7 @@ rusty_fork_test! {
 
     /// find_spec() returns None on missing module.
     #[test]
-    fn find_spec_missing(){
+    fn find_spec_missing() {
         let mut interp = new_interpreter().unwrap();
         let importer = get_importer(&mut interp).unwrap();
         let py = interp.acquire_gil().unwrap();

@@ -452,7 +452,7 @@ impl<'a> PythonResourcesState<'a, u8> {
     /// on the incoming entry will overwrite fields on the existing entry.
     ///
     /// If an entry doesn't exist, the resource will be inserted as-is.
-    fn index_data(&mut self, data: &'a [u8]) -> Result<(), &'static str> {
+    pub fn index_data(&mut self, data: &'a [u8]) -> Result<(), &'static str> {
         let resources = python_packed_resources::parser::load_resources(data)?;
 
         // Reserve space for expected number of incoming items so we can avoid extra
@@ -508,7 +508,7 @@ impl<'a> PythonResourcesState<'a, u8> {
     }
 
     /// Load `builtin` modules from the Python interpreter.
-    fn index_interpreter_builtin_extension_modules(&mut self) -> Result<(), &'static str> {
+    pub fn index_interpreter_builtin_extension_modules(&mut self) -> Result<(), &'static str> {
         for i in 0.. {
             let record = unsafe { pyffi::PyImport_Inittab.offset(i) };
 
@@ -540,7 +540,7 @@ impl<'a> PythonResourcesState<'a, u8> {
     }
 
     /// Load `frozen` modules from the Python interpreter.
-    fn index_interpreter_frozen_modules(&mut self) -> Result<(), &'static str> {
+    pub fn index_interpreter_frozen_modules(&mut self) -> Result<(), &'static str> {
         for i in 0.. {
             let record = unsafe { pyffi::PyImport_FrozenModules.offset(i) };
 
@@ -1407,4 +1407,45 @@ pub fn resource_to_pyobject(py: Python, resource: &Resource<u8>) -> PyResult<PyO
 #[inline]
 pub fn pyobject_to_resource(py: Python, resource: OxidizedResource) -> Resource<u8> {
     resource.resource(py).borrow().clone()
+}
+
+#[cfg(test)]
+mod tests {
+    use {super::*, crate::OxidizedPythonInterpreterConfig};
+
+    #[test]
+    fn multiple_resource_blobs() -> Result<()> {
+        let mut state0 = PythonResourcesState::default();
+        state0
+            .add_resource(Resource {
+                name: "foo".into(),
+                is_module: true,
+                in_memory_source: Some(vec![42].into()),
+                ..Default::default()
+            })
+            .unwrap();
+        let data0 = state0.serialize_resources(true, true)?;
+
+        let mut state1 = PythonResourcesState::default();
+        state1
+            .add_resource(Resource {
+                name: "bar".into(),
+                is_module: true,
+                in_memory_source: Some(vec![42, 42].into()),
+                ..Default::default()
+            })
+            .unwrap();
+        let data1 = state1.serialize_resources(true, true)?;
+
+        let config = OxidizedPythonInterpreterConfig::default().resolve()?;
+
+        let mut resources = PythonResourcesState::try_from(&config)?;
+        resources.index_data(&data0).unwrap();
+        resources.index_data(&data1).unwrap();
+
+        assert!(resources.resources.contains_key("foo".into()));
+        assert!(resources.resources.contains_key("bar".into()));
+
+        Ok(())
+    }
 }
