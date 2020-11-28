@@ -48,6 +48,8 @@ Bug Fixes
   Python interpreter configuration should now be more robust. Previously,
   special characters (like ``\``) were not escaped properly. (#321)
 * The ``load()`` Starlark function should now work. (#328)
+* ``pyembed::OxidizedPythonInterpreterConfig.argv`` is now always used when
+  set, even if ``self.interpreter_config.argv`` is also set.
 
 New Features
 ^^^^^^^^^^^^

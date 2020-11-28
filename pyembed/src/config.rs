@@ -294,10 +294,10 @@ impl<'a> ResolvedOxidizedPythonInterpreterConfig<'a> {
     /// Returns `Some(T)` if we should populate `PyConfig.argv` or `None` if we should
     /// leave this value alone.
     pub fn resolve_sys_argv(&self) -> Option<Vec<OsString>> {
-        if self.inner.interpreter_config.argv.is_some() {
-            None
-        } else if let Some(args) = &self.inner.argv {
+        if let Some(args) = &self.inner.argv {
             Some(args.clone())
+        } else if self.inner.interpreter_config.argv.is_some() {
+            None
         } else {
             Some(std::env::args_os().collect::<Vec<_>>())
         }

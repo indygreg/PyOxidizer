@@ -176,6 +176,7 @@ rusty_fork_test! {
             OsString::from("foo"),
             OsString::from("bar"),
         ]);
+        config.interpreter_config.argv = Some(vec![OsString::from("shoud-be-ignored")]);
 
         let mut interp = MainPythonInterpreter::new(config).unwrap();
 
