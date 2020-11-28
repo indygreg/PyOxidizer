@@ -292,11 +292,11 @@ pub(crate) struct ImporterState {
     /// Python object that was used to supply resources data.
     _resources_py_object: Option<PyObject>,
 
-    /// Holds a memory mapped file instance that resources data came from.
+    /// Holds memory mapped file instances that resources data came from.
     ///
-    /// We need to hold a reference to this instance because resources_state
-    /// was constructed from a &[u8] backed by it.
-    _resources_mmap: Option<Box<memmap::Mmap>>,
+    /// We need to hold a reference to this because resources_state was
+    /// constructed from a &[u8] backed by it.
+    _resources_mmaps: Option<Vec<Box<memmap::Mmap>>>,
 }
 
 impl ImporterState {
@@ -307,7 +307,7 @@ impl ImporterState {
         resources_state: &'a PythonResourcesState<'a, u8>,
         resources_state_owned: bool,
         resources_py_object: Option<PyObject>,
-        resources_mmap: Option<Box<memmap::Mmap>>,
+        resources_mmaps: Option<Vec<Box<memmap::Mmap>>>,
     ) -> Result<Self, PyErr> {
         let decode_source = importer_module.get(py, "decode_source")?;
 
@@ -408,7 +408,7 @@ impl ImporterState {
             resources_state: capsule,
             resources_state_owned,
             _resources_py_object: resources_py_object,
-            _resources_mmap: resources_mmap,
+            _resources_mmaps: resources_mmaps,
         })
     }
 
@@ -997,7 +997,7 @@ fn oxidized_finder_new(
         // lives at least as long as this slice.
         let data = unsafe { std::slice::from_raw_parts::<u8>(mapped.as_ptr(), mapped.len()) };
 
-        (vec![data], Some(mapped))
+        (vec![data], Some(vec![mapped]))
     } else {
         (vec![], None)
     };
