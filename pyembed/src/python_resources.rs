@@ -18,7 +18,8 @@ use {
     },
     anyhow::Result,
     cpython::{
-        exc::{ImportError, OSError, TypeError},
+        buffer::PyBuffer,
+        exc::{ImportError, OSError, TypeError, ValueError},
         py_class, NoArgs, ObjectProtocol, PyBytes, PyDict, PyErr, PyList, PyModule, PyObject,
         PyResult, PyString, PyTuple, Python, PythonObject, ToPyObject,
     },
@@ -378,6 +379,12 @@ where
 
     /// Named resources available for loading.
     pub resources: HashMap<Cow<'a, str>, Resource<'a, X>>,
+
+    /// List of `PyObject` that back indexed data.
+    ///
+    /// Holding a reference to these prevents them from being gc'd and for
+    /// memory referenced by `self.resources` from being freed.
+    backing_py_objects: Vec<PyObject>,
 }
 
 impl<'a> Default for PythonResourcesState<'a, u8> {
@@ -386,6 +393,7 @@ impl<'a> Default for PythonResourcesState<'a, u8> {
             current_exe: PathBuf::new(),
             origin: PathBuf::new(),
             resources: HashMap::new(),
+            backing_py_objects: vec![],
         }
     }
 }
@@ -402,6 +410,7 @@ impl<'a, 'config: 'a> TryFrom<&ResolvedOxidizedPythonInterpreterConfig<'config>>
             current_exe: config.exe().clone(),
             origin: config.origin().clone(),
             resources: Default::default(),
+            backing_py_objects: vec![],
         };
 
         state
@@ -425,6 +434,7 @@ impl<'a> PythonResourcesState<'a, u8> {
             current_exe: exe,
             origin,
             resources: Default::default(),
+            backing_py_objects: vec![],
         })
     }
 
@@ -437,6 +447,23 @@ impl<'a> PythonResourcesState<'a, u8> {
         }
         self.load_interpreter_builtin_modules()?;
         self.load_interpreter_frozen_modules()?;
+
+        Ok(())
+    }
+
+    /// Load resources from packed data stored in a PyObject.
+    ///
+    /// The `PyObject` must conform to the buffer protocol.
+    pub fn load_from_pyobject(&mut self, py: Python, obj: PyObject) -> PyResult<()> {
+        let buffer = PyBuffer::get(py, &obj)?;
+
+        let data = unsafe {
+            std::slice::from_raw_parts::<u8>(buffer.buf_ptr() as *const _, buffer.len_bytes())
+        };
+
+        self.load(&[data])
+            .map_err(|msg| PyErr::new::<ValueError, _>(py, msg))?;
+        self.backing_py_objects.push(obj);
 
         Ok(())
     }

@@ -27,7 +27,6 @@ use {
         resource_scanning::find_resources_in_path,
     },
     cpython::{
-        buffer::PyBuffer,
         exc::{FileNotFoundError, IOError, ImportError, ValueError},
         {
             py_class, py_fn, ObjectProtocol, PyBytes, PyCapsule, PyClone, PyDict, PyErr, PyList,
@@ -288,9 +287,6 @@ pub(crate) struct ImporterState {
     /// by 'static.
     resources_state: PyCapsule,
 
-    /// Python object that was used to supply resources data.
-    _resources_py_object: Option<PyObject>,
-
     /// Holds memory mapped file instances that resources data came from.
     ///
     /// We need to hold a reference to this because resources_state was
@@ -304,7 +300,6 @@ impl ImporterState {
         importer_module: &PyModule,
         bootstrap_module: &PyModule,
         resources_state: Box<PythonResourcesState<'a, u8>>,
-        resources_py_object: Option<PyObject>,
         resources_mmaps: Option<Vec<Box<memmap::Mmap>>>,
     ) -> Result<Self, PyErr> {
         let decode_source = importer_module.get(py, "decode_source")?;
@@ -408,7 +403,6 @@ impl ImporterState {
             exec_fn,
             optimize_level,
             resources_state: capsule,
-            _resources_py_object: resources_py_object,
             _resources_mmaps: resources_mmaps,
         })
     }
@@ -916,7 +910,6 @@ impl OxidizedFinder {
                 &bootstrap_module,
                 resources_state,
                 None,
-                None,
             )?),
         )?;
 
@@ -966,13 +959,9 @@ fn oxidized_finder_new(
 
     // If we received a PyObject defining resources data, try to resolve it.
     let (raw_resource_datas, mapped) = if let Some(resources) = &resources_data {
-        let buffer = PyBuffer::get(py, resources)?;
+        resources_state.load_from_pyobject(py, resources.clone_ref(py))?;
 
-        let data = unsafe {
-            std::slice::from_raw_parts::<u8>(buffer.buf_ptr() as *const _, buffer.len_bytes())
-        };
-
-        (vec![data], None)
+        (vec![], None)
     } else if let Some(resources_file) = resources_file {
         let path = pyobject_to_pathbuf(py, resources_file)?;
 
@@ -1006,7 +995,6 @@ fn oxidized_finder_new(
             &m,
             &bootstrap_module,
             resources_state,
-            resources_data,
             mapped,
         )?),
     )?;
