@@ -14,17 +14,15 @@ use {
     super::osutils::resolve_terminfo_dirs,
     super::pyalloc::{make_raw_rust_memory_allocator, RawAllocator},
     super::python_resources::PythonResourcesState,
-    cpython::{
-        GILGuard, NoArgs, ObjectProtocol, PyDict, PyErr, PyList, PyString, Python, ToPyObject,
-    },
+    crate::error::NewInterpreterError,
+    cpython::{GILGuard, NoArgs, ObjectProtocol, PyDict, PyList, PyString, Python, ToPyObject},
     lazy_static::lazy_static,
     python3_sys as pyffi,
     python_packaging::interpreter::{MemoryAllocatorBackend, TerminfoResolution},
     std::collections::BTreeSet,
     std::convert::{TryFrom, TryInto},
     std::env,
-    std::ffi::{CStr, OsString},
-    std::fmt::{Display, Formatter},
+    std::ffi::OsString,
     std::fs,
     std::io::Write,
     std::path::PathBuf,
@@ -55,86 +53,6 @@ fn raw_jemallocator() -> pyffi::PyMemAllocatorEx {
 #[cfg(not(feature = "jemalloc-sys"))]
 fn raw_jemallocator() -> pyffi::PyMemAllocatorEx {
     panic!("jemalloc is not available in this build configuration");
-}
-
-/// Format a PyErr in a crude manner.
-///
-/// This is meant to be called during interpreter initialization. We can't
-/// call PyErr_Print() because sys.stdout may not be available yet.
-fn format_pyerr(py: Python, err: PyErr) -> Result<String, &'static str> {
-    let type_repr = err
-        .ptype
-        .repr(py)
-        .map_err(|_| "unable to get repr of error type")?;
-
-    if let Some(value) = &err.pvalue {
-        let value_repr = value
-            .repr(py)
-            .map_err(|_| "unable to get repr of error value")?;
-
-        let value = format!(
-            "{}: {}",
-            type_repr.to_string_lossy(py),
-            value_repr.to_string_lossy(py)
-        );
-
-        Ok(value)
-    } else {
-        Ok(type_repr.to_string_lossy(py).to_string())
-    }
-}
-
-/// Represents an error encountered when creating an embedded Python interpreter.
-#[derive(Debug)]
-pub enum NewInterpreterError {
-    Simple(&'static str),
-    Dynamic(String),
-}
-
-impl From<&'static str> for NewInterpreterError {
-    fn from(v: &'static str) -> Self {
-        NewInterpreterError::Simple(v)
-    }
-}
-
-impl Display for NewInterpreterError {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match &self {
-            NewInterpreterError::Simple(value) => value.fmt(f),
-            NewInterpreterError::Dynamic(value) => value.fmt(f),
-        }
-    }
-}
-
-impl std::error::Error for NewInterpreterError {}
-
-impl NewInterpreterError {
-    pub fn new_from_pyerr(py: Python, err: PyErr, context: &str) -> Self {
-        match format_pyerr(py, err) {
-            Ok(value) => NewInterpreterError::Dynamic(format!("during {}: {}", context, value)),
-            Err(msg) => NewInterpreterError::Dynamic(format!("during {}: {}", context, msg)),
-        }
-    }
-
-    pub fn new_from_pystatus(status: &pyffi::PyStatus, context: &str) -> Self {
-        if !status.func.is_null() && !status.err_msg.is_null() {
-            let func = unsafe { CStr::from_ptr(status.func) };
-            let msg = unsafe { CStr::from_ptr(status.err_msg) };
-
-            NewInterpreterError::Dynamic(format!(
-                "during {}: {}: {}",
-                context,
-                func.to_string_lossy(),
-                msg.to_string_lossy()
-            ))
-        } else if !status.err_msg.is_null() {
-            let msg = unsafe { CStr::from_ptr(status.err_msg) };
-
-            NewInterpreterError::Dynamic(format!("during {}: {}", context, msg.to_string_lossy()))
-        } else {
-            NewInterpreterError::Dynamic(format!("during {}: could not format PyStatus", context))
-        }
-    }
 }
 
 enum InterpreterRawAllocator {
