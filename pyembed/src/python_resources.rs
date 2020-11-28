@@ -444,6 +444,14 @@ impl<'a> PythonResourcesState<'a, u8> {
         })
     }
 
+    /// Load resources that are built-in to the Python interpreter.
+    pub fn load_interpreter_builtins(&mut self) -> Result<(), &'static str> {
+        self.load_interpreter_builtin_modules()?;
+        self.load_interpreter_frozen_modules()?;
+
+        Ok(())
+    }
+
     /// Load state from the environment and by parsing data structures.
     pub fn load(&mut self, resource_datas: &[&'a [u8]]) -> Result<(), &'static str> {
         // Loading of builtin and frozen knows to mutate existing entries rather
@@ -451,8 +459,8 @@ impl<'a> PythonResourcesState<'a, u8> {
         for data in resource_datas {
             self.load_resources(data)?;
         }
-        self.load_interpreter_builtin_modules()?;
-        self.load_interpreter_frozen_modules()?;
+
+        self.load_interpreter_builtins()?;
 
         Ok(())
     }

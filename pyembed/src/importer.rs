@@ -931,10 +931,6 @@ fn oxidized_finder_new(
         resources_state.origin = pyobject_to_pathbuf(py, py_origin)?;
     }
 
-    resources_state
-        .load(&[])
-        .map_err(|err| PyErr::new::<ValueError, _>(py, err))?;
-
     if let Some(resources) = &resources_data {
         resources_state.load_from_pyobject(py, resources.clone_ref(py))?;
     } else if let Some(resources_file) = resources_file {
@@ -943,6 +939,10 @@ fn oxidized_finder_new(
             .load_from_path(&path)
             .map_err(|e| PyErr::new::<ValueError, _>(py, e))?;
     }
+
+    resources_state
+        .load_interpreter_builtins()
+        .map_err(|err| PyErr::new::<ValueError, _>(py, err))?;
 
     let importer = OxidizedFinder::create_instance(
         py,
