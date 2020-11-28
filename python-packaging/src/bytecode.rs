@@ -6,7 +6,7 @@
 
 use {
     super::resource::BytecodeOptimizationLevel,
-    anyhow::{anyhow, Result},
+    anyhow::{anyhow, Context, Result},
     byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt},
     std::{
         fs::File,
@@ -116,31 +116,46 @@ impl PythonBytecodeCompiler for BytecodeCompiler {
 
         let mut reader = BufReader::new(stdout);
 
-        stdin.write_all(b"compile\n")?;
-        stdin.write_all(filename.len().to_string().as_bytes())?;
+        stdin
+            .write_all(b"compile\n")
+            .context("writing compile command")?;
+        stdin
+            .write_all(filename.len().to_string().as_bytes())
+            .context("writing filename length")?;
         stdin.write_all(b"\n")?;
-        stdin.write_all(source.len().to_string().as_bytes())?;
+        stdin
+            .write_all(source.len().to_string().as_bytes())
+            .context("writing source code length")?;
         stdin.write_all(b"\n")?;
         stdin.write_all(i32::from(optimize).to_string().as_bytes())?;
         stdin.write_all(b"\n")?;
-        stdin.write_all(match output_mode {
-            CompileMode::Bytecode => b"bytecode",
-            CompileMode::PycCheckedHash => b"pyc-checked-hash",
-            CompileMode::PycUncheckedHash => b"pyc-unchecked-hash",
-        })?;
+        stdin
+            .write_all(match output_mode {
+                CompileMode::Bytecode => b"bytecode",
+                CompileMode::PycCheckedHash => b"pyc-checked-hash",
+                CompileMode::PycUncheckedHash => b"pyc-unchecked-hash",
+            })
+            .context("writing format")?;
         stdin.write_all(b"\n")?;
-        stdin.write_all(filename.as_bytes())?;
-        stdin.write_all(source)?;
-        stdin.flush()?;
+        stdin
+            .write_all(filename.as_bytes())
+            .context("writing filename")?;
+        stdin.write_all(source).context("writing source code")?;
+        stdin.flush().context("flushing")?;
 
         let mut len_s = String::new();
-        reader.read_line(&mut len_s)?;
+        reader
+            .read_line(&mut len_s)
+            .context("reading output size line")?;
 
         let len_s = len_s.trim_end();
         let bytecode_len = len_s.parse::<u64>().unwrap();
 
         let mut bytecode: Vec<u8> = Vec::new();
-        reader.take(bytecode_len).read_to_end(&mut bytecode)?;
+        reader
+            .take(bytecode_len)
+            .read_to_end(&mut bytecode)
+            .context("reading bytecode result")?;
 
         Ok(bytecode)
     }

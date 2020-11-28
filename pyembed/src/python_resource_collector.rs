@@ -268,12 +268,16 @@ impl OxidizedResourceCollector {
         let collector = self.collector(py).borrow();
 
         let mut compiler = BytecodeCompiler::new(&python_exe).map_err(|e| {
-            PyErr::new::<ValueError, _>(py, format!("error constructing bytecode compiler: {}", e))
+            PyErr::new::<ValueError, _>(
+                py,
+                format!("error constructing bytecode compiler: {:?}", e),
+            )
         })?;
 
         let prepared: CompiledResourcesCollection = collector
             .compile_resources(&mut compiler)
-            .map_err(|e| PyErr::new::<ValueError, _>(py, format!("error oxidizing: {}", e)))?;
+            .context("compiling resources")
+            .map_err(|e| PyErr::new::<ValueError, _>(py, format!("error oxidizing: {:?}", e)))?;
 
         let mut resources = Vec::new();
 

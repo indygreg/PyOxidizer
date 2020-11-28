@@ -113,42 +113,48 @@ impl PrePackagedResource {
                 Some(PythonModuleBytecodeProvider::Provided(location)) => {
                     Some(Cow::Owned(location.resolve()?))
                 }
-                Some(PythonModuleBytecodeProvider::FromSource(location)) => {
-                    Some(Cow::Owned(compiler.compile(
-                        &location.resolve()?,
-                        &self.name,
-                        BytecodeOptimizationLevel::Zero,
-                        CompileMode::Bytecode,
-                    )?))
-                }
+                Some(PythonModuleBytecodeProvider::FromSource(location)) => Some(Cow::Owned(
+                    compiler
+                        .compile(
+                            &location.resolve()?,
+                            &self.name,
+                            BytecodeOptimizationLevel::Zero,
+                            CompileMode::Bytecode,
+                        )
+                        .context("compiling in-memory bytecode")?,
+                )),
                 None => None,
             },
             in_memory_bytecode_opt1: match &self.in_memory_bytecode_opt1 {
                 Some(PythonModuleBytecodeProvider::Provided(location)) => {
                     Some(Cow::Owned(location.resolve()?))
                 }
-                Some(PythonModuleBytecodeProvider::FromSource(location)) => {
-                    Some(Cow::Owned(compiler.compile(
-                        &location.resolve()?,
-                        &self.name,
-                        BytecodeOptimizationLevel::One,
-                        CompileMode::Bytecode,
-                    )?))
-                }
+                Some(PythonModuleBytecodeProvider::FromSource(location)) => Some(Cow::Owned(
+                    compiler
+                        .compile(
+                            &location.resolve()?,
+                            &self.name,
+                            BytecodeOptimizationLevel::One,
+                            CompileMode::Bytecode,
+                        )
+                        .context("compiling in-memory bytecode opt-1")?,
+                )),
                 None => None,
             },
             in_memory_bytecode_opt2: match &self.in_memory_bytecode_opt2 {
                 Some(PythonModuleBytecodeProvider::Provided(location)) => {
                     Some(Cow::Owned(location.resolve()?))
                 }
-                Some(PythonModuleBytecodeProvider::FromSource(location)) => {
-                    Some(Cow::Owned(compiler.compile(
-                        &location.resolve()?,
-                        &self.name,
-                        BytecodeOptimizationLevel::Two,
-                        CompileMode::Bytecode,
-                    )?))
-                }
+                Some(PythonModuleBytecodeProvider::FromSource(location)) => Some(Cow::Owned(
+                    compiler
+                        .compile(
+                            &location.resolve()?,
+                            &self.name,
+                            BytecodeOptimizationLevel::Two,
+                            CompileMode::Bytecode,
+                        )
+                        .context("compiling in-memory bytecode opt2")?,
+                )),
                 None => None,
             },
             in_memory_extension_module_shared_library: if let Some(location) =
@@ -218,12 +224,14 @@ impl PrePackagedResource {
                 installs.push((
                     path.clone(),
                     FileData::Memory(match provider {
-                        PythonModuleBytecodeProvider::FromSource(location) => compiler.compile(
-                            &location.resolve()?,
-                            &self.name,
-                            BytecodeOptimizationLevel::Zero,
-                            CompileMode::PycUncheckedHash,
-                        )?,
+                        PythonModuleBytecodeProvider::FromSource(location) => compiler
+                            .compile(
+                                &location.resolve()?,
+                                &self.name,
+                                BytecodeOptimizationLevel::Zero,
+                                CompileMode::PycUncheckedHash,
+                            )
+                            .context("compiling relative path module bytecode")?,
                         PythonModuleBytecodeProvider::Provided(location) => {
                             let mut data = compute_bytecode_header(
                                 compiler.get_magic_number(),
@@ -258,12 +266,14 @@ impl PrePackagedResource {
                 installs.push((
                     path.clone(),
                     FileData::Memory(match provider {
-                        PythonModuleBytecodeProvider::FromSource(location) => compiler.compile(
-                            &location.resolve()?,
-                            &self.name,
-                            BytecodeOptimizationLevel::One,
-                            CompileMode::PycUncheckedHash,
-                        )?,
+                        PythonModuleBytecodeProvider::FromSource(location) => compiler
+                            .compile(
+                                &location.resolve()?,
+                                &self.name,
+                                BytecodeOptimizationLevel::One,
+                                CompileMode::PycUncheckedHash,
+                            )
+                            .context("compiling relative path module bytecode opt-1")?,
                         PythonModuleBytecodeProvider::Provided(location) => {
                             let mut data = compute_bytecode_header(
                                 compiler.get_magic_number(),
@@ -308,7 +318,8 @@ impl PrePackagedResource {
                             let mut data = compute_bytecode_header(
                                 compiler.get_magic_number(),
                                 BytecodeHeaderMode::UncheckedHash(0),
-                            )?;
+                            )
+                            .context("compiling relative path module bytecode opt-2")?;
                             data.extend(location.resolve()?);
 
                             data
@@ -1682,13 +1693,15 @@ impl PythonResourceCollector {
         compiler: &mut dyn PythonBytecodeCompiler,
     ) -> Result<CompiledResourcesCollection> {
         let mut input_resources = self.resources.clone();
-        populate_parent_packages(&mut input_resources)?;
+        populate_parent_packages(&mut input_resources).context("populating parent packages")?;
 
         let mut resources = BTreeMap::new();
         let mut extra_files = Vec::new();
 
         for (name, resource) in &input_resources {
-            let (entry, installs) = resource.to_resource(compiler)?;
+            let (entry, installs) = resource
+                .to_resource(compiler)
+                .with_context(|| format!("converting {} to resource", name))?;
 
             for install in installs {
                 extra_files.push(install);
