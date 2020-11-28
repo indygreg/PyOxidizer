@@ -11,27 +11,31 @@ for importing Python modules from memory.
 
 #[cfg(not(library_mode = "extension"))]
 use cpython::NoArgs;
+#[cfg(windows)]
 use {
-    super::conversion::pyobject_to_pathbuf,
-    super::python_resources::{
-        pyobject_to_resource, resource_to_pyobject, ModuleFlavor, OptimizeLevel, OxidizedResource,
-        PythonResourcesState,
+    crate::memory_dll::{free_library_memory, get_proc_address_memory, load_library_memory},
+    cpython::exc::SystemError,
+    std::ffi::{c_void, CString},
+};
+use {
+    crate::{
+        conversion::pyobject_to_pathbuf,
+        python_resources::{
+            pyobject_to_resource, resource_to_pyobject, ModuleFlavor, OptimizeLevel,
+            OxidizedResource, PythonResourcesState,
+        },
+        resource_scanning::find_resources_in_path,
     },
-    super::resource_scanning::find_resources_in_path,
-    cpython::buffer::PyBuffer,
-    cpython::exc::{FileNotFoundError, IOError, ImportError, ValueError},
     cpython::{
-        py_class, py_fn, ObjectProtocol, PyBytes, PyCapsule, PyClone, PyDict, PyErr, PyList,
-        PyModule, PyObject, PyResult, PyString, PyTuple, Python, PythonObject, ToPyObject,
+        buffer::PyBuffer,
+        exc::{FileNotFoundError, IOError, ImportError, ValueError},
+        {
+            py_class, py_fn, ObjectProtocol, PyBytes, PyCapsule, PyClone, PyDict, PyErr, PyList,
+            PyModule, PyObject, PyResult, PyString, PyTuple, Python, PythonObject, ToPyObject,
+        },
     },
     python3_sys as pyffi,
     std::sync::Arc,
-};
-#[cfg(windows)]
-use {
-    super::memory_dll::{free_library_memory, get_proc_address_memory, load_library_memory},
-    cpython::exc::SystemError,
-    std::ffi::{c_void, CString},
 };
 
 pub const OXIDIZED_IMPORTER_NAME_STR: &str = "oxidized_importer";
@@ -879,7 +883,7 @@ impl OxidizedFinder {
             (None, None)
         };
 
-        super::package_metadata::find_distributions(py, state.clone(), path, name)
+        crate::package_metadata::find_distributions(py, state.clone(), path, name)
     }
 }
 

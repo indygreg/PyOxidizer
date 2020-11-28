@@ -7,8 +7,7 @@
 use {
     libc::{c_void, size_t},
     python3_sys as pyffi,
-    std::alloc,
-    std::collections::HashMap,
+    std::{alloc, collections::HashMap},
 };
 
 #[cfg(feature = "jemalloc-sys")]

@@ -9,20 +9,30 @@ not a Python `module`.
 */
 
 use {
-    super::python_resources::PythonResourcesState,
+    crate::python_resources::PythonResourcesState,
     lazy_static::lazy_static,
     memory_module_sys::{
         MemoryFreeLibrary, MemoryGetProcAddress, MemoryLoadLibraryEx, HCUSTOMMODULE,
     },
-    std::collections::HashMap,
-    std::ffi::{c_void, CStr},
-    std::sync::atomic::{AtomicUsize, Ordering},
-    std::sync::Mutex,
-    winapi::shared::basetsd::SIZE_T,
-    winapi::shared::minwindef::{BOOL, DWORD, FARPROC, HINSTANCE__, LPVOID},
-    winapi::shared::ntdef::LPCSTR,
-    winapi::um::libloaderapi::{FreeLibrary, GetProcAddress, LoadLibraryA},
-    winapi::um::memoryapi::{VirtualAlloc, VirtualFree},
+    std::{
+        collections::HashMap,
+        ffi::{c_void, CStr},
+        sync::{
+            atomic::{AtomicUsize, Ordering},
+            Mutex,
+        },
+    },
+    winapi::{
+        shared::{
+            basetsd::SIZE_T,
+            minwindef::{BOOL, DWORD, FARPROC, HINSTANCE__, LPVOID},
+            ntdef::LPCSTR,
+        },
+        um::{
+            libloaderapi::{FreeLibrary, GetProcAddress, LoadLibraryA},
+            memoryapi::{VirtualAlloc, VirtualFree},
+        },
+    },
 };
 
 /// Holds state for a module loaded from memory.

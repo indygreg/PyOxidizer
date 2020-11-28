@@ -3,17 +3,14 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    super::importer::ImporterState,
-    cpython::exc::{IOError, NotImplementedError},
+    crate::importer::ImporterState,
     cpython::{
+        exc::{IOError, NotImplementedError},
         py_class, NoArgs, ObjectProtocol, PyBytes, PyErr, PyList, PyObject, PyResult, PyString,
         Python, PythonObject, ToPyObject,
     },
     python_packed_resources::data::Resource,
-    std::borrow::Cow,
-    std::collections::HashMap,
-    std::path::Path,
-    std::sync::Arc,
+    std::{borrow::Cow, collections::HashMap, path::Path, sync::Arc},
 };
 
 // A importlib.metadata.Distribution allowing access to package distribution data.

@@ -5,13 +5,17 @@
 //! Bridge Rust and Python string types.
 
 use {
-    cpython::buffer::PyBuffer,
-    cpython::exc::UnicodeDecodeError,
-    cpython::{PyDict, PyErr, PyObject, PyResult, Python},
+    cpython::{
+        buffer::PyBuffer,
+        exc::UnicodeDecodeError,
+        {PyDict, PyErr, PyObject, PyResult, Python},
+    },
     python3_sys as pyffi,
-    std::collections::HashMap,
-    std::ffi::{CStr, OsStr},
-    std::path::{Path, PathBuf},
+    std::{
+        collections::HashMap,
+        ffi::{CStr, OsStr},
+        path::{Path, PathBuf},
+    },
 };
 
 #[cfg(not(library_mode = "extension"))]

@@ -12,9 +12,11 @@ use {
         interpreter::{CheckHashPYCsMode, PythonInterpreterConfig, PythonInterpreterProfile},
         resource::BytecodeOptimizationLevel,
     },
-    std::convert::{TryFrom, TryInto},
-    std::ffi::{CStr, CString, OsStr, OsString},
-    std::path::Path,
+    std::{
+        convert::{TryFrom, TryInto},
+        ffi::{CStr, CString, OsStr, OsString},
+        path::Path,
+    },
 };
 
 #[cfg(target_family = "unix")]

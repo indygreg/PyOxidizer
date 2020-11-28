@@ -5,21 +5,25 @@
 /*! Python functionality for resource collection. */
 
 use {
-    crate::conversion::{path_to_pathlib_path, pyobject_to_pathbuf},
-    crate::python_resource_types::{
-        PythonExtensionModule, PythonModuleBytecode, PythonModuleSource,
-        PythonPackageDistributionResource, PythonPackageResource,
+    crate::{
+        conversion::{path_to_pathlib_path, pyobject_to_pathbuf},
+        python_resource_types::{
+            PythonExtensionModule, PythonModuleBytecode, PythonModuleSource,
+            PythonPackageDistributionResource, PythonPackageResource,
+        },
+        python_resources::resource_to_pyobject,
     },
-    crate::python_resources::resource_to_pyobject,
     anyhow::Context,
-    cpython::exc::{TypeError, ValueError},
     cpython::{
+        exc::{TypeError, ValueError},
         py_class, ObjectProtocol, PyBytes, PyErr, PyList, PyObject, PyResult, Python, PythonObject,
         ToPyObject,
     },
-    python_packaging::bytecode::BytecodeCompiler,
-    python_packaging::location::{AbstractResourceLocation, ConcreteResourceLocation},
-    python_packaging::resource_collection::{CompiledResourcesCollection, PythonResourceCollector},
+    python_packaging::{
+        bytecode::BytecodeCompiler,
+        location::{AbstractResourceLocation, ConcreteResourceLocation},
+        resource_collection::{CompiledResourcesCollection, PythonResourceCollector},
+    },
     std::{cell::RefCell, convert::TryFrom},
 };
 

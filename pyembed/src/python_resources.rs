@@ -7,25 +7,27 @@ Management of Python resources.
 */
 
 use {
-    super::conversion::{
+    crate::conversion::{
         path_to_pathlib_path, path_to_pyobject, pyobject_optional_resources_map_to_owned_bytes,
         pyobject_optional_resources_map_to_pathbuf, pyobject_to_owned_bytes_optional,
         pyobject_to_pathbuf_optional,
     },
     anyhow::Result,
-    cpython::exc::{ImportError, OSError, TypeError},
     cpython::{
+        exc::{ImportError, OSError, TypeError},
         py_class, NoArgs, ObjectProtocol, PyBytes, PyDict, PyErr, PyList, PyModule, PyObject,
         PyResult, PyString, PyTuple, Python, PythonObject, ToPyObject,
     },
     python3_sys as pyffi,
     python_packed_resources::data::Resource,
-    std::borrow::Cow,
-    std::cell::RefCell,
-    std::collections::HashMap,
-    std::ffi::CStr,
-    std::iter::FromIterator,
-    std::path::{Path, PathBuf},
+    std::{
+        borrow::Cow,
+        cell::RefCell,
+        collections::HashMap,
+        ffi::CStr,
+        iter::FromIterator,
+        path::{Path, PathBuf},
+    },
 };
 
 /// Python bytecode optimization level.

@@ -5,30 +5,33 @@
 //! Manage an embedded Python interpreter.
 
 use {
-    super::config::{OxidizedPythonInterpreterConfig, ResolvedOxidizedPythonInterpreterConfig},
-    super::conversion::osstring_to_bytes,
-    super::importer::{
-        initialize_importer, PyInit_oxidized_importer, OXIDIZED_IMPORTER_NAME,
-        OXIDIZED_IMPORTER_NAME_STR,
+    crate::{
+        config::{OxidizedPythonInterpreterConfig, ResolvedOxidizedPythonInterpreterConfig},
+        conversion::osstring_to_bytes,
+        error::NewInterpreterError,
+        importer::{
+            initialize_importer, PyInit_oxidized_importer, OXIDIZED_IMPORTER_NAME,
+            OXIDIZED_IMPORTER_NAME_STR,
+        },
+        osutils::resolve_terminfo_dirs,
+        pyalloc::{make_raw_rust_memory_allocator, RawAllocator},
+        python_resources::PythonResourcesState,
     },
-    super::osutils::resolve_terminfo_dirs,
-    super::pyalloc::{make_raw_rust_memory_allocator, RawAllocator},
-    super::python_resources::PythonResourcesState,
-    crate::error::NewInterpreterError,
     cpython::{GILGuard, NoArgs, ObjectProtocol, PyDict, PyList, PyString, Python, ToPyObject},
     lazy_static::lazy_static,
     python3_sys as pyffi,
     python_packaging::interpreter::{MemoryAllocatorBackend, TerminfoResolution},
-    std::collections::BTreeSet,
-    std::convert::{TryFrom, TryInto},
-    std::env,
-    std::fs,
-    std::io::Write,
-    std::path::PathBuf,
+    std::{
+        collections::BTreeSet,
+        convert::{TryFrom, TryInto},
+        env, fs,
+        io::Write,
+        path::PathBuf,
+    },
 };
 
 #[cfg(feature = "jemalloc-sys")]
-use super::pyalloc::make_raw_jemalloc_allocator;
+use crate::pyalloc::make_raw_jemalloc_allocator;
 use python3_sys::PyMemAllocatorEx;
 
 lazy_static! {
