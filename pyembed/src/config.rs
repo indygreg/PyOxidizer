@@ -250,33 +250,6 @@ impl<'a> OxidizedPythonInterpreterConfig<'a> {
             },
         })
     }
-
-    // TODO move logic to resolve() or the Resolved type.
-
-    /// Resolve `OsString` to use for `sys.argv`.
-    ///
-    /// Returns `Some(T)` if we should populate `PyConfig.argv` or `None` if we should
-    /// leave this value alone.
-    pub fn resolve_sys_argv(&self) -> Option<Vec<OsString>> {
-        if self.interpreter_config.argv.is_some() {
-            None
-        } else if let Some(args) = &self.argv {
-            Some(args.clone())
-        } else {
-            Some(std::env::args_os().collect::<Vec<_>>())
-        }
-    }
-
-    /// Resolve the value to use for `sys.argvb`.
-    pub fn resolve_sys_argvb(&self) -> Vec<OsString> {
-        if let Some(args) = &self.interpreter_config.argv {
-            args.clone()
-        } else if let Some(args) = &self.argv {
-            args.clone()
-        } else {
-            std::env::args_os().collect::<Vec<_>>()
-        }
-    }
 }
 
 /// An `OxidizedPythonInterpreterConfig` that has fields resolved.
@@ -314,5 +287,30 @@ impl<'a> ResolvedOxidizedPythonInterpreterConfig<'a> {
             .origin
             .as_ref()
             .expect("origin should have a value")
+    }
+
+    /// Resolve `OsString` to use for `sys.argv`.
+    ///
+    /// Returns `Some(T)` if we should populate `PyConfig.argv` or `None` if we should
+    /// leave this value alone.
+    pub fn resolve_sys_argv(&self) -> Option<Vec<OsString>> {
+        if self.inner.interpreter_config.argv.is_some() {
+            None
+        } else if let Some(args) = &self.inner.argv {
+            Some(args.clone())
+        } else {
+            Some(std::env::args_os().collect::<Vec<_>>())
+        }
+    }
+
+    /// Resolve the value to use for `sys.argvb`.
+    pub fn resolve_sys_argvb(&self) -> Vec<OsString> {
+        if let Some(args) = &self.inner.interpreter_config.argv {
+            args.clone()
+        } else if let Some(args) = &self.inner.argv {
+            args.clone()
+        } else {
+            std::env::args_os().collect::<Vec<_>>()
+        }
     }
 }
