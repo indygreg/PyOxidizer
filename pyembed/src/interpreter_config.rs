@@ -14,7 +14,7 @@ use {
     },
     std::{
         convert::{TryFrom, TryInto},
-        ffi::{CString, OsStr, OsString},
+        ffi::{CString, OsString},
         path::Path,
     },
 };
@@ -157,38 +157,6 @@ fn append_wide_string_list_from_path(
 ) -> Result<(), NewInterpreterError> {
     let status = unsafe {
         let mut value: Vec<wchar_t> = path.as_os_str().encode_wide().collect();
-        // NULL terminate.
-        value.push(0);
-
-        pyffi::PyWideStringList_Append(dest as *mut _, value.as_ptr() as *const _)
-    };
-
-    if unsafe { pyffi::PyStatus_Exception(status) } != 0 {
-        Err(NewInterpreterError::new_from_pystatus(&status, context))
-    } else {
-        Ok(())
-    }
-}
-
-#[cfg(unix)]
-fn append_wide_string_list_from_osstr(
-    dest: &mut pyffi::PyWideStringList,
-    value: &OsStr,
-    context: &str,
-) -> Result<(), NewInterpreterError> {
-    let value = String::from_utf8(value.as_bytes().into())
-        .map_err(|_| NewInterpreterError::Simple("unable to convert value to str"))?;
-    append_wide_string_list_from_str(dest, &value, context)
-}
-
-#[cfg(windows)]
-fn append_wide_string_list_from_osstr(
-    dest: &mut pyffi::PyWideStringList,
-    value: &OsStr,
-    context: &str,
-) -> Result<(), NewInterpreterError> {
-    let status = unsafe {
-        let mut value: Vec<wchar_t> = value.encode_wide().collect();
         // NULL terminate.
         value.push(0);
 
@@ -407,9 +375,7 @@ pub fn python_interpreter_config_to_py_config(
         config.parse_argv = if parse_argv { 1 } else { 0 };
     }
     if let Some(argv) = &value.argv {
-        for value in argv {
-            append_wide_string_list_from_osstr(&mut config.argv, value, "setting argv")?;
-        }
+        set_argv(&mut config, argv)?;
     }
     if let Some(program_name) = &value.program_name {
         set_config_string_from_path(
