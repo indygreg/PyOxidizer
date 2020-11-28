@@ -14,7 +14,7 @@ use {
     },
     std::{
         convert::{TryFrom, TryInto},
-        ffi::{CStr, CString, OsStr, OsString},
+        ffi::{CString, OsStr, OsString},
         path::Path,
     },
 };
@@ -25,33 +25,13 @@ use std::{ffi::NulError, os::unix::ffi::OsStrExt};
 #[cfg(target_family = "windows")]
 use std::os::windows::prelude::OsStrExt;
 
-fn py_status_to_string(status: &pyffi::PyStatus, context: &str) -> String {
-    if !status.func.is_null() && !status.err_msg.is_null() {
-        let func = unsafe { CStr::from_ptr(status.func) };
-        let msg = unsafe { CStr::from_ptr(status.err_msg) };
-
-        format!(
-            "during {}: {}: {}",
-            context,
-            func.to_string_lossy(),
-            msg.to_string_lossy()
-        )
-    } else if !status.err_msg.is_null() {
-        let msg = unsafe { CStr::from_ptr(status.err_msg) };
-
-        format!("during {}: {}", context, msg.to_string_lossy())
-    } else {
-        format!("during {}: could not format PyStatus", context)
-    }
-}
-
 /// Set a PyConfig string value from a str.
 fn set_config_string_from_str(
     config: &pyffi::PyConfig,
     dest: &*mut wchar_t,
     value: &str,
     context: &str,
-) -> Result<(), String> {
+) -> Result<(), NewInterpreterError> {
     match CString::new(value) {
         Ok(value) => unsafe {
             let status = pyffi::PyConfig_SetBytesString(
@@ -60,15 +40,15 @@ fn set_config_string_from_str(
                 value.as_ptr(),
             );
             if pyffi::PyStatus_Exception(status) != 0 {
-                Err(py_status_to_string(&status, context))
+                Err(NewInterpreterError::new_from_pystatus(&status, context))
             } else {
                 Ok(())
             }
         },
-        Err(_) => Err(format!(
+        Err(_) => Err(NewInterpreterError::Dynamic(format!(
             "during {}: unable to convert {} to C string",
             context, value
-        )),
+        ))),
     }
 }
 
@@ -78,9 +58,9 @@ fn set_config_string_from_path(
     dest: &*mut wchar_t,
     path: &Path,
     context: &str,
-) -> Result<(), String> {
+) -> Result<(), NewInterpreterError> {
     let value = CString::new(path.as_os_str().as_bytes())
-        .map_err(|_| "cannot convert path to C string".to_string())?;
+        .map_err(|_| NewInterpreterError::Simple("cannot convert path to C string"))?;
 
     let status = unsafe {
         pyffi::PyConfig_SetBytesString(
@@ -91,7 +71,7 @@ fn set_config_string_from_path(
     };
 
     if unsafe { pyffi::PyStatus_Exception(status) } != 0 {
-        Err(py_status_to_string(&status, context))
+        Err(NewInterpreterError::new_from_pystatus(&status, context))
     } else {
         Ok(())
     }
@@ -103,7 +83,7 @@ fn set_config_string_from_path(
     dest: &*mut wchar_t,
     path: &Path,
     context: &str,
-) -> Result<(), String> {
+) -> Result<(), NewInterpreterError> {
     let status = unsafe {
         let mut value: Vec<wchar_t> = path.as_os_str().encode_wide().collect();
         // NULL terminate.
@@ -117,7 +97,7 @@ fn set_config_string_from_path(
     };
 
     if unsafe { pyffi::PyStatus_Exception(status) } != 0 {
-        Err(py_status_to_string(&status, context))
+        Err(NewInterpreterError::new_from_pystatus(&status, context))
     } else {
         Ok(())
     }
@@ -128,16 +108,19 @@ fn append_wide_string_list_from_str(
     dest: &mut pyffi::PyWideStringList,
     value: &str,
     context: &str,
-) -> Result<(), String> {
-    let value =
-        CString::new(value).map_err(|_| "unable to convert value to C string".to_string())?;
+) -> Result<(), NewInterpreterError> {
+    let value = CString::new(value)
+        .map_err(|_| NewInterpreterError::Simple("unable to convert value to C string"))?;
 
     let mut len: size_t = 0;
 
     let decoded = unsafe { pyffi::Py_DecodeLocale(value.as_ptr() as *const _, &mut len) };
 
     if decoded.is_null() {
-        Err(format!("during {}: unable to decode value", context))
+        Err(NewInterpreterError::Dynamic(format!(
+            "during {}: unable to decode value",
+            context
+        )))
     } else {
         let status = unsafe { pyffi::PyWideStringList_Append(dest as *mut _, decoded) };
         unsafe {
@@ -145,7 +128,7 @@ fn append_wide_string_list_from_str(
         }
 
         if unsafe { pyffi::PyStatus_Exception(status) } != 0 {
-            Err(py_status_to_string(&status, context))
+            Err(NewInterpreterError::new_from_pystatus(&status, context))
         } else {
             Ok(())
         }
@@ -157,11 +140,11 @@ fn append_wide_string_list_from_path(
     dest: &mut pyffi::PyWideStringList,
     path: &Path,
     context: &str,
-) -> Result<(), String> {
+) -> Result<(), NewInterpreterError> {
     let value = path
         .as_os_str()
         .to_str()
-        .ok_or_else(|| "unable to convert value to str".to_string())?;
+        .ok_or_else(|| NewInterpreterError::Simple("unable to convert value to str"))?;
 
     append_wide_string_list_from_str(dest, value, context)
 }
@@ -171,7 +154,7 @@ fn append_wide_string_list_from_path(
     dest: &mut pyffi::PyWideStringList,
     path: &Path,
     context: &str,
-) -> Result<(), String> {
+) -> Result<(), NewInterpreterError> {
     let status = unsafe {
         let mut value: Vec<wchar_t> = path.as_os_str().encode_wide().collect();
         // NULL terminate.
@@ -181,7 +164,7 @@ fn append_wide_string_list_from_path(
     };
 
     if unsafe { pyffi::PyStatus_Exception(status) } != 0 {
-        Err(py_status_to_string(&status, context))
+        Err(NewInterpreterError::new_from_pystatus(&status, context))
     } else {
         Ok(())
     }
@@ -192,9 +175,9 @@ fn append_wide_string_list_from_osstr(
     dest: &mut pyffi::PyWideStringList,
     value: &OsStr,
     context: &str,
-) -> Result<(), String> {
+) -> Result<(), NewInterpreterError> {
     let value = String::from_utf8(value.as_bytes().into())
-        .map_err(|_| "unable to convert value to str".to_string())?;
+        .map_err(|_| NewInterpreterError::Simple("unable to convert value to str"))?;
     append_wide_string_list_from_str(dest, &value, context)
 }
 
@@ -203,7 +186,7 @@ fn append_wide_string_list_from_osstr(
     dest: &mut pyffi::PyWideStringList,
     value: &OsStr,
     context: &str,
-) -> Result<(), String> {
+) -> Result<(), NewInterpreterError> {
     let status = unsafe {
         let mut value: Vec<wchar_t> = value.encode_wide().collect();
         // NULL terminate.
@@ -213,7 +196,7 @@ fn append_wide_string_list_from_osstr(
     };
 
     if unsafe { pyffi::PyStatus_Exception(status) } != 0 {
-        Err(py_status_to_string(&status, context))
+        Err(NewInterpreterError::new_from_pystatus(&status, context))
     } else {
         Ok(())
     }
@@ -350,7 +333,7 @@ impl<'a> TryFrom<&ResolvedOxidizedPythonInterpreterConfig<'a>> for pyffi::PyPreC
 
 pub fn python_interpreter_config_to_py_config(
     value: &PythonInterpreterConfig,
-) -> Result<pyffi::PyConfig, String> {
+) -> Result<pyffi::PyConfig, NewInterpreterError> {
     let mut config = pyffi::PyConfig::default();
     unsafe {
         match value.profile {
@@ -629,8 +612,7 @@ impl<'a> TryInto<pyffi::PyConfig> for &'a ResolvedOxidizedPythonInterpreterConfi
         // We use the raw configuration as a base then we apply any adjustments,
         // as needed.
         let mut config: pyffi::PyConfig =
-            python_interpreter_config_to_py_config(&self.interpreter_config)
-                .map_err(NewInterpreterError::Dynamic)?;
+            python_interpreter_config_to_py_config(&self.interpreter_config)?;
 
         if let Some(argv) = &self.argv {
             set_argv(&mut config, argv)?;
@@ -657,14 +639,12 @@ impl<'a> TryInto<pyffi::PyConfig> for &'a ResolvedOxidizedPythonInterpreterConfi
                     &config.program_name,
                     &exe,
                     "setting program_name",
-                )
-                .map_err(NewInterpreterError::Dynamic)?;
+                )?;
             }
 
             // PYTHONHOME is set to directory of current executable.
             if self.interpreter_config.home.is_none() {
-                set_config_string_from_path(&config, &config.home, origin, "setting home")
-                    .map_err(NewInterpreterError::Dynamic)?;
+                set_config_string_from_path(&config, &config.home, origin, "setting home")?;
             }
         }
 
