@@ -936,7 +936,7 @@ fn oxidized_finder_new(
     } else if let Some(resources_file) = resources_file {
         let path = pyobject_to_pathbuf(py, resources_file)?;
         resources_state
-            .index_path(&path)
+            .index_path_memory_mapped(&path)
             .map_err(|e| PyErr::new::<ValueError, _>(py, e))?;
     }
 

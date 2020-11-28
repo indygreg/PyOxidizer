@@ -413,9 +413,7 @@ impl<'a, 'config: 'a> TryFrom<&ResolvedOxidizedPythonInterpreterConfig<'config>>
         let mut state = Self {
             current_exe: config.exe().clone(),
             origin: config.origin().clone(),
-            resources: Default::default(),
-            backing_py_objects: vec![],
-            backing_mmaps: vec![],
+            ..Default::default()
         };
 
         for data in &config.packed_resources {
@@ -444,9 +442,7 @@ impl<'a> PythonResourcesState<'a, u8> {
         Ok(Self {
             current_exe: exe,
             origin,
-            resources: Default::default(),
-            backing_py_objects: vec![],
-            backing_mmaps: vec![],
+            ..Default::default()
         })
     }
 
@@ -479,8 +475,8 @@ impl<'a> PythonResourcesState<'a, u8> {
         Ok(())
     }
 
-    /// Load resources data from a filesystem path.
-    pub fn index_path(&mut self, path: impl AsRef<Path>) -> Result<(), String> {
+    /// Load resources data from a filesystem path using memory mapped I/O.
+    pub fn index_path_memory_mapped(&mut self, path: impl AsRef<Path>) -> Result<(), String> {
         let path = path.as_ref();
         let f = std::fs::File::open(path).map_err(|e| e.to_string())?;
 
