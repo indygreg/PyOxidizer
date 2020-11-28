@@ -269,27 +269,19 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
         if self.config.oxidized_importer {
             self.resources_state = Some(Box::new(PythonResourcesState::try_from(&self.config)?));
 
-            if let Some(ref mut resources_state) = self.resources_state {
-                resources_state
-                    .load(&self.config.packed_resources)
-                    .map_err(|err| NewInterpreterError::Simple(err))?;
+            let resources_state = self.resources_state.as_mut().unwrap();
 
-                let oxidized_importer = py.import(OXIDIZED_IMPORTER_NAME_STR).map_err(|err| {
-                    NewInterpreterError::new_from_pyerr(
-                        py,
-                        err,
-                        "import of oxidized importer module",
-                    )
-                })?;
+            resources_state
+                .load(&self.config.packed_resources)
+                .map_err(|err| NewInterpreterError::Simple(err))?;
 
-                initialize_importer(py, &oxidized_importer, resources_state).map_err(|err| {
-                    NewInterpreterError::new_from_pyerr(
-                        py,
-                        err,
-                        "initialization of oxidized importer",
-                    )
-                })?;
-            }
+            let oxidized_importer = py.import(OXIDIZED_IMPORTER_NAME_STR).map_err(|err| {
+                NewInterpreterError::new_from_pyerr(py, err, "import of oxidized importer module")
+            })?;
+
+            initialize_importer(py, &oxidized_importer, resources_state).map_err(|err| {
+                NewInterpreterError::new_from_pyerr(py, err, "initialization of oxidized importer")
+            })?;
         }
 
         // Now proceed with the Python main initialization. This will initialize
