@@ -201,6 +201,14 @@ impl<'a> OxidizedPythonInterpreterConfig<'a> {
     pub fn resolve(
         self,
     ) -> Result<ResolvedOxidizedPythonInterpreterConfig<'a>, NewInterpreterError> {
+        let argv = if let Some(args) = self.argv {
+            Some(args)
+        } else if self.interpreter_config.argv.is_some() {
+            None
+        } else {
+            Some(std::env::args_os().collect::<Vec<_>>())
+        };
+
         let exe = if let Some(exe) = self.exe {
             exe
         } else {
@@ -251,6 +259,7 @@ impl<'a> OxidizedPythonInterpreterConfig<'a> {
                     module_search_paths,
                     ..self.interpreter_config
                 },
+                argv,
                 tcl_library,
                 ..self
             },
@@ -293,20 +302,6 @@ impl<'a> ResolvedOxidizedPythonInterpreterConfig<'a> {
             .origin
             .as_ref()
             .expect("origin should have a value")
-    }
-
-    /// Resolve `OsString` to use for `sys.argv`.
-    ///
-    /// Returns `Some(T)` if we should populate `PyConfig.argv` or `None` if we should
-    /// leave this value alone.
-    pub fn resolve_sys_argv(&self) -> Option<Vec<OsString>> {
-        if let Some(args) = &self.inner.argv {
-            Some(args.clone())
-        } else if self.inner.interpreter_config.argv.is_some() {
-            None
-        } else {
-            Some(std::env::args_os().collect::<Vec<_>>())
-        }
     }
 
     /// Resolve the value to use for `sys.argvb`.

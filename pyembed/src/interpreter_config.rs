@@ -626,9 +626,13 @@ impl<'a> TryInto<pyffi::PyConfig> for &'a ResolvedOxidizedPythonInterpreterConfi
     fn try_into(self) -> Result<pyffi::PyConfig, Self::Error> {
         // We use the raw configuration as a base then we apply any adjustments,
         // as needed.
-        let config: pyffi::PyConfig =
+        let mut config: pyffi::PyConfig =
             python_interpreter_config_to_py_config(&self.interpreter_config)
                 .map_err(NewInterpreterError::Dynamic)?;
+
+        if let Some(argv) = &self.argv {
+            set_argv(&mut config, argv)?;
+        }
 
         if self.exe.is_none() {
             return Err(NewInterpreterError::Simple(

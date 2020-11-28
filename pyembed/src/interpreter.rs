@@ -14,7 +14,7 @@ use {
     super::osutils::resolve_terminfo_dirs,
     super::pyalloc::{make_raw_rust_memory_allocator, RawAllocator},
     super::python_resources::PythonResourcesState,
-    crate::{error::NewInterpreterError, interpreter_config::set_argv},
+    crate::error::NewInterpreterError,
     cpython::{GILGuard, NoArgs, ObjectProtocol, PyDict, PyList, PyString, Python, ToPyObject},
     lazy_static::lazy_static,
     python3_sys as pyffi,
@@ -247,11 +247,6 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
         // Enable multi-phase initialization. This allows us to initialize
         // our custom importer before Python attempts any imports.
         py_config._init_main = 0;
-
-        // Set PyConfig.argv if we didn't do so already.
-        if let Some(args) = self.config.resolve_sys_argv() {
-            set_argv(&mut py_config, &args)?;
-        }
 
         let status = unsafe { pyffi::Py_InitializeFromConfig(&py_config) };
         if unsafe { pyffi::PyStatus_Exception(status) } != 0 {
