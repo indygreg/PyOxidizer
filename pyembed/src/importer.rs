@@ -529,8 +529,8 @@ py_class!(class OxidizedFinder |py| {
     }
 
     // Additional methods provided for convenience.
-    def __new__(_cls, resources_data: Option<PyObject> = None, resources_file: Option<PyObject> = None, relative_path_origin: Option<PyObject> = None) -> PyResult<OxidizedFinder> {
-        oxidized_finder_new(py, resources_data, resources_file, relative_path_origin)
+    def __new__(_cls, relative_path_origin: Option<PyObject> = None) -> PyResult<OxidizedFinder> {
+        oxidized_finder_new(py, relative_path_origin)
     }
 
     def index_bytes(&self, data: PyObject) -> PyResult<PyObject> {
@@ -928,11 +928,9 @@ impl OxidizedFinder {
     }
 }
 
-/// OxidizedFinder.__new__(resources_data=None, resources_file=None, relative_path_origin=None))
+/// OxidizedFinder.__new__(relative_path_origin=None))
 fn oxidized_finder_new(
     py: Python,
-    resources_data: Option<PyObject>,
-    resources_file: Option<PyObject>,
     relative_path_origin: Option<PyObject>,
 ) -> PyResult<OxidizedFinder> {
     // We need to obtain an ImporterState instance. This requires handles on a
@@ -954,17 +952,6 @@ fn oxidized_finder_new(
     resources_state
         .index_interpreter_builtins()
         .map_err(|err| PyErr::new::<ValueError, _>(py, err))?;
-
-    if let Some(resources) = &resources_data {
-        resources_state.index_pyobject(py, resources.clone_ref(py))?;
-    }
-
-    if let Some(resources_file) = resources_file {
-        let path = pyobject_to_pathbuf(py, resources_file)?;
-        resources_state
-            .index_path_memory_mapped(&path)
-            .map_err(|e| PyErr::new::<ValueError, _>(py, e))?;
-    }
 
     let importer = OxidizedFinder::create_instance(
         py,

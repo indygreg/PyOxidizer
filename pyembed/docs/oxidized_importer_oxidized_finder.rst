@@ -115,16 +115,6 @@ Python types:
 
 The constructor takes the following named arguments:
 
-``resources_data``
-   Bytes-like *packed resources data* to parse. A reference to the passed in
-   value will be stored internally in the constructed instance, as the memory
-   needs to live for the lifetime of the ``OxidizedFinder`` instance.
-
-``resources_file``
-   A path-like object defining the filesystem path to a file containing
-   *packed resources data*. If provided, the file will be opened and
-   memory mapped and resources data will be parsed from it.
-
 ``relative_path_origin``
    A path-like object denoting the filesystem path that should be used as the
    *origin* value for relative path resources. Filesystem-based resources are
