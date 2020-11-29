@@ -4,6 +4,7 @@ on:
 jobs:
   pyoxidizer:
     strategy:
+      fail-fast: false
       matrix:
         rust_toolchain:
           - 'stable'
@@ -16,7 +17,7 @@ jobs:
           - 'ubuntu-20.04'
           - 'macos-11.0'
           - 'windows-2019'
-    continue-on-error: true
+    continue-on-error: ${{ matrix.rust_toolchain == 'nightly' }}
     runs-on: ${{ matrix.os }}
     env:
       IN_CI: '1'
