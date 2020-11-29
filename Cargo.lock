@@ -2167,6 +2167,7 @@ dependencies = [
  "mailparse",
  "python-packed-resources",
  "regex",
+ "spdx",
  "tempfile",
  "tugger-file-manifest",
  "walkdir",
@@ -2871,6 +2872,17 @@ dependencies = [
  "libc",
  "redox_syscall",
  "winapi 0.3.9",
+]
+
+[[package]]
+name = "spdx"
+version = "0.3.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1a68f874c9aa7762aa10401e2ae004d977e7b6156074668eb4ce78dd0cb28255"
+dependencies = [
+ "lazy_static",
+ "regex",
+ "smallvec",
 ]
 
 [[package]]
