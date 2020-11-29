@@ -77,6 +77,36 @@ fn optional_vec_string_to_string(value: &Option<Vec<String>>) -> String {
     }
 }
 
+/// Represents sources for loading packed resources data.
+#[derive(Clone, Debug, PartialEq)]
+pub enum PyembedPackedResourcesSource {
+    /// Load from memory via an `include_bytes!` directive.
+    MemoryIncludeBytes(PathBuf),
+    /// Load from a file using memory mapped I/O.
+    ///
+    /// The string `$ORIGIN` is expanded at runtime.
+    MemoryMappedPath(PathBuf),
+}
+
+impl ToString for PyembedPackedResourcesSource {
+    fn to_string(&self) -> String {
+        match self {
+            Self::MemoryIncludeBytes(path) => {
+                format!(
+                    "pyembed::PackedResourcesSource::Memory(include_bytes!(r#\"{}\"#))",
+                    path.display()
+                )
+            }
+            Self::MemoryMappedPath(path) => {
+                format!(
+                    "pyembed::PackedResourcesSource::MemoryMappedPath({})",
+                    pathbuf_to_string(&path)
+                )
+            }
+        }
+    }
+}
+
 /// Represents the run-time configuration of a Python interpreter.
 ///
 /// This type mirrors `pyembed::OxidizedPythonInterpreterConfig`. We can't
@@ -323,10 +353,8 @@ impl PyembedPythonInterpreterConfig {
             self.oxidized_importer,
             self.filesystem_importer,
             if let Some(path) = packed_resources_path {
-                format!(
-                    "vec![pyembed::PackedResourcesSource::Memory(include_bytes!(r#\"{}\"#))]",
-                    path.display()
-                )
+                let entry = PyembedPackedResourcesSource::MemoryIncludeBytes(path.to_path_buf());
+                format!("vec![{}]", entry.to_string())
             } else {
                 "vec![]".to_string()
             },
