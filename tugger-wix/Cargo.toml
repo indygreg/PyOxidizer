@@ -34,4 +34,4 @@ path = "../tugger-file-manifest"
 
 [dev-dependencies]
 msi = "0.3"
-tempdir = "0.3"
+tempfile = "3.1"

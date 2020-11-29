@@ -283,7 +283,7 @@ mod tests {
     #[cfg(windows)]
     #[test]
     fn test_vc_redistributable_build() -> Result<()> {
-        let temp_dir = tempdir::TempDir::new("tugger-test")?;
+        let temp_dir = tempfile::Builder::new().prefix("tugger-test").tempdir()?;
         let logger = get_logger()?;
 
         let mut bundle = WiXBundleInstallerBuilder::new(
