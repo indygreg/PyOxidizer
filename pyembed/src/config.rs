@@ -29,7 +29,7 @@ pub struct ExtensionModule {
 }
 
 /// A source for packed resources data.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum PackedResourcesSource<'a> {
     /// A reference to raw resources data in memory.
     Memory(&'a [u8]),
@@ -128,6 +128,11 @@ pub struct OxidizedPythonInterpreterConfig<'a> {
     /// meta path importer during interpreter initialization when
     /// `oxidized_importer=true`. If `oxidized_importer=false`, this field
     /// is ignored.
+    ///
+    /// For `Path`-based sources, the special string `$ORIGIN` will be expanded
+    /// to the directory of the current executable or the value of
+    /// `self.origin` if set. Relative paths without `$ORIGIN` will be evaluated
+    /// relative to the process's current working directory.
     pub packed_resources: Vec<PackedResourcesSource<'a>>,
 
     /// Extra extension modules to make available to the interpreter.
@@ -243,6 +248,19 @@ impl<'a> OxidizedPythonInterpreterConfig<'a> {
 
         let origin_string = origin.display().to_string();
 
+        let packed_resources = self
+            .packed_resources
+            .into_iter()
+            .map(|entry| match entry {
+                PackedResourcesSource::Memory(_) => entry,
+                PackedResourcesSource::MemoryMappedPath(p) => {
+                    PackedResourcesSource::MemoryMappedPath(PathBuf::from(
+                        p.display().to_string().replace("$ORIGIN", &origin_string),
+                    ))
+                }
+            })
+            .collect::<Vec<_>>();
+
         let module_search_paths = match &self.interpreter_config.module_search_paths {
             Some(paths) => Some(
                 paths
@@ -275,6 +293,7 @@ impl<'a> OxidizedPythonInterpreterConfig<'a> {
                     ..self.interpreter_config
                 },
                 argv,
+                packed_resources,
                 tcl_library,
                 ..self
             },
@@ -328,5 +347,53 @@ impl<'a> ResolvedOxidizedPythonInterpreterConfig<'a> {
         } else {
             std::env::args_os().collect::<Vec<_>>()
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use {super::*, anyhow::Result};
+
+    #[test]
+    fn test_packed_resources_implicit_origin() -> Result<()> {
+        let mut config = OxidizedPythonInterpreterConfig::default();
+        config
+            .packed_resources
+            .push(PackedResourcesSource::MemoryMappedPath(PathBuf::from(
+                "$ORIGIN/lib/packed-resources",
+            )));
+
+        let resolved = config.resolve()?;
+
+        assert_eq!(
+            resolved.packed_resources,
+            vec![PackedResourcesSource::MemoryMappedPath(
+                resolved.origin().join("lib/packed-resources")
+            )]
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_packed_resources_explicit_origin() -> Result<()> {
+        let mut config = OxidizedPythonInterpreterConfig::default();
+        config.origin = Some(PathBuf::from("/other/origin"));
+        config
+            .packed_resources
+            .push(PackedResourcesSource::MemoryMappedPath(PathBuf::from(
+                "$ORIGIN/lib/packed-resources",
+            )));
+
+        let resolved = config.resolve()?;
+
+        assert_eq!(
+            resolved.packed_resources,
+            vec![PackedResourcesSource::MemoryMappedPath(PathBuf::from(
+                "/other/origin/lib/packed-resources"
+            ))]
+        );
+
+        Ok(())
     }
 }
