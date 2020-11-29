@@ -82,6 +82,10 @@ Other Relevant Changes
 ^^^^^^^^^^^^^^^^^^^^^^
 
 * CI has been moved from Azure Pipelines to GitHub Actions.
+* Low level code in the ``pyembed`` crate for loading and indexing resources
+  has been significantly refactored. This code has historically been a bit
+  brittle, as it needs to do *unsafe* things. We think the new code is much
+  more robust. But there's a chance that crashes could occur.
 
 .. _version_0_10_3:
 
