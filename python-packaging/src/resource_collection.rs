@@ -596,7 +596,10 @@ impl PythonResourceAddCollectionContext {
 /// `PythonBytecodeCompiler` to produce bytecode.
 #[derive(Clone, Debug, Default)]
 pub struct CompiledResourcesCollection<'a> {
+    /// All indexes resources.
     pub resources: BTreeMap<String, Resource<'a, u8>>,
+
+    /// Extra file installs that must be performed so referenced files are available.
     pub extra_files: Vec<FileInstall>,
 }
 
@@ -621,6 +624,10 @@ impl<'a> CompiledResourcesCollection<'a> {
 /// bytecode, etc) into a collection of `Resource` so they can be
 /// serialized to the *Python packed resources* format. This type
 /// exists to facilitate doing this.
+///
+/// This type is not only responsible for tracking resources but also for
+/// enforcing policies on where those resources can be loaded from and
+/// what types of resources are allowed.
 #[derive(Debug, Clone)]
 pub struct PythonResourceCollector {
     /// Where resources can be placed.
