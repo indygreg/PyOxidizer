@@ -40,6 +40,9 @@ Backwards Compatibility Notes
   to ``py_runmain()`` to reflect that it always calls ``Py_RunMain()``.
 * The ``py-module-names`` file is no longer written as part of the files
   comprising an embedded Python interpreter.
+* ``OxidizedFinder.__init__()`` now accepts specifying both resources data and
+  a filesystem path. Previously, it silently only processed resources data if
+  both were specified.
 
 Bug Fixes
 ^^^^^^^^^

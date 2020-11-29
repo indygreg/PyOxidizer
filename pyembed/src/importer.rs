@@ -928,7 +928,7 @@ impl OxidizedFinder {
     }
 }
 
-/// OxidizedFinder.__new__(resources_data=None)
+/// OxidizedFinder.__new__(resources_data=None, resources_file=None, relative_path_origin=None))
 fn oxidized_finder_new(
     py: Python,
     resources_data: Option<PyObject>,
@@ -951,18 +951,20 @@ fn oxidized_finder_new(
         resources_state.origin = pyobject_to_pathbuf(py, py_origin)?;
     }
 
+    resources_state
+        .index_interpreter_builtins()
+        .map_err(|err| PyErr::new::<ValueError, _>(py, err))?;
+
     if let Some(resources) = &resources_data {
         resources_state.index_pyobject(py, resources.clone_ref(py))?;
-    } else if let Some(resources_file) = resources_file {
+    }
+
+    if let Some(resources_file) = resources_file {
         let path = pyobject_to_pathbuf(py, resources_file)?;
         resources_state
             .index_path_memory_mapped(&path)
             .map_err(|e| PyErr::new::<ValueError, _>(py, e))?;
     }
-
-    resources_state
-        .index_interpreter_builtins()
-        .map_err(|err| PyErr::new::<ValueError, _>(py, err))?;
 
     let importer = OxidizedFinder::create_instance(
         py,
