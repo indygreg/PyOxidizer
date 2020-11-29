@@ -721,7 +721,9 @@ mod tests {
 
     #[test]
     fn test_source_resolution() -> Result<()> {
-        let td = tempdir::TempDir::new("pyoxidizer-test")?;
+        let td = tempfile::Builder::new()
+            .prefix("python-packaging-test")
+            .tempdir()?;
         let tp = td.path();
 
         let acme_path = tp.join("acme");
@@ -840,7 +842,9 @@ mod tests {
 
     #[test]
     fn test_bytecode_resolution() -> Result<()> {
-        let td = tempdir::TempDir::new("pyoxidizer-test")?;
+        let td = tempfile::Builder::new()
+            .prefix("python-packaging-test")
+            .tempdir()?;
         let tp = td.path();
 
         let acme_path = tp.join("acme");
@@ -1116,7 +1120,9 @@ mod tests {
 
     #[test]
     fn test_site_packages() -> Result<()> {
-        let td = tempdir::TempDir::new("pyoxidizer-test")?;
+        let td = tempfile::Builder::new()
+            .prefix("python-packaging-test")
+            .tempdir()?;
         let tp = td.path();
 
         let sp_path = tp.join("site-packages");
@@ -1162,7 +1168,9 @@ mod tests {
 
     #[test]
     fn test_extension_module() -> Result<()> {
-        let td = tempdir::TempDir::new("pyoxidizer-test")?;
+        let td = tempfile::Builder::new()
+            .prefix("python-packaging-test")
+            .tempdir()?;
         let tp = td.path();
 
         create_dir_all(&tp.join("markupsafe"))?;
@@ -1301,7 +1309,9 @@ mod tests {
 
     #[test]
     fn test_egg_file() -> Result<()> {
-        let td = tempdir::TempDir::new("pyoxidizer-test")?;
+        let td = tempfile::Builder::new()
+            .prefix("python-packaging-test")
+            .tempdir()?;
         let tp = td.path();
 
         create_dir_all(&tp)?;
@@ -1327,7 +1337,9 @@ mod tests {
 
     #[test]
     fn test_egg_dir() -> Result<()> {
-        let td = tempdir::TempDir::new("pyoxidizer-test")?;
+        let td = tempfile::Builder::new()
+            .prefix("python-packaging-test")
+            .tempdir()?;
         let tp = td.path();
 
         create_dir_all(&tp)?;
@@ -1378,7 +1390,9 @@ mod tests {
 
     #[test]
     fn test_pth_file() -> Result<()> {
-        let td = tempdir::TempDir::new("pyoxidizer-test")?;
+        let td = tempfile::Builder::new()
+            .prefix("python-packaging-test")
+            .tempdir()?;
         let tp = td.path();
 
         create_dir_all(&tp)?;
@@ -1405,7 +1419,9 @@ mod tests {
     /// Resource files without a package are not valid.
     #[test]
     fn test_root_resource_file() -> Result<()> {
-        let td = tempdir::TempDir::new("pyoxidizer-test")?;
+        let td = tempfile::Builder::new()
+            .prefix("python-packaging-test")
+            .tempdir()?;
         let tp = td.path();
 
         let resource_path = tp.join("resource.txt");
@@ -1422,7 +1438,9 @@ mod tests {
     /// Resource files in a relative directory without a package are not valid.
     #[test]
     fn test_relative_resource_no_package() -> Result<()> {
-        let td = tempdir::TempDir::new("pyoxidizer-test")?;
+        let td = tempfile::Builder::new()
+            .prefix("python-packaging-test")
+            .tempdir()?;
         let tp = td.path();
 
         write(&tp.join("foo.py"), "")?;
@@ -1456,7 +1474,9 @@ mod tests {
     /// Resource files next to a package are detected.
     #[test]
     fn test_relative_package_resource() -> Result<()> {
-        let td = tempdir::TempDir::new("pyoxidizer-test")?;
+        let td = tempfile::Builder::new()
+            .prefix("python-packaging-test")
+            .tempdir()?;
         let tp = td.path();
 
         let package_dir = tp.join("foo");
@@ -1502,7 +1522,9 @@ mod tests {
     /// Resource files in sub-directory are detected.
     #[test]
     fn test_subdirectory_resource() -> Result<()> {
-        let td = tempdir::TempDir::new("pyoxidizer-test")?;
+        let td = tempfile::Builder::new()
+            .prefix("python-packaging-test")
+            .tempdir()?;
         let tp = td.path();
 
         let package_dir = tp.join("foo");
@@ -1549,7 +1571,9 @@ mod tests {
     /// .dist-info directory ignored if METADATA file not present.
     #[test]
     fn test_distinfo_missing_metadata() -> Result<()> {
-        let td = tempdir::TempDir::new("pyoxidizer-test")?;
+        let td = tempfile::Builder::new()
+            .prefix("python-packaging-test")
+            .tempdir()?;
         let tp = td.path();
 
         let dist_path = tp.join("foo-1.2.dist-info");
@@ -1568,7 +1592,9 @@ mod tests {
     /// .dist-info with invalid METADATA file has no content emitted.
     #[test]
     fn test_distinfo_bad_metadata() -> Result<()> {
-        let td = tempdir::TempDir::new("pyoxidizer-test")?;
+        let td = tempfile::Builder::new()
+            .prefix("python-packaging-test")
+            .tempdir()?;
         let tp = td.path();
 
         let dist_path = tp.join("foo-1.2.dist-info");
@@ -1589,7 +1615,9 @@ mod tests {
     /// .dist-info with partial METADATA content has no content emitted.
     #[test]
     fn test_distinfo_partial_metadata() -> Result<()> {
-        let td = tempdir::TempDir::new("pyoxidizer-test")?;
+        let td = tempfile::Builder::new()
+            .prefix("python-packaging-test")
+            .tempdir()?;
         let tp = td.path();
 
         let dist_path = tp.join("black-1.2.3.dist-info");
@@ -1610,7 +1638,9 @@ mod tests {
     /// .dist-info with partial METADATA content has no content emitted.
     #[test]
     fn test_distinfo_valid_metadata() -> Result<()> {
-        let td = tempdir::TempDir::new("pyoxidizer-test")?;
+        let td = tempfile::Builder::new()
+            .prefix("python-packaging-test")
+            .tempdir()?;
         let tp = td.path();
 
         let dist_path = tp.join("black-1.2.3.dist-info");
@@ -1670,7 +1700,9 @@ mod tests {
     /// .dist-info with partial METADATA content has no content emitted.
     #[test]
     fn test_egginfo_valid_metadata() -> Result<()> {
-        let td = tempdir::TempDir::new("pyoxidizer-test")?;
+        let td = tempfile::Builder::new()
+            .prefix("python-packaging-test")
+            .tempdir()?;
         let tp = td.path();
 
         let egg_path = tp.join("black-1.2.3.egg-info");

@@ -36,7 +36,7 @@ pub trait PythonBytecodeCompiler {
 /// An entity to perform Python bytecode compilation.
 #[derive(Debug)]
 pub struct BytecodeCompiler {
-    _temp_dir: tempdir::TempDir,
+    _temp_dir: tempfile::TempDir,
     command: process::Child,
 
     /// Magic number for bytecode header.
@@ -62,7 +62,9 @@ impl BytecodeCompiler {
     /// requests and receive the compiled bytecode. The process is terminated
     /// when this object is dropped.
     pub fn new(python: &Path) -> Result<BytecodeCompiler> {
-        let temp_dir = tempdir::TempDir::new("bytecode-compiler")?;
+        let temp_dir = tempfile::Builder::new()
+            .prefix("bytecode-compiler")
+            .tempdir()?;
 
         let script_path = PathBuf::from(temp_dir.path()).join("bytecodecompiler.py");
 
