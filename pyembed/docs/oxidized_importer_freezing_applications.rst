@@ -117,16 +117,17 @@ and register the custom importer with Python:
    # Load those resources into an instance of our custom importer. This
    # will read the index in the passed data structure and make all
    # resources immediately available for importing.
-   finder = oxidized_importer.OxidizedFinder(resources_file="oxidized_resources")
+   finder = oxidized_importer.OxidizedFinder()
+   finder.index_file_memory_mapped("oxidized_resources")
 
    # If the relative path of filesystem-based resources is not relative
    # to the current executable (which is likely the ``python3`` executable),
    # you'll need to set ``origin`` to the directory the resources are
    # relative to.
    finder = oxidized_importer.OxidizedFinder(
-       resources=packed_data,
        relative_path_origin=os.path.dirname(os.path.abspath(__file__)),
    )
+   finder.index_bytes(packed_data)
 
    # Register the meta path finder as the first item, making it the
    # first finder that is consulted.
