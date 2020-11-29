@@ -5,8 +5,8 @@
 use {
     super::{
         binary::{
-            EmbeddedPythonContext, LibpythonLinkMode, PythonBinaryBuilder, PythonLinkingInfo,
-            ResourceAddCollectionContextCallback,
+            EmbeddedPythonContext, LibpythonLinkMode, PackedResourcesLoadMode, PythonBinaryBuilder,
+            PythonLinkingInfo, ResourceAddCollectionContextCallback,
         },
         config::{PyembedPackedResourcesSource, PyembedPythonInterpreterConfig},
         distribution::{BinaryLibpythonLinkMode, PythonDistribution},
@@ -17,7 +17,7 @@ use {
         },
         standalone_distribution::StandaloneDistribution,
     },
-    anyhow::{anyhow, Result},
+    anyhow::{anyhow, Context, Result},
     lazy_static::lazy_static,
     python_packaging::{
         bytecode::BytecodeCompiler,
@@ -93,6 +93,9 @@ pub struct StandalonePythonExecutableBuilder {
 
     /// Python resources to be embedded in the binary.
     resources_collector: PythonResourceCollector,
+
+    /// How packed resources will be loaded at run-time.
+    resources_load_mode: PackedResourcesLoadMode,
 
     /// Holds state necessary to link libpython.
     core_build_context: LibPythonBuildContext,
@@ -203,6 +206,9 @@ impl StandalonePythonExecutableBuilder {
                 allow_new_builtin_extension_modules,
                 packaging_policy.allow_files(),
                 &cache_tag,
+            ),
+            resources_load_mode: PackedResourcesLoadMode::EmbeddedInBinary(
+                "packed-resources".to_string(),
             ),
             core_build_context: LibPythonBuildContext::default(),
             extension_build_contexts: BTreeMap::new(),
@@ -763,13 +769,36 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
 
         let mut config = self.config.clone();
 
-        let packed_resources_path = PathBuf::from("packed-resources");
-        config
-            .packed_resources
-            .push(PyembedPackedResourcesSource::MemoryIncludeBytes(
-                packed_resources_path.clone(),
-            ));
-        pending_resources.push((compiled_resources, packed_resources_path));
+        match &self.resources_load_mode {
+            PackedResourcesLoadMode::EmbeddedInBinary(filename) => {
+                pending_resources.push((compiled_resources, PathBuf::from(filename)));
+                config
+                    .packed_resources
+                    .push(PyembedPackedResourcesSource::MemoryIncludeBytes(
+                        PathBuf::from(filename),
+                    ));
+            }
+            PackedResourcesLoadMode::BinaryRelativePathMemoryMapped(path) => {
+                // We need to materialize the file in extra_files. So compile now.
+                let mut buffer = vec![];
+                compiled_resources
+                    .write_packed_resources(&mut buffer)
+                    .context("serializing packed resources")?;
+                extra_files.add_file_entry(
+                    Path::new(path),
+                    FileEntry {
+                        data: FileData::Memory(buffer),
+                        executable: false,
+                    },
+                )?;
+
+                config
+                    .packed_resources
+                    .push(PyembedPackedResourcesSource::MemoryMappedPath(
+                        PathBuf::from("$ORIGIN").join(path),
+                    ));
+            }
+        }
 
         let linking_info = self.resolve_python_linking_info(logger, opt_level)?;
 
@@ -1073,6 +1102,35 @@ pub mod tests {
         let temp_dir = tempdir::TempDir::new("pyoxidizer-test")?;
 
         embedded.write_files(temp_dir.path())?;
+
+        let resources_path = temp_dir.path().join("packed-resources");
+        assert!(resources_path.exists(), "packed-resources file exists");
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_memory_mapped_file_resources() -> Result<()> {
+        let logger = get_logger()?;
+        let options = StandalonePythonExecutableBuilderOptions::default();
+        let mut exe = options.new_builder()?;
+        exe.resources_load_mode =
+            PackedResourcesLoadMode::BinaryRelativePathMemoryMapped("resources".into());
+
+        let embedded = exe.to_embedded_python_context(&logger, "0")?;
+
+        assert_eq!(
+            &embedded.config.packed_resources,
+            &vec![PyembedPackedResourcesSource::MemoryMappedPath(
+                "$ORIGIN/resources".into()
+            )],
+            "load mode should have mapped to MemoryMappedPath"
+        );
+
+        assert!(
+            embedded.extra_files.has_path(Path::new("resources")),
+            "resources file should be present in extra files manifest"
+        );
 
         Ok(())
     }

@@ -38,6 +38,27 @@ pub enum LibpythonLinkMode {
     Dynamic,
 }
 
+/// Determines how packed resources are loaded by the generated binary.
+///
+/// This effectively controls how resources file are written to disk
+/// and what `pyembed::PackedResourcesSource` will get serialized in the
+/// configuration.
+#[derive(Clone, Debug, PartialEq)]
+pub enum PackedResourcesLoadMode {
+    /// Resources data will be embedded in the binary.
+    ///
+    /// The data will be referenced via an `include_bytes!()` and the
+    /// stored path controls the name of the file that will be materialized
+    /// in the artifacts directory.
+    EmbeddedInBinary(String),
+
+    /// Resources data will be serialized to a file relative to the built binary.
+    ///
+    /// The configuration will reference the file via a relative path using
+    /// `$ORIGIN` expansion. Memory mapped I/O will be used to read the file.
+    BinaryRelativePathMemoryMapped(String),
+}
+
 /// A callable that can influence PythonResourceAddCollectionContext.
 pub type ResourceAddCollectionContextCallback<'a> = Box<
     dyn Fn(
