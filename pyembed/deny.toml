@@ -1,0 +1,15 @@
+[licenses]
+unlicensed = "deny"
+allow = [
+    "0BSD",
+    "BSD-3-Clause",
+    "ISC",
+    "MIT",
+    "MPL-2.0",
+    "Python-2.0",
+    "Zlib",
+]
+default = "deny"
+
+[bans]
+multiple-versions = "warn"

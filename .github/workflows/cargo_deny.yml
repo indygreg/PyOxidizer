@@ -1,0 +1,11 @@
+on:
+  - push
+  - pull_request
+jobs:
+  pyembed:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: EmbarkStudios/cargo-deny-action@v1
+        with:
+          arguments: "--manifest-path pyembed/Cargo.toml"
