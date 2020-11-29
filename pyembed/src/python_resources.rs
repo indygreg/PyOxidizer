@@ -1420,7 +1420,7 @@ pub fn pyobject_to_resource(py: Python, resource: OxidizedResource) -> Resource<
 
 #[cfg(test)]
 mod tests {
-    use {super::*, crate::OxidizedPythonInterpreterConfig};
+    use {super::*, crate::OxidizedPythonInterpreterConfig, anyhow::anyhow};
 
     #[test]
     fn multiple_resource_blobs() -> Result<()> {
@@ -1454,6 +1454,60 @@ mod tests {
 
         assert!(resources.resources.contains_key("foo".into()));
         assert!(resources.resources.contains_key("bar".into()));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_memory_mapped_file_resources() -> Result<()> {
+        let current_dir = std::env::current_exe()?
+            .parent()
+            .ok_or_else(|| anyhow!("unable to find current exe parent"))?
+            .to_path_buf();
+
+        let mut state0 = PythonResourcesState::default();
+        state0
+            .add_resource(Resource {
+                name: "foo".into(),
+                is_module: true,
+                in_memory_source: Some(vec![42].into()),
+                ..Default::default()
+            })
+            .unwrap();
+        let data0 = state0.serialize_resources(true, true)?;
+
+        let resources_dir = current_dir.join("resources");
+        if !resources_dir.exists() {
+            std::fs::create_dir(&resources_dir)?;
+        }
+
+        let resources_path = resources_dir.join("test_memory_mapped_file_resources");
+        std::fs::write(&resources_path, &data0)?;
+
+        // Absolute path should work.
+        let mut config = OxidizedPythonInterpreterConfig::default();
+        config
+            .packed_resources
+            .push(PackedResourcesSource::MemoryMappedPath(
+                resources_path.clone(),
+            ));
+
+        let resolved = config.clone().resolve()?;
+        let resources = PythonResourcesState::try_from(&resolved)?;
+
+        assert!(resources.resources.contains_key("foo".into()));
+
+        // Now let's try with relative paths.
+        let relative_path =
+            pathdiff::diff_paths(&resources_path, std::env::current_dir()?).unwrap();
+        config.packed_resources.clear();
+        config
+            .packed_resources
+            .push(PackedResourcesSource::MemoryMappedPath(relative_path));
+
+        let resolved = config.resolve()?;
+        let resources = PythonResourcesState::try_from(&resolved)?;
+        assert!(resources.resources.contains_key("foo".into()));
 
         Ok(())
     }

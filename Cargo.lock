@@ -1877,6 +1877,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "pathdiff"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "877630b3de15c0b64cc52f659345724fbf6bdad9bd9566699fc53688f3c34a34"
+
+[[package]]
 name = "pem"
 version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2128,6 +2134,7 @@ dependencies = [
  "libc",
  "memmap",
  "memory-module-sys",
+ "pathdiff",
  "python-packaging",
  "python-packed-resources",
  "python3-sys",

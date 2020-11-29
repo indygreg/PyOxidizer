@@ -42,6 +42,7 @@ memory-module-sys = "0.3"
 winapi = { version = "0.3", features = ["libloaderapi", "memoryapi", "minwindef"] }
 
 [dev-dependencies]
+pathdiff = "0.2"
 rusty-fork = "0.3"
 
 [features]
