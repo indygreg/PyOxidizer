@@ -415,16 +415,6 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         &self.target_distribution.python_exe_path()
     }
 
-    fn windows_subsystem(&self) -> &str {
-        &self.windows_subsystem
-    }
-
-    fn set_windows_subsystem(&mut self, value: &str) -> Result<()> {
-        self.windows_subsystem = value.to_string();
-
-        Ok(())
-    }
-
     fn tcl_files_path(&self) -> &Option<String> {
         &self.tcl_files_path
     }
@@ -443,6 +433,16 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         } else {
             None
         };
+    }
+
+    fn windows_subsystem(&self) -> &str {
+        &self.windows_subsystem
+    }
+
+    fn set_windows_subsystem(&mut self, value: &str) -> Result<()> {
+        self.windows_subsystem = value.to_string();
+
+        Ok(())
     }
 
     fn iter_resources<'a>(
