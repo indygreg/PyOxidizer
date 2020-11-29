@@ -10,6 +10,7 @@ use {
             compute_bytecode_header, BytecodeHeaderMode, CompileMode, PythonBytecodeCompiler,
         },
         libpython::LibPythonBuildContext,
+        licensing::PackageLicenseInfo,
         location::{AbstractResourceLocation, ConcreteResourceLocation},
         module_util::{packages_from_module_name, resolve_path_for_module},
         python_source::has_dunder_file,
@@ -627,7 +628,8 @@ impl<'a> CompiledResourcesCollection<'a> {
 ///
 /// This type is not only responsible for tracking resources but also for
 /// enforcing policies on where those resources can be loaded from and
-/// what types of resources are allowed.
+/// what types of resources are allowed. This includes tracking the
+/// licensing metadata for indexed resources.
 #[derive(Debug, Clone)]
 pub struct PythonResourceCollector {
     /// Where resources can be placed.
@@ -653,8 +655,12 @@ pub struct PythonResourceCollector {
 
     /// Named resources that have been collected.
     resources: BTreeMap<String, PrePackagedResource>,
+
     /// Bytecode cache tag to use for compiled bytecode modules.
     cache_tag: String,
+
+    /// Stores per-package licensing metadata.
+    package_license_infos: BTreeSet<PackageLicenseInfo>,
 }
 
 impl PythonResourceCollector {
@@ -679,6 +685,7 @@ impl PythonResourceCollector {
             allow_files,
             resources: BTreeMap::new(),
             cache_tag: cache_tag.to_string(),
+            package_license_infos: BTreeSet::new(),
         }
     }
 
@@ -724,6 +731,24 @@ impl PythonResourceCollector {
     /// Obtain an iterator over the resources in this collector.
     pub fn iter_resources(&self) -> impl Iterator<Item = (&String, &PrePackagedResource)> {
         Box::new(self.resources.iter())
+    }
+
+    /// Obtain the license info for a given package name.
+    pub fn package_license_infos(&self, package: &str) -> Vec<&PackageLicenseInfo> {
+        self.package_license_infos
+            .iter()
+            .filter(|l| l.package == package)
+            .collect::<Vec<_>>()
+    }
+
+    /// Adds a `PackageLicenseInfo` to be tracked by this instance.
+    ///
+    /// An existing package of the same name/version of the incoming value will be
+    /// overwritten.
+    pub fn add_package_license_info(&mut self, info: PackageLicenseInfo) -> Result<()> {
+        self.package_license_infos.insert(info);
+
+        Ok(())
     }
 
     /// Add Python module source with a specific location.

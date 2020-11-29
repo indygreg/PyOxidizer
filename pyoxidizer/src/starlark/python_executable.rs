@@ -248,7 +248,7 @@ impl PythonExecutableValue {
 
     /// PythonExecutable.pip_download(args)
     pub fn pip_download(
-        &self,
+        &mut self,
         type_values: &TypeValues,
         call_stack: &mut CallStack,
         args: &Value,
@@ -261,6 +261,8 @@ impl PythonExecutableValue {
         let pyoxidizer_context = pyoxidizer_context_value
             .downcast_ref::<PyOxidizerEnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
+
+        let python_packaging_policy = self.python_packaging_policy();
 
         let resources = self
             .exe
@@ -278,14 +280,7 @@ impl PythonExecutableValue {
             })?
             .iter()
             .filter(|r| is_resource_starlark_compatible(r))
-            .map(|r| {
-                python_resource_to_value(
-                    type_values,
-                    call_stack,
-                    r,
-                    &self.python_packaging_policy(),
-                )
-            })
+            .map(|r| python_resource_to_value(type_values, call_stack, r, &python_packaging_policy))
             .collect::<Result<Vec<Value>, ValueError>>()?;
 
         Ok(Value::from(resources))
@@ -293,7 +288,7 @@ impl PythonExecutableValue {
 
     /// PythonExecutable.pip_install(args, extra_envs=None)
     pub fn pip_install(
-        &self,
+        &mut self,
         type_values: &TypeValues,
         call_stack: &mut CallStack,
         args: &Value,
@@ -323,6 +318,8 @@ impl PythonExecutableValue {
             .downcast_ref::<PyOxidizerEnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
 
+        let python_packaging_policy = self.python_packaging_policy();
+
         let resources = self
             .exe
             .pip_install(
@@ -340,14 +337,7 @@ impl PythonExecutableValue {
             })?
             .iter()
             .filter(|r| is_resource_starlark_compatible(r))
-            .map(|r| {
-                python_resource_to_value(
-                    type_values,
-                    call_stack,
-                    r,
-                    &self.python_packaging_policy(),
-                )
-            })
+            .map(|r| python_resource_to_value(type_values, call_stack, r, &python_packaging_policy))
             .collect::<Result<Vec<Value>, ValueError>>()?;
 
         Ok(Value::from(resources))
@@ -355,7 +345,7 @@ impl PythonExecutableValue {
 
     /// PythonExecutable.read_package_root(path, packages)
     pub fn read_package_root(
-        &self,
+        &mut self,
         type_values: &TypeValues,
         call_stack: &mut CallStack,
         path: String,
@@ -374,6 +364,8 @@ impl PythonExecutableValue {
             .downcast_ref::<PyOxidizerEnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
 
+        let python_packaging_policy = self.python_packaging_policy();
+
         let resources = self
             .exe
             .read_package_root(pyoxidizer_context.logger(), Path::new(&path), &packages)
@@ -386,14 +378,7 @@ impl PythonExecutableValue {
             })?
             .iter()
             .filter(|r| is_resource_starlark_compatible(r))
-            .map(|r| {
-                python_resource_to_value(
-                    type_values,
-                    call_stack,
-                    r,
-                    &self.python_packaging_policy(),
-                )
-            })
+            .map(|r| python_resource_to_value(type_values, call_stack, r, &python_packaging_policy))
             .collect::<Result<Vec<Value>, ValueError>>()?;
 
         Ok(Value::from(resources))
@@ -401,7 +386,7 @@ impl PythonExecutableValue {
 
     /// PythonExecutable.read_virtualenv(path)
     pub fn read_virtualenv(
-        &self,
+        &mut self,
         type_values: &TypeValues,
         call_stack: &mut CallStack,
         path: String,
@@ -410,6 +395,8 @@ impl PythonExecutableValue {
         let pyoxidizer_context = pyoxidizer_context_value
             .downcast_ref::<PyOxidizerEnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
+
+        let python_packaging_policy = self.python_packaging_policy();
 
         let resources = self
             .exe
@@ -423,14 +410,7 @@ impl PythonExecutableValue {
             })?
             .iter()
             .filter(|r| is_resource_starlark_compatible(r))
-            .map(|r| {
-                python_resource_to_value(
-                    type_values,
-                    call_stack,
-                    r,
-                    &self.python_packaging_policy(),
-                )
-            })
+            .map(|r| python_resource_to_value(type_values, call_stack, r, &python_packaging_policy))
             .collect::<Result<Vec<Value>, ValueError>>()?;
 
         Ok(Value::from(resources))
@@ -438,7 +418,7 @@ impl PythonExecutableValue {
 
     /// PythonExecutable.setup_py_install(package_path, extra_envs=None, extra_global_arguments=None)
     pub fn setup_py_install(
-        &self,
+        &mut self,
         type_values: &TypeValues,
         call_stack: &mut CallStack,
         package_path: String,
@@ -484,6 +464,8 @@ impl PythonExecutableValue {
             PathBuf::from(&pyoxidizer_context.cwd).join(package_path)
         };
 
+        let python_packaging_policy = self.python_packaging_policy();
+
         let resources = self
             .exe
             .setup_py_install(
@@ -502,14 +484,7 @@ impl PythonExecutableValue {
             })?
             .iter()
             .filter(|r| is_resource_starlark_compatible(r))
-            .map(|r| {
-                python_resource_to_value(
-                    type_values,
-                    call_stack,
-                    r,
-                    &self.python_packaging_policy(),
-                )
-            })
+            .map(|r| python_resource_to_value(type_values, call_stack, r, &python_packaging_policy))
             .collect::<Result<Vec<Value>, ValueError>>()?;
 
         warn!(
@@ -943,7 +918,7 @@ starlark_module! { python_executable_env =>
         this,
         args
     ) {
-        let this = this.downcast_ref::<PythonExecutableValue>().unwrap();
+        let mut this = this.downcast_mut::<PythonExecutableValue>().unwrap().unwrap();
         this.pip_download(&env, cs, &args)
     }
 
@@ -955,7 +930,7 @@ starlark_module! { python_executable_env =>
         args,
         extra_envs=NoneType::None
     ) {
-        let this = this.downcast_ref::<PythonExecutableValue>().unwrap();
+        let mut this = this.downcast_mut::<PythonExecutableValue>().unwrap().unwrap();
         this.pip_install(&env, cs, &args, &extra_envs)
     }
 
@@ -967,7 +942,7 @@ starlark_module! { python_executable_env =>
         path: String,
         packages
     ) {
-        let this = this.downcast_ref::<PythonExecutableValue>().unwrap();
+        let mut this = this.downcast_mut::<PythonExecutableValue>().unwrap().unwrap();
         this.read_package_root(&env, cs, path, &packages)
     }
 
@@ -978,7 +953,7 @@ starlark_module! { python_executable_env =>
         this,
         path: String
     ) {
-        let this = this.downcast_ref::<PythonExecutableValue>().unwrap();
+        let mut this = this.downcast_mut::<PythonExecutableValue>().unwrap().unwrap();
         this.read_virtualenv(&env, cs, path)
     }
 
@@ -991,7 +966,7 @@ starlark_module! { python_executable_env =>
         extra_envs=NoneType::None,
         extra_global_arguments=NoneType::None
     ) {
-        let this = this.downcast_ref::<PythonExecutableValue>().unwrap();
+        let mut this = this.downcast_mut::<PythonExecutableValue>().unwrap().unwrap();
         this.setup_py_install(&env, cs, package_path, &extra_envs, &extra_global_arguments)
     }
 

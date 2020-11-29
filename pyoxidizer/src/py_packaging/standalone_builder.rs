@@ -23,6 +23,7 @@ use {
         bytecode::BytecodeCompiler,
         interpreter::MemoryAllocatorBackend,
         libpython::LibPythonBuildContext,
+        licensing::derive_package_license_infos,
         location::AbstractResourceLocation,
         policy::PythonPackagingPolicy,
         resource::{
@@ -466,13 +467,24 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         Box::new(self.resources_collector.iter_resources())
     }
 
+    fn index_package_license_info_from_resources<'a>(
+        &mut self,
+        resources: &[PythonResource<'a>],
+    ) -> Result<()> {
+        for info in derive_package_license_infos(resources.iter())? {
+            self.resources_collector.add_package_license_info(info)?;
+        }
+
+        Ok(())
+    }
+
     fn pip_download(
-        &self,
+        &mut self,
         logger: &slog::Logger,
         verbose: bool,
         args: &[String],
     ) -> Result<Vec<PythonResource>> {
-        pip_download(
+        let resources = pip_download(
             logger,
             &*self.host_distribution,
             &*self.target_distribution,
@@ -480,16 +492,22 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
             verbose,
             args,
         )
+        .context("calling pip download")?;
+
+        self.index_package_license_info_from_resources(&resources)
+            .context("indexing package license metadata")?;
+
+        Ok(resources)
     }
 
     fn pip_install(
-        &self,
+        &mut self,
         logger: &slog::Logger,
         verbose: bool,
         install_args: &[String],
         extra_envs: &HashMap<String, String>,
     ) -> Result<Vec<PythonResource>> {
-        pip_install(
+        let resources = pip_install(
             logger,
             &*self.target_distribution,
             self.python_packaging_policy(),
@@ -498,20 +516,27 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
             install_args,
             extra_envs,
         )
+        .context("calling pip install")?;
+
+        self.index_package_license_info_from_resources(&resources)
+            .context("indexing package license metadata")?;
+
+        Ok(resources)
     }
 
     fn read_package_root(
-        &self,
+        &mut self,
         _logger: &slog::Logger,
         path: &Path,
         packages: &[String],
     ) -> Result<Vec<PythonResource>> {
-        Ok(find_resources(
+        let resources = find_resources(
             &*self.target_distribution,
             self.python_packaging_policy(),
             path,
             None,
-        )?
+        )
+        .context("finding resources")?
         .iter()
         .filter_map(|x| {
             if x.is_in_packages(packages) {
@@ -520,26 +545,41 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
                 None
             }
         })
-        .collect::<Vec<_>>())
+        .collect::<Vec<_>>();
+
+        self.index_package_license_info_from_resources(&resources)
+            .context("indexing package license metadata")?;
+
+        Ok(resources)
     }
 
-    fn read_virtualenv(&self, _logger: &slog::Logger, path: &Path) -> Result<Vec<PythonResource>> {
-        read_virtualenv(
+    fn read_virtualenv(
+        &mut self,
+        _logger: &slog::Logger,
+        path: &Path,
+    ) -> Result<Vec<PythonResource>> {
+        let resources = read_virtualenv(
             &*self.target_distribution,
             self.python_packaging_policy(),
             path,
         )
+        .context("reading virtualenv")?;
+
+        self.index_package_license_info_from_resources(&resources)
+            .context("indexing package license metadata")?;
+
+        Ok(resources)
     }
 
     fn setup_py_install(
-        &self,
+        &mut self,
         logger: &slog::Logger,
         package_path: &Path,
         verbose: bool,
         extra_envs: &HashMap<String, String>,
         extra_global_arguments: &[String],
     ) -> Result<Vec<PythonResource>> {
-        setup_py_install(
+        let resources = setup_py_install(
             logger,
             &*self.target_distribution,
             self.python_packaging_policy(),
@@ -549,6 +589,12 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
             extra_envs,
             extra_global_arguments,
         )
+        .context("running setup.py install")?;
+
+        self.index_package_license_info_from_resources(&resources)
+            .context("indexing package license metadata")?;
+
+        Ok(resources)
     }
 
     fn add_distribution_resources(
@@ -857,7 +903,10 @@ pub mod tests {
         crate::python_distributions::PYTHON_DISTRIBUTIONS,
         crate::testutil::*,
         lazy_static::lazy_static,
-        python_packaging::{location::ConcreteResourceLocation, policy::ExtensionModuleFilter},
+        python_packaging::{
+            licensing::PackageLicenseInfo, location::ConcreteResourceLocation,
+            policy::ExtensionModuleFilter,
+        },
         std::collections::BTreeSet,
         std::iter::FromIterator,
         std::ops::DerefMut,
@@ -2821,7 +2870,7 @@ pub mod tests {
                 ..StandalonePythonExecutableBuilderOptions::default()
             };
 
-            let builder = options.new_builder()?;
+            let mut builder = options.new_builder()?;
             let logger = get_logger()?;
 
             let resources = builder.pip_install(
@@ -2889,6 +2938,19 @@ pub mod tests {
                 },
                 "PythonExtensionModule for {:?}",
                 libpython_link_mode
+            );
+
+            let license_infos = builder.resources_collector.package_license_infos("PyYAML");
+            assert_eq!(license_infos.len(), 1);
+            assert_eq!(
+                license_infos[0],
+                &PackageLicenseInfo {
+                    package: "PyYAML".into(),
+                    version: "5.3.1".into(),
+                    metadata_licenses: vec!["MIT".to_string()],
+                    classifier_licenses: vec!["MIT License".to_string()],
+                    ..Default::default()
+                }
             );
         }
 

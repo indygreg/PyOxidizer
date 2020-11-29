@@ -5,7 +5,7 @@
 use {
     crate::{package_metadata::PythonPackageMetadata, resource::PythonResource},
     anyhow::{Context, Result},
-    std::collections::BTreeMap,
+    std::{cmp::Ordering, collections::BTreeMap},
 };
 
 /// SPDX licenses in Python distributions that are not GPL.
@@ -34,7 +34,7 @@ pub struct LicenseInfo {
 }
 
 /// Defines license information for a Python package.
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct PackageLicenseInfo {
     /// The Python package who license info is being annotated.
     pub package: String,
@@ -53,6 +53,26 @@ pub struct PackageLicenseInfo {
 
     /// Texts of NOTICE files in the package.
     pub notice_texts: Vec<String>,
+}
+
+impl PartialOrd for PackageLicenseInfo {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        if self.package == other.package {
+            self.version.partial_cmp(&other.version)
+        } else {
+            self.package.partial_cmp(&other.package)
+        }
+    }
+}
+
+impl Ord for PackageLicenseInfo {
+    fn cmp(&self, other: &Self) -> Ordering {
+        if self.package == other.package {
+            self.version.cmp(&other.version)
+        } else {
+            self.package.cmp(&other.package)
+        }
+    }
 }
 
 impl PackageLicenseInfo {
