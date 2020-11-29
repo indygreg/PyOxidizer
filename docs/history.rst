@@ -89,6 +89,10 @@ New Features
   file installed next to the binary (enabling multiple binaries to share the
   same resources file). See :ref:`packaging_resources_data` for more on this
   feature.
+* PyOxidizer now scans for licenses of Python packages processed during
+  building and prints a report about what it finds when writing build
+  artifacts. This feature is best effort and relies on packages properly
+  advertising their license metadata.
 
 Other Relevant Changes
 ^^^^^^^^^^^^^^^^^^^^^^

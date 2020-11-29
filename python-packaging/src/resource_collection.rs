@@ -596,6 +596,19 @@ impl PythonResourceAddCollectionContext {
     }
 }
 
+/// Describes the state of licensing for resources in a given resources collection.
+#[derive(Clone, Debug, Default)]
+pub struct ResourcesLicenseReport {
+    /// Packages without any licensing info.
+    pub no_license_packages: BTreeSet<String>,
+
+    /// Packages using an SPDX license. Maps license to package names.
+    pub spdx_by_package: BTreeMap<String, BTreeSet<String>>,
+
+    /// Packages using non-SPDX license. Maps license to package names.
+    pub non_spdx_by_package: BTreeMap<String, BTreeSet<String>>,
+}
+
 /// Represents a finalized collection of Python resources.
 ///
 /// Instances are produced from a `PythonResourceCollector` and a
@@ -757,6 +770,54 @@ impl PythonResourceCollector {
             .iter()
             .filter(|l| l.package == package)
             .collect::<Vec<_>>()
+    }
+
+    /// Generate a summary of licensing information for resources in the collection.
+    pub fn generate_license_report(&self) -> Result<ResourcesLicenseReport> {
+        let mut report = ResourcesLicenseReport::default();
+
+        let all_packages = self.all_packages();
+
+        for package in &all_packages {
+            // Only care about top-level packages.
+            if package.contains('.') {
+                continue;
+            }
+
+            if !self
+                .package_license_infos
+                .iter()
+                .any(|li| &li.package == package)
+            {
+                report.no_license_packages.insert(package.clone());
+            }
+        }
+
+        for li in &self.package_license_infos {
+            // We don't care about license metadata belonging to packages not
+            // in our collection.
+            if !all_packages.contains(&li.package) {
+                continue;
+            }
+
+            for license in li.spdx_licenses() {
+                report
+                    .spdx_by_package
+                    .entry(license.name.to_string())
+                    .or_insert_with(BTreeSet::new)
+                    .insert(li.package.clone());
+            }
+
+            for license in li.non_spdx_licenses() {
+                report
+                    .non_spdx_by_package
+                    .entry(license)
+                    .or_insert_with(BTreeSet::new)
+                    .insert(li.package.clone());
+            }
+        }
+
+        Ok(report)
     }
 
     /// Adds a `PackageLicenseInfo` to be tracked by this instance.

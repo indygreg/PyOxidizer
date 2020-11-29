@@ -804,6 +804,40 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
             );
         }
 
+        let license_report = self.resources_collector.generate_license_report()?;
+        if license_report.no_license_packages.is_empty() {
+            warn!(logger, "All Python packages have license metadata");
+        } else {
+            warn!(
+                logger,
+                "{} Python packages lack software licenses: {:?}",
+                license_report.no_license_packages.len(),
+                license_report.no_license_packages
+            );
+        }
+
+        if license_report.non_spdx_by_package.is_empty() {
+            warn!(logger, "No Python packages with non-SPDX licenses");
+        } else {
+            warn!(
+                logger,
+                "{} non-SPDX licenses seen",
+                license_report.non_spdx_by_package.len()
+            );
+            for (license, packages) in &license_report.non_spdx_by_package {
+                warn!(logger, "license: {}; packages: {:?}", license, packages);
+            }
+        }
+
+        warn!(
+            logger,
+            "{} SPDX licenses encountered:",
+            license_report.spdx_by_package.len()
+        );
+        for (license, packages) in &license_report.spdx_by_package {
+            warn!(logger, "license: {}; packages: {:?}", license, packages);
+        }
+
         let compiled_resources = {
             let mut compiler = BytecodeCompiler::new(self.host_python_exe_path())?;
             self.resources_collector.compile_resources(&mut compiler)?
