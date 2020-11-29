@@ -653,7 +653,8 @@ class TestImporterResources(unittest.TestCase):
         serialized = f.serialize_indexed_resources()
         self.assertIsInstance(serialized, bytes)
 
-        f2 = OxidizedFinder(resources_data=serialized)
+        f2 = OxidizedFinder()
+        f2.index_bytes(serialized)
 
         modules = {r.name: r for r in f2.indexed_resources() if r.is_module}
         self.assertEqual(len(modules), 2)

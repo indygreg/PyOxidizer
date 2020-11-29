@@ -17,25 +17,24 @@ class TestImporterConstruction(unittest.TestCase):
         f = OxidizedFinder(None)
         self.assertIsInstance(f, OxidizedFinder)
 
-        f = OxidizedFinder(resources_data=None)
-        self.assertIsInstance(f, OxidizedFinder)
-
     def test_bad_resources_type(self):
         with self.assertRaises(TypeError):
-            OxidizedFinder(resources_data="foo")
+            f = OxidizedFinder()
+            f.index_bytes("foo")
 
     def test_resources_no_magic(self):
         with self.assertRaisesRegex(ValueError, "reading 8 byte"):
-            OxidizedFinder(resources_data=b"foo")
+            f = OxidizedFinder()
+            f.index_bytes(b"foo")
 
     def test_resources_bad_magic(self):
         with self.assertRaisesRegex(ValueError, "unrecognized file format"):
-            OxidizedFinder(resources_data=b"\xde\xad\xbe\xef\xaa\xaa\xaa\xaa")
+            f = OxidizedFinder()
+            f.index_bytes(b"\xde\xad\xbe\xef\xaa\xaa\xaa\xaa")
 
     def test_no_indices(self):
-        OxidizedFinder(
-            resources_data=b"pyembed\x03\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
-        )
+        f = OxidizedFinder()
+        f.index_bytes(b"pyembed\x03\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00")
 
     def test_origin_bad_value(self):
         with self.assertRaises(TypeError):

@@ -78,7 +78,8 @@ class TestImporterResourceCollector(unittest.TestCase):
         with (self.td / "serialized").open("wb") as fh:
             fh.write(f.serialize_indexed_resources())
 
-        f = OxidizedFinder(resources_file=self.td / "serialized")
+        f = OxidizedFinder()
+        f.index_file_memory_mapped(self.td / "serialized")
 
         self.assertGreaterEqual(len(f.indexed_resources()), len(resources))
 
