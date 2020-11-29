@@ -12,7 +12,9 @@ use {
         libpython::LibPythonBuildContext,
         licensing::PackageLicenseInfo,
         location::{AbstractResourceLocation, ConcreteResourceLocation},
-        module_util::{packages_from_module_name, resolve_path_for_module},
+        module_util::{
+            packages_from_module_name, packages_from_module_names, resolve_path_for_module,
+        },
         python_source::has_dunder_file,
         resource::{
             BytecodeOptimizationLevel, PythonExtensionModule, PythonModuleBytecode,
@@ -89,6 +91,14 @@ pub struct PrePackagedResource {
 }
 
 impl PrePackagedResource {
+    /// Whether this resource represents a Python resource.
+    pub fn is_python_resource(&self) -> bool {
+        self.is_module
+            || self.is_builtin_extension_module
+            || self.is_frozen_module
+            || self.is_extension_module
+    }
+
     /// Convert the instance to a `Resource`.
     ///
     /// This will compile bytecode from source code using the specified compiler.
@@ -418,12 +428,7 @@ pub fn populate_parent_packages(
     let original_resources = resources
         .iter()
         .filter_map(|(k, v)| {
-            let emit = v.is_module
-                || v.is_builtin_extension_module
-                || v.is_frozen_module
-                || v.is_extension_module;
-
-            if emit {
+            if v.is_python_resource() {
                 Some((k.to_owned(), v.to_owned()))
             } else {
                 None
@@ -692,6 +697,19 @@ impl PythonResourceCollector {
     /// Obtain locations that resources can be loaded from.
     pub fn allowed_locations(&self) -> &Vec<AbstractResourceLocation> {
         &self.allowed_locations
+    }
+
+    /// Obtain a set of all Python packages registered with the collector.
+    pub fn all_packages(&self) -> BTreeSet<String> {
+        let names = self.resources.values().filter_map(|r| {
+            if r.is_python_resource() {
+                Some(r.name.clone())
+            } else {
+                None
+            }
+        });
+
+        packages_from_module_names(names)
     }
 
     /// Validate that a resource add in the specified location is allowed.
