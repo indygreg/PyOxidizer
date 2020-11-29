@@ -87,6 +87,7 @@ fn optional_vec_string_to_string(value: &Option<Vec<String>>) -> String {
 pub struct PyembedPythonInterpreterConfig {
     pub config: PythonInterpreterConfig,
     pub raw_allocator: MemoryAllocatorBackend,
+    pub set_missing_path_configuration: bool,
     pub oxidized_importer: bool,
     pub filesystem_importer: bool,
     pub argvb: bool,
@@ -111,6 +112,7 @@ impl Default for PyembedPythonInterpreterConfig {
                 ..PythonInterpreterConfig::default()
             },
             raw_allocator: MemoryAllocatorBackend::System,
+            set_missing_path_configuration: true,
             oxidized_importer: true,
             filesystem_importer: false,
             argvb: false,
@@ -193,7 +195,7 @@ impl PyembedPythonInterpreterConfig {
             x_options: {},\n        \
             }},\n    \
             raw_allocator: Some({}),\n    \
-            set_missing_path_configuration: true,\n    \
+            set_missing_path_configuration: {},\n    \
             oxidized_importer: {},\n    \
             filesystem_importer: {},\n    \
             packed_resources: {},\n    \
@@ -317,6 +319,7 @@ impl PyembedPythonInterpreterConfig {
                 MemoryAllocatorBackend::Rust => "pyembed::PythonRawAllocator::rust()",
                 MemoryAllocatorBackend::System => "pyembed::PythonRawAllocator::system()",
             },
+            self.set_missing_path_configuration,
             self.oxidized_importer,
             self.filesystem_importer,
             if let Some(path) = packed_resources_path {
@@ -508,6 +511,7 @@ mod tests {
                 x_options: Some(vec!["x0".into(), "x1".into()]),
             },
             raw_allocator: MemoryAllocatorBackend::System,
+            set_missing_path_configuration: false,
             oxidized_importer: true,
             filesystem_importer: true,
             argvb: true,
