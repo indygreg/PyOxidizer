@@ -43,6 +43,9 @@ Backwards Compatibility Notes
 * ``OxidizedFinder.__init__()`` no longer accepts ``resources_data`` and
   ``resources_file`` argument to specify the resources to load. Instead, call one
   of the new ``index_*`` methods on constructed instances.
+* ``OxidizedFinder.__init__()`` no longer automatically indexes builtin
+  extension modules and frozen modules. Instead, you must now call one of the
+  ``index_*`` methods to index these resources.
 
 Bug Fixes
 ^^^^^^^^^

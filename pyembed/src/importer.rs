@@ -949,10 +949,6 @@ fn oxidized_finder_new(
         resources_state.origin = pyobject_to_pathbuf(py, py_origin)?;
     }
 
-    resources_state
-        .index_interpreter_builtins()
-        .map_err(|err| PyErr::new::<ValueError, _>(py, err))?;
-
     let importer = OxidizedFinder::create_instance(
         py,
         Arc::new(ImporterState::new(

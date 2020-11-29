@@ -17,6 +17,7 @@ from oxidized_importer import (
 class TestImporterResources(unittest.TestCase):
     def test_resources_builtins(self):
         f = OxidizedFinder()
+        f.index_interpreter_builtin_extension_modules()
         resources = f.indexed_resources()
         self.assertIsInstance(resources, list)
         self.assertGreater(len(resources), 0)
@@ -58,6 +59,7 @@ class TestImporterResources(unittest.TestCase):
 
     def test_resources_frozen(self):
         f = OxidizedFinder()
+        f.index_interpreter_frozen_modules()
         resources = f.indexed_resources()
 
         resource = [x for x in resources if x.name == "_frozen_importlib"][0]
