@@ -7,7 +7,7 @@ Defining and manipulating binaries embedding Python.
 */
 
 use {
-    super::config::{PyembedPackedResourcesSource, PyembedPythonInterpreterConfig},
+    super::config::PyembedPythonInterpreterConfig,
     anyhow::{anyhow, Context, Result},
     python_packaging::{
         policy::PythonPackagingPolicy,
@@ -278,15 +278,6 @@ pub struct PythonLinkingInfo {
     pub cargo_metadata: Vec<String>,
 }
 
-/// A reference to compiled resources to use in the binary.
-pub enum EmbeddedResources<'a> {
-    /// Use resources in a given compiled resources collection instance.
-    Collection(CompiledResourcesCollection<'a>),
-
-    /// Use resources at a given path.
-    Path(PathBuf),
-}
-
 /// Holds context necessary to embed Python in a binary.
 pub struct EmbeddedPythonContext<'a> {
     /// The configuration for the embedded interpreter.
@@ -295,8 +286,8 @@ pub struct EmbeddedPythonContext<'a> {
     /// Information on how to link against Python.
     pub linking_info: PythonLinkingInfo,
 
-    /// Python resources to embed in the binary.
-    pub resources: EmbeddedResources<'a>,
+    /// Python resources that need to be serialized to a file.
+    pub pending_resources: Vec<(CompiledResourcesCollection<'a>, PathBuf)>,
 
     /// Extra files to install next to produced binary.
     pub extra_files: FileManifest,
@@ -309,14 +300,6 @@ pub struct EmbeddedPythonContext<'a> {
 }
 
 impl<'a> EmbeddedPythonContext<'a> {
-    /// Obtain the filesystem path of the packed resources file.
-    pub fn packed_resources_path(&self, dest_dir: impl AsRef<Path>) -> PathBuf {
-        match &self.resources {
-            EmbeddedResources::Collection(_) => dest_dir.as_ref().join("packed-resources"),
-            EmbeddedResources::Path(p) => p.clone(),
-        }
-    }
-
     /// Obtain the filesystem of the generated Rust source file containing the interpreter configuration.
     pub fn interpreter_config_rs_path(&self, dest_dir: impl AsRef<Path>) -> PathBuf {
         dest_dir.as_ref().join("default_python_config.rs")
@@ -369,18 +352,18 @@ impl<'a> EmbeddedPythonContext<'a> {
         lines
     }
 
-    /// Ensure the packed resources file is written.
+    /// Ensure packed resources files are written.
     pub fn write_packed_resources(&self, dest_dir: impl AsRef<Path>) -> Result<()> {
-        match &self.resources {
-            EmbeddedResources::Collection(collection) => {
-                let mut writer = std::io::BufWriter::new(std::fs::File::create(
-                    self.packed_resources_path(dest_dir),
-                )?);
-                collection
-                    .write_packed_resources(&mut writer)
-                    .context("writing packed resources")?;
-            }
-            EmbeddedResources::Path(_) => {}
+        for (collection, path) in &self.pending_resources {
+            let dest_path = dest_dir.as_ref().join(path);
+
+            let mut writer = std::io::BufWriter::new(
+                std::fs::File::create(&dest_path)
+                    .with_context(|| format!("opening {} for writing", dest_path.display()))?,
+            );
+            collection
+                .write_packed_resources(&mut writer)
+                .context("writing packed resources")?;
         }
 
         Ok(())
@@ -404,15 +387,8 @@ impl<'a> EmbeddedPythonContext<'a> {
 
     /// Write the file containing the default interpreter configuration Rust struct.
     pub fn write_interpreter_config_rs(&self, dest_dir: impl AsRef<Path>) -> Result<()> {
-        // TODO populate packed_resources before we get here.
-        let mut config = self.config.clone();
-        config
-            .packed_resources
-            .push(PyembedPackedResourcesSource::MemoryIncludeBytes(
-                self.packed_resources_path(&dest_dir),
-            ));
-
-        config.write_default_python_config_rs(self.interpreter_config_rs_path(&dest_dir))?;
+        self.config
+            .write_default_python_config_rs(self.interpreter_config_rs_path(&dest_dir))?;
 
         Ok(())
     }

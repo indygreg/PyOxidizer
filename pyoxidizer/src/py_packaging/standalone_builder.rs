@@ -5,10 +5,10 @@
 use {
     super::{
         binary::{
-            EmbeddedPythonContext, EmbeddedResources, LibpythonLinkMode, PythonBinaryBuilder,
-            PythonLinkingInfo, ResourceAddCollectionContextCallback,
+            EmbeddedPythonContext, LibpythonLinkMode, PythonBinaryBuilder, PythonLinkingInfo,
+            ResourceAddCollectionContextCallback,
         },
-        config::PyembedPythonInterpreterConfig,
+        config::{PyembedPackedResourcesSource, PyembedPythonInterpreterConfig},
         distribution::{BinaryLibpythonLinkMode, PythonDistribution},
         filtering::{filter_btreemap, resolve_resource_names_from_files},
         libpython::link_libpython,
@@ -748,6 +748,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
             self.resources_collector.compile_resources(&mut compiler)?
         };
 
+        let mut pending_resources = vec![];
         let mut extra_files = FileManifest::default();
 
         for (path, location, executable) in &compiled_resources.extra_files {
@@ -759,6 +760,16 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
                 },
             )?;
         }
+
+        let mut config = self.config.clone();
+
+        let packed_resources_path = PathBuf::from("packed-resources");
+        config
+            .packed_resources
+            .push(PyembedPackedResourcesSource::MemoryIncludeBytes(
+                packed_resources_path.clone(),
+            ));
+        pending_resources.push((compiled_resources, packed_resources_path));
 
         let linking_info = self.resolve_python_linking_info(logger, opt_level)?;
 
@@ -789,9 +800,9 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         }
 
         Ok(EmbeddedPythonContext {
-            config: self.config.clone(),
+            config,
             linking_info,
-            resources: EmbeddedResources::Collection(compiled_resources),
+            pending_resources,
             extra_files,
             host_triple: self.host_triple.clone(),
             target_triple: self.target_triple.clone(),
