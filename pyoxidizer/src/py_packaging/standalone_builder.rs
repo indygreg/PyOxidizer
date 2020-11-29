@@ -451,6 +451,14 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         Ok(())
     }
 
+    fn packed_resources_load_mode(&self) -> &PackedResourcesLoadMode {
+        &self.resources_load_mode
+    }
+
+    fn set_packed_resources_load_mode(&mut self, load_mode: PackedResourcesLoadMode) {
+        self.resources_load_mode = load_mode;
+    }
+
     fn iter_resources<'a>(
         &'a self,
     ) -> Box<dyn Iterator<Item = (&'a String, &'a PrePackagedResource)> + 'a> {
@@ -770,6 +778,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         let mut config = self.config.clone();
 
         match &self.resources_load_mode {
+            PackedResourcesLoadMode::None => {}
             PackedResourcesLoadMode::EmbeddedInBinary(filename) => {
                 pending_resources.push((compiled_resources, PathBuf::from(filename)));
                 config

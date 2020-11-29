@@ -45,6 +45,9 @@ pub enum LibpythonLinkMode {
 /// configuration.
 #[derive(Clone, Debug, PartialEq)]
 pub enum PackedResourcesLoadMode {
+    /// Packed resources will not be loaded.
+    None,
+
     /// Resources data will be embedded in the binary.
     ///
     /// The data will be referenced via an `include_bytes!()` and the
@@ -124,6 +127,12 @@ pub trait PythonBinaryBuilder {
 
     /// Set the value of the `windows_subsystem` Rust attribute for generated Rust projects.
     fn set_windows_subsystem(&mut self, value: &str) -> Result<()>;
+
+    /// How packed Python resources will be loaded by the binary.
+    fn packed_resources_load_mode(&self) -> &PackedResourcesLoadMode;
+
+    /// Set how packed Python resources will be loaded by the binary.
+    fn set_packed_resources_load_mode(&mut self, load_mode: PackedResourcesLoadMode);
 
     /// Obtain an iterator over all resource entries that will be embedded in the binary.
     ///
