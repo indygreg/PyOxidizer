@@ -266,7 +266,7 @@ pub fn build_python_executable<'a>(
     let env = crate::environment::resolve_environment()?;
     let pyembed_location = env.as_pyembed_location();
 
-    let temp_dir = tempdir::TempDir::new("pyoxidizer")?;
+    let temp_dir = tempfile::Builder::new().prefix("pyoxidizer").tempdir()?;
 
     // Directory needs to have name of project.
     let project_path = temp_dir.path().join(bin_name);

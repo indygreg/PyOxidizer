@@ -70,7 +70,7 @@ pub fn link_libpython(
 ) -> Result<LibpythonInfo> {
     let mut cargo_metadata: Vec<String> = Vec::new();
 
-    let temp_dir = tempdir::TempDir::new("libpython")?;
+    let temp_dir = tempfile::Builder::new().prefix("libpython").tempdir()?;
     let temp_dir_path = temp_dir.path();
 
     let windows = crate::environment::WINDOWS_TARGET_TRIPLES.contains(&target_triple);

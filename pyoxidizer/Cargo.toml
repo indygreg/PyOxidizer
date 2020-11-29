@@ -52,7 +52,7 @@ sha2 = "0.9"
 slog = "2.4"
 starlark = "0.3.1"
 tar = "0.4"
-tempdir = "0.3"
+tempfile = "3.1"
 url = "2.1"
 uuid = { version = "0.8", features = ["v4", "v5"] }
 version-compare = "0.0"

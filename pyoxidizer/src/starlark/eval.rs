@@ -378,7 +378,9 @@ mod tests {
 
     #[test]
     fn test_load() -> Result<()> {
-        let temp_dir = tempdir::TempDir::new("pyoxidizer-test")?;
+        let temp_dir = tempfile::Builder::new()
+            .prefix("pyoxidizer-test")
+            .tempdir()?;
         let logger = get_logger()?;
 
         let load_path = temp_dir.path().join("load.bzl");
@@ -408,7 +410,9 @@ mod tests {
 
     #[test]
     fn test_register_target() -> Result<()> {
-        let temp_dir = tempdir::TempDir::new("pyoxidizer-test")?;
+        let temp_dir = tempfile::Builder::new()
+            .prefix("pyoxidizer-test")
+            .tempdir()?;
         let logger = get_logger()?;
 
         let config_path = temp_dir.path().join("pyoxidizer.bzl");

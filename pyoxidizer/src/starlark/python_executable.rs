@@ -1219,7 +1219,9 @@ mod tests {
 
     #[test]
     fn test_read_package_root_simple() -> Result<()> {
-        let temp_dir = tempdir::TempDir::new("pyoxidizer-test")?;
+        let temp_dir = tempfile::Builder::new()
+            .prefix("pyoxidizer-test")
+            .tempdir()?;
 
         let root = temp_dir.path();
         std::fs::create_dir(root.join("bar"))?;

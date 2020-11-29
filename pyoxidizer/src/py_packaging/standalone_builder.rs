@@ -39,7 +39,6 @@ use {
         path::{Path, PathBuf},
         sync::Arc,
     },
-    tempdir::TempDir,
     tugger_file_manifest::{File, FileData, FileEntry, FileManifest},
     tugger_windows::VCRedistributablePlatform,
 };
@@ -310,7 +309,9 @@ impl StandalonePythonExecutableBuilder {
 
         match self.link_mode {
             LibpythonLinkMode::Static => {
-                let temp_dir = TempDir::new("pyoxidizer-build-exe")?;
+                let temp_dir = tempfile::Builder::new()
+                    .prefix("pyoxidizer-build-exe-packaging")
+                    .tempdir()?;
                 let temp_dir_path = temp_dir.path();
 
                 warn!(
@@ -1108,7 +1109,9 @@ pub mod tests {
         let exe = options.new_builder()?;
         let embedded = exe.to_embedded_python_context(&logger, "0")?;
 
-        let temp_dir = tempdir::TempDir::new("pyoxidizer-test")?;
+        let temp_dir = tempfile::Builder::new()
+            .prefix("pyoxidizer-test")
+            .tempdir()?;
 
         embedded.write_files(temp_dir.path())?;
 

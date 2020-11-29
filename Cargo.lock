@@ -2178,7 +2178,7 @@ dependencies = [
  "starlark",
  "starlark-dialect-build-targets",
  "tar",
- "tempdir",
+ "tempfile",
  "tugger",
  "tugger-binary-analysis",
  "tugger-common",

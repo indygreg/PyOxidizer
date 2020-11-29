@@ -83,7 +83,9 @@ pub fn bootstrap_packaging_tools(
     let get_pip_py_path =
         download_distribution(&GET_PIP_PY_19.url, &GET_PIP_PY_19.sha256, cache_dir)?;
 
-    let temp_dir = tempdir::TempDir::new("pyoxidizer-bootstrap-packaging")?;
+    let temp_dir = tempfile::Builder::new()
+        .prefix("pyoxidizer-bootstrap-packaging")
+        .tempdir()?;
 
     // We need to hack `get-pip.py`'s source code to allow exclusive use of a
     // requirements file for installing `pip`. The `implicit_*` variables control
@@ -240,7 +242,9 @@ pub fn pip_download<'a>(
     verbose: bool,
     args: &[String],
 ) -> Result<Vec<PythonResource<'a>>> {
-    let temp_dir = tempdir::TempDir::new("pyoxidizer-pip-download")?;
+    let temp_dir = tempfile::Builder::new()
+        .prefix("pyoxidizer-pip-download")
+        .tempdir()?;
 
     host_dist.ensure_pip(logger)?;
 
@@ -339,7 +343,9 @@ pub fn pip_install<'a, S: BuildHasher>(
     install_args: &[String],
     extra_envs: &HashMap<String, String, S>,
 ) -> Result<Vec<PythonResource<'a>>> {
-    let temp_dir = tempdir::TempDir::new("pyoxidizer-pip-install")?;
+    let temp_dir = tempfile::Builder::new()
+        .prefix("pyoxidizer-pip-install")
+        .tempdir()?;
 
     dist.ensure_pip(logger)?;
 
@@ -430,7 +436,9 @@ pub fn setup_py_install<'a, S: BuildHasher>(
         ));
     }
 
-    let temp_dir = tempdir::TempDir::new("pyoxidizer-setup-py-install")?;
+    let temp_dir = tempfile::Builder::new()
+        .prefix("pyoxidizer-setup-py-install")
+        .tempdir()?;
 
     let target_dir_path = temp_dir.path().join("install");
     let target_dir_s = target_dir_path.display().to_string();
