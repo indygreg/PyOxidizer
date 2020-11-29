@@ -3332,7 +3332,7 @@ dependencies = [
  "reqwest",
  "sha2 0.9.2",
  "slog",
- "tempdir",
+ "tempfile",
  "url",
  "zip",
 ]

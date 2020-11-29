@@ -5,8 +5,10 @@
 use {anyhow::Result, lazy_static::lazy_static, slog::Drain, std::path::PathBuf};
 
 lazy_static! {
-    pub static ref DEFAULT_TEMP_DIR: tempdir::TempDir =
-        tempdir::TempDir::new("tugger-test").expect("unable to create temporary directory");
+    pub static ref DEFAULT_TEMP_DIR: tempfile::TempDir = tempfile::Builder::new()
+        .prefix("tugger-test")
+        .tempdir()
+        .expect("unable to create temporary directory");
     pub static ref DEFAULT_DOWNLOAD_DIR: PathBuf = {
         let p = if let Ok(manifest_dir) = std::env::var("OUT_DIR") {
             PathBuf::from(manifest_dir).join("tugger-files")
