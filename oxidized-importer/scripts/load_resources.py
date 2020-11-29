@@ -17,18 +17,24 @@ def main():
 
     args = parser.parse_args()
 
-    kwargs = {}
+    data = None
+    path = None
 
     if args.load_method == "memory":
         with open(args.resources_file, "rb") as fh:
-            kwargs["resources_data"] = fh.read()
+            data = fh.read()
     elif args.load_method == "mmap":
-        kwargs["resources_file"] = args.resources_file
+        path = args.resources_file
     else:
         raise Exception("unhandled load method")
 
     for _ in range(args.iterations):
-        oxidized_importer.OxidizedFinder(**kwargs)
+        oxidized_importer.OxidizedFinder()
+
+        if data is not None:
+            oxidized_importer.index_bytes(data)
+        if path is not None:
+            oxidized_importer.index_file_memory_mapped(path)
 
 
 if __name__ == "__main__":
