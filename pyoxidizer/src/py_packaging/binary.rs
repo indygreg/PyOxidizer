@@ -7,7 +7,7 @@ Defining and manipulating binaries embedding Python.
 */
 
 use {
-    super::config::PyembedPythonInterpreterConfig,
+    super::config::{PyembedPackedResourcesSource, PyembedPythonInterpreterConfig},
     anyhow::{anyhow, Context, Result},
     python_packaging::{
         policy::PythonPackagingPolicy,
@@ -404,10 +404,15 @@ impl<'a> EmbeddedPythonContext<'a> {
 
     /// Write the file containing the default interpreter configuration Rust struct.
     pub fn write_interpreter_config_rs(&self, dest_dir: impl AsRef<Path>) -> Result<()> {
-        self.config.write_default_python_config_rs(
-            self.interpreter_config_rs_path(&dest_dir),
-            Some(&self.packed_resources_path(dest_dir)),
-        )?;
+        // TODO populate packed_resources before we get here.
+        let mut config = self.config.clone();
+        config
+            .packed_resources
+            .push(PyembedPackedResourcesSource::MemoryIncludeBytes(
+                self.packed_resources_path(&dest_dir),
+            ));
+
+        config.write_default_python_config_rs(self.interpreter_config_rs_path(&dest_dir))?;
 
         Ok(())
     }

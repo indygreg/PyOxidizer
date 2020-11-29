@@ -120,6 +120,7 @@ pub struct PyembedPythonInterpreterConfig {
     pub set_missing_path_configuration: bool,
     pub oxidized_importer: bool,
     pub filesystem_importer: bool,
+    pub packed_resources: Vec<PyembedPackedResourcesSource>,
     pub argvb: bool,
     pub sys_frozen: bool,
     pub sys_meipass: bool,
@@ -145,6 +146,7 @@ impl Default for PyembedPythonInterpreterConfig {
             set_missing_path_configuration: true,
             oxidized_importer: true,
             filesystem_importer: false,
+            packed_resources: vec![],
             argvb: false,
             sys_frozen: false,
             sys_meipass: false,
@@ -157,10 +159,7 @@ impl Default for PyembedPythonInterpreterConfig {
 
 impl PyembedPythonInterpreterConfig {
     /// Convert the instance to Rust code that constructs a `pyembed::OxidizedPythonInterpreterConfig`.
-    pub fn to_oxidized_python_interpreter_config_rs(
-        &self,
-        packed_resources_path: Option<&Path>,
-    ) -> Result<String> {
+    pub fn to_oxidized_python_interpreter_config_rs(&self) -> Result<String> {
         let code = format!(
             "pyembed::OxidizedPythonInterpreterConfig {{\n    \
             exe: None,\n    \
@@ -352,12 +351,13 @@ impl PyembedPythonInterpreterConfig {
             self.set_missing_path_configuration,
             self.oxidized_importer,
             self.filesystem_importer,
-            if let Some(path) = packed_resources_path {
-                let entry = PyembedPackedResourcesSource::MemoryIncludeBytes(path.to_path_buf());
-                format!("vec![{}]", entry.to_string())
-            } else {
-                "vec![]".to_string()
-            },
+            format!(
+                "vec![{}]",
+                self.packed_resources
+                    .iter()
+                    .map(|e| e.to_string())
+                    .join(", ")
+            ),
             self.argvb,
             self.sys_frozen,
             self.sys_meipass,
@@ -376,15 +376,11 @@ impl PyembedPythonInterpreterConfig {
     }
 
     /// Write a Rust file containing a function for obtaining the default `OxidizedPythonInterpreterConfig`.
-    pub fn write_default_python_config_rs(
-        &self,
-        path: impl AsRef<Path>,
-        packed_resources_path: Option<&Path>,
-    ) -> Result<()> {
+    pub fn write_default_python_config_rs(&self, path: impl AsRef<Path>) -> Result<()> {
         let mut f = std::fs::File::create(path.as_ref())?;
 
         let indented = self
-            .to_oxidized_python_interpreter_config_rs(packed_resources_path)?
+            .to_oxidized_python_interpreter_config_rs()?
             .split('\n')
             .map(|line| "    ".to_string() + line)
             .join("\n");
@@ -423,7 +419,7 @@ mod tests {
         let mut config = PyembedPythonInterpreterConfig::default();
         config.config.module_search_paths = Some(paths.iter().map(PathBuf::from).collect());
 
-        let code = config.to_oxidized_python_interpreter_config_rs(None)?;
+        let code = config.to_oxidized_python_interpreter_config_rs()?;
         assert_contains(&code, expected_contents)
     }
 
@@ -449,7 +445,7 @@ mod tests {
         config.config.filesystem_encoding = Some("ascii".to_string());
         config.config.filesystem_errors = Some("strict".to_string());
 
-        let code = config.to_oxidized_python_interpreter_config_rs(None)?;
+        let code = config.to_oxidized_python_interpreter_config_rs()?;
 
         assert!(code.contains("filesystem_encoding: Some(\"ascii\".to_string()),"));
         assert!(code.contains("filesystem_errors: Some(\"strict\".to_string()),"));
@@ -462,7 +458,7 @@ mod tests {
         let mut config = PyembedPythonInterpreterConfig::default();
         config.tcl_library = Some(PathBuf::from("c:\\windows"));
 
-        let code = config.to_oxidized_python_interpreter_config_rs(None)?;
+        let code = config.to_oxidized_python_interpreter_config_rs()?;
 
         assert_contains(
             &code,
@@ -542,6 +538,12 @@ mod tests {
             set_missing_path_configuration: false,
             oxidized_importer: true,
             filesystem_importer: true,
+            packed_resources: vec![
+                PyembedPackedResourcesSource::MemoryIncludeBytes(PathBuf::from("packed-resources")),
+                PyembedPackedResourcesSource::MemoryMappedPath(PathBuf::from(
+                    "$ORIGIN/packed-resources",
+                )),
+            ],
             argvb: true,
             sys_frozen: true,
             sys_meipass: true,
