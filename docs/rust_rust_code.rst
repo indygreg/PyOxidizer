@@ -139,15 +139,15 @@ to import Python resources, you will need to update a handful of fields:
 
    let mut config = pyembed::OxidizedPythonInterpreterConfig::default();
    config.packed_resources = ...;
-   config.use_custom_importlib = true;
+   config.oxidized_importer = true;
 
 The ``packed_resources`` field defines a reference to *packed resources
-data* (a ``&[u8]``. This is a custom serialization format for expressing
-*resources* to make available to a Python interpreter. See
+data* (a ``PackedResourcesSource`` enum. This is a custom serialization
+format for expressing *resources* to make available to a Python interpreter. See
 :ref:`python_packed_resources` for more. The easiest way to obtain this
 data blob is by using PyOxidizer and consuming the ``packed-resources``
 build artifact/file, likely though ``include_bytes!``.
 :ref:`oxidized_finder` can also be used to produce these data structures.
 
-Finally, setting ``use_custom_importlib = true`` is necessary to enable
-the custom bytecode and meta path importer to be used at run-time.
+Finally, setting ``oxidized_importer = true`` is necessary to enable
+``OxidizedFinder``.

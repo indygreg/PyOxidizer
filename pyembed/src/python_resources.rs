@@ -8,7 +8,7 @@ Management of Python resources.
 
 use {
     crate::{
-        config::ResolvedOxidizedPythonInterpreterConfig,
+        config::{PackedResourcesSource, ResolvedOxidizedPythonInterpreterConfig},
         conversion::{
             path_to_pathlib_path, path_to_pyobject, pyobject_optional_resources_map_to_owned_bytes,
             pyobject_optional_resources_map_to_pathbuf, pyobject_to_owned_bytes_optional,
@@ -416,10 +416,19 @@ impl<'a, 'config: 'a> TryFrom<&ResolvedOxidizedPythonInterpreterConfig<'config>>
             ..Default::default()
         };
 
-        for data in &config.packed_resources {
-            state
-                .index_data(data)
-                .map_err(NewInterpreterError::Simple)?;
+        for source in &config.packed_resources {
+            match source {
+                PackedResourcesSource::Memory(data) => {
+                    state
+                        .index_data(data)
+                        .map_err(NewInterpreterError::Simple)?;
+                }
+                PackedResourcesSource::MemoryMappedPath(path) => {
+                    state
+                        .index_path_memory_mapped(path)
+                        .map_err(NewInterpreterError::Dynamic)?;
+                }
+            }
         }
 
         state

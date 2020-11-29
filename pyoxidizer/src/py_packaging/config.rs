@@ -320,7 +320,10 @@ impl EmbeddedPythonConfig {
             self.oxidized_importer,
             self.filesystem_importer,
             if let Some(path) = packed_resources_path {
-                format!("vec![include_bytes!(r#\"{}\"#)]", path.display())
+                format!(
+                    "vec![pyembed::PackedResourcesSource::Memory(include_bytes!(r#\"{}\"#))]",
+                    path.display()
+                )
             } else {
                 "vec![]".to_string()
             },

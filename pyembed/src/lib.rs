@@ -83,7 +83,7 @@ That crate's build script will attempt to find a `libpython` from the
 
 */
 
-#[cfg(not(library_mode = "extension"))]
+#[allow(unused)]
 mod config;
 mod conversion;
 mod error;
@@ -113,11 +113,12 @@ pub mod technotes;
 #[cfg(test)]
 mod test;
 
+pub use crate::{config::PackedResourcesSource, error::NewInterpreterError};
+
 #[cfg(not(library_mode = "extension"))]
 #[allow(unused_imports)]
 pub use crate::{
     config::{ExtensionModule, OxidizedPythonInterpreterConfig},
-    error::NewInterpreterError,
     interpreter::MainPythonInterpreter,
 };
 

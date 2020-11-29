@@ -46,6 +46,9 @@ Backwards Compatibility Notes
 * ``OxidizedFinder.__init__()`` no longer automatically indexes builtin
   extension modules and frozen modules. Instead, you must now call one of the
   ``index_*`` methods to index these resources.
+* The ``pyembed::OxidizedPythonInterpreterConfig.packed_resources`` field is now
+  a ``Vec<pyembed::PackedResourcesSource>`` instead of ``Vec<&[u8]>``. The new
+  enum allows specifying files as alternative resources sources.
 
 Bug Fixes
 ^^^^^^^^^
