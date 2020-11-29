@@ -15,7 +15,10 @@ use {
             ResourceCollectionContext,
         },
     },
-    crate::{project_building::build_python_executable, py_packaging::binary::PythonBinaryBuilder},
+    crate::{
+        project_building::build_python_executable, py_packaging::binary::PackedResourcesLoadMode,
+        py_packaging::binary::PythonBinaryBuilder,
+    },
     anyhow::{anyhow, Context, Result},
     linked_hash_map::LinkedHashMap,
     python_packaging::resource::PythonModuleSource,
@@ -41,6 +44,7 @@ use {
     },
     std::{
         collections::HashMap,
+        convert::TryFrom,
         io::Write,
         ops::Deref,
         path::{Path, PathBuf},
@@ -131,6 +135,9 @@ impl TypedValue for PythonExecutableValue {
 
     fn get_attr(&self, attribute: &str) -> ValueResult {
         match attribute {
+            "packed_resources_load_mode" => Ok(Value::from(
+                self.exe.packed_resources_load_mode().to_string(),
+            )),
             "tcl_files_path" => match self.exe.tcl_files_path() {
                 Some(value) => Ok(Value::from(value.to_string())),
                 None => Ok(Value::from(NoneType::None)),
@@ -145,11 +152,27 @@ impl TypedValue for PythonExecutableValue {
     }
 
     fn has_attr(&self, attribute: &str) -> Result<bool, ValueError> {
-        Ok(matches!(attribute, "tcl_files_path" | "windows_subsystem"))
+        Ok(matches!(
+            attribute,
+            "packed_resources_load_mode" | "tcl_files_path" | "windows_subsystem"
+        ))
     }
 
     fn set_attr(&mut self, attribute: &str, value: Value) -> Result<(), ValueError> {
         match attribute {
+            "packed_resources_load_mode" => {
+                self.exe.set_packed_resources_load_mode(
+                    PackedResourcesLoadMode::try_from(value.to_string().as_str()).map_err(|e| {
+                        ValueError::from(RuntimeError {
+                            code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
+                            message: e,
+                            label: format!("{}.{}", Self::TYPE, attribute),
+                        })
+                    })?,
+                );
+
+                Ok(())
+            }
             "tcl_files_path" => {
                 self.exe.set_tcl_files_path(value.to_optional());
 
@@ -1243,6 +1266,23 @@ mod tests {
         assert_eq!(x.inner.name, "foo");
         assert!(!x.inner.is_package);
         assert_eq!(x.inner.source.resolve().unwrap(), b"# foo");
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_packed_resources_load_mode() -> Result<()> {
+        let mut env = test_evaluation_context_builder()?.into_context()?;
+        add_exe(&mut env)?;
+
+        let value = env.eval("exe.packed_resources_load_mode")?;
+        assert_eq!(value.get_type(), "string");
+        assert_eq!(value.to_string(), "embedded:packed-resources");
+
+        let value =
+            env.eval("exe.packed_resources_load_mode = 'none'; exe.packed_resources_load_mode")?;
+        assert_eq!(value.get_type(), "string");
+        assert_eq!(value.to_string(), "none");
 
         Ok(())
     }

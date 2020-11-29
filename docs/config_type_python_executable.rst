@@ -17,6 +17,38 @@ Attributes
 
 The following sections describe the attributes available on each instance.
 
+.. _config_type_python_executable.packed_resources_load_mode:
+
+``packed_resources_load_mode``
+------------------------------
+
+(``string``)
+
+Defines how the *packed Python resources data* (see
+:ref:`python_packed_resources`) is written and loaded at run-time by the
+embedded Python interpreter.
+
+The following values/patterns can be defined:
+
+``none``
+   No resources data will be serialized or loaded at run-time. (Use this
+   if you are using Python's filesystem based module importer and don't
+   want to use PyOxidizer's custom importer.)
+
+``embedded:<filename>``
+   The packed resources data will be embedded in the binary and loaded
+   from a memory address at run-time.
+
+   ``filename`` denotes the path of the on-disk file used at build time.
+   This file is written to the *artifacts* directory that PyOxidizer
+   writes required build files to.
+
+``binary-relative-memory-mapped:<filename>``
+   The packed resources data will be written to a file relative to the
+   built binary and loaded from there at run-time using memory mapped I/O.
+
+The default is ``embedded:packed-resources``.
+
 .. _config_type_python_executable_tcl_files_path:
 
 ``tcl_files_path``

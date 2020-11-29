@@ -21,6 +21,7 @@ instructions.
    packaging_python_files
    packaging_additional_files
    packaging_extension_modules
+   packaging_resources_data
    packaging_trimming_resources
    packaging_performance
    packaging_pitfalls

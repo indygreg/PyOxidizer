@@ -97,9 +97,10 @@ If you want the built executable to behave like ``python`` would and use the
 standard library importers, you can disable ``oxidized_importer`` by setting
 :ref:`config_type_python_interpreter_config_oxidized_importer` to ``False``.
 
-Another caveat is that indexed resources are always embedded in the built
-executable. This may bloat the size of the executable. This will eventually
-be addressed by :ref:`status_standalone_resource_files`.
+Another caveat is that indexed resources are embedded in the built executable
+by default. This will bloat the size of the executable for no benefit. To
+disable this functionality, set
+:ref:`config_type_python_executable.packed_resources_load_mode` to ``none``.
 
 Binary Portability
 ==================

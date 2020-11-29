@@ -80,6 +80,15 @@ New Features
   to facilitate loading/indexing of resource data in arbitrary byte buffers
   or files. You can call these methods multiple times to chain multiple
   resources blobs together.
+* The ``PythonExecutable`` Starlark type now exposes a
+  ``packed_resources_load_mode`` attribute allowing control over where *packed
+  resources data* is written and how it is loaded at run-time. This attribute
+  facilitates disabling the embedding of packed resources data completely
+  (enabling you to produce an executable that behaves very similarly to
+  ``python``) and allows writing and loading resources data to a standalone
+  file installed next to the binary (enabling multiple binaries to share the
+  same resources file). See :ref:`packaging_resources_data` for more on this
+  feature.
 
 Other Relevant Changes
 ^^^^^^^^^^^^^^^^^^^^^^
