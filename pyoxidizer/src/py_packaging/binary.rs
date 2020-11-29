@@ -21,6 +21,7 @@ use {
     },
     std::{
         collections::HashMap,
+        convert::TryFrom,
         io::Write,
         path::{Path, PathBuf},
         sync::Arc,
@@ -60,6 +61,49 @@ pub enum PackedResourcesLoadMode {
     /// The configuration will reference the file via a relative path using
     /// `$ORIGIN` expansion. Memory mapped I/O will be used to read the file.
     BinaryRelativePathMemoryMapped(String),
+}
+
+impl ToString for PackedResourcesLoadMode {
+    fn to_string(&self) -> String {
+        match self {
+            Self::None => "none".to_string(),
+            Self::EmbeddedInBinary(filename) => format!("embedded:{}", filename),
+            Self::BinaryRelativePathMemoryMapped(path) => {
+                format!("binary-relative-memory-mapped:{}", path)
+            }
+        }
+    }
+}
+
+impl TryFrom<&str> for PackedResourcesLoadMode {
+    type Error = String;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        if value == "none" {
+            Ok(Self::None)
+        } else {
+            let parts = value.splitn(2, ':').collect::<Vec<_>>();
+            if parts.len() != 2 {
+                Err(
+                    "resources load mode value not recognized; must have form `type:value`"
+                        .to_string(),
+                )
+            } else {
+                let prefix = parts[0];
+                let value = parts[1];
+
+                match prefix {
+                    "embedded" => {
+                        Ok(Self::EmbeddedInBinary(value.to_string()))
+                    }
+                    "binary-relative-memory-mapped" => {
+                        Ok(Self::BinaryRelativePathMemoryMapped(value.to_string()))
+                    }
+                    _ => Err(format!("{} is not a valid prefix; must be 'embedded' or 'binary-relative-memory-mapped'", prefix))
+                }
+            }
+        }
+    }
 }
 
 /// A callable that can influence PythonResourceAddCollectionContext.
@@ -441,6 +485,46 @@ impl<'a> EmbeddedPythonContext<'a> {
             .context("writing interpreter config Rust source")?;
         self.write_cargo_metadata(&dest_dir)
             .context("writing cargo metadata file")?;
+
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_resources_load_mode_serialization() {
+        assert_eq!(
+            PackedResourcesLoadMode::None.to_string(),
+            "none".to_string()
+        );
+        assert_eq!(
+            PackedResourcesLoadMode::EmbeddedInBinary("resources".into()).to_string(),
+            "embedded:resources".to_string()
+        );
+        assert_eq!(
+            PackedResourcesLoadMode::BinaryRelativePathMemoryMapped("relative-resources".into())
+                .to_string(),
+            "binary-relative-memory-mapped:relative-resources".to_string()
+        );
+    }
+
+    #[test]
+    fn test_resources_load_mode_parsing() -> Result<()> {
+        assert_eq!(
+            PackedResourcesLoadMode::try_from("none").unwrap(),
+            PackedResourcesLoadMode::None
+        );
+        assert_eq!(
+            PackedResourcesLoadMode::try_from("embedded:resources").unwrap(),
+            PackedResourcesLoadMode::EmbeddedInBinary("resources".into())
+        );
+        assert_eq!(
+            PackedResourcesLoadMode::try_from("binary-relative-memory-mapped:relative").unwrap(),
+            PackedResourcesLoadMode::BinaryRelativePathMemoryMapped("relative".into())
+        );
 
         Ok(())
     }
