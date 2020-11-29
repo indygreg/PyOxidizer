@@ -4,7 +4,7 @@
 
 use {
     super::util::ToValue,
-    crate::py_packaging::config::EmbeddedPythonConfig,
+    crate::py_packaging::config::PyembedPythonInterpreterConfig,
     python_packaging::{
         interpreter::{
             Allocator, BytesWarning, CheckHashPYCsMode, CoerceCLocale, MemoryAllocatorBackend,
@@ -107,11 +107,11 @@ fn bytecode_optimization_level_try_to_optional(
 
 #[derive(Debug, Clone)]
 pub struct PythonInterpreterConfigValue {
-    pub inner: EmbeddedPythonConfig,
+    pub inner: PyembedPythonInterpreterConfig,
 }
 
 impl PythonInterpreterConfigValue {
-    pub fn new(inner: EmbeddedPythonConfig) -> Self {
+    pub fn new(inner: PyembedPythonInterpreterConfig) -> Self {
         Self { inner }
     }
 }

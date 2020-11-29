@@ -7,7 +7,7 @@ Defining and manipulating binaries embedding Python.
 */
 
 use {
-    super::config::EmbeddedPythonConfig,
+    super::config::PyembedPythonInterpreterConfig,
     anyhow::{anyhow, Context, Result},
     python_packaging::{
         policy::PythonPackagingPolicy,
@@ -290,7 +290,7 @@ pub enum EmbeddedResources<'a> {
 /// Holds context necessary to embed Python in a binary.
 pub struct EmbeddedPythonContext<'a> {
     /// The configuration for the embedded interpreter.
-    pub config: EmbeddedPythonConfig,
+    pub config: PyembedPythonInterpreterConfig,
 
     /// Information on how to link against Python.
     pub linking_info: PythonLinkingInfo,

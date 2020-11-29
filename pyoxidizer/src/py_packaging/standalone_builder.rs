@@ -8,7 +8,7 @@ use {
             EmbeddedPythonContext, EmbeddedResources, LibpythonLinkMode, PythonBinaryBuilder,
             PythonLinkingInfo, ResourceAddCollectionContextCallback,
         },
-        config::EmbeddedPythonConfig,
+        config::PyembedPythonInterpreterConfig,
         distribution::{BinaryLibpythonLinkMode, PythonDistribution},
         filtering::{filter_btreemap, resolve_resource_names_from_files},
         libpython::link_libpython,
@@ -104,7 +104,7 @@ pub struct StandalonePythonExecutableBuilder {
     extension_build_contexts: BTreeMap<String, LibPythonBuildContext>,
 
     /// Configuration of the embedded Python interpreter.
-    config: EmbeddedPythonConfig,
+    config: PyembedPythonInterpreterConfig,
 
     /// Path to python executable that can be invoked at build time.
     host_python_exe: PathBuf,
@@ -126,7 +126,7 @@ impl StandalonePythonExecutableBuilder {
         exe_name: String,
         link_mode: BinaryLibpythonLinkMode,
         packaging_policy: PythonPackagingPolicy,
-        config: EmbeddedPythonConfig,
+        config: PyembedPythonInterpreterConfig,
     ) -> Result<Box<Self>> {
         let host_python_exe = host_distribution.python_exe_path().to_path_buf();
         let cache_tag = target_distribution.cache_tag.clone();
@@ -942,7 +942,7 @@ pub mod tests {
                 policy.set_allow_in_memory_shared_library_loading(*value);
             }
 
-            let config = EmbeddedPythonConfig::default();
+            let config = PyembedPythonInterpreterConfig::default();
 
             let mut builder = StandalonePythonExecutableBuilder::from_distribution(
                 host_distribution,

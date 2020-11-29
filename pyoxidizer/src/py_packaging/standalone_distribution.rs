@@ -7,7 +7,7 @@
 use {
     super::{
         binary::{LibpythonLinkMode, PythonBinaryBuilder},
-        config::{default_raw_allocator, EmbeddedPythonConfig},
+        config::{default_raw_allocator, PyembedPythonInterpreterConfig},
         distribution::{
             resolve_python_distribution_from_location, BinaryLibpythonLinkMode,
             DistributionExtractLock, PythonDistribution, PythonDistributionLocation,
@@ -1203,10 +1203,10 @@ impl PythonDistribution for StandaloneDistribution {
         Ok(policy)
     }
 
-    fn create_python_interpreter_config(&self) -> Result<EmbeddedPythonConfig> {
-        let embedded_default = EmbeddedPythonConfig::default();
+    fn create_python_interpreter_config(&self) -> Result<PyembedPythonInterpreterConfig> {
+        let embedded_default = PyembedPythonInterpreterConfig::default();
 
-        Ok(EmbeddedPythonConfig {
+        Ok(PyembedPythonInterpreterConfig {
             config: PythonInterpreterConfig {
                 profile: PythonInterpreterProfile::Isolated,
                 ..embedded_default.config
@@ -1227,7 +1227,7 @@ impl PythonDistribution for StandaloneDistribution {
         name: &str,
         libpython_link_mode: BinaryLibpythonLinkMode,
         policy: &PythonPackagingPolicy,
-        config: &EmbeddedPythonConfig,
+        config: &PyembedPythonInterpreterConfig,
         host_distribution: Option<Arc<dyn PythonDistribution>>,
     ) -> Result<Box<dyn PythonBinaryBuilder>> {
         // TODO can we avoid these clones?

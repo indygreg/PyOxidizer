@@ -9,7 +9,7 @@ Defining and manipulating Python distributions.
 use {
     super::{
         binary::{LibpythonLinkMode, PythonBinaryBuilder},
-        config::EmbeddedPythonConfig,
+        config::PyembedPythonInterpreterConfig,
         standalone_distribution::StandaloneDistribution,
     },
     crate::python_distributions::PYTHON_DISTRIBUTIONS,
@@ -133,7 +133,7 @@ pub trait PythonDistribution {
     fn create_packaging_policy(&self) -> Result<PythonPackagingPolicy>;
 
     /// Construct an `EmbeddedPythonConfig` derived from this instance.
-    fn create_python_interpreter_config(&self) -> Result<EmbeddedPythonConfig>;
+    fn create_python_interpreter_config(&self) -> Result<PyembedPythonInterpreterConfig>;
 
     /// Obtain a `PythonBinaryBuilder` for constructing an executable embedding Python.
     ///
@@ -150,7 +150,7 @@ pub trait PythonDistribution {
         name: &str,
         libpython_link_mode: BinaryLibpythonLinkMode,
         policy: &PythonPackagingPolicy,
-        config: &EmbeddedPythonConfig,
+        config: &PyembedPythonInterpreterConfig,
         host_distribution: Option<Arc<dyn PythonDistribution>>,
     ) -> Result<Box<dyn PythonBinaryBuilder>>;
 

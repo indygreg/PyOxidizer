@@ -84,7 +84,7 @@ fn optional_vec_string_to_string(value: &Option<Vec<String>>) -> String {
 /// But that type holds a reference to resources data and this type needs to
 /// be embedded in Starlark values, which have a `static lifetime.
 #[derive(Clone, Debug, PartialEq)]
-pub struct EmbeddedPythonConfig {
+pub struct PyembedPythonInterpreterConfig {
     pub config: PythonInterpreterConfig,
     pub raw_allocator: MemoryAllocatorBackend,
     pub oxidized_importer: bool,
@@ -97,9 +97,9 @@ pub struct EmbeddedPythonConfig {
     pub write_modules_directory_env: Option<String>,
 }
 
-impl Default for EmbeddedPythonConfig {
+impl Default for PyembedPythonInterpreterConfig {
     fn default() -> Self {
-        EmbeddedPythonConfig {
+        PyembedPythonInterpreterConfig {
             config: PythonInterpreterConfig {
                 profile: PythonInterpreterProfile::Isolated,
                 // Isolated mode disables configure_locale by default. But this
@@ -123,7 +123,7 @@ impl Default for EmbeddedPythonConfig {
     }
 }
 
-impl EmbeddedPythonConfig {
+impl PyembedPythonInterpreterConfig {
     /// Convert the instance to Rust code that constructs a `pyembed::OxidizedPythonInterpreterConfig`.
     pub fn to_oxidized_python_interpreter_config_rs(
         &self,
@@ -389,7 +389,7 @@ mod tests {
     }
 
     fn assert_serialize_module_search_paths(paths: &[&str], expected_contents: &str) -> Result<()> {
-        let mut config = EmbeddedPythonConfig::default();
+        let mut config = PyembedPythonInterpreterConfig::default();
         config.config.module_search_paths = Some(paths.iter().map(PathBuf::from).collect());
 
         let code = config.to_oxidized_python_interpreter_config_rs(None)?;
@@ -414,7 +414,7 @@ mod tests {
 
     #[test]
     fn test_serialize_filesystem_fields() -> Result<()> {
-        let mut config = EmbeddedPythonConfig::default();
+        let mut config = PyembedPythonInterpreterConfig::default();
         config.config.filesystem_encoding = Some("ascii".to_string());
         config.config.filesystem_errors = Some("strict".to_string());
 
@@ -428,7 +428,7 @@ mod tests {
 
     #[test]
     fn test_backslash_in_path() -> Result<()> {
-        let mut config = EmbeddedPythonConfig::default();
+        let mut config = PyembedPythonInterpreterConfig::default();
         config.tcl_library = Some(PathBuf::from("c:\\windows"));
 
         let code = config.to_oxidized_python_interpreter_config_rs(None)?;
@@ -447,7 +447,7 @@ mod tests {
         let dist = get_default_distribution()?;
         let policy = dist.create_packaging_policy()?;
 
-        let config = EmbeddedPythonConfig {
+        let config = PyembedPythonInterpreterConfig {
             config: PythonInterpreterConfig {
                 profile: Default::default(),
                 allocator: Some(Allocator::MallocDebug),
