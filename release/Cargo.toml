@@ -13,7 +13,8 @@ anyhow = "1.0"
 cargo_toml = "0.8"
 clap = "2.33"
 duct = "0.13"
-git2 = "0.13"
+# We don't need network functionality.
+git2 = { version = "0.13", default-features = false }
 lazy_static = "1.4"
 semver = "0.11"
 toml = "0.5"
