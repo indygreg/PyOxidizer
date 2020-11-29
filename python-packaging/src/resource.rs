@@ -76,7 +76,7 @@ pub struct PythonModuleSource {
     pub is_package: bool,
     /// Tag to apply to bytecode files.
     ///
-    /// e.g. `cpython-37`.
+    /// e.g. `cpython-39`.
     pub cache_tag: String,
     /// Whether this module belongs to the Python standard library.
     ///
@@ -153,7 +153,7 @@ pub struct PythonModuleBytecodeFromSource {
     pub is_package: bool,
     /// Tag to apply to bytecode files.
     ///
-    /// e.g. `cpython-37`.
+    /// e.g. `cpython-39`.
     pub cache_tag: String,
     /// Whether this module belongs to the Python standard library.
     ///
@@ -219,7 +219,7 @@ pub struct PythonModuleBytecode {
     pub is_package: bool,
     /// Tag to apply to bytecode files.
     ///
-    /// e.g. `cpython-37`.
+    /// e.g. `cpython-39`.
     pub cache_tag: String,
     /// Whether this module belongs to the Python standard library.
     ///
@@ -917,7 +917,7 @@ impl<'a> From<&'a File> for PythonResource<'a> {
 mod tests {
     use super::*;
 
-    const DEFAULT_CACHE_TAG: &str = "cpython-37";
+    const DEFAULT_CACHE_TAG: &str = "cpython-39";
 
     #[test]
     fn test_is_in_packages() {

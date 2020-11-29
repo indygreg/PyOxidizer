@@ -452,7 +452,7 @@ pub struct StandaloneDistribution {
 
     /// Tag to apply to bytecode files.
     ///
-    /// e.g. `cpython-37`.
+    /// e.g. `cpython-39`.
     pub cache_tag: String,
 
     /// Suffixes for Python module types.

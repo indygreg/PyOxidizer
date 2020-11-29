@@ -1733,7 +1733,7 @@ mod tests {
         tugger_file_manifest::FileEntry,
     };
 
-    const DEFAULT_CACHE_TAG: &str = "cpython-37";
+    const DEFAULT_CACHE_TAG: &str = "cpython-39";
 
     pub struct FakeBytecodeCompiler {
         magic_number: u32,

@@ -240,7 +240,7 @@ mod tests {
         tugger_file_manifest::FileData,
     };
 
-    const DEFAULT_CACHE_TAG: &str = "cpython-37";
+    const DEFAULT_CACHE_TAG: &str = "cpython-39";
 
     #[test]
     fn test_add_python_source_module() -> Result<()> {

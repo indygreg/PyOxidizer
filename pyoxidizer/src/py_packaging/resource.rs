@@ -102,7 +102,7 @@ impl AddToFileManifest for PythonExtensionModule {
 mod tests {
     use {super::*, itertools::Itertools, std::path::PathBuf, tugger_file_manifest::FileData};
 
-    const DEFAULT_CACHE_TAG: &str = "cpython-37";
+    const DEFAULT_CACHE_TAG: &str = "cpython-39";
 
     #[test]
     fn test_source_module_add_to_manifest_top_level() -> Result<()> {
