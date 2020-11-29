@@ -1,3 +1,6 @@
+# pyembed is shipped with applications built with PyOxidizer. We want
+# pyembed to only use permissive licenses so a proprietary application
+# can be distributed with PyOxidizer.
 [licenses]
 unlicensed = "deny"
 allow = [
@@ -11,4 +14,6 @@ allow = [
 default = "deny"
 
 [bans]
+# We want to keep the dependency tree as slim as possible. Let's
+# warn when we're shipping multiple versions of the same crate.
 multiple-versions = "warn"
