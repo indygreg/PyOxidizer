@@ -8,7 +8,6 @@ Functionality for defining how Python resources should be packaged.
 
 use {
     crate::{
-        licensing::NON_GPL_LICENSES,
         location::ConcreteResourceLocation,
         resource::{PythonExtensionModule, PythonExtensionModuleVariants, PythonResource},
         resource_collection::PythonResourceAddCollectionContext,
@@ -579,21 +578,9 @@ impl PythonPackagingPolicy {
                         .filter_map(|em| {
                             if em.link_libraries.is_empty() {
                                 Some(em.clone())
-                            // Public domain is always allowed.
-                            } else if em.license_public_domain == Some(true) {
-                                Some(em.clone())
-                            // Use explicit license list if one is defined.
-                            } else if let Some(ref licenses) = em.licenses {
-                                // We filter through an allow list because it is safer. (No new GPL
-                                // licenses can slip through.)
-                                let all_non_gpl_licenses = licenses.iter().all(|license| {
-                                    license
-                                        .licenses
-                                        .iter()
-                                        .all(|license| NON_GPL_LICENSES.contains(&license.as_str()))
-                                });
-
-                                if all_non_gpl_licenses {
+                            } else if let Some(license) = &em.license {
+                                // Public domain is always allowed.
+                                if license.is_public_domain() || license.is_non_gpl() {
                                     Some(em.clone())
                                 } else {
                                     None

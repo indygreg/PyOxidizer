@@ -1411,10 +1411,8 @@ impl PythonResourceCollector {
                 }
             }
 
-            if let Some(lis) = &extension_module.licenses {
-                build_context
-                    .license_infos
-                    .insert(extension_module.name.clone(), lis.clone());
+            if let Some(li) = &extension_module.license {
+                build_context.license_infos.insert(li.clone());
             }
 
             if let Some(init_fn) = &extension_module.init_fn {
@@ -4137,8 +4135,7 @@ mod tests {
             builtin_default: true,
             required: true,
             variant: None,
-            licenses: None,
-            license_public_domain: None,
+            license: None,
         };
 
         c.add_builtin_python_extension_module(&em)?;
@@ -4192,8 +4189,7 @@ mod tests {
             builtin_default: false,
             required: false,
             variant: None,
-            licenses: None,
-            license_public_domain: None,
+            license: None,
         };
 
         let mut c = PythonResourceCollector::new(
@@ -4290,8 +4286,7 @@ mod tests {
             builtin_default: false,
             required: false,
             variant: None,
-            licenses: None,
-            license_public_domain: None,
+            license: None,
         };
 
         let mut c = PythonResourceCollector::new(

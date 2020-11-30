@@ -7,7 +7,7 @@
 use {
     crate::{
         bytecode::{CompileMode, PythonBytecodeCompiler},
-        licensing::LicenseInfo,
+        licensing::PackageLicenseInfo,
         module_util::{is_package_from_path, packages_from_module_name, resolve_path_for_module},
         python_source::has_dunder_file,
     },
@@ -550,9 +550,7 @@ pub struct PythonExtensionModule {
     /// available to choose from.
     pub variant: Option<String>,
     /// Licenses that apply to this extension.
-    pub licenses: Option<Vec<LicenseInfo>>,
-    /// Whether the license for this extension and any library dependencies are in the public domain.
-    pub license_public_domain: Option<bool>,
+    pub license: Option<PackageLicenseInfo>,
 }
 
 impl PythonExtensionModule {
@@ -577,8 +575,7 @@ impl PythonExtensionModule {
             builtin_default: self.builtin_default,
             required: self.required,
             variant: self.variant.clone(),
-            licenses: self.licenses.clone(),
-            license_public_domain: self.license_public_domain,
+            license: self.license.clone(),
         })
     }
 

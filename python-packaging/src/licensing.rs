@@ -22,17 +22,6 @@ pub const NON_GPL_LICENSES: &[&str] = &[
     "Zlib",
 ];
 
-/// Describes license information for a library.
-#[derive(Clone, Debug, PartialEq)]
-pub struct LicenseInfo {
-    /// SPDX license shortnames.
-    pub licenses: Vec<String>,
-    /// Suggested filename for the license.
-    pub license_filename: String,
-    /// Text of the license.
-    pub license_text: String,
-}
-
 /// Defines license information for a Python package.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct PackageLicenseInfo {
@@ -53,6 +42,9 @@ pub struct PackageLicenseInfo {
 
     /// Texts of NOTICE files in the package.
     pub notice_texts: Vec<String>,
+
+    /// Special annotation indicating if the license is in the public domain.
+    pub is_public_domain: bool,
 }
 
 impl PartialOrd for PackageLicenseInfo {
@@ -95,6 +87,11 @@ impl PackageLicenseInfo {
         res
     }
 
+    /// Whether we have license identifiers.
+    pub fn have_license_identifiers(&self) -> bool {
+        !self.all_license_identifiers().is_empty()
+    }
+
     /// All SPDX license identifiers appearing in this package.
     pub fn spdx_licenses(&self) -> Vec<spdx::LicenseId> {
         self.all_license_identifiers()
@@ -109,6 +106,24 @@ impl PackageLicenseInfo {
             .into_iter()
             .filter(|value| spdx::license_id(value).is_none())
             .collect::<Vec<_>>()
+    }
+
+    /// Whether the license is likely not GPL.
+    ///
+    /// TODO use copyleft annotation from spdx instead.
+    pub fn is_non_gpl(&self) -> bool {
+        if self.have_license_identifiers() && self.non_spdx_licenses().is_empty() {
+            self.spdx_licenses()
+                .iter()
+                .all(|l| NON_GPL_LICENSES.contains(&l.name))
+        } else {
+            false
+        }
+    }
+
+    pub fn is_public_domain(&self) -> bool {
+        // TODO implement.
+        false
     }
 }
 

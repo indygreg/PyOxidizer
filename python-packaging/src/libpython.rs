@@ -5,7 +5,7 @@
 /*! Functionality for building a library containing Python */
 
 use {
-    crate::licensing::LicenseInfo,
+    crate::licensing::PackageLicenseInfo,
     std::{
         collections::{BTreeMap, BTreeSet},
         path::PathBuf,
@@ -57,7 +57,7 @@ pub struct LibPythonBuildContext {
     ///
     /// Keys are entity name (e.g. extension name). Values are license
     /// structures.
-    pub license_infos: BTreeMap<String, Vec<LicenseInfo>>,
+    pub license_infos: BTreeSet<PackageLicenseInfo>,
 }
 
 impl Default for LibPythonBuildContext {
@@ -72,7 +72,7 @@ impl Default for LibPythonBuildContext {
             static_libraries: BTreeSet::new(),
             frameworks: BTreeSet::new(),
             init_functions: BTreeMap::new(),
-            license_infos: BTreeMap::new(),
+            license_infos: BTreeSet::new(),
         }
     }
 }
@@ -89,7 +89,7 @@ impl LibPythonBuildContext {
         let mut static_libraries = BTreeSet::new();
         let mut frameworks = BTreeSet::new();
         let mut init_functions = BTreeMap::new();
-        let mut license_infos = BTreeMap::new();
+        let mut license_infos = BTreeSet::new();
 
         for context in contexts {
             // Last write wins.
@@ -120,8 +120,8 @@ impl LibPythonBuildContext {
             for (k, v) in &context.init_functions {
                 init_functions.insert(k.clone(), v.clone());
             }
-            for (k, v) in &context.license_infos {
-                license_infos.insert(k.clone(), v.clone());
+            for v in &context.license_infos {
+                license_infos.insert(v.clone());
             }
         }
 

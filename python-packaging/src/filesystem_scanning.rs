@@ -363,8 +363,7 @@ impl<'a> PythonResourceIterator<'a> {
                         builtin_default: false,
                         required: false,
                         variant: None,
-                        licenses: None,
-                        license_public_domain: None,
+                        license: None,
                     }
                     .into(),
                 ));
@@ -1222,8 +1221,7 @@ mod tests {
                 builtin_default: false,
                 required: false,
                 variant: None,
-                licenses: None,
-                license_public_domain: None,
+                license: None,
             }
             .into()
         );
@@ -1241,8 +1239,7 @@ mod tests {
                 builtin_default: false,
                 required: false,
                 variant: None,
-                licenses: None,
-                license_public_domain: None,
+                license: None,
             }
             .into(),
         );
@@ -1260,8 +1257,7 @@ mod tests {
                 builtin_default: false,
                 required: false,
                 variant: None,
-                licenses: None,
-                license_public_domain: None,
+                license: None,
             }
             .into(),
         );
@@ -1279,8 +1275,7 @@ mod tests {
                 builtin_default: false,
                 required: false,
                 variant: None,
-                licenses: None,
-                license_public_domain: None,
+                license: None,
             }
             .into(),
         );
@@ -1298,8 +1293,7 @@ mod tests {
                 builtin_default: false,
                 required: false,
                 variant: None,
-                licenses: None,
-                license_public_domain: None,
+                license: None,
             }
             .into(),
         );

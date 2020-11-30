@@ -431,9 +431,6 @@ pub struct StandaloneDistribution {
     /// within that package.
     pub resources: BTreeMap<String, BTreeMap<String, PathBuf>>,
 
-    /// Describes license info for things in this distribution.
-    pub license_infos: BTreeMap<String, Vec<python_packaging::licensing::LicenseInfo>>,
-
     /// Path to copy of hacked dist to use for packaging rules venvs
     pub venv_base: PathBuf,
 
@@ -611,8 +608,6 @@ impl StandaloneDistribution {
         let frozen_c: Vec<u8> = Vec::new();
         let mut py_modules: BTreeMap<String, PathBuf> = BTreeMap::new();
         let mut resources: BTreeMap<String, BTreeMap<String, PathBuf>> = BTreeMap::new();
-        let mut license_infos: BTreeMap<String, Vec<python_packaging::licensing::LicenseInfo>> =
-            BTreeMap::new();
 
         for entry in std::fs::read_dir(dist_dir)? {
             let entry = entry?;
@@ -749,32 +744,26 @@ impl StandaloneDistribution {
                     links.push(depends);
                 }
 
-                let licenses = if let Some(ref license_paths) = entry.license_paths {
-                    let mut licenses = Vec::new();
+                let mut license = PackageLicenseInfo {
+                    package: module.clone(),
+                    version: pi.python_version.clone(),
+                    is_public_domain: entry.license_public_domain.unwrap_or(false),
+                    ..Default::default()
+                };
 
+                if let Some(license_paths) = &entry.license_paths {
                     for license_path in license_paths {
                         let license_path = python_path.join(license_path);
-                        let license_text = std::fs::read_to_string(&license_path)
-                            .with_context(|| "unable to read license file")?;
-
-                        licenses.push(python_packaging::licensing::LicenseInfo {
-                            licenses: entry.licenses.clone().unwrap(),
-                            license_filename: license_path
-                                .file_name()
-                                .unwrap()
-                                .to_str()
-                                .unwrap()
-                                .to_string(),
-                            license_text,
-                        });
+                        license.license_texts.push(
+                            std::fs::read_to_string(&license_path)
+                                .with_context(|| format!("reading {}", license_path.display()))?,
+                        );
                     }
+                }
 
-                    license_infos.insert(module.clone(), licenses.clone());
-
-                    Some(licenses)
-                } else {
-                    None
-                };
+                if let Some(licenses) = &entry.licenses {
+                    license.metadata_licenses.extend(licenses.clone());
+                }
 
                 ems.push(PythonExtensionModule {
                     name: module.clone(),
@@ -792,8 +781,7 @@ impl StandaloneDistribution {
                     builtin_default: entry.in_core,
                     required: entry.required,
                     variant: Some(entry.variant.clone()),
-                    licenses,
-                    license_public_domain: entry.license_public_domain,
+                    license: Some(license),
                 });
             }
 
@@ -916,7 +904,6 @@ impl StandaloneDistribution {
             libpython_shared_library,
             py_modules,
             resources,
-            license_infos,
             venv_base,
             inittab_object,
             inittab_cflags: pi.build_info.inittab_cflags,
