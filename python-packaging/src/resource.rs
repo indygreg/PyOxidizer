@@ -114,6 +114,15 @@ impl PythonModuleSource {
         }
     }
 
+    /// Obtain the top-level package name this module belongs to.
+    pub fn top_level_package(&self) -> &str {
+        if let Some(idx) = self.name.find('.') {
+            &self.name[0..idx]
+        } else {
+            &self.name
+        }
+    }
+
     /// Convert the instance to a BytecodeModule.
     pub fn as_bytecode_module(
         &self,

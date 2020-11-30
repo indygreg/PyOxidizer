@@ -23,7 +23,7 @@ use {
         bytecode::BytecodeCompiler,
         interpreter::MemoryAllocatorBackend,
         libpython::LibPythonBuildContext,
-        licensing::derive_package_license_infos,
+        licensing::{derive_package_license_infos, PackageLicenseInfo},
         location::AbstractResourceLocation,
         policy::PythonPackagingPolicy,
         resource::{
@@ -601,6 +601,16 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         &mut self,
         callback: Option<ResourceAddCollectionContextCallback>,
     ) -> Result<()> {
+        let stdlib_licenses = self
+            .target_distribution
+            .license_infos
+            .get("python")
+            .ok_or_else(|| anyhow!("could not resolve Python standard library licenses"))?
+            .iter()
+            .map(|li| li.licenses.clone())
+            .flatten()
+            .collect::<Vec<_>>();
+
         // TODO consolidate into loop below.
         for ext in self.packaging_policy.resolve_python_extension_modules(
             self.target_distribution.extension_modules.values(),
@@ -644,6 +654,13 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
 
             match resource {
                 PythonResource::ModuleSource(source) => {
+                    let li = PackageLicenseInfo {
+                        package: source.top_level_package().to_string(),
+                        version: "stdlib".to_string(),
+                        metadata_licenses: stdlib_licenses.clone(),
+                        ..Default::default()
+                    };
+                    self.resources_collector.add_package_license_info(li)?;
                     self.add_python_module_source(source, Some(add_context))?;
                 }
                 PythonResource::PackageResource(r) => {
@@ -937,10 +954,7 @@ pub mod tests {
         crate::python_distributions::PYTHON_DISTRIBUTIONS,
         crate::testutil::*,
         lazy_static::lazy_static,
-        python_packaging::{
-            licensing::PackageLicenseInfo, location::ConcreteResourceLocation,
-            policy::ExtensionModuleFilter,
-        },
+        python_packaging::{location::ConcreteResourceLocation, policy::ExtensionModuleFilter},
         std::collections::BTreeSet,
         std::iter::FromIterator,
         std::ops::DerefMut,
