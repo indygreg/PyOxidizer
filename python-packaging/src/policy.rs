@@ -580,7 +580,7 @@ impl PythonPackagingPolicy {
                                 Some(em.clone())
                             } else if let Some(license) = &em.license {
                                 // Public domain is always allowed.
-                                if license.is_public_domain() || license.is_non_gpl() {
+                                if license.is_public_domain || license.is_non_gpl() {
                                     Some(em.clone())
                                 } else {
                                     None

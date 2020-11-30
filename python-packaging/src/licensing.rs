@@ -120,11 +120,6 @@ impl PackageLicenseInfo {
             false
         }
     }
-
-    pub fn is_public_domain(&self) -> bool {
-        // TODO implement.
-        false
-    }
 }
 
 /// Obtain Python package license information from an iterable of Python resources.

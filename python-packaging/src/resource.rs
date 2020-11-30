@@ -630,6 +630,15 @@ impl PythonExtensionModule {
     pub fn in_libpython(&self) -> bool {
         self.is_stdlib && (self.builtin_default || self.shared_library.is_none())
     }
+
+    /// Obtain the top-level package name this module belongs to.
+    pub fn top_level_package(&self) -> &str {
+        if let Some(idx) = self.name.find('.') {
+            &self.name[0..idx]
+        } else {
+            &self.name
+        }
+    }
 }
 
 /// Represents a collection of variants for a given Python extension module.

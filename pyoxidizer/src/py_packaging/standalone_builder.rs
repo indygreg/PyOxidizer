@@ -621,6 +621,26 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
                 callback(&self.packaging_policy, &resource, &mut add_context)?;
             }
 
+            let mut license_info = PackageLicenseInfo {
+                package: ext.top_level_package().to_string(),
+                version: self.target_distribution.python_version().to_string(),
+                metadata_licenses: stdlib_licenses.clone(),
+                ..Default::default()
+            };
+
+            if let Some(ext_info) = &ext.license {
+                license_info
+                    .metadata_licenses
+                    .extend(ext_info.metadata_licenses.iter().cloned());
+                license_info
+                    .license_texts
+                    .extend(ext_info.license_texts.iter().cloned());
+                license_info.is_public_domain = ext_info.is_public_domain;
+            }
+
+            self.resources_collector
+                .add_package_license_info(license_info)?;
+
             self.add_python_extension_module(&ext, Some(add_context))?;
         }
 
