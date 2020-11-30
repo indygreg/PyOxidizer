@@ -283,10 +283,19 @@ impl StandalonePythonExecutableBuilder {
                 .insert("msvcrt".to_string());
         }
 
-        if let Some(lis) = self.target_distribution.license_infos.get("python") {
-            self.core_build_context
-                .license_infos
-                .insert("python".to_string(), lis.clone());
+        if let Some(li) = &self.target_distribution.core_license_info {
+            self.core_build_context.license_infos.insert(
+                "python".to_string(),
+                vec![python_packaging::licensing::LicenseInfo {
+                    licenses: li.metadata_licenses.clone(),
+                    license_filename: "LICENSE.python.txt".to_string(),
+                    license_text: li
+                        .license_texts
+                        .get(0)
+                        .unwrap_or(&"".to_string())
+                        .to_string(),
+                }],
+            );
         }
 
         Ok(())
@@ -603,13 +612,11 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
     ) -> Result<()> {
         let stdlib_licenses = self
             .target_distribution
-            .license_infos
-            .get("python")
+            .core_license_info
+            .as_ref()
             .ok_or_else(|| anyhow!("could not resolve Python standard library licenses"))?
-            .iter()
-            .map(|li| li.licenses.clone())
-            .flatten()
-            .collect::<Vec<_>>();
+            .metadata_licenses
+            .clone();
 
         // TODO consolidate into loop below.
         for ext in self.packaging_policy.resolve_python_extension_modules(

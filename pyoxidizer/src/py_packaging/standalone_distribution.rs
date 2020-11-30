@@ -24,6 +24,7 @@ use {
         bytecode::{BytecodeCompiler, PythonBytecodeCompiler},
         filesystem_scanning::{find_python_resources, walk_tree_files},
         interpreter::{PythonInterpreterConfig, PythonInterpreterProfile, TerminfoResolution},
+        licensing::PackageLicenseInfo,
         location::ConcreteResourceLocation,
         module_util::{is_package_from_path, PythonModuleSuffixes},
         policy::PythonPackagingPolicy,
@@ -32,7 +33,7 @@ use {
             PythonModuleSource, PythonPackageResource, PythonResource,
         },
     },
-    serde::{Deserialize, Serialize},
+    serde::Deserialize,
     slog::{info, warn},
     std::{
         collections::{hash_map::RandomState, BTreeMap, HashMap},
@@ -320,17 +321,6 @@ pub fn invoke_python(python_paths: &PythonPaths, logger: &slog::Logger, args: &[
     }
 }
 
-/// Describes license information for a library.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct LicenseInfo {
-    /// SPDX license shortnames.
-    pub licenses: Vec<String>,
-    /// Suggested filename for the license.
-    pub license_filename: String,
-    /// Text of the license.
-    pub license_text: String,
-}
-
 /// Describes how libpython is linked in a standalone distribution.
 #[derive(Clone, Debug, PartialEq)]
 pub enum StandaloneDistributionLinkMode {
@@ -384,6 +374,9 @@ pub struct StandaloneDistribution {
 
     /// Capabilities of distribution to load extension modules.
     extension_module_loading: Vec<String>,
+
+    /// Holds license information for the core distribution.
+    pub core_license_info: Option<PackageLicenseInfo>,
 
     /// SPDX license shortnames that apply to this distribution.
     ///
@@ -661,20 +654,21 @@ impl StandaloneDistribution {
 
         let pi = parse_python_json_from_distribution(dist_dir)?;
 
+        let mut core_license_info = None;
+
         if let Some(ref python_license_path) = pi.license_path {
             let license_path = python_path.join(python_license_path);
             let license_text = std::fs::read_to_string(&license_path).with_context(|| {
                 format!("unable to read Python license {}", license_path.display())
             })?;
 
-            let mut licenses = Vec::new();
-            licenses.push(python_packaging::licensing::LicenseInfo {
-                licenses: pi.licenses.clone().unwrap(),
-                license_filename: "LICENSE.python.txt".to_string(),
-                license_text,
+            core_license_info.replace(PackageLicenseInfo {
+                package: "__python-distribution__".to_string(),
+                version: pi.python_version.to_string(),
+                metadata_licenses: pi.licenses.clone().unwrap(),
+                license_texts: vec![license_text],
+                ..Default::default()
             });
-
-            license_infos.insert("python".to_string(), licenses);
         }
 
         // Collect object files for libpython.
@@ -902,6 +896,7 @@ impl StandaloneDistribution {
             link_mode,
             python_symbol_visibility: pi.python_symbol_visibility,
             extension_module_loading: pi.python_extension_module_loading,
+            core_license_info,
             licenses: pi.licenses.clone(),
             license_path: match pi.license_path {
                 Some(ref path) => Some(PathBuf::from(path)),
