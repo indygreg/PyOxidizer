@@ -1354,7 +1354,10 @@ impl PythonDistribution for StandaloneDistribution {
 
 #[cfg(test)]
 pub mod tests {
-    use {super::*, crate::testutil::*};
+    use {
+        super::*, crate::testutil::*, python_packaging::policy::ExtensionModuleFilter,
+        std::collections::BTreeSet,
+    };
 
     #[test]
     fn test_stdlib_annotations() -> Result<()> {
@@ -1394,6 +1397,166 @@ pub mod tests {
             } else {
                 assert!(!tcl_files.is_empty());
             }
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_extension_module_copyleft_filtering() -> Result<()> {
+        for dist in get_all_standalone_distributions()? {
+            let mut policy = dist.create_packaging_policy()?;
+            policy.set_extension_module_filter(ExtensionModuleFilter::All);
+
+            let all_extensions = policy
+                .resolve_python_extension_modules(
+                    dist.extension_modules.values(),
+                    &dist.target_triple,
+                )?
+                .into_iter()
+                .map(|e| (e.name, e.variant))
+                .collect::<BTreeSet<_>>();
+
+            policy.set_extension_module_filter(ExtensionModuleFilter::NoCopyleft);
+
+            let no_copyleft_extensions = policy
+                .resolve_python_extension_modules(
+                    dist.extension_modules.values(),
+                    &dist.target_triple,
+                )?
+                .into_iter()
+                .map(|e| (e.name, e.variant))
+                .collect::<BTreeSet<_>>();
+
+            let dropped = all_extensions
+                .difference(&no_copyleft_extensions)
+                .cloned()
+                .collect::<Vec<_>>();
+
+            let added = no_copyleft_extensions
+                .difference(&all_extensions)
+                .cloned()
+                .collect::<Vec<_>>();
+
+            let linux_dropped = vec![
+                ("_curses".to_string(), Some("default".to_string())),
+                ("_curses_panel".to_string(), Some("default".to_string())),
+                ("_posixshmem".to_string(), Some("default".to_string())),
+                ("readline".to_string(), Some("default".to_string())),
+            ];
+
+            let linux_added = vec![("readline".to_string(), Some("libedit".to_string()))];
+
+            let windows_dropped = vec![
+                ("_msi".to_string(), Some("default".to_string())),
+                ("_multiprocessing".to_string(), Some("default".to_string())),
+                ("_overlapped".to_string(), Some("default".to_string())),
+                ("_socket".to_string(), Some("default".to_string())),
+                ("select".to_string(), Some("default".to_string())),
+                ("winsound".to_string(), Some("default".to_string())),
+            ];
+
+            let apple_dropped = vec![
+                ("_abc".to_string(), Some("default".to_string())),
+                ("_asyncio".to_string(), Some("default".to_string())),
+                ("_bisect".to_string(), Some("default".to_string())),
+                ("_blake2".to_string(), Some("default".to_string())),
+                ("_codecs_cn".to_string(), Some("default".to_string())),
+                ("_codecs_hk".to_string(), Some("default".to_string())),
+                ("_codecs_iso2022".to_string(), Some("default".to_string())),
+                ("_codecs_jp".to_string(), Some("default".to_string())),
+                ("_codecs_kr".to_string(), Some("default".to_string())),
+                ("_codecs_tw".to_string(), Some("default".to_string())),
+                ("_collections".to_string(), Some("default".to_string())),
+                ("_contextvars".to_string(), Some("default".to_string())),
+                ("_crypt".to_string(), Some("default".to_string())),
+                ("_csv".to_string(), Some("default".to_string())),
+                ("_datetime".to_string(), Some("default".to_string())),
+                ("_decimal".to_string(), Some("default".to_string())),
+                ("_elementtree".to_string(), Some("default".to_string())),
+                ("_functools".to_string(), Some("default".to_string())),
+                ("_heapq".to_string(), Some("default".to_string())),
+                ("_json".to_string(), Some("default".to_string())),
+                ("_locale".to_string(), Some("default".to_string())),
+                ("_lsprof".to_string(), Some("default".to_string())),
+                ("_md5".to_string(), Some("default".to_string())),
+                ("_multibytecodec".to_string(), Some("default".to_string())),
+                ("_multiprocessing".to_string(), Some("default".to_string())),
+                ("_opcode".to_string(), Some("default".to_string())),
+                ("_operator".to_string(), Some("default".to_string())),
+                ("_pickle".to_string(), Some("default".to_string())),
+                ("_posixshmem".to_string(), Some("default".to_string())),
+                ("_posixsubprocess".to_string(), Some("default".to_string())),
+                ("_queue".to_string(), Some("default".to_string())),
+                ("_random".to_string(), Some("default".to_string())),
+                ("_scproxy".to_string(), Some("default".to_string())),
+                ("_sha1".to_string(), Some("default".to_string())),
+                ("_sha256".to_string(), Some("default".to_string())),
+                ("_sha3".to_string(), Some("default".to_string())),
+                ("_sha512".to_string(), Some("default".to_string())),
+                ("_socket".to_string(), Some("default".to_string())),
+                ("_sre".to_string(), Some("default".to_string())),
+                ("_stat".to_string(), Some("default".to_string())),
+                ("_statistics".to_string(), Some("default".to_string())),
+                ("_struct".to_string(), Some("default".to_string())),
+                ("_symtable".to_string(), Some("default".to_string())),
+                ("_testinternalcapi".to_string(), Some("default".to_string())),
+                ("array".to_string(), Some("default".to_string())),
+                ("atexit".to_string(), Some("default".to_string())),
+                ("audioop".to_string(), Some("default".to_string())),
+                ("binascii".to_string(), Some("default".to_string())),
+                ("cmath".to_string(), Some("default".to_string())),
+                ("errno".to_string(), Some("default".to_string())),
+                ("fcntl".to_string(), Some("default".to_string())),
+                ("grp".to_string(), Some("default".to_string())),
+                ("itertools".to_string(), Some("default".to_string())),
+                ("math".to_string(), Some("default".to_string())),
+                ("mmap".to_string(), Some("default".to_string())),
+                ("parser".to_string(), Some("default".to_string())),
+                ("pwd".to_string(), Some("default".to_string())),
+                ("pyexpat".to_string(), Some("default".to_string())),
+                ("resource".to_string(), Some("default".to_string())),
+                ("select".to_string(), Some("default".to_string())),
+                ("syslog".to_string(), Some("default".to_string())),
+                ("termios".to_string(), Some("default".to_string())),
+                ("time".to_string(), Some("default".to_string())),
+                ("unicodedata".to_string(), Some("default".to_string())),
+                ("xxsubtype".to_string(), Some("default".to_string())),
+            ];
+
+            let (wanted_dropped, wanted_added) = match (
+                dist.python_major_minor_version().as_str(),
+                dist.target_triple(),
+            ) {
+                (_, "x86_64-unknown-linux-gnu") => (linux_dropped.clone(), linux_added.clone()),
+                (_, "x86_64-unknown-linux-musl") => (linux_dropped.clone(), linux_added.clone()),
+                (_, "i686-pc-windows-msvc") => (windows_dropped.clone(), vec![]),
+                (_, "x86_64-pc-windows-msvc") => (windows_dropped.clone(), vec![]),
+                ("3.8", "x86_64-apple-darwin") => (apple_dropped.clone(), vec![]),
+                ("3.9", "x86_64-apple-darwin") => {
+                    let mut added = apple_dropped.into_iter().collect::<BTreeSet<_>>();
+                    added.insert(("_peg_parser".to_string(), Some("default".to_string())));
+                    added.insert(("_zoneinfo".to_string(), Some("default".to_string())));
+
+                    (added.into_iter().collect::<Vec<_>>(), vec![])
+                }
+                _ => (vec![], vec![]),
+            };
+
+            assert_eq!(
+                dropped,
+                wanted_dropped,
+                "dropped matches for {} {}",
+                dist.python_major_minor_version(),
+                dist.target_triple(),
+            );
+            assert_eq!(
+                added,
+                wanted_added,
+                "added matches for {} {}",
+                dist.python_major_minor_version(),
+                dist.target_triple()
+            );
         }
 
         Ok(())
