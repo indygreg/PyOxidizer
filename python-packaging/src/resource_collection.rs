@@ -12,9 +12,7 @@ use {
         libpython::LibPythonBuildContext,
         licensing::PackageLicenseInfo,
         location::{AbstractResourceLocation, ConcreteResourceLocation},
-        module_util::{
-            packages_from_module_name, packages_from_module_names, resolve_path_for_module,
-        },
+        module_util::{packages_from_module_name, resolve_path_for_module},
         python_source::has_dunder_file,
         resource::{
             BytecodeOptimizationLevel, PythonExtensionModule, PythonModuleBytecode,
@@ -712,17 +710,27 @@ impl PythonResourceCollector {
         &self.allowed_locations
     }
 
-    /// Obtain a set of all Python packages registered with the collector.
-    pub fn all_packages(&self) -> BTreeSet<String> {
-        let names = self.resources.values().filter_map(|r| {
-            if r.is_python_resource() {
-                Some(r.name.clone())
-            } else {
-                None
-            }
-        });
+    /// Obtain a set of all top-level Python module names registered with the collector.
+    ///
+    /// The returned values correspond to packages or single file modules without
+    /// children modules.
+    pub fn all_top_level_module_names(&self) -> BTreeSet<String> {
+        self.resources
+            .values()
+            .filter_map(|r| {
+                if r.is_python_resource() {
+                    let name = if let Some(idx) = r.name.find('.') {
+                        &r.name[0..idx]
+                    } else {
+                        &r.name
+                    };
 
-        packages_from_module_names(names)
+                    Some(name.to_string())
+                } else {
+                    None
+                }
+            })
+            .collect::<BTreeSet<_>>()
     }
 
     /// Validate that a resource add in the specified location is allowed.
@@ -776,7 +784,7 @@ impl PythonResourceCollector {
     pub fn generate_license_report(&self) -> Result<ResourcesLicenseReport> {
         let mut report = ResourcesLicenseReport::default();
 
-        let all_packages = self.all_packages();
+        let all_packages = self.all_top_level_module_names();
 
         for package in &all_packages {
             // Only care about top-level packages.
