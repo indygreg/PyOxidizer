@@ -736,6 +736,7 @@ impl PythonPathExtension {
 }
 
 /// Represents a resource that can be read by Python somehow.
+#[allow(clippy::large_enum_variant)]
 #[derive(Clone, Debug, PartialEq)]
 pub enum PythonResource<'a> {
     /// A module defined by source code.
