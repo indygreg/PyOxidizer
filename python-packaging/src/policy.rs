@@ -580,13 +580,13 @@ impl PythonPackagingPolicy {
                     let ext_variants: PythonExtensionModuleVariants = variants
                         .iter()
                         .filter_map(|em| {
-                            if em.link_libraries.is_empty() {
-                                Some(em.clone())
                             // As a special case, if all we link against are system libraries
                             // that are known to be benign, allow that.
-                            } else if em.link_libraries.iter().all(|link| {
+                            let all_safe_system_libraries = em.link_libraries.iter().all(|link| {
                                 link.system && SAFE_SYSTEM_LIBRARIES.contains(&link.name.as_str())
-                            }) {
+                            });
+
+                            if em.link_libraries.is_empty() || all_safe_system_libraries {
                                 Some(em.clone())
                             } else if let Some(license) = &em.license {
                                 if license.is_non_copyleft() {
