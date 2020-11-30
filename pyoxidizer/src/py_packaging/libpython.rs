@@ -8,10 +8,9 @@ Building a native binary containing Python.
 
 use {
     anyhow::{anyhow, Result},
-    python_packaging::{libpython::LibPythonBuildContext, licensing::LicenseInfo},
+    python_packaging::libpython::LibPythonBuildContext,
     slog::warn,
     std::{
-        collections::BTreeMap,
         fs,
         fs::create_dir_all,
         path::{Path, PathBuf},
@@ -54,7 +53,6 @@ pub struct LibpythonInfo {
     pub libpython_path: PathBuf,
     pub libpyembeddedconfig_path: PathBuf,
     pub cargo_metadata: Vec<String>,
-    pub license_infos: BTreeMap<String, Vec<LicenseInfo>>,
 }
 
 /// Create a static libpython from a Python distribution.
@@ -213,6 +211,5 @@ pub fn link_libpython(
         libpython_path,
         libpyembeddedconfig_path,
         cargo_metadata,
-        license_infos: context.license_infos.clone(),
     })
 }
