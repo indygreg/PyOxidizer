@@ -49,6 +49,9 @@ Backwards Compatibility Notes
 * The ``pyembed::OxidizedPythonInterpreterConfig.packed_resources`` field is now
   a ``Vec<pyembed::PackedResourcesSource>`` instead of ``Vec<&[u8]>``. The new
   enum allows specifying files as alternative resources sources.
+* The ``no-gpl`` value of ``PythonPackagingPolicy.extension_module_filter``
+  has been changed to ``no-copyleft`` and it operates on the SPDX license
+  annotations instead of a list we maintained.
 
 Bug Fixes
 ^^^^^^^^^

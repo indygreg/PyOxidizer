@@ -19,10 +19,13 @@ use {
 /// Denotes methods to filter extension modules.
 #[derive(Clone, Debug, PartialEq)]
 pub enum ExtensionModuleFilter {
+    /// Only use the minimum set of extension modules needed to initialize an interpreter.
     Minimal,
+    /// Use all extension modules.
     All,
+    /// Only use extension modules without library dependencies.
     NoLibraries,
-    NoGPL,
+    NoCopyleft,
 }
 
 impl TryFrom<&str> for ExtensionModuleFilter {
@@ -33,7 +36,7 @@ impl TryFrom<&str> for ExtensionModuleFilter {
             "minimal" => Ok(ExtensionModuleFilter::Minimal),
             "all" => Ok(ExtensionModuleFilter::All),
             "no-libraries" => Ok(ExtensionModuleFilter::NoLibraries),
-            "no-gpl" => Ok(ExtensionModuleFilter::NoGPL),
+            "no-copyleft" => Ok(ExtensionModuleFilter::NoCopyleft),
             t => Err(format!("{} is not a valid extension module filter", t)),
         }
     }
@@ -44,7 +47,7 @@ impl AsRef<str> for ExtensionModuleFilter {
         match self {
             ExtensionModuleFilter::All => "all",
             ExtensionModuleFilter::Minimal => "minimal",
-            ExtensionModuleFilter::NoGPL => "no-gpl",
+            ExtensionModuleFilter::NoCopyleft => "no-copyleft",
             ExtensionModuleFilter::NoLibraries => "no-libraries",
         }
     }
@@ -572,15 +575,14 @@ impl PythonPackagingPolicy {
                     }
                 }
 
-                ExtensionModuleFilter::NoGPL => {
+                ExtensionModuleFilter::NoCopyleft => {
                     let ext_variants: PythonExtensionModuleVariants = variants
                         .iter()
                         .filter_map(|em| {
                             if em.link_libraries.is_empty() {
                                 Some(em.clone())
                             } else if let Some(license) = &em.license {
-                                // Public domain is always allowed.
-                                if license.is_public_domain || license.is_non_gpl() {
+                                if license.is_non_copyleft() {
                                     Some(em.clone())
                                 } else {
                                     None

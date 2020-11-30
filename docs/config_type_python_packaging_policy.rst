@@ -102,16 +102,15 @@ The following values are recognized:
   Most common Python extension modules are included. Extension modules
   like ``_ssl`` (links against OpenSSL) and ``zlib`` are not included.
 
-``no-gpl``
-  Return only extension modules that do not link against GPL licensed
+``no-copyleft``
+  Return only extension modules that do not link against *copyleft* licensed
   libraries.
 
   Not all Python distributions may annotate license info for all extensions
   or the libraries they link against. If license info is missing, the
-  extension is not included because it *could* be GPL licensed. Similarly,
-  the mechanism for determining whether a license is GPL is based on an
-  explicit list of non-GPL licenses. This ensures new GPL licenses don't
-  slip through.
+  extension is not included because it *could* be *copyleft* licensed.
+  Similarly, the mechanism for determining whether a license is *copyleft* is
+  based on the SPDX license annotations, which could be wrong or out of date.
 
 Default is ``all``.
 

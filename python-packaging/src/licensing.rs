@@ -8,20 +8,6 @@ use {
     std::{cmp::Ordering, collections::BTreeMap},
 };
 
-/// SPDX licenses in Python distributions that are not GPL.
-///
-/// We store an allow list of licenses rather than trying to deny GPL licenses
-/// because if we miss a new GPL license, we accidentally let in GPL.
-pub const NON_GPL_LICENSES: &[&str] = &[
-    "BSD-3-Clause",
-    "bzip2-1.0.6",
-    "MIT",
-    "OpenSSL",
-    "Sleepycat",
-    "X11",
-    "Zlib",
-];
-
 /// Defines license information for a Python package.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct PackageLicenseInfo {
@@ -108,17 +94,12 @@ impl PackageLicenseInfo {
             .collect::<Vec<_>>()
     }
 
-    /// Whether the license is likely not GPL.
-    ///
-    /// TODO use copyleft annotation from spdx instead.
-    pub fn is_non_gpl(&self) -> bool {
-        if self.have_license_identifiers() && self.non_spdx_licenses().is_empty() {
-            self.spdx_licenses()
-                .iter()
-                .all(|l| NON_GPL_LICENSES.contains(&l.name))
-        } else {
-            false
-        }
+    /// Whether the license is likely not a copyleft license.
+    pub fn is_non_copyleft(&self) -> bool {
+        self.is_public_domain
+            || (self.have_license_identifiers()
+                && self.non_spdx_licenses().is_empty()
+                && self.spdx_licenses().iter().all(|l| !l.is_copyleft()))
     }
 }
 
