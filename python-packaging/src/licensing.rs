@@ -8,6 +8,11 @@ use {
     std::{cmp::Ordering, collections::BTreeMap},
 };
 
+/// System libraries that are safe to link against, ignoring copyleft license implications.
+pub const SAFE_SYSTEM_LIBRARIES: &[&str] = &[
+    "cabinet", "iphlpapi", "msi", "rpcrt4", "rt", "winmm", "ws2_32",
+];
+
 /// Defines license information for a Python package.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct PackageLicenseInfo {

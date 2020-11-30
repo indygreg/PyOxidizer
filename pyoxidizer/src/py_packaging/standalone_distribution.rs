@@ -1441,20 +1441,10 @@ pub mod tests {
             let linux_dropped = vec![
                 ("_curses".to_string(), Some("default".to_string())),
                 ("_curses_panel".to_string(), Some("default".to_string())),
-                ("_posixshmem".to_string(), Some("default".to_string())),
                 ("readline".to_string(), Some("default".to_string())),
             ];
 
             let linux_added = vec![("readline".to_string(), Some("libedit".to_string()))];
-
-            let windows_dropped = vec![
-                ("_msi".to_string(), Some("default".to_string())),
-                ("_multiprocessing".to_string(), Some("default".to_string())),
-                ("_overlapped".to_string(), Some("default".to_string())),
-                ("_socket".to_string(), Some("default".to_string())),
-                ("select".to_string(), Some("default".to_string())),
-                ("winsound".to_string(), Some("default".to_string())),
-            ];
 
             let apple_dropped = vec![
                 ("_abc".to_string(), Some("default".to_string())),
@@ -1530,8 +1520,8 @@ pub mod tests {
             ) {
                 (_, "x86_64-unknown-linux-gnu") => (linux_dropped.clone(), linux_added.clone()),
                 (_, "x86_64-unknown-linux-musl") => (linux_dropped.clone(), linux_added.clone()),
-                (_, "i686-pc-windows-msvc") => (windows_dropped.clone(), vec![]),
-                (_, "x86_64-pc-windows-msvc") => (windows_dropped.clone(), vec![]),
+                (_, "i686-pc-windows-msvc") => (vec![], vec![]),
+                (_, "x86_64-pc-windows-msvc") => (vec![], vec![]),
                 ("3.8", "x86_64-apple-darwin") => (apple_dropped.clone(), vec![]),
                 ("3.9", "x86_64-apple-darwin") => {
                     let mut added = apple_dropped.into_iter().collect::<BTreeSet<_>>();

@@ -105,6 +105,9 @@ Other Relevant Changes
   has been significantly refactored. This code has historically been a bit
   brittle, as it needs to do *unsafe* things. We think the new code is much
   more robust. But there's a chance that crashes could occur.
+* When using the ``no-copyleft`` (formerly ``no-gpl``) extension module filter,
+  some system library dependencies are now allowed, enabling various extension
+  modules to be present in this mode.
 
 .. _version_0_10_3:
 

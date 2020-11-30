@@ -8,6 +8,7 @@ Functionality for defining how Python resources should be packaged.
 
 use {
     crate::{
+        licensing::SAFE_SYSTEM_LIBRARIES,
         location::ConcreteResourceLocation,
         resource::{PythonExtensionModule, PythonExtensionModuleVariants, PythonResource},
         resource_collection::PythonResourceAddCollectionContext,
@@ -581,6 +582,12 @@ impl PythonPackagingPolicy {
                         .filter_map(|em| {
                             if em.link_libraries.is_empty() {
                                 Some(em.clone())
+                            // As a special case, if all we link against are system libraries
+                            // that are known to be benign, allow that.
+                            } else if em.link_libraries.iter().all(|link| {
+                                link.system && SAFE_SYSTEM_LIBRARIES.contains(&link.name.as_str())
+                            }) {
+                                Some(em.clone())
                             } else if let Some(license) = &em.license {
                                 if license.is_non_copyleft() {
                                     Some(em.clone())
@@ -588,9 +595,6 @@ impl PythonPackagingPolicy {
                                     None
                                 }
                             } else {
-                                // In lack of evidence that it isn't GPL, assume GPL.
-                                // TODO consider improving logic here, like allowing known system
-                                // and framework libraries to be used.
                                 None
                             }
                         })
