@@ -81,6 +81,20 @@ impl SigntoolSign {
         }
     }
 
+    /// Clone this instance, but not the list of files to sign.
+    pub fn clone_settings(&self) -> Self {
+        Self {
+            certificate: self.certificate.clone(),
+            verbose: self.verbose,
+            debug: self.debug,
+            description: self.description.clone(),
+            file_digest_algorithm: self.file_digest_algorithm.clone(),
+            timestamp_server: self.timestamp_server.clone(),
+            extra_args: self.extra_args.clone(),
+            sign_files: vec![],
+        }
+    }
+
     /// Run signtool in verbose mode.
     ///
     /// Activates the `/v` flag.
