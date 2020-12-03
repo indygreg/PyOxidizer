@@ -416,7 +416,12 @@ impl FileManifest {
     /// Write files in this manifest to the specified path.
     ///
     /// Existing files will be replaced if they exist.
-    pub fn materialize_files(&self, dest: impl AsRef<Path>) -> Result<(), FileManifestError> {
+    pub fn materialize_files(
+        &self,
+        dest: impl AsRef<Path>,
+    ) -> Result<Vec<PathBuf>, FileManifestError> {
+        let mut dest_paths = vec![];
+
         let dest = dest.as_ref();
 
         for (k, v) in self.iter_entries() {
@@ -431,9 +436,10 @@ impl FileManifest {
             if v.executable {
                 set_executable(&mut fh)?;
             }
+            dest_paths.push(dest_path)
         }
 
-        Ok(())
+        Ok(dest_paths)
     }
 
     /// Calls `materialize_files()` but removes the destination directory if it exists.
@@ -443,7 +449,7 @@ impl FileManifest {
     pub fn materialize_files_with_replace(
         &self,
         dest: impl AsRef<Path>,
-    ) -> Result<(), FileManifestError> {
+    ) -> Result<Vec<PathBuf>, FileManifestError> {
         let dest = dest.as_ref();
         if dest.exists() {
             std::fs::remove_dir_all(dest)?;

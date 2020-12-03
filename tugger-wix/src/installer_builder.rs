@@ -10,6 +10,7 @@ use {
         path::{Path, PathBuf},
     },
     tugger_file_manifest::{FileEntry, FileManifest},
+    tugger_windows::{is_file_signable, SigntoolSign},
     xml::EmitterConfig,
 };
 
@@ -40,6 +41,9 @@ pub struct WiXInstallerBuilder {
 
     /// Extra files to install in the build directory.
     extra_build_files: FileManifest,
+
+    /// Signtool settings to use to auto sign binaries and the installer.
+    auto_sign_signtool_settings: Option<SigntoolSign>,
 }
 
 impl WiXInstallerBuilder {
@@ -53,6 +57,7 @@ impl WiXInstallerBuilder {
             variables: BTreeMap::new(),
             wxs_files: BTreeMap::new(),
             extra_build_files: FileManifest::default(),
+            auto_sign_signtool_settings: None,
         }
     }
 
@@ -113,6 +118,14 @@ impl WiXInstallerBuilder {
         &mut self.install_files
     }
 
+    /// Register signtool signing settings to be used to automatically sign binaries.
+    ///
+    /// This will automatically sign all installed binaries as well as the
+    /// generated installer.
+    pub fn auto_sign_signtool(&mut self, settings: SigntoolSign) {
+        self.auto_sign_signtool_settings = Some(settings);
+    }
+
     fn stage_path(&self) -> PathBuf {
         self.build_path.join("staged_files")
     }
@@ -153,9 +166,25 @@ impl WiXInstallerBuilder {
             extract_wix(logger, &self.build_path).context("extracting WiX Toolset")?;
 
         // Materialize FileManifest so we can reference files from WiX.
-        self.install_files
+        let installed_files = self
+            .install_files
             .materialize_files(&self.stage_path())
             .context("writing install files")?;
+
+        // Automatically sign files that are signable.
+        if let Some(signtool_settings) = &self.auto_sign_signtool_settings {
+            for path in installed_files {
+                if is_file_signable(&path)
+                    .with_context(|| format!("checking if {} is signable", path.display()))?
+                {
+                    signtool_settings
+                        .clone_settings()
+                        .sign_file(&path)
+                        .run(logger)
+                        .with_context(|| format!("signing {}", path.display()))?;
+                }
+            }
+        }
 
         let wxs_path = self.build_path.join("wxs");
 
@@ -196,9 +225,19 @@ impl WiXInstallerBuilder {
             &self.build_path,
             wixobj_paths.iter(),
             self.variables.iter().map(|(k, v)| (k.clone(), v.clone())),
-            output_path,
+            output_path.as_ref(),
         )
         .context("running light")?;
+
+        if let Some(signtool_settings) = &self.auto_sign_signtool_settings {
+            if is_file_signable(output_path.as_ref()).context("checking if file is signable")? {
+                signtool_settings
+                    .clone_settings()
+                    .sign_file(output_path.as_ref())
+                    .run(logger)
+                    .with_context(|| format!("signing {}", output_path.as_ref().display()))?;
+            }
+        }
 
         Ok(())
     }

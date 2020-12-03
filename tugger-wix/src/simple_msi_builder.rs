@@ -11,7 +11,7 @@ use {
         path::{Path, PathBuf},
     },
     tugger_file_manifest::FileManifest,
-    tugger_windows::{find_visual_cpp_redistributable, VCRedistributablePlatform},
+    tugger_windows::{find_visual_cpp_redistributable, SigntoolSign, VCRedistributablePlatform},
     uuid::Uuid,
     xml::{
         common::XmlVersion,
@@ -60,6 +60,9 @@ pub struct WiXSimpleMSIBuilder {
     ///
     /// Dimensions are 493 x 312.
     dialog_bmp: Option<PathBuf>,
+
+    /// Signtool settings to use to auto sign binaries and the installer.
+    auto_sign_signtool_settings: Option<SigntoolSign>,
 }
 
 impl WiXSimpleMSIBuilder {
@@ -173,6 +176,15 @@ impl WiXSimpleMSIBuilder {
         self
     }
 
+    /// Register signtool signing settings to be used to automatically sign binaries.
+    ///
+    /// This will automatically sign all installed binaries as well as the
+    /// generated installer.
+    pub fn auto_sign_signtool(mut self, settings: SigntoolSign) -> Self {
+        self.auto_sign_signtool_settings = Some(settings);
+        self
+    }
+
     /// Add this instance to a `WiXInstallerBuilder`.
     pub fn add_to_installer_builder(&self, builder: &mut WiXInstallerBuilder) -> Result<()> {
         let mut emitter_config = EmitterConfig::new();
@@ -192,6 +204,10 @@ impl WiXSimpleMSIBuilder {
             .install_files_mut()
             .add_manifest(&self.program_files_manifest)?;
         builder.add_files_manifest_wxs("APPLICATIONFOLDER")?;
+
+        if let Some(settings) = &self.auto_sign_signtool_settings {
+            builder.auto_sign_signtool(settings.clone_settings());
+        }
 
         Ok(())
     }
@@ -598,6 +614,22 @@ mod tests {
 
         builder.add_program_files_manifest(&m)?;
 
+        let cert = create_self_signed_code_signing_certificate("tugger@example.com")?;
+        let pfx_data = certificate_to_pfx(&cert, "password", "name")?;
+        let key_path = temp_dir.path().join("test_msi_key.pfx");
+        std::fs::write(&key_path, &pfx_data)?;
+
+        let mut c = FileBasedX509SigningCertificate::new(&key_path);
+        c.set_password("password");
+
+        let mut settings = SigntoolSign::new(c.into());
+        settings
+            .verbose()
+            .debug()
+            .description("simple msi installer");
+
+        let builder = builder.auto_sign_signtool(settings);
+
         let builder = builder.to_installer_builder(env!("HOST"), temp_dir.path())?;
 
         let output_path = temp_dir.path().join("test.msi");
@@ -610,22 +642,6 @@ mod tests {
         assert_eq!(summary_info.subject(), Some("testapp"));
 
         assert!(is_file_signable(&output_path)?);
-
-        // Also try signing it.
-        let cert = create_self_signed_code_signing_certificate("tugger@example.com")?;
-        let pfx_data = certificate_to_pfx(&cert, "password", "name")?;
-        let key_path = temp_dir.path().join("test_msi_key.pfx");
-        std::fs::write(&key_path, &pfx_data)?;
-
-        let mut c = FileBasedX509SigningCertificate::new(&key_path);
-        c.set_password("password");
-
-        SigntoolSign::new(c.into())
-            .verbose()
-            .debug()
-            .description("simple msi installer")
-            .sign_file(&output_path)
-            .run(&logger)?;
 
         Ok(())
     }

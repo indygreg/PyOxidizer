@@ -54,7 +54,7 @@ pub fn find_signtool() -> Result<PathBuf> {
 }
 
 /// Represents an invocation of `signtool.exe sign` to sign some files.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct SigntoolSign {
     certificate: X509SigningCertificate,
     verbose: bool,
