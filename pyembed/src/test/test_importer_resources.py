@@ -5,7 +5,6 @@
 import importlib.machinery
 import marshal
 import pathlib
-import sys
 import unittest
 
 from oxidized_importer import (

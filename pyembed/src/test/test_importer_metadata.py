@@ -6,7 +6,6 @@ import email.message
 import importlib.metadata
 import os
 import pathlib
-import sys
 import tempfile
 import unittest
 
