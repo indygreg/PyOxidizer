@@ -77,6 +77,48 @@ Python's ``zipimport`` importer uses the same approach for modules
 imported from zip files, so there is precedence for ``OxidizedFinder``
 doing things this way.
 
+.. _oxidized_importer_dunder_init_module_names:
+
+Support for ``__init__`` in Module Names
+========================================
+
+There exists Python code that does things like ``from .__init__ import X``.
+
+``__init__`` is special in Python module names because it is the filename
+used to denote a Python package's filename. So syntax like
+``from .__init__ import X`` is probably intended to be equivalent to
+``from . import X``. Or ``import foo.__init__`` is probably intended to be
+written as ``import foo``.
+
+Python's filesystem importer doesn't treat ``__init__`` in module names
+as special. If you attempt to import a module named ``foo.__init__``,
+it will attempt to locate a file named ``foo/__init__.py``. If that
+module is a package, this will succeed. However, the module name seen by
+the importer has ``__init__`` in it and the name on the created module
+object will have ``__init__`` in it. This means that you can have both a
+module ``foo`` and ``foo.__init__``. These will both be derived from the
+same file but are actually separate module objects.
+
+PyOxidizer will automatically remove trailing ``.__init__`` from
+module names. This will enable PyOxidizer to work with syntax such
+as ``import foo.__init__`` and ``from .__init__ import X`` and therefore
+be compatible with Python code in the wild. However, PyOxidizer may not
+preserve the ``.__init__`` in the module name. For example, with Python's
+path based importer, you could have both ``foo`` and ``foo.__init__`` in
+``sys.modules`` but PyOxidizer will only have ``foo``.
+
+A limitation of PyOxidizer module name normalization is it only normalizes
+the single trailing ``.__init__`` from the module name: ``__init__``
+appearing inside the module name are not normalized. e.g.
+``foo.__init__.bar`` is not normalized to ``foo.bar``. This may introduce
+incompatibilities with Python code in the wild. However, for this to be
+true, the filesystem layout would have to be something like
+``foo/__init__/bar.py``. This hopefully does not occur in the wild. But
+it is conceivable it does.
+
+See https://github.com/indygreg/PyOxidizer/issues/317 and
+https://bugs.python.org/issue42564 for more discussion on this issue.
+
 ``ResourceReader`` Compatibility
 ================================
 

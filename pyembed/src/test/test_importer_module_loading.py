@@ -167,7 +167,10 @@ class TestImporterModuleLoading(unittest.TestCase):
         self.assertIsInstance(spec.loader, OxidizedFinder)
 
         spec = f.find_spec("dotinit.__init__", None)
-        self.assertIsNone(spec)
+        self.assertIsInstance(spec, importlib.machinery.ModuleSpec)
+        self.assertEqual(spec.name, "dotinit")
+        self.assertIsInstance(spec.loader, OxidizedFinder)
+        self.assertEqual(spec.parent, "dotinit")
 
         sys.meta_path.insert(0, f)
 
@@ -175,11 +178,11 @@ class TestImporterModuleLoading(unittest.TestCase):
         self.assertNotIn("dotinit.bar", sys.modules)
         self.assertNotIn("dotinit.__init__", sys.modules)
 
-        with self.assertRaisesRegex(ModuleNotFoundError, "No module named 'dotinit.__init__"):
-            importlib.import_module("dotinit.bar")
+        importlib.import_module("dotinit.bar")
 
         self.assertIn("dotinit", sys.modules)
-        self.assertNotIn("dotinit.bar", sys.modules)
+        self.assertIn("dotinit.bar", sys.modules)
+        self.assertNotIn("dotinit.__init__", sys.modules)
 
 
 if __name__ == "__main__":

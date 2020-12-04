@@ -62,6 +62,10 @@ Bug Fixes
 * The ``load()`` Starlark function should now work. (#328)
 * ``pyembed::OxidizedPythonInterpreterConfig.argv`` is now always used when
   set, even if ``self.interpreter_config.argv`` is also set.
+* ``OxidizedFinder`` now normalizes trailing ``.__init__`` in module names
+  to be equivalent to the parent package to partially emulate CPython's
+  behavior. See :ref:`oxidized_importer_dunder_init_module_names` for more.
+  (#317)
 
 New Features
 ^^^^^^^^^^^^

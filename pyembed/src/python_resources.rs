@@ -611,6 +611,31 @@ impl<'a> PythonResourcesState<'a, u8> {
         name: &str,
         optimize_level: OptimizeLevel,
     ) -> Option<ImportablePythonModule<u8>> {
+        // Python's filesystem based importer accepts `foo.__init__` as a valid
+        // module name. When these names are encountered, it fails to recognize
+        // that `__init__` is special and happily searches for and uses/imports a
+        // file with `__init__` in it, resulting in a new module object and
+        // `sys.modules` entry (as opposed to silently normalizing to and reusing
+        // `foo`. See https://github.com/indygreg/PyOxidizer/issues/317
+        // and https://bugs.python.org/issue42564 for more.
+        //
+        // Our strategy is to strip off trailing `.__init__` from the requested
+        // module name, effectively aliasing the resource entry for `foo.__init__`
+        // to `foo`. The aliasing of the resource name is pretty uncontroversial.
+        // However, the name stored inside the resource is the actual indexed name,
+        // not the requested name (which may have `.__init__`). If the caller uses
+        // the indexed name instead of the requested name, behavior will diverge from
+        // Python, as an extra `foo.__init__` module object will not be created
+        // and used.
+        //
+        // At the time this comment was written, find_spec() used the resource's
+        // internal name, not the requested name, thus silently treating
+        // `foo.__init__` as `foo`. This behavior is incompatible with CPython's path
+        // importer. But we think it makes more sense, as `__init__` is a filename
+        // encoding and the importer shouldn't even allow it. We only provide support
+        // for recognizing `__init__` because Python code in the wild relies on it.
+        let name = name.strip_suffix(".__init__").unwrap_or(name);
+
         let resource = match self.resources.get(name) {
             Some(entry) => entry,
             None => return None,
