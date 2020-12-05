@@ -11,6 +11,7 @@ members = [
     'tugger-common',
     'tugger-debian',
     'tugger-file-manifest',
+    'tugger-licensing',
     'tugger-rpm',
     'tugger-snapcraft',
     'tugger-windows',

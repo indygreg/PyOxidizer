@@ -3314,6 +3314,10 @@ name = "tugger-file-manifest"
 version = "0.1.0-pre"
 
 [[package]]
+name = "tugger-licensing"
+version = "0.1.0-pre"
+
+[[package]]
 name = "tugger-rpm"
 version = "0.1.0-pre"
 dependencies = [
