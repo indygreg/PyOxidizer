@@ -9,9 +9,8 @@ use {
     anyhow::{anyhow, Context, Result},
     byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt},
     std::{
-        fs::File,
         io::{BufRead, BufReader, Read, Write},
-        path::{Path, PathBuf},
+        path::Path,
         process,
     },
 };
@@ -36,7 +35,7 @@ pub trait PythonBytecodeCompiler {
 /// An entity to perform Python bytecode compilation.
 #[derive(Debug)]
 pub struct BytecodeCompiler {
-    _temp_dir: tempfile::TempDir,
+    _temp_file: tempfile::NamedTempFile,
     command: process::Child,
 
     /// Magic number for bytecode header.
@@ -62,19 +61,16 @@ impl BytecodeCompiler {
     /// requests and receive the compiled bytecode. The process is terminated
     /// when this object is dropped.
     pub fn new(python: &Path) -> Result<BytecodeCompiler> {
-        let temp_dir = tempfile::Builder::new()
+        let mut script_file = tempfile::Builder::new()
             .prefix("bytecode-compiler")
-            .tempdir()?;
-
-        let script_path = PathBuf::from(temp_dir.path()).join("bytecodecompiler.py");
-
-        {
-            let mut fh = File::create(&script_path)?;
-            fh.write_all(BYTECODE_COMPILER)?;
-        }
+            .tempfile()
+            .context("creating temporary file")?;
+        script_file
+            .write_all(BYTECODE_COMPILER)
+            .context("writing Python script to temp file")?;
 
         let mut command = process::Command::new(python)
-            .arg(script_path)
+            .arg(script_file.path())
             .stdin(process::Stdio::piped())
             .stdout(process::Stdio::piped())
             .spawn()?;
@@ -99,7 +95,7 @@ impl BytecodeCompiler {
             .context("reading magic number")?;
 
         Ok(BytecodeCompiler {
-            _temp_dir: temp_dir,
+            _temp_file: script_file,
             command,
             magic_number,
         })
