@@ -508,19 +508,12 @@ enum VersionBump {
     Patch,
 }
 
-fn command_release(args: &ArgMatches) -> Result<()> {
+fn command_release(repo_root: &Path, args: &ArgMatches) -> Result<()> {
     let version_bump = if args.is_present("patch") {
         VersionBump::Patch
     } else {
         VersionBump::Minor
     };
-
-    let cwd = std::env::current_dir()?;
-
-    let repo = Repository::discover(&cwd).context("finding Git repository")?;
-    let repo_root = repo
-        .workdir()
-        .ok_or_else(|| anyhow!("unable to resolve working directory"))?;
 
     let workspace_toml = repo_root.join("Cargo.toml");
     let workspace_packages =
@@ -631,14 +624,7 @@ fn get_license_text(client: &reqwest::blocking::Client, license: &str) -> Result
     }
 }
 
-fn generate_pyembed_license() -> Result<String> {
-    let cwd = std::env::current_dir()?;
-
-    let repo = Repository::discover(&cwd).context("finding Git repository")?;
-    let repo_root = repo
-        .workdir()
-        .ok_or_else(|| anyhow!("unable to resolve working directory"))?;
-
+fn generate_pyembed_license(repo_root: &Path) -> Result<String> {
     let pyembed_manifest_path = repo_root.join("pyembed").join("Cargo.toml");
 
     let output = cmd(
@@ -708,13 +694,20 @@ fn generate_pyembed_license() -> Result<String> {
     Ok(text)
 }
 
-fn command_generate_pyembed_license(_args: &ArgMatches) -> Result<()> {
-    print!("{}", generate_pyembed_license()?);
+fn command_generate_pyembed_license(repo_root: &Path, _args: &ArgMatches) -> Result<()> {
+    print!("{}", generate_pyembed_license(repo_root)?);
 
     Ok(())
 }
 
 fn main_impl() -> Result<()> {
+    let cwd = std::env::current_dir()?;
+
+    let repo = Repository::discover(&cwd).context("finding Git repository")?;
+    let repo_root = repo
+        .workdir()
+        .ok_or_else(|| anyhow!("unable to resolve working directory"))?;
+
     let matches = App::new("PyOxidizer Releaser")
         .setting(AppSettings::ArgRequiredElseHelp)
         .version("0.1")
@@ -735,8 +728,10 @@ fn main_impl() -> Result<()> {
         .get_matches();
 
     match matches.subcommand() {
-        ("release", Some(args)) => command_release(args),
-        ("generate-pyembed-license", Some(args)) => command_generate_pyembed_license(args),
+        ("release", Some(args)) => command_release(repo_root, args),
+        ("generate-pyembed-license", Some(args)) => {
+            command_generate_pyembed_license(repo_root, args)
+        }
         _ => Err(anyhow!("invalid sub-command")),
     }
 }
