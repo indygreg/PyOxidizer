@@ -5,7 +5,7 @@
 use {
     anyhow::{anyhow, Context, Result},
     cargo_toml::Manifest,
-    clap::{App, Arg},
+    clap::{App, AppSettings, Arg, ArgMatches, SubCommand},
     duct::cmd,
     git2::Repository,
     lazy_static::lazy_static,
@@ -505,15 +505,8 @@ enum VersionBump {
     Patch,
 }
 
-fn release() -> Result<()> {
-    let matches = App::new("PyOxidizer Releaser")
-        .version("0.1")
-        .author("Gregory Szorc <gregory.szorc@gmail.com>")
-        .about("Perform releases from the PyOxidizer repository")
-        .arg(Arg::with_name("patch").help("Bump the patch version instead of the minor version"))
-        .get_matches();
-
-    let version_bump = if matches.is_present("patch") {
+fn command_release(args: &ArgMatches) -> Result<()> {
+    let version_bump = if args.is_present("patch") {
         VersionBump::Patch
     } else {
         VersionBump::Minor
@@ -604,8 +597,30 @@ fn release() -> Result<()> {
     Ok(())
 }
 
+fn main_impl() -> Result<()> {
+    let matches = App::new("PyOxidizer Releaser")
+        .setting(AppSettings::ArgRequiredElseHelp)
+        .version("0.1")
+        .author("Gregory Szorc <gregory.szorc@gmail.com>")
+        .about("Perform releases from the PyOxidizer repository")
+        .subcommand(
+            SubCommand::with_name("release")
+                .about("Perform release actions")
+                .arg(
+                    Arg::with_name("patch")
+                        .help("Bump the patch version instead of the minor version"),
+                ),
+        )
+        .get_matches();
+
+    match matches.subcommand() {
+        ("release", Some(args)) => command_release(args),
+        _ => Err(anyhow!("invalid sub-command")),
+    }
+}
+
 fn main() {
-    let exit_code = match release() {
+    let exit_code = match main_impl() {
         Ok(()) => 0,
         Err(err) => {
             eprintln!("Error: {:?}", err);
