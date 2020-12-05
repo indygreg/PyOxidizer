@@ -515,6 +515,8 @@ fn command_release(repo_root: &Path, args: &ArgMatches) -> Result<()> {
         VersionBump::Minor
     };
 
+    ensure_pyembed_license_current(repo_root)?;
+
     let workspace_toml = repo_root.join("Cargo.toml");
     let workspace_packages =
         get_workspace_members(&workspace_toml).context("parsing workspace Cargo.toml")?;
@@ -692,6 +694,26 @@ fn generate_pyembed_license(repo_root: &Path) -> Result<String> {
     }
 
     Ok(text)
+}
+
+/// Ensures the `pyembed-license.rst` file in source control is up to date with reality.
+fn ensure_pyembed_license_current(repo_root: &Path) -> Result<()> {
+    let path = repo_root
+        .join("pyoxidizer")
+        .join("src")
+        .join("pyembed-license.rst");
+
+    let file_text = std::fs::read_to_string(&path)?;
+    let wanted_text = generate_pyembed_license(repo_root)?;
+
+    if file_text == wanted_text {
+        Ok(())
+    } else {
+        Err(anyhow!(
+            "{} does not match expected content",
+            path.display()
+        ))
+    }
 }
 
 fn command_generate_pyembed_license(repo_root: &Path, _args: &ArgMatches) -> Result<()> {

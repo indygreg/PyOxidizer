@@ -25,6 +25,9 @@ use {
 
 pub const HOST: &str = env!("HOST");
 
+/// Licensing information for the pyembed crate and its dependencies.
+pub const PYEMBED_LICENSE_TEXT: &str = include_str!("pyembed-license.rst");
+
 /// Find a pyoxidizer.toml configuration file by walking directory ancestry.
 pub fn find_pyoxidizer_config_file(start_dir: &Path) -> Option<PathBuf> {
     for test_dir in start_dir.ancestors() {
