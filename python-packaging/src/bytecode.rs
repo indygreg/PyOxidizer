@@ -35,7 +35,6 @@ pub trait PythonBytecodeCompiler {
 /// An entity to perform Python bytecode compilation.
 #[derive(Debug)]
 pub struct BytecodeCompiler {
-    _temp_file: tempfile::NamedTempFile,
     command: process::Child,
 
     /// Magic number for bytecode header.
@@ -94,8 +93,11 @@ impl BytecodeCompiler {
             .read_u32::<LittleEndian>()
             .context("reading magic number")?;
 
+        // The temporary file only needs to live long enough for Python
+        // to read its content.
+        script_file.close().context("closing script file")?;
+
         Ok(BytecodeCompiler {
-            _temp_file: script_file,
             command,
             magic_number,
         })
