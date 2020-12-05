@@ -59,17 +59,20 @@ impl BytecodeCompiler {
     /// object via a pipe, which is used to send bytecode compilation
     /// requests and receive the compiled bytecode. The process is terminated
     /// when this object is dropped.
-    pub fn new(python: &Path) -> Result<BytecodeCompiler> {
-        let mut script_file = tempfile::Builder::new()
-            .prefix("bytecode-compiler")
-            .tempfile()
-            .context("creating temporary file")?;
-        script_file
-            .write_all(BYTECODE_COMPILER)
-            .context("writing Python script to temp file")?;
+    ///
+    /// A Python script is written to the directory passed. This should ideally be
+    /// a temporary directory. The file name is deterministic, so it isn't safe
+    /// for multiple callers to simultaneously pass the same directory. The temporary
+    /// file is deleted before this function returns. Ideally this function would use
+    /// a proper temporary file internally. The reason this isn't done is to avoid
+    /// an extra crate dependency.
+    pub fn new(python: &Path, script_dir: impl AsRef<Path>) -> Result<BytecodeCompiler> {
+        let script_path = script_dir.as_ref().join("bytecode-compiler.py");
+        std::fs::write(&script_path, BYTECODE_COMPILER)
+            .with_context(|| format!("writing Python script to {}", script_path.display()))?;
 
         let mut command = process::Command::new(python)
-            .arg(script_file.path())
+            .arg(&script_path)
             .stdin(process::Stdio::piped())
             .stdout(process::Stdio::piped())
             .spawn()?;
@@ -93,9 +96,8 @@ impl BytecodeCompiler {
             .read_u32::<LittleEndian>()
             .context("reading magic number")?;
 
-        // The temporary file only needs to live long enough for Python
-        // to read its content.
-        script_file.close().context("closing script file")?;
+        std::fs::remove_file(&script_path)
+            .with_context(|| format!("deleting {}", script_path.display()))?;
 
         Ok(BytecodeCompiler {
             command,

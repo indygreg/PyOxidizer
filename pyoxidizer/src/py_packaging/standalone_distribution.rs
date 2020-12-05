@@ -1155,7 +1155,11 @@ impl PythonDistribution for StandaloneDistribution {
     }
 
     fn create_bytecode_compiler(&self) -> Result<Box<dyn PythonBytecodeCompiler>> {
-        Ok(Box::new(BytecodeCompiler::new(&self.python_exe)?))
+        let temp_dir = tempfile::TempDir::new()?;
+        Ok(Box::new(BytecodeCompiler::new(
+            &self.python_exe,
+            temp_dir.path(),
+        )?))
     }
 
     fn create_packaging_policy(&self) -> Result<PythonPackagingPolicy> {

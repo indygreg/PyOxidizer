@@ -872,7 +872,8 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         }
 
         let compiled_resources = {
-            let mut compiler = BytecodeCompiler::new(self.host_python_exe_path())?;
+            let temp_dir = tempfile::TempDir::new()?;
+            let mut compiler = BytecodeCompiler::new(self.host_python_exe_path(), temp_dir.path())?;
             self.resources_collector.compile_resources(&mut compiler)?
         };
 

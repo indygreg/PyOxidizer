@@ -16,8 +16,8 @@ use {
     anyhow::Context,
     cpython::{
         exc::{TypeError, ValueError},
-        py_class, ObjectProtocol, PyBytes, PyErr, PyList, PyObject, PyResult, Python, PythonObject,
-        ToPyObject,
+        py_class, NoArgs, ObjectProtocol, PyBytes, PyErr, PyList, PyObject, PyResult, Python,
+        PythonObject, ToPyObject,
     },
     python_packaging::{
         bytecode::BytecodeCompiler,
@@ -271,9 +271,14 @@ impl OxidizedResourceCollector {
         };
         let python_exe = pyobject_to_pathbuf(py, python_exe)?;
 
+        let tempfile = py.import("tempfile")?;
+        let temp_dir = tempfile.call(py, "TemporaryDirectory", NoArgs, None)?;
+        let temp_dir_name = temp_dir.getattr(py, "name")?;
+        let temp_dir_path = pyobject_to_pathbuf(py, temp_dir_name)?;
+
         let collector = self.collector(py).borrow();
 
-        let mut compiler = BytecodeCompiler::new(&python_exe).map_err(|e| {
+        let mut compiler = BytecodeCompiler::new(&python_exe, &temp_dir_path).map_err(|e| {
             PyErr::new::<ValueError, _>(
                 py,
                 format!("error constructing bytecode compiler: {:?}", e),
