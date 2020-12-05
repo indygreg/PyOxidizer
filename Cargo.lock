@@ -2436,8 +2436,12 @@ dependencies = [
  "duct",
  "git2",
  "lazy_static",
+ "reqwest",
  "semver",
+ "serde",
+ "serde_json",
  "toml",
+ "url",
 ]
 
 [[package]]

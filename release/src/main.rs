@@ -9,9 +9,12 @@ use {
     duct::cmd,
     git2::Repository,
     lazy_static::lazy_static,
+    serde::Deserialize,
     std::{
+        collections::BTreeSet,
         ffi::OsString,
-        io::{BufRead, BufReader},
+        fmt::Write,
+        io::{BufRead, BufReader, Read},
         path::Path,
     },
 };
@@ -597,6 +600,120 @@ fn command_release(args: &ArgMatches) -> Result<()> {
     Ok(())
 }
 
+#[derive(Debug, Deserialize)]
+struct CargoDenyLicenseList {
+    licenses: Vec<(String, Vec<String>)>,
+    unlicensed: Vec<String>,
+}
+
+fn get_license_text(client: &reqwest::blocking::Client, license: &str) -> Result<String> {
+    if license.contains(" WITH ") {
+        let parts = license.split(" WITH ").collect::<Vec<_>>();
+
+        let mut licenses = vec![];
+        licenses.push(get_license_text(client, parts[0])?);
+        licenses.push(get_license_text(client, parts[1])?);
+
+        Ok(licenses.join("\n"))
+    } else {
+        let license_url = url::Url::parse(&format!(
+            "https://raw.githubusercontent.com/spdx/license-list-data/master/text/{}.txt",
+            license
+        ))?;
+        let mut response = client.get(license_url.clone()).send()?;
+        if response.status() != 200 {
+            return Err(anyhow!("HTTP {} from {}", response.status(), license_url));
+        }
+        let mut license_text = String::new();
+        response.read_to_string(&mut license_text)?;
+
+        Ok(license_text)
+    }
+}
+
+fn generate_pyembed_license() -> Result<String> {
+    let cwd = std::env::current_dir()?;
+
+    let repo = Repository::discover(&cwd).context("finding Git repository")?;
+    let repo_root = repo
+        .workdir()
+        .ok_or_else(|| anyhow!("unable to resolve working directory"))?;
+
+    let pyembed_manifest_path = repo_root.join("pyembed").join("Cargo.toml");
+
+    let output = cmd(
+        "cargo",
+        vec![
+            "deny".to_string(),
+            "--features".to_string(),
+            "jemalloc".to_string(),
+            "--manifest-path".to_string(),
+            pyembed_manifest_path.display().to_string(),
+            "list".to_string(),
+            "-f".to_string(),
+            "Json".to_string(),
+        ],
+    )
+    .stdout_capture()
+    .run()?;
+
+    let deny: CargoDenyLicenseList = serde_json::from_slice(&output.stdout)?;
+
+    let client = reqwest::blocking::Client::new();
+
+    let mut text = String::new();
+
+    writeln!(
+        &mut text,
+        "This application contains Rust code governed by various software"
+    )?;
+    writeln!(
+        &mut text,
+        "licenses. The list of licenses and Rust crates utilizing them follows."
+    )?;
+    writeln!(&mut text)?;
+    for (license, entries) in &deny.licenses {
+        writeln!(&mut text, "{} License", license)?;
+        writeln!(
+            &mut text,
+            "{}",
+            "=".repeat(license.len() + " License".len())
+        )?;
+        writeln!(&mut text)?;
+        writeln!(
+            &mut text,
+            "The following Rust crates utilize the {} license:",
+            license
+        )?;
+        writeln!(&mut text)?;
+
+        let mut crates = BTreeSet::new();
+        for entry in entries {
+            crates.insert(entry.split(' ').next().unwrap());
+        }
+
+        for name in crates {
+            writeln!(&mut text, "* {} (https://crates.io/crates/{})", name, name)?;
+        }
+
+        writeln!(&mut text)?;
+        writeln!(&mut text, "The text of the {} license follows:", license)?;
+        writeln!(&mut text)?;
+
+        write!(&mut text, "{}", get_license_text(&client, license)?)?;
+
+        writeln!(&mut text)?;
+    }
+
+    Ok(text)
+}
+
+fn command_generate_pyembed_license(_args: &ArgMatches) -> Result<()> {
+    print!("{}", generate_pyembed_license()?);
+
+    Ok(())
+}
+
 fn main_impl() -> Result<()> {
     let matches = App::new("PyOxidizer Releaser")
         .setting(AppSettings::ArgRequiredElseHelp)
@@ -611,10 +728,15 @@ fn main_impl() -> Result<()> {
                         .help("Bump the patch version instead of the minor version"),
                 ),
         )
+        .subcommand(
+            SubCommand::with_name("generate-pyembed-license")
+                .about("Emit license information for the pyembed crate"),
+        )
         .get_matches();
 
     match matches.subcommand() {
         ("release", Some(args)) => command_release(args),
+        ("generate-pyembed-license", Some(args)) => command_generate_pyembed_license(args),
         _ => Err(anyhow!("invalid sub-command")),
     }
 }
