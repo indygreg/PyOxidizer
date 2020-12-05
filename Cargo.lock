@@ -2103,7 +2103,6 @@ dependencies = [
  "python3-sys",
  "rusty-fork",
  "tugger-file-manifest",
- "uuid",
  "winapi 0.3.9",
 ]
 

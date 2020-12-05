@@ -26,7 +26,7 @@ use {
         convert::{TryFrom, TryInto},
         env, fs,
         io::Write,
-        path::PathBuf,
+        path::{Path, PathBuf},
     },
 };
 
@@ -105,6 +105,8 @@ pub struct MainPythonInterpreter<'python, 'interpreter: 'python, 'resources: 'in
     raw_allocator: Option<InterpreterRawAllocator>,
     gil: Option<GILGuard>,
     py: Option<Python<'python>>,
+    /// File to write containing list of modules when the interpreter finalizes.
+    write_modules_path: Option<PathBuf>,
 }
 
 impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpreter, 'resources> {
@@ -135,6 +137,7 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
             raw_allocator: None,
             gil: None,
             py: None,
+            write_modules_path: None,
         };
 
         res.init()?;
@@ -368,6 +371,45 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
             }
         }
 
+        if let Some(key) = &self.config.write_modules_directory_env {
+            if let Ok(path) = std::env::var(key) {
+                let path = PathBuf::from(path);
+
+                std::fs::create_dir_all(&path).map_err(|e| {
+                    NewInterpreterError::Dynamic(format!(
+                        "error creating directory for loaded modules files: {}",
+                        e.to_string()
+                    ))
+                })?;
+
+                // We use Python's uuid module to generate a filename. This avoids
+                // a dependency on a Rust crate, which cuts down on dependency bloat.
+                let uuid_mod = py.import("uuid").map_err(|e| {
+                    NewInterpreterError::new_from_pyerr(py, e, "importing uuid module")
+                })?;
+                let uuid = uuid_mod.call(py, "uuid4", NoArgs, None).map_err(|e| {
+                    NewInterpreterError::new_from_pyerr(py, e, "calling uuid.uuid()")
+                })?;
+                let uuid_str = uuid
+                    .str(py)
+                    .map_err(|e| {
+                        NewInterpreterError::new_from_pyerr(py, e, "converting uuid to str")
+                    })?
+                    .to_string(py)
+                    .map_err(|e| {
+                        NewInterpreterError::new_from_pyerr(
+                            py,
+                            e,
+                            "converting uuid str to Rust string",
+                        )
+                    })?
+                    .to_string();
+
+                self.write_modules_path =
+                    Some(PathBuf::from(path).join(format!("modules-{}", uuid_str)));
+            }
+        }
+
         Ok(())
     }
 
@@ -505,14 +547,8 @@ fn set_pyimport_inittab(config: &OxidizedPythonInterpreterConfig) {
 /// Given a Python interpreter and a path to a directory, this will create a
 /// file in that directory named ``modules-<UUID>`` and write a ``\n`` delimited
 /// list of loaded names from ``sys.modules`` into that file.
-fn write_modules_to_directory(py: Python, path: &PathBuf) -> Result<(), &'static str> {
+fn write_modules_to_path(py: Python, path: &Path) -> Result<(), &'static str> {
     // TODO this needs better error handling all over.
-
-    fs::create_dir_all(path).map_err(|_| "could not create directory for modules")?;
-
-    let rand = uuid::Uuid::new_v4();
-
-    let path = path.join(format!("modules-{}", rand.to_string()));
 
     let sys = py
         .import("sys")
@@ -547,14 +583,11 @@ impl<'python, 'interpreter, 'resources> Drop
     for MainPythonInterpreter<'python, 'interpreter, 'resources>
 {
     fn drop(&mut self) {
-        if let Some(key) = &self.config.write_modules_directory_env {
-            if let Ok(path) = env::var(key) {
-                let path = PathBuf::from(path);
-                let py = self.acquire_gil().unwrap();
+        if let Some(path) = self.write_modules_path.clone() {
+            let py = self.acquire_gil().unwrap();
 
-                if let Err(msg) = write_modules_to_directory(py, &path) {
-                    eprintln!("error writing modules file: {}", msg);
-                }
+            if let Err(msg) = write_modules_to_path(py, &path) {
+                eprintln!("error writing modules file: {}", msg);
             }
         }
 

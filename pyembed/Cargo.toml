@@ -22,7 +22,6 @@ lazy_static = "1.4"
 libc = "0.2"
 memmap = "0.7"
 python3-sys = "0.5.1"
-uuid = { version = "0.8", features = ["v4"] }
 
 [dependencies.python-packed-resources]
 version = "0.5.0-pre"
