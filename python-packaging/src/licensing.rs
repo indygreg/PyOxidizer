@@ -79,8 +79,10 @@ impl TryInto<LicensedComponent> for PackageLicenseInfo {
                     .join(" OR ");
                 LicensedComponent::new_spdx(&self.package, &expression)?
             } else {
-                // TODO support a variant with unknown license identifiers.
-                LicensedComponent::new_none(&self.package)
+                LicensedComponent::new_unknown(
+                    &self.package,
+                    non_spdx_licenses.into_iter().collect::<Vec<_>>(),
+                )
             }
         } else {
             LicensedComponent::new_none(&self.package)
@@ -416,6 +418,25 @@ mod tests {
 
         let c: LicensedComponent = li.try_into()?;
         let mut wanted = LicensedComponent::new_spdx("foo", "MIT")?;
+        wanted.set_flavor(ComponentFlavor::PythonPackage);
+        assert_eq!(c, wanted);
+
+        Ok(())
+    }
+
+    #[test]
+    fn license_info_to_component_unknown() -> Result<()> {
+        let terms = vec!["Unknown".to_string(), "Unknown 2".to_string()];
+
+        let li = PackageLicenseInfo {
+            package: "foo".to_string(),
+            version: "0.1".to_string(),
+            metadata_licenses: terms.clone(),
+            ..Default::default()
+        };
+
+        let c: LicensedComponent = li.try_into()?;
+        let mut wanted = LicensedComponent::new_unknown("foo", terms);
         wanted.set_flavor(ComponentFlavor::PythonPackage);
         assert_eq!(c, wanted);
 
