@@ -58,11 +58,15 @@ impl TryInto<LicensedComponent> for PackageLicenseInfo {
                 .into_iter()
                 .chain(self.classifier_licenses.into_iter())
             {
-                // TODO support full names as valid identifiers.
                 if let Some(lid) = spdx::license_id(&s) {
                     spdx_license_ids.insert(format!("({})", lid.name));
                 } else if spdx::Expression::parse(&s).is_ok() {
                     spdx_license_ids.insert(format!("({})", s));
+                } else if let Some(name) = spdx::identifiers::LICENSES
+                    .iter()
+                    .find_map(|(name, full, _)| if &s == full { Some(name) } else { None })
+                {
+                    spdx_license_ids.insert(name.to_string());
                 } else {
                     non_spdx_licenses.insert(s);
                 }
@@ -411,7 +415,7 @@ mod tests {
         };
 
         let c: LicensedComponent = li.try_into()?;
-        let mut wanted = LicensedComponent::new_none("foo");
+        let mut wanted = LicensedComponent::new_spdx("foo", "MIT")?;
         wanted.set_flavor(ComponentType::PythonPackage);
         assert_eq!(c, wanted);
 
