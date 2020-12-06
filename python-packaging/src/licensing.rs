@@ -5,7 +5,12 @@
 use {
     crate::{package_metadata::PythonPackageMetadata, resource::PythonResource},
     anyhow::{Context, Result},
-    std::{cmp::Ordering, collections::BTreeMap},
+    std::{
+        cmp::Ordering,
+        collections::{BTreeMap, BTreeSet},
+        convert::TryInto,
+    },
+    tugger_licensing::{ComponentType, LicensedComponent},
 };
 
 /// System libraries that are safe to link against, ignoring copyleft license implications.
@@ -36,6 +41,60 @@ pub struct PackageLicenseInfo {
 
     /// Special annotation indicating if the license is in the public domain.
     pub is_public_domain: bool,
+}
+
+impl TryInto<LicensedComponent> for PackageLicenseInfo {
+    type Error = anyhow::Error;
+
+    fn try_into(self) -> Result<LicensedComponent, Self::Error> {
+        let mut component = if self.is_public_domain {
+            LicensedComponent::new_public_domain(&self.package)
+        } else if !self.metadata_licenses.is_empty() || !self.classifier_licenses.is_empty() {
+            let mut spdx_license_ids = BTreeSet::new();
+            let mut non_spdx_licenses = BTreeSet::new();
+
+            for s in self
+                .metadata_licenses
+                .into_iter()
+                .chain(self.classifier_licenses.into_iter())
+            {
+                // TODO support full names as valid identifiers.
+                // TODO support parsing SPDX expressions.
+                if let Some(lid) = spdx::license_id(&s) {
+                    spdx_license_ids.insert(lid.name.to_string());
+                } else {
+                    non_spdx_licenses.insert(s);
+                }
+            }
+
+            if non_spdx_licenses.is_empty() {
+                let expression = spdx_license_ids
+                    .into_iter()
+                    .collect::<Vec<_>>()
+                    .join(" OR ");
+                LicensedComponent::new_spdx(&self.package, &expression)?
+            } else {
+                // TODO support a variant with unknown license identifiers.
+                LicensedComponent::new_none(&self.package)
+            }
+        } else {
+            LicensedComponent::new_none(&self.package)
+        };
+
+        component.set_flavor(ComponentType::PythonPackage);
+
+        if !self.license_texts.is_empty() || !self.notice_texts.is_empty() {
+            component.set_license_text(
+                self.license_texts
+                    .into_iter()
+                    .chain(self.notice_texts.into_iter())
+                    .collect::<Vec<_>>()
+                    .join("\n"),
+            );
+        }
+
+        Ok(component)
+    }
 }
 
 impl PartialOrd for PackageLicenseInfo {
@@ -236,6 +295,124 @@ mod tests {
                 ..Default::default()
             }
         );
+
+        Ok(())
+    }
+
+    #[test]
+    fn license_info_to_component_empty() -> Result<()> {
+        let li = PackageLicenseInfo {
+            package: "foo".to_string(),
+            version: "0.1".to_string(),
+            ..Default::default()
+        };
+
+        let c: LicensedComponent = li.try_into()?;
+        let mut wanted = LicensedComponent::new_none("foo");
+        wanted.set_flavor(ComponentType::PythonPackage);
+        assert_eq!(c, wanted);
+
+        Ok(())
+    }
+
+    #[test]
+    fn license_info_to_component_single_metadata_spdx() -> Result<()> {
+        let li = PackageLicenseInfo {
+            package: "foo".to_string(),
+            version: "0.1".to_string(),
+            metadata_licenses: vec!["MIT".to_string()],
+            ..Default::default()
+        };
+
+        let c: LicensedComponent = li.try_into()?;
+        let mut wanted = LicensedComponent::new_spdx("foo", "MIT")?;
+        wanted.set_flavor(ComponentType::PythonPackage);
+        assert_eq!(c, wanted);
+
+        Ok(())
+    }
+
+    #[test]
+    fn license_info_to_component_single_classifier_spdx() -> Result<()> {
+        let li = PackageLicenseInfo {
+            package: "foo".to_string(),
+            version: "0.1".to_string(),
+            classifier_licenses: vec!["Apache-2.0".to_string()],
+            ..Default::default()
+        };
+
+        let c: LicensedComponent = li.try_into()?;
+        let mut wanted = LicensedComponent::new_spdx("foo", "Apache-2.0")?;
+        wanted.set_flavor(ComponentType::PythonPackage);
+        assert_eq!(c, wanted);
+
+        Ok(())
+    }
+
+    #[test]
+    fn license_info_to_component_multiple_metadata_spdx() -> Result<()> {
+        let li = PackageLicenseInfo {
+            package: "foo".to_string(),
+            version: "0.1".to_string(),
+            metadata_licenses: vec!["MIT".to_string(), "Apache-2.0".to_string()],
+            ..Default::default()
+        };
+
+        let c: LicensedComponent = li.try_into()?;
+        let mut wanted = LicensedComponent::new_spdx("foo", "Apache-2.0 OR MIT")?;
+        wanted.set_flavor(ComponentType::PythonPackage);
+        assert_eq!(c, wanted);
+
+        Ok(())
+    }
+
+    #[test]
+    fn license_info_to_component_multiple_classifier_spdx() -> Result<()> {
+        let li = PackageLicenseInfo {
+            package: "foo".to_string(),
+            version: "0.1".to_string(),
+            classifier_licenses: vec!["Apache-2.0".to_string(), "MIT".to_string()],
+            ..Default::default()
+        };
+
+        let c: LicensedComponent = li.try_into()?;
+        let mut wanted = LicensedComponent::new_spdx("foo", "Apache-2.0 OR MIT")?;
+        wanted.set_flavor(ComponentType::PythonPackage);
+        assert_eq!(c, wanted);
+
+        Ok(())
+    }
+
+    #[test]
+    fn license_info_to_component_spdx_expression() -> Result<()> {
+        let li = PackageLicenseInfo {
+            package: "foo".to_string(),
+            version: "0.1".to_string(),
+            metadata_licenses: vec!["MIT OR Apache-2.0".to_string()],
+            ..Default::default()
+        };
+
+        let c: LicensedComponent = li.try_into()?;
+        let mut wanted = LicensedComponent::new_none("foo");
+        wanted.set_flavor(ComponentType::PythonPackage);
+        assert_eq!(c, wanted);
+
+        Ok(())
+    }
+
+    #[test]
+    fn license_info_to_component_spdx_fullname() -> Result<()> {
+        let li = PackageLicenseInfo {
+            package: "foo".to_string(),
+            version: "0.1".to_string(),
+            metadata_licenses: vec!["MIT License".to_string()],
+            ..Default::default()
+        };
+
+        let c: LicensedComponent = li.try_into()?;
+        let mut wanted = LicensedComponent::new_none("foo");
+        wanted.set_flavor(ComponentType::PythonPackage);
+        assert_eq!(c, wanted);
 
         Ok(())
     }

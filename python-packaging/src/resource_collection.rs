@@ -10,7 +10,6 @@ use {
             compute_bytecode_header, BytecodeHeaderMode, CompileMode, PythonBytecodeCompiler,
         },
         libpython::LibPythonBuildContext,
-        licensing::PackageLicenseInfo,
         location::{AbstractResourceLocation, ConcreteResourceLocation},
         module_util::{packages_from_module_name, resolve_path_for_module},
         python_source::has_dunder_file,
@@ -678,9 +677,6 @@ pub struct PythonResourceCollector {
 
     /// Collection of software components which are licensed.
     licensed_components: LicensedComponents,
-
-    /// Stores per-package licensing metadata.
-    package_license_infos: BTreeSet<PackageLicenseInfo>,
 }
 
 impl PythonResourceCollector {
@@ -705,7 +701,6 @@ impl PythonResourceCollector {
             allow_files,
             resources: BTreeMap::new(),
             cache_tag: cache_tag.to_string(),
-            package_license_infos: BTreeSet::new(),
             licensed_components: LicensedComponents::default(),
         }
     }
@@ -777,14 +772,6 @@ impl PythonResourceCollector {
         Box::new(self.resources.iter())
     }
 
-    /// Obtain the license info for a given package name.
-    pub fn package_license_infos(&self, package: &str) -> Vec<&PackageLicenseInfo> {
-        self.package_license_infos
-            .iter()
-            .filter(|l| l.package == package)
-            .collect::<Vec<_>>()
-    }
-
     /// Generate a summary of licensing information for resources in the collection.
     pub fn generate_license_report(&self) -> Result<ResourcesLicenseReport> {
         let mut report = ResourcesLicenseReport::default();
@@ -838,16 +825,6 @@ impl PythonResourceCollector {
     /// Register a licensed software component to this collection.
     pub fn add_licensed_component(&mut self, component: LicensedComponent) -> Result<()> {
         self.licensed_components.add_component(component);
-
-        Ok(())
-    }
-
-    /// Adds a `PackageLicenseInfo` to be tracked by this instance.
-    ///
-    /// An existing package of the same name/version of the incoming value will be
-    /// overwritten.
-    pub fn add_package_license_info(&mut self, info: PackageLicenseInfo) -> Result<()> {
-        self.package_license_infos.insert(info);
 
         Ok(())
     }

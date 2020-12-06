@@ -37,6 +37,7 @@ use {
     slog::warn,
     std::{
         collections::{BTreeMap, BTreeSet, HashMap},
+        convert::TryInto,
         path::{Path, PathBuf},
         sync::Arc,
     },
@@ -473,7 +474,8 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         resources: &[PythonResource<'a>],
     ) -> Result<()> {
         for info in derive_package_license_infos(resources.iter())? {
-            self.resources_collector.add_package_license_info(info)?;
+            self.resources_collector
+                .add_licensed_component(info.try_into()?)?;
         }
 
         Ok(())
