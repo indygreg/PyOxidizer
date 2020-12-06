@@ -23,7 +23,7 @@ use {
         bytecode::BytecodeCompiler,
         interpreter::MemoryAllocatorBackend,
         libpython::LibPythonBuildContext,
-        licensing::{derive_package_license_infos, PackageLicenseInfo},
+        licensing::derive_package_license_infos,
         location::AbstractResourceLocation,
         policy::PythonPackagingPolicy,
         resource::{
@@ -41,7 +41,7 @@ use {
         sync::Arc,
     },
     tugger_file_manifest::{File, FileData, FileEntry, FileManifest},
-    tugger_licensing::{ComponentType, LicenseType, LicensedComponent},
+    tugger_licensing::{ComponentType, LicensedComponent},
     tugger_windows::VCRedistributablePlatform,
 };
 
@@ -607,11 +607,6 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
             .core_license
             .clone()
             .ok_or_else(|| anyhow!("could not resolve Python standard library license"))?;
-        let stdlib_licenses = core_component
-            .all_spdx_licenses()
-            .iter()
-            .map(|(lid, _)| lid.name.to_string())
-            .collect::<Vec<_>>();
 
         self.resources_collector
             .add_licensed_component(core_component.clone())?;
@@ -634,30 +629,6 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
                 self.resources_collector
                     .add_licensed_component(component.clone())?;
             }
-
-            let mut license_info = PackageLicenseInfo {
-                package: ext.top_level_package().to_string(),
-                version: self.target_distribution.python_version().to_string(),
-                metadata_licenses: stdlib_licenses.clone(),
-                ..Default::default()
-            };
-
-            if let Some(ext_license) = &ext.license {
-                license_info.metadata_licenses.extend(
-                    ext_license
-                        .all_spdx_licenses()
-                        .iter()
-                        .map(|(req, _)| req.name.to_string()),
-                );
-                if let Some(text) = ext_license.license_text() {
-                    license_info.license_texts.push(text.clone());
-                }
-                license_info.is_public_domain =
-                    matches!(ext_license.license(), LicenseType::PublicDomain);
-            }
-
-            self.resources_collector
-                .add_package_license_info(license_info)?;
 
             self.add_python_extension_module(&ext, Some(add_context))?;
         }
@@ -2947,19 +2918,6 @@ pub mod tests {
                 },
                 "PythonExtensionModule for {:?}",
                 libpython_link_mode
-            );
-
-            let license_infos = builder.resources_collector.package_license_infos("PyYAML");
-            assert_eq!(license_infos.len(), 1);
-            assert_eq!(
-                license_infos[0],
-                &PackageLicenseInfo {
-                    package: "PyYAML".into(),
-                    version: "5.3.1".into(),
-                    metadata_licenses: vec!["MIT".to_string()],
-                    classifier_licenses: vec!["MIT License".to_string()],
-                    ..Default::default()
-                }
             );
         }
 
