@@ -5,8 +5,8 @@
 use {
     super::{
         binary::{
-            EmbeddedPythonContext, LibpythonLinkMode, PackedResourcesLoadMode, PythonBinaryBuilder,
-            PythonLinkingInfo, ResourceAddCollectionContextCallback,
+            pyembed_licenses, EmbeddedPythonContext, LibpythonLinkMode, PackedResourcesLoadMode,
+            PythonBinaryBuilder, PythonLinkingInfo, ResourceAddCollectionContextCallback,
         },
         config::{PyembedPackedResourcesSource, PyembedPythonInterpreterConfig},
         distribution::{BinaryLibpythonLinkMode, PythonDistribution},
@@ -226,6 +226,10 @@ impl StandalonePythonExecutableBuilder {
     }
 
     fn add_distribution_core_state(&mut self) -> Result<()> {
+        for component in pyembed_licenses().context("deriving pyembed component licenses")? {
+            self.resources_collector.add_licensed_component(component)?;
+        }
+
         self.core_build_context.inittab_cflags =
             Some(self.target_distribution.inittab_cflags.clone());
 
