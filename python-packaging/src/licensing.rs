@@ -58,48 +58,6 @@ impl Ord for PackageLicenseInfo {
     }
 }
 
-impl PackageLicenseInfo {
-    /// All license identifiers appearing in this package.
-    ///
-    /// This does not take license file text into consideration.
-    pub fn all_license_identifiers(&self) -> Vec<String> {
-        let mut res = vec![];
-
-        for value in self
-            .metadata_licenses
-            .iter()
-            .chain(self.classifier_licenses.iter())
-        {
-            if !res.contains(value) {
-                res.push(value.to_string());
-            }
-        }
-
-        res
-    }
-
-    /// Whether we have license identifiers.
-    pub fn have_license_identifiers(&self) -> bool {
-        !self.all_license_identifiers().is_empty()
-    }
-
-    /// All SPDX license identifiers appearing in this package.
-    pub fn spdx_licenses(&self) -> Vec<spdx::LicenseId> {
-        self.all_license_identifiers()
-            .iter()
-            .filter_map(|value| spdx::license_id(value))
-            .collect::<Vec<_>>()
-    }
-
-    /// All license identifiers that are not recognized SPDX license identifiers.
-    pub fn non_spdx_licenses(&self) -> Vec<String> {
-        self.all_license_identifiers()
-            .into_iter()
-            .filter(|value| spdx::license_id(value).is_none())
-            .collect::<Vec<_>>()
-    }
-}
-
 /// Obtain Python package license information from an iterable of Python resources.
 ///
 /// This will look at `PythonPackageDistributionResource` entries and attempt
@@ -181,45 +139,6 @@ mod tests {
         std::borrow::Cow,
         tugger_file_manifest::FileData,
     };
-
-    #[test]
-    fn test_license_identifiers() {
-        let l = PackageLicenseInfo {
-            metadata_licenses: vec!["BSD-1-Clause".to_string(), "invalid-metadata".to_string()],
-            classifier_licenses: vec![
-                "BSD-1-Clause".to_string(),
-                "BSD-2-Clause".to_string(),
-                "invalid-classifier".to_string(),
-            ],
-            ..Default::default()
-        };
-
-        assert_eq!(
-            l.all_license_identifiers(),
-            vec![
-                "BSD-1-Clause".to_string(),
-                "invalid-metadata".to_string(),
-                "BSD-2-Clause".to_string(),
-                "invalid-classifier".to_string()
-            ]
-        );
-
-        assert_eq!(
-            l.spdx_licenses(),
-            vec![
-                spdx::license_id("BSD-1-Clause").unwrap(),
-                spdx::license_id("BSD-2-Clause").unwrap()
-            ]
-        );
-
-        assert_eq!(
-            l.non_spdx_licenses(),
-            vec![
-                "invalid-metadata".to_string(),
-                "invalid-classifier".to_string()
-            ]
-        );
-    }
 
     #[test]
     fn test_derive_package_license_infos_empty() -> Result<()> {
