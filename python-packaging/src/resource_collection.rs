@@ -28,7 +28,7 @@ use {
         path::PathBuf,
     },
     tugger_file_manifest::{File, FileData},
-    tugger_licensing::{ComponentType, LicensedComponent, LicensedComponents},
+    tugger_licensing::{ComponentFlavor, LicensedComponent, LicensedComponents},
 };
 
 /// Represents a single file install.
@@ -787,7 +787,7 @@ impl PythonResourceCollector {
             if !self
                 .licensed_components
                 .iter_components()
-                .any(|c| c.name() == package && c.flavor() == &ComponentType::PythonPackage)
+                .any(|c| c.name() == package && c.flavor() == &ComponentFlavor::PythonPackage)
             {
                 report.no_license_packages.insert(package.clone());
             }

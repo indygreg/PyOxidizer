@@ -66,7 +66,7 @@ pub fn license_requirement_to_license_text(
 
 /// The type of a license.
 #[derive(Clone, Debug, PartialEq)]
-pub enum LicenseType {
+pub enum LicenseFlavor {
     /// No explicit licensing defined.
     None,
 
@@ -82,7 +82,7 @@ pub enum LicenseType {
 
 /// Describes the type of a software component.
 #[derive(Clone, Debug, PartialEq)]
-pub enum ComponentType {
+pub enum ComponentFlavor {
     /// No specific component type.
     Generic,
     /// A generic software library.
@@ -109,10 +109,10 @@ pub struct LicensedComponent {
     name: String,
 
     /// Type of component.
-    flavor: ComponentType,
+    flavor: ComponentFlavor,
 
     /// The type of license.
-    license: LicenseType,
+    license: LicenseFlavor,
 
     /// Location where source code for this component can be obtained.
     source_location: SourceLocation,
@@ -129,14 +129,14 @@ impl LicensedComponent {
         let spdx_expression = Expression::parse(spdx_expression).map_err(|e| anyhow!("{}", e))?;
 
         let license = if spdx_expression.evaluate(|req| req.license.id().is_some()) {
-            LicenseType::SPDX(spdx_expression)
+            LicenseFlavor::SPDX(spdx_expression)
         } else {
-            LicenseType::OtherExpression(spdx_expression)
+            LicenseFlavor::OtherExpression(spdx_expression)
         };
 
         Ok(Self {
             name: name.to_string(),
-            flavor: ComponentType::Generic,
+            flavor: ComponentFlavor::Generic,
             license,
             source_location: SourceLocation::NotSet,
             license_text: None,
@@ -147,8 +147,8 @@ impl LicensedComponent {
     pub fn new_none(name: &str) -> Self {
         Self {
             name: name.to_string(),
-            flavor: ComponentType::Generic,
-            license: LicenseType::None,
+            flavor: ComponentFlavor::Generic,
+            license: LicenseFlavor::None,
             source_location: SourceLocation::NotSet,
             license_text: None,
         }
@@ -158,8 +158,8 @@ impl LicensedComponent {
     pub fn new_public_domain(name: &str) -> Self {
         Self {
             name: name.to_string(),
-            flavor: ComponentType::Generic,
-            license: LicenseType::PublicDomain,
+            flavor: ComponentFlavor::Generic,
+            license: LicenseFlavor::PublicDomain,
             source_location: SourceLocation::NotSet,
             license_text: None,
         }
@@ -171,26 +171,26 @@ impl LicensedComponent {
     }
 
     /// The type of this component.
-    pub fn flavor(&self) -> &ComponentType {
+    pub fn flavor(&self) -> &ComponentFlavor {
         &self.flavor
     }
 
     /// Set the flavor of this component.
-    pub fn set_flavor(&mut self, flavor: ComponentType) {
+    pub fn set_flavor(&mut self, flavor: ComponentFlavor) {
         self.flavor = flavor;
     }
 
     /// Obtain the flavor of license for this component.
-    pub fn license(&self) -> &LicenseType {
+    pub fn license(&self) -> &LicenseFlavor {
         &self.license
     }
 
     /// Obtain the SPDX expression for this component's license.
     pub fn spdx_expression(&self) -> Option<&Expression> {
         match &self.license {
-            LicenseType::SPDX(expression) => Some(expression),
-            LicenseType::OtherExpression(expression) => Some(expression),
-            LicenseType::None | LicenseType::PublicDomain => None,
+            LicenseFlavor::SPDX(expression) => Some(expression),
+            LicenseFlavor::OtherExpression(expression) => Some(expression),
+            LicenseFlavor::None | LicenseFlavor::PublicDomain => None,
         }
     }
 
@@ -198,7 +198,7 @@ impl LicensedComponent {
     ///
     /// Simple is defined as having at most a single license.
     pub fn is_simple_spdx_expression(&self) -> bool {
-        if let LicenseType::SPDX(expression) = &self.license {
+        if let LicenseFlavor::SPDX(expression) = &self.license {
             expression.iter().count() < 2
         } else {
             false
@@ -222,7 +222,7 @@ impl LicensedComponent {
 
     /// Returns whether all license identifiers are SPDX.
     pub fn is_spdx(&self) -> bool {
-        matches!(self.license, LicenseType::SPDX(_))
+        matches!(self.license, LicenseFlavor::SPDX(_))
     }
 
     /// Obtain all SPDX licenses referenced by this component.
@@ -231,11 +231,11 @@ impl LicensedComponent {
     /// is an optional exclusion identifier.
     pub fn all_spdx_licenses(&self) -> BTreeSet<(LicenseId, Option<ExceptionId>)> {
         match &self.license {
-            LicenseType::SPDX(expression) => expression
+            LicenseFlavor::SPDX(expression) => expression
                 .requirements()
                 .map(|req| (req.req.license.id().clone().unwrap(), req.req.exception))
                 .collect::<BTreeSet<_>>(),
-            LicenseType::OtherExpression(expression) => expression
+            LicenseFlavor::OtherExpression(expression) => expression
                 .requirements()
                 .filter_map(|req| {
                     if let Some(id) = req.req.license.id() {
@@ -245,7 +245,7 @@ impl LicensedComponent {
                     }
                 })
                 .collect::<BTreeSet<_>>(),
-            LicenseType::None | LicenseType::PublicDomain => BTreeSet::new(),
+            LicenseFlavor::None | LicenseFlavor::PublicDomain => BTreeSet::new(),
         }
     }
 
@@ -256,12 +256,12 @@ impl LicensedComponent {
     #[cfg(feature = "reqwest")]
     pub fn spdx_license_texts(&self, client: &reqwest::blocking::Client) -> Result<Vec<String>> {
         let reqs = match &self.license {
-            LicenseType::SPDX(expression) => expression.requirements().collect::<Vec<_>>(),
-            LicenseType::OtherExpression(expression) => expression
+            LicenseFlavor::SPDX(expression) => expression.requirements().collect::<Vec<_>>(),
+            LicenseFlavor::OtherExpression(expression) => expression
                 .requirements()
                 .filter(|req| req.req.license.id().is_some())
                 .collect::<Vec<_>>(),
-            LicenseType::None | LicenseType::PublicDomain => vec![],
+            LicenseFlavor::None | LicenseFlavor::PublicDomain => vec![],
         };
 
         reqs.iter()
@@ -324,7 +324,7 @@ impl LicensedComponents {
         for component in self
             .components
             .values()
-            .filter(|c| !matches!(c.license(), LicenseType::None))
+            .filter(|c| !matches!(c.license(), LicenseFlavor::None))
         {
             let title = format!("{} License", component.name);
             writeln!(&mut text, "{}", title)?;
@@ -335,10 +335,10 @@ impl LicensedComponents {
                 "This product contains the {} {}.",
                 component.name,
                 match component.flavor {
-                    ComponentType::Generic => "software",
-                    ComponentType::Library => "library",
-                    ComponentType::RustCrate => "Rust crate",
-                    ComponentType::PythonPackage => "Python package",
+                    ComponentFlavor::Generic => "software",
+                    ComponentFlavor::Library => "library",
+                    ComponentFlavor::RustCrate => "Rust crate",
+                    ComponentFlavor::PythonPackage => "Python package",
                 }
             )?;
             writeln!(&mut text)?;
@@ -354,24 +354,24 @@ impl LicensedComponents {
                 }
             }
             match component.license() {
-                LicenseType::SPDX(expression) => {
+                LicenseFlavor::SPDX(expression) => {
                     writeln!(
                         &mut text,
                         "The SPDX license expression of this component is\n\"{}\".",
                         expression
                     )?;
                 }
-                LicenseType::OtherExpression(expression) => {
+                LicenseFlavor::OtherExpression(expression) => {
                     writeln!(
                         &mut text,
                         "The SPDX license expression of this component is \n\"{}\".",
                         expression
                     )?;
                 }
-                LicenseType::PublicDomain => {
+                LicenseFlavor::PublicDomain => {
                     writeln!(&mut text, "This component is in the public domain.")?;
                 }
-                LicenseType::None => {}
+                LicenseFlavor::None => {}
             }
 
             writeln!(&mut text)?;

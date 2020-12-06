@@ -42,7 +42,7 @@ use {
         sync::Arc,
     },
     tugger_file_manifest::{File, FileData, FileEntry, FileManifest},
-    tugger_licensing::{ComponentType, LicensedComponent},
+    tugger_licensing::{ComponentFlavor, LicensedComponent},
     tugger_windows::VCRedistributablePlatform,
 };
 
@@ -668,7 +668,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
                             .ok_or_else(|| anyhow!("should have resolved SPDX expression"))?
                             .to_string(),
                     )?;
-                    component.set_flavor(ComponentType::PythonPackage);
+                    component.set_flavor(ComponentFlavor::PythonPackage);
 
                     self.resources_collector.add_licensed_component(component)?;
                     self.add_python_module_source(source, Some(add_context))?;

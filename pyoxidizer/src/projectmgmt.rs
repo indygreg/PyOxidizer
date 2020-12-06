@@ -27,7 +27,7 @@ use {
         path::{Path, PathBuf},
     },
     tugger_file_manifest::FileData,
-    tugger_licensing::LicenseType,
+    tugger_licensing::LicenseFlavor,
 };
 
 /// Attempt to resolve the default Rust target for a build.
@@ -400,10 +400,10 @@ pub fn python_distribution_info(dist_path: &str) -> Result<()> {
                 println!(
                     "Licensing: {}",
                     match component.license() {
-                        LicenseType::SPDX(expression) => expression.to_string(),
-                        LicenseType::OtherExpression(expression) => expression.to_string(),
-                        LicenseType::PublicDomain => "public domain".to_string(),
-                        LicenseType::None => "none".to_string(),
+                        LicenseFlavor::SPDX(expression) => expression.to_string(),
+                        LicenseFlavor::OtherExpression(expression) => expression.to_string(),
+                        LicenseFlavor::PublicDomain => "public domain".to_string(),
+                        LicenseFlavor::None => "none".to_string(),
                     }
                 );
             }
@@ -500,16 +500,16 @@ pub fn python_distribution_licenses(path: &str) -> Result<()> {
 
             if let Some(component) = &variant.license {
                 match component.license() {
-                    LicenseType::SPDX(expression) => {
+                    LicenseFlavor::SPDX(expression) => {
                         println!("Licensing: Valid SPDX: {}", expression);
                     }
-                    LicenseType::OtherExpression(expression) => {
+                    LicenseFlavor::OtherExpression(expression) => {
                         println!("Licensing: Invalid SPDX: {}", expression);
                     }
-                    LicenseType::PublicDomain => {
+                    LicenseFlavor::PublicDomain => {
                         println!("Licensing: Public Domain");
                     }
-                    LicenseType::None => {
+                    LicenseFlavor::None => {
                         println!("Licensing: None defined");
                     }
                 }

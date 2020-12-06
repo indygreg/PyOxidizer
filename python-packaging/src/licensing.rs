@@ -10,7 +10,7 @@ use {
         collections::{BTreeMap, BTreeSet},
         convert::TryInto,
     },
-    tugger_licensing::{ComponentType, LicensedComponent},
+    tugger_licensing::{ComponentFlavor, LicensedComponent},
 };
 
 /// System libraries that are safe to link against, ignoring copyleft license implications.
@@ -86,7 +86,7 @@ impl TryInto<LicensedComponent> for PackageLicenseInfo {
             LicensedComponent::new_none(&self.package)
         };
 
-        component.set_flavor(ComponentType::PythonPackage);
+        component.set_flavor(ComponentFlavor::PythonPackage);
 
         if !self.license_texts.is_empty() || !self.notice_texts.is_empty() {
             component.set_license_text(
@@ -314,7 +314,7 @@ mod tests {
 
         let c: LicensedComponent = li.try_into()?;
         let mut wanted = LicensedComponent::new_none("foo");
-        wanted.set_flavor(ComponentType::PythonPackage);
+        wanted.set_flavor(ComponentFlavor::PythonPackage);
         assert_eq!(c, wanted);
 
         Ok(())
@@ -331,7 +331,7 @@ mod tests {
 
         let c: LicensedComponent = li.try_into()?;
         let mut wanted = LicensedComponent::new_spdx("foo", "MIT")?;
-        wanted.set_flavor(ComponentType::PythonPackage);
+        wanted.set_flavor(ComponentFlavor::PythonPackage);
         assert_eq!(c, wanted);
 
         Ok(())
@@ -348,7 +348,7 @@ mod tests {
 
         let c: LicensedComponent = li.try_into()?;
         let mut wanted = LicensedComponent::new_spdx("foo", "Apache-2.0")?;
-        wanted.set_flavor(ComponentType::PythonPackage);
+        wanted.set_flavor(ComponentFlavor::PythonPackage);
         assert_eq!(c, wanted);
 
         Ok(())
@@ -365,7 +365,7 @@ mod tests {
 
         let c: LicensedComponent = li.try_into()?;
         let mut wanted = LicensedComponent::new_spdx("foo", "Apache-2.0 OR MIT")?;
-        wanted.set_flavor(ComponentType::PythonPackage);
+        wanted.set_flavor(ComponentFlavor::PythonPackage);
         assert_eq!(c, wanted);
 
         Ok(())
@@ -382,7 +382,7 @@ mod tests {
 
         let c: LicensedComponent = li.try_into()?;
         let mut wanted = LicensedComponent::new_spdx("foo", "Apache-2.0 OR MIT")?;
-        wanted.set_flavor(ComponentType::PythonPackage);
+        wanted.set_flavor(ComponentFlavor::PythonPackage);
         assert_eq!(c, wanted);
 
         Ok(())
@@ -399,7 +399,7 @@ mod tests {
 
         let c: LicensedComponent = li.try_into()?;
         let mut wanted = LicensedComponent::new_spdx("foo", "MIT OR Apache-2.0")?;
-        wanted.set_flavor(ComponentType::PythonPackage);
+        wanted.set_flavor(ComponentFlavor::PythonPackage);
         assert_eq!(c, wanted);
 
         Ok(())
@@ -416,7 +416,7 @@ mod tests {
 
         let c: LicensedComponent = li.try_into()?;
         let mut wanted = LicensedComponent::new_spdx("foo", "MIT")?;
-        wanted.set_flavor(ComponentType::PythonPackage);
+        wanted.set_flavor(ComponentFlavor::PythonPackage);
         assert_eq!(c, wanted);
 
         Ok(())

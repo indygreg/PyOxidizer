@@ -15,7 +15,7 @@ use {
     },
     anyhow::Result,
     std::{collections::HashMap, convert::TryFrom},
-    tugger_licensing::LicenseType,
+    tugger_licensing::LicenseFlavor,
 };
 
 /// Denotes methods to filter extension modules.
@@ -591,7 +591,7 @@ impl PythonPackagingPolicy {
                                 Some(em.clone())
                             } else if let Some(license) = &em.license {
                                 match license.license() {
-                                    LicenseType::SPDX(expression) => {
+                                    LicenseFlavor::SPDX(expression) => {
                                         let copyleft = expression.evaluate(|req| {
                                             if let Some(id) = req.license.id() {
                                                 id.is_copyleft()
@@ -606,9 +606,9 @@ impl PythonPackagingPolicy {
                                             None
                                         }
                                     }
-                                    LicenseType::OtherExpression(_) => None,
-                                    LicenseType::PublicDomain => Some(em.clone()),
-                                    LicenseType::None => None,
+                                    LicenseFlavor::OtherExpression(_) => None,
+                                    LicenseFlavor::PublicDomain => Some(em.clone()),
+                                    LicenseFlavor::None => None,
                                 }
                             } else {
                                 None

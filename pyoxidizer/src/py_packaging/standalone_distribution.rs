@@ -41,7 +41,7 @@ use {
         sync::Arc,
     },
     tugger_file_manifest::FileData,
-    tugger_licensing::{ComponentType, LicensedComponent},
+    tugger_licensing::{ComponentFlavor, LicensedComponent},
 };
 
 // This needs to be kept in sync with *compiler.py
@@ -661,7 +661,7 @@ impl StandaloneDistribution {
             let mut component =
                 LicensedComponent::new_spdx(&pi.python_implementation_name, &expression)?;
 
-            component.set_flavor(ComponentType::Library);
+            component.set_flavor(ComponentFlavor::Library);
             component.set_license_text(license_text);
 
             core_license.replace(component);
