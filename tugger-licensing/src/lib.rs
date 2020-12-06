@@ -87,7 +87,7 @@ pub enum LicenseFlavor {
 }
 
 /// Describes the type of a software component.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ComponentFlavor {
     /// No specific component type.
     Generic,
@@ -97,6 +97,29 @@ pub enum ComponentFlavor {
     RustCrate,
     /// A Python package.
     PythonPackage,
+}
+
+impl ToString for ComponentFlavor {
+    fn to_string(&self) -> String {
+        match self {
+            Self::Generic => "generic".to_string(),
+            Self::Library => "library".to_string(),
+            Self::RustCrate => "Rust crate".to_string(),
+            Self::PythonPackage => "Python package".to_string(),
+        }
+    }
+}
+
+impl PartialOrd for ComponentFlavor {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        self.to_string().partial_cmp(&other.to_string())
+    }
+}
+
+impl Ord for ComponentFlavor {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.partial_cmp(other).unwrap()
+    }
 }
 
 /// Where source code for a component can be obtained from.
@@ -132,11 +155,7 @@ pub struct LicensedComponent {
 impl PartialOrd for LicensedComponent {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         if self.name == other.name {
-            if self.flavor == other.flavor {
-                Some(Ordering::Equal)
-            } else {
-                None
-            }
+            self.flavor.partial_cmp(&other.flavor)
         } else {
             self.name.partial_cmp(&other.name)
         }
@@ -307,7 +326,7 @@ impl LicensedComponent {
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct LicensedComponents {
     /// The collection of components, indexed by name.
-    components: BTreeMap<String, LicensedComponent>,
+    components: BTreeMap<(String, ComponentFlavor), LicensedComponent>,
 }
 
 impl LicensedComponents {
@@ -318,7 +337,10 @@ impl LicensedComponents {
 
     /// Add a component to this collection.
     pub fn add_component(&mut self, component: LicensedComponent) {
-        self.components.insert(component.name.clone(), component);
+        self.components.insert(
+            (component.name.clone(), component.flavor.clone()),
+            component,
+        );
     }
 
     /// Add a component to this collection, but only if it only contains SPDX license identifiers.
