@@ -90,14 +90,12 @@ impl TryInto<LicensedComponent> for PackageLicenseInfo {
 
         component.set_flavor(ComponentFlavor::PythonPackage);
 
-        if !self.license_texts.is_empty() || !self.notice_texts.is_empty() {
-            component.set_license_text(
-                self.license_texts
-                    .into_iter()
-                    .chain(self.notice_texts.into_iter())
-                    .collect::<Vec<_>>()
-                    .join("\n"),
-            );
+        for text in self
+            .license_texts
+            .into_iter()
+            .chain(self.notice_texts.into_iter())
+        {
+            component.add_license_text(text);
         }
 
         Ok(component)

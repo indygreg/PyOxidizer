@@ -122,8 +122,8 @@ pub struct LicensedComponent {
 
     /// Specified license text for this component.
     ///
-    /// If not defined, it will be derived from the SPDX expression.
-    license_text: Option<String>,
+    /// If empty, license texts will be derived from SPDX identifiers, if available.
+    license_texts: Vec<String>,
 }
 
 impl LicensedComponent {
@@ -142,7 +142,7 @@ impl LicensedComponent {
             flavor: ComponentFlavor::Generic,
             license,
             source_location: SourceLocation::NotSet,
-            license_text: None,
+            license_texts: vec![],
         })
     }
 
@@ -153,7 +153,7 @@ impl LicensedComponent {
             flavor: ComponentFlavor::Generic,
             license: LicenseFlavor::None,
             source_location: SourceLocation::NotSet,
-            license_text: None,
+            license_texts: vec![],
         }
     }
 
@@ -164,7 +164,7 @@ impl LicensedComponent {
             flavor: ComponentFlavor::Generic,
             license: LicenseFlavor::PublicDomain,
             source_location: SourceLocation::NotSet,
-            license_text: None,
+            license_texts: vec![],
         }
     }
 
@@ -175,7 +175,7 @@ impl LicensedComponent {
             flavor: ComponentFlavor::Generic,
             license: LicenseFlavor::Unknown(terms),
             source_location: SourceLocation::NotSet,
-            license_text: None,
+            license_texts: vec![],
         }
     }
 
@@ -224,14 +224,14 @@ impl LicensedComponent {
         self.source_location = location;
     }
 
-    /// Obtain the explicitly set license text for this component.
-    pub fn license_text(&self) -> &Option<String> {
-        &self.license_text
+    /// Obtain the explicitly set license texts for this component.
+    pub fn license_texts(&self) -> &Vec<String> {
+        &self.license_texts
     }
 
     /// Define the license text for this component.
-    pub fn set_license_text(&mut self, text: impl ToString) {
-        self.license_text = Some(text.to_string())
+    pub fn add_license_text(&mut self, text: impl ToString) {
+        self.license_texts.push(text.to_string());
     }
 
     /// Returns whether all license identifiers are SPDX.
@@ -398,14 +398,14 @@ impl LicensedComponents {
             }
 
             writeln!(&mut text)?;
-            if let Some(explicit) = &component.license_text {
-                writeln!(&mut text, "{}", explicit)?;
-            } else {
+            if component.license_texts.is_empty() {
                 writeln!(
                     &mut text,
                     "{}",
                     component.spdx_license_texts(&client)?.join("\n")
                 )?;
+            } else {
+                writeln!(&mut text, "{}", component.license_texts.join("\n"))?;
             }
         }
 

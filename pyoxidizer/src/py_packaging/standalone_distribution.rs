@@ -662,7 +662,7 @@ impl StandaloneDistribution {
                 LicensedComponent::new_spdx(&pi.python_implementation_name, &expression)?;
 
             component.set_flavor(ComponentFlavor::Library);
-            component.set_license_text(license_text);
+            component.add_license_text(license_text);
 
             core_license.replace(component);
         }
@@ -755,20 +755,13 @@ impl StandaloneDistribution {
                 };
 
                 if let Some(license_paths) = &entry.license_paths {
-                    let license_text = license_paths
-                        .iter()
-                        .map(|p| {
-                            let path = python_path.join(p);
+                    for path in license_paths {
+                        let path = python_path.join(path);
+                        let text = std::fs::read_to_string(&path)
+                            .with_context(|| format!("reading {}", path.display()))?;
 
-                            let text = std::fs::read_to_string(&path)
-                                .with_context(|| format!("reading {}", path.display()))?;
-
-                            Ok(text)
-                        })
-                        .collect::<Result<Vec<_>>>()?
-                        .join("\n");
-
-                    license.set_license_text(license_text);
+                        license.add_license_text(text);
+                    }
                 }
 
                 ems.push(PythonExtensionModule {
