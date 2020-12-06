@@ -112,6 +112,11 @@ Other Relevant Changes
 * When using the ``no-copyleft`` (formerly ``no-gpl``) extension module filter,
   some system library dependencies are now allowed, enabling various extension
   modules to be present in this mode.
+* The ``pyembed`` and ``oxidized-importer`` crates had their SPDX license
+  expression changed from ``Python-2.0 AND MPL-2.0`` to
+  ``Python-2.0 OR MPL-2.0``. The author misunderstood what ``AND`` did and
+  after realizing his mistake, corrected it to ``OR`` so the crates can one
+  license or the other.
 
 .. _version_0_10_3:
 
