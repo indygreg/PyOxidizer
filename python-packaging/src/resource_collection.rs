@@ -29,7 +29,7 @@ use {
         path::PathBuf,
     },
     tugger_file_manifest::{File, FileData},
-    tugger_licensing::{LicensedComponent, LicensedComponents},
+    tugger_licensing::{ComponentType, LicensedComponent, LicensedComponents},
 };
 
 /// Represents a single file install.
@@ -798,35 +798,37 @@ impl PythonResourceCollector {
             }
 
             if !self
-                .package_license_infos
-                .iter()
-                .any(|li| &li.package == package)
+                .licensed_components
+                .iter_components()
+                .any(|c| c.name() == package && c.flavor() == &ComponentType::PythonPackage)
             {
                 report.no_license_packages.insert(package.clone());
             }
         }
 
-        for li in &self.package_license_infos {
+        for component in self.licensed_components.iter_components() {
             // We don't care about license metadata belonging to packages not
             // in our collection.
-            if !all_packages.contains(&li.package) {
+            if !all_packages.contains(component.name()) {
                 continue;
             }
 
-            for license in li.spdx_licenses() {
-                report
-                    .spdx_by_package
-                    .entry(license.name.to_string())
-                    .or_insert_with(BTreeSet::new)
-                    .insert(li.package.clone());
-            }
-
-            for license in li.non_spdx_licenses() {
-                report
-                    .non_spdx_by_package
-                    .entry(license)
-                    .or_insert_with(BTreeSet::new)
-                    .insert(li.package.clone());
+            if let Some(expression) = component.spdx_expression() {
+                for req in expression.requirements() {
+                    if let Some(id) = &req.req.license.id() {
+                        report
+                            .spdx_by_package
+                            .entry(id.name.to_string())
+                            .or_insert_with(BTreeSet::new)
+                            .insert(component.name().to_string());
+                    } else {
+                        report
+                            .non_spdx_by_package
+                            .entry(req.req.license.to_string())
+                            .or_insert_with(BTreeSet::new)
+                            .insert(component.name().to_string());
+                    }
+                }
             }
         }
 
