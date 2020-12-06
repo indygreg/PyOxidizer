@@ -5,7 +5,6 @@
 /*! Functionality for building a library containing Python */
 
 use {
-    crate::licensing::PackageLicenseInfo,
     std::{
         collections::{BTreeMap, BTreeSet},
         path::PathBuf,
@@ -56,12 +55,6 @@ pub struct LibPythonBuildContext {
 
     /// Holds licensing info for things being linked together.
     pub licensed_components: LicensedComponents,
-
-    /// Holds licensing info for things being linked together.
-    ///
-    /// Keys are entity name (e.g. extension name). Values are license
-    /// structures.
-    pub license_infos: BTreeSet<PackageLicenseInfo>,
 }
 
 impl Default for LibPythonBuildContext {
@@ -77,7 +70,6 @@ impl Default for LibPythonBuildContext {
             frameworks: BTreeSet::new(),
             init_functions: BTreeMap::new(),
             licensed_components: LicensedComponents::default(),
-            license_infos: BTreeSet::new(),
         }
     }
 }
@@ -95,7 +87,6 @@ impl LibPythonBuildContext {
         let mut frameworks = BTreeSet::new();
         let mut init_functions = BTreeMap::new();
         let mut licensed_components = LicensedComponents::default();
-        let mut license_infos = BTreeSet::new();
 
         for context in contexts {
             // Last write wins.
@@ -129,9 +120,6 @@ impl LibPythonBuildContext {
             for c in context.licensed_components.iter_components() {
                 licensed_components.add_component(c.clone());
             }
-            for v in &context.license_infos {
-                license_infos.insert(v.clone());
-            }
         }
 
         Self {
@@ -145,7 +133,6 @@ impl LibPythonBuildContext {
             frameworks,
             init_functions,
             licensed_components,
-            license_infos,
         }
     }
 }
