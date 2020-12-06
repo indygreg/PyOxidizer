@@ -98,14 +98,6 @@ impl PackageLicenseInfo {
             .filter(|value| spdx::license_id(value).is_none())
             .collect::<Vec<_>>()
     }
-
-    /// Whether the license is likely not a copyleft license.
-    pub fn is_non_copyleft(&self) -> bool {
-        self.is_public_domain
-            || (self.have_license_identifiers()
-                && self.non_spdx_licenses().is_empty()
-                && self.spdx_licenses().iter().all(|l| !l.is_copyleft()))
-    }
 }
 
 /// Obtain Python package license information from an iterable of Python resources.

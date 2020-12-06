@@ -1423,8 +1423,10 @@ impl PythonResourceCollector {
                 }
             }
 
-            if let Some(li) = &extension_module.license {
-                build_context.license_infos.insert(li.clone());
+            if let Some(component) = &extension_module.license {
+                build_context
+                    .licensed_components
+                    .add_component(component.clone());
             }
 
             if let Some(init_fn) = &extension_module.init_fn {

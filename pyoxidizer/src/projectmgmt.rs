@@ -27,6 +27,7 @@ use {
         path::{Path, PathBuf},
     },
     tugger_file_manifest::FileData,
+    tugger_licensing::LicenseType,
 };
 
 /// Attempt to resolve the default Rust target for a build.
@@ -395,8 +396,16 @@ pub fn python_distribution_info(dist_path: &str) -> Result<()> {
             println!();
             println!("Required: {}", em.required);
             println!("Built-in Default: {}", em.builtin_default);
-            if let Some(li) = &em.license {
-                println!("Licenses: {}", li.all_license_identifiers().join(", "));
+            if let Some(component) = &em.license {
+                println!(
+                    "Licensing: {}",
+                    match component.license() {
+                        LicenseType::SPDX(expression) => expression.to_string(),
+                        LicenseType::OtherExpression(expression) => expression.to_string(),
+                        LicenseType::PublicDomain => "public domain".to_string(),
+                        LicenseType::None => "none".to_string(),
+                    }
+                );
             }
             if !em.link_libraries.is_empty() {
                 println!(
@@ -489,15 +498,23 @@ pub fn python_distribution_licenses(path: &str) -> Result<()> {
                 println!();
             }
 
-            if variant.license.clone().unwrap_or_default().is_public_domain {
-                println!("Licenses: Public Domain");
-            } else if let Some(ref license) = variant.license {
-                println!("Licenses: {}", license.all_license_identifiers().join(", "));
-                for l in license.spdx_licenses() {
-                    println!("License Info: https://spdx.org/licenses/{}.html", l.name);
+            if let Some(component) = &variant.license {
+                match component.license() {
+                    LicenseType::SPDX(expression) => {
+                        println!("Licensing: Valid SPDX: {}", expression);
+                    }
+                    LicenseType::OtherExpression(expression) => {
+                        println!("Licensing: Invalid SPDX: {}", expression);
+                    }
+                    LicenseType::PublicDomain => {
+                        println!("Licensing: Public Domain");
+                    }
+                    LicenseType::None => {
+                        println!("Licensing: None defined");
+                    }
                 }
             } else {
-                println!("Licenses: UNKNOWN");
+                println!("Licensing: UNKNOWN");
             }
 
             println!();

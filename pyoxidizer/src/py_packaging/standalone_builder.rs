@@ -41,6 +41,7 @@ use {
         sync::Arc,
     },
     tugger_file_manifest::{File, FileData, FileEntry, FileManifest},
+    tugger_licensing::LicenseType,
     tugger_windows::VCRedistributablePlatform,
 };
 
@@ -629,6 +630,11 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
                 callback(&self.packaging_policy, &resource, &mut add_context)?;
             }
 
+            if let Some(component) = &ext.license {
+                self.resources_collector
+                    .add_licensed_component(component.clone())?;
+            }
+
             let mut license_info = PackageLicenseInfo {
                 package: ext.top_level_package().to_string(),
                 version: self.target_distribution.python_version().to_string(),
@@ -636,14 +642,18 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
                 ..Default::default()
             };
 
-            if let Some(ext_info) = &ext.license {
-                license_info
-                    .metadata_licenses
-                    .extend(ext_info.metadata_licenses.iter().cloned());
-                license_info
-                    .license_texts
-                    .extend(ext_info.license_texts.iter().cloned());
-                license_info.is_public_domain = ext_info.is_public_domain;
+            if let Some(ext_license) = &ext.license {
+                license_info.metadata_licenses.extend(
+                    ext_license
+                        .all_spdx_licenses()
+                        .iter()
+                        .map(|(req, _)| req.name.to_string()),
+                );
+                if let Some(text) = ext_license.license_text() {
+                    license_info.license_texts.push(text.clone());
+                }
+                license_info.is_public_domain =
+                    matches!(ext_license.license(), LicenseType::PublicDomain);
             }
 
             self.resources_collector
@@ -983,6 +993,7 @@ pub mod tests {
         std::collections::BTreeSet,
         std::iter::FromIterator,
         std::ops::DerefMut,
+        tugger_licensing::LicensedComponents,
     };
 
     #[cfg(target_os = "linux")]
@@ -1221,6 +1232,16 @@ pub mod tests {
         Ok(())
     }
 
+    fn licensed_components_from_extension(ext: &PythonExtensionModule) -> LicensedComponents {
+        let mut r = LicensedComponents::default();
+
+        if let Some(component) = &ext.license {
+            r.add_component(component.clone());
+        }
+
+        r
+    }
+
     #[test]
     fn test_write_embedded_files() -> Result<()> {
         let logger = get_logger()?;
@@ -1363,16 +1384,14 @@ pub mod tests {
             assert_eq!(
                 builder.extension_build_contexts.get("_sqlite3"),
                 Some(&LibPythonBuildContext {
-                    object_files: sqlite.object_file_data,
+                    object_files: sqlite.object_file_data.clone(),
                     static_libraries: BTreeSet::from_iter(["sqlite3".to_string()].iter().cloned()),
                     init_functions: BTreeMap::from_iter(
                         [("_sqlite3".to_string(), "PyInit__sqlite3".to_string())]
                             .iter()
                             .cloned()
                     ),
-                    license_infos: BTreeSet::from_iter(
-                        [sqlite.license.clone().unwrap()].iter().cloned()
-                    ),
+                    licensed_components: licensed_components_from_extension(&sqlite),
                     ..LibPythonBuildContext::default()
                 })
             );
@@ -1563,16 +1582,14 @@ pub mod tests {
             assert_eq!(
                 builder.extension_build_contexts.get("_sqlite3"),
                 Some(&LibPythonBuildContext {
-                    object_files: ext.object_file_data,
+                    object_files: ext.object_file_data.clone(),
                     static_libraries: BTreeSet::from_iter(["sqlite3".to_string()].iter().cloned()),
                     init_functions: BTreeMap::from_iter(
                         [("_sqlite3".to_string(), "PyInit__sqlite3".to_string())]
                             .iter()
                             .cloned()
                     ),
-                    license_infos: BTreeSet::from_iter(
-                        [ext.license.clone().unwrap()].iter().cloned()
-                    ),
+                    licensed_components: licensed_components_from_extension(&ext),
                     ..LibPythonBuildContext::default()
                 })
             );
@@ -1723,16 +1740,14 @@ pub mod tests {
         assert_eq!(
             builder.extension_build_contexts.get("_sqlite3"),
             Some(&LibPythonBuildContext {
-                object_files: sqlite.object_file_data,
+                object_files: sqlite.object_file_data.clone(),
                 static_libraries: BTreeSet::from_iter(["sqlite3".to_string()].iter().cloned()),
                 init_functions: BTreeMap::from_iter(
                     [("_sqlite3".to_string(), "PyInit__sqlite3".to_string())]
                         .iter()
                         .cloned()
                 ),
-                license_infos: BTreeSet::from_iter(
-                    [sqlite.license.clone().unwrap()].iter().cloned()
-                ),
+                licensed_components: licensed_components_from_extension(&sqlite),
                 ..LibPythonBuildContext::default()
             })
         );
@@ -1781,14 +1796,14 @@ pub mod tests {
         assert_eq!(
             builder.extension_build_contexts.get("_sqlite3"),
             Some(&LibPythonBuildContext {
-                object_files: ext.object_file_data,
+                object_files: ext.object_file_data.clone(),
                 static_libraries: BTreeSet::from_iter(["sqlite3".to_string()].iter().cloned()),
                 init_functions: BTreeMap::from_iter(
                     [("_sqlite3".to_string(), "PyInit__sqlite3".to_string())]
                         .iter()
                         .cloned()
                 ),
-                license_infos: BTreeSet::from_iter([ext.license.clone().unwrap()].iter().cloned()),
+                licensed_components: licensed_components_from_extension(&ext),
                 ..LibPythonBuildContext::default()
             })
         );
@@ -1935,7 +1950,7 @@ pub mod tests {
             assert_eq!(
                 builder.extension_build_contexts.get("_sqlite3"),
                 Some(&LibPythonBuildContext {
-                    object_files: sqlite.object_file_data,
+                    object_files: sqlite.object_file_data.clone(),
                     system_libraries: BTreeSet::from_iter(["iconv".to_string()].iter().cloned()),
                     static_libraries: BTreeSet::from_iter(
                         ["intl".to_string(), "sqlite3".to_string()].iter().cloned()
@@ -1945,9 +1960,7 @@ pub mod tests {
                             .iter()
                             .cloned()
                     ),
-                    license_infos: BTreeSet::from_iter(
-                        [sqlite.license.clone().unwrap()].iter().cloned()
-                    ),
+                    licensed_components: licensed_components_from_extension(&sqlite),
                     ..LibPythonBuildContext::default()
                 })
             );
@@ -2000,7 +2013,7 @@ pub mod tests {
             assert_eq!(
                 builder.extension_build_contexts.get("_sqlite3"),
                 Some(&LibPythonBuildContext {
-                    object_files: ext.object_file_data,
+                    object_files: ext.object_file_data.clone(),
                     system_libraries: BTreeSet::from_iter(["iconv".to_string()].iter().cloned()),
                     static_libraries: BTreeSet::from_iter(
                         ["intl".to_string(), "sqlite3".to_string()].iter().cloned()
@@ -2010,9 +2023,7 @@ pub mod tests {
                             .iter()
                             .cloned()
                     ),
-                    license_infos: BTreeSet::from_iter(
-                        [ext.license.clone().unwrap()].iter().cloned()
-                    ),
+                    licensed_components: licensed_components_from_extension(&ext),
                     ..LibPythonBuildContext::default()
                 })
             );
@@ -2367,9 +2378,7 @@ pub mod tests {
                             .iter()
                             .cloned()
                     ),
-                    license_infos: BTreeSet::from_iter(
-                        [sqlite.license.clone().unwrap()].iter().cloned()
-                    ),
+                    licensed_components: licensed_components_from_extension(&sqlite),
                     ..LibPythonBuildContext::default()
                 })
             );

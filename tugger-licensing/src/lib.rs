@@ -67,6 +67,9 @@ pub fn license_requirement_to_license_text(
 /// The type of a license.
 #[derive(Clone, Debug, PartialEq)]
 pub enum LicenseType {
+    /// No explicit licensing defined.
+    None,
+
     /// An SPDX license expression.
     SPDX(Expression),
 
@@ -140,6 +143,28 @@ impl LicensedComponent {
         })
     }
 
+    /// Construct a new instance with no licensing defined.
+    pub fn new_none(name: &str) -> Self {
+        Self {
+            name: name.to_string(),
+            flavor: ComponentType::Generic,
+            license: LicenseType::None,
+            source_location: SourceLocation::NotSet,
+            license_text: None,
+        }
+    }
+
+    /// Construct a new instance with a license in the public domain.
+    pub fn new_public_domain(name: &str) -> Self {
+        Self {
+            name: name.to_string(),
+            flavor: ComponentType::Generic,
+            license: LicenseType::PublicDomain,
+            source_location: SourceLocation::NotSet,
+            license_text: None,
+        }
+    }
+
     /// Obtain the name of this software component.
     pub fn name(&self) -> &str {
         &self.name
@@ -211,7 +236,7 @@ impl LicensedComponent {
                     }
                 })
                 .collect::<BTreeSet<_>>(),
-            LicenseType::PublicDomain => BTreeSet::new(),
+            LicenseType::None | LicenseType::PublicDomain => BTreeSet::new(),
         }
     }
 
@@ -227,7 +252,7 @@ impl LicensedComponent {
                 .requirements()
                 .filter(|req| req.req.license.id().is_some())
                 .collect::<Vec<_>>(),
-            LicenseType::PublicDomain => vec![],
+            LicenseType::None | LicenseType::PublicDomain => vec![],
         };
 
         reqs.iter()
@@ -287,7 +312,11 @@ impl LicensedComponents {
         writeln!(&mut text)?;
         writeln!(&mut text)?;
 
-        for component in self.components.values() {
+        for component in self
+            .components
+            .values()
+            .filter(|c| !matches!(c.license(), LicenseType::None))
+        {
             let title = format!("{} License", component.name);
             writeln!(&mut text, "{}", title)?;
             writeln!(&mut text, "{}", "=".repeat(title.len()))?;
@@ -333,6 +362,7 @@ impl LicensedComponents {
                 LicenseType::PublicDomain => {
                     writeln!(&mut text, "This component is in the public domain.")?;
                 }
+                LicenseType::None => {}
             }
 
             writeln!(&mut text)?;

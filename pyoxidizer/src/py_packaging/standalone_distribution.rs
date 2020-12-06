@@ -24,7 +24,6 @@ use {
         bytecode::{BytecodeCompiler, PythonBytecodeCompiler},
         filesystem_scanning::{find_python_resources, walk_tree_files},
         interpreter::{PythonInterpreterConfig, PythonInterpreterProfile, TerminfoResolution},
-        licensing::PackageLicenseInfo,
         location::ConcreteResourceLocation,
         module_util::{is_package_from_path, PythonModuleSuffixes},
         policy::PythonPackagingPolicy,
@@ -660,8 +659,7 @@ impl StandaloneDistribution {
 
             let expression = pi.licenses.clone().unwrap().join(" OR ");
             let mut component =
-                LicensedComponent::new_spdx(&pi.python_implementation_name, &expression)
-                    .map_err(|e| anyhow!("{}", e))?;
+                LicensedComponent::new_spdx(&pi.python_implementation_name, &expression)?;
 
             component.set_flavor(ComponentType::Library);
             component.set_license_text(license_text);
@@ -747,25 +745,30 @@ impl StandaloneDistribution {
                     links.push(depends);
                 }
 
-                let mut license = PackageLicenseInfo {
-                    package: module.clone(),
-                    version: pi.python_version.clone(),
-                    is_public_domain: entry.license_public_domain.unwrap_or(false),
-                    ..Default::default()
+                let mut license = if entry.license_public_domain.unwrap_or(false) {
+                    LicensedComponent::new_public_domain(module)
+                } else if let Some(licenses) = &entry.licenses {
+                    let expression = licenses.join(" OR ");
+                    LicensedComponent::new_spdx(module, &expression)?
+                } else {
+                    LicensedComponent::new_none(module)
                 };
 
                 if let Some(license_paths) = &entry.license_paths {
-                    for license_path in license_paths {
-                        let license_path = python_path.join(license_path);
-                        license.license_texts.push(
-                            std::fs::read_to_string(&license_path)
-                                .with_context(|| format!("reading {}", license_path.display()))?,
-                        );
-                    }
-                }
+                    let license_text = license_paths
+                        .iter()
+                        .map(|p| {
+                            let path = python_path.join(p);
 
-                if let Some(licenses) = &entry.licenses {
-                    license.metadata_licenses.extend(licenses.clone());
+                            let text = std::fs::read_to_string(&path)
+                                .with_context(|| format!("reading {}", path.display()))?;
+
+                            Ok(text)
+                        })
+                        .collect::<Result<Vec<_>>>()?
+                        .join("\n");
+
+                    license.set_license_text(license_text);
                 }
 
                 ems.push(PythonExtensionModule {

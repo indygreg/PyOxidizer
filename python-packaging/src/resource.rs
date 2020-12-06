@@ -7,7 +7,6 @@
 use {
     crate::{
         bytecode::{CompileMode, PythonBytecodeCompiler},
-        licensing::PackageLicenseInfo,
         module_util::{is_package_from_path, packages_from_module_name, resolve_path_for_module},
         python_source::has_dunder_file,
     },
@@ -21,6 +20,7 @@ use {
         path::{Path, PathBuf},
     },
     tugger_file_manifest::{File, FileData},
+    tugger_licensing::LicensedComponent,
 };
 
 /// An optimization level for Python bytecode.
@@ -550,7 +550,7 @@ pub struct PythonExtensionModule {
     /// available to choose from.
     pub variant: Option<String>,
     /// Licenses that apply to this extension.
-    pub license: Option<PackageLicenseInfo>,
+    pub license: Option<LicensedComponent>,
 }
 
 impl PythonExtensionModule {
