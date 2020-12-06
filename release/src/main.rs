@@ -11,14 +11,12 @@ use {
     lazy_static::lazy_static,
     serde::Deserialize,
     std::{
-        collections::BTreeSet,
+        collections::{BTreeMap, BTreeSet},
         ffi::OsString,
         fmt::Write,
         io::{BufRead, BufReader},
         path::Path,
     },
-    tugger_licensing::LicensedComponent,
-    tugger_licensing_net::licensed_component_spdx_license_texts,
 };
 
 lazy_static! {
@@ -624,64 +622,70 @@ fn generate_pyembed_license(repo_root: &Path) -> Result<String> {
 
     let deny: CargoDenyLicenseList = serde_json::from_slice(&output.stdout)?;
 
-    let client = reqwest::blocking::Client::new();
+    let mut crates = BTreeMap::new();
+
+    for (license, entries) in &deny.licenses {
+        for entry in entries {
+            let crate_name = entry.split(' ').next().unwrap();
+
+            crates
+                .entry(crate_name.to_string())
+                .or_insert_with(BTreeSet::new)
+                .insert(license.clone());
+        }
+    }
 
     let mut text = String::new();
 
     writeln!(
         &mut text,
-        "This application contains Rust code governed by various software"
+        "// This Source Code Form is subject to the terms of the Mozilla Public"
     )?;
     writeln!(
         &mut text,
-        "licenses. The list of licenses and Rust crates utilizing them follows."
+        "// License, v. 2.0. If a copy of the MPL was not distributed with this"
+    )?;
+    writeln!(
+        &mut text,
+        "// file, You can obtain one at https://mozilla.org/MPL/2.0/."
     )?;
     writeln!(&mut text)?;
-    for (license, entries) in &deny.licenses {
-        let component = LicensedComponent::new_spdx(&entries[0], license)?;
-        let license_texts = licensed_component_spdx_license_texts(&component, &client)?;
 
-        writeln!(&mut text, "{} License", license)?;
+    writeln!(
+        &mut text,
+        "pub fn pyembed_licenses() -> anyhow::Result<Vec<tugger_licensing::LicensedComponent>> {{"
+    )?;
+    writeln!(&mut text, "    let mut res = vec![];")?;
+    writeln!(&mut text)?;
+
+    for (crate_name, licenses) in crates {
+        let expression = licenses.into_iter().collect::<Vec<_>>().join(" OR ");
+
         writeln!(
             &mut text,
-            "{}",
-            "=".repeat(license.len() + " License".len())
+            "    let mut component = tugger_licensing::LicensedComponent::new_spdx(\"{}\", \"{}\")?;",
+            crate_name, expression
         )?;
-        writeln!(&mut text)?;
         writeln!(
             &mut text,
-            "The following Rust crates utilize the {} license:",
-            license
+            "    component.set_flavor(tugger_licensing::ComponentFlavor::RustCrate);"
         )?;
+        writeln!(&mut text, "    res.push(component);")?;
         writeln!(&mut text)?;
-
-        let mut crates = BTreeSet::new();
-        for entry in entries {
-            crates.insert(entry.split(' ').next().unwrap());
-        }
-
-        for name in crates {
-            writeln!(&mut text, "* {} (https://crates.io/crates/{})", name, name)?;
-        }
-
-        writeln!(&mut text)?;
-        writeln!(&mut text, "The text of the {} license follows:", license)?;
-        writeln!(&mut text)?;
-        for license in license_texts {
-            write!(&mut text, "{}", license)?;
-            writeln!(&mut text)?;
-        }
     }
+
+    writeln!(&mut text, "    Ok(res)")?;
+    writeln!(&mut text, "}}")?;
 
     Ok(text)
 }
 
-/// Ensures the `pyembed-license.rst` file in source control is up to date with reality.
+/// Ensures the `pyembed-license.rs` file in source control is up to date with reality.
 fn ensure_pyembed_license_current(repo_root: &Path) -> Result<()> {
     let path = repo_root
         .join("pyoxidizer")
         .join("src")
-        .join("pyembed-license.rst");
+        .join("pyembed-license.rs");
 
     let file_text = std::fs::read_to_string(&path)?;
     let wanted_text = generate_pyembed_license(repo_root)?;

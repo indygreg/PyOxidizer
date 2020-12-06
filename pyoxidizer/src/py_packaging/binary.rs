@@ -30,6 +30,8 @@ use {
     tugger_windows::VCRedistributablePlatform,
 };
 
+include!("../pyembed-license.rs");
+
 /// How a binary should link against libpython.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum LibpythonLinkMode {
