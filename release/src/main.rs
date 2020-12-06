@@ -14,9 +14,11 @@ use {
         collections::BTreeSet,
         ffi::OsString,
         fmt::Write,
-        io::{BufRead, BufReader, Read},
+        io::{BufRead, BufReader},
         path::Path,
     },
+    tugger_licensing::LicensedComponent,
+    tugger_licensing_net::licensed_component_spdx_license_texts,
 };
 
 lazy_static! {
@@ -601,31 +603,6 @@ struct CargoDenyLicenseList {
     unlicensed: Vec<String>,
 }
 
-fn get_license_text(client: &reqwest::blocking::Client, license: &str) -> Result<String> {
-    if license.contains(" WITH ") {
-        let parts = license.split(" WITH ").collect::<Vec<_>>();
-
-        let mut licenses = vec![];
-        licenses.push(get_license_text(client, parts[0])?);
-        licenses.push(get_license_text(client, parts[1])?);
-
-        Ok(licenses.join("\n"))
-    } else {
-        let license_url = url::Url::parse(&format!(
-            "https://raw.githubusercontent.com/spdx/license-list-data/master/text/{}.txt",
-            license
-        ))?;
-        let mut response = client.get(license_url.clone()).send()?;
-        if response.status() != 200 {
-            return Err(anyhow!("HTTP {} from {}", response.status(), license_url));
-        }
-        let mut license_text = String::new();
-        response.read_to_string(&mut license_text)?;
-
-        Ok(license_text)
-    }
-}
-
 fn generate_pyembed_license(repo_root: &Path) -> Result<String> {
     let pyembed_manifest_path = repo_root.join("pyembed").join("Cargo.toml");
 
@@ -661,6 +638,9 @@ fn generate_pyembed_license(repo_root: &Path) -> Result<String> {
     )?;
     writeln!(&mut text)?;
     for (license, entries) in &deny.licenses {
+        let component = LicensedComponent::new_spdx(&entries[0], license)?;
+        let license_texts = licensed_component_spdx_license_texts(&component, &client)?;
+
         writeln!(&mut text, "{} License", license)?;
         writeln!(
             &mut text,
@@ -687,10 +667,10 @@ fn generate_pyembed_license(repo_root: &Path) -> Result<String> {
         writeln!(&mut text)?;
         writeln!(&mut text, "The text of the {} license follows:", license)?;
         writeln!(&mut text)?;
-
-        write!(&mut text, "{}", get_license_text(&client, license)?)?;
-
-        writeln!(&mut text)?;
+        for license in license_texts {
+            write!(&mut text, "{}", license)?;
+            writeln!(&mut text)?;
+        }
     }
 
     Ok(text)

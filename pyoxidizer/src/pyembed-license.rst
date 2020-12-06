@@ -580,6 +580,7 @@ The following Rust crates utilize the MPL-2.0 license:
 * python-packaging (https://crates.io/crates/python-packaging)
 * python-packed-resources (https://crates.io/crates/python-packed-resources)
 * tugger-file-manifest (https://crates.io/crates/tugger-file-manifest)
+* tugger-licensing (https://crates.io/crates/tugger-licensing)
 
 The text of the MPL-2.0 license follows:
 

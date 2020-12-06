@@ -2443,6 +2443,8 @@ dependencies = [
  "serde",
  "serde_json",
  "toml",
+ "tugger-licensing",
+ "tugger-licensing-net",
  "url",
 ]
 
