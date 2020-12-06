@@ -659,8 +659,9 @@ impl StandaloneDistribution {
             })?;
 
             let expression = pi.licenses.clone().unwrap().join(" OR ");
-            let mut component = LicensedComponent::new(&pi.python_implementation_name, &expression)
-                .map_err(|e| anyhow!("{}", e))?;
+            let mut component =
+                LicensedComponent::new_spdx(&pi.python_implementation_name, &expression)
+                    .map_err(|e| anyhow!("{}", e))?;
 
             component.set_flavor(ComponentType::Library);
             component.set_license_text(license_text);
