@@ -3316,6 +3316,13 @@ version = "0.1.0-pre"
 [[package]]
 name = "tugger-licensing"
 version = "0.1.0-pre"
+dependencies = [
+ "anyhow",
+ "reqwest",
+ "spdx",
+ "tugger-common",
+ "url",
+]
 
 [[package]]
 name = "tugger-rpm"
