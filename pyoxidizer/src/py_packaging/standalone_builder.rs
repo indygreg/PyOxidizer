@@ -41,7 +41,7 @@ use {
         sync::Arc,
     },
     tugger_file_manifest::{File, FileData, FileEntry, FileManifest},
-    tugger_licensing::LicenseType,
+    tugger_licensing::{ComponentType, LicenseType, LicensedComponent},
     tugger_windows::VCRedistributablePlatform,
 };
 
@@ -605,7 +605,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         let core_component = self
             .target_distribution
             .core_license
-            .as_ref()
+            .clone()
             .ok_or_else(|| anyhow!("could not resolve Python standard library license"))?;
         let stdlib_licenses = core_component
             .all_spdx_licenses()
@@ -688,13 +688,16 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
 
             match resource {
                 PythonResource::ModuleSource(source) => {
-                    let li = PackageLicenseInfo {
-                        package: source.top_level_package().to_string(),
-                        version: "stdlib".to_string(),
-                        metadata_licenses: stdlib_licenses.clone(),
-                        ..Default::default()
-                    };
-                    self.resources_collector.add_package_license_info(li)?;
+                    let mut component = LicensedComponent::new_spdx(
+                        source.top_level_package(),
+                        &core_component
+                            .spdx_expression()
+                            .ok_or_else(|| anyhow!("should have resolved SPDX expression"))?
+                            .to_string(),
+                    )?;
+                    component.set_flavor(ComponentType::PythonPackage);
+
+                    self.resources_collector.add_licensed_component(component)?;
                     self.add_python_module_source(source, Some(add_context))?;
                 }
                 PythonResource::PackageResource(r) => {

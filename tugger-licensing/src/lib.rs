@@ -185,6 +185,15 @@ impl LicensedComponent {
         &self.license
     }
 
+    /// Obtain the SPDX expression for this component's license.
+    pub fn spdx_expression(&self) -> Option<&Expression> {
+        match &self.license {
+            LicenseType::SPDX(expression) => Some(expression),
+            LicenseType::OtherExpression(expression) => Some(expression),
+            LicenseType::None | LicenseType::PublicDomain => None,
+        }
+    }
+
     /// Whether the SPDX expression is simple.
     ///
     /// Simple is defined as having at most a single license.
