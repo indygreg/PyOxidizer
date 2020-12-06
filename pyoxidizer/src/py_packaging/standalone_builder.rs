@@ -933,6 +933,20 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
                 };
 
                 extra_files.add_file_entry(&manifest_path, content)?;
+
+                // Always look for and add the python3.dll variant if it exists. This DLL
+                // exports the stable subset of the Python ABI and it is required by some
+                // extensions.
+                let python3_dll_path = p.with_file_name("python3.dll");
+                let manifest_path = Path::new(python3_dll_path.file_name().unwrap());
+                if python3_dll_path.exists() {
+                    let content = FileEntry {
+                        data: std::fs::read(&python3_dll_path)?.into(),
+                        executable: false,
+                    };
+
+                    extra_files.add_file_entry(&manifest_path, content)?;
+                }
             }
         }
 

@@ -117,6 +117,8 @@ Other Relevant Changes
   ``Python-2.0 OR MPL-2.0``. The author misunderstood what ``AND`` did and
   after realizing his mistake, corrected it to ``OR`` so the crates can one
   license or the other.
+* When using dynamically linked Python distributions on Windows, the
+  ``python3.dll`` file is automatically installed if it is present. (#336)
 
 .. _version_0_10_3:
 
