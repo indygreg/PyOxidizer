@@ -2145,6 +2145,7 @@ dependencies = [
  "tugger-binary-analysis",
  "tugger-common",
  "tugger-file-manifest",
+ "tugger-licensing",
  "tugger-windows",
  "url",
  "uuid",
@@ -2169,6 +2170,7 @@ dependencies = [
  "spdx",
  "tempfile",
  "tugger-file-manifest",
+ "tugger-licensing",
  "walkdir",
  "zip",
 ]

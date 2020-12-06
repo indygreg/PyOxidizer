@@ -11,6 +11,7 @@ use {
         path::PathBuf,
     },
     tugger_file_manifest::FileData,
+    tugger_licensing::LicensedComponents,
 };
 
 /// Holds state necessary to build and link a libpython.
@@ -54,6 +55,9 @@ pub struct LibPythonBuildContext {
     pub init_functions: BTreeMap<String, String>,
 
     /// Holds licensing info for things being linked together.
+    pub licensed_components: LicensedComponents,
+
+    /// Holds licensing info for things being linked together.
     ///
     /// Keys are entity name (e.g. extension name). Values are license
     /// structures.
@@ -72,6 +76,7 @@ impl Default for LibPythonBuildContext {
             static_libraries: BTreeSet::new(),
             frameworks: BTreeSet::new(),
             init_functions: BTreeMap::new(),
+            licensed_components: LicensedComponents::default(),
             license_infos: BTreeSet::new(),
         }
     }
@@ -89,6 +94,7 @@ impl LibPythonBuildContext {
         let mut static_libraries = BTreeSet::new();
         let mut frameworks = BTreeSet::new();
         let mut init_functions = BTreeMap::new();
+        let mut licensed_components = LicensedComponents::default();
         let mut license_infos = BTreeSet::new();
 
         for context in contexts {
@@ -120,6 +126,9 @@ impl LibPythonBuildContext {
             for (k, v) in &context.init_functions {
                 init_functions.insert(k.clone(), v.clone());
             }
+            for c in context.licensed_components.iter_components() {
+                licensed_components.add_component(c.clone());
+            }
             for v in &context.license_infos {
                 license_infos.insert(v.clone());
             }
@@ -135,6 +144,7 @@ impl LibPythonBuildContext {
             static_libraries,
             frameworks,
             init_functions,
+            licensed_components,
             license_infos,
         }
     }

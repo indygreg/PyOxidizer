@@ -29,6 +29,7 @@ use {
         path::PathBuf,
     },
     tugger_file_manifest::{File, FileData},
+    tugger_licensing::{LicensedComponent, LicensedComponents},
 };
 
 /// Represents a single file install.
@@ -675,6 +676,9 @@ pub struct PythonResourceCollector {
     /// Bytecode cache tag to use for compiled bytecode modules.
     cache_tag: String,
 
+    /// Collection of software components which are licensed.
+    licensed_components: LicensedComponents,
+
     /// Stores per-package licensing metadata.
     package_license_infos: BTreeSet<PackageLicenseInfo>,
 }
@@ -702,6 +706,7 @@ impl PythonResourceCollector {
             resources: BTreeMap::new(),
             cache_tag: cache_tag.to_string(),
             package_license_infos: BTreeSet::new(),
+            licensed_components: LicensedComponents::default(),
         }
     }
 
@@ -826,6 +831,13 @@ impl PythonResourceCollector {
         }
 
         Ok(report)
+    }
+
+    /// Register a licensed software component to this collection.
+    pub fn add_licensed_component(&mut self, component: LicensedComponent) -> Result<()> {
+        self.licensed_components.add_component(component);
+
+        Ok(())
     }
 
     /// Adds a `PackageLicenseInfo` to be tracked by this instance.

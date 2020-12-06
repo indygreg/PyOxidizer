@@ -244,13 +244,18 @@ impl LicensedComponent {
 }
 
 /// A collection of licensed components.
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct LicensedComponents {
     /// The collection of components, indexed by name.
     components: BTreeMap<String, LicensedComponent>,
 }
 
 impl LicensedComponents {
+    /// Iterate over components in this collection.
+    pub fn iter_components(&self) -> impl Iterator<Item = &LicensedComponent> {
+        self.components.values()
+    }
+
     /// Add a component to this collection.
     pub fn add_component(&mut self, component: LicensedComponent) {
         self.components.insert(component.name.clone(), component);

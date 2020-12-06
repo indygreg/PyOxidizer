@@ -42,6 +42,7 @@ use {
         sync::Arc,
     },
     tugger_file_manifest::FileData,
+    tugger_licensing::{ComponentType, LicensedComponent},
 };
 
 // This needs to be kept in sync with *compiler.py
@@ -376,7 +377,7 @@ pub struct StandaloneDistribution {
     extension_module_loading: Vec<String>,
 
     /// Holds license information for the core distribution.
-    pub core_license_info: Option<PackageLicenseInfo>,
+    pub core_license: Option<LicensedComponent>,
 
     /// SPDX license shortnames that apply to this distribution.
     ///
@@ -649,7 +650,7 @@ impl StandaloneDistribution {
 
         let pi = parse_python_json_from_distribution(dist_dir)?;
 
-        let mut core_license_info = None;
+        let mut core_license = None;
 
         if let Some(ref python_license_path) = pi.license_path {
             let license_path = python_path.join(python_license_path);
@@ -657,13 +658,14 @@ impl StandaloneDistribution {
                 format!("unable to read Python license {}", license_path.display())
             })?;
 
-            core_license_info.replace(PackageLicenseInfo {
-                package: "__python-distribution__".to_string(),
-                version: pi.python_version.to_string(),
-                metadata_licenses: pi.licenses.clone().unwrap(),
-                license_texts: vec![license_text],
-                ..Default::default()
-            });
+            let expression = pi.licenses.clone().unwrap().join(" OR ");
+            let mut component = LicensedComponent::new(&pi.python_implementation_name, &expression)
+                .map_err(|e| anyhow!("{}", e))?;
+
+            component.set_flavor(ComponentType::Library);
+            component.set_license_text(license_text);
+
+            core_license.replace(component);
         }
 
         // Collect object files for libpython.
@@ -884,7 +886,7 @@ impl StandaloneDistribution {
             link_mode,
             python_symbol_visibility: pi.python_symbol_visibility,
             extension_module_loading: pi.python_extension_module_loading,
-            core_license_info,
+            core_license,
             licenses: pi.licenses.clone(),
             license_path: match pi.license_path {
                 Some(ref path) => Some(PathBuf::from(path)),

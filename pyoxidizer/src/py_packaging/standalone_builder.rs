@@ -283,8 +283,10 @@ impl StandalonePythonExecutableBuilder {
                 .insert("msvcrt".to_string());
         }
 
-        if let Some(li) = &self.target_distribution.core_license_info {
-            self.core_build_context.license_infos.insert(li.clone());
+        if let Some(component) = &self.target_distribution.core_license {
+            self.core_build_context
+                .licensed_components
+                .add_component(component.clone());
         }
 
         Ok(())
@@ -599,13 +601,19 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         &mut self,
         callback: Option<ResourceAddCollectionContextCallback>,
     ) -> Result<()> {
-        let stdlib_licenses = self
+        let core_component = self
             .target_distribution
-            .core_license_info
+            .core_license
             .as_ref()
-            .ok_or_else(|| anyhow!("could not resolve Python standard library licenses"))?
-            .metadata_licenses
-            .clone();
+            .ok_or_else(|| anyhow!("could not resolve Python standard library license"))?;
+        let stdlib_licenses = core_component
+            .all_spdx_licenses()
+            .iter()
+            .map(|(lid, _)| lid.name.to_string())
+            .collect::<Vec<_>>();
+
+        self.resources_collector
+            .add_licensed_component(core_component.clone())?;
 
         // TODO consolidate into loop below.
         for ext in self.packaging_policy.resolve_python_extension_modules(
