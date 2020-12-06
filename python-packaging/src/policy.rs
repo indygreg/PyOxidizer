@@ -609,6 +609,7 @@ impl PythonPackagingPolicy {
                                     LicenseFlavor::OtherExpression(_) => None,
                                     LicenseFlavor::PublicDomain => Some(em.clone()),
                                     LicenseFlavor::None => None,
+                                    LicenseFlavor::Unknown(_) => None,
                                 }
                             } else {
                                 None

@@ -78,6 +78,9 @@ pub enum LicenseFlavor {
 
     /// License is in the public domain.
     PublicDomain,
+
+    /// Unknown licensing type with available string identifiers.
+    Unknown(Vec<String>),
 }
 
 /// Describes the type of a software component.
@@ -165,6 +168,17 @@ impl LicensedComponent {
         }
     }
 
+    /// Construct a new instance with an unknown license.
+    pub fn new_unknown(name: &str, terms: Vec<String>) -> Self {
+        Self {
+            name: name.to_string(),
+            flavor: ComponentFlavor::Generic,
+            license: LicenseFlavor::Unknown(terms),
+            source_location: SourceLocation::NotSet,
+            license_text: None,
+        }
+    }
+
     /// Obtain the name of this software component.
     pub fn name(&self) -> &str {
         &self.name
@@ -190,7 +204,7 @@ impl LicensedComponent {
         match &self.license {
             LicenseFlavor::SPDX(expression) => Some(expression),
             LicenseFlavor::OtherExpression(expression) => Some(expression),
-            LicenseFlavor::None | LicenseFlavor::PublicDomain => None,
+            LicenseFlavor::None | LicenseFlavor::PublicDomain | LicenseFlavor::Unknown(_) => None,
         }
     }
 
@@ -245,7 +259,9 @@ impl LicensedComponent {
                     }
                 })
                 .collect::<BTreeSet<_>>(),
-            LicenseFlavor::None | LicenseFlavor::PublicDomain => BTreeSet::new(),
+            LicenseFlavor::None | LicenseFlavor::PublicDomain | LicenseFlavor::Unknown(_) => {
+                BTreeSet::new()
+            }
         }
     }
 
@@ -261,7 +277,7 @@ impl LicensedComponent {
                 .requirements()
                 .filter(|req| req.req.license.id().is_some())
                 .collect::<Vec<_>>(),
-            LicenseFlavor::None | LicenseFlavor::PublicDomain => vec![],
+            LicenseFlavor::None | LicenseFlavor::PublicDomain | LicenseFlavor::Unknown(_) => vec![],
         };
 
         reqs.iter()
@@ -372,6 +388,13 @@ impl LicensedComponents {
                     writeln!(&mut text, "This component is in the public domain.")?;
                 }
                 LicenseFlavor::None => {}
+                LicenseFlavor::Unknown(terms) => {
+                    writeln!(
+                        &mut text,
+                        "This component is licensed according to {}",
+                        terms.join(", ")
+                    )?;
+                }
             }
 
             writeln!(&mut text)?;

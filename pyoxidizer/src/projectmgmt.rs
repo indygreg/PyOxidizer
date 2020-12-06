@@ -404,6 +404,7 @@ pub fn python_distribution_info(dist_path: &str) -> Result<()> {
                         LicenseFlavor::OtherExpression(expression) => expression.to_string(),
                         LicenseFlavor::PublicDomain => "public domain".to_string(),
                         LicenseFlavor::None => "none".to_string(),
+                        LicenseFlavor::Unknown(terms) => terms.join(","),
                     }
                 );
             }
@@ -511,6 +512,9 @@ pub fn python_distribution_licenses(path: &str) -> Result<()> {
                     }
                     LicenseFlavor::None => {
                         println!("Licensing: None defined");
+                    }
+                    LicenseFlavor::Unknown(terms) => {
+                        println!("Licensing: {}", terms.join(", "));
                     }
                 }
             } else {
