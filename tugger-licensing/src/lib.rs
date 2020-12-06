@@ -4,15 +4,20 @@
 
 use {
     anyhow::{anyhow, Result},
-    spdx::{ExceptionId, Expression, LicenseId, LicenseReq},
-    std::{
-        collections::{BTreeMap, BTreeSet},
-        fmt::Write,
-        io::Read,
-    },
-    url::Url,
+    spdx::{ExceptionId, Expression, LicenseId},
+    std::collections::{BTreeMap, BTreeSet},
 };
 
+#[cfg(feature = "reqwest")]
+use {
+    spdx::LicenseReq,
+    std::{fmt::Write, io::Read},
+};
+
+#[cfg(feature = "url")]
+use url::Url;
+
+#[allow(unused)]
 const LICENSE_TEXT_URL: &str =
     "https://raw.githubusercontent.com/spdx/license-list-data/master/text/{}.txt";
 
@@ -20,6 +25,7 @@ pub const DEFAULT_LICENSE_PREAMBLE: &str =
     "This product contains software subject to licenses as described below.";
 
 /// Obtain the SPDX license text for a given license ID.
+#[cfg(feature = "reqwest")]
 pub fn get_spdx_license_text(
     client: &reqwest::blocking::Client,
     license_id: &str,
@@ -40,6 +46,7 @@ pub fn get_spdx_license_text(
 ///
 /// Only works for valid SPDX licenses. If an exception is present, that exception
 /// text will be concatenated to the original license's text.
+#[cfg(feature = "reqwest")]
 pub fn license_requirement_to_license_text(
     client: &reqwest::blocking::Client,
     req: &LicenseReq,
@@ -226,6 +233,7 @@ impl LicensedComponent {
     ///
     /// If non-SPDX license identifiers are present, they are ignored. Consider
     /// calling `is_spdx()` to ensure only SPDX license identifiers are used.
+    #[cfg(feature = "reqwest")]
     pub fn spdx_license_texts(&self, client: &reqwest::blocking::Client) -> Result<Vec<String>> {
         self.spdx_expression
             .requirements()
@@ -271,6 +279,7 @@ impl LicensedComponents {
     ///
     /// `preamble` is introductory text that will be printed before the automatically
     /// generated text.
+    #[cfg(feature = "reqwest")]
     pub fn generate_aggregate_license_text(
         &self,
         client: &reqwest::blocking::Client,
@@ -339,6 +348,7 @@ mod tests {
         Ok(())
     }
 
+    #[cfg(feature = "reqwest")]
     #[test]
     fn spdx_license_texts() -> Result<()> {
         let client = tugger_common::http::get_http_client()?;
@@ -358,6 +368,7 @@ mod tests {
         Ok(())
     }
 
+    #[cfg(feature = "reqwest")]
     #[test]
     fn generate_aggregate_license_text() -> Result<()> {
         let client = tugger_common::http::get_http_client()?;
