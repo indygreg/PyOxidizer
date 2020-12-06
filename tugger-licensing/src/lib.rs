@@ -5,7 +5,10 @@
 use {
     anyhow::{anyhow, Result},
     spdx::{ExceptionId, Expression, LicenseId},
-    std::collections::{BTreeMap, BTreeSet},
+    std::{
+        cmp::Ordering,
+        collections::{BTreeMap, BTreeSet},
+    },
 };
 
 #[cfg(feature = "reqwest")]
@@ -124,6 +127,20 @@ pub struct LicensedComponent {
     ///
     /// If empty, license texts will be derived from SPDX identifiers, if available.
     license_texts: Vec<String>,
+}
+
+impl PartialOrd for LicensedComponent {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        if self.name == other.name {
+            if self.flavor == other.flavor {
+                Some(Ordering::Equal)
+            } else {
+                None
+            }
+        } else {
+            self.name.partial_cmp(&other.name)
+        }
+    }
 }
 
 impl LicensedComponent {
