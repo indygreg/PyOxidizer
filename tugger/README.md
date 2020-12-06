@@ -9,6 +9,7 @@ Tugger implements its functionality across a series of crates:
 * `tugger-debian` - Debian packaging.
 * `tugger-file-manifest` - Represent a collection of files.
 * `tugger-licensing` - Functionality related to software licensing.
+* `tugger-licensing-net` - Software licensing functionality requiring network access.
 * `tugger-rpm` - RPM packaging.
 * `tugger-snapcraft` - Snapcraft packaging.
 * `tugger-windows` - Common Windows functionality (like binary signing).

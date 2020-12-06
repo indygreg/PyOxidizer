@@ -79,6 +79,9 @@ The following crates compose Tugger's crate *fleet*:
 ``tugger-licensing``
    Functionality related to software licensing.
 
+``tugger-licensing-net``
+   Functionality related to software licensing requiring network access.
+
 ``tugger-rpm``
    RPM packaging primitives.
 

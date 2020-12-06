@@ -13,17 +13,3 @@ readme = "README.md"
 [dependencies]
 anyhow = "1.0"
 spdx = "0.3"
-url = {version = "2.2", optional = true }
-
-[dependencies.reqwest]
-version = "0.10"
-optional = true
-default-features = false
-features = ["blocking", "rustls-tls"]
-
-[dev-dependencies.tugger-common]
-version = "0.1.0-pre"
-path = "../tugger-common"
-
-[features]
-default = ["reqwest", "url"]

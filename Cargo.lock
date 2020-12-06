@@ -3320,9 +3320,18 @@ name = "tugger-licensing"
 version = "0.1.0-pre"
 dependencies = [
  "anyhow",
+ "spdx",
+]
+
+[[package]]
+name = "tugger-licensing-net"
+version = "0.1.0-pre"
+dependencies = [
+ "anyhow",
  "reqwest",
  "spdx",
  "tugger-common",
+ "tugger-licensing",
  "url",
 ]
 

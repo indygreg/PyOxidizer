@@ -1,0 +1,25 @@
+[package]
+name = "tugger-licensing-net"
+version = "0.1.0-pre"
+authors = ["Gregory Szorc <gregory.szorc@gmail.com>"]
+edition = "2018"
+license = "MPL-2.0"
+description = "Software licensing functionality requiring network access"
+keywords = ["tugger"]
+homepage = "https://github.com/indygreg/PyOxidizer"
+repository = "https://github.com/indygreg/PyOxidizer.git"
+readme = "README.md"
+
+[dependencies]
+anyhow = "1.0"
+reqwest = { version = "0.10", default-features = false, features = ["blocking", "rustls-tls"] }
+spdx = "0.3"
+url = "2.2"
+
+[dependencies.tugger-licensing]
+version = "0.1.0-pre"
+path = "../tugger-licensing"
+
+[dev-dependencies.tugger-common]
+version = "0.1.0-pre"
+path = "../tugger-common"
