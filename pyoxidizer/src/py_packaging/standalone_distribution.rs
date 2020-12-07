@@ -750,9 +750,19 @@ impl StandaloneDistribution {
                 } else if let Some(licenses) = &entry.licenses {
                     let expression = licenses.join(" OR ");
                     LicensedComponent::new_spdx(module, &expression)?
+                } else if let Some(core) = &core_license {
+                    LicensedComponent::new_spdx(
+                        module,
+                        &core
+                            .spdx_expression()
+                            .ok_or_else(|| anyhow!("could not resolve SPDX license for core"))?
+                            .to_string(),
+                    )?
                 } else {
                     LicensedComponent::new_none(module)
                 };
+
+                license.set_flavor(ComponentFlavor::PythonPackage);
 
                 if let Some(license_paths) = &entry.license_paths {
                     for path in license_paths {
