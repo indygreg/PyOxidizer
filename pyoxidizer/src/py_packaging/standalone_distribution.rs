@@ -1358,7 +1358,12 @@ impl PythonDistribution for StandaloneDistribution {
 #[cfg(test)]
 pub mod tests {
     use {
-        super::*, crate::testutil::*, python_packaging::policy::ExtensionModuleFilter,
+        super::*,
+        crate::testutil::*,
+        python_packaging::{
+            bytecode::CompileMode, policy::ExtensionModuleFilter,
+            resource::BytecodeOptimizationLevel,
+        },
         std::collections::BTreeSet,
     };
 
@@ -1551,6 +1556,28 @@ pub mod tests {
                 dist.target_triple()
             );
         }
+
+        Ok(())
+    }
+
+    #[test]
+    fn compile_syntax_error() -> Result<()> {
+        let dist = get_default_distribution()?;
+
+        let temp_dir = tempfile::TempDir::new()?;
+
+        let mut compiler = BytecodeCompiler::new(dist.python_exe_path(), temp_dir.path())?;
+        let res = compiler.compile(
+            b"invalid syntax",
+            "foo.py",
+            BytecodeOptimizationLevel::Zero,
+            CompileMode::Bytecode,
+        );
+        assert!(res.is_err());
+        let err = res.err().unwrap();
+        assert!(err
+            .to_string()
+            .starts_with("compiling error: invalid syntax"));
 
         Ok(())
     }
