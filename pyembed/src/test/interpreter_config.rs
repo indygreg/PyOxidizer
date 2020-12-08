@@ -32,6 +32,52 @@ fn get_unicode_argument() -> OsString {
     OsString::from_wide(&[0x2d4e, 0x8765])
 }
 
+fn reprs(py: cpython::Python, container: &PyObject) -> cpython::PyResult<Vec<String>> {
+    let mut names = Vec::new();
+    for x in container.iter(py)? {
+        names.push(x?.to_string());
+    }
+    Ok(names)
+}
+
+fn assert_importer(oxidized: bool, filesystem: bool) {
+    let mut config = OxidizedPythonInterpreterConfig::default();
+    // Otherwise the Rust arguments are interpreted as Python arguments.
+    config.interpreter_config.parse_argv = Some(false);
+    config.set_missing_path_configuration = false;
+    config.oxidized_importer = oxidized;
+    config.filesystem_importer = filesystem;
+    let mut interp = MainPythonInterpreter::new(config).unwrap();
+
+    let py = interp.acquire_gil().unwrap();
+    let sys = py.import("sys").unwrap();
+    let meta_path_reprs = reprs(py, &sys.get(py, "meta_path").unwrap()).unwrap();
+    let path_hook_reprs = reprs(py, &sys.get(py, "path_hooks").unwrap()).unwrap();
+    const PATH_HOOK_REPR: &str = "built-in method path_hook of OxidizedFinder object";
+    if oxidized {
+        assert!(meta_path_reprs[0].contains("OxidizedFinder"));
+    } else {
+        assert!(meta_path_reprs
+            .iter()
+            .all(|s| !s.contains("OxidizedFinder")));
+        assert!(path_hook_reprs.iter().all(|s| !s.contains(PATH_HOOK_REPR)));
+    }
+    if filesystem {
+        assert!(meta_path_reprs
+            .last()
+            .unwrap()
+            .contains("_frozen_importlib_external.PathFinder"));
+    } else {
+        assert!(meta_path_reprs
+            .iter()
+            .all(|s| !s.contains("_frozen_importlib_external.PathFinder")));
+        assert!(path_hook_reprs.iter().all(|s| !s.contains(PATH_HOOK_REPR)));
+    }
+    if oxidized && filesystem {
+        assert!(path_hook_reprs.last().unwrap().contains(PATH_HOOK_REPR));
+    }
+}
+
 rusty_fork_test! {
     #[test]
     fn test_default_interpreter() {
@@ -58,6 +104,26 @@ rusty_fork_test! {
         assert!(importer
             .to_string()
             .contains("_frozen_importlib_external.PathFinder"));
+    }
+
+    #[test]
+    fn test_importer_oxidized() {
+        assert_importer(true, false);
+    }
+
+    #[test]
+    fn test_importer_oxidized_filesystem() {
+        assert_importer(true, true);
+    }
+
+    #[test]
+    fn test_importer_filesystem() {
+        assert_importer(false, true);
+    }
+
+    #[test]
+    fn test_importer_neither() {
+        assert_importer(false, false);
     }
 
     #[test]

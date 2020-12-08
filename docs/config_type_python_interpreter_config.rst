@@ -220,6 +220,10 @@ Whether to install the ``oxidized_importer`` meta path importer
 (:ref:`oxidized_importer`) on ``sys.meta_path`` during interpreter
 initialization.
 
+If :ref:`config_type_python_interpreter_config_filesystem_importer` is also
+``True``, the importer's :ref:`path_hook <oxidized_finder_path_hook>` method is
+appended to ``sys.path_hooks`` at the end of interpreter initialization.
+
 Defaults to ``True``.
 
 .. _config_type_python_interpreter_config_filesystem_importer:
@@ -231,6 +235,12 @@ Defaults to ``True``.
 
 Whether to install the standard library path-based importer for
 loading Python modules from the filesystem.
+
+If :ref:`config_type_python_interpreter_config_oxidized_importer` is also
+``True``, the :ref:`path_hook <oxidized_finder_path_hook>` method of the
+``oxidized_importer`` meta path importer (:ref:`oxidized_importer`) on
+``sys.meta_path`` is appended to ``sys.path_hooks`` at the end of interpreter
+initialization.
 
 If not enabled, Python modules will not be loaded from the filesystem
 (via ``sys.path`` discovery): only modules indexed by ``oxidized_importer``

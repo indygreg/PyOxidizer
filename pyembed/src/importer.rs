@@ -533,6 +533,10 @@ py_class!(class OxidizedFinder |py| {
         oxidized_finder_new(py, relative_path_origin)
     }
 
+    def path_hook(&self, path: PyObject) -> PyResult<_PathEntryFinder> {
+        self.path_hook_impl(py, path)
+    }
+
     def index_bytes(&self, data: PyObject) -> PyResult<PyObject> {
         self.index_bytes_impl(py, data)
     }
@@ -905,7 +909,212 @@ impl OxidizedFinder {
             None
         };
 
-        resources_state.pkgutil_modules_infos(py, prefix, state.optimize_level)
+        resources_state.pkgutil_modules_infos(py, prefix, state.optimize_level, |_resource| true)
+    }
+
+    fn path_hook_impl(&self, py: Python, path: PyObject) -> PyResult<_PathEntryFinder> {
+        // Compute _PathEntryFinder::package
+        let pkg = {
+            // Get the canonicalized path to the current executable or raise an OSError.
+            let current_exe = {
+                let current_exe = &self.state(py).get_resources_state().current_exe;
+                current_exe.canonicalize().map_err(|err| {
+                    let exe = current_exe.display();
+                    // Use a Python expression instead of PyErr::new to ensure we get the
+                    // right OSError subclass.
+                    let strerror = format!("cannot open current executable: '{}'", exe);
+                    let raw_os_error = err
+                        .raw_os_error()
+                        .map_or_else(|| "None".to_string(), |err_code| err_code.to_string());
+                    let code = if cfg!(windows) {
+                        format!(
+                            "OSError(None, r\"{}\", r\"{}\", {})",
+                            strerror, exe, raw_os_error
+                        )
+                    } else {
+                        format!("OSError({}, r\"{}\", r\"{}\")", raw_os_error, strerror, exe)
+                    };
+                    py.eval(&code, None, None).map_or_else(
+                        |err_creating_exc| err_creating_exc,
+                        |exc| PyErr::from_instance(py, exc),
+                    )
+                })
+            }?;
+            let not_exe_err = || {
+                let msg = format!(
+                    "path {} does not begin in \'{}\' (if you're sure it does, check Python's file-system encoding)", &path, current_exe.display());
+                let mut err = PyErr::new::<ImportError, _>(py, msg);
+                let exc = err.instance(py);
+                if let Err(setattr_err) = exc.setattr(py, "path", path.clone_ref(py)) {
+                    setattr_err
+                } else {
+                    err
+                }
+            };
+            let pbuf = pyobject_to_pathbuf(py, path.clone_ref(py))?;
+            let mut p: &std::path::Path = pbuf.as_ref();
+            // path could point "inside" current_exe. If we can't canonicalize,
+            // strip the last component and check again. (zipimporter does
+            // somethings similar)
+            let mut abs_p = p.canonicalize();
+            // Count the number of components at the end of `path` will be in pkg
+            let mut parts: usize = 0;
+            while abs_p.is_err() {
+                p = match p.parent() {
+                    Some(parent) => {
+                        parts += 1;
+                        parent
+                    }
+                    None => {
+                        return Err(not_exe_err());
+                    }
+                };
+                abs_p = p.canonicalize();
+            }
+            let abs_p = abs_p.unwrap();
+            if abs_p != current_exe {
+                return Err(not_exe_err());
+            }
+            // Extract the part of `path` after current_exe
+            // FIXME: This takes two allocations, but it shouldn't even use one.
+            let tail = pbuf
+                .iter()
+                .rev()
+                .take(parts)
+                .collect::<std::path::PathBuf>()
+                .iter()
+                .rev()
+                .collect::<std::path::PathBuf>();
+            _PathEntryFinder::parse_path_to_pkg(py, &tail)?
+        };
+        let finder = OxidizedFinder::create_instance(py, Arc::clone(self.state(py)))?;
+        // sys.path_hooks is only read after importlib._bootstrap_internal has
+        // been setup, either in that module or after initialization by
+        // PyImport_GetImporter checking for the existence of config->run_filename
+        // has been setup, so it's safe to import os now.
+        let paths = PyList::new(py, &[py.import("os")?.call(py, "fspath", (path,), None)?]);
+        _PathEntryFinder::create_instance(py, finder.into_object(), paths, pkg)
+    }
+}
+
+// A (mostly compliant) `importlib.abc.PathEntryFinder` that delegates paths
+// within the current executable to the `OxidizedFinder` whose `path_hook`
+// method created it. This is a private implementation detail.
+py_class!(class _PathEntryFinder |py| {
+    // A `importlib.abc.MetaPathFinder`, presumably but not necessarily an
+    // `OxidizedFinder`. However, `_PathEntryFinder::iter_modules` will raise
+    // a `TypeError` when called if `finder` is not an `OxidizedFinder`.
+    data finder: PyObject;
+    // A list containing a single either str or bytes, normalized from the `path`
+    // argument to `OxidizedFinder::path_hook`.
+    data path: PyList;
+    // If the entry of `path` is `os.path.join(sys.executable, "pkg", "mod")`,
+    // then `package` is `"pkg.mod"`.
+    data package: String;
+
+    def find_spec(&self, fullname: &str, target: Option<PyModule> = None) -> PyResult<Option<PyObject>> {
+        self.find_spec_impl(py, fullname, target)
+    }
+
+    def invalidate_caches(&self) -> PyResult<PyObject> {
+        self.finder(py).call_method(py, "invalidate_caches", NoArgs, None)
+    }
+
+    def iter_modules(&self, prefix: Option<&str> = None) -> PyResult<PyList> {
+        self.iter_modules_impl(py, prefix)
+    }
+
+    // Private getter. Just for testing.
+    @property def _package(&self) -> PyResult<String> {
+        Ok(self.package(py).clone())
+    }
+});
+
+impl _PathEntryFinder {
+    // `name` is considered _visible_ in `package` if `name` is in the first
+    // level of the package. The computation is purely textual. See this
+    // module's `test_path_entry_finder::test_is_visible` test.
+    fn is_visible(package: &str, name: &str) -> bool {
+        if package.starts_with('.') || package.ends_with('.') || package.contains("..") {
+            return false;
+        }
+        // This implementation can be simplified when str::rsplit_once stabilize
+        // https://doc.rust-lang.org/std/primitive.str.html#method.rsplit_once
+        let mut split = name.rsplitn(2, '.');
+        match split.next() {
+            Some(module) if !module.is_empty() && !module.contains('.') => {}
+            _ => {
+                return false;
+            }
+        }
+        match split.next() {
+            Some(pkg) if !package.is_empty() && pkg == package => true,
+            None if package.is_empty() => true,
+            _ => false,
+        }
+    }
+
+    fn find_spec_impl(
+        &self,
+        py: Python,
+        fullname: &str,
+        target: Option<PyModule>,
+    ) -> PyResult<Option<PyObject>> {
+        if !_PathEntryFinder::is_visible(self.package(py), fullname) {
+            return Ok(Some(py.None()));
+        }
+        self.finder(py)
+            .call_method(py, "find_spec", (fullname, self.path(py), target), None)
+            .map(|spec| if spec == py.None() { None } else { Some(spec) })
+    }
+
+    fn iter_modules_impl(&self, py: Python, prefix: Option<&str>) -> PyResult<PyList> {
+        let state = self.finder(py).cast_as::<OxidizedFinder>(py)?.state(py);
+        let modules = state.get_resources_state().pkgutil_modules_infos(
+            py,
+            prefix.map(|p| p.to_string()),
+            state.optimize_level,
+            |resource| _PathEntryFinder::is_visible(self.package(py), &resource.name),
+        );
+        // unwrap() is safe because pkgutil_modules_infos returns a PyList cast
+        // into a PyObject.
+        Ok(modules?.cast_into(py).unwrap())
+    }
+
+    // Transform b"pkg/mod" into "pkg.mod" on behalf of `OxidizedFinder::path_hook`.
+    // Raise an `ImportError` if decoding `path` fails.
+    fn parse_path_to_pkg(py: Python, path: &std::path::Path) -> PyResult<String> {
+        let mut pkg = Vec::new();
+        for part in path.iter() {
+            pkg.push(
+                // Use Python's filesystem encoding to ensure correctly
+                // round-tripping the str Python package name from the
+                // potentially non-Unicode path.
+                // https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/V1_chap03.html#tag_03_170
+                // https://docs.microsoft.com/en-us/windows/win32/fileio/naming-a-file
+                crate::conversion::path_to_pyobject(py, std::path::Path::new(part))?
+                    .cast_as::<PyString>(py)?
+                    .to_string(py)
+                    .map_err(|mut unicode_err| {
+                        // Need to raise an ImportError if can't decode. For
+                        // clarity, we also attach the UnicodeDecodeError.
+                        // https://docs.python.org/3/reference/import.html#path-entry-finders
+                        let mut imp_err = PyErr::new::<ImportError, _>(py, "cannot decode path");
+                        let imp_exc = imp_err.instance(py);
+                        if let Err(err) = imp_exc.setattr(py, "__suppress_context__", true) {
+                            err
+                        } else if let Err(err) =
+                            imp_exc.setattr(py, "__cause__", unicode_err.instance(py))
+                        {
+                            err
+                        } else {
+                            imp_err
+                        }
+                    })?
+                    .into_owned(),
+            );
+        }
+        Ok(pkg.join("."))
     }
 }
 
@@ -1466,17 +1675,16 @@ fn module_init(py: Python, m: &PyModule) -> PyResult<()> {
     Ok(())
 }
 
-/// Replace all meta path importers with an OxidizedFinder instance.
+/// Replace all meta path importers with an OxidizedFinder instance and return it.
 ///
 /// This is called after PyInit_* to finish the initialization of the
-/// module. Its state struct is updated. A new instance of the meta path
-/// importer is constructed and registered on sys.meta_path.
+/// module. Its state struct is updated.
 #[cfg(not(library_mode = "extension"))]
 pub(crate) fn replace_meta_path_importers<'a>(
     py: Python,
     m: &PyModule,
     resources_state: Box<PythonResourcesState<'a, u8>>,
-) -> PyResult<()> {
+) -> PyResult<PyObject> {
     let mut state = get_module_state(py, m)?;
 
     let sys_module = py.import("sys")?;
@@ -1494,5 +1702,99 @@ pub(crate) fn replace_meta_path_importers<'a>(
 
     state.initialized = true;
 
-    Ok(())
+    Ok(unified_importer.into_object())
+}
+
+/// Append [`OxidizedFinder::path_hook`] to [`sys.path_hooks`].
+///
+/// `sys` must be a reference to the [`sys`] module.
+///
+/// [`sys.path_hooks`]: https://docs.python.org/3/library/sys.html#sys.path_hooks
+/// [`sys`]: https://docs.python.org/3/library/sys.html
+#[cfg(not(library_mode = "extension"))]
+pub(crate) fn initialize_path_hooks(py: Python, finder: &PyObject, sys: &PyModule) -> PyResult<()> {
+    let hook = finder.getattr(py, "path_hook")?;
+    sys.get(py, "path_hooks")?
+        .call_method(py, "append", (hook,), None)
+        .map(|_| ())
+}
+
+#[cfg(test)]
+mod test_path_entry_finder {
+    use super::_PathEntryFinder;
+
+    #[test]
+    fn is_visible() {
+        let is_visible = _PathEntryFinder::is_visible;
+        // The empty package name allows top-level imports.
+        assert!(is_visible("", "importlib"));
+
+        // Any module on the first nesting level of a package are visible.
+        // panic!("am i alive?")
+        assert!(is_visible("importlib", "importlib.resources"));
+        assert!(is_visible("importlib", "importlib.machinery"));
+        assert!(is_visible("importlib", "importlib._private"));
+
+        // Modules a level lower or higher than the first level inside a package are invisible.
+        assert!(!is_visible("importlib", "importlib.machinery.internal"));
+        assert!(!is_visible("", "importlib.resources"));
+        assert!(!is_visible("importlib", "importlib"));
+
+        // Modules in different packages than `package` are invisible.
+        assert!(!is_visible("idlelib", "importlib.resources"));
+        assert!(!is_visible("imp", "importlib.resources"));
+
+        // Malformed package names always cause `is_visible` to return [`false`].
+        assert!(!is_visible(".a.b", ".a.b.c"));
+        assert!(!is_visible("a..b", "a..b.c"));
+        assert!(!is_visible("a.b.", "a.b.c"));
+        assert!(!is_visible(".", "a"));
+
+        // Unicode is fully supported.
+        assert!(is_visible("חבילות", "חבילות.מודול"));
+    }
+
+    /// _PathEntryFinder::parse_path_to_pkg re-encodes the package part of the
+    /// path with Python's filesystem encoding, rather than forcing UTF-8.
+    ///
+    /// Decoding "\u3030" (WAVY DASH) into UTF-16-LE and encoding the result
+    /// with UTF-8 returns the two-character sequence "00". So we set the
+    /// filesystem encoding to UTF-16-LE, pass in os.fsencode("\u3030"), and
+    /// ensure we get "\u3030" back out.
+    #[test]
+    fn parse_path_to_pkg_filesystem_encoding() {
+        // Obtain a Python interpreter with filesystem encoding set to UTF-16-LE
+        let mut config = crate::OxidizedPythonInterpreterConfig::default();
+        config.interpreter_config.parse_argv = Some(false);
+        config.set_missing_path_configuration = false;
+        config.interpreter_config.filesystem_encoding = Some("UTF-16-LE".to_string());
+        let mut interp = crate::MainPythonInterpreter::new(config).unwrap();
+        let py = interp.acquire_gil().unwrap();
+
+        // Verify assumptions about the test itself.
+        const WAVY_DASH: &str = "〰";
+        const WAVY_DASH_CODE: u16 = 0x3030;
+        assert_eq!(WAVY_DASH, "\u{3030}");
+        assert_eq!(
+            WAVY_DASH.encode_utf16().collect::<Vec<u16>>(),
+            [WAVY_DASH_CODE]
+        );
+        assert_eq!(WAVY_DASH_CODE.to_be_bytes(), [48, 48]); // endianness
+        assert_eq!(WAVY_DASH_CODE.to_le_bytes(), [48, 48]); // doesn't matter
+        assert_eq!(std::str::from_utf8(&[48, 48]).unwrap(), "00");
+        assert_eq!(
+            py.import("sys")
+                .unwrap()
+                .call(py, "getfilesystemencoding", cpython::NoArgs, None)
+                .unwrap()
+                .to_string(),
+            "utf-16-le"
+        );
+
+        // The actual test.
+        assert_eq!(
+            _PathEntryFinder::parse_path_to_pkg(py, std::path::Path::new("00")).unwrap(),
+            WAVY_DASH
+        );
+    }
 }

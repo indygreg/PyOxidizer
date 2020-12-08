@@ -158,10 +158,23 @@ pub struct OxidizedPythonInterpreterConfig<'a> {
     /// build-time configuration.
     pub set_missing_path_configuration: bool,
 
-    /// Whether to install our custom meta path importer on interpreter init.
+    /// Whether to install our custom meta path importer on interpreter init,
+    /// and, if [`filesystem_importer`] is `true`, to add its ``path_hook``
+    /// method to [`sys.path_hooks`] for `PathFinder`'s and [`pkgutil`]'s use.
+    ///
+    /// [`filesystem_importer`]: #structfield.filesystem_importer
+    /// [`sys.path_hooks`]: https://docs.python.org/3/library/sys.html#sys.path_hooks
+    /// [`pkgutil`]: https://docs.python.org/3/library/pkgutil.html
     pub oxidized_importer: bool,
 
-    /// Whether to install the default `PathFinder` meta path finder.
+    /// Whether to install the default `PathFinder` meta path finder and, if
+    /// [`oxidized_importer`] is `true`, to add our custom meta path
+    /// importer's ``path_hook`` method to [`sys.path_hooks`] for `PathFinder`'s
+    /// and [`pkgutil`]'s use.
+    ///
+    /// [`oxidized_importer`]: #structfield.oxidized_importer
+    /// [`sys.path_hooks`]: https://docs.python.org/3/library/sys.html#sys.path_hooks
+    /// [`pkgutil`]: https://docs.python.org/3/library/pkgutil.html
     pub filesystem_importer: bool,
 
     /// References to packed resources data.

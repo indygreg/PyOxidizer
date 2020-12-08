@@ -168,4 +168,10 @@ rusty_fork_test! {
     fn importer_resource_reading_py() {
         run_py_test("test_importer_resource_reading.py").unwrap()
     }
+
+    /// Run test_importer_path_entry_finder.py.
+    #[test]
+    fn importer_path_entry_finder_py() {
+        run_py_test("test_importer_path_entry_finder.py").unwrap()
+    }
 }

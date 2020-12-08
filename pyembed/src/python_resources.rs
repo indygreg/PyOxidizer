@@ -254,14 +254,8 @@ impl<'a> ImportablePythonModule<'a, u8> {
             // directory? Perhaps.
             //
             // By setting `__path__` to a meaningful value, we leave the door
-            // open for our code later seeing this path and doing something
-            // special with it. For example, the documentation for the deprecated
-            // `importlib.abc.ResourceLoader.get_data()` says consumers could use
-            // `__path__` to construct the `path` to pass into that function
-            // (probably via `os.path.join()`). If we set `__path__` and our
-            // `get_data()` is called, we could recognize the special value and
-            // route to our importer accordingly. If we don't set `__path__` to
-            // any value, we can't do this.
+            // open for `pkgutil.iter_modules(foo.bar.__path__)`, which
+            // `OxidizedFinder.path_hook` supports with these semantics.
             //
             // As a point of reference, the zip importer in the Python standard
             // library sets `__path__` to the path to the zip file with the package
@@ -947,18 +941,23 @@ impl<'a> PythonResourcesState<'a, u8> {
     /// Obtain a PyList of pkgutil.ModuleInfo for known resources.
     ///
     /// This is intended to be used as the implementation for Finder.iter_modules().
-    pub fn pkgutil_modules_infos(
+    pub fn pkgutil_modules_infos<P>(
         &self,
         py: Python,
         prefix: Option<String>,
         optimize_level: OptimizeLevel,
-    ) -> PyResult<PyObject> {
+        predicate: P,
+    ) -> PyResult<PyObject>
+    where
+        P: FnMut(&&Resource<'_, u8>) -> bool,
+    {
         let infos: PyResult<Vec<PyObject>> = self
             .resources
             .values()
             .filter(|r| {
                 r.is_extension_module || (r.is_module && is_module_importable(r, optimize_level))
             })
+            .filter(predicate)
             .map(|r| {
                 let name = if let Some(prefix) = &prefix {
                     format!("{}{}", prefix, r.name)

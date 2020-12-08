@@ -8,6 +8,7 @@ import pkgutil
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from oxidized_importer import (
     OxidizedFinder,
@@ -106,6 +107,29 @@ class TestImporterIterModules(unittest.TestCase):
         self.assertEqual(res[0].module_finder.__class__.__name__, "OxidizedFinder")
         self.assertEqual(res[0].name, "foomy_package")
         self.assertTrue(res[0].ispkg)
+
+    def test_iter_modules_path(self):
+        self._make_package("a.b.c")
+        self._make_package("one.two.three")
+        self._make_package("on.tשo.۳")
+        self._make_package("on.two")
+        path = pathlib.Path(sys.executable, "on")
+        finder = self._finder_from_td()
+        path_entry_finder = finder.path_hook(path)
+        _PathEntryFinder = type(path_entry_finder)
+        modules = path_entry_finder.iter_modules()
+        self.assertCountEqual(modules, [("on.two", True), ("on.tשo", True)])
+
+        sys.meta_path = [finder]
+        import on
+        self.assertEqual(on.__path__, [str(path)])
+        sys.path = [sys.executable]
+        with patch.object(sys, "path_hooks", [finder.path_hook]):
+            res = list(pkgutil.iter_modules([path]))
+            self.assertCountEqual([(mi.name, mi.ispkg) for mi in res], modules)
+            for mi in res:
+                self.assertIsInstance(mi, pkgutil.ModuleInfo)
+                self.assertIsInstance(mi.module_finder, _PathEntryFinder)
 
 
 if __name__ == "__main__":

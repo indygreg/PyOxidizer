@@ -71,6 +71,13 @@ it to service every ``import`` except those from the very few *built-in
 extension modules* that are compiled into the interpreter and loaded as
 part of Python initialization (e.g. the ``sys`` module).
 
+At the end of initialization, the :ref:`path_hook <oxidized_finder_path_hook>`
+method of the ``OxidizedFinder`` instance on ``sys.meta_path`` is appended to
+``sys.path_hooks`` if both
+:ref:`config_type_python_interpreter_config_oxidized_importer` and
+:ref:`config_type_python_interpreter_config_filesystem_importer` of
+:ref:`config_type_python_interpreter_config` are ``True``.
+
 Python API
 ==========
 
@@ -255,3 +262,39 @@ Entries for *built-in* and *frozen* modules are ignored by default because
 they aren't portable, as they are compiled into the interpreter and aren't
 guaranteed to work from one Python interpreter to another. The serialized
 format does support expressing them. Use at your own risk.
+
+.. _oxidized_finder_path_hook:
+
+``path_hook(path: Union[str, bytes, os.PathLike[AnyStr]]) -> importlib.abc.PathEntryFinder``
+--------------------------------------------------------------------------------------------
+
+When ``path_hook``, bound to an ``OxidizedFinder`` instance ``self``, is in
+``sys.path_hooks``, ``pkgutil.iter_modules`` can search ``self``'s embedded
+resources, filtering by its ``path`` argument. Additionally, if you add
+``sys.executable`` to ``sys.path``, the meta-path finder
+``importlib.machineray.PathFinder`` can find ``self``'s embedded resources.
+
+``path_hook`` returns a `path-entry finder`_\ [#fn-path-entry-finder]_ that can
+find modules at the top level or inside a package according to ``path``.
+
+``path``'s semantics match those of
+:ref:`oxidized_finder_behavior_and_compliance_path`. After normalization,
+``path`` must be or be in ``sys.executable``; otherwise ``path_hook`` raises an
+``ImportError``. If ``path`` is ``sys.executable``, top-level modules are
+accessible. Otherwise ``path_hook`` computes the requested package by stripping
+``sys.executable`` from the beginning of ``path`` and replacing path separators
+with dots. The result is decoded to a ``str`` using the filesystem encoding. If
+that fails, ``path_hook`` raises an ``ImportError`` from the
+``UnicodeDecodeError``.\ [#fn-decode-error]_
+
+.. rubric:: Footnotes
+
+.. [#fn-path-entry-finder]
+   Support for the long-deprecated methods
+   ``importlib.abc.PathEntryFinder.find_loader`` and
+   ``importlib.abc.PathEntryFinder.find_module`` may be missing or incomplete.
+
+.. [#fn-decode-error]
+   This is required by the `path-entry finder`_ protocol.
+
+.. _path-entry finder: https://docs.python.org/3/reference/import.html#path-entry-finders
