@@ -61,6 +61,10 @@ Contrast with a typical Python environment::
        <class '_frozen_importlib_external.PathFinder'>
    ]
 
+A callable returning an ``OxidizedFinder`` instance with its ``path`` argument
+set will be automatically registered as the last element in ``sys.path_hooks``
+when starting a Python interpreter.
+
 The ``OxidizedFinder`` instance will (likely) be associated with resources
 data embedded in the binary.
 
@@ -76,10 +80,11 @@ Python API
 
 ``OxidizedFinder`` instances implement the following interfaces:
 
-* ``importlib.abc.MetaPathFinder``
+* ``importlib.abc.MetaPathFinder`` (depending on :ref:`oxidized_finder_path`)
 * ``importlib.abc.Loader``
 * ``importlib.abc.InspectLoader``
 * ``importlib.abc.ExecutionLoader``
+* ``importlib.abc.PathEntryFinder`` (depending on :ref:`oxidized_finder_path`)
 
 See the `importlib.abc documentation <https://docs.python.org/3/library/importlib.html#module-importlib.abc>`_
 for more on these interfaces.
@@ -120,6 +125,10 @@ The constructor takes the following named arguments:
    *origin* value for relative path resources. Filesystem-based resources are
    stored as a relative path to an *anchor* value. This is that *anchor* value.
    If not specified, the directory of the current executable will be used.
+
+``path``
+   An optional path-like object defaulting to ``None``. See
+   :ref:`oxidized_finder_path` for details.
 
 See the `python_packed_resources <https://docs.rs/python-packed-resources/0.1.0/python_packed_resources/>`_
 Rust crate for the specification of the binary data blob defining *packed
@@ -255,3 +264,32 @@ Entries for *built-in* and *frozen* modules are ignored by default because
 they aren't portable, as they are compiled into the interpreter and aren't
 guaranteed to work from one Python interpreter to another. The serialized
 format does support expressing them. Use at your own risk.
+
+.. _oxidized_finder_path:
+
+``path``
+--------
+
+This is the read-only value of ``path`` passed to :ref:`oxidized_finder__new__`
+after some processing: If it's not ``None``, then it may be converted to
+different path-like type; if it's a relative path, it's made absolute assuming
+it's relative to ``sys.executable``.
+
+If it's ``None``, the instance's ``find_spec`` method has the semantics of
+``importlib.abc.MetaPathFinder.find_spec``, whose own ``path`` argument controls
+package search.
+
+Otherwise, the instance's ``find_spec`` method has the semantics of
+``importlib.abc.PathEntryFinder.find_spec``, which does not accept a ``path``
+argument of its own.
+
+If ``path`` does not start with ``sys.executable``, the instance will find no
+modules: its ``find_spec`` method always returns ``None``.
+
+The final possibility is that ``path`` starts with ``sys.executable``. The
+instance can find only those modules specified by ``path`` in the sense of
+:ref:`oxidized_finder_behavior_and_compliance_path`. If ``path`` equals
+``sys.executable``, the instance can find top-level module and their submodules.
+If, for example, ``path`` equals ``os.path.join``\ ``([``\ ``sys.executable``\
+``, "``\ ``importlib``\ ``"])``, the instance will only be able to import
+``importlib`` and its submodules.

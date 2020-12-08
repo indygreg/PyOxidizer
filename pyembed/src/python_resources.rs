@@ -255,14 +255,9 @@ impl<'a> ImportablePythonModule<'a, u8> {
             // directory? Perhaps.
             //
             // By setting `__path__` to a meaningful value, we leave the door
-            // open for our code later seeing this path and doing something
-            // special with it. For example, the documentation for the deprecated
-            // `importlib.abc.ResourceLoader.get_data()` says consumers could use
-            // `__path__` to construct the `path` to pass into that function
-            // (probably via `os.path.join()`). If we set `__path__` and our
-            // `get_data()` is called, we could recognize the special value and
-            // route to our importer accordingly. If we don't set `__path__` to
-            // any value, we can't do this.
+            // open for our code seeing this path and doing something special
+            // with it. For example, the interface to pkgutil.iter_modules uses
+            // the path to restrict which packages to search.
             //
             // As a point of reference, the zip importer in the Python standard
             // library sets `__path__` to the path to the zip file with the package

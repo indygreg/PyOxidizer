@@ -107,6 +107,12 @@ class TestImporterIterModules(unittest.TestCase):
         self.assertEqual(res[0].name, "foomy_package")
         self.assertTrue(res[0].ispkg)
 
+    def test_iter_modules_path(self):
+        import importlib
+        self.assertLessEqual(
+            {'abc', 'machinery', 'metadata', 'resources', 'util'},
+            {info.name for info in pkgutil.iter_modules(importlib.__path__)})
+
 
 if __name__ == "__main__":
     unittest.main()
