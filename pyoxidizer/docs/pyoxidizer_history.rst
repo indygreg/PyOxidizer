@@ -71,6 +71,10 @@ New Features
   and targeting information is printed during builds. See
   :ref:`pyoxidizer_distributing_macos_build_machine_requirements` for details
   on how to override default behavior.
+* ``OxidizedFinder`` now implements ``path_hook()`` and a path hook is
+  automatically registered on ``sys.path_hooks`` during interpreter
+  initialization when an ``OxidizedFinder`` is being used. Feature
+  contributed by William Schwartz in #343.
 
 Other Relevant Changes
 ^^^^^^^^^^^^^^^^^^^^^^

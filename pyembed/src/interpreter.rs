@@ -10,8 +10,8 @@ use {
         conversion::osstring_to_bytes,
         error::NewInterpreterError,
         importer::{
-            replace_meta_path_importers, PyInit_oxidized_importer, OXIDIZED_IMPORTER_NAME,
-            OXIDIZED_IMPORTER_NAME_STR,
+            initialize_path_hooks, replace_meta_path_importers, PyInit_oxidized_importer,
+            OXIDIZED_IMPORTER_NAME, OXIDIZED_IMPORTER_NAME_STR,
         },
         osutils::resolve_terminfo_dirs,
         pyalloc::PythonMemoryAllocator,
@@ -189,7 +189,7 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
         let py = unsafe { Python::assume_gil_acquired() };
         self.py = Some(py);
 
-        if self.config.oxidized_importer {
+        let finder = if self.config.oxidized_importer {
             let resources_state = Box::new(PythonResourcesState::try_from(&self.config)?);
 
             let oxidized_importer = py.import(OXIDIZED_IMPORTER_NAME_STR).map_err(|err| {
@@ -203,16 +203,20 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
             // is dropped. However, that would require self to be dropped. And if self is dropped,
             // there should no longer be a Python interpreter around. So it follows that the
             // importer state cannot be dropped after self.
-            replace_meta_path_importers(py, &oxidized_importer, resources_state).map_err(
-                |err| {
-                    NewInterpreterError::new_from_pyerr(
-                        py,
-                        err,
-                        "initialization of oxidized importer",
-                    )
-                },
-            )?;
-        }
+            Some(
+                replace_meta_path_importers(py, &oxidized_importer, resources_state).map_err(
+                    |err| {
+                        NewInterpreterError::new_from_pyerr(
+                            py,
+                            err,
+                            "initialization of oxidized importer",
+                        )
+                    },
+                )?,
+            )
+        } else {
+            None
+        };
 
         // Now proceed with the Python main initialization. This will initialize
         // importlib. And if the custom importlib bytecode was registered above,
@@ -226,6 +230,9 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
             ));
         }
 
+        let sys_module = py
+            .import("sys")
+            .map_err(|err| NewInterpreterError::new_from_pyerr(py, err, "obtaining sys module"))?;
         // When the main initialization ran, it initialized the "external"
         // importer (importlib._bootstrap_external). Our meta path importer
         // should have been registered first and would have been used for
@@ -237,9 +244,6 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
         // controls both internal and external bootstrap modules and when
         // set it will disable a lot of "main" initialization.
         if !self.config.filesystem_importer {
-            let sys_module = py.import("sys").map_err(|err| {
-                NewInterpreterError::new_from_pyerr(py, err, "obtaining sys module")
-            })?;
             let meta_path = sys_module.get(py, "meta_path").map_err(|err| {
                 NewInterpreterError::new_from_pyerr(py, err, "obtaining sys.meta_path")
             })?;
@@ -248,6 +252,17 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
                 .map_err(|err| {
                     NewInterpreterError::new_from_pyerr(py, err, "sys.meta_path.pop()")
                 })?;
+        } else if let Some(finder) = finder {
+            // If we have both OxidizedFinder and PathFinder, we tell PathFinder
+            // how to use OxidizedFinder by inserting OxidizedFinder.path_hook
+            // into sys.path_hooks
+            initialize_path_hooks(py, &finder, &sys_module).map_err(|err| {
+                NewInterpreterError::new_from_pyerr(
+                    py,
+                    err,
+                    "installing OxidizedFinder in sys.path_hooks",
+                )
+            })?
         }
 
         /* Pre-initialization functions we could support:

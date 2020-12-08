@@ -57,6 +57,8 @@ these missing attributes is to avoid in-memory loading.
    files*. See :ref:`resource_files` for more on this topic, including
    how to port code to more modern Python APIs for loading resources.
 
+.. _oxidized_finder_behavior_and_compliance_path:
+
 ``__path__`` Module Attribute
 =============================
 
@@ -187,8 +189,9 @@ differences in behavior:
   ``OxidizedFinder.iter_modules()`` returns a ``list``. ``list`` is
   iterable and this difference should hopefully be a harmless
   implementation detail.
-* ``pkgutil.iter_modules()`` inspects ``sys.path_importer_cache`` as
-  part of evaluating its ``path`` argument. However, ``OxidizedFinder``
-  does not populate ``sys.path_importer_cache``, so path-based
-  filtering via ``pkgutil.iter_modules(path=...)`` will not work like it
-  does with the standard library's importer.
+* Support for the ``path`` argument to ``pkgutil.iter_modules()`` requires that
+  both :ref:`config_type_python_interpreter_config_oxidized_importer` and
+  :ref:`config_type_python_interpreter_config_filesystem_importer` of
+  :ref:`config_type_python_interpreter_config` be set to ``True`` so that
+  ``OxidizedFinder``'s :ref:`path_hook <oxidized_finder_path_hook>` is installed
+  in ``sys.path_hooks``.
