@@ -23,7 +23,7 @@ class TestImporterPathEntryFinder(unittest.TestCase):
         self.assertIsNone(spec.origin, spec)
         self.assertIsNone(spec.submodule_search_locations, spec)
         self.assertIsNone(spec.cached, spec)
-        self.assertEqual(spec.parent, name.rpartition(.)[2], spec)
+        self.assertEqual(spec.parent, name.rpartition(".")[2], spec)
         self.assertFalse(spec.has_location, spec)
 
     def test_find_spec(self):
