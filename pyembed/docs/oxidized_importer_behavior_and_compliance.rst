@@ -11,6 +11,9 @@ should be compatible. In other words, things should mostly *just work*
 and any deviance from the ``importlib`` documentation constitutes a bug
 worth `reporting <https://github.com/indygreg/PyOxidizer/issues>`_.
 
+That said, full compatibility with long deprecated APIs such as
+``importlib.abc.PathEntryFinder.find_loader`` is not guaranteed.
+
 That being said, ``OxidizedFinder``'s approach to loading resources is
 drastically different from more traditional means, notably loading files
 from the filesystem. PyOxidizer breaks a lot of assumptions about how things
