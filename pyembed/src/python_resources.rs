@@ -943,9 +943,13 @@ impl<'a> PythonResourcesState<'a, u8> {
     /// Obtain a PyList of pkgutil.ModuleInfo for known resources.
     ///
     /// This is intended to be used as the implementation for Finder.iter_modules().
+    ///
+    /// Only resources whose (name)[`Resource::name`] (starts
+    /// with)[`str.starts_with`] `path` are returned.
     pub fn pkgutil_modules_infos(
         &self,
         py: Python,
+        path: &str,
         prefix: Option<String>,
         optimize_level: OptimizeLevel,
     ) -> PyResult<PyObject> {
@@ -954,6 +958,9 @@ impl<'a> PythonResourcesState<'a, u8> {
             .values()
             .filter(|r| {
                 r.is_extension_module || (r.is_module && is_module_importable(r, optimize_level))
+            })
+            .filter(|r| {
+                r.name.starts_with(path)
             })
             .map(|r| {
                 let name = if let Some(prefix) = &prefix {

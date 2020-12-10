@@ -15,8 +15,10 @@ use cpython::NoArgs;
 use {
     crate::memory_dll::{free_library_memory, get_proc_address_memory, load_library_memory},
     cpython::exc::SystemError,
-    std::ffi::{c_void, CString},
+    std::ffi::c_void,
 };
+#[cfg(unix)]
+use std::os::unix::ffi::OsStrExt;
 use {
     crate::{
         conversion::pyobject_to_pathbuf,
@@ -27,14 +29,19 @@ use {
         resource_scanning::find_resources_in_path,
     },
     cpython::{
-        exc::{FileNotFoundError, ImportError, ValueError},
+        exc::{FileNotFoundError, ImportError, UnicodeDecodeError, ValueError},
         {
             py_class, py_fn, ObjectProtocol, PyBytes, PyCapsule, PyClone, PyDict, PyErr, PyList,
             PyModule, PyObject, PyResult, PyString, PyTuple, Python, PythonObject, ToPyObject,
         },
     },
     python3_sys as pyffi,
-    std::sync::Arc,
+    std::{
+        borrow::Cow,
+        ffi::CString,
+        path::Path,
+        sync::Arc,
+    },
 };
 
 pub const OXIDIZED_IMPORTER_NAME_STR: &str = "oxidized_importer";
@@ -451,19 +458,41 @@ impl Drop for ImporterState {
 // finding/loading modules. It supports loading various flavors of modules,
 // allowing it to be the only registered sys.meta_path importer.
 //
+// It also implements the importlib.abc.PathEntryFinder interface, allowing it
+// to be registered in sys.path_hooks for importlib.machinery.PathFinder.
+//
 // Because macro expansion confuses IDE type hinting and rustfmt, most
 // methods call into non-macro implemented methods named <method>_impl which
 // are defined below in separate `impl {}` blocks.
 py_class!(class OxidizedFinder |py| {
     data state: Arc<ImporterState>;
+    // The `path` argument to the constructor.
+    data path_arg: Option<PyObject>;
+    // The `pkg` attribute can be in one of three states depending on `path_arg`
+    //
+    // pkg                          path_arg
+    // ------------                 ------------
+    // ""                           None
+    // "\0"                         absolute not starting with sys.executable
+    // dotted Python package name   relative or starting with sys.executable
+    //
+    // We can always check if resource.name.starts_with(self.pkg) because all
+    // module `__name__`s start with the empty string, no module's name starts
+    // with the nul character. "\0" is not an `xid_start` character that can
+    // begin an identifier in Python:
+    // https://docs.python.org/3/reference/lexical_analysis.html#identifiers
+    // And Windows and POSIX file systems disallow "\0" in file names anyway:
+    // https://docs.microsoft.com/en-us/windows/win32/fileio/naming-a-file
+    // https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/V1_chap03.html#tag_03_170
+    data pkg: String;
 
-    // Start of importlib.abc.MetaPathFinder interface.
+    // Start of importlib.abc.MetaPathFinder and PathEntryFinder interfaces.
 
-    def find_spec(&self, fullname: &PyString, path: &PyObject, target: Option<PyObject> = None) -> PyResult<PyObject> {
+    def find_spec(&self, fullname: &PyString, path: Option<&PyObject> = None, target: Option<PyObject> = None) -> PyResult<PyObject> {
         self.find_spec_impl(py, fullname, path, target)
     }
 
-    def find_module(&self, fullname: &PyObject, path: &PyObject) -> PyResult<PyObject> {
+    def find_module(&self, fullname: &PyObject, path: Option<&PyObject> = None) -> PyResult<PyObject> {
         self.find_module_impl(py, fullname, path)
     }
 
@@ -471,7 +500,7 @@ py_class!(class OxidizedFinder |py| {
         self.invalidate_caches_impl(py)
     }
 
-    // End of importlib.abc.MetaPathFinder interface.
+    // End of importlib.abc.MetaPathFinder and PathEntryFinder interfaces.
 
     // Start of importlib.abc.Loader interface.
 
@@ -529,8 +558,12 @@ py_class!(class OxidizedFinder |py| {
     }
 
     // Additional methods provided for convenience.
-    def __new__(_cls, relative_path_origin: Option<PyObject> = None) -> PyResult<OxidizedFinder> {
-        oxidized_finder_new(py, relative_path_origin)
+    def __new__(_cls, relative_path_origin: Option<PyObject> = None, path: Option<PyObject> = None) -> PyResult<OxidizedFinder> {
+        oxidized_finder_new(py, relative_path_origin, path)
+    }
+
+    @property def path(&self) -> PyResult<PyObject> {
+        self.path_impl(py)
     }
 
     def index_bytes(&self, data: PyObject) -> PyResult<PyObject> {
@@ -576,11 +609,36 @@ impl OxidizedFinder {
         &self,
         py: Python,
         fullname: &PyString,
-        path: &PyObject,
+        path: Option<&PyObject>,
         target: Option<PyObject>,
     ) -> PyResult<PyObject> {
         let state = self.state(py);
         let key = fullname.to_string(py)?;
+
+        let path_attr = self.path_arg(py).clone_ref(py);
+        if path_attr.is_some() {
+            if path.is_some() {
+                return Err(PyErr::new::<ValueError, _>(
+                    py,
+                    "self.find_spec() does not take a path argument because self.path is not None",
+                ));
+            }
+            if !key.starts_with(self.pkg(py)) {
+                return Ok(py.None());
+            }
+        }
+        let list: PyList = PyList::new(py, &[]);
+        let p: PyObject = if path.is_some() {
+            for entry in path.unwrap().iter(py)? {
+                list.append(py, entry?);
+            }
+            list.into_object()
+        } else if path_attr.is_some() {
+            list.append(py, path_attr.unwrap());
+            list.into_object()
+        } else {
+            py.None()
+        };
 
         let module = match state
             .get_resources_state()
@@ -607,7 +665,7 @@ impl OxidizedFinder {
             ModuleFlavor::Frozen => {
                 state
                     .frozen_importer
-                    .call_method(py, "find_spec", (fullname, path, target), None)
+                    .call_method(py, "find_spec", (fullname, &p, target), None)
             }
         }
     }
@@ -620,7 +678,7 @@ impl OxidizedFinder {
         &self,
         py: Python,
         fullname: &PyObject,
-        path: &PyObject,
+        path: Option<&PyObject>,
     ) -> PyResult<PyObject> {
         let finder = self.as_object();
         let find_spec = finder.getattr(py, "find_spec")?;
@@ -900,7 +958,7 @@ impl OxidizedFinder {
             None
         };
 
-        resources_state.pkgutil_modules_infos(py, prefix, state.optimize_level)
+        resources_state.pkgutil_modules_infos(py, self.pkg(py), prefix, state.optimize_level)
     }
 }
 
@@ -922,16 +980,80 @@ impl OxidizedFinder {
                 &bootstrap_module,
                 resources_state,
             )?),
+            None,
+            "".to_string(),
         )?;
 
         Ok(importer)
     }
+
+    fn path_impl(&self, py: Python) -> PyResult<PyObject> {
+        Ok(self.path_arg(py).clone_ref(py).unwrap_or_else(|| py.None()))
+    }
+}
+
+fn parse_path_to_pkg(
+    py: Python,
+    path: &Option<PyObject>,
+    current_exe: &Path,
+) -> PyResult<String> {
+    if path.is_none() {
+        // all module names start with the empty string
+        return Ok("".to_string());
+    }
+    let start: usize;
+    let p = pyobject_to_pathbuf(py, path.as_ref().unwrap().clone_ref(py))?;
+    let p = if p.is_absolute() {
+        let tail = p.strip_prefix(current_exe);
+        if tail.is_err() {
+            return Ok("\0".to_string());
+        }
+        let tail = tail.unwrap();
+        // p have junk such as `/./` between current_exe and tail. So the index
+        // of the first component may not just be the length of current_exe.
+        //
+        // underflow safety: p ends with tail, so p is longer.
+        start = p.as_os_str().len() - tail.as_os_str().len();
+        Cow::Borrowed(tail)
+    } else {
+        start = 0;
+        Cow::Owned(p)
+    };
+
+    // p refers to an embedded module like "pkg/mod". Build pkg to be "pkg.mod".
+    let mut pkg = String::with_capacity(p.as_os_str().len());
+    for (i, part_osstr) in p.iter().enumerate() {
+        if i != 0 {
+            pkg.push_str(".");
+        }
+        pkg.push_str(part_osstr.to_str().ok_or_else(|| {
+            #[cfg(windows)]
+            unreachable!("paths are always valid Unicode on Windows");
+            #[cfg(unix)]
+            let input = p.as_os_str().as_bytes();
+
+            UnicodeDecodeError::new(
+                py,
+                &CString::new("utf-8").unwrap(),
+                input,
+                // +1 to go one past the end
+                (start + pkg.len())..(start + pkg.len() + part_osstr.len() + 1),
+                &CString::new("invalid utf-8").unwrap(),
+            ).map_or_else(
+                |err_creating_ude| err_creating_ude,
+                |ude| PyErr::new::<UnicodeDecodeError, _>(py, ude),
+            )
+        })?);
+    }
+    pkg.shrink_to_fit();
+    Ok(pkg)
 }
 
 /// OxidizedFinder.__new__(relative_path_origin=None))
 fn oxidized_finder_new(
     py: Python,
     relative_path_origin: Option<PyObject>,
+    path: Option<PyObject>,
 ) -> PyResult<OxidizedFinder> {
     // We need to obtain an ImporterState instance. This requires handles on a
     // few items...
@@ -949,6 +1071,8 @@ fn oxidized_finder_new(
         resources_state.origin = pyobject_to_pathbuf(py, py_origin)?;
     }
 
+    let pkg = parse_path_to_pkg(py, &path, &resources_state.current_exe)?;
+
     let importer = OxidizedFinder::create_instance(
         py,
         Arc::new(ImporterState::new(
@@ -957,6 +1081,8 @@ fn oxidized_finder_new(
             &bootstrap_module,
             resources_state,
         )?),
+        path,
+        pkg,
     )?;
 
     Ok(importer)
