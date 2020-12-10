@@ -18,6 +18,7 @@ class TestImporterPathEntryFinder(unittest.TestCase):
         self.assertIsNone(finder.path)
 
     def assert_oxide_spec_non_pkg(self, spec: ModuleSpec, name: str) -> None:
+        self.assertIsNotNone(spec)
         self.assertEqual(spec.name, name, spec)
         self.assertIsInstance(spec.loader, OxidizedFinder, spec)
         self.assertIsNone(spec.origin, spec)
@@ -45,7 +46,7 @@ class TestImporterPathEntryFinder(unittest.TestCase):
             None)
 
     def test_path_hook(self):
-        hook = OxidizedFinder.path_hook()
+        hook = sys.path_hooks[-1]
         self.assertTrue(callable(hook), hook)
         path = os.path.join(sys.executable, "encodings")
         instance = hook(path)
@@ -72,7 +73,7 @@ class TestImporterPathEntryFinder(unittest.TestCase):
 
     def test_path_relative(self):
         finder = OxidizedFinder(path="importlib")
-        self.assertEqual(finder.path, os.path.join(sys.executable, "importlib"))
+        self.assertEqual(finder.path, "importlib")
         self.assert_oxide_spec_non_pkg(
             finder.find_spec("importlib.resources"), "importlib.resources")
 

@@ -54,6 +54,7 @@ class TestImporterModule(unittest.TestCase):
                 "indexed_resources",
                 "invalidate_caches",
                 "iter_modules",
+                "path",
                 "serialize_indexed_resources",
             },
         )

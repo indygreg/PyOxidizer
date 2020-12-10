@@ -48,7 +48,7 @@ class TestImporterConstruction(unittest.TestCase):
     def test_path_PathLike(self):
         p = Path("/path/to/origin")
         f = OxidizedFinder(path=p)
-        self.assertEqual(f.path, str(p))
+        self.assertEqual(f.path, p)
 
     def test_path_read_only(self):
         p = Path("/path/to/origin")
@@ -57,7 +57,7 @@ class TestImporterConstruction(unittest.TestCase):
 
     def test_path_bad_type(self):
         self.assertRaisesRegex(
-            TypeError, "expected None, str, bytes or os.PathLike object, not int",
+            TypeError, "expected str, bytes or os.PathLike object, not int",
             OxidizedFinder, path=1)
 
 
