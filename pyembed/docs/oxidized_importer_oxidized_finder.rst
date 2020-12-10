@@ -127,8 +127,10 @@ The constructor takes the following named arguments:
    If not specified, the directory of the current executable will be used.
 
 ``path``
-   An optional path-like object defaulting to ``None``. See
-   :ref:`oxidized_finder_path` for details.
+   An optional path-like object defaulting to ``None``. If it is a relative
+   path or an absolute path whose head is ``sys.executable`` but the tail is not
+   valid Unicode, ``UnicodeDecodeError`` will be raised. See
+   :ref:`oxidized_finder_path` for further details.
 
 See the `python_packed_resources <https://docs.rs/python-packed-resources/0.1.0/python_packed_resources/>`_
 Rust crate for the specification of the binary data blob defining *packed
@@ -270,10 +272,7 @@ format does support expressing them. Use at your own risk.
 ``path``
 --------
 
-This is the read-only value of ``path`` passed to :ref:`oxidized_finder__new__`
-after some processing: If it's not ``None``, then it may be converted to
-different path-like type; if it's a relative path, it's made absolute assuming
-it's relative to ``sys.executable``.
+This is the read-only value of ``path`` passed to :ref:`oxidized_finder__new__`.
 
 If it's ``None``, the instance's ``find_spec`` method has the semantics of
 ``importlib.abc.MetaPathFinder.find_spec``, whose own ``path`` argument controls
@@ -283,13 +282,14 @@ Otherwise, the instance's ``find_spec`` method has the semantics of
 ``importlib.abc.PathEntryFinder.find_spec``, which does not accept a ``path``
 argument of its own.
 
-If ``path`` does not start with ``sys.executable``, the instance will find no
-modules: its ``find_spec`` method always returns ``None``.
+If ``path`` is absolute and does not start with ``sys.executable``, the instance
+will find no modules: its ``find_spec`` method always returns ``None``.
 
-The final possibility is that ``path`` starts with ``sys.executable``. The
-instance can find only those modules specified by ``path`` in the sense of
-:ref:`oxidized_finder_behavior_and_compliance_path`. If ``path`` equals
-``sys.executable``, the instance can find top-level module and their submodules.
-If, for example, ``path`` equals ``os.path.join``\ ``([``\ ``sys.executable``\
-``, "``\ ``importlib``\ ``"])``, the instance will only be able to import
-``importlib`` and its submodules.
+Let ``p`` be ``path`` if ``path`` is relative or the tail of ``path`` if
+``path``'s head is ``sys.executable``. ``p`` can be converted to valid Unicode.
+The instance can find only those modules whose ``__name__`` starts with ``p``.
+This is compatible with :ref:`oxidized_finder_behavior_and_compliance_path`. For
+one example, if ``path`` equals ``sys.executable``, the instance can find all
+top-level modules and their submodules. For another example, if ``path`` equals
+``os.path.join``\ ``([``\ ``sys.executable``\ ``, "``\ ``importlib``\ ``"])``,
+the instance will only be able to import ``importlib`` and its submodules.
