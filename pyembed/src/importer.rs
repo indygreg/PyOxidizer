@@ -987,9 +987,9 @@ impl OxidizedFinder {
     }
 }
 
+// See comment above `data path` in `class OxidizedFinder`.
 fn parse_path_to_pkg(py: Python, path: &Option<PyObject>, current_exe: &Path) -> PyResult<String> {
     if path.is_none() {
-        // all module names start with the empty string
         return Ok("".to_string());
     }
     let start: usize;
@@ -1000,8 +1000,8 @@ fn parse_path_to_pkg(py: Python, path: &Option<PyObject>, current_exe: &Path) ->
             return Ok("\0".to_string());
         }
         let tail = tail.unwrap();
-        // p have junk such as `/./` between current_exe and tail. So the index
-        // of the first component may not just be the length of current_exe.
+        // p could have junk such as `/./` between current_exe and tail. So the
+        // index of the first component may not just be current_exe.len().
         //
         // underflow safety: p ends with tail, so p is longer.
         start = p.as_os_str().len() - tail.as_os_str().len();
