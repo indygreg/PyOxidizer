@@ -11,14 +11,14 @@ for importing Python modules from memory.
 
 #[cfg(not(library_mode = "extension"))]
 use cpython::NoArgs;
+#[cfg(unix)]
+use std::os::unix::ffi::OsStrExt;
 #[cfg(windows)]
 use {
     crate::memory_dll::{free_library_memory, get_proc_address_memory, load_library_memory},
     cpython::exc::SystemError,
     std::ffi::c_void,
 };
-#[cfg(unix)]
-use std::os::unix::ffi::OsStrExt;
 use {
     crate::{
         conversion::pyobject_to_pathbuf,
@@ -36,12 +36,7 @@ use {
         },
     },
     python3_sys as pyffi,
-    std::{
-        borrow::Cow,
-        ffi::CString,
-        path::Path,
-        sync::Arc,
-    },
+    std::{borrow::Cow, ffi::CString, path::Path, sync::Arc},
 };
 
 pub const OXIDIZED_IMPORTER_NAME_STR: &str = "oxidized_importer";
@@ -992,11 +987,7 @@ impl OxidizedFinder {
     }
 }
 
-fn parse_path_to_pkg(
-    py: Python,
-    path: &Option<PyObject>,
-    current_exe: &Path,
-) -> PyResult<String> {
+fn parse_path_to_pkg(py: Python, path: &Option<PyObject>, current_exe: &Path) -> PyResult<String> {
     if path.is_none() {
         // all module names start with the empty string
         return Ok("".to_string());
@@ -1039,7 +1030,8 @@ fn parse_path_to_pkg(
                 // +1 to go one past the end
                 (start + pkg.len())..(start + pkg.len() + part_osstr.len() + 1),
                 &CString::new("invalid utf-8").unwrap(),
-            ).map_or_else(
+            )
+            .map_or_else(
                 |err_creating_ude| err_creating_ude,
                 |ude| PyErr::new::<UnicodeDecodeError, _>(py, ude),
             )

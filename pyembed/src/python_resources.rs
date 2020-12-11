@@ -959,9 +959,7 @@ impl<'a> PythonResourcesState<'a, u8> {
             .filter(|r| {
                 r.is_extension_module || (r.is_module && is_module_importable(r, optimize_level))
             })
-            .filter(|r| {
-                r.name.starts_with(path)
-            })
+            .filter(|r| r.name.starts_with(path))
             .map(|r| {
                 let name = if let Some(prefix) = &prefix {
                     format!("{}{}", prefix, r.name)
