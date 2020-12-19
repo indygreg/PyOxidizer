@@ -1,6 +1,9 @@
 on:
-  - push
-  - pull_request
+  push:
+  pull_request:
+  schedule:
+    # Run daily to keep sccache cache up to date.
+    - cron: '13 4 * * *'
 jobs:
   pyoxidizer:
     strategy:
