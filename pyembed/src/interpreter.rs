@@ -10,8 +10,8 @@ use {
         conversion::osstring_to_bytes,
         error::NewInterpreterError,
         importer::{
-            replace_meta_path_importers, PyInit_oxidized_importer, OXIDIZED_IMPORTER_NAME,
-            OXIDIZED_IMPORTER_NAME_STR, initialize_path_hooks,
+            initialize_path_hooks, replace_meta_path_importers, PyInit_oxidized_importer,
+            OXIDIZED_IMPORTER_NAME, OXIDIZED_IMPORTER_NAME_STR,
         },
         osutils::resolve_terminfo_dirs,
         pyalloc::PythonMemoryAllocator,
@@ -203,15 +203,17 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
             // is dropped. However, that would require self to be dropped. And if self is dropped,
             // there should no longer be a Python interpreter around. So it follows that the
             // importer state cannot be dropped after self.
-            Some(replace_meta_path_importers(py, &oxidized_importer, resources_state).map_err(
-                |err| {
-                    NewInterpreterError::new_from_pyerr(
-                        py,
-                        err,
-                        "initialization of oxidized importer",
-                    )
-                },
-            )?)
+            Some(
+                replace_meta_path_importers(py, &oxidized_importer, resources_state).map_err(
+                    |err| {
+                        NewInterpreterError::new_from_pyerr(
+                            py,
+                            err,
+                            "initialization of oxidized importer",
+                        )
+                    },
+                )?,
+            )
         } else {
             None
         };
@@ -228,9 +230,9 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
             ));
         }
 
-        let sys_module = py.import("sys").map_err(|err| {
-            NewInterpreterError::new_from_pyerr(py, err, "obtaining sys module")
-        })?;
+        let sys_module = py
+            .import("sys")
+            .map_err(|err| NewInterpreterError::new_from_pyerr(py, err, "obtaining sys module"))?;
         // When the main initialization ran, it initialized the "external"
         // importer (importlib._bootstrap_external). Our meta path importer
         // should have been registered first and would have been used for
