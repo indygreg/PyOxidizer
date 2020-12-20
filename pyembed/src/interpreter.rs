@@ -422,6 +422,18 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
     }
 
     /// Ensure the Python GIL is acquired, returning a handle on the interpreter.
+    /// The lifetime bounds prevent use-after-free errors like the following,
+    /// which does not compile.
+    /// ```compile_fail
+    /// let py = {
+    ///     let mut config = pyembed::OxidizedPythonInterpreterConfig::default();
+    ///     config.interpreter_config.parse_argv = Some(false);
+    ///     config.set_missing_path_configuration = false;
+    ///     let mut interp = pyembed::MainPythonInterpreter::new(config).unwrap();
+    ///     interp.acquire_gil().unwrap()
+    /// };
+    /// py.import("sys").unwrap();
+    /// ```
     pub fn acquire_gil(&mut self) -> Result<Python<'python>, &'static str> {
         match self.interpreter_state {
             InterpreterState::NotStarted => {
