@@ -912,34 +912,39 @@ impl OxidizedFinder {
         resources_state.pkgutil_modules_infos(py, prefix, state.optimize_level, |_resource| true)
     }
 
+    // Canonicalize the path to the current executable or raise an OSError.
+    //
+    // Even `std::env::current_exe()` can fail to `fs::canonicalize()` if, e.g.,
+    // the file is deleted after the program starts.
+    fn exe_realpath(&self, py: Python) -> PyResult<std::path::PathBuf> {
+        let current_exe = &self.state(py).get_resources_state().current_exe;
+        current_exe.canonicalize().map_err(|err| {
+            let exe = current_exe.display();
+            // Use a Python expression instead of PyErr::new to ensure we get the
+            // right OSError subclass.
+            let strerror = format!("cannot open current executable: '{}'", exe);
+            let raw_os_error = err
+                .raw_os_error()
+                .map_or_else(|| "None".to_string(), |err_code| err_code.to_string());
+            let code = if cfg!(windows) {
+                format!(
+                    "OSError(None, r\"{}\", r\"{}\", {})",
+                    strerror, exe, raw_os_error
+                )
+            } else {
+                format!("OSError({}, r\"{}\", r\"{}\")", raw_os_error, strerror, exe)
+            };
+            py.eval(&code, None, None).map_or_else(
+                |err_creating_exc| err_creating_exc,
+                |exc| PyErr::from_instance(py, exc),
+            )
+        })
+    }
+
     fn path_hook_impl(&self, py: Python, path: PyObject) -> PyResult<_PathEntryFinder> {
         // Compute _PathEntryFinder::package
         let pkg = {
-            // Get the canonicalized path to the current executable or raise an OSError.
-            let current_exe = {
-                let current_exe = &self.state(py).get_resources_state().current_exe;
-                current_exe.canonicalize().map_err(|err| {
-                    let exe = current_exe.display();
-                    // Use a Python expression instead of PyErr::new to ensure we get the
-                    // right OSError subclass.
-                    let strerror = format!("cannot open current executable: '{}'", exe);
-                    let raw_os_error = err
-                        .raw_os_error()
-                        .map_or_else(|| "None".to_string(), |err_code| err_code.to_string());
-                    let code = if cfg!(windows) {
-                        format!(
-                            "OSError(None, r\"{}\", r\"{}\", {})",
-                            strerror, exe, raw_os_error
-                        )
-                    } else {
-                        format!("OSError({}, r\"{}\", r\"{}\")", raw_os_error, strerror, exe)
-                    };
-                    py.eval(&code, None, None).map_or_else(
-                        |err_creating_exc| err_creating_exc,
-                        |exc| PyErr::from_instance(py, exc),
-                    )
-                })
-            }?;
+            let current_exe = self.exe_realpath(py)?;
             let not_exe_err = || {
                 let msg = format!(
                     "path {} does not begin in \'{}\' (if you're sure it does, check Python's file-system encoding)", &path, current_exe.display());
@@ -1721,7 +1726,7 @@ pub(crate) fn initialize_path_hooks(py: Python, finder: &PyObject, sys: &PyModul
 
 #[cfg(test)]
 mod test_path_entry_finder {
-    use super::_PathEntryFinder;
+    use super::{_PathEntryFinder, oxidized_finder_new};
 
     #[test]
     fn is_visible() {
@@ -1754,6 +1759,19 @@ mod test_path_entry_finder {
         assert!(is_visible("חבילות", "חבילות.מודול"));
     }
 
+    fn get_py(fsencoding: Option<&str>) -> (crate::MainPythonInterpreter, cpython::Python<'_>) {
+        let mut config = crate::OxidizedPythonInterpreterConfig::default();
+        config.interpreter_config.parse_argv = Some(false);
+        config.set_missing_path_configuration = false;
+        config.oxidized_importer = true;
+        if fsencoding.is_some() {
+            config.interpreter_config.filesystem_encoding = fsencoding.map(|e| e.to_string());
+        }
+        let mut interp = crate::MainPythonInterpreter::new(config).unwrap();
+        let py = interp.acquire_gil().unwrap();
+        (interp, py)
+    }
+
     /// _PathEntryFinder::parse_path_to_pkg re-encodes the package part of the
     /// path with Python's filesystem encoding, rather than forcing UTF-8.
     ///
@@ -1764,13 +1782,7 @@ mod test_path_entry_finder {
     #[test]
     fn parse_path_to_pkg_filesystem_encoding() {
         // Obtain a Python interpreter with filesystem encoding set to UTF-16-LE
-        let mut config = crate::OxidizedPythonInterpreterConfig::default();
-        config.interpreter_config.parse_argv = Some(false);
-        config.set_missing_path_configuration = false;
-        config.interpreter_config.filesystem_encoding = Some("UTF-16-LE".to_string());
-        let mut interp = crate::MainPythonInterpreter::new(config).unwrap();
-        let py = interp.acquire_gil().unwrap();
-
+        let (_interp, py) = get_py(Some("UTF-16-LE"));
         // Verify assumptions about the test itself.
         const WAVY_DASH: &str = "〰";
         const WAVY_DASH_CODE: u16 = 0x3030;
@@ -1795,6 +1807,30 @@ mod test_path_entry_finder {
         assert_eq!(
             _PathEntryFinder::parse_path_to_pkg(py, std::path::Path::new("00")).unwrap(),
             WAVY_DASH
+        );
+    }
+
+    /// OxidizedFinder::path_hook raises an OSError if current_exe cannot be
+    /// canonicalized. The OSError returns the right exception subclass.
+    #[test]
+    fn bad_current_exe() {
+        let (_interp, py) = get_py(None);
+
+        let exe: std::path::PathBuf = "/../a/../foo.txt".into();
+        assert_eq!(
+            exe.canonicalize().unwrap_err().kind(),
+            std::io::ErrorKind::NotFound
+        );
+
+        let finder = oxidized_finder_new(py, None).unwrap();
+        finder.state(py).get_resources_state_mut().current_exe = exe;
+        let exc = finder
+            .exe_realpath(py)
+            .expect_err("canonicalize unexpectedly succeeded")
+            .instance(py);
+        assert_eq!(
+            format!("{:?}", exc),
+            "FileNotFoundError(2, \"cannot open current executable: '/../a/../foo.txt'\")"
         );
     }
 }
