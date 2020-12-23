@@ -19,6 +19,7 @@ use {
         py_class, NoArgs, ObjectProtocol, PyBytes, PyErr, PyList, PyObject, PyResult, Python,
         PythonObject, ToPyObject,
     },
+    python3_sys as pyffi,
     python_packaging::{
         bytecode::BytecodeCompiler,
         location::{AbstractResourceLocation, ConcreteResourceLocation},
@@ -26,6 +27,37 @@ use {
     },
     std::{cell::RefCell, convert::TryFrom},
 };
+
+struct PyTempDir {
+    cleanup: PyObject,
+    path: std::path::PathBuf,
+}
+
+impl PyTempDir {
+    fn new(py: Python) -> PyResult<Self> {
+        let temp_dir = py
+            .import("tempfile")?
+            .call(py, "TemporaryDirectory", NoArgs, None)?;
+        let cleanup = temp_dir.getattr(py, "cleanup")?;
+        let path = pyobject_to_pathbuf(py, temp_dir.getattr(py, "name")?)?;
+        Ok(PyTempDir {cleanup, path})
+    }
+
+    fn path(&self) -> &std::path::Path {
+        &self.path
+    }
+}
+
+impl Drop for PyTempDir {
+    fn drop(&mut self) {
+        let gil_guard = Python::acquire_gil();
+        let py = gil_guard.python();
+        if self.cleanup.call(py, NoArgs, None).is_err() {
+            let cleanup = self.cleanup.as_ptr();
+            unsafe { pyffi::PyErr_WriteUnraisable(cleanup) }
+        }
+    }
+}
 
 py_class!(pub class OxidizedResourceCollector |py| {
     data collector: RefCell<PythonResourceCollector>;
@@ -270,15 +302,10 @@ impl OxidizedResourceCollector {
             }
         };
         let python_exe = pyobject_to_pathbuf(py, python_exe)?;
-
-        let tempfile = py.import("tempfile")?;
-        let temp_dir = tempfile.call(py, "TemporaryDirectory", NoArgs, None)?;
-        let temp_dir_name = temp_dir.getattr(py, "name")?;
-        let temp_dir_path = pyobject_to_pathbuf(py, temp_dir_name)?;
-
+        let temp_dir = PyTempDir::new(py)?;
         let collector = self.collector(py).borrow();
 
-        let mut compiler = BytecodeCompiler::new(&python_exe, &temp_dir_path).map_err(|e| {
+        let mut compiler = BytecodeCompiler::new(&python_exe, temp_dir.path()).map_err(|e| {
             PyErr::new::<ValueError, _>(
                 py,
                 format!("error constructing bytecode compiler: {:?}", e),
@@ -312,5 +339,31 @@ impl OxidizedResourceCollector {
         Ok((resources.into_py_object(py), file_installs)
             .into_py_object(py)
             .into_object())
+    }
+}
+
+#[cfg(test)]
+mod test_pytempdir {
+    use super::PyTempDir;
+
+    fn get_py<'interp, 'rsrc, 'py>() -> (crate::MainPythonInterpreter<'py, 'interp, 'rsrc>, cpython::Python<'py>) {
+        let mut config = crate::OxidizedPythonInterpreterConfig::default();
+        config.interpreter_config.parse_argv = Some(false);
+        config.set_missing_path_configuration = false;
+        let mut interp = crate::MainPythonInterpreter::new(config).unwrap();
+        let py = interp.acquire_gil().unwrap();
+        (interp, py)
+    }
+
+    #[test]
+    fn lifetimes() {
+        let path = {
+            let (_interp, py) = get_py();
+            let temp_dir = PyTempDir::new(py).unwrap();
+            drop(py);  // PyTempDir::drop reacquires the GIL for itself
+            assert!(temp_dir.path().is_dir());
+            temp_dir.path().to_path_buf()
+        };
+        assert!(!path.is_dir());
     }
 }
