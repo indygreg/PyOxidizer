@@ -108,28 +108,62 @@ class TestImporterIterModules(unittest.TestCase):
         self.assertEqual(res[0].name, "foomy_package")
         self.assertTrue(res[0].ispkg)
 
+    def test_iter_modules_nested(self):
+        self._make_package("a.b")
+        (self.td / "one.py").touch()
+
+        f = self._finder_from_td()
+
+        expected = [("a", True), ("one", False)]
+        self.assertCountEqual(f.iter_modules(), expected)
+
+        sys.meta_path = [f]
+        sys.path = []
+        res = list(pkgutil.iter_modules())
+        self.assertCountEqual([(mi.name, mi.ispkg) for mi in res], expected)
+        for mi in res:
+            self.assertIs(mi.module_finder, f)
+
     def test_iter_modules_path(self):
         self._make_package("a.b.c")
         self._make_package("one.two.three")
         self._make_package("on.tשo.۳")
         self._make_package("on.two")
-        path = pathlib.Path(sys.executable, "on")
-        finder = self._finder_from_td()
-        path_entry_finder = finder.path_hook(path)
-        _PathEntryFinder = type(path_entry_finder)
-        modules = path_entry_finder.iter_modules()
-        self.assertCountEqual(modules, [("on.two", True), ("on.tשo", True)])
 
-        sys.meta_path = [finder]
-        import on
-        self.assertEqual(on.__path__, [str(path)])
+        f = self._finder_from_td()
+
+        name = "on"
+        path = pathlib.Path(sys.executable, name)
+        path_entry_finder = f.path_hook(path)
+
+        with self.subTest(prefix="", module_iterator="_PathEntryFinder"):
+            unprefixed = path_entry_finder.iter_modules()
+            self.assertCountEqual(unprefixed, [("two", True), ("tשo", True)])
+
+        prefix = name + "."
+        with self.subTest(prefix=name + ".", module_iterator="_PathEntryFinder"):
+            prefixed = path_entry_finder.iter_modules(prefix=prefix)
+            self.assertCountEqual(prefixed, [("on.two", True), ("on.tשo", True)])
+
+        def assert_iter_modules(prefix: str, expected, *args):
+            with self.subTest(prefix=prefix, module_iterator="pkgutil"):
+                res = list(pkgutil.iter_modules(*args))
+                self.assertCountEqual([(mi.name, mi.ispkg) for mi in res], expected)
+                for mi in res:
+                    self.assertIsInstance(mi.module_finder, type(path_entry_finder))
+                    self.assertEqual(
+                        mi.module_finder._package, path_entry_finder._package)
+
         sys.path = [sys.executable]
-        with patch.object(sys, "path_hooks", [finder.path_hook]):
-            res = list(pkgutil.iter_modules([path]))
-            self.assertCountEqual([(mi.name, mi.ispkg) for mi in res], modules)
-            for mi in res:
-                self.assertIsInstance(mi, pkgutil.ModuleInfo)
-                self.assertIsInstance(mi.module_finder, _PathEntryFinder)
+        sys.meta_path = [f]
+        with patch.dict(sys.modules):
+            import on
+            self.assertEqual(on.__name__, name)
+            self.assertEqual(on.__path__, [str(path)])
+            with patch.object(sys, "path_hooks", [f.path_hook]):
+                assert_iter_modules("", unprefixed, on.__path__)
+                prefix = on.__name__ + "."
+                assert_iter_modules(prefix, prefixed, on.__path__, prefix)
 
 
 if __name__ == "__main__":

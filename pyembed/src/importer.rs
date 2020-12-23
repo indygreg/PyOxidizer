@@ -909,7 +909,9 @@ impl OxidizedFinder {
             None
         };
 
-        resources_state.pkgutil_modules_infos(py, prefix, state.optimize_level, |_resource| true)
+        resources_state.pkgutil_modules_infos(py, prefix, state.optimize_level, |resource| {
+            _PathEntryFinder::is_visible("", &resource.name)
+        })
     }
 
     // Canonicalize the path to the current executable or raise an OSError.
@@ -1025,7 +1027,7 @@ py_class!(class _PathEntryFinder |py| {
         self.finder(py).call_method(py, "invalidate_caches", NoArgs, None)
     }
 
-    def iter_modules(&self, prefix: Option<&str> = None) -> PyResult<PyList> {
+    def iter_modules(&self, prefix: &str = "") -> PyResult<PyList> {
         self.iter_modules_impl(py, prefix)
     }
 
@@ -1073,11 +1075,11 @@ impl _PathEntryFinder {
             .map(|spec| if spec == py.None() { None } else { Some(spec) })
     }
 
-    fn iter_modules_impl(&self, py: Python, prefix: Option<&str>) -> PyResult<PyList> {
+    fn iter_modules_impl(&self, py: Python, prefix: &str) -> PyResult<PyList> {
         let state = self.finder(py).cast_as::<OxidizedFinder>(py)?.state(py);
         let modules = state.get_resources_state().pkgutil_modules_infos(
             py,
-            prefix.map(|p| p.to_string()),
+            Some(prefix.to_string()),
             state.optimize_level,
             |resource| _PathEntryFinder::is_visible(self.package(py), &resource.name),
         );

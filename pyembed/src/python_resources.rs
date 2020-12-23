@@ -959,10 +959,11 @@ impl<'a> PythonResourcesState<'a, u8> {
             })
             .filter(predicate)
             .map(|r| {
+                let name = r.name.rsplit('.').take(1).next().unwrap();
                 let name = if let Some(prefix) = &prefix {
-                    format!("{}{}", prefix, r.name)
+                    format!("{}{}", prefix, name)
                 } else {
-                    r.name.to_string()
+                    name.to_string()
                 };
 
                 let name = name.to_py_object(py).into_object();

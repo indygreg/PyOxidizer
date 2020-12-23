@@ -120,8 +120,9 @@ class TestImporterPathEntryFinder(unittest.TestCase):
         self.assertIsNone(finder.find_spec("on.tשo.۳"))
         # Return a correct ModuleSpec for modules in the search path
         self.assert_spec(finder.find_spec("on.tשo"), "on.tשo", is_pkg=True)
-        # Find the same module from iter_modules()
-        self.assertCountEqual(finder.iter_modules(""), [("on.tשo", True)])
+        # Find the same module from iter_modules(), without and with a prefix
+        self.assertCountEqual(finder.iter_modules(), [("tשo", True)])
+        self.assertCountEqual(finder.iter_modules("on."), [("on.tשo", True)])
 
     def test_find_spec_nested_abs_str(self):
         self.assert_find_spec_nested(os.path.join(sys.executable, "on"))
@@ -142,7 +143,7 @@ class TestImporterPathEntryFinder(unittest.TestCase):
     def assert_find_spec_top_level(self, path: Union[str, bytes, os.PathLike]) -> None:
         finder = self.finder(path, "")
         modules = [("a", True), ("one", True), ("on", True)]
-        self.assertCountEqual(finder.iter_modules(""), modules)
+        self.assertCountEqual(finder.iter_modules(), modules)
         for name, is_pkg in modules:
             self.assert_spec(finder.find_spec(name), name, is_pkg)
         for name in "a.b", "a.b.c", "on.tשo", "on.tשo.۳":
@@ -162,7 +163,7 @@ class TestImporterPathEntryFinder(unittest.TestCase):
     def assert_unicode_path(self, path: Union[str, bytes, os.PathLike]) -> None:
         finder = self.finder(path, "on.tשo")
         self.assert_spec(finder.find_spec("on.tשo.۳"), "on.tשo.۳", is_pkg=False)
-        self.assertCountEqual(finder.iter_modules(""), [("on.tשo.۳", False)])
+        self.assertCountEqual(finder.iter_modules(), [("۳", False)])
 
     def test_unicode_path_abs_str(self):
         self.assert_unicode_path(os.path.join(sys.executable,"on", "tשo"))
