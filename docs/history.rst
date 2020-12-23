@@ -90,6 +90,11 @@ Bug Fixes
   to compile rather than causing runtime errors.
 * The optional ``rust`` memory allocator is now thread-safe. Previously, it
   wasn't and releasing of the GIL could lead to memory corruption and crashes.
+* ``OxidizedResourceCollector.oxidize()`` should now properly clean up the
+  temporary directory it uses during execution. Before, premature Python
+  interpreter termination (such as during failing tests) could cause the
+  temporary directory to not be removed. Closes #346. Fix contributed by
+  William Schwartz in #347.
 
 New Features
 ^^^^^^^^^^^^

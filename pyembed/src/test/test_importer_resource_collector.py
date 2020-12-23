@@ -2,12 +2,16 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+from contextlib import contextmanager, redirect_stderr
 import importlib.util
+from io import StringIO
 import os
 import pathlib
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
+import warnings
 
 from oxidized_importer import (
     OxidizedFinder,
@@ -15,6 +19,24 @@ from oxidized_importer import (
     PythonModuleBytecode,
     find_resources_in_path,
 )
+
+
+@contextmanager
+def assert_tempfile_cleaned_up(TemporaryDirectory=tempfile.TemporaryDirectory):
+    call_count = 0
+    class TrackingTempDir(TemporaryDirectory):
+        def cleanup(self):
+            nonlocal call_count
+            call_count += 1
+            super().cleanup()
+
+    patcher = patch("tempfile.TemporaryDirectory", TrackingTempDir)
+    msg = fr"""^Implicitly cleaning up <{TrackingTempDir.__name__} (['"]).*\1>$"""
+    with warnings.catch_warnings(record=True) as cm, patcher:
+        warnings.filterwarnings(
+            "error", category=ResourceWarning, module=r"^tempfile$", message=msg)
+        yield TrackingTempDir, TrackingTempDir.cleanup
+    assert call_count == 1, f"tempfile.TemporaryDirectory.cleanup {call_count=}≠1"
 
 
 class TestImporterResourceCollector(unittest.TestCase):
@@ -36,6 +58,23 @@ class TestImporterResourceCollector(unittest.TestCase):
         c = OxidizedResourceCollector(allowed_locations=["in-memory"])
         self.assertEqual(c.allowed_locations, ["in-memory"])
 
+    def test_tempdir_error(self):
+        class BadTempDir(tempfile.TemporaryDirectory):
+            def cleanup(self):
+                super().cleanup()
+                raise FileNotFoundError(self.name)
+        python_exe = os.environ.get("PYTHON_SYS_EXECUTABLE")
+        c = OxidizedResourceCollector(allowed_locations=["in-memory"])
+        stderr = StringIO()
+        assertion = assert_tempfile_cleaned_up(BadTempDir)
+        with assertion as (TrackingTempDir, cleanup), redirect_stderr(stderr):
+            oxide = c.oxidize(python_exe=python_exe)
+        self.assertRegex(
+            stderr.getvalue(),
+            fr"""Exception ignored in: <bound method {cleanup.__qualname__} """
+            fr"""of <{TrackingTempDir.__name__} (['"]){tempfile.gettempdir()}"""
+            fr"""[/\\].+\1>>""")
+
     def test_source_module(self):
         c = OxidizedResourceCollector(allowed_locations=["in-memory"])
 
@@ -48,9 +87,10 @@ class TestImporterResourceCollector(unittest.TestCase):
             c.add_in_memory(resource)
 
         f = OxidizedFinder()
-        f.add_resources(
-            c.oxidize(python_exe=os.environ.get("PYTHON_SYS_EXECUTABLE"))[0]
-        )
+        python_exe = os.environ.get("PYTHON_SYS_EXECUTABLE")
+        with assert_tempfile_cleaned_up():
+            oxide = c.oxidize(python_exe=python_exe)
+        f.add_resources(oxide[0])
 
         resources = [r for r in f.indexed_resources() if r.name == "foo"]
         self.assertEqual(len(resources), 1)
@@ -69,9 +109,9 @@ class TestImporterResourceCollector(unittest.TestCase):
                     c.add_in_memory(resource)
                     c.add_filesystem_relative("", resource)
 
-        resources, file_installs = c.oxidize(
-            python_exe=os.environ.get("PYTHON_SYS_EXECUTABLE")
-        )
+        python_exe = os.environ.get("PYTHON_SYS_EXECUTABLE")
+        with assert_tempfile_cleaned_up():
+            resources, file_installs = c.oxidize(python_exe=python_exe)
         f = OxidizedFinder()
         f.add_resources(resources)
 
@@ -98,9 +138,9 @@ class TestImporterResourceCollector(unittest.TestCase):
                             if resource.optimize_level == 0:
                                 c.add_filesystem_relative("lib", resource)
 
-        resources, file_installs = c.oxidize(
-            python_exe=os.environ.get("PYTHON_SYS_EXECUTABLE")
-        )
+        python_exe = os.environ.get("PYTHON_SYS_EXECUTABLE")
+        with assert_tempfile_cleaned_up():
+            resources, file_installs = c.oxidize(python_exe=python_exe)
         self.assertEqual(len(resources), len(file_installs))
 
         idx = None
