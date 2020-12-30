@@ -41,7 +41,7 @@ rusty_fork_test! {
         config.set_missing_path_configuration = false;
         let mut interp = MainPythonInterpreter::new(config).unwrap();
 
-        let py = interp.acquire_gil().unwrap();
+        let py = interp.acquire_gil();
         let sys = py.import("sys").unwrap();
         let meta_path = sys.get(py, "meta_path").unwrap();
         assert_eq!(meta_path.len(py).unwrap(), 3);
@@ -72,7 +72,7 @@ rusty_fork_test! {
 
         let mut interp = MainPythonInterpreter::new(config).unwrap();
 
-        let py = interp.acquire_gil().unwrap();
+        let py = interp.acquire_gil();
         let sys = py.import("sys").unwrap();
         let flags = sys.get(py, "flags").unwrap();
 
@@ -122,7 +122,7 @@ rusty_fork_test! {
 
         let mut interp = MainPythonInterpreter::new(config).unwrap();
 
-        let py = interp.acquire_gil().unwrap();
+        let py = interp.acquire_gil();
         let sys = py.import("sys").unwrap();
 
         let argv = sys
@@ -153,7 +153,7 @@ rusty_fork_test! {
 
         let mut interp = MainPythonInterpreter::new(config).unwrap();
 
-        let py = interp.acquire_gil().unwrap();
+        let py = interp.acquire_gil();
         let sys = py.import("sys").unwrap();
 
         let argv = sys
@@ -180,7 +180,7 @@ rusty_fork_test! {
 
         let mut interp = MainPythonInterpreter::new(config).unwrap();
 
-        let py = interp.acquire_gil().unwrap();
+        let py = interp.acquire_gil();
         let sys = py.import("sys").unwrap();
 
         let argv = sys
@@ -203,7 +203,7 @@ rusty_fork_test! {
 
         let mut interp = MainPythonInterpreter::new(config).unwrap();
 
-        let py = interp.acquire_gil().unwrap();
+        let py = interp.acquire_gil();
         let sys = py.import("sys").unwrap();
 
         let argvb_raw = sys.get(py, "argvb").unwrap();
@@ -235,7 +235,7 @@ rusty_fork_test! {
 
         let mut interp = MainPythonInterpreter::new(config).unwrap();
 
-        let py = interp.acquire_gil().unwrap();
+        let py = interp.acquire_gil();
         let sys = py.import("sys").unwrap();
 
         let argv_raw = sys.get(py, "argv").unwrap();
@@ -275,7 +275,7 @@ rusty_fork_test! {
 
         let mut interp = MainPythonInterpreter::new(config).unwrap();
 
-        let py = interp.acquire_gil().unwrap();
+        let py = interp.acquire_gil();
         let sys = py.import("sys").unwrap();
 
         let argv_raw = sys.get(py, "argv").unwrap();
@@ -338,7 +338,7 @@ rusty_fork_test! {
 
         let mut interp = MainPythonInterpreter::new(config).unwrap();
 
-        let py = interp.acquire_gil().unwrap();
+        let py = interp.acquire_gil();
         let sys = py.import("sys").unwrap();
 
         let argv_raw = sys.get(py, "argv").unwrap();
@@ -399,7 +399,7 @@ rusty_fork_test! {
 
         let mut interp = MainPythonInterpreter::new(config).unwrap();
 
-        let py = interp.acquire_gil().unwrap();
+        let py = interp.acquire_gil();
         let sys = py.import("sys").unwrap();
 
         let flags = sys.get(py, "flags").unwrap();
@@ -416,7 +416,7 @@ rusty_fork_test! {
 
         let mut interp = MainPythonInterpreter::new(config).unwrap();
 
-        let py = interp.acquire_gil().unwrap();
+        let py = interp.acquire_gil();
         let sys = py.import("sys").unwrap();
 
         let flags = sys.get(py, "flags").unwrap();
@@ -433,7 +433,7 @@ rusty_fork_test! {
 
         let mut interp = MainPythonInterpreter::new(config).unwrap();
 
-        let py = interp.acquire_gil().unwrap();
+        let py = interp.acquire_gil();
         let sys = py.import("sys").unwrap();
 
         let flags = sys.get(py, "flags").unwrap();
@@ -450,7 +450,7 @@ rusty_fork_test! {
 
         let mut interp = MainPythonInterpreter::new(config).unwrap();
 
-        let py = interp.acquire_gil().unwrap();
+        let py = interp.acquire_gil();
         let sys = py.import("sys").unwrap();
 
         let flags = sys.get(py, "flags").unwrap();
@@ -467,7 +467,7 @@ rusty_fork_test! {
 
         let mut interp = MainPythonInterpreter::new(config).unwrap();
 
-        let py = interp.acquire_gil().unwrap();
+        let py = interp.acquire_gil();
         let sys = py.import("sys").unwrap();
 
         let flags = sys.get(py, "flags").unwrap();
@@ -484,7 +484,7 @@ rusty_fork_test! {
 
         let mut interp = MainPythonInterpreter::new(config).unwrap();
 
-        let py = interp.acquire_gil().unwrap();
+        let py = interp.acquire_gil();
         let sys = py.import("sys").unwrap();
 
         let flags = sys.get(py, "flags").unwrap();
@@ -501,7 +501,7 @@ rusty_fork_test! {
 
         let mut interp = MainPythonInterpreter::new(config).unwrap();
 
-        let py = interp.acquire_gil().unwrap();
+        let py = interp.acquire_gil();
         let sys = py.import("sys").unwrap();
 
         let flags = sys.get(py, "flags").unwrap();
@@ -518,7 +518,7 @@ rusty_fork_test! {
 
         let mut interp = MainPythonInterpreter::new(config).unwrap();
 
-        let py = interp.acquire_gil().unwrap();
+        let py = interp.acquire_gil();
         let sys = py.import("sys").unwrap();
 
         let flags = sys.get(py, "flags").unwrap();
@@ -535,7 +535,7 @@ rusty_fork_test! {
 
         let mut interp = MainPythonInterpreter::new(config).unwrap();
 
-        let py = interp.acquire_gil().unwrap();
+        let py = interp.acquire_gil();
         let sys = py.import("sys").unwrap();
 
         let flags = sys.get(py, "flags").unwrap();
@@ -552,7 +552,7 @@ rusty_fork_test! {
 
         let mut interp = MainPythonInterpreter::new(config).unwrap();
 
-        let py = interp.acquire_gil().unwrap();
+        let py = interp.acquire_gil();
         let sys = py.import("sys").unwrap();
 
         let flags = sys.get(py, "flags").unwrap();
@@ -569,7 +569,7 @@ rusty_fork_test! {
 
         let mut interp = MainPythonInterpreter::new(config).unwrap();
 
-        let py = interp.acquire_gil().unwrap();
+        let py = interp.acquire_gil();
         let sys = py.import("sys").unwrap();
 
         let flags = sys.get(py, "flags").unwrap();
@@ -586,7 +586,7 @@ rusty_fork_test! {
 
         let mut interp = MainPythonInterpreter::new(config).unwrap();
 
-        let py = interp.acquire_gil().unwrap();
+        let py = interp.acquire_gil();
         let sys = py.import("sys").unwrap();
 
         let flags = sys.get(py, "flags").unwrap();
@@ -603,7 +603,7 @@ rusty_fork_test! {
 
         let mut interp = MainPythonInterpreter::new(config).unwrap();
 
-        let py = interp.acquire_gil().unwrap();
+        let py = interp.acquire_gil();
         let sys = py.import("sys").unwrap();
 
         let flags = sys.get(py, "flags").unwrap();

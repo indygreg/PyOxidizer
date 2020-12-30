@@ -24,7 +24,7 @@ use it:
 .. code-block:: rust
 
    fn do_it(interpreter: &MainPythonInterpreter) -> {
-       let py = interpreter.acquire_gil().unwrap();
+       let py = interpreter.acquire_gil();
 
        match py.eval("print('hello, world')") {
            Ok(_) => print("python code executed successfully"),

@@ -55,6 +55,8 @@ Backwards Compatibility Notes
 * ``show_alloc_count`` has been removed from types representing Python
   interpreter configuration because support for this feature was removed in
   Python 3.9.
+* ``pyembed::MainPythonInterpreter.acquire_gil()``'s signature has changed, now
+  returning a ``Python`` value directly without wrapping it in a ``Result``.
 
 Bug Fixes
 ^^^^^^^^^
@@ -72,6 +74,9 @@ Bug Fixes
 * The lifetime of ``pyembed::MainPythonInterpreter.acquire_gil()``'s return
   value has been adjusted so the Rust compiler will refuse to compile code
   that could crash due to attempting to use a finalized interpreter. (#345)
+* ``pyembed::MainPythonInterpreter.py_runmain()``'s signature has changed, now
+  consuming ownership of the receiver. Subsequent borrows of ``self`` now fail
+  to compile rather than causing runtime errors.
 
 New Features
 ^^^^^^^^^^^^

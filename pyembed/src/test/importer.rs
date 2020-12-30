@@ -34,10 +34,8 @@ fn run_py_test(test_filename: &str) -> Result<()> {
     config.interpreter_config.run_filename = Some(test_path);
     config.interpreter_config.buffered_stdio = Some(false);
     config.set_missing_path_configuration = false;
-    let mut interp = MainPythonInterpreter::new(config)?;
 
-    let exit_code = interp.py_runmain();
-    if exit_code != 0 {
+    if MainPythonInterpreter::new(config)?.py_runmain() != 0 {
         Err(anyhow!("Python code did not exit successfully"))
     } else {
         Ok(())
@@ -45,7 +43,7 @@ fn run_py_test(test_filename: &str) -> Result<()> {
 }
 
 fn get_importer(interp: &mut MainPythonInterpreter) -> Result<PyObject> {
-    let py = interp.acquire_gil().unwrap();
+    let py = interp.acquire_gil();
 
     let sys = py.import("sys").unwrap();
     let meta_path = sys.get(py, "meta_path").unwrap();
@@ -69,7 +67,7 @@ rusty_fork_test! {
         config.set_missing_path_configuration = false;
         let mut interp = MainPythonInterpreter::new(config).unwrap();
 
-        let py = interp.acquire_gil().unwrap();
+        let py = interp.acquire_gil();
         let sys = py.import("sys").unwrap();
         let meta_path = sys.get(py, "meta_path").unwrap();
         assert_eq!(meta_path.len(py).unwrap(), 2);
@@ -90,7 +88,7 @@ rusty_fork_test! {
     fn find_spec_missing() {
         let mut interp = new_interpreter().unwrap();
         let importer = get_importer(&mut interp).unwrap();
-        let py = interp.acquire_gil().unwrap();
+        let py = interp.acquire_gil();
 
         assert_eq!(
             importer
