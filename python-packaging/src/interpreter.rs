@@ -478,9 +478,6 @@ pub struct PythonInterpreterConfig {
     /// See https://docs.python.org/3/c-api/init_config.html#c.PyConfig.run_module.
     pub run_module: Option<String>,
 
-    /// See https://docs.python.org/3/c-api/init_config.html#c.PyConfig.show_alloc_count.
-    pub show_alloc_count: Option<bool>,
-
     /// See https://docs.python.org/3/c-api/init_config.html#c.PyConfig.show_ref_count.
     pub show_ref_count: Option<bool>,
 

@@ -178,7 +178,6 @@ impl TypedValue for PythonInterpreterConfigValue {
             "run_command" => self.inner.config.run_command.to_value(),
             "run_filename" => self.inner.config.run_filename.to_value(),
             "run_module" => self.inner.config.run_module.to_value(),
-            "show_alloc_count" => self.inner.config.show_alloc_count.to_value(),
             "show_ref_count" => self.inner.config.show_ref_count.to_value(),
             "site_import" => self.inner.config.site_import.to_value(),
             "skip_first_source_line" => self.inner.config.skip_first_source_line.to_value(),
@@ -257,7 +256,6 @@ impl TypedValue for PythonInterpreterConfigValue {
                 | "run_command"
                 | "run_filename"
                 | "run_module"
-                | "show_alloc_count"
                 | "show_ref_count"
                 | "site_import"
                 | "skip_first_source_line"
@@ -479,9 +477,6 @@ impl TypedValue for PythonInterpreterConfigValue {
             }
             "run_module" => {
                 self.inner.config.run_module = value.to_optional();
-            }
-            "show_alloc_count" => {
-                self.inner.config.show_alloc_count = value.to_optional();
             }
             "show_ref_count" => {
                 self.inner.config.show_ref_count = value.to_optional();
@@ -1022,15 +1017,6 @@ mod tests {
         let mut env = get_env()?;
 
         eval_assert(&mut env, "config.run_module == None")?;
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_show_alloc_count() -> Result<()> {
-        let mut env = get_env()?;
-
-        eval_assert(&mut env, "config.show_alloc_count == None")?;
 
         Ok(())
     }

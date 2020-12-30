@@ -787,16 +787,6 @@ Controls the value of
 Controls the value of
 `PyConfig.run_module <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.run_module>`_.
 
-.. _config_type_python_interpreter_config_show_alloc_count:
-
-``show_alloc_count``
-^^^^^^^^^^^^^^^^^^^^
-
-(``bool`` or ``None``)
-
-Controls the value of
-`PyConfig.show_alloc_count <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.show_alloc_count>`_.
-
 .. _config_type_python_interpreter_config_show_ref_count:
 
 ``show_ref_count``

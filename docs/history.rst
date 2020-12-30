@@ -52,6 +52,9 @@ Backwards Compatibility Notes
 * The ``no-gpl`` value of ``PythonPackagingPolicy.extension_module_filter``
   has been changed to ``no-copyleft`` and it operates on the SPDX license
   annotations instead of a list we maintained.
+* ``show_alloc_count`` has been removed from types representing Python
+  interpreter configuration because support for this feature was removed in
+  Python 3.9.
 
 Bug Fixes
 ^^^^^^^^^

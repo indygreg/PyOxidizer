@@ -210,7 +210,6 @@ impl PyembedPythonInterpreterConfig {
             run_command: {},\n        \
             run_filename: {},\n        \
             run_module: {},\n        \
-            show_alloc_count: {},\n        \
             show_ref_count: {},\n        \
             site_import: {},\n        \
             skip_first_source_line: {},\n        \
@@ -331,7 +330,6 @@ impl PyembedPythonInterpreterConfig {
             optional_string_to_string(&self.config.run_command),
             optional_pathbuf_to_string(&self.config.run_filename),
             optional_string_to_string(&self.config.run_module),
-            optional_bool_to_string(&self.config.show_alloc_count),
             optional_bool_to_string(&self.config.show_ref_count),
             optional_bool_to_string(&self.config.site_import),
             optional_bool_to_string(&self.config.skip_first_source_line),
@@ -521,7 +519,6 @@ mod tests {
                 run_command: Some("command".into()),
                 run_filename: Some("filename".into()),
                 run_module: Some("module".into()),
-                show_alloc_count: Some(true),
                 show_ref_count: Some(false),
                 site_import: Some(true),
                 skip_first_source_line: Some(false),
