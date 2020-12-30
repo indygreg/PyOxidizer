@@ -422,7 +422,12 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
     }
 
     /// Ensure the Python GIL is acquired, returning a handle on the interpreter.
-    pub fn acquire_gil(&mut self) -> Result<Python<'python>, &'static str> {
+    ///
+    /// The returned value has a lifetime of the `MainPythonInterpreter`
+    /// instance. This is because `MainPythonInterpreter.drop()` finalizes
+    /// the interpreter. The borrow checker should refuse to compile code
+    /// where the returned `Python` outlives `self`.
+    pub fn acquire_gil(&mut self) -> Result<Python<'_>, &'static str> {
         match self.interpreter_state {
             InterpreterState::NotStarted => {
                 return Err("interpreter not initialized");

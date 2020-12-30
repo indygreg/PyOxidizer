@@ -9,15 +9,12 @@ use {
 
 rusty_fork_test! {
     #[test]
-    #[should_panic]
     fn test_instantiate_interpreter() {
-        let py = {
-            let mut config = OxidizedPythonInterpreterConfig::default();
-            config.interpreter_config.parse_argv = Some(false);
-            config.set_missing_path_configuration = false;
-            let mut interp = MainPythonInterpreter::new(config).unwrap();
-            interp.acquire_gil().unwrap()
-        };
+        let mut config = OxidizedPythonInterpreterConfig::default();
+        config.interpreter_config.parse_argv = Some(false);
+        config.set_missing_path_configuration = false;
+        let mut interp = MainPythonInterpreter::new(config).unwrap();
+        let py = interp.acquire_gil().unwrap();
         py.import("sys").unwrap();
     }
 }

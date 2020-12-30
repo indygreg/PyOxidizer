@@ -69,6 +69,9 @@ Bug Fixes
   to be equivalent to the parent package to partially emulate CPython's
   behavior. See :ref:`oxidized_importer_dunder_init_module_names` for more.
   (#317)
+* The lifetime of ``pyembed::MainPythonInterpreter.acquire_gil()``'s return
+  value has been adjusted so the Rust compiler will refuse to compile code
+  that could crash due to attempting to use a finalized interpreter. (#345)
 
 New Features
 ^^^^^^^^^^^^
