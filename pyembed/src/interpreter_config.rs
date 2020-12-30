@@ -338,8 +338,8 @@ pub fn python_interpreter_config_to_py_config(
     if let Some(show_ref_count) = value.show_ref_count {
         config.show_ref_count = if show_ref_count { 1 } else { 0 };
     }
-    if let Some(show_alloc_coun) = value.show_alloc_count {
-        config.show_alloc_count = if show_alloc_coun { 1 } else { 0 };
+    if let Some(show_alloc_count) = value.show_alloc_count {
+        config.show_alloc_count = if show_alloc_count { 1 } else { 0 };
     }
     if let Some(dump_refs) = value.dump_refs {
         config.dump_refs = if dump_refs { 1 } else { 0 };
