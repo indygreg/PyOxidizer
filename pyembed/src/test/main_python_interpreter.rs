@@ -14,7 +14,7 @@ rusty_fork_test! {
         config.interpreter_config.parse_argv = Some(false);
         config.set_missing_path_configuration = false;
         let mut interp = MainPythonInterpreter::new(config).unwrap();
-        let py = interp.acquire_gil().unwrap();
+        let py = interp.acquire_gil();
         py.import("sys").unwrap();
     }
 }

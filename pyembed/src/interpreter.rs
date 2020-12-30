@@ -74,14 +74,6 @@ impl From<RawAllocator> for InterpreterRawAllocator {
     }
 }
 
-#[derive(Debug, PartialEq)]
-enum InterpreterState {
-    NotStarted,
-    Initializing,
-    Initialized,
-    Finalized,
-}
-
 /// Manages an embedded Python interpreter.
 ///
 /// Python interpreters have global state and there can only be a single
@@ -100,7 +92,6 @@ pub struct MainPythonInterpreter<'python, 'interpreter: 'python, 'resources: 'in
     // It is possible to have a use-after-free if config is dropped before the
     // interpreter is finalized/dropped.
     config: ResolvedOxidizedPythonInterpreterConfig<'resources>,
-    interpreter_state: InterpreterState,
     interpreter_guard: Option<std::sync::MutexGuard<'interpreter, ()>>,
     raw_allocator: Option<InterpreterRawAllocator>,
     gil: Option<GILGuard>,
@@ -133,7 +124,6 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
         let mut res = MainPythonInterpreter {
             config,
             interpreter_guard: None,
-            interpreter_state: InterpreterState::NotStarted,
             raw_allocator: None,
             gil: None,
             py: None,
@@ -158,25 +148,10 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
     ///
     /// Returns a Python instance which has the GIL acquired.
     fn init(&mut self) -> Result<(), NewInterpreterError> {
-        match &self.interpreter_state {
-            InterpreterState::Initializing => {
-                return Err(NewInterpreterError::Simple(
-                    "interpreter in initializing state",
-                ))
-            }
-            InterpreterState::Initialized => {
-                return Ok(());
-            }
-            InterpreterState::NotStarted => {}
-            InterpreterState::Finalized => {}
-        }
-
         assert!(self.interpreter_guard.is_none());
         self.interpreter_guard = Some(GLOBAL_INTERPRETER_GUARD.lock().map_err(|_| {
             NewInterpreterError::Simple("unable to acquire global interpreter guard")
         })?);
-
-        self.interpreter_state = InterpreterState::Initializing;
 
         let origin_string = self.config.origin().display().to_string();
 
@@ -250,6 +225,7 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
         // inject our custom importer.
 
         let py = unsafe { Python::assume_gil_acquired() };
+        self.py = Some(py);
 
         if self.config.oxidized_importer {
             let resources_state = Box::new(PythonResourcesState::try_from(&self.config)?);
@@ -316,9 +292,6 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
          *
          * PyObject_SetArenaAllocator()
          */
-
-        self.py = Some(py);
-        self.interpreter_state = InterpreterState::Initialized;
 
         if self.config.argvb {
             let args_objs = self
@@ -421,10 +394,8 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
 
     /// Ensure the Python GIL is released.
     pub fn release_gil(&mut self) {
-        if self.py.is_some() {
-            self.py = None;
-            self.gil = None;
-        }
+        self.py = None;
+        self.gil = None;
     }
 
     /// Ensure the Python GIL is acquired, returning a handle on the interpreter.
@@ -433,21 +404,8 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
     /// instance. This is because `MainPythonInterpreter.drop()` finalizes
     /// the interpreter. The borrow checker should refuse to compile code
     /// where the returned `Python` outlives `self`.
-    pub fn acquire_gil(&mut self) -> Result<Python<'_>, &'static str> {
-        match self.interpreter_state {
-            InterpreterState::NotStarted => {
-                return Err("interpreter not initialized");
-            }
-            InterpreterState::Initializing => {
-                return Err("interpreter not fully initialized");
-            }
-            InterpreterState::Initialized => {}
-            InterpreterState::Finalized => {
-                return Err("interpreter is finalized");
-            }
-        }
-
-        Ok(match self.py {
+    pub fn acquire_gil(&mut self) -> Python<'_> {
+        match self.py {
             Some(py) => py,
             None => {
                 let gil = GILGuard::acquire();
@@ -458,10 +416,10 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
 
                 py
             }
-        })
+        }
     }
 
-    /// Runs `Py_RunMain()`.
+    /// Runs `Py_RunMain()` and finalizes the interpreter.
     ///
     /// This will execute whatever is configured by the Python interpreter config
     /// and return an integer suitable for use as a process exit code.
@@ -471,16 +429,8 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
     /// an uncaught exception. If you want to keep the interpreter alive or inspect
     /// the evaluation result, consider calling a function on the interpreter handle
     /// that executes code.
-    pub fn py_runmain(&mut self) -> i32 {
-        let res = unsafe { pyffi::Py_RunMain() };
-
-        // Py_RunMain() finalizes the interpreter. So drop our refs and state.
-        self.interpreter_guard = None;
-        self.interpreter_state = InterpreterState::Finalized;
-        self.py = None;
-        self.gil = None;
-
-        res
+    pub fn py_runmain(self) -> i32 {
+        unsafe { pyffi::Py_RunMain() }
     }
 }
 
@@ -595,9 +545,7 @@ impl<'python, 'interpreter, 'resources> Drop
 {
     fn drop(&mut self) {
         if let Some(path) = self.write_modules_path.clone() {
-            let py = self.acquire_gil().unwrap();
-
-            if let Err(msg) = write_modules_to_path(py, &path) {
+            if let Err(msg) = write_modules_to_path(self.acquire_gil(), &path) {
                 eprintln!("error writing modules file: {}", msg);
             }
         }
