@@ -55,6 +55,7 @@ Financial Contributions
 
 If you would like to thank the PyOxidizer maintainer via a financial
 contribution, you can do so
+`via GitHub Sponsors <https://github.com/sponsors/indygreg>`_
 `on his Patreon <https://www.patreon.com/indygreg>`_ or
 `via PayPal <https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=gregory%2eszorc%40gmail%2ecom&lc=US&item_name=PyOxidizer&currency_code=USD&bn=PP%2dDonationsBF%3abtn_donate_LG%2egif%3aNonHosted>`_.
 
