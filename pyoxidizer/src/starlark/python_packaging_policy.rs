@@ -294,6 +294,7 @@ impl PythonPackagingPolicyValue {
         Ok(Value::from(NoneType::None))
     }
 
+    #[allow(clippy::unnecessary_wraps)]
     fn starlark_set_preferred_extension_module_variant(
         &mut self,
         name: String,
