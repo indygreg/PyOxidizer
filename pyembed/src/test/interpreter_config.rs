@@ -49,7 +49,7 @@ fn assert_importer(oxidized: bool, filesystem: bool) {
     config.filesystem_importer = filesystem;
     let mut interp = MainPythonInterpreter::new(config).unwrap();
 
-    let py = interp.acquire_gil().unwrap();
+    let py = interp.acquire_gil();
     let sys = py.import("sys").unwrap();
     let meta_path_reprs = reprs(py, &sys.get(py, "meta_path").unwrap()).unwrap();
     let path_hook_reprs = reprs(py, &sys.get(py, "path_hooks").unwrap()).unwrap();

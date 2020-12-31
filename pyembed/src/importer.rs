@@ -1761,7 +1761,7 @@ mod test_path_entry_finder {
         assert!(is_visible("חבילות", "חבילות.מודול"));
     }
 
-    fn get_py(fsencoding: Option<&str>) -> (crate::MainPythonInterpreter, cpython::Python<'_>) {
+    fn get_py(fsencoding: Option<&str>) -> crate::MainPythonInterpreter {
         let mut config = crate::OxidizedPythonInterpreterConfig::default();
         config.interpreter_config.parse_argv = Some(false);
         config.set_missing_path_configuration = false;
@@ -1769,9 +1769,7 @@ mod test_path_entry_finder {
         if fsencoding.is_some() {
             config.interpreter_config.filesystem_encoding = fsencoding.map(|e| e.to_string());
         }
-        let mut interp = crate::MainPythonInterpreter::new(config).unwrap();
-        let py = interp.acquire_gil().unwrap();
-        (interp, py)
+        crate::MainPythonInterpreter::new(config).unwrap()
     }
 
     /// _PathEntryFinder::parse_path_to_pkg re-encodes the package part of the
@@ -1784,7 +1782,8 @@ mod test_path_entry_finder {
     #[test]
     fn parse_path_to_pkg_filesystem_encoding() {
         // Obtain a Python interpreter with filesystem encoding set to UTF-16-LE
-        let (_interp, py) = get_py(Some("UTF-16-LE"));
+        let mut interp = get_py(Some("UTF-16-LE"));
+        let py = interp.acquire_gil();
         // Verify assumptions about the test itself.
         const WAVY_DASH: &str = "〰";
         const WAVY_DASH_CODE: u16 = 0x3030;
@@ -1816,7 +1815,8 @@ mod test_path_entry_finder {
     /// canonicalized. The OSError returns the right exception subclass.
     #[test]
     fn bad_current_exe() {
-        let (_interp, py) = get_py(None);
+        let mut interp = get_py(None);
+        let py = interp.acquire_gil();
 
         let exe: std::path::PathBuf = "/../a/../foo.txt".into();
         assert_eq!(
