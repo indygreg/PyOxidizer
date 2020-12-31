@@ -583,11 +583,6 @@ mod tests {
                 continue;
             }
 
-            // TODO enable once Python 3.9 wheel is published.
-            if target_dist.python_major_minor_version() == "3.9" {
-                continue;
-            }
-
             warn!(
                 logger,
                 "using distribution {}-{}-{}",
@@ -604,7 +599,7 @@ mod tests {
                 &*target_dist,
                 &policy,
                 false,
-                &["zstandard==0.14.0".to_string()],
+                &["zstandard==0.14.1".to_string()],
             )?;
 
             assert!(!resources.is_empty());
@@ -620,14 +615,14 @@ mod tests {
                 full_names,
                 BTreeSet::from_iter(
                     [
-                        "zstd",
                         "zstandard",
                         "zstandard.cffi",
                         "zstandard:LICENSE",
-                        "zstandard:top_level.txt",
-                        "zstandard:WHEEL",
-                        "zstandard:RECORD",
                         "zstandard:METADATA",
+                        "zstandard:RECORD",
+                        "zstandard:WHEEL",
+                        "zstandard:top_level.txt",
+                        "zstd"
                     ]
                     .iter()
                     .map(|x| x.to_string())
@@ -662,11 +657,6 @@ mod tests {
                 continue;
             }
 
-            // TODO support once a Python 3.9 wheel is published.
-            if target_dist.python_major_minor_version() == "3.9" {
-                continue;
-            }
-
             warn!(
                 logger,
                 "using distribution {}-{}-{}",
@@ -685,7 +675,7 @@ mod tests {
                 &*target_dist,
                 &policy,
                 false,
-                &["numpy==1.19.2".to_string()],
+                &["numpy==1.19.4".to_string()],
             )?;
 
             assert!(!resources.is_empty());
