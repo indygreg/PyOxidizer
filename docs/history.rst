@@ -115,6 +115,9 @@ New Features
 Other Relevant Changes
 ^^^^^^^^^^^^^^^^^^^^^^
 
+* Python distributions upgraded to CPython 3.8.7 and 3.9.1 (from 3.8.6 and 3.9.0).
+  See https://github.com/indygreg/python-build-standalone/releases/tag/20210103
+  for a full list of changes in these distributions.
 * CI has been moved from Azure Pipelines to GitHub Actions.
 * Low level code in the ``pyembed`` crate for loading and indexing resources
   has been significantly refactored. This code has historically been a bit

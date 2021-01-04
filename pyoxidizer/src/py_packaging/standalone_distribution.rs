@@ -1446,81 +1446,9 @@ pub mod tests {
                 .cloned()
                 .collect::<Vec<_>>();
 
-            let linux_dropped = vec![
-                ("_curses".to_string(), Some("default".to_string())),
-                ("_curses_panel".to_string(), Some("default".to_string())),
-                ("readline".to_string(), Some("default".to_string())),
-            ];
+            let linux_dropped = vec![("readline".to_string(), Some("default".to_string()))];
 
             let linux_added = vec![("readline".to_string(), Some("libedit".to_string()))];
-
-            let apple_dropped = vec![
-                ("_abc".to_string(), Some("default".to_string())),
-                ("_asyncio".to_string(), Some("default".to_string())),
-                ("_bisect".to_string(), Some("default".to_string())),
-                ("_blake2".to_string(), Some("default".to_string())),
-                ("_codecs_cn".to_string(), Some("default".to_string())),
-                ("_codecs_hk".to_string(), Some("default".to_string())),
-                ("_codecs_iso2022".to_string(), Some("default".to_string())),
-                ("_codecs_jp".to_string(), Some("default".to_string())),
-                ("_codecs_kr".to_string(), Some("default".to_string())),
-                ("_codecs_tw".to_string(), Some("default".to_string())),
-                ("_collections".to_string(), Some("default".to_string())),
-                ("_contextvars".to_string(), Some("default".to_string())),
-                ("_crypt".to_string(), Some("default".to_string())),
-                ("_csv".to_string(), Some("default".to_string())),
-                ("_datetime".to_string(), Some("default".to_string())),
-                ("_decimal".to_string(), Some("default".to_string())),
-                ("_elementtree".to_string(), Some("default".to_string())),
-                ("_functools".to_string(), Some("default".to_string())),
-                ("_heapq".to_string(), Some("default".to_string())),
-                ("_json".to_string(), Some("default".to_string())),
-                ("_locale".to_string(), Some("default".to_string())),
-                ("_lsprof".to_string(), Some("default".to_string())),
-                ("_md5".to_string(), Some("default".to_string())),
-                ("_multibytecodec".to_string(), Some("default".to_string())),
-                ("_multiprocessing".to_string(), Some("default".to_string())),
-                ("_opcode".to_string(), Some("default".to_string())),
-                ("_operator".to_string(), Some("default".to_string())),
-                ("_pickle".to_string(), Some("default".to_string())),
-                ("_posixshmem".to_string(), Some("default".to_string())),
-                ("_posixsubprocess".to_string(), Some("default".to_string())),
-                ("_queue".to_string(), Some("default".to_string())),
-                ("_random".to_string(), Some("default".to_string())),
-                ("_scproxy".to_string(), Some("default".to_string())),
-                ("_sha1".to_string(), Some("default".to_string())),
-                ("_sha256".to_string(), Some("default".to_string())),
-                ("_sha3".to_string(), Some("default".to_string())),
-                ("_sha512".to_string(), Some("default".to_string())),
-                ("_socket".to_string(), Some("default".to_string())),
-                ("_sre".to_string(), Some("default".to_string())),
-                ("_stat".to_string(), Some("default".to_string())),
-                ("_statistics".to_string(), Some("default".to_string())),
-                ("_struct".to_string(), Some("default".to_string())),
-                ("_symtable".to_string(), Some("default".to_string())),
-                ("_testinternalcapi".to_string(), Some("default".to_string())),
-                ("array".to_string(), Some("default".to_string())),
-                ("atexit".to_string(), Some("default".to_string())),
-                ("audioop".to_string(), Some("default".to_string())),
-                ("binascii".to_string(), Some("default".to_string())),
-                ("cmath".to_string(), Some("default".to_string())),
-                ("errno".to_string(), Some("default".to_string())),
-                ("fcntl".to_string(), Some("default".to_string())),
-                ("grp".to_string(), Some("default".to_string())),
-                ("itertools".to_string(), Some("default".to_string())),
-                ("math".to_string(), Some("default".to_string())),
-                ("mmap".to_string(), Some("default".to_string())),
-                ("parser".to_string(), Some("default".to_string())),
-                ("pwd".to_string(), Some("default".to_string())),
-                ("pyexpat".to_string(), Some("default".to_string())),
-                ("resource".to_string(), Some("default".to_string())),
-                ("select".to_string(), Some("default".to_string())),
-                ("syslog".to_string(), Some("default".to_string())),
-                ("termios".to_string(), Some("default".to_string())),
-                ("time".to_string(), Some("default".to_string())),
-                ("unicodedata".to_string(), Some("default".to_string())),
-                ("xxsubtype".to_string(), Some("default".to_string())),
-            ];
 
             let (wanted_dropped, wanted_added) = match (
                 dist.python_major_minor_version().as_str(),
@@ -1530,14 +1458,7 @@ pub mod tests {
                 (_, "x86_64-unknown-linux-musl") => (linux_dropped.clone(), linux_added.clone()),
                 (_, "i686-pc-windows-msvc") => (vec![], vec![]),
                 (_, "x86_64-pc-windows-msvc") => (vec![], vec![]),
-                ("3.8", "x86_64-apple-darwin") => (apple_dropped.clone(), vec![]),
-                ("3.9", "x86_64-apple-darwin") => {
-                    let mut added = apple_dropped.into_iter().collect::<BTreeSet<_>>();
-                    added.insert(("_peg_parser".to_string(), Some("default".to_string())));
-                    added.insert(("_zoneinfo".to_string(), Some("default".to_string())));
-
-                    (added.into_iter().collect::<Vec<_>>(), vec![])
-                }
+                (_, "x86_64-apple-darwin") => (vec![], vec![]),
                 _ => (vec![], vec![]),
             };
 

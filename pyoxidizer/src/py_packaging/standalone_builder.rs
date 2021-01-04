@@ -1945,10 +1945,7 @@ pub mod tests {
                 builder.extension_build_contexts.get("_sqlite3"),
                 Some(&LibPythonBuildContext {
                     object_files: sqlite.object_file_data.clone(),
-                    system_libraries: BTreeSet::from_iter(["iconv".to_string()].iter().cloned()),
-                    static_libraries: BTreeSet::from_iter(
-                        ["intl".to_string(), "sqlite3".to_string()].iter().cloned()
-                    ),
+                    static_libraries: BTreeSet::from_iter(["sqlite3".to_string()].iter().cloned()),
                     init_functions: BTreeMap::from_iter(
                         [("_sqlite3".to_string(), "PyInit__sqlite3".to_string())]
                             .iter()
@@ -2008,10 +2005,7 @@ pub mod tests {
                 builder.extension_build_contexts.get("_sqlite3"),
                 Some(&LibPythonBuildContext {
                     object_files: ext.object_file_data.clone(),
-                    system_libraries: BTreeSet::from_iter(["iconv".to_string()].iter().cloned()),
-                    static_libraries: BTreeSet::from_iter(
-                        ["intl".to_string(), "sqlite3".to_string()].iter().cloned()
-                    ),
+                    static_libraries: BTreeSet::from_iter(["sqlite3".to_string()].iter().cloned()),
                     init_functions: BTreeMap::from_iter(
                         [("_sqlite3".to_string(), "PyInit__sqlite3".to_string())]
                             .iter()
