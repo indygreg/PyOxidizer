@@ -63,6 +63,11 @@ Backwards Compatibility Notes
 * The Starlark ``PythonInterpreterConfig.raw_allocator`` field has been renamed
   to ``allocator_backend``. The ``system`` value has been renamed to
   ``default``.
+* The ``pyembed`` crate now canonicalizes the current executable's path
+  and uses this canonicalized path when resolving values with ``$ORIGIN``
+  in them. Previously, the path passed into the program was used without
+  resolving symlinks, etc. If that path were a symlink or hardlink,
+  unexpected results could ensue.
 
 Bug Fixes
 ^^^^^^^^^
