@@ -171,6 +171,20 @@ pub fn link_libpython(
         cargo_metadata.push(format!("cargo:rustc-link-lib=static={}", lib));
     }
 
+    // Python 3.9+ on macOS uses __builtin_available(), which requires
+    // ___isOSVersionAtLeast(), which is part of libclang_rt. However,
+    // libclang_rt isn't linked by default by Rust. So unless something else
+    // pulls it in, we'll get unresolved symbol errors when attempting to link
+    // the final binary. Our solution to this is to always annotate
+    // `clang_rt.<platform>` as a library dependency of our static libpython.
+    if target_triple.ends_with("-apple-darwin") {
+        if let Some(path) = macos_clang_search_path()? {
+            cargo_metadata.push(format!("cargo:rustc-link-search={}", path.display()));
+        }
+
+        cargo_metadata.push("cargo:rustc-link-lib=clang_rt.osx".to_string());
+    }
+
     // python3-sys uses #[link(name="pythonXY")] attributes heavily on Windows. Its
     // build.rs then remaps ``pythonXY`` to e.g. ``python37``. This causes Cargo to
     // link against ``python37.lib`` (or ``pythonXY.lib`` if the
@@ -212,4 +226,26 @@ pub fn link_libpython(
         libpyembeddedconfig_path,
         cargo_metadata,
     })
+}
+
+/// Attempt to resolve the linker search path for clang libraries.
+fn macos_clang_search_path() -> Result<Option<PathBuf>> {
+    let output = std::process::Command::new("clang")
+        .arg("--print-search-dirs")
+        .output()?;
+    if !output.status.success() {
+        return Ok(None);
+    }
+
+    for line in String::from_utf8_lossy(&output.stdout).lines() {
+        if line.contains("libraries: =") {
+            let path = line
+                .split('=')
+                .nth(1)
+                .ok_or_else(|| anyhow!("could not parse libraries line"))?;
+            return Ok(Some(PathBuf::from(path).join("lib").join("darwin")));
+        }
+    }
+
+    Ok(None)
 }

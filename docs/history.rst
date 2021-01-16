@@ -130,6 +130,9 @@ Other Relevant Changes
   license or the other.
 * When using dynamically linked Python distributions on Windows, the
   ``python3.dll`` file is automatically installed if it is present. (#336)
+* ``libclang_rt.osx.a`` is now linked into Python binaries on macOS. This
+  was necessary to avoid undefined symbols errors from symbols which Python
+  3.9.1+ relies on.
 
 .. _version_0_10_3:
 
