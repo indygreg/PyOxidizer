@@ -30,5 +30,5 @@ version = "0.1.0-pre"
 path = "../tugger-common"
 
 [dev-dependencies]
-der-parser = "4.1"
-x509-parser = "0.8"
+der-parser = "5"
+x509-parser = "0"

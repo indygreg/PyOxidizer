@@ -210,7 +210,7 @@ mod tests {
         let cert = create_self_signed_code_signing_certificate("testing@example.com")?;
         let cert_der = cert.serialize_der()?;
 
-        let generated = x509_parser::parse_x509_der(&cert_der)?.1;
+        let generated = x509_parser::parse_x509_certificate(&cert_der)?.1;
 
         assert_eq!(generated.subject(), powershell.subject(), "subject matches");
         assert_eq!(
