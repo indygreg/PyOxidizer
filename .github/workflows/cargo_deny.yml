@@ -1,6 +1,8 @@
 on:
-  - push
-  - pull_request
+  push:
+  pull_request:
+  schedule:
+    - cron: '13 4 * * *'
 jobs:
   pyembed:
     runs-on: ubuntu-latest
