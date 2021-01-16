@@ -9,16 +9,16 @@ homepage = "https://github.com/indygreg/PyOxidizer"
 repository = "https://github.com/indygreg/PyOxidizer.git"
 
 [dependencies]
-anyhow = "1.0"
-cargo_toml = "0.8"
-clap = "2.33"
-duct = "0.13"
+anyhow = "1"
+cargo_toml = "0"
+clap = "2"
+duct = "0"
 # We don't need network functionality.
-git2 = { version = "0.13", default-features = false }
-lazy_static = "1.4"
-reqwest = { version = "0.10", default-features= false, features = ["blocking", "rustls-tls"] }
-semver = "0.11"
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-toml = "0.5"
-url = "2.1"
+git2 = { version = "0", default-features = false }
+lazy_static = "1"
+reqwest = { version = "0", default-features= false, features = ["blocking", "rustls-tls"] }
+semver = "0"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+toml = "0"
+url = "2"
