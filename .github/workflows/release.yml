@@ -1,0 +1,56 @@
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: '14 4 * * *'
+jobs:
+  linux-x86_64-bin:
+    runs-on: 'ubuntu-20.04'
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      SCCACHE_BUCKET: 'pyoxidizer-sccache'
+      SCCACHE_S3_USE_SSL: '1'
+    steps:
+      - name: Install system packages
+        run: |
+          sudo apt install -y --no-install-recommends musl-tools
+
+      - uses: actions/checkout@v2
+        with:
+          # Needed by build.rs, which needs to walk the Git history to find the
+          # root commit. Without this, a shallow clone (depth=1) is performed.
+          fetch-depth: 0
+
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          default: true
+          profile: minimal
+          target: x86_64-unknown-linux-musl
+
+      - name: Install sccache
+        run: |
+          wget -O sccache.tar.gz --progress dot:mega https://github.com/mozilla/sccache/releases/download/v0.2.15/sccache-v0.2.15-x86_64-unknown-linux-musl.tar.gz
+          tar -xvzf sccache.tar.gz
+          mv sccache-*/sccache /usr/share/rust/.cargo/bin/sccache
+          chmod +x /usr/share/rust/.cargo/bin/sccache
+          sccache --start-server
+
+      - name: Build pyoxidizer Executable
+        env:
+          RUSTC_WRAPPER: sccache
+        run: |
+          rustc --version
+          cargo build --target x86_64-unknown-linux-musl --release --bin pyoxidizer
+
+      - name: Stop sccache
+        continue-on-error: true
+        run: |
+          sccache --stop-server
+
+      - name: Upload Binary
+        uses: actions/upload-artifact@v2
+        with:
+          name: linux-x86_64-bin
+          path: target/x86_64-unknown-linux-musl/release/pyoxidizer
