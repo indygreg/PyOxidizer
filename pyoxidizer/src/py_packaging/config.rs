@@ -22,6 +22,19 @@ use {
     },
 };
 
+/// Determine the default pymalloc allocator for a target triple.
+pub fn default_pymalloc_allocator(target_triple: &str) -> MemoryAllocatorBackend {
+    // Jemalloc doesn't work on Windows.
+    //
+    // We don't use Jemalloc by default in the test environment because it slows down
+    // builds of test projects.
+    if target_triple == "x86_64-pc-windows-msvc" || cfg!(test) {
+        MemoryAllocatorBackend::System
+    } else {
+        MemoryAllocatorBackend::Jemalloc
+    }
+}
+
 /// Determine the default raw allocator for a target triple.
 pub fn default_raw_allocator(target_triple: &str) -> MemoryAllocatorBackend {
     // Jemalloc doesn't work on Windows.
@@ -117,6 +130,7 @@ impl ToString for PyembedPackedResourcesSource {
 pub struct PyembedPythonInterpreterConfig {
     pub config: PythonInterpreterConfig,
     pub raw_allocator: MemoryAllocatorBackend,
+    pub pymalloc_allocator: MemoryAllocatorBackend,
     pub set_missing_path_configuration: bool,
     pub oxidized_importer: bool,
     pub filesystem_importer: bool,
@@ -143,6 +157,7 @@ impl Default for PyembedPythonInterpreterConfig {
                 ..PythonInterpreterConfig::default()
             },
             raw_allocator: MemoryAllocatorBackend::System,
+            pymalloc_allocator: MemoryAllocatorBackend::System,
             set_missing_path_configuration: true,
             oxidized_importer: true,
             filesystem_importer: false,
@@ -223,6 +238,7 @@ impl PyembedPythonInterpreterConfig {
             x_options: {},\n        \
             }},\n    \
             raw_allocator: Some({}),\n    \
+            pymalloc_allocator: Some({}),\n    \
             set_missing_path_configuration: {},\n    \
             oxidized_importer: {},\n    \
             filesystem_importer: {},\n    \
@@ -347,6 +363,13 @@ impl PyembedPythonInterpreterConfig {
                 MemoryAllocatorBackend::Snmalloc => "pyembed::PythonRawAllocator::snmalloc()",
                 MemoryAllocatorBackend::Rust => "pyembed::PythonRawAllocator::rust()",
                 MemoryAllocatorBackend::System => "pyembed::PythonRawAllocator::system()",
+            },
+            match self.pymalloc_allocator {
+                MemoryAllocatorBackend::Mimalloc => "pyembed::PythonPyMallocAllocator::mimalloc()",
+                MemoryAllocatorBackend::Snmalloc => "pyembed::PythonPyMallocAllocator::snmalloc()",
+                MemoryAllocatorBackend::Jemalloc => "pyembed::PythonPyMallocAllocator::jemalloc()",
+                MemoryAllocatorBackend::Rust => "pyembed::PythonPyMallocAllocator::rust()",
+                MemoryAllocatorBackend::System => "pyembed::PythonPyMallocAllocator::system()",
             },
             self.set_missing_path_configuration,
             self.oxidized_importer,
@@ -534,6 +557,7 @@ mod tests {
                 x_options: Some(vec!["x0".into(), "x1".into()]),
             },
             raw_allocator: MemoryAllocatorBackend::System,
+            pymalloc_allocator: MemoryAllocatorBackend::System,
             set_missing_path_configuration: false,
             oxidized_importer: true,
             filesystem_importer: true,

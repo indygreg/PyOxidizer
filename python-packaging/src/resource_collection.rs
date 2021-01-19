@@ -4635,7 +4635,7 @@ mod tests {
                 name: file.path_string(),
                 is_utf8_filename_data: true,
                 file_executable: true,
-                file_data_embedded: Some(file.entry.data.clone().into()),
+                file_data_embedded: Some(file.entry.data.clone()),
                 ..PrePackagedResource::default()
             })
         );
@@ -4654,7 +4654,7 @@ mod tests {
                 file_executable: true,
                 file_data_utf8_relative_path: Some((
                     PathBuf::from("prefix").join(file.path_string()),
-                    file.entry.data.into()
+                    file.entry.data
                 )),
                 ..PrePackagedResource::default()
             })

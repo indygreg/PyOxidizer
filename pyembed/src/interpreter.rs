@@ -14,7 +14,10 @@ use {
             OXIDIZED_IMPORTER_NAME_STR,
         },
         osutils::resolve_terminfo_dirs,
-        pyalloc::{make_raw_rust_memory_allocator, RawAllocator},
+        pyalloc::{
+            make_raw_rust_memory_allocator, make_rust_pyobject_arena_allocator, PyAllocator,
+            RawAllocator,
+        },
         python_resources::PythonResourcesState,
     },
     cpython::{GILGuard, NoArgs, ObjectProtocol, PyDict, PyList, PyString, Python, ToPyObject},
@@ -30,11 +33,13 @@ use {
     },
 };
 
-#[cfg(feature = "jemalloc-sys")]
-use crate::pyalloc::make_raw_jemalloc_allocator;
-
 #[cfg(feature = "mimalloc")]
-use crate::pyalloc::make_raw_mimalloc_allocator;
+use crate::pyalloc::{make_mimalloc_pyallocator, make_raw_mimalloc_allocator};
+
+#[cfg(feature = "jemalloc-sys")]
+use crate::pyalloc::{make_jemalloc_pyallocator, make_raw_jemalloc_allocator};
+
+use python3_sys::{PyMemAllocatorEx, PyObjectArenaAllocator};
 
 lazy_static! {
     static ref GLOBAL_INTERPRETER_GUARD: std::sync::Mutex<()> = std::sync::Mutex::new(());
@@ -43,6 +48,16 @@ lazy_static! {
 #[cfg(feature = "jemalloc-sys")]
 fn raw_jemallocator() -> pyffi::PyMemAllocatorEx {
     make_raw_jemalloc_allocator()
+}
+
+#[cfg(feature = "jemalloc-sys")]
+fn jepymallocator() -> pyffi::PyObjectArenaAllocator {
+    make_jemalloc_pyallocator()
+}
+
+#[cfg(not(feature = "jemalloc-sys"))]
+fn jepymallocator() -> pyffi::PyObjectArenaAllocator {
+    panic!("jemalloc is not available in this build configuration");
 }
 
 #[cfg(not(feature = "jemalloc-sys"))]
@@ -62,6 +77,42 @@ fn raw_mimallocator() -> pyffi::PyMemAllocatorEx {
 
 fn raw_snmallocator() -> pyffi::PyMemAllocatorEx {
     panic!("snmalloc allocator not yet implemented");
+}
+
+#[cfg(feature = "mimalloc")]
+fn mipymallocator() -> pyffi::PyObjectArenaAllocator {
+    make_mimalloc_pyallocator()
+}
+
+#[cfg(not(feature = "mimalloc"))]
+fn mipymallocator() -> pyffi::PyObjectArenaAllocator {
+    panic!("mimalloc is not available in this build configuration");
+}
+
+enum InterpreterPyAllocator {
+    Python(pyffi::PyObjectArenaAllocator),
+    Py(PyAllocator),
+}
+
+impl InterpreterPyAllocator {
+    fn as_ptr(&self) -> *const pyffi::PyObjectArenaAllocator {
+        match self {
+            InterpreterPyAllocator::Python(alloc) => alloc as *const _,
+            InterpreterPyAllocator::Py(alloc) => &alloc.allocator as *const _,
+        }
+    }
+}
+
+impl From<pyffi::PyObjectArenaAllocator> for InterpreterPyAllocator {
+    fn from(allocator: PyObjectArenaAllocator) -> Self {
+        InterpreterPyAllocator::Python(allocator)
+    }
+}
+
+impl From<PyAllocator> for InterpreterPyAllocator {
+    fn from(allocator: PyAllocator) -> Self {
+        InterpreterPyAllocator::Py(allocator)
+    }
 }
 
 enum InterpreterRawAllocator {
@@ -110,7 +161,8 @@ pub struct MainPythonInterpreter<'python, 'interpreter: 'python, 'resources: 'in
     config: ResolvedOxidizedPythonInterpreterConfig<'resources>,
     interpreter_guard: Option<std::sync::MutexGuard<'interpreter, ()>>,
     raw_allocator: Option<InterpreterRawAllocator>,
-    gil: Option<GILGuard>,
+    pymalloc_allocator: Option<InterpreterPyAllocator>,
+    _gil: Option<GILGuard>,
     py: Option<Python<'python>>,
     /// File to write containing list of modules when the interpreter finalizes.
     write_modules_path: Option<PathBuf>,
@@ -141,7 +193,8 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
             config,
             interpreter_guard: None,
             raw_allocator: None,
-            gil: None,
+            pymalloc_allocator: None,
+            _gil: None,
             py: None,
             write_modules_path: None,
         };
@@ -207,10 +260,17 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
                 MemoryAllocatorBackend::Rust => {
                     self.raw_allocator = Some(InterpreterRawAllocator::from(
                         make_raw_rust_memory_allocator(),
-                    ));
+                    ))
+                }
+                MemoryAllocatorBackend::Snmalloc => {
+                    self.raw_allocator = Some(InterpreterRawAllocator::from(
+                        make_raw_rust_memory_allocator(),
+                    ))
+                }
+                MemoryAllocatorBackend::Mimalloc => {
+                    self.raw_allocator = Some(InterpreterRawAllocator::from(raw_mimallocator()));
                 }
             }
-
             if let Some(allocator) = &self.raw_allocator {
                 unsafe {
                     pyffi::PyMem_SetAllocator(
@@ -223,6 +283,34 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
             if raw_allocator.debug {
                 unsafe {
                     pyffi::PyMem_SetupDebugHooks();
+                }
+            }
+        }
+
+        // Override the pymalloc allocator if one is configured.
+        if let Some(pymalloc_allocator) = &self.config.raw_allocator {
+            match pymalloc_allocator.backend {
+                MemoryAllocatorBackend::System => {}
+                MemoryAllocatorBackend::Jemalloc => {
+                    self.pymalloc_allocator = Some(InterpreterPyAllocator::from(jepymallocator()))
+                }
+                MemoryAllocatorBackend::Rust => {
+                    self.pymalloc_allocator = Some(InterpreterPyAllocator::from(
+                        make_rust_pyobject_arena_allocator(),
+                    ))
+                }
+                MemoryAllocatorBackend::Snmalloc => {
+                    self.pymalloc_allocator = Some(InterpreterPyAllocator::from(
+                        make_rust_pyobject_arena_allocator(),
+                    ))
+                }
+                MemoryAllocatorBackend::Mimalloc => {
+                    self.pymalloc_allocator = Some(InterpreterPyAllocator::from(mipymallocator()))
+                }
+            }
+            if let Some(allocator) = &self.pymalloc_allocator {
+                unsafe {
+                    pyffi::PyObject_SetArenaAllocator(allocator.as_ptr() as *mut _);
                 }
             }
         }
@@ -417,7 +505,7 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
     /// Ensure the Python GIL is released.
     pub fn release_gil(&mut self) {
         self.py = None;
-        self.gil = None;
+        self._gil = None;
     }
 
     /// Ensure the Python GIL is acquired, returning a handle on the interpreter.
@@ -430,10 +518,10 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
         match self.py {
             Some(py) => py,
             None => {
-                let gil = GILGuard::acquire();
+                let _gil = GILGuard::acquire();
                 let py = unsafe { Python::assume_gil_acquired() };
 
-                self.gil = Some(gil);
+                self._gil = Some(_gil);
                 self.py = Some(py);
 
                 py

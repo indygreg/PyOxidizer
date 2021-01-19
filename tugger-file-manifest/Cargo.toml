@@ -9,3 +9,6 @@ description = "Interact with lists of files through a storage-agnostic interface
 keywords = ["package", "tugger"]
 homepage = "https://github.com/indygreg/PyOxidizer"
 repository = "https://github.com/indygreg/PyOxidizer.git"
+
+[dependencies]
+remove_dir_all = "0.5"

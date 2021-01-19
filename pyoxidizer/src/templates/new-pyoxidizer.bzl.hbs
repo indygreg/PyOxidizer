@@ -197,6 +197,13 @@ def make_exe(dist):
     # objects to the binary, with a load location as defined by the packaging
     # policy's resource location attributes.
     #exe.add_python_resources(exe.pip_download(["pyflakes==2.2.0"]))
+	# to customize location of where packages are installed 
+    #for resource in exe.pip_install(["numpy"]):
+    #    resource.add_location = "filesystem-relative:lib"
+    #    exe.add_python_resource(resource)
+    #for resource in exe.pip_install(["pyflakes==2.2.0"]):
+    #    resource.add_location = "in-memory"
+    #    exe.add_python_resource(resource)
 
     # Invoke `pip install` with our Python distribution to install a single package.
     # `pip_install()` returns objects representing installed files.

@@ -3,6 +3,23 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 //! Custom Python memory allocators.
+#[cfg(feature = "jemalloc-sys")]
+use {jemalloc_sys as jemallocffi, jemallocator::Jemalloc};
+#[cfg(feature = "jemalloc-sys")]
+#[global_allocator]
+static GLOBAL: Jemalloc = Jemalloc;
+
+#[cfg(feature = "mimalloc")]
+use {libmimalloc_sys as mimallocffi, mimalloc::MiMalloc};
+#[cfg(feature = "mimalloc")]
+#[global_allocator]
+static GLOBAL: MiMalloc = MiMalloc;
+
+#[cfg(feature = "snmalloc-rs")]
+use snmalloc_rs::SnMalloc;
+#[cfg(feature = "snmalloc-rs")]
+#[global_allocator]
+static GLOBAL: SnMalloc = SnMalloc;
 
 use {
     libc::{c_void, size_t},
@@ -10,14 +27,12 @@ use {
     std::{alloc, collections::HashMap},
 };
 
-#[cfg(feature = "jemalloc-sys")]
-use jemalloc_sys as jemallocffi;
-
 const MIN_ALIGN: usize = 16;
 
 type RawAllocatorState = HashMap<*mut u8, alloc::Layout>;
-
 /// Holds state for the raw memory allocator.
+type PyAllocatorState = HashMap<*mut u8, alloc::Layout>;
+/// Holds the PyMalloc State
 ///
 /// Ideally we wouldn't need to track state. But Rust's dealloc() API
 /// requires passing in a Layout that matches the allocation. This means
@@ -31,6 +46,11 @@ pub struct RawAllocator {
     _state: Box<RawAllocatorState>,
 }
 
+pub struct PyAllocator {
+    pub allocator: pyffi::PyObjectArenaAllocator,
+    _state: Box<PyAllocatorState>,
+}
+
 extern "C" fn raw_rust_malloc(ctx: *mut c_void, size: size_t) -> *mut c_void {
     // PyMem_RawMalloc()'s docs say: Requesting zero bytes returns a distinct
     // non-NULL pointer if possible, as if PyMem_RawMalloc(1) had been called
@@ -42,6 +62,27 @@ extern "C" fn raw_rust_malloc(ctx: *mut c_void, size: size_t) -> *mut c_void {
 
     unsafe {
         let state = ctx as *mut RawAllocatorState;
+        let layout = alloc::Layout::from_size_align_unchecked(size, MIN_ALIGN);
+        let res = alloc::alloc(layout);
+
+        (*state).insert(res, layout);
+
+        //println!("allocated {} bytes to {:?}", size, res);
+        res as *mut c_void
+    }
+}
+
+extern "C" fn rust_pymalloc(ctx: *mut c_void, size: size_t) -> *mut c_void {
+    // PyMem_RawMalloc()'s docs say: Requesting zero bytes returns a distinct
+    // non-NULL pointer if possible, as if PyMem_RawMalloc(1) had been called
+    // instead.
+    let size = match size {
+        0 => 1,
+        val => val,
+    };
+
+    unsafe {
+        let state = ctx as *mut PyAllocatorState;
         let layout = alloc::Layout::from_size_align_unchecked(size, MIN_ALIGN);
         let res = alloc::alloc(layout);
 
@@ -129,6 +170,25 @@ extern "C" fn raw_rust_free(ctx: *mut c_void, ptr: *mut c_void) {
     }
 }
 
+extern "C" fn rust_pymallocfree(ctx: *mut c_void, ptr: *mut c_void, _size: size_t) {
+    if ptr.is_null() {
+        return;
+    }
+
+    //println!("freeing {:?}", ptr as *mut u8);
+    unsafe {
+        let state = ctx as *mut PyAllocatorState;
+
+        let key = ptr as *mut u8;
+        let layout = (*state)
+            .get(&key)
+            .unwrap_or_else(|| panic!("could not find allocated memory record: {:?}", key));
+
+        alloc::dealloc(key, *layout);
+        (*state).remove(&key);
+    }
+}
+
 pub fn make_raw_rust_memory_allocator() -> RawAllocator {
     // We need to allocate the HashMap on the heap so the pointer doesn't refer
     // to the stack. We rebox and add the Box to our struct so lifetimes are
@@ -150,11 +210,77 @@ pub fn make_raw_rust_memory_allocator() -> RawAllocator {
     }
 }
 
+pub fn make_rust_pyobject_arena_allocator() -> PyAllocator {
+    // We need to allocate the HashMap on the heap so the pointer doesn't refer
+    // to the stack. We rebox and add the Box to our struct so lifetimes are
+    // managed.
+    let alloc = Box::new(HashMap::<*mut u8, alloc::Layout>::new());
+    let state = Box::into_raw(alloc);
+
+    let allocator = pyffi::PyObjectArenaAllocator {
+        ctx: state as *mut c_void,
+        alloc: Some(rust_pymalloc),
+        free: Some(rust_pymallocfree),
+    };
+
+    PyAllocator {
+        allocator,
+        _state: unsafe { Box::from_raw(state) },
+    }
+}
+
+#[cfg(feature = "mimalloc")]
+extern "C" fn mimalloc_pymalloc(_ctx: *mut c_void, size: size_t) -> *mut c_void {
+    // PyMem_RawMalloc()'s docs say: Requesting zero bytes returns a distinct
+    // non-NULL pointer if possible, as if PyMem_RawMalloc(1) had been called
+    // instead.
+    let size = match size {
+        0 => 1,
+        val => val,
+    };
+    // Allocate `size` bytes.Returns pointer to the allocated memory or null if out of memory.
+    // Returns a unique pointer if called with `size` 0
+    let padding = _ctx as *const _ as usize;
+    unsafe { mimallocffi::mi_malloc(size + padding) }
+}
+
+#[cfg(feature = "mimalloc")]
+extern "C" fn mimalloc_pymallocfree(_ctx: *mut c_void, ptr: *mut c_void, _size: size_t) {
+    if ptr.is_null() {
+        return;
+    }
+    // Free previously allocated memory
+    // The pointer `p` must have been allocated before (or be null)
+    unsafe { mimallocffi::mi_free(ptr) }
+}
+
+#[cfg(feature = "mimalloc")]
+pub fn make_mimalloc_pyallocator() -> pyffi::PyObjectArenaAllocator {
+    pyffi::PyObjectArenaAllocator {
+        ctx: null_mut(),
+        alloc: Some(mimalloc_pymalloc),
+        free: Some(mimalloc_pymallocfree),
+    }
+}
+
 // Now let's define a raw memory allocator that interfaces directly with jemalloc.
 // This avoids the overhead of going through Rust's allocation layer.
 
 #[cfg(feature = "jemalloc-sys")]
 extern "C" fn raw_jemalloc_malloc(_ctx: *mut c_void, size: size_t) -> *mut c_void {
+    // PyMem_RawMalloc()'s docs say: Requesting zero bytes returns a distinct
+    // non-NULL pointer if possible, as if PyMem_RawMalloc(1) had been called
+    // instead.
+    let size = match size {
+        0 => 1,
+        val => val,
+    };
+
+    unsafe { jemallocffi::mallocx(size, 0) }
+}
+
+#[cfg(feature = "jemalloc-sys")]
+extern "C" fn jemalloc_pymalloc(_ctx: *mut c_void, size: size_t) -> *mut c_void {
     // PyMem_RawMalloc()'s docs say: Requesting zero bytes returns a distinct
     // non-NULL pointer if possible, as if PyMem_RawMalloc(1) had been called
     // instead.
@@ -202,6 +328,15 @@ extern "C" fn raw_jemalloc_realloc(
 
 #[cfg(feature = "jemalloc-sys")]
 extern "C" fn raw_jemalloc_free(_ctx: *mut c_void, ptr: *mut c_void) {
+    if ptr.is_null() {
+        return;
+    }
+
+    unsafe { jemallocffi::dallocx(ptr, 0) }
+}
+
+#[cfg(feature = "jemalloc-sys")]
+extern "C" fn jemalloc_pymallocfree(_ctx: *mut c_void, ptr: *mut c_void, _size: size_t) {
     if ptr.is_null() {
         return;
     }
@@ -298,5 +433,14 @@ pub fn make_raw_mimalloc_allocator() -> pyffi::PyMemAllocatorEx {
         calloc: Some(raw_mimalloc_calloc),
         realloc: Some(raw_mimalloc_realloc),
         free: Some(raw_mimalloc_free),
+    }
+}
+
+#[cfg(feature = "jemalloc-sys")]
+pub fn make_jemalloc_pyallocator() -> pyffi::PyObjectArenaAllocator {
+    pyffi::PyObjectArenaAllocator {
+        ctx: null_mut(),
+        alloc: Some(jemalloc_pymalloc),
+        free: Some(jemalloc_pymallocfree),
     }
 }
