@@ -159,6 +159,9 @@ pub fn build_executable_with_rust_project<'a>(
     if exe.requires_jemalloc() {
         features.push("jemalloc");
     }
+    if exe.requires_mimalloc() {
+        features.push("gmimalloc");
+    }
 
     let features = features.join(" ");
 

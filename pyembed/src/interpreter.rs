@@ -185,10 +185,14 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
                 MemoryAllocatorBackend::Rust => {
                     self.raw_allocator = Some(InterpreterRawAllocator::from(
                         make_raw_rust_memory_allocator(),
+                    ))
+                }
+                MemoryAllocatorBackend::Mimalloc => {
+                    self.raw_allocator = Some(InterpreterRawAllocator::from(
+                        make_raw_rust_memory_allocator(),
                     ));
                 }
             }
-
             if let Some(allocator) = &self.raw_allocator {
                 unsafe {
                     pyffi::PyMem_SetAllocator(
