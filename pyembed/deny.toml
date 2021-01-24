@@ -5,6 +5,7 @@
 unlicensed = "deny"
 allow = [
     "0BSD",
+    "CC0-1.0",
     "MIT",
     "MPL-2.0",
     "Python-2.0",
