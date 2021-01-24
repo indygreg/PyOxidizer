@@ -30,6 +30,10 @@ use {
     },
 };
 
+#[cfg(feature = "mimalloc")]
+use crate::pyalloc::make_raw_mimalloc_allocator;
+
+
 #[cfg(feature = "jemalloc-sys")]
 use crate::pyalloc::make_raw_jemalloc_allocator;
 use python3_sys::PyMemAllocatorEx;
@@ -48,6 +52,15 @@ fn raw_jemallocator() -> pyffi::PyMemAllocatorEx {
     panic!("jemalloc is not available in this build configuration");
 }
 
+#[cfg(feature = "mimalloc")]
+fn raw_mimallocator() -> pyffi::PyMemAllocatorEx {
+    make_raw_mimalloc_allocator()
+}
+
+#[cfg(not(feature = "mimalloc"))]
+fn raw_mimallocator() -> pyffi::PyMemAllocatorEx {
+    panic!("mimalloc is not available in this build configuration");
+}
 enum InterpreterRawAllocator {
     Python(pyffi::PyMemAllocatorEx),
     Raw(RawAllocator),
@@ -188,9 +201,7 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
                     ))
                 }
                 MemoryAllocatorBackend::Mimalloc => {
-                    self.raw_allocator = Some(InterpreterRawAllocator::from(
-                        make_raw_rust_memory_allocator(),
-                    ));
+                    self.raw_allocator = Some(InterpreterRawAllocator::from(raw_mimallocator()));
                 }
             }
             if let Some(allocator) = &self.raw_allocator {

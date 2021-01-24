@@ -4,7 +4,7 @@
 
 //! Custom Python memory allocators.
 #[cfg(feature = "mimalloc")]
-use mimalloc::MiMalloc;
+use {mimalloc::MiMalloc, std::ptr::null_mut,libmimalloc_sys as mimallocffi};
 
 #[cfg(feature = "mimalloc")]
 #[global_allocator]
@@ -155,6 +155,75 @@ pub fn make_raw_rust_memory_allocator() -> RawAllocator {
         _state: unsafe { Box::from_raw(state) },
     }
 }
+// Now let's define a raw memory allocator that interfaces directly with mimalloc.
+// This avoids the overhead of going through Rust's allocation layer.
+#[cfg(feature = "mimalloc")]
+extern "C" fn raw_mimalloc_malloc(_ctx: *mut c_void, size: size_t) -> *mut c_void {
+    // PyMem_RawMalloc()'s docs say: Requesting zero bytes returns a distinct
+    // non-NULL pointer if possible, as if PyMem_RawMalloc(1) had been called
+    // instead.
+    let size = match size {
+        0 => 1,
+        val => val,
+    };
+
+    unsafe { mimallocffi::mi_malloc(size) }
+}
+
+#[cfg(feature = "mimalloc")]
+extern "C" fn raw_mimalloc_calloc(_ctx: *mut c_void, nelem: size_t, elsize: size_t) -> *mut c_void {
+    // PyMem_RawCalloc()'s docs say: Requesting zero elements or elements of
+    // size zero bytes returns a distinct non-NULL pointer if possible, as if
+    // PyMem_RawCalloc(1, 1) had been called instead.
+    let size = match nelem * elsize {
+        0 => 1,
+        val => val,
+    };
+
+    unsafe { mimallocffi::mi_calloc(size,0) }
+}
+
+#[cfg(feature = "mimalloc")]
+extern "C" fn raw_mimalloc_realloc(
+    ctx: *mut c_void,
+    ptr: *mut c_void,
+    new_size: size_t,
+) -> *mut c_void {
+    // PyMem_RawRealloc()'s docs say: If p is NULL, the call is equivalent to
+    // PyMem_RawMalloc(n); else if n is equal to zero, the memory block is
+    // resized but is not freed, and the returned pointer is non-NULL.
+    if ptr.is_null() {
+        return raw_mimalloc_malloc(ctx, new_size);
+    }
+
+    let new_size = match new_size {
+        0 => 1,
+        val => val,
+    };
+
+    unsafe { mimallocffi::mi_realloc(ptr, new_size) }
+}
+
+#[cfg(feature = "mimalloc")]
+extern "C" fn raw_mimalloc_free(_ctx: *mut c_void, ptr: *mut c_void) {
+    if ptr.is_null() {
+        return;
+    }
+
+    unsafe { mimallocffi::mi_free(ptr) }
+}
+
+#[cfg(feature = "mimalloc")]
+pub fn make_raw_mimalloc_allocator() -> pyffi::PyMemAllocatorEx {
+    pyffi::PyMemAllocatorEx {
+        ctx: null_mut(),
+        malloc: Some(raw_mimalloc_malloc),
+        calloc: Some(raw_mimalloc_calloc),
+        realloc: Some(raw_mimalloc_realloc),
+        free: Some(raw_mimalloc_free),
+    }
+}
+
 
 // Now let's define a raw memory allocator that interfaces directly with jemalloc.
 // This avoids the overhead of going through Rust's allocation layer.
