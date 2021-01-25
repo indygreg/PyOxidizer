@@ -166,6 +166,8 @@ extern "C" fn raw_mimalloc_malloc(_ctx: *mut c_void, size: size_t) -> *mut c_voi
         0 => 1,
         val => val,
     };
+    // Allocate `size` bytes.Returns pointer to the allocated memory or null if out of memory.
+    // Returns a unique pointer if called with `size` 0
 
     unsafe { mimallocffi::mi_malloc(size) }
 }
@@ -179,27 +181,37 @@ extern "C" fn raw_mimalloc_calloc(_ctx: *mut c_void, nelem: size_t, elsize: size
         0 => 1,
         val => val,
     };
-
-    unsafe { mimallocffi::mi_calloc(size,0) }
+    // Allocate `count` items of `size` length each.
+    // Returns `null` if `count * size` overflows or on out-of-memory.
+    // All items are initialized to zero
+    unsafe { mimallocffi::mi_calloc(nelem,size) }
 }
 
 #[cfg(feature = "mimalloc")]
 extern "C" fn raw_mimalloc_realloc(
-    ctx: *mut c_void,
+    _ctx: *mut c_void,
     ptr: *mut c_void,
     new_size: size_t,
 ) -> *mut c_void {
     // PyMem_RawRealloc()'s docs say: If p is NULL, the call is equivalent to
     // PyMem_RawMalloc(n); else if n is equal to zero, the memory block is
     // resized but is not freed, and the returned pointer is non-NULL.
-    if ptr.is_null() {
-        return raw_mimalloc_malloc(ctx, new_size);
-    }
+    // Below should be automatic
 
     let new_size = match new_size {
         0 => 1,
         val => val,
     };
+    // Re-allocate memory to `newsize` bytes.
+    //
+    // Return pointer to the allocated memory or null if out of memory. If null
+    // is returned, the pointer `p` is not freed. Otherwise the original
+    // pointer is either freed or returned as the reallocated result (in case
+    // it fits in-place with the new size)
+    //
+    // If `p` is null, it behaves as [`mi_malloc`]. If `newsize` is larger than
+    // the original `size` allocated for `p`, the bytes after `size` are
+    // uninitialized
 
     unsafe { mimallocffi::mi_realloc(ptr, new_size) }
 }
@@ -209,7 +221,8 @@ extern "C" fn raw_mimalloc_free(_ctx: *mut c_void, ptr: *mut c_void) {
     if ptr.is_null() {
         return;
     }
-
+    // Free previously allocated memory
+    // The pointer `p` must have been allocated before (or be null)
     unsafe { mimallocffi::mi_free(ptr) }
 }
 

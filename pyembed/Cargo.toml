@@ -17,8 +17,8 @@ links = "pythonXY"
 # Update documentation in lib.rs when new dependencies are added.
 anyhow = "1.0"
 cpython = "0.5.2"
-libmimalloc-sys = {version = "0.1.18", feature = "extended",optional = true}
-mimalloc = { version = "0.1.22", default-features = false, optional = true }
+libmimalloc-sys = {git = "https://github.com/ryancinsight/mimalloc_rust",optional = true}
+mimalloc = { git = "https://github.com/ryancinsight/mimalloc_rust", default-features = false, optional = true }
 jemalloc-sys = { version = "0.3", optional = true }
 lazy_static = "1.4"
 libc = "0.2"
