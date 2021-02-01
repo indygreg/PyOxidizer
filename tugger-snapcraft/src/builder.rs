@@ -14,6 +14,9 @@ use {
     },
     tugger_file_manifest::{FileEntry, FileManifest},
 };
+//This library provides a reliable implementation of remove_dir_all for Windows. For Unix systems, it re-exports std::fs::remove_dir_all.
+extern crate remove_dir_all;
+use remove_dir_all::remove_dir_all;
 
 /// Represents an invocation of the `snapcraft` command.
 #[derive(Clone, Debug, PartialEq)]
@@ -141,7 +144,7 @@ impl<'a> SnapcraftBuilder<'a> {
 
         if invocation.purge_build && build_path.exists() {
             warn!(logger, "purging {}", build_path.display());
-            std::fs::remove_dir_all(build_path)
+            remove_dir_all(build_path)
                 .with_context(|| format!("removing {}", build_path.display()))?;
         }
 

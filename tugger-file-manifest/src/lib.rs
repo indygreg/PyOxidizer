@@ -9,6 +9,9 @@ use std::{
     io::Write,
     path::{Path, PathBuf},
 };
+//This library provides a reliable implementation of remove_dir_all for Windows. For Unix systems, it re-exports std::fs::remove_dir_all.
+extern crate remove_dir_all;
+use remove_dir_all::remove_dir_all;
 
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
@@ -452,7 +455,7 @@ impl FileManifest {
     ) -> Result<Vec<PathBuf>, FileManifestError> {
         let dest = dest.as_ref();
         if dest.exists() {
-            std::fs::remove_dir_all(dest)?;
+            remove_dir_all(dest)?;
         }
 
         self.materialize_files(dest)

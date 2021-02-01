@@ -16,6 +16,7 @@ duct = "0.13"
 serde_yaml = "0.8"
 serde = { version = "1.0", features = ["derive"] }
 slog = "2.4"
+remove_dir_all = {version = "*"}
 
 [dependencies.tugger-common]
 version = "0.1.0-pre"

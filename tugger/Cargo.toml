@@ -19,6 +19,7 @@ slog = "2.4"
 starlark = "0.3.1"
 tar = "0.4"
 walkdir = "2"
+remove_dir_all = {version = "*"}
 
 [dependencies.starlark-dialect-build-targets]
 version = "0.2.0-pre"
