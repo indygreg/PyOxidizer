@@ -4,20 +4,25 @@
 
 //! Custom Python memory allocators.
 #[cfg(feature = "mimalloc")]
-use {mimalloc::MiMalloc, std::ptr::null_mut,libmimalloc_sys as mimallocffi};
+use {mimalloc::MiMalloc,libmimalloc_sys as mimallocffi, std::ptr::null_mut};
+
+#[cfg(feature = "jemalloc-sys")]
+use {jemallocator::Jemalloc,jemalloc_sys as jemallocffi, std::ptr::null_mut};
 
 #[cfg(feature = "mimalloc")]
 #[global_allocator]
 static GLOBAL: MiMalloc = MiMalloc;
+
+#[cfg(feature = "jemalloc-sys")]
+#[global_allocator]
+static GLOBAL: Jemalloc = Jemalloc;
+
 
 use {
     libc::{c_void, size_t},
     python3_sys as pyffi,
     std::{alloc, collections::HashMap},
 };
-
-#[cfg(feature = "jemalloc-sys")]
-use {jemalloc_sys as jemallocffi, std::ptr::null_mut};
 
 const MIN_ALIGN: usize = 16;
 
