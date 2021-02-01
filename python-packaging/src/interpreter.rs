@@ -163,7 +163,7 @@ impl PythonRawAllocator {
 
     pub fn mimalloc() -> Self {
         Self {
-            backend: MemoryAllocatorBackend::Rust,
+            backend: MemoryAllocatorBackend::Mimalloc,
             ..PythonRawAllocator::default()
         }
     }
