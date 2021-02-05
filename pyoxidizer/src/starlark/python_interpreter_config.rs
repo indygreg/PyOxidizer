@@ -1125,7 +1125,7 @@ mod tests {
         let mut env = get_env()?;
 
         eval_assert(&mut env, "config.raw_allocator == 'system'")?;
-		
+
         env.eval("config.raw_allocator = 'gmimalloc'")?;
         eval_assert(&mut env, "config.raw_allocator == 'gmimalloc'")?;
 

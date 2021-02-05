@@ -178,7 +178,7 @@ mod tests {
     };
 
     // PEM encoded key pair generated via Powershell.
-    const POWERSHELL_CERTIFICATE_PUBLIC_PEM: &'static str = "-----BEGIN CERTIFICATE-----\n\
+    const POWERSHELL_CERTIFICATE_PUBLIC_PEM: &str = "-----BEGIN CERTIFICATE-----\n\
         MIIBnzCCAUagAwIBAgIQSE/jLE4ZZYtHZ1e/Uh5IKTAKBggqhkjOPQQDAjAeMRww\n\
         GgYDVQQDDBN0ZXN0aW5nQGV4YW1wbGUuY29tMB4XDTIwMTEyNjIxMjIyOFoXDTIx\n\
         MTEyNjIxNDIyOFowHjEcMBoGA1UEAwwTdGVzdGluZ0BleGFtcGxlLmNvbTBZMBMG\n\
@@ -190,7 +190,7 @@ mod tests {
         HgIgWCs4HPGhR1KmUEvjOLZLxsph/SZ1omQt8QQQYsUn1m4=\n\
         -----END CERTIFICATE-----\n";
 
-    const POWERSHELL_CERTIFICATE_PRIVATE_PEM: &'static str = "-----BEGIN PRIVATE KEY-----\n\
+    const POWERSHELL_CERTIFICATE_PRIVATE_PEM: &str = "-----BEGIN PRIVATE KEY-----\n\
         MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQg9mPzM4rZBqtjLuWZ\n\
         rWiPM5PgwTcsYMm6ojX9OAz1AIehRANCAARudHAsKwW0mCB42pLnH5BUMAcchC2q\n\
         qt+muZd9/swuboJ4f8wzaf7cYThB6Fm+ysYHni7A1OX5xOaOy1jMHhxe\n\

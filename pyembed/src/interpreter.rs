@@ -33,7 +33,6 @@ use {
 #[cfg(feature = "mimalloc")]
 use crate::pyalloc::make_raw_mimalloc_allocator;
 
-
 #[cfg(feature = "jemalloc-sys")]
 use crate::pyalloc::make_raw_jemalloc_allocator;
 use python3_sys::PyMemAllocatorEx;

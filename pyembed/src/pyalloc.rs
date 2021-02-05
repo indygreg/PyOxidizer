@@ -4,10 +4,10 @@
 
 //! Custom Python memory allocators.
 #[cfg(feature = "mimalloc")]
-use {mimalloc::MiMalloc,libmimalloc_sys as mimallocffi, std::ptr::null_mut};
+use {libmimalloc_sys as mimallocffi, mimalloc::MiMalloc, std::ptr::null_mut};
 
 #[cfg(feature = "jemalloc-sys")]
-use {jemallocator::Jemalloc,jemalloc_sys as jemallocffi, std::ptr::null_mut};
+use {jemalloc_sys as jemallocffi, jemallocator::Jemalloc, std::ptr::null_mut};
 
 #[cfg(feature = "mimalloc")]
 #[global_allocator]
@@ -16,7 +16,6 @@ static GLOBAL: MiMalloc = MiMalloc;
 #[cfg(feature = "jemalloc-sys")]
 #[global_allocator]
 static GLOBAL: Jemalloc = Jemalloc;
-
 
 use {
     libc::{c_void, size_t},
@@ -189,7 +188,7 @@ extern "C" fn raw_mimalloc_calloc(_ctx: *mut c_void, nelem: size_t, elsize: size
     // Allocate `count` items of `size` length each.
     // Returns `null` if `count * size` overflows or on out-of-memory.
     // All items are initialized to zero
-    unsafe { mimallocffi::mi_calloc(nelem,size) }
+    unsafe { mimallocffi::mi_calloc(nelem, size) }
 }
 
 #[cfg(feature = "mimalloc")]
@@ -241,7 +240,6 @@ pub fn make_raw_mimalloc_allocator() -> pyffi::PyMemAllocatorEx {
         free: Some(raw_mimalloc_free),
     }
 }
-
 
 // Now let's define a raw memory allocator that interfaces directly with jemalloc.
 // This avoids the overhead of going through Rust's allocation layer.
