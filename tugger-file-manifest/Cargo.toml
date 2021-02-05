@@ -11,4 +11,4 @@ homepage = "https://github.com/indygreg/PyOxidizer"
 repository = "https://github.com/indygreg/PyOxidizer.git"
 
 [dependencies]
-remove_dir_all = {version = "*"}
+remove_dir_all = {version = "0.6.1"}

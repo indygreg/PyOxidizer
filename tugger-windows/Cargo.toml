@@ -21,6 +21,7 @@ semver = "0.11"
 slog = "2.4"
 yasna = "0.3"
 
+
 [target.'cfg(windows)'.dependencies]
 find-winsdk = "0.2"
 winapi = { version = "0.3", features = ["combaseapi", "knownfolders", "shlobj", "shtypes"] }
