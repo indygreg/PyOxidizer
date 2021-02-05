@@ -14,3 +14,10 @@ rustflags = ["-C", "link-args=-Wl,-export-dynamic"]
 
 [target.x86_64-apple-darwin]
 rustflags = ["-C", "link-args=-rdynamic"]
+
+[target.x86_64-pc-windows-gnu]
+rustflags = ["-C", "link-args=-fuse-ld=lld","-C", "opt-level=3", "-C", "inline-threshold=275","-C","target-feature=+crt-static"]
+#may require "-C", "link-args=-fuse-ld=lld -larchive -lbcrypt","-L","D:/MSYS2/mingw64/lib" using mimalloc
+
+[target.x86_64-pc-windows-msvc]
+rustflags = ["-C","target-feature=+crt-static"]
