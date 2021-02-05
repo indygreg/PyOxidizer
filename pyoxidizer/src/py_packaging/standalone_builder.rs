@@ -1164,14 +1164,13 @@ pub mod tests {
             builder.extension_build_contexts.get(&extension.name),
             Some(&LibPythonBuildContext {
                 object_files: extension.object_file_data.clone(),
-                init_functions: BTreeMap::from_iter(
-                    [(
-                        extension.name.to_string(),
-                        extension.init_fn.as_ref().clone().unwrap().to_string()
-                    )]
-                    .iter()
-                    .cloned()
-                ),
+                init_functions: [(
+                    extension.name.to_string(),
+                    extension.init_fn.as_ref().clone().unwrap().to_string()
+                )]
+                .iter()
+                .cloned()
+                .collect(),
                 ..LibPythonBuildContext::default()
             }),
             "build context for extension module {} is present",
@@ -1383,12 +1382,11 @@ pub mod tests {
                 builder.extension_build_contexts.get("_sqlite3"),
                 Some(&LibPythonBuildContext {
                     object_files: sqlite.object_file_data.clone(),
-                    static_libraries: BTreeSet::from_iter(["sqlite3".to_string()].iter().cloned()),
-                    init_functions: BTreeMap::from_iter(
-                        [("_sqlite3".to_string(), "PyInit__sqlite3".to_string())]
-                            .iter()
-                            .cloned()
-                    ),
+                    static_libraries: ["sqlite3".to_string()].iter().cloned().collect(),
+                    init_functions: [("_sqlite3".to_string(), "PyInit__sqlite3".to_string())]
+                        .iter()
+                        .cloned()
+                        .collect(),
                     licensed_components: licensed_components_from_extension(&sqlite),
                     ..LibPythonBuildContext::default()
                 })
@@ -1581,12 +1579,11 @@ pub mod tests {
                 builder.extension_build_contexts.get("_sqlite3"),
                 Some(&LibPythonBuildContext {
                     object_files: ext.object_file_data.clone(),
-                    static_libraries: BTreeSet::from_iter(["sqlite3".to_string()].iter().cloned()),
-                    init_functions: BTreeMap::from_iter(
-                        [("_sqlite3".to_string(), "PyInit__sqlite3".to_string())]
-                            .iter()
-                            .cloned()
-                    ),
+                    static_libraries: ["sqlite3".to_string()].iter().cloned().collect(),
+                    init_functions: [("_sqlite3".to_string(), "PyInit__sqlite3".to_string())]
+                        .iter()
+                        .cloned()
+                        .collect(),
                     licensed_components: licensed_components_from_extension(&ext),
                     ..LibPythonBuildContext::default()
                 })
@@ -1739,12 +1736,11 @@ pub mod tests {
             builder.extension_build_contexts.get("_sqlite3"),
             Some(&LibPythonBuildContext {
                 object_files: sqlite.object_file_data.clone(),
-                static_libraries: BTreeSet::from_iter(["sqlite3".to_string()].iter().cloned()),
-                init_functions: BTreeMap::from_iter(
-                    [("_sqlite3".to_string(), "PyInit__sqlite3".to_string())]
-                        .iter()
-                        .cloned()
-                ),
+                static_libraries: ["sqlite3".to_string()].iter().cloned().collect(),
+                init_functions: [("_sqlite3".to_string(), "PyInit__sqlite3".to_string())]
+                    .iter()
+                    .cloned()
+                    .collect(),
                 licensed_components: licensed_components_from_extension(&sqlite),
                 ..LibPythonBuildContext::default()
             })
@@ -1795,12 +1791,11 @@ pub mod tests {
             builder.extension_build_contexts.get("_sqlite3"),
             Some(&LibPythonBuildContext {
                 object_files: ext.object_file_data.clone(),
-                static_libraries: BTreeSet::from_iter(["sqlite3".to_string()].iter().cloned()),
-                init_functions: BTreeMap::from_iter(
-                    [("_sqlite3".to_string(), "PyInit__sqlite3".to_string())]
-                        .iter()
-                        .cloned()
-                ),
+                static_libraries: ["sqlite3".to_string()].iter().cloned().collect(),
+                init_functions: [("_sqlite3".to_string(), "PyInit__sqlite3".to_string())]
+                    .iter()
+                    .cloned()
+                    .collect(),
                 licensed_components: licensed_components_from_extension(&ext),
                 ..LibPythonBuildContext::default()
             })
@@ -1949,12 +1944,11 @@ pub mod tests {
                 builder.extension_build_contexts.get("_sqlite3"),
                 Some(&LibPythonBuildContext {
                     object_files: sqlite.object_file_data.clone(),
-                    static_libraries: BTreeSet::from_iter(["sqlite3".to_string()].iter().cloned()),
-                    init_functions: BTreeMap::from_iter(
-                        [("_sqlite3".to_string(), "PyInit__sqlite3".to_string())]
-                            .iter()
-                            .cloned()
-                    ),
+                    static_libraries: ["sqlite3".to_string()].iter().cloned().collect(),
+                    init_functions: [("_sqlite3".to_string(), "PyInit__sqlite3".to_string())]
+                        .iter()
+                        .cloned()
+                        .collect(),
                     licensed_components: licensed_components_from_extension(&sqlite),
                     ..LibPythonBuildContext::default()
                 })
@@ -2009,12 +2003,11 @@ pub mod tests {
                 builder.extension_build_contexts.get("_sqlite3"),
                 Some(&LibPythonBuildContext {
                     object_files: ext.object_file_data.clone(),
-                    static_libraries: BTreeSet::from_iter(["sqlite3".to_string()].iter().cloned()),
-                    init_functions: BTreeMap::from_iter(
-                        [("_sqlite3".to_string(), "PyInit__sqlite3".to_string())]
-                            .iter()
-                            .cloned()
-                    ),
+                    static_libraries: ["sqlite3".to_string()].iter().cloned().collect(),
+                    init_functions: [("_sqlite3".to_string(), "PyInit__sqlite3".to_string())]
+                        .iter()
+                        .cloned()
+                        .collect(),
                     licensed_components: licensed_components_from_extension(&ext),
                     ..LibPythonBuildContext::default()
                 })
@@ -2364,12 +2357,11 @@ pub mod tests {
                 builder.extension_build_contexts.get("_sqlite3"),
                 Some(&LibPythonBuildContext {
                     object_files: sqlite.object_file_data.clone(),
-                    static_libraries: BTreeSet::from_iter(["sqlite3".to_string()].iter().cloned()),
-                    init_functions: BTreeMap::from_iter(
-                        [("_sqlite3".to_string(), "PyInit__sqlite3".to_string())]
-                            .iter()
-                            .cloned()
-                    ),
+                    static_libraries: ["sqlite3".to_string()].iter().cloned().collect(),
+                    init_functions: [("_sqlite3".to_string(), "PyInit__sqlite3".to_string())]
+                        .iter()
+                        .cloned()
+                        .collect(),
                     licensed_components: licensed_components_from_extension(&sqlite),
                     ..LibPythonBuildContext::default()
                 })
