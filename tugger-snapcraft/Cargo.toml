@@ -11,12 +11,12 @@ repository = "https://github.com/indygreg/PyOxidizer.git"
 readme = "README.md"
 
 [dependencies]
-anyhow = "1.0"
-duct = "0.13"
-serde_yaml = "0.8"
-serde = { version = "1.0", features = ["derive"] }
-slog = "2.4"
-remove_dir_all = {version = "0.6.1"}
+anyhow = "1.0.38"
+duct = "0.13.5"
+serde_yaml = "0.8.16"
+serde = { version = "1.0.123", features = ["derive"] }
+slog = "2.7.0"
+remove_dir_all = "0.6.1"
 
 
 [dependencies.tugger-common]

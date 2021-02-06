@@ -12,13 +12,13 @@ readme = "README.md"
 build = "build.rs"
 
 [dependencies]
-anyhow = "1.0"
-duct = "0.13"
-lazy_static = "1.4"
-slog = "2.4"
-url = "2.1"
-uuid = { version = "0.8", features = ["v4", "v5"] }
-xml-rs = "0.8"
+anyhow = "1.0.38"
+duct = "0.13.5"
+lazy_static = "1.4.0"
+slog = "2.7.0"
+url = "2.2.0"
+uuid = { version = "0.8.2", features = ["v4", "v5"] }
+xml-rs = "0.8.3"
 
 [dependencies.tugger-common]
 version = "0.1.0-pre"
@@ -33,5 +33,5 @@ version = "0.1.0-pre"
 path = "../tugger-file-manifest"
 
 [dev-dependencies]
-msi = "0.3"
-tempfile = "3.1"
+msi = "0.3.0"
+tempfile = "3.2.0"

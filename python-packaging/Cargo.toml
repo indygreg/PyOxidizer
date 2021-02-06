@@ -11,16 +11,16 @@ repository = "https://github.com/indygreg/PyOxidizer.git"
 keywords = ["python"]
 
 [dependencies]
-anyhow = "1.0"
-byteorder = "1.2"
-encoding_rs = "0.8"
-itertools = "0.10"
-lazy_static = "1.4"
-mailparse = "0.13"
-regex = "1"
-spdx = "0.3"
-walkdir = "2"
-zip = { version = "0.5", optional = true }
+anyhow = "1.0.38"
+byteorder = "1.4.2"
+encoding_rs = "0.8.28"
+itertools = "0.10.0"
+lazy_static = "1.4.0"
+mailparse = "0.13.2"
+regex = "1.4.3"
+spdx = "0.3.4"
+walkdir = "2.3.1"
+zip = { version = "0.5.9", optional = true }
 
 [dependencies.python-packed-resources]
 version = "0.5.0-pre"
@@ -35,7 +35,7 @@ version = "0.1.0-pre"
 path = "../tugger-licensing"
 
 [dev-dependencies]
-tempfile = "3.1"
+tempfile = "3.2.0"
 
 # We make `wheel` support optional because the `zip` crate has a handful
 # of dependencies that we don't want to bloat the dependency tree with.
