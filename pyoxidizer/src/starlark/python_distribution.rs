@@ -355,7 +355,7 @@ impl PythonDistributionValue {
 
         let callback = Box::new(
             |_policy: &PythonPackagingPolicy,
-             resource: &PythonResource,
+             resource: &PythonResource<'_>,
              add_context: &mut PythonResourceAddCollectionContext|
              -> Result<()> {
                 // Callback is declared Fn, so we can't take a mutable reference.

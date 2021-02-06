@@ -28,7 +28,7 @@ impl slog::Drain for PrintlnDrain {
 
     fn log(
         &self,
-        record: &slog::Record,
+        record: &slog::Record<'_>,
         _values: &slog::OwnedKVList,
     ) -> Result<Self::Ok, Self::Err> {
         if record.level().is_at_least(self.min_level) {

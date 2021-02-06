@@ -41,7 +41,7 @@ pub fn analyze_data(buffer: &[u8]) {
 }
 
 pub fn analyze_elf_libraries(libs: &[&str], undefined_symbols: &[UndefinedSymbol]) {
-    let mut latest_symbols: BTreeMap<String, version_compare::Version> = BTreeMap::new();
+    let mut latest_symbols: BTreeMap<String, version_compare::Version<'_>> = BTreeMap::new();
 
     println!("Shared Library Dependencies");
     println!("===========================");

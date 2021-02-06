@@ -262,7 +262,7 @@ fn value_to_apps(value: Value) -> Result<HashMap<Cow<'static, str>, SnapApp<'sta
             for key in &value.iter()? {
                 let v = value.at(key.clone())?;
 
-                let app_value = v.downcast_ref::<SnapAppValue>().ok_or_else(|| {
+                let app_value = v.downcast_ref::<SnapAppValue<'_>>().ok_or_else(|| {
                     ValueError::from(RuntimeError {
                         code: "TUGGER_SNAPCRAFT",
                         message: format!("apps value must be SnapApp; got {}", v.get_type()),
@@ -294,7 +294,7 @@ fn value_to_parts(
             for key in &value.iter()? {
                 let v = value.at(key.clone())?;
 
-                let app_value = v.downcast_ref::<SnapPartValue>().ok_or_else(|| {
+                let app_value = v.downcast_ref::<SnapPartValue<'_>>().ok_or_else(|| {
                     ValueError::from(RuntimeError {
                         code: "TUGGER_SNAPCRAFT",
                         message: format!("parts value must be SnapPart; got {}", v.get_type()),
@@ -757,32 +757,32 @@ starlark_module! { snapcraft_module =>
     }
 
     #[allow(non_snake_case)]
-    Snap.to_builder(this: SnapValue) {
+    Snap.to_builder(this: SnapValue<'_>) {
         Ok(Value::new(SnapcraftBuilderValue::new_from_snap_value(this)))
     }
 
     #[allow(non_snake_case)]
-    SnapcraftBuilder(snap: SnapValue) {
+    SnapcraftBuilder(snap: SnapValue<'_>) {
         Ok(Value::new(SnapcraftBuilderValue::new_from_snap_value(snap)))
     }
 
     #[allow(non_snake_case)]
     SnapcraftBuilder.add_invocation(this, args: Vec<String>, purge_build = NoneType::None) {
-        let mut this = this.downcast_mut::<SnapcraftBuilderValue>().unwrap().unwrap();
+        let mut this = this.downcast_mut::<SnapcraftBuilderValue<'_>>().unwrap().unwrap();
 
         this.add_invocation(args, purge_build)
     }
 
     #[allow(non_snake_case)]
     SnapcraftBuilder.add_file_manifest(this, manifest: FileManifestValue) {
-        let mut this = this.downcast_mut::<SnapcraftBuilderValue>().unwrap().unwrap();
+        let mut this = this.downcast_mut::<SnapcraftBuilderValue<'_>>().unwrap().unwrap();
 
         this.add_file_manifest(manifest)
     }
 
     #[allow(non_snake_case)]
     SnapcraftBuilder.build(env env, this, target: String) {
-        let this = this.downcast_ref::<SnapcraftBuilderValue>().unwrap();
+        let this = this.downcast_ref::<SnapcraftBuilderValue<'_>>().unwrap();
         this.build(env, target)
     }
 }
@@ -790,7 +790,7 @@ starlark_module! { snapcraft_module =>
 #[cfg(test)]
 mod tests {
     use {
-        super::*, crate::starlark::testutil::*, anyhow::Result, std::iter::FromIterator,
+        super::*, crate::starlark::testutil::*, anyhow::Result,
         tugger_file_manifest::FileManifest,
     };
 
@@ -822,7 +822,7 @@ mod tests {
         env.eval("app.socket_mode = 42")?;
         env.eval("app.socket = {'sock0': 'sock0_value'}")?;
 
-        let app = app_value.downcast_ref::<SnapAppValue>().unwrap();
+        let app = app_value.downcast_ref::<SnapAppValue<'_>>().unwrap();
         assert_eq!(
             app.inner,
             SnapApp {
@@ -833,14 +833,10 @@ mod tests {
                 common_id: Some("common_id".into()),
                 daemon: Some(Daemon::Oneshot),
                 desktop: Some("desktop".into()),
-                environment: HashMap::from_iter(
-                    [("env0".into(), "env0_value".into())].iter().cloned()
-                ),
+                environment: [("env0".into(), "env0_value".into())].iter().cloned().collect(),
                 extensions: vec!["ext0".into(), "ext1".into()],
                 listen_stream: Some("listen_stream".into()),
-                passthrough: HashMap::from_iter(
-                    [("key0".into(), "key0_value".into())].iter().cloned()
-                ),
+                passthrough: [("key0".into(), "key0_value".into())].iter().cloned().collect(),
                 plugs: vec!["plug0".into(), "plug1".into()],
                 post_stop_command: Some("post_stop_command".into()),
                 restart_condition: Some(RestartCondition::OnFailure),
@@ -849,9 +845,7 @@ mod tests {
                 stop_timeout: Some("stop_timeout".into()),
                 timer: Some("timer".into()),
                 socket_mode: Some(42),
-                socket: HashMap::from_iter(
-                    [("sock0".into(), "sock0_value".into())].iter().cloned()
-                ),
+                socket: [("sock0".into(), "sock0_value".into())].iter().cloned().collect(),
             }
         );
 
@@ -891,25 +885,20 @@ mod tests {
         env.eval("part.stage_snaps = ['snap0', 'snap1']")?;
         env.eval("part.stage = ['stage0', 'stage1']")?;
 
-        let part = part_value.downcast_ref::<SnapPartValue>().unwrap();
+        let part = part_value.downcast_ref::<SnapPartValue<'_>>().unwrap();
         assert_eq!(
             part.inner,
             SnapPart {
                 after: vec!["after0".into(), "after1".into()],
                 build_attributes: vec![BuildAttribute::Debug, BuildAttribute::NoPatchelf],
-                build_environment: vec![HashMap::from_iter(
-                    [("env0".into(), "env1".into())].iter().cloned()
-                )],
+                build_environment: vec![[("env0".into(), "env1".into())].iter().cloned().collect()],
                 build_packages: vec!["p0".into(), "p1".into()],
                 build_snaps: vec!["snap0".into(), "snap1".into()],
-                filesets: HashMap::from_iter(
-                    [("set0".into(), vec!["val0".into(), "val1".into()])]
+                filesets: [("set0".into(), vec!["val0".into(), "val1".into()])]
                         .iter()
                         .cloned()
-                ),
-                organize: HashMap::from_iter(
-                    [("org0".into(), "org0_value".into())].iter().cloned()
-                ),
+						.collect(),
+                organize: [("org0".into(), "org0_value".into())].iter().cloned().collect(),
                 override_build: Some("build".into()),
                 override_prime: Some("prime".into()),
                 override_pull: Some("pull".into()),
@@ -960,7 +949,7 @@ mod tests {
         env.eval("snap.title = 'title'")?;
         env.eval("snap.type = 'kernel'")?;
 
-        let snap = snap_value.downcast_ref::<SnapValue>().unwrap();
+        let snap = snap_value.downcast_ref::<SnapValue<'_>>().unwrap();
         let mut expected = Snapcraft::new(
             "name".into(),
             "version".into(),
@@ -979,26 +968,22 @@ mod tests {
         expected.grade = Some(Grade::Stable);
         expected.icon = Some("icon".into());
         expected.license = Some("license".into());
-        expected.passthrough =
-            HashMap::from_iter([("key0".into(), "value0".into())].iter().cloned());
-        expected.parts =
-            HashMap::from_iter([("part0".into(), SnapPart::default())].iter().cloned());
-        expected.plugs = HashMap::from_iter(
-            [(
+        expected.passthrough =[("key0".into(), "value0".into())].iter().cloned().collect();
+        expected.parts =[("part0".into(), SnapPart::default())].iter().cloned().collect();
+        expected.plugs = [(
                 "plug0".into(),
-                HashMap::from_iter([("key0".into(), "value0".into())].iter().cloned()),
+                [("key0".into(), "value0".into())].iter().cloned().collect(),
             )]
             .iter()
-            .cloned(),
-        );
-        expected.slots = HashMap::from_iter(
-            [(
+            .cloned()
+			.collect();
+        expected.slots = [(
                 "slot0".into(),
-                HashMap::from_iter([("key0".into(), "value0".into())].iter().cloned()),
+                [("key0".into(), "value0".into())].iter().cloned().collect(),
             )]
             .iter()
-            .cloned(),
-        );
+            .cloned()
+			.collect();
         expected.title = Some("title".into());
         expected.snap_type = Some(Type::Kernel);
 
@@ -1021,7 +1006,7 @@ mod tests {
         env.eval("builder.add_invocation(['cmd2'], purge_build = False)")?;
 
         let builder = builder_value
-            .downcast_ref::<SnapcraftBuilderValue>()
+            .downcast_ref::<SnapcraftBuilderValue<'_>>()
             .unwrap();
         assert_eq!(
             builder.inner.snap(),

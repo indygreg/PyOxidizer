@@ -1644,7 +1644,7 @@ impl PythonResourceCollector {
 
     fn add_python_resource_with_locations(
         &mut self,
-        resource: &PythonResource,
+        resource: &PythonResource<'_>,
         location: &ConcreteResourceLocation,
         fallback_location: &Option<ConcreteResourceLocation>,
     ) -> Result<()> {
@@ -1801,7 +1801,7 @@ impl PythonResourceCollector {
     pub fn compile_resources(
         &self,
         compiler: &mut dyn PythonBytecodeCompiler,
-    ) -> Result<CompiledResourcesCollection> {
+    ) -> Result<CompiledResourcesCollection<'_>> {
         let mut input_resources = self.resources.clone();
         populate_parent_packages(&mut input_resources).context("populating parent packages")?;
 
@@ -1832,7 +1832,6 @@ mod tests {
     use {
         super::*,
         crate::resource::{LibraryDependency, PythonPackageDistributionResourceFlavor},
-        std::iter::FromIterator,
         tugger_file_manifest::FileEntry,
     };
 
@@ -3694,11 +3693,10 @@ mod tests {
                 is_module: true,
                 name: "foo".to_string(),
                 is_package: true,
-                in_memory_resources: Some(BTreeMap::from_iter(
-                    [("resource.txt".to_string(), FileData::Memory(vec![42]))]
+                in_memory_resources: Some([("resource.txt".to_string(), FileData::Memory(vec![42]))]
                         .iter()
                         .cloned()
-                )),
+						.collect()),
                 ..PrePackagedResource::default()
             })
         );
@@ -3714,11 +3712,10 @@ mod tests {
                 is_module: true,
                 name: Cow::Owned("foo".to_string()),
                 is_package: true,
-                in_memory_package_resources: Some(HashMap::from_iter(
-                    [(Cow::Owned("resource.txt".to_string()), Cow::Owned(vec![42]))]
+                in_memory_package_resources: Some([(Cow::Owned("resource.txt".to_string()), Cow::Owned(vec![42]))]
                         .iter()
                         .cloned()
-                )),
+						.collect()),
                 ..Resource::default()
             })
         );
@@ -3754,8 +3751,7 @@ mod tests {
                 is_module: true,
                 name: "foo".to_string(),
                 is_package: true,
-                relative_path_package_resources: Some(BTreeMap::from_iter(
-                    [(
+                relative_path_package_resources: Some([(
                         "resource.txt".to_string(),
                         (
                             PathBuf::from("prefix/foo/resource.txt"),
@@ -3764,7 +3760,7 @@ mod tests {
                     )]
                     .iter()
                     .cloned()
-                )),
+					.collect()),
                 ..PrePackagedResource::default()
             })
         );
@@ -3780,14 +3776,14 @@ mod tests {
                 is_module: true,
                 name: Cow::Owned("foo".to_string()),
                 is_package: true,
-                relative_path_package_resources: Some(HashMap::from_iter(
+                relative_path_package_resources: Some(
                     [(
                         Cow::Owned("resource.txt".to_string()),
                         Cow::Owned(PathBuf::from("prefix/foo/resource.txt")),
                     )]
                     .iter()
                     .cloned()
-                )),
+					.collect()),
                 ..Resource::default()
             })
         );
@@ -3845,11 +3841,11 @@ mod tests {
                 is_module: true,
                 name: resource.leaf_package.clone(),
                 is_package: true,
-                in_memory_resources: Some(BTreeMap::from_iter(
+                in_memory_resources: Some(
                     [(resource.relative_name.clone(), resource.data.clone())]
                         .iter()
                         .cloned()
-                )),
+						.collect()),
                 ..PrePackagedResource::default()
             })
         );
@@ -3867,8 +3863,7 @@ mod tests {
                 is_module: true,
                 name: resource.leaf_package.clone(),
                 is_package: true,
-                relative_path_package_resources: Some(BTreeMap::from_iter(
-                    [(
+                relative_path_package_resources: Some([(
                         resource.relative_name.clone(),
                         (
                             PathBuf::from("prefix")
@@ -3879,7 +3874,7 @@ mod tests {
                     )]
                     .iter()
                     .cloned()
-                )),
+					.collect()),
                 ..PrePackagedResource::default()
             })
         );
@@ -3916,11 +3911,10 @@ mod tests {
                 is_module: true,
                 name: "mypackage".to_string(),
                 is_package: true,
-                in_memory_distribution_resources: Some(BTreeMap::from_iter(
-                    [("resource.txt".to_string(), FileData::Memory(vec![42]))]
+                in_memory_distribution_resources: Some([("resource.txt".to_string(), FileData::Memory(vec![42]))]
                         .iter()
                         .cloned()
-                )),
+						.collect()),
                 ..PrePackagedResource::default()
             })
         );
@@ -3936,11 +3930,10 @@ mod tests {
                 is_module: true,
                 name: Cow::Owned("mypackage".to_string()),
                 is_package: true,
-                in_memory_distribution_resources: Some(HashMap::from_iter(
-                    [(Cow::Owned("resource.txt".to_string()), Cow::Owned(vec![42]))]
+                in_memory_distribution_resources: Some([(Cow::Owned("resource.txt".to_string()), Cow::Owned(vec![42]))]
                         .iter()
                         .cloned()
-                )),
+						.collect()),
                 ..Resource::default()
             })
         );
@@ -3976,8 +3969,7 @@ mod tests {
                 is_module: true,
                 name: "mypackage".to_string(),
                 is_package: true,
-                relative_path_distribution_resources: Some(BTreeMap::from_iter(
-                    [(
+                relative_path_distribution_resources: Some([(
                         "resource.txt".to_string(),
                         (
                             PathBuf::from("prefix/mypackage-1.0.dist-info/resource.txt"),
@@ -3986,7 +3978,7 @@ mod tests {
                     )]
                     .iter()
                     .cloned()
-                )),
+					.collect()),
                 ..PrePackagedResource::default()
             })
         );
@@ -4002,14 +3994,13 @@ mod tests {
                 is_module: true,
                 name: Cow::Owned("mypackage".to_string()),
                 is_package: true,
-                relative_path_distribution_resources: Some(HashMap::from_iter(
-                    [(
+                relative_path_distribution_resources: Some([(
                         Cow::Owned("resource.txt".to_string()),
                         Cow::Owned(PathBuf::from("prefix/mypackage-1.0.dist-info/resource.txt")),
                     )]
                     .iter()
                     .cloned()
-                )),
+					.collect()),
                 ..Resource::default()
             })
         );
@@ -4067,11 +4058,10 @@ mod tests {
                 is_module: true,
                 name: resource.package.clone(),
                 is_package: true,
-                in_memory_distribution_resources: Some(BTreeMap::from_iter(
-                    [(resource.name.clone(), resource.data.clone())]
+                in_memory_distribution_resources: Some([(resource.name.clone(), resource.data.clone())]
                         .iter()
                         .cloned()
-                )),
+						.collect()),
                 ..PrePackagedResource::default()
             })
         );
@@ -4089,14 +4079,13 @@ mod tests {
                 is_module: true,
                 name: resource.package.clone(),
                 is_package: true,
-                relative_path_distribution_resources: Some(BTreeMap::from_iter(
-                    [(
+                relative_path_distribution_resources: Some([(
                         resource.name.clone(),
                         (resource.resolve_path("prefix"), resource.data.clone())
                     )]
                     .iter()
                     .cloned()
-                )),
+					.collect()),
                 ..PrePackagedResource::default()
             })
         );

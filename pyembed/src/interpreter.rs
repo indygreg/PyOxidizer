@@ -106,7 +106,7 @@ pub struct MainPythonInterpreter<'python, 'interpreter: 'python, 'resources: 'in
     config: ResolvedOxidizedPythonInterpreterConfig<'resources>,
     interpreter_guard: Option<std::sync::MutexGuard<'interpreter, ()>>,
     raw_allocator: Option<InterpreterRawAllocator>,
-    gil: Option<GILGuard>,
+    _gil: Option<GILGuard>,
     py: Option<Python<'python>>,
     /// File to write containing list of modules when the interpreter finalizes.
     write_modules_path: Option<PathBuf>,
@@ -137,7 +137,7 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
             config,
             interpreter_guard: None,
             raw_allocator: None,
-            gil: None,
+            _gil: None,
             py: None,
             write_modules_path: None,
         };
@@ -409,7 +409,7 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
     /// Ensure the Python GIL is released.
     pub fn release_gil(&mut self) {
         self.py = None;
-        self.gil = None;
+        self._gil = None;
     }
 
     /// Ensure the Python GIL is acquired, returning a handle on the interpreter.
@@ -422,10 +422,10 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
         match self.py {
             Some(py) => py,
             None => {
-                let gil = GILGuard::acquire();
+                let _gil = GILGuard::acquire();
                 let py = unsafe { Python::assume_gil_acquired() };
 
-                self.gil = Some(gil);
+                self._gil = Some(_gil);
                 self.py = Some(py);
 
                 py
@@ -461,7 +461,7 @@ static mut REPLACED_BUILTIN_EXTENSIONS: Option<Box<Vec<pyffi::_inittab>>> = None
 /// We maintain our own shadow copy of this array and synchronize it
 /// to PyImport_Inittab during interpreter initialization so we don't
 /// call the broken APIs.
-fn set_pyimport_inittab(config: &OxidizedPythonInterpreterConfig) {
+fn set_pyimport_inittab(config: &OxidizedPythonInterpreterConfig<'_>) {
     // If this is our first time, copy the canonical source to our shadow
     // copy.
     unsafe {
@@ -522,7 +522,7 @@ fn set_pyimport_inittab(config: &OxidizedPythonInterpreterConfig) {
 /// Given a Python interpreter and a path to a directory, this will create a
 /// file in that directory named ``modules-<UUID>`` and write a ``\n`` delimited
 /// list of loaded names from ``sys.modules`` into that file.
-fn write_modules_to_path(py: Python, path: &Path) -> Result<(), &'static str> {
+fn write_modules_to_path(py: Python<'_>, path: &Path) -> Result<(), &'static str> {
     // TODO this needs better error handling all over.
 
     let sys = py

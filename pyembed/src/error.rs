@@ -15,7 +15,7 @@ use {
 ///
 /// This is meant to be called during interpreter initialization. We can't
 /// call PyErr_Print() because sys.stdout may not be available yet.
-fn format_pyerr(py: Python, err: PyErr) -> Result<String, &'static str> {
+fn format_pyerr(py: Python<'_>, err: PyErr) -> Result<String, &'static str> {
     let type_repr = err
         .ptype
         .repr(py)
@@ -63,7 +63,7 @@ impl Display for NewInterpreterError {
 impl std::error::Error for NewInterpreterError {}
 
 impl NewInterpreterError {
-    pub fn new_from_pyerr(py: Python, err: PyErr, context: &str) -> Self {
+    pub fn new_from_pyerr(py: Python<'_>, err: PyErr, context: &str) -> Self {
         match format_pyerr(py, err) {
             Ok(value) => NewInterpreterError::Dynamic(format!("during {}: {}", context, value)),
             Err(msg) => NewInterpreterError::Dynamic(format!("during {}: {}", context, msg)),

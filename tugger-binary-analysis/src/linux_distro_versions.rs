@@ -137,7 +137,7 @@ lazy_static! {
 
 /// Find the minimum Linux distribution version supporting a given version of something.
 pub fn find_minimum_distro_version(
-    version: &version_compare::Version,
+    version: &version_compare::Version<'_>,
     distro_versions: &BTreeMap<&'static str, DistroVersion>,
 ) -> Vec<String> {
     let mut res: Vec<String> = Vec::new();

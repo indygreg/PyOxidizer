@@ -886,7 +886,7 @@ pub fn write_packed_resources_v3<'a, T: AsRef<Resource<'a, u8>>, W: Write>(
     let mut module_index_length = 1;
 
     let process_field = |blob_sections: &mut BTreeMap<ResourceField, BlobSection>,
-                         resource: &Resource<u8>,
+                         resource: &Resource<'_, u8>,
                          field: ResourceField| {
         let padding = match &interior_padding {
             Some(padding) => *padding,
@@ -1187,7 +1187,7 @@ mod tests {
     #[test]
     fn test_write_empty() -> Result<()> {
         let mut data = Vec::new();
-        let resources: Vec<Resource<u8>> = Vec::new();
+        let resources: Vec<Resource<'_, u8>> = Vec::new();
         write_packed_resources_v3(&resources, &mut data, None)?;
 
         let mut expected: Vec<u8> = b"pyembed\x03".to_vec();

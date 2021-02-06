@@ -23,7 +23,7 @@ use {
 };
 
 /// Scans a filesystem path for Python resources and turns them into Python types.
-pub(crate) fn find_resources_in_path(py: Python, path: PyObject) -> PyResult<PyObject> {
+pub(crate) fn find_resources_in_path(py: Python<'_>, path: PyObject) -> PyResult<PyObject> {
     let path = pyobject_to_pathbuf(py, path)?;
 
     if !path.is_dir() {

@@ -32,7 +32,7 @@ fn canonicalize_path(path: &Path) -> Result<PathBuf, std::io::Error> {
 /// Find the root Git commit given a starting Git commit.
 ///
 /// This just walks parents until it gets to a commit without any.
-fn find_root_git_commit(commit: Commit) -> Commit {
+fn find_root_git_commit(commit: Commit<'_>) -> Commit<'_> {
     let mut current = commit;
 
     while let Ok(parent) = current.parent(0) {

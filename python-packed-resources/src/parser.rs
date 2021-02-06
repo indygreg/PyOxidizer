@@ -742,7 +742,7 @@ mod tests {
 
         let resources = load_resources(&data)
             .unwrap()
-            .collect::<Result<Vec<Resource<u8>>, &'static str>>()
+            .collect::<Result<Vec<Resource<'_, u8>>, &'static str>>()
             .unwrap();
 
         assert_eq!(resources.len(), 1);
@@ -773,7 +773,7 @@ mod tests {
         write_packed_resources_v3(&[resource1, resource2], &mut data, None).unwrap();
         let resources = load_resources(&data)
             .unwrap()
-            .collect::<Result<Vec<Resource<u8>>, &'static str>>()
+            .collect::<Result<Vec<Resource<'_, u8>>, &'static str>>()
             .unwrap();
 
         assert_eq!(resources.len(), 2);
@@ -819,7 +819,7 @@ mod tests {
         .unwrap();
         let resources = load_resources(&data)
             .unwrap()
-            .collect::<Result<Vec<Resource<u8>>, &'static str>>()
+            .collect::<Result<Vec<Resource<'_, u8>>, &'static str>>()
             .unwrap();
 
         assert_eq!(resources.len(), 2);
@@ -855,7 +855,7 @@ mod tests {
         write_packed_resources_v3(&[resource], &mut data, None).unwrap();
         let resources = load_resources(&data)
             .unwrap()
-            .collect::<Result<Vec<Resource<u8>>, &'static str>>()
+            .collect::<Result<Vec<Resource<'_, u8>>, &'static str>>()
             .unwrap();
 
         assert_eq!(resources.len(), 1);
@@ -886,7 +886,7 @@ mod tests {
         write_packed_resources_v3(&[resource], &mut data, None).unwrap();
         let resources = load_resources(&data)
             .unwrap()
-            .collect::<Result<Vec<Resource<u8>>, &'static str>>()
+            .collect::<Result<Vec<Resource<'_, u8>>, &'static str>>()
             .unwrap();
 
         assert_eq!(resources.len(), 1);
@@ -920,7 +920,7 @@ mod tests {
         write_packed_resources_v3(&[resource], &mut data, None).unwrap();
         let resources = load_resources(&data)
             .unwrap()
-            .collect::<Result<Vec<Resource<u8>>, &'static str>>()
+            .collect::<Result<Vec<Resource<'_, u8>>, &'static str>>()
             .unwrap();
 
         assert_eq!(resources.len(), 1);
@@ -954,7 +954,7 @@ mod tests {
         write_packed_resources_v3(&[resource], &mut data, None).unwrap();
         let resources = load_resources(&data)
             .unwrap()
-            .collect::<Result<Vec<Resource<u8>>, &'static str>>()
+            .collect::<Result<Vec<Resource<'_, u8>>, &'static str>>()
             .unwrap();
 
         assert_eq!(resources.len(), 1);
@@ -988,7 +988,7 @@ mod tests {
         write_packed_resources_v3(&[resource], &mut data, None).unwrap();
         let resources = load_resources(&data)
             .unwrap()
-            .collect::<Result<Vec<Resource<u8>>, &'static str>>()
+            .collect::<Result<Vec<Resource<'_, u8>>, &'static str>>()
             .unwrap();
 
         assert_eq!(resources.len(), 1);
@@ -1032,7 +1032,7 @@ mod tests {
         write_packed_resources_v3(&[resource], &mut data, None).unwrap();
         let resources = load_resources(&data)
             .unwrap()
-            .collect::<Result<Vec<Resource<u8>>, &'static str>>()
+            .collect::<Result<Vec<Resource<'_, u8>>, &'static str>>()
             .unwrap();
 
         assert_eq!(resources.len(), 1);
@@ -1061,7 +1061,7 @@ mod tests {
         write_packed_resources_v3(&[resource], &mut data, None).unwrap();
         let resources = load_resources(&data)
             .unwrap()
-            .collect::<Result<Vec<Resource<u8>>, &'static str>>()
+            .collect::<Result<Vec<Resource<'_, u8>>, &'static str>>()
             .unwrap();
 
         assert_eq!(resources.len(), 1);
@@ -1086,7 +1086,7 @@ mod tests {
         write_packed_resources_v3(&[resource], &mut data, None).unwrap();
         let resources = load_resources(&data)
             .unwrap()
-            .collect::<Result<Vec<Resource<u8>>, &'static str>>()
+            .collect::<Result<Vec<Resource<'_, u8>>, &'static str>>()
             .unwrap();
 
         assert_eq!(resources.len(), 1);
@@ -1122,7 +1122,7 @@ mod tests {
         write_packed_resources_v3(&[resource], &mut data, None).unwrap();
         let resources = load_resources(&data)
             .unwrap()
-            .collect::<Result<Vec<Resource<u8>>, &'static str>>()
+            .collect::<Result<Vec<Resource<'_, u8>>, &'static str>>()
             .unwrap();
 
         assert_eq!(resources.len(), 1);
@@ -1147,7 +1147,7 @@ mod tests {
         write_packed_resources_v3(&[resource], &mut data, None).unwrap();
         let resources = load_resources(&data)
             .unwrap()
-            .collect::<Result<Vec<Resource<u8>>, &'static str>>()
+            .collect::<Result<Vec<Resource<'_, u8>>, &'static str>>()
             .unwrap();
 
         assert_eq!(resources.len(), 1);
@@ -1176,7 +1176,7 @@ mod tests {
         write_packed_resources_v3(&[resource], &mut data, None).unwrap();
         let resources = load_resources(&data)
             .unwrap()
-            .collect::<Result<Vec<Resource<u8>>, &'static str>>()
+            .collect::<Result<Vec<Resource<'_, u8>>, &'static str>>()
             .unwrap();
 
         assert_eq!(resources.len(), 1);
@@ -1205,7 +1205,7 @@ mod tests {
         write_packed_resources_v3(&[resource], &mut data, None).unwrap();
         let resources = load_resources(&data)
             .unwrap()
-            .collect::<Result<Vec<Resource<u8>>, &'static str>>()
+            .collect::<Result<Vec<Resource<'_, u8>>, &'static str>>()
             .unwrap();
 
         assert_eq!(resources.len(), 1);
@@ -1234,7 +1234,7 @@ mod tests {
         write_packed_resources_v3(&[resource], &mut data, None).unwrap();
         let resources = load_resources(&data)
             .unwrap()
-            .collect::<Result<Vec<Resource<u8>>, &'static str>>()
+            .collect::<Result<Vec<Resource<'_, u8>>, &'static str>>()
             .unwrap();
 
         assert_eq!(resources.len(), 1);
@@ -1263,7 +1263,7 @@ mod tests {
         write_packed_resources_v3(&[resource], &mut data, None).unwrap();
         let resources = load_resources(&data)
             .unwrap()
-            .collect::<Result<Vec<Resource<u8>>, &'static str>>()
+            .collect::<Result<Vec<Resource<'_, u8>>, &'static str>>()
             .unwrap();
 
         assert_eq!(resources.len(), 1);
@@ -1298,7 +1298,7 @@ mod tests {
         write_packed_resources_v3(&[resource], &mut data, None).unwrap();
         let resources = load_resources(&data)
             .unwrap()
-            .collect::<Result<Vec<Resource<u8>>, &'static str>>()
+            .collect::<Result<Vec<Resource<'_, u8>>, &'static str>>()
             .unwrap();
 
         assert_eq!(resources.len(), 1);
@@ -1333,7 +1333,7 @@ mod tests {
         write_packed_resources_v3(&[resource], &mut data, None).unwrap();
         let resources = load_resources(&data)
             .unwrap()
-            .collect::<Result<Vec<Resource<u8>>, &'static str>>()
+            .collect::<Result<Vec<Resource<'_, u8>>, &'static str>>()
             .unwrap();
 
         assert_eq!(resources.len(), 1);
@@ -1419,7 +1419,7 @@ mod tests {
         write_packed_resources_v3(&[resource], &mut data, None).unwrap();
         let resources = load_resources(&data)
             .unwrap()
-            .collect::<Result<Vec<Resource<u8>>, &'static str>>()
+            .collect::<Result<Vec<Resource<'_, u8>>, &'static str>>()
             .unwrap();
 
         assert_eq!(resources.len(), 1);
@@ -1532,7 +1532,7 @@ mod tests {
 
     #[test]
     fn test_fields_mix() {
-        let resources: Vec<Resource<u8>> = vec![
+        let resources: Vec<Resource<'_, u8>> = vec![
             Resource {
                 flavor: ResourceFlavor::Module,
                 name: Cow::from("foo"),
@@ -1551,7 +1551,7 @@ mod tests {
         write_packed_resources_v3(&resources, &mut data, None).unwrap();
         let loaded = load_resources(&data)
             .unwrap()
-            .collect::<Result<Vec<Resource<u8>>, &'static str>>()
+            .collect::<Result<Vec<Resource<'_, u8>>, &'static str>>()
             .unwrap();
 
         assert_eq!(resources, loaded);

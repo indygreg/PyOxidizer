@@ -130,6 +130,9 @@ def make_exe(dist):
 
     # Use jemalloc as Python's memory allocator
     # python_config.raw_allocator = "jemalloc"
+	
+    # Use mimalloc as Python's memory allocator
+    # python_config.raw_allocator = "gmimalloc"
 
     # Use the system allocator as Python's memory allocator.
     # python_config.raw_allocator = "system"

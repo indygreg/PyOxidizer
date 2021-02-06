@@ -135,12 +135,12 @@ impl<'a> ControlParagraph<'a> {
     }
 
     /// Obtain the first field with a given name in this paragraph.
-    pub fn get_field(&self, name: &str) -> Option<&ControlField> {
+    pub fn get_field(&self, name: &str) -> Option<&ControlField<'_>> {
         self.fields.iter().find(|f| f.name == name)
     }
 
     /// Obtain a mutable reference to the first field with a given name.
-    pub fn get_field_mut(&mut self, name: &str) -> Option<&'a mut ControlField> {
+    pub fn get_field_mut(&mut self, name: &str) -> Option<&'a mut ControlField<'_>> {
         self.fields.iter_mut().find(|f| f.name == name)
     }
 

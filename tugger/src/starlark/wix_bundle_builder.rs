@@ -179,12 +179,12 @@ starlark_module! { wix_bundle_builder_module =>
     }
 
     WiXBundleBuilder.add_condition(this, condition: String, message: String) {
-        let mut this = this.downcast_mut::<WiXBundleBuilderValue>().unwrap().unwrap();
+        let mut this = this.downcast_mut::<WiXBundleBuilderValue<'_>>().unwrap().unwrap();
         this.add_condition(condition, message)
     }
 
     WiXBundleBuilder.add_vc_redistributable(env env, this, platform: String) {
-        let mut this = this.downcast_mut::<WiXBundleBuilderValue>().unwrap().unwrap();
+        let mut this = this.downcast_mut::<WiXBundleBuilderValue<'_>>().unwrap().unwrap();
         this.add_vc_redistributable(env, platform)
     }
 
@@ -194,12 +194,12 @@ starlark_module! { wix_bundle_builder_module =>
         display_internal_ui: bool = false,
         install_condition = NoneType::None
     ) {
-        let mut this = this.downcast_mut::<WiXBundleBuilderValue>().unwrap().unwrap();
+        let mut this = this.downcast_mut::<WiXBundleBuilderValue<'_>>().unwrap().unwrap();
         this.add_wix_msi_builder(builder, display_internal_ui, install_condition)
     }
 
     WiXBundleBuilder.build(env env, this, target: String) {
-        let this = this.downcast_ref::<WiXBundleBuilderValue>().unwrap();
+        let this = this.downcast_ref::<WiXBundleBuilderValue<'_>>().unwrap();
         this.build(env, target)
     }
 }
@@ -215,7 +215,7 @@ mod tests {
         let v = env.eval("WiXBundleBuilder('prefix', 'name', '0.1', 'manufacturer')")?;
         assert_eq!(v.get_type(), "WiXBundleBuilder");
 
-        let builder = v.downcast_ref::<WiXBundleBuilderValue>().unwrap();
+        let builder = v.downcast_ref::<WiXBundleBuilderValue<'_>>().unwrap();
         assert_eq!(builder.id_prefix, "prefix");
         assert_eq!(builder.target_triple, env!("HOST"));
 

@@ -490,7 +490,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         logger: &slog::Logger,
         verbose: bool,
         args: &[String],
-    ) -> Result<Vec<PythonResource>> {
+    ) -> Result<Vec<PythonResource<'_>>> {
         let resources = pip_download(
             logger,
             &*self.host_distribution,
@@ -513,7 +513,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         verbose: bool,
         install_args: &[String],
         extra_envs: &HashMap<String, String>,
-    ) -> Result<Vec<PythonResource>> {
+    ) -> Result<Vec<PythonResource<'_>>> {
         let resources = pip_install(
             logger,
             &*self.target_distribution,
@@ -536,7 +536,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         _logger: &slog::Logger,
         path: &Path,
         packages: &[String],
-    ) -> Result<Vec<PythonResource>> {
+    ) -> Result<Vec<PythonResource<'_>>> {
         let resources = find_resources(
             &*self.target_distribution,
             self.python_packaging_policy(),
@@ -564,7 +564,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         &mut self,
         _logger: &slog::Logger,
         path: &Path,
-    ) -> Result<Vec<PythonResource>> {
+    ) -> Result<Vec<PythonResource<'_>>> {
         let resources = read_virtualenv(
             &*self.target_distribution,
             self.python_packaging_policy(),
@@ -585,7 +585,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         verbose: bool,
         extra_envs: &HashMap<String, String>,
         extra_global_arguments: &[String],
-    ) -> Result<Vec<PythonResource>> {
+    ) -> Result<Vec<PythonResource<'_>>> {
         let resources = setup_py_install(
             logger,
             &*self.target_distribution,
@@ -606,7 +606,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
 
     fn add_distribution_resources(
         &mut self,
-        callback: Option<ResourceAddCollectionContextCallback>,
+        callback: Option<ResourceAddCollectionContextCallback<'_>>,
     ) -> Result<()> {
         let core_component = self
             .target_distribution
@@ -820,7 +820,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         &self,
         logger: &slog::Logger,
         opt_level: &str,
-    ) -> Result<EmbeddedPythonContext> {
+    ) -> Result<EmbeddedPythonContext<'_>> {
         let mut file_seen = false;
         for module in self.resources_collector.find_dunder_file()? {
             file_seen = true;
@@ -988,8 +988,6 @@ pub mod tests {
         crate::testutil::*,
         lazy_static::lazy_static,
         python_packaging::{location::ConcreteResourceLocation, policy::ExtensionModuleFilter},
-        std::collections::BTreeSet,
-        std::iter::FromIterator,
         std::ops::DerefMut,
         tugger_licensing::LicensedComponents,
     };
@@ -2593,7 +2591,7 @@ pub mod tests {
             // All distribution extensions are built-ins in static Windows
             // distributions.
             for name in builder.target_distribution.extension_modules.keys() {
-                assert!(builtin_names.contains(&name));
+                assert!(builder.extension_build_contexts.keys().any(|x| x == name));
             }
         }
 

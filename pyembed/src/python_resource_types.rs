@@ -77,7 +77,7 @@ py_class!(pub class PythonModuleSource |py| {
 });
 
 impl PythonModuleSource {
-    pub fn new(py: Python, resource: RawPythonModuleSource) -> PyResult<Self> {
+    pub fn new(py: Python<'_>, resource: RawPythonModuleSource) -> PyResult<Self> {
         PythonModuleSource::create_instance(py, RefCell::new(resource))
     }
 
@@ -157,7 +157,7 @@ py_class!(pub class PythonModuleBytecode |py| {
 });
 
 impl PythonModuleBytecode {
-    pub fn new(py: Python, resource: RawPythonModuleBytecode) -> PyResult<Self> {
+    pub fn new(py: Python<'_>, resource: RawPythonModuleBytecode) -> PyResult<Self> {
         PythonModuleBytecode::create_instance(py, RefCell::new(resource))
     }
 
@@ -224,7 +224,7 @@ py_class!(pub class PythonPackageResource |py| {
 });
 
 impl PythonPackageResource {
-    pub fn new(py: Python, resource: RawPythonPackageResource) -> PyResult<Self> {
+    pub fn new(py: Python<'_>, resource: RawPythonPackageResource) -> PyResult<Self> {
         PythonPackageResource::create_instance(py, RefCell::new(resource))
     }
 
@@ -305,7 +305,7 @@ py_class!(pub class PythonPackageDistributionResource |py| {
 });
 
 impl PythonPackageDistributionResource {
-    pub fn new(py: Python, resource: RawPythonPackageDistributionResource) -> PyResult<Self> {
+    pub fn new(py: Python<'_>, resource: RawPythonPackageDistributionResource) -> PyResult<Self> {
         PythonPackageDistributionResource::create_instance(py, RefCell::new(resource))
     }
 
@@ -331,7 +331,7 @@ py_class!(pub class PythonExtensionModule |py| {
 });
 
 impl PythonExtensionModule {
-    pub fn new(py: Python, resource: RawPythonExtensionModule) -> PyResult<Self> {
+    pub fn new(py: Python<'_>, resource: RawPythonExtensionModule) -> PyResult<Self> {
         PythonExtensionModule::create_instance(py, RefCell::new(resource))
     }
 

@@ -226,7 +226,7 @@ pub fn find_resources(
     Ok(())
 }
 
-fn print_resource(r: &PythonResource) {
+fn print_resource(r: &PythonResource<'_>) {
     match r {
         PythonResource::ModuleSource(m) => println!(
             "PythonModuleSource {{ name: {}, is_package: {}, is_stdlib: {}, is_test: {} }}",

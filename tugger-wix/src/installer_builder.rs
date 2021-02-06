@@ -62,7 +62,7 @@ impl WiXInstallerBuilder {
     }
 
     /// Obtain variables that will be used for `light` invocations.
-    pub fn variables(&self) -> std::collections::btree_map::Iter<String, Option<String>> {
+    pub fn variables(&self) -> std::collections::btree_map::Iter<'_, String, Option<String>> {
         self.variables.iter()
     }
 

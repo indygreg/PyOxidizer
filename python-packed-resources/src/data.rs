@@ -250,7 +250,7 @@ impl TryFrom<u8> for ResourceField {
 /// owned data. This allows the use of a single type to both hold
 /// data or reference it from some other location.
 #[derive(Clone, Debug, PartialEq)]
-pub struct Resource<'a, X: 'a>
+pub struct Resource<'a, X>
 where
     [X]: ToOwned<Owned = Vec<X>>,
 {

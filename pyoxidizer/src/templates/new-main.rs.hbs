@@ -24,7 +24,7 @@ fn main() {
         // Construct a new Python interpreter using that config, handling any errors
         // from construction.
         match MainPythonInterpreter::new(config) {
-            Ok(mut interp) => {
+            Ok(interp) => {
                 // And run it using the default run configuration as specified by the
                 // configuration. This calls `Py_RunMain()`, which finalizes the
                 // Python interpreter.

@@ -31,15 +31,15 @@ use {
 
 /// Pip requirements file for bootstrapping packaging tools.
 pub const PIP_BOOTSTRAP_REQUIREMENTS: &str = indoc::indoc!(
-    "wheel==0.34.2 \\
-        --hash=sha256:8788e9155fe14f54164c1b9eb0a319d98ef02c160725587ad60f14ddc57b6f96 \\
-        --hash=sha256:df277cb51e61359aba502208d680f90c0493adec6f0e848af94948778aed386e
-    pip==20.0.2 \\
-        --hash=sha256:4ae14a42d8adba3205ebeb38aa68cfc0b6c346e1ae2e699a0b3bad4da19cef5c \\\
-         --hash=sha256:7db0c8ea4c7ea51c8049640e8e6e7fde949de672bfa4949920675563a5a6967f
-    setuptools==45.1.0 \\
-        --hash=sha256:68e7fd3508687f94367f1aa090a3ed921cd045a60b73d8b0aa1f305199a0ca28 \\
-        --hash=sha256:91f72d83602a6e5e4a9e4fe296e27185854038d7cbda49dcd7006c4d3b3b89d5"
+    "wheel==0.36.2 \\
+        --hash=sha256:78b5b185f0e5763c26ca1e324373aadd49182ca90e825f7853f4b2509215dc0e \\
+        --hash=sha256:e11eefd162658ea59a60a0f6c7d493a7190ea4b9a85e335b33489d9f17e0245e
+    pip==21.0.1 \\
+        --hash=sha256:37fd50e056e2aed635dec96594606f0286640489b0db0ce7607f7e51890372d5 \\\
+         --hash=sha256:99bbde183ec5ec037318e774b0d8ae0a64352fe53b2c7fd630be1d07e94f41e5
+    setuptools==53.0.0 \\
+        --hash=sha256:0e86620d658c5ca87a71a283bd308fcaeb4c33e17792ef6f081aec17c171347f \\
+        --hash=sha256:1b18ef17d74ba97ac9c0e4b4265f123f07a8ae85d9cd093949fa056d3eeeead5"
 );
 
 /// Bootstrap Python packaging tools given a Python executable.
@@ -524,7 +524,7 @@ mod tests {
         let logger = get_logger()?;
         let distribution = get_default_distribution()?;
 
-        let resources: Vec<PythonResource> = pip_install(
+        let resources: Vec<PythonResource<'_>> = pip_install(
             &logger,
             distribution.deref(),
             &distribution.create_packaging_policy()?,
@@ -548,7 +548,7 @@ mod tests {
         let distribution = get_default_dynamic_distribution()?;
         let policy = distribution.create_packaging_policy()?;
 
-        let resources: Vec<PythonResource> = pip_install(
+        let resources: Vec<PythonResource<'_>> = pip_install(
             &logger,
             distribution.deref(),
             &policy,
@@ -564,7 +564,7 @@ mod tests {
                 PythonResource::ExtensionModule { .. } => true,
                 _ => false,
             })
-            .collect::<Vec<&PythonResource>>();
+            .collect::<Vec<&PythonResource<'_>>>();
 
         assert_eq!(ems.len(), 1);
         assert_eq!(ems[0].full_name(), "_cffi_backend");
@@ -613,20 +613,19 @@ mod tests {
 
             assert_eq!(
                 full_names,
-                BTreeSet::from_iter(
-                    [
-                        "zstandard",
-                        "zstandard.cffi",
-                        "zstandard:LICENSE",
-                        "zstandard:METADATA",
-                        "zstandard:RECORD",
-                        "zstandard:WHEEL",
-                        "zstandard:top_level.txt",
-                        "zstd"
-                    ]
-                    .iter()
-                    .map(|x| x.to_string())
-                )
+                [
+                    "zstandard",
+                    "zstandard.cffi",
+                    "zstandard:LICENSE",
+                    "zstandard:METADATA",
+                    "zstandard:RECORD",
+                    "zstandard:WHEEL",
+                    "zstandard:top_level.txt",
+                    "zstd"
+                ]
+                .iter()
+                .map(|x| x.to_string())
+                .collect()
             );
 
             let extensions = zstandard_resources

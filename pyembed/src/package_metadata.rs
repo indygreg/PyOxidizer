@@ -44,7 +44,7 @@ py_class!(class OxidizedDistribution |py| {
 });
 
 impl OxidizedDistribution {
-    fn read_text_impl(&self, py: Python, filename: &PyString) -> PyResult<PyObject> {
+    fn read_text_impl(&self, py: Python<'_>, filename: &PyString) -> PyResult<PyObject> {
         let state: &Arc<ImporterState> = self.state(py);
         let package: &str = self.package(py);
         let resources_state = state.get_resources_state();
@@ -82,7 +82,7 @@ impl OxidizedDistribution {
     ///
     /// The returned object will have keys that name the various bits of
     /// metadata.
-    fn metadata_impl(&self, py: Python) -> PyResult<PyObject> {
+    fn metadata_impl(&self, py: Python<'_>) -> PyResult<PyObject> {
         let state: &Arc<ImporterState> = self.state(py);
         let package: &str = self.package(py);
         let resources_state = state.get_resources_state();
@@ -118,7 +118,7 @@ impl OxidizedDistribution {
         email.call(py, "message_from_bytes", (data,), None)
     }
 
-    fn version_impl(&self, py: Python) -> PyResult<PyObject> {
+    fn version_impl(&self, py: Python<'_>) -> PyResult<PyObject> {
         let distribution = self.as_object();
 
         let metadata = distribution.getattr(py, "metadata")?;
@@ -126,7 +126,7 @@ impl OxidizedDistribution {
         metadata.get_item(py, "Version")
     }
 
-    fn entry_points_impl(&self, py: Python) -> PyResult<PyObject> {
+    fn entry_points_impl(&self, py: Python<'_>) -> PyResult<PyObject> {
         let importlib_metadata = py.import("importlib.metadata")?;
 
         let entry_point = importlib_metadata.get(py, "EntryPoint")?;
@@ -136,11 +136,11 @@ impl OxidizedDistribution {
         entry_point.call_method(py, "_from_text", (text,), None)
     }
 
-    fn files_impl(&self, py: Python) -> PyResult<PyObject> {
+    fn files_impl(&self, py: Python<'_>) -> PyResult<PyObject> {
         Err(PyErr::new::<NotImplementedError, _>(py, NoArgs))
     }
 
-    fn requires_impl(&self, py: Python) -> PyResult<PyObject> {
+    fn requires_impl(&self, py: Python<'_>) -> PyResult<PyObject> {
         let requires: PyObject =
             self.metadata_impl(py)?
                 .call_method(py, "get_all", ("Requires-Dist",), None)?;
@@ -174,7 +174,7 @@ impl OxidizedDistribution {
 
 /// Find package metadata distributions given search criteria.
 pub(crate) fn find_distributions(
-    py: Python,
+    py: Python<'_>,
     state: Arc<ImporterState>,
     name: Option<PyObject>,
     _path: Option<PyObject>,

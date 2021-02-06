@@ -10,7 +10,7 @@ use std::{
     path::{Path, PathBuf},
 };
 //This library provides a reliable implementation of remove_dir_all for Windows. For Unix systems, it re-exports std::fs::remove_dir_all.
-extern crate remove_dir_all;
+
 use remove_dir_all::remove_dir_all;
 
 #[cfg(unix)]
@@ -346,8 +346,7 @@ impl FileManifest {
     pub fn resolve_directories(&self, relative_to: impl AsRef<Path>) -> Vec<PathBuf> {
         let relative_to = relative_to.as_ref();
 
-        let mut dirs = Vec::new();
-        dirs.push(relative_to.to_path_buf());
+        let mut dirs = vec![relative_to.to_path_buf()];
 
         for p in self.relative_directories() {
             dirs.push(relative_to.join(p));
@@ -367,7 +366,7 @@ impl FileManifest {
     }
 
     /// Obtain an iterator over paths and file entries in this manifest.
-    pub fn iter_entries(&self) -> std::collections::btree_map::Iter<PathBuf, FileEntry> {
+    pub fn iter_entries(&self) -> std::collections::btree_map::Iter<'_, PathBuf, FileEntry> {
         self.files.iter()
     }
 
@@ -464,7 +463,7 @@ impl FileManifest {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, std::iter::FromIterator};
+    use super::*;
 
     #[test]
     fn test_add_file_entry() -> Result<(), FileManifestError> {
@@ -616,30 +615,38 @@ mod tests {
 
         assert_eq!(
             entries.get(&None).unwrap(),
-            &BTreeMap::from_iter([(OsStr::new("root.txt"), &c),].iter().cloned())
+            &[(OsStr::new("root.txt"), &c),].iter().cloned().collect()
         );
         assert_eq!(
             entries.get(&Some(Path::new("dir0"))).unwrap(),
-            &BTreeMap::from_iter([(OsStr::new("dir0_file0.txt"), &c)].iter().cloned())
+            &[(OsStr::new("dir0_file0.txt"), &c)]
+                .iter()
+                .cloned()
+                .collect()
         );
         assert_eq!(
             entries.get(&Some(Path::new("dir0/child0"))).unwrap(),
-            &BTreeMap::from_iter(
-                [
-                    (OsStr::new("dir0_child0_file0.txt"), &c),
-                    (OsStr::new("dir0_child0_file1.txt"), &c)
-                ]
-                .iter()
-                .cloned()
-            )
+            &[
+                (OsStr::new("dir0_child0_file0.txt"), &c),
+                (OsStr::new("dir0_child0_file1.txt"), &c)
+            ]
+            .iter()
+            .cloned()
+            .collect()
         );
         assert_eq!(
             entries.get(&Some(Path::new("dir0/child1"))).unwrap(),
-            &BTreeMap::from_iter([(OsStr::new("dir0_child1_file0.txt"), &c)].iter().cloned())
+            &[(OsStr::new("dir0_child1_file0.txt"), &c)]
+                .iter()
+                .cloned()
+                .collect()
         );
         assert_eq!(
             entries.get(&Some(Path::new("dir1/child0"))).unwrap(),
-            &BTreeMap::from_iter([(OsStr::new("dir1_child0_file0.txt"), &c)].iter().cloned())
+            &[(OsStr::new("dir1_child0_file0.txt"), &c)]
+                .iter()
+                .cloned()
+                .collect()
         );
 
         Ok(())

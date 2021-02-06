@@ -81,7 +81,7 @@ lazy_static! {
 /// This is the primary interface to use for initiating the load of a library from memory.
 /// It handles setting up user data and dispatching with the appropriate hooks set.
 pub(crate) unsafe fn load_library_memory(
-    resources_state: &PythonResourcesState<u8>,
+    resources_state: &PythonResourcesState<'_, u8>,
     data: &[u8],
 ) -> *const c_void {
     MemoryLoadLibraryEx(
@@ -92,7 +92,7 @@ pub(crate) unsafe fn load_library_memory(
         custom_load_library,
         custom_get_proc_address,
         custom_free_library,
-        resources_state as *const PythonResourcesState<u8> as *mut c_void,
+        resources_state as *const PythonResourcesState<'_, u8> as *mut c_void,
     )
 }
 
@@ -154,7 +154,7 @@ extern "C" fn custom_load_library(filename: LPCSTR, user_data: *mut c_void) -> H
 
     // Look for a loadable memory module in our resources data structure.
     let resources_state = unsafe {
-        (user_data as *const PythonResourcesState<u8>)
+        (user_data as *const PythonResourcesState<'_, u8>)
             .as_ref()
             .unwrap()
     };

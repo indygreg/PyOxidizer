@@ -42,7 +42,7 @@ fn run_py_test(test_filename: &str) -> Result<()> {
     }
 }
 
-fn get_importer(interp: &mut MainPythonInterpreter) -> Result<PyObject> {
+fn get_importer(interp: &mut MainPythonInterpreter<'_, '_, '_>) -> Result<PyObject> {
     let py = interp.acquire_gil();
 
     let sys = py.import("sys").unwrap();

@@ -423,7 +423,7 @@ impl PythonPackagingPolicy {
     /// to a `PythonResourceCollector` given this policy.
     pub fn derive_add_collection_context(
         &self,
-        resource: &PythonResource,
+        resource: &PythonResource<'_>,
     ) -> PythonResourceAddCollectionContext {
         let include = self.filter_python_resource(resource);
 
@@ -458,7 +458,7 @@ impl PythonPackagingPolicy {
     /// resource meets the inclusion requirements for the current policy.
     ///
     /// Returns true if the resource should be included, false otherwise.
-    fn filter_python_resource(&self, resource: &PythonResource) -> bool {
+    fn filter_python_resource(&self, resource: &PythonResource<'_>) -> bool {
         match resource {
             PythonResource::File(_) => {
                 if !self.include_file_resources {

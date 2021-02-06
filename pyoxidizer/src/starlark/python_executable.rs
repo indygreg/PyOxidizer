@@ -773,7 +773,7 @@ impl PythonExecutableValue {
             product_manufacturer,
         )?;
         let mut bundle_builder = bundle_builder_value
-            .downcast_mut::<WiXBundleBuilderValue>()
+            .downcast_mut::<WiXBundleBuilderValue<'_>>()
             .unwrap()
             .unwrap();
 
@@ -1305,7 +1305,7 @@ mod tests {
         env.eval("def modify(msi):\n msi.package_description = 'description'\n")?;
         let builder_value = env.eval("exe.to_wix_bundle_builder('id_prefix', 'product_name', '0.1', 'manufacturer', msi_builder_callback = modify)")?;
         let builder = builder_value
-            .downcast_ref::<WiXBundleBuilderValue>()
+            .downcast_ref::<WiXBundleBuilderValue<'_>>()
             .unwrap();
 
         assert_eq!(builder.build_msis.len(), 1);

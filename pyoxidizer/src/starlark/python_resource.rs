@@ -106,7 +106,7 @@ pub trait ResourceCollectionContext {
     fn add_collection_context_mut(&mut self) -> &mut Option<PythonResourceAddCollectionContext>;
 
     /// Cast this instance to a `PythonResource`.
-    fn as_python_resource(&self) -> PythonResource;
+    fn as_python_resource(&self) -> PythonResource<'_>;
 
     /// Obtains the Starlark object attributes that are defined by the add collection context.
     fn add_collection_context_attrs(&self) -> Vec<&'static str> {
@@ -680,7 +680,7 @@ impl TypedValue for FileValue {
 }
 
 /// Whether a `PythonResource` can be converted to a Starlark value.
-pub fn is_resource_starlark_compatible(resource: &PythonResource) -> bool {
+pub fn is_resource_starlark_compatible(resource: &PythonResource<'_>) -> bool {
     match resource {
         PythonResource::ModuleSource(_) => true,
         PythonResource::PackageResource(_) => true,
@@ -697,7 +697,7 @@ pub fn is_resource_starlark_compatible(resource: &PythonResource) -> bool {
 pub fn python_resource_to_value(
     type_values: &TypeValues,
     call_stack: &mut CallStack,
-    resource: &PythonResource,
+    resource: &PythonResource<'_>,
     policy: &PythonPackagingPolicyValue,
 ) -> ValueResult {
     match resource {

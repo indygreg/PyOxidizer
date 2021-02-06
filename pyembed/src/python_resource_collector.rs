@@ -56,7 +56,7 @@ py_class!(pub class OxidizedResourceCollector |py| {
 });
 
 impl OxidizedResourceCollector {
-    pub fn new(py: Python, allowed_locations: Vec<String>) -> PyResult<Self> {
+    pub fn new(py: Python<'_>, allowed_locations: Vec<String>) -> PyResult<Self> {
         let allowed_locations = allowed_locations
             .iter()
             .map(|location| AbstractResourceLocation::try_from(location.as_str()))
@@ -80,7 +80,7 @@ impl OxidizedResourceCollector {
         OxidizedResourceCollector::create_instance(py, RefCell::new(collector))
     }
 
-    fn allowed_locations_impl(&self, py: Python) -> PyResult<PyObject> {
+    fn allowed_locations_impl(&self, py: Python<'_>) -> PyResult<PyObject> {
         let values = self
             .collector(py)
             .borrow()
@@ -92,7 +92,7 @@ impl OxidizedResourceCollector {
         Ok(PyList::new(py, &values).into_object())
     }
 
-    fn add_in_memory_impl(&self, py: Python, resource: PyObject) -> PyResult<PyObject> {
+    fn add_in_memory_impl(&self, py: Python<'_>, resource: PyObject) -> PyResult<PyObject> {
         let mut collector = self.collector(py).borrow_mut();
         let typ = resource.get_type(py);
 
@@ -178,7 +178,7 @@ impl OxidizedResourceCollector {
 
     fn add_filesystem_relative_impl(
         &self,
-        py: Python,
+        py: Python<'_>,
         prefix: String,
         resource: PyObject,
     ) -> PyResult<PyObject> {
@@ -259,7 +259,7 @@ impl OxidizedResourceCollector {
         }
     }
 
-    fn oxidize_impl(&self, py: Python, python_exe: Option<PyObject>) -> PyResult<PyObject> {
+    fn oxidize_impl(&self, py: Python<'_>, python_exe: Option<PyObject>) -> PyResult<PyObject> {
         let python_exe = match python_exe {
             Some(p) => p,
             None => {
@@ -285,7 +285,7 @@ impl OxidizedResourceCollector {
             )
         })?;
 
-        let prepared: CompiledResourcesCollection = collector
+        let prepared: CompiledResourcesCollection<'_> = collector
             .compile_resources(&mut compiler)
             .context("compiling resources")
             .map_err(|e| PyErr::new::<ValueError, _>(py, format!("error oxidizing: {:?}", e)))?;

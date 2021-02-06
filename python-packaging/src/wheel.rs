@@ -126,7 +126,7 @@ impl WheelArchive {
     }
 
     /// Obtain the first header value from the archive metadata file.
-    pub fn archive_metadata_header(&self, header: &str) -> Result<Cow<str>> {
+    pub fn archive_metadata_header(&self, header: &str) -> Result<Cow<'_, str>> {
         let metadata = self.archive_metadata()?;
 
         Ok(Cow::Owned(
@@ -138,7 +138,7 @@ impl WheelArchive {
     }
 
     /// Obtain values of all headers from the archive metadata file.
-    pub fn archive_metadata_headers(&self, header: &str) -> Result<Vec<Cow<str>>> {
+    pub fn archive_metadata_headers(&self, header: &str) -> Result<Vec<Cow<'_, str>>> {
         let metadata = self.archive_metadata()?;
 
         Ok(metadata
@@ -149,12 +149,12 @@ impl WheelArchive {
     }
 
     /// Obtain the version number of the wheel specification used to build this wheel.
-    pub fn wheel_version(&self) -> Result<Cow<str>> {
+    pub fn wheel_version(&self) -> Result<Cow<'_, str>> {
         self.archive_metadata_header("Wheel-Version")
     }
 
     /// Obtain the generator of the wheel archive.
-    pub fn wheel_generator(&self) -> Result<Cow<str>> {
+    pub fn wheel_generator(&self) -> Result<Cow<'_, str>> {
         self.archive_metadata_header("Generator")
     }
 
@@ -164,17 +164,17 @@ impl WheelArchive {
     }
 
     /// `Tag` values for the wheel archive.
-    pub fn tags(&self) -> Result<Vec<Cow<str>>> {
+    pub fn tags(&self) -> Result<Vec<Cow<'_, str>>> {
         self.archive_metadata_headers("Tag")
     }
 
     /// `Build` identifier for the wheel archive.
-    pub fn build(&self) -> Result<Cow<str>> {
+    pub fn build(&self) -> Result<Cow<'_, str>> {
         self.archive_metadata_header("Build")
     }
 
     /// `Install-Paths-To` values.
-    pub fn install_paths_to(&self) -> Result<Vec<Cow<str>>> {
+    pub fn install_paths_to(&self) -> Result<Vec<Cow<'_, str>>> {
         self.archive_metadata_headers("Install-Paths-To")
     }
 

@@ -508,7 +508,7 @@ enum VersionBump {
     Patch,
 }
 
-fn command_release(repo_root: &Path, args: &ArgMatches) -> Result<()> {
+fn command_release(repo_root: &Path, args: &ArgMatches<'_>) -> Result<()> {
     let version_bump = if args.is_present("patch") {
         VersionBump::Patch
     } else {
@@ -701,7 +701,7 @@ fn ensure_pyembed_license_current(repo_root: &Path) -> Result<()> {
     }
 }
 
-fn command_generate_pyembed_license(repo_root: &Path, _args: &ArgMatches) -> Result<()> {
+fn command_generate_pyembed_license(repo_root: &Path, _args: &ArgMatches<'_>) -> Result<()> {
     print!("{}", generate_pyembed_license(repo_root)?);
 
     Ok(())
