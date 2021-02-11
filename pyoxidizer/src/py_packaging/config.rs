@@ -343,6 +343,7 @@ impl PyembedPythonInterpreterConfig {
             optional_vec_string_to_string(&self.config.x_options),
             match self.raw_allocator {
                 MemoryAllocatorBackend::Mimalloc => "pyembed::PythonRawAllocator::mimalloc()",
+                MemoryAllocatorBackend::Snmalloc => "pyembed::PythonRawAllocator::snmalloc()",
                 MemoryAllocatorBackend::Jemalloc => "pyembed::PythonRawAllocator::jemalloc()",
                 MemoryAllocatorBackend::Rust => "pyembed::PythonRawAllocator::rust()",
                 MemoryAllocatorBackend::System => "pyembed::PythonRawAllocator::system()",

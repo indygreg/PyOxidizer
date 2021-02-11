@@ -199,6 +199,11 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
                         make_raw_rust_memory_allocator(),
                     ))
                 }
+                MemoryAllocatorBackend::Snmalloc => {
+                    self.raw_allocator = Some(InterpreterRawAllocator::from(
+                        make_raw_rust_memory_allocator(),
+                    ))
+                }
                 MemoryAllocatorBackend::Mimalloc => {
                     self.raw_allocator = Some(InterpreterRawAllocator::from(raw_mimallocator()));
                 }

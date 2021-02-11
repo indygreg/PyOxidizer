@@ -5,14 +5,18 @@
 //! Custom Python memory allocators.
 #[cfg(feature = "mimalloc")]
 use {libmimalloc_sys as mimallocffi, mimalloc::MiMalloc, std::ptr::null_mut};
-
-#[cfg(feature = "jemalloc-sys")]
-use {jemalloc_sys as jemallocffi, jemallocator::Jemalloc, std::ptr::null_mut};
-
 #[cfg(feature = "mimalloc")]
 #[global_allocator]
 static GLOBAL: MiMalloc = MiMalloc;
 
+#[cfg(feature = "snmalloc-rs")]
+use snmalloc_rs::SnMalloc;
+#[cfg(feature = "snmalloc-rs")]
+#[global_allocator]
+static GLOBAL: SnMalloc = SnMalloc;
+
+#[cfg(feature = "jemalloc-sys")]
+use {jemalloc_sys as jemallocffi, jemallocator::Jemalloc, std::ptr::null_mut};
 #[cfg(feature = "jemalloc-sys")]
 #[global_allocator]
 static GLOBAL: Jemalloc = Jemalloc;

@@ -790,8 +790,7 @@ starlark_module! { snapcraft_module =>
 #[cfg(test)]
 mod tests {
     use {
-        super::*, crate::starlark::testutil::*, anyhow::Result,
-        tugger_file_manifest::FileManifest,
+        super::*, crate::starlark::testutil::*, anyhow::Result, tugger_file_manifest::FileManifest,
     };
 
     #[test]
@@ -833,10 +832,16 @@ mod tests {
                 common_id: Some("common_id".into()),
                 daemon: Some(Daemon::Oneshot),
                 desktop: Some("desktop".into()),
-                environment: [("env0".into(), "env0_value".into())].iter().cloned().collect(),
+                environment: [("env0".into(), "env0_value".into())]
+                    .iter()
+                    .cloned()
+                    .collect(),
                 extensions: vec!["ext0".into(), "ext1".into()],
                 listen_stream: Some("listen_stream".into()),
-                passthrough: [("key0".into(), "key0_value".into())].iter().cloned().collect(),
+                passthrough: [("key0".into(), "key0_value".into())]
+                    .iter()
+                    .cloned()
+                    .collect(),
                 plugs: vec!["plug0".into(), "plug1".into()],
                 post_stop_command: Some("post_stop_command".into()),
                 restart_condition: Some(RestartCondition::OnFailure),
@@ -845,7 +850,10 @@ mod tests {
                 stop_timeout: Some("stop_timeout".into()),
                 timer: Some("timer".into()),
                 socket_mode: Some(42),
-                socket: [("sock0".into(), "sock0_value".into())].iter().cloned().collect(),
+                socket: [("sock0".into(), "sock0_value".into())]
+                    .iter()
+                    .cloned()
+                    .collect(),
             }
         );
 
@@ -895,10 +903,13 @@ mod tests {
                 build_packages: vec!["p0".into(), "p1".into()],
                 build_snaps: vec!["snap0".into(), "snap1".into()],
                 filesets: [("set0".into(), vec!["val0".into(), "val1".into()])]
-                        .iter()
-                        .cloned()
-						.collect(),
-                organize: [("org0".into(), "org0_value".into())].iter().cloned().collect(),
+                    .iter()
+                    .cloned()
+                    .collect(),
+                organize: [("org0".into(), "org0_value".into())]
+                    .iter()
+                    .cloned()
+                    .collect(),
                 override_build: Some("build".into()),
                 override_prime: Some("prime".into()),
                 override_pull: Some("pull".into()),
@@ -968,22 +979,25 @@ mod tests {
         expected.grade = Some(Grade::Stable);
         expected.icon = Some("icon".into());
         expected.license = Some("license".into());
-        expected.passthrough =[("key0".into(), "value0".into())].iter().cloned().collect();
-        expected.parts =[("part0".into(), SnapPart::default())].iter().cloned().collect();
+        expected.passthrough = [("key0".into(), "value0".into())].iter().cloned().collect();
+        expected.parts = [("part0".into(), SnapPart::default())]
+            .iter()
+            .cloned()
+            .collect();
         expected.plugs = [(
-                "plug0".into(),
-                [("key0".into(), "value0".into())].iter().cloned().collect(),
-            )]
-            .iter()
-            .cloned()
-			.collect();
+            "plug0".into(),
+            [("key0".into(), "value0".into())].iter().cloned().collect(),
+        )]
+        .iter()
+        .cloned()
+        .collect();
         expected.slots = [(
-                "slot0".into(),
-                [("key0".into(), "value0".into())].iter().cloned().collect(),
-            )]
-            .iter()
-            .cloned()
-			.collect();
+            "slot0".into(),
+            [("key0".into(), "value0".into())].iter().cloned().collect(),
+        )]
+        .iter()
+        .cloned()
+        .collect();
         expected.title = Some("title".into());
         expected.snap_type = Some(Type::Kernel);
 

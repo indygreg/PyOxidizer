@@ -341,6 +341,9 @@ pub trait PythonBinaryBuilder {
     /// Whether the binary requires the Mimalloc library.
     fn requires_mimalloc(&self) -> bool;
 
+    /// Whether the binary requires the Snmalloc library.
+    fn requires_snmalloc(&self) -> bool;
+
     /// Obtain an `EmbeddedPythonContext` instance from this one.
     fn to_embedded_python_context(
         &self,

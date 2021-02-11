@@ -161,6 +161,9 @@ pub fn build_executable_with_rust_project<'a>(
     if exe.requires_mimalloc() {
         features.push("gmimalloc");
     }
+    if exe.requires_snmalloc() {
+        features.push("snmalloc");
+    }
 
     let features = features.join(" ");
 

@@ -103,6 +103,8 @@ pub enum MemoryAllocatorBackend {
     Jemalloc,
     /// Use Mimalloc.
     Mimalloc,
+    /// Use Snmalloc.
+    Snmalloc,
     /// Use Rust's global allocator.
     Rust,
 }
@@ -113,6 +115,7 @@ impl ToString for MemoryAllocatorBackend {
             Self::System => "system",
             Self::Jemalloc => "jemalloc",
             Self::Mimalloc => "gmimalloc",
+            Self::Snmalloc => "snmalloc",
             Self::Rust => "rust",
         }
         .to_string()
@@ -127,6 +130,7 @@ impl TryFrom<&str> for MemoryAllocatorBackend {
             "system" => Ok(Self::System),
             "jemalloc" => Ok(Self::Jemalloc),
             "gmimalloc" => Ok(Self::Mimalloc),
+            "snmalloc" => Ok(Self::Snmalloc),
             "rust" => Ok(Self::Rust),
             _ => Err(format!("{} is not a valid memory allocator backend", value)),
         }
@@ -164,6 +168,13 @@ impl PythonRawAllocator {
     pub fn mimalloc() -> Self {
         Self {
             backend: MemoryAllocatorBackend::Mimalloc,
+            ..PythonRawAllocator::default()
+        }
+    }
+
+    pub fn snmalloc() -> Self {
+        Self {
+            backend: MemoryAllocatorBackend::Snmalloc,
             ..PythonRawAllocator::default()
         }
     }

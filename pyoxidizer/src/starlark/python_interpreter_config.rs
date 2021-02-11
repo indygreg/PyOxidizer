@@ -1129,6 +1129,9 @@ mod tests {
         env.eval("config.raw_allocator = 'gmimalloc'")?;
         eval_assert(&mut env, "config.raw_allocator == 'gmimalloc'")?;
 
+        env.eval("config.raw_allocator = 'snmalloc'")?;
+        eval_assert(&mut env, "config.raw_allocator == 'snmalloc'")?;
+
         env.eval("config.raw_allocator = 'jemalloc'")?;
         eval_assert(&mut env, "config.raw_allocator == 'jemalloc'")?;
 

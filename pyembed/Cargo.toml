@@ -21,6 +21,7 @@ libmimalloc-sys = { version = "0.1.20", features = ["extended"], optional = true
 mimalloc = { version = "0.1.24", default-features = false, optional = true }
 jemalloc-sys = { version = "0.3.2", optional = true }
 jemallocator = { version = "0.3.2", optional = true }
+snmalloc-rs = { version = "0.2", optional = true }
 lazy_static = "1.4.0"
 libc = "0.2.86"
 memmap = "0.7.0"
@@ -51,6 +52,8 @@ rusty-fork = "0.3.0"
 default = ["build-mode-default"]
 jemalloc = ["jemallocator","jemalloc-sys"]
 gmimalloc = ["mimalloc", "libmimalloc-sys"]
+snmalloc = ["snmalloc-rs"]
+
 
 # The default build mode.
 #

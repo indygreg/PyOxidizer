@@ -1421,8 +1421,15 @@ mod tests {
         let resource_path = tp.join("resource.txt");
         write(&resource_path, "content")?;
 
-        let _resources =
-            assert!(PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &DEFAULT_SUFFIXES, false, true).next().is_none());
+        let _resources = assert!(PythonResourceIterator::new(
+            tp,
+            DEFAULT_CACHE_TAG,
+            &DEFAULT_SUFFIXES,
+            false,
+            true
+        )
+        .next()
+        .is_none());
 
         Ok(())
     }
