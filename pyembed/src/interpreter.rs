@@ -14,7 +14,7 @@ use {
             OXIDIZED_IMPORTER_NAME_STR,
         },
         osutils::resolve_terminfo_dirs,
-        pyalloc::{make_raw_rust_memory_allocator, RawAllocator},
+        pyalloc::{make_raw_rust_memory_allocator, RawAllocator,make_rust_pyobject_arena_allocator, PyAllocator},
         python_resources::PythonResourcesState,
     },
     cpython::{GILGuard, NoArgs, ObjectProtocol, PyDict, PyList, PyString, Python, ToPyObject},
@@ -31,11 +31,12 @@ use {
 };
 
 #[cfg(feature = "mimalloc")]
-use crate::pyalloc::make_raw_mimalloc_allocator;
+use crate::pyalloc::{make_raw_mimalloc_allocator,make_mimalloc_pyallocator};
 
 #[cfg(feature = "jemalloc-sys")]
-use crate::pyalloc::make_raw_jemalloc_allocator;
-use python3_sys::PyMemAllocatorEx;
+use crate::pyalloc::{make_raw_jemalloc_allocator,make_jemalloc_pyallocator};
+
+use python3_sys::{PyMemAllocatorEx,PyObjectArenaAllocator};
 
 lazy_static! {
     static ref GLOBAL_INTERPRETER_GUARD: std::sync::Mutex<()> = std::sync::Mutex::new(());
@@ -44,6 +45,16 @@ lazy_static! {
 #[cfg(feature = "jemalloc-sys")]
 fn raw_jemallocator() -> pyffi::PyMemAllocatorEx {
     make_raw_jemalloc_allocator()
+}
+
+#[cfg(feature = "jemalloc-sys")]
+fn jepymallocator() -> pyffi::PyObjectArenaAllocator {
+    make_jemalloc_pyallocator()
+}
+
+#[cfg(not(feature = "jemalloc-sys"))]
+fn jepymallocator() -> pyffi::PyObjectArenaAllocator {
+    panic!("jemalloc is not available in this build configuration");
 }
 
 #[cfg(not(feature = "jemalloc-sys"))]
@@ -60,6 +71,43 @@ fn raw_mimallocator() -> pyffi::PyMemAllocatorEx {
 fn raw_mimallocator() -> pyffi::PyMemAllocatorEx {
     panic!("mimalloc is not available in this build configuration");
 }
+
+#[cfg(feature = "mimalloc")]
+fn mipymallocator() -> pyffi::PyObjectArenaAllocator {
+    make_mimalloc_pyallocator()
+}
+
+#[cfg(not(feature = "mimalloc"))]
+fn mipymallocator() -> pyffi::PyObjectArenaAllocator {
+    panic!("mimalloc is not available in this build configuration");
+}
+
+enum InterpreterPyAllocator {
+    Python(pyffi::PyObjectArenaAllocator),
+    Py(PyAllocator),
+}
+
+impl InterpreterPyAllocator {
+    fn as_ptr(&self) -> *const pyffi::PyObjectArenaAllocator {
+        match self {
+            InterpreterPyAllocator::Python(alloc) => alloc as *const _,
+            InterpreterPyAllocator::Py(alloc) => &alloc.allocator as *const _,
+        }
+    }
+}
+
+impl From<pyffi::PyObjectArenaAllocator> for InterpreterPyAllocator {
+    fn from(allocator: PyObjectArenaAllocator) -> Self {
+        InterpreterPyAllocator::Python(allocator)
+    }
+}
+
+impl From<PyAllocator> for InterpreterPyAllocator {
+    fn from(allocator: PyAllocator) -> Self {
+        InterpreterPyAllocator::Py(allocator)
+    }
+}
+
 enum InterpreterRawAllocator {
     Python(pyffi::PyMemAllocatorEx),
     Raw(RawAllocator),
@@ -106,6 +154,7 @@ pub struct MainPythonInterpreter<'python, 'interpreter: 'python, 'resources: 'in
     config: ResolvedOxidizedPythonInterpreterConfig<'resources>,
     interpreter_guard: Option<std::sync::MutexGuard<'interpreter, ()>>,
     raw_allocator: Option<InterpreterRawAllocator>,
+    pymalloc_allocator: Option<InterpreterPyAllocator>,
     _gil: Option<GILGuard>,
     py: Option<Python<'python>>,
     /// File to write containing list of modules when the interpreter finalizes.
@@ -137,6 +186,7 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
             config,
             interpreter_guard: None,
             raw_allocator: None,
+            pymalloc_allocator: None,
             _gil: None,
             py: None,
             write_modules_path: None,
@@ -222,6 +272,46 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
                     pyffi::PyMem_SetupDebugHooks();
                 }
             }
+        }
+		
+        // Override the pymalloc allocator if one is configured.
+        if let Some(pymalloc_allocator) = &self.config.pymalloc_allocator {
+            match pymalloc_allocator.backend {
+                MemoryAllocatorBackend::System => {}
+                MemoryAllocatorBackend::Jemalloc => {
+                    self.pymalloc_allocator = Some(InterpreterPyAllocator::from(
+                        jepymallocator(),
+                    ))
+				}
+                MemoryAllocatorBackend::Rust => {
+                    self.pymalloc_allocator = Some(InterpreterPyAllocator::from(
+                        make_rust_pyobject_arena_allocator(),
+                    ))
+                }
+                MemoryAllocatorBackend::Snmalloc => {
+                    self.pymalloc_allocator = Some(InterpreterPyAllocator::from(
+                        make_rust_pyobject_arena_allocator(),
+                    ))
+				}
+                MemoryAllocatorBackend::Mimalloc => {
+                    self.pymalloc_allocator = Some(InterpreterPyAllocator::from(
+                        mipymallocator(),
+                    ))
+				}
+            }
+            if let Some(allocator) = &self.pymalloc_allocator {
+                unsafe {
+                    pyffi::PyMem_SetAllocator(
+                        pyffi::PyMemAllocatorDomain::PYMEM_DOMAIN_MEM,
+						allocator.as_ptr() as *mut _,
+                    );
+                    pyffi::PyMem_SetAllocator(
+                        pyffi::PyMemAllocatorDomain::PYMEM_DOMAIN_OBJ,
+						allocator.as_ptr() as *mut _,
+                    );
+                }
+            }
+
         }
 
         let mut py_config: pyffi::PyConfig = (&self.config).try_into()?;

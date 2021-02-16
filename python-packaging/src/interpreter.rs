@@ -137,6 +137,70 @@ impl TryFrom<&str> for MemoryAllocatorBackend {
     }
 }
 
+/// Defines configuration for Python's pymalloc allocator.
+///
+/// This allocator is what Python uses for all small memory allocations.
+///
+/// See https://docs.python.org/3/c-api/memory.html for more.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct PythonPyMallocAllocator {
+    /// Which allocator backend to use.
+    pub backend: MemoryAllocatorBackend,
+    /// Whether memory debugging should be enabled.
+    pub debug: bool,
+}
+
+impl PythonPyMallocAllocator {
+    pub fn system() -> Self {
+        Self {
+            backend: MemoryAllocatorBackend::System,
+            ..PythonPyMallocAllocator::default()
+        }
+    }
+
+    pub fn jemalloc() -> Self {
+        Self {
+            backend: MemoryAllocatorBackend::Jemalloc,
+            ..PythonPyMallocAllocator::default()
+        }
+    }
+
+    pub fn mimalloc() -> Self {
+        Self {
+            backend: MemoryAllocatorBackend::Mimalloc,
+            ..PythonPyMallocAllocator::default()
+        }
+    }
+
+    pub fn snmalloc() -> Self {
+        Self {
+            backend: MemoryAllocatorBackend::Snmalloc,
+            ..PythonPyMallocAllocator::default()
+        }
+    }
+
+    pub fn rust() -> Self {
+        Self {
+            backend: MemoryAllocatorBackend::Rust,
+            ..PythonPyMallocAllocator::default()
+        }
+    }
+}
+
+impl Default for PythonPyMallocAllocator {
+    fn default() -> Self {
+        Self {
+            backend: if cfg!(windows) {
+                MemoryAllocatorBackend::System
+            } else {
+                MemoryAllocatorBackend::Jemalloc
+            },
+            debug: false,
+        }
+    }
+}
+
+
 /// Defines configuration for Python's raw allocator.
 ///
 /// This allocator is what Python uses for all memory allocations.

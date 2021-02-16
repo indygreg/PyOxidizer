@@ -8,7 +8,7 @@ use {
     crate::NewInterpreterError,
     python3_sys as pyffi,
     python_packaging::interpreter::{
-        PythonInterpreterConfig, PythonInterpreterProfile, PythonRawAllocator, TerminfoResolution,
+        PythonInterpreterConfig, PythonInterpreterProfile, PythonRawAllocator, PythonPyMallocAllocator, TerminfoResolution,
     },
     std::{
         convert::TryFrom,
@@ -86,6 +86,9 @@ pub struct OxidizedPythonInterpreterConfig<'a> {
 
     /// Allocator to use for Python's raw allocator.
     pub raw_allocator: Option<PythonRawAllocator>,
+	
+    /// Allocator to use for Python's pymalloc allocator.
+    pub pymalloc_allocator: Option<PythonPyMallocAllocator>,
 
     /// Whether to automatically set missing "path configuration" fields.
     ///
@@ -200,6 +203,7 @@ impl<'a> Default for OxidizedPythonInterpreterConfig<'a> {
                 ..PythonInterpreterConfig::default()
             },
             raw_allocator: None,
+            pymalloc_allocator: None,
             set_missing_path_configuration: true,
             oxidized_importer: false,
             filesystem_importer: true,
