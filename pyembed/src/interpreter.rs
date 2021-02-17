@@ -273,16 +273,16 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
                 }
             }
         }
-		
+
         // Override the pymalloc allocator if one is configured.
-        if let Some(pymalloc_allocator) = &self.config.pymalloc_allocator {
+        if let Some(pymalloc_allocator) = &self.config.raw_allocator {
             match pymalloc_allocator.backend {
                 MemoryAllocatorBackend::System => {}
                 MemoryAllocatorBackend::Jemalloc => {
                     self.pymalloc_allocator = Some(InterpreterPyAllocator::from(
                         jepymallocator(),
                     ))
-				}
+                }
                 MemoryAllocatorBackend::Rust => {
                     self.pymalloc_allocator = Some(InterpreterPyAllocator::from(
                         make_rust_pyobject_arena_allocator(),
@@ -292,27 +292,22 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
                     self.pymalloc_allocator = Some(InterpreterPyAllocator::from(
                         make_rust_pyobject_arena_allocator(),
                     ))
-				}
+                }
                 MemoryAllocatorBackend::Mimalloc => {
                     self.pymalloc_allocator = Some(InterpreterPyAllocator::from(
                         mipymallocator(),
                     ))
-				}
+                }
             }
             if let Some(allocator) = &self.pymalloc_allocator {
                 unsafe {
-                    pyffi::PyMem_SetAllocator(
-                        pyffi::PyMemAllocatorDomain::PYMEM_DOMAIN_MEM,
-						allocator.as_ptr() as *mut _,
-                    );
-                    pyffi::PyMem_SetAllocator(
-                        pyffi::PyMemAllocatorDomain::PYMEM_DOMAIN_OBJ,
-						allocator.as_ptr() as *mut _,
+                    pyffi::PyObject_SetArenaAllocator(
+                        allocator.as_ptr() as *mut _,
                     );
                 }
             }
+            }
 
-        }
 
         let mut py_config: pyffi::PyConfig = (&self.config).try_into()?;
 

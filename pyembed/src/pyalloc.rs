@@ -3,6 +3,12 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 //! Custom Python memory allocators.
+#[cfg(feature = "jemalloc-sys")]
+use {jemalloc_sys as jemallocffi, jemallocator::Jemalloc, std::ptr::null_mut};
+#[cfg(feature = "jemalloc-sys")]
+#[global_allocator]
+static GLOBAL: Jemalloc = Jemalloc;
+
 #[cfg(feature = "mimalloc")]
 use {libmimalloc_sys as mimallocffi, mimalloc::MiMalloc, std::ptr::null_mut};
 #[cfg(feature = "mimalloc")]
@@ -14,12 +20,6 @@ use snmalloc_rs::SnMalloc;
 #[cfg(feature = "snmalloc-rs")]
 #[global_allocator]
 static GLOBAL: SnMalloc = SnMalloc;
-
-#[cfg(feature = "jemalloc-sys")]
-use {jemalloc_sys as jemallocffi, jemallocator::Jemalloc, std::ptr::null_mut};
-#[cfg(feature = "jemalloc-sys")]
-#[global_allocator]
-static GLOBAL: Jemalloc = Jemalloc;
 
 use {
     libc::{c_void, size_t},
