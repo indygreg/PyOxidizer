@@ -5,6 +5,7 @@
 /*! Declares the foundational data primitives inside packed resources data. */
 
 use std::{borrow::Cow, collections::HashMap, convert::TryFrom, path::Path};
+use rayon::prelude::*;
 
 /// Header value for version 2 of resources payload.
 pub const HEADER_V3: &[u8] = b"pyembed\x03";
@@ -547,7 +548,7 @@ where
             shared_library_dependency_names: self.shared_library_dependency_names.as_ref().map(
                 |value| {
                     value
-                        .iter()
+                        .par_iter()
                         .map(|x| Cow::Owned(x.clone().into_owned()))
                         .collect()
                 },
@@ -575,7 +576,7 @@ where
             relative_path_package_resources: self.relative_path_package_resources.as_ref().map(
                 |value| {
                     value
-                        .iter()
+                        .par_iter()
                         .map(|(k, v)| {
                             (
                                 Cow::Owned(k.clone().into_owned()),
@@ -590,7 +591,7 @@ where
                 .as_ref()
                 .map(|value| {
                     value
-                        .iter()
+                        .par_iter()
                         .map(|(k, v)| {
                             (
                                 Cow::Owned(k.clone().into_owned()),

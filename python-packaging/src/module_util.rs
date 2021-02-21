@@ -5,6 +5,7 @@
 /*! Utility functions related to Python modules. */
 
 use std::{collections::BTreeSet, path::Path, path::PathBuf};
+use rayon::prelude::*;
 
 /// Represents file name suffixes for Python modules.
 #[derive(Clone, Debug, PartialEq)]
@@ -70,7 +71,7 @@ pub fn resolve_path_for_module(
 ) -> PathBuf {
     let mut module_path = PathBuf::from(root);
 
-    let parts = name.split('.').collect::<Vec<&str>>();
+    let parts = name.par_split('.').collect::<Vec<&str>>();
 
     // All module parts up to the final one are packages/directories.
     for part in &parts[0..parts.len() - 1] {

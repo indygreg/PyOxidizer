@@ -5,6 +5,7 @@
 /*! Working with Python package metadata (i.e. .pkg-info directories) */
 
 use {
+	rayon::prelude::*,
     anyhow::{Context, Result},
     mailparse::parse_mail,
 };
@@ -21,7 +22,7 @@ impl PythonPackageMetadata {
 
         let headers = message
             .headers
-            .iter()
+            .par_iter()
             .map(|header| (header.get_key(), header.get_value()))
             .collect::<Vec<_>>();
 
@@ -43,7 +44,7 @@ impl PythonPackageMetadata {
     #[allow(unused)]
     pub fn find_all_headers(&self, key: &str) -> Vec<&str> {
         self.headers
-            .iter()
+            .par_iter()
             .filter_map(|(k, v)| if k == key { Some(v.as_ref()) } else { None })
             .collect::<Vec<_>>()
     }

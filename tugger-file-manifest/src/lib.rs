@@ -1,7 +1,7 @@
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
-
+use rayon::prelude::*;
 use std::{
     collections::{BTreeMap, BTreeSet},
     convert::TryFrom,
@@ -337,7 +337,7 @@ impl FileManifest {
             }
         }
 
-        dirs.iter().map(|x| x.to_path_buf()).collect()
+        dirs.par_iter().map(|x| x.to_path_buf()).collect()
     }
 
     /// Resolve all required directories relative to another directory.

@@ -7,6 +7,7 @@ Scanning the filesystem for Python resources.
 */
 
 use {
+	rayon::prelude::*,
     crate::{
         module_util::{is_package_from_path, PythonModuleSuffixes},
         package_metadata::PythonPackageMetadata,
@@ -153,14 +154,14 @@ impl<'a> PythonResourceIterator<'a> {
         emit_non_files: bool,
     ) -> Result<PythonResourceIterator<'a>> {
         let mut paths = resources
-            .iter()
+            .par_iter()
             .map(|file| PathEntry {
                 path: file.path.clone(),
                 file_emitted: false,
                 non_file_emitted: false,
             })
             .collect::<Vec<_>>();
-        paths.sort_by(|a, b| a.path.cmp(&b.path));
+        paths.par_sort_by(|a, b| a.path.cmp(&b.path));
 
         let mut path_content_overrides = FileManifest::default();
         for resource in resources {
@@ -292,7 +293,7 @@ impl<'a> PythonResourceIterator<'a> {
         // scenario: we essentially have a new package root that corresponds to the
         // egg's extraction directory.
         if (&components[0..components.len() - 1])
-            .iter()
+            .par_iter()
             .any(|p| p.ends_with(".egg"))
         {
             let mut egg_root_path = self.root_path.clone();
@@ -346,7 +347,7 @@ impl<'a> PythonResourceIterator<'a> {
 
                 self.seen_packages.insert(package);
 
-                let module_components = full_module_name.split('.').collect::<Vec<_>>();
+                let module_components = full_module_name.par_split('.').collect::<Vec<_>>();
                 let final_name = module_components[module_components.len() - 1];
                 let init_fn = Some(format!("PyInit_{}", final_name));
 
@@ -374,7 +375,7 @@ impl<'a> PythonResourceIterator<'a> {
         if self
             .suffixes
             .source
-            .iter()
+            .par_iter()
             .any(|ext| rel_str.ends_with(ext))
         {
             let package_parts = &components[0..components.len() - 1];
@@ -416,7 +417,7 @@ impl<'a> PythonResourceIterator<'a> {
         if self
             .suffixes
             .bytecode
-            .iter()
+            .par_iter()
             .any(|ext| rel_str.ends_with(ext))
         {
             // .pyc files should be in a __pycache__ directory.
@@ -439,7 +440,7 @@ impl<'a> PythonResourceIterator<'a> {
                 .to_string_lossy()
                 .to_string();
 
-            let filename_parts = filename.split('.').collect::<Vec<&str>>();
+            let filename_parts = filename.par_split('.').collect::<Vec<&str>>();
 
             if filename_parts.len() < 3 {
                 return None;

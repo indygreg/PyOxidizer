@@ -7,6 +7,7 @@ Interacting with distutils.
 */
 
 use {
+	rayon::prelude::*,
     anyhow::{Context, Result},
     lazy_static::lazy_static,
     python_packaging::resource::{LibraryDependency, PythonExtensionModule},
@@ -148,7 +149,7 @@ pub fn read_built_extensions(state_dir: &Path) -> Result<Vec<PythonExtensionModu
 
         let info: DistutilsExtensionState = serde_json::from_str(&data).context("parsing JSON")?;
 
-        let module_components: Vec<&str> = info.name.split('.').collect();
+        let module_components: Vec<&str> = info.name.par_split('.').collect();
         let final_name = module_components[module_components.len() - 1];
         let init_fn = "PyInit_".to_string() + final_name;
 
@@ -185,7 +186,7 @@ pub fn read_built_extensions(state_dir: &Path) -> Result<Vec<PythonExtensionModu
 
         let link_libraries = info
             .libraries
-            .iter()
+            .par_iter()
             .map(|l| LibraryDependency {
                 name: l.clone(),
                 static_library: None,

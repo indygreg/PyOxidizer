@@ -3,6 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
+	rayon::prelude::*,
     anyhow::{anyhow, Result},
     spdx::LicenseReq,
     std::{fmt::Write, io::Read},
@@ -71,7 +72,7 @@ pub fn licensed_component_spdx_license_texts(
         LicenseFlavor::None | LicenseFlavor::PublicDomain | LicenseFlavor::Unknown(_) => vec![],
     };
 
-    reqs.iter()
+    reqs.par_iter()
         .map(|req| license_requirement_to_license_text(client, &req.req))
         .collect::<Result<Vec<_>>>()
 }

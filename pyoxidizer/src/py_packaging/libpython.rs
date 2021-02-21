@@ -7,6 +7,7 @@ Building a native binary containing Python.
 */
 
 use {
+	rayon::prelude::*,
     anyhow::{anyhow, Result},
     python_packaging::libpython::LibPythonBuildContext,
     slog::warn,
@@ -85,7 +86,7 @@ pub fn link_libpython(
         "deriving custom config.c from {} extension modules",
         context.init_functions.len()
     );
-    let config_c_source = make_config_c(&context.init_functions.iter().collect::<Vec<_>>());
+    let config_c_source = make_config_c(&context.init_functions.par_iter().collect::<Vec<_>>());
     let config_c_path = out_dir.join("config.c");
     let config_c_temp_path = temp_dir_path.join("config.c");
 

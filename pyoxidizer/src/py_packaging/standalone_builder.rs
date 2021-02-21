@@ -3,6 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
+	rayon::prelude::*,
     super::{
         binary::{
             pyembed_licenses, EmbeddedPythonContext, LibpythonLinkMode, PackedResourcesLoadMode,
@@ -404,8 +405,8 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         if let Some(s) = self
             .target_distribution
             .crt_features
-            .iter()
-            .find(|s| s.starts_with("vcruntime:"))
+            .par_iter()
+            .find_any(|s| s.starts_with("vcruntime:"))
         {
             Some((s.split(':').nth(1).unwrap()[0..2].to_string(), platform))
         } else {
@@ -544,7 +545,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
             None,
         )
         .context("finding resources")?
-        .iter()
+        .par_iter()
         .filter_map(|x| {
             if x.is_in_packages(packages) {
                 Some(x.clone())
@@ -1170,7 +1171,7 @@ pub mod tests {
                     extension.name.to_string(),
                     extension.init_fn.as_ref().clone().unwrap().to_string()
                 )]
-                .iter()
+                .par_iter()
                 .cloned()
                 .collect(),
                 ..LibPythonBuildContext::default()

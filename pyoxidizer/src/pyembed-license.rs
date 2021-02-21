@@ -88,7 +88,27 @@ pub fn pyembed_licenses() -> anyhow::Result<Vec<tugger_licensing::LicensedCompon
     let mut component = tugger_licensing::LicensedComponent::new_spdx("jemalloc-sys", "Apache-2.0 OR MIT")?;
     component.set_flavor(tugger_licensing::ComponentFlavor::RustCrate);
     res.push(component);
+	
+    let mut component = tugger_licensing::LicensedComponent::new_spdx("jemallocator", "Apache-2.0 OR MIT")?;
+    component.set_flavor(tugger_licensing::ComponentFlavor::RustCrate);
+    res.push(component);
+	
+    let mut component = tugger_licensing::LicensedComponent::new_spdx("libmimalloc-sys", "MIT")?;
+    component.set_flavor(tugger_licensing::ComponentFlavor::RustCrate);
+    res.push(component);
+	
+    let mut component = tugger_licensing::LicensedComponent::new_spdx("mimalloc", "MIT")?;
+    component.set_flavor(tugger_licensing::ComponentFlavor::RustCrate);
+    res.push(component);
 
+    let mut component = tugger_licensing::LicensedComponent::new_spdx("snmalloc-rs", "MIT")?;
+    component.set_flavor(tugger_licensing::ComponentFlavor::RustCrate);
+    res.push(component);
+	
+    let mut component = tugger_licensing::LicensedComponent::new_spdx("rayon", "Apache-2.0 OR MIT")?;
+    component.set_flavor(tugger_licensing::ComponentFlavor::RustCrate);
+    res.push(component);
+	
     let mut component = tugger_licensing::LicensedComponent::new_spdx("jobserver", "Apache-2.0 OR MIT")?;
     component.set_flavor(tugger_licensing::ComponentFlavor::RustCrate);
     res.push(component);

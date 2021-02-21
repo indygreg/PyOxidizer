@@ -5,6 +5,7 @@
 //! Data structures for configuring a Python interpreter.
 
 use {
+	rayon::prelude::*,
     crate::NewInterpreterError,
     python3_sys as pyffi,
     python_packaging::interpreter::{
@@ -254,7 +255,7 @@ impl<'a> OxidizedPythonInterpreterConfig<'a> {
 
         let packed_resources = self
             .packed_resources
-            .into_iter()
+            .into_par_iter()
             .map(|entry| match entry {
                 PackedResourcesSource::Memory(_) => entry,
                 PackedResourcesSource::MemoryMappedPath(p) => {
@@ -268,7 +269,7 @@ impl<'a> OxidizedPythonInterpreterConfig<'a> {
         let module_search_paths = match &self.interpreter_config.module_search_paths {
             Some(paths) => Some(
                 paths
-                    .iter()
+                    .par_iter()
                     .map(|p| {
                         PathBuf::from(p.display().to_string().replace("$ORIGIN", &origin_string))
                     })

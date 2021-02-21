@@ -5,6 +5,7 @@
 //! Handle file layout of PyOxidizer projects.
 
 use {
+	rayon::prelude::*,
     crate::environment::{PyOxidizerSource, BUILD_GIT_COMMIT, PYOXIDIZER_VERSION},
     anyhow::{anyhow, Result},
     handlebars::Handlebars,
@@ -202,7 +203,7 @@ pub fn write_new_pyoxidizer_config_file(
         data.code = Some(code.replace("\"", "\\\""));
     }
 
-    data.pip_install_simple = pip_install.iter().map(|v| (*v).to_string()).collect();
+    data.pip_install_simple = pip_install.par_iter().map(|v| (*v).to_string()).collect();
 
     let t = HANDLEBARS.render("new-pyoxidizer.bzl", &data)?;
 

@@ -5,6 +5,7 @@
 /*! Functionality for collecting Python resources. */
 
 use {
+	rayon::prelude::*,
     crate::{
         bytecode::{
             compute_bytecode_header, BytecodeHeaderMode, CompileMode, PythonBytecodeCompiler,
@@ -201,7 +202,7 @@ impl PrePackagedResource {
             shared_library_dependency_names: if let Some(names) =
                 &self.shared_library_dependency_names
             {
-                Some(names.iter().map(|x| Cow::Owned(x.clone())).collect())
+                Some(names.par_iter().map(|x| Cow::Owned(x.clone())).collect())
             } else {
                 None
             },
@@ -424,7 +425,7 @@ pub fn populate_parent_packages(
     resources: &mut BTreeMap<String, PrePackagedResource>,
 ) -> Result<()> {
     let original_resources = resources
-        .iter()
+        .par_iter()
         .filter_map(|(k, v)| {
             if v.is_python_resource() {
                 Some((k.to_owned(), v.to_owned()))

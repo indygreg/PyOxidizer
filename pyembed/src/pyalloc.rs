@@ -241,8 +241,8 @@ extern "C" fn raw_mimalloc_malloc(_ctx: *mut c_void, size: size_t) -> *mut c_voi
     };
     // Allocate `size` bytes.Returns pointer to the allocated memory or null if out of memory.
     // Returns a unique pointer if called with `size` 0
-
-    unsafe { mimallocffi::mi_malloc(size) }
+	let padding = _ctx as *const _ as usize;
+    unsafe { mimallocffi::mi_malloc(size + padding) }
 }
 
 #[cfg(feature = "mimalloc")]
@@ -256,8 +256,8 @@ extern "C" fn mimalloc_pymalloc(_ctx: *mut c_void, size: size_t) -> *mut c_void 
     };
     // Allocate `size` bytes.Returns pointer to the allocated memory or null if out of memory.
     // Returns a unique pointer if called with `size` 0
-
-    unsafe { mimallocffi::mi_malloc(size) }
+	let padding = _ctx as *const _ as usize;
+    unsafe { mimallocffi::mi_malloc(size + padding) }
 }
 
 #[cfg(feature = "mimalloc")]
@@ -272,7 +272,8 @@ extern "C" fn raw_mimalloc_calloc(_ctx: *mut c_void, nelem: size_t, elsize: size
     // Allocate `count` items of `size` length each.
     // Returns `null` if `count * size` overflows or on out-of-memory.
     // All items are initialized to zero
-    unsafe { mimallocffi::mi_calloc(nelem, size) }
+	let padding = _ctx as *const _ as usize;
+    unsafe { mimallocffi::mi_calloc(nelem, size + padding) }
 }
 
 #[cfg(feature = "mimalloc")]
@@ -300,8 +301,8 @@ extern "C" fn raw_mimalloc_realloc(
     // If `p` is null, it behaves as [`mi_malloc`]. If `newsize` is larger than
     // the original `size` allocated for `p`, the bytes after `size` are
     // uninitialized
-
-    unsafe { mimallocffi::mi_realloc(ptr, new_size) }
+	let padding = _ctx as *const _ as usize;
+    unsafe { mimallocffi::mi_realloc(ptr, new_size + padding) }
 }
 
 #[cfg(feature = "mimalloc")]

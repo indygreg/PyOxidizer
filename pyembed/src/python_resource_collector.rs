@@ -5,6 +5,7 @@
 /*! Python functionality for resource collection. */
 
 use {
+	rayon::prelude::*,
     crate::{
         conversion::{path_to_pathlib_path, pyobject_to_pathbuf},
         python_resource_types::{
@@ -58,7 +59,7 @@ py_class!(pub class OxidizedResourceCollector |py| {
 impl OxidizedResourceCollector {
     pub fn new(py: Python<'_>, allowed_locations: Vec<String>) -> PyResult<Self> {
         let allowed_locations = allowed_locations
-            .iter()
+            .par_iter()
             .map(|location| AbstractResourceLocation::try_from(location.as_str()))
             .collect::<Result<Vec<_>, _>>()
             .map_err(|e| PyErr::new::<ValueError, _>(py, e))?;

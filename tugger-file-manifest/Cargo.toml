@@ -12,3 +12,4 @@ repository = "https://github.com/indygreg/PyOxidizer.git"
 
 [dependencies]
 remove_dir_all = "0.5.3"
+rayon = "1.5.0"

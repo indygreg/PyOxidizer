@@ -4,7 +4,7 @@
 
 /*! Utility functions related to Python source code. */
 
-use {anyhow::Result, lazy_static::lazy_static};
+use {anyhow::Result, lazy_static::lazy_static,};
 
 lazy_static! {
     static ref RE_CODING: regex::bytes::Regex =

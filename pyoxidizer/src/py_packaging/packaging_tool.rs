@@ -7,6 +7,7 @@ Interaction with Python packaging tools (pip, setuptools, etc).
 */
 
 use {
+	rayon::prelude::*,
     super::{
         binary::LibpythonLinkMode,
         distribution::{download_distribution, PythonDistribution},
@@ -189,7 +190,7 @@ pub fn find_resources<'a>(
 
     let built_extensions = if let Some(p) = state_dir {
         read_built_extensions(&p)?
-            .iter()
+            .par_iter()
             .map(|ext| (ext.name.clone(), ext.clone()))
             .collect()
     } else {
@@ -262,7 +263,7 @@ pub fn pip_download<'a>(
         pip_args.push("--verbose".to_string());
     }
 
-    pip_args.extend(vec![
+    pip_args.par_extend(vec![
         "download".to_string(),
         // Download packages to our temporary directory.
         "--dest".to_string(),
@@ -314,7 +315,7 @@ pub fn pip_download<'a>(
     let mut files = std::fs::read_dir(target_dir)?
         .map(|entry| Ok(entry?.path()))
         .collect::<Result<Vec<_>>>()?;
-    files.sort();
+    files.par_sort();
 
     // TODO there's probably a way to do this using iterators.
     let mut res = Vec::new();
@@ -322,7 +323,7 @@ pub fn pip_download<'a>(
     for path in &files {
         let wheel = WheelArchive::from_path(path)?;
 
-        res.extend(wheel.python_resources(
+        res.par_extend(wheel.python_resources(
             taget_dist.cache_tag(),
             &taget_dist.python_module_suffixes()?,
             policy.file_scanner_emit_files(),
@@ -372,7 +373,7 @@ pub fn pip_install<'a, S: BuildHasher>(
         pip_args.push("--verbose".to_string());
     }
 
-    pip_args.extend(vec![
+    pip_args.par_extend(vec![
         "install".to_string(),
         "--target".to_string(),
         format!("{}", target_dir.display()),

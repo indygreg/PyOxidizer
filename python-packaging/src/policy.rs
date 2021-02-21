@@ -7,6 +7,7 @@ Functionality for defining how Python resources should be packaged.
 */
 
 use {
+	rayon::prelude::*,
     crate::{
         licensing::SAFE_SYSTEM_LIBRARIES,
         location::ConcreteResourceLocation,
@@ -583,7 +584,7 @@ impl PythonPackagingPolicy {
                         .filter_map(|em| {
                             // As a special case, if all we link against are system libraries
                             // that are known to be benign, allow that.
-                            let all_safe_system_libraries = em.link_libraries.iter().all(|link| {
+                            let all_safe_system_libraries = em.link_libraries.par_iter().all(|link| {
                                 link.system && SAFE_SYSTEM_LIBRARIES.contains(&link.name.as_str())
                             });
 

@@ -20,6 +20,7 @@ rcgen = "0.8.9"
 semver = "0.11.0"
 slog = "2.7.0"
 yasna = "0.3.2"
+rayon = "1.5.0"
 
 
 [target.'cfg(windows)'.dependencies]

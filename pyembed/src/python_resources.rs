@@ -7,6 +7,7 @@ Management of Python resources.
 */
 
 use {
+	rayon::prelude::*,
     crate::{
         config::{PackedResourcesSource, ResolvedOxidizedPythonInterpreterConfig},
         conversion::{
@@ -786,7 +787,7 @@ impl<'a> PythonResourcesState<'a, u8> {
             vec![]
         };
 
-        names.sort();
+        names.par_sort();
 
         let names = names
             .iter()
@@ -888,7 +889,7 @@ impl<'a> PythonResourcesState<'a, u8> {
             .as_os_str()
             .to_string_lossy()];
         let mut package_parts = components[0..components.len() - 1]
-            .iter()
+            .par_iter()
             .map(|c| c.as_os_str().to_string_lossy())
             .collect::<Vec<_>>();
 
@@ -1000,7 +1001,7 @@ impl<'a> PythonResourcesState<'a, u8> {
             .collect::<Vec<&Resource<'_, u8>>>();
 
         // Sort so behavior is deterministic.
-        resources.sort_by_key(|v| &v.name);
+        resources.par_sort_by_key(|v| &v.name);
 
         let mut buffer = Vec::new();
 
@@ -1213,7 +1214,7 @@ py_class!(pub class OxidizedResource |py| {
         if let Some(value) = value {
             self.resource(py).borrow_mut().in_memory_package_resources =
                 pyobject_optional_resources_map_to_owned_bytes(py, &value)?
-                    .map(|x| x.iter().map(|(k, v)| (Cow::Owned(k.to_owned()), Cow::Owned(v.to_owned()))).collect()
+                    .map(|x| x.par_iter().map(|(k, v)| (Cow::Owned(k.to_owned()), Cow::Owned(v.to_owned()))).collect()
                      );
 
             Ok(())
@@ -1233,7 +1234,7 @@ py_class!(pub class OxidizedResource |py| {
             self.resource(py).borrow_mut().in_memory_distribution_resources =
                 pyobject_optional_resources_map_to_owned_bytes(py, &value)?
                     .map(|x|
-                        x.iter().map(|(k, v)| (Cow::Owned(k.to_owned()), Cow::Owned(v.to_owned()))).collect()
+                        x.par_iter().map(|(k, v)| (Cow::Owned(k.to_owned()), Cow::Owned(v.to_owned()))).collect()
                      );
 
             Ok(())
@@ -1259,14 +1260,14 @@ py_class!(pub class OxidizedResource |py| {
 
     @property def shared_library_dependency_names(&self) -> PyResult<Option<Vec<String>>> {
         Ok(self.resource(py).borrow().shared_library_dependency_names.as_ref().map(|x| {
-            x.iter().map(|v| v.to_string()).collect()
+            x.par_iter().map(|v| v.to_string()).collect()
         }))
     }
 
     @shared_library_dependency_names.setter def set_shared_library_dependency_names(&self, value: Option<Option<Vec<String>>>) -> PyResult<()> {
         if let Some(value) = value {
             self.resource(py).borrow_mut().shared_library_dependency_names =
-                value.map(|x| x.iter().map(|v| Cow::Owned(v.to_owned())).collect());
+                value.map(|x| x.par_iter().map(|v| Cow::Owned(v.to_owned())).collect());
 
             Ok(())
         } else {
@@ -1389,7 +1390,7 @@ py_class!(pub class OxidizedResource |py| {
             self.resource(py).borrow_mut().relative_path_package_resources =
                 pyobject_optional_resources_map_to_pathbuf(py, &value)?
                     .map(|x|
-                        x.iter().map(|(k, v)| (Cow::Owned(k.to_owned()), Cow::Owned(v.to_owned()))).collect()
+                        x.par_iter().map(|(k, v)| (Cow::Owned(k.to_owned()), Cow::Owned(v.to_owned()))).collect()
                      );
 
             Ok(())
@@ -1418,7 +1419,7 @@ py_class!(pub class OxidizedResource |py| {
             self.resource(py).borrow_mut().relative_path_distribution_resources =
                 pyobject_optional_resources_map_to_pathbuf(py, &value)?
                     .map(|x|
-                        x.iter().map(|(k, v)| (Cow::Owned(k.to_owned()), Cow::Owned(v.to_owned()))).collect()
+                        x.par_iter().map(|(k, v)| (Cow::Owned(k.to_owned()), Cow::Owned(v.to_owned()))).collect()
                      );
 
             Ok(())

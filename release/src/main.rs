@@ -3,6 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
+	rayon::prelude::*,
     anyhow::{anyhow, Context, Result},
     cargo_toml::Manifest,
     clap::{App, AppSettings, Arg, ArgMatches, SubCommand},
@@ -580,7 +581,7 @@ fn command_release(repo_root: &Path, args: &ArgMatches<'_>) -> Result<()> {
             packages.push(p.to_string());
         }
 
-        packages.sort();
+        packages.par_sort();
 
         write_workspace_toml(&workspace_toml, &packages)?;
     }
@@ -661,7 +662,7 @@ fn generate_pyembed_license(repo_root: &Path) -> Result<String> {
     writeln!(&mut text)?;
 
     for (crate_name, licenses) in crates {
-        let expression = licenses.into_iter().collect::<Vec<_>>().join(" OR ");
+        let expression = licenses.into_par_iter().collect::<Vec<_>>().join(" OR ");
 
         writeln!(
             &mut text,

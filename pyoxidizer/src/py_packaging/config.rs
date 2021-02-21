@@ -7,6 +7,7 @@ Configuring a Python interpreter.
 */
 
 use {
+	rayon::prelude::*,
     anyhow::Result,
     itertools::Itertools,
     python_packaging::{
@@ -81,7 +82,7 @@ fn optional_vec_string_to_string(value: &Option<Vec<String>>) -> String {
         Some(value) => format!(
             "Some(vec![{}])",
             value
-                .iter()
+                .par_iter()
                 .map(|x| format!("\"{}\".to_string()", x.escape_default()))
                 .collect::<Vec<_>>()
                 .join(", ")
@@ -319,7 +320,7 @@ impl PyembedPythonInterpreterConfig {
                     format!(
                         "Some(vec![{}])",
                         paths
-                            .iter()
+                            .par_iter()
                             .map(pathbuf_to_string)
                             .collect::<Vec<String>>()
                             .join(", ")
@@ -440,7 +441,7 @@ mod tests {
 
     fn assert_serialize_module_search_paths(paths: &[&str], expected_contents: &str) -> Result<()> {
         let mut config = PyembedPythonInterpreterConfig::default();
-        config.config.module_search_paths = Some(paths.iter().map(PathBuf::from).collect());
+        config.config.module_search_paths = Some(paths.par_iter().map(PathBuf::from).collect());
 
         let code = config.to_oxidized_python_interpreter_config_rs()?;
         assert_contains(&code, expected_contents)

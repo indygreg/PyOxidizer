@@ -3,6 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
+	rayon::prelude::*,
     crate::{package_metadata::PythonPackageMetadata, resource::PythonResource},
     anyhow::{Context, Result},
     std::{
@@ -190,7 +191,7 @@ pub fn derive_package_license_infos<'a>(
         // Else we don't know what to do with this file. Just ignore it.
     }
 
-    Ok(packages.into_iter().map(|(_, v)| v).collect::<Vec<_>>())
+    Ok(packages.into_par_iter().map(|(_, v)| v).collect::<Vec<_>>())
 }
 
 #[cfg(test)]

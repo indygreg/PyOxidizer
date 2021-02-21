@@ -7,6 +7,7 @@ Utility code for filtering.
 */
 
 use {
+	rayon::prelude::*,
     anyhow::{anyhow, Result},
     slog::warn,
     std::{
@@ -43,14 +44,14 @@ pub fn resolve_resource_names_from_files(
 
     for path in files {
         let new_names = read_resource_names_file(path)?;
-        include_names.extend(new_names);
+        include_names.par_extend(new_names);
     }
 
     for pattern in glob_files {
         let mut new_names = BTreeSet::new();
 
         for entry in glob::glob(pattern)? {
-            new_names.extend(read_resource_names_file(&entry?)?);
+            new_names.par_extend(read_resource_names_file(&entry?)?);
         }
 
         if new_names.is_empty() {
@@ -59,7 +60,7 @@ pub fn resolve_resource_names_from_files(
             ));
         }
 
-        include_names.extend(new_names);
+        include_names.par_extend(new_names);
     }
 
     Ok(include_names)

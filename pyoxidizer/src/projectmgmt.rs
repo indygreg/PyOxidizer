@@ -5,6 +5,7 @@
 //! Manage PyOxidizer projects.
 
 use {
+	rayon::prelude::*,
     crate::{
         project_building::find_pyoxidizer_config_file_env,
         project_layout::{initialize_project, write_new_pyoxidizer_config_file},
@@ -412,7 +413,7 @@ pub fn python_distribution_info(dist_path: &str) -> Result<()> {
                 println!(
                     "Links: {}",
                     em.link_libraries
-                        .iter()
+                        .par_iter()
                         .map(|l| l.name.clone())
                         .collect::<Vec<String>>()
                         .join(", ")

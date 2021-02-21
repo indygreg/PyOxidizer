@@ -52,6 +52,7 @@ sha2 = "0.9.3"
 slog = "2.7.0"
 starlark = "0.3.1"
 tar = "0.4.32"
+rayon = "1.5.0"
 tempfile = "3.2.0"
 url = "2.2.0"
 uuid = { version = "0.8.2", features = ["v4", "v5"] }

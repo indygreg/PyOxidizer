@@ -5,6 +5,7 @@
 /*! Defines types representing Python resources. */
 
 use {
+	rayon::prelude::*,
     crate::{
         bytecode::{CompileMode, PythonBytecodeCompiler},
         module_util::{is_package_from_path, packages_from_module_name, resolve_path_for_module},
@@ -568,7 +569,7 @@ impl PythonExtensionModule {
             is_package: self.is_package,
             link_libraries: self
                 .link_libraries
-                .iter()
+                .par_iter()
                 .map(|l| l.to_memory())
                 .collect::<Result<Vec<_>, _>>()?,
             is_stdlib: self.is_stdlib,
@@ -603,7 +604,7 @@ impl PythonExtensionModule {
     pub fn package_parts(&self) -> Vec<String> {
         if let Some(idx) = self.name.rfind('.') {
             let prefix = &self.name[0..idx];
-            prefix.split('.').map(|x| x.to_string()).collect()
+            prefix.par_split('.').map(|x| x.to_string()).collect()
         } else {
             Vec::new()
         }

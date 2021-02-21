@@ -3,6 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
+	rayon::prelude::*,
     super::{
         env::{get_context, PyOxidizerEnvironmentContext},
         file_resource::file_manifest_add_python_executable,
@@ -870,8 +871,8 @@ impl PythonExecutableValue {
             _ => panic!("type should have been validated above"),
         };
 
-        let files_refs = files.iter().map(|x| x.as_ref()).collect::<Vec<&Path>>();
-        let glob_files_refs = glob_files.iter().map(|x| x.as_ref()).collect::<Vec<&str>>();
+        let files_refs = files.par_iter().map(|x| x.as_ref()).collect::<Vec<&Path>>();
+        let glob_files_refs = glob_files.par_iter().map(|x| x.as_ref()).collect::<Vec<&str>>();
 
         let pyoxidizer_context_value = get_context(type_values)?;
         let pyoxidizer_context = pyoxidizer_context_value

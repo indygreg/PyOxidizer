@@ -3,6 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
+	rayon::prelude::*,
     starlark::values::{none::NoneType, Value},
     std::{os::raw::c_ulong, path::PathBuf},
 };
@@ -61,7 +62,7 @@ impl ToValue for Option<Vec<PathBuf>> {
         match self {
             Some(value) => Value::from(
                 value
-                    .iter()
+                    .par_iter()
                     .map(|x| format!("{}", x.display()))
                     .collect::<Vec<_>>(),
             ),

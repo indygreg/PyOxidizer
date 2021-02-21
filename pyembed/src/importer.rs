@@ -18,6 +18,7 @@ use {
     std::ffi::{c_void, CString},
 };
 use {
+	rayon::prelude::*,
     crate::{
         conversion::pyobject_to_pathbuf,
         python_resources::{
@@ -1028,7 +1029,7 @@ impl OxidizedFinder {
             .values()
             .collect::<Vec<&python_packed_resources::data::Resource<'_, u8>>>();
 
-        resources.sort_by_key(|r| &r.name);
+        resources.par_sort_by_key(|r| &r.name);
 
         let objects: Result<Vec<PyObject>, PyErr> = resources
             .iter()

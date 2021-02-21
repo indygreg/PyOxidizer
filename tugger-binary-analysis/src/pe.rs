@@ -3,10 +3,11 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {anyhow::Result, std::path::Path};
+use rayon::prelude::*;
 
 pub fn find_pe_dependencies(data: &[u8]) -> Result<Vec<String>> {
     let pe = goblin::pe::PE::parse(data)?;
-    Ok(pe.libraries.iter().map(|l| (*l).to_string()).collect())
+    Ok(pe.libraries.par_iter().map(|l| (*l).to_string()).collect())
 }
 
 #[allow(unused)]

@@ -5,6 +5,7 @@
 /*! Interact with Python wheel files. */
 
 use {
+	rayon::prelude::*,
     crate::{
         filesystem_scanning::PythonResourceIterator, module_util::PythonModuleSuffixes,
         package_metadata::PythonPackageMetadata, resource::PythonResource,
@@ -143,7 +144,7 @@ impl WheelArchive {
 
         Ok(metadata
             .find_all_headers(header)
-            .iter()
+            .par_iter()
             .map(|s| Cow::Owned(s.to_string()))
             .collect::<Vec<_>>())
     }
@@ -279,14 +280,14 @@ impl WheelArchive {
         let mut inputs = self.regular_files();
 
         // As are .dist-info paths.
-        inputs.extend(self.dist_info_files());
+        inputs.par_extend(self.dist_info_files());
 
         // Get modules from purelib and platlib, remapping them to the root.
-        inputs.extend(self.purelib_files());
-        inputs.extend(self.platlib_files());
+        inputs.par_extend(self.purelib_files());
+        inputs.par_extend(self.platlib_files());
 
         // Get resources from data, remapping them to the root.
-        inputs.extend(self.data_files());
+        inputs.par_extend(self.data_files());
 
         // Other data keys are `headers` and `scripts`, which we don't yet
         // support as resource types.

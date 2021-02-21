@@ -13,4 +13,5 @@ keywords = ["python"]
 [dependencies]
 anyhow = "1.0.38"
 byteorder = "1.4.2"
+rayon = "1.5.0"
 

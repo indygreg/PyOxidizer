@@ -5,6 +5,7 @@
 /*! Serializing of structures into packed resources blobs. */
 
 use {
+	rayon::prelude::*,
     super::data::{
         BlobInteriorPadding, BlobSectionField, Resource, ResourceField, ResourceFlavor, HEADER_V3,
     },
@@ -346,7 +347,7 @@ where
             }
             ResourceField::SharedLibraryDependencyNames => {
                 if let Some(names) = &self.shared_library_dependency_names {
-                    names.iter().map(|s| s.as_bytes().len()).sum()
+                    names.par_iter().map(|s| s.as_bytes().len()).sum()
                 } else {
                     0
                 }
@@ -389,7 +390,7 @@ where
             ResourceField::RelativeFilesystemPackageResources => {
                 if let Some(resources) = &self.relative_path_package_resources {
                     resources
-                        .iter()
+                        .par_iter()
                         .map(|(key, value)| key.as_bytes().len() + path_bytes_length(value))
                         .sum()
                 } else {
@@ -399,7 +400,7 @@ where
             ResourceField::RelativeFilesystemDistributionResource => {
                 if let Some(metadata) = &self.relative_path_distribution_resources {
                     metadata
-                        .iter()
+                        .par_iter()
                         .map(|(key, value)| key.as_bytes().len() + path_bytes_length(value))
                         .sum()
                 } else {

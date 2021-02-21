@@ -3,6 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
+	rayon::prelude::*,
     anyhow::{anyhow, Result},
     std::{
         convert::TryFrom,
@@ -98,7 +99,7 @@ pub fn find_visual_cpp_redistributable(
             .to_string(),
     )?
     .collect::<Vec<_>>()
-    .into_iter()
+    .into_par_iter()
     .map(|r| r.map_err(|e| anyhow!("glob error: {}", e)))
     .collect::<Result<Vec<PathBuf>>>()?;
 
