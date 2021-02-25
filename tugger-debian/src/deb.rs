@@ -21,7 +21,7 @@ use {
 /// Represents an error related to .deb file handling.
 #[derive(Debug)]
 pub enum DebError {
-    IOError(std::io::Error),
+    IoError(std::io::Error),
     PathError(String),
     FileManifestError(FileManifestError),
 }
@@ -29,7 +29,7 @@ pub enum DebError {
 impl std::fmt::Display for DebError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::IOError(inner) => write!(f, "I/O error: {}", inner),
+            Self::IoError(inner) => write!(f, "I/O error: {}", inner),
             Self::PathError(msg) => write!(f, "path error: {}", msg),
             Self::FileManifestError(inner) => write!(f, "file manifest error: {}", inner),
         }
@@ -40,13 +40,13 @@ impl std::error::Error for DebError {}
 
 impl From<std::io::Error> for DebError {
     fn from(e: std::io::Error) -> Self {
-        Self::IOError(e)
+        Self::IoError(e)
     }
 }
 
 impl<W> From<std::io::IntoInnerError<W>> for DebError {
     fn from(e: std::io::IntoInnerError<W>) -> Self {
-        Self::IOError(e.into())
+        Self::IoError(e.into())
     }
 }
 

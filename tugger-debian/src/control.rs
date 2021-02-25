@@ -15,20 +15,20 @@ use std::{
 
 #[derive(Debug)]
 pub enum ControlError {
-    IOError(std::io::Error),
+    IoError(std::io::Error),
     ParseError(String),
 }
 
 impl From<std::io::Error> for ControlError {
     fn from(e: std::io::Error) -> Self {
-        Self::IOError(e)
+        Self::IoError(e)
     }
 }
 
 impl std::fmt::Display for ControlError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::IOError(inner) => write!(f, "I/O error: {}", inner),
+            Self::IoError(inner) => write!(f, "I/O error: {}", inner),
             Self::ParseError(msg) => write!(f, "parse error: {}", msg),
         }
     }
