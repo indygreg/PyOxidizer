@@ -129,10 +129,7 @@ pub fn build_executable_with_rust_project<'a>(
             .join(target)
             .join(if release { "release" } else { "debug" });
 
-    let mut args = Vec::new();
-    args.push("build");
-    args.push("--target");
-    args.push(target);
+    let mut args = vec!["build", "--target", target];
 
     let target_dir = target_base_path.display().to_string();
     args.push("--target-dir");
