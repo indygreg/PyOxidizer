@@ -183,6 +183,7 @@ impl Default for PythonRawAllocator {
 /// See https://docs.python.org/3/c-api/init_config.html#c.PyPreConfig.coerce_c_locale.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum CoerceCLocale {
+    #[allow(clippy::upper_case_acronyms)]
     LCCtype = 1,
     C = 2,
 }
