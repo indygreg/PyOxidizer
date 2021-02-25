@@ -91,9 +91,9 @@ impl TryFrom<&Value> for OptionalResourceLocation {
     }
 }
 
-impl Into<Option<ConcreteResourceLocation>> for OptionalResourceLocation {
-    fn into(self) -> Option<ConcreteResourceLocation> {
-        self.inner
+impl From<OptionalResourceLocation> for Option<ConcreteResourceLocation> {
+    fn from(location: OptionalResourceLocation) -> Self {
+        location.inner
     }
 }
 
