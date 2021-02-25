@@ -460,7 +460,7 @@ impl FileManifest {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, std::iter::FromIterator};
+    use super::*;
 
     #[test]
     fn test_add_file_entry() -> Result<(), FileManifestError> {
@@ -612,30 +612,38 @@ mod tests {
 
         assert_eq!(
             entries.get(&None).unwrap(),
-            &BTreeMap::from_iter([(OsStr::new("root.txt"), &c),].iter().cloned())
+            &[(OsStr::new("root.txt"), &c),].iter().cloned().collect()
         );
         assert_eq!(
             entries.get(&Some(Path::new("dir0"))).unwrap(),
-            &BTreeMap::from_iter([(OsStr::new("dir0_file0.txt"), &c)].iter().cloned())
+            &[(OsStr::new("dir0_file0.txt"), &c)]
+                .iter()
+                .cloned()
+                .collect()
         );
         assert_eq!(
             entries.get(&Some(Path::new("dir0/child0"))).unwrap(),
-            &BTreeMap::from_iter(
-                [
-                    (OsStr::new("dir0_child0_file0.txt"), &c),
-                    (OsStr::new("dir0_child0_file1.txt"), &c)
-                ]
-                .iter()
-                .cloned()
-            )
+            &[
+                (OsStr::new("dir0_child0_file0.txt"), &c),
+                (OsStr::new("dir0_child0_file1.txt"), &c)
+            ]
+            .iter()
+            .cloned()
+            .collect()
         );
         assert_eq!(
             entries.get(&Some(Path::new("dir0/child1"))).unwrap(),
-            &BTreeMap::from_iter([(OsStr::new("dir0_child1_file0.txt"), &c)].iter().cloned())
+            &[(OsStr::new("dir0_child1_file0.txt"), &c)]
+                .iter()
+                .cloned()
+                .collect()
         );
         assert_eq!(
             entries.get(&Some(Path::new("dir1/child0"))).unwrap(),
-            &BTreeMap::from_iter([(OsStr::new("dir1_child0_file0.txt"), &c)].iter().cloned())
+            &[(OsStr::new("dir1_child0_file0.txt"), &c)]
+                .iter()
+                .cloned()
+                .collect()
         );
 
         Ok(())
