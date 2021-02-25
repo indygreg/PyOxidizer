@@ -18,7 +18,7 @@ pub enum LicenseFlavor {
     None,
 
     /// An SPDX license expression.
-    SPDX(Expression),
+    Spdx(Expression),
 
     /// An SPDX expression that contain unknown license identifiers.
     OtherExpression(Expression),
@@ -112,7 +112,7 @@ impl LicensedComponent {
         let spdx_expression = Expression::parse(spdx_expression).map_err(|e| anyhow!("{}", e))?;
 
         let license = if spdx_expression.evaluate(|req| req.license.id().is_some()) {
-            LicenseFlavor::SPDX(spdx_expression)
+            LicenseFlavor::Spdx(spdx_expression)
         } else {
             LicenseFlavor::OtherExpression(spdx_expression)
         };
@@ -182,7 +182,7 @@ impl LicensedComponent {
     /// Obtain the SPDX expression for this component's license.
     pub fn spdx_expression(&self) -> Option<&Expression> {
         match &self.license {
-            LicenseFlavor::SPDX(expression) => Some(expression),
+            LicenseFlavor::Spdx(expression) => Some(expression),
             LicenseFlavor::OtherExpression(expression) => Some(expression),
             LicenseFlavor::None | LicenseFlavor::PublicDomain | LicenseFlavor::Unknown(_) => None,
         }
@@ -192,7 +192,7 @@ impl LicensedComponent {
     ///
     /// Simple is defined as having at most a single license.
     pub fn is_simple_spdx_expression(&self) -> bool {
-        if let LicenseFlavor::SPDX(expression) = &self.license {
+        if let LicenseFlavor::Spdx(expression) = &self.license {
             expression.iter().count() < 2
         } else {
             false
@@ -221,7 +221,7 @@ impl LicensedComponent {
 
     /// Returns whether all license identifiers are SPDX.
     pub fn is_spdx(&self) -> bool {
-        matches!(self.license, LicenseFlavor::SPDX(_))
+        matches!(self.license, LicenseFlavor::Spdx(_))
     }
 
     /// Obtain all SPDX licenses referenced by this component.
@@ -230,7 +230,7 @@ impl LicensedComponent {
     /// is an optional exclusion identifier.
     pub fn all_spdx_licenses(&self) -> BTreeSet<(LicenseId, Option<ExceptionId>)> {
         match &self.license {
-            LicenseFlavor::SPDX(expression) => expression
+            LicenseFlavor::Spdx(expression) => expression
                 .requirements()
                 .map(|req| (req.req.license.id().clone().unwrap(), req.req.exception))
                 .collect::<BTreeSet<_>>(),

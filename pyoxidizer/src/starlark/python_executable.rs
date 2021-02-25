@@ -51,7 +51,7 @@ use {
     },
     tugger::starlark::{
         file_resource::FileManifestValue, wix_bundle_builder::WiXBundleBuilderValue,
-        wix_msi_builder::WiXMSIBuilderValue,
+        wix_msi_builder::WiXMsiBuilderValue,
     },
     tugger_file_manifest::FileData,
 };
@@ -763,7 +763,7 @@ impl PythonExecutableValue {
         }
 
         let msi_builder = msi_builder_value
-            .downcast_ref::<WiXMSIBuilderValue>()
+            .downcast_ref::<WiXMsiBuilderValue>()
             .unwrap();
 
         let bundle_builder_value = WiXBundleBuilderValue::new_from_args(
@@ -810,14 +810,14 @@ impl PythonExecutableValue {
         let manifest_value = self.to_file_manifest(type_values, ".".to_string())?;
         let manifest = manifest_value.downcast_ref::<FileManifestValue>().unwrap();
 
-        let builder_value = WiXMSIBuilderValue::new_from_args(
+        let builder_value = WiXMsiBuilderValue::new_from_args(
             id_prefix,
             product_name,
             product_version,
             product_manufacturer,
         )?;
         let mut builder = builder_value
-            .downcast_mut::<WiXMSIBuilderValue>()
+            .downcast_mut::<WiXMsiBuilderValue>()
             .unwrap()
             .unwrap();
 

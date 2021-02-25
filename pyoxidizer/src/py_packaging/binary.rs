@@ -27,7 +27,7 @@ use {
         sync::Arc,
     },
     tugger_file_manifest::{File, FileManifest},
-    tugger_windows::VCRedistributablePlatform,
+    tugger_windows::VcRedistributablePlatform,
 };
 
 include!("../pyembed-license.rs");
@@ -144,7 +144,7 @@ pub trait PythonBinaryBuilder {
     /// If `None`, there is no dependency on `vcruntimeXXX.dll` files. If `Some`,
     /// the returned tuple declares the VC++ Redistributable major version string
     /// (e.g. `14`) and the VC++ Redistributable platform variant that is required.
-    fn vc_runtime_requirements(&self) -> Option<(String, VCRedistributablePlatform)>;
+    fn vc_runtime_requirements(&self) -> Option<(String, VcRedistributablePlatform)>;
 
     /// Obtain the cache tag to apply to Python bytecode modules.
     fn cache_tag(&self) -> &str;

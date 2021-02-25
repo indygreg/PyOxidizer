@@ -17,7 +17,7 @@ pub use {
     common::{run_candle, run_light, target_triple_to_wix_arch, write_file_manifest_to_wix},
     exe_package::ExePackage,
     installer_builder::WiXInstallerBuilder,
-    msi_package::MSIPackage,
-    simple_msi_builder::WiXSimpleMSIBuilder,
+    msi_package::MsiPackage,
+    simple_msi_builder::WiXSimpleMsiBuilder,
     wxs_builder::WxsBuilder,
 };

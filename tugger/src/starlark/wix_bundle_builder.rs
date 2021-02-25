@@ -3,7 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    crate::starlark::wix_msi_builder::WiXMSIBuilderValue,
+    crate::starlark::wix_msi_builder::WiXMsiBuilderValue,
     starlark::{
         environment::TypeValues,
         values::{
@@ -20,8 +20,8 @@ use {
         get_context_value, EnvironmentContext, ResolvedTarget, ResolvedTargetValue, RunMode,
     },
     std::convert::TryFrom,
-    tugger_windows::VCRedistributablePlatform,
-    tugger_wix::{MSIPackage, WiXBundleInstallerBuilder},
+    tugger_windows::VcRedistributablePlatform,
+    tugger_wix::{MsiPackage, WiXBundleInstallerBuilder},
 };
 
 #[derive(Clone)]
@@ -29,7 +29,7 @@ pub struct WiXBundleBuilderValue<'a> {
     pub inner: WiXBundleInstallerBuilder<'a>,
     pub target_triple: String,
     pub id_prefix: String,
-    pub build_msis: Vec<WiXMSIBuilderValue>,
+    pub build_msis: Vec<WiXMsiBuilderValue>,
 }
 
 impl TypedValue for WiXBundleBuilderValue<'static> {
@@ -71,7 +71,7 @@ impl<'a> WiXBundleBuilderValue<'a> {
         type_values: &TypeValues,
         platform: String,
     ) -> ValueResult {
-        let platform = VCRedistributablePlatform::try_from(platform.as_str()).map_err(|e| {
+        let platform = VcRedistributablePlatform::try_from(platform.as_str()).map_err(|e| {
             ValueError::Runtime(RuntimeError {
                 code: "TUGGER_WIX_BUNDLE_BUILDER",
                 message: e,
@@ -100,11 +100,11 @@ impl<'a> WiXBundleBuilderValue<'a> {
     /// WiXBundleBuilder.add_wix_msi_builder(builder)
     pub fn add_wix_msi_builder(
         &mut self,
-        builder: WiXMSIBuilderValue,
+        builder: WiXMsiBuilderValue,
         display_internal_ui: bool,
         install_condition: Value,
     ) -> ValueResult {
-        let mut package = MSIPackage {
+        let mut package = MsiPackage {
             source_file: Some(builder.msi_filename().into()),
             ..Default::default()
         };
@@ -190,7 +190,7 @@ starlark_module! { wix_bundle_builder_module =>
 
     WiXBundleBuilder.add_wix_msi_builder(
         this,
-        builder: WiXMSIBuilderValue,
+        builder: WiXMsiBuilderValue,
         display_internal_ui: bool = false,
         install_condition = NoneType::None
     ) {

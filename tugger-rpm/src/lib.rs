@@ -6,4 +6,4 @@
 mod builder;
 
 #[cfg(target_family = "unix")]
-pub use builder::RPMBuilder;
+pub use builder::RpmBuilder;

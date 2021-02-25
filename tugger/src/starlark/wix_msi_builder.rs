@@ -23,21 +23,21 @@ use {
         get_context_value, EnvironmentContext, ResolvedTarget, ResolvedTargetValue, RunMode,
     },
     std::convert::TryFrom,
-    tugger_windows::VCRedistributablePlatform,
-    tugger_wix::WiXSimpleMSIBuilder,
+    tugger_windows::VcRedistributablePlatform,
+    tugger_wix::WiXSimpleMsiBuilder,
 };
 
 #[derive(Clone)]
-pub struct WiXMSIBuilderValue {
-    pub inner: WiXSimpleMSIBuilder,
+pub struct WiXMsiBuilderValue {
+    pub inner: WiXSimpleMsiBuilder,
     /// Explicit filename to use for the built MSI.
     msi_filename: Option<String>,
     /// The target architecture we are building for.
     pub target_triple: String,
 }
 
-impl TypedValue for WiXMSIBuilderValue {
-    type Holder = Mutable<WiXMSIBuilderValue>;
+impl TypedValue for WiXMsiBuilderValue {
+    type Holder = Mutable<WiXMsiBuilderValue>;
     const TYPE: &'static str = "WiXMSIBuilder";
 
     fn values_for_descendant_check_and_freeze(&self) -> Box<dyn Iterator<Item = Value>> {
@@ -92,21 +92,21 @@ impl TypedValue for WiXMSIBuilderValue {
     }
 }
 
-impl WiXMSIBuilderValue {
+impl WiXMsiBuilderValue {
     pub fn new_from_args(
         id_prefix: String,
         product_name: String,
         product_version: String,
         product_manufacturer: String,
     ) -> ValueResult {
-        let inner = WiXSimpleMSIBuilder::new(
+        let inner = WiXSimpleMsiBuilder::new(
             &id_prefix,
             &product_name,
             &product_version,
             &product_manufacturer,
         );
 
-        Ok(Value::new(WiXMSIBuilderValue {
+        Ok(Value::new(WiXMsiBuilderValue {
             inner,
             msi_filename: None,
             target_triple: env!("HOST").to_string(),
@@ -132,7 +132,7 @@ impl WiXMSIBuilderValue {
         redist_version: String,
         platform: String,
     ) -> ValueResult {
-        let platform = VCRedistributablePlatform::try_from(platform.as_str()).map_err(|e| {
+        let platform = VcRedistributablePlatform::try_from(platform.as_str()).map_err(|e| {
             ValueError::Runtime(RuntimeError {
                 code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
                 message: e,
@@ -207,12 +207,12 @@ starlark_module! { wix_msi_builder_module =>
         product_version: String,
         product_manufacturer: String
     ) {
-        WiXMSIBuilderValue::new_from_args(id_prefix, product_name, product_version, product_manufacturer)
+        WiXMsiBuilderValue::new_from_args(id_prefix, product_name, product_version, product_manufacturer)
     }
 
     #[allow(non_snake_case)]
     WiXMSIBuilder.add_program_files_manifest(this, manifest: FileManifestValue) {
-        let mut this = this.downcast_mut::<WiXMSIBuilderValue>().unwrap().unwrap();
+        let mut this = this.downcast_mut::<WiXMsiBuilderValue>().unwrap().unwrap();
         this.add_program_files_manifest(manifest)
     }
 
@@ -222,13 +222,13 @@ starlark_module! { wix_msi_builder_module =>
         redist_version: String,
         platform: String
     ) {
-        let mut this = this.downcast_mut::<WiXMSIBuilderValue>().unwrap().unwrap();
+        let mut this = this.downcast_mut::<WiXMsiBuilderValue>().unwrap().unwrap();
         this.add_visual_cpp_redistributable(redist_version, platform)
     }
 
     #[allow(non_snake_case)]
     WiXMSIBuilder.build(env env, this, target: String) {
-        let this = this.downcast_ref::<WiXMSIBuilderValue>().unwrap();
+        let this = this.downcast_ref::<WiXMsiBuilderValue>().unwrap();
         this.build(env, target)
     }
 }
@@ -288,7 +288,7 @@ mod tests {
 
     #[test]
     fn test_add_visual_cpp_redistributable() -> Result<()> {
-        if tugger_windows::find_visual_cpp_redistributable("14", VCRedistributablePlatform::X64)
+        if tugger_windows::find_visual_cpp_redistributable("14", VcRedistributablePlatform::X64)
             .is_err()
         {
             eprintln!("skipping test because Visual C++ Redistributable files not found");

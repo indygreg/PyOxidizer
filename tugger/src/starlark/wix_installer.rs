@@ -3,7 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    crate::starlark::{file_resource::FileManifestValue, wix_msi_builder::WiXMSIBuilderValue},
+    crate::starlark::{file_resource::FileManifestValue, wix_msi_builder::WiXMsiBuilderValue},
     anyhow::Result,
     starlark::{
         environment::TypeValues,
@@ -23,7 +23,7 @@ use {
     },
     std::{convert::TryFrom, path::Path},
     tugger_file_manifest::FileEntry,
-    tugger_wix::{WiXInstallerBuilder, WiXSimpleMSIBuilder, WxsBuilder},
+    tugger_wix::{WiXInstallerBuilder, WiXSimpleMsiBuilder, WxsBuilder},
 };
 
 pub struct WiXInstallerValue {
@@ -154,7 +154,7 @@ impl WiXInstallerValue {
         Ok(Value::new(NoneType::None))
     }
 
-    fn add_msi_builder(&mut self, builder: WiXMSIBuilderValue) -> ValueResult {
+    fn add_msi_builder(&mut self, builder: WiXMsiBuilderValue) -> ValueResult {
         builder
             .inner
             .add_to_installer_builder(&mut self.inner)
@@ -177,7 +177,7 @@ impl WiXInstallerValue {
         product_manufacturer: String,
         program_files: FileManifestValue,
     ) -> ValueResult {
-        let mut builder = WiXSimpleMSIBuilder::new(
+        let mut builder = WiXSimpleMsiBuilder::new(
             &id_prefix,
             &product_name,
             &product_version,
@@ -313,7 +313,7 @@ starlark_module! { wix_installer_module =>
         this.add_install_files(manifest)
     }
 
-    WiXInstaller.add_msi_builder(this, builder: WiXMSIBuilderValue) {
+    WiXInstaller.add_msi_builder(this, builder: WiXMsiBuilderValue) {
         let mut this = this.downcast_mut::<WiXInstallerValue>().unwrap().unwrap();
         this.add_msi_builder(builder)
     }

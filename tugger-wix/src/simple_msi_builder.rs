@@ -11,7 +11,7 @@ use {
         path::{Path, PathBuf},
     },
     tugger_file_manifest::FileManifest,
-    tugger_windows::{find_visual_cpp_redistributable, SigntoolSign, VCRedistributablePlatform},
+    tugger_windows::{find_visual_cpp_redistributable, SigntoolSign, VcRedistributablePlatform},
     uuid::Uuid,
     xml::{
         common::XmlVersion,
@@ -30,7 +30,7 @@ use {
 /// The MSI installer will materialize registered files in the
 /// `Program Files` directory on the target machine.
 #[derive(Clone, Default)]
-pub struct WiXSimpleMSIBuilder {
+pub struct WiXSimpleMsiBuilder {
     id_prefix: String,
     product_name: String,
     product_version: String,
@@ -65,7 +65,7 @@ pub struct WiXSimpleMSIBuilder {
     auto_sign_signtool_settings: Option<SigntoolSign>,
 }
 
-impl WiXSimpleMSIBuilder {
+impl WiXSimpleMsiBuilder {
     pub fn new(id_prefix: &str, product_name: &str, version: &str, manufacturer: &str) -> Self {
         Self {
             id_prefix: id_prefix.to_string(),
@@ -104,7 +104,7 @@ impl WiXSimpleMSIBuilder {
     pub fn add_visual_cpp_redistributable(
         &mut self,
         redist_version: &str,
-        platform: VCRedistributablePlatform,
+        platform: VcRedistributablePlatform,
     ) -> Result<()> {
         for path in find_visual_cpp_redistributable(redist_version, platform)? {
             let parent = path
@@ -573,7 +573,7 @@ mod tests {
 
     #[test]
     fn test_simple_msi_builder() -> Result<()> {
-        let mut builder = WiXSimpleMSIBuilder::new("prefix", "myapp", "0.1", "author");
+        let mut builder = WiXSimpleMsiBuilder::new("prefix", "myapp", "0.1", "author");
 
         let mut m = FileManifest::default();
         m.add_file_entry(
@@ -601,7 +601,7 @@ mod tests {
 
         let logger = get_logger()?;
 
-        let mut builder = WiXSimpleMSIBuilder::new("prefix", "testapp", "0.1", "author");
+        let mut builder = WiXSimpleMsiBuilder::new("prefix", "testapp", "0.1", "author");
 
         let mut m = FileManifest::default();
         m.add_file_entry(
@@ -648,13 +648,13 @@ mod tests {
 
     #[test]
     fn test_add_visual_cpp_redistributable() -> Result<()> {
-        if find_visual_cpp_redistributable("14", VCRedistributablePlatform::X64).is_err() {
+        if find_visual_cpp_redistributable("14", VcRedistributablePlatform::X64).is_err() {
             eprintln!("skipping because VC++ redistributable files could not be located");
             return Ok(());
         }
 
-        let mut builder = WiXSimpleMSIBuilder::new("prefix", "testapp", "0.1", "author");
-        builder.add_visual_cpp_redistributable("14", VCRedistributablePlatform::X64)?;
+        let mut builder = WiXSimpleMsiBuilder::new("prefix", "testapp", "0.1", "author");
+        builder.add_visual_cpp_redistributable("14", VcRedistributablePlatform::X64)?;
 
         assert!(builder
             .program_files_manifest

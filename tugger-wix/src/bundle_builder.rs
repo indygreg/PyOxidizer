@@ -11,7 +11,7 @@ use {
     slog::warn,
     std::{borrow::Cow, collections::BTreeMap, io::Write, ops::Deref, path::Path},
     tugger_common::http::download_to_path,
-    tugger_windows::VCRedistributablePlatform,
+    tugger_windows::VcRedistributablePlatform,
     uuid::Uuid,
     xml::{common::XmlVersion, writer::XmlEvent, EmitterConfig, EventWriter},
 };
@@ -80,13 +80,13 @@ impl<'a> WiXBundleInstallerBuilder<'a> {
     pub fn add_vc_redistributable<P: AsRef<Path>>(
         &mut self,
         logger: &slog::Logger,
-        platform: VCRedistributablePlatform,
+        platform: VcRedistributablePlatform,
         download_path: P,
     ) -> Result<()> {
         let (entry, install_condition) = match platform {
-            VCRedistributablePlatform::X86 => (VC_REDIST_X86.deref(), "Not VersionNT64"),
-            VCRedistributablePlatform::X64 => (VC_REDIST_X64.deref(), "VersionNT64"),
-            VCRedistributablePlatform::Arm64 => {
+            VcRedistributablePlatform::X86 => (VC_REDIST_X86.deref(), "Not VersionNT64"),
+            VcRedistributablePlatform::X64 => (VC_REDIST_X64.deref(), "VersionNT64"),
+            VcRedistributablePlatform::Arm64 => {
                 // TODO define proper Arm64 install condition.
                 (VC_REDIST_ARM64.deref(), "VersionNT64 And Not VersionNT64")
             }
@@ -263,17 +263,17 @@ mod tests {
 
         bundle.add_vc_redistributable(
             &logger,
-            VCRedistributablePlatform::X86,
+            VcRedistributablePlatform::X86,
             DEFAULT_DOWNLOAD_DIR.as_path(),
         )?;
         bundle.add_vc_redistributable(
             &logger,
-            VCRedistributablePlatform::X64,
+            VcRedistributablePlatform::X64,
             DEFAULT_DOWNLOAD_DIR.as_path(),
         )?;
         bundle.add_vc_redistributable(
             &logger,
-            VCRedistributablePlatform::Arm64,
+            VcRedistributablePlatform::Arm64,
             DEFAULT_DOWNLOAD_DIR.as_path(),
         )?;
 
@@ -294,12 +294,12 @@ mod tests {
 
         bundle.add_vc_redistributable(
             &logger,
-            VCRedistributablePlatform::X86,
+            VcRedistributablePlatform::X86,
             DEFAULT_DOWNLOAD_DIR.as_path(),
         )?;
         bundle.add_vc_redistributable(
             &logger,
-            VCRedistributablePlatform::X64,
+            VcRedistributablePlatform::X64,
             DEFAULT_DOWNLOAD_DIR.as_path(),
         )?;
 

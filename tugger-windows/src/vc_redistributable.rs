@@ -16,13 +16,13 @@ use {crate::find_vswhere, std::collections::BTreeMap};
 
 /// Available VC++ Redistributable platforms we can add to the bundle.
 #[derive(Debug, PartialEq)]
-pub enum VCRedistributablePlatform {
+pub enum VcRedistributablePlatform {
     X86,
     X64,
     Arm64,
 }
 
-impl Display for VCRedistributablePlatform {
+impl Display for VcRedistributablePlatform {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         f.write_str(match self {
             Self::X86 => "x86",
@@ -32,7 +32,7 @@ impl Display for VCRedistributablePlatform {
     }
 }
 
-impl TryFrom<&str> for VCRedistributablePlatform {
+impl TryFrom<&str> for VcRedistributablePlatform {
     type Error = String;
 
     fn try_from(value: &str) -> anyhow::Result<Self, Self::Error> {
@@ -58,7 +58,7 @@ impl TryFrom<&str> for VCRedistributablePlatform {
 #[cfg(windows)]
 pub fn find_visual_cpp_redistributable(
     redist_version: &str,
-    platform: VCRedistributablePlatform,
+    platform: VcRedistributablePlatform,
 ) -> Result<Vec<PathBuf>> {
     let vswhere_exe = find_vswhere()?;
 
@@ -131,7 +131,7 @@ pub fn find_visual_cpp_redistributable(
 #[cfg(unix)]
 pub fn find_visual_cpp_redistributable(
     _version: &str,
-    _platform: VCRedistributablePlatform,
+    _platform: VcRedistributablePlatform,
 ) -> Result<Vec<PathBuf>> {
     // TODO we could potentially reference these files at a URL and download them or something.
     Err(anyhow!(
@@ -146,9 +146,9 @@ mod tests {
     #[test]
     fn test_find_visual_cpp_redistributable_14() -> Result<()> {
         let platforms = vec![
-            VCRedistributablePlatform::X86,
-            VCRedistributablePlatform::X64,
-            VCRedistributablePlatform::Arm64,
+            VcRedistributablePlatform::X86,
+            VcRedistributablePlatform::X64,
+            VcRedistributablePlatform::Arm64,
         ];
 
         for platform in platforms {

@@ -8,7 +8,7 @@ use {crate::*, anyhow::Result, std::io::Write, xml::EventWriter};
 #[derive(Clone, Debug)]
 pub enum ChainElement<'a> {
     ExePackage(ExePackage<'a>),
-    MsiPackage(MSIPackage<'a>),
+    MsiPackage(MsiPackage<'a>),
 }
 
 impl<'a> ChainElement<'a> {

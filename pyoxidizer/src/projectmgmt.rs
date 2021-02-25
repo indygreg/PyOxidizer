@@ -400,7 +400,7 @@ pub fn python_distribution_info(dist_path: &str) -> Result<()> {
                 println!(
                     "Licensing: {}",
                     match component.license() {
-                        LicenseFlavor::SPDX(expression) => expression.to_string(),
+                        LicenseFlavor::Spdx(expression) => expression.to_string(),
                         LicenseFlavor::OtherExpression(expression) => expression.to_string(),
                         LicenseFlavor::PublicDomain => "public domain".to_string(),
                         LicenseFlavor::None => "none".to_string(),
@@ -501,7 +501,7 @@ pub fn python_distribution_licenses(path: &str) -> Result<()> {
 
             if let Some(component) = &variant.license {
                 match component.license() {
-                    LicenseFlavor::SPDX(expression) => {
+                    LicenseFlavor::Spdx(expression) => {
                         println!("Licensing: Valid SPDX: {}", expression);
                     }
                     LicenseFlavor::OtherExpression(expression) => {

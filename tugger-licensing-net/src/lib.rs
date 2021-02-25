@@ -63,7 +63,7 @@ pub fn licensed_component_spdx_license_texts(
     client: &reqwest::blocking::Client,
 ) -> Result<Vec<String>> {
     let reqs = match component.license() {
-        LicenseFlavor::SPDX(expression) => expression.requirements().collect::<Vec<_>>(),
+        LicenseFlavor::Spdx(expression) => expression.requirements().collect::<Vec<_>>(),
         LicenseFlavor::OtherExpression(expression) => expression
             .requirements()
             .filter(|req| req.req.license.id().is_some())
@@ -119,7 +119,7 @@ pub fn generate_aggregate_license_text<'a>(
             }
         }
         match component.license() {
-            LicenseFlavor::SPDX(expression) => {
+            LicenseFlavor::Spdx(expression) => {
                 writeln!(
                     &mut text,
                     "The SPDX license expression of this component is\n\"{}\".",

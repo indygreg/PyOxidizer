@@ -18,6 +18,6 @@ mod signtool;
 pub use signtool::{find_signtool, SigntoolSign};
 mod util;
 mod vc_redistributable;
-pub use vc_redistributable::{find_visual_cpp_redistributable, VCRedistributablePlatform};
+pub use vc_redistributable::{find_visual_cpp_redistributable, VcRedistributablePlatform};
 mod vswhere;
 pub use vswhere::find_vswhere;

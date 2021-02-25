@@ -43,7 +43,7 @@ use {
     },
     tugger_file_manifest::{File, FileData, FileEntry, FileManifest},
     tugger_licensing::{ComponentFlavor, LicensedComponent},
-    tugger_windows::VCRedistributablePlatform,
+    tugger_windows::VcRedistributablePlatform,
 };
 
 lazy_static! {
@@ -390,13 +390,13 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         &self.target_triple
     }
 
-    fn vc_runtime_requirements(&self) -> Option<(String, VCRedistributablePlatform)> {
+    fn vc_runtime_requirements(&self) -> Option<(String, VcRedistributablePlatform)> {
         let platform = if self.target_triple.starts_with("i686-") {
-            VCRedistributablePlatform::X86
+            VcRedistributablePlatform::X86
         } else if self.target_triple.starts_with("x86_64-") {
-            VCRedistributablePlatform::X64
+            VcRedistributablePlatform::X64
         } else if self.target_triple.starts_with("aarch64-") {
-            VCRedistributablePlatform::Arm64
+            VcRedistributablePlatform::Arm64
         } else {
             return None;
         };
@@ -2958,8 +2958,8 @@ pub mod tests {
 
             if dist.target_triple().contains("windows") && dist.libpython_shared_library.is_some() {
                 let platform = match dist.target_triple() {
-                    "i686-pc-windows-msvc" => VCRedistributablePlatform::X86,
-                    "x86_64-pc-windows-msvc" => VCRedistributablePlatform::X64,
+                    "i686-pc-windows-msvc" => VcRedistributablePlatform::X86,
+                    "x86_64-pc-windows-msvc" => VcRedistributablePlatform::X64,
                     triple => {
                         return Err(anyhow!("unexpected distribution triple: {}", triple));
                     }

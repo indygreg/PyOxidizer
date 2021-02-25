@@ -11,7 +11,7 @@ use {
 
 /// Represents an `<MsiPackage>` WiX XML element.
 #[derive(Clone, Debug, Default)]
-pub struct MSIPackage<'a> {
+pub struct MsiPackage<'a> {
     pub id: Option<Cow<'a, str>>,
     pub display_name: Option<Cow<'a, str>>,
     pub force_per_machine: Option<Cow<'a, str>>,
@@ -21,13 +21,13 @@ pub struct MSIPackage<'a> {
     pub install_condition: Option<Cow<'a, str>>,
 }
 
-impl<'a> From<MSIPackage<'a>> for ChainElement<'a> {
-    fn from(value: MSIPackage<'a>) -> Self {
+impl<'a> From<MsiPackage<'a>> for ChainElement<'a> {
+    fn from(value: MsiPackage<'a>) -> Self {
         Self::MsiPackage(value)
     }
 }
 
-impl<'a> MSIPackage<'a> {
+impl<'a> MsiPackage<'a> {
     pub fn write_xml<W: Write>(&self, writer: &mut EventWriter<W>) -> Result<()> {
         let e = XmlEvent::start_element("MsiPackage");
 

@@ -591,7 +591,7 @@ impl PythonPackagingPolicy {
                                 Some(em.clone())
                             } else if let Some(license) = &em.license {
                                 match license.license() {
-                                    LicenseFlavor::SPDX(expression) => {
+                                    LicenseFlavor::Spdx(expression) => {
                                         let copyleft = expression.evaluate(|req| {
                                             if let Some(id) = req.license.id() {
                                                 id.is_copyleft()

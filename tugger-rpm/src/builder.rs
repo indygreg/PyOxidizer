@@ -16,20 +16,20 @@ use rpm::{RPMFileOptions, RPMPackage};
 /// This is a thin wrapper around rpm::RPMBuilder which provides some
 /// minor quality of life improvements, such as handling of
 /// `FileManifest` instances.
-pub struct RPMBuilder {
+pub struct RpmBuilder {
     inner: rpm::RPMBuilder,
 
     build_path: PathBuf,
     files: FileManifest,
 }
 
-impl AsMut<rpm::RPMBuilder> for RPMBuilder {
+impl AsMut<rpm::RPMBuilder> for RpmBuilder {
     fn as_mut(&mut self) -> &mut rpm::RPMBuilder {
         &mut self.inner
     }
 }
 
-impl RPMBuilder {
+impl RpmBuilder {
     /// Create a new instance from required fields.
     pub fn new<P: AsRef<Path>>(
         build_path: P,
