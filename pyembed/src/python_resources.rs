@@ -31,7 +31,6 @@ use {
         collections::{hash_map::Entry, HashMap},
         convert::TryFrom,
         ffi::CStr,
-        iter::FromIterator,
         path::{Path, PathBuf},
     },
 };
@@ -1206,7 +1205,7 @@ py_class!(pub class OxidizedResource |py| {
 
     @property def in_memory_package_resources(&self) -> PyResult<Option<HashMap<String, PyBytes>>> {
         Ok(self.resource(py).borrow().in_memory_package_resources.as_ref().map(|x| {
-            HashMap::from_iter(x.iter().map(|(k, v)| (k.to_string(), PyBytes::new(py, v))))
+            x.iter().map(|(k, v)| (k.to_string(), PyBytes::new(py, v))).collect()
         }))
     }
 
@@ -1214,9 +1213,7 @@ py_class!(pub class OxidizedResource |py| {
         if let Some(value) = value {
             self.resource(py).borrow_mut().in_memory_package_resources =
                 pyobject_optional_resources_map_to_owned_bytes(py, &value)?
-                    .map(|x| HashMap::from_iter(
-                        x.iter().map(|(k, v)| (Cow::Owned(k.to_owned()), Cow::Owned(v.to_owned())))
-                     ));
+                    .map(|x| x.into_iter().map(|(k, v)| (Cow::Owned(k.to_owned()), Cow::Owned(v.to_owned()))).collect());
 
             Ok(())
         } else {
@@ -1226,7 +1223,7 @@ py_class!(pub class OxidizedResource |py| {
 
     @property def in_memory_distribution_resources(&self) -> PyResult<Option<HashMap<String, PyBytes>>> {
         Ok(self.resource(py).borrow().in_memory_distribution_resources.as_ref().map(|x| {
-            HashMap::from_iter(x.iter().map(|(k, v)| (k.to_string(), PyBytes::new(py, v))))
+            x.iter().map(|(k, v)| (k.to_string(), PyBytes::new(py, v))).collect()
         }))
     }
 
@@ -1234,9 +1231,9 @@ py_class!(pub class OxidizedResource |py| {
         if let Some(value) = value {
             self.resource(py).borrow_mut().in_memory_distribution_resources =
                 pyobject_optional_resources_map_to_owned_bytes(py, &value)?
-                    .map(|x| HashMap::from_iter(
-                        x.iter().map(|(k, v)| (Cow::Owned(k.to_owned()), Cow::Owned(v.to_owned())))
-                     ));
+                    .map(|x|
+                        x.into_iter().map(|(k, v)| (Cow::Owned(k.to_owned()), Cow::Owned(v.to_owned()))).collect()
+                    );
 
             Ok(())
         } else {
@@ -1261,14 +1258,14 @@ py_class!(pub class OxidizedResource |py| {
 
     @property def shared_library_dependency_names(&self) -> PyResult<Option<Vec<String>>> {
         Ok(self.resource(py).borrow().shared_library_dependency_names.as_ref().map(|x| {
-            Vec::from_iter(x.iter().map(|v| v.to_string()))
+            x.into_iter().map(|v| v.to_string()).collect()
         }))
     }
 
     @shared_library_dependency_names.setter def set_shared_library_dependency_names(&self, value: Option<Option<Vec<String>>>) -> PyResult<()> {
         if let Some(value) = value {
             self.resource(py).borrow_mut().shared_library_dependency_names =
-                value.map(|x| Vec::from_iter(x.iter().map(|v| Cow::Owned(v.to_owned()))));
+                value.map(|x| x.into_iter().map(|v| Cow::Owned(v.to_owned())).collect());
 
             Ok(())
         } else {
@@ -1390,9 +1387,9 @@ py_class!(pub class OxidizedResource |py| {
         if let Some(value) = value {
             self.resource(py).borrow_mut().relative_path_package_resources =
                 pyobject_optional_resources_map_to_pathbuf(py, &value)?
-                    .map(|x| HashMap::from_iter(
-                        x.iter().map(|(k, v)| (Cow::Owned(k.to_owned()), Cow::Owned(v.to_owned())))
-                     ));
+                    .map(|x|
+                        x.into_iter().map(|(k, v)| (Cow::Owned(k.to_owned()), Cow::Owned(v.to_owned()))).collect()
+                    );
 
             Ok(())
         } else {
@@ -1419,9 +1416,9 @@ py_class!(pub class OxidizedResource |py| {
         if let Some(value) = value {
             self.resource(py).borrow_mut().relative_path_distribution_resources =
                 pyobject_optional_resources_map_to_pathbuf(py, &value)?
-                    .map(|x| HashMap::from_iter(
-                        x.iter().map(|(k, v)| (Cow::Owned(k.to_owned()), Cow::Owned(v.to_owned())))
-                     ));
+                    .map(|x|
+                        x.into_iter().map(|(k, v)| (Cow::Owned(k.to_owned()), Cow::Owned(v.to_owned()))).collect()
+                    );
 
             Ok(())
         } else {
