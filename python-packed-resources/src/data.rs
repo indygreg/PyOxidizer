@@ -29,9 +29,9 @@ impl Default for ResourceFlavor {
     }
 }
 
-impl Into<u8> for ResourceFlavor {
-    fn into(self) -> u8 {
-        match self {
+impl From<ResourceFlavor> for u8 {
+    fn from(source: ResourceFlavor) -> Self {
+        match source {
             ResourceFlavor::None => 0x00,
             ResourceFlavor::Module => 0x01,
             ResourceFlavor::BuiltinExtensionModule => 0x02,
@@ -72,9 +72,9 @@ pub enum BlobInteriorPadding {
     Null = 0x02,
 }
 
-impl Into<u8> for &BlobInteriorPadding {
-    fn into(self) -> u8 {
-        match self {
+impl From<&BlobInteriorPadding> for u8 {
+    fn from(source: &BlobInteriorPadding) -> Self {
+        match source {
             BlobInteriorPadding::None => 0x01,
             BlobInteriorPadding::Null => 0x02,
         }
@@ -92,9 +92,9 @@ pub enum BlobSectionField {
     InteriorPadding = 0x05,
 }
 
-impl Into<u8> for BlobSectionField {
-    fn into(self) -> u8 {
-        match self {
+impl From<BlobSectionField> for u8 {
+    fn from(source: BlobSectionField) -> u8 {
+        match source {
             BlobSectionField::EndOfIndex => 0x00,
             BlobSectionField::StartOfEntry => 0x01,
             BlobSectionField::ResourceFieldType => 0x02,
@@ -158,9 +158,9 @@ pub enum ResourceField {
     FileDataUtf8RelativePath = 0x1e,
 }
 
-impl Into<u8> for ResourceField {
-    fn into(self) -> u8 {
-        match self {
+impl From<ResourceField> for u8 {
+    fn from(field: ResourceField) -> Self {
+        match field {
             ResourceField::EndOfIndex => 0x00,
             ResourceField::StartOfEntry => 0x01,
             ResourceField::Flavor => 0x02,
