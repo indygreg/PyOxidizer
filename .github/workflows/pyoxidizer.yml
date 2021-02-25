@@ -17,8 +17,16 @@ jobs:
           - '1.45.0'
         os:
           - 'ubuntu-20.04'
+          - 'macos-10.15'
           - 'macos-11.0'
           - 'windows-2019'
+        exclude:
+          - os: 'macos-11.0'
+            rust_toolchain: '1.45.0'
+          - os: 'macos-11.0'
+            rust_toolchain: 'beta'
+          - os: 'macos-11.0'
+            rust_toolchain: 'nightly'
     continue-on-error: ${{ matrix.rust_toolchain == 'nightly' }}
     runs-on: ${{ matrix.os }}
     env:
