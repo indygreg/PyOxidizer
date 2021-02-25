@@ -202,7 +202,6 @@ mod tests {
     use {
         super::*,
         crate::{SnapApp, SnapPart},
-        std::{collections::HashMap, iter::FromIterator},
         tugger_common::{glob::evaluate_glob, testutil::*},
     };
 
@@ -263,7 +262,7 @@ mod tests {
             SnapPart {
                 plugin: Some("nil".into()),
                 source: Some(".".into()),
-                build_environment: vec![HashMap::from_iter([("PATH".into(), "${HOME}/.cargo/bin:${PATH}".into())].iter().cloned())],
+                build_environment: vec![[("PATH".into(), "${HOME}/.cargo/bin:${PATH}".into())].iter().cloned().collect()],
                 override_build: Some(
                     "RUSTC_WRAPPER= cargo install --target x86_64-unknown-linux-musl --path . --root ${SNAPCRAFT_PART_INSTALL} --force".into(),
                 ),
