@@ -12,7 +12,7 @@ keywords = ["python"]
 
 [dependencies]
 anyhow = "1.0"
-byteorder = "1.2"
+byteorder = "1.4"
 encoding_rs = "0.8"
 itertools = "0.10"
 lazy_static = "1.4"

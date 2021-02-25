@@ -12,7 +12,7 @@ readme = "README.md"
 
 [dependencies]
 anyhow = "1.0"
-byteorder = "1.2"
+byteorder = "1.4"
 goblin = "0.3"
 lazy_static = "1.4"
 version-compare = "0.0"
