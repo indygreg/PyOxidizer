@@ -677,6 +677,14 @@ fn generate_pyembed_license(repo_root: &Path) -> Result<String> {
     writeln!(&mut text, "    Ok(res)")?;
     writeln!(&mut text, "}}")?;
 
+    let mut text = cmd("rustfmt", &vec!["--emit", "stdout"])
+        .dir(repo_root)
+        .stdout_capture()
+        .stdin_bytes(text.as_bytes())
+        .read()?;
+
+    text.push('\n');
+
     Ok(text)
 }
 
