@@ -68,9 +68,9 @@ impl ToString for ConcreteResourceLocation {
     }
 }
 
-impl Into<String> for ConcreteResourceLocation {
-    fn into(self) -> String {
-        self.to_string()
+impl From<ConcreteResourceLocation> for String {
+    fn from(location: ConcreteResourceLocation) -> Self {
+        location.to_string()
     }
 }
 
