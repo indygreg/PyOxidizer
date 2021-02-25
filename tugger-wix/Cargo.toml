@@ -16,7 +16,7 @@ anyhow = "1.0"
 duct = "0.13"
 lazy_static = "1.4"
 slog = "2.7"
-url = "2.1"
+url = "2.2"
 uuid = { version = "0.8", features = ["v4", "v5"] }
 xml-rs = "0.8"
 
