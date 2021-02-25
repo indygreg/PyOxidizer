@@ -516,7 +516,7 @@ mod tests {
     use {
         super::*,
         crate::testutil::*,
-        std::{collections::BTreeSet, iter::FromIterator, ops::Deref},
+        std::{collections::BTreeSet, ops::Deref},
     };
 
     #[test]
@@ -609,24 +609,26 @@ mod tests {
                 .collect::<Vec<_>>();
             assert!(!zstandard_resources.is_empty());
 
-            let full_names = BTreeSet::from_iter(zstandard_resources.iter().map(|r| r.full_name()));
+            let full_names = zstandard_resources
+                .iter()
+                .map(|r| r.full_name())
+                .collect::<BTreeSet<_>>();
 
             assert_eq!(
                 full_names,
-                BTreeSet::from_iter(
-                    [
-                        "zstandard",
-                        "zstandard.cffi",
-                        "zstandard:LICENSE",
-                        "zstandard:METADATA",
-                        "zstandard:RECORD",
-                        "zstandard:WHEEL",
-                        "zstandard:top_level.txt",
-                        "zstd"
-                    ]
-                    .iter()
-                    .map(|x| x.to_string())
-                )
+                [
+                    "zstandard",
+                    "zstandard.cffi",
+                    "zstandard:LICENSE",
+                    "zstandard:METADATA",
+                    "zstandard:RECORD",
+                    "zstandard:WHEEL",
+                    "zstandard:top_level.txt",
+                    "zstd"
+                ]
+                .iter()
+                .map(|x| x.to_string())
+                .collect()
             );
 
             let extensions = zstandard_resources
