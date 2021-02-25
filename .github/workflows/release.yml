@@ -2,7 +2,7 @@ on:
   push:
   pull_request:
   schedule:
-    - cron: '14 4 * * *'
+    - cron: '13 15 * * *'
 jobs:
   linux-x86_64-bin:
     runs-on: 'ubuntu-20.04'
