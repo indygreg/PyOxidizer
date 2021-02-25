@@ -179,7 +179,7 @@ pub enum FileManifestError {
     IllegalRelativePath(String),
     IllegalAbsolutePath(String),
     NoParentDirectory,
-    IOError(std::io::Error),
+    IoError(std::io::Error),
     StripPrefix(std::path::StripPrefixError),
 }
 
@@ -193,7 +193,7 @@ impl std::fmt::Display for FileManifestError {
                 f.write_str(&format!("path cannot be absolute: {}", path))
             }
             Self::NoParentDirectory => f.write_str("could not resolve parent directory"),
-            Self::IOError(inner) => inner.fmt(f),
+            Self::IoError(inner) => inner.fmt(f),
             Self::StripPrefix(inner) => inner.fmt(f),
         }
     }
@@ -203,7 +203,7 @@ impl std::error::Error for FileManifestError {}
 
 impl From<std::io::Error> for FileManifestError {
     fn from(err: std::io::Error) -> Self {
-        Self::IOError(err)
+        Self::IoError(err)
     }
 }
 
