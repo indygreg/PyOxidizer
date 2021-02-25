@@ -46,14 +46,12 @@ pub fn get_http_client() -> reqwest::Result<reqwest::blocking::Client> {
             let schema = &key[..end];
 
             if let Ok(url) = Url::parse(&value) {
-                if let Some(proxy) = match schema {
+                if let Some(Ok(proxy)) = match schema {
                     "http" => Some(reqwest::Proxy::http(url.as_str())),
                     "https" => Some(reqwest::Proxy::https(url.as_str())),
                     _ => None,
                 } {
-                    if let Ok(proxy) = proxy {
-                        builder = builder.proxy(proxy);
-                    }
+                    builder = builder.proxy(proxy);
                 }
             }
         }
