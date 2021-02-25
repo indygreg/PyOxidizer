@@ -112,17 +112,20 @@ pub fn is_package_from_path(path: &Path) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, std::iter::FromIterator};
+    use super::*;
 
     #[test]
     fn test_packages_from_module_name() {
         assert_eq!(
             packages_from_module_name("foo.bar"),
-            BTreeSet::from_iter(vec!["foo".to_string()])
+            ["foo".to_string()].iter().cloned().collect()
         );
         assert_eq!(
             packages_from_module_name("foo.bar.baz"),
-            BTreeSet::from_iter(vec!["foo".to_string(), "foo.bar".to_string()])
+            ["foo".to_string(), "foo.bar".to_string()]
+                .iter()
+                .cloned()
+                .collect()
         );
     }
 
