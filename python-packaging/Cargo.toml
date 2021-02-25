@@ -35,7 +35,7 @@ version = "0.1.0-pre"
 path = "../tugger-licensing"
 
 [dev-dependencies]
-tempfile = "3.1"
+tempfile = "3.2"
 
 # We make `wheel` support optional because the `zip` crate has a handful
 # of dependencies that we don't want to bloat the dependency tree with.
