@@ -141,7 +141,7 @@ impl<'a> SnapcraftBuilder<'a> {
 
         if invocation.purge_build && build_path.exists() {
             warn!(logger, "purging {}", build_path.display());
-            std::fs::remove_dir_all(build_path)
+            remove_dir_all::remove_dir_all(build_path)
                 .with_context(|| format!("removing {}", build_path.display()))?;
         }
 
