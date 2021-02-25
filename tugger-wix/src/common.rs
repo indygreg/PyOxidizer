@@ -533,7 +533,7 @@ mod tests {
         m.add_file_entry(Path::new("dir0/child0/dir0_child0_file0.txt"), c.clone())?;
         m.add_file_entry(Path::new("dir0/child0/dir0_child0_file1.txt"), c.clone())?;
         m.add_file_entry(Path::new("dir0/child1/dir0_child1_file0.txt"), c.clone())?;
-        m.add_file_entry(Path::new("dir1/child0/dir1_child0_file0.txt"), c.clone())?;
+        m.add_file_entry(Path::new("dir1/child0/dir1_child0_file0.txt"), c)?;
 
         let buffer = Vec::new();
         let buf_writer = std::io::BufWriter::new(buffer);
