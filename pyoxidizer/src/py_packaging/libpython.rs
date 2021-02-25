@@ -25,9 +25,7 @@ where
 {
     // It is easier to construct the file from scratch than parse the template
     // and insert things in the right places.
-    let mut lines: Vec<String> = Vec::new();
-
-    lines.push(String::from("#include \"Python.h\""));
+    let mut lines: Vec<String> = vec!["#include \"Python.h\"".to_string()];
 
     // Declare the initialization functions.
     for (_name, init_fn) in extensions {
