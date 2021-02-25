@@ -49,7 +49,7 @@ fn optional_string_to_string(value: &Option<String>) -> String {
     }
 }
 
-fn pathbuf_to_string(value: &PathBuf) -> String {
+fn path_to_string(value: &Path) -> String {
     format!(
         "std::path::PathBuf::from(\"{}\")",
         value.display().to_string().escape_default()
@@ -58,7 +58,7 @@ fn pathbuf_to_string(value: &PathBuf) -> String {
 
 fn optional_pathbuf_to_string(value: &Option<PathBuf>) -> String {
     match value {
-        Some(value) => format!("Some({})", pathbuf_to_string(value)),
+        Some(value) => format!("Some({})", path_to_string(value)),
         None => "None".to_string(),
     }
 }
@@ -100,7 +100,7 @@ impl ToString for PyembedPackedResourcesSource {
             Self::MemoryMappedPath(path) => {
                 format!(
                     "pyembed::PackedResourcesSource::MemoryMappedPath({})",
-                    pathbuf_to_string(&path)
+                    path_to_string(&path)
                 )
             }
         }
@@ -304,7 +304,7 @@ impl PyembedPythonInterpreterConfig {
                         "Some(vec![{}])",
                         paths
                             .iter()
-                            .map(pathbuf_to_string)
+                            .map(|p| path_to_string(p.as_path()))
                             .collect::<Vec<String>>()
                             .join(", ")
                     )

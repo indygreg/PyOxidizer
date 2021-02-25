@@ -242,7 +242,7 @@ impl Drop for DistributionExtractLock {
     }
 }
 
-fn sha256_path(path: &PathBuf) -> Vec<u8> {
+fn sha256_path(path: &Path) -> Vec<u8> {
     let mut hasher = Sha256::new();
     let fh = File::open(&path).unwrap();
     let mut reader = std::io::BufReader::new(fh);
@@ -322,7 +322,7 @@ pub fn download_distribution(url: &str, sha256: &str, cache_dir: &Path) -> Resul
     Ok(cache_path)
 }
 
-pub fn copy_local_distribution(path: &PathBuf, sha256: &str, cache_dir: &Path) -> Result<PathBuf> {
+pub fn copy_local_distribution(path: &Path, sha256: &str, cache_dir: &Path) -> Result<PathBuf> {
     let expected_hash = hex::decode(sha256)?;
     let basename = path.file_name().unwrap().to_str().unwrap().to_string();
     let cache_path = cache_dir.join(basename);
