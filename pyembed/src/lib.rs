@@ -129,7 +129,7 @@ pub use crate::importer::PyInit_oxidized_importer;
 #[allow(unused_imports)]
 pub use python_packaging::{
     interpreter::{
-        Allocator, BytesWarning, CheckHashPYCsMode, CoerceCLocale, PythonInterpreterConfig,
+        Allocator, BytesWarning, CheckHashPycsMode, CoerceCLocale, PythonInterpreterConfig,
         PythonInterpreterProfile, PythonRawAllocator, TerminfoResolution,
     },
     resource::BytecodeOptimizationLevel,

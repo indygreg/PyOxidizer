@@ -9,7 +9,7 @@ use {
     libc::{c_int, size_t, wchar_t},
     python3_sys as pyffi,
     python_packaging::{
-        interpreter::{CheckHashPYCsMode, PythonInterpreterConfig, PythonInterpreterProfile},
+        interpreter::{CheckHashPycsMode, PythonInterpreterConfig, PythonInterpreterProfile},
         resource::BytecodeOptimizationLevel,
     },
     std::{
@@ -461,9 +461,9 @@ pub fn python_interpreter_config_to_py_config(
             &config,
             &config.check_hash_pycs_mode,
             match check_hash_pycs_mode {
-                CheckHashPYCsMode::Always => "always",
-                CheckHashPYCsMode::Never => "never",
-                CheckHashPYCsMode::Default => "default",
+                CheckHashPycsMode::Always => "always",
+                CheckHashPycsMode::Never => "never",
+                CheckHashPycsMode::Default => "default",
             },
             "setting check_hash_pycs_mode",
         )?;

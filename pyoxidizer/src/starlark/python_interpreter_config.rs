@@ -7,7 +7,7 @@ use {
     crate::py_packaging::config::PyembedPythonInterpreterConfig,
     python_packaging::{
         interpreter::{
-            Allocator, BytesWarning, CheckHashPYCsMode, CoerceCLocale, MemoryAllocatorBackend,
+            Allocator, BytesWarning, CheckHashPycsMode, CoerceCLocale, MemoryAllocatorBackend,
             PythonInterpreterProfile, TerminfoResolution,
         },
         resource::BytecodeOptimizationLevel,
@@ -53,7 +53,7 @@ impl ToValue for Option<BytesWarning> {
     }
 }
 
-impl ToValue for Option<CheckHashPYCsMode> {
+impl ToValue for Option<CheckHashPycsMode> {
     fn to_value(&self) -> Value {
         match self {
             Some(value) => Value::from(value.to_string()),
@@ -378,7 +378,7 @@ impl TypedValue for PythonInterpreterConfigValue {
                     None
                 } else {
                     Some(
-                        CheckHashPYCsMode::try_from(value.to_string().as_str()).map_err(|e| {
+                        CheckHashPycsMode::try_from(value.to_string().as_str()).map_err(|e| {
                             ValueError::from(RuntimeError {
                                 code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
                                 message: e,

@@ -256,13 +256,13 @@ impl From<i32> for BytesWarning {
 
 /// See https://docs.python.org/3/c-api/init_config.html#c.PyConfig.check_hash_pycs_mode.
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub enum CheckHashPYCsMode {
+pub enum CheckHashPycsMode {
     Always,
     Never,
     Default,
 }
 
-impl ToString for CheckHashPYCsMode {
+impl ToString for CheckHashPycsMode {
     fn to_string(&self) -> String {
         match self {
             Self::Always => "always",
@@ -273,7 +273,7 @@ impl ToString for CheckHashPYCsMode {
     }
 }
 
-impl TryFrom<&str> for CheckHashPYCsMode {
+impl TryFrom<&str> for CheckHashPycsMode {
     type Error = String;
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
@@ -396,7 +396,7 @@ pub struct PythonInterpreterConfig {
     pub bytes_warning: Option<BytesWarning>,
 
     /// See https://docs.python.org/3/c-api/init_config.html#c.PyConfig.check_hash_pycs_mode.
-    pub check_hash_pycs_mode: Option<CheckHashPYCsMode>,
+    pub check_hash_pycs_mode: Option<CheckHashPycsMode>,
 
     /// See https://docs.python.org/3/c-api/init_config.html#c.PyConfig.configure_c_stdio.
     pub configure_c_stdio: Option<bool>,

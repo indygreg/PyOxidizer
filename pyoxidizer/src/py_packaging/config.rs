@@ -11,7 +11,7 @@ use {
     itertools::Itertools,
     python_packaging::{
         interpreter::{
-            Allocator, BytesWarning, CheckHashPYCsMode, CoerceCLocale, MemoryAllocatorBackend,
+            Allocator, BytesWarning, CheckHashPycsMode, CoerceCLocale, MemoryAllocatorBackend,
             PythonInterpreterConfig, PythonInterpreterProfile, TerminfoResolution,
         },
         resource::BytecodeOptimizationLevel,
@@ -275,9 +275,9 @@ impl PyembedPythonInterpreterConfig {
                 None => "None",
             },
             match self.config.check_hash_pycs_mode {
-                Some(CheckHashPYCsMode::Always) => "Some(pyembed::CheckHashPYCsMode::Always)",
-                Some(CheckHashPYCsMode::Default) => "Some(pyembed::CheckHashPYCsMode::Default)",
-                Some(CheckHashPYCsMode::Never) => "Some(pyembed::CheckHashPYCsMode::Never)",
+                Some(CheckHashPycsMode::Always) => "Some(pyembed::CheckHashPycsMode::Always)",
+                Some(CheckHashPycsMode::Default) => "Some(pyembed::CheckHashPycsMode::Default)",
+                Some(CheckHashPycsMode::Never) => "Some(pyembed::CheckHashPycsMode::Never)",
                 None => "None",
             },
             optional_bool_to_string(&self.config.configure_c_stdio),
@@ -491,7 +491,7 @@ mod tests {
                 base_prefix: Some("path".into()),
                 buffered_stdio: Some(false),
                 bytes_warning: Some(BytesWarning::Raise),
-                check_hash_pycs_mode: Some(CheckHashPYCsMode::Always),
+                check_hash_pycs_mode: Some(CheckHashPycsMode::Always),
                 configure_c_stdio: Some(true),
                 dump_refs: Some(true),
                 exec_prefix: Some("path".into()),
