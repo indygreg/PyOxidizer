@@ -343,8 +343,7 @@ impl FileManifest {
     pub fn resolve_directories(&self, relative_to: impl AsRef<Path>) -> Vec<PathBuf> {
         let relative_to = relative_to.as_ref();
 
-        let mut dirs = Vec::new();
-        dirs.push(relative_to.to_path_buf());
+        let mut dirs = vec![relative_to.to_path_buf()];
 
         for p in self.relative_directories() {
             dirs.push(relative_to.join(p));
