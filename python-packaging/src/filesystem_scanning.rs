@@ -1421,10 +1421,11 @@ mod tests {
         let resource_path = tp.join("resource.txt");
         write(&resource_path, "content")?;
 
-        let resources =
+        assert!(
             PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &DEFAULT_SUFFIXES, false, true)
-                .collect::<Vec<_>>();
-        assert!(resources.is_empty());
+                .next()
+                .is_none()
+        );
 
         Ok(())
     }
