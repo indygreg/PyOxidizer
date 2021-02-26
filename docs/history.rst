@@ -111,6 +111,8 @@ New Features
   building and prints a report about what it finds when writing build
   artifacts. This feature is best effort and relies on packages properly
   advertising their license metadata.
+* The *mimalloc* memory allocator can now be used as Python's *raw allocator*.
+  See documentation for ``PythonInterpreterConfig.raw_allocator``.
 
 Other Relevant Changes
 ^^^^^^^^^^^^^^^^^^^^^^

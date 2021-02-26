@@ -77,9 +77,9 @@ custom ``OxidizedPythonInterpreterConfig`` instance, you can ignore most of the
 arguments when creating the ``PythonInterpreterConfig`` instance.
 
 An exception to this is the ``raw_allocator`` argument/field. If you
-are using jemalloc, you will need to enable a Cargo feature when building
-the ``pyembed`` crate or else you will get a run-time error that jemalloc
-is not available.
+are using a custom allocator (like jemalloc, mimalloc, or snmalloc), you will need
+to enable a Cargo feature when building the ``pyembed`` crate or else you will get
+a run-time error that the specified allocator is not available.
 
 ``pyembed::OxidizedPythonInterpreterConfig::default()`` can be used to
 construct a new instance, pre-populated with default values for each field.
