@@ -123,7 +123,7 @@ extern "C" fn jemalloc_malloc(_ctx: *mut c_void, size: size_t) -> *mut c_void {
 }
 
 #[cfg(feature = "libmimalloc-sys")]
-extern "C" fn mimalloc_alloc(_ctx: *mut c_void, size: size_t) -> *mut c_void {
+extern "C" fn mimalloc_malloc(_ctx: *mut c_void, size: size_t) -> *mut c_void {
     let size = match size {
         0 => 1,
         val => val,
@@ -253,7 +253,7 @@ extern "C" fn mimalloc_realloc(
     new_size: size_t,
 ) -> *mut c_void {
     if ptr.is_null() {
-        return mimalloc_alloc(ctx, new_size);
+        return mimalloc_malloc(ctx, new_size);
     }
 
     let new_size = match new_size {
@@ -377,7 +377,7 @@ impl PythonMemoryAllocator {
     pub fn mimalloc() -> Self {
         Self::Python(pyffi::PyMemAllocatorEx {
             ctx: std::ptr::null_mut(),
-            malloc: Some(mimalloc_alloc),
+            malloc: Some(mimalloc_malloc),
             calloc: Some(mimalloc_calloc),
             realloc: Some(mimalloc_realloc),
             free: Some(mimalloc_free),
