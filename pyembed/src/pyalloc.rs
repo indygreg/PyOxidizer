@@ -198,7 +198,7 @@ impl Drop for BorrowedAllocationTracker {
 }
 
 /// Represents an interface to Rust's memory allocator.
-pub(crate) struct RustAllocator {
+pub(crate) struct TrackingAllocator {
     pub allocator: pyffi::PyMemAllocatorEx,
     pub arena: pyffi::PyObjectArenaAllocator,
     _state: Box<AllocationTracker>,
@@ -482,10 +482,10 @@ extern "C" fn snmalloc_arena_free(_ctx: *mut c_void, ptr: *mut c_void, size: siz
 enum AllocatorInstance {
     /// Backed by a `PyMemAllocatorEx` struct.
     #[allow(dead_code)]
-    Python(pyffi::PyMemAllocatorEx, pyffi::PyObjectArenaAllocator),
+    Simple(pyffi::PyMemAllocatorEx, pyffi::PyObjectArenaAllocator),
 
     /// Backed by a custom wrapper type.
-    Rust(RustAllocator),
+    Tracking(TrackingAllocator),
 }
 
 /// Represents a custom memory allocator that can be registered with Python.
@@ -516,7 +516,7 @@ impl PythonMemoryAllocator {
     pub fn jemalloc() -> Self {
         Self {
             backend: MemoryAllocatorBackend::Jemalloc,
-            instance: AllocatorInstance::Python(
+            instance: AllocatorInstance::Simple(
                 pyffi::PyMemAllocatorEx {
                     ctx: std::ptr::null_mut(),
                     malloc: Some(jemalloc_malloc),
@@ -543,7 +543,7 @@ impl PythonMemoryAllocator {
     pub fn mimalloc() -> Self {
         Self {
             backend: MemoryAllocatorBackend::Mimalloc,
-            instance: AllocatorInstance::Python(
+            instance: AllocatorInstance::Simple(
                 pyffi::PyMemAllocatorEx {
                     ctx: std::ptr::null_mut(),
                     malloc: Some(mimalloc_malloc),
@@ -581,7 +581,7 @@ impl PythonMemoryAllocator {
 
         Self {
             backend: MemoryAllocatorBackend::Rust,
-            instance: AllocatorInstance::Rust(RustAllocator {
+            instance: AllocatorInstance::Tracking(TrackingAllocator {
                 allocator,
                 arena: pyffi::PyObjectArenaAllocator {
                     ctx: state as *mut c_void,
@@ -600,7 +600,7 @@ impl PythonMemoryAllocator {
 
         Self {
             backend: MemoryAllocatorBackend::Snmalloc,
-            instance: AllocatorInstance::Python(
+            instance: AllocatorInstance::Simple(
                 pyffi::PyMemAllocatorEx {
                     ctx: std::ptr::null_mut(),
                     malloc: Some(snmalloc_malloc),
@@ -653,16 +653,16 @@ impl PythonMemoryAllocator {
     /// Obtain the pointer to the `PyMemAllocatorEx` for this allocator.
     fn as_memory_allocator(&self) -> *const pyffi::PyMemAllocatorEx {
         match &self.instance {
-            AllocatorInstance::Python(alloc, _) => alloc as *const _,
-            AllocatorInstance::Rust(alloc) => &alloc.allocator as *const _,
+            AllocatorInstance::Simple(alloc, _) => alloc as *const _,
+            AllocatorInstance::Tracking(alloc) => &alloc.allocator as *const _,
         }
     }
 
     #[allow(dead_code)]
     fn as_arena_allocator(&self) -> *mut pyffi::PyObjectArenaAllocator {
         match &self.instance {
-            AllocatorInstance::Python(_, arena) => arena as *const _ as *mut _,
-            AllocatorInstance::Rust(alloc) => &alloc.arena as *const _ as *mut _,
+            AllocatorInstance::Simple(_, arena) => arena as *const _ as *mut _,
+            AllocatorInstance::Tracking(alloc) => &alloc.arena as *const _ as *mut _,
         }
     }
 }
