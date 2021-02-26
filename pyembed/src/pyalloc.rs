@@ -97,6 +97,9 @@ use {
 
 const MIN_ALIGN: usize = 16;
 
+#[cfg(feature = "snmalloc-sys")]
+const SNMALLOC_ALIGNMENT: usize = 8;
+
 type RustAllocatorState = HashMap<*mut u8, alloc::Layout>;
 
 /// Holds state for the Rust memory allocator.
@@ -159,7 +162,7 @@ extern "C" fn snmalloc_malloc(_ctx: *mut c_void, size: size_t) -> *mut c_void {
         val => val,
     };
 
-    unsafe { snmalloc_sys::rust_alloc(8, size) as *mut _ }
+    unsafe { snmalloc_sys::rust_alloc(SNMALLOC_ALIGNMENT, size) as *mut _ }
 }
 
 extern "C" fn rust_calloc(ctx: *mut c_void, nelem: size_t, elsize: size_t) -> *mut c_void {
@@ -208,7 +211,7 @@ extern "C" fn snmalloc_calloc(_ctx: *mut c_void, nelem: size_t, elsize: size_t) 
         val => val,
     };
 
-    let ptr = unsafe { snmalloc_sys::rust_alloc(8, size) };
+    let ptr = unsafe { snmalloc_sys::rust_alloc(SNMALLOC_ALIGNMENT, size) };
     if ptr.is_null() {
         return ptr as *mut _;
     }
@@ -299,7 +302,7 @@ extern "C" fn snmalloc_realloc(
     };
 
     // TODO pass old_size properly.
-    unsafe { snmalloc_sys::rust_realloc(ptr as *mut _, 8, 0, new_size) as *mut _ }
+    unsafe { snmalloc_sys::rust_realloc(ptr as *mut _, SNMALLOC_ALIGNMENT, 0, new_size) as *mut _ }
 }
 
 extern "C" fn rust_free(ctx: *mut c_void, ptr: *mut c_void) {
@@ -347,7 +350,7 @@ extern "C" fn snmalloc_free(_ctx: *mut c_void, ptr: *mut c_void) {
 
     // TODO pass size properly.
     unsafe {
-        snmalloc_sys::rust_dealloc(ptr as *mut _, 8, 0);
+        snmalloc_sys::rust_dealloc(ptr as *mut _, SNMALLOC_ALIGNMENT, 0);
     }
 }
 
@@ -394,7 +397,7 @@ extern "C" fn snmalloc_arena_free(_ctx: *mut c_void, ptr: *mut c_void, size: siz
     }
 
     unsafe {
-        snmalloc_sys::rust_dealloc(ptr as *mut _, 8, size);
+        snmalloc_sys::rust_dealloc(ptr as *mut _, SNMALLOC_ALIGNMENT, size);
     }
 }
 
