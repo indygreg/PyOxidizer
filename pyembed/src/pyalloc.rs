@@ -32,30 +32,6 @@ pub(crate) struct RawAllocator {
     _state: Box<RawAllocatorState>,
 }
 
-#[cfg(feature = "jemalloc-sys")]
-fn raw_jemallocator() -> pyffi::PyMemAllocatorEx {
-    make_raw_jemalloc_allocator()
-}
-
-#[cfg(not(feature = "jemalloc-sys"))]
-fn raw_jemallocator() -> pyffi::PyMemAllocatorEx {
-    panic!("jemalloc is not available in this build configuration");
-}
-
-#[cfg(feature = "mimalloc")]
-fn raw_mimallocator() -> pyffi::PyMemAllocatorEx {
-    make_raw_mimalloc_allocator()
-}
-
-#[cfg(not(feature = "mimalloc"))]
-fn raw_mimallocator() -> pyffi::PyMemAllocatorEx {
-    panic!("mimalloc is not available in this build configuration");
-}
-
-fn raw_snmallocator() -> pyffi::PyMemAllocatorEx {
-    panic!("snmalloc allocator not yet implemented");
-}
-
 extern "C" fn raw_rust_malloc(ctx: *mut c_void, size: size_t) -> *mut c_void {
     // PyMem_RawMalloc()'s docs say: Requesting zero bytes returns a distinct
     // non-NULL pointer if possible, as if PyMem_RawMalloc(1) had been called
@@ -154,27 +130,6 @@ extern "C" fn raw_rust_free(ctx: *mut c_void, ptr: *mut c_void) {
     }
 }
 
-fn make_raw_rust_memory_allocator() -> RawAllocator {
-    // We need to allocate the HashMap on the heap so the pointer doesn't refer
-    // to the stack. We rebox and add the Box to our struct so lifetimes are
-    // managed.
-    let alloc = Box::new(HashMap::<*mut u8, alloc::Layout>::new());
-    let state = Box::into_raw(alloc);
-
-    let allocator = pyffi::PyMemAllocatorEx {
-        ctx: state as *mut c_void,
-        malloc: Some(raw_rust_malloc),
-        calloc: Some(raw_rust_calloc),
-        realloc: Some(raw_rust_realloc),
-        free: Some(raw_rust_free),
-    };
-
-    RawAllocator {
-        allocator,
-        _state: unsafe { Box::from_raw(state) },
-    }
-}
-
 // Now let's define a raw memory allocator that interfaces directly with jemalloc.
 // This avoids the overhead of going through Rust's allocation layer.
 
@@ -232,17 +187,6 @@ extern "C" fn raw_jemalloc_free(_ctx: *mut c_void, ptr: *mut c_void) {
     }
 
     unsafe { jemallocffi::dallocx(ptr, 0) }
-}
-
-#[cfg(feature = "jemalloc-sys")]
-fn make_raw_jemalloc_allocator() -> pyffi::PyMemAllocatorEx {
-    pyffi::PyMemAllocatorEx {
-        ctx: std::ptr::null_mut(),
-        malloc: Some(raw_jemalloc_malloc),
-        calloc: Some(raw_jemalloc_calloc),
-        realloc: Some(raw_jemalloc_realloc),
-        free: Some(raw_jemalloc_free),
-    }
 }
 
 #[cfg(feature = "mimalloc")]
@@ -312,20 +256,10 @@ extern "C" fn raw_mimalloc_free(_ctx: *mut c_void, ptr: *mut c_void) {
     unsafe { libmimalloc_sys::mi_free(ptr as *mut _) }
 }
 
-#[cfg(feature = "mimalloc")]
-fn make_raw_mimalloc_allocator() -> pyffi::PyMemAllocatorEx {
-    pyffi::PyMemAllocatorEx {
-        ctx: std::ptr::null_mut(),
-        malloc: Some(raw_mimalloc_malloc),
-        calloc: Some(raw_mimalloc_calloc),
-        realloc: Some(raw_mimalloc_realloc),
-        free: Some(raw_mimalloc_free),
-    }
-}
-
 /// Represents a `PyMemAllocatorEx` that can be installed as a memory allocator.
 pub(crate) enum PythonMemoryAllocator {
     /// Backed by a `PyMemAllocatorEx` struct.
+    #[allow(dead_code)]
     Python(pyffi::PyMemAllocatorEx),
 
     /// Backed by a custom wrapper type.
@@ -347,23 +281,64 @@ impl PythonMemoryAllocator {
     }
 
     /// Construct a new instance using jemalloc.
+    #[cfg(feature = "jemalloc-sys")]
     pub fn jemalloc() -> Self {
-        Self::Python(raw_jemallocator())
+        Self::Python(pyffi::PyMemAllocatorEx {
+            ctx: std::ptr::null_mut(),
+            malloc: Some(raw_jemalloc_malloc),
+            calloc: Some(raw_jemalloc_calloc),
+            realloc: Some(raw_jemalloc_realloc),
+            free: Some(raw_jemalloc_free),
+        })
+    }
+
+    #[cfg(not(feature = "jemalloc-sys"))]
+    pub fn jemalloc() -> Self {
+        panic!("jemalloc is not available in this build configuration");
     }
 
     /// Construct a new instance using mimalloc.
+    #[cfg(feature = "mimalloc")]
     pub fn mimalloc() -> Self {
-        Self::Python(raw_mimallocator())
+        Self::Python(pyffi::PyMemAllocatorEx {
+            ctx: std::ptr::null_mut(),
+            malloc: Some(raw_mimalloc_malloc),
+            calloc: Some(raw_mimalloc_calloc),
+            realloc: Some(raw_mimalloc_realloc),
+            free: Some(raw_mimalloc_free),
+        })
+    }
+
+    #[cfg(not(feature = "mimalloc"))]
+    pub fn mimalloc() -> Self {
+        panic!("mimalloc is not available in this build configuration");
     }
 
     /// Construct a new instance using Rust's global allocator.
     pub fn rust() -> Self {
-        Self::Raw(make_raw_rust_memory_allocator())
+        // We need to allocate the HashMap on the heap so the pointer doesn't refer
+        // to the stack. We rebox and add the Box to our struct so lifetimes are
+        // managed.
+        let alloc = Box::new(HashMap::<*mut u8, alloc::Layout>::new());
+        let state = Box::into_raw(alloc);
+
+        let allocator = pyffi::PyMemAllocatorEx {
+            ctx: state as *mut c_void,
+            malloc: Some(raw_rust_malloc),
+            calloc: Some(raw_rust_calloc),
+            realloc: Some(raw_rust_realloc),
+            free: Some(raw_rust_free),
+        };
+
+        Self::Raw(RawAllocator {
+            allocator,
+            _state: unsafe { Box::from_raw(state) },
+        })
     }
 
     /// Construct a new instance using snmalloc.
     pub fn snmalloc() -> Self {
-        Self::Python(raw_snmallocator())
+        panic!("snmalloc allocator not yet implemented");
     }
 
     /// Set this allocator to be the allocator for a certain "domain" in a Python interpreter.
