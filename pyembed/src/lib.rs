@@ -42,7 +42,8 @@ At this time, we have required direct dependencies on published versions of the
 `anyhow`, `lazy_static`, `libc`, `memmap`, `python-packed-resources`, and `uuid`
 crates. On Windows, this list is extended by `memory-module-sys` and `winapi`,
 which are required to support loading DLLs from memory. We also have an optional
-direct dependency on the `jemalloc-sys` crate.
+direct dependency on the `jemalloc-sys`, `libmimalloc-sys`, and `snmalloc-sys`
+crates for custom memory allocators.
 
 This crate requires linking against a library providing CPython C symbols.
 (This dependency is via the `python3-sys` crate.) On Windows, this library
@@ -55,6 +56,14 @@ The optional `jemalloc` feature controls support for using
 from Python is a run-time configuration option controlled by the
 `OxidizedPythonInterpreterConfig` type and having `jemalloc` compiled into the
 binary does not mean it is being used!
+
+The optional `mimalloc` feature controls support for using
+[mimalloc](https://github.com/microsoft/mimalloc) as Python's memory allocator.
+The feature behaves similarly to `jemalloc`, which is documented above.
+
+The optional `snmalloc` feature controls support for using
+[snmalloc](https://github.com/microsoft/snmalloc) as Python's memory allocator.
+The feature behaves similarly to `jemalloc`, which is documented above.
 
 There exist mutually exclusive `build-mode-*` features to control how the
 `build.rs` build script works.

@@ -21,15 +21,7 @@ There exist several
 CPython defines multiple memory allocator *domains* and it is possible to
 use a custom memory allocator for each using the `PyMem_SetAllocator()` API.
 
-We support having the *raw* memory allocator use either `jemalloc`, Rust's
-global allocator, or the system allocator.
-
-The `pyalloc` module defines types that serve as interfaces between the
-`jemalloc` library and Rust's allocator. The reason we call into
-`jemalloc-sys` directly instead of going through Rust's allocator is overhead:
-why involve an extra layer of abstraction when it isn't needed. To register
-a custom allocator, we simply instantiate an instance of the custom allocator
-type and tell Python about it via `PyMem_SetAllocator()`.
+See the documentation in the `pyalloc` module for more on this topic.
 
 # Module Importing
 

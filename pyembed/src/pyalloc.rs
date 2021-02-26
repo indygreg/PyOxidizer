@@ -6,6 +6,8 @@
 
 This module holds code for customizing Python's memory allocators.
 
+# Python Memory Allocators
+
 The canonical documentation for Python's memory allocators is
 https://docs.python.org/3/c-api/memory.html.
 
@@ -67,6 +69,23 @@ Here is the documentation for the various `PyMemAllocatorEx` members:
 (Documentation for the `PyMem_Raw*()` functions was used. However, the semantics
 are the same regardless of which domain the `PyMemAllocatorEx` is installed
 to.)
+
+# Support for Custom Allocators
+
+We support `jemalloc`, `mimalloc`, `snmalloc`, and Rust's global allocator as
+custom Python allocators.
+
+Rust's global allocator can independently also be set to one of the aforementioned
+custom allocators via external Rust code.
+
+Our `jemalloc`, `mimalloc`, and `snmalloc` Python allocator bindings speak
+directly to the underlying C APIs provided by these allocators. By contrast,
+going through the Rust global allocator introduces an abstraction layer. This
+abstraction layer adds overhead (as we need to track allocation sizes to appease
+Rust's allocator API). So even if Rust's global allocator is set to a custom
+allocator, it is preferred to install the Python allocator because its bindings
+to the allocator will be more efficient.
+
 */
 
 use {
