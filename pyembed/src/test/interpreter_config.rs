@@ -214,8 +214,6 @@ rusty_fork_test! {
 
     #[cfg(feature = "snmalloc")]
     #[test]
-    // snmalloc not yet implemented.
-    #[should_panic]
     fn test_allocator_snmalloc() {
         let mut config = OxidizedPythonInterpreterConfig::default();
         // Otherwise the Rust arguments are interpreted as Python arguments.

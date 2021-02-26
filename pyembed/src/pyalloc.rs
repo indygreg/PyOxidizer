@@ -139,6 +139,10 @@ impl AllocationTracker {
 
     /// Construct an instance from a pointer owned by someone else.
     fn from_owned_ptr(ptr: *mut c_void) -> BorrowedAllocationTracker {
+        if ptr.is_null() {
+            panic!("must not pass NULL pointer");
+        }
+
         BorrowedAllocationTracker {
             inner: Some(unsafe { Box::from_raw(ptr as *mut AllocationTracker) }),
         }
@@ -241,13 +245,20 @@ extern "C" fn mimalloc_malloc(_ctx: *mut c_void, size: size_t) -> *mut c_void {
 }
 
 #[cfg(feature = "snmalloc-sys")]
-extern "C" fn snmalloc_malloc(_ctx: *mut c_void, size: size_t) -> *mut c_void {
+extern "C" fn snmalloc_malloc(ctx: *mut c_void, size: size_t) -> *mut c_void {
     let size = match size {
         0 => 1,
         val => val,
     };
 
-    unsafe { snmalloc_sys::rust_alloc(SNMALLOC_ALIGNMENT, size) as *mut _ }
+    let mut tracker = AllocationTracker::from_owned_ptr(ctx);
+
+    let layout = unsafe { alloc::Layout::from_size_align_unchecked(size, SNMALLOC_ALIGNMENT) };
+    let res = unsafe { snmalloc_sys::rust_alloc(SNMALLOC_ALIGNMENT, size) as *mut _ };
+
+    tracker.insert_allocation(res, layout);
+
+    res
 }
 
 extern "C" fn rust_calloc(ctx: *mut c_void, nelem: size_t, elsize: size_t) -> *mut c_void {
@@ -287,15 +298,19 @@ extern "C" fn mimalloc_calloc(_ctx: *mut c_void, nelem: size_t, elsize: size_t) 
 }
 
 #[cfg(feature = "snmalloc-sys")]
-extern "C" fn snmalloc_calloc(_ctx: *mut c_void, nelem: size_t, elsize: size_t) -> *mut c_void {
+extern "C" fn snmalloc_calloc(ctx: *mut c_void, nelem: size_t, elsize: size_t) -> *mut c_void {
     let size = match nelem * elsize {
         0 => 1,
         val => val,
     };
 
-    let ptr = unsafe { snmalloc_sys::rust_alloc(SNMALLOC_ALIGNMENT, size) };
+    let mut tracker = AllocationTracker::from_owned_ptr(ctx);
+
+    let layout = unsafe { alloc::Layout::from_size_align_unchecked(size, SNMALLOC_ALIGNMENT) };
+
+    let ptr: *mut c_void = unsafe { snmalloc_sys::rust_alloc(SNMALLOC_ALIGNMENT, size) } as *mut _;
     if ptr.is_null() {
-        return ptr as *mut _;
+        return ptr;
     }
 
     // TODO should we use write_volatile() + memory fence to be sure?
@@ -303,7 +318,9 @@ extern "C" fn snmalloc_calloc(_ctx: *mut c_void, nelem: size_t, elsize: size_t) 
         std::ptr::write_bytes(ptr, 0, size);
     }
 
-    ptr as *mut _
+    tracker.insert_allocation(ptr, layout);
+
+    ptr
 }
 
 extern "C" fn rust_realloc(ctx: *mut c_void, ptr: *mut c_void, new_size: size_t) -> *mut c_void {
@@ -379,8 +396,24 @@ extern "C" fn snmalloc_realloc(
         val => val,
     };
 
-    // TODO pass old_size properly.
-    unsafe { snmalloc_sys::rust_realloc(ptr as *mut _, SNMALLOC_ALIGNMENT, 0, new_size) as *mut _ }
+    let mut tracker = AllocationTracker::from_owned_ptr(ctx);
+
+    let layout = unsafe { alloc::Layout::from_size_align_unchecked(new_size, SNMALLOC_ALIGNMENT) };
+
+    let old_layout = tracker.remove_allocation(ptr);
+
+    let res = unsafe {
+        snmalloc_sys::rust_realloc(
+            ptr as *mut _,
+            SNMALLOC_ALIGNMENT,
+            old_layout.size(),
+            new_size,
+        ) as *mut _
+    };
+
+    tracker.insert_allocation(res, layout);
+
+    res
 }
 
 extern "C" fn rust_free(ctx: *mut c_void, ptr: *mut c_void) {
@@ -420,15 +453,22 @@ extern "C" fn mimalloc_free(_ctx: *mut c_void, ptr: *mut c_void) {
 }
 
 #[cfg(feature = "snmalloc-sys")]
-extern "C" fn snmalloc_free(_ctx: *mut c_void, ptr: *mut c_void) {
+extern "C" fn snmalloc_free(ctx: *mut c_void, ptr: *mut c_void) {
     if ptr.is_null() {
         return;
     }
 
-    // TODO pass size properly.
+    let mut tracker = AllocationTracker::from_owned_ptr(ctx);
+
+    let layout = tracker
+        .get_allocation(ptr)
+        .unwrap_or_else(|| panic!("could not find allocated memory record: {:?}", ptr));
+
     unsafe {
-        snmalloc_sys::rust_dealloc(ptr as *mut _, SNMALLOC_ALIGNMENT, 0);
+        snmalloc_sys::rust_dealloc(ptr as *mut _, SNMALLOC_ALIGNMENT, layout.size());
     }
+
+    tracker.remove_allocation(ptr);
 }
 
 extern "C" fn rust_arena_free(ctx: *mut c_void, ptr: *mut c_void, _size: size_t) {
@@ -468,14 +508,18 @@ extern "C" fn mimalloc_arena_free(_ctx: *mut c_void, ptr: *mut c_void, _size: si
 }
 
 #[cfg(feature = "snmalloc-sys")]
-extern "C" fn snmalloc_arena_free(_ctx: *mut c_void, ptr: *mut c_void, size: size_t) {
+extern "C" fn snmalloc_arena_free(ctx: *mut c_void, ptr: *mut c_void, size: size_t) {
     if ptr.is_null() {
         return;
     }
 
+    let mut tracker = AllocationTracker::from_owned_ptr(ctx);
+
     unsafe {
         snmalloc_sys::rust_dealloc(ptr as *mut _, SNMALLOC_ALIGNMENT, size);
     }
+
+    tracker.remove_allocation(ptr);
 }
 
 /// Represents a `PyMemAllocatorEx` that can be installed as a memory allocator.
@@ -596,24 +640,25 @@ impl PythonMemoryAllocator {
     /// Construct a new instance using snmalloc.
     #[cfg(feature = "snmalloc-sys")]
     pub fn snmalloc() -> Self {
-        panic!("snmalloc is not yet fully implemented");
+        let state = Box::into_raw(AllocationTracker::new());
 
         Self {
             backend: MemoryAllocatorBackend::Snmalloc,
-            instance: AllocatorInstance::Simple(
-                pyffi::PyMemAllocatorEx {
-                    ctx: std::ptr::null_mut(),
+            instance: AllocatorInstance::Tracking(TrackingAllocator {
+                allocator: pyffi::PyMemAllocatorEx {
+                    ctx: state as *mut c_void,
                     malloc: Some(snmalloc_malloc),
                     calloc: Some(snmalloc_calloc),
                     realloc: Some(snmalloc_realloc),
                     free: Some(snmalloc_free),
                 },
-                pyffi::PyObjectArenaAllocator {
+                arena: pyffi::PyObjectArenaAllocator {
                     ctx: std::ptr::null_mut(),
                     alloc: Some(snmalloc_malloc),
                     free: Some(snmalloc_arena_free),
                 },
-            ),
+                _state: unsafe { Box::from_raw(state) },
+            }),
         }
     }
 
