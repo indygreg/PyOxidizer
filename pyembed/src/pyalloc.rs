@@ -227,7 +227,7 @@ extern "C" fn jemalloc_free(_ctx: *mut c_void, ptr: *mut c_void) {
     unsafe { jemalloc_sys::dallocx(ptr, 0) }
 }
 
-#[cfg(feature = "mimalloc")]
+#[cfg(feature = "libmimalloc-sys")]
 extern "C" fn mimalloc_alloc(_ctx: *mut c_void, size: size_t) -> *mut c_void {
     let size = match size {
         0 => 1,
@@ -237,7 +237,7 @@ extern "C" fn mimalloc_alloc(_ctx: *mut c_void, size: size_t) -> *mut c_void {
     unsafe { libmimalloc_sys::mi_malloc(size) as *mut _ }
 }
 
-#[cfg(feature = "mimalloc")]
+#[cfg(feature = "libmimalloc-sys")]
 extern "C" fn mimalloc_calloc(_ctx: *mut c_void, nelem: size_t, elsize: size_t) -> *mut c_void {
     let size = match nelem * elsize {
         0 => 1,
@@ -247,7 +247,7 @@ extern "C" fn mimalloc_calloc(_ctx: *mut c_void, nelem: size_t, elsize: size_t) 
     unsafe { libmimalloc_sys::mi_calloc(nelem, size) as *mut _ }
 }
 
-#[cfg(feature = "mimalloc")]
+#[cfg(feature = "libmimalloc-sys")]
 extern "C" fn mimalloc_realloc(
     _ctx: *mut c_void,
     ptr: *mut c_void,
@@ -261,7 +261,7 @@ extern "C" fn mimalloc_realloc(
     unsafe { libmimalloc_sys::mi_realloc(ptr as *mut _, new_size) as *mut _ }
 }
 
-#[cfg(feature = "mimalloc")]
+#[cfg(feature = "libmimalloc-sys")]
 extern "C" fn mimalloc_free(_ctx: *mut c_void, ptr: *mut c_void) {
     if ptr.is_null() {
         return;
@@ -312,7 +312,7 @@ impl PythonMemoryAllocator {
     }
 
     /// Construct a new instance using mimalloc.
-    #[cfg(feature = "mimalloc")]
+    #[cfg(feature = "libmimalloc-sys")]
     pub fn mimalloc() -> Self {
         Self::Python(pyffi::PyMemAllocatorEx {
             ctx: std::ptr::null_mut(),
@@ -323,7 +323,7 @@ impl PythonMemoryAllocator {
         })
     }
 
-    #[cfg(not(feature = "mimalloc"))]
+    #[cfg(not(feature = "libmimalloc-sys"))]
     pub fn mimalloc() -> Self {
         panic!("mimalloc is not available in this build configuration");
     }
