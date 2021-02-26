@@ -64,29 +64,33 @@ fn raw_snmallocator() -> pyffi::PyMemAllocatorEx {
     panic!("snmalloc allocator not yet implemented");
 }
 
-enum InterpreterRawAllocator {
+/// Represents a `PyMemAllocatorEx` that can be installed as a memory allocator.
+enum PythonMemoryAllocator {
+    /// Backed by a `PyMemAllocatorEx` struct.
     Python(pyffi::PyMemAllocatorEx),
+
+    /// Backed by a custom wrapper type.
     Raw(RawAllocator),
 }
 
-impl InterpreterRawAllocator {
+impl PythonMemoryAllocator {
     fn as_ptr(&self) -> *const pyffi::PyMemAllocatorEx {
         match self {
-            InterpreterRawAllocator::Python(alloc) => alloc as *const _,
-            InterpreterRawAllocator::Raw(alloc) => &alloc.allocator as *const _,
+            PythonMemoryAllocator::Python(alloc) => alloc as *const _,
+            PythonMemoryAllocator::Raw(alloc) => &alloc.allocator as *const _,
         }
     }
 }
 
-impl From<pyffi::PyMemAllocatorEx> for InterpreterRawAllocator {
+impl From<pyffi::PyMemAllocatorEx> for PythonMemoryAllocator {
     fn from(allocator: pyffi::PyMemAllocatorEx) -> Self {
-        InterpreterRawAllocator::Python(allocator)
+        PythonMemoryAllocator::Python(allocator)
     }
 }
 
-impl From<RawAllocator> for InterpreterRawAllocator {
+impl From<RawAllocator> for PythonMemoryAllocator {
     fn from(allocator: RawAllocator) -> Self {
-        InterpreterRawAllocator::Raw(allocator)
+        PythonMemoryAllocator::Raw(allocator)
     }
 }
 
@@ -109,7 +113,7 @@ pub struct MainPythonInterpreter<'python, 'interpreter: 'python, 'resources: 'in
     // interpreter is finalized/dropped.
     config: ResolvedOxidizedPythonInterpreterConfig<'resources>,
     interpreter_guard: Option<std::sync::MutexGuard<'interpreter, ()>>,
-    raw_allocator: Option<InterpreterRawAllocator>,
+    raw_allocator: Option<PythonMemoryAllocator>,
     gil: Option<GILGuard>,
     py: Option<Python<'python>>,
     /// File to write containing list of modules when the interpreter finalizes.
@@ -196,17 +200,17 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
             self.raw_allocator = match raw_allocator.backend {
                 MemoryAllocatorBackend::System => None,
                 MemoryAllocatorBackend::Jemalloc => {
-                    Some(InterpreterRawAllocator::from(raw_jemallocator()))
+                    Some(PythonMemoryAllocator::from(raw_jemallocator()))
                 }
                 MemoryAllocatorBackend::Mimalloc => {
-                    Some(InterpreterRawAllocator::from(raw_mimallocator()))
+                    Some(PythonMemoryAllocator::from(raw_mimallocator()))
                 }
                 MemoryAllocatorBackend::Snmalloc => {
-                    Some(InterpreterRawAllocator::from(raw_snmallocator()))
+                    Some(PythonMemoryAllocator::from(raw_snmallocator()))
                 }
-                MemoryAllocatorBackend::Rust => Some(InterpreterRawAllocator::from(
-                    make_raw_rust_memory_allocator(),
-                )),
+                MemoryAllocatorBackend::Rust => {
+                    Some(PythonMemoryAllocator::from(make_raw_rust_memory_allocator()))
+                }
             };
 
             if let Some(allocator) = &self.raw_allocator {
