@@ -8,7 +8,8 @@ use {
     crate::NewInterpreterError,
     python3_sys as pyffi,
     python_packaging::interpreter::{
-        PythonInterpreterConfig, PythonInterpreterProfile, PythonRawAllocator, TerminfoResolution,
+        MemoryAllocatorBackend, PythonInterpreterConfig, PythonInterpreterProfile,
+        TerminfoResolution,
     },
     std::{
         convert::TryFrom,
@@ -85,7 +86,7 @@ pub struct OxidizedPythonInterpreterConfig<'a> {
     pub interpreter_config: PythonInterpreterConfig,
 
     /// Allocator to use for Python's raw allocator.
-    pub raw_allocator: Option<PythonRawAllocator>,
+    pub raw_allocator: Option<MemoryAllocatorBackend>,
 
     /// Whether to set up Python allocator debug hooks to detect memory bugs.
     ///

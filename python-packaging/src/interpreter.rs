@@ -109,6 +109,16 @@ pub enum MemoryAllocatorBackend {
     Rust,
 }
 
+impl Default for MemoryAllocatorBackend {
+    fn default() -> Self {
+        if cfg!(windows) {
+            Self::System
+        } else {
+            Self::Jemalloc
+        }
+    }
+}
+
 impl ToString for MemoryAllocatorBackend {
     fn to_string(&self) -> String {
         match self {
@@ -133,61 +143,6 @@ impl TryFrom<&str> for MemoryAllocatorBackend {
             "snmalloc" => Ok(Self::Snmalloc),
             "rust" => Ok(Self::Rust),
             _ => Err(format!("{} is not a valid memory allocator backend", value)),
-        }
-    }
-}
-
-/// Defines configuration for Python's raw allocator.
-///
-/// This allocator is what Python uses for all memory allocations.
-///
-/// See https://docs.python.org/3/c-api/memory.html for more.
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub struct PythonRawAllocator {
-    /// Which allocator backend to use.
-    pub backend: MemoryAllocatorBackend,
-}
-
-impl PythonRawAllocator {
-    pub fn system() -> Self {
-        Self {
-            backend: MemoryAllocatorBackend::System,
-        }
-    }
-
-    pub fn jemalloc() -> Self {
-        Self {
-            backend: MemoryAllocatorBackend::Jemalloc,
-        }
-    }
-
-    pub fn mimalloc() -> Self {
-        Self {
-            backend: MemoryAllocatorBackend::Mimalloc,
-        }
-    }
-
-    pub fn snmalloc() -> Self {
-        Self {
-            backend: MemoryAllocatorBackend::Snmalloc,
-        }
-    }
-
-    pub fn rust() -> Self {
-        Self {
-            backend: MemoryAllocatorBackend::Rust,
-        }
-    }
-}
-
-impl Default for PythonRawAllocator {
-    fn default() -> Self {
-        Self {
-            backend: if cfg!(windows) {
-                MemoryAllocatorBackend::System
-            } else {
-                MemoryAllocatorBackend::Jemalloc
-            },
         }
     }
 }

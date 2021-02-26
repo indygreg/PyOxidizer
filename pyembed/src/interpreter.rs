@@ -136,8 +136,8 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
         };
 
         // Override the raw allocator if one is configured.
-        if let Some(raw_allocator) = &self.config.raw_allocator {
-            self.raw_allocator = PythonMemoryAllocator::from_backend(raw_allocator.backend);
+        if let Some(backend) = self.config.raw_allocator {
+            self.raw_allocator = PythonMemoryAllocator::from_backend(backend);
 
             if let Some(allocator) = &self.raw_allocator {
                 allocator.set_allocator(pyffi::PyMemAllocatorDomain::PYMEM_DOMAIN_RAW);
