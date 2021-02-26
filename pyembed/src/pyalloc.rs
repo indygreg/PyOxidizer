@@ -218,10 +218,14 @@ extern "C" fn jemalloc_realloc(
 
 #[cfg(feature = "libmimalloc-sys")]
 extern "C" fn mimalloc_realloc(
-    _ctx: *mut c_void,
+    ctx: *mut c_void,
     ptr: *mut c_void,
     new_size: size_t,
 ) -> *mut c_void {
+    if ptr.is_null() {
+        return mimalloc_alloc(ctx, new_size);
+    }
+
     let new_size = match new_size {
         0 => 1,
         val => val,
