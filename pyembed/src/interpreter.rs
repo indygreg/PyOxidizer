@@ -193,23 +193,21 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
 
         // Override the raw allocator if one is configured.
         if let Some(raw_allocator) = &self.config.raw_allocator {
-            match raw_allocator.backend {
-                MemoryAllocatorBackend::System => {}
+            self.raw_allocator = match raw_allocator.backend {
+                MemoryAllocatorBackend::System => None,
                 MemoryAllocatorBackend::Jemalloc => {
-                    self.raw_allocator = Some(InterpreterRawAllocator::from(raw_jemallocator()));
+                    Some(InterpreterRawAllocator::from(raw_jemallocator()))
                 }
                 MemoryAllocatorBackend::Mimalloc => {
-                    self.raw_allocator = Some(InterpreterRawAllocator::from(raw_mimallocator()));
+                    Some(InterpreterRawAllocator::from(raw_mimallocator()))
                 }
                 MemoryAllocatorBackend::Snmalloc => {
-                    self.raw_allocator = Some(InterpreterRawAllocator::from(raw_snmallocator()));
+                    Some(InterpreterRawAllocator::from(raw_snmallocator()))
                 }
-                MemoryAllocatorBackend::Rust => {
-                    self.raw_allocator = Some(InterpreterRawAllocator::from(
-                        make_raw_rust_memory_allocator(),
-                    ));
-                }
-            }
+                MemoryAllocatorBackend::Rust => Some(InterpreterRawAllocator::from(
+                    make_raw_rust_memory_allocator(),
+                )),
+            };
 
             if let Some(allocator) = &self.raw_allocator {
                 unsafe {
