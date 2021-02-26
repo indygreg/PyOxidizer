@@ -190,6 +190,7 @@ impl TypedValue for PythonInterpreterConfigValue {
             "write_bytecode" => self.inner.config.write_bytecode.to_value(),
             "x_options" => self.inner.config.x_options.to_value(),
             "raw_allocator" => self.inner.raw_allocator.to_value(),
+            "allocator_debug" => Value::from(self.inner.allocator_debug),
             "oxidized_importer" => Value::from(self.inner.oxidized_importer),
             "filesystem_importer" => Value::from(self.inner.filesystem_importer),
             "argvb" => Value::from(self.inner.argvb),
@@ -268,6 +269,7 @@ impl TypedValue for PythonInterpreterConfigValue {
                 | "write_bytecode"
                 | "x_options"
                 | "raw_allocator"
+                | "allocator_debug"
                 | "oxidized_importer"
                 | "filesystem_importer"
                 | "argvb"
@@ -520,6 +522,9 @@ impl TypedValue for PythonInterpreterConfigValue {
                             label: format!("{}.{}", Self::TYPE, attribute),
                         })
                     })?;
+            }
+            "allocator_debug" => {
+                self.inner.allocator_debug = value.to_bool();
             }
             "oxidized_importer" => {
                 self.inner.oxidized_importer = value.to_bool();
@@ -1137,6 +1142,18 @@ mod tests {
 
         env.eval("config.raw_allocator = 'snmalloc'")?;
         eval_assert(&mut env, "config.raw_allocator == 'snmalloc'")?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_allocator_debug() -> Result<()> {
+        let mut env = get_env()?;
+
+        eval_assert(&mut env, "config.allocator_debug == False")?;
+
+        env.eval("config.allocator_debug = True")?;
+        eval_assert(&mut env, "config.allocator_debug == True")?;
 
         Ok(())
     }

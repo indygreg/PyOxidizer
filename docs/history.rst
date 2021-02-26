@@ -112,7 +112,12 @@ New Features
   artifacts. This feature is best effort and relies on packages properly
   advertising their license metadata.
 * The *mimalloc* memory allocator can now be used as Python's *raw allocator*.
-  See documentation for ``PythonInterpreterConfig.raw_allocator``.
+  See documentation for
+  :ref:`PythonInterpreterConfig.raw_allocator <config_type_python_interpreter_config_raw_allocator>`.
+* The Starlark
+  :ref:`PythonInterpreterConfig.allocator_debug <config_type_python_interpreter_config_allocator_debug>`
+  field has been added and allows enabling Python memory allocator debug hooks
+  for the embedded Python interpreter.
 
 Other Relevant Changes
 ^^^^^^^^^^^^^^^^^^^^^^

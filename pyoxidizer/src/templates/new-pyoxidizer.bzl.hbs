@@ -140,6 +140,9 @@ def make_exe(dist):
     # Use the system allocator as Python's memory allocator.
     # python_config.raw_allocator = "system"
 
+    # Enable Python memory allocator debug hooks.
+    # python_config.allocator_debug = True
+
     # Control whether `oxidized_importer` is the first importer on
     # `sys.meta_path`.
     # python_config.oxidized_importer = False

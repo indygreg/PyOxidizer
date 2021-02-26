@@ -99,6 +99,22 @@ allocators are configured but the binary was built without these crates.
 Default is ``jemalloc`` on non-Windows targets and ``system`` on Windows.
 (The ``jemalloc-sys`` crate doesn't work on Windows MSVC targets.)
 
+.. _config_type_python_interpreter_config_allocator_debug:
+
+``allocator_debug``
+^^^^^^^^^^^^^^^^^^^
+
+(``bool``)
+
+Whether to enable debug hooks for Python's memory allocators.
+
+Enabling debug hooks enables debugging of memory-related issues in the
+Python interpreter. This setting effectively controls whether to call
+`PyMem_SetupDebugHooks() <https://docs.python.org/3/c-api/memory.html#c.PyMem_SetupDebugHooks>`_
+during interpreter initialization. See the linked documentation for more.
+
+Defaults to ``False``.
+
 .. _config_type_python_interpreter_config_oxidized_importer:
 
 ``oxidized_importer``

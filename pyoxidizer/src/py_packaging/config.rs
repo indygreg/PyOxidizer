@@ -225,7 +225,7 @@ impl PyembedPythonInterpreterConfig {
             x_options: {},\n        \
             }},\n    \
             raw_allocator: Some({}),\n    \
-            allocator_debug: false,\n    \
+            allocator_debug: {},\n    \
             set_missing_path_configuration: {},\n    \
             oxidized_importer: {},\n    \
             filesystem_importer: {},\n    \
@@ -351,6 +351,7 @@ impl PyembedPythonInterpreterConfig {
                 MemoryAllocatorBackend::Rust => "pyembed::MemoryAllocatorBackend::Rust",
                 MemoryAllocatorBackend::System => "pyembed::MemoryAllocatorBackend::System",
             },
+            self.allocator_debug,
             self.set_missing_path_configuration,
             self.oxidized_importer,
             self.filesystem_importer,
