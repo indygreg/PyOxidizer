@@ -91,6 +91,7 @@ type RustAllocatorState = HashMap<*mut u8, alloc::Layout>;
 /// hold the GIL. So we need a thread safe map or a mutex guarding access.
 pub(crate) struct RustAllocator {
     pub allocator: pyffi::PyMemAllocatorEx,
+    pub arena: pyffi::PyObjectArenaAllocator,
     _state: Box<RustAllocatorState>,
 }
 
@@ -331,11 +332,58 @@ extern "C" fn snmalloc_free(_ctx: *mut c_void, ptr: *mut c_void) {
     }
 }
 
+extern "C" fn rust_arena_free(ctx: *mut c_void, ptr: *mut c_void, _size: size_t) {
+    if ptr.is_null() {
+        return;
+    }
+
+    unsafe {
+        let state = ctx as *mut RustAllocatorState;
+
+        let key = ptr as *mut u8;
+        let layout = (*state)
+            .get(&key)
+            .unwrap_or_else(|| panic!("could not find allocated memory record: {:?}", key));
+
+        alloc::dealloc(key, *layout);
+        (*state).remove(&key);
+    }
+}
+
+#[cfg(feature = "jemalloc-sys")]
+extern "C" fn jemalloc_arena_free(_ctx: *mut c_void, ptr: *mut c_void, _size: size_t) {
+    if ptr.is_null() {
+        return;
+    }
+
+    unsafe { jemalloc_sys::dallocx(ptr, 0) }
+}
+
+#[cfg(feature = "libmimalloc-sys")]
+extern "C" fn mimalloc_arena_free(_ctx: *mut c_void, ptr: *mut c_void, _size: size_t) {
+    if ptr.is_null() {
+        return;
+    }
+
+    unsafe { libmimalloc_sys::mi_free(ptr as *mut _) }
+}
+
+#[cfg(feature = "snmalloc-sys")]
+extern "C" fn snmalloc_arena_free(_ctx: *mut c_void, ptr: *mut c_void, size: size_t) {
+    if ptr.is_null() {
+        return;
+    }
+
+    unsafe {
+        snmalloc_sys::rust_dealloc(ptr as *mut _, 8, size);
+    }
+}
+
 /// Represents a `PyMemAllocatorEx` that can be installed as a memory allocator.
 pub(crate) enum PythonMemoryAllocator {
     /// Backed by a `PyMemAllocatorEx` struct.
     #[allow(dead_code)]
-    Python(pyffi::PyMemAllocatorEx),
+    Python(pyffi::PyMemAllocatorEx, pyffi::PyObjectArenaAllocator),
 
     /// Backed by a custom wrapper type.
     Rust(RustAllocator),
@@ -358,13 +406,20 @@ impl PythonMemoryAllocator {
     /// Construct a new instance using jemalloc.
     #[cfg(feature = "jemalloc-sys")]
     pub fn jemalloc() -> Self {
-        Self::Python(pyffi::PyMemAllocatorEx {
-            ctx: std::ptr::null_mut(),
-            malloc: Some(jemalloc_malloc),
-            calloc: Some(jemalloc_calloc),
-            realloc: Some(jemalloc_realloc),
-            free: Some(jemalloc_free),
-        })
+        Self::Python(
+            pyffi::PyMemAllocatorEx {
+                ctx: std::ptr::null_mut(),
+                malloc: Some(jemalloc_malloc),
+                calloc: Some(jemalloc_calloc),
+                realloc: Some(jemalloc_realloc),
+                free: Some(jemalloc_free),
+            },
+            pyffi::PyObjectArenaAllocator {
+                ctx: std::ptr::null_mut(),
+                alloc: Some(jemalloc_malloc),
+                free: Some(jemalloc_arena_free),
+            },
+        )
     }
 
     #[cfg(not(feature = "jemalloc-sys"))]
@@ -375,13 +430,20 @@ impl PythonMemoryAllocator {
     /// Construct a new instance using mimalloc.
     #[cfg(feature = "libmimalloc-sys")]
     pub fn mimalloc() -> Self {
-        Self::Python(pyffi::PyMemAllocatorEx {
-            ctx: std::ptr::null_mut(),
-            malloc: Some(mimalloc_malloc),
-            calloc: Some(mimalloc_calloc),
-            realloc: Some(mimalloc_realloc),
-            free: Some(mimalloc_free),
-        })
+        Self::Python(
+            pyffi::PyMemAllocatorEx {
+                ctx: std::ptr::null_mut(),
+                malloc: Some(mimalloc_malloc),
+                calloc: Some(mimalloc_calloc),
+                realloc: Some(mimalloc_realloc),
+                free: Some(mimalloc_free),
+            },
+            pyffi::PyObjectArenaAllocator {
+                ctx: std::ptr::null_mut(),
+                alloc: Some(mimalloc_malloc),
+                free: Some(mimalloc_arena_free),
+            },
+        )
     }
 
     #[cfg(not(feature = "libmimalloc-sys"))]
@@ -407,6 +469,11 @@ impl PythonMemoryAllocator {
 
         Self::Rust(RustAllocator {
             allocator,
+            arena: pyffi::PyObjectArenaAllocator {
+                ctx: state as *mut c_void,
+                alloc: Some(rust_malloc),
+                free: Some(rust_arena_free),
+            },
             _state: unsafe { Box::from_raw(state) },
         })
     }
@@ -416,13 +483,20 @@ impl PythonMemoryAllocator {
     pub fn snmalloc() -> Self {
         panic!("snmalloc is not yet fully implemented");
 
-        Self::Python(pyffi::PyMemAllocatorEx {
-            ctx: std::ptr::null_mut(),
-            malloc: Some(snmalloc_malloc),
-            calloc: Some(snmalloc_calloc),
-            realloc: Some(snmalloc_realloc),
-            free: Some(snmalloc_free),
-        })
+        Self::Python(
+            pyffi::PyMemAllocatorEx {
+                ctx: std::ptr::null_mut(),
+                malloc: Some(snmalloc_malloc),
+                calloc: Some(snmalloc_calloc),
+                realloc: Some(snmalloc_realloc),
+                free: Some(snmalloc_free),
+            },
+            pyffi::PyObjectArenaAllocator {
+                ctx: std::ptr::null_mut(),
+                alloc: Some(snmalloc_malloc),
+                free: Some(snmalloc_arena_free),
+            },
+        )
     }
 
     #[cfg(not(feature = "snmalloc-sys"))]
@@ -435,15 +509,36 @@ impl PythonMemoryAllocator {
     /// This should be called before `Py_Initialize*()`.
     pub fn set_allocator(&self, domain: pyffi::PyMemAllocatorDomain) {
         unsafe {
-            pyffi::PyMem_SetAllocator(domain, self.as_ptr() as *mut _);
+            pyffi::PyMem_SetAllocator(domain, self.as_memory_allocator() as *mut _);
         }
     }
 
+    /// Set the arena allocator used by the `pymalloc` allocator.
+    ///
+    /// This only has an effect if the `pymalloc` allocator is registered to the
+    /// `mem` or `object` allocator domains.
+    #[allow(dead_code)]
+    pub fn set_arena_allocator(&self) {
+        // python3-sys has the size and ptr argument order to PyObjectArenaAllocator.free
+        // swapped. So we can't set arena allocators until this is fixed.
+        panic!("arena allocator not supported due to python3-sys bug");
+
+        // unsafe { pyffi::PyObject_SetArenaAllocator(self.as_arena_allocator()) }
+    }
+
     /// Obtain the pointer to the `PyMemAllocatorEx` for this allocator.
-    fn as_ptr(&self) -> *const pyffi::PyMemAllocatorEx {
+    fn as_memory_allocator(&self) -> *const pyffi::PyMemAllocatorEx {
         match self {
-            PythonMemoryAllocator::Python(alloc) => alloc as *const _,
+            PythonMemoryAllocator::Python(alloc, _) => alloc as *const _,
             PythonMemoryAllocator::Rust(alloc) => &alloc.allocator as *const _,
+        }
+    }
+
+    #[allow(dead_code)]
+    fn as_arena_allocator(&self) -> *mut pyffi::PyObjectArenaAllocator {
+        match self {
+            PythonMemoryAllocator::Python(_, arena) => arena as *const _ as *mut _,
+            PythonMemoryAllocator::Rust(alloc) => &alloc.arena as *const _ as *mut _,
         }
     }
 }
