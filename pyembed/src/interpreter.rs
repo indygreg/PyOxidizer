@@ -53,7 +53,7 @@ pub struct MainPythonInterpreter<'python, 'interpreter: 'python, 'resources: 'in
     // interpreter is finalized/dropped.
     config: ResolvedOxidizedPythonInterpreterConfig<'resources>,
     interpreter_guard: Option<std::sync::MutexGuard<'interpreter, ()>>,
-    allocator: Option<PythonMemoryAllocator>,
+    pub(crate) allocator: Option<PythonMemoryAllocator>,
     gil: Option<GILGuard>,
     py: Option<Python<'python>>,
     /// File to write containing list of modules when the interpreter finalizes.

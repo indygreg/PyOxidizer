@@ -7,7 +7,7 @@ use {
     cpython::{ObjectProtocol, PyBytes, PyList, PyObject, PyString, PyStringData},
     python3_sys as pyffi,
     python_packaging::{
-        interpreter::{BytesWarning, PythonInterpreterProfile},
+        interpreter::{BytesWarning, MemoryAllocatorBackend, PythonInterpreterProfile},
         resource::BytecodeOptimizationLevel,
     },
     rusty_fork::rusty_fork_test,
@@ -84,6 +84,190 @@ rusty_fork_test! {
                 .unwrap(),
             1
         );
+    }
+
+    #[test]
+    fn test_allocator_default() {
+        let mut config = OxidizedPythonInterpreterConfig::default();
+        // Otherwise the Rust arguments are interpreted as Python arguments.
+        config.interpreter_config.parse_argv = Some(false);
+        config.set_missing_path_configuration = false;
+
+        config.allocator_backend = MemoryAllocatorBackend::Default;
+
+        let interp = MainPythonInterpreter::new(config).unwrap();
+
+        assert!(interp.allocator.is_none());
+    }
+
+    #[test]
+    fn test_allocator_rust() {
+        let mut config = OxidizedPythonInterpreterConfig::default();
+        // Otherwise the Rust arguments are interpreted as Python arguments.
+        config.interpreter_config.parse_argv = Some(false);
+        config.set_missing_path_configuration = false;
+
+        config.allocator_backend = MemoryAllocatorBackend::Rust;
+        config.allocator_raw = true;
+        config.allocator_mem = true;
+        config.allocator_obj = true;
+
+        let interp = MainPythonInterpreter::new(config).unwrap();
+
+        assert!(interp.allocator.is_some());
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_allocator_rust_pymalloc_arena() {
+        let mut config = OxidizedPythonInterpreterConfig::default();
+        // Otherwise the Rust arguments are interpreted as Python arguments.
+        config.interpreter_config.parse_argv = Some(false);
+        config.set_missing_path_configuration = false;
+
+        config.allocator_backend = MemoryAllocatorBackend::Rust;
+        config.allocator_raw = true;
+        config.allocator_pymalloc_arena = true;
+
+        let interp = MainPythonInterpreter::new(config).unwrap();
+
+        assert!(interp.allocator.is_some());
+    }
+
+    #[cfg(feature = "jemalloc")]
+    #[test]
+    fn test_allocator_jemalloc() {
+        let mut config = OxidizedPythonInterpreterConfig::default();
+        // Otherwise the Rust arguments are interpreted as Python arguments.
+        config.interpreter_config.parse_argv = Some(false);
+        config.set_missing_path_configuration = false;
+
+        config.allocator_backend = MemoryAllocatorBackend::Jemalloc;
+        config.allocator_raw = true;
+        config.allocator_mem = true;
+        config.allocator_obj = true;
+
+        let interp = MainPythonInterpreter::new(config).unwrap();
+
+        assert!(interp.allocator.is_some());
+    }
+
+    #[cfg(feature = "jemalloc")]
+    #[test]
+    #[should_panic]
+    fn test_allocator_jemalloc_pymalloc_arena() {
+        let mut config = OxidizedPythonInterpreterConfig::default();
+        // Otherwise the Rust arguments are interpreted as Python arguments.
+        config.interpreter_config.parse_argv = Some(false);
+        config.set_missing_path_configuration = false;
+
+        config.allocator_backend = MemoryAllocatorBackend::Jemalloc;
+        config.allocator_raw = true;
+        config.allocator_pymalloc_arena = true;
+
+        let interp = MainPythonInterpreter::new(config).unwrap();
+
+        assert!(interp.allocator.is_some());
+    }
+
+    #[cfg(feature = "mimalloc")]
+    #[test]
+    fn test_allocator_mimalloc() {
+        let mut config = OxidizedPythonInterpreterConfig::default();
+        // Otherwise the Rust arguments are interpreted as Python arguments.
+        config.interpreter_config.parse_argv = Some(false);
+        config.set_missing_path_configuration = false;
+
+        config.allocator_backend = MemoryAllocatorBackend::Mimalloc;
+        config.allocator_raw = true;
+        config.allocator_mem = true;
+        config.allocator_obj = true;
+
+        let interp = MainPythonInterpreter::new(config).unwrap();
+
+        assert!(interp.allocator.is_some());
+    }
+
+    #[cfg(feature = "mimalloc")]
+    #[test]
+    #[should_panic]
+    fn test_allocator_mimalloc_pymalloc_arena() {
+        let mut config = OxidizedPythonInterpreterConfig::default();
+        // Otherwise the Rust arguments are interpreted as Python arguments.
+        config.interpreter_config.parse_argv = Some(false);
+        config.set_missing_path_configuration = false;
+
+        config.allocator_backend = MemoryAllocatorBackend::Mimalloc;
+        config.allocator_raw = true;
+        config.allocator_pymalloc_arena = true;
+
+        let interp = MainPythonInterpreter::new(config).unwrap();
+
+        assert!(interp.allocator.is_some());
+    }
+
+    #[cfg(feature = "snmalloc")]
+    #[test]
+    // snmalloc not yet implemented.
+    #[should_panic]
+    fn test_allocator_snmalloc() {
+        let mut config = OxidizedPythonInterpreterConfig::default();
+        // Otherwise the Rust arguments are interpreted as Python arguments.
+        config.interpreter_config.parse_argv = Some(false);
+        config.set_missing_path_configuration = false;
+
+        config.allocator_backend = MemoryAllocatorBackend::Snmalloc;
+        config.allocator_raw = true;
+        config.allocator_mem = true;
+        config.allocator_obj = true;
+
+        let interp = MainPythonInterpreter::new(config).unwrap();
+
+        assert!(interp.allocator.is_some());
+    }
+
+    #[cfg(feature = "snmalloc")]
+    #[test]
+    #[should_panic]
+    fn test_allocator_snmalloc_pymalloc_arena() {
+        let mut config = OxidizedPythonInterpreterConfig::default();
+        // Otherwise the Rust arguments are interpreted as Python arguments.
+        config.interpreter_config.parse_argv = Some(false);
+        config.set_missing_path_configuration = false;
+
+        config.allocator_backend = MemoryAllocatorBackend::Snmalloc;
+        config.allocator_raw = true;
+        config.allocator_pymalloc_arena = true;
+
+        let interp = MainPythonInterpreter::new(config).unwrap();
+
+        assert!(interp.allocator.is_some());
+    }
+
+    #[test]
+    fn test_allocator_debug() {
+        let mut config = OxidizedPythonInterpreterConfig::default();
+        // Otherwise the Rust arguments are interpreted as Python arguments.
+        config.interpreter_config.parse_argv = Some(false);
+        config.set_missing_path_configuration = false;
+
+        config.allocator_debug = true;
+
+        MainPythonInterpreter::new(config).unwrap();
+    }
+
+    #[test]
+    fn test_allocator_debug_custom_backend() {
+        let mut config = OxidizedPythonInterpreterConfig::default();
+        // Otherwise the Rust arguments are interpreted as Python arguments.
+        config.interpreter_config.parse_argv = Some(false);
+        config.set_missing_path_configuration = false;
+
+        config.allocator_backend = MemoryAllocatorBackend::Rust;
+        config.allocator_raw = true;
+        config.allocator_debug = true;
+
+        MainPythonInterpreter::new(config).unwrap();
     }
 
     #[test]
