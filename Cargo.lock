@@ -2146,7 +2146,7 @@ dependencies = [
  "python-packed-resources",
  "python3-sys",
  "rusty-fork",
- "snmalloc-rs",
+ "snmalloc-sys",
  "tugger-file-manifest",
  "winapi 0.3.9",
 ]
@@ -2995,15 +2995,6 @@ name = "smallvec"
 version = "1.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fe0f37c9e8f3c5a4a66ad655a93c74daac4ad00c441533bf5c6e7990bb42604e"
-
-[[package]]
-name = "snmalloc-rs"
-version = "0.2.24"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9ef8b05b3ebb9f8ca192bcaee085f57dec601083e90f88bcaf84c2c05c5831a0"
-dependencies = [
- "snmalloc-sys",
-]
 
 [[package]]
 name = "snmalloc-sys"

@@ -132,6 +132,16 @@ extern "C" fn mimalloc_alloc(_ctx: *mut c_void, size: size_t) -> *mut c_void {
     unsafe { libmimalloc_sys::mi_malloc(size) as *mut _ }
 }
 
+#[cfg(feature = "snmalloc-sys")]
+extern "C" fn snmalloc_malloc(_ctx: *mut c_void, size: size_t) -> *mut c_void {
+    let size = match size {
+        0 => 1,
+        val => val,
+    };
+
+    unsafe { snmalloc_sys::rust_alloc(8, size) as *mut _ }
+}
+
 extern "C" fn rust_calloc(ctx: *mut c_void, nelem: size_t, elsize: size_t) -> *mut c_void {
     let size = match nelem * elsize {
         0 => 1,
@@ -169,6 +179,26 @@ extern "C" fn mimalloc_calloc(_ctx: *mut c_void, nelem: size_t, elsize: size_t) 
     };
 
     unsafe { libmimalloc_sys::mi_calloc(nelem, size) as *mut _ }
+}
+
+#[cfg(feature = "snmalloc-sys")]
+extern "C" fn snmalloc_calloc(_ctx: *mut c_void, nelem: size_t, elsize: size_t) -> *mut c_void {
+    let size = match nelem * elsize {
+        0 => 1,
+        val => val,
+    };
+
+    let ptr = unsafe { snmalloc_sys::rust_alloc(8, size) };
+    if ptr.is_null() {
+        return ptr as *mut _;
+    }
+
+    // TODO should we use write_volatile() + memory fence to be sure?
+    unsafe {
+        std::ptr::write_bytes(ptr, 0, size);
+    }
+
+    ptr as *mut _
 }
 
 extern "C" fn rust_realloc(ctx: *mut c_void, ptr: *mut c_void, new_size: size_t) -> *mut c_void {
@@ -234,6 +264,24 @@ extern "C" fn mimalloc_realloc(
     unsafe { libmimalloc_sys::mi_realloc(ptr as *mut _, new_size) as *mut _ }
 }
 
+#[cfg(feature = "snmalloc-sys")]
+extern "C" fn snmalloc_realloc(
+    ctx: *mut c_void,
+    ptr: *mut c_void,
+    new_size: size_t,
+) -> *mut c_void {
+    if ptr.is_null() {
+        return snmalloc_malloc(ctx, new_size);
+    }
+    let new_size = match new_size {
+        0 => 1,
+        val => val,
+    };
+
+    // TODO pass old_size properly.
+    unsafe { snmalloc_sys::rust_realloc(ptr as *mut _, 8, 0, new_size) as *mut _ }
+}
+
 extern "C" fn rust_free(ctx: *mut c_void, ptr: *mut c_void) {
     if ptr.is_null() {
         return;
@@ -269,6 +317,18 @@ extern "C" fn mimalloc_free(_ctx: *mut c_void, ptr: *mut c_void) {
     }
 
     unsafe { libmimalloc_sys::mi_free(ptr as *mut _) }
+}
+
+#[cfg(feature = "snmalloc-sys")]
+extern "C" fn snmalloc_free(_ctx: *mut c_void, ptr: *mut c_void) {
+    if ptr.is_null() {
+        return;
+    }
+
+    // TODO pass size properly.
+    unsafe {
+        snmalloc_sys::rust_dealloc(ptr as *mut _, 8, 0);
+    }
 }
 
 /// Represents a `PyMemAllocatorEx` that can be installed as a memory allocator.
@@ -352,8 +412,22 @@ impl PythonMemoryAllocator {
     }
 
     /// Construct a new instance using snmalloc.
+    #[cfg(feature = "snmalloc-sys")]
     pub fn snmalloc() -> Self {
-        panic!("snmalloc allocator not yet implemented");
+        panic!("snmalloc is not yet fully implemented");
+
+        Self::Python(pyffi::PyMemAllocatorEx {
+            ctx: std::ptr::null_mut(),
+            malloc: Some(snmalloc_malloc),
+            calloc: Some(snmalloc_calloc),
+            realloc: Some(snmalloc_realloc),
+            free: Some(snmalloc_free),
+        })
+    }
+
+    #[cfg(not(feature = "snmalloc-sys"))]
+    pub fn snmalloc() -> Self {
+        panic!("snmalloc is not available in this build configuration");
     }
 
     /// Set this allocator to be the allocator for a certain "domain" in a Python interpreter.
