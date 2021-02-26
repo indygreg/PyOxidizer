@@ -97,8 +97,8 @@ impl TryFrom<&str> for TerminfoResolution {
 /// Defines a backend for a memory allocator.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum MemoryAllocatorBackend {
-    /// The default system allocator.
-    System,
+    /// The default allocator as configured by Python.
+    Default,
     /// Use jemalloc.
     Jemalloc,
     /// Use Mimalloc.
@@ -112,7 +112,7 @@ pub enum MemoryAllocatorBackend {
 impl Default for MemoryAllocatorBackend {
     fn default() -> Self {
         if cfg!(windows) {
-            Self::System
+            Self::Default
         } else {
             Self::Jemalloc
         }
@@ -122,7 +122,7 @@ impl Default for MemoryAllocatorBackend {
 impl ToString for MemoryAllocatorBackend {
     fn to_string(&self) -> String {
         match self {
-            Self::System => "system",
+            Self::Default => "default",
             Self::Jemalloc => "jemalloc",
             Self::Mimalloc => "mimalloc",
             Self::Snmalloc => "snmalloc",
@@ -137,7 +137,7 @@ impl TryFrom<&str> for MemoryAllocatorBackend {
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         match value {
-            "system" => Ok(Self::System),
+            "default" => Ok(Self::Default),
             "jemalloc" => Ok(Self::Jemalloc),
             "mimalloc" => Ok(Self::Mimalloc),
             "snmalloc" => Ok(Self::Snmalloc),

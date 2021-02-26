@@ -57,6 +57,12 @@ Backwards Compatibility Notes
   Python 3.9.
 * ``pyembed::MainPythonInterpreter.acquire_gil()``'s signature has changed, now
   returning a ``Python`` value directly without wrapping it in a ``Result``.
+* ``pyembed::OxidizedPythonInterpreterConfig`` had its memory allocator fields
+  refactored to support new features and to help prevent bad configs (like
+  defining multiple custom memory allocators).
+* The Starlark ``PythonInterpreterConfig.raw_allocator`` field has been renamed
+  to ``allocator_backend``. The ``system`` value has been renamed to
+  ``default``.
 
 Bug Fixes
 ^^^^^^^^^
@@ -111,13 +117,19 @@ New Features
   building and prints a report about what it finds when writing build
   artifacts. This feature is best effort and relies on packages properly
   advertising their license metadata.
+* Support for configuring Python's memory allocators has been expanded.
+  The Starlark :ref:`PythonInterpreterConfig.allocator_debug <config_type_python_interpreter_config_allocator_debug>`
+  field has been added and allows enabling Python memory allocator debug hooks.
+  The Starlark :ref:`PythonInterpreterConfig.allocator_mem <config_type_python_interpreter_config_allocator_mem>`,
+  :ref:`PythonInterpreterConfig.allocator_obj <config_type_python_interpreter_config_allocator_obj>`,
+  and :ref:`PythonInterpreterConfig.allocator_pymalloc_arena <config_type_python_interpreter_config_allocator_pymalloc_arena>`
+  fields have been added to control whether to install a custom allocator for
+  the *mem* and *obj* domains as well as ``pymalloc``'s arena allocator.
+  (However, the ``pymalloc`` arena allocator customization does not yet work
+  due to a bug outside of our control.)
 * The *mimalloc* memory allocator can now be used as Python's *raw allocator*.
   See documentation for
-  :ref:`PythonInterpreterConfig.raw_allocator <config_type_python_interpreter_config_raw_allocator>`.
-* The Starlark
-  :ref:`PythonInterpreterConfig.allocator_debug <config_type_python_interpreter_config_allocator_debug>`
-  field has been added and allows enabling Python memory allocator debug hooks
-  for the embedded Python interpreter.
+  :ref:`PythonInterpreterConfig.raw_allocator <config_type_python_interpreter_config_allocator_backend>`.
 
 Other Relevant Changes
 ^^^^^^^^^^^^^^^^^^^^^^

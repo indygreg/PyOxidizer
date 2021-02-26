@@ -809,15 +809,15 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
     }
 
     fn requires_jemalloc(&self) -> bool {
-        self.config.raw_allocator == MemoryAllocatorBackend::Jemalloc
+        self.config.allocator_backend == MemoryAllocatorBackend::Jemalloc
     }
 
     fn requires_mimalloc(&self) -> bool {
-        self.config.raw_allocator == MemoryAllocatorBackend::Mimalloc
+        self.config.allocator_backend == MemoryAllocatorBackend::Mimalloc
     }
 
     fn requires_snmalloc(&self) -> bool {
-        self.config.raw_allocator == MemoryAllocatorBackend::Snmalloc
+        self.config.allocator_backend == MemoryAllocatorBackend::Snmalloc
     }
 
     fn to_embedded_python_context(

@@ -7,7 +7,7 @@
 use {
     super::{
         binary::{LibpythonLinkMode, PythonBinaryBuilder},
-        config::{default_raw_allocator, PyembedPythonInterpreterConfig},
+        config::{default_memory_allocator, PyembedPythonInterpreterConfig},
         distribution::{
             resolve_python_distribution_from_location, BinaryLibpythonLinkMode,
             DistributionExtractLock, PythonDistribution, PythonDistributionLocation,
@@ -1206,7 +1206,8 @@ impl PythonDistribution for StandaloneDistribution {
                 profile: PythonInterpreterProfile::Isolated,
                 ..embedded_default.config
             },
-            raw_allocator: default_raw_allocator(self.target_triple()),
+            allocator_backend: default_memory_allocator(self.target_triple()),
+            allocator_raw: true,
             oxidized_importer: true,
             filesystem_importer: false,
             terminfo_resolution: TerminfoResolution::Dynamic,

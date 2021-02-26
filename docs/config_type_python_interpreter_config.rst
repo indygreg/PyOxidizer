@@ -53,24 +53,22 @@ These attributes provide features and level of control over
 embedded Python interpreters beyond what is possible with Python's
 `initialization C API <https://docs.python.org/3/c-api/init_config.html>`_.
 
-.. _config_type_python_interpreter_config_raw_allocator:
+.. _config_type_python_interpreter_config_allocator_backend:
 
-``raw_allocator``
-^^^^^^^^^^^^^^^^^
+``allocator_backend``
+^^^^^^^^^^^^^^^^^^^^^
 
 (``string``)
 
-Configures the low-level *raw* allocator used by Python. Internally,
-Python has its own allocator that manages pools of memory. But that
-allocator gets its memory from some other allocator. This attribute
-defines what that other allocator is. In Python C API speak, this
-defines the allocator for the ``PYMEM_DOMAIN_RAW`` allocator.
+Configures a custom memory allocator to be used by Python.
 
 Accepted values are:
 
-``system``
-   Use the default allocator functions exposed to the binary (``malloc()``,
-   ``free()``, etc).
+``default``
+   Let Python choose how to configure the allocator.
+
+   This will likely use the ``malloc()``, ``free()``, etc functions
+   linked to the binary.
 
 ``jemalloc``
    Use the jemalloc allocator.
@@ -87,7 +85,7 @@ Accepted values are:
    Use the snmalloc allocator (https://github.com/microsoft/snmalloc).
 
 The ``jemalloc``, ``mimalloc``, and ``snmalloc`` allocators require the
-presence of additional Rust crates. A run-time panic will occur if these
+presence of additional Rust crates. A run-time error will occur if these
 allocators are configured but the binary was built without these crates.
 (This should not occur when using ``pyoxidizer`` to build the binary.)
 
@@ -96,8 +94,90 @@ allocators are configured but the binary was built without these crates.
    The ``rust`` allocator is not recommended because it introduces performance
    overhead. But it may help with debugging in some situations.
 
-Default is ``jemalloc`` on non-Windows targets and ``system`` on Windows.
+Default is ``jemalloc`` on non-Windows targets and ``default`` on Windows.
 (The ``jemalloc-sys`` crate doesn't work on Windows MSVC targets.)
+
+.. _config_type_python_interpreter_config_allocator_raw:
+
+``allocator_raw``
+^^^^^^^^^^^^^^^^^
+
+(``bool``)
+
+Controls whether to install a custom allocator (defined by
+``allocator_backend``) into Python's *raw* allocator domain
+(``PYMEM_DOMAIN_RAW`` in Python C API speak).
+
+Setting this to ``True`` will replace the system allocator (e.g. ``malloc()``,
+``free()``) for this domain.
+
+A value of ``True`` only has an effect if ``allocator_backend`` is some value
+other than ``default``.
+
+Defaults to ``True``.
+
+.. _config_type_python_interpreter_config_allocator_mem:
+
+``allocator_mem``
+^^^^^^^^^^^^^^^^^
+
+(``bool``)
+
+Controls whether to install a custom allocator (defined by
+``allocator_backend``) into Python's *mem* allocator domain
+(``PYMEM_DOMAIN_MEM`` in Python C API speak).
+
+Setting this to ``True`` will replace ``pymalloc`` as the allocator
+for this domain.
+
+A value of ``True`` only has an effect if ``allocator_backend`` is some value
+other than ``default``.
+
+Defaults to ``False``.
+
+.. _config_type_python_interpreter_config_allocator_obj:
+
+``allocator_obj``
+^^^^^^^^^^^^^^^^^
+
+(``bool``)
+
+Controls whether to install a custom allocator (defined by
+``allocator_backend``) into Python's *obj* allocator domain
+(``PYMEM_DOMAIN_OBJ`` in Python C API speak).
+
+Setting this to ``True`` will replace ``pymalloc`` as the allocator
+for this domain.
+
+A value of ``True`` only has an effect if ``allocator_backend`` is some value
+other than ``default``.
+
+Defaults to ``False``.
+
+.. _config_type_python_interpreter_config_allocator_pymalloc_arena:
+
+``allocator_pymalloc_arena``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+(``bool``)
+
+Controls whether to install a custom allocator (defined by
+``allocator_backend``) into Python's ``pymalloc`` to be used as its
+arena allocator.
+
+The ``pymalloc`` allocator is used by Python by default and will use
+the system's allocator functions (``malloc()``, ``VirtualAlloc()``, etc)
+by default.
+
+Setting this to ``True`` will have no effect if ``pymalloc`` is not
+being used (the ``allocator_mem`` and ``allocator_obj`` settings are
+``True`` and have replaced ``pymalloc`` as the allocator backend for these
+domains).
+
+A value of ``True`` only has an effect if ``allocator_backend`` is some
+value other than ``default``.
+
+Defaults to ``False``.
 
 .. _config_type_python_interpreter_config_allocator_debug:
 

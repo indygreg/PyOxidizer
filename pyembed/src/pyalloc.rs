@@ -414,7 +414,7 @@ impl PythonMemoryAllocator {
     /// Returns `None` if the backend shouldn't be defined.
     pub fn from_backend(backend: MemoryAllocatorBackend) -> Option<Self> {
         match backend {
-            MemoryAllocatorBackend::System => None,
+            MemoryAllocatorBackend::Default => None,
             MemoryAllocatorBackend::Jemalloc => Some(Self::jemalloc()),
             MemoryAllocatorBackend::Mimalloc => Some(Self::mimalloc()),
             MemoryAllocatorBackend::Snmalloc => Some(Self::snmalloc()),

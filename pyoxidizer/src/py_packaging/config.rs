@@ -22,14 +22,14 @@ use {
     },
 };
 
-/// Determine the default raw allocator for a target triple.
-pub fn default_raw_allocator(target_triple: &str) -> MemoryAllocatorBackend {
+/// Determine the default memory allocator for a target triple.
+pub fn default_memory_allocator(target_triple: &str) -> MemoryAllocatorBackend {
     // Jemalloc doesn't work on Windows.
     //
     // We don't use Jemalloc by default in the test environment because it slows down
     // builds of test projects.
-    if target_triple == "x86_64-pc-windows-msvc" || cfg!(test) {
-        MemoryAllocatorBackend::System
+    if target_triple.ends_with("-pc-windows-msvc") || cfg!(test) {
+        MemoryAllocatorBackend::Default
     } else {
         MemoryAllocatorBackend::Jemalloc
     }
@@ -116,7 +116,11 @@ impl ToString for PyembedPackedResourcesSource {
 #[derive(Clone, Debug, PartialEq)]
 pub struct PyembedPythonInterpreterConfig {
     pub config: PythonInterpreterConfig,
-    pub raw_allocator: MemoryAllocatorBackend,
+    pub allocator_backend: MemoryAllocatorBackend,
+    pub allocator_raw: bool,
+    pub allocator_mem: bool,
+    pub allocator_obj: bool,
+    pub allocator_pymalloc_arena: bool,
     pub allocator_debug: bool,
     pub set_missing_path_configuration: bool,
     pub oxidized_importer: bool,
@@ -143,7 +147,13 @@ impl Default for PyembedPythonInterpreterConfig {
                 configure_locale: Some(true),
                 ..PythonInterpreterConfig::default()
             },
-            raw_allocator: MemoryAllocatorBackend::System,
+            allocator_backend: MemoryAllocatorBackend::Default,
+            // This setting has no effect by itself. But the default of true
+            // makes it so a custom backend is used automatically.
+            allocator_raw: true,
+            allocator_mem: false,
+            allocator_obj: false,
+            allocator_pymalloc_arena: false,
             allocator_debug: false,
             set_missing_path_configuration: true,
             oxidized_importer: true,
@@ -224,7 +234,11 @@ impl PyembedPythonInterpreterConfig {
             write_bytecode: {},\n        \
             x_options: {},\n        \
             }},\n    \
-            raw_allocator: Some({}),\n    \
+            allocator_backend: {},\n    \
+            allocator_raw: {},\n    \
+            allocator_mem: {},\n    \
+            allocator_obj: {},\n    \
+            allocator_pymalloc_arena: {},\n    \
             allocator_debug: {},\n    \
             set_missing_path_configuration: {},\n    \
             oxidized_importer: {},\n    \
@@ -344,13 +358,17 @@ impl PyembedPythonInterpreterConfig {
             optional_vec_string_to_string(&self.config.warn_options),
             optional_bool_to_string(&self.config.write_bytecode),
             optional_vec_string_to_string(&self.config.x_options),
-            match self.raw_allocator {
+            match self.allocator_backend {
                 MemoryAllocatorBackend::Jemalloc => "pyembed::MemoryAllocatorBackend::Jemalloc",
                 MemoryAllocatorBackend::Mimalloc => "pyembed::MemoryAllocatorBackend::Mimalloc",
                 MemoryAllocatorBackend::Snmalloc => "pyembed::MemoryAllocatorBackend::Snmalloc",
                 MemoryAllocatorBackend::Rust => "pyembed::MemoryAllocatorBackend::Rust",
-                MemoryAllocatorBackend::System => "pyembed::MemoryAllocatorBackend::System",
+                MemoryAllocatorBackend::Default => "pyembed::MemoryAllocatorBackend::Default",
             },
+            self.allocator_raw,
+            self.allocator_mem,
+            self.allocator_obj,
+            self.allocator_pymalloc_arena,
             self.allocator_debug,
             self.set_missing_path_configuration,
             self.oxidized_importer,
@@ -537,7 +555,11 @@ mod tests {
                 write_bytecode: Some(true),
                 x_options: Some(vec!["x0".into(), "x1".into()]),
             },
-            raw_allocator: MemoryAllocatorBackend::System,
+            allocator_backend: MemoryAllocatorBackend::Default,
+            allocator_raw: true,
+            allocator_mem: true,
+            allocator_obj: true,
+            allocator_pymalloc_arena: true,
             allocator_debug: true,
             set_missing_path_configuration: false,
             oxidized_importer: true,

@@ -129,16 +129,30 @@ def make_exe(dist):
     # python_config.module_search_paths = ["$ORIGIN/lib"]
 
     # Use jemalloc as Python's memory allocator.
-    # python_config.raw_allocator = "jemalloc"
+    # python_config.allocator_backend = "jemalloc"
 
     # Use mimalloc as Python's memory allocator.
-    # python_config.raw_allocator = "mimalloc"
+    # python_config.allocator_backend = "mimalloc"
 
     # Use snmalloc as Python's memory allocator.
-    # python_config.raw_allocator = "snmalloc"
+    # python_config.allocator_backend = "snmalloc"
 
-    # Use the system allocator as Python's memory allocator.
-    # python_config.raw_allocator = "system"
+    # Let Python choose which memory allocator to use. (This will likely
+    # use the malloc()/free() linked into the program.
+    # python_config.allocator_backend = "default"
+
+    # Enable the use of a custom allocator backend with the "raw" memory domain.
+    # python_config.allocator_raw = True
+
+    # Enable the use of a custom allocator backend with the "mem" memory domain.
+    # python_config.allocator_mem = True
+
+    # Enable the use of a custom allocator backend with the "obj" memory domain.
+    # python_config.allocator_obj = True
+
+    # Enable the use of a custom allocator backend with pymalloc's arena
+    # allocator.
+    # python_config.allocator_pymalloc_arena = True
 
     # Enable Python memory allocator debug hooks.
     # python_config.allocator_debug = True

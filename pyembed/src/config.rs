@@ -85,8 +85,43 @@ pub struct OxidizedPythonInterpreterConfig<'a> {
     /// Low-level configuration of Python interpreter.
     pub interpreter_config: PythonInterpreterConfig,
 
-    /// Allocator to use for Python's raw allocator.
-    pub raw_allocator: Option<MemoryAllocatorBackend>,
+    /// Memory allocator backend to use.
+    pub allocator_backend: MemoryAllocatorBackend,
+
+    /// Whether to install the custom allocator for the `raw` memory domain.
+    ///
+    /// See https://docs.python.org/3/c-api/memory.html for documentation on how Python
+    /// memory allocator domains work.
+    ///
+    /// Has no effect if `allocator_backend` is `MemoryAllocatorBackend::Default`.
+    pub allocator_raw: bool,
+
+    /// Whether to install the custom allocator for the `mem` memory domain.
+    ///
+    /// See https://docs.python.org/3/c-api/memory.html for documentation on how Python
+    /// memory allocator domains work.
+    ///
+    /// Has no effect if `allocator_backend` is `MemoryAllocatorBackend::Default`.
+    pub allocator_mem: bool,
+
+    /// Whether to install the custom allocator for the `obj` memory domain.
+    ///
+    /// See https://docs.python.org/3/c-api/memory.html for documentation on how Python
+    /// memory allocator domains work.
+    ///
+    /// Has no effect if `allocator_backend` is `MemoryAllocatorBackend::Default`.
+    pub allocator_obj: bool,
+
+    /// Whether to install the custom allocator for the `pymalloc` arena allocator.
+    ///
+    /// See https://docs.python.org/3/c-api/memory.html for documentation on how Python
+    /// memory allocation works.
+    ///
+    /// This setting requires the `pymalloc` allocator to be used for the `mem`
+    /// or `obj` domains (`allocator_mem = false` and `allocator_obj = false` - this is
+    /// the default behavior) and for a custom allocator backend to not be
+    /// `MemoryAllocatorBackend::Default`.
+    pub allocator_pymalloc_arena: bool,
 
     /// Whether to set up Python allocator debug hooks to detect memory bugs.
     ///
@@ -207,7 +242,13 @@ impl<'a> Default for OxidizedPythonInterpreterConfig<'a> {
                 profile: PythonInterpreterProfile::Python,
                 ..PythonInterpreterConfig::default()
             },
-            raw_allocator: None,
+            allocator_backend: MemoryAllocatorBackend::Default,
+            // We set to true by default so any installed custom backend
+            // takes effect.
+            allocator_raw: true,
+            allocator_mem: false,
+            allocator_obj: false,
+            allocator_pymalloc_arena: false,
             allocator_debug: false,
             set_missing_path_configuration: true,
             oxidized_importer: false,

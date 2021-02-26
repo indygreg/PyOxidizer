@@ -189,7 +189,11 @@ impl TypedValue for PythonInterpreterConfigValue {
             "warn_options" => self.inner.config.warn_options.to_value(),
             "write_bytecode" => self.inner.config.write_bytecode.to_value(),
             "x_options" => self.inner.config.x_options.to_value(),
-            "raw_allocator" => self.inner.raw_allocator.to_value(),
+            "allocator_backend" => self.inner.allocator_backend.to_value(),
+            "allocator_raw" => Value::from(self.inner.allocator_raw),
+            "allocator_mem" => Value::from(self.inner.allocator_mem),
+            "allocator_obj" => Value::from(self.inner.allocator_obj),
+            "allocator_pymalloc_arena" => Value::from(self.inner.allocator_pymalloc_arena),
             "allocator_debug" => Value::from(self.inner.allocator_debug),
             "oxidized_importer" => Value::from(self.inner.oxidized_importer),
             "filesystem_importer" => Value::from(self.inner.filesystem_importer),
@@ -268,7 +272,11 @@ impl TypedValue for PythonInterpreterConfigValue {
                 | "warn_options"
                 | "write_bytecode"
                 | "x_options"
-                | "raw_allocator"
+                | "allocator_backend"
+                | "allocator_raw"
+                | "allocator_mem"
+                | "allocator_obj"
+                | "allocator_pymalloc_arena"
                 | "allocator_debug"
                 | "oxidized_importer"
                 | "filesystem_importer"
@@ -513,8 +521,8 @@ impl TypedValue for PythonInterpreterConfigValue {
             "x_options" => {
                 self.inner.config.x_options = value.try_to_optional()?;
             }
-            "raw_allocator" => {
-                self.inner.raw_allocator =
+            "allocator_backend" => {
+                self.inner.allocator_backend =
                     MemoryAllocatorBackend::try_from(value.to_string().as_str()).map_err(|e| {
                         ValueError::from(RuntimeError {
                             code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
@@ -522,6 +530,18 @@ impl TypedValue for PythonInterpreterConfigValue {
                             label: format!("{}.{}", Self::TYPE, attribute),
                         })
                     })?;
+            }
+            "allocator_raw" => {
+                self.inner.allocator_raw = value.to_bool();
+            }
+            "allocator_mem" => {
+                self.inner.allocator_mem = value.to_bool();
+            }
+            "allocator_obj" => {
+                self.inner.allocator_obj = value.to_bool();
+            }
+            "allocator_pymalloc_arena" => {
+                self.inner.allocator_pymalloc_arena = value.to_bool();
             }
             "allocator_debug" => {
                 self.inner.allocator_debug = value.to_bool();
@@ -1126,22 +1146,73 @@ mod tests {
     }
 
     #[test]
-    fn test_raw_allocator() -> Result<()> {
+    fn test_allocator_backend() -> Result<()> {
         let mut env = get_env()?;
 
-        eval_assert(&mut env, "config.raw_allocator == 'system'")?;
+        eval_assert(&mut env, "config.allocator_backend == 'default'")?;
 
-        env.eval("config.raw_allocator = 'jemalloc'")?;
-        eval_assert(&mut env, "config.raw_allocator == 'jemalloc'")?;
+        env.eval("config.allocator_backend = 'jemalloc'")?;
+        eval_assert(&mut env, "config.allocator_backend == 'jemalloc'")?;
 
-        env.eval("config.raw_allocator = 'mimalloc'")?;
-        eval_assert(&mut env, "config.raw_allocator == 'mimalloc'")?;
+        env.eval("config.allocator_backend = 'mimalloc'")?;
+        eval_assert(&mut env, "config.allocator_backend == 'mimalloc'")?;
 
-        env.eval("config.raw_allocator = 'rust'")?;
-        eval_assert(&mut env, "config.raw_allocator == 'rust'")?;
+        env.eval("config.allocator_backend = 'rust'")?;
+        eval_assert(&mut env, "config.allocator_backend == 'rust'")?;
 
-        env.eval("config.raw_allocator = 'snmalloc'")?;
-        eval_assert(&mut env, "config.raw_allocator == 'snmalloc'")?;
+        env.eval("config.allocator_backend = 'snmalloc'")?;
+        eval_assert(&mut env, "config.allocator_backend == 'snmalloc'")?;
+
+        env.eval("config.allocator_backend = 'default'")?;
+        eval_assert(&mut env, "config.allocator_backend == 'default'")?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_allocator_raw() -> Result<()> {
+        let mut env = get_env()?;
+
+        eval_assert(&mut env, "config.allocator_raw == True")?;
+
+        env.eval("config.allocator_raw = False")?;
+        eval_assert(&mut env, "config.allocator_raw == False")?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_allocator_mem() -> Result<()> {
+        let mut env = get_env()?;
+
+        eval_assert(&mut env, "config.allocator_mem == False")?;
+
+        env.eval("config.allocator_mem = True")?;
+        eval_assert(&mut env, "config.allocator_mem == True")?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_allocator_obj() -> Result<()> {
+        let mut env = get_env()?;
+
+        eval_assert(&mut env, "config.allocator_obj == False")?;
+
+        env.eval("config.allocator_obj = True")?;
+        eval_assert(&mut env, "config.allocator_obj == True")?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_allocator_pymalloc_arena() -> Result<()> {
+        let mut env = get_env()?;
+
+        eval_assert(&mut env, "config.allocator_pymalloc_arena == False")?;
+
+        env.eval("config.allocator_pymalloc_arena = True")?;
+        eval_assert(&mut env, "config.allocator_pymalloc_arena == True")?;
 
         Ok(())
     }

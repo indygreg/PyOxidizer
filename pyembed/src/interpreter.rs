@@ -20,7 +20,7 @@ use {
     cpython::{GILGuard, NoArgs, ObjectProtocol, PyDict, PyList, PyString, Python, ToPyObject},
     lazy_static::lazy_static,
     python3_sys as pyffi,
-    python_packaging::interpreter::TerminfoResolution,
+    python_packaging::interpreter::{MemoryAllocatorBackend, TerminfoResolution},
     std::{
         collections::BTreeSet,
         convert::{TryFrom, TryInto},
@@ -53,7 +53,7 @@ pub struct MainPythonInterpreter<'python, 'interpreter: 'python, 'resources: 'in
     // interpreter is finalized/dropped.
     config: ResolvedOxidizedPythonInterpreterConfig<'resources>,
     interpreter_guard: Option<std::sync::MutexGuard<'interpreter, ()>>,
-    raw_allocator: Option<PythonMemoryAllocator>,
+    allocator: Option<PythonMemoryAllocator>,
     gil: Option<GILGuard>,
     py: Option<Python<'python>>,
     /// File to write containing list of modules when the interpreter finalizes.
@@ -84,7 +84,7 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
         let mut res = MainPythonInterpreter {
             config,
             interpreter_guard: None,
-            raw_allocator: None,
+            allocator: None,
             gil: None,
             py: None,
             write_modules_path: None,
@@ -135,12 +135,28 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
             }
         };
 
-        // Override the raw allocator if one is configured.
-        if let Some(backend) = self.config.raw_allocator {
-            self.raw_allocator = PythonMemoryAllocator::from_backend(backend);
+        // Set the memory allocator domains if they are configured.
+        self.allocator = PythonMemoryAllocator::from_backend(self.config.allocator_backend);
 
-            if let Some(allocator) = &self.raw_allocator {
+        if let Some(allocator) = &self.allocator {
+            if self.config.allocator_raw {
                 allocator.set_allocator(pyffi::PyMemAllocatorDomain::PYMEM_DOMAIN_RAW);
+            }
+
+            if self.config.allocator_mem {
+                allocator.set_allocator(pyffi::PyMemAllocatorDomain::PYMEM_DOMAIN_MEM);
+            }
+
+            if self.config.allocator_obj {
+                allocator.set_allocator(pyffi::PyMemAllocatorDomain::PYMEM_DOMAIN_OBJ);
+            }
+
+            if self.config.allocator_pymalloc_arena {
+                if self.config.allocator_mem || self.config.allocator_obj {
+                    return Err(NewInterpreterError::Simple("A custom pymalloc arena allocator cannot be used with custom `mem` or `obj` domain allocators"));
+                }
+
+                allocator.set_arena_allocator();
             }
         }
 
