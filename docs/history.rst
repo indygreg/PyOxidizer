@@ -127,8 +127,6 @@ New Features
   and :ref:`PythonInterpreterConfig.allocator_pymalloc_arena <config_type_python_interpreter_config_allocator_pymalloc_arena>`
   fields have been added to control whether to install a custom allocator for
   the *mem* and *obj* domains as well as ``pymalloc``'s arena allocator.
-  (However, the ``pymalloc`` arena allocator customization does not yet work
-  due to a bug outside of our control.)
 * The *mimalloc* and *snmalloc* memory allocators can now be used as Python's
   memory allocators. See documentation for
   :ref:`PythonInterpreterConfig.allocator_backend <config_type_python_interpreter_config_allocator_backend>`.

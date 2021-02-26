@@ -119,7 +119,6 @@ rusty_fork_test! {
     }
 
     #[test]
-    #[should_panic]
     fn test_allocator_rust_pymalloc_arena() {
         let mut config = OxidizedPythonInterpreterConfig::default();
         // Otherwise the Rust arguments are interpreted as Python arguments.
@@ -157,7 +156,6 @@ rusty_fork_test! {
 
     #[cfg(feature = "jemalloc")]
     #[test]
-    #[should_panic]
     fn test_allocator_jemalloc_pymalloc_arena() {
         let mut config = OxidizedPythonInterpreterConfig::default();
         // Otherwise the Rust arguments are interpreted as Python arguments.
@@ -195,7 +193,6 @@ rusty_fork_test! {
 
     #[cfg(feature = "mimalloc")]
     #[test]
-    #[should_panic]
     fn test_allocator_mimalloc_pymalloc_arena() {
         let mut config = OxidizedPythonInterpreterConfig::default();
         // Otherwise the Rust arguments are interpreted as Python arguments.
@@ -233,7 +230,6 @@ rusty_fork_test! {
 
     #[cfg(feature = "snmalloc")]
     #[test]
-    #[should_panic]
     fn test_allocator_snmalloc_pymalloc_arena() {
         let mut config = OxidizedPythonInterpreterConfig::default();
         // Otherwise the Rust arguments are interpreted as Python arguments.

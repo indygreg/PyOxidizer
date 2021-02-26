@@ -653,7 +653,7 @@ impl PythonMemoryAllocator {
                     free: Some(snmalloc_free),
                 },
                 arena: pyffi::PyObjectArenaAllocator {
-                    ctx: std::ptr::null_mut(),
+                    ctx: state as *mut c_void,
                     alloc: Some(snmalloc_malloc),
                     free: Some(snmalloc_arena_free),
                 },
@@ -688,11 +688,7 @@ impl PythonMemoryAllocator {
     /// `mem` or `object` allocator domains.
     #[allow(dead_code)]
     pub fn set_arena_allocator(&self) {
-        // python3-sys has the size and ptr argument order to PyObjectArenaAllocator.free
-        // swapped. So we can't set arena allocators until this is fixed.
-        panic!("arena allocator not supported due to python3-sys bug");
-
-        // unsafe { pyffi::PyObject_SetArenaAllocator(self.as_arena_allocator()) }
+        unsafe { pyffi::PyObject_SetArenaAllocator(self.as_arena_allocator()) }
     }
 
     /// Obtain the pointer to the `PyMemAllocatorEx` for this allocator.
