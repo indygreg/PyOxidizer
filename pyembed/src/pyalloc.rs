@@ -76,9 +76,6 @@ use {
     std::{alloc, collections::HashMap},
 };
 
-#[cfg(feature = "jemalloc-sys")]
-use jemalloc_sys as jemallocffi;
-
 const MIN_ALIGN: usize = 16;
 
 type RawAllocatorState = HashMap<*mut u8, alloc::Layout>;
@@ -194,7 +191,7 @@ extern "C" fn raw_jemalloc_malloc(_ctx: *mut c_void, size: size_t) -> *mut c_voi
         val => val,
     };
 
-    unsafe { jemallocffi::mallocx(size, 0) }
+    unsafe { jemalloc_sys::mallocx(size, 0) }
 }
 
 #[cfg(feature = "jemalloc-sys")]
@@ -204,7 +201,7 @@ extern "C" fn raw_jemalloc_calloc(_ctx: *mut c_void, nelem: size_t, elsize: size
         val => val,
     };
 
-    unsafe { jemallocffi::mallocx(size, jemallocffi::MALLOCX_ZERO) }
+    unsafe { jemalloc_sys::mallocx(size, jemalloc_sys::MALLOCX_ZERO) }
 }
 
 #[cfg(feature = "jemalloc-sys")]
@@ -222,7 +219,7 @@ extern "C" fn raw_jemalloc_realloc(
         val => val,
     };
 
-    unsafe { jemallocffi::rallocx(ptr, new_size, 0) }
+    unsafe { jemalloc_sys::rallocx(ptr, new_size, 0) }
 }
 
 #[cfg(feature = "jemalloc-sys")]
@@ -231,7 +228,7 @@ extern "C" fn raw_jemalloc_free(_ctx: *mut c_void, ptr: *mut c_void) {
         return;
     }
 
-    unsafe { jemallocffi::dallocx(ptr, 0) }
+    unsafe { jemalloc_sys::dallocx(ptr, 0) }
 }
 
 #[cfg(feature = "mimalloc")]
