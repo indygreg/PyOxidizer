@@ -14,13 +14,13 @@ use {
             OXIDIZED_IMPORTER_NAME_STR,
         },
         osutils::resolve_terminfo_dirs,
-        pyalloc::{make_raw_rust_memory_allocator, RawAllocator},
+        pyalloc::PythonMemoryAllocator,
         python_resources::PythonResourcesState,
     },
     cpython::{GILGuard, NoArgs, ObjectProtocol, PyDict, PyList, PyString, Python, ToPyObject},
     lazy_static::lazy_static,
     python3_sys as pyffi,
-    python_packaging::interpreter::{MemoryAllocatorBackend, TerminfoResolution},
+    python_packaging::interpreter::TerminfoResolution,
     std::{
         collections::BTreeSet,
         convert::{TryFrom, TryInto},
@@ -30,68 +30,8 @@ use {
     },
 };
 
-#[cfg(feature = "jemalloc-sys")]
-use crate::pyalloc::make_raw_jemalloc_allocator;
-
-#[cfg(feature = "mimalloc")]
-use crate::pyalloc::make_raw_mimalloc_allocator;
-
 lazy_static! {
     static ref GLOBAL_INTERPRETER_GUARD: std::sync::Mutex<()> = std::sync::Mutex::new(());
-}
-
-#[cfg(feature = "jemalloc-sys")]
-fn raw_jemallocator() -> pyffi::PyMemAllocatorEx {
-    make_raw_jemalloc_allocator()
-}
-
-#[cfg(not(feature = "jemalloc-sys"))]
-fn raw_jemallocator() -> pyffi::PyMemAllocatorEx {
-    panic!("jemalloc is not available in this build configuration");
-}
-
-#[cfg(feature = "mimalloc")]
-fn raw_mimallocator() -> pyffi::PyMemAllocatorEx {
-    make_raw_mimalloc_allocator()
-}
-
-#[cfg(not(feature = "mimalloc"))]
-fn raw_mimallocator() -> pyffi::PyMemAllocatorEx {
-    panic!("mimalloc is not available in this build configuration");
-}
-
-fn raw_snmallocator() -> pyffi::PyMemAllocatorEx {
-    panic!("snmalloc allocator not yet implemented");
-}
-
-/// Represents a `PyMemAllocatorEx` that can be installed as a memory allocator.
-enum PythonMemoryAllocator {
-    /// Backed by a `PyMemAllocatorEx` struct.
-    Python(pyffi::PyMemAllocatorEx),
-
-    /// Backed by a custom wrapper type.
-    Raw(RawAllocator),
-}
-
-impl PythonMemoryAllocator {
-    fn as_ptr(&self) -> *const pyffi::PyMemAllocatorEx {
-        match self {
-            PythonMemoryAllocator::Python(alloc) => alloc as *const _,
-            PythonMemoryAllocator::Raw(alloc) => &alloc.allocator as *const _,
-        }
-    }
-}
-
-impl From<pyffi::PyMemAllocatorEx> for PythonMemoryAllocator {
-    fn from(allocator: pyffi::PyMemAllocatorEx) -> Self {
-        PythonMemoryAllocator::Python(allocator)
-    }
-}
-
-impl From<RawAllocator> for PythonMemoryAllocator {
-    fn from(allocator: RawAllocator) -> Self {
-        PythonMemoryAllocator::Raw(allocator)
-    }
 }
 
 /// Manages an embedded Python interpreter.
@@ -197,29 +137,10 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
 
         // Override the raw allocator if one is configured.
         if let Some(raw_allocator) = &self.config.raw_allocator {
-            self.raw_allocator = match raw_allocator.backend {
-                MemoryAllocatorBackend::System => None,
-                MemoryAllocatorBackend::Jemalloc => {
-                    Some(PythonMemoryAllocator::from(raw_jemallocator()))
-                }
-                MemoryAllocatorBackend::Mimalloc => {
-                    Some(PythonMemoryAllocator::from(raw_mimallocator()))
-                }
-                MemoryAllocatorBackend::Snmalloc => {
-                    Some(PythonMemoryAllocator::from(raw_snmallocator()))
-                }
-                MemoryAllocatorBackend::Rust => {
-                    Some(PythonMemoryAllocator::from(make_raw_rust_memory_allocator()))
-                }
-            };
+            self.raw_allocator = PythonMemoryAllocator::from_backend(raw_allocator.backend);
 
             if let Some(allocator) = &self.raw_allocator {
-                unsafe {
-                    pyffi::PyMem_SetAllocator(
-                        pyffi::PyMemAllocatorDomain::PYMEM_DOMAIN_RAW,
-                        allocator.as_ptr() as *mut _,
-                    );
-                }
+                allocator.set_allocator(pyffi::PyMemAllocatorDomain::PYMEM_DOMAIN_RAW);
             }
 
             if raw_allocator.debug {

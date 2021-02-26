@@ -7,6 +7,7 @@
 use {
     libc::{c_void, size_t},
     python3_sys as pyffi,
+    python_packaging::interpreter::MemoryAllocatorBackend,
     std::{alloc, collections::HashMap},
 };
 
@@ -26,9 +27,33 @@ type RawAllocatorState = HashMap<*mut u8, alloc::Layout>;
 ///
 /// TODO HashMap isn't thread safe and the Python raw allocator doesn't
 /// hold the GIL. So we need a thread safe map or a mutex guarding access.
-pub struct RawAllocator {
+pub(crate) struct RawAllocator {
     pub allocator: pyffi::PyMemAllocatorEx,
     _state: Box<RawAllocatorState>,
+}
+
+#[cfg(feature = "jemalloc-sys")]
+fn raw_jemallocator() -> pyffi::PyMemAllocatorEx {
+    make_raw_jemalloc_allocator()
+}
+
+#[cfg(not(feature = "jemalloc-sys"))]
+fn raw_jemallocator() -> pyffi::PyMemAllocatorEx {
+    panic!("jemalloc is not available in this build configuration");
+}
+
+#[cfg(feature = "mimalloc")]
+fn raw_mimallocator() -> pyffi::PyMemAllocatorEx {
+    make_raw_mimalloc_allocator()
+}
+
+#[cfg(not(feature = "mimalloc"))]
+fn raw_mimallocator() -> pyffi::PyMemAllocatorEx {
+    panic!("mimalloc is not available in this build configuration");
+}
+
+fn raw_snmallocator() -> pyffi::PyMemAllocatorEx {
+    panic!("snmalloc allocator not yet implemented");
 }
 
 extern "C" fn raw_rust_malloc(ctx: *mut c_void, size: size_t) -> *mut c_void {
@@ -129,7 +154,7 @@ extern "C" fn raw_rust_free(ctx: *mut c_void, ptr: *mut c_void) {
     }
 }
 
-pub fn make_raw_rust_memory_allocator() -> RawAllocator {
+fn make_raw_rust_memory_allocator() -> RawAllocator {
     // We need to allocate the HashMap on the heap so the pointer doesn't refer
     // to the stack. We rebox and add the Box to our struct so lifetimes are
     // managed.
@@ -210,7 +235,7 @@ extern "C" fn raw_jemalloc_free(_ctx: *mut c_void, ptr: *mut c_void) {
 }
 
 #[cfg(feature = "jemalloc-sys")]
-pub fn make_raw_jemalloc_allocator() -> pyffi::PyMemAllocatorEx {
+fn make_raw_jemalloc_allocator() -> pyffi::PyMemAllocatorEx {
     pyffi::PyMemAllocatorEx {
         ctx: std::ptr::null_mut(),
         malloc: Some(raw_jemalloc_malloc),
@@ -288,12 +313,73 @@ extern "C" fn raw_mimalloc_free(_ctx: *mut c_void, ptr: *mut c_void) {
 }
 
 #[cfg(feature = "mimalloc")]
-pub fn make_raw_mimalloc_allocator() -> pyffi::PyMemAllocatorEx {
+fn make_raw_mimalloc_allocator() -> pyffi::PyMemAllocatorEx {
     pyffi::PyMemAllocatorEx {
         ctx: std::ptr::null_mut(),
         malloc: Some(raw_mimalloc_malloc),
         calloc: Some(raw_mimalloc_calloc),
         realloc: Some(raw_mimalloc_realloc),
         free: Some(raw_mimalloc_free),
+    }
+}
+
+/// Represents a `PyMemAllocatorEx` that can be installed as a memory allocator.
+pub(crate) enum PythonMemoryAllocator {
+    /// Backed by a `PyMemAllocatorEx` struct.
+    Python(pyffi::PyMemAllocatorEx),
+
+    /// Backed by a custom wrapper type.
+    Raw(RawAllocator),
+}
+
+impl PythonMemoryAllocator {
+    /// Construct an instance from a `MemoryAllocatorBackend`.
+    ///
+    /// Returns `None` if the backend shouldn't be defined.
+    pub fn from_backend(backend: MemoryAllocatorBackend) -> Option<Self> {
+        match backend {
+            MemoryAllocatorBackend::System => None,
+            MemoryAllocatorBackend::Jemalloc => Some(Self::jemalloc()),
+            MemoryAllocatorBackend::Mimalloc => Some(Self::mimalloc()),
+            MemoryAllocatorBackend::Snmalloc => Some(Self::snmalloc()),
+            MemoryAllocatorBackend::Rust => Some(Self::rust()),
+        }
+    }
+
+    /// Construct a new instance using jemalloc.
+    pub fn jemalloc() -> Self {
+        Self::Python(raw_jemallocator())
+    }
+
+    /// Construct a new instance using mimalloc.
+    pub fn mimalloc() -> Self {
+        Self::Python(raw_mimallocator())
+    }
+
+    /// Construct a new instance using Rust's global allocator.
+    pub fn rust() -> Self {
+        Self::Raw(make_raw_rust_memory_allocator())
+    }
+
+    /// Construct a new instance using snmalloc.
+    pub fn snmalloc() -> Self {
+        Self::Python(raw_snmallocator())
+    }
+
+    /// Set this allocator to be the allocator for a certain "domain" in a Python interpreter.
+    ///
+    /// This should be called before `Py_Initialize*()`.
+    pub fn set_allocator(&self, domain: pyffi::PyMemAllocatorDomain) {
+        unsafe {
+            pyffi::PyMem_SetAllocator(domain, self.as_ptr() as *mut _);
+        }
+    }
+
+    /// Obtain the pointer to the `PyMemAllocatorEx` for this allocator.
+    fn as_ptr(&self) -> *const pyffi::PyMemAllocatorEx {
+        match self {
+            PythonMemoryAllocator::Python(alloc) => alloc as *const _,
+            PythonMemoryAllocator::Raw(alloc) => &alloc.allocator as *const _,
+        }
     }
 }
