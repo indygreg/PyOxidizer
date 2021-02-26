@@ -92,7 +92,11 @@ use {
     libc::{c_void, size_t},
     python3_sys as pyffi,
     python_packaging::interpreter::MemoryAllocatorBackend,
-    std::{alloc, collections::HashMap},
+    std::{
+        alloc,
+        collections::HashMap,
+        ops::{Deref, DerefMut},
+    },
 };
 
 const MIN_ALIGN: usize = 16;
@@ -100,21 +104,94 @@ const MIN_ALIGN: usize = 16;
 #[cfg(feature = "snmalloc-sys")]
 const SNMALLOC_ALIGNMENT: usize = 8;
 
-type RustAllocatorState = HashMap<*mut u8, alloc::Layout>;
+/// Tracks allocations from an allocator.
+///
+/// Some allocators need to pass the original allocation size and alignment
+/// to various functions. But this information isn't passed as part of Python's
+/// allocator APIs.
+///
+/// This type exists to facilitate tracking the allocation metadata
+/// out-of-band. Essentially, we create an instance of this on the heap
+/// and store a pointer to it via the allocator "context" C structs.
+struct AllocationTracker {
+    /// TODO HashMap isn't thread safe and the Python raw allocator doesn't
+    /// hold the GIL. So we need a thread safe map or a mutex guarding access.
+    allocations: HashMap<*mut c_void, alloc::Layout>,
+}
 
-/// Holds state for the Rust memory allocator.
+impl AllocationTracker {
+    /// Construct a new instance.
+    ///
+    /// It is automatically boxed because it needs to live on the heap.
+    fn new() -> Box<Self> {
+        Box::new(Self {
+            allocations: HashMap::with_capacity(128),
+        })
+    }
+
+    /// Construct an instance from a pointer owned by someone else.
+    fn from_owned_ptr(ptr: *mut c_void) -> BorrowedAllocationTracker {
+        BorrowedAllocationTracker {
+            inner: Some(unsafe { Box::from_raw(ptr as *mut AllocationTracker) }),
+        }
+    }
+
+    /// Obtain an allocation record in this tracker.
+    #[inline]
+    fn get_allocation(&self, ptr: *mut c_void) -> Option<&alloc::Layout> {
+        self.allocations.get(&ptr)
+    }
+
+    /// Record an allocation in this tracker.
+    ///
+    /// An existing allocation for the specified memory address will be replaced.
+    #[inline]
+    fn insert_allocation(&mut self, ptr: *mut c_void, layout: alloc::Layout) {
+        self.allocations.insert(ptr, layout);
+    }
+
+    /// Remove an allocation from this tracker.
+    #[inline]
+    fn remove_allocation(&mut self, ptr: *mut c_void) -> alloc::Layout {
+        self.allocations
+            .remove(&ptr)
+            .expect("memory address not tracked")
+    }
+}
+
+/// An `AllocationTracker` associated with a borrowed raw pointer.
 ///
-/// Ideally we wouldn't need to track state. But Rust's dealloc() API
-/// requires passing in a Layout that matches the allocation. This means
-/// we need to track the Layout for each allocation. This data structure
-/// facilitates that.
-///
-/// TODO HashMap isn't thread safe and the Python raw allocator doesn't
-/// hold the GIL. So we need a thread safe map or a mutex guarding access.
+/// Instances can be derefed to `AllocationTracker` and are "leaked"
+/// when they are dropped.
+struct BorrowedAllocationTracker {
+    inner: Option<Box<AllocationTracker>>,
+}
+
+impl Deref for BorrowedAllocationTracker {
+    type Target = AllocationTracker;
+
+    fn deref(&self) -> &Self::Target {
+        self.inner.as_ref().unwrap()
+    }
+}
+
+impl DerefMut for BorrowedAllocationTracker {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.inner.as_mut().unwrap()
+    }
+}
+
+impl Drop for BorrowedAllocationTracker {
+    fn drop(&mut self) {
+        Box::into_raw(self.inner.take().unwrap());
+    }
+}
+
+/// Represents an interface to Rust's memory allocator.
 pub(crate) struct RustAllocator {
     pub allocator: pyffi::PyMemAllocatorEx,
     pub arena: pyffi::PyObjectArenaAllocator,
-    _state: Box<RustAllocatorState>,
+    _state: Box<AllocationTracker>,
 }
 
 extern "C" fn rust_malloc(ctx: *mut c_void, size: size_t) -> *mut c_void {
@@ -123,16 +200,14 @@ extern "C" fn rust_malloc(ctx: *mut c_void, size: size_t) -> *mut c_void {
         val => val,
     };
 
-    unsafe {
-        let state = ctx as *mut RustAllocatorState;
-        let layout = alloc::Layout::from_size_align_unchecked(size, MIN_ALIGN);
-        let res = alloc::alloc(layout);
+    let mut tracker = AllocationTracker::from_owned_ptr(ctx);
 
-        (*state).insert(res, layout);
+    let layout = unsafe { alloc::Layout::from_size_align_unchecked(size, MIN_ALIGN) };
+    let res = unsafe { alloc::alloc(layout) } as *mut _;
 
-        //println!("allocated {} bytes to {:?}", size, res);
-        res as *mut c_void
-    }
+    tracker.insert_allocation(res, layout);
+
+    res
 }
 
 #[cfg(feature = "jemalloc-sys")]
@@ -171,17 +246,14 @@ extern "C" fn rust_calloc(ctx: *mut c_void, nelem: size_t, elsize: size_t) -> *m
         val => val,
     };
 
-    unsafe {
-        let state = ctx as *mut RustAllocatorState;
-        let layout = alloc::Layout::from_size_align_unchecked(size, MIN_ALIGN);
-        let res = alloc::alloc_zeroed(layout);
+    let mut tracker = AllocationTracker::from_owned_ptr(ctx);
 
-        (*state).insert(res, layout);
+    let layout = unsafe { alloc::Layout::from_size_align_unchecked(size, MIN_ALIGN) };
+    let res = unsafe { alloc::alloc_zeroed(layout) } as *mut _;
 
-        //println!("zero allocated {} bytes to {:?}", size, res);
+    tracker.insert_allocation(res, layout);
 
-        res as *mut c_void
-    }
+    res
 }
 
 #[cfg(feature = "jemalloc-sys")]
@@ -234,21 +306,17 @@ extern "C" fn rust_realloc(ctx: *mut c_void, ptr: *mut c_void, new_size: size_t)
         val => val,
     };
 
-    unsafe {
-        let state = ctx as *mut RustAllocatorState;
-        let layout = alloc::Layout::from_size_align_unchecked(new_size, MIN_ALIGN);
+    let mut tracker = AllocationTracker::from_owned_ptr(ctx);
 
-        let key = ptr as *mut u8;
-        let old_layout = (*state)
-            .remove(&key)
-            .expect("original memory address not tracked");
+    let layout = unsafe { alloc::Layout::from_size_align_unchecked(new_size, MIN_ALIGN) };
 
-        let res = alloc::realloc(ptr as *mut u8, old_layout, new_size);
+    let old_layout = tracker.remove_allocation(ptr);
 
-        (*state).insert(res, layout);
+    let res = unsafe { alloc::realloc(ptr as *mut _, old_layout, new_size) } as *mut _;
 
-        res as *mut c_void
-    }
+    tracker.insert_allocation(res, layout);
+
+    res
 }
 
 #[cfg(feature = "jemalloc-sys")]
@@ -310,18 +378,17 @@ extern "C" fn rust_free(ctx: *mut c_void, ptr: *mut c_void) {
         return;
     }
 
-    //println!("freeing {:?}", ptr as *mut u8);
+    let mut tracker = AllocationTracker::from_owned_ptr(ctx);
+
+    let layout = tracker
+        .get_allocation(ptr)
+        .unwrap_or_else(|| panic!("could not find allocated memory record: {:?}", ptr));
+
     unsafe {
-        let state = ctx as *mut RustAllocatorState;
-
-        let key = ptr as *mut u8;
-        let layout = (*state)
-            .get(&key)
-            .unwrap_or_else(|| panic!("could not find allocated memory record: {:?}", key));
-
-        alloc::dealloc(key, *layout);
-        (*state).remove(&key);
+        alloc::dealloc(ptr as *mut _, *layout);
     }
+
+    tracker.remove_allocation(ptr);
 }
 
 #[cfg(feature = "jemalloc-sys")]
@@ -359,17 +426,17 @@ extern "C" fn rust_arena_free(ctx: *mut c_void, ptr: *mut c_void, _size: size_t)
         return;
     }
 
+    let mut tracker = AllocationTracker::from_owned_ptr(ctx);
+
+    let layout = tracker
+        .get_allocation(ptr)
+        .unwrap_or_else(|| panic!("could not find allocated memory record: {:?}", ptr));
+
     unsafe {
-        let state = ctx as *mut RustAllocatorState;
-
-        let key = ptr as *mut u8;
-        let layout = (*state)
-            .get(&key)
-            .unwrap_or_else(|| panic!("could not find allocated memory record: {:?}", key));
-
-        alloc::dealloc(key, *layout);
-        (*state).remove(&key);
+        alloc::dealloc(ptr as *mut _, *layout);
     }
+
+    tracker.remove_allocation(ptr);
 }
 
 #[cfg(feature = "jemalloc-sys")]
@@ -490,11 +557,9 @@ impl PythonMemoryAllocator {
 
     /// Construct a new instance using Rust's global allocator.
     pub fn rust() -> Self {
-        // We need to allocate the HashMap on the heap so the pointer doesn't refer
-        // to the stack. We rebox and add the Box to our struct so lifetimes are
-        // managed.
-        let alloc = Box::new(HashMap::<*mut u8, alloc::Layout>::new());
-        let state = Box::into_raw(alloc);
+        // We temporarily convert the box to a raw pointer to workaround
+        // borrow issues.
+        let state = Box::into_raw(AllocationTracker::new());
 
         let allocator = pyffi::PyMemAllocatorEx {
             ctx: state as *mut c_void,
