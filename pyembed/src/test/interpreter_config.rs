@@ -115,6 +115,7 @@ rusty_fork_test! {
         let interp = MainPythonInterpreter::new(config).unwrap();
 
         assert!(interp.allocator.is_some());
+        assert_eq!(interp.allocator.as_ref().unwrap().backend(), MemoryAllocatorBackend::Rust);
     }
 
     #[test]
@@ -132,6 +133,7 @@ rusty_fork_test! {
         let interp = MainPythonInterpreter::new(config).unwrap();
 
         assert!(interp.allocator.is_some());
+        assert_eq!(interp.allocator.as_ref().unwrap().backend(), MemoryAllocatorBackend::Rust);
     }
 
     #[cfg(feature = "jemalloc")]
@@ -150,6 +152,7 @@ rusty_fork_test! {
         let interp = MainPythonInterpreter::new(config).unwrap();
 
         assert!(interp.allocator.is_some());
+        assert_eq!(interp.allocator.as_ref().unwrap().backend(), MemoryAllocatorBackend::Jemalloc);
     }
 
     #[cfg(feature = "jemalloc")]
@@ -168,6 +171,7 @@ rusty_fork_test! {
         let interp = MainPythonInterpreter::new(config).unwrap();
 
         assert!(interp.allocator.is_some());
+        assert_eq!(interp.allocator.as_ref().unwrap().backend(), MemoryAllocatorBackend::Jemalloc);
     }
 
     #[cfg(feature = "mimalloc")]
@@ -186,6 +190,7 @@ rusty_fork_test! {
         let interp = MainPythonInterpreter::new(config).unwrap();
 
         assert!(interp.allocator.is_some());
+        assert_eq!(interp.allocator.as_ref().unwrap().backend(), MemoryAllocatorBackend::Mimalloc);
     }
 
     #[cfg(feature = "mimalloc")]
@@ -204,6 +209,7 @@ rusty_fork_test! {
         let interp = MainPythonInterpreter::new(config).unwrap();
 
         assert!(interp.allocator.is_some());
+        assert_eq!(interp.allocator.as_ref().unwrap().backend(), MemoryAllocatorBackend::Mimalloc);
     }
 
     #[cfg(feature = "snmalloc")]
@@ -224,6 +230,7 @@ rusty_fork_test! {
         let interp = MainPythonInterpreter::new(config).unwrap();
 
         assert!(interp.allocator.is_some());
+        assert_eq!(interp.allocator.as_ref().unwrap().backend(), MemoryAllocatorBackend::Snmalloc);
     }
 
     #[cfg(feature = "snmalloc")]
@@ -242,6 +249,7 @@ rusty_fork_test! {
         let interp = MainPythonInterpreter::new(config).unwrap();
 
         assert!(interp.allocator.is_some());
+        assert_eq!(interp.allocator.as_ref().unwrap().backend(), MemoryAllocatorBackend::Snmalloc);
     }
 
     #[test]

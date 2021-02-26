@@ -402,13 +402,22 @@ extern "C" fn snmalloc_arena_free(_ctx: *mut c_void, ptr: *mut c_void, size: siz
 }
 
 /// Represents a `PyMemAllocatorEx` that can be installed as a memory allocator.
-pub(crate) enum PythonMemoryAllocator {
+enum AllocatorInstance {
     /// Backed by a `PyMemAllocatorEx` struct.
     #[allow(dead_code)]
     Python(pyffi::PyMemAllocatorEx, pyffi::PyObjectArenaAllocator),
 
     /// Backed by a custom wrapper type.
     Rust(RustAllocator),
+}
+
+/// Represents a custom memory allocator that can be registered with Python.
+pub(crate) struct PythonMemoryAllocator {
+    /// The allocator being used (for identification purposes).
+    backend: MemoryAllocatorBackend,
+
+    /// Holds reference to data structures needed by the Python interpreter.
+    instance: AllocatorInstance,
 }
 
 impl PythonMemoryAllocator {
@@ -428,20 +437,23 @@ impl PythonMemoryAllocator {
     /// Construct a new instance using jemalloc.
     #[cfg(feature = "jemalloc-sys")]
     pub fn jemalloc() -> Self {
-        Self::Python(
-            pyffi::PyMemAllocatorEx {
-                ctx: std::ptr::null_mut(),
-                malloc: Some(jemalloc_malloc),
-                calloc: Some(jemalloc_calloc),
-                realloc: Some(jemalloc_realloc),
-                free: Some(jemalloc_free),
-            },
-            pyffi::PyObjectArenaAllocator {
-                ctx: std::ptr::null_mut(),
-                alloc: Some(jemalloc_malloc),
-                free: Some(jemalloc_arena_free),
-            },
-        )
+        Self {
+            backend: MemoryAllocatorBackend::Jemalloc,
+            instance: AllocatorInstance::Python(
+                pyffi::PyMemAllocatorEx {
+                    ctx: std::ptr::null_mut(),
+                    malloc: Some(jemalloc_malloc),
+                    calloc: Some(jemalloc_calloc),
+                    realloc: Some(jemalloc_realloc),
+                    free: Some(jemalloc_free),
+                },
+                pyffi::PyObjectArenaAllocator {
+                    ctx: std::ptr::null_mut(),
+                    alloc: Some(jemalloc_malloc),
+                    free: Some(jemalloc_arena_free),
+                },
+            ),
+        }
     }
 
     #[cfg(not(feature = "jemalloc-sys"))]
@@ -452,20 +464,23 @@ impl PythonMemoryAllocator {
     /// Construct a new instance using mimalloc.
     #[cfg(feature = "libmimalloc-sys")]
     pub fn mimalloc() -> Self {
-        Self::Python(
-            pyffi::PyMemAllocatorEx {
-                ctx: std::ptr::null_mut(),
-                malloc: Some(mimalloc_malloc),
-                calloc: Some(mimalloc_calloc),
-                realloc: Some(mimalloc_realloc),
-                free: Some(mimalloc_free),
-            },
-            pyffi::PyObjectArenaAllocator {
-                ctx: std::ptr::null_mut(),
-                alloc: Some(mimalloc_malloc),
-                free: Some(mimalloc_arena_free),
-            },
-        )
+        Self {
+            backend: MemoryAllocatorBackend::Mimalloc,
+            instance: AllocatorInstance::Python(
+                pyffi::PyMemAllocatorEx {
+                    ctx: std::ptr::null_mut(),
+                    malloc: Some(mimalloc_malloc),
+                    calloc: Some(mimalloc_calloc),
+                    realloc: Some(mimalloc_realloc),
+                    free: Some(mimalloc_free),
+                },
+                pyffi::PyObjectArenaAllocator {
+                    ctx: std::ptr::null_mut(),
+                    alloc: Some(mimalloc_malloc),
+                    free: Some(mimalloc_arena_free),
+                },
+            ),
+        }
     }
 
     #[cfg(not(feature = "libmimalloc-sys"))]
@@ -489,15 +504,18 @@ impl PythonMemoryAllocator {
             free: Some(rust_free),
         };
 
-        Self::Rust(RustAllocator {
-            allocator,
-            arena: pyffi::PyObjectArenaAllocator {
-                ctx: state as *mut c_void,
-                alloc: Some(rust_malloc),
-                free: Some(rust_arena_free),
-            },
-            _state: unsafe { Box::from_raw(state) },
-        })
+        Self {
+            backend: MemoryAllocatorBackend::Rust,
+            instance: AllocatorInstance::Rust(RustAllocator {
+                allocator,
+                arena: pyffi::PyObjectArenaAllocator {
+                    ctx: state as *mut c_void,
+                    alloc: Some(rust_malloc),
+                    free: Some(rust_arena_free),
+                },
+                _state: unsafe { Box::from_raw(state) },
+            }),
+        }
     }
 
     /// Construct a new instance using snmalloc.
@@ -505,25 +523,34 @@ impl PythonMemoryAllocator {
     pub fn snmalloc() -> Self {
         panic!("snmalloc is not yet fully implemented");
 
-        Self::Python(
-            pyffi::PyMemAllocatorEx {
-                ctx: std::ptr::null_mut(),
-                malloc: Some(snmalloc_malloc),
-                calloc: Some(snmalloc_calloc),
-                realloc: Some(snmalloc_realloc),
-                free: Some(snmalloc_free),
-            },
-            pyffi::PyObjectArenaAllocator {
-                ctx: std::ptr::null_mut(),
-                alloc: Some(snmalloc_malloc),
-                free: Some(snmalloc_arena_free),
-            },
-        )
+        Self {
+            backend: MemoryAllocatorBackend::Snmalloc,
+            instance: AllocatorInstance::Python(
+                pyffi::PyMemAllocatorEx {
+                    ctx: std::ptr::null_mut(),
+                    malloc: Some(snmalloc_malloc),
+                    calloc: Some(snmalloc_calloc),
+                    realloc: Some(snmalloc_realloc),
+                    free: Some(snmalloc_free),
+                },
+                pyffi::PyObjectArenaAllocator {
+                    ctx: std::ptr::null_mut(),
+                    alloc: Some(snmalloc_malloc),
+                    free: Some(snmalloc_arena_free),
+                },
+            ),
+        }
     }
 
     #[cfg(not(feature = "snmalloc-sys"))]
     pub fn snmalloc() -> Self {
         panic!("snmalloc is not available in this build configuration");
+    }
+
+    /// Obtain the backend used for this instance.
+    #[allow(unused)]
+    pub fn backend(&self) -> MemoryAllocatorBackend {
+        self.backend
     }
 
     /// Set this allocator to be the allocator for a certain "domain" in a Python interpreter.
@@ -550,17 +577,17 @@ impl PythonMemoryAllocator {
 
     /// Obtain the pointer to the `PyMemAllocatorEx` for this allocator.
     fn as_memory_allocator(&self) -> *const pyffi::PyMemAllocatorEx {
-        match self {
-            PythonMemoryAllocator::Python(alloc, _) => alloc as *const _,
-            PythonMemoryAllocator::Rust(alloc) => &alloc.allocator as *const _,
+        match &self.instance {
+            AllocatorInstance::Python(alloc, _) => alloc as *const _,
+            AllocatorInstance::Rust(alloc) => &alloc.allocator as *const _,
         }
     }
 
     #[allow(dead_code)]
     fn as_arena_allocator(&self) -> *mut pyffi::PyObjectArenaAllocator {
-        match self {
-            PythonMemoryAllocator::Python(_, arena) => arena as *const _ as *mut _,
-            PythonMemoryAllocator::Rust(alloc) => &alloc.arena as *const _ as *mut _,
+        match &self.instance {
+            AllocatorInstance::Python(_, arena) => arena as *const _ as *mut _,
+            AllocatorInstance::Rust(alloc) => &alloc.arena as *const _ as *mut _,
         }
     }
 }
