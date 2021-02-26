@@ -2,7 +2,72 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-//! Custom Python memory allocators.
+/*! Custom Python memory allocators.
+
+This module holds code for customizing Python's memory allocators.
+
+The canonical documentation for Python's memory allocators is
+https://docs.python.org/3/c-api/memory.html.
+
+Important parts have been reproduced below for easy reference.
+
+Python declares memory allocators via the `PyMemAllocatorEx` struct.
+This holds pointers to functions which perform allocation, reallocation,
+releasing, etc.
+
+There are 3 _domains_ within the Python interpreter: raw, memory, and object.
+The _raw_ domain is effectively the global allocator for Python. The
+_memory_ and _object_ domains often wrap the _raw_ domain with custom logic,
+such as arena allocation.
+
+By default, the _raw_ domain uses malloc()/free(). The other domains
+use _pymalloc_, which is an arena-based allocator backed by
+malloc()/VirtualAlloc(). It is possible to customize the allocator used
+by _pymalloc_ or to replace _pymalloc_ with your own `PyMemAllocatorEx`,
+bypassing _pymalloc_ completely.
+
+Here is the documentation for the various `PyMemAllocatorEx` members:
+
+`void* malloc(void *ctx, size_t size)`
+    Allocates n bytes and returns a pointer of type void* to the allocated
+    memory, or NULL if the request fails.
+
+    Requesting zero bytes returns a distinct non-NULL pointer if possible,
+    as if PyMem_Malloc(1) had been called instead. The memory will not have
+    been initialized in any way.
+
+`void* PyMem_Calloc(size_t nelem, size_t elsize)`
+    Allocates nelem elements each whose size in bytes is elsize and returns
+    a pointer of type void* to the allocated memory, or NULL if the request
+    fails. The memory is initialized to zeros.
+
+    Requesting zero elements or elements of size zero bytes returns a
+    distinct non-NULL pointer if possible, as if PyMem_RawCalloc(1, 1) had
+    been called instead.
+
+`void* PyMem_RawRealloc(void *p, size_t n)`
+    Resizes the memory block pointed to by p to n bytes. The contents will be
+    unchanged to the minimum of the old and the new sizes.
+
+    If p is NULL, the call is equivalent to PyMem_RawMalloc(n); else if n is
+    equal to zero, the memory block is resized but is not freed, and the
+    returned pointer is non-NULL.
+
+    Unless p is NULL, it must have been returned by a previous call to
+    PyMem_RawMalloc(), PyMem_RawRealloc() or PyMem_RawCalloc().
+
+`void PyMem_RawFree(void *p)`
+    Frees the memory block pointed to by p, which must have been returned by
+    a previous call to PyMem_RawMalloc(), PyMem_RawRealloc() or
+    PyMem_RawCalloc(). Otherwise, or if PyMem_RawFree(p) has been called before,
+    undefined behavior occurs.
+
+    If p is NULL, no operation is performed.
+
+(Documentation for the `PyMem_Raw*()` functions was used. However, the semantics
+are the same regardless of which domain the `PyMemAllocatorEx` is installed
+to.)
+*/
 
 use {
     libc::{c_void, size_t},
@@ -33,9 +98,6 @@ pub(crate) struct RawAllocator {
 }
 
 extern "C" fn raw_rust_malloc(ctx: *mut c_void, size: size_t) -> *mut c_void {
-    // PyMem_RawMalloc()'s docs say: Requesting zero bytes returns a distinct
-    // non-NULL pointer if possible, as if PyMem_RawMalloc(1) had been called
-    // instead.
     let size = match size {
         0 => 1,
         val => val,
@@ -54,9 +116,6 @@ extern "C" fn raw_rust_malloc(ctx: *mut c_void, size: size_t) -> *mut c_void {
 }
 
 extern "C" fn raw_rust_calloc(ctx: *mut c_void, nelem: size_t, elsize: size_t) -> *mut c_void {
-    // PyMem_RawCalloc()'s docs say: Requesting zero elements or elements of
-    // size zero bytes returns a distinct non-NULL pointer if possible, as if
-    // PyMem_RawCalloc(1, 1) had been called instead.
     let size = match nelem * elsize {
         0 => 1,
         val => val,
@@ -80,11 +139,6 @@ extern "C" fn raw_rust_realloc(
     ptr: *mut c_void,
     new_size: size_t,
 ) -> *mut c_void {
-    //println!("reallocating {:?} to {} bytes", ptr as *mut u8, new_size);
-
-    // PyMem_RawRealloc()'s docs say: If p is NULL, the call is equivalent to
-    // PyMem_RawMalloc(n); else if n is equal to zero, the memory block is
-    // resized but is not freed, and the returned pointer is non-NULL.
     if ptr.is_null() {
         return raw_rust_malloc(ctx, new_size);
     }
@@ -135,9 +189,6 @@ extern "C" fn raw_rust_free(ctx: *mut c_void, ptr: *mut c_void) {
 
 #[cfg(feature = "jemalloc-sys")]
 extern "C" fn raw_jemalloc_malloc(_ctx: *mut c_void, size: size_t) -> *mut c_void {
-    // PyMem_RawMalloc()'s docs say: Requesting zero bytes returns a distinct
-    // non-NULL pointer if possible, as if PyMem_RawMalloc(1) had been called
-    // instead.
     let size = match size {
         0 => 1,
         val => val,
@@ -148,9 +199,6 @@ extern "C" fn raw_jemalloc_malloc(_ctx: *mut c_void, size: size_t) -> *mut c_voi
 
 #[cfg(feature = "jemalloc-sys")]
 extern "C" fn raw_jemalloc_calloc(_ctx: *mut c_void, nelem: size_t, elsize: size_t) -> *mut c_void {
-    // PyMem_RawCalloc()'s docs say: Requesting zero elements or elements of
-    // size zero bytes returns a distinct non-NULL pointer if possible, as if
-    // PyMem_RawCalloc(1, 1) had been called instead.
     let size = match nelem * elsize {
         0 => 1,
         val => val,
@@ -165,9 +213,6 @@ extern "C" fn raw_jemalloc_realloc(
     ptr: *mut c_void,
     new_size: size_t,
 ) -> *mut c_void {
-    // PyMem_RawRealloc()'s docs say: If p is NULL, the call is equivalent to
-    // PyMem_RawMalloc(n); else if n is equal to zero, the memory block is
-    // resized but is not freed, and the returned pointer is non-NULL.
     if ptr.is_null() {
         return raw_jemalloc_malloc(ctx, new_size);
     }
@@ -191,30 +236,21 @@ extern "C" fn raw_jemalloc_free(_ctx: *mut c_void, ptr: *mut c_void) {
 
 #[cfg(feature = "mimalloc")]
 extern "C" fn raw_mimalloc_malloc(_ctx: *mut c_void, size: size_t) -> *mut c_void {
-    // PyMem_RawMalloc()'s docs say: Requesting zero bytes returns a distinct
-    // non-NULL pointer if possible, as if PyMem_RawMalloc(1) had been called
-    // instead.
     let size = match size {
         0 => 1,
         val => val,
     };
-    // Allocate `size` bytes.Returns pointer to the allocated memory or null if out of memory.
-    // Returns a unique pointer if called with `size` 0
+
     unsafe { libmimalloc_sys::mi_malloc(size) as *mut _ }
 }
 
 #[cfg(feature = "mimalloc")]
 extern "C" fn raw_mimalloc_calloc(_ctx: *mut c_void, nelem: size_t, elsize: size_t) -> *mut c_void {
-    // PyMem_RawCalloc()'s docs say: Requesting zero elements or elements of
-    // size zero bytes returns a distinct non-NULL pointer if possible, as if
-    // PyMem_RawCalloc(1, 1) had been called instead.
     let size = match nelem * elsize {
         0 => 1,
         val => val,
     };
-    // Allocate `count` items of `size` length each.
-    // Returns `null` if `count * size` overflows or on out-of-memory.
-    // All items are initialized to zero
+
     unsafe { libmimalloc_sys::mi_calloc(nelem, size) as *mut _ }
 }
 
@@ -224,25 +260,11 @@ extern "C" fn raw_mimalloc_realloc(
     ptr: *mut c_void,
     new_size: size_t,
 ) -> *mut c_void {
-    // PyMem_RawRealloc()'s docs say: If p is NULL, the call is equivalent to
-    // PyMem_RawMalloc(n); else if n is equal to zero, the memory block is
-    // resized but is not freed, and the returned pointer is non-NULL.
-    // Below should be automatic
-
     let new_size = match new_size {
         0 => 1,
         val => val,
     };
-    // Re-allocate memory to `newsize` bytes.
-    //
-    // Return pointer to the allocated memory or null if out of memory. If null
-    // is returned, the pointer `p` is not freed. Otherwise the original
-    // pointer is either freed or returned as the reallocated result (in case
-    // it fits in-place with the new size)
-    //
-    // If `p` is null, it behaves as [`mi_malloc`]. If `newsize` is larger than
-    // the original `size` allocated for `p`, the bytes after `size` are
-    // uninitialized
+
     unsafe { libmimalloc_sys::mi_realloc(ptr as *mut _, new_size) as *mut _ }
 }
 
@@ -251,8 +273,7 @@ extern "C" fn raw_mimalloc_free(_ctx: *mut c_void, ptr: *mut c_void) {
     if ptr.is_null() {
         return;
     }
-    // Free previously allocated memory
-    // The pointer `p` must have been allocated before (or be null)
+
     unsafe { libmimalloc_sys::mi_free(ptr as *mut _) }
 }
 
