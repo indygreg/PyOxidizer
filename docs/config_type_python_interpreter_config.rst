@@ -75,12 +75,21 @@ Accepted values are:
 ``jemalloc``
    Use the jemalloc allocator.
 
+   (Not available on Windows.)
+
+``mimalloc``
+   Use the mimalloc allocator (https://github.com/microsoft/mimalloc).
+
 ``rust``
    Use Rust's global allocator (whatever that may be).
 
-The ``jemalloc`` allocator requires the ``jemalloc-sys`` crate to be
-available. A run-time error will occur if ``jemalloc`` is configured but this
-allocator isn't available.
+``snmalloc``
+   Use the snmalloc allocator (https://github.com/microsoft/snmalloc).
+
+The ``jemalloc``, ``mimalloc``, and ``snmalloc`` allocators require the
+presence of additional Rust crates. A run-time panic will occur if these
+allocators are configured but the binary was built without these crates.
+(This should not occur when using ``pyoxidizer`` to build the binary.)
 
 .. important::
 

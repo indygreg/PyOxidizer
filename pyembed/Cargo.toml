@@ -22,6 +22,16 @@ lazy_static = "1.4"
 libc = "0.2"
 memmap = "0.7"
 python3-sys = "0.5.2"
+snmalloc-rs = { version = "0.2", optional = true }
+
+[dependencies.libmimalloc-sys]
+version = "0.1"
+features = [
+    "extended",
+    "local_dynamic_tls",
+    "override",
+]
+optional = true
 
 [dependencies.python-packed-resources]
 version = "0.5.0-pre"
@@ -47,6 +57,8 @@ rusty-fork = "0.3"
 [features]
 default = ["build-mode-default"]
 jemalloc = ["jemalloc-sys"]
+mimalloc = ["libmimalloc-sys"]
+snmalloc = ["snmalloc-rs"]
 
 # The default build mode.
 #

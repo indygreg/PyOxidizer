@@ -128,8 +128,14 @@ def make_exe(dist):
     # a value, it will be expanded to the directory of the built executable.
     # python_config.module_search_paths = ["$ORIGIN/lib"]
 
-    # Use jemalloc as Python's memory allocator
+    # Use jemalloc as Python's memory allocator.
     # python_config.raw_allocator = "jemalloc"
+
+    # Use mimalloc as Python's memory allocator.
+    # python_config.raw_allocator = "mimalloc"
+
+    # Use snmalloc as Python's memory allocator.
+    # python_config.raw_allocator = "snmalloc"
 
     # Use the system allocator as Python's memory allocator.
     # python_config.raw_allocator = "system"

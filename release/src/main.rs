@@ -609,7 +609,7 @@ fn generate_pyembed_license(repo_root: &Path) -> Result<String> {
         vec![
             "deny".to_string(),
             "--features".to_string(),
-            "jemalloc".to_string(),
+            "jemalloc,mimalloc,snmalloc".to_string(),
             "--manifest-path".to_string(),
             pyembed_manifest_path.display().to_string(),
             "list".to_string(),

@@ -32,7 +32,9 @@ use {
 
 #[cfg(feature = "jemalloc-sys")]
 use crate::pyalloc::make_raw_jemalloc_allocator;
-use python3_sys::PyMemAllocatorEx;
+
+#[cfg(feature = "mimalloc")]
+use crate::pyalloc::make_raw_mimalloc_allocator;
 
 lazy_static! {
     static ref GLOBAL_INTERPRETER_GUARD: std::sync::Mutex<()> = std::sync::Mutex::new(());
@@ -46,6 +48,20 @@ fn raw_jemallocator() -> pyffi::PyMemAllocatorEx {
 #[cfg(not(feature = "jemalloc-sys"))]
 fn raw_jemallocator() -> pyffi::PyMemAllocatorEx {
     panic!("jemalloc is not available in this build configuration");
+}
+
+#[cfg(feature = "mimalloc")]
+fn raw_mimallocator() -> pyffi::PyMemAllocatorEx {
+    make_raw_mimalloc_allocator()
+}
+
+#[cfg(not(feature = "mimalloc"))]
+fn raw_mimallocator() -> pyffi::PyMemAllocatorEx {
+    panic!("mimalloc is not available in this build configuration");
+}
+
+fn raw_snmallocator() -> pyffi::PyMemAllocatorEx {
+    panic!("snmalloc allocator not yet implemented");
 }
 
 enum InterpreterRawAllocator {
@@ -63,7 +79,7 @@ impl InterpreterRawAllocator {
 }
 
 impl From<pyffi::PyMemAllocatorEx> for InterpreterRawAllocator {
-    fn from(allocator: PyMemAllocatorEx) -> Self {
+    fn from(allocator: pyffi::PyMemAllocatorEx) -> Self {
         InterpreterRawAllocator::Python(allocator)
     }
 }
@@ -181,6 +197,12 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
                 MemoryAllocatorBackend::System => {}
                 MemoryAllocatorBackend::Jemalloc => {
                     self.raw_allocator = Some(InterpreterRawAllocator::from(raw_jemallocator()));
+                }
+                MemoryAllocatorBackend::Mimalloc => {
+                    self.raw_allocator = Some(InterpreterRawAllocator::from(raw_mimallocator()));
+                }
+                MemoryAllocatorBackend::Snmalloc => {
+                    self.raw_allocator = Some(InterpreterRawAllocator::from(raw_snmallocator()));
                 }
                 MemoryAllocatorBackend::Rust => {
                     self.raw_allocator = Some(InterpreterRawAllocator::from(
