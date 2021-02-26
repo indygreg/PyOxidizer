@@ -8,7 +8,7 @@ Interacting with distutils.
 
 use {
     anyhow::{Context, Result},
-    lazy_static::lazy_static,
+    once_cell::sync::Lazy,
     python_packaging::resource::{LibraryDependency, PythonExtensionModule},
     serde::Deserialize,
     slog::warn,
@@ -20,26 +20,26 @@ use {
     tugger_file_manifest::FileData,
 };
 
-lazy_static! {
-    static ref MODIFIED_DISTUTILS_FILES: BTreeMap<&'static str, &'static [u8]> = {
-        let mut res: BTreeMap<&'static str, &'static [u8]> = BTreeMap::new();
 
-        res.insert(
-            "command/build_ext.py",
-            include_bytes!("../distutils/command/build_ext.py"),
-        );
-        res.insert(
-            "_msvccompiler.py",
-            include_bytes!("../distutils/_msvccompiler.py"),
-        );
-        res.insert(
-            "unixccompiler.py",
-            include_bytes!("../distutils/unixccompiler.py"),
-        );
+static MODIFIED_DISTUTILS_FILES: Lazy<BTreeMap<&'static str, &'static [u8]>> = Lazy::new(|| {
+	let mut res: BTreeMap<&'static str, &'static [u8]> = BTreeMap::new();
 
-        res
-    };
-}
+	res.insert(
+		"command/build_ext.py",
+		include_bytes!("../distutils/command/build_ext.py"),
+	);
+	res.insert(
+		"_msvccompiler.py",
+		include_bytes!("../distutils/_msvccompiler.py"),
+	);
+	res.insert(
+		"unixccompiler.py",
+		include_bytes!("../distutils/unixccompiler.py"),
+	);
+
+	res
+});
+
 
 /// Prepare a hacked install of distutils to use with Python packaging.
 ///

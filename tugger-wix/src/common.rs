@@ -5,7 +5,7 @@
 use {
     anyhow::{anyhow, Context, Result},
     duct::cmd,
-    lazy_static::lazy_static,
+    once_cell::sync::Lazy,
     slog::warn,
     std::{
         ffi::OsStr,
@@ -24,33 +24,33 @@ use {
     },
 };
 
-lazy_static! {
-    static ref WIX_TOOLSET: RemoteContent = RemoteContent {
-        url: "https://github.com/wixtoolset/wix3/releases/download/wix3112rtm/wix311-binaries.zip"
-            .to_string(),
-        sha256: "2c1888d5d1dba377fc7fa14444cf556963747ff9a0a289a3599cf09da03b9e2e".to_string(),
-    };
 
-    // Latest versions of the VC++ Redistributable can be found at
-    // https://support.microsoft.com/en-us/help/2977003/the-latest-supported-visual-c-downloads.
-    // The download URL will redirect to a deterministic artifact, which is what we
-    // record here.
+static WIX_TOOLSET: Lazy<RemoteContent> =  Lazy::new(|| {RemoteContent {
+	url: "https://github.com/wixtoolset/wix3/releases/download/wix3112rtm/wix311-binaries.zip"
+		.to_string(),
+	sha256: "2c1888d5d1dba377fc7fa14444cf556963747ff9a0a289a3599cf09da03b9e2e".to_string(),
+}});
 
-    pub(crate) static ref VC_REDIST_X86: RemoteContent = RemoteContent {
-        url: "https://download.visualstudio.microsoft.com/download/pr/48431a06-59c5-4b63-a102-20b66a521863/CAA38FD474164A38AB47AC1755C8CCCA5CCFACFA9A874F62609E6439924E87EC/VC_redist.x86.exe".to_string(),
-        sha256: "caa38fd474164a38ab47ac1755c8ccca5ccfacfa9a874f62609e6439924e87ec".to_string(),
-    };
+// Latest versions of the VC++ Redistributable can be found at
+// https://support.microsoft.com/en-us/help/2977003/the-latest-supported-visual-c-downloads.
+// The download URL will redirect to a deterministic artifact, which is what we
+// record here.
 
-    pub(crate) static ref VC_REDIST_X64: RemoteContent = RemoteContent {
-        url: "https://download.visualstudio.microsoft.com/download/pr/48431a06-59c5-4b63-a102-20b66a521863/4B5890EB1AEFDF8DFA3234B5032147EB90F050C5758A80901B201AE969780107/VC_redist.x64.exe".to_string(),
-        sha256: "4b5890eb1aefdf8dfa3234b5032147eb90f050c5758a80901b201ae969780107".to_string(),
-    };
+pub(crate) static VC_REDIST_X86: Lazy<RemoteContent> =  Lazy::new(|| {RemoteContent {
+	url: "https://download.visualstudio.microsoft.com/download/pr/48431a06-59c5-4b63-a102-20b66a521863/CAA38FD474164A38AB47AC1755C8CCCA5CCFACFA9A874F62609E6439924E87EC/VC_redist.x86.exe".to_string(),
+	sha256: "caa38fd474164a38ab47ac1755c8ccca5ccfacfa9a874f62609e6439924e87ec".to_string(),
+}});
 
-    pub(crate) static ref VC_REDIST_ARM64: RemoteContent = RemoteContent {
-        url: "https://download.visualstudio.microsoft.com/download/pr/48431a06-59c5-4b63-a102-20b66a521863/A950A1C9DB37E2F784ABA98D484A4E0F77E58ED7CB57727672F9DC321015469E/VC_redist.arm64.exe".to_string(),
-        sha256: "a950a1c9db37e2f784aba98d484a4e0f77e58ed7cb57727672f9dc321015469e".to_string(),
-    };
-}
+pub(crate) static VC_REDIST_X64: Lazy<RemoteContent> =  Lazy::new(|| {RemoteContent {
+	url: "https://download.visualstudio.microsoft.com/download/pr/48431a06-59c5-4b63-a102-20b66a521863/4B5890EB1AEFDF8DFA3234B5032147EB90F050C5758A80901B201AE969780107/VC_redist.x64.exe".to_string(),
+	sha256: "4b5890eb1aefdf8dfa3234b5032147eb90f050c5758a80901b201ae969780107".to_string(),
+}});
+
+pub(crate) static VC_REDIST_ARM64: Lazy<RemoteContent> =  Lazy::new(|| {RemoteContent {
+	url: "https://download.visualstudio.microsoft.com/download/pr/48431a06-59c5-4b63-a102-20b66a521863/A950A1C9DB37E2F784ABA98D484A4E0F77E58ED7CB57727672F9DC321015469E/VC_redist.arm64.exe".to_string(),
+	sha256: "a950a1c9db37e2f784aba98d484a4e0f77e58ed7cb57727672f9dc321015469e".to_string(),
+}});
+
 
 /// Compute the `Id` of a directory.
 pub fn directory_to_id(prefix: &str, path: &Path) -> String {

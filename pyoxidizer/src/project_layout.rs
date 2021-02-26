@@ -8,7 +8,7 @@ use {
     crate::environment::{PyOxidizerSource, BUILD_GIT_COMMIT, PYOXIDIZER_VERSION},
     anyhow::{anyhow, Result},
     handlebars::Handlebars,
-    lazy_static::lazy_static,
+    once_cell::sync::Lazy,
     python_packaging::filesystem_scanning::walk_tree_files,
     serde::Serialize,
     std::{
@@ -18,41 +18,41 @@ use {
     },
 };
 
-lazy_static! {
-    static ref HANDLEBARS: Handlebars<'static> = {
-        let mut handlebars = Handlebars::new();
 
-        handlebars
-            .register_template_string(
-                "application-manifest.rc",
-                include_str!("templates/application-manifest.rc.hbs"),
-            )
-            .unwrap();
-        handlebars
-            .register_template_string("exe.manifest", include_str!("templates/exe.manifest.hbs"))
-            .unwrap();
-        handlebars
-            .register_template_string("new-build.rs", include_str!("templates/new-build.rs.hbs"))
-            .unwrap();
-        handlebars
-            .register_template_string(
-                "new-cargo-config",
-                include_str!("templates/new-cargo-config.hbs"),
-            )
-            .unwrap();
-        handlebars
-            .register_template_string("new-main.rs", include_str!("templates/new-main.rs.hbs"))
-            .unwrap();
-        handlebars
-            .register_template_string(
-                "new-pyoxidizer.bzl",
-                include_str!("templates/new-pyoxidizer.bzl.hbs"),
-            )
-            .unwrap();
+static HANDLEBARS: Lazy<Handlebars<'static>> = Lazy::new(|| {
+	let mut handlebars = Handlebars::new();
 
-        handlebars
-    };
-}
+	handlebars
+		.register_template_string(
+			"application-manifest.rc",
+			include_str!("templates/application-manifest.rc.hbs"),
+		)
+		.unwrap();
+	handlebars
+		.register_template_string("exe.manifest", include_str!("templates/exe.manifest.hbs"))
+		.unwrap();
+	handlebars
+		.register_template_string("new-build.rs", include_str!("templates/new-build.rs.hbs"))
+		.unwrap();
+	handlebars
+		.register_template_string(
+			"new-cargo-config",
+			include_str!("templates/new-cargo-config.hbs"),
+		)
+		.unwrap();
+	handlebars
+		.register_template_string("new-main.rs", include_str!("templates/new-main.rs.hbs"))
+		.unwrap();
+	handlebars
+		.register_template_string(
+			"new-pyoxidizer.bzl",
+			include_str!("templates/new-pyoxidizer.bzl.hbs"),
+		)
+		.unwrap();
+
+	handlebars
+});
+
 
 #[derive(Serialize)]
 struct PythonDistribution {

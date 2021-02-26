@@ -8,7 +8,7 @@ use {
     clap::{App, AppSettings, Arg, ArgMatches, SubCommand},
     duct::cmd,
     git2::Repository,
-    lazy_static::lazy_static,
+    once_cell::sync::Lazy,
     serde::Deserialize,
     std::{
         collections::{BTreeMap, BTreeSet},
@@ -19,23 +19,23 @@ use {
     },
 };
 
-lazy_static! {
-    /// Packages we should disable in the workspace before releasing.
-    static ref DISABLE_PACKAGES: Vec<&'static str> = vec!["oxidized-importer"];
 
-    /// Packages in the workspace we should ignore.
-    static ref IGNORE_PACKAGES: Vec<&'static str> = vec!["release"];
+/// Packages we should disable in the workspace before releasing.
+static DISABLE_PACKAGES: Lazy<Vec<&'static str>> = Lazy::new(|| {vec!["oxidized-importer"]});
 
-    /// Order that packages should be released in.
-    static ref RELEASE_ORDER: Vec<&'static str> = vec![
-        "python-packed-resources",
-        "python-packaging",
-        "pyembed",
-        "starlark-dialect-build-targets",
-        "tugger",
-        "pyoxidizer",
-    ];
-}
+/// Packages in the workspace we should ignore.
+static IGNORE_PACKAGES: Lazy<Vec<&'static str>> = Lazy::new(|| {vec!["release"]});
+
+/// Order that packages should be released in.
+static RELEASE_ORDER: Lazy<Vec<&'static str>> = Lazy::new(|| {vec![
+	"python-packed-resources",
+	"python-packaging",
+	"pyembed",
+	"starlark-dialect-build-targets",
+	"tugger",
+	"pyoxidizer",
+]});
+
 
 fn get_workspace_members(path: &Path) -> Result<Vec<String>> {
     let manifest = Manifest::from_path(path)?;

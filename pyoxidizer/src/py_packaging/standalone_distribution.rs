@@ -18,7 +18,7 @@ use {
     crate::environment::{LINUX_TARGET_TRIPLES, MACOS_TARGET_TRIPLES},
     anyhow::{anyhow, Context, Result},
     duct::cmd,
-    lazy_static::lazy_static,
+    once_cell::sync::Lazy,
     path_dedot::ParseDot,
     python_packaging::{
         bytecode::{BytecodeCompiler, PythonBytecodeCompiler},
@@ -59,27 +59,27 @@ const PIP_EXE_BASENAME: &str = "pip3.exe";
 #[cfg(unix)]
 const PIP_EXE_BASENAME: &str = "pip3";
 
-lazy_static! {
-    /// Distribution extensions with known problems on Linux.
-    ///
-    /// These will never be packaged.
-    pub static ref BROKEN_EXTENSIONS_LINUX: Vec<String> = vec![
-        // Linking issues.
-        "_crypt".to_string(),
-        // Linking issues.
-        "nis".to_string(),
-    ];
 
-    /// Distribution extensions with known problems on macOS.
-    ///
-    /// These will never be packaged.
-    pub static ref BROKEN_EXTENSIONS_MACOS: Vec<String> = vec![
-        // curses and readline have linking issues.
-        "curses".to_string(),
-        "_curses_panel".to_string(),
-        "readline".to_string(),
-    ];
-}
+/// Distribution extensions with known problems on Linux.
+///
+/// These will never be packaged.
+pub static BROKEN_EXTENSIONS_LINUX: Lazy<Vec<String>> = Lazy::new(|| {vec![
+	// Linking issues.
+	"_crypt".to_string(),
+	// Linking issues.
+	"nis".to_string(),
+]});
+
+/// Distribution extensions with known problems on macOS.
+///
+/// These will never be packaged.
+pub static BROKEN_EXTENSIONS_MACOS: Lazy<Vec<String>> = Lazy::new(|| {vec![
+	// curses and readline have linking issues.
+	"curses".to_string(),
+	"_curses_panel".to_string(),
+	"readline".to_string(),
+]});
+
 
 #[derive(Debug, Deserialize)]
 struct LinkEntry {

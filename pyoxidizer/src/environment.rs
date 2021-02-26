@@ -7,7 +7,7 @@
 use {
     crate::project_layout::PyembedLocation,
     anyhow::Result,
-    lazy_static::lazy_static,
+    once_cell::sync::Lazy,
     std::{
         env,
         path::{Path, PathBuf},
@@ -22,90 +22,90 @@ const GIT_REPO_URL: &str = env!("GIT_REPO_URL");
 /// Version string of PyOxidizer.
 pub const PYOXIDIZER_VERSION: &str = env!("PYOXIDIZER_VERSION");
 
-lazy_static! {
-    /// Filesystem path to Git repository we were built from.
-    ///
-    /// Will be None if a path is defined in the environment but not present.
-    pub static ref BUILD_GIT_REPO_PATH: Option<PathBuf> = {
-        match env!("GIT_REPO_PATH") {
-            "" => None,
-            value => {
-                let path = PathBuf::from(value);
 
-                // There is a potential for false positives here. e.g. shared checkout
-                // directories. But hopefully that should be rare.
-                if path.exists() {
-                    Some(path)
-                } else {
-                    None
-                }
-            }
-        }
-    };
+/// Filesystem path to Git repository we were built from.
+///
+/// Will be None if a path is defined in the environment but not present.
+pub static BUILD_GIT_REPO_PATH: Lazy<Option<PathBuf>> = Lazy::new(|| {
+	match env!("GIT_REPO_PATH") {
+		"" => None,
+		value => {
+			let path = PathBuf::from(value);
 
-    /// Git commit this build of PyOxidizer was produced with.
-    pub static ref BUILD_GIT_COMMIT: Option<String> = {
-        match env!("GIT_COMMIT") {
-            // Can happen when not run from a Git checkout (such as installing
-            // from a crate).
-            "" => None,
-            value => Some(value.to_string()),
-        }
-    };
+			// There is a potential for false positives here. e.g. shared checkout
+			// directories. But hopefully that should be rare.
+			if path.exists() {
+				Some(path)
+			} else {
+				None
+			}
+		}
+	}
+});
 
-    /// The Git tag we are built against.
-    pub static ref BUILD_GIT_TAG: Option<String> = {
-        let tag = env!("GIT_TAG");
-        if tag.is_empty() {
-            None
-        } else {
-            Some(tag.to_string())
-        }
-    };
+/// Git commit this build of PyOxidizer was produced with.
+pub static BUILD_GIT_COMMIT: Lazy<Option<String>> = Lazy::new(|| {
+	match env!("GIT_COMMIT") {
+		// Can happen when not run from a Git checkout (such as installing
+		// from a crate).
+		"" => None,
+		value => Some(value.to_string()),
+	}
+});
 
-    /// Defines the source of this install from Git data embedded in the binary.
-    pub static ref GIT_SOURCE: PyOxidizerSource = {
-        let commit = BUILD_GIT_COMMIT.clone();
+/// The Git tag we are built against.
+pub static BUILD_GIT_TAG: Lazy<Option<String>> = Lazy::new(|| {
+	let tag = env!("GIT_TAG");
+	if tag.is_empty() {
+		None
+	} else {
+		Some(tag.to_string())
+	}
+});
 
-        // Commit and tag should be mutually exclusive.
-        let tag = if commit.is_some() || BUILD_GIT_TAG.is_none() {
-            None
-        } else {
-            BUILD_GIT_TAG.clone()
-        };
+/// Defines the source of this install from Git data embedded in the binary.
+pub static GIT_SOURCE: Lazy<PyOxidizerSource> = Lazy::new(|| {
+	let commit = BUILD_GIT_COMMIT.clone();
 
-        PyOxidizerSource::GitUrl {
-            url: GIT_REPO_URL.to_owned(),
-            commit,
-            tag,
-        }
-    };
+	// Commit and tag should be mutually exclusive.
+	let tag = if commit.is_some() || BUILD_GIT_TAG.is_none() {
+		None
+	} else {
+		BUILD_GIT_TAG.clone()
+	};
 
-    /// Minimum version of Rust required to build PyOxidizer applications.
-    ///
-    // Remember to update the CI configuration in ci/azure-pipelines-template.yml
-    // and the `Installing Rust` documentation when this changes.
-    pub static ref MINIMUM_RUST_VERSION: semver::Version = semver::Version::new(1, 45, 0);
+	PyOxidizerSource::GitUrl {
+		url: GIT_REPO_URL.to_owned(),
+		commit,
+		tag,
+	}
+});
 
-    /// Target triples for Linux.
-    pub static ref LINUX_TARGET_TRIPLES: Vec<&'static str> = vec![
-        "x86_64-unknown-linux-gnu",
-        "x86_64-unknown-linux-musl",
-    ];
+/// Minimum version of Rust required to build PyOxidizer applications.
+///
+// Remember to update the CI configuration in ci/azure-pipelines-template.yml
+// and the `Installing Rust` documentation when this changes.
+pub static MINIMUM_RUST_VERSION: Lazy<semver::Version> = Lazy::new(|| {semver::Version::new(1, 45, 0)});
 
-    /// Target triples for macOS.
-    pub static ref MACOS_TARGET_TRIPLES: Vec<&'static str> = vec![
-        "x86_64-apple-darwin",
-    ];
+/// Target triples for Linux.
+pub static LINUX_TARGET_TRIPLES: Lazy<Vec<&'static str>> = Lazy::new(|| {vec![
+	"x86_64-unknown-linux-gnu",
+	"x86_64-unknown-linux-musl",
+]});
 
-    /// Target triples for Windows.
-    pub static ref WINDOWS_TARGET_TRIPLES: Vec<&'static str> = vec![
-        "i686-pc-windows-gnu",
-        "i686-pc-windows-msvc",
-        "x86_64-pc-windows-gnu",
-        "x86_64-pc-windows-msvc",
-    ];
-}
+/// Target triples for macOS.
+pub static MACOS_TARGET_TRIPLES: Lazy<Vec<&'static str>> = Lazy::new(|| {vec![
+	"x86_64-apple-darwin",
+]});
+
+/// Target triples for Windows.
+pub static WINDOWS_TARGET_TRIPLES: Lazy<Vec<&'static str>> = Lazy::new(|| { vec![
+	"i686-pc-windows-gnu",
+	"i686-pc-windows-msvc",
+	"x86_64-pc-windows-gnu",
+	"x86_64-pc-windows-msvc",
+]});
+
 
 pub fn canonicalize_path(path: &Path) -> Result<PathBuf, std::io::Error> {
     let mut p = path.canonicalize()?;
