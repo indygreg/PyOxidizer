@@ -78,9 +78,9 @@ use {
 
 const MIN_ALIGN: usize = 16;
 
-type RawAllocatorState = HashMap<*mut u8, alloc::Layout>;
+type RustAllocatorState = HashMap<*mut u8, alloc::Layout>;
 
-/// Holds state for the raw memory allocator.
+/// Holds state for the Rust memory allocator.
 ///
 /// Ideally we wouldn't need to track state. But Rust's dealloc() API
 /// requires passing in a Layout that matches the allocation. This means
@@ -89,9 +89,9 @@ type RawAllocatorState = HashMap<*mut u8, alloc::Layout>;
 ///
 /// TODO HashMap isn't thread safe and the Python raw allocator doesn't
 /// hold the GIL. So we need a thread safe map or a mutex guarding access.
-pub(crate) struct RawAllocator {
+pub(crate) struct RustAllocator {
     pub allocator: pyffi::PyMemAllocatorEx,
-    _state: Box<RawAllocatorState>,
+    _state: Box<RustAllocatorState>,
 }
 
 extern "C" fn raw_rust_malloc(ctx: *mut c_void, size: size_t) -> *mut c_void {
@@ -101,7 +101,7 @@ extern "C" fn raw_rust_malloc(ctx: *mut c_void, size: size_t) -> *mut c_void {
     };
 
     unsafe {
-        let state = ctx as *mut RawAllocatorState;
+        let state = ctx as *mut RustAllocatorState;
         let layout = alloc::Layout::from_size_align_unchecked(size, MIN_ALIGN);
         let res = alloc::alloc(layout);
 
@@ -119,7 +119,7 @@ extern "C" fn raw_rust_calloc(ctx: *mut c_void, nelem: size_t, elsize: size_t) -
     };
 
     unsafe {
-        let state = ctx as *mut RawAllocatorState;
+        let state = ctx as *mut RustAllocatorState;
         let layout = alloc::Layout::from_size_align_unchecked(size, MIN_ALIGN);
         let res = alloc::alloc_zeroed(layout);
 
@@ -146,7 +146,7 @@ extern "C" fn raw_rust_realloc(
     };
 
     unsafe {
-        let state = ctx as *mut RawAllocatorState;
+        let state = ctx as *mut RustAllocatorState;
         let layout = alloc::Layout::from_size_align_unchecked(new_size, MIN_ALIGN);
 
         let key = ptr as *mut u8;
@@ -169,7 +169,7 @@ extern "C" fn raw_rust_free(ctx: *mut c_void, ptr: *mut c_void) {
 
     //println!("freeing {:?}", ptr as *mut u8);
     unsafe {
-        let state = ctx as *mut RawAllocatorState;
+        let state = ctx as *mut RustAllocatorState;
 
         let key = ptr as *mut u8;
         let layout = (*state)
@@ -281,7 +281,7 @@ pub(crate) enum PythonMemoryAllocator {
     Python(pyffi::PyMemAllocatorEx),
 
     /// Backed by a custom wrapper type.
-    Raw(RawAllocator),
+    Rust(RustAllocator),
 }
 
 impl PythonMemoryAllocator {
@@ -348,7 +348,7 @@ impl PythonMemoryAllocator {
             free: Some(raw_rust_free),
         };
 
-        Self::Raw(RawAllocator {
+        Self::Rust(RustAllocator {
             allocator,
             _state: unsafe { Box::from_raw(state) },
         })
@@ -372,7 +372,7 @@ impl PythonMemoryAllocator {
     fn as_ptr(&self) -> *const pyffi::PyMemAllocatorEx {
         match self {
             PythonMemoryAllocator::Python(alloc) => alloc as *const _,
-            PythonMemoryAllocator::Raw(alloc) => &alloc.allocator as *const _,
+            PythonMemoryAllocator::Rust(alloc) => &alloc.allocator as *const _,
         }
     }
 }
