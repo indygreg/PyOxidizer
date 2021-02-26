@@ -20,7 +20,7 @@ use {
     cpython::{GILGuard, NoArgs, ObjectProtocol, PyDict, PyList, PyString, Python, ToPyObject},
     lazy_static::lazy_static,
     python3_sys as pyffi,
-    python_packaging::interpreter::{MemoryAllocatorBackend, TerminfoResolution},
+    python_packaging::interpreter::TerminfoResolution,
     std::{
         collections::BTreeSet,
         convert::{TryFrom, TryInto},
