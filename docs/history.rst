@@ -83,6 +83,8 @@ Bug Fixes
 * ``pyembed::MainPythonInterpreter.py_runmain()``'s signature has changed, now
   consuming ownership of the receiver. Subsequent borrows of ``self`` now fail
   to compile rather than causing runtime errors.
+* The optional ``rust`` memory allocator is now thread-safe. Previously, it
+  wasn't and releasing of the GIL could lead to memory corruption and crashes.
 
 New Features
 ^^^^^^^^^^^^

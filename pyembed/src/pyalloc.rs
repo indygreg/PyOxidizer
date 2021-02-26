@@ -96,6 +96,7 @@ use {
         alloc,
         collections::HashMap,
         ops::{Deref, DerefMut},
+        sync::Mutex,
     },
 };
 
@@ -113,10 +114,17 @@ const SNMALLOC_ALIGNMENT: usize = 8;
 /// This type exists to facilitate tracking the allocation metadata
 /// out-of-band. Essentially, we create an instance of this on the heap
 /// and store a pointer to it via the allocator "context" C structs.
+///
+/// The Python raw domain allocator doesn't hold the GIL. So operations
+/// against this data structure called from the context of a raw domain
+/// allocator must be thread safe.
+///
+/// Our current solution to this is a Mutex around the inner data structure.
+/// Although this is inefficient: many calling functions perform multiple
+/// container operations, requiring a lock for each one. It would be better
+/// to have a RAII guard for scoped logical operation.
 struct AllocationTracker {
-    /// TODO HashMap isn't thread safe and the Python raw allocator doesn't
-    /// hold the GIL. So we need a thread safe map or a mutex guarding access.
-    allocations: HashMap<*mut c_void, alloc::Layout>,
+    allocations: Mutex<HashMap<*mut c_void, alloc::Layout>>,
 }
 
 impl AllocationTracker {
@@ -125,7 +133,7 @@ impl AllocationTracker {
     /// It is automatically boxed because it needs to live on the heap.
     fn new() -> Box<Self> {
         Box::new(Self {
-            allocations: HashMap::with_capacity(128),
+            allocations: Mutex::new(HashMap::with_capacity(128)),
         })
     }
 
@@ -138,8 +146,8 @@ impl AllocationTracker {
 
     /// Obtain an allocation record in this tracker.
     #[inline]
-    fn get_allocation(&self, ptr: *mut c_void) -> Option<&alloc::Layout> {
-        self.allocations.get(&ptr)
+    fn get_allocation(&self, ptr: *mut c_void) -> Option<alloc::Layout> {
+        self.allocations.lock().unwrap().get(&ptr).cloned()
     }
 
     /// Record an allocation in this tracker.
@@ -147,13 +155,15 @@ impl AllocationTracker {
     /// An existing allocation for the specified memory address will be replaced.
     #[inline]
     fn insert_allocation(&mut self, ptr: *mut c_void, layout: alloc::Layout) {
-        self.allocations.insert(ptr, layout);
+        self.allocations.lock().unwrap().insert(ptr, layout);
     }
 
     /// Remove an allocation from this tracker.
     #[inline]
     fn remove_allocation(&mut self, ptr: *mut c_void) -> alloc::Layout {
         self.allocations
+            .lock()
+            .unwrap()
             .remove(&ptr)
             .expect("memory address not tracked")
     }
@@ -385,7 +395,7 @@ extern "C" fn rust_free(ctx: *mut c_void, ptr: *mut c_void) {
         .unwrap_or_else(|| panic!("could not find allocated memory record: {:?}", ptr));
 
     unsafe {
-        alloc::dealloc(ptr as *mut _, *layout);
+        alloc::dealloc(ptr as *mut _, layout);
     }
 
     tracker.remove_allocation(ptr);
@@ -433,7 +443,7 @@ extern "C" fn rust_arena_free(ctx: *mut c_void, ptr: *mut c_void, _size: size_t)
         .unwrap_or_else(|| panic!("could not find allocated memory record: {:?}", ptr));
 
     unsafe {
-        alloc::dealloc(ptr as *mut _, *layout);
+        alloc::dealloc(ptr as *mut _, layout);
     }
 
     tracker.remove_allocation(ptr);
