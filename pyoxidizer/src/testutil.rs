@@ -13,7 +13,7 @@ use {
         python_distributions::PYTHON_DISTRIBUTIONS,
     },
     anyhow::{anyhow, Result},
-    lazy_static::lazy_static,
+    once_cell::sync::Lazy,
     slog::{Drain, Logger},
     std::{ops::Deref, path::PathBuf, sync::Arc},
 };
@@ -28,15 +28,17 @@ pub fn get_logger() -> Result<slog::Logger> {
     ))
 }
 
-lazy_static! {
-    pub static ref DEFAULT_DISTRIBUTION_TEMP_DIR: tempfile::TempDir = tempfile::Builder::new()
+pub static DEFAULT_DISTRIBUTION_TEMP_DIR: Lazy<tempfile::TempDir> = Lazy::new(|| {
+    tempfile::Builder::new()
         .prefix("pyoxidizer-test")
         .tempdir()
-        .expect("unable to create temp directory");
-    pub static ref DISTRIBUTION_CACHE: Arc<DistributionCache> = Arc::new(DistributionCache::new(
-        Some(DEFAULT_DISTRIBUTION_TEMP_DIR.path())
-    ));
-}
+        .expect("unable to create temp directory")
+});
+pub static DISTRIBUTION_CACHE: Lazy<Arc<DistributionCache>> = Lazy::new(|| {
+    Arc::new(DistributionCache::new(Some(
+        DEFAULT_DISTRIBUTION_TEMP_DIR.path(),
+    )))
+});
 
 pub fn get_distribution(
     location: &PythonDistributionLocation,

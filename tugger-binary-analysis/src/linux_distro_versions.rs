@@ -2,12 +2,12 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use {lazy_static::lazy_static, std::collections::BTreeMap};
+use {once_cell::sync::Lazy, std::collections::BTreeMap};
 
 type DistroVersion = Vec<(&'static str, &'static str)>;
 
-lazy_static! {
-    pub static ref GLIBC_VERSIONS_BY_DISTRO: BTreeMap<&'static str, DistroVersion> = {
+pub static GLIBC_VERSIONS_BY_DISTRO: Lazy<BTreeMap<&'static str, DistroVersion>> =
+    Lazy::new(|| {
         let mut res: BTreeMap<&'static str, DistroVersion> = BTreeMap::new();
 
         res.insert(
@@ -79,77 +79,76 @@ lazy_static! {
         );
 
         res
-    };
-    pub static ref GCC_VERSIONS_BY_DISTRO: BTreeMap<&'static str, DistroVersion> = {
-        let mut res: BTreeMap<&'static str, DistroVersion> = BTreeMap::new();
+    });
+pub static GCC_VERSIONS_BY_DISTRO: Lazy<BTreeMap<&'static str, DistroVersion>> = Lazy::new(|| {
+    let mut res: BTreeMap<&'static str, DistroVersion> = BTreeMap::new();
 
-        res.insert(
-            "Fedora",
-            vec![
-                ("16", "4.6"),
-                ("17", "4.7"),
-                ("18", "4.7"),
-                ("19", "4.8"),
-                ("20", "4.8"),
-                ("21", "4.9"),
-                ("22", "4.9"),
-                ("23", "5.1"),
-                ("24", "6.1"),
-                ("25", "6.2"),
-                ("26", "7.1"),
-                ("27", "7.2"),
-                ("28", "8.0.1"),
-                ("29", "8.2.1"),
-                ("30", "9.0.1"),
-                ("31", "9.2.1"),
-                ("32", "10.0.1"),
-            ],
-        );
+    res.insert(
+        "Fedora",
+        vec![
+            ("16", "4.6"),
+            ("17", "4.7"),
+            ("18", "4.7"),
+            ("19", "4.8"),
+            ("20", "4.8"),
+            ("21", "4.9"),
+            ("22", "4.9"),
+            ("23", "5.1"),
+            ("24", "6.1"),
+            ("25", "6.2"),
+            ("26", "7.1"),
+            ("27", "7.2"),
+            ("28", "8.0.1"),
+            ("29", "8.2.1"),
+            ("30", "9.0.1"),
+            ("31", "9.2.1"),
+            ("32", "10.0.1"),
+        ],
+    );
 
-        res.insert("RHEL", vec![("6", "4.4"), ("7", "4.8"), ("8", "8.3.1")]);
+    res.insert("RHEL", vec![("6", "4.4"), ("7", "4.8"), ("8", "8.3.1")]);
 
-        res.insert(
-            "OpenSUSE",
-            vec![
-                ("11.4", "4.5"),
-                ("12.1", "4.6"),
-                ("12.2", "4.7"),
-                ("12.3", "4.7"),
-                ("13.1", "4.8"),
-                ("13.2", "4.8"),
-                ("42.1", "4.8"),
-                ("42.2", "4.8.5"),
-                ("42.3", "4.8.5"),
-                ("15.0", "7.3.1"),
-            ],
-        );
+    res.insert(
+        "OpenSUSE",
+        vec![
+            ("11.4", "4.5"),
+            ("12.1", "4.6"),
+            ("12.2", "4.7"),
+            ("12.3", "4.7"),
+            ("13.1", "4.8"),
+            ("13.2", "4.8"),
+            ("42.1", "4.8"),
+            ("42.2", "4.8.5"),
+            ("42.3", "4.8.5"),
+            ("15.0", "7.3.1"),
+        ],
+    );
 
-        res.insert(
-            "Debian",
-            vec![
-                ("6", "4.1"),
-                ("7", "4.4"),
-                ("8", "4.8"),
-                ("9", "6.3"),
-                ("10", "8.3"),
-            ],
-        );
+    res.insert(
+        "Debian",
+        vec![
+            ("6", "4.1"),
+            ("7", "4.4"),
+            ("8", "4.8"),
+            ("9", "6.3"),
+            ("10", "8.3"),
+        ],
+    );
 
-        res.insert(
-            "Ubuntu",
-            vec![
-                ("12.04", "4.4"),
-                ("14.04", "4.4"),
-                ("16.04", "4.7"),
-                ("18.04", "7.3"),
-                ("20.04", "9.3"),
-                ("20.10", "10.2"),
-            ],
-        );
+    res.insert(
+        "Ubuntu",
+        vec![
+            ("12.04", "4.4"),
+            ("14.04", "4.4"),
+            ("16.04", "4.7"),
+            ("18.04", "7.3"),
+            ("20.04", "9.3"),
+            ("20.10", "10.2"),
+        ],
+    );
 
-        res
-    };
-}
+    res
+});
 
 /// Find the minimum Linux distribution version supporting a given version of something.
 pub fn find_minimum_distro_version(

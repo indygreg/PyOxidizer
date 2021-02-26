@@ -18,7 +18,7 @@ use {
         standalone_distribution::StandaloneDistribution,
     },
     anyhow::{anyhow, Context, Result},
-    lazy_static::lazy_static,
+    once_cell::sync::Lazy,
     python_packaging::{
         bytecode::BytecodeCompiler,
         interpreter::MemoryAllocatorBackend,
@@ -46,13 +46,11 @@ use {
     tugger_windows::VcRedistributablePlatform,
 };
 
-lazy_static! {
-    /// Libraries that we should not link against on Linux.
-    static ref LINUX_IGNORE_LIBRARIES: Vec<&'static str> = vec!["dl", "m",];
+/// Libraries that we should not link against on Linux.
+static LINUX_IGNORE_LIBRARIES: Lazy<Vec<&'static str>> = Lazy::new(|| vec!["dl", "m"]);
 
-    /// Libraries that we should not link against on macOS.
-    static ref MACOS_IGNORE_LIBRARIES: Vec<&'static str> = vec!["dl", "m",];
-}
+/// Libraries that we should not link against on macOS.
+static MACOS_IGNORE_LIBRARIES: Lazy<Vec<&'static str>> = Lazy::new(|| vec!["dl", "m"]);
 
 /// Obtain a list of ignored libraries for a given target triple.
 fn ignored_libraries_for_target(target_triple: &str) -> Vec<&'static str> {
@@ -990,7 +988,7 @@ pub mod tests {
         crate::py_packaging::distribution::{BinaryLibpythonLinkMode, DistributionFlavor},
         crate::python_distributions::PYTHON_DISTRIBUTIONS,
         crate::testutil::*,
-        lazy_static::lazy_static,
+        once_cell::sync::Lazy,
         python_packaging::{location::ConcreteResourceLocation, policy::ExtensionModuleFilter},
         std::ops::DerefMut,
         tugger_licensing::LicensedComponents,
@@ -999,61 +997,59 @@ pub mod tests {
     #[cfg(target_os = "linux")]
     use python_packaging::resource::LibraryDependency;
 
-    lazy_static! {
-        pub static ref WINDOWS_TARGET_TRIPLES: Vec<&'static str> =
-            vec!["i686-pc-windows-msvc", "x86_64-pc-windows-msvc"];
+    pub static WINDOWS_TARGET_TRIPLES: Lazy<Vec<&'static str>> =
+        Lazy::new(|| vec!["i686-pc-windows-msvc", "x86_64-pc-windows-msvc"]);
 
-        /// An extension module represented by a shared library file.
-        pub static ref EXTENSION_MODULE_SHARED_LIBRARY_ONLY: PythonExtensionModule =
-            PythonExtensionModule {
-                name: "shared_only".to_string(),
-                init_fn: Some("PyInit_shared_only".to_string()),
-                extension_file_suffix: ".so".to_string(),
-                shared_library: Some(FileData::Memory(vec![42])),
-                object_file_data: vec![],
-                is_package: false,
-                link_libraries: vec![],
-                is_stdlib: false,
-                builtin_default: false,
-                required: false,
-                variant: None,
-                license: None,
-            };
+    /// An extension module represented by a shared library file.
+    pub static EXTENSION_MODULE_SHARED_LIBRARY_ONLY: Lazy<PythonExtensionModule> =
+        Lazy::new(|| PythonExtensionModule {
+            name: "shared_only".to_string(),
+            init_fn: Some("PyInit_shared_only".to_string()),
+            extension_file_suffix: ".so".to_string(),
+            shared_library: Some(FileData::Memory(vec![42])),
+            object_file_data: vec![],
+            is_package: false,
+            link_libraries: vec![],
+            is_stdlib: false,
+            builtin_default: false,
+            required: false,
+            variant: None,
+            license: None,
+        });
 
-        /// An extension module represented by only object files.
-        pub static ref EXTENSION_MODULE_OBJECT_FILES_ONLY: PythonExtensionModule =
-            PythonExtensionModule {
-                name: "object_files_only".to_string(),
-                init_fn: Some("PyInit_object_files_only".to_string()),
-                extension_file_suffix: ".so".to_string(),
-                shared_library: None,
-                object_file_data: vec![FileData::Memory(vec![0]), FileData::Memory(vec![1])],
-                is_package: false,
-                link_libraries: vec![],
-                is_stdlib: false,
-                builtin_default: false,
-                required: false,
-                variant: None,
-                license: None,
-        };
+    /// An extension module represented by only object files.
+    pub static EXTENSION_MODULE_OBJECT_FILES_ONLY: Lazy<PythonExtensionModule> =
+        Lazy::new(|| PythonExtensionModule {
+            name: "object_files_only".to_string(),
+            init_fn: Some("PyInit_object_files_only".to_string()),
+            extension_file_suffix: ".so".to_string(),
+            shared_library: None,
+            object_file_data: vec![FileData::Memory(vec![0]), FileData::Memory(vec![1])],
+            is_package: false,
+            link_libraries: vec![],
+            is_stdlib: false,
+            builtin_default: false,
+            required: false,
+            variant: None,
+            license: None,
+        });
 
-        /// An extension module with both a shared library and object files.
-        pub static ref EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES: PythonExtensionModule =
-            PythonExtensionModule {
-                name: "shared_and_object_files".to_string(),
-                init_fn: Some("PyInit_shared_and_object_files".to_string()),
-                extension_file_suffix: ".so".to_string(),
-                shared_library: Some(FileData::Memory(b"shared".to_vec())),
-                object_file_data: vec![FileData::Memory(vec![0]), FileData::Memory(vec![1])],
-                is_package: false,
-                link_libraries: vec![],
-                is_stdlib: false,
-                builtin_default: false,
-                required: false,
-                variant: None,
-                license: None,
-        };
-    }
+    /// An extension module with both a shared library and object files.
+    pub static EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES: Lazy<PythonExtensionModule> =
+        Lazy::new(|| PythonExtensionModule {
+            name: "shared_and_object_files".to_string(),
+            init_fn: Some("PyInit_shared_and_object_files".to_string()),
+            extension_file_suffix: ".so".to_string(),
+            shared_library: Some(FileData::Memory(b"shared".to_vec())),
+            object_file_data: vec![FileData::Memory(vec![0]), FileData::Memory(vec![1])],
+            is_package: false,
+            link_libraries: vec![],
+            is_stdlib: false,
+            builtin_default: false,
+            required: false,
+            variant: None,
+            license: None,
+        });
 
     /// Defines construction options for a `StandalonePythonExecutableBuilder`.
     ///

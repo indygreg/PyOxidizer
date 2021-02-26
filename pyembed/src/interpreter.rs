@@ -18,7 +18,7 @@ use {
         python_resources::PythonResourcesState,
     },
     cpython::{GILGuard, NoArgs, ObjectProtocol, PyDict, PyList, PyString, Python, ToPyObject},
-    lazy_static::lazy_static,
+    once_cell::sync::Lazy,
     python3_sys as pyffi,
     python_packaging::interpreter::TerminfoResolution,
     std::{
@@ -30,9 +30,8 @@ use {
     },
 };
 
-lazy_static! {
-    static ref GLOBAL_INTERPRETER_GUARD: std::sync::Mutex<()> = std::sync::Mutex::new(());
-}
+static GLOBAL_INTERPRETER_GUARD: Lazy<std::sync::Mutex<()>> =
+    Lazy::new(|| std::sync::Mutex::new(()));
 
 /// Manages an embedded Python interpreter.
 ///

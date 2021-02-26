@@ -702,21 +702,19 @@ pub fn find_python_resources<'a>(
 mod tests {
     use {
         super::*,
-        lazy_static::lazy_static,
+        once_cell::sync::Lazy,
         std::fs::{create_dir_all, write},
     };
 
     const DEFAULT_CACHE_TAG: &str = "cpython-37";
 
-    lazy_static! {
-        static ref DEFAULT_SUFFIXES: PythonModuleSuffixes = PythonModuleSuffixes {
-            source: vec![".py".to_string()],
-            bytecode: vec![".pyc".to_string()],
-            debug_bytecode: vec![],
-            optimized_bytecode: vec![],
-            extension: vec![],
-        };
-    }
+    static DEFAULT_SUFFIXES: Lazy<PythonModuleSuffixes> = Lazy::new(|| PythonModuleSuffixes {
+        source: vec![".py".to_string()],
+        bytecode: vec![".pyc".to_string()],
+        debug_bytecode: vec![],
+        optimized_bytecode: vec![],
+        extension: vec![],
+    });
 
     #[test]
     fn test_source_resolution() -> Result<()> {

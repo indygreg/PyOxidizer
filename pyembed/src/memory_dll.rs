@@ -10,10 +10,10 @@ not a Python `module`.
 
 use {
     crate::python_resources::PythonResourcesState,
-    lazy_static::lazy_static,
     memory_module_sys::{
         MemoryFreeLibrary, MemoryGetProcAddress, MemoryLoadLibraryEx, HCUSTOMMODULE,
     },
+    once_cell::sync::Lazy,
     std::{
         collections::HashMap,
         ffi::{c_void, CStr},
@@ -67,14 +67,12 @@ struct MemoryModules {
 
 unsafe impl Send for MemoryModules {}
 
-lazy_static! {
-    static ref MEMORY_MODULES: Mutex<MemoryModules> = {
-        Mutex::new(MemoryModules {
-            modules: HashMap::new(),
-            module_ptrs: Vec::new(),
-        })
-    };
-}
+static MEMORY_MODULES: Lazy<Mutex<MemoryModules>> = Lazy::new(|| {
+    Mutex::new(MemoryModules {
+        modules: HashMap::new(),
+        module_ptrs: Vec::new(),
+    })
+});
 
 /// Load a library from memory, possibly retrieving missing libraries from resources state.
 ///

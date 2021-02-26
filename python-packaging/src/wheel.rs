@@ -10,7 +10,7 @@ use {
         package_metadata::PythonPackageMetadata, resource::PythonResource,
     },
     anyhow::{anyhow, Context, Result},
-    lazy_static::lazy_static,
+    once_cell::sync::Lazy,
     std::{
         borrow::Cow,
         io::Read,
@@ -20,13 +20,13 @@ use {
     zip::ZipArchive,
 };
 
-lazy_static! {
-    /// Regex for finding the wheel info directory.
-    ///
-    /// This is copied from the wheel.wheelfile Python module.
-    static ref RE_WHEEL_INFO: regex::Regex =
-        regex::Regex::new(r"^(?P<namever>(?P<name>.+?)-(?P<ver>.+?))(-(?P<build>\d[^-]*))?-(?P<pyver>.+?)-(?P<abi>.+?)-(?P<plat>.+?)\.whl$").unwrap();
-}
+/// Regex for finding the wheel info directory.
+///
+/// This is copied from the wheel.wheelfile Python module.
+
+static RE_WHEEL_INFO: Lazy<regex::Regex> = Lazy::new(|| {
+    regex::Regex::new(r"^(?P<namever>(?P<name>.+?)-(?P<ver>.+?))(-(?P<build>\d[^-]*))?-(?P<pyver>.+?)-(?P<abi>.+?)-(?P<plat>.+?)\.whl$").unwrap()
+});
 
 const S_IXUSR: u32 = 64;
 

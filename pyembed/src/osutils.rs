@@ -3,7 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    lazy_static::lazy_static,
+    once_cell::sync::Lazy,
     std::path::{Path, PathBuf},
 };
 
@@ -23,19 +23,17 @@ const TERMINFO_DIRS_REDHAT: &str = "/etc/terminfo:/usr/share/terminfo";
 /// terminfo directories for macOS.
 const TERMINFO_DIRS_MACOS: &str = "/usr/share/terminfo";
 
-lazy_static! {
-    static ref TERMINFO_DIRS_COMMON: Vec<PathBuf> = {
-        vec![
-            PathBuf::from("/usr/local/etc/terminfo"),
-            PathBuf::from("/usr/local/lib/terminfo"),
-            PathBuf::from("/usr/local/share/terminfo"),
-            PathBuf::from("/etc/terminfo"),
-            PathBuf::from("/usr/lib/terminfo"),
-            PathBuf::from("/lib/terminfo"),
-            PathBuf::from("/usr/share/terminfo"),
-        ]
-    };
-}
+static TERMINFO_DIRS_COMMON: Lazy<Vec<PathBuf>> = Lazy::new(|| {
+    vec![
+        PathBuf::from("/usr/local/etc/terminfo"),
+        PathBuf::from("/usr/local/lib/terminfo"),
+        PathBuf::from("/usr/local/share/terminfo"),
+        PathBuf::from("/etc/terminfo"),
+        PathBuf::from("/usr/lib/terminfo"),
+        PathBuf::from("/lib/terminfo"),
+        PathBuf::from("/usr/share/terminfo"),
+    ]
+});
 
 #[derive(Clone)]
 enum OsVariant {
@@ -51,19 +49,17 @@ enum LinuxDistroVariant {
     Unknown,
 }
 
-lazy_static! {
-    static ref TARGET_OS: OsVariant = {
-        if cfg!(target_os = "linux") {
-            OsVariant::Linux
-        } else if cfg!(target_os = "macos") {
-            OsVariant::MacOs
-        } else if cfg!(target_os = "windows") {
-            OsVariant::Windows
-        } else {
-            OsVariant::Other
-        }
-    };
-}
+static TARGET_OS: Lazy<OsVariant> = Lazy::new(|| {
+    if cfg!(target_os = "linux") {
+        OsVariant::Linux
+    } else if cfg!(target_os = "macos") {
+        OsVariant::MacOs
+    } else if cfg!(target_os = "windows") {
+        OsVariant::Windows
+    } else {
+        OsVariant::Other
+    }
+});
 
 struct OsInfo {
     os: OsVariant,

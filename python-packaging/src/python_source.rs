@@ -4,12 +4,11 @@
 
 /*! Utility functions related to Python source code. */
 
-use {anyhow::Result, lazy_static::lazy_static};
+use {anyhow::Result, once_cell::sync::Lazy};
 
-lazy_static! {
-    static ref RE_CODING: regex::bytes::Regex =
-        regex::bytes::Regex::new(r"^[ \t\f]*#.*?coding[:=][ \t]*([-_.a-zA-Z0-9]+)").unwrap();
-}
+static RE_CODING: Lazy<regex::bytes::Regex> = Lazy::new(|| {
+    regex::bytes::Regex::new(r"^[ \t\f]*#.*?coding[:=][ \t]*([-_.a-zA-Z0-9]+)").unwrap()
+});
 
 /// Derive the source encoding from Python source code.
 pub fn python_source_encoding(source: &[u8]) -> Vec<u8> {
