@@ -117,6 +117,7 @@ impl ToString for PyembedPackedResourcesSource {
 pub struct PyembedPythonInterpreterConfig {
     pub config: PythonInterpreterConfig,
     pub raw_allocator: MemoryAllocatorBackend,
+    pub allocator_debug: bool,
     pub set_missing_path_configuration: bool,
     pub oxidized_importer: bool,
     pub filesystem_importer: bool,
@@ -143,6 +144,7 @@ impl Default for PyembedPythonInterpreterConfig {
                 ..PythonInterpreterConfig::default()
             },
             raw_allocator: MemoryAllocatorBackend::System,
+            allocator_debug: false,
             set_missing_path_configuration: true,
             oxidized_importer: true,
             filesystem_importer: false,
@@ -223,6 +225,7 @@ impl PyembedPythonInterpreterConfig {
             x_options: {},\n        \
             }},\n    \
             raw_allocator: Some({}),\n    \
+            allocator_debug: false,\n    \
             set_missing_path_configuration: {},\n    \
             oxidized_importer: {},\n    \
             filesystem_importer: {},\n    \
@@ -534,6 +537,7 @@ mod tests {
                 x_options: Some(vec!["x0".into(), "x1".into()]),
             },
             raw_allocator: MemoryAllocatorBackend::System,
+            allocator_debug: true,
             set_missing_path_configuration: false,
             oxidized_importer: true,
             filesystem_importer: true,

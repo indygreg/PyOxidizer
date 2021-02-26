@@ -142,11 +142,13 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
             if let Some(allocator) = &self.raw_allocator {
                 allocator.set_allocator(pyffi::PyMemAllocatorDomain::PYMEM_DOMAIN_RAW);
             }
+        }
 
-            if raw_allocator.debug {
-                unsafe {
-                    pyffi::PyMem_SetupDebugHooks();
-                }
+        // Debug hooks apply to all allocator domains and work with or without
+        // custom domain allocators.
+        if self.config.allocator_debug {
+            unsafe {
+                pyffi::PyMem_SetupDebugHooks();
             }
         }
 

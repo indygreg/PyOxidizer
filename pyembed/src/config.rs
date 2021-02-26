@@ -87,6 +87,13 @@ pub struct OxidizedPythonInterpreterConfig<'a> {
     /// Allocator to use for Python's raw allocator.
     pub raw_allocator: Option<PythonRawAllocator>,
 
+    /// Whether to set up Python allocator debug hooks to detect memory bugs.
+    ///
+    /// This setting triggers the calling of `PyMem_SetupDebugHooks()` during
+    /// interpreter initialization. It can be used with or without custom
+    /// Python allocators.
+    pub allocator_debug: bool,
+
     /// Whether to automatically set missing "path configuration" fields.
     ///
     /// If `true`, various path configuration
@@ -200,6 +207,7 @@ impl<'a> Default for OxidizedPythonInterpreterConfig<'a> {
                 ..PythonInterpreterConfig::default()
             },
             raw_allocator: None,
+            allocator_debug: false,
             set_missing_path_configuration: true,
             oxidized_importer: false,
             filesystem_importer: true,

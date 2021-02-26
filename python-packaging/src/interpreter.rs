@@ -146,43 +146,36 @@ impl TryFrom<&str> for MemoryAllocatorBackend {
 pub struct PythonRawAllocator {
     /// Which allocator backend to use.
     pub backend: MemoryAllocatorBackend,
-    /// Whether memory debugging should be enabled.
-    pub debug: bool,
 }
 
 impl PythonRawAllocator {
     pub fn system() -> Self {
         Self {
             backend: MemoryAllocatorBackend::System,
-            ..PythonRawAllocator::default()
         }
     }
 
     pub fn jemalloc() -> Self {
         Self {
             backend: MemoryAllocatorBackend::Jemalloc,
-            ..PythonRawAllocator::default()
         }
     }
 
     pub fn mimalloc() -> Self {
         Self {
             backend: MemoryAllocatorBackend::Mimalloc,
-            ..PythonRawAllocator::default()
         }
     }
 
     pub fn snmalloc() -> Self {
         Self {
             backend: MemoryAllocatorBackend::Snmalloc,
-            ..PythonRawAllocator::default()
         }
     }
 
     pub fn rust() -> Self {
         Self {
             backend: MemoryAllocatorBackend::Rust,
-            ..PythonRawAllocator::default()
         }
     }
 }
@@ -195,7 +188,6 @@ impl Default for PythonRawAllocator {
             } else {
                 MemoryAllocatorBackend::Jemalloc
             },
-            debug: false,
         }
     }
 }
