@@ -94,7 +94,7 @@ pub(crate) struct RustAllocator {
     _state: Box<RustAllocatorState>,
 }
 
-extern "C" fn raw_rust_malloc(ctx: *mut c_void, size: size_t) -> *mut c_void {
+extern "C" fn rust_malloc(ctx: *mut c_void, size: size_t) -> *mut c_void {
     let size = match size {
         0 => 1,
         val => val,
@@ -112,7 +112,7 @@ extern "C" fn raw_rust_malloc(ctx: *mut c_void, size: size_t) -> *mut c_void {
     }
 }
 
-extern "C" fn raw_rust_calloc(ctx: *mut c_void, nelem: size_t, elsize: size_t) -> *mut c_void {
+extern "C" fn rust_calloc(ctx: *mut c_void, nelem: size_t, elsize: size_t) -> *mut c_void {
     let size = match nelem * elsize {
         0 => 1,
         val => val,
@@ -131,13 +131,9 @@ extern "C" fn raw_rust_calloc(ctx: *mut c_void, nelem: size_t, elsize: size_t) -
     }
 }
 
-extern "C" fn raw_rust_realloc(
-    ctx: *mut c_void,
-    ptr: *mut c_void,
-    new_size: size_t,
-) -> *mut c_void {
+extern "C" fn rust_realloc(ctx: *mut c_void, ptr: *mut c_void, new_size: size_t) -> *mut c_void {
     if ptr.is_null() {
-        return raw_rust_malloc(ctx, new_size);
+        return rust_malloc(ctx, new_size);
     }
 
     let new_size = match new_size {
@@ -162,7 +158,7 @@ extern "C" fn raw_rust_realloc(
     }
 }
 
-extern "C" fn raw_rust_free(ctx: *mut c_void, ptr: *mut c_void) {
+extern "C" fn rust_free(ctx: *mut c_void, ptr: *mut c_void) {
     if ptr.is_null() {
         return;
     }
@@ -181,11 +177,11 @@ extern "C" fn raw_rust_free(ctx: *mut c_void, ptr: *mut c_void) {
     }
 }
 
-// Now let's define a raw memory allocator that interfaces directly with jemalloc.
+// Now let's define a memory allocator that interfaces directly with jemalloc.
 // This avoids the overhead of going through Rust's allocation layer.
 
 #[cfg(feature = "jemalloc-sys")]
-extern "C" fn raw_jemalloc_malloc(_ctx: *mut c_void, size: size_t) -> *mut c_void {
+extern "C" fn jemalloc_malloc(_ctx: *mut c_void, size: size_t) -> *mut c_void {
     let size = match size {
         0 => 1,
         val => val,
@@ -195,7 +191,7 @@ extern "C" fn raw_jemalloc_malloc(_ctx: *mut c_void, size: size_t) -> *mut c_voi
 }
 
 #[cfg(feature = "jemalloc-sys")]
-extern "C" fn raw_jemalloc_calloc(_ctx: *mut c_void, nelem: size_t, elsize: size_t) -> *mut c_void {
+extern "C" fn jemalloc_calloc(_ctx: *mut c_void, nelem: size_t, elsize: size_t) -> *mut c_void {
     let size = match nelem * elsize {
         0 => 1,
         val => val,
@@ -205,13 +201,13 @@ extern "C" fn raw_jemalloc_calloc(_ctx: *mut c_void, nelem: size_t, elsize: size
 }
 
 #[cfg(feature = "jemalloc-sys")]
-extern "C" fn raw_jemalloc_realloc(
+extern "C" fn jemalloc_realloc(
     ctx: *mut c_void,
     ptr: *mut c_void,
     new_size: size_t,
 ) -> *mut c_void {
     if ptr.is_null() {
-        return raw_jemalloc_malloc(ctx, new_size);
+        return jemalloc_malloc(ctx, new_size);
     }
 
     let new_size = match new_size {
@@ -223,7 +219,7 @@ extern "C" fn raw_jemalloc_realloc(
 }
 
 #[cfg(feature = "jemalloc-sys")]
-extern "C" fn raw_jemalloc_free(_ctx: *mut c_void, ptr: *mut c_void) {
+extern "C" fn jemalloc_free(_ctx: *mut c_void, ptr: *mut c_void) {
     if ptr.is_null() {
         return;
     }
@@ -232,7 +228,7 @@ extern "C" fn raw_jemalloc_free(_ctx: *mut c_void, ptr: *mut c_void) {
 }
 
 #[cfg(feature = "mimalloc")]
-extern "C" fn raw_mimalloc_malloc(_ctx: *mut c_void, size: size_t) -> *mut c_void {
+extern "C" fn mimalloc_alloc(_ctx: *mut c_void, size: size_t) -> *mut c_void {
     let size = match size {
         0 => 1,
         val => val,
@@ -242,7 +238,7 @@ extern "C" fn raw_mimalloc_malloc(_ctx: *mut c_void, size: size_t) -> *mut c_voi
 }
 
 #[cfg(feature = "mimalloc")]
-extern "C" fn raw_mimalloc_calloc(_ctx: *mut c_void, nelem: size_t, elsize: size_t) -> *mut c_void {
+extern "C" fn mimalloc_calloc(_ctx: *mut c_void, nelem: size_t, elsize: size_t) -> *mut c_void {
     let size = match nelem * elsize {
         0 => 1,
         val => val,
@@ -252,7 +248,7 @@ extern "C" fn raw_mimalloc_calloc(_ctx: *mut c_void, nelem: size_t, elsize: size
 }
 
 #[cfg(feature = "mimalloc")]
-extern "C" fn raw_mimalloc_realloc(
+extern "C" fn mimalloc_realloc(
     _ctx: *mut c_void,
     ptr: *mut c_void,
     new_size: size_t,
@@ -266,7 +262,7 @@ extern "C" fn raw_mimalloc_realloc(
 }
 
 #[cfg(feature = "mimalloc")]
-extern "C" fn raw_mimalloc_free(_ctx: *mut c_void, ptr: *mut c_void) {
+extern "C" fn mimalloc_free(_ctx: *mut c_void, ptr: *mut c_void) {
     if ptr.is_null() {
         return;
     }
@@ -303,10 +299,10 @@ impl PythonMemoryAllocator {
     pub fn jemalloc() -> Self {
         Self::Python(pyffi::PyMemAllocatorEx {
             ctx: std::ptr::null_mut(),
-            malloc: Some(raw_jemalloc_malloc),
-            calloc: Some(raw_jemalloc_calloc),
-            realloc: Some(raw_jemalloc_realloc),
-            free: Some(raw_jemalloc_free),
+            malloc: Some(jemalloc_malloc),
+            calloc: Some(jemalloc_calloc),
+            realloc: Some(jemalloc_realloc),
+            free: Some(jemalloc_free),
         })
     }
 
@@ -320,10 +316,10 @@ impl PythonMemoryAllocator {
     pub fn mimalloc() -> Self {
         Self::Python(pyffi::PyMemAllocatorEx {
             ctx: std::ptr::null_mut(),
-            malloc: Some(raw_mimalloc_malloc),
-            calloc: Some(raw_mimalloc_calloc),
-            realloc: Some(raw_mimalloc_realloc),
-            free: Some(raw_mimalloc_free),
+            malloc: Some(mimalloc_alloc),
+            calloc: Some(mimalloc_calloc),
+            realloc: Some(mimalloc_realloc),
+            free: Some(mimalloc_free),
         })
     }
 
@@ -342,10 +338,10 @@ impl PythonMemoryAllocator {
 
         let allocator = pyffi::PyMemAllocatorEx {
             ctx: state as *mut c_void,
-            malloc: Some(raw_rust_malloc),
-            calloc: Some(raw_rust_calloc),
-            realloc: Some(raw_rust_realloc),
-            free: Some(raw_rust_free),
+            malloc: Some(rust_malloc),
+            calloc: Some(rust_calloc),
+            realloc: Some(rust_realloc),
+            free: Some(rust_free),
         };
 
         Self::Rust(RustAllocator {
