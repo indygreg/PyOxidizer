@@ -1,10 +1,11 @@
 .. _packaging_static_linking:
 
-==============
-Static Linking
-==============
+=========================================================
+Standalone / Single File Applications with Static Linking
+=========================================================
 
-This document describes how to statically link binaries embedding Python.
+This document describes how to produce standalone, single file application
+binaries embedding Python using static linking.
 
 See also :ref:`packaging_extension_modules` for extensive documentation
 about extension modules, which are often a pain point when it comes to
@@ -55,19 +56,13 @@ linking errors due to missing symbols. For example::
     /usr/bin/ld: /build/Python-3.7.3/Python/bootstrap_hash.c:136: undefined reference to `getrandom'
 
 Rust 1.37 or newer is required for the modern musl version compatibility.
-Rust 1.37 is Rust Nightly until July 4, 2019, at which point it becomes
-Rust Beta. It then becomes Rust Stable on August 15, 2019. You may need to
-override the Rust toolchain used to build your project so Rust 1.37+ is
-used. For example::
+And newer versions of Rust may change which version of musl they use,
+introducing failures similar to above. If you run into problems with a
+modern version of Rust, consider
+`reporting an issue <https://github.com/indygreg/PyOxidizer/issues>`_ against
+PyOxidizer!
 
-   $ rustup override set nightly
-   $ rustup target add --toolchain nightly x86_64-unknown-linux-musl
-
-This will tell Rust that the ``nightly`` toolchain should be used for
-the current directory and to install musl support for the ``nightly``
-toolchain.
-
-Then you can build away::
+Once Rust's musl target is installed, you can build away::
 
    $ pyoxidizer build --target x86_64-unknown-linux-musl
    $ ldd build/apps/myapp/x86_64-unknown-linux-musl/debug/myapp
@@ -88,6 +83,42 @@ a Python application!
    will use ``jemalloc`` for memory allocations, bypassing musl's apparently
    slower memory allocator implementation. This *may* help mitigate reported
    performance issues.
+
+.. _statically_linked_windows:
+
+Building Statically Linked Binaries on Windows
+==============================================
+
+It is possibly to produce a mostly self-contained ``.exe`` on Windows.
+We say *mostly* self-contained here because currently the built binary
+has some external ``.dll`` dependencies. However, these DLLs are core
+Windows / system DLLs and should be present on any Windows installation
+supported by the Python distribution being used.
+
+The main trick to build a statically linked Windows binary is to
+switch the Python distribution from the default ``standalone_dynamic``
+flavor to ``standalone_static``. This can be done via the following in
+your config file:
+
+.. code-block:: python
+
+   def make_dist():
+       return default_python_distribution(flavor = "standalone_static")
+
+.. important::
+
+   The ``standalone_static`` Windows distributions build Python in a way that
+   is incompatible with compiled Python extensions (``.pyd`` files). So if you
+   use this distribution flavor, you will need to compile all Python extensions
+   from source and cannot use pre-built wheels packages. This can make building
+   applications with many dependencies difficult, as many Python packages don't
+   compile on Windows without installing many dependencies first.
+
+   See also :ref:`packaging_extension_modules_windows_static`.
+
+See also :ref:`packaging_python_distributions` for more details on the
+differences between ``standalone_dynamic`` and ``standalone_static`` Python
+distributions.
 
 Implications of Static Linking
 ==============================
