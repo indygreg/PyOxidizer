@@ -168,6 +168,9 @@ Other Relevant Changes
 * ``libclang_rt.osx.a`` is now linked into Python binaries on macOS. This
   was necessary to avoid undefined symbols errors from symbols which Python
   3.9.1+ relies on.
+* The ``oxidized_importer`` Python module now exports the
+  ``OxidizedDistribution`` symbol, which is the custom ``importlib.metadata``
+  *distribution* type used by ``OxidizedFinder``.
 
 .. _version_0_10_3:
 

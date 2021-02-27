@@ -6,8 +6,8 @@ use {
     crate::importer::ImporterState,
     cpython::{
         exc::{IOError, NotImplementedError},
-        py_class, NoArgs, ObjectProtocol, PyBytes, PyErr, PyList, PyObject, PyResult, PyString,
-        Python, PythonObject, ToPyObject,
+        py_class, NoArgs, ObjectProtocol, PyBytes, PyErr, PyList, PyModule, PyObject, PyResult,
+        PyString, Python, PythonObject, ToPyObject,
     },
     python_packed_resources::data::Resource,
     std::{borrow::Cow, collections::HashMap, path::Path, sync::Arc},
@@ -247,4 +247,14 @@ fn resolve_package_distribution_resource<'a>(
     } else {
         Ok(None)
     }
+}
+
+pub(crate) fn module_init(py: Python, m: &PyModule) -> PyResult<()> {
+    m.add(
+        py,
+        "OxidizedDistribution",
+        py.get_type::<crate::package_metadata::OxidizedDistribution>(),
+    )?;
+
+    Ok(())
 }

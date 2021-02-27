@@ -1456,6 +1456,8 @@ fn module_init(py: Python, m: &PyModule) -> PyResult<()> {
         py.get_type::<crate::python_resource_types::PythonExtensionModule>(),
     )?;
 
+    crate::package_metadata::module_init(py, m)?;
+
     Ok(())
 }
 
