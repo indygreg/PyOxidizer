@@ -6,10 +6,12 @@ import email.message
 import importlib.metadata
 import os
 import pathlib
+import sys
 import tempfile
 import unittest
 
 from oxidized_importer import (
+    OxidizedDistribution,
     OxidizedFinder,
     OxidizedResourceCollector,
     find_resources_in_path,
@@ -22,11 +24,15 @@ class TestImporterMetadata(unittest.TestCase):
             prefix="oxidized_importer-test-"
         )
         self.td = pathlib.Path(self.raw_temp_dir.name)
+        self.old_finders = list(sys.meta_path)
+        self.old_path = list(sys.path)
 
     def tearDown(self):
         self.raw_temp_dir.cleanup()
         del self.raw_temp_dir
         del self.td
+        sys.meta_path[:] = self.old_finders
+        sys.path[:] = self.old_path
 
     def _write_metadata(self):
         metadata_path = self.td / "my_package-1.0.dist-info" / "METADATA"
@@ -64,7 +70,7 @@ class TestImporterMetadata(unittest.TestCase):
 
         d = dists[0]
 
-        self.assertEqual(d.__class__.__name__, "OxidizedDistribution")
+        self.assertIsInstance(d, OxidizedDistribution)
 
         # read_text() on missing file returns None.
         self.assertIsNone(d.read_text("does_not_exist"))
@@ -196,6 +202,48 @@ class TestImporterMetadata(unittest.TestCase):
         requires = dists[0].requires
         self.assertIsInstance(requires, list)
         self.assertEqual(requires, ["foo"])
+
+    def test_distribution_locate_file(self):
+        self._write_metadata()
+        f = self._finder_from_td()
+
+        dist = f.find_distributions()[0]
+
+        with self.assertRaises(AttributeError):
+            dist.locate_file("METADATA")
+
+    def test_distribution_from_name(self):
+        self._write_metadata()
+        f = self._finder_from_td()
+
+        sys.meta_path = [f]
+        sys.path = []
+
+        # Not yet implemented.
+        with self.assertRaises(AttributeError):
+            OxidizedDistribution.from_name("my_package")
+
+    def test_distribution_discover(self):
+        self._write_metadata()
+        f = self._finder_from_td()
+
+        sys.meta_path = [f]
+        sys.path = []
+
+        # Not yet implemented.
+        with self.assertRaises(AttributeError):
+            OxidizedDistribution.discover()
+
+    def test_distribution_at(self):
+        self._write_metadata()
+        f = self._finder_from_td()
+
+        sys.meta_path = [f]
+        sys.path = []
+
+        # Not yet implemented.
+        with self.assertRaises(AttributeError):
+            OxidizedDistribution.at(self.td)
 
 
 if __name__ == "__main__":

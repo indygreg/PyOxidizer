@@ -151,6 +151,8 @@ instances. However, the returned objects do not implement the full
 Here are the known differences between ``OxidizedDistribution`` and
 ``importlib.metadata.Distribution`` instances:
 
+* ``OxidizedDistribution`` is not an instance of
+  ``importlib.metadata.Distribution``.
 * ``locate_file()`` is not defined.
 * ``@classmethod from_name()`` is not defined.
 * ``@classmethod discover()`` is not defined.
