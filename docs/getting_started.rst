@@ -281,6 +281,13 @@ Now let's try building and running the new configuration::
 
 You've just produced an executable for ``pyflakes``!
 
+.. note::
+
+   ``pyflakes`` with no command arguments will read from stdin and will
+   effectively hang until stdin is closed (typically via ``CTRL + D``). So
+   the ``-- --help`` in the above example is important, as it forces
+   the command to produce output.
+
 There are far more powerful packaging and configuration settings available.
 Read all about them at :ref:`config_files` and :ref:`packaging`. Or continue
 on to :ref:`managing_projects` to learn more about the ``pyoxidizer`` tool.
