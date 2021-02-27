@@ -31,40 +31,40 @@ bypassing _pymalloc_ completely.
 Here is the documentation for the various `PyMemAllocatorEx` members:
 
 `void* malloc(void *ctx, size_t size)`
-    Allocates n bytes and returns a pointer of type void* to the allocated
-    memory, or NULL if the request fails.
-
-    Requesting zero bytes returns a distinct non-NULL pointer if possible,
-    as if PyMem_Malloc(1) had been called instead. The memory will not have
-    been initialized in any way.
+> Allocates n bytes and returns a pointer of type void* to the allocated
+> memory, or NULL if the request fails.
+>
+> Requesting zero bytes returns a distinct non-NULL pointer if possible,
+> as if PyMem_Malloc(1) had been called instead. The memory will not have
+> been initialized in any way.
 
 `void* PyMem_Calloc(size_t nelem, size_t elsize)`
-    Allocates nelem elements each whose size in bytes is elsize and returns
-    a pointer of type void* to the allocated memory, or NULL if the request
-    fails. The memory is initialized to zeros.
-
-    Requesting zero elements or elements of size zero bytes returns a
-    distinct non-NULL pointer if possible, as if PyMem_RawCalloc(1, 1) had
-    been called instead.
+> Allocates nelem elements each whose size in bytes is elsize and returns
+> a pointer of type void* to the allocated memory, or NULL if the request
+> fails. The memory is initialized to zeros.
+>
+> Requesting zero elements or elements of size zero bytes returns a
+> distinct non-NULL pointer if possible, as if PyMem_RawCalloc(1, 1) had
+> been called instead.
 
 `void* PyMem_RawRealloc(void *p, size_t n)`
-    Resizes the memory block pointed to by p to n bytes. The contents will be
-    unchanged to the minimum of the old and the new sizes.
-
-    If p is NULL, the call is equivalent to PyMem_RawMalloc(n); else if n is
-    equal to zero, the memory block is resized but is not freed, and the
-    returned pointer is non-NULL.
-
-    Unless p is NULL, it must have been returned by a previous call to
-    PyMem_RawMalloc(), PyMem_RawRealloc() or PyMem_RawCalloc().
+> Resizes the memory block pointed to by p to n bytes. The contents will be
+> unchanged to the minimum of the old and the new sizes.
+>
+> If p is NULL, the call is equivalent to PyMem_RawMalloc(n); else if n is
+> equal to zero, the memory block is resized but is not freed, and the
+> returned pointer is non-NULL.
+>
+> Unless p is NULL, it must have been returned by a previous call to
+> PyMem_RawMalloc(), PyMem_RawRealloc() or PyMem_RawCalloc().
 
 `void PyMem_RawFree(void *p)`
-    Frees the memory block pointed to by p, which must have been returned by
-    a previous call to PyMem_RawMalloc(), PyMem_RawRealloc() or
-    PyMem_RawCalloc(). Otherwise, or if PyMem_RawFree(p) has been called before,
-    undefined behavior occurs.
-
-    If p is NULL, no operation is performed.
+> Frees the memory block pointed to by p, which must have been returned by
+> a previous call to PyMem_RawMalloc(), PyMem_RawRealloc() or
+> PyMem_RawCalloc(). Otherwise, or if PyMem_RawFree(p) has been called before,
+> undefined behavior occurs.
+>
+> If p is NULL, no operation is performed.
 
 (Documentation for the `PyMem_Raw*()` functions was used. However, the semantics
 are the same regardless of which domain the `PyMemAllocatorEx` is installed
