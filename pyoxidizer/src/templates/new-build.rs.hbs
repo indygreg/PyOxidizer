@@ -10,6 +10,20 @@ fn main() {
     let target_family =
         std::env::var("CARGO_CFG_TARGET_FAMILY").expect("CARGO_CFG_TARGET_FAMILY not defined");
 
+    let global_allocator_jemalloc = std::env::var("CARGO_FEATURE_GLOBAL_ALLOCATOR_JEMALLOC").is_ok();
+    let global_allocator_mimalloc = std::env::var("CARGO_FEATURE_GLOBAL_ALLOCATOR_MIMALLOC").is_ok();
+    let global_allocator_snmalloc = std::env::var("CARGO_FEATURE_GLOBAL_ALLOCATOR_SNMALLOC").is_ok();
+
+    let global_allocator_count = vec![
+        global_allocator_jemalloc,
+        global_allocator_mimalloc,
+        global_allocator_snmalloc,
+    ].into_iter().filter(|x| *x).count();
+
+    if global_allocator_count > 1 {
+        panic!("at most 1 global-allocator-* feature must be defined; got {}", global_allocator_count);
+    }
+
     // Embed the XML manifest enabling long paths into the binary.
     //
     // This isn't needed on Windows 10 version 1607 and above, as long paths are

@@ -154,13 +154,16 @@ pub fn build_executable_with_rust_project<'a>(
     });
 
     if exe.requires_jemalloc() {
-        features.push("jemalloc");
+        features.push("global-allocator-jemalloc");
+        features.push("allocator-jemalloc");
     }
     if exe.requires_mimalloc() {
-        features.push("mimalloc");
+        features.push("global-allocator-mimalloc");
+        features.push("allocator-mimalloc");
     }
     if exe.requires_snmalloc() {
-        features.push("snmalloc");
+        features.push("global-allocator-snmalloc");
+        features.push("allocator-snmalloc");
     }
 
     let features = features.join(" ");
@@ -545,14 +548,86 @@ fn artifacts_current(logger: &slog::Logger, config_path: &Path, artifacts_path: 
 mod tests {
     use {
         super::*,
-        crate::py_packaging::standalone_builder::tests::StandalonePythonExecutableBuilderOptions,
-        crate::testutil::*,
+        crate::{
+            py_packaging::standalone_builder::tests::StandalonePythonExecutableBuilderOptions,
+            testutil::*,
+        },
+        python_packaging::interpreter::MemoryAllocatorBackend,
     };
 
     #[test]
     fn test_empty_project() -> Result<()> {
         let logger = get_logger()?;
         let options = StandalonePythonExecutableBuilderOptions::default();
+        let pre_built = options.new_builder()?;
+
+        build_python_executable(
+            &logger,
+            "myapp",
+            pre_built.as_ref(),
+            env!("HOST"),
+            "0",
+            false,
+        )?;
+
+        Ok(())
+    }
+
+    #[test]
+    // Not supported on Windows.
+    #[cfg(not(target_env = "msvc"))]
+    fn test_allocator_jemalloc() -> Result<()> {
+        let logger = get_logger()?;
+
+        let mut options = StandalonePythonExecutableBuilderOptions::default();
+        options.config.allocator_backend = MemoryAllocatorBackend::Jemalloc;
+
+        let pre_built = options.new_builder()?;
+
+        build_python_executable(
+            &logger,
+            "myapp",
+            pre_built.as_ref(),
+            env!("HOST"),
+            "0",
+            false,
+        )?;
+
+        Ok(())
+    }
+
+    #[test]
+    // Requires cmake, which isn't common on Windows.
+    #[cfg(not(target_env = "msvc"))]
+    fn test_allocator_mimalloc() -> Result<()> {
+        let logger = get_logger()?;
+
+        let mut options = StandalonePythonExecutableBuilderOptions::default();
+        options.config.allocator_backend = MemoryAllocatorBackend::Mimalloc;
+
+        let pre_built = options.new_builder()?;
+
+        build_python_executable(
+            &logger,
+            "myapp",
+            pre_built.as_ref(),
+            env!("HOST"),
+            "0",
+            false,
+        )?;
+
+        Ok(())
+    }
+
+    #[test]
+    // Requires cmake, which isn't common on Windows.
+    #[cfg(not(target_env = "msvc"))]
+    fn test_allocator_snmalloc() -> Result<()> {
+        let logger = get_logger()?;
+
+        let mut options = StandalonePythonExecutableBuilderOptions::default();
+        options.config.allocator_backend = MemoryAllocatorBackend::Snmalloc;
+
         let pre_built = options.new_builder()?;
 
         build_python_executable(

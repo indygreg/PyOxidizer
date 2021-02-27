@@ -1069,6 +1069,7 @@ pub mod tests {
         pub resources_location: Option<ConcreteResourceLocation>,
         pub resources_location_fallback: Option<Option<ConcreteResourceLocation>>,
         pub allow_in_memory_shared_library_loading: Option<bool>,
+        pub config: PyembedPythonInterpreterConfig,
     }
 
     impl Default for StandalonePythonExecutableBuilderOptions {
@@ -1083,6 +1084,7 @@ pub mod tests {
                 resources_location: None,
                 resources_location_fallback: None,
                 allow_in_memory_shared_library_loading: None,
+                config: PyembedPythonInterpreterConfig::default(),
             }
         }
     }
@@ -1122,8 +1124,6 @@ pub mod tests {
                 policy.set_allow_in_memory_shared_library_loading(*value);
             }
 
-            let config = PyembedPythonInterpreterConfig::default();
-
             let mut builder = StandalonePythonExecutableBuilder::from_distribution(
                 host_distribution,
                 target_distribution,
@@ -1132,7 +1132,7 @@ pub mod tests {
                 self.app_name.clone(),
                 self.libpython_link_mode.clone(),
                 policy,
-                config,
+                self.config.clone(),
             )?;
 
             builder.add_distribution_resources(None)?;

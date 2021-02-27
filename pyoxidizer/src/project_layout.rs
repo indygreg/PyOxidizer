@@ -324,23 +324,43 @@ pub fn update_new_cargo_toml(path: &Path, pyembed_location: &PyembedLocation) ->
     content.push_str("build = \"build.rs\"\n");
     content.push_str(after);
 
-    content.push_str("jemallocator-global = { version = \"0.3\", optional = true }\n");
-
     content.push_str(&format!(
         "pyembed = {{ {}, default-features = false }}\n",
         pyembed_location.cargo_manifest_fields()
     ));
-
     content.push('\n');
+
+    content.push_str("[dependencies.jemallocator]\n");
+    content.push_str("version = \"0.3\"\n");
+    content.push_str("optional = true\n");
+    content.push('\n');
+
+    content.push_str("[dependencies.mimalloc]\n");
+    content.push_str("version = \"0.1\"\n");
+    content.push_str("optional = true\n");
+    content.push_str("features = [\"local_dynamic_tls\", \"override\", \"secure\"]\n");
+    content.push('\n');
+
+    content.push_str("[dependencies.snmalloc-rs]\n");
+    content.push_str("version = \"0.2\"\n");
+    content.push_str("optional = true\n");
+    content.push('\n');
+
     content.push_str("[build-dependencies]\n");
     content.push_str("embed-resource = \"1.3\"\n");
 
     content.push('\n');
     content.push_str("[features]\n");
     content.push_str("default = [\"build-mode-pyoxidizer-exe\"]\n");
-    content.push_str("jemalloc = [\"jemallocator-global\", \"pyembed/jemalloc\"]\n");
-    content.push_str("mimalloc = [\"pyembed/mimalloc\"]\n");
-    content.push_str("snmalloc = [\"pyembed/snmalloc\"]\n");
+    content.push('\n');
+    content.push_str("global-allocator-jemalloc = [\"jemallocator\"]\n");
+    content.push_str("global-allocator-mimalloc = [\"mimalloc\"]\n");
+    content.push_str("global-allocator-snmalloc = [\"snmalloc-rs\"]\n");
+    content.push('\n');
+    content.push_str("allocator-jemalloc = [\"pyembed/jemalloc\"]\n");
+    content.push_str("allocator-mimalloc = [\"pyembed/mimalloc\"]\n");
+    content.push_str("allocator-snmalloc = [\"pyembed/snmalloc\"]\n");
+    content.push('\n');
     content.push_str("build-mode-pyoxidizer-exe = [\"pyembed/build-mode-pyoxidizer-exe\"]\n");
     content
         .push_str("build-mode-prebuilt-artifacts = [\"pyembed/build-mode-prebuilt-artifacts\"]\n");

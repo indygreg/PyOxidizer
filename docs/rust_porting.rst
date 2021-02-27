@@ -141,22 +141,22 @@ You can resolve this issue by either disabling jemalloc in the Python
 configuration or by enabling jemalloc in Rust.
 
 To disable jemalloc, open your ``pyoxidizer.bzl`` file and find the
-definition of ``raw_allocator``. You can set it to ``raw_allocator="system"``
+definition of ``allocator_backend``. You can set it to ``raw_allocator="default"``
 so Python uses the system memory allocator instead of jemalloc.
 
 To enable jemalloc, you have a few options.
 
 First, you could build the Rust project with jemalloc support::
 
-    $ cargo build --features jemalloc
+    $ cargo build --features allocator-jemalloc
 
-Or, you modify ``Cargo.toml`` so the *jemalloc* feature is enabled by
+Or, you modify ``Cargo.toml`` so the *allocator-jemalloc* feature is enabled by
 default::
 
 .. code-block:: toml
 
    [features]
-   default = ["build-mode-pyoxidizer-exe", "jemalloc"]
+   default = ["build-mode-pyoxidizer-exe", "allocator-jemalloc"]
 
 *jemalloc* is typically a faster allocator than the system allocator. So if
 you care about performance, you may want to use it.

@@ -131,6 +131,8 @@ New Features
   memory allocators. See documentation for
   :ref:`PythonInterpreterConfig.allocator_backend <config_type_python_interpreter_config_allocator_backend>`.
   Code contributed by Ryan Clanton in #358.
+* The *mimalloc* and *snmalloc* memory allocators will now automatically be used
+  as Rust's global allocator when configured to be used by Python.
 
 Other Relevant Changes
 ^^^^^^^^^^^^^^^^^^^^^^

@@ -2,6 +2,26 @@
 
 use pyembed::{MainPythonInterpreter, OxidizedPythonInterpreterConfig};
 
+// Various cargo features can be defined to install a custom global allocator
+// for Rust.
+//
+// Note that this *only* controls Rust's allocator: the Python interpreter
+// has its own memory allocator settings on the
+// `pyembed::OxidizedPythonInterpreterConfig` that will need to be set in
+// order to fully leverage a custom allocator.
+
+#[cfg(feature = "global-allocator-jemalloc")]
+#[global_allocator]
+static GLOBAL: jemallocator::Jemalloc = jemallocator::Jemalloc;
+
+#[cfg(feature = "global-allocator-mimalloc")]
+#[global_allocator]
+static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
+
+#[cfg(feature = "global-allocator-snmalloc")]
+#[global_allocator]
+static GLOBAL: snmalloc_rs::SnMalloc = snmalloc_rs::SnMalloc;
+
 // Include an auto-generated file defining a
 // `fn default_python_config<'a>() -> pyembed::OxidizedPythonInterpreterConfig<'a>`
 // which returns an `OxidizedPythonInterpreterConfig` derived by the PyOxidizer
