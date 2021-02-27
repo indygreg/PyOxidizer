@@ -221,7 +221,8 @@ pub fn build_executable_with_rust_project<'a>(
         .dir(&project_path)
         .full_env(&envs)
         .stderr_to_stdout()
-        .reader()?;
+        .reader()
+        .context("invoking cargo command")?;
     {
         let reader = BufReader::new(&command);
         for line in reader.lines() {
