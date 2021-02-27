@@ -283,9 +283,11 @@ impl<'a> OxidizedPythonInterpreterConfig<'a> {
             exe
         } else {
             dunce::canonicalize(
-                std::env::current_exe()
-                    .map_err(|_| NewInterpreterError::Simple("could not obtain current executable"))?
-            ).map_err(|_| NewInterpreterError::Simple("could not obtain current executable path"))?
+                std::env::current_exe().map_err(|_| {
+                    NewInterpreterError::Simple("could not obtain current executable")
+                })?,
+            )
+            .map_err(|_| NewInterpreterError::Simple("could not obtain current executable path"))?
         };
 
         let origin = if let Some(origin) = self.origin {
