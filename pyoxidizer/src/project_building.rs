@@ -597,9 +597,13 @@ mod tests {
     }
 
     #[test]
-    // Requires cmake, which isn't common on Windows.
-    #[cfg(not(target_env = "msvc"))]
     fn test_allocator_mimalloc() -> Result<()> {
+        // cmake required to build.
+        if cfg!(windows) {
+            eprintln!("skipping on Windows due to build sensitivity");
+            return Ok(());
+        }
+
         let logger = get_logger()?;
 
         let mut options = StandalonePythonExecutableBuilderOptions::default();
@@ -620,9 +624,13 @@ mod tests {
     }
 
     #[test]
-    // Requires cmake, which isn't common on Windows.
-    #[cfg(not(target_env = "msvc"))]
     fn test_allocator_snmalloc() -> Result<()> {
+        // cmake required to build.
+        if cfg!(windows) {
+            eprintln!("skipping on Windows due to build sensitivity");
+            return Ok(());
+        }
+
         let logger = get_logger()?;
 
         let mut options = StandalonePythonExecutableBuilderOptions::default();
