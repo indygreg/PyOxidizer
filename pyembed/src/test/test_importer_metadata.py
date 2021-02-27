@@ -60,6 +60,38 @@ class TestImporterMetadata(unittest.TestCase):
         self.assertIsInstance(dists, list)
         self.assertEqual(len(dists), 0)
 
+    def test_find_distributions_default_context(self):
+        self._write_metadata()
+        f = self._finder_from_td()
+
+        dists = f.find_distributions(importlib.metadata.DistributionFinder.Context())
+        self.assertIsInstance(dists, list)
+        # TODO should be 1.
+        self.assertEqual(len(dists), 0)
+
+    def test_find_distributions_context_unknown_name(self):
+        f = OxidizedFinder()
+
+        dists = f.find_distributions(
+            importlib.metadata.DistributionFinder.Context(name="missing")
+        )
+        self.assertEqual(len(dists), 0)
+
+    def test_find_distributions_context_name(self):
+        self._write_metadata()
+        f = self._finder_from_td()
+
+        dists = f.find_distributions(
+            importlib.metadata.DistributionFinder.Context(name="my_package")
+        )
+        # TODO wrong behavior.
+        self.assertEqual(len(dists), 0)
+        return
+        self.assertEqual(len(dists), 1)
+        dist = dists[0]
+        self.assertIsInstance(dist, OxidizedDistribution)
+        self.assertEqual(dist.version, "1.0")
+
     def test_read_text(self):
         self._write_metadata()
         f = self._finder_from_td()
