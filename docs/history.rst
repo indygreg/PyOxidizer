@@ -95,6 +95,10 @@ Bug Fixes
   interpreter termination (such as during failing tests) could cause the
   temporary directory to not be removed. Closes #346. Fix contributed by
   William Schwartz in #347.
+* ``OxidizedFinder.find_distributions()`` now properly filters when the
+  passed ``Context``'s ``name`` attribute is set to a string. Previously,
+  the ``name`` and ``path`` attributes had their order swapped in a function
+  call, leading to incorrect filtering.
 
 New Features
 ^^^^^^^^^^^^

@@ -883,7 +883,7 @@ impl OxidizedFinder {
             (None, None)
         };
 
-        crate::package_metadata::find_distributions(py, state.clone(), path, name)
+        crate::package_metadata::find_distributions(py, state.clone(), name, path)
     }
 }
 

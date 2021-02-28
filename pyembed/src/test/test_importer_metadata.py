@@ -84,9 +84,6 @@ class TestImporterMetadata(unittest.TestCase):
         dists = f.find_distributions(
             importlib.metadata.DistributionFinder.Context(name="my_package")
         )
-        # TODO wrong behavior.
-        self.assertEqual(len(dists), 0)
-        return
         self.assertEqual(len(dists), 1)
         dist = dists[0]
         self.assertIsInstance(dist, OxidizedDistribution)
