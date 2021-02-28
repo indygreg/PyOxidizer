@@ -2,7 +2,12 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+import collections.abc
 import email.message
+# email.parser may be unused. However, it is needed by Rust code and some
+# sys.path mucking in tests may prevent it from being imported. So import
+# here to ensure it is cached in sys.modules so Rust can import it.
+import email.parser
 import importlib.metadata
 import os
 import pathlib
@@ -57,7 +62,8 @@ class TestImporterMetadata(unittest.TestCase):
     def test_find_distributions_empty(self):
         f = OxidizedFinder()
         dists = f.find_distributions()
-        self.assertIsInstance(dists, list)
+        self.assertIsInstance(dists, collections.abc.Iterator)
+        dists = list(dists)
         self.assertEqual(len(dists), 0)
 
     def test_find_distributions_default_context(self):
@@ -65,24 +71,25 @@ class TestImporterMetadata(unittest.TestCase):
         f = self._finder_from_td()
 
         dists = f.find_distributions(importlib.metadata.DistributionFinder.Context())
-        self.assertIsInstance(dists, list)
+        self.assertIsInstance(dists, collections.abc.Iterator)
+        dists = list(dists)
         self.assertEqual(len(dists), 1)
 
     def test_find_distributions_context_unknown_name(self):
         f = OxidizedFinder()
 
-        dists = f.find_distributions(
+        dists = list(f.find_distributions(
             importlib.metadata.DistributionFinder.Context(name="missing")
-        )
+        ))
         self.assertEqual(len(dists), 0)
 
     def test_find_distributions_context_name(self):
         self._write_metadata()
         f = self._finder_from_td()
 
-        dists = f.find_distributions(
+        dists = list(f.find_distributions(
             importlib.metadata.DistributionFinder.Context(name="my_package")
-        )
+        ))
         self.assertEqual(len(dists), 1)
         dist = dists[0]
         self.assertIsInstance(dist, OxidizedDistribution)
@@ -92,8 +99,7 @@ class TestImporterMetadata(unittest.TestCase):
         self._write_metadata()
         f = self._finder_from_td()
 
-        dists = f.find_distributions()
-        self.assertIsInstance(dists, list)
+        dists = list(f.find_distributions())
         self.assertEqual(len(dists), 1)
 
         d = dists[0]
@@ -110,8 +116,7 @@ class TestImporterMetadata(unittest.TestCase):
         self._write_metadata()
         f = self._finder_from_td()
 
-        dists = f.find_distributions()
-        self.assertIsInstance(dists, list)
+        dists = list(f.find_distributions())
         self.assertEqual(len(dists), 1)
 
         metadata = dists[0].metadata
@@ -137,7 +142,7 @@ class TestImporterMetadata(unittest.TestCase):
             collector.oxidize(python_exe=os.environ.get("PYTHON_SYS_EXECUTABLE"))[0]
         )
 
-        dists = f.find_distributions()
+        dists = list(f.find_distributions())
         self.assertEqual(len(dists), 1)
 
         metadata = dists[0].metadata
@@ -149,14 +154,14 @@ class TestImporterMetadata(unittest.TestCase):
         self._write_metadata()
         f = self._finder_from_td()
 
-        dists = f.find_distributions()
+        dists = list(f.find_distributions())
         self.assertEqual(dists[0].version, "1.0")
 
     def test_missing_entry_points(self):
         self._write_metadata()
         f = self._finder_from_td()
 
-        dists = f.find_distributions()
+        dists = list(f.find_distributions())
         self.assertEqual(len(dists), 1)
 
         eps = dists[0].entry_points
@@ -175,7 +180,7 @@ class TestImporterMetadata(unittest.TestCase):
 
         f = self._finder_from_td()
 
-        dists = f.find_distributions()
+        dists = list(f.find_distributions())
 
         eps = dists[0].entry_points
 
@@ -193,7 +198,7 @@ class TestImporterMetadata(unittest.TestCase):
         self._write_metadata()
         f = self._finder_from_td()
 
-        dists = f.find_distributions()
+        dists = list(f.find_distributions())
 
         self.assertIsNone(dists[0].requires)
 
@@ -205,7 +210,7 @@ class TestImporterMetadata(unittest.TestCase):
             fh.write(b"Requires-Dist: bar; extra == 'all'\n")
 
         f = self._finder_from_td()
-        dists = f.find_distributions()
+        dists = list(f.find_distributions())
 
         requires = dists[0].requires
         self.assertIsInstance(requires, list)
@@ -224,7 +229,7 @@ class TestImporterMetadata(unittest.TestCase):
             fh.write("foo\n")
 
         f = self._finder_from_td()
-        dists = f.find_distributions()
+        dists = list(f.find_distributions())
         self.assertEqual(len(dists), 1)
 
         requires = dists[0].requires
@@ -235,7 +240,7 @@ class TestImporterMetadata(unittest.TestCase):
         self._write_metadata()
         f = self._finder_from_td()
 
-        dist = f.find_distributions()[0]
+        dist = list(f.find_distributions())[0]
 
         with self.assertRaises(AttributeError):
             dist.locate_file("METADATA")
@@ -253,11 +258,10 @@ class TestImporterMetadata(unittest.TestCase):
         dist = OxidizedDistribution.from_name("my_package")
         self.assertIsInstance(dist, OxidizedDistribution)
 
-        # TODO this fails on Python 3.8.7 because importlib.metadata expects
-        # find_distributions() to return an iterator. Python 3.9 casts to
-        # list() first.
-        with self.assertRaises(TypeError):
-            importlib.metadata.metadata("my_package")
+        metadata = importlib.metadata.metadata("my_package")
+        self.assertIsInstance(metadata, email.message.Message)
+        self.assertEqual(metadata["Name"], "my_package")
+        self.assertEqual(metadata["Version"], "1.0")
 
     def test_distribution_discover(self):
         self._write_metadata()

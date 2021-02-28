@@ -68,6 +68,11 @@ Backwards Compatibility Notes
   in them. Previously, the path passed into the program was used without
   resolving symlinks, etc. If that path were a symlink or hardlink,
   unexpected results could ensue.
+* ``OxidizedFinder.find_distributions()`` now returns an iterator of
+  ``OxidizedDistribution`` instead of a ``list``. Code in the standard
+  library of older versions of CPython expected an iterator to be returned
+  and the new behavior is more compatible. This change enables
+  ``importlib.metadata.metadata()`` to work with ``OxidizedFinder``.
 
 Bug Fixes
 ^^^^^^^^^

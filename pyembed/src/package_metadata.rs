@@ -270,7 +270,10 @@ pub(crate) fn find_distributions(
         distributions
     };
 
-    Ok(PyList::new(py, &distributions).into_object())
+    Ok(PyList::new(py, &distributions)
+        .into_object()
+        .iter(py)?
+        .into_object())
 }
 
 fn resolve_package_distribution_resource<'a>(
