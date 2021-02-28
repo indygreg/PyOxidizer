@@ -1459,7 +1459,10 @@ pub mod tests {
                 .cloned()
                 .collect::<Vec<_>>();
 
-            let linux_dropped = vec![("readline".to_string(), Some("default".to_string()))];
+            let linux_dropped = vec![
+                ("_gdbm".to_string(), Some("default".to_string())),
+                ("readline".to_string(), Some("default".to_string())),
+            ];
 
             let linux_added = vec![("readline".to_string(), Some("libedit".to_string()))];
 
