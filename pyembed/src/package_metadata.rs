@@ -5,9 +5,9 @@
 use {
     crate::importer::ImporterState,
     cpython::{
-        exc::{IOError, NotImplementedError},
-        py_class, NoArgs, ObjectProtocol, PyBytes, PyDict, PyErr, PyList, PyModule, PyObject,
-        PyResult, PyString, PyType, Python, PythonObject, ToPyObject,
+        exc::{IOError, NotImplementedError, ValueError},
+        py_class, NoArgs, ObjectProtocol, PyBytes, PyClone, PyDict, PyErr, PyList, PyModule,
+        PyObject, PyResult, PyString, PyType, Python, PythonObject, ToPyObject,
     },
     python_packed_resources::data::Resource,
     std::{borrow::Cow, collections::HashMap, path::Path, sync::Arc},
@@ -39,6 +39,11 @@ py_class!(class OxidizedDistribution |py| {
     @classmethod
     def from_name(cls, name: &PyString) -> PyResult<PyObject> {
         OxidizedDistribution::from_name_impl(py, cls, name)
+    }
+
+    @classmethod
+    def discover(cls, *args, **kwargs) -> PyResult<PyObject> {
+        OxidizedDistribution::discover_impl(py, cls, kwargs)
     }
 
     def read_text(&self, filename: &PyString) -> PyResult<PyObject> {
@@ -94,6 +99,52 @@ impl OxidizedDistribution {
             py,
             package_not_found_error.call(py, (name,), None)?,
         ))
+    }
+
+    fn discover_impl(py: Python, _cls: &PyType, kwargs: Option<&PyDict>) -> PyResult<PyObject> {
+        let importlib_metadata = py.import("importlib.metadata")?;
+        let distribution_finder = importlib_metadata.get(py, "DistributionFinder")?;
+        let context_type = distribution_finder.getattr(py, "Context")?;
+
+        let context = if let Some(kwargs) = kwargs {
+            let context =
+                kwargs
+                    .as_object()
+                    .call_method(py, "pop", ("context", py.None()), None)?;
+
+            if context != py.None() && kwargs.len(py) > 0 {
+                return Err(PyErr::new::<ValueError, _>(
+                    py,
+                    "cannot accept context and kwargs",
+                ));
+            }
+
+            if context == py.None() {
+                context_type.call(py, NoArgs, Some(kwargs))?
+            } else {
+                context
+            }
+        } else {
+            context_type.call(py, NoArgs, None)?
+        };
+
+        let mut distributions = vec![];
+
+        for resolver in discover_resolvers(py)?.iter(py) {
+            for distribution in resolver
+                .call(py, (context.clone_ref(py),), None)?
+                .iter(py)?
+            {
+                distributions.push(distribution?);
+            }
+        }
+
+        // Return an iterator for compatibility with older standard library
+        // versions.
+        Ok(PyList::new(py, &distributions)
+            .into_object()
+            .iter(py)?
+            .into_object())
     }
 
     fn read_text_impl(&self, py: Python, filename: &PyString) -> PyResult<PyObject> {

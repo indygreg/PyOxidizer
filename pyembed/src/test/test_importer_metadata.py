@@ -4,6 +4,7 @@
 
 import collections.abc
 import email.message
+
 # email.parser may be unused. However, it is needed by Rust code and some
 # sys.path mucking in tests may prevent it from being imported. So import
 # here to ensure it is cached in sys.modules so Rust can import it.
@@ -78,18 +79,22 @@ class TestImporterMetadata(unittest.TestCase):
     def test_find_distributions_context_unknown_name(self):
         f = OxidizedFinder()
 
-        dists = list(f.find_distributions(
-            importlib.metadata.DistributionFinder.Context(name="missing")
-        ))
+        dists = list(
+            f.find_distributions(
+                importlib.metadata.DistributionFinder.Context(name="missing")
+            )
+        )
         self.assertEqual(len(dists), 0)
 
     def test_find_distributions_context_name(self):
         self._write_metadata()
         f = self._finder_from_td()
 
-        dists = list(f.find_distributions(
-            importlib.metadata.DistributionFinder.Context(name="my_package")
-        ))
+        dists = list(
+            f.find_distributions(
+                importlib.metadata.DistributionFinder.Context(name="my_package")
+            )
+        )
         self.assertEqual(len(dists), 1)
         dist = dists[0]
         self.assertIsInstance(dist, OxidizedDistribution)
@@ -270,9 +275,58 @@ class TestImporterMetadata(unittest.TestCase):
         sys.meta_path = [f]
         sys.path = []
 
-        # Not yet implemented.
-        with self.assertRaises(AttributeError):
-            OxidizedDistribution.discover()
+        dists = OxidizedDistribution.discover()
+        self.assertIsInstance(dists, collections.abc.Iterator)
+        dists = list(dists)
+        self.assertEqual(len(dists), 1)
+
+        dist = dists[0]
+        self.assertEqual(dist.metadata["Name"], "my_package")
+
+    def test_distribution_discover_context_kwarg(self):
+        self._write_metadata()
+        f = self._finder_from_td()
+
+        sys.meta_path = [f]
+        sys.path = []
+
+        dists = list(
+            OxidizedDistribution.discover(
+                context=importlib.metadata.DistributionFinder.Context(name="missing")
+            )
+        )
+        self.assertEqual(len(dists), 0)
+
+        dists = list(
+            OxidizedDistribution.discover(
+                context=importlib.metadata.DistributionFinder.Context()
+            )
+        )
+        self.assertEqual(len(dists), 1)
+
+        dists = list(
+            OxidizedDistribution.discover(
+                context=importlib.metadata.DistributionFinder.Context(name="my_package")
+            )
+        )
+        self.assertEqual(len(dists), 1)
+
+    def test_distribution_discover_name_kwarg(self):
+        self._write_metadata()
+        f = self._finder_from_td()
+
+        sys.meta_path = [f]
+        sys.path = []
+
+        dists = list(OxidizedDistribution.discover(name="missing"))
+        self.assertEqual(len(dists), 0)
+
+        dists = list(OxidizedDistribution.discover(name="my_package"))
+        self.assertEqual(len(dists), 1)
+
+    def test_distribution_discover_conflicting_args(self):
+        with self.assertRaises(ValueError):
+            OxidizedDistribution.discover(context="ignored", name="ignored")
 
     def test_distribution_at(self):
         self._write_metadata()

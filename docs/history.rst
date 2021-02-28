@@ -157,8 +157,9 @@ New Features
   Code contributed by Ryan Clanton in #358.
 * The *mimalloc* and *snmalloc* memory allocators will now automatically be used
   as Rust's global allocator when configured to be used by Python.
-* The ``@classmethod`` ``OxidizedDistribution.find_name()`` is now implemented,
-  filling in a feature gap in ``importlib.metadata`` functionality.
+* The ``@classmethod``s ``OxidizedDistribution.find_name()`` and
+  ``OxidizedDistribution.discover()`` are now implemented, filling in a feature
+  gap in ``importlib.metadata`` functionality.
 
 Other Relevant Changes
 ^^^^^^^^^^^^^^^^^^^^^^
