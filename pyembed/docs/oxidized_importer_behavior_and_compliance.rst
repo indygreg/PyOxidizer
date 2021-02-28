@@ -154,7 +154,6 @@ Here are the known differences between ``OxidizedDistribution`` and
 * ``OxidizedDistribution`` is not an instance of
   ``importlib.metadata.Distribution``.
 * ``locate_file()`` is not defined.
-* ``@classmethod from_name()`` is not defined.
 * ``@classmethod discover()`` is not defined.
 * ``@staticmethod at()`` is not defined.
 * ``@property files`` raises ``NotImplementedError``.

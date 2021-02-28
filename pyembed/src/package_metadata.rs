@@ -6,17 +6,40 @@ use {
     crate::importer::ImporterState,
     cpython::{
         exc::{IOError, NotImplementedError},
-        py_class, NoArgs, ObjectProtocol, PyBytes, PyErr, PyList, PyModule, PyObject, PyResult,
-        PyString, Python, PythonObject, ToPyObject,
+        py_class, NoArgs, ObjectProtocol, PyBytes, PyDict, PyErr, PyList, PyModule, PyObject,
+        PyResult, PyString, PyType, Python, PythonObject, ToPyObject,
     },
     python_packed_resources::data::Resource,
     std::{borrow::Cow, collections::HashMap, path::Path, sync::Arc},
 };
 
+// Emulates importlib.metadata.Distribution._discover_resolvers().
+fn discover_resolvers(py: Python) -> PyResult<PyList> {
+    let sys_module = py.import("sys")?;
+    let meta_path = sys_module.get(py, "meta_path")?.cast_into::<PyList>(py)?;
+
+    let mut resolvers = vec![];
+
+    for finder in meta_path.iter(py) {
+        if let Ok(find_distributions) = finder.getattr(py, "find_distributions") {
+            if find_distributions != py.None() {
+                resolvers.push(find_distributions);
+            }
+        }
+    }
+
+    Ok(resolvers.into_py_object(py))
+}
+
 // A importlib.metadata.Distribution allowing access to package distribution data.
 py_class!(class OxidizedDistribution |py| {
     data state: Arc<ImporterState>;
     data package: String;
+
+    @classmethod
+    def from_name(cls, name: &PyString) -> PyResult<PyObject> {
+        OxidizedDistribution::from_name_impl(py, cls, name)
+    }
 
     def read_text(&self, filename: &PyString) -> PyResult<PyObject> {
         self.read_text_impl(py, filename)
@@ -44,6 +67,35 @@ py_class!(class OxidizedDistribution |py| {
 });
 
 impl OxidizedDistribution {
+    fn from_name_impl(py: Python, _cls: &PyType, name: &PyString) -> PyResult<PyObject> {
+        let importlib_metadata = py.import("importlib.metadata")?;
+        let finder = importlib_metadata.get(py, "DistributionFinder")?;
+        let context_type = finder.getattr(py, "Context")?;
+
+        for resolver in discover_resolvers(py)?.iter(py) {
+            let kwargs = PyDict::new(py);
+            kwargs.set_item(py, "name", name)?;
+            let context = context_type.call(py, NoArgs, Some(&kwargs))?;
+
+            let dists = resolver.call(py, (context,), None)?;
+
+            let mut it = dists.iter(py)?;
+
+            if let Some(dist) = it.next() {
+                let dist = dist?;
+
+                return Ok(dist);
+            }
+        }
+
+        let package_not_found_error = importlib_metadata.get(py, "PackageNotFoundError")?;
+
+        Err(PyErr::from_instance(
+            py,
+            package_not_found_error.call(py, (name,), None)?,
+        ))
+    }
+
     fn read_text_impl(&self, py: Python, filename: &PyString) -> PyResult<PyObject> {
         let state: &Arc<ImporterState> = self.state(py);
         let package: &str = self.package(py);

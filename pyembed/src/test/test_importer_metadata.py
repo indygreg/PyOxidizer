@@ -247,9 +247,17 @@ class TestImporterMetadata(unittest.TestCase):
         sys.meta_path = [f]
         sys.path = []
 
-        # Not yet implemented.
-        with self.assertRaises(AttributeError):
-            OxidizedDistribution.from_name("my_package")
+        with self.assertRaises(importlib.metadata.PackageNotFoundError):
+            OxidizedDistribution.from_name("missing")
+
+        dist = OxidizedDistribution.from_name("my_package")
+        self.assertIsInstance(dist, OxidizedDistribution)
+
+        # TODO this fails on Python 3.8.7 because importlib.metadata expects
+        # find_distributions() to return an iterator. Python 3.9 casts to
+        # list() first.
+        with self.assertRaises(TypeError):
+            importlib.metadata.metadata("my_package")
 
     def test_distribution_discover(self):
         self._write_metadata()
