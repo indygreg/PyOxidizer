@@ -66,8 +66,7 @@ class TestImporterMetadata(unittest.TestCase):
 
         dists = f.find_distributions(importlib.metadata.DistributionFinder.Context())
         self.assertIsInstance(dists, list)
-        # TODO should be 1.
-        self.assertEqual(len(dists), 0)
+        self.assertEqual(len(dists), 1)
 
     def test_find_distributions_context_unknown_name(self):
         f = OxidizedFinder()

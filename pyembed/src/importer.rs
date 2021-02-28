@@ -874,10 +874,15 @@ impl OxidizedFinder {
         let state = self.state(py);
 
         let (path, name) = if let Some(context) = context {
-            // The passed object should have `path` and `name` attributes.
+            // The passed object should have `path` and `name` attributes. But the
+            // values could be `None`, so normalize those to Rust's `None`.
             let path = context.getattr(py, "path")?;
+            let path = if path == py.None() { None } else { Some(path) };
+
             let name = context.getattr(py, "name")?;
-            (Some(path), Some(name))
+            let name = if name == py.None() { None } else { Some(name) };
+
+            (path, name)
         } else {
             // No argument = default Context = find everything.
             (None, None)

@@ -95,6 +95,11 @@ Bug Fixes
   interpreter termination (such as during failing tests) could cause the
   temporary directory to not be removed. Closes #346. Fix contributed by
   William Schwartz in #347.
+* ``OxidizedFinder.find_distributions()`` now properly handles the default/empty
+  ``Context`` instance (specifically instances where ``.name = None``).
+  Previously, ``name = None`` would filter as if ``.name = "None"``. This
+  means that all distributions should now be returned with the default/empty
+  ``Context`` instance.
 * ``OxidizedFinder.find_distributions()`` now properly filters when the
   passed ``Context``'s ``name`` attribute is set to a string. Previously,
   the ``name`` and ``path`` attributes had their order swapped in a function
