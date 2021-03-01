@@ -1040,7 +1040,7 @@ py_class!(class _PathEntryFinder |py| {
 impl _PathEntryFinder {
     // `name` is considered _visible_ in `package` if `name` is in the first
     // level of the package. The computation is purely textual. See this
-    // module's `test_path_entry_finder::test_is_visible` test.
+    // module's `test_path_entry_finder::is_visible` test.
     fn is_visible(package: &str, name: &str) -> bool {
         if package.starts_with('.') || package.ends_with('.') || package.contains("..") {
             return false;
