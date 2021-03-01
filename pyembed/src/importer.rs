@@ -944,6 +944,18 @@ impl OxidizedFinder {
     }
 
     fn path_hook_impl(&self, py: Python, path: PyObject) -> PyResult<_PathEntryFinder> {
+        // `paths` will become the return value's `path` attribute, which exists
+        // only to be passed to `self.find_spec`'s
+        // `path: Optional[Iterable[str]]` argument.
+        let paths = {
+            // `import os` is safe: sys.path_hooks is read only after
+            // importlib._bootstrap_internal has been setup, either in that module
+            // module or after initialization by PyImport_GetImporter checking
+            // for the existence of config->run_filename has been setup.
+            let os = py.import("os")?;
+            PyList::new(py, &[os.call(py, "fspath", (path.clone_ref(py),), None)?])
+        };
+
         // Compute _PathEntryFinder::package
         let pkg = {
             let current_exe = self.exe_realpath(py)?;
@@ -994,11 +1006,6 @@ impl OxidizedFinder {
                 .collect::<std::path::PathBuf>();
             _PathEntryFinder::parse_path_to_pkg(py, &tail)?
         };
-        // sys.path_hooks is only read after importlib._bootstrap_internal has
-        // been setup, either in that module or after initialization by
-        // PyImport_GetImporter checking for the existence of config->run_filename
-        // has been setup, so it's safe to import os now.
-        let paths = PyList::new(py, &[py.import("os")?.call(py, "fspath", (path,), None)?]);
         _PathEntryFinder::create_instance(py, self.as_object().clone_ref(py), paths, pkg)
     }
 }
@@ -1012,7 +1019,8 @@ py_class!(class _PathEntryFinder |py| {
     // a `TypeError` when called if `finder` is not an `OxidizedFinder`.
     data finder: PyObject;
     // A list containing a single either str or bytes, normalized from the `path`
-    // argument to `OxidizedFinder::path_hook`.
+    // argument to `OxidizedFinder::path_hook`. Used only for passing to
+    // `finder.find_spec`'s `path` argument.
     data path: PyList;
     // If the entry of `path` is `os.path.join(sys.executable, "pkg", "mod")`,
     // then `package` is `"pkg.mod"`.
