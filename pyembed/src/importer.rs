@@ -994,13 +994,12 @@ impl OxidizedFinder {
                 .collect::<std::path::PathBuf>();
             _PathEntryFinder::parse_path_to_pkg(py, &tail)?
         };
-        let finder = OxidizedFinder::create_instance(py, Arc::clone(self.state(py)))?;
         // sys.path_hooks is only read after importlib._bootstrap_internal has
         // been setup, either in that module or after initialization by
         // PyImport_GetImporter checking for the existence of config->run_filename
         // has been setup, so it's safe to import os now.
         let paths = PyList::new(py, &[py.import("os")?.call(py, "fspath", (path,), None)?]);
-        _PathEntryFinder::create_instance(py, finder.into_object(), paths, pkg)
+        _PathEntryFinder::create_instance(py, self.as_object().clone_ref(py), paths, pkg)
     }
 }
 
