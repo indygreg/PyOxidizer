@@ -1074,7 +1074,7 @@ impl _PathEntryFinder {
         fullname: &str,
         target: Option<PyModule>,
     ) -> PyResult<Option<PyObject>> {
-        if !_PathEntryFinder::is_visible(self.package(py), fullname) {
+        if !Self::is_visible(self.package(py), fullname) {
             return Ok(Some(py.None()));
         }
         self.finder(py)
@@ -1088,7 +1088,7 @@ impl _PathEntryFinder {
             py,
             Some(prefix.to_string()),
             state.optimize_level,
-            |resource| _PathEntryFinder::is_visible(self.package(py), &resource.name),
+            |resource| Self::is_visible(self.package(py), &resource.name),
         );
         // unwrap() is safe because pkgutil_modules_infos returns a PyList cast
         // into a PyObject.
