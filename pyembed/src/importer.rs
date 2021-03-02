@@ -980,36 +980,18 @@ impl OxidizedFinder {
             // path could point "inside" current_exe. If we can't canonicalize,
             // strip the last component and check again. (zipimporter does
             // somethings similar)
-            let mut abs_p = p.canonicalize();
-            // Count the number of components at the end of `path` will be in pkg
-            let mut parts: usize = 0;
-            while abs_p.is_err() {
-                p = match p.parent() {
-                    Some(parent) => {
-                        parts += 1;
-                        parent
+            if current_exe
+                != loop {
+                    match p.canonicalize() {
+                        Ok(abs_p) => break abs_p,
+                        Err(_) => p = p.parent().ok_or_else(not_exe_err)?,
                     }
-                    None => {
-                        return Err(not_exe_err());
-                    }
-                };
-                abs_p = p.canonicalize();
-            }
-            let abs_p = abs_p.unwrap();
-            if abs_p != current_exe {
+                }
+            {
                 return Err(not_exe_err());
             }
-            // Extract the part of `path` after current_exe
-            // FIXME: This takes two allocations, but it shouldn't even use one.
-            let tail = pbuf
-                .iter()
-                .rev()
-                .take(parts)
-                .collect::<std::path::PathBuf>()
-                .iter()
-                .rev()
-                .collect::<std::path::PathBuf>();
-            _PathEntryFinder::parse_path_to_pkg(py, &tail)?
+            // unwrapping is safe because we already know p is the prefix of pbuf
+            _PathEntryFinder::parse_path_to_pkg(py, pbuf.strip_prefix(p).unwrap())?
         };
         _PathEntryFinder::create_instance(py, self.as_object().clone_ref(py), paths, pkg)
     }
