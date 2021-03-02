@@ -9,6 +9,7 @@ import marshal
 import os
 from pathlib import Path
 import re
+import subprocess
 import sys
 import tempfile
 from typing import Iterable, Optional, Tuple, Union, TYPE_CHECKING
@@ -53,6 +54,17 @@ def chdir(dir: PathLike) -> Iterable[Path]:
         yield old_cwd
     finally:
         os.chdir(old_cwd)
+
+
+def link_dir(src: PathLike, dst: PathLike) -> None:
+    """Create a link named ``dst`` pointing to a directory ``src``."""
+    if not os.path.isdir(src):
+        raise ValueError(f"src is not a directory: {src}")
+    if sys.platform != 'win32':
+        return os.symlink(src, dst)
+    subprocess.run(
+        ['mklink', '/J', os.fsdecode(dst), os.fsdecode(src)],
+        check=True, shell=True, capture_output=True)
 
 
 class TestImporterPathEntryFinder(unittest.TestCase):
@@ -133,6 +145,12 @@ class TestImporterPathEntryFinder(unittest.TestCase):
 
     def test_find_spec_nested_abs_pathlike(self):
         self.assert_find_spec_nested(Path(sys.executable, "on"))
+
+    def test_find_spec_nested_link(self):
+        with tempfile.TemporaryDirectory(prefix="oxidized_importer-test-") as td:
+            dst = os.path.join(td, "origin", os.path.basename(sys.executable))
+            link_dir(os.path.dirname(sys.executable), os.path.dirname(dst))
+            self.assert_find_spec_nested(os.path.join(dst, "on"))
 
     def test_find_spec_nested_rel_bytes(self):
         exe = Path(sys.executable)
