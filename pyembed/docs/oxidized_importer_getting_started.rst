@@ -30,11 +30,11 @@ To build from source, obtain a clone of PyOxidizer's Git repository and
 run the ``setup.py`` script or use ``pip`` to build the Python project in
 the root of the repository. e.g.::
 
-   $ python3.8 setup.py build_ext -i
-   $ python3.8 setup.py install
+   $ python3.9 setup.py build_ext -i
+   $ python3.9 setup.py install
 
-   $ pip3.8 install .
-   $ pip3.8 wheel .
+   $ pip3.9 install .
+   $ pip3.9 wheel .
 
 The ``setup.py`` is pretty minimal and is a thin wrapper around ``cargo build``
 for the underlying Rust project. If you want to build using Rust's standard
@@ -43,11 +43,11 @@ toolchain, do something like the following::
    $ cd oxidized-importer
    $ cargo build --release
 
-If you don't have a Python 3.8 ``python3`` executable in your ``PATH``, you
+If you don't have a Python 3.9 ``python3`` executable in your ``PATH``, you
 will need to tell the Rust build system which ``python3`` executable to use to
 help derive the build configuration for the Python extension::
 
-   $ PYTHON_SYS_EXECUTABLE=/path/to/python3.8 cargo build
+   $ PYTHON_SYS_EXECUTABLE=/path/to/python3.9 cargo build
 
 Using
 =====

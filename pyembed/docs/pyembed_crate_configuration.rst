@@ -148,5 +148,5 @@ existing Python library already on your system (this is effectively
 what ``build-mode-default`` does). So a minimal ``cargo_metadata.txt``
 might look something like this:
 
-   cargo:rustc-link-lib=pythonXY:python3.8
+   cargo:rustc-link-lib=pythonXY:python3.9
    cargo:rustc-link-search=native=/path/to/directory/containing/python/library

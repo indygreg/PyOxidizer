@@ -357,10 +357,10 @@ mod tests {
     }
 
     #[test]
-    fn test_add_python_executable_39() -> Result<()> {
+    fn test_add_python_executable_38() -> Result<()> {
         let mut env = test_evaluation_context_builder()?.into_context()?;
 
-        env.eval("dist = default_python_distribution(python_version='3.9')")?;
+        env.eval("dist = default_python_distribution(python_version='3.8')")?;
         env.eval("exe = dist.to_python_executable('testapp')")?;
 
         let m = Value::new(FileManifestValue {

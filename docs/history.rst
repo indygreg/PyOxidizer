@@ -34,6 +34,11 @@ Not yet released.
 Backwards Compatibility Notes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+* The default Python distribution is now CPython 3.9 instead of 3.8. To use
+  3.8, pass the ``python_version="3.8"`` argument to
+  :ref:`config_default_python_distribution` in your configuration file. We
+  don't anticipate dropping support for 3.8 any time soon. However, this may
+  be necessary in order to more easily support new Python features.
 * The minimum Rust version has been changed from 1.41 to 1.45 to facilitate
   the use of procedural macros.
 * The ``pyembed::MainPythonInterpreter::run_as_main()`` method has been renamed

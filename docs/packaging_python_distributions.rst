@@ -66,9 +66,8 @@ Python Version Compatibility
 
 PyOxidizer is capable of working with Python 3.8 and 3.9.
 
-Python 3.8 is the default Python version because it has been around
-for a while and is relatively stable. Once Python 3.9 matures, it
-will eventually become the default Python version.
+Python 3.9 is the default Python version because it has been around
+for a while and is relatively stable.
 
 PyOxidizer's tests are run primarily against the default Python
 version. So adopting a non-default version may risk running into
@@ -79,9 +78,9 @@ subtle bugs.
 Choosing a Python Distribution
 ==============================
 
-The Python 3.8 distributions are the default and are better tested
-than the Python 3.9 distributions. If you care about stability,
-you should use 3.8.
+The Python 3.9 distributions are the default and are better tested
+than the Python 3.8 distributions. 3.8 was the default in previous
+releases and is known to work.
 
 The ``standalone_dynamic`` distributions behave much more similarly
 to traditional Python build configurations than do their

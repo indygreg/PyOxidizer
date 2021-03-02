@@ -42,7 +42,7 @@ The following named arguments are accepted:
 
    Supported values are ``3.8`` and ``3.9``.
 
-   Defaults to ``3.8``.
+   Defaults to ``3.9``.
 
 ``flavor`` is a string denoting the distribution *flavor*. Values can be one
 of the following:

@@ -62,15 +62,15 @@ it needs to exchange state with PyOxidizer, its build configuration is...
 The ``pyembed`` crate defines various *features* to control how it is built.
 See :ref:`pyembed_crate_configuration` for details.
 
-In its default configuration, a Python 3.8 executable needs to be found on
+In its default configuration, a Python 3.9 executable needs to be found on
 ``PATH``. If said executable can't be found, you'll get a
 ``No python interpreter found of version 3.*`` error at build time.
 
-To work around this, add a ``python3.8`` or ``python3`` executable to
+To work around this, add a ``python3.9`` or ``python3`` executable to
 ``PATH`` or run ``cargo build`` with the ``PYTHON_SYS_EXECUTABLE`` environment
 variable pointing to a specific Python 3 executable. e.g.
 
-    $ PYTHON_SYS_EXECUTABLE=/path/to/python3.8 cargo build -p pyembed
+    $ PYTHON_SYS_EXECUTABLE=/path/to/python3.9 cargo build -p pyembed
 
 ``oxidized-importer`` Crate
 ===========================
