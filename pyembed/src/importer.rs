@@ -919,28 +919,33 @@ impl OxidizedFinder {
     // Even `std::env::current_exe()` can fail to `fs::canonicalize()` if, e.g.,
     // the file is deleted after the program starts.
     fn exe_realpath(&self, py: Python) -> PyResult<std::path::PathBuf> {
-        let current_exe = &self.state(py).get_resources_state().current_exe;
-        current_exe.canonicalize().map_err(|err| {
-            let exe = current_exe.display();
+        fn os_error(py: Python, err: std::io::Error, exe: std::path::Display) -> PyErr {
             // Use a Python expression instead of PyErr::new to ensure we get the
             // right OSError subclass.
-            let strerror = format!("cannot open current executable: '{}'", exe);
-            let raw_os_error = err
-                .raw_os_error()
-                .map_or_else(|| "None".to_string(), |err_code| err_code.to_string());
-            let code = if cfg!(windows) {
-                format!(
-                    "OSError(None, r\"{}\", r\"{}\", {})",
-                    strerror, exe, raw_os_error
-                )
-            } else {
-                format!("OSError({}, r\"{}\", r\"{}\")", raw_os_error, strerror, exe)
+            let locals = PyDict::new(py);
+            if let Err(e) = locals.set_item(py, "strerror", "cannot open current executable") {
+                return e;
             };
-            py.eval(&code, None, None).map_or_else(
+            if let Err(e) = locals.set_item(py, "exe", format!("{}", exe)) {
+                return e;
+            };
+            if let Err(e) = locals.set_item(py, "raw_os_error", err.raw_os_error()) {
+                return e;
+            };
+            let code = if cfg!(windows) {
+                "OSError(None, strerror, exe, raw_os_error)"
+            } else {
+                "OSError(raw_os_error, strerror, exe)"
+            };
+            py.eval(&code, None, Some(&locals)).map_or_else(
                 |err_creating_exc| err_creating_exc,
                 |exc| PyErr::from_instance(py, exc),
             )
-        })
+        }
+        let current_exe = &self.state(py).get_resources_state().current_exe;
+        current_exe
+            .canonicalize()
+            .map_err(|err| os_error(py, err, current_exe.display()))
     }
 
     fn path_hook_impl(&self, py: Python, path: PyObject) -> PyResult<_PathEntryFinder> {
@@ -1819,12 +1824,12 @@ mod test_path_entry_finder {
     /// canonicalized. The OSError returns the right exception subclass.
     #[test]
     fn bad_current_exe() {
-        let exe: std::path::PathBuf = "/../a/../foo.txt".into();
+        let exe: std::path::PathBuf = r#"/../a"/../foo.txt\"#.into();
         assert_eq!(
             exe.canonicalize().unwrap_err().kind(),
             std::io::ErrorKind::NotFound
         );
-        let exc = {
+        let (s, ty) = {
             let mut interp = get_py(None);
             let py = interp.acquire_gil();
             let finder = oxidized_finder_new(py, None).unwrap();
@@ -1833,11 +1838,22 @@ mod test_path_entry_finder {
                 .exe_realpath(py)
                 .expect_err("canonicalize unexpectedly succeeded")
                 .instance(py);
-            format!("{:?}", exc)
+            use cpython::ObjectProtocol;
+            let s = exc.str(py).unwrap().to_string(py).unwrap().into_owned();
+            exc.cast_as::<cpython::exc::OSError>(py).unwrap();
+            let ty = exc
+                .getattr(py, "__class__")
+                .unwrap()
+                .getattr(py, "__name__")
+                .unwrap()
+                .extract::<String>(py)
+                .unwrap();
+            (s, ty)
         };
         assert_eq!(
-            exc,
-            "FileNotFoundError(2, \"cannot open current executable: '/../a/../foo.txt'\")"
+            s,
+            r#"[Errno 2] cannot open current executable: '/../a"/../foo.txt\\'"#
         );
+        assert_eq!(ty, "FileNotFoundError");
     }
 }
