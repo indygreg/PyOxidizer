@@ -1098,37 +1098,33 @@ impl _PathEntryFinder {
     // Transform b"pkg/mod" into "pkg.mod" on behalf of `OxidizedFinder::path_hook`.
     // Raise an `ImportError` if decoding `path` fails.
     fn parse_path_to_pkg(py: Python, path: &std::path::Path) -> PyResult<String> {
-        let mut pkg = Vec::new();
-        for part in path.iter() {
-            pkg.push(
-                // Use Python's filesystem encoding to ensure correctly
-                // round-tripping the str Python package name from the
-                // potentially non-Unicode path.
-                // https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/V1_chap03.html#tag_03_170
-                // https://docs.microsoft.com/en-us/windows/win32/fileio/naming-a-file
-                crate::conversion::path_to_pyobject(py, std::path::Path::new(part))?
-                    .cast_as::<PyString>(py)?
-                    .to_string(py)
-                    .map_err(|mut unicode_err| {
-                        // Need to raise an ImportError if can't decode. For
-                        // clarity, we also attach the UnicodeDecodeError.
-                        // https://docs.python.org/3/reference/import.html#path-entry-finders
-                        let mut imp_err = PyErr::new::<ImportError, _>(py, "cannot decode path");
-                        let imp_exc = imp_err.instance(py);
-                        if let Err(err) = imp_exc.setattr(py, "__suppress_context__", true) {
-                            err
-                        } else if let Err(err) =
-                            imp_exc.setattr(py, "__cause__", unicode_err.instance(py))
-                        {
-                            err
-                        } else {
-                            imp_err
-                        }
-                    })?
-                    .into_owned(),
-            );
-        }
-        Ok(pkg.join("."))
+        // Use Python's filesystem encoding to ensure correctly
+        // round-tripping the str Python package name from the
+        // potentially non-Unicode path.
+        // https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/V1_chap03.html#tag_03_170
+        // https://docs.microsoft.com/en-us/windows/win32/fileio/naming-a-file
+        let pkg = crate::conversion::path_to_pyobject(py, path)?
+            .cast_as::<PyString>(py)?
+            .to_string(py)
+            .map_err(|mut unicode_err| {
+                // Need to raise an ImportError if can't decode. For
+                // clarity, we also attach the UnicodeDecodeError.
+                // https://docs.python.org/3/reference/import.html#path-entry-finders
+                let mut imp_err = PyErr::new::<ImportError, _>(py, "cannot decode path");
+                let imp_exc = imp_err.instance(py);
+                if let Err(err) = imp_exc.setattr(py, "__suppress_context__", true) {
+                    err
+                } else if let Err(err) = imp_exc.setattr(py, "__cause__", unicode_err.instance(py))
+                {
+                    err
+                } else {
+                    imp_err
+                }
+            })?
+            .replace("/", ".");
+        #[cfg(windows)]
+        let pkg = pkg.replace("\\", ".");
+        Ok(pkg)
     }
 }
 
