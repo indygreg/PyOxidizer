@@ -547,7 +547,7 @@ mod tests {
                 &*target_dist,
                 &policy,
                 false,
-                &["numpy==1.19.4".to_string()],
+                &["numpy==1.20.1".to_string()],
             )?;
 
             assert!(!resources.is_empty());
