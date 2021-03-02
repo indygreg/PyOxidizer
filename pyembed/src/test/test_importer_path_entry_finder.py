@@ -22,6 +22,9 @@ if TYPE_CHECKING:
     from importlib.machinery import ModuleSpec
 
 
+PathLike = Union[str, bytes, os.PathLike]
+
+
 def make_finder(*modules: Tuple[str, str, bool]) -> OxidizedFinder:
     """Create an ``OxidizedFinder`` with modules defined by ``modules``.
 
@@ -42,7 +45,7 @@ def make_finder(*modules: Tuple[str, str, bool]) -> OxidizedFinder:
 
 
 @contextmanager
-def chdir(dir: Union[str, bytes, os.PathLike]) -> Iterable[Path]:
+def chdir(dir: PathLike) -> Iterable[Path]:
     "Change the current directory to ``dir``, yielding the previous one."
     old_cwd = Path.cwd()
     try:
@@ -54,11 +57,7 @@ def chdir(dir: Union[str, bytes, os.PathLike]) -> Iterable[Path]:
 
 class TestImporterPathEntryFinder(unittest.TestCase):
 
-    def finder(
-        self,
-        path: Union[str, bytes, os.PathLike],
-        package: str,
-    ) -> importlib.abc.PathEntryFinder:
+    def finder(self, path: PathLike, package: str) -> importlib.abc.PathEntryFinder:
         """Add the following package hierarchy to the returned finder:
 
         - ``a`` imports ``a.b`` imports ``a.b.c``
@@ -109,7 +108,7 @@ class TestImporterPathEntryFinder(unittest.TestCase):
             self.assertIsNone(spec.submodule_search_locations, spec)
             self.assertEqual(spec.parent, name.rpartition(".")[0], spec)
 
-    def assert_find_spec_nested(self, path: Union[str, bytes, os.PathLike]) -> None:
+    def assert_find_spec_nested(self, path: PathLike) -> None:
         finder = self.finder(path, "on")
         # Return None for modules outside the search path, even if their names
         # are prefixed by the path.
@@ -140,7 +139,7 @@ class TestImporterPathEntryFinder(unittest.TestCase):
         with chdir(exe.parent):
             self.assert_find_spec_nested(bytes(Path("..", exe.parent.name, exe.name, "on")))
 
-    def assert_find_spec_top_level(self, path: Union[str, bytes, os.PathLike]) -> None:
+    def assert_find_spec_top_level(self, path: PathLike) -> None:
         finder = self.finder(path, "")
         modules = [("a", True), ("one", True), ("on", True)]
         self.assertCountEqual(finder.iter_modules(), modules)
@@ -160,7 +159,7 @@ class TestImporterPathEntryFinder(unittest.TestCase):
         with chdir(exe.parent):
             self.assert_find_spec_top_level(exe.name)
 
-    def assert_unicode_path(self, path: Union[str, bytes, os.PathLike]) -> None:
+    def assert_unicode_path(self, path: PathLike) -> None:
         finder = self.finder(path, "on.tשo")
         self.assert_spec(finder.find_spec("on.tשo.۳"), "on.tשo.۳", is_pkg=False)
         self.assertCountEqual(finder.iter_modules(), [("۳", False)])
