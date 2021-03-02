@@ -447,13 +447,13 @@ mod tests {
                 &*target_dist,
                 &policy,
                 false,
-                &["zstandard==0.14.1".to_string()],
+                &["zstandard==0.15.2".to_string()],
             )?;
 
             assert!(!resources.is_empty());
             let zstandard_resources = resources
                 .iter()
-                .filter(|r| r.is_in_packages(&["zstandard".to_string(), "zstd".to_string()]))
+                .filter(|r| r.is_in_packages(&["zstandard".to_string()]))
                 .collect::<Vec<_>>();
             assert!(!zstandard_resources.is_empty());
 
@@ -462,21 +462,38 @@ mod tests {
                 .map(|r| r.full_name())
                 .collect::<BTreeSet<_>>();
 
+            let mut expected_names = [
+                "zstandard",
+                "zstandard.__init__.pyi",
+                "zstandard.backend_c",
+                "zstandard.backend_cffi",
+                "zstandard.py.typed",
+                "zstandard:LICENSE",
+                "zstandard:METADATA",
+                "zstandard:RECORD",
+                "zstandard:WHEEL",
+                "zstandard:top_level.txt",
+            ]
+            .iter()
+            .map(|x| x.to_string())
+            .collect::<BTreeSet<String>>();
+
+            let mut expected_extensions_count = 1;
+            let mut expected_first_extension_name = "zstandard.backend_c";
+
+            if matches!(
+                target_dist.target_triple.as_str(),
+                "i686-pc-windows-msvc" | "x86_64-pc-windows-msvc"
+            ) {
+                expected_names.insert("zstandard._cffi".to_string());
+                expected_extensions_count = 2;
+                expected_first_extension_name = "zstandard._cffi";
+            }
+
             assert_eq!(
-                full_names,
-                [
-                    "zstandard",
-                    "zstandard.cffi",
-                    "zstandard:LICENSE",
-                    "zstandard:METADATA",
-                    "zstandard:RECORD",
-                    "zstandard:WHEEL",
-                    "zstandard:top_level.txt",
-                    "zstd"
-                ]
-                .iter()
-                .map(|x| x.to_string())
-                .collect()
+                full_names, expected_names,
+                "target triple: {}",
+                target_dist.target_triple
             );
 
             let extensions = zstandard_resources
@@ -487,9 +504,14 @@ mod tests {
                 })
                 .collect::<Vec<_>>();
 
-            assert_eq!(extensions.len(), 1);
+            assert_eq!(
+                extensions.len(),
+                expected_extensions_count,
+                "target triple: {}",
+                target_dist.target_triple
+            );
             let em = extensions[0];
-            assert_eq!(em.name, "zstd");
+            assert_eq!(em.name, expected_first_extension_name);
             assert!(em.shared_library.is_some());
         }
 
