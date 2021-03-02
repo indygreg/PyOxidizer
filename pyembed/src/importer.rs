@@ -1784,9 +1784,6 @@ mod test_path_entry_finder {
     /// ensure we get "\u3030" back out.
     #[test]
     fn parse_path_to_pkg_filesystem_encoding() {
-        // Obtain a Python interpreter with filesystem encoding set to UTF-16-LE
-        let mut interp = get_py(Some("UTF-16-LE"));
-        let py = interp.acquire_gil();
         // Verify assumptions about the test itself.
         const WAVY_DASH: &str = "〰";
         const WAVY_DASH_CODE: u16 = 0x3030;
@@ -1798,43 +1795,48 @@ mod test_path_entry_finder {
         assert_eq!(WAVY_DASH_CODE.to_be_bytes(), [48, 48]); // endianness
         assert_eq!(WAVY_DASH_CODE.to_le_bytes(), [48, 48]); // doesn't matter
         assert_eq!(std::str::from_utf8(&[48, 48]).unwrap(), "00");
-        assert_eq!(
-            py.import("sys")
-                .unwrap()
-                .call(py, "getfilesystemencoding", cpython::NoArgs, None)
-                .unwrap()
-                .to_string(),
-            "utf-16-le"
-        );
+
+        let wavy_dash = {
+            // Obtain a Python interpreter with filesystem encoding set to UTF-16-LE
+            let mut interp = get_py(Some("UTF-16-LE"));
+            let py = interp.acquire_gil();
+            assert_eq!(
+                py.import("sys")
+                    .unwrap()
+                    .call(py, "getfilesystemencoding", cpython::NoArgs, None)
+                    .unwrap()
+                    .to_string(),
+                "utf-16-le"
+            );
+            _PathEntryFinder::parse_path_to_pkg(py, std::path::Path::new("00")).unwrap()
+        };
 
         // The actual test.
-        assert_eq!(
-            _PathEntryFinder::parse_path_to_pkg(py, std::path::Path::new("00")).unwrap(),
-            WAVY_DASH
-        );
+        assert_eq!(wavy_dash, WAVY_DASH);
     }
 
     /// OxidizedFinder::path_hook raises an OSError if current_exe cannot be
     /// canonicalized. The OSError returns the right exception subclass.
     #[test]
     fn bad_current_exe() {
-        let mut interp = get_py(None);
-        let py = interp.acquire_gil();
-
         let exe: std::path::PathBuf = "/../a/../foo.txt".into();
         assert_eq!(
             exe.canonicalize().unwrap_err().kind(),
             std::io::ErrorKind::NotFound
         );
-
-        let finder = oxidized_finder_new(py, None).unwrap();
-        finder.state(py).get_resources_state_mut().current_exe = exe;
-        let exc = finder
-            .exe_realpath(py)
-            .expect_err("canonicalize unexpectedly succeeded")
-            .instance(py);
+        let exc = {
+            let mut interp = get_py(None);
+            let py = interp.acquire_gil();
+            let finder = oxidized_finder_new(py, None).unwrap();
+            finder.state(py).get_resources_state_mut().current_exe = exe;
+            let exc = finder
+                .exe_realpath(py)
+                .expect_err("canonicalize unexpectedly succeeded")
+                .instance(py);
+            format!("{:?}", exc)
+        };
         assert_eq!(
-            format!("{:?}", exc),
+            exc,
             "FileNotFoundError(2, \"cannot open current executable: '/../a/../foo.txt'\")"
         );
     }
