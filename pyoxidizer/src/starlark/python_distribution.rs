@@ -502,6 +502,8 @@ mod tests {
     }
 
     #[test]
+    // Python 3.8 not supported on aarch64.
+    #[cfg(not(target_arch = "aarch64"))]
     fn test_default_python_distribution_python_38() -> Result<()> {
         let mut env = test_evaluation_context_builder()?.into_context()?;
 

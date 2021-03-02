@@ -93,7 +93,7 @@ pub static LINUX_TARGET_TRIPLES: Lazy<Vec<&'static str>> =
 
 /// Target triples for macOS.
 pub static MACOS_TARGET_TRIPLES: Lazy<Vec<&'static str>> =
-    Lazy::new(|| vec!["x86_64-apple-darwin"]);
+    Lazy::new(|| vec!["aarch64-apple-darwin", "x86_64-apple-darwin"]);
 
 /// Target triples for Windows.
 pub static WINDOWS_TARGET_TRIPLES: Lazy<Vec<&'static str>> = Lazy::new(|| {

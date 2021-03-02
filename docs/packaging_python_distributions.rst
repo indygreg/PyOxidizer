@@ -50,6 +50,8 @@ Here are the built-in Python distributions:
 +---------+---------+--------------------+---------------------------+
 | CPython |   3.9.2 | standalone_static  | x86_64-pc-windows-msvc    |
 +---------+---------+--------------------+---------------------------+
+| CPython |   3.9.2 | standalone_dynamic | aarch64-apple-darwin      |
++---------+---------+--------------------+---------------------------+
 | CPython |   3.8.8 | standalone_dynamic | x86_64-apple-darwin       |
 +---------+---------+--------------------+---------------------------+
 | CPython |   3.9.2 | standalone_dynamic | x86_64-apple-darwin       |
@@ -58,6 +60,23 @@ Here are the built-in Python distributions:
 All of these distributions are provided by the
 `python-build-standalone <https://github.com/indygreg/python-build-standalone>`_,
 and are maintained by the maintainer of PyOxidizer.
+
+Here is what those target triple values translate to:
+
+``aarch64-apple-darwin``
+   64-bit ARM compiled for macOS.
+``i686-pc-windows-msvc``
+   32-bit Windows using the Microsoft Visual C++ Compiler.
+``x86-64-pc-windows-msvc``
+   64-bit Windows using the Microsoft Visual C++ Compiler.
+``x86_64-apple-darwin``
+   64-bit Intel processors compiled for macOS.
+``x86_64-pc-unknown-linux-gnu``
+   64-bit x86 (typically Intel or AMD) targeting Linux, with a dependency on
+   GNU libc (glibc / ``libc.so``).
+``x86_64-pc-unknown-linux-musl``
+   64-bit x86 (typically Intel or AMD) targeting Linux using musl libc.
+   (Musl libc uses static linking for libc, unlike glibc.)
 
 .. _packaging_python_version_compatibility:
 
@@ -121,6 +140,27 @@ run on nearly every system for the platform they target. This means:
   Base Core Configuration and should be present on all conforming Linux
   distros. On macOS, referenced dylibs include ``libSystem``, which is part
   of the macOS core install.
-* On macOS, distributions are compiled with ``MACOSX_DEPLOYMENT_TARGET=10.9``
-  so they only used SDK features present on macOS >=10.9, enabling them to
-  run on sufficiently old macOS versions.
+* On macOS, x86_64 (read: Intel CPUs) distributions are built so that they should
+  run on macOS >= 10.9 and aarch64 (read: Apple/ARM CPUs) distributions should run
+  on macOS >= 11.0 (the first version of macOS to support ARM CPUs).
+
+.. _packaging_python_distribution_knowns_issues:
+
+Known Issues with Distributions
+===============================
+
+There are various known issues with various distributions. The
+python-build-standalone project documentation at
+https://python-build-standalone.readthedocs.io/en/latest/ attempts to capture
+many of them.
+
+PyOxidizer contains workaround for many of the limitations. For example,
+PyOxidizer (specifically the ``pyembed`` Rust crate) can automatically
+configure the terminfo database at run-time.
+
+The ``aarch64-apple-darwin`` Python distributions are considered beta quality
+because PyOxidizer does not have continuous CI coverage for this architecture.
+Releases should be tested before they are released. But there may be
+undetected breakage on unreleased commits on the ``main`` branch due to
+lack of CI coverage. This limitation should go away once GitHub Actions
+supports running jobs on M1 hardware.

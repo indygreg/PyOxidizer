@@ -541,14 +541,22 @@ mod tests {
             policy.set_file_scanner_emit_files(true);
             policy.set_file_scanner_classify_files(true);
 
-            let resources = pip_download(
+            let res = pip_download(
                 &logger,
                 &*host_dist,
                 &*target_dist,
                 &policy,
                 false,
                 &["numpy==1.20.1".to_string()],
-            )?;
+            );
+
+            // numpy doesn't yet publish a macOS ARM wheel.
+            if target_dist.target_triple == "aarch64-apple-darwin" {
+                assert!(res.is_err());
+                continue;
+            }
+
+            let resources = res?;
 
             assert!(!resources.is_empty());
 

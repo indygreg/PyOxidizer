@@ -188,6 +188,15 @@ pub static PYTHON_DISTRIBUTIONS: Lazy<PythonDistributionCollection> = Lazy::new(
 
 		// macOS.
 		PythonDistributionRecord {
+			python_major_minor_version: "3.9".to_string(),
+			location: PythonDistributionLocation::Url {
+				url: "https://github.com/indygreg/python-build-standalone/releases/download/20210228/cpython-3.9.2-aarch64-apple-darwin-pgo-20210228T1503.tar.zst".to_string(),
+				sha256: "192b981874c95f79c294521bcb344066a97f534768b547563852e4d8df738358".to_string(),
+			},
+			target_triple: "aarch64-apple-darwin".to_string(),
+			supports_prebuilt_extension_modules: true,
+		},
+		PythonDistributionRecord {
 			python_major_minor_version: "3.8".to_string(),
 			location: PythonDistributionLocation::Url {
 				url: "https://github.com/indygreg/python-build-standalone/releases/download/20210228/cpython-3.8.8-x86_64-apple-darwin-pgo-20210228T1503.tar.zst".to_string(),
@@ -221,6 +230,7 @@ mod tests {
                 .all_target_triples()
                 .collect::<Vec<_>>(),
             vec![
+                "aarch64-apple-darwin",
                 "i686-pc-windows-msvc",
                 "x86_64-apple-darwin",
                 "x86_64-pc-windows-msvc",

@@ -1063,6 +1063,7 @@ impl PythonDistribution for StandaloneDistribution {
                 "x86_64-unknown-linux-gnu" => vec![],
                 // musl libc linked distributions run on GNU Linux.
                 "x86_64-unknown-linux-musl" => vec!["x86_64-unknown-linux-gnu"],
+                "aarch64-apple-darwin" => vec![],
                 "x86_64-apple-darwin" => vec![],
                 // 32-bit Windows GNU on 32-bit Windows MSVC and 64-bit Windows.
                 "i686-pc-windows-gnu" => vec![
@@ -1147,6 +1148,7 @@ impl PythonDistribution for StandaloneDistribution {
             "linux-x86_64" => "manylinux2014_x86_64",
             "linux-i686" => "manylinux2014_i686",
             "macosx-10.9-x86_64" => "macosx_10_9_x86_64",
+            "macosx-11.0-arm64" => "macosx_11_0_arm64",
             "win-amd64" => "win_amd64",
             "win32" => "win32",
             p => panic!("unsupported Python platform: {}", p),
@@ -1474,6 +1476,7 @@ pub mod tests {
                 (_, "x86_64-unknown-linux-musl") => (linux_dropped.clone(), linux_added.clone()),
                 (_, "i686-pc-windows-msvc") => (vec![], vec![]),
                 (_, "x86_64-pc-windows-msvc") => (vec![], vec![]),
+                (_, "aarch64-apple-darwin") => (vec![], vec![]),
                 (_, "x86_64-apple-darwin") => (vec![], vec![]),
                 _ => (vec![], vec![]),
             };

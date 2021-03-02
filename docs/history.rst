@@ -118,6 +118,10 @@ Bug Fixes
 New Features
 ^^^^^^^^^^^^
 
+* Support added for ``aarch64-apple-darwin`` (Apple M1 machines). Only Python
+  3.9 is supported on this architecture. Because we do not have CI coverage
+  for this architecture (due to GitHub Actions not yet having M1 machines),
+  support is considered beta quality at this time.
 * The ``FileManifest`` Starlark type now exposes an ``add_path()`` to add a
   single file to the manifest.
 * The ``PythonExecutable`` Starlark type now exposes a ``to_file_manifest()`` to

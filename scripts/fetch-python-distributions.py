@@ -122,6 +122,7 @@ def main():
         ENTRY.format(**records["3.9-x86_64-pc-windows-msvc-static-noopt"]),
         "",
         "// macOS.",
+        ENTRY.format(**records["3.9-aarch64-apple-darwin-pgo"]),
         ENTRY.format(**records["3.8-x86_64-apple-darwin-pgo"]),
         ENTRY.format(**records["3.9-x86_64-apple-darwin-pgo"]),
     ]
