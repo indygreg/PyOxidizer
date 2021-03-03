@@ -1143,7 +1143,7 @@ pub mod tests {
     fn assert_extension_builtin(
         builder: &StandalonePythonExecutableBuilder,
         extension: &PythonExtensionModule,
-    ) -> Result<()> {
+    ) {
         assert_eq!(
             builder.iter_resources().find_map(|(name, r)| {
                 if *name == extension.name {
@@ -1177,15 +1177,13 @@ pub mod tests {
             "build context for extension module {} is present",
             extension.name
         );
-
-        Ok(())
     }
 
     fn assert_extension_shared_library(
         builder: &StandalonePythonExecutableBuilder,
         extension: &PythonExtensionModule,
         location: ConcreteResourceLocation,
-    ) -> Result<()> {
+    ) {
         let mut entry = PrePackagedResource {
             is_extension_module: true,
             name: extension.name.clone(),
@@ -1226,8 +1224,6 @@ pub mod tests {
         // This could change if we ever link shared library extension modules from
         // object files.
         assert_eq!(builder.extension_build_contexts.get(&extension.name), None);
-
-        Ok(())
     }
 
     fn licensed_components_from_extension(ext: &PythonExtensionModule) -> LicensedComponents {
@@ -1438,7 +1434,7 @@ pub mod tests {
             match libpython_link_mode {
                 BinaryLibpythonLinkMode::Static => {
                     assert!(res.is_ok());
-                    assert_extension_builtin(&builder, &EXTENSION_MODULE_OBJECT_FILES_ONLY)?;
+                    assert_extension_builtin(&builder, &EXTENSION_MODULE_OBJECT_FILES_ONLY);
                 }
                 BinaryLibpythonLinkMode::Dynamic => {
                     assert!(res.is_err());
@@ -1459,7 +1455,7 @@ pub mod tests {
                     assert_extension_builtin(
                         &builder,
                         &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES,
-                    )?;
+                    );
                 }
                 BinaryLibpythonLinkMode::Dynamic => {
                     assert!(res.is_err());
@@ -1498,14 +1494,14 @@ pub mod tests {
                 &builder,
                 &EXTENSION_MODULE_SHARED_LIBRARY_ONLY,
                 ConcreteResourceLocation::RelativePath("prefix_policy".to_string()),
-            )?;
+            );
 
             let res =
                 builder.add_python_extension_module(&EXTENSION_MODULE_OBJECT_FILES_ONLY, None);
             match libpython_link_mode {
                 BinaryLibpythonLinkMode::Static => {
                     assert!(res.is_ok());
-                    assert_extension_builtin(&builder, &EXTENSION_MODULE_OBJECT_FILES_ONLY)?;
+                    assert_extension_builtin(&builder, &EXTENSION_MODULE_OBJECT_FILES_ONLY);
                 }
                 BinaryLibpythonLinkMode::Dynamic => {
                     assert!(res.is_err());
@@ -1528,14 +1524,14 @@ pub mod tests {
                     assert_extension_builtin(
                         &builder,
                         &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES,
-                    )?;
+                    );
                 }
                 BinaryLibpythonLinkMode::Dynamic => {
                     assert_extension_shared_library(
                         &builder,
                         &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES,
                         ConcreteResourceLocation::RelativePath("prefix_policy".to_string()),
-                    )?;
+                    );
                 }
                 BinaryLibpythonLinkMode::Default => {
                     panic!("should not get here");
@@ -1629,14 +1625,14 @@ pub mod tests {
                 &builder,
                 &EXTENSION_MODULE_SHARED_LIBRARY_ONLY,
                 ConcreteResourceLocation::RelativePath("prefix_policy".to_string()),
-            )?;
+            );
 
             let res =
                 builder.add_python_extension_module(&EXTENSION_MODULE_OBJECT_FILES_ONLY, None);
             match libpython_link_mode {
                 BinaryLibpythonLinkMode::Static => {
                     assert!(res.is_ok());
-                    assert_extension_builtin(&builder, &EXTENSION_MODULE_OBJECT_FILES_ONLY)?;
+                    assert_extension_builtin(&builder, &EXTENSION_MODULE_OBJECT_FILES_ONLY);
                 }
                 BinaryLibpythonLinkMode::Dynamic => {
                     assert!(res.is_err());
@@ -1655,14 +1651,14 @@ pub mod tests {
                 &builder,
                 &EXTENSION_MODULE_SHARED_LIBRARY_ONLY,
                 ConcreteResourceLocation::RelativePath("prefix_policy".to_string()),
-            )?;
+            );
         }
 
         Ok(())
     }
 
     #[test]
-    fn test_linux_musl_distribution_dynamic() -> Result<()> {
+    fn test_linux_musl_distribution_dynamic() {
         let options = StandalonePythonExecutableBuilderOptions {
             target_triple: "x86_64-unknown-linux-musl".to_string(),
             extension_module_filter: Some(ExtensionModuleFilter::Minimal),
@@ -1677,8 +1673,6 @@ pub mod tests {
             err.unwrap().to_string(),
             "Python distribution does not support dynamically linking libpython"
         );
-
-        Ok(())
     }
 
     #[test]
@@ -1837,11 +1831,11 @@ pub mod tests {
         );
 
         builder.add_python_extension_module(&EXTENSION_MODULE_OBJECT_FILES_ONLY, None)?;
-        assert_extension_builtin(&builder, &EXTENSION_MODULE_OBJECT_FILES_ONLY)?;
+        assert_extension_builtin(&builder, &EXTENSION_MODULE_OBJECT_FILES_ONLY);
 
         builder
             .add_python_extension_module(&EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES, None)?;
-        assert_extension_builtin(&builder, &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES)?;
+        assert_extension_builtin(&builder, &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES);
 
         Ok(())
     }
@@ -1869,11 +1863,11 @@ pub mod tests {
         );
 
         builder.add_python_extension_module(&EXTENSION_MODULE_OBJECT_FILES_ONLY, None)?;
-        assert_extension_builtin(&builder, &EXTENSION_MODULE_OBJECT_FILES_ONLY)?;
+        assert_extension_builtin(&builder, &EXTENSION_MODULE_OBJECT_FILES_ONLY);
 
         builder
             .add_python_extension_module(&EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES, None)?;
-        assert_extension_builtin(&builder, &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES)?;
+        assert_extension_builtin(&builder, &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES);
 
         Ok(())
     }
@@ -2066,7 +2060,7 @@ pub mod tests {
                 match libpython_link_mode {
                     BinaryLibpythonLinkMode::Static => {
                         assert!(res.is_ok());
-                        assert_extension_builtin(&builder, &EXTENSION_MODULE_OBJECT_FILES_ONLY)?;
+                        assert_extension_builtin(&builder, &EXTENSION_MODULE_OBJECT_FILES_ONLY);
                     }
                     BinaryLibpythonLinkMode::Dynamic => {
                         assert!(res.is_err());
@@ -2087,7 +2081,7 @@ pub mod tests {
                         assert_extension_builtin(
                             &builder,
                             &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES,
-                        )?;
+                        );
                     }
                     BinaryLibpythonLinkMode::Dynamic => {
                         assert!(res.is_err());
@@ -2128,14 +2122,14 @@ pub mod tests {
                     &builder,
                     &EXTENSION_MODULE_SHARED_LIBRARY_ONLY,
                     ConcreteResourceLocation::RelativePath("prefix_policy".to_string()),
-                )?;
+                );
 
                 let res =
                     builder.add_python_extension_module(&EXTENSION_MODULE_OBJECT_FILES_ONLY, None);
                 match libpython_link_mode {
                     BinaryLibpythonLinkMode::Static => {
                         assert!(res.is_ok());
-                        assert_extension_builtin(&builder, &EXTENSION_MODULE_OBJECT_FILES_ONLY)?;
+                        assert_extension_builtin(&builder, &EXTENSION_MODULE_OBJECT_FILES_ONLY);
                     }
                     BinaryLibpythonLinkMode::Dynamic => {
                         assert!(res.is_err());
@@ -2154,7 +2148,7 @@ pub mod tests {
                     &builder,
                     &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES,
                     ConcreteResourceLocation::RelativePath("prefix_policy".to_string()),
-                )?;
+                );
             }
         }
 
@@ -2186,14 +2180,14 @@ pub mod tests {
                     &builder,
                     &EXTENSION_MODULE_SHARED_LIBRARY_ONLY,
                     ConcreteResourceLocation::RelativePath("prefix_policy".to_string()),
-                )?;
+                );
 
                 let res =
                     builder.add_python_extension_module(&EXTENSION_MODULE_OBJECT_FILES_ONLY, None);
                 match libpython_link_mode {
                     BinaryLibpythonLinkMode::Static => {
                         assert!(res.is_ok());
-                        assert_extension_builtin(&builder, &EXTENSION_MODULE_OBJECT_FILES_ONLY)?;
+                        assert_extension_builtin(&builder, &EXTENSION_MODULE_OBJECT_FILES_ONLY);
                     }
                     BinaryLibpythonLinkMode::Dynamic => {
                         assert!(res.is_err());
@@ -2216,14 +2210,14 @@ pub mod tests {
                         assert_extension_builtin(
                             &builder,
                             &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES,
-                        )?;
+                        );
                     }
                     BinaryLibpythonLinkMode::Dynamic => {
                         assert_extension_shared_library(
                             &builder,
                             &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES,
                             ConcreteResourceLocation::RelativePath("prefix_policy".to_string()),
-                        )?;
+                        );
                     }
                     BinaryLibpythonLinkMode::Default => {
                         panic!("should not get here");
@@ -2236,7 +2230,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_windows_dynamic_static_mismatch() -> Result<()> {
+    fn test_windows_dynamic_static_mismatch() {
         for target_triple in WINDOWS_TARGET_TRIPLES.iter() {
             let options = StandalonePythonExecutableBuilderOptions {
                 target_triple: target_triple.to_string(),
@@ -2254,12 +2248,10 @@ pub mod tests {
                 "Python distribution does not support statically linking libpython"
             );
         }
-
-        Ok(())
     }
 
     #[test]
-    fn test_windows_static_dynamic_mismatch() -> Result<()> {
+    fn test_windows_static_dynamic_mismatch() {
         for target_triple in WINDOWS_TARGET_TRIPLES.iter() {
             let options = StandalonePythonExecutableBuilderOptions {
                 target_triple: target_triple.to_string(),
@@ -2272,8 +2264,6 @@ pub mod tests {
             // We can't request dynamic libpython with a static distribution.
             assert!(options.new_builder().is_err());
         }
-
-        Ok(())
     }
 
     #[test]
@@ -2634,7 +2624,7 @@ pub mod tests {
                 &builder,
                 &EXTENSION_MODULE_SHARED_LIBRARY_ONLY,
                 ConcreteResourceLocation::InMemory,
-            )?;
+            );
 
             let res =
                 builder.add_python_extension_module(&EXTENSION_MODULE_OBJECT_FILES_ONLY, None);
@@ -2652,7 +2642,7 @@ pub mod tests {
                 &builder,
                 &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES,
                 ConcreteResourceLocation::InMemory,
-            )?;
+            );
         }
 
         Ok(())
@@ -2682,13 +2672,13 @@ pub mod tests {
             );
 
             builder.add_python_extension_module(&EXTENSION_MODULE_OBJECT_FILES_ONLY, None)?;
-            assert_extension_builtin(&builder, &EXTENSION_MODULE_OBJECT_FILES_ONLY)?;
+            assert_extension_builtin(&builder, &EXTENSION_MODULE_OBJECT_FILES_ONLY);
 
             builder.add_python_extension_module(
                 &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES,
                 None,
             )?;
-            assert_extension_builtin(&builder, &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES)?;
+            assert_extension_builtin(&builder, &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES);
         }
 
         Ok(())
@@ -2716,7 +2706,7 @@ pub mod tests {
                 &builder,
                 &EXTENSION_MODULE_SHARED_LIBRARY_ONLY,
                 ConcreteResourceLocation::RelativePath("prefix_policy".to_string()),
-            )?;
+            );
 
             let res =
                 builder.add_python_extension_module(&EXTENSION_MODULE_OBJECT_FILES_ONLY, None);
@@ -2731,7 +2721,7 @@ pub mod tests {
                 &builder,
                 &EXTENSION_MODULE_SHARED_LIBRARY_ONLY,
                 ConcreteResourceLocation::RelativePath("prefix_policy".to_string()),
-            )?;
+            );
         }
 
         Ok(())
@@ -2762,13 +2752,13 @@ pub mod tests {
             );
 
             builder.add_python_extension_module(&EXTENSION_MODULE_OBJECT_FILES_ONLY, None)?;
-            assert_extension_builtin(&builder, &EXTENSION_MODULE_OBJECT_FILES_ONLY)?;
+            assert_extension_builtin(&builder, &EXTENSION_MODULE_OBJECT_FILES_ONLY);
 
             builder.add_python_extension_module(
                 &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES,
                 None,
             )?;
-            assert_extension_builtin(&builder, &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES)?;
+            assert_extension_builtin(&builder, &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES);
         }
 
         Ok(())
@@ -2797,7 +2787,7 @@ pub mod tests {
                 &builder,
                 &EXTENSION_MODULE_SHARED_LIBRARY_ONLY,
                 ConcreteResourceLocation::InMemory,
-            )?;
+            );
 
             // Cannot link new builtins in dynamic libpython link mode.
             let res =
@@ -2816,7 +2806,7 @@ pub mod tests {
                 &builder,
                 &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES,
                 ConcreteResourceLocation::InMemory,
-            )?;
+            );
         }
 
         Ok(())
@@ -2847,13 +2837,13 @@ pub mod tests {
             );
 
             builder.add_python_extension_module(&EXTENSION_MODULE_OBJECT_FILES_ONLY, None)?;
-            assert_extension_builtin(&builder, &EXTENSION_MODULE_OBJECT_FILES_ONLY)?;
+            assert_extension_builtin(&builder, &EXTENSION_MODULE_OBJECT_FILES_ONLY);
 
             builder.add_python_extension_module(
                 &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES,
                 None,
             )?;
-            assert_extension_builtin(&builder, &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES)?;
+            assert_extension_builtin(&builder, &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES);
         }
 
         Ok(())
