@@ -30,7 +30,7 @@ available Python distributions. The supported operating systems and
 architectures are:
 
 * Linux x86_64 (glibc 2.19 or musl linked)
-* Windows 7+ x86 and x86_64
+* Windows 8+ / Server 2012+ x86 and x86_64
 * macOS 10.9+ Intel x86_64
 
 .. _installing:

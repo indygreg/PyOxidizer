@@ -140,6 +140,11 @@ run on nearly every system for the platform they target. This means:
   Base Core Configuration and should be present on all conforming Linux
   distros. On macOS, referenced dylibs include ``libSystem``, which is part
   of the macOS core install.
+* On Windows, distributions require Windows 8 or Windows Server 2012 or newer.
+  (The official Python 3.8 distributions support Windows 7 however we've chosen
+  to drop Windows 7 support to make the support story simpler.) The
+  ``standalone_dynamic`` distributions have a run-time dependency on the
+  Microsoft Visual C++ Redistributable, likely ``vcruntime140.dll``.
 * On macOS, x86_64 (read: Intel CPUs) distributions are built so that they should
   run on macOS >= 10.9 and aarch64 (read: Apple/ARM CPUs) distributions should run
   on macOS >= 11.0 (the first version of macOS to support ARM CPUs).

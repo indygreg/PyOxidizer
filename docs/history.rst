@@ -39,6 +39,9 @@ Backwards Compatibility Notes
   :ref:`config_default_python_distribution` in your configuration file. We
   don't anticipate dropping support for 3.8 any time soon. However, this may
   be necessary in order to more easily support new Python features.
+* The Python 3.8 distributions no longer support Windows 7 and require Windows
+  8, Windows 2012, or newer. The Python 3.9 distributions already required these
+  Windows versions.
 * The minimum Rust version has been changed from 1.41 to 1.45 to facilitate
   the use of procedural macros.
 * The ``pyembed::MainPythonInterpreter::run_as_main()`` method has been renamed
