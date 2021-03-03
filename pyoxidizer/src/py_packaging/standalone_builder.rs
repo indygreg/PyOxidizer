@@ -1093,7 +1093,11 @@ pub mod tests {
     impl StandalonePythonExecutableBuilderOptions {
         pub fn new_builder(&self) -> Result<Box<StandalonePythonExecutableBuilder>> {
             let target_record = PYTHON_DISTRIBUTIONS
-                .find_distribution(&self.target_triple, &self.distribution_flavor, None)
+                .find_distribution(
+                    &self.target_triple,
+                    &self.distribution_flavor,
+                    self.distribution_version.as_deref(),
+                )
                 .ok_or_else(|| anyhow!("could not find target Python distribution"))?;
 
             let target_distribution = get_distribution(&target_record.location)?;
@@ -1105,11 +1109,7 @@ pub mod tests {
                 target_distribution.clone_trait()
             } else {
                 let host_record = PYTHON_DISTRIBUTIONS
-                    .find_distribution(
-                        &self.host_triple,
-                        &DistributionFlavor::Standalone,
-                        self.distribution_version.as_ref().map(|x| x.as_str()),
-                    )
+                    .find_distribution(&self.host_triple, &DistributionFlavor::Standalone, None)
                     .ok_or_else(|| anyhow!("could not find host Python distribution"))?;
 
                 get_distribution(&host_record.location)?.clone_trait()
