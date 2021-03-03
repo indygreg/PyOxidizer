@@ -31,6 +31,13 @@ Version History
 
 Not yet released.
 
+Other Relevant Changes
+^^^^^^^^^^^^^^^^^^^^^^
+
+* The ``snmalloc`` allocator now uses the C API directly and avoids going
+  through an allocation tracking layer, improving the performance of this
+  allocator. Improvement contributed by Ryan Clanton.
+
 .. _version_0_11_0:
 
 0.11.0
@@ -180,7 +187,7 @@ New Features
   Code contributed by Ryan Clanton in #358.
 * The *mimalloc* and *snmalloc* memory allocators will now automatically be used
   as Rust's global allocator when configured to be used by Python.
-* The ``@classmethod``s ``OxidizedDistribution.find_name()`` and
+* The ``@classmethod`` ``OxidizedDistribution.find_name()`` and
   ``OxidizedDistribution.discover()`` are now implemented, filling in a feature
   gap in ``importlib.metadata`` functionality.
 * There is a new :ref:`config_type_python_executable_windows_runtime_dlls_mode`
