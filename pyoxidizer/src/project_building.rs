@@ -556,6 +556,9 @@ mod tests {
         python_packaging::interpreter::MemoryAllocatorBackend,
     };
 
+    #[cfg(target_env = "msvc")]
+    use crate::py_packaging::distribution::DistributionFlavor;
+
     #[test]
     fn test_empty_project() -> Result<()> {
         let logger = get_logger()?;
@@ -570,6 +573,74 @@ mod tests {
             "0",
             false,
         )?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_empty_project_python_38() -> Result<()> {
+        let logger = get_logger()?;
+        let options = StandalonePythonExecutableBuilderOptions {
+            distribution_version: Some("3.8".to_string()),
+            ..Default::default()
+        };
+        let pre_built = options.new_builder()?;
+
+        build_python_executable(
+            &logger,
+            "myapp",
+            pre_built.as_ref(),
+            env!("HOST"),
+            "0",
+            false,
+        )?;
+
+        Ok(())
+    }
+
+    #[test]
+    #[cfg(target_env = "msvc")]
+    fn test_empty_project_standalone_static() -> Result<()> {
+        let logger = get_logger()?;
+        let options = StandalonePythonExecutableBuilderOptions {
+            distribution_flavor: DistributionFlavor::StandaloneStatic,
+            ..Default::default()
+        };
+        let pre_built = options.new_builder()?;
+
+        assert!(build_python_executable(
+            &logger,
+            "myapp",
+            pre_built.as_ref(),
+            env!("HOST"),
+            "0",
+            false,
+        )
+        .is_err());
+
+        Ok(())
+    }
+
+    #[test]
+    #[cfg(target_env = "msvc")]
+    fn test_empty_project_standalone_static_38() -> Result<()> {
+        let logger = get_logger()?;
+        let options = StandalonePythonExecutableBuilderOptions {
+            distribution_version: Some("3.8".to_string()),
+            distribution_flavor: DistributionFlavor::StandaloneStatic,
+            ..Default::default()
+        };
+        let pre_built = options.new_builder()?;
+
+        assert!(build_python_executable(
+            &logger,
+            "myapp",
+            pre_built.as_ref(),
+            env!("HOST"),
+            "0",
+            false,
+        )
+        .is_err());
 
         Ok(())
     }

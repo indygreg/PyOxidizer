@@ -1061,6 +1061,7 @@ pub mod tests {
     pub struct StandalonePythonExecutableBuilderOptions {
         pub host_triple: String,
         pub target_triple: String,
+        pub distribution_version: Option<String>,
         pub distribution_flavor: DistributionFlavor,
         pub app_name: String,
         pub libpython_link_mode: BinaryLibpythonLinkMode,
@@ -1076,6 +1077,7 @@ pub mod tests {
             Self {
                 host_triple: env!("HOST").to_string(),
                 target_triple: env!("HOST").to_string(),
+                distribution_version: None,
                 distribution_flavor: DistributionFlavor::Standalone,
                 app_name: "testapp".to_string(),
                 libpython_link_mode: BinaryLibpythonLinkMode::Default,
@@ -1103,7 +1105,11 @@ pub mod tests {
                 target_distribution.clone_trait()
             } else {
                 let host_record = PYTHON_DISTRIBUTIONS
-                    .find_distribution(&self.host_triple, &DistributionFlavor::Standalone, None)
+                    .find_distribution(
+                        &self.host_triple,
+                        &DistributionFlavor::Standalone,
+                        self.distribution_version.as_ref().map(|x| x.as_str()),
+                    )
                     .ok_or_else(|| anyhow!("could not find host Python distribution"))?;
 
                 get_distribution(&host_record.location)?.clone_trait()
