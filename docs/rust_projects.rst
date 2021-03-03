@@ -24,6 +24,7 @@ Layout
 Generated Rust projects all have a similar layout::
 
    $ find pyapp -type f | grep -v .git
+   .cargo/config
    Cargo.toml
    build.rs
    pyoxidizer.bzl
@@ -58,3 +59,16 @@ interpreter. That's our executable.
 
 The ``pyoxidizer.bzl`` is our auto-generated
 :ref:`PyOxidizer configuration file <config_files>`.
+
+Cargo Configuration
+===================
+
+Linking a custom libpython into the final Rust binary can be finicky, especially
+when statically linking on Windows.
+
+The auto-generated ``.cargo/config`` file defines some custom compiler settings
+to enable things to work. However, this only works for some configurations. The
+file contains some commented out settings that may need to be set for some
+configurations (e.g. the ``standalone_static`` Windows distributions). Please
+consult this file if running into build errors when not building through
+``pyoxidizer``.

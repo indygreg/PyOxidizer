@@ -117,6 +117,10 @@ Bug Fixes
   passed ``Context``'s ``name`` attribute is set to a string. Previously,
   the ``name`` and ``path`` attributes had their order swapped in a function
   call, leading to incorrect filtering.
+* When building with Windows ``standalone_static`` distributions, ``pyoxidizer``
+  now sets ``RUSTFLAGS=target-feature=+crt-static`` to force static CRT linkage.
+  Previously, the Python distribution would be using static CRT linkage and
+  the Rust application would use dynamic/DLL CRT linkage.
 
 New Features
 ^^^^^^^^^^^^

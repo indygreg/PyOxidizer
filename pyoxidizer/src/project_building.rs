@@ -6,7 +6,7 @@ use {
     crate::{
         environment::{canonicalize_path, MINIMUM_RUST_VERSION},
         project_layout::initialize_project,
-        py_packaging::binary::{EmbeddedPythonContext, PythonBinaryBuilder},
+        py_packaging::binary::{EmbeddedPythonContext, LibpythonLinkMode, PythonBinaryBuilder},
         starlark::eval::{EvaluationContext, EvaluationContextBuilder},
     },
     anyhow::{anyhow, Context, Result},
@@ -214,6 +214,22 @@ pub fn build_executable_with_rust_project<'a>(
     // https://github.com/rust-lang/rust/issues/37403 is resolved.
     if cfg!(windows) {
         envs.insert("RUSTC_BOOTSTRAP".to_string(), "1".to_string());
+    }
+
+    // Windows standalone_static distributions require the non-DLL CRT.
+    // This requires telling Rust to use the static CRT.
+    if exe.target_triple().contains("-windows-")
+        && exe.libpython_link_mode() == LibpythonLinkMode::Static
+    {
+        let flags = "-C target-feature=+crt-static";
+
+        let flags = if let Some(value) = envs.get("RUSTFLAGS") {
+            format!("{} {}", flags, value)
+        } else {
+            flags.to_string()
+        };
+
+        envs.insert("RUSTFLAGS".to_string(), flags);
     }
 
     // TODO force cargo to colorize output under certain circumstances?

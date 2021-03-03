@@ -20,3 +20,18 @@ rustflags = ["-C", "link-args=-rdynamic"]
 
 [target.x86_64-apple-darwin]
 rustflags = ["-C", "link-args=-rdynamic"]
+
+# The Windows standalone_static distributions use the static CRT (/MT compiler
+# flag). By default, Rust will build with the dynamically linked / DLL CRT
+# (/MD compiler flag). `pyoxidizer build` should adjust RUSTFLAGS automatically
+# when a standalone_static distribution is being used. But if invoking `cargo`
+# directly, you'll need to override the default CRT linkage by either passing
+# RUSTFLAGS="-C target-feature=+crt-static" or by commenting out the lines
+# below. Note that use of `target-feature=+crt-static` will prevent
+# standalone_dynamic distributions from working.
+
+#[target.i686-pc-windows-msvc]
+#rustflags = ["-C", "target-feature=+crt-static"]
+#
+#[target.x86_64-pc-windows-msvc]
+#rustflags = ["-C", "target-feature=+crt-static"]
