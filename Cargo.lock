@@ -2127,7 +2127,7 @@ dependencies = [
  "once_cell",
  "pathdiff",
  "python-packaging",
- "python-packed-resources",
+ "python-packed-resources 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "python3-sys",
  "rusty-fork",
  "snmalloc-sys",
@@ -2159,7 +2159,7 @@ dependencies = [
  "once_cell",
  "path-dedot",
  "python-packaging",
- "python-packed-resources",
+ "python-packed-resources 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rustc_version",
  "semver",
  "serde",
@@ -2194,7 +2194,7 @@ dependencies = [
  "itertools 0.10.0",
  "mailparse",
  "once_cell",
- "python-packed-resources",
+ "python-packed-resources 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "regex",
  "spdx",
  "tempfile",
@@ -2206,7 +2206,17 @@ dependencies = [
 
 [[package]]
 name = "python-packed-resources"
-version = "0.5.0-pre"
+version = "0.5.0"
+dependencies = [
+ "anyhow",
+ "byteorder",
+]
+
+[[package]]
+name = "python-packed-resources"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3ec011681e159c300f717586ce49ba1cbffa43c9cafbd02b705a421609560527"
 dependencies = [
  "anyhow",
  "byteorder",

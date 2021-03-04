@@ -35,8 +35,8 @@ features = [
 optional = true
 
 [dependencies.python-packed-resources]
-version = "0.5.0-pre"
-path = "../python-packed-resources"
+version = "0.5.0"
+# path = "../python-packed-resources"
 
 [dependencies.python-packaging]
 version = "0.4.0-pre"
