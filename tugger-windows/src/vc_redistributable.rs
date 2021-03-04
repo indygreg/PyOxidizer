@@ -144,7 +144,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_find_visual_cpp_redistributable_14() -> Result<()> {
+    fn test_find_visual_cpp_redistributable_14() {
         let platforms = vec![
             VcRedistributablePlatform::X86,
             VcRedistributablePlatform::X64,
@@ -162,7 +162,5 @@ mod tests {
                 assert!(res.is_err());
             }
         }
-
-        Ok(())
     }
 }
