@@ -117,10 +117,10 @@ Bug Fixes
   passed ``Context``'s ``name`` attribute is set to a string. Previously,
   the ``name`` and ``path`` attributes had their order swapped in a function
   call, leading to incorrect filtering.
-* When building with Windows ``standalone_static`` distributions, ``pyoxidizer``
-  now sets ``RUSTFLAGS=target-feature=+crt-static`` to force static CRT linkage.
-  Previously, the Python distribution would be using static CRT linkage and
-  the Rust application would use dynamic/DLL CRT linkage.
+* The Windows ``standalone_static`` distributions should now work again. They
+  had been broken for a few releases and likely never worked with Python 3.9.
+  Test coverage of this build configuration has been added to help prevent
+  future regressions. (#360)
 
 New Features
 ^^^^^^^^^^^^
@@ -205,6 +205,15 @@ Other Relevant Changes
 * The ``oxidized_importer`` Python module now exports the
   ``OxidizedDistribution`` symbol, which is the custom ``importlib.metadata``
   *distribution* type used by ``OxidizedFinder``.
+* When building with Windows ``standalone_static`` distributions, ``pyoxidizer``
+  now sets ``RUSTFLAGS=-C target-feature=+crt-static -C link-args=/FORCE:MULTIPLE``
+  to force static CRT linkage and ignore duplicate symbol errors. Previously, the
+  Python distribution would be using static CRT linkage and the Rust application
+  would use dynamic/DLL CRT linkage. Furthermore, many ``standalone_static``
+  distributions have build configurations that lead to duplicate symbols and
+  this would lead to a linker error. Suppressing the duplicate symbol error
+  is not ideal, but it restores building with ``standalone_static`` until a
+  more appropriate workaround can be devised.
 
 .. _version_0_10_3:
 

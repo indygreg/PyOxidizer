@@ -29,9 +29,14 @@ rustflags = ["-C", "link-args=-rdynamic"]
 # RUSTFLAGS="-C target-feature=+crt-static" or by commenting out the lines
 # below. Note that use of `target-feature=+crt-static` will prevent
 # standalone_dynamic distributions from working.
+#
+# The standalone_static distributions also have duplicate symbols and some
+# build configurations will result in hard linker errors because of this. We
+# also add the /FORCE:MULTIPLE linker argument to prevent this from being a
+# fatal error.
 
 #[target.i686-pc-windows-msvc]
-#rustflags = ["-C", "target-feature=+crt-static"]
+#rustflags = ["-C", "target-feature=+crt-static", "-C", "link-args=/FORCE:MULTIPLE"]
 #
 #[target.x86_64-pc-windows-msvc]
-#rustflags = ["-C", "target-feature=+crt-static"]
+#rustflags = ["-C", "target-feature=+crt-static", "-C", "link-args=/FORCE:MULTIPLE"]

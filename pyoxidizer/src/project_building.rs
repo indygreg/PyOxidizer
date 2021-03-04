@@ -218,10 +218,17 @@ pub fn build_executable_with_rust_project<'a>(
 
     // Windows standalone_static distributions require the non-DLL CRT.
     // This requires telling Rust to use the static CRT.
+    //
+    // In addition, these distributions also have some symbols defined in
+    // multiple object files. See https://github.com/indygreg/python-build-standalone/issues/71.
+    // This can lead to a linker error unless we suppress it via /FORCE:MULTIPLE.
+    // This workaround is not ideal.
+    // TODO remove /FORCE:MULTIPLE once the distributions eliminate duplicate
+    // symbols.
     if exe.target_triple().contains("-windows-")
         && exe.libpython_link_mode() == LibpythonLinkMode::Static
     {
-        let flags = "-C target-feature=+crt-static";
+        let flags = "-C target-feature=+crt-static -C link-args=/FORCE:MULTIPLE";
 
         let flags = if let Some(value) = envs.get("RUSTFLAGS") {
             format!("{} {}", flags, value)
@@ -624,15 +631,14 @@ mod tests {
         };
         let pre_built = options.new_builder()?;
 
-        assert!(build_python_executable(
+        build_python_executable(
             &logger,
             "myapp",
             pre_built.as_ref(),
             env!("HOST"),
             "0",
             false,
-        )
-        .is_err());
+        )?;
 
         Ok(())
     }
@@ -648,15 +654,14 @@ mod tests {
         };
         let pre_built = options.new_builder()?;
 
-        assert!(build_python_executable(
+        build_python_executable(
             &logger,
             "myapp",
             pre_built.as_ref(),
             env!("HOST"),
             "0",
             false,
-        )
-        .is_err());
+        )?;
 
         Ok(())
     }
