@@ -1,11 +1,13 @@
 [workspace]
 members = [
+    'oxidized-importer',
     'pyembed',
     'pyoxidizer',
     'python-packaging',
     'python-packed-resources',
     'release',
     'starlark-dialect-build-targets',
+    'tugger',
     'tugger-binary-analysis',
     'tugger-common',
     'tugger-debian',
@@ -16,5 +18,4 @@ members = [
     'tugger-snapcraft',
     'tugger-windows',
     'tugger-wix',
-    'tugger',
 ]
