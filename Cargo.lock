@@ -3531,7 +3531,7 @@ dependencies = [
  "anyhow",
  "reqwest",
  "spdx",
- "tugger-common 0.1.0",
+ "tugger-common 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-licensing 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "url",
 ]
