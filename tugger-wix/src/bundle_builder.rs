@@ -3,15 +3,12 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    crate::{
-        common::{VC_REDIST_ARM64, VC_REDIST_X64, VC_REDIST_X86},
-        *,
-    },
+    crate::*,
     anyhow::{anyhow, Context, Result},
     slog::warn,
     std::{borrow::Cow, collections::BTreeMap, io::Write, ops::Deref, path::Path},
     tugger_common::http::download_to_path,
-    tugger_windows::VcRedistributablePlatform,
+    tugger_windows::{VcRedistributablePlatform, VC_REDIST_ARM64, VC_REDIST_X64, VC_REDIST_X86},
     uuid::Uuid,
     xml::{common::XmlVersion, writer::XmlEvent, EmitterConfig, EventWriter},
 };

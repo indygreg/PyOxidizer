@@ -3476,6 +3476,7 @@ dependencies = [
  "duct",
  "find-winsdk",
  "glob",
+ "once_cell",
  "p12",
  "rcgen",
  "semver",

@@ -4,15 +4,43 @@
 
 use {
     anyhow::{anyhow, Result},
+    once_cell::sync::Lazy,
     std::{
         convert::TryFrom,
         fmt::{Display, Formatter},
         path::PathBuf,
     },
+    tugger_common::http::RemoteContent,
 };
 
 #[cfg(windows)]
 use {crate::find_vswhere, std::collections::BTreeMap};
+
+// Latest versions of the VC++ Redistributable can be found at
+// https://support.microsoft.com/en-us/help/2977003/the-latest-supported-visual-c-downloads.
+// The download URL will redirect to a deterministic artifact, which is what we
+// record here.
+
+pub static VC_REDIST_X86: Lazy<RemoteContent> = Lazy::new(|| {
+    RemoteContent {
+        url: "https://download.visualstudio.microsoft.com/download/pr/d64b93c3-f270-4750-9e75-bc12b2e899fb/4521ED84B9B1679A706E719423D54EF5E413DC50DDE1CF362232D7359D7E89C4/VC_redist.x86.exe".to_string(),
+        sha256: "4521ed84b9b1679a706e719423d54ef5e413dc50dde1cf362232d7359d7e89c4".to_string(),
+    }
+});
+
+pub static VC_REDIST_X64: Lazy<RemoteContent> = Lazy::new(|| {
+    RemoteContent {
+        url: "https://download.visualstudio.microsoft.com/download/pr/cd3a705f-70b6-46f7-b8e2-63e6acc5bd05/F299953673DE262FEFAD9DD19BFBE6A5725A03AE733BEBFEC856F1306F79C9F7/VC_redist.x64.exe".to_string(),
+        sha256: "f299953673de262fefad9dd19bfbe6a5725a03ae733bebfec856f1306f79c9f7".to_string(),
+    }
+});
+
+pub static VC_REDIST_ARM64: Lazy<RemoteContent> = Lazy::new(|| {
+    RemoteContent {
+        url: "https://download.visualstudio.microsoft.com/download/pr/cd3a705f-70b6-46f7-b8e2-63e6acc5bd05/D49B964641B8B2B9908A2908851A6196734B47BCC7B198C387287C438C8100B7/VC_redist.arm64.exe".to_string(),
+        sha256: "d49b964641b8b2b9908a2908851a6196734b47bcc7b198c387287c438c8100b7".to_string(),
+    }
+});
 
 /// Available VC++ Redistributable platforms we can add to the bundle.
 #[derive(Debug, PartialEq)]
@@ -141,7 +169,33 @@ pub fn find_visual_cpp_redistributable(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use {
+        super::*,
+        tugger_common::{http::download_to_path, testutil::*},
+    };
+
+    #[test]
+    fn test_vcredist_download() -> Result<()> {
+        let logger = get_logger()?;
+
+        download_to_path(
+            &logger,
+            &VC_REDIST_X86,
+            &DEFAULT_DOWNLOAD_DIR.join("vc_redist.x86.exe"),
+        )?;
+        download_to_path(
+            &logger,
+            &VC_REDIST_X64,
+            &DEFAULT_DOWNLOAD_DIR.join("vc_redist.x64.exe"),
+        )?;
+        download_to_path(
+            &logger,
+            &VC_REDIST_ARM64,
+            &DEFAULT_DOWNLOAD_DIR.join("vc_redist.arm64.exe"),
+        )?;
+
+        Ok(())
+    }
 
     #[test]
     fn test_find_visual_cpp_redistributable_14() {
