@@ -37,23 +37,23 @@ static WIX_TOOLSET: Lazy<RemoteContent> = Lazy::new(|| RemoteContent {
 
 pub(crate) static VC_REDIST_X86: Lazy<RemoteContent> = Lazy::new(|| {
     RemoteContent {
-	url: "https://download.visualstudio.microsoft.com/download/pr/48431a06-59c5-4b63-a102-20b66a521863/CAA38FD474164A38AB47AC1755C8CCCA5CCFACFA9A874F62609E6439924E87EC/VC_redist.x86.exe".to_string(),
-	sha256: "caa38fd474164a38ab47ac1755c8ccca5ccfacfa9a874f62609e6439924e87ec".to_string(),
-}
+        url: "https://download.visualstudio.microsoft.com/download/pr/d64b93c3-f270-4750-9e75-bc12b2e899fb/4521ED84B9B1679A706E719423D54EF5E413DC50DDE1CF362232D7359D7E89C4/VC_redist.x86.exe".to_string(),
+        sha256: "4521ed84b9b1679a706e719423d54ef5e413dc50dde1cf362232d7359d7e89c4".to_string(),
+    }
 });
 
 pub(crate) static VC_REDIST_X64: Lazy<RemoteContent> = Lazy::new(|| {
     RemoteContent {
-	url: "https://download.visualstudio.microsoft.com/download/pr/48431a06-59c5-4b63-a102-20b66a521863/4B5890EB1AEFDF8DFA3234B5032147EB90F050C5758A80901B201AE969780107/VC_redist.x64.exe".to_string(),
-	sha256: "4b5890eb1aefdf8dfa3234b5032147eb90f050c5758a80901b201ae969780107".to_string(),
-}
+        url: "https://download.visualstudio.microsoft.com/download/pr/cd3a705f-70b6-46f7-b8e2-63e6acc5bd05/F299953673DE262FEFAD9DD19BFBE6A5725A03AE733BEBFEC856F1306F79C9F7/VC_redist.x64.exe".to_string(),
+        sha256: "f299953673de262fefad9dd19bfbe6a5725a03ae733bebfec856f1306f79c9f7".to_string(),
+    }
 });
 
 pub(crate) static VC_REDIST_ARM64: Lazy<RemoteContent> = Lazy::new(|| {
     RemoteContent {
-	url: "https://download.visualstudio.microsoft.com/download/pr/48431a06-59c5-4b63-a102-20b66a521863/A950A1C9DB37E2F784ABA98D484A4E0F77E58ED7CB57727672F9DC321015469E/VC_redist.arm64.exe".to_string(),
-	sha256: "a950a1c9db37e2f784aba98d484a4e0f77e58ed7cb57727672f9dc321015469e".to_string(),
-}
+        url: "https://download.visualstudio.microsoft.com/download/pr/cd3a705f-70b6-46f7-b8e2-63e6acc5bd05/D49B964641B8B2B9908A2908851A6196734B47BCC7B198C387287C438C8100B7/VC_redist.arm64.exe".to_string(),
+        sha256: "d49b964641b8b2b9908a2908851a6196734b47bcc7b198c387287c438c8100b7".to_string(),
+    }
 });
 
 /// Compute the `Id` of a directory.
