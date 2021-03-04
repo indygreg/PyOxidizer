@@ -122,7 +122,7 @@ fn update_cargo_toml_dependency_package_version(
         let line = line?;
 
         lines.push(
-            if !seen_dependency_section && line == format!("[dependencies.{}]", package) {
+            if !seen_dependency_section && line.ends_with(&format!("dependencies.{}]", package)) {
                 seen_dependency_section = true;
                 line
             } else if seen_dependency_section && !seen_version && line.starts_with("version = \"") {
@@ -168,7 +168,7 @@ fn update_cargo_toml_dependency_package_location(
         let line = line?;
 
         lines.push(
-            if !seen_dependency_section && line == format!("[dependencies.{}]", package) {
+            if !seen_dependency_section && line.ends_with(&format!("dependencies.{}]", package)) {
                 seen_dependency_section = true;
                 line
             } else if seen_dependency_section
