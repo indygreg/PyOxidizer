@@ -29,8 +29,8 @@ version = "0.1.0"
 # path = "../tugger-windows"
 
 [dependencies.tugger-file-manifest]
-version = "0.1.0"
-# path = "../tugger-file-manifest"
+version = "0.2.0-pre"
+path = "../tugger-file-manifest"
 
 [dev-dependencies]
 msi = "0.3"
