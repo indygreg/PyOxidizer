@@ -3404,7 +3404,7 @@ dependencies = [
  "tar",
  "tugger-common 0.2.0-pre",
  "tugger-file-manifest 0.2.0-pre",
- "tugger-rpm 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-rpm 0.2.0-pre",
  "tugger-snapcraft 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-windows 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-wix 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3426,7 +3426,7 @@ dependencies = [
  "tar",
  "tugger-common 0.1.0",
  "tugger-file-manifest 0.1.0",
- "tugger-rpm 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-rpm 0.1.0",
  "tugger-snapcraft 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-windows 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-wix 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3540,21 +3540,21 @@ dependencies = [
 [[package]]
 name = "tugger-rpm"
 version = "0.1.0"
-dependencies = [
- "anyhow",
- "rpm-rs",
- "tugger-file-manifest 0.2.0-pre",
-]
-
-[[package]]
-name = "tugger-rpm"
-version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "385185e8332b924c8419d6f75e96a1b587d20fedffa4d4db79cccbf4485e52c6"
 dependencies = [
  "anyhow",
  "rpm-rs",
  "tugger-file-manifest 0.1.0",
+]
+
+[[package]]
+name = "tugger-rpm"
+version = "0.2.0-pre"
+dependencies = [
+ "anyhow",
+ "rpm-rs",
+ "tugger-file-manifest 0.2.0-pre",
 ]
 
 [[package]]
