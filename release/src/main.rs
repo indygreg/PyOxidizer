@@ -525,6 +525,17 @@ fn command_release(repo_root: &Path, args: &ArgMatches) -> Result<()> {
         VersionBump::Minor
     };
 
+    let ignores_pre = if let Some(values) = args.values_of("ignore_pre") {
+        values.collect()
+    } else {
+        vec![]
+    };
+    let ignores_post = if let Some(values) = args.values_of("ignore_post") {
+        values.collect()
+    } else {
+        vec![]
+    };
+
     ensure_pyembed_license_current(repo_root)?;
 
     let workspace_toml = repo_root.join("Cargo.toml");
@@ -571,8 +582,10 @@ fn command_release(repo_root: &Path, args: &ArgMatches) -> Result<()> {
     }
 
     for package in RELEASE_ORDER.iter() {
-        release_package(&repo_root, &new_workspace_packages, *package)
-            .with_context(|| format!("releasing {}", package))?;
+        if !ignores_pre.contains(package) {
+            release_package(&repo_root, &new_workspace_packages, *package)
+                .with_context(|| format!("releasing {}", package))?;
+        }
     }
 
     let workspace_packages = get_workspace_members(&workspace_toml)?;
@@ -598,8 +611,10 @@ fn command_release(repo_root: &Path, args: &ArgMatches) -> Result<()> {
     let workspace_packages = get_workspace_members(&workspace_toml)?;
 
     for package in RELEASE_ORDER.iter() {
-        update_package_version(repo_root, &workspace_packages, *package, version_bump)
-            .with_context(|| format!("incrementing version for {}", package))?;
+        if !ignores_post.contains(package) {
+            update_package_version(repo_root, &workspace_packages, *package, version_bump)
+                .with_context(|| format!("incrementing version for {}", package))?;
+        }
     }
 
     Ok(())
@@ -743,6 +758,20 @@ fn main_impl() -> Result<()> {
                 .arg(
                     Arg::with_name("patch")
                         .help("Bump the patch version instead of the minor version"),
+                )
+                .arg(
+                    Arg::with_name("ignore_pre")
+                        .long("ignore-pre")
+                        .takes_value(true)
+                        .multiple(true)
+                        .help("Name of package to ignore when releasing"),
+                )
+                .arg(
+                    Arg::with_name("ignore_post")
+                        .long("ignore-post")
+                        .takes_value(true)
+                        .multiple(true)
+                        .help("Name of package to ignore post releases"),
                 ),
         )
         .subcommand(
