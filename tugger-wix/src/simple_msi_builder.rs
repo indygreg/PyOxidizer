@@ -90,7 +90,7 @@ impl WiXSimpleMsiBuilder {
         Ok(())
     }
 
-    /// Attempt to add the Visaul C++ Redistributable DLLs to the program files manifest.
+    /// Attempt to add the Visual C++ Redistributable DLLs to the program files manifest.
     ///
     /// This will use `vswhere.exe` to attempt to locate a Visual Studio installation
     /// and will attempt to find the Visual C++ Redistributable DLLs (`vcruntimeXXX.dll`) in

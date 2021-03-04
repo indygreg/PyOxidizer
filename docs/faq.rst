@@ -182,3 +182,32 @@ execute.
 Fedora 30+ are known to have this issue. A workaround is to install the
 ``libxcrypt-compat`` on the machine running ``pyoxidizer``. See
 https://github.com/indygreg/PyOxidizer/issues/89 for more info.
+
+``vcruntime140.dll was not found`` Error on Windows
+===================================================
+
+Binaries built with PyOxidizer often have a dependency on the Visual
+C++ Redistributable Runtime, or ``vcruntime140.dll``. If this file
+is not present on your system or in a path where the built binary
+can find it, you'll get an error about this missing file when attempting to
+run/load the binary.
+
+PyOxidizer has some support for managing this file for you. See
+:ref:`packaging_windows_portability` for more.
+
+If PyOxidizer is not materializing this file next your built binary,
+either you've disabled this functionality via your configuration
+file (see :ref:`config_type_python_executable_windows_runtime_dlls_mode`)
+or PyOxidizer could not find the Visual Studio component providing this
+file.
+
+The quick fix for this is to install the Visual C++ Redistributable
+runtime globally on your system. Simply go to
+https://support.microsoft.com/en-us/topic/the-latest-supported-visual-c-downloads-2647da03-1eea-4433-9aff-95f26a218cc0
+and download and install the appropriate platform installer for
+``Visual Studio 2015, 2017 and 2019``.
+
+If you want PyOxidizer to materialize the DLL(s) next to your built
+binary, you'll need to install Visual Studio with the
+``Microsoft.VisualCPP.Redist.14.Latest`` component (you will typically
+get this component if installing support for building C/C++ applications).

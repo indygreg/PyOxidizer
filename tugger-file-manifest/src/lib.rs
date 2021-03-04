@@ -223,6 +223,11 @@ pub struct FileManifest {
 }
 
 impl FileManifest {
+    /// Whether the instance has any files entries.
+    pub fn is_empty(&self) -> bool {
+        self.files.is_empty()
+    }
+
     /// Add a file on the filesystem to the manifest.
     ///
     /// The filesystem path must have a prefix specified which will be stripped

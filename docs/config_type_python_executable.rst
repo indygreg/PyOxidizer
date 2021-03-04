@@ -19,8 +19,8 @@ The following sections describe the attributes available on each instance.
 
 .. _config_type_python_executable.packed_resources_load_mode:
 
-``packed_resources_load_mode``
-------------------------------
+``PythonExecutable.packed_resources_load_mode``
+-----------------------------------------------
 
 (``string``)
 
@@ -51,8 +51,8 @@ The default is ``embedded:packed-resources``.
 
 .. _config_type_python_executable_tcl_files_path:
 
-``tcl_files_path``
-------------------
+``PythonExecutable.tcl_files_path``
+-----------------------------------
 
 (``Optional[string]``)
 
@@ -66,10 +66,45 @@ to load tcl files from this directory.
 
 If ``None`` (the default), no tcl/tk files will be installed.
 
+.. _config_type_python_executable_windows_runtime_dlls_mode:
+
+``PythonExecutable.windows_runtime_dlls_mode``
+----------------------------------------------
+
+(``string``)
+
+Controls how Windows runtime DLLs should be managed when building the binary.
+
+Windows binaries often have a dependency on various runtime DLLs, such as
+``vcruntime140.dll``. The built executable will need access to these DLLs
+or it won't work.
+
+This setting controls whether to install required Windows runtime DLLs
+next to the built binary at build time. For example, if you are producing
+a ``myapp.exe``, this setting can automatically install a ``vcruntime140.dll``
+next to that binary.
+
+The following values are recognized:
+
+``never``
+   Never install Windows runtime DLLs.
+
+``when-present``
+   Install Windows runtime DLLs when they can be located. Do nothing if
+   they can't be found.
+
+``always``
+   Install Windows runtime DLLs and fail if they can't be located.
+
+This setting is ignored when the built binary does not have a dependency
+on Windows runtime DLLs.
+
+See :ref:`packaging_windows_portability` for more on runtime DLL requirements.
+
 .. _config_type_python_executable_windows_subsystem:
 
-``windows_subsystem``
----------------------
+``PythonExecutable.windows_subsystem``
+--------------------------------------
 
 (``string``)
 
@@ -371,6 +406,14 @@ This method accepts the following arguments:
 
 The returned value can be further customized before it is built. See
 :ref:`tugger_starlark_type_wix_bundle_builder` type documentation for more.
+
+.. important::
+
+   :ref:`config_type_python_executable_windows_runtime_dlls_mode` can result
+   in DLLs being installed next to the binary in addition to being installed
+   as part of the installer. When using this method, you probably want to set
+   ``.windows_runtime_dlls_mode = "never"`` to prevent the redundant
+   installation.
 
 .. _config_python_executable_to_wix_msi_builder:
 

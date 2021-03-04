@@ -64,8 +64,10 @@ built-in Python distributions. This means that the binary portability
 of your built binary is effectively defined by the environment
 ``pyoxidizer`` was run from.
 
-Windows
-=======
+.. _packaging_windows_portability:
+
+Windows Portability
+===================
 
 The built-in Python distributions have a run-time dependency on
 various DLLs. All 3rd party DLLs (OpenSSL, SQLite3, etc) required
@@ -78,25 +80,65 @@ C++ Runtime. You will need to distribute a copy of ``vcruntimeXXX.dll``
 alongside your binary or trigger the install of the Visual Stdio
 C++ Redistributable in your application installer so the dependency
 is managed at the system level. (Installing the redistributable via
-an installer is preferred.)
+an installer is preferred per Microsoft documentation.)
 
 There is also currently a dependency on the Universal C Runtime (UCRT).
 
-PyOxidizer will eventually make producing Windows installers from packaged
-applications turnkey
-(`#279 <https://github.com/indygreg/PyOxidizer/issues/279>`_).
-Until that time arrives, see the
+PyOxidizer supports automatically materializing the runtime dependencies
+via multiple mechanisms.
+
+:ref:`config_python_executable_to_wix_bundle_builder` produces an ``.exe``
+installer embedding a copy of the ``vc_redist<arch>.exe`` installer for
+the target platform. At installer creation time, a deterministic and
+SHA-256 verified copy of the ``vc_redist<arch>.exe`` files are downloaded
+from Microsoft's servers and embedded in the installer. At install time,
+the embedded installers are executed (if needed) and the VC++ files are
+installed globally on the target system.
+
+:ref:`config_type_python_executable_windows_runtime_dlls_mode` controls
+whether the build process for executables attempts to copy runtime DLLs
+next to the built executable. Since Windows attempts to load DLLs next to
+the executable, if the DLLs are present, this should *just work*.
+
+:ref:`config_type_python_executable_windows_runtime_dlls_mode` treats the
+DLL dependencies as additional extra files to be materialized with the
+built binary. So the additional files will be there for local builds
+(e.g. ``pyoxidizer build`` or ``pyoxidizer run``) as well as be
+materialized in file lists when using methods like
+:ref:`config_python_executable_to_file_manifest` or
+:ref:`config_python_executable_to_wix_msi_builder`.
+
+Unlike the ``vc_redist<arch>.exe`` mechanism (which obtains an official
+Microsoft installer from the Internet), the *local DLL files* mode relies
+on locating DLLs on the local system. Specifically, ``vswhere.exe`` is
+located and used to find packages/files in a Visual Studio installation.
+So if ``vswhere.exe``, Visual Studio, or the Visual Studio components
+providing these files isn't installed, this operation can fail. Generally,
+installing a modern version of Visual Studio with support for building
+C/C++ applications is sufficient. The specific component required is
+``Microsoft.VisualCPP.Redist.<version>.Latest``, where ``<version>`` is
+likely ``14``.
+
+PyOxidizer does not currently support automatically materializing the
+Universal C Runtime (UCRT) files.
+
+PyOxidizer does also not yet support sniffing binaries for missing DLL
+dependencies. So you may need to manually add additional DLLs to your
+application install layout to satisfy run-time dependencies.
+
+For more information, see the
 `Microsoft documentation <https://docs.microsoft.com/en-us/cpp/windows/deploying-native-desktop-applications-visual-cpp?view=vs-2019>`_
-on deployment considerations for Windows binaries. The
-`Dependency Walker <http://www.dependencywalker.com/>`_ tool is also
+on deployment considerations for Windows binaries.
+
+The `Dependency Walker <http://www.dependencywalker.com/>`_ tool is also
 useful for analyzing DLL dependencies.
 
 Windows binaries tend to be highly portable by default. If you follow
 Microsoft's guidelines and install all required DLLs, you should be
 set.
 
-macOS
-=====
+macOS Portability
+=================
 
 The built-in Python distributions are built with
 ``MACOSX_DEPLOYMENT_TARGET=10.9``, so they should be compatible with
@@ -113,8 +155,8 @@ macOS SDK features aren't present.
 Apple's `Xcode documentation <https://developer.apple.com/documentation/xcode>`_
 has various guides useful for further consideration.
 
-Linux
-=====
+Linux Portability
+=================
 
 Linux is the most difficult platform to tackle for binary portability.
 There's a strongly held attitude that binaries should be managed as

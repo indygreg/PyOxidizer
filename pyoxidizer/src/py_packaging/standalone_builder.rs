@@ -7,6 +7,7 @@ use {
         binary::{
             pyembed_licenses, EmbeddedPythonContext, LibpythonLinkMode, PackedResourcesLoadMode,
             PythonBinaryBuilder, PythonLinkingInfo, ResourceAddCollectionContextCallback,
+            WindowsRuntimeDllsMode,
         },
         config::{PyembedPackedResourcesSource, PyembedPythonInterpreterConfig},
         distribution::{BinaryLibpythonLinkMode, PythonDistribution},
@@ -43,7 +44,7 @@ use {
     },
     tugger_file_manifest::{File, FileData, FileEntry, FileManifest},
     tugger_licensing::{ComponentFlavor, LicensedComponent},
-    tugger_windows::VcRedistributablePlatform,
+    tugger_windows::{find_visual_cpp_redistributable, VcRedistributablePlatform},
 };
 
 /// Libraries that we should not link against on Linux.
@@ -117,6 +118,9 @@ pub struct StandalonePythonExecutableBuilder {
 
     /// Path to install tcl/tk files into.
     tcl_files_path: Option<String>,
+
+    /// Describes how Windows runtime DLLs should be handled during builds.
+    windows_runtime_dlls_mode: WindowsRuntimeDllsMode,
 }
 
 impl StandalonePythonExecutableBuilder {
@@ -216,6 +220,7 @@ impl StandalonePythonExecutableBuilder {
             host_python_exe,
             windows_subsystem: "console".to_string(),
             tcl_files_path: None,
+            windows_runtime_dlls_mode: WindowsRuntimeDllsMode::WhenPresent,
         });
 
         builder.add_distribution_core_state()?;
@@ -369,6 +374,51 @@ impl StandalonePythonExecutableBuilder {
             cargo_metadata,
         })
     }
+
+    /// Resolves Windows runtime DLLs file needed for this binary given current settings.
+    fn resolve_windows_runtime_dll_files(&self) -> Result<FileManifest> {
+        let mut manifest = FileManifest::default();
+
+        // If we require Windows CRT DLLs and we're told to install them, do that.
+        if let Some((version, platform)) = self.vc_runtime_requirements() {
+            if matches!(
+                self.windows_runtime_dlls_mode(),
+                WindowsRuntimeDllsMode::WhenPresent | WindowsRuntimeDllsMode::Always
+            ) {
+                match find_visual_cpp_redistributable(&version, platform) {
+                    Ok(paths) => {
+                        for path in paths {
+                            let file_name = PathBuf::from(
+                                path.file_name()
+                                    .ok_or_else(|| anyhow!("could not determine file name"))?,
+                            );
+                            manifest.add_file_entry(
+                                file_name,
+                                FileEntry {
+                                    data: FileData::Path(path),
+                                    executable: true,
+                                },
+                            )?;
+                        }
+                    }
+                    Err(err) => {
+                        // Non-fatal in WhenPresent mode.
+                        if matches!(
+                            self.windows_runtime_dlls_mode(),
+                            WindowsRuntimeDllsMode::Always
+                        ) {
+                            return Err(anyhow!(
+                                "Windows Runtime DLLs mode of 'always' failed to locate files: {}",
+                                err
+                            ));
+                        }
+                    }
+                }
+            }
+        }
+
+        Ok(manifest)
+    }
 }
 
 impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
@@ -425,6 +475,14 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
 
     fn target_python_exe_path(&self) -> &Path {
         &self.target_distribution.python_exe_path()
+    }
+
+    fn windows_runtime_dlls_mode(&self) -> &WindowsRuntimeDllsMode {
+        &self.windows_runtime_dlls_mode
+    }
+
+    fn set_windows_runtime_dlls_mode(&mut self, value: WindowsRuntimeDllsMode) {
+        self.windows_runtime_dlls_mode = value;
     }
 
     fn tcl_files_path(&self) -> &Option<String> {
@@ -969,6 +1027,9 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
                 )?;
             }
         }
+
+        // Install Windows runtime DLLs if told to do so.
+        extra_files.add_manifest(&self.resolve_windows_runtime_dll_files()?)?;
 
         Ok(EmbeddedPythonContext {
             config,
@@ -2973,6 +3034,88 @@ pub mod tests {
                 assert_eq!(reqs, Some(("14".to_string(), platform)));
             } else {
                 assert!(reqs.is_none());
+            }
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_install_windows_runtime_dlls() -> Result<()> {
+        let host_distribution = get_default_distribution()?;
+
+        for dist in get_all_standalone_distributions()? {
+            let mut builder = StandalonePythonExecutableBuilder::from_distribution(
+                host_distribution.clone(),
+                dist.clone(),
+                host_distribution.target_triple().to_string(),
+                dist.target_triple().to_string(),
+                "myapp".to_string(),
+                BinaryLibpythonLinkMode::Default,
+                dist.create_packaging_policy()?,
+                dist.create_python_interpreter_config()?,
+            )?;
+
+            // In Never mode, the set of extra files should always be empty.
+            builder.set_windows_runtime_dlls_mode(WindowsRuntimeDllsMode::Never);
+            let manifest = builder.resolve_windows_runtime_dll_files()?;
+            assert!(
+                manifest.is_empty(),
+                "target triple: {}",
+                dist.target_triple()
+            );
+
+            // In WhenPresent mode, we resolve files when the binary requires
+            // them and when the host machine can locate them.
+            builder.set_windows_runtime_dlls_mode(WindowsRuntimeDllsMode::WhenPresent);
+
+            if let Some((version, platform)) = builder.vc_runtime_requirements() {
+                let can_locate_runtime =
+                    find_visual_cpp_redistributable(&version, platform).is_ok();
+
+                let manifest = builder.resolve_windows_runtime_dll_files()?;
+
+                if can_locate_runtime {
+                    assert!(
+                        !manifest.is_empty(),
+                        "target triple: {}",
+                        dist.target_triple()
+                    );
+                } else {
+                    assert!(
+                        manifest.is_empty(),
+                        "target triple: {}",
+                        dist.target_triple()
+                    );
+                }
+            } else {
+                assert!(
+                    builder.resolve_windows_runtime_dll_files()?.is_empty(),
+                    "target triple: {}",
+                    dist.target_triple()
+                );
+            }
+
+            // In Always mode, we error if we can't locate the runtime files.
+            builder.set_windows_runtime_dlls_mode(WindowsRuntimeDllsMode::Always);
+
+            if let Some((version, platform)) = builder.vc_runtime_requirements() {
+                let can_locate_runtime =
+                    find_visual_cpp_redistributable(&version, platform).is_ok();
+
+                let res = builder.resolve_windows_runtime_dll_files();
+
+                if can_locate_runtime {
+                    assert!(!res?.is_empty(), "target triple: {}", dist.target_triple());
+                } else {
+                    assert!(res.is_err());
+                }
+            } else {
+                assert!(
+                    builder.resolve_windows_runtime_dll_files()?.is_empty(),
+                    "target triple: {}",
+                    dist.target_triple()
+                );
             }
         }
 

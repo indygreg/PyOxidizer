@@ -108,6 +108,45 @@ impl TryFrom<&str> for PackedResourcesLoadMode {
     }
 }
 
+/// Describes how Windows Runtime DLLs (e.g. vcruntime140.dll) should be handled during builds.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum WindowsRuntimeDllsMode {
+    /// Never attempt to install Windows Runtime DLLs.
+    ///
+    /// A binary will be generated with no runtime DLLs next to it.
+    Never,
+
+    /// Install Windows Runtime DLLs if they can be located. Do nothing if not.
+    WhenPresent,
+
+    /// Always install Windows Runtime DLLs and fail if they can't be found.
+    Always,
+}
+
+impl ToString for WindowsRuntimeDllsMode {
+    fn to_string(&self) -> String {
+        match self {
+            Self::Never => "never",
+            Self::WhenPresent => "when-present",
+            Self::Always => "always",
+        }
+        .to_string()
+    }
+}
+
+impl TryFrom<&str> for WindowsRuntimeDllsMode {
+    type Error = String;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        match value {
+            "never" => Ok(Self::Never),
+            "when-present" => Ok(Self::WhenPresent),
+            "always" => Ok(Self::Always),
+            _ => Err(format!("{} is not a valid mode; must be 'never'", value)),
+        }
+    }
+}
+
 /// A callable that can influence PythonResourceAddCollectionContext.
 pub type ResourceAddCollectionContextCallback<'a> = Box<
     dyn Fn(
@@ -161,6 +200,17 @@ pub trait PythonBinaryBuilder {
     /// Path to Python executable that is native to the target architecture.
     // TODO this should not need to exist if we properly supported cross-compiling.
     fn target_python_exe_path(&self) -> &Path;
+
+    /// Obtain how Windows runtime DLLs will be handled during builds.
+    ///
+    /// See the enum's documentation for behavior.
+    ///
+    /// This setting is ignored for binaries that don't need the Windows runtime
+    /// DLLs.
+    fn windows_runtime_dlls_mode(&self) -> &WindowsRuntimeDllsMode;
+
+    /// Set the value for `windows_runtime_dlls_mode()`.
+    fn set_windows_runtime_dlls_mode(&mut self, value: WindowsRuntimeDllsMode);
 
     /// The directory to install tcl/tk files into.
     fn tcl_files_path(&self) -> &Option<String>;

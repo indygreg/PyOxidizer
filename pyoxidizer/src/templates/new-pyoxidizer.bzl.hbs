@@ -202,6 +202,17 @@ def make_exe(dist):
     # module works.
     # exe.tcl_files_path = "lib"
 
+    # Never attempt to copy Windows runtime DLLs next to the built executable.
+    # exe.windows_runtime_dlls_mode = "never"
+
+    # Copy Windows runtime DLLs next to the built executable when they can be
+    # located.
+    # exe.windows_runtime_dlls_mode = "when-present"
+
+    # Copy Windows runtime DLLs next to the build executable and error if this
+    # cannot be done.
+    # exe.windows_runtime_dlls_mode = "always"
+
     # Make the executable a console application on Windows.
     # exe.windows_subsystem = "console"
 

@@ -16,8 +16,9 @@ use {
         },
     },
     crate::{
-        project_building::build_python_executable, py_packaging::binary::PackedResourcesLoadMode,
+        project_building::build_python_executable,
         py_packaging::binary::PythonBinaryBuilder,
+        py_packaging::binary::{PackedResourcesLoadMode, WindowsRuntimeDllsMode},
     },
     anyhow::{anyhow, Context, Result},
     linked_hash_map::LinkedHashMap,
@@ -142,6 +143,9 @@ impl TypedValue for PythonExecutableValue {
                 Some(value) => Ok(Value::from(value.to_string())),
                 None => Ok(Value::from(NoneType::None)),
             },
+            "windows_runtime_dlls_mode" => Ok(Value::from(
+                self.exe.windows_runtime_dlls_mode().to_string(),
+            )),
             "windows_subsystem" => Ok(Value::from(self.exe.windows_subsystem())),
             _ => Err(ValueError::OperationNotSupported {
                 op: UnsupportedOperation::GetAttr(attribute.to_string()),
@@ -154,7 +158,10 @@ impl TypedValue for PythonExecutableValue {
     fn has_attr(&self, attribute: &str) -> Result<bool, ValueError> {
         Ok(matches!(
             attribute,
-            "packed_resources_load_mode" | "tcl_files_path" | "windows_subsystem"
+            "packed_resources_load_mode"
+                | "tcl_files_path"
+                | "windows_runtime_dlls_mode"
+                | "windows_subsystem"
         ))
     }
 
@@ -175,6 +182,19 @@ impl TypedValue for PythonExecutableValue {
             }
             "tcl_files_path" => {
                 self.exe.set_tcl_files_path(value.to_optional());
+
+                Ok(())
+            }
+            "windows_runtime_dlls_mode" => {
+                self.exe.set_windows_runtime_dlls_mode(
+                    WindowsRuntimeDllsMode::try_from(value.to_string().as_str()).map_err(|e| {
+                        ValueError::from(RuntimeError {
+                            code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
+                            message: e,
+                            label: format!("{}.{}", Self::TYPE, attribute),
+                        })
+                    })?,
+                );
 
                 Ok(())
             }
@@ -746,9 +766,6 @@ impl PythonExecutableValue {
             product_name.clone(),
             product_version.clone(),
             product_manufacturer.clone(),
-            // Don't add vcruntime files in bundle installer because we install them
-            // as part of the install chain.
-            false,
         )?;
 
         if msi_builder_callback.get_type() == "function" {
@@ -805,7 +822,6 @@ impl PythonExecutableValue {
         product_name: String,
         product_version: String,
         product_manufacturer: String,
-        add_vcruntime: bool,
     ) -> ValueResult {
         let manifest_value = self.to_file_manifest(type_values, ".".to_string())?;
         let manifest = manifest_value.downcast_ref::<FileManifestValue>().unwrap();
@@ -820,24 +836,6 @@ impl PythonExecutableValue {
             .downcast_mut::<WiXMsiBuilderValue>()
             .unwrap()
             .unwrap();
-
-        // Automatically add the Visual C++ Redistributable files if they are needed.
-        // We do this before .add_program_files_manifest() in case the manifest wants to
-        // override them with explicit copies.
-        if add_vcruntime {
-            if let Some((version, platform)) = self.exe.vc_runtime_requirements() {
-                builder
-                    .inner
-                    .add_visual_cpp_redistributable(&version, platform)
-                    .map_err(|e| {
-                        ValueError::Runtime(RuntimeError {
-                            code: "PYOXIDIZER_PYTHON_EXECUTABLE",
-                            message: format!("{:?}", e),
-                            label: "to_wix_msi_builder()".to_string(),
-                        })
-                    })?;
-            }
-        }
 
         builder.add_program_files_manifest(manifest.deref().clone())?;
 
@@ -1050,7 +1048,7 @@ starlark_module! { python_executable_env =>
         product_manufacturer: String
     ) {
         let this = this.downcast_ref::<PythonExecutableValue>().unwrap();
-        this.to_wix_msi_builder(&env, id_prefix, product_name, product_version, product_manufacturer, true)
+        this.to_wix_msi_builder(&env, id_prefix, product_name, product_version, product_manufacturer)
     }
 }
 
@@ -1243,6 +1241,33 @@ mod tests {
         assert_eq!(x.inner.name, "foo");
         assert!(!x.inner.is_package);
         assert_eq!(x.inner.source.resolve().unwrap(), b"# foo");
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_windows_runtime_dlls_mode() -> Result<()> {
+        let mut env = test_evaluation_context_builder()?.into_context()?;
+        add_exe(&mut env)?;
+
+        let value = env.eval("exe.windows_runtime_dlls_mode")?;
+        assert_eq!(value.get_type(), "string");
+        assert_eq!(value.to_string(), "when-present");
+
+        let value =
+            env.eval("exe.windows_runtime_dlls_mode = 'never'; exe.windows_runtime_dlls_mode")?;
+        assert_eq!(value.to_string(), "never");
+
+        let value =
+            env.eval("exe.windows_runtime_dlls_mode = 'always'; exe.windows_runtime_dlls_mode")?;
+        assert_eq!(value.to_string(), "always");
+
+        assert!(env.eval("exe.windows_runtime_dlls_mode = 'bad'").is_err());
+
+        let value = env.eval(
+            "exe.windows_runtime_dlls_mode = 'when-present'; exe.windows_runtime_dlls_mode",
+        )?;
+        assert_eq!(value.to_string(), "when-present");
 
         Ok(())
     }

@@ -176,6 +176,12 @@ New Features
 * The ``@classmethod``s ``OxidizedDistribution.find_name()`` and
   ``OxidizedDistribution.discover()`` are now implemented, filling in a feature
   gap in ``importlib.metadata`` functionality.
+* There is a new :ref:`config_type_python_executable_windows_runtime_dlls_mode`
+  attribute to control how required Windows runtime DLL files should be
+  materialized during application building. By default, if a built binary
+  requires the Visual C++ Redistributable Runtime (e.g. ``vcruntime140.dll``),
+  PyOxidizer will attempt to locate and copy those files next to the built
+  binary. See :ref:`packaging_windows_portability` for more.
 
 Other Relevant Changes
 ^^^^^^^^^^^^^^^^^^^^^^
