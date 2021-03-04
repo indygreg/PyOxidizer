@@ -340,7 +340,7 @@ fn release_package(root: &Path, workspace_packages: &[String], package: &str) ->
         == 0
     {
         println!("{}: sleeping to wait for crates index to update", package);
-        std::thread::sleep(std::time::Duration::from_secs(20));
+        std::thread::sleep(std::time::Duration::from_secs(30));
     };
 
     println!(
