@@ -72,8 +72,8 @@ version = "0.2.0"
 # path = "../starlark-dialect-build-targets"
 
 [dependencies.tugger-binary-analysis]
-version = "0.1.0-pre"
-path = "../tugger-binary-analysis"
+version = "0.1.0"
+# path = "../tugger-binary-analysis"
 
 [dependencies.tugger-common]
 version = "0.1.0"
