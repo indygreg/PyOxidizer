@@ -76,8 +76,8 @@ version = "0.1.0-pre"
 path = "../tugger-binary-analysis"
 
 [dependencies.tugger-common]
-version = "0.1.0-pre"
-path = "../tugger-common"
+version = "0.1.0"
+# path = "../tugger-common"
 
 [dependencies.tugger-licensing]
 version = "0.1.0-pre"
