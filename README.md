@@ -56,4 +56,5 @@ at https://pyoxidizer.readthedocs.io/en/latest/index.html.
 mailing list is a forum for users to discuss all things PyOxidizer.
 
 :moneybag: If you want to financially contribute to PyOxidizer, do so
+via [GitHub Sponsors](https://github.com/sponsors/indygreg) or
 [on Patreon](https://www.patreon.com/indygreg).
