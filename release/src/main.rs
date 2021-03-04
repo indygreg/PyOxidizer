@@ -28,11 +28,21 @@ static IGNORE_PACKAGES: Lazy<Vec<&'static str>> = Lazy::new(|| vec!["release"]);
 /// Order that packages should be released in.
 static RELEASE_ORDER: Lazy<Vec<&'static str>> = Lazy::new(|| {
     vec![
+        "starlark-dialect-build-targets",
+        "tugger-common",
+        "tugger-file-manifest",
+        "tugger-binary-analysis",
+        "tugger-debian",
+        "tugger-licensing",
+        "tugger-licensing-net",
+        "tugger-rpm",
+        "tugger-snapcraft",
+        "tugger-windows",
+        "tugger-wix",
+        "tugger",
         "python-packed-resources",
         "python-packaging",
         "pyembed",
-        "starlark-dialect-build-targets",
-        "tugger",
         "pyoxidizer",
     ]
 });
