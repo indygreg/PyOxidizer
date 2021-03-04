@@ -82,7 +82,11 @@ C++ Redistributable in your application installer so the dependency
 is managed at the system level. (Installing the redistributable via
 an installer is preferred per Microsoft documentation.)
 
-There is also currently a dependency on the Universal C Runtime (UCRT).
+There is also a dependency on the Universal C Runtime (UCRT). However,
+the UCRT is a Windows operating system component and is always present
+in installations of Windows 10 and Windows Server 2016 and newer. So
+unless you are targeting Windows 8 or Windows Server 2012, you don't
+need to worry about the UCRT.
 
 PyOxidizer supports automatically materializing the runtime dependencies
 via multiple mechanisms.
@@ -120,7 +124,9 @@ C/C++ applications is sufficient. The specific component required is
 likely ``14``.
 
 PyOxidizer does not currently support automatically materializing the
-Universal C Runtime (UCRT) files.
+Universal C Runtime (UCRT) files. See
+https://docs.microsoft.com/en-us/cpp/windows/universal-crt-deployment for
+instructions on deploying the UCRT with your application.
 
 PyOxidizer does also not yet support sniffing binaries for missing DLL
 dependencies. So you may need to manually add additional DLLs to your
