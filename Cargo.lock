@@ -1856,7 +1856,7 @@ dependencies = [
  "libc",
  "memory-module-sys",
  "pyembed",
- "python-packed-resources 0.5.0",
+ "python-packed-resources 0.6.0-pre",
  "python3-sys",
  "winapi 0.3.9",
 ]
@@ -2141,7 +2141,7 @@ dependencies = [
  "once_cell",
  "pathdiff",
  "python-packaging 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "python-packed-resources 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "python-packed-resources 0.6.0-pre",
  "python3-sys",
  "rusty-fork",
  "snmalloc-sys",
@@ -2173,7 +2173,7 @@ dependencies = [
  "once_cell",
  "path-dedot",
  "python-packaging 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "python-packed-resources 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "python-packed-resources 0.6.0-pre",
  "rustc_version",
  "semver",
  "serde",
@@ -2208,7 +2208,7 @@ dependencies = [
  "itertools 0.10.0",
  "mailparse",
  "once_cell",
- "python-packed-resources 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "python-packed-resources 0.6.0-pre",
  "regex",
  "spdx",
  "tempfile",
@@ -2230,7 +2230,7 @@ dependencies = [
  "itertools 0.10.0",
  "mailparse",
  "once_cell",
- "python-packed-resources 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "python-packed-resources 0.5.0",
  "regex",
  "spdx",
  "tugger-file-manifest 0.1.0",
@@ -2242,6 +2242,8 @@ dependencies = [
 [[package]]
 name = "python-packed-resources"
 version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3ec011681e159c300f717586ce49ba1cbffa43c9cafbd02b705a421609560527"
 dependencies = [
  "anyhow",
  "byteorder",
@@ -2249,9 +2251,7 @@ dependencies = [
 
 [[package]]
 name = "python-packed-resources"
-version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3ec011681e159c300f717586ce49ba1cbffa43c9cafbd02b705a421609560527"
+version = "0.6.0-pre"
 dependencies = [
  "anyhow",
  "byteorder",
