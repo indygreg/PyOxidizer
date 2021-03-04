@@ -29,8 +29,8 @@ version = "0.1.0"
 # path = "../tugger-common"
 
 [target.'cfg(target_family = "unix")'.dependencies.tugger-rpm]
-version = "0.1.0-pre"
-path = "../tugger-rpm"
+version = "0.1.0"
+# path = "../tugger-rpm"
 
 [dependencies.tugger-snapcraft]
 version = "0.1.0"
