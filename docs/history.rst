@@ -24,6 +24,13 @@ Blog Posts
 Version History
 ===============
 
+.. _version_0_12_0:
+
+0.12.0
+------
+
+Not yet released.
+
 .. _version_0_11_0:
 
 0.11.0
