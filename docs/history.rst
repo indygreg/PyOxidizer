@@ -181,7 +181,10 @@ New Features
   materialized during application building. By default, if a built binary
   requires the Visual C++ Redistributable Runtime (e.g. ``vcruntime140.dll``),
   PyOxidizer will attempt to locate and copy those files next to the built
-  binary. See :ref:`packaging_windows_portability` for more.
+  binary. See :ref:`pyoxidizer_distributing_windows_vc_redist` for more.
+* The new :ref:`pyoxidizer_distributing_windows` documentation consolidates
+  and expands documentation around distribution/deployment considerations
+  for Windows.
 
 Other Relevant Changes
 ^^^^^^^^^^^^^^^^^^^^^^

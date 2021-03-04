@@ -193,7 +193,7 @@ can find it, you'll get an error about this missing file when attempting to
 run/load the binary.
 
 PyOxidizer has some support for managing this file for you. See
-:ref:`packaging_windows_portability` for more.
+:ref:`pyoxidizer_distributing_windows_vc_redist` for more.
 
 If PyOxidizer is not materializing this file next your built binary,
 either you've disabled this functionality via your configuration

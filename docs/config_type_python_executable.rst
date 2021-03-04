@@ -99,7 +99,7 @@ The following values are recognized:
 This setting is ignored when the built binary does not have a dependency
 on Windows runtime DLLs.
 
-See :ref:`packaging_windows_portability` for more on runtime DLL requirements.
+See :ref:`pyoxidizer_distributing_windows` for more on runtime DLL requirements.
 
 .. _config_type_python_executable_windows_subsystem:
 
