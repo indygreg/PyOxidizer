@@ -140,6 +140,8 @@ run on nearly every system for the platform they target. This means:
   Base Core Configuration and should be present on all conforming Linux
   distros. On macOS, referenced dylibs include ``libSystem``, which is part
   of the macOS core install.
+* For Linux, see :ref:`pyoxidizer_distributing_linux` for portability
+  considerations.
 * For Windows, see :ref:`pyoxidizer_distributing_windows` for portability
   considerations.
 * On macOS, x86_64 (read: Intel CPUs) distributions are built so that they should

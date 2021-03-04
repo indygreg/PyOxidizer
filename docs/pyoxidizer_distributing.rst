@@ -12,4 +12,5 @@ with PyOxidizer.
 
    pyoxidizer_distributing_overview
    pyoxidizer_distributing_wix
+   pyoxidizer_distributing_linux
    pyoxidizer_distributing_windows

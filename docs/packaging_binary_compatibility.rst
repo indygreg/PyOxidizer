@@ -39,31 +39,6 @@ thinks the binary is compatible with.
 
    ``pyoxidizer analyze`` is not yet feature complete on all platforms.
 
-Python Distribution Versus Built Application Portability
-========================================================
-
-PyOxidizer ships with specially built Python distributions that are
-highly portable. See :ref:`packaging_available_python_distributions`
-for the full list of these distributions and
-:ref:`packaging_python_distribution_portability` for details on the
-portability of these Python distributions.
-
-Generally speaking, you don't have to worry about the portability
-of the Python distributions because the distributions tend to
-*just work*.
-
-.. important::
-
-   The machine and environment you use to run ``pyoxidizer`` has
-   critical implications for the portability of built binaries.
-
-When you use PyOxidizer to produce a new binary (an executable or
-library), you are compiling *new* code and linking it in an environment
-that is different from the specialized environment used to build the
-built-in Python distributions. This means that the binary portability
-of your built binary is effectively defined by the environment
-``pyoxidizer`` was run from.
-
 .. _packaging_windows_portability:
 
 Windows Portability
@@ -92,47 +67,4 @@ has various guides useful for further consideration.
 Linux Portability
 =================
 
-Linux is the most difficult platform to tackle for binary portability.
-There's a strongly held attitude that binaries should be managed as
-packages by the operating system and these packages are built in such
-a way that the package manager handles all the details for you. If you
-stray from the *paved road* and choose not to use the package manager
-provided by your operating system with the package sources configured
-by default, things get very challenging very quickly.
-
-The best way to produce a portable Linux binary is to produce a
-fully statically-linked binary. There are no shared libraries to
-worry about and generally speaking these binaries *just work*. See
-:ref:`statically_linked_linux` for more.
-
-If you produce a dynamic binary with library dependencies, things are
-complicated.
-
-Nearly every binary built on Linux will require linking against ``libc``
-and will require a symbol provided by ``glibc``. ``glibc`` versions
-it symbols. And when the linker resolves those symbols at link time,
-it usually uses the version of ``glibc`` being linked against. For
-example, if you link on a machine with ``glibc`` 2.19, the symbol
-versions in the produced binary will be against version 2.19 and
-the binary will load against ``glibc`` versions >=2.19. But if
-you link on a machine with ``glibc`` 2.29, symbol versions are against
-version 2.29 and you can only load against versions >= 2.29.
-
-This means that to ensure maximum portability, you want to link against
-old ``glibc`` symbol versions. While it is possible to use old symbol
-versions when a more modern ``glibc`` is present, the path of least
-resistance is to build in an environment that has an older ``glibc``.
-
-The built-in Linux distributions use Debian 8 (Jessie) as their build
-environment. So a Debian 8 build environment is a good candidate
-to build on. Ubuntu 14.04, OpenSUSE 13.2, OpenSUSE 42.1, RHEL/CentOS 7,
-and Fedora 21 (``glibc`` 2.20) are also good candidates for build
-environments.
-
-Of course, if you are producing distribution-specific binaries and/or
-control installation (so e.g. dependencies are installed automatically),
-this matters less to you.
-
-Again, the ``pyoxidizer analyze`` command can be very useful for
-inspecting binaries for portability and alerting you to any potential
-issues.
+See :ref:`pyoxidizer_distributing_linux`.
