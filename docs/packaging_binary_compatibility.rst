@@ -38,33 +38,3 @@ thinks the binary is compatible with.
 .. note::
 
    ``pyoxidizer analyze`` is not yet feature complete on all platforms.
-
-.. _packaging_windows_portability:
-
-Windows Portability
-===================
-
-See :ref:`pyoxidizer_distributing_windows`.
-
-macOS Portability
-=================
-
-The built-in Python distributions are built with
-``MACOSX_DEPLOYMENT_TARGET=10.9``, so they should be compatible with
-macOS versions 10.9 and newer.
-
-The Python distribution has dependencies against a handful of system
-libraries and frameworks. These frameworks should be present on all
-macOS installations.
-
-From your build environment, you may want to also ensure
-``MACOSX_DEPLOYMENT_TARGET`` is set to ensure references to newer
-macOS SDK features aren't present.
-
-Apple's `Xcode documentation <https://developer.apple.com/documentation/xcode>`_
-has various guides useful for further consideration.
-
-Linux Portability
-=================
-
-See :ref:`pyoxidizer_distributing_linux`.

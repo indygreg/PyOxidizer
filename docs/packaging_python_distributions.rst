@@ -142,11 +142,10 @@ run on nearly every system for the platform they target. This means:
   of the macOS core install.
 * For Linux, see :ref:`pyoxidizer_distributing_linux` for portability
   considerations.
+* For macOS, see :ref:`pyoxidizer_distributing_macos` for portability
+  considerations.
 * For Windows, see :ref:`pyoxidizer_distributing_windows` for portability
   considerations.
-* On macOS, x86_64 (read: Intel CPUs) distributions are built so that they should
-  run on macOS >= 10.9 and aarch64 (read: Apple/ARM CPUs) distributions should run
-  on macOS >= 11.0 (the first version of macOS to support ARM CPUs).
 
 .. _packaging_python_distribution_knowns_issues:
 
