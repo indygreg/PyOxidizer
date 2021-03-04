@@ -1,8 +1,5 @@
 [workspace]
-# Remember to update the constants in release/src/main.rs when the set
-# of crates changes.
 members = [
-    'oxidized-importer',
     'pyembed',
     'pyoxidizer',
     'python-packaging',
