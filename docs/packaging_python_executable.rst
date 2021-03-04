@@ -106,5 +106,6 @@ Binary Portability
 ==================
 
 A ``python``-like executable built with PyOxidizer may not *just work*
-when copied to another machine. See :ref:`packaging_binary_compatibility`
+when copied to another machine. See
+:ref:`pyoxidizer_distributing_binary_portability`
 to learn more about the portability of binaries built with PyOxidizer.

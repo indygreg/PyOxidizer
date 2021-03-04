@@ -11,6 +11,7 @@ with PyOxidizer.
    :maxdepth: 2
 
    pyoxidizer_distributing_overview
+   pyoxidizer_distributing_binary_portability
    pyoxidizer_distributing_wix
    pyoxidizer_distributing_linux
    pyoxidizer_distributing_macos

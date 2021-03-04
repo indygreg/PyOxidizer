@@ -1,4 +1,4 @@
-.. _packaging_binary_compatibility:
+.. _pyoxidizer_distributing_binary_portability:
 
 =============================================
 Portability of Binaries Built with PyOxidizer
@@ -14,13 +14,20 @@ portability for various reasons.
 
 PyOxidizer is capable of building binaries that are highly *portable*.
 However, the steps for doing so can be nuanced and vary substantially
-by operating system and target platform. This document attempts to
-capture the various steps and caveats involved.
+by operating system and target platform.
+
+This document outlines some general strategies for tackling binary
+portability. Please also consult the various platform-specific
+documentation on this topic:
+
+* :ref:`pyoxidizer_distributing_linux`
+* :ref:`pyoxidizer_distributing_macos`
+* :ref:`pyoxidizer_distributing_windows`
 
 .. important::
 
    Please create issues at https://github.com/indygreg/PyOxidizer/issues
-   when documentation on this page is inaccurate or lacks critical
+   when documentation on this subject is inaccurate or lacks critical
    details.
 
 Using ``pyoxidizer analyze`` For Assessing Binary Portability

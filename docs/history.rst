@@ -182,9 +182,9 @@ New Features
   requires the Visual C++ Redistributable Runtime (e.g. ``vcruntime140.dll``),
   PyOxidizer will attempt to locate and copy those files next to the built
   binary. See :ref:`pyoxidizer_distributing_windows_vc_redist` for more.
-* The new :ref:`pyoxidizer_distributing_windows` documentation consolidates
-  and expands documentation around distribution/deployment considerations
-  for Windows.
+* Documentation around portability of binaries produced with PyOxidizer has been
+  reorganized and overhauled. See :ref:`pyoxidizer_distributing_binary_portability`
+  for the new documentation.
 
 Other Relevant Changes
 ^^^^^^^^^^^^^^^^^^^^^^
