@@ -272,7 +272,7 @@ When ``path_hook``, bound to an ``OxidizedFinder`` instance ``self``, is in
 ``sys.path_hooks``, ``pkgutil.iter_modules`` can search ``self``'s embedded
 resources, filtering by its ``path`` argument. Additionally, if you add
 ``sys.executable`` to ``sys.path``, the meta-path finder
-``importlib.machineray.PathFinder`` can find ``self``'s embedded resources.
+``importlib.machinery.PathFinder`` can find ``self``'s embedded resources.
 
 ``path_hook`` returns a `path-entry finder`_\ [#fn-path-entry-finder]_ that can
 find modules at the top level or inside a package according to ``path``.
