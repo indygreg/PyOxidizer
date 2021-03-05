@@ -1719,7 +1719,7 @@ pub(crate) fn initialize_path_hooks(py: Python, finder: &PyObject, sys: &PyModul
 
 #[cfg(test)]
 mod test_path_entry_finder {
-    use super::{PathEntryFinder, oxidized_finder_new};
+    use super::{oxidized_finder_new, PathEntryFinder};
 
     #[test]
     fn is_visible() {
