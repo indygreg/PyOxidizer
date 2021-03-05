@@ -242,7 +242,7 @@ extern "C" fn mimalloc_malloc(_ctx: *mut c_void, size: size_t) -> *mut c_void {
 }
 
 #[cfg(feature = "snmalloc-sys")]
-extern "C" fn snmalloc_malloc(ctx: *mut c_void, size: size_t) -> *mut c_void {
+extern "C" fn snmalloc_malloc(_ctx: *mut c_void, size: size_t) -> *mut c_void {
     let size = match size {
         0 => 1,
         val => val,
@@ -288,7 +288,7 @@ extern "C" fn mimalloc_calloc(_ctx: *mut c_void, nelem: size_t, elsize: size_t) 
 }
 
 #[cfg(feature = "snmalloc-sys")]
-extern "C" fn snmalloc_calloc(ctx: *mut c_void, nelem: size_t, elsize: size_t) -> *mut c_void {
+extern "C" fn snmalloc_calloc(_ctx: *mut c_void, nelem: size_t, elsize: size_t) -> *mut c_void {
     let size = match nelem * elsize {
         0 => 1,
         val => val,
@@ -410,7 +410,7 @@ extern "C" fn mimalloc_free(_ctx: *mut c_void, ptr: *mut c_void) {
 }
 
 #[cfg(feature = "snmalloc-sys")]
-extern "C" fn snmalloc_free(ctx: *mut c_void, ptr: *mut c_void) {
+extern "C" fn snmalloc_free(_ctx: *mut c_void, ptr: *mut c_void) {
     if ptr.is_null() {
         return;
     }
@@ -455,7 +455,7 @@ extern "C" fn mimalloc_arena_free(_ctx: *mut c_void, ptr: *mut c_void, _size: si
 }
 
 #[cfg(feature = "snmalloc-sys")]
-extern "C" fn snmalloc_arena_free(ctx: *mut c_void, ptr: *mut c_void, size: size_t) {
+extern "C" fn snmalloc_arena_free(_ctx: *mut c_void, ptr: *mut c_void, _size: size_t) {
     if ptr.is_null() {
         return;
     }
