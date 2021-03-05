@@ -533,7 +533,7 @@ py_class!(class OxidizedFinder |py| {
         oxidized_finder_new(py, relative_path_origin)
     }
 
-    def path_hook(&self, path: PyObject) -> PyResult<_PathEntryFinder> {
+    def path_hook(&self, path: PyObject) -> PyResult<PathEntryFinder> {
         self.path_hook_impl(py, path)
     }
 
@@ -910,7 +910,7 @@ impl OxidizedFinder {
         };
 
         resources_state.pkgutil_modules_infos(py, prefix, state.optimize_level, |resource| {
-            _PathEntryFinder::is_visible("", &resource.name)
+            PathEntryFinder::is_visible("", &resource.name)
         })
     }
 
@@ -948,7 +948,7 @@ impl OxidizedFinder {
             .map_err(|err| os_error(py, err, current_exe.display()))
     }
 
-    fn path_hook_impl(&self, py: Python, path: PyObject) -> PyResult<_PathEntryFinder> {
+    fn path_hook_impl(&self, py: Python, path: PyObject) -> PyResult<PathEntryFinder> {
         // `paths` will become the return value's `path` attribute, which exists
         // only to be passed to `self.find_spec`'s
         // `path: Optional[Iterable[str]]` argument.
@@ -961,7 +961,7 @@ impl OxidizedFinder {
             PyList::new(py, &[os.call(py, "fspath", (path.clone_ref(py),), None)?])
         };
 
-        // Compute _PathEntryFinder::package
+        // Compute PathEntryFinder::package
         let pkg = {
             let current_exe = self.exe_realpath(py)?;
             let not_exe_err = || {
@@ -991,18 +991,18 @@ impl OxidizedFinder {
                 return Err(not_exe_err());
             }
             // unwrapping is safe because we already know p is the prefix of pbuf
-            _PathEntryFinder::parse_path_to_pkg(py, pbuf.strip_prefix(p).unwrap())?
+            PathEntryFinder::parse_path_to_pkg(py, pbuf.strip_prefix(p).unwrap())?
         };
-        _PathEntryFinder::create_instance(py, self.as_object().clone_ref(py), paths, pkg)
+        PathEntryFinder::create_instance(py, self.as_object().clone_ref(py), paths, pkg)
     }
 }
 
 // A (mostly compliant) `importlib.abc.PathEntryFinder` that delegates paths
 // within the current executable to the `OxidizedFinder` whose `path_hook`
-// method created it. This is a private implementation detail.
-py_class!(class _PathEntryFinder |py| {
+// method created it.
+py_class!(class PathEntryFinder |py| {
     // A `importlib.abc.MetaPathFinder`, presumably but not necessarily an
-    // `OxidizedFinder`. However, `_PathEntryFinder::iter_modules` will raise
+    // `OxidizedFinder`. However, `PathEntryFinder::iter_modules` will raise
     // a `TypeError` when called if `finder` is not an `OxidizedFinder`.
     data finder: PyObject;
     // A list containing a single either str or bytes, normalized from the `path`
@@ -1031,7 +1031,7 @@ py_class!(class _PathEntryFinder |py| {
     }
 });
 
-impl _PathEntryFinder {
+impl PathEntryFinder {
     // `name` is considered _visible_ in `package` if `name` is in the first
     // level of the package. The computation is purely textual. See this
     // module's `test_path_entry_finder::is_visible` test.
@@ -1641,6 +1641,7 @@ fn module_init(py: Python, m: &PyModule) -> PyResult<()> {
         "OxidizedResourceReader",
         py.get_type::<OxidizedResourceReader>(),
     )?;
+    m.add(py, "PathEntryFinder", py.get_type::<PathEntryFinder>())?;
     m.add(
         py,
         "PythonModuleSource",
@@ -1718,11 +1719,11 @@ pub(crate) fn initialize_path_hooks(py: Python, finder: &PyObject, sys: &PyModul
 
 #[cfg(test)]
 mod test_path_entry_finder {
-    use super::{_PathEntryFinder, oxidized_finder_new};
+    use super::{PathEntryFinder, oxidized_finder_new};
 
     #[test]
     fn is_visible() {
-        let is_visible = _PathEntryFinder::is_visible;
+        let is_visible = PathEntryFinder::is_visible;
         // The empty package name allows top-level imports.
         assert!(is_visible("", "importlib"));
 
@@ -1762,7 +1763,7 @@ mod test_path_entry_finder {
         crate::MainPythonInterpreter::new(config).unwrap()
     }
 
-    /// _PathEntryFinder::parse_path_to_pkg re-encodes the package part of the
+    /// PathEntryFinder::parse_path_to_pkg re-encodes the package part of the
     /// path with Python's filesystem encoding, rather than forcing UTF-8.
     ///
     /// Decoding "\u3030" (WAVY DASH) into UTF-16-LE and encoding the result
@@ -1795,7 +1796,7 @@ mod test_path_entry_finder {
                     .to_string(),
                 "utf-16-le"
             );
-            _PathEntryFinder::parse_path_to_pkg(py, std::path::Path::new("00")).unwrap()
+            PathEntryFinder::parse_path_to_pkg(py, std::path::Path::new("00")).unwrap()
         };
 
         // The actual test.

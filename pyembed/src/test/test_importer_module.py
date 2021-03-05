@@ -20,6 +20,7 @@ class TestImporterModule(unittest.TestCase):
                 "OxidizedResourceCollector",
                 "OxidizedResourceReader",
                 "OxidizedResource",
+                "PathEntryFinder",
                 "PythonExtensionModule",
                 "PythonModuleBytecode",
                 "PythonModuleSource",

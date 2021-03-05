@@ -16,7 +16,7 @@ from typing import Iterable, Optional, Tuple, Union, TYPE_CHECKING
 import unittest
 from unittest.mock import patch
 
-from oxidized_importer import OxidizedFinder, OxidizedResource
+from oxidized_importer import OxidizedFinder, OxidizedResource, PathEntryFinder
 
 if TYPE_CHECKING:
     import importlib.abc
@@ -69,7 +69,7 @@ def link_dir(src: PathLike, dst: PathLike) -> None:
 
 class TestImporterPathEntryFinder(unittest.TestCase):
 
-    def finder(self, path: PathLike, package: str) -> importlib.abc.PathEntryFinder:
+    def finder(self, path: PathLike, package: str) -> PathEntryFinder:
         """Add the following package hierarchy to the returned finder:
 
         - ``a`` imports ``a.b`` imports ``a.b.c``
@@ -91,6 +91,7 @@ class TestImporterPathEntryFinder(unittest.TestCase):
             ("on.tשo.۳", "pass", False),
         )
         pef = mpf.path_hook(path)
+        self.assertIsInstance(pef, PathEntryFinder)
         self.assertEqual(pef._package, package)
         self.assertRaises(AttributeError, setattr, pef, "_package", package)
         return pef

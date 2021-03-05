@@ -136,12 +136,12 @@ class TestImporterIterModules(unittest.TestCase):
         path = pathlib.Path(sys.executable, name)
         path_entry_finder = f.path_hook(path)
 
-        with self.subTest(prefix="", module_iterator="_PathEntryFinder"):
+        with self.subTest(prefix="", module_iterator="PathEntryFinder"):
             unprefixed = path_entry_finder.iter_modules()
             self.assertCountEqual(unprefixed, [("two", True), ("tשo", True)])
 
         prefix = name + "."
-        with self.subTest(prefix=name + ".", module_iterator="_PathEntryFinder"):
+        with self.subTest(prefix=name + ".", module_iterator="PathEntryFinder"):
             prefixed = path_entry_finder.iter_modules(prefix=prefix)
             self.assertCountEqual(prefixed, [("on.two", True), ("on.tשo", True)])
 

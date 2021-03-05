@@ -1,3 +1,5 @@
+.. py:currentmodule:: oxidized_finder
+
 .. _oxidized_finder:
 
 ==============================
@@ -265,17 +267,14 @@ format does support expressing them. Use at your own risk.
 
 .. _oxidized_finder_path_hook:
 
-``path_hook(path: Union[str, bytes, os.PathLike[AnyStr]]) -> importlib.abc.PathEntryFinder``
---------------------------------------------------------------------------------------------
+``path_hook(path: Union[str, bytes, os.PathLike[AnyStr]]) ->`` :class:`PathEntryFinder`
+---------------------------------------------------------------------------------------
 
 When ``path_hook``, bound to an ``OxidizedFinder`` instance ``self``, is in
 ``sys.path_hooks``, ``pkgutil.iter_modules`` can search ``self``'s embedded
 resources, filtering by its ``path`` argument. Additionally, if you add
 ``sys.executable`` to ``sys.path``, the meta-path finder
 ``importlib.machinery.PathFinder`` can find ``self``'s embedded resources.
-
-``path_hook`` returns a `path-entry finder`_\ [#fn-path-entry-finder]_ that can
-find modules at the top level or inside a package according to ``path``.
 
 ``path``'s semantics match those of
 :ref:`oxidized_finder_behavior_and_compliance_path`. After normalization,
@@ -287,12 +286,46 @@ with dots. The result is decoded to a ``str`` using the filesystem encoding. If
 that fails, ``path_hook`` raises an ``ImportError`` from the
 ``UnicodeDecodeError``.\ [#fn-decode-error]_
 
-.. rubric:: Footnotes
+.. py:class:: PathEntryFinder
 
-.. [#fn-path-entry-finder]
-   Support for the long-deprecated methods
+   A `path-entry finder`_ that can find modules embedded in an ``OxidizedFinder``
+   instance by searching paths at or under ``sys.executable``.
+   Each :class:`PathEntryFinder` instance is associated with the ``path``
+   argument to :class:`PathEntryFinder`'s only constructor,
+   :ref:`OxidizedFinder.path_hook <oxidized_finder_path_hook>`.
+   Only modules embedded in the ``OxidizedFinder`` instance in the top level of
+   the path are :dfn:`visible` to the :class:`PathEntryFinder` instance. For
+   example, if ``path`` were ``os.path.join(``\ ``sys.executable``\ ``, 'a')``,
+   then module ``a.b`` would be visible, but neither modules ``a`` nor ``a.b.c``
+   would be visible. Further, ``a.b`` would be visible only if it were embedded
+   in the ``OxidizedFinder`` instance that constructed the instance.
+
+   This class complies with the `path-entry finder`_ protocol by providing
+   compliant :meth:`~PathEntryFinder.find_spec` and
+   :meth:`~PathEntryFinder.invalidate_caches` methods.
+   However, support for the long-deprecated methods
    ``importlib.abc.PathEntryFinder.find_loader`` and
    ``importlib.abc.PathEntryFinder.find_module`` may be missing or incomplete.
+
+   Direct use of :class:`PathEntryFinder` is generally unnecessary. It exists
+   primarily to support ``pkgutil.iter_modules`` via
+   :ref:`OxidizedFinder.path_hook <oxidized_finder_path_hook>`.
+
+   .. py:method:: find_spec(fullname: str, target: Optional[types.ModuleType] = None) -> Optional[importlib.machinery.ModuleSpec]
+
+      Search for modules visible to the instance.
+
+   .. py:method:: invalidate_caches() -> None
+
+      Invoke the same method on the ``OxidizedFinder`` instance with which the
+      :class:`PathEntryFinder` instance was constructed.
+
+   .. py:method:: iter_modules(prefix: str = "") -> List[pkgutil.ModuleInfo]
+
+      Iterate over the visible modules. This method complies with
+      ``pkgutil.iter_modules``'s protocol.
+
+.. rubric:: Footnotes
 
 .. [#fn-decode-error]
    This is required by the `path-entry finder`_ protocol.
