@@ -130,6 +130,7 @@ pub fn parse_str(data: &str) -> Result<Vec<TBDRecord>, ParseError> {
 mod tests {
     use {
         super::*,
+        rand::seq::SliceRandom,
         rayon::prelude::*,
         tugger_apple::{
             find_command_line_tools_sdks, find_developer_sdks,
@@ -159,22 +160,42 @@ mod tests {
             .collect::<Vec<_>>();
 
         sdks.into_par_iter().for_each(|sdk| {
-            for entry in walkdir::WalkDir::new(&sdk.path) {
-                let entry = entry.unwrap();
+            let mut tbd_paths = walkdir::WalkDir::new(&sdk.path)
+                .into_iter()
+                .filter_map(|entry| {
+                    let entry = entry.unwrap();
 
-                let file_name = entry.file_name().to_string_lossy();
-                if file_name.ends_with(".tbd") {
-                    eprintln!("parsing {}", entry.path().display());
-                    let data = std::fs::read(&entry.path()).unwrap();
-                    let data = String::from_utf8(data).unwrap();
+                    let file_name = entry.file_name().to_string_lossy();
+                    if file_name.ends_with(".tbd") {
+                        Some(entry.path().to_path_buf())
+                    } else {
+                        None
+                    }
+                })
+                .collect::<Vec<_>>();
 
-                    parse_str(&data).unwrap_or_else(|e| {
-                        eprintln!("path: {}", entry.path().display());
-                        eprint!("{}", data);
-                        eprint!("{:?}", e);
-                        panic!("parse error");
-                    });
-                }
+            // We only select a percentage of tbd paths because there are too many
+            // in CI and the test takes too long.
+            let percentage = if let Ok(percentage) = std::env::var("TBD_SAMPLE_PERCENTAGE") {
+                percentage.parse::<usize>().unwrap()
+            } else {
+                10
+            };
+
+            let mut rng = rand::thread_rng();
+            tbd_paths.shuffle(&mut rng);
+
+            for path in tbd_paths.iter().take(tbd_paths.len() * percentage / 100) {
+                eprintln!("parsing {}", path.display());
+                let data = std::fs::read(path).unwrap();
+                let data = String::from_utf8(data).unwrap();
+
+                parse_str(&data).unwrap_or_else(|e| {
+                    eprintln!("path: {}", path.display());
+                    eprint!("{}", data);
+                    eprint!("{:?}", e);
+                    panic!("parse error");
+                });
             }
         });
     }

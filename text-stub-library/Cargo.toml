@@ -16,6 +16,7 @@ yaml-rust = "0.4"
 serde_yaml = "0.8"
 
 [dev-dependencies]
+rand = "0.8"
 rayon = "1.5"
 walkdir = "2.3"
 
