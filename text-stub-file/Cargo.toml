@@ -11,3 +11,14 @@ repository = "https://github.com/indygreg/PyOxidizer.git"
 readme = "README.md"
 
 [dependencies]
+serde = { version = "1.0", features = ["derive"] }
+yaml-rust = "0.4"
+serde_yaml = "0.8"
+
+[dev-dependencies]
+rayon = "1.5"
+walkdir = "2.3"
+
+[dev-dependencies.tugger-apple]
+version = "0.1.0-pre"
+path = "../tugger-apple"

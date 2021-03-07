@@ -3195,6 +3195,14 @@ dependencies = [
 [[package]]
 name = "text-stub-file"
 version = "0.1.0"
+dependencies = [
+ "rayon",
+ "serde",
+ "serde_yaml",
+ "tugger-apple",
+ "walkdir",
+ "yaml-rust",
+]
 
 [[package]]
 name = "textwrap"
