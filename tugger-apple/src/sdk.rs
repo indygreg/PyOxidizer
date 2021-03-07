@@ -37,14 +37,14 @@ struct SDKSettingsJsonDefaultProperties {
 /// Represents a SupportedTargets value in a SDKSettings.json file.
 #[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "PascalCase")]
-struct AppleSDKSupportedTarget {
-    archs: Vec<String>,
-    default_deployment_target: String,
-    default_variant: Option<String>,
-    deployment_target_setting_name: Option<String>,
-    minimum_deployment_target: String,
-    platform_family_name: Option<String>,
-    valid_deployment_targets: Vec<String>,
+pub struct AppleSDKSupportedTarget {
+    pub archs: Vec<String>,
+    pub default_deployment_target: String,
+    pub default_variant: Option<String>,
+    pub deployment_target_setting_name: Option<String>,
+    pub minimum_deployment_target: String,
+    pub platform_family_name: Option<String>,
+    pub valid_deployment_targets: Vec<String>,
 }
 
 /// Used for deserializing a SDKSettings.json file in an SDK directory.
@@ -66,37 +66,37 @@ struct SDKSettingsJson {
 #[derive(Clone, Debug)]
 pub struct AppleSDK {
     /// Root directory of the SDK.
-    path: PathBuf,
+    pub path: PathBuf,
 
     /// Whether the root directory is a symlink to another path.
-    is_symlink: bool,
+    pub is_symlink: bool,
 
     /// The name of the platform
-    platform_name: String,
+    pub platform_name: String,
 
     /// The canonical name of the SDK. e.g. `macosx11.1`.
-    name: String,
+    pub name: String,
 
     /// Version of the default deployment target for this SDK.
-    default_deployment_target: String,
+    pub default_deployment_target: String,
 
     /// Name of default settings variant for this SDK.
-    default_variant: Option<String>,
+    pub default_variant: Option<String>,
 
     /// Human friendly name of this SDK.
-    display_name: String,
+    pub display_name: String,
 
     /// Maximum deployment target version this SDK supports.
-    maximum_deployment_target: String,
+    pub maximum_deployment_target: String,
 
     /// Human friendly value for name (probably just version string).
-    minimal_display_name: String,
+    pub minimal_display_name: String,
 
     /// Describes named target configurations this SDK supports.
-    supported_targets: HashMap<String, AppleSDKSupportedTarget>,
+    pub supported_targets: HashMap<String, AppleSDKSupportedTarget>,
 
     /// Version of this SDK. e.g. `11.1`.
-    version: String,
+    pub version: String,
 }
 
 impl AppleSDK {
