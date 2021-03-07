@@ -8,6 +8,7 @@ members = [
     'release',
     'starlark-dialect-build-targets',
     'tugger',
+    'tugger-apple',
     'tugger-binary-analysis',
     'tugger-common',
     'tugger-debian',
