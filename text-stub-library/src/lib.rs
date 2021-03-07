@@ -168,7 +168,12 @@ mod tests {
                     let data = std::fs::read(&entry.path()).unwrap();
                     let data = String::from_utf8(data).unwrap();
 
-                    parse_str(&data).unwrap();
+                    parse_str(&data).unwrap_or_else(|e| {
+                        eprintln!("path: {}", entry.path().display());
+                        eprint!("{}", data);
+                        eprint!("{:?}", e);
+                        panic!("parse error");
+                    });
                 }
             }
         });
