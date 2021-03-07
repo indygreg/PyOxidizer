@@ -185,7 +185,7 @@ pub struct TBDVersion2 {
     /// Objective-C constraint.
     pub objc_constraint: Option<String>,
 
-    pub parent_umbrella: Option<TBDUmbrellaSection>,
+    pub parent_umbrella: Option<String>,
 
     /// Export sections.
     pub exports: Vec<TBDVersion12ExportSection>,
@@ -303,7 +303,7 @@ pub struct TBDVersion3 {
     /// Defaults to `retain_release`.
     pub objc_constraint: Option<String>,
 
-    pub parent_umbrella: Option<TBDUmbrellaSection>,
+    pub parent_umbrella: Option<String>,
 
     /// Export sections.
     #[serde(default)]
