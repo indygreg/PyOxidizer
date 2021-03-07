@@ -1,5 +1,5 @@
 [package]
-name = "text-stub-file"
+name = "text-stub-library"
 version = "0.1.0"
 authors = ["Gregory Szorc <gregory.szorc@gmail.com>"]
 edition = "2018"

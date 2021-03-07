@@ -1,6 +1,6 @@
-# text-stub-file
+# text-stub-library
 
-`text-stub-file` is a library crate for reading and writing
+`text-stub-library` is a library crate for reading and writing
 *text stub files*, which define metadata about dynamic libraries.
 
 *text stub files* are commonly materialized as `.tbd` files and

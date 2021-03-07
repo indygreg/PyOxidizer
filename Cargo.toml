@@ -7,7 +7,7 @@ members = [
     'python-packed-resources',
     'release',
     'starlark-dialect-build-targets',
-    "text-stub-file",
+    "text-stub-library",
     'tugger',
     'tugger-apple',
     'tugger-binary-analysis',

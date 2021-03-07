@@ -3193,7 +3193,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "text-stub-file"
+name = "text-stub-library"
 version = "0.1.0"
 dependencies = [
  "rayon",
