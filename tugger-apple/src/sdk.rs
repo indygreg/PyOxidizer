@@ -30,14 +30,14 @@ pub static XCODE_APP_RELATIVE_PATH_DEVELOPER: Lazy<PathBuf> =
 /// Represents the DefaultProperties key in a SDKSettings.json file.
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-struct SDKSettingsJsonDefaultProperties {
+struct SdkSettingsJsonDefaultProperties {
     platform_name: String,
 }
 
 /// Represents a SupportedTargets value in a SDKSettings.json file.
 #[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "PascalCase")]
-pub struct AppleSDKSupportedTarget {
+pub struct AppleSdkSupportedTarget {
     pub archs: Vec<String>,
     pub default_deployment_target: String,
     pub default_variant: Option<String>,
@@ -50,21 +50,21 @@ pub struct AppleSDKSupportedTarget {
 /// Used for deserializing a SDKSettings.json file in an SDK directory.
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "PascalCase")]
-struct SDKSettingsJson {
+struct SdkSettingsJson {
     canonical_name: String,
     default_deployment_target: String,
-    default_properties: SDKSettingsJsonDefaultProperties,
+    default_properties: SdkSettingsJsonDefaultProperties,
     default_variant: Option<String>,
     display_name: String,
     maximum_deployment_target: String,
     minimal_display_name: String,
-    supported_targets: HashMap<String, AppleSDKSupportedTarget>,
+    supported_targets: HashMap<String, AppleSdkSupportedTarget>,
     version: String,
 }
 
 /// Describes an Apple SDK on the filesystem.
 #[derive(Clone, Debug)]
-pub struct AppleSDK {
+pub struct AppleSdk {
     /// Root directory of the SDK.
     pub path: PathBuf,
 
@@ -93,15 +93,15 @@ pub struct AppleSDK {
     pub minimal_display_name: String,
 
     /// Describes named target configurations this SDK supports.
-    pub supported_targets: HashMap<String, AppleSDKSupportedTarget>,
+    pub supported_targets: HashMap<String, AppleSdkSupportedTarget>,
 
     /// Version of this SDK. e.g. `11.1`.
     pub version: String,
 }
 
-impl AppleSDK {
+impl AppleSdk {
     /// Attempt to create a new instance from deserialized JSON.
-    fn from_json(path: PathBuf, is_symlink: bool, value: SDKSettingsJson) -> Self {
+    fn from_json(path: PathBuf, is_symlink: bool, value: SdkSettingsJson) -> Self {
         Self {
             path,
             is_symlink,
@@ -288,7 +288,7 @@ pub fn find_developer_platforms(developer_dir: &Path) -> Result<Vec<(String, Pat
 /// SDKs are annotated with an `is_symlink` field to denote when this is
 /// the case. Callers may want to filter out symlinked SDKs to avoid
 /// duplicates.
-pub fn find_sdks_in_directory(root: &Path) -> Result<Vec<AppleSDK>> {
+pub fn find_sdks_in_directory(root: &Path) -> Result<Vec<AppleSdk>> {
     let dir = match std::fs::read_dir(&root) {
         Ok(v) => Ok(v),
         Err(e) => {
@@ -324,10 +324,10 @@ pub fn find_sdks_in_directory(root: &Path) -> Result<Vec<AppleSDK>> {
             }
         }?;
 
-        let settings_json: SDKSettingsJson = serde_json::from_slice(&json_data)
+        let settings_json: SdkSettingsJson = serde_json::from_slice(&json_data)
             .with_context(|| format!("parsing {}", settings_path.display()))?;
 
-        res.push(AppleSDK::from_json(entry.path(), is_symlink, settings_json));
+        res.push(AppleSdk::from_json(entry.path(), is_symlink, settings_json));
     }
 
     Ok(res)
@@ -338,7 +338,7 @@ pub fn find_sdks_in_directory(root: &Path) -> Result<Vec<AppleSDK>> {
 /// This function is a simple wrapper around `find_sdks_in_directory()`
 /// looking under the `Developer/SDKs` directory, which is the path under
 /// platform directories containing SDKs.
-pub fn find_sdks_in_platform(platform_dir: &Path) -> Result<Vec<AppleSDK>> {
+pub fn find_sdks_in_platform(platform_dir: &Path) -> Result<Vec<AppleSdk>> {
     let sdks_path = platform_dir.join("Developer").join("SDKs");
 
     find_sdks_in_directory(&sdks_path)
@@ -349,7 +349,7 @@ pub fn find_sdks_in_platform(platform_dir: &Path) -> Result<Vec<AppleSDK>> {
 /// This is effectively a convenience method for calling
 /// `find_developer_platforms()` + `find_sdks_in_platform()` and chaining the
 /// results.
-pub fn find_developer_sdks(developer_dir: &Path) -> Result<Vec<AppleSDK>> {
+pub fn find_developer_sdks(developer_dir: &Path) -> Result<Vec<AppleSdk>> {
     Ok(find_developer_platforms(developer_dir)
         .context("finding developer platforms")?
         .into_iter()
@@ -371,7 +371,7 @@ pub fn find_developer_sdks(developer_dir: &Path) -> Result<Vec<AppleSDK>> {
 ///
 /// Returns `Ok(None)` if the Xcode Command Line Tools are not present in
 /// this directory or doesn't have an `SDKs` directory.
-pub fn find_command_line_tools_sdks() -> Result<Option<Vec<AppleSDK>>> {
+pub fn find_command_line_tools_sdks() -> Result<Option<Vec<AppleSdk>>> {
     let sdk_path = COMMAND_LINE_TOOLS_DEFAULT_PATH.join("SDKs");
 
     if !sdk_path.exists() {
