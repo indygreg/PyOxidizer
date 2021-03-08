@@ -2230,6 +2230,7 @@ dependencies = [
  "tar",
  "tempfile",
  "tugger",
+ "tugger-apple",
  "tugger-binary-analysis",
  "tugger-common",
  "tugger-file-manifest",

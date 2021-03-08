@@ -73,6 +73,11 @@ You will need a working C compiler/toolchain in order to build some Rust
 crates and their dependencies. If Rust cannot find a C compiler, it should
 print a message at build time and give you instructions on how to install one.
 
+On macOS, you will need an Apple SDK that is at least as new as the SDK
+used to build the Python distribution embedded in the binary. PyOxidizer
+will automatically attempt to locate, validate, and use an appropriate SDK.
+See :ref:`pyoxidizer_distributing_macos_build_machine_requirements` for more.
+
 There is a known issue with PyOxidizer on Fedora 30+ that will require you
 to install the ``libxcrypt-compat`` package to avoid an error due to a missing
 ``libcrypt.so.1`` file. See https://github.com/indygreg/PyOxidizer/issues/89

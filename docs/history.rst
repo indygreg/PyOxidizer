@@ -31,6 +31,36 @@ Version History
 
 Not yet released.
 
+Backwards Compatibility Notes
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+* On Apple platforms, PyOxidizer now validates that the Apple SDK being used
+  is compatible with the Python distribution being used and will abort the
+  build if not. Previously, PyOxidizer would blindly use whatever SDK was
+  the default and this could lead to cryptic error messages when building
+  (likely undefined symbol errors when linking). The current default Python
+  distributions impose a requirement of the macosx10.15+ SDK for Python 3.8 and
+  macosx11.0+ for Python 3.9. See issue #373 for a comprehensive discussion
+  of this topic.
+* On Apple platforms, binaries built with PyOxidizer now automatically target
+  the OS version that the Python distribution was built to target. Previously,
+  binaries would likely target the OS version of the building machine unless
+  explicit action was taken. The practical effect of this change is binaries
+  targeting x86_64 should now work on macOS 10.9 without any end-user action
+  required.
+
+New Features
+^^^^^^^^^^^^
+
+* On Apple platforms, PyOxidizer now automatically locates, validates, and
+  uses an appropriate SDK given the settings of the Python distribution being
+  used. PyOxidizer will reject building with an SDK older than the one used
+  to produce the Python distribution. PyOxidizer will automatically use the
+  newest installed SDK compatible with the target configuration. The SDK
+  and targeting information is printed during builds. See
+  :ref:`pyoxidizer_distributing_macos_build_machine_requirements` for details
+  on how to override default behavior.
+
 Other Relevant Changes
 ^^^^^^^^^^^^^^^^^^^^^^
 

@@ -211,3 +211,19 @@ If you want PyOxidizer to materialize the DLL(s) next to your built
 binary, you'll need to install Visual Studio with the
 ``Microsoft.VisualCPP.Redist.14.Latest`` component (you will typically
 get this component if installing support for building C/C++ applications).
+
+``ld: unsupported tapi file type '!tapi-tbd' in YAML file`` on macOS When Building
+==================================================================================
+
+If you see this error when building on macOS, it means that the linker (likely
+Clang) being used is not able to read the ``.tbd`` files from a more modern
+Apple SDK.
+
+PyOxidizer requires using an Apple SDK no older than the one used to build
+the Python distributions being embedded (see
+:ref:`pyoxidizer_distributing_macos_build_machine_requirements`). So the only
+recourse to this problem is to use a more modern linker.
+
+On Apple platforms, it is common to use the clang/linker from an Xcode or
+Xcode Commandline Tools install. So the problem can usually be fixed by
+upgrading Xcode or the Xcode Commandline Tools.

@@ -10,7 +10,7 @@ use {
             WindowsRuntimeDllsMode,
         },
         config::{PyembedPackedResourcesSource, PyembedPythonInterpreterConfig},
-        distribution::{BinaryLibpythonLinkMode, PythonDistribution},
+        distribution::{AppleSdkInfo, BinaryLibpythonLinkMode, PythonDistribution},
         filtering::{filter_btreemap, resolve_resource_names_from_files},
         libpython::link_libpython,
         packaging_tool::{
@@ -475,6 +475,10 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
 
     fn target_python_exe_path(&self) -> &Path {
         &self.target_distribution.python_exe_path()
+    }
+
+    fn apple_sdk_info(&self) -> Option<&AppleSdkInfo> {
+        self.target_distribution.apple_sdk_info()
     }
 
     fn windows_runtime_dlls_mode(&self) -> &WindowsRuntimeDllsMode {

@@ -18,6 +18,37 @@ Apple devices. The default
 :ref:`Python distributions <packaging_python_distributions>` target
 macOS 10.9+ for x86_64 and 11.0+ for aarch64.
 
+.. _pyoxidizer_distributing_macos_build_machine_requirements:
+
+Build Machine Requirements
+==========================
+
+PyOxidizer needs to link new binaries containing Python. Due to the way
+linking works on Apple platforms, you **must** use an Apple SDK no older
+than the one used to build the Python distributions or linker errors
+(likely undefined symbols) can occur.
+
+PyOxidizer will automatically attempt to locate, validate, and use an
+appropriate Apple SDK given requirements specified by the Python distribution
+in use. If you have Xcode or the Xcode Commandline Tools installed,
+PyOxidizer should be able to locate Apple SDKs automatically. When building,
+PyOxidizer will print information about Apple SDK discovery. More details
+are printed when running ``pyoxidizer --verbose``.
+
+PyOxidizer will automatically look for SDKs in the directory specified
+by ``xcode-select --print-path``. This path is often
+``/Applications/Xcode.app/Contents/Developer``. You can specify an alternative
+directory by setting the ``DEVELOPER_DIR`` environment variable. e.g.::
+
+   DEVELOPER_DIR=/Applications/Xcode-beta.app/Contents/Developer pyoxidizer build
+
+You can override PyOxidizer's automatic SDK discovery by setting ``SDKROOT``
+to the base directory of an Apple SDK you want to use. (If you find yourself
+doing this to work around SDK discovery *bugs*, please consider creating a
+GitHub issue to track the problem.) e.g.::
+
+   SDKROOT=/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk pyoxidizer build
+
 .. _pyoxidizer_distributing_macos_python_distributions:
 
 Python Distribution Dependencies
@@ -65,12 +96,23 @@ application and introduce additional dependencies and degrade the portability
 of the default Python distributions.
 
 It is common for built binaries to pull in modern macOS SDK features. A
-common way to prevent this is to set the ``MACOS_DEPLOYMENT_TARGET``
+common way to prevent this is to set the ``MACOSX_DEPLOYMENT_TARGET``
 environment variable during the build to the oldest version of macOS you
-want to support. The default Python distributions target macOS 10.9, so to
-set the same compatibility level, do something like this::
+want to support.
 
-   $ MACOSX_DEPLOYMENT_TARGET=10.9 pyoxidizer build
+The default :ref:`Python distributions <packaging_python_distributions>` target
+macOS 10.9 on x86_64 and 11.0 on aarch64.
+
+.. important::
+
+   PyOxidizer will automatically set the deployment target to match what the
+   Python distribution was built with, so in many cases you don't need to
+   worry about version targeting.
+
+If you wish to override the default deployment targets, set an alternative
+value using the appropriate environment variable.::
+
+   $ MACOSX_DEPLOYMENT_TARGET=10.15 pyoxidizer build
 
 Apple's `Xcode documentation <https://developer.apple.com/documentation/xcode>`_
 has various guides useful for further consideration.

@@ -6,13 +6,16 @@ use {
     crate::{
         environment::{canonicalize_path, MINIMUM_RUST_VERSION},
         project_layout::initialize_project,
-        py_packaging::binary::{EmbeddedPythonContext, LibpythonLinkMode, PythonBinaryBuilder},
+        py_packaging::{
+            binary::{EmbeddedPythonContext, LibpythonLinkMode, PythonBinaryBuilder},
+            distribution::AppleSdkInfo,
+        },
         starlark::eval::{EvaluationContext, EvaluationContextBuilder},
     },
     anyhow::{anyhow, Context, Result},
     duct::cmd,
     semver::Version,
-    slog::warn,
+    slog::{info, warn},
     starlark_dialect_build_targets::ResolvedTarget,
     std::{
         collections::HashMap,
@@ -22,6 +25,7 @@ use {
         io::{BufRead, BufReader},
         path::{Path, PathBuf},
     },
+    tugger_apple::{find_command_line_tools_sdks, find_default_developer_sdks, AppleSdk},
 };
 
 pub const HOST: &str = env!("HOST");
@@ -77,6 +81,110 @@ pub fn find_pyoxidizer_config_file_env(logger: &slog::Logger, start_dir: &Path) 
     find_pyoxidizer_config_file(start_dir)
 }
 
+/// Resolve an appropriate Apple SDK to use.
+pub fn resolve_apple_sdk(
+    logger: &slog::Logger,
+    platform: &str,
+    minimum_version: &str,
+    deployment_target: &str,
+) -> Result<AppleSdk> {
+    if minimum_version.split('.').count() != 2 {
+        return Err(anyhow!(
+            "expected X.Y minimum Apple SDK version; got {}",
+            minimum_version
+        ));
+    }
+
+    let minimum_semver = Version::parse(&format!("{}.0", minimum_version))?;
+
+    let mut sdks = find_default_developer_sdks()
+        .context("discovering Apple SDKs (default developer directory)")?;
+    if let Some(extra_sdks) =
+        find_command_line_tools_sdks().context("discovering Apple SDKs (command line tools)")?
+    {
+        sdks.extend(extra_sdks);
+    }
+
+    let target_sdks = sdks
+        .iter()
+        .filter(|sdk| !sdk.is_symlink && sdk.supported_targets.contains_key(platform))
+        .collect::<Vec<_>>();
+
+    info!(
+        logger,
+        "found {} total Apple SDKs; {} support {}",
+        sdks.len(),
+        target_sdks.len(),
+        platform,
+    );
+
+    let mut candidate_sdks = target_sdks
+        .into_iter()
+        .filter(|sdk| {
+            let version = match sdk.version_as_semver() {
+                Ok(v) => v,
+                Err(_) => return false,
+            };
+
+            if version < minimum_semver {
+                info!(
+                    logger,
+                    "ignoring SDK {} because it is too old ({} < {})",
+                    sdk.path.display(),
+                    sdk.version,
+                    minimum_version
+                );
+
+                false
+            } else if !sdk
+                .supported_targets
+                .get(platform)
+                // Safe because key was validated above.
+                .unwrap()
+                .valid_deployment_targets
+                .contains(&deployment_target.to_string())
+            {
+                info!(
+                    logger,
+                    "ignoring SDK {} because it doesn't support deployment target {}",
+                    sdk.path.display(),
+                    deployment_target
+                );
+
+                false
+            } else {
+                true
+            }
+        })
+        .collect::<Vec<_>>();
+    candidate_sdks.sort_by(|a, b| {
+        b.version_as_semver()
+            .unwrap()
+            .cmp(&a.version_as_semver().unwrap())
+    });
+
+    if candidate_sdks.is_empty() {
+        Err(anyhow!(
+            "unable to find suitable Apple SDK supporting {}{} or newer",
+            platform,
+            minimum_version
+        ))
+    } else {
+        info!(
+            logger,
+            "found {} suitable Apple SDKs ({})",
+            candidate_sdks.len(),
+            candidate_sdks
+                .iter()
+                .map(|sdk| sdk.name.clone())
+                .collect::<Vec<_>>()
+                .join(" ")
+        );
+
+        Ok(candidate_sdks[0].clone())
+    }
+}
+
 /// Describes an environment and settings used to build a project.
 pub struct BuildEnvironment {
     /// Path to cargo executable to run.
@@ -95,11 +203,13 @@ pub struct BuildEnvironment {
 impl BuildEnvironment {
     /// Construct a new build environment performing validation of requirements.
     pub fn new(
+        logger: &slog::Logger,
         target_triple: &str,
         artifacts_path: &Path,
         target_python_path: &Path,
         libpython_link_mode: LibpythonLinkMode,
         libpython_filename: Option<&Path>,
+        apple_sdk_info: Option<&AppleSdkInfo>,
     ) -> Result<Self> {
         let rust_version = rustc_version::version()?;
         if rust_version.lt(&MINIMUM_RUST_VERSION) {
@@ -149,6 +259,79 @@ impl BuildEnvironment {
         // https://github.com/rust-lang/rust/issues/37403 is resolved.
         if target_triple.contains("-windows-") {
             envs.insert("RUSTC_BOOTSTRAP".to_string(), "1".to_string());
+        }
+
+        // When targeting Apple platforms and using Apple SDKs, you can very
+        // easily run into SDK and toolchain compatibility issues when your
+        // local SDK or toolchain is older than the one used to produce the
+        // Python distribution. For example, if the macosx10.15 SDK is used to
+        // produce the Python distribution and you are using an older version
+        // of Clang that can't parse version 4 .tbd files, the linker will fail
+        // to find which dylibs contain symbols (because mach-o must encode the
+        // name of a dylib containing weakly linked symbols) and you'll get a
+        // linker error for unresolved symbols. See
+        // https://github.com/indygreg/PyOxidizer/issues/373 for a thorough
+        // discussion on this topic.
+        //
+        // Here, we validate that the local SDK being used is >= the version used
+        // by the Python distribution.
+        // TODO validate minimum Clang/linker version as well.
+        if target_triple.contains("-apple-") {
+            let sdk_info = apple_sdk_info.ok_or_else(|| {
+                anyhow!("targeting Apple platform but Apple SDK info not available")
+            })?;
+
+            let platform = &sdk_info.platform;
+            let minimum_version = &sdk_info.version;
+            let deployment_target = &sdk_info.deployment_target;
+
+            // Respect the SDKROOT environment variable.
+            let sdk = if let Some(sdk_root) = envs.get("SDKROOT") {
+                warn!(logger, "SDKROOT defined; using Apple SDK at {}", sdk_root);
+                AppleSdk::from_directory(&PathBuf::from(sdk_root)).with_context(|| {
+                    format!("resolving SDK at {} as defined via SDKROOT", sdk_root)
+                })?
+            } else {
+                warn!(
+                    logger,
+                    "locating Apple SDK {}{}+ supporting {}{}",
+                    platform,
+                    minimum_version,
+                    platform,
+                    deployment_target
+                );
+
+                resolve_apple_sdk(logger, platform, minimum_version, deployment_target)
+                    .context("resolving Apple SDK")?
+            };
+
+            warn!(
+                logger,
+                "using SDK {} ({} targeting {}{})",
+                sdk.path.display(),
+                sdk.name,
+                platform,
+                deployment_target
+            );
+
+            let deployment_target_name = sdk.supported_targets.get(platform).ok_or_else(|| {
+                anyhow!("could not find settings for target {} (this shouldn't happen)", platform)
+            })?.deployment_target_setting_name.as_ref().ok_or_else(|| {
+                anyhow!("unable to identify deployment target environment variable for {} (please report this bug)", platform)
+            })?;
+
+            // SDKROOT will instruct rustc and potentially other tools to use exactly this SDK.
+            envs.insert("SDKROOT".to_string(), sdk.path.display().to_string());
+
+            // This (e.g. MACOSX_DEPLOYMENT_TARGET) will instruct compilers to target a specific
+            // minimum version of the target platform. We respect an explicit value if one
+            // is given.
+            if envs.get(deployment_target_name).is_none() {
+                envs.insert(
+                    deployment_target_name.to_string(),
+                    deployment_target.to_string(),
+                );
+            }
         }
 
         // Windows standalone_static distributions require the non-DLL CRT.
@@ -232,11 +415,13 @@ pub fn build_executable_with_rust_project<'a>(
     embedded_data.write_files(&artifacts_path)?;
 
     let build_env = BuildEnvironment::new(
+        logger,
         exe.target_triple(),
         artifacts_path,
         exe.target_python_exe_path(),
         exe.libpython_link_mode(),
         embedded_data.linking_info.libpython_filename.as_deref(),
+        exe.apple_sdk_info(),
     )
     .context("resolving build environment")?;
 

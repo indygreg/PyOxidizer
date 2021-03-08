@@ -7,7 +7,7 @@ Defining and manipulating binaries embedding Python.
 */
 
 use {
-    super::config::PyembedPythonInterpreterConfig,
+    super::{config::PyembedPythonInterpreterConfig, distribution::AppleSdkInfo},
     anyhow::{anyhow, Context, Result},
     python_packaging::{
         policy::PythonPackagingPolicy,
@@ -200,6 +200,9 @@ pub trait PythonBinaryBuilder {
     /// Path to Python executable that is native to the target architecture.
     // TODO this should not need to exist if we properly supported cross-compiling.
     fn target_python_exe_path(&self) -> &Path;
+
+    /// Apple SDK build/targeting information.
+    fn apple_sdk_info(&self) -> Option<&AppleSdkInfo>;
 
     /// Obtain how Windows runtime DLLs will be handled during builds.
     ///
