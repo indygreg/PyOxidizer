@@ -35,6 +35,8 @@ jobs:
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       SCCACHE_BUCKET: 'pyoxidizer-sccache'
       SCCACHE_S3_USE_SSL: '1'
+      # Prevent sccache server from stopping due to inactivity.
+      SCCACHE_IDLE_TIMEOUT: '0'
     steps:
       - name: Install Linux system packages
         if: runner.os == 'Linux'
