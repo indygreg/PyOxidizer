@@ -43,7 +43,7 @@ Each export section is defined as following:
 /// Version 1 of the TBD structure.
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case")]
-pub struct TBDVersion1 {
+pub struct TbdVersion1 {
     /// The list of architecture slices that are supported by this file.
     ///
     /// armv7, arm64, etc.
@@ -76,13 +76,13 @@ pub struct TBDVersion1 {
     objc_constraint: Option<String>,
 
     /// Export sections.
-    exports: Vec<TBDVersion12ExportSection>,
+    exports: Vec<TbdVersion12ExportSection>,
 }
 
 /// Export section in a TBD version 1 or 2 structure.
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case")]
-pub struct TBDVersion12ExportSection {
+pub struct TbdVersion12ExportSection {
     /// List of architecture slices.
     pub archs: Vec<String>,
 
@@ -153,7 +153,7 @@ Each undefineds section is defined as following:
 /// Version 2 of the TBD data structure.
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case")]
-pub struct TBDVersion2 {
+pub struct TbdVersion2 {
     /// The list of architecture slices that are supported by this file.
     pub archs: Vec<String>,
 
@@ -188,16 +188,16 @@ pub struct TBDVersion2 {
     pub parent_umbrella: Option<String>,
 
     /// Export sections.
-    pub exports: Vec<TBDVersion12ExportSection>,
+    pub exports: Vec<TbdVersion12ExportSection>,
 
     /// Undefineds sections.
-    pub undefineds: Vec<TBDVersion2UndefinedsSection>,
+    pub undefineds: Vec<TbdVersion2UndefinedsSection>,
 }
 
 /// Undefineds sections in a version 2 TBD structure.
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case")]
-pub struct TBDVersion2UndefinedsSection {
+pub struct TbdVersion2UndefinedsSection {
     /// The list of architecture slices.
     pub archs: Vec<String>,
 
@@ -220,7 +220,7 @@ pub struct TBDVersion2UndefinedsSection {
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case")]
-pub struct TBDUmbrellaSection {
+pub struct TbdUmbrellaSection {
     #[serde(default)]
     pub targets: Vec<String>,
 
@@ -269,7 +269,7 @@ Each undefineds section is defined as following:
 /// Version 3 of the TBD data structure.
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case")]
-pub struct TBDVersion3 {
+pub struct TbdVersion3 {
     /// The list of architecture slices that are supported by this file.
     pub archs: Vec<String>,
 
@@ -307,17 +307,17 @@ pub struct TBDVersion3 {
 
     /// Export sections.
     #[serde(default)]
-    pub exports: Vec<TBDVersion3ExportSection>,
+    pub exports: Vec<TbdVersion3ExportSection>,
 
     /// Undefineds sections.
     #[serde(default)]
-    pub undefineds: Vec<TBDVersion3UndefinedsSection>,
+    pub undefineds: Vec<TbdVersion3UndefinedsSection>,
 }
 
 /// Export section in a TBD version 3 structure.
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case")]
-pub struct TBDVersion3ExportSection {
+pub struct TbdVersion3ExportSection {
     /// List of architecture slices.
     pub archs: Vec<String>,
 
@@ -354,10 +354,10 @@ pub struct TBDVersion3ExportSection {
     pub thread_local_symbols: Vec<String>,
 }
 
-/// Undefineds sections in a version 3 TBD structure.
+/// Undefineds section in a version 3 TBD structure.
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case")]
-pub struct TBDVersion3UndefinedsSection {
+pub struct TbdVersion3UndefinedsSection {
     /// The list of architecture slices.
     pub archs: Vec<String>,
 
@@ -431,7 +431,7 @@ Each undefineds section is defined as following:
 /// Version 4 of the TBD data structure.
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case")]
-pub struct TBDVersion4 {
+pub struct TbdVersion4 {
     /// The tbd version for format.
     pub tbd_version: usize,
 
@@ -440,7 +440,7 @@ pub struct TBDVersion4 {
 
     /// List of architecture and UUID pairs.
     #[serde(default)]
-    pub uuids: Vec<TBDVersion4Uuid>,
+    pub uuids: Vec<TbdVersion4Uuid>,
 
     #[serde(default)]
     pub flags: Vec<String>,
@@ -461,27 +461,27 @@ pub struct TBDVersion4 {
     pub swift_abi_version: Option<String>,
 
     #[serde(default)]
-    pub parent_umbrella: Vec<TBDUmbrellaSection>,
+    pub parent_umbrella: Vec<TbdUmbrellaSection>,
 
     #[serde(default)]
-    pub allowable_clients: Vec<TBDVersion4AllowableClient>,
+    pub allowable_clients: Vec<TbdVersion4AllowableClient>,
 
     /// Export sections.
     #[serde(default)]
-    pub exports: Vec<TBDVersion4ExportSection>,
+    pub exports: Vec<TbdVersion4ExportSection>,
 
     /// Reexport sections.
     #[serde(default)]
-    pub re_exports: Vec<TBDVersion4ExportSection>,
+    pub re_exports: Vec<TbdVersion4ExportSection>,
 
     /// Undefineds sections.
     #[serde(default)]
-    pub undefineds: Vec<TBDVersion4UndefinedsSection>,
+    pub undefineds: Vec<TbdVersion4UndefinedsSection>,
 }
 
 /// A UUID value in a TBD version 4 data structure.
 #[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct TBDVersion4Uuid {
+pub struct TbdVersion4Uuid {
     pub target: String,
 
     pub value: String,
@@ -489,7 +489,7 @@ pub struct TBDVersion4Uuid {
 
 /// An allowable client in a TBD version 4 data structure.
 #[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct TBDVersion4AllowableClient {
+pub struct TbdVersion4AllowableClient {
     #[serde(default)]
     targets: Vec<String>,
     clients: Vec<String>,
@@ -498,7 +498,7 @@ pub struct TBDVersion4AllowableClient {
 /// (Re)export section in a TBD version 4 structure.
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case")]
-pub struct TBDVersion4ExportSection {
+pub struct TbdVersion4ExportSection {
     /// Target triples associated with symbols.
     pub targets: Vec<String>,
 
@@ -530,7 +530,7 @@ pub struct TBDVersion4ExportSection {
 /// Undefineds sections in a version 4 TBD structure.
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case")]
-pub struct TBDVersion4UndefinedsSection {
+pub struct TbdVersion4UndefinedsSection {
     /// The list of target triples associated with symbols.
     pub targets: Vec<String>,
 

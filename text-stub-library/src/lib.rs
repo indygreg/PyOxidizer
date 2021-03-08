@@ -9,7 +9,7 @@ use yaml_rust::ScanError;
 
 /// Version of a TBD document.
 #[derive(Copy, Clone, Debug)]
-pub enum TBDVersion {
+pub enum TbdVersion {
     V1,
     V2,
     V3,
@@ -17,11 +17,11 @@ pub enum TBDVersion {
 }
 
 /// A parsed TBD record from a YAML document.
-pub enum TBDRecord {
-    V1(TBDVersion1),
-    V2(TBDVersion2),
-    V3(TBDVersion3),
-    V4(TBDVersion4),
+pub enum TbdRecord {
+    V1(TbdVersion1),
+    V2(TbdVersion2),
+    V3(TbdVersion3),
+    V4(TbdVersion4),
 }
 
 /// Represents an error when parsing TBD YAML.
@@ -65,7 +65,7 @@ const TBD_V4_DOCUMENT_START: &str = "--- !tapi-tbd";
 /// Parse TBD records from a YAML stream.
 ///
 /// Returns a series of parsed records contained in the stream.
-pub fn parse_str(data: &str) -> Result<Vec<TBDRecord>, ParseError> {
+pub fn parse_str(data: &str) -> Result<Vec<TbdRecord>, ParseError> {
     // serde_yaml doesn't support tags on documents with YAML streams
     // (https://github.com/dtolnay/serde-yaml/issues/147) because yaml-rust
     // doesn't do so (https://github.com/chyh1990/yaml-rust/issues/147). Our
@@ -85,14 +85,14 @@ pub fn parse_str(data: &str) -> Result<Vec<TBDRecord>, ParseError> {
         // Start of new YAML document.
         if line.starts_with("---") {
             let version = if line.starts_with(TBD_V2_DOCUMENT_START) {
-                TBDVersion::V2
+                TbdVersion::V2
             } else if line.starts_with(TBD_V3_DOCUMENT_START) {
-                TBDVersion::V3
+                TbdVersion::V3
             } else if line.starts_with(TBD_V4_DOCUMENT_START) {
-                TBDVersion::V4
+                TbdVersion::V4
             } else {
                 // Version 1 has no document tag.
-                TBDVersion::V1
+                TbdVersion::V1
             };
 
             document_versions.push(version);
@@ -103,7 +103,7 @@ pub fn parse_str(data: &str) -> Result<Vec<TBDRecord>, ParseError> {
     // `---` marker is a version 1 TBD. So if there is a count mismatch,
     // insert a version 1 at the beginning of the versions list.
     if document_versions.len() == yamls.len() - 1 {
-        document_versions.insert(0, TBDVersion::V1);
+        document_versions.insert(0, TbdVersion::V1);
     } else if document_versions.len() != yamls.len() {
         return Err(ParseError::DocumentCountMismatch);
     }
@@ -116,10 +116,10 @@ pub fn parse_str(data: &str) -> Result<Vec<TBDRecord>, ParseError> {
         yaml_rust::YamlEmitter::new(&mut s).dump(value).unwrap();
 
         res.push(match document_versions[index] {
-            TBDVersion::V1 => TBDRecord::V1(serde_yaml::from_str(&s)?),
-            TBDVersion::V2 => TBDRecord::V2(serde_yaml::from_str(&s)?),
-            TBDVersion::V3 => TBDRecord::V3(serde_yaml::from_str(&s)?),
-            TBDVersion::V4 => TBDRecord::V4(serde_yaml::from_str(&s)?),
+            TbdVersion::V1 => TbdRecord::V1(serde_yaml::from_str(&s)?),
+            TbdVersion::V2 => TbdRecord::V2(serde_yaml::from_str(&s)?),
+            TbdVersion::V3 => TbdRecord::V3(serde_yaml::from_str(&s)?),
+            TbdVersion::V4 => TbdRecord::V4(serde_yaml::from_str(&s)?),
         })
     }
 
