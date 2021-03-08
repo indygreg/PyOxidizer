@@ -17,7 +17,9 @@ pub enum TbdVersion {
 }
 
 /// A parsed TBD record from a YAML document.
-pub enum TbdRecord {
+///
+/// This is an enum over the raw, versioned YAML data structures.
+pub enum TbdVersionedRecord {
     V1(TbdVersion1),
     V2(TbdVersion2),
     V3(TbdVersion3),
@@ -65,7 +67,7 @@ const TBD_V4_DOCUMENT_START: &str = "--- !tapi-tbd";
 /// Parse TBD records from a YAML stream.
 ///
 /// Returns a series of parsed records contained in the stream.
-pub fn parse_str(data: &str) -> Result<Vec<TbdRecord>, ParseError> {
+pub fn parse_str(data: &str) -> Result<Vec<TbdVersionedRecord>, ParseError> {
     // serde_yaml doesn't support tags on documents with YAML streams
     // (https://github.com/dtolnay/serde-yaml/issues/147) because yaml-rust
     // doesn't do so (https://github.com/chyh1990/yaml-rust/issues/147). Our
@@ -116,10 +118,10 @@ pub fn parse_str(data: &str) -> Result<Vec<TbdRecord>, ParseError> {
         yaml_rust::YamlEmitter::new(&mut s).dump(value).unwrap();
 
         res.push(match document_versions[index] {
-            TbdVersion::V1 => TbdRecord::V1(serde_yaml::from_str(&s)?),
-            TbdVersion::V2 => TbdRecord::V2(serde_yaml::from_str(&s)?),
-            TbdVersion::V3 => TbdRecord::V3(serde_yaml::from_str(&s)?),
-            TbdVersion::V4 => TbdRecord::V4(serde_yaml::from_str(&s)?),
+            TbdVersion::V1 => TbdVersionedRecord::V1(serde_yaml::from_str(&s)?),
+            TbdVersion::V2 => TbdVersionedRecord::V2(serde_yaml::from_str(&s)?),
+            TbdVersion::V3 => TbdVersionedRecord::V3(serde_yaml::from_str(&s)?),
+            TbdVersion::V4 => TbdVersionedRecord::V4(serde_yaml::from_str(&s)?),
         })
     }
 
