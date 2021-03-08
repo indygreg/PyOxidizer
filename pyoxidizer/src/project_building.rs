@@ -157,6 +157,8 @@ impl BuildEnvironment {
             envs.insert("RUSTC_BOOTSTRAP".to_string(), "1".to_string());
         }
 
+        let mut rust_flags = vec![];
+
         // Windows standalone_static distributions require the non-DLL CRT.
         // This requires telling Rust to use the static CRT.
         //
@@ -167,15 +169,29 @@ impl BuildEnvironment {
         // TODO remove /FORCE:MULTIPLE once the distributions eliminate duplicate
         // symbols.
         if target_triple.contains("-windows-") && libpython_link_mode == LibpythonLinkMode::Static {
-            let flags = "-C target-feature=+crt-static -C link-args=/FORCE:MULTIPLE";
+            rust_flags.extend(
+                [
+                    "-C".to_string(),
+                    "target-feature=+crt-static".to_string(),
+                    "-C".to_string(),
+                    "link-args=/FORCE:MULTIPLE".to_string(),
+                ]
+                .iter()
+                .map(|x| x.to_string()),
+            );
+        }
 
-            let flags = if let Some(value) = envs.get("RUSTFLAGS") {
-                format!("{} {}", flags, value)
-            } else {
-                flags.to_string()
-            };
+        if !rust_flags.is_empty() {
+            let extra_flags = rust_flags.join(" ");
 
-            envs.insert("RUSTFLAGS".to_string(), flags);
+            envs.insert(
+                "RUSTFLAGS".to_string(),
+                if let Some(value) = envs.get("RUSTFLAGS") {
+                    format!("{} {}", extra_flags, value)
+                } else {
+                    extra_flags
+                },
+            );
         }
 
         Ok(Self {
