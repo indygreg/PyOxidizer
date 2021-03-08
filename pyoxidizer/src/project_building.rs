@@ -11,6 +11,7 @@ use {
     },
     anyhow::{anyhow, Context, Result},
     duct::cmd,
+    semver::Version,
     slog::warn,
     starlark_dialect_build_targets::ResolvedTarget,
     std::{
@@ -76,6 +77,34 @@ pub fn find_pyoxidizer_config_file_env(logger: &slog::Logger, start_dir: &Path) 
     find_pyoxidizer_config_file(start_dir)
 }
 
+/// Describes an environment and settings used to build a project.
+pub struct BuildEnvironment {
+    /// Path to cargo executable to run.
+    pub cargo_exe: String,
+
+    /// Version of Rust being used.
+    pub rust_version: Version,
+}
+
+impl BuildEnvironment {
+    /// Construct a new build environment performing validation of requirements.
+    pub fn new() -> Result<Self> {
+        let rust_version = rustc_version::version()?;
+        if rust_version.lt(&MINIMUM_RUST_VERSION) {
+            return Err(anyhow!(
+                "PyOxidizer requires Rust {}; version {} found",
+                *MINIMUM_RUST_VERSION,
+                rust_version
+            ));
+        }
+
+        Ok(Self {
+            cargo_exe: "cargo".to_string(),
+            rust_version,
+        })
+    }
+}
+
 /// Holds results from building an executable.
 pub struct BuiltExecutable<'a> {
     /// Path to built executable file.
@@ -113,15 +142,9 @@ pub fn build_executable_with_rust_project<'a>(
     let embedded_data = exe.to_embedded_python_context(logger, opt_level)?;
     embedded_data.write_files(&artifacts_path)?;
 
-    let rust_version = rustc_version::version()?;
-    if rust_version.lt(&MINIMUM_RUST_VERSION) {
-        return Err(anyhow!(
-            "PyOxidizer requires Rust {}; version {} found",
-            *MINIMUM_RUST_VERSION,
-            rust_version
-        ));
-    }
-    warn!(logger, "building with Rust {}", rust_version);
+    let build_env = BuildEnvironment::new().context("resolving build environment")?;
+
+    warn!(logger, "building with Rust {}", build_env.rust_version);
 
     let target_base_path = build_path.join("target");
     let target_triple_base_path =
@@ -240,7 +263,7 @@ pub fn build_executable_with_rust_project<'a>(
     }
 
     // TODO force cargo to colorize output under certain circumstances?
-    let command = cmd("cargo", &args)
+    let command = cmd(build_env.cargo_exe, &args)
         .dir(&project_path)
         .full_env(&envs)
         .stderr_to_stdout()
