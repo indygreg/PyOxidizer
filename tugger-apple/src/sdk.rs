@@ -6,6 +6,7 @@ use {
     anyhow::{anyhow, Context, Result},
     duct::cmd,
     once_cell::sync::Lazy,
+    semver::Version,
     serde::Deserialize,
     std::{
         collections::HashMap,
@@ -100,6 +101,29 @@ pub struct AppleSdk {
 }
 
 impl AppleSdk {
+    /// Attempt to resolve an SDK from a path to the SDK root directory.
+    pub fn from_directory(path: &Path) -> Result<Self> {
+        // Need to call symlink_metadata so symlinks aren't followed.
+        let metadata =
+            std::fs::symlink_metadata(path).context("reading directory entry metadata")?;
+
+        let is_symlink = metadata.file_type().is_symlink();
+
+        let settings_path = path.join("SDKSettings.json");
+
+        let json_data = std::fs::read(&settings_path)
+            .with_context(|| format!("reading {}", settings_path.display()))?;
+
+        let settings_json: SdkSettingsJson = serde_json::from_slice(&json_data)
+            .with_context(|| format!("parsing {}", settings_path.display()))?;
+
+        Ok(Self::from_json(
+            path.to_path_buf(),
+            is_symlink,
+            settings_json,
+        ))
+    }
+
     /// Attempt to create a new instance from deserialized JSON.
     fn from_json(path: PathBuf, is_symlink: bool, value: SdkSettingsJson) -> Self {
         Self {
@@ -114,6 +138,18 @@ impl AppleSdk {
             minimal_display_name: value.minimal_display_name,
             supported_targets: value.supported_targets,
             version: value.version,
+        }
+    }
+
+    /// Convert the version string to a `semver::Version`.
+    pub fn version_as_semver(&self) -> Result<Version> {
+        match self.version.split('.').count() {
+            2 => Ok(Version::parse(&format!("{}.0", self.version))?),
+            3 => Ok(Version::parse(&self.version)?),
+            _ => Err(anyhow!(
+                "version string {} is not of form X.Y or X.Y.Z",
+                self.version
+            )),
         }
     }
 }
@@ -305,29 +341,13 @@ pub fn find_sdks_in_directory(root: &Path) -> Result<Vec<AppleSdk>> {
     for entry in dir {
         let entry = entry.context("reading directory entry")?;
 
-        // Need to call symlink_metadata so symlinks aren't followed.
-        let metadata =
-            std::fs::symlink_metadata(&entry.path()).context("reading directory entry metadata")?;
-
-        let is_symlink = metadata.file_type().is_symlink();
-
         let settings_path = entry.path().join("SDKSettings.json");
 
-        let json_data = match std::fs::read(&settings_path) {
-            Ok(data) => Ok(data),
-            Err(e) => {
-                if e.kind() == std::io::ErrorKind::NotFound {
-                    continue;
-                } else {
-                    Err(anyhow!("error reading {}", settings_path.display()))
-                }
-            }
-        }?;
+        if !settings_path.exists() {
+            continue;
+        }
 
-        let settings_json: SdkSettingsJson = serde_json::from_slice(&json_data)
-            .with_context(|| format!("parsing {}", settings_path.display()))?;
-
-        res.push(AppleSdk::from_json(entry.path(), is_symlink, settings_json));
+        res.push(AppleSdk::from_directory(&entry.path())?);
     }
 
     Ok(res)

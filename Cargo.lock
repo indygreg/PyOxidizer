@@ -3385,6 +3385,7 @@ dependencies = [
  "anyhow",
  "duct",
  "once_cell",
+ "semver",
  "serde",
  "serde_json",
 ]
