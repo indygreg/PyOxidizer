@@ -108,6 +108,12 @@ used to build the binary will configure the Rust global allocator
 
    The workaround is to install cmake or use a different allocator.
 
+.. note::
+
+   ``snmalloc`` only supports targeting to macOS 10.14 or newer. You will
+   likely see build errors when building a binary targeting macOS 10.13 or
+   older.
+
 Default is ``jemalloc`` on non-Windows targets and ``default`` on Windows.
 (The ``jemalloc-sys`` crate doesn't work on Windows MSVC targets.)
 
