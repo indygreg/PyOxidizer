@@ -653,6 +653,8 @@ mod tests {
         Ok(())
     }
 
+    // Skip on aarch64-apple-darwin because we don't have 3.8 builds.
+    #[cfg(not(all(target_os = "macos", target_arch = "aarch64")))]
     #[test]
     fn test_empty_project_python_38() -> Result<()> {
         let logger = get_logger()?;
