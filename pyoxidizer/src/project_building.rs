@@ -131,23 +131,17 @@ impl BuildEnvironment {
             target_python_path.display().to_string(),
         );
 
+        let mut rust_flags = vec![];
+
         // If linking against an existing dynamic library on Windows, add the path to that
-        // library to an environment variable so link.exe can find it.
+        // library so the linker can find it.
         if let Some(libpython_filename) = libpython_filename {
             if target_triple.contains("-windows-") {
                 let libpython_dir = libpython_filename
                     .parent()
                     .ok_or_else(|| anyhow!("unable to find parent directory of python DLL"))?;
 
-                // TODO perhaps cargo -C would be a better approach?
-                envs.insert(
-                    "LIB".to_string(),
-                    if let Ok(lib) = std::env::var("LIB") {
-                        format!("{};{}", lib, libpython_dir.display())
-                    } else {
-                        format!("{}", libpython_dir.display())
-                    },
-                );
+                rust_flags.push(format!("-L{}", libpython_dir.display()));
             }
         }
 
@@ -156,8 +150,6 @@ impl BuildEnvironment {
         if target_triple.contains("-windows-") {
             envs.insert("RUSTC_BOOTSTRAP".to_string(), "1".to_string());
         }
-
-        let mut rust_flags = vec![];
 
         // Windows standalone_static distributions require the non-DLL CRT.
         // This requires telling Rust to use the static CRT.
