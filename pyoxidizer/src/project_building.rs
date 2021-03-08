@@ -236,11 +236,7 @@ pub fn build_executable_with_rust_project<'a>(
         artifacts_path,
         exe.target_python_exe_path(),
         exe.libpython_link_mode(),
-        embedded_data
-            .linking_info
-            .libpython_filename
-            .as_ref()
-            .map(|x| x.as_path()),
+        embedded_data.linking_info.libpython_filename.as_deref(),
     )
     .context("resolving build environment")?;
 
