@@ -364,6 +364,14 @@ pub fn find_developer_sdks(developer_dir: &Path) -> Result<Vec<AppleSdk>> {
         .collect::<Vec<_>>())
 }
 
+/// Discover SDKs in the default developer directory.
+pub fn find_default_developer_sdks() -> Result<Vec<AppleSdk>> {
+    let developer_dir =
+        default_developer_directory().context("locating default developer directory")?;
+
+    find_developer_sdks(&developer_dir).context("finding SDKs in developer directory")
+}
+
 /// Locate SDKs installed as part of the Xcode Command Line Tools.
 ///
 /// This is a convenience method for looking for SDKs in the `SDKs` directory
@@ -411,6 +419,7 @@ mod tests {
     fn test_find_default_sdks() -> Result<()> {
         if let Ok(developer_dir) = default_developer_directory() {
             assert!(!find_developer_sdks(&developer_dir)?.is_empty());
+            assert!(!find_default_developer_sdks()?.is_empty());
         }
 
         Ok(())
