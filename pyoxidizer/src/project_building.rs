@@ -134,7 +134,7 @@ impl BuildEnvironment {
         // If linking against an existing dynamic library on Windows, add the path to that
         // library to an environment variable so link.exe can find it.
         if let Some(libpython_filename) = libpython_filename {
-            if cfg!(windows) {
+            if target_triple.contains("-windows-") {
                 let libpython_dir = libpython_filename
                     .parent()
                     .ok_or_else(|| anyhow!("unable to find parent directory of python DLL"))?;
@@ -153,7 +153,7 @@ impl BuildEnvironment {
 
         // static-nobundle link kind requires nightly Rust compiler until
         // https://github.com/rust-lang/rust/issues/37403 is resolved.
-        if cfg!(windows) {
+        if target_triple.contains("-windows-") {
             envs.insert("RUSTC_BOOTSTRAP".to_string(), "1".to_string());
         }
 
