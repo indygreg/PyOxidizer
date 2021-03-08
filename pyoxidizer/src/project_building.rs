@@ -15,7 +15,7 @@ use {
     slog::warn,
     starlark_dialect_build_targets::ResolvedTarget,
     std::{
-        collections::{hash_map::RandomState, HashMap},
+        collections::HashMap,
         convert::TryInto,
         env,
         fs::create_dir_all,
@@ -84,11 +84,23 @@ pub struct BuildEnvironment {
 
     /// Version of Rust being used.
     pub rust_version: Version,
+
+    /// Environment variables to use in build processes.
+    ///
+    /// This contains a copy of environment variables that were present at
+    /// object creation time, it isn't just a supplemental list.
+    pub environment_vars: HashMap<String, String>,
 }
 
 impl BuildEnvironment {
     /// Construct a new build environment performing validation of requirements.
-    pub fn new() -> Result<Self> {
+    pub fn new(
+        target_triple: &str,
+        artifacts_path: &Path,
+        target_python_path: &Path,
+        libpython_link_mode: LibpythonLinkMode,
+        libpython_filename: Option<&Path>,
+    ) -> Result<Self> {
         let rust_version = rustc_version::version()?;
         if rust_version.lt(&MINIMUM_RUST_VERSION) {
             return Err(anyhow!(
@@ -98,9 +110,78 @@ impl BuildEnvironment {
             ));
         }
 
+        let mut envs = std::env::vars().collect::<HashMap<_, _>>();
+
+        // Tells any invoked pyoxidizer process where to write build artifacts.
+        envs.insert(
+            "PYOXIDIZER_ARTIFACT_DIR".to_string(),
+            artifacts_path.display().to_string(),
+        );
+
+        // Tells any invoked pyoxidizer process to reuse artifacts if they are up to date.
+        envs.insert("PYOXIDIZER_REUSE_ARTIFACTS".to_string(), "1".to_string());
+
+        // Set PYTHON_SYS_EXECUTABLE so python3-sys uses our distribution's Python to configure
+        // itself.
+        // TODO the build environment requiring use of target arch executable prevents
+        // cross-compiling. We should be able to pass in all state without having to
+        // run an executable in a build script.
+        envs.insert(
+            "PYTHON_SYS_EXECUTABLE".to_string(),
+            target_python_path.display().to_string(),
+        );
+
+        // If linking against an existing dynamic library on Windows, add the path to that
+        // library to an environment variable so link.exe can find it.
+        if let Some(libpython_filename) = libpython_filename {
+            if cfg!(windows) {
+                let libpython_dir = libpython_filename
+                    .parent()
+                    .ok_or_else(|| anyhow!("unable to find parent directory of python DLL"))?;
+
+                // TODO perhaps cargo -C would be a better approach?
+                envs.insert(
+                    "LIB".to_string(),
+                    if let Ok(lib) = std::env::var("LIB") {
+                        format!("{};{}", lib, libpython_dir.display())
+                    } else {
+                        format!("{}", libpython_dir.display())
+                    },
+                );
+            }
+        }
+
+        // static-nobundle link kind requires nightly Rust compiler until
+        // https://github.com/rust-lang/rust/issues/37403 is resolved.
+        if cfg!(windows) {
+            envs.insert("RUSTC_BOOTSTRAP".to_string(), "1".to_string());
+        }
+
+        // Windows standalone_static distributions require the non-DLL CRT.
+        // This requires telling Rust to use the static CRT.
+        //
+        // In addition, these distributions also have some symbols defined in
+        // multiple object files. See https://github.com/indygreg/python-build-standalone/issues/71.
+        // This can lead to a linker error unless we suppress it via /FORCE:MULTIPLE.
+        // This workaround is not ideal.
+        // TODO remove /FORCE:MULTIPLE once the distributions eliminate duplicate
+        // symbols.
+        if target_triple.contains("-windows-") && libpython_link_mode == LibpythonLinkMode::Static {
+            let flags = "-C target-feature=+crt-static -C link-args=/FORCE:MULTIPLE";
+
+            let flags = if let Some(value) = envs.get("RUSTFLAGS") {
+                format!("{} {}", flags, value)
+            } else {
+                flags.to_string()
+            };
+
+            envs.insert("RUSTFLAGS".to_string(), flags);
+        }
+
         Ok(Self {
             cargo_exe: "cargo".to_string(),
             rust_version,
+            environment_vars: envs,
         })
     }
 }
@@ -142,7 +223,18 @@ pub fn build_executable_with_rust_project<'a>(
     let embedded_data = exe.to_embedded_python_context(logger, opt_level)?;
     embedded_data.write_files(&artifacts_path)?;
 
-    let build_env = BuildEnvironment::new().context("resolving build environment")?;
+    let build_env = BuildEnvironment::new(
+        exe.target_triple(),
+        artifacts_path,
+        exe.target_python_exe_path(),
+        exe.libpython_link_mode(),
+        embedded_data
+            .linking_info
+            .libpython_filename
+            .as_ref()
+            .map(|x| x.as_path()),
+    )
+    .context("resolving build environment")?;
 
     warn!(logger, "building with Rust {}", build_env.rust_version);
 
@@ -196,76 +288,10 @@ pub fn build_executable_with_rust_project<'a>(
         args.push(&features);
     }
 
-    let mut envs: HashMap<String, String, RandomState> = std::env::vars().collect();
-    envs.insert(
-        "PYOXIDIZER_ARTIFACT_DIR".to_string(),
-        artifacts_path.display().to_string(),
-    );
-    envs.insert("PYOXIDIZER_REUSE_ARTIFACTS".to_string(), "1".to_string());
-
-    // Set PYTHON_SYS_EXECUTABLE so python3-sys uses our distribution's Python to configure
-    // itself.
-    // TODO the build environment requiring use of target arch executable prevents
-    // cross-compiling. We should be able to pass in all state without having to
-    // run an executable in a build script.
-    let python_exe_path = exe.target_python_exe_path();
-    envs.insert(
-        "PYTHON_SYS_EXECUTABLE".to_string(),
-        python_exe_path.display().to_string(),
-    );
-
-    // If linking against an existing dynamic library on Windows, add the path to that
-    // library to an environment variable so link.exe can find it.
-    if let Some(libpython_filename) = &embedded_data.linking_info.libpython_filename {
-        if cfg!(windows) {
-            let libpython_dir = libpython_filename
-                .parent()
-                .ok_or_else(|| anyhow!("unable to find parent directory of python DLL"))?;
-
-            envs.insert(
-                "LIB".to_string(),
-                if let Ok(lib) = std::env::var("LIB") {
-                    format!("{};{}", lib, libpython_dir.display())
-                } else {
-                    format!("{}", libpython_dir.display())
-                },
-            );
-        }
-    }
-
-    // static-nobundle link kind requires nightly Rust compiler until
-    // https://github.com/rust-lang/rust/issues/37403 is resolved.
-    if cfg!(windows) {
-        envs.insert("RUSTC_BOOTSTRAP".to_string(), "1".to_string());
-    }
-
-    // Windows standalone_static distributions require the non-DLL CRT.
-    // This requires telling Rust to use the static CRT.
-    //
-    // In addition, these distributions also have some symbols defined in
-    // multiple object files. See https://github.com/indygreg/python-build-standalone/issues/71.
-    // This can lead to a linker error unless we suppress it via /FORCE:MULTIPLE.
-    // This workaround is not ideal.
-    // TODO remove /FORCE:MULTIPLE once the distributions eliminate duplicate
-    // symbols.
-    if exe.target_triple().contains("-windows-")
-        && exe.libpython_link_mode() == LibpythonLinkMode::Static
-    {
-        let flags = "-C target-feature=+crt-static -C link-args=/FORCE:MULTIPLE";
-
-        let flags = if let Some(value) = envs.get("RUSTFLAGS") {
-            format!("{} {}", flags, value)
-        } else {
-            flags.to_string()
-        };
-
-        envs.insert("RUSTFLAGS".to_string(), flags);
-    }
-
     // TODO force cargo to colorize output under certain circumstances?
     let command = cmd(build_env.cargo_exe, &args)
         .dir(&project_path)
-        .full_env(&envs)
+        .full_env(&build_env.environment_vars)
         .stderr_to_stdout()
         .reader()
         .context("invoking cargo command")?;
