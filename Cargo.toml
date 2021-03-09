@@ -9,6 +9,7 @@ members = [
     'starlark-dialect-build-targets',
     "text-stub-library",
     'tugger',
+    'tugger-apple-bundle',
     'tugger-apple',
     'tugger-binary-analysis',
     'tugger-common',
