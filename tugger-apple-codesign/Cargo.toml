@@ -9,3 +9,10 @@ keywords = ["tugger", "apple", "macos", "codesign"]
 homepage = "https://github.com/indygreg/PyOxidizer"
 repository = "https://github.com/indygreg/PyOxidizer.git"
 readme = "README.md"
+
+[dependencies]
+digest = "0.9"
+goblin = "0.3"
+scroll = "0.10"
+sha-1 = "0.9"
+sha2 = "0.9"

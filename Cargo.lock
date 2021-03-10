@@ -3425,6 +3425,13 @@ dependencies = [
 [[package]]
 name = "tugger-apple-codesign"
 version = "0.1.0"
+dependencies = [
+ "digest 0.9.0",
+ "goblin",
+ "scroll",
+ "sha-1 0.9.4",
+ "sha2 0.9.3",
+]
 
 [[package]]
 name = "tugger-binary-analysis"
