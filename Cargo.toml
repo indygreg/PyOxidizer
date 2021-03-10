@@ -10,6 +10,7 @@ members = [
     "text-stub-library",
     'tugger',
     'tugger-apple-bundle',
+    'tugger-apple-codesign',
     'tugger-apple',
     'tugger-binary-analysis',
     'tugger-common',
