@@ -128,6 +128,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "904dfeac50f3cdaba28fc6f57fdcddb75f49ed61346676a78c4ffe55877802fd"
 
 [[package]]
+name = "bcder"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c16eb8ab9a5deef7188129b3ea73775a67fa07cc153ebe8d4b08ea21985d9c5b"
+dependencies = [
+ "bytes",
+ "smallvec",
+]
+
+[[package]]
 name = "bit-set"
 version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -550,6 +560,16 @@ checksum = "58bcd97a54c7ca5ce2f6eb16f6bede5b0ab5f0055fedc17d2f0b4466e21671ca"
 dependencies = [
  "generic-array 0.14.4",
  "subtle",
+]
+
+[[package]]
+name = "cryptographic-message-syntax"
+version = "0.1.0"
+dependencies = [
+ "bcder",
+ "bytes",
+ "chrono",
+ "ring",
 ]
 
 [[package]]
@@ -3426,6 +3446,7 @@ dependencies = [
 name = "tugger-apple-codesign"
 version = "0.1.0"
 dependencies = [
+ "cryptographic-message-syntax",
  "digest 0.9.0",
  "goblin",
  "scroll",

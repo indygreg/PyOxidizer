@@ -1186,33 +1186,150 @@ pub fn parse_signature_data(data: &[u8]) -> Result<EmbeddedSignature<'_>, MachOP
     }
 }
 
-/*
 #[cfg(test)]
 mod tests {
-    use {super::*, std::convert::TryInto};
+    use {
+        super::*,
+        cryptographic_message_syntax::SignedData,
+        std::{
+            io::Read,
+            path::{Path, PathBuf},
+        },
+    };
 
-    #[test]
-    fn test_parse() {
-        let data = std::fs::read("/Applications/iTerm.app/Contents/MacOS/iTerm2").unwrap();
+    const MACHO_UNIVERSAL_MAGIC: [u8; 4] = [0xca, 0xfe, 0xba, 0xbe];
+    const MACHO_64BIT_MAGIC: [u8; 4] = [0xfe, 0xed, 0xfa, 0xcf];
 
-        let mach = goblin::mach::Mach::parse(&data).unwrap();
+    /// Find files in a directory appearing to be Mach-O by sniffing magic.
+    ///
+    /// Ignores file I/O errors.
+    fn find_likely_macho_files(path: &Path) -> Vec<PathBuf> {
+        let mut res = Vec::new();
 
-        if let goblin::mach::Mach::Fat(multiarch) = mach {
-            for i in 0..multiarch.narches {
-                let macho = multiarch.get(i).unwrap();
-                let raw = find_signature_data(&macho).unwrap().unwrap();
-                let signature = parse_signature_data(raw).unwrap();
+        let dir = std::fs::read_dir(path).unwrap();
 
-                if let Some(signature_data) = signature.signature_data().unwrap() {
-                    std::fs::write("/Users/gps/tmp/appsig", signature_data).unwrap();
+        for entry in dir {
+            let entry = entry.unwrap();
+
+            if let Ok(mut fh) = std::fs::File::open(&entry.path()) {
+                let mut magic = [0; 4];
+
+                if let Ok(size) = fh.read(&mut magic) {
+                    if size == 4 && (magic == MACHO_UNIVERSAL_MAGIC || magic == MACHO_64BIT_MAGIC) {
+                        res.push(entry.path());
+                    }
                 }
+            }
+        }
 
-                for blob in signature.blobs {
-                    let blob: ParsedBlob = blob.try_into().unwrap();
-                    println!("{:#?}", blob);
+        res
+    }
+
+    fn find_apple_codesign_signature(macho: &goblin::mach::MachO) -> Option<Vec<u8>> {
+        if let Ok(Some(codesign_data)) = find_signature_data(macho) {
+            if let Ok(signature) = parse_signature_data(codesign_data) {
+                if let Ok(Some(data)) = signature.signature_data() {
+                    Some(data.to_vec())
+                } else {
+                    None
+                }
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    }
+
+    /// Attempt to extract CMS signature data from Mach-O binaries in a given path.
+    fn find_macho_codesign_signatures_in_dir(directory: &Path) -> Vec<(PathBuf, Vec<u8>)> {
+        let mut res = Vec::new();
+
+        for path in find_likely_macho_files(directory).into_iter() {
+            if let Ok(file_data) = std::fs::read(&path) {
+                if let Ok(mach) = goblin::mach::Mach::parse(&file_data) {
+                    match mach {
+                        goblin::mach::Mach::Binary(macho) => {
+                            if let Some(cms_data) = find_apple_codesign_signature(&macho) {
+                                res.push((path, cms_data));
+                            }
+                        }
+                        goblin::mach::Mach::Fat(multiarch) => {
+                            for i in 0..multiarch.narches {
+                                if let Ok(macho) = multiarch.get(i) {
+                                    if let Some(cms_data) = find_apple_codesign_signature(&macho) {
+                                        res.push((path.clone(), cms_data));
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        res
+    }
+
+    fn parse_macho_cms_data_in_dir(dir: &Path) {
+        println!("searching for Mach-O files in {}", dir.display());
+        for (path, cms_data) in find_macho_codesign_signatures_in_dir(dir) {
+            cryptographic_message_syntax::asn1::rfc5652::SignedData::decode_ber(&cms_data).unwrap();
+
+            match SignedData::parse_ber(&cms_data) {
+                Ok(signed_data) => {
+                    for signer in signed_data.signers() {
+                        if let Err(e) = signer.verify_signature_with_signed_data(&signed_data) {
+                            println!(
+                                "signature verification failed for {}: {}",
+                                path.display(),
+                                e
+                            )
+                        }
+
+                        if let Ok(()) = signer.verify_message_digest_with_signed_data(&signed_data)
+                        {
+                            println!(
+                                "message digest verification unexpectedly correct for {}",
+                                path.display()
+                            )
+                        }
+                    }
+                }
+                Err(e) => {
+                    println!(
+                        "error performing high-level parse of {}: {:?}",
+                        path.display(),
+                        e
+                    );
                 }
             }
         }
     }
+
+    #[test]
+    fn parse_applications_macho_signatures() {
+        // This test scans common directories containing Mach-O files on macOS and
+        // verifies we can parse CMS blobs within.
+
+        if let Ok(dir) = std::fs::read_dir("/Applications") {
+            for entry in dir {
+                let entry = entry.unwrap();
+
+                let search_dir = entry.path().join("Contents").join("MacOS");
+
+                if search_dir.exists() {
+                    parse_macho_cms_data_in_dir(&search_dir);
+                }
+            }
+        }
+
+        for dir in &["/usr/bin", "/usr/local/bin", "/opt/homebrew/bin"] {
+            let dir = PathBuf::from(dir);
+
+            if dir.exists() {
+                parse_macho_cms_data_in_dir(&dir);
+            }
+        }
+    }
 }
-*/
