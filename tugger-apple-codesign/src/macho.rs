@@ -112,24 +112,24 @@ impl From<u32> for CodeSigningSlot {
     }
 }
 
-impl Into<u32> for CodeSigningSlot {
-    fn into(self) -> u32 {
-        match self {
-            Self::CodeDirectory => CSSLOT_CODEDIRECTORY,
-            Self::Info => CSSLOT_INFOSLOT,
-            Self::Requirements => CSSLOT_REQUIREMENTS,
-            Self::ResourceDir => CSSLOT_RESOURCEDIR,
-            Self::Application => CSSLOT_APPLICATION,
-            Self::Entitlements => CSSLOT_ENTITLEMENTS,
-            Self::AlternateCodeDirectory0 => CSSLOT_ALTERNATE_CODEDIRECTORY_0,
-            Self::AlternateCodeDirectory1 => CSSLOT_ALTERNATE_CODEDIRECTORY_1,
-            Self::AlternateCodeDirectory2 => CSSLOT_ALTERNATE_CODEDIRECTORY_2,
-            Self::AlternateCodeDirectory3 => CSSLOT_ALTERNATE_CODEDIRECTORY_3,
-            Self::AlternateCodeDirectory4 => CSSLOT_ALTERNATE_CODEDIRECTORY_4,
-            Self::Signature => CSSLOT_SIGNATURESLOT,
-            Self::Identification => CSSLOT_IDENTIFICATIONSLOT,
-            Self::Ticket => CSSLOT_TICKETSLOT,
-            Self::Unknown(v) => v,
+impl From<CodeSigningSlot> for u32 {
+    fn from(v: CodeSigningSlot) -> Self {
+        match v {
+            CodeSigningSlot::CodeDirectory => CSSLOT_CODEDIRECTORY,
+            CodeSigningSlot::Info => CSSLOT_INFOSLOT,
+            CodeSigningSlot::Requirements => CSSLOT_REQUIREMENTS,
+            CodeSigningSlot::ResourceDir => CSSLOT_RESOURCEDIR,
+            CodeSigningSlot::Application => CSSLOT_APPLICATION,
+            CodeSigningSlot::Entitlements => CSSLOT_ENTITLEMENTS,
+            CodeSigningSlot::AlternateCodeDirectory0 => CSSLOT_ALTERNATE_CODEDIRECTORY_0,
+            CodeSigningSlot::AlternateCodeDirectory1 => CSSLOT_ALTERNATE_CODEDIRECTORY_1,
+            CodeSigningSlot::AlternateCodeDirectory2 => CSSLOT_ALTERNATE_CODEDIRECTORY_2,
+            CodeSigningSlot::AlternateCodeDirectory3 => CSSLOT_ALTERNATE_CODEDIRECTORY_3,
+            CodeSigningSlot::AlternateCodeDirectory4 => CSSLOT_ALTERNATE_CODEDIRECTORY_4,
+            CodeSigningSlot::Signature => CSSLOT_SIGNATURESLOT,
+            CodeSigningSlot::Identification => CSSLOT_IDENTIFICATIONSLOT,
+            CodeSigningSlot::Ticket => CSSLOT_TICKETSLOT,
+            CodeSigningSlot::Unknown(v) => v,
         }
     }
 }
@@ -805,15 +805,15 @@ impl From<u8> for HashType {
     }
 }
 
-impl Into<u8> for HashType {
-    fn into(self) -> u8 {
-        match self {
-            Self::None => 0,
-            Self::Sha1 => CS_HASHTYPE_SHA1,
-            Self::Sha256 => CS_HASHTYPE_SHA256,
-            Self::Sha256Truncated => CS_HASHTYPE_SHA256_TRUNCATED,
-            Self::Sha384 => CS_HASHTYPE_SHA384,
-            Self::Unknown(v) => v,
+impl From<HashType> for u8 {
+    fn from(v: HashType) -> u8 {
+        match v {
+            HashType::None => 0,
+            HashType::Sha1 => CS_HASHTYPE_SHA1,
+            HashType::Sha256 => CS_HASHTYPE_SHA256,
+            HashType::Sha256Truncated => CS_HASHTYPE_SHA256_TRUNCATED,
+            HashType::Sha384 => CS_HASHTYPE_SHA384,
+            HashType::Unknown(v) => v,
         }
     }
 }
@@ -960,7 +960,7 @@ impl<'a> CodeDirectoryBlob<'a> {
     ///
     /// Data contains magic and length header.
     pub fn from_bytes(data: &'a [u8]) -> Result<Self, MachOError> {
-        read_and_validate_blob_header(data, CSMAGIC_CODEDIRECTORY)?;
+        read_and_validate_blob_header(data, Self::magic())?;
 
         let offset = &mut 8;
 
@@ -1091,6 +1091,140 @@ impl<'a> CodeDirectoryBlob<'a> {
             code_hashes,
             special_hashes,
         })
+    }
+}
+
+impl<'a> Blob for CodeDirectoryBlob<'a> {
+    fn magic() -> u32 {
+        CSMAGIC_CODEDIRECTORY
+    }
+
+    fn to_vec(&self) -> Result<Vec<u8>, MachOError> {
+        let mut cursor = std::io::Cursor::new(Vec::<u8>::new());
+
+        // We need to do this in 2 phases because we don't know the length until
+        // we build up the data structure.
+
+        cursor.iowrite_with(self.version, scroll::BE)?;
+        cursor.iowrite_with(self.flags, scroll::BE)?;
+        let hash_offset_cursor_position = cursor.position();
+        cursor.iowrite_with(0u32, scroll::BE)?;
+        let ident_offset_cursor_position = cursor.position();
+        cursor.iowrite_with(0u32, scroll::BE)?;
+        // Use the actual data structures to avoid potential mismatch.
+        cursor.iowrite_with(self.special_hashes.len() as u32, scroll::BE)?;
+        cursor.iowrite_with(self.code_hashes.len() as u32, scroll::BE)?;
+        cursor.iowrite_with(self.code_limit, scroll::BE)?;
+        cursor.iowrite_with(self.hash_size, scroll::BE)?;
+        cursor.iowrite_with(u8::from(self.hash_type), scroll::BE)?;
+        cursor.iowrite_with(self.platform, scroll::BE)?;
+        cursor.iowrite_with(self.page_size, scroll::BE)?;
+        cursor.iowrite_with(self.spare2, scroll::BE)?;
+
+        let mut scatter_offset_cursor_position = None;
+        let mut team_offset_cursor_position = None;
+
+        if self.version >= CS_SUPPORTSSCATTER {
+            scatter_offset_cursor_position = Some(cursor.position());
+            cursor.iowrite_with(self.scatter_offset.unwrap_or(0), scroll::BE)?;
+
+            if self.version >= CS_SUPPORTSTEAMID {
+                team_offset_cursor_position = Some(cursor.position());
+                cursor.iowrite_with(0u32, scroll::BE)?;
+
+                if self.version >= CS_SUPPORTSCODELIMIT64 {
+                    cursor.iowrite_with(self.spare3.unwrap_or(0), scroll::BE)?;
+                    cursor.iowrite_with(self.code_limit_64.unwrap_or(0), scroll::BE)?;
+
+                    if self.version >= CS_SUPPORTSEXECSEG {
+                        cursor.iowrite_with(self.exec_seg_base.unwrap_or(0), scroll::BE)?;
+                        cursor.iowrite_with(self.exec_seg_limit.unwrap_or(0), scroll::BE)?;
+                        cursor.iowrite_with(self.exec_seg_limit.unwrap_or(0), scroll::BE)?;
+
+                        if self.version >= CS_SUPPORTSRUNTIME {
+                            cursor.iowrite_with(self.runtime.unwrap_or(0), scroll::BE)?;
+                            cursor
+                                .iowrite_with(self.pre_encrypt_offset.unwrap_or(0), scroll::BE)?;
+
+                            if self.version >= CS_SUPPORTSLINKAGE {
+                                cursor.iowrite_with(
+                                    self.linkage_hash_type.unwrap_or(0),
+                                    scroll::BE,
+                                )?;
+                                cursor.iowrite_with(
+                                    self.linkage_truncated.unwrap_or(0),
+                                    scroll::BE,
+                                )?;
+                                cursor.iowrite_with(self.spare4.unwrap_or(0), scroll::BE)?;
+                                cursor
+                                    .iowrite_with(self.linkage_offset.unwrap_or(0), scroll::BE)?;
+                                cursor.iowrite_with(self.linkage_size.unwrap_or(0), scroll::BE)?;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // We've written all the struct fields. Now write variable length fields.
+
+        let identity_offset = cursor.position();
+        cursor.write_all(self.ident.as_bytes())?;
+        cursor.write_all(b"\0")?;
+
+        // Hash offsets are wonky. The recorded hash offset is the beginning
+        // of code hashes and special hashes are in "negative" indices before
+        // that offset. Hashes are also at the index of their CSSLOT_ constant.
+        // e.g. Code Directory is the first element in the specials array because
+        // it is slot 0. This means we need to write out empty hashes for missing
+        // special slots.
+        // TODO consider aligning cursor on page boundary here for performance?
+
+        if let Some(highest_slot) = self
+            .special_hashes
+            .keys()
+            .map(|slot| u32::from(*slot))
+            .max()
+        {
+            for slot_index in 0..highest_slot + 1 {
+                if let Some(hash) = self.special_hashes.get(&CodeSigningSlot::from(slot_index)) {
+                    cursor.write_all(&hash.data)?;
+                } else {
+                    cursor.write_all(&b"\0".repeat(self.hash_size as usize))?;
+                }
+            }
+        }
+
+        let code_hashes_start_offset = cursor.position();
+
+        for hash in &self.code_hashes {
+            cursor.write_all(&hash.data)?;
+        }
+
+        // TODO write out scatter vector.
+        // TODO write out team identifier.
+
+        // Now go back and update the placeholder offsets.
+        cursor.set_position(hash_offset_cursor_position);
+        cursor.iowrite_with(code_hashes_start_offset as u32, scroll::BE)?;
+
+        cursor.set_position(ident_offset_cursor_position);
+        cursor.iowrite_with(identity_offset as u32, scroll::BE)?;
+
+        if scatter_offset_cursor_position.is_some() {
+            unimplemented!();
+        }
+
+        if team_offset_cursor_position.is_some() {
+            unimplemented!();
+        }
+
+        let mut res = Vec::new();
+        res.iowrite_with(Self::magic(), scroll::BE)?;
+        res.iowrite_with(cursor.position() as u32, scroll::BE)?;
+        res.extend(cursor.into_inner());
+
+        Ok(res)
     }
 }
 
