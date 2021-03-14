@@ -6,6 +6,8 @@
 mod code_hash;
 #[allow(unused)]
 mod macho;
+#[allow(unused)]
+mod specification;
 
 use {
     crate::macho::{find_signature_data, parse_signature_data, HashType},
