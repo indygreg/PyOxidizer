@@ -3448,13 +3448,11 @@ version = "0.1.0"
 dependencies = [
  "clap",
  "cryptographic-message-syntax",
- "digest 0.9.0",
  "goblin",
  "hex",
  "pem",
+ "ring",
  "scroll",
- "sha-1 0.9.4",
- "sha2 0.9.3",
 ]
 
 [[package]]

@@ -40,7 +40,6 @@ which allows some access to data within each specific blob type.
 */
 
 use {
-    digest::Digest,
     goblin::mach::{constants::SEG_LINKEDIT, load_command::CommandVariant, MachO},
     scroll::Pread,
     std::{
@@ -757,13 +756,33 @@ impl Into<u8> for HashType {
 }
 
 impl HashType {
-    pub fn digest(&self, data: &[u8]) -> Result<Vec<u8>, &'static str> {
+    /// Obtain a hasher for this digest type.
+    pub fn as_hasher(&self) -> Result<ring::digest::Context, &'static str> {
         match self {
-            Self::Sha1 => Ok(sha1::Sha1::digest(data).to_vec()),
-            Self::Sha256 => Ok(sha2::Sha256::digest(data).to_vec()),
-            Self::Sha384 => Ok(sha2::Sha384::digest(data).to_vec()),
+            Self::Sha1 => Ok(ring::digest::Context::new(
+                &ring::digest::SHA1_FOR_LEGACY_USE_ONLY,
+            )),
+            Self::Sha256 | Self::Sha256Truncated => {
+                Ok(ring::digest::Context::new(&ring::digest::SHA256))
+            }
+            Self::Sha384 => Ok(ring::digest::Context::new(&ring::digest::SHA384)),
             _ => Err("hasher not implemented"),
         }
+    }
+
+    /// Digest data given the configured hasher.
+    pub fn digest(&self, data: &[u8]) -> Result<Vec<u8>, &'static str> {
+        let mut hasher = self.as_hasher()?;
+
+        hasher.update(data);
+        let hash = hasher.finish().as_ref().to_vec();
+
+        // TODO truncate hash.
+        if matches!(self, Self::Sha256Truncated) {
+            unimplemented!();
+        }
+
+        Ok(hash)
     }
 }
 
