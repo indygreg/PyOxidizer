@@ -54,7 +54,7 @@ The *Code Directory* blob/slot defines information about the binary
 being signed. There are many fields to this data structure. But the most
 important ones to understand are the hashes / content digests. The *Code
 Directory* contains digests (e.g. SHA-256) of various content in the binary,
-such as the code (read: `__TEXT` segment) and other blobs/slots.
+such as Mach-O segment data (i.e. the executable code) and other blobs/slots.
 
 The *Entitlements* blob/slot contains a *plist*.
 
@@ -83,7 +83,7 @@ Code signing logically consists of the following steps:
 Embedded code signatures support signing a myriad of data formats.
 These include but aren't limited to:
 
-* The executable code data within the binary.
+* The Mach-O data outside the signature data in the `__LINKEDIT` segment.
 * Requested entitlements for the binary.
 * A code requirement statement / expression.
 * Resource files.
@@ -96,10 +96,16 @@ directory contains additional files whose content should be signed.
 
 Once content has been assembled, a series of digests are computed.
 
-For the binary code/`__TEXT` segment, the data is chunked into *pages*
-and each hashed separately. This is to allow code data to be lazily
-hashed as a page is loaded into the kernel. (Otherwise you would have
-to hash often megabytes on process start, which would add overhead.)
+For the code digests, the Mach-O segments are iterated. The raw segment
+data is chunked into *pages* and each hashed separately. This is to allow
+code data to be lazily hashed as a page is loaded into the kernel.
+(Otherwise you would have to hash often megabytes on process start, which
+would add overhead.)
+
+Code hashes are a bit nuanced. A hash is emitted at segment boundaries. i.e.
+hashes don't span across multiple segments. The `__PAGEZERO` segment is
+not hashed. The `__LINKEDIT` segment is hashed, but only up to the start
+offset of the embedded signature data, if present.
 
 Other content (such as the entitlements, code requirement statement, and
 resource files) are serialized to *Blob* data. The mechanism for this

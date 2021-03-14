@@ -784,6 +784,21 @@ impl Into<u8> for HashType {
     }
 }
 
+impl TryFrom<&str> for HashType {
+    type Error = DigestError;
+
+    fn try_from(s: &str) -> Result<Self, Self::Error> {
+        match s {
+            "none" => Ok(Self::None),
+            "sha1" => Ok(Self::Sha1),
+            "sha256" => Ok(Self::Sha256),
+            "sha256-truncated" => Ok(Self::Sha256Truncated),
+            "sha384" => Ok(Self::Sha384),
+            _ => Err(DigestError::UnknownAlgorithm),
+        }
+    }
+}
+
 impl HashType {
     /// Obtain a hasher for this digest type.
     pub fn as_hasher(&self) -> Result<ring::digest::Context, DigestError> {

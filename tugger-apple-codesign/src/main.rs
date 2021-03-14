@@ -10,10 +10,13 @@ mod macho;
 mod specification;
 
 use {
-    crate::macho::{find_signature_data, parse_signature_data, HashType},
+    crate::{
+        code_hash::{compute_code_hashes, SignatureError},
+        macho::{find_signature_data, parse_signature_data, HashType},
+    },
     clap::{App, AppSettings, Arg, ArgMatches, SubCommand},
     goblin::mach::{Mach, MachO},
-    std::{io::Write, str::FromStr},
+    std::{convert::TryFrom, io::Write, str::FromStr},
 };
 
 const EXTRACT_ABOUT: &str = "\
@@ -48,6 +51,9 @@ superblob
    records, including digests of every Blob.
 ";
 
+const SUPPORTED_HASHES: &[&'static str; 5] =
+    &["none", "sha1", "sha256", "sha256-truncated", "sha384"];
+
 #[derive(Debug)]
 enum AppError {
     UnknownCommand,
@@ -58,6 +64,7 @@ enum AppError {
     NoCodeSignature,
     NoCmsData,
     Digest(crate::macho::DigestError),
+    Signature(SignatureError),
 }
 
 impl std::fmt::Display for AppError {
@@ -71,6 +78,7 @@ impl std::fmt::Display for AppError {
             Self::NoCodeSignature => f.write_str("code signature data not found"),
             Self::NoCmsData => f.write_str("CMS data structure not found"),
             Self::Digest(e) => f.write_fmt(format_args!("digest error: {}", e)),
+            Self::Signature(e) => e.fmt(f),
         }
     }
 }
@@ -101,6 +109,12 @@ impl From<crate::macho::DigestError> for AppError {
     }
 }
 
+impl From<SignatureError> for AppError {
+    fn from(e: SignatureError) -> Self {
+        Self::Signature(e)
+    }
+}
+
 fn get_macho_from_data(data: &[u8], universal_index: usize) -> Result<MachO, AppError> {
     let mach = Mach::parse(data)?;
 
@@ -115,6 +129,29 @@ fn get_macho_from_data(data: &[u8], universal_index: usize) -> Result<MachO, App
             Ok(multiarch.get(universal_index)?)
         }
     }
+}
+
+fn command_compute_code_hashes(args: &ArgMatches) -> Result<(), AppError> {
+    let path = args.value_of("path").ok_or(AppError::BadArgument)?;
+    let index = args.value_of("universal_index").unwrap();
+    let index = usize::from_str(index).map_err(|_| AppError::BadArgument)?;
+    let hash_type = HashType::try_from(args.value_of("hash").unwrap())?;
+    let page_size = if let Some(page_size) = args.value_of("page_size") {
+        Some(usize::from_str(page_size).map_err(|_| AppError::BadArgument)?)
+    } else {
+        None
+    };
+
+    let data = std::fs::read(path)?;
+    let macho = get_macho_from_data(&data, index)?;
+
+    let hashes = compute_code_hashes(&macho, hash_type, page_size)?;
+
+    for hash in hashes {
+        println!("{}", hex::encode(hash));
+    }
+
+    Ok(())
 }
 
 fn command_extract(args: &ArgMatches) -> Result<(), AppError> {
@@ -234,6 +271,36 @@ fn main_impl() -> Result<(), AppError> {
         .author("Gregory Szorc <gregory.szorc@gmail.com>")
         .about("Do things related to code signing of Apple binaries")
         .subcommand(
+            SubCommand::with_name("compute-code-hashes")
+                .about("Compute code hashes for a binary")
+                .arg(
+                    Arg::with_name("path")
+                        .required(true)
+                        .help("path to Mach-O binary to examine"),
+                )
+                .arg(
+                    Arg::with_name("hash")
+                        .long("hash")
+                        .takes_value(true)
+                        .possible_values(SUPPORTED_HASHES)
+                        .default_value("sha256")
+                        .help("Hashing algorithm to use"),
+                )
+                .arg(
+                    Arg::with_name("page_size")
+                        .long("page-size")
+                        .takes_value(true)
+                        .help("Chunk size to digest over"),
+                )
+                .arg(
+                    Arg::with_name("universal_index")
+                        .long("universal-index")
+                        .takes_value(true)
+                        .default_value("0")
+                        .help("Index of Mach-O binary to operate on within a universal/fat binary"),
+                ),
+        )
+        .subcommand(
             SubCommand::with_name("extract")
                 .about("Extracts code signature data from a Mach-O binary")
                 .long_about(EXTRACT_ABOUT)
@@ -270,6 +337,7 @@ fn main_impl() -> Result<(), AppError> {
         .get_matches();
 
     match matches.subcommand() {
+        ("compute-code-hashes", Some(args)) => command_compute_code_hashes(args),
         ("extract", Some(args)) => command_extract(args),
         _ => Err(AppError::UnknownCommand),
     }
