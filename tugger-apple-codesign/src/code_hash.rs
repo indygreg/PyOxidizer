@@ -84,7 +84,7 @@ impl From<MachOParseError> for SignatureError {
 /// Given a Mach-O binary, attempt to verify the integrity of code hashes within.
 pub fn verify_macho_code_hashes(macho: &MachO) -> Result<(), SignatureError> {
     if let Some(signature_data) = find_signature_data(macho)? {
-        let signature = parse_signature_data(signature_data)?;
+        let signature = parse_signature_data(signature_data.signature_data)?;
 
         let code_directory = signature
             .code_directory()?

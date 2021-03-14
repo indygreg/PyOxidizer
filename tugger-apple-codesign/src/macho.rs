@@ -767,7 +767,6 @@ impl HashType {
     }
 }
 
-#[derive(Debug)]
 pub struct Hash<'a> {
     pub data: &'a [u8],
 }
@@ -775,6 +774,12 @@ pub struct Hash<'a> {
 impl<'a> Hash<'a> {
     pub fn to_vec(&self) -> Vec<u8> {
         self.data.to_vec()
+    }
+}
+
+impl<'a> std::fmt::Debug for Hash<'a> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&hex::encode(self.data))
     }
 }
 
@@ -1066,7 +1071,6 @@ impl<'a> DetachedSignatureBlob<'a> {
 }
 
 /// Represents a generic blob wrapper (CSMAGIC_BLOBWRAPPER).
-#[derive(Debug)]
 pub struct BlobWrapperBlob<'a> {
     data: &'a [u8],
 }
@@ -1079,6 +1083,12 @@ impl<'a> BlobWrapperBlob<'a> {
         Ok(Self {
             data: read_and_validate_blob_header(data, CSMAGIC_BLOBWRAPPER)?,
         })
+    }
+}
+
+impl<'a> std::fmt::Debug for BlobWrapperBlob<'a> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!("{}", hex::encode(self.data)))
     }
 }
 
@@ -1132,6 +1142,27 @@ impl From<std::str::Utf8Error> for MachOParseError {
     }
 }
 
+/// Describes signature data embedded within a Mach-O binary.
+pub struct MachOSignatureData<'a> {
+    /// The number of segments in the Mach-O binary.
+    pub segments_count: usize,
+
+    /// Which segment offset is the `__LINKEDIT` segment.
+    pub linkedit_segment_index: usize,
+
+    /// The start offset of the signature data within the `__LINKEDIT` segment.
+    pub signature_start_offset: usize,
+
+    /// The end offset of the signature data within the `__LINKEDIT` segment.
+    pub signature_end_offset: usize,
+
+    /// Raw data in the `__LINKEDIT` segment.
+    pub linkedit_segment_data: &'a [u8],
+
+    /// The signature data within the `__LINKEDIT` segment.
+    pub signature_data: &'a [u8],
+}
+
 /// Attempt to extract a reference to raw signature data in a Mach-O binary.
 ///
 /// An `LC_CODE_SIGNATURE` load command in the Mach-O file header points to
@@ -1139,7 +1170,9 @@ impl From<std::str::Utf8Error> for MachOParseError {
 ///
 /// This function is used as part of parsing signature data. You probably want to
 /// use a function that parses referenced data.
-pub fn find_signature_data<'a>(obj: &'a MachO) -> Result<Option<&'a [u8]>, MachOParseError> {
+pub fn find_signature_data<'a>(
+    obj: &'a MachO,
+) -> Result<Option<MachOSignatureData<'a>>, MachOParseError> {
     if let Some(linkedit_data_command) = obj.load_commands.iter().find_map(|load_command| {
         if let CommandVariant::CodeSignature(command) = &load_command.command {
             Some(command)
@@ -1148,10 +1181,11 @@ pub fn find_signature_data<'a>(obj: &'a MachO) -> Result<Option<&'a [u8]>, MachO
         }
     }) {
         // Now find the slice of data in the __LINKEDIT segment we need to parse.
-        let linkedit = obj
+        let (linkedit_segment_index, linkedit) = obj
             .segments
             .iter()
-            .find(|segment| {
+            .enumerate()
+            .find(|(_, segment)| {
                 if let Ok(name) = segment.name() {
                     name == SEG_LINKEDIT
                 } else {
@@ -1160,10 +1194,20 @@ pub fn find_signature_data<'a>(obj: &'a MachO) -> Result<Option<&'a [u8]>, MachO
             })
             .ok_or(MachOParseError::MissingLinkedit)?;
 
-        let start_offset = linkedit_data_command.dataoff as usize - linkedit.fileoff as usize;
-        let end_offset = start_offset + linkedit_data_command.datasize as usize;
+        let signature_start_offset =
+            linkedit_data_command.dataoff as usize - linkedit.fileoff as usize;
+        let signature_end_offset = signature_start_offset + linkedit_data_command.datasize as usize;
 
-        Ok(Some(&linkedit.data[start_offset..end_offset]))
+        let signature_data = &linkedit.data[signature_start_offset..signature_end_offset];
+
+        Ok(Some(MachOSignatureData {
+            segments_count: obj.segments.len(),
+            linkedit_segment_index,
+            signature_start_offset,
+            signature_end_offset,
+            linkedit_segment_data: linkedit.data,
+            signature_data,
+        }))
     } else {
         Ok(None)
     }
@@ -1227,7 +1271,7 @@ mod tests {
 
     fn find_apple_codesign_signature(macho: &goblin::mach::MachO) -> Option<Vec<u8>> {
         if let Ok(Some(codesign_data)) = find_signature_data(macho) {
-            if let Ok(signature) = parse_signature_data(codesign_data) {
+            if let Ok(signature) = parse_signature_data(codesign_data.signature_data) {
                 if let Ok(Some(data)) = signature.signature_data() {
                     Some(data.to_vec())
                 } else {
