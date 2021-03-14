@@ -865,7 +865,7 @@ impl HashType {
 }
 
 pub struct Hash<'a> {
-    pub data: &'a [u8],
+    pub data: Cow<'a, [u8]>,
 }
 
 impl<'a> Hash<'a> {
@@ -876,14 +876,14 @@ impl<'a> Hash<'a> {
 
 impl<'a> std::fmt::Debug for Hash<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&hex::encode(self.data))
+        f.write_str(&hex::encode(&self.data))
     }
 }
 
 fn get_hashes(data: &[u8], offset: usize, count: usize, hash_size: usize) -> Vec<Hash<'_>> {
     data[offset..offset + (count * hash_size)]
         .chunks(hash_size)
-        .map(|data| Hash { data })
+        .map(|data| Hash { data: data.into() })
         .collect()
 }
 
