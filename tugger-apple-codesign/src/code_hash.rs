@@ -20,7 +20,8 @@ This module contains code related to reading and writing these so-called
 
 use {
     crate::macho::{
-        find_signature_data, parse_signature_data, CodeSigningSlot, HashType, MachOParseError,
+        find_signature_data, parse_signature_data, CodeSigningSlot, DigestError, HashType,
+        MachOParseError,
     },
     goblin::mach::MachO,
 };
@@ -35,12 +36,12 @@ pub fn compute_code_hashes(
     hash: HashType,
     page_size: usize,
     max_offset: usize,
-) -> Result<Vec<Vec<u8>>, &'static str> {
+) -> Result<Vec<Vec<u8>>, DigestError> {
     let data = &data[..max_offset];
 
     data.chunks(page_size)
         .map(|chunk| hash.digest(chunk))
-        .collect::<Result<Vec<_>, &'static str>>()
+        .collect::<Result<Vec<_>, DigestError>>()
 }
 
 #[derive(Debug)]
@@ -48,7 +49,7 @@ pub enum SignatureError {
     ParseError(MachOParseError),
     NoSignatureData,
     NoCodeDirectory,
-    HashingError,
+    HashingError(DigestError),
     MissingHash(CodeSigningSlot),
     HashMismatch(CodeSigningSlot, Vec<u8>, Vec<u8>),
 }
@@ -61,7 +62,9 @@ impl std::fmt::Display for SignatureError {
             Self::NoCodeDirectory => {
                 f.write_str("signature data does not contain a code directory blob")
             }
-            Self::HashingError => f.write_str("error occurred while hashing"),
+            Self::HashingError(e) => {
+                f.write_fmt(format_args!("error occurred while hashing: {}", e))
+            }
             Self::MissingHash(slot) => {
                 f.write_fmt(format_args!("missing hash for slot {:?}", slot))
             }
@@ -81,6 +84,12 @@ impl From<MachOParseError> for SignatureError {
     }
 }
 
+impl From<DigestError> for SignatureError {
+    fn from(e: DigestError) -> Self {
+        Self::HashingError(e)
+    }
+}
+
 /// Given a Mach-O binary, attempt to verify the integrity of code hashes within.
 pub fn verify_macho_code_hashes(macho: &MachO) -> Result<(), SignatureError> {
     if let Some(signature_data) = find_signature_data(macho)? {
@@ -94,10 +103,7 @@ pub fn verify_macho_code_hashes(macho: &MachO) -> Result<(), SignatureError> {
         // help ensure the signature data hasn't been tampered with. There
         // should be a signature for each blob in the signature payload.
         for blob_entry in &signature.blobs {
-            let actual_hash = code_directory
-                .hash_type
-                .digest(blob_entry.data)
-                .map_err(|_| SignatureError::HashingError)?;
+            let actual_hash = code_directory.hash_type.digest(blob_entry.data)?;
 
             if let Some(expected_hash) = code_directory.special_hashes.get(&blob_entry.slot) {
                 let expected_hash = expected_hash.to_vec();

@@ -8,7 +8,7 @@ mod code_hash;
 mod macho;
 
 use {
-    crate::macho::{find_signature_data, parse_signature_data},
+    crate::macho::{find_signature_data, parse_signature_data, HashType},
     clap::{App, AppSettings, Arg, ArgMatches, SubCommand},
     goblin::mach::{Mach, MachO},
     std::{io::Write, str::FromStr},
@@ -23,6 +23,7 @@ enum AppError {
     MachOError(crate::macho::MachOParseError),
     NoCodeSignature,
     NoCmsData,
+    Digest(crate::macho::DigestError),
 }
 
 impl std::fmt::Display for AppError {
@@ -35,6 +36,7 @@ impl std::fmt::Display for AppError {
             Self::MachOError(e) => f.write_fmt(format_args!("Mach-O parsing error: {:?}", e)),
             Self::NoCodeSignature => f.write_str("code signature data not found"),
             Self::NoCmsData => f.write_str("CMS data structure not found"),
+            Self::Digest(e) => f.write_fmt(format_args!("digest error: {}", e)),
         }
     }
 }
@@ -56,6 +58,12 @@ impl From<goblin::error::Error> for AppError {
 impl From<crate::macho::MachOParseError> for AppError {
     fn from(e: crate::macho::MachOParseError) -> Self {
         Self::MachOError(e)
+    }
+}
+
+impl From<crate::macho::DigestError> for AppError {
+    fn from(e: crate::macho::DigestError) -> Self {
+        Self::Digest(e)
     }
 }
 
@@ -185,6 +193,15 @@ fn command_extract_macho_signature(args: &ArgMatches) -> Result<(), AppError> {
                 println!("  length: {}", blob.length);
                 println!("  end offset: {}", blob.offset + blob.length - 1);
                 println!("  magic: {:?}", blob.magic);
+                println!("  sha1: {}", hex::encode(blob.digest_with(HashType::Sha1)?));
+                println!(
+                    "  sha256: {}",
+                    hex::encode(blob.digest_with(HashType::Sha256)?)
+                );
+                println!(
+                    "  sha384: {}",
+                    hex::encode(blob.digest_with(HashType::Sha384)?)
+                );
             }
         }
         _ => panic!("unhandled format: {}", format),

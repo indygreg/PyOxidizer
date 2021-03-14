@@ -517,6 +517,11 @@ impl<'a> BlobEntry<'a> {
     pub fn into_parsed_blob(self) -> Result<ParsedBlob<'a>, MachOParseError> {
         self.try_into()
     }
+
+    /// Compute the content digest of this blob using the specified hash type.
+    pub fn digest_with(&self, hash: HashType) -> Result<Vec<u8>, DigestError> {
+        hash.digest(&self.data)
+    }
 }
 
 /// Represents the parsed content of a blob entry.
@@ -527,6 +532,13 @@ pub struct ParsedBlob<'a> {
 
     /// The parsed blob data.
     pub blob: BlobData<'a>,
+}
+
+impl<'a> ParsedBlob<'a> {
+    /// Compute the content digest of this blob using the specified hash type.
+    pub fn digest_with(&self, hash: HashType) -> Result<Vec<u8>, DigestError> {
+        hash.digest(&self.blob_entry.data)
+    }
 }
 
 impl<'a> TryFrom<BlobEntry<'a>> for ParsedBlob<'a> {
@@ -718,6 +730,23 @@ impl<'a> RequirementsBlob<'a> {
     }
 }
 
+#[derive(Debug)]
+pub enum DigestError {
+    UnknownAlgorithm,
+    UnsupportedAlgorithm,
+}
+
+impl std::error::Error for DigestError {}
+
+impl std::fmt::Display for DigestError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::UnknownAlgorithm => f.write_str("unknown algorithm"),
+            Self::UnsupportedAlgorithm => f.write_str("unsupported algorithm"),
+        }
+    }
+}
+
 /// Represents a hash type from a CS_HASHTYPE_* constants.
 #[derive(Clone, Copy, Debug)]
 pub enum HashType {
@@ -757,7 +786,7 @@ impl Into<u8> for HashType {
 
 impl HashType {
     /// Obtain a hasher for this digest type.
-    pub fn as_hasher(&self) -> Result<ring::digest::Context, &'static str> {
+    pub fn as_hasher(&self) -> Result<ring::digest::Context, DigestError> {
         match self {
             Self::Sha1 => Ok(ring::digest::Context::new(
                 &ring::digest::SHA1_FOR_LEGACY_USE_ONLY,
@@ -766,12 +795,12 @@ impl HashType {
                 Ok(ring::digest::Context::new(&ring::digest::SHA256))
             }
             Self::Sha384 => Ok(ring::digest::Context::new(&ring::digest::SHA384)),
-            _ => Err("hasher not implemented"),
+            _ => Err(DigestError::UnknownAlgorithm),
         }
     }
 
     /// Digest data given the configured hasher.
-    pub fn digest(&self, data: &[u8]) -> Result<Vec<u8>, &'static str> {
+    pub fn digest(&self, data: &[u8]) -> Result<Vec<u8>, DigestError> {
         let mut hasher = self.as_hasher()?;
 
         hasher.update(data);
@@ -779,7 +808,7 @@ impl HashType {
 
         // TODO truncate hash.
         if matches!(self, Self::Sha256Truncated) {
-            unimplemented!();
+            return Err(DigestError::UnsupportedAlgorithm);
         }
 
         Ok(hash)
