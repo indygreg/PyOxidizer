@@ -1,6 +1,6 @@
 # tugger-apple-codesign
 
-`tugger-apple-codesign` is a library crate implementing functionality related
+`tugger-apple-codesign` is a crate implementing functionality related
 to code signing on Apple platforms.
 
 `tugger-apple-codesign` is part of the Tugger application distribution tool

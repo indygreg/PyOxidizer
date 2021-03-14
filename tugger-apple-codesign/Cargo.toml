@@ -10,9 +10,15 @@ homepage = "https://github.com/indygreg/PyOxidizer"
 repository = "https://github.com/indygreg/PyOxidizer.git"
 readme = "README.md"
 
+[[bin]]
+name = "rcodesign"
+path = "src/main.rs"
+
 [dependencies]
+clap = "2.33"
 digest = "0.9"
 goblin = "0.3"
+pem = "0.8"
 scroll = "0.10"
 sha-1 = "0.9"
 sha2 = "0.9"
