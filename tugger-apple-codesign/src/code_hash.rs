@@ -21,7 +21,7 @@ This module contains code related to reading and writing these so-called
 use {
     crate::macho::{
         find_signature_data, parse_signature_data, CodeSigningSlot, DigestError, HashType,
-        MachOParseError,
+        MachOError,
     },
     goblin::mach::MachO,
 };
@@ -91,7 +91,7 @@ pub fn compute_code_hashes(
 
 #[derive(Debug)]
 pub enum SignatureError {
-    ParseError(MachOParseError),
+    ParseError(MachOError),
     NoSignatureData,
     NoCodeDirectory,
     HashingError(DigestError),
@@ -123,8 +123,8 @@ impl std::fmt::Display for SignatureError {
 
 impl std::error::Error for SignatureError {}
 
-impl From<MachOParseError> for SignatureError {
-    fn from(e: MachOParseError) -> Self {
+impl From<MachOError> for SignatureError {
+    fn from(e: MachOError) -> Self {
         Self::ParseError(e)
     }
 }

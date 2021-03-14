@@ -60,7 +60,7 @@ enum AppError {
     BadArgument,
     Io(std::io::Error),
     Goblin(goblin::error::Error),
-    MachOError(crate::macho::MachOParseError),
+    MachOError(crate::macho::MachOError),
     NoCodeSignature,
     NoCmsData,
     Digest(crate::macho::DigestError),
@@ -97,8 +97,8 @@ impl From<goblin::error::Error> for AppError {
     }
 }
 
-impl From<crate::macho::MachOParseError> for AppError {
-    fn from(e: crate::macho::MachOParseError) -> Self {
+impl From<crate::macho::MachOError> for AppError {
+    fn from(e: crate::macho::MachOError) -> Self {
         Self::MachOError(e)
     }
 }
@@ -212,7 +212,7 @@ fn command_extract(args: &ArgMatches) -> Result<(), AppError> {
         "requirements" => {
             let embedded = parse_signature_data(&sig.signature_data)?;
 
-            if let Some(reqs) = embedded.requirements()? {
+            if let Some(reqs) = embedded.code_requirements()? {
                 println!("{:#?}", reqs)
             } else {
                 eprintln!("no requirements");
@@ -222,15 +222,31 @@ fn command_extract(args: &ArgMatches) -> Result<(), AppError> {
             println!("segments count: {}", sig.segments_count);
             println!("__LINKEDIT segment index: {}", sig.linkedit_segment_index);
             println!(
+                "__LINKEDIT segment start offset: {}",
+                sig.linkedit_segment_start_offset
+            );
+            println!(
+                "__LINKEDIT segment end offset: {}",
+                sig.linkedit_segment_end_offset
+            );
+            println!(
                 "__LINKEDIT segment size: {}",
                 sig.linkedit_segment_data.len()
             );
             println!(
-                "__LINKEDIT signature start offset: {}",
+                "__LINKEDIT signature global start offset: {}",
+                sig.linkedit_signature_start_offset
+            );
+            println!(
+                "__LINKEDIT signature global end offset: {}",
+                sig.linkedit_signature_end_offset
+            );
+            println!(
+                "__LINKEDIT signature local segment start offset: {}",
                 sig.signature_start_offset
             );
             println!(
-                "__LINKEDIT signature end offset: {}",
+                "__LINKEDIT signature local segment end offset: {}",
                 sig.signature_end_offset
             );
             println!("__LINKEDIT signature size: {}", sig.signature_data.len());
