@@ -1209,6 +1209,7 @@ impl<'a> Blob for CodeDirectoryBlob<'a> {
         cursor.iowrite_with(0u32, scroll::BE)?;
         let ident_offset_cursor_position = cursor.position();
         cursor.iowrite_with(0u32, scroll::BE)?;
+        assert_eq!(cursor.position(), 0x10);
         cursor.iowrite_with(self.special_hashes.len() as u32, scroll::BE)?;
         cursor.iowrite_with(self.code_hashes.len() as u32, scroll::BE)?;
         cursor.iowrite_with(self.code_limit, scroll::BE)?;
@@ -1216,6 +1217,7 @@ impl<'a> Blob for CodeDirectoryBlob<'a> {
         cursor.iowrite_with(u8::from(self.hash_type), scroll::BE)?;
         cursor.iowrite_with(self.platform, scroll::BE)?;
         cursor.iowrite_with(self.page_size.trailing_zeros() as u8, scroll::BE)?;
+        assert_eq!(cursor.position(), 0x20);
         cursor.iowrite_with(self.spare2, scroll::BE)?;
 
         let mut scatter_offset_cursor_position = None;
@@ -1231,14 +1233,17 @@ impl<'a> Blob for CodeDirectoryBlob<'a> {
 
                 if self.version >= CS_SUPPORTSCODELIMIT64 {
                     cursor.iowrite_with(self.spare3.unwrap_or(0), scroll::BE)?;
+                    assert_eq!(cursor.position(), 0x30);
                     cursor.iowrite_with(self.code_limit_64.unwrap_or(0), scroll::BE)?;
 
                     if self.version >= CS_SUPPORTSEXECSEG {
                         cursor.iowrite_with(self.exec_seg_base.unwrap_or(0), scroll::BE)?;
+                        assert_eq!(cursor.position(), 0x40);
                         cursor.iowrite_with(self.exec_seg_limit.unwrap_or(0), scroll::BE)?;
                         cursor.iowrite_with(self.exec_seg_limit.unwrap_or(0), scroll::BE)?;
 
                         if self.version >= CS_SUPPORTSRUNTIME {
+                            assert_eq!(cursor.position(), 0x50);
                             cursor.iowrite_with(self.runtime.unwrap_or(0), scroll::BE)?;
                             cursor
                                 .iowrite_with(self.pre_encrypt_offset.unwrap_or(0), scroll::BE)?;
@@ -1255,6 +1260,7 @@ impl<'a> Blob for CodeDirectoryBlob<'a> {
                                 cursor.iowrite_with(self.spare4.unwrap_or(0), scroll::BE)?;
                                 cursor
                                     .iowrite_with(self.linkage_offset.unwrap_or(0), scroll::BE)?;
+                                assert_eq!(cursor.position(), 0x60);
                                 cursor.iowrite_with(self.linkage_size.unwrap_or(0), scroll::BE)?;
                             }
                         }
@@ -1270,9 +1276,11 @@ impl<'a> Blob for CodeDirectoryBlob<'a> {
         cursor.write_all(b"\0")?;
 
         let team_offset = cursor.position();
-        if let Some(team_name) = &self.team_name {
-            cursor.write_all(team_name.as_bytes())?;
-            cursor.write_all(b"\0")?;
+        if team_offset_cursor_position.is_some() {
+            if let Some(team_name) = &self.team_name {
+                cursor.write_all(team_name.as_bytes())?;
+                cursor.write_all(b"\0")?;
+            }
         }
 
         // Hash offsets are wonky. The recorded hash offset is the beginning
@@ -1306,12 +1314,13 @@ impl<'a> Blob for CodeDirectoryBlob<'a> {
 
         // TODO write out scatter vector.
 
-        // Now go back and update the placeholder offsets.
+        // Now go back and update the placeholder offsets. We need to add 8 to account
+        // for the blob header, which isn't present in this buffer.
         cursor.set_position(hash_offset_cursor_position);
-        cursor.iowrite_with(code_hashes_start_offset as u32, scroll::BE)?;
+        cursor.iowrite_with(code_hashes_start_offset as u32 + 8, scroll::BE)?;
 
         cursor.set_position(ident_offset_cursor_position);
-        cursor.iowrite_with(identity_offset as u32, scroll::BE)?;
+        cursor.iowrite_with(identity_offset as u32 + 8, scroll::BE)?;
 
         if self.scatter_offset.is_some() {
             return Err(MachOError::Unimplemented);
@@ -1320,7 +1329,7 @@ impl<'a> Blob for CodeDirectoryBlob<'a> {
         if let Some(offset) = team_offset_cursor_position {
             if self.team_name.is_some() {
                 cursor.set_position(offset);
-                cursor.iowrite_with(team_offset as u32, scroll::BE)?;
+                cursor.iowrite_with(team_offset as u32 + 8, scroll::BE)?;
             }
         }
 
