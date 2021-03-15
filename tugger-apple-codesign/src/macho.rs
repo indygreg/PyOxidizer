@@ -970,12 +970,24 @@ impl<'a> CodeDirectoryBlob<'a> {
         let spare2 = data.gread_with(offset, scroll::BE)?;
 
         let scatter_offset = if version >= CS_SUPPORTSSCATTER {
-            Some(data.gread_with(offset, scroll::BE)?)
+            let v = data.gread_with(offset, scroll::BE)?;
+
+            if v != 0 {
+                Some(v)
+            } else {
+                None
+            }
         } else {
             None
         };
         let team_offset = if version >= CS_SUPPORTSTEAMID {
-            Some(data.gread_with::<u32>(offset, scroll::BE)?)
+            let v = data.gread_with::<u32>(offset, scroll::BE)?;
+
+            if v != 0 {
+                Some(v)
+            } else {
+                None
+            }
         } else {
             None
         };
@@ -1033,20 +1045,19 @@ impl<'a> CodeDirectoryBlob<'a> {
             }
         };
 
-        let team_name = match team_offset {
-            Some(0) | None => None,
-            Some(team_offset) => {
-                match data[team_offset as usize..]
-                    .split(|&b| b == 0)
-                    .map(std::str::from_utf8)
-                    .next()
-                {
-                    Some(res) => Some(Cow::from(res?)),
-                    None => {
-                        return Err(MachOError::BadTeamString);
-                    }
+        let team_name = if let Some(team_offset) = team_offset {
+            match data[team_offset as usize..]
+                .split(|&b| b == 0)
+                .map(std::str::from_utf8)
+                .next()
+            {
+                Some(res) => Some(Cow::from(res?)),
+                None => {
+                    return Err(MachOError::BadTeamString);
                 }
             }
+        } else {
+            None
         };
 
         let code_hashes = get_hashes(
