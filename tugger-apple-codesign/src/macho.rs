@@ -1700,79 +1700,56 @@ mod tests {
         }
     }
 
-    fn find_apple_codesign_signature(macho: &goblin::mach::MachO) -> Option<Vec<u8>> {
+    fn validate_macho(path: &Path, macho: &MachO) {
+        // We found signature data in the binary.
         if let Some(signature) = find_apple_embedded_signature(macho) {
-            if let Ok(Some(data)) = signature.signature_data() {
-                Some(data.to_vec())
-            } else {
-                None
+            // Found a CMS signed data blob.
+            if let Ok(Some(cms)) = signature.signature_data() {
+                match SignedData::parse_ber(&cms) {
+                    Ok(signed_data) => {
+                        for signer in signed_data.signers() {
+                            if let Err(e) = signer.verify_signature_with_signed_data(&signed_data) {
+                                println!(
+                                    "signature verification failed for {}: {}",
+                                    path.display(),
+                                    e
+                                );
+                            }
+
+                            if let Ok(()) =
+                                signer.verify_message_digest_with_signed_data(&signed_data)
+                            {
+                                println!(
+                                    "message digest verification unexpectedly correct for {}",
+                                    path.display()
+                                );
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        println!("error performing CMS parse of {}: {:?}", path.display(), e);
+                    }
+                }
             }
-        } else {
-            None
         }
     }
 
-    /// Attempt to extract CMS signature data from Mach-O binaries in a given path.
-    fn find_macho_codesign_signatures_in_dir(directory: &Path) -> Vec<(PathBuf, Vec<u8>)> {
-        let mut res = Vec::new();
-
-        for path in find_likely_macho_files(directory).into_iter() {
+    fn validate_macho_in_dir(dir: &Path) {
+        for path in find_likely_macho_files(dir).into_iter() {
             if let Ok(file_data) = std::fs::read(&path) {
                 if let Ok(mach) = goblin::mach::Mach::parse(&file_data) {
                     match mach {
                         goblin::mach::Mach::Binary(macho) => {
-                            if let Some(cms_data) = find_apple_codesign_signature(&macho) {
-                                res.push((path, cms_data));
-                            }
+                            validate_macho(&path, &macho);
                         }
                         goblin::mach::Mach::Fat(multiarch) => {
                             for i in 0..multiarch.narches {
                                 if let Ok(macho) = multiarch.get(i) {
-                                    if let Some(cms_data) = find_apple_codesign_signature(&macho) {
-                                        res.push((path.clone(), cms_data));
-                                    }
+                                    validate_macho(&path, &macho);
                                 }
                             }
                         }
                     }
-                }
-            }
-        }
-
-        res
-    }
-
-    fn parse_macho_cms_data_in_dir(dir: &Path) {
-        println!("searching for Mach-O files in {}", dir.display());
-        for (path, cms_data) in find_macho_codesign_signatures_in_dir(dir) {
-            cryptographic_message_syntax::asn1::rfc5652::SignedData::decode_ber(&cms_data).unwrap();
-
-            match SignedData::parse_ber(&cms_data) {
-                Ok(signed_data) => {
-                    for signer in signed_data.signers() {
-                        if let Err(e) = signer.verify_signature_with_signed_data(&signed_data) {
-                            println!(
-                                "signature verification failed for {}: {}",
-                                path.display(),
-                                e
-                            )
-                        }
-
-                        if let Ok(()) = signer.verify_message_digest_with_signed_data(&signed_data)
-                        {
-                            println!(
-                                "message digest verification unexpectedly correct for {}",
-                                path.display()
-                            )
-                        }
-                    }
-                }
-                Err(e) => {
-                    println!(
-                        "error performing high-level parse of {}: {:?}",
-                        path.display(),
-                        e
-                    );
                 }
             }
         }
@@ -1790,7 +1767,7 @@ mod tests {
                 let search_dir = entry.path().join("Contents").join("MacOS");
 
                 if search_dir.exists() {
-                    parse_macho_cms_data_in_dir(&search_dir);
+                    validate_macho_in_dir(&search_dir);
                 }
             }
         }
@@ -1799,7 +1776,7 @@ mod tests {
             let dir = PathBuf::from(dir);
 
             if dir.exists() {
-                parse_macho_cms_data_in_dir(&dir);
+                validate_macho_in_dir(&dir);
             }
         }
     }
