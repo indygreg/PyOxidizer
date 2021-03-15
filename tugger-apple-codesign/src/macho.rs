@@ -947,21 +947,17 @@ impl<'a> Hash<'a> {
     pub fn to_vec(&self) -> Vec<u8> {
         self.data.to_vec()
     }
+
+    pub fn to_owned(&self) -> Hash<'static> {
+        Hash {
+            data: Cow::Owned(self.data.clone().into_owned()),
+        }
+    }
 }
 
 impl<'a> std::fmt::Debug for Hash<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(&hex::encode(&self.data))
-    }
-}
-
-impl<'a> ToOwned for Hash<'a> {
-    type Owned = Hash<'a>;
-
-    fn to_owned(&self) -> Self::Owned {
-        Self::Owned {
-            data: self.data.to_owned(),
-        }
     }
 }
 
@@ -1424,13 +1420,9 @@ impl<'a> CodeDirectoryBlob<'a> {
             self.linkage_size = None;
         }
     }
-}
 
-impl<'a> ToOwned for CodeDirectoryBlob<'a> {
-    type Owned = CodeDirectoryBlob<'a>;
-
-    fn to_owned(&self) -> Self::Owned {
-        Self::Owned {
+    pub fn to_owned(&self) -> CodeDirectoryBlob<'static> {
+        CodeDirectoryBlob {
             version: self.version,
             flags: self.flags,
             code_limit: self.code_limit,
@@ -1452,8 +1444,11 @@ impl<'a> ToOwned for CodeDirectoryBlob<'a> {
             spare4: self.spare4,
             linkage_offset: self.linkage_offset,
             linkage_size: self.linkage_size,
-            ident: self.ident.to_owned(),
-            team_name: self.team_name.to_owned(),
+            ident: Cow::Owned(self.ident.clone().into_owned()),
+            team_name: self
+                .team_name
+                .as_ref()
+                .map(|x| Cow::Owned(x.clone().into_owned())),
             code_hashes: self
                 .code_hashes
                 .iter()

@@ -39,7 +39,7 @@ pub struct SignatureBuilder<'a> {
     hash_type: HashType,
 
     /// Embedded entitlements data.
-    entitlements: Option<EntitlementsBlob<'a>>,
+    entitlements: Option<EntitlementsBlob<'static>>,
 
     /// Code requirement data.
     code_requirement: Option<RequirementsBlob<'static>>,
