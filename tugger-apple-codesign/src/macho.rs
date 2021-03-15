@@ -59,6 +59,10 @@ const CSSLOT_RESOURCEDIR: u32 = 3;
 const CSSLOT_APPLICATION: u32 = 4;
 const CSSLOT_ENTITLEMENTS: u32 = 5;
 
+// This slot appears to contain a binary plist with executable security settings.
+// We don't know what to call it.
+const CSSLOT_SECURITYSETTINGS: u32 = 7;
+
 /// First alternate CodeDirectory, if any
 const CSSLOT_ALTERNATE_CODEDIRECTORY_0: u32 = 0x1000;
 const CSSLOT_ALTERNATE_CODEDIRECTORY_1: u32 = 0x1001;
@@ -80,6 +84,7 @@ pub enum CodeSigningSlot {
     ResourceDir,
     Application,
     Entitlements,
+    SecuritySettings,
     AlternateCodeDirectory0,
     AlternateCodeDirectory1,
     AlternateCodeDirectory2,
@@ -100,6 +105,7 @@ impl From<u32> for CodeSigningSlot {
             CSSLOT_RESOURCEDIR => Self::ResourceDir,
             CSSLOT_APPLICATION => Self::Application,
             CSSLOT_ENTITLEMENTS => Self::Entitlements,
+            CSSLOT_SECURITYSETTINGS => Self::SecuritySettings,
             CSSLOT_ALTERNATE_CODEDIRECTORY_0 => Self::AlternateCodeDirectory0,
             CSSLOT_ALTERNATE_CODEDIRECTORY_1 => Self::AlternateCodeDirectory1,
             CSSLOT_ALTERNATE_CODEDIRECTORY_2 => Self::AlternateCodeDirectory2,
@@ -122,6 +128,7 @@ impl From<CodeSigningSlot> for u32 {
             CodeSigningSlot::ResourceDir => CSSLOT_RESOURCEDIR,
             CodeSigningSlot::Application => CSSLOT_APPLICATION,
             CodeSigningSlot::Entitlements => CSSLOT_ENTITLEMENTS,
+            CodeSigningSlot::SecuritySettings => CSSLOT_SECURITYSETTINGS,
             CodeSigningSlot::AlternateCodeDirectory0 => CSSLOT_ALTERNATE_CODEDIRECTORY_0,
             CodeSigningSlot::AlternateCodeDirectory1 => CSSLOT_ALTERNATE_CODEDIRECTORY_1,
             CodeSigningSlot::AlternateCodeDirectory2 => CSSLOT_ALTERNATE_CODEDIRECTORY_2,
@@ -153,6 +160,9 @@ const CSMAGIC_EMBEDDED_SIGNATURE_OLD: u32 = 0xfade0b02;
 /// Embedded entitlements.
 const CSMAGIC_EMBEDDED_ENTITLEMENTS: u32 = 0xfade7171;
 
+/// Security settings.
+const CSMAGIC_SECURITY_SETTINGS: u32 = 0xfade7172;
+
 /// Multi-arch collection of embedded signatures.
 const CSMAGIC_DETACHED_SIGNATURE: u32 = 0xfade0cc1;
 
@@ -168,6 +178,7 @@ pub enum CodeSigningMagic {
     EmbeddedSignature,
     EmbeddedSignatureOld,
     EmbeddedEntitlements,
+    SecuritySettings,
     DetachedSignature,
     BlobWrapper,
     Unknown(u32),
@@ -182,6 +193,7 @@ impl From<u32> for CodeSigningMagic {
             CSMAGIC_EMBEDDED_SIGNATURE => Self::EmbeddedSignature,
             CSMAGIC_EMBEDDED_SIGNATURE_OLD => Self::EmbeddedSignatureOld,
             CSMAGIC_EMBEDDED_ENTITLEMENTS => Self::EmbeddedEntitlements,
+            CSMAGIC_SECURITY_SETTINGS => Self::SecuritySettings,
             CSMAGIC_DETACHED_SIGNATURE => Self::DetachedSignature,
             CSMAGIC_BLOBWRAPPER => Self::BlobWrapper,
             _ => Self::Unknown(v),
@@ -198,6 +210,7 @@ impl Into<u32> for CodeSigningMagic {
             Self::EmbeddedSignature => CSMAGIC_EMBEDDED_SIGNATURE,
             Self::EmbeddedSignatureOld => CSMAGIC_EMBEDDED_SIGNATURE_OLD,
             Self::EmbeddedEntitlements => CSMAGIC_EMBEDDED_ENTITLEMENTS,
+            Self::SecuritySettings => CSMAGIC_SECURITY_SETTINGS,
             Self::DetachedSignature => CSMAGIC_DETACHED_SIGNATURE,
             Self::BlobWrapper => CSMAGIC_BLOBWRAPPER,
             Self::Unknown(v) => v,
