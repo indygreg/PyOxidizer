@@ -569,12 +569,18 @@ impl<'a> TryFrom<BlobEntry<'a>> for ParsedBlob<'a> {
 }
 
 /// Provides common features for a parsed blob type.
-pub trait Blob
+pub trait Blob<'a>
 where
     Self: Sized,
 {
     /// The header magic that identifies this format.
     fn magic() -> u32;
+
+    /// Attempt to construct an instance by parsing a bytes slice.
+    ///
+    /// The slice begins with the 8 byte blob header denoting the magic
+    /// and length.
+    fn from_bytes(data: &'a [u8]) -> Result<Self, MachOError>;
 
     /// Serialize the payload of this blob to bytes.
     ///
@@ -661,30 +667,25 @@ pub struct RequirementBlob<'a> {
     pub data: &'a [u8],
 }
 
-impl<'a> RequirementBlob<'a> {
-    /// Construct an instance by parsing bytes for a blob.
-    ///
-    /// Data contains magic and length header.
-    pub fn from_bytes(data: &'a [u8]) -> Result<Self, MachOError> {
+impl<'a> Blob<'a> for RequirementBlob<'a> {
+    fn magic() -> u32 {
+        CSMAGIC_REQUIREMENT
+    }
+
+    fn from_bytes(data: &'a [u8]) -> Result<Self, MachOError> {
         let data = read_and_validate_blob_header(data, Self::magic())?;
 
         Ok(Self { data })
+    }
+
+    fn serialize_payload(&self) -> Result<Vec<u8>, MachOError> {
+        Ok(self.data.to_vec())
     }
 }
 
 impl<'a> std::fmt::Debug for RequirementBlob<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_fmt(format_args!("RequirementBlob({})", hex::encode(&self.data)))
-    }
-}
-
-impl<'a> Blob for RequirementBlob<'a> {
-    fn magic() -> u32 {
-        CSMAGIC_REQUIREMENT
-    }
-
-    fn serialize_payload(&self) -> Result<Vec<u8>, MachOError> {
-        Ok(self.data.to_vec())
     }
 }
 
@@ -696,11 +697,12 @@ pub struct RequirementsBlob<'a> {
     segments: Vec<(u32, RequirementBlob<'a>)>,
 }
 
-impl<'a> RequirementsBlob<'a> {
-    /// Construct an instance by parsing bytes for a blob.
-    ///
-    /// Data contains magic and length header.
-    pub fn from_bytes(data: &'a [u8]) -> Result<Self, MachOError> {
+impl<'a> Blob<'a> for RequirementsBlob<'a> {
+    fn magic() -> u32 {
+        CSMAGIC_REQUIREMENTS
+    }
+
+    fn from_bytes(data: &'a [u8]) -> Result<Self, MachOError> {
         read_and_validate_blob_header(data, Self::magic())?;
 
         // There are other blobs nested within. A u32 denotes how many there are.
@@ -733,12 +735,6 @@ impl<'a> RequirementsBlob<'a> {
         }
 
         Ok(Self { segments })
-    }
-}
-
-impl<'a> Blob for RequirementsBlob<'a> {
-    fn magic() -> u32 {
-        CSMAGIC_REQUIREMENTS
     }
 
     fn serialize_payload(&self) -> Result<Vec<u8>, MachOError> {
@@ -960,11 +956,12 @@ pub struct CodeDirectoryBlob<'a> {
     pub special_hashes: HashMap<CodeSigningSlot, Hash<'a>>,
 }
 
-impl<'a> CodeDirectoryBlob<'a> {
-    /// Construct an instance by parsing bytes for a blob.
-    ///
-    /// Data contains magic and length header.
-    pub fn from_bytes(data: &'a [u8]) -> Result<Self, MachOError> {
+impl<'a> Blob<'a> for CodeDirectoryBlob<'a> {
+    fn magic() -> u32 {
+        CSMAGIC_CODEDIRECTORY
+    }
+
+    fn from_bytes(data: &'a [u8]) -> Result<Self, MachOError> {
         read_and_validate_blob_header(data, Self::magic())?;
 
         let offset = &mut 8;
@@ -1127,90 +1124,6 @@ impl<'a> CodeDirectoryBlob<'a> {
         })
     }
 
-    /// Adjust the version of the data structure according to what fields are set.
-    ///
-    /// Returns the old version.
-    pub fn adjust_version(&mut self) -> u32 {
-        let old_version = self.version;
-
-        let mut minimum_version = 0x20000;
-
-        if self.scatter_offset.is_some() {
-            minimum_version = CS_SUPPORTSSCATTER;
-        }
-        if self.team_name.is_some() {
-            minimum_version = CS_SUPPORTSTEAMID;
-        }
-        if self.spare3.is_some() || self.code_limit_64.is_some() {
-            minimum_version = CS_SUPPORTSCODELIMIT64;
-        }
-        if self.exec_seg_base.is_some()
-            || self.exec_seg_limit.is_some()
-            || self.exec_seg_flags.is_some()
-        {
-            minimum_version = CS_SUPPORTSEXECSEG;
-        }
-        if self.runtime.is_some() || self.pre_encrypt_offset.is_some() {
-            minimum_version = CS_SUPPORTSRUNTIME;
-        }
-        if self.linkage_hash_type.is_some()
-            || self.linkage_truncated.is_some()
-            || self.spare4.is_some()
-            || self.linkage_offset.is_some()
-            || self.linkage_size.is_some()
-        {
-            minimum_version = CS_SUPPORTSLINKAGE;
-        }
-
-        self.version = minimum_version;
-
-        old_version
-    }
-
-    /// Clears optional fields that are newer than the current version.
-    ///
-    /// The C structure is versioned and our Rust struct is a superset of
-    /// all versions. While our serializer should omit too new fields for
-    /// a given version, it is possible for some optional fields to be set
-    /// when they wouldn't get serialized.
-    ///
-    /// Calling this function will set fields not present in the current
-    /// version to None.
-    pub fn clear_newer_fields(&mut self) {
-        if self.version < CS_SUPPORTSSCATTER {
-            self.scatter_offset = None;
-        }
-        if self.version < CS_SUPPORTSTEAMID {
-            self.team_name = None;
-        }
-        if self.version < CS_SUPPORTSCODELIMIT64 {
-            self.spare3 = None;
-            self.code_limit_64 = None;
-        }
-        if self.version < CS_SUPPORTSEXECSEG {
-            self.exec_seg_base = None;
-            self.exec_seg_limit = None;
-            self.exec_seg_flags = None;
-        }
-        if self.version < CS_SUPPORTSRUNTIME {
-            self.runtime = None;
-            self.pre_encrypt_offset = None;
-        }
-        if self.version < CS_SUPPORTSLINKAGE {
-            self.linkage_hash_type = None;
-            self.linkage_truncated = None;
-            self.spare4 = None;
-            self.linkage_offset = None;
-            self.linkage_size = None;
-        }
-    }
-}
-
-impl<'a> Blob for CodeDirectoryBlob<'a> {
-    fn magic() -> u32 {
-        CSMAGIC_CODEDIRECTORY
-    }
-
     fn serialize_payload(&self) -> Result<Vec<u8>, MachOError> {
         let mut cursor = std::io::Cursor::new(Vec::<u8>::new());
 
@@ -1351,6 +1264,86 @@ impl<'a> Blob for CodeDirectoryBlob<'a> {
     }
 }
 
+impl<'a> CodeDirectoryBlob<'a> {
+    /// Adjust the version of the data structure according to what fields are set.
+    ///
+    /// Returns the old version.
+    pub fn adjust_version(&mut self) -> u32 {
+        let old_version = self.version;
+
+        let mut minimum_version = 0x20000;
+
+        if self.scatter_offset.is_some() {
+            minimum_version = CS_SUPPORTSSCATTER;
+        }
+        if self.team_name.is_some() {
+            minimum_version = CS_SUPPORTSTEAMID;
+        }
+        if self.spare3.is_some() || self.code_limit_64.is_some() {
+            minimum_version = CS_SUPPORTSCODELIMIT64;
+        }
+        if self.exec_seg_base.is_some()
+            || self.exec_seg_limit.is_some()
+            || self.exec_seg_flags.is_some()
+        {
+            minimum_version = CS_SUPPORTSEXECSEG;
+        }
+        if self.runtime.is_some() || self.pre_encrypt_offset.is_some() {
+            minimum_version = CS_SUPPORTSRUNTIME;
+        }
+        if self.linkage_hash_type.is_some()
+            || self.linkage_truncated.is_some()
+            || self.spare4.is_some()
+            || self.linkage_offset.is_some()
+            || self.linkage_size.is_some()
+        {
+            minimum_version = CS_SUPPORTSLINKAGE;
+        }
+
+        self.version = minimum_version;
+
+        old_version
+    }
+
+    /// Clears optional fields that are newer than the current version.
+    ///
+    /// The C structure is versioned and our Rust struct is a superset of
+    /// all versions. While our serializer should omit too new fields for
+    /// a given version, it is possible for some optional fields to be set
+    /// when they wouldn't get serialized.
+    ///
+    /// Calling this function will set fields not present in the current
+    /// version to None.
+    pub fn clear_newer_fields(&mut self) {
+        if self.version < CS_SUPPORTSSCATTER {
+            self.scatter_offset = None;
+        }
+        if self.version < CS_SUPPORTSTEAMID {
+            self.team_name = None;
+        }
+        if self.version < CS_SUPPORTSCODELIMIT64 {
+            self.spare3 = None;
+            self.code_limit_64 = None;
+        }
+        if self.version < CS_SUPPORTSEXECSEG {
+            self.exec_seg_base = None;
+            self.exec_seg_limit = None;
+            self.exec_seg_flags = None;
+        }
+        if self.version < CS_SUPPORTSRUNTIME {
+            self.runtime = None;
+            self.pre_encrypt_offset = None;
+        }
+        if self.version < CS_SUPPORTSLINKAGE {
+            self.linkage_hash_type = None;
+            self.linkage_truncated = None;
+            self.spare4 = None;
+            self.linkage_offset = None;
+            self.linkage_size = None;
+        }
+    }
+}
+
 impl<'a> ToOwned for CodeDirectoryBlob<'a> {
     type Owned = CodeDirectoryBlob<'a>;
 
@@ -1399,20 +1392,15 @@ pub struct EmbeddedSignatureBlob<'a> {
     data: &'a [u8],
 }
 
-impl<'a> EmbeddedSignatureBlob<'a> {
-    /// Construct an instance by parsing bytes for a blob.
-    ///
-    /// Data contains magic and length header.
-    pub fn from_bytes(data: &'a [u8]) -> Result<Self, MachOError> {
+impl<'a> Blob<'a> for EmbeddedSignatureBlob<'a> {
+    fn magic() -> u32 {
+        CSMAGIC_EMBEDDED_SIGNATURE
+    }
+
+    fn from_bytes(data: &'a [u8]) -> Result<Self, MachOError> {
         Ok(Self {
             data: read_and_validate_blob_header(data, Self::magic())?,
         })
-    }
-}
-
-impl<'a> Blob for EmbeddedSignatureBlob<'a> {
-    fn magic() -> u32 {
-        CSMAGIC_EMBEDDED_SIGNATURE
     }
 
     fn serialize_payload(&self) -> Result<Vec<u8>, MachOError> {
@@ -1426,20 +1414,15 @@ pub struct EmbeddedSignatureOldBlob<'a> {
     data: &'a [u8],
 }
 
-impl<'a> EmbeddedSignatureOldBlob<'a> {
-    /// Construct an instance by parsing bytes for a blob.
-    ///
-    /// Data contains magic and length header.
-    pub fn from_bytes(data: &'a [u8]) -> Result<Self, MachOError> {
+impl<'a> Blob<'a> for EmbeddedSignatureOldBlob<'a> {
+    fn magic() -> u32 {
+        CSMAGIC_EMBEDDED_SIGNATURE_OLD
+    }
+
+    fn from_bytes(data: &'a [u8]) -> Result<Self, MachOError> {
         Ok(Self {
             data: read_and_validate_blob_header(data, Self::magic())?,
         })
-    }
-}
-
-impl<'a> Blob for EmbeddedSignatureOldBlob<'a> {
-    fn magic() -> u32 {
-        CSMAGIC_EMBEDDED_SIGNATURE_OLD
     }
 
     fn serialize_payload(&self) -> Result<Vec<u8>, MachOError> {
@@ -1457,9 +1440,16 @@ pub struct EntitlementsBlob<'a> {
     plist: Cow<'a, str>,
 }
 
-impl<'a> Blob for EntitlementsBlob<'a> {
+impl<'a> Blob<'a> for EntitlementsBlob<'a> {
     fn magic() -> u32 {
         CSMAGIC_EMBEDDED_ENTITLEMENTS
+    }
+
+    fn from_bytes(data: &'a [u8]) -> Result<Self, MachOError> {
+        let data = read_and_validate_blob_header(data, Self::magic())?;
+        let s = std::str::from_utf8(data)?;
+
+        Ok(Self { plist: s.into() })
     }
 
     fn serialize_payload(&self) -> Result<Vec<u8>, MachOError> {
@@ -1468,16 +1458,6 @@ impl<'a> Blob for EntitlementsBlob<'a> {
 }
 
 impl<'a> EntitlementsBlob<'a> {
-    /// Construct an instance by parsing bytes for a blob.
-    ///
-    /// Data contains magic and length header.
-    pub fn from_bytes(data: &'a [u8]) -> Result<Self, MachOError> {
-        let data = read_and_validate_blob_header(data, Self::magic())?;
-        let s = std::str::from_utf8(data)?;
-
-        Ok(Self { plist: s.into() })
-    }
-
     /// Construct an instance using any string as the payload.
     pub fn from_string(s: impl ToString) -> Self {
         Self {
@@ -1498,24 +1478,19 @@ pub struct DetachedSignatureBlob<'a> {
     data: &'a [u8],
 }
 
-impl<'a> Blob for DetachedSignatureBlob<'a> {
+impl<'a> Blob<'a> for DetachedSignatureBlob<'a> {
     fn magic() -> u32 {
         CSMAGIC_DETACHED_SIGNATURE
     }
 
-    fn serialize_payload(&self) -> Result<Vec<u8>, MachOError> {
-        Ok(self.data.to_vec())
-    }
-}
-
-impl<'a> DetachedSignatureBlob<'a> {
-    /// Construct an instance by parsing bytes for a blob.
-    ///
-    /// Data contains magic and length header.
-    pub fn from_bytes(data: &'a [u8]) -> Result<Self, MachOError> {
+    fn from_bytes(data: &'a [u8]) -> Result<Self, MachOError> {
         Ok(Self {
             data: read_and_validate_blob_header(data, Self::magic())?,
         })
+    }
+
+    fn serialize_payload(&self) -> Result<Vec<u8>, MachOError> {
+        Ok(self.data.to_vec())
     }
 }
 
@@ -1524,24 +1499,19 @@ pub struct BlobWrapperBlob<'a> {
     data: &'a [u8],
 }
 
-impl<'a> Blob for BlobWrapperBlob<'a> {
+impl<'a> Blob<'a> for BlobWrapperBlob<'a> {
     fn magic() -> u32 {
         CSMAGIC_BLOBWRAPPER
     }
 
-    fn serialize_payload(&self) -> Result<Vec<u8>, MachOError> {
-        Ok(self.data.to_vec())
-    }
-}
-
-impl<'a> BlobWrapperBlob<'a> {
-    /// Construct an instance by parsing bytes for a blob.
-    ///
-    /// Data contains magic and length header.
-    pub fn from_bytes(data: &'a [u8]) -> Result<Self, MachOError> {
+    fn from_bytes(data: &'a [u8]) -> Result<Self, MachOError> {
         Ok(Self {
             data: read_and_validate_blob_header(data, Self::magic())?,
         })
+    }
+
+    fn serialize_payload(&self) -> Result<Vec<u8>, MachOError> {
+        Ok(self.data.to_vec())
     }
 }
 
