@@ -923,8 +923,7 @@ pub struct CodeDirectoryBlob<'a> {
     /// Offset of optional scatter vector.
     pub scatter_offset: Option<u32>,
     // Version 0x20200
-    /// Offset of optional team identifier.
-    pub team_offset: Option<u32>,
+    // team_offset not stored because it is redundant with derived stored str.
     // Version 0x20300
     /// Unused (must be 0).
     pub spare3: Option<u32>,
@@ -949,6 +948,7 @@ pub struct CodeDirectoryBlob<'a> {
 
     // End of blob header data / start of derived data.
     pub ident: &'a str,
+    pub team_name: Option<&'a str>,
     pub code_hashes: Vec<Hash<'a>>,
     pub special_hashes: HashMap<CodeSigningSlot, Hash<'a>>,
 }
@@ -982,7 +982,7 @@ impl<'a> CodeDirectoryBlob<'a> {
             None
         };
         let team_offset = if version >= CS_SUPPORTSTEAMID {
-            Some(data.gread_with(offset, scroll::BE)?)
+            Some(data.gread_with::<u32>(offset, scroll::BE)?)
         } else {
             None
         };
@@ -1040,6 +1040,21 @@ impl<'a> CodeDirectoryBlob<'a> {
             }
         };
 
+        let team_name = if let Some(team_offset) = team_offset {
+            match data[team_offset as usize..]
+                .split(|&b| b == 0)
+                .map(std::str::from_utf8)
+                .next()
+            {
+                Some(res) => Some(res?),
+                None => {
+                    return Err(MachOError::BadTeamString);
+                }
+            }
+        } else {
+            None
+        };
+
         let code_hashes = get_hashes(
             data,
             hash_offset as usize,
@@ -1068,7 +1083,6 @@ impl<'a> CodeDirectoryBlob<'a> {
             page_size,
             spare2,
             scatter_offset,
-            team_offset,
             spare3,
             code_limit_64,
             exec_seg_base,
@@ -1082,6 +1096,7 @@ impl<'a> CodeDirectoryBlob<'a> {
             linkage_offset,
             linkage_size,
             ident,
+            team_name,
             code_hashes,
             special_hashes,
         })
@@ -1165,6 +1180,12 @@ impl<'a> Blob for CodeDirectoryBlob<'a> {
         cursor.write_all(self.ident.as_bytes())?;
         cursor.write_all(b"\0")?;
 
+        let team_offset = cursor.position();
+        if let Some(team_name) = self.team_name {
+            cursor.write_all(team_name.as_bytes())?;
+            cursor.write_all(b"\0")?;
+        }
+
         // Hash offsets are wonky. The recorded hash offset is the beginning
         // of code hashes and special hashes are in "negative" indices before
         // that offset. Hashes are also at the index of their CSSLOT_ constant.
@@ -1195,7 +1216,6 @@ impl<'a> Blob for CodeDirectoryBlob<'a> {
         }
 
         // TODO write out scatter vector.
-        // TODO write out team identifier.
 
         // Now go back and update the placeholder offsets.
         cursor.set_position(hash_offset_cursor_position);
@@ -1208,8 +1228,11 @@ impl<'a> Blob for CodeDirectoryBlob<'a> {
             unimplemented!();
         }
 
-        if team_offset_cursor_position.is_some() {
-            unimplemented!();
+        if let Some(offset) = team_offset_cursor_position {
+            if self.team_name.is_some() {
+                cursor.set_position(offset);
+                cursor.iowrite_with(team_offset as u32, scroll::BE)?;
+            }
         }
 
         let mut res = Vec::new();
@@ -1364,6 +1387,7 @@ pub enum MachOError {
     ScrollError(scroll::Error),
     Utf8Error(std::str::Utf8Error),
     BadIdentifierString,
+    BadTeamString,
     Digest(DigestError),
     Io(std::io::Error),
 }
@@ -1379,6 +1403,7 @@ impl std::fmt::Display for MachOError {
             Self::ScrollError(e) => e.fmt(f),
             Self::Utf8Error(e) => e.fmt(f),
             Self::BadIdentifierString => f.write_str("identifier string isn't null terminated"),
+            Self::BadTeamString => f.write_str("team name string isn't null terminated"),
             Self::Digest(e) => f.write_fmt(format_args!("digest error: {}", e)),
             Self::Io(e) => f.write_fmt(format_args!("I/O error: {}", e)),
         }
