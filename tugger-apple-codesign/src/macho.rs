@@ -629,9 +629,13 @@ pub enum BlobData<'a> {
     Other(Box<OtherBlob<'a>>),
 }
 
-impl<'a> BlobData<'a> {
+impl<'a> Blob<'a> for BlobData<'a> {
+    fn magic() -> u32 {
+        u32::MAX
+    }
+
     /// Parse blob data by reading its magic and feeding into magic-specific parser.
-    pub fn from_bytes(data: &'a [u8]) -> Result<Self, MachOError> {
+    fn from_bytes(data: &'a [u8]) -> Result<Self, MachOError> {
         let (magic, length, _) = read_blob_header(data)?;
 
         // This should be a no-op. But it could (correctly) cause a panic if the
@@ -661,6 +665,34 @@ impl<'a> BlobData<'a> {
             CSMAGIC_BLOBWRAPPER => Self::BlobWrapper(Box::new(BlobWrapperBlob::from_bytes(data)?)),
             _ => Self::Other(Box::new(OtherBlob::from_bytes(data)?)),
         })
+    }
+
+    fn serialize_payload(&self) -> Result<Vec<u8>, MachOError> {
+        match self {
+            Self::Requirement(b) => b.serialize_payload(),
+            Self::Requirements(b) => b.serialize_payload(),
+            Self::CodeDirectory(b) => b.serialize_payload(),
+            Self::EmbeddedSignature(b) => b.serialize_payload(),
+            Self::EmbeddedSignatureOld(b) => b.serialize_payload(),
+            Self::EmbeddedEntitlements(b) => b.serialize_payload(),
+            Self::DetachedSignature(b) => b.serialize_payload(),
+            Self::BlobWrapper(b) => b.serialize_payload(),
+            Self::Other(b) => b.serialize_payload(),
+        }
+    }
+
+    fn to_vec(&self) -> Result<Vec<u8>, MachOError> {
+        match self {
+            Self::Requirement(b) => b.to_vec(),
+            Self::Requirements(b) => b.to_vec(),
+            Self::CodeDirectory(b) => b.to_vec(),
+            Self::EmbeddedSignature(b) => b.to_vec(),
+            Self::EmbeddedSignatureOld(b) => b.to_vec(),
+            Self::EmbeddedEntitlements(b) => b.to_vec(),
+            Self::DetachedSignature(b) => b.to_vec(),
+            Self::BlobWrapper(b) => b.to_vec(),
+            Self::Other(b) => b.to_vec(),
+        }
     }
 }
 
