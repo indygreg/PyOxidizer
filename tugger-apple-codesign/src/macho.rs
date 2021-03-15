@@ -1323,7 +1323,7 @@ impl<'a> Blob for CodeDirectoryBlob<'a> {
         cursor.set_position(ident_offset_cursor_position);
         cursor.iowrite_with(identity_offset as u32 + 8, scroll::BE)?;
 
-        if self.scatter_offset.is_some() {
+        if scatter_offset_cursor_position.is_some() {
             return Err(MachOError::Unimplemented);
         }
 
