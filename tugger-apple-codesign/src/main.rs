@@ -43,6 +43,8 @@ code-directory
    Information on the main code directory data structure.
 linkededit-segment-raw
    Complete content of the __LINKEDIT Mach-O segment as binary.
+requirements-raw
+   Raw binary data composing the requirements blob/slot.
 requirements
    Parsed code requirement statement/expression.
 segment-info
@@ -220,6 +222,15 @@ fn command_extract(args: &ArgMatches) -> Result<(), AppError> {
         "linkedit-segment-raw" => {
             std::io::stdout().write_all(sig.linkedit_segment_data)?;
         }
+        "requirements-raw" => {
+            let embedded = parse_signature_data(&sig.signature_data)?;
+
+            if let Some(blob) = embedded.find_slot(CodeSigningSlot::Requirements) {
+                std::io::stdout().write_all(blob.data)?;
+            } else {
+                eprintln!("no requirements");
+            }
+        }
         "requirements" => {
             let embedded = parse_signature_data(&sig.signature_data)?;
 
@@ -347,6 +358,7 @@ fn main_impl() -> Result<(), AppError> {
                             "code-directory-raw",
                             "code-directory",
                             "linkedit-segment-raw",
+                            "requirements-raw",
                             "requirements",
                             "segment-info",
                             "superblob",
