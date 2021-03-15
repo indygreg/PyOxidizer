@@ -774,17 +774,23 @@ impl<'a> Blob<'a> for RequirementsBlob<'a> {
     fn serialize_payload(&self) -> Result<Vec<u8>, MachOError> {
         let mut res = Vec::new();
 
+        // The index contains blob relative offsets. To know what the start offset will
+        // be, we calculate the total index size.
+        let data_start_offset = 8 + 4 + (8 * self.segments.len() as u32);
+        let mut written_requirements_data = 0;
+
         res.iowrite_with(self.segments.len() as u32, scroll::BE)?;
 
         // Write an index of all nested requirement blobs.
         for (flavor, requirement) in &self.segments {
             res.iowrite_with(*flavor, scroll::BE)?;
-            res.iowrite_with(requirement.data.len() as u32, scroll::BE)?;
+            res.iowrite_with(data_start_offset + written_requirements_data, scroll::BE)?;
+            written_requirements_data += requirement.to_vec()?.len() as u32;
         }
 
         // Now write every requirement's raw data.
         for (_, requirement) in &self.segments {
-            res.write_all(&requirement.data)?;
+            res.write_all(&requirement.to_vec()?)?;
         }
 
         Ok(res)

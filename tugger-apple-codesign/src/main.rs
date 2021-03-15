@@ -14,7 +14,7 @@ use {
         code_hash::{compute_code_hashes, SignatureError},
         macho::{
             find_signature_data, parse_signature_data, Blob, CodeDirectoryBlob, CodeSigningSlot,
-            HashType,
+            HashType, RequirementsBlob,
         },
     },
     clap::{App, AppSettings, Arg, ArgMatches, SubCommand},
@@ -56,6 +56,11 @@ requirements-raw
    Raw binary data composing the requirements blob/slot.
 requirements
    Parsed code requirement statement/expression.
+requirements-serialized
+   Reserialize the code requirements blob, parse it again, and then
+   print it like `requirements` would.
+requirements-serialized-raw
+   Reserialize the code requirements blob and emit its binary.
 segment-info
    Information about Mach-O segments in the binary and where the
    __LINKEDIT is in relationship to the binary.
@@ -257,6 +262,25 @@ fn command_extract(args: &ArgMatches) -> Result<(), AppError> {
                 eprintln!("no requirements");
             }
         }
+        "requirements-serialized-raw" => {
+            let embedded = parse_signature_data(&sig.signature_data)?;
+
+            if let Some(reqs) = embedded.code_requirements()? {
+                std::io::stdout().write_all(&reqs.to_vec()?)?;
+            } else {
+                eprintln!("no requirements");
+            }
+        }
+        "requirements-serialized" => {
+            let embedded = parse_signature_data(&sig.signature_data)?;
+
+            if let Some(reqs) = embedded.code_requirements()? {
+                let serialized = reqs.to_vec()?;
+                println!("{:#?}", RequirementsBlob::from_bytes(&serialized)?);
+            } else {
+                eprintln!("no requirements");
+            }
+        }
         "requirements" => {
             let embedded = parse_signature_data(&sig.signature_data)?;
 
@@ -387,6 +411,8 @@ fn main_impl() -> Result<(), AppError> {
                             "code-directory",
                             "linkedit-segment-raw",
                             "requirements-raw",
+                            "requirements-serialized-raw",
+                            "requirements-serialized",
                             "requirements",
                             "segment-info",
                             "superblob",
