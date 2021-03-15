@@ -587,7 +587,8 @@ pub trait Blob {
         res.iowrite_with(Self::magic(), scroll::BE)?;
 
         let payload = self.serialize_payload()?;
-        res.iowrite_with(payload.len() as u32, scroll::BE)?;
+        // Length includes our own header.
+        res.iowrite_with(payload.len() as u32 + 8, scroll::BE)?;
 
         res.extend(payload);
 
