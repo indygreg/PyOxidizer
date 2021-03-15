@@ -520,7 +520,7 @@ impl<'a> std::fmt::Debug for BlobEntry<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         f.debug_struct("BlobEntry")
             .field("index", &self.index)
-            .field("type", &self.slot)
+            .field("slot", &self.slot)
             .field("offset", &self.offset)
             .field("length", &self.length)
             .field("magic", &self.magic)
