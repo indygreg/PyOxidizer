@@ -16,6 +16,7 @@ pub mod specification;
 use {
     crate::macho::{
         find_signature_data, EmbeddedSignature, EntitlementsBlob, HashType, MachOError,
+        RequirementsBlob,
     },
     goblin::mach::MachO,
 };
@@ -41,7 +42,7 @@ pub struct SignatureBuilder<'a> {
     entitlements: Option<EntitlementsBlob<'a>>,
 
     /// Code requirement data.
-    code_requirement: Option<Vec<u8>>,
+    code_requirement: Option<RequirementsBlob<'static>>,
 
     /// Setup and mode flags from CodeDirectory.
     cdflags: Option<u32>,
@@ -92,6 +93,10 @@ impl<'a> SignatureBuilder<'a> {
                 self.cdflags = Some(cd.flags);
                 self.executable_segment_flags = cd.exec_seg_flags;
                 self.runtime = cd.runtime;
+            }
+
+            if let Some(blob) = signature.code_requirements()? {
+                self.code_requirement = Some(blob.to_owned());
             }
 
             if let Some(entitlements) = signature.entitlements()? {
