@@ -1215,7 +1215,7 @@ impl<'a> Blob for CodeDirectoryBlob<'a> {
         cursor.iowrite_with(self.hash_size, scroll::BE)?;
         cursor.iowrite_with(u8::from(self.hash_type), scroll::BE)?;
         cursor.iowrite_with(self.platform, scroll::BE)?;
-        cursor.iowrite_with(self.page_size, scroll::BE)?;
+        cursor.iowrite_with(self.page_size.trailing_zeros() as u8, scroll::BE)?;
         cursor.iowrite_with(self.spare2, scroll::BE)?;
 
         let mut scatter_offset_cursor_position = None;
