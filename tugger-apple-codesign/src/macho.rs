@@ -573,8 +573,26 @@ trait Blob {
     /// The header magic that identifies this format.
     fn magic() -> u32;
 
-    /// Serialize the content of this blob to bytes.
-    fn to_vec(&self) -> Result<Vec<u8>, MachOError>;
+    /// Serialize the payload of this blob to bytes.
+    ///
+    /// Does not include the magic or length header fields common to blobs.
+    fn serialize_payload(&self) -> Result<Vec<u8>, MachOError>;
+
+    /// Serialize this blob to bytes.
+    ///
+    /// This is `serialize_payload()` with the blob magic and length
+    /// prepended.
+    fn to_vec(&self) -> Result<Vec<u8>, MachOError> {
+        let mut res = Vec::new();
+        res.iowrite_with(Self::magic(), scroll::BE)?;
+
+        let payload = self.serialize_payload()?;
+        res.iowrite_with(payload.len() as u32, scroll::BE)?;
+
+        res.extend(payload);
+
+        Ok(res)
+    }
 
     /// Obtain the digest of the blob using the specified hasher.
     ///
@@ -709,9 +727,7 @@ impl<'a> Blob for RequirementsBlob<'a> {
         CSMAGIC_REQUIREMENTS
     }
 
-    fn to_vec(&self) -> Result<Vec<u8>, MachOError> {
-        // We need to perform a 2 stage pass to figure out how large the nested
-        // blobs are.
+    fn serialize_payload(&self) -> Result<Vec<u8>, MachOError> {
         let mut res = Vec::new();
 
         res.iowrite_with(self.segments.len() as u32, scroll::BE)?;
@@ -727,12 +743,7 @@ impl<'a> Blob for RequirementsBlob<'a> {
             res.write_all(&requirement.data)?;
         }
 
-        let mut payload = Vec::new();
-        payload.iowrite_with(Self::magic(), scroll::BE)?;
-        payload.iowrite_with(res.len() as u32, scroll::BE)?;
-        payload.extend(res);
-
-        Ok(payload)
+        Ok(res)
     }
 }
 
@@ -1168,7 +1179,7 @@ impl<'a> Blob for CodeDirectoryBlob<'a> {
         CSMAGIC_CODEDIRECTORY
     }
 
-    fn to_vec(&self) -> Result<Vec<u8>, MachOError> {
+    fn serialize_payload(&self) -> Result<Vec<u8>, MachOError> {
         let mut cursor = std::io::Cursor::new(Vec::<u8>::new());
 
         // We need to do this in 2 phases because we don't know the length until
@@ -1295,12 +1306,7 @@ impl<'a> Blob for CodeDirectoryBlob<'a> {
             }
         }
 
-        let mut res = Vec::new();
-        res.iowrite_with(Self::magic(), scroll::BE)?;
-        res.iowrite_with(cursor.position() as u32, scroll::BE)?;
-        res.extend(cursor.into_inner());
-
-        Ok(res)
+        Ok(cursor.into_inner())
     }
 }
 
@@ -1395,14 +1401,8 @@ impl<'a> Blob for EntitlementsBlob<'a> {
         CSMAGIC_EMBEDDED_ENTITLEMENTS
     }
 
-    fn to_vec(&self) -> Result<Vec<u8>, MachOError> {
-        let mut res = Vec::new();
-
-        res.iowrite_with(Self::magic(), scroll::BE)?;
-        res.iowrite_with(self.plist.as_bytes().len() as u32, scroll::BE)?;
-        res.write_all(self.plist.as_bytes())?;
-
-        Ok(res)
+    fn serialize_payload(&self) -> Result<Vec<u8>, MachOError> {
+        Ok(self.plist.as_bytes().to_vec())
     }
 }
 
