@@ -669,7 +669,7 @@ impl<'a> RequirementsBlob<'a> {
     ///
     /// Data contains magic and length header.
     pub fn from_bytes(data: &'a [u8]) -> Result<Self, MachOError> {
-        read_and_validate_blob_header(data, CSMAGIC_REQUIREMENTS)?;
+        read_and_validate_blob_header(data, Self::magic())?;
 
         // There are other blobs nested within. A u32 denotes how many there are.
         // Then there is an array of N (u32, u32) denoting the type and
@@ -701,6 +701,38 @@ impl<'a> RequirementsBlob<'a> {
         }
 
         Ok(Self { segments })
+    }
+}
+
+impl<'a> Blob for RequirementsBlob<'a> {
+    fn magic() -> u32 {
+        CSMAGIC_REQUIREMENTS
+    }
+
+    fn to_vec(&self) -> Result<Vec<u8>, MachOError> {
+        // We need to perform a 2 stage pass to figure out how large the nested
+        // blobs are.
+        let mut res = Vec::new();
+
+        res.iowrite_with(self.segments.len() as u32, scroll::BE)?;
+
+        // Write an index of all nested requirement blobs.
+        for (flavor, requirement) in &self.segments {
+            res.iowrite_with(*flavor, scroll::BE)?;
+            res.iowrite_with(requirement.data.len() as u32, scroll::BE)?;
+        }
+
+        // Now write every requirement's raw data.
+        for (_, requirement) in &self.segments {
+            res.write_all(&requirement.data)?;
+        }
+
+        let mut payload = Vec::new();
+        payload.iowrite_with(Self::magic(), scroll::BE)?;
+        payload.iowrite_with(res.len() as u32, scroll::BE)?;
+        payload.extend(res);
+
+        Ok(payload)
     }
 }
 
