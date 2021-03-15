@@ -12,7 +12,7 @@ mod specification;
 use {
     crate::{
         code_hash::{compute_code_hashes, SignatureError},
-        macho::{find_signature_data, parse_signature_data, HashType},
+        macho::{find_signature_data, parse_signature_data, CodeSigningSlot, HashType},
     },
     clap::{App, AppSettings, Arg, ArgMatches, SubCommand},
     goblin::mach::{Mach, MachO},
@@ -37,6 +37,8 @@ cms-ber
 cms-pem
    Like cms-ber except it prints PEM encoded data, which is ASCII and
    safe to print to terminals.
+code-directory-raw
+   Raw binary data composing the code directory data structure.
 code-directory
    Information on the main code directory data structure.
 linkededit-segment-raw
@@ -197,6 +199,15 @@ fn command_extract(args: &ArgMatches) -> Result<(), AppError> {
                 eprintln!("no CMS data");
             }
         }
+        "code-directory-raw" => {
+            let embedded = parse_signature_data(&sig.signature_data)?;
+
+            if let Some(blob) = embedded.find_slot(CodeSigningSlot::CodeDirectory) {
+                std::io::stdout().write_all(blob.data)?;
+            } else {
+                eprintln!("no code directory");
+            }
+        }
         "code-directory" => {
             let embedded = parse_signature_data(&sig.signature_data)?;
 
@@ -333,6 +344,7 @@ fn main_impl() -> Result<(), AppError> {
                             "blobs",
                             "cms-ber",
                             "cms-pem",
+                            "code-directory-raw",
                             "code-directory",
                             "linkedit-segment-raw",
                             "requirements",
