@@ -1111,6 +1111,84 @@ impl<'a> CodeDirectoryBlob<'a> {
             special_hashes,
         })
     }
+
+    /// Adjust the version of the data structure according to what fields are set.
+    ///
+    /// Returns the old version.
+    pub fn adjust_version(&mut self) -> u32 {
+        let old_version = self.version;
+
+        let mut minimum_version = 0x20000;
+
+        if self.scatter_offset.is_some() {
+            minimum_version = CS_SUPPORTSSCATTER;
+        }
+        if self.team_name.is_some() {
+            minimum_version = CS_SUPPORTSTEAMID;
+        }
+        if self.spare3.is_some() || self.code_limit_64.is_some() {
+            minimum_version = CS_SUPPORTSCODELIMIT64;
+        }
+        if self.exec_seg_base.is_some()
+            || self.exec_seg_limit.is_some()
+            || self.exec_seg_flags.is_some()
+        {
+            minimum_version = CS_SUPPORTSEXECSEG;
+        }
+        if self.runtime.is_some() || self.pre_encrypt_offset.is_some() {
+            minimum_version = CS_SUPPORTSRUNTIME;
+        }
+        if self.linkage_hash_type.is_some()
+            || self.linkage_truncated.is_some()
+            || self.spare4.is_some()
+            || self.linkage_offset.is_some()
+            || self.linkage_size.is_some()
+        {
+            minimum_version = CS_SUPPORTSLINKAGE;
+        }
+
+        self.version = minimum_version;
+
+        old_version
+    }
+
+    /// Clears optional fields that are newer than the current version.
+    ///
+    /// The C structure is versioned and our Rust struct is a superset of
+    /// all versions. While our serializer should omit too new fields for
+    /// a given version, it is possible for some optional fields to be set
+    /// when they wouldn't get serialized.
+    ///
+    /// Calling this function will set fields not present in the current
+    /// version to None.
+    pub fn clear_newer_fields(&mut self) {
+        if self.version < CS_SUPPORTSSCATTER {
+            self.scatter_offset = None;
+        }
+        if self.version < CS_SUPPORTSTEAMID {
+            self.team_name = None;
+        }
+        if self.version < CS_SUPPORTSCODELIMIT64 {
+            self.spare3 = None;
+            self.code_limit_64 = None;
+        }
+        if self.version < CS_SUPPORTSEXECSEG {
+            self.exec_seg_base = None;
+            self.exec_seg_limit = None;
+            self.exec_seg_flags = None;
+        }
+        if self.version < CS_SUPPORTSRUNTIME {
+            self.runtime = None;
+            self.pre_encrypt_offset = None;
+        }
+        if self.version < CS_SUPPORTSLINKAGE {
+            self.linkage_hash_type = None;
+            self.linkage_truncated = None;
+            self.spare4 = None;
+            self.linkage_offset = None;
+            self.linkage_size = None;
+        }
+    }
 }
 
 impl<'a> Blob for CodeDirectoryBlob<'a> {
