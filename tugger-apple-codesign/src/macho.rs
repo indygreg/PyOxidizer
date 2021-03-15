@@ -880,6 +880,16 @@ impl<'a> std::fmt::Debug for Hash<'a> {
     }
 }
 
+impl<'a> ToOwned for Hash<'a> {
+    type Owned = Hash<'a>;
+
+    fn to_owned(&self) -> Self::Owned {
+        Self::Owned {
+            data: self.data.to_owned(),
+        }
+    }
+}
+
 fn get_hashes(data: &[u8], offset: usize, count: usize, hash_size: usize) -> Vec<Hash<'_>> {
     data[offset..offset + (count * hash_size)]
         .chunks(hash_size)
@@ -1241,6 +1251,48 @@ impl<'a> Blob for CodeDirectoryBlob<'a> {
         res.extend(cursor.into_inner());
 
         Ok(res)
+    }
+}
+
+impl<'a> ToOwned for CodeDirectoryBlob<'a> {
+    type Owned = CodeDirectoryBlob<'a>;
+
+    fn to_owned(&self) -> Self::Owned {
+        Self::Owned {
+            version: self.version,
+            flags: self.flags,
+            code_limit: self.code_limit,
+            hash_size: self.hash_size,
+            hash_type: self.hash_type,
+            platform: self.platform,
+            page_size: self.page_size,
+            spare2: self.spare2,
+            scatter_offset: self.scatter_offset,
+            spare3: self.spare3,
+            code_limit_64: self.code_limit_64,
+            exec_seg_base: self.exec_seg_base,
+            exec_seg_limit: self.exec_seg_limit,
+            exec_seg_flags: self.exec_seg_flags,
+            runtime: self.runtime,
+            pre_encrypt_offset: self.pre_encrypt_offset,
+            linkage_hash_type: self.linkage_hash_type,
+            linkage_truncated: self.linkage_truncated,
+            spare4: self.spare4,
+            linkage_offset: self.linkage_offset,
+            linkage_size: self.linkage_size,
+            ident: self.ident.to_owned(),
+            team_name: self.team_name.to_owned(),
+            code_hashes: self
+                .code_hashes
+                .iter()
+                .map(|h| h.to_owned())
+                .collect::<Vec<_>>(),
+            special_hashes: self
+                .special_hashes
+                .iter()
+                .map(|(k, v)| (k.to_owned(), v.to_owned()))
+                .collect::<HashMap<_, _>>(),
+        }
     }
 }
 
