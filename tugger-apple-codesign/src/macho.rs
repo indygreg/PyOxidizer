@@ -626,7 +626,7 @@ pub enum BlobData<'a> {
     EmbeddedEntitlements(Box<EntitlementsBlob<'a>>),
     DetachedSignature(Box<DetachedSignatureBlob<'a>>),
     BlobWrapper(Box<BlobWrapperBlob<'a>>),
-    Other((u32, usize, &'a [u8])),
+    Other(Box<OtherBlob<'a>>),
 }
 
 impl<'a> BlobData<'a> {
@@ -655,7 +655,7 @@ impl<'a> BlobData<'a> {
                 Self::DetachedSignature(DetachedSignatureBlob::from_bytes(data)?)
             }
             CSMAGIC_BLOBWRAPPER => Self::BlobWrapper(BlobWrapperBlob::from_bytes(data)?),
-            _ => Self::Other((magic, length, data)),
+            _ => Self::Other(OtherBlob::from_bytes(data)?),
         })
     }
 }
@@ -1514,6 +1514,45 @@ impl<'a> Blob<'a> for BlobWrapperBlob<'a> {
 }
 
 impl<'a> std::fmt::Debug for BlobWrapperBlob<'a> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!("{}", hex::encode(self.data)))
+    }
+}
+
+/// Represents an unknown blob type.
+pub struct OtherBlob<'a> {
+    pub magic: u32,
+    pub data: &'a [u8],
+}
+
+impl<'a> Blob<'a> for OtherBlob<'a> {
+    fn magic() -> u32 {
+        // Use a placeholder magic value because there is no self bind here.
+        u32::MAX
+    }
+
+    fn from_bytes(data: &'a [u8]) -> Result<Box<Self>, MachOError> {
+        let (magic, _, data) = read_blob_header(data)?;
+
+        Ok(Box::new(Self { magic, data }))
+    }
+
+    fn serialize_payload(&self) -> Result<Vec<u8>, MachOError> {
+        Ok(self.data.to_vec())
+    }
+
+    // We need to implement this for custom magic serialization.
+    fn to_vec(&self) -> Result<Vec<u8>, MachOError> {
+        let mut res = Vec::with_capacity(self.data.len() + 8);
+        res.iowrite_with(self.magic, scroll::BE)?;
+        res.iowrite_with(self.data.len() + 8, scroll::BE)?;
+        res.write_all(&self.data)?;
+
+        Ok(res)
+    }
+}
+
+impl<'a> std::fmt::Debug for OtherBlob<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_fmt(format_args!("{}", hex::encode(self.data)))
     }
