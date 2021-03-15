@@ -44,6 +44,7 @@ use {
     scroll::{IOwrite, Pread},
     std::{
         borrow::Cow,
+        cmp::Ordering,
         collections::HashMap,
         convert::{TryFrom, TryInto},
         io::Write,
@@ -376,9 +377,17 @@ impl<'a> EmbeddedSignature<'a> {
                 blob_indices[i + 1].offset as usize
             };
 
-            let blob_data = &data[index.offset as usize..end_offset];
+            let full_slice = &data[index.offset as usize..end_offset];
+            let (magic, blob_length, _) = read_blob_header(full_slice)?;
 
-            let (magic, blob_length, _) = read_blob_header(blob_data)?;
+            // Self-reported length can't be greater than the data we have.
+            let blob_data = match blob_length.cmp(&full_slice.len()) {
+                Ordering::Greater => {
+                    return Err(MachOError::Malformed);
+                }
+                Ordering::Equal => full_slice,
+                Ordering::Less => &full_slice[0..blob_length],
+            };
 
             blobs.push(BlobEntry {
                 index: i,
@@ -1623,6 +1632,7 @@ pub enum MachOError {
     Digest(DigestError),
     Io(std::io::Error),
     Unimplemented,
+    Malformed,
 }
 
 impl std::fmt::Display for MachOError {
@@ -1640,6 +1650,7 @@ impl std::fmt::Display for MachOError {
             Self::Digest(e) => f.write_fmt(format_args!("digest error: {}", e)),
             Self::Io(e) => f.write_fmt(format_args!("I/O error: {}", e)),
             Self::Unimplemented => f.write_str("functionality not implemented"),
+            Self::Malformed => f.write_str("data is malformed"),
         }
     }
 }
