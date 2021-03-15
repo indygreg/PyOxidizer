@@ -957,10 +957,12 @@ impl<'a> CodeDirectoryBlob<'a> {
 
         let version = data.gread_with(offset, scroll::BE)?;
         let flags = data.gread_with(offset, scroll::BE)?;
+        assert_eq!(*offset, 0x10);
         let hash_offset = data.gread_with::<u32>(offset, scroll::BE)?;
         let ident_offset = data.gread_with::<u32>(offset, scroll::BE)?;
         let n_special_slots = data.gread_with::<u32>(offset, scroll::BE)?;
         let n_code_slots = data.gread_with::<u32>(offset, scroll::BE)?;
+        assert_eq!(*offset, 0x20);
         let code_limit = data.gread_with(offset, scroll::BE)?;
         let hash_size = data.gread_with(offset, scroll::BE)?;
         let hash_type = data.gread_with::<u8>(offset, scroll::BE)?.into();
@@ -981,6 +983,7 @@ impl<'a> CodeDirectoryBlob<'a> {
             None
         };
         let team_offset = if version >= CS_SUPPORTSTEAMID {
+            assert_eq!(*offset, 0x30);
             let v = data.gread_with::<u32>(offset, scroll::BE)?;
 
             if v != 0 {
@@ -1002,6 +1005,7 @@ impl<'a> CodeDirectoryBlob<'a> {
         };
 
         let (exec_seg_base, exec_seg_limit, exec_seg_flags) = if version >= CS_SUPPORTSEXECSEG {
+            assert_eq!(*offset, 0x40);
             (
                 Some(data.gread_with(offset, scroll::BE)?),
                 Some(data.gread_with(offset, scroll::BE)?),
@@ -1012,6 +1016,7 @@ impl<'a> CodeDirectoryBlob<'a> {
         };
 
         let (runtime, pre_encrypt_offset) = if version >= CS_SUPPORTSRUNTIME {
+            assert_eq!(*offset, 0x58);
             (
                 Some(data.gread_with(offset, scroll::BE)?),
                 Some(data.gread_with(offset, scroll::BE)?),
@@ -1022,6 +1027,7 @@ impl<'a> CodeDirectoryBlob<'a> {
 
         let (linkage_hash_type, linkage_truncated, spare4, linkage_offset, linkage_size) =
             if version >= CS_SUPPORTSLINKAGE {
+                assert_eq!(*offset, 0x60);
                 (
                     Some(data.gread_with(offset, scroll::BE)?),
                     Some(data.gread_with(offset, scroll::BE)?),
