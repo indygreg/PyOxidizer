@@ -904,6 +904,10 @@ pub struct CodeDirectoryBlob<'a> {
     // hash_offset, ident_offset, n_special_slots, and n_code_slots not stored
     // explicitly because they are redundant with derived fields.
     /// Limit to main image signature range.
+    ///
+    /// This is the file-level offset to stop digesting code data at.
+    /// It likely corresponds to the file-offset offset where the
+    /// embedded signature data starts in the `__LINKEDIT` segment.
     pub code_limit: u32,
     /// Size of each hash in bytes.
     pub hash_size: u8,
