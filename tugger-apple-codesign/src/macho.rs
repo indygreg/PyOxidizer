@@ -947,8 +947,8 @@ pub struct CodeDirectoryBlob<'a> {
     pub linkage_size: Option<u32>,
 
     // End of blob header data / start of derived data.
-    pub ident: &'a str,
-    pub team_name: Option<&'a str>,
+    pub ident: Cow<'a, str>,
+    pub team_name: Option<Cow<'a, str>>,
     pub code_hashes: Vec<Hash<'a>>,
     pub special_hashes: HashMap<CodeSigningSlot, Hash<'a>>,
 }
@@ -1034,7 +1034,7 @@ impl<'a> CodeDirectoryBlob<'a> {
             .map(std::str::from_utf8)
             .next()
         {
-            Some(res) => res?,
+            Some(res) => Cow::from(res?),
             None => {
                 return Err(MachOError::BadIdentifierString);
             }
@@ -1046,7 +1046,7 @@ impl<'a> CodeDirectoryBlob<'a> {
                 .map(std::str::from_utf8)
                 .next()
             {
-                Some(res) => Some(res?),
+                Some(res) => Some(Cow::from(res?)),
                 None => {
                     return Err(MachOError::BadTeamString);
                 }
@@ -1181,7 +1181,7 @@ impl<'a> Blob for CodeDirectoryBlob<'a> {
         cursor.write_all(b"\0")?;
 
         let team_offset = cursor.position();
-        if let Some(team_name) = self.team_name {
+        if let Some(team_name) = &self.team_name {
             cursor.write_all(team_name.as_bytes())?;
             cursor.write_all(b"\0")?;
         }
