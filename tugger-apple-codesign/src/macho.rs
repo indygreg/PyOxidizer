@@ -1703,6 +1703,19 @@ mod tests {
     fn validate_macho(path: &Path, macho: &MachO) {
         // We found signature data in the binary.
         if let Some(signature) = find_apple_embedded_signature(macho) {
+            // Attempt a deep parse of all blobs.
+            for blob in &signature.blobs {
+                if let Err(e) = blob.clone().into_parsed_blob() {
+                    println!(
+                        "blob parse failure on {}; index {}, magic {:?}: {}",
+                        path.display(),
+                        blob.index,
+                        blob.magic,
+                        e
+                    );
+                }
+            }
+
             // Found a CMS signed data blob.
             if let Ok(Some(cms)) = signature.signature_data() {
                 match SignedData::parse_ber(&cms) {
