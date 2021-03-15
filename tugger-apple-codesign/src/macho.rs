@@ -1609,7 +1609,7 @@ impl<'a> Blob<'a> for OtherBlob<'a> {
     fn to_vec(&self) -> Result<Vec<u8>, MachOError> {
         let mut res = Vec::with_capacity(self.data.len() + 8);
         res.iowrite_with(self.magic, scroll::BE)?;
-        res.iowrite_with(self.data.len() + 8, scroll::BE)?;
+        res.iowrite_with(self.data.len() as u32 + 8, scroll::BE)?;
         res.write_all(&self.data)?;
 
         Ok(res)
