@@ -1240,7 +1240,7 @@ impl<'a> Blob for CodeDirectoryBlob<'a> {
                         cursor.iowrite_with(self.exec_seg_base.unwrap_or(0), scroll::BE)?;
                         assert_eq!(cursor.position(), 0x40);
                         cursor.iowrite_with(self.exec_seg_limit.unwrap_or(0), scroll::BE)?;
-                        cursor.iowrite_with(self.exec_seg_limit.unwrap_or(0), scroll::BE)?;
+                        cursor.iowrite_with(self.exec_seg_flags.unwrap_or(0), scroll::BE)?;
 
                         if self.version >= CS_SUPPORTSRUNTIME {
                             assert_eq!(cursor.position(), 0x50);
