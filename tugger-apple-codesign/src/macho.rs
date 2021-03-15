@@ -720,7 +720,7 @@ impl<'a> Blob<'a> for BlobData<'a> {
 
 /// Represents a Requirement blob (CSMAGIC_REQUIREMENT).
 pub struct RequirementBlob<'a> {
-    pub data: &'a [u8],
+    pub data: Cow<'a, [u8]>,
 }
 
 impl<'a> Blob<'a> for RequirementBlob<'a> {
@@ -731,7 +731,7 @@ impl<'a> Blob<'a> for RequirementBlob<'a> {
     fn from_bytes(data: &'a [u8]) -> Result<Self, MachOError> {
         let data = read_and_validate_blob_header(data, Self::magic())?;
 
-        Ok(Self { data })
+        Ok(Self { data: data.into() })
     }
 
     fn serialize_payload(&self) -> Result<Vec<u8>, MachOError> {
@@ -742,6 +742,14 @@ impl<'a> Blob<'a> for RequirementBlob<'a> {
 impl<'a> std::fmt::Debug for RequirementBlob<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_fmt(format_args!("RequirementBlob({})", hex::encode(&self.data)))
+    }
+}
+
+impl<'a> RequirementBlob<'a> {
+    pub fn to_owned(&self) -> RequirementBlob<'static> {
+        RequirementBlob {
+            data: Cow::Owned(self.data.clone().into_owned()),
+        }
     }
 }
 
@@ -816,6 +824,18 @@ impl<'a> Blob<'a> for RequirementsBlob<'a> {
         }
 
         Ok(res)
+    }
+}
+
+impl<'a> RequirementsBlob<'a> {
+    pub fn to_owned(&self) -> RequirementsBlob<'static> {
+        RequirementsBlob {
+            segments: self
+                .segments
+                .iter()
+                .map(|(flavor, blob)| (*flavor, blob.to_owned()))
+                .collect::<Vec<_>>(),
+        }
     }
 }
 
