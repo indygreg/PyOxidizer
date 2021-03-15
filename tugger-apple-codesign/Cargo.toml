@@ -22,6 +22,6 @@ pem = "0.8"
 scroll = "0.10"
 ring = "0.16"
 
-[dev-dependencies.cryptographic-message-syntax]
+[dependencies.cryptographic-message-syntax]
 path = "../cryptographic-message-syntax"
 version = "0.1.0-dev"

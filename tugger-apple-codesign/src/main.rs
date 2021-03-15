@@ -18,6 +18,7 @@ use {
         },
     },
     clap::{App, AppSettings, Arg, ArgMatches, SubCommand},
+    cryptographic_message_syntax::{CmsError, SignedData},
     goblin::mach::{Mach, MachO},
     std::{convert::TryFrom, io::Write, str::FromStr},
 };
@@ -40,6 +41,8 @@ cms-ber
 cms-pem
    Like cms-ber except it prints PEM encoded data, which is ASCII and
    safe to print to terminals.
+cms
+   Print the ASN.1 decoded CMS data.
 code-directory-raw
    Raw binary data composing the code directory data structure.
 code-directory
@@ -85,6 +88,7 @@ enum AppError {
     NoCmsData,
     Digest(crate::macho::DigestError),
     Signature(SignatureError),
+    Cms(CmsError),
 }
 
 impl std::fmt::Display for AppError {
@@ -99,6 +103,7 @@ impl std::fmt::Display for AppError {
             Self::NoCmsData => f.write_str("CMS data structure not found"),
             Self::Digest(e) => f.write_fmt(format_args!("digest error: {}", e)),
             Self::Signature(e) => e.fmt(f),
+            Self::Cms(e) => f.write_fmt(format_args!("CMS error: {}", e)),
         }
     }
 }
@@ -132,6 +137,12 @@ impl From<crate::macho::DigestError> for AppError {
 impl From<SignatureError> for AppError {
     fn from(e: SignatureError) -> Self {
         Self::Signature(e)
+    }
+}
+
+impl From<CmsError> for AppError {
+    fn from(e: CmsError) -> Self {
+        Self::Cms(e)
     }
 }
 
@@ -213,6 +224,16 @@ fn command_extract(args: &ArgMatches) -> Result<(), AppError> {
                         contents: cms.to_vec(),
                     })
                 );
+            } else {
+                eprintln!("no CMS data");
+            }
+        }
+        "cms" => {
+            let embedded = parse_signature_data(&sig.signature_data)?;
+            if let Some(cms) = embedded.signature_data()? {
+                let signed_data = SignedData::parse_ber(cms)?;
+
+                println!("{:#?}", signed_data);
             } else {
                 eprintln!("no CMS data");
             }
@@ -415,6 +436,7 @@ fn main_impl() -> Result<(), AppError> {
                             "blobs",
                             "cms-ber",
                             "cms-pem",
+                            "cms",
                             "code-directory-raw",
                             "code-directory-serialized-raw",
                             "code-directory-serialized",
