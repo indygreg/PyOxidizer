@@ -634,76 +634,9 @@ impl<'a> BlobData<'a> {
     }
 }
 
-#[derive(Debug)]
-pub enum Expression<'a> {
-    False,
-    True,
-    Ident(&'a str),
-    AppleAnchor,
-    AnchorHash,
-    InfoKeyValue,
-    And(Box<Expression<'a>>, Box<Expression<'a>>),
-    Or(Box<Expression<'a>>, Box<Expression<'a>>),
-    CDHash,
-    Not,
-    InfoKeyField,
-    CertField,
-    TrustedCert,
-    TrustedCerts,
-    CertGeneric,
-    AppleGenericAnchor,
-    EntitlementField,
-    Other(u32),
-}
-
-impl<'a> Expression<'a> {
-    /// Parse an expression from bytes.
-    pub fn from_bytes(data: &'a [u8]) -> Result<(Self, &'a [u8]), MachOError> {
-        let offset = &mut 0;
-
-        let tag: u32 = data.gread_with(offset, scroll::BE)?;
-
-        let data = &data[*offset..];
-
-        let instance = match tag {
-            0 => Self::False,
-            1 => Self::True,
-            2 => Self::Ident(std::str::from_utf8(&data[*offset..])?),
-            3 => Self::AppleAnchor,
-            4 => Self::AnchorHash,
-            5 => Self::InfoKeyValue,
-            6 => {
-                let (a, data) = Expression::from_bytes(data)?;
-                let (b, data) = Expression::from_bytes(data)?;
-
-                return Ok((Self::And(Box::new(a), Box::new(b)), data));
-            }
-            7 => {
-                let (a, data) = Expression::from_bytes(data)?;
-                let (b, data) = Expression::from_bytes(data)?;
-
-                return Ok((Self::Or(Box::new(a), Box::new(b)), data));
-            }
-            8 => Self::CDHash,
-            9 => Self::Not,
-            10 => Self::InfoKeyField,
-            11 => Self::CertField,
-            12 => Self::TrustedCert,
-            13 => Self::TrustedCerts,
-            14 => Self::CertGeneric,
-            15 => Self::AppleGenericAnchor,
-            16 => Self::EntitlementField,
-            _ => Self::Other(tag),
-        };
-
-        Ok((instance, data))
-    }
-}
-
 /// Represents a Requirement blob (CSMAGIC_REQUIREMENT).
-#[derive(Debug)]
 pub struct RequirementBlob<'a> {
-    pub expression: Expression<'a>,
+    pub data: &'a [u8],
 }
 
 impl<'a> RequirementBlob<'a> {
@@ -713,9 +646,13 @@ impl<'a> RequirementBlob<'a> {
     pub fn from_bytes(data: &'a [u8]) -> Result<Self, MachOError> {
         let data = read_and_validate_blob_header(data, CSMAGIC_REQUIREMENT)?;
 
-        let expression = Expression::from_bytes(data)?.0;
+        Ok(Self { data })
+    }
+}
 
-        Ok(Self { expression })
+impl<'a> std::fmt::Debug for RequirementBlob<'a> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!("RequirementBlob({})", hex::encode(&self.data)))
     }
 }
 
