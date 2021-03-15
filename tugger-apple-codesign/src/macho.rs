@@ -657,9 +657,11 @@ impl<'a> std::fmt::Debug for RequirementBlob<'a> {
 }
 
 /// Represents a Requirements blob (CSMAGIC_REQUIREMENTS).
+///
+/// A Requirements blob contains nested Requirement blobs.
 #[derive(Debug)]
 pub struct RequirementsBlob<'a> {
-    segments: Vec<BlobData<'a>>,
+    segments: Vec<(u32, RequirementBlob<'a>)>,
 }
 
 impl<'a> RequirementsBlob<'a> {
@@ -685,7 +687,8 @@ impl<'a> RequirementsBlob<'a> {
 
         let mut segments = Vec::with_capacity(indices.len());
 
-        for (i, (_, offset)) in indices.iter().enumerate() {
+        // TODO figure out what the first integer means. It means something.
+        for (i, (flavor, offset)) in indices.iter().enumerate() {
             let end_offset = if i == indices.len() - 1 {
                 data.len()
             } else {
@@ -694,7 +697,7 @@ impl<'a> RequirementsBlob<'a> {
 
             let segment_data = &data[*offset as usize..end_offset];
 
-            segments.push(BlobData::from_bytes(segment_data)?);
+            segments.push((*flavor, RequirementBlob::from_bytes(segment_data)?));
         }
 
         Ok(Self { segments })
