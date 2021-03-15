@@ -12,7 +12,7 @@ mod specification;
 use {
     crate::{
         code_hash::{compute_code_hashes, SignatureError},
-        macho::{find_signature_data, parse_signature_data, CodeSigningSlot, HashType},
+        macho::{find_signature_data, parse_signature_data, Blob, CodeSigningSlot, HashType},
     },
     clap::{App, AppSettings, Arg, ArgMatches, SubCommand},
     goblin::mach::{Mach, MachO},
@@ -41,6 +41,9 @@ code-directory-raw
    Raw binary data composing the code directory data structure.
 code-directory
    Information on the main code directory data structure.
+code-directory-serialized-raw
+   Reserialize the parsed code directory and emit its binary. Useful
+   for comparing round-tripping of code directory data.
 linkededit-segment-raw
    Complete content of the __LINKEDIT Mach-O segment as binary.
 requirements-raw
@@ -210,6 +213,15 @@ fn command_extract(args: &ArgMatches) -> Result<(), AppError> {
                 eprintln!("no code directory");
             }
         }
+        "code-directory-serialized-raw" => {
+            let embedded = parse_signature_data(&sig.signature_data)?;
+
+            if let Ok(Some(cd)) = embedded.code_directory() {
+                std::io::stdout().write_all(&cd.to_vec()?)?;
+            } else {
+                eprintln!("no code directory");
+            }
+        }
         "code-directory" => {
             let embedded = parse_signature_data(&sig.signature_data)?;
 
@@ -356,6 +368,7 @@ fn main_impl() -> Result<(), AppError> {
                             "cms-ber",
                             "cms-pem",
                             "code-directory-raw",
+                            "code-directory-serialized-raw",
                             "code-directory",
                             "linkedit-segment-raw",
                             "requirements-raw",

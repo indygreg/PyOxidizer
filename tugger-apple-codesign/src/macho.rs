@@ -569,7 +569,7 @@ impl<'a> TryFrom<BlobEntry<'a>> for ParsedBlob<'a> {
 }
 
 /// Provides common features for a parsed blob type.
-trait Blob {
+pub trait Blob {
     /// The header magic that identifies this format.
     fn magic() -> u32;
 
