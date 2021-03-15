@@ -901,14 +901,8 @@ pub struct CodeDirectoryBlob<'a> {
     pub version: u32,
     /// Setup and mode flags.
     pub flags: u32,
-    /// Offset of hash slot element at index zero.
-    pub hash_offset: u32,
-    /// Offset of identifier string.
-    pub ident_offset: u32,
-    /// Number of special hash slots.
-    pub n_special_slots: u32,
-    /// Number of ordinary code hash slots.
-    pub n_code_slots: u32,
+    // hash_offset, ident_offset, n_special_slots, and n_code_slots not stored
+    // explicitly because they are redundant with derived fields.
     /// Limit to main image signature range.
     pub code_limit: u32,
     /// Size of each hash in bytes.
@@ -966,10 +960,10 @@ impl<'a> CodeDirectoryBlob<'a> {
 
         let version = data.gread_with(offset, scroll::BE)?;
         let flags = data.gread_with(offset, scroll::BE)?;
-        let hash_offset = data.gread_with(offset, scroll::BE)?;
+        let hash_offset = data.gread_with::<u32>(offset, scroll::BE)?;
         let ident_offset = data.gread_with::<u32>(offset, scroll::BE)?;
-        let n_special_slots = data.gread_with(offset, scroll::BE)?;
-        let n_code_slots = data.gread_with(offset, scroll::BE)?;
+        let n_special_slots = data.gread_with::<u32>(offset, scroll::BE)?;
+        let n_code_slots = data.gread_with::<u32>(offset, scroll::BE)?;
         let code_limit = data.gread_with(offset, scroll::BE)?;
         let hash_size = data.gread_with(offset, scroll::BE)?;
         let hash_type = data.gread_with::<u8>(offset, scroll::BE)?.into();
@@ -1063,10 +1057,6 @@ impl<'a> CodeDirectoryBlob<'a> {
         Ok(Self {
             version,
             flags,
-            hash_offset,
-            ident_offset,
-            n_special_slots,
-            n_code_slots,
             code_limit,
             hash_size,
             hash_type,
@@ -1111,7 +1101,6 @@ impl<'a> Blob for CodeDirectoryBlob<'a> {
         cursor.iowrite_with(0u32, scroll::BE)?;
         let ident_offset_cursor_position = cursor.position();
         cursor.iowrite_with(0u32, scroll::BE)?;
-        // Use the actual data structures to avoid potential mismatch.
         cursor.iowrite_with(self.special_hashes.len() as u32, scroll::BE)?;
         cursor.iowrite_with(self.code_hashes.len() as u32, scroll::BE)?;
         cursor.iowrite_with(self.code_limit, scroll::BE)?;
