@@ -1584,14 +1584,24 @@ mod tests {
         res
     }
 
-    fn find_apple_codesign_signature(macho: &goblin::mach::MachO) -> Option<Vec<u8>> {
+    fn find_apple_embedded_signature<'a>(
+        macho: &'a goblin::mach::MachO,
+    ) -> Option<EmbeddedSignature<'a>> {
         if let Ok(Some(codesign_data)) = find_signature_data(macho) {
             if let Ok(signature) = parse_signature_data(codesign_data.signature_data) {
-                if let Ok(Some(data)) = signature.signature_data() {
-                    Some(data.to_vec())
-                } else {
-                    None
-                }
+                Some(signature)
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    }
+
+    fn find_apple_codesign_signature(macho: &goblin::mach::MachO) -> Option<Vec<u8>> {
+        if let Some(signature) = find_apple_embedded_signature(macho) {
+            if let Ok(Some(data)) = signature.signature_data() {
+                Some(data.to_vec())
             } else {
                 None
             }
