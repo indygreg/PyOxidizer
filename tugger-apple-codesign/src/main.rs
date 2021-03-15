@@ -334,6 +334,7 @@ fn command_extract(args: &ArgMatches) -> Result<(), AppError> {
                 println!("  offset: {}", blob.offset);
                 println!("  length: {}", blob.length);
                 println!("  end offset: {}", blob.offset + blob.length - 1);
+                println!("  slot: {:?}", blob.slot);
                 println!("  magic: {:?}", blob.magic);
                 println!("  sha1: {}", hex::encode(blob.digest_with(HashType::Sha1)?));
                 println!(
