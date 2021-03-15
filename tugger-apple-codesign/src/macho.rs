@@ -1831,32 +1831,36 @@ mod tests {
         if let Some(signature) = find_apple_embedded_signature(macho) {
             // Attempt a deep parse of all blobs.
             for blob in &signature.blobs {
-                if let Err(e) = blob.clone().into_parsed_blob() {
-                    println!(
-                        "blob parse failure on {}; index {}, magic {:?}: {}",
-                        path.display(),
-                        blob.index,
-                        blob.magic,
-                        e
-                    );
-                }
-            }
-
-            // Attempt a roundtrip of code directory blob.
-            if let Ok(Some(cd)) = signature.code_directory() {
-                match cd.to_vec() {
-                    Ok(serialized) => {
-                        let blob = signature.find_slot(CodeSigningSlot::CodeDirectory).unwrap();
-                        let original = blob.data;
-
-                        if serialized != original {
-                            println!("Code Directory round trip mismatch on {}", path.display());
+                match blob.clone().into_parsed_blob() {
+                    Ok(parsed) => {
+                        // Attempt to roundtrip the blob data.
+                        match parsed.blob.to_vec() {
+                            Ok(serialized) => {
+                                if serialized != blob.data {
+                                    println!("blob serialization roundtrip failure on {}: index {}, magic {:?}",
+                                        path.display(),
+                                        blob.index,
+                                        blob.magic,
+                                    );
+                                }
+                            }
+                            Err(e) => {
+                                println!(
+                                    "blob serialization failure on {}; index {}, magic {:?}: {}",
+                                    path.display(),
+                                    blob.index,
+                                    blob.magic,
+                                    e
+                                );
+                            }
                         }
                     }
                     Err(e) => {
                         println!(
-                            "error serializing Code Directory for {}: {}",
+                            "blob parse failure on {}; index {}, magic {:?}: {}",
                             path.display(),
+                            blob.index,
+                            blob.magic,
                             e
                         );
                     }
