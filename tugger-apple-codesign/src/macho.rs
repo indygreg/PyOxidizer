@@ -1033,19 +1033,20 @@ impl<'a> CodeDirectoryBlob<'a> {
             }
         };
 
-        let team_name = if let Some(team_offset) = team_offset {
-            match data[team_offset as usize..]
-                .split(|&b| b == 0)
-                .map(std::str::from_utf8)
-                .next()
-            {
-                Some(res) => Some(Cow::from(res?)),
-                None => {
-                    return Err(MachOError::BadTeamString);
+        let team_name = match team_offset {
+            Some(0) | None => None,
+            Some(team_offset) => {
+                match data[team_offset as usize..]
+                    .split(|&b| b == 0)
+                    .map(std::str::from_utf8)
+                    .next()
+                {
+                    Some(res) => Some(Cow::from(res?)),
+                    None => {
+                        return Err(MachOError::BadTeamString);
+                    }
                 }
             }
-        } else {
-            None
         };
 
         let code_hashes = get_hashes(
