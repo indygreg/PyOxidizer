@@ -1297,7 +1297,7 @@ impl<'a> Blob for CodeDirectoryBlob<'a> {
         cursor.iowrite_with(identity_offset as u32, scroll::BE)?;
 
         if scatter_offset_cursor_position.is_some() {
-            unimplemented!();
+            return Err(MachOError::Unimplemented);
         }
 
         if let Some(offset) = team_offset_cursor_position {
@@ -1493,6 +1493,7 @@ pub enum MachOError {
     BadTeamString,
     Digest(DigestError),
     Io(std::io::Error),
+    Unimplemented,
 }
 
 impl std::fmt::Display for MachOError {
@@ -1509,6 +1510,7 @@ impl std::fmt::Display for MachOError {
             Self::BadTeamString => f.write_str("team name string isn't null terminated"),
             Self::Digest(e) => f.write_fmt(format_args!("digest error: {}", e)),
             Self::Io(e) => f.write_fmt(format_args!("I/O error: {}", e)),
+            Self::Unimplemented => f.write_str("functionality not implemented"),
         }
     }
 }
@@ -1714,6 +1716,27 @@ mod tests {
                         blob.magic,
                         e
                     );
+                }
+            }
+
+            // Attempt a roundtrip of code directory blob.
+            if let Ok(Some(cd)) = signature.code_directory() {
+                match cd.to_vec() {
+                    Ok(serialized) => {
+                        let blob = signature.find_slot(CodeSigningSlot::CodeDirectory).unwrap();
+                        let original = blob.data;
+
+                        if serialized != original {
+                            println!("Code Directory round trip mismatch on {}", path.display());
+                        }
+                    }
+                    Err(e) => {
+                        println!(
+                            "error serializing Code Directory for {}: {}",
+                            path.display(),
+                            e
+                        );
+                    }
                 }
             }
 
