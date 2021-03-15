@@ -61,6 +61,8 @@ requirements-serialized
    print it like `requirements` would.
 requirements-serialized-raw
    Reserialize the code requirements blob and emit its binary.
+signature-raw
+   Raw binary data composing the signature data embedded in the binary.
 segment-info
    Information about Mach-O segments in the binary and where the
    __LINKEDIT is in relationship to the binary.
@@ -323,6 +325,9 @@ fn command_extract(args: &ArgMatches) -> Result<(), AppError> {
             );
             println!("__LINKEDIT signature size: {}", sig.signature_data.len());
         }
+        "signature-raw" => {
+            std::io::stdout().write_all(&sig.signature_data)?;
+        }
         "superblob" => {
             let embedded = parse_signature_data(&sig.signature_data)?;
 
@@ -416,6 +421,7 @@ fn main_impl() -> Result<(), AppError> {
                             "requirements-serialized",
                             "requirements",
                             "segment-info",
+                            "signature-raw",
                             "superblob",
                         ])
                         .default_value("segment-info")
