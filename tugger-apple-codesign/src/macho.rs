@@ -663,7 +663,7 @@ impl<'a> RequirementBlob<'a> {
     ///
     /// Data contains magic and length header.
     pub fn from_bytes(data: &'a [u8]) -> Result<Self, MachOError> {
-        let data = read_and_validate_blob_header(data, CSMAGIC_REQUIREMENT)?;
+        let data = read_and_validate_blob_header(data, Self::magic())?;
 
         Ok(Self { data })
     }
@@ -672,6 +672,16 @@ impl<'a> RequirementBlob<'a> {
 impl<'a> std::fmt::Debug for RequirementBlob<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_fmt(format_args!("RequirementBlob({})", hex::encode(&self.data)))
+    }
+}
+
+impl<'a> Blob for RequirementBlob<'a> {
+    fn magic() -> u32 {
+        CSMAGIC_REQUIREMENT
+    }
+
+    fn serialize_payload(&self) -> Result<Vec<u8>, MachOError> {
+        Ok(self.data.to_vec())
     }
 }
 
@@ -1392,8 +1402,18 @@ impl<'a> EmbeddedSignatureBlob<'a> {
     /// Data contains magic and length header.
     pub fn from_bytes(data: &'a [u8]) -> Result<Self, MachOError> {
         Ok(Self {
-            data: read_and_validate_blob_header(data, CSMAGIC_EMBEDDED_SIGNATURE)?,
+            data: read_and_validate_blob_header(data, Self::magic())?,
         })
+    }
+}
+
+impl<'a> Blob for EmbeddedSignatureBlob<'a> {
+    fn magic() -> u32 {
+        CSMAGIC_EMBEDDED_SIGNATURE
+    }
+
+    fn serialize_payload(&self) -> Result<Vec<u8>, MachOError> {
+        Ok(self.data.to_vec())
     }
 }
 
@@ -1409,8 +1429,18 @@ impl<'a> EmbeddedSignatureOldBlob<'a> {
     /// Data contains magic and length header.
     pub fn from_bytes(data: &'a [u8]) -> Result<Self, MachOError> {
         Ok(Self {
-            data: read_and_validate_blob_header(data, CSMAGIC_EMBEDDED_SIGNATURE_OLD)?,
+            data: read_and_validate_blob_header(data, Self::magic())?,
         })
+    }
+}
+
+impl<'a> Blob for EmbeddedSignatureOldBlob<'a> {
+    fn magic() -> u32 {
+        CSMAGIC_EMBEDDED_SIGNATURE_OLD
+    }
+
+    fn serialize_payload(&self) -> Result<Vec<u8>, MachOError> {
+        Ok(self.data.to_vec())
     }
 }
 
@@ -1465,13 +1495,23 @@ pub struct DetachedSignatureBlob<'a> {
     data: &'a [u8],
 }
 
+impl<'a> Blob for DetachedSignatureBlob<'a> {
+    fn magic() -> u32 {
+        CSMAGIC_DETACHED_SIGNATURE
+    }
+
+    fn serialize_payload(&self) -> Result<Vec<u8>, MachOError> {
+        Ok(self.data.to_vec())
+    }
+}
+
 impl<'a> DetachedSignatureBlob<'a> {
     /// Construct an instance by parsing bytes for a blob.
     ///
     /// Data contains magic and length header.
     pub fn from_bytes(data: &'a [u8]) -> Result<Self, MachOError> {
         Ok(Self {
-            data: read_and_validate_blob_header(data, CSMAGIC_DETACHED_SIGNATURE)?,
+            data: read_and_validate_blob_header(data, Self::magic())?,
         })
     }
 }
@@ -1481,13 +1521,23 @@ pub struct BlobWrapperBlob<'a> {
     data: &'a [u8],
 }
 
+impl<'a> Blob for BlobWrapperBlob<'a> {
+    fn magic() -> u32 {
+        CSMAGIC_BLOBWRAPPER
+    }
+
+    fn serialize_payload(&self) -> Result<Vec<u8>, MachOError> {
+        Ok(self.data.to_vec())
+    }
+}
+
 impl<'a> BlobWrapperBlob<'a> {
     /// Construct an instance by parsing bytes for a blob.
     ///
     /// Data contains magic and length header.
     pub fn from_bytes(data: &'a [u8]) -> Result<Self, MachOError> {
         Ok(Self {
-            data: read_and_validate_blob_header(data, CSMAGIC_BLOBWRAPPER)?,
+            data: read_and_validate_blob_header(data, Self::magic())?,
         })
     }
 }
