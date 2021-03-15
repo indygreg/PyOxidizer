@@ -15,6 +15,7 @@ name = "rcodesign"
 path = "src/main.rs"
 
 [dependencies]
+bcder = "0.6"
 clap = "2.33"
 goblin = "0.3"
 hex = "0.4"

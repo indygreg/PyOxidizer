@@ -18,8 +18,29 @@ use {
         find_signature_data, EmbeddedSignature, EntitlementsBlob, HashType, MachOError,
         RequirementsBlob,
     },
+    cryptographic_message_syntax::asn1::rfc5280::Certificate,
     goblin::mach::MachO,
 };
+
+/// A generic error during code signing.
+pub enum CodeSignError {
+    /// An error occurred when decoding a certificate from BER/DER.
+    CertificateDecode(bcder::decode::Error),
+    /// An error when parsing a PEM encoded certificate.
+    CertificatePem(pem::PemError),
+}
+
+impl From<bcder::decode::Error> for CodeSignError {
+    fn from(e: bcder::decode::Error) -> Self {
+        Self::CertificateDecode(e)
+    }
+}
+
+impl From<pem::PemError> for CodeSignError {
+    fn from(e: pem::PemError) -> Self {
+        Self::CertificatePem(e)
+    }
+}
 
 /// Build Apple embedded signatures from parameters.
 ///
@@ -58,6 +79,9 @@ pub struct SignatureBuilder<'a> {
     ///
     /// Corresponds to `CodeDirectory`'s `runtime` field.
     runtime: Option<u32>,
+
+    /// Certificate information to include.
+    certificates: Vec<Certificate>,
 }
 
 impl<'a> SignatureBuilder<'a> {
@@ -72,6 +96,7 @@ impl<'a> SignatureBuilder<'a> {
             cdflags: None,
             executable_segment_flags: None,
             runtime: None,
+            certificates: vec![],
         }
     }
 
@@ -139,5 +164,35 @@ impl<'a> SignatureBuilder<'a> {
     /// See the `CS_EXECSEG_*` constants in the `macho` module for description.
     pub fn executable_segment_flags(&mut self, flags: u64) -> Option<u64> {
         self.executable_segment_flags.replace(flags)
+    }
+
+    /// Add a DER encoded X.509 public certificate to the signing chain.
+    ///
+    /// Use this to add the raw binary content of an ASN.1 encoded public
+    /// certificate.
+    ///
+    /// The DER data is decoded at function call time. Any error decoding the
+    /// certificate will result in `Err`. No validation of the certificate is
+    /// performed.
+    pub fn add_certificate_der(&mut self, data: &[u8]) -> Result<(), CodeSignError> {
+        let cert = bcder::decode::Constructed::decode(data, bcder::Mode::Der, |cons| {
+            Certificate::take_from(cons)
+        })?;
+
+        self.certificates.push(cert);
+
+        Ok(())
+    }
+
+    /// Add a PEM encoded X.509 public certificate to the signing chain.
+    ///
+    /// PEM data looks like `-----BEGIN CERTIFICATE-----` and is a common method
+    /// for encoding certificate data. (PEM is effectively base64 encoded DER data.)
+    ///
+    /// Only a single certificate is read from the PEM data.
+    pub fn add_certificate_pem(&mut self, data: impl AsRef<[u8]>) -> Result<(), CodeSignError> {
+        let pem = pem::parse(data)?;
+
+        self.add_certificate_der(&pem.contents)
     }
 }

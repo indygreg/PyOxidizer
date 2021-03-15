@@ -3446,6 +3446,7 @@ dependencies = [
 name = "tugger-apple-codesign"
 version = "0.1.0"
 dependencies = [
+ "bcder",
  "clap",
  "cryptographic-message-syntax",
  "goblin",
