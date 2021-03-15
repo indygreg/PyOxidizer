@@ -331,6 +331,10 @@ fn command_extract(args: &ArgMatches) -> Result<(), AppError> {
         "superblob" => {
             let embedded = parse_signature_data(&sig.signature_data)?;
 
+            println!("file start offset: {}", sig.linkedit_signature_start_offset);
+            println!("file end offset: {}", sig.linkedit_signature_end_offset);
+            println!("__LINKEDIT start offset: {}", sig.signature_start_offset);
+            println!("__LINKEDIT end offset: {}", sig.signature_end_offset);
             println!("length: {}", embedded.length);
             println!("blob count: {}", embedded.count);
             println!("blobs:");
