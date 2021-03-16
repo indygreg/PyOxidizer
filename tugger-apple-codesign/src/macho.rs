@@ -1170,7 +1170,7 @@ impl<'a> Blob<'a> for CodeDirectoryBlob<'a> {
         )
         .into_iter()
         .enumerate()
-        .map(|(i, h)| (CodeSigningSlot::from(i as u32), h))
+        .map(|(i, h)| (CodeSigningSlot::from(n_special_slots - i as u32), h))
         .collect();
 
         Ok(Self {
