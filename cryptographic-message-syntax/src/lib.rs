@@ -74,10 +74,12 @@ structures referenced by RFC5652 and taught them to serialize using `bcder`.
 mod algorithm;
 pub mod asn1;
 mod certificate;
+mod signing;
 
 pub use {
-    algorithm::{CertificateKeyAlgorithm, DigestAlgorithm, SignatureAlgorithm},
+    algorithm::{CertificateKeyAlgorithm, DigestAlgorithm, SignatureAlgorithm, SigningKey},
     certificate::Certificate,
+    signing::{SignedDataBuilder, SignerBuilder},
 };
 
 use {
@@ -91,6 +93,7 @@ use {
         certificate::certificate_is_subset_of,
     },
     bcder::{Integer, OctetString, Oid},
+    pem::PemError,
     ring::{digest::Digest, signature::UnparsedPublicKey},
     std::{collections::HashSet, convert::TryFrom, fmt::Display, ops::Deref},
 };
@@ -141,6 +144,15 @@ pub enum CmsError {
 
     /// Two content digests were not equivalent.
     DigestNotEqual,
+
+    /// Error encoding/decoding PEM data.
+    Pem(PemError),
+
+    /// Error occurred when creating a signature.
+    SignatureCreation,
+
+    /// Attempted to use a `Certificate` but we couldn't find the backing data for it.
+    CertificateMissingData,
 }
 
 impl std::error::Error for CmsError {}
@@ -179,6 +191,9 @@ impl Display for CmsError {
             Self::SignatureVerificationError => f.write_str("signature verification failed"),
             Self::NoSignedAttributes => f.write_str("SignedAttributes structure is missing"),
             Self::DigestNotEqual => f.write_str("digests not equivalent"),
+            Self::Pem(e) => f.write_fmt(format_args!("PEM error: {}", e)),
+            Self::SignatureCreation => f.write_str("error during signature creation"),
+            Self::CertificateMissingData => f.write_str("certificate data not available"),
         }
     }
 }
@@ -192,6 +207,12 @@ impl From<bcder::decode::Error> for CmsError {
 impl From<std::io::Error> for CmsError {
     fn from(e: std::io::Error) -> Self {
         Self::Io(e)
+    }
+}
+
+impl From<PemError> for CmsError {
+    fn from(e: PemError) -> Self {
+        Self::Pem(e)
     }
 }
 

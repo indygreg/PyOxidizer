@@ -6,7 +6,10 @@ use {
     crate::CmsError,
     bcder::{ConstOid, Oid},
     bytes::Bytes,
-    ring::{digest::SHA256, signature::VerificationAlgorithm},
+    ring::{
+        digest::SHA256,
+        signature::{EcdsaKeyPair, Ed25519KeyPair, RsaKeyPair, VerificationAlgorithm},
+    },
     std::convert::TryFrom,
 };
 
@@ -213,6 +216,73 @@ impl From<CertificateKeyAlgorithm> for Oid {
     fn from(v: CertificateKeyAlgorithm) -> Self {
         match v {
             CertificateKeyAlgorithm::Rsa => Oid(Bytes::copy_from_slice(OID_RSA.as_ref())),
+        }
+    }
+}
+
+/// Represents a key used for signing content.
+///
+/// This is a wrapper around ring's key types supporting signing. We only
+/// care about the private key as this type should only be used for signing.
+#[derive(Debug)]
+pub enum SigningKey {
+    /// ECDSA key pair.
+    Ecdsa(EcdsaKeyPair),
+
+    /// ED25519 key pair.
+    Ed25519(Ed25519KeyPair),
+
+    /// RSA key pair.
+    Rsa(RsaKeyPair),
+}
+
+impl SigningKey {
+    /// Sign a message using this signing key.
+    ///
+    /// Returns the raw bytes constituting the signature.
+    pub fn sign(&self, message: &[u8]) -> Result<Vec<u8>, CmsError> {
+        match self {
+            Self::Rsa(key) => {
+                let mut signature = vec![0; key.public_modulus_len()];
+
+                key.sign(
+                    &ring::signature::RSA_PKCS1_SHA256,
+                    &ring::rand::SystemRandom::new(),
+                    message,
+                    &mut signature,
+                )
+                .map_err(|_| CmsError::SignatureCreation)?;
+
+                Ok(signature)
+            }
+            _ => unimplemented!(),
+        }
+    }
+}
+
+impl From<EcdsaKeyPair> for SigningKey {
+    fn from(key: EcdsaKeyPair) -> Self {
+        Self::Ecdsa(key)
+    }
+}
+
+impl From<Ed25519KeyPair> for SigningKey {
+    fn from(key: Ed25519KeyPair) -> Self {
+        Self::Ed25519(key)
+    }
+}
+
+impl From<RsaKeyPair> for SigningKey {
+    fn from(key: RsaKeyPair) -> Self {
+        Self::Rsa(key)
+    }
+}
+
+impl From<&SigningKey> for SignatureAlgorithm {
+    fn from(key: &SigningKey) -> Self {
+        match key {
+            SigningKey::Rsa(_) => SignatureAlgorithm::Sha256Rsa,
+            _ => unimplemented!(),
         }
     }
 }

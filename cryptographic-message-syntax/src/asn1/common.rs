@@ -126,6 +126,11 @@ impl PrimitiveContent for GeneralizedTime {
 pub struct UtcTime(chrono::DateTime<chrono::Utc>);
 
 impl UtcTime {
+    /// Obtain a new instance with now as the time.
+    pub fn now() -> Self {
+        Self(chrono::Utc::now())
+    }
+
     pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, S::Err> {
         cons.take_primitive_if(Tag::UTC_TIME, |prim| Self::from_primitive(prim))
     }

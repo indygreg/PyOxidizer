@@ -569,6 +569,7 @@ dependencies = [
  "bcder",
  "bytes",
  "chrono",
+ "pem",
  "ring",
 ]
 

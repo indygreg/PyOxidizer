@@ -165,7 +165,7 @@ impl SignedData {
 /// ```ASN.1
 /// DigestAlgorithmIdentifiers ::= SET OF DigestAlgorithmIdentifier
 /// ```
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct DigestAlgorithmIdentifiers(Vec<DigestAlgorithmIdentifier>);
 
 impl Deref for DigestAlgorithmIdentifiers {
@@ -207,7 +207,7 @@ pub type DigestAlgorithmIdentifier = AlgorithmIdentifier;
 /// ```ASN.1
 /// SignerInfos ::= SET OF SignerInfo
 /// ```
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct SignerInfos(Vec<SignerInfo>);
 
 impl Deref for SignerInfos {
@@ -259,9 +259,8 @@ impl EncapsulatedContentInfo {
     pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, S::Err> {
         cons.take_sequence(|cons| {
             let content_type = ContentType::take_from(cons)?;
-            let content = cons.take_opt_value_if(Tag::OCTET_STRING, |content| {
-                OctetString::from_content(content)
-            })?;
+            let content =
+                cons.take_opt_constructed_if(Tag::CTX_0, |cons| OctetString::take_from(cons))?;
 
             Ok(Self {
                 content_type,
@@ -274,7 +273,7 @@ impl EncapsulatedContentInfo {
         encode::sequence((
             self.content_type.encode_ref(),
             if let Some(content) = self.content.as_ref() {
-                Some(content.encode_ref_as(Tag::CTX_0))
+                Some(encode::sequence_as(Tag::CTX_0, content.encode_ref()))
             } else {
                 None
             },
@@ -307,7 +306,7 @@ pub struct SignerInfo {
     /// Raw bytes backing signed attributes data.
     ///
     /// Does not include constructed tag or length bytes.
-    signed_attributes_data: Option<Vec<u8>>,
+    pub signed_attributes_data: Option<Vec<u8>>,
 }
 
 impl SignerInfo {
@@ -452,7 +451,8 @@ impl SignerInfo {
             } else {
                 // No existing copy present. Serialize from raw data structures.
                 let mut der = Vec::new();
-                encode::set_as(Tag::SET, signed_attributes.encode_ref())
+                signed_attributes
+                    .encode_ref()
                     .write_encoded(bcder::Mode::Der, &mut der)?;
 
                 Ok(Some(der))
@@ -522,7 +522,7 @@ impl Values for SignerIdentifier {
 /// ```ASN.1
 /// SignedAttributes ::= SET SIZE (1..MAX) OF Attribute
 /// ```
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct SignedAttributes(Vec<Attribute>);
 
 impl Deref for SignedAttributes {
@@ -650,6 +650,11 @@ impl Attribute {
 pub struct AttributeValue(Captured);
 
 impl AttributeValue {
+    /// Construct a new instance from captured data.
+    pub fn new(captured: Captured) -> Self {
+        Self(captured)
+    }
+
     pub fn take_opt_from<S: Source>(cons: &mut Constructed<S>) -> Result<Option<Self>, S::Err> {
         let captured = cons.capture_all()?;
 
@@ -1152,7 +1157,7 @@ impl OtherCertificateFormat {
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct CertificateSet(Vec<CertificateChoices>);
 
 impl Deref for CertificateSet {
