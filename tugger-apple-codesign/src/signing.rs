@@ -2,6 +2,10 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+//! Signing binaries.
+//!
+//! This module contains code for signing binaries.
+
 use {
     crate::{
         code_hash::compute_code_hashes,
