@@ -15,11 +15,14 @@ name = "rcodesign"
 path = "src/main.rs"
 
 [dependencies]
+base64 = "0.13"
 bcder = "0.6"
+bytes = "1.0"
 clap = "2.33"
 goblin = "0.3"
 hex = "0.4"
 pem = "0.8"
+plist = "1.1"
 scroll = "0.10"
 ring = "0.16"
 

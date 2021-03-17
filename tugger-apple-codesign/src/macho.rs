@@ -201,19 +201,19 @@ impl From<u32> for CodeSigningMagic {
     }
 }
 
-impl Into<u32> for CodeSigningMagic {
-    fn into(self) -> u32 {
-        match self {
-            Self::Requirement => CSMAGIC_REQUIREMENT,
-            Self::Requirements => CSMAGIC_REQUIREMENTS,
-            Self::CodeDirectory => CSMAGIC_CODEDIRECTORY,
-            Self::EmbeddedSignature => CSMAGIC_EMBEDDED_SIGNATURE,
-            Self::EmbeddedSignatureOld => CSMAGIC_EMBEDDED_SIGNATURE_OLD,
-            Self::EmbeddedEntitlements => CSMAGIC_EMBEDDED_ENTITLEMENTS,
-            Self::SecuritySettings => CSMAGIC_SECURITY_SETTINGS,
-            Self::DetachedSignature => CSMAGIC_DETACHED_SIGNATURE,
-            Self::BlobWrapper => CSMAGIC_BLOBWRAPPER,
-            Self::Unknown(v) => v,
+impl From<CodeSigningMagic> for u32 {
+    fn from(magic: CodeSigningMagic) -> u32 {
+        match magic {
+            CodeSigningMagic::Requirement => CSMAGIC_REQUIREMENT,
+            CodeSigningMagic::Requirements => CSMAGIC_REQUIREMENTS,
+            CodeSigningMagic::CodeDirectory => CSMAGIC_CODEDIRECTORY,
+            CodeSigningMagic::EmbeddedSignature => CSMAGIC_EMBEDDED_SIGNATURE,
+            CodeSigningMagic::EmbeddedSignatureOld => CSMAGIC_EMBEDDED_SIGNATURE_OLD,
+            CodeSigningMagic::EmbeddedEntitlements => CSMAGIC_EMBEDDED_ENTITLEMENTS,
+            CodeSigningMagic::SecuritySettings => CSMAGIC_SECURITY_SETTINGS,
+            CodeSigningMagic::DetachedSignature => CSMAGIC_DETACHED_SIGNATURE,
+            CodeSigningMagic::BlobWrapper => CSMAGIC_BLOBWRAPPER,
+            CodeSigningMagic::Unknown(v) => v,
         }
     }
 }
@@ -314,6 +314,49 @@ impl std::fmt::Debug for BlobIndex {
             .field("offset", &self.offset)
             .finish()
     }
+}
+
+/// Create the binary content for a SuperBlob.
+pub fn create_superblob<'a>(
+    magic: CodeSigningMagic,
+    blobs: impl Iterator<Item = &'a (CodeSigningSlot, Vec<u8>)>,
+) -> Result<Vec<u8>, MachOError> {
+    // Makes offset calculation easier.
+    let blobs = blobs.collect::<Vec<_>>();
+
+    let mut cursor = std::io::Cursor::new(Vec::<u8>::new());
+
+    let mut blob_data = Vec::new();
+    // magic + total length + blob count.
+    let mut total_length: u32 = 4 + 4 + 4;
+    // 8 bytes for each blob index.
+    total_length += 8 * blobs.len() as u32;
+
+    let mut indices = Vec::with_capacity(blobs.len());
+
+    for (slot, blob) in blobs {
+        blob_data.push(blob);
+
+        indices.push(BlobIndex {
+            typ: u32::from(*slot),
+            offset: total_length,
+        });
+
+        total_length += blob.len() as u32;
+    }
+
+    cursor.iowrite_with(u32::from(magic), scroll::BE)?;
+    cursor.iowrite_with(total_length, scroll::BE)?;
+    cursor.iowrite_with(indices.len() as u32, scroll::BE)?;
+    for index in indices {
+        cursor.iowrite_with(index.typ, scroll::BE)?;
+        cursor.iowrite_with(index.offset, scroll::BE)?;
+    }
+    for data in blob_data {
+        cursor.write_all(data)?;
+    }
+
+    Ok(cursor.into_inner())
 }
 
 /// Represents embedded signature data in a Mach-O binary.
@@ -843,6 +886,7 @@ impl<'a> RequirementsBlob<'a> {
 pub enum DigestError {
     UnknownAlgorithm,
     UnsupportedAlgorithm,
+    Unspecified,
 }
 
 impl std::error::Error for DigestError {}
@@ -852,6 +896,7 @@ impl std::fmt::Display for DigestError {
         match self {
             Self::UnknownAlgorithm => f.write_str("unknown algorithm"),
             Self::UnsupportedAlgorithm => f.write_str("unsupported algorithm"),
+            Self::Unspecified => f.write_str("unspecified error occurred"),
         }
     }
 }
@@ -909,6 +954,11 @@ impl TryFrom<&str> for HashType {
 }
 
 impl HashType {
+    /// Obtain the size of hashes for this hash type.
+    pub fn hash_len(&self) -> Result<usize, DigestError> {
+        Ok(self.digest(&[])?.len())
+    }
+
     /// Obtain a hasher for this digest type.
     pub fn as_hasher(&self) -> Result<ring::digest::Context, DigestError> {
         match self {
@@ -1536,7 +1586,7 @@ impl<'a> Blob<'a> for EntitlementsBlob<'a> {
 
 impl<'a> EntitlementsBlob<'a> {
     /// Construct an instance using any string as the payload.
-    pub fn from_string(s: impl ToString) -> Self {
+    pub fn from_string(s: &impl ToString) -> Self {
         Self {
             plist: s.to_string().into(),
         }

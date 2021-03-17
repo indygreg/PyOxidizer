@@ -7,6 +7,8 @@ mod code_hash;
 #[allow(unused)]
 mod macho;
 #[allow(unused)]
+mod signing;
+#[allow(unused)]
 mod specification;
 
 use {
@@ -16,6 +18,7 @@ use {
             find_signature_data, parse_signature_data, Blob, CodeDirectoryBlob, CodeSigningSlot,
             HashType, RequirementsBlob,
         },
+        signing::{MachOSigner, NotSignableError, SigningError},
     },
     clap::{App, AppSettings, Arg, ArgMatches, SubCommand},
     cryptographic_message_syntax::{CmsError, SignedData},
@@ -74,8 +77,7 @@ superblob
    records, including digests of every Blob.
 ";
 
-const SUPPORTED_HASHES: &[&'static str; 5] =
-    &["none", "sha1", "sha256", "sha256-truncated", "sha384"];
+const SUPPORTED_HASHES: &[&str; 5] = &["none", "sha1", "sha256", "sha256-truncated", "sha384"];
 
 #[derive(Debug)]
 enum AppError {
@@ -89,6 +91,8 @@ enum AppError {
     Digest(crate::macho::DigestError),
     Signature(SignatureError),
     Cms(CmsError),
+    NotSignable(NotSignableError),
+    Signing(SigningError),
 }
 
 impl std::fmt::Display for AppError {
@@ -104,6 +108,8 @@ impl std::fmt::Display for AppError {
             Self::Digest(e) => f.write_fmt(format_args!("digest error: {}", e)),
             Self::Signature(e) => e.fmt(f),
             Self::Cms(e) => f.write_fmt(format_args!("CMS error: {}", e)),
+            Self::NotSignable(e) => f.write_fmt(format_args!("binary not signable: {}", e)),
+            Self::Signing(e) => f.write_fmt(format_args!("signing error: {}", e)),
         }
     }
 }
@@ -143,6 +149,18 @@ impl From<SignatureError> for AppError {
 impl From<CmsError> for AppError {
     fn from(e: CmsError) -> Self {
         Self::Cms(e)
+    }
+}
+
+impl From<NotSignableError> for AppError {
+    fn from(e: NotSignableError) -> Self {
+        Self::NotSignable(e)
+    }
+}
+
+impl From<SigningError> for AppError {
+    fn from(e: SigningError) -> Self {
+        Self::Signing(e)
     }
 }
 
@@ -383,6 +401,24 @@ fn command_extract(args: &ArgMatches) -> Result<(), AppError> {
     Ok(())
 }
 
+fn command_sign(args: &ArgMatches) -> Result<(), AppError> {
+    let input_path = args.value_of("input_path").ok_or(AppError::BadArgument)?;
+    let output_path = args.value_of("output_path").ok_or(AppError::BadArgument)?;
+
+    println!("signing {}", input_path);
+    let macho_data = std::fs::read(input_path)?;
+
+    println!("parsing Mach-O");
+    let mut signer = MachOSigner::new(&macho_data)?;
+    signer.load_existing_signature_context()?;
+
+    println!("writing {}", output_path);
+    let mut fh = std::fs::File::create(output_path)?;
+    signer.write_signed_binary(&mut fh)?;
+
+    Ok(())
+}
+
 fn main_impl() -> Result<(), AppError> {
     let matches = App::new("Oxidized Apple Codesigning")
         .setting(AppSettings::ArgRequiredElseHelp)
@@ -461,11 +497,26 @@ fn main_impl() -> Result<(), AppError> {
                         .help("Index of Mach-O binary to operate on within a universal/fat binary"),
                 ),
         )
+        .subcommand(
+            SubCommand::with_name("sign")
+                .about("Adds a code signature to a Mach-O binary")
+                .arg(
+                    Arg::with_name("input_path")
+                        .required(true)
+                        .help("Path to Mach-O binary to sign"),
+                )
+                .arg(
+                    Arg::with_name("output_path")
+                        .required(true)
+                        .help("Path to signed Mach-O binary to write"),
+                ),
+        )
         .get_matches();
 
     match matches.subcommand() {
         ("compute-code-hashes", Some(args)) => command_compute_code_hashes(args),
         ("extract", Some(args)) => command_extract(args),
+        ("sign", Some(args)) => command_sign(args),
         _ => Err(AppError::UnknownCommand),
     }
 }
@@ -474,7 +525,7 @@ fn main() {
     let exit_code = match main_impl() {
         Ok(()) => 0,
         Err(err) => {
-            eprintln!("Error: {:?}", err);
+            eprintln!("Error: {}", err);
             1
         }
     };

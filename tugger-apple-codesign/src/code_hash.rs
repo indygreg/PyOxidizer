@@ -51,8 +51,8 @@ pub fn compute_code_hashes(
     macho: &MachO,
     hash_type: HashType,
     page_size: Option<usize>,
-) -> Result<Vec<Vec<u8>>, SignatureError> {
-    let signature = find_signature_data(macho)?;
+) -> Result<Vec<Vec<u8>>, DigestError> {
+    let signature = find_signature_data(macho).map_err(|_| DigestError::Unspecified)?;
 
     // TODO validate size.
     let page_size = page_size.unwrap_or(4096);
@@ -82,8 +82,7 @@ pub fn compute_code_hashes(
 
             compute_paged_hashes(s.data, hash_type, page_size, max_offset)
         })
-        .collect::<Result<Vec<_>, DigestError>>()
-        .map_err(SignatureError::HashingError)?
+        .collect::<Result<Vec<_>, DigestError>>()?
         .into_iter()
         .flatten()
         .collect::<Vec<_>>())

@@ -3447,12 +3447,15 @@ dependencies = [
 name = "tugger-apple-codesign"
 version = "0.1.0"
 dependencies = [
+ "base64 0.13.0",
  "bcder",
+ "bytes",
  "clap",
  "cryptographic-message-syntax",
  "goblin",
  "hex",
  "pem",
+ "plist",
  "ring",
  "scroll",
 ]
