@@ -13,7 +13,7 @@ mod specification;
 
 use {
     crate::{
-        code_hash::{compute_code_hashes, SignatureError},
+        code_hash::compute_code_hashes,
         macho::{
             find_signature_data, parse_signature_data, Blob, CodeDirectoryBlob, CodeSigningSlot,
             HashType, RequirementsBlob,
@@ -89,7 +89,6 @@ enum AppError {
     NoCodeSignature,
     NoCmsData,
     Digest(crate::macho::DigestError),
-    Signature(SignatureError),
     Cms(CmsError),
     NotSignable(NotSignableError),
     Signing(SigningError),
@@ -106,7 +105,6 @@ impl std::fmt::Display for AppError {
             Self::NoCodeSignature => f.write_str("code signature data not found"),
             Self::NoCmsData => f.write_str("CMS data structure not found"),
             Self::Digest(e) => f.write_fmt(format_args!("digest error: {}", e)),
-            Self::Signature(e) => e.fmt(f),
             Self::Cms(e) => f.write_fmt(format_args!("CMS error: {}", e)),
             Self::NotSignable(e) => f.write_fmt(format_args!("binary not signable: {}", e)),
             Self::Signing(e) => f.write_fmt(format_args!("signing error: {}", e)),
@@ -137,12 +135,6 @@ impl From<crate::macho::MachOError> for AppError {
 impl From<crate::macho::DigestError> for AppError {
     fn from(e: crate::macho::DigestError) -> Self {
         Self::Digest(e)
-    }
-}
-
-impl From<SignatureError> for AppError {
-    fn from(e: SignatureError) -> Self {
-        Self::Signature(e)
     }
 }
 

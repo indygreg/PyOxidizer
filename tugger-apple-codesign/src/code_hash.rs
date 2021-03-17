@@ -19,10 +19,7 @@ This module contains code related to reading and writing these so-called
 */
 
 use {
-    crate::macho::{
-        find_signature_data, parse_signature_data, CodeSigningSlot, DigestError, HashType,
-        MachOError,
-    },
+    crate::macho::{find_signature_data, DigestError, HashType},
     goblin::mach::MachO,
 };
 
@@ -86,92 +83,4 @@ pub fn compute_code_hashes(
         .into_iter()
         .flatten()
         .collect::<Vec<_>>())
-}
-
-#[derive(Debug)]
-pub enum SignatureError {
-    ParseError(MachOError),
-    NoSignatureData,
-    NoCodeDirectory,
-    HashingError(DigestError),
-    MissingHash(CodeSigningSlot),
-    HashMismatch(CodeSigningSlot, Vec<u8>, Vec<u8>),
-}
-
-impl std::fmt::Display for SignatureError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::ParseError(e) => e.fmt(f),
-            Self::NoSignatureData => f.write_str("no signature data found"),
-            Self::NoCodeDirectory => {
-                f.write_str("signature data does not contain a code directory blob")
-            }
-            Self::HashingError(e) => {
-                f.write_fmt(format_args!("error occurred while hashing: {}", e))
-            }
-            Self::MissingHash(slot) => {
-                f.write_fmt(format_args!("missing hash for slot {:?}", slot))
-            }
-            Self::HashMismatch(slot, got, wanted) => f.write_fmt(format_args!(
-                "hash mismatch on {:?}; got {:?}; wanted {:?}",
-                slot, got, wanted
-            )),
-        }
-    }
-}
-
-impl std::error::Error for SignatureError {}
-
-impl From<MachOError> for SignatureError {
-    fn from(e: MachOError) -> Self {
-        Self::ParseError(e)
-    }
-}
-
-impl From<DigestError> for SignatureError {
-    fn from(e: DigestError) -> Self {
-        Self::HashingError(e)
-    }
-}
-
-/// Given a Mach-O binary, attempt to verify the integrity of code hashes within.
-pub fn verify_macho_code_hashes(macho: &MachO) -> Result<(), SignatureError> {
-    if let Some(signature_data) = find_signature_data(macho)? {
-        let signature = parse_signature_data(signature_data.signature_data)?;
-
-        let code_directory = signature
-            .code_directory()?
-            .ok_or(SignatureError::NoCodeDirectory)?;
-
-        // "Special" hashes are hashes over the signature data itself. They
-        // help ensure the signature data hasn't been tampered with. There
-        // should be a signature for each blob in the signature payload.
-        for blob_entry in &signature.blobs {
-            let actual_hash = code_directory.hash_type.digest(blob_entry.data)?;
-
-            if let Some(expected_hash) = code_directory.special_hashes.get(&blob_entry.slot) {
-                let expected_hash = expected_hash.to_vec();
-
-                // There's a timing side-channel here, but it shouldn't matter since it
-                // isn't like someone is brute-forcing hashes.
-                if actual_hash != expected_hash {
-                    return Err(SignatureError::HashMismatch(
-                        blob_entry.slot,
-                        actual_hash,
-                        expected_hash,
-                    ));
-                }
-            } else {
-                // TODO we presumably need to exclude CodeDirectory since it cannot sign self?
-                return Err(SignatureError::MissingHash(blob_entry.slot));
-            }
-        }
-
-        // "Code" hashes are hashes over the code.
-        // TODO implement this.
-
-        panic!("not yet implemented");
-    } else {
-        Err(SignatureError::NoSignatureData)
-    }
 }
