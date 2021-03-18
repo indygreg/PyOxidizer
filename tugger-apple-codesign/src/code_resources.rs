@@ -165,6 +165,7 @@ struct Files2Value {
     cdhash: Option<Vec<u8>>,
     hash2: Option<Vec<u8>>,
     requirement: Option<String>,
+    symlink: Option<String>,
 }
 
 impl std::fmt::Debug for Files2Value {
@@ -179,6 +180,7 @@ impl std::fmt::Debug for Files2Value {
                 &format_args!("{:?}", self.hash2.as_ref().map(hex::encode)),
             )
             .field("requirement", &format_args!("{:?}", self.requirement))
+            .field("symlink", &format_args!("{:?}", self.symlink))
             .finish()
     }
 }
@@ -194,6 +196,7 @@ impl TryFrom<&Value> for Files2Value {
         let mut hash2 = None;
         let mut cdhash = None;
         let mut requirement = None;
+        let mut symlink = None;
 
         for (key, value) in dict.iter() {
             match key.as_str() {
@@ -228,6 +231,19 @@ impl TryFrom<&Value> for Files2Value {
 
                     requirement = Some(v.to_string());
                 }
+                "symlink" => {
+                    symlink = Some(
+                        value
+                            .as_string()
+                            .ok_or_else(|| {
+                                CodeResourcesError::PlistParseError(format!(
+                                    "expected string for symlink key, got {:?}",
+                                    value
+                                ))
+                            })?
+                            .to_string(),
+                    );
+                }
                 key => {
                     return Err(CodeResourcesError::PlistParseError(format!(
                         "unexpected key in files2 dict entry: {}",
@@ -241,6 +257,7 @@ impl TryFrom<&Value> for Files2Value {
             cdhash,
             hash2,
             requirement,
+            symlink,
         })
     }
 }
@@ -262,6 +279,10 @@ impl From<&Files2Value> for Value {
                 "requirement".to_string(),
                 Value::String(requirement.to_string()),
             );
+        }
+
+        if let Some(symlink) = &v.symlink {
+            dict.insert("symlink".to_string(), Value::String(symlink.to_string()));
         }
 
         Value::Dictionary(dict)
@@ -623,6 +644,11 @@ mod tests {
                 <data>NevNMzQBub9OjomMUAk2xBumyHM=</data>
                 <key>requirement</key>
                 <string>anchor apple generic and certificate leaf[field.1.2.840.113635.100.6.1.9] /* exists */ or anchor apple generic and certificate 1[field.1.2.840.113635.100.6.2.6] /* exists */ and certificate leaf[field.1.2.840.113635.100.6.1.13] /* exists */ and certificate leaf[subject.OU] = "43AQ936H96"</string>
+              </dict>
+              <key>MacOS/SafariForWebKitDevelopment</key>
+              <dict>
+                <key>symlink</key>
+                <string>/Library/Application Support/Apple/Safari/SafariForWebKitDevelopment</string>
               </dict>
             </dict>
             <key>rules</key>
