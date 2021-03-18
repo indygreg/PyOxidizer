@@ -93,6 +93,8 @@
 
 mod code_hash;
 pub use code_hash::*;
+mod code_resources;
+pub use code_resources::*;
 mod macho;
 pub use macho::*;
 mod signing;

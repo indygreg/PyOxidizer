@@ -58,8 +58,13 @@ such as Mach-O segment data (i.e. the executable code) and other blobs/slots.
 
 The *Entitlements* blob/slot contains a *plist*.
 
-The *Resources* blob/slot contains information on additional resources
-that are signed.
+Additional file-based resources can also be signed. These are referred to as
+*Code Resources*. *Code Resources* are captured in a
+`_CodeSignature/CodeResources` XML plist file in the bundle and the digest
+of this file is captured by the *Code Directory*. There is a defined
+`RESOURCEDIR` slot to hold its digest. However, there is no explicit
+magic constant for resources, implying that this data can only be provided
+externally and not embedded within the *SuperBlob*.
 
 The *Signature* blob/slot contains a Cryptographic Message Syntax (CMS)
 RFC 5652 defined `SignedData` BER encoded ASN.1 data structure. CMS is

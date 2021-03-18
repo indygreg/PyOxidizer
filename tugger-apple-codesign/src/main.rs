@@ -5,6 +5,8 @@
 #[allow(unused)]
 mod code_hash;
 #[allow(unused)]
+mod code_resources;
+#[allow(unused)]
 mod macho;
 #[allow(unused)]
 mod signing;
