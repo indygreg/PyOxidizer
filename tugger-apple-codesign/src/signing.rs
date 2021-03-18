@@ -222,7 +222,7 @@ pub fn create_code_directory_hashes_plist<'a>(
 ) -> Result<Vec<u8>, SigningError> {
     let hashes = code_directories
         .map(|cd| {
-            let blob_data = cd.to_vec().map_err(SigningError::MachO)?;
+            let blob_data = cd.to_blob_bytes().map_err(SigningError::MachO)?;
 
             // SHA-1 is always used.
             let digest = HashType::Sha1.digest(&blob_data)?;
@@ -803,7 +803,7 @@ impl<'key> MachOSignatureBuilder<'key> {
         let mut blobs = vec![(
             CodeSigningSlot::CodeDirectory,
             self.create_code_directory(macho)?
-                .to_vec()
+                .to_blob_bytes()
                 .map_err(SigningError::MachO)?,
         )];
         blobs.extend(self.create_special_blobs()?);
@@ -830,7 +830,9 @@ impl<'key> MachOSignatureBuilder<'key> {
         let code_directory = self.create_code_directory(macho)?;
         // We need the blob serialized content of the code directory to compute
         // the message digest using alternate data.
-        let code_directory_raw = code_directory.to_vec().map_err(SigningError::MachO)?;
+        let code_directory_raw = code_directory
+            .to_blob_bytes()
+            .map_err(SigningError::MachO)?;
 
         // We need an XML plist containing code directory hashes to include as a signed
         // attribute.
@@ -982,14 +984,18 @@ impl<'key> MachOSignatureBuilder<'key> {
         if let Some(requirements) = &self.code_requirement {
             res.push((
                 CodeSigningSlot::Requirements,
-                requirements.to_vec().map_err(SigningError::BlobEncode)?,
+                requirements
+                    .to_blob_bytes()
+                    .map_err(SigningError::BlobEncode)?,
             ));
         }
 
         if let Some(entitlements) = &self.entitlements {
             res.push((
                 CodeSigningSlot::Entitlements,
-                entitlements.to_vec().map_err(SigningError::BlobEncode)?,
+                entitlements
+                    .to_blob_bytes()
+                    .map_err(SigningError::BlobEncode)?,
             ));
         }
 

@@ -265,7 +265,7 @@ fn command_extract(args: &ArgMatches) -> Result<(), AppError> {
             let embedded = parse_signature_data(&sig.signature_data)?;
 
             if let Ok(Some(cd)) = embedded.code_directory() {
-                std::io::stdout().write_all(&cd.to_vec()?)?;
+                std::io::stdout().write_all(&cd.to_blob_bytes()?)?;
             } else {
                 eprintln!("no code directory");
             }
@@ -274,8 +274,8 @@ fn command_extract(args: &ArgMatches) -> Result<(), AppError> {
             let embedded = parse_signature_data(&sig.signature_data)?;
 
             if let Ok(Some(cd)) = embedded.code_directory() {
-                let serialized = cd.to_vec()?;
-                println!("{:#?}", CodeDirectoryBlob::from_bytes(&serialized)?);
+                let serialized = cd.to_blob_bytes()?;
+                println!("{:#?}", CodeDirectoryBlob::from_blob_bytes(&serialized)?);
             }
         }
         "code-directory" => {
@@ -303,7 +303,7 @@ fn command_extract(args: &ArgMatches) -> Result<(), AppError> {
             let embedded = parse_signature_data(&sig.signature_data)?;
 
             if let Some(reqs) = embedded.code_requirements()? {
-                std::io::stdout().write_all(&reqs.to_vec()?)?;
+                std::io::stdout().write_all(&reqs.to_blob_bytes()?)?;
             } else {
                 eprintln!("no requirements");
             }
@@ -312,8 +312,8 @@ fn command_extract(args: &ArgMatches) -> Result<(), AppError> {
             let embedded = parse_signature_data(&sig.signature_data)?;
 
             if let Some(reqs) = embedded.code_requirements()? {
-                let serialized = reqs.to_vec()?;
-                println!("{:#?}", RequirementsBlob::from_bytes(&serialized)?);
+                let serialized = reqs.to_blob_bytes()?;
+                println!("{:#?}", RequirementsBlob::from_blob_bytes(&serialized)?);
             } else {
                 eprintln!("no requirements");
             }

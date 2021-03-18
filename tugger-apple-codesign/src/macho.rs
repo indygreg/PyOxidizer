@@ -627,7 +627,7 @@ impl<'a> TryFrom<BlobEntry<'a>> for ParsedBlob<'a> {
     type Error = MachOError;
 
     fn try_from(blob_entry: BlobEntry<'a>) -> Result<Self, Self::Error> {
-        let blob = BlobData::from_bytes(blob_entry.data)?;
+        let blob = BlobData::from_blob_bytes(blob_entry.data)?;
 
         Ok(Self { blob_entry, blob })
     }
@@ -645,7 +645,7 @@ where
     ///
     /// The slice begins with the 8 byte blob header denoting the magic
     /// and length.
-    fn from_bytes(data: &'a [u8]) -> Result<Self, MachOError>;
+    fn from_blob_bytes(data: &'a [u8]) -> Result<Self, MachOError>;
 
     /// Serialize the payload of this blob to bytes.
     ///
@@ -656,7 +656,7 @@ where
     ///
     /// This is `serialize_payload()` with the blob magic and length
     /// prepended.
-    fn to_vec(&self) -> Result<Vec<u8>, MachOError> {
+    fn to_blob_bytes(&self) -> Result<Vec<u8>, MachOError> {
         let mut res = Vec::new();
         res.iowrite_with(Self::magic(), scroll::BE)?;
 
@@ -671,10 +671,10 @@ where
 
     /// Obtain the digest of the blob using the specified hasher.
     ///
-    /// Default implementation calls `self.to_vec()` and digests that, which
+    /// Default implementation calls [Blob::to_blob_bytes] and digests that, which
     /// should always be correct.
     fn digest_with(&self, hash_type: HashType) -> Result<Vec<u8>, MachOError> {
-        Ok(hash_type.digest(&self.to_vec()?)?)
+        Ok(hash_type.digest(&self.to_blob_bytes()?)?)
     }
 }
 
@@ -700,7 +700,7 @@ impl<'a> Blob<'a> for BlobData<'a> {
     }
 
     /// Parse blob data by reading its magic and feeding into magic-specific parser.
-    fn from_bytes(data: &'a [u8]) -> Result<Self, MachOError> {
+    fn from_blob_bytes(data: &'a [u8]) -> Result<Self, MachOError> {
         let (magic, length, _) = read_blob_header(data)?;
 
         // This should be a no-op. But it could (correctly) cause a panic if the
@@ -708,27 +708,31 @@ impl<'a> Blob<'a> for BlobData<'a> {
         let data = &data[0..length];
 
         Ok(match magic {
-            CSMAGIC_REQUIREMENT => Self::Requirement(Box::new(RequirementBlob::from_bytes(data)?)),
+            CSMAGIC_REQUIREMENT => {
+                Self::Requirement(Box::new(RequirementBlob::from_blob_bytes(data)?))
+            }
             CSMAGIC_REQUIREMENTS => {
-                Self::Requirements(Box::new(RequirementsBlob::from_bytes(data)?))
+                Self::Requirements(Box::new(RequirementsBlob::from_blob_bytes(data)?))
             }
             CSMAGIC_CODEDIRECTORY => {
-                Self::CodeDirectory(Box::new(CodeDirectoryBlob::from_bytes(data)?))
+                Self::CodeDirectory(Box::new(CodeDirectoryBlob::from_blob_bytes(data)?))
             }
             CSMAGIC_EMBEDDED_SIGNATURE => {
-                Self::EmbeddedSignature(Box::new(EmbeddedSignatureBlob::from_bytes(data)?))
+                Self::EmbeddedSignature(Box::new(EmbeddedSignatureBlob::from_blob_bytes(data)?))
             }
-            CSMAGIC_EMBEDDED_SIGNATURE_OLD => {
-                Self::EmbeddedSignatureOld(Box::new(EmbeddedSignatureOldBlob::from_bytes(data)?))
-            }
+            CSMAGIC_EMBEDDED_SIGNATURE_OLD => Self::EmbeddedSignatureOld(Box::new(
+                EmbeddedSignatureOldBlob::from_blob_bytes(data)?,
+            )),
             CSMAGIC_EMBEDDED_ENTITLEMENTS => {
-                Self::EmbeddedEntitlements(Box::new(EntitlementsBlob::from_bytes(data)?))
+                Self::EmbeddedEntitlements(Box::new(EntitlementsBlob::from_blob_bytes(data)?))
             }
             CSMAGIC_DETACHED_SIGNATURE => {
-                Self::DetachedSignature(Box::new(DetachedSignatureBlob::from_bytes(data)?))
+                Self::DetachedSignature(Box::new(DetachedSignatureBlob::from_blob_bytes(data)?))
             }
-            CSMAGIC_BLOBWRAPPER => Self::BlobWrapper(Box::new(BlobWrapperBlob::from_bytes(data)?)),
-            _ => Self::Other(Box::new(OtherBlob::from_bytes(data)?)),
+            CSMAGIC_BLOBWRAPPER => {
+                Self::BlobWrapper(Box::new(BlobWrapperBlob::from_blob_bytes(data)?))
+            }
+            _ => Self::Other(Box::new(OtherBlob::from_blob_bytes(data)?)),
         })
     }
 
@@ -746,17 +750,17 @@ impl<'a> Blob<'a> for BlobData<'a> {
         }
     }
 
-    fn to_vec(&self) -> Result<Vec<u8>, MachOError> {
+    fn to_blob_bytes(&self) -> Result<Vec<u8>, MachOError> {
         match self {
-            Self::Requirement(b) => b.to_vec(),
-            Self::Requirements(b) => b.to_vec(),
-            Self::CodeDirectory(b) => b.to_vec(),
-            Self::EmbeddedSignature(b) => b.to_vec(),
-            Self::EmbeddedSignatureOld(b) => b.to_vec(),
-            Self::EmbeddedEntitlements(b) => b.to_vec(),
-            Self::DetachedSignature(b) => b.to_vec(),
-            Self::BlobWrapper(b) => b.to_vec(),
-            Self::Other(b) => b.to_vec(),
+            Self::Requirement(b) => b.to_blob_bytes(),
+            Self::Requirements(b) => b.to_blob_bytes(),
+            Self::CodeDirectory(b) => b.to_blob_bytes(),
+            Self::EmbeddedSignature(b) => b.to_blob_bytes(),
+            Self::EmbeddedSignatureOld(b) => b.to_blob_bytes(),
+            Self::EmbeddedEntitlements(b) => b.to_blob_bytes(),
+            Self::DetachedSignature(b) => b.to_blob_bytes(),
+            Self::BlobWrapper(b) => b.to_blob_bytes(),
+            Self::Other(b) => b.to_blob_bytes(),
         }
     }
 }
@@ -771,7 +775,7 @@ impl<'a> Blob<'a> for RequirementBlob<'a> {
         CSMAGIC_REQUIREMENT
     }
 
-    fn from_bytes(data: &'a [u8]) -> Result<Self, MachOError> {
+    fn from_blob_bytes(data: &'a [u8]) -> Result<Self, MachOError> {
         let data = read_and_validate_blob_header(data, Self::magic())?;
 
         Ok(Self { data: data.into() })
@@ -809,7 +813,7 @@ impl<'a> Blob<'a> for RequirementsBlob<'a> {
         CSMAGIC_REQUIREMENTS
     }
 
-    fn from_bytes(data: &'a [u8]) -> Result<Self, MachOError> {
+    fn from_blob_bytes(data: &'a [u8]) -> Result<Self, MachOError> {
         read_and_validate_blob_header(data, Self::magic())?;
 
         // There are other blobs nested within. A u32 denotes how many there are.
@@ -838,7 +842,7 @@ impl<'a> Blob<'a> for RequirementsBlob<'a> {
 
             let segment_data = &data[*offset as usize..end_offset];
 
-            segments.push((*flavor, RequirementBlob::from_bytes(segment_data)?));
+            segments.push((*flavor, RequirementBlob::from_blob_bytes(segment_data)?));
         }
 
         Ok(Self { segments })
@@ -858,12 +862,12 @@ impl<'a> Blob<'a> for RequirementsBlob<'a> {
         for (flavor, requirement) in &self.segments {
             res.iowrite_with(*flavor, scroll::BE)?;
             res.iowrite_with(data_start_offset + written_requirements_data, scroll::BE)?;
-            written_requirements_data += requirement.to_vec()?.len() as u32;
+            written_requirements_data += requirement.to_blob_bytes()?.len() as u32;
         }
 
         // Now write every requirement's raw data.
         for (_, requirement) in &self.segments {
-            res.write_all(&requirement.to_vec()?)?;
+            res.write_all(&requirement.to_blob_bytes()?)?;
         }
 
         Ok(res)
@@ -1089,7 +1093,7 @@ impl<'a> Blob<'a> for CodeDirectoryBlob<'a> {
         CSMAGIC_CODEDIRECTORY
     }
 
-    fn from_bytes(data: &'a [u8]) -> Result<Self, MachOError> {
+    fn from_blob_bytes(data: &'a [u8]) -> Result<Self, MachOError> {
         read_and_validate_blob_header(data, Self::magic())?;
 
         let offset = &mut 8;
@@ -1529,7 +1533,7 @@ impl<'a> Blob<'a> for EmbeddedSignatureBlob<'a> {
         CSMAGIC_EMBEDDED_SIGNATURE
     }
 
-    fn from_bytes(data: &'a [u8]) -> Result<Self, MachOError> {
+    fn from_blob_bytes(data: &'a [u8]) -> Result<Self, MachOError> {
         Ok(Self {
             data: read_and_validate_blob_header(data, Self::magic())?,
         })
@@ -1551,7 +1555,7 @@ impl<'a> Blob<'a> for EmbeddedSignatureOldBlob<'a> {
         CSMAGIC_EMBEDDED_SIGNATURE_OLD
     }
 
-    fn from_bytes(data: &'a [u8]) -> Result<Self, MachOError> {
+    fn from_blob_bytes(data: &'a [u8]) -> Result<Self, MachOError> {
         Ok(Self {
             data: read_and_validate_blob_header(data, Self::magic())?,
         })
@@ -1577,7 +1581,7 @@ impl<'a> Blob<'a> for EntitlementsBlob<'a> {
         CSMAGIC_EMBEDDED_ENTITLEMENTS
     }
 
-    fn from_bytes(data: &'a [u8]) -> Result<Self, MachOError> {
+    fn from_blob_bytes(data: &'a [u8]) -> Result<Self, MachOError> {
         let data = read_and_validate_blob_header(data, Self::magic())?;
         let s = std::str::from_utf8(data)?;
 
@@ -1615,7 +1619,7 @@ impl<'a> Blob<'a> for DetachedSignatureBlob<'a> {
         CSMAGIC_DETACHED_SIGNATURE
     }
 
-    fn from_bytes(data: &'a [u8]) -> Result<Self, MachOError> {
+    fn from_blob_bytes(data: &'a [u8]) -> Result<Self, MachOError> {
         Ok(Self {
             data: read_and_validate_blob_header(data, Self::magic())?,
         })
@@ -1636,7 +1640,7 @@ impl<'a> Blob<'a> for BlobWrapperBlob<'a> {
         CSMAGIC_BLOBWRAPPER
     }
 
-    fn from_bytes(data: &'a [u8]) -> Result<Self, MachOError> {
+    fn from_blob_bytes(data: &'a [u8]) -> Result<Self, MachOError> {
         Ok(Self {
             data: read_and_validate_blob_header(data, Self::magic())?,
         })
@@ -1665,7 +1669,7 @@ impl<'a> Blob<'a> for OtherBlob<'a> {
         u32::MAX
     }
 
-    fn from_bytes(data: &'a [u8]) -> Result<Self, MachOError> {
+    fn from_blob_bytes(data: &'a [u8]) -> Result<Self, MachOError> {
         let (magic, _, data) = read_blob_header(data)?;
 
         Ok(Self { magic, data })
@@ -1676,7 +1680,7 @@ impl<'a> Blob<'a> for OtherBlob<'a> {
     }
 
     // We need to implement this for custom magic serialization.
-    fn to_vec(&self) -> Result<Vec<u8>, MachOError> {
+    fn to_blob_bytes(&self) -> Result<Vec<u8>, MachOError> {
         let mut res = Vec::with_capacity(self.data.len() + 8);
         res.iowrite_with(self.magic, scroll::BE)?;
         res.iowrite_with(self.data.len() as u32 + 8, scroll::BE)?;
@@ -1934,7 +1938,7 @@ mod tests {
                 match blob.clone().into_parsed_blob() {
                     Ok(parsed) => {
                         // Attempt to roundtrip the blob data.
-                        match parsed.blob.to_vec() {
+                        match parsed.blob.to_blob_bytes() {
                             Ok(serialized) => {
                                 if serialized != blob.data {
                                     println!("blob serialization roundtrip failure on {}: index {}, magic {:?}",
