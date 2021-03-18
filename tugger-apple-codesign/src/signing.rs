@@ -27,7 +27,7 @@ use {
         parse_magic_and_ctx, Mach, MachO,
     },
     scroll::{ctx::SizeWith, IOwrite, Pwrite},
-    std::{collections::HashMap, io::Write},
+    std::{cmp::Ordering, collections::HashMap, io::Write},
 };
 
 /// OID for signed attribute containing plist of code directory hashes.
@@ -138,6 +138,8 @@ pub enum SigningError {
     Io(std::io::Error),
     /// Error occurred in scroll crate.
     Scroll(scroll::Error),
+    /// New signature data is too large for the allocated space for it.
+    SignatureDataTooLarge,
 }
 
 impl std::fmt::Display for SigningError {
@@ -161,6 +163,9 @@ impl std::fmt::Display for SigningError {
             Self::NoSigningCertificate => f.write_str("no signing certificate"),
             Self::Io(e) => f.write_fmt(format_args!("I/O error: {}", e)),
             Self::Scroll(e) => f.write_fmt(format_args!("scroll error: {}", e)),
+            Self::SignatureDataTooLarge => f.write_str(
+                "signature data too large for allocated size (please report this issue)",
+            ),
         }
     }
 }
@@ -235,7 +240,7 @@ pub fn create_code_directory_hashes_plist<'a>(
     Ok(buffer)
 }
 
-/// Drive a new Mach-O binary with new signature data.
+/// Derive a new Mach-O binary with new signature data.
 fn create_macho_with_signature(
     macho_data: &[u8],
     macho: &MachO,
@@ -365,6 +370,22 @@ fn create_macho_with_signature(
 ///
 /// Signing of both single architecture and fat/universal binaries is supported.
 /// Signing settings apply to all binaries within a fat binary.
+///
+/// # Circular Dependency
+///
+/// There is a circular dependency between the generation of the Code Directory
+/// present in the embedded signature and the Mach-O binary. See the note
+/// in [crate::specification] for the gory details. The tl;dr is the Mach-O
+/// data up to the signature data needs to be digested. But that digested data
+/// contains load commands that reference the signature data and its size, which
+/// can't be known until the Code Directory, CMS blob, and SuperBlob are all
+/// created.
+///
+/// Our solution to this problem is to create an intermediate Mach-O binary with
+/// placeholder bytes for the signature. We then digest this. When writing
+/// the final Mach-O binary we simply replace NULLs with actual signature data,
+/// leaving any extra at the end, because truncating the file would require
+/// adjusting Mach-O load commands and changing content digests.
 #[derive(Debug)]
 pub struct MachOSigner<'data, 'key> {
     /// Raw data backing parsed Mach-O binary.
@@ -469,9 +490,45 @@ impl<'data, 'key> MachOSigner<'data, 'key> {
             .iter()
             .enumerate()
             .map(|(index, builder)| {
-                let signature_data = builder.create_superblob()?;
+                // Derive an intermediate Mach-O with placeholder NULLs for signature
+                // data so Code Directory digests are correct.
+                let placeholder_signature_len = builder.create_superblob(&builder.macho)?.len();
+                let placeholder_signature = b"\0".repeat(placeholder_signature_len + 1024);
 
-                create_macho_with_signature(self.macho_data(index), &builder.macho, &signature_data)
+                // TODO calling this twice could be undesirable, especially if using
+                // a timestamp server. Should we call in no-op mode or write a size
+                // estimation function instead?
+                let intermediate_macho_data = create_macho_with_signature(
+                    self.macho_data(index),
+                    &builder.macho,
+                    &placeholder_signature,
+                )?;
+
+                // A nice side-effect of this is that it catches bugs if we write malformed Mach-O!
+                let intermediate_macho =
+                    MachO::parse(&intermediate_macho_data, 0).map_err(SigningError::BinaryLoad)?;
+
+                let mut signature_data = builder.create_superblob(&intermediate_macho)?;
+
+                // The Mach-O writer adjusts load commands based on the signature length. So pad
+                // with NULLs to get to our placeholder length.
+                match signature_data.len().cmp(&placeholder_signature.len()) {
+                    Ordering::Greater => {
+                        return Err(SigningError::SignatureDataTooLarge);
+                    }
+                    Ordering::Equal => {}
+                    Ordering::Less => {
+                        signature_data.extend_from_slice(
+                            &b"\0".repeat(placeholder_signature.len() - signature_data.len()),
+                        );
+                    }
+                }
+
+                create_macho_with_signature(
+                    &intermediate_macho_data,
+                    &intermediate_macho,
+                    &signature_data,
+                )
             })
             .collect::<Result<Vec<_>, SigningError>>()?;
 
@@ -546,6 +603,9 @@ impl<'data, 'key> MachOSigner<'data, 'key> {
 /// Build Apple embedded signatures from parameters.
 ///
 /// This type provides a high-level interface for signing a Mach-O binary.
+///
+/// You probably want to use [MachOSigner] instead, as it provides more
+/// capabilities and is easier to use.
 #[derive(Debug)]
 pub struct MachOSignatureBuilder<'data, 'key> {
     /// The binary we are signing.
@@ -724,11 +784,15 @@ impl<'data, 'key> MachOSignatureBuilder<'data, 'key> {
     ///
     /// The superblob contains the code directory, any extra blobs, and an optional
     /// CMS structure containing a cryptographic signature.
-    pub fn create_superblob(&self) -> Result<Vec<u8>, SigningError> {
+    ///
+    /// This takes an explicit Mach-O to operate on due to a circular dependency
+    /// between writing out the Mach-O and digesting its content. See the note
+    /// in [MachOSigner] for details.
+    pub fn create_superblob(&self, macho: &MachO) -> Result<Vec<u8>, SigningError> {
         // By convention, the Code Directory goes first.
         let mut blobs = vec![(
             CodeSigningSlot::CodeDirectory,
-            self.create_code_directory()?
+            self.create_code_directory(macho)?
                 .to_vec()
                 .map_err(SigningError::MachO)?,
         )];
@@ -743,13 +807,17 @@ impl<'data, 'key> MachOSignatureBuilder<'data, 'key> {
     /// This becomes the content of the `EmbeddedSignature` blob in the `Signature` slot.
     ///
     /// This function will error if a signing key has not been specified.
-    pub fn create_cms_signature(&self) -> Result<Vec<u8>, SigningError> {
+    ///
+    /// This takes an explicit Mach-O to operate on due to a circular dependency
+    /// between writing out the Mach-O and digesting its content. See the note
+    /// in [MachOSigner] for details.
+    pub fn create_cms_signature(&self, macho: &MachO) -> Result<Vec<u8>, SigningError> {
         let (signing_key, signing_cert) = self
             .signing_key
             .as_ref()
             .ok_or(SigningError::NoSigningCertificate)?;
 
-        let code_directory = self.create_code_directory()?;
+        let code_directory = self.create_code_directory(macho)?;
         // We need the blob serialized content of the code directory to compute
         // the message digest using alternate data.
         let code_directory_raw = code_directory.to_vec().map_err(SigningError::MachO)?;
@@ -776,7 +844,14 @@ impl<'data, 'key> MachOSignatureBuilder<'data, 'key> {
     }
 
     /// Create the `CodeDirectory` for the current configuration.
-    pub fn create_code_directory(&self) -> Result<CodeDirectoryBlob<'static>, SigningError> {
+    ///
+    /// This takes an explicit Mach-O to operate on due to a circular dependency
+    /// between writing out the Mach-O and digesting its content. See the note
+    /// in [MachOSigner] for details.
+    pub fn create_code_directory(
+        &self,
+        macho: &MachO,
+    ) -> Result<CodeDirectoryBlob<'static>, SigningError> {
         // TODO support defining or filling in proper values for fields with
         // static values.
         let flags = self.cdflags.unwrap_or(0);
@@ -785,7 +860,7 @@ impl<'data, 'key> MachOSignatureBuilder<'data, 'key> {
         // is the file offset in the `__LINKEDIT` segment when the embedded signature
         // SuperBlob begins.
         let (code_limit, code_limit_64) =
-            match find_signature_data(&self.macho).map_err(SigningError::MachO)? {
+            match find_signature_data(macho).map_err(SigningError::MachO)? {
                 Some(sig) => {
                     // If binary already has signature data, take existing signature start offset.
                     let limit = sig.linkedit_signature_start_offset;
@@ -799,8 +874,7 @@ impl<'data, 'key> MachOSignatureBuilder<'data, 'key> {
                 None => {
                     // No existing signature in binary. Look for __LINKEDIT and use its
                     // end offset.
-                    match self
-                        .macho
+                    match macho
                         .segments
                         .iter()
                         .find(|x| matches!(x.name(), Ok("__LINKEDIT")))
@@ -815,7 +889,7 @@ impl<'data, 'key> MachOSignatureBuilder<'data, 'key> {
                             }
                         }
                         None => {
-                            let last_segment = self.macho.segments.iter().last().unwrap();
+                            let last_segment = macho.segments.iter().last().unwrap();
                             let limit = last_segment.fileoff as usize + last_segment.data.len();
 
                             if limit > u32::MAX as usize {
@@ -831,11 +905,10 @@ impl<'data, 'key> MachOSignatureBuilder<'data, 'key> {
         let platform = 0;
         let page_size = 4096u32;
 
-        let code_hashes =
-            compute_code_hashes(&self.macho, self.hash_type, Some(page_size as usize))?
-                .into_iter()
-                .map(|v| Hash { data: v.into() })
-                .collect::<Vec<_>>();
+        let code_hashes = compute_code_hashes(macho, self.hash_type, Some(page_size as usize))?
+            .into_iter()
+            .map(|v| Hash { data: v.into() })
+            .collect::<Vec<_>>();
 
         let special_hashes = self
             .create_special_blobs()?
