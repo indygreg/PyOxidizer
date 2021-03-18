@@ -41,8 +41,8 @@ of sub-records. A *SuperBlob* header defines the signing data format, the
 length of data to follow, and the number of sub-sections, or *Blob* within.
 Each *Blob* occupies a defined *slot*. *Slots* are effectively well-known
 pieces of signing data. These include a *Code Directory*, *Entitlements*,
-and a *Signature*, among others. See the [CodeSigningSlot] enumeration for
-the known defined slots.
+and a *Signature*, among others. See the [crate::CodeSigningSlot]
+enumeration for the known defined slots.
 
 Each *Blob* contains its own header magic effectively identifying the
 content type within and how bytes should be interpreted. The magic
@@ -198,6 +198,25 @@ data structures accordingly. In many cases, an existing code signature
 can be replaced by truncating the `__LINKEDIT` section, writing the
 replacement data, and updating sizes/offsets in-place in the segments
 index and `LC_CODE_SIGNATURE` load command.
+
+Note that there is a chicken-and-egg problem related to writing the
+Mach-O binary and computing the digests of that binary for the *Code
+Directory*! The *Code Directory* needs to compute a digest over the
+content of the Mach-O file up until the signature data. But this needs
+to be done before a CMS signature is produced, as we need to digest
+the *Code Directory* for a CMS signed attribute. We also need to know
+the size of the CMS signature, as it is part of the signature data
+embedded in the Mach-O binary and its size needs to be recorded in
+the `LC_CODE_SIGNATURE` load command and segment definitions, which
+are hashed by the *Code Directory*. This is a circular dependency. A
+trick to working around it is to pad the Mach-O signature data with
+extra NULLs and record this extra long value in `LC_CODE_SIGNATURE`
+before code digests are computed. The *SuperBlob* parser appears to
+be lenient about this solution. Further note that calculating the
+exact final length before CMS signature generation may be impossible
+due to the CMS signature being non-deterministic (due to the use of
+signing times and timestamp servers tokens, which could be variable
+length).
 
 # How Verification Works
 
