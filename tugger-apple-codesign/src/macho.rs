@@ -76,7 +76,7 @@ const CSSLOT_IDENTIFICATIONSLOT: u32 = 0x10001;
 const CSSLOT_TICKETSLOT: u32 = 0x10002;
 
 /// Defines a typed slot within code signing data.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub enum CodeSigningSlot {
     CodeDirectory,
     Info,
@@ -94,6 +94,50 @@ pub enum CodeSigningSlot {
     Identification,
     Ticket,
     Unknown(u32),
+}
+
+impl std::fmt::Debug for CodeSigningSlot {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::CodeDirectory => {
+                f.write_fmt(format_args!("CodeDirectory ({})", u32::from(*self)))
+            }
+            Self::Info => f.write_fmt(format_args!("Info ({})", u32::from(*self))),
+            Self::Requirements => f.write_fmt(format_args!("Requirements ({})", u32::from(*self))),
+            Self::ResourceDir => f.write_fmt(format_args!("Resources ({})", u32::from(*self))),
+            Self::Application => f.write_fmt(format_args!("Application ({})", u32::from(*self))),
+            Self::Entitlements => f.write_fmt(format_args!("Entitlements ({})", u32::from(*self))),
+            Self::SecuritySettings => {
+                f.write_fmt(format_args!("SecuritySettings ({})", u32::from(*self)))
+            }
+            Self::AlternateCodeDirectory0 => f.write_fmt(format_args!(
+                "CodeDirectory Alternate #0 ({})",
+                u32::from(*self)
+            )),
+            Self::AlternateCodeDirectory1 => f.write_fmt(format_args!(
+                "CodeDirectory Alternate #1 ({})",
+                u32::from(*self)
+            )),
+            Self::AlternateCodeDirectory2 => f.write_fmt(format_args!(
+                "CodeDirectory Alternate #2 ({})",
+                u32::from(*self)
+            )),
+            Self::AlternateCodeDirectory3 => f.write_fmt(format_args!(
+                "CodeDirectory Alternate #3 ({})",
+                u32::from(*self)
+            )),
+            Self::AlternateCodeDirectory4 => f.write_fmt(format_args!(
+                "CodeDirectory Alternate #4 ({})",
+                u32::from(*self)
+            )),
+            Self::Signature => f.write_fmt(format_args!("CMS Signature ({})", u32::from(*self))),
+            Self::Identification => {
+                f.write_fmt(format_args!("Identification ({})", u32::from(*self)))
+            }
+            Self::Ticket => f.write_fmt(format_args!("Ticket ({})", u32::from(*self))),
+            Self::Unknown(value) => f.write_fmt(format_args!("Unknown ({})", value)),
+        }
+    }
 }
 
 impl From<u32> for CodeSigningSlot {
