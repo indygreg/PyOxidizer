@@ -41,7 +41,7 @@ of sub-records. A *SuperBlob* header defines the signing data format, the
 length of data to follow, and the number of sub-sections, or *Blob* within.
 Each *Blob* occupies a defined *slot*. *Slots* are effectively well-known
 pieces of signing data. These include a *Code Directory*, *Entitlements*,
-and a *Signature*, among others. See the `CodeSigningSlot` enumeration for
+and a *Signature*, among others. See the [CodeSigningSlot] enumeration for
 the known defined slots.
 
 Each *Blob* contains its own header magic effectively identifying the
@@ -186,12 +186,11 @@ Mach-O binary. An appropriate `LC_CODE_SIGNATURE` load command is
 also written to the Mach-O binary to instruct where the *SuperBlob*
 data resides.
 
-The `__LINKEDIT` segment is often the last segment in the Mach-O
-binary and the *SuperBlob* often occupies the final bytes of the
-`__LINKEDIT` segment. So in many cases adding code signature data
-to a Mach-O requires simple file appends for the `__LINKEDIT`
-data. And stripping or replacing the data can be performed via
-a truncation.
+The `__LINKEDIT` segment is the last segment in the Mach-O binary and
+the *SuperBlob* often occupies the final bytes of the `__LINKEDIT`
+segment. So in many cases adding code signature data to a Mach-O
+requires an optional truncation to remove the existing signature then
+file appends for the `__LINKEDIT` data.
 
 However, insertion or removal of `LC_CODE_SIGNATURE` will require
 rewriting the entire file and adjusting offsets in various Mach-O
