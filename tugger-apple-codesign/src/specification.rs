@@ -300,4 +300,28 @@ data like the embedded entitlements and code requirement statement are read very
 early during binary loading so an appropriate trust policy can be applied to
 the binary.
 
+# Unknowns
+
+## cdhash entries in `files2` code resources plist
+
+The `CodeResources` XML plist file has entries in its `files2` section that
+look like the following:
+
+```xml
+<key>MacOS/XUL</key>
+<dict>
+  <key>cdhash</key>
+  <data>NevNMzQBub9OjomMUAk2xBumyHM=</data>
+  <key>requirement</key>
+  <string>anchor apple generic and ...</string>
+</dict>
+```
+
+That `cdhash` seems to imply *Code Directory hash* and the data is a base64
+encoded hash. But it isn't clear what data is being digested to obtain it. We
+only see nested binaries enumerated here (not the *main* binary for the
+bundle). So this is possibly a digest of the code directory data for already
+signed binaries. But it is unclear how that digest is being calculated, as
+there can be multiple code directories in a fat binary.
+
 */
