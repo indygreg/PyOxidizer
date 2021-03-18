@@ -1265,7 +1265,23 @@ impl<'a> Blob<'a> for CodeDirectoryBlob<'a> {
         let ident_offset_cursor_position = cursor.position();
         cursor.iowrite_with(0u32, scroll::BE)?;
         assert_eq!(cursor.position(), 0x10);
-        cursor.iowrite_with(self.special_hashes.len() as u32, scroll::BE)?;
+
+        // Hash offsets and counts are wonky. The recorded hash offset is the beginning
+        // of code hashes and special hashes are in "negative" indices before
+        // that offset. Hashes are also at the index of their CSSLOT_ constant.
+        // e.g. Code Directory is the first element in the specials array because
+        // it is slot 0. This means we need to write out empty hashes for missing
+        // special slots. Our local specials HashMap may not have all entries. So compute
+        // how many specials there should be and write that here. We'll insert placeholder
+        // digests later.
+        let highest_slot = self
+            .special_hashes
+            .keys()
+            .map(|slot| u32::from(*slot))
+            .max()
+            .unwrap_or(0);
+
+        cursor.iowrite_with(highest_slot as u32, scroll::BE)?;
         cursor.iowrite_with(self.code_hashes.len() as u32, scroll::BE)?;
         cursor.iowrite_with(self.code_limit, scroll::BE)?;
         cursor.iowrite_with(self.hash_size, scroll::BE)?;
@@ -1338,26 +1354,15 @@ impl<'a> Blob<'a> for CodeDirectoryBlob<'a> {
             }
         }
 
-        // Hash offsets are wonky. The recorded hash offset is the beginning
-        // of code hashes and special hashes are in "negative" indices before
-        // that offset. Hashes are also at the index of their CSSLOT_ constant.
-        // e.g. Code Directory is the first element in the specials array because
-        // it is slot 0. This means we need to write out empty hashes for missing
-        // special slots.
         // TODO consider aligning cursor on page boundary here for performance?
 
-        if let Some(highest_slot) = self
-            .special_hashes
-            .keys()
-            .map(|slot| u32::from(*slot))
-            .max()
-        {
-            for slot_index in 0..highest_slot + 1 {
-                if let Some(hash) = self.special_hashes.get(&CodeSigningSlot::from(slot_index)) {
-                    cursor.write_all(&hash.data)?;
-                } else {
-                    cursor.write_all(&b"\0".repeat(self.hash_size as usize))?;
-                }
+        // The boundary conditions are a bit wonky here. We want to go from greatest
+        // to smallest, not writing index 0 because that's the first code digest.
+        for slot_index in (1..highest_slot + 1).rev() {
+            if let Some(hash) = self.special_hashes.get(&CodeSigningSlot::from(slot_index)) {
+                cursor.write_all(&hash.data)?;
+            } else {
+                cursor.write_all(&b"\0".repeat(self.hash_size as usize))?;
             }
         }
 
