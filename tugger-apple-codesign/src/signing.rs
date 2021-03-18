@@ -391,10 +391,13 @@ pub struct MachOSigner<'data, 'key> {
     /// Raw data backing parsed Mach-O binary.
     macho_data: &'data [u8],
 
+    /// Parsed Mach-O binaries.
+    machos: Vec<MachO<'data>>,
+
     /// Mach-O signature builders used by this instance.
     ///
     /// A vector for each binary in a universal binary source.
-    signature_builders: Vec<MachOSignatureBuilder<'data, 'key>>,
+    signature_builders: Vec<MachOSignatureBuilder<'key>>,
 }
 
 impl<'data, 'key> MachOSigner<'data, 'key> {
@@ -405,26 +408,44 @@ impl<'data, 'key> MachOSigner<'data, 'key> {
     pub fn new(macho_data: &'data [u8]) -> Result<Self, NotSignableError> {
         let mach = Mach::parse(macho_data)?;
 
-        let signature_builders = match mach {
-            Mach::Binary(macho) => vec![MachOSignatureBuilder::new(macho)?],
-            Mach::Fat(multiarch) => (0..multiarch.narches)
-                .into_iter()
-                .map(|index| MachOSignatureBuilder::new(multiarch.get(index)?))
-                .collect::<Result<Vec<_>, NotSignableError>>()?,
+        let (machos, signature_builders) = match mach {
+            Mach::Binary(macho) => {
+                check_signing_capability(&macho)?;
+
+                (vec![macho], vec![MachOSignatureBuilder::new()?])
+            }
+            Mach::Fat(multiarch) => {
+                let mut machos = vec![];
+                let mut builders = vec![];
+
+                for index in 0..multiarch.narches {
+                    let macho = multiarch.get(index)?;
+                    check_signing_capability(&macho)?;
+
+                    machos.push(macho);
+                    builders.push(MachOSignatureBuilder::new()?);
+                }
+
+                (machos, builders)
+            }
         };
 
         Ok(Self {
             macho_data,
+            machos,
             signature_builders,
         })
     }
 
     /// See [MachOSignatureBuilder::load_existing_signature_context].
     pub fn load_existing_signature_context(&mut self) -> Result<(), MachOError> {
+        let machos = &self.machos;
+
         self.signature_builders = self
             .signature_builders
             .drain(..)
-            .map(|builder| builder.load_existing_signature_context())
+            .enumerate()
+            .map(|(index, builder)| builder.load_existing_signature_context(&machos[index]))
             .collect::<Result<Vec<_>, _>>()?;
 
         Ok(())
@@ -490,9 +511,11 @@ impl<'data, 'key> MachOSigner<'data, 'key> {
             .iter()
             .enumerate()
             .map(|(index, builder)| {
+                let original_macho = &self.machos[index];
+
                 // Derive an intermediate Mach-O with placeholder NULLs for signature
                 // data so Code Directory digests are correct.
-                let placeholder_signature_len = builder.create_superblob(&builder.macho)?.len();
+                let placeholder_signature_len = builder.create_superblob(original_macho)?.len();
                 let placeholder_signature = b"\0".repeat(placeholder_signature_len + 1024);
 
                 // TODO calling this twice could be undesirable, especially if using
@@ -500,7 +523,7 @@ impl<'data, 'key> MachOSigner<'data, 'key> {
                 // estimation function instead?
                 let intermediate_macho_data = create_macho_with_signature(
                     self.macho_data(index),
-                    &builder.macho,
+                    original_macho,
                     &placeholder_signature,
                 )?;
 
@@ -607,10 +630,7 @@ impl<'data, 'key> MachOSigner<'data, 'key> {
 /// You probably want to use [MachOSigner] instead, as it provides more
 /// capabilities and is easier to use.
 #[derive(Debug)]
-pub struct MachOSignatureBuilder<'data, 'key> {
-    /// The binary we are signing.
-    macho: MachO<'data>,
-
+pub struct MachOSignatureBuilder<'key> {
     /// Identifier string for the binary.
     ///
     /// This is likely the `CFBundleIdentifier` value from the `Info.plist` in a bundle.
@@ -651,20 +671,10 @@ pub struct MachOSignatureBuilder<'data, 'key> {
     certificates: Vec<Certificate>,
 }
 
-impl<'data, 'key> MachOSignatureBuilder<'data, 'key> {
+impl<'key> MachOSignatureBuilder<'key> {
     /// Create an instance that will sign a MachO binary.
-    ///
-    /// `macho_data` contains the raw data of an existing Mach-O binary. It will
-    /// be parsed as Mach-O.
-    ///
-    /// We do not accept a `goblin::mach::MachO` instance because as part of rewriting
-    /// the binary we need to get access to the original bytes of the binary, which
-    /// goblin's API doesn't expose to us.
-    pub fn new(macho: MachO<'data>) -> Result<Self, NotSignableError> {
-        check_signing_capability(&macho)?;
-
+    pub fn new() -> Result<Self, NotSignableError> {
         Ok(Self {
-            macho,
             identifier: None,
             hash_type: HashType::Sha256,
             entitlements: None,
@@ -685,8 +695,8 @@ impl<'data, 'key> MachOSignatureBuilder<'data, 'key> {
     /// settings should be carried forward.
     ///
     /// If the binary has no signature data, this function does nothing.
-    pub fn load_existing_signature_context(mut self) -> Result<Self, MachOError> {
-        if let Some(signature) = find_signature_data(&self.macho)? {
+    pub fn load_existing_signature_context(mut self, macho: &MachO) -> Result<Self, MachOError> {
+        if let Some(signature) = find_signature_data(macho)? {
             let signature = EmbeddedSignature::from_bytes(signature.signature_data)?;
 
             if let Some(cd) = signature.code_directory()? {
