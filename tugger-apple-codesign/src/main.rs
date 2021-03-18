@@ -10,6 +10,8 @@ mod macho;
 mod signing;
 #[allow(unused)]
 mod specification;
+#[allow(unused)]
+mod verify;
 
 use {
     crate::{
@@ -92,6 +94,7 @@ enum AppError {
     Cms(CmsError),
     NotSignable(NotSignableError),
     Signing(SigningError),
+    VerificationProblems,
 }
 
 impl std::fmt::Display for AppError {
@@ -108,6 +111,7 @@ impl std::fmt::Display for AppError {
             Self::Cms(e) => f.write_fmt(format_args!("CMS error: {}", e)),
             Self::NotSignable(e) => f.write_fmt(format_args!("binary not signable: {}", e)),
             Self::Signing(e) => f.write_fmt(format_args!("signing error: {}", e)),
+            Self::VerificationProblems => f.write_str("problems reported during verification"),
         }
     }
 }
@@ -411,6 +415,26 @@ fn command_sign(args: &ArgMatches) -> Result<(), AppError> {
     Ok(())
 }
 
+fn command_verify(args: &ArgMatches) -> Result<(), AppError> {
+    let path = args.value_of("path").ok_or(AppError::BadArgument)?;
+
+    let data = std::fs::read(path)?;
+
+    let problems = verify::verify_macho_data(&data);
+
+    for problem in &problems {
+        println!("{}", problem);
+    }
+
+    if problems.is_empty() {
+        eprintln!("no problems detected!");
+        eprintln!("(we do not verify everything so please do not assume that the signature meets Apple standards)");
+        Ok(())
+    } else {
+        Err(AppError::VerificationProblems)
+    }
+}
+
 fn main_impl() -> Result<(), AppError> {
     let matches = App::new("Oxidized Apple Codesigning")
         .setting(AppSettings::ArgRequiredElseHelp)
@@ -503,12 +527,22 @@ fn main_impl() -> Result<(), AppError> {
                         .help("Path to signed Mach-O binary to write"),
                 ),
         )
+        .subcommand(
+            SubCommand::with_name("verify")
+                .about("Verifies code signature data")
+                .arg(
+                    Arg::with_name("path")
+                        .required(true)
+                        .help("Path of Mach-O binary to examine"),
+                ),
+        )
         .get_matches();
 
     match matches.subcommand() {
         ("compute-code-hashes", Some(args)) => command_compute_code_hashes(args),
         ("extract", Some(args)) => command_extract(args),
         ("sign", Some(args)) => command_sign(args),
+        ("verify", Some(args)) => command_verify(args),
         _ => Err(AppError::UnknownCommand),
     }
 }

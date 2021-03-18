@@ -98,3 +98,5 @@ pub use macho::*;
 mod signing;
 pub use signing::*;
 pub mod specification;
+mod verify;
+pub use verify::*;
