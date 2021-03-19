@@ -48,6 +48,11 @@ const OID_ECDSA_SHA256: ConstOid = Oid(&[42, 134, 72, 206, 61, 4, 3, 2]);
 /// 1.2.840.10045.2.1
 const OID_EC_PUBLIC_KEY: ConstOid = Oid(&[42, 134, 72, 206, 61, 2, 1]);
 
+/// Edwards curve digital signature algorithm.
+///
+/// 1.3.101.112
+const OID_ED25519: ConstOid = Oid(&[43, 101, 112]);
+
 /// A hashing algorithm used for digesting data.
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum DigestAlgorithm {
@@ -214,6 +219,9 @@ pub enum CertificateKeyAlgorithm {
 
     /// Corresponds to OID 1.2.840.10045.2.1
     Ec,
+
+    /// Corresponds to OID 1.3.101.112
+    Ed25519,
 }
 
 impl TryFrom<&Oid> for CertificateKeyAlgorithm {
@@ -224,6 +232,8 @@ impl TryFrom<&Oid> for CertificateKeyAlgorithm {
             Ok(Self::Rsa)
         } else if v == &OID_EC_PUBLIC_KEY {
             Ok(Self::Ec)
+        } else if v == &OID_ED25519 {
+            Ok(Self::Ed25519)
         } else {
             Err(CmsError::UnknownSignatureAlgorithm(v.clone()))
         }
@@ -243,6 +253,7 @@ impl From<CertificateKeyAlgorithm> for Oid {
         match v {
             CertificateKeyAlgorithm::Rsa => Oid(Bytes::copy_from_slice(OID_RSA.as_ref())),
             CertificateKeyAlgorithm::Ec => Oid(Bytes::copy_from_slice(OID_EC_PUBLIC_KEY.as_ref())),
+            CertificateKeyAlgorithm::Ed25519 => Oid(Bytes::copy_from_slice(OID_ED25519.as_ref())),
         }
     }
 }
@@ -287,6 +298,9 @@ impl SigningKey {
                 ecdsa_signing_algorithm,
                 data,
             )?)),
+            CertificateKeyAlgorithm::Ed25519 => {
+                Ok(Self::Ed25519(Ed25519KeyPair::from_pkcs8(data)?))
+            }
         }
     }
 
@@ -389,5 +403,23 @@ mod test {
 
         let signing_key = SigningKey::from_pkcs8_pem(pem_data.as_bytes(), None).unwrap();
         assert!(matches!(signing_key, SigningKey::Ecdsa(_)));
+    }
+
+    #[test]
+    fn signing_key_from_ed25519_pkcs8() {
+        let rng = ring::rand::SystemRandom::new();
+
+        let doc = ring::signature::Ed25519KeyPair::generate_pkcs8(&rng).unwrap();
+
+        let signing_key = SigningKey::from_pkcs8_der(doc.as_ref(), None).unwrap();
+        assert!(matches!(signing_key, SigningKey::Ed25519(_)));
+
+        let pem_data = pem::encode(&pem::Pem {
+            tag: "PRIVATE KEY".to_string(),
+            contents: doc.as_ref().to_vec(),
+        });
+
+        let signing_key = SigningKey::from_pkcs8_pem(pem_data.as_bytes(), None).unwrap();
+        assert!(matches!(signing_key, SigningKey::Ed25519(_)));
     }
 }
