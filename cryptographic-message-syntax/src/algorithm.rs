@@ -423,6 +423,16 @@ mod test {
 
         let signing_key = SigningKey::from_pkcs8_pem(pem_data.as_bytes(), None).unwrap();
         assert!(matches!(signing_key, SigningKey::Ecdsa(_)));
+
+        let key_pair_asn1 = Constructed::decode(doc.as_ref(), bcder::Mode::Der, |cons| {
+            OneAsymmetricKey::take_from(cons)
+        })
+        .unwrap();
+        assert_eq!(
+            key_pair_asn1.private_key_algorithm.algorithm,
+            OID_EC_PUBLIC_KEY
+        );
+        assert!(key_pair_asn1.private_key_algorithm.parameters.is_some());
     }
 
     #[test]
@@ -441,5 +451,15 @@ mod test {
 
         let signing_key = SigningKey::from_pkcs8_pem(pem_data.as_bytes(), None).unwrap();
         assert!(matches!(signing_key, SigningKey::Ed25519(_)));
+
+        let key_pair_asn1 = Constructed::decode(doc.as_ref(), bcder::Mode::Der, |cons| {
+            OneAsymmetricKey::take_from(cons)
+        })
+        .unwrap();
+        assert_eq!(
+            key_pair_asn1.private_key_algorithm.algorithm,
+            OID_ED25519_SIGNATURE_ALGORITHM
+        );
+        assert!(key_pair_asn1.private_key_algorithm.parameters.is_none());
     }
 }
