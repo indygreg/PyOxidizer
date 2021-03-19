@@ -5,12 +5,13 @@
 //! ASN.1 primitives from RFC 5958.
 
 use {
-    crate::asn1::rfc5280::AlgorithmIdentifier,
+    crate::asn1::{rfc5280::AlgorithmIdentifier, rfc5915::EcPrivateKey},
     bcder::{
         decode::{Constructed, Malformed, Source, Unimplemented},
         encode::{self, PrimitiveContent, Values},
-        BitString, Integer, OctetString, Tag,
+        BitString, Integer, Mode, OctetString, Tag,
     },
+    std::convert::TryFrom,
 };
 
 /// A single asymmetric key.
@@ -111,7 +112,20 @@ impl From<Version> for u8 {
 }
 
 /// Private key data.
+///
+/// This is actually an [crate::asn1::rfc5915::EcPrivateKey] stored as an
+/// OctetString.
 pub type PrivateKey = OctetString;
+
+impl TryFrom<&PrivateKey> for EcPrivateKey {
+    type Error = bcder::decode::Error;
+
+    fn try_from(v: &PrivateKey) -> Result<Self, Self::Error> {
+        Constructed::decode(v.as_slice().ok_or(Malformed)?, Mode::Der, |cons| {
+            EcPrivateKey::take_from(cons)
+        })
+    }
+}
 
 /// Public key data.
 pub type PublicKey = BitString;
@@ -133,9 +147,19 @@ mod test {
         )
         .unwrap();
 
-        Constructed::decode(doc.as_ref(), Mode::Der, |cons| {
+        ring::signature::EcdsaKeyPair::from_pkcs8(
+            &ring::signature::ECDSA_P256_SHA256_ASN1_SIGNING,
+            doc.as_ref(),
+        )
+        .unwrap();
+
+        let key = Constructed::decode(doc.as_ref(), Mode::Der, |cons| {
             OneAsymmetricKey::take_from(cons)
         })
         .unwrap();
+
+        let private_key = EcPrivateKey::try_from(&key.private_key).unwrap();
+        assert_eq!(private_key.version, Integer::from(1));
+        assert!(private_key.parameters.is_none());
     }
 }

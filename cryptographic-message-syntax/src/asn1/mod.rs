@@ -9,5 +9,7 @@ pub mod rfc3280;
 pub mod rfc3281;
 pub mod rfc4519;
 pub mod rfc5280;
+pub mod rfc5480;
 pub mod rfc5652;
+pub mod rfc5915;
 pub mod rfc5958;
