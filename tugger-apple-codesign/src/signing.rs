@@ -478,6 +478,17 @@ impl<'data, 'key> MachOSigner<'data, 'key> {
             .collect::<Vec<_>>()
     }
 
+    /// See [MachOSignatureBuilder::code_resources_content].
+    pub fn code_resources_data(&mut self, data: &[u8]) -> Result<(), SigningError> {
+        self.signature_builders = self
+            .signature_builders
+            .drain(..)
+            .map(|builder| builder.code_resources_data(data))
+            .collect::<Result<Vec<_>, SigningError>>()?;
+
+        Ok(())
+    }
+
     /// See [MachOSignatureBuilder::chain_certificate_der].
     pub fn chain_certificate_der(&mut self, data: impl AsRef<[u8]>) -> Result<(), SigningError> {
         self.signature_builders = self
@@ -661,6 +672,9 @@ pub struct MachOSignatureBuilder<'key> {
     /// Corresponds to `CodeDirectory`'s `runtime` field.
     runtime: Option<u32>,
 
+    /// Digest of the `CodeResources` XML plist file.
+    resources_digest: Option<Hash<'static>>,
+
     /// The key pair to cryptographically sign with.
     ///
     /// Optional because we can write an embedded signature with just the
@@ -682,6 +696,7 @@ impl<'key> MachOSignatureBuilder<'key> {
             cdflags: None,
             executable_segment_flags: None,
             runtime: None,
+            resources_digest: None,
             signing_key: None,
             certificates: vec![],
         })
@@ -705,6 +720,10 @@ impl<'key> MachOSignatureBuilder<'key> {
                 self.cdflags = Some(cd.flags);
                 self.executable_segment_flags = cd.exec_seg_flags;
                 self.runtime = cd.runtime;
+
+                if let Some(digest) = cd.special_hashes.get(&CodeSigningSlot::ResourceDir) {
+                    self.resources_digest = Some(digest.to_owned());
+                }
             }
 
             if let Some(blob) = signature.code_requirements()? {
@@ -760,6 +779,25 @@ impl<'key> MachOSignatureBuilder<'key> {
         self.executable_segment_flags.replace(flags);
 
         self
+    }
+
+    /// Define the code resources content.
+    ///
+    /// Signatures can reference the digest of an external *Code Resources*
+    /// file defining external files and their digests. This file likely exists
+    /// as a `_CodeSignature/CodeResources` file inside the bundle.
+    ///
+    /// This function tells us what the raw content of that file is so that
+    /// content can be digested and the digest included in the code directory.
+    ///
+    /// The value passed here should be the raw content of the XML plist defining
+    /// code resources metadata.
+    pub fn code_resources_data(mut self, data: &[u8]) -> Result<Self, SigningError> {
+        self.resources_digest.replace(Hash {
+            data: self.hash_type.digest(data)?.into(),
+        });
+
+        Ok(self)
     }
 
     /// Add a DER encoded X.509 public certificate to the signing chain.
@@ -922,7 +960,7 @@ impl<'key> MachOSignatureBuilder<'key> {
             .map(|v| Hash { data: v.into() })
             .collect::<Vec<_>>();
 
-        let special_hashes = self
+        let mut special_hashes = self
             .create_special_blobs()?
             .into_iter()
             .map(|(slot, data)| {
@@ -934,6 +972,13 @@ impl<'key> MachOSignatureBuilder<'key> {
                 ))
             })
             .collect::<Result<HashMap<_, _>, DigestError>>()?;
+
+        // Add the resources digest, if defined and not a placeholder.
+        if let Some(resources_digest) = &self.resources_digest {
+            if !resources_digest.is_null() {
+                special_hashes.insert(CodeSigningSlot::ResourceDir, resources_digest.to_owned());
+            }
+        }
 
         let ident = self.identifier.clone().ok_or(SigningError::NoIdentifier)?;
 

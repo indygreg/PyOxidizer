@@ -402,6 +402,7 @@ fn command_extract(args: &ArgMatches) -> Result<(), AppError> {
 fn command_sign(args: &ArgMatches) -> Result<(), AppError> {
     let input_path = args.value_of("input_path").ok_or(AppError::BadArgument)?;
     let output_path = args.value_of("output_path").ok_or(AppError::BadArgument)?;
+    let code_resources_path = args.value_of("code_resources").map(PathBuf::from);
     let entitlement_path = args.value_of("entitlement").map(PathBuf::from);
 
     println!("signing {}", input_path);
@@ -409,11 +410,17 @@ fn command_sign(args: &ArgMatches) -> Result<(), AppError> {
 
     println!("parsing Mach-O");
     let mut signer = MachOSigner::new(&macho_data)?;
+    signer.load_existing_signature_context()?;
+
+    if let Some(code_resources_path) = code_resources_path {
+        let code_resources_data = std::fs::read(code_resources_path)?;
+        signer.code_resources_data(&code_resources_data)?;
+    }
+
     if let Some(entitlement_path) = entitlement_path {
         let entitlement_data = std::fs::read_to_string(entitlement_path)?;
         signer.set_entitlements_string(&entitlement_data);
     }
-    signer.load_existing_signature_context()?;
 
     println!("writing {}", output_path);
     let mut fh = std::fs::File::create(output_path)?;
@@ -523,6 +530,12 @@ fn main_impl() -> Result<(), AppError> {
         .subcommand(
             SubCommand::with_name("sign")
                 .about("Adds a code signature to a Mach-O binary")
+                .arg(
+                    Arg::with_name("code_resources")
+                        .long("code-resources")
+                        .takes_value(true)
+                        .help("Path to an XML plist file containing code resources"),
+                )
                 .arg(
                     Arg::with_name("entitlement")
                         .long("entitlement")

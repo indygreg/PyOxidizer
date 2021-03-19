@@ -1046,6 +1046,11 @@ pub struct Hash<'a> {
 }
 
 impl<'a> Hash<'a> {
+    /// Whether this is the null hash (all 0s).
+    pub fn is_null(&self) -> bool {
+        self.data.iter().all(|b| *b == 0)
+    }
+
     pub fn to_vec(&self) -> Vec<u8> {
         self.data.to_vec()
     }
