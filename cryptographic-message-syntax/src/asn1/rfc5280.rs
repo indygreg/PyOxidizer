@@ -352,7 +352,7 @@ impl SubjectPublicKeyInfo {
 /// ```ASN.1
 /// Extensions  ::=  SEQUENCE SIZE (1..MAX) OF Extension
 /// ```
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Extensions(Vec<Extension>);
 
 impl Extensions {
@@ -370,6 +370,20 @@ impl Extensions {
 
     pub fn encode_ref(&self) -> impl Values + '_ {
         encode::sequence(&self.0)
+    }
+}
+
+impl Deref for Extensions {
+    type Target = Vec<Extension>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for Extensions {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
     }
 }
 

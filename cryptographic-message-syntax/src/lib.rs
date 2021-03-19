@@ -78,7 +78,7 @@ mod signing;
 
 pub use {
     algorithm::{CertificateKeyAlgorithm, DigestAlgorithm, SignatureAlgorithm, SigningKey},
-    certificate::Certificate,
+    certificate::{Certificate, RelativeDistinguishedName},
     signing::{SignedDataBuilder, SignerBuilder},
 };
 
@@ -153,6 +153,9 @@ pub enum CmsError {
 
     /// Attempted to use a `Certificate` but we couldn't find the backing data for it.
     CertificateMissingData,
+
+    /// Error occurred parsing a distinguished name field in a certificate.
+    DistinguishedNameParseError,
 }
 
 impl std::error::Error for CmsError {}
@@ -194,6 +197,9 @@ impl Display for CmsError {
             Self::Pem(e) => f.write_fmt(format_args!("PEM error: {}", e)),
             Self::SignatureCreation => f.write_str("error during signature creation"),
             Self::CertificateMissingData => f.write_str("certificate data not available"),
+            Self::DistinguishedNameParseError => {
+                f.write_str("could not parse distinguished name data")
+            }
         }
     }
 }

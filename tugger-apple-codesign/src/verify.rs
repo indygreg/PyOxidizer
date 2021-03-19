@@ -358,7 +358,7 @@ fn verify_cms_signature(data: &[u8], context: VerificationContext) -> Vec<Verifi
         }
 
         match signer.signature_algorithm() {
-            SignatureAlgorithm::Sha256Rsa => {}
+            SignatureAlgorithm::Sha256Rsa | SignatureAlgorithm::EcdsaSha256 => {}
             // RsaesPkcsV15 appears to be in widespread use. Should we still notify?
             SignatureAlgorithm::RsaesPkcsV15 | SignatureAlgorithm::Sha1Rsa => {
                 problems.push(VerificationProblem {

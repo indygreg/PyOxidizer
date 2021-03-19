@@ -7,14 +7,148 @@
 use {
     crate::{
         asn1::{
-            rfc3280::Name,
+            rfc3280::{self, AttributeTypeAndValue, DirectoryString, Name},
+            rfc4519::{
+                OID_COMMON_NAME, OID_COUNTRY_NAME, OID_ORGANIZATIONAL_UNIT_NAME,
+                OID_ORGANIZATION_NAME,
+            },
+            rfc5280,
             rfc5652::{CertificateChoices, IssuerAndSerialNumber},
         },
         CertificateKeyAlgorithm, CmsError,
     },
-    bcder::{decode::Constructed, Integer, Mode},
-    std::convert::{TryFrom, TryInto},
+    bcder::{
+        decode::{self, Constructed},
+        Integer, Mode, Oid, Utf8String,
+    },
+    bytes::Bytes,
+    std::{
+        convert::{TryFrom, TryInto},
+        str::FromStr,
+    },
 };
+
+/// Represents a Relative Distinguished Name (RDN).
+///
+/// These are what certificate subject and issuer fields are. Manipulating
+/// these yourself is hard. This type makes it easier.
+#[derive(Clone, Debug, Default)]
+pub struct RelativeDistinguishedName(rfc3280::RelativeDistinguishedName);
+
+impl RelativeDistinguishedName {
+    /// Obtain the Common Name (CN) field.
+    pub fn common_name(&self) -> Result<Option<String>, decode::Error> {
+        self.find_attribute_string(Oid(Bytes::from(OID_COMMON_NAME.as_ref())))
+    }
+
+    /// Set the value of the Common Name (CN) field.
+    pub fn set_common_name(&mut self, value: &str) -> Result<(), bcder::string::CharSetError> {
+        self.set_attribute_string(Oid(Bytes::from(OID_COMMON_NAME.as_ref())), value)
+    }
+
+    /// Obtain the Country Name (C) field.
+    pub fn country_name(&self) -> Result<Option<String>, decode::Error> {
+        self.find_attribute_string(Oid(Bytes::from(OID_COUNTRY_NAME.as_ref())))
+    }
+
+    /// Set the value of the Country Name (C) field.
+    pub fn set_country_name(&mut self, value: &str) -> Result<(), bcder::string::CharSetError> {
+        self.set_attribute_string(Oid(Bytes::from(OID_COUNTRY_NAME.as_ref())), value)
+    }
+
+    /// Obtain the Organization Name (O) field.
+    pub fn organization_name(&self) -> Result<Option<String>, decode::Error> {
+        self.find_attribute_string(Oid(Bytes::from(OID_ORGANIZATION_NAME.as_ref())))
+    }
+
+    /// Set the value of the Organization Name (O) field.
+    pub fn set_organization_name(
+        &mut self,
+        value: &str,
+    ) -> Result<(), bcder::string::CharSetError> {
+        self.set_attribute_string(Oid(Bytes::from(OID_ORGANIZATION_NAME.as_ref())), value)
+    }
+
+    /// Obtain the Organizational Unit Name (OU) field.
+    pub fn organizational_unit_name(&self) -> Result<Option<String>, decode::Error> {
+        self.find_attribute_string(Oid(Bytes::from(OID_ORGANIZATIONAL_UNIT_NAME.as_ref())))
+    }
+
+    /// Set the value of the Organizational Unit Name (OU) field.
+    pub fn set_organizational_unit_name(
+        &mut self,
+        value: &str,
+    ) -> Result<(), bcder::string::CharSetError> {
+        self.set_attribute_string(
+            Oid(Bytes::from(OID_ORGANIZATIONAL_UNIT_NAME.as_ref())),
+            value,
+        )
+    }
+
+    fn find_attribute(&self, attribute: Oid) -> Option<&AttributeTypeAndValue> {
+        self.0.iter().find(|attr| attr.typ == attribute)
+    }
+
+    fn find_attribute_mut(&mut self, attribute: Oid) -> Option<&mut AttributeTypeAndValue> {
+        self.0.iter_mut().find(|attr| attr.typ == attribute)
+    }
+
+    fn find_attribute_string(&self, attribute: Oid) -> Result<Option<String>, decode::Error> {
+        if let Some(attr) = self.find_attribute(attribute) {
+            attr.value.clone().decode(|cons| {
+                let value = DirectoryString::take_from(cons)?;
+
+                Ok(Some(value.to_string()))
+            })
+        } else {
+            Ok(None)
+        }
+    }
+
+    pub fn set_attribute_string(
+        &mut self,
+        attribute: Oid,
+        value: &str,
+    ) -> Result<(), bcder::string::CharSetError> {
+        let ds = DirectoryString::Utf8String(Utf8String::from_str(value)?);
+        let captured = bcder::Captured::from_values(Mode::Der, ds);
+
+        if let Some(mut attr) = self.find_attribute_mut(attribute.clone()) {
+            attr.value = captured;
+
+            Ok(())
+        } else {
+            self.0.push(AttributeTypeAndValue {
+                typ: attribute,
+                value: captured,
+            });
+
+            Ok(())
+        }
+    }
+}
+
+impl From<RelativeDistinguishedName> for Name {
+    fn from(rdn: RelativeDistinguishedName) -> Self {
+        let mut seq = rfc3280::RdnSequence::default();
+        seq.push(rdn.0);
+
+        Self::RdnSequence(seq)
+    }
+}
+
+impl TryFrom<&Name> for RelativeDistinguishedName {
+    type Error = CmsError;
+
+    fn try_from(name: &Name) -> Result<Self, Self::Error> {
+        match name {
+            Name::RdnSequence(seq) => match seq.iter().next() {
+                Some(rdn) => Ok(RelativeDistinguishedName(rdn.clone())),
+                None => Err(CmsError::DistinguishedNameParseError),
+            },
+        }
+    }
+}
 
 /// Defines an X.509 certificate used for signing data.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -39,10 +173,21 @@ pub struct Certificate {
     pub public_key: CertificatePublicKey,
 
     /// The parsed ASN.1 certificate backing this instance.
-    raw_cert: Option<crate::asn1::rfc5280::Certificate>,
+    raw_cert: Option<rfc5280::Certificate>,
 }
 
 impl Certificate {
+    /// Obtain an instance from an already parsed ASN.1 data structure.
+    pub fn from_parsed_asn1(cert: rfc5280::Certificate) -> Result<Self, CmsError> {
+        Ok(Self {
+            serial_number: cert.tbs_certificate.serial_number.clone(),
+            subject: cert.tbs_certificate.subject.clone(),
+            issuer: cert.tbs_certificate.issuer.clone(),
+            public_key: (&cert.tbs_certificate.subject_public_key_info).try_into()?,
+            raw_cert: Some(cert),
+        })
+    }
+
     pub fn from_der(data: &[u8]) -> Result<Self, CmsError> {
         let cert = Constructed::decode(data, Mode::Der, |cons| {
             crate::asn1::rfc5280::Certificate::take_from(cons)
@@ -77,11 +222,21 @@ impl Certificate {
         &self.subject
     }
 
+    /// Obtain the subject as a parsed object.
+    pub fn subject_dn(&self) -> Result<RelativeDistinguishedName, CmsError> {
+        RelativeDistinguishedName::try_from(&self.subject)
+    }
+
     /// The issuer of this certificate.
     ///
     /// (Used for identification purposes.)
     pub fn issuer(&self) -> &Name {
         &self.issuer
+    }
+
+    /// Obtain the issuer as a parsed object.
+    pub fn issuer_dn(&self) -> Result<RelativeDistinguishedName, CmsError> {
+        RelativeDistinguishedName::try_from(&self.issuer)
     }
 
     /// Obtain the public key associated with this certificate.

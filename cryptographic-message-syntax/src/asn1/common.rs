@@ -44,6 +44,12 @@ impl AsRef<chrono::DateTime<chrono::Utc>> for Time {
     }
 }
 
+impl From<chrono::DateTime<chrono::Utc>> for Time {
+    fn from(t: chrono::DateTime<chrono::Utc>) -> Self {
+        Self::UtcTime(UtcTime(t))
+    }
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct GeneralizedTime(chrono::DateTime<chrono::Utc>);
 

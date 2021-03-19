@@ -38,6 +38,16 @@ const OID_RSAES_PKCS_V15: ConstOid = Oid(&[42, 134, 72, 134, 247, 13, 1, 1, 1]);
 /// 1.2.840.113549.1.1.1
 const OID_RSA: ConstOid = Oid(&[42, 134, 72, 134, 247, 13, 1, 1, 1]);
 
+/// ECDSA with SHA-256.
+///
+/// 1.2.840.10045.4.3.2
+const OID_ECDSA_SHA256: ConstOid = Oid(&[42, 134, 72, 206, 61, 4, 3, 2]);
+
+/// Elliptic curve public key cryptography.
+///
+/// 1.2.840.10045.2.1
+const OID_EC_PUBLIC_KEY: ConstOid = Oid(&[42, 134, 72, 206, 61, 2, 1]);
+
 /// A hashing algorithm used for digesting data.
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum DigestAlgorithm {
@@ -113,6 +123,11 @@ pub enum SignatureAlgorithm {
     ///
     /// Corresponds to OID 1.2.840.113549.1.1.1.
     RsaesPkcsV15,
+
+    /// ECDSA with SHA-256.
+    ///
+    /// Corresponds to OID 1.2.840.10045.4.3.2.
+    EcdsaSha256,
 }
 
 impl SignatureAlgorithm {
@@ -120,7 +135,7 @@ impl SignatureAlgorithm {
     ///
     /// This enables you to easily obtain a ring signature verified based on
     /// the type of algorithm.
-    pub fn as_verification_algorithm(&self) -> &'static impl VerificationAlgorithm {
+    pub fn as_verification_algorithm(&self) -> &'static dyn VerificationAlgorithm {
         match self {
             SignatureAlgorithm::Sha1Rsa => {
                 &ring::signature::RSA_PKCS1_2048_8192_SHA1_FOR_LEGACY_USE_ONLY
@@ -129,6 +144,7 @@ impl SignatureAlgorithm {
             SignatureAlgorithm::RsaesPkcsV15 => {
                 &ring::signature::RSA_PKCS1_1024_8192_SHA256_FOR_LEGACY_USE_ONLY
             }
+            SignatureAlgorithm::EcdsaSha256 => &ring::signature::ECDSA_P256_SHA256_ASN1,
         }
     }
 }
@@ -143,6 +159,8 @@ impl TryFrom<&Oid> for SignatureAlgorithm {
             Ok(Self::Sha256Rsa)
         } else if v == &OID_RSAES_PKCS_V15 {
             Ok(Self::RsaesPkcsV15)
+        } else if v == &OID_ECDSA_SHA256 {
+            Ok(Self::EcdsaSha256)
         } else {
             Err(CmsError::UnknownSignatureAlgorithm(v.clone()))
         }
@@ -167,6 +185,9 @@ impl From<SignatureAlgorithm> for Oid {
             SignatureAlgorithm::RsaesPkcsV15 => {
                 Oid(Bytes::copy_from_slice(OID_RSAES_PKCS_V15.as_ref()))
             }
+            SignatureAlgorithm::EcdsaSha256 => {
+                Oid(Bytes::copy_from_slice(OID_ECDSA_SHA256.as_ref()))
+            }
         }
     }
 }
@@ -190,6 +211,9 @@ pub enum CertificateKeyAlgorithm {
     ///
     /// Corresponds to OID 1.2.840.113549.1.1.1.
     Rsa,
+
+    /// Corresponds to OID 1.2.840.10045.2.1
+    Ec,
 }
 
 impl TryFrom<&Oid> for CertificateKeyAlgorithm {
@@ -198,6 +222,8 @@ impl TryFrom<&Oid> for CertificateKeyAlgorithm {
     fn try_from(v: &Oid) -> Result<Self, Self::Error> {
         if v == &OID_RSA {
             Ok(Self::Rsa)
+        } else if v == &OID_EC_PUBLIC_KEY {
+            Ok(Self::Ec)
         } else {
             Err(CmsError::UnknownSignatureAlgorithm(v.clone()))
         }
@@ -216,6 +242,7 @@ impl From<CertificateKeyAlgorithm> for Oid {
     fn from(v: CertificateKeyAlgorithm) -> Self {
         match v {
             CertificateKeyAlgorithm::Rsa => Oid(Bytes::copy_from_slice(OID_RSA.as_ref())),
+            CertificateKeyAlgorithm::Ec => Oid(Bytes::copy_from_slice(OID_EC_PUBLIC_KEY.as_ref())),
         }
     }
 }
@@ -255,7 +282,18 @@ impl SigningKey {
 
                 Ok(signature)
             }
-            _ => unimplemented!(),
+            Self::Ecdsa(key) => {
+                let signature = key
+                    .sign(&ring::rand::SystemRandom::new(), message)
+                    .map_err(|_| CmsError::SignatureCreation)?;
+
+                Ok(signature.as_ref().to_vec())
+            }
+            Self::Ed25519(key) => {
+                let signature = key.sign(message);
+
+                Ok(signature.as_ref().to_vec())
+            }
         }
     }
 }
@@ -282,6 +320,7 @@ impl From<&SigningKey> for SignatureAlgorithm {
     fn from(key: &SigningKey) -> Self {
         match key {
             SigningKey::Rsa(_) => SignatureAlgorithm::Sha256Rsa,
+            SigningKey::Ecdsa(_) => SignatureAlgorithm::EcdsaSha256,
             _ => unimplemented!(),
         }
     }

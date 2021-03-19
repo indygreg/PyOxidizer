@@ -4,11 +4,11 @@
 
 use {
     bcder::{
-        decode::{Constructed, Source},
+        decode::{Constructed, Error::Unimplemented, Source},
         encode,
         encode::{PrimitiveContent, Values},
         string::{Ia5String, PrintableString, Utf8String},
-        Captured, Mode, OctetString, Oid,
+        Captured, Mode, OctetString, Oid, Tag,
     },
     std::{
         io::Write,
@@ -81,6 +81,50 @@ pub enum DirectoryString {
     BmpString,
 }
 
+impl DirectoryString {
+    pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, S::Err> {
+        cons.take_value(|tag, content| {
+            if tag == Tag::PRINTABLE_STRING {
+                Ok(Self::PrintableString(PrintableString::from_content(
+                    content,
+                )?))
+            } else if tag == Tag::UTF8_STRING {
+                Ok(Self::Utf8String(Utf8String::from_content(content)?))
+            } else {
+                Err(Unimplemented.into())
+            }
+        })
+    }
+
+    pub fn encode_ref(&self) -> impl Values + '_ {
+        match self {
+            Self::PrintableString(ps) => (Some(ps.encode_ref()), None),
+            Self::Utf8String(s) => (None, Some(s.encode_ref())),
+            _ => unimplemented!(),
+        }
+    }
+}
+
+impl ToString for DirectoryString {
+    fn to_string(&self) -> String {
+        match self {
+            Self::PrintableString(s) => s.to_string(),
+            Self::Utf8String(s) => s.to_string(),
+            _ => unimplemented!(),
+        }
+    }
+}
+
+impl Values for DirectoryString {
+    fn encoded_len(&self, mode: Mode) -> usize {
+        self.encode_ref().encoded_len(mode)
+    }
+
+    fn write_encoded<W: Write>(&self, mode: Mode, target: &mut W) -> Result<(), std::io::Error> {
+        self.encode_ref().write_encoded(mode, target)
+    }
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Name {
     RdnSequence(RdnSequence),
@@ -98,7 +142,7 @@ impl Name {
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct RdnSequence(Vec<RelativeDistinguishedName>);
 
 impl Deref for RdnSequence {
@@ -141,7 +185,7 @@ pub type DistinguishedName = RdnSequence;
 /// RelativeDistinguishedName ::=
 ///   SET OF AttributeTypeAndValue
 /// ```
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct RelativeDistinguishedName(Vec<AttributeTypeAndValue>);
 
 impl Deref for RelativeDistinguishedName {
