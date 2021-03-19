@@ -48,10 +48,15 @@ const OID_ECDSA_SHA256: ConstOid = Oid(&[42, 134, 72, 206, 61, 4, 3, 2]);
 /// 1.2.840.10045.2.1
 const OID_EC_PUBLIC_KEY: ConstOid = Oid(&[42, 134, 72, 206, 61, 2, 1]);
 
+/// ED25519 key agreement.
+///
+/// 1.3.101.110
+const OID_ED25519_KEY_AGREEMENT: ConstOid = Oid(&[43, 101, 110]);
+
 /// Edwards curve digital signature algorithm.
 ///
 /// 1.3.101.112
-const OID_ED25519: ConstOid = Oid(&[43, 101, 112]);
+const OID_ED25519_SIGNATURE_ALGORITHM: ConstOid = Oid(&[43, 101, 112]);
 
 /// A hashing algorithm used for digesting data.
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
@@ -133,6 +138,11 @@ pub enum SignatureAlgorithm {
     ///
     /// Corresponds to OID 1.2.840.10045.4.3.2.
     EcdsaSha256,
+
+    /// ED25519
+    ///
+    /// Corresponds to OID 1.3.101.112.
+    Ed25519,
 }
 
 impl SignatureAlgorithm {
@@ -150,6 +160,7 @@ impl SignatureAlgorithm {
                 &ring::signature::RSA_PKCS1_1024_8192_SHA256_FOR_LEGACY_USE_ONLY
             }
             SignatureAlgorithm::EcdsaSha256 => &ring::signature::ECDSA_P256_SHA256_ASN1,
+            SignatureAlgorithm::Ed25519 => &ring::signature::ED25519,
         }
     }
 }
@@ -166,6 +177,8 @@ impl TryFrom<&Oid> for SignatureAlgorithm {
             Ok(Self::RsaesPkcsV15)
         } else if v == &OID_ECDSA_SHA256 {
             Ok(Self::EcdsaSha256)
+        } else if v == &OID_ED25519_SIGNATURE_ALGORITHM {
+            Ok(Self::Ed25519)
         } else {
             Err(CmsError::UnknownSignatureAlgorithm(v.clone()))
         }
@@ -193,6 +206,9 @@ impl From<SignatureAlgorithm> for Oid {
             SignatureAlgorithm::EcdsaSha256 => {
                 Oid(Bytes::copy_from_slice(OID_ECDSA_SHA256.as_ref()))
             }
+            SignatureAlgorithm::Ed25519 => Oid(Bytes::copy_from_slice(
+                OID_ED25519_SIGNATURE_ALGORITHM.as_ref(),
+            )),
         }
     }
 }
@@ -220,7 +236,7 @@ pub enum CertificateKeyAlgorithm {
     /// Corresponds to OID 1.2.840.10045.2.1
     Ec,
 
-    /// Corresponds to OID 1.3.101.112
+    /// Corresponds to OID 1.3.101.110
     Ed25519,
 }
 
@@ -232,7 +248,9 @@ impl TryFrom<&Oid> for CertificateKeyAlgorithm {
             Ok(Self::Rsa)
         } else if v == &OID_EC_PUBLIC_KEY {
             Ok(Self::Ec)
-        } else if v == &OID_ED25519 {
+        // ED25519 appears to use the signature algorithm OID for private key
+        // identification, so we need to accept both.
+        } else if v == &OID_ED25519_KEY_AGREEMENT || v == &OID_ED25519_SIGNATURE_ALGORITHM {
             Ok(Self::Ed25519)
         } else {
             Err(CmsError::UnknownSignatureAlgorithm(v.clone()))
@@ -253,7 +271,9 @@ impl From<CertificateKeyAlgorithm> for Oid {
         match v {
             CertificateKeyAlgorithm::Rsa => Oid(Bytes::copy_from_slice(OID_RSA.as_ref())),
             CertificateKeyAlgorithm::Ec => Oid(Bytes::copy_from_slice(OID_EC_PUBLIC_KEY.as_ref())),
-            CertificateKeyAlgorithm::Ed25519 => Oid(Bytes::copy_from_slice(OID_ED25519.as_ref())),
+            CertificateKeyAlgorithm::Ed25519 => {
+                Oid(Bytes::copy_from_slice(OID_ED25519_KEY_AGREEMENT.as_ref()))
+            }
         }
     }
 }
@@ -374,7 +394,7 @@ impl From<&SigningKey> for SignatureAlgorithm {
         match key {
             SigningKey::Rsa(_) => SignatureAlgorithm::Sha256Rsa,
             SigningKey::Ecdsa(_) => SignatureAlgorithm::EcdsaSha256,
-            _ => unimplemented!(),
+            SigningKey::Ed25519(_) => SignatureAlgorithm::Ed25519,
         }
     }
 }
