@@ -20,7 +20,7 @@ use {
         code_hash::compute_code_hashes,
         macho::{
             find_signature_data, parse_signature_data, Blob, CodeDirectoryBlob, CodeSigningSlot,
-            HashType, RequirementsBlob,
+            DigestType, RequirementsBlob,
         },
         signing::{MachOSigner, NotSignableError, SigningError},
     },
@@ -182,7 +182,7 @@ fn command_compute_code_hashes(args: &ArgMatches) -> Result<(), AppError> {
     let path = args.value_of("path").ok_or(AppError::BadArgument)?;
     let index = args.value_of("universal_index").unwrap();
     let index = usize::from_str(index).map_err(|_| AppError::BadArgument)?;
-    let hash_type = HashType::try_from(args.value_of("hash").unwrap())?;
+    let hash_type = DigestType::try_from(args.value_of("hash").unwrap())?;
     let page_size = if let Some(page_size) = args.value_of("page_size") {
         Some(usize::from_str(page_size).map_err(|_| AppError::BadArgument)?)
     } else {
@@ -382,14 +382,17 @@ fn command_extract(args: &ArgMatches) -> Result<(), AppError> {
                 println!("  end offset: {}", blob.offset + blob.length - 1);
                 println!("  slot: {:?}", blob.slot);
                 println!("  magic: {:?}", blob.magic);
-                println!("  sha1: {}", hex::encode(blob.digest_with(HashType::Sha1)?));
+                println!(
+                    "  sha1: {}",
+                    hex::encode(blob.digest_with(DigestType::Sha1)?)
+                );
                 println!(
                     "  sha256: {}",
-                    hex::encode(blob.digest_with(HashType::Sha256)?)
+                    hex::encode(blob.digest_with(DigestType::Sha256)?)
                 );
                 println!(
                     "  sha384: {}",
-                    hex::encode(blob.digest_with(HashType::Sha384)?)
+                    hex::encode(blob.digest_with(DigestType::Sha384)?)
                 );
             }
         }

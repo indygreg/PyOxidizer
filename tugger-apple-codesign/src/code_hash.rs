@@ -19,7 +19,7 @@ This module contains code related to reading and writing these so-called
 */
 
 use {
-    crate::macho::{find_signature_data, DigestError, HashType},
+    crate::macho::{find_signature_data, DigestError, DigestType},
     goblin::mach::MachO,
 };
 
@@ -32,7 +32,7 @@ use {
 /// This is likely used as part of computing code hashes.
 pub fn compute_paged_hashes(
     data: &[u8],
-    hash: HashType,
+    hash: DigestType,
     page_size: usize,
     max_offset: usize,
 ) -> Result<Vec<Vec<u8>>, DigestError> {
@@ -46,7 +46,7 @@ pub fn compute_paged_hashes(
 /// Compute code hashes for a Mach-O binary.
 pub fn compute_code_hashes(
     macho: &MachO,
-    hash_type: HashType,
+    hash_type: DigestType,
     page_size: Option<usize>,
 ) -> Result<Vec<Vec<u8>>, DigestError> {
     let signature = find_signature_data(macho).map_err(|_| DigestError::Unspecified)?;

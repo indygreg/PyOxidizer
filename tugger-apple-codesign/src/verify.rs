@@ -26,7 +26,7 @@ use {
         code_hash::compute_code_hashes,
         macho::{
             find_signature_data, parse_signature_data, CodeDirectoryBlob, CodeSigningSlot,
-            DigestError, EmbeddedSignature, HashType, MachOError,
+            DigestError, DigestType, EmbeddedSignature, MachOError,
         },
     },
     cryptographic_message_syntax::{CmsError, DigestAlgorithm, SignatureAlgorithm, SignedData},
@@ -57,7 +57,7 @@ pub enum VerificationProblemType {
     CmsError(CmsError),
     CmsOldSignatureAlgorithm(SignatureAlgorithm),
     NoCodeDirectory,
-    CodeDirectoryOldDigestAlgorithm(HashType),
+    CodeDirectoryOldDigestAlgorithm(DigestType),
     CodeDigestError(DigestError),
     CodeDigestMissingEntry(usize, Vec<u8>),
     CodeDigestExtraEntry(usize, Vec<u8>),
@@ -397,7 +397,7 @@ fn verify_code_directory(
     let mut problems = vec![];
 
     match cd.hash_type {
-        HashType::Sha256 | HashType::Sha384 => {}
+        DigestType::Sha256 | DigestType::Sha384 => {}
         hash_type => problems.push(VerificationProblem {
             context: context.clone(),
             problem: VerificationProblemType::CodeDirectoryOldDigestAlgorithm(hash_type),

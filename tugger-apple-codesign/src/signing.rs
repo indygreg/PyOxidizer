@@ -11,7 +11,7 @@ use {
         code_hash::compute_code_hashes,
         macho::{
             create_superblob, find_signature_data, Blob, CodeDirectoryBlob, CodeSigningMagic,
-            CodeSigningSlot, DigestError, EmbeddedSignature, EntitlementsBlob, Hash, HashType,
+            CodeSigningSlot, Digest, DigestError, DigestType, EmbeddedSignature, EntitlementsBlob,
             MachOError, RequirementsBlob,
         },
     },
@@ -225,7 +225,7 @@ pub fn create_code_directory_hashes_plist<'a>(
             let blob_data = cd.to_blob_bytes().map_err(SigningError::MachO)?;
 
             // SHA-1 is always used.
-            let digest = HashType::Sha1.digest(&blob_data)?;
+            let digest = DigestType::Sha1.digest(&blob_data)?;
 
             Ok(plist::Value::String(base64::encode(&digest)))
         })
@@ -649,7 +649,7 @@ pub struct MachOSignatureBuilder<'key> {
     identifier: Option<String>,
 
     /// Digest method to use.
-    hash_type: HashType,
+    hash_type: DigestType,
 
     /// Embedded entitlements data.
     entitlements: Option<EntitlementsBlob<'static>>,
@@ -673,7 +673,7 @@ pub struct MachOSignatureBuilder<'key> {
     runtime: Option<u32>,
 
     /// Digest of the `CodeResources` XML plist file.
-    resources_digest: Option<Hash<'static>>,
+    resources_digest: Option<Digest<'static>>,
 
     /// The key pair to cryptographically sign with.
     ///
@@ -690,7 +690,7 @@ impl<'key> MachOSignatureBuilder<'key> {
     pub fn new() -> Result<Self, NotSignableError> {
         Ok(Self {
             identifier: None,
-            hash_type: HashType::Sha256,
+            hash_type: DigestType::Sha256,
             entitlements: None,
             code_requirement: None,
             cdflags: None,
@@ -793,7 +793,7 @@ impl<'key> MachOSignatureBuilder<'key> {
     /// The value passed here should be the raw content of the XML plist defining
     /// code resources metadata.
     pub fn code_resources_data(mut self, data: &[u8]) -> Result<Self, SigningError> {
-        self.resources_digest.replace(Hash {
+        self.resources_digest.replace(Digest {
             data: self.hash_type.digest(data)?.into(),
         });
 
@@ -957,7 +957,7 @@ impl<'key> MachOSignatureBuilder<'key> {
 
         let code_hashes = compute_code_hashes(macho, self.hash_type, Some(page_size as usize))?
             .into_iter()
-            .map(|v| Hash { data: v.into() })
+            .map(|v| Digest { data: v.into() })
             .collect::<Vec<_>>();
 
         let mut special_hashes = self
@@ -966,7 +966,7 @@ impl<'key> MachOSignatureBuilder<'key> {
             .map(|(slot, data)| {
                 Ok((
                     slot,
-                    Hash {
+                    Digest {
                         data: self.hash_type.digest(&data)?.into(),
                     },
                 ))

@@ -645,7 +645,7 @@ impl<'a> BlobEntry<'a> {
     }
 
     /// Compute the content digest of this blob using the specified hash type.
-    pub fn digest_with(&self, hash: HashType) -> Result<Vec<u8>, DigestError> {
+    pub fn digest_with(&self, hash: DigestType) -> Result<Vec<u8>, DigestError> {
         hash.digest(&self.data)
     }
 }
@@ -662,7 +662,7 @@ pub struct ParsedBlob<'a> {
 
 impl<'a> ParsedBlob<'a> {
     /// Compute the content digest of this blob using the specified hash type.
-    pub fn digest_with(&self, hash: HashType) -> Result<Vec<u8>, DigestError> {
+    pub fn digest_with(&self, hash: DigestType) -> Result<Vec<u8>, DigestError> {
         hash.digest(&self.blob_entry.data)
     }
 }
@@ -717,7 +717,7 @@ where
     ///
     /// Default implementation calls [Blob::to_blob_bytes] and digests that, which
     /// should always be correct.
-    fn digest_with(&self, hash_type: HashType) -> Result<Vec<u8>, MachOError> {
+    fn digest_with(&self, hash_type: DigestType) -> Result<Vec<u8>, MachOError> {
         Ok(hash_type.digest(&self.to_blob_bytes()?)?)
     }
 }
@@ -953,9 +953,9 @@ impl std::fmt::Display for DigestError {
     }
 }
 
-/// Represents a hash type from a CS_HASHTYPE_* constants.
+/// Represents a digest type from a CS_HASHTYPE_* constants.
 #[derive(Clone, Copy, Debug)]
-pub enum HashType {
+pub enum DigestType {
     None,
     Sha1,
     Sha256,
@@ -964,7 +964,7 @@ pub enum HashType {
     Unknown(u8),
 }
 
-impl From<u8> for HashType {
+impl From<u8> for DigestType {
     fn from(v: u8) -> Self {
         match v {
             0 => Self::None,
@@ -977,20 +977,20 @@ impl From<u8> for HashType {
     }
 }
 
-impl From<HashType> for u8 {
-    fn from(v: HashType) -> u8 {
+impl From<DigestType> for u8 {
+    fn from(v: DigestType) -> u8 {
         match v {
-            HashType::None => 0,
-            HashType::Sha1 => CS_HASHTYPE_SHA1,
-            HashType::Sha256 => CS_HASHTYPE_SHA256,
-            HashType::Sha256Truncated => CS_HASHTYPE_SHA256_TRUNCATED,
-            HashType::Sha384 => CS_HASHTYPE_SHA384,
-            HashType::Unknown(v) => v,
+            DigestType::None => 0,
+            DigestType::Sha1 => CS_HASHTYPE_SHA1,
+            DigestType::Sha256 => CS_HASHTYPE_SHA256,
+            DigestType::Sha256Truncated => CS_HASHTYPE_SHA256_TRUNCATED,
+            DigestType::Sha384 => CS_HASHTYPE_SHA384,
+            DigestType::Unknown(v) => v,
         }
     }
 }
 
-impl TryFrom<&str> for HashType {
+impl TryFrom<&str> for DigestType {
     type Error = DigestError;
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
@@ -1005,7 +1005,7 @@ impl TryFrom<&str> for HashType {
     }
 }
 
-impl HashType {
+impl DigestType {
     /// Obtain the size of hashes for this hash type.
     pub fn hash_len(&self) -> Result<usize, DigestError> {
         Ok(self.digest(&[])?.len())
@@ -1041,11 +1041,11 @@ impl HashType {
     }
 }
 
-pub struct Hash<'a> {
+pub struct Digest<'a> {
     pub data: Cow<'a, [u8]>,
 }
 
-impl<'a> Hash<'a> {
+impl<'a> Digest<'a> {
     /// Whether this is the null hash (all 0s).
     pub fn is_null(&self) -> bool {
         self.data.iter().all(|b| *b == 0)
@@ -1055,23 +1055,23 @@ impl<'a> Hash<'a> {
         self.data.to_vec()
     }
 
-    pub fn to_owned(&self) -> Hash<'static> {
-        Hash {
+    pub fn to_owned(&self) -> Digest<'static> {
+        Digest {
             data: Cow::Owned(self.data.clone().into_owned()),
         }
     }
 }
 
-impl<'a> std::fmt::Debug for Hash<'a> {
+impl<'a> std::fmt::Debug for Digest<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(&hex::encode(&self.data))
     }
 }
 
-fn get_hashes(data: &[u8], offset: usize, count: usize, hash_size: usize) -> Vec<Hash<'_>> {
+fn get_hashes(data: &[u8], offset: usize, count: usize, hash_size: usize) -> Vec<Digest<'_>> {
     data[offset..offset + (count * hash_size)]
         .chunks(hash_size)
-        .map(|data| Hash { data: data.into() })
+        .map(|data| Digest { data: data.into() })
         .collect()
 }
 
@@ -1100,7 +1100,7 @@ pub struct CodeDirectoryBlob<'a> {
     /// Size of each hash in bytes.
     pub hash_size: u8,
     /// Type of hash.
-    pub hash_type: HashType,
+    pub hash_type: DigestType,
     /// Platform identifier. 0 if not platform binary.
     pub platform: u8,
     /// Page size in bytes. (stored as log u8)
@@ -1137,8 +1137,8 @@ pub struct CodeDirectoryBlob<'a> {
     // End of blob header data / start of derived data.
     pub ident: Cow<'a, str>,
     pub team_name: Option<Cow<'a, str>>,
-    pub code_hashes: Vec<Hash<'a>>,
-    pub special_hashes: HashMap<CodeSigningSlot, Hash<'a>>,
+    pub code_hashes: Vec<Digest<'a>>,
+    pub special_hashes: HashMap<CodeSigningSlot, Digest<'a>>,
 }
 
 impl<'a> Blob<'a> for CodeDirectoryBlob<'a> {
