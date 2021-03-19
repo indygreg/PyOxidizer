@@ -96,6 +96,8 @@
 //! If you'd like to learn about the technical underpinnings of code signing on Apple
 //! platforms, see [specification].
 
+mod certificate;
+pub use certificate::*;
 mod code_hash;
 pub use code_hash::*;
 mod code_resources;

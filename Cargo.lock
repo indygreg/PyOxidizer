@@ -3446,6 +3446,7 @@ dependencies = [
  "base64 0.13.0",
  "bcder",
  "bytes",
+ "chrono",
  "clap",
  "cryptographic-message-syntax",
  "goblin",

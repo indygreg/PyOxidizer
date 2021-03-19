@@ -3,6 +3,8 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 #[allow(unused)]
+mod certificate;
+#[allow(unused)]
 mod code_hash;
 #[allow(unused)]
 mod code_resources;
