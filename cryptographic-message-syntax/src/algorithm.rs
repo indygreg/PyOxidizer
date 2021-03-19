@@ -234,7 +234,7 @@ pub enum CertificateKeyAlgorithm {
     Rsa,
 
     /// Corresponds to OID 1.2.840.10045.2.1
-    Ec,
+    Ecdsa,
 
     /// Corresponds to OID 1.3.101.110
     Ed25519,
@@ -247,7 +247,7 @@ impl TryFrom<&Oid> for CertificateKeyAlgorithm {
         if v == &OID_RSA {
             Ok(Self::Rsa)
         } else if v == &OID_EC_PUBLIC_KEY {
-            Ok(Self::Ec)
+            Ok(Self::Ecdsa)
         // ED25519 appears to use the signature algorithm OID for private key
         // identification, so we need to accept both.
         } else if v == &OID_ED25519_KEY_AGREEMENT || v == &OID_ED25519_SIGNATURE_ALGORITHM {
@@ -270,7 +270,7 @@ impl From<CertificateKeyAlgorithm> for Oid {
     fn from(v: CertificateKeyAlgorithm) -> Self {
         match v {
             CertificateKeyAlgorithm::Rsa => Oid(Bytes::copy_from_slice(OID_RSA.as_ref())),
-            CertificateKeyAlgorithm::Ec => Oid(Bytes::copy_from_slice(OID_EC_PUBLIC_KEY.as_ref())),
+            CertificateKeyAlgorithm::Ecdsa => Oid(Bytes::copy_from_slice(OID_EC_PUBLIC_KEY.as_ref())),
             CertificateKeyAlgorithm::Ed25519 => {
                 Oid(Bytes::copy_from_slice(OID_ED25519_KEY_AGREEMENT.as_ref()))
             }
@@ -314,7 +314,7 @@ impl SigningKey {
 
         match algorithm {
             CertificateKeyAlgorithm::Rsa => Ok(Self::Rsa(RsaKeyPair::from_pkcs8(data)?)),
-            CertificateKeyAlgorithm::Ec => Ok(Self::Ecdsa(EcdsaKeyPair::from_pkcs8(
+            CertificateKeyAlgorithm::Ecdsa => Ok(Self::Ecdsa(EcdsaKeyPair::from_pkcs8(
                 ecdsa_signing_algorithm,
                 data,
             )?)),
