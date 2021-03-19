@@ -49,11 +49,16 @@
 //! * No Time-Stamp Protocol (TSP / RFC 3161) support. It is common for the CMS
 //!   signature to contain a token provided by a TSP server. While the core support
 //!   for adding this to the CMS signature is there, use is currently not turnkey.
-//! * No signed/sealed resources support. We haven't written the code to
-//!   parse/serialize this data structure.
+//! * Minimal signed resources support. We will preserve an existing referenced
+//!   file digest when re-signing a binary if signing settings are carried forward.
+//!   We support defining the content of the resources XML plist file so it can be
+//!   digested. We have minimal support for parsing these XML plist files. We do not
+//!   yet support mutating/building new resources XML plist files.
 //! * No bundle-based signing. We eventually want to provide an API where you
 //!   provide the path to a bundle (e.g. `/Applications/MyProgram.app`) and it
-//!   automatically finds and signs binaries.
+//!   automatically finds and signs binaries, automatically signing resources and
+//!   signing nested binaries in the correct order so all content digests are chained
+//!   and secure.
 //! * No turnkey support for signing keys. We want to make it easier for obtaining
 //!   signing keys (and their X.509 certificate chain) for use with this crate. It
 //!   should be possible to easily integrate with the OS's key store or hardware
