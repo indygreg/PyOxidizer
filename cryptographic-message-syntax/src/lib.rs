@@ -156,6 +156,9 @@ pub enum CmsError {
 
     /// Error occurred parsing a distinguished name field in a certificate.
     DistinguishedNameParseError,
+
+    /// Ring rejected loading a private key.
+    KeyRejected(ring::error::KeyRejected),
 }
 
 impl std::error::Error for CmsError {}
@@ -200,6 +203,9 @@ impl Display for CmsError {
             Self::DistinguishedNameParseError => {
                 f.write_str("could not parse distinguished name data")
             }
+            Self::KeyRejected(reason) => {
+                f.write_fmt(format_args!("private key rejected: {}", reason))
+            }
         }
     }
 }
@@ -219,6 +225,12 @@ impl From<std::io::Error> for CmsError {
 impl From<PemError> for CmsError {
     fn from(e: PemError) -> Self {
         Self::Pem(e)
+    }
+}
+
+impl From<ring::error::KeyRejected> for CmsError {
+    fn from(e: ring::error::KeyRejected) -> Self {
+        Self::KeyRejected(e)
     }
 }
 
