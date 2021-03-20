@@ -28,7 +28,9 @@ use {
         signing::{MachOSigner, NotSignableError, SigningError},
     },
     clap::{App, AppSettings, Arg, ArgMatches, SubCommand},
-    cryptographic_message_syntax::{CertificateKeyAlgorithm, CmsError, SignedData},
+    cryptographic_message_syntax::{
+        Certificate, CertificateKeyAlgorithm, CmsError, SignedData, SigningKey,
+    },
     goblin::mach::{Mach, MachO},
     std::{convert::TryFrom, io::Write, path::PathBuf, str::FromStr},
 };
@@ -51,6 +53,9 @@ cms-ber
 cms-pem
    Like cms-ber except it prints PEM encoded data, which is ASCII and
    safe to print to terminals.
+cms-raw
+   Print the payload of the CMS blob. This should be well-formed BER
+   encoded ASN.1 data.
 cms
    Print the ASN.1 decoded CMS data.
 code-directory-raw
@@ -100,6 +105,37 @@ load binaries signed with it.
 The command prints 2 PEM encoded blocks. One block is for the X.509 public
 certificate. The other is for the PKCS#8 private key (which can include
 the public key).
+";
+
+const SIGN_ABOUT: &str = "\
+Adds code signatures to a Mach-O binary.
+
+This command will at an embedded code signature to the specified Mach-O binary.
+It will then produce a new Mach-O binary at the path specified with embedded
+code signature data.
+
+The input path can be a single or multiple/fat/universal Mach-O binary. If
+a fat binary is given, each Mach-O within that binary will be signed using
+identical signing options.
+
+By default, the embedded code signature will only contains hashes of
+the binary and other important entities (such as entitlements and resources).
+To use a code signing key/certificate to derive a cryptographic signature,
+use the --pem-source argument to define paths to files containing PEM encoded
+certificate/key data. (e.g. files with \"===== BEGIN CERTIFICATE =====\").
+
+When reading PEM data for signing, there MUST be at least 1
+`BEGIN CERTIFICATE` and 1 `BEGIN PRIVATE KEY` section in the read data.
+(If you use the output from the `generate-self-signed-certificate` command,
+this should just work.) There must be exactly 1 `PRIVATE KEY` defined.
+And, the first `CERTIFICATE` is assumed to be paired with the `PRIVATE KEY`.
+All extra `CERTIFICATE` sections are assumed to belong to the CA chain.
+
+For best results, put your private key and its corresponding X.509 certificate
+in a single file. Then make it the first --pem-source argument. It is highly
+recommended to also include the X.509 certificates of the certificate signing
+chain, up to the root CA, as this lowers the risk of verification failures at
+run-time.
 ";
 
 const SUPPORTED_HASHES: &[&str; 5] = &["none", "sha1", "sha256", "sha256-truncated", "sha384"];
@@ -269,6 +305,14 @@ fn command_extract(args: &ArgMatches) -> Result<(), AppError> {
                         contents: cms.to_vec(),
                     })
                 );
+            } else {
+                eprintln!("no CMS data");
+            }
+        }
+        "cms-raw" => {
+            let embedded = parse_signature_data(&sig.signature_data)?;
+            if let Some(cms) = embedded.signature_data()? {
+                std::io::stdout().write_all(cms)?;
             } else {
                 eprintln!("no CMS data");
             }
@@ -482,6 +526,10 @@ fn command_sign(args: &ArgMatches) -> Result<(), AppError> {
     let output_path = args.value_of("output_path").ok_or(AppError::BadArgument)?;
     let code_resources_path = args.value_of("code_resources").map(PathBuf::from);
     let entitlement_path = args.value_of("entitlement").map(PathBuf::from);
+    let pem_sources = match args.values_of("pem_source") {
+        Some(values) => values.collect::<Vec<_>>(),
+        None => vec![],
+    };
 
     println!("signing {}", input_path);
     let macho_data = std::fs::read(input_path)?;
@@ -489,6 +537,51 @@ fn command_sign(args: &ArgMatches) -> Result<(), AppError> {
     println!("parsing Mach-O");
     let mut signer = MachOSigner::new(&macho_data)?;
     signer.load_existing_signature_context()?;
+
+    let mut private_keys = vec![];
+    let mut public_certificates = vec![];
+
+    for pem_source in pem_sources {
+        println!("reading PEM data from {}", pem_source);
+        let pem_data = std::fs::read(pem_source)?;
+
+        for pem in pem::parse_many(&pem_data) {
+            match pem.tag.as_str() {
+                "CERTIFICATE" => public_certificates.push(pem.contents),
+                "PRIVATE KEY" => private_keys.push(pem.contents),
+                tag => println!("(unhandled PEM tag {}; ignoring)", tag),
+            }
+        }
+    }
+
+    if private_keys.len() > 1 {
+        println!("at most 1 PRIVATE KEY can be present; aborting");
+        return Err(AppError::BadArgument);
+    }
+
+    let private = if private_keys.is_empty() {
+        None
+    } else {
+        Some(SigningKey::from_pkcs8_der(&private_keys[0], None)?)
+    };
+
+    if let Some(signing_key) = &private {
+        if public_certificates.is_empty() {
+            println!("a PRIVATE KEY requires a corresponding CERTIFICATE to pair with it");
+            return Err(AppError::BadArgument);
+        }
+
+        let cert = public_certificates.remove(0);
+        let cert = Certificate::from_der(&cert)?;
+
+        println!("registering signing key");
+        signer.signing_key(signing_key, cert);
+    }
+
+    for cert in public_certificates {
+        println!("registering extra X.509 certificate");
+        signer.chain_certificate_der(&cert)?;
+    }
 
     if let Some(code_resources_path) = code_resources_path {
         let code_resources_data = std::fs::read(code_resources_path)?;
@@ -580,6 +673,7 @@ fn main_impl() -> Result<(), AppError> {
                             "blobs",
                             "cms-ber",
                             "cms-pem",
+                            "cms-raw",
                             "cms",
                             "code-directory-raw",
                             "code-directory-serialized-raw",
@@ -649,6 +743,7 @@ fn main_impl() -> Result<(), AppError> {
         .subcommand(
             SubCommand::with_name("sign")
                 .about("Adds a code signature to a Mach-O binary")
+                .long_about(SIGN_ABOUT)
                 .arg(
                     Arg::with_name("code_resources")
                         .long("code-resources")
@@ -662,6 +757,13 @@ fn main_impl() -> Result<(), AppError> {
                         .required(false)
                         .takes_value(true)
                         .help("Path to a plist file containing entitlements"),
+                )
+                .arg(
+                    Arg::with_name("pem_source")
+                        .long("pem-source")
+                        .takes_value(true)
+                        .multiple(true)
+                        .help("Path to file containing PEM encoded certificate/key data"),
                 )
                 .arg(
                     Arg::with_name("input_path")

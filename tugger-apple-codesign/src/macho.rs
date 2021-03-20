@@ -1710,6 +1710,13 @@ impl<'a> std::fmt::Debug for BlobWrapperBlob<'a> {
     }
 }
 
+impl<'a> BlobWrapperBlob<'a> {
+    /// Construct an instance where the payload (post blob header) is given data.
+    pub fn from_data(data: &'a [u8]) -> BlobWrapperBlob<'a> {
+        Self { data }
+    }
+}
+
 /// Represents an unknown blob type.
 pub struct OtherBlob<'a> {
     pub magic: u32,

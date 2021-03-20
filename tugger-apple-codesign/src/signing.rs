@@ -10,9 +10,9 @@ use {
     crate::{
         code_hash::compute_code_hashes,
         macho::{
-            create_superblob, find_signature_data, Blob, CodeDirectoryBlob, CodeSigningMagic,
-            CodeSigningSlot, Digest, DigestError, DigestType, EmbeddedSignature, EntitlementsBlob,
-            MachOError, RequirementsBlob,
+            create_superblob, find_signature_data, Blob, BlobWrapperBlob, CodeDirectoryBlob,
+            CodeSigningMagic, CodeSigningSlot, Digest, DigestError, DigestType, EmbeddedSignature,
+            EntitlementsBlob, MachOError, RequirementsBlob,
         },
     },
     bytes::Bytes,
@@ -837,14 +837,26 @@ impl<'key> MachOSignatureBuilder<'key> {
     /// between writing out the Mach-O and digesting its content. See the note
     /// in [MachOSigner] for details.
     pub fn create_superblob(&self, macho: &MachO) -> Result<Vec<u8>, SigningError> {
+        let code_directory = self.create_code_directory(macho)?;
+
         // By convention, the Code Directory goes first.
         let mut blobs = vec![(
             CodeSigningSlot::CodeDirectory,
-            self.create_code_directory(macho)?
+            code_directory
                 .to_blob_bytes()
                 .map_err(SigningError::MachO)?,
         )];
         blobs.extend(self.create_special_blobs()?);
+
+        // And the CMS signature goes last.
+        if self.signing_key.is_some() {
+            blobs.push((
+                CodeSigningSlot::Signature,
+                BlobWrapperBlob::from_data(&self.create_cms_signature(&code_directory)?)
+                    .to_blob_bytes()
+                    .map_err(SigningError::MachO)?,
+            ));
+        }
 
         create_superblob(CodeSigningMagic::EmbeddedSignature, blobs.iter())
             .map_err(SigningError::MachO)
@@ -859,13 +871,15 @@ impl<'key> MachOSignatureBuilder<'key> {
     /// This takes an explicit Mach-O to operate on due to a circular dependency
     /// between writing out the Mach-O and digesting its content. See the note
     /// in [MachOSigner] for details.
-    pub fn create_cms_signature(&self, macho: &MachO) -> Result<Vec<u8>, SigningError> {
+    pub fn create_cms_signature(
+        &self,
+        code_directory: &CodeDirectoryBlob,
+    ) -> Result<Vec<u8>, SigningError> {
         let (signing_key, signing_cert) = self
             .signing_key
             .as_ref()
             .ok_or(SigningError::NoSigningCertificate)?;
 
-        let code_directory = self.create_code_directory(macho)?;
         // We need the blob serialized content of the code directory to compute
         // the message digest using alternate data.
         let code_directory_raw = code_directory
@@ -874,7 +888,7 @@ impl<'key> MachOSignatureBuilder<'key> {
 
         // We need an XML plist containing code directory hashes to include as a signed
         // attribute.
-        let code_directories = vec![&code_directory];
+        let code_directories = vec![code_directory];
         let code_directory_hashes_plist =
             create_code_directory_hashes_plist(code_directories.into_iter())?;
 
