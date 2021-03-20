@@ -19,6 +19,7 @@ use {
     },
     bcder::{
         decode::{self, Constructed},
+        encode::Values,
         Integer, Mode, Oid, Utf8String,
     },
     bytes::Bytes,
@@ -173,7 +174,7 @@ pub struct Certificate {
     pub public_key: CertificatePublicKey,
 
     /// The parsed ASN.1 certificate backing this instance.
-    raw_cert: Option<rfc5280::Certificate>,
+    raw_cert: rfc5280::Certificate,
 }
 
 impl Certificate {
@@ -184,7 +185,7 @@ impl Certificate {
             subject: cert.tbs_certificate.subject.clone(),
             issuer: cert.tbs_certificate.issuer.clone(),
             public_key: (&cert.tbs_certificate.subject_public_key_info).try_into()?,
-            raw_cert: Some(cert),
+            raw_cert: cert,
         })
     }
 
@@ -198,7 +199,7 @@ impl Certificate {
             subject: cert.tbs_certificate.subject.clone(),
             issuer: cert.tbs_certificate.issuer.clone(),
             public_key: (&cert.tbs_certificate.subject_public_key_info).try_into()?,
-            raw_cert: Some(cert),
+            raw_cert: cert,
         })
     }
 
@@ -248,8 +249,30 @@ impl Certificate {
     }
 
     /// Obtain the parsed certificate data structure backing this instance.
-    pub fn raw_certificate(&self) -> Option<&crate::asn1::rfc5280::Certificate> {
-        self.raw_cert.as_ref()
+    pub fn raw_certificate(&self) -> &crate::asn1::rfc5280::Certificate {
+        &self.raw_cert
+    }
+
+    /// Serialize this certificate to BER.
+    pub fn as_ber(&self) -> Result<Vec<u8>, CmsError> {
+        let mut res = Vec::<u8>::new();
+
+        self.raw_cert
+            .encode_ref()
+            .write_encoded(Mode::Ber, &mut res)?;
+
+        Ok(res)
+    }
+
+    /// Serialize this certificate to DER.
+    pub fn as_der(&self) -> Result<Vec<u8>, CmsError> {
+        let mut res = Vec::<u8>::new();
+
+        self.raw_cert
+            .encode_ref()
+            .write_encoded(Mode::Der, &mut res)?;
+
+        Ok(res)
     }
 }
 
@@ -280,7 +303,7 @@ impl TryFrom<&crate::asn1::rfc5280::Certificate> for Certificate {
             subject,
             issuer,
             public_key,
-            raw_cert: Some(cert.clone()),
+            raw_cert: cert.clone(),
         })
     }
 }

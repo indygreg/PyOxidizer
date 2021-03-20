@@ -159,11 +159,7 @@ impl<'a> SignedDataBuilder<'a> {
 
     /// Add a certificate defined by our crate's Certificate type.
     pub fn certificate(self, cert: Certificate) -> Result<Self, CmsError> {
-        if let Some(cert) = cert.raw_certificate() {
-            Ok(self.certificate_asn1(cert.clone()))
-        } else {
-            Err(CmsError::CertificateMissingData)
-        }
+        Ok(self.certificate_asn1(cert.raw_certificate().clone()))
     }
 
     /// Add multiple certificates to the certificates chain.
@@ -172,12 +168,9 @@ impl<'a> SignedDataBuilder<'a> {
         certs: impl Iterator<Item = Certificate>,
     ) -> Result<Self, CmsError> {
         for cert in certs {
-            if let Some(cert) = cert.raw_certificate() {
-                if !self.certificates.iter().any(|x| x == cert) {
-                    self.certificates.push(cert.clone());
-                }
-            } else {
-                return Err(CmsError::CertificateMissingData);
+            let cert = cert.raw_certificate();
+            if !self.certificates.iter().any(|x| x == cert) {
+                self.certificates.push(cert.clone());
             }
         }
 
@@ -193,10 +186,9 @@ impl<'a> SignedDataBuilder<'a> {
         for signer in &self.signers {
             seen_digest_algorithms.insert(signer.digest_algorithm);
 
-            if let Some(cert) = signer.signing_certificate.raw_certificate() {
-                if !seen_certificates.iter().any(|x| x == cert) {
-                    seen_certificates.push(cert.clone());
-                }
+            let cert = signer.signing_certificate.raw_certificate();
+            if !seen_certificates.iter().any(|x| x == cert) {
+                seen_certificates.push(cert.clone());
             }
 
             let version = CMSVersion::V1;
