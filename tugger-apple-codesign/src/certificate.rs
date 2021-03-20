@@ -126,7 +126,14 @@ pub fn create_self_signed_code_signing_certificate(
     country_name: &str,
     email_address: &str,
     validity_duration: chrono::Duration,
-) -> Result<(cryptographic_message_syntax::Certificate, SigningKey), CertificateError> {
+) -> Result<
+    (
+        cryptographic_message_syntax::Certificate,
+        SigningKey,
+        Vec<u8>,
+    ),
+    CertificateError,
+> {
     let system_random = ring::rand::SystemRandom::new();
 
     let key_pair_document = match algorithm {
@@ -213,7 +220,7 @@ pub fn create_self_signed_code_signing_certificate(
 
     let cert = cryptographic_message_syntax::Certificate::from_parsed_asn1(cert)?;
 
-    Ok((cert, signing_key))
+    Ok((cert, signing_key, key_pair_document.as_ref().to_vec()))
 }
 
 #[cfg(test)]
@@ -249,7 +256,7 @@ mod tests {
 
     #[test]
     fn cms_self_signed_certificate_signing_ecdsa() {
-        let (cert, signing_key) = create_self_signed_code_signing_certificate(
+        let (cert, signing_key, _) = create_self_signed_code_signing_certificate(
             CertificateKeyAlgorithm::Ecdsa,
             "test",
             "US",
@@ -279,7 +286,7 @@ mod tests {
 
     #[test]
     fn cms_self_signed_certificate_signing_ed25519() {
-        let (cert, signing_key) = create_self_signed_code_signing_certificate(
+        let (cert, signing_key, _) = create_self_signed_code_signing_certificate(
             CertificateKeyAlgorithm::Ed25519,
             "test",
             "US",

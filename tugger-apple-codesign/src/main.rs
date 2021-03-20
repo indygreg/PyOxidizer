@@ -19,6 +19,7 @@ mod verify;
 
 use {
     crate::{
+        certificate::{create_self_signed_code_signing_certificate, CertificateError},
         code_hash::compute_code_hashes,
         macho::{
             find_signature_data, parse_signature_data, Blob, CodeDirectoryBlob, CodeSigningSlot,
@@ -27,7 +28,7 @@ use {
         signing::{MachOSigner, NotSignableError, SigningError},
     },
     clap::{App, AppSettings, Arg, ArgMatches, SubCommand},
-    cryptographic_message_syntax::{CmsError, SignedData},
+    cryptographic_message_syntax::{CertificateKeyAlgorithm, CmsError, SignedData},
     goblin::mach::{Mach, MachO},
     std::{convert::TryFrom, io::Write, path::PathBuf, str::FromStr},
 };
@@ -83,6 +84,24 @@ superblob
    records, including digests of every Blob.
 ";
 
+const GENERATE_SELF_SIGNED_CERTIFICATE_ABOUT: &str = "\
+Generate a self-signed certificate that can be used for code signing.
+
+This command will generate a new key pair using the algorithm of choice
+then create an X.509 certificate wrapper for it that is signed with the
+just-generated private key. The created X.509 certificate has extensions
+that mark it as appropriate for code signing.
+
+Certificates generated with this command can be useful for local testing.
+However, because it is a self-signed certificate and isn't signed by a
+trusted certificate authority, Apple operating systems may refuse to
+load binaries signed with it.
+
+The command prints 2 PEM encoded blocks. One block is for the X.509 public
+certificate. The other is for the PKCS#8 private key (which can include
+the public key).
+";
+
 const SUPPORTED_HASHES: &[&str; 5] = &["none", "sha1", "sha256", "sha256-truncated", "sha384"];
 
 #[derive(Debug)]
@@ -99,6 +118,7 @@ enum AppError {
     NotSignable(NotSignableError),
     Signing(SigningError),
     VerificationProblems,
+    Certificate(CertificateError),
 }
 
 impl std::fmt::Display for AppError {
@@ -116,6 +136,7 @@ impl std::fmt::Display for AppError {
             Self::NotSignable(e) => f.write_fmt(format_args!("binary not signable: {}", e)),
             Self::Signing(e) => f.write_fmt(format_args!("signing error: {}", e)),
             Self::VerificationProblems => f.write_str("problems reported during verification"),
+            Self::Certificate(e) => f.write_fmt(format_args!("certificate error: {}", e)),
         }
     }
 }
@@ -161,6 +182,12 @@ impl From<NotSignableError> for AppError {
 impl From<SigningError> for AppError {
     fn from(e: SigningError) -> Self {
         Self::Signing(e)
+    }
+}
+
+impl From<CertificateError> for AppError {
+    fn from(e: CertificateError) -> Self {
+        Self::Certificate(e)
     }
 }
 
@@ -404,6 +431,52 @@ fn command_extract(args: &ArgMatches) -> Result<(), AppError> {
     Ok(())
 }
 
+fn command_generate_self_signed_certificate(args: &ArgMatches) -> Result<(), AppError> {
+    let algorithm = match args.value_of("algorithm").ok_or(AppError::BadArgument)? {
+        "ecdsa" => CertificateKeyAlgorithm::Ecdsa,
+        "ed25519" => CertificateKeyAlgorithm::Ed25519,
+        value => panic!(
+            "algorithm values should have been validated by arg parser: {}",
+            value
+        ),
+    };
+
+    let common_name = args.value_of("common_name").ok_or(AppError::BadArgument)?;
+    let country_name = args.value_of("country_name").ok_or(AppError::BadArgument)?;
+    let email_address = args
+        .value_of("email_address")
+        .ok_or(AppError::BadArgument)?;
+    let validity_days = args.value_of("validity_days").unwrap();
+    let validity_days = i64::from_str(validity_days).map_err(|_| AppError::BadArgument)?;
+
+    let validity_duration = chrono::Duration::days(validity_days);
+
+    let (cert, _, raw) = create_self_signed_code_signing_certificate(
+        algorithm,
+        common_name,
+        country_name,
+        email_address,
+        validity_duration,
+    )?;
+
+    print!(
+        "{}",
+        pem::encode(&pem::Pem {
+            tag: "CERTIFICATE".to_string(),
+            contents: cert.as_ber()?,
+        })
+    );
+    print!(
+        "{}",
+        pem::encode(&pem::Pem {
+            tag: "PRIVATE KEY".to_string(),
+            contents: raw
+        })
+    );
+
+    Ok(())
+}
+
 fn command_sign(args: &ArgMatches) -> Result<(), AppError> {
     let input_path = args.value_of("input_path").ok_or(AppError::BadArgument)?;
     let output_path = args.value_of("output_path").ok_or(AppError::BadArgument)?;
@@ -533,6 +606,47 @@ fn main_impl() -> Result<(), AppError> {
                 ),
         )
         .subcommand(
+            SubCommand::with_name("generate-self-signed-certificate")
+                .about("Generate a self-signed certificate for code signing")
+                .long_about(GENERATE_SELF_SIGNED_CERTIFICATE_ABOUT)
+                .arg(
+                    Arg::with_name("algorithm")
+                        .long("algorithm")
+                        .takes_value(true)
+                        .possible_values(&["ecdsa", "ed25519"])
+                        .default_value("ecdsa")
+                        .help("Which key type to use"),
+                )
+                .arg(
+                    Arg::with_name("common_name")
+                        .long("common-name")
+                        .takes_value(true)
+                        .default_value("default-name")
+                        .help("Common Name (CN) value for certificate identifier"),
+                )
+                .arg(
+                    Arg::with_name("country_name")
+                        .long("country-name")
+                        .takes_value(true)
+                        .default_value("XX")
+                        .help("Country Name (C) value for certificate identifier"),
+                )
+                .arg(
+                    Arg::with_name("email_address")
+                        .long("email-address")
+                        .takes_value(true)
+                        .default_value("someone@example.com")
+                        .help("Email address value for certificate identifier"),
+                )
+                .arg(
+                    Arg::with_name("validity_days")
+                        .long("validity-days")
+                        .takes_value(true)
+                        .default_value("365")
+                        .help("How many days the certificate should be valid for"),
+                ),
+        )
+        .subcommand(
             SubCommand::with_name("sign")
                 .about("Adds a code signature to a Mach-O binary")
                 .arg(
@@ -574,6 +688,9 @@ fn main_impl() -> Result<(), AppError> {
     match matches.subcommand() {
         ("compute-code-hashes", Some(args)) => command_compute_code_hashes(args),
         ("extract", Some(args)) => command_extract(args),
+        ("generate-self-signed-certificate", Some(args)) => {
+            command_generate_self_signed_certificate(args)
+        }
         ("sign", Some(args)) => command_sign(args),
         ("verify", Some(args)) => command_verify(args),
         _ => Err(AppError::UnknownCommand),
