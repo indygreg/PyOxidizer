@@ -19,9 +19,9 @@ use {
             },
             rfc5958::OneAsymmetricKey,
         },
-        CmsError, RelativeDistinguishedName, SignatureAlgorithm, SigningKey,
+        CertificateKeyAlgorithm, CmsError, RelativeDistinguishedName, SigningKey,
     },
-    ring::signature::{EcdsaKeyPair, KeyPair, ECDSA_P256_SHA256_ASN1_SIGNING},
+    ring::signature::{EcdsaKeyPair, Ed25519KeyPair, ECDSA_P256_SHA256_ASN1_SIGNING},
 };
 
 /// Key Usage extension.
@@ -44,6 +44,9 @@ const OID_EMAIL_ADDRESS: ConstOid = Oid(&[42, 134, 72, 134, 247, 13, 1, 9, 1]);
 
 #[derive(Debug)]
 pub enum CertificateError {
+    /// A certificate key algorithm is not supported.
+    UnsupportedCertificateAlgorithm(CertificateKeyAlgorithm),
+
     /// An unspecified error in ring.
     Ring(ring::error::Unspecified),
 
@@ -63,6 +66,9 @@ pub enum CertificateError {
 impl std::fmt::Display for CertificateError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            Self::UnsupportedCertificateAlgorithm(alg) => {
+                f.write_fmt(format_args!("unsupported key algorithm: {:?}", alg))
+            }
             Self::Ring(e) => f.write_fmt(format_args!("error in ring: {}", e)),
             Self::Asn1Decode(e) => f.write_fmt(format_args!("error decoding ASN.1: {}", e)),
             Self::Io(e) => f.write_fmt(format_args!("I/O error: {}", e)),
@@ -115,23 +121,31 @@ impl From<bcder::string::CharSetError> for CertificateError {
 /// to proceed. Needless to say, only use certificates generated with this
 /// function for testing purposes only.
 pub fn create_self_signed_code_signing_certificate(
+    algorithm: CertificateKeyAlgorithm,
     common_name: &str,
     country_name: &str,
     email_address: &str,
     validity_duration: chrono::Duration,
 ) -> Result<(cryptographic_message_syntax::Certificate, SigningKey), CertificateError> {
     let system_random = ring::rand::SystemRandom::new();
-    let signing_algorithm = &ECDSA_P256_SHA256_ASN1_SIGNING;
 
-    let key_pair_document = EcdsaKeyPair::generate_pkcs8(signing_algorithm, &system_random)?;
+    let key_pair_document = match algorithm {
+        CertificateKeyAlgorithm::Ed25519 => Ed25519KeyPair::generate_pkcs8(&system_random)?,
+        CertificateKeyAlgorithm::Ecdsa => {
+            let signing_algorithm = &ECDSA_P256_SHA256_ASN1_SIGNING;
+            EcdsaKeyPair::generate_pkcs8(signing_algorithm, &system_random)?
+        }
+        CertificateKeyAlgorithm::Rsa => {
+            return Err(CertificateError::UnsupportedCertificateAlgorithm(algorithm));
+        }
+    };
 
     let key_pair_asn1 =
         bcder::decode::Constructed::decode(key_pair_document.as_ref(), Mode::Der, |cons| {
             OneAsymmetricKey::take_from(cons)
         })?;
 
-    let key_pair = EcdsaKeyPair::from_pkcs8(signing_algorithm, key_pair_document.as_ref())
-        .expect("why would ring reject a key pair it just generated?");
+    let signing_key = SigningKey::from_pkcs8_der(key_pair_document.as_ref(), None)?;
 
     let mut rdn = RelativeDistinguishedName::default();
     rdn.set_common_name(common_name)?;
@@ -163,10 +177,7 @@ pub fn create_self_signed_code_signing_certificate(
     let tbs_certificate = TbsCertificate {
         version: Version::V3,
         serial_number: 42.into(),
-        signature: AlgorithmIdentifier {
-            algorithm: SignatureAlgorithm::EcdsaSha256.into(),
-            parameters: None,
-        },
+        signature: algorithm.default_signature_algorithm_identifier(),
         issuer: rdn.clone().into(),
         validity: Validity {
             not_before: Time::from(now),
@@ -176,12 +187,9 @@ pub fn create_self_signed_code_signing_certificate(
         subject_public_key_info: SubjectPublicKeyInfo {
             algorithm: AlgorithmIdentifier {
                 algorithm: key_pair_asn1.private_key_algorithm.algorithm.clone(),
-                parameters: key_pair_asn1.private_key_algorithm.parameters.clone(),
+                parameters: key_pair_asn1.private_key_algorithm.parameters,
             },
-            subject_public_key: BitString::new(
-                0,
-                Bytes::copy_from_slice(key_pair.public_key().as_ref()),
-            ),
+            subject_public_key: BitString::new(0, Bytes::copy_from_slice(signing_key.public_key())),
         },
         issuer_unique_id: None,
         subject_unique_id: None,
@@ -195,20 +203,17 @@ pub fn create_self_signed_code_signing_certificate(
         .encode_ref()
         .write_encoded(Mode::Ber, &mut cert_ber)?;
 
-    let signature = key_pair.sign(&system_random, &cert_ber)?;
+    let signature = signing_key.sign(&cert_ber)?;
 
     let cert = Certificate {
         tbs_certificate,
-        signature_algorithm: AlgorithmIdentifier {
-            algorithm: SignatureAlgorithm::EcdsaSha256.into(),
-            parameters: None,
-        },
+        signature_algorithm: algorithm.default_signature_algorithm_identifier(),
         signature: BitString::new(0, Bytes::copy_from_slice(signature.as_ref())),
     };
 
     let cert = cryptographic_message_syntax::Certificate::from_parsed_asn1(cert)?;
 
-    Ok((cert, key_pair.into()))
+    Ok((cert, signing_key))
 }
 
 #[cfg(test)]
@@ -219,8 +224,9 @@ mod tests {
     };
 
     #[test]
-    fn generate_self_signed_certificate() {
+    fn generate_self_signed_certificate_ecdsa() {
         create_self_signed_code_signing_certificate(
+            CertificateKeyAlgorithm::Ecdsa,
             "test",
             "US",
             "nobody@example.com",
@@ -230,8 +236,51 @@ mod tests {
     }
 
     #[test]
-    fn cms_self_signed_certificate_signing() {
+    fn generate_self_signed_certificate_ed25519() {
+        create_self_signed_code_signing_certificate(
+            CertificateKeyAlgorithm::Ed25519,
+            "test",
+            "US",
+            "nobody@example.com",
+            chrono::Duration::hours(1),
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn cms_self_signed_certificate_signing_ecdsa() {
         let (cert, signing_key) = create_self_signed_code_signing_certificate(
+            CertificateKeyAlgorithm::Ecdsa,
+            "test",
+            "US",
+            "nobody@example.com",
+            chrono::Duration::hours(1),
+        )
+        .unwrap();
+
+        let plaintext = "hello, world";
+
+        let cms = SignedDataBuilder::default()
+            .certificate(cert.clone())
+            .unwrap()
+            .signed_content(plaintext.as_bytes().to_vec())
+            .signer(SignerBuilder::new(&signing_key, cert))
+            .build_ber()
+            .unwrap();
+
+        let signed_data = SignedData::parse_ber(&cms).unwrap();
+
+        for signer in signed_data.signers() {
+            signer
+                .verify_signature_with_signed_data(&signed_data)
+                .unwrap();
+        }
+    }
+
+    #[test]
+    fn cms_self_signed_certificate_signing_ed25519() {
+        let (cert, signing_key) = create_self_signed_code_signing_certificate(
+            CertificateKeyAlgorithm::Ed25519,
             "test",
             "US",
             "nobody@example.com",
