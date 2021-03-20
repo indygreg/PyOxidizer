@@ -3,12 +3,15 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    crate::{asn1::rfc5958::OneAsymmetricKey, CmsError},
+    crate::{
+        asn1::{rfc5280::AlgorithmIdentifier, rfc5958::OneAsymmetricKey},
+        CmsError,
+    },
     bcder::{decode::Constructed, ConstOid, Oid},
     bytes::Bytes,
     ring::{
         digest::SHA256,
-        signature::{EcdsaKeyPair, Ed25519KeyPair, RsaKeyPair, VerificationAlgorithm},
+        signature::{EcdsaKeyPair, Ed25519KeyPair, KeyPair, RsaKeyPair, VerificationAlgorithm},
     },
     std::convert::TryFrom,
 };
@@ -240,6 +243,25 @@ pub enum CertificateKeyAlgorithm {
     Ed25519,
 }
 
+impl CertificateKeyAlgorithm {
+    /// Obtain the OID of the default signature algorithm this key algorithm uses.
+    pub fn default_signature_algorithm_oid(&self) -> Oid {
+        match self {
+            Self::Rsa => SignatureAlgorithm::Sha256Rsa.into(),
+            Self::Ecdsa => SignatureAlgorithm::EcdsaSha256.into(),
+            Self::Ed25519 => SignatureAlgorithm::Ed25519.into(),
+        }
+    }
+
+    /// Obtain the default [AlgorithmIdentifier] that this key uses.
+    pub fn default_signature_algorithm_identifier(&self) -> AlgorithmIdentifier {
+        AlgorithmIdentifier {
+            algorithm: self.default_signature_algorithm_oid(),
+            parameters: None,
+        }
+    }
+}
+
 impl TryFrom<&Oid> for CertificateKeyAlgorithm {
     type Error = CmsError;
 
@@ -270,7 +292,9 @@ impl From<CertificateKeyAlgorithm> for Oid {
     fn from(v: CertificateKeyAlgorithm) -> Self {
         match v {
             CertificateKeyAlgorithm::Rsa => Oid(Bytes::copy_from_slice(OID_RSA.as_ref())),
-            CertificateKeyAlgorithm::Ecdsa => Oid(Bytes::copy_from_slice(OID_EC_PUBLIC_KEY.as_ref())),
+            CertificateKeyAlgorithm::Ecdsa => {
+                Oid(Bytes::copy_from_slice(OID_EC_PUBLIC_KEY.as_ref()))
+            }
             CertificateKeyAlgorithm::Ed25519 => {
                 Oid(Bytes::copy_from_slice(OID_ED25519_KEY_AGREEMENT.as_ref()))
             }
@@ -367,6 +391,15 @@ impl SigningKey {
 
                 Ok(signature.as_ref().to_vec())
             }
+        }
+    }
+
+    /// Obtain the raw bytes constituting the public key for this signing key.
+    pub fn public_key(&self) -> &[u8] {
+        match self {
+            Self::Rsa(key) => key.public_key().as_ref(),
+            Self::Ecdsa(key) => key.public_key().as_ref(),
+            Self::Ed25519(key) => key.public_key().as_ref(),
         }
     }
 }
