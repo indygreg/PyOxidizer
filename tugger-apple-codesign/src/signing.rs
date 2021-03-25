@@ -219,13 +219,13 @@ impl From<scroll::Error> for SigningError {
 /// This plist is embedded as a signed attribute in the CMS signature.
 pub fn create_code_directory_hashes_plist<'a>(
     code_directories: impl Iterator<Item = &'a CodeDirectoryBlob<'a>>,
+    digest_type: DigestType,
 ) -> Result<Vec<u8>, SigningError> {
     let hashes = code_directories
         .map(|cd| {
             let blob_data = cd.to_blob_bytes().map_err(SigningError::MachO)?;
 
-            // SHA-1 is always used.
-            let digest = DigestType::Sha1.digest(&blob_data)?;
+            let digest = digest_type.digest(&blob_data)?;
 
             Ok(plist::Value::String(base64::encode(&digest)))
         })
@@ -889,8 +889,10 @@ impl<'key> MachOSignatureBuilder<'key> {
         // We need an XML plist containing code directory hashes to include as a signed
         // attribute.
         let code_directories = vec![code_directory];
-        let code_directory_hashes_plist =
-            create_code_directory_hashes_plist(code_directories.into_iter())?;
+        let code_directory_hashes_plist = create_code_directory_hashes_plist(
+            code_directories.into_iter(),
+            code_directory.hash_type,
+        )?;
 
         let ber = SignedDataBuilder::default()
             .signer(
