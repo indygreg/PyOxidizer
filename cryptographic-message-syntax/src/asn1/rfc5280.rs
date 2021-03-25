@@ -356,20 +356,30 @@ impl SubjectPublicKeyInfo {
 pub struct Extensions(Vec<Extension>);
 
 impl Extensions {
+    pub fn take_opt_from<S: Source>(cons: &mut Constructed<S>) -> Result<Option<Self>, S::Err> {
+        cons.take_opt_sequence(|cons| Self::from_sequence(cons))
+    }
+
     pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, S::Err> {
-        cons.take_sequence(|cons| {
-            let mut extensions = Vec::new();
+        cons.take_sequence(|cons| Self::from_sequence(cons))
+    }
 
-            while let Some(extension) = Extension::take_opt_from(cons)? {
-                extensions.push(extension);
-            }
+    pub fn from_sequence<S: Source>(cons: &mut Constructed<S>) -> Result<Self, S::Err> {
+        let mut extensions = Vec::new();
 
-            Ok(Self(extensions))
-        })
+        while let Some(extension) = Extension::take_opt_from(cons)? {
+            extensions.push(extension);
+        }
+
+        Ok(Self(extensions))
     }
 
     pub fn encode_ref(&self) -> impl Values + '_ {
         encode::sequence(&self.0)
+    }
+
+    pub fn encode_ref_as(&self, tag: Tag) -> impl Values + '_ {
+        encode::sequence_as(tag, &self.0)
     }
 }
 

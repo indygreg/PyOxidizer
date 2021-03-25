@@ -75,6 +75,55 @@ pub const OID_SIGNING_TIME: ConstOid = Oid(&[42, 134, 72, 134, 247, 13, 1, 9, 5]
 /// 1.2.840.113549.1.9.6
 pub const OID_COUNTER_SIGNATURE: ConstOid = Oid(&[42, 134, 72, 134, 247, 13, 1, 9, 6]);
 
+/// Content info.
+///
+/// ```ASN.1
+/// ContentInfo ::= SEQUENCE {
+///   contentType ContentType,
+///   content [0] EXPLICIT ANY DEFINED BY contentType }
+/// ```
+#[derive(Clone, Debug)]
+pub struct ContentInfo {
+    pub content_type: ContentType,
+    pub content: Captured,
+}
+
+impl PartialEq for ContentInfo {
+    fn eq(&self, other: &Self) -> bool {
+        self.content_type == other.content_type
+            && self.content.as_slice() == other.content.as_slice()
+    }
+}
+
+impl Eq for ContentInfo {}
+
+impl ContentInfo {
+    pub fn take_opt_from<S: Source>(cons: &mut Constructed<S>) -> Result<Option<Self>, S::Err> {
+        cons.take_opt_sequence(|cons| Self::from_sequence(cons))
+    }
+
+    pub fn from_sequence<S: Source>(cons: &mut Constructed<S>) -> Result<Self, S::Err> {
+        let content_type = ContentType::take_from(cons)?;
+        let content = cons.take_constructed_if(Tag::CTX_0, |cons| cons.capture_all())?;
+
+        Ok(Self {
+            content_type,
+            content,
+        })
+    }
+}
+
+impl Values for ContentInfo {
+    fn encoded_len(&self, mode: Mode) -> usize {
+        encode::sequence((self.content_type.encode_ref(), &self.content)).encoded_len(mode)
+    }
+
+    fn write_encoded<W: Write>(&self, mode: Mode, target: &mut W) -> Result<(), std::io::Error> {
+        encode::sequence((self.content_type.encode_ref(), &self.content))
+            .write_encoded(mode, target)
+    }
+}
+
 /// Represents signed data.
 ///
 /// ASN.1 type specification:
