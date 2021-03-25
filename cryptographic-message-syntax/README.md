@@ -1,7 +1,8 @@
 # cryptographic-message-syntax
 
 `cryptographic-message-syntax` is a pure Rust implementation of
-Cryptographic Message Syntax (CMS) as defined by RFC 5652.
+Cryptographic Message Syntax (CMS) as defined by RFC 5652. Also included
+is Time-Stamp Protocol (TSP) (RFC 3161) client support.
 
 From a high level CMS defines a way to digitally sign and authenticate
 arbitrary content.

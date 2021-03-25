@@ -75,16 +75,19 @@ mod algorithm;
 pub mod asn1;
 mod certificate;
 mod signing;
+mod time_stamp_protocol;
 
 pub use {
     algorithm::{CertificateKeyAlgorithm, DigestAlgorithm, SignatureAlgorithm, SigningKey},
     certificate::{Certificate, RelativeDistinguishedName},
     signing::{SignedDataBuilder, SignerBuilder},
+    time_stamp_protocol::{time_stamp_message_http, time_stamp_request_http, TimeStampError},
 };
 
 use {
     crate::{
         asn1::{
+            rfc3161::OID_TIME_STAMP_TOKEN,
             rfc3280::Name,
             rfc5652::{
                 SignerIdentifier, Time, OID_CONTENT_TYPE, OID_MESSAGE_DIGEST, OID_SIGNING_TIME,
@@ -117,6 +120,9 @@ pub enum CmsError {
 
     /// The signing-time signed attribute is malformed.
     MalformedSignedAttributeSigningTime,
+
+    /// The time-stamp token unsigned attribute is malformed.
+    MalformedUnsignedAttributeTimeStampToken,
 
     /// Subject key identifiers in signer info is not supported.
     SubjectKeyIdentifierUnsupported,
@@ -159,6 +165,9 @@ pub enum CmsError {
 
     /// Ring rejected loading a private key.
     KeyRejected(ring::error::KeyRejected),
+
+    /// Error occurred in Time-Stamp Protocol.
+    TimeStampProtocol(TimeStampError),
 }
 
 impl std::error::Error for CmsError {}
@@ -181,6 +190,9 @@ impl Display for CmsError {
             }
             Self::MalformedSignedAttributeSigningTime => {
                 f.write_str("signing-time attribute in SignedAttributes is malformed")
+            }
+            Self::MalformedUnsignedAttributeTimeStampToken => {
+                f.write_str("time-stamp token attribute in UnsignedAttributes is malformed")
             }
             Self::SubjectKeyIdentifierUnsupported => {
                 f.write_str("signer info using subject key identifier is not supported")
@@ -205,6 +217,9 @@ impl Display for CmsError {
             }
             Self::KeyRejected(reason) => {
                 f.write_fmt(format_args!("private key rejected: {}", reason))
+            }
+            Self::TimeStampProtocol(e) => {
+                f.write_fmt(format_args!("Time-Stamp Protocol error: {}", e))
             }
         }
     }
@@ -231,6 +246,12 @@ impl From<PemError> for CmsError {
 impl From<ring::error::KeyRejected> for CmsError {
     fn from(e: ring::error::KeyRejected) -> Self {
         Self::KeyRejected(e)
+    }
+}
+
+impl From<TimeStampError> for CmsError {
+    fn from(e: TimeStampError) -> Self {
+        Self::TimeStampProtocol(e)
     }
 }
 
@@ -390,6 +411,9 @@ pub struct SignerInfo {
 
     /// Raw data constituting SignedAttributes that needs to be digested.
     digested_signed_attributes_data: Option<Vec<u8>>,
+
+    /// Parsed unsigned attributes.
+    unsigned_attributes: Option<UnsignedAttributes>,
 }
 
 impl SignerInfo {
@@ -421,6 +445,11 @@ impl SignerInfo {
     /// Obtain the `SignedAttributes` attached to this instance.
     pub fn signed_attributes(&self) -> Option<&SignedAttributes> {
         self.signed_attributes.as_ref()
+    }
+
+    /// Obtain the `UnsignedAttributes` attached to this instance.
+    pub fn unsigned_attributes(&self) -> Option<&UnsignedAttributes> {
+        self.unsigned_attributes.as_ref()
     }
 
     /// Verifies the signature defined by this signer given a `SignedData` instance.
@@ -717,6 +746,28 @@ impl TryFrom<&crate::asn1::rfc5652::SignerInfo> for SignerInfo {
 
         let digested_signed_attributes_data = signer_info.signed_attributes_digested_content()?;
 
+        let unsigned_attributes =
+            if let Some(attributes) = &signer_info.unsigned_attributes {
+                let time_stamp_token =
+                    attributes
+                        .iter()
+                        .find(|attr| attr.typ == OID_TIME_STAMP_TOKEN)
+                        .map(|attr| {
+                            if attr.values.len() != 1 {
+                                Err(CmsError::MalformedUnsignedAttributeTimeStampToken)
+                            } else {
+                                Ok(attr.values.get(0).unwrap().deref().clone().decode(|cons| {
+                                    crate::asn1::rfc5652::SignedData::decode(cons)
+                                })?)
+                            }
+                        })
+                        .transpose()?;
+
+                Some(UnsignedAttributes { time_stamp_token })
+            } else {
+                None
+            };
+
         Ok(SignerInfo {
             issuer,
             serial_number,
@@ -725,6 +776,7 @@ impl TryFrom<&crate::asn1::rfc5652::SignerInfo> for SignerInfo {
             signature,
             signed_attributes,
             digested_signed_attributes_data,
+            unsigned_attributes,
         })
     }
 }
@@ -744,6 +796,12 @@ pub struct SignedAttributes {
 
     /// The time the signature was created.
     signing_time: Option<chrono::DateTime<chrono::Utc>>,
+}
+
+#[derive(Clone, Debug)]
+pub struct UnsignedAttributes {
+    /// Time-Stamp Token from a Time-Stamp Protocol server.
+    time_stamp_token: Option<crate::asn1::rfc5652::SignedData>,
 }
 
 #[cfg(test)]

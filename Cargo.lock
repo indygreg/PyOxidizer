@@ -570,6 +570,7 @@ dependencies = [
  "bytes",
  "chrono",
  "pem",
+ "reqwest",
  "ring",
 ]
 

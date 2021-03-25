@@ -9,16 +9,18 @@ use {
         algorithm::{DigestAlgorithm, SignatureAlgorithm, SigningKey},
         asn1::{
             common::UtcTime,
+            rfc3161::OID_TIME_STAMP_TOKEN,
             rfc5652::{
                 Attribute, AttributeValue, CMSVersion, CertificateChoices, CertificateSet,
                 DigestAlgorithmIdentifier, DigestAlgorithmIdentifiers, EncapsulatedContentInfo,
                 IssuerAndSerialNumber, SignatureAlgorithmIdentifier, SignatureValue,
                 SignedAttributes, SignedData, SignerIdentifier, SignerInfo, SignerInfos,
-                OID_CONTENT_TYPE, OID_ID_DATA, OID_ID_SIGNED_DATA, OID_MESSAGE_DIGEST,
-                OID_SIGNING_TIME,
+                UnsignedAttributes, OID_CONTENT_TYPE, OID_ID_DATA, OID_ID_SIGNED_DATA,
+                OID_MESSAGE_DIGEST, OID_SIGNING_TIME,
             },
         },
         certificate::Certificate,
+        time_stamp_protocol::{time_stamp_message_http, TimeStampError},
         CmsError,
     },
     bcder::{
@@ -26,6 +28,7 @@ use {
         Captured, Mode, OctetString, Oid,
     },
     bytes::Bytes,
+    reqwest::IntoUrl,
     std::collections::HashSet,
 };
 
@@ -55,6 +58,9 @@ pub struct SignerBuilder<'a> {
 
     /// Extra attributes to include in the SignedAttributes set.
     extra_signed_attributes: Vec<Attribute>,
+
+    /// Time-Stamp Protocol (TSP) server HTTP URL to use.
+    time_stamp_url: Option<reqwest::Url>,
 }
 
 impl<'a> SignerBuilder<'a> {
@@ -69,6 +75,7 @@ impl<'a> SignerBuilder<'a> {
             message_id_content: None,
             content_type: Oid(Bytes::copy_from_slice(OID_ID_DATA.as_ref())),
             extra_signed_attributes: Vec::new(),
+            time_stamp_url: None,
         }
     }
 
@@ -112,6 +119,17 @@ impl<'a> SignerBuilder<'a> {
                 data.encode_ref(),
             ))],
         )
+    }
+
+    /// Obtain a time-stamp token from a server.
+    ///
+    /// If this is called, the URL must be a server implementing the Time-Stamp Protocol
+    /// (TSP) as defined by RFC 3161. At signature generation time, the server will be
+    /// contacted and the time stamp token response will be added as an unsigned attribute
+    /// on the [SignedData] instance.
+    pub fn time_stamp_url(mut self, url: impl IntoUrl) -> Result<Self, reqwest::Error> {
+        self.time_stamp_url = Some(url.into_url()?);
+        Ok(self)
     }
 }
 
@@ -279,6 +297,30 @@ impl<'a> SignedDataBuilder<'a> {
             signer_info.signature =
                 SignatureValue::new(Bytes::from(signer.signing_key.sign(&signed_content)?));
 
+            if let Some(url) = &signer.time_stamp_url {
+                let res =
+                    time_stamp_message_http(url.clone(), &signed_content, signer.digest_algorithm)?;
+
+                if !res.is_success() {
+                    return Err(TimeStampError::Unsuccessful(res.clone()).into());
+                }
+
+                let signed_data = res
+                    .signed_data()?
+                    .ok_or(CmsError::TimeStampProtocol(TimeStampError::BadResponse))?;
+
+                let mut unsigned_attributes = UnsignedAttributes::default();
+                unsigned_attributes.push(Attribute {
+                    typ: Oid(Bytes::copy_from_slice(OID_TIME_STAMP_TOKEN.as_ref())),
+                    values: vec![AttributeValue::new(Captured::from_values(
+                        Mode::Der,
+                        signed_data.encode_ref(),
+                    ))],
+                });
+
+                signer_info.unsigned_attributes = Some(unsigned_attributes);
+            }
+
             signer_infos.push(signer_info);
         }
 
@@ -389,6 +431,8 @@ mod tests {
         CiRnpyZ52+8FW64s952/SGtMs4P3fFNnWpL3njNDnfxa+r+aWDtz12PJc5FyzlkC\n\
         P4ysBX3CuA==\n\
         -----END CERTIFICATE-----";
+
+    const APPLE_TIMESTAMP_URL: &str = "http://timestamp.apple.com/ts01";
 
     fn rsa_private_key() -> SigningKey {
         let key_der = pem::parse(RSA_PRIVATE_KEY.as_bytes()).unwrap();
@@ -587,6 +631,31 @@ mod tests {
             signer
                 .verify_signature_with_signed_data(&signed_data)
                 .unwrap();
+            assert!(signer.unsigned_attributes.is_none());
+        }
+    }
+
+    #[test]
+    fn time_stamp_url() {
+        let key = rsa_private_key();
+        let cert = rsa_cert();
+
+        let signer = SignerBuilder::new(&key, cert)
+            .time_stamp_url(APPLE_TIMESTAMP_URL)
+            .unwrap();
+
+        let ber = SignedDataBuilder::default()
+            .signed_content(vec![42])
+            .signer(signer)
+            .build_ber()
+            .unwrap();
+
+        let signed_data = crate::SignedData::parse_ber(&ber).unwrap();
+
+        for signer in signed_data.signers() {
+            let unsigned = signer.unsigned_attributes().unwrap();
+            let tst = unsigned.time_stamp_token.as_ref().unwrap();
+            assert!(tst.certificates.is_some());
         }
     }
 

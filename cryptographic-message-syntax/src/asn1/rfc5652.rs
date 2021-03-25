@@ -150,10 +150,10 @@ pub struct SignedData {
 impl SignedData {
     /// Attempt to decode BER encoded bytes to a parsed data structure.
     pub fn decode_ber(data: &[u8]) -> Result<Self, bcder::decode::Error> {
-        Constructed::decode(data, bcder::Mode::Ber, |cons| Self::take_from(cons))
+        Constructed::decode(data, bcder::Mode::Ber, |cons| Self::decode(cons))
     }
 
-    pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, S::Err> {
+    pub fn decode<S: Source>(cons: &mut Constructed<S>) -> Result<Self, S::Err> {
         cons.take_sequence(|cons| {
             let oid = Oid::take_from(cons)?;
 
@@ -161,28 +161,29 @@ impl SignedData {
                 return Err(Malformed.into());
             }
 
-            cons.take_constructed_if(Tag::CTX_0, |cons| {
-                cons.take_sequence(|cons| {
-                    let version = CMSVersion::take_from(cons)?;
-                    let digest_algorithms = DigestAlgorithmIdentifiers::take_from(cons)?;
-                    let content_info = EncapsulatedContentInfo::take_from(cons)?;
-                    let certificates = cons.take_opt_constructed_if(Tag::CTX_0, |cons| {
-                        CertificateSet::take_from(cons)
-                    })?;
-                    let crls = cons.take_opt_constructed_if(Tag::CTX_1, |cons| {
-                        RevocationInfoChoices::take_from(cons)
-                    })?;
-                    let signer_infos = SignerInfos::take_from(cons)?;
+            cons.take_constructed_if(Tag::CTX_0, Self::take_from)
+        })
+    }
 
-                    Ok(Self {
-                        version,
-                        digest_algorithms,
-                        content_info,
-                        certificates,
-                        crls,
-                        signer_infos,
-                    })
-                })
+    pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, S::Err> {
+        cons.take_sequence(|cons| {
+            let version = CMSVersion::take_from(cons)?;
+            let digest_algorithms = DigestAlgorithmIdentifiers::take_from(cons)?;
+            let content_info = EncapsulatedContentInfo::take_from(cons)?;
+            let certificates =
+                cons.take_opt_constructed_if(Tag::CTX_0, |cons| CertificateSet::take_from(cons))?;
+            let crls = cons.take_opt_constructed_if(Tag::CTX_1, |cons| {
+                RevocationInfoChoices::take_from(cons)
+            })?;
+            let signer_infos = SignerInfos::take_from(cons)?;
+
+            Ok(Self {
+                version,
+                digest_algorithms,
+                content_info,
+                certificates,
+                crls,
+                signer_infos,
             })
         })
     }
@@ -617,7 +618,7 @@ impl SignedAttributes {
 /// ```ASN.1
 /// UnsignedAttributes ::= SET SIZE (1..MAX) OF Attribute
 /// ```
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct UnsignedAttributes(Vec<Attribute>);
 
 impl Deref for UnsignedAttributes {
