@@ -38,8 +38,6 @@
 //! that we hope are eventually implemented:
 //!
 //! * Only embedded signatures are supported. (No support for detached signatures.)
-//! * Only RSA signing keys are supported. You will get a panic if you attempt
-//!   to use ECDSA or ED25519 keys.
 //! * No support for parsing Code Signing Requirements. There is a binary encoding
 //!   of this language which we do not yet parse. There is also a human friendly
 //!   DSL that gets compiled to binary which we do not support parsing. To use Code
