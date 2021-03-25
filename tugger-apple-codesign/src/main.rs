@@ -136,7 +136,13 @@ in a single file. Then make it the first --pem-source argument. It is highly
 recommended to also include the X.509 certificates of the certificate signing
 chain, up to the root CA, as this lowers the risk of verification failures at
 run-time.
+
+When using a code signing key/certificate, a Time-Stamp Protocol server URL
+can be specified via --timestamp-url. By default, Apple's server is used. The
+special value \"none\" can disable using a timestamp server.
 ";
+
+const APPLE_TIMESTAMP_URL: &str = "http://timestamp.apple.com/ts01";
 
 const SUPPORTED_HASHES: &[&str; 5] = &["none", "sha1", "sha256", "sha256-truncated", "sha384"];
 
@@ -530,6 +536,14 @@ fn command_sign(args: &ArgMatches) -> Result<(), AppError> {
         Some(values) => values.collect::<Vec<_>>(),
         None => vec![],
     };
+    let timestamp_url = args
+        .value_of("timestamp_url")
+        .ok_or(AppError::BadArgument)?;
+    let timestamp_url = if timestamp_url == "none" {
+        None
+    } else {
+        Some(timestamp_url)
+    };
 
     println!("signing {}", input_path);
     let macho_data = std::fs::read(input_path)?;
@@ -576,6 +590,11 @@ fn command_sign(args: &ArgMatches) -> Result<(), AppError> {
 
         println!("registering signing key");
         signer.signing_key(signing_key, cert);
+
+        if let Some(timestamp_url) = timestamp_url {
+            println!("using time-stamp protocol server {}", timestamp_url);
+            signer.time_stamp_url(timestamp_url)?;
+        }
     }
 
     for cert in public_certificates {
@@ -764,6 +783,15 @@ fn main_impl() -> Result<(), AppError> {
                         .takes_value(true)
                         .multiple(true)
                         .help("Path to file containing PEM encoded certificate/key data"),
+                )
+                .arg(
+                    Arg::with_name("timestamp_url")
+                        .long("timestamp-url")
+                        .takes_value(true)
+                        .default_value(APPLE_TIMESTAMP_URL)
+                        .help(
+                            "URL of timestamp server to use to obtain a token of the CMS signature",
+                        ),
                 )
                 .arg(
                     Arg::with_name("input_path")

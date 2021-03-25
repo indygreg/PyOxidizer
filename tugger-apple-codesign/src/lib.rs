@@ -25,9 +25,10 @@
 //! * Deeply parse code signature data into Rust structs. (See
 //!   [EmbeddedSignature], [BlobData], and e.g. [CodeDirectoryBlob].
 //! * Parse and verify the RFC 5652 Cryptographic Message Syntax (CMS)
-//!   signature data. (Functionality provided by the
-//!   `cryptographic-message-syntax` crate, developed in the same repository
-//!   as this crate.)
+//!   signature data. This includes using a Time-Stamp Protocol (TSP) / RFC 3161
+//!   server for including a signed time-stamp token for that signature.
+//!   (Functionality provided by the `cryptographic-message-syntax` crate,
+//!   developed in the same repository as this crate.)
 //! * Generate new embedded signature data, including cryptographically
 //!   signing that data using any signing key and X.509 certificate chain
 //!   you provide. (See [MachOSigner] and [MachOSignatureBuilder].)
@@ -44,9 +45,6 @@
 //!   Signing Requirements, you will need to use the `csreq` tool to compile an
 //!   expression to binary and then give that binary blob to this crate. (We can
 //!   embed that blob in the signature data without knowing what is inside.)
-//! * No Time-Stamp Protocol (TSP / RFC 3161) support. It is common for the CMS
-//!   signature to contain a token provided by a TSP server. While the core support
-//!   for adding this to the CMS signature is there, use is currently not turnkey.
 //! * Minimal signed resources support. We will preserve an existing referenced
 //!   file digest when re-signing a binary if signing settings are carried forward.
 //!   We support defining the content of the resources XML plist file so it can be

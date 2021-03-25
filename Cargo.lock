@@ -3454,6 +3454,7 @@ dependencies = [
  "hex",
  "pem",
  "plist",
+ "reqwest",
  "ring",
  "scroll",
 ]

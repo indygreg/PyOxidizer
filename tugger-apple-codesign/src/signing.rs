@@ -26,6 +26,7 @@ use {
         load_command::{CommandVariant, LinkeditDataCommand, SegmentCommand32, SegmentCommand64},
         parse_magic_and_ctx, Mach, MachO,
     },
+    reqwest::{IntoUrl, Url},
     scroll::{ctx::SizeWith, IOwrite, Pwrite},
     std::{cmp::Ordering, collections::HashMap, io::Write},
 };
@@ -140,6 +141,8 @@ pub enum SigningError {
     Scroll(scroll::Error),
     /// New signature data is too large for the allocated space for it.
     SignatureDataTooLarge,
+    /// Some issue in reqwest crate land.
+    Reqwest(reqwest::Error),
 }
 
 impl std::fmt::Display for SigningError {
@@ -166,6 +169,7 @@ impl std::fmt::Display for SigningError {
             Self::SignatureDataTooLarge => f.write_str(
                 "signature data too large for allocated size (please report this issue)",
             ),
+            Self::Reqwest(e) => f.write_fmt(format_args!("HTTP error: {}", e)),
         }
     }
 }
@@ -211,6 +215,12 @@ impl From<std::io::Error> for SigningError {
 impl From<scroll::Error> for SigningError {
     fn from(e: scroll::Error) -> Self {
         Self::Scroll(e)
+    }
+}
+
+impl From<reqwest::Error> for SigningError {
+    fn from(e: reqwest::Error) -> Self {
+        Self::Reqwest(e)
     }
 }
 
@@ -511,6 +521,19 @@ impl<'data, 'key> MachOSigner<'data, 'key> {
         Ok(())
     }
 
+    /// See [MachOSignatureBuilder::time_stamp_url].
+    pub fn time_stamp_url(&mut self, url: impl IntoUrl) -> Result<(), SigningError> {
+        let url = url.into_url()?;
+
+        self.signature_builders = self
+            .signature_builders
+            .drain(..)
+            .map(|builder| builder.time_stamp_url(url.clone()))
+            .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(())
+    }
+
     /// Write signed Mach-O data to the given writer.
     pub fn write_signed_binary(&self, writer: &mut impl Write) -> Result<(), SigningError> {
         // Implementing a true streaming writer requires calculating final sizes
@@ -683,6 +706,9 @@ pub struct MachOSignatureBuilder<'key> {
 
     /// Certificate information to include.
     certificates: Vec<Certificate>,
+
+    /// Time-Stamp Protocol server URL to use.
+    time_stamp_url: Option<Url>,
 }
 
 impl<'key> MachOSignatureBuilder<'key> {
@@ -699,6 +725,7 @@ impl<'key> MachOSignatureBuilder<'key> {
             resources_digest: None,
             signing_key: None,
             certificates: vec![],
+            time_stamp_url: None,
         })
     }
 
@@ -828,6 +855,16 @@ impl<'key> MachOSignatureBuilder<'key> {
         Ok(self)
     }
 
+    /// Set the Time-Stamp Protocol server URL to use to generate a Time-Stamp Token.
+    ///
+    /// When set, the server will be contacted during signing and a Time-Stamp Token will
+    /// be embedded in the CMS data structure.
+    pub fn time_stamp_url(mut self, url: impl IntoUrl) -> Result<Self, SigningError> {
+        self.time_stamp_url = Some(url.into_url()?);
+
+        Ok(self)
+    }
+
     /// Create data constituting the SuperBlob to be embedded in the `__LINKEDIT` segment.
     ///
     /// The superblob contains the code directory, any extra blobs, and an optional
@@ -894,15 +931,20 @@ impl<'key> MachOSignatureBuilder<'key> {
             code_directory.hash_type,
         )?;
 
+        let signer = SignerBuilder::new(signing_key, signing_cert.clone())
+            .message_id_content(code_directory_raw)
+            .signed_attribute_octet_string(
+                bcder::Oid(Bytes::copy_from_slice(CDHASH_PLIST_OID.as_ref())),
+                &code_directory_hashes_plist,
+            );
+        let signer = if let Some(time_stamp_url) = &self.time_stamp_url {
+            signer.time_stamp_url(time_stamp_url.clone())?
+        } else {
+            signer
+        };
+
         let ber = SignedDataBuilder::default()
-            .signer(
-                SignerBuilder::new(signing_key, signing_cert.clone())
-                    .message_id_content(code_directory_raw)
-                    .signed_attribute_octet_string(
-                        bcder::Oid(Bytes::copy_from_slice(CDHASH_PLIST_OID.as_ref())),
-                        &code_directory_hashes_plist,
-                    ),
-            )
+            .signer(signer)
             .certificates(self.certificates.iter().cloned())?
             .build_ber()?;
 
