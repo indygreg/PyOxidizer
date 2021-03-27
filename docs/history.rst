@@ -37,6 +37,10 @@ Other Relevant Changes
 * The ``snmalloc`` allocator now uses the C API directly and avoids going
   through an allocation tracking layer, improving the performance of this
   allocator. Improvement contributed by Ryan Clanton.
+* Python distributions updated to latest versions. Changes include:
+  macOS Python 3.8 is now built against the 10.15 SDK instead of 11.1;
+  musl libc upgraded to 1.2.2; setuptools upgraded to 54.1.1; LibreSSL upgraded
+  to 3.2.5; OpenSSL upgraded to 1.1.1k; SQLite upgraded to 3.35.2.
 
 .. _version_0_11_0:
 
