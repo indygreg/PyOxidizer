@@ -27,7 +27,7 @@ with (ROOT / "pyoxidizer" / "Cargo.toml").open("r") as fh:
 
 
 project = "PyOxidizer"
-copyright = "2019, Gregory Szorc"
+copyright = "2019-present, Gregory Szorc"
 author = "Gregory Szorc"
 extensions = []
 templates_path = ["_templates"]
