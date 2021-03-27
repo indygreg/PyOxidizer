@@ -5,7 +5,7 @@ on:
     - cron: '13 15 * * *'
 jobs:
   sphinx_pyoxidizer:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-python@v2
@@ -17,7 +17,7 @@ jobs:
           make -C docs html
 
   sphinx_pyembed:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-python@v2
@@ -29,7 +29,7 @@ jobs:
           make -C pyembed/docs html
 
   sphinx_tugger:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-python@v2
