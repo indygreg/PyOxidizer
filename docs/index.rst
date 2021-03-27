@@ -29,7 +29,7 @@ The creator and maintainer of ``PyOxidizer`` is
    getting_started
    managing_projects
    config
-   packaging
+   pyoxidizer_packaging
    pyoxidizer_distributing
    oxidized_importer
    packed_resources
