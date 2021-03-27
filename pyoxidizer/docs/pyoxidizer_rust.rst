@@ -19,7 +19,7 @@ can be leveraged to build more advanced applications embedding Python.
 .. toctree::
    :maxdepth: 2
 
-   rust_cargo_source_checkouts
-   rust_projects
-   rust_rust_code
-   rust_porting
+   pyoxidizer_rust_cargo_source_checkouts
+   pyoxidizer_rust_projects
+   pyoxidizer_rust_rust_code
+   pyoxidizer_rust_porting

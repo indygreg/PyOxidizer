@@ -25,20 +25,20 @@ The creator and maintainer of ``PyOxidizer`` is
 .. toctree::
    :maxdepth: 2
 
-   overview
-   getting_started
-   managing_projects
+   pyoxidizer_overview
+   pyoxidizer_getting_started
+   pyoxidizer_managing_projects
    pyoxidizer_config
    pyoxidizer_packaging
    pyoxidizer_distributing
    oxidized_importer
-   packed_resources
+   pyoxidizer_packed_resources
    pyembed
-   rust
+   pyoxidizer_rust
    tugger
-   faq
-   status
-   comparisons
-   contributing
-   history
-   technotes
+   pyoxidizer_faq
+   pyoxidizer_status
+   pyoxidizer_comparisons
+   pyoxidizer_contributing
+   pyoxidizer_history
+   pyoxidizer_technotes
