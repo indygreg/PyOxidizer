@@ -40,6 +40,7 @@ which allows some access to data within each specific blob type.
 */
 
 use {
+    crate::code_requirement::{parse_requirements, CodeRequirementError, ExpressionElement},
     goblin::mach::{constants::SEG_LINKEDIT, load_command::CommandVariant, MachO},
     scroll::{IOwrite, Pread},
     std::{
@@ -341,7 +342,10 @@ fn read_blob_header(data: &[u8]) -> Result<(u32, usize, &[u8]), scroll::Error> {
     Ok((magic, length as usize, &data[8..]))
 }
 
-fn read_and_validate_blob_header(data: &[u8], expected_magic: u32) -> Result<&[u8], MachOError> {
+pub(crate) fn read_and_validate_blob_header(
+    data: &[u8],
+    expected_magic: u32,
+) -> Result<&[u8], MachOError> {
     let (magic, _, data) = read_blob_header(data)?;
 
     if magic != expected_magic {
@@ -845,6 +849,11 @@ impl<'a> RequirementBlob<'a> {
         RequirementBlob {
             data: Cow::Owned(self.data.clone().into_owned()),
         }
+    }
+
+    /// Parse the binary data in this blob into Code Requirement expressions.
+    pub fn parse_expressions(&self) -> Result<Vec<ExpressionElement>, MachOError> {
+        Ok(parse_requirements(&self.data)?.0)
     }
 }
 
@@ -1780,6 +1789,7 @@ pub enum MachOError {
     Io(std::io::Error),
     Unimplemented,
     Malformed,
+    CodeRequirement(CodeRequirementError),
 }
 
 impl std::fmt::Display for MachOError {
@@ -1798,6 +1808,7 @@ impl std::fmt::Display for MachOError {
             Self::Io(e) => f.write_fmt(format_args!("I/O error: {}", e)),
             Self::Unimplemented => f.write_str("functionality not implemented"),
             Self::Malformed => f.write_str("data is malformed"),
+            Self::CodeRequirement(e) => f.write_fmt(format_args!("code requirements error: {}", e)),
         }
     }
 }
@@ -1819,6 +1830,12 @@ impl From<std::str::Utf8Error> for MachOError {
 impl From<DigestError> for MachOError {
     fn from(e: DigestError) -> Self {
         Self::Digest(e)
+    }
+}
+
+impl From<CodeRequirementError> for MachOError {
+    fn from(e: CodeRequirementError) -> Self {
+        Self::CodeRequirement(e)
     }
 }
 

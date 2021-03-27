@@ -7,6 +7,8 @@ mod certificate;
 #[allow(unused)]
 mod code_hash;
 #[allow(unused)]
+mod code_requirement;
+#[allow(unused)]
 mod code_resources;
 #[allow(unused)]
 mod macho;
@@ -401,7 +403,11 @@ fn command_extract(args: &ArgMatches) -> Result<(), AppError> {
             let embedded = parse_signature_data(&sig.signature_data)?;
 
             if let Some(reqs) = embedded.code_requirements()? {
-                println!("{:#?}", reqs)
+                for (_, req) in &reqs.segments {
+                    for expr in req.parse_expressions()? {
+                        println!("{}", expr);
+                    }
+                }
             } else {
                 eprintln!("no requirements");
             }
