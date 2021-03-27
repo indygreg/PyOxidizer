@@ -48,6 +48,8 @@ Backwards Compatibility Notes
   explicit action was taken. The practical effect of this change is binaries
   targeting x86_64 should now work on macOS 10.9 without any end-user action
   required.
+* Documentation URLs for PyOxidizer now all consistently begin with
+  ``pyoxidizer_``. Many old documentation URLs no longer work.
 
 New Features
 ^^^^^^^^^^^^
