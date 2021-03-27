@@ -6,10 +6,11 @@ import pathlib
 import re
 import shutil
 
-EXTERNAL_PREFIXES = ("oxidized_importer", "pyembed", "tugger")
+EXTERNAL_PREFIXES = ("oxidized_importer", "pyembed", "pyoxidizer", "tugger")
 
 EXTERNAL_SOURCE_DIRS = (
     pathlib.Path("pyembed") / "docs",
+    pathlib.Path("pyoxidizer") / "docs",
     pathlib.Path("tugger") / "docs",
 )
 

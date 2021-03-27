@@ -2,6 +2,7 @@
 docs/_build/
 docs/oxidized_importer*
 docs/pyembed*
+docs/pyoxidizer*
 docs/tugger*
 pyembed/docs/_build/
 target/
