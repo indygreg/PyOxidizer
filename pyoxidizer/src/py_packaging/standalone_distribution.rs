@@ -9,7 +9,7 @@ use {
         binary::{LibpythonLinkMode, PythonBinaryBuilder},
         config::{default_memory_allocator, PyembedPythonInterpreterConfig},
         distribution::{
-            resolve_python_distribution_from_location, BinaryLibpythonLinkMode,
+            resolve_python_distribution_from_location, AppleSdkInfo, BinaryLibpythonLinkMode,
             DistributionExtractLock, PythonDistribution, PythonDistributionLocation,
         },
         distutils::prepare_hacked_distutils,
@@ -175,6 +175,10 @@ struct PythonJsonMain {
     python_bytecode_magic_number: String,
     python_symbol_visibility: String,
     python_extension_module_loading: Vec<String>,
+    apple_sdk_canonical_name: Option<String>,
+    apple_sdk_platform: Option<String>,
+    apple_sdk_version: Option<String>,
+    apple_sdk_deployment_target: Option<String>,
     libpython_link_mode: String,
     crt_features: Vec<String>,
     run_tests: String,
@@ -376,6 +380,9 @@ pub struct StandaloneDistribution {
 
     /// Capabilities of distribution to load extension modules.
     extension_module_loading: Vec<String>,
+
+    /// Apple SDK build/targeting settings.
+    apple_sdk_info: Option<AppleSdkInfo>,
 
     /// Holds license information for the core distribution.
     pub core_license: Option<LicensedComponent>,
@@ -879,6 +886,27 @@ impl StandaloneDistribution {
             return Err(anyhow!("unhandled link mode: {}", pi.libpython_link_mode));
         };
 
+        let apple_sdk_info = if let Some(canonical_name) = pi.apple_sdk_canonical_name {
+            let platform = pi
+                .apple_sdk_platform
+                .ok_or_else(|| anyhow!("apple_sdk_platform not defined"))?;
+            let version = pi
+                .apple_sdk_version
+                .ok_or_else(|| anyhow!("apple_sdk_version not defined"))?;
+            let deployment_target = pi
+                .apple_sdk_deployment_target
+                .ok_or_else(|| anyhow!("apple_sdk_deployment_target not defined"))?;
+
+            Some(AppleSdkInfo {
+                canonical_name,
+                platform,
+                version,
+                deployment_target,
+            })
+        } else {
+            None
+        };
+
         let inittab_object = python_path.join(pi.build_info.inittab_object);
 
         Ok(Self {
@@ -895,6 +923,7 @@ impl StandaloneDistribution {
             link_mode,
             python_symbol_visibility: pi.python_symbol_visibility,
             extension_module_loading: pi.python_extension_module_loading,
+            apple_sdk_info,
             core_license,
             licenses: pi.licenses.clone(),
             license_path: match pi.license_path {
@@ -1165,6 +1194,10 @@ impl PythonDistribution for StandaloneDistribution {
 
     fn stdlib_test_packages(&self) -> Vec<String> {
         self.stdlib_test_packages.clone()
+    }
+
+    fn apple_sdk_info(&self) -> Option<&AppleSdkInfo> {
+        self.apple_sdk_info.as_ref()
     }
 
     fn create_bytecode_compiler(&self) -> Result<Box<dyn PythonBytecodeCompiler>> {
@@ -1518,6 +1551,19 @@ pub mod tests {
         assert!(err
             .to_string()
             .starts_with("compiling error: invalid syntax"));
+
+        Ok(())
+    }
+
+    #[test]
+    fn apple_sdk_info() -> Result<()> {
+        for dist in get_all_standalone_distributions()? {
+            if dist.target_triple().contains("-apple-") {
+                assert!(dist.apple_sdk_info().is_some());
+            } else {
+                assert!(dist.apple_sdk_info().is_none());
+            }
+        }
 
         Ok(())
     }

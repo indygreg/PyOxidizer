@@ -70,6 +70,19 @@ pub struct PythonDistributionRecord {
     pub supports_prebuilt_extension_modules: bool,
 }
 
+/// Describes Apple SDK build/targeting.
+#[derive(Clone, Debug, PartialEq)]
+pub struct AppleSdkInfo {
+    /// Canonical name of Apple SDK used.
+    pub canonical_name: String,
+    /// Name of SDK platform being targeted.
+    pub platform: String,
+    /// Version of Apple SDK used.
+    pub version: String,
+    /// Deployment target version used.
+    pub deployment_target: String,
+}
+
 /// Describes a generic Python distribution.
 pub trait PythonDistribution {
     /// Clone self into a Box'ed trait object.
@@ -125,6 +138,9 @@ pub trait PythonDistribution {
 
     /// Obtain Python packages in the standard library that provide tests.
     fn stdlib_test_packages(&self) -> Vec<String>;
+
+    /// Obtain Apple SDK settings for this distribution.
+    fn apple_sdk_info(&self) -> Option<&AppleSdkInfo>;
 
     /// Create a `PythonBytecodeCompiler` from this instance.
     fn create_bytecode_compiler(&self) -> Result<Box<dyn PythonBytecodeCompiler>>;
