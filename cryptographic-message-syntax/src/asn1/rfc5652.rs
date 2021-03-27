@@ -139,7 +139,7 @@ impl Values for ContentInfo {
 /// ```
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct SignedData {
-    pub version: CMSVersion,
+    pub version: CmsVersion,
     pub digest_algorithms: DigestAlgorithmIdentifiers,
     pub content_info: EncapsulatedContentInfo,
     pub certificates: Option<CertificateSet>,
@@ -167,7 +167,7 @@ impl SignedData {
 
     pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, S::Err> {
         cons.take_sequence(|cons| {
-            let version = CMSVersion::take_from(cons)?;
+            let version = CmsVersion::take_from(cons)?;
             let digest_algorithms = DigestAlgorithmIdentifiers::take_from(cons)?;
             let content_info = EncapsulatedContentInfo::take_from(cons)?;
             let certificates =
@@ -345,7 +345,7 @@ impl EncapsulatedContentInfo {
 /// ```
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct SignerInfo {
-    pub version: CMSVersion,
+    pub version: CmsVersion,
     pub sid: SignerIdentifier,
     pub digest_algorithm: DigestAlgorithmIdentifier,
     pub signed_attributes: Option<SignedAttributes>,
@@ -365,7 +365,7 @@ impl SignerInfo {
     }
 
     pub fn from_sequence<S: Source>(cons: &mut Constructed<S>) -> Result<Self, S::Err> {
-        let version = CMSVersion::take_from(cons)?;
+        let version = CmsVersion::take_from(cons)?;
         let sid = SignerIdentifier::take_from(cons)?;
         let digest_algorithm = DigestAlgorithmIdentifier::take_from(cons)?;
         let signed_attributes = cons.take_opt_constructed_if(Tag::CTX_0, |cons| {
@@ -762,7 +762,7 @@ pub type SignatureValue = OctetString;
 /// ```
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct EnvelopedData {
-    pub version: CMSVersion,
+    pub version: CmsVersion,
     pub originator_info: Option<OriginatorInfo>,
     pub recipient_infos: RecipientInfos,
     pub encrypted_content_info: EncryptedContentInfo,
@@ -835,7 +835,7 @@ pub type EncryptedKey = OctetString;
 /// ```
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct KeyTransRecipientInfo {
-    pub version: CMSVersion,
+    pub version: CmsVersion,
     pub rid: RecipientIdentifier,
     pub key_encryption_algorithm: KeyEncryptionAlgorithmIdentifier,
     pub encrypted_key: EncryptedKey,
@@ -866,7 +866,7 @@ pub enum RecipientIdentifier {
 /// ```
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct KeyAgreeRecipientInfo {
-    pub version: CMSVersion,
+    pub version: CmsVersion,
     pub originator: OriginatorIdentifierOrKey,
     pub ukm: Option<UserKeyingMaterial>,
     pub key_encryption_algorithm: KeyEncryptionAlgorithmIdentifier,
@@ -958,7 +958,7 @@ type SubjectKeyIdentifier = OctetString;
 /// ```
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct KekRecipientInfo {
-    pub version: CMSVersion,
+    pub version: CmsVersion,
     pub kek_id: KekIdentifier,
     pub kek_encryption_algorithm: KeyEncryptionAlgorithmIdentifier,
     pub encrypted_key: EncryptedKey,
@@ -991,7 +991,7 @@ pub struct KekIdentifier {
 /// ```
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct PasswordRecipientInfo {
-    pub version: CMSVersion,
+    pub version: CmsVersion,
     pub key_derivation_algorithm: Option<KeyDerivationAlgorithmIdentifier>,
     pub key_encryption_algorithm: KeyEncryptionAlgorithmIdentifier,
     pub encrypted_key: EncryptedKey,
@@ -1015,7 +1015,7 @@ pub struct OtherRecipientInfo {
 /// ```
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct DigestedData {
-    pub version: CMSVersion,
+    pub version: CmsVersion,
     pub digest_algorithm: DigestAlgorithmIdentifier,
     pub content_type: EncapsulatedContentInfo,
     pub digest: Digest,
@@ -1033,7 +1033,7 @@ pub type Digest = OctetString;
 /// ```
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct EncryptedData {
-    pub version: CMSVersion,
+    pub version: CmsVersion,
     pub encrypted_content_info: EncryptedContentInfo,
     pub unprotected_attributes: Option<UnprotectedAttributes>,
 }
@@ -1054,7 +1054,7 @@ pub struct EncryptedData {
 /// ```
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct AuthenticatedData {
-    pub version: CMSVersion,
+    pub version: CmsVersion,
     pub originator_info: Option<OriginatorInfo>,
     pub recipient_infos: RecipientInfos,
     pub mac_algorithm: MessageAuthenticationCodeAlgorithm,
@@ -1280,7 +1280,7 @@ pub type CertificateSerialNumber = Integer;
 ///                { v0(0), v1(1), v2(2), v3(3), v4(4), v5(5) }
 /// ```
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum CMSVersion {
+pub enum CmsVersion {
     V0 = 0,
     V1 = 1,
     V2 = 2,
@@ -1289,7 +1289,7 @@ pub enum CMSVersion {
     V5 = 5,
 }
 
-impl CMSVersion {
+impl CmsVersion {
     pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, S::Err> {
         match cons.take_primitive_if(Tag::INTEGER, Integer::i8_from_primitive)? {
             0 => Ok(Self::V0),
@@ -1307,15 +1307,15 @@ impl CMSVersion {
     }
 }
 
-impl From<CMSVersion> for u8 {
-    fn from(v: CMSVersion) -> u8 {
+impl From<CmsVersion> for u8 {
+    fn from(v: CmsVersion) -> u8 {
         match v {
-            CMSVersion::V0 => 0,
-            CMSVersion::V1 => 1,
-            CMSVersion::V2 => 2,
-            CMSVersion::V3 => 3,
-            CMSVersion::V4 => 4,
-            CMSVersion::V5 => 5,
+            CmsVersion::V0 => 0,
+            CmsVersion::V1 => 1,
+            CmsVersion::V2 => 2,
+            CmsVersion::V3 => 3,
+            CmsVersion::V4 => 4,
+            CmsVersion::V5 => 5,
         }
     }
 }

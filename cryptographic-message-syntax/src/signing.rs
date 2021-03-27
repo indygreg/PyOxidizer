@@ -11,7 +11,7 @@ use {
             common::UtcTime,
             rfc3161::OID_TIME_STAMP_TOKEN,
             rfc5652::{
-                Attribute, AttributeValue, CMSVersion, CertificateChoices, CertificateSet,
+                Attribute, AttributeValue, CertificateChoices, CertificateSet, CmsVersion,
                 DigestAlgorithmIdentifier, DigestAlgorithmIdentifiers, EncapsulatedContentInfo,
                 IssuerAndSerialNumber, SignatureAlgorithmIdentifier, SignatureValue,
                 SignedAttributes, SignedData, SignerIdentifier, SignerInfo, SignerInfos,
@@ -209,7 +209,7 @@ impl<'a> SignedDataBuilder<'a> {
                 seen_certificates.push(cert.clone());
             }
 
-            let version = CMSVersion::V1;
+            let version = CmsVersion::V1;
             let digest_algorithm = DigestAlgorithmIdentifier {
                 algorithm: signer.digest_algorithm.into(),
                 parameters: None,
@@ -340,7 +340,7 @@ impl<'a> SignedDataBuilder<'a> {
         );
 
         let signed_data = SignedData {
-            version: CMSVersion::V1,
+            version: CmsVersion::V1,
             digest_algorithms,
             content_info: EncapsulatedContentInfo {
                 content_type: Oid(Bytes::copy_from_slice(OID_ID_SIGNED_DATA.as_ref())),
