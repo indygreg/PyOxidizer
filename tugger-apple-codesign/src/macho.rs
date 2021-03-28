@@ -275,11 +275,6 @@ pub enum CodeDirectoryVersion {
     SupportsLinkage = 0x20600,
 }
 
-/// always - larger hashes are truncated
-pub const CS_CDHASH_LEN: u32 = 20;
-/// max size of the hash we'll support
-pub const CS_HASH_MAX_SIZE: u32 = 48;
-
 /// Denotes type of code requirements.
 #[derive(Clone, Copy, Debug)]
 #[repr(u32)]
