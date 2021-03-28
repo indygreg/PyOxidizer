@@ -404,7 +404,7 @@ fn command_extract(args: &ArgMatches) -> Result<(), AppError> {
 
             if let Some(reqs) = embedded.code_requirements()? {
                 for (typ, req) in &reqs.segments {
-                    for expr in req.parse_expressions()? {
+                    for expr in req.parse_expressions()?.iter() {
                         println!("{} => {}", typ, expr);
                     }
                 }
