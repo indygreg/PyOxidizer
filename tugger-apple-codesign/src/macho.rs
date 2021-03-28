@@ -52,30 +52,6 @@ use {
     },
 };
 
-// Constants identifying payload of Blob entries.
-const CSSLOT_CODEDIRECTORY: u32 = 0;
-const CSSLOT_INFOSLOT: u32 = 1;
-const CSSLOT_REQUIREMENTS: u32 = 2;
-const CSSLOT_RESOURCEDIR: u32 = 3;
-const CSSLOT_APPLICATION: u32 = 4;
-const CSSLOT_ENTITLEMENTS: u32 = 5;
-
-// This slot appears to contain a binary plist with executable security settings.
-// We don't know what to call it.
-const CSSLOT_SECURITYSETTINGS: u32 = 7;
-
-/// First alternate CodeDirectory, if any
-const CSSLOT_ALTERNATE_CODEDIRECTORY_0: u32 = 0x1000;
-const CSSLOT_ALTERNATE_CODEDIRECTORY_1: u32 = 0x1001;
-const CSSLOT_ALTERNATE_CODEDIRECTORY_2: u32 = 0x1002;
-const CSSLOT_ALTERNATE_CODEDIRECTORY_3: u32 = 0x1003;
-const CSSLOT_ALTERNATE_CODEDIRECTORY_4: u32 = 0x1004;
-
-/// CMS signature.
-const CSSLOT_SIGNATURESLOT: u32 = 0x10000;
-const CSSLOT_IDENTIFICATIONSLOT: u32 = 0x10001;
-const CSSLOT_TICKETSLOT: u32 = 0x10002;
-
 /// Defines a typed slot within code signing data.
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub enum CodeSigningSlot {
@@ -144,21 +120,21 @@ impl std::fmt::Debug for CodeSigningSlot {
 impl From<u32> for CodeSigningSlot {
     fn from(v: u32) -> Self {
         match v {
-            CSSLOT_CODEDIRECTORY => Self::CodeDirectory,
-            CSSLOT_INFOSLOT => Self::Info,
-            CSSLOT_REQUIREMENTS => Self::Requirements,
-            CSSLOT_RESOURCEDIR => Self::ResourceDir,
-            CSSLOT_APPLICATION => Self::Application,
-            CSSLOT_ENTITLEMENTS => Self::Entitlements,
-            CSSLOT_SECURITYSETTINGS => Self::SecuritySettings,
-            CSSLOT_ALTERNATE_CODEDIRECTORY_0 => Self::AlternateCodeDirectory0,
-            CSSLOT_ALTERNATE_CODEDIRECTORY_1 => Self::AlternateCodeDirectory1,
-            CSSLOT_ALTERNATE_CODEDIRECTORY_2 => Self::AlternateCodeDirectory2,
-            CSSLOT_ALTERNATE_CODEDIRECTORY_3 => Self::AlternateCodeDirectory3,
-            CSSLOT_ALTERNATE_CODEDIRECTORY_4 => Self::AlternateCodeDirectory4,
-            CSSLOT_SIGNATURESLOT => Self::Signature,
-            CSSLOT_IDENTIFICATIONSLOT => Self::Identification,
-            CSSLOT_TICKETSLOT => Self::Ticket,
+            0 => Self::CodeDirectory,
+            1 => Self::Info,
+            2 => Self::Requirements,
+            3 => Self::ResourceDir,
+            4 => Self::Application,
+            5 => Self::Entitlements,
+            7 => Self::SecuritySettings,
+            0x1000 => Self::AlternateCodeDirectory0,
+            0x1001 => Self::AlternateCodeDirectory1,
+            0x1002 => Self::AlternateCodeDirectory2,
+            0x1003 => Self::AlternateCodeDirectory3,
+            0x1004 => Self::AlternateCodeDirectory4,
+            0x10000 => Self::Signature,
+            0x10001 => Self::Identification,
+            0x10002 => Self::Ticket,
             _ => Self::Unknown(v),
         }
     }
@@ -167,21 +143,21 @@ impl From<u32> for CodeSigningSlot {
 impl From<CodeSigningSlot> for u32 {
     fn from(v: CodeSigningSlot) -> Self {
         match v {
-            CodeSigningSlot::CodeDirectory => CSSLOT_CODEDIRECTORY,
-            CodeSigningSlot::Info => CSSLOT_INFOSLOT,
-            CodeSigningSlot::Requirements => CSSLOT_REQUIREMENTS,
-            CodeSigningSlot::ResourceDir => CSSLOT_RESOURCEDIR,
-            CodeSigningSlot::Application => CSSLOT_APPLICATION,
-            CodeSigningSlot::Entitlements => CSSLOT_ENTITLEMENTS,
-            CodeSigningSlot::SecuritySettings => CSSLOT_SECURITYSETTINGS,
-            CodeSigningSlot::AlternateCodeDirectory0 => CSSLOT_ALTERNATE_CODEDIRECTORY_0,
-            CodeSigningSlot::AlternateCodeDirectory1 => CSSLOT_ALTERNATE_CODEDIRECTORY_1,
-            CodeSigningSlot::AlternateCodeDirectory2 => CSSLOT_ALTERNATE_CODEDIRECTORY_2,
-            CodeSigningSlot::AlternateCodeDirectory3 => CSSLOT_ALTERNATE_CODEDIRECTORY_3,
-            CodeSigningSlot::AlternateCodeDirectory4 => CSSLOT_ALTERNATE_CODEDIRECTORY_4,
-            CodeSigningSlot::Signature => CSSLOT_SIGNATURESLOT,
-            CodeSigningSlot::Identification => CSSLOT_IDENTIFICATIONSLOT,
-            CodeSigningSlot::Ticket => CSSLOT_TICKETSLOT,
+            CodeSigningSlot::CodeDirectory => 0,
+            CodeSigningSlot::Info => 1,
+            CodeSigningSlot::Requirements => 2,
+            CodeSigningSlot::ResourceDir => 3,
+            CodeSigningSlot::Application => 4,
+            CodeSigningSlot::Entitlements => 5,
+            CodeSigningSlot::SecuritySettings => 7,
+            CodeSigningSlot::AlternateCodeDirectory0 => 0x1000,
+            CodeSigningSlot::AlternateCodeDirectory1 => 0x1001,
+            CodeSigningSlot::AlternateCodeDirectory2 => 0x1002,
+            CodeSigningSlot::AlternateCodeDirectory3 => 0x1003,
+            CodeSigningSlot::AlternateCodeDirectory4 => 0x1004,
+            CodeSigningSlot::Signature => 0x10000,
+            CodeSigningSlot::Identification => 0x10001,
+            CodeSigningSlot::Ticket => 0x10002,
             CodeSigningSlot::Unknown(v) => v,
         }
     }
