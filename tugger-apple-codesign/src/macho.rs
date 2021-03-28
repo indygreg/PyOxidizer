@@ -259,39 +259,23 @@ bitflags::bitflags! {
     }
 }
 
-/// Flags that influence behavior of executable segment.
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub enum ExecutableSegmentFlag {
-    /// Executable segment belongs to main binary.
-    MainBinary,
-    /// Allow unsigned pages (for debugging).
-    AllowUnsigned,
-    /// Main binary is debugger.
-    Debugger,
-    /// JIT enabled.
-    Jit,
-    /// Skip library validation (obsolete).
-    SkipLibraryValidation,
-    /// Can bless code directory hash for execution.
-    CanLoadCdHash,
-    /// Can execute blessed code directory hash.
-    CanExecCdHash,
-    /// Unknown flag.
-    Unknown(u64),
-}
-
-impl From<ExecutableSegmentFlag> for u64 {
-    fn from(flag: ExecutableSegmentFlag) -> Self {
-        match flag {
-            ExecutableSegmentFlag::MainBinary => 0x0001,
-            ExecutableSegmentFlag::AllowUnsigned => 0x0010,
-            ExecutableSegmentFlag::Debugger => 0x0020,
-            ExecutableSegmentFlag::Jit => 0x0040,
-            ExecutableSegmentFlag::SkipLibraryValidation => 0x0080,
-            ExecutableSegmentFlag::CanLoadCdHash => 0x0100,
-            ExecutableSegmentFlag::CanExecCdHash => 0x0200,
-            ExecutableSegmentFlag::Unknown(v) => v,
-        }
+bitflags::bitflags! {
+    /// Flags that influence behavior of executable segment.
+    pub struct ExecutableSegmentFlags: u64 {
+        /// Executable segment belongs to main binary.
+        const MAIN_BINARY = 0x0001;
+        /// Allow unsigned pages (for debugging).
+        const ALLOW_UNSIGNED = 0x0010;
+        /// Main binary is debugger.
+        const DEBUGGER = 0x0020;
+        /// JIT enabled.
+        const JIT = 0x0040;
+        /// Skip library validation (obsolete).
+        const SKIP_LIBRARY_VALIDATION = 0x0080;
+        /// Can bless code directory hash for execution.
+        const CAN_LOAD_CD_HASH = 0x0100;
+        /// Can execute blessed code directory hash.
+        const CAN_EXEC_CD_HASH = 0x0200;
     }
 }
 
@@ -1185,7 +1169,7 @@ pub struct CodeDirectoryBlob<'a> {
     /// Limit of executable segment.
     pub exec_seg_limit: Option<u64>,
     /// Executable segment flags.
-    pub exec_seg_flags: Option<u64>,
+    pub exec_seg_flags: Option<ExecutableSegmentFlags>,
     // Version 0x20500
     pub runtime: Option<u32>,
     pub pre_encrypt_offset: Option<u32>,
@@ -1270,11 +1254,17 @@ impl<'a> Blob<'a> for CodeDirectoryBlob<'a> {
                 (
                     Some(data.gread_with(offset, scroll::BE)?),
                     Some(data.gread_with(offset, scroll::BE)?),
-                    Some(data.gread_with(offset, scroll::BE)?),
+                    Some(data.gread_with::<u64>(offset, scroll::BE)?),
                 )
             } else {
                 (None, None, None)
             };
+
+        let exec_seg_flags = if let Some(flags) = exec_seg_flags {
+            Some(unsafe { ExecutableSegmentFlags::from_bits_unchecked(flags) })
+        } else {
+            None
+        };
 
         let (runtime, pre_encrypt_offset) =
             if version >= CodeDirectoryVersion::SupportsRuntime as u32 {
@@ -1434,7 +1424,12 @@ impl<'a> Blob<'a> for CodeDirectoryBlob<'a> {
                         cursor.iowrite_with(self.exec_seg_base.unwrap_or(0), scroll::BE)?;
                         assert_eq!(cursor.position(), 0x40);
                         cursor.iowrite_with(self.exec_seg_limit.unwrap_or(0), scroll::BE)?;
-                        cursor.iowrite_with(self.exec_seg_flags.unwrap_or(0), scroll::BE)?;
+                        cursor.iowrite_with(
+                            self.exec_seg_flags
+                                .unwrap_or(ExecutableSegmentFlags::empty())
+                                .bits,
+                            scroll::BE,
+                        )?;
 
                         if self.version >= CodeDirectoryVersion::SupportsRuntime as u32 {
                             assert_eq!(cursor.position(), 0x50);

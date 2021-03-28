@@ -13,8 +13,8 @@ use {
         macho::{
             create_superblob, find_signature_data, Blob, BlobWrapperBlob, CodeDirectoryBlob,
             CodeSignatureFlags, CodeSigningMagic, CodeSigningSlot, Digest, DigestError, DigestType,
-            EmbeddedSignature, EntitlementsBlob, MachOError, RequirementBlob, RequirementSetBlob,
-            RequirementType,
+            EmbeddedSignature, EntitlementsBlob, ExecutableSegmentFlags, MachOError,
+            RequirementBlob, RequirementSetBlob, RequirementType,
         },
     },
     bytes::Bytes,
@@ -514,7 +514,7 @@ impl<'data, 'key> MachOSigner<'data, 'key> {
     }
 
     /// See [MachOSignatureBuilder::executable_segment_flags].
-    pub fn executable_segment_flags(&mut self, flags: u64) {
+    pub fn executable_segment_flags(&mut self, flags: ExecutableSegmentFlags) {
         self.signature_builders = self
             .signature_builders
             .drain(..)
@@ -718,11 +718,7 @@ pub struct MachOSignatureBuilder<'key> {
     cdflags: Option<CodeSignatureFlags>,
 
     /// Flags for Code Directory execseg field.
-    ///
-    /// These are the `CS_EXECSEG_*` constants.
-    ///
-    /// `CS_EXECSEG_MAIN_BINARY` should be set on executable binaries.
-    executable_segment_flags: Option<u64>,
+    executable_segment_flags: Option<ExecutableSegmentFlags>,
 
     /// Runtime minimum version requirement.
     ///
@@ -849,9 +845,7 @@ impl<'key> MachOSignatureBuilder<'key> {
     }
 
     /// Set the executable segment flags for this binary.
-    ///
-    /// See the `CS_EXECSEG_*` constants in the `macho` module for description.
-    pub fn executable_segment_flags(mut self, flags: u64) -> Self {
+    pub fn executable_segment_flags(mut self, flags: ExecutableSegmentFlags) -> Self {
         self.executable_segment_flags.replace(flags);
 
         self
