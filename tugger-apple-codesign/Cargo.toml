@@ -17,6 +17,7 @@ path = "src/main.rs"
 [dependencies]
 base64 = "0.13"
 bcder = "0.6"
+bitflags = "1.2"
 bytes = "1.0"
 clap = "2.33"
 chrono = "0.4"

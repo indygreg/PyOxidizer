@@ -12,8 +12,9 @@ use {
         code_requirement::{CodeRequirementError, CodeRequirements},
         macho::{
             create_superblob, find_signature_data, Blob, BlobWrapperBlob, CodeDirectoryBlob,
-            CodeSigningMagic, CodeSigningSlot, Digest, DigestError, DigestType, EmbeddedSignature,
-            EntitlementsBlob, MachOError, RequirementBlob, RequirementSetBlob, RequirementType,
+            CodeSignatureFlags, CodeSigningMagic, CodeSigningSlot, Digest, DigestError, DigestType,
+            EmbeddedSignature, EntitlementsBlob, MachOError, RequirementBlob, RequirementSetBlob,
+            RequirementType,
         },
     },
     bytes::Bytes,
@@ -714,7 +715,7 @@ pub struct MachOSignatureBuilder<'key> {
     code_requirement: Option<RequirementSetBlob<'static>>,
 
     /// Setup and mode flags from CodeDirectory.
-    cdflags: Option<u32>,
+    cdflags: Option<CodeSignatureFlags>,
 
     /// Flags for Code Directory execseg field.
     ///
@@ -1010,7 +1011,7 @@ impl<'key> MachOSignatureBuilder<'key> {
     ) -> Result<CodeDirectoryBlob<'static>, SigningError> {
         // TODO support defining or filling in proper values for fields with
         // static values.
-        let flags = self.cdflags.unwrap_or(0);
+        let flags = self.cdflags.unwrap_or(CodeSignatureFlags::empty());
 
         // Code limit fields hold the file offset at which code digests stop. This
         // is the file offset in the `__LINKEDIT` segment when the embedded signature

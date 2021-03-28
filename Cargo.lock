@@ -3447,6 +3447,7 @@ version = "0.1.0"
 dependencies = [
  "base64 0.13.0",
  "bcder",
+ "bitflags",
  "bytes",
  "chrono",
  "clap",

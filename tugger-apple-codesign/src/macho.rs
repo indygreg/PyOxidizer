@@ -228,6 +228,37 @@ impl From<CodeSigningMagic> for u32 {
     }
 }
 
+bitflags::bitflags! {
+    /// Code signature flags.
+    ///
+    /// These flags are embedded in the Code Directory and govern use of the embedded
+    /// signature.
+    pub struct CodeSignatureFlags: u32 {
+        /// Code may act as a host that controls and supervises guest code.
+        const HOST = 0x0001;
+        /// The code has been sealed without a signing identity.
+        const ADHOC = 0x0002;
+        /// Set the "hard" status bit for the code when it starts running.
+        const FORCE_HARD = 0x0100;
+        /// Implicitly set the "kill" status bit for the code when it starts running.
+        const FORCE_KILL = 0x0200;
+        /// Force certificate expiration checks.
+        const FORCE_EXPIRATION = 0x0400;
+        /// Restrict dyld loading.
+        const RESTRICT = 0x0800;
+        /// Enforce code signing.
+        const ENFORCEMENT = 0x1000;
+        /// Library validation required.
+        const LIBRARY_VALIDATION = 0x2000;
+        /// Apply runtime hardening policies.
+        const RUNTIME = 0x10000;
+        /// The code was automatically signed by the linker.
+        ///
+        /// This signature should be ignored in any new signing operation.
+        const LINKER_SIGNED = 0x20000;
+    }
+}
+
 /// Flags that influence behavior of executable segment.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum ExecutableSegmentFlag {
@@ -1119,7 +1150,7 @@ pub struct CodeDirectoryBlob<'a> {
     /// Compatibility version.
     pub version: u32,
     /// Setup and mode flags.
-    pub flags: u32,
+    pub flags: CodeSignatureFlags,
     // hash_offset, ident_offset, n_special_slots, and n_code_slots not stored
     // explicitly because they are redundant with derived fields.
     /// Limit to main image signature range.
@@ -1183,7 +1214,8 @@ impl<'a> Blob<'a> for CodeDirectoryBlob<'a> {
         let offset = &mut 8;
 
         let version = data.gread_with(offset, scroll::BE)?;
-        let flags = data.gread_with(offset, scroll::BE)?;
+        let flags = data.gread_with::<u32>(offset, scroll::BE)?;
+        let flags = unsafe { CodeSignatureFlags::from_bits_unchecked(flags) };
         assert_eq!(*offset, 0x10);
         let hash_offset = data.gread_with::<u32>(offset, scroll::BE)?;
         let ident_offset = data.gread_with::<u32>(offset, scroll::BE)?;
@@ -1350,7 +1382,7 @@ impl<'a> Blob<'a> for CodeDirectoryBlob<'a> {
         // we build up the data structure.
 
         cursor.iowrite_with(self.version, scroll::BE)?;
-        cursor.iowrite_with(self.flags, scroll::BE)?;
+        cursor.iowrite_with(self.flags.bits, scroll::BE)?;
         let hash_offset_cursor_position = cursor.position();
         cursor.iowrite_with(0u32, scroll::BE)?;
         let ident_offset_cursor_position = cursor.position();
