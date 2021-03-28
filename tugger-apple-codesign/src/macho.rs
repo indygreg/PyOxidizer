@@ -40,7 +40,9 @@ which allows some access to data within each specific blob type.
 */
 
 use {
-    crate::code_requirement::{parse_requirements, CodeRequirementError, ExpressionElement},
+    crate::code_requirement::{
+        parse_code_requirements, CodeRequirementError, CodeRequirementExpression,
+    },
     goblin::mach::{constants::SEG_LINKEDIT, load_command::CommandVariant, MachO},
     scroll::{IOwrite, Pread},
     std::{
@@ -864,8 +866,8 @@ impl<'a> RequirementBlob<'a> {
     }
 
     /// Parse the binary data in this blob into Code Requirement expressions.
-    pub fn parse_expressions(&self) -> Result<Vec<ExpressionElement>, MachOError> {
-        Ok(parse_requirements(&self.data)?.0)
+    pub fn parse_expressions(&self) -> Result<Vec<CodeRequirementExpression>, MachOError> {
+        Ok(parse_code_requirements(&self.data)?.0)
     }
 }
 

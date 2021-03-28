@@ -24,6 +24,7 @@ on 4 byte boundaries.
 */
 
 use {
+    crate::macho::{read_and_validate_blob_header, CodeSigningMagic},
     bcder::Oid,
     chrono::TimeZone,
     scroll::Pread,
@@ -90,13 +91,17 @@ fn read_data(data: &[u8]) -> Result<(&[u8], &[u8]), CodeRequirementError> {
     Ok((value, remaining))
 }
 
+/// A value in a code requirement expression.
+///
+/// The value can be various primitive types. This type exists to make it
+/// easier to work with and format values in code requirement expressions.
 #[derive(Clone, Debug, PartialEq)]
-pub enum Value<'a> {
+pub enum CodeRequirementValue<'a> {
     String(Cow<'a, str>),
     Bytes(Cow<'a, [u8]>),
 }
 
-impl<'a> From<&'a [u8]> for Value<'a> {
+impl<'a> From<&'a [u8]> for CodeRequirementValue<'a> {
     fn from(value: &'a [u8]) -> Self {
         let is_ascii_printable = |c: &u8| -> bool {
             c.is_ascii_alphanumeric() || c.is_ascii_whitespace() || c.is_ascii_punctuation()
@@ -110,19 +115,19 @@ impl<'a> From<&'a [u8]> for Value<'a> {
     }
 }
 
-impl<'a> From<&'a str> for Value<'a> {
+impl<'a> From<&'a str> for CodeRequirementValue<'a> {
     fn from(s: &'a str) -> Self {
         Self::String(s.into())
     }
 }
 
-impl<'a> From<Cow<'a, str>> for Value<'a> {
+impl<'a> From<Cow<'a, str>> for CodeRequirementValue<'a> {
     fn from(v: Cow<'a, str>) -> Self {
         Self::String(v)
     }
 }
 
-impl<'a> std::fmt::Display for Value<'a> {
+impl<'a> std::fmt::Display for CodeRequirementValue<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::String(s) => f.write_str(s),
@@ -131,9 +136,10 @@ impl<'a> std::fmt::Display for Value<'a> {
     }
 }
 
+/// An opcode representing a code requirement expression.
 #[derive(Clone, Copy, Debug, PartialEq)]
 #[repr(u32)]
-pub enum RequirementOpCode {
+enum RequirementOpCode {
     False = 0,
     True = 1,
     Identifier = 2,
@@ -202,26 +208,26 @@ impl RequirementOpCode {
     pub fn parse_payload<'a>(
         &self,
         data: &'a [u8],
-    ) -> Result<(ExpressionElement<'a>, &'a [u8]), CodeRequirementError> {
+    ) -> Result<(CodeRequirementExpression<'a>, &'a [u8]), CodeRequirementError> {
         match self {
-            Self::False => Ok((ExpressionElement::False, data)),
-            Self::True => Ok((ExpressionElement::True, data)),
+            Self::False => Ok((CodeRequirementExpression::False, data)),
+            Self::True => Ok((CodeRequirementExpression::True, data)),
             Self::Identifier => {
                 let (value, data) = read_data(data)?;
                 let s = std::str::from_utf8(value).map_err(|_| {
                     CodeRequirementError::Malformed("identifier value not a UTF-8 string")
                 })?;
 
-                Ok((ExpressionElement::Identifier(Cow::from(s)), data))
+                Ok((CodeRequirementExpression::Identifier(Cow::from(s)), data))
             }
-            Self::AnchorApple => Ok((ExpressionElement::AnchorApple, data)),
+            Self::AnchorApple => Ok((CodeRequirementExpression::AnchorApple, data)),
             Self::AnchorCertificateHash => {
                 let slot = data.pread_with::<i32>(0, scroll::BE)?;
                 let digest_length = data.pread_with::<u32>(4, scroll::BE)?;
                 let digest = &data[8..8 + digest_length as usize];
 
                 Ok((
-                    ExpressionElement::AnchorCertificateHash(slot, digest.into()),
+                    CodeRequirementExpression::AnchorCertificateHash(slot, digest.into()),
                     &data[8 + digest_length as usize..],
                 ))
             }
@@ -238,31 +244,40 @@ impl RequirementOpCode {
                 })?;
 
                 Ok((
-                    ExpressionElement::InfoKeyValueLegacy(key.into(), value.into()),
+                    CodeRequirementExpression::InfoKeyValueLegacy(key.into(), value.into()),
                     data,
                 ))
             }
             Self::And => {
-                let (a, data) = ExpressionElement::from_bytes(data)?;
-                let (b, data) = ExpressionElement::from_bytes(data)?;
+                let (a, data) = CodeRequirementExpression::from_bytes(data)?;
+                let (b, data) = CodeRequirementExpression::from_bytes(data)?;
 
-                Ok((ExpressionElement::And(Box::new(a), Box::new(b)), data))
+                Ok((
+                    CodeRequirementExpression::And(Box::new(a), Box::new(b)),
+                    data,
+                ))
             }
             Self::Or => {
-                let (a, data) = ExpressionElement::from_bytes(data)?;
-                let (b, data) = ExpressionElement::from_bytes(data)?;
+                let (a, data) = CodeRequirementExpression::from_bytes(data)?;
+                let (b, data) = CodeRequirementExpression::from_bytes(data)?;
 
-                Ok((ExpressionElement::Or(Box::new(a), Box::new(b)), data))
+                Ok((
+                    CodeRequirementExpression::Or(Box::new(a), Box::new(b)),
+                    data,
+                ))
             }
             Self::CodeDirectoryHash => {
                 let (value, data) = read_data(data)?;
 
-                Ok((ExpressionElement::CodeDirectoryHash(value.into()), data))
+                Ok((
+                    CodeRequirementExpression::CodeDirectoryHash(value.into()),
+                    data,
+                ))
             }
             Self::Not => {
-                let (expr, data) = ExpressionElement::from_bytes(data)?;
+                let (expr, data) = CodeRequirementExpression::from_bytes(data)?;
 
-                Ok((ExpressionElement::Not(Box::new(expr)), data))
+                Ok((CodeRequirementExpression::Not(Box::new(expr)), data))
             }
             Self::InfoPlistExpression => {
                 let (key, data) = read_data(data)?;
@@ -270,9 +285,12 @@ impl RequirementOpCode {
                 let key = std::str::from_utf8(key)
                     .map_err(|_| CodeRequirementError::Malformed("key is not valid UTF-8"))?;
 
-                let (expr, data) = MatchExpression::from_bytes(data)?;
+                let (expr, data) = CodeRequirementMatchExpression::from_bytes(data)?;
 
-                Ok((ExpressionElement::InfoPlistKeyField(key.into(), expr), data))
+                Ok((
+                    CodeRequirementExpression::InfoPlistKeyField(key.into(), expr),
+                    data,
+                ))
             }
             Self::CertificateField => {
                 let slot = data.pread_with::<i32>(0, scroll::BE)?;
@@ -283,51 +301,57 @@ impl RequirementOpCode {
                     CodeRequirementError::Malformed("certificate field is not valid UTF-8")
                 })?;
 
-                let (expr, data) = MatchExpression::from_bytes(data)?;
+                let (expr, data) = CodeRequirementMatchExpression::from_bytes(data)?;
 
                 Ok((
-                    ExpressionElement::CertificateField(slot, field.into(), expr),
+                    CodeRequirementExpression::CertificateField(slot, field.into(), expr),
                     data,
                 ))
             }
             Self::CertificateTrusted => {
                 let slot = data.pread_with::<i32>(0, scroll::BE)?;
 
-                Ok((ExpressionElement::CertificateTrusted(slot), &data[4..]))
+                Ok((
+                    CodeRequirementExpression::CertificateTrusted(slot),
+                    &data[4..],
+                ))
             }
-            Self::AnchorTrusted => Ok((ExpressionElement::AnchorTrusted, data)),
+            Self::AnchorTrusted => Ok((CodeRequirementExpression::AnchorTrusted, data)),
             Self::CertificateGeneric => {
                 let slot = data.pread_with::<i32>(0, scroll::BE)?;
 
                 let (oid, data) = read_data(&data[4..])?;
 
-                let (expr, data) = MatchExpression::from_bytes(data)?;
+                let (expr, data) = CodeRequirementMatchExpression::from_bytes(data)?;
 
                 Ok((
-                    ExpressionElement::CertificateGeneric(slot, Oid(oid), expr),
+                    CodeRequirementExpression::CertificateGeneric(slot, Oid(oid), expr),
                     data,
                 ))
             }
-            Self::AnchorAppleGeneric => Ok((ExpressionElement::AnchorAppleGeneric, data)),
+            Self::AnchorAppleGeneric => Ok((CodeRequirementExpression::AnchorAppleGeneric, data)),
             Self::EntitlementsField => {
                 let (key, data) = read_data(data)?;
 
                 let key = std::str::from_utf8(key)
                     .map_err(|_| CodeRequirementError::Malformed("entitlement key is not UTF-8"))?;
 
-                let (expr, data) = MatchExpression::from_bytes(data)?;
+                let (expr, data) = CodeRequirementMatchExpression::from_bytes(data)?;
 
-                Ok((ExpressionElement::EntitlementsKey(key.into(), expr), data))
+                Ok((
+                    CodeRequirementExpression::EntitlementsKey(key.into(), expr),
+                    data,
+                ))
             }
             Self::CertificatePolicy => {
                 let slot = data.pread_with::<i32>(0, scroll::BE)?;
 
                 let (oid, data) = read_data(&data[4..])?;
 
-                let (expr, data) = MatchExpression::from_bytes(data)?;
+                let (expr, data) = CodeRequirementMatchExpression::from_bytes(data)?;
 
                 Ok((
-                    ExpressionElement::CertificatePolicy(slot, Oid(oid), expr),
+                    CodeRequirementExpression::CertificatePolicy(slot, Oid(oid), expr),
                     data,
                 ))
             }
@@ -337,7 +361,7 @@ impl RequirementOpCode {
                 let name = std::str::from_utf8(name)
                     .map_err(|_| CodeRequirementError::Malformed("named anchor isn't UTF-8"))?;
 
-                Ok((ExpressionElement::NamedAnchor(name.into()), data))
+                Ok((CodeRequirementExpression::NamedAnchor(name.into()), data))
             }
             Self::NamedCode => {
                 let (name, data) = read_data(data)?;
@@ -345,34 +369,34 @@ impl RequirementOpCode {
                 let name = std::str::from_utf8(name)
                     .map_err(|_| CodeRequirementError::Malformed("named code isn't UTF-8"))?;
 
-                Ok((ExpressionElement::NamedCode(name.into()), data))
+                Ok((CodeRequirementExpression::NamedCode(name.into()), data))
             }
             Self::Platform => {
                 let value = data.pread_with::<u32>(0, scroll::BE)?;
 
-                Ok((ExpressionElement::Platform(value), &data[4..]))
+                Ok((CodeRequirementExpression::Platform(value), &data[4..]))
             }
-            Self::Notarized => Ok((ExpressionElement::Notarized, data)),
+            Self::Notarized => Ok((CodeRequirementExpression::Notarized, data)),
             Self::CertificateFieldDate => {
                 let slot = data.pread_with::<i32>(0, scroll::BE)?;
 
                 let (oid, data) = read_data(&data[4..])?;
 
-                let (expr, data) = MatchExpression::from_bytes(data)?;
+                let (expr, data) = CodeRequirementMatchExpression::from_bytes(data)?;
 
                 Ok((
-                    ExpressionElement::CertificateFieldDate(slot, Oid(oid), expr),
+                    CodeRequirementExpression::CertificateFieldDate(slot, Oid(oid), expr),
                     data,
                 ))
             }
-            Self::LegacyDeveloperId => Ok((ExpressionElement::LegacyDeveloperId, data)),
+            Self::LegacyDeveloperId => Ok((CodeRequirementExpression::LegacyDeveloperId, data)),
         }
     }
 }
 
-/// Defines an element in an expression tree.
+/// Defines a code requirement expression.
 #[derive(Clone, Debug, PartialEq)]
-pub enum ExpressionElement<'a> {
+pub enum CodeRequirementExpression<'a> {
     /// False
     ///
     /// `false`
@@ -420,14 +444,20 @@ pub enum ExpressionElement<'a> {
     /// `expr0 and expr1`
     ///
     /// Payload consists of 2 sub-expressions with no additional encoding.
-    And(Box<ExpressionElement<'a>>, Box<ExpressionElement<'a>>),
+    And(
+        Box<CodeRequirementExpression<'a>>,
+        Box<CodeRequirementExpression<'a>>,
+    ),
 
     /// Logical or.
     ///
     /// `expr0 or expr1`
     ///
     /// Payload consists of 2 sub-expressions with no additional encoding.
-    Or(Box<ExpressionElement<'a>>, Box<ExpressionElement<'a>>),
+    Or(
+        Box<CodeRequirementExpression<'a>>,
+        Box<CodeRequirementExpression<'a>>,
+    ),
 
     /// Code directory hash.
     ///
@@ -441,7 +471,7 @@ pub enum ExpressionElement<'a> {
     /// `!expr`
     ///
     /// Payload is 1 sub-expression.
-    Not(Box<ExpressionElement<'a>>),
+    Not(Box<CodeRequirementExpression<'a>>),
 
     /// Info plist key field.
     ///
@@ -450,14 +480,14 @@ pub enum ExpressionElement<'a> {
     /// e.g. `info [CFBundleName] exists`
     ///
     /// 4 bytes key length, key string, then match expression.
-    InfoPlistKeyField(Cow<'a, str>, MatchExpression<'a>),
+    InfoPlistKeyField(Cow<'a, str>, CodeRequirementMatchExpression<'a>),
 
     /// Certificate field matches.
     ///
     /// `certificate <slot> [<field>] match expression`
     ///
     /// Slot i32, 4 bytes field length, field string, then match expression.
-    CertificateField(i32, Cow<'a, str>, MatchExpression<'a>),
+    CertificateField(i32, Cow<'a, str>, CodeRequirementMatchExpression<'a>),
 
     /// Certificate in position is trusted for code signing.
     ///
@@ -478,7 +508,7 @@ pub enum ExpressionElement<'a> {
     /// `certificate <slot> [field.<oid>] match expression`
     ///
     /// Slot i32, 4 bytes OID length, OID raw bytes, match expression.
-    CertificateGeneric(i32, Oid<&'a [u8]>, MatchExpression<'a>),
+    CertificateGeneric(i32, Oid<&'a [u8]>, CodeRequirementMatchExpression<'a>),
 
     /// For code signed by Apple, including from code signing certificates issued by Apple.
     ///
@@ -492,14 +522,14 @@ pub enum ExpressionElement<'a> {
     /// `entitlement [<key>] match expression`
     ///
     /// 4 bytes key length, key bytes, match expression.
-    EntitlementsKey(Cow<'a, str>, MatchExpression<'a>),
+    EntitlementsKey(Cow<'a, str>, CodeRequirementMatchExpression<'a>),
 
     /// OID associated with certificate in a given slot.
     ///
     /// It is unknown what the OID means.
     ///
     /// `certificate <slot> [policy.<oid>] match expression`
-    CertificatePolicy(i32, Oid<&'a [u8]>, MatchExpression<'a>),
+    CertificatePolicy(i32, Oid<&'a [u8]>, CodeRequirementMatchExpression<'a>),
 
     /// A named Apple anchor.
     ///
@@ -534,13 +564,13 @@ pub enum ExpressionElement<'a> {
     /// Unknown what the OID corresponds to.
     ///
     /// `certificate <slot> [timestamp.<oid>] match expression`
-    CertificateFieldDate(i32, Oid<&'a [u8]>, MatchExpression<'a>),
+    CertificateFieldDate(i32, Oid<&'a [u8]>, CodeRequirementMatchExpression<'a>),
 
     /// Legacy developer ID used.
     LegacyDeveloperId,
 }
 
-impl<'a> std::fmt::Display for ExpressionElement<'a> {
+impl<'a> std::fmt::Display for CodeRequirementExpression<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::False => f.write_str("never"),
@@ -594,7 +624,7 @@ impl<'a> std::fmt::Display for ExpressionElement<'a> {
     }
 }
 
-impl<'a> ExpressionElement<'a> {
+impl<'a> CodeRequirementExpression<'a> {
     /// Construct an expression element by reading from a slice.
     ///
     /// Returns the newly constructed element and remaining data in the slice.
@@ -612,9 +642,10 @@ impl<'a> ExpressionElement<'a> {
     }
 }
 
+/// A code requirement match expression type.
 #[derive(Clone, Copy, Debug, PartialEq)]
 #[repr(u32)]
-pub enum MatchType {
+enum MatchType {
     Exists = 0,
     Equal = 1,
     Contains = 2,
@@ -662,54 +693,66 @@ impl MatchType {
     pub fn parse_payload<'a>(
         &self,
         data: &'a [u8],
-    ) -> Result<(MatchExpression<'a>, &'a [u8]), CodeRequirementError> {
+    ) -> Result<(CodeRequirementMatchExpression<'a>, &'a [u8]), CodeRequirementError> {
         match self {
-            Self::Exists => Ok((MatchExpression::Exists, data)),
+            Self::Exists => Ok((CodeRequirementMatchExpression::Exists, data)),
             Self::Equal => {
                 let (value, data) = read_data(data)?;
 
-                Ok((MatchExpression::Equal(value.into()), data))
+                Ok((CodeRequirementMatchExpression::Equal(value.into()), data))
             }
             Self::Contains => {
                 let (value, data) = read_data(data)?;
 
-                Ok((MatchExpression::Contains(value.into()), data))
+                Ok((CodeRequirementMatchExpression::Contains(value.into()), data))
             }
             Self::BeginsWith => {
                 let (value, data) = read_data(data)?;
 
-                Ok((MatchExpression::BeginsWith(value.into()), data))
+                Ok((
+                    CodeRequirementMatchExpression::BeginsWith(value.into()),
+                    data,
+                ))
             }
             Self::EndsWith => {
                 let (value, data) = read_data(data)?;
 
-                Ok((MatchExpression::EndsWith(value.into()), data))
+                Ok((CodeRequirementMatchExpression::EndsWith(value.into()), data))
             }
             Self::LessThan => {
                 let (value, data) = read_data(data)?;
 
-                Ok((MatchExpression::LessThan(value.into()), data))
+                Ok((CodeRequirementMatchExpression::LessThan(value.into()), data))
             }
             Self::GreaterThan => {
                 let (value, data) = read_data(data)?;
 
-                Ok((MatchExpression::GreaterThan(value.into()), data))
+                Ok((
+                    CodeRequirementMatchExpression::GreaterThan(value.into()),
+                    data,
+                ))
             }
             Self::LessThanEqual => {
                 let (value, data) = read_data(data)?;
 
-                Ok((MatchExpression::LessThanEqual(value.into()), data))
+                Ok((
+                    CodeRequirementMatchExpression::LessThanEqual(value.into()),
+                    data,
+                ))
             }
             Self::GreaterThanEqual => {
                 let (value, data) = read_data(data)?;
 
-                Ok((MatchExpression::GreaterThanEqual(value.into()), data))
+                Ok((
+                    CodeRequirementMatchExpression::GreaterThanEqual(value.into()),
+                    data,
+                ))
             }
             Self::On => {
                 let value = data.pread_with::<i64>(0, scroll::BE)?;
 
                 Ok((
-                    MatchExpression::On(chrono::Utc.timestamp(value, 0)),
+                    CodeRequirementMatchExpression::On(chrono::Utc.timestamp(value, 0)),
                     &data[8..],
                 ))
             }
@@ -717,7 +760,7 @@ impl MatchType {
                 let value = data.pread_with::<i64>(0, scroll::BE)?;
 
                 Ok((
-                    MatchExpression::Before(chrono::Utc.timestamp(value, 0)),
+                    CodeRequirementMatchExpression::Before(chrono::Utc.timestamp(value, 0)),
                     &data[8..],
                 ))
             }
@@ -725,7 +768,7 @@ impl MatchType {
                 let value = data.pread_with::<i64>(0, scroll::BE)?;
 
                 Ok((
-                    MatchExpression::After(chrono::Utc.timestamp(value, 0)),
+                    CodeRequirementMatchExpression::After(chrono::Utc.timestamp(value, 0)),
                     &data[8..],
                 ))
             }
@@ -733,7 +776,7 @@ impl MatchType {
                 let value = data.pread_with::<i64>(0, scroll::BE)?;
 
                 Ok((
-                    MatchExpression::OnOrBefore(chrono::Utc.timestamp(value, 0)),
+                    CodeRequirementMatchExpression::OnOrBefore(chrono::Utc.timestamp(value, 0)),
                     &data[8..],
                 ))
             }
@@ -741,18 +784,18 @@ impl MatchType {
                 let value = data.pread_with::<i64>(0, scroll::BE)?;
 
                 Ok((
-                    MatchExpression::OnOrAfter(chrono::Utc.timestamp(value, 0)),
+                    CodeRequirementMatchExpression::OnOrAfter(chrono::Utc.timestamp(value, 0)),
                     &data[8..],
                 ))
             }
-            Self::Absent => Ok((MatchExpression::Absent, data)),
+            Self::Absent => Ok((CodeRequirementMatchExpression::Absent, data)),
         }
     }
 }
 
-/// Defines a match expression.
+/// An instance of a match expression in a [CodeRequirementExpression].
 #[derive(Clone, Debug, PartialEq)]
-pub enum MatchExpression<'a> {
+pub enum CodeRequirementMatchExpression<'a> {
     /// Entity exists.
     ///
     /// `exists`
@@ -765,54 +808,54 @@ pub enum MatchExpression<'a> {
     /// `= <value>`
     ///
     /// 4 bytes length, raw data.
-    Equal(Value<'a>),
+    Equal(CodeRequirementValue<'a>),
 
     /// Contains.
     ///
     /// `~ <value>`
     ///
     /// 4 bytes length, raw data.
-    Contains(Value<'a>),
+    Contains(CodeRequirementValue<'a>),
 
     /// Begins with.
     ///
     /// `= <value>*`
     ///
     /// 4 bytes length, raw data.
-    BeginsWith(Value<'a>),
+    BeginsWith(CodeRequirementValue<'a>),
 
     /// Ends with.
     ///
     /// `= *<value>`
     ///
     /// 4 bytes length, raw data.
-    EndsWith(Value<'a>),
+    EndsWith(CodeRequirementValue<'a>),
 
     /// Less than.
     ///
     /// `< <value>`
     ///
     /// 4 bytes length, raw data.
-    LessThan(Value<'a>),
+    LessThan(CodeRequirementValue<'a>),
 
     /// Greater than.
     ///
     /// `> <value>`
-    GreaterThan(Value<'a>),
+    GreaterThan(CodeRequirementValue<'a>),
 
     /// Less than or equal to.
     ///
     /// `<= <value>`
     ///
     /// 4 bytes length, raw data.
-    LessThanEqual(Value<'a>),
+    LessThanEqual(CodeRequirementValue<'a>),
 
     /// Greater than or equal to.
     ///
     /// `>= <value>`
     ///
     /// 4 bytes length, raw data.
-    GreaterThanEqual(Value<'a>),
+    GreaterThanEqual(CodeRequirementValue<'a>),
 
     /// Timestamp value equivalent.
     ///
@@ -847,7 +890,7 @@ pub enum MatchExpression<'a> {
     Absent,
 }
 
-impl<'a> std::fmt::Display for MatchExpression<'a> {
+impl<'a> std::fmt::Display for CodeRequirementMatchExpression<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Exists => f.write_str("/* exists */"),
@@ -869,7 +912,7 @@ impl<'a> std::fmt::Display for MatchExpression<'a> {
     }
 }
 
-impl<'a> MatchExpression<'a> {
+impl<'a> CodeRequirementMatchExpression<'a> {
     /// Parse a match expression from bytes.
     ///
     /// The slice should begin with the match type u32.
@@ -886,22 +929,34 @@ impl<'a> MatchExpression<'a> {
 ///
 /// This parses the data that follows the requirement blob header/magic that
 /// usually accompanies the binary representation of code requirements.
-pub fn parse_requirements(
+pub fn parse_code_requirements(
     data: &[u8],
-) -> Result<(Vec<ExpressionElement>, &[u8]), CodeRequirementError> {
+) -> Result<(Vec<CodeRequirementExpression>, &[u8]), CodeRequirementError> {
     let count = data.pread_with::<u32>(0, scroll::BE)?;
     let mut data = &data[4..];
 
     let mut elements = Vec::with_capacity(count as usize);
 
     for _ in 0..count {
-        let res = ExpressionElement::from_bytes(data)?;
+        let res = CodeRequirementExpression::from_bytes(data)?;
 
         elements.push(res.0);
         data = res.1;
     }
 
     Ok((elements, data))
+}
+
+/// Parse a code requirement blob, which begins with header magic.
+///
+/// This can be used to parse the output generated by `csreq -b`.
+pub fn parse_code_requirement_blob(
+    data: &[u8],
+) -> Result<(Vec<CodeRequirementExpression>, &[u8]), CodeRequirementError> {
+    let data = read_and_validate_blob_header(data, u32::from(CodeSigningMagic::Requirement))
+        .map_err(|_| CodeRequirementError::Malformed("malformed blob header"))?;
+
+    parse_code_requirements(data)
 }
 
 #[cfg(test)]
@@ -912,9 +967,9 @@ mod test {
     fn parse_false() {
         let source = hex::decode("0000000100000000").unwrap();
 
-        let (els, data) = parse_requirements(&source).unwrap();
+        let (els, data) = parse_code_requirements(&source).unwrap();
 
-        assert_eq!(els, vec![ExpressionElement::False]);
+        assert_eq!(els, vec![CodeRequirementExpression::False]);
         assert!(data.is_empty());
     }
 
@@ -922,9 +977,9 @@ mod test {
     fn parse_true() {
         let source = hex::decode("0000000100000001").unwrap();
 
-        let (els, data) = parse_requirements(&source).unwrap();
+        let (els, data) = parse_code_requirements(&source).unwrap();
 
-        assert_eq!(els, vec![ExpressionElement::True]);
+        assert_eq!(els, vec![CodeRequirementExpression::True]);
         assert!(data.is_empty());
     }
 
@@ -932,9 +987,12 @@ mod test {
     fn parse_identifier() {
         let source = hex::decode("000000010000000200000007666f6f2e62617200").unwrap();
 
-        let (els, data) = parse_requirements(&source).unwrap();
+        let (els, data) = parse_code_requirements(&source).unwrap();
 
-        assert_eq!(els, vec![ExpressionElement::Identifier("foo.bar".into())]);
+        assert_eq!(
+            els,
+            vec![CodeRequirementExpression::Identifier("foo.bar".into())]
+        );
         assert!(data.is_empty());
     }
 
@@ -942,9 +1000,9 @@ mod test {
     fn parse_anchor_apple() {
         let source = hex::decode("0000000100000003").unwrap();
 
-        let (els, data) = parse_requirements(&source).unwrap();
+        let (els, data) = parse_code_requirements(&source).unwrap();
 
-        assert_eq!(els, vec![ExpressionElement::AnchorApple]);
+        assert_eq!(els, vec![CodeRequirementExpression::AnchorApple]);
         assert!(data.is_empty());
     }
 
@@ -954,11 +1012,11 @@ mod test {
             hex::decode("0000000100000004ffffffff00000014deadbeefdeadbeefdeadbeefdeadbeefdeadbeef")
                 .unwrap();
 
-        let (els, data) = parse_requirements(&source).unwrap();
+        let (els, data) = parse_code_requirements(&source).unwrap();
 
         assert_eq!(
             els,
-            vec![ExpressionElement::AnchorCertificateHash(
+            vec![CodeRequirementExpression::AnchorCertificateHash(
                 -1,
                 hex::decode("deadbeefdeadbeefdeadbeefdeadbeefdeadbeef")
                     .unwrap()
@@ -972,13 +1030,13 @@ mod test {
     fn parse_and() {
         let source = hex::decode("00000001000000060000000100000000").unwrap();
 
-        let (els, data) = parse_requirements(&source).unwrap();
+        let (els, data) = parse_code_requirements(&source).unwrap();
 
         assert_eq!(
             els,
-            vec![ExpressionElement::And(
-                Box::new(ExpressionElement::True),
-                Box::new(ExpressionElement::False)
+            vec![CodeRequirementExpression::And(
+                Box::new(CodeRequirementExpression::True),
+                Box::new(CodeRequirementExpression::False)
             )]
         );
         assert!(data.is_empty());
@@ -988,13 +1046,13 @@ mod test {
     fn parse_or() {
         let source = hex::decode("00000001000000070000000100000000").unwrap();
 
-        let (els, data) = parse_requirements(&source).unwrap();
+        let (els, data) = parse_code_requirements(&source).unwrap();
 
         assert_eq!(
             els,
-            vec![ExpressionElement::Or(
-                Box::new(ExpressionElement::True),
-                Box::new(ExpressionElement::False)
+            vec![CodeRequirementExpression::Or(
+                Box::new(CodeRequirementExpression::True),
+                Box::new(CodeRequirementExpression::False)
             )]
         );
         assert!(data.is_empty());
@@ -1006,11 +1064,11 @@ mod test {
             hex::decode("000000010000000800000014deadbeefdeadbeefdeadbeefdeadbeefdeadbeef")
                 .unwrap();
 
-        let (els, data) = parse_requirements(&source).unwrap();
+        let (els, data) = parse_code_requirements(&source).unwrap();
 
         assert_eq!(
             els,
-            vec![ExpressionElement::CodeDirectoryHash(
+            vec![CodeRequirementExpression::CodeDirectoryHash(
                 hex::decode("deadbeefdeadbeefdeadbeefdeadbeefdeadbeef")
                     .unwrap()
                     .into()
@@ -1023,11 +1081,13 @@ mod test {
     fn parse_not() {
         let source = hex::decode("000000010000000900000001").unwrap();
 
-        let (els, data) = parse_requirements(&source).unwrap();
+        let (els, data) = parse_code_requirements(&source).unwrap();
 
         assert_eq!(
             els,
-            vec![ExpressionElement::Not(Box::new(ExpressionElement::True))]
+            vec![CodeRequirementExpression::Not(Box::new(
+                CodeRequirementExpression::True
+            ))]
         );
         assert!(data.is_empty());
     }
@@ -1036,13 +1096,13 @@ mod test {
     fn parse_info_plist_key_field() {
         let source = hex::decode("000000010000000a000000036b65790000000000").unwrap();
 
-        let (els, data) = parse_requirements(&source).unwrap();
+        let (els, data) = parse_code_requirements(&source).unwrap();
 
         assert_eq!(
             els,
-            vec![ExpressionElement::InfoPlistKeyField(
+            vec![CodeRequirementExpression::InfoPlistKeyField(
                 "key".into(),
-                MatchExpression::Exists
+                CodeRequirementMatchExpression::Exists
             )]
         );
         assert!(data.is_empty());
@@ -1054,14 +1114,14 @@ mod test {
             hex::decode("000000010000000bffffffff0000000a7375626a6563742e434e000000000000")
                 .unwrap();
 
-        let (els, data) = parse_requirements(&source).unwrap();
+        let (els, data) = parse_code_requirements(&source).unwrap();
 
         assert_eq!(
             els,
-            vec![ExpressionElement::CertificateField(
+            vec![CodeRequirementExpression::CertificateField(
                 -1,
                 "subject.CN".into(),
-                MatchExpression::Exists
+                CodeRequirementMatchExpression::Exists
             )]
         );
         assert!(data.is_empty());
@@ -1071,9 +1131,9 @@ mod test {
     fn parse_certificate_trusted() {
         let source = hex::decode("000000010000000cffffffff").unwrap();
 
-        let (els, data) = parse_requirements(&source).unwrap();
+        let (els, data) = parse_code_requirements(&source).unwrap();
 
-        assert_eq!(els, vec![ExpressionElement::CertificateTrusted(-1)]);
+        assert_eq!(els, vec![CodeRequirementExpression::CertificateTrusted(-1)]);
         assert!(data.is_empty());
     }
 
@@ -1081,9 +1141,9 @@ mod test {
     fn parse_anchor_trusted() {
         let source = hex::decode("000000010000000d").unwrap();
 
-        let (els, data) = parse_requirements(&source).unwrap();
+        let (els, data) = parse_code_requirements(&source).unwrap();
 
-        assert_eq!(els, vec![ExpressionElement::AnchorTrusted]);
+        assert_eq!(els, vec![CodeRequirementExpression::AnchorTrusted]);
         assert!(data.is_empty());
     }
 
@@ -1091,14 +1151,14 @@ mod test {
     fn parse_certificate_generic() {
         let source = hex::decode("000000010000000effffffff000000035504030000000000").unwrap();
 
-        let (els, data) = parse_requirements(&source).unwrap();
+        let (els, data) = parse_code_requirements(&source).unwrap();
 
         assert_eq!(
             els,
-            vec![ExpressionElement::CertificateGeneric(
+            vec![CodeRequirementExpression::CertificateGeneric(
                 -1,
                 Oid(&[0x55, 4, 3]),
-                MatchExpression::Exists
+                CodeRequirementMatchExpression::Exists
             )]
         );
         assert!(data.is_empty());
@@ -1108,9 +1168,9 @@ mod test {
     fn parse_anchor_apple_generic() {
         let source = hex::decode("000000010000000f").unwrap();
 
-        let (els, data) = parse_requirements(&source).unwrap();
+        let (els, data) = parse_code_requirements(&source).unwrap();
 
-        assert_eq!(els, vec![ExpressionElement::AnchorAppleGeneric]);
+        assert_eq!(els, vec![CodeRequirementExpression::AnchorAppleGeneric]);
         assert!(data.is_empty());
     }
 
@@ -1118,13 +1178,13 @@ mod test {
     fn parse_entitlements_key() {
         let source = hex::decode("0000000100000010000000036b65790000000000").unwrap();
 
-        let (els, data) = parse_requirements(&source).unwrap();
+        let (els, data) = parse_code_requirements(&source).unwrap();
 
         assert_eq!(
             els,
-            vec![ExpressionElement::EntitlementsKey(
+            vec![CodeRequirementExpression::EntitlementsKey(
                 "key".into(),
-                MatchExpression::Exists
+                CodeRequirementMatchExpression::Exists
             )]
         );
         assert!(data.is_empty());
@@ -1134,14 +1194,14 @@ mod test {
     fn parse_certificate_policy() {
         let source = hex::decode("0000000100000011ffffffff000000035504030000000000").unwrap();
 
-        let (els, data) = parse_requirements(&source).unwrap();
+        let (els, data) = parse_code_requirements(&source).unwrap();
 
         assert_eq!(
             els,
-            vec![ExpressionElement::CertificatePolicy(
+            vec![CodeRequirementExpression::CertificatePolicy(
                 -1,
                 Oid(&[0x55, 4, 3]),
-                MatchExpression::Exists
+                CodeRequirementMatchExpression::Exists
             )]
         );
         assert!(data.is_empty());
@@ -1151,9 +1211,12 @@ mod test {
     fn parse_named_anchor() {
         let source = hex::decode("000000010000001200000003666f6f00").unwrap();
 
-        let (els, data) = parse_requirements(&source).unwrap();
+        let (els, data) = parse_code_requirements(&source).unwrap();
 
-        assert_eq!(els, vec![ExpressionElement::NamedAnchor("foo".into())]);
+        assert_eq!(
+            els,
+            vec![CodeRequirementExpression::NamedAnchor("foo".into())]
+        );
         assert!(data.is_empty());
     }
 
@@ -1161,9 +1224,12 @@ mod test {
     fn parse_named_code() {
         let source = hex::decode("000000010000001300000003666f6f00").unwrap();
 
-        let (els, data) = parse_requirements(&source).unwrap();
+        let (els, data) = parse_code_requirements(&source).unwrap();
 
-        assert_eq!(els, vec![ExpressionElement::NamedCode("foo".into())]);
+        assert_eq!(
+            els,
+            vec![CodeRequirementExpression::NamedCode("foo".into())]
+        );
         assert!(data.is_empty());
     }
 
@@ -1171,9 +1237,9 @@ mod test {
     fn parse_platform() {
         let source = hex::decode("00000001000000140000000a").unwrap();
 
-        let (els, data) = parse_requirements(&source).unwrap();
+        let (els, data) = parse_code_requirements(&source).unwrap();
 
-        assert_eq!(els, vec![ExpressionElement::Platform(10)]);
+        assert_eq!(els, vec![CodeRequirementExpression::Platform(10)]);
         assert!(data.is_empty());
     }
 
@@ -1181,9 +1247,9 @@ mod test {
     fn parse_notarized() {
         let source = hex::decode("0000000100000015").unwrap();
 
-        let (els, data) = parse_requirements(&source).unwrap();
+        let (els, data) = parse_code_requirements(&source).unwrap();
 
-        assert_eq!(els, vec![ExpressionElement::Notarized]);
+        assert_eq!(els, vec![CodeRequirementExpression::Notarized]);
         assert!(data.is_empty());
     }
 
@@ -1191,14 +1257,14 @@ mod test {
     fn parse_certificate_field_date() {
         let source = hex::decode("0000000100000016ffffffff000000035504030000000000").unwrap();
 
-        let (els, data) = parse_requirements(&source).unwrap();
+        let (els, data) = parse_code_requirements(&source).unwrap();
 
         assert_eq!(
             els,
-            vec![ExpressionElement::CertificateFieldDate(
+            vec![CodeRequirementExpression::CertificateFieldDate(
                 -1,
                 Oid(&[0x55, 4, 3]),
-                MatchExpression::Exists,
+                CodeRequirementMatchExpression::Exists,
             )]
         );
         assert!(data.is_empty());
@@ -1208,9 +1274,19 @@ mod test {
     fn parse_legacy() {
         let source = hex::decode("0000000100000017").unwrap();
 
-        let (els, data) = parse_requirements(&source).unwrap();
+        let (els, data) = parse_code_requirements(&source).unwrap();
 
-        assert_eq!(els, vec![ExpressionElement::LegacyDeveloperId]);
+        assert_eq!(els, vec![CodeRequirementExpression::LegacyDeveloperId]);
+        assert!(data.is_empty());
+    }
+
+    #[test]
+    fn parse_blob() {
+        let source = hex::decode("fade0c00000000100000000100000000").unwrap();
+
+        let (els, data) = parse_code_requirement_blob(&source).unwrap();
+
+        assert_eq!(els, vec![CodeRequirementExpression::False]);
         assert!(data.is_empty());
     }
 
@@ -1218,13 +1294,13 @@ mod test {
     fn parse_match_exists() {
         let source = hex::decode("000000010000000a000000036b65790000000000").unwrap();
 
-        let (els, data) = parse_requirements(&source).unwrap();
+        let (els, data) = parse_code_requirements(&source).unwrap();
 
         assert_eq!(
             els,
-            vec![ExpressionElement::InfoPlistKeyField(
+            vec![CodeRequirementExpression::InfoPlistKeyField(
                 "key".into(),
-                MatchExpression::Exists
+                CodeRequirementMatchExpression::Exists
             )]
         );
         assert!(data.is_empty());
@@ -1234,13 +1310,13 @@ mod test {
     fn parse_match_absent() {
         let source = hex::decode("000000010000000a000000036b6579000000000e").unwrap();
 
-        let (els, data) = parse_requirements(&source).unwrap();
+        let (els, data) = parse_code_requirements(&source).unwrap();
 
         assert_eq!(
             els,
-            vec![ExpressionElement::InfoPlistKeyField(
+            vec![CodeRequirementExpression::InfoPlistKeyField(
                 "key".into(),
-                MatchExpression::Absent
+                CodeRequirementMatchExpression::Absent
             )]
         );
         assert!(data.is_empty());
@@ -1252,13 +1328,13 @@ mod test {
             hex::decode("000000010000000a000000036b657900000000010000000576616c7565000000")
                 .unwrap();
 
-        let (els, data) = parse_requirements(&source).unwrap();
+        let (els, data) = parse_code_requirements(&source).unwrap();
 
         assert_eq!(
             els,
-            vec![ExpressionElement::InfoPlistKeyField(
+            vec![CodeRequirementExpression::InfoPlistKeyField(
                 "key".into(),
-                MatchExpression::Equal(b"value".as_ref().into())
+                CodeRequirementMatchExpression::Equal(b"value".as_ref().into())
             )]
         );
         assert!(data.is_empty());
@@ -1270,13 +1346,13 @@ mod test {
             hex::decode("000000010000000a000000036b657900000000020000000576616c7565000000")
                 .unwrap();
 
-        let (els, data) = parse_requirements(&source).unwrap();
+        let (els, data) = parse_code_requirements(&source).unwrap();
 
         assert_eq!(
             els,
-            vec![ExpressionElement::InfoPlistKeyField(
+            vec![CodeRequirementExpression::InfoPlistKeyField(
                 "key".into(),
-                MatchExpression::Contains(b"value".as_ref().into())
+                CodeRequirementMatchExpression::Contains(b"value".as_ref().into())
             )]
         );
         assert!(data.is_empty());
@@ -1288,13 +1364,13 @@ mod test {
             hex::decode("000000010000000a000000036b657900000000030000000576616c7565000000")
                 .unwrap();
 
-        let (els, data) = parse_requirements(&source).unwrap();
+        let (els, data) = parse_code_requirements(&source).unwrap();
 
         assert_eq!(
             els,
-            vec![ExpressionElement::InfoPlistKeyField(
+            vec![CodeRequirementExpression::InfoPlistKeyField(
                 "key".into(),
-                MatchExpression::BeginsWith(b"value".as_ref().into())
+                CodeRequirementMatchExpression::BeginsWith(b"value".as_ref().into())
             )]
         );
         assert!(data.is_empty());
@@ -1306,13 +1382,13 @@ mod test {
             hex::decode("000000010000000a000000036b657900000000040000000576616c7565000000")
                 .unwrap();
 
-        let (els, data) = parse_requirements(&source).unwrap();
+        let (els, data) = parse_code_requirements(&source).unwrap();
 
         assert_eq!(
             els,
-            vec![ExpressionElement::InfoPlistKeyField(
+            vec![CodeRequirementExpression::InfoPlistKeyField(
                 "key".into(),
-                MatchExpression::EndsWith(b"value".as_ref().into())
+                CodeRequirementMatchExpression::EndsWith(b"value".as_ref().into())
             )]
         );
         assert!(data.is_empty());
@@ -1324,13 +1400,13 @@ mod test {
             hex::decode("000000010000000a000000036b657900000000050000000576616c7565000000")
                 .unwrap();
 
-        let (els, data) = parse_requirements(&source).unwrap();
+        let (els, data) = parse_code_requirements(&source).unwrap();
 
         assert_eq!(
             els,
-            vec![ExpressionElement::InfoPlistKeyField(
+            vec![CodeRequirementExpression::InfoPlistKeyField(
                 "key".into(),
-                MatchExpression::LessThan(b"value".as_ref().into())
+                CodeRequirementMatchExpression::LessThan(b"value".as_ref().into())
             )]
         );
         assert!(data.is_empty());
@@ -1342,13 +1418,13 @@ mod test {
             hex::decode("000000010000000a000000036b657900000000060000000576616c7565000000")
                 .unwrap();
 
-        let (els, data) = parse_requirements(&source).unwrap();
+        let (els, data) = parse_code_requirements(&source).unwrap();
 
         assert_eq!(
             els,
-            vec![ExpressionElement::InfoPlistKeyField(
+            vec![CodeRequirementExpression::InfoPlistKeyField(
                 "key".into(),
-                MatchExpression::GreaterThan(b"value".as_ref().into())
+                CodeRequirementMatchExpression::GreaterThan(b"value".as_ref().into())
             )]
         );
         assert!(data.is_empty());
@@ -1360,13 +1436,13 @@ mod test {
             hex::decode("000000010000000a000000036b657900000000070000000576616c7565000000")
                 .unwrap();
 
-        let (els, data) = parse_requirements(&source).unwrap();
+        let (els, data) = parse_code_requirements(&source).unwrap();
 
         assert_eq!(
             els,
-            vec![ExpressionElement::InfoPlistKeyField(
+            vec![CodeRequirementExpression::InfoPlistKeyField(
                 "key".into(),
-                MatchExpression::LessThanEqual(b"value".as_ref().into())
+                CodeRequirementMatchExpression::LessThanEqual(b"value".as_ref().into())
             )]
         );
         assert!(data.is_empty());
@@ -1378,13 +1454,13 @@ mod test {
             hex::decode("000000010000000a000000036b657900000000080000000576616c7565000000")
                 .unwrap();
 
-        let (els, data) = parse_requirements(&source).unwrap();
+        let (els, data) = parse_code_requirements(&source).unwrap();
 
         assert_eq!(
             els,
-            vec![ExpressionElement::InfoPlistKeyField(
+            vec![CodeRequirementExpression::InfoPlistKeyField(
                 "key".into(),
-                MatchExpression::GreaterThanEqual(b"value".as_ref().into())
+                CodeRequirementMatchExpression::GreaterThanEqual(b"value".as_ref().into())
             )]
         );
         assert!(data.is_empty());
@@ -1395,13 +1471,13 @@ mod test {
         let source =
             hex::decode("000000010000000a000000036b6579000000000900000000605fca30").unwrap();
 
-        let (els, data) = parse_requirements(&source).unwrap();
+        let (els, data) = parse_code_requirements(&source).unwrap();
 
         assert_eq!(
             els,
-            vec![ExpressionElement::InfoPlistKeyField(
+            vec![CodeRequirementExpression::InfoPlistKeyField(
                 "key".into(),
-                MatchExpression::On(chrono::Utc.timestamp(1616890416, 0)),
+                CodeRequirementMatchExpression::On(chrono::Utc.timestamp(1616890416, 0)),
             )]
         );
         assert!(data.is_empty());
@@ -1412,13 +1488,13 @@ mod test {
         let source =
             hex::decode("000000010000000a000000036b6579000000000a00000000605fca30").unwrap();
 
-        let (els, data) = parse_requirements(&source).unwrap();
+        let (els, data) = parse_code_requirements(&source).unwrap();
 
         assert_eq!(
             els,
-            vec![ExpressionElement::InfoPlistKeyField(
+            vec![CodeRequirementExpression::InfoPlistKeyField(
                 "key".into(),
-                MatchExpression::Before(chrono::Utc.timestamp(1616890416, 0)),
+                CodeRequirementMatchExpression::Before(chrono::Utc.timestamp(1616890416, 0)),
             )]
         );
         assert!(data.is_empty());
@@ -1429,13 +1505,13 @@ mod test {
         let source =
             hex::decode("000000010000000a000000036b6579000000000b00000000605fca30").unwrap();
 
-        let (els, data) = parse_requirements(&source).unwrap();
+        let (els, data) = parse_code_requirements(&source).unwrap();
 
         assert_eq!(
             els,
-            vec![ExpressionElement::InfoPlistKeyField(
+            vec![CodeRequirementExpression::InfoPlistKeyField(
                 "key".into(),
-                MatchExpression::After(chrono::Utc.timestamp(1616890416, 0)),
+                CodeRequirementMatchExpression::After(chrono::Utc.timestamp(1616890416, 0)),
             )]
         );
         assert!(data.is_empty());
@@ -1446,13 +1522,13 @@ mod test {
         let source =
             hex::decode("000000010000000a000000036b6579000000000c00000000605fca30").unwrap();
 
-        let (els, data) = parse_requirements(&source).unwrap();
+        let (els, data) = parse_code_requirements(&source).unwrap();
 
         assert_eq!(
             els,
-            vec![ExpressionElement::InfoPlistKeyField(
+            vec![CodeRequirementExpression::InfoPlistKeyField(
                 "key".into(),
-                MatchExpression::OnOrBefore(chrono::Utc.timestamp(1616890416, 0)),
+                CodeRequirementMatchExpression::OnOrBefore(chrono::Utc.timestamp(1616890416, 0)),
             )]
         );
         assert!(data.is_empty());
@@ -1463,13 +1539,13 @@ mod test {
         let source =
             hex::decode("000000010000000a000000036b6579000000000d00000000605fca30").unwrap();
 
-        let (els, data) = parse_requirements(&source).unwrap();
+        let (els, data) = parse_code_requirements(&source).unwrap();
 
         assert_eq!(
             els,
-            vec![ExpressionElement::InfoPlistKeyField(
+            vec![CodeRequirementExpression::InfoPlistKeyField(
                 "key".into(),
-                MatchExpression::OnOrAfter(chrono::Utc.timestamp(1616890416, 0)),
+                CodeRequirementMatchExpression::OnOrAfter(chrono::Utc.timestamp(1616890416, 0)),
             )]
         );
         assert!(data.is_empty());
