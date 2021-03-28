@@ -169,7 +169,7 @@ pub enum CodeSigningMagic {
     /// Code requirement blob.
     Requirement,
     /// Code requirements blob.
-    Requirements,
+    RequirementSet,
     /// CodeDirectory blob.
     CodeDirectory,
     /// Embedded signature.
@@ -178,10 +178,10 @@ pub enum CodeSigningMagic {
     EmbeddedSignature,
     /// Old embedded signature.
     EmbeddedSignatureOld,
-    /// Embedded entitlements blob.
-    EmbeddedEntitlements,
-    /// Binary entitlements blob.
-    SecuritySettings,
+    /// Entitlements blob.
+    Entitlements,
+    /// DER encoded entitlements blob.
+    EntitlementsDer,
     /// Multi-arch collection of embedded signatures.
     DetachedSignature,
     /// Generic blob wrapper.
@@ -196,12 +196,12 @@ impl From<u32> for CodeSigningMagic {
     fn from(v: u32) -> Self {
         match v {
             0xfade0c00 => Self::Requirement,
-            0xfade0c01 => Self::Requirements,
+            0xfade0c01 => Self::RequirementSet,
             0xfade0c02 => Self::CodeDirectory,
             0xfade0cc0 => Self::EmbeddedSignature,
             0xfade0b02 => Self::EmbeddedSignatureOld,
-            0xfade7171 => Self::EmbeddedEntitlements,
-            0xfade7172 => Self::SecuritySettings,
+            0xfade7171 => Self::Entitlements,
+            0xfade7172 => Self::EntitlementsDer,
             0xfade0cc1 => Self::DetachedSignature,
             0xfade0b01 => Self::BlobWrapper,
             _ => Self::Unknown(v),
@@ -213,12 +213,12 @@ impl From<CodeSigningMagic> for u32 {
     fn from(magic: CodeSigningMagic) -> u32 {
         match magic {
             CodeSigningMagic::Requirement => 0xfade0c00,
-            CodeSigningMagic::Requirements => 0xfade0c01,
+            CodeSigningMagic::RequirementSet => 0xfade0c01,
             CodeSigningMagic::CodeDirectory => 0xfade0c02,
             CodeSigningMagic::EmbeddedSignature => 0xfade0cc0,
             CodeSigningMagic::EmbeddedSignatureOld => 0xfade0b02,
-            CodeSigningMagic::EmbeddedEntitlements => 0xfade7171,
-            CodeSigningMagic::SecuritySettings => 0xfade7172,
+            CodeSigningMagic::Entitlements => 0xfade7171,
+            CodeSigningMagic::EntitlementsDer => 0xfade7172,
             CodeSigningMagic::DetachedSignature => 0xfade0cc1,
             CodeSigningMagic::BlobWrapper => 0xfade0b01,
             CodeSigningMagic::Unknown(v) => v,
@@ -583,7 +583,7 @@ impl<'a> EmbeddedSignature<'a> {
     /// Returns `Ok(None)` if there is no entitlements slot.
     pub fn entitlements(&self) -> Result<Option<Box<EntitlementsBlob<'_>>>, MachOError> {
         if let Some(parsed) = self.find_slot_parsed(CodeSigningSlot::Entitlements)? {
-            if let BlobData::EmbeddedEntitlements(entitlements) = parsed.blob {
+            if let BlobData::Entitlements(entitlements) = parsed.blob {
                 Ok(Some(entitlements))
             } else {
                 Err(MachOError::BadMagic)
@@ -599,9 +599,9 @@ impl<'a> EmbeddedSignature<'a> {
     /// blob.
     ///
     /// Returns `Ok(None)` if there is no requirements slot.
-    pub fn code_requirements(&self) -> Result<Option<Box<RequirementsBlob<'_>>>, MachOError> {
+    pub fn code_requirements(&self) -> Result<Option<Box<RequirementSetBlob<'_>>>, MachOError> {
         if let Some(parsed) = self.find_slot_parsed(CodeSigningSlot::Requirements)? {
-            if let BlobData::Requirements(reqs) = parsed.blob {
+            if let BlobData::RequirementSet(reqs) = parsed.blob {
                 Ok(Some(reqs))
             } else {
                 Err(MachOError::BadMagic)
@@ -761,11 +761,11 @@ where
 #[derive(Debug)]
 pub enum BlobData<'a> {
     Requirement(Box<RequirementBlob<'a>>),
-    Requirements(Box<RequirementsBlob<'a>>),
+    RequirementSet(Box<RequirementSetBlob<'a>>),
     CodeDirectory(Box<CodeDirectoryBlob<'a>>),
     EmbeddedSignature(Box<EmbeddedSignatureBlob<'a>>),
     EmbeddedSignatureOld(Box<EmbeddedSignatureOldBlob<'a>>),
-    EmbeddedEntitlements(Box<EntitlementsBlob<'a>>),
+    Entitlements(Box<EntitlementsBlob<'a>>),
     DetachedSignature(Box<DetachedSignatureBlob<'a>>),
     BlobWrapper(Box<BlobWrapperBlob<'a>>),
     Other(Box<OtherBlob<'a>>),
@@ -790,8 +790,8 @@ impl<'a> Blob<'a> for BlobData<'a> {
             CodeSigningMagic::Requirement => {
                 Self::Requirement(Box::new(RequirementBlob::from_blob_bytes(data)?))
             }
-            CodeSigningMagic::Requirements => {
-                Self::Requirements(Box::new(RequirementsBlob::from_blob_bytes(data)?))
+            CodeSigningMagic::RequirementSet => {
+                Self::RequirementSet(Box::new(RequirementSetBlob::from_blob_bytes(data)?))
             }
             CodeSigningMagic::CodeDirectory => {
                 Self::CodeDirectory(Box::new(CodeDirectoryBlob::from_blob_bytes(data)?))
@@ -802,8 +802,8 @@ impl<'a> Blob<'a> for BlobData<'a> {
             CodeSigningMagic::EmbeddedSignatureOld => Self::EmbeddedSignatureOld(Box::new(
                 EmbeddedSignatureOldBlob::from_blob_bytes(data)?,
             )),
-            CodeSigningMagic::EmbeddedEntitlements => {
-                Self::EmbeddedEntitlements(Box::new(EntitlementsBlob::from_blob_bytes(data)?))
+            CodeSigningMagic::Entitlements => {
+                Self::Entitlements(Box::new(EntitlementsBlob::from_blob_bytes(data)?))
             }
             CodeSigningMagic::DetachedSignature => {
                 Self::DetachedSignature(Box::new(DetachedSignatureBlob::from_blob_bytes(data)?))
@@ -818,11 +818,11 @@ impl<'a> Blob<'a> for BlobData<'a> {
     fn serialize_payload(&self) -> Result<Vec<u8>, MachOError> {
         match self {
             Self::Requirement(b) => b.serialize_payload(),
-            Self::Requirements(b) => b.serialize_payload(),
+            Self::RequirementSet(b) => b.serialize_payload(),
             Self::CodeDirectory(b) => b.serialize_payload(),
             Self::EmbeddedSignature(b) => b.serialize_payload(),
             Self::EmbeddedSignatureOld(b) => b.serialize_payload(),
-            Self::EmbeddedEntitlements(b) => b.serialize_payload(),
+            Self::Entitlements(b) => b.serialize_payload(),
             Self::DetachedSignature(b) => b.serialize_payload(),
             Self::BlobWrapper(b) => b.serialize_payload(),
             Self::Other(b) => b.serialize_payload(),
@@ -832,11 +832,11 @@ impl<'a> Blob<'a> for BlobData<'a> {
     fn to_blob_bytes(&self) -> Result<Vec<u8>, MachOError> {
         match self {
             Self::Requirement(b) => b.to_blob_bytes(),
-            Self::Requirements(b) => b.to_blob_bytes(),
+            Self::RequirementSet(b) => b.to_blob_bytes(),
             Self::CodeDirectory(b) => b.to_blob_bytes(),
             Self::EmbeddedSignature(b) => b.to_blob_bytes(),
             Self::EmbeddedSignatureOld(b) => b.to_blob_bytes(),
-            Self::EmbeddedEntitlements(b) => b.to_blob_bytes(),
+            Self::Entitlements(b) => b.to_blob_bytes(),
             Self::DetachedSignature(b) => b.to_blob_bytes(),
             Self::BlobWrapper(b) => b.to_blob_bytes(),
             Self::Other(b) => b.to_blob_bytes(),
@@ -888,17 +888,17 @@ impl<'a> RequirementBlob<'a> {
     }
 }
 
-/// Represents a Requirements blob.
+/// Represents a Requirement set blob.
 ///
-/// A Requirements blob contains nested Requirement blobs.
+/// A Requirement set blob contains nested Requirement blobs.
 #[derive(Debug)]
-pub struct RequirementsBlob<'a> {
+pub struct RequirementSetBlob<'a> {
     pub segments: Vec<(RequirementType, RequirementBlob<'a>)>,
 }
 
-impl<'a> Blob<'a> for RequirementsBlob<'a> {
+impl<'a> Blob<'a> for RequirementSetBlob<'a> {
     fn magic() -> u32 {
-        u32::from(CodeSigningMagic::Requirements)
+        u32::from(CodeSigningMagic::RequirementSet)
     }
 
     fn from_blob_bytes(data: &'a [u8]) -> Result<Self, MachOError> {
@@ -963,9 +963,9 @@ impl<'a> Blob<'a> for RequirementsBlob<'a> {
     }
 }
 
-impl<'a> RequirementsBlob<'a> {
-    pub fn to_owned(&self) -> RequirementsBlob<'static> {
-        RequirementsBlob {
+impl<'a> RequirementSetBlob<'a> {
+    pub fn to_owned(&self) -> RequirementSetBlob<'static> {
+        RequirementSetBlob {
             segments: self
                 .segments
                 .iter()
@@ -1679,7 +1679,7 @@ pub struct EntitlementsBlob<'a> {
 
 impl<'a> Blob<'a> for EntitlementsBlob<'a> {
     fn magic() -> u32 {
-        u32::from(CodeSigningMagic::EmbeddedEntitlements)
+        u32::from(CodeSigningMagic::Entitlements)
     }
 
     fn from_blob_bytes(data: &'a [u8]) -> Result<Self, MachOError> {

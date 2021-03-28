@@ -12,7 +12,7 @@ use {
         macho::{
             create_superblob, find_signature_data, Blob, BlobWrapperBlob, CodeDirectoryBlob,
             CodeSigningMagic, CodeSigningSlot, Digest, DigestError, DigestType, EmbeddedSignature,
-            EntitlementsBlob, MachOError, RequirementsBlob,
+            EntitlementsBlob, MachOError, RequirementSetBlob,
         },
     },
     bytes::Bytes,
@@ -678,7 +678,7 @@ pub struct MachOSignatureBuilder<'key> {
     entitlements: Option<EntitlementsBlob<'static>>,
 
     /// Code requirement data.
-    code_requirement: Option<RequirementsBlob<'static>>,
+    code_requirement: Option<RequirementSetBlob<'static>>,
 
     /// Setup and mode flags from CodeDirectory.
     cdflags: Option<u32>,

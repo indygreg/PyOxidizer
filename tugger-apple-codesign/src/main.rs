@@ -25,7 +25,7 @@ use {
         code_hash::compute_code_hashes,
         macho::{
             find_signature_data, parse_signature_data, Blob, CodeDirectoryBlob, CodeSigningSlot,
-            DigestType, RequirementsBlob,
+            DigestType, RequirementSetBlob,
         },
         signing::{MachOSigner, NotSignableError, SigningError},
     },
@@ -394,7 +394,7 @@ fn command_extract(args: &ArgMatches) -> Result<(), AppError> {
 
             if let Some(reqs) = embedded.code_requirements()? {
                 let serialized = reqs.to_blob_bytes()?;
-                println!("{:#?}", RequirementsBlob::from_blob_bytes(&serialized)?);
+                println!("{:#?}", RequirementSetBlob::from_blob_bytes(&serialized)?);
             } else {
                 eprintln!("no requirements");
             }
