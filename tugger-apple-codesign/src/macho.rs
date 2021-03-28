@@ -278,7 +278,7 @@ pub enum CodeDirectoryVersion {
 }
 
 /// Denotes type of code requirements.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 #[repr(u32)]
 pub enum RequirementType {
     /// What hosts may run on us.
@@ -873,7 +873,7 @@ impl<'a> RequirementBlob<'a> {
 /// A Requirement set blob contains nested Requirement blobs.
 #[derive(Debug)]
 pub struct RequirementSetBlob<'a> {
-    pub segments: Vec<(RequirementType, RequirementBlob<'a>)>,
+    pub requirements: HashMap<RequirementType, RequirementBlob<'a>>,
 }
 
 impl<'a> Blob<'a> for RequirementSetBlob<'a> {
@@ -898,7 +898,7 @@ impl<'a> Blob<'a> for RequirementSetBlob<'a> {
             ));
         }
 
-        let mut segments = Vec::with_capacity(indices.len());
+        let mut requirements = HashMap::with_capacity(indices.len());
 
         for (i, (flavor, offset)) in indices.iter().enumerate() {
             let typ = RequirementType::from(*flavor);
@@ -909,12 +909,12 @@ impl<'a> Blob<'a> for RequirementSetBlob<'a> {
                 indices[i + 1].1 as usize
             };
 
-            let segment_data = &data[*offset as usize..end_offset];
+            let requirement_data = &data[*offset as usize..end_offset];
 
-            segments.push((typ, RequirementBlob::from_blob_bytes(segment_data)?));
+            requirements.insert(typ, RequirementBlob::from_blob_bytes(requirement_data)?);
         }
 
-        Ok(Self { segments })
+        Ok(Self { requirements })
     }
 
     fn serialize_payload(&self) -> Result<Vec<u8>, MachOError> {
@@ -922,20 +922,20 @@ impl<'a> Blob<'a> for RequirementSetBlob<'a> {
 
         // The index contains blob relative offsets. To know what the start offset will
         // be, we calculate the total index size.
-        let data_start_offset = 8 + 4 + (8 * self.segments.len() as u32);
+        let data_start_offset = 8 + 4 + (8 * self.requirements.len() as u32);
         let mut written_requirements_data = 0;
 
-        res.iowrite_with(self.segments.len() as u32, scroll::BE)?;
+        res.iowrite_with(self.requirements.len() as u32, scroll::BE)?;
 
         // Write an index of all nested requirement blobs.
-        for (typ, requirement) in &self.segments {
+        for (typ, requirement) in &self.requirements {
             res.iowrite_with(u32::from(*typ), scroll::BE)?;
             res.iowrite_with(data_start_offset + written_requirements_data, scroll::BE)?;
             written_requirements_data += requirement.to_blob_bytes()?.len() as u32;
         }
 
         // Now write every requirement's raw data.
-        for (_, requirement) in &self.segments {
+        for requirement in self.requirements.values() {
             res.write_all(&requirement.to_blob_bytes()?)?;
         }
 
@@ -946,11 +946,11 @@ impl<'a> Blob<'a> for RequirementSetBlob<'a> {
 impl<'a> RequirementSetBlob<'a> {
     pub fn to_owned(&self) -> RequirementSetBlob<'static> {
         RequirementSetBlob {
-            segments: self
-                .segments
+            requirements: self
+                .requirements
                 .iter()
                 .map(|(flavor, blob)| (*flavor, blob.to_owned()))
-                .collect::<Vec<_>>(),
+                .collect::<HashMap<_, _>>(),
         }
     }
 }
