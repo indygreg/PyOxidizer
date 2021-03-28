@@ -280,18 +280,6 @@ pub const CS_CDHASH_LEN: u32 = 20;
 /// max size of the hash we'll support
 pub const CS_HASH_MAX_SIZE: u32 = 48;
 
-/*
- * Currently only to support Legacy VPN plugins, and Mac App Store
- * but intended to replace all the various platform code, dev code etc. bits.
- */
-pub const CS_SIGNER_TYPE_UNKNOWN: u32 = 0;
-pub const CS_SIGNER_TYPE_LEGACYVPN: u32 = 5;
-pub const CS_SIGNER_TYPE_MAC_APP_STORE: u32 = 6;
-
-pub const CS_SUPPL_SIGNER_TYPE_UNKNOWN: u32 = 0;
-pub const CS_SUPPL_SIGNER_TYPE_TRUSTCACHE: u32 = 7;
-pub const CS_SUPPL_SIGNER_TYPE_LOCAL: u32 = 8;
-
 /// Denotes type of code requirements.
 #[derive(Clone, Copy, Debug)]
 #[repr(u32)]
