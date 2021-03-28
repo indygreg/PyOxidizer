@@ -27,8 +27,8 @@ use {
     crate::macho::{read_and_validate_blob_header, CodeSigningMagic},
     bcder::Oid,
     chrono::TimeZone,
-    scroll::Pread,
-    std::{borrow::Cow, convert::TryFrom},
+    scroll::{IOwrite, Pread},
+    std::{borrow::Cow, convert::TryFrom, io::Write},
 };
 
 const OPCODE_FLAG_MASK: u32 = 0xff000000;
@@ -51,6 +51,8 @@ pub enum CodeRequirementError {
     UnknownMatch(u32),
     /// Error in scroll crate.
     Scroll(scroll::Error),
+    /// I/O error.
+    Io(std::io::Error),
     /// Generic malformed error.
     Malformed(&'static str),
 }
@@ -61,6 +63,7 @@ impl std::fmt::Display for CodeRequirementError {
             Self::UnknownOpCode(v) => f.write_fmt(format_args!("unknown opcode: {}", v)),
             Self::UnknownMatch(v) => f.write_fmt(format_args!("unknown match code: {}", v)),
             Self::Scroll(e) => f.write_fmt(format_args!("decoding error: {}", e)),
+            Self::Io(e) => f.write_fmt(format_args!("I/O error: {}", e)),
             Self::Malformed(s) => f.write_fmt(format_args!("malformed data: {}", s)),
         }
     }
@@ -71,6 +74,12 @@ impl std::error::Error for CodeRequirementError {}
 impl From<scroll::Error> for CodeRequirementError {
     fn from(e: scroll::Error) -> Self {
         Self::Scroll(e)
+    }
+}
+
+impl From<std::io::Error> for CodeRequirementError {
+    fn from(e: std::io::Error) -> Self {
+        Self::Io(e)
     }
 }
 
@@ -89,6 +98,22 @@ fn read_data(data: &[u8]) -> Result<(&[u8], &[u8]), CodeRequirementError> {
     let remaining = &data[offset..];
 
     Ok((value, remaining))
+}
+
+fn write_data(dest: &mut impl Write, data: &[u8]) -> Result<(), CodeRequirementError> {
+    dest.iowrite_with(data.len() as u32, scroll::BE)?;
+    dest.write_all(data)?;
+
+    match data.len() % 4 {
+        0 => {}
+        pad => {
+            for _ in 0..4 - pad {
+                dest.iowrite(0u8)?;
+            }
+        }
+    }
+
+    Ok(())
 }
 
 /// A value in a code requirement expression.
@@ -132,6 +157,18 @@ impl<'a> std::fmt::Display for CodeRequirementValue<'a> {
         match self {
             Self::String(s) => f.write_str(s),
             Self::Bytes(data) => f.write_fmt(format_args!("{}", hex::encode(data))),
+        }
+    }
+}
+
+impl<'a> CodeRequirementValue<'a> {
+    /// Write the encoded version of this value somewhere.
+    ///
+    /// Binary encoding is u32 of length, then raw bytes, then NULL padding to next u32.
+    fn write_encoded(&self, dest: &mut impl Write) -> Result<(), CodeRequirementError> {
+        match self {
+            Self::Bytes(data) => write_data(dest, data),
+            Self::String(s) => write_data(dest, s.as_bytes()),
         }
     }
 }
@@ -624,6 +661,55 @@ impl<'a> std::fmt::Display for CodeRequirementExpression<'a> {
     }
 }
 
+impl<'a> From<&CodeRequirementExpression<'a>> for RequirementOpCode {
+    fn from(e: &CodeRequirementExpression) -> Self {
+        match e {
+            CodeRequirementExpression::False => RequirementOpCode::False,
+            CodeRequirementExpression::True => RequirementOpCode::True,
+            CodeRequirementExpression::Identifier(_) => RequirementOpCode::Identifier,
+            CodeRequirementExpression::AnchorApple => RequirementOpCode::AnchorApple,
+            CodeRequirementExpression::AnchorCertificateHash(_, _) => {
+                RequirementOpCode::AnchorCertificateHash
+            }
+            CodeRequirementExpression::InfoKeyValueLegacy(_, _) => {
+                RequirementOpCode::InfoKeyValueLegacy
+            }
+            CodeRequirementExpression::And(_, _) => RequirementOpCode::And,
+            CodeRequirementExpression::Or(_, _) => RequirementOpCode::Or,
+            CodeRequirementExpression::CodeDirectoryHash(_) => RequirementOpCode::CodeDirectoryHash,
+            CodeRequirementExpression::Not(_) => RequirementOpCode::Not,
+            CodeRequirementExpression::InfoPlistKeyField(_, _) => {
+                RequirementOpCode::InfoPlistExpression
+            }
+            CodeRequirementExpression::CertificateField(_, _, _) => {
+                RequirementOpCode::CertificateField
+            }
+            CodeRequirementExpression::CertificateTrusted(_) => {
+                RequirementOpCode::CertificateTrusted
+            }
+            CodeRequirementExpression::AnchorTrusted => RequirementOpCode::AnchorTrusted,
+            CodeRequirementExpression::CertificateGeneric(_, _, _) => {
+                RequirementOpCode::CertificateGeneric
+            }
+            CodeRequirementExpression::AnchorAppleGeneric => RequirementOpCode::AnchorAppleGeneric,
+            CodeRequirementExpression::EntitlementsKey(_, _) => {
+                RequirementOpCode::EntitlementsField
+            }
+            CodeRequirementExpression::CertificatePolicy(_, _, _) => {
+                RequirementOpCode::CertificatePolicy
+            }
+            CodeRequirementExpression::NamedAnchor(_) => RequirementOpCode::NamedAnchor,
+            CodeRequirementExpression::NamedCode(_) => RequirementOpCode::NamedCode,
+            CodeRequirementExpression::Platform(_) => RequirementOpCode::Platform,
+            CodeRequirementExpression::Notarized => RequirementOpCode::Notarized,
+            CodeRequirementExpression::CertificateFieldDate(_, _, _) => {
+                RequirementOpCode::CertificateFieldDate
+            }
+            CodeRequirementExpression::LegacyDeveloperId => RequirementOpCode::LegacyDeveloperId,
+        }
+    }
+}
+
 impl<'a> CodeRequirementExpression<'a> {
     /// Construct an expression element by reading from a slice.
     ///
@@ -639,6 +725,99 @@ impl<'a> CodeRequirementExpression<'a> {
         let opcode = RequirementOpCode::try_from(opcode)?;
 
         opcode.parse_payload(data)
+    }
+
+    /// Write binary representation of this expression to a destination.
+    pub fn write_to(&self, dest: &mut impl Write) -> Result<(), CodeRequirementError> {
+        dest.iowrite_with(RequirementOpCode::from(self) as u32, scroll::BE)?;
+
+        match self {
+            Self::False => {}
+            Self::True => {}
+            Self::Identifier(s) => {
+                write_data(dest, s.as_bytes())?;
+            }
+            Self::AnchorApple => {}
+            Self::AnchorCertificateHash(slot, hash) => {
+                dest.iowrite_with(*slot, scroll::BE)?;
+                write_data(dest, hash)?;
+            }
+            Self::InfoKeyValueLegacy(key, value) => {
+                write_data(dest, key.as_bytes())?;
+                write_data(dest, value.as_bytes())?;
+            }
+            Self::And(a, b) => {
+                a.write_to(dest)?;
+                b.write_to(dest)?;
+            }
+            Self::Or(a, b) => {
+                a.write_to(dest)?;
+                b.write_to(dest)?;
+            }
+            Self::CodeDirectoryHash(hash) => {
+                write_data(dest, hash)?;
+            }
+            Self::Not(expr) => {
+                expr.write_to(dest)?;
+            }
+            Self::InfoPlistKeyField(key, m) => {
+                write_data(dest, key.as_bytes())?;
+                m.write_to(dest)?;
+            }
+            Self::CertificateField(slot, field, m) => {
+                dest.iowrite_with(*slot, scroll::BE)?;
+                write_data(dest, field.as_bytes())?;
+                m.write_to(dest)?;
+            }
+            Self::CertificateTrusted(slot) => {
+                dest.iowrite_with(*slot, scroll::BE)?;
+            }
+            Self::AnchorTrusted => {}
+            Self::CertificateGeneric(slot, oid, m) => {
+                dest.iowrite_with(*slot, scroll::BE)?;
+                write_data(dest, oid.as_ref())?;
+                m.write_to(dest)?;
+            }
+            Self::AnchorAppleGeneric => {}
+            Self::EntitlementsKey(key, m) => {
+                write_data(dest, key.as_bytes())?;
+                m.write_to(dest)?;
+            }
+            Self::CertificatePolicy(slot, oid, m) => {
+                dest.iowrite_with(*slot, scroll::BE)?;
+                write_data(dest, oid.as_ref())?;
+                m.write_to(dest)?;
+            }
+            Self::NamedAnchor(value) => {
+                write_data(dest, value.as_bytes())?;
+            }
+            Self::NamedCode(value) => {
+                write_data(dest, value.as_bytes())?;
+            }
+            Self::Platform(value) => {
+                dest.iowrite_with(*value, scroll::BE)?;
+            }
+            Self::Notarized => {}
+            Self::CertificateFieldDate(slot, oid, m) => {
+                dest.iowrite_with(*slot, scroll::BE)?;
+                write_data(dest, oid.as_ref())?;
+                m.write_to(dest)?;
+            }
+            Self::LegacyDeveloperId => {}
+        }
+
+        Ok(())
+    }
+
+    /// Produce the binary serialization of this expression.
+    ///
+    /// The blob header/magic is not included.
+    pub fn to_bytes(&self) -> Result<Vec<u8>, CodeRequirementError> {
+        let mut res = vec![];
+
+        self.write_to(&mut res)?;
+
+        Ok(res)
     }
 }
 
@@ -912,6 +1091,28 @@ impl<'a> std::fmt::Display for CodeRequirementMatchExpression<'a> {
     }
 }
 
+impl<'a> From<&CodeRequirementMatchExpression<'a>> for MatchType {
+    fn from(m: &CodeRequirementMatchExpression<'a>) -> Self {
+        match m {
+            CodeRequirementMatchExpression::Exists => MatchType::Exists,
+            CodeRequirementMatchExpression::Equal(_) => MatchType::Equal,
+            CodeRequirementMatchExpression::Contains(_) => MatchType::Contains,
+            CodeRequirementMatchExpression::BeginsWith(_) => MatchType::BeginsWith,
+            CodeRequirementMatchExpression::EndsWith(_) => MatchType::EndsWith,
+            CodeRequirementMatchExpression::LessThan(_) => MatchType::LessThan,
+            CodeRequirementMatchExpression::GreaterThan(_) => MatchType::GreaterThan,
+            CodeRequirementMatchExpression::LessThanEqual(_) => MatchType::LessThanEqual,
+            CodeRequirementMatchExpression::GreaterThanEqual(_) => MatchType::GreaterThanEqual,
+            CodeRequirementMatchExpression::On(_) => MatchType::On,
+            CodeRequirementMatchExpression::Before(_) => MatchType::Before,
+            CodeRequirementMatchExpression::After(_) => MatchType::After,
+            CodeRequirementMatchExpression::OnOrBefore(_) => MatchType::OnOrBefore,
+            CodeRequirementMatchExpression::OnOrAfter(_) => MatchType::OnOrAfter,
+            CodeRequirementMatchExpression::Absent => MatchType::Absent,
+        }
+    }
+}
+
 impl<'a> CodeRequirementMatchExpression<'a> {
     /// Parse a match expression from bytes.
     ///
@@ -922,6 +1123,31 @@ impl<'a> CodeRequirementMatchExpression<'a> {
         let typ = MatchType::try_from(typ)?;
 
         typ.parse_payload(&data[4..])
+    }
+
+    /// Write binary representation of this match expression to a destination.
+    pub fn write_to(&self, dest: &mut impl Write) -> Result<(), CodeRequirementError> {
+        dest.iowrite_with(MatchType::from(self) as u32, scroll::BE)?;
+
+        match self {
+            Self::Exists => {}
+            Self::Equal(value) => value.write_encoded(dest)?,
+            Self::Contains(value) => value.write_encoded(dest)?,
+            Self::BeginsWith(value) => value.write_encoded(dest)?,
+            Self::EndsWith(value) => value.write_encoded(dest)?,
+            Self::LessThan(value) => value.write_encoded(dest)?,
+            Self::GreaterThan(value) => value.write_encoded(dest)?,
+            Self::LessThanEqual(value) => value.write_encoded(dest)?,
+            Self::GreaterThanEqual(value) => value.write_encoded(dest)?,
+            Self::On(value) => dest.iowrite_with(value.timestamp(), scroll::BE)?,
+            Self::Before(value) => dest.iowrite_with(value.timestamp(), scroll::BE)?,
+            Self::After(value) => dest.iowrite_with(value.timestamp(), scroll::BE)?,
+            Self::OnOrBefore(value) => dest.iowrite_with(value.timestamp(), scroll::BE)?,
+            Self::OnOrAfter(value) => dest.iowrite_with(value.timestamp(), scroll::BE)?,
+            Self::Absent => {}
+        }
+
+        Ok(())
     }
 }
 
