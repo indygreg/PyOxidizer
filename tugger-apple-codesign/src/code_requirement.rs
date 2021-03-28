@@ -24,7 +24,7 @@ on 4 byte boundaries.
 */
 
 use {
-    crate::macho::{read_and_validate_blob_header, CodeSigningMagic},
+    crate::macho::{read_and_validate_blob_header, CodeSigningMagic, RequirementBlob},
     bcder::Oid,
     chrono::TimeZone,
     scroll::{IOwrite, Pread},
@@ -1229,7 +1229,7 @@ impl<'a> CodeRequirements<'a> {
     /// and will prepend the blob header identifying the data as code requirements.
     ///
     /// The generated data should be equivalent to what `csreq -b` would produce.
-    pub fn to_blob(&self) -> Result<Vec<u8>, CodeRequirementError> {
+    pub fn to_blob_data(&self) -> Result<Vec<u8>, CodeRequirementError> {
         let mut payload = vec![];
         self.write_to(&mut payload)?;
 
@@ -1239,6 +1239,19 @@ impl<'a> CodeRequirements<'a> {
         dest.write_all(&payload)?;
 
         Ok(dest)
+    }
+}
+
+impl<'a> TryFrom<&CodeRequirements<'a>> for RequirementBlob<'static> {
+    type Error = CodeRequirementError;
+
+    fn try_from(requirements: &CodeRequirements<'a>) -> Result<Self, Self::Error> {
+        let mut data = Vec::<u8>::new();
+        requirements.write_to(&mut data)?;
+
+        Ok(Self {
+            data: Cow::Owned(data),
+        })
     }
 }
 
@@ -1630,7 +1643,7 @@ mod test {
         );
         assert!(data.is_empty());
 
-        let dest = els.to_blob().unwrap();
+        let dest = els.to_blob_data().unwrap();
         assert_eq!(source, dest);
     }
 
