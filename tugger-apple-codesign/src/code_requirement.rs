@@ -110,6 +110,18 @@ impl<'a> From<&'a [u8]> for Value<'a> {
     }
 }
 
+impl<'a> From<&'a str> for Value<'a> {
+    fn from(s: &'a str) -> Self {
+        Self::String(s.into())
+    }
+}
+
+impl<'a> From<Cow<'a, str>> for Value<'a> {
+    fn from(v: Cow<'a, str>) -> Self {
+        Self::String(v)
+    }
+}
+
 impl<'a> std::fmt::Display for Value<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
