@@ -39,12 +39,12 @@
 //! that we hope are eventually implemented:
 //!
 //! * Only embedded signatures are supported. (No support for detached signatures.)
-//! * Limited support for Code Signing Requirements. We support parsing the binary
-//!   code requirements encoding and rendering it back to the Code Signing
-//!   Requirements DSL. We don't yet support serializing the Rust structs back
-//!   to binary or parsing the human friendly DSL. You will need to use the `csreq`
-//!   tool to compile an expression to binary and then give that binary blob to this
-//!   crate.
+//! * No parsing of the Code Signing Requirements DSL. We support parsing the binary
+//!   requirements to Rust structs, serializing back to binary, and rendering to the
+//!   human friendly DSL. You will need to use the `csreq` tool to compile an
+//!   expression to binary and then give that binary blob to this crate. Alternatively,
+//!   you can write Rust code to construct a code requirements expression and serialize
+//!   that to binary.
 //! * Minimal signed resources support. We will preserve an existing referenced
 //!   file digest when re-signing a binary if signing settings are carried forward.
 //!   We support defining the content of the resources XML plist file so it can be

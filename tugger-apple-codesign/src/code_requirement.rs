@@ -1210,11 +1210,47 @@ impl<'a> CodeRequirements<'a> {
 
         Self::parse_binary(data)
     }
+
+    /// Write binary representation of these expressions to a destination.
+    ///
+    /// The blob header/magic is not written.
+    pub fn write_to(&self, dest: &mut impl Write) -> Result<(), CodeRequirementError> {
+        dest.iowrite_with(self.0.len() as u32, scroll::BE)?;
+        for e in &self.0 {
+            e.write_to(dest)?;
+        }
+
+        Ok(())
+    }
+
+    /// Obtain the blob representation of these expressions.
+    ///
+    /// This is like [CodeRequirements.write_to] except it will return an owned Vec
+    /// and will prepend the blob header identifying the data as code requirements.
+    ///
+    /// The generated data should be equivalent to what `csreq -b` would produce.
+    pub fn to_blob(&self) -> Result<Vec<u8>, CodeRequirementError> {
+        let mut payload = vec![];
+        self.write_to(&mut payload)?;
+
+        let mut dest = Vec::with_capacity(payload.len() + 8);
+        dest.iowrite_with(u32::from(CodeSigningMagic::Requirement), scroll::BE)?;
+        dest.iowrite_with(dest.capacity() as u32, scroll::BE)?;
+        dest.write_all(&payload)?;
+
+        Ok(dest)
+    }
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
+
+    fn verify_roundtrip(reqs: &CodeRequirements, source: &[u8]) {
+        let mut dest = Vec::<u8>::new();
+        reqs.write_to(&mut dest).unwrap();
+        assert_eq!(&dest, source);
+    }
 
     #[test]
     fn parse_false() {
@@ -1227,6 +1263,7 @@ mod test {
             CodeRequirements(vec![CodeRequirementExpression::False])
         );
         assert!(data.is_empty());
+        verify_roundtrip(&els, &source);
     }
 
     #[test]
@@ -1237,6 +1274,7 @@ mod test {
 
         assert_eq!(els, CodeRequirements(vec![CodeRequirementExpression::True]));
         assert!(data.is_empty());
+        verify_roundtrip(&els, &source);
     }
 
     #[test]
@@ -1252,6 +1290,7 @@ mod test {
             )])
         );
         assert!(data.is_empty());
+        verify_roundtrip(&els, &source);
     }
 
     #[test]
@@ -1265,6 +1304,7 @@ mod test {
             CodeRequirements(vec![CodeRequirementExpression::AnchorApple])
         );
         assert!(data.is_empty());
+        verify_roundtrip(&els, &source);
     }
 
     #[test]
@@ -1285,6 +1325,7 @@ mod test {
             )])
         );
         assert!(data.is_empty());
+        verify_roundtrip(&els, &source);
     }
 
     #[test]
@@ -1301,6 +1342,7 @@ mod test {
             )])
         );
         assert!(data.is_empty());
+        verify_roundtrip(&els, &source);
     }
 
     #[test]
@@ -1317,6 +1359,7 @@ mod test {
             )])
         );
         assert!(data.is_empty());
+        verify_roundtrip(&els, &source);
     }
 
     #[test]
@@ -1336,6 +1379,7 @@ mod test {
             )])
         );
         assert!(data.is_empty());
+        verify_roundtrip(&els, &source);
     }
 
     #[test]
@@ -1351,6 +1395,7 @@ mod test {
             ))])
         );
         assert!(data.is_empty());
+        verify_roundtrip(&els, &source);
     }
 
     #[test]
@@ -1367,6 +1412,7 @@ mod test {
             )])
         );
         assert!(data.is_empty());
+        verify_roundtrip(&els, &source);
     }
 
     #[test]
@@ -1386,6 +1432,7 @@ mod test {
             )])
         );
         assert!(data.is_empty());
+        verify_roundtrip(&els, &source);
     }
 
     #[test]
@@ -1399,6 +1446,7 @@ mod test {
             CodeRequirements(vec![CodeRequirementExpression::CertificateTrusted(-1)])
         );
         assert!(data.is_empty());
+        verify_roundtrip(&els, &source);
     }
 
     #[test]
@@ -1412,6 +1460,7 @@ mod test {
             CodeRequirements(vec![CodeRequirementExpression::AnchorTrusted])
         );
         assert!(data.is_empty());
+        verify_roundtrip(&els, &source);
     }
 
     #[test]
@@ -1429,6 +1478,7 @@ mod test {
             )])
         );
         assert!(data.is_empty());
+        verify_roundtrip(&els, &source);
     }
 
     #[test]
@@ -1442,6 +1492,7 @@ mod test {
             CodeRequirements(vec![CodeRequirementExpression::AnchorAppleGeneric])
         );
         assert!(data.is_empty());
+        verify_roundtrip(&els, &source);
     }
 
     #[test]
@@ -1458,6 +1509,7 @@ mod test {
             )])
         );
         assert!(data.is_empty());
+        verify_roundtrip(&els, &source);
     }
 
     #[test]
@@ -1475,6 +1527,7 @@ mod test {
             )])
         );
         assert!(data.is_empty());
+        verify_roundtrip(&els, &source);
     }
 
     #[test]
@@ -1488,6 +1541,7 @@ mod test {
             CodeRequirements(vec![CodeRequirementExpression::NamedAnchor("foo".into())])
         );
         assert!(data.is_empty());
+        verify_roundtrip(&els, &source);
     }
 
     #[test]
@@ -1501,6 +1555,7 @@ mod test {
             CodeRequirements(vec![CodeRequirementExpression::NamedCode("foo".into())])
         );
         assert!(data.is_empty());
+        verify_roundtrip(&els, &source);
     }
 
     #[test]
@@ -1514,6 +1569,7 @@ mod test {
             CodeRequirements(vec![CodeRequirementExpression::Platform(10)])
         );
         assert!(data.is_empty());
+        verify_roundtrip(&els, &source);
     }
 
     #[test]
@@ -1527,6 +1583,7 @@ mod test {
             CodeRequirements(vec![CodeRequirementExpression::Notarized])
         );
         assert!(data.is_empty());
+        verify_roundtrip(&els, &source);
     }
 
     #[test]
@@ -1544,6 +1601,7 @@ mod test {
             )])
         );
         assert!(data.is_empty());
+        verify_roundtrip(&els, &source);
     }
 
     #[test]
@@ -1557,6 +1615,7 @@ mod test {
             CodeRequirements(vec![CodeRequirementExpression::LegacyDeveloperId])
         );
         assert!(data.is_empty());
+        verify_roundtrip(&els, &source);
     }
 
     #[test]
@@ -1570,6 +1629,9 @@ mod test {
             CodeRequirements(vec![CodeRequirementExpression::False])
         );
         assert!(data.is_empty());
+
+        let dest = els.to_blob().unwrap();
+        assert_eq!(source, dest);
     }
 
     #[test]
@@ -1586,6 +1648,7 @@ mod test {
             )])
         );
         assert!(data.is_empty());
+        verify_roundtrip(&els, &source);
     }
 
     #[test]
@@ -1602,6 +1665,7 @@ mod test {
             )])
         );
         assert!(data.is_empty());
+        verify_roundtrip(&els, &source);
     }
 
     #[test]
@@ -1620,6 +1684,7 @@ mod test {
             )])
         );
         assert!(data.is_empty());
+        verify_roundtrip(&els, &source);
     }
 
     #[test]
@@ -1638,6 +1703,7 @@ mod test {
             )])
         );
         assert!(data.is_empty());
+        verify_roundtrip(&els, &source);
     }
 
     #[test]
@@ -1656,6 +1722,7 @@ mod test {
             )])
         );
         assert!(data.is_empty());
+        verify_roundtrip(&els, &source);
     }
 
     #[test]
@@ -1674,6 +1741,7 @@ mod test {
             )])
         );
         assert!(data.is_empty());
+        verify_roundtrip(&els, &source);
     }
 
     #[test]
@@ -1692,6 +1760,7 @@ mod test {
             )])
         );
         assert!(data.is_empty());
+        verify_roundtrip(&els, &source);
     }
 
     #[test]
@@ -1710,6 +1779,7 @@ mod test {
             )])
         );
         assert!(data.is_empty());
+        verify_roundtrip(&els, &source);
     }
 
     #[test]
@@ -1728,6 +1798,7 @@ mod test {
             )])
         );
         assert!(data.is_empty());
+        verify_roundtrip(&els, &source);
     }
 
     #[test]
@@ -1746,6 +1817,7 @@ mod test {
             )])
         );
         assert!(data.is_empty());
+        verify_roundtrip(&els, &source);
     }
 
     #[test]
@@ -1763,6 +1835,7 @@ mod test {
             )])
         );
         assert!(data.is_empty());
+        verify_roundtrip(&els, &source);
     }
 
     #[test]
@@ -1780,6 +1853,7 @@ mod test {
             )])
         );
         assert!(data.is_empty());
+        verify_roundtrip(&els, &source);
     }
 
     #[test]
@@ -1797,6 +1871,7 @@ mod test {
             )])
         );
         assert!(data.is_empty());
+        verify_roundtrip(&els, &source);
     }
 
     #[test]
@@ -1814,6 +1889,7 @@ mod test {
             )])
         );
         assert!(data.is_empty());
+        verify_roundtrip(&els, &source);
     }
 
     #[test]
@@ -1831,5 +1907,6 @@ mod test {
             )])
         );
         assert!(data.is_empty());
+        verify_roundtrip(&els, &source);
     }
 }
