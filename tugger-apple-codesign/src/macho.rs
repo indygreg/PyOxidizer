@@ -226,28 +226,41 @@ impl From<CodeSigningMagic> for u32 {
     }
 }
 
-// Executable segment flags.
+/// Flags that influence behavior of executable segment.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum ExecutableSegmentFlag {
+    /// Executable segment belongs to main binary.
+    MainBinary,
+    /// Allow unsigned pages (for debugging).
+    AllowUnsigned,
+    /// Main binary is debugger.
+    Debugger,
+    /// JIT enabled.
+    Jit,
+    /// Skip library validation (obsolete).
+    SkipLibraryValidation,
+    /// Can bless code directory hash for execution.
+    CanLoadCdHash,
+    /// Can execute blessed code directory hash.
+    CanExecCdHash,
+    /// Unknown flag.
+    Unknown(u32),
+}
 
-/// Executable segment denotes main binary.
-pub const CS_EXECSEG_MAIN_BINARY: u32 = 0x1;
-
-/// Allow unsigned pages (for debugging)
-pub const CS_EXECSEG_ALLOW_UNSIGNED: u32 = 0x10;
-
-/// Main binary is debugger.
-pub const CS_EXECSEG_DEBUGGER: u32 = 0x20;
-
-/// JIT enabled.
-pub const CS_EXECSEG_JIT: u32 = 0x40;
-
-/// Obsolete: skip library validation.
-pub const CS_EXECSEG_SKIP_LV: u32 = 0x80;
-
-/// Can bless cdhash for execution.
-pub const CS_EXECSEG_CAN_LOAD_CDHASH: u32 = 0x100;
-
-/// Can execute blessed cdhash.
-pub const CS_EXECSEG_CAN_EXEC_CDHASH: u32 = 0x200;
+impl From<ExecutableSegmentFlag> for u32 {
+    fn from(flag: ExecutableSegmentFlag) -> Self {
+        match flag {
+            ExecutableSegmentFlag::MainBinary => 0x0001,
+            ExecutableSegmentFlag::AllowUnsigned => 0x0010,
+            ExecutableSegmentFlag::Debugger => 0x0020,
+            ExecutableSegmentFlag::Jit => 0x0040,
+            ExecutableSegmentFlag::SkipLibraryValidation => 0x0080,
+            ExecutableSegmentFlag::CanLoadCdHash => 0x0100,
+            ExecutableSegmentFlag::CanExecCdHash => 0x0200,
+            ExecutableSegmentFlag::Unknown(v) => v,
+        }
+    }
+}
 
 // Versions of CodeDirectory struct.
 const CS_SUPPORTSSCATTER: u32 = 0x20100;
