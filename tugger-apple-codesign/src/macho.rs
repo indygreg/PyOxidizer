@@ -871,7 +871,7 @@ impl<'a> RequirementBlob<'a> {
 /// Represents a Requirement set blob.
 ///
 /// A Requirement set blob contains nested Requirement blobs.
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct RequirementSetBlob<'a> {
     pub requirements: HashMap<RequirementType, RequirementBlob<'a>>,
 }
@@ -952,6 +952,11 @@ impl<'a> RequirementSetBlob<'a> {
                 .map(|(flavor, blob)| (*flavor, blob.to_owned()))
                 .collect::<HashMap<_, _>>(),
         }
+    }
+
+    /// Set the requirements for a given [RequirementType].
+    pub fn set_requirements(&mut self, slot: RequirementType, blob: RequirementBlob<'a>) {
+        self.requirements.insert(slot, blob);
     }
 }
 

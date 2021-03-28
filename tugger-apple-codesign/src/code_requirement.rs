@@ -24,7 +24,10 @@ on 4 byte boundaries.
 */
 
 use {
-    crate::macho::{read_and_validate_blob_header, CodeSigningMagic, RequirementBlob},
+    crate::macho::{
+        read_and_validate_blob_header, CodeSigningMagic, RequirementBlob, RequirementSetBlob,
+        RequirementType,
+    },
     bcder::Oid,
     chrono::TimeZone,
     scroll::{IOwrite, Pread},
@@ -1239,6 +1242,19 @@ impl<'a> CodeRequirements<'a> {
         dest.write_all(&payload)?;
 
         Ok(dest)
+    }
+
+    /// Have this instance occupy a slot in a [RequirementSetBlob] instance.
+    pub fn add_to_requirement_set(
+        &self,
+        requirements_set: &mut RequirementSetBlob,
+        slot: RequirementType,
+    ) -> Result<(), CodeRequirementError> {
+        let blob = RequirementBlob::try_from(self)?;
+
+        requirements_set.set_requirements(slot, blob);
+
+        Ok(())
     }
 }
 

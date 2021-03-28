@@ -9,10 +9,11 @@
 use {
     crate::{
         code_hash::compute_code_hashes,
+        code_requirement::{CodeRequirementError, CodeRequirements},
         macho::{
             create_superblob, find_signature_data, Blob, BlobWrapperBlob, CodeDirectoryBlob,
             CodeSigningMagic, CodeSigningSlot, Digest, DigestError, DigestType, EmbeddedSignature,
-            EntitlementsBlob, MachOError, RequirementSetBlob,
+            EntitlementsBlob, MachOError, RequirementBlob, RequirementSetBlob, RequirementType,
         },
     },
     bytes::Bytes,
@@ -143,6 +144,8 @@ pub enum SigningError {
     SignatureDataTooLarge,
     /// Some issue in reqwest crate land.
     Reqwest(reqwest::Error),
+    /// Error related to code requirements.
+    CodeRequirement(CodeRequirementError),
 }
 
 impl std::fmt::Display for SigningError {
@@ -170,6 +173,7 @@ impl std::fmt::Display for SigningError {
                 "signature data too large for allocated size (please report this issue)",
             ),
             Self::Reqwest(e) => f.write_fmt(format_args!("HTTP error: {}", e)),
+            Self::CodeRequirement(e) => f.write_fmt(format_args!("code requirement error: {}", e)),
         }
     }
 }
@@ -221,6 +225,12 @@ impl From<scroll::Error> for SigningError {
 impl From<reqwest::Error> for SigningError {
     fn from(e: reqwest::Error) -> Self {
         Self::Reqwest(e)
+    }
+}
+
+impl From<CodeRequirementError> for SigningError {
+    fn from(e: CodeRequirementError) -> Self {
+        Self::CodeRequirement(e)
     }
 }
 
@@ -476,6 +486,29 @@ impl<'data, 'key> MachOSigner<'data, 'key> {
             .signature_builders
             .drain(..)
             .map(|builder| builder.set_entitlements_string(v))
+            .collect::<Vec<_>>()
+    }
+
+    /// See [MachOSignatureBuilder::set_designated_code_requirements].
+    pub fn set_designated_code_requirements(
+        &mut self,
+        reqs: &CodeRequirements,
+    ) -> Result<(), SigningError> {
+        self.signature_builders = self
+            .signature_builders
+            .drain(..)
+            .map(|builder| builder.set_designated_code_requirements(reqs))
+            .collect::<Result<Vec<_>, SigningError>>()?;
+
+        Ok(())
+    }
+
+    /// See [MachOSignatureBuilder::set_designated_code_requirements_raw].
+    pub fn set_designated_code_requirements_raw(&mut self, requirement: &RequirementBlob) {
+        self.signature_builders = self
+            .signature_builders
+            .drain(..)
+            .map(|builder| builder.set_designated_code_requirements_raw(requirement))
             .collect::<Vec<_>>()
     }
 
@@ -787,17 +820,32 @@ impl<'key> MachOSignatureBuilder<'key> {
         self
     }
 
-    /*
-    /// Set the code requirement blob data.
-    ///
-    /// The passed value is the binary serialization of a Code Requirement
-    /// expression. See `man csreq` on an Apple machine and
-    /// https://developer.apple.com/library/archive/technotes/tn2206/_index.html#//apple_ref/doc/uid/DTS40007919-CH1-TNTAG4
-    /// for more info.
-    pub fn set_code_requirement(&mut self, v: impl Into<Vec<u8>>) -> Option<Vec<u8>> {
-        self.code_requirement.replace(v.into())
+    /// Set designated code requirements from a [CodeRequirements] instance.
+    pub fn set_designated_code_requirements(
+        mut self,
+        reqs: &CodeRequirements,
+    ) -> Result<Self, SigningError> {
+        if self.code_requirement.is_none() {
+            self.code_requirement = Some(RequirementSetBlob::default());
+        }
+
+        let blob = self.code_requirement.as_mut().unwrap();
+        reqs.add_to_requirement_set(blob, RequirementType::Designated)?;
+
+        Ok(self)
     }
-     */
+
+    /// Set designated code requirements from raw binary data.
+    pub fn set_designated_code_requirements_raw(mut self, requirement: &RequirementBlob) -> Self {
+        if self.code_requirement.is_none() {
+            self.code_requirement = Some(RequirementSetBlob::default());
+        }
+
+        let blob = self.code_requirement.as_mut().unwrap();
+        blob.set_requirements(RequirementType::Designated, requirement.to_owned());
+
+        self
+    }
 
     /// Set the executable segment flags for this binary.
     ///

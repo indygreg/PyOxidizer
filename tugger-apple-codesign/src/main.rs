@@ -23,6 +23,7 @@ use {
     crate::{
         certificate::{create_self_signed_code_signing_certificate, CertificateError},
         code_hash::compute_code_hashes,
+        code_requirement::{CodeRequirementError, CodeRequirements},
         macho::{
             find_signature_data, parse_signature_data, Blob, CodeDirectoryBlob, CodeSigningSlot,
             DigestType, RequirementSetBlob,
@@ -120,6 +121,14 @@ The input path can be a single or multiple/fat/universal Mach-O binary. If
 a fat binary is given, each Mach-O within that binary will be signed using
 identical signing options.
 
+Designated code requirements can be specified via --code-requirements-path.
+This file MUST contain a binary/compiled code requirements expression. We do
+not (yet) support parsing the human-friendly code requirements DSL. A
+binary/compiled file can be produced via Apple's `csreq` tool. e.g.
+`csreq -r '=<expression>' -b /output/path`. If code requirements data is
+specified, it will be parsed and displayed as part of signing to ensure it
+is well-formed.
+
 By default, the embedded code signature will only contains hashes of
 the binary and other important entities (such as entitlements and resources).
 To use a code signing key/certificate to derive a cryptographic signature,
@@ -162,6 +171,7 @@ enum AppError {
     Signing(SigningError),
     VerificationProblems,
     Certificate(CertificateError),
+    CodeRequirement(CodeRequirementError),
 }
 
 impl std::fmt::Display for AppError {
@@ -179,6 +189,7 @@ impl std::fmt::Display for AppError {
             Self::Signing(e) => f.write_fmt(format_args!("signing error: {}", e)),
             Self::VerificationProblems => f.write_str("problems reported during verification"),
             Self::Certificate(e) => f.write_fmt(format_args!("certificate error: {}", e)),
+            Self::CodeRequirement(e) => f.write_fmt(format_args!("code requirement error: {}", e)),
         }
     }
 }
@@ -230,6 +241,12 @@ impl From<SigningError> for AppError {
 impl From<CertificateError> for AppError {
     fn from(e: CertificateError) -> Self {
         Self::Certificate(e)
+    }
+}
+
+impl From<CodeRequirementError> for AppError {
+    fn from(e: CodeRequirementError) -> Self {
+        Self::CodeRequirement(e)
     }
 }
 
@@ -534,6 +551,7 @@ fn command_generate_self_signed_certificate(args: &ArgMatches) -> Result<(), App
 fn command_sign(args: &ArgMatches) -> Result<(), AppError> {
     let input_path = args.value_of("input_path").ok_or(AppError::BadArgument)?;
     let output_path = args.value_of("output_path").ok_or(AppError::BadArgument)?;
+    let code_requirements_path = args.value_of("code_requirements_path").map(PathBuf::from);
     let code_resources_path = args.value_of("code_resources").map(PathBuf::from);
     let entitlement_path = args.value_of("entitlement").map(PathBuf::from);
     let pem_sources = match args.values_of("pem_source") {
@@ -604,6 +622,15 @@ fn command_sign(args: &ArgMatches) -> Result<(), AppError> {
     for cert in public_certificates {
         println!("registering extra X.509 certificate");
         signer.chain_certificate_der(&cert)?;
+    }
+
+    if let Some(code_requirements_path) = code_requirements_path {
+        let code_requirements_data = std::fs::read(code_requirements_path)?;
+        let reqs = CodeRequirements::parse_blob(&code_requirements_data)?.0;
+        for expr in reqs.iter() {
+            println!("setting designated code requirements: {}", expr);
+        }
+        signer.set_designated_code_requirements(&reqs)?;
     }
 
     if let Some(code_resources_path) = code_resources_path {
@@ -767,6 +794,12 @@ fn main_impl() -> Result<(), AppError> {
             SubCommand::with_name("sign")
                 .about("Adds a code signature to a Mach-O binary")
                 .long_about(SIGN_ABOUT)
+                .arg(
+                    Arg::with_name("code_requirements_path")
+                        .long("code-requirements-path")
+                        .takes_value(true)
+                        .help("Path to a file containing binary code requirements data to be used as designated requirements")
+                )
                 .arg(
                     Arg::with_name("code_resources")
                         .long("code-resources")
