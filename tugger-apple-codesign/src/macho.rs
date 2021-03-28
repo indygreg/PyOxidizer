@@ -246,10 +246,10 @@ pub enum ExecutableSegmentFlag {
     /// Can execute blessed code directory hash.
     CanExecCdHash,
     /// Unknown flag.
-    Unknown(u32),
+    Unknown(u64),
 }
 
-impl From<ExecutableSegmentFlag> for u32 {
+impl From<ExecutableSegmentFlag> for u64 {
     fn from(flag: ExecutableSegmentFlag) -> Self {
         match flag {
             ExecutableSegmentFlag::MainBinary => 0x0001,
