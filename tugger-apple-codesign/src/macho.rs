@@ -298,15 +298,6 @@ const CS_SUPPORTSLINKAGE: u32 = 0x20600;
 pub const CSTYPE_INDEX_REQUIREMENTS: u32 = 0x00000002;
 pub const CSTYPE_INDEX_ENTITLEMENTS: u32 = 0x00000005;
 
-const CS_HASHTYPE_SHA1: u8 = 1;
-const CS_HASHTYPE_SHA256: u8 = 2;
-const CS_HASHTYPE_SHA256_TRUNCATED: u8 = 3;
-const CS_HASHTYPE_SHA384: u8 = 4;
-
-pub const CS_SHA1_LEN: u32 = 20;
-pub const CS_SHA256_LEN: u32 = 32;
-pub const CS_SHA256_TRUNCATED_LEN: u32 = 20;
-
 /// always - larger hashes are truncated
 pub const CS_CDHASH_LEN: u32 = 20;
 /// max size of the hash we'll support
@@ -1028,6 +1019,7 @@ pub enum DigestType {
     Sha256,
     Sha256Truncated,
     Sha384,
+    Sha512,
     Unknown(u8),
 }
 
@@ -1035,10 +1027,11 @@ impl From<u8> for DigestType {
     fn from(v: u8) -> Self {
         match v {
             0 => Self::None,
-            CS_HASHTYPE_SHA1 => Self::Sha1,
-            CS_HASHTYPE_SHA256 => Self::Sha256,
-            CS_HASHTYPE_SHA256_TRUNCATED => Self::Sha256Truncated,
-            CS_HASHTYPE_SHA384 => Self::Sha384,
+            1 => Self::Sha1,
+            2 => Self::Sha256,
+            3 => Self::Sha256Truncated,
+            4 => Self::Sha384,
+            5 => Self::Sha512,
             _ => Self::Unknown(v),
         }
     }
@@ -1048,10 +1041,11 @@ impl From<DigestType> for u8 {
     fn from(v: DigestType) -> u8 {
         match v {
             DigestType::None => 0,
-            DigestType::Sha1 => CS_HASHTYPE_SHA1,
-            DigestType::Sha256 => CS_HASHTYPE_SHA256,
-            DigestType::Sha256Truncated => CS_HASHTYPE_SHA256_TRUNCATED,
-            DigestType::Sha384 => CS_HASHTYPE_SHA384,
+            DigestType::Sha1 => 1,
+            DigestType::Sha256 => 2,
+            DigestType::Sha256Truncated => 3,
+            DigestType::Sha384 => 4,
+            DigestType::Sha512 => 5,
             DigestType::Unknown(v) => v,
         }
     }
@@ -1067,6 +1061,7 @@ impl TryFrom<&str> for DigestType {
             "sha256" => Ok(Self::Sha256),
             "sha256-truncated" => Ok(Self::Sha256Truncated),
             "sha384" => Ok(Self::Sha384),
+            "sha512" => Ok(Self::Sha512),
             _ => Err(DigestError::UnknownAlgorithm),
         }
     }
@@ -1088,6 +1083,7 @@ impl DigestType {
                 Ok(ring::digest::Context::new(&ring::digest::SHA256))
             }
             Self::Sha384 => Ok(ring::digest::Context::new(&ring::digest::SHA384)),
+            Self::Sha512 => Ok(ring::digest::Context::new(&ring::digest::SHA512)),
             _ => Err(DigestError::UnknownAlgorithm),
         }
     }
@@ -1097,11 +1093,10 @@ impl DigestType {
         let mut hasher = self.as_hasher()?;
 
         hasher.update(data);
-        let hash = hasher.finish().as_ref().to_vec();
+        let mut hash = hasher.finish().as_ref().to_vec();
 
-        // TODO truncate hash.
         if matches!(self, Self::Sha256Truncated) {
-            return Err(DigestError::UnsupportedAlgorithm);
+            hash.truncate(20);
         }
 
         Ok(hash)
