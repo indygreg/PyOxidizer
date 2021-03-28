@@ -29,9 +29,9 @@ data structures within the segment is roughly as follows:
   *blob* contains (code directory, entitlements, embedded signature, etc).
 * N *blob* sections of varying formats and lengths.
 
-We only support the `CSMAGIC_EMBEDDED_SIGNATURE` magic in the `SuperBlob`, as
-this is what is used in the wild. (It is even unclear if other `CSMAGIC_*`
-values can occur in `SuperBlob` headers.)
+We only support the [CodeSigningMagic::EmbeddedSignature] magic in the `SuperBlob`,
+as this is what is used in the wild. (It is even unclear if other magic values
+can occur in `SuperBlob` headers.)
 
 The `EmbeddedSignature` type represents a lightly parsed `SuperBlob`. It
 provides access to `BlobEntry` which describe the *blob* sections within the
@@ -163,60 +163,47 @@ impl From<CodeSigningSlot> for u32 {
     }
 }
 
-/// Single requirement blob.
-const CSMAGIC_REQUIREMENT: u32 = 0xfade0c00;
-
-/// Requirements vector (internal requirements).
-const CSMAGIC_REQUIREMENTS: u32 = 0xfade0c01;
-
-/// CodeDirectory blob.
-const CSMAGIC_CODEDIRECTORY: u32 = 0xfade0c02;
-
-/// Embedded form of signature data.
-const CSMAGIC_EMBEDDED_SIGNATURE: u32 = 0xfade0cc0;
-
-/// XXX
-const CSMAGIC_EMBEDDED_SIGNATURE_OLD: u32 = 0xfade0b02;
-
-/// Embedded entitlements.
-const CSMAGIC_EMBEDDED_ENTITLEMENTS: u32 = 0xfade7171;
-
-/// Security settings.
-const CSMAGIC_SECURITY_SETTINGS: u32 = 0xfade7172;
-
-/// Multi-arch collection of embedded signatures.
-const CSMAGIC_DETACHED_SIGNATURE: u32 = 0xfade0cc1;
-
-/// CMS signature, among other things.
-const CSMAGIC_BLOBWRAPPER: u32 = 0xfade0b01;
-
 /// Defines header magic for various payloads.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum CodeSigningMagic {
+    /// Code requirement blob.
     Requirement,
+    /// Code requirements blob.
     Requirements,
+    /// CodeDirectory blob.
     CodeDirectory,
+    /// Embedded signature.
+    ///
+    /// This is often the magic of the SuperBlob.
     EmbeddedSignature,
+    /// Old embedded signature.
     EmbeddedSignatureOld,
+    /// Embedded entitlements blob.
     EmbeddedEntitlements,
+    /// Binary entitlements blob.
     SecuritySettings,
+    /// Multi-arch collection of embedded signatures.
     DetachedSignature,
+    /// Generic blob wrapper.
+    ///
+    /// The CMS signature is stored in this type.
     BlobWrapper,
+    /// Unknown magic.
     Unknown(u32),
 }
 
 impl From<u32> for CodeSigningMagic {
     fn from(v: u32) -> Self {
         match v {
-            CSMAGIC_REQUIREMENT => Self::Requirement,
-            CSMAGIC_REQUIREMENTS => Self::Requirements,
-            CSMAGIC_CODEDIRECTORY => Self::CodeDirectory,
-            CSMAGIC_EMBEDDED_SIGNATURE => Self::EmbeddedSignature,
-            CSMAGIC_EMBEDDED_SIGNATURE_OLD => Self::EmbeddedSignatureOld,
-            CSMAGIC_EMBEDDED_ENTITLEMENTS => Self::EmbeddedEntitlements,
-            CSMAGIC_SECURITY_SETTINGS => Self::SecuritySettings,
-            CSMAGIC_DETACHED_SIGNATURE => Self::DetachedSignature,
-            CSMAGIC_BLOBWRAPPER => Self::BlobWrapper,
+            0xfade0c00 => Self::Requirement,
+            0xfade0c01 => Self::Requirements,
+            0xfade0c02 => Self::CodeDirectory,
+            0xfade0cc0 => Self::EmbeddedSignature,
+            0xfade0b02 => Self::EmbeddedSignatureOld,
+            0xfade7171 => Self::EmbeddedEntitlements,
+            0xfade7172 => Self::SecuritySettings,
+            0xfade0cc1 => Self::DetachedSignature,
+            0xfade0b01 => Self::BlobWrapper,
             _ => Self::Unknown(v),
         }
     }
@@ -225,15 +212,15 @@ impl From<u32> for CodeSigningMagic {
 impl From<CodeSigningMagic> for u32 {
     fn from(magic: CodeSigningMagic) -> u32 {
         match magic {
-            CodeSigningMagic::Requirement => CSMAGIC_REQUIREMENT,
-            CodeSigningMagic::Requirements => CSMAGIC_REQUIREMENTS,
-            CodeSigningMagic::CodeDirectory => CSMAGIC_CODEDIRECTORY,
-            CodeSigningMagic::EmbeddedSignature => CSMAGIC_EMBEDDED_SIGNATURE,
-            CodeSigningMagic::EmbeddedSignatureOld => CSMAGIC_EMBEDDED_SIGNATURE_OLD,
-            CodeSigningMagic::EmbeddedEntitlements => CSMAGIC_EMBEDDED_ENTITLEMENTS,
-            CodeSigningMagic::SecuritySettings => CSMAGIC_SECURITY_SETTINGS,
-            CodeSigningMagic::DetachedSignature => CSMAGIC_DETACHED_SIGNATURE,
-            CodeSigningMagic::BlobWrapper => CSMAGIC_BLOBWRAPPER,
+            CodeSigningMagic::Requirement => 0xfade0c00,
+            CodeSigningMagic::Requirements => 0xfade0c01,
+            CodeSigningMagic::CodeDirectory => 0xfade0c02,
+            CodeSigningMagic::EmbeddedSignature => 0xfade0cc0,
+            CodeSigningMagic::EmbeddedSignatureOld => 0xfade0b02,
+            CodeSigningMagic::EmbeddedEntitlements => 0xfade7171,
+            CodeSigningMagic::SecuritySettings => 0xfade7172,
+            CodeSigningMagic::DetachedSignature => 0xfade0cc1,
+            CodeSigningMagic::BlobWrapper => 0xfade0b01,
             CodeSigningMagic::Unknown(v) => v,
         }
     }
@@ -351,7 +338,7 @@ impl std::fmt::Display for RequirementType {
 #[repr(C)]
 #[derive(Clone, Pread)]
 struct BlobIndex {
-    /// Corresponds to a CSSLOT_* constant.
+    /// Corresponds to a [CodeSigningSlot] variant.
     typ: u32,
     offset: u32,
 }
@@ -434,7 +421,7 @@ pub fn create_superblob<'a>(
 /// Represents embedded signature data in a Mach-O binary.
 ///
 /// This type represents a lightly parsed `SuperBlob` with
-/// `CSMAGIC_EMBEDDED_SIGNATURE` magic embedded in a Mach-O binary. It is the
+/// [CodeSigningMagic::EmbeddedSignature] embedded in a Mach-O binary. It is the
 /// most common embedded signature data format you are likely to encounter.
 pub struct EmbeddedSignature<'a> {
     /// Magic value from header.
@@ -752,7 +739,7 @@ where
 
 /// Represents a single, parsed Blob entry/slot.
 ///
-/// Each variant corresponds to a CSMAGIC_* blob type.
+/// Each variant corresponds to a [CodeSigningMagic] blob type.
 #[derive(Debug)]
 pub enum BlobData<'a> {
     Requirement(Box<RequirementBlob<'a>>),
@@ -779,29 +766,31 @@ impl<'a> Blob<'a> for BlobData<'a> {
         // advertised length is incorrect and we would incur a buffer overrun.
         let data = &data[0..length];
 
+        let magic = CodeSigningMagic::from(magic);
+
         Ok(match magic {
-            CSMAGIC_REQUIREMENT => {
+            CodeSigningMagic::Requirement => {
                 Self::Requirement(Box::new(RequirementBlob::from_blob_bytes(data)?))
             }
-            CSMAGIC_REQUIREMENTS => {
+            CodeSigningMagic::Requirements => {
                 Self::Requirements(Box::new(RequirementsBlob::from_blob_bytes(data)?))
             }
-            CSMAGIC_CODEDIRECTORY => {
+            CodeSigningMagic::CodeDirectory => {
                 Self::CodeDirectory(Box::new(CodeDirectoryBlob::from_blob_bytes(data)?))
             }
-            CSMAGIC_EMBEDDED_SIGNATURE => {
+            CodeSigningMagic::EmbeddedSignature => {
                 Self::EmbeddedSignature(Box::new(EmbeddedSignatureBlob::from_blob_bytes(data)?))
             }
-            CSMAGIC_EMBEDDED_SIGNATURE_OLD => Self::EmbeddedSignatureOld(Box::new(
+            CodeSigningMagic::EmbeddedSignatureOld => Self::EmbeddedSignatureOld(Box::new(
                 EmbeddedSignatureOldBlob::from_blob_bytes(data)?,
             )),
-            CSMAGIC_EMBEDDED_ENTITLEMENTS => {
+            CodeSigningMagic::EmbeddedEntitlements => {
                 Self::EmbeddedEntitlements(Box::new(EntitlementsBlob::from_blob_bytes(data)?))
             }
-            CSMAGIC_DETACHED_SIGNATURE => {
+            CodeSigningMagic::DetachedSignature => {
                 Self::DetachedSignature(Box::new(DetachedSignatureBlob::from_blob_bytes(data)?))
             }
-            CSMAGIC_BLOBWRAPPER => {
+            CodeSigningMagic::BlobWrapper => {
                 Self::BlobWrapper(Box::new(BlobWrapperBlob::from_blob_bytes(data)?))
             }
             _ => Self::Other(Box::new(OtherBlob::from_blob_bytes(data)?)),
@@ -837,7 +826,7 @@ impl<'a> Blob<'a> for BlobData<'a> {
     }
 }
 
-/// Represents a Requirement blob (CSMAGIC_REQUIREMENT).
+/// Represents a Requirement blob.
 ///
 /// It appears `csreq -b` will emit instances of this blob, header magic and
 /// all. So data generated by `csreq -b` can be fed into [RequirementBlob.from_blob_bytes]
@@ -848,7 +837,7 @@ pub struct RequirementBlob<'a> {
 
 impl<'a> Blob<'a> for RequirementBlob<'a> {
     fn magic() -> u32 {
-        CSMAGIC_REQUIREMENT
+        u32::from(CodeSigningMagic::Requirement)
     }
 
     fn from_blob_bytes(data: &'a [u8]) -> Result<Self, MachOError> {
@@ -881,7 +870,7 @@ impl<'a> RequirementBlob<'a> {
     }
 }
 
-/// Represents a Requirements blob (CSMAGIC_REQUIREMENTS).
+/// Represents a Requirements blob.
 ///
 /// A Requirements blob contains nested Requirement blobs.
 #[derive(Debug)]
@@ -891,7 +880,7 @@ pub struct RequirementsBlob<'a> {
 
 impl<'a> Blob<'a> for RequirementsBlob<'a> {
     fn magic() -> u32 {
-        CSMAGIC_REQUIREMENTS
+        u32::from(CodeSigningMagic::Requirements)
     }
 
     fn from_blob_bytes(data: &'a [u8]) -> Result<Self, MachOError> {
@@ -1113,7 +1102,7 @@ fn get_hashes(data: &[u8], offset: usize, count: usize, hash_size: usize) -> Vec
         .collect()
 }
 
-/// Represents a code directory blob entry (CSSLOT_CODEDIRECTORY).
+/// Represents a code directory blob entry.
 ///
 /// This struct is versioned and has been extended over time.
 ///
@@ -1181,7 +1170,7 @@ pub struct CodeDirectoryBlob<'a> {
 
 impl<'a> Blob<'a> for CodeDirectoryBlob<'a> {
     fn magic() -> u32 {
-        CSMAGIC_CODEDIRECTORY
+        u32::from(CodeSigningMagic::CodeDirectory)
     }
 
     fn from_blob_bytes(data: &'a [u8]) -> Result<Self, MachOError> {
@@ -1363,7 +1352,7 @@ impl<'a> Blob<'a> for CodeDirectoryBlob<'a> {
 
         // Hash offsets and counts are wonky. The recorded hash offset is the beginning
         // of code hashes and special hashes are in "negative" indices before
-        // that offset. Hashes are also at the index of their CSSLOT_ constant.
+        // that offset. Hashes are also at the index of their CodeSigningSlot constant.
         // e.g. Code Directory is the first element in the specials array because
         // it is slot 0. This means we need to write out empty hashes for missing
         // special slots. Our local specials HashMap may not have all entries. So compute
@@ -1613,7 +1602,7 @@ impl<'a> CodeDirectoryBlob<'a> {
     }
 }
 
-/// Represents an embedded signature (CSMAGIC_EMBEDDED_SIGNATURE).
+/// Represents an embedded signature.
 #[derive(Debug)]
 pub struct EmbeddedSignatureBlob<'a> {
     data: &'a [u8],
@@ -1621,7 +1610,7 @@ pub struct EmbeddedSignatureBlob<'a> {
 
 impl<'a> Blob<'a> for EmbeddedSignatureBlob<'a> {
     fn magic() -> u32 {
-        CSMAGIC_EMBEDDED_SIGNATURE
+        u32::from(CodeSigningMagic::EmbeddedSignature)
     }
 
     fn from_blob_bytes(data: &'a [u8]) -> Result<Self, MachOError> {
@@ -1635,7 +1624,7 @@ impl<'a> Blob<'a> for EmbeddedSignatureBlob<'a> {
     }
 }
 
-/// An old embedded signature (CSMAGIC_EMBEDDED_SIGNATURE_OLD).
+/// An old embedded signature.
 #[derive(Debug)]
 pub struct EmbeddedSignatureOldBlob<'a> {
     data: &'a [u8],
@@ -1643,7 +1632,7 @@ pub struct EmbeddedSignatureOldBlob<'a> {
 
 impl<'a> Blob<'a> for EmbeddedSignatureOldBlob<'a> {
     fn magic() -> u32 {
-        CSMAGIC_EMBEDDED_SIGNATURE_OLD
+        u32::from(CodeSigningMagic::EmbeddedSignatureOld)
     }
 
     fn from_blob_bytes(data: &'a [u8]) -> Result<Self, MachOError> {
@@ -1657,7 +1646,7 @@ impl<'a> Blob<'a> for EmbeddedSignatureOldBlob<'a> {
     }
 }
 
-/// Represents an Entitlements blob (CSSLOT_ENTITLEMENTS).
+/// Represents an Entitlements blob.
 ///
 /// An entitlements blob contains an XML plist with a dict. Keys are
 /// strings of the entitlements being requested and values appear to be
@@ -1669,7 +1658,7 @@ pub struct EntitlementsBlob<'a> {
 
 impl<'a> Blob<'a> for EntitlementsBlob<'a> {
     fn magic() -> u32 {
-        CSMAGIC_EMBEDDED_ENTITLEMENTS
+        u32::from(CodeSigningMagic::EmbeddedEntitlements)
     }
 
     fn from_blob_bytes(data: &'a [u8]) -> Result<Self, MachOError> {
@@ -1699,7 +1688,7 @@ impl<'a> std::fmt::Display for EntitlementsBlob<'a> {
     }
 }
 
-/// A detached signature (CSMAGIC_DETACHED_SIGNATURE).
+/// A detached signature.
 #[derive(Debug)]
 pub struct DetachedSignatureBlob<'a> {
     data: &'a [u8],
@@ -1707,7 +1696,7 @@ pub struct DetachedSignatureBlob<'a> {
 
 impl<'a> Blob<'a> for DetachedSignatureBlob<'a> {
     fn magic() -> u32 {
-        CSMAGIC_DETACHED_SIGNATURE
+        u32::from(CodeSigningMagic::DetachedSignature)
     }
 
     fn from_blob_bytes(data: &'a [u8]) -> Result<Self, MachOError> {
@@ -1721,14 +1710,14 @@ impl<'a> Blob<'a> for DetachedSignatureBlob<'a> {
     }
 }
 
-/// Represents a generic blob wrapper (CSMAGIC_BLOBWRAPPER).
+/// Represents a generic blob wrapper.
 pub struct BlobWrapperBlob<'a> {
     data: &'a [u8],
 }
 
 impl<'a> Blob<'a> for BlobWrapperBlob<'a> {
     fn magic() -> u32 {
-        CSMAGIC_BLOBWRAPPER
+        u32::from(CodeSigningMagic::BlobWrapper)
     }
 
     fn from_blob_bytes(data: &'a [u8]) -> Result<Self, MachOError> {
@@ -1976,7 +1965,7 @@ pub fn find_signature_data<'a>(
 pub fn parse_signature_data(data: &[u8]) -> Result<EmbeddedSignature<'_>, MachOError> {
     let magic: u32 = data.pread_with(0, scroll::BE)?;
 
-    if magic == CSMAGIC_EMBEDDED_SIGNATURE {
+    if magic == u32::from(CodeSigningMagic::EmbeddedSignature) {
         EmbeddedSignature::from_bytes(data)
     } else {
         Err(MachOError::BadMagic)
