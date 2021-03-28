@@ -262,13 +262,18 @@ impl From<ExecutableSegmentFlag> for u32 {
     }
 }
 
-// Versions of CodeDirectory struct.
-const CS_SUPPORTSSCATTER: u32 = 0x20100;
-const CS_SUPPORTSTEAMID: u32 = 0x20200;
-const CS_SUPPORTSCODELIMIT64: u32 = 0x20300;
-const CS_SUPPORTSEXECSEG: u32 = 0x20400;
-const CS_SUPPORTSRUNTIME: u32 = 0x20500;
-const CS_SUPPORTSLINKAGE: u32 = 0x20600;
+/// Version of Code Directory data structure.
+#[derive(Clone, Copy, Debug, PartialEq)]
+#[repr(u32)]
+pub enum CodeDirectoryVersion {
+    Initial = 0x20000,
+    SupportsScatter = 0x20100,
+    SupportsTeamId = 0x20200,
+    SupportsCodeLimit64 = 0x20300,
+    SupportsExecutableSegment = 0x20400,
+    SupportsRuntime = 0x20500,
+    SupportsLinkage = 0x20600,
+}
 
 /// Compat with amfi
 pub const CSTYPE_INDEX_REQUIREMENTS: u32 = 0x00000002;
@@ -1207,7 +1212,7 @@ impl<'a> Blob<'a> for CodeDirectoryBlob<'a> {
         let page_size = 2u32.pow(page_size as u32);
         let spare2 = data.gread_with(offset, scroll::BE)?;
 
-        let scatter_offset = if version >= CS_SUPPORTSSCATTER {
+        let scatter_offset = if version >= CodeDirectoryVersion::SupportsScatter as u32 {
             let v = data.gread_with(offset, scroll::BE)?;
 
             if v != 0 {
@@ -1218,7 +1223,7 @@ impl<'a> Blob<'a> for CodeDirectoryBlob<'a> {
         } else {
             None
         };
-        let team_offset = if version >= CS_SUPPORTSTEAMID {
+        let team_offset = if version >= CodeDirectoryVersion::SupportsTeamId as u32 {
             assert_eq!(*offset, 0x30);
             let v = data.gread_with::<u32>(offset, scroll::BE)?;
 
@@ -1231,7 +1236,8 @@ impl<'a> Blob<'a> for CodeDirectoryBlob<'a> {
             None
         };
 
-        let (spare3, code_limit_64) = if version >= CS_SUPPORTSCODELIMIT64 {
+        let (spare3, code_limit_64) = if version >= CodeDirectoryVersion::SupportsCodeLimit64 as u32
+        {
             (
                 Some(data.gread_with(offset, scroll::BE)?),
                 Some(data.gread_with(offset, scroll::BE)?),
@@ -1240,29 +1246,31 @@ impl<'a> Blob<'a> for CodeDirectoryBlob<'a> {
             (None, None)
         };
 
-        let (exec_seg_base, exec_seg_limit, exec_seg_flags) = if version >= CS_SUPPORTSEXECSEG {
-            assert_eq!(*offset, 0x40);
-            (
-                Some(data.gread_with(offset, scroll::BE)?),
-                Some(data.gread_with(offset, scroll::BE)?),
-                Some(data.gread_with(offset, scroll::BE)?),
-            )
-        } else {
-            (None, None, None)
-        };
+        let (exec_seg_base, exec_seg_limit, exec_seg_flags) =
+            if version >= CodeDirectoryVersion::SupportsExecutableSegment as u32 {
+                assert_eq!(*offset, 0x40);
+                (
+                    Some(data.gread_with(offset, scroll::BE)?),
+                    Some(data.gread_with(offset, scroll::BE)?),
+                    Some(data.gread_with(offset, scroll::BE)?),
+                )
+            } else {
+                (None, None, None)
+            };
 
-        let (runtime, pre_encrypt_offset) = if version >= CS_SUPPORTSRUNTIME {
-            assert_eq!(*offset, 0x58);
-            (
-                Some(data.gread_with(offset, scroll::BE)?),
-                Some(data.gread_with(offset, scroll::BE)?),
-            )
-        } else {
-            (None, None)
-        };
+        let (runtime, pre_encrypt_offset) =
+            if version >= CodeDirectoryVersion::SupportsRuntime as u32 {
+                assert_eq!(*offset, 0x58);
+                (
+                    Some(data.gread_with(offset, scroll::BE)?),
+                    Some(data.gread_with(offset, scroll::BE)?),
+                )
+            } else {
+                (None, None)
+            };
 
         let (linkage_hash_type, linkage_truncated, spare4, linkage_offset, linkage_size) =
-            if version >= CS_SUPPORTSLINKAGE {
+            if version >= CodeDirectoryVersion::SupportsLinkage as u32 {
                 assert_eq!(*offset, 0x60);
                 (
                     Some(data.gread_with(offset, scroll::BE)?),
@@ -1391,32 +1399,32 @@ impl<'a> Blob<'a> for CodeDirectoryBlob<'a> {
         let mut scatter_offset_cursor_position = None;
         let mut team_offset_cursor_position = None;
 
-        if self.version >= CS_SUPPORTSSCATTER {
+        if self.version >= CodeDirectoryVersion::SupportsScatter as u32 {
             scatter_offset_cursor_position = Some(cursor.position());
             cursor.iowrite_with(self.scatter_offset.unwrap_or(0), scroll::BE)?;
 
-            if self.version >= CS_SUPPORTSTEAMID {
+            if self.version >= CodeDirectoryVersion::SupportsTeamId as u32 {
                 team_offset_cursor_position = Some(cursor.position());
                 cursor.iowrite_with(0u32, scroll::BE)?;
 
-                if self.version >= CS_SUPPORTSCODELIMIT64 {
+                if self.version >= CodeDirectoryVersion::SupportsCodeLimit64 as u32 {
                     cursor.iowrite_with(self.spare3.unwrap_or(0), scroll::BE)?;
                     assert_eq!(cursor.position(), 0x30);
                     cursor.iowrite_with(self.code_limit_64.unwrap_or(0), scroll::BE)?;
 
-                    if self.version >= CS_SUPPORTSEXECSEG {
+                    if self.version >= CodeDirectoryVersion::SupportsExecutableSegment as u32 {
                         cursor.iowrite_with(self.exec_seg_base.unwrap_or(0), scroll::BE)?;
                         assert_eq!(cursor.position(), 0x40);
                         cursor.iowrite_with(self.exec_seg_limit.unwrap_or(0), scroll::BE)?;
                         cursor.iowrite_with(self.exec_seg_flags.unwrap_or(0), scroll::BE)?;
 
-                        if self.version >= CS_SUPPORTSRUNTIME {
+                        if self.version >= CodeDirectoryVersion::SupportsRuntime as u32 {
                             assert_eq!(cursor.position(), 0x50);
                             cursor.iowrite_with(self.runtime.unwrap_or(0), scroll::BE)?;
                             cursor
                                 .iowrite_with(self.pre_encrypt_offset.unwrap_or(0), scroll::BE)?;
 
-                            if self.version >= CS_SUPPORTSLINKAGE {
+                            if self.version >= CodeDirectoryVersion::SupportsLinkage as u32 {
                                 cursor.iowrite_with(
                                     self.linkage_hash_type.unwrap_or(0),
                                     scroll::BE,
@@ -1501,25 +1509,25 @@ impl<'a> CodeDirectoryBlob<'a> {
     pub fn adjust_version(&mut self) -> u32 {
         let old_version = self.version;
 
-        let mut minimum_version = 0x20000;
+        let mut minimum_version = CodeDirectoryVersion::Initial;
 
         if self.scatter_offset.is_some() {
-            minimum_version = CS_SUPPORTSSCATTER;
+            minimum_version = CodeDirectoryVersion::SupportsScatter;
         }
         if self.team_name.is_some() {
-            minimum_version = CS_SUPPORTSTEAMID;
+            minimum_version = CodeDirectoryVersion::SupportsTeamId;
         }
         if self.spare3.is_some() || self.code_limit_64.is_some() {
-            minimum_version = CS_SUPPORTSCODELIMIT64;
+            minimum_version = CodeDirectoryVersion::SupportsCodeLimit64;
         }
         if self.exec_seg_base.is_some()
             || self.exec_seg_limit.is_some()
             || self.exec_seg_flags.is_some()
         {
-            minimum_version = CS_SUPPORTSEXECSEG;
+            minimum_version = CodeDirectoryVersion::SupportsExecutableSegment;
         }
         if self.runtime.is_some() || self.pre_encrypt_offset.is_some() {
-            minimum_version = CS_SUPPORTSRUNTIME;
+            minimum_version = CodeDirectoryVersion::SupportsRuntime;
         }
         if self.linkage_hash_type.is_some()
             || self.linkage_truncated.is_some()
@@ -1527,10 +1535,10 @@ impl<'a> CodeDirectoryBlob<'a> {
             || self.linkage_offset.is_some()
             || self.linkage_size.is_some()
         {
-            minimum_version = CS_SUPPORTSLINKAGE;
+            minimum_version = CodeDirectoryVersion::SupportsLinkage;
         }
 
-        self.version = minimum_version;
+        self.version = minimum_version as u32;
 
         old_version
     }
@@ -1545,26 +1553,26 @@ impl<'a> CodeDirectoryBlob<'a> {
     /// Calling this function will set fields not present in the current
     /// version to None.
     pub fn clear_newer_fields(&mut self) {
-        if self.version < CS_SUPPORTSSCATTER {
+        if self.version < CodeDirectoryVersion::SupportsScatter as u32 {
             self.scatter_offset = None;
         }
-        if self.version < CS_SUPPORTSTEAMID {
+        if self.version < CodeDirectoryVersion::SupportsTeamId as u32 {
             self.team_name = None;
         }
-        if self.version < CS_SUPPORTSCODELIMIT64 {
+        if self.version < CodeDirectoryVersion::SupportsCodeLimit64 as u32 {
             self.spare3 = None;
             self.code_limit_64 = None;
         }
-        if self.version < CS_SUPPORTSEXECSEG {
+        if self.version < CodeDirectoryVersion::SupportsExecutableSegment as u32 {
             self.exec_seg_base = None;
             self.exec_seg_limit = None;
             self.exec_seg_flags = None;
         }
-        if self.version < CS_SUPPORTSRUNTIME {
+        if self.version < CodeDirectoryVersion::SupportsRuntime as u32 {
             self.runtime = None;
             self.pre_encrypt_offset = None;
         }
-        if self.version < CS_SUPPORTSLINKAGE {
+        if self.version < CodeDirectoryVersion::SupportsLinkage as u32 {
             self.linkage_hash_type = None;
             self.linkage_truncated = None;
             self.spare4 = None;
