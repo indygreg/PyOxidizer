@@ -374,7 +374,7 @@ fn command_extract(args: &ArgMatches) -> Result<(), AppError> {
         "requirements-raw" => {
             let embedded = parse_signature_data(&sig.signature_data)?;
 
-            if let Some(blob) = embedded.find_slot(CodeSigningSlot::Requirements) {
+            if let Some(blob) = embedded.find_slot(CodeSigningSlot::RequirementSet) {
                 std::io::stdout().write_all(blob.data)?;
             } else {
                 eprintln!("no requirements");

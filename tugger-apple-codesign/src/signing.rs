@@ -488,7 +488,7 @@ impl<'data, 'key> MachOSigner<'data, 'key> {
             .collect::<Vec<_>>()
     }
 
-    /// See [MachOSignatureBuilder::code_resources_content].
+    /// See [MachOSignatureBuilder::code_resources_data].
     pub fn code_resources_data(&mut self, data: &[u8]) -> Result<(), SigningError> {
         self.signature_builders = self
             .signature_builders
@@ -1086,7 +1086,7 @@ impl<'key> MachOSignatureBuilder<'key> {
 
         if let Some(requirements) = &self.code_requirement {
             res.push((
-                CodeSigningSlot::Requirements,
+                CodeSigningSlot::RequirementSet,
                 requirements
                     .to_blob_bytes()
                     .map_err(SigningError::BlobEncode)?,

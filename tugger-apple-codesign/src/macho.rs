@@ -57,7 +57,7 @@ use {
 pub enum CodeSigningSlot {
     CodeDirectory,
     Info,
-    Requirements,
+    RequirementSet,
     ResourceDir,
     Application,
     Entitlements,
@@ -80,7 +80,9 @@ impl std::fmt::Debug for CodeSigningSlot {
                 f.write_fmt(format_args!("CodeDirectory ({})", u32::from(*self)))
             }
             Self::Info => f.write_fmt(format_args!("Info ({})", u32::from(*self))),
-            Self::Requirements => f.write_fmt(format_args!("Requirements ({})", u32::from(*self))),
+            Self::RequirementSet => {
+                f.write_fmt(format_args!("RequirementSet ({})", u32::from(*self)))
+            }
             Self::ResourceDir => f.write_fmt(format_args!("Resources ({})", u32::from(*self))),
             Self::Application => f.write_fmt(format_args!("Application ({})", u32::from(*self))),
             Self::Entitlements => f.write_fmt(format_args!("Entitlements ({})", u32::from(*self))),
@@ -122,7 +124,7 @@ impl From<u32> for CodeSigningSlot {
         match v {
             0 => Self::CodeDirectory,
             1 => Self::Info,
-            2 => Self::Requirements,
+            2 => Self::RequirementSet,
             3 => Self::ResourceDir,
             4 => Self::Application,
             5 => Self::Entitlements,
@@ -145,7 +147,7 @@ impl From<CodeSigningSlot> for u32 {
         match v {
             CodeSigningSlot::CodeDirectory => 0,
             CodeSigningSlot::Info => 1,
-            CodeSigningSlot::Requirements => 2,
+            CodeSigningSlot::RequirementSet => 2,
             CodeSigningSlot::ResourceDir => 3,
             CodeSigningSlot::Application => 4,
             CodeSigningSlot::Entitlements => 5,
@@ -554,7 +556,7 @@ impl<'a> EmbeddedSignature<'a> {
         }
     }
 
-    /// Attempt to resolve a parsed `EntitlementsBlob` for this signature data.
+    /// Attempt to resolve a parsed [EntitlementsBlob] for this signature data.
     ///
     /// Returns Err on data parsing error or if the blob slot didn't contain an entitlments
     /// blob.
@@ -572,14 +574,14 @@ impl<'a> EmbeddedSignature<'a> {
         }
     }
 
-    /// Attempt to resolve a parsed `RequirementsBlob` for this signature data.
+    /// Attempt to resolve a parsed [RequirementSetBlob] for this signature data.
     ///
     /// Returns Err on data parsing error or if the blob slot didn't contain a requirements
     /// blob.
     ///
     /// Returns `Ok(None)` if there is no requirements slot.
     pub fn code_requirements(&self) -> Result<Option<Box<RequirementSetBlob<'_>>>, MachOError> {
-        if let Some(parsed) = self.find_slot_parsed(CodeSigningSlot::Requirements)? {
+        if let Some(parsed) = self.find_slot_parsed(CodeSigningSlot::RequirementSet)? {
             if let BlobData::RequirementSet(reqs) = parsed.blob {
                 Ok(Some(reqs))
             } else {
@@ -590,7 +592,7 @@ impl<'a> EmbeddedSignature<'a> {
         }
     }
 
-    /// Attempt to resolve raw signature data from `SignatureBlob`.
+    /// Attempt to resolve raw CMS signature data.
     ///
     /// The returned data is likely DER PKCS#7 with the root object
     /// pkcs7-signedData (1.2.840.113549.1.7.2).
@@ -607,7 +609,7 @@ impl<'a> EmbeddedSignature<'a> {
     }
 }
 
-/// Represents a single blob as defined by a `SuperBlob` index entry.
+/// Represents a single blob as defined by a SuperBlob index entry.
 ///
 /// Instances have copies of their own index info, including the relative
 /// order, slot type, and start offset within the `SuperBlob`.
@@ -651,7 +653,7 @@ impl<'a> std::fmt::Debug for BlobEntry<'a> {
 }
 
 impl<'a> BlobEntry<'a> {
-    /// Attempt to convert to a `ParsedBlob`.
+    /// Attempt to convert to a [ParsedBlob].
     pub fn into_parsed_blob(self) -> Result<ParsedBlob<'a>, MachOError> {
         self.try_into()
     }
@@ -710,7 +712,7 @@ where
 
     /// Serialize this blob to bytes.
     ///
-    /// This is `serialize_payload()` with the blob magic and length
+    /// This is [Blob::serialize_payload] with the blob magic and length
     /// prepended.
     fn to_blob_bytes(&self) -> Result<Vec<u8>, MachOError> {
         let mut res = Vec::new();
