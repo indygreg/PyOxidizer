@@ -403,9 +403,9 @@ fn command_extract(args: &ArgMatches) -> Result<(), AppError> {
             let embedded = parse_signature_data(&sig.signature_data)?;
 
             if let Some(reqs) = embedded.code_requirements()? {
-                for (_, req) in &reqs.segments {
+                for (typ, req) in &reqs.segments {
                     for expr in req.parse_expressions()? {
-                        println!("{}", expr);
+                        println!("{} => {}", typ, expr);
                     }
                 }
             } else {

@@ -324,6 +324,63 @@ pub const CS_SUPPL_SIGNER_TYPE_UNKNOWN: u32 = 0;
 pub const CS_SUPPL_SIGNER_TYPE_TRUSTCACHE: u32 = 7;
 pub const CS_SUPPL_SIGNER_TYPE_LOCAL: u32 = 8;
 
+/// Denotes type of code requirements.
+#[derive(Clone, Copy, Debug)]
+#[repr(u32)]
+pub enum RequirementType {
+    /// What hosts may run on us.
+    Host,
+    /// What guests we may run.
+    Guest,
+    /// Designated requirement.
+    Designated,
+    /// What libraries we may link against.
+    Library,
+    /// What plug-ins we may load.
+    Plugin,
+    /// Unknown requirement type.
+    Unknown(u32),
+}
+
+impl From<u32> for RequirementType {
+    fn from(v: u32) -> Self {
+        match v {
+            1 => Self::Host,
+            2 => Self::Guest,
+            3 => Self::Designated,
+            4 => Self::Library,
+            5 => Self::Plugin,
+            _ => Self::Unknown(v),
+        }
+    }
+}
+
+impl From<RequirementType> for u32 {
+    fn from(t: RequirementType) -> Self {
+        match t {
+            RequirementType::Host => 1,
+            RequirementType::Guest => 2,
+            RequirementType::Designated => 3,
+            RequirementType::Library => 4,
+            RequirementType::Plugin => 5,
+            RequirementType::Unknown(v) => v,
+        }
+    }
+}
+
+impl std::fmt::Display for RequirementType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Host => f.write_str("host(1)"),
+            Self::Guest => f.write_str("guest(2)"),
+            Self::Designated => f.write_str("designated(3)"),
+            Self::Library => f.write_str("library(4)"),
+            Self::Plugin => f.write_str("plugin(5)"),
+            Self::Unknown(v) => f.write_fmt(format_args!("unknown({})", v)),
+        }
+    }
+}
+
 #[repr(C)]
 #[derive(Clone, Pread)]
 struct BlobIndex {
@@ -862,7 +919,7 @@ impl<'a> RequirementBlob<'a> {
 /// A Requirements blob contains nested Requirement blobs.
 #[derive(Debug)]
 pub struct RequirementsBlob<'a> {
-    pub segments: Vec<(u32, RequirementBlob<'a>)>,
+    pub segments: Vec<(RequirementType, RequirementBlob<'a>)>,
 }
 
 impl<'a> Blob<'a> for RequirementsBlob<'a> {
@@ -889,8 +946,9 @@ impl<'a> Blob<'a> for RequirementsBlob<'a> {
 
         let mut segments = Vec::with_capacity(indices.len());
 
-        // TODO figure out what the first integer means. It means something.
         for (i, (flavor, offset)) in indices.iter().enumerate() {
+            let typ = RequirementType::from(*flavor);
+
             let end_offset = if i == indices.len() - 1 {
                 data.len()
             } else {
@@ -899,7 +957,7 @@ impl<'a> Blob<'a> for RequirementsBlob<'a> {
 
             let segment_data = &data[*offset as usize..end_offset];
 
-            segments.push((*flavor, RequirementBlob::from_blob_bytes(segment_data)?));
+            segments.push((typ, RequirementBlob::from_blob_bytes(segment_data)?));
         }
 
         Ok(Self { segments })
@@ -916,8 +974,8 @@ impl<'a> Blob<'a> for RequirementsBlob<'a> {
         res.iowrite_with(self.segments.len() as u32, scroll::BE)?;
 
         // Write an index of all nested requirement blobs.
-        for (flavor, requirement) in &self.segments {
-            res.iowrite_with(*flavor, scroll::BE)?;
+        for (typ, requirement) in &self.segments {
+            res.iowrite_with(u32::from(*typ), scroll::BE)?;
             res.iowrite_with(data_start_offset + written_requirements_data, scroll::BE)?;
             written_requirements_data += requirement.to_blob_bytes()?.len() as u32;
         }
