@@ -275,10 +275,6 @@ pub enum CodeDirectoryVersion {
     SupportsLinkage = 0x20600,
 }
 
-/// Compat with amfi
-pub const CSTYPE_INDEX_REQUIREMENTS: u32 = 0x00000002;
-pub const CSTYPE_INDEX_ENTITLEMENTS: u32 = 0x00000005;
-
 /// always - larger hashes are truncated
 pub const CS_CDHASH_LEN: u32 = 20;
 /// max size of the hash we'll support
