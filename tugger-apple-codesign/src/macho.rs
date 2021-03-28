@@ -1059,6 +1059,7 @@ impl DigestType {
     /// Obtain a hasher for this digest type.
     pub fn as_hasher(&self) -> Result<ring::digest::Context, DigestError> {
         match self {
+            Self::None => Err(DigestError::UnknownAlgorithm),
             Self::Sha1 => Ok(ring::digest::Context::new(
                 &ring::digest::SHA1_FOR_LEGACY_USE_ONLY,
             )),
@@ -1067,7 +1068,7 @@ impl DigestType {
             }
             Self::Sha384 => Ok(ring::digest::Context::new(&ring::digest::SHA384)),
             Self::Sha512 => Ok(ring::digest::Context::new(&ring::digest::SHA512)),
-            _ => Err(DigestError::UnknownAlgorithm),
+            Self::Unknown(_) => Err(DigestError::UnknownAlgorithm),
         }
     }
 
