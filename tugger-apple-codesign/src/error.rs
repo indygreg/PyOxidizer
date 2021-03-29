@@ -87,4 +87,13 @@ pub enum AppleCodesignError {
 
     #[error("code requirement data malformed: {0}")]
     RequirementMalformed(&'static str),
+
+    #[error("plist error in code resources: {0}")]
+    ResourcesPlist(plist::Error),
+
+    #[error("base64 error in code resources: {0}")]
+    ResourcesBase64(base64::DecodeError),
+
+    #[error("plist parse error in code resources: {0}")]
+    ResourcesPlistParse(String),
 }

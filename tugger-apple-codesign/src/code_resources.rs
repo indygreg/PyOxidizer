@@ -16,41 +16,10 @@
 //! We gave up and decided to just coerce the [plist::Value] instances instead.
 
 use {
+    crate::error::AppleCodesignError,
     plist::{Dictionary, Value},
     std::{collections::HashMap, convert::TryFrom, io::Write},
 };
-
-/// Represents an error when handling code resources.
-#[derive(Debug)]
-pub enum CodeResourcesError {
-    Plist(plist::Error),
-    Base64(base64::DecodeError),
-    PlistParseError(String),
-}
-
-impl std::fmt::Display for CodeResourcesError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Plist(e) => f.write_fmt(format_args!("plist error: {}", e)),
-            Self::Base64(e) => f.write_fmt(format_args!("base64 error: {}", e)),
-            Self::PlistParseError(msg) => f.write_fmt(format_args!("plist parse error: {}", msg)),
-        }
-    }
-}
-
-impl std::error::Error for CodeResourcesError {}
-
-impl From<plist::Error> for CodeResourcesError {
-    fn from(e: plist::Error) -> Self {
-        Self::Plist(e)
-    }
-}
-
-impl From<base64::DecodeError> for CodeResourcesError {
-    fn from(e: base64::DecodeError) -> Self {
-        Self::Base64(e)
-    }
-}
 
 #[derive(Clone, PartialEq)]
 enum FilesValue {
@@ -89,7 +58,7 @@ impl std::fmt::Display for FilesValue {
 }
 
 impl TryFrom<&Value> for FilesValue {
-    type Error = CodeResourcesError;
+    type Error = AppleCodesignError;
 
     fn try_from(v: &Value) -> Result<Self, Self::Error> {
         match v {
@@ -102,7 +71,7 @@ impl TryFrom<&Value> for FilesValue {
                     match key.as_str() {
                         "hash" => {
                             let data = value.as_data().ok_or_else(|| {
-                                CodeResourcesError::PlistParseError(format!(
+                                AppleCodesignError::ResourcesPlistParse(format!(
                                     "expected <data> for files <dict> entry, got {:?}",
                                     value
                                 ))
@@ -112,7 +81,7 @@ impl TryFrom<&Value> for FilesValue {
                         }
                         "optional" => {
                             let v = value.as_boolean().ok_or_else(|| {
-                                CodeResourcesError::PlistParseError(format!(
+                                AppleCodesignError::ResourcesPlistParse(format!(
                                     "expected boolean for optional key, got {:?}",
                                     value
                                 ))
@@ -121,7 +90,7 @@ impl TryFrom<&Value> for FilesValue {
                             optional = Some(v);
                         }
                         key => {
-                            return Err(CodeResourcesError::PlistParseError(format!(
+                            return Err(AppleCodesignError::ResourcesPlistParse(format!(
                                 "unexpected key in files dict: {}",
                                 key
                             )));
@@ -132,12 +101,12 @@ impl TryFrom<&Value> for FilesValue {
                 match (digest, optional) {
                     (Some(digest), Some(true)) => Ok(Self::Optional(digest)),
                     (Some(digest), Some(false)) => Ok(Self::Required(digest)),
-                    _ => Err(CodeResourcesError::PlistParseError(
+                    _ => Err(AppleCodesignError::ResourcesPlistParse(
                         "missing hash or optional key".to_string(),
                     )),
                 }
             }
-            _ => Err(CodeResourcesError::PlistParseError(format!(
+            _ => Err(AppleCodesignError::ResourcesPlistParse(format!(
                 "bad value in files <dict>; expected <data> or <dict>, got {:?}",
                 v
             ))),
@@ -186,11 +155,11 @@ impl std::fmt::Debug for Files2Value {
 }
 
 impl TryFrom<&Value> for Files2Value {
-    type Error = CodeResourcesError;
+    type Error = AppleCodesignError;
 
     fn try_from(v: &Value) -> Result<Self, Self::Error> {
         let dict = v.as_dictionary().ok_or_else(|| {
-            CodeResourcesError::PlistParseError("files2 value should be a dict".to_string())
+            AppleCodesignError::ResourcesPlistParse("files2 value should be a dict".to_string())
         })?;
 
         let mut hash2 = None;
@@ -202,7 +171,7 @@ impl TryFrom<&Value> for Files2Value {
             match key.as_str() {
                 "cdhash" => {
                     let data = value.as_data().ok_or_else(|| {
-                        CodeResourcesError::PlistParseError(format!(
+                        AppleCodesignError::ResourcesPlistParse(format!(
                             "expected <data> for files2 cdhash entry, got {:?}",
                             value
                         ))
@@ -213,7 +182,7 @@ impl TryFrom<&Value> for Files2Value {
 
                 "hash2" => {
                     let data = value.as_data().ok_or_else(|| {
-                        CodeResourcesError::PlistParseError(format!(
+                        AppleCodesignError::ResourcesPlistParse(format!(
                             "expected <data> for files2 hash entry, got {:?}",
                             value
                         ))
@@ -223,7 +192,7 @@ impl TryFrom<&Value> for Files2Value {
                 }
                 "requirement" => {
                     let v = value.as_string().ok_or_else(|| {
-                        CodeResourcesError::PlistParseError(format!(
+                        AppleCodesignError::ResourcesPlistParse(format!(
                             "expected string for requirement key, got {:?}",
                             value
                         ))
@@ -236,7 +205,7 @@ impl TryFrom<&Value> for Files2Value {
                         value
                             .as_string()
                             .ok_or_else(|| {
-                                CodeResourcesError::PlistParseError(format!(
+                                AppleCodesignError::ResourcesPlistParse(format!(
                                     "expected string for symlink key, got {:?}",
                                     value
                                 ))
@@ -245,7 +214,7 @@ impl TryFrom<&Value> for Files2Value {
                     );
                 }
                 key => {
-                    return Err(CodeResourcesError::PlistParseError(format!(
+                    return Err(AppleCodesignError::ResourcesPlistParse(format!(
                         "unexpected key in files2 dict entry: {}",
                         key
                     )));
@@ -296,7 +265,7 @@ struct RulesValue {
 }
 
 impl TryFrom<&Value> for RulesValue {
-    type Error = CodeResourcesError;
+    type Error = AppleCodesignError;
 
     fn try_from(v: &Value) -> Result<Self, Self::Error> {
         match v {
@@ -312,7 +281,7 @@ impl TryFrom<&Value> for RulesValue {
                     match key.as_str() {
                         "optional" => {
                             optional = Some(value.as_boolean().ok_or_else(|| {
-                                CodeResourcesError::PlistParseError(format!(
+                                AppleCodesignError::ResourcesPlistParse(format!(
                                     "rules optional key value not a boolean, got {:?}",
                                     value
                                 ))
@@ -320,14 +289,14 @@ impl TryFrom<&Value> for RulesValue {
                         }
                         "weight" => {
                             weight = Some(value.as_real().ok_or_else(|| {
-                                CodeResourcesError::PlistParseError(format!(
+                                AppleCodesignError::ResourcesPlistParse(format!(
                                     "rules weight key value not a real, got {:?}",
                                     value
                                 ))
                             })?);
                         }
                         key => {
-                            return Err(CodeResourcesError::PlistParseError(format!(
+                            return Err(AppleCodesignError::ResourcesPlistParse(format!(
                                 "extra key in rules dict: {}",
                                 key
                             )));
@@ -340,12 +309,12 @@ impl TryFrom<&Value> for RulesValue {
                         required: !optional,
                         weight,
                     }),
-                    _ => Err(CodeResourcesError::PlistParseError(
+                    _ => Err(AppleCodesignError::ResourcesPlistParse(
                         "rules dict must have optional and weight keys".to_string(),
                     )),
                 }
             }
-            _ => Err(CodeResourcesError::PlistParseError(
+            _ => Err(AppleCodesignError::ResourcesPlistParse(
                 "invalid value for rules entry".to_string(),
             )),
         }
@@ -378,11 +347,11 @@ struct Rules2Value {
 }
 
 impl TryFrom<&Value> for Rules2Value {
-    type Error = CodeResourcesError;
+    type Error = AppleCodesignError;
 
     fn try_from(v: &Value) -> Result<Self, Self::Error> {
         let dict = v.as_dictionary().ok_or_else(|| {
-            CodeResourcesError::PlistParseError("rules2 value should be a dict".to_string())
+            AppleCodesignError::ResourcesPlistParse("rules2 value should be a dict".to_string())
         })?;
 
         let mut nested = None;
@@ -393,7 +362,7 @@ impl TryFrom<&Value> for Rules2Value {
             match key.as_str() {
                 "nested" => {
                     nested = Some(value.as_boolean().ok_or_else(|| {
-                        CodeResourcesError::PlistParseError(format!(
+                        AppleCodesignError::ResourcesPlistParse(format!(
                             "expected bool for rules2 nested key, got {:?}",
                             value
                         ))
@@ -401,7 +370,7 @@ impl TryFrom<&Value> for Rules2Value {
                 }
                 "omit" => {
                     omit = Some(value.as_boolean().ok_or_else(|| {
-                        CodeResourcesError::PlistParseError(format!(
+                        AppleCodesignError::ResourcesPlistParse(format!(
                             "expected bool for rules2 omit key, got {:?}",
                             value
                         ))
@@ -409,14 +378,14 @@ impl TryFrom<&Value> for Rules2Value {
                 }
                 "weight" => {
                     weight = Some(value.as_real().ok_or_else(|| {
-                        CodeResourcesError::PlistParseError(format!(
+                        AppleCodesignError::ResourcesPlistParse(format!(
                             "expected real for rules2 weight key, got {:?}",
                             value
                         ))
                     })?);
                 }
                 key => {
-                    return Err(CodeResourcesError::PlistParseError(format!(
+                    return Err(AppleCodesignError::ResourcesPlistParse(format!(
                         "unexpected key in rules dict entry: {}",
                         key
                     )));
@@ -466,11 +435,13 @@ pub struct CodeResources {
 
 impl CodeResources {
     /// Construct an instance by parsing an XML plist.
-    pub fn from_xml(xml: &[u8]) -> Result<Self, CodeResourcesError> {
-        let plist = Value::from_reader_xml(xml)?;
+    pub fn from_xml(xml: &[u8]) -> Result<Self, AppleCodesignError> {
+        let plist = Value::from_reader_xml(xml).map_err(AppleCodesignError::ResourcesPlist)?;
 
         let dict = plist.into_dictionary().ok_or_else(|| {
-            CodeResourcesError::PlistParseError("plist root element should be a <dict>".to_string())
+            AppleCodesignError::ResourcesPlistParse(
+                "plist root element should be a <dict>".to_string(),
+            )
         })?;
 
         let mut files = HashMap::new();
@@ -482,7 +453,7 @@ impl CodeResources {
             match key.as_ref() {
                 "files" => {
                     let dict = value.as_dictionary().ok_or_else(|| {
-                        CodeResourcesError::PlistParseError(format!(
+                        AppleCodesignError::ResourcesPlistParse(format!(
                             "expecting files to be a dict, got {:?}",
                             value
                         ))
@@ -494,7 +465,7 @@ impl CodeResources {
                 }
                 "files2" => {
                     let dict = value.as_dictionary().ok_or_else(|| {
-                        CodeResourcesError::PlistParseError(format!(
+                        AppleCodesignError::ResourcesPlistParse(format!(
                             "expecting files2 to be a dict, got {:?}",
                             value
                         ))
@@ -506,7 +477,7 @@ impl CodeResources {
                 }
                 "rules" => {
                     let dict = value.as_dictionary().ok_or_else(|| {
-                        CodeResourcesError::PlistParseError(format!(
+                        AppleCodesignError::ResourcesPlistParse(format!(
                             "expecting rules to be a dict, got {:?}",
                             value
                         ))
@@ -518,7 +489,7 @@ impl CodeResources {
                 }
                 "rules2" => {
                     let dict = value.as_dictionary().ok_or_else(|| {
-                        CodeResourcesError::PlistParseError(format!(
+                        AppleCodesignError::ResourcesPlistParse(format!(
                             "expecting rules2 to be a dict, got {:?}",
                             value
                         ))
@@ -529,7 +500,7 @@ impl CodeResources {
                     }
                 }
                 key => {
-                    return Err(CodeResourcesError::PlistParseError(format!(
+                    return Err(AppleCodesignError::ResourcesPlistParse(format!(
                         "unexpected key in root dict: {}",
                         key
                     )));
@@ -545,10 +516,12 @@ impl CodeResources {
         })
     }
 
-    pub fn to_writer_xml(&self, writer: impl Write) -> Result<(), CodeResourcesError> {
+    pub fn to_writer_xml(&self, writer: impl Write) -> Result<(), AppleCodesignError> {
         let value = Value::from(self);
 
-        Ok(value.to_writer_xml(writer)?)
+        Ok(value
+            .to_writer_xml(writer)
+            .map_err(AppleCodesignError::ResourcesPlist)?)
     }
 }
 
