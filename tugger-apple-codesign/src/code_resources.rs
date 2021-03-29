@@ -24,7 +24,7 @@ use {
     },
     goblin::mach::{Mach, MachO},
     plist::{Dictionary, Value},
-    std::{collections::HashMap, convert::TryFrom, io::Write, path::Path},
+    std::{cmp::Ordering, collections::HashMap, convert::TryFrom, io::Write},
 };
 
 #[derive(Clone, PartialEq)]
@@ -283,6 +283,7 @@ impl From<&Files2Value> for Value {
 
 #[derive(Clone, Debug, PartialEq)]
 struct RulesValue {
+    omit: bool,
     required: bool,
     weight: Option<f64>,
 }
@@ -293,15 +294,25 @@ impl TryFrom<&Value> for RulesValue {
     fn try_from(v: &Value) -> Result<Self, Self::Error> {
         match v {
             Value::Boolean(true) => Ok(Self {
+                omit: false,
                 required: true,
                 weight: None,
             }),
             Value::Dictionary(dict) => {
+                let mut omit = None;
                 let mut optional = None;
                 let mut weight = None;
 
                 for (key, value) in dict {
                     match key.as_str() {
+                        "omit" => {
+                            omit = Some(value.as_boolean().ok_or_else(|| {
+                                AppleCodesignError::ResourcesPlistParse(format!(
+                                    "rules omit key value not a boolean; got {:?}",
+                                    value
+                                ))
+                            })?);
+                        }
                         "optional" => {
                             optional = Some(value.as_boolean().ok_or_else(|| {
                                 AppleCodesignError::ResourcesPlistParse(format!(
@@ -327,15 +338,11 @@ impl TryFrom<&Value> for RulesValue {
                     }
                 }
 
-                match (optional, weight) {
-                    (Some(optional), Some(_)) => Ok(Self {
-                        required: !optional,
-                        weight,
-                    }),
-                    _ => Err(AppleCodesignError::ResourcesPlistParse(
-                        "rules dict must have optional and weight keys".to_string(),
-                    )),
-                }
+                Ok(Self {
+                    omit: omit.unwrap_or(false),
+                    required: !optional.unwrap_or(false),
+                    weight,
+                })
             }
             _ => Err(AppleCodesignError::ResourcesPlistParse(
                 "invalid value for rules entry".to_string(),
@@ -346,12 +353,17 @@ impl TryFrom<&Value> for RulesValue {
 
 impl From<&RulesValue> for Value {
     fn from(v: &RulesValue) -> Self {
-        if v.required {
+        if v.required && !v.omit && v.weight.is_none() {
             Value::Boolean(true)
         } else {
             let mut dict = Dictionary::new();
 
-            dict.insert("optional".to_string(), Value::Boolean(true));
+            if v.omit {
+                dict.insert("omit".to_string(), Value::Boolean(true));
+            }
+            if !v.required {
+                dict.insert("optional".to_string(), Value::Boolean(true));
+            }
 
             if let Some(weight) = v.weight {
                 dict.insert("weight".to_string(), Value::Real(weight));
@@ -366,6 +378,7 @@ impl From<&RulesValue> for Value {
 struct Rules2Value {
     nested: Option<bool>,
     omit: Option<bool>,
+    optional: Option<bool>,
     weight: Option<f64>,
 }
 
@@ -379,6 +392,7 @@ impl TryFrom<&Value> for Rules2Value {
 
         let mut nested = None;
         let mut omit = None;
+        let mut optional = None;
         let mut weight = None;
 
         for (key, value) in dict.iter() {
@@ -395,6 +409,14 @@ impl TryFrom<&Value> for Rules2Value {
                     omit = Some(value.as_boolean().ok_or_else(|| {
                         AppleCodesignError::ResourcesPlistParse(format!(
                             "expected bool for rules2 omit key, got {:?}",
+                            value
+                        ))
+                    })?);
+                }
+                "optional" => {
+                    optional = Some(value.as_boolean().ok_or_else(|| {
+                        AppleCodesignError::ResourcesPlistParse(format!(
+                            "expected bool for rules2 optional key, got {:?}",
                             value
                         ))
                     })?);
@@ -419,6 +441,7 @@ impl TryFrom<&Value> for Rules2Value {
         Ok(Self {
             nested,
             omit,
+            optional,
             weight,
         })
     }
@@ -432,6 +455,10 @@ impl From<&Rules2Value> for Value {
             dict.insert("omit".to_string(), Value::Boolean(true));
         }
 
+        if let Some(true) = v.optional {
+            dict.insert("optional".to_string(), Value::Boolean(true));
+        }
+
         if let Some(weight) = v.weight {
             dict.insert("weight".to_string(), Value::Real(weight));
         }
@@ -441,6 +468,93 @@ impl From<&Rules2Value> for Value {
         }
 
         Value::Dictionary(dict)
+    }
+}
+
+/// Represents an abstract rule in a `CodeResources` XML plist.
+///
+/// This type represents both `<rules>` and `<rules2>` entries. It contains a
+/// superset of all fields for these entries.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct CodeResourcesRule {
+    /// The rule pattern.
+    ///
+    /// The `<key>` in the `<rules>` or `<rules2>` dict.
+    pub pattern: String,
+
+    /// Whether this is an exclusion rule.
+    pub exclude: bool,
+
+    pub nested: bool,
+
+    pub omit: bool,
+
+    /// Whether the rule is optional.
+    pub optional: bool,
+
+    /// Weighting to apply to the rule.
+    pub weight: Option<u32>,
+}
+
+impl PartialOrd for CodeResourcesRule {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        // Default weight is 1 if not specified.
+        let our_weight = self.weight.unwrap_or(1);
+        let their_weight = other.weight.unwrap_or(1);
+
+        our_weight.partial_cmp(&their_weight)
+    }
+}
+
+impl Ord for CodeResourcesRule {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.partial_cmp(other).unwrap()
+    }
+}
+
+impl CodeResourcesRule {
+    pub fn new(pattern: impl ToString) -> Self {
+        Self {
+            pattern: pattern.to_string(),
+            exclude: false,
+            nested: false,
+            omit: false,
+            optional: false,
+            weight: None,
+        }
+    }
+
+    /// Mark this as an exclusion rule.
+    ///
+    /// Exclusion rules are internal to the builder and not materialized in the
+    /// `CodeResources` file.
+    pub fn exclude(mut self) -> Self {
+        self.exclude = true;
+        self
+    }
+
+    /// Mark the rule as nested.
+    pub fn nested(mut self) -> Self {
+        self.nested = true;
+        self
+    }
+
+    /// Set the omit field.
+    pub fn omit(mut self) -> Self {
+        self.omit = true;
+        self
+    }
+
+    /// Mark the files matched by this rule are optional.
+    pub fn optional(mut self) -> Self {
+        self.optional = true;
+        self
+    }
+
+    /// Set the weight of this rule.
+    pub fn weight(mut self, v: u32) -> Self {
+        self.weight = Some(v);
+        self
     }
 }
 
@@ -546,6 +660,31 @@ impl CodeResources {
         Ok(value
             .to_writer_xml(writer)
             .map_err(AppleCodesignError::ResourcesPlist)?)
+    }
+
+    /// Add a rule to this instance in the `<rules>` section.
+    pub fn add_rule(&mut self, rule: CodeResourcesRule) {
+        self.rules.insert(
+            rule.pattern,
+            RulesValue {
+                omit: rule.omit,
+                required: !rule.optional,
+                weight: rule.weight.map(|x| x as f64),
+            },
+        );
+    }
+
+    /// Add a rule to this instance in the `<rules2>` section.
+    pub fn add_rule2(&mut self, rule: CodeResourcesRule) {
+        self.rules2.insert(
+            rule.pattern,
+            Rules2Value {
+                nested: if rule.nested { Some(true) } else { None },
+                omit: if rule.omit { Some(true) } else { None },
+                optional: if rule.optional { Some(true) } else { None },
+                weight: rule.weight.map(|x| x as f64),
+            },
+        );
     }
 
     /// Seal a regular file.
@@ -730,6 +869,147 @@ impl From<&CodeResources> for Value {
     }
 }
 
+/// Interface for constructing a `CodeResources` instance.
+///
+/// This type is used during bundle signing to construct a `CodeResources` instance.
+/// It contains logic for validating a file against registered processing rules and
+/// handling it accordingly.
+#[derive(Clone, Debug, Default)]
+pub struct CodeResourcesBuilder {
+    rules: Vec<CodeResourcesRule>,
+    resources: CodeResources,
+}
+
+impl CodeResourcesBuilder {
+    /// Obtain an instance with default rules for a bundle with a `Resources/` directory.
+    pub fn default_resources_rules() -> Self {
+        let mut slf = Self::default();
+
+        slf.add_rule(CodeResourcesRule::new("^version.plist$"));
+        slf.add_rule(CodeResourcesRule::new("^Resources/"));
+        slf.add_rule(
+            CodeResourcesRule::new("^Resources/.*\\.lproj/")
+                .optional()
+                .weight(1000),
+        );
+        slf.add_rule(CodeResourcesRule::new("^Resources/Base\\.lproj/").weight(1010));
+        slf.add_rule(
+            CodeResourcesRule::new("^Resources/.*\\.lproj/locversion.plist$")
+                .omit()
+                .weight(1100),
+        );
+
+        slf.add_rule2(CodeResourcesRule::new("^.*"));
+        slf.add_rule2(CodeResourcesRule::new("^[^/]+$").nested().weight(10));
+        slf.add_rule2(CodeResourcesRule::new("^(Frameworks|SharedFrameworks|PlugIns|Plug-ins|XPCServices|Helpers|MacOS|Library/(Automator|Spotlight|LoginItems))/")
+                         .nested().weight(10));
+        slf.add_rule2(CodeResourcesRule::new(".*\\.dSYM($|/)").weight(11));
+        slf.add_rule2(
+            CodeResourcesRule::new("^(.*/)?\\.DS_Store$")
+                .omit()
+                .weight(2000),
+        );
+        slf.add_rule2(CodeResourcesRule::new("^Info\\.plist$").omit().weight(20));
+        slf.add_rule2(CodeResourcesRule::new("^version\\.plist$").weight(20));
+        slf.add_rule2(CodeResourcesRule::new("^embedded\\.provisionprofile$").weight(20));
+        slf.add_rule2(CodeResourcesRule::new("^PkgInfo$").omit().weight(20));
+        slf.add_rule2(CodeResourcesRule::new("^Resources/").weight(20));
+        slf.add_rule2(
+            CodeResourcesRule::new("^Resources/.*\\.lproj/")
+                .nested()
+                .weight(1000),
+        );
+        slf.add_rule2(CodeResourcesRule::new("^Resources/Base\\.lproj/").weight(1010));
+        slf.add_rule2(
+            CodeResourcesRule::new("^Resources/.*\\.lproj/locversion.plist$")
+                .omit()
+                .weight(1100),
+        );
+
+        slf
+    }
+
+    /// Obtain an instance with default rules for a bundle without a `Resources/` directory.
+    pub fn default_no_resources_rules() -> Self {
+        let mut slf = Self::default();
+
+        slf.add_rule(CodeResourcesRule::new("^version.plist$"));
+        slf.add_rule(CodeResourcesRule::new("^.*"));
+        slf.add_rule(
+            CodeResourcesRule::new("^.*\\.lproj")
+                .optional()
+                .weight(1000),
+        );
+        slf.add_rule(CodeResourcesRule::new("^Base\\.lproj").weight(1010));
+        slf.add_rule(
+            CodeResourcesRule::new("^.*\\.lproj/locversion.plist$")
+                .omit()
+                .weight(1100),
+        );
+        slf.add_rule2(CodeResourcesRule::new("^.*"));
+        slf.add_rule2(CodeResourcesRule::new(".*\\.dSYM($|/)").weight(11));
+        slf.add_rule2(
+            CodeResourcesRule::new("^(.*/)?\\.DS_Store$")
+                .omit()
+                .weight(2000),
+        );
+        slf.add_rule2(CodeResourcesRule::new("^Info\\.plist$").omit().weight(20));
+        slf.add_rule2(CodeResourcesRule::new("^version\\.plist$").weight(20));
+        slf.add_rule2(CodeResourcesRule::new("^embedded\\.provisionprofile$").weight(20));
+        slf.add_rule2(CodeResourcesRule::new("^PkgInfo$").omit().weight(20));
+        slf.add_rule2(
+            CodeResourcesRule::new("^.*\\.lproj/")
+                .optional()
+                .weight(1000),
+        );
+        slf.add_rule2(CodeResourcesRule::new("^Base\\.lproj").weight(1010));
+        slf.add_rule2(
+            CodeResourcesRule::new("^.*\\.lproj/locversion.plist$")
+                .omit()
+                .weight(1100),
+        );
+
+        slf
+    }
+
+    /// Add a rule to this instance in the `<rules>` section.
+    pub fn add_rule(&mut self, rule: CodeResourcesRule) {
+        // Don't set internal rules because we only operate in a v2 world.
+        self.resources.add_rule(rule);
+    }
+
+    /// Add a rule to this instance in the `<rules2>` section.
+    pub fn add_rule2(&mut self, rule: CodeResourcesRule) {
+        self.rules.push(rule.clone());
+        self.rules.sort();
+        self.resources.add_rule2(rule);
+    }
+
+    pub fn add_exclusion_rule(&mut self, rule: CodeResourcesRule) {
+        self.rules.insert(0, rule);
+    }
+
+    pub fn process_regular_file(
+        &mut self,
+        path: impl ToString,
+        data: impl AsRef<[u8]>,
+    ) -> Result<(), AppleCodesignError> {
+        unimplemented!()
+    }
+
+    pub fn process_macho_file(
+        &mut self,
+        path: impl ToString,
+        data: impl AsRef<[u8]>,
+    ) -> Result<(), AppleCodesignError> {
+        unimplemented!()
+    }
+
+    pub fn process_symlink(&mut self, path: impl ToString, target: impl ToString) {
+        unimplemented!()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -812,6 +1092,11 @@ mod tests {
                 <true/>
                 <key>weight</key>
                 <real>10</real>
+              </dict>
+              <key>optional</key>
+              <dict>
+                <key>optional</key>
+                <true/>
               </dict>
             </dict>
           </dict>
