@@ -2212,4 +2212,36 @@ mod tests {
             }
         }
     }
+
+    #[test]
+    fn code_signature_flags_from_str() {
+        assert_eq!(
+            CodeSignatureFlags::from_str("host").unwrap(),
+            CodeSignatureFlags::HOST
+        );
+        assert_eq!(
+            CodeSignatureFlags::from_str("hard").unwrap(),
+            CodeSignatureFlags::FORCE_HARD
+        );
+        assert_eq!(
+            CodeSignatureFlags::from_str("kill").unwrap(),
+            CodeSignatureFlags::FORCE_KILL
+        );
+        assert_eq!(
+            CodeSignatureFlags::from_str("expires").unwrap(),
+            CodeSignatureFlags::FORCE_EXPIRATION
+        );
+        assert_eq!(
+            CodeSignatureFlags::from_str("library").unwrap(),
+            CodeSignatureFlags::LIBRARY_VALIDATION
+        );
+        assert_eq!(
+            CodeSignatureFlags::from_str("runtime").unwrap(),
+            CodeSignatureFlags::RUNTIME
+        );
+        assert_eq!(
+            CodeSignatureFlags::from_str("linker-signed").unwrap(),
+            CodeSignatureFlags::LINKER_SIGNED
+        );
+    }
 }
