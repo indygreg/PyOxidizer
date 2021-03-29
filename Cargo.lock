@@ -3460,6 +3460,7 @@ dependencies = [
  "reqwest",
  "ring",
  "scroll",
+ "thiserror",
 ]
 
 [[package]]

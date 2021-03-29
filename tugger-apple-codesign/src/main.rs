@@ -12,6 +12,7 @@ mod code_hash;
 mod code_requirement;
 #[allow(unused)]
 mod code_resources;
+mod error;
 #[allow(unused)]
 mod macho;
 #[allow(unused)]
@@ -23,20 +24,19 @@ mod verify;
 
 use {
     crate::{
-        certificate::{create_self_signed_code_signing_certificate, CertificateError},
+        certificate::create_self_signed_code_signing_certificate,
         code_directory::{CodeDirectoryBlob, CodeSignatureFlags},
         code_hash::compute_code_hashes,
-        code_requirement::{CodeRequirementError, CodeRequirements},
+        code_requirement::CodeRequirements,
+        error::AppleCodesignError,
         macho::{
             find_signature_data, parse_signature_data, Blob, CodeSigningSlot, DigestType,
             RequirementSetBlob,
         },
-        signing::{MachOSigner, NotSignableError, SigningError},
+        signing::MachOSigner,
     },
     clap::{App, AppSettings, Arg, ArgMatches, SubCommand},
-    cryptographic_message_syntax::{
-        Certificate, CertificateKeyAlgorithm, CmsError, SignedData, SigningKey,
-    },
+    cryptographic_message_syntax::{Certificate, CertificateKeyAlgorithm, SignedData, SigningKey},
     goblin::mach::{Mach, MachO},
     std::{convert::TryFrom, io::Write, path::PathBuf, str::FromStr},
 };
@@ -160,100 +160,7 @@ const APPLE_TIMESTAMP_URL: &str = "http://timestamp.apple.com/ts01";
 
 const SUPPORTED_HASHES: &[&str; 5] = &["none", "sha1", "sha256", "sha256-truncated", "sha384"];
 
-#[derive(Debug)]
-enum AppError {
-    UnknownCommand,
-    BadArgument,
-    Io(std::io::Error),
-    Goblin(goblin::error::Error),
-    MachOError(crate::macho::MachOError),
-    NoCodeSignature,
-    Digest(crate::macho::DigestError),
-    Cms(CmsError),
-    NotSignable(NotSignableError),
-    Signing(SigningError),
-    VerificationProblems,
-    Certificate(CertificateError),
-    CodeRequirement(CodeRequirementError),
-}
-
-impl std::fmt::Display for AppError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::BadArgument => f.write_str("bad argument"),
-            Self::UnknownCommand => f.write_str("unknown command"),
-            Self::Io(e) => f.write_fmt(format_args!("I/O error: {:?}", e)),
-            Self::Goblin(e) => f.write_fmt(format_args!("error parsing binary: {:?}", e)),
-            Self::MachOError(e) => f.write_fmt(format_args!("Mach-O parsing error: {:?}", e)),
-            Self::NoCodeSignature => f.write_str("code signature data not found"),
-            Self::Digest(e) => f.write_fmt(format_args!("digest error: {}", e)),
-            Self::Cms(e) => f.write_fmt(format_args!("CMS error: {}", e)),
-            Self::NotSignable(e) => f.write_fmt(format_args!("binary not signable: {}", e)),
-            Self::Signing(e) => f.write_fmt(format_args!("signing error: {}", e)),
-            Self::VerificationProblems => f.write_str("problems reported during verification"),
-            Self::Certificate(e) => f.write_fmt(format_args!("certificate error: {}", e)),
-            Self::CodeRequirement(e) => f.write_fmt(format_args!("code requirement error: {}", e)),
-        }
-    }
-}
-
-impl std::error::Error for AppError {}
-
-impl From<std::io::Error> for AppError {
-    fn from(e: std::io::Error) -> Self {
-        Self::Io(e)
-    }
-}
-
-impl From<goblin::error::Error> for AppError {
-    fn from(e: goblin::error::Error) -> Self {
-        Self::Goblin(e)
-    }
-}
-
-impl From<crate::macho::MachOError> for AppError {
-    fn from(e: crate::macho::MachOError) -> Self {
-        Self::MachOError(e)
-    }
-}
-
-impl From<crate::macho::DigestError> for AppError {
-    fn from(e: crate::macho::DigestError) -> Self {
-        Self::Digest(e)
-    }
-}
-
-impl From<CmsError> for AppError {
-    fn from(e: CmsError) -> Self {
-        Self::Cms(e)
-    }
-}
-
-impl From<NotSignableError> for AppError {
-    fn from(e: NotSignableError) -> Self {
-        Self::NotSignable(e)
-    }
-}
-
-impl From<SigningError> for AppError {
-    fn from(e: SigningError) -> Self {
-        Self::Signing(e)
-    }
-}
-
-impl From<CertificateError> for AppError {
-    fn from(e: CertificateError) -> Self {
-        Self::Certificate(e)
-    }
-}
-
-impl From<CodeRequirementError> for AppError {
-    fn from(e: CodeRequirementError) -> Self {
-        Self::CodeRequirement(e)
-    }
-}
-
-fn get_macho_from_data(data: &[u8], universal_index: usize) -> Result<MachO, AppError> {
+fn get_macho_from_data(data: &[u8], universal_index: usize) -> Result<MachO, AppleCodesignError> {
     let mach = Mach::parse(data)?;
 
     match mach {
@@ -269,13 +176,15 @@ fn get_macho_from_data(data: &[u8], universal_index: usize) -> Result<MachO, App
     }
 }
 
-fn command_compute_code_hashes(args: &ArgMatches) -> Result<(), AppError> {
-    let path = args.value_of("path").ok_or(AppError::BadArgument)?;
+fn command_compute_code_hashes(args: &ArgMatches) -> Result<(), AppleCodesignError> {
+    let path = args
+        .value_of("path")
+        .ok_or(AppleCodesignError::CliBadArgument)?;
     let index = args.value_of("universal_index").unwrap();
-    let index = usize::from_str(index).map_err(|_| AppError::BadArgument)?;
+    let index = usize::from_str(index).map_err(|_| AppleCodesignError::CliBadArgument)?;
     let hash_type = DigestType::try_from(args.value_of("hash").unwrap())?;
     let page_size = if let Some(page_size) = args.value_of("page_size") {
-        Some(usize::from_str(page_size).map_err(|_| AppError::BadArgument)?)
+        Some(usize::from_str(page_size).map_err(|_| AppleCodesignError::CliBadArgument)?)
     } else {
         None
     };
@@ -292,17 +201,21 @@ fn command_compute_code_hashes(args: &ArgMatches) -> Result<(), AppError> {
     Ok(())
 }
 
-fn command_extract(args: &ArgMatches) -> Result<(), AppError> {
-    let path = args.value_of("path").ok_or(AppError::BadArgument)?;
-    let format = args.value_of("data").ok_or(AppError::BadArgument)?;
+fn command_extract(args: &ArgMatches) -> Result<(), AppleCodesignError> {
+    let path = args
+        .value_of("path")
+        .ok_or(AppleCodesignError::CliBadArgument)?;
+    let format = args
+        .value_of("data")
+        .ok_or(AppleCodesignError::CliBadArgument)?;
     let index = args.value_of("universal_index").unwrap();
-    let index = usize::from_str(index).map_err(|_| AppError::BadArgument)?;
+    let index = usize::from_str(index).map_err(|_| AppleCodesignError::CliBadArgument)?;
 
     let data = std::fs::read(path)?;
 
     let macho = get_macho_from_data(&data, index)?;
 
-    let sig = find_signature_data(&macho)?.ok_or(AppError::NoCodeSignature)?;
+    let sig = find_signature_data(&macho)?.ok_or(AppleCodesignError::BinaryNoCodeSignature)?;
 
     match format {
         "blobs" => {
@@ -505,8 +418,11 @@ fn command_extract(args: &ArgMatches) -> Result<(), AppError> {
     Ok(())
 }
 
-fn command_generate_self_signed_certificate(args: &ArgMatches) -> Result<(), AppError> {
-    let algorithm = match args.value_of("algorithm").ok_or(AppError::BadArgument)? {
+fn command_generate_self_signed_certificate(args: &ArgMatches) -> Result<(), AppleCodesignError> {
+    let algorithm = match args
+        .value_of("algorithm")
+        .ok_or(AppleCodesignError::CliBadArgument)?
+    {
         "ecdsa" => CertificateKeyAlgorithm::Ecdsa,
         "ed25519" => CertificateKeyAlgorithm::Ed25519,
         value => panic!(
@@ -515,13 +431,18 @@ fn command_generate_self_signed_certificate(args: &ArgMatches) -> Result<(), App
         ),
     };
 
-    let common_name = args.value_of("common_name").ok_or(AppError::BadArgument)?;
-    let country_name = args.value_of("country_name").ok_or(AppError::BadArgument)?;
+    let common_name = args
+        .value_of("common_name")
+        .ok_or(AppleCodesignError::CliBadArgument)?;
+    let country_name = args
+        .value_of("country_name")
+        .ok_or(AppleCodesignError::CliBadArgument)?;
     let email_address = args
         .value_of("email_address")
-        .ok_or(AppError::BadArgument)?;
+        .ok_or(AppleCodesignError::CliBadArgument)?;
     let validity_days = args.value_of("validity_days").unwrap();
-    let validity_days = i64::from_str(validity_days).map_err(|_| AppError::BadArgument)?;
+    let validity_days =
+        i64::from_str(validity_days).map_err(|_| AppleCodesignError::CliBadArgument)?;
 
     let validity_duration = chrono::Duration::days(validity_days);
 
@@ -551,9 +472,13 @@ fn command_generate_self_signed_certificate(args: &ArgMatches) -> Result<(), App
     Ok(())
 }
 
-fn command_sign(args: &ArgMatches) -> Result<(), AppError> {
-    let input_path = args.value_of("input_path").ok_or(AppError::BadArgument)?;
-    let output_path = args.value_of("output_path").ok_or(AppError::BadArgument)?;
+fn command_sign(args: &ArgMatches) -> Result<(), AppleCodesignError> {
+    let input_path = args
+        .value_of("input_path")
+        .ok_or(AppleCodesignError::CliBadArgument)?;
+    let output_path = args
+        .value_of("output_path")
+        .ok_or(AppleCodesignError::CliBadArgument)?;
     let code_requirements_path = args.value_of("code_requirements_path").map(PathBuf::from);
     let code_resources_path = args.value_of("code_resources").map(PathBuf::from);
     let entitlement_path = args.value_of("entitlement").map(PathBuf::from);
@@ -567,7 +492,7 @@ fn command_sign(args: &ArgMatches) -> Result<(), AppError> {
     };
     let timestamp_url = args
         .value_of("timestamp_url")
-        .ok_or(AppError::BadArgument)?;
+        .ok_or(AppleCodesignError::CliBadArgument)?;
     let timestamp_url = if timestamp_url == "none" {
         None
     } else {
@@ -599,7 +524,7 @@ fn command_sign(args: &ArgMatches) -> Result<(), AppError> {
 
     if private_keys.len() > 1 {
         println!("at most 1 PRIVATE KEY can be present; aborting");
-        return Err(AppError::BadArgument);
+        return Err(AppleCodesignError::CliBadArgument);
     }
 
     let private = if private_keys.is_empty() {
@@ -611,7 +536,7 @@ fn command_sign(args: &ArgMatches) -> Result<(), AppError> {
     if let Some(signing_key) = &private {
         if public_certificates.is_empty() {
             println!("a PRIVATE KEY requires a corresponding CERTIFICATE to pair with it");
-            return Err(AppError::BadArgument);
+            return Err(AppleCodesignError::CliBadArgument);
         }
 
         let cert = public_certificates.remove(0);
@@ -662,8 +587,10 @@ fn command_sign(args: &ArgMatches) -> Result<(), AppError> {
     Ok(())
 }
 
-fn command_verify(args: &ArgMatches) -> Result<(), AppError> {
-    let path = args.value_of("path").ok_or(AppError::BadArgument)?;
+fn command_verify(args: &ArgMatches) -> Result<(), AppleCodesignError> {
+    let path = args
+        .value_of("path")
+        .ok_or(AppleCodesignError::CliBadArgument)?;
 
     let data = std::fs::read(path)?;
 
@@ -678,11 +605,11 @@ fn command_verify(args: &ArgMatches) -> Result<(), AppError> {
         eprintln!("(we do not verify everything so please do not assume that the signature meets Apple standards)");
         Ok(())
     } else {
-        Err(AppError::VerificationProblems)
+        Err(AppleCodesignError::VerificationProblems)
     }
 }
 
-fn main_impl() -> Result<(), AppError> {
+fn main_impl() -> Result<(), AppleCodesignError> {
     let matches = App::new("Oxidized Apple Codesigning")
         .setting(AppSettings::ArgRequiredElseHelp)
         .version("0.1")
@@ -877,7 +804,7 @@ fn main_impl() -> Result<(), AppError> {
         }
         ("sign", Some(args)) => command_sign(args),
         ("verify", Some(args)) => command_verify(args),
-        _ => Err(AppError::UnknownCommand),
+        _ => Err(AppleCodesignError::CliUnknownCommand),
     }
 }
 
@@ -885,7 +812,7 @@ fn main() {
     let exit_code = match main_impl() {
         Ok(()) => 0,
         Err(err) => {
-            eprintln!("Error: {}", err);
+            eprintln!("Error: {:?}", err);
             1
         }
     };

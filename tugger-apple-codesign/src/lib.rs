@@ -102,6 +102,8 @@ pub mod code_requirement;
 pub use code_requirement::*;
 mod code_resources;
 pub use code_resources::*;
+mod error;
+pub use error::*;
 mod macho;
 pub use macho::*;
 mod signing;
