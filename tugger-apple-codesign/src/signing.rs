@@ -522,6 +522,24 @@ impl<'data, 'key> MachOSigner<'data, 'key> {
             .collect::<Vec<_>>()
     }
 
+    /// See [MachOSignatureBuilder::add_code_signature_flags].
+    pub fn add_code_signature_flags(&mut self, flags: CodeSignatureFlags) {
+        self.signature_builders = self
+            .signature_builders
+            .drain(..)
+            .map(|builder| builder.add_code_signature_flags(flags))
+            .collect::<Vec<_>>()
+    }
+
+    /// See [MachOSignatureBuilder::remove_code_signature_flags].
+    pub fn remove_code_signature_flags(&mut self, flags: CodeSignatureFlags) {
+        self.signature_builders = self
+            .signature_builders
+            .drain(..)
+            .map(|builder| builder.remove_code_signature_flags(flags))
+            .collect::<Vec<_>>()
+    }
+
     /// See [MachOSignatureBuilder::code_resources_data].
     pub fn code_resources_data(&mut self, data: &[u8]) -> Result<(), SigningError> {
         self.signature_builders = self
@@ -840,6 +858,22 @@ impl<'key> MachOSignatureBuilder<'key> {
 
         let blob = self.code_requirement.as_mut().unwrap();
         blob.set_requirements(RequirementType::Designated, requirement.to_owned());
+
+        self
+    }
+
+    /// Add a [CodeSignatureFlags] to the set of active flags.
+    pub fn add_code_signature_flags(mut self, flags: CodeSignatureFlags) -> Self {
+        let existing = self.cdflags.unwrap_or_else(|| CodeSignatureFlags::empty());
+        self.cdflags = Some(existing | flags);
+
+        self
+    }
+
+    /// Remove a [CodeSignatureFlags] from the set of active flags.
+    pub fn remove_code_signature_flags(mut self, flags: CodeSignatureFlags) -> Self {
+        let existing = self.cdflags.unwrap_or_else(|| CodeSignatureFlags::empty());
+        self.cdflags = Some(existing - flags);
 
         self
     }

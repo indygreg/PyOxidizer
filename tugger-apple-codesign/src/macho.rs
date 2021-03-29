@@ -49,6 +49,7 @@ use {
         collections::HashMap,
         convert::{TryFrom, TryInto},
         io::Write,
+        str::FromStr,
     },
 };
 
@@ -256,6 +257,36 @@ bitflags::bitflags! {
         ///
         /// This signature should be ignored in any new signing operation.
         const LINKER_SIGNED = 0x20000;
+    }
+}
+
+impl FromStr for CodeSignatureFlags {
+    type Err = MachOError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "host" => Ok(Self::HOST),
+            "hard" => Ok(Self::FORCE_HARD),
+            "kill" => Ok(Self::FORCE_KILL),
+            "expires" => Ok(Self::FORCE_EXPIRATION),
+            "library" => Ok(Self::LIBRARY_VALIDATION),
+            "runtime" => Ok(Self::RUNTIME),
+            "linker-signed" => Ok(Self::LINKER_SIGNED),
+            _ => Err(MachOError::UnknownCodeSignatureFlag(s.to_string())),
+        }
+    }
+}
+
+impl CodeSignatureFlags {
+    /// Attempt to convert a series of strings into a [CodeSignatureFlags].
+    pub fn from_strs(s: &[&str]) -> Result<CodeSignatureFlags, MachOError> {
+        let mut flags = CodeSignatureFlags::empty();
+
+        for s in s {
+            flags |= Self::from_str(s)?;
+        }
+
+        Ok(flags)
     }
 }
 
@@ -1842,6 +1873,7 @@ pub enum MachOError {
     Unimplemented,
     Malformed,
     CodeRequirement(CodeRequirementError),
+    UnknownCodeSignatureFlag(String),
 }
 
 impl std::fmt::Display for MachOError {
@@ -1861,6 +1893,9 @@ impl std::fmt::Display for MachOError {
             Self::Unimplemented => f.write_str("functionality not implemented"),
             Self::Malformed => f.write_str("data is malformed"),
             Self::CodeRequirement(e) => f.write_fmt(format_args!("code requirements error: {}", e)),
+            Self::UnknownCodeSignatureFlag(s) => {
+                f.write_fmt(format_args!("unknown code signature flag: {}", s))
+            }
         }
     }
 }

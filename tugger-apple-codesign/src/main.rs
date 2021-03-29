@@ -25,8 +25,8 @@ use {
         code_hash::compute_code_hashes,
         code_requirement::{CodeRequirementError, CodeRequirements},
         macho::{
-            find_signature_data, parse_signature_data, Blob, CodeDirectoryBlob, CodeSigningSlot,
-            DigestType, RequirementSetBlob,
+            find_signature_data, parse_signature_data, Blob, CodeDirectoryBlob, CodeSignatureFlags,
+            CodeSigningSlot, DigestType, RequirementSetBlob,
         },
         signing::{MachOSigner, NotSignableError, SigningError},
     },
@@ -554,6 +554,10 @@ fn command_sign(args: &ArgMatches) -> Result<(), AppError> {
     let code_requirements_path = args.value_of("code_requirements_path").map(PathBuf::from);
     let code_resources_path = args.value_of("code_resources").map(PathBuf::from);
     let entitlement_path = args.value_of("entitlement").map(PathBuf::from);
+    let options = match args.values_of("options") {
+        Some(values) => values.collect::<Vec<_>>(),
+        None => vec![],
+    };
     let pem_sources = match args.values_of("pem_source") {
         Some(values) => values.collect::<Vec<_>>(),
         None => vec![],
@@ -641,6 +645,11 @@ fn command_sign(args: &ArgMatches) -> Result<(), AppError> {
     if let Some(entitlement_path) = entitlement_path {
         let entitlement_data = std::fs::read_to_string(entitlement_path)?;
         signer.set_entitlements_string(&entitlement_data);
+    }
+
+    for option in options {
+        let flags = CodeSignatureFlags::from_str(option)?;
+        signer.add_code_signature_flags(flags);
     }
 
     println!("writing {}", output_path);
@@ -813,6 +822,11 @@ fn main_impl() -> Result<(), AppError> {
                         .required(false)
                         .takes_value(true)
                         .help("Path to a plist file containing entitlements"),
+                )
+                .arg(
+                    Arg::with_name("options")
+                        .long("options")
+                        .takes_value(true)
                 )
                 .arg(
                     Arg::with_name("pem_source")
