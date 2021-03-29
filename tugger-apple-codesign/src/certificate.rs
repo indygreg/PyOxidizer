@@ -5,6 +5,7 @@
 //! Functionality related to certificates.
 
 use {
+    crate::error::AppleCodesignError,
     bcder::{
         encode::{PrimitiveContent, Values},
         BitString, ConstOid, Mode, OctetString, Oid,
@@ -19,7 +20,7 @@ use {
             },
             rfc5958::OneAsymmetricKey,
         },
-        CertificateKeyAlgorithm, CmsError, RelativeDistinguishedName, SigningKey,
+        CertificateKeyAlgorithm, RelativeDistinguishedName, SigningKey,
     },
     ring::signature::{EcdsaKeyPair, Ed25519KeyPair, ECDSA_P256_SHA256_ASN1_SIGNING},
 };
@@ -41,74 +42,6 @@ const OID_PURPOSE_CODE_SIGNING: ConstOid = Oid(&[43, 6, 1, 5, 5, 7, 3, 3]);
 
 /// OID used for email address in RDN in Apple generated code signing certificates.
 const OID_EMAIL_ADDRESS: ConstOid = Oid(&[42, 134, 72, 134, 247, 13, 1, 9, 1]);
-
-#[derive(Debug)]
-pub enum CertificateError {
-    /// A certificate key algorithm is not supported.
-    UnsupportedCertificateAlgorithm(CertificateKeyAlgorithm),
-
-    /// An unspecified error in ring.
-    Ring(ring::error::Unspecified),
-
-    /// Error decoding ASN.1.
-    Asn1Decode(bcder::decode::Error),
-
-    /// I/O error.
-    Io(std::io::Error),
-
-    /// Error in cryptographic message syntax crate.
-    Cms(CmsError),
-
-    /// Bad string value.
-    Charset(bcder::string::CharSetError),
-}
-
-impl std::fmt::Display for CertificateError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::UnsupportedCertificateAlgorithm(alg) => {
-                f.write_fmt(format_args!("unsupported key algorithm: {:?}", alg))
-            }
-            Self::Ring(e) => f.write_fmt(format_args!("error in ring: {}", e)),
-            Self::Asn1Decode(e) => f.write_fmt(format_args!("error decoding ASN.1: {}", e)),
-            Self::Io(e) => f.write_fmt(format_args!("I/O error: {}", e)),
-            Self::Cms(e) => f.write_fmt(format_args!("CMS error: {}", e)),
-            Self::Charset(e) => f.write_fmt(format_args!("bad string value: {:?}", e)),
-        }
-    }
-}
-
-impl std::error::Error for CertificateError {}
-
-impl From<ring::error::Unspecified> for CertificateError {
-    fn from(e: ring::error::Unspecified) -> Self {
-        Self::Ring(e)
-    }
-}
-
-impl From<bcder::decode::Error> for CertificateError {
-    fn from(e: bcder::decode::Error) -> Self {
-        Self::Asn1Decode(e)
-    }
-}
-
-impl From<std::io::Error> for CertificateError {
-    fn from(e: std::io::Error) -> Self {
-        Self::Io(e)
-    }
-}
-
-impl From<CmsError> for CertificateError {
-    fn from(e: CmsError) -> Self {
-        Self::Cms(e)
-    }
-}
-
-impl From<bcder::string::CharSetError> for CertificateError {
-    fn from(e: bcder::string::CharSetError) -> Self {
-        Self::Charset(e)
-    }
-}
 
 /// Create a new self-signed X.509 certificate suitable for signing code.
 ///
@@ -132,32 +65,40 @@ pub fn create_self_signed_code_signing_certificate(
         SigningKey,
         Vec<u8>,
     ),
-    CertificateError,
+    AppleCodesignError,
 > {
     let system_random = ring::rand::SystemRandom::new();
 
     let key_pair_document = match algorithm {
-        CertificateKeyAlgorithm::Ed25519 => Ed25519KeyPair::generate_pkcs8(&system_random)?,
+        CertificateKeyAlgorithm::Ed25519 => Ed25519KeyPair::generate_pkcs8(&system_random)
+            .map_err(AppleCodesignError::CertificateRing)?,
         CertificateKeyAlgorithm::Ecdsa => {
             let signing_algorithm = &ECDSA_P256_SHA256_ASN1_SIGNING;
-            EcdsaKeyPair::generate_pkcs8(signing_algorithm, &system_random)?
+            EcdsaKeyPair::generate_pkcs8(signing_algorithm, &system_random)
+                .map_err(AppleCodesignError::CertificateRing)?
         }
         CertificateKeyAlgorithm::Rsa => {
-            return Err(CertificateError::UnsupportedCertificateAlgorithm(algorithm));
+            return Err(AppleCodesignError::CertificateUnsupportedKeyAlgorithm(
+                algorithm,
+            ));
         }
     };
 
     let key_pair_asn1 =
         bcder::decode::Constructed::decode(key_pair_document.as_ref(), Mode::Der, |cons| {
             OneAsymmetricKey::take_from(cons)
-        })?;
+        })
+        .map_err(AppleCodesignError::CertificateDecode)?;
 
     let signing_key = SigningKey::from_pkcs8_der(key_pair_document.as_ref(), None)?;
 
     let mut rdn = RelativeDistinguishedName::default();
-    rdn.set_common_name(common_name)?;
-    rdn.set_country_name(country_name)?;
-    rdn.set_attribute_string(Oid(Bytes::from(OID_EMAIL_ADDRESS.as_ref())), email_address)?;
+    rdn.set_common_name(common_name)
+        .map_err(AppleCodesignError::CertificateCharset)?;
+    rdn.set_country_name(country_name)
+        .map_err(AppleCodesignError::CertificateCharset)?;
+    rdn.set_attribute_string(Oid(Bytes::from(OID_EMAIL_ADDRESS.as_ref())), email_address)
+        .map_err(AppleCodesignError::CertificateCharset)?;
 
     let now = chrono::Utc::now();
     let expires = now + validity_duration;

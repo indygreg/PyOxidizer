@@ -2,7 +2,10 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use {cryptographic_message_syntax::CmsError, thiserror::Error};
+use {
+    cryptographic_message_syntax::{CertificateKeyAlgorithm, CmsError},
+    thiserror::Error,
+};
 
 /// Unified error type for Apple code signing.
 #[derive(Debug, Error)]
@@ -40,9 +43,18 @@ pub enum AppleCodesignError {
     #[error("problems reported during verification")]
     VerificationProblems,
 
-    #[error("certificate error: {0}")]
-    Certificate(#[from] crate::certificate::CertificateError),
-
     #[error("code requirement error: {0}")]
     CodeRequirement(#[from] crate::code_requirement::CodeRequirementError),
+
+    #[error("certificate decode error: {0}")]
+    CertificateDecode(bcder::decode::Error),
+
+    #[error("unsupported key algorithm in certificate: {0:?}")]
+    CertificateUnsupportedKeyAlgorithm(CertificateKeyAlgorithm),
+
+    #[error("unspecified cryptography error in certificate")]
+    CertificateRing(ring::error::Unspecified),
+
+    #[error("bad string value in certificate: {0:?}")]
+    CertificateCharset(bcder::string::CharSetError),
 }
