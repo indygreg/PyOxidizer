@@ -8,13 +8,13 @@
 
 use {
     crate::{
+        code_directory::{CodeDirectoryBlob, CodeSignatureFlags, ExecutableSegmentFlags},
         code_hash::compute_code_hashes,
         code_requirement::{CodeRequirementError, CodeRequirements},
         macho::{
-            create_superblob, find_signature_data, Blob, BlobWrapperBlob, CodeDirectoryBlob,
-            CodeSignatureFlags, CodeSigningMagic, CodeSigningSlot, Digest, DigestError, DigestType,
-            EmbeddedSignature, EntitlementsBlob, ExecutableSegmentFlags, MachOError,
-            RequirementBlob, RequirementSetBlob, RequirementType,
+            create_superblob, find_signature_data, Blob, BlobWrapperBlob, CodeSigningMagic,
+            CodeSigningSlot, Digest, DigestError, DigestType, EmbeddedSignature, EntitlementsBlob,
+            MachOError, RequirementBlob, RequirementSetBlob, RequirementType,
         },
     },
     bytes::Bytes,

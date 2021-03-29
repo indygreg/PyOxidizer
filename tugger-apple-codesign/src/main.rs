@@ -5,6 +5,8 @@
 #[allow(unused)]
 mod certificate;
 #[allow(unused)]
+mod code_directory;
+#[allow(unused)]
 mod code_hash;
 #[allow(unused)]
 mod code_requirement;
@@ -22,11 +24,12 @@ mod verify;
 use {
     crate::{
         certificate::{create_self_signed_code_signing_certificate, CertificateError},
+        code_directory::{CodeDirectoryBlob, CodeSignatureFlags},
         code_hash::compute_code_hashes,
         code_requirement::{CodeRequirementError, CodeRequirements},
         macho::{
-            find_signature_data, parse_signature_data, Blob, CodeDirectoryBlob, CodeSignatureFlags,
-            CodeSigningSlot, DigestType, RequirementSetBlob,
+            find_signature_data, parse_signature_data, Blob, CodeSigningSlot, DigestType,
+            RequirementSetBlob,
         },
         signing::{MachOSigner, NotSignableError, SigningError},
     },

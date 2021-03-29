@@ -23,10 +23,11 @@
 
 use {
     crate::{
+        code_directory::CodeDirectoryBlob,
         code_hash::compute_code_hashes,
         macho::{
-            find_signature_data, parse_signature_data, CodeDirectoryBlob, CodeSigningSlot,
-            DigestError, DigestType, EmbeddedSignature, MachOError,
+            find_signature_data, parse_signature_data, CodeSigningSlot, DigestError, DigestType,
+            EmbeddedSignature, MachOError,
         },
     },
     cryptographic_message_syntax::{CmsError, DigestAlgorithm, SignatureAlgorithm, SignedData},
