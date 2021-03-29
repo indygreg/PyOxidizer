@@ -16,7 +16,7 @@ mod error;
 #[allow(unused)]
 mod macho;
 #[allow(unused)]
-mod signing;
+mod macho_signing;
 #[allow(unused)]
 mod specification;
 #[allow(unused)]
@@ -33,7 +33,7 @@ use {
             find_signature_data, parse_signature_data, Blob, CodeSigningSlot, DigestType,
             RequirementSetBlob,
         },
-        signing::MachOSigner,
+        macho_signing::MachOSigner,
     },
     clap::{App, AppSettings, Arg, ArgMatches, SubCommand},
     cryptographic_message_syntax::{Certificate, CertificateKeyAlgorithm, SignedData, SigningKey},
