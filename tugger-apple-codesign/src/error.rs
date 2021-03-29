@@ -31,14 +31,14 @@ pub enum AppleCodesignError {
     #[error("CMS error: {0}")]
     Cms(#[from] CmsError),
 
-    #[error("signing error: {0}")]
-    Signing(#[from] crate::signing::SigningError),
-
     #[error("problems reported during verification")]
     VerificationProblems,
 
     #[error("certificate decode error: {0}")]
     CertificateDecode(bcder::decode::Error),
+
+    #[error("PEM error: {0}")]
+    CertificatePem(pem::PemError),
 
     #[error("unsupported key algorithm in certificate: {0:?}")]
     CertificateUnsupportedKeyAlgorithm(CertificateKeyAlgorithm),
@@ -63,6 +63,9 @@ pub enum AppleCodesignError {
 
     #[error("malformed team name string in code directory")]
     CodeDirectoryMalformedTeam,
+
+    #[error("plist error in code directory: {0}")]
+    CodeDirectoryPlist(plist::Error),
 
     #[error("SuperBlob data is malformed")]
     SuperblobMalformed,
@@ -99,4 +102,16 @@ pub enum AppleCodesignError {
 
     #[error("__LINKEDIT segment contains data after signature")]
     DataAfterSignature,
+
+    #[error("no identifier string provided")]
+    NoIdentifier,
+
+    #[error("no signing certificate")]
+    NoSigningCertificate,
+
+    #[error("signature data too large (please report this issue)")]
+    SignatureDataTooLarge,
+
+    #[error("HTTP error: {0}")]
+    Reqwest(#[from] reqwest::Error),
 }
