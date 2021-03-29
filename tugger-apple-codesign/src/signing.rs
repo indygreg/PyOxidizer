@@ -39,49 +39,6 @@ use {
 /// 1.2.840.113635.100.9.1.
 const CDHASH_PLIST_OID: bcder::ConstOid = bcder::Oid(&[42, 134, 72, 134, 247, 99, 100, 9, 1]);
 
-/// Denotes inability to sign a binary due to some error.
-#[derive(Debug)]
-pub enum NotSignableError {
-    /// Error parsing Mach-O binary.
-    BinaryParse(goblin::error::Error),
-
-    /// Cannot sign due to an internal error dealing with Mach-O internals.
-    AppleCodesignError(Box<AppleCodesignError>),
-
-    /// Cannot sign because an existing embedded signature wasn't found.
-    NoSignatureData,
-
-    /// Cannot sign because the __LINKEDIT segment isn't the last segment.
-    LinkeditNotLast,
-
-    /// Cannot sign because there is data after the signature in the __LINKEDIT segment.
-    DataAfterSignature,
-}
-
-impl std::fmt::Display for NotSignableError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::BinaryParse(e) => f.write_fmt(format_args!("error loading Mach-O binary: {}", e)),
-            Self::AppleCodesignError(e) => {
-                f.write_fmt(format_args!("error parsing Mach-O signature data: {:?}", e))
-            }
-            Self::NoSignatureData => f.write_str("no existing embedded signature"),
-            Self::LinkeditNotLast => f.write_str("__LINKEDIT isn't the final Mach-O segment"),
-            Self::DataAfterSignature => {
-                f.write_str("__LINKEDIT segments contains data after signature")
-            }
-        }
-    }
-}
-
-impl std::error::Error for NotSignableError {}
-
-impl From<goblin::error::Error> for NotSignableError {
-    fn from(e: goblin::error::Error) -> Self {
-        Self::BinaryParse(e)
-    }
-}
-
 /// Determines whether this crate is capable of signing a given Mach-O binary.
 ///
 /// Code in this crate is limited in the amount of Mach-O binary manipulation
@@ -94,24 +51,22 @@ impl From<goblin::error::Error> for NotSignableError {
 /// embedded signature. Often linked binaries automatically contain an embedded
 /// signature containing just the code directory (without a cryptographically
 /// signed signature), so this limitation hopefully isn't impactful.
-pub fn check_signing_capability(macho: &MachO) -> Result<(), NotSignableError> {
-    match find_signature_data(macho)
-        .map_err(|e| NotSignableError::AppleCodesignError(Box::new(e)))?
-    {
+pub fn check_signing_capability(macho: &MachO) -> Result<(), AppleCodesignError> {
+    match find_signature_data(macho)? {
         Some(signature) => {
             // __LINKEDIT needs to be the final segment so we don't have to rewrite
             // offsets.
             if signature.linkedit_segment_index != macho.segments.len() - 1 {
-                Err(NotSignableError::LinkeditNotLast)
+                Err(AppleCodesignError::LinkeditNotLast)
             // There can be no meaningful data after the signature because we don't
             // know how to rewrite it.
             } else if signature.signature_end_offset != signature.linkedit_segment_data.len() {
-                Err(NotSignableError::DataAfterSignature)
+                Err(AppleCodesignError::DataAfterSignature)
             } else {
                 Ok(())
             }
         }
-        None => Err(NotSignableError::NoSignatureData),
+        None => Err(AppleCodesignError::BinaryNoCodeSignature),
     }
 }
 
@@ -427,7 +382,7 @@ impl<'data, 'key> MachOSigner<'data, 'key> {
     ///
     /// The data will be parsed as a Mach-O binary (either single arch or fat/universal)
     /// and validated that we are capable of signing it.
-    pub fn new(macho_data: &'data [u8]) -> Result<Self, NotSignableError> {
+    pub fn new(macho_data: &'data [u8]) -> Result<Self, AppleCodesignError> {
         let mach = Mach::parse(macho_data)?;
 
         let (machos, signature_builders) = match mach {
@@ -762,7 +717,7 @@ pub struct MachOSignatureBuilder<'key> {
 
 impl<'key> MachOSignatureBuilder<'key> {
     /// Create an instance that will sign a MachO binary.
-    pub fn new() -> Result<Self, NotSignableError> {
+    pub fn new() -> Result<Self, AppleCodesignError> {
         Ok(Self {
             identifier: None,
             hash_type: DigestType::Sha256,

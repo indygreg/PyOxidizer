@@ -31,9 +31,6 @@ pub enum AppleCodesignError {
     #[error("CMS error: {0}")]
     Cms(#[from] CmsError),
 
-    #[error("binary not signable: {0}")]
-    NotSignable(#[from] crate::signing::NotSignableError),
-
     #[error("signing error: {0}")]
     Signing(#[from] crate::signing::SigningError),
 
@@ -96,4 +93,10 @@ pub enum AppleCodesignError {
 
     #[error("plist parse error in code resources: {0}")]
     ResourcesPlistParse(String),
+
+    #[error("__LINKEDIT isn't final Mach-O segment")]
+    LinkeditNotLast,
+
+    #[error("__LINKEDIT segment contains data after signature")]
+    DataAfterSignature,
 }
