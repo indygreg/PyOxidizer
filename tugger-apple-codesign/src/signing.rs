@@ -10,7 +10,7 @@ use {
     crate::{
         code_directory::{CodeDirectoryBlob, CodeSignatureFlags, ExecutableSegmentFlags},
         code_hash::compute_code_hashes,
-        code_requirement::{CodeRequirementError, CodeRequirements},
+        code_requirement::CodeRequirements,
         error::AppleCodesignError,
         macho::{
             create_superblob, find_signature_data, Blob, BlobWrapperBlob, CodeSigningMagic,
@@ -149,7 +149,7 @@ pub enum SigningError {
     /// Some issue in reqwest crate land.
     Reqwest(reqwest::Error),
     /// Error related to code requirements.
-    CodeRequirement(CodeRequirementError),
+    CodeRequirement(Box<AppleCodesignError>),
 }
 
 impl std::fmt::Display for SigningError {
@@ -177,7 +177,9 @@ impl std::fmt::Display for SigningError {
                 "signature data too large for allocated size (please report this issue)",
             ),
             Self::Reqwest(e) => f.write_fmt(format_args!("HTTP error: {}", e)),
-            Self::CodeRequirement(e) => f.write_fmt(format_args!("code requirement error: {}", e)),
+            Self::CodeRequirement(e) => {
+                f.write_fmt(format_args!("code requirement error: {:?}", e))
+            }
         }
     }
 }
@@ -229,12 +231,6 @@ impl From<scroll::Error> for SigningError {
 impl From<reqwest::Error> for SigningError {
     fn from(e: reqwest::Error) -> Self {
         Self::Reqwest(e)
-    }
-}
-
-impl From<CodeRequirementError> for SigningError {
-    fn from(e: CodeRequirementError) -> Self {
-        Self::CodeRequirement(e)
     }
 }
 
@@ -853,7 +849,8 @@ impl<'key> MachOSignatureBuilder<'key> {
         }
 
         let blob = self.code_requirement.as_mut().unwrap();
-        reqs.add_to_requirement_set(blob, RequirementType::Designated)?;
+        reqs.add_to_requirement_set(blob, RequirementType::Designated)
+            .map_err(|e| SigningError::CodeRequirement(Box::new(e)))?;
 
         Ok(self)
     }

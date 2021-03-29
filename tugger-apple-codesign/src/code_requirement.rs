@@ -24,9 +24,12 @@ on 4 byte boundaries.
 */
 
 use {
-    crate::macho::{
-        read_and_validate_blob_header, CodeSigningMagic, RequirementBlob, RequirementSetBlob,
-        RequirementType,
+    crate::{
+        error::AppleCodesignError,
+        macho::{
+            read_and_validate_blob_header, CodeSigningMagic, RequirementBlob, RequirementSetBlob,
+            RequirementType,
+        },
     },
     bcder::Oid,
     chrono::TimeZone,
@@ -50,48 +53,7 @@ const OPCODE_FLAG_DEFAULT_FALSE: u32 = 0x80000000;
 #[allow(unused)]
 const OPCODE_FLAG_SKIP: u32 = 0x40000000;
 
-/// An error related to a code requirement expression.
-#[derive(Debug)]
-pub enum CodeRequirementError {
-    /// Unknown opcode encountered.
-    UnknownOpCode(u32),
-    /// Unknown match operator.
-    UnknownMatch(u32),
-    /// Error in scroll crate.
-    Scroll(scroll::Error),
-    /// I/O error.
-    Io(std::io::Error),
-    /// Generic malformed error.
-    Malformed(&'static str),
-}
-
-impl std::fmt::Display for CodeRequirementError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::UnknownOpCode(v) => f.write_fmt(format_args!("unknown opcode: {}", v)),
-            Self::UnknownMatch(v) => f.write_fmt(format_args!("unknown match code: {}", v)),
-            Self::Scroll(e) => f.write_fmt(format_args!("decoding error: {}", e)),
-            Self::Io(e) => f.write_fmt(format_args!("I/O error: {}", e)),
-            Self::Malformed(s) => f.write_fmt(format_args!("malformed data: {}", s)),
-        }
-    }
-}
-
-impl std::error::Error for CodeRequirementError {}
-
-impl From<scroll::Error> for CodeRequirementError {
-    fn from(e: scroll::Error) -> Self {
-        Self::Scroll(e)
-    }
-}
-
-impl From<std::io::Error> for CodeRequirementError {
-    fn from(e: std::io::Error) -> Self {
-        Self::Io(e)
-    }
-}
-
-fn read_data(data: &[u8]) -> Result<(&[u8], &[u8]), CodeRequirementError> {
+fn read_data(data: &[u8]) -> Result<(&[u8], &[u8]), AppleCodesignError> {
     let length = data.pread_with::<u32>(0, scroll::BE)?;
     let value = &data[4..4 + length as usize];
 
@@ -108,7 +70,7 @@ fn read_data(data: &[u8]) -> Result<(&[u8], &[u8]), CodeRequirementError> {
     Ok((value, remaining))
 }
 
-fn write_data(dest: &mut impl Write, data: &[u8]) -> Result<(), CodeRequirementError> {
+fn write_data(dest: &mut impl Write, data: &[u8]) -> Result<(), AppleCodesignError> {
     dest.iowrite_with(data.len() as u32, scroll::BE)?;
     dest.write_all(data)?;
 
@@ -173,7 +135,7 @@ impl<'a> CodeRequirementValue<'a> {
     /// Write the encoded version of this value somewhere.
     ///
     /// Binary encoding is u32 of length, then raw bytes, then NULL padding to next u32.
-    fn write_encoded(&self, dest: &mut impl Write) -> Result<(), CodeRequirementError> {
+    fn write_encoded(&self, dest: &mut impl Write) -> Result<(), AppleCodesignError> {
         match self {
             Self::Bytes(data) => write_data(dest, data),
             Self::String(s) => write_data(dest, s.as_bytes()),
@@ -212,7 +174,7 @@ enum RequirementOpCode {
 }
 
 impl TryFrom<u32> for RequirementOpCode {
-    type Error = CodeRequirementError;
+    type Error = AppleCodesignError;
 
     fn try_from(v: u32) -> Result<Self, Self::Error> {
         match v {
@@ -240,7 +202,7 @@ impl TryFrom<u32> for RequirementOpCode {
             21 => Ok(Self::Notarized),
             22 => Ok(Self::CertificateFieldDate),
             23 => Ok(Self::LegacyDeveloperId),
-            _ => Err(CodeRequirementError::UnknownOpCode(v)),
+            _ => Err(AppleCodesignError::RequirementUnknownOpcode(v)),
         }
     }
 }
@@ -253,14 +215,14 @@ impl RequirementOpCode {
     pub fn parse_payload<'a>(
         &self,
         data: &'a [u8],
-    ) -> Result<(CodeRequirementExpression<'a>, &'a [u8]), CodeRequirementError> {
+    ) -> Result<(CodeRequirementExpression<'a>, &'a [u8]), AppleCodesignError> {
         match self {
             Self::False => Ok((CodeRequirementExpression::False, data)),
             Self::True => Ok((CodeRequirementExpression::True, data)),
             Self::Identifier => {
                 let (value, data) = read_data(data)?;
                 let s = std::str::from_utf8(value).map_err(|_| {
-                    CodeRequirementError::Malformed("identifier value not a UTF-8 string")
+                    AppleCodesignError::RequirementMalformed("identifier value not a UTF-8 string")
                 })?;
 
                 Ok((CodeRequirementExpression::Identifier(Cow::from(s)), data))
@@ -279,13 +241,14 @@ impl RequirementOpCode {
             Self::InfoKeyValueLegacy => {
                 let (key, data) = read_data(data)?;
 
-                let key = std::str::from_utf8(key)
-                    .map_err(|_| CodeRequirementError::Malformed("info key not a UTF-8 string"))?;
+                let key = std::str::from_utf8(key).map_err(|_| {
+                    AppleCodesignError::RequirementMalformed("info key not a UTF-8 string")
+                })?;
 
                 let (value, data) = read_data(data)?;
 
                 let value = std::str::from_utf8(value).map_err(|_| {
-                    CodeRequirementError::Malformed("info value not a UTF-8 string")
+                    AppleCodesignError::RequirementMalformed("info value not a UTF-8 string")
                 })?;
 
                 Ok((
@@ -327,8 +290,9 @@ impl RequirementOpCode {
             Self::InfoPlistExpression => {
                 let (key, data) = read_data(data)?;
 
-                let key = std::str::from_utf8(key)
-                    .map_err(|_| CodeRequirementError::Malformed("key is not valid UTF-8"))?;
+                let key = std::str::from_utf8(key).map_err(|_| {
+                    AppleCodesignError::RequirementMalformed("key is not valid UTF-8")
+                })?;
 
                 let (expr, data) = CodeRequirementMatchExpression::from_bytes(data)?;
 
@@ -343,7 +307,7 @@ impl RequirementOpCode {
                 let (field, data) = read_data(&data[4..])?;
 
                 let field = std::str::from_utf8(field).map_err(|_| {
-                    CodeRequirementError::Malformed("certificate field is not valid UTF-8")
+                    AppleCodesignError::RequirementMalformed("certificate field is not valid UTF-8")
                 })?;
 
                 let (expr, data) = CodeRequirementMatchExpression::from_bytes(data)?;
@@ -378,8 +342,9 @@ impl RequirementOpCode {
             Self::EntitlementsField => {
                 let (key, data) = read_data(data)?;
 
-                let key = std::str::from_utf8(key)
-                    .map_err(|_| CodeRequirementError::Malformed("entitlement key is not UTF-8"))?;
+                let key = std::str::from_utf8(key).map_err(|_| {
+                    AppleCodesignError::RequirementMalformed("entitlement key is not UTF-8")
+                })?;
 
                 let (expr, data) = CodeRequirementMatchExpression::from_bytes(data)?;
 
@@ -403,16 +368,18 @@ impl RequirementOpCode {
             Self::NamedAnchor => {
                 let (name, data) = read_data(data)?;
 
-                let name = std::str::from_utf8(name)
-                    .map_err(|_| CodeRequirementError::Malformed("named anchor isn't UTF-8"))?;
+                let name = std::str::from_utf8(name).map_err(|_| {
+                    AppleCodesignError::RequirementMalformed("named anchor isn't UTF-8")
+                })?;
 
                 Ok((CodeRequirementExpression::NamedAnchor(name.into()), data))
             }
             Self::NamedCode => {
                 let (name, data) = read_data(data)?;
 
-                let name = std::str::from_utf8(name)
-                    .map_err(|_| CodeRequirementError::Malformed("named code isn't UTF-8"))?;
+                let name = std::str::from_utf8(name).map_err(|_| {
+                    AppleCodesignError::RequirementMalformed("named code isn't UTF-8")
+                })?;
 
                 Ok((CodeRequirementExpression::NamedCode(name.into()), data))
             }
@@ -722,7 +689,7 @@ impl<'a> CodeRequirementExpression<'a> {
     /// Construct an expression element by reading from a slice.
     ///
     /// Returns the newly constructed element and remaining data in the slice.
-    pub fn from_bytes(data: &'a [u8]) -> Result<(Self, &'a [u8]), CodeRequirementError> {
+    pub fn from_bytes(data: &'a [u8]) -> Result<(Self, &'a [u8]), AppleCodesignError> {
         let opcode_raw = data.pread_with::<u32>(0, scroll::BE)?;
 
         let _flags = opcode_raw & OPCODE_FLAG_MASK;
@@ -736,7 +703,7 @@ impl<'a> CodeRequirementExpression<'a> {
     }
 
     /// Write binary representation of this expression to a destination.
-    pub fn write_to(&self, dest: &mut impl Write) -> Result<(), CodeRequirementError> {
+    pub fn write_to(&self, dest: &mut impl Write) -> Result<(), AppleCodesignError> {
         dest.iowrite_with(RequirementOpCode::from(self) as u32, scroll::BE)?;
 
         match self {
@@ -820,7 +787,7 @@ impl<'a> CodeRequirementExpression<'a> {
     /// Produce the binary serialization of this expression.
     ///
     /// The blob header/magic is not included.
-    pub fn to_bytes(&self) -> Result<Vec<u8>, CodeRequirementError> {
+    pub fn to_bytes(&self) -> Result<Vec<u8>, AppleCodesignError> {
         let mut res = vec![];
 
         self.write_to(&mut res)?;
@@ -851,7 +818,7 @@ enum MatchType {
 }
 
 impl TryFrom<u32> for MatchType {
-    type Error = CodeRequirementError;
+    type Error = AppleCodesignError;
 
     fn try_from(v: u32) -> Result<Self, Self::Error> {
         match v {
@@ -870,7 +837,7 @@ impl TryFrom<u32> for MatchType {
             12 => Ok(Self::OnOrBefore),
             13 => Ok(Self::OnOrAfter),
             14 => Ok(Self::Absent),
-            _ => Err(CodeRequirementError::UnknownMatch(v)),
+            _ => Err(AppleCodesignError::RequirementUnknownMatchExpression(v)),
         }
     }
 }
@@ -880,7 +847,7 @@ impl MatchType {
     pub fn parse_payload<'a>(
         &self,
         data: &'a [u8],
-    ) -> Result<(CodeRequirementMatchExpression<'a>, &'a [u8]), CodeRequirementError> {
+    ) -> Result<(CodeRequirementMatchExpression<'a>, &'a [u8]), AppleCodesignError> {
         match self {
             Self::Exists => Ok((CodeRequirementMatchExpression::Exists, data)),
             Self::Equal => {
@@ -1125,7 +1092,7 @@ impl<'a> CodeRequirementMatchExpression<'a> {
     /// Parse a match expression from bytes.
     ///
     /// The slice should begin with the match type u32.
-    pub fn from_bytes(data: &'a [u8]) -> Result<(Self, &'a [u8]), CodeRequirementError> {
+    pub fn from_bytes(data: &'a [u8]) -> Result<(Self, &'a [u8]), AppleCodesignError> {
         let typ = data.pread_with::<u32>(0, scroll::BE)?;
 
         let typ = MatchType::try_from(typ)?;
@@ -1134,7 +1101,7 @@ impl<'a> CodeRequirementMatchExpression<'a> {
     }
 
     /// Write binary representation of this match expression to a destination.
-    pub fn write_to(&self, dest: &mut impl Write) -> Result<(), CodeRequirementError> {
+    pub fn write_to(&self, dest: &mut impl Write) -> Result<(), AppleCodesignError> {
         dest.iowrite_with(MatchType::from(self) as u32, scroll::BE)?;
 
         match self {
@@ -1188,7 +1155,7 @@ impl<'a> CodeRequirements<'a> {
     ///
     /// This parses the data that follows the requirement blob header/magic that
     /// usually accompanies the binary representation of code requirements.
-    pub fn parse_binary(data: &'a [u8]) -> Result<(Self, &'a [u8]), CodeRequirementError> {
+    pub fn parse_binary(data: &'a [u8]) -> Result<(Self, &'a [u8]), AppleCodesignError> {
         let count = data.pread_with::<u32>(0, scroll::BE)?;
         let mut data = &data[4..];
 
@@ -1207,13 +1174,13 @@ impl<'a> CodeRequirements<'a> {
     /// Parse a code requirement blob, which begins with header magic.
     ///
     /// This can be used to parse the output generated by `csreq -b`.
-    pub fn parse_blob(data: &'a [u8]) -> Result<(Self, &'a [u8]), CodeRequirementError> {
+    pub fn parse_blob(data: &'a [u8]) -> Result<(Self, &'a [u8]), AppleCodesignError> {
         let data = read_and_validate_blob_header(
             data,
             u32::from(CodeSigningMagic::Requirement),
             "code requirement blob",
         )
-        .map_err(|_| CodeRequirementError::Malformed("malformed blob header"))?;
+        .map_err(|_| AppleCodesignError::RequirementMalformed("blob header"))?;
 
         Self::parse_binary(data)
     }
@@ -1221,7 +1188,7 @@ impl<'a> CodeRequirements<'a> {
     /// Write binary representation of these expressions to a destination.
     ///
     /// The blob header/magic is not written.
-    pub fn write_to(&self, dest: &mut impl Write) -> Result<(), CodeRequirementError> {
+    pub fn write_to(&self, dest: &mut impl Write) -> Result<(), AppleCodesignError> {
         dest.iowrite_with(self.0.len() as u32, scroll::BE)?;
         for e in &self.0 {
             e.write_to(dest)?;
@@ -1236,7 +1203,7 @@ impl<'a> CodeRequirements<'a> {
     /// and will prepend the blob header identifying the data as code requirements.
     ///
     /// The generated data should be equivalent to what `csreq -b` would produce.
-    pub fn to_blob_data(&self) -> Result<Vec<u8>, CodeRequirementError> {
+    pub fn to_blob_data(&self) -> Result<Vec<u8>, AppleCodesignError> {
         let mut payload = vec![];
         self.write_to(&mut payload)?;
 
@@ -1253,7 +1220,7 @@ impl<'a> CodeRequirements<'a> {
         &self,
         requirements_set: &mut RequirementSetBlob,
         slot: RequirementType,
-    ) -> Result<(), CodeRequirementError> {
+    ) -> Result<(), AppleCodesignError> {
         let blob = RequirementBlob::try_from(self)?;
 
         requirements_set.set_requirements(slot, blob);
@@ -1263,7 +1230,7 @@ impl<'a> CodeRequirements<'a> {
 }
 
 impl<'a> TryFrom<&CodeRequirements<'a>> for RequirementBlob<'static> {
-    type Error = CodeRequirementError;
+    type Error = AppleCodesignError;
 
     fn try_from(requirements: &CodeRequirements<'a>) -> Result<Self, Self::Error> {
         let mut data = Vec::<u8>::new();

@@ -40,9 +40,6 @@ pub enum AppleCodesignError {
     #[error("problems reported during verification")]
     VerificationProblems,
 
-    #[error("code requirement error: {0}")]
-    CodeRequirement(#[from] crate::code_requirement::CodeRequirementError),
-
     #[error("certificate decode error: {0}")]
     CertificateDecode(bcder::decode::Error),
 
@@ -81,4 +78,13 @@ pub enum AppleCodesignError {
 
     #[error("entitlements data not valid UTF-8: {0}")]
     EntitlementsBadUtf8(std::str::Utf8Error),
+
+    #[error("unknown code requirement opcode: {0}")]
+    RequirementUnknownOpcode(u32),
+
+    #[error("unknown code requirement match expression: {0}")]
+    RequirementUnknownMatchExpression(u32),
+
+    #[error("code requirement data malformed: {0}")]
+    RequirementMalformed(&'static str),
 }
