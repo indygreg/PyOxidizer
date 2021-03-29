@@ -56,9 +56,9 @@ impl DirectoryBundle {
         let shallow = !contents.is_dir();
 
         let app_plist = if shallow {
-            contents.join("Info.plist")
-        } else {
             directory.join("Info.plist")
+        } else {
+            contents.join("Info.plist")
         };
 
         let framework_plist = directory.join("Resources").join("Info.plist");
@@ -95,12 +95,18 @@ impl DirectoryBundle {
         })
     }
 
-    fn resolve_path(&self, path: impl AsRef<Path>) -> PathBuf {
+    /// Resolve the absolute path to a file in the bundle.
+    pub fn resolve_path(&self, path: impl AsRef<Path>) -> PathBuf {
         if self.shallow {
             self.root.join(path.as_ref())
         } else {
             self.root.join("Contents").join(path.as_ref())
         }
+    }
+
+    /// The root directory of this bundle.
+    pub fn root_dir(&self) -> &Path {
+        &self.root
     }
 
     /// The on-disk name of this bundle.
@@ -109,6 +115,13 @@ impl DirectoryBundle {
     /// `.framework`, etc suffix.
     pub fn name(&self) -> &str {
         &self.root_name
+    }
+
+    /// Whether this is a shallow bundle.
+    ///
+    /// If false, content is likely in a `Contents` directory.
+    pub fn shallow(&self) -> bool {
+        self.shallow
     }
 
     /// Obtain the path to the `Info.plist` file.
@@ -201,7 +214,15 @@ impl DirectoryBundle {
     /// Obtain all files within this bundle.
     ///
     /// The iteration order is deterministic.
-    pub fn files(&self) -> Result<Vec<DirectoryBundleFile<'_>>> {
+    ///
+    /// `traverse_nested` defines whether to traverse into nested bundles.
+    pub fn files(&self, traverse_nested: bool) -> Result<Vec<DirectoryBundleFile<'_>>> {
+        let nested_dirs = self
+            .nested_bundles()?
+            .into_iter()
+            .map(|(_, bundle)| bundle.root_dir().to_path_buf())
+            .collect::<Vec<_>>();
+
         Ok(walkdir::WalkDir::new(&self.root)
             .sort_by(|a, b| a.file_name().cmp(b.file_name()))
             .into_iter()
@@ -213,7 +234,12 @@ impl DirectoryBundle {
             .collect::<Result<Vec<_>>>()?
             .into_iter()
             .filter_map(|path| {
-                if path.is_dir() {
+                if path.is_dir()
+                    || (!traverse_nested
+                        && nested_dirs
+                            .iter()
+                            .any(|prefix| path.strip_prefix(prefix).is_ok()))
+                {
                     None
                 } else {
                     Some(DirectoryBundleFile::new(self, path))
@@ -229,7 +255,7 @@ impl DirectoryBundle {
     ///
     /// This will descend infinitely into nested bundles. i.e. we don't stop
     /// traversing directories when we encounter a bundle.
-    pub fn nested_bundles(&self) -> Result<Vec<Self>> {
+    pub fn nested_bundles(&self) -> Result<Vec<(String, Self)>> {
         Ok(walkdir::WalkDir::new(&self.root)
             .sort_by(|a, b| a.file_name().cmp(b.file_name()))
             .into_iter()
@@ -241,9 +267,16 @@ impl DirectoryBundle {
             .collect::<Result<Vec<_>>>()?
             .into_iter()
             .filter_map(|p| {
-                if p.is_dir() {
+                let file_name = p.file_name().map(|x| x.to_string_lossy());
+
+                if p.is_dir() && file_name != Some("Contents".into()) && p != self.root {
                     if let Ok(bundle) = Self::new_from_path(&p) {
-                        Some(bundle)
+                        let rel = bundle
+                            .root
+                            .strip_prefix(&self.root)
+                            .expect("nested bundle should be in sub-directory of main");
+
+                        Some((rel.to_string_lossy().to_string(), bundle))
                     } else {
                         None
                     }
@@ -305,5 +338,18 @@ impl<'a> DirectoryBundleFile<'a> {
         let prefix = self.bundle.resolve_path("_CodeSignature");
 
         self.absolute_path.starts_with(&prefix)
+    }
+
+    /// Obtain the symlink target for this file.
+    ///
+    /// If `None`, the file is not a symlink.
+    pub fn symlink_target(&self) -> Result<Option<PathBuf>> {
+        let metadata = self.absolute_path.metadata()?;
+
+        if metadata.file_type().is_symlink() {
+            Ok(Some(std::fs::read_link(&self.absolute_path)?))
+        } else {
+            Ok(None)
+        }
     }
 }
