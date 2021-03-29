@@ -16,9 +16,15 @@
 //! We gave up and decided to just coerce the [plist::Value] instances instead.
 
 use {
-    crate::error::AppleCodesignError,
+    crate::{
+        error::AppleCodesignError,
+        macho::{
+            find_signature_data, parse_signature_data, CodeSigningSlot, DigestType, RequirementType,
+        },
+    },
+    goblin::mach::{Mach, MachO},
     plist::{Dictionary, Value},
-    std::{collections::HashMap, convert::TryFrom, io::Write},
+    std::{collections::HashMap, convert::TryFrom, io::Write, path::Path},
 };
 
 #[derive(Clone, PartialEq)]
@@ -133,6 +139,7 @@ impl From<&FilesValue> for Value {
 struct Files2Value {
     cdhash: Option<Vec<u8>>,
     hash2: Option<Vec<u8>>,
+    optional: Option<bool>,
     requirement: Option<String>,
     symlink: Option<String>,
 }
@@ -148,6 +155,7 @@ impl std::fmt::Debug for Files2Value {
                 "hash2",
                 &format_args!("{:?}", self.hash2.as_ref().map(hex::encode)),
             )
+            .field("optional", &format_args!("{:?}", self.optional))
             .field("requirement", &format_args!("{:?}", self.requirement))
             .field("symlink", &format_args!("{:?}", self.symlink))
             .finish()
@@ -164,6 +172,7 @@ impl TryFrom<&Value> for Files2Value {
 
         let mut hash2 = None;
         let mut cdhash = None;
+        let mut optional = None;
         let mut requirement = None;
         let mut symlink = None;
 
@@ -179,7 +188,6 @@ impl TryFrom<&Value> for Files2Value {
 
                     cdhash = Some(data.to_vec());
                 }
-
                 "hash2" => {
                     let data = value.as_data().ok_or_else(|| {
                         AppleCodesignError::ResourcesPlistParse(format!(
@@ -189,6 +197,16 @@ impl TryFrom<&Value> for Files2Value {
                     })?;
 
                     hash2 = Some(data.to_vec());
+                }
+                "optional" => {
+                    let v = value.as_boolean().ok_or_else(|| {
+                        AppleCodesignError::ResourcesPlistParse(format!(
+                            "expected bool for optional key, got {:?}",
+                            value
+                        ))
+                    })?;
+
+                    optional = Some(v);
                 }
                 "requirement" => {
                     let v = value.as_string().ok_or_else(|| {
@@ -225,6 +243,7 @@ impl TryFrom<&Value> for Files2Value {
         Ok(Self {
             cdhash,
             hash2,
+            optional,
             requirement,
             symlink,
         })
@@ -241,6 +260,10 @@ impl From<&Files2Value> for Value {
 
         if let Some(hash2) = &v.hash2 {
             dict.insert("hash2".to_string(), Value::Data(hash2.to_vec()));
+        }
+
+        if let Some(optional) = &v.optional {
+            dict.insert("optional".to_string(), Value::Boolean(*optional));
         }
 
         if let Some(requirement) = &v.requirement {
@@ -425,7 +448,7 @@ impl From<&Rules2Value> for Value {
 ///
 /// This file/type represents a collection of file-based resources whose
 /// content is digested and captured in this file.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct CodeResources {
     files: HashMap<String, FilesValue>,
     files2: HashMap<String, Files2Value>,
@@ -516,12 +539,138 @@ impl CodeResources {
         })
     }
 
+    /// Serialize an instance to XML.
     pub fn to_writer_xml(&self, writer: impl Write) -> Result<(), AppleCodesignError> {
         let value = Value::from(self);
 
         Ok(value
             .to_writer_xml(writer)
             .map_err(AppleCodesignError::ResourcesPlist)?)
+    }
+
+    /// Seal a regular file.
+    ///
+    /// This will digest the content specified and record that digest in the files list.
+    ///
+    /// To seal a symlink, call [CodeResources::seal_symlink] instead. If the file
+    /// is a Mach-O file, call [CodeResources::seal_macho] or [CodeResources::seal_macho_file]
+    /// instead.
+    pub fn seal_regular_file(
+        &mut self,
+        path: impl ToString,
+        content: impl AsRef<[u8]>,
+        optional: bool,
+    ) -> Result<(), AppleCodesignError> {
+        let sha1 = DigestType::Sha1.digest(content.as_ref())?;
+        let sha256 = DigestType::Sha256.digest(content.as_ref())?;
+
+        let path = path.to_string();
+
+        self.files.insert(
+            path.clone(),
+            if optional {
+                FilesValue::Optional(sha1)
+            } else {
+                FilesValue::Required(sha1)
+            },
+        );
+        self.files2.insert(
+            path,
+            Files2Value {
+                cdhash: None,
+                hash2: Some(sha256),
+                optional: if optional { Some(true) } else { None },
+                requirement: None,
+                symlink: None,
+            },
+        );
+
+        Ok(())
+    }
+
+    /// Seal a symlink file.
+    ///
+    /// `path` is the path of the symlink and `target` is the path it points to.
+    pub fn seal_symlink(&mut self, path: impl ToString, target: impl ToString) {
+        self.files2.insert(
+            path.to_string(),
+            Files2Value {
+                cdhash: None,
+                hash2: None,
+                optional: None,
+                requirement: None,
+                symlink: Some(target.to_string()),
+            },
+        );
+    }
+
+    /// Seal a Mach-O binary.
+    ///
+    /// The Mach-O binary MUST already have been signed, as the digest of its
+    /// Code Directory and its Code Requirements data must be captured.
+    ///
+    /// If sealing a fat/universal binary, the first Mach-O within should be passed
+    /// to this function.
+    pub fn seal_macho(
+        &mut self,
+        path: impl ToString,
+        macho: &MachO,
+        optional: bool,
+    ) -> Result<(), AppleCodesignError> {
+        let signature_data =
+            find_signature_data(macho)?.ok_or(AppleCodesignError::BinaryNoCodeSignature)?;
+        let signature = parse_signature_data(&signature_data.signature_data)?;
+
+        let cd = signature
+            .find_slot(CodeSigningSlot::CodeDirectory)
+            .ok_or(AppleCodesignError::BinaryNoCodeSignature)?;
+
+        let cd_digest = cd.digest_with(DigestType::Sha1)?;
+
+        let requirement = if let Some(requirements) = signature.code_requirements()? {
+            if let Some(designated) = requirements.requirements.get(&RequirementType::Designated) {
+                let req = designated.parse_expressions()?;
+
+                Some(format!("{}", req[0]))
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
+        self.files2.insert(
+            path.to_string(),
+            Files2Value {
+                cdhash: Some(cd_digest),
+                hash2: None,
+                optional: if optional { Some(true) } else { None },
+                requirement,
+                symlink: None,
+            },
+        );
+
+        Ok(())
+    }
+
+    /// Seal a Mach-O file.
+    ///
+    /// This is a wrapper around [CodeResources::seal_macho] which parses the passed
+    /// content as a Mach-O binary and calls that function with the appropriate
+    /// binary.
+    pub fn seal_macho_file(
+        &mut self,
+        path: impl ToString,
+        data: impl AsRef<[u8]>,
+        optional: bool,
+    ) -> Result<(), AppleCodesignError> {
+        let macho = match Mach::parse(data.as_ref())? {
+            // The first Mach-O's metadata is taken.
+            Mach::Fat(fat) => fat.get(0)?,
+            Mach::Binary(macho) => macho,
+        };
+
+        self.seal_macho(path, &macho, optional)
     }
 }
 
@@ -610,6 +759,13 @@ mod tests {
               <dict>
                 <key>hash2</key>
                 <data>iMnDHpWkKTI6xLi9Av93eNuIhxXhv3C18D4fljCfw2Y=</data>
+              </dict>
+              <key>TestOptional</key>
+              <dict>
+                <key>hash2</key>
+                <data>iMnDHpWkKTI6xLi9Av93eNuIhxXhv3C18D4fljCfw2Y=</data>
+                <key>optional</key>
+                <true/>
               </dict>
               <key>MacOS/XUL</key>
               <dict>
