@@ -25,9 +25,6 @@ pub enum AppleCodesignError {
     #[error("binary does not have code signature data")]
     BinaryNoCodeSignature,
 
-    #[error("digest error: {0}")]
-    Digest(#[from] crate::macho::DigestError),
-
     #[error("CMS error: {0}")]
     Cms(#[from] CmsError),
 
@@ -114,4 +111,13 @@ pub enum AppleCodesignError {
 
     #[error("HTTP error: {0}")]
     Reqwest(#[from] reqwest::Error),
+
+    #[error("unknown digest algorithm")]
+    DigestUnknownAlgorithm,
+
+    #[error("unsupported digest algorithm")]
+    DigestUnsupportedAlgorithm,
+
+    #[error("unspecified digest error")]
+    DigestUnspecified,
 }

@@ -618,7 +618,7 @@ impl<'a> BlobEntry<'a> {
     }
 
     /// Compute the content digest of this blob using the specified hash type.
-    pub fn digest_with(&self, hash: DigestType) -> Result<Vec<u8>, DigestError> {
+    pub fn digest_with(&self, hash: DigestType) -> Result<Vec<u8>, AppleCodesignError> {
         hash.digest(&self.data)
     }
 }
@@ -635,7 +635,7 @@ pub struct ParsedBlob<'a> {
 
 impl<'a> ParsedBlob<'a> {
     /// Compute the content digest of this blob using the specified hash type.
-    pub fn digest_with(&self, hash: DigestType) -> Result<Vec<u8>, DigestError> {
+    pub fn digest_with(&self, hash: DigestType) -> Result<Vec<u8>, AppleCodesignError> {
         hash.digest(&self.blob_entry.data)
     }
 }
@@ -919,25 +919,6 @@ impl<'a> RequirementSetBlob<'a> {
     }
 }
 
-#[derive(Debug)]
-pub enum DigestError {
-    UnknownAlgorithm,
-    UnsupportedAlgorithm,
-    Unspecified,
-}
-
-impl std::error::Error for DigestError {}
-
-impl std::fmt::Display for DigestError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::UnknownAlgorithm => f.write_str("unknown algorithm"),
-            Self::UnsupportedAlgorithm => f.write_str("unsupported algorithm"),
-            Self::Unspecified => f.write_str("unspecified error occurred"),
-        }
-    }
-}
-
 /// Represents a digest type from a CS_HASHTYPE_* constants.
 #[derive(Clone, Copy, Debug)]
 pub enum DigestType {
@@ -979,7 +960,7 @@ impl From<DigestType> for u8 {
 }
 
 impl TryFrom<&str> for DigestType {
-    type Error = DigestError;
+    type Error = AppleCodesignError;
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         match s {
@@ -989,21 +970,21 @@ impl TryFrom<&str> for DigestType {
             "sha256-truncated" => Ok(Self::Sha256Truncated),
             "sha384" => Ok(Self::Sha384),
             "sha512" => Ok(Self::Sha512),
-            _ => Err(DigestError::UnknownAlgorithm),
+            _ => Err(AppleCodesignError::DigestUnknownAlgorithm),
         }
     }
 }
 
 impl DigestType {
     /// Obtain the size of hashes for this hash type.
-    pub fn hash_len(&self) -> Result<usize, DigestError> {
+    pub fn hash_len(&self) -> Result<usize, AppleCodesignError> {
         Ok(self.digest(&[])?.len())
     }
 
     /// Obtain a hasher for this digest type.
-    pub fn as_hasher(&self) -> Result<ring::digest::Context, DigestError> {
+    pub fn as_hasher(&self) -> Result<ring::digest::Context, AppleCodesignError> {
         match self {
-            Self::None => Err(DigestError::UnknownAlgorithm),
+            Self::None => Err(AppleCodesignError::DigestUnknownAlgorithm),
             Self::Sha1 => Ok(ring::digest::Context::new(
                 &ring::digest::SHA1_FOR_LEGACY_USE_ONLY,
             )),
@@ -1012,12 +993,12 @@ impl DigestType {
             }
             Self::Sha384 => Ok(ring::digest::Context::new(&ring::digest::SHA384)),
             Self::Sha512 => Ok(ring::digest::Context::new(&ring::digest::SHA512)),
-            Self::Unknown(_) => Err(DigestError::UnknownAlgorithm),
+            Self::Unknown(_) => Err(AppleCodesignError::DigestUnknownAlgorithm),
         }
     }
 
     /// Digest data given the configured hasher.
-    pub fn digest(&self, data: &[u8]) -> Result<Vec<u8>, DigestError> {
+    pub fn digest(&self, data: &[u8]) -> Result<Vec<u8>, AppleCodesignError> {
         let mut hasher = self.as_hasher()?;
 
         hasher.update(data);
@@ -1437,7 +1418,7 @@ mod tests {
                             }
                             Err(e) => {
                                 println!(
-                                    "blob serialization failure on {}; index {}, magic {:?}: {}",
+                                    "blob serialization failure on {}; index {}, magic {:?}: {:?}",
                                     path.display(),
                                     blob.index,
                                     blob.magic,
@@ -1448,7 +1429,7 @@ mod tests {
                     }
                     Err(e) => {
                         println!(
-                            "blob parse failure on {}; index {}, magic {:?}: {}",
+                            "blob parse failure on {}; index {}, magic {:?}: {:?}",
                             path.display(),
                             blob.index,
                             blob.magic,

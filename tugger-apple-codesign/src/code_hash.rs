@@ -19,7 +19,10 @@ This module contains code related to reading and writing these so-called
 */
 
 use {
-    crate::macho::{find_signature_data, DigestError, DigestType},
+    crate::{
+        error::AppleCodesignError,
+        macho::{find_signature_data, DigestType},
+    },
     goblin::mach::MachO,
 };
 
@@ -35,12 +38,12 @@ pub fn compute_paged_hashes(
     hash: DigestType,
     page_size: usize,
     max_offset: usize,
-) -> Result<Vec<Vec<u8>>, DigestError> {
+) -> Result<Vec<Vec<u8>>, AppleCodesignError> {
     let data = &data[..max_offset];
 
     data.chunks(page_size)
         .map(|chunk| hash.digest(chunk))
-        .collect::<Result<Vec<_>, DigestError>>()
+        .collect::<Result<Vec<_>, AppleCodesignError>>()
 }
 
 /// Compute code hashes for a Mach-O binary.
@@ -48,8 +51,8 @@ pub fn compute_code_hashes(
     macho: &MachO,
     hash_type: DigestType,
     page_size: Option<usize>,
-) -> Result<Vec<Vec<u8>>, DigestError> {
-    let signature = find_signature_data(macho).map_err(|_| DigestError::Unspecified)?;
+) -> Result<Vec<Vec<u8>>, AppleCodesignError> {
+    let signature = find_signature_data(macho)?;
 
     // TODO validate size.
     let page_size = page_size.unwrap_or(4096);
@@ -79,7 +82,7 @@ pub fn compute_code_hashes(
 
             compute_paged_hashes(s.data, hash_type, page_size, max_offset)
         })
-        .collect::<Result<Vec<_>, DigestError>>()?
+        .collect::<Result<Vec<_>, AppleCodesignError>>()?
         .into_iter()
         .flatten()
         .collect::<Vec<_>>())

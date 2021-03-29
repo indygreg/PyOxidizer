@@ -27,7 +27,7 @@ use {
         code_hash::compute_code_hashes,
         error::AppleCodesignError,
         macho::{
-            find_signature_data, parse_signature_data, CodeSigningSlot, DigestError, DigestType,
+            find_signature_data, parse_signature_data, CodeSigningSlot, DigestType,
             EmbeddedSignature,
         },
     },
@@ -60,14 +60,14 @@ pub enum VerificationProblemType {
     CmsOldSignatureAlgorithm(SignatureAlgorithm),
     NoCodeDirectory,
     CodeDirectoryOldDigestAlgorithm(DigestType),
-    CodeDigestError(DigestError),
+    CodeDigestError(AppleCodesignError),
     CodeDigestMissingEntry(usize, Vec<u8>),
     CodeDigestExtraEntry(usize, Vec<u8>),
     CodeDigestMismatch(usize, Vec<u8>, Vec<u8>),
     SlotDigestMissing(CodeSigningSlot),
     ExtraSlotDigest(CodeSigningSlot, Vec<u8>),
     SlotDigestMismatch(CodeSigningSlot, Vec<u8>, Vec<u8>),
-    SlotDigestError(DigestError),
+    SlotDigestError(AppleCodesignError),
 }
 
 #[derive(Debug)]
@@ -92,7 +92,7 @@ impl std::fmt::Display for VerificationProblem {
                 "Mach-O signature data not found".to_string()
             }
             VerificationProblemType::MachOSignatureError(e) => {
-                format!("error parsing Mach-O signature data: {}", e)
+                format!("error parsing Mach-O signature data: {:?}", e)
             }
             VerificationProblemType::LinkeditNotLastSegment => {
                 "__LINKEDIT isn't last Mach-O segment".to_string()
@@ -115,7 +115,7 @@ impl std::fmt::Display for VerificationProblem {
                 )
             }
             VerificationProblemType::CodeDigestError(e) => {
-                format!("error computing code digests: {}", e)
+                format!("error computing code digests: {:?}", e)
             }
             VerificationProblemType::CodeDigestMissingEntry(index, digest) => {
                 format!(
@@ -158,7 +158,7 @@ impl std::fmt::Display for VerificationProblem {
                 )
             }
             VerificationProblemType::SlotDigestError(e) => {
-                format!("error computing slot digest: {}", e)
+                format!("error computing slot digest: {:?}", e)
             }
         };
 

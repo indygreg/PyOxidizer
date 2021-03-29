@@ -14,7 +14,7 @@ use {
         error::AppleCodesignError,
         macho::{
             create_superblob, find_signature_data, Blob, BlobWrapperBlob, CodeSigningMagic,
-            CodeSigningSlot, Digest, DigestError, DigestType, EmbeddedSignature, EntitlementsBlob,
+            CodeSigningSlot, Digest, DigestType, EmbeddedSignature, EntitlementsBlob,
             RequirementBlob, RequirementSetBlob, RequirementType,
         },
     },
@@ -952,7 +952,7 @@ impl<'key> MachOSignatureBuilder<'key> {
                     },
                 ))
             })
-            .collect::<Result<HashMap<_, _>, DigestError>>()?;
+            .collect::<Result<HashMap<_, _>, AppleCodesignError>>()?;
 
         // Add the resources digest, if defined and not a placeholder.
         if let Some(resources_digest) = &self.resources_digest {
