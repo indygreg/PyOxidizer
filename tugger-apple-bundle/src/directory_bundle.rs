@@ -25,12 +25,22 @@ pub struct DirectoryBundle {
     ///
     /// If false, content is in a `Contents/` sub-directory.
     shallow: bool,
+
+    /// The type of this bundle.
+    package_type: BundlePackageType,
+
+    /// Parsed `Info.plist` file.
+    info_plist: plist::Dictionary,
 }
 
 impl DirectoryBundle {
     /// Open an existing bundle from a filesystem path.
     ///
     /// The specified path should be the root directory of the bundle.
+    ///
+    /// This will validate that the directory is a bundle and error if not.
+    /// Validation is limited to locating an `Info.plist` file, which is
+    /// required for all bundle types.
     pub fn new_from_path(directory: &Path) -> Result<Self> {
         if !directory.is_dir() {
             return Err(anyhow!("{} is not a directory", directory.display()));
@@ -45,10 +55,43 @@ impl DirectoryBundle {
         let contents = directory.join("Contents");
         let shallow = !contents.is_dir();
 
+        let app_plist = if shallow {
+            contents.join("Info.plist")
+        } else {
+            directory.join("Info.plist")
+        };
+
+        let framework_plist = directory.join("Resources").join("Info.plist");
+
+        let (package_type, info_plist_path) = if app_plist.is_file() {
+            if root_name.ends_with(".app") {
+                (BundlePackageType::App, app_plist)
+            } else {
+                (BundlePackageType::Bundle, app_plist)
+            }
+        } else if framework_plist.is_file() {
+            if root_name.ends_with(".framework") {
+                (BundlePackageType::Framework, framework_plist)
+            } else {
+                (BundlePackageType::Bundle, framework_plist)
+            }
+        } else {
+            return Err(anyhow!("Info.plist not found; not a valid bundle"));
+        };
+
+        let info_plist_data = std::fs::read(&info_plist_path)?;
+        let cursor = std::io::Cursor::new(info_plist_data);
+        let value = plist::Value::from_reader_xml(cursor).context("parsing Info.plist XML")?;
+        let info_plist = value
+            .into_dictionary()
+            .ok_or_else(|| anyhow!("{} is not a dictionary", info_plist_path.display()))?;
+
         Ok(Self {
             root: directory.to_path_buf(),
             root_name,
             shallow,
+            package_type,
+            info_plist,
         })
     }
 
@@ -60,66 +103,47 @@ impl DirectoryBundle {
         }
     }
 
-    /// Obtain the parsed `Info.plist` file.
-    pub fn info_plist(&self) -> Result<Option<plist::Dictionary>> {
-        let path = self.resolve_path("Info.plist");
+    /// The on-disk name of this bundle.
+    ///
+    /// This is effectively the directory name of the bundle. Contains the `.app`,
+    /// `.framework`, etc suffix.
+    pub fn name(&self) -> &str {
+        &self.root_name
+    }
 
-        match std::fs::read(&path) {
-            Ok(data) => {
-                let cursor = std::io::Cursor::new(data);
-
-                let value =
-                    plist::Value::from_reader_xml(cursor).context("parsing Info.plist XML")?;
-
-                if let Some(dict) = value.into_dictionary() {
-                    Ok(Some(dict))
-                } else {
-                    Err(anyhow!("{} is not a dictionary", path.display()))
-                }
-            }
-            Err(e) => {
-                if e.kind() == std::io::ErrorKind::NotFound {
-                    Ok(None)
-                } else {
-                    Err(e.into())
-                }
-            }
+    /// Obtain the path to the `Info.plist` file.
+    pub fn info_plist_path(&self) -> PathBuf {
+        match self.package_type {
+            BundlePackageType::App | BundlePackageType::Bundle => self.resolve_path("Info.plist"),
+            BundlePackageType::Framework => self.root.join("Resources").join("Info.plist"),
         }
+    }
+
+    /// Obtain the parsed `Info.plist` file.
+    pub fn info_plist(&self) -> &plist::Dictionary {
+        &self.info_plist
     }
 
     /// Obtain an `Info.plist` key as a `String`.
     ///
-    /// Will return `None` if there is no `Info.plist` file or the specified
-    /// key doesn't exist. Errors on `Info.plist` parse error or if the key value
+    /// Will return `None` if the specified key doesn't exist. Errors if the key value
     /// is not a string.
     pub fn info_plist_key_string(&self, key: &str) -> Result<Option<String>> {
-        if let Some(plist) = self.info_plist()? {
-            if let Some(value) = plist.get(key) {
-                Ok(Some(
-                    value
-                        .as_string()
-                        .ok_or_else(|| anyhow!("key {} is not a string", key))?
-                        .to_string(),
-                ))
-            } else {
-                Ok(None)
-            }
+        if let Some(value) = self.info_plist.get(key) {
+            Ok(Some(
+                value
+                    .as_string()
+                    .ok_or_else(|| anyhow!("key {} is not a string", key))?
+                    .to_string(),
+            ))
         } else {
             Ok(None)
         }
     }
 
     /// Obtain the type of bundle.
-    ///
-    /// This sniffs the extension of the root directory for well-defined suffixes.
     pub fn package_type(&self) -> BundlePackageType {
-        if self.root_name.ends_with(".app") {
-            BundlePackageType::App
-        } else if self.root_name.ends_with(".framework") {
-            BundlePackageType::Framework
-        } else {
-            BundlePackageType::Bundle
-        }
+        self.package_type
     }
 
     /// Obtain the bundle display name.
@@ -154,25 +178,21 @@ impl DirectoryBundle {
     ///
     /// This retrieves `CFBundleIconFiles` from the `Info.plist`.
     pub fn icon_files(&self) -> Result<Option<Vec<String>>> {
-        if let Some(plist) = self.info_plist()? {
-            if let Some(value) = plist.get("CFBundleIconFiles") {
-                let values = value
-                    .as_array()
-                    .ok_or_else(|| anyhow!("CFBundleIconFiles not an array"))?;
+        if let Some(value) = self.info_plist.get("CFBundleIconFiles") {
+            let values = value
+                .as_array()
+                .ok_or_else(|| anyhow!("CFBundleIconFiles not an array"))?;
 
-                Ok(Some(
-                    values
-                        .iter()
-                        .map(|x| {
-                            Ok(x.as_string()
-                                .ok_or_else(|| anyhow!("CFBundleIconFiles value not a string"))?
-                                .to_string())
-                        })
-                        .collect::<Result<Vec<_>>>()?,
-                ))
-            } else {
-                Ok(None)
-            }
+            Ok(Some(
+                values
+                    .iter()
+                    .map(|x| {
+                        Ok(x.as_string()
+                            .ok_or_else(|| anyhow!("CFBundleIconFiles value not a string"))?
+                            .to_string())
+                    })
+                    .collect::<Result<Vec<_>>>()?,
+            ))
         } else {
             Ok(None)
         }
@@ -197,6 +217,38 @@ impl DirectoryBundle {
                     None
                 } else {
                     Some(DirectoryBundleFile::new(self, path))
+                }
+            })
+            .collect::<Vec<_>>())
+    }
+
+    /// Obtain all nested bundles within this one.
+    ///
+    /// This walks the directory tree for directories that can be parsed
+    /// as bundles.
+    ///
+    /// This will descend infinitely into nested bundles. i.e. we don't stop
+    /// traversing directories when we encounter a bundle.
+    pub fn nested_bundles(&self) -> Result<Vec<Self>> {
+        Ok(walkdir::WalkDir::new(&self.root)
+            .sort_by(|a, b| a.file_name().cmp(b.file_name()))
+            .into_iter()
+            .map(|entry| {
+                let entry = entry?;
+
+                Ok(entry.path().to_path_buf())
+            })
+            .collect::<Result<Vec<_>>>()?
+            .into_iter()
+            .filter_map(|p| {
+                if p.is_dir() {
+                    if let Ok(bundle) = Self::new_from_path(&p) {
+                        Some(bundle)
+                    } else {
+                        None
+                    }
+                } else {
+                    None
                 }
             })
             .collect::<Vec<_>>())
@@ -236,7 +288,7 @@ impl<'a> DirectoryBundleFile<'a> {
 
     /// Whether this is the `Info.plist` file.
     pub fn is_info_plist(&self) -> bool {
-        self.absolute_path == self.bundle.resolve_path("Info.plist")
+        self.absolute_path == self.bundle.info_plist_path()
     }
 
     /// Whether this is the main executable for the bundle.

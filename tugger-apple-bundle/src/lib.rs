@@ -8,6 +8,7 @@ mod macos_application_bundle;
 pub use macos_application_bundle::*;
 
 /// Denotes the type of a bundle.
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum BundlePackageType {
     /// Application bundle.
     App,
