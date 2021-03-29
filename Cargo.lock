@@ -3439,6 +3439,7 @@ dependencies = [
  "anyhow",
  "plist",
  "tugger-file-manifest",
+ "walkdir",
 ]
 
 [[package]]

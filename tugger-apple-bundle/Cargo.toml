@@ -13,6 +13,7 @@ readme = "README.md"
 [dependencies]
 anyhow = "1.0"
 plist = "1.1"
+walkdir = "2.3"
 
 [dependencies.tugger-file-manifest]
 version = "0.2.0-pre"

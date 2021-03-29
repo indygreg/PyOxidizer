@@ -9,6 +9,7 @@ for documentation of the macOS Application Bundle format.
 */
 
 use {
+    crate::BundlePackageType,
     anyhow::{anyhow, Context, Result},
     std::path::{Path, PathBuf},
     tugger_file_manifest::{FileData, FileEntry, FileManifest, FileManifestError},
@@ -82,7 +83,7 @@ impl MacOsApplicationBundleBuilder {
 
         // This is an application bundle, so CFBundlePackageType is constant.
         instance
-            .set_info_plist_key("CFBundlePackageType", "APPL")
+            .set_info_plist_key("CFBundlePackageType", BundlePackageType::App.to_string())
             .context("setting CFBundlePackageType")?;
 
         Ok(instance)
