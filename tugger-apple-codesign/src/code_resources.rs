@@ -692,8 +692,6 @@ mod tests {
     fn parse_firefox() {
         let resources = CodeResources::from_xml(FIREFOX_SNIPPET.as_bytes()).unwrap();
 
-        println!("{:#?}", resources);
-
         // Serialize back to XML.
         let mut buffer = Vec::<u8>::new();
         resources.to_writer_xml(&mut buffer).unwrap();
