@@ -25,9 +25,10 @@ use {
     crate::{
         code_directory::CodeDirectoryBlob,
         code_hash::compute_code_hashes,
+        error::AppleCodesignError,
         macho::{
             find_signature_data, parse_signature_data, CodeSigningSlot, DigestError, DigestType,
-            EmbeddedSignature, MachOError,
+            EmbeddedSignature,
         },
     },
     cryptographic_message_syntax::{CmsError, DigestAlgorithm, SignatureAlgorithm, SignedData},
@@ -51,7 +52,7 @@ pub enum VerificationProblemType {
     IoError(std::io::Error),
     MachOParseError(goblin::error::Error),
     NoMachOSignatureData,
-    MachOSignatureError(MachOError),
+    MachOSignatureError(AppleCodesignError),
     LinkeditNotLastSegment,
     SignatureNotLastLinkeditData,
     NoCryptographicSignature,

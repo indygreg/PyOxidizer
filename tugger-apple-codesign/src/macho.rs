@@ -41,8 +41,8 @@ which allows some access to data within each specific blob type.
 
 use {
     crate::{
-        code_directory::CodeDirectoryBlob,
-        code_requirement::{CodeRequirementError, CodeRequirements},
+        code_directory::CodeDirectoryBlob, code_requirement::CodeRequirements,
+        error::AppleCodesignError,
     },
     goblin::mach::{constants::SEG_LINKEDIT, load_command::CommandVariant, MachO},
     scroll::{IOwrite, Pread},
@@ -306,14 +306,15 @@ fn read_blob_header(data: &[u8]) -> Result<(u32, usize, &[u8]), scroll::Error> {
     Ok((magic, length as usize, &data[8..]))
 }
 
-pub(crate) fn read_and_validate_blob_header(
-    data: &[u8],
+pub(crate) fn read_and_validate_blob_header<'a>(
+    data: &'a [u8],
     expected_magic: u32,
-) -> Result<&[u8], MachOError> {
+    what: &'static str,
+) -> Result<&'a [u8], AppleCodesignError> {
     let (magic, _, data) = read_blob_header(data)?;
 
     if magic != expected_magic {
-        Err(MachOError::BadMagic)
+        Err(AppleCodesignError::BadMagic(what))
     } else {
         Ok(data)
     }
@@ -332,7 +333,7 @@ impl std::fmt::Debug for BlobIndex {
 pub fn create_superblob<'a>(
     magic: CodeSigningMagic,
     blobs: impl Iterator<Item = &'a (CodeSigningSlot, Vec<u8>)>,
-) -> Result<Vec<u8>, MachOError> {
+) -> Result<Vec<u8>, AppleCodesignError> {
     // Makes offset calculation easier.
     let blobs = blobs.collect::<Vec<_>>();
 
@@ -409,14 +410,16 @@ impl<'a> EmbeddedSignature<'a> {
     /// The argument to this function is likely the subset of the
     /// `__LINKEDIT` Mach-O section that the `LC_CODE_SIGNATURE` load instructions
     /// points it.
-    pub fn from_bytes(data: &'a [u8]) -> Result<Self, MachOError> {
+    pub fn from_bytes(data: &'a [u8]) -> Result<Self, AppleCodesignError> {
         let offset = &mut 0;
 
         // Parse the 3 fields from the SuperBlob.
         let magic = data.gread_with::<u32>(offset, scroll::BE)?.into();
 
         if magic != CodeSigningMagic::EmbeddedSignature {
-            return Err(MachOError::BadMagic);
+            return Err(AppleCodesignError::BadMagic(
+                "embedded signature super blob",
+            ));
         }
 
         let length = data.gread_with(offset, scroll::BE)?;
@@ -451,7 +454,7 @@ impl<'a> EmbeddedSignature<'a> {
             // Self-reported length can't be greater than the data we have.
             let blob_data = match blob_length.cmp(&full_slice.len()) {
                 Ordering::Greater => {
-                    return Err(MachOError::Malformed);
+                    return Err(AppleCodesignError::SuperblobMalformed);
                 }
                 Ordering::Equal => full_slice,
                 Ordering::Less => &full_slice[0..blob_length],
@@ -484,7 +487,7 @@ impl<'a> EmbeddedSignature<'a> {
     pub fn find_slot_parsed(
         &self,
         slot: CodeSigningSlot,
-    ) -> Result<Option<ParsedBlob<'_>>, MachOError> {
+    ) -> Result<Option<ParsedBlob<'_>>, AppleCodesignError> {
         if let Some(entry) = self.find_slot(slot) {
             Ok(Some(entry.clone().into_parsed_blob()?))
         } else {
@@ -498,12 +501,12 @@ impl<'a> EmbeddedSignature<'a> {
     /// directory.
     ///
     /// Returns `Ok(None)` if there is no code directory slot.
-    pub fn code_directory(&self) -> Result<Option<Box<CodeDirectoryBlob<'_>>>, MachOError> {
+    pub fn code_directory(&self) -> Result<Option<Box<CodeDirectoryBlob<'_>>>, AppleCodesignError> {
         if let Some(parsed) = self.find_slot_parsed(CodeSigningSlot::CodeDirectory)? {
             if let BlobData::CodeDirectory(cd) = parsed.blob {
                 Ok(Some(cd))
             } else {
-                Err(MachOError::BadMagic)
+                Err(AppleCodesignError::BadMagic("code directory blob"))
             }
         } else {
             Ok(None)
@@ -516,12 +519,12 @@ impl<'a> EmbeddedSignature<'a> {
     /// blob.
     ///
     /// Returns `Ok(None)` if there is no entitlements slot.
-    pub fn entitlements(&self) -> Result<Option<Box<EntitlementsBlob<'_>>>, MachOError> {
+    pub fn entitlements(&self) -> Result<Option<Box<EntitlementsBlob<'_>>>, AppleCodesignError> {
         if let Some(parsed) = self.find_slot_parsed(CodeSigningSlot::Entitlements)? {
             if let BlobData::Entitlements(entitlements) = parsed.blob {
                 Ok(Some(entitlements))
             } else {
-                Err(MachOError::BadMagic)
+                Err(AppleCodesignError::BadMagic("entitlements blob"))
             }
         } else {
             Ok(None)
@@ -534,12 +537,14 @@ impl<'a> EmbeddedSignature<'a> {
     /// blob.
     ///
     /// Returns `Ok(None)` if there is no requirements slot.
-    pub fn code_requirements(&self) -> Result<Option<Box<RequirementSetBlob<'_>>>, MachOError> {
+    pub fn code_requirements(
+        &self,
+    ) -> Result<Option<Box<RequirementSetBlob<'_>>>, AppleCodesignError> {
         if let Some(parsed) = self.find_slot_parsed(CodeSigningSlot::RequirementSet)? {
             if let BlobData::RequirementSet(reqs) = parsed.blob {
                 Ok(Some(reqs))
             } else {
-                Err(MachOError::BadMagic)
+                Err(AppleCodesignError::BadMagic("requirements blob"))
             }
         } else {
             Ok(None)
@@ -550,12 +555,12 @@ impl<'a> EmbeddedSignature<'a> {
     ///
     /// The returned data is likely DER PKCS#7 with the root object
     /// pkcs7-signedData (1.2.840.113549.1.7.2).
-    pub fn signature_data(&self) -> Result<Option<&'_ [u8]>, MachOError> {
+    pub fn signature_data(&self) -> Result<Option<&'_ [u8]>, AppleCodesignError> {
         if let Some(parsed) = self.find_slot_parsed(CodeSigningSlot::Signature)? {
             if let BlobData::BlobWrapper(blob) = parsed.blob {
                 Ok(Some(blob.data))
             } else {
-                Err(MachOError::BadMagic)
+                Err(AppleCodesignError::BadMagic("signature blob"))
             }
         } else {
             Ok(None)
@@ -608,7 +613,7 @@ impl<'a> std::fmt::Debug for BlobEntry<'a> {
 
 impl<'a> BlobEntry<'a> {
     /// Attempt to convert to a [ParsedBlob].
-    pub fn into_parsed_blob(self) -> Result<ParsedBlob<'a>, MachOError> {
+    pub fn into_parsed_blob(self) -> Result<ParsedBlob<'a>, AppleCodesignError> {
         self.try_into()
     }
 
@@ -636,7 +641,7 @@ impl<'a> ParsedBlob<'a> {
 }
 
 impl<'a> TryFrom<BlobEntry<'a>> for ParsedBlob<'a> {
-    type Error = MachOError;
+    type Error = AppleCodesignError;
 
     fn try_from(blob_entry: BlobEntry<'a>) -> Result<Self, Self::Error> {
         let blob = BlobData::from_blob_bytes(blob_entry.data)?;
@@ -657,18 +662,18 @@ where
     ///
     /// The slice begins with the 8 byte blob header denoting the magic
     /// and length.
-    fn from_blob_bytes(data: &'a [u8]) -> Result<Self, MachOError>;
+    fn from_blob_bytes(data: &'a [u8]) -> Result<Self, AppleCodesignError>;
 
     /// Serialize the payload of this blob to bytes.
     ///
     /// Does not include the magic or length header fields common to blobs.
-    fn serialize_payload(&self) -> Result<Vec<u8>, MachOError>;
+    fn serialize_payload(&self) -> Result<Vec<u8>, AppleCodesignError>;
 
     /// Serialize this blob to bytes.
     ///
     /// This is [Blob::serialize_payload] with the blob magic and length
     /// prepended.
-    fn to_blob_bytes(&self) -> Result<Vec<u8>, MachOError> {
+    fn to_blob_bytes(&self) -> Result<Vec<u8>, AppleCodesignError> {
         let mut res = Vec::new();
         res.iowrite_with(Self::magic(), scroll::BE)?;
 
@@ -685,7 +690,7 @@ where
     ///
     /// Default implementation calls [Blob::to_blob_bytes] and digests that, which
     /// should always be correct.
-    fn digest_with(&self, hash_type: DigestType) -> Result<Vec<u8>, MachOError> {
+    fn digest_with(&self, hash_type: DigestType) -> Result<Vec<u8>, AppleCodesignError> {
         Ok(hash_type.digest(&self.to_blob_bytes()?)?)
     }
 }
@@ -712,7 +717,7 @@ impl<'a> Blob<'a> for BlobData<'a> {
     }
 
     /// Parse blob data by reading its magic and feeding into magic-specific parser.
-    fn from_blob_bytes(data: &'a [u8]) -> Result<Self, MachOError> {
+    fn from_blob_bytes(data: &'a [u8]) -> Result<Self, AppleCodesignError> {
         let (magic, length, _) = read_blob_header(data)?;
 
         // This should be a no-op. But it could (correctly) cause a panic if the
@@ -750,7 +755,7 @@ impl<'a> Blob<'a> for BlobData<'a> {
         })
     }
 
-    fn serialize_payload(&self) -> Result<Vec<u8>, MachOError> {
+    fn serialize_payload(&self) -> Result<Vec<u8>, AppleCodesignError> {
         match self {
             Self::Requirement(b) => b.serialize_payload(),
             Self::RequirementSet(b) => b.serialize_payload(),
@@ -764,7 +769,7 @@ impl<'a> Blob<'a> for BlobData<'a> {
         }
     }
 
-    fn to_blob_bytes(&self) -> Result<Vec<u8>, MachOError> {
+    fn to_blob_bytes(&self) -> Result<Vec<u8>, AppleCodesignError> {
         match self {
             Self::Requirement(b) => b.to_blob_bytes(),
             Self::RequirementSet(b) => b.to_blob_bytes(),
@@ -792,13 +797,13 @@ impl<'a> Blob<'a> for RequirementBlob<'a> {
         u32::from(CodeSigningMagic::Requirement)
     }
 
-    fn from_blob_bytes(data: &'a [u8]) -> Result<Self, MachOError> {
-        let data = read_and_validate_blob_header(data, Self::magic())?;
+    fn from_blob_bytes(data: &'a [u8]) -> Result<Self, AppleCodesignError> {
+        let data = read_and_validate_blob_header(data, Self::magic(), "requirement blob")?;
 
         Ok(Self { data: data.into() })
     }
 
-    fn serialize_payload(&self) -> Result<Vec<u8>, MachOError> {
+    fn serialize_payload(&self) -> Result<Vec<u8>, AppleCodesignError> {
         Ok(self.data.to_vec())
     }
 }
@@ -817,7 +822,7 @@ impl<'a> RequirementBlob<'a> {
     }
 
     /// Parse the binary data in this blob into Code Requirement expressions.
-    pub fn parse_expressions(&self) -> Result<CodeRequirements, MachOError> {
+    pub fn parse_expressions(&self) -> Result<CodeRequirements, AppleCodesignError> {
         Ok(CodeRequirements::parse_binary(&self.data)?.0)
     }
 }
@@ -835,8 +840,8 @@ impl<'a> Blob<'a> for RequirementSetBlob<'a> {
         u32::from(CodeSigningMagic::RequirementSet)
     }
 
-    fn from_blob_bytes(data: &'a [u8]) -> Result<Self, MachOError> {
-        read_and_validate_blob_header(data, Self::magic())?;
+    fn from_blob_bytes(data: &'a [u8]) -> Result<Self, AppleCodesignError> {
+        read_and_validate_blob_header(data, Self::magic(), "requirement set blob")?;
 
         // There are other blobs nested within. A u32 denotes how many there are.
         // Then there is an array of N (u32, u32) denoting the type and
@@ -871,7 +876,7 @@ impl<'a> Blob<'a> for RequirementSetBlob<'a> {
         Ok(Self { requirements })
     }
 
-    fn serialize_payload(&self) -> Result<Vec<u8>, MachOError> {
+    fn serialize_payload(&self) -> Result<Vec<u8>, AppleCodesignError> {
         let mut res = Vec::new();
 
         // The index contains blob relative offsets. To know what the start offset will
@@ -1064,13 +1069,13 @@ impl<'a> Blob<'a> for EmbeddedSignatureBlob<'a> {
         u32::from(CodeSigningMagic::EmbeddedSignature)
     }
 
-    fn from_blob_bytes(data: &'a [u8]) -> Result<Self, MachOError> {
+    fn from_blob_bytes(data: &'a [u8]) -> Result<Self, AppleCodesignError> {
         Ok(Self {
-            data: read_and_validate_blob_header(data, Self::magic())?,
+            data: read_and_validate_blob_header(data, Self::magic(), "embedded signature blob")?,
         })
     }
 
-    fn serialize_payload(&self) -> Result<Vec<u8>, MachOError> {
+    fn serialize_payload(&self) -> Result<Vec<u8>, AppleCodesignError> {
         Ok(self.data.to_vec())
     }
 }
@@ -1086,13 +1091,17 @@ impl<'a> Blob<'a> for EmbeddedSignatureOldBlob<'a> {
         u32::from(CodeSigningMagic::EmbeddedSignatureOld)
     }
 
-    fn from_blob_bytes(data: &'a [u8]) -> Result<Self, MachOError> {
+    fn from_blob_bytes(data: &'a [u8]) -> Result<Self, AppleCodesignError> {
         Ok(Self {
-            data: read_and_validate_blob_header(data, Self::magic())?,
+            data: read_and_validate_blob_header(
+                data,
+                Self::magic(),
+                "old embedded signature blob",
+            )?,
         })
     }
 
-    fn serialize_payload(&self) -> Result<Vec<u8>, MachOError> {
+    fn serialize_payload(&self) -> Result<Vec<u8>, AppleCodesignError> {
         Ok(self.data.to_vec())
     }
 }
@@ -1112,14 +1121,14 @@ impl<'a> Blob<'a> for EntitlementsBlob<'a> {
         u32::from(CodeSigningMagic::Entitlements)
     }
 
-    fn from_blob_bytes(data: &'a [u8]) -> Result<Self, MachOError> {
-        let data = read_and_validate_blob_header(data, Self::magic())?;
-        let s = std::str::from_utf8(data)?;
+    fn from_blob_bytes(data: &'a [u8]) -> Result<Self, AppleCodesignError> {
+        let data = read_and_validate_blob_header(data, Self::magic(), "entitlements blob")?;
+        let s = std::str::from_utf8(data).map_err(AppleCodesignError::EntitlementsBadUtf8)?;
 
         Ok(Self { plist: s.into() })
     }
 
-    fn serialize_payload(&self) -> Result<Vec<u8>, MachOError> {
+    fn serialize_payload(&self) -> Result<Vec<u8>, AppleCodesignError> {
         Ok(self.plist.as_bytes().to_vec())
     }
 }
@@ -1150,13 +1159,13 @@ impl<'a> Blob<'a> for DetachedSignatureBlob<'a> {
         u32::from(CodeSigningMagic::DetachedSignature)
     }
 
-    fn from_blob_bytes(data: &'a [u8]) -> Result<Self, MachOError> {
+    fn from_blob_bytes(data: &'a [u8]) -> Result<Self, AppleCodesignError> {
         Ok(Self {
-            data: read_and_validate_blob_header(data, Self::magic())?,
+            data: read_and_validate_blob_header(data, Self::magic(), "detached signature blob")?,
         })
     }
 
-    fn serialize_payload(&self) -> Result<Vec<u8>, MachOError> {
+    fn serialize_payload(&self) -> Result<Vec<u8>, AppleCodesignError> {
         Ok(self.data.to_vec())
     }
 }
@@ -1171,13 +1180,13 @@ impl<'a> Blob<'a> for BlobWrapperBlob<'a> {
         u32::from(CodeSigningMagic::BlobWrapper)
     }
 
-    fn from_blob_bytes(data: &'a [u8]) -> Result<Self, MachOError> {
+    fn from_blob_bytes(data: &'a [u8]) -> Result<Self, AppleCodesignError> {
         Ok(Self {
-            data: read_and_validate_blob_header(data, Self::magic())?,
+            data: read_and_validate_blob_header(data, Self::magic(), "blob wrapper blob")?,
         })
     }
 
-    fn serialize_payload(&self) -> Result<Vec<u8>, MachOError> {
+    fn serialize_payload(&self) -> Result<Vec<u8>, AppleCodesignError> {
         Ok(self.data.to_vec())
     }
 }
@@ -1207,18 +1216,18 @@ impl<'a> Blob<'a> for OtherBlob<'a> {
         u32::MAX
     }
 
-    fn from_blob_bytes(data: &'a [u8]) -> Result<Self, MachOError> {
+    fn from_blob_bytes(data: &'a [u8]) -> Result<Self, AppleCodesignError> {
         let (magic, _, data) = read_blob_header(data)?;
 
         Ok(Self { magic, data })
     }
 
-    fn serialize_payload(&self) -> Result<Vec<u8>, MachOError> {
+    fn serialize_payload(&self) -> Result<Vec<u8>, AppleCodesignError> {
         Ok(self.data.to_vec())
     }
 
     // We need to implement this for custom magic serialization.
-    fn to_blob_bytes(&self) -> Result<Vec<u8>, MachOError> {
+    fn to_blob_bytes(&self) -> Result<Vec<u8>, AppleCodesignError> {
         let mut res = Vec::with_capacity(self.data.len() + 8);
         res.iowrite_with(self.magic, scroll::BE)?;
         res.iowrite_with(self.data.len() as u32 + 8, scroll::BE)?;
@@ -1244,78 +1253,6 @@ pub struct Scatter {
     target_offset: u64,
     /// Reserved.
     spare: u64,
-}
-
-#[derive(Debug)]
-pub enum MachOError {
-    MissingLinkedit,
-    BadMagic,
-    ScrollError(scroll::Error),
-    Utf8Error(std::str::Utf8Error),
-    BadIdentifierString,
-    BadTeamString,
-    Digest(DigestError),
-    Io(std::io::Error),
-    Unimplemented,
-    Malformed,
-    CodeRequirement(CodeRequirementError),
-    UnknownCodeSignatureFlag(String),
-}
-
-impl std::fmt::Display for MachOError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::MissingLinkedit => f.write_fmt(format_args!(
-                "unable to locate {} segment despite load command reference",
-                SEG_LINKEDIT,
-            )),
-            Self::BadMagic => f.write_str("bad magic value in SuperBlob header"),
-            Self::ScrollError(e) => e.fmt(f),
-            Self::Utf8Error(e) => e.fmt(f),
-            Self::BadIdentifierString => f.write_str("identifier string isn't null terminated"),
-            Self::BadTeamString => f.write_str("team name string isn't null terminated"),
-            Self::Digest(e) => f.write_fmt(format_args!("digest error: {}", e)),
-            Self::Io(e) => f.write_fmt(format_args!("I/O error: {}", e)),
-            Self::Unimplemented => f.write_str("functionality not implemented"),
-            Self::Malformed => f.write_str("data is malformed"),
-            Self::CodeRequirement(e) => f.write_fmt(format_args!("code requirements error: {}", e)),
-            Self::UnknownCodeSignatureFlag(s) => {
-                f.write_fmt(format_args!("unknown code signature flag: {}", s))
-            }
-        }
-    }
-}
-
-impl std::error::Error for MachOError {}
-
-impl From<scroll::Error> for MachOError {
-    fn from(e: scroll::Error) -> Self {
-        Self::ScrollError(e)
-    }
-}
-
-impl From<std::str::Utf8Error> for MachOError {
-    fn from(e: std::str::Utf8Error) -> Self {
-        Self::Utf8Error(e)
-    }
-}
-
-impl From<DigestError> for MachOError {
-    fn from(e: DigestError) -> Self {
-        Self::Digest(e)
-    }
-}
-
-impl From<CodeRequirementError> for MachOError {
-    fn from(e: CodeRequirementError) -> Self {
-        Self::CodeRequirement(e)
-    }
-}
-
-impl From<std::io::Error> for MachOError {
-    fn from(e: std::io::Error) -> Self {
-        Self::Io(e)
-    }
 }
 
 /// Describes signature data embedded within a Mach-O binary.
@@ -1360,7 +1297,7 @@ pub struct MachOSignatureData<'a> {
 /// use a function that parses referenced data.
 pub fn find_signature_data<'a>(
     obj: &'a MachO,
-) -> Result<Option<MachOSignatureData<'a>>, MachOError> {
+) -> Result<Option<MachOSignatureData<'a>>, AppleCodesignError> {
     if let Some(linkedit_data_command) = obj.load_commands.iter().find_map(|load_command| {
         if let CommandVariant::CodeSignature(command) = &load_command.command {
             Some(command)
@@ -1380,7 +1317,7 @@ pub fn find_signature_data<'a>(
                     false
                 }
             })
-            .ok_or(MachOError::MissingLinkedit)?;
+            .ok_or(AppleCodesignError::MissingLinkedit)?;
 
         let linkedit_segment_start_offset = linkedit.fileoff as usize;
         let linkedit_segment_end_offset = linkedit_segment_start_offset + linkedit.data.len();
@@ -1417,13 +1354,13 @@ pub fn find_signature_data<'a>(
 ///
 /// Only a high-level parse of the super blob and its blob indices is performed:
 /// the parser does not look inside individual blob payloads.
-pub fn parse_signature_data(data: &[u8]) -> Result<EmbeddedSignature<'_>, MachOError> {
+pub fn parse_signature_data(data: &[u8]) -> Result<EmbeddedSignature<'_>, AppleCodesignError> {
     let magic: u32 = data.pread_with(0, scroll::BE)?;
 
     if magic == u32::from(CodeSigningMagic::EmbeddedSignature) {
         EmbeddedSignature::from_bytes(data)
     } else {
-        Err(MachOError::BadMagic)
+        Err(AppleCodesignError::BadMagic("embedded signature superblob"))
     }
 }
 

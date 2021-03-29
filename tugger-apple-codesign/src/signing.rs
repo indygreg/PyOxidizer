@@ -11,10 +11,11 @@ use {
         code_directory::{CodeDirectoryBlob, CodeSignatureFlags, ExecutableSegmentFlags},
         code_hash::compute_code_hashes,
         code_requirement::{CodeRequirementError, CodeRequirements},
+        error::AppleCodesignError,
         macho::{
             create_superblob, find_signature_data, Blob, BlobWrapperBlob, CodeSigningMagic,
             CodeSigningSlot, Digest, DigestError, DigestType, EmbeddedSignature, EntitlementsBlob,
-            MachOError, RequirementBlob, RequirementSetBlob, RequirementType,
+            RequirementBlob, RequirementSetBlob, RequirementType,
         },
     },
     bytes::Bytes,
@@ -45,7 +46,7 @@ pub enum NotSignableError {
     BinaryParse(goblin::error::Error),
 
     /// Cannot sign due to an internal error dealing with Mach-O internals.
-    MachOError(MachOError),
+    AppleCodesignError(Box<AppleCodesignError>),
 
     /// Cannot sign because an existing embedded signature wasn't found.
     NoSignatureData,
@@ -61,8 +62,8 @@ impl std::fmt::Display for NotSignableError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::BinaryParse(e) => f.write_fmt(format_args!("error loading Mach-O binary: {}", e)),
-            Self::MachOError(e) => {
-                f.write_fmt(format_args!("error parsing Mach-O signature data: {}", e))
+            Self::AppleCodesignError(e) => {
+                f.write_fmt(format_args!("error parsing Mach-O signature data: {:?}", e))
             }
             Self::NoSignatureData => f.write_str("no existing embedded signature"),
             Self::LinkeditNotLast => f.write_str("__LINKEDIT isn't the final Mach-O segment"),
@@ -94,7 +95,9 @@ impl From<goblin::error::Error> for NotSignableError {
 /// signature containing just the code directory (without a cryptographically
 /// signed signature), so this limitation hopefully isn't impactful.
 pub fn check_signing_capability(macho: &MachO) -> Result<(), NotSignableError> {
-    match find_signature_data(macho).map_err(NotSignableError::MachOError)? {
+    match find_signature_data(macho)
+        .map_err(|e| NotSignableError::AppleCodesignError(Box::new(e)))?
+    {
         Some(signature) => {
             // __LINKEDIT needs to be the final segment so we don't have to rewrite
             // offsets.
@@ -120,13 +123,13 @@ pub enum SigningError {
     /// We do not support signing this binary.
     NotSignable,
     /// General error related to Mach-O parsing.
-    MachO(MachOError),
+    MachO(Box<AppleCodesignError>),
     /// An error occurred when decoding a certificate from BER/DER.
     CertificateDecode(bcder::decode::Error),
     /// An error when parsing a PEM encoded certificate.
     CertificatePem(pem::PemError),
     /// An error occurred when attempting to encode blob data.
-    BlobEncode(MachOError),
+    BlobEncode(Box<AppleCodesignError>),
     /// An error occurred when digesting data.
     Digest(DigestError),
     /// An error occurred related to plist handling.
@@ -157,12 +160,12 @@ impl std::fmt::Display for SigningError {
                 e
             )),
             Self::NotSignable => f.write_str("file is not signable"),
-            Self::MachO(e) => f.write_fmt(format_args!("Mach-O error: {}", e)),
+            Self::MachO(e) => f.write_fmt(format_args!("Mach-O error: {:?}", e)),
             Self::CertificateDecode(e) => {
                 f.write_fmt(format_args!("certificate decode error: {}", e))
             }
             Self::CertificatePem(e) => f.write_fmt(format_args!("pem error: {}", e)),
-            Self::BlobEncode(e) => f.write_fmt(format_args!("blob encoding error: {}", e)),
+            Self::BlobEncode(e) => f.write_fmt(format_args!("blob encoding error: {:?}", e)),
             Self::Digest(e) => f.write_fmt(format_args!("digest error: {}", e)),
             Self::Plist(e) => f.write_fmt(format_args!("plist error: {}", e)),
             Self::Cms(e) => f.write_fmt(format_args!("CMS error: {}", e)),
@@ -244,7 +247,9 @@ pub fn create_code_directory_hashes_plist<'a>(
 ) -> Result<Vec<u8>, SigningError> {
     let hashes = code_directories
         .map(|cd| {
-            let blob_data = cd.to_blob_bytes().map_err(SigningError::MachO)?;
+            let blob_data = cd
+                .to_blob_bytes()
+                .map_err(|e| SigningError::MachO(Box::new(e)))?;
 
             let digest = digest_type.digest(&blob_data)?;
 
@@ -268,7 +273,7 @@ fn create_macho_with_signature(
     signature_data: &[u8],
 ) -> Result<Vec<u8>, SigningError> {
     let existing_signature = find_signature_data(macho)
-        .map_err(SigningError::MachO)?
+        .map_err(|e| SigningError::MachO(Box::new(e)))?
         .ok_or(SigningError::NotSignable)?;
 
     // This should have already been called. But we do it again out of paranoia.
@@ -459,7 +464,7 @@ impl<'data, 'key> MachOSigner<'data, 'key> {
     }
 
     /// See [MachOSignatureBuilder::load_existing_signature_context].
-    pub fn load_existing_signature_context(&mut self) -> Result<(), MachOError> {
+    pub fn load_existing_signature_context(&mut self) -> Result<(), AppleCodesignError> {
         let machos = &self.machos;
 
         self.signature_builders = self
@@ -785,7 +790,10 @@ impl<'key> MachOSignatureBuilder<'key> {
     /// settings should be carried forward.
     ///
     /// If the binary has no signature data, this function does nothing.
-    pub fn load_existing_signature_context(mut self, macho: &MachO) -> Result<Self, MachOError> {
+    pub fn load_existing_signature_context(
+        mut self,
+        macho: &MachO,
+    ) -> Result<Self, AppleCodesignError> {
         if let Some(signature) = find_signature_data(macho)? {
             let signature = EmbeddedSignature::from_bytes(signature.signature_data)?;
 
@@ -958,7 +966,7 @@ impl<'key> MachOSignatureBuilder<'key> {
             CodeSigningSlot::CodeDirectory,
             code_directory
                 .to_blob_bytes()
-                .map_err(SigningError::MachO)?,
+                .map_err(|e| SigningError::MachO(Box::new(e)))?,
         )];
         blobs.extend(self.create_special_blobs()?);
 
@@ -968,12 +976,12 @@ impl<'key> MachOSignatureBuilder<'key> {
                 CodeSigningSlot::Signature,
                 BlobWrapperBlob::from_data(&self.create_cms_signature(&code_directory)?)
                     .to_blob_bytes()
-                    .map_err(SigningError::MachO)?,
+                    .map_err(|e| SigningError::MachO(Box::new(e)))?,
             ));
         }
 
         create_superblob(CodeSigningMagic::EmbeddedSignature, blobs.iter())
-            .map_err(SigningError::MachO)
+            .map_err(|e| SigningError::MachO(Box::new(e)))
     }
 
     /// Create a CMS `SignedData` structure containing a cryptographic signature.
@@ -998,7 +1006,7 @@ impl<'key> MachOSignatureBuilder<'key> {
         // the message digest using alternate data.
         let code_directory_raw = code_directory
             .to_blob_bytes()
-            .map_err(SigningError::MachO)?;
+            .map_err(|e| SigningError::MachO(Box::new(e)))?;
 
         // We need an XML plist containing code directory hashes to include as a signed
         // attribute.
@@ -1051,7 +1059,7 @@ impl<'key> MachOSignatureBuilder<'key> {
         // is the file offset in the `__LINKEDIT` segment when the embedded signature
         // SuperBlob begins.
         let (code_limit, code_limit_64) =
-            match find_signature_data(macho).map_err(SigningError::MachO)? {
+            match find_signature_data(macho).map_err(|e| SigningError::MachO(Box::new(e)))? {
                 Some(sig) => {
                     // If binary already has signature data, take existing signature start offset.
                     let limit = sig.linkedit_signature_start_offset;
@@ -1172,7 +1180,7 @@ impl<'key> MachOSignatureBuilder<'key> {
                 CodeSigningSlot::RequirementSet,
                 requirements
                     .to_blob_bytes()
-                    .map_err(SigningError::BlobEncode)?,
+                    .map_err(|e| SigningError::BlobEncode(Box::new(e)))?,
             ));
         }
 
@@ -1181,7 +1189,7 @@ impl<'key> MachOSignatureBuilder<'key> {
                 CodeSigningSlot::Entitlements,
                 entitlements
                     .to_blob_bytes()
-                    .map_err(SigningError::BlobEncode)?,
+                    .map_err(|e| SigningError::BlobEncode(Box::new(e)))?,
             ));
         }
 

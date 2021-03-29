@@ -5,9 +5,12 @@
 //! Code directory data structure and related types.
 
 use {
-    crate::macho::{
-        read_and_validate_blob_header, Blob, CodeSigningMagic, CodeSigningSlot, Digest, DigestType,
-        MachOError,
+    crate::{
+        error::AppleCodesignError,
+        macho::{
+            read_and_validate_blob_header, Blob, CodeSigningMagic, CodeSigningSlot, Digest,
+            DigestType,
+        },
     },
     scroll::{IOwrite, Pread},
     std::{borrow::Cow, collections::HashMap, io::Write, str::FromStr},
@@ -45,7 +48,7 @@ bitflags::bitflags! {
 }
 
 impl FromStr for CodeSignatureFlags {
-    type Err = MachOError;
+    type Err = AppleCodesignError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
@@ -56,14 +59,14 @@ impl FromStr for CodeSignatureFlags {
             "library" => Ok(Self::LIBRARY_VALIDATION),
             "runtime" => Ok(Self::RUNTIME),
             "linker-signed" => Ok(Self::LINKER_SIGNED),
-            _ => Err(MachOError::UnknownCodeSignatureFlag(s.to_string())),
+            _ => Err(AppleCodesignError::CodeSignatureUnknownFlag(s.to_string())),
         }
     }
 }
 
 impl CodeSignatureFlags {
     /// Attempt to convert a series of strings into a [CodeSignatureFlags].
-    pub fn from_strs(s: &[&str]) -> Result<CodeSignatureFlags, MachOError> {
+    pub fn from_strs(s: &[&str]) -> Result<CodeSignatureFlags, AppleCodesignError> {
         let mut flags = CodeSignatureFlags::empty();
 
         for s in s {
@@ -185,8 +188,8 @@ impl<'a> Blob<'a> for CodeDirectoryBlob<'a> {
         u32::from(CodeSigningMagic::CodeDirectory)
     }
 
-    fn from_blob_bytes(data: &'a [u8]) -> Result<Self, MachOError> {
-        read_and_validate_blob_header(data, Self::magic())?;
+    fn from_blob_bytes(data: &'a [u8]) -> Result<Self, AppleCodesignError> {
+        read_and_validate_blob_header(data, Self::magic(), "code directory blob")?;
 
         let offset = &mut 8;
 
@@ -290,9 +293,11 @@ impl<'a> Blob<'a> for CodeDirectoryBlob<'a> {
             .map(std::str::from_utf8)
             .next()
         {
-            Some(res) => Cow::from(res?),
+            Some(res) => {
+                Cow::from(res.map_err(|_| AppleCodesignError::CodeDirectoryMalformedIdentifier)?)
+            }
             None => {
-                return Err(MachOError::BadIdentifierString);
+                return Err(AppleCodesignError::CodeDirectoryMalformedIdentifier);
             }
         };
 
@@ -302,9 +307,13 @@ impl<'a> Blob<'a> for CodeDirectoryBlob<'a> {
                 .map(std::str::from_utf8)
                 .next()
             {
-                Some(res) => Some(Cow::from(res?)),
+                Some(res) => {
+                    Some(Cow::from(res.map_err(|_| {
+                        AppleCodesignError::CodeDirectoryMalformedTeam
+                    })?))
+                }
                 None => {
-                    return Err(MachOError::BadTeamString);
+                    return Err(AppleCodesignError::CodeDirectoryMalformedTeam);
                 }
             }
         } else {
@@ -358,7 +367,7 @@ impl<'a> Blob<'a> for CodeDirectoryBlob<'a> {
         })
     }
 
-    fn serialize_payload(&self) -> Result<Vec<u8>, MachOError> {
+    fn serialize_payload(&self) -> Result<Vec<u8>, AppleCodesignError> {
         let mut cursor = std::io::Cursor::new(Vec::<u8>::new());
 
         // We need to do this in 2 phases because we don't know the length until
@@ -494,7 +503,7 @@ impl<'a> Blob<'a> for CodeDirectoryBlob<'a> {
         cursor.iowrite_with(identity_offset as u32 + 8, scroll::BE)?;
 
         if scatter_offset_cursor_position.is_some() && self.scatter_offset.is_some() {
-            return Err(MachOError::Unimplemented);
+            return Err(AppleCodesignError::Unimplemented("scatter offset"));
         }
 
         if let Some(offset) = team_offset_cursor_position {

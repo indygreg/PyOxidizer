@@ -22,9 +22,6 @@ pub enum AppleCodesignError {
     #[error("binary parsing error: {0}")]
     Goblin(#[from] goblin::error::Error),
 
-    #[error("Mach-O parsing error: {0}")]
-    MachO(#[from] crate::macho::MachOError),
-
     #[error("binary does not have code signature data")]
     BinaryNoCodeSignature,
 
@@ -57,4 +54,31 @@ pub enum AppleCodesignError {
 
     #[error("bad string value in certificate: {0:?}")]
     CertificateCharset(bcder::string::CharSetError),
+
+    #[error("unable to locate __LINKEDIT segment")]
+    MissingLinkedit,
+
+    #[error("bad header magic in {0}")]
+    BadMagic(&'static str),
+
+    #[error("data structure parse error: {0}")]
+    Scroll(#[from] scroll::Error),
+
+    #[error("malformed identifier string in code directory")]
+    CodeDirectoryMalformedIdentifier,
+
+    #[error("malformed team name string in code directory")]
+    CodeDirectoryMalformedTeam,
+
+    #[error("SuperBlob data is malformed")]
+    SuperblobMalformed,
+
+    #[error("functionality not implemented: {0}")]
+    Unimplemented(&'static str),
+
+    #[error("unknown code signature flag: {0}")]
+    CodeSignatureUnknownFlag(String),
+
+    #[error("entitlements data not valid UTF-8: {0}")]
+    EntitlementsBadUtf8(std::str::Utf8Error),
 }
