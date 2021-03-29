@@ -864,7 +864,7 @@ impl<'key> MachOSignatureBuilder<'key> {
 
     /// Add a [CodeSignatureFlags] to the set of active flags.
     pub fn add_code_signature_flags(mut self, flags: CodeSignatureFlags) -> Self {
-        let existing = self.cdflags.unwrap_or_else(|| CodeSignatureFlags::empty());
+        let existing = self.cdflags.unwrap_or_else(CodeSignatureFlags::empty);
         self.cdflags = Some(existing | flags);
 
         self
@@ -872,7 +872,7 @@ impl<'key> MachOSignatureBuilder<'key> {
 
     /// Remove a [CodeSignatureFlags] from the set of active flags.
     pub fn remove_code_signature_flags(mut self, flags: CodeSignatureFlags) -> Self {
-        let existing = self.cdflags.unwrap_or_else(|| CodeSignatureFlags::empty());
+        let existing = self.cdflags.unwrap_or_else(CodeSignatureFlags::empty);
         self.cdflags = Some(existing - flags);
 
         self
