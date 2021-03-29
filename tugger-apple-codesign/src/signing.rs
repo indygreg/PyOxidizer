@@ -1039,7 +1039,13 @@ impl<'key> MachOSignatureBuilder<'key> {
     ) -> Result<CodeDirectoryBlob<'static>, SigningError> {
         // TODO support defining or filling in proper values for fields with
         // static values.
-        let flags = self.cdflags.unwrap_or(CodeSignatureFlags::empty());
+
+        let mut flags = self.cdflags.unwrap_or_else(CodeSignatureFlags::empty);
+
+        // The adhoc flag is set when there is no CMS signature.
+        if self.signing_key.is_none() {
+            flags |= CodeSignatureFlags::ADHOC;
+        }
 
         // Code limit fields hold the file offset at which code digests stop. This
         // is the file offset in the `__LINKEDIT` segment when the embedded signature
