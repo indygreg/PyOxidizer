@@ -327,7 +327,11 @@ impl<'a> DirectoryBundleFile<'a> {
     /// Whether this is the main executable for the bundle.
     pub fn is_main_executable(&self) -> Result<bool> {
         if let Some(main) = self.bundle.main_executable()? {
-            Ok(self.absolute_path == self.bundle.resolve_path(main))
+            if self.bundle.shallow() {
+                Ok(self.absolute_path == self.bundle.resolve_path(main))
+            } else {
+                Ok(self.absolute_path == self.bundle.resolve_path(format!("MacOS/{}", main)))
+            }
         } else {
             Ok(false)
         }
