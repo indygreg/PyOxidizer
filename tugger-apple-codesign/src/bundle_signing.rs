@@ -381,7 +381,11 @@ impl SingleBundleSigner {
 
         // The resources are now sealed. Write out that XML file.
         let code_resources_path = dest_dir.join("_CodeSignature").join("CodeResources");
-        warn!(&log, "writing {}", code_resources_path.display());
+        warn!(
+            &log,
+            "writing sealed resources to {}",
+            code_resources_path.display()
+        );
         std::fs::create_dir_all(code_resources_path.parent().unwrap())?;
         {
             let mut fh = std::fs::File::create(&code_resources_path)?;
