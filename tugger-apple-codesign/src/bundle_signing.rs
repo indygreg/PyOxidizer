@@ -205,6 +205,11 @@ impl BundleFileHandler for SingleBundleHandler {
 
         // Read permissions first in case we overwrite the original file.
         let permissions = std::fs::metadata(file.absolute_path())?.permissions();
+        std::fs::create_dir_all(
+            dest_path
+                .parent()
+                .expect("parent directory should be available"),
+        )?;
         {
             let mut fh = std::fs::File::create(&dest_path)?;
             fh.write_all(&new_data)?;
@@ -299,37 +304,24 @@ impl SingleBundleSigner {
             dest_dir.join("Contents")
         };
 
-        let identifier = self
-            .bundle
+        self.bundle
             .identifier()
             .map_err(AppleCodesignError::DirectoryBundle)?
             .ok_or_else(|| AppleCodesignError::BundleNoIdentifier(self.bundle.info_plist_path()))?;
 
-        let main_executable = self
-            .bundle
-            .main_executable()
-            .map_err(AppleCodesignError::DirectoryBundle)?
-            .ok_or_else(|| {
-                AppleCodesignError::BundleNoMainExecutable(self.bundle.info_plist_path())
-            })?;
-
         warn!(&log, "collecting code resources files");
         let mut resources_builder = CodeResourcesBuilder::default_resources_rules()?;
-        // Exclude main executable from signing, as it is special.
-        resources_builder.add_exclusion_rule(
-            CodeResourcesRule::new(format!("^{}$", main_executable))?.exclude(),
-        );
-        resources_builder.add_exclusion_rule(
-            CodeResourcesRule::new(format!("^MacOS/{}$", main_executable))?.exclude(),
-        );
         // Exclude code signature files we'll write.
         resources_builder.add_exclusion_rule(CodeResourcesRule::new("^_CodeSignature/")?.exclude());
         // Ignore notarization ticket.
         resources_builder.add_exclusion_rule(CodeResourcesRule::new("^CodeResources$")?.exclude());
 
         let handler = SingleBundleHandler {
-            dest_dir: dest_dir_root,
+            dest_dir: dest_dir_root.clone(),
         };
+
+        let mut main_exe = None;
+        let mut info_plist_data = None;
 
         // Iterate files in this bundle and register as code resources.
         //
@@ -339,7 +331,19 @@ impl SingleBundleSigner {
             .files(false)
             .map_err(AppleCodesignError::DirectoryBundle)?
         {
-            resources_builder.process_file(log, &file, &handler)?;
+            // The main executable is special and handled below.
+            if file
+                .is_main_executable()
+                .map_err(AppleCodesignError::DirectoryBundle)?
+            {
+                main_exe = Some(file);
+            // The Info.plist is digested specially.
+            } else if file.is_info_plist() {
+                handler.install_file(log, &file)?;
+                info_plist_data = Some(std::fs::read(file.absolute_path())?);
+            } else {
+                resources_builder.process_file(log, &file, &handler)?;
+            }
         }
 
         // The resources are now sealed. Write out that XML file.
@@ -350,9 +354,49 @@ impl SingleBundleSigner {
             code_resources_path.display()
         );
         std::fs::create_dir_all(code_resources_path.parent().unwrap())?;
+        let mut resources_data = Vec::<u8>::new();
+        resources_builder.write_code_resources(&mut resources_data)?;
+
         {
             let mut fh = std::fs::File::create(&code_resources_path)?;
-            resources_builder.write_code_resources(&mut fh)?;
+            fh.write_all(&resources_data)?;
+        }
+
+        // Seal the main executable.
+        if let Some(exe) = main_exe {
+            warn!(
+                log,
+                "signing main executable {}",
+                exe.relative_path().display()
+            );
+
+            let macho_data = std::fs::read(exe.absolute_path())?;
+            let mut signer = MachOSigner::new(&macho_data)?;
+
+            signer.load_existing_signature_context()?;
+
+            signer.code_resources_data(&resources_data)?;
+
+            if let Some(info_plist_data) = info_plist_data {
+                signer.info_plist_data(&info_plist_data)?;
+            }
+
+            let mut new_data = Vec::<u8>::with_capacity(macho_data.len() + 2_usize.pow(17));
+            signer.write_signed_binary(&mut new_data)?;
+
+            let dest_path = dest_dir_root.join(exe.relative_path());
+
+            let permissions = std::fs::metadata(exe.absolute_path())?.permissions();
+            std::fs::create_dir_all(
+                dest_path
+                    .parent()
+                    .expect("parent directory should be available"),
+            )?;
+            {
+                let mut fh = std::fs::File::create(&dest_path)?;
+                fh.write_all(&new_data)?;
+            }
+            std::fs::set_permissions(&dest_path, permissions)?;
         }
 
         Ok(())
