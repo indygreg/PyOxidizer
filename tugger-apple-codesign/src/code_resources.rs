@@ -24,7 +24,9 @@ use {
     },
     goblin::mach::{Mach, MachO},
     plist::{Dictionary, Value},
+    slog::{debug, info, Logger},
     std::{cmp::Ordering, collections::HashMap, convert::TryFrom, io::Write},
+    tugger_apple_bundle::DirectoryBundleFile,
 };
 
 #[derive(Clone, PartialEq)]
@@ -475,7 +477,7 @@ impl From<&Rules2Value> for Value {
 ///
 /// This type represents both `<rules>` and `<rules2>` entries. It contains a
 /// superset of all fields for these entries.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug)]
 pub struct CodeResourcesRule {
     /// The rule pattern.
     ///
@@ -494,7 +496,22 @@ pub struct CodeResourcesRule {
 
     /// Weighting to apply to the rule.
     pub weight: Option<u32>,
+
+    re: regex::Regex,
 }
+
+impl PartialEq for CodeResourcesRule {
+    fn eq(&self, other: &Self) -> bool {
+        self.pattern == other.pattern
+            && self.exclude == other.exclude
+            && self.nested == other.nested
+            && self.omit == other.omit
+            && self.optional == other.optional
+            && self.weight == other.weight
+    }
+}
+
+impl Eq for CodeResourcesRule {}
 
 impl PartialOrd for CodeResourcesRule {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
@@ -502,7 +519,13 @@ impl PartialOrd for CodeResourcesRule {
         let our_weight = self.weight.unwrap_or(1);
         let their_weight = other.weight.unwrap_or(1);
 
-        our_weight.partial_cmp(&their_weight)
+        // Exclusion rules always take priority over inclusion rules.
+        // The smaller the weight, the less important it is.
+        match self.exclude.cmp(&other.exclude) {
+            Ordering::Equal => their_weight.partial_cmp(&our_weight),
+            Ordering::Greater => Some(Ordering::Less),
+            Ordering::Less => Some(Ordering::Greater),
+        }
     }
 }
 
@@ -513,15 +536,17 @@ impl Ord for CodeResourcesRule {
 }
 
 impl CodeResourcesRule {
-    pub fn new(pattern: impl ToString) -> Self {
-        Self {
+    pub fn new(pattern: impl ToString) -> Result<Self, AppleCodesignError> {
+        Ok(Self {
             pattern: pattern.to_string(),
             exclude: false,
             nested: false,
             omit: false,
             optional: false,
             weight: None,
-        }
+            re: regex::Regex::new(&pattern.to_string())
+                .map_err(|e| AppleCodesignError::ResourcesBadRegex(pattern.to_string(), e))?,
+        })
     }
 
     /// Mark this as an exclusion rule.
@@ -882,94 +907,90 @@ pub struct CodeResourcesBuilder {
 
 impl CodeResourcesBuilder {
     /// Obtain an instance with default rules for a bundle with a `Resources/` directory.
-    pub fn default_resources_rules() -> Self {
+    pub fn default_resources_rules() -> Result<Self, AppleCodesignError> {
         let mut slf = Self::default();
 
-        slf.add_rule(CodeResourcesRule::new("^version.plist$"));
-        slf.add_rule(CodeResourcesRule::new("^Resources/"));
+        slf.add_rule(CodeResourcesRule::new("^version.plist$")?);
+        slf.add_rule(CodeResourcesRule::new("^Resources/")?);
         slf.add_rule(
-            CodeResourcesRule::new("^Resources/.*\\.lproj/")
+            CodeResourcesRule::new("^Resources/.*\\.lproj/")?
                 .optional()
                 .weight(1000),
         );
-        slf.add_rule(CodeResourcesRule::new("^Resources/Base\\.lproj/").weight(1010));
+        slf.add_rule(CodeResourcesRule::new("^Resources/Base\\.lproj/")?.weight(1010));
         slf.add_rule(
-            CodeResourcesRule::new("^Resources/.*\\.lproj/locversion.plist$")
+            CodeResourcesRule::new("^Resources/.*\\.lproj/locversion.plist$")?
                 .omit()
                 .weight(1100),
         );
 
-        slf.add_rule2(CodeResourcesRule::new("^.*"));
-        slf.add_rule2(CodeResourcesRule::new("^[^/]+$").nested().weight(10));
-        slf.add_rule2(CodeResourcesRule::new("^(Frameworks|SharedFrameworks|PlugIns|Plug-ins|XPCServices|Helpers|MacOS|Library/(Automator|Spotlight|LoginItems))/")
+        slf.add_rule2(CodeResourcesRule::new("^.*")?);
+        slf.add_rule2(CodeResourcesRule::new("^[^/]+$")?.nested().weight(10));
+        slf.add_rule2(CodeResourcesRule::new("^(Frameworks|SharedFrameworks|PlugIns|Plug-ins|XPCServices|Helpers|MacOS|Library/(Automator|Spotlight|LoginItems))/")?
                          .nested().weight(10));
-        slf.add_rule2(CodeResourcesRule::new(".*\\.dSYM($|/)").weight(11));
+        slf.add_rule2(CodeResourcesRule::new(".*\\.dSYM($|/)")?.weight(11));
         slf.add_rule2(
-            CodeResourcesRule::new("^(.*/)?\\.DS_Store$")
+            CodeResourcesRule::new("^(.*/)?\\.DS_Store$")?
                 .omit()
                 .weight(2000),
         );
-        slf.add_rule2(CodeResourcesRule::new("^Info\\.plist$").omit().weight(20));
-        slf.add_rule2(CodeResourcesRule::new("^version\\.plist$").weight(20));
-        slf.add_rule2(CodeResourcesRule::new("^embedded\\.provisionprofile$").weight(20));
-        slf.add_rule2(CodeResourcesRule::new("^PkgInfo$").omit().weight(20));
-        slf.add_rule2(CodeResourcesRule::new("^Resources/").weight(20));
+        slf.add_rule2(CodeResourcesRule::new("^Info\\.plist$")?.omit().weight(20));
+        slf.add_rule2(CodeResourcesRule::new("^version\\.plist$")?.weight(20));
+        slf.add_rule2(CodeResourcesRule::new("^embedded\\.provisionprofile$")?.weight(20));
+        slf.add_rule2(CodeResourcesRule::new("^PkgInfo$")?.omit().weight(20));
+        slf.add_rule2(CodeResourcesRule::new("^Resources/")?.weight(20));
+        slf.add_rule2(CodeResourcesRule::new("^Resources/.*\\.lproj/")?.weight(1000));
+        slf.add_rule2(CodeResourcesRule::new("^Resources/Base\\.lproj/")?.weight(1010));
         slf.add_rule2(
-            CodeResourcesRule::new("^Resources/.*\\.lproj/")
-                .nested()
-                .weight(1000),
-        );
-        slf.add_rule2(CodeResourcesRule::new("^Resources/Base\\.lproj/").weight(1010));
-        slf.add_rule2(
-            CodeResourcesRule::new("^Resources/.*\\.lproj/locversion.plist$")
+            CodeResourcesRule::new("^Resources/.*\\.lproj/locversion.plist$")?
                 .omit()
                 .weight(1100),
         );
 
-        slf
+        Ok(slf)
     }
 
     /// Obtain an instance with default rules for a bundle without a `Resources/` directory.
-    pub fn default_no_resources_rules() -> Self {
+    pub fn default_no_resources_rules() -> Result<Self, AppleCodesignError> {
         let mut slf = Self::default();
 
-        slf.add_rule(CodeResourcesRule::new("^version.plist$"));
-        slf.add_rule(CodeResourcesRule::new("^.*"));
+        slf.add_rule(CodeResourcesRule::new("^version.plist$")?);
+        slf.add_rule(CodeResourcesRule::new("^.*")?);
         slf.add_rule(
-            CodeResourcesRule::new("^.*\\.lproj")
+            CodeResourcesRule::new("^.*\\.lproj")?
                 .optional()
                 .weight(1000),
         );
-        slf.add_rule(CodeResourcesRule::new("^Base\\.lproj").weight(1010));
+        slf.add_rule(CodeResourcesRule::new("^Base\\.lproj")?.weight(1010));
         slf.add_rule(
-            CodeResourcesRule::new("^.*\\.lproj/locversion.plist$")
+            CodeResourcesRule::new("^.*\\.lproj/locversion.plist$")?
                 .omit()
                 .weight(1100),
         );
-        slf.add_rule2(CodeResourcesRule::new("^.*"));
-        slf.add_rule2(CodeResourcesRule::new(".*\\.dSYM($|/)").weight(11));
+        slf.add_rule2(CodeResourcesRule::new("^.*")?);
+        slf.add_rule2(CodeResourcesRule::new(".*\\.dSYM($|/)")?.weight(11));
         slf.add_rule2(
-            CodeResourcesRule::new("^(.*/)?\\.DS_Store$")
+            CodeResourcesRule::new("^(.*/)?\\.DS_Store$")?
                 .omit()
                 .weight(2000),
         );
-        slf.add_rule2(CodeResourcesRule::new("^Info\\.plist$").omit().weight(20));
-        slf.add_rule2(CodeResourcesRule::new("^version\\.plist$").weight(20));
-        slf.add_rule2(CodeResourcesRule::new("^embedded\\.provisionprofile$").weight(20));
-        slf.add_rule2(CodeResourcesRule::new("^PkgInfo$").omit().weight(20));
+        slf.add_rule2(CodeResourcesRule::new("^Info\\.plist$")?.omit().weight(20));
+        slf.add_rule2(CodeResourcesRule::new("^version\\.plist$")?.weight(20));
+        slf.add_rule2(CodeResourcesRule::new("^embedded\\.provisionprofile$")?.weight(20));
+        slf.add_rule2(CodeResourcesRule::new("^PkgInfo$")?.omit().weight(20));
         slf.add_rule2(
-            CodeResourcesRule::new("^.*\\.lproj/")
+            CodeResourcesRule::new("^.*\\.lproj/")?
                 .optional()
                 .weight(1000),
         );
-        slf.add_rule2(CodeResourcesRule::new("^Base\\.lproj").weight(1010));
+        slf.add_rule2(CodeResourcesRule::new("^Base\\.lproj")?.weight(1010));
         slf.add_rule2(
-            CodeResourcesRule::new("^.*\\.lproj/locversion.plist$")
+            CodeResourcesRule::new("^.*\\.lproj/locversion.plist$")?
                 .omit()
                 .weight(1100),
         );
 
-        slf
+        Ok(slf)
     }
 
     /// Add a rule to this instance in the `<rules>` section.
@@ -985,28 +1006,139 @@ impl CodeResourcesBuilder {
         self.resources.add_rule2(rule);
     }
 
+    /// Add an exclusion rule to the processing rules.
+    ///
+    /// Exclusion rules are not added to the [CodeResources] because they are
+    /// for building only.
     pub fn add_exclusion_rule(&mut self, rule: CodeResourcesRule) {
-        self.rules.insert(0, rule);
+        self.rules.push(rule);
+        self.rules.sort();
     }
 
-    pub fn process_regular_file(
+    /// Find the first rule matching a given path.
+    ///
+    /// Rule processing is a bit complicated. Internally, rules are sorted by
+    /// decreasing priority. So the first pattern that matches is the rule we use.
+    /// However, there are a few special cases.
+    ///
+    /// If a path begins with `Contents/`, that prefix is ignored when performing the
+    /// pattern match.
+    ///
+    /// Directories are special. If an exclusion rule matches a directory, that directory
+    /// tree should be ignored. There are also default rules for handling nested bundles.
+    /// However, our bundle scanning code already filters out nested bundles automatically,
+    /// so these rules shouldn't be relevant to us. But we handle them anyway, just in
+    /// case. These rules take precedence over directory exclusion rules.
+    fn find_rule(&self, path: &str) -> Option<CodeResourcesRule> {
+        // Remove Contents/ prefix for pattern matching.
+        let path = path.strip_prefix("Contents/").unwrap_or(&path).to_string();
+
+        let parts = path.split("/").collect::<Vec<_>>();
+
+        let mut exclude_override = false;
+
+        let rule = self.rules.iter().find(|rule| {
+            // Nested rules matching leaf-most directory with `.` result in match.
+            // But we treat as exclusion, as these are treated as nested bundles,
+            // which are handled externally.
+            if rule.nested {
+                for last_part in 1..parts.len() - 1 {
+                    let parent = parts[0..last_part].join("/");
+
+                    if rule.re.is_match(&parent) && parts[last_part - 1].contains(".") {
+                        exclude_override = true;
+                        return true;
+                    }
+                }
+            }
+
+            // Directory exclusions match entire directory tree. So walk the parents and yield
+            // this rule if matches.
+            if rule.exclude {
+                for last_part in 1..parts.len() - 1 {
+                    let parent = parts[0..last_part].join("/");
+
+                    if rule.re.is_match(&parent) {
+                        return true;
+                    }
+                }
+            }
+
+            rule.re.is_match(&path)
+        });
+
+        if let Some(rule) = rule {
+            let mut rule = rule.clone();
+
+            if exclude_override {
+                rule.exclude = true;
+            }
+
+            Some(rule)
+        } else {
+            None
+        }
+    }
+
+    /// Process a file for resource handling.
+    pub fn process_file(
         &mut self,
-        path: impl ToString,
-        data: impl AsRef<[u8]>,
+        log: &Logger,
+        file: &DirectoryBundleFile,
     ) -> Result<(), AppleCodesignError> {
-        unimplemented!()
-    }
+        // Always use UNIX style directory separators.
+        let relative_path = file.relative_path().to_string_lossy().replace("\\", "/");
 
-    pub fn process_macho_file(
-        &mut self,
-        path: impl ToString,
-        data: impl AsRef<[u8]>,
-    ) -> Result<(), AppleCodesignError> {
-        unimplemented!()
-    }
+        info!(log, "processing {}", relative_path);
 
-    pub fn process_symlink(&mut self, path: impl ToString, target: impl ToString) {
-        unimplemented!()
+        let rule = match self.find_rule(relative_path.as_ref()) {
+            Some(rule) => {
+                debug!(
+                    log,
+                    "{} matches {} rule {}",
+                    relative_path,
+                    if rule.exclude || rule.omit {
+                        "exclusion"
+                    } else {
+                        "inclusion"
+                    },
+                    rule.pattern
+                );
+
+                if rule.exclude || rule.omit {
+                    return Ok(());
+                }
+
+                rule
+            }
+            None => {
+                debug!(log, "{} doesn't match any rule; processing", relative_path);
+                return Ok(());
+            }
+        };
+
+        if let Some(target) = file
+            .symlink_target()
+            .map_err(AppleCodesignError::DirectoryBundle)?
+        {
+            let target = target.to_string_lossy().replace("\\", "/");
+
+            info!(log, "sealing symlink {} -> {}", relative_path, target);
+            self.resources.seal_symlink(relative_path, target);
+        } else {
+            let data = std::fs::read(file.absolute_path())?;
+
+            // If nested bit is set, treat as Mach-O binary to be signed.
+            if rule.nested {
+                info!(log, "sealing Mach-O file {}", relative_path);
+            } else {
+                info!(log, "sealing regular file {}", relative_path);
+                self.resources
+                    .seal_regular_file(relative_path, data, rule.optional)?;
+            }
+        }
+
+        Ok(())
     }
 }
 

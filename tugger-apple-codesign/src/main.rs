@@ -3,6 +3,8 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 #[allow(unused)]
+mod bundle_signing;
+#[allow(unused)]
 mod certificate;
 #[allow(unused)]
 mod code_directory;
@@ -24,6 +26,7 @@ mod verify;
 
 use {
     crate::{
+        bundle_signing::BundleSigner,
         certificate::create_self_signed_code_signing_certificate,
         code_directory::{CodeDirectoryBlob, CodeSignatureFlags},
         code_hash::compute_code_hashes,
@@ -38,6 +41,7 @@ use {
     clap::{App, AppSettings, Arg, ArgMatches, SubCommand},
     cryptographic_message_syntax::{Certificate, CertificateKeyAlgorithm, SignedData, SigningKey},
     goblin::mach::{Mach, MachO},
+    slog::{error, o, warn, Drain},
     std::{convert::TryFrom, io::Write, path::PathBuf, str::FromStr},
 };
 
@@ -159,6 +163,14 @@ special value \"none\" can disable using a timestamp server.
 const APPLE_TIMESTAMP_URL: &str = "http://timestamp.apple.com/ts01";
 
 const SUPPORTED_HASHES: &[&str; 5] = &["none", "sha1", "sha256", "sha256-truncated", "sha384"];
+
+fn get_logger() -> slog::Logger {
+    let decorator = slog_term::TermDecorator::new().build();
+    let drain = slog_term::CompactFormat::new(decorator).build();
+    let drain = std::sync::Mutex::new(drain).fuse();
+
+    slog::Logger::root(drain, o!())
+}
 
 fn get_macho_from_data(data: &[u8], universal_index: usize) -> Result<MachO, AppleCodesignError> {
     let mach = Mach::parse(data)?;
@@ -473,9 +485,10 @@ fn command_generate_self_signed_certificate(args: &ArgMatches) -> Result<(), App
 }
 
 fn command_sign(args: &ArgMatches) -> Result<(), AppleCodesignError> {
-    let input_path = args
-        .value_of("input_path")
-        .ok_or(AppleCodesignError::CliBadArgument)?;
+    let input_path = PathBuf::from(
+        args.value_of("input_path")
+            .ok_or(AppleCodesignError::CliBadArgument)?,
+    );
     let output_path = args
         .value_of("output_path")
         .ok_or(AppleCodesignError::CliBadArgument)?;
@@ -499,90 +512,104 @@ fn command_sign(args: &ArgMatches) -> Result<(), AppleCodesignError> {
         Some(timestamp_url)
     };
 
-    println!("signing {}", input_path);
-    let macho_data = std::fs::read(input_path)?;
+    let log = get_logger();
 
-    println!("parsing Mach-O");
-    let mut signer = MachOSigner::new(&macho_data)?;
-    signer.load_existing_signature_context()?;
+    // TODO consider defining a signing trait and unify the API.
+    if input_path.is_file() {
+        warn!(&log, "signing {} as a Mach-O binary", input_path.display());
+        let macho_data = std::fs::read(input_path)?;
 
-    let mut private_keys = vec![];
-    let mut public_certificates = vec![];
+        warn!(&log, "parsing Mach-O");
+        let mut signer = MachOSigner::new(&macho_data)?;
+        signer.load_existing_signature_context()?;
 
-    for pem_source in pem_sources {
-        println!("reading PEM data from {}", pem_source);
-        let pem_data = std::fs::read(pem_source)?;
+        let mut private_keys = vec![];
+        let mut public_certificates = vec![];
 
-        for pem in pem::parse_many(&pem_data) {
-            match pem.tag.as_str() {
-                "CERTIFICATE" => public_certificates.push(pem.contents),
-                "PRIVATE KEY" => private_keys.push(pem.contents),
-                tag => println!("(unhandled PEM tag {}; ignoring)", tag),
+        for pem_source in pem_sources {
+            warn!(&log, "reading PEM data from {}", pem_source);
+            let pem_data = std::fs::read(pem_source)?;
+
+            for pem in pem::parse_many(&pem_data) {
+                match pem.tag.as_str() {
+                    "CERTIFICATE" => public_certificates.push(pem.contents),
+                    "PRIVATE KEY" => private_keys.push(pem.contents),
+                    tag => warn!(&log, "(unhandled PEM tag {}; ignoring)", tag),
+                }
             }
         }
-    }
 
-    if private_keys.len() > 1 {
-        println!("at most 1 PRIVATE KEY can be present; aborting");
-        return Err(AppleCodesignError::CliBadArgument);
-    }
-
-    let private = if private_keys.is_empty() {
-        None
-    } else {
-        Some(SigningKey::from_pkcs8_der(&private_keys[0], None)?)
-    };
-
-    if let Some(signing_key) = &private {
-        if public_certificates.is_empty() {
-            println!("a PRIVATE KEY requires a corresponding CERTIFICATE to pair with it");
+        if private_keys.len() > 1 {
+            error!(&log, "at most 1 PRIVATE KEY can be present; aborting");
             return Err(AppleCodesignError::CliBadArgument);
         }
 
-        let cert = public_certificates.remove(0);
-        let cert = Certificate::from_der(&cert)?;
+        let private = if private_keys.is_empty() {
+            None
+        } else {
+            Some(SigningKey::from_pkcs8_der(&private_keys[0], None)?)
+        };
 
-        println!("registering signing key");
-        signer.signing_key(signing_key, cert);
+        if let Some(signing_key) = &private {
+            if public_certificates.is_empty() {
+                error!(
+                    &log,
+                    "a PRIVATE KEY requires a corresponding CERTIFICATE to pair with it"
+                );
+                return Err(AppleCodesignError::CliBadArgument);
+            }
 
-        if let Some(timestamp_url) = timestamp_url {
-            println!("using time-stamp protocol server {}", timestamp_url);
-            signer.time_stamp_url(timestamp_url)?;
+            let cert = public_certificates.remove(0);
+            let cert = Certificate::from_der(&cert)?;
+
+            warn!(&log, "registering signing key");
+            signer.signing_key(signing_key, cert);
+
+            if let Some(timestamp_url) = timestamp_url {
+                warn!(&log, "using time-stamp protocol server {}", timestamp_url);
+                signer.time_stamp_url(timestamp_url)?;
+            }
         }
-    }
 
-    for cert in public_certificates {
-        println!("registering extra X.509 certificate");
-        signer.chain_certificate_der(&cert)?;
-    }
-
-    if let Some(code_requirements_path) = code_requirements_path {
-        let code_requirements_data = std::fs::read(code_requirements_path)?;
-        let reqs = CodeRequirements::parse_blob(&code_requirements_data)?.0;
-        for expr in reqs.iter() {
-            println!("setting designated code requirements: {}", expr);
+        for cert in public_certificates {
+            warn!(&log, "registering extra X.509 certificate");
+            signer.chain_certificate_der(&cert)?;
         }
-        signer.set_designated_code_requirements(&reqs)?;
-    }
 
-    if let Some(code_resources_path) = code_resources_path {
-        let code_resources_data = std::fs::read(code_resources_path)?;
-        signer.code_resources_data(&code_resources_data)?;
-    }
+        if let Some(code_requirements_path) = code_requirements_path {
+            let code_requirements_data = std::fs::read(code_requirements_path)?;
+            let reqs = CodeRequirements::parse_blob(&code_requirements_data)?.0;
+            for expr in reqs.iter() {
+                warn!(&log, "setting designated code requirements: {}", expr);
+            }
+            signer.set_designated_code_requirements(&reqs)?;
+        }
 
-    if let Some(entitlement_path) = entitlement_path {
-        let entitlement_data = std::fs::read_to_string(entitlement_path)?;
-        signer.set_entitlements_string(&entitlement_data);
-    }
+        if let Some(code_resources_path) = code_resources_path {
+            let code_resources_data = std::fs::read(code_resources_path)?;
+            signer.code_resources_data(&code_resources_data)?;
+        }
 
-    for option in options {
-        let flags = CodeSignatureFlags::from_str(option)?;
-        signer.add_code_signature_flags(flags);
-    }
+        if let Some(entitlement_path) = entitlement_path {
+            let entitlement_data = std::fs::read_to_string(entitlement_path)?;
+            signer.set_entitlements_string(&entitlement_data);
+        }
 
-    println!("writing {}", output_path);
-    let mut fh = std::fs::File::create(output_path)?;
-    signer.write_signed_binary(&mut fh)?;
+        for option in options {
+            let flags = CodeSignatureFlags::from_str(option)?;
+            signer.add_code_signature_flags(flags);
+        }
+
+        warn!(&log, "writing {}", output_path);
+        let mut fh = std::fs::File::create(output_path)?;
+        signer.write_signed_binary(&mut fh)?;
+    } else {
+        warn!(&log, "signing {} as a bundle", input_path.display());
+
+        let signer = BundleSigner::new_from_path(&input_path)?;
+
+        signer.write_signed_bundle(&log, &output_path)?;
+    }
 
     Ok(())
 }

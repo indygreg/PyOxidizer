@@ -4,6 +4,7 @@
 
 use {
     cryptographic_message_syntax::{CertificateKeyAlgorithm, CmsError},
+    std::path::PathBuf,
     thiserror::Error,
 };
 
@@ -94,6 +95,9 @@ pub enum AppleCodesignError {
     #[error("plist parse error in code resources: {0}")]
     ResourcesPlistParse(String),
 
+    #[error("bad regular expression in code resources: {0}; {1}")]
+    ResourcesBadRegex(String, regex::Error),
+
     #[error("__LINKEDIT isn't final Mach-O segment")]
     LinkeditNotLast,
 
@@ -120,4 +124,16 @@ pub enum AppleCodesignError {
 
     #[error("unspecified digest error")]
     DigestUnspecified,
+
+    #[error("error interfacing with directory-based bundle: {0}")]
+    DirectoryBundle(anyhow::Error),
+
+    #[error("nested bundle does not exist: {0}")]
+    BundleUnknown(String),
+
+    #[error("bundle Info.plist does not define CFBundleIdentifier: {0}")]
+    BundleNoIdentifier(PathBuf),
+
+    #[error("bundle Info.plist does not define CFBundleExecutable: {0}")]
+    BundleNoMainExecutable(PathBuf),
 }

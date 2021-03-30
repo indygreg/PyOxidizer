@@ -223,6 +223,28 @@ due to the CMS signature being non-deterministic (due to the use of
 signing times and timestamp servers tokens, which could be variable
 length).
 
+# How Bundle Signing Works
+
+Signing bundles (e.g. `.app`, `.framework` directories) has its own
+complexities beyond signing individual binaries.
+
+Bundles consist of multiple files, perhaps multiple binaries. These files
+can be classified as:
+
+1. The main executable.
+2. The `Info.plist` file.
+3. Support/resources files.
+4. Code signature files.
+
+When signing bundles, the high-level process is the following:
+
+1. Find and sign all nested binaries and bundles (bundles can contain
+   other bundles) except the main binary and bundle.
+2. Identify support/resources files and calculate their hashes, capturing
+   this metadata in a `CodeResources` XML file.
+3. Sign the main binary with an embedded reference to the digest of the
+   `CodeResources` file.
+
 # How Verification Works
 
 What happens when a binary is loaded? Read on to find out.
