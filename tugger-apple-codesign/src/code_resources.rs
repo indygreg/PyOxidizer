@@ -17,12 +17,10 @@
 
 use {
     crate::{
+        bundle_signing::{BundleFileHandler, SignedMachOInfo},
         error::AppleCodesignError,
-        macho::{
-            find_signature_data, parse_signature_data, CodeSigningSlot, DigestType, RequirementType,
-        },
+        macho::DigestType,
     },
-    goblin::mach::{Mach, MachO},
     plist::{Dictionary, Value},
     slog::{debug, info, Logger},
     std::{cmp::Ordering, collections::HashMap, convert::TryFrom, io::Write},
@@ -768,73 +766,27 @@ impl CodeResources {
         );
     }
 
-    /// Seal a Mach-O binary.
+    /// Record metadata of a previously signed Mach-O binary.
     ///
-    /// The Mach-O binary MUST already have been signed, as the digest of its
-    /// Code Directory and its Code Requirements data must be captured.
-    ///
-    /// If sealing a fat/universal binary, the first Mach-O within should be passed
-    /// to this function.
+    /// If sealing a fat/universal binary, pass in metadata for the first Mach-O within in.
     pub fn seal_macho(
         &mut self,
         path: impl ToString,
-        macho: &MachO,
+        info: &SignedMachOInfo,
         optional: bool,
     ) -> Result<(), AppleCodesignError> {
-        let signature_data =
-            find_signature_data(macho)?.ok_or(AppleCodesignError::BinaryNoCodeSignature)?;
-        let signature = parse_signature_data(&signature_data.signature_data)?;
-
-        let cd = signature
-            .find_slot(CodeSigningSlot::CodeDirectory)
-            .ok_or(AppleCodesignError::BinaryNoCodeSignature)?;
-
-        let cd_digest = cd.digest_with(DigestType::Sha1)?;
-
-        let requirement = if let Some(requirements) = signature.code_requirements()? {
-            if let Some(designated) = requirements.requirements.get(&RequirementType::Designated) {
-                let req = designated.parse_expressions()?;
-
-                Some(format!("{}", req[0]))
-            } else {
-                None
-            }
-        } else {
-            None
-        };
-
         self.files2.insert(
             path.to_string(),
             Files2Value {
-                cdhash: Some(cd_digest),
+                cdhash: Some(info.code_directory_sha1.clone()),
                 hash2: None,
                 optional: if optional { Some(true) } else { None },
-                requirement,
+                requirement: info.designated_code_requirement.clone(),
                 symlink: None,
             },
         );
 
         Ok(())
-    }
-
-    /// Seal a Mach-O file.
-    ///
-    /// This is a wrapper around [CodeResources::seal_macho] which parses the passed
-    /// content as a Mach-O binary and calls that function with the appropriate
-    /// binary.
-    pub fn seal_macho_file(
-        &mut self,
-        path: impl ToString,
-        data: impl AsRef<[u8]>,
-        optional: bool,
-    ) -> Result<(), AppleCodesignError> {
-        let macho = match Mach::parse(data.as_ref())? {
-            // The first Mach-O's metadata is taken.
-            Mach::Fat(fat) => fat.get(0)?,
-            Mach::Binary(macho) => macho,
-        };
-
-        self.seal_macho(path, &macho, optional)
     }
 }
 
@@ -1081,10 +1033,14 @@ impl CodeResourcesBuilder {
     }
 
     /// Process a file for resource handling.
+    ///
+    /// This determines whether a file is relevant for inclusion in the CodeResources
+    /// file and takes actions to process it, if necessary.
     pub fn process_file(
         &mut self,
         log: &Logger,
         file: &DirectoryBundleFile,
+        file_handler: &dyn BundleFileHandler,
     ) -> Result<(), AppleCodesignError> {
         // Always use UNIX style directory separators.
         let relative_path = file.relative_path().to_string_lossy().replace("\\", "/");
@@ -1125,16 +1081,21 @@ impl CodeResourcesBuilder {
 
             info!(log, "sealing symlink {} -> {}", relative_path, target);
             self.resources.seal_symlink(relative_path, target);
+            file_handler.install_symlink(log, file)?;
         } else {
             let data = std::fs::read(file.absolute_path())?;
 
             // If nested bit is set, treat as Mach-O binary to be signed.
             if rule.nested {
+                let macho_info = file_handler.sign_and_install_macho(log, file)?;
                 info!(log, "sealing Mach-O file {}", relative_path);
+                self.resources
+                    .seal_macho(relative_path, &macho_info, rule.optional)?;
             } else {
                 info!(log, "sealing regular file {}", relative_path);
                 self.resources
                     .seal_regular_file(relative_path, data, rule.optional)?;
+                file_handler.install_normal_file(log, file)?;
             }
         }
 

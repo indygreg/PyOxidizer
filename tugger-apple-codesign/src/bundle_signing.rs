@@ -8,10 +8,19 @@ use {
     crate::{
         code_resources::{CodeResourcesBuilder, CodeResourcesRule},
         error::AppleCodesignError,
+        macho::{
+            find_signature_data, parse_signature_data, CodeSigningSlot, DigestType, RequirementType,
+        },
+        macho_signing::MachOSigner,
     },
+    goblin::mach::Mach,
     slog::{info, warn, Logger},
-    std::{collections::BTreeMap, path::Path},
-    tugger_apple_bundle::DirectoryBundle,
+    std::{
+        collections::BTreeMap,
+        io::Write,
+        path::{Path, PathBuf},
+    },
+    tugger_apple_bundle::{DirectoryBundle, DirectoryBundleFile},
 };
 
 /// A primitive for signing an Apple bundle.
@@ -115,6 +124,163 @@ pub enum SignMode {
     Nested,
 }
 
+pub struct SignedMachOInfo {
+    pub code_directory_sha1: Vec<u8>,
+    pub designated_code_requirement: Option<String>,
+}
+
+/// Used to process individual files within a bundle.
+///
+/// This abstraction lets entities like [CodeResourcesBuilder] drive the
+/// installation of files into a new bundle.
+pub trait BundleFileHandler {
+    /// Ensures a symlink is installed.
+    fn install_symlink(
+        &self,
+        log: &Logger,
+        file: &DirectoryBundleFile,
+    ) -> Result<(), AppleCodesignError>;
+
+    /// Ensures a file is installed.
+    fn install_normal_file(
+        &self,
+        log: &Logger,
+        file: &DirectoryBundleFile,
+    ) -> Result<(), AppleCodesignError>;
+
+    /// Sign a Mach-O file and ensure its new content is installed.
+    ///
+    /// Returns Mach-O metadata which will be recorded in [CodeResources].
+    fn sign_and_install_macho(
+        &self,
+        log: &Logger,
+        file: &DirectoryBundleFile,
+    ) -> Result<SignedMachOInfo, AppleCodesignError>;
+}
+
+struct SingleBundleHandler {
+    dest_dir: PathBuf,
+}
+
+impl BundleFileHandler for SingleBundleHandler {
+    fn install_symlink(
+        &self,
+        log: &Logger,
+        file: &DirectoryBundleFile,
+    ) -> Result<(), AppleCodesignError> {
+        let source_path = file.absolute_path();
+        let dest_path = self.dest_dir.join(file.relative_path());
+
+        if source_path != dest_path {
+            info!(
+                log,
+                "copying symlink {} -> {}",
+                source_path.display(),
+                dest_path.display()
+            );
+            std::fs::create_dir_all(
+                dest_path
+                    .parent()
+                    .expect("parent directory should be available"),
+            )?;
+            std::fs::copy(source_path, dest_path)?;
+        }
+
+        Ok(())
+    }
+
+    fn install_normal_file(
+        &self,
+        log: &Logger,
+        file: &DirectoryBundleFile,
+    ) -> Result<(), AppleCodesignError> {
+        let source_path = file.absolute_path();
+        let dest_path = self.dest_dir.join(file.relative_path());
+
+        if source_path != dest_path {
+            info!(
+                log,
+                "copying file {} -> {}",
+                source_path.display(),
+                dest_path.display()
+            );
+            std::fs::create_dir_all(
+                dest_path
+                    .parent()
+                    .expect("parent directory should be available"),
+            )?;
+            std::fs::copy(source_path, dest_path)?;
+        }
+
+        Ok(())
+    }
+
+    fn sign_and_install_macho(
+        &self,
+        log: &Logger,
+        file: &DirectoryBundleFile,
+    ) -> Result<SignedMachOInfo, AppleCodesignError> {
+        info!(
+            log,
+            "signing Mach-O file {}",
+            file.relative_path().display()
+        );
+
+        let macho_data = std::fs::read(file.absolute_path())?;
+        let mut signer = MachOSigner::new(&macho_data)?;
+
+        signer.load_existing_signature_context()?;
+
+        let mut new_data = Vec::<u8>::with_capacity(macho_data.len() + 2_usize.pow(17));
+        signer.write_signed_binary(&mut new_data)?;
+
+        let dest_path = self.dest_dir.join(file.relative_path());
+
+        // Read permissions first in case we overwrite the original file.
+        let permissions = std::fs::metadata(file.absolute_path())?.permissions();
+        {
+            let mut fh = std::fs::File::create(&dest_path)?;
+            fh.write_all(&new_data)?;
+        }
+        std::fs::set_permissions(&dest_path, permissions)?;
+
+        let macho = match Mach::parse(&new_data)? {
+            Mach::Binary(macho) => macho,
+            // Initial Mach-O's signature data is used.
+            Mach::Fat(multi_arch) => multi_arch.get(0)?,
+        };
+
+        let signature_data =
+            find_signature_data(&macho)?.ok_or(AppleCodesignError::BinaryNoCodeSignature)?;
+        let signature = parse_signature_data(&signature_data.signature_data)?;
+
+        let cd = signature
+            .find_slot(CodeSigningSlot::CodeDirectory)
+            .ok_or(AppleCodesignError::BinaryNoCodeSignature)?;
+
+        let code_directory_sha1 = cd.digest_with(DigestType::Sha1)?;
+
+        let designated_code_requirement = if let Some(requirements) =
+            signature.code_requirements()?
+        {
+            if let Some(designated) = requirements.requirements.get(&RequirementType::Designated) {
+                let req = designated.parse_expressions()?;
+
+                Some(format!("{}", req[0]))
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
+        Ok(SignedMachOInfo {
+            code_directory_sha1,
+            designated_code_requirement,
+        })
+    }
+}
+
 /// A primitive for signing a single Apple bundle.
 ///
 /// Unlike [BundleSigner], this type only signs a single bundle and is ignorant
@@ -162,8 +328,10 @@ impl SingleBundleSigner {
             dest_dir.display()
         );
 
+        let dest_dir_root = dest_dir.to_path_buf();
+
         let dest_dir = if self.bundle.shallow() {
-            dest_dir.to_path_buf()
+            dest_dir_root.clone()
         } else {
             dest_dir.join("Contents")
         };
@@ -191,15 +359,24 @@ impl SingleBundleSigner {
         resources_builder.add_exclusion_rule(
             CodeResourcesRule::new(format!("^MacOS/{}$", main_executable))?.exclude(),
         );
+        // Exclude code signature files we'll write.
         resources_builder.add_exclusion_rule(CodeResourcesRule::new("^_CodeSignature/")?.exclude());
+        // Ignore notarization ticket.
+        resources_builder.add_exclusion_rule(CodeResourcesRule::new("^CodeResources$")?.exclude());
+
+        let handler = SingleBundleHandler {
+            dest_dir: dest_dir_root,
+        };
 
         // Iterate files in this bundle and register as code resources.
+        //
+        // Encountered Mach-O binaries will need to be signed.
         for file in self
             .bundle
             .files(false)
             .map_err(AppleCodesignError::DirectoryBundle)?
         {
-            resources_builder.process_file(log, &file)?;
+            resources_builder.process_file(log, &file, &handler)?;
         }
 
         // The resources are now sealed. Write out that XML file.
