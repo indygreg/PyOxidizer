@@ -985,7 +985,7 @@ impl CodeResourcesBuilder {
         // Remove Contents/ prefix for pattern matching.
         let path = path.strip_prefix("Contents/").unwrap_or(&path).to_string();
 
-        let parts = path.split("/").collect::<Vec<_>>();
+        let parts = path.split('/').collect::<Vec<_>>();
 
         let mut exclude_override = false;
 
@@ -997,7 +997,7 @@ impl CodeResourcesBuilder {
                 for last_part in 1..parts.len() - 1 {
                     let parent = parts[0..last_part].join("/");
 
-                    if rule.re.is_match(&parent) && parts[last_part - 1].contains(".") {
+                    if rule.re.is_match(&parent) && parts[last_part - 1].contains('.') {
                         exclude_override = true;
                         return true;
                     }
