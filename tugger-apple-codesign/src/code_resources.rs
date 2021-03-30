@@ -1061,8 +1061,12 @@ impl CodeResourcesBuilder {
                     rule.pattern
                 );
 
-                if rule.exclude || rule.omit {
+                // Excluded files are hard ignored (our caller will handle them if necessary).
+                if rule.exclude {
                     return Ok(());
+                // Omitted files aren't sealed. But they are installed.
+                } else if rule.omit {
+                    return file_handler.install_file(log, file);
                 }
 
                 rule
