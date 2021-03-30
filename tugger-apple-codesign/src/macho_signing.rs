@@ -21,7 +21,7 @@ use {
     bytes::Bytes,
     cryptographic_message_syntax::{Certificate, SignedDataBuilder, SignerBuilder, SigningKey},
     goblin::mach::{
-        constants::SEG_LINKEDIT,
+        constants::{SEG_LINKEDIT, SEG_PAGEZERO},
         fat::FAT_MAGIC,
         fat::{SIZEOF_FAT_ARCH, SIZEOF_FAT_HEADER},
         load_command::{CommandVariant, LinkeditDataCommand, SegmentCommand32, SegmentCommand64},
@@ -183,11 +183,15 @@ fn create_macho_with_signature(
     }
 
     // Write out segments, updating the __LINKEDIT segment when we encounter it.
-    //
-    // The initial __PAGEZERO segment contains no data (it is the magic and load
-    // commands), so we ignore it during traversal.
-    for segment in macho.segments.iter().skip(1) {
+    for segment in macho.segments.iter() {
         assert!(segment.fileoff == 0 || segment.fileoff == cursor.position());
+
+        // The initial __PAGEZERO segment contains no data (it is the magic and load
+        // commands) and overlaps with the __TEXT segment, which has .fileoff =0, so
+        // we ignore it.
+        if matches!(segment.name(), Ok(SEG_PAGEZERO)) {
+            continue;
+        }
 
         match segment.name() {
             Ok(SEG_LINKEDIT) => {
