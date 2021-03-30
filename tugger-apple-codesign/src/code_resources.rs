@@ -1081,7 +1081,7 @@ impl CodeResourcesBuilder {
 
             info!(log, "sealing symlink {} -> {}", relative_path, target);
             self.resources.seal_symlink(relative_path, target);
-            file_handler.install_symlink(log, file)?;
+            file_handler.install_file(log, file)?;
         } else {
             let data = std::fs::read(file.absolute_path())?;
 
@@ -1095,7 +1095,7 @@ impl CodeResourcesBuilder {
                 info!(log, "sealing regular file {}", relative_path);
                 self.resources
                     .seal_regular_file(relative_path, data, rule.optional)?;
-                file_handler.install_normal_file(log, file)?;
+                file_handler.install_file(log, file)?;
             }
         }
 

@@ -134,15 +134,8 @@ pub struct SignedMachOInfo {
 /// This abstraction lets entities like [CodeResourcesBuilder] drive the
 /// installation of files into a new bundle.
 pub trait BundleFileHandler {
-    /// Ensures a symlink is installed.
-    fn install_symlink(
-        &self,
-        log: &Logger,
-        file: &DirectoryBundleFile,
-    ) -> Result<(), AppleCodesignError>;
-
-    /// Ensures a file is installed.
-    fn install_normal_file(
+    /// Ensures a file (regular or symlink) is installed.
+    fn install_file(
         &self,
         log: &Logger,
         file: &DirectoryBundleFile,
@@ -163,33 +156,7 @@ struct SingleBundleHandler {
 }
 
 impl BundleFileHandler for SingleBundleHandler {
-    fn install_symlink(
-        &self,
-        log: &Logger,
-        file: &DirectoryBundleFile,
-    ) -> Result<(), AppleCodesignError> {
-        let source_path = file.absolute_path();
-        let dest_path = self.dest_dir.join(file.relative_path());
-
-        if source_path != dest_path {
-            info!(
-                log,
-                "copying symlink {} -> {}",
-                source_path.display(),
-                dest_path.display()
-            );
-            std::fs::create_dir_all(
-                dest_path
-                    .parent()
-                    .expect("parent directory should be available"),
-            )?;
-            std::fs::copy(source_path, dest_path)?;
-        }
-
-        Ok(())
-    }
-
-    fn install_normal_file(
+    fn install_file(
         &self,
         log: &Logger,
         file: &DirectoryBundleFile,
