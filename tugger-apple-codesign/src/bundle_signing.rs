@@ -51,10 +51,10 @@ impl BundleSigner {
             .nested_bundles()
             .map_err(AppleCodesignError::DirectoryBundle)?
             .into_iter()
-            .map(|(k, bundle)| (Some(k), SingleBundleSigner::new(bundle, SignMode::Nested)))
+            .map(|(k, bundle)| (Some(k), SingleBundleSigner::new(bundle)))
             .collect::<BTreeMap<Option<String>, SingleBundleSigner>>();
 
-        bundles.insert(None, SingleBundleSigner::new(main_bundle, SignMode::Main));
+        bundles.insert(None, SingleBundleSigner::new(main_bundle));
 
         Ok(Self { bundles })
     }
@@ -258,19 +258,15 @@ pub struct SingleBundleSigner {
     /// The bundle being signed.
     bundle: DirectoryBundle,
 
-    /// How we are configured for signing.
-    sign_mode: SignMode,
-
     /// Entitlements string to use.
     entitlements: Option<String>,
 }
 
 impl SingleBundleSigner {
     /// Construct a new instance.
-    pub fn new(bundle: DirectoryBundle, sign_mode: SignMode) -> Self {
+    pub fn new(bundle: DirectoryBundle) -> Self {
         Self {
             bundle,
-            sign_mode,
             entitlements: None,
         }
     }
