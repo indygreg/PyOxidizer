@@ -691,7 +691,7 @@ where
     /// Default implementation calls [Blob::to_blob_bytes] and digests that, which
     /// should always be correct.
     fn digest_with(&self, hash_type: DigestType) -> Result<Vec<u8>, AppleCodesignError> {
-        Ok(hash_type.digest(&self.to_blob_bytes()?)?)
+        hash_type.digest(&self.to_blob_bytes()?)
     }
 }
 

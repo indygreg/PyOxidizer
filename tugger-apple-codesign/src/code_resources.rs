@@ -680,9 +680,9 @@ impl CodeResources {
     pub fn to_writer_xml(&self, writer: impl Write) -> Result<(), AppleCodesignError> {
         let value = Value::from(self);
 
-        Ok(value
+        value
             .to_writer_xml(writer)
-            .map_err(AppleCodesignError::ResourcesPlist)?)
+            .map_err(AppleCodesignError::ResourcesPlist)
     }
 
     /// Add a rule to this instance in the `<rules>` section.
