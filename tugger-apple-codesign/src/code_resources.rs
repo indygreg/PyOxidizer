@@ -1140,6 +1140,11 @@ impl CodeResourcesBuilder {
 
         Ok(())
     }
+
+    /// Write CodeResources XML content to a writer.
+    pub fn write_code_resources(&self, writer: impl Write) -> Result<(), AppleCodesignError> {
+        self.resources.to_writer_xml(writer)
+    }
 }
 
 #[cfg(test)]

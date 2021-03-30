@@ -162,6 +162,12 @@ impl SingleBundleSigner {
             dest_dir.display()
         );
 
+        let dest_dir = if self.bundle.shallow() {
+            dest_dir.to_path_buf()
+        } else {
+            dest_dir.join("Contents")
+        };
+
         let identifier = self
             .bundle
             .identifier()
@@ -194,6 +200,15 @@ impl SingleBundleSigner {
             .map_err(AppleCodesignError::DirectoryBundle)?
         {
             resources_builder.process_file(log, &file)?;
+        }
+
+        // The resources are now sealed. Write out that XML file.
+        let code_resources_path = dest_dir.join("_CodeSignature").join("CodeResources");
+        warn!(&log, "writing {}", code_resources_path.display());
+        std::fs::create_dir_all(code_resources_path.parent().unwrap())?;
+        {
+            let mut fh = std::fs::File::create(&code_resources_path)?;
+            resources_builder.write_code_resources(&mut fh)?;
         }
 
         Ok(())
