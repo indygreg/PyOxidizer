@@ -377,6 +377,17 @@ impl<'data, 'key> MachOSigner<'data, 'key> {
             .collect::<Vec<_>>()
     }
 
+    /// See [MachOSignatureBuilder::info_plist_data].
+    pub fn info_plist_data(&mut self, data: &[u8]) -> Result<(), AppleCodesignError> {
+        self.signature_builders = self
+            .signature_builders
+            .drain(..)
+            .map(|builder| builder.info_plist_data(data))
+            .collect::<Result<Vec<_>, AppleCodesignError>>()?;
+
+        Ok(())
+    }
+
     /// See [MachOSignatureBuilder::code_resources_data].
     pub fn code_resources_data(&mut self, data: &[u8]) -> Result<(), AppleCodesignError> {
         self.signature_builders = self
@@ -585,6 +596,9 @@ pub struct MachOSignatureBuilder<'key> {
     /// Corresponds to `CodeDirectory`'s `runtime` field.
     runtime: Option<u32>,
 
+    /// Digest of `Info.plist` XML plist file.
+    info_plist_digest: Option<Digest<'static>>,
+
     /// Digest of the `CodeResources` XML plist file.
     resources_digest: Option<Digest<'static>>,
 
@@ -612,6 +626,7 @@ impl<'key> MachOSignatureBuilder<'key> {
             cdflags: None,
             executable_segment_flags: None,
             runtime: None,
+            info_plist_digest: None,
             resources_digest: None,
             signing_key: None,
             certificates: vec![],
@@ -640,6 +655,10 @@ impl<'key> MachOSignatureBuilder<'key> {
                 self.cdflags = Some(cd.flags);
                 self.executable_segment_flags = cd.exec_seg_flags;
                 self.runtime = cd.runtime;
+
+                if let Some(digest) = cd.special_hashes.get(&CodeSigningSlot::Info) {
+                    self.info_plist_digest = Some(digest.to_owned());
+                }
 
                 if let Some(digest) = cd.special_hashes.get(&CodeSigningSlot::ResourceDir) {
                     self.resources_digest = Some(digest.to_owned());
@@ -728,6 +747,23 @@ impl<'key> MachOSignatureBuilder<'key> {
         self.executable_segment_flags.replace(flags);
 
         self
+    }
+
+    /// Define the Info.plist content.
+    ///
+    /// Signatures can reference the digest of an external `Info.plist` file in
+    /// the bundle the binary is located in.
+    ///
+    /// This function tells us what the raw content of that file is so that the
+    /// content can be digested and the digest included in the code directory.
+    ///
+    /// The value passed here should be the raw content of the `Info.plist` XML file.
+    pub fn info_plist_data(mut self, data: &[u8]) -> Result<Self, AppleCodesignError> {
+        self.info_plist_digest.replace(Digest {
+            data: self.hash_type.digest(data)?.into(),
+        });
+
+        Ok(self)
     }
 
     /// Define the code resources content.
@@ -962,6 +998,12 @@ impl<'key> MachOSignatureBuilder<'key> {
         if let Some(resources_digest) = &self.resources_digest {
             if !resources_digest.is_null() {
                 special_hashes.insert(CodeSigningSlot::ResourceDir, resources_digest.to_owned());
+            }
+        }
+
+        if let Some(info_plist_digest) = &self.info_plist_digest {
+            if !info_plist_digest.is_null() {
+                special_hashes.insert(CodeSigningSlot::Info, info_plist_digest.to_owned());
             }
         }
 
