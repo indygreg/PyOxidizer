@@ -11,7 +11,9 @@ use {
         macho::{find_signature_data, parse_signature_data, CodeSigningSlot, RequirementType},
         macho_signing::MachOSigner,
     },
+    cryptographic_message_syntax::{Certificate, SigningKey},
     goblin::mach::Mach,
+    reqwest::{IntoUrl, Url},
     slog::{info, warn, Logger},
     std::{
         collections::BTreeMap,
@@ -32,12 +34,12 @@ use {
 /// Various functions accept an `Option<impl ToString>` to determine which
 /// bundle configuration to operate on. `None` is the main bundle and `Some(T)`
 /// defines the relative path of a nested bundle.
-pub struct BundleSigner {
+pub struct BundleSigner<'key> {
     /// All the bundles being signed, indexed by relative path.
-    bundles: BTreeMap<Option<String>, SingleBundleSigner>,
+    bundles: BTreeMap<Option<String>, SingleBundleSigner<'key>>,
 }
 
-impl BundleSigner {
+impl<'key> BundleSigner<'key> {
     /// Construct a new instance given the path to an on-disk bundle.
     ///
     /// The path should be the root directory of the bundle. e.g. `MyApp.app`.
@@ -71,6 +73,48 @@ impl BundleSigner {
             .ok_or_else(|| AppleCodesignError::BundleUnknown(bundle_path.unwrap()))?;
 
         bundle.entitlements_string(v);
+
+        Ok(())
+    }
+
+    /// Set the signing key to use for all cryptographic signatures.
+    pub fn set_signing_key(&mut self, private: &'key SigningKey, public: Certificate) {
+        for signer in self.bundles.values_mut() {
+            signer.signing_key(private, public.clone());
+        }
+    }
+
+    /// Add a DER encoded X.509 certificate to the certificate chain.
+    pub fn chain_certificate_der(
+        &mut self,
+        data: impl AsRef<[u8]>,
+    ) -> Result<(), AppleCodesignError> {
+        for signer in self.bundles.values_mut() {
+            signer.chain_certificate_der(data.as_ref())?;
+        }
+
+        Ok(())
+    }
+
+    /// Add a PEM encoded X.509 certificate to the certificate chain.
+    pub fn chain_certificate_pem(
+        &mut self,
+        data: impl AsRef<[u8]>,
+    ) -> Result<(), AppleCodesignError> {
+        for signer in self.bundles.values_mut() {
+            signer.chain_certificate_pem(data.as_ref())?;
+        }
+
+        Ok(())
+    }
+
+    /// Set the URL of a Time-Stamp Protocol server to use.
+    pub fn time_stamp_url(&mut self, url: impl IntoUrl) -> Result<(), AppleCodesignError> {
+        let url = url.into_url()?;
+
+        for signer in self.bundles.values_mut() {
+            signer.time_stamp_url(url.clone())?;
+        }
 
         Ok(())
     }
@@ -218,13 +262,13 @@ pub trait BundleFileHandler {
     ) -> Result<SignedMachOInfo, AppleCodesignError>;
 }
 
-struct SingleBundleHandler<'a> {
-    signer: &'a SingleBundleSigner,
+struct SingleBundleHandler<'a, 'key> {
+    signer: &'a SingleBundleSigner<'key>,
 
     dest_dir: PathBuf,
 }
 
-impl<'a> BundleFileHandler for SingleBundleHandler<'a> {
+impl<'a, 'key> BundleFileHandler for SingleBundleHandler<'a, 'key> {
     fn install_file(
         &self,
         log: &Logger,
@@ -267,8 +311,20 @@ impl<'a> BundleFileHandler for SingleBundleHandler<'a> {
 
         signer.load_existing_signature_context()?;
 
+        if let Some((private, public)) = &self.signer.signing_key {
+            signer.signing_key(private, public.clone());
+        }
+
+        for cert in &self.signer.certificates {
+            signer.chain_certificate_der(cert.as_der()?)?;
+        }
+
         if let Some(entitlements) = &self.signer.entitlements {
             signer.set_entitlements_string(entitlements);
+        }
+
+        if let Some(time_stamp_url) = &self.signer.time_stamp_url {
+            signer.time_stamp_url(time_stamp_url.clone())?;
         }
 
         let mut new_data = Vec::<u8>::with_capacity(macho_data.len() + 2_usize.pow(17));
@@ -299,26 +355,89 @@ impl<'a> BundleFileHandler for SingleBundleHandler<'a> {
 /// about nested bundles. You probably want to use [BundleSigner] as the interface
 /// for signing bundles, as failure to account for nested bundles can result in
 /// signature verification errors.
-pub struct SingleBundleSigner {
+pub struct SingleBundleSigner<'key> {
     /// The bundle being signed.
     bundle: DirectoryBundle,
 
     /// Entitlements string to use.
     entitlements: Option<String>,
+
+    /// The key pair to cryptographically sign with.
+    signing_key: Option<(&'key SigningKey, Certificate)>,
+
+    /// Certificate information to include.
+    certificates: Vec<Certificate>,
+
+    /// Time-Stamp Protocol server URL to use.
+    time_stamp_url: Option<Url>,
 }
 
-impl SingleBundleSigner {
+impl<'key> SingleBundleSigner<'key> {
     /// Construct a new instance.
     pub fn new(bundle: DirectoryBundle) -> Self {
         Self {
             bundle,
             entitlements: None,
+            signing_key: None,
+            certificates: vec![],
+            time_stamp_url: None,
         }
     }
 
     /// Set the entitlements string for the bundle and all its nested binaries.
     pub fn entitlements_string(&mut self, v: impl ToString) {
         self.entitlements = Some(v.to_string());
+    }
+
+    /// Set the signing key and its public certificate to create a cryptographic signature.
+    ///
+    /// If not called, no cryptographic signature will be recorded (ad-hoc signing).
+    pub fn signing_key(&mut self, private: &'key SigningKey, public: Certificate) {
+        self.signing_key = Some((private, public));
+    }
+
+    /// Add a DER encoded X.509 public certificate to the signing chain.
+    ///
+    /// Use this to add the raw binary content of an ASN.1 encoded public
+    /// certificate.
+    ///
+    /// The DER data is decoded at function call time. Any error decoding the
+    /// certificate will result in `Err`. No validation of the certificate is
+    /// performed.
+    pub fn chain_certificate_der(
+        &mut self,
+        data: impl AsRef<[u8]>,
+    ) -> Result<(), AppleCodesignError> {
+        self.certificates
+            .push(Certificate::from_der(data.as_ref())?);
+
+        Ok(())
+    }
+
+    /// Add a PEM encoded X.509 public certificate to the signing chain.
+    ///
+    /// PEM data looks like `-----BEGIN CERTIFICATE-----` and is a common method
+    /// for encoding certificate data. (PEM is effectively base64 encoded DER data.)
+    ///
+    /// Only a single certificate is read from the PEM data.
+    pub fn chain_certificate_pem(
+        &mut self,
+        data: impl AsRef<[u8]>,
+    ) -> Result<(), AppleCodesignError> {
+        self.certificates
+            .push(Certificate::from_pem(data.as_ref())?);
+
+        Ok(())
+    }
+
+    /// Set the Time-Stamp Protocol server URL to use to generate a Time-Stamp Token.
+    ///
+    /// When set, the server will be contacted during signing and a Time-Stamp Token will
+    /// be embedded in the CMS data structure.
+    pub fn time_stamp_url(&mut self, url: impl IntoUrl) -> Result<(), AppleCodesignError> {
+        self.time_stamp_url = Some(url.into_url()?);
+
+        Ok(())
     }
 
     /// Write a signed bundle to the given directory.
