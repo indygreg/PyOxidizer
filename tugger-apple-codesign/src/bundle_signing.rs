@@ -218,11 +218,13 @@ pub trait BundleFileHandler {
     ) -> Result<SignedMachOInfo, AppleCodesignError>;
 }
 
-struct SingleBundleHandler {
+struct SingleBundleHandler<'a> {
+    signer: &'a SingleBundleSigner,
+
     dest_dir: PathBuf,
 }
 
-impl BundleFileHandler for SingleBundleHandler {
+impl<'a> BundleFileHandler for SingleBundleHandler<'a> {
     fn install_file(
         &self,
         log: &Logger,
@@ -264,6 +266,10 @@ impl BundleFileHandler for SingleBundleHandler {
         let mut signer = MachOSigner::new(&macho_data)?;
 
         signer.load_existing_signature_context()?;
+
+        if let Some(entitlements) = &self.signer.entitlements {
+            signer.set_entitlements_string(entitlements);
+        }
 
         let mut new_data = Vec::<u8>::with_capacity(macho_data.len() + 2_usize.pow(17));
         signer.write_signed_binary(&mut new_data)?;
@@ -353,6 +359,7 @@ impl SingleBundleSigner {
 
         let handler = SingleBundleHandler {
             dest_dir: dest_dir_root.clone(),
+            signer: self,
         };
 
         let mut main_exe = None;
