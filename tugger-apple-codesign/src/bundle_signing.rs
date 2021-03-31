@@ -137,12 +137,6 @@ impl BundleSigner {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub enum SignMode {
-    Main,
-    Nested,
-}
-
 /// Metadata about a signed Mach-O file or bundle.
 ///
 /// If referring to a bundle, the metadata refers to the 1st Mach-O in the
