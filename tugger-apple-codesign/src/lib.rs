@@ -110,6 +110,8 @@ mod macho;
 pub use macho::*;
 mod macho_signing;
 pub use macho_signing::*;
+mod signing;
+pub use signing::*;
 pub mod specification;
 mod verify;
 pub use verify::*;

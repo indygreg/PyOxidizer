@@ -20,6 +20,8 @@ mod macho;
 #[allow(unused)]
 mod macho_signing;
 #[allow(unused)]
+mod signing;
+#[allow(unused)]
 mod specification;
 #[allow(unused)]
 mod verify;

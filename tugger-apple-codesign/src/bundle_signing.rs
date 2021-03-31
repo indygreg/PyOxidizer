@@ -59,6 +59,13 @@ impl<'key> BundleSigner<'key> {
         Ok(Self { bundles })
     }
 
+    /// See [MachOSignatureBuilder::load_existing_signature_context].
+    pub fn load_existing_signature_settings(&mut self) {
+        for signer in self.bundles.values_mut() {
+            signer.load_existing_signature_settings();
+        }
+    }
+
     /// Set the entitlements string to use for a bundle.
     pub fn set_bundle_entitlements_string(
         &mut self,
@@ -309,7 +316,9 @@ impl<'a, 'key> BundleFileHandler for SingleBundleHandler<'a, 'key> {
         let macho_data = std::fs::read(file.absolute_path())?;
         let mut signer = MachOSigner::new(&macho_data)?;
 
-        signer.load_existing_signature_context()?;
+        if self.signer.load_existing_signature_settings {
+            signer.load_existing_signature_context()?;
+        }
 
         if let Some((private, public)) = &self.signer.signing_key {
             signer.signing_key(private, public.clone());
@@ -359,6 +368,9 @@ pub struct SingleBundleSigner<'key> {
     /// The bundle being signed.
     bundle: DirectoryBundle,
 
+    /// Whether to load existing signature settings.
+    load_existing_signature_settings: bool,
+
     /// Entitlements string to use.
     entitlements: Option<String>,
 
@@ -377,11 +389,17 @@ impl<'key> SingleBundleSigner<'key> {
     pub fn new(bundle: DirectoryBundle) -> Self {
         Self {
             bundle,
+            load_existing_signature_settings: false,
             entitlements: None,
             signing_key: None,
             certificates: vec![],
             time_stamp_url: None,
         }
+    }
+
+    /// Enable loading of existing signature settings.
+    pub fn load_existing_signature_settings(&mut self) {
+        self.load_existing_signature_settings = true;
     }
 
     /// Set the entitlements string for the bundle and all its nested binaries.
