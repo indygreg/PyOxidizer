@@ -8,9 +8,7 @@ use {
     crate::{
         code_resources::{CodeResourcesBuilder, CodeResourcesRule},
         error::AppleCodesignError,
-        macho::{
-            find_signature_data, parse_signature_data, CodeSigningSlot, DigestType, RequirementType,
-        },
+        macho::{find_signature_data, parse_signature_data, CodeSigningSlot, RequirementType},
         macho_signing::MachOSigner,
     },
     goblin::mach::Mach,
@@ -124,8 +122,22 @@ pub enum SignMode {
     Nested,
 }
 
+/// Metadata about a signed Mach-O file or bundle.
+///
+/// If referring to a bundle, the metadata refers to the 1st Mach-O in the
+/// bundle's main executable.
+///
+/// This contains enough metadata to construct references to the file/bundle
+/// in [CodeResources] files.
 pub struct SignedMachOInfo {
-    pub code_directory_sha1: Vec<u8>,
+    /// Raw data constituting the code directory blob.
+    ///
+    /// Is typically digested to construct a <cdhash>.
+    pub code_directory_blob: Vec<u8>,
+
+    /// Designated code requirements string.
+    ///
+    /// Typically pccupies a `<key>requirement</key>` in a [CodeResources] file.
     pub designated_code_requirement: Option<String>,
 }
 
@@ -230,7 +242,7 @@ impl BundleFileHandler for SingleBundleHandler {
             .find_slot(CodeSigningSlot::CodeDirectory)
             .ok_or(AppleCodesignError::BinaryNoCodeSignature)?;
 
-        let code_directory_sha1 = cd.digest_with(DigestType::Sha1)?;
+        let code_directory_blob = cd.data.to_vec();
 
         let designated_code_requirement = if let Some(requirements) =
             signature.code_requirements()?
@@ -247,7 +259,7 @@ impl BundleFileHandler for SingleBundleHandler {
         };
 
         Ok(SignedMachOInfo {
-            code_directory_sha1,
+            code_directory_blob,
             designated_code_requirement,
         })
     }
