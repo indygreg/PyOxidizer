@@ -795,7 +795,7 @@ impl CodeResources {
         self.files2.insert(
             path.to_string(),
             Files2Value {
-                cdhash: Some(DigestType::Sha1.digest(&info.code_directory_blob)?),
+                cdhash: Some(DigestType::Sha256Truncated.digest(&info.code_directory_blob)?),
                 hash2: None,
                 optional: if optional { Some(true) } else { None },
                 requirement: info.designated_code_requirement.clone(),
