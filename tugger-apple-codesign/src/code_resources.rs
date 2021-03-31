@@ -891,7 +891,11 @@ impl CodeResourcesBuilder {
         slf.add_rule2(CodeResourcesRule::new("^embedded\\.provisionprofile$")?.weight(20));
         slf.add_rule2(CodeResourcesRule::new("^PkgInfo$")?.omit().weight(20));
         slf.add_rule2(CodeResourcesRule::new("^Resources/")?.weight(20));
-        slf.add_rule2(CodeResourcesRule::new("^Resources/.*\\.lproj/")?.weight(1000));
+        slf.add_rule2(
+            CodeResourcesRule::new("^Resources/.*\\.lproj/")?
+                .optional()
+                .weight(1000),
+        );
         slf.add_rule2(CodeResourcesRule::new("^Resources/Base\\.lproj/")?.weight(1010));
         slf.add_rule2(
             CodeResourcesRule::new("^Resources/.*\\.lproj/locversion.plist$")?
