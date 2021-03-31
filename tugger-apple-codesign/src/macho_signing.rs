@@ -576,6 +576,9 @@ pub struct MachOSignatureBuilder<'key> {
     /// e.g. `com.example.my_program`.
     identifier: Option<String>,
 
+    /// Team name string for the binary.
+    team_name: Option<String>,
+
     /// Digest method to use.
     hash_type: DigestType,
 
@@ -620,6 +623,7 @@ impl<'key> MachOSignatureBuilder<'key> {
     pub fn new() -> Result<Self, AppleCodesignError> {
         Ok(Self {
             identifier: None,
+            team_name: None,
             hash_type: DigestType::Sha256,
             entitlements: None,
             code_requirement: None,
@@ -651,6 +655,7 @@ impl<'key> MachOSignatureBuilder<'key> {
 
             if let Some(cd) = signature.code_directory()? {
                 self.identifier = Some(cd.ident.to_string());
+                self.team_name = cd.team_name.map(|x| x.to_string());
                 self.hash_type = cd.hash_type;
                 self.cdflags = Some(cd.flags);
                 self.executable_segment_flags = cd.exec_seg_flags;
@@ -1012,6 +1017,8 @@ impl<'key> MachOSignatureBuilder<'key> {
             .clone()
             .ok_or(AppleCodesignError::NoIdentifier)?;
 
+        let team_name = self.team_name.clone().map(|x| x.into());
+
         let mut cd = CodeDirectoryBlob {
             version: 0,
             flags,
@@ -1035,7 +1042,7 @@ impl<'key> MachOSignatureBuilder<'key> {
             linkage_offset: None,
             linkage_size: None,
             ident: ident.into(),
-            team_name: None,
+            team_name,
             code_hashes,
             special_hashes,
         };
