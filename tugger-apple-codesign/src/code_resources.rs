@@ -681,12 +681,25 @@ impl CodeResources {
     }
 
     /// Serialize an instance to XML.
-    pub fn to_writer_xml(&self, writer: impl Write) -> Result<(), AppleCodesignError> {
+    pub fn to_writer_xml(&self, mut writer: impl Write) -> Result<(), AppleCodesignError> {
         let value = Value::from(self);
 
+        // Ideally we'd write direct to the output. However, Apple's XML writer doesn't
+        // emit a space for empty elements. e.g. we do `<true />` and Apple does `<true/>`.
+        // In addition, our writer doesn't emit a trailing newline. To make it easier to
+        // diff generated files with the canonical output, we normalize to Apple's format.
+        let mut data = Vec::<u8>::new();
         value
-            .to_writer_xml(writer)
-            .map_err(AppleCodesignError::ResourcesPlist)
+            .to_writer_xml(&mut data)
+            .map_err(AppleCodesignError::ResourcesPlist)?;
+
+        let data = String::from_utf8(data).expect("XML should be valid UTF-8");
+        let data = data.replace("<true />", "<true/>");
+
+        writer.write_all(data.as_bytes())?;
+        writer.write_all(b"\n")?;
+
+        Ok(())
     }
 
     /// Add a rule to this instance in the `<rules>` section.
