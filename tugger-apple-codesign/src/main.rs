@@ -419,8 +419,36 @@ fn command_extract(args: &ArgMatches) -> Result<(), AppleCodesignError> {
                     hex::encode(blob.digest_with(DigestType::Sha256)?)
                 );
                 println!(
+                    "  sha256-truncated: {}",
+                    hex::encode(blob.digest_with(DigestType::Sha256Truncated)?)
+                );
+                println!(
                     "  sha384: {}",
-                    hex::encode(blob.digest_with(DigestType::Sha384)?)
+                    hex::encode(blob.digest_with(DigestType::Sha384)?),
+                );
+                println!(
+                    "  sha512: {}",
+                    hex::encode(blob.digest_with(DigestType::Sha512)?),
+                );
+                println!(
+                    "  sha1-base64: {}",
+                    base64::encode(blob.digest_with(DigestType::Sha1)?)
+                );
+                println!(
+                    "  sha256-base64: {}",
+                    base64::encode(blob.digest_with(DigestType::Sha256)?)
+                );
+                println!(
+                    "  sha256-truncated-base64: {}",
+                    base64::encode(blob.digest_with(DigestType::Sha256Truncated)?)
+                );
+                println!(
+                    "  sha384-base64: {}",
+                    base64::encode(blob.digest_with(DigestType::Sha384)?)
+                );
+                println!(
+                    "  sha512-base64: {}",
+                    base64::encode(blob.digest_with(DigestType::Sha512)?)
                 );
             }
         }
