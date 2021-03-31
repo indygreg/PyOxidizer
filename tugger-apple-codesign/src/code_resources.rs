@@ -1003,9 +1003,6 @@ impl CodeResourcesBuilder {
     /// so these rules shouldn't be relevant to us. But we handle them anyway, just in
     /// case. These rules take precedence over directory exclusion rules.
     fn find_rule(&self, path: &str) -> Option<CodeResourcesRule> {
-        // Remove Contents/ prefix for pattern matching.
-        let path = path.strip_prefix("Contents/").unwrap_or(&path).to_string();
-
         let parts = path.split('/').collect::<Vec<_>>();
 
         let mut exclude_override = false;
@@ -1065,6 +1062,13 @@ impl CodeResourcesBuilder {
     ) -> Result<(), AppleCodesignError> {
         // Always use UNIX style directory separators.
         let relative_path = file.relative_path().to_string_lossy().replace("\\", "/");
+
+        // The Contents/ prefix is also removed for pattern matching and references in the
+        // resources file.
+        let relative_path = relative_path
+            .strip_prefix("Contents/")
+            .unwrap_or(&relative_path)
+            .to_string();
 
         info!(log, "processing {}", relative_path);
 
