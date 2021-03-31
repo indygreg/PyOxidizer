@@ -1131,6 +1131,19 @@ impl CodeResourcesBuilder {
         Ok(())
     }
 
+    /// Add metadata for an additional signed Mach-O file.
+    ///
+    /// This is likely used to register the metadata of a nested bundle. The
+    /// metadata likely comes from the first Mach-O binary in the nested bundle's
+    /// main executable.
+    pub fn add_signed_macho_file(
+        &mut self,
+        path: &str,
+        info: &SignedMachOInfo,
+    ) -> Result<(), AppleCodesignError> {
+        self.resources.seal_macho(path, info, false)
+    }
+
     /// Write CodeResources XML content to a writer.
     pub fn write_code_resources(&self, writer: impl Write) -> Result<(), AppleCodesignError> {
         self.resources.to_writer_xml(writer)

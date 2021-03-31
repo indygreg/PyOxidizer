@@ -87,6 +87,8 @@ impl BundleSigner {
     ) -> Result<DirectoryBundle, AppleCodesignError> {
         let dest_dir = dest_dir.as_ref();
 
+        let mut additional_files = Vec::new();
+
         for (rel, nested) in &self.bundles {
             match rel {
                 Some(rel) => {
@@ -96,7 +98,26 @@ impl BundleSigner {
                         "entering nested bundle {}",
                         nested.bundle.root_dir().display(),
                     );
-                    nested.write_signed_bundle(log, nested_dest_dir)?;
+                    let signed_bundle = nested.write_signed_bundle(log, nested_dest_dir, &[])?;
+
+                    // The main bundle's CodeResources file contains references to metadata about
+                    // nested bundles' main executables. So we capture that here.
+                    let main_exe = signed_bundle
+                        .files(false)
+                        .map_err(AppleCodesignError::DirectoryBundle)?
+                        .into_iter()
+                        .find(|file| matches!(file.is_main_executable(), Ok(true)));
+
+                    if let Some(main_exe) = main_exe {
+                        let macho_data = std::fs::read(main_exe.absolute_path())?;
+                        let macho_info = SignedMachOInfo::parse_data(&macho_data)?;
+
+                        let path = rel.replace('\\', "/");
+                        let path = path.strip_prefix("Contents/").unwrap_or(&path).to_string();
+
+                        additional_files.push((path, macho_info));
+                    }
+
                     info!(
                         log,
                         "leaving nested bundle {}",
@@ -112,7 +133,7 @@ impl BundleSigner {
             .get(&None)
             .expect("main bundle should have a key");
 
-        main.write_signed_bundle(log, dest_dir)
+        main.write_signed_bundle(log, dest_dir, &additional_files)
     }
 }
 
@@ -139,6 +160,46 @@ pub struct SignedMachOInfo {
     ///
     /// Typically pccupies a `<key>requirement</key>` in a [CodeResources] file.
     pub designated_code_requirement: Option<String>,
+}
+
+impl SignedMachOInfo {
+    /// Parse Mach-O data to obtain an instance.
+    pub fn parse_data(data: &[u8]) -> Result<Self, AppleCodesignError> {
+        let macho = match Mach::parse(data)? {
+            Mach::Binary(macho) => macho,
+            // Initial Mach-O's signature data is used.
+            Mach::Fat(multi_arch) => multi_arch.get(0)?,
+        };
+
+        let signature_data =
+            find_signature_data(&macho)?.ok_or(AppleCodesignError::BinaryNoCodeSignature)?;
+        let signature = parse_signature_data(&signature_data.signature_data)?;
+
+        let cd = signature
+            .find_slot(CodeSigningSlot::CodeDirectory)
+            .ok_or(AppleCodesignError::BinaryNoCodeSignature)?;
+
+        let code_directory_blob = cd.data.to_vec();
+
+        let designated_code_requirement = if let Some(requirements) =
+            signature.code_requirements()?
+        {
+            if let Some(designated) = requirements.requirements.get(&RequirementType::Designated) {
+                let req = designated.parse_expressions()?;
+
+                Some(format!("{}", req[0]))
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
+        Ok(SignedMachOInfo {
+            code_directory_blob,
+            designated_code_requirement,
+        })
+    }
 }
 
 /// Used to process individual files within a bundle.
@@ -228,40 +289,7 @@ impl BundleFileHandler for SingleBundleHandler {
         }
         std::fs::set_permissions(&dest_path, permissions)?;
 
-        let macho = match Mach::parse(&new_data)? {
-            Mach::Binary(macho) => macho,
-            // Initial Mach-O's signature data is used.
-            Mach::Fat(multi_arch) => multi_arch.get(0)?,
-        };
-
-        let signature_data =
-            find_signature_data(&macho)?.ok_or(AppleCodesignError::BinaryNoCodeSignature)?;
-        let signature = parse_signature_data(&signature_data.signature_data)?;
-
-        let cd = signature
-            .find_slot(CodeSigningSlot::CodeDirectory)
-            .ok_or(AppleCodesignError::BinaryNoCodeSignature)?;
-
-        let code_directory_blob = cd.data.to_vec();
-
-        let designated_code_requirement = if let Some(requirements) =
-            signature.code_requirements()?
-        {
-            if let Some(designated) = requirements.requirements.get(&RequirementType::Designated) {
-                let req = designated.parse_expressions()?;
-
-                Some(format!("{}", req[0]))
-            } else {
-                None
-            }
-        } else {
-            None
-        };
-
-        Ok(SignedMachOInfo {
-            code_directory_blob,
-            designated_code_requirement,
-        })
+        SignedMachOInfo::parse_data(&new_data)
     }
 }
 
@@ -298,6 +326,7 @@ impl SingleBundleSigner {
         &self,
         log: &Logger,
         dest_dir: impl AsRef<Path>,
+        additional_macho_files: &[(String, SignedMachOInfo)],
     ) -> Result<DirectoryBundle, AppleCodesignError> {
         let dest_dir = dest_dir.as_ref();
 
@@ -356,6 +385,12 @@ impl SingleBundleSigner {
             } else {
                 resources_builder.process_file(log, &file, &handler)?;
             }
+        }
+
+        // Add in any additional signed Mach-O files. This is likely used for nested
+        // bundles.
+        for (path, info) in additional_macho_files {
+            resources_builder.add_signed_macho_file(path, info)?;
         }
 
         // The resources are now sealed. Write out that XML file.
