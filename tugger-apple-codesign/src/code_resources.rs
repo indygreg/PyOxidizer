@@ -451,6 +451,10 @@ impl From<&Rules2Value> for Value {
     fn from(v: &Rules2Value) -> Self {
         let mut dict = Dictionary::new();
 
+        if let Some(true) = v.nested {
+            dict.insert("nested".to_string(), Value::Boolean(true));
+        }
+
         if let Some(true) = v.omit {
             dict.insert("omit".to_string(), Value::Boolean(true));
         }
@@ -461,10 +465,6 @@ impl From<&Rules2Value> for Value {
 
         if let Some(weight) = v.weight {
             dict.insert("weight".to_string(), Value::Real(weight));
-        }
-
-        if let Some(true) = v.nested {
-            dict.insert("nested".to_string(), Value::Boolean(true));
         }
 
         Value::Dictionary(dict)
