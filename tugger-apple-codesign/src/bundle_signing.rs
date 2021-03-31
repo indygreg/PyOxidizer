@@ -86,7 +86,7 @@ impl BundleSigner {
         &self,
         log: &Logger,
         dest_dir: impl AsRef<Path>,
-    ) -> Result<(), AppleCodesignError> {
+    ) -> Result<DirectoryBundle, AppleCodesignError> {
         let dest_dir = dest_dir.as_ref();
 
         for (rel, nested) in &self.bundles {
@@ -286,7 +286,7 @@ impl SingleBundleSigner {
         &self,
         log: &Logger,
         dest_dir: impl AsRef<Path>,
-    ) -> Result<(), AppleCodesignError> {
+    ) -> Result<DirectoryBundle, AppleCodesignError> {
         let dest_dir = dest_dir.as_ref();
 
         warn!(
@@ -399,6 +399,6 @@ impl SingleBundleSigner {
             std::fs::set_permissions(&dest_path, permissions)?;
         }
 
-        Ok(())
+        DirectoryBundle::new_from_path(&dest_dir_root).map_err(AppleCodesignError::DirectoryBundle)
     }
 }
