@@ -467,7 +467,11 @@ impl From<&Rules2Value> for Value {
             dict.insert("weight".to_string(), Value::Real(weight));
         }
 
-        Value::Dictionary(dict)
+        if dict.is_empty() {
+            Value::Boolean(true)
+        } else {
+            Value::Dictionary(dict)
+        }
     }
 }
 
