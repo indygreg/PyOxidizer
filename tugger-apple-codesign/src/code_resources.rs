@@ -23,7 +23,7 @@ use {
     },
     plist::{Dictionary, Value},
     slog::{debug, info, Logger},
-    std::{cmp::Ordering, collections::HashMap, convert::TryFrom, io::Write},
+    std::{cmp::Ordering, collections::BTreeMap, convert::TryFrom, io::Write},
     tugger_apple_bundle::DirectoryBundleFile,
 };
 
@@ -587,10 +587,10 @@ impl CodeResourcesRule {
 /// content is digested and captured in this file.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct CodeResources {
-    files: HashMap<String, FilesValue>,
-    files2: HashMap<String, Files2Value>,
-    rules: HashMap<String, RulesValue>,
-    rules2: HashMap<String, Rules2Value>,
+    files: BTreeMap<String, FilesValue>,
+    files2: BTreeMap<String, Files2Value>,
+    rules: BTreeMap<String, RulesValue>,
+    rules2: BTreeMap<String, Rules2Value>,
 }
 
 impl CodeResources {
@@ -604,10 +604,10 @@ impl CodeResources {
             )
         })?;
 
-        let mut files = HashMap::new();
-        let mut files2 = HashMap::new();
-        let mut rules = HashMap::new();
-        let mut rules2 = HashMap::new();
+        let mut files = BTreeMap::new();
+        let mut files2 = BTreeMap::new();
+        let mut rules = BTreeMap::new();
+        let mut rules2 = BTreeMap::new();
 
         for (key, value) in dict.iter() {
             match key.as_ref() {
