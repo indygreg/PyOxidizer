@@ -77,6 +77,9 @@ pub enum AppleCodesignError {
     #[error("entitlements data not valid UTF-8: {0}")]
     EntitlementsBadUtf8(std::str::Utf8Error),
 
+    #[error("unknown executable segment flag: {0}")]
+    ExecutableSegmentUnknownFlag(String),
+
     #[error("unknown code requirement opcode: {0}")]
     RequirementUnknownOpcode(u32),
 
@@ -136,4 +139,7 @@ pub enum AppleCodesignError {
 
     #[error("bundle Info.plist does not define CFBundleExecutable: {0}")]
     BundleNoMainExecutable(PathBuf),
+
+    #[error("unable to parse settings scope: {0}")]
+    ParseSettingsScope(String),
 }

@@ -97,6 +97,25 @@ bitflags::bitflags! {
     }
 }
 
+impl FromStr for ExecutableSegmentFlags {
+    type Err = AppleCodesignError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "main-binary" => Ok(Self::MAIN_BINARY),
+            "allow-unsigned" => Ok(Self::ALLOW_UNSIGNED),
+            "debugger" => Ok(Self::DEBUGGER),
+            "jit" => Ok(Self::JIT),
+            "skip-library-validation" => Ok(Self::SKIP_LIBRARY_VALIDATION),
+            "can-load-cd-hash" => Ok(Self::CAN_LOAD_CD_HASH),
+            "can-exec-cd-hash" => Ok(Self::CAN_EXEC_CD_HASH),
+            _ => Err(AppleCodesignError::ExecutableSegmentUnknownFlag(
+                s.to_string(),
+            )),
+        }
+    }
+}
+
 /// Version of Code Directory data structure.
 #[derive(Clone, Copy, Debug, PartialEq)]
 #[repr(u32)]

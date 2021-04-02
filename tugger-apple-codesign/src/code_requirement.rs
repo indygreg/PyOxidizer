@@ -1127,7 +1127,7 @@ impl<'a> CodeRequirementMatchExpression<'a> {
 }
 
 /// Represents a series of [CodeRequirementExpression].
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct CodeRequirements<'a>(Vec<CodeRequirementExpression<'a>>);
 
 impl<'a> Deref for CodeRequirements<'a> {

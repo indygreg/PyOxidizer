@@ -30,7 +30,7 @@ use {
     crate::{
         bundle_signing::BundleSigner,
         certificate::create_self_signed_code_signing_certificate,
-        code_directory::{CodeDirectoryBlob, CodeSignatureFlags},
+        code_directory::{CodeDirectoryBlob, CodeSignatureFlags, ExecutableSegmentFlags},
         code_hash::compute_code_hashes,
         code_requirement::CodeRequirements,
         error::AppleCodesignError,
@@ -39,6 +39,7 @@ use {
             RequirementSetBlob,
         },
         macho_signing::MachOSigner,
+        signing::{SettingsScope, SigningSettings},
     },
     clap::{App, AppSettings, Arg, ArgMatches, SubCommand},
     cryptographic_message_syntax::{Certificate, CertificateKeyAlgorithm, SignedData, SigningKey},
@@ -120,17 +121,98 @@ the public key).
 ";
 
 const SIGN_ABOUT: &str = "\
-Adds code signatures to a Mach-O binary.
+Adds code signatures to a signable entity.
 
-This command will at an embedded code signature to the specified Mach-O binary.
-It will then produce a new Mach-O binary at the path specified with embedded
-code signature data.
+This command can sign the following entities:
 
-The input path can be a single or multiple/fat/universal Mach-O binary. If
-a fat binary is given, each Mach-O within that binary will be signed using
-identical signing options.
+* A single Mach-O binary (specified by its file path)
+* A bundle (specified by its directory path)
+
+If the input is Mach-O binary, it can be a single or multiple/fat/universal
+Mach-O binary. If a fat binary is given, each Mach-O within that binary will
+be signed.
+
+If the input is a bundle, the bundle will be recursively signed. If the
+bundle contains nested bundles or Mach-O binaries, those will be signed
+automatically.
+
+# Settings Scope
+
+The following signing settings are global and apply to all signed entities:
+
+* --digest
+* --pem-source
+* --team-name
+* --timestamp-url
+
+The following signing settings can be scoped so they only apply to certain
+entities:
+
+* --binary-identifier
+* --code-requirements-path
+* --code-resources-path
+* --code-signature-flags
+* --entitlements-xml-path
+* --executable-segment-flags
+* --info-plist-path
+
+Scoped settings take the form <value> or <scope>:<value>. If the 2nd form
+is used, the string before the first colon is parsed as a \"scoping string\".
+It can have the following values:
+
+* `main` - Applies to the main entity being signed and all nested entities.
+* `@<integer>` - e.g. `@0`. Applies to a Mach-O within a fat binary at the
+  specified index. 0 means the first Mach-O in a fat binary.
+* `@[cpu_type=<int>` - e.g. `@[cpu_type=7]`. Applies to a Mach-O within a fat
+  binary targeting a numbered CPU architecture (using numeric constants
+  as defined by Mach-O).
+* `@[cpu_type=<string>` - e.g. `@[cpu_type=x86_64]`. Applies to a Mach-O within
+  a fat binary targeting a CPU architecture identified by a string. See below
+  for the list of recognized values.
+* `<string>` - e.g. `path/to/file`. Applies to content at a given path. This
+  should be the bundle-relative path to a Mach-O binary, a nested bundle, or
+  a Mach-O binary within a nested bundle. If a nested bundle is referenced,
+  settings apply to everything within that bundle.
+* `<string>@<int>` - e.g. `path/to/file@0`. Applies to a Mach-O within a
+  fat binary at the given path. If the path is to a bundle, the setting applies
+  to all Mach-O binaries in that bundle.
+* `<string>@[cpu_type=<int|string>]` e.g. `Contents/MacOS/binary@[cpu_type=7]`
+  or `Contents/MacOS/binary@[cpu_type=arm64]`. Applies to a Mach-O within a
+  fat binary targeting a CPU architecture identified by its integer constant
+  or string name. If the path is to a bundle, the setting applies to all
+  Mach-O binaries in that bundle.
+
+The following named CPU architectures are recognized:
+
+* arm
+* arm64
+* arm64_32
+* x86_64
+
+Signing will traverse into nested entities:
+
+* A fat Mach-O binary will traverse into the multiple Mach-O binaries within.
+* A bundle will traverse into nested bundles.
+* A bundle will traverse non-code \"resource\" files and sign their digests.
+* A bundle will traverse non-main Mach-O binaries and sign them, adding their
+  metadata to the signed resources file.
+
+# Bundle Signing Overrides Settings
+
+When signing bundles, some settings specified on the command line will be
+ignored. This is to ensure that the produced signing data is correct. The
+settings ignored include (but may not be limited to):
+
+* --binary-identifier for the main executable. The `CFBundleIdentifier` value
+  from the bundle's `Info.plist` will be used instead.
+* --code-resources-path. The code resources data will be computed automatically
+  as part of signing the bundle.
+* --info-plist-path. The `Info.plist` from the bundle will be used instead.
+
+# Designated Code Requirements
 
 Designated code requirements can be specified via --code-requirements-path.
+
 This file MUST contain a binary/compiled code requirements expression. We do
 not (yet) support parsing the human-friendly code requirements DSL. A
 binary/compiled file can be produced via Apple's `csreq` tool. e.g.
@@ -138,8 +220,12 @@ binary/compiled file can be produced via Apple's `csreq` tool. e.g.
 specified, it will be parsed and displayed as part of signing to ensure it
 is well-formed.
 
-By default, the embedded code signature will only contains hashes of
-the binary and other important entities (such as entitlements and resources).
+# Code Signing Key Pair
+
+By default, the embedded code signature will only contain digests of the
+binary and other important entities (such as entitlements and resources).
+This is often referred to as \"ad-hoc\" signing.
+
 To use a code signing key/certificate to derive a cryptographic signature,
 use the --pem-source argument to define paths to files containing PEM encoded
 certificate/key data. (e.g. files with \"===== BEGIN CERTIFICATE =====\").
@@ -149,7 +235,8 @@ When reading PEM data for signing, there MUST be at least 1
 (If you use the output from the `generate-self-signed-certificate` command,
 this should just work.) There must be exactly 1 `PRIVATE KEY` defined.
 And, the first `CERTIFICATE` is assumed to be paired with the `PRIVATE KEY`.
-All extra `CERTIFICATE` sections are assumed to belong to the CA chain.
+All extra `CERTIFICATE` sections are assumed to belong to the issuing chain
+for the signing certificate.
 
 For best results, put your private key and its corresponding X.509 certificate
 in a single file. Then make it the first --pem-source argument. It is highly
@@ -164,7 +251,14 @@ special value \"none\" can disable using a timestamp server.
 
 const APPLE_TIMESTAMP_URL: &str = "http://timestamp.apple.com/ts01";
 
-const SUPPORTED_HASHES: &[&str; 5] = &["none", "sha1", "sha256", "sha256-truncated", "sha384"];
+const SUPPORTED_HASHES: &[&str; 6] = &[
+    "none",
+    "sha1",
+    "sha256",
+    "sha256-truncated",
+    "sha384",
+    "sha512",
+];
 
 fn get_logger() -> slog::Logger {
     let decorator = slog_term::TermDecorator::new().build();
@@ -172,6 +266,16 @@ fn get_logger() -> slog::Logger {
     let drain = std::sync::Mutex::new(drain).fuse();
 
     slog::Logger::root(drain, o!())
+}
+
+fn parse_scoped_value(s: &str) -> Result<(SettingsScope, &str), AppleCodesignError> {
+    let parts = s.splitn(2, ':').collect::<Vec<_>>();
+
+    match parts.len() {
+        1 => Ok((SettingsScope::Main, s)),
+        2 => Ok((SettingsScope::try_from(parts[0])?, parts[1])),
+        _ => Err(AppleCodesignError::CliBadArgument),
+    }
 }
 
 fn get_macho_from_data(data: &[u8], universal_index: usize) -> Result<MachO, AppleCodesignError> {
@@ -515,48 +619,15 @@ fn command_generate_self_signed_certificate(args: &ArgMatches) -> Result<(), App
 }
 
 fn command_sign(args: &ArgMatches) -> Result<(), AppleCodesignError> {
-    let input_path = PathBuf::from(
-        args.value_of("input_path")
-            .ok_or(AppleCodesignError::CliBadArgument)?,
-    );
-    let output_path = args
-        .value_of("output_path")
-        .ok_or(AppleCodesignError::CliBadArgument)?;
-    let code_requirements_path = args.value_of("code_requirements_path").map(PathBuf::from);
-    let code_resources_path = args.value_of("code_resources").map(PathBuf::from);
-    let entitlement_path = args.value_of("entitlement").map(PathBuf::from);
-    let options = match args.values_of("options") {
-        Some(values) => values.collect::<Vec<_>>(),
-        None => vec![],
-    };
-    let pem_sources = match args.values_of("pem_source") {
-        Some(values) => values.collect::<Vec<_>>(),
-        None => vec![],
-    };
-    let timestamp_url = args
-        .value_of("timestamp_url")
-        .ok_or(AppleCodesignError::CliBadArgument)?;
-    let timestamp_url = if timestamp_url == "none" {
-        None
-    } else {
-        Some(timestamp_url)
-    };
-
     let log = get_logger();
 
-    // TODO consider defining a signing trait and unify the API.
-    if input_path.is_file() {
-        warn!(&log, "signing {} as a Mach-O binary", input_path.display());
-        let macho_data = std::fs::read(input_path)?;
+    let mut settings = SigningSettings::default();
 
-        warn!(&log, "parsing Mach-O");
-        let mut signer = MachOSigner::new(&macho_data)?;
-        signer.load_existing_signature_context()?;
+    let mut private_keys = vec![];
+    let mut public_certificates = vec![];
 
-        let mut private_keys = vec![];
-        let mut public_certificates = vec![];
-
-        for pem_source in pem_sources {
+    if let Some(values) = args.values_of("pem_source") {
+        for pem_source in values {
             warn!(&log, "reading PEM data from {}", pem_source);
             let pem_data = std::fs::read(pem_source)?;
 
@@ -568,77 +639,156 @@ fn command_sign(args: &ArgMatches) -> Result<(), AppleCodesignError> {
                 }
             }
         }
+    }
 
-        if private_keys.len() > 1 {
-            error!(&log, "at most 1 PRIVATE KEY can be present; aborting");
+    if private_keys.len() > 1 {
+        error!(&log, "at most 1 PRIVATE KEY can be present; aborting");
+        return Err(AppleCodesignError::CliBadArgument);
+    }
+
+    let private = if private_keys.is_empty() {
+        None
+    } else {
+        Some(SigningKey::from_pkcs8_der(&private_keys[0], None)?)
+    };
+
+    if let Some(signing_key) = &private {
+        if public_certificates.is_empty() {
+            error!(
+                &log,
+                "a PRIVATE KEY requires a corresponding CERTIFICATE to pair with it"
+            );
             return Err(AppleCodesignError::CliBadArgument);
         }
 
-        let private = if private_keys.is_empty() {
-            None
-        } else {
-            Some(SigningKey::from_pkcs8_der(&private_keys[0], None)?)
-        };
+        let cert = public_certificates.remove(0);
+        let cert = Certificate::from_der(&cert)?;
 
-        if let Some(signing_key) = &private {
-            if public_certificates.is_empty() {
-                error!(
-                    &log,
-                    "a PRIVATE KEY requires a corresponding CERTIFICATE to pair with it"
-                );
-                return Err(AppleCodesignError::CliBadArgument);
-            }
+        warn!(&log, "registering signing key");
+        settings.set_signing_key(signing_key, cert);
 
-            let cert = public_certificates.remove(0);
-            let cert = Certificate::from_der(&cert)?;
-
-            warn!(&log, "registering signing key");
-            signer.signing_key(signing_key, cert);
-
-            if let Some(timestamp_url) = timestamp_url {
+        if let Some(timestamp_url) = args.value_of("timestamp_url") {
+            if timestamp_url != "none" {
                 warn!(&log, "using time-stamp protocol server {}", timestamp_url);
-                signer.time_stamp_url(timestamp_url)?;
+                settings.set_time_stamp_url(timestamp_url)?;
             }
         }
+    }
 
-        for cert in public_certificates {
-            warn!(&log, "registering extra X.509 certificate");
-            signer.chain_certificate_der(&cert)?;
+    for cert in public_certificates {
+        warn!(&log, "registering extra X.509 certificate");
+        settings.chain_certificate_der(&cert)?;
+    }
+
+    if let Some(team_name) = args.value_of("team_name") {
+        settings.set_team_name(team_name);
+    }
+
+    if let Some(value) = args.value_of("digest") {
+        let digest_type = DigestType::try_from(value)?;
+        settings.set_digest_type(digest_type);
+    }
+
+    if let Some(values) = args.values_of("binary_identifier") {
+        for value in values {
+            let (scope, identifier) = parse_scoped_value(value)?;
+            settings.set_binary_identifier(scope, identifier);
         }
+    }
 
-        if let Some(code_requirements_path) = code_requirements_path {
-            let code_requirements_data = std::fs::read(code_requirements_path)?;
+    if let Some(values) = args.values_of("code_requirements_path") {
+        for value in values {
+            let (scope, path) = parse_scoped_value(value)?;
+
+            let code_requirements_data = std::fs::read(path)?;
             let reqs = CodeRequirements::parse_blob(&code_requirements_data)?.0;
             for expr in reqs.iter() {
-                warn!(&log, "setting designated code requirements: {}", expr);
+                warn!(
+                    &log,
+                    "setting designated code requirements for {}: {}", scope, expr
+                );
+                settings.set_designated_requirement_expression(scope.clone(), expr)?;
             }
-            signer.set_designated_code_requirements(&reqs)?;
         }
+    }
 
-        if let Some(code_resources_path) = code_resources_path {
-            let code_resources_data = std::fs::read(code_resources_path)?;
-            signer.code_resources_data(&code_resources_data)?;
-        }
+    if let Some(values) = args.values_of("code_resources") {
+        for value in values {
+            let (scope, path) = parse_scoped_value(value)?;
 
-        if let Some(entitlement_path) = entitlement_path {
-            let entitlement_data = std::fs::read_to_string(entitlement_path)?;
-            signer.set_entitlements_string(&entitlement_data);
+            warn!(
+                &log,
+                "setting code resources data for {} from path {}", scope, path
+            );
+            let code_resources_data = std::fs::read(path)?;
+            settings.set_code_resources_data(scope, code_resources_data);
         }
+    }
 
-        for option in options {
-            let flags = CodeSignatureFlags::from_str(option)?;
-            signer.add_code_signature_flags(flags);
+    if let Some(values) = args.values_of("code_signature_flags_set") {
+        for value in values {
+            let (scope, value) = parse_scoped_value(value)?;
+
+            let flags = CodeSignatureFlags::from_str(value)?;
+            settings.set_code_signature_flags(scope, flags);
         }
+    }
+
+    if let Some(values) = args.values_of("entitlements_xml_path") {
+        for value in values {
+            let (scope, path) = parse_scoped_value(value)?;
+
+            warn!(
+                &log,
+                "setting entitlments XML for {} from path {}", scope, path
+            );
+            let entitlements_data = std::fs::read_to_string(path)?;
+            settings.set_entitlements_xml(scope, entitlements_data);
+        }
+    }
+
+    if let Some(values) = args.values_of("executable_segment_flags_set") {
+        for value in values {
+            let (scope, value) = parse_scoped_value(value)?;
+
+            let flags = ExecutableSegmentFlags::from_str(value)?;
+            settings.set_executable_segment_flags(scope, flags);
+        }
+    }
+
+    if let Some(values) = args.values_of("info_plist_path") {
+        for value in values {
+            let (scope, value) = parse_scoped_value(value)?;
+
+            let content = std::fs::read(value)?;
+            settings.set_info_plist_data(scope, content);
+        }
+    }
+
+    let input_path = PathBuf::from(
+        args.value_of("input_path")
+            .expect("input_path presence should have been validated by clap"),
+    );
+    let output_path = args
+        .value_of("output_path")
+        .expect("output_path presence should have been validated by clap");
+
+    if input_path.is_file() {
+        warn!(&log, "signing {} as a Mach-O binary", input_path.display());
+        let macho_data = std::fs::read(input_path)?;
+
+        warn!(&log, "parsing Mach-O");
+        let signer = MachOSigner::new(&macho_data)?;
 
         warn!(&log, "writing {}", output_path);
         let mut fh = std::fs::File::create(output_path)?;
-        signer.write_signed_binary(&mut fh)?;
+        signer.write_signed_binary(&settings, &mut fh)?;
     } else {
         warn!(&log, "signing {} as a bundle", input_path.display());
 
         let signer = BundleSigner::new_from_path(&input_path)?;
 
-        signer.write_signed_bundle(&log, &output_path)?;
+        signer.write_signed_bundle(&log, &output_path, &settings)?;
     }
 
     Ok(())
@@ -788,32 +938,66 @@ fn main_impl() -> Result<(), AppleCodesignError> {
         )
         .subcommand(
             SubCommand::with_name("sign")
-                .about("Adds a code signature to a Mach-O binary")
+                .about("Sign a Mach-O binary or bundle")
                 .long_about(SIGN_ABOUT)
+                .arg(
+                    Arg::with_name("binary_identifier")
+                        .long("binary-identifier")
+                        .takes_value(true)
+                        .multiple(true)
+                        .number_of_values(1)
+                        .help("Identifier string for binary. The value normally used by CFBundleIdentifier")
+                )
                 .arg(
                     Arg::with_name("code_requirements_path")
                         .long("code-requirements-path")
                         .takes_value(true)
+                        .multiple(true)
+                        .number_of_values(1)
                         .help("Path to a file containing binary code requirements data to be used as designated requirements")
                 )
                 .arg(
                     Arg::with_name("code_resources")
-                        .long("code-resources")
+                        .long("code-resources-path")
                         .takes_value(true)
+                        .multiple(true)
+                        .number_of_values(1)
                         .help("Path to an XML plist file containing code resources"),
                 )
                 .arg(
-                    Arg::with_name("entitlement")
-                        .long("entitlement")
-                        .short("e")
-                        .required(false)
+                    Arg::with_name("code_signature_flags_set")
+                        .long("code-signature-flags")
                         .takes_value(true)
+                        .help("Code signature flags to set")
+                )
+                .arg(
+                    Arg::with_name("digest")
+                        .long("digest")
+                        .possible_values(SUPPORTED_HASHES)
+                        .takes_value(true)
+                        .default_value("sha256")
+                        .help("Digest algorithm to use")
+                )
+                .arg(
+                    Arg::with_name("entitlements_xml_path")
+                        .long("entitlements-xml-path")
+                        .short("e")
+                        .takes_value(true)
+                        .multiple(true)
+                        .number_of_values(1)
                         .help("Path to a plist file containing entitlements"),
                 )
                 .arg(
-                    Arg::with_name("options")
-                        .long("options")
+                    Arg::with_name("executable_segment_flags_set")
+                        .long("executable-segment-flags")
                         .takes_value(true)
+                        .help("Executable segment flags to set")
+                )
+                .arg(
+                    Arg::with_name("info_plist_path")
+                        .long("info-plist-path")
+                        .takes_value(true)
+                        .help("Path to an Info.plist file whose digest to include in Mach-O signature")
                 )
                 .arg(
                     Arg::with_name("pem_source")
@@ -821,6 +1005,14 @@ fn main_impl() -> Result<(), AppleCodesignError> {
                         .takes_value(true)
                         .multiple(true)
                         .help("Path to file containing PEM encoded certificate/key data"),
+                )
+                .arg(
+                    Arg::with_name(
+                        "team_name")
+                        .long("team-name")
+                        .takes_value(true)
+                        .help("Team name/identifier to include in code signature"
+                    )
                 )
                 .arg(
                     Arg::with_name("timestamp_url")

@@ -10,10 +10,9 @@ use {
         error::AppleCodesignError,
         macho::{find_signature_data, parse_signature_data, CodeSigningSlot, RequirementType},
         macho_signing::MachOSigner,
+        signing::{SettingsScope, SigningSettings},
     },
-    cryptographic_message_syntax::{Certificate, SigningKey},
     goblin::mach::Mach,
-    reqwest::{IntoUrl, Url},
     slog::{info, warn, Logger},
     std::{
         collections::BTreeMap,
@@ -30,16 +29,12 @@ use {
 ///
 /// This type handles the signing of nested bundles (if present) such that
 /// they chain to the main bundle's signature.
-///
-/// Various functions accept an `Option<impl ToString>` to determine which
-/// bundle configuration to operate on. `None` is the main bundle and `Some(T)`
-/// defines the relative path of a nested bundle.
-pub struct BundleSigner<'key> {
+pub struct BundleSigner {
     /// All the bundles being signed, indexed by relative path.
-    bundles: BTreeMap<Option<String>, SingleBundleSigner<'key>>,
+    bundles: BTreeMap<Option<String>, SingleBundleSigner>,
 }
 
-impl<'key> BundleSigner<'key> {
+impl BundleSigner {
     /// Construct a new instance given the path to an on-disk bundle.
     ///
     /// The path should be the root directory of the bundle. e.g. `MyApp.app`.
@@ -59,73 +54,6 @@ impl<'key> BundleSigner<'key> {
         Ok(Self { bundles })
     }
 
-    /// See [MachOSignatureBuilder::load_existing_signature_context].
-    pub fn load_existing_signature_settings(&mut self) {
-        for signer in self.bundles.values_mut() {
-            signer.load_existing_signature_settings();
-        }
-    }
-
-    /// Set the entitlements string to use for a bundle.
-    pub fn set_bundle_entitlements_string(
-        &mut self,
-        bundle_path: Option<impl ToString>,
-        v: impl ToString,
-    ) -> Result<(), AppleCodesignError> {
-        let bundle_path = bundle_path.map(|x| x.to_string());
-
-        let bundle = self
-            .bundles
-            .get_mut(&bundle_path)
-            .ok_or_else(|| AppleCodesignError::BundleUnknown(bundle_path.unwrap()))?;
-
-        bundle.entitlements_string(v);
-
-        Ok(())
-    }
-
-    /// Set the signing key to use for all cryptographic signatures.
-    pub fn set_signing_key(&mut self, private: &'key SigningKey, public: Certificate) {
-        for signer in self.bundles.values_mut() {
-            signer.signing_key(private, public.clone());
-        }
-    }
-
-    /// Add a DER encoded X.509 certificate to the certificate chain.
-    pub fn chain_certificate_der(
-        &mut self,
-        data: impl AsRef<[u8]>,
-    ) -> Result<(), AppleCodesignError> {
-        for signer in self.bundles.values_mut() {
-            signer.chain_certificate_der(data.as_ref())?;
-        }
-
-        Ok(())
-    }
-
-    /// Add a PEM encoded X.509 certificate to the certificate chain.
-    pub fn chain_certificate_pem(
-        &mut self,
-        data: impl AsRef<[u8]>,
-    ) -> Result<(), AppleCodesignError> {
-        for signer in self.bundles.values_mut() {
-            signer.chain_certificate_pem(data.as_ref())?;
-        }
-
-        Ok(())
-    }
-
-    /// Set the URL of a Time-Stamp Protocol server to use.
-    pub fn time_stamp_url(&mut self, url: impl IntoUrl) -> Result<(), AppleCodesignError> {
-        let url = url.into_url()?;
-
-        for signer in self.bundles.values_mut() {
-            signer.time_stamp_url(url.clone())?;
-        }
-
-        Ok(())
-    }
-
     /// Write a signed bundle to the given destination directory.
     ///
     /// The destination directory can be the same as the source directory. However,
@@ -135,6 +63,7 @@ impl<'key> BundleSigner<'key> {
         &self,
         log: &Logger,
         dest_dir: impl AsRef<Path>,
+        settings: &SigningSettings,
     ) -> Result<DirectoryBundle, AppleCodesignError> {
         let dest_dir = dest_dir.as_ref();
 
@@ -149,7 +78,12 @@ impl<'key> BundleSigner<'key> {
                         "entering nested bundle {}",
                         nested.bundle.root_dir().display(),
                     );
-                    let signed_bundle = nested.write_signed_bundle(log, nested_dest_dir, &[])?;
+                    let signed_bundle = nested.write_signed_bundle(
+                        log,
+                        nested_dest_dir,
+                        &settings.as_nested_bundle_settings(rel),
+                        &[],
+                    )?;
 
                     // The main bundle's CodeResources file contains references to metadata about
                     // nested bundles' main executables. So we capture that here.
@@ -184,7 +118,7 @@ impl<'key> BundleSigner<'key> {
             .get(&None)
             .expect("main bundle should have a key");
 
-        main.write_signed_bundle(log, dest_dir, &additional_files)
+        main.write_signed_bundle(log, dest_dir, settings, &additional_files)
     }
 }
 
@@ -270,8 +204,7 @@ pub trait BundleFileHandler {
 }
 
 struct SingleBundleHandler<'a, 'key> {
-    signer: &'a SingleBundleSigner<'key>,
-
+    settings: &'a SigningSettings<'key>,
     dest_dir: PathBuf,
 }
 
@@ -314,30 +247,28 @@ impl<'a, 'key> BundleFileHandler for SingleBundleHandler<'a, 'key> {
         );
 
         let macho_data = std::fs::read(file.absolute_path())?;
-        let mut signer = MachOSigner::new(&macho_data)?;
+        let signer = MachOSigner::new(&macho_data)?;
 
-        if self.signer.load_existing_signature_settings {
-            signer.load_existing_signature_context()?;
-        }
+        let mut settings = self
+            .settings
+            .as_bundle_macho_settings(file.relative_path().to_string_lossy().as_ref());
 
-        if let Some((private, public)) = &self.signer.signing_key {
-            signer.signing_key(private, public.clone());
-        }
+        // The identifier string for a Mach-O that isn't the main executable is the
+        // file name, without a `.dylib` extension.
+        // TODO consider adding logic to SigningSettings?
+        let identifier = file
+            .relative_path()
+            .file_name()
+            .expect("failure to extract filename (this should never happen)")
+            .to_string_lossy();
 
-        for cert in &self.signer.certificates {
-            signer.chain_certificate_der(cert.as_der()?)?;
-        }
-
-        if let Some(entitlements) = &self.signer.entitlements {
-            signer.set_entitlements_string(entitlements);
-        }
-
-        if let Some(time_stamp_url) = &self.signer.time_stamp_url {
-            signer.time_stamp_url(time_stamp_url.clone())?;
-        }
+        let identifier = identifier
+            .strip_suffix(".dylib")
+            .unwrap_or_else(|| identifier.as_ref());
+        settings.set_binary_identifier(SettingsScope::Main, identifier);
 
         let mut new_data = Vec::<u8>::with_capacity(macho_data.len() + 2_usize.pow(17));
-        signer.write_signed_binary(&mut new_data)?;
+        signer.write_signed_binary(&settings, &mut new_data)?;
 
         let dest_path = self.dest_dir.join(file.relative_path());
 
@@ -364,98 +295,15 @@ impl<'a, 'key> BundleFileHandler for SingleBundleHandler<'a, 'key> {
 /// about nested bundles. You probably want to use [BundleSigner] as the interface
 /// for signing bundles, as failure to account for nested bundles can result in
 /// signature verification errors.
-pub struct SingleBundleSigner<'key> {
+pub struct SingleBundleSigner {
     /// The bundle being signed.
     bundle: DirectoryBundle,
-
-    /// Whether to load existing signature settings.
-    load_existing_signature_settings: bool,
-
-    /// Entitlements string to use.
-    entitlements: Option<String>,
-
-    /// The key pair to cryptographically sign with.
-    signing_key: Option<(&'key SigningKey, Certificate)>,
-
-    /// Certificate information to include.
-    certificates: Vec<Certificate>,
-
-    /// Time-Stamp Protocol server URL to use.
-    time_stamp_url: Option<Url>,
 }
 
-impl<'key> SingleBundleSigner<'key> {
+impl SingleBundleSigner {
     /// Construct a new instance.
     pub fn new(bundle: DirectoryBundle) -> Self {
-        Self {
-            bundle,
-            load_existing_signature_settings: false,
-            entitlements: None,
-            signing_key: None,
-            certificates: vec![],
-            time_stamp_url: None,
-        }
-    }
-
-    /// Enable loading of existing signature settings.
-    pub fn load_existing_signature_settings(&mut self) {
-        self.load_existing_signature_settings = true;
-    }
-
-    /// Set the entitlements string for the bundle and all its nested binaries.
-    pub fn entitlements_string(&mut self, v: impl ToString) {
-        self.entitlements = Some(v.to_string());
-    }
-
-    /// Set the signing key and its public certificate to create a cryptographic signature.
-    ///
-    /// If not called, no cryptographic signature will be recorded (ad-hoc signing).
-    pub fn signing_key(&mut self, private: &'key SigningKey, public: Certificate) {
-        self.signing_key = Some((private, public));
-    }
-
-    /// Add a DER encoded X.509 public certificate to the signing chain.
-    ///
-    /// Use this to add the raw binary content of an ASN.1 encoded public
-    /// certificate.
-    ///
-    /// The DER data is decoded at function call time. Any error decoding the
-    /// certificate will result in `Err`. No validation of the certificate is
-    /// performed.
-    pub fn chain_certificate_der(
-        &mut self,
-        data: impl AsRef<[u8]>,
-    ) -> Result<(), AppleCodesignError> {
-        self.certificates
-            .push(Certificate::from_der(data.as_ref())?);
-
-        Ok(())
-    }
-
-    /// Add a PEM encoded X.509 public certificate to the signing chain.
-    ///
-    /// PEM data looks like `-----BEGIN CERTIFICATE-----` and is a common method
-    /// for encoding certificate data. (PEM is effectively base64 encoded DER data.)
-    ///
-    /// Only a single certificate is read from the PEM data.
-    pub fn chain_certificate_pem(
-        &mut self,
-        data: impl AsRef<[u8]>,
-    ) -> Result<(), AppleCodesignError> {
-        self.certificates
-            .push(Certificate::from_pem(data.as_ref())?);
-
-        Ok(())
-    }
-
-    /// Set the Time-Stamp Protocol server URL to use to generate a Time-Stamp Token.
-    ///
-    /// When set, the server will be contacted during signing and a Time-Stamp Token will
-    /// be embedded in the CMS data structure.
-    pub fn time_stamp_url(&mut self, url: impl IntoUrl) -> Result<(), AppleCodesignError> {
-        self.time_stamp_url = Some(url.into_url()?);
-
-        Ok(())
+        Self { bundle }
     }
 
     /// Write a signed bundle to the given directory.
@@ -463,6 +311,7 @@ impl<'key> SingleBundleSigner<'key> {
         &self,
         log: &Logger,
         dest_dir: impl AsRef<Path>,
+        settings: &SigningSettings,
         additional_macho_files: &[(String, SignedMachOInfo)],
     ) -> Result<DirectoryBundle, AppleCodesignError> {
         let dest_dir = dest_dir.as_ref();
@@ -496,7 +345,7 @@ impl<'key> SingleBundleSigner<'key> {
 
         let handler = SingleBundleHandler {
             dest_dir: dest_dir_root.clone(),
-            signer: self,
+            settings: &settings,
         };
 
         let mut main_exe = None;
@@ -556,18 +405,27 @@ impl<'key> SingleBundleSigner<'key> {
             );
 
             let macho_data = std::fs::read(exe.absolute_path())?;
-            let mut signer = MachOSigner::new(&macho_data)?;
+            let signer = MachOSigner::new(&macho_data)?;
 
-            signer.load_existing_signature_context()?;
+            let mut settings = settings.clone();
 
-            signer.code_resources_data(&resources_data)?;
+            // The identifier for the main executable is defined in the bundle's Info.plist.
+            if let Some(ident) = self
+                .bundle
+                .identifier()
+                .map_err(AppleCodesignError::DirectoryBundle)?
+            {
+                settings.set_binary_identifier(SettingsScope::Main, ident);
+            }
+
+            settings.set_code_resources_data(SettingsScope::Main, resources_data);
 
             if let Some(info_plist_data) = info_plist_data {
-                signer.info_plist_data(&info_plist_data)?;
+                settings.set_info_plist_data(SettingsScope::Main, info_plist_data);
             }
 
             let mut new_data = Vec::<u8>::with_capacity(macho_data.len() + 2_usize.pow(17));
-            signer.write_signed_binary(&mut new_data)?;
+            signer.write_signed_binary(&settings, &mut new_data)?;
 
             let dest_path = dest_dir_root.join(exe.relative_path());
 

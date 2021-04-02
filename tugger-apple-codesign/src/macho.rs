@@ -931,6 +931,12 @@ pub enum DigestType {
     Unknown(u8),
 }
 
+impl Default for DigestType {
+    fn default() -> Self {
+        Self::Sha256
+    }
+}
+
 impl From<u8> for DigestType {
     fn from(v: u8) -> Self {
         match v {
@@ -1116,7 +1122,7 @@ impl<'a> Blob<'a> for EntitlementsBlob<'a> {
 
 impl<'a> EntitlementsBlob<'a> {
     /// Construct an instance using any string as the payload.
-    pub fn from_string(s: &impl ToString) -> Self {
+    pub fn from_string(s: &(impl ToString + ?Sized)) -> Self {
         Self {
             plist: s.to_string().into(),
         }
