@@ -17,6 +17,9 @@ pub enum AppleCodesignError {
     #[error("bad argument")]
     CliBadArgument,
 
+    #[error("{0}")]
+    CliGeneralError(String),
+
     #[error("I/O error: {0}")]
     Io(#[from] std::io::Error),
 
@@ -148,4 +151,14 @@ pub enum AppleCodesignError {
 
     #[error("error parsing PFX data: {0}")]
     PfxParseError(String),
+
+    #[cfg(target_os = "macos")]
+    #[error("SecurityFramework error: {0}")]
+    SecurityFramework(#[from] security_framework::base::Error),
+
+    #[error("error interfacing with macOS keychain: {0}")]
+    KeychainError(String),
+
+    #[error("failed to find certificate satisfying requirements: {0}")]
+    CertificateNotFound(String),
 }

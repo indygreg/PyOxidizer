@@ -43,3 +43,6 @@ version = "0.2.0-pre"
 [dependencies.tugger-apple-bundle]
 path = "../tugger-apple-bundle"
 version = "0.3.0-pre"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+security-framework = { version = "2.2", features = ["OSX_10_12"] }

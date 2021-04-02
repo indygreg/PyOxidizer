@@ -19,6 +19,9 @@ mod error;
 mod macho;
 #[allow(unused)]
 mod macho_signing;
+#[allow(non_upper_case_globals, unused)]
+#[cfg(target_os = "macos")]
+mod macos;
 #[allow(unused)]
 mod signing;
 #[allow(unused)]
@@ -46,6 +49,12 @@ use {
     goblin::mach::{Mach, MachO},
     slog::{error, o, warn, Drain},
     std::{convert::TryFrom, io::Write, path::PathBuf, str::FromStr},
+};
+
+#[cfg(target_os = "macos")]
+use {
+    crate::macos::macos_keychain_find_certificate_chain,
+    security_framework::os::macos::keychain::SecPreferencesDomain,
 };
 
 const EXTRACT_ABOUT: &str = "\
@@ -638,6 +647,61 @@ fn command_generate_self_signed_certificate(args: &ArgMatches) -> Result<(), App
     Ok(())
 }
 
+#[cfg(target_os = "macos")]
+fn command_keychain_export_certificate_chain(args: &ArgMatches) -> Result<(), AppleCodesignError> {
+    let user_id = args.value_of("user_id").unwrap();
+
+    let domain = args
+        .value_of("domain")
+        .expect("clap should have added default value");
+
+    let domain = match domain {
+        "user" => SecPreferencesDomain::User,
+        "system" => SecPreferencesDomain::System,
+        "common" => SecPreferencesDomain::Common,
+        "dynamic" => SecPreferencesDomain::Dynamic,
+        _ => panic!("clap should have validated domain values"),
+    };
+
+    let password = if let Some(path) = args.value_of("password_file") {
+        let data = std::fs::read_to_string(path)?;
+
+        Some(
+            data.lines()
+                .next()
+                .expect("should get a single line")
+                .to_string(),
+        )
+    } else if let Some(password) = args.value_of("password") {
+        Some(password.to_string())
+    } else {
+        None
+    };
+
+    let certs = macos_keychain_find_certificate_chain(
+        domain,
+        password.as_ref().map(|x| x.as_str()),
+        user_id,
+    )?;
+
+    for (i, cert) in certs.iter().enumerate() {
+        if args.is_present("no_print_self") && i == 0 {
+            continue;
+        }
+
+        print!("{}", cert.as_pem()?);
+    }
+
+    Ok(())
+}
+
+#[cfg(not(target_os = "macos"))]
+fn command_keychain_export_certificate_chain(_args: &ArgMatches) -> Result<(), AppleCodesignError> {
+    Err(AppleCodesignError::CliGeneralError(
+        "macOS Keychain export only supported on macOS".to_string(),
+    ))
+}
+
 fn command_parse_code_signing_requirement(args: &ArgMatches) -> Result<(), AppleCodesignError> {
     let path = args
         .value_of("input_path")
@@ -982,12 +1046,58 @@ fn main_impl() -> Result<(), AppleCodesignError> {
                         .default_value("365")
                         .help("How many days the certificate should be valid for"),
                 ),
+        ).
+        subcommand(SubCommand::with_name("keychain-export-certificate-chain")
+            .about("Export Apple CA certificates from the macOS Keychain")
+            .arg(
+                Arg::with_name("domain")
+                    .long("--domain")
+                    .possible_values(&["user", "system", "common", "dynamic"])
+                    .default_value("user")
+                    .help("Keychain domain to operate on")
+            )
+            .arg(
+                Arg::with_name("password")
+                    .long("--password")
+                    .takes_value(true)
+                    .help("Password to unlock the Keychain")
+            )
+            .arg(
+                Arg::with_name("password_file")
+                    .long("--password-file")
+                    .takes_value(true)
+                    .conflicts_with("password")
+                    .help("File containing password to use to unlock the Keychain")
+            )
+           .arg(
+                Arg::with_name("no_print_self")
+                    .long("--no-print-self")
+                    .help("Print only the issuing certificate chain, not the subject certificate")
+           )
+           .arg(
+               Arg::with_name("user_id")
+                    .long("--user-id")
+                    .takes_value(true)
+                    .required(true)
+                    .help("User ID value of code signing certificate to find and whose CA chain to export")
+           ),
         )
         .subcommand(SubCommand::with_name("parse-code-signing-requirement")
             .about("Parse binary Code Signing Requirement data into a human readable string")
             .long_about(PARSE_CODE_SIGNING_REQUIREMENT_ABOUT)
-            .arg(Arg::with_name("format").long("--format").required(true).possible_values(&["csrl", "expression-tree"]).default_value("csrl").help("Output format"))
-            .arg(Arg::with_name("input_path").required(true).help("Path to file to parse"))
+            .arg(
+                Arg::with_name("format")
+                    .long("--format")
+                    .required(true)
+                    .possible_values(&["csrl", "expression-tree"])
+                    .default_value("csrl")
+                    .help("Output format")
+            )
+            .arg(
+                Arg::with_name("input_path")
+                    .required(true)
+                    .help("Path to file to parse")
+            )
         )
         .subcommand(
             SubCommand::with_name("sign")
@@ -1103,6 +1213,9 @@ fn main_impl() -> Result<(), AppleCodesignError> {
         ("extract", Some(args)) => command_extract(args),
         ("generate-self-signed-certificate", Some(args)) => {
             command_generate_self_signed_certificate(args)
+        }
+        ("keychain-export-certificate-chain", Some(args)) => {
+            command_keychain_export_certificate_chain(args)
         }
         ("parse-code-signing-requirement", Some(args)) => {
             command_parse_code_signing_requirement(args)

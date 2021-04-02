@@ -89,6 +89,17 @@
 //!
 //! If you'd like to learn about the technical underpinnings of code signing on Apple
 //! platforms, see [specification].
+//!
+//! # Accessing Apple Code Signing Certificates
+//!
+//! This crate doesn't yet support integrating with the macOS keychain to obtain
+//! or use the code signing certificate private key. However, it does support
+//! importing the certificate key from a `.p12` file exported from the `Keychain
+//! Access` application. It also supports exporting the x509 certificate chain
+//! for a given certificate by speaking directly to the macOS keychain APIs.
+//!
+//! See the `keychain-export-certificate-chain` CLI command for exporting a
+//! code signing certificate's x509 chain as PEM.
 
 mod bundle_signing;
 pub use bundle_signing::*;
@@ -106,6 +117,11 @@ mod error;
 pub use error::*;
 mod macho;
 pub use macho::*;
+#[cfg(target_os = "macos")]
+#[allow(non_upper_case_globals)]
+mod macos;
+#[cfg(target_os = "macos")]
+pub use macos::*;
 mod macho_signing;
 pub use macho_signing::*;
 mod signing;

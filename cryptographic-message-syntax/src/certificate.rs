@@ -94,7 +94,7 @@ impl RelativeDistinguishedName {
         self.0.iter_mut().find(|attr| attr.typ == attribute)
     }
 
-    fn find_attribute_string(&self, attribute: Oid) -> Result<Option<String>, decode::Error> {
+    pub fn find_attribute_string(&self, attribute: Oid) -> Result<Option<String>, decode::Error> {
         if let Some(attr) = self.find_attribute(attribute) {
             attr.value.clone().decode(|cons| {
                 let value = DirectoryString::take_from(cons)?;
@@ -126,6 +126,12 @@ impl RelativeDistinguishedName {
 
             Ok(())
         }
+    }
+}
+
+impl PartialEq for RelativeDistinguishedName {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.eq(&other.0)
     }
 }
 
