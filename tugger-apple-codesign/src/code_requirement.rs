@@ -86,6 +86,15 @@ fn write_data(dest: &mut impl Write, data: &[u8]) -> Result<(), AppleCodesignErr
     Ok(())
 }
 
+/// Format a certificate slot's value to human form.
+fn format_certificate_slot(slot: i32) -> String {
+    match slot {
+        -1 => "root".to_string(),
+        0 => "leaf".to_string(),
+        _ => format!("{}", slot),
+    }
+}
+
 /// A value in a code requirement expression.
 ///
 /// The value can be various primitive types. This type exists to make it
@@ -604,23 +613,31 @@ impl<'a> std::fmt::Display for CodeRequirementExpression<'a> {
             Self::InfoPlistKeyField(key, expr) => {
                 f.write_fmt(format_args!("info [{}] {}", key, expr))
             }
-            Self::CertificateField(slot, field, expr) => {
-                f.write_fmt(format_args!("certificate {}[{}] {}", slot, field, expr))
-            }
+            Self::CertificateField(slot, field, expr) => f.write_fmt(format_args!(
+                "certificate {}[{}] {}",
+                format_certificate_slot(*slot),
+                field,
+                expr
+            )),
             Self::CertificateTrusted(slot) => {
                 f.write_fmt(format_args!("certificate {} trusted", slot))
             }
             Self::AnchorTrusted => f.write_str("anchor trusted"),
-            Self::CertificateGeneric(slot, oid, expr) => {
-                f.write_fmt(format_args!("certificate {}[field.{}] {}", slot, oid, expr))
-            }
+            Self::CertificateGeneric(slot, oid, expr) => f.write_fmt(format_args!(
+                "certificate {}[field.{}] {}",
+                format_certificate_slot(*slot),
+                oid,
+                expr
+            )),
             Self::AnchorAppleGeneric => f.write_str("anchor apple generic"),
             Self::EntitlementsKey(key, expr) => {
                 f.write_fmt(format_args!("entitlement [{}] {}", key, expr))
             }
             Self::CertificatePolicy(slot, oid, expr) => f.write_fmt(format_args!(
                 "certificate {}[policy.{}] {}",
-                slot, oid, expr
+                format_certificate_slot(*slot),
+                oid,
+                expr
             )),
             Self::NamedAnchor(name) => f.write_fmt(format_args!("anchor apple {}", name)),
             Self::NamedCode(name) => f.write_fmt(format_args!("({})", name)),
@@ -628,7 +645,9 @@ impl<'a> std::fmt::Display for CodeRequirementExpression<'a> {
             Self::Notarized => f.write_str("notarized"),
             Self::CertificateFieldDate(slot, oid, expr) => f.write_fmt(format_args!(
                 "certificate {}[timestamp.{}] {}",
-                slot, oid, expr
+                format_certificate_slot(*slot),
+                oid,
+                expr
             )),
             Self::LegacyDeveloperId => f.write_str("legacy"),
         }
