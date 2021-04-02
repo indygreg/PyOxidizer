@@ -605,22 +605,21 @@ impl<'a> std::fmt::Display for CodeRequirementExpression<'a> {
                 f.write_fmt(format_args!("info [{}] {}", key, expr))
             }
             Self::CertificateField(slot, field, expr) => {
-                f.write_fmt(format_args!("certificate {} [{}] {}", slot, field, expr))
+                f.write_fmt(format_args!("certificate {}[{}] {}", slot, field, expr))
             }
             Self::CertificateTrusted(slot) => {
                 f.write_fmt(format_args!("certificate {} trusted", slot))
             }
             Self::AnchorTrusted => f.write_str("anchor trusted"),
-            Self::CertificateGeneric(slot, oid, expr) => f.write_fmt(format_args!(
-                "certificate {} [field.{}] {}",
-                slot, oid, expr
-            )),
+            Self::CertificateGeneric(slot, oid, expr) => {
+                f.write_fmt(format_args!("certificate {}[field.{}] {}", slot, oid, expr))
+            }
             Self::AnchorAppleGeneric => f.write_str("anchor apple generic"),
             Self::EntitlementsKey(key, expr) => {
                 f.write_fmt(format_args!("entitlement [{}] {}", key, expr))
             }
             Self::CertificatePolicy(slot, oid, expr) => f.write_fmt(format_args!(
-                "certificate {} [policy.{}] {}",
+                "certificate {}[policy.{}] {}",
                 slot, oid, expr
             )),
             Self::NamedAnchor(name) => f.write_fmt(format_args!("anchor apple {}", name)),
@@ -628,7 +627,7 @@ impl<'a> std::fmt::Display for CodeRequirementExpression<'a> {
             Self::Platform(platform) => f.write_fmt(format_args!("platform = {}", platform)),
             Self::Notarized => f.write_str("notarized"),
             Self::CertificateFieldDate(slot, oid, expr) => f.write_fmt(format_args!(
-                "certificate {} [timestamp.{}] {}",
+                "certificate {}[timestamp.{}] {}",
                 slot, oid, expr
             )),
             Self::LegacyDeveloperId => f.write_str("legacy"),
