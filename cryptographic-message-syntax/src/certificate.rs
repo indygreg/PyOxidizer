@@ -274,6 +274,14 @@ impl Certificate {
 
         Ok(res)
     }
+
+    /// Serialize this certificate to PEM.
+    pub fn as_pem(&self) -> Result<String, CmsError> {
+        Ok(pem::encode(&pem::Pem {
+            tag: "CERTIFICATE".to_string(),
+            contents: self.as_der()?,
+        }))
+    }
 }
 
 impl TryFrom<&CertificateChoices> for Certificate {
