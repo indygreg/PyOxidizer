@@ -34,6 +34,13 @@
 //!   you provide. (See [MachOSigner] and [MachOSignatureBuilder].)
 //! * Writing a new Mach-O file containing new signature data. (See
 //!   [MachOSigner].)
+//! * Parse `CodeResources` XML plist files defining information on nested/signed
+//!   resources within bundles. This includes parsing and applying the filtering
+//!   rules defining in these files.
+//! * Sign bundles. Nested bundles will automatically be signed. Additional
+//!   Mach-O binaries outside the main executable will also be signed. Non
+//!   Mach-O/code files will be digested. A `CodeResources` XML file will be
+//!   produced.
 //!
 //! There are a number of missing features and capabilities from this crate
 //! that we hope are eventually implemented:
@@ -45,16 +52,6 @@
 //!   expression to binary and then give that binary blob to this crate. Alternatively,
 //!   you can write Rust code to construct a code requirements expression and serialize
 //!   that to binary.
-//! * Minimal signed resources support. We will preserve an existing referenced
-//!   file digest when re-signing a binary if signing settings are carried forward.
-//!   We support defining the content of the resources XML plist file so it can be
-//!   digested. We have minimal support for parsing these XML plist files. We do not
-//!   yet support mutating/building new resources XML plist files.
-//! * No bundle-based signing. We eventually want to provide an API where you
-//!   provide the path to a bundle (e.g. `/Applications/MyProgram.app`) and it
-//!   automatically finds and signs binaries, automatically signing resources and
-//!   signing nested binaries in the correct order so all content digests are chained
-//!   and secure.
 //! * No turnkey support for signing keys. We want to make it easier for obtaining
 //!   signing keys (and their X.509 certificate chain) for use with this crate. It
 //!   should be possible to easily integrate with the OS's key store or hardware
@@ -69,12 +66,13 @@
 //! There is missing features and functionality that will likely never be implemented:
 //!
 //! * Binary verification compliant with Apple's operating systems. We are capable
-//!   of verifying the hashes of code and other embedded signature data. We can also
+//!   of verifying the digests of code and other embedded signature data. We can also
 //!   verify that a cryptographic signature came from the annotated public key in
 //!   that signature. We can also write heuristics to look for certain common problems
 //!   with signatures. But we can't and likely never will implement all the rules Apple
-//!   uses to verify a binary for execution because the rules are complex and we don't
-//!   fully understand what they are because the implementation is proprietary.
+//!   uses to verify a binary for execution because we perceive there to be little
+//!   value in doing this. This crate could be used to build such functionality
+//!   elsewhere, however.
 //!
 //! # Getting Started
 //!
