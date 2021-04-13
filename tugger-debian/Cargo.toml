@@ -19,7 +19,7 @@ md5 = "0.7"
 os_str_bytes = "2.4"
 tar = "0.4"
 xz2 = "0.1"
-zstd = "0.6"
+zstd = "0.7"
 
 [dependencies.tugger-file-manifest]
 version = "0.2.0-pre"
