@@ -386,7 +386,7 @@ impl<'a> ControlTarBuilder<'a> {
         let mut entry = Vec::new();
         entry.write_all(&digest.to_ascii_lowercase())?;
         entry.write_all(b"  ")?;
-        entry.write_all(path.as_ref().to_bytes().as_ref())?;
+        entry.write_all(path.as_ref().to_raw_bytes().as_ref())?;
         entry.write_all(b"\n")?;
 
         self.md5sums.push(entry);
