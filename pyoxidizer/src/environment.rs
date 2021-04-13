@@ -85,7 +85,7 @@ pub static GIT_SOURCE: Lazy<PyOxidizerSource> = Lazy::new(|| {
 // Remember to update the CI configuration in ci/azure-pipelines-template.yml
 // and the `Installing Rust` documentation when this changes.
 pub static MINIMUM_RUST_VERSION: Lazy<semver::Version> =
-    Lazy::new(|| semver::Version::new(1, 45, 0));
+    Lazy::new(|| semver::Version::new(1, 46, 0));
 
 /// Target triples for Linux.
 pub static LINUX_TARGET_TRIPLES: Lazy<Vec<&'static str>> =

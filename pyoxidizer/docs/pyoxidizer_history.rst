@@ -34,6 +34,8 @@ Not yet released.
 Backwards Compatibility Notes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+* The minimum Rust version has been changed from 1.45 to 1.46 to facilitate
+  use of `const fn`.
 * On Apple platforms, PyOxidizer now validates that the Apple SDK being used
   is compatible with the Python distribution being used and will abort the
   build if not. Previously, PyOxidizer would blindly use whatever SDK was
