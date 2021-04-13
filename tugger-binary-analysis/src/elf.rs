@@ -80,7 +80,9 @@ pub fn find_undefined_elf_symbols(buffer: &[u8], elf: &goblin::elf::Elf) -> Vec<
     for section_header in &elf.section_headers {
         match section_header.sh_type {
             goblin::elf::section_header::SHT_GNU_VERSYM => {
-                let data: &[u8] = &buffer[section_header.file_range()];
+                let data: &[u8] = &buffer[section_header
+                    .file_range()
+                    .expect("SHT_GNU_VERSYM missing file range")];
 
                 let mut reader = std::io::Cursor::new(data);
 
@@ -91,7 +93,9 @@ pub fn find_undefined_elf_symbols(buffer: &[u8], elf: &goblin::elf::Elf) -> Vec<
             goblin::elf::section_header::SHT_GNU_VERNEED => {
                 verneed_names_section = section_header.sh_link;
 
-                let data: &[u8] = &buffer[section_header.file_range()];
+                let data: &[u8] = &buffer[section_header
+                    .file_range()
+                    .expect("SHT_GNU_VERNEED missing file range")];
 
                 let mut ptr = data.as_ptr();
 
@@ -121,8 +125,9 @@ pub fn find_undefined_elf_symbols(buffer: &[u8], elf: &goblin::elf::Elf) -> Vec<
     }
 
     let dynstrtab = &elf.dynstrtab;
-    let verneed_names_data: &[u8] =
-        &buffer[elf.section_headers[verneed_names_section as usize].file_range()];
+    let verneed_names_data: &[u8] = &buffer[elf.section_headers[verneed_names_section as usize]
+        .file_range()
+        .expect("verneed names section missing file range")];
 
     let mut res: Vec<UndefinedSymbol> = Vec::new();
 
