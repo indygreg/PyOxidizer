@@ -329,6 +329,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "cargo_toml"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d94e66797729c3a52b74980ec7992a9399aace3044bbcde9ce6bb98926abb673"
+dependencies = [
+ "serde",
+ "serde_derive",
+ "toml",
+]
+
+[[package]]
 name = "cast5"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1247,9 +1258,9 @@ checksum = "494b4d60369511e7dea41cf646832512a94e542f68bb9c49e54518e0f468eb47"
 
 [[package]]
 name = "hyper"
-version = "0.14.4"
+version = "0.14.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e8e946c2b1349055e0b72ae281b238baf1a3ea7307c7e9f9d64673bdd9c26ac7"
+checksum = "8bf09f61b52cfcf4c00de50df88ae423d6c02354e385a86341133b5338630ad1"
 dependencies = [
  "bytes",
  "futures-channel",
@@ -2219,7 +2230,7 @@ name = "pyoxidizer"
 version = "0.12.0-pre"
 dependencies = [
  "anyhow",
- "cargo_toml",
+ "cargo_toml 0.8.1",
  "cc",
  "clap",
  "codemap",
@@ -2619,7 +2630,7 @@ name = "release"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "cargo_toml",
+ "cargo_toml 0.9.0",
  "clap",
  "duct",
  "git2",
@@ -3088,11 +3099,10 @@ dependencies = [
 
 [[package]]
 name = "socket2"
-version = "0.3.19"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "122e570113d28d773067fab24266b66753f6ea915758651696b6e35e49f88d6e"
+checksum = "9e3dfc207c526015c632472a77be09cf1b6e46866581aecae5cc38fb4235dea2"
 dependencies = [
- "cfg-if 1.0.0",
  "libc",
  "winapi 0.3.9",
 ]
