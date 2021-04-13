@@ -27,7 +27,7 @@ git2 = { version = "0.13", default-features = false }
 
 [dependencies]
 anyhow = "1.0"
-cargo_toml = "0.8"
+cargo_toml = "0.9"
 cc = "1.0"
 clap = "2.33"
 codemap = "0.1"

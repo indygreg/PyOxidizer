@@ -319,17 +319,6 @@ dependencies = [
 
 [[package]]
 name = "cargo_toml"
-version = "0.8.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "513d17226888c7b8283ac02a1c1b0d8a9d4cbf6db65dfadb79f598f5d7966fe9"
-dependencies = [
- "serde",
- "serde_derive",
- "toml",
-]
-
-[[package]]
-name = "cargo_toml"
 version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d94e66797729c3a52b74980ec7992a9399aace3044bbcde9ce6bb98926abb673"
@@ -2230,7 +2219,7 @@ name = "pyoxidizer"
 version = "0.12.0-pre"
 dependencies = [
  "anyhow",
- "cargo_toml 0.8.1",
+ "cargo_toml",
  "cc",
  "clap",
  "codemap",
@@ -2630,7 +2619,7 @@ name = "release"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "cargo_toml 0.9.0",
+ "cargo_toml",
  "clap",
  "duct",
  "git2",
