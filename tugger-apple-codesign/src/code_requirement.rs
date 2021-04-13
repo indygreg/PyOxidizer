@@ -1267,7 +1267,7 @@ mod test {
     fn verify_roundtrip(reqs: &CodeRequirements, source: &[u8]) {
         let mut dest = Vec::<u8>::new();
         reqs.write_to(&mut dest).unwrap();
-        assert_eq!(&dest, source);
+        assert_eq!(dest.as_slice(), source);
     }
 
     #[test]
