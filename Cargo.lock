@@ -3099,9 +3099,9 @@ dependencies = [
 
 [[package]]
 name = "spdx"
-version = "0.3.6"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4e6b6cc773b635ad64a05f00367c6f66d06a8708f7360f67c41d446dacdd0a0f"
+checksum = "55ebe4f76cacc83caff34a6ad8731a260d5d1213bdedc655968c62f6cbc92783"
 dependencies = [
  "lazy_static",
  "regex",
