@@ -190,8 +190,7 @@ differences in behavior:
   iterable and this difference should hopefully be a harmless
   implementation detail.
 * Support for the ``path`` argument to ``pkgutil.iter_modules()`` requires that
-  both :ref:`config_type_python_interpreter_config_oxidized_importer` and
-  :ref:`config_type_python_interpreter_config_filesystem_importer` of
-  :ref:`config_type_python_interpreter_config` be set to ``True`` so that
   ``OxidizedFinder``'s :ref:`path_hook <oxidized_finder_path_hook>` is installed
-  in ``sys.path_hooks``.
+  in ``sys.path_hooks``. For automatic registration of this at interpreter
+  initialization time, both ``OxidizedFinder`` and the stdlib filesystem-based
+  importer have to be enabled.
