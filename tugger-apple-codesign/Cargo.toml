@@ -36,7 +36,7 @@ thiserror = "1.0"
 
 [dependencies.cryptographic-message-syntax]
 path = "../cryptographic-message-syntax"
-version = "0.1.0-dev"
+version = "0.1.0"
 
 [dependencies.tugger-apple-bundle]
 path = "../tugger-apple-bundle"
