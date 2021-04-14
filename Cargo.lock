@@ -2254,7 +2254,7 @@ dependencies = [
  "tugger-binary-analysis",
  "tugger-common 0.3.0-pre",
  "tugger-file-manifest 0.3.0-pre",
- "tugger-licensing 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-licensing 0.3.0-pre",
  "tugger-windows 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "url",
  "uuid",
@@ -2280,7 +2280,7 @@ dependencies = [
  "spdx",
  "tempfile",
  "tugger-file-manifest 0.3.0-pre",
- "tugger-licensing 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-licensing 0.3.0-pre",
  "walkdir",
  "zip",
 ]
@@ -2301,7 +2301,7 @@ dependencies = [
  "regex",
  "spdx",
  "tugger-file-manifest 0.2.0",
- "tugger-licensing 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-licensing 0.2.0",
  "walkdir",
  "zip",
 ]
@@ -3701,6 +3701,8 @@ version = "0.3.0-pre"
 [[package]]
 name = "tugger-licensing"
 version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e5808bdced02ef8c2e585af2cfdd988421b0beba3999e1354b28d7a8b2d21cf6"
 dependencies = [
  "anyhow",
  "spdx",
@@ -3708,9 +3710,7 @@ dependencies = [
 
 [[package]]
 name = "tugger-licensing"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e5808bdced02ef8c2e585af2cfdd988421b0beba3999e1354b28d7a8b2d21cf6"
+version = "0.3.0-pre"
 dependencies = [
  "anyhow",
  "spdx",
@@ -3724,7 +3724,7 @@ dependencies = [
  "reqwest",
  "spdx",
  "tugger-common 0.3.0-pre",
- "tugger-licensing 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-licensing 0.3.0-pre",
  "url",
 ]
 
