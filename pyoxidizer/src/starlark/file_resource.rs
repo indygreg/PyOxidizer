@@ -15,7 +15,7 @@ use {
         project_building::build_python_executable,
         py_packaging::{binary::PythonBinaryBuilder, resource::AddToFileManifest},
     },
-    anyhow::Result,
+    anyhow::{Context, Result},
     slog::warn,
     starlark::{
         environment::TypeValues,
@@ -44,7 +44,8 @@ pub fn file_manifest_add_python_executable(
     release: bool,
     opt_level: &str,
 ) -> Result<()> {
-    let build = build_python_executable(logger, &exe.name(), exe, target, opt_level, release)?;
+    let build = build_python_executable(logger, &exe.name(), exe, target, opt_level, release)
+        .context("building Python executable")?;
 
     let content = FileEntry {
         data: build.exe_data.clone().into(),
@@ -54,7 +55,10 @@ pub fn file_manifest_add_python_executable(
     let use_prefix = if prefix == "." { "" } else { prefix };
 
     let path = Path::new(use_prefix).join(build.exe_name);
-    manifest.manifest.add_file_entry(&path, content)?;
+    manifest
+        .manifest
+        .add_file_entry(&path, content)
+        .context("adding exe content to manifest")?;
 
     // Add any additional files that the exe builder requires.
     let mut extra_files = FileManifest::default();

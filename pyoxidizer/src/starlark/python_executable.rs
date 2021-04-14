@@ -735,6 +735,7 @@ impl PythonExecutableValue {
             pyoxidizer_context.build_release,
             &pyoxidizer_context.build_opt_level,
         )
+        .context("adding PythonExecutable to FileManifest")
         .map_err(|e| {
             ValueError::from(RuntimeError {
                 code: "PYOXIDIZER_PYTHON_EXECUTABLE",

@@ -6,7 +6,7 @@
 
 use {
     crate::environment::{PyOxidizerSource, BUILD_GIT_COMMIT, PYOXIDIZER_VERSION},
-    anyhow::{anyhow, Result},
+    anyhow::{anyhow, Context, Result},
     handlebars::Handlebars,
     once_cell::sync::Lazy,
     python_packaging::filesystem_scanning::walk_tree_files,
@@ -390,7 +390,8 @@ pub fn initialize_project(
         .arg("init")
         .arg("--bin")
         .arg(project_path)
-        .status()?;
+        .status()
+        .context("invoking cargo init")?;
 
     if !status.success() {
         return Err(anyhow!("cargo init failed"));
@@ -398,13 +399,16 @@ pub fn initialize_project(
 
     let path = PathBuf::from(project_path);
     let name = path.iter().last().unwrap().to_str().unwrap();
-    add_pyoxidizer(&path, true)?;
-    update_new_cargo_toml(&path.join("Cargo.toml"), pyembed_location)?;
-    write_new_cargo_config(&path)?;
-    write_new_build_rs(&path.join("build.rs"), name)?;
-    write_new_main_rs(&path.join("src").join("main.rs"), windows_subsystem)?;
-    write_new_pyoxidizer_config_file(&path, &name, code, pip_install)?;
-    write_application_manifest(&path, &name)?;
+    add_pyoxidizer(&path, true).context("adding PyOxidizer to Rust project")?;
+    update_new_cargo_toml(&path.join("Cargo.toml"), pyembed_location)
+        .context("updating Cargo.toml")?;
+    write_new_cargo_config(&path).context("writing cargo config")?;
+    write_new_build_rs(&path.join("build.rs"), name).context("writing build.rs")?;
+    write_new_main_rs(&path.join("src").join("main.rs"), windows_subsystem)
+        .context("writing main.rs")?;
+    write_new_pyoxidizer_config_file(&path, &name, code, pip_install)
+        .context("writing PyOxidizer config file")?;
+    write_application_manifest(&path, &name).context("writing application manifest")?;
 
     Ok(())
 }

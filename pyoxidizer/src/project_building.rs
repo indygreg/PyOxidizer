@@ -407,12 +407,15 @@ pub fn build_executable_with_rust_project<'a>(
     opt_level: &str,
     release: bool,
 ) -> Result<BuiltExecutable<'a>> {
-    create_dir_all(&artifacts_path)
-        .with_context(|| "creating directory for PyOxidizer build artifacts")?;
+    create_dir_all(&artifacts_path).context("creating directory for PyOxidizer build artifacts")?;
 
     // Derive and write the artifacts needed to build a binary embedding Python.
-    let embedded_data = exe.to_embedded_python_context(logger, opt_level)?;
-    embedded_data.write_files(&artifacts_path)?;
+    let embedded_data = exe
+        .to_embedded_python_context(logger, opt_level)
+        .context("obtaining embedded python context")?;
+    embedded_data
+        .write_files(&artifacts_path)
+        .context("writing embedded python context files")?;
 
     let build_env = BuildEnvironment::new(
         logger,
@@ -531,10 +534,13 @@ pub fn build_python_executable<'a>(
     opt_level: &str,
     release: bool,
 ) -> Result<BuiltExecutable<'a>> {
-    let env = crate::environment::resolve_environment()?;
+    let env = crate::environment::resolve_environment().context("resolving environment")?;
     let pyembed_location = env.as_pyembed_location();
 
-    let temp_dir = tempfile::Builder::new().prefix("pyoxidizer").tempdir()?;
+    let temp_dir = tempfile::Builder::new()
+        .prefix("pyoxidizer")
+        .tempdir()
+        .context("creating temp directory")?;
 
     // Directory needs to have name of project.
     let project_path = temp_dir.path().join(bin_name);
@@ -547,7 +553,8 @@ pub fn build_python_executable<'a>(
         None,
         &[],
         exe.windows_subsystem(),
-    )?;
+    )
+    .context("initializing project")?;
 
     let mut build = build_executable_with_rust_project(
         logger,
@@ -559,7 +566,8 @@ pub fn build_python_executable<'a>(
         target,
         opt_level,
         release,
-    )?;
+    )
+    .context("building executable with Rust project")?;
 
     // Blank out the path since it is in the temporary directory.
     build.exe_path = None;
