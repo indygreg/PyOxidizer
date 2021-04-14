@@ -18,7 +18,7 @@ libc = "0.2"
 python3-sys = "0.5.2"
 
 [dependencies.python-packed-resources]
-version = "0.6.0-pre"
+version = "0.7.0-pre"
 path = "../python-packed-resources"
 
 [dependencies.pyembed]
