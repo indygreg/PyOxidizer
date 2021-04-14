@@ -254,7 +254,12 @@ where
     }
 }
 
-fn release_package(root: &Path, workspace_packages: &[String], package: &str) -> Result<()> {
+fn release_package(
+    root: &Path,
+    workspace_packages: &[String],
+    package: &str,
+    publish: bool,
+) -> Result<()> {
     println!("releasing {}", package);
     println!(
         "(to resume from this position use --start-at=pre:{})",
@@ -335,43 +340,45 @@ fn release_package(root: &Path, workspace_packages: &[String], package: &str) ->
     )
     .context("creating Git commit")?;
 
-    if run_cmd(
-        package,
-        &root.join(package),
-        "cargo",
-        vec!["publish"],
-        vec![format!(
-            "crate version `{}` is already uploaded",
-            release_version
-        )],
-    )
-    .context("running cargo publish")?
-        == 0
-    {
-        println!("{}: sleeping to wait for crates index to update", package);
-        std::thread::sleep(std::time::Duration::from_secs(30));
-    };
-
-    println!(
-        "{}: checking workspace packages for package location updates",
-        package
-    );
-    for other_package in workspace_packages {
-        let cargo_toml = root.join(other_package).join("Cargo.toml");
-        println!(
-            "{}: {} {}",
+    if publish {
+        if run_cmd(
             package,
-            cargo_toml.display(),
-            if update_cargo_toml_dependency_package_location(
-                &cargo_toml,
-                package,
-                Location::Remote
-            )? {
-                "updated"
-            } else {
-                "unchanged"
-            }
+            &root.join(package),
+            "cargo",
+            vec!["publish"],
+            vec![format!(
+                "crate version `{}` is already uploaded",
+                release_version
+            )],
+        )
+        .context("running cargo publish")?
+            == 0
+        {
+            println!("{}: sleeping to wait for crates index to update", package);
+            std::thread::sleep(std::time::Duration::from_secs(30));
+        };
+
+        println!(
+            "{}: checking workspace packages for package location updates",
+            package
         );
+        for other_package in workspace_packages {
+            let cargo_toml = root.join(other_package).join("Cargo.toml");
+            println!(
+                "{}: {} {}",
+                package,
+                cargo_toml.display(),
+                if update_cargo_toml_dependency_package_location(
+                    &cargo_toml,
+                    package,
+                    Location::Remote
+                )? {
+                    "updated"
+                } else {
+                    "unchanged"
+                }
+            );
+        }
     }
 
     println!(
@@ -403,30 +410,32 @@ fn release_package(root: &Path, workspace_packages: &[String], package: &str) ->
     )
     .context("creating Git commit")?;
 
-    let tag = format!("{}/{}", package, release_version);
-    run_cmd(
-        package,
-        root,
-        "git",
-        vec!["tag".to_string(), "-f".to_string(), tag.clone()],
-        vec![],
-    )
-    .context("creating Git tag")?;
+    if publish {
+        let tag = format!("{}/{}", package, release_version);
+        run_cmd(
+            package,
+            root,
+            "git",
+            vec!["tag".to_string(), "-f".to_string(), tag.clone()],
+            vec![],
+        )
+        .context("creating Git tag")?;
 
-    run_cmd(
-        package,
-        root,
-        "git",
-        vec![
-            "push".to_string(),
-            "-f".to_string(),
-            "--tag".to_string(),
-            "origin".to_string(),
-            tag,
-        ],
-        vec![],
-    )
-    .context("pushing git tag")?;
+        run_cmd(
+            package,
+            root,
+            "git",
+            vec![
+                "push".to_string(),
+                "-f".to_string(),
+                "--tag".to_string(),
+                "origin".to_string(),
+                tag,
+            ],
+            vec![],
+        )
+        .context("pushing git tag")?;
+    }
 
     Ok(())
 }
@@ -532,6 +541,8 @@ enum VersionBump {
 }
 
 fn command_release(repo_root: &Path, args: &ArgMatches, repo: &Repository) -> Result<()> {
+    let publish = !args.is_present("no_publish");
+
     let version_bump = if args.is_present("patch") {
         VersionBump::Patch
     } else {
@@ -623,7 +634,7 @@ fn command_release(repo_root: &Path, args: &ArgMatches, repo: &Repository) -> Re
             }
 
             if seen_package {
-                release_package(&repo_root, &new_workspace_packages, *package)
+                release_package(&repo_root, &new_workspace_packages, *package, publish)
                     .with_context(|| format!("releasing {}", package))?;
             }
         }
@@ -805,6 +816,11 @@ fn main_impl() -> Result<()> {
         .subcommand(
             SubCommand::with_name("release")
                 .about("Perform release actions")
+                .arg(
+                    Arg::with_name("no_publish")
+                        .long("no-publish")
+                        .help("Do not publish release"),
+                )
                 .arg(
                     Arg::with_name("patch")
                         .help("Bump the patch version instead of the minor version"),
