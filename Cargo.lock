@@ -1907,7 +1907,7 @@ dependencies = [
  "libc",
  "memory-module-sys",
  "pyembed",
- "python-packed-resources 0.7.0-pre",
+ "python-packed-resources",
  "python3-sys",
  "winapi 0.3.9",
 ]
@@ -2205,12 +2205,12 @@ dependencies = [
  "memory-module-sys",
  "once_cell",
  "pathdiff",
- "python-packaging 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "python-packed-resources 0.7.0-pre",
+ "python-packaging",
+ "python-packed-resources",
  "python3-sys",
  "rusty-fork",
  "snmalloc-sys",
- "tugger-file-manifest 0.3.0-pre",
+ "tugger-file-manifest",
  "winapi 0.3.9",
 ]
 
@@ -2237,8 +2237,8 @@ dependencies = [
  "linked-hash-map",
  "once_cell",
  "path-dedot",
- "python-packaging 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "python-packed-resources 0.7.0-pre",
+ "python-packaging",
+ "python-packed-resources",
  "rustc_version",
  "semver",
  "serde",
@@ -2253,8 +2253,8 @@ dependencies = [
  "tugger-apple",
  "tugger-binary-analysis",
  "tugger-common",
- "tugger-file-manifest 0.3.0-pre",
- "tugger-licensing 0.3.0-pre",
+ "tugger-file-manifest",
+ "tugger-licensing",
  "tugger-windows",
  "url",
  "uuid",
@@ -2267,7 +2267,7 @@ dependencies = [
 
 [[package]]
 name = "python-packaging"
-version = "0.5.0"
+version = "0.6.0-pre"
 dependencies = [
  "anyhow",
  "byteorder",
@@ -2275,45 +2275,14 @@ dependencies = [
  "itertools 0.10.0",
  "mailparse",
  "once_cell",
- "python-packed-resources 0.7.0-pre",
+ "python-packed-resources",
  "regex",
  "spdx",
  "tempfile",
- "tugger-file-manifest 0.3.0-pre",
- "tugger-licensing 0.3.0-pre",
+ "tugger-file-manifest",
+ "tugger-licensing",
  "walkdir",
  "zip",
-]
-
-[[package]]
-name = "python-packaging"
-version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8b2d390b7ed2b092b53034665bd7f0de280f44c3394903765d78c9ea90f74824"
-dependencies = [
- "anyhow",
- "byteorder",
- "encoding_rs",
- "itertools 0.10.0",
- "mailparse",
- "once_cell",
- "python-packed-resources 0.6.0",
- "regex",
- "spdx",
- "tugger-file-manifest 0.2.0",
- "tugger-licensing 0.2.0",
- "walkdir",
- "zip",
-]
-
-[[package]]
-name = "python-packed-resources"
-version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fdf68bd98e905adec7d25babf354c5cf3c752447ce7d5a47897e2179cefbccf9"
-dependencies = [
- "anyhow",
- "byteorder",
 ]
 
 [[package]]
@@ -3507,7 +3476,7 @@ dependencies = [
  "starlark-dialect-build-targets",
  "tar",
  "tugger-common",
- "tugger-file-manifest 0.3.0-pre",
+ "tugger-file-manifest",
  "tugger-snapcraft",
  "tugger-windows",
  "tugger-wix",
@@ -3532,7 +3501,7 @@ version = "0.2.0-pre"
 dependencies = [
  "anyhow",
  "plist",
- "tugger-file-manifest 0.3.0-pre",
+ "tugger-file-manifest",
  "walkdir",
 ]
 
@@ -3602,30 +3571,14 @@ dependencies = [
  "md5",
  "os_str_bytes",
  "tar",
- "tugger-file-manifest 0.3.0-pre",
+ "tugger-file-manifest",
  "xz2",
  "zstd",
 ]
 
 [[package]]
 name = "tugger-file-manifest"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9fdffb996e472ed76d006a60902de6044b76fd5a9866ad48840f35718a942a89"
-
-[[package]]
-name = "tugger-file-manifest"
 version = "0.3.0-pre"
-
-[[package]]
-name = "tugger-licensing"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e5808bdced02ef8c2e585af2cfdd988421b0beba3999e1354b28d7a8b2d21cf6"
-dependencies = [
- "anyhow",
- "spdx",
-]
 
 [[package]]
 name = "tugger-licensing"
@@ -3643,7 +3596,7 @@ dependencies = [
  "reqwest",
  "spdx",
  "tugger-common",
- "tugger-licensing 0.3.0-pre",
+ "tugger-licensing",
  "url",
 ]
 
@@ -3653,7 +3606,7 @@ version = "0.3.0-pre"
 dependencies = [
  "anyhow",
  "rpm-rs",
- "tugger-file-manifest 0.3.0-pre",
+ "tugger-file-manifest",
 ]
 
 [[package]]
@@ -3667,7 +3620,7 @@ dependencies = [
  "serde_yaml",
  "slog",
  "tugger-common",
- "tugger-file-manifest 0.3.0-pre",
+ "tugger-file-manifest",
 ]
 
 [[package]]
@@ -3702,7 +3655,7 @@ dependencies = [
  "slog",
  "tempfile",
  "tugger-common",
- "tugger-file-manifest 0.3.0-pre",
+ "tugger-file-manifest",
  "tugger-windows",
  "url",
  "uuid",
