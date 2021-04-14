@@ -36,6 +36,13 @@ Bug Fixes
 
 * `WiXSimpleMsiBuilder` now properly writes XML when a license file is provided.
 
+New Features
+^^^^^^^^^^^^
+
+* Windows MSI installers for PyOxidizer are now available. The installers
+  are built with PyOxidizer, using its built-in support for producing MSI
+  installers.
+
 .. _version_0_12_0:
 
 0.12.0
