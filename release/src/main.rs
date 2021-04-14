@@ -254,6 +254,21 @@ where
     }
 }
 
+fn run_cargo_update_package(root: &Path, package: &str) -> Result<i32> {
+    println!(
+        "{}: running cargo update to ensure proper version string reflected",
+        package
+    );
+    run_cmd(
+        package,
+        &root,
+        "cargo",
+        vec!["update", "-p", package],
+        vec![],
+    )
+    .context("running cargo update")
+}
+
 fn release_package(
     root: &Path,
     workspace_packages: &[String],
@@ -309,18 +324,7 @@ fn release_package(
     }
 
     // We need to ensure Cargo.lock reflects any version changes.
-    println!(
-        "{}: running cargo update to ensure proper version string reflected",
-        package
-    );
-    run_cmd(
-        package,
-        &root,
-        "cargo",
-        vec!["update", "-p", package],
-        vec![],
-    )
-    .context("running cargo update")?;
+    run_cargo_update_package(root, package)?;
 
     // We need to perform a Git commit to ensure the working directory is clean, otherwise
     // Cargo complains. We could run with --allow-dirty. But that exposes us to other dangers,
