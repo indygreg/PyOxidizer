@@ -758,6 +758,10 @@ fn main_impl() -> Result<()> {
         .author("Gregory Szorc <gregory.szorc@gmail.com>")
         .about("Perform releases from the PyOxidizer repository")
         .subcommand(
+            SubCommand::with_name("generate-pyembed-license")
+                .about("Emit license information for the pyembed crate"),
+        )
+        .subcommand(
             SubCommand::with_name("release")
                 .about("Perform release actions")
                 .arg(
@@ -778,10 +782,6 @@ fn main_impl() -> Result<()> {
                         .multiple(true)
                         .help("Name of package to ignore post releases"),
                 ),
-        )
-        .subcommand(
-            SubCommand::with_name("generate-pyembed-license")
-                .about("Emit license information for the pyembed crate"),
         )
         .get_matches();
 
