@@ -75,10 +75,8 @@ part of Python initialization (e.g. the ``sys`` module).
 
 At the end of initialization, the :ref:`path_hook <oxidized_finder_path_hook>`
 method of the ``OxidizedFinder`` instance on ``sys.meta_path`` is appended to
-``sys.path_hooks`` if both
-:ref:`config_type_python_interpreter_config_oxidized_importer` and
-:ref:`config_type_python_interpreter_config_filesystem_importer` of
-:ref:`config_type_python_interpreter_config` are ``True``.
+``sys.path_hooks`` if both the ``OxidizedFinder`` and standard library
+filesystem based importer are enabled.
 
 Python API
 ==========
