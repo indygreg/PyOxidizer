@@ -380,14 +380,14 @@ impl WiXSimpleMsiBuilder {
                 XmlEvent::start_element("Component")
                     .attr("Id", "License")
                     .attr("Guid", "*")
-                    .attr("Win64", "$(var.Win64"),
+                    .attr("Win64", "$(var.Win64)"),
             )?;
 
             writer.write(
                 XmlEvent::start_element("File")
                     .attr("Id", "LicenseFile")
                     .attr("Name", "LicenseFile")
-                    .attr("DiskID", "1")
+                    .attr("DiskId", "1")
                     .attr("Source", &license_source.display().to_string())
                     .attr("KeyPath", "yes"),
             )?;

@@ -24,6 +24,18 @@ Blog Posts
 Version History
 ===============
 
+.. _version_0_13_0:
+
+0.13.0
+------
+
+Not yet released.
+
+Bug Fixes
+^^^^^^^^^
+
+* `WiXSimpleMsiBuilder` now properly writes XML when a license file is provided.
+
 .. _version_0_12_0:
 
 0.12.0
