@@ -28,7 +28,7 @@ static IGNORE_PACKAGES: Lazy<Vec<&'static str>> = Lazy::new(|| vec!["release"]);
 /// Order that packages should be released in.
 static RELEASE_ORDER: Lazy<Vec<&'static str>> = Lazy::new(|| {
     vec![
-        "crypographic-message-syntax",
+        "cryptographic-message-syntax",
         "starlark-dialect-build-targets",
         "tugger-common",
         "tugger-file-manifest",
