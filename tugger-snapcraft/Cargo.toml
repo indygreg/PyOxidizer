@@ -23,5 +23,5 @@ version = "0.2.0"
 # path = "../tugger-common"
 
 [dependencies.tugger-file-manifest]
-version = "0.2.0-pre"
-path = "../tugger-file-manifest"
+version = "0.2.0"
+# path = "../tugger-file-manifest"
