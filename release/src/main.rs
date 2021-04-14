@@ -271,6 +271,7 @@ fn run_cargo_update_package(root: &Path, package: &str) -> Result<i32> {
 
 fn release_package(
     root: &Path,
+    repo: &Repository,
     workspace_packages: &[String],
     package: &str,
     publish: bool,
@@ -292,17 +293,100 @@ fn release_package(
 
     println!("{}: existing Cargo.toml version: {}", package, version);
 
-    let version = semver::Version::parse(version).context("parsing package version")?;
-    let mut release_version = version.clone();
-    release_version.pre.clear();
+    let current_version = semver::Version::parse(version).context("parsing package version")?;
 
-    if version.is_prerelease() {
-        println!("{}: removing pre-release version", package);
+    // Find previous tags for this package so we can see if there are any
+    // meaningful changes to the package since the last tag.
+    let mut package_tags = vec![];
+    repo.tag_foreach(|oid, name| {
+        let name = String::from_utf8_lossy(name);
+
+        if name.starts_with(&format!("refs/tags/{}/", package)) {
+            package_tags.push((name.to_string(), oid));
+        }
+
+        true
+    })?;
+
+    let restore_version = if package_tags.is_empty() {
+        None
+    } else {
+        // Find the last tag and see if there are file changes.
+        let mut walker = repo.revwalk()?;
+
+        walker.set_sorting(git2::Sort::TOPOLOGICAL)?;
+        walker.push_head()?;
+
+        for (_, oid) in &package_tags {
+            walker.push(*oid)?;
+        }
+
+        let mut restore_version = None;
+
+        for oid in walker {
+            let oid = oid?;
+
+            // Stop traversal when we get to a prior tag.
+            if let Some((version, _)) = package_tags.iter().find(|(_, tag_oid)| &oid == tag_oid) {
+                restore_version = Some(version.clone());
+                break;
+            }
+
+            let commit = repo.find_commit(oid)?;
+
+            let old_tree = commit.parent(0)?.tree()?;
+            let new_tree = commit.tree()?;
+
+            let diff = repo.diff_tree_to_tree(Some(&old_tree), Some(&new_tree), None)?;
+
+            let relevant = diff.deltas().any(|delta| {
+                if let Some(old_path) = delta.old_file().path_bytes() {
+                    return String::from_utf8_lossy(old_path).starts_with(&format!("{}/", package));
+                }
+
+                if let Some(new_path) = delta.new_file().path_bytes() {
+                    return String::from_utf8_lossy(new_path).starts_with(&format!("{}/", package));
+                }
+
+                false
+            });
+
+            // Commit didn't touch this package. Ignore it.
+            if !relevant {
+                continue;
+            }
+
+            if !commit.message_bytes().starts_with(b"release: ") {
+                break;
+            }
+        }
+
+        restore_version
+    };
+
+    // If there were no meaningful changes, the release version is the last tag.
+    // Otherwise we strip the pre component from the version string and release it.
+    let release_version = if let Some(restore_version) = &restore_version {
+        semver::Version::parse(restore_version).context("parsing old released version")?
+    } else {
+        let mut v = current_version.clone();
+        v.pre.clear();
+
+        v
+    };
+
+    println!(
+        "previous version: {}; new version: {}",
+        current_version, release_version
+    );
+
+    if current_version != release_version {
+        println!("{}: updating version to {}", package, release_version);
         update_cargo_toml_package_version(&manifest_path, &release_version.to_string())?;
     }
 
     println!(
-        "{}: checking workspace packages for version updated",
+        "{}: checking workspace packages for version updates",
         package
     );
     for other_package in workspace_packages {
@@ -344,7 +428,7 @@ fn release_package(
     )
     .context("creating Git commit")?;
 
-    if publish {
+    if publish && release_version > current_version {
         if run_cmd(
             package,
             &root.join(package),
@@ -414,7 +498,7 @@ fn release_package(
     )
     .context("creating Git commit")?;
 
-    if publish {
+    if publish && release_version > current_version {
         let tag = format!("{}/{}", package, release_version);
         run_cmd(
             package,
@@ -529,7 +613,7 @@ fn update_package_version(
             "commit".to_string(),
             "-a".to_string(),
             "-m".to_string(),
-            format!("{}: bump version to {}", package, next_version),
+            format!("release: bump {} version to {}", package, next_version),
         ],
         vec![],
     )
@@ -679,7 +763,7 @@ fn command_release(repo_root: &Path, args: &ArgMatches, repo: &Repository) -> Re
                     return Err(anyhow!("package {} is dirty: refusing to proceed", package));
                 }
 
-                release_package(&repo_root, &new_workspace_packages, *package, publish)
+                release_package(&repo_root, repo, &new_workspace_packages, *package, publish)
                     .with_context(|| format!("releasing {}", package))?;
             }
         }

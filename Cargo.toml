@@ -8,7 +8,7 @@ members = [
     'python-packed-resources',
     'release',
     'starlark-dialect-build-targets',
-    "text-stub-library",
+    'text-stub-library',
     'tugger',
     'tugger-apple-bundle',
     'tugger-apple-codesign',
