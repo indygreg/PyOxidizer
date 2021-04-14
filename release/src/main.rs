@@ -256,6 +256,10 @@ where
 
 fn release_package(root: &Path, workspace_packages: &[String], package: &str) -> Result<()> {
     println!("releasing {}", package);
+    println!(
+        "(to resume from this position use --start-at=pre:{})",
+        package
+    );
 
     let manifest_path = root.join(package).join("Cargo.toml");
     let manifest = Manifest::from_path(&manifest_path)
@@ -434,6 +438,10 @@ fn update_package_version(
     version_bump: VersionBump,
 ) -> Result<()> {
     println!("updating package version for {}", package);
+    println!(
+        "(to resume from this position use --start-at=post:{})",
+        package
+    );
 
     let manifest_path = root.join(package).join("Cargo.toml");
     let manifest = Manifest::from_path(&manifest_path)
@@ -530,16 +538,29 @@ fn command_release(repo_root: &Path, args: &ArgMatches) -> Result<()> {
         VersionBump::Minor
     };
 
-    let ignores_pre = if let Some(values) = args.values_of("ignore_pre") {
-        values.collect()
-    } else {
-        vec![]
-    };
-    let ignores_post = if let Some(values) = args.values_of("ignore_post") {
-        values.collect()
-    } else {
-        vec![]
-    };
+    let (do_pre, pre_start_name, post_start_name) =
+        if let Some(start_at) = args.value_of("start_at") {
+            let mut parts = start_at.splitn(2, ':');
+
+            let prefix = parts
+                .next()
+                .ok_or_else(|| anyhow!("start_at value must contain a :"))?;
+            let suffix = parts
+                .next()
+                .ok_or_else(|| anyhow!("start_at value must contain a value after :"))?;
+
+            match prefix {
+                "pre" => (true, Some(suffix), None),
+                "post" => (false, None, Some(suffix)),
+                _ => {
+                    return Err(anyhow!(
+                        "illegal start_at value: must begin with `pre:` or `post:`"
+                    ))
+                }
+            }
+        } else {
+            (true, None, None)
+        };
 
     ensure_pyembed_license_current(repo_root)?;
 
@@ -586,10 +607,18 @@ fn command_release(repo_root: &Path, args: &ArgMatches) -> Result<()> {
         ));
     }
 
-    for package in RELEASE_ORDER.iter() {
-        if !ignores_pre.contains(package) {
-            release_package(&repo_root, &new_workspace_packages, *package)
-                .with_context(|| format!("releasing {}", package))?;
+    if do_pre {
+        let mut seen_package = pre_start_name.is_none();
+
+        for package in RELEASE_ORDER.iter() {
+            if Some(*package) == pre_start_name {
+                seen_package = true;
+            }
+
+            if seen_package {
+                release_package(&repo_root, &new_workspace_packages, *package)
+                    .with_context(|| format!("releasing {}", package))?;
+            }
         }
     }
 
@@ -615,8 +644,13 @@ fn command_release(repo_root: &Path, args: &ArgMatches) -> Result<()> {
 
     let workspace_packages = get_workspace_members(&workspace_toml)?;
 
+    let mut seen_package = post_start_name.is_none();
     for package in RELEASE_ORDER.iter() {
-        if !ignores_post.contains(package) {
+        if Some(*package) == post_start_name {
+            seen_package = true;
+        }
+
+        if seen_package {
             update_package_version(repo_root, &workspace_packages, *package, version_bump)
                 .with_context(|| format!("incrementing version for {}", package))?;
         }
@@ -769,18 +803,10 @@ fn main_impl() -> Result<()> {
                         .help("Bump the patch version instead of the minor version"),
                 )
                 .arg(
-                    Arg::with_name("ignore_pre")
-                        .long("ignore-pre")
+                    Arg::with_name("start_at")
+                        .long("start-at")
                         .takes_value(true)
-                        .multiple(true)
-                        .help("Name of package to ignore when releasing"),
-                )
-                .arg(
-                    Arg::with_name("ignore_post")
-                        .long("ignore-post")
-                        .takes_value(true)
-                        .multiple(true)
-                        .help("Name of package to ignore post releases"),
+                        .help("Where to resume the release process"),
                 ),
         )
         .get_matches();
