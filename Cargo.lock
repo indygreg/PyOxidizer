@@ -3498,7 +3498,7 @@ dependencies = [
 
 [[package]]
 name = "tugger-apple-bundle"
-version = "0.1.0"
+version = "0.1.0-pre"
 dependencies = [
  "anyhow",
  "plist",
@@ -3508,7 +3508,7 @@ dependencies = [
 
 [[package]]
 name = "tugger-apple-codesign"
-version = "0.1.0"
+version = "0.1.0-pre"
 dependencies = [
  "anyhow",
  "base64 0.13.0",

@@ -1,6 +1,6 @@
 [package]
 name = "tugger-apple-codesign"
-version = "0.1.0"
+version = "0.1.0-pre"
 authors = ["Gregory Szorc <gregory.szorc@gmail.com>"]
 edition = "2018"
 license = "MPL-2.0"
@@ -40,4 +40,4 @@ version = "0.1.0"
 
 [dependencies.tugger-apple-bundle]
 path = "../tugger-apple-bundle"
-version = "0.1.0-dev"
+version = "0.1.0-pre"
