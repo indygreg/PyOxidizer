@@ -616,13 +616,16 @@ fn command_release(repo_root: &Path, args: &ArgMatches, repo: &Repository) -> Re
         .context("git commit to reflect workspace changes")?;
     }
 
-    if !new_workspace_packages
+    let problems = new_workspace_packages
         .iter()
-        .all(|p| RELEASE_ORDER.contains(&p.as_str()) || IGNORE_PACKAGES.contains(&p.as_str()))
-    {
-        return Err(anyhow!(
-            "workspace packages does not match expectations in release script"
-        ));
+        .filter(|p| !RELEASE_ORDER.contains(&p.as_str()) && !IGNORE_PACKAGES.contains(&p.as_str()))
+        .collect::<Vec<_>>();
+
+    if !problems.is_empty() {
+        for p in problems {
+            eprintln!("problem with workspace package: {}", p);
+        }
+        return Err(anyhow!("workspace packages mismatch with release script"));
     }
 
     if do_pre {
