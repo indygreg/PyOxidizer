@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        environment::{canonicalize_path, MINIMUM_RUST_VERSION},
+        environment::{canonicalize_path, find_cargo_exe, MINIMUM_RUST_VERSION},
         project_layout::initialize_project,
         py_packaging::{
             binary::{EmbeddedPythonContext, LibpythonLinkMode, PythonBinaryBuilder},
@@ -188,7 +188,7 @@ pub fn resolve_apple_sdk(
 /// Describes an environment and settings used to build a project.
 pub struct BuildEnvironment {
     /// Path to cargo executable to run.
-    pub cargo_exe: String,
+    pub cargo_exe: PathBuf,
 
     /// Version of Rust being used.
     pub rust_version: Version,
@@ -370,7 +370,7 @@ impl BuildEnvironment {
         }
 
         Ok(Self {
-            cargo_exe: "cargo".to_string(),
+            cargo_exe: find_cargo_exe().context("finding cargo executable")?,
             rust_version,
             environment_vars: envs,
         })

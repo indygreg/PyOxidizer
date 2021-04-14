@@ -5,7 +5,7 @@
 //! Handle file layout of PyOxidizer projects.
 
 use {
-    crate::environment::{PyOxidizerSource, BUILD_GIT_COMMIT, PYOXIDIZER_VERSION},
+    crate::environment::{find_cargo_exe, PyOxidizerSource, BUILD_GIT_COMMIT, PYOXIDIZER_VERSION},
     anyhow::{anyhow, Context, Result},
     handlebars::Handlebars,
     once_cell::sync::Lazy,
@@ -386,7 +386,7 @@ pub fn initialize_project(
     pip_install: &[&str],
     windows_subsystem: &str,
 ) -> Result<()> {
-    let status = std::process::Command::new("cargo")
+    let status = std::process::Command::new(find_cargo_exe().context("finding cargo executable")?)
         .arg("init")
         .arg("--bin")
         .arg(project_path)

@@ -194,3 +194,8 @@ pub fn resolve_environment() -> Result<Environment> {
 
     Ok(Environment { pyoxidizer_source })
 }
+
+/// Obtain the path to a `cargo` executable.
+pub fn find_cargo_exe() -> which::Result<PathBuf> {
+    which::which("cargo")
+}
