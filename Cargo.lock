@@ -3523,7 +3523,7 @@ dependencies = [
  "tar",
  "tugger-common 0.3.0-pre",
  "tugger-file-manifest 0.3.0-pre",
- "tugger-snapcraft 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-snapcraft 0.3.0-pre",
  "tugger-windows 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-wix 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "walkdir",
@@ -3544,7 +3544,7 @@ dependencies = [
  "tar",
  "tugger-common 0.2.0",
  "tugger-file-manifest 0.2.0",
- "tugger-snapcraft 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-snapcraft 0.2.0",
  "tugger-windows 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-wix 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "walkdir",
@@ -3740,20 +3740,6 @@ dependencies = [
 [[package]]
 name = "tugger-snapcraft"
 version = "0.2.0"
-dependencies = [
- "anyhow",
- "duct",
- "remove_dir_all 0.7.0",
- "serde",
- "serde_yaml",
- "slog",
- "tugger-common 0.3.0-pre",
- "tugger-file-manifest 0.3.0-pre",
-]
-
-[[package]]
-name = "tugger-snapcraft"
-version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "25f8045a67458f6642b2ed7bf61b7905963b3679db679e54bd50fe965514a285"
 dependencies = [
@@ -3765,6 +3751,20 @@ dependencies = [
  "slog",
  "tugger-common 0.2.0",
  "tugger-file-manifest 0.2.0",
+]
+
+[[package]]
+name = "tugger-snapcraft"
+version = "0.3.0-pre"
+dependencies = [
+ "anyhow",
+ "duct",
+ "remove_dir_all 0.7.0",
+ "serde",
+ "serde_yaml",
+ "slog",
+ "tugger-common 0.3.0-pre",
+ "tugger-file-manifest 0.3.0-pre",
 ]
 
 [[package]]
