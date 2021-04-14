@@ -61,6 +61,8 @@ Bug Fixes
 * Linux binaries using the ``libedit`` variant of the ``readline`` Python
   extension (occurs when using the ``no-copyleft`` extension module filter)
   no longer encounter an undefined symbol error when linking. (#376)
+* The `ctypes` extension was previously compiled incorrectly, leading to
+  run-time errors on various platforms. These issues should be fixed.
 
 New Features
 ^^^^^^^^^^^^
@@ -87,7 +89,7 @@ Other Relevant Changes
 * Python distributions updated to latest versions. Changes include:
   macOS Python 3.8 is now built against the 10.15 SDK instead of 11.1;
   musl libc upgraded to 1.2.2; setuptools upgraded to 54.2.0; LibreSSL upgraded
-  to 3.2.5; OpenSSL upgraded to 1.1.1k; SQLite upgraded to 3.35.2.
+  to 3.2.5; OpenSSL upgraded to 1.1.1k; SQLite upgraded to 3.35.4.
 
 .. _version_0_11_0:
 
