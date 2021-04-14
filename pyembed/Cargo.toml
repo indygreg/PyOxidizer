@@ -41,8 +41,8 @@ version = "0.6.0"
 # path = "../python-packed-resources"
 
 [dependencies.python-packaging]
-version = "0.5.0-pre"
-path = "../python-packaging"
+version = "0.5.0"
+# path = "../python-packaging"
 default-features = false
 
 [dependencies.tugger-file-manifest]
