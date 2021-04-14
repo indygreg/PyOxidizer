@@ -2235,7 +2235,7 @@ dependencies = [
  "starlark-dialect-build-targets 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tar",
  "tempfile",
- "tugger",
+ "tugger 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-apple 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-binary-analysis 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-common 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3467,7 +3467,28 @@ dependencies = [
 
 [[package]]
 name = "tugger"
-version = "0.4.0-pre"
+version = "0.4.0"
+dependencies = [
+ "anyhow",
+ "codemap",
+ "codemap-diagnostic",
+ "slog",
+ "starlark",
+ "starlark-dialect-build-targets 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tar",
+ "tugger-common 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-file-manifest 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-snapcraft 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-windows 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-wix 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "walkdir",
+]
+
+[[package]]
+name = "tugger"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2ebbf01f2af5b4d67be7e2930fe5f47eb07a1ca6e0eafbcba42aa0019128bbd3"
 dependencies = [
  "anyhow",
  "codemap",
