@@ -31,16 +31,17 @@ impl EcParameters {
     pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, S::Err> {
         if let Some(oid) = Oid::take_opt_from(cons)? {
             Ok(Self::NamedCurve(oid))
-        } else if cons
-            .take_opt_primitive_if(Tag::NULL, |cons| {
-                cons.take_all()?;
-                Ok(Some(()))
-            })?
-            .is_some()
-        {
-            Ok(Self::ImplicitCurve)
         } else {
-            Err(Unimplemented.into())
+            let null_value = cons.take_opt_primitive_if(Tag::NULL, |cons| {
+                cons.take_all()?;
+                Ok(())
+            })?;
+
+            if null_value.is_some() {
+                Ok(Self::ImplicitCurve)
+            } else {
+                Err(Unimplemented.into())
+            }
         }
     }
 
