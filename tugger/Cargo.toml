@@ -25,8 +25,8 @@ version = "0.4.0-pre"
 path = "../starlark-dialect-build-targets"
 
 [dependencies.tugger-common]
-version = "0.2.0"
-# path = "../tugger-common"
+version = "0.3.0-pre"
+path = "../tugger-common"
 
 [dependencies.tugger-snapcraft]
 version = "0.2.0"
