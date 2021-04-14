@@ -3301,7 +3301,7 @@ dependencies = [
 
 [[package]]
 name = "text-stub-library"
-version = "0.1.0"
+version = "0.1.0-pre"
 dependencies = [
  "rand 0.8.3",
  "rayon",
