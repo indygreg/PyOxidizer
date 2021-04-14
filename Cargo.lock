@@ -3475,7 +3475,6 @@ dependencies = [
  "tar",
  "tugger-common",
  "tugger-file-manifest",
- "tugger-rpm",
  "tugger-snapcraft",
  "tugger-windows",
  "tugger-wix",
