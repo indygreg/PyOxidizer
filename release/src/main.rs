@@ -422,7 +422,10 @@ fn release_package(
             "commit".to_string(),
             "-a".to_string(),
             "-m".to_string(),
-            format!("{}: release version {}", package, release_version),
+            format!(
+                "release: update {} from version {} to {}",
+                package, current_version, release_version
+            ),
         ],
         vec![],
     )
@@ -492,7 +495,10 @@ fn release_package(
             "-a".to_string(),
             "--amend".to_string(),
             "-m".to_string(),
-            format!("{}: release version {}", package, release_version),
+            format!(
+                "release: update {} from version {} to {}",
+                package, current_version, release_version
+            ),
         ],
         vec![],
     )
