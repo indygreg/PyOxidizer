@@ -531,7 +531,7 @@ enum VersionBump {
     Patch,
 }
 
-fn command_release(repo_root: &Path, args: &ArgMatches) -> Result<()> {
+fn command_release(repo_root: &Path, args: &ArgMatches, repo: &Repository) -> Result<()> {
     let version_bump = if args.is_present("patch") {
         VersionBump::Patch
     } else {
@@ -561,6 +561,13 @@ fn command_release(repo_root: &Path, args: &ArgMatches) -> Result<()> {
         } else {
             (true, None, None)
         };
+
+    let head_commit = repo.head()?.peel_to_commit()?;
+    println!(
+        "HEAD at {}; to abort release, run `git reset --hard {}`",
+        head_commit.id(),
+        head_commit.id()
+    );
 
     ensure_pyembed_license_current(repo_root)?;
 
@@ -812,7 +819,7 @@ fn main_impl() -> Result<()> {
         .get_matches();
 
     match matches.subcommand() {
-        ("release", Some(args)) => command_release(repo_root, args),
+        ("release", Some(args)) => command_release(repo_root, args, &repo),
         ("generate-pyembed-license", Some(args)) => {
             command_generate_pyembed_license(repo_root, args)
         }
