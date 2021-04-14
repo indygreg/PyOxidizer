@@ -1,6 +1,7 @@
 [workspace]
 members = [
     'cryptographic-message-syntax',
+    'oxidized-importer',
     'pyembed',
     'pyoxidizer',
     'python-packaging',
@@ -9,9 +10,9 @@ members = [
     'starlark-dialect-build-targets',
     'text-stub-library',
     'tugger',
+    'tugger-apple',
     'tugger-apple-bundle',
     'tugger-apple-codesign',
-    'tugger-apple',
     'tugger-binary-analysis',
     'tugger-common',
     'tugger-debian',
