@@ -7,7 +7,7 @@ use {
     cargo_toml::Manifest,
     clap::{App, AppSettings, Arg, ArgMatches, SubCommand},
     duct::cmd,
-    git2::Repository,
+    git2::{Repository, Status},
     once_cell::sync::Lazy,
     serde::Deserialize,
     std::{
@@ -580,6 +580,30 @@ fn command_release(repo_root: &Path, args: &ArgMatches, repo: &Repository) -> Re
         head_commit.id()
     );
 
+    let statuses = repo.statuses(None)?;
+    let mut extra_files = vec![];
+    let mut repo_dirty = false;
+
+    for status in statuses.iter() {
+        match status.status() {
+            Status::WT_NEW => {
+                extra_files.push(String::from_utf8_lossy(status.path_bytes()).to_string());
+            }
+            Status::IGNORED => {}
+            _ => {
+                eprintln!(
+                    "repo contains dirty tracked path: {}",
+                    String::from_utf8_lossy(status.path_bytes())
+                );
+                repo_dirty = true;
+            }
+        }
+    }
+
+    if repo_dirty {
+        return Err(anyhow!("repo has uncommited changes; refusing to proceed"));
+    }
+
     ensure_pyembed_license_current(repo_root)?;
 
     let workspace_toml = repo_root.join("Cargo.toml");
@@ -637,6 +661,20 @@ fn command_release(repo_root: &Path, args: &ArgMatches, repo: &Repository) -> Re
             }
 
             if seen_package {
+                let prefix = format!("{}/", package);
+
+                let mut package_dirty = false;
+                for path in &extra_files {
+                    if path.starts_with(&prefix) {
+                        eprintln!("repo contains untracked path in package: {}", path);
+                        package_dirty = true;
+                    }
+                }
+
+                if package_dirty {
+                    return Err(anyhow!("package {} is dirty: refusing to proceed", package));
+                }
+
                 release_package(&repo_root, &new_workspace_packages, *package, publish)
                     .with_context(|| format!("releasing {}", package))?;
             }
