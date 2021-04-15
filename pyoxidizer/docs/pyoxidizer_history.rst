@@ -38,6 +38,8 @@ Bug Fixes
 * `WixBundleInstallerBuilder` now handles the *already installed* exit code from
   the VC++ Redistributable installer as a success condition. Previously, installs
   would abort.
+* `WixBundleInstallerBuilder` no longer errors on a missing build directory
+  when attempting to download the Visual C++ Redistributable runtime files.
 
 New Features
 ^^^^^^^^^^^^

@@ -92,6 +92,11 @@ pub fn download_to_path<P: AsRef<Path>>(
 ) -> Result<()> {
     let dest_path = dest_path.as_ref();
 
+    if let Some(dest_dir) = dest_path.parent() {
+        std::fs::create_dir_all(dest_dir)
+            .with_context(|| format!("creating directory {}", dest_dir.display()))?;
+    }
+
     let expected_hash = hex::decode(&entry.sha256)?;
 
     let lock_path = dest_path.with_extension("lock");
