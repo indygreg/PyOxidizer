@@ -3628,18 +3628,27 @@ name = "tugger-windows"
 version = "0.4.0-pre"
 dependencies = [
  "anyhow",
- "chrono",
- "der-parser",
  "duct",
  "find-winsdk",
  "glob",
  "once_cell",
- "p12",
- "rcgen",
  "semver",
- "slog",
  "tugger-common",
  "winapi 0.3.9",
+]
+
+[[package]]
+name = "tugger-windows-codesign"
+version = "0.1.0-pre"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "der-parser",
+ "duct",
+ "p12",
+ "rcgen",
+ "slog",
+ "tugger-common",
  "x509-parser",
  "yasna",
 ]
@@ -3657,6 +3666,7 @@ dependencies = [
  "tugger-common",
  "tugger-file-manifest",
  "tugger-windows",
+ "tugger-windows-codesign",
  "url",
  "uuid",
  "xml-rs",

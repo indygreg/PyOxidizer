@@ -1,14 +1,13 @@
-# tugger-windows
+# tugger-windows-codesign
 
 `tugger-windows` is a library crate implementing functionality related
-to packaging on Windows. The following functionality is (partially)
+to code signing on Windows. The following functionality is (partially)
 implemented:
 
-* Locating the Windows SDK.
-* Locating the Visual C++ Redistributable runtime files.
-* Locating `vswhere.exe`.
+* Signing binaries with `signtool.exe`.
+* Interfacing with code signing certificates.
 
-`tugger-windows` is part of the Tugger application distribution tool
+`tugger-windows-codesign` is part of the Tugger application distribution tool
 but exists as its own crate to facilitate code reuse for other tools
 wishing to perform similar functionality. Tugger is part of the
 [PyOxidizer](https://github.com/indygreg/PyOxidizer.git) project and

@@ -10,7 +10,7 @@ use {
         path::{Path, PathBuf},
     },
     tugger_file_manifest::{FileEntry, FileManifest},
-    tugger_windows::{is_file_signable, SigntoolSign},
+    tugger_windows_codesign::{is_file_signable, SigntoolSign},
     xml::EmitterConfig,
 };
 

@@ -8,14 +8,6 @@ mod sdk;
 #[cfg(target_family = "windows")]
 pub use sdk::find_windows_sdk_current_arch_bin_path;
 pub use sdk::target_arch_to_windows_sdk_platform_path;
-mod signing;
-pub use signing::{
-    certificate_to_pfx, create_self_signed_code_signing_certificate,
-    create_self_signed_code_signing_certificate_params, is_file_signable,
-    is_signable_binary_header, FileBasedX509SigningCertificate, X509SigningCertificate,
-};
-mod signtool;
-pub use signtool::{find_signtool, SigntoolSign};
 mod util;
 mod vc_redistributable;
 pub use vc_redistributable::{

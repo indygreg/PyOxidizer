@@ -24,6 +24,10 @@ xml-rs = "0.8"
 version = "0.4.0-pre"
 path = "../tugger-common"
 
+[dependencies.tugger-windows-codesign]
+version = "0.1.0-pre"
+path = "../tugger-windows-codesign"
+
 [dependencies.tugger-windows]
 version = "0.4.0-pre"
 path = "../tugger-windows"

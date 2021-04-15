@@ -11,7 +11,8 @@ use {
         path::{Path, PathBuf},
     },
     tugger_file_manifest::FileManifest,
-    tugger_windows::{find_visual_cpp_redistributable, SigntoolSign, VcRedistributablePlatform},
+    tugger_windows::{find_visual_cpp_redistributable, VcRedistributablePlatform},
+    tugger_windows_codesign::SigntoolSign,
     uuid::Uuid,
     xml::{
         common::XmlVersion,
