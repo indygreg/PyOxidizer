@@ -39,5 +39,5 @@ thiserror = "1.0"
 version = "0.1.0"
 
 [dependencies.tugger-apple-bundle]
-path = "../tugger-apple-bundle"
-version = "0.3.0-pre"
+# path = "../tugger-apple-bundle"
+version = "0.2.0"
