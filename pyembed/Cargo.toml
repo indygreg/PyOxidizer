@@ -46,8 +46,8 @@ version = "0.6.0"
 default-features = false
 
 [dependencies.tugger-file-manifest]
-version = "0.2.0"
-# path = "../tugger-file-manifest"
+version = "0.3.0-pre"
+path = "../tugger-file-manifest"
 
 [target.'cfg(windows)'.dependencies]
 memory-module-sys = "0.3"
