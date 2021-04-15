@@ -41,5 +41,5 @@ version = "0.3.0-pre"
 path = "../tugger-wix"
 
 [dependencies.tugger-file-manifest]
-version = "0.3.0-pre"
+version = "0.2.0"
 path = "../tugger-file-manifest"

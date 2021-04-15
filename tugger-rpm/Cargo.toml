@@ -14,7 +14,7 @@ readme = "README.md"
 anyhow = "1.0"
 
 [dependencies.tugger-file-manifest]
-version = "0.3.0-pre"
+version = "0.2.0"
 path = "../tugger-file-manifest"
 
 [target.'cfg(target_family = "unix")'.dependencies]
