@@ -3564,23 +3564,11 @@ dependencies = [
 
 [[package]]
 name = "tugger-apple-bundle"
-version = "0.2.0"
+version = "0.3.0-pre"
 dependencies = [
  "anyhow",
  "plist",
  "tugger-file-manifest 0.3.0-pre",
- "walkdir",
-]
-
-[[package]]
-name = "tugger-apple-bundle"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0d63bb516c96fe9ab1d2e97bb3c18090608576e92a46938a42575d9d77ac0619"
-dependencies = [
- "anyhow",
- "plist",
- "tugger-file-manifest 0.2.0",
  "walkdir",
 ]
 
@@ -3607,7 +3595,7 @@ dependencies = [
  "slog",
  "slog-term",
  "thiserror",
- "tugger-apple-bundle 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-apple-bundle",
 ]
 
 [[package]]
