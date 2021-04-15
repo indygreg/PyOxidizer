@@ -15,7 +15,7 @@ pub use {
     bundle_builder::WiXBundleInstallerBuilder,
     chain::ChainElement,
     common::{run_candle, run_light, target_triple_to_wix_arch, write_file_manifest_to_wix},
-    exe_package::ExePackage,
+    exe_package::{Behavior, ExePackage, ExitCode},
     installer_builder::WiXInstallerBuilder,
     msi_package::MsiPackage,
     simple_msi_builder::WiXSimpleMsiBuilder,

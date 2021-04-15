@@ -9,6 +9,44 @@ use {
     xml::writer::{EventWriter, XmlEvent},
 };
 
+/// Behavior for an exit code.
+#[derive(Clone, Copy, Debug)]
+pub enum Behavior {
+    /// Interpret exit code as success.
+    Success,
+
+    /// Interpret exit code as error.
+    Error,
+
+    /// Schedule reboot.
+    ScheduleReboot,
+
+    /// Force an immediate reboot.
+    ForceReboot,
+}
+
+impl ToString for Behavior {
+    fn to_string(&self) -> String {
+        match self {
+            Self::Success => "success",
+            Self::Error => "error",
+            Self::ScheduleReboot => "scheduleReboot",
+            Self::ForceReboot => "forceReboot",
+        }
+        .to_string()
+    }
+}
+
+/// Defines a mapping of an exit code to behavior.
+#[derive(Clone, Debug)]
+pub struct ExitCode {
+    /// What behavior to take.
+    pub behavior: Behavior,
+
+    /// The exit code value.
+    pub value: i32,
+}
+
 /// Represents the `<ExePackage>` WiX XML element.
 #[derive(Clone, Debug, Default)]
 pub struct ExePackage<'a> {
@@ -25,6 +63,7 @@ pub struct ExePackage<'a> {
     pub install_command: Option<Cow<'a, str>>,
     pub repair_command: Option<Cow<'a, str>>,
     pub uninstall_command: Option<Cow<'a, str>>,
+    pub exit_codes: Vec<ExitCode>,
 }
 
 impl<'a> From<ExePackage<'a>> for ChainElement<'a> {
@@ -116,6 +155,16 @@ impl<'a> ExePackage<'a> {
         };
 
         writer.write(e)?;
+
+        for exit_code in &self.exit_codes {
+            writer.write(
+                XmlEvent::start_element("ExitCode")
+                    .attr("Behavior", exit_code.behavior.to_string().as_str())
+                    .attr("Value", format!("{}", exit_code.value).as_str()),
+            )?;
+            writer.write(XmlEvent::end_element().name("ExitCode"))?;
+        }
+
         writer.write(XmlEvent::end_element().name("ExePackage"))?;
 
         Ok(())

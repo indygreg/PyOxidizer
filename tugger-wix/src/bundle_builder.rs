@@ -119,6 +119,13 @@ impl<'a> WiXBundleInstallerBuilder<'a> {
                 install_command: Some("/install /quiet /norestart".into()),
                 repair_command: Some("/repair /quiet /norestart".into()),
                 uninstall_command: Some("/uninstall /quiet /norestart".into()),
+                exit_codes: vec![
+                    // Exit code 0x666 means already installed.
+                    ExitCode {
+                        behavior: Behavior::Success,
+                        value: 0x666,
+                    },
+                ],
                 ..ExePackage::default()
             }
             .into(),
