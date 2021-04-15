@@ -721,7 +721,10 @@ fn update_package_version(
             "commit".to_string(),
             "-a".to_string(),
             "-m".to_string(),
-            format!("release: bump {} version to {}", package, next_version),
+            format!(
+                "releasebot: {} post-release-version-change {} -> {}",
+                package, version, next_version
+            ),
         ],
         vec![],
     )
