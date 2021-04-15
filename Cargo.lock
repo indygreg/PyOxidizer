@@ -3760,22 +3760,6 @@ dependencies = [
 [[package]]
 name = "tugger-windows-codesign"
 version = "0.1.0"
-dependencies = [
- "anyhow",
- "chrono",
- "der-parser",
- "duct",
- "p12",
- "rcgen",
- "slog",
- "tugger-common 0.4.0-pre",
- "x509-parser",
- "yasna",
-]
-
-[[package]]
-name = "tugger-windows-codesign"
-version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d86fbf94dcc49b67c22294d809d161b9e2e997b6d7d0e626a1199015e0ad3947"
 dependencies = [
@@ -3786,6 +3770,22 @@ dependencies = [
  "rcgen",
  "slog",
  "tugger-common 0.3.0",
+ "yasna",
+]
+
+[[package]]
+name = "tugger-windows-codesign"
+version = "0.2.0-pre"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "der-parser",
+ "duct",
+ "p12",
+ "rcgen",
+ "slog",
+ "tugger-common 0.4.0-pre",
+ "x509-parser",
  "yasna",
 ]
 
@@ -3802,7 +3802,7 @@ dependencies = [
  "tugger-common 0.4.0-pre",
  "tugger-file-manifest 0.3.0-pre",
  "tugger-windows 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "tugger-windows-codesign 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-windows-codesign 0.2.0-pre",
  "url",
  "uuid",
  "xml-rs",
@@ -3821,7 +3821,7 @@ dependencies = [
  "tugger-common 0.3.0",
  "tugger-file-manifest 0.2.0",
  "tugger-windows 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "tugger-windows-codesign 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-windows-codesign 0.1.0",
  "url",
  "uuid",
  "xml-rs",
