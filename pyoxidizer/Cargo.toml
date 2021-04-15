@@ -73,7 +73,7 @@ version = "0.4.0-pre"
 path = "../starlark-dialect-build-targets"
 
 [dependencies.tugger-apple]
-version = "0.1.0"
+version = "0.2.0-pre"
 path = "../tugger-apple"
 
 [dependencies.tugger-binary-analysis]
