@@ -48,6 +48,12 @@ New Features
   PyOxidizer are now available. The installers are built with PyOxidizer,
   using its built-in support for producing Windows installers.
 
+Other Relevant Changes
+^^^^^^^^^^^^^^^^^^^^^^
+
+* Default CPython distributions upgraded from 3.9.3 to 3.9.4.
+* Default Python distributions upgraded setuptools from 54.2.0 to 56.0.0.
+
 .. _version_0_12_0:
 
 0.12.0
