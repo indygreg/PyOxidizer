@@ -301,8 +301,9 @@ fn release_package(
     repo.tag_foreach(|oid, name| {
         let name = String::from_utf8_lossy(name);
 
-        if name.starts_with(&format!("refs/tags/{}/", package)) {
-            package_tags.push((name.to_string(), oid));
+        if let Some(tag) = name.strip_prefix(&format!("refs/tags/{}/", package)) {
+            println!("{}: found previous release tag {}@{}", package, tag, oid);
+            package_tags.push((tag.to_string(), oid));
         }
 
         true
@@ -327,8 +328,8 @@ fn release_package(
             let oid = oid?;
 
             // Stop traversal when we get to a prior tag.
-            if let Some((version, _)) = package_tags.iter().find(|(_, tag_oid)| &oid == tag_oid) {
-                restore_version = Some(version.clone());
+            if let Some((tag, _)) = package_tags.iter().find(|(_, tag_oid)| &oid == tag_oid) {
+                restore_version = Some(tag.clone());
                 break;
             }
 
@@ -341,11 +342,15 @@ fn release_package(
 
             let relevant = diff.deltas().any(|delta| {
                 if let Some(old_path) = delta.old_file().path_bytes() {
-                    return String::from_utf8_lossy(old_path).starts_with(&format!("{}/", package));
+                    if String::from_utf8_lossy(old_path).starts_with(&format!("{}/", package)) {
+                        return true;
+                    }
                 }
 
                 if let Some(new_path) = delta.new_file().path_bytes() {
-                    return String::from_utf8_lossy(new_path).starts_with(&format!("{}/", package));
+                    if String::from_utf8_lossy(new_path).starts_with(&format!("{}/", package)) {
+                        return true;
+                    }
                 }
 
                 false
@@ -357,6 +362,10 @@ fn release_package(
             }
 
             if !commit.message_bytes().starts_with(b"release: ") {
+                println!(
+                    "{}: found meaningful commit touching this package; release needed: {}",
+                    package, oid
+                );
                 break;
             }
         }
@@ -367,6 +376,10 @@ fn release_package(
     // If there were no meaningful changes, the release version is the last tag.
     // Otherwise we strip the pre component from the version string and release it.
     let release_version = if let Some(restore_version) = &restore_version {
+        println!(
+            "{}: no meaningful commits since last release; restoring version {}",
+            package, restore_version
+        );
         semver::Version::parse(restore_version).context("parsing old released version")?
     } else {
         let mut v = current_version.clone();
@@ -376,62 +389,72 @@ fn release_package(
     };
 
     println!(
-        "previous version: {}; new version: {}",
-        current_version, release_version
+        "{}: current version: {}; new version: {}",
+        package, current_version, release_version
     );
 
-    if current_version != release_version {
+    if current_version == release_version {
+        println!(
+            "{}: calculated release version identical to current version; not changing anything",
+            package
+        );
+    } else {
         println!("{}: updating version to {}", package, release_version);
         update_cargo_toml_package_version(&manifest_path, &release_version.to_string())?;
-    }
 
-    println!(
-        "{}: checking workspace packages for version updates",
-        package
-    );
-    for other_package in workspace_packages {
-        let cargo_toml = root.join(other_package).join("Cargo.toml");
         println!(
-            "{}: {} {}",
-            package,
-            cargo_toml.display(),
-            if update_cargo_toml_dependency_package_version(
-                &cargo_toml,
-                package,
-                &release_version.to_string(),
-            )? {
-                "updated"
-            } else {
-                "unchanged"
-            }
+            "{}: checking workspace packages for version updates",
+            package
         );
+        for other_package in workspace_packages {
+            let cargo_toml = root.join(other_package).join("Cargo.toml");
+            println!(
+                "{}: {} {}",
+                package,
+                cargo_toml.display(),
+                if update_cargo_toml_dependency_package_version(
+                    &cargo_toml,
+                    package,
+                    &release_version.to_string(),
+                )? {
+                    "updated"
+                } else {
+                    "unchanged"
+                }
+            );
+        }
+
+        // We need to ensure Cargo.lock reflects any version changes.
+        run_cargo_update_package(root, package)?;
+
+        // We need to perform a Git commit to ensure the working directory is clean, otherwise
+        // Cargo complains. We could run with --allow-dirty. But that exposes us to other dangers,
+        // such as packaging files in the source directory we don't want to package.
+        println!("{}: creating Git commit to reflect release", package);
+        run_cmd(
+            package,
+            root,
+            "git",
+            vec![
+                "commit".to_string(),
+                "-a".to_string(),
+                "-m".to_string(),
+                format!(
+                    "release: update {} from version {} to {}",
+                    package, current_version, release_version
+                ),
+            ],
+            vec![],
+        )
+        .context("creating Git commit")?;
     }
 
-    // We need to ensure Cargo.lock reflects any version changes.
-    run_cargo_update_package(root, package)?;
-
-    // We need to perform a Git commit to ensure the working directory is clean, otherwise
-    // Cargo complains. We could run with --allow-dirty. But that exposes us to other dangers,
-    // such as packaging files in the source directory we don't want to package.
-    println!("{}: creating Git commit to reflect release", package);
-    run_cmd(
-        package,
-        root,
-        "git",
-        vec![
-            "commit".to_string(),
-            "-a".to_string(),
-            "-m".to_string(),
-            format!(
-                "release: update {} from version {} to {}",
-                package, current_version, release_version
-            ),
-        ],
-        vec![],
-    )
-    .context("creating Git commit")?;
-
-    if publish && release_version > current_version {
+    if release_version <= current_version {
+        println!(
+            "{}: release version not newer than current version; not performing release",
+            package
+        );
+    } else if publish {
         if run_cmd(
             package,
             &root.join(package),
@@ -470,41 +493,39 @@ fn release_package(
                 }
             );
         }
-    }
 
-    println!(
-        "{}: running cargo update to ensure proper location reflected",
-        package
-    );
-    run_cmd(
-        package,
-        &root,
-        "cargo",
-        vec!["update", "-p", package],
-        vec![],
-    )
-    .context("running cargo update")?;
+        println!(
+            "{}: running cargo update to ensure proper location reflected",
+            package
+        );
+        run_cmd(
+            package,
+            &root,
+            "cargo",
+            vec!["update", "-p", package],
+            vec![],
+        )
+        .context("running cargo update")?;
 
-    println!("{}: amending Git commit to reflect release", package);
-    run_cmd(
-        package,
-        root,
-        "git",
-        vec![
-            "commit".to_string(),
-            "-a".to_string(),
-            "--amend".to_string(),
-            "-m".to_string(),
-            format!(
-                "release: update {} from version {} to {}",
-                package, current_version, release_version
-            ),
-        ],
-        vec![],
-    )
-    .context("creating Git commit")?;
+        println!("{}: amending Git commit to reflect release", package);
+        run_cmd(
+            package,
+            root,
+            "git",
+            vec![
+                "commit".to_string(),
+                "-a".to_string(),
+                "--amend".to_string(),
+                "-m".to_string(),
+                format!(
+                    "release: update {} from version {} to {}",
+                    package, current_version, release_version
+                ),
+            ],
+            vec![],
+        )
+        .context("creating Git commit")?;
 
-    if publish && release_version > current_version {
         let tag = format!("{}/{}", package, release_version);
         run_cmd(
             package,
@@ -529,6 +550,11 @@ fn release_package(
             vec![],
         )
         .context("pushing git tag")?;
+    } else {
+        println!(
+            "{}: publishing disabled; would have released {}",
+            package, release_version
+        );
     }
 
     Ok(())
