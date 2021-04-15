@@ -2232,16 +2232,16 @@ dependencies = [
  "sha2 0.9.3",
  "slog",
  "starlark",
- "starlark-dialect-build-targets 0.4.0-pre",
+ "starlark-dialect-build-targets",
  "tar",
  "tempfile",
- "tugger 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger",
  "tugger-apple",
  "tugger-binary-analysis",
- "tugger-common 0.4.0-pre",
+ "tugger-common",
  "tugger-file-manifest 0.3.0-pre",
  "tugger-licensing 0.3.0-pre",
- "tugger-windows 0.5.0-pre",
+ "tugger-windows",
  "url",
  "uuid",
  "version-compare",
@@ -3147,21 +3147,6 @@ dependencies = [
 
 [[package]]
 name = "starlark-dialect-build-targets"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5d3b72f3574d7d407290031dc862795f199e2ab26107dccfa055d2d954e7cc3d"
-dependencies = [
- "anyhow",
- "codemap",
- "codemap-diagnostic",
- "linked-hash-map",
- "path-dedot",
- "slog",
- "starlark",
-]
-
-[[package]]
-name = "starlark-dialect-build-targets"
 version = "0.4.0-pre"
 dependencies = [
  "anyhow",
@@ -3498,41 +3483,20 @@ dependencies = [
 
 [[package]]
 name = "tugger"
-version = "0.6.0"
+version = "0.7.0-pre"
 dependencies = [
  "anyhow",
  "codemap",
  "codemap-diagnostic",
  "slog",
  "starlark",
- "starlark-dialect-build-targets 0.4.0-pre",
+ "starlark-dialect-build-targets",
  "tar",
- "tugger-common 0.4.0-pre",
+ "tugger-common",
  "tugger-file-manifest 0.3.0-pre",
- "tugger-snapcraft 0.4.0-pre",
- "tugger-windows 0.5.0-pre",
- "tugger-wix 0.5.0-pre",
- "walkdir",
-]
-
-[[package]]
-name = "tugger"
-version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7c08ab71d61a7457c1ee41f746dedcbbdc6ba1ec58bcbca71406c262eb3391ee"
-dependencies = [
- "anyhow",
- "codemap",
- "codemap-diagnostic",
- "slog",
- "starlark",
- "starlark-dialect-build-targets 0.3.0",
- "tar",
- "tugger-common 0.3.0",
- "tugger-file-manifest 0.2.0",
- "tugger-snapcraft 0.3.0",
- "tugger-windows 0.4.0",
- "tugger-wix 0.4.0",
+ "tugger-snapcraft",
+ "tugger-windows",
+ "tugger-wix",
  "walkdir",
 ]
 
@@ -3593,25 +3557,6 @@ dependencies = [
  "goblin",
  "once_cell",
  "version-compare",
-]
-
-[[package]]
-name = "tugger-common"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2319f7219ac3c2d993a4b245285d8718a46fe23f286e67a6dc74046ff4b80111"
-dependencies = [
- "anyhow",
- "fs2",
- "glob",
- "hex",
- "once_cell",
- "reqwest",
- "sha2 0.9.3",
- "slog",
- "tempfile",
- "url",
- "zip",
 ]
 
 [[package]]
@@ -3683,7 +3628,7 @@ dependencies = [
  "anyhow",
  "reqwest",
  "spdx",
- "tugger-common 0.4.0-pre",
+ "tugger-common",
  "tugger-licensing 0.3.0-pre",
  "url",
 ]
@@ -3699,22 +3644,6 @@ dependencies = [
 
 [[package]]
 name = "tugger-snapcraft"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "98908317b357ac6bc7b377fe7b1cb4be1d738dffce0d2d52e4e8e87ca51c8fcc"
-dependencies = [
- "anyhow",
- "duct",
- "remove_dir_all 0.7.0",
- "serde",
- "serde_yaml",
- "slog",
- "tugger-common 0.3.0",
- "tugger-file-manifest 0.2.0",
-]
-
-[[package]]
-name = "tugger-snapcraft"
 version = "0.4.0-pre"
 dependencies = [
  "anyhow",
@@ -3723,24 +3652,8 @@ dependencies = [
  "serde",
  "serde_yaml",
  "slog",
- "tugger-common 0.4.0-pre",
+ "tugger-common",
  "tugger-file-manifest 0.3.0-pre",
-]
-
-[[package]]
-name = "tugger-windows"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f95ef423412ff811803540a2f6e07a8f47e4680a687312d8edba65e41349bb4c"
-dependencies = [
- "anyhow",
- "duct",
- "find-winsdk",
- "glob",
- "once_cell",
- "semver",
- "tugger-common 0.3.0",
- "winapi 0.3.9",
 ]
 
 [[package]]
@@ -3753,24 +3666,8 @@ dependencies = [
  "glob",
  "once_cell",
  "semver",
- "tugger-common 0.4.0-pre",
+ "tugger-common",
  "winapi 0.3.9",
-]
-
-[[package]]
-name = "tugger-windows-codesign"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d86fbf94dcc49b67c22294d809d161b9e2e997b6d7d0e626a1199015e0ad3947"
-dependencies = [
- "anyhow",
- "chrono",
- "duct",
- "p12",
- "rcgen",
- "slog",
- "tugger-common 0.3.0",
- "yasna",
 ]
 
 [[package]]
@@ -3784,28 +3681,9 @@ dependencies = [
  "p12",
  "rcgen",
  "slog",
- "tugger-common 0.4.0-pre",
+ "tugger-common",
  "x509-parser",
  "yasna",
-]
-
-[[package]]
-name = "tugger-wix"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "349b78a75a135e58b39b1795f3edcb9de1b6a863ccc3f9bc7c3a588b6509edd2"
-dependencies = [
- "anyhow",
- "duct",
- "once_cell",
- "slog",
- "tugger-common 0.3.0",
- "tugger-file-manifest 0.2.0",
- "tugger-windows 0.4.0",
- "tugger-windows-codesign 0.1.0",
- "url",
- "uuid",
- "xml-rs",
 ]
 
 [[package]]
@@ -3818,10 +3696,10 @@ dependencies = [
  "once_cell",
  "slog",
  "tempfile",
- "tugger-common 0.4.0-pre",
+ "tugger-common",
  "tugger-file-manifest 0.3.0-pre",
- "tugger-windows 0.5.0-pre",
- "tugger-windows-codesign 0.2.0-pre",
+ "tugger-windows",
+ "tugger-windows-codesign",
  "url",
  "uuid",
  "xml-rs",
