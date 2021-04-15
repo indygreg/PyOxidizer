@@ -22,7 +22,7 @@ xz2 = "0.1"
 zstd = "0.7"
 
 [dependencies.tugger-file-manifest]
-version = "0.2.0"
+version = "0.3.0-pre"
 path = "../tugger-file-manifest"
 
 [dev-dependencies]

@@ -29,7 +29,7 @@ version = "0.3.0"
 # path = "../tugger-windows"
 
 [dependencies.tugger-file-manifest]
-version = "0.2.0"
+version = "0.3.0-pre"
 path = "../tugger-file-manifest"
 
 [dev-dependencies]
