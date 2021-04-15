@@ -3608,7 +3608,7 @@ dependencies = [
 
 [[package]]
 name = "tugger-debian"
-version = "0.4.0-pre"
+version = "0.3.0"
 dependencies = [
  "anyhow",
  "ar",
