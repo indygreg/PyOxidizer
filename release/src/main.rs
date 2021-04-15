@@ -413,26 +413,65 @@ fn release_package(
                 continue;
             }
 
-            // Commit messages beginning with release: belong to us and are special.
+            // Commit messages beginning with releasebot: belong to us and are special.
             // Other messages are meaningful commits and result in a release.
-            if let Some(message) = commit.message_bytes().strip_prefix(b"release: ") {
-                // If this was a commit to update the version of some other package and
-                // that commit touched our package (assumption is the Cargo.toml), that must mean
-                // we have a dependency on that other package. If we must take the package
-                // update for this package otherwise this could lead to multiple dependency
-                // versions in use and version conflicts.
-                if message.starts_with(b"update ") {
+            if let Some(message) = commit.message_bytes().strip_prefix(b"releasebot: ") {
+                // Ignore commits that should have no bearing on this package.
+                if message.starts_with(b"pre-release-workspace-normalize")
+                    || message.starts_with(b"post-release-version-change ")
+                {
                     println!(
-                        "{}: found release commit impacting this package; release needed: {}",
-                        package, oid
+                        "{}: ignoring releasebot commit: {} ({})",
+                        package,
+                        oid,
+                        String::from_utf8_lossy(message)
                     );
-                    break;
+                    continue;
+                } else if let Some(s) = message.strip_prefix(b"release-version-change ") {
+                    // This commit updated the version of a package. We need to look at the package
+                    // and version change to see if it impacts us.
+
+                    let message = String::from_utf8_lossy(s);
+                    let parts = message
+                        .strip_suffix("\n")
+                        .unwrap_or(&*message)
+                        .split(' ')
+                        .collect::<Vec<_>>();
+
+                    if parts.len() != 4 {
+                        return Err(anyhow!(
+                            "malformed release-version-change commit message: {}",
+                            message
+                        ));
+                    }
+
+                    let (changed_package, old_version, new_version) =
+                        (parts[0], parts[1], parts[3]);
+
+                    let old_version =
+                        semver::Version::parse(old_version).context("parsing old version")?;
+                    let new_version =
+                        semver::Version::parse(new_version).context("parsing new version")?;
+
+                    // Restored an earlier version. Not meaningful to us.
+                    if new_version <= old_version {
+                        println!(
+                            "{}: ignoring commit downgrading {} from {} to {}: {}",
+                            package, changed_package, old_version, new_version, oid
+                        );
+                        continue;
+                    } else {
+                        println!("{}: commit necessitates package release: {}", package, oid);
+                        break;
+                    }
                 } else {
-                    println!(
-                        "{}: found release commit not impacting this package: {}",
-                        package, oid
-                    );
+                    return Err(anyhow!("unhandled releasebot: commit: {}", oid));
                 }
+            // TODO remove this block after next release cycle.
+            } else if commit.message_bytes().starts_with(b"release: update ")
+                || commit.message_bytes().starts_with(b"release: bump ")
+            {
+                println!("{}: ignoring legacy release commit: {}", package, oid);
             } else {
                 println!(
                     "{}: found meaningful commit touching this package; release needed: {}",
@@ -462,6 +501,11 @@ fn release_package(
 
     println!(
         "{}: current version: {}; new version: {}",
+        package, current_version, release_version
+    );
+
+    let commit_message = format!(
+        "releasebot: release-version-change {} {} -> {}",
         package, current_version, release_version
     );
 
@@ -513,10 +557,7 @@ fn release_package(
                 "commit".to_string(),
                 "-a".to_string(),
                 "-m".to_string(),
-                format!(
-                    "release: update {} from version {} to {}",
-                    package, current_version, release_version
-                ),
+                commit_message.clone(),
             ],
             vec![],
         )
@@ -591,10 +632,7 @@ fn release_package(
                 "-a".to_string(),
                 "--amend".to_string(),
                 "-m".to_string(),
-                format!(
-                    "release: update {} from version {} to {}",
-                    package, current_version, release_version
-                ),
+                commit_message,
             ],
             vec![],
         )
@@ -722,7 +760,7 @@ fn update_package_version(
             "-a".to_string(),
             "-m".to_string(),
             format!(
-                "releasebot: {} post-release-version-change {} -> {}",
+                "releasebot: post-release-version-change {} {} -> {}",
                 package, version, next_version
             ),
         ],
@@ -832,7 +870,7 @@ fn command_release(repo_root: &Path, args: &ArgMatches, repo: &Repository) -> Re
                 "commit",
                 "-a",
                 "-m",
-                "release: remove packages from workspace to facilitate release",
+                "releasebot: pre-release-workspace-normalize",
             ],
             vec![],
         )
