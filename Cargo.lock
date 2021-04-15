@@ -2232,10 +2232,10 @@ dependencies = [
  "sha2 0.9.3",
  "slog",
  "starlark",
- "starlark-dialect-build-targets",
+ "starlark-dialect-build-targets 0.3.0",
  "tar",
  "tempfile",
- "tugger",
+ "tugger 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-apple",
  "tugger-binary-analysis",
  "tugger-common 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3128,6 +3128,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "starlark-dialect-build-targets"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5d3b72f3574d7d407290031dc862795f199e2ab26107dccfa055d2d954e7cc3d"
+dependencies = [
+ "anyhow",
+ "codemap",
+ "codemap-diagnostic",
+ "linked-hash-map",
+ "path-dedot",
+ "slog",
+ "starlark",
+]
+
+[[package]]
 name = "static_assertions"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3452,17 +3467,38 @@ dependencies = [
 
 [[package]]
 name = "tugger"
-version = "0.5.0-pre"
+version = "0.5.0"
 dependencies = [
  "anyhow",
  "codemap",
  "codemap-diagnostic",
  "slog",
  "starlark",
- "starlark-dialect-build-targets",
+ "starlark-dialect-build-targets 0.3.0",
  "tar",
  "tugger-common 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-file-manifest 0.2.0",
+ "tugger-snapcraft 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-windows 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-wix 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "walkdir",
+]
+
+[[package]]
+name = "tugger"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3298d1ca741e5591edf2a4a2e5a4dd5a8b1838432f73aa70f98506a7e8d16016"
+dependencies = [
+ "anyhow",
+ "codemap",
+ "codemap-diagnostic",
+ "slog",
+ "starlark",
+ "starlark-dialect-build-targets 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tar",
+ "tugger-common 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-file-manifest 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-snapcraft 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-windows 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-wix 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
