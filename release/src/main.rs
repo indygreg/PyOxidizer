@@ -419,6 +419,7 @@ fn release_package(
             if let Some(message) = commit.message_bytes().strip_prefix(b"releasebot: ") {
                 // Ignore commits that should have no bearing on this package.
                 if message.starts_with(b"pre-release-workspace-normalize")
+                    || message.starts_with(b"post-release-workspace-normalize")
                     || message.starts_with(b"post-release-version-change ")
                 {
                     println!(
@@ -524,6 +525,7 @@ fn release_package(
             package
         );
         for other_package in workspace_packages {
+            // Reflect new dependency version in all packages in this repo.
             let cargo_toml = root.join(other_package).join("Cargo.toml");
             println!(
                 "{}: {} {}",
@@ -534,11 +536,29 @@ fn release_package(
                     package,
                     &release_version.to_string(),
                 )? {
-                    "updated"
+                    "updated version"
                 } else {
-                    "unchanged"
+                    "unchanged unchanged version"
                 }
             );
+
+            // If this was a downgrade, update dependency location to remote.
+            if release_version < current_version {
+                println!(
+                    "{}: {} {}",
+                    package,
+                    cargo_toml.display(),
+                    if update_cargo_toml_dependency_package_location(
+                        &cargo_toml,
+                        package,
+                        Location::Remote
+                    )? {
+                        "updated location"
+                    } else {
+                        "unchanged location"
+                    }
+                );
+            }
         }
 
         // We need to ensure Cargo.lock reflects any version changes.
@@ -675,7 +695,7 @@ fn release_package(
 
 fn update_package_version(
     root: &Path,
-    workspace_packages: &[String],
+    workspace_packages: &[&str],
     package: &str,
     version_bump: VersionBump,
 ) -> Result<()> {
@@ -722,9 +742,9 @@ fn update_package_version(
                 package,
                 &next_version.to_string()
             )? {
-                "updated"
+                "updated version"
             } else {
-                "unchanged"
+                "unchanged version"
             }
         );
         println!(
@@ -736,9 +756,9 @@ fn update_package_version(
                 package,
                 Location::LocalPath
             )? {
-                "updated"
+                "updated location"
             } else {
-                "unchanged"
+                "unchanged location"
             }
         );
     }
@@ -776,6 +796,29 @@ fn update_package_version(
 enum VersionBump {
     Minor,
     Patch,
+}
+
+fn update_workspace_toml(
+    repo_root: &Path,
+    path: &Path,
+    workspace_packages: &[String],
+    commit_message: &str,
+) -> Result<()> {
+    write_workspace_toml(path, workspace_packages).context("writing workspace Cargo.toml")?;
+    println!("running cargo update to reflect workspace change");
+    run_cmd("workspace", repo_root, "cargo", vec!["update"], vec![])
+        .context("cargo update to reflect workspace changes")?;
+    println!("performing git commit to reflect workspace changes");
+    run_cmd(
+        "workspace",
+        repo_root,
+        "git",
+        vec!["commit", "-a", "-m", commit_message],
+        vec![],
+    )
+    .context("git commit to reflect workspace changes")?;
+
+    Ok(())
 }
 
 fn command_release(repo_root: &Path, args: &ArgMatches, repo: &Repository) -> Result<()> {
@@ -856,26 +899,12 @@ fn command_release(repo_root: &Path, args: &ArgMatches, repo: &Repository) -> Re
 
     if new_workspace_packages != workspace_packages {
         println!("removing packages from {}", workspace_toml.display());
-        write_workspace_toml(&workspace_toml, &new_workspace_packages)
-            .context("writing workspace Cargo.toml")?;
-
-        println!("running cargo update to reflect workspace change");
-        run_cmd("workspace", repo_root, "cargo", vec!["update"], vec![])
-            .context("cargo update to reflect workspace changes")?;
-        println!("performing git commit to reflect workspace changes");
-        run_cmd(
-            "workspace",
+        update_workspace_toml(
             repo_root,
-            "git",
-            vec![
-                "commit",
-                "-a",
-                "-m",
-                "releasebot: pre-release-workspace-normalize",
-            ],
-            vec![],
-        )
-        .context("git commit to reflect workspace changes")?;
+            &workspace_toml,
+            &new_workspace_packages,
+            "releasebot: pre-release-workspace-normalize",
+        )?;
     }
 
     let problems = new_workspace_packages
@@ -934,6 +963,26 @@ fn command_release(repo_root: &Path, args: &ArgMatches, repo: &Repository) -> Re
         }
     }
 
+    let mut seen_package = post_start_name.is_none();
+    for package in RELEASE_ORDER.iter() {
+        if Some(*package) == post_start_name {
+            seen_package = true;
+        }
+
+        if seen_package {
+            update_package_version(
+                repo_root,
+                &dependency_update_packages,
+                *package,
+                version_bump,
+            )
+            .with_context(|| format!("incrementing version for {}", package))?;
+        }
+    }
+
+    // This is done after all version updates are performed because oxidized-importer
+    // referencing pyembed can confuse Cargo due to conflicting requirements for the
+    // pythonXY dependency.
     let workspace_packages = get_workspace_members(&workspace_toml)?;
     let workspace_missing_disabled = DISABLE_PACKAGES
         .iter()
@@ -951,21 +1000,12 @@ fn command_release(repo_root: &Path, args: &ArgMatches, repo: &Repository) -> Re
 
         packages.sort();
 
-        write_workspace_toml(&workspace_toml, &packages)?;
-    }
-
-    let workspace_packages = get_workspace_members(&workspace_toml)?;
-
-    let mut seen_package = post_start_name.is_none();
-    for package in RELEASE_ORDER.iter() {
-        if Some(*package) == post_start_name {
-            seen_package = true;
-        }
-
-        if seen_package {
-            update_package_version(repo_root, &workspace_packages, *package, version_bump)
-                .with_context(|| format!("incrementing version for {}", package))?;
-        }
+        update_workspace_toml(
+            repo_root,
+            &workspace_toml,
+            &packages,
+            "releasebot: post-release-workspace-normalize",
+        )?;
     }
 
     Ok(())
