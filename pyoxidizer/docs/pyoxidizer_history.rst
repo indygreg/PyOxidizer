@@ -24,6 +24,18 @@ Blog Posts
 Version History
 ===============
 
+.. _version_0_13_2:
+
+0.13.2
+------
+
+Released April 15, 2021.
+
+Bug Fixes
+^^^^^^^^^
+
+* Fixes a build failure on Windows.
+
 .. _version_0_13_1:
 
 0.13.1
