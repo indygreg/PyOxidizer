@@ -93,8 +93,8 @@ version = "0.4.0"
 # path = "../tugger-windows"
 
 [dependencies.tugger]
-version = "0.6.0-pre"
-path = "../tugger"
+version = "0.6.0"
+# path = "../tugger"
 
 [dependencies.tugger-file-manifest]
 version = "0.2.0"
