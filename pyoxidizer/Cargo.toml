@@ -69,7 +69,7 @@ version = "0.6.0"
 path = "../python-packed-resources"
 
 [dependencies.starlark-dialect-build-targets]
-version = "0.3.0"
+version = "0.4.0-pre"
 path = "../starlark-dialect-build-targets"
 
 [dependencies.tugger-apple]

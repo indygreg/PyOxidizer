@@ -21,7 +21,7 @@ tar = "0.4"
 walkdir = "2"
 
 [dependencies.starlark-dialect-build-targets]
-version = "0.3.0"
+version = "0.4.0-pre"
 path = "../starlark-dialect-build-targets"
 
 [dependencies.tugger-common]
