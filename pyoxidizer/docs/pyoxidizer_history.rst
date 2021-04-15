@@ -24,6 +24,20 @@ Blog Posts
 Version History
 ===============
 
+.. _version_0_13_1:
+
+0.13.1
+------
+
+Released April 15, 2021.
+
+Bug Fixes
+^^^^^^^^^
+
+* The 0.13.0 release contained improper crate paths in ``Cargo.toml`` files
+  due to a bug in our automated release mechanism. This release should fix
+  those issues.
+
 .. _version_0_13_0:
 
 0.13.0
@@ -34,11 +48,11 @@ Released April 15, 2021.
 Bug Fixes
 ^^^^^^^^^
 
-* `WiXSimpleMsiBuilder` now properly writes XML when a license file is provided.
-* `WixBundleInstallerBuilder` now handles the *already installed* exit code from
+* ``WiXSimpleMsiBuilder`` now properly writes XML when a license file is provided.
+* ``WixBundleInstallerBuilder`` now handles the *already installed* exit code from
   the VC++ Redistributable installer as a success condition. Previously, installs
   would abort.
-* `WixBundleInstallerBuilder` no longer errors on a missing build directory
+* ``WixBundleInstallerBuilder`` no longer errors on a missing build directory
   when attempting to download the Visual C++ Redistributable runtime files.
 
 New Features
