@@ -85,8 +85,8 @@ version = "0.3.0"
 # path = "../tugger-common"
 
 [dependencies.tugger-licensing]
-version = "0.3.0-pre"
-path = "../tugger-licensing"
+version = "0.2.0"
+# path = "../tugger-licensing"
 
 [dependencies.tugger-windows]
 version = "0.4.0-pre"
