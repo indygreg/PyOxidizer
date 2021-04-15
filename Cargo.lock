@@ -2216,7 +2216,7 @@ dependencies = [
 
 [[package]]
 name = "pyoxidizer"
-version = "0.13.0"
+version = "0.14.0-pre"
 dependencies = [
  "anyhow",
  "cargo_toml",
