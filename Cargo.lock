@@ -3649,6 +3649,7 @@ dependencies = [
  "rcgen",
  "slog",
  "tugger-common",
+ "tugger-windows",
  "x509-parser",
  "yasna",
 ]

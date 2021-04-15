@@ -23,6 +23,10 @@ yasna = "0.3"
 version = "0.4.0-pre"
 path = "../tugger-common"
 
+[dependencies.tugger-windows]
+version = "0.5.0-pre"
+path = "../tugger-windows"
+
 [dev-dependencies]
 der-parser = "5"
 x509-parser = "0"

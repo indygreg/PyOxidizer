@@ -15,7 +15,7 @@ use {
 };
 
 #[cfg(target_family = "windows")]
-use crate::find_windows_sdk_current_arch_bin_path;
+use tugger_windows::find_windows_sdk_current_arch_bin_path;
 
 /// Describes a timestamp server to use during signing.
 #[derive(Clone, Debug)]
