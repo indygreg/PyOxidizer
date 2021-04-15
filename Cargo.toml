@@ -1,6 +1,7 @@
 [workspace]
 members = [
     'cryptographic-message-syntax',
+    'oxidized-importer',
     'pyembed',
     'pyoxidizer',
     'python-packaging',
@@ -20,7 +21,7 @@ members = [
     'tugger-licensing-net',
     'tugger-rpm',
     'tugger-snapcraft',
-    'tugger-windows-codesign',
     'tugger-windows',
+    'tugger-windows-codesign',
     'tugger-wix',
 ]
