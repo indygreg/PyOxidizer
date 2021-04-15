@@ -324,7 +324,7 @@ fn run_cargo_update_package(root: &Path, package: &str) -> Result<i32> {
 fn release_package(
     root: &Path,
     repo: &Repository,
-    workspace_packages: &[String],
+    workspace_packages: &[&str],
     package: &str,
     publish: bool,
 ) -> Result<()> {
@@ -851,6 +851,15 @@ fn command_release(repo_root: &Path, args: &ArgMatches, repo: &Repository) -> Re
         return Err(anyhow!("workspace packages mismatch with release script"));
     }
 
+    // We construct a list of all potential packages to use for updating
+    // references because if we resume a partial release, the Cargo.toml defining
+    // workspace members may have already been pruned, leading to these packages
+    // not being considered.
+    let mut dependency_update_packages = RELEASE_ORDER.clone();
+    dependency_update_packages.extend(DISABLE_PACKAGES.iter());
+    dependency_update_packages.extend(IGNORE_PACKAGES.iter());
+    dependency_update_packages.sort_unstable();
+
     if do_pre {
         let mut seen_package = pre_start_name.is_none();
 
@@ -874,8 +883,14 @@ fn command_release(repo_root: &Path, args: &ArgMatches, repo: &Repository) -> Re
                     return Err(anyhow!("package {} is dirty: refusing to proceed", package));
                 }
 
-                release_package(&repo_root, repo, &workspace_packages, *package, publish)
-                    .with_context(|| format!("releasing {}", package))?;
+                release_package(
+                    &repo_root,
+                    repo,
+                    &dependency_update_packages,
+                    *package,
+                    publish,
+                )
+                .with_context(|| format!("releasing {}", package))?;
             }
         }
     }
