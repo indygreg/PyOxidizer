@@ -1,4 +1,4 @@
-PYOXIDIZER_VERSION = "0.13.1"
+PYOXIDIZER_VERSION = "0.14.0"
 AUTHOR = "Gregory Szorc"
 
 def make_msi(target_triple, add_vc_redist):
