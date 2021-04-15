@@ -61,6 +61,12 @@ Other Relevant Changes
 
 Released April 14, 2021.
 
+.. danger::
+
+   The 0.12.0 release uses CPython 3.9.3, which inadvertently shipped an ABI
+   incompatible change, causing some extension modules to not work or crash.
+   Please avoid this release if you use pre-built Python extension modules.
+
 Backwards Compatibility Notes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
