@@ -567,7 +567,7 @@ mod tests {
     use {super::*, tugger_common::testutil::*, tugger_file_manifest::FileEntry};
 
     #[cfg(target_family = "windows")]
-    use tugger_windows::{
+    use tugger_windows_codesign::{
         certificate_to_pfx, create_self_signed_code_signing_certificate, is_file_signable,
         FileBasedX509SigningCertificate, SigntoolSign,
     };
