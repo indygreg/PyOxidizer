@@ -413,7 +413,27 @@ fn release_package(
                 continue;
             }
 
-            if !commit.message_bytes().starts_with(b"release: ") {
+            // Commit messages beginning with release: belong to us and are special.
+            // Other messages are meaningful commits and result in a release.
+            if let Some(message) = commit.message_bytes().strip_prefix(b"release: ") {
+                // If this was a commit to update the version of some other package and
+                // that commit touched our package (assumption is the Cargo.toml), that must mean
+                // we have a dependency on that other package. If we must take the package
+                // update for this package otherwise this could lead to multiple dependency
+                // versions in use and version conflicts.
+                if message.starts_with(b"update ") {
+                    println!(
+                        "{}: found release commit impacting this package; release needed: {}",
+                        package, oid
+                    );
+                    break;
+                } else {
+                    println!(
+                        "{}: found release commit not impacting this package: {}",
+                        package, oid
+                    );
+                }
+            } else {
                 println!(
                     "{}: found meaningful commit touching this package; release needed: {}",
                     package, oid
