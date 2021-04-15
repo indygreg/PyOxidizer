@@ -35,8 +35,8 @@ slog-term = "2.8"
 thiserror = "1.0"
 
 [dependencies.cryptographic-message-syntax]
-# path = "../cryptographic-message-syntax"
-version = "0.1.0"
+path = "../cryptographic-message-syntax"
+version = "0.2.0-pre"
 
 [dependencies.tugger-apple-bundle]
 # path = "../tugger-apple-bundle"
