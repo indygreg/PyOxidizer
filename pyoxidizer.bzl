@@ -1,11 +1,12 @@
 PYOXIDIZER_VERSION = "0.13.0"
+AUTHOR = "Gregory Szorc"
 
-def make_msi(target_triple):
+def make_msi(target_triple, add_vc_redist):
     msi = WiXMSIBuilder(
         id_prefix = "pyoxidizer",
         product_name = "PyOxidizer",
         product_version = PYOXIDIZER_VERSION,
-        product_manufacturer = "Gregory Szorc",
+        product_manufacturer = AUTHOR,
     )
     msi.help_url = "https://pyoxidizer.readthedocs.io/"
     msi.target_triple = target_triple
@@ -19,7 +20,9 @@ def make_msi(target_triple):
         platform = "unknown"
 
     msi.msi_filename = "pyoxidizer-" + PYOXIDIZER_VERSION + "-" + platform + ".msi"
-    msi.add_visual_cpp_redistributable(redist_version = "14", platform = platform)
+
+    if add_vc_redist:
+        msi.add_visual_cpp_redistributable(redist_version = "14", platform = platform)
 
     m = FileManifest()
 
@@ -35,14 +38,39 @@ def make_msi(target_triple):
 
 
 def make_msi_x86():
-    return make_msi("i686-pc-windows-msvc")
+    return make_msi("i686-pc-windows-msvc", True)
 
 
 def make_msi_x86_64():
-    return make_msi("x86_64-pc-windows-msvc")
+    return make_msi("x86_64-pc-windows-msvc", True)
 
+
+def make_exe_installer():
+    bundle = WiXBundleBuilder(
+        id_prefix = "pyoxidizer",
+        name = "PyOxidizer",
+        version = PYOXIDIZER_VERSION,
+        manufacturer = AUTHOR,
+    )
+
+    bundle.add_vc_redistributable("x86")
+    bundle.add_vc_redistributable("x64")
+
+    bundle.add_wix_msi_builder(
+        builder = make_msi("i686-pc-windows-msvc", False),
+        display_internal_ui = True,
+        install_condition = "Not VersionNT64",
+    )
+    bundle.add_wix_msi_builder(
+        builder = make_msi("x86_64-pc-windows-msvc", False),
+        display_internal_ui = True,
+        install_condition = "VersionNT64",
+    )
+
+    return bundle
 
 register_target("msi_x86", make_msi_x86)
-register_target("msi_x86_64", make_msi_x86_64, default = True)
+register_target("msi_x86_64", make_msi_x86_64)
+register_target("exe_installer", make_exe_installer, default = True)
 
 resolve_targets()

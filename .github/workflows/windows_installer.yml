@@ -79,3 +79,68 @@ jobs:
         with:
           name: msi
           path: '*.msi'
+
+  exe:
+    runs-on: 'windows-2019'
+    env:
+      IN_CI: '1'
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      SCCACHE_BUCKET: 'pyoxidizer-sccache'
+      SCCACHE_S3_USE_SSL: '1'
+      # Prevent sccache server from stopping due to inactivity.
+      SCCACHE_IDLE_TIMEOUT: '0'
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          # Needed by build.rs, which needs to walk the Git history to find the
+          # root commit. Without this, a shallow clone (depth=1) is performed.
+          fetch-depth: 0
+
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          default: true
+          profile: minimal
+          target: i686-pc-windows-msvc
+
+      - name: Cache sccache (Windows)
+        id: cache-sccache
+        uses: actions/cache@v2
+        with:
+          path: C:/Rust/.cargo/bin/sccache.exe
+          key: ${{ runner.os }}-sccache-0
+
+      - name: Install sccache build dependencies
+        if: steps.cache-sccache.outputs.cache-hit != 'true'
+        run: |
+          vcpkg integrate install
+          vcpkg install openssl:x64-windows
+
+      - name: Install sccache (Windows)
+        if: steps.cache-sccache.outputs.cache-hit != 'true'
+        run: |
+          cargo install --features 's3' sccache
+
+      - name: Start sccache
+        run: |
+          sccache --start-server
+
+      - name: Build Executables
+        env:
+          RUSTC_WRAPPER: sccache
+        run: |
+          rustc --version
+          cargo build --target i686-pc-windows-msvc --release --bin pyoxidizer
+          cargo build --target x86_64-pc-windows-msvc --release --bin pyoxidizer
+
+      - name: Produce exe installer
+        run: |
+          target/x86_64-pc-windows-msvc/release/pyoxidizer.exe build --release --target-triple x86_64-pc-windows-msvc exe_installer
+          move build/x86_64-pc-windows-msvc/release/*/*.exe .
+
+      - name: Upload exe installer
+        uses: actions/upload-artifact@v2
+        with:
+          name: exe
+          path: '*.exe'

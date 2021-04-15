@@ -44,9 +44,9 @@ Bug Fixes
 New Features
 ^^^^^^^^^^^^
 
-* Windows MSI installers for PyOxidizer are now available. The installers
-  are built with PyOxidizer, using its built-in support for producing MSI
-  installers.
+* Per-platform Windows MSI and multi-platform Windows exe installers for
+  PyOxidizer are now available. The installers are built with PyOxidizer,
+  using its built-in support for producing Windows installers.
 
 .. _version_0_12_0:
 
