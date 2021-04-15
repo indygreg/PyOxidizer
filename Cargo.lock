@@ -2273,7 +2273,7 @@ dependencies = [
 
 [[package]]
 name = "python-packed-resources"
-version = "0.7.0-pre"
+version = "0.6.0"
 dependencies = [
  "anyhow",
  "byteorder",
