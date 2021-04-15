@@ -564,21 +564,7 @@ dependencies = [
 
 [[package]]
 name = "cryptographic-message-syntax"
-version = "0.1.0"
-dependencies = [
- "bcder",
- "bytes",
- "chrono",
- "pem",
- "reqwest",
- "ring",
-]
-
-[[package]]
-name = "cryptographic-message-syntax"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "47e2fca329d4156fca64f02078f991a252f2f7c0c3e9157938fc9fcc1dd3b174"
+version = "0.2.0-pre"
 dependencies = [
  "bcder",
  "bytes",
@@ -3609,7 +3595,7 @@ dependencies = [
  "bytes",
  "chrono",
  "clap",
- "cryptographic-message-syntax 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cryptographic-message-syntax",
  "goblin",
  "hex",
  "pem",
