@@ -3587,7 +3587,7 @@ version = "0.2.0"
 
 [[package]]
 name = "tugger-licensing"
-version = "0.3.0-pre"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "spdx",

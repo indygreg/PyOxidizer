@@ -31,7 +31,7 @@ version = "0.2.0"
 path = "../tugger-file-manifest"
 
 [dependencies.tugger-licensing]
-version = "0.3.0-pre"
+version = "0.2.0"
 path = "../tugger-licensing"
 
 [dev-dependencies]
