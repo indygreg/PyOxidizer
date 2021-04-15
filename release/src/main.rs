@@ -795,7 +795,7 @@ fn command_release(repo_root: &Path, args: &ArgMatches, repo: &Repository) -> Re
                     return Err(anyhow!("package {} is dirty: refusing to proceed", package));
                 }
 
-                release_package(&repo_root, repo, &new_workspace_packages, *package, publish)
+                release_package(&repo_root, repo, &workspace_packages, *package, publish)
                     .with_context(|| format!("releasing {}", package))?;
             }
         }
