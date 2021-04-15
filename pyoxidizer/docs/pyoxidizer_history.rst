@@ -29,7 +29,7 @@ Version History
 0.13.0
 ------
 
-Not yet released.
+Released April 15, 2021.
 
 Bug Fixes
 ^^^^^^^^^
