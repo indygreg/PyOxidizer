@@ -205,6 +205,58 @@ fn update_cargo_toml_dependency_package_location(
     Ok(changed)
 }
 
+/// Update version string in pyoxidizer.bzl file.
+fn update_pyoxidizer_bzl_version(root: &Path, version: &semver::Version) -> Result<()> {
+    // Version string in file does not have pre-release component.
+    let mut version = version.clone();
+    version.pre.clear();
+
+    let path = root.join("pyoxidizer.bzl");
+
+    let mut lines = Vec::new();
+
+    let fh = std::fs::File::open(&path).with_context(|| format!("opening {}", path.display()))?;
+    let reader = BufReader::new(fh);
+
+    let mut seen_version = false;
+    for line in reader.lines() {
+        let line = line?;
+
+        lines.push(if line.starts_with("PYOXIDIZER_VERSION = ") {
+            seen_version = true;
+
+            format!("PYOXIDIZER_VERSION = \"{}\"", version)
+        } else {
+            line
+        });
+    }
+    lines.push("".to_string());
+
+    if !seen_version {
+        return Err(anyhow!(
+            "PYOXIDIZER_VERSION line not found in {}",
+            path.display()
+        ));
+    }
+
+    std::fs::write(&path, lines.join("\n"))?;
+
+    Ok(())
+}
+
+// Reflect version changes to a given package.
+fn reflect_package_version_change(
+    root: &Path,
+    package: &str,
+    version: &semver::Version,
+) -> Result<()> {
+    if package == "pyoxidizer" {
+        update_pyoxidizer_bzl_version(root, version)?;
+    }
+
+    Ok(())
+}
+
 fn run_cmd<S>(
     package: &str,
     dir: &Path,
@@ -427,6 +479,8 @@ fn release_package(
         // We need to ensure Cargo.lock reflects any version changes.
         run_cargo_update_package(root, package)?;
 
+        reflect_package_version_change(root, package, &release_version)?;
+
         // We need to perform a Git commit to ensure the working directory is clean, otherwise
         // Cargo complains. We could run with --allow-dirty. But that exposes us to other dangers,
         // such as packaging files in the source directory we don't want to package.
@@ -635,6 +689,8 @@ fn update_package_version(
         package
     );
     run_cmd(package, &root, "cargo", vec!["update"], vec![]).context("running cargo update")?;
+
+    reflect_package_version_change(root, package, &next_version)?;
 
     println!("{}: creating Git commit to reflect version bump", package);
     run_cmd(
