@@ -416,25 +416,26 @@ fn release_package(
 
             // Commit messages beginning with releasebot: belong to us and are special.
             // Other messages are meaningful commits and result in a release.
-            if let Some(message) = commit.message_bytes().strip_prefix(b"releasebot: ") {
+            let commit_message = String::from_utf8_lossy(commit.message_bytes());
+
+            if let Some(message) = commit_message.strip_prefix("releasebot: ") {
                 // Ignore commits that should have no bearing on this package.
-                if message.starts_with(b"pre-release-workspace-normalize")
-                    || message.starts_with(b"post-release-workspace-normalize")
-                    || message.starts_with(b"post-release-version-change ")
+                if message.starts_with("pre-release-workspace-normalize")
+                    || message.starts_with("post-release-workspace-normalize")
+                    || message.starts_with("post-release-version-change ")
                 {
                     println!(
                         "{}: ignoring releasebot commit: {} ({})",
                         package,
                         oid,
-                        String::from_utf8_lossy(message)
+                        message.strip_suffix("\n").unwrap_or(message),
                     );
                     continue;
-                } else if let Some(s) = message.strip_prefix(b"release-version-change ") {
+                } else if let Some(s) = message.strip_prefix("release-version-change ") {
                     // This commit updated the version of a package. We need to look at the package
                     // and version change to see if it impacts us.
 
-                    let message = String::from_utf8_lossy(s);
-                    let parts = message
+                    let parts = s
                         .strip_suffix("\n")
                         .unwrap_or(&*message)
                         .split(' ')
