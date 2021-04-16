@@ -1523,27 +1523,27 @@ py_class!(class OxidizedPkgResourcesProvider |py| {
 
     // Begin IResourceProvider interface.
 
-    def get_resource_filename(&self, manager: PyObject, resource_name: PyObject) -> PyResult<PyObject> {
+    def get_resource_filename(&self, manager: PyObject, resource_name: PyString) -> PyResult<PyObject> {
         self.get_resource_filename_impl(py, manager, resource_name)
     }
 
-    def get_resource_stream(&self, manager: PyObject, resource_name: PyObject) -> PyResult<PyObject> {
+    def get_resource_stream(&self, manager: PyObject, resource_name: PyString) -> PyResult<PyObject> {
         self.get_resource_stream_impl(py, manager, resource_name)
     }
 
-    def get_resource_string(&self, manager: PyObject, resource_name: PyObject) -> PyResult<PyObject> {
+    def get_resource_string(&self, manager: PyObject, resource_name: PyString) -> PyResult<PyObject> {
         self.get_resource_string_impl(py, manager, resource_name)
     }
 
-    def has_resource(&self, resource_name: PyObject) -> PyResult<bool> {
+    def has_resource(&self, resource_name: PyString) -> PyResult<bool> {
         self.has_resource_impl(py, resource_name)
     }
 
-    def resource_isdir(&self, resource_name: PyObject) -> PyResult<bool> {
+    def resource_isdir(&self, resource_name: PyString) -> PyResult<bool> {
         self.resource_isdir_impl(py, resource_name)
     }
 
-    def resource_listdir(&self, resource_name: PyObject) -> PyResult<PyObject> {
+    def resource_listdir(&self, resource_name: PyString) -> PyResult<PyList> {
         self.resource_listdir_impl(py, resource_name)
     }
 
@@ -1668,8 +1668,14 @@ impl OxidizedPkgResourcesProvider {
         &self,
         py: Python,
         _manager: PyObject,
-        _resource_name: PyObject,
+        _resource_name: PyString,
     ) -> PyResult<PyObject> {
+        // Raising NotImplementedError seems allowed per the implementation of
+        // pkg_resources.ZipProvider, which also raises this error when resources
+        // aren't backed by the filesystem.
+        //
+        // We could potentially expose the filename if the resource is backed
+        // by a file. But we keep things simple for now.
         Err(PyErr::new::<NotImplementedError, _>(py, NoArgs))
     }
 
@@ -1677,30 +1683,64 @@ impl OxidizedPkgResourcesProvider {
         &self,
         py: Python,
         _manager: PyObject,
-        _resource_name: PyObject,
+        resource_name: PyString,
     ) -> PyResult<PyObject> {
-        Err(PyErr::new::<NotImplementedError, _>(py, NoArgs))
+        let state = self.state(py);
+        let package = self.package(py);
+        let resource_name = resource_name.to_string_lossy(py);
+
+        state
+            .get_resources_state()
+            .get_package_resource_file(py, &package, &resource_name)?
+            .ok_or_else(|| PyErr::new::<IOError, _>(py, "resource does not exist"))
     }
 
     fn get_resource_string_impl(
         &self,
         py: Python,
-        _manager: PyObject,
-        _resource_name: PyObject,
+        manager: PyObject,
+        resource_name: PyString,
     ) -> PyResult<PyObject> {
-        Err(PyErr::new::<NotImplementedError, _>(py, NoArgs))
+        let fh = self.get_resource_stream_impl(py, manager, resource_name)?;
+
+        fh.call_method(py, "read", NoArgs, None)
     }
 
-    fn has_resource_impl(&self, py: Python, _resource_name: PyObject) -> PyResult<bool> {
-        Err(PyErr::new::<NotImplementedError, _>(py, NoArgs))
+    fn has_resource_impl(&self, py: Python, resource_name: PyString) -> PyResult<bool> {
+        let state = self.state(py);
+        let package = self.package(py);
+        let resource_name = resource_name.to_string_lossy(py);
+
+        Ok(state
+            .get_resources_state()
+            .get_package_resource_file(py, &package, &resource_name)
+            .unwrap_or(None)
+            .is_some())
     }
 
-    fn resource_isdir_impl(&self, py: Python, _resource_name: PyObject) -> PyResult<bool> {
-        Err(PyErr::new::<NotImplementedError, _>(py, NoArgs))
+    fn resource_isdir_impl(&self, py: Python, resource_name: PyString) -> PyResult<bool> {
+        let state = self.state(py);
+        let package = self.package(py);
+        let resource_name = resource_name.to_string_lossy(py);
+
+        Ok(state
+            .get_resources_state()
+            .is_package_resource_directory(&package, &resource_name))
     }
 
-    fn resource_listdir_impl(&self, py: Python, _resource_name: PyObject) -> PyResult<PyObject> {
-        Err(PyErr::new::<NotImplementedError, _>(py, NoArgs))
+    fn resource_listdir_impl(&self, py: Python, resource_name: PyString) -> PyResult<PyList> {
+        let state = self.state(py);
+        let package = self.package(py);
+        let resource_name = resource_name.to_string_lossy(py);
+
+        let entries = state
+            .get_resources_state()
+            .package_resources_list_directory(&package, &resource_name)
+            .into_iter()
+            .map(|s| PyString::new(py, &s).into_object())
+            .collect::<Vec<_>>();
+
+        Ok(PyList::new(py, &entries))
     }
 }
 

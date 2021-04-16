@@ -269,8 +269,10 @@ for modules loaded via ``OxidizedFinder`` to ``OxidizedPkgResourcesProvider``.
 ``run_script()``, which raises ``NotImplementedError``. Behavior of all
 implemented members should conform to the interface specification.
 
-Currently, all methods on ``OxidizedPkgResourcesProvider`` raise
-``NotImplementedError`` and no meaningful functionality is implemented.
+``OxidizedPkgResourcesProvider`` implements all
+``pkg_resources.IResourceProvider`` members and all members should conform
+to the interface specification. ``get_resource_filename()`` always raises
+``NotImplementedError``, which appears to be allowed behavior.
 
 ``oxidized_importer`` does not currently register itself via
 ``pkg_resources.register_finder()``, so functionality requiring resolving

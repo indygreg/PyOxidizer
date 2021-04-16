@@ -7,6 +7,7 @@
 # here to ensure it is cached in sys.modules so Rust can import it.
 import email.parser
 
+import io
 import os
 import pathlib
 import sys
@@ -100,6 +101,19 @@ class TestImporterPkgResources(unittest.TestCase):
         with (my_package_path / "__init__.py").open("wb"):
             pass
 
+        with (my_package_path / "resource0.txt").open("wb") as fh:
+            fh.write(b"line0\n")
+            fh.write(b"line1\n")
+
+        (my_package_path / "subdir").mkdir()
+        (my_package_path / "subdir" / "grandchild").mkdir()
+
+        with (my_package_path / "subdir" / "child0.txt").open("wb"):
+            pass
+
+        with (my_package_path / "subdir" / "grandchild" / "grandchild.txt").open("wb"):
+            pass
+
         f = self._finder_from_td()
         sys.meta_path.insert(0, f)
 
@@ -147,20 +161,54 @@ class TestImporterPkgResources(unittest.TestCase):
         with self.assertRaises(NotImplementedError):
             provider.get_resource_filename(None, "foo")
 
-        with self.assertRaises(NotImplementedError):
-            provider.get_resource_stream(None, "foo")
+        with self.assertRaises(IOError):
+            provider.get_resource_stream(None, "missing")
 
-        with self.assertRaises(NotImplementedError):
-            provider.get_resource_string(None, "foo")
+        fh = provider.get_resource_stream(None, "resource0.txt")
+        self.assertIsInstance(fh, io.BytesIO)
+        self.assertEqual(fh.read(), b"line0\nline1\n")
 
-        with self.assertRaises(NotImplementedError):
-            provider.has_resource("foo")
+        with self.assertRaises(IOError):
+            provider.get_resource_string(None, "missing")
 
-        with self.assertRaises(NotImplementedError):
-            provider.resource_isdir("foo")
+        self.assertEqual(
+            provider.get_resource_string(None, "resource0.txt"), b"line0\nline1\n"
+        )
+        self.assertEqual(provider.get_resource_string(None, "subdir/child0.txt"), b"")
 
-        with self.assertRaises(NotImplementedError):
-            provider.resource_listdir("foo")
+        self.assertFalse(provider.has_resource("missing"))
+        self.assertTrue(provider.has_resource("resource0.txt"))
+        self.assertTrue(provider.has_resource("subdir/child0.txt"))
+        self.assertTrue(provider.has_resource("subdir/grandchild/grandchild.txt"))
+
+        self.assertFalse(provider.resource_isdir("missing"))
+        self.assertFalse(provider.resource_isdir("resource0.txt"))
+        self.assertFalse(provider.resource_isdir(""))
+        self.assertTrue(provider.resource_isdir("subdir"))
+        self.assertTrue(provider.resource_isdir("subdir/"))
+        self.assertTrue(provider.resource_isdir("subdir\\"))
+        self.assertTrue(provider.resource_isdir("subdir/grandchild"))
+        self.assertTrue(provider.resource_isdir("subdir/grandchild/"))
+        self.assertTrue(provider.resource_isdir("subdir\\grandchild"))
+        self.assertTrue(provider.resource_isdir("subdir\\grandchild\\"))
+
+        self.assertEqual(provider.resource_listdir("missing"), [])
+        self.assertEqual(provider.resource_listdir(""), ["resource0.txt"])
+        self.assertEqual(provider.resource_listdir("subdir"), ["child0.txt"])
+        self.assertEqual(provider.resource_listdir("subdir/"), ["child0.txt"])
+        self.assertEqual(provider.resource_listdir("subdir\\"), ["child0.txt"])
+        self.assertEqual(
+            provider.resource_listdir("subdir/grandchild"), ["grandchild.txt"]
+        )
+        self.assertEqual(
+            provider.resource_listdir("subdir\\grandchild"), ["grandchild.txt"]
+        )
+        self.assertEqual(
+            provider.resource_listdir("subdir/grandchild/"), ["grandchild.txt"]
+        )
+        self.assertEqual(
+            provider.resource_listdir("subdir\\grandchild\\"), ["grandchild.txt"]
+        )
 
 
 if __name__ == "__main__":

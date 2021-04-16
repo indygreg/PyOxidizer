@@ -28,7 +28,7 @@ use {
     std::{
         borrow::Cow,
         cell::RefCell,
-        collections::{hash_map::Entry, HashMap},
+        collections::{hash_map::Entry, BTreeSet, HashMap},
         convert::TryFrom,
         ffi::CStr,
         path::{Path, PathBuf},
@@ -788,6 +788,87 @@ impl<'a> PythonResourcesState<'a, u8> {
             .collect::<Vec<PyObject>>();
 
         Ok(PyList::new(py, &names).into_object())
+    }
+
+    /// Whether the given resource name is a directory with resources.
+    pub fn is_package_resource_directory(&self, package: &str, name: &str) -> bool {
+        // Normalize to UNIX style paths.
+        let name = name.replace('\\', "/");
+
+        let prefix = if name.ends_with('/') {
+            name
+        } else {
+            format!("{}/", name)
+        };
+
+        if let Some(entry) = self.resources.get(package) {
+            if let Some(resources) = &entry.in_memory_package_resources {
+                if resources.keys().any(|path| path.starts_with(&prefix)) {
+                    return true;
+                }
+            }
+
+            if let Some(resources) = &entry.relative_path_package_resources {
+                if resources.keys().any(|path| path.starts_with(&prefix)) {
+                    return true;
+                }
+            }
+
+            false
+        } else {
+            false
+        }
+    }
+
+    /// Resolve package resources in a directory.
+    pub fn package_resources_list_directory(&self, package: &str, name: &str) -> Vec<String> {
+        let name = name.replace('\\', "/");
+
+        let prefix = if name.ends_with('/') {
+            Some(name)
+        } else if name.is_empty() {
+            None
+        } else {
+            Some(format!("{}/", name))
+        };
+
+        let filter_map_resource = |path: &'_ Cow<'_, str>| -> Option<String> {
+            match &prefix {
+                Some(prefix) => {
+                    if let Some(name) = path.strip_prefix(prefix) {
+                        if name.contains('/') {
+                            None
+                        } else {
+                            Some(name.to_string())
+                        }
+                    } else {
+                        None
+                    }
+                }
+                None => {
+                    // Empty string input matches root directory.
+                    if path.contains('/') {
+                        None
+                    } else {
+                        Some(path.to_string())
+                    }
+                }
+            }
+        };
+
+        let mut entries = BTreeSet::new();
+
+        if let Some(entry) = self.resources.get(package) {
+            if let Some(resources) = &entry.in_memory_package_resources {
+                entries.extend(resources.keys().filter_map(filter_map_resource));
+            }
+
+            if let Some(resources) = &entry.relative_path_package_resources {
+                entries.extend(resources.keys().filter_map(filter_map_resource));
+            }
+        }
+
+        entries.into_iter().collect::<Vec<_>>()
     }
 
     /// Attempt to resolve a PyBytes for resource data given a relative path.
