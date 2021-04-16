@@ -9,8 +9,6 @@ This module defines a Python meta path importer and associated functionality
 for importing Python modules from memory.
 */
 
-#[cfg(not(library_mode = "extension"))]
-use cpython::NoArgs;
 #[cfg(windows)]
 use {
     crate::memory_dll::{free_library_memory, get_proc_address_memory, load_library_memory},
@@ -29,8 +27,9 @@ use {
     cpython::{
         exc::{FileNotFoundError, ImportError, ValueError},
         {
-            py_class, py_fn, ObjectProtocol, PyBytes, PyCapsule, PyClone, PyDict, PyErr, PyList,
-            PyModule, PyObject, PyResult, PyString, PyTuple, Python, PythonObject, ToPyObject,
+            py_class, py_fn, NoArgs, ObjectProtocol, PyBytes, PyCapsule, PyClone, PyDict, PyErr,
+            PyList, PyModule, PyObject, PyResult, PyString, PyTuple, Python, PythonObject,
+            ToPyObject,
         },
     },
     python3_sys as pyffi,
