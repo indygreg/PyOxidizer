@@ -25,7 +25,7 @@ use {
         resource_scanning::find_resources_in_path,
     },
     cpython::{
-        exc::{FileNotFoundError, ImportError, NotImplementedError, ValueError},
+        exc::{FileNotFoundError, ImportError, NotImplementedError, TypeError, ValueError},
         {
             py_class, py_fn, NoArgs, ObjectProtocol, PyBytes, PyCapsule, PyClone, PyDict, PyErr,
             PyList, PyModule, PyObject, PyResult, PyString, PyTuple, Python, PythonObject,
@@ -1479,6 +1479,9 @@ impl PyOxidizerTraversable {
 }
 
 py_class!(class OxidizedPkgResourcesProvider |py| {
+    data state: Arc<ImporterState>;
+    data package: String;
+
     def __new__(_cls, module: PyObject) -> PyResult<OxidizedPkgResourcesProvider> {
         oxidized_pkg_resources_provider_new(py, module)
     }
@@ -1539,9 +1542,24 @@ py_class!(class OxidizedPkgResourcesProvider |py| {
 /// OxidizedPkgResourcesProvider.__new__(module)
 fn oxidized_pkg_resources_provider_new(
     py: Python,
-    _module: PyObject,
+    module: PyObject,
 ) -> PyResult<OxidizedPkgResourcesProvider> {
-    OxidizedPkgResourcesProvider::create_instance(py)
+    let loader = module.getattr(py, "__loader__")?;
+    let package = module.getattr(py, "__package__")?;
+
+    let loader_type = loader.get_type(py);
+
+    if loader_type != py.get_type::<OxidizedFinder>() {
+        return Err(PyErr::new::<TypeError, _>(
+            py,
+            "__loader__ is not an OxidizedFinder",
+        ));
+    }
+
+    let finder = loader.cast_as::<OxidizedFinder>(py)?;
+    let state = finder.state(py);
+
+    OxidizedPkgResourcesProvider::create_instance(py, state.clone(), package.to_string())
 }
 
 // pkg_resources.IMetadataProvider
