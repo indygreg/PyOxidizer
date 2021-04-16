@@ -139,6 +139,11 @@ rusty_fork_test! {
         run_py_test("test_importer_metadata.py").unwrap()
     }
 
+    #[test]
+    fn importer_pkg_resources_py() {
+        run_py_test("test_importer_pkg_resources.py").unwrap()
+    }
+
     /// Run test_importer_resource_collector.py.
     #[test]
     fn importer_resource_collector_py() {

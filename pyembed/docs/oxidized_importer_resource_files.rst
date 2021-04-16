@@ -242,11 +242,34 @@ packaging settings to move the resource locations from in-memory to
 filesystem-relative, as ``__file__`` is set when loading modules from the
 filesystem.
 
+.. _oxidized_finder_pkg_resources:
+
 Support for ``pkg_resources``
 =============================
 
-``pkg_resources``'s APIs for loading resources likely do not work with
-``oxidized_importer``.
+``oxidized_importer`` has support for working with ``pkg_resources``.
+
+``pkg_resources`` integration is optional and must be explicitly enabled.
+This is because importing ``pkg_resources`` adds overhead and it would be
+wasteful to register ``pkg_resources`` integration if it isn't used.
+
+To enable ``pkg_resources`` integration at run-time, call
+``oxidized_importer.register_pkg_resources()``. It is safe to call this
+function multiple times.
+
+When ``pkg_resources`` integration is enabled, the ``OxidizedFinder`` loader
+type is mapped to ``OxidizedPkgResourcesProvider``, which is
+``oxidized_importer``'s type implementing ``pkg_resources.IMetadataProvider``
+and ``pkg_resources.IResourceProvider``. What this means is that
+``pkg_resources`` will automatically dispatch all ``pkg_resources`` APIs
+for modules loaded via ``OxidizedFinder`` to ``OxidizedPkgResourcesProvider``.
+
+Currently, all methods on ``OxidizedPkgResourcesProvider`` raise
+``NotImplementedError`` and no meaningful functionality is implemented.
+
+``oxidized_importer`` does not currently register itself via
+``pkg_resources.register_finder()``, so functionality requiring resolving
+*distributions* will not work.
 
 Porting Code to Modern Resources APIs
 =====================================

@@ -194,3 +194,13 @@ differences in behavior:
   in ``sys.path_hooks``. For automatic registration of this at interpreter
   initialization time, both ``OxidizedFinder`` and the stdlib filesystem-based
   importer have to be enabled.
+
+``pkg_resources`` Compatibility
+===============================
+
+``OxidizedFinder`` can be registered as a provider for ``pkg_resources``,
+enabling ``pkg_resources`` APIs to be used with resources tracked by
+``OxidizedFinder`` instances.
+
+However, there are known compatibility differences. See
+:ref:`oxidized_finder_pkg_resources` for more.

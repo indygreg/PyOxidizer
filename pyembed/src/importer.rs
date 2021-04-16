@@ -25,7 +25,7 @@ use {
         resource_scanning::find_resources_in_path,
     },
     cpython::{
-        exc::{FileNotFoundError, ImportError, ValueError},
+        exc::{FileNotFoundError, ImportError, NotImplementedError, ValueError},
         {
             py_class, py_fn, NoArgs, ObjectProtocol, PyBytes, PyCapsule, PyClone, PyDict, PyErr,
             PyList, PyModule, PyObject, PyResult, PyString, PyTuple, Python, PythonObject,
@@ -1478,6 +1478,142 @@ impl PyOxidizerTraversable {
     }
 }
 
+py_class!(class OxidizedPkgResourcesProvider |py| {
+    def __new__(_cls, module: PyObject) -> PyResult<OxidizedPkgResourcesProvider> {
+        oxidized_pkg_resources_provider_new(py, module)
+    }
+
+    // Begin IMetadataProvider interface.
+
+    def has_metadata(&self, name: &str) -> PyResult<bool> {
+        self.has_metadata_impl(py, name)
+    }
+
+    def get_metadata(&self, name: &str) -> PyResult<PyString> {
+        self.get_metadata_impl(py, name)
+    }
+
+    def metadata_isdir(&self, name: &str) -> PyResult<bool> {
+        self.metadata_isdir_impl(py, name)
+    }
+
+    def metadata_listdir(&self, name: &str) -> PyResult<PyObject> {
+        self.metadata_listdir_impl(py, name)
+    }
+
+    def run_script(&self, script_name: &str, namespace: PyObject) -> PyResult<PyObject> {
+        self.run_script_impl(py, script_name, namespace)
+    }
+
+    // End IMetadataProvider interface.
+
+    // Begin IResourceProvider interface.
+
+    def get_resource_filename(&self, manager: PyObject, resource_name: PyObject) -> PyResult<PyObject> {
+        self.get_resource_filename_impl(py, manager, resource_name)
+    }
+
+    def get_resource_stream(&self, manager: PyObject, resource_name: PyObject) -> PyResult<PyObject> {
+        self.get_resource_stream_impl(py, manager, resource_name)
+    }
+
+    def get_resource_string(&self, manager: PyObject, resource_name: PyObject) -> PyResult<PyObject> {
+        self.get_resource_string_impl(py, manager, resource_name)
+    }
+
+    def has_resource(&self, resource_name: PyObject) -> PyResult<bool> {
+        self.has_resource_impl(py, resource_name)
+    }
+
+    def resource_isdir(&self, resource_name: PyObject) -> PyResult<bool> {
+        self.resource_isdir_impl(py, resource_name)
+    }
+
+    def resource_listdir(&self, resource_name: PyObject) -> PyResult<PyObject> {
+        self.resource_listdir_impl(py, resource_name)
+    }
+
+    // End IResourceProvider interface.
+});
+
+/// OxidizedPkgResourcesProvider.__new__(module)
+fn oxidized_pkg_resources_provider_new(
+    py: Python,
+    _module: PyObject,
+) -> PyResult<OxidizedPkgResourcesProvider> {
+    OxidizedPkgResourcesProvider::create_instance(py)
+}
+
+// pkg_resources.IMetadataProvider
+impl OxidizedPkgResourcesProvider {
+    fn has_metadata_impl(&self, py: Python, _name: &str) -> PyResult<bool> {
+        Err(PyErr::new::<NotImplementedError, _>(py, NoArgs))
+    }
+
+    fn get_metadata_impl(&self, py: Python, _name: &str) -> PyResult<PyString> {
+        Err(PyErr::new::<NotImplementedError, _>(py, NoArgs))
+    }
+
+    fn metadata_isdir_impl(&self, py: Python, _name: &str) -> PyResult<bool> {
+        Err(PyErr::new::<NotImplementedError, _>(py, NoArgs))
+    }
+
+    fn metadata_listdir_impl(&self, py: Python, _name: &str) -> PyResult<PyObject> {
+        Err(PyErr::new::<NotImplementedError, _>(py, NoArgs))
+    }
+
+    fn run_script_impl(
+        &self,
+        py: Python,
+        _script_name: &str,
+        _namespace: PyObject,
+    ) -> PyResult<PyObject> {
+        Err(PyErr::new::<NotImplementedError, _>(py, NoArgs))
+    }
+}
+
+// pkg_resources.IResourceProvider
+impl OxidizedPkgResourcesProvider {
+    fn get_resource_filename_impl(
+        &self,
+        py: Python,
+        _manager: PyObject,
+        _resource_name: PyObject,
+    ) -> PyResult<PyObject> {
+        Err(PyErr::new::<NotImplementedError, _>(py, NoArgs))
+    }
+
+    fn get_resource_stream_impl(
+        &self,
+        py: Python,
+        _manager: PyObject,
+        _resource_name: PyObject,
+    ) -> PyResult<PyObject> {
+        Err(PyErr::new::<NotImplementedError, _>(py, NoArgs))
+    }
+
+    fn get_resource_string_impl(
+        &self,
+        py: Python,
+        _manager: PyObject,
+        _resource_name: PyObject,
+    ) -> PyResult<PyObject> {
+        Err(PyErr::new::<NotImplementedError, _>(py, NoArgs))
+    }
+
+    fn has_resource_impl(&self, py: Python, _resource_name: PyObject) -> PyResult<bool> {
+        Err(PyErr::new::<NotImplementedError, _>(py, NoArgs))
+    }
+
+    fn resource_isdir_impl(&self, py: Python, _resource_name: PyObject) -> PyResult<bool> {
+        Err(PyErr::new::<NotImplementedError, _>(py, NoArgs))
+    }
+
+    fn resource_listdir_impl(&self, py: Python, _resource_name: PyObject) -> PyResult<PyObject> {
+        Err(PyErr::new::<NotImplementedError, _>(py, NoArgs))
+    }
+}
+
 const DOC: &[u8] = b"A highly-performant importer implemented in Rust\0";
 
 /// State associated with each importer module instance.
@@ -1528,6 +1664,22 @@ fn decode_source(py: Python, io_module: &PyModule, source_bytes: PyObject) -> Py
     )?;
     let data = source_bytes.call_method(py, "decode", (encoding.get_item(py, 0)?,), None)?;
     newline_decoder.call_method(py, "decode", (data,), None)
+}
+
+fn register_pkg_resources(py: Python) -> PyResult<PyObject> {
+    let pkg_resources = py.import("pkg_resources")?;
+
+    pkg_resources.call(
+        py,
+        "register_loader_type",
+        (
+            py.get_type::<OxidizedFinder>(),
+            py.get_type::<OxidizedPkgResourcesProvider>(),
+        ),
+        None,
+    )?;
+
+    Ok(py.None())
 }
 
 static mut MODULE_DEF: pyffi::PyModuleDef = pyffi::PyModuleDef {
@@ -1627,6 +1779,11 @@ fn module_init(py: Python, m: &PyModule) -> PyResult<()> {
         "find_resources_in_path",
         py_fn!(py, find_resources_in_path(path: PyObject)),
     )?;
+    m.add(
+        py,
+        "register_pkg_resources",
+        py_fn!(py, register_pkg_resources()),
+    )?;
 
     m.add(py, "OxidizedFinder", py.get_type::<OxidizedFinder>())?;
     m.add(py, "OxidizedResource", py.get_type::<OxidizedResource>())?;
@@ -1644,6 +1801,11 @@ fn module_init(py: Python, m: &PyModule) -> PyResult<()> {
         py,
         "OxidizedPathEntryFinder",
         py.get_type::<OxidizedPathEntryFinder>(),
+    )?;
+    m.add(
+        py,
+        "OxidizedPkgResourcesProvider",
+        py.get_type::<OxidizedPkgResourcesProvider>(),
     )?;
     m.add(
         py,
