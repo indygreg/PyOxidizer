@@ -264,6 +264,11 @@ and ``pkg_resources.IResourceProvider``. What this means is that
 ``pkg_resources`` will automatically dispatch all ``pkg_resources`` APIs
 for modules loaded via ``OxidizedFinder`` to ``OxidizedPkgResourcesProvider``.
 
+``OxidizedPkgResourcesProvider`` implements all
+``pkg_resources.IMetadataProvider`` members with the exception of
+``run_script()``, which raises ``NotImplementedError``. Behavior of all
+implemented members should conform to the interface specification.
+
 Currently, all methods on ``OxidizedPkgResourcesProvider`` raise
 ``NotImplementedError`` and no meaningful functionality is implemented.
 

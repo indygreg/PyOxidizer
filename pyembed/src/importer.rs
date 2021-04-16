@@ -18,6 +18,10 @@ use {
 use {
     crate::{
         conversion::pyobject_to_pathbuf,
+        package_metadata::{
+            metadata_list_directory, metadata_name_is_directory,
+            resolve_package_distribution_resource,
+        },
         python_resources::{
             pyobject_to_resource, resource_to_pyobject, ModuleFlavor, OptimizeLevel,
             OxidizedResource, PythonResourcesState,
@@ -25,7 +29,10 @@ use {
         resource_scanning::find_resources_in_path,
     },
     cpython::{
-        exc::{FileNotFoundError, ImportError, NotImplementedError, TypeError, ValueError},
+        exc::{
+            FileNotFoundError, IOError, ImportError, NotImplementedError, TypeError,
+            UnicodeDecodeError, ValueError,
+        },
         {
             py_class, py_fn, NoArgs, ObjectProtocol, PyBytes, PyCapsule, PyClone, PyDict, PyErr,
             PyList, PyModule, PyObject, PyResult, PyString, PyTuple, Python, PythonObject,
@@ -1488,23 +1495,27 @@ py_class!(class OxidizedPkgResourcesProvider |py| {
 
     // Begin IMetadataProvider interface.
 
-    def has_metadata(&self, name: &str) -> PyResult<bool> {
+    def has_metadata(&self, name: PyString) -> PyResult<bool> {
         self.has_metadata_impl(py, name)
     }
 
-    def get_metadata(&self, name: &str) -> PyResult<PyString> {
+    def get_metadata(&self, name: PyString) -> PyResult<PyString> {
         self.get_metadata_impl(py, name)
     }
 
-    def metadata_isdir(&self, name: &str) -> PyResult<bool> {
+    def get_metadata_lines(&self, name: PyString) -> PyResult<PyObject> {
+        self.get_metadata_lines_impl(py, name)
+    }
+
+    def metadata_isdir(&self, name: PyString) -> PyResult<bool> {
         self.metadata_isdir_impl(py, name)
     }
 
-    def metadata_listdir(&self, name: &str) -> PyResult<PyObject> {
+    def metadata_listdir(&self, name: PyString) -> PyResult<PyList> {
         self.metadata_listdir_impl(py, name)
     }
 
-    def run_script(&self, script_name: &str, namespace: PyObject) -> PyResult<PyObject> {
+    def run_script(&self, script_name: PyString, namespace: PyObject) -> PyResult<PyObject> {
         self.run_script_impl(py, script_name, namespace)
     }
 
@@ -1564,26 +1575,87 @@ fn oxidized_pkg_resources_provider_new(
 
 // pkg_resources.IMetadataProvider
 impl OxidizedPkgResourcesProvider {
-    fn has_metadata_impl(&self, py: Python, _name: &str) -> PyResult<bool> {
-        Err(PyErr::new::<NotImplementedError, _>(py, NoArgs))
+    fn has_metadata_impl(&self, py: Python, name: PyString) -> PyResult<bool> {
+        let state = self.state(py);
+        let package = self.package(py);
+        let resources_state = state.get_resources_state();
+
+        let name = name.to_string_lossy(py);
+
+        let data = resolve_package_distribution_resource(
+            &resources_state.resources,
+            &resources_state.origin,
+            package,
+            &name,
+        )
+        .unwrap_or(None);
+
+        Ok(data.is_some())
     }
 
-    fn get_metadata_impl(&self, py: Python, _name: &str) -> PyResult<PyString> {
-        Err(PyErr::new::<NotImplementedError, _>(py, NoArgs))
+    fn get_metadata_impl(&self, py: Python, name: PyString) -> PyResult<PyString> {
+        let state = self.state(py);
+        let package = self.package(py);
+        let resources_state = state.get_resources_state();
+
+        let name = name.to_string_lossy(py);
+
+        let data = resolve_package_distribution_resource(
+            &resources_state.resources,
+            &resources_state.origin,
+            package,
+            &name,
+        )
+        .map_err(|e| PyErr::new::<IOError, _>(py, format!("error obtaining metadata: {}", e)))?
+        .ok_or_else(|| PyErr::new::<IOError, _>(py, "metadata does not exist"))?;
+
+        let data = String::from_utf8(data.to_vec())
+            .map_err(|_| PyErr::new::<UnicodeDecodeError, _>(py, "metadata is not UTF-8"))?;
+
+        Ok(PyString::new(py, &data))
     }
 
-    fn metadata_isdir_impl(&self, py: Python, _name: &str) -> PyResult<bool> {
-        Err(PyErr::new::<NotImplementedError, _>(py, NoArgs))
+    fn get_metadata_lines_impl(&self, py: Python, name: PyString) -> PyResult<PyObject> {
+        let s = self.get_metadata(py, name)?;
+
+        let pkg_resources = py.import("pkg_resources")?;
+
+        pkg_resources.call(py, "yield_lines", (s,), None)
     }
 
-    fn metadata_listdir_impl(&self, py: Python, _name: &str) -> PyResult<PyObject> {
-        Err(PyErr::new::<NotImplementedError, _>(py, NoArgs))
+    fn metadata_isdir_impl(&self, py: Python, name: PyString) -> PyResult<bool> {
+        let state = self.state(py);
+        let package = self.package(py);
+        let resources_state = state.get_resources_state();
+
+        let name = name.to_string_lossy(py);
+
+        Ok(metadata_name_is_directory(
+            &resources_state.resources,
+            &package,
+            &name,
+        ))
+    }
+
+    fn metadata_listdir_impl(&self, py: Python, name: PyString) -> PyResult<PyList> {
+        let state = self.state(py);
+        let package = self.package(py);
+        let resources_state = state.get_resources_state();
+
+        let name = name.to_string_lossy(py);
+
+        let entries = metadata_list_directory(&resources_state.resources, &package, &name)
+            .into_iter()
+            .map(|s| PyString::new(py, s).into_object())
+            .collect::<Vec<_>>();
+
+        Ok(PyList::new(py, &entries))
     }
 
     fn run_script_impl(
         &self,
         py: Python,
-        _script_name: &str,
+        _script_name: PyString,
         _namespace: PyObject,
     ) -> PyResult<PyObject> {
         Err(PyErr::new::<NotImplementedError, _>(py, NoArgs))

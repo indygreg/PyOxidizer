@@ -10,7 +10,12 @@ use {
         PyObject, PyResult, PyString, PyType, Python, PythonObject, ToPyObject,
     },
     python_packed_resources::data::Resource,
-    std::{borrow::Cow, collections::HashMap, path::Path, sync::Arc},
+    std::{
+        borrow::Cow,
+        collections::{BTreeSet, HashMap},
+        path::Path,
+        sync::Arc,
+    },
 };
 
 // Emulates importlib.metadata.Distribution._discover_resolvers().
@@ -327,7 +332,7 @@ pub(crate) fn find_distributions(
         .into_object())
 }
 
-fn resolve_package_distribution_resource<'a>(
+pub(crate) fn resolve_package_distribution_resource<'a>(
     resources: &'a HashMap<Cow<'a, str>, Resource<'a, u8>>,
     origin: &Path,
     package: &str,
@@ -353,6 +358,94 @@ fn resolve_package_distribution_resource<'a>(
     } else {
         Ok(None)
     }
+}
+
+/// Whether a metadata resource name is a directory.
+pub(crate) fn metadata_name_is_directory<'a>(
+    resources: &'a HashMap<Cow<'a, str>, Resource<'a, u8>>,
+    package: &str,
+    name: &str,
+) -> bool {
+    let name = name.replace('\\', "/");
+
+    let prefix = if name.ends_with('/') {
+        name
+    } else {
+        format!("{}/", name)
+    };
+
+    if let Some(entry) = resources.get(package) {
+        if let Some(resources) = &entry.in_memory_distribution_resources {
+            if resources.keys().any(|path| path.starts_with(&prefix)) {
+                return true;
+            }
+        }
+
+        if let Some(resources) = &entry.relative_path_distribution_resources {
+            if resources.keys().any(|path| path.starts_with(&prefix)) {
+                return true;
+            }
+        }
+
+        false
+    } else {
+        false
+    }
+}
+
+/// List contents of a metadata directory.
+pub(crate) fn metadata_list_directory<'a>(
+    resources: &'a HashMap<Cow<'a, str>, Resource<'a, u8>>,
+    package: &str,
+    name: &str,
+) -> Vec<&'a str> {
+    let name = name.replace('\\', "/");
+
+    let prefix = if name.ends_with('/') {
+        Some(name)
+    } else if name.is_empty() {
+        None
+    } else {
+        Some(format!("{}/", name))
+    };
+
+    let filter_map_resource = |path: &'a Cow<'a, str>| -> Option<&'a str> {
+        match &prefix {
+            Some(prefix) => {
+                if let Some(name) = path.strip_prefix(prefix) {
+                    if name.contains('/') {
+                        None
+                    } else {
+                        Some(name)
+                    }
+                } else {
+                    None
+                }
+            }
+            None => {
+                // Empty string input matches root directory.
+                if path.contains('/') {
+                    None
+                } else {
+                    Some(path)
+                }
+            }
+        }
+    };
+
+    let mut entries = BTreeSet::new();
+
+    if let Some(entry) = resources.get(package) {
+        if let Some(resources) = &entry.in_memory_distribution_resources {
+            entries.extend(resources.keys().filter_map(filter_map_resource));
+        }
+
+        if let Some(resources) = &entry.relative_path_distribution_resources {
+            entries.extend(resources.keys().filter_map(filter_map_resource));
+        }
+    }
+
+    entries.into_iter().collect::<Vec<_>>()
 }
 
 pub(crate) fn module_init(py: Python, m: &PyModule) -> PyResult<()> {
