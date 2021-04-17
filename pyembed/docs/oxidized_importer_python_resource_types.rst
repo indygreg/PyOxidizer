@@ -58,63 +58,25 @@ attributes to ``True``:
 ``PythonModuleSource``
 ======================
 
-The ``oxidized_importer.PythonModuleSource`` type represents Python module
-source code. e.g. a ``.py`` file.
-
-Instances have the following properties:
-
-``module`` (``str``)
-   The fully qualified Python module name. e.g. ``my_package.foo``.
-
-``source`` (``bytes``)
-   The source code of the Python module.
-
-   Note that source code is stored as ``bytes``, not ``str``. Most Python
-   source is stored as ``utf-8``, so you can ``.encode("utf-8")`` or
-   ``.decode("utf-8")`` to convert between ``bytes`` and ``str``.
-
-``is_package`` (``bool``)
-   This this module is a Python package.
+The :py:class:`PythonModuleSource` type represents Python module
+source code. e.g. a ``.py`` file. See its linked API documentation
+for more.
 
 ``PythonModuleBytecode``
 ========================
 
-The ``oxidized_importer.PythonModuleBytecode`` type represents Python
+The :py:class:`PythonModuleBytecode` type represents Python
 module bytecode. e.g. what a ``.pyc`` file holds (but without the header
 that a ``.pyc`` file has).
-
-Instances have the following properties:
-
-``module`` (``str``)
-   The fully qualified Python module name.
-
-``bytecode`` (``bytes``)
-   The bytecode of the Python module.
-
-   This is what you would get by compiling Python source code via
-   something like ``marshal.dumps(compile(source, "exe"))``. The bytecode
-   does **not** contain a header, like what would be found in a ``.pyc``
-   file.
-
-``optimize_level`` (``int``)
-   The bytecode optimization level. Either ``0``, ``1``, or ``2``.
-
-``is_package`` (``bool``)
-   Whether this module is a Python package.
 
 ``PythonExtensionModule``
 =========================
 
-The ``oxidized_importer.PythonExtensionModule`` type represents a
+The :py:class:`PythonExtensionModule` type represents a
 Python extension module. This is a shared library defining a Python
 extension implemented in native machine code that can be loaded into
 a process and defines a Python module. Extension modules are typically
 defined by ``.so``, ``.dylib``, or ``.pyd`` files.
-
-Instances have the following properties:
-
-``name`` (``str``)
-   The name of the extension module.
 
 .. note::
 
@@ -123,44 +85,11 @@ Instances have the following properties:
 ``PythonPackageResource``
 =========================
 
-The ``oxidized_importer.PythonPackageResource`` type represents a non-module
-*resource* file. These are files that live next to Python modules that
-are typically accessed via the APIs in ``importlib.resources``.
-
-Instances have the following properties:
-
-``package`` (``str``)
-   The name of the leaf-most Python package this resource is associated with.
-
-   With :py:class:`OxidizedFinder`, an ``importlib.abc.ResourceReader``
-   associated with this package will be used to load the resource.
-
-``name`` (``str``)
-   The name of the resource within its ``package``. This is typically the
-   filename of the resource. e.g. ``resource.txt`` or ``child/foo.png``.
-
-``data`` (``bytes``)
-   The raw binary content of the resource.
+The :py:class:`PythonPackageResource` type represents a non-module
+*resource* file.
 
 ``PythonPackageDistributionResource``
 =====================================
 
-The ``oxidized_importer.PythonPackageDistributionResource`` type represents
+The :py:class:`PythonPackageDistributionResource` type represents
 a non-module *resource* file living in a package distribution directory
-(e.g. ``<package>-<version>.dist-info`` or ``<package>-<version>.egg-info``).
-These resources are typically accessed via the APIs in ``importlib.metadata``.
-
-Instances have the following properties:
-
-``package`` (``str``)
-   The name of the Python package this resource is associated with.
-
-``version`` (``str``)
-   Version string of Python package this resource is associated with.
-
-``name`` (``str``)
-   The name of the resource within the metadata distribution. This is
-   typically the filename of the resource. e.g. ``METADATA``.
-
-``data`` (``bytes``)
-   The raw binary content of the resource.

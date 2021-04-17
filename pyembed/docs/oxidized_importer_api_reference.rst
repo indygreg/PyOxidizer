@@ -490,25 +490,128 @@ The ``PythonModuleSource`` Class
 
 .. py:class:: PythonModuleSource
 
+   Represents Python module source code. e.g. a ``.py`` file.
+
+
+   .. py:attribute:: module
+
+      (``str``) The fully qualified Python module name. e.g.
+      ``my_package.foo``.
+
+   .. py:attribute:: source
+
+      (``bytes``) The source code of the Python module.
+
+      Note that source code is stored as ``bytes``, not ``str``. Most Python
+      source is stored as ``utf-8``, so you can ``.encode("utf-8")`` or
+      ``.decode("utf-8")`` to convert between ``bytes`` and ``str``.
+
+   .. py:attribute:: is_package
+
+      (``bool``) Whether this module is a Python package.
+
 The ``PythonModuleBytecode`` Class
 ==================================
 
 .. py:class:: PythonModuleBytecode
+
+   Represents Python module bytecode. e.g. what a ``.pyc`` file holds (but
+   without the header that a ``.pyc`` file has).
+
+   .. py:attribute:: module
+
+      (``str``) The fully qualified Python module name.
+
+   .. py:attribute:: bytecode
+
+      (``bytes``) The bytecode of the Python module.
+
+      This is what you would get by compiling Python source code via
+      something like ``marshal.dumps(compile(source, "exe"))``. The bytecode
+      does **not** contain a header, like what would be found in a ``.pyc``
+      file.
+
+   .. py:attribute:: optimize_level
+
+      (``int``) The bytecode optimization level. Either ``0``, ``1``, or ``2``.
+
+   .. py:attribute:: is_package
+
+      (``bool``) Whether this module is a Python package.
 
 The ``PythonPackageResource`` Class
 ===================================
 
 .. py:class:: PythonPackageResource
 
+   Represents a non-module *resource* file. These are files that live next
+   to Python modules that are typically accessed via the APIs in
+   ``importlib.resources``.
+
+   .. py:attribute:: package
+
+      (``str``) The name of the leaf-most Python package this resource is
+      associated with.
+
+      With :py:class:`OxidizedFinder`, an ``importlib.abc.ResourceReader``
+      associated with this package will be used to load the resource.
+
+   .. py:attribute:: name
+
+      (``str``) The name of the resource within its ``package``. This is
+      typically the filename of the resource. e.g. ``resource.txt`` or
+      ``child/foo.png``.
+
+   .. py:attribute:: data
+
+      (``bytes``) The raw binary content of the resource.
+
 The ``PythonPackageDistributionResource`` Class
 ===============================================
 
 .. py:class:: PythonPackageDistributionResource
 
+   Represents a non-module *resource* file living in a package distribution
+   directory (e.g. ``<package>-<version>.dist-info`` or
+   ``<package>-<version>.egg-info``).
+
+   These resources are typically accessed via the APIs in ``importlib.metadata``.
+
+   .. py:attribute:: package
+
+      (``str``) The name of the Python package this resource is associated with.
+
+   .. py:attribute:: version
+
+      (``str``) Version string of Python package this resource is associated with.
+
+   .. py:attribute:: name
+
+      (``str``) The name of the resource within the metadata distribution. This
+      is typically the filename of the resource. e.g. ``METADATA``.
+
+   .. py:attribute:: data
+
+      (``bytes``) The raw binary content of the resource.
+
 The ``PythonExtensionModule`` Class
 ===================================
 
 .. py:class:: PythonExtensionModule
+
+   Represents a Python extension module. This is a shared library
+   defining a Python extension implemented in native machine code that
+   can be loaded into a process and defines a Python module. Extension
+   modules are typically defined by ``.so``, ``.dylib``, or ``.pyd``
+   files.
+
+   .. :py:attribute:: name
+
+      (``str``) The name of the extension module.
+
+.. note::
+
+   Properties of this type are read-only.
 
 .. rubric:: Footnotes
 
