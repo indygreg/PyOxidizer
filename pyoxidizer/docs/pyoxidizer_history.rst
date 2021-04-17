@@ -31,6 +31,16 @@ Version History
 
 Not yet released.
 
+Backwards Compatibility Notes
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+* The ``pyembed`` crate now always canonicalizes the path to the current
+  executable. Previously, if ``OxidizedPythonInterpreterConfig.exe`` were
+  set, it would not be canonicalized. It is possible this could break
+  use cases where the current executable is deleted after the executable
+  starts. In this case, the Python interpreter will fail to initialize. If
+  this functionality is important to you, file a feature request.
+
 .. _version_0_13_2:
 
 0.13.2

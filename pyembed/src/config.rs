@@ -77,6 +77,10 @@ impl<'a> From<&'a [u8]> for PackedResourcesSource<'a> {
 #[derive(Clone, Debug)]
 pub struct OxidizedPythonInterpreterConfig<'a> {
     /// The path of the currently executing executable.
+    ///
+    /// If not set, [std::env::current_exe()] will be used.
+    ///
+    /// In all cases, the path will be canonicalized.
     pub exe: Option<PathBuf>,
 
     /// The filesystem path from which relative paths will be interpreted.
@@ -295,13 +299,15 @@ impl<'a> OxidizedPythonInterpreterConfig<'a> {
         let exe = if let Some(exe) = self.exe {
             exe
         } else {
-            dunce::canonicalize(
-                std::env::current_exe().map_err(|_| {
-                    NewInterpreterError::Simple("could not obtain current executable")
-                })?,
-            )
-            .map_err(|_| NewInterpreterError::Simple("could not obtain current executable path"))?
+            std::env::current_exe()
+                .map_err(|_| NewInterpreterError::Simple("could not obtain current executable"))?
         };
+
+        // We always canonicalize the current executable because we use path
+        // comparisons in the path hooks importer to assess whether a given sys.path
+        // entry is this executable.
+        let exe = dunce::canonicalize(exe)
+            .map_err(|_| NewInterpreterError::Simple("could not obtain current executable path"))?;
 
         let origin = if let Some(origin) = self.origin {
             origin
