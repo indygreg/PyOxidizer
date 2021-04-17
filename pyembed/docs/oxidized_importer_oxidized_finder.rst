@@ -2,20 +2,21 @@
 
 .. _oxidized_finder:
 
-==============================
-``OxidizedFinder`` Python Type
-==============================
+===================================
+``OxidizedFinder`` Meta Path Finder
+===================================
 
-:py:class:`OxidizedFinder` is a Python type that implements a
-custom *meta path finder*. *Oxidized* is in its name because it is
-implemented in Rust.
+:py:class:`OxidizedFinder` is a Python type implementing a custom and
+fully-featured :ref:`meta path finder <oxidized_importer_meta_path_finders>`.
+*Oxidized* is in its name because it is implemented in Rust.
 
 Unlike traditional *meta path finders* which have to dynamically
 discover resources (often by scanning the filesystem),
 :py:class:`OxidizedFinder` instances maintain an *index* of known
 resources. When a resource is requested, :py:class:`OxidizedFinder`
 can retrieve that resource by effectively performing 1 or 2 lookups
-in a Rust ``HashMap``. This makes resource resolution extremely efficient.
+in a Rust ``HashMap``. This makes resource resolution extremely efficient,
+as no filesystem probing or other explicit I/O is performed.
 
 Instances of :py:class:`OxidizedFinder` are optionally bound to binary
 blobs holding *packed resources data*. This is a custom serialization format
