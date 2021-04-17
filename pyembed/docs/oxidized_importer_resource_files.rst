@@ -119,27 +119,27 @@ are effectively relative filesystem paths. e.g. ``resource.txt`` or
 directory separator, even on Windows.
 
 ``OxidizedFinder.get_resource_reader()`` returns instances of
-``OxidizedResourceReader``. Each instance is bound to a specific Python
-package: that's how they are defined. When an ``OxidizedResourceReader``
-receives the name of a resource, it performs a simple lookup in the global
-resources index. If the string key is found, it is used. Otherwise, it is
-assumed the resource doesn't exist.
+:py:class:`OxidizedResourceReader`. Each instance is bound to a specific
+Python package: that's how they are defined. When an
+:py:class:`OxidizedResourceReader` receives the name of a resource, it
+performs a simple lookup in the global resources index. If the string key
+is found, it is used. Otherwise, it is assumed the resource doesn't exist.
 
 The ``OxidizedResourceReader.contents()`` method will return a list of all
 keys in the internal resources index.
 
-``OxidizedResourceReader`` works the same way for in-memory and
+:py:class:`OxidizedResourceReader` works the same way for in-memory and
 filesystem-relative resource locations because internally
 both use the same index of resources to drive execution: only the location
 of the resource content varies.
 
-``OxidizedResourceReader``'s implementation varies from the standard library
-filesystem-based implementation in the following ways:
+:py:class:`OxidizedResourceReader`'s implementation varies from the
+standard library filesystem-based implementation in the following ways:
 
 * ``OxidizedResourceReader.contents()`` will return keys from the package's
   resources dictionary, not all the files in the same directory as the
   underlying Python package (the standard library uses ``os.listdir()``).
-  ``OxidizedResourceReader`` will therefore return resource names in
+  :py:class:`OxidizedResourceReader` will therefore return resource names in
   sub-directories as long as those sub-directories aren't themselves Python
   packages.
 * Resources must be explicitly registered with :py:class:`OxidizedFinder` as
@@ -149,7 +149,7 @@ filesystem-based implementation in the following ways:
 * ``OxidizedResourceReader.is_resource()`` will return ``True`` for resource
   names containing a slash. Contrast with Python's, which returns ``False``
   (even though you can open a resource with ``ResourceReader.open_resource()``
-  for the same path). ``OxidizedResourceReader``'s behavior is more
+  for the same path). :py:class:`OxidizedResourceReader`'s behavior is more
   consistent.
 
 .. _resource_loader_support:
