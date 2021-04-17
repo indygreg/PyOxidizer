@@ -485,6 +485,12 @@ The ``OxidizedResourceReader`` Class
 
 .. py:class:: OxidizedResourceResource
 
+   An implementation of
+   `importlib.abc.ResourceReader <https://docs.python.org/3.9/library/importlib.html#importlib.abc.ResourceReader>`_
+   to facilitate resource reading from an :py:class:`OxidizedFinder`.
+
+   See :ref:`resource_reader_support` for more.
+
 The ``PythonModuleSource`` Class
 ================================
 
