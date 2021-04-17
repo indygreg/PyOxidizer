@@ -40,7 +40,7 @@ use {
         },
     },
     python3_sys as pyffi,
-    std::sync::Arc,
+    std::{path::Path, sync::Arc},
 };
 
 pub const OXIDIZED_IMPORTER_NAME_STR: &str = "oxidized_importer";
@@ -939,7 +939,7 @@ impl OxidizedFinder {
                 }
             };
             let pbuf = pyobject_to_pathbuf(py, path.clone_ref(py))?;
-            let mut p: &std::path::Path = pbuf.as_ref();
+            let mut p = pbuf.as_path();
             // path could point "inside" current_exe. If we can't canonicalize,
             // strip the last component and check again. (zipimporter does
             // somethings similar)
@@ -1066,7 +1066,7 @@ impl OxidizedPathEntryFinder {
 
     // Transform b"pkg/mod" into "pkg.mod" on behalf of `OxidizedFinder::path_hook`.
     // Raise an `ImportError` if decoding `path` fails.
-    fn parse_path_to_pkg(py: Python, path: &std::path::Path) -> PyResult<String> {
+    fn parse_path_to_pkg(py: Python, path: &Path) -> PyResult<String> {
         // Use Python's filesystem encoding to ensure correctly
         // round-tripping the str Python package name from the
         // potentially non-Unicode path.
@@ -2056,7 +2056,7 @@ pub(crate) fn initialize_path_hooks(py: Python, finder: &PyObject, sys: &PyModul
 
 #[cfg(test)]
 mod test_path_entry_finder {
-    use {super::OxidizedPathEntryFinder, rusty_fork::rusty_fork_test};
+    use {super::*, rusty_fork::rusty_fork_test};
 
     fn get_py(fsencoding: Option<&str>) -> crate::MainPythonInterpreter {
         let mut config = crate::OxidizedPythonInterpreterConfig::default();
@@ -2135,7 +2135,7 @@ mod test_path_entry_finder {
                         .to_string(),
                     "utf-16-le"
                 );
-                OxidizedPathEntryFinder::parse_path_to_pkg(py, std::path::Path::new("00")).unwrap()
+                OxidizedPathEntryFinder::parse_path_to_pkg(py, Path::new("00")).unwrap()
             };
 
             // The actual test.
