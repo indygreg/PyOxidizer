@@ -6,6 +6,47 @@
 API Reference
 =============
 
+Module Level Functions
+======================
+
+.. py:function:: decode_source(io_module, source_bytes) -> str
+
+   Decodes Python source code ``bytes`` to a ``str``.
+
+   This is effectively a reimplementation of
+   ``importlib._bootstrap_external.decode_source()``
+
+.. py:function:: find_resources_in_path(path) -> List
+
+   This function will scan the specified filesystem path and return an
+   iterable of objects representing found resources. Those objects will be 1
+   of the types documented in :ref:`oxidized_importer_python_resource_types`.
+
+   Only directories can be scanned.
+
+.. py:function:: register_pkg_resources()
+
+   Enables ``pkg_resources`` integration.
+
+   This function effectively does the following:
+
+   * Calls ``pkg_resources.register_finder()`` to map
+     :py:class:`OxidizedPathEntryFinder` to
+     :py:func:pkg_resources_find_distributions`.
+   * Calls ``pkg_resources.register_load_type()`` to map
+     :py:class:`OxidizedFinder` to :py:class:`OxidizedPkgResourcesProvider`.
+
+   It is safe to call this function multiple times, as behavior should
+   be deterministic.
+
+.. py:function:: pkg_resources_find_distributions(finder: OxidizedPathEntryFinder, path_item: str, only=false) -> List[pkg_resources.Distribution]
+
+   Resolve ``pkg_resources.Distribution`` instances given a
+   :py:class:`OxidizedPathEntryFinder` and search criteria.
+
+   This function is what is registered with ``pkg_resources`` for distribution
+   resolution and you likely don't need to call it directly.
+
 The ``OxidizedFinder`` Class
 ============================
 

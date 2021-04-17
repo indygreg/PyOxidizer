@@ -12,12 +12,8 @@ facilitate scanning for and collecting Python resources.
 ``find_resources_in_path(path)``
 ================================
 
-The ``oxidized_importer.find_resources_in_path()`` function will scan the
-specified filesystem path and return an iterable of objects representing
-found resources. Those objects will be 1 of the types documented in
-:ref:`oxidized_importer_python_resource_types`.
-
-Only directories can be scanned.
+This function scans a filesystem path and returns discovered resources.
+See :py:func:`find_resources_in_path` for the API documentation.
 
 To discover all filesystem based resources that Python's ``PathFinder``
 *meta path finder* would (with the exception of ``.zip`` files), try the

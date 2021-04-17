@@ -1,3 +1,5 @@
+.. py:currentmodule:: oxidized_finder
+
 .. _oxidized_importer_common_issues:
 
 =============
@@ -46,7 +48,7 @@ like this:
 Resource Scanning Descends Into ``site-packages``
 =================================================
 
-``oxidized_importer.find_resources_in_path()`` descends into ``site-packages``
+:py:func:`find_resources_in_path()` descends into ``site-packages``
 directories. This is arguably not the desired behavior, especially when
 in the context of virtualenvs, which may want to not inherit the resources
 in the ``site-packages`` of the *outer* Python installation. This will

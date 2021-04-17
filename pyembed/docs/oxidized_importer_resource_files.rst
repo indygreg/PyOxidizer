@@ -256,17 +256,7 @@ This is because importing ``pkg_resources`` adds overhead and it would be
 wasteful to register ``pkg_resources`` integration if it isn't used.
 
 To enable ``pkg_resources`` integration at run-time, call
-``oxidized_importer.register_pkg_resources()``. It is safe to call this
-function multiple times.
-
-Calling ``oxidized_importer.register_pkg_resources()`` effectively does
-the following:
-
-* Calls ``pkg_resources.register_finder()`` to map
-  :py:class:`OxidizedPathEntryFinder` to
-  ``oxidized_importer.pkg_resources_find_distributions()``.
-* Calls ``pkg_resources.register_load_type()`` to map ``OxidizedFinder``
-  to ``OxidizedPkgResourcesProvider``.
+:py:func:`register_pkg_resources`.
 
 Distribution Resolving
 ----------------------
@@ -285,9 +275,9 @@ responds to ``sys.path`` entries via the ``sys.path_hooks`` mechanism.
    If either of these aren't present, ``pkg_resources`` will fail to call
    into ``oxidized_importer`` to resolve distributions.
 
-``oxidized_importer.pkg_resources_find_distributions()`` does not currently
+:py:func:`pkg_resources_find_distributions` does not currently
 implement any filtering and always returns all packages tracked by the
-``OxidizedFinder`` the loader was derived from. This behavior is wrong.
+:py:class:`OxidizedFinder` the loader was derived from. This behavior is wrong.
 
 Metadata and Resource Resolving
 -------------------------------
