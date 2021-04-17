@@ -923,44 +923,10 @@ impl OxidizedFinder {
 
 // Path hooks support.
 impl OxidizedFinder {
-    // Canonicalize the path to the current executable or raise an OSError.
-    //
-    // Even `std::env::current_exe()` can fail to `fs::canonicalize()` if, e.g.,
-    // the file is deleted after the program starts.
-    fn exe_realpath(&self, py: Python) -> PyResult<std::path::PathBuf> {
-        fn os_error(py: Python, err: std::io::Error, exe: std::path::Display) -> PyErr {
-            // Use a Python expression instead of PyErr::new to ensure we get the
-            // right OSError subclass.
-            let locals = PyDict::new(py);
-            if let Err(e) = locals.set_item(py, "strerror", "cannot open current executable") {
-                return e;
-            };
-            if let Err(e) = locals.set_item(py, "exe", format!("{}", exe)) {
-                return e;
-            };
-            if let Err(e) = locals.set_item(py, "raw_os_error", err.raw_os_error()) {
-                return e;
-            };
-            let code = if cfg!(windows) {
-                "OSError(None, strerror, exe, raw_os_error)"
-            } else {
-                "OSError(raw_os_error, strerror, exe)"
-            };
-            py.eval(&code, None, Some(&locals)).map_or_else(
-                |err_creating_exc| err_creating_exc,
-                |exc| PyErr::from_instance(py, exc),
-            )
-        }
-        let current_exe = &self.state(py).get_resources_state().current_exe;
-        current_exe
-            .canonicalize()
-            .map_err(|err| os_error(py, err, current_exe.display()))
-    }
-
     fn path_hook_impl(&self, py: Python, path: PyObject) -> PyResult<OxidizedPathEntryFinder> {
         // Compute OxidizedPathEntryFinder::package
         let pkg = {
-            let current_exe = self.exe_realpath(py)?;
+            let current_exe = self.state(py).get_resources_state().current_exe.clone();
             let not_exe_err = || {
                 let msg = format!(
                     "path {} does not begin in \'{}\' (if you're sure it does, check Python's file-system encoding)", &path, current_exe.display());
@@ -2086,10 +2052,7 @@ pub(crate) fn initialize_path_hooks(py: Python, finder: &PyObject, sys: &PyModul
 
 #[cfg(test)]
 mod test_path_entry_finder {
-    use {
-        super::{oxidized_finder_new, OxidizedPathEntryFinder},
-        rusty_fork::rusty_fork_test,
-    };
+    use {super::OxidizedPathEntryFinder, rusty_fork::rusty_fork_test};
 
     fn get_py(fsencoding: Option<&str>) -> crate::MainPythonInterpreter {
         let mut config = crate::OxidizedPythonInterpreterConfig::default();
@@ -2173,43 +2136,6 @@ mod test_path_entry_finder {
 
             // The actual test.
             assert_eq!(wavy_dash, WAVY_DASH);
-        }
-
-        /// OxidizedFinder::path_hook raises an OSError if current_exe cannot be
-        /// canonicalized. The OSError returns the right exception subclass.
-        #[test]
-        fn bad_current_exe() {
-            let exe: std::path::PathBuf = r#"/../a"/../foo.txt\"#.into();
-            assert_eq!(
-                exe.canonicalize().unwrap_err().kind(),
-                std::io::ErrorKind::NotFound
-            );
-            let (s, ty) = {
-                let mut interp = get_py(None);
-                let py = interp.acquire_gil();
-                let finder = oxidized_finder_new(py, None).unwrap();
-                finder.state(py).get_resources_state_mut().current_exe = exe;
-                let exc = finder
-                    .exe_realpath(py)
-                    .expect_err("canonicalize unexpectedly succeeded")
-                    .instance(py);
-                use cpython::ObjectProtocol;
-                let s = exc.str(py).unwrap().to_string(py).unwrap().into_owned();
-                exc.cast_as::<cpython::exc::OSError>(py).unwrap();
-                let ty = exc
-                    .getattr(py, "__class__")
-                    .unwrap()
-                    .getattr(py, "__name__")
-                    .unwrap()
-                    .extract::<String>(py)
-                    .unwrap();
-                (s, ty)
-            };
-            assert_eq!(
-                s,
-                r#"[Errno 2] cannot open current executable: '/../a"/../foo.txt\\'"#
-            );
-            assert_eq!(ty, "FileNotFoundError");
         }
     }
 }
