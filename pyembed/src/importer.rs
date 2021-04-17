@@ -1072,7 +1072,7 @@ impl OxidizedPathEntryFinder {
         // potentially non-Unicode path.
         // https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/V1_chap03.html#tag_03_170
         // https://docs.microsoft.com/en-us/windows/win32/fileio/naming-a-file
-        let pkg = crate::conversion::path_to_pyobject(py, path)?
+        Ok(crate::conversion::path_to_pyobject(py, path)?
             .cast_as::<PyString>(py)?
             .to_string(py)
             .map_err(|mut unicode_err| {
@@ -1090,10 +1090,8 @@ impl OxidizedPathEntryFinder {
                     imp_err
                 }
             })?
-            .replace("/", ".");
-        #[cfg(windows)]
-        let pkg = pkg.replace("\\", ".");
-        Ok(pkg)
+            .replace("/", ".")
+            .replace('\\', "."))
     }
 }
 
