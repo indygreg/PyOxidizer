@@ -265,11 +265,6 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
             })?;
         }
 
-        /* Pre-initialization functions we could support:
-         *
-         * PyObject_SetArenaAllocator()
-         */
-
         if self.config.argvb {
             let args_objs = self
                 .config
