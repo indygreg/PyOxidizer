@@ -958,14 +958,6 @@ impl OxidizedFinder {
     }
 
     fn path_hook_impl(&self, py: Python, path: PyObject) -> PyResult<OxidizedPathEntryFinder> {
-        // `paths` will become the return value's `path` attribute, which exists
-        // only to be passed to `self.find_spec`'s
-        // `path: Optional[Iterable[str]]` argument.
-        let paths = {
-            let os = py.import("os")?;
-            PyList::new(py, &[os.call(py, "fspath", (path.clone_ref(py),), None)?])
-        };
-
         // Compute OxidizedPathEntryFinder::package
         let pkg = {
             let current_exe = self.exe_realpath(py)?;
@@ -998,7 +990,11 @@ impl OxidizedFinder {
             // unwrapping is safe because we already know p is the prefix of pbuf
             OxidizedPathEntryFinder::parse_path_to_pkg(py, pbuf.strip_prefix(p).unwrap())?
         };
-        OxidizedPathEntryFinder::create_instance(py, self.as_object().clone_ref(py), paths, pkg)
+
+        let os = py.import("os")?;
+        let path = os.call(py, "fspath", (path,), None)?;
+
+        OxidizedPathEntryFinder::create_instance(py, self.as_object().clone_ref(py), path, pkg)
     }
 }
 
@@ -1010,10 +1006,12 @@ py_class!(class OxidizedPathEntryFinder |py| {
     // `OxidizedFinder`. However, `OxidizedPathEntryFinder::iter_modules` will raise
     // a `TypeError` when called if `finder` is not an `OxidizedFinder`.
     data finder: PyObject;
-    // A list containing a single either str or bytes, normalized from the `path`
-    // argument to `OxidizedFinder::path_hook`. Used only for passing to
-    // `finder.find_spec`'s `path` argument.
-    data path: PyList;
+
+    // The sys.path value this instance was created with.
+    //
+    // Could be PyBytes or PyString.
+    data source_path: PyObject;
+
     // If the entry of `path` is `os.path.join(sys.executable, "pkg", "mod")`,
     // then `package` is `"pkg.mod"`.
     data package: String;
@@ -1070,7 +1068,16 @@ impl OxidizedPathEntryFinder {
             return Ok(Some(py.None()));
         }
         self.finder(py)
-            .call_method(py, "find_spec", (fullname, self.path(py), target), None)
+            .call_method(
+                py,
+                "find_spec",
+                (
+                    fullname,
+                    PyList::new(py, &[self.source_path(py).clone_ref(py)]).as_object(),
+                    target,
+                ),
+                None,
+            )
             .map(|spec| if spec == py.None() { None } else { Some(spec) })
     }
 
@@ -1827,7 +1834,7 @@ fn pkg_resources_find_distributions(
         state.clone(),
         &path_item.to_string_lossy(py),
         only,
-        finder.path(py),
+        finder.source_path(py),
         finder.package(py),
     )
 }
