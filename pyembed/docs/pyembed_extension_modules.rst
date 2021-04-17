@@ -1,3 +1,5 @@
+.. py:currentmodule:: oxidized_importer
+
 .. _pyembed_extension_modules:
 
 ====================================

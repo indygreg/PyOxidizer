@@ -1,3 +1,5 @@
+.. py:currentmodule:: oxidized_importer
+
 .. _oxidized_importer_python_resource_types:
 
 ===========================================
@@ -33,26 +35,26 @@ Each ``OxidizedResource`` instance describes a particular type of resource.
 If a resource identifies as a type, it sets one of the following ``is_*``
 attributes to ``True``:
 
-``is_module``
+:py:attr:`OxidizedResource.is_module`
    A Python module. These typically have source or bytecode attached.
 
    Modules can also be packages. In this case, they can hold additional
    data, such as a mapping of resource files.
 
-``is_builtin_extension_module``
+:py:attr:`OxidizedResource.is_builtin_extension_module`
    A built-in extension module. These represent Python extension modules
    that are compiled into the application and don't exist as separate
    shared libraries.
 
-``is_frozen_module``
+:py:attr:`OxidizedResource.is_frozen_module`
    A frozen Python module. These are Python modules whose bytecode is
    compiled into the application.
 
-``is_extension_module``
+:py:attr:`OxidizedResource.is_extension_module`
    A Python extension module. These are shared libraries that can be loaded
    to provide additional modules to Python.
 
-``is_shared_library``
+:py:attr:`OxidizedResource.is_shared_library`
    A shared library. e.g. a ``.so`` or ``.dll``.
 
 ``PythonModuleSource``

@@ -1,3 +1,5 @@
+.. py:currentmodule:: oxidized_importer
+
 .. _oxidized_importer_security:
 
 ==========================================

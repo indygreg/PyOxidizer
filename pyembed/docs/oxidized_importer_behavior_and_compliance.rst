@@ -1,3 +1,5 @@
+.. py:currentmodule:: oxidized_importer
+
 .. _oxidized_finder_behavior_and_compliance:
 
 ==========================================

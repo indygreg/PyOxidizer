@@ -1,4 +1,4 @@
-.. py:currentmodule:: oxidized_finder
+.. py:currentmodule:: oxidized_importer
 
 .. _oxidized_importer_common_issues:
 

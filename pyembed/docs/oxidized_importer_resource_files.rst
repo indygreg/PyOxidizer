@@ -1,4 +1,4 @@
-.. py:currentmodule:: oxidized_finder
+.. py:currentmodule:: oxidized_importer
 
 .. _resource_files:
 
