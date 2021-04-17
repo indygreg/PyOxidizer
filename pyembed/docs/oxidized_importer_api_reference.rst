@@ -318,6 +318,198 @@ The ``OxidizedPkgResourcesProvider`` Class
 
       Returns a ``list`` instead of a generator.
 
+The ``OxidizedResource`` Class
+==============================
+
+.. py:class:: OxidizedResource
+
+   Represents a *resource* that is indexed by a
+   :py:class:`OxidizedFinder` instance.
+
+   Each instance represents a named entity with associated metadata and data.
+   e.g. an instance can represent a Python module with associated source and
+   bytecode.
+
+   New instances can be constructed via ``OxidizedResource()``. This will return
+   an instance whose ``name = ""`` and all properties will be ``None`` or
+   ``false``.
+
+   .. py:attribute:: is_module
+
+      A ``bool`` indicating if this resource is a Python module. Python modules
+      are backed by source or bytecode.
+
+   .. py:attribute:: is_builtin_extension_module
+
+      A ``bool`` indicating if this resource is a Python extension module
+      built-in to the Python interpreter.
+
+   .. py:attribute:: is_frozen_module
+
+      A ``bool`` indicating if this resource is a Python module whose bytecode
+      is frozen into the Python interpreter.
+
+   .. py:attribute:: is_extension_module
+
+      A ``bool`` indicating if this resource is a Python extension module.
+
+   .. py:attribute:: is_shared_library
+
+      A ``bool`` indicating if this resource is a shared library.
+
+   .. py:attribute:: name
+
+      The ``str`` name of the resource.
+
+   .. py:attribute:: is_package
+
+      A ``bool`` indicating if this resource is a Python package.
+
+   .. py:attribute:: is_namespace_package
+
+      A ``bool`` indicating if this resource is a Python namespace package.
+
+   .. py:attribute:: in_memory_source
+
+      ``bytes`` or ``None`` holding Python module source code that should be
+      imported from memory.
+
+   .. py:attribute:: in_memory_bytecode
+
+      ``bytes`` or ``None`` holding Python module bytecode that should be
+      imported from memory.
+
+      This is raw Python bytecode, as produced from the ``marshal`` module.
+      ``.pyc`` files have a header before this data that will need to be
+      stripped should you want to move data from a ``.pyc`` file into this
+      field.
+
+   .. py:attribute:: in_memory_bytecode_opt1
+
+      ``bytes`` or ``None`` holding Python module bytecode at optimization level 1
+      that should be imported from memory.
+
+      This is raw Python bytecode, as produced from the ``marshal`` module.
+      ``.pyc`` files have a header before this data that will need to be
+      stripped should you want to move data from a ``.pyc`` file into this
+      field.
+
+   .. py:attribute:: in_memory_bytecode_opt2
+
+      ``bytes`` or ``None`` holding Python module bytecode at optimization level 2
+      that should be imported from memory.
+
+      This is raw Python bytecode, as produced from the ``marshal`` module.
+      ``.pyc`` files have a header before this data that will need to be
+      stripped should you want to move data from a ``.pyc`` file into this
+      field.
+
+   .. py:attribute:: in_memory_extension_module_shared_library
+
+      ``bytes`` or ``None`` holding native machine code defining a Python extension
+      module shared library that should be imported from memory.
+
+   .. py:attribute:: in_memory_package_resources
+
+      ``dict[str, bytes]`` or ``None`` holding resource files to make available to
+      the ``importlib.resources`` APIs via in-memory data access. The ``name`` of
+      this object will be a Python package name. Keys in this dict are virtual
+      filenames under that package. Values are raw file data.
+
+   .. py:attribute:: in_memory_distribution_resources
+
+      ``dict[str, bytes]`` or ``None`` holding resource files to make available to
+      the ``importlib.metadata`` API via in-memory data access. The ``name`` of
+      this object will be a Python package name. Keys in this dict are virtual
+      filenames. Values are raw file data.
+
+   .. py:attribute:: in_memory_shared_library
+
+      ``bytes`` or ``None`` holding a shared library that should be imported from
+      memory.
+
+   .. py:attribute:: shared_library_dependency_names
+
+      ``list[str]`` or ``None`` holding the names of shared libraries that this
+      resource depends on. If this resource defines a loadable shared library,
+      this list can be used to express what other shared libraries it depends on.
+
+   .. py:attribute:: relative_path_module_source
+
+      ``pathlib.Path`` or ``None`` holding the relative path to Python module
+      source that should be imported from the filesystem.
+
+   .. py:attribute:: relative_path_module_bytecode
+
+      ``pathlib.Path`` or ``None`` holding the relative path to Python module
+      bytecode that should be imported from the filesystem.
+
+   .. py:attribute:: relative_path_module_bytecode_opt1
+
+      ``pathlib.Path`` or ``None`` holding the relative path to Python module
+      bytecode at optimization level 1 that should be imported from the filesystem.
+
+   .. py:attribute:: relative_path_module_bytecode_opt2
+
+      ``pathlib.Path`` or ``None`` holding the relative path to Python module
+      bytecode at optimization level 2 that should be imported from the filesystem.
+
+   .. py:attribute:: relative_path_extension_module_shared_library
+
+      ``pathlib.Path`` or ``None`` holding the relative path to a Python extension
+      module that should be imported from the filesystem.
+
+   .. py:attribute:: relative_path_package_resources
+
+      ``dict[str, pathlib.Path]`` or ``None`` holding resource files to make
+      available to the ``importlib.resources`` APIs via filesystem access. The
+      ``name`` of this object will be a Python package name. Keys in this dict are
+      filenames under that package. Values are relative paths to files from which
+      to read data.
+
+   .. py:attribute:: relative_path_distribution_resources
+
+      ``dict[str, pathlib.Path]`` or ``None`` holding resource files to make
+      available to the ``importlib.metadata`` APIs via filesystem access. The
+      ``name`` of this object will be a Python package name. Keys in this dict are
+      filenames under that package. Values are relative paths to files from which
+      to read data.
+
+The ``OxidizedResourceCollector`` Class
+=======================================
+
+.. py:class:: OxidizedResourceCollector
+
+The ``OxidizedResourceReader`` Class
+====================================
+
+.. py:class:: OxidizedResourceResource
+
+The ``PythonModuleSource`` Class
+================================
+
+.. py:class:: PythonModuleSource
+
+The ``PythonModuleBytecode`` Class
+==================================
+
+.. py:class:: PythonModuleBytecode
+
+The ``PythonPackageResource`` Class
+===================================
+
+.. py:class:: PythonPackageResource
+
+The ``PythonPackageDistributionResource`` Class
+===============================================
+
+.. py:class:: PythonPackageDistributionResource
+
+The ``PythonExtensionModule`` Class
+===================================
+
+.. py:class:: PythonExtensionModule
+
 .. rubric:: Footnotes
 
 .. _meta-path finder: https://docs.python.org/3/library/importlib.html#importlib.abc.MetaPathFinder
