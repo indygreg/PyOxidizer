@@ -480,6 +480,48 @@ The ``OxidizedResourceCollector`` Class
 
 .. py:class:: OxidizedResourceCollector
 
+   Provides functionality for turning instances of Python resource types into a
+   collection of :py:class:`OxidizedResource` for loading into an
+   :py:class:`OxidizedFinder` instance.
+
+   .. py:method:: __new__(cls, allowed_locations: list[str])
+
+      Construct an instance by defining locations that resources can be loaded
+      from.
+
+      The accepted string values are ``in-memory`` and ``filesystem-relative``.
+
+   .. py:attribute:: allowed_locations
+
+      (``list[str]``) Exposes allowed locations where resources can be loaded from.
+
+   .. py:method:: add_in_memory_resource(resource)
+
+      Adds a Python resource type (:py:class:`PythonModuleSource`,
+      :py:class:`PythonModuleBytecode`, etc) to the collector and marks it for
+      loading via in-memory mechanisms.
+
+   .. py:method:: add_filesystem_relative(prefix, resource)
+
+      Adds a Python resource type (:py:class:`PythonModuleSource`,
+      :py:class:`PythonModuleBytecode`, etc) to the collector and marks it for
+      loading via a relative path next to some *origin* path (as specified to the
+      :py:class:`OxidizedFinder`). That relative path can have a ``prefix`` value
+      prepended to it. If no prefix is desired and you want the resource placed
+      next to the *origin*, use an empty ``str`` for ``prefix``.
+
+   .. py:method:: oxidize() -> tuple[list[OxidizedResource], list[tuple[pathlib.Path, bytes, bool]]]
+
+      Takes all the resources collected so far and turns them into data
+      structures to facilitate later use.
+
+      The first element in the returned tuple is a list of
+      :py:class:`OxidizedResource` instances.
+
+      The second is a list of 3-tuples containing the relative filesystem
+      path for a file, the content to write to that path, and whether the file
+      should be marked as executable.
+
 The ``OxidizedResourceReader`` Class
 ====================================
 

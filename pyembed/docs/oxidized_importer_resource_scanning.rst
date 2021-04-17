@@ -35,17 +35,13 @@ following:
 ``OxidizedResourceCollector`` Python Type
 =========================================
 
-The ``oxidized_importer.OxidizedResourceCollector`` type provides functionality
+The :py:class:`OxidizedResourceCollector`` type provides functionality
 for turning instances of Python resource types into a collection
 of ``OxidizedResource`` for loading into an :py:class:`OxidizedFinder`
 instance. It exists as a convenience, as working with individual
 ``OxidizedResource`` instances can be rather cumbersome.
 
-Instances can be constructed by passing an ``allowed_locations=<list[str]>``
-argument defining locations that resources can be loaded from. The accepted
-string values are ``in-memory`` and ``filesystem-relative``.
-
-e.g. to create a collector that only marks resources for in-memory loading:
+To create a collector that only marks resources for in-memory loading:
 
 .. code-block:: python
 
@@ -54,43 +50,3 @@ e.g. to create a collector that only marks resources for in-memory loading:
    collector = oxidized_importer.OxidizedResourceCollector(
        allowed_locations=["in-memory"]
    )
-
-Instances of ``OxidizedResourceCollector`` have the following properties:
-
-``allowed_locations`` (``list[str]``)
-   Exposes allowed locations where resources can be loaded from.
-
-Methods are documented in the following sections.
-
-``add_in_memory(resource)``
----------------------------
-
-``OxidizedResourceCollector.add_in_memory(resource)`` adds a Python resource
-type (``PythonModuleSource``, ``PythonModuleBytecode``, etc) to the collector
-and marks it for loading via in-memory mechanisms.
-
-``add_filesystem_relative(prefix, resource)``
----------------------------------------------
-
-``OxidizedResourceCollector.add_filesystem_relative(prefix, resource)`` adds a
-Python resource type (``PythonModuleSource``, ``PythonModuleBytecode``, etc) to
-the collector and marks it for loading via a relative path next to some
-*origin* path (as specified to the :py:class:`OxidizedFinder`). That relative
-path can have a ``prefix`` value prepended to it. If no prefix is desired and
-you want the resource placed next to the *origin*, use an empty ``str`` for
-``prefix``.
-
-``oxidize()``
--------------
-
-``OxidizedResourceCollector.oxidize()`` takes all the resources collected so
-far and turns them into data structures to facilitate later use.
-
-The return value is a tuple of
-``(List[OxidizedResource], List[Tuple[pathlib.Path, bytes, bool]])``.
-
-The first element in the tuple is a list of ``OxidizedResource`` instances.
-
-The second is a list of 3-tuples containing the relative filesystem
-path for a file, the content to write to that path, and whether the file
-should be marked as executable.

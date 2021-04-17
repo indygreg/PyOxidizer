@@ -60,6 +60,16 @@ Bug Fixes
   they were using subtly different methods, which could result in path
   comparisons not working on Windows.
 
+Other Relevant Changes
+^^^^^^^^^^^^^^^^^^^^^^
+
+* The Python API for the ``oxidized_importer`` Python extension module
+  providing our custom importer logic is now centrally documented instead of
+  spread out over multiple documentation pages. See
+  :ref:`oxidized_importer_api_reference` for the new docs. Various type
+  references throughout the generated documentation should now link to the
+  new API docs.
+
 .. _version_0_13_2:
 
 0.13.2
