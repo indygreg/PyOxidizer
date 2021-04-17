@@ -73,10 +73,12 @@ it to service every ``import`` except those from the very few *built-in
 extension modules* that are compiled into the interpreter and loaded as
 part of Python initialization (e.g. the ``sys`` module).
 
-At the end of initialization, the :ref:`path_hook <oxidized_finder_path_hook>`
-method of the ``OxidizedFinder`` instance on ``sys.meta_path`` is appended to
-``sys.path_hooks`` if both the ``OxidizedFinder`` and standard library
-filesystem based importer are enabled.
+If ``OxidizedFinder`` is being installed on ``sys.meta_path``, its
+:ref:`path_hook <oxidized_finder_path_hook>` method will be registered
+as the first item on ``sys.path_hooks``.
+
+If filesystem importing is disabled, all entries of ``sys.meta_path`` and
+``sys.path_hooks`` not related to ``OxidizedFinder`` will be removed.
 
 Python API
 ==========

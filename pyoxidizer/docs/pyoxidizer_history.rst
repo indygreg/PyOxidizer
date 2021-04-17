@@ -40,6 +40,17 @@ Backwards Compatibility Notes
   use cases where the current executable is deleted after the executable
   starts. In this case, the Python interpreter will fail to initialize. If
   this functionality is important to you, file a feature request.
+* The ``pyembed`` crate will now remove entries from ``sys.path_hooks``
+  related to filesystem importers if filesystem importing is disabled.
+  Previously, only ``sys.meta_path`` would have its filesystem importers
+  removed.
+* The ``pyembed`` crate now always registers the ``OxidizedFinder`` path hook
+  on ``sys.path_hooks`` when an instance is being installed on
+  ``sys.meta_path``. This ensures that consumers of ``sys.path_hooks`` outside
+  the module importing mechanism (such as ``pkg_resources``) can use the
+  path hook.
+* The ``pyembed`` crate now registers the ``OxidizedFinder`` path hook
+  as the 1st entry on ``sys.path_hooks``, not the last.
 
 Bug Fixes
 ^^^^^^^^^

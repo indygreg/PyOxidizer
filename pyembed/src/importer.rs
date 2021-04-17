@@ -2038,6 +2038,68 @@ pub(crate) fn replace_meta_path_importers<'a>(
     Ok(unified_importer.into_object())
 }
 
+/// Undoes the actions of `importlib._bootstrap_external` initialization.
+///
+/// This will remove types that aren't defined by this extension from
+/// `sys.meta_path` and `sys.path_hooks`.
+#[cfg(not(library_mode = "extension"))]
+pub(crate) fn remove_external_importers(py: Python, sys_module: &PyModule) -> PyResult<()> {
+    let meta_path = sys_module.get(py, "meta_path")?;
+    let meta_path = meta_path.cast_into::<PyList>(py)?;
+
+    // We need to mutate the lists in place so any updates are reflected
+    // in references to the lists.
+
+    let mut oxidized_path_hooks = vec![];
+    let mut index = 0;
+    while index < meta_path.len(py) {
+        let entry = meta_path.get_item(py, index);
+
+        // We want to preserve `_frozen_importlib.BuiltinImporter` and
+        // `_frozen_importlib.FrozenImporter`, if present. Ideally we'd
+        // do PyType comparisons. However, there doesn't appear to be a way
+        // to easily get a handle on their PyType. We'd also prefer to do
+        // PyType.name() checks. But both these report `type`. So we key
+        // of `__module__` instead.
+        if entry.get_type(py) == py.get_type::<OxidizedFinder>() {
+            oxidized_path_hooks.push(entry.getattr(py, "path_hook")?);
+            index += 1;
+        } else if entry
+            .getattr(py, "__module__")?
+            .cast_as::<PyString>(py)?
+            .to_string_lossy(py)
+            == "_frozen_importlib"
+        {
+            index += 1;
+        } else {
+            meta_path
+                .as_object()
+                .call_method(py, "pop", (index,), None)?;
+        }
+    }
+
+    let path_hooks = sys_module.get(py, "path_hooks")?;
+    let path_hooks = path_hooks.cast_into::<PyList>(py)?;
+
+    let mut index = 0;
+    while index < path_hooks.len(py) {
+        let entry = path_hooks.get_item(py, index);
+
+        if oxidized_path_hooks
+            .iter()
+            .any(|candidate| candidate == &entry)
+        {
+            index += 1;
+        } else {
+            path_hooks
+                .as_object()
+                .call_method(py, "pop", (index,), None)?;
+        }
+    }
+
+    Ok(())
+}
+
 /// Append [`OxidizedFinder::path_hook`] to [`sys.path_hooks`].
 ///
 /// `sys` must be a reference to the [`sys`] module.
@@ -2045,10 +2107,10 @@ pub(crate) fn replace_meta_path_importers<'a>(
 /// [`sys.path_hooks`]: https://docs.python.org/3/library/sys.html#sys.path_hooks
 /// [`sys`]: https://docs.python.org/3/library/sys.html
 #[cfg(not(library_mode = "extension"))]
-pub(crate) fn initialize_path_hooks(py: Python, finder: &PyObject, sys: &PyModule) -> PyResult<()> {
+pub(crate) fn install_path_hook(py: Python, finder: &PyObject, sys: &PyModule) -> PyResult<()> {
     let hook = finder.getattr(py, "path_hook")?;
     sys.get(py, "path_hooks")?
-        .call_method(py, "append", (hook,), None)
+        .call_method(py, "insert", (0, hook), None)
         .map(|_| ())
 }
 

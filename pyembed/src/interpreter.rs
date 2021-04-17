@@ -10,8 +10,8 @@ use {
         conversion::osstring_to_bytes,
         error::NewInterpreterError,
         importer::{
-            initialize_path_hooks, replace_meta_path_importers, PyInit_oxidized_importer,
-            OXIDIZED_IMPORTER_NAME, OXIDIZED_IMPORTER_NAME_STR,
+            install_path_hook, remove_external_importers, replace_meta_path_importers,
+            PyInit_oxidized_importer, OXIDIZED_IMPORTER_NAME, OXIDIZED_IMPORTER_NAME_STR,
         },
         osutils::resolve_terminfo_dirs,
         pyalloc::PythonMemoryAllocator,
@@ -189,7 +189,7 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
         let py = unsafe { Python::assume_gil_acquired() };
         self.py = Some(py);
 
-        let finder = if self.config.oxidized_importer {
+        let oxidized_finder = if self.config.oxidized_importer {
             let resources_state = Box::new(PythonResourcesState::try_from(&self.config)?);
 
             let oxidized_importer = py.import(OXIDIZED_IMPORTER_NAME_STR).map_err(|err| {
@@ -233,36 +233,36 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
         let sys_module = py
             .import("sys")
             .map_err(|err| NewInterpreterError::new_from_pyerr(py, err, "obtaining sys module"))?;
+
         // When the main initialization ran, it initialized the "external"
-        // importer (importlib._bootstrap_external). Our meta path importer
-        // should have been registered first and would have been used for
-        // all imports, if configured for such.
+        // importer (importlib._bootstrap_external), mutating `sys.meta_path`
+        // and `sys.path_hooks`.
         //
-        // Here, we remove the filesystem importer if we aren't configured
-        // to use it. Ideally there would be a field on PyConfig to disable
-        // just the external importer. But there isn't. The only field
-        // controls both internal and external bootstrap modules and when
-        // set it will disable a lot of "main" initialization.
+        // If enabled, OxidizedFinder should still be the initial entry on
+        // `sys.meta_path`. And if it were capable, OxidizedFinder would have
+        // serviced all imports so far.
+        //
+        // Here, we undo the mutations caused by initializing of the "external"
+        // importers if we're not configured to perform filesystem importing.
+        // Ideally there would be a field on PyConfig to prevent the initializing
+        // of these importers. But there isn't. There is an `_install_importlib`
+        // field. However, when disabled it disables a lot of "main" initialization
+        // and isn't usable for us.
+
         if !self.config.filesystem_importer {
-            let meta_path = sys_module.get(py, "meta_path").map_err(|err| {
-                NewInterpreterError::new_from_pyerr(py, err, "obtaining sys.meta_path")
+            remove_external_importers(py, &sys_module).map_err(|err| {
+                NewInterpreterError::new_from_pyerr(py, err, "removing external importers")
             })?;
-            meta_path
-                .call_method(py, "pop", NoArgs, None)
-                .map_err(|err| {
-                    NewInterpreterError::new_from_pyerr(py, err, "sys.meta_path.pop()")
-                })?;
-        } else if let Some(finder) = finder {
-            // If we have both OxidizedFinder and PathFinder, we tell PathFinder
-            // how to use OxidizedFinder by inserting OxidizedFinder.path_hook
-            // into sys.path_hooks
-            initialize_path_hooks(py, &finder, &sys_module).map_err(|err| {
+        }
+
+        if let Some(finder) = &oxidized_finder {
+            install_path_hook(py, &finder, &sys_module).map_err(|err| {
                 NewInterpreterError::new_from_pyerr(
                     py,
                     err,
                     "installing OxidizedFinder in sys.path_hooks",
                 )
-            })?
+            })?;
         }
 
         /* Pre-initialization functions we could support:

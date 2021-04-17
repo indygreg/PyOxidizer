@@ -54,14 +54,35 @@ fn assert_importer(oxidized: bool, filesystem: bool) {
     let meta_path_reprs = reprs(py, &sys.get(py, "meta_path").unwrap()).unwrap();
     let path_hook_reprs = reprs(py, &sys.get(py, "path_hooks").unwrap()).unwrap();
     const PATH_HOOK_REPR: &str = "built-in method path_hook of OxidizedFinder object";
+
+    // OxidizedFinder should be installed sys.meta_path and sys.path_hooks as first
+    // element when enabled. Its presence also replaced BuiltinImporter and
+    // FrozenImporter.
     if oxidized {
         assert!(meta_path_reprs[0].contains("OxidizedFinder"));
+        assert!(path_hook_reprs[0].contains(PATH_HOOK_REPR));
+
+        assert!(meta_path_reprs
+            .iter()
+            .all(|s| !s.contains("_frozen_importlib.BuiltinImporter")));
+        assert!(meta_path_reprs
+            .iter()
+            .all(|s| !s.contains("_frozen_importlib.FrozenImporter")));
     } else {
         assert!(meta_path_reprs
             .iter()
             .all(|s| !s.contains("OxidizedFinder")));
         assert!(path_hook_reprs.iter().all(|s| !s.contains(PATH_HOOK_REPR)));
+
+        assert!(meta_path_reprs
+            .iter()
+            .any(|s| s.contains("_frozen_importlib.BuiltinImporter")));
+        assert!(meta_path_reprs
+            .iter()
+            .any(|s| s.contains("_frozen_importlib.FrozenImporter")));
     }
+
+    // PathFinder should only be present when filesystem importer is enabled.
     if filesystem {
         assert!(meta_path_reprs
             .last()
@@ -71,10 +92,6 @@ fn assert_importer(oxidized: bool, filesystem: bool) {
         assert!(meta_path_reprs
             .iter()
             .all(|s| !s.contains("_frozen_importlib_external.PathFinder")));
-        assert!(path_hook_reprs.iter().all(|s| !s.contains(PATH_HOOK_REPR)));
-    }
-    if oxidized && filesystem {
-        assert!(path_hook_reprs.last().unwrap().contains(PATH_HOOK_REPR));
     }
 }
 

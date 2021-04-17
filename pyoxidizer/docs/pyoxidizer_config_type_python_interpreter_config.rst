@@ -223,12 +223,9 @@ Defaults to ``False``.
 (``bool``)
 
 Whether to install the ``oxidized_importer`` meta path importer
-(:ref:`oxidized_importer`) on ``sys.meta_path`` during interpreter
-initialization.
-
-If :ref:`config_type_python_interpreter_config_filesystem_importer` is also
-``True``, the importer's :ref:`path_hook <oxidized_finder_path_hook>` method is
-appended to ``sys.path_hooks`` at the end of interpreter initialization.
+(:ref:`oxidized_importer`) on ``sys.meta_path`` and ``sys.path_hooks`` during
+interpreter initialization. If installed, we will always occupy the
+first element in these lists.
 
 Defaults to ``True``.
 
@@ -242,15 +239,20 @@ Defaults to ``True``.
 Whether to install the standard library path-based importer for
 loading Python modules from the filesystem.
 
-If :ref:`config_type_python_interpreter_config_oxidized_importer` is also
-``True``, the :ref:`path_hook <oxidized_finder_path_hook>` method of the
-``oxidized_importer`` meta path importer (:ref:`oxidized_importer`) on
-``sys.meta_path`` is appended to ``sys.path_hooks`` at the end of interpreter
-initialization.
+If disabled, ``sys.meta_path`` and ``sys.path_hooks`` will not have
+entries provided by the standard library's path-based importer.
 
-If not enabled, Python modules will not be loaded from the filesystem
-(via ``sys.path`` discovery): only modules indexed by ``oxidized_importer``
-will be loadable.
+Due to quirks in how the Python interpreter is initialized, the standard
+library's path-based importer will be registered on ``sys.meta_path``
+and ``sys.path_hooks`` for a brief moment when the interpreter is
+initialized. If ``sys.path`` contains valid entries that would be
+serviced by this importer and ``oxidized_importer`` isn't able to
+service imports, it is possible for the path-based importer to be
+used to import some Python modules needed to initialize the Python
+interpreter. In many cases, this behavior is harmless. In all cases,
+the path-based importer is disabled after Python interpreter
+initialization, so future imports won't be serviced by the
+path-based importer if it is disabled by this flag.
 
 The filesystem importer is enabled automatically if
 :ref:`config_type_python_interpreter_config_module_search_paths` is
