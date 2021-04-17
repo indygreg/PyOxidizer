@@ -200,6 +200,77 @@ differences in behavior:
   in ``sys.path_hooks``. This will be done automatically if
   :py:class:`OxidizedFinder` is installed at interpreter initialization time.
 
+.. _oxidized_finder_path_hooks:
+
+Paths Hooks Compatibility
+=========================
+
+The :py:meth:`OxidizedFinder.path_hook <OxidizedFinder.path_hook>` method
+from an instantiated instance can be installed on ``sys.path_hooks`` to
+enable a :py:class:`OxidizedFinder` to function as a
+`path entry finder <https://docs.python.org/3/reference/import.html#path-entry-finders>`_.
+
+As a brief refresher, callables on ``sys.path_hooks`` are called with
+entries from ``sys.path``, giving them the opportunity to service a
+particular ``sys.path`` entry. If a *path hook* responds to a ``sys.path``
+entry by returning a *path entry finder*, that returned object will
+service that ``sys.path`` entry.
+
+``sys.path_hooks`` is used by the following mechanisms:
+
+* The standard library `PathFinder <https://docs.python.org/3/library/importlib.html#importlib.machinery.PathFinder>`_
+  (the meta path finder that Python uses to load resources from the
+  filesystem) uses ``sys.path_hooks`` as part of resolving a *finder* for
+  a given ``sys.path`` entry.
+* ``pkgutil.get_importer()`` for resolving the finder for a given ``sys.path``
+  entry. This in turn is used by various code, including other ``pkgutil``
+  APIs.
+* ``pkg_resources`` maps *path entry finder* types to functions to enable
+  a resolution of ``pkg_resources.Distribution`` instances for individual
+  ``sys.path`` entries.
+
+When installed on ``sys.path_hooks``,
+:py:meth:`OxidizedFinder.path_hook <OxidizedFinder.path_hook>` will respond
+to the following path values:
+
+* The path to the current executable, as defined by
+  :py:attr:`OxidizedFinder.current_exe`.
+* A virtual sub-directory of the path to the current executable, as defined by
+  :py:attr:`OxidizedFinder.current_exe`.
+
+.. important::
+
+   :py:attr:`OxidizedFinder.current_exe` may not be the same value as
+   ``sys.executable``. To ensure the path hook responds to the *current
+   executable*, derive ``sys.path`` values from
+   :py:attr:`OxidizedFinder.current_exe`.
+
+When :py:meth:`path_hook <OxidizedFinder.path_hook>` is called with its
+:py:attr:`OxidizedFinder.current_exe` value, a
+:py:class:`OxidizedPathEntryFinder` bound to the source
+:py:class:`OxidizedFinder` is returned. This finder is able to service all
+resources indexed by that :py:class:`OxidizedFinder`.
+
+When :py:meth:`path_hook <OxidizedFinder.path_hook>` is called with
+a virtual sub-directory of :py:attr:`OxidizedFinder.current_exe`, the same
+thing happens except the returned :py:class:`OxidizedPathEntryFinder`
+will only service resources that are directly contained in that
+virtual sub-directory. For example, if ``path`` were
+``os.path.join(oxidized_finder.current_exe, "a")``, the finder
+would only service modules ``a``, ``a.b``, ``a.*``, but not
+``b``, ``a.b.c``, or ``a.b.*``.
+
+:py:class:`OxidizedPathEntryFinder` complies with the
+`PathEntryFinder <https://docs.python.org/3/library/importlib.html#importlib.abc.PathEntryFinder>`_
+protocol and implements :py:meth:`OxidizedPathEntryFinder.find_spec`
+and :py:meth:`OxidizedPathEntryFinder.invalidate_caches`. However,
+support for the deprecated methods ``find_loader`` and ``find_module``
+is not implemented. Instances also implement
+:py:meth:`OxidizedPathEntryFinder.iter_modules`, enabling it to be
+used by ``pkgutil.iter_modules()``.
+
+.. _oxidized_finder_pkg_resources:
+
 ``pkg_resources`` Compatibility
 ===============================
 

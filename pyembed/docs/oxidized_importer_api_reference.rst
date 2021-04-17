@@ -52,7 +52,7 @@ The ``OxidizedFinder`` Class
 
 .. py:class:: OxidizedFinder
 
-    A `meta-path finder`_ that resolves indexed resources. See
+    A `meta path finder`_ that resolves indexed resources. See
     See :ref:`oxidized_finder` for more high-level documentation.
 
     This type implements the following interfaces:
@@ -222,53 +222,27 @@ The ``OxidizedFinder`` Class
 
     .. py:method:: path_hook(path: Union[str, bytes, os.PathLike[AnyStr]]) -> OxidizedPathEntryFinder
 
-        When ``path_hook``, bound to an :py:class:`OxidizedFinder` instance ``self``,
-        is in ``sys.path_hooks``, ``pkgutil.iter_modules`` can search ``self``'s
-        embedded resources, filtering by its ``path`` argument. Additionally, if
-        you add ``sys.executable`` to ``sys.path``, the meta-path finder
-        ``importlib.machinery.PathFinder`` can find ``self``'s embedded resources.
+        Implements a *path hook* for obtaining a
+        `PathEntryFinder <https://docs.python.org/3/library/importlib.html#importlib.abc.PathEntryFinder>`_
+        from a ``sys.path`` entry. See :ref:`oxidized_finder_path_hooks` for details.
 
-        ``path``'s semantics match those of
-        :ref:`oxidized_finder_behavior_and_compliance_path`. After normalization,
-        ``path`` must be or be in ``sys.executable``; otherwise ``path_hook`` raises an
-        ``ImportError``. If ``path`` is ``sys.executable``, top-level modules are
-        accessible. Otherwise ``path_hook`` computes the requested package by stripping
-        ``sys.executable`` from the beginning of ``path`` and replacing path separators
-        with dots. The result is decoded to a ``str`` using the filesystem encoding. If
-        that fails, ``path_hook`` raises an ``ImportError`` from the
-        ``UnicodeDecodeError``.\ [#fn-decode-error]_
+        Raises ``ImportError`` if the given path isn't serviceable.
 
 The ``OxidizedPathEntryFinder`` Class
 =====================================
 
 .. py:class:: OxidizedPathEntryFinder
 
-   A `path-entry finder`_ that can find modules embedded in an
-   :py:class:`OxidizedFinder` instance by searching paths at or under
-   ``sys.executable``
+   A `path entry finder`_ that can find resources contained in an associated
+   :py:class:`OxidizedFinder` instance.
 
-   Each :class:`OxidizedPathEntryFinder` instance is associated with the ``path``
-   argument to :class:`OxidizedPathEntryFinder`'s only constructor,
-   :meth:`OxidiziedFinder.path_hooh <OxidizedFinder.path_hook>`.
+   Instances are created via :py:meth:`OxidizedFinder.path_hook <OxidizedFinder.path_hook>`.
 
-   Only modules embedded in the :py:class:`OxidizedFinder` instance in the top
-   level of the path are :dfn:`visible` to the :class:`OxidizedPathEntryFinder`
-   instance.  For example, if ``path`` were
-   ``os.path.join(``\ ``sys.executable``\ ``, 'a')``, then module ``a.b`` would
-   be visible, but neither modules ``a`` nor ``a.b.c`` would be visible. Further,
-   ``a.b`` would be visible only if it were embedded in the
-   :py:class:`OxidizedFinder` instance that constructed the instance.
+   Direct use of :class:`OxidizedPathEntryFinder` is generally unnecessary:
+   :py:class:`OxidizedFinder` is the primary interface to the custom importer.
 
-   This class complies with the `path-entry finder`_ protocol by providing
-   compliant :meth:`~OxidizedPathEntryFinder.find_spec` and
-   :meth:`~OxidizedPathEntryFinder.invalidate_caches` methods.
-   However, support for the long-deprecated methods
-   ``importlib.abc.PathEntryFinder.find_loader`` and
-   ``importlib.abc.PathEntryFinder.find_module`` may be missing or incomplete.
-
-   Direct use of :class:`OxidizedPathEntryFinder` is generally unnecessary. It exists
-   primarily to support ``pkgutil.iter_modules`` via
-   :meth:`OxidizedFinder.path_hook <OxidizedFinder.path_hook>`.
+   See :ref:`oxidized_finder_path_hooks` for more on path hook and path entry finder
+   behavior in ``oxidized_importer``.
 
    .. py:method:: find_spec(fullname: str, target: Optional[types.ModuleType] = None) -> Optional[importlib.machinery.ModuleSpec]
 
@@ -674,9 +648,6 @@ The ``PythonExtensionModule`` Class
 
 .. rubric:: Footnotes
 
-.. _meta-path finder: https://docs.python.org/3/library/importlib.html#importlib.abc.MetaPathFinder
+.. _meta path finder: https://docs.python.org/3/library/importlib.html#importlib.abc.MetaPathFinder
 
-.. _path-entry finder: https://docs.python.org/3/reference/import.html#path-entry-finders
-
-.. [#fn-decode-error]
-   This is required by the `path-entry finder`_ protocol.
+.. _path entry finder: https://docs.python.org/3/reference/import.html#path-entry-finders
