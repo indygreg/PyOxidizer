@@ -919,7 +919,10 @@ impl OxidizedFinder {
             OxidizedPathEntryFinder::is_visible("", &resource.name)
         })
     }
+}
 
+// Path hooks support.
+impl OxidizedFinder {
     // Canonicalize the path to the current executable or raise an OSError.
     //
     // Even `std::env::current_exe()` can fail to `fs::canonicalize()` if, e.g.,
