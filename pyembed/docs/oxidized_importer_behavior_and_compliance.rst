@@ -190,7 +190,7 @@ differences in behavior:
   iterable and this difference should hopefully be a harmless
   implementation detail.
 * Support for the ``path`` argument to ``pkgutil.iter_modules()`` requires that
-  ``OxidizedFinder``'s :ref:`path_hook <oxidized_finder_path_hook>` is installed
+  ``OxidizedFinder``'s :meth:`path_hook <OxidizedFinder.path_hook>` is installed
   in ``sys.path_hooks``. This will be done automatically if ``OxidizedFinder``
   is installed at interpreter initialization time.
 

@@ -263,7 +263,7 @@ Calling ``oxidized_importer.register_pkg_resources()`` effectively does
 the following:
 
 * Calls ``pkg_resources.register_finder()`` to map
-  :class:`OxidizedPathEntryFinder` to
+  :py:class:`OxidizedPathEntryFinder` to
   ``oxidized_importer.pkg_resources_find_distributions()``.
 * Calls ``pkg_resources.register_load_type()`` to map ``OxidizedFinder``
   to ``OxidizedPkgResourcesProvider``.
@@ -276,10 +276,11 @@ responds to ``sys.path`` entries via the ``sys.path_hooks`` mechanism.
 
 .. important::
 
-   Distribution resolution support requires both ``OxidizedFinder.path_hook``
-   to be registered on ``sys.path_hook`` as well as ``sys.path`` to contain
-   an entry that ``OxidizedFinder.path_hook`` will respond to. See
-   :ref:`its documentation <oxidized_finder_path_hook>` for more.
+   Distribution resolution support requires both
+   :py:meth:`OxidizedFinder.path_hook <OxidizedFinder.path_hook>` to be
+   registered on ``sys.path_hook`` as well as ``sys.path`` to contain an
+   entry that this function will respond to. See the linked function
+   documentation for more.
 
    If either of these aren't present, ``pkg_resources`` will fail to call
    into ``oxidized_importer`` to resolve distributions.

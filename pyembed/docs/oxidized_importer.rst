@@ -36,3 +36,4 @@ used with regular Python installs.
    oxidized_importer_freezing_applications
    oxidized_importer_known_issues
    oxidized_importer_security
+   oxidized_importer_api_reference
