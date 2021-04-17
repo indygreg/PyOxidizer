@@ -297,48 +297,6 @@ If ``pkg_resources`` derives the *provider* for any module loaded with
 create an instance of :py:class:`OxidizedPkgResourcesProvider` to resolve
 package metadata and resource info.
 
-.. py:class:: OxidizedPkgResourcesProvider
-
-   A ``pkg_resources.IMetadataProvider`` and ``pkg_resources.IResourceProvider``
-   enabling ``pkg_resources`` to access package metadata and resources.
-
-   All members of the aforementioned interfaces are implemented. Divergence
-   from ``pkg_resources`` defined behavior is documented next to the method.
-
-  .. py:method:: has_metadata(name: str) -> bool
-
-  .. py:method:: get_metadata(name: str) -> str
-
-  .. py:method:: get_metadata_lines(name: str) -> List[str]
-
-     Returns a ``list`` instead of a generator.
-
-  .. py:method:: metadata_isdir(name: str) -> bool
-
-  .. py:method:: metadata_listdir(name: str) -> List[str]
-
-  .. py:method:: run_script(script_name: str, namespace: Any)
-
-     Always raises ``NotImplementedError``.
-
-  .. py:method:: get_resource_filename(manager: pkg_resources.IResourceManager, resource_name: str)
-
-     Always raises ``NotImplementedError``.
-
-     This behavior appears to be allowed given code in ``pkg_resources``.
-
-  .. py:method:: get_resource_stream(manager: pkg_resources.IResourceManager, resource_name: str) -> io.BytesIO
-
-  .. py:method:: get_resource_string(manager: pkg_resources.IResourceManager, resource_name: str) -> bytes
-
-  .. py:method:: has_resource(resource_name: str) -> bool
-
-  .. py:method:: resource_isdir(resource_name: str) -> bool
-
-  .. py:method:: resource_listdir(resource_name: str) -> List[str]
-
-     Returns a ``list`` instead of a generator.
-
 Porting Code to Modern Resources APIs
 =====================================
 
