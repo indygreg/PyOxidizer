@@ -17,7 +17,7 @@ use {
 };
 use {
     crate::{
-        conversion::pyobject_to_pathbuf,
+        conversion::{path_to_pyobject, pyobject_to_pathbuf},
         package_metadata::{
             find_pkg_resources_distributions, metadata_list_directory, metadata_name_is_directory,
             resolve_package_distribution_resource,
@@ -535,6 +535,15 @@ py_class!(class OxidizedFinder |py| {
     }
 
     // Additional methods provided for convenience.
+
+    @property def current_exe(&self) -> PyResult<PyObject> {
+        self.current_exe_impl(py)
+    }
+
+    @property def origin(&self) -> PyResult<PyObject> {
+        self.origin_impl(py)
+    }
+
     def __new__(_cls, relative_path_origin: Option<PyObject> = None) -> PyResult<OxidizedFinder> {
         oxidized_finder_new(py, relative_path_origin)
     }
@@ -1154,6 +1163,14 @@ fn oxidized_finder_new(
 }
 
 impl OxidizedFinder {
+    fn current_exe_impl(&self, py: Python) -> PyResult<PyObject> {
+        path_to_pyobject(py, &self.state(py).get_resources_state().current_exe)
+    }
+
+    fn origin_impl(&self, py: Python) -> PyResult<PyObject> {
+        path_to_pyobject(py, &self.state(py).get_resources_state().origin)
+    }
+
     fn index_bytes_impl(&self, py: Python, data: PyObject) -> PyResult<PyObject> {
         let resources_state: &mut PythonResourcesState<u8> =
             self.state(py).get_resources_state_mut();

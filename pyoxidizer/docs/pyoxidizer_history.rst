@@ -60,6 +60,13 @@ Bug Fixes
   they were using subtly different methods, which could result in path
   comparisons not working on Windows.
 
+New Features
+^^^^^^^^^^^^
+
+* :py:class:`oxidized_importer.OxidizedFinder` now exposes the properties
+  :py:attr:`oxidized_importer.OxidizedFinder.current_exe` and
+  :py:attr:`oxidized_importer.OxidizedFinder.origin`.
+
 Other Relevant Changes
 ^^^^^^^^^^^^^^^^^^^^^^
 

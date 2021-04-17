@@ -79,6 +79,17 @@ The ``OxidizedFinder`` Class
     ``importlib``. This functionality allows you to construct, inspect, and
     manipulate instances.
 
+    .. py:attribute:: current_exe
+
+        (``str``) The path to the current executable, as understood by this instance.
+
+        This value may or may not be the same as ``sys.executable``.
+
+    .. py:attribute:: origin
+
+        (``str``) The path this instance is using as the anchor for relative path
+        references.
+
     .. py:method:: __new__(cls, relative_path_origin: Optional[PathLike]) -> OxidizedFinder
 
         Construct a new instance of :py:class:`OxidizedFinder`.

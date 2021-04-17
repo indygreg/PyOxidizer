@@ -2,6 +2,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+import sys
 import unittest
 
 from oxidized_importer import OxidizedFinder
@@ -39,8 +40,13 @@ class TestImporterConstruction(unittest.TestCase):
         with self.assertRaises(TypeError):
             OxidizedFinder(relative_path_origin=True)
 
+    def test_current_exe(self):
+        f = OxidizedFinder()
+        self.assertEqual(f.current_exe, sys.executable)
+
     def test_origin(self):
-        OxidizedFinder(relative_path_origin="/path/to/origin")
+        f = OxidizedFinder(relative_path_origin="/path/to/origin")
+        self.assertEqual(f.origin, "/path/to/origin")
 
 
 if __name__ == "__main__":
