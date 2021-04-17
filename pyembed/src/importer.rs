@@ -2007,10 +2007,10 @@ fn module_init(py: Python, m: &PyModule) -> PyResult<()> {
 #[cfg(not(library_mode = "extension"))]
 pub(crate) fn replace_meta_path_importers<'a>(
     py: Python,
-    m: &PyModule,
+    oxidized_importer: &PyModule,
     resources_state: Box<PythonResourcesState<'a, u8>>,
 ) -> PyResult<PyObject> {
-    let mut state = get_module_state(py, m)?;
+    let mut state = get_module_state(py, oxidized_importer)?;
 
     let sys_module = py.import("sys")?;
 
@@ -2018,16 +2018,17 @@ pub(crate) fn replace_meta_path_importers<'a>(
     // importer is able to handle builtin and frozen modules, the existing meta path
     // importers are removed. The assumption here is that we're called very early
     // during startup and the 2 default meta path importers are installed.
-    let unified_importer = OxidizedFinder::new_from_module_and_resources(py, m, resources_state)?;
+    let oxidized_finder =
+        OxidizedFinder::new_from_module_and_resources(py, oxidized_importer, resources_state)?;
 
     let meta_path_object = sys_module.get(py, "meta_path")?;
 
     meta_path_object.call_method(py, "clear", NoArgs, None)?;
-    meta_path_object.call_method(py, "append", (unified_importer.clone_ref(py),), None)?;
+    meta_path_object.call_method(py, "append", (oxidized_finder.clone_ref(py),), None)?;
 
     state.initialized = true;
 
-    Ok(unified_importer.into_object())
+    Ok(oxidized_finder.into_object())
 }
 
 /// Undoes the actions of `importlib._bootstrap_external` initialization.
