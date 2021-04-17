@@ -960,7 +960,12 @@ impl OxidizedFinder {
         let os = py.import("os")?;
         let path = os.call(py, "fspath", (path,), None)?;
 
-        OxidizedPathEntryFinder::create_instance(py, self.as_object().clone_ref(py), path, pkg)
+        OxidizedPathEntryFinder::create_instance(
+            py,
+            OxidizedFinder::create_instance(py, self.state(py).clone())?,
+            path,
+            pkg,
+        )
     }
 }
 
@@ -968,10 +973,8 @@ impl OxidizedFinder {
 // within the current executable to the `OxidizedFinder` whose `path_hook`
 // method created it.
 py_class!(class OxidizedPathEntryFinder |py| {
-    // A `importlib.abc.MetaPathFinder`, presumably but not necessarily an
-    // `OxidizedFinder`. However, `OxidizedPathEntryFinder::iter_modules` will raise
-    // a `TypeError` when called if `finder` is not an `OxidizedFinder`.
-    data finder: PyObject;
+    // A clone of the meta path finder from which we came.
+    data finder: OxidizedFinder;
 
     // The sys.path value this instance was created with.
     //
@@ -987,7 +990,7 @@ py_class!(class OxidizedPathEntryFinder |py| {
     }
 
     def invalidate_caches(&self) -> PyResult<PyObject> {
-        self.finder(py).call_method(py, "invalidate_caches", NoArgs, None)
+        self.finder(py).as_object().call_method(py, "invalidate_caches", NoArgs, None)
     }
 
     def iter_modules(&self, prefix: &str = "") -> PyResult<PyList> {
@@ -1034,6 +1037,7 @@ impl OxidizedPathEntryFinder {
             return Ok(Some(py.None()));
         }
         self.finder(py)
+            .as_object()
             .call_method(
                 py,
                 "find_spec",
@@ -1048,7 +1052,7 @@ impl OxidizedPathEntryFinder {
     }
 
     fn iter_modules_impl(&self, py: Python, prefix: &str) -> PyResult<PyList> {
-        let state = self.finder(py).cast_as::<OxidizedFinder>(py)?.state(py);
+        let state = self.finder(py).state(py);
         let modules = state.get_resources_state().pkgutil_modules_infos(
             py,
             Some(prefix.to_string()),
@@ -1793,7 +1797,7 @@ fn pkg_resources_find_distributions(
 
     let finder = importer.cast_as::<OxidizedPathEntryFinder>(py)?;
     let meta_finder = finder.finder(py);
-    let state = meta_finder.cast_as::<OxidizedFinder>(py)?.state(py);
+    let state = meta_finder.state(py);
 
     find_pkg_resources_distributions(
         py,
