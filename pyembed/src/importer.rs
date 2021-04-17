@@ -1842,8 +1842,8 @@ fn register_pkg_resources(py: Python) -> PyResult<PyObject> {
 
 static mut MODULE_DEF: pyffi::PyModuleDef = pyffi::PyModuleDef {
     m_base: pyffi::PyModuleDef_HEAD_INIT,
-    m_name: std::ptr::null(),
-    m_doc: std::ptr::null(),
+    m_name: OXIDIZED_IMPORTER_NAME.as_ptr() as *const _,
+    m_doc: DOC.as_ptr() as *const _,
     m_size: std::mem::size_of::<ModuleState>() as isize,
     m_methods: 0 as *mut _,
     m_slots: 0 as *mut _,
@@ -1862,14 +1862,6 @@ static mut MODULE_DEF: pyffi::PyModuleDef = pyffi::PyModuleDef {
 #[allow(non_snake_case)]
 pub extern "C" fn PyInit_oxidized_importer() -> *mut pyffi::PyObject {
     let py = unsafe { cpython::Python::assume_gil_acquired() };
-
-    // TRACKING RUST1.32 We can't call as_ptr() in const fn in Rust 1.31.
-    unsafe {
-        if MODULE_DEF.m_name.is_null() {
-            MODULE_DEF.m_name = OXIDIZED_IMPORTER_NAME.as_ptr() as *const _;
-            MODULE_DEF.m_doc = DOC.as_ptr() as *const _;
-        }
-    }
 
     let module = unsafe { pyffi::PyModule_Create(&mut MODULE_DEF) };
 
