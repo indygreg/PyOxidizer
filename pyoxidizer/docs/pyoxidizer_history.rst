@@ -41,6 +41,14 @@ Backwards Compatibility Notes
   starts. In this case, the Python interpreter will fail to initialize. If
   this functionality is important to you, file a feature request.
 
+Bug Fixes
+^^^^^^^^^
+
+* The ``OxidizedFinder`` ``sys.path_hooks`` implementation now canonicalizes
+  paths the same way that the current executable is canonicalized. Previously,
+  they were using subtly different methods, which could result in path
+  comparisons not working on Windows.
+
 .. _version_0_13_2:
 
 0.13.2

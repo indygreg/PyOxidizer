@@ -945,7 +945,7 @@ impl OxidizedFinder {
             // somethings similar)
             if current_exe
                 != loop {
-                    match p.canonicalize() {
+                    match dunce::canonicalize(p) {
                         Ok(abs_p) => break abs_p,
                         Err(_) => p = p.parent().ok_or_else(not_exe_err)?,
                     }
