@@ -64,7 +64,8 @@ None / Disabled
 ---------------
 
 The resources load mode of ``none`` will disable the writing and loading
-of this *packed resources data*. This effectively means ``OxidizedFinder``
+of this *packed resources data*. This effectively means
+:py:class:`oxidized_importer.OxidizedFinder`
 can't load anything by default.
 
 This mode can be useful to produce a binary that behaves like ``python``,
@@ -73,6 +74,6 @@ without PyOxidizer's special run-time code. (See
 
 If this mode is in use, you will need to enable Python's filesystem
 importer (:ref:`config_type_python_interpreter_config_filesystem_importer`)
-or define custom Rust code to have ``OxidizedFinder`` *index* resources
-or else the embedded Python interpreter will fail to initialize due to
-missing modules.
+or define custom Rust code to have :py:class:`oxidized_importer.OxidizedFinder`
+*index* resources or else the embedded Python interpreter will fail to
+initialize due to missing modules.

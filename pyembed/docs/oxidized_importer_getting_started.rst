@@ -72,6 +72,6 @@ To register a custom importer with Python, do something like the following:
    sys.meta_path.insert(0, finder)
 
 To get performance benefits of loading modules and resources from memory,
-you'll need to index resources with the ``OxidizedFinder``, serialize that
-data out, then load that data into a new ``OxidizedFinder`` instance. See
-:ref:`oxidized_importer_freezing` for more detailed examples.
+you'll need to index resources with the :py:class:`OxidizedFinder`, serialize
+that data out, then load that data into a new :py:class:`OxidizedFinder`
+instance. See :ref:`oxidized_importer_freezing` for more detailed examples.

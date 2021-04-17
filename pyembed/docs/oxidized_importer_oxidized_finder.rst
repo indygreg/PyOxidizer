@@ -6,36 +6,36 @@
 ``OxidizedFinder`` Python Type
 ==============================
 
-``oxidized_importer.OxidizedFinder`` is a Python type that implements a
+:py:class:`OxidizedFinder` is a Python type that implements a
 custom *meta path finder*. *Oxidized* is in its name because it is
 implemented in Rust.
 
 Unlike traditional *meta path finders* which have to dynamically
-discover resources (often by scanning the filesystem), ``OxidizedFinder``
-instances maintain an *index* of known resources. When a resource is
-requested, ``OxidizedFinder`` can retrieve that resource by effectively
-performing 1 or 2 lookups in a Rust ``HashMap``. This makes resource
-resolution extremely efficient.
+discover resources (often by scanning the filesystem),
+:py:class:`OxidizedFinder` instances maintain an *index* of known
+resources. When a resource is requested, :py:class:`OxidizedFinder`
+can retrieve that resource by effectively performing 1 or 2 lookups
+in a Rust ``HashMap``. This makes resource resolution extremely efficient.
 
-Instances of ``OxidizedFinder`` are optionally bound to binary blobs
-holding *packed resources data*. This is a custom serialization format
+Instances of :py:class:`OxidizedFinder` are optionally bound to binary
+blobs holding *packed resources data*. This is a custom serialization format
 for expressing Python modules (source and bytecode), Python extension
 modules, resource files, shared libraries, etc. This data format
 along with a Rust library for interacting with it are defined by the
 `python-packed-resources <https://crates.io/crates/python-packed-resources>`_
 crate.
 
-When an ``OxidizedFinder`` instance is created, the *packed resources
+When an :py:class:`OxidizedFinder` instance is created, the *packed resources
 data* is parsed into a Rust data structure. On a modern machine, parsing
 this resources data for the entirety of the Python standard library
 takes ~1 ms.
 
-``OxidizedFinder`` instances can index *built-in* extension modules
+:py:class:`OxidizedFinder` instances can index *built-in* extension modules
 and *frozen* modules, which are compiled into the Python interpreter. This
-allows ``OxidizedFinder`` to subsume functionality normally provided by
+allows :py:class:`OxidizedFinder` to subsume functionality normally provided by
 the ``BuiltinImporter`` and ``FrozenImporter`` *meta path finders*,
 allowing you to potentially replace ``sys.meta_path`` with a single
-instance of ``OxidizedFinder``.
+instance of :py:class:`OxidizedFinder`.
 
 .. _oxidized_finder_in_pyoxidizer:
 
@@ -43,9 +43,9 @@ instance of ``OxidizedFinder``.
 =============================================
 
 When running from an application built with PyOxidizer (or using the
-``pyembed`` crate directly), an ``OxidizedFinder`` instance will (likely)
-be automatically registered as the first element in ``sys.meta_path`` when
-starting a Python interpreter.
+``pyembed`` crate directly), an :py:class:`OxidizedFinder` instance will
+(likely) be automatically registered as the first element in
+``sys.meta_path`` when starting a Python interpreter.
 
 You can verify this inside a binary built with PyOxidizer::
 
@@ -63,22 +63,22 @@ Contrast with a typical Python environment::
        <class '_frozen_importlib_external.PathFinder'>
    ]
 
-The ``OxidizedFinder`` instance will (likely) be associated with resources
-data embedded in the binary.
+The :py:class:`OxidizedFinder` instance will (likely) be associated with
+resources data embedded in the binary.
 
-This ``OxidizedFinder`` instance is constructed very early during Python
+This :py:class:`OxidizedFinder` instance is constructed very early during Python
 interpreter initialization. It is registered on ``sys.meta_path`` before
 the first ``import`` requesting a ``.py``/``.pyc`` is performed, allowing
 it to service every ``import`` except those from the very few *built-in
 extension modules* that are compiled into the interpreter and loaded as
 part of Python initialization (e.g. the ``sys`` module).
 
-If ``OxidizedFinder`` is being installed on ``sys.meta_path``, its
+If :py:class:`OxidizedFinder` is being installed on ``sys.meta_path``, its
 :py:meth:`path_hook <OxidizedFinder.path_hook>` method will be registered
 as the first item on ``sys.path_hooks``.
 
 If filesystem importing is disabled, all entries of ``sys.meta_path`` and
-``sys.path_hooks`` not related to ``OxidizedFinder`` will be removed.
+``sys.path_hooks`` not related to :py:class:`OxidizedFinder` will be removed.
 
 Python API
 ==========

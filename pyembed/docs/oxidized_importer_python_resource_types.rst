@@ -5,7 +5,7 @@
 ===========================================
 
 The ``oxidized_importer`` module defines Python types beyond
-``OxidizedFinder``. This page documents those types and their APIs.
+:py:class:`OxidizedFinder`. This page documents those types and their APIs.
 
 .. important::
 
@@ -20,7 +20,7 @@ The ``oxidized_importer`` module defines Python types beyond
 ====================
 
 The ``OxidizedResource`` Python type represents a *resource* that is indexed
-by a ``OxidizedFinder`` instance.
+by a :py:class:`OxidizedFinder` instance.
 
 Each instance represents a named entity with associated metadata and data.
 e.g. an instance can represent a Python module with associated source and
@@ -261,8 +261,8 @@ Instances have the following properties:
 ``package`` (``str``)
    The name of the leaf-most Python package this resource is associated with.
 
-   With ``OxidizedFinder``, an ``importlib.abc.ResourceReader`` associated
-   with this package will be used to load the resource.
+   With :py:class:`OxidizedFinder`, an ``importlib.abc.ResourceReader``
+   associated with this package will be used to load the resource.
 
 ``name`` (``str``)
    The name of the resource within its ``package``. This is typically the

@@ -35,9 +35,9 @@ following:
 
 The ``oxidized_importer.OxidizedResourceCollector`` type provides functionality
 for turning instances of Python resource types into a collection
-of ``OxidizedResource`` for loading into an ``OxidizedFinder`` instance. It
-exists as a convenience, as working with individual ``OxidizedResource``
-instances can be rather cumbersome.
+of ``OxidizedResource`` for loading into an :py:class:`OxidizedFinder`
+instance. It exists as a convenience, as working with individual
+``OxidizedResource`` instances can be rather cumbersome.
 
 Instances can be constructed by passing an ``allowed_locations=<list[str]>``
 argument defining locations that resources can be loaded from. The accepted
@@ -73,9 +73,9 @@ and marks it for loading via in-memory mechanisms.
 ``OxidizedResourceCollector.add_filesystem_relative(prefix, resource)`` adds a
 Python resource type (``PythonModuleSource``, ``PythonModuleBytecode``, etc) to
 the collector and marks it for loading via a relative path next to some
-*origin* path (as specified to the ``OxidizedFinder``). That relative path
-can have a ``prefix`` value prepended to it. If no prefix is desired and you
-want the resource placed next to the *origin*, use an empty ``str`` for
+*origin* path (as specified to the :py:class:`OxidizedFinder`). That relative
+path can have a ``prefix`` value prepended to it. If no prefix is desired and
+you want the resource placed next to the *origin*, use an empty ``str`` for
 ``prefix``.
 
 ``oxidize()``

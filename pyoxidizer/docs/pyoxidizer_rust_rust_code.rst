@@ -150,4 +150,4 @@ build artifact/file, likely though ``include_bytes!``.
 :ref:`oxidized_finder` can also be used to produce these data structures.
 
 Finally, setting ``oxidized_importer = true`` is necessary to enable
-``OxidizedFinder``.
+:py:class:`oxidized_importer.OxidizedFinder`.

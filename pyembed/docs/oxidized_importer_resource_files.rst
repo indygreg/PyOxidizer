@@ -142,8 +142,8 @@ filesystem-based implementation in the following ways:
   ``OxidizedResourceReader`` will therefore return resource names in
   sub-directories as long as those sub-directories aren't themselves Python
   packages.
-* Resources must be explicitly registered with ``OxidizedFinder`` as such in
-  order   to be exposed via the resources API. By contrast, the
+* Resources must be explicitly registered with :py:class:`OxidizedFinder` as
+  such in order to be exposed via the resources API. By contrast, the
   filesystem-based   importer - relying on ``os.listdir()`` - will expose
   all files in a directory as a resource. This includes ``.py`` files.
 * ``OxidizedResourceReader.is_resource()`` will return ``True`` for resource
@@ -157,8 +157,8 @@ filesystem-based implementation in the following ways:
 Support for ``ResourceLoader``
 ==============================
 
-``OxidizedFinder`` implements the deprecated ``ResourceLoader`` interface
-and ``get_data(path)`` will return ``bytes`` instances for registered
+:py:class:`OxidizedFinder` implements the deprecated ``ResourceLoader``
+interface and ``get_data(path)`` will return ``bytes`` instances for registered
 resources or raise ``OSError`` on request of an unregistered resource.
 
 The path passed to ``get_data(path)`` MUST be an absolute path that has the
@@ -180,8 +180,8 @@ valid filesystem path pointing to an existing file is passed in.
 .. note::
 
    The behavior of not servicing paths that actually exist but aren't
-   registered with ``OxidizedFinder`` as resources may be overly opinionated
-   and undesirable for some applications.
+   registered with :py:class:`OxidizedFinder` as resources may be overly
+   opinionated and undesirable for some applications.
 
    If this is a legitimate use case for your application, please create a
    GitHub issue to request this feature.
@@ -189,7 +189,7 @@ valid filesystem path pointing to an existing file is passed in.
 Once a path is recognized as having the prefix of the current executable
 or its directory, the remaining path components will be interpreted as the
 resource path. This resource path logically contains a package name component
-and a resource name component. ``OxidizedFinder`` will traverse all
+and a resource name component. :py:class:`OxidizedFinder` will traverse all
 potential package names starting from the longest/deepest up until the
 top-level package looking for a known Python package. Once a known package
 name is encountered, its resources will be consulted. At most 1 package
@@ -232,8 +232,8 @@ file permission errors).
 Support for ``__file__``
 ========================
 
-``OxidizedFinder`` may or may not set the ``__file__`` attribute on loaded
-modules. See :ref:`no_file` for details.
+:py:class:`OxidizedFinder` may or may not set the ``__file__`` attribute
+on loaded modules. See :ref:`no_file` for details.
 
 Therefore, Python code relying on the presence of ``__file__`` to derive
 paths to resource files may or may not work with ``oxidized_importer``.
@@ -283,7 +283,7 @@ Metadata and Resource Resolving
 -------------------------------
 
 If ``pkg_resources`` derives the *provider* for any module loaded with
-``OxidizedFinder`` or :py:class:`OxidizedPathEntryFinder`, it should
+:py:class:`OxidizedFinder` or :py:class:`OxidizedPathEntryFinder`, it should
 create an instance of :py:class:`OxidizedPkgResourcesProvider` to resolve
 package metadata and resource info.
 

@@ -83,8 +83,8 @@ The ``OxidizedFinder`` Class
 
         Construct a new instance of :py:class:`OxidizedFinder`.
 
-        New instances of ``OxidizedFinder`` can be constructed like normal
-        Python types:
+        New instances of :py:class:`OxidizedFinder` can be constructed like
+        normal Python types:
 
         .. code-block:: python
 
@@ -151,14 +151,14 @@ The ``OxidizedFinder`` Class
 
         When an ``OxidizedResource`` is registered, its data is copied into the
         finder instance. So changes to the original ``OxidizedResource`` are not
-        reflected on the finder. (This is because ``OxidizedFinder`` maintains an
-        index and it is important for the data behind that index to not change
-        out from under it.)
+        reflected on the finder. (This is because :py:class:`OxidizedFinder`
+        maintains an index and it is important for the data behind that index to
+        not change out from under it.)
 
         Resources are stored in an invisible hash map where they are indexed by
         the ``name`` attribute. When a resource is added, any existing resource
-        under the same name has its data replaced by the incoming ``OxidizedResource``
-        instance.
+        under the same name has its data replaced by the incoming
+        ``OxidizedResource`` instance.
 
         If you have source code and want to produce bytecode, you can do something
         like the following:
@@ -189,7 +189,7 @@ The ``OxidizedFinder`` Class
 
         This method serializes all resources currently indexed by the instance
         into an opaque ``bytes`` instance. The returned data can be fed into a
-        separate ``OxidizedFinder`` instance by passing it to
+        separate :py:class:`OxidizedFinder` instance by passing it to
         :py:meth:`OxidizedFinder.__new__`.
 
         Arguments:
@@ -211,10 +211,10 @@ The ``OxidizedFinder`` Class
 
     .. py:method:: path_hook(path: Union[str, bytes, os.PathLike[AnyStr]]) -> OxidizedPathEntryFinder
 
-        When ``path_hook``, bound to an ``OxidizedFinder`` instance ``self``, is in
-        ``sys.path_hooks``, ``pkgutil.iter_modules`` can search ``self``'s embedded
-        resources, filtering by its ``path`` argument. Additionally, if you add
-        ``sys.executable`` to ``sys.path``, the meta-path finder
+        When ``path_hook``, bound to an :py:class:`OxidizedFinder` instance ``self``,
+        is in ``sys.path_hooks``, ``pkgutil.iter_modules`` can search ``self``'s
+        embedded resources, filtering by its ``path`` argument. Additionally, if
+        you add ``sys.executable`` to ``sys.path``, the meta-path finder
         ``importlib.machinery.PathFinder`` can find ``self``'s embedded resources.
 
         ``path``'s semantics match those of
@@ -232,17 +232,21 @@ The ``OxidizedPathEntryFinder`` Class
 
 .. py:class:: OxidizedPathEntryFinder
 
-   A `path-entry finder`_ that can find modules embedded in an ``OxidizedFinder``
-   instance by searching paths at or under ``sys.executable``.
+   A `path-entry finder`_ that can find modules embedded in an
+   :py:class:`OxidizedFinder` instance by searching paths at or under
+   ``sys.executable``
+
    Each :class:`OxidizedPathEntryFinder` instance is associated with the ``path``
    argument to :class:`OxidizedPathEntryFinder`'s only constructor,
    :meth:`OxidiziedFinder.path_hooh <OxidizedFinder.path_hook>`.
-   Only modules embedded in the ``OxidizedFinder`` instance in the top level of
-   the path are :dfn:`visible` to the :class:`OxidizedPathEntryFinder` instance.
-   For    example, if ``path`` were ``os.path.join(``\ ``sys.executable``\ ``, 'a')``,
-   then module ``a.b`` would be visible, but neither modules ``a`` nor ``a.b.c``
-   would be visible. Further, ``a.b`` would be visible only if it were embedded
-   in the ``OxidizedFinder`` instance that constructed the instance.
+
+   Only modules embedded in the :py:class:`OxidizedFinder` instance in the top
+   level of the path are :dfn:`visible` to the :class:`OxidizedPathEntryFinder`
+   instance.  For example, if ``path`` were
+   ``os.path.join(``\ ``sys.executable``\ ``, 'a')``, then module ``a.b`` would
+   be visible, but neither modules ``a`` nor ``a.b.c`` would be visible. Further,
+   ``a.b`` would be visible only if it were embedded in the
+   :py:class:`OxidizedFinder` instance that constructed the instance.
 
    This class complies with the `path-entry finder`_ protocol by providing
    compliant :meth:`~OxidizedPathEntryFinder.find_spec` and
@@ -261,8 +265,8 @@ The ``OxidizedPathEntryFinder`` Class
 
    .. py:method:: invalidate_caches() -> None
 
-      Invoke the same method on the ``OxidizedFinder`` instance with which the
-      :class:`OxidizedPathEntryFinder` instance was constructed.
+      Invoke the same method on the :py:class:`OxidizedFinder` instance with
+      which the :class:`OxidizedPathEntryFinder` instance was constructed.
 
    .. py:method:: iter_modules(prefix: str = "") -> List[pkgutil.ModuleInfo]
 

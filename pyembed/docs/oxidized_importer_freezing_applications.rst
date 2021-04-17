@@ -21,16 +21,16 @@ High-Level Freezing Workflow
 
 The steps for *freezing* an application all look the same:
 
-1. Load ``OxidizedResource`` instances into an ``OxidizedFinder`` instance
-   so they are indexed.
+1. Load ``OxidizedResource`` instances into an :py:class:`OxidizedFinder`
+   instance so they are indexed.
 2. Serialize indexed resources.
 3. Write the serialized resources blob somewhere along with any
    files (if using filesystem-based loading).
 4. Somehow make that resources blob available to others (you could
    add it as a *resource* file in your Python package for example).
-5. From your application, construct an ``OxidizedFinder`` instance and
-   load the resources blob you generated.
-6. Register the ``OxidizedFinder`` instance as the first element on
+5. From your application, construct an :py:class:`OxidizedFinder` instance
+   and load the resources blob you generated.
+6. Register the :py:class:`OxidizedFinder` instance as the first element on
    ``sys.meta_path``.
 
 The next sections show what this may look like.
@@ -42,8 +42,8 @@ Indexing and Serializing Resources
 
 In your *build* process, you'll need to index resources and serialize
 them. You can construct ``OxidizedResource`` instances directly and hand
-them off to an ``OxidizedFinder`` instance. But you'll probably want to
-use ``OxidizedResourceCollector`` to make this simpler.
+them off to an :py:class:`OxidizedFinder` instance. But you'll probably
+want to use ``OxidizedResourceCollector`` to make this simpler.
 
 Try something like the following:
 

@@ -1,3 +1,5 @@
+.. py:currentmodule:: oxidized_finder
+
 .. _oxidized_importer:
 
 ======================================
@@ -7,14 +9,14 @@
 ``oxidized_importer`` is a Python extension module maintained as part of
 the PyOxidizer project that allows you to:
 
-* Install a custom, high-performance module importer (``OxidizedFinder``)
-  to service Python ``import`` statements and resource loading (potentially
-  from memory).
+* Install a custom, high-performance module importer
+  (:py:class:`OxidizedFinder`) to service Python ``import`` statements and
+  resource loading (potentially from memory).
 * Scan the filesystem for Python resources (source modules, bytecode
   files, package resources, distribution metadata, etc) and turn them
   into Python objects.
 * Serialize Python resource data into an efficient binary data structure
-  for loading into an ``OxidizedFinder`` instance. This facilitates
+  for loading into an :py:class:`OxidizedFinder` instance. This facilitates
   producing a standalone *resources blob* that can be distributed with
   a Python application which contains all the Python modules, bytecode,
   etc required to power that application.

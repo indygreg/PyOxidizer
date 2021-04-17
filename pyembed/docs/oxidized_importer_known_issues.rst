@@ -21,8 +21,8 @@ module to filesystem-based loading if not supported.
 ``OxidizedResourceCollector`` is *dumb* and adds resources where you tell it
 to.
 
-``OxidizedFinder`` supports loading extension modules from memory on Windows.
-But everywhere else, this isn't supported and will result in an
+:py:class:`OxidizedFinder` supports loading extension modules from memory
+on Windows. But everywhere else, this isn't supported and will result in an
 ``ImportError`` if you index an extension module for in-memory loading.
 
 To work around this deficiency, you'll want to mark extension modules as
