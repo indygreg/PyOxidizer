@@ -3,7 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    crate::importer::ImporterState,
+    crate::importer::{create_oxidized_pkg_resources_provider, ImporterState},
     cpython::{
         exc::{IOError, NotImplementedError, ValueError},
         py_class, NoArgs, ObjectProtocol, PyBytes, PyClone, PyDict, PyErr, PyList, PyModule,
@@ -330,6 +330,64 @@ pub(crate) fn find_distributions(
         .into_object()
         .iter(py)?
         .into_object())
+}
+
+/// pkg_resources distribution finder for sys.path entries.
+///
+/// `state` meta path importer state.
+/// `search_path` is the `sys.path` item being evaluated.
+/// `only` if True only yield items that would be importable if `search_item` were
+/// on `sys.path`. Otherwise yields items that are in or under `search_path`.
+/// `path_finder_path` is the path from the `OxidizedPathEntryFinder`.
+/// `path_finder_package` is the package from the `OxidizedPathEntryFinder`.
+pub(crate) fn find_pkg_resources_distributions<'a>(
+    py: Python,
+    state: Arc<ImporterState>,
+    search_path: &str,
+    _only: bool,
+    _path_finder_path: &PyList,
+    _path_finder_package: &str,
+) -> PyResult<PyList> {
+    let resources = &state.get_resources_state().resources;
+
+    let pkg_resources = py.import("pkg_resources")?;
+    let distribution_type = pkg_resources.get(py, "Distribution")?;
+
+    let distributions = resources
+        .values()
+        // Find packages with distribution resources.
+        .filter(|r| {
+            r.is_package
+                && (r.in_memory_distribution_resources.is_some()
+                    || r.relative_path_distribution_resources.is_some())
+        })
+        // TODO perform path filtering
+        .map(|r| {
+            let oxidized_distribution =
+                OxidizedDistribution::create_instance(py, state.clone(), r.name.to_string())?;
+
+            let metadata = oxidized_distribution.metadata(py)?;
+
+            let project_name = metadata.get_item(py, "Name")?;
+            let version = metadata.get_item(py, "Version")?;
+
+            let location = format!("{}/{}", search_path, r.name.replace('.', "/"));
+
+            let provider =
+                create_oxidized_pkg_resources_provider(py, state.clone(), r.name.to_string())?;
+
+            let kwargs = PyDict::new(py);
+            kwargs.set_item(py, "location", PyString::new(py, &location))?;
+            kwargs.set_item(py, "metadata", provider.into_object())?;
+            kwargs.set_item(py, "project_name", project_name)?;
+            kwargs.set_item(py, "version", version)?;
+
+            distribution_type.call(py, NoArgs, Some(&kwargs))
+        })
+        .filter_map(|dist| dist.ok())
+        .collect::<Vec<PyObject>>();
+
+    Ok(PyList::new(py, &distributions))
 }
 
 pub(crate) fn resolve_package_distribution_resource<'a>(

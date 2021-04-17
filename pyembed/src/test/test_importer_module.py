@@ -15,6 +15,7 @@ class TestImporterModule(unittest.TestCase):
             {
                 "decode_source",
                 "find_resources_in_path",
+                "pkg_resources_find_distributions",
                 "register_pkg_resources",
                 "OxidizedDistribution",
                 "OxidizedFinder",

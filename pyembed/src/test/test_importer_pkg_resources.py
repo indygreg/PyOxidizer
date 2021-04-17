@@ -21,11 +21,32 @@ except ImportError:
 
 from oxidized_importer import (
     OxidizedFinder,
+    OxidizedPathEntryFinder,
     OxidizedPkgResourcesProvider,
     OxidizedResourceCollector,
+    OxidizedResource,
     find_resources_in_path,
     register_pkg_resources,
 )
+
+
+def make_in_memory_finder():
+    f = OxidizedFinder()
+
+    r = OxidizedResource()
+    r.is_module = True
+    r.is_package = True
+    r.name = "my_package"
+    r.in_memory_source = b"print('hello, world')"
+
+    r.in_memory_distribution_resources = {
+        "METADATA": b"Name: my_package\nVersion: 1.0\n",
+        "entry_points.txt": b"[console_scripts]\ncli = my_package:cli\n",
+    }
+
+    f.add_resource(r)
+
+    return f
 
 
 @unittest.skipIf(pkg_resources is None, "pkg_resources not available")
@@ -41,8 +62,11 @@ class TestImporterPkgResources(unittest.TestCase):
         self.td = pathlib.Path(self.raw_temp_dir.name)
         self.old_finders = list(sys.meta_path)
         self.old_path = list(sys.path)
+        self.old_path_hooks = list(sys.path_hooks)
+        self.old_path_importer_cache = dict(sys.path_importer_cache)
         self.old_modules = dict(sys.modules)
         self.old_provider_factories = dict(pkg_resources._provider_factories)
+        self.old_distribution_finders = dict(pkg_resources._distribution_finders)
 
     def tearDown(self):
         self.raw_temp_dir.cleanup()
@@ -50,10 +74,15 @@ class TestImporterPkgResources(unittest.TestCase):
         del self.td
         sys.meta_path[:] = self.old_finders
         sys.path[:] = self.old_path
+        sys.path_hooks[:] = self.old_path_hooks
+        sys.path_importer_cache.clear()
+        sys.path_importer_cache.update(self.old_path_importer_cache)
         sys.modules.clear()
         sys.modules.update(self.old_modules)
         pkg_resources._provider_factories.clear()
         pkg_resources._provider_factories.update(self.old_provider_factories)
+        pkg_resources._distribution_finders.clear()
+        pkg_resources._distribution_finders.update(self.old_distribution_finders)
 
     def _write_metadata(self):
         metadata_path = self.td / "my_package-1.0.dist-info" / "METADATA"
@@ -77,6 +106,10 @@ class TestImporterPkgResources(unittest.TestCase):
 
     def test_provider_registered(self):
         # Should have been done via setUpClass.
+        self.assertEqual(
+            pkg_resources._distribution_finders.get(OxidizedPathEntryFinder).__name__,
+            "pkg_resources_find_distributions",
+        )
         self.assertEqual(
             pkg_resources._provider_factories.get(OxidizedFinder),
             OxidizedPkgResourcesProvider,
@@ -209,6 +242,29 @@ class TestImporterPkgResources(unittest.TestCase):
         self.assertEqual(
             provider.resource_listdir("subdir\\grandchild\\"), ["grandchild.txt"]
         )
+
+    def test_find_distributions_no_path_hooks(self):
+        sys.meta_path.insert(0, make_in_memory_finder())
+        sys.path_hooks.clear()
+        self.assertEqual(
+            list(pkg_resources.find_distributions(sys.executable, only=True)), []
+        )
+
+    def test_find_distributions_simple(self):
+        f = make_in_memory_finder()
+
+        sys.meta_path.insert(0, f)
+        sys.path_hooks.insert(0, f.path_hook)
+
+        dists = list(pkg_resources.find_distributions(sys.executable, only=True))
+        self.assertEqual(len(dists), 1)
+
+        dist = dists[0]
+        self.assertIsInstance(dist, pkg_resources.Distribution)
+        self.assertEqual(dist.project_name, "my-package")
+        self.assertEqual(dist.version, "1.0")
+        self.assertEqual(
+            list(dist.get_entry_map(None).keys()), ["console_scripts"])
 
 
 if __name__ == "__main__":

@@ -19,7 +19,7 @@ use {
     crate::{
         conversion::pyobject_to_pathbuf,
         package_metadata::{
-            metadata_list_directory, metadata_name_is_directory,
+            find_pkg_resources_distributions, metadata_list_directory, metadata_name_is_directory,
             resolve_package_distribution_resource,
         },
         python_resources::{
@@ -1573,6 +1573,14 @@ fn oxidized_pkg_resources_provider_new(
     OxidizedPkgResourcesProvider::create_instance(py, state.clone(), package.to_string())
 }
 
+pub(crate) fn create_oxidized_pkg_resources_provider(
+    py: Python,
+    state: Arc<ImporterState>,
+    package: String,
+) -> PyResult<PyObject> {
+    Ok(OxidizedPkgResourcesProvider::create_instance(py, state, package)?.into_object())
+}
+
 // pkg_resources.IMetadataProvider
 impl OxidizedPkgResourcesProvider {
     fn has_metadata_impl(&self, py: Python, name: PyString) -> PyResult<bool> {
@@ -1796,8 +1804,54 @@ fn decode_source(py: Python, io_module: &PyModule, source_bytes: PyObject) -> Py
     newline_decoder.call_method(py, "decode", (data,), None)
 }
 
+/// pkg_resources distribution finder for sys.path items.
+fn pkg_resources_find_distributions(
+    py: Python,
+    importer: PyObject,
+    path_item: PyString,
+    only: bool,
+) -> PyResult<PyList> {
+    let importer_type = importer.get_type(py);
+
+    // This shouldn't happen since that path hook type is mapped to this function.
+    // But you never know.
+    if importer_type != py.get_type::<OxidizedPathEntryFinder>() {
+        return Ok(PyList::new(py, &[]));
+    }
+
+    let finder = importer.cast_as::<OxidizedPathEntryFinder>(py)?;
+    let meta_finder = finder.finder(py);
+    let state = meta_finder.cast_as::<OxidizedFinder>(py)?.state(py);
+
+    find_pkg_resources_distributions(
+        py,
+        state.clone(),
+        &path_item.to_string_lossy(py),
+        only,
+        finder.path(py),
+        finder.package(py),
+    )
+}
+
 fn register_pkg_resources(py: Python) -> PyResult<PyObject> {
     let pkg_resources = py.import("pkg_resources")?;
+
+    pkg_resources.call(
+        py,
+        "register_finder",
+        (
+            py.get_type::<OxidizedPathEntryFinder>(),
+            py_fn!(
+                py,
+                pkg_resources_find_distributions(
+                    importer: PyObject,
+                    path_item: PyString,
+                    only: Option<bool> = false
+                )
+            ),
+        ),
+        None,
+    )?;
 
     pkg_resources.call(
         py,
@@ -1913,6 +1967,18 @@ fn module_init(py: Python, m: &PyModule) -> PyResult<()> {
         py,
         "register_pkg_resources",
         py_fn!(py, register_pkg_resources()),
+    )?;
+    m.add(
+        py,
+        "pkg_resources_find_distributions",
+        py_fn!(
+            py,
+            pkg_resources_find_distributions(
+                importer: PyObject,
+                path_item: PyString,
+                only: Option<bool> = false,
+            )
+        ),
     )?;
 
     m.add(py, "OxidizedFinder", py.get_type::<OxidizedFinder>())?;

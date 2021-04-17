@@ -1,3 +1,5 @@
+.. py:currentmodule:: oxidized_finder
+
 .. _resource_files:
 
 ======================
@@ -257,26 +259,84 @@ To enable ``pkg_resources`` integration at run-time, call
 ``oxidized_importer.register_pkg_resources()``. It is safe to call this
 function multiple times.
 
-When ``pkg_resources`` integration is enabled, the ``OxidizedFinder`` loader
-type is mapped to ``OxidizedPkgResourcesProvider``, which is
-``oxidized_importer``'s type implementing ``pkg_resources.IMetadataProvider``
-and ``pkg_resources.IResourceProvider``. What this means is that
-``pkg_resources`` will automatically dispatch all ``pkg_resources`` APIs
-for modules loaded via ``OxidizedFinder`` to ``OxidizedPkgResourcesProvider``.
+Calling ``oxidized_importer.register_pkg_resources()`` effectively does
+the following:
 
-``OxidizedPkgResourcesProvider`` implements all
-``pkg_resources.IMetadataProvider`` members with the exception of
-``run_script()``, which raises ``NotImplementedError``. Behavior of all
-implemented members should conform to the interface specification.
+* Calls ``pkg_resources.register_finder()`` to map
+  :class:`OxidizedPathEntryFinder` to
+  ``oxidized_importer.pkg_resources_find_distributions()``.
+* Calls ``pkg_resources.register_load_type()`` to map ``OxidizedFinder``
+  to ``OxidizedPkgResourcesProvider``.
 
-``OxidizedPkgResourcesProvider`` implements all
-``pkg_resources.IResourceProvider`` members and all members should conform
-to the interface specification. ``get_resource_filename()`` always raises
-``NotImplementedError``, which appears to be allowed behavior.
+Distribution Resolving
+----------------------
 
-``oxidized_importer`` does not currently register itself via
-``pkg_resources.register_finder()``, so functionality requiring resolving
-*distributions* will not work.
+:py:class:`OxidizedPathEntryFinder` is a finder type that
+responds to ``sys.path`` entries via the ``sys.path_hooks`` mechanism.
+
+.. important::
+
+   Distribution resolution support requires both ``OxidizedFinder.path_hook``
+   to be registered on ``sys.path_hook`` as well as ``sys.path`` to contain
+   an entry that ``OxidizedFinder.path_hook`` will respond to. See
+   :ref:`its documentation <oxidized_finder_path_hook>` for more.
+
+   If either of these aren't present, ``pkg_resources`` will fail to call
+   into ``oxidized_importer`` to resolve distributions.
+
+``oxidized_importer.pkg_resources_find_distributions()`` does not currently
+implement any filtering and always returns all packages tracked by the
+``OxidizedFinder`` the loader was derived from. This behavior is wrong.
+
+Metadata and Resource Resolving
+-------------------------------
+
+If ``pkg_resources`` derives the *provider* for any module loaded with
+``OxidizedFinder`` or :py:class:`OxidizedPathEntryFinder`, it should
+create an instance of :py:class:`OxidizedPkgResourcesProvider` to resolve
+package metadata and resource info.
+
+.. py:class:: OxidizedPkgResourcesProvider
+
+   A ``pkg_resources.IMetadataProvider`` and ``pkg_resources.IResourceProvider``
+   enabling ``pkg_resources`` to access package metadata and resources.
+
+   All members of the aforementioned interfaces are implemented. Divergence
+   from ``pkg_resources`` defined behavior is documented next to the method.
+
+  .. py:method:: has_metadata(name: str) -> bool
+
+  .. py:method:: get_metadata(name: str) -> str
+
+  .. py:method:: get_metadata_lines(name: str) -> List[str]
+
+     Returns a ``list`` instead of a generator.
+
+  .. py:method:: metadata_isdir(name: str) -> bool
+
+  .. py:method:: metadata_listdir(name: str) -> List[str]
+
+  .. py:method:: run_script(script_name: str, namespace: Any)
+
+     Always raises ``NotImplementedError``.
+
+  .. py:method:: get_resource_filename(manager: pkg_resources.IResourceManager, resource_name: str)
+
+     Always raises ``NotImplementedError``.
+
+     This behavior appears to be allowed given code in ``pkg_resources``.
+
+  .. py:method:: get_resource_stream(manager: pkg_resources.IResourceManager, resource_name: str) -> io.BytesIO
+
+  .. py:method:: get_resource_string(manager: pkg_resources.IResourceManager, resource_name: str) -> bytes
+
+  .. py:method:: has_resource(resource_name: str) -> bool
+
+  .. py:method:: resource_isdir(resource_name: str) -> bool
+
+  .. py:method:: resource_listdir(resource_name: str) -> List[str]
+
+     Returns a ``list`` instead of a generator.
 
 Porting Code to Modern Resources APIs
 =====================================
