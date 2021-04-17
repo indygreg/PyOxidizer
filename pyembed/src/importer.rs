@@ -962,10 +962,6 @@ impl OxidizedFinder {
         // only to be passed to `self.find_spec`'s
         // `path: Optional[Iterable[str]]` argument.
         let paths = {
-            // `import os` is safe: sys.path_hooks is read only after
-            // importlib._bootstrap_internal has been setup, either in that module
-            // module or after initialization by PyImport_GetImporter checking
-            // for the existence of config->run_filename has been setup.
             let os = py.import("os")?;
             PyList::new(py, &[os.call(py, "fspath", (path.clone_ref(py),), None)?])
         };
