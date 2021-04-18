@@ -259,22 +259,19 @@ To enable ``pkg_resources`` integration at run-time, call
 Distribution Resolving
 ----------------------
 
-:py:class:`OxidizedPathEntryFinder` is a finder type that
-responds to ``sys.path`` entries via the ``sys.path_hooks`` mechanism.
+:py:class:`OxidizedPathEntryFinder` is a *path entry finder* type that
+responds to *paths* via the ``sys.path_hooks`` mechanism.
 
-.. important::
+Distribution resolution support requires
+:py:meth:`OxidizedFinder.path_hook <OxidizedFinder.path_hook>` to be
+registered on ``sys.path_hook`` and for :py:func:`register_pkg_resources`
+to have been called. If both these conditions are satisfied, ``pkg_resources``
+should be able to find package distributions indexed by
+:py:class:`OxidizedFinder` instances.
 
-   Distribution resolution support requires both
-   :py:meth:`OxidizedFinder.path_hook <OxidizedFinder.path_hook>` to be
-   registered on ``sys.path_hook`` as well as ``sys.path`` to contain an
-   entry that this function will respond to. See
-   :ref:`oxidized_finder_path_hooks` for more.
-
-   If either of these aren't present, ``pkg_resources`` will fail to call
-   into ``oxidized_importer`` to resolve distributions.
-
-:py:func:`pkg_resources_find_distributions` should properly apply
-path filtering and the ``only`` flag, per the behavior documented by
+:py:func:`pkg_resources_find_distributions` is the callable registered
+with ``pkg_resources`` for resolving distributions. It respects path
+targeting and the ``only`` flag, per the behavior documented by
 ``pkg_resources``.
 
 Metadata and Resource Resolving
@@ -284,6 +281,10 @@ If ``pkg_resources`` derives the *provider* for any module loaded with
 :py:class:`OxidizedFinder` or :py:class:`OxidizedPathEntryFinder`, it should
 create an instance of :py:class:`OxidizedPkgResourcesProvider` to resolve
 package metadata and resource info.
+
+There are known behavior differences with
+:py:class:`OxidizedPkgResourcesProvider` that may result in runtime errors.
+See that type's API documentation for more.
 
 Porting Code to Modern Resources APIs
 =====================================

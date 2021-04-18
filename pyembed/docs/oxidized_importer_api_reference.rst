@@ -271,37 +271,45 @@ The ``OxidizedPkgResourcesProvider`` Class
    All members of the aforementioned interfaces are implemented. Divergence
    from ``pkg_resources`` defined behavior is documented next to the method.
 
-  .. py:method:: has_metadata(name: str) -> bool
+   .. py:method:: has_metadata(name: str) -> bool
 
-  .. py:method:: get_metadata(name: str) -> str
+   .. py:method:: get_metadata(name: str) -> str
 
-  .. py:method:: get_metadata_lines(name: str) -> List[str]
+   .. py:method:: get_metadata_lines(name: str) -> List[str]
 
       Returns a ``list`` instead of a generator.
 
-  .. py:method:: metadata_isdir(name: str) -> bool
+   .. py:method:: metadata_isdir(name: str) -> bool
 
-  .. py:method:: metadata_listdir(name: str) -> List[str]
+   .. py:method:: metadata_listdir(name: str) -> List[str]
 
-  .. py:method:: run_script(script_name: str, namespace: Any)
+   .. py:method:: run_script(script_name: str, namespace: Any)
 
       Always raises ``NotImplementedError``.
 
-  .. py:method:: get_resource_filename(manager: pkg_resources.IResourceManager, resource_name: str)
+      Please leave a comment in
+      `#384 <https://github.com/indygreg/PyOxidizer/issues/384>`_ if you would like
+      this functionality implemented.
+
+   .. py:method:: get_resource_filename(manager: pkg_resources.IResourceManager, resource_name: str)
 
       Always raises ``NotImplementedError``.
 
       This behavior appears to be allowed given code in ``pkg_resources``.
+      However, it means that ``pkg_resources.resource_filename()`` will not
+      work. Please leave a comment in
+      `#383 <https://github.com/indygreg/PyOxidizer/issues/383>`_ if you would like
+      this functionality implemented.
 
-  .. py:method:: get_resource_stream(manager: pkg_resources.IResourceManager, resource_name: str) -> io.BytesIO
+   .. py:method:: get_resource_stream(manager: pkg_resources.IResourceManager, resource_name: str) -> io.BytesIO
 
-  .. py:method:: get_resource_string(manager: pkg_resources.IResourceManager, resource_name: str) -> bytes
+   .. py:method:: get_resource_string(manager: pkg_resources.IResourceManager, resource_name: str) -> bytes
 
-  .. py:method:: has_resource(resource_name: str) -> bool
+   .. py:method:: has_resource(resource_name: str) -> bool
 
-  .. py:method:: resource_isdir(resource_name: str) -> bool
+   .. py:method:: resource_isdir(resource_name: str) -> bool
 
-  .. py:method:: resource_listdir(resource_name: str) -> List[str]
+   .. py:method:: resource_listdir(resource_name: str) -> List[str]
 
       Returns a ``list`` instead of a generator.
 
