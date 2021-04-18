@@ -240,10 +240,20 @@ to the following path values:
 
 .. important::
 
-   :py:attr:`OxidizedFinder.current_exe` may not be the same value as
-   ``sys.executable``. To ensure the path hook responds to the *current
-   executable*, derive ``sys.path`` values from
-   :py:attr:`OxidizedFinder.current_exe`.
+   :py:meth:`path_hook <OxidizedFinder.path_hook>` is very strict about
+   what values it will respond to.
+
+   The value **must** be a ``str`` and be equal to
+   :py:attr:`OxidizedFinder.current_exe` or have
+   :py:attr:`OxidizedFinder.current_exe` plus a directory separator
+   as the exact string prefix.
+
+   :py:meth:`path_hook <OxidizedFinder.path_hook>` will **not** respond
+   to ``bytes``, ``pathlib.Path``, or any other path-like type.
+
+   :py:attr:`OxidizedFinder.current_exe` **may not** be the same value as
+   ``sys.executable``. Always use :py:attr:`OxidizedFinder.current_exe`
+   to derive ``sys.path`` values to ensure the path hook will respond.
 
 When :py:meth:`path_hook <OxidizedFinder.path_hook>` is called with its
 :py:attr:`OxidizedFinder.current_exe` value, a
@@ -254,11 +264,55 @@ resources indexed by that :py:class:`OxidizedFinder`.
 When :py:meth:`path_hook <OxidizedFinder.path_hook>` is called with
 a virtual sub-directory of :py:attr:`OxidizedFinder.current_exe`, the same
 thing happens except the returned :py:class:`OxidizedPathEntryFinder`
-will only service resources that are directly contained in that
-virtual sub-directory. For example, if ``path`` were
-``os.path.join(oxidized_finder.current_exe, "a")``, the finder
-would only service modules ``a``, ``a.b``, ``a.*``, but not
+will only service resources that are directly contained in a Python
+package corresponding to that virtual sub-directory.
+
+When virtual sub-directories are present, the ``str`` is validated
+and parsed similarly to the following:
+
+.. code-block:: python
+
+   def path_hook(self, path: str):
+       if not path.startswith((self.current_exe + "/", self.current_exe + "\\")):
+           raise ImportError
+
+       # Part after directory separator.
+       package_part = path[len(current_exe) + 1:]
+
+       # Normalize to UNIX style directory separators, allowing Windows
+       # separators to exist.
+       package_part = package_part.replace("\\", "/")
+
+       # Ban leading, trailing, and consecutive directory separators.
+       if package_part.startswith("/") or package_part.endswith("\\") or package_part.contains("//"):
+           raise ImportError()
+
+       # Ban dots in directory components.
+       for part in package_part.split("/"):
+           if part.startswith(".") or part.endswith(".") or part.contains(".."):
+               raise ImportError()
+
+       # Normalize directory tree to package hierarchy. e.g. foo/bar -> foo.bar.
+       package = package_part.replace("/", ".")
+
+       # When converting the package string to a Rust string to facilitate
+       # resource name comparisons, it is encoded to UTF-8, replacing
+       # "bad" code points with the Unicode replacement code point.
+       rust_package_string = package.encode("utf-8", "replace")
+
+Note that when the package component of virtual sub-directories is converted
+to a Rust string, we use the UTF-8 encoding, not Python's active filesystem
+encoding. This is to keep things simpler. And since :py:class:`OxidizedFinder`
+indexes resource names using Rust's UTF-8 backed string type anyway, this seems
+semantically correct from the perspective of ``oxidized_importer``.
+
+As an example, if ``path`` were
+``os.path.join(finder.current_exe, "a")``, the
+finder would only service modules ``a``, ``a.b``, ``a.*``, but not
 ``b``, ``a.b.c``, or ``a.b.*``.
+
+For best results, use ``os.path.join(finder.current_exe, str)`` to define
+``sys.path`` values that will be accepted by the path hook.
 
 :py:class:`OxidizedPathEntryFinder` complies with the
 `PathEntryFinder <https://docs.python.org/3/library/importlib.html#importlib.abc.PathEntryFinder>`_

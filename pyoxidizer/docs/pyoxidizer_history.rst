@@ -44,21 +44,25 @@ Backwards Compatibility Notes
   related to filesystem importers if filesystem importing is disabled.
   Previously, only ``sys.meta_path`` would have its filesystem importers
   removed.
-* The ``pyembed`` crate now always registers the ``OxidizedFinder`` path hook
-  on ``sys.path_hooks`` when an instance is being installed on
-  ``sys.meta_path``. This ensures that consumers of ``sys.path_hooks`` outside
-  the module importing mechanism (such as ``pkg_resources``) can use the
-  path hook.
-* The ``pyembed`` crate now registers the ``OxidizedFinder`` path hook
-  as the 1st entry on ``sys.path_hooks``, not the last.
-
-Bug Fixes
-^^^^^^^^^
-
-* The ``OxidizedFinder`` ``sys.path_hooks`` implementation now canonicalizes
-  paths the same way that the current executable is canonicalized. Previously,
-  they were using subtly different methods, which could result in path
-  comparisons not working on Windows.
+* The ``pyembed`` crate now always registers the
+  :py:class:`oxidized_importer.OxidizedFinder` path hook on ``sys.path_hooks``
+  when an instance is being installed on ``sys.meta_path``. This ensures that
+  consumers of ``sys.path_hooks`` outside the module importing mechanism (such
+  as ``pkgutil`` and ``pkg_resources``) can use the path hook.
+* The ``pyembed`` crate now registers the
+  :py:class:`oxidized_importer.OxidizedFinder` path hook as the 1st entry on
+  ``sys.path_hooks``, not the last.
+* The :py:class:`oxidized_importer.OxidizedFinder` path hook is now more strict
+  about the path values it will respond to. Previously, it would accept ``str``,
+  ``bytes``, ``pathlib.Path``, or any other path-like type. Now, it only
+  responds to ``str`` values. Furthermore, it will only respond to values that
+  exactly match :py:attr:`oxidized_importer.OxidizedFinder.current_exe` or
+  a well-formed virtual sub-directory thereof. Previously, it would attempt to
+  canonicalize path strings, taking into account the current working directory,
+  filesystem links, and other factors affecting path normalization. The new
+  implementation is simpler and by being stricter should be less brittle at
+  run-time. See :ref:`oxidized_finder_path_hooks` for documentation on the path
+  hooks behavior.
 
 New Features
 ^^^^^^^^^^^^

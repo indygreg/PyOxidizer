@@ -8,10 +8,7 @@ from importlib.machinery import PathFinder
 import marshal
 import os
 from pathlib import Path
-import re
-import subprocess
 import sys
-import tempfile
 from typing import Iterable, Optional, Tuple, Union, TYPE_CHECKING
 import unittest
 from unittest.mock import patch
@@ -24,6 +21,8 @@ if TYPE_CHECKING:
 
 
 PathLike = Union[str, bytes, os.PathLike]
+
+CURRENT_EXE = OxidizedFinder().current_exe
 
 
 def make_finder(*modules: Tuple[str, str, bool]) -> OxidizedFinder:
@@ -39,8 +38,9 @@ def make_finder(*modules: Tuple[str, str, bool]) -> OxidizedFinder:
         resource.name = module_name
         resource.is_package = is_pkg
         resource.in_memory_source = source.encode("utf-8")
-        resource.in_memory_bytecode = marshal.dumps(compile(
-            source, module_name, "exec"))
+        resource.in_memory_bytecode = marshal.dumps(
+            compile(source, module_name, "exec")
+        )
         mpf.add_resource(resource)
     return mpf
 
@@ -56,19 +56,7 @@ def chdir(dir: PathLike) -> Iterable[Path]:
         os.chdir(old_cwd)
 
 
-def link_dir(src: PathLike, dst: PathLike) -> None:
-    """Create a link named ``dst`` pointing to a directory ``src``."""
-    if not os.path.isdir(src):
-        raise ValueError(f"src is not a directory: {src}")
-    if sys.platform != 'win32':
-        return os.symlink(src, dst)
-    subprocess.run(
-        ['mklink', '/J', os.fsdecode(dst), os.fsdecode(src)],
-        check=True, shell=True, capture_output=True)
-
-
 class TestImporterPathEntryFinder(unittest.TestCase):
-
     def finder(self, path: PathLike, package: str) -> OxidizedPathEntryFinder:
         """Add the following package hierarchy to the returned finder:
 
@@ -81,11 +69,9 @@ class TestImporterPathEntryFinder(unittest.TestCase):
             ("a", "import a.b", True),
             ("a.b", "import a.b.c", True),
             ("a.b.c", "pass", False),
-
             ("one", "from .two import three", True),
             ("one.two", "import one.two.three", True),
             ("one.two.three", "pass", False),
-
             ("on", "pass", True),
             ("on.tשo", "pass", True),
             ("on.tשo.۳", "pass", False),
@@ -102,13 +88,13 @@ class TestImporterPathEntryFinder(unittest.TestCase):
         name: str,
         is_pkg: bool,
         Loader: importlib.abc.Loader = OxidizedFinder,
-        origin: Optional[str] = None
+        origin: Optional[str] = None,
     ) -> None:
         self.assertIsNotNone(spec, name)
         self.assertEqual(spec.name, name, spec)
         self.assertTrue(
-            isinstance(spec.loader, Loader) or issubclass(spec.loader, Loader),
-            spec)
+            isinstance(spec.loader, Loader) or issubclass(spec.loader, Loader), spec
+        )
         self.assertEqual(spec.origin, origin, spec)
         self.assertIsNone(spec.cached, spec)
         self.assertFalse(spec.has_location, spec)
@@ -136,27 +122,102 @@ class TestImporterPathEntryFinder(unittest.TestCase):
         self.assertCountEqual(finder.iter_modules(), [("tשo", True)])
         self.assertCountEqual(finder.iter_modules("on."), [("on.tשo", True)])
 
-    def test_find_spec_nested_abs_str(self):
-        self.assert_find_spec_nested(os.path.join(sys.executable, "on"))
+    def test_bytes_path_rejected(self):
+        f = OxidizedFinder()
 
-    def test_find_spec_nested_rel_str(self):
-        exe = Path(sys.executable)
-        with chdir(exe.parent):
-            self.assert_find_spec_nested(str(Path("..", exe.parent.name, exe.name, "on")))
+        with self.assertRaisesRegex(
+            ImportError, "error running OxidizedFinder.path_hook"
+        ) as e:
+            f.path_hook(b"foo")
 
-    def test_find_spec_nested_abs_pathlike(self):
-        self.assert_find_spec_nested(Path(sys.executable, "on"))
+        self.assertIsInstance(e.exception.__cause__, TypeError)
 
-    def test_find_spec_nested_link(self):
-        with tempfile.TemporaryDirectory(prefix="oxidized_importer-test-") as td:
-            dst = os.path.join(td, "origin", os.path.basename(sys.executable))
-            link_dir(os.path.dirname(sys.executable), os.path.dirname(dst))
-            self.assert_find_spec_nested(os.path.join(dst, "on"))
+    def test_path_pathlike_rejected(self):
+        f = OxidizedFinder()
 
-    def test_find_spec_nested_rel_bytes(self):
-        exe = Path(sys.executable)
-        with chdir(exe.parent):
-            self.assert_find_spec_nested(bytes(Path("..", exe.parent.name, exe.name, "on")))
+        with self.assertRaisesRegex(
+            ImportError, "error running OxidizedFinder.path_hook"
+        ) as e:
+            f.path_hook(Path("foo"))
+
+        self.assertIsInstance(e.exception.__cause__, TypeError)
+
+    def test_current_exe_ok(self):
+        f = OxidizedFinder()
+        self.assertIsInstance(f.path_hook(CURRENT_EXE), OxidizedPathEntryFinder)
+
+    def test_current_exe_parent_rejected(self):
+        f = OxidizedFinder()
+
+        with self.assertRaises(ImportError):
+            f.path_hook(os.path.dirname(CURRENT_EXE))
+
+    def test_empty_rejected(self):
+        f = OxidizedFinder()
+
+        with self.assertRaises(ImportError):
+            f.path_hook("")
+
+    def test_dots_rejected(self):
+        f = OxidizedFinder()
+
+        suffixes = (
+            r".",
+            r"..",
+            r".foo",
+            r"foo.",
+            r"foo..bar",
+            r"../../etc/passwd",
+            r"..\..\etc\passwd",
+        )
+
+        for suffix in suffixes:
+            with self.assertRaises(ImportError):
+                f.path_hook(CURRENT_EXE + "/" + suffix)
+
+            with self.assertRaises(ImportError):
+                f.path_hook(CURRENT_EXE + "\\" + suffix)
+
+    def test_bad_directory_separators(self):
+        suffixes = (
+            r"//foo",
+            r"/foo//bar",
+            r"/foo\\bar",
+            r"\\foo",
+            r"/foo//",
+            r"/foo\\",
+            r"/\foo",
+        )
+
+        for suffix in suffixes:
+            f = OxidizedFinder()
+
+            with self.assertRaises(ImportError):
+                f.path_hook(CURRENT_EXE + suffix)
+
+    def test_package_resolution(self):
+        mapping = (
+            (r"/foo", "foo"),
+            (r"/foo/bar", "foo.bar"),
+            (r"\foo", "foo"),
+            (r"\foo\bar", "foo.bar"),
+            (r"/foo\bar", "foo.bar"),
+            (r"\foo/bar", "foo.bar"),
+            (r"/foo.bar", "foo.bar"),
+            (r"\foo.bar", "foo.bar"),
+            (r"/foo.bar/baz", "foo.bar.baz"),
+            (r"/tשo", "tשo"),
+            (r"\tשo", "tשo"),
+        )
+
+        for (suffix, package) in mapping:
+            f = OxidizedFinder()
+
+            pef = f.path_hook(CURRENT_EXE + suffix)
+            self.assertEqual(pef._package, package)
+
+    def test_find_spec_subdir(self):
+        self.assert_find_spec_nested(os.path.join(CURRENT_EXE, "on"))
 
     def assert_find_spec_top_level(self, path: PathLike) -> None:
         finder = self.finder(path, "")
@@ -167,122 +228,56 @@ class TestImporterPathEntryFinder(unittest.TestCase):
         for name in "a.b", "a.b.c", "on.tשo", "on.tשo.۳":
             self.assertIsNone(finder.find_spec(name))
 
-    def test_find_spec_top_level_abs_str(self):
-        self.assert_find_spec_top_level(sys.executable)
-
-    def test_find_spec_top_level_abs_bytes(self):
-        self.assert_find_spec_top_level(os.fsencode(sys.executable))
-
-    def test_find_spec_top_level_rel_str(self):
-        exe = Path(sys.executable)
-        with chdir(exe.parent):
-            self.assert_find_spec_top_level(exe.name)
+    def test_find_spec_top_level(self):
+        self.assert_find_spec_top_level(CURRENT_EXE)
 
     def assert_unicode_path(self, path: PathLike) -> None:
         finder = self.finder(path, "on.tשo")
         self.assert_spec(finder.find_spec("on.tשo.۳"), "on.tשo.۳", is_pkg=False)
         self.assertCountEqual(finder.iter_modules(), [("۳", False)])
 
-    def test_unicode_path_abs_str(self):
-        self.assert_unicode_path(os.path.join(sys.executable,"on", "tשo"))
+    def test_unicode_path_subdir(self):
+        self.assert_unicode_path(os.path.join(CURRENT_EXE, "on", "tשo"))
 
-    def test_unicode_path_abs_bytes(self):
-        self.assert_unicode_path(os.fsencode(os.path.join(sys.executable,"on", "tשo")))
+    def test_empty_finder_top_level(self):
+        self.assertIsNone(OxidizedFinder().path_hook(CURRENT_EXE).find_spec("a"))
 
-    def test_unicode_path_rel_pathlike(self):
-        exe = Path(sys.executable)
-        with chdir(exe.parent):
-            self.assert_unicode_path(Path(exe.name, "on", "tשo"))
-
-    def test_unicode_path_rel_bytes(self):
-        exe = Path(sys.executable)
-        with chdir(exe.parent):
-            self.assert_unicode_path(bytes(Path(exe.name, "on", "tשo")))
-
-    def test_empty_finder_abs_str(self):
-        self.assertIsNone(OxidizedFinder().path_hook(sys.executable).find_spec("a"))
-
-    def test_non_existent_pkg_abs_str(self):
-        path = os.path.join(sys.executable, "foo", "bar")
+    def test_non_existent_pkg(self):
+        path = os.path.join(CURRENT_EXE, "foo", "bar")
         finder = self.finder(path, "foo.bar")
         self.assertIsNone(finder.find_spec("foo.bar.baz"))
 
-    def test_non_existent_pkg_rel_str(self):
-        exe = Path(sys.executable)
-        with chdir(exe.parent):
-            path = os.path.join("..", exe.parent.name, exe.name, "foo", "bar")
-            finder = self.finder(path, "foo.bar")
-            self.assertIsNone(finder.find_spec("foo.bar.baz"))
-
     def test_path_hook_installed(self):
-        # PathFinder can only use it with sys.executable on sys.path
-        with patch('sys.path', sys.path):
-            sys.path = [p for p in sys.path if p != sys.executable]
+        # PathFinder can only use it with CURRENT_EXT on sys.path
+        with patch("sys.path", sys.path):
+            sys.path = [p for p in sys.path if p != CURRENT_EXE]
             PathFinder.invalidate_caches()
             self.assertIsNone(PathFinder.find_spec("pwd"))
 
-            sys.path.append(sys.executable)
+            sys.path.append(CURRENT_EXE)
             spec = PathFinder.find_spec("pwd")
         self.assert_spec(
-            spec, "pwd", is_pkg=False, Loader=sys.__spec__.loader,
-            origin="built-in")
+            spec, "pwd", is_pkg=False, Loader=sys.__spec__.loader, origin="built-in"
+        )
 
     ############################################################################
     # Error Handling
 
     NOT_FOUND_ERR = "path .* does not begin in .*"
 
-    def test_not_sys_executable_abs_str(self):
-        self.assertFalse(
-            sys.prefix.startswith(sys.executable), "bad assumption in test")
-        finder = OxidizedFinder()
-        with self.assertRaisesRegex(ImportError, self.NOT_FOUND_ERR) as cm:
-             finder.path_hook(sys.prefix)
-        self.assertEqual(cm.exception.path, sys.prefix)
-
-    def test_not_sys_executable_rel_str(self):
-        path = Path(Path(sys.executable).name, "a", "b")
-        with tempfile.TemporaryDirectory(prefix="oxidized_importer-test-") as td:
-            with chdir(td):
-                with self.assertRaisesRegex(ImportError, self.NOT_FOUND_ERR) as cm:
-                    self.finder(path, "a.b")
-                self.assertEqual(cm.exception.path, path)
-
     def test_find_spec_no_path_arg(self):
-        finder = self.finder(Path(sys.executable, "a"), "a")
+        finder = self.finder(os.path.join(CURRENT_EXE, "a"), "a")
         # finder.find_spec does not take a path arg
         self.assertRaisesRegex(
-            TypeError, "takes at most 2 arguments", finder.find_spec, "a.b",
-            None, None)
+            TypeError, "takes at most 2 arguments", finder.find_spec, "a.b", None, None
+        )
         self.assertRaisesRegex(
-            TypeError, "'path' is an invalid keyword argument",
-            finder.find_spec, "a.b", path=None)
-
-    def test_path_bad_type(self):
-        self.assertRaisesRegex(
-            TypeError, "expected str, bytes or os.PathLike object, not int",
-            OxidizedFinder().path_hook, 1)
-
-    def test_bad_unicode_executable_path_ok(self):
-        # A non-Unicode path doesn't cause a panic.
-        exe = sys.executable.encode("utf-8", "surrogatepass")
-        # "fo\ud800o" contains an unpaired surrogate.
-        foo = "fo\ud800o".encode("utf-8", "surrogatepass")
-        exe += foo
-        with self.assertRaises(ImportError) as cm:
-            OxidizedFinder().path_hook(exe)
-        self.assertEqual(cm.exception.path, exe)
-
-    @unittest.expectedFailure  # https://github.com/dgrunwald/rust-cpython/issues/246
-    def test_bad_utf8_pkg_name_raises(self):
-        exe = sys.executable.encode("utf-8", "surrogatepass")
-        foo = "fo\ud800o".encode("utf-8", "surrogatepass")
-        exe = os.path.join(exe, foo)
-        with self.assertRaisesRegex(ImportError, "cannot decode") as cm:
-            OxidizedFinder().path_hook(exe)
-        self.assertIsInstance(cm.exception.__cause__, UnicodeDecodeError)
-        self.assertIn(foo, cm.exception.__cause__.object)
-        self.assertEqual(cm.exception.__cause__.encoding.lower(), "utf-8")
+            TypeError,
+            "'path' is an invalid keyword argument",
+            finder.find_spec,
+            "a.b",
+            path=None,
+        )
 
 
 if __name__ == "__main__":

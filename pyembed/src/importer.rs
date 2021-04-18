@@ -40,7 +40,7 @@ use {
         },
     },
     python3_sys as pyffi,
-    std::{path::Path, sync::Arc},
+    std::sync::Arc,
 };
 
 pub const OXIDIZED_IMPORTER_NAME_STR: &str = "oxidized_importer";
@@ -933,47 +933,144 @@ impl OxidizedFinder {
 // Path hooks support.
 impl OxidizedFinder {
     fn path_hook_impl(&self, py: Python, path: PyObject) -> PyResult<OxidizedPathEntryFinder> {
-        // Compute OxidizedPathEntryFinder::package
-        let pkg = {
-            let current_exe = self.state(py).get_resources_state().current_exe.clone();
-            let not_exe_err = || {
-                let msg = format!(
-                    "path {} does not begin in \'{}\' (if you're sure it does, check Python's file-system encoding)", &path, current_exe.display());
-                let mut err = PyErr::new::<ImportError, _>(py, msg);
-                let exc = err.instance(py);
-                if let Err(setattr_err) = exc.setattr(py, "path", path.clone_ref(py)) {
-                    setattr_err
-                } else {
-                    err
-                }
-            };
-            let pbuf = pyobject_to_pathbuf(py, path.clone_ref(py))?;
-            let mut p = pbuf.as_path();
-            // path could point "inside" current_exe. If we can't canonicalize,
-            // strip the last component and check again. (zipimporter does
-            // somethings similar)
-            if current_exe
-                != loop {
-                    match dunce::canonicalize(p) {
-                        Ok(abs_p) => break abs_p,
-                        Err(_) => p = p.parent().ok_or_else(not_exe_err)?,
-                    }
-                }
-            {
-                return Err(not_exe_err());
-            }
-            // unwrapping is safe because we already know p is the prefix of pbuf
-            OxidizedPathEntryFinder::parse_path_to_pkg(py, pbuf.strip_prefix(p).unwrap())?
-        };
+        self.path_hook_inner(py, path).map_err(|mut inner| {
+            let mut err =
+                PyErr::new::<ImportError, _>(py, "error running OxidizedFinder.path_hook");
 
-        let os = py.import("os")?;
-        let path = os.call(py, "fspath", (path,), None)?;
+            if let Err(err) = err.instance(py).setattr(py, "__suppress_context__", true) {
+                err
+            } else if let Err(err) = err
+                .instance(py)
+                .setattr(py, "__cause__", inner.instance(py))
+            {
+                err
+            } else {
+                err
+            }
+        })
+    }
+
+    fn path_hook_inner(
+        &self,
+        py: Python,
+        path_original: PyObject,
+    ) -> PyResult<OxidizedPathEntryFinder> {
+        // We respond to the following paths:
+        //
+        // * self.current_exe
+        // * virtual sub-directories under self.current_exe
+        //
+        // There is a mismatch between the ways that Rust and Python store paths.
+        // self.current_exe is a Rust PathBuf and came from Rust. We can get the raw
+        // OsString and know the raw bytes. But Python applies text encoding to
+        // paths. Normalizing between the 2 could be difficult, especially since
+        // Python module names can be quite literally any str value.
+        //
+        // We restrict accepted paths to Python str that are equal to
+        // self.current_exe or have it + a directory separator as a strict prefix.
+        // This leaves us with a suffix constituting the relative package path, which we
+        // can coerce to a Rust String easily, as Python str are Unicode.
+
+        // Only accept str.
+        let path = path_original.cast_as::<PyString>(py)?;
+
+        let current_exe = self.current_exe(py)?.cast_into::<PyString>(py)?;
+
+        let package = if path.as_object().compare(py, current_exe.as_object())?
+            == std::cmp::Ordering::Equal
+        {
+            "".to_string()
+        } else {
+            // Accept both directory separators as prefix match.
+            let unix_prefix = current_exe
+                .as_object()
+                .call_method(py, "__add__", ("/",), None)?;
+            let windows_prefix =
+                current_exe
+                    .as_object()
+                    .call_method(py, "__add__", ("\\",), None)?;
+
+            let prefix = PyTuple::new(py, &[unix_prefix, windows_prefix]);
+
+            if !path
+                .as_object()
+                .call_method(py, "startswith", (prefix,), None)?
+                .extract::<bool>(py)?
+            {
+                return Err(PyErr::new::<ValueError, _>(
+                    py,
+                    format!(
+                        "{} is not prefixed by {}",
+                        path.to_string_lossy(py),
+                        current_exe.to_string_lossy(py)
+                    ),
+                ));
+            }
+
+            // Ideally we'd strip the prefix in the domain of Python so we don't have
+            // to worry about text encoding. However, since we need to normalize the
+            // suffix to a Rust string anyway to facilitate filtering against UTF-8
+            // names, we go ahead and convert to Rust/UTF-8 and do the string
+            // operations in Rust.
+            //
+            // It is tempting to use os.fsencode() here, as sys.path entries are,
+            // well, paths. But since sys.path entries are meant to map to our
+            // path hook, we get to decide what their format is and we decide that
+            // any unicode encoding should be in UTF-8, not whatever the current
+            // filesystem encoding is set to. Since Rust won't handle surrogateescape
+            // that well, we use the "replace" error handling strategy to ensure a
+            // Rust string valid byte sequence.
+            let current_exe_bytes = current_exe
+                .as_object()
+                .call_method(py, "encode", ("utf-8", "replace"), None)?
+                .extract::<Vec<u8>>(py)?;
+            let path_bytes = path
+                .as_object()
+                .call_method(py, "encode", ("utf-8", "replace"), None)?
+                .extract::<Vec<u8>>(py)?;
+
+            // +1 for directory separator, which should always be 1 byte in UTF-8.
+            let path_suffix: &[u8] = &path_bytes[current_exe_bytes.len() + 1..];
+            let original_package_path = String::from_utf8(path_suffix.to_vec()).map_err(|e| {
+                PyErr::new::<ValueError, _>(
+                    py,
+                    format!("error coercing package suffix to Rust string: {}", e),
+                )
+            })?;
+
+            let package_path = original_package_path.replace('\\', "/");
+
+            // Ban leading and trailing directory separators.
+            if package_path.starts_with('/') || package_path.ends_with('/') {
+                return Err(PyErr::new::<ValueError, _>(py, format!("rejecting virtual sub-directory because package part contains leading or trailing directory separator: {}", original_package_path)));
+            }
+
+            // Ban consecutive directory separators.
+            if package_path.contains("//") {
+                return Err(PyErr::new::<ValueError, _>(
+                    py, format!("rejecting virtual sub-directory because it has consecutive directory separators: {}", original_package_path))
+                );
+            }
+
+            // Since we have to normalize to Python package form where dots are
+            // special, ban dots in special places.
+            if package_path
+                .split('/')
+                .any(|s| s.starts_with('.') || s.ends_with('.') || s.contains(".."))
+            {
+                return Err(PyErr::new::<ValueError, _>(
+                    py, format!("rejecting virtual sub-directory because package part contains illegal dot characters: {}", original_package_path)
+                ));
+            }
+
+            package_path.replace('/', ".")
+        };
 
         OxidizedPathEntryFinder::create_instance(
             py,
             OxidizedFinder::create_instance(py, self.state(py).clone())?,
-            path,
-            pkg,
+            path.clone_ref(py),
+            package,
         )
     }
 }
@@ -986,12 +1083,9 @@ py_class!(class OxidizedPathEntryFinder |py| {
     data finder: OxidizedFinder;
 
     // The sys.path value this instance was created with.
-    //
-    // Could be PyBytes or PyString.
-    data source_path: PyObject;
+    data source_path: PyString;
 
-    // If the entry of `path` is `os.path.join(sys.executable, "pkg", "mod")`,
-    // then `package` is `"pkg.mod"`.
+    // Sub-package we are limited to.
     data package: String;
 
     def find_spec(&self, fullname: &str, target: Option<PyModule> = None) -> PyResult<Option<PyObject>> {
@@ -1052,7 +1146,7 @@ impl OxidizedPathEntryFinder {
                 "find_spec",
                 (
                     fullname,
-                    PyList::new(py, &[self.source_path(py).clone_ref(py)]).as_object(),
+                    PyList::new(py, &[self.source_path(py).as_object().clone_ref(py)]).as_object(),
                     target,
                 ),
                 None,
@@ -1071,36 +1165,6 @@ impl OxidizedPathEntryFinder {
         // unwrap() is safe because pkgutil_modules_infos returns a PyList cast
         // into a PyObject.
         Ok(modules?.cast_into(py).unwrap())
-    }
-
-    // Transform b"pkg/mod" into "pkg.mod" on behalf of `OxidizedFinder::path_hook`.
-    // Raise an `ImportError` if decoding `path` fails.
-    fn parse_path_to_pkg(py: Python, path: &Path) -> PyResult<String> {
-        // Use Python's filesystem encoding to ensure correctly
-        // round-tripping the str Python package name from the
-        // potentially non-Unicode path.
-        // https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/V1_chap03.html#tag_03_170
-        // https://docs.microsoft.com/en-us/windows/win32/fileio/naming-a-file
-        Ok(crate::conversion::path_to_pyobject(py, path)?
-            .cast_as::<PyString>(py)?
-            .to_string(py)
-            .map_err(|mut unicode_err| {
-                // Need to raise an ImportError if can't decode. For
-                // clarity, we also attach the UnicodeDecodeError.
-                // https://docs.python.org/3/reference/import.html#path-entry-finders
-                let mut imp_err = PyErr::new::<ImportError, _>(py, "cannot decode path");
-                let imp_exc = imp_err.instance(py);
-                if let Err(err) = imp_exc.setattr(py, "__suppress_context__", true) {
-                    err
-                } else if let Err(err) = imp_exc.setattr(py, "__cause__", unicode_err.instance(py))
-                {
-                    err
-                } else {
-                    imp_err
-                }
-            })?
-            .replace("/", ".")
-            .replace('\\', "."))
     }
 }
 
@@ -2128,18 +2192,6 @@ pub(crate) fn install_path_hook(py: Python, finder: &PyObject, sys: &PyModule) -
 mod test_path_entry_finder {
     use {super::*, rusty_fork::rusty_fork_test};
 
-    fn get_py(fsencoding: Option<&str>) -> crate::MainPythonInterpreter {
-        let mut config = crate::OxidizedPythonInterpreterConfig::default();
-        config.interpreter_config.parse_argv = Some(false);
-        config.set_missing_path_configuration = false;
-        config.oxidized_importer = true;
-        if fsencoding.is_some() {
-            config.interpreter_config.filesystem_encoding = fsencoding.map(|e| e.to_string());
-        }
-
-        crate::MainPythonInterpreter::new(config).unwrap()
-    }
-
     rusty_fork_test! {
         #[test]
         fn is_visible() {
@@ -2170,46 +2222,6 @@ mod test_path_entry_finder {
 
             // Unicode is fully supported.
             assert!(is_visible("חבילות", "חבילות.מודול"));
-        }
-
-        /// OxidizedPathEntryFinder::parse_path_to_pkg re-encodes the package part of the
-        /// path with Python's filesystem encoding, rather than forcing UTF-8.
-        ///
-        /// Decoding "\u3030" (WAVY DASH) into UTF-16-LE and encoding the result
-        /// with UTF-8 returns the two-character sequence "00". So we set the
-        /// filesystem encoding to UTF-16-LE, pass in os.fsencode("\u3030"), and
-        /// ensure we get "\u3030" back out.
-        #[test]
-        fn parse_path_to_pkg_filesystem_encoding() {
-            // Verify assumptions about the test itself.
-            const WAVY_DASH: &str = "〰";
-            const WAVY_DASH_CODE: u16 = 0x3030;
-            assert_eq!(WAVY_DASH, "\u{3030}");
-            assert_eq!(
-                WAVY_DASH.encode_utf16().collect::<Vec<u16>>(),
-                [WAVY_DASH_CODE]
-            );
-            assert_eq!(WAVY_DASH_CODE.to_be_bytes(), [48, 48]); // endianness
-            assert_eq!(WAVY_DASH_CODE.to_le_bytes(), [48, 48]); // doesn't matter
-            assert_eq!(std::str::from_utf8(&[48, 48]).unwrap(), "00");
-
-            let wavy_dash = {
-                // Obtain a Python interpreter with filesystem encoding set to UTF-16-LE
-                let mut interp = get_py(Some("UTF-16-LE"));
-                let py = interp.acquire_gil();
-                assert_eq!(
-                    py.import("sys")
-                        .unwrap()
-                        .call(py, "getfilesystemencoding", cpython::NoArgs, None)
-                        .unwrap()
-                        .to_string(),
-                    "utf-16-le"
-                );
-                OxidizedPathEntryFinder::parse_path_to_pkg(py, Path::new("00")).unwrap()
-            };
-
-            // The actual test.
-            assert_eq!(wavy_dash, WAVY_DASH);
         }
     }
 }

@@ -345,7 +345,7 @@ pub(crate) fn find_pkg_resources_distributions<'a>(
     state: Arc<ImporterState>,
     search_path: &str,
     _only: bool,
-    _path_finder_path: &PyObject,
+    _path_finder_path: &PyString,
     _path_finder_package: &str,
 ) -> PyResult<PyList> {
     let resources = &state.get_resources_state().resources;

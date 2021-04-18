@@ -226,7 +226,9 @@ The ``OxidizedFinder`` Class
         `PathEntryFinder <https://docs.python.org/3/library/importlib.html#importlib.abc.PathEntryFinder>`_
         from a ``sys.path`` entry. See :ref:`oxidized_finder_path_hooks` for details.
 
-        Raises ``ImportError`` if the given path isn't serviceable.
+        Raises ``ImportError`` if the given path isn't serviceable. The exception
+        should have ``.__cause__`` set to an inner exception with more details on why
+        the path was rejected.
 
 The ``OxidizedPathEntryFinder`` Class
 =====================================
