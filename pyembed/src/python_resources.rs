@@ -65,6 +65,30 @@ where
         }
 }
 
+/// Whether a resource name matches a package target.
+///
+/// This function is used for filtering through resources at a specific
+/// level in the package hierarchy, as defined by `package_target`.
+///
+/// `None` means the root level and will only yield top-level elements.
+/// `Some(T)` defines a specific package level.
+///
+/// Note that a resource is emitted by its parent. e.g. the `foo` resource
+/// would be emitted by the `None` target and `foo.bar` would be emitted by
+/// the `foo` target.
+///
+/// Targeting resources at specific levels in the package hierarchy is
+/// likely encountered in path entry finders and iter_modules().
+pub(crate) fn name_at_package_hierarchy(fullname: &str, package_target: Option<&str>) -> bool {
+    match package_target {
+        None => !fullname.contains('.'),
+        Some(package) => match fullname.strip_prefix(&format!("{}.", package)) {
+            Some(suffix) => !suffix.contains('.'),
+            None => false,
+        },
+    }
+}
+
 /// Describes the type of an importable Python module.
 #[derive(Debug, PartialEq)]
 pub(crate) enum ModuleFlavor {
@@ -1038,43 +1062,7 @@ impl<'a> PythonResourcesState<'a, u8> {
             .filter(|r| {
                 r.is_extension_module || (r.is_module && is_module_importable(r, optimize_level))
             })
-            .filter(|r| {
-                // The logic here is worth explaining.
-                //
-                // iter_modules() implicitly targets the path (read: directory
-                // for PathFinder) associated with a finder. And it only yields
-                // entries in that directory. However, a foo/pkg/__init__.py file
-                // would yield a hit for a finder bound to `foo/`.
-                //
-                // The empty filter is simply: it yields all top-level items
-                // (those without a . in the name).
-                //
-                // When a package filter matches a package, we want to obtain
-                // its children. But not the package itself.
-                //
-                // When a package filter matches a leaf module, it should return
-                // nothing, as its parent should have emitted it.
-
-                match package_filter {
-                    None => {
-                        // Empty package filter only returns top-level elements.
-                        !r.name.contains('.')
-                    }
-                    Some(package_filter) => {
-                        if &r.name == package_filter {
-                            // Exact match should have been yielded by parent.
-                            false
-                        } else if let Some(suffix) =
-                            r.name.strip_prefix(&format!("{}.", package_filter))
-                        {
-                            // We're a child of the filter. Return immediate children only.
-                            !suffix.contains('.')
-                        } else {
-                            false
-                        }
-                    }
-                }
-            })
+            .filter(|r| name_at_package_hierarchy(&r.name, package_filter))
             .map(|r| {
                 // We always take the leaf-most name.
                 let name = r.name.rsplit('.').next().unwrap();
