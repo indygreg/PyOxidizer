@@ -42,6 +42,9 @@ def make_in_memory_finder():
         "METADATA": b"Name: package0\nVersion: 1.0\n",
         "entry_points.txt": b"[console_scripts]\ncli = package0:cli\n",
     }
+    r.in_memory_package_resources = {
+        "file0": b"foo",
+    }
     f.add_resource(r)
 
     r = OxidizedResource()
@@ -62,6 +65,9 @@ def make_in_memory_finder():
     r.in_memory_source = b"pass"
     r.in_memory_distribution_resources = {
         "METADATA": b"Name: p0child0\nVersion: 1.0\n",
+    }
+    r.in_memory_package_resources = {
+        "childfile0": b"foo",
     }
     f.add_resource(r)
 
@@ -385,6 +391,33 @@ class TestImporterPkgResources(unittest.TestCase):
         self.assertEqual(
             list(pkg_resources.find_distributions(search_path, only=True)), []
         )
+
+    def test_resource_manager(self):
+        install_distributions_finder()
+
+        self.assertTrue(pkg_resources.resource_exists("package0", "file0"))
+        self.assertTrue(
+            pkg_resources.resource_exists("package0.p0child0", "childfile0")
+        )
+        self.assertFalse(pkg_resources.resource_exists("package0", "missing"))
+        self.assertFalse(pkg_resources.resource_exists("package0.p0child0", "missing"))
+
+        with self.assertRaises(ModuleNotFoundError):
+            pkg_resources.resource_exists("missing_package", "irrelevant")
+
+        self.assertIsInstance(
+            pkg_resources.resource_stream("package0", "file0"), io.BytesIO
+        )
+        self.assertIsInstance(
+            pkg_resources.resource_stream("package0.p0child0", "childfile0"), io.BytesIO
+        )
+        with self.assertRaises(OSError):
+            pkg_resources.resource_stream("package0", "missing")
+        with self.assertRaises(OSError):
+            pkg_resources.resource_stream("package0.p0child0", "missing")
+
+        with self.assertRaises(NotImplementedError):
+            pkg_resources.resource_filename("package0", "file0")
 
 
 if __name__ == "__main__":
