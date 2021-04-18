@@ -220,7 +220,7 @@ class TestImporterPathEntryFinder(unittest.TestCase):
         self.assert_find_spec_nested(os.path.join(CURRENT_EXE, "on"))
 
     def assert_find_spec_top_level(self, path: PathLike) -> None:
-        finder = self.finder(path, "")
+        finder = self.finder(path, None)
         modules = [("a", True), ("one", True), ("on", True)]
         self.assertCountEqual(finder.iter_modules(), modules)
 

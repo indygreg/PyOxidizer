@@ -924,7 +924,7 @@ impl OxidizedFinder {
             None
         };
 
-        resources_state.pkgutil_modules_infos(py, "", prefix, state.optimize_level)
+        resources_state.pkgutil_modules_infos(py, None, prefix, state.optimize_level)
     }
 }
 
@@ -974,10 +974,10 @@ impl OxidizedFinder {
 
         let current_exe = self.current_exe(py)?.cast_into::<PyString>(py)?;
 
-        let package = if path.as_object().compare(py, current_exe.as_object())?
+        let target_package = if path.as_object().compare(py, current_exe.as_object())?
             == std::cmp::Ordering::Equal
         {
-            "".to_string()
+            None
         } else {
             // Accept both directory separators as prefix match.
             let unix_prefix = current_exe
@@ -1061,14 +1061,18 @@ impl OxidizedFinder {
                 ));
             }
 
-            package_path.replace('/', ".")
+            if package_path.is_empty() {
+                None
+            } else {
+                Some(package_path.replace('/', "."))
+            }
         };
 
         OxidizedPathEntryFinder::create_instance(
             py,
             OxidizedFinder::create_instance(py, self.state(py).clone())?,
             path.clone_ref(py),
-            package,
+            target_package,
         )
     }
 }
@@ -1264,8 +1268,8 @@ py_class!(class OxidizedPathEntryFinder |py| {
 
     // Name of package being targeted.
     //
-    // Empty string is the top-level package.
-    data target_package: String;
+    // None is the top-level. Some(T) is a specific package in the hierarchy.
+    data target_package: Option<String>;
 
     def find_spec(&self, fullname: &str, target: Option<PyModule> = None) -> PyResult<Option<PyObject>> {
         self.find_spec_impl(py, fullname, target)
@@ -1280,7 +1284,7 @@ py_class!(class OxidizedPathEntryFinder |py| {
     }
 
     // Private getter. Just for testing.
-    @property def _package(&self) -> PyResult<String> {
+    @property def _package(&self) -> PyResult<Option<String>> {
         Ok(self.target_package(py).clone())
     }
 });
@@ -1291,9 +1295,11 @@ impl OxidizedPathEntryFinder {
     /// In other words, should this instance expose a resource with the given
     /// name.
     fn matches_package_filter(&self, py: Python, fullname: &str) -> bool {
-        let prefix = self.target_package(py);
-
-        prefix.is_empty() || prefix == fullname || fullname.starts_with(&format!("{}.", prefix))
+        if let Some(package) = self.target_package(py) {
+            package == fullname || fullname.starts_with(&format!("{}.", package))
+        } else {
+            true
+        }
     }
 
     fn find_spec_impl(
@@ -1324,7 +1330,7 @@ impl OxidizedPathEntryFinder {
         let state = self.finder(py).state(py);
         let modules = state.get_resources_state().pkgutil_modules_infos(
             py,
-            self.target_package(py),
+            self.target_package(py).as_ref().map(|s| s.as_str()),
             Some(prefix.to_string()),
             state.optimize_level,
         );
@@ -1882,7 +1888,7 @@ fn pkg_resources_find_distributions(
         state.clone(),
         &path_item.to_string_lossy(py),
         only,
-        finder.target_package(py),
+        finder.target_package(py).as_ref().map(|s| s.as_str()),
     )
 }
 

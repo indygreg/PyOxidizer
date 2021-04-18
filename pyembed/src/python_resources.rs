@@ -1028,7 +1028,7 @@ impl<'a> PythonResourcesState<'a, u8> {
     pub fn pkgutil_modules_infos(
         &self,
         py: Python,
-        package_filter: &str,
+        package_filter: Option<&str>,
         prefix: Option<String>,
         optimize_level: OptimizeLevel,
     ) -> PyResult<PyObject> {
@@ -1055,17 +1055,24 @@ impl<'a> PythonResourcesState<'a, u8> {
                 // When a package filter matches a leaf module, it should return
                 // nothing, as its parent should have emitted it.
 
-                if package_filter.is_empty() {
-                    // Empty package filter only returns top-level elements.
-                    !r.name.contains('.')
-                } else if &r.name == package_filter {
-                    // Exact match should have been yielded by parent.
-                    false
-                } else if let Some(suffix) = r.name.strip_prefix(&format!("{}.", package_filter)) {
-                    // We're a child of the filter. Return immediate children only.
-                    !suffix.contains('.')
-                } else {
-                    false
+                match package_filter {
+                    None => {
+                        // Empty package filter only returns top-level elements.
+                        !r.name.contains('.')
+                    }
+                    Some(package_filter) => {
+                        if &r.name == package_filter {
+                            // Exact match should have been yielded by parent.
+                            false
+                        } else if let Some(suffix) =
+                            r.name.strip_prefix(&format!("{}.", package_filter))
+                        {
+                            // We're a child of the filter. Return immediate children only.
+                            !suffix.contains('.')
+                        } else {
+                            false
+                        }
+                    }
                 }
             })
             .map(|r| {

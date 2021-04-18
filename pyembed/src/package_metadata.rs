@@ -344,7 +344,7 @@ pub(crate) fn find_pkg_resources_distributions<'a>(
     state: Arc<ImporterState>,
     search_path: &str,
     only: bool,
-    package_filter: &str,
+    package_filter: Option<&str>,
 ) -> PyResult<PyList> {
     let resources = &state.get_resources_state().resources;
 
@@ -362,20 +362,24 @@ pub(crate) fn find_pkg_resources_distributions<'a>(
         .filter(|r| {
             if only {
                 // Only means to limit to packages that are immediate children of `package_filter`.
-                if package_filter.is_empty() {
-                    !r.name.contains('.')
-                } else if &r.name == package_filter {
-                    false
-                } else if let Some(suffix) = r.name.strip_prefix(&format!("{}.", package_filter)) {
-                    !suffix.contains('.')
-                } else {
-                    false
+                match package_filter {
+                    None => !r.name.contains('.'),
+                    Some(package_filter) => {
+                        if &r.name == package_filter {
+                            false
+                        } else if let Some(suffix) =
+                            r.name.strip_prefix(&format!("{}.", package_filter))
+                        {
+                            !suffix.contains('.')
+                        } else {
+                            false
+                        }
+                    }
                 }
             } else {
-                if package_filter.is_empty() {
-                    true
-                } else {
-                    r.name.starts_with(&format!("{}.", package_filter))
+                match package_filter {
+                    None => true,
+                    Some(package_filter) => r.name.starts_with(&format!("{}.", package_filter)),
                 }
             }
         })
