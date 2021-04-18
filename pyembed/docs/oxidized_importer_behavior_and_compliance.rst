@@ -264,8 +264,11 @@ resources indexed by that :py:class:`OxidizedFinder`.
 When :py:meth:`path_hook <OxidizedFinder.path_hook>` is called with
 a virtual sub-directory of :py:attr:`OxidizedFinder.current_exe`, the same
 thing happens except the returned :py:class:`OxidizedPathEntryFinder`
-will only service resources that are directly contained in a Python
-package corresponding to that virtual sub-directory.
+will only service resources that are contained in a Python package
+corresponding to that virtual sub-directory. In other words, the
+virtual sub-directory acts as a filter. The filter is matched
+if a resource name matches the filter exactly or begins with
+the filter value + ``.``.
 
 When virtual sub-directories are present, the ``str`` is validated
 and parsed similarly to the following:
@@ -308,8 +311,9 @@ semantically correct from the perspective of ``oxidized_importer``.
 
 As an example, if ``path`` were
 ``os.path.join(finder.current_exe, "a")``, the
-finder would only service modules ``a``, ``a.b``, ``a.*``, but not
-``b``, ``a.b.c``, or ``a.b.*``.
+finder would only service modules named ``a`` or beginning with ``a.``.
+So ``a``, ``a.b``, and ``a.b.c`` would all match but ``b`` and ``b.d``
+would not.
 
 For best results, use ``os.path.join(finder.current_exe, str)`` to define
 ``sys.path`` values that will be accepted by the path hook.

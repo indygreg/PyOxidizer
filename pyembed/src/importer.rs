@@ -1112,6 +1112,16 @@ py_class!(class OxidizedPathEntryFinder |py| {
 });
 
 impl OxidizedPathEntryFinder {
+    /// Whether a given resource name matches the package filter.
+    ///
+    /// In other words, should this instance expose a resource with the given
+    /// name.
+    fn matches_package_filter(&self, py: Python, fullname: &str) -> bool {
+        let prefix = self.package(py);
+
+        prefix.is_empty() || prefix == fullname || fullname.starts_with(&format!("{}.", prefix))
+    }
+
     /// Whether a given resource name is considered visible for this instance.
     ///
     /// `package` is guaranteed to be well-formed per path hook validation rules.
@@ -1142,7 +1152,7 @@ impl OxidizedPathEntryFinder {
         fullname: &str,
         target: Option<PyModule>,
     ) -> PyResult<Option<PyObject>> {
-        if !Self::is_visible(self.package(py), fullname) {
+        if !self.matches_package_filter(py, fullname) {
             return Ok(Some(py.None()));
         }
         self.finder(py)

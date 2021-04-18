@@ -113,9 +113,9 @@ class TestImporterPathEntryFinder(unittest.TestCase):
         # are prefixed by the path.
         self.assertIsNone(finder.find_spec("one.two"))
         # Return None for modules shallower than the search path
-        self.assertIsNone(finder.find_spec("on"))
+        self.assert_spec(finder.find_spec("on"), "on", is_pkg=True)
         # Return None for modules deeper than the search path
-        self.assertIsNone(finder.find_spec("on.tשo.۳"))
+        self.assert_spec(finder.find_spec("on.tשo.۳"), "on.tשo.۳", is_pkg=False)
         # Return a correct ModuleSpec for modules in the search path
         self.assert_spec(finder.find_spec("on.tשo"), "on.tשo", is_pkg=True)
         # Find the same module from iter_modules(), without and with a prefix
@@ -223,10 +223,21 @@ class TestImporterPathEntryFinder(unittest.TestCase):
         finder = self.finder(path, "")
         modules = [("a", True), ("one", True), ("on", True)]
         self.assertCountEqual(finder.iter_modules(), modules)
+
+        modules = [
+            ("a", True),
+            ("a.b", True),
+            ("a.b.c", False),
+            ("one", True),
+            ("one.two", True),
+            ("one.two.three", False),
+            ("on", True),
+            ("on.tשo", True),
+            ("on.tשo.۳", False),
+        ]
+
         for name, is_pkg in modules:
             self.assert_spec(finder.find_spec(name), name, is_pkg)
-        for name in "a.b", "a.b.c", "on.tשo", "on.tשo.۳":
-            self.assertIsNone(finder.find_spec(name))
 
     def test_find_spec_top_level(self):
         self.assert_find_spec_top_level(CURRENT_EXE)
