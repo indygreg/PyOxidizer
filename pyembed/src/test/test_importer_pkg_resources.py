@@ -323,7 +323,6 @@ class TestImporterPkgResources(unittest.TestCase):
         self.assert_package0_grandchild0(dists[2])
         self.assert_package1(dists[3])
 
-    @unittest.expectedFailure
     def test_find_distributions_top_level_only_true(self):
         f = install_distributions_finder()
         search_path = f.current_exe
@@ -333,7 +332,6 @@ class TestImporterPkgResources(unittest.TestCase):
         self.assert_package0(dists[0])
         self.assert_package1(dists[1])
 
-    @unittest.expectedFailure
     def test_find_distributions_search_path_missing(self):
         f = install_distributions_finder()
         search_path = os.path.join(f.current_exe, "missing_package")
@@ -344,7 +342,6 @@ class TestImporterPkgResources(unittest.TestCase):
         dists = list(pkg_resources.find_distributions(search_path, only=True))
         self.assertEqual(dists, [])
 
-    @unittest.expectedFailure
     def test_find_distributions_search_path_child_only_false(self):
         f = install_distributions_finder()
         search_path = os.path.join(f.current_exe, "package0")
@@ -354,7 +351,6 @@ class TestImporterPkgResources(unittest.TestCase):
         self.assert_package0_child0(dists[0])
         self.assert_package0_grandchild0(dists[1])
 
-    @unittest.expectedFailure
     def test_find_distributions_search_path_child_only_true(self):
         f = install_distributions_finder()
         search_path = os.path.join(f.current_exe, "package0")
@@ -363,7 +359,6 @@ class TestImporterPkgResources(unittest.TestCase):
         self.assertEqual(len(dists), 1)
         self.assert_package0_child0(dists[0])
 
-    @unittest.expectedFailure
     def test_find_distributions_search_path_grandchild_only_false(self):
         f = install_distributions_finder()
         search_path = os.path.join(f.current_exe, "package0", "p0child0")
@@ -372,7 +367,6 @@ class TestImporterPkgResources(unittest.TestCase):
         self.assertEqual(len(dists), 1)
         self.assert_package0_grandchild0(dists[0])
 
-    @unittest.expectedFailure
     def test_find_distributions_search_path_grandchild_only_true(self):
         f = install_distributions_finder()
         search_path = os.path.join(f.current_exe, "package0", "p0child0")
@@ -381,7 +375,6 @@ class TestImporterPkgResources(unittest.TestCase):
         self.assertEqual(len(dists), 1)
         self.assert_package0_grandchild0(dists[0])
 
-    @unittest.expectedFailure
     def test_find_distributions_search_path_too_deep(self):
         f = install_distributions_finder()
         search_path = os.path.join(f.current_exe, "package0", "p0child0", "grandchild0")

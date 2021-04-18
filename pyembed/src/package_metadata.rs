@@ -336,17 +336,15 @@ pub(crate) fn find_distributions(
 ///
 /// `state` meta path importer state.
 /// `search_path` is the `sys.path` item being evaluated.
-/// `only` if True only yield items that would be importable if `search_item` were
+/// `only` if True only yield items that would be importable if `search_path` were
 /// on `sys.path`. Otherwise yields items that are in or under `search_path`.
-/// `path_finder_path` is the path from the `OxidizedPathEntryFinder`.
-/// `path_finder_package` is the package from the `OxidizedPathEntryFinder`.
+/// `package_filter` is the package filter from the `OxidizedPathEntryFinder`.
 pub(crate) fn find_pkg_resources_distributions<'a>(
     py: Python,
     state: Arc<ImporterState>,
     search_path: &str,
-    _only: bool,
-    _path_finder_path: &PyString,
-    _path_finder_package: &str,
+    only: bool,
+    package_filter: &str,
 ) -> PyResult<PyList> {
     let resources = &state.get_resources_state().resources;
 
@@ -361,7 +359,26 @@ pub(crate) fn find_pkg_resources_distributions<'a>(
                 && (r.in_memory_distribution_resources.is_some()
                     || r.relative_path_distribution_resources.is_some())
         })
-        // TODO perform path filtering
+        .filter(|r| {
+            if only {
+                // Only means to limit to packages that are immediate children of `package_filter`.
+                if package_filter.is_empty() {
+                    !r.name.contains('.')
+                } else if &r.name == package_filter {
+                    false
+                } else if let Some(suffix) = r.name.strip_prefix(&format!("{}.", package_filter)) {
+                    !suffix.contains('.')
+                } else {
+                    false
+                }
+            } else {
+                if package_filter.is_empty() {
+                    true
+                } else {
+                    r.name.starts_with(&format!("{}.", package_filter))
+                }
+            }
+        })
         .map(|r| {
             let oxidized_distribution =
                 OxidizedDistribution::create_instance(py, state.clone(), r.name.to_string())?;

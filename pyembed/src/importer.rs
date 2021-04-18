@@ -1860,6 +1860,18 @@ fn pkg_resources_find_distributions(
     }
 
     let finder = importer.cast_as::<OxidizedPathEntryFinder>(py)?;
+
+    // The path_item we're handling should match what was registered to this path
+    // entry finder. Reject if that's not the case.
+    if finder
+        .source_path(py)
+        .as_object()
+        .compare(py, path_item.as_object())?
+        != std::cmp::Ordering::Equal
+    {
+        return Ok(PyList::new(py, &[]));
+    }
+
     let meta_finder = finder.finder(py);
     let state = meta_finder.state(py);
 
@@ -1868,7 +1880,6 @@ fn pkg_resources_find_distributions(
         state.clone(),
         &path_item.to_string_lossy(py),
         only,
-        finder.source_path(py),
         finder.package(py),
     )
 }

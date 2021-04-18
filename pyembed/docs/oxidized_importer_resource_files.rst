@@ -267,15 +267,15 @@ responds to ``sys.path`` entries via the ``sys.path_hooks`` mechanism.
    Distribution resolution support requires both
    :py:meth:`OxidizedFinder.path_hook <OxidizedFinder.path_hook>` to be
    registered on ``sys.path_hook`` as well as ``sys.path`` to contain an
-   entry that this function will respond to. See the linked function
-   documentation for more.
+   entry that this function will respond to. See
+   :ref:`oxidized_finder_path_hooks` for more.
 
    If either of these aren't present, ``pkg_resources`` will fail to call
    into ``oxidized_importer`` to resolve distributions.
 
-:py:func:`pkg_resources_find_distributions` does not currently
-implement any filtering and always returns all packages tracked by the
-:py:class:`OxidizedFinder` the loader was derived from. This behavior is wrong.
+:py:func:`pkg_resources_find_distributions` should properly apply
+path filtering and the ``only`` flag, per the behavior documented by
+``pkg_resources``.
 
 Metadata and Resource Resolving
 -------------------------------
