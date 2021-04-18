@@ -3,7 +3,10 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    crate::importer::{create_oxidized_pkg_resources_provider, ImporterState},
+    crate::{
+        importer::{create_oxidized_pkg_resources_provider, ImporterState},
+        python_resources::{name_at_package_hierarchy, name_within_package_hierarchy},
+    },
     cpython::{
         exc::{IOError, NotImplementedError, ValueError},
         py_class, NoArgs, ObjectProtocol, PyBytes, PyClone, PyDict, PyErr, PyList, PyModule,
@@ -338,13 +341,13 @@ pub(crate) fn find_distributions(
 /// `search_path` is the `sys.path` item being evaluated.
 /// `only` if True only yield items that would be importable if `search_path` were
 /// on `sys.path`. Otherwise yields items that are in or under `search_path`.
-/// `package_filter` is the package filter from the `OxidizedPathEntryFinder`.
+/// `package_target` is the package target from the `OxidizedPathEntryFinder`.
 pub(crate) fn find_pkg_resources_distributions<'a>(
     py: Python,
     state: Arc<ImporterState>,
     search_path: &str,
     only: bool,
-    package_filter: Option<&str>,
+    package_target: Option<&str>,
 ) -> PyResult<PyList> {
     let resources = &state.get_resources_state().resources;
 
@@ -361,26 +364,9 @@ pub(crate) fn find_pkg_resources_distributions<'a>(
         })
         .filter(|r| {
             if only {
-                // Only means to limit to packages that are immediate children of `package_filter`.
-                match package_filter {
-                    None => !r.name.contains('.'),
-                    Some(package_filter) => {
-                        if &r.name == package_filter {
-                            false
-                        } else if let Some(suffix) =
-                            r.name.strip_prefix(&format!("{}.", package_filter))
-                        {
-                            !suffix.contains('.')
-                        } else {
-                            false
-                        }
-                    }
-                }
+                name_at_package_hierarchy(&r.name, package_target)
             } else {
-                match package_filter {
-                    None => true,
-                    Some(package_filter) => r.name.starts_with(&format!("{}.", package_filter)),
-                }
+                name_within_package_hierarchy(&r.name, package_target)
             }
         })
         .map(|r| {

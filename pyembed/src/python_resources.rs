@@ -89,6 +89,19 @@ pub(crate) fn name_at_package_hierarchy(fullname: &str, package_target: Option<&
     }
 }
 
+/// Whether a resource name is within a given package hierarchy.
+///
+/// This is like [name_at_package_hierarchy] except non-immediate descendants
+/// of the target package match. The `None` target matches everything.
+/// `fullname == package_target` will never match, as it should be matched
+/// by its parent.
+pub(crate) fn name_within_package_hierarchy(fullname: &str, package_target: Option<&str>) -> bool {
+    match package_target {
+        None => true,
+        Some(package) => fullname.starts_with(&format!("{}.", package)),
+    }
+}
+
 /// Describes the type of an importable Python module.
 #[derive(Debug, PartialEq)]
 pub(crate) enum ModuleFlavor {
