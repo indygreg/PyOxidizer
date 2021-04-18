@@ -20,6 +20,7 @@ members = [
     'tugger-licensing',
     'tugger-licensing-net',
     'tugger-rpm',
+    'tugger-rust-toolchain',
     'tugger-snapcraft',
     'tugger-windows',
     'tugger-windows-codesign',

@@ -3610,6 +3610,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "tugger-rust-toolchain"
+version = "0.1.0-pre"
+
+[[package]]
 name = "tugger-snapcraft"
 version = "0.4.0-pre"
 dependencies = [
