@@ -1022,6 +1022,10 @@ impl<'a> PythonResourcesState<'a, u8> {
     /// Obtain a PyList of pkgutil.ModuleInfo for known resources.
     ///
     /// This is intended to be used as the implementation for Finder.iter_modules().
+    ///
+    /// `predicate` receives the name of the resource being operated on. It returns
+    /// `Some` if the resource should be yield and `None` if not. The function can
+    /// also translate the resource into a different name.
     pub fn pkgutil_modules_infos<P>(
         &self,
         py: Python,
@@ -1030,7 +1034,7 @@ impl<'a> PythonResourcesState<'a, u8> {
         predicate: P,
     ) -> PyResult<PyObject>
     where
-        P: Fn(&str) -> bool,
+        P: Fn(&str) -> Option<String>,
     {
         let infos: PyResult<Vec<PyObject>> = self
             .resources
@@ -1038,13 +1042,12 @@ impl<'a> PythonResourcesState<'a, u8> {
             .filter(|r| {
                 r.is_extension_module || (r.is_module && is_module_importable(r, optimize_level))
             })
-            .filter(|r| predicate(&r.name))
-            .map(|r| {
-                let name = r.name.rsplit('.').take(1).next().unwrap();
+            .filter_map(|r| predicate(&r.name).map(|name| (name, r)))
+            .map(|(name, r)| {
                 let name = if let Some(prefix) = &prefix {
                     format!("{}{}", prefix, name)
                 } else {
-                    name.to_string()
+                    name
                 };
 
                 let name = name.to_py_object(py).into_object();

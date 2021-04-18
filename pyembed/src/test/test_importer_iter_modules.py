@@ -110,6 +110,7 @@ class TestImporterIterModules(unittest.TestCase):
 
     def test_iter_modules_nested(self):
         self._make_package("a.b")
+        self._make_package("a.b.c")
         (self.td / "one.py").touch()
 
         f = self._finder_from_td()

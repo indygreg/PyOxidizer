@@ -925,7 +925,12 @@ impl OxidizedFinder {
         };
 
         resources_state.pkgutil_modules_infos(py, prefix, state.optimize_level, |name| {
-            OxidizedPathEntryFinder::is_visible("", name)
+            // Only return top-level modules.
+            if name.contains(".") {
+                None
+            } else {
+                Some(name.to_string())
+            }
         })
     }
 }
@@ -1160,7 +1165,15 @@ impl OxidizedPathEntryFinder {
             py,
             Some(prefix.to_string()),
             state.optimize_level,
-            |name| Self::is_visible(self.package(py), name),
+            |name| {
+                if Self::is_visible(self.package(py), name) {
+                    // is_visible is only true for immediate children. So taking
+                    // the last component is safe.
+                    Some(name.rsplit('.').take(1).next().unwrap().to_string())
+                } else {
+                    None
+                }
+            },
         );
         // unwrap() is safe because pkgutil_modules_infos returns a PyList cast
         // into a PyObject.
