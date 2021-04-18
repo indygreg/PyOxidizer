@@ -924,14 +924,7 @@ impl OxidizedFinder {
             None
         };
 
-        resources_state.pkgutil_modules_infos(py, prefix, state.optimize_level, |name| {
-            // Only return top-level modules.
-            if name.contains(".") {
-                None
-            } else {
-                Some(name.to_string())
-            }
-        })
+        resources_state.pkgutil_modules_infos(py, "", prefix, state.optimize_level)
     }
 }
 
@@ -1122,30 +1115,6 @@ impl OxidizedPathEntryFinder {
         prefix.is_empty() || prefix == fullname || fullname.starts_with(&format!("{}.", prefix))
     }
 
-    /// Whether a given resource name is considered visible for this instance.
-    ///
-    /// `package` is guaranteed to be well-formed per path hook validation rules.
-    ///
-    /// `name` is considered _visible_ in `package` if `name` is in the first
-    /// level of the package. The computation is purely textual. See this
-    /// module's `test_path_entry_finder::is_visible` test.
-    fn is_visible(package: &str, name: &str) -> bool {
-        // This implementation can be simplified when str::rsplit_once stabilize
-        // https://doc.rust-lang.org/std/primitive.str.html#method.rsplit_once
-        let mut split = name.rsplitn(2, '.');
-        match split.next() {
-            Some(module) if !module.is_empty() => {}
-            _ => {
-                return false;
-            }
-        }
-        match split.next() {
-            Some(pkg) if !package.is_empty() && pkg == package => true,
-            None if package.is_empty() => true,
-            _ => false,
-        }
-    }
-
     fn find_spec_impl(
         &self,
         py: Python,
@@ -1174,17 +1143,9 @@ impl OxidizedPathEntryFinder {
         let state = self.finder(py).state(py);
         let modules = state.get_resources_state().pkgutil_modules_infos(
             py,
+            self.package(py),
             Some(prefix.to_string()),
             state.optimize_level,
-            |name: &str| {
-                if Self::is_visible(self.package(py), name) {
-                    // is_visible is only true for immediate children. So taking
-                    // the last component is safe.
-                    Some(name.rsplit('.').take(1).next().unwrap().to_string())
-                } else {
-                    None
-                }
-            },
         );
         // unwrap() is safe because pkgutil_modules_infos returns a PyList cast
         // into a PyObject.
@@ -2210,36 +2171,4 @@ pub(crate) fn install_path_hook(py: Python, finder: &PyObject, sys: &PyModule) -
     sys.get(py, "path_hooks")?
         .call_method(py, "insert", (0, hook), None)
         .map(|_| ())
-}
-
-#[cfg(test)]
-mod test_path_entry_finder {
-    use {super::*, rusty_fork::rusty_fork_test};
-
-    rusty_fork_test! {
-        #[test]
-        fn is_visible() {
-            let is_visible = OxidizedPathEntryFinder::is_visible;
-            // The empty package name allows top-level imports.
-            assert!(is_visible("", "importlib"));
-
-            // Any module on the first nesting level of a package are visible.
-            // panic!("am i alive?")
-            assert!(is_visible("importlib", "importlib.resources"));
-            assert!(is_visible("importlib", "importlib.machinery"));
-            assert!(is_visible("importlib", "importlib._private"));
-
-            // Modules a level lower or higher than the first level inside a package are invisible.
-            assert!(!is_visible("importlib", "importlib.machinery.internal"));
-            assert!(!is_visible("", "importlib.resources"));
-            assert!(!is_visible("importlib", "importlib"));
-
-            // Modules in different packages than `package` are invisible.
-            assert!(!is_visible("idlelib", "importlib.resources"));
-            assert!(!is_visible("imp", "importlib.resources"));
-
-            // Unicode is fully supported.
-            assert!(is_visible("חבילות", "חבילות.מודול"));
-        }
-    }
 }

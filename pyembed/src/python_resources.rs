@@ -1023,31 +1023,59 @@ impl<'a> PythonResourcesState<'a, u8> {
     ///
     /// This is intended to be used as the implementation for Finder.iter_modules().
     ///
-    /// `predicate` receives the name of the resource being operated on. It returns
-    /// `Some` if the resource should be yield and `None` if not. The function can
-    /// also translate the resource into a different name.
-    pub fn pkgutil_modules_infos<P>(
+    /// `package_filter` defines the target package to return results for. The
+    /// empty string denotes top-level packages only.
+    pub fn pkgutil_modules_infos(
         &self,
         py: Python,
+        package_filter: &str,
         prefix: Option<String>,
         optimize_level: OptimizeLevel,
-        predicate: P,
-    ) -> PyResult<PyObject>
-    where
-        P: Fn(&str) -> Option<String>,
-    {
+    ) -> PyResult<PyObject> {
         let infos: PyResult<Vec<PyObject>> = self
             .resources
             .values()
             .filter(|r| {
                 r.is_extension_module || (r.is_module && is_module_importable(r, optimize_level))
             })
-            .filter_map(|r| predicate(&r.name).map(|name| (name, r)))
-            .map(|(name, r)| {
+            .filter(|r| {
+                // The logic here is worth explaining.
+                //
+                // iter_modules() implicitly targets the path (read: directory
+                // for PathFinder) associated with a finder. And it only yields
+                // entries in that directory. However, a foo/pkg/__init__.py file
+                // would yield a hit for a finder bound to `foo/`.
+                //
+                // The empty filter is simply: it yields all top-level items
+                // (those without a . in the name).
+                //
+                // When a package filter matches a package, we want to obtain
+                // its children. But not the package itself.
+                //
+                // When a package filter matches a leaf module, it should return
+                // nothing, as its parent should have emitted it.
+
+                if package_filter.is_empty() {
+                    // Empty package filter only returns top-level elements.
+                    !r.name.contains('.')
+                } else if &r.name == package_filter {
+                    // Exact match should have been yielded by parent.
+                    false
+                } else if let Some(suffix) = r.name.strip_prefix(&format!("{}.", package_filter)) {
+                    // We're a child of the filter. Return immediate children only.
+                    !suffix.contains('.')
+                } else {
+                    false
+                }
+            })
+            .map(|r| {
+                // We always take the leaf-most name.
+                let name = r.name.rsplit('.').next().unwrap();
+
                 let name = if let Some(prefix) = &prefix {
                     format!("{}{}", prefix, name)
                 } else {
-                    name
+                    name.to_string()
                 };
 
                 let name = name.to_py_object(py).into_object();
