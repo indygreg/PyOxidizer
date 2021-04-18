@@ -1030,7 +1030,7 @@ impl<'a> PythonResourcesState<'a, u8> {
         predicate: P,
     ) -> PyResult<PyObject>
     where
-        P: FnMut(&&Resource<'_, u8>) -> bool,
+        P: Fn(&&Resource<'_, u8>) -> bool,
     {
         let infos: PyResult<Vec<PyObject>> = self
             .resources
