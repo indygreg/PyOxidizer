@@ -1262,8 +1262,10 @@ py_class!(class OxidizedPathEntryFinder |py| {
     // The sys.path value this instance was created with.
     data source_path: PyString;
 
-    // Sub-package we are limited to.
-    data package: String;
+    // Name of package being targeted.
+    //
+    // Empty string is the top-level package.
+    data target_package: String;
 
     def find_spec(&self, fullname: &str, target: Option<PyModule> = None) -> PyResult<Option<PyObject>> {
         self.find_spec_impl(py, fullname, target)
@@ -1279,7 +1281,7 @@ py_class!(class OxidizedPathEntryFinder |py| {
 
     // Private getter. Just for testing.
     @property def _package(&self) -> PyResult<String> {
-        Ok(self.package(py).clone())
+        Ok(self.target_package(py).clone())
     }
 });
 
@@ -1289,7 +1291,7 @@ impl OxidizedPathEntryFinder {
     /// In other words, should this instance expose a resource with the given
     /// name.
     fn matches_package_filter(&self, py: Python, fullname: &str) -> bool {
-        let prefix = self.package(py);
+        let prefix = self.target_package(py);
 
         prefix.is_empty() || prefix == fullname || fullname.starts_with(&format!("{}.", prefix))
     }
@@ -1322,7 +1324,7 @@ impl OxidizedPathEntryFinder {
         let state = self.finder(py).state(py);
         let modules = state.get_resources_state().pkgutil_modules_infos(
             py,
-            self.package(py),
+            self.target_package(py),
             Some(prefix.to_string()),
             state.optimize_level,
         );
@@ -1880,7 +1882,7 @@ fn pkg_resources_find_distributions(
         state.clone(),
         &path_item.to_string_lossy(py),
         only,
-        finder.package(py),
+        finder.target_package(py),
     )
 }
 
