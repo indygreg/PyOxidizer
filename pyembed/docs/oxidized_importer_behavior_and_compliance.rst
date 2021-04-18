@@ -211,12 +211,17 @@ enable a :py:class:`OxidizedFinder` to function as a
 `path entry finder <https://docs.python.org/3/reference/import.html#path-entry-finders>`_.
 
 As a brief refresher, callables on ``sys.path_hooks`` are called with
-entries from ``sys.path``, giving them the opportunity to service a
-particular ``sys.path`` entry. If a *path hook* responds to a ``sys.path``
-entry by returning a *path entry finder*, that returned object will
-service that ``sys.path`` entry.
+*paths*, giving them the opportunity to service a particular *path*.
+If a *path hook* responds to a *path* by returning a *path entry finder*,
+that returned object will service that *path*. Often, the *paths* passed
+to *path hooks* are from ``sys.path``. However, arbitrary *paths* can be
+passed in. A property of the returned *path entry finder* is it only
+targets a particular level in the *package hierarchy*. Unlike *meta
+path finders* (which can service any named resource it knows about),
+*path entry finders* are *bound* to a specific package target level
+and will only return resources existing at that level.
 
-``sys.path_hooks`` is used by the following mechanisms:
+*path hooks* are used by the following mechanisms:
 
 * The standard library `PathFinder <https://docs.python.org/3/library/importlib.html#importlib.machinery.PathFinder>`_
   (the meta path finder that Python uses to load resources from the
@@ -227,7 +232,7 @@ service that ``sys.path`` entry.
   APIs.
 * ``pkg_resources`` maps *path entry finder* types to functions to enable
   a resolution of ``pkg_resources.Distribution`` instances for individual
-  ``sys.path`` entries.
+  *paths*.
 
 When installed on ``sys.path_hooks``,
 :py:meth:`OxidizedFinder.path_hook <OxidizedFinder.path_hook>` will respond
@@ -258,24 +263,27 @@ to the following path values:
 When :py:meth:`path_hook <OxidizedFinder.path_hook>` is called with its
 :py:attr:`OxidizedFinder.current_exe` value, a
 :py:class:`OxidizedPathEntryFinder` bound to the source
-:py:class:`OxidizedFinder` is returned. This finder is able to service all
-resources indexed by that :py:class:`OxidizedFinder`.
+:py:class:`OxidizedFinder` is returned. This finder is able to service
+*root resources* (i.e. top-level modules and packages).
 
 When :py:meth:`path_hook <OxidizedFinder.path_hook>` is called with
 a virtual sub-directory of :py:attr:`OxidizedFinder.current_exe`, the same
 thing happens except the returned :py:class:`OxidizedPathEntryFinder`
-will only service resources that are contained in a Python package
-corresponding to that virtual sub-directory. In other words, the
-virtual sub-directory acts as a filter. The filter is matched
-if a resource name matches the filter exactly or begins with
-the filter value + ``.``.
+will only service resources at the exact package hierarchy specified
+by that virtual sub-directory.
 
-When virtual sub-directories are present, the ``str`` is validated
-and parsed similarly to the following:
+The validation and normalization of path values is similar to the
+following:
 
 .. code-block:: python
 
    def path_hook(self, path: str):
+       # Path exactly matching current_exe will be bound to resources at root.
+       if path == self.current_exe:
+           return ...
+
+       # Virtual sub-directories must begin with self.current_exe + directory
+       # separator.
        if not path.startswith((self.current_exe + "/", self.current_exe + "\\")):
            raise ImportError
 
@@ -311,12 +319,11 @@ semantically correct from the perspective of ``oxidized_importer``.
 
 As an example, if ``path`` were
 ``os.path.join(finder.current_exe, "a")``, the
-finder would only service modules named ``a`` or beginning with ``a.``.
-So ``a``, ``a.b``, and ``a.b.c`` would all match but ``b`` and ``b.d``
-would not.
+finder would only service modules of the form ``a.*``. So ``a``, ``a.b`` would
+match but ``a.b.c`` and ``d`` would not.
 
 For best results, use ``os.path.join(finder.current_exe, str)`` to define
-``sys.path`` values that will be accepted by the path hook.
+values that will be accepted by the path hook.
 
 :py:class:`OxidizedPathEntryFinder` complies with the
 `PathEntryFinder <https://docs.python.org/3/library/importlib.html#importlib.abc.PathEntryFinder>`_

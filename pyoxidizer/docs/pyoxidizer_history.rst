@@ -63,11 +63,6 @@ Backwards Compatibility Notes
   implementation is simpler and by being stricter should be less brittle at
   run-time. See :ref:`oxidized_finder_path_hooks` for documentation on the path
   hooks behavior.
-* The :py:class:`oxidized_importer.OxidizedFinder` path hook has changed how
-  it filters virtual sub-directories. Before, only immediate members of the list
-  package would pass the filter. Now, all children are matched. e.g. before
-  a filter of ``a`` would match ``a.b`` but not ``a.b.c``. Now it matches
-  ``a`` and ``a.*``.
 
 New Features
 ^^^^^^^^^^^^

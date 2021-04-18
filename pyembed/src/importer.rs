@@ -23,8 +23,8 @@ use {
             resolve_package_distribution_resource,
         },
         python_resources::{
-            pyobject_to_resource, resource_to_pyobject, ModuleFlavor, OptimizeLevel,
-            OxidizedResource, PythonResourcesState,
+            name_at_package_hierarchy, pyobject_to_resource, resource_to_pyobject, ModuleFlavor,
+            OptimizeLevel, OxidizedResource, PythonResourcesState,
         },
         resource_scanning::find_resources_in_path,
     },
@@ -1290,27 +1290,19 @@ py_class!(class OxidizedPathEntryFinder |py| {
 });
 
 impl OxidizedPathEntryFinder {
-    /// Whether a given resource name matches the package filter.
-    ///
-    /// In other words, should this instance expose a resource with the given
-    /// name.
-    fn matches_package_filter(&self, py: Python, fullname: &str) -> bool {
-        if let Some(package) = self.target_package(py) {
-            package == fullname || fullname.starts_with(&format!("{}.", package))
-        } else {
-            true
-        }
-    }
-
     fn find_spec_impl(
         &self,
         py: Python,
         fullname: &str,
         target: Option<PyModule>,
     ) -> PyResult<Option<PyObject>> {
-        if !self.matches_package_filter(py, fullname) {
+        if !name_at_package_hierarchy(
+            fullname,
+            self.target_package(py).as_ref().map(|s| s.as_str()),
+        ) {
             return Ok(Some(py.None()));
         }
+
         self.finder(py)
             .as_object()
             .call_method(
