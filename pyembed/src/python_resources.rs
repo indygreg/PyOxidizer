@@ -1030,7 +1030,7 @@ impl<'a> PythonResourcesState<'a, u8> {
         predicate: P,
     ) -> PyResult<PyObject>
     where
-        P: Fn(&&Resource<'_, u8>) -> bool,
+        P: Fn(&str) -> bool,
     {
         let infos: PyResult<Vec<PyObject>> = self
             .resources
@@ -1038,7 +1038,7 @@ impl<'a> PythonResourcesState<'a, u8> {
             .filter(|r| {
                 r.is_extension_module || (r.is_module && is_module_importable(r, optimize_level))
             })
-            .filter(predicate)
+            .filter(|r| predicate(&r.name))
             .map(|r| {
                 let name = r.name.rsplit('.').take(1).next().unwrap();
                 let name = if let Some(prefix) = &prefix {

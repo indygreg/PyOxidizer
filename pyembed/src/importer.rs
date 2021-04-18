@@ -924,8 +924,8 @@ impl OxidizedFinder {
             None
         };
 
-        resources_state.pkgutil_modules_infos(py, prefix, state.optimize_level, |resource| {
-            OxidizedPathEntryFinder::is_visible("", &resource.name)
+        resources_state.pkgutil_modules_infos(py, prefix, state.optimize_level, |name| {
+            OxidizedPathEntryFinder::is_visible("", name)
         })
     }
 }
@@ -1160,7 +1160,7 @@ impl OxidizedPathEntryFinder {
             py,
             Some(prefix.to_string()),
             state.optimize_level,
-            |resource| Self::is_visible(self.package(py), &resource.name),
+            |name| Self::is_visible(self.package(py), name),
         );
         // unwrap() is safe because pkgutil_modules_infos returns a PyList cast
         // into a PyObject.
