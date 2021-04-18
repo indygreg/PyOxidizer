@@ -70,7 +70,6 @@ pub fn download_and_verify(logger: &slog::Logger, entry: &RemoteContent) -> Resu
     let mut data: Vec<u8> = Vec::new();
     response.read_to_end(&mut data)?;
 
-    warn!(logger, "validating hash...");
     let mut hasher = sha2::Sha256::new();
     hasher.update(&data);
 
@@ -78,6 +77,7 @@ pub fn download_and_verify(logger: &slog::Logger, entry: &RemoteContent) -> Resu
     let expected_hash = hex::decode(&entry.sha256)?;
 
     if expected_hash == url_hash {
+        warn!(logger, "verified SHA-256 is {}", entry.sha256);
         Ok(data)
     } else {
         Err(anyhow!("hash mismatch of downloaded file"))
