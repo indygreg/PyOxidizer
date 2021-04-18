@@ -1134,7 +1134,7 @@ impl OxidizedPathEntryFinder {
         // https://doc.rust-lang.org/std/primitive.str.html#method.rsplit_once
         let mut split = name.rsplitn(2, '.');
         match split.next() {
-            Some(module) if !module.is_empty() && !module.contains('.') => {}
+            Some(module) if !module.is_empty() => {}
             _ => {
                 return false;
             }
@@ -1176,7 +1176,7 @@ impl OxidizedPathEntryFinder {
             py,
             Some(prefix.to_string()),
             state.optimize_level,
-            |name| {
+            |name: &str| {
                 if Self::is_visible(self.package(py), name) {
                     // is_visible is only true for immediate children. So taking
                     // the last component is safe.
