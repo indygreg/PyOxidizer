@@ -10,6 +10,6 @@ binary data structure that can be used for quickly loading an index of
 available Python resources.
 
 This project is part of the
-[PyOxidized](https://github.com/indygreg/PyOxidizer) project. For more,
+[PyOxidizer](https://github.com/indygreg/PyOxidizer) project. For more,
 see the documentation in the `docs/` directory, rendered online at
 https://pyoxidizer.readthedocs.io/en/latest/oxidized_importer.html.
