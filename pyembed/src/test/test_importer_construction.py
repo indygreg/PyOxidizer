@@ -34,7 +34,9 @@ class TestImporterConstruction(unittest.TestCase):
 
     def test_no_indices(self):
         f = OxidizedFinder()
-        f.index_bytes(b"pyembed\x03\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00")
+        f.index_bytes(
+            b"pyembed\x03\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+        )
 
     def test_origin_bad_value(self):
         with self.assertRaises(TypeError):

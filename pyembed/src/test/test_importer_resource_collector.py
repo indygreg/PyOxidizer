@@ -24,6 +24,7 @@ from oxidized_importer import (
 @contextmanager
 def assert_tempfile_cleaned_up(TemporaryDirectory=tempfile.TemporaryDirectory):
     call_count = 0
+
     class TrackingTempDir(TemporaryDirectory):
         def cleanup(self):
             nonlocal call_count
@@ -34,7 +35,8 @@ def assert_tempfile_cleaned_up(TemporaryDirectory=tempfile.TemporaryDirectory):
     msg = fr"""^Implicitly cleaning up <{TrackingTempDir.__name__} (['"]).*\1>$"""
     with warnings.catch_warnings(record=True) as cm, patcher:
         warnings.filterwarnings(
-            "error", category=ResourceWarning, module=r"^tempfile$", message=msg)
+            "error", category=ResourceWarning, module=r"^tempfile$", message=msg
+        )
         yield TrackingTempDir, TrackingTempDir.cleanup
     assert call_count == 1, f"tempfile.TemporaryDirectory.cleanup {call_count=}≠1"
 
@@ -63,6 +65,7 @@ class TestImporterResourceCollector(unittest.TestCase):
             def cleanup(self):
                 super().cleanup()
                 raise FileNotFoundError(self.name)
+
         python_exe = os.environ.get("PYTHON_SYS_EXECUTABLE")
         c = OxidizedResourceCollector(allowed_locations=["in-memory"])
         stderr = StringIO()
@@ -73,7 +76,8 @@ class TestImporterResourceCollector(unittest.TestCase):
             stderr.getvalue(),
             fr"""Exception ignored in: <bound method {cleanup.__qualname__} """
             fr"""of <{TrackingTempDir.__name__} (['"]){tempfile.gettempdir()}"""
-            fr"""[/\\].+\1>>""")
+            fr"""[/\\].+\1>>""",
+        )
 
     def test_source_module(self):
         c = OxidizedResourceCollector(allowed_locations=["in-memory"])

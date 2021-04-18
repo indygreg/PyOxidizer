@@ -263,8 +263,7 @@ class TestImporterPkgResources(unittest.TestCase):
         self.assertIsInstance(dist, pkg_resources.Distribution)
         self.assertEqual(dist.project_name, "my-package")
         self.assertEqual(dist.version, "1.0")
-        self.assertEqual(
-            list(dist.get_entry_map(None).keys()), ["console_scripts"])
+        self.assertEqual(list(dist.get_entry_map(None).keys()), ["console_scripts"])
 
 
 if __name__ == "__main__":

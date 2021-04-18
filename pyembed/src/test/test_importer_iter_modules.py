@@ -133,7 +133,7 @@ class TestImporterIterModules(unittest.TestCase):
         f = self._finder_from_td()
 
         name = "on"
-        path = pathlib.Path(sys.executable, name)
+        path = os.path.join(f.current_exe, name)
         path_entry_finder = f.path_hook(path)
 
         with self.subTest(prefix="", module_iterator="OxidizedPathEntryFinder"):
@@ -152,12 +152,14 @@ class TestImporterIterModules(unittest.TestCase):
                 for mi in res:
                     self.assertIsInstance(mi.module_finder, type(path_entry_finder))
                     self.assertEqual(
-                        mi.module_finder._package, path_entry_finder._package)
+                        mi.module_finder._package, path_entry_finder._package
+                    )
 
         sys.path = [sys.executable]
         sys.meta_path = [f]
         with patch.dict(sys.modules):
             import on
+
             self.assertEqual(on.__name__, name)
             self.assertEqual(on.__path__, [str(path)])
             with patch.object(sys, "path_hooks", [f.path_hook]):
