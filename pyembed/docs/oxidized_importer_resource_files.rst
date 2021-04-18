@@ -249,12 +249,24 @@ Support for ``pkg_resources``
 
 ``oxidized_importer`` has support for working with ``pkg_resources``.
 
-``pkg_resources`` integration is optional and must be explicitly enabled.
-This is because importing ``pkg_resources`` adds overhead and it would be
-wasteful to register ``pkg_resources`` integration if it isn't used.
+``oxidized_importer`` integration with ``pkg_resources`` is enabled by
+calling :py:func:`register_pkg_resources`.
 
-To enable ``pkg_resources`` integration at run-time, call
-:py:func:`register_pkg_resources`.
+If an :py:class:`OxidizedFinder` imports the ``pkg_resources`` module,
+:py:func:`register_pkg_resources` may be called automatically.
+
+The ``pyembed`` crate and PyOxidizer both have this functionality enabled
+by default and will likely have :py:class:`OxidizedFinder` servicing the
+``pkg_resources`` import. So there are likely no additional steps needed
+to enable ``pkg_resources`` support in these scenarios.
+
+If you are using ``oxidized_importer`` as a standalone extension module
+in the context of a regular Python interpreter, you may need to call
+:py:func:`register_pkg_resources` manually to ensure integration is enabled.
+
+To test whether integration is enabled, look for an
+`<class 'OxidizedFinder'>: <class 'OxidizedPkgResourcesProvider'>` entry in
+``pkg_resources._provider_factories``.
 
 Distribution Resolving
 ----------------------

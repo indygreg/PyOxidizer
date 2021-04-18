@@ -277,6 +277,8 @@ pub(crate) struct ImporterState {
     exec_fn: PyObject,
     /// Bytecode optimization level currently in effect.
     optimize_level: OptimizeLevel,
+    /// Whether to automatically register ourself with `pkg_resources` when it is imported.
+    pkg_resources_import_auto_register: bool,
     /// Holds state about importable resources.
     ///
     /// This field is a PyCapsule and is a glorified wrapper around
@@ -401,6 +403,8 @@ impl ImporterState {
             decode_source,
             exec_fn,
             optimize_level,
+            // TODO value should come from config.
+            pkg_resources_import_auto_register: true,
             resources_state: capsule,
         })
     }
@@ -749,7 +753,13 @@ impl OxidizedFinder {
                 .call(py, (&exec_dynamic, module), None)
         } else {
             Ok(py.None())
+        }?;
+
+        if key == "pkg_resources" && state.pkg_resources_import_auto_register {
+            register_pkg_resources_with_module(py, module)?;
         }
+
+        Ok(py.None())
     }
 }
 
@@ -1884,10 +1894,9 @@ fn pkg_resources_find_distributions(
     )
 }
 
-fn register_pkg_resources(py: Python) -> PyResult<PyObject> {
-    let pkg_resources = py.import("pkg_resources")?;
-
-    pkg_resources.call(
+/// Registers our types/callbacks with `pkg_resources`.
+fn register_pkg_resources_with_module(py: Python, pkg_resources: &PyObject) -> PyResult<PyObject> {
+    pkg_resources.call_method(
         py,
         "register_finder",
         (
@@ -1904,7 +1913,7 @@ fn register_pkg_resources(py: Python) -> PyResult<PyObject> {
         None,
     )?;
 
-    pkg_resources.call(
+    pkg_resources.call_method(
         py,
         "register_loader_type",
         (
@@ -1915,6 +1924,10 @@ fn register_pkg_resources(py: Python) -> PyResult<PyObject> {
     )?;
 
     Ok(py.None())
+}
+
+fn register_pkg_resources(py: Python) -> PyResult<PyObject> {
+    register_pkg_resources_with_module(py, py.import("pkg_resources")?.as_object())
 }
 
 static mut MODULE_DEF: pyffi::PyModuleDef = pyffi::PyModuleDef {
