@@ -1073,86 +1073,6 @@ impl OxidizedFinder {
     }
 }
 
-// A (mostly compliant) `importlib.abc.PathEntryFinder` that delegates paths
-// within the current executable to the `OxidizedFinder` whose `path_hook`
-// method created it.
-py_class!(class OxidizedPathEntryFinder |py| {
-    // A clone of the meta path finder from which we came.
-    data finder: OxidizedFinder;
-
-    // The sys.path value this instance was created with.
-    data source_path: PyString;
-
-    // Sub-package we are limited to.
-    data package: String;
-
-    def find_spec(&self, fullname: &str, target: Option<PyModule> = None) -> PyResult<Option<PyObject>> {
-        self.find_spec_impl(py, fullname, target)
-    }
-
-    def invalidate_caches(&self) -> PyResult<PyObject> {
-        self.finder(py).as_object().call_method(py, "invalidate_caches", NoArgs, None)
-    }
-
-    def iter_modules(&self, prefix: &str = "") -> PyResult<PyList> {
-        self.iter_modules_impl(py, prefix)
-    }
-
-    // Private getter. Just for testing.
-    @property def _package(&self) -> PyResult<String> {
-        Ok(self.package(py).clone())
-    }
-});
-
-impl OxidizedPathEntryFinder {
-    /// Whether a given resource name matches the package filter.
-    ///
-    /// In other words, should this instance expose a resource with the given
-    /// name.
-    fn matches_package_filter(&self, py: Python, fullname: &str) -> bool {
-        let prefix = self.package(py);
-
-        prefix.is_empty() || prefix == fullname || fullname.starts_with(&format!("{}.", prefix))
-    }
-
-    fn find_spec_impl(
-        &self,
-        py: Python,
-        fullname: &str,
-        target: Option<PyModule>,
-    ) -> PyResult<Option<PyObject>> {
-        if !self.matches_package_filter(py, fullname) {
-            return Ok(Some(py.None()));
-        }
-        self.finder(py)
-            .as_object()
-            .call_method(
-                py,
-                "find_spec",
-                (
-                    fullname,
-                    PyList::new(py, &[self.source_path(py).as_object().clone_ref(py)]).as_object(),
-                    target,
-                ),
-                None,
-            )
-            .map(|spec| if spec == py.None() { None } else { Some(spec) })
-    }
-
-    fn iter_modules_impl(&self, py: Python, prefix: &str) -> PyResult<PyList> {
-        let state = self.finder(py).state(py);
-        let modules = state.get_resources_state().pkgutil_modules_infos(
-            py,
-            self.package(py),
-            Some(prefix.to_string()),
-            state.optimize_level,
-        );
-        // unwrap() is safe because pkgutil_modules_infos returns a PyList cast
-        // into a PyObject.
-        Ok(modules?.cast_into(py).unwrap())
-    }
-}
-
 impl OxidizedFinder {
     /// Construct an instance from a module and resources state.
     #[cfg(not(library_mode = "extension"))]
@@ -1329,6 +1249,86 @@ impl OxidizedFinder {
             .map_err(|e| PyErr::new::<ValueError, _>(py, format!("error serializing: {}", e)))?;
 
         Ok(PyBytes::new(py, &data).into_object())
+    }
+}
+
+// A (mostly compliant) `importlib.abc.PathEntryFinder` that delegates paths
+// within the current executable to the `OxidizedFinder` whose `path_hook`
+// method created it.
+py_class!(class OxidizedPathEntryFinder |py| {
+    // A clone of the meta path finder from which we came.
+    data finder: OxidizedFinder;
+
+    // The sys.path value this instance was created with.
+    data source_path: PyString;
+
+    // Sub-package we are limited to.
+    data package: String;
+
+    def find_spec(&self, fullname: &str, target: Option<PyModule> = None) -> PyResult<Option<PyObject>> {
+        self.find_spec_impl(py, fullname, target)
+    }
+
+    def invalidate_caches(&self) -> PyResult<PyObject> {
+        self.finder(py).as_object().call_method(py, "invalidate_caches", NoArgs, None)
+    }
+
+    def iter_modules(&self, prefix: &str = "") -> PyResult<PyList> {
+        self.iter_modules_impl(py, prefix)
+    }
+
+    // Private getter. Just for testing.
+    @property def _package(&self) -> PyResult<String> {
+        Ok(self.package(py).clone())
+    }
+});
+
+impl OxidizedPathEntryFinder {
+    /// Whether a given resource name matches the package filter.
+    ///
+    /// In other words, should this instance expose a resource with the given
+    /// name.
+    fn matches_package_filter(&self, py: Python, fullname: &str) -> bool {
+        let prefix = self.package(py);
+
+        prefix.is_empty() || prefix == fullname || fullname.starts_with(&format!("{}.", prefix))
+    }
+
+    fn find_spec_impl(
+        &self,
+        py: Python,
+        fullname: &str,
+        target: Option<PyModule>,
+    ) -> PyResult<Option<PyObject>> {
+        if !self.matches_package_filter(py, fullname) {
+            return Ok(Some(py.None()));
+        }
+        self.finder(py)
+            .as_object()
+            .call_method(
+                py,
+                "find_spec",
+                (
+                    fullname,
+                    PyList::new(py, &[self.source_path(py).as_object().clone_ref(py)]).as_object(),
+                    target,
+                ),
+                None,
+            )
+            .map(|spec| if spec == py.None() { None } else { Some(spec) })
+    }
+
+    fn iter_modules_impl(&self, py: Python, prefix: &str) -> PyResult<PyList> {
+        let state = self.finder(py).state(py);
+        let modules = state.get_resources_state().pkgutil_modules_infos(
+            py,
+            self.package(py),
+            Some(prefix.to_string()),
+            state.optimize_level,
+        );
+        // unwrap() is safe because pkgutil_modules_infos returns a PyList cast
+        // into a PyObject.
+        Ok(modules?.cast_into(py).unwrap())
     }
 }
 
