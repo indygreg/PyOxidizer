@@ -206,6 +206,41 @@ fn update_cargo_toml_dependency_package_location(
     Ok(changed)
 }
 
+/// Update the pyembed crate version in environment.rs.
+fn update_environment_rs_pyembed_version(root: &Path, version: &semver::Version) -> Result<()> {
+    let path = root.join("pyoxidizer").join("src").join("environment.rs");
+
+    let mut lines = Vec::new();
+
+    let fh = std::fs::File::open(&path).with_context(|| format!("opening {}", path.display()))?;
+    let reader = BufReader::new(fh);
+
+    let mut seen_version = false;
+    for line in reader.lines() {
+        let line = line?;
+
+        lines.push(if line.starts_with("const PYEMBED_CRATE_VERSION: ") {
+            seen_version = true;
+
+            format!("const PYEMBED_CRATE_VERSION: &str = \"{}\";", version)
+        } else {
+            line
+        });
+    }
+    lines.push("".to_string());
+
+    if !seen_version {
+        return Err(anyhow!(
+            "PYEMBED_CRATE_VERSION line not found in {}",
+            path.display()
+        ));
+    }
+
+    std::fs::write(&path, lines.join("\n"))?;
+
+    Ok(())
+}
+
 /// Update version string in pyoxidizer.bzl file.
 fn update_pyoxidizer_bzl_version(root: &Path, version: &semver::Version) -> Result<()> {
     // Version string in file does not have pre-release component.
@@ -251,8 +286,14 @@ fn reflect_package_version_change(
     package: &str,
     version: &semver::Version,
 ) -> Result<()> {
-    if package == "pyoxidizer" {
-        update_pyoxidizer_bzl_version(root, version)?;
+    match package {
+        "pyembed" => {
+            update_environment_rs_pyembed_version(root, version)?;
+        }
+        "pyoxidizer" => {
+            update_pyoxidizer_bzl_version(root, version)?;
+        }
+        _ => {}
     }
 
     Ok(())

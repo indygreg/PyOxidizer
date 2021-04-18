@@ -17,6 +17,9 @@ use {
 /// Version string of PyOxidizer's crate from its Cargo.toml.
 const PYOXIDIZER_CRATE_VERSION: &str = env!("CARGO_PKG_VERSION");
 
+/// Version string of pyembed crate from its Cargo.toml.
+const PYEMBED_CRATE_VERSION: &str = "0.14.0-pre";
+
 /// URL of Git repository we were built from.
 const GIT_REPO_URL: &str = env!("GIT_REPO_URL");
 
@@ -158,7 +161,7 @@ impl Environment {
             }
             PyOxidizerSource::GitUrl { url, commit, .. } => match commit {
                 Some(commit) => PyembedLocation::Git(url.clone(), commit.clone()),
-                None => PyembedLocation::Version(PYOXIDIZER_CRATE_VERSION.to_string()),
+                None => PyembedLocation::Version(PYEMBED_CRATE_VERSION.to_string()),
             },
         }
     }
