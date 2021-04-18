@@ -117,11 +117,29 @@ impl TryFrom<&Path> for FileEntry {
 }
 
 impl FileEntry {
+    /// Obtain a new instance guaranteed to have file data stored in memory.
     pub fn to_memory(&self) -> Result<Self, std::io::Error> {
         Ok(Self {
             data: self.data.to_memory()?,
             executable: self.executable,
         })
+    }
+
+    /// Write this file entry to the given destination path.
+    pub fn write_to_path(&self, dest_path: impl AsRef<Path>) -> Result<(), FileManifestError> {
+        let dest_path = dest_path.as_ref();
+        let parent = dest_path
+            .parent()
+            .ok_or(FileManifestError::NoParentDirectory)?;
+
+        std::fs::create_dir_all(parent)?;
+        let mut fh = std::fs::File::create(&dest_path)?;
+        fh.write_all(&self.data.resolve()?)?;
+        if self.executable {
+            set_executable(&mut fh)?;
+        }
+
+        Ok(())
     }
 }
 
@@ -430,16 +448,7 @@ impl FileManifest {
 
         for (k, v) in self.iter_entries() {
             let dest_path = dest.join(k);
-            let parent = dest_path
-                .parent()
-                .ok_or(FileManifestError::NoParentDirectory)?;
-
-            std::fs::create_dir_all(parent)?;
-            let mut fh = std::fs::File::create(&dest_path)?;
-            fh.write_all(&v.data.resolve()?)?;
-            if v.executable {
-                set_executable(&mut fh)?;
-            }
+            v.write_to_path(&dest_path)?;
             dest_paths.push(dest_path)
         }
 
