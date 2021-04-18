@@ -1112,13 +1112,14 @@ py_class!(class OxidizedPathEntryFinder |py| {
 });
 
 impl OxidizedPathEntryFinder {
-    // `name` is considered _visible_ in `package` if `name` is in the first
-    // level of the package. The computation is purely textual. See this
-    // module's `test_path_entry_finder::is_visible` test.
+    /// Whether a given resource name is considered visible for this instance.
+    ///
+    /// `package` is guaranteed to be well-formed per path hook validation rules.
+    ///
+    /// `name` is considered _visible_ in `package` if `name` is in the first
+    /// level of the package. The computation is purely textual. See this
+    /// module's `test_path_entry_finder::is_visible` test.
     fn is_visible(package: &str, name: &str) -> bool {
-        if package.starts_with('.') || package.ends_with('.') || package.contains("..") {
-            return false;
-        }
         // This implementation can be simplified when str::rsplit_once stabilize
         // https://doc.rust-lang.org/std/primitive.str.html#method.rsplit_once
         let mut split = name.rsplitn(2, '.');
@@ -2226,12 +2227,6 @@ mod test_path_entry_finder {
             // Modules in different packages than `package` are invisible.
             assert!(!is_visible("idlelib", "importlib.resources"));
             assert!(!is_visible("imp", "importlib.resources"));
-
-            // Malformed package names always cause `is_visible` to return [`false`].
-            assert!(!is_visible(".a.b", ".a.b.c"));
-            assert!(!is_visible("a..b", "a..b.c"));
-            assert!(!is_visible("a.b.", "a.b.c"));
-            assert!(!is_visible(".", "a"));
 
             // Unicode is fully supported.
             assert!(is_visible("חבילות", "חבילות.מודול"));
