@@ -67,6 +67,13 @@ Backwards Compatibility Notes
 New Features
 ^^^^^^^^^^^^
 
+* :py:class:`oxidized_importer.OxidizedFinder` now supports ``pkg_resources``
+  integration. Most of the ``pkg_resources`` APIs are implemented, enabling
+  most ``pkg_resources`` functionality to work. ``pkg_resources`` integration
+  is automatically enabled upon import of the ``pkg_resources`` module, so
+  ``pkg_resources`` integration should *just work* for many applications.
+  See :ref:`oxidized_finder_pkg_resources` for the full documentation, including
+  which features aren't implemented.
 * :py:class:`oxidized_importer.OxidizedFinder` now exposes the properties
   :py:attr:`oxidized_importer.OxidizedFinder.current_exe` and
   :py:attr:`oxidized_importer.OxidizedFinder.origin`.

@@ -244,6 +244,8 @@ packaging settings to move the resource locations from in-memory to
 filesystem-relative, as ``__file__`` is set when loading modules from the
 filesystem.
 
+.. _oxidized_finder_pkg_resources:
+
 Support for ``pkg_resources``
 =============================
 

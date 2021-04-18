@@ -334,8 +334,6 @@ is not implemented. Instances also implement
 :py:meth:`OxidizedPathEntryFinder.iter_modules`, enabling it to be
 used by ``pkgutil.iter_modules()``.
 
-.. _oxidized_finder_pkg_resources:
-
 ``pkg_resources`` Compatibility
 ===============================
 
