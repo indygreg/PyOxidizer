@@ -12,7 +12,7 @@ use {
     python_packed_resources::data::Resource,
     std::{
         borrow::Cow,
-        collections::{BTreeSet, HashMap},
+        collections::{BTreeMap, BTreeSet, HashMap},
         path::Path,
         sync::Arc,
     },
@@ -382,12 +382,19 @@ pub(crate) fn find_pkg_resources_distributions<'a>(
             kwargs.set_item(py, "project_name", project_name)?;
             kwargs.set_item(py, "version", version)?;
 
-            distribution_type.call(py, NoArgs, Some(&kwargs))
+            Ok((&r.name, distribution_type.call(py, NoArgs, Some(&kwargs))?))
         })
-        .filter_map(|dist| dist.ok())
-        .collect::<Vec<PyObject>>();
+        // Collect into a BTreeMap to deduplicate and facilitate deterministic output.
+        .filter_map(|kv: PyResult<(_, PyObject)>| kv.ok())
+        .collect::<BTreeMap<_, PyObject>>();
 
-    Ok(PyList::new(py, &distributions))
+    Ok(PyList::new(
+        py,
+        &distributions
+            .into_iter()
+            .map(|(_, v)| v)
+            .collect::<Vec<_>>(),
+    ))
 }
 
 pub(crate) fn resolve_package_distribution_resource<'a>(

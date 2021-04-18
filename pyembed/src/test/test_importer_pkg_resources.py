@@ -36,15 +36,52 @@ def make_in_memory_finder():
     r = OxidizedResource()
     r.is_module = True
     r.is_package = True
-    r.name = "my_package"
-    r.in_memory_source = b"print('hello, world')"
-
+    r.name = "package0"
+    r.in_memory_source = b"pass"
     r.in_memory_distribution_resources = {
-        "METADATA": b"Name: my_package\nVersion: 1.0\n",
-        "entry_points.txt": b"[console_scripts]\ncli = my_package:cli\n",
+        "METADATA": b"Name: package0\nVersion: 1.0\n",
+        "entry_points.txt": b"[console_scripts]\ncli = package0:cli\n",
     }
-
     f.add_resource(r)
+
+    r = OxidizedResource()
+    r.is_module = True
+    r.is_package = True
+    r.name = "package1"
+    r.in_memory_source = b"pass"
+    r.in_memory_distribution_resources = {
+        "PKG-INFO": b"Name: package1\nVersion: 2.0\n",
+        "requires.txt": b"package0\n",
+    }
+    f.add_resource(r)
+
+    r = OxidizedResource()
+    r.is_module = True
+    r.is_package = True
+    r.name = "package0.p0child0"
+    r.in_memory_source = b"pass"
+    r.in_memory_distribution_resources = {
+        "METADATA": b"Name: p0child0\nVersion: 1.0\n",
+    }
+    f.add_resource(r)
+
+    r = OxidizedResource()
+    r.is_module = True
+    r.is_package = True
+    r.name = "package0.p0child0.p0grandchild0"
+    r.in_memory_source = b"pass"
+    r.in_memory_distribution_resources = {
+        "METADATA": b"Name: p0grandchild0\nVersion: 1.0\n",
+    }
+    f.add_resource(r)
+
+    return f
+
+
+def install_distributions_finder():
+    f = make_in_memory_finder()
+    sys.meta_path.insert(0, f)
+    sys.path_hooks.insert(0, f.path_hook)
 
     return f
 
@@ -243,27 +280,118 @@ class TestImporterPkgResources(unittest.TestCase):
             provider.resource_listdir("subdir\\grandchild\\"), ["grandchild.txt"]
         )
 
-    def test_find_distributions_no_path_hooks(self):
-        sys.meta_path.insert(0, make_in_memory_finder())
-        sys.path_hooks.clear()
-        self.assertEqual(
-            list(pkg_resources.find_distributions(sys.executable, only=True)), []
-        )
-
-    def test_find_distributions_simple(self):
-        f = make_in_memory_finder()
-
-        sys.meta_path.insert(0, f)
-        sys.path_hooks.insert(0, f.path_hook)
-
-        dists = list(pkg_resources.find_distributions(sys.executable, only=True))
-        self.assertEqual(len(dists), 1)
-
-        dist = dists[0]
+    def assert_package0(self, dist):
         self.assertIsInstance(dist, pkg_resources.Distribution)
-        self.assertEqual(dist.project_name, "my-package")
+        self.assertEqual(dist.project_name, "package0")
         self.assertEqual(dist.version, "1.0")
         self.assertEqual(list(dist.get_entry_map(None).keys()), ["console_scripts"])
+
+    def assert_package0_child0(self, dist):
+        self.assertIsInstance(dist, pkg_resources.Distribution)
+        self.assertEqual(dist.project_name, "p0child0")
+        self.assertEqual(dist.version, "1.0")
+
+    def assert_package0_grandchild0(self, dist):
+        self.assertIsInstance(dist, pkg_resources.Distribution)
+        self.assertEqual(dist.project_name, "p0grandchild0")
+        self.assertEqual(dist.version, "1.0")
+
+    def assert_package1(self, dist):
+        self.assertIsInstance(dist, pkg_resources.Distribution)
+        self.assertEqual(dist.project_name, "package1")
+        self.assertEqual(dist.version, "2.0")
+        self.assertEqual(dist.requires(), [pkg_resources.Requirement("package0")])
+
+    def test_find_distributions_no_path_hooks(self):
+        f = install_distributions_finder()
+        sys.path_hooks.clear()
+        self.assertEqual(
+            list(pkg_resources.find_distributions(f.current_exe, only=True)), []
+        )
+
+    def test_find_distributions_not_current_exe_path_hook(self):
+        install_distributions_finder()
+        self.assertEqual(list(pkg_resources.find_distributions("/some/other/path")), [])
+
+    def test_find_distributions_top_level_only_false(self):
+        f = install_distributions_finder()
+
+        dists = list(pkg_resources.find_distributions(f.current_exe, only=False))
+        self.assertEqual(len(dists), 4)
+        self.assert_package0(dists[0])
+        self.assert_package0_child0(dists[1])
+        self.assert_package0_grandchild0(dists[2])
+        self.assert_package1(dists[3])
+
+    @unittest.expectedFailure
+    def test_find_distributions_top_level_only_true(self):
+        f = install_distributions_finder()
+        search_path = f.current_exe
+
+        dists = list(pkg_resources.find_distributions(search_path, only=True))
+        self.assertEqual(len(dists), 2)
+        self.assert_package0(dists[0])
+        self.assert_package1(dists[1])
+
+    @unittest.expectedFailure
+    def test_find_distributions_search_path_missing(self):
+        f = install_distributions_finder()
+        search_path = os.path.join(f.current_exe, "missing_package")
+
+        dists = list(pkg_resources.find_distributions(search_path, only=False))
+        self.assertEqual(dists, [])
+
+        dists = list(pkg_resources.find_distributions(search_path, only=True))
+        self.assertEqual(dists, [])
+
+    @unittest.expectedFailure
+    def test_find_distributions_search_path_child_only_false(self):
+        f = install_distributions_finder()
+        search_path = os.path.join(f.current_exe, "package0")
+
+        dists = list(pkg_resources.find_distributions(search_path, only=False))
+        self.assertEqual(len(dists), 2)
+        self.assert_package0_child0(dists[0])
+        self.assert_package0_grandchild0(dists[1])
+
+    @unittest.expectedFailure
+    def test_find_distributions_search_path_child_only_true(self):
+        f = install_distributions_finder()
+        search_path = os.path.join(f.current_exe, "package0")
+
+        dists = list(pkg_resources.find_distributions(search_path, only=True))
+        self.assertEqual(len(dists), 1)
+        self.assert_package0_child0(dists[0])
+
+    @unittest.expectedFailure
+    def test_find_distributions_search_path_grandchild_only_false(self):
+        f = install_distributions_finder()
+        search_path = os.path.join(f.current_exe, "package0", "p0child0")
+
+        dists = list(pkg_resources.find_distributions(search_path, only=False))
+        self.assertEqual(len(dists), 1)
+        self.assert_package0_grandchild0(dists[0])
+
+    @unittest.expectedFailure
+    def test_find_distributions_search_path_grandchild_only_true(self):
+        f = install_distributions_finder()
+        search_path = os.path.join(f.current_exe, "package0", "p0child0")
+
+        dists = list(pkg_resources.find_distributions(search_path, only=True))
+        self.assertEqual(len(dists), 1)
+        self.assert_package0_grandchild0(dists[0])
+
+    @unittest.expectedFailure
+    def test_find_distributions_search_path_too_deep(self):
+        f = install_distributions_finder()
+        search_path = os.path.join(f.current_exe, "package0", "p0child0", "grandchild0")
+
+        self.assertEqual(
+            list(pkg_resources.find_distributions(search_path, only=False)), []
+        )
+        self.assertEqual(
+            list(pkg_resources.find_distributions(search_path, only=True)), []
+        )
 
 
 if __name__ == "__main__":
