@@ -33,13 +33,10 @@ pub fn get_logger() -> Result<slog::Logger> {
 }
 
 pub static DISTRIBUTION_CACHE: Lazy<Arc<DistributionCache>> = Lazy::new(|| {
-    let cache_dir = get_env()
-        .expect("failed to resolve environment")
-        .cache_dir()
-        .to_path_buf();
-
     Arc::new(DistributionCache::new(Some(
-        &cache_dir.join("python_distributions"),
+        &get_env()
+            .expect("failed to resolve environment")
+            .python_distributions_dir(),
     )))
 });
 

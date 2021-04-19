@@ -69,7 +69,7 @@ impl PythonDistributionValue {
                 .downcast_mut::<PyOxidizerEnvironmentContext>()?
                 .ok_or(ValueError::IncorrectParameterType)?;
 
-            let dest_dir = pyoxidizer_context.python_distributions_path(type_values)?;
+            let dest_dir = pyoxidizer_context.python_distributions_path()?;
 
             self.distribution = Some(
                 pyoxidizer_context
@@ -291,8 +291,7 @@ impl PythonDistributionValue {
             .downcast_ref::<PyOxidizerEnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
 
-        let python_distributions_path =
-            pyoxidizer_context.python_distributions_path(type_values)?;
+        let python_distributions_path = pyoxidizer_context.python_distributions_path()?;
 
         let host_distribution = if dist
             .compatible_host_triples()

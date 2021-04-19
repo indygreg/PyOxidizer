@@ -80,8 +80,11 @@ impl PyOxidizerEnvironmentContext {
             parent.to_path_buf()
         };
 
-        let distribution_cache =
-            distribution_cache.unwrap_or_else(|| Arc::new(DistributionCache::new(None)));
+        let distribution_cache = distribution_cache.unwrap_or_else(|| {
+            Arc::new(DistributionCache::new(Some(
+                &env.python_distributions_dir(),
+            )))
+        });
 
         Ok(PyOxidizerEnvironmentContext {
             env: env.clone(),
@@ -110,11 +113,8 @@ impl PyOxidizerEnvironmentContext {
         Ok(context.build_path().to_path_buf())
     }
 
-    pub fn python_distributions_path(
-        &self,
-        type_values: &TypeValues,
-    ) -> Result<PathBuf, ValueError> {
-        Ok(self.build_path(type_values)?.join("python_distributions"))
+    pub fn python_distributions_path(&self) -> Result<PathBuf, ValueError> {
+        Ok(self.env.python_distributions_dir())
     }
 
     pub fn get_output_path(

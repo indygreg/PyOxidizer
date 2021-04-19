@@ -182,6 +182,11 @@ impl Environment {
         &self.cache_dir
     }
 
+    /// Directory to use for storing Python distributions.
+    pub fn python_distributions_dir(&self) -> PathBuf {
+        self.cache_dir.join("python_distributions")
+    }
+
     /// Determine the location of the pyembed crate given a run-time environment.
     ///
     /// If running from a PyOxidizer Git repository, we reference the pyembed
