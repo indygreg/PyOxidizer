@@ -22,6 +22,9 @@ use {
 /// Holds state for evaluating a Starlark config file.
 #[derive(Debug)]
 pub struct PyOxidizerEnvironmentContext {
+    /// PyOxidizer's run-time environment.
+    env: crate::environment::Environment,
+
     logger: slog::Logger,
 
     /// Whether executing in verbose mode.
@@ -57,6 +60,7 @@ pub struct PyOxidizerEnvironmentContext {
 impl PyOxidizerEnvironmentContext {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
+        env: &crate::environment::Environment,
         logger: slog::Logger,
         verbose: bool,
         config_path: &Path,
@@ -80,6 +84,7 @@ impl PyOxidizerEnvironmentContext {
             distribution_cache.unwrap_or_else(|| Arc::new(DistributionCache::new(None)));
 
         Ok(PyOxidizerEnvironmentContext {
+            env: env.clone(),
             logger,
             verbose,
             cwd: parent,

@@ -6,7 +6,7 @@ use {
     crate::{
         logging::PrintlnDrain,
         starlark::eval::{EvaluationContext, EvaluationContextBuilder},
-        testutil::DISTRIBUTION_CACHE,
+        testutil::{get_env, DISTRIBUTION_CACHE},
     },
     anyhow::{anyhow, Result},
     codemap::CodeMap,
@@ -17,6 +17,8 @@ use {
 
 /// Construct a new `EvaluationContextBuilder` suitable for the test environment.
 pub fn test_evaluation_context_builder() -> Result<EvaluationContextBuilder> {
+    let env = get_env()?;
+
     let logger = slog::Logger::root(
         PrintlnDrain {
             min_level: slog::Level::Info,
@@ -30,7 +32,7 @@ pub fn test_evaluation_context_builder() -> Result<EvaluationContextBuilder> {
     let cwd = std::env::current_dir()?;
     let config_path = cwd.join("dummy");
 
-    let builder = EvaluationContextBuilder::new(logger, config_path, build_target)
+    let builder = EvaluationContextBuilder::new(&env, logger, config_path, build_target)
         .distribution_cache(DISTRIBUTION_CACHE.clone());
 
     Ok(builder)

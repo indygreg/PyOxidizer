@@ -34,6 +34,7 @@ use {
 
 /// Builder type to construct `EvaluationContext` instances.
 pub struct EvaluationContextBuilder {
+    env: crate::environment::Environment,
     logger: slog::Logger,
     config_path: PathBuf,
     build_target_triple: String,
@@ -47,11 +48,13 @@ pub struct EvaluationContextBuilder {
 
 impl EvaluationContextBuilder {
     pub fn new(
+        env: &crate::environment::Environment,
         logger: slog::Logger,
         config_path: impl AsRef<Path>,
         build_target_triple: impl ToString,
     ) -> Self {
         Self {
+            env: env.clone(),
             logger,
             config_path: config_path.as_ref().to_path_buf(),
             build_target_triple: build_target_triple.to_string(),
@@ -152,6 +155,7 @@ impl TryFrom<EvaluationContextBuilder> for EvaluationContext {
 impl EvaluationContext {
     pub fn from_builder(builder: EvaluationContextBuilder) -> Result<Self> {
         let context = PyOxidizerEnvironmentContext::new(
+            &builder.env,
             builder.logger,
             builder.verbose,
             &builder.config_path,
@@ -381,6 +385,7 @@ mod tests {
         let temp_dir = tempfile::Builder::new()
             .prefix("pyoxidizer-test")
             .tempdir()?;
+        let env = get_env()?;
         let logger = get_logger()?;
 
         let load_path = temp_dir.path().join("load.bzl");
@@ -399,10 +404,14 @@ mod tests {
             .as_bytes(),
         )?;
 
-        let mut context =
-            EvaluationContextBuilder::new(logger, main_path.clone(), env!("HOST").to_string())
-                .verbose(true)
-                .into_context()?;
+        let mut context = EvaluationContextBuilder::new(
+            &env,
+            logger,
+            main_path.clone(),
+            env!("HOST").to_string(),
+        )
+        .verbose(true)
+        .into_context()?;
         context.evaluate_file(&main_path)?;
 
         Ok(())
@@ -413,15 +422,20 @@ mod tests {
         let temp_dir = tempfile::Builder::new()
             .prefix("pyoxidizer-test")
             .tempdir()?;
+        let env = get_env()?;
         let logger = get_logger()?;
 
         let config_path = temp_dir.path().join("pyoxidizer.bzl");
         std::fs::write(&config_path, "def make_dist():\n    return default_python_distribution()\nregister_target('dist', make_dist)\n".as_bytes())?;
 
-        let mut context: EvaluationContext =
-            EvaluationContextBuilder::new(logger, config_path.clone(), env!("HOST").to_string())
-                .verbose(true)
-                .into_context()?;
+        let mut context: EvaluationContext = EvaluationContextBuilder::new(
+            &env,
+            logger,
+            config_path.clone(),
+            env!("HOST").to_string(),
+        )
+        .verbose(true)
+        .into_context()?;
         context.evaluate_file(&config_path)?;
 
         Ok(())

@@ -479,6 +479,8 @@ pub fn build_pyembed_artifacts(
     release: bool,
     verbose: bool,
 ) -> Result<()> {
+    let env = Environment::new()?;
+
     create_dir_all(artifacts_path)?;
 
     let artifacts_path = canonicalize_path(artifacts_path)?;
@@ -488,6 +490,7 @@ pub fn build_pyembed_artifacts(
     }
 
     let mut context: EvaluationContext = EvaluationContextBuilder::new(
+        &env,
         logger.clone(),
         config_path.to_path_buf(),
         target_triple.to_string(),

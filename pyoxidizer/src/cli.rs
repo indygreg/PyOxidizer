@@ -366,6 +366,7 @@ pub fn run_cli() -> Result<()> {
             };
 
             projectmgmt::build(
+                &env,
                 &logger_context.logger,
                 Path::new(path),
                 target_triple,
@@ -424,7 +425,7 @@ pub fn run_cli() -> Result<()> {
         ("list-targets", Some(args)) => {
             let path = args.value_of("path").unwrap();
 
-            projectmgmt::list_targets(&logger_context.logger, Path::new(path))
+            projectmgmt::list_targets(&env, &logger_context.logger, Path::new(path))
         }
 
         ("init-rust-project", Some(args)) => {
@@ -477,6 +478,7 @@ pub fn run_cli() -> Result<()> {
             let extra: Vec<&str> = args.values_of("extra").unwrap_or_default().collect();
 
             projectmgmt::run(
+                &env,
                 &logger_context.logger,
                 Path::new(path),
                 target_triple,

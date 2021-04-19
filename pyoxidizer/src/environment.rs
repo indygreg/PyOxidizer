@@ -143,6 +143,7 @@ pub enum PyOxidizerSource {
 }
 
 /// Describes the PyOxidizer run-time environment.
+#[derive(Clone, Debug)]
 pub struct Environment {
     /// Where a copy of PyOxidizer can be obtained from.
     pub pyoxidizer_source: PyOxidizerSource,

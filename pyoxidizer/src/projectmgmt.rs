@@ -57,7 +57,7 @@ pub fn resolve_target(target: Option<&str>) -> Result<String> {
     }
 }
 
-pub fn list_targets(logger: &slog::Logger, project_path: &Path) -> Result<()> {
+pub fn list_targets(env: &Environment, logger: &slog::Logger, project_path: &Path) -> Result<()> {
     let config_path = find_pyoxidizer_config_file_env(logger, project_path).ok_or_else(|| {
         anyhow!(
             "unable to find PyOxidizder config file at {}",
@@ -68,7 +68,7 @@ pub fn list_targets(logger: &slog::Logger, project_path: &Path) -> Result<()> {
     let target_triple = default_target()?;
 
     let mut context =
-        EvaluationContextBuilder::new(logger.clone(), config_path.clone(), target_triple)
+        EvaluationContextBuilder::new(env, logger.clone(), config_path.clone(), target_triple)
             .resolve_targets(vec![])
             .into_context()?;
 
@@ -96,6 +96,7 @@ pub fn list_targets(logger: &slog::Logger, project_path: &Path) -> Result<()> {
 /// This is a glorified wrapper around `cargo build`. Our goal is to get the
 /// output from repackaging to give the user something for debugging.
 pub fn build(
+    env: &Environment,
     logger: &slog::Logger,
     project_path: &Path,
     target_triple: Option<&str>,
@@ -112,7 +113,7 @@ pub fn build(
     let target_triple = resolve_target(target_triple)?;
 
     let mut context =
-        EvaluationContextBuilder::new(logger.clone(), config_path.clone(), target_triple)
+        EvaluationContextBuilder::new(env, logger.clone(), config_path.clone(), target_triple)
             .release(release)
             .verbose(verbose)
             .resolve_targets_optional(resolve_targets)
@@ -128,6 +129,7 @@ pub fn build(
 }
 
 pub fn run(
+    env: &Environment,
     logger: &slog::Logger,
     project_path: &Path,
     target_triple: Option<&str>,
@@ -145,7 +147,7 @@ pub fn run(
     let target_triple = resolve_target(target_triple)?;
 
     let mut context =
-        EvaluationContextBuilder::new(logger.clone(), config_path.clone(), target_triple)
+        EvaluationContextBuilder::new(env, logger.clone(), config_path.clone(), target_triple)
             .release(release)
             .verbose(verbose)
             .resolve_target_optional(target)
