@@ -8,6 +8,27 @@ The ``pyoxidizer`` command line tool is a frontend to the various
 functionality of ``PyOxidizer``. See :ref:`components` for more
 on the various components of ``PyOxidizer``.
 
+.. _pyoxidizer_cache:
+
+Per-User Cache
+==============
+
+``pyoxidizer`` may need to download resources such as Python distributions
+from the Internet. These resources are cached in a per-user directory.
+
+PyOxidizer chooses the first available directory from the following list
+to use as the cache:
+
+* The value of the environment variable ``PYOXIDIZER_CACHE_DIR``.
+* ``$XDG_CACHE_HOME/pyoxidizer`` on Linux if ``XDG_CACHE_HOME`` is set.
+* ``$HOME/.cache/pyoxidizer`` on Linux if ``HOME`` is set.
+* ``$HOME/Library/Caches/pyoxidizer`` on macOS if ``HOME`` is set.
+* ``{FOLDERID_LocalAppData}/pyoxidizer`` on Windows.
+* ``~/.pyoxidizer/cache``
+
+The ``pyoxidizer cache-clear`` command can be used to delete the contents
+of the cache.
+
 Creating New Projects with ``init-config-file``
 ===============================================
 

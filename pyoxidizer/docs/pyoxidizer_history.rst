@@ -87,6 +87,8 @@ Other Relevant Changes
   :ref:`oxidized_importer_api_reference` for the new docs. Various type
   references throughout the generated documentation should now link to the
   new API docs.
+* PyOxidizer now stores persistent artifacts in a per-user *cache* directory.
+  See :ref:`pyoxidizer_cache` for more.
 
 .. _version_0_13_2:
 
