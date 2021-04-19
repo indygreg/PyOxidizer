@@ -249,6 +249,13 @@ mod tests {
         "x86_64-unknown-linux-gnu",
     ];
 
+    static CACHE_DIR: Lazy<PathBuf> = Lazy::new(|| {
+        dirs::cache_dir()
+            .expect("unable to obtain cache dir")
+            .join("pyoxidizer")
+            .join("rust")
+    });
+
     #[test]
     fn fetch_stable() -> Result<()> {
         let logger = get_logger()?;
@@ -273,7 +280,7 @@ mod tests {
                 target_triple,
                 &[],
                 temp_dir.path(),
-                None,
+                Some(&*CACHE_DIR),
             )?;
 
             assert_eq!(

@@ -3810,6 +3810,7 @@ name = "tugger-rust-toolchain"
 version = "0.1.0-pre"
 dependencies = [
  "anyhow",
+ "dirs",
  "flate2",
  "hex",
  "once_cell",
