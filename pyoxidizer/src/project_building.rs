@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        environment::{canonicalize_path, find_cargo_exe, MINIMUM_RUST_VERSION},
+        environment::{canonicalize_path, find_cargo_exe, resolve_apple_sdk, MINIMUM_RUST_VERSION},
         project_layout::initialize_project,
         py_packaging::{
             binary::{EmbeddedPythonContext, LibpythonLinkMode, PythonBinaryBuilder},
@@ -15,7 +15,7 @@ use {
     anyhow::{anyhow, Context, Result},
     duct::cmd,
     semver::Version,
-    slog::{info, warn},
+    slog::warn,
     starlark_dialect_build_targets::ResolvedTarget,
     std::{
         collections::HashMap,
@@ -25,7 +25,7 @@ use {
         io::{BufRead, BufReader},
         path::{Path, PathBuf},
     },
-    tugger_apple::{find_command_line_tools_sdks, find_default_developer_sdks, AppleSdk},
+    tugger_apple::AppleSdk,
 };
 
 pub const HOST: &str = env!("HOST");
@@ -79,110 +79,6 @@ pub fn find_pyoxidizer_config_file_env(logger: &slog::Logger, start_dir: &Path) 
     }
 
     find_pyoxidizer_config_file(start_dir)
-}
-
-/// Resolve an appropriate Apple SDK to use.
-pub fn resolve_apple_sdk(
-    logger: &slog::Logger,
-    platform: &str,
-    minimum_version: &str,
-    deployment_target: &str,
-) -> Result<AppleSdk> {
-    if minimum_version.split('.').count() != 2 {
-        return Err(anyhow!(
-            "expected X.Y minimum Apple SDK version; got {}",
-            minimum_version
-        ));
-    }
-
-    let minimum_semver = Version::parse(&format!("{}.0", minimum_version))?;
-
-    let mut sdks = find_default_developer_sdks()
-        .context("discovering Apple SDKs (default developer directory)")?;
-    if let Some(extra_sdks) =
-        find_command_line_tools_sdks().context("discovering Apple SDKs (command line tools)")?
-    {
-        sdks.extend(extra_sdks);
-    }
-
-    let target_sdks = sdks
-        .iter()
-        .filter(|sdk| !sdk.is_symlink && sdk.supported_targets.contains_key(platform))
-        .collect::<Vec<_>>();
-
-    info!(
-        logger,
-        "found {} total Apple SDKs; {} support {}",
-        sdks.len(),
-        target_sdks.len(),
-        platform,
-    );
-
-    let mut candidate_sdks = target_sdks
-        .into_iter()
-        .filter(|sdk| {
-            let version = match sdk.version_as_semver() {
-                Ok(v) => v,
-                Err(_) => return false,
-            };
-
-            if version < minimum_semver {
-                info!(
-                    logger,
-                    "ignoring SDK {} because it is too old ({} < {})",
-                    sdk.path.display(),
-                    sdk.version,
-                    minimum_version
-                );
-
-                false
-            } else if !sdk
-                .supported_targets
-                .get(platform)
-                // Safe because key was validated above.
-                .unwrap()
-                .valid_deployment_targets
-                .contains(&deployment_target.to_string())
-            {
-                info!(
-                    logger,
-                    "ignoring SDK {} because it doesn't support deployment target {}",
-                    sdk.path.display(),
-                    deployment_target
-                );
-
-                false
-            } else {
-                true
-            }
-        })
-        .collect::<Vec<_>>();
-    candidate_sdks.sort_by(|a, b| {
-        b.version_as_semver()
-            .unwrap()
-            .cmp(&a.version_as_semver().unwrap())
-    });
-
-    if candidate_sdks.is_empty() {
-        Err(anyhow!(
-            "unable to find suitable Apple SDK supporting {}{} or newer",
-            platform,
-            minimum_version
-        ))
-    } else {
-        info!(
-            logger,
-            "found {} suitable Apple SDKs ({})",
-            candidate_sdks.len(),
-            candidate_sdks
-                .iter()
-                .map(|sdk| sdk.name.clone())
-                .collect::<Vec<_>>()
-                .join(" ")
-        );
-
-        Ok(candidate_sdks[0].clone())
-    }
 }
 
 /// Describes an environment and settings used to build a project.
