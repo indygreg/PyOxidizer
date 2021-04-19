@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        environment::{canonicalize_path, resolve_apple_sdk, MINIMUM_RUST_VERSION},
+        environment::{canonicalize_path, resolve_apple_sdk, Environment, RustEnvironment},
         project_layout::initialize_project,
         py_packaging::{
             binary::{EmbeddedPythonContext, LibpythonLinkMode, PythonBinaryBuilder},
@@ -14,7 +14,6 @@ use {
     },
     anyhow::{anyhow, Context, Result},
     duct::cmd,
-    semver::Version,
     slog::warn,
     starlark_dialect_build_targets::ResolvedTarget,
     std::{
@@ -83,11 +82,8 @@ pub fn find_pyoxidizer_config_file_env(logger: &slog::Logger, start_dir: &Path) 
 
 /// Describes an environment and settings used to build a project.
 pub struct BuildEnvironment {
-    /// Path to cargo executable to run.
-    pub cargo_exe: PathBuf,
-
-    /// Version of Rust being used.
-    pub rust_version: Version,
+    /// Describes the Rust toolchain we're using.
+    pub rust_environment: RustEnvironment,
 
     /// Environment variables to use in build processes.
     ///
@@ -107,23 +103,11 @@ impl BuildEnvironment {
         libpython_filename: Option<&Path>,
         apple_sdk_info: Option<&AppleSdkInfo>,
     ) -> Result<Self> {
-        let env = crate::environment::Environment::new()?;
+        let env = Environment::new()?;
 
-        let cargo_exe = env
-            .cargo_exe()
-            .context("finding cargo executable")?
-            .ok_or_else(|| {
-                anyhow!("could not find cargo executable; is Rust installed and in PATH?")
-            })?;
-
-        let rust_version = rustc_version::version()?;
-        if rust_version.lt(&MINIMUM_RUST_VERSION) {
-            return Err(anyhow!(
-                "PyOxidizer requires Rust {}; version {} found",
-                *MINIMUM_RUST_VERSION,
-                rust_version
-            ));
-        }
+        let rust_environment = env
+            .rust_environment()
+            .context("resolving Rust environment")?;
 
         let mut envs = std::env::vars().collect::<HashMap<_, _>>();
 
@@ -275,8 +259,7 @@ impl BuildEnvironment {
         }
 
         Ok(Self {
-            cargo_exe,
-            rust_version,
+            rust_environment,
             environment_vars: envs,
         })
     }
@@ -333,7 +316,10 @@ pub fn build_executable_with_rust_project<'a>(
     )
     .context("resolving build environment")?;
 
-    warn!(logger, "building with Rust {}", build_env.rust_version);
+    warn!(
+        logger,
+        "building with Rust {}", build_env.rust_environment.rust_version.semver
+    );
 
     let target_base_path = build_path.join("target");
     let target_triple_base_path =
@@ -386,7 +372,7 @@ pub fn build_executable_with_rust_project<'a>(
     }
 
     // TODO force cargo to colorize output under certain circumstances?
-    let command = cmd(build_env.cargo_exe, &args)
+    let command = cmd(&build_env.rust_environment.cargo_exe, &args)
         .dir(&project_path)
         .full_env(&build_env.environment_vars)
         .stderr_to_stdout()

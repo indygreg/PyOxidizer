@@ -218,7 +218,10 @@ impl Environment {
     /// Obtain the path to a `rustc` executable.
     ///
     /// This respects the `RUSTC` environment variable.
-    pub fn rustc_exe(&self) -> which::Result<Option<PathBuf>> {
+    ///
+    /// Not exposed as public because we want all consumers of rustc to go
+    /// through validation logic in [self.rust_environment()].
+    fn rustc_exe(&self) -> which::Result<Option<PathBuf>> {
         if let Some(v) = std::env::var_os("RUSTC") {
             let p = PathBuf::from(v);
 
@@ -233,9 +236,60 @@ impl Environment {
     }
 
     /// Obtain the path to a `cargo` executable.
-    pub fn cargo_exe(&self) -> which::Result<Option<PathBuf>> {
+    ///
+    /// Not exposed as public because we want all consumers of cargo to
+    /// go through validation logic in [self.rust_environment()].
+    fn cargo_exe(&self) -> which::Result<Option<PathBuf>> {
         self.find_executable("cargo")
     }
+
+    /// Return information about a Rust toolchain suitable for building.
+    ///
+    /// This attempts to locate a Rust toolchain suitable for use with
+    /// PyOxidizer. If a toolchain could not be found or doesn't meet the
+    /// requirements, an error occurs.
+    pub fn rust_environment(&self) -> Result<RustEnvironment> {
+        let cargo_exe = self
+            .cargo_exe()
+            .context("finding cargo executable")?
+            .ok_or_else(|| anyhow!("cargo executable not found; is Rust installed and in PATH?"))?;
+
+        let rustc_exe = self
+            .rustc_exe()
+            .context("finding rustc executable")?
+            .ok_or_else(|| anyhow!("rustc executable not found; is Rust installed and in PATH?"))?;
+
+        let rust_version =
+            rustc_version::VersionMeta::for_command(std::process::Command::new(&rustc_exe))
+                .context("resolving rustc version")?;
+
+        if rust_version.semver.lt(&MINIMUM_RUST_VERSION) {
+            return Err(anyhow!(
+                "PyOxidizer requires Rust {}; {} is version {}",
+                *MINIMUM_RUST_VERSION,
+                rustc_exe.display(),
+                rust_version.semver
+            ));
+        }
+
+        Ok(RustEnvironment {
+            cargo_exe,
+            rustc_exe,
+            rust_version,
+        })
+    }
+}
+
+/// Represents an available Rust toolchain.
+pub struct RustEnvironment {
+    /// Path to `cargo` executable.
+    pub cargo_exe: PathBuf,
+
+    /// Path to `rustc` executable.
+    pub rustc_exe: PathBuf,
+
+    /// Describes rustc version info.
+    pub rust_version: rustc_version::VersionMeta,
 }
 
 /// Resolve an appropriate Apple SDK to use.

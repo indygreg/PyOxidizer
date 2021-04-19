@@ -387,12 +387,11 @@ pub fn initialize_project(
     windows_subsystem: &str,
 ) -> Result<()> {
     let env = Environment::new()?;
-    let cargo_exe = env
-        .cargo_exe()
-        .context("finding cargo executable")?
-        .ok_or_else(|| anyhow!("cargo executable not found; is Rust installed?"))?;
+    let rust_env = env
+        .rust_environment()
+        .context("resolving Rust environment")?;
 
-    let status = std::process::Command::new(cargo_exe)
+    let status = std::process::Command::new(&rust_env.cargo_exe)
         .arg("init")
         .arg("--bin")
         .arg(project_path)
