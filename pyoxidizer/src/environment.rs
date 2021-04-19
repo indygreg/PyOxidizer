@@ -146,6 +146,9 @@ pub enum PyOxidizerSource {
 pub struct Environment {
     /// Where a copy of PyOxidizer can be obtained from.
     pub pyoxidizer_source: PyOxidizerSource,
+
+    /// Directory to use for caching things.
+    cache_dir: PathBuf,
 }
 
 impl Environment {
@@ -157,7 +160,25 @@ impl Environment {
             GIT_SOURCE.clone()
         };
 
-        Ok(Self { pyoxidizer_source })
+        let cache_dir = if let Ok(p) = std::env::var("PYOXIDIZER_CACHE_DIR") {
+            PathBuf::from(p)
+        } else if let Some(cache_dir) = dirs::cache_dir() {
+            cache_dir.join("pyoxidizer")
+        } else {
+            dirs::home_dir().ok_or_else(|| anyhow!("could not resolve home dir as part of resolving PyOxidizer cache directory"))?.join(".pyoxidizer").join("cache")
+        };
+
+        Ok(Self {
+            pyoxidizer_source,
+            cache_dir,
+        })
+    }
+
+    /// Cache directory for PyOxidizer to use.
+    ///
+    /// The cache is per-user but multi-process.
+    pub fn cache_dir(&self) -> &Path {
+        &self.cache_dir
     }
 
     /// Determine the location of the pyembed crate given a run-time environment.

@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        environment::BUILD_GIT_REPO_PATH,
+        environment::Environment,
         logging::PrintlnDrain,
         py_packaging::distribution::{
             DistributionCache, DistributionFlavor, PythonDistributionLocation,
@@ -15,8 +15,12 @@ use {
     anyhow::{anyhow, Result},
     once_cell::sync::Lazy,
     slog::{Drain, Logger},
-    std::{ops::Deref, path::PathBuf, sync::Arc},
+    std::sync::Arc,
 };
+
+pub fn get_env() -> Result<Environment> {
+    Environment::new()
+}
 
 pub fn get_logger() -> Result<slog::Logger> {
     Ok(Logger::root(
@@ -28,32 +32,24 @@ pub fn get_logger() -> Result<slog::Logger> {
     ))
 }
 
-pub static DEFAULT_DISTRIBUTION_TEMP_DIR: Lazy<tempfile::TempDir> = Lazy::new(|| {
-    tempfile::Builder::new()
-        .prefix("pyoxidizer-test")
-        .tempdir()
-        .expect("unable to create temp directory")
-});
 pub static DISTRIBUTION_CACHE: Lazy<Arc<DistributionCache>> = Lazy::new(|| {
+    let cache_dir = get_env()
+        .expect("failed to resolve environment")
+        .cache_dir()
+        .to_path_buf();
+
     Arc::new(DistributionCache::new(Some(
-        DEFAULT_DISTRIBUTION_TEMP_DIR.path(),
+        &cache_dir.join("python_distributions"),
     )))
 });
 
 pub fn get_distribution(
     location: &PythonDistributionLocation,
 ) -> Result<Arc<StandaloneDistribution>> {
-    let dest_path = if let Some(build_path) = &BUILD_GIT_REPO_PATH.deref() {
-        build_path.join("target").join("python_distributions")
-    } else if let Ok(manifest_dir) = std::env::var("CARGO_MANIFEST_DIR") {
-        PathBuf::from(manifest_dir)
-            .join("target")
-            .join("python_distributions")
-    } else {
-        DEFAULT_DISTRIBUTION_TEMP_DIR.path().to_path_buf()
-    };
-
+    let env = get_env()?;
     let logger = get_logger()?;
+
+    let dest_path = env.cache_dir().join("python_distributions");
 
     DISTRIBUTION_CACHE.resolve_distribution(&logger, &location, Some(&dest_path))
 }
