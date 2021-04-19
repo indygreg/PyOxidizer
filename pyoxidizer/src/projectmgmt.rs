@@ -314,7 +314,7 @@ pub fn init_config_file(
 
 /// Initialize a new Rust project with PyOxidizer support.
 pub fn init_rust_project(project_path: &Path) -> Result<()> {
-    let env = crate::environment::resolve_environment()?;
+    let env = crate::environment::Environment::new()?;
     let pyembed_location = env.as_pyembed_location();
 
     initialize_project(project_path, &pyembed_location, None, &[], "console")?;

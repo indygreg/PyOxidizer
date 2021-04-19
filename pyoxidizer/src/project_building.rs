@@ -430,7 +430,7 @@ pub fn build_python_executable<'a>(
     opt_level: &str,
     release: bool,
 ) -> Result<BuiltExecutable<'a>> {
-    let env = crate::environment::resolve_environment().context("resolving environment")?;
+    let env = crate::environment::Environment::new().context("resolving environment")?;
     let pyembed_location = env.as_pyembed_location();
 
     let temp_dir = tempfile::Builder::new()

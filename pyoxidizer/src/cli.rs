@@ -89,7 +89,7 @@ bugs can result in incorrect install layouts, missing resources, etc.
 ";
 
 pub fn run_cli() -> Result<()> {
-    let env = crate::environment::resolve_environment()?;
+    let env = crate::environment::Environment::new()?;
 
     let matches = App::new("PyOxidizer")
         .setting(AppSettings::ArgRequiredElseHelp)

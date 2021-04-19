@@ -92,7 +92,7 @@ impl TemplateData {
 }
 
 fn populate_template_data(data: &mut TemplateData) {
-    let env = super::environment::resolve_environment().unwrap();
+    let env = super::environment::Environment::new().unwrap();
 
     data.pyoxidizer_version = Some(PYOXIDIZER_VERSION.to_string());
     data.pyoxidizer_commit = Some(

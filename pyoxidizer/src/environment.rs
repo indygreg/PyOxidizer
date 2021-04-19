@@ -149,6 +149,17 @@ pub struct Environment {
 }
 
 impl Environment {
+    /// Obtain a new instance.
+    pub fn new() -> Result<Self> {
+        let pyoxidizer_source = if let Some(path) = BUILD_GIT_REPO_PATH.as_ref() {
+            PyOxidizerSource::LocalPath { path: path.clone() }
+        } else {
+            GIT_SOURCE.clone()
+        };
+
+        Ok(Self { pyoxidizer_source })
+    }
+
     /// Determine the location of the pyembed crate given a run-time environment.
     ///
     /// If running from a PyOxidizer Git repository, we reference the pyembed
@@ -190,16 +201,6 @@ impl Environment {
             self.as_pyembed_location().cargo_manifest_fields(),
         )
     }
-}
-
-pub fn resolve_environment() -> Result<Environment> {
-    let pyoxidizer_source = if let Some(path) = BUILD_GIT_REPO_PATH.as_ref() {
-        PyOxidizerSource::LocalPath { path: path.clone() }
-    } else {
-        GIT_SOURCE.clone()
-    };
-
-    Ok(Environment { pyoxidizer_source })
 }
 
 /// Obtain the path to a `cargo` executable.
