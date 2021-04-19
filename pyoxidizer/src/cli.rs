@@ -121,6 +121,9 @@ pub fn run_cli() -> Result<()> {
                 .arg(Arg::with_name("path").help("Path to executable to analyze")),
         )
         .subcommand(
+            SubCommand::with_name("cache-clear").about("Clear PyOxidizer's user-specific cache"),
+        )
+        .subcommand(
             SubCommand::with_name("run-build-script")
                 .setting(AppSettings::ArgRequiredElseHelp)
                 .about("Run functionality that a build script would perform")
@@ -371,6 +374,8 @@ pub fn run_cli() -> Result<()> {
                 verbose,
             )
         }
+
+        ("cache-clear", Some(_)) => projectmgmt::cache_clear(&env),
 
         ("find-resources", Some(args)) => {
             let path = if let Some(value) = args.value_of("path") {

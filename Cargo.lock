@@ -2395,6 +2395,7 @@ dependencies = [
  "path-dedot",
  "python-packaging",
  "python-packed-resources",
+ "remove_dir_all 0.7.0",
  "rustc_version",
  "semver",
  "serde",

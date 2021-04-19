@@ -6,6 +6,7 @@
 
 use {
     crate::{
+        environment::Environment,
         project_building::find_pyoxidizer_config_file_env,
         project_layout::{initialize_project, write_new_pyoxidizer_config_file},
         py_packaging::{
@@ -153,6 +154,15 @@ pub fn run(
     context.evaluate_file(&config_path)?;
 
     context.run_target(target)
+}
+
+pub fn cache_clear(env: &Environment) -> Result<()> {
+    let cache_dir = env.cache_dir();
+
+    println!("removing {}", cache_dir.display());
+    remove_dir_all::remove_dir_all(&cache_dir)?;
+
+    Ok(())
 }
 
 /// Find resources given a source path.
@@ -314,7 +324,7 @@ pub fn init_config_file(
 
 /// Initialize a new Rust project with PyOxidizer support.
 pub fn init_rust_project(project_path: &Path) -> Result<()> {
-    let env = crate::environment::Environment::new()?;
+    let env = Environment::new()?;
     let pyembed_location = env.as_pyembed_location();
 
     initialize_project(project_path, &pyembed_location, None, &[], "console")?;
