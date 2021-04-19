@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        environment::{canonicalize_path, find_cargo_exe, resolve_apple_sdk, MINIMUM_RUST_VERSION},
+        environment::{canonicalize_path, resolve_apple_sdk, MINIMUM_RUST_VERSION},
         project_layout::initialize_project,
         py_packaging::{
             binary::{EmbeddedPythonContext, LibpythonLinkMode, PythonBinaryBuilder},
@@ -107,6 +107,15 @@ impl BuildEnvironment {
         libpython_filename: Option<&Path>,
         apple_sdk_info: Option<&AppleSdkInfo>,
     ) -> Result<Self> {
+        let env = crate::environment::Environment::new()?;
+
+        let cargo_exe = env
+            .cargo_exe()
+            .context("finding cargo executable")?
+            .ok_or_else(|| {
+                anyhow!("could not find cargo executable; is Rust installed and in PATH?")
+            })?;
+
         let rust_version = rustc_version::version()?;
         if rust_version.lt(&MINIMUM_RUST_VERSION) {
             return Err(anyhow!(
@@ -266,7 +275,7 @@ impl BuildEnvironment {
         }
 
         Ok(Self {
-            cargo_exe: find_cargo_exe().context("finding cargo executable")?,
+            cargo_exe,
             rust_version,
             environment_vars: envs,
         })

@@ -201,11 +201,41 @@ impl Environment {
             self.as_pyembed_location().cargo_manifest_fields(),
         )
     }
-}
 
-/// Obtain the path to a `cargo` executable.
-pub fn find_cargo_exe() -> which::Result<PathBuf> {
-    which::which("cargo")
+    /// Find an executable of the given name.
+    ///
+    /// Resolves to `Some(T)` if an executable was found or `None` if not.
+    ///
+    /// Errors if there were problems searching for executables.
+    pub fn find_executable(&self, name: &str) -> which::Result<Option<PathBuf>> {
+        match which::which(name) {
+            Ok(p) => Ok(Some(p)),
+            Err(which::Error::CannotFindBinaryPath) => Ok(None),
+            Err(e) => Err(e),
+        }
+    }
+
+    /// Obtain the path to a `rustc` executable.
+    ///
+    /// This respects the `RUSTC` environment variable.
+    pub fn rustc_exe(&self) -> which::Result<Option<PathBuf>> {
+        if let Some(v) = std::env::var_os("RUSTC") {
+            let p = PathBuf::from(v);
+
+            if p.exists() {
+                Ok(Some(p))
+            } else {
+                Err(which::Error::BadAbsolutePath)
+            }
+        } else {
+            self.find_executable("rustc")
+        }
+    }
+
+    /// Obtain the path to a `cargo` executable.
+    pub fn cargo_exe(&self) -> which::Result<Option<PathBuf>> {
+        self.find_executable("cargo")
+    }
 }
 
 /// Resolve an appropriate Apple SDK to use.

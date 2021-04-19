@@ -5,7 +5,7 @@
 //! Handle file layout of PyOxidizer projects.
 
 use {
-    crate::environment::{find_cargo_exe, PyOxidizerSource, BUILD_GIT_COMMIT, PYOXIDIZER_VERSION},
+    crate::environment::{Environment, PyOxidizerSource, BUILD_GIT_COMMIT, PYOXIDIZER_VERSION},
     anyhow::{anyhow, Context, Result},
     handlebars::Handlebars,
     once_cell::sync::Lazy,
@@ -92,7 +92,7 @@ impl TemplateData {
 }
 
 fn populate_template_data(data: &mut TemplateData) {
-    let env = super::environment::Environment::new().unwrap();
+    let env = Environment::new().unwrap();
 
     data.pyoxidizer_version = Some(PYOXIDIZER_VERSION.to_string());
     data.pyoxidizer_commit = Some(
@@ -386,7 +386,13 @@ pub fn initialize_project(
     pip_install: &[&str],
     windows_subsystem: &str,
 ) -> Result<()> {
-    let status = std::process::Command::new(find_cargo_exe().context("finding cargo executable")?)
+    let env = Environment::new()?;
+    let cargo_exe = env
+        .cargo_exe()
+        .context("finding cargo executable")?
+        .ok_or_else(|| anyhow!("cargo executable not found; is Rust installed?"))?;
+
+    let status = std::process::Command::new(cargo_exe)
         .arg("init")
         .arg("--bin")
         .arg(project_path)
