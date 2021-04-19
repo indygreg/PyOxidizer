@@ -138,7 +138,13 @@ pub fn materialize_rust_package(
     })?;
 
     let tar_data = if let Some(download_dir) = download_cache_dir {
-        let dest_path = download_dir.join(&remote_content.sha256);
+        let dest_path = download_dir.join(
+            remote_content
+                .url
+                .rsplit('/')
+                .next()
+                .expect("failed to parse URL"),
+        );
 
         download_to_path(logger, &remote_content, &dest_path)
             .context("downloading file to cache directory")?;
