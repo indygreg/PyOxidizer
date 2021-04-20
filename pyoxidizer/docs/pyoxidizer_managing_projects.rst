@@ -8,13 +8,19 @@ The ``pyoxidizer`` command line tool is a frontend to the various
 functionality of ``PyOxidizer``. See :ref:`components` for more
 on the various components of ``PyOxidizer``.
 
+.. _pyoxidizer_settings:
+
+Settings
+========
+
 .. _pyoxidizer_cache:
 
-Per-User Cache
-==============
+Cache Directory
+---------------
 
 ``pyoxidizer`` may need to download resources such as Python distributions
-from the Internet. These resources are cached in a per-user directory.
+and Rust toolchains from the Internet. These resources are cached in a
+per-user directory.
 
 PyOxidizer chooses the first available directory from the following list
 to use as the cache:
@@ -28,6 +34,26 @@ to use as the cache:
 
 The ``pyoxidizer cache-clear`` command can be used to delete the contents
 of the cache.
+
+.. _pyoxidizer_managed_rust:
+
+Managed Rust Toolchain
+----------------------
+
+PyOxidizer leverages the Rust programming language and its tooling
+for building binaries embedding Python.
+
+By default, PyOxidizer will automatically download and use Rust toolchains
+(the Rust compiler, standard library, and Cargo) when their functionality is
+needed. PyOxidizer will store these Rust toolchains in the configured
+:ref:`cache <pyoxidizer_cache>`.
+
+If you already have Rust installed on your machine and want PyOxidizer to
+use the existing Rust installation, either pass the ``--system-rust`` flag
+to ``pyoxidizer`` invocations or define the ``PYOXIDIZER_SYSTEM_RUST``
+environment variable to any value. When the *system* Rust is being used,
+``pyoxidizer`` will automatically use the ``cargo`` executable found
+on the current search path (typically the ``PATH`` environment variable).
 
 Creating New Projects with ``init-config-file``
 ===============================================

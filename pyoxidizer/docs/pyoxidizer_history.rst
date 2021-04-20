@@ -34,6 +34,10 @@ Not yet released.
 Backwards Compatibility Notes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+* PyOxidizer no longer uses the system's installed Rust toolchain when
+  building projects. By default, it will download and use a specific version
+  of the Rust toolchain. See :ref:`pyoxidizer_managed_rust` for instructions
+  on disabling this behavior.
 * The ``pyembed`` crate now always canonicalizes the path to the current
   executable. Previously, if ``OxidizedPythonInterpreterConfig.exe`` were
   set, it would not be canonicalized. It is possible this could break
@@ -67,6 +71,12 @@ Backwards Compatibility Notes
 New Features
 ^^^^^^^^^^^^
 
+* PyOxidizer now automatically downloads and uses a Rust toolchain at run time.
+  This means there is no longer an install requirement of having Rust already
+  available on your system (unless you install PyOxidizer from source). See
+  :ref:`pyoxidizer_managed_rust` for details of the new feature, including
+  directions on how to disable the feature and have PyOxidizer use an already
+  installed Rust.
 * :py:class:`oxidized_importer.OxidizedFinder` now supports ``pkg_resources``
   integration. Most of the ``pkg_resources`` APIs are implemented, enabling
   most ``pkg_resources`` functionality to work. ``pkg_resources`` integration

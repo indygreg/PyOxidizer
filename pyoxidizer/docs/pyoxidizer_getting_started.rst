@@ -16,36 +16,93 @@ PyOxidizer. See :ref:`faq_python_38` for more on the minimum Python requirement.
 Operating System Requirements
 =============================
 
-PyOxidizer itself is a Rust program and should theoretically be installable
-on any environment that Rust supports.
+PyOxidizer is officially supported on the following operating systems:
 
-However, PyOxidizer needs to run Python interpreters on the machine performing
-build/packaging actions and the built binary needs to run a Python interpreter
-for the target architecture and operating system. These Python interpreters
-need to be built/packaged in a specific way so PyOxidizer can interact with
-them.
+* Windows x86 (32-bit)
+* Windows x86_64/amd64 (64-bit)
+* macOS x86_64 (Intel processors)
+* macOS aarch64 (ARM/Apple processors)
+* Linux i686 (32-bit)
+* Linux x86_64 (64-bit)
+
+It is likely possible to run PyOxidizer on unsupported operating systems
+and architectures. However, PyOxidizer needs to run Python interpreters on the
+machine performing build/packaging actions and the built binary needs to run a
+Python interpreter for the target architecture and operating system. These
+Python interpreters need to be built/packaged in a specific way so PyOxidizer
+can interact with them.
 
 See :ref:`packaging_available_python_distributions` for the full list of
 available Python distributions. The supported operating systems and
-architectures are:
+architectures of the built-in Python distributions are:
 
 * Linux x86_64 (glibc 2.19 or musl linked)
 * Windows 8+ / Server 2012+ i686 and x86_64
 * macOS 10.9+ Intel x86_64 or 11.0+ ARM
+
+Other System Dependencies
+-------------------------
+
+You will need a working C compiler/toolchain in order to build binaries. If a C
+compiler cannot be found, you should see an error message with instructions
+on how to install one.
+
+On macOS, you will need an Apple SDK that is at least as new as the SDK
+used to build the Python distribution embedded in the binary. PyOxidizer
+will automatically attempt to locate, validate, and use an appropriate SDK.
+See :ref:`pyoxidizer_distributing_macos_build_machine_requirements` for more.
+
+There is a known issue with PyOxidizer on Fedora 30+ that will require you
+to install the ``libxcrypt-compat`` package to avoid an error due to a missing
+``libcrypt.so.1`` file. See https://github.com/indygreg/PyOxidizer/issues/89
+for more info.
+
+While PyOxidizer is implemented in Rust and invokes the Rust compiler and
+build tooling to build binaries, PyOxidizer
+:ref:`manages a Rust installation for you <pyoxidizer_managed_rust>`. This means
+Rust is not an explicit install dependency for PyOxidizer unless you are building
+PyOxidizer from source code.
 
 .. _installing:
 
 Installing
 ==========
 
+Pre-Built Installers and Executables
+------------------------------------
+
+PyOxidizer provides pre-built installers and executables as part of its release
+process. The following should be made available:
+
+* Windows x86 (32-bit) MSI installer.
+* Windows amd64 (64-bit) MSI installer.
+* Windows universal (x86+amd64) EXE installer.
+
+These installers can generally be found at
+https://github.com/indygreg/PyOxidizer/releases/latest.
+
+If this URL does not redirect to a PyOxidizer release, go to
+https://github.com/indygreg/PyOxidizer/releases and look for a release with
+PyOxidizer release artifacts. You should see giant text that reads
+``PyOxidizer <version>`` that looks different from other entries in the
+list. You may have to click through multiple `next` links at the bottom of
+the release list until you find a PyOxidizer release.
+
+If pre-built artifacts are not available for your machine, you will need to
+compile PyOxidizer from source code.
+
+.. _installing_pyoxidizer:
+
+Installing PyOxidizer from Source
+---------------------------------
+
 .. _installing_rust:
 
 Installing Rust
----------------
+^^^^^^^^^^^^^^^
 
 PyOxidizer is a Rust application and requires Rust (1.46 or newer) to be
-installed in order to build PyOxidizer itself as well as Python application
-binaries.
+installed in order to build PyOxidizer.
 
 You can verify your installed version of Rust by running::
 
@@ -66,33 +123,15 @@ official ``rustup`` install instructions involving a ``curl | sh`` (your
 paranoia is understood), you can find instructions for alternative installation
 methods at https://github.com/rust-lang/rustup.rs/#other-installation-methods.
 
-Other System Dependencies
--------------------------
-
-You will need a working C compiler/toolchain in order to build some Rust
-crates and their dependencies. If Rust cannot find a C compiler, it should
-print a message at build time and give you instructions on how to install one.
-
-On macOS, you will need an Apple SDK that is at least as new as the SDK
-used to build the Python distribution embedded in the binary. PyOxidizer
-will automatically attempt to locate, validate, and use an appropriate SDK.
-See :ref:`pyoxidizer_distributing_macos_build_machine_requirements` for more.
-
-There is a known issue with PyOxidizer on Fedora 30+ that will require you
-to install the ``libxcrypt-compat`` package to avoid an error due to a missing
-``libcrypt.so.1`` file. See https://github.com/indygreg/PyOxidizer/issues/89
-for more info.
-
-.. _installing_pyoxidizer:
-
 Installing PyOxidizer
----------------------
+^^^^^^^^^^^^^^^^^^^^^
 
-PyOxidizer can be installed from its latest published crate::
+Once Rust is installed, PyOxidizer can be installed from its latest
+published crate on Rust's official/default package repository::
 
    $ cargo install pyoxidizer
 
-From a Git repository using cargo::
+From PyOxidizer's canonical Git repository using cargo::
 
    # The latest commit in source control.
    $ cargo install --git https://github.com/indygreg/PyOxidizer.git --branch main pyoxidizer
@@ -100,7 +139,7 @@ From a Git repository using cargo::
    $ A specific release
    $ cargo install --git https://github.com/indygreg/PyOxidizer.git --tag <TAG> pyoxidizer
 
-Or by cloning the Git repository and building the project locally::
+Or by cloning the canonical Git repository and building the project locally::
 
    $ git clone https://github.com/indygreg/PyOxidizer.git
    $ cd PyOxidizer
@@ -123,7 +162,7 @@ Or by cloning the Git repository and building the project locally::
 Once the ``pyoxidizer`` executable is installed, try to run it::
 
    $ pyoxidizer
-   PyOxidizer 0.8-pre
+   PyOxidizer 0.14.0-pre
    Gregory Szorc <gregory.szorc@gmail.com>
    Build and distribute Python applications
 
