@@ -3,7 +3,8 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    crate::{MainPythonInterpreter, OxidizedPythonInterpreterConfig},
+    super::default_interpreter_config,
+    crate::MainPythonInterpreter,
     anyhow::{anyhow, Result},
     cpython::{ObjectProtocol, PyObject},
     rusty_fork::rusty_fork_test,
@@ -12,11 +13,8 @@ use {
 
 fn new_interpreter<'python, 'interpreter, 'resources>(
 ) -> Result<MainPythonInterpreter<'python, 'interpreter, 'resources>> {
-    let mut config = OxidizedPythonInterpreterConfig::default();
-    // Otherwise Rust test executable args are parsed as Python args.
-    config.interpreter_config.parse_argv = Some(false);
+    let mut config = default_interpreter_config();
     config.oxidized_importer = true;
-    config.set_missing_path_configuration = false;
     let interp = MainPythonInterpreter::new(config)?;
 
     Ok(interp)
@@ -26,14 +24,11 @@ fn run_py_test(test_filename: &str) -> Result<()> {
     let test_dir = env!("PYEMBED_TESTS_DIR");
     let test_path = PathBuf::from(test_dir).join(test_filename);
 
-    let mut config = OxidizedPythonInterpreterConfig::default();
-    // Normalize the arguments in the interpreter and prevent Python from parsing them.
-    config.interpreter_config.parse_argv = Some(false);
+    let mut config = default_interpreter_config();
     config.argv = Some(vec![std::env::current_exe().unwrap().into_os_string()]);
     config.oxidized_importer = true;
     config.interpreter_config.run_filename = Some(test_path);
     config.interpreter_config.buffered_stdio = Some(false);
-    config.set_missing_path_configuration = false;
 
     if MainPythonInterpreter::new(config)?.py_runmain() != 0 {
         Err(anyhow!("Python code did not exit successfully"))
@@ -60,11 +55,8 @@ rusty_fork_test! {
     /// We can load our oxidized importer with no resources.
     #[test]
     fn no_resources() {
-        let mut config = OxidizedPythonInterpreterConfig::default();
-        // Otherwise Rust test executable args are parsed as Python args.
-        config.interpreter_config.parse_argv = Some(false);
+        let mut config = default_interpreter_config();
         config.oxidized_importer = true;
-        config.set_missing_path_configuration = false;
         let mut interp = MainPythonInterpreter::new(config).unwrap();
 
         let py = interp.acquire_gil();

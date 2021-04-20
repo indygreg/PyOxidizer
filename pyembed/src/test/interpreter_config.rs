@@ -3,6 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
+    super::default_interpreter_config,
     crate::{MainPythonInterpreter, OxidizedPythonInterpreterConfig},
     cpython::{ObjectProtocol, PyBytes, PyList, PyObject, PyString, PyStringData},
     python3_sys as pyffi,
@@ -41,10 +42,8 @@ fn reprs(py: cpython::Python, container: &PyObject) -> cpython::PyResult<Vec<Str
 }
 
 fn assert_importer(oxidized: bool, filesystem: bool) {
-    let mut config = OxidizedPythonInterpreterConfig::default();
-    // Otherwise the Rust arguments are interpreted as Python arguments.
-    config.interpreter_config.parse_argv = Some(false);
-    config.set_missing_path_configuration = false;
+    let mut config = default_interpreter_config();
+
     config.oxidized_importer = oxidized;
     config.filesystem_importer = filesystem;
     let mut interp = MainPythonInterpreter::new(config).unwrap();
@@ -98,10 +97,7 @@ fn assert_importer(oxidized: bool, filesystem: bool) {
 rusty_fork_test! {
     #[test]
     fn test_default_interpreter() {
-        let mut config = OxidizedPythonInterpreterConfig::default();
-        // Otherwise the Rust arguments are interpreted as Python arguments.
-        config.interpreter_config.parse_argv = Some(false);
-        config.set_missing_path_configuration = false;
+        let config = default_interpreter_config();
         let mut interp = MainPythonInterpreter::new(config).unwrap();
 
         let py = interp.acquire_gil();
@@ -145,13 +141,8 @@ rusty_fork_test! {
 
     #[test]
     fn test_isolated_interpreter() {
-        let mut config = OxidizedPythonInterpreterConfig::default();
+        let mut config = default_interpreter_config();
         config.interpreter_config.profile = PythonInterpreterProfile::Isolated;
-        // This allows us to pick up the default paths from the Python install
-        // detected by python3_sys. Without this, sys.path and other paths reference
-        // directories next to the Rust test executable, and there is no Python stdlib
-        // there.
-        config.set_missing_path_configuration = false;
 
         let mut interp = MainPythonInterpreter::new(config).unwrap();
 
@@ -171,10 +162,7 @@ rusty_fork_test! {
 
     #[test]
     fn test_allocator_default() {
-        let mut config = OxidizedPythonInterpreterConfig::default();
-        // Otherwise the Rust arguments are interpreted as Python arguments.
-        config.interpreter_config.parse_argv = Some(false);
-        config.set_missing_path_configuration = false;
+        let mut config = default_interpreter_config();
 
         config.allocator_backend = MemoryAllocatorBackend::Default;
 
@@ -185,10 +173,7 @@ rusty_fork_test! {
 
     #[test]
     fn test_allocator_rust() {
-        let mut config = OxidizedPythonInterpreterConfig::default();
-        // Otherwise the Rust arguments are interpreted as Python arguments.
-        config.interpreter_config.parse_argv = Some(false);
-        config.set_missing_path_configuration = false;
+        let mut config = default_interpreter_config();
 
         config.allocator_backend = MemoryAllocatorBackend::Rust;
         config.allocator_raw = true;
@@ -203,10 +188,7 @@ rusty_fork_test! {
 
     #[test]
     fn test_allocator_rust_pymalloc_arena() {
-        let mut config = OxidizedPythonInterpreterConfig::default();
-        // Otherwise the Rust arguments are interpreted as Python arguments.
-        config.interpreter_config.parse_argv = Some(false);
-        config.set_missing_path_configuration = false;
+        let mut config = default_interpreter_config();
 
         config.allocator_backend = MemoryAllocatorBackend::Rust;
         config.allocator_raw = true;
@@ -221,10 +203,7 @@ rusty_fork_test! {
     #[cfg(feature = "jemalloc")]
     #[test]
     fn test_allocator_jemalloc() {
-        let mut config = OxidizedPythonInterpreterConfig::default();
-        // Otherwise the Rust arguments are interpreted as Python arguments.
-        config.interpreter_config.parse_argv = Some(false);
-        config.set_missing_path_configuration = false;
+        let mut config = default_interpreter_config();
 
         config.allocator_backend = MemoryAllocatorBackend::Jemalloc;
         config.allocator_raw = true;
@@ -240,10 +219,7 @@ rusty_fork_test! {
     #[cfg(feature = "jemalloc")]
     #[test]
     fn test_allocator_jemalloc_pymalloc_arena() {
-        let mut config = OxidizedPythonInterpreterConfig::default();
-        // Otherwise the Rust arguments are interpreted as Python arguments.
-        config.interpreter_config.parse_argv = Some(false);
-        config.set_missing_path_configuration = false;
+        let mut config = default_interpreter_config();
 
         config.allocator_backend = MemoryAllocatorBackend::Jemalloc;
         config.allocator_raw = true;
@@ -258,10 +234,7 @@ rusty_fork_test! {
     #[cfg(feature = "mimalloc")]
     #[test]
     fn test_allocator_mimalloc() {
-        let mut config = OxidizedPythonInterpreterConfig::default();
-        // Otherwise the Rust arguments are interpreted as Python arguments.
-        config.interpreter_config.parse_argv = Some(false);
-        config.set_missing_path_configuration = false;
+        let mut config = default_interpreter_config();
 
         config.allocator_backend = MemoryAllocatorBackend::Mimalloc;
         config.allocator_raw = true;
@@ -277,10 +250,7 @@ rusty_fork_test! {
     #[cfg(feature = "mimalloc")]
     #[test]
     fn test_allocator_mimalloc_pymalloc_arena() {
-        let mut config = OxidizedPythonInterpreterConfig::default();
-        // Otherwise the Rust arguments are interpreted as Python arguments.
-        config.interpreter_config.parse_argv = Some(false);
-        config.set_missing_path_configuration = false;
+        let mut config = default_interpreter_config();
 
         config.allocator_backend = MemoryAllocatorBackend::Mimalloc;
         config.allocator_raw = true;
@@ -295,10 +265,7 @@ rusty_fork_test! {
     #[cfg(feature = "snmalloc")]
     #[test]
     fn test_allocator_snmalloc() {
-        let mut config = OxidizedPythonInterpreterConfig::default();
-        // Otherwise the Rust arguments are interpreted as Python arguments.
-        config.interpreter_config.parse_argv = Some(false);
-        config.set_missing_path_configuration = false;
+        let mut config = default_interpreter_config();
 
         config.allocator_backend = MemoryAllocatorBackend::Snmalloc;
         config.allocator_raw = true;
@@ -314,10 +281,7 @@ rusty_fork_test! {
     #[cfg(feature = "snmalloc")]
     #[test]
     fn test_allocator_snmalloc_pymalloc_arena() {
-        let mut config = OxidizedPythonInterpreterConfig::default();
-        // Otherwise the Rust arguments are interpreted as Python arguments.
-        config.interpreter_config.parse_argv = Some(false);
-        config.set_missing_path_configuration = false;
+        let mut config = default_interpreter_config();
 
         config.allocator_backend = MemoryAllocatorBackend::Snmalloc;
         config.allocator_raw = true;
@@ -331,10 +295,7 @@ rusty_fork_test! {
 
     #[test]
     fn test_allocator_debug() {
-        let mut config = OxidizedPythonInterpreterConfig::default();
-        // Otherwise the Rust arguments are interpreted as Python arguments.
-        config.interpreter_config.parse_argv = Some(false);
-        config.set_missing_path_configuration = false;
+        let mut config = default_interpreter_config();
 
         config.allocator_debug = true;
 
@@ -343,10 +304,7 @@ rusty_fork_test! {
 
     #[test]
     fn test_allocator_debug_custom_backend() {
-        let mut config = OxidizedPythonInterpreterConfig::default();
-        // Otherwise the Rust arguments are interpreted as Python arguments.
-        config.interpreter_config.parse_argv = Some(false);
-        config.set_missing_path_configuration = false;
+        let mut config = default_interpreter_config();
 
         config.allocator_backend = MemoryAllocatorBackend::Rust;
         config.allocator_raw = true;
@@ -384,11 +342,7 @@ rusty_fork_test! {
     /// sys.argv is initialized using the Rust process's arguments by default.
     #[test]
     fn test_argv_default() {
-        let mut config = OxidizedPythonInterpreterConfig::default();
-        // Otherwise the Rust arguments are interpreted as Python arguments.
-        config.interpreter_config.parse_argv = Some(false);
-        config.set_missing_path_configuration = false;
-
+        let config = default_interpreter_config();
         let mut interp = MainPythonInterpreter::new(config).unwrap();
 
         let py = interp.acquire_gil();
@@ -406,11 +360,7 @@ rusty_fork_test! {
     /// `OxidizedPythonInterpreterConfig.interpreter_config.argv` is respected.
     #[test]
     fn test_argv_respect_interpreter_config() {
-        let mut config = OxidizedPythonInterpreterConfig::default();
-        // Otherwise the arguments are interpreted as Python arguments.
-        config.interpreter_config.parse_argv = Some(false);
-        config.set_missing_path_configuration = false;
-
+        let mut config = default_interpreter_config();
         // .argv expands to current process args by default. But setting
         // .interpreter_config.argv overrides this behavior.
         config.argv = None;
@@ -436,10 +386,7 @@ rusty_fork_test! {
     /// `OxidizedPythonInterpreterConfig.argv` can be used to define `sys.argv`.
     #[test]
     fn test_argv_override() {
-        let mut config = OxidizedPythonInterpreterConfig::default();
-        // Otherwise the arguments are interpreted as Python arguments.
-        config.interpreter_config.parse_argv = Some(false);
-        config.set_missing_path_configuration = false;
+        let mut config = default_interpreter_config();
         config.argv = Some(vec![
             OsString::from("prog"),
             OsString::from("foo"),
@@ -462,11 +409,7 @@ rusty_fork_test! {
 
     #[test]
     fn test_argvb_utf8() {
-        let mut config = OxidizedPythonInterpreterConfig::default();
-
-        // Otherwise the Rust arguments are interpreted as Python arguments.
-        config.interpreter_config.parse_argv = Some(false);
-        config.set_missing_path_configuration = false;
+        let mut config = default_interpreter_config();
         config.argv = Some(vec![get_unicode_argument()]);
         config.argvb = true;
 
@@ -495,11 +438,7 @@ rusty_fork_test! {
 
     #[test]
     fn test_argv_utf8() {
-        let mut config = OxidizedPythonInterpreterConfig::default();
-
-        // Otherwise the Rust arguments are interpreted as Python arguments.
-        config.interpreter_config.parse_argv = Some(false);
-        config.set_missing_path_configuration = false;
+        let mut config = default_interpreter_config();
         config.argv = Some(vec![get_unicode_argument()]);
 
         let mut interp = MainPythonInterpreter::new(config).unwrap();
@@ -534,12 +473,8 @@ rusty_fork_test! {
 
     #[test]
     fn test_argv_utf8_isolated() {
-        let mut config = OxidizedPythonInterpreterConfig::default();
+        let mut config = default_interpreter_config();
         config.interpreter_config.profile = PythonInterpreterProfile::Isolated;
-        // Otherwise the Rust arguments are interpreted as Python arguments.
-        config.interpreter_config.parse_argv = Some(false);
-        config.set_missing_path_configuration = false;
-        config.set_missing_path_configuration = false;
         config.argv = Some(vec![get_unicode_argument()]);
 
         let mut interp = MainPythonInterpreter::new(config).unwrap();
@@ -597,12 +532,9 @@ rusty_fork_test! {
 
     #[test]
     fn test_argv_utf8_isolated_configure_locale() {
-        let mut config = OxidizedPythonInterpreterConfig::default();
+        let mut config = default_interpreter_config();
         config.interpreter_config.profile = PythonInterpreterProfile::Isolated;
         config.interpreter_config.configure_locale = Some(true);
-        // Otherwise the Rust arguments are interpreted as Python arguments.
-        config.interpreter_config.parse_argv = Some(false);
-        config.set_missing_path_configuration = false;
         config.argv = Some(vec![get_unicode_argument()]);
 
         let mut interp = MainPythonInterpreter::new(config).unwrap();
@@ -641,9 +573,7 @@ rusty_fork_test! {
 
     #[test]
     fn test_tcl_library_origin() {
-        let mut config = OxidizedPythonInterpreterConfig::default();
-        // Otherwise the Rust arguments are interpreted as Python arguments.
-        config.interpreter_config.parse_argv = Some(false);
+        let mut config = default_interpreter_config();
         config.tcl_library = Some(PathBuf::from("$ORIGIN").join("lib").join("tcl8.6"));
 
         let config = config.resolve().unwrap();
@@ -660,10 +590,7 @@ rusty_fork_test! {
 
     #[test]
     fn test_dev_mode() {
-        let mut config = OxidizedPythonInterpreterConfig::default();
-        // Otherwise the Rust arguments are interpreted as Python arguments.
-        config.interpreter_config.parse_argv = Some(false);
-        config.set_missing_path_configuration = false;
+        let mut config = default_interpreter_config();
         config.interpreter_config.development_mode = Some(true);
 
         let mut interp = MainPythonInterpreter::new(config).unwrap();
@@ -677,10 +604,7 @@ rusty_fork_test! {
 
     #[test]
     fn test_use_environment() {
-        let mut config = OxidizedPythonInterpreterConfig::default();
-        // Otherwise the Rust arguments are interpreted as Python arguments.
-        config.interpreter_config.parse_argv = Some(false);
-        config.set_missing_path_configuration = false;
+        let mut config = default_interpreter_config();
         config.interpreter_config.use_environment = Some(false);
 
         let mut interp = MainPythonInterpreter::new(config).unwrap();
@@ -694,10 +618,7 @@ rusty_fork_test! {
 
     #[test]
     fn test_utf8_mode() {
-        let mut config = OxidizedPythonInterpreterConfig::default();
-        // Otherwise the Rust arguments are interpreted as Python arguments.
-        config.interpreter_config.parse_argv = Some(false);
-        config.set_missing_path_configuration = false;
+        let mut config = default_interpreter_config();
         config.interpreter_config.utf8_mode = Some(true);
 
         let mut interp = MainPythonInterpreter::new(config).unwrap();
@@ -711,10 +632,7 @@ rusty_fork_test! {
 
     #[test]
     fn test_bytes_warning_warn() {
-        let mut config = OxidizedPythonInterpreterConfig::default();
-        // Otherwise the Rust arguments are interpreted as Python arguments.
-        config.interpreter_config.parse_argv = Some(false);
-        config.set_missing_path_configuration = false;
+        let mut config = default_interpreter_config();
         config.interpreter_config.bytes_warning = Some(BytesWarning::Warn);
 
         let mut interp = MainPythonInterpreter::new(config).unwrap();
@@ -728,10 +646,7 @@ rusty_fork_test! {
 
     #[test]
     fn test_bytes_warning_raise() {
-        let mut config = OxidizedPythonInterpreterConfig::default();
-        // Otherwise the Rust arguments are interpreted as Python arguments.
-        config.interpreter_config.parse_argv = Some(false);
-        config.set_missing_path_configuration = false;
+        let mut config = default_interpreter_config();
         config.interpreter_config.bytes_warning = Some(BytesWarning::Raise);
 
         let mut interp = MainPythonInterpreter::new(config).unwrap();
@@ -745,10 +660,7 @@ rusty_fork_test! {
 
     #[test]
     fn test_optimization_level_one() {
-        let mut config = OxidizedPythonInterpreterConfig::default();
-        // Otherwise the Rust arguments are interpreted as Python arguments.
-        config.interpreter_config.parse_argv = Some(false);
-        config.set_missing_path_configuration = false;
+        let mut config = default_interpreter_config();
         config.interpreter_config.optimization_level = Some(BytecodeOptimizationLevel::One);
 
         let mut interp = MainPythonInterpreter::new(config).unwrap();
@@ -762,10 +674,7 @@ rusty_fork_test! {
 
     #[test]
     fn test_optimization_level_two() {
-        let mut config = OxidizedPythonInterpreterConfig::default();
-        // Otherwise the Rust arguments are interpreted as Python arguments.
-        config.interpreter_config.parse_argv = Some(false);
-        config.set_missing_path_configuration = false;
+        let mut config = default_interpreter_config();
         config.interpreter_config.optimization_level = Some(BytecodeOptimizationLevel::Two);
 
         let mut interp = MainPythonInterpreter::new(config).unwrap();
@@ -779,10 +688,7 @@ rusty_fork_test! {
 
     #[test]
     fn test_inspect() {
-        let mut config = OxidizedPythonInterpreterConfig::default();
-        // Otherwise the Rust arguments are interpreted as Python arguments.
-        config.interpreter_config.parse_argv = Some(false);
-        config.set_missing_path_configuration = false;
+        let mut config = default_interpreter_config();
         config.interpreter_config.inspect = Some(true);
 
         let mut interp = MainPythonInterpreter::new(config).unwrap();
@@ -796,10 +702,7 @@ rusty_fork_test! {
 
     #[test]
     fn test_interactive() {
-        let mut config = OxidizedPythonInterpreterConfig::default();
-        // Otherwise the Rust arguments are interpreted as Python arguments.
-        config.interpreter_config.parse_argv = Some(false);
-        config.set_missing_path_configuration = false;
+        let mut config = default_interpreter_config();
         config.interpreter_config.interactive = Some(true);
 
         let mut interp = MainPythonInterpreter::new(config).unwrap();
@@ -813,10 +716,7 @@ rusty_fork_test! {
 
     #[test]
     fn test_quiet() {
-        let mut config = OxidizedPythonInterpreterConfig::default();
-        // Otherwise the Rust arguments are interpreted as Python arguments.
-        config.interpreter_config.parse_argv = Some(false);
-        config.set_missing_path_configuration = false;
+        let mut config = default_interpreter_config();
         config.interpreter_config.quiet = Some(true);
 
         let mut interp = MainPythonInterpreter::new(config).unwrap();
@@ -830,10 +730,7 @@ rusty_fork_test! {
 
     #[test]
     fn test_site_import() {
-        let mut config = OxidizedPythonInterpreterConfig::default();
-        // Otherwise the Rust arguments are interpreted as Python arguments.
-        config.interpreter_config.parse_argv = Some(false);
-        config.set_missing_path_configuration = false;
+        let mut config = default_interpreter_config();
         config.interpreter_config.site_import = Some(false);
 
         let mut interp = MainPythonInterpreter::new(config).unwrap();
@@ -847,10 +744,7 @@ rusty_fork_test! {
 
     #[test]
     fn test_user_site_directory() {
-        let mut config = OxidizedPythonInterpreterConfig::default();
-        // Otherwise the Rust arguments are interpreted as Python arguments.
-        config.interpreter_config.parse_argv = Some(false);
-        config.set_missing_path_configuration = false;
+        let mut config = default_interpreter_config();
         config.interpreter_config.user_site_directory = Some(false);
 
         let mut interp = MainPythonInterpreter::new(config).unwrap();
@@ -864,10 +758,7 @@ rusty_fork_test! {
 
     #[test]
     fn test_write_bytecode() {
-        let mut config = OxidizedPythonInterpreterConfig::default();
-        // Otherwise the Rust arguments are interpreted as Python arguments.
-        config.interpreter_config.parse_argv = Some(false);
-        config.set_missing_path_configuration = false;
+        let mut config = default_interpreter_config();
         config.interpreter_config.write_bytecode = Some(false);
 
         let mut interp = MainPythonInterpreter::new(config).unwrap();
