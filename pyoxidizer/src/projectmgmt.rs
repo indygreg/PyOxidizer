@@ -18,7 +18,7 @@ use {
         },
         starlark::eval::EvaluationContextBuilder,
     },
-    anyhow::{anyhow, Result},
+    anyhow::{anyhow, Context, Result},
     python_packaging::{
         filesystem_scanning::find_python_resources, resource::PythonResource, wheel::WheelArchive,
     },
@@ -325,11 +325,25 @@ pub fn init_config_file(
 }
 
 /// Initialize a new Rust project with PyOxidizer support.
-pub fn init_rust_project(project_path: &Path) -> Result<()> {
-    let env = Environment::new()?;
+pub fn init_rust_project(
+    env: &Environment,
+    logger: &slog::Logger,
+    project_path: &Path,
+) -> Result<()> {
+    let cargo_exe = env
+        .ensure_rust_toolchain(logger, env!("HOST"), env!("HOST"))
+        .context("resolving Rust environment")?
+        .cargo_exe;
     let pyembed_location = env.as_pyembed_location();
 
-    initialize_project(project_path, &pyembed_location, None, &[], "console")?;
+    initialize_project(
+        project_path,
+        &cargo_exe,
+        &pyembed_location,
+        None,
+        &[],
+        "console",
+    )?;
     println!();
     println!(
         "A new Rust binary application has been created in {}",

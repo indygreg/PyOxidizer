@@ -216,7 +216,7 @@ impl Environment {
         self.managed_rust = false;
         self.rust_environment
             .write()
-            .map_err(|e| anyhow!("unable to lock cached rust environment for writing"))?
+            .map_err(|e| anyhow!("unable to lock cached rust environment for writing: {}", e))?
             .take();
 
         Ok(())
@@ -361,7 +361,7 @@ impl Environment {
     /// This attempts to locate a Rust toolchain suitable for use with
     /// PyOxidizer. If a toolchain could not be found or doesn't meet the
     /// requirements, an error occurs.
-    pub fn system_rust_environment(&self) -> Result<RustEnvironment> {
+    fn system_rust_environment(&self) -> Result<RustEnvironment> {
         let cargo_exe = self
             .cargo_exe()
             .context("finding cargo executable")?

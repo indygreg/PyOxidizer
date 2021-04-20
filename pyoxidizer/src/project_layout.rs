@@ -381,18 +381,13 @@ pub fn update_new_cargo_toml(path: &Path, pyembed_location: &PyembedLocation) ->
 /// attribute.
 pub fn initialize_project(
     project_path: &Path,
+    cargo_exe: &Path,
     pyembed_location: &PyembedLocation,
     code: Option<&str>,
     pip_install: &[&str],
     windows_subsystem: &str,
 ) -> Result<()> {
-    // TODO use ensure_rust_toolchain().
-    let env = Environment::new()?;
-    let rust_env = env
-        .system_rust_environment()
-        .context("resolving Rust environment")?;
-
-    let status = std::process::Command::new(&rust_env.cargo_exe)
+    let status = std::process::Command::new(cargo_exe)
         .arg("init")
         .arg("--bin")
         .arg(project_path)

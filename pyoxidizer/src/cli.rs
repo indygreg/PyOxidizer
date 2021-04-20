@@ -432,7 +432,7 @@ pub fn run_cli() -> Result<()> {
             let path = args.value_of("path").unwrap();
             let project_path = Path::new(path);
 
-            projectmgmt::init_rust_project(&project_path)
+            projectmgmt::init_rust_project(&env, &logger_context.logger, &project_path)
         }
 
         ("python-distribution-extract", Some(args)) => {

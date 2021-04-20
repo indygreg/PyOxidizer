@@ -428,6 +428,11 @@ pub fn build_python_executable<'a>(
     let env = crate::environment::Environment::new().context("resolving environment")?;
     let pyembed_location = env.as_pyembed_location();
 
+    let cargo_exe = env
+        .ensure_rust_toolchain(logger, env!("HOST"), env!("HOST"))
+        .context("resolving Rust toolchain")?
+        .cargo_exe;
+
     let temp_dir = tempfile::Builder::new()
         .prefix("pyoxidizer")
         .tempdir()
@@ -440,6 +445,7 @@ pub fn build_python_executable<'a>(
 
     initialize_project(
         &project_path,
+        &cargo_exe,
         &pyembed_location,
         None,
         &[],
