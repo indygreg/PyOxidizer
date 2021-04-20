@@ -37,6 +37,7 @@ use {
 #[allow(clippy::too_many_arguments)]
 pub fn file_manifest_add_python_executable(
     manifest: &mut FileManifestValue,
+    env: &crate::environment::Environment,
     logger: &slog::Logger,
     prefix: &str,
     exe: &dyn PythonBinaryBuilder,
@@ -44,7 +45,7 @@ pub fn file_manifest_add_python_executable(
     release: bool,
     opt_level: &str,
 ) -> Result<()> {
-    let build = build_python_executable(logger, &exe.name(), exe, target, opt_level, release)
+    let build = build_python_executable(env, logger, &exe.name(), exe, target, opt_level, release)
         .context("building Python executable")?;
 
     let content = FileEntry {

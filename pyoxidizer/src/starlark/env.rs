@@ -100,6 +100,10 @@ impl PyOxidizerEnvironmentContext {
         })
     }
 
+    pub fn env(&self) -> &crate::environment::Environment {
+        &self.env
+    }
+
     pub fn logger(&self) -> &slog::Logger {
         &self.logger
     }

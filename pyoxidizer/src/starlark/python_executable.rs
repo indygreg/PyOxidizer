@@ -93,6 +93,7 @@ impl PythonExecutableValue {
         // Build an executable by writing out a temporary Rust project
         // and building it.
         let build = build_python_executable(
+            context.env(),
             context.logger(),
             &self.exe.name(),
             self.exe.deref(),
@@ -728,6 +729,7 @@ impl PythonExecutableValue {
 
         file_manifest_add_python_executable(
             &mut manifest,
+            pyoxidizer_context.env(),
             pyoxidizer_context.logger(),
             &prefix,
             self.exe.deref(),

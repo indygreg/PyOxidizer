@@ -417,6 +417,7 @@ pub fn build_executable_with_rust_project<'a>(
 ///
 /// Returns the binary data constituting the built executable.
 pub fn build_python_executable<'a>(
+    env: &Environment,
     logger: &slog::Logger,
     bin_name: &str,
     exe: &'a (dyn PythonBinaryBuilder + 'a),
@@ -424,7 +425,6 @@ pub fn build_python_executable<'a>(
     opt_level: &str,
     release: bool,
 ) -> Result<BuiltExecutable<'a>> {
-    let env = crate::environment::Environment::new().context("resolving environment")?;
     let pyembed_location = env.pyoxidizer_source.as_pyembed_location();
 
     let cargo_exe = env
@@ -730,11 +730,13 @@ mod tests {
 
     #[test]
     fn test_empty_project() -> Result<()> {
+        let env = get_env()?;
         let logger = get_logger()?;
         let options = StandalonePythonExecutableBuilderOptions::default();
         let pre_built = options.new_builder()?;
 
         build_python_executable(
+            &env,
             &logger,
             "myapp",
             pre_built.as_ref(),
@@ -750,6 +752,7 @@ mod tests {
     #[cfg(not(all(target_os = "macos", target_arch = "aarch64")))]
     #[test]
     fn test_empty_project_python_38() -> Result<()> {
+        let env = get_env()?;
         let logger = get_logger()?;
         let options = StandalonePythonExecutableBuilderOptions {
             distribution_version: Some("3.8".to_string()),
@@ -758,6 +761,7 @@ mod tests {
         let pre_built = options.new_builder()?;
 
         build_python_executable(
+            &env,
             &logger,
             "myapp",
             pre_built.as_ref(),
@@ -772,6 +776,7 @@ mod tests {
     #[test]
     #[cfg(target_env = "msvc")]
     fn test_empty_project_standalone_static() -> Result<()> {
+        let env = get_env()?;
         let logger = get_logger()?;
         let options = StandalonePythonExecutableBuilderOptions {
             distribution_flavor: DistributionFlavor::StandaloneStatic,
@@ -780,6 +785,7 @@ mod tests {
         let pre_built = options.new_builder()?;
 
         build_python_executable(
+            &env,
             &logger,
             "myapp",
             pre_built.as_ref(),
@@ -794,6 +800,7 @@ mod tests {
     #[test]
     #[cfg(target_env = "msvc")]
     fn test_empty_project_standalone_static_38() -> Result<()> {
+        let env = get_env()?;
         let logger = get_logger()?;
         let options = StandalonePythonExecutableBuilderOptions {
             distribution_version: Some("3.8".to_string()),
@@ -803,6 +810,7 @@ mod tests {
         let pre_built = options.new_builder()?;
 
         build_python_executable(
+            &env,
             &logger,
             "myapp",
             pre_built.as_ref(),
@@ -818,6 +826,7 @@ mod tests {
     // Not supported on Windows.
     #[cfg(not(target_env = "msvc"))]
     fn test_allocator_jemalloc() -> Result<()> {
+        let env = get_env()?;
         let logger = get_logger()?;
 
         let mut options = StandalonePythonExecutableBuilderOptions::default();
@@ -826,6 +835,7 @@ mod tests {
         let pre_built = options.new_builder()?;
 
         build_python_executable(
+            &env,
             &logger,
             "myapp",
             pre_built.as_ref(),
@@ -845,6 +855,7 @@ mod tests {
             return Ok(());
         }
 
+        let env = get_env()?;
         let logger = get_logger()?;
 
         let mut options = StandalonePythonExecutableBuilderOptions::default();
@@ -853,6 +864,7 @@ mod tests {
         let pre_built = options.new_builder()?;
 
         build_python_executable(
+            &env,
             &logger,
             "myapp",
             pre_built.as_ref(),
@@ -872,6 +884,7 @@ mod tests {
             return Ok(());
         }
 
+        let env = get_env()?;
         let logger = get_logger()?;
 
         let mut options = StandalonePythonExecutableBuilderOptions::default();
@@ -880,6 +893,7 @@ mod tests {
         let pre_built = options.new_builder()?;
 
         build_python_executable(
+            &env,
             &logger,
             "myapp",
             pre_built.as_ref(),
