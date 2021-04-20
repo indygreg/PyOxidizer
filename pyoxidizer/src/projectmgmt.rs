@@ -331,7 +331,7 @@ pub fn init_rust_project(
     project_path: &Path,
 ) -> Result<()> {
     let cargo_exe = env
-        .ensure_rust_toolchain(logger, env!("HOST"), env!("HOST"))
+        .ensure_rust_toolchain(logger, env!("HOST"))
         .context("resolving Rust environment")?
         .cargo_exe;
     let pyembed_location = env.as_pyembed_location();

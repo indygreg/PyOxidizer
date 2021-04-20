@@ -279,11 +279,15 @@ impl Environment {
         }
     }
 
+    /// Obtain the Rust target triple for the current machine.
+    fn rust_host_triple(&self) -> &str {
+        env!("HOST")
+    }
+
     /// Ensure a Rust toolchain suitable for building is available.
     pub fn ensure_rust_toolchain(
         &self,
         logger: &slog::Logger,
-        host_triple: &str,
         target_triple: &str,
     ) -> Result<RustEnvironment> {
         let mut cached = self
@@ -303,7 +307,7 @@ impl Environment {
                 let toolchain = install_rust_toolchain(
                     logger,
                     RUST_TOOLCHAIN_VERSION,
-                    host_triple,
+                    self.rust_host_triple(),
                     &[target_triple],
                     &self.rust_dir(),
                     Some(&self.rust_dir()),

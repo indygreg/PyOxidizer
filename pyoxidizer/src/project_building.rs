@@ -106,7 +106,7 @@ impl BuildEnvironment {
         let env = Environment::new()?;
 
         let rust_environment = env
-            .ensure_rust_toolchain(logger, env!("HOST"), target_triple)
+            .ensure_rust_toolchain(logger, target_triple)
             .context("ensuring Rust toolchain available")?;
 
         let mut envs = std::env::vars().collect::<HashMap<_, _>>();
@@ -429,7 +429,7 @@ pub fn build_python_executable<'a>(
     let pyembed_location = env.as_pyembed_location();
 
     let cargo_exe = env
-        .ensure_rust_toolchain(logger, env!("HOST"), env!("HOST"))
+        .ensure_rust_toolchain(logger, env!("HOST"))
         .context("resolving Rust toolchain")?
         .cargo_exe;
 
