@@ -18,8 +18,11 @@ use {
     std::sync::Arc,
 };
 
+static ENVIRONMENT: Lazy<Environment> =
+    Lazy::new(|| Environment::new().expect("error spawning global Environment"));
+
 pub fn get_env() -> Result<Environment> {
-    Environment::new()
+    Ok(ENVIRONMENT.clone())
 }
 
 pub fn get_logger() -> Result<slog::Logger> {
