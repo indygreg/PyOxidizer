@@ -128,6 +128,7 @@ pub fn build(
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn run(
     env: &Environment,
     logger: &slog::Logger,
