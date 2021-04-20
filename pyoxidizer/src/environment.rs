@@ -158,6 +158,28 @@ impl Default for PyOxidizerSource {
     }
 }
 
+impl PyOxidizerSource {
+    /// Determine the location of the pyembed crate given a run-time environment.
+    ///
+    /// If running from a PyOxidizer Git repository, we reference the pyembed
+    /// crate within the PyOxidizer Git repository. Otherwise we use the pyembed
+    /// crate from the package registry.
+    ///
+    /// There is room to reference a Git repository+commit. But this isn't implemented
+    /// yet.
+    pub fn as_pyembed_location(&self) -> PyembedLocation {
+        match self {
+            PyOxidizerSource::LocalPath { path } => {
+                PyembedLocation::Path(canonicalize_path(&path.join("pyembed")).unwrap())
+            }
+            PyOxidizerSource::GitUrl { url, commit, .. } => match commit {
+                Some(commit) => PyembedLocation::Git(url.clone(), commit.clone()),
+                None => PyembedLocation::Version(PYEMBED_CRATE_VERSION.to_string()),
+            },
+        }
+    }
+}
+
 /// Describes the PyOxidizer run-time environment.
 #[derive(Clone, Debug)]
 pub struct Environment {
@@ -230,26 +252,6 @@ impl Environment {
         Ok(())
     }
 
-    /// Determine the location of the pyembed crate given a run-time environment.
-    ///
-    /// If running from a PyOxidizer Git repository, we reference the pyembed
-    /// crate within the PyOxidizer Git repository. Otherwise we use the pyembed
-    /// crate from the package registry.
-    ///
-    /// There is room to reference a Git repository+commit. But this isn't implemented
-    /// yet.
-    pub fn as_pyembed_location(&self) -> PyembedLocation {
-        match &self.pyoxidizer_source {
-            PyOxidizerSource::LocalPath { path } => {
-                PyembedLocation::Path(canonicalize_path(&path.join("pyembed")).unwrap())
-            }
-            PyOxidizerSource::GitUrl { url, commit, .. } => match commit {
-                Some(commit) => PyembedLocation::Git(url.clone(), commit.clone()),
-                None => PyembedLocation::Version(PYEMBED_CRATE_VERSION.to_string()),
-            },
-        }
-    }
-
     /// Obtain a string to be used as the long form version info for the executable.
     pub fn version_long(&self) -> String {
         format!(
@@ -268,7 +270,9 @@ impl Environment {
                     url.clone()
                 }
             },
-            self.as_pyembed_location().cargo_manifest_fields(),
+            self.pyoxidizer_source
+                .as_pyembed_location()
+                .cargo_manifest_fields(),
         )
     }
 

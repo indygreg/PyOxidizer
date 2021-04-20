@@ -334,7 +334,7 @@ pub fn init_rust_project(
         .ensure_rust_toolchain(logger, None)
         .context("resolving Rust environment")?
         .cargo_exe;
-    let pyembed_location = env.as_pyembed_location();
+    let pyembed_location = env.pyoxidizer_source.as_pyembed_location();
 
     initialize_project(
         project_path,

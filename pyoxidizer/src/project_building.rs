@@ -426,7 +426,7 @@ pub fn build_python_executable<'a>(
     release: bool,
 ) -> Result<BuiltExecutable<'a>> {
     let env = crate::environment::Environment::new().context("resolving environment")?;
-    let pyembed_location = env.as_pyembed_location();
+    let pyembed_location = env.pyoxidizer_source.as_pyembed_location();
 
     let cargo_exe = env
         .ensure_rust_toolchain(logger, Some(target_triple))
