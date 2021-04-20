@@ -6,7 +6,7 @@ use {
     crate::{
         environment::PYOXIDIZER_VERSION, logging, project_building, project_layout, projectmgmt,
     },
-    anyhow::{anyhow, Result},
+    anyhow::{anyhow, Context, Result},
     clap::{App, AppSettings, Arg, SubCommand},
     std::path::{Path, PathBuf},
 };
@@ -89,7 +89,7 @@ bugs can result in incorrect install layouts, missing resources, etc.
 ";
 
 pub fn run_cli() -> Result<()> {
-    let env = crate::environment::Environment::new()?;
+    let mut env = crate::environment::Environment::new()?;
 
     let matches = App::new("PyOxidizer")
         .setting(AppSettings::ArgRequiredElseHelp)
@@ -97,6 +97,11 @@ pub fn run_cli() -> Result<()> {
         .long_version(env.version_long().as_str())
         .author("Gregory Szorc <gregory.szorc@gmail.com>")
         .long_about("Build and distribute Python applications")
+        .arg(
+            Arg::with_name("system_rust")
+                .long("--system-rust")
+                .help("Use a system install of Rust instead of a self-managed Rust installation"),
+        )
         .arg(
             Arg::with_name("verbose")
                 .long("verbose")
@@ -339,6 +344,10 @@ pub fn run_cli() -> Result<()> {
     };
 
     let logger_context = logging::logger_from_env(log_level);
+
+    if matches.is_present("system_rust") {
+        env.unmanage_rust().context("unmanaging Rust")?;
+    }
 
     match matches.subcommand() {
         ("add", Some(args)) => {
