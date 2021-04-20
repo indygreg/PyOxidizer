@@ -75,26 +75,35 @@ impl BytecodeCompiler {
             .arg(&script_path)
             .stdin(process::Stdio::piped())
             .stdout(process::Stdio::piped())
-            .spawn()?;
+            .spawn()
+            .with_context(|| format!("spawning {}", python.display()))?;
 
         let stdin = command
             .stdin
             .as_mut()
             .ok_or_else(|| anyhow!("unable to get stdin"))
-            .context("obtaining stdin")?;
+            .with_context(|| format!("obtaining stdin from {} process", python.display()))?;
 
+        stdin.write_all(b"magic_number\n").with_context(|| {
+            format!(
+                "writing magic_number command request to {} process",
+                python.display()
+            )
+        })?;
         stdin
-            .write_all(b"magic_number\n")
-            .context("writing magic_number command request")?;
-        stdin.flush().context("flushing")?;
+            .flush()
+            .with_context(|| format!("flushing stdin to {} process", python.display()))?;
 
         let stdout = command
             .stdout
             .as_mut()
-            .ok_or_else(|| anyhow!("unable to get stdou"))?;
-        let magic_number = stdout
-            .read_u32::<LittleEndian>()
-            .context("reading magic number")?;
+            .ok_or_else(|| anyhow!("unable to get stdout"))?;
+        let magic_number = stdout.read_u32::<LittleEndian>().with_context(|| {
+            format!(
+                "reading magic number from invoked {} process",
+                python.display()
+            )
+        })?;
 
         std::fs::remove_file(&script_path)
             .with_context(|| format!("deleting {}", script_path.display()))?;
