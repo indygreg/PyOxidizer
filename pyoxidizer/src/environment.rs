@@ -183,10 +183,12 @@ impl Environment {
             dirs::home_dir().ok_or_else(|| anyhow!("could not resolve home dir as part of resolving PyOxidizer cache directory"))?.join(".pyoxidizer").join("cache")
         };
 
+        let managed_rust = std::env::var("PYOXIDIZER_SYSTEM_RUST").is_err();
+
         Ok(Self {
             pyoxidizer_source,
             cache_dir,
-            managed_rust: true,
+            managed_rust,
             rust_environment: Arc::new(RwLock::new(None)),
         })
     }
