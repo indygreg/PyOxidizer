@@ -13,7 +13,10 @@ pub mod manifest;
 pub mod tar;
 
 use {
-    crate::{manifest::Manifest, tar::PackageArchive},
+    crate::{
+        manifest::Manifest,
+        tar::{read_installs_manifest, PackageArchive},
+    },
     anyhow::{anyhow, Context, Result},
     fs2::FileExt,
     once_cell::sync::Lazy,
@@ -171,6 +174,65 @@ pub struct InstalledToolchain {
     pub cargo_path: PathBuf,
 }
 
+fn materialize_archive(archive: &PackageArchive, package: &str, install_dir: &Path) -> Result<()> {
+    archive.install(&install_dir).context("installing")?;
+
+    let manifest_path = install_dir.join(format!("MANIFEST.{}", package));
+    let mut fh = std::fs::File::create(&manifest_path).context("opening manifest file")?;
+    archive
+        .write_installs_manifest(&mut fh)
+        .context("writing installs manifest")?;
+
+    Ok(())
+}
+
+fn sha256_path(path: &Path) -> Result<Vec<u8>> {
+    let mut hasher = sha2::Sha256::new();
+    let fh = std::fs::File::open(&path)?;
+    let mut reader = std::io::BufReader::new(fh);
+
+    let mut buffer = [0; 32768];
+
+    loop {
+        let count = reader.read(&mut buffer)?;
+        if count == 0 {
+            break;
+        }
+        hasher.update(&buffer[..count]);
+    }
+
+    Ok(hasher.finalize().to_vec())
+}
+
+fn package_is_fresh(install_dir: &Path, package: &str) -> Result<bool> {
+    let manifest_path = install_dir.join(format!("MANIFEST.{}", package));
+
+    if !manifest_path.exists() {
+        return Ok(false);
+    }
+
+    let mut fh =
+        std::fs::File::open(&manifest_path).context("opening installs manifest for reading")?;
+    let manifest = read_installs_manifest(&mut fh)?;
+
+    for (path, wanted_digest) in manifest {
+        let install_path = install_dir.join(&path);
+
+        match sha256_path(&install_path) {
+            Ok(got_digest) => {
+                if wanted_digest != hex::encode(got_digest) {
+                    return Ok(false);
+                }
+            }
+            Err(_) => {
+                return Ok(false);
+            }
+        }
+    }
+
+    Ok(true)
+}
+
 /// Install a functional Rust toolchain capable of running on and building for a target triple.
 ///
 /// This is a convenience method for fetching the packages that compose a minimal
@@ -198,21 +260,38 @@ pub fn install_rust_toolchain(
     lock.lock_exclusive().context("obtaining lock")?;
 
     for component in &["rustc", "cargo", "rust-std"] {
-        let archive = resolve_package_archive(
-            logger,
-            &manifest,
-            &component,
-            host_triple,
-            download_cache_dir,
-        )?;
-        archive.install(&install_dir).context("installing")?;
+        if !package_is_fresh(&install_dir, component)? {
+            warn!(
+                logger,
+                "extracting {} to {}",
+                component,
+                install_dir.display()
+            );
+            let archive = resolve_package_archive(
+                logger,
+                &manifest,
+                &component,
+                host_triple,
+                download_cache_dir,
+            )?;
+
+            materialize_archive(&archive, component, &install_dir)?;
+        }
     }
 
+    let package = "rust-std";
     for triple in extra_target_triples {
-        if *triple != host_triple {
+        if *triple != host_triple && !package_is_fresh(&install_dir, package)? {
+            warn!(
+                logger,
+                "extracting {} to {}",
+                package,
+                install_dir.display()
+            );
             let archive =
                 resolve_package_archive(logger, &manifest, "rust-std", triple, download_cache_dir)?;
-            archive.install(&install_dir).context("installing")?;
+
+            materialize_archive(&archive, "rust-std", &install_dir)?;
         }
     }
 
@@ -280,6 +359,16 @@ mod tests {
                 toolchain.path,
                 temp_dir.path().join(format!("stable-{}", target_triple))
             );
+
+            // Doing it again should no-op.
+            install_rust_toolchain(
+                &logger,
+                "stable",
+                target_triple,
+                &[],
+                temp_dir.path(),
+                Some(&*CACHE_DIR),
+            )?;
         }
 
         Ok(())

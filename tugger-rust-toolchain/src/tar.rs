@@ -4,8 +4,9 @@
 
 use {
     anyhow::{anyhow, Context, Result},
+    sha2::Digest,
     std::{
-        io::Read,
+        io::{BufRead, Read, Write},
         path::{Path, PathBuf},
     },
     tugger_file_manifest::{FileEntry, FileManifest},
@@ -138,6 +139,24 @@ impl PackageArchive {
         Ok(res)
     }
 
+    /// Write a file containing SHA-256 hashes of file installs to the specified writer.
+    pub fn write_installs_manifest(&self, fh: &mut impl Write) -> Result<()> {
+        for (path, entry) in self.resolve_installs().context("resolving installs")? {
+            let mut hasher = sha2::Sha256::new();
+            hasher.update(entry.data.resolve()?);
+
+            let line = format!(
+                "{}\t{}\n",
+                hex::encode(hasher.finalize().as_slice()),
+                path.display()
+            );
+
+            fh.write_all(&line.as_bytes())?;
+        }
+
+        Ok(())
+    }
+
     /// Materialize files from this manifest into the specified destination directory.
     pub fn install(&self, dest_dir: &Path) -> Result<()> {
         for (dest_path, entry) in self.resolve_installs().context("resolving installs")? {
@@ -176,4 +195,34 @@ impl PackageArchive {
 
         Ok((dirs, files))
     }
+}
+
+/// Read an installs manifest from a given reader.
+///
+/// Returns a mapping of filesystem path to expected SHA-256 digest.
+pub fn read_installs_manifest(fh: &mut impl Read) -> Result<Vec<(PathBuf, String)>> {
+    let mut res = vec![];
+
+    let reader = std::io::BufReader::new(fh);
+
+    for line in reader.lines() {
+        let line = line?;
+
+        if line.is_empty() {
+            break;
+        }
+
+        let mut parts = line.splitn(2, '\t');
+
+        let digest = parts
+            .next()
+            .ok_or_else(|| anyhow!("could not read digest"))?;
+        let filename = parts
+            .next()
+            .ok_or_else(|| anyhow!("could not read filename"))?;
+
+        res.push((PathBuf::from(filename), digest.to_string()));
+    }
+
+    Ok(res)
 }
