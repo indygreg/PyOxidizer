@@ -25,7 +25,6 @@ fn run_py_test(test_filename: &str) -> Result<()> {
     let test_path = PathBuf::from(test_dir).join(test_filename);
 
     let mut config = default_interpreter_config();
-    config.argv = Some(vec![std::env::current_exe().unwrap().into_os_string()]);
     config.oxidized_importer = true;
     config.interpreter_config.run_filename = Some(test_path);
     config.interpreter_config.buffered_stdio = Some(false);

@@ -79,7 +79,7 @@ class TestImporterModuleLoading(unittest.TestCase):
         self.assertIsInstance(spec.submodule_search_locations, list)
         self.assertEqual(
             spec.submodule_search_locations,
-            [os.path.join(sys.argv[0], "my_package")],
+            [os.path.join(f.current_exe, "my_package")],
         )
 
         # Default module creation semantics for source modules.
@@ -90,7 +90,7 @@ class TestImporterModuleLoading(unittest.TestCase):
         self.assertIsInstance(m.__loader__, OxidizedFinder)
         self.assertEqual(m.__loader__, f)
         self.assertEqual(m.__package__, "my_package")
-        self.assertEqual(m.__path__, [os.path.join(sys.argv[0], "my_package")])
+        self.assertEqual(m.__path__, [os.path.join(f.current_exe, "my_package")])
         self.assertFalse(hasattr(m, "__file__"))
         self.assertFalse(hasattr(m, "__cached__"))
 
@@ -128,7 +128,7 @@ class TestImporterModuleLoading(unittest.TestCase):
         self.assertIsInstance(spec.submodule_search_locations, list)
         self.assertEqual(
             spec.submodule_search_locations,
-            [os.path.join(sys.argv[0], "my_package")],
+            [os.path.join(f.current_exe, "my_package")],
         )
 
         # Default module creation semantics for bytecode modules.
@@ -139,7 +139,7 @@ class TestImporterModuleLoading(unittest.TestCase):
         self.assertIsInstance(m.__loader__, OxidizedFinder)
         self.assertEqual(m.__loader__, f)
         self.assertEqual(m.__package__, "my_package")
-        self.assertEqual(m.__path__, [os.path.join(sys.argv[0], "my_package")])
+        self.assertEqual(m.__path__, [os.path.join(f.current_exe, "my_package")])
         self.assertFalse(hasattr(m, "__file__"))
         self.assertFalse(hasattr(m, "__cached__"))
 
