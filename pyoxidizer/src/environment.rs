@@ -148,6 +148,16 @@ pub enum PyOxidizerSource {
     },
 }
 
+impl Default for PyOxidizerSource {
+    fn default() -> Self {
+        if let Some(path) = BUILD_GIT_REPO_PATH.as_ref() {
+            Self::LocalPath { path: path.clone() }
+        } else {
+            GIT_SOURCE.clone()
+        }
+    }
+}
+
 /// Describes the PyOxidizer run-time environment.
 #[derive(Clone, Debug)]
 pub struct Environment {
@@ -169,11 +179,7 @@ pub struct Environment {
 impl Environment {
     /// Obtain a new instance.
     pub fn new() -> Result<Self> {
-        let pyoxidizer_source = if let Some(path) = BUILD_GIT_REPO_PATH.as_ref() {
-            PyOxidizerSource::LocalPath { path: path.clone() }
-        } else {
-            GIT_SOURCE.clone()
-        };
+        let pyoxidizer_source = PyOxidizerSource::default();
 
         let cache_dir = if let Ok(p) = std::env::var("PYOXIDIZER_CACHE_DIR") {
             PathBuf::from(p)
