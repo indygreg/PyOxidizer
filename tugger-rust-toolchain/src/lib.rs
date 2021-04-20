@@ -99,21 +99,16 @@ pub fn fetch_channel_manifest(logger: &slog::Logger, channel: &str) -> Result<Ma
     Ok(manifest)
 }
 
-/// Materialize a Rust package in a directory.
+/// Resolve a [PackageArchive] for a requested Rust toolchain package.
 ///
-/// Given a parsed manifest, this will attempt to locate the package entry,
-/// download and verify it, and extract it to the directory specified.
-///
-/// `download_cache_dir` specifies an optional path where to cache downloaded
-/// archives.
-pub fn materialize_rust_package(
+/// This is safe to call concurrently from different threads or processes.
+pub fn resolve_package_archive(
     logger: &slog::Logger,
     manifest: &Manifest,
     package: &str,
     target_triple: &str,
-    install_dir: &Path,
     download_cache_dir: Option<&Path>,
-) -> Result<()> {
+) -> Result<PackageArchive> {
     let (version, target) = manifest
         .find_package(package, target_triple)
         .ok_or_else(|| {
@@ -154,12 +149,7 @@ pub fn materialize_rust_package(
         download_and_verify(logger, &remote_content)?
     };
 
-    let archive =
-        PackageArchive::new(compression_format, tar_data).context("obtaining PackageArchive")?;
-
-    archive.install(install_dir).context("installing")?;
-
-    Ok(())
+    PackageArchive::new(compression_format, tar_data).context("obtaining PackageArchive")
 }
 
 /// Represents an installed toolchain on the filesystem.
@@ -202,26 +192,21 @@ pub fn install_rust_toolchain(
     let install_dir = install_root_dir.join(format!("{}-{}", toolchain, host_triple));
 
     for component in &["rustc", "cargo", "rust-std"] {
-        materialize_rust_package(
+        let archive = resolve_package_archive(
             logger,
             &manifest,
-            component,
+            &component,
             host_triple,
-            &install_dir,
             download_cache_dir,
         )?;
+        archive.install(&install_dir).context("installing")?;
     }
 
     for triple in extra_target_triples {
         if *triple != host_triple {
-            materialize_rust_package(
-                logger,
-                &manifest,
-                "rust-std",
-                triple,
-                &install_dir,
-                download_cache_dir,
-            )?;
+            let archive =
+                resolve_package_archive(logger, &manifest, "rust-std", triple, download_cache_dir)?;
+            archive.install(&install_dir).context("installing")?;
         }
     }
 
