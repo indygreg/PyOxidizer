@@ -66,12 +66,11 @@ class TestImporterResourceCollector(unittest.TestCase):
                 super().cleanup()
                 raise FileNotFoundError(self.name)
 
-        python_exe = os.environ.get("PYTHON_SYS_EXECUTABLE")
         c = OxidizedResourceCollector(allowed_locations=["in-memory"])
         stderr = StringIO()
         assertion = assert_tempfile_cleaned_up(BadTempDir)
         with assertion as (TrackingTempDir, cleanup), redirect_stderr(stderr):
-            oxide = c.oxidize(python_exe=python_exe)
+            c.oxidize()
         self.assertRegex(
             stderr.getvalue(),
             fr"""Exception ignored in: <bound method {cleanup.__qualname__} """,
@@ -89,9 +88,8 @@ class TestImporterResourceCollector(unittest.TestCase):
             c.add_in_memory(resource)
 
         f = OxidizedFinder()
-        python_exe = os.environ.get("PYTHON_SYS_EXECUTABLE")
         with assert_tempfile_cleaned_up():
-            oxide = c.oxidize(python_exe=python_exe)
+            oxide = c.oxidize()
         f.add_resources(oxide[0])
 
         resources = [r for r in f.indexed_resources() if r.name == "foo"]
@@ -111,9 +109,8 @@ class TestImporterResourceCollector(unittest.TestCase):
                     c.add_in_memory(resource)
                     c.add_filesystem_relative("", resource)
 
-        python_exe = os.environ.get("PYTHON_SYS_EXECUTABLE")
         with assert_tempfile_cleaned_up():
-            resources, file_installs = c.oxidize(python_exe=python_exe)
+            resources, file_installs = c.oxidize()
         f = OxidizedFinder()
         f.add_resources(resources)
 
@@ -140,9 +137,8 @@ class TestImporterResourceCollector(unittest.TestCase):
                             if resource.optimize_level == 0:
                                 c.add_filesystem_relative("lib", resource)
 
-        python_exe = os.environ.get("PYTHON_SYS_EXECUTABLE")
         with assert_tempfile_cleaned_up():
-            resources, file_installs = c.oxidize(python_exe=python_exe)
+            resources, file_installs = c.oxidize()
         self.assertEqual(len(resources), len(file_installs))
 
         idx = None
