@@ -291,7 +291,7 @@ pub fn build_executable_with_rust_project<'a>(
     exe: &'a (dyn PythonBinaryBuilder + 'a),
     build_path: &Path,
     artifacts_path: &Path,
-    target: &str,
+    target_triple: &str,
     opt_level: &str,
     release: bool,
 ) -> Result<BuiltExecutable<'a>> {
@@ -324,10 +324,10 @@ pub fn build_executable_with_rust_project<'a>(
     let target_base_path = build_path.join("target");
     let target_triple_base_path =
         target_base_path
-            .join(target)
+            .join(target_triple)
             .join(if release { "release" } else { "debug" });
 
-    let mut args = vec!["build", "--target", target];
+    let mut args = vec!["build", "--target", target_triple];
 
     let target_dir = target_base_path.display().to_string();
     args.push("--target-dir");
@@ -391,7 +391,7 @@ pub fn build_executable_with_rust_project<'a>(
         return Err(anyhow!("cargo build failed"));
     }
 
-    let exe_name = if target.contains("pc-windows") {
+    let exe_name = if target_triple.contains("pc-windows") {
         format!("{}.exe", bin_name)
     } else {
         bin_name.to_string()
@@ -421,7 +421,7 @@ pub fn build_python_executable<'a>(
     logger: &slog::Logger,
     bin_name: &str,
     exe: &'a (dyn PythonBinaryBuilder + 'a),
-    target: &str,
+    target_triple: &str,
     opt_level: &str,
     release: bool,
 ) -> Result<BuiltExecutable<'a>> {
@@ -429,7 +429,7 @@ pub fn build_python_executable<'a>(
     let pyembed_location = env.as_pyembed_location();
 
     let cargo_exe = env
-        .ensure_rust_toolchain(logger, env!("HOST"))
+        .ensure_rust_toolchain(logger, target_triple)
         .context("resolving Rust toolchain")?
         .cargo_exe;
 
@@ -460,7 +460,7 @@ pub fn build_python_executable<'a>(
         exe,
         &build_path,
         &artifacts_path,
-        target,
+        target_triple,
         opt_level,
         release,
     )
