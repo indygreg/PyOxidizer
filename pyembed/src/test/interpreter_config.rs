@@ -610,6 +610,7 @@ rusty_fork_test! {
     fn test_use_environment() {
         let mut config = default_interpreter_config();
         config.interpreter_config.use_environment = Some(false);
+        set_sys_paths(&mut config);
 
         let mut interp = MainPythonInterpreter::new(config).unwrap();
 
