@@ -19,8 +19,6 @@ links = "pythonXY"
 [dependencies]
 # Update documentation in lib.rs when new dependencies are added.
 anyhow = "1.0"
-# When https://github.com/dgrunwald/rust-cpython/issues/246 gets fixed, remove
-# `@unittest.expectedFailure` in `test_importer_path_entry_finder.py`.
 cpython = "0.5.2"
 dunce = "1.0"
 jemalloc-sys = { version = "0.3", optional = true }
