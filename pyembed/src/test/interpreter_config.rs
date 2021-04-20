@@ -23,14 +23,14 @@ use std::os::windows::ffi::OsStringExt;
 
 #[cfg(target_family = "unix")]
 fn get_unicode_argument() -> OsString {
-    // 中文
+    // 中文 = U+4e2d / 20013 + U+6587 / 25991
     OsString::from_vec([0xe4, 0xb8, 0xad, 0xe6, 0x96, 0x87].to_vec())
 }
 
 #[cfg(target_family = "windows")]
 fn get_unicode_argument() -> OsString {
     // 中文
-    OsString::from_wide(&[0x2d4e, 0x8765])
+    OsString::from_wide(&[20013, 25991])
 }
 
 fn reprs(py: cpython::Python, container: &PyObject) -> cpython::PyResult<Vec<String>> {
@@ -429,8 +429,8 @@ rusty_fork_test! {
         assert_eq!(
             value_bytes.data(py).to_vec(),
             if cfg!(windows) {
-                // UTF-16.
-                b"\x4e\x2d\x65\x87".to_vec()
+                // UTF-16-LE.
+                b"\x2d\x4e\x87\x65".to_vec()
             } else {
                 // UTF-8.
                 b"\xe4\xb8\xad\xe6\x96\x87".to_vec()
@@ -455,20 +455,7 @@ rusty_fork_test! {
         let value_raw = argv.get_item(py, 1);
         let value_string = value_raw.cast_as::<PyString>(py).unwrap();
         match value_string.data(py) {
-            PyStringData::Utf8(b"\xe4\xb8\xad\xe6\x96\x87") => {
-                if cfg!(target_family = "unix") {
-                    assert!(true)
-                } else {
-                    assert!(false)
-                }
-            }
-            PyStringData::Utf8(b"\xe2\xb5\x8e\xe8\x9d\xa5") => {
-                if cfg!(target_family = "windows") {
-                    assert!(true)
-                } else {
-                    assert!(false)
-                }
-            }
+            PyStringData::Utf16(&[20013, 25991]) => {},
             value => assert!(false, "{:?}", value),
         }
     }
@@ -490,46 +477,27 @@ rusty_fork_test! {
         assert_eq!(argv.len(py), 2);
 
         let value_raw = argv.get_item(py, 1);
+        let value_string = value_raw.cast_as::<PyString>(py).unwrap();
 
-        // The cpython crate only converts to PyStringData if the internal
-        // representation is UTF-8 and will panic otherwise. Since we're using
-        // surrogates for the test string, `.data()` will panic. So let's poke
-        // at the CPython APIs to get what we need.
-        //
-        // Unfortunately, python3_sys doesn't expose `PyUnicode_Type` to us,
-        // since `PyUnicode_KIND` is a macro. Neither do we have bindings to
-        // `PyUnicode_DATA`.
-        assert_eq!(unsafe {
-            pyffi::PyUnicode_GetLength(value_raw.as_ptr())
-        }, if cfg!(target_family = "windows") {
-            2
-        } else {
-            6
-        });
-
-        let encoded_raw = unsafe {
-            PyObject::from_owned_ptr(
-                py,
-                pyffi::PyUnicode_AsEncodedString(
-                    value_raw.as_ptr(),
-                    b"utf-8\0".as_ptr() as *const _,
-                    b"surrogatepass\0".as_ptr() as *const _,
-                )
-            )
-        };
-        let encoded_bytes = encoded_raw.cast_as::<PyBytes>(py).unwrap();
-        let encoded_data = encoded_bytes.data(py);
-
-        if cfg!(target_family = "windows") {
-            assert_eq!(encoded_data.len(), 6);
-            assert_eq!(encoded_data, b"\xe2\xb5\x8e\xe8\x9d\xa5");
-        } else {
-            // This is very wrong.
-            assert_eq!(encoded_data.len(), 18);
-            assert_eq!(
-                String::from_utf8(encoded_data.to_owned()).unwrap_err().to_string(),
-                "invalid utf-8 sequence of 1 bytes from index 0",
-            );
+        // The result in isolated mode without configure_locale is kinda wonky.
+        match value_string.data(py) {
+            // This is the correct value.
+            PyStringData::Utf16(&[20013, 25991]) => {
+                if cfg!(any(target_family = "windows", target_os = "macos")) {
+                    assert!(true);
+                } else {
+                    assert!(false);
+                }
+            }
+            // This is some abomination.
+            PyStringData::Utf16(&[56548, 56504, 56493, 56550, 56470, 56455]) => {
+                if cfg!(target_family = "unix") {
+                    assert!(true);
+                } else {
+                    assert!(false);
+                }
+            }
+            value => assert!(false, "unexpected string data: {:?}", value),
         }
     }
 
@@ -551,28 +519,12 @@ rusty_fork_test! {
         assert_eq!(argv.len(py), 2);
 
         let value_raw = argv.get_item(py, 1);
+        let value_string = value_raw.cast_as::<PyString>(py).unwrap();
 
-        assert_eq!(unsafe {
-            pyffi::PyUnicode_GetLength(value_raw.as_ptr())
-        }, 2);
-
-        let encoded_raw = unsafe {
-            PyObject::from_owned_ptr(
-                py,
-                pyffi::PyUnicode_AsEncodedString(
-                    value_raw.as_ptr(),
-                    b"utf-8\0".as_ptr() as *const _,
-                    b"strict\0".as_ptr() as *const _,
-                )
-            )
-        };
-        let encoded_bytes = encoded_raw.cast_as::<PyBytes>(py).unwrap();
-        let encoded_data = encoded_bytes.data(py);
-        assert_eq!(encoded_data, if cfg!(target_family = "windows") {
-            b"\xe2\xb5\x8e\xe8\x9d\xa5"
-        } else {
-            b"\xe4\xb8\xad\xe6\x96\x87"
-        });
+        match value_string.data(py) {
+            PyStringData::Utf16(&[20013, 25991]) => {},
+            value => assert!(false, "unexpected string data: {:?}", value),
+        }
     }
 
     #[test]
