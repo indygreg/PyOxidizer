@@ -131,9 +131,9 @@ class TestImporterPkgResources(unittest.TestCase):
         metadata_path = self.td / "my_package-1.0.dist-info" / "METADATA"
         metadata_path.parent.mkdir()
 
-        with metadata_path.open("w", encoding="utf-8") as fh:
-            fh.write("Name: my_package\n")
-            fh.write("Version: 1.0\n")
+        with metadata_path.open("wb") as fh:
+            fh.write(b"Name: my_package\n")
+            fh.write(b"Version: 1.0\n")
 
     def _finder_from_td(self):
         collector = OxidizedResourceCollector(allowed_locations=["in-memory"])
