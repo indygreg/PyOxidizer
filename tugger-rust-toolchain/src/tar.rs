@@ -28,12 +28,16 @@ fn get_decompression_stream(format: CompressionFormat, data: Vec<u8>) -> Result<
     }
 }
 
+/// Represents an extracted Rust package archive.
+///
+/// File contents exist in memory.
 pub struct PackageArchive {
     manifest: FileManifest,
     components: Vec<String>,
 }
 
 impl PackageArchive {
+    /// Construct a new instance with compressed tar data.
     pub fn new(format: CompressionFormat, data: Vec<u8>) -> Result<Self> {
         let mut archive = tar::Archive::new(
             get_decompression_stream(format, data).context("obtaining decompression stream")?,
@@ -96,6 +100,7 @@ impl PackageArchive {
         })
     }
 
+    /// Materialize files from this manifest into the specified destination directory.
     pub fn install(&self, dest_dir: &Path) -> Result<()> {
         for component in &self.components {
             let component_path = PathBuf::from(component);
