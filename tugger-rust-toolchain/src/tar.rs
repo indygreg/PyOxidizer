@@ -100,8 +100,13 @@ impl PackageArchive {
         })
     }
 
-    /// Materialize files from this manifest into the specified destination directory.
-    pub fn install(&self, dest_dir: &Path) -> Result<()> {
+    /// Resolve file installs that need to be performed to materialize this package.
+    ///
+    /// Returned Vec has relative destination path and the FileManifest's internal entry
+    /// as members.
+    pub fn resolve_installs(&self) -> Result<Vec<(PathBuf, &FileEntry)>> {
+        let mut res = Vec::new();
+
         for component in &self.components {
             let component_path = PathBuf::from(component);
             let manifest_path = component_path.join("manifest.in");
@@ -126,16 +131,21 @@ impl PackageArchive {
                     )
                 })?;
 
-                let dest_path = dest_dir.join(file);
-
-                entry.write_to_path(&dest_path).with_context(|| {
-                    format!(
-                        "writing {} to {}",
-                        manifest_path.display(),
-                        dest_path.display(),
-                    )
-                })?;
+                res.push((PathBuf::from(file), entry));
             }
+        }
+
+        Ok(res)
+    }
+
+    /// Materialize files from this manifest into the specified destination directory.
+    pub fn install(&self, dest_dir: &Path) -> Result<()> {
+        for (dest_path, entry) in self.resolve_installs().context("resolving installs")? {
+            let dest_path = dest_dir.join(dest_path);
+
+            entry
+                .write_to_path(&dest_path)
+                .with_context(|| format!("writing {}", dest_path.display(),))?;
         }
 
         Ok(())
