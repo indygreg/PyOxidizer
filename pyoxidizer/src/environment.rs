@@ -178,6 +178,28 @@ impl PyOxidizerSource {
             },
         }
     }
+
+    /// Obtain a string to be used as the long form version info for the executable.
+    pub fn version_long(&self) -> String {
+        format!(
+            "{}\ncommit: {}\nsource: {}\npyembed crate location: {}",
+            PYOXIDIZER_CRATE_VERSION,
+            if let Some(commit) = BUILD_GIT_COMMIT.as_ref() {
+                commit.as_str()
+            } else {
+                "unknown"
+            },
+            match self {
+                PyOxidizerSource::LocalPath { path } => {
+                    format!("{}", path.display())
+                }
+                PyOxidizerSource::GitUrl { url, .. } => {
+                    url.clone()
+                }
+            },
+            self.as_pyembed_location().cargo_manifest_fields(),
+        )
+    }
 }
 
 /// Describes the PyOxidizer run-time environment.
@@ -250,30 +272,6 @@ impl Environment {
             .take();
 
         Ok(())
-    }
-
-    /// Obtain a string to be used as the long form version info for the executable.
-    pub fn version_long(&self) -> String {
-        format!(
-            "{}\ncommit: {}\nsource: {}\npyembed crate location: {}",
-            PYOXIDIZER_CRATE_VERSION,
-            if let Some(commit) = BUILD_GIT_COMMIT.as_ref() {
-                commit.as_str()
-            } else {
-                "unknown"
-            },
-            match &self.pyoxidizer_source {
-                PyOxidizerSource::LocalPath { path } => {
-                    format!("{}", path.display())
-                }
-                PyOxidizerSource::GitUrl { url, .. } => {
-                    url.clone()
-                }
-            },
-            self.pyoxidizer_source
-                .as_pyembed_location()
-                .cargo_manifest_fields(),
-        )
     }
 
     /// Find an executable of the given name.
