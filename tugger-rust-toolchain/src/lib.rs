@@ -254,44 +254,43 @@ pub fn install_rust_toolchain(
     // host triple.
     let install_dir = install_root_dir.join(format!("{}-{}", toolchain, host_triple));
 
+    let mut installs = vec![
+        (host_triple, "rustc"),
+        (host_triple, "cargo"),
+        (host_triple, "rust-std"),
+    ];
+
+    for triple in extra_target_triples {
+        if *triple != host_triple {
+            installs.push((*triple, "rust-std"));
+        }
+    }
+
     let lock_path = install_dir.with_extension("lock");
     let lock = std::fs::File::create(&lock_path)
         .with_context(|| format!("creating {}", lock_path.display()))?;
     lock.lock_exclusive().context("obtaining lock")?;
 
-    for component in &["rustc", "cargo", "rust-std"] {
-        if !package_is_fresh(&install_dir, component)? {
+    for (triple, package) in installs {
+        if package_is_fresh(&install_dir, package)? {
             warn!(
                 logger,
-                "extracting {} to {}",
-                component,
+                "{} for {} in {} is up-to-date",
+                package,
+                triple,
                 install_dir.display()
             );
-            let archive = resolve_package_archive(
-                logger,
-                &manifest,
-                &component,
-                host_triple,
-                download_cache_dir,
-            )?;
-
-            materialize_archive(&archive, component, &install_dir)?;
-        }
-    }
-
-    let package = "rust-std";
-    for triple in extra_target_triples {
-        if *triple != host_triple && !package_is_fresh(&install_dir, package)? {
+        } else {
             warn!(
                 logger,
-                "extracting {} to {}",
+                "extracting {} for {} to {}",
                 package,
+                triple,
                 install_dir.display()
             );
             let archive =
-                resolve_package_archive(logger, &manifest, "rust-std", triple, download_cache_dir)?;
-
-            materialize_archive(&archive, "rust-std", &install_dir)?;
+                resolve_package_archive(logger, &manifest, package, triple, download_cache_dir)?;
+            materialize_archive(&archive, package, &install_dir)?;
         }
     }
 
