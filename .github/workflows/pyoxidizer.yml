@@ -102,7 +102,6 @@ jobs:
         run: |
           sccache --start-server
 
-      # TODO get pyembed working. It needs a working libpython.
       - name: Build Workspace
         env:
           RUSTC_WRAPPER: sccache
@@ -117,12 +116,22 @@ jobs:
         run: |
           cargo test --release --workspace --exclude pyembed --exclude oxidized-importer
 
+      # To minimize potential for Python interference, we delay install Python
+      # until we need it for pyembed.
+      - uses: actions/setup-python@v2
+        with:
+          python-version: '3.9'
+
+      - name: Test pyembed
+        run: |
+          python scripts/run-pyembed-tests.py
+
       - uses: actions-rs/clippy@master
         if: ${{ matrix.rust_toolchain == 'stable' || matrix.rust_toolchain == 'beta' }}
         env:
           RUSTC_WRAPPER: sccache
         with:
-          args: --release --workspace --exclude pyembed --exclude oxidized-importer
+          args: --release --workspace --exclude oxidized-importer
 
       - name: Stop sccache
         run: |
