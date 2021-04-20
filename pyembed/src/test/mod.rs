@@ -35,3 +35,18 @@ pub fn default_interpreter_config<'a>() -> OxidizedPythonInterpreterConfig<'a> {
 
     config
 }
+
+/// Set `sys.paths` on the config to pick up resources from the Python interpreter.
+pub fn set_sys_paths(config: &mut OxidizedPythonInterpreterConfig) {
+    // This is only needed on Windows, as UNIX builds seem to do the right
+    // thing.
+    if cfg!(target_family = "windows") {
+        let parent = std::path::PathBuf::from(PYTHON_INTERPRETER_PATH)
+            .parent()
+            .expect("could not compute Python interpreter parent directory")
+            .to_path_buf();
+
+        config.interpreter_config.module_search_paths =
+            Some(vec![parent.join("DLLs"), parent.join("Lib")]);
+    }
+}

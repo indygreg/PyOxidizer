@@ -3,7 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    super::{default_interpreter_config, PYTHON_INTERPRETER_PATH},
+    super::{default_interpreter_config, set_sys_paths, PYTHON_INTERPRETER_PATH},
     crate::{MainPythonInterpreter, OxidizedPythonInterpreterConfig},
     cpython::{ObjectProtocol, PyBytes, PyList, PyObject, PyString, PyStringData},
     python3_sys as pyffi,
@@ -143,6 +143,7 @@ rusty_fork_test! {
     fn test_isolated_interpreter() {
         let mut config = default_interpreter_config();
         config.interpreter_config.profile = PythonInterpreterProfile::Isolated;
+        set_sys_paths(&mut config);
 
         let mut interp = MainPythonInterpreter::new(config).unwrap();
 
@@ -477,6 +478,7 @@ rusty_fork_test! {
         let mut config = default_interpreter_config();
         config.interpreter_config.profile = PythonInterpreterProfile::Isolated;
         config.argv.as_mut().unwrap().push(get_unicode_argument());
+        set_sys_paths(&mut config);
 
         let mut interp = MainPythonInterpreter::new(config).unwrap();
 
@@ -537,6 +539,7 @@ rusty_fork_test! {
         config.interpreter_config.profile = PythonInterpreterProfile::Isolated;
         config.interpreter_config.configure_locale = Some(true);
         config.argv.as_mut().unwrap().push(get_unicode_argument());
+        set_sys_paths(&mut config);
 
         let mut interp = MainPythonInterpreter::new(config).unwrap();
 
