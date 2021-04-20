@@ -13,6 +13,7 @@ readme = "README.md"
 [dependencies]
 anyhow = "1.0"
 flate2 = "1.0"
+fs2 = "0.4"
 hex = "0.4"
 once_cell = "1.7"
 pgp = "0.7"

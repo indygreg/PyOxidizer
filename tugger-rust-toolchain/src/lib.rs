@@ -15,6 +15,7 @@ pub mod tar;
 use {
     crate::{manifest::Manifest, tar::PackageArchive},
     anyhow::{anyhow, Context, Result},
+    fs2::FileExt,
     once_cell::sync::Lazy,
     pgp::{Deserializable, SignedPublicKey, StandaloneSignature},
     sha2::Digest,
@@ -191,6 +192,11 @@ pub fn install_rust_toolchain(
     // host triple.
     let install_dir = install_root_dir.join(format!("{}-{}", toolchain, host_triple));
 
+    let lock_path = install_dir.with_extension("lock");
+    let lock = std::fs::File::create(&lock_path)
+        .with_context(|| format!("creating {}", lock_path.display()))?;
+    lock.lock_exclusive().context("obtaining lock")?;
+
     for component in &["rustc", "cargo", "rust-std"] {
         let archive = resolve_package_archive(
             logger,
@@ -209,6 +215,8 @@ pub fn install_rust_toolchain(
             archive.install(&install_dir).context("installing")?;
         }
     }
+
+    lock.unlock().context("unlocking")?;
 
     let exe_suffix = if host_triple.contains("-windows-") {
         ".exe"
