@@ -5,7 +5,7 @@
 //! Handle file layout of PyOxidizer projects.
 
 use {
-    crate::environment::{Environment, PyOxidizerSource, BUILD_GIT_COMMIT, PYOXIDIZER_VERSION},
+    crate::environment::{PyOxidizerSource, BUILD_GIT_COMMIT, PYOXIDIZER_VERSION},
     anyhow::{anyhow, Context, Result},
     handlebars::Handlebars,
     once_cell::sync::Lazy,
@@ -91,9 +91,7 @@ impl TemplateData {
     }
 }
 
-fn populate_template_data(data: &mut TemplateData) {
-    let env = Environment::new().unwrap();
-
+fn populate_template_data(source: &PyOxidizerSource, data: &mut TemplateData) {
     data.pyoxidizer_version = Some(PYOXIDIZER_VERSION.to_string());
     data.pyoxidizer_commit = Some(
         BUILD_GIT_COMMIT
@@ -101,18 +99,18 @@ fn populate_template_data(data: &mut TemplateData) {
             .unwrap_or_else(|| "UNKNOWN".to_string()),
     );
 
-    match env.pyoxidizer_source {
+    match source {
         PyOxidizerSource::LocalPath { path } => {
             data.pyoxidizer_local_repo_path = Some(path.display().to_string());
         }
         PyOxidizerSource::GitUrl { url, commit, tag } => {
-            data.pyoxidizer_git_url = Some(url);
+            data.pyoxidizer_git_url = Some(url.clone());
 
             if let Some(commit) = commit {
-                data.pyoxidizer_git_commit = Some(commit);
+                data.pyoxidizer_git_commit = Some(commit.clone());
             }
             if let Some(tag) = tag {
-                data.pyoxidizer_git_tag = Some(tag);
+                data.pyoxidizer_git_tag = Some(tag.clone());
             }
         }
     }
@@ -183,6 +181,7 @@ pub fn write_new_main_rs(path: &Path, windows_subsystem: &str) -> Result<()> {
 
 /// Writes default PyOxidizer config files into a project directory.
 pub fn write_new_pyoxidizer_config_file(
+    source: &PyOxidizerSource,
     project_dir: &Path,
     name: &str,
     code: Option<&str>,
@@ -191,7 +190,7 @@ pub fn write_new_pyoxidizer_config_file(
     let path = project_dir.join("pyoxidizer.bzl");
 
     let mut data = TemplateData::new();
-    populate_template_data(&mut data);
+    populate_template_data(source, &mut data);
     data.program_name = Some(name.to_string());
 
     if let Some(code) = code {
@@ -380,9 +379,9 @@ pub fn update_new_cargo_toml(path: &Path, pyembed_location: &PyembedLocation) ->
 /// `windows_subsystem` is the value of the `windows_subsystem` compiler
 /// attribute.
 pub fn initialize_project(
+    source: &PyOxidizerSource,
     project_path: &Path,
     cargo_exe: &Path,
-    pyembed_location: &PyembedLocation,
     code: Option<&str>,
     pip_install: &[&str],
     windows_subsystem: &str,
@@ -401,13 +400,13 @@ pub fn initialize_project(
     let path = PathBuf::from(project_path);
     let name = path.iter().last().unwrap().to_str().unwrap();
     add_pyoxidizer(&path, true).context("adding PyOxidizer to Rust project")?;
-    update_new_cargo_toml(&path.join("Cargo.toml"), pyembed_location)
+    update_new_cargo_toml(&path.join("Cargo.toml"), &source.as_pyembed_location())
         .context("updating Cargo.toml")?;
     write_new_cargo_config(&path).context("writing cargo config")?;
     write_new_build_rs(&path.join("build.rs"), name).context("writing build.rs")?;
     write_new_main_rs(&path.join("src").join("main.rs"), windows_subsystem)
         .context("writing main.rs")?;
-    write_new_pyoxidizer_config_file(&path, &name, code, pip_install)
+    write_new_pyoxidizer_config_file(source, &path, &name, code, pip_install)
         .context("writing PyOxidizer config file")?;
     write_application_manifest(&path, &name).context("writing application manifest")?;
 

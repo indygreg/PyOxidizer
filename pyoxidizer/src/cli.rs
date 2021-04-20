@@ -433,7 +433,7 @@ pub fn run_cli() -> Result<()> {
             let path = args.value_of("path").unwrap();
             let config_path = Path::new(path);
 
-            projectmgmt::init_config_file(&config_path, code, &pip_install)
+            projectmgmt::init_config_file(&env.pyoxidizer_source, &config_path, code, &pip_install)
         }
 
         ("list-targets", Some(args)) => {

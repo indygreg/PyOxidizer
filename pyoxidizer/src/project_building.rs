@@ -425,8 +425,6 @@ pub fn build_python_executable<'a>(
     opt_level: &str,
     release: bool,
 ) -> Result<BuiltExecutable<'a>> {
-    let pyembed_location = env.pyoxidizer_source.as_pyembed_location();
-
     let cargo_exe = env
         .ensure_rust_toolchain(logger, Some(target_triple))
         .context("resolving Rust toolchain")?
@@ -443,9 +441,9 @@ pub fn build_python_executable<'a>(
     let artifacts_path = temp_dir.path().join("artifacts");
 
     initialize_project(
+        &env.pyoxidizer_source,
         &project_path,
         &cargo_exe,
-        &pyembed_location,
         None,
         &[],
         exe.windows_subsystem(),

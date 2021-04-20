@@ -6,7 +6,7 @@
 
 use {
     crate::{
-        environment::Environment,
+        environment::{Environment, PyOxidizerSource},
         project_building::find_pyoxidizer_config_file_env,
         project_layout::{initialize_project, write_new_pyoxidizer_config_file},
         py_packaging::{
@@ -289,6 +289,7 @@ fn print_resource(r: &PythonResource) {
 
 /// Initialize a PyOxidizer configuration file in a given directory.
 pub fn init_config_file(
+    source: &PyOxidizerSource,
     project_dir: &Path,
     code: Option<&str>,
     pip_install: &[&str],
@@ -306,7 +307,7 @@ pub fn init_config_file(
 
     let name = project_dir.iter().last().unwrap().to_str().unwrap();
 
-    write_new_pyoxidizer_config_file(project_dir, name, code, pip_install)?;
+    write_new_pyoxidizer_config_file(source, project_dir, name, code, pip_install)?;
 
     println!();
     println!("A new PyOxidizer configuration file has been created.");
@@ -334,12 +335,11 @@ pub fn init_rust_project(
         .ensure_rust_toolchain(logger, None)
         .context("resolving Rust environment")?
         .cargo_exe;
-    let pyembed_location = env.pyoxidizer_source.as_pyembed_location();
 
     initialize_project(
+        &env.pyoxidizer_source,
         project_path,
         &cargo_exe,
-        &pyembed_location,
         None,
         &[],
         "console",
