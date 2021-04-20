@@ -2412,6 +2412,7 @@ dependencies = [
  "tugger-common",
  "tugger-file-manifest",
  "tugger-licensing",
+ "tugger-rust-toolchain",
  "tugger-windows",
  "url",
  "uuid",

@@ -9,12 +9,15 @@ use {
     anyhow::{anyhow, Context, Result},
     once_cell::sync::Lazy,
     semver::Version,
-    slog::info,
+    slog::{info, warn},
     std::{
         env,
+        ops::Deref,
         path::{Path, PathBuf},
+        sync::{Arc, RwLock},
     },
     tugger_apple::{find_command_line_tools_sdks, find_default_developer_sdks, AppleSdk},
+    tugger_rust_toolchain::install_rust_toolchain,
 };
 
 /// Version string of PyOxidizer's crate from its Cargo.toml.
@@ -94,6 +97,9 @@ pub static GIT_SOURCE: Lazy<PyOxidizerSource> = Lazy::new(|| {
 pub static MINIMUM_RUST_VERSION: Lazy<semver::Version> =
     Lazy::new(|| semver::Version::new(1, 46, 0));
 
+/// Version of Rust toolchain to use for our managed Rust install.
+pub const RUST_TOOLCHAIN_VERSION: &str = "1.51.0";
+
 /// Target triples for Linux.
 pub static LINUX_TARGET_TRIPLES: Lazy<Vec<&'static str>> =
     Lazy::new(|| vec!["x86_64-unknown-linux-gnu", "x86_64-unknown-linux-musl"]);
@@ -150,6 +156,14 @@ pub struct Environment {
 
     /// Directory to use for caching things.
     cache_dir: PathBuf,
+
+    /// Whether we should use a Rust installation we manage ourselves.
+    managed_rust: bool,
+
+    /// Rust environment to use.
+    ///
+    /// Cached because lookups may be expensive.
+    rust_environment: Arc<RwLock<Option<RustEnvironment>>>,
 }
 
 impl Environment {
@@ -172,6 +186,8 @@ impl Environment {
         Ok(Self {
             pyoxidizer_source,
             cache_dir,
+            managed_rust: true,
+            rust_environment: Arc::new(RwLock::new(None)),
         })
     }
 
@@ -185,6 +201,25 @@ impl Environment {
     /// Directory to use for storing Python distributions.
     pub fn python_distributions_dir(&self) -> PathBuf {
         self.cache_dir.join("python_distributions")
+    }
+
+    /// Directory to hold Rust toolchains.
+    pub fn rust_dir(&self) -> PathBuf {
+        self.cache_dir.join("rust")
+    }
+
+    /// Do not use a managed Rust.
+    ///
+    /// When called, [self.ensure_rust_toolchain()] will attempt to locate a
+    /// Rust install on the system rather than manage it itself.
+    pub fn unmanage_rust(&mut self) -> Result<()> {
+        self.managed_rust = false;
+        self.rust_environment
+            .write()
+            .map_err(|e| anyhow!("unable to lock cached rust environment for writing"))?
+            .take();
+
+        Ok(())
     }
 
     /// Determine the location of the pyembed crate given a run-time environment.
@@ -242,6 +277,57 @@ impl Environment {
         }
     }
 
+    /// Ensure a Rust toolchain suitable for building is available.
+    pub fn ensure_rust_toolchain(
+        &self,
+        logger: &slog::Logger,
+        host_triple: &str,
+        target_triple: &str,
+    ) -> Result<RustEnvironment> {
+        let mut cached = self
+            .rust_environment
+            .write()
+            .map_err(|e| anyhow!("failed to acquire rust environment lock: {}", e))?;
+
+        if cached.is_none() {
+            warn!(
+                logger,
+                "ensuring Rust toolchain {} supporting {} is available",
+                RUST_TOOLCHAIN_VERSION,
+                target_triple
+            );
+
+            let rust_env = if self.managed_rust {
+                let toolchain = install_rust_toolchain(
+                    logger,
+                    RUST_TOOLCHAIN_VERSION,
+                    host_triple,
+                    &[target_triple],
+                    &self.rust_dir(),
+                    Some(&self.rust_dir()),
+                )?;
+
+                RustEnvironment {
+                    cargo_exe: toolchain.cargo_path,
+                    rustc_exe: toolchain.rustc_path.clone(),
+                    rust_version: rustc_version::VersionMeta::for_command(
+                        std::process::Command::new(toolchain.rustc_path),
+                    )?,
+                }
+            } else {
+                self.system_rust_environment()?
+            };
+
+            cached.replace(rust_env);
+        }
+
+        Ok(cached
+            .deref()
+            .as_ref()
+            .expect("should have been populated above")
+            .clone())
+    }
+
     /// Obtain the path to a `rustc` executable.
     ///
     /// This respects the `RUSTC` environment variable.
@@ -270,12 +356,12 @@ impl Environment {
         self.find_executable("cargo")
     }
 
-    /// Return information about a Rust toolchain suitable for building.
+    /// Return information about the system's Rust toolchain.
     ///
     /// This attempts to locate a Rust toolchain suitable for use with
     /// PyOxidizer. If a toolchain could not be found or doesn't meet the
     /// requirements, an error occurs.
-    pub fn rust_environment(&self) -> Result<RustEnvironment> {
+    pub fn system_rust_environment(&self) -> Result<RustEnvironment> {
         let cargo_exe = self
             .cargo_exe()
             .context("finding cargo executable")?
@@ -308,6 +394,7 @@ impl Environment {
 }
 
 /// Represents an available Rust toolchain.
+#[derive(Clone, Debug)]
 pub struct RustEnvironment {
     /// Path to `cargo` executable.
     pub cargo_exe: PathBuf,

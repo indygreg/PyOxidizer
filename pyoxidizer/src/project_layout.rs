@@ -386,9 +386,10 @@ pub fn initialize_project(
     pip_install: &[&str],
     windows_subsystem: &str,
 ) -> Result<()> {
+    // TODO use ensure_rust_toolchain().
     let env = Environment::new()?;
     let rust_env = env
-        .rust_environment()
+        .system_rust_environment()
         .context("resolving Rust environment")?;
 
     let status = std::process::Command::new(&rust_env.cargo_exe)

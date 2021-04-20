@@ -106,8 +106,8 @@ impl BuildEnvironment {
         let env = Environment::new()?;
 
         let rust_environment = env
-            .rust_environment()
-            .context("resolving Rust environment")?;
+            .ensure_rust_toolchain(logger, env!("HOST"), target_triple)
+            .context("ensuring Rust toolchain available")?;
 
         let mut envs = std::env::vars().collect::<HashMap<_, _>>();
 
