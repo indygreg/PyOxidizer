@@ -568,9 +568,9 @@ checksum = "8aebca1129a03dc6dc2b127edd729435bbc4a37e1d5f4d7513165089ceb02634"
 
 [[package]]
 name = "cpython"
-version = "0.5.2"
+version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0f11357af68648b6a227e7e2384d439cec8595de65970f45e3f7f4b2600be472"
+checksum = "8094679a4e9bfc8035572162624bc800eda35b5f9eff2537b9cd9aacc3d9782e"
 dependencies = [
  "libc",
  "num-traits",
@@ -2036,22 +2036,9 @@ dependencies = [
 
 [[package]]
 name = "paste"
-version = "0.1.18"
+version = "1.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "45ca20c77d80be666aef2b45486da86238fabe33e38306bd3118fe4af33fa880"
-dependencies = [
- "paste-impl",
- "proc-macro-hack",
-]
-
-[[package]]
-name = "paste-impl"
-version = "0.1.18"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d95a7db200b97ef370c8e6de0088252f7e0dfff7d047a28528e47456c0fc98b6"
-dependencies = [
- "proc-macro-hack",
-]
+checksum = "acbf547ad0c65e31259204bd90935776d1c693cec2f4ff7abb7a1bbbd40dfe58"
 
 [[package]]
 name = "path-dedot"
@@ -2453,9 +2440,9 @@ dependencies = [
 
 [[package]]
 name = "python3-sys"
-version = "0.5.2"
+version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5b29b99c6868eb02beb3bf6ed025c8bcdf02efc149b8e80347d3e5d059a806db"
+checksum = "b78af21b29594951a47fc3dac9b9eff0a3f077dec2f780ee943ae16a668f3b6a"
 dependencies = [
  "libc",
  "regex",

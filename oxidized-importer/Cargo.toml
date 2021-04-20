@@ -15,7 +15,7 @@ crate-type = ["cdylib"]
 anyhow = "1.0"
 lazy_static = "1.4"
 libc = "0.2"
-python3-sys = "0.5.2"
+python3-sys = "0.6.0"
 
 [dependencies.python-packed-resources]
 version = "0.7.0-pre"
