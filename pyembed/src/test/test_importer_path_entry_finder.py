@@ -249,6 +249,9 @@ class TestImporterPathEntryFinder(unittest.TestCase):
         self.assertIsNone(finder.find_spec("foo.bar.baz"))
 
     def test_path_hook_installed(self):
+        if not PathFinder.find_spec("pwd"):
+            raise unittest.SkipTest("PathFinder failed to import pwd")
+
         # PathFinder can only use it with CURRENT_EXT on sys.path
         with patch("sys.path", sys.path):
             sys.path = [p for p in sys.path if p != CURRENT_EXE]
