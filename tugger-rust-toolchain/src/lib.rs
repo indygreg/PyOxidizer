@@ -254,6 +254,9 @@ pub fn install_rust_toolchain(
     // host triple.
     let install_dir = install_root_dir.join(format!("{}-{}", toolchain, host_triple));
 
+    std::fs::create_dir_all(&install_dir)
+        .with_context(|| format!("creating directory {}", install_dir.display()))?;
+
     let mut installs = vec![
         (host_triple, "rustc"),
         (host_triple, "cargo"),
