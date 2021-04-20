@@ -288,7 +288,7 @@ impl Environment {
     pub fn ensure_rust_toolchain(
         &self,
         logger: &slog::Logger,
-        target_triple: &str,
+        target_triple: Option<&str>,
     ) -> Result<RustEnvironment> {
         let mut cached = self
             .rust_environment
@@ -298,12 +298,12 @@ impl Environment {
         if cached.is_none() {
             warn!(
                 logger,
-                "ensuring Rust toolchain {} supporting {} is available",
-                RUST_TOOLCHAIN_VERSION,
-                target_triple
+                "ensuring Rust toolchain {} is available", RUST_TOOLCHAIN_VERSION,
             );
 
             let rust_env = if self.managed_rust {
+                let target_triple = target_triple.unwrap_or_else(|| self.rust_host_triple());
+
                 let toolchain = install_rust_toolchain(
                     logger,
                     RUST_TOOLCHAIN_VERSION,
