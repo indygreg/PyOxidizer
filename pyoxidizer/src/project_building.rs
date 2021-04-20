@@ -93,7 +93,9 @@ pub struct BuildEnvironment {
 
 impl BuildEnvironment {
     /// Construct a new build environment performing validation of requirements.
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
+        env: &Environment,
         logger: &slog::Logger,
         target_triple: &str,
         artifacts_path: &Path,
@@ -102,8 +104,6 @@ impl BuildEnvironment {
         libpython_filename: Option<&Path>,
         apple_sdk_info: Option<&AppleSdkInfo>,
     ) -> Result<Self> {
-        let env = Environment::new()?;
-
         let rust_environment = env
             .ensure_rust_toolchain(logger, Some(target_triple))
             .context("ensuring Rust toolchain available")?;
@@ -284,6 +284,7 @@ pub struct BuiltExecutable<'a> {
 /// The path to the produced executable is returned.
 #[allow(clippy::too_many_arguments)]
 pub fn build_executable_with_rust_project<'a>(
+    env: &Environment,
     logger: &slog::Logger,
     project_path: &Path,
     bin_name: &str,
@@ -305,6 +306,7 @@ pub fn build_executable_with_rust_project<'a>(
         .context("writing embedded python context files")?;
 
     let build_env = BuildEnvironment::new(
+        env,
         logger,
         exe.target_triple(),
         artifacts_path,
@@ -451,6 +453,7 @@ pub fn build_python_executable<'a>(
     .context("initializing project")?;
 
     let mut build = build_executable_with_rust_project(
+        env,
         logger,
         &project_path,
         bin_name,
