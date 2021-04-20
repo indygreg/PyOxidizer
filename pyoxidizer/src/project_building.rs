@@ -19,7 +19,6 @@ use {
     std::{
         collections::HashMap,
         convert::TryInto,
-        env,
         fs::create_dir_all,
         io::{BufRead, BufReader},
         path::{Path, PathBuf},
@@ -61,7 +60,7 @@ pub fn find_pyoxidizer_config_file(start_dir: &Path) -> Option<PathBuf> {
 /// If none of the above find a config file, we fall back to traversing ancestors
 /// of `start_dir`.
 pub fn find_pyoxidizer_config_file_env(logger: &slog::Logger, start_dir: &Path) -> Option<PathBuf> {
-    if let Ok(path) = env::var("PYOXIDIZER_CONFIG") {
+    if let Ok(path) = std::env::var("PYOXIDIZER_CONFIG") {
         warn!(
             logger,
             "using PyOxidizer config file from PYOXIDIZER_CONFIG: {}", path
@@ -69,7 +68,7 @@ pub fn find_pyoxidizer_config_file_env(logger: &slog::Logger, start_dir: &Path) 
         return Some(PathBuf::from(path));
     }
 
-    if let Ok(path) = env::var("OUT_DIR") {
+    if let Ok(path) = std::env::var("OUT_DIR") {
         warn!(logger, "looking for config file in ancestry of {}", path);
         let res = find_pyoxidizer_config_file(&Path::new(&path));
         if res.is_some() {
@@ -477,6 +476,7 @@ pub fn build_python_executable<'a>(
 /// This will resolve `resolve_target` or the default then build it. Built
 /// artifacts (if any) are written to `artifacts_path`.
 pub fn build_pyembed_artifacts(
+    env: &Environment,
     logger: &slog::Logger,
     config_path: &Path,
     artifacts_path: &Path,
@@ -485,8 +485,6 @@ pub fn build_pyembed_artifacts(
     release: bool,
     verbose: bool,
 ) -> Result<()> {
-    let env = Environment::new()?;
-
     create_dir_all(artifacts_path)?;
 
     let artifacts_path = canonicalize_path(artifacts_path)?;
@@ -496,7 +494,7 @@ pub fn build_pyembed_artifacts(
     }
 
     let mut context: EvaluationContext = EvaluationContextBuilder::new(
-        &env,
+        env,
         logger.clone(),
         config_path.to_path_buf(),
         target_triple.to_string(),
@@ -564,6 +562,7 @@ pub fn build_pyembed_artifacts(
 /// For this to work as expected, the target resolved in the config file must
 /// return a `PythonEmbeddeResources` starlark type.
 pub fn run_from_build(
+    env: &Environment,
     logger: &slog::Logger,
     build_script: &str,
     resolve_target: Option<&str>,
@@ -575,11 +574,11 @@ pub fn run_from_build(
     println!("cargo:rerun-if-env-changed=PYOXIDIZER_CONFIG");
 
     // TODO use these variables?
-    //let host = env::var("HOST").expect("HOST not defined");
-    let target = env::var("TARGET").context("TARGET")?;
-    //let opt_level = env::var("OPT_LEVEL").expect("OPT_LEVEL not defined");
-    let manifest_dir = env::var("CARGO_MANIFEST_DIR").context("CARGO_MANIFEST_DIR")?;
-    let profile = env::var("PROFILE").context("PROFILE")?;
+    //let host = std::env::var("HOST").expect("HOST not defined");
+    let target = std::env::var("TARGET").context("TARGET")?;
+    //let opt_level = std::env::var("OPT_LEVEL").expect("OPT_LEVEL not defined");
+    let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").context("CARGO_MANIFEST_DIR")?;
+    let profile = std::env::var("PROFILE").context("PROFILE")?;
 
     //let project_path = PathBuf::from(&manifest_dir);
 
@@ -594,12 +593,13 @@ pub fn run_from_build(
 
     println!("cargo:rerun-if-changed={}", config_path.display());
 
-    let dest_dir = match env::var("PYOXIDIZER_ARTIFACT_DIR") {
+    let dest_dir = match std::env::var("PYOXIDIZER_ARTIFACT_DIR") {
         Ok(ref v) => PathBuf::from(v),
-        Err(_) => PathBuf::from(env::var("OUT_DIR").context("OUT_DIR")?),
+        Err(_) => PathBuf::from(std::env::var("OUT_DIR").context("OUT_DIR")?),
     };
 
     build_pyembed_artifacts(
+        env,
         logger,
         &config_path,
         &dest_dir,

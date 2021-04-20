@@ -481,7 +481,7 @@ pub fn run_cli() -> Result<()> {
             let build_script = args.value_of("build-script-name").unwrap();
             let target = args.value_of("target");
 
-            project_building::run_from_build(&logger_context.logger, build_script, target)
+            project_building::run_from_build(&env, &logger_context.logger, build_script, target)
         }
 
         ("run", Some(args)) => {

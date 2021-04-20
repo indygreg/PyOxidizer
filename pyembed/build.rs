@@ -69,8 +69,11 @@ fn build_with_pyoxidizer_exe(exe: Option<String>, resolve_target: Option<&str>) 
 /* UNCOMMENT THE FOLLOWING TO ENABLE BUILDING IN LIBRARY MODE.
 
 use {
-    pyoxidizerlib::logging::LoggerContext,
-    pyoxidizerlib::project_building::run_from_build,
+    pyoxidizerlib::{
+        env::Environment,
+        logging::LoggerContext,
+        project_building::run_from_build,
+    },
 };
 
 /// Build by calling PyOxidizer natively as a Rust library.
@@ -79,9 +82,10 @@ use {
 /// default if not set.
 fn build_with_pyoxidizer_native(resolve_target: Option<&str>) {
     println!("invoking PyOxidizer natively to build artifacts");
+    let env = Environment::new().expect("could not construct PyOxidizer environment");
     let logger_context = LoggerContext::default();
 
-    run_from_build(&logger_context.logger, "build.rs", resolve_target).unwrap();
+    run_from_build(&env, &logger_context.logger, "build.rs", resolve_target).unwrap();
 }
 */
 
