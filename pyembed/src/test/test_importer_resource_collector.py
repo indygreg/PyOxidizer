@@ -74,9 +74,7 @@ class TestImporterResourceCollector(unittest.TestCase):
             oxide = c.oxidize(python_exe=python_exe)
         self.assertRegex(
             stderr.getvalue(),
-            fr"""Exception ignored in: <bound method {cleanup.__qualname__} """
-            fr"""of <{TrackingTempDir.__name__} (['"]){tempfile.gettempdir()}"""
-            fr"""[/\\].+\1>>""",
+            fr"""Exception ignored in: <bound method {cleanup.__qualname__} """,
         )
 
     def test_source_module(self):
