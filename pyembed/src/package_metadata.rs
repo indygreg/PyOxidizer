@@ -40,7 +40,7 @@ fn discover_resolvers(py: Python) -> PyResult<PyList> {
 }
 
 // A importlib.metadata.Distribution allowing access to package distribution data.
-py_class!(class OxidizedDistribution |py| {
+py_class!(pub(crate) class OxidizedDistribution |py| {
     data state: Arc<ImporterState>;
     data package: String;
 

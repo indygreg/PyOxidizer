@@ -1130,7 +1130,7 @@ impl<'a> PythonResourcesState<'a, u8> {
     }
 }
 
-py_class!(pub class OxidizedResource |py| {
+py_class!(pub(crate) class OxidizedResource |py| {
     data resource: RefCell<Resource<'static, u8>>;
 
     def __new__(_cls) -> PyResult<OxidizedResource> {
@@ -1556,7 +1556,7 @@ pub fn resource_to_pyobject(py: Python, resource: &Resource<u8>) -> PyResult<PyO
 }
 
 #[inline]
-pub fn pyobject_to_resource(py: Python, resource: OxidizedResource) -> Resource<u8> {
+pub(crate) fn pyobject_to_resource(py: Python, resource: OxidizedResource) -> Resource<u8> {
     resource.resource(py).borrow().clone()
 }
 

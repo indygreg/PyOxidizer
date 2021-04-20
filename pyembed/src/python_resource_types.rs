@@ -22,7 +22,7 @@ use {
     tugger_file_manifest::FileData,
 };
 
-py_class!(pub class PythonModuleSource |py| {
+py_class!(pub(crate) class PythonModuleSource |py| {
     data resource: RefCell<RawPythonModuleSource>;
 
     def __repr__(&self) -> PyResult<String> {
@@ -86,7 +86,7 @@ impl PythonModuleSource {
     }
 }
 
-py_class!(pub class PythonModuleBytecode |py| {
+py_class!(pub(crate) class PythonModuleBytecode |py| {
     data resource: RefCell<RawPythonModuleBytecode>;
 
     def __repr__(&self) -> PyResult<String> {
@@ -166,7 +166,7 @@ impl PythonModuleBytecode {
     }
 }
 
-py_class!(pub class PythonPackageResource |py| {
+py_class!(pub(crate) class PythonPackageResource |py| {
     data resource: RefCell<RawPythonPackageResource>;
 
     def __repr__(&self) -> PyResult<String> {
@@ -233,7 +233,7 @@ impl PythonPackageResource {
     }
 }
 
-py_class!(pub class PythonPackageDistributionResource |py| {
+py_class!(pub(crate) class PythonPackageDistributionResource |py| {
     data resource: RefCell<RawPythonPackageDistributionResource>;
 
     def __repr__(&self) -> PyResult<String> {
@@ -317,7 +317,7 @@ impl PythonPackageDistributionResource {
     }
 }
 
-py_class!(pub class PythonExtensionModule |py| {
+py_class!(pub(crate) class PythonExtensionModule |py| {
     data resource: RefCell<RawPythonExtensionModule>;
 
     def __repr__(&self) -> PyResult<String> {

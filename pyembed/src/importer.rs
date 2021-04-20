@@ -464,7 +464,7 @@ impl Drop for ImporterState {
 // Because macro expansion confuses IDE type hinting and rustfmt, most
 // methods call into non-macro implemented methods named <method>_impl which
 // are defined below in separate `impl {}` blocks.
-py_class!(class OxidizedFinder |py| {
+py_class!(pub(crate) class OxidizedFinder |py| {
     data state: Arc<ImporterState>;
 
     // Start of importlib.abc.MetaPathFinder interface.
@@ -1269,7 +1269,7 @@ impl OxidizedFinder {
 // A (mostly compliant) `importlib.abc.PathEntryFinder` that delegates paths
 // within the current executable to the `OxidizedFinder` whose `path_hook`
 // method created it.
-py_class!(class OxidizedPathEntryFinder |py| {
+py_class!(pub(crate) class OxidizedPathEntryFinder |py| {
     // A clone of the meta path finder from which we came.
     data finder: OxidizedFinder;
 
@@ -1345,7 +1345,7 @@ impl OxidizedPathEntryFinder {
 // Implements in-memory reading of resource data.
 //
 // Implements importlib.abc.ResourceReader.
-py_class!(class OxidizedResourceReader |py| {
+py_class!(pub(crate) class OxidizedResourceReader |py| {
     data state: Arc<ImporterState>;
     data package: String;
 
@@ -1435,7 +1435,7 @@ impl OxidizedResourceReader {
 // Path-like object facilitating Python resource access.
 //
 // This implements importlib.abc.Traversable.
-py_class!(class PyOxidizerTraversable |py| {
+py_class!(pub(crate) class PyOxidizerTraversable |py| {
     data state: Arc<ImporterState>;
     data path: String;
 
@@ -1535,7 +1535,7 @@ impl PyOxidizerTraversable {
     }
 }
 
-py_class!(class OxidizedPkgResourcesProvider |py| {
+py_class!(pub(crate) class OxidizedPkgResourcesProvider |py| {
     data state: Arc<ImporterState>;
     data package: String;
 

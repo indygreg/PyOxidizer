@@ -64,7 +64,7 @@ impl Drop for PyTempDir {
     }
 }
 
-py_class!(pub class OxidizedResourceCollector |py| {
+py_class!(pub(crate) class OxidizedResourceCollector |py| {
     data collector: RefCell<PythonResourceCollector>;
 
     def __new__(_cls, allowed_locations: Vec<String>) -> PyResult<OxidizedResourceCollector> {
