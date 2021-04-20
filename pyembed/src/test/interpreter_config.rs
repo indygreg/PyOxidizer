@@ -3,7 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    super::default_interpreter_config,
+    super::{default_interpreter_config, PYTHON_INTERPRETER_PATH},
     crate::{MainPythonInterpreter, OxidizedPythonInterpreterConfig},
     cpython::{ObjectProtocol, PyBytes, PyList, PyObject, PyString, PyStringData},
     python3_sys as pyffi,
@@ -342,7 +342,10 @@ rusty_fork_test! {
     /// sys.argv is initialized using the Rust process's arguments by default.
     #[test]
     fn test_argv_default() {
-        let config = default_interpreter_config();
+        let mut config = default_interpreter_config();
+        // Undo defaults from default_interpreter_config().
+        config.argv = None;
+
         let mut interp = MainPythonInterpreter::new(config).unwrap();
 
         let py = interp.acquire_gil();
@@ -363,12 +366,12 @@ rusty_fork_test! {
         let mut config = default_interpreter_config();
         // .argv expands to current process args by default. But setting
         // .interpreter_config.argv overrides this behavior.
-        config.argv = None;
         config.interpreter_config.argv = Some(vec![
-            OsString::from("prog"),
+            config.argv.as_ref().unwrap()[0].clone(),
             OsString::from("arg0"),
             OsString::from("arg1"),
         ]);
+        config.argv = None;
 
         let mut interp = MainPythonInterpreter::new(config).unwrap();
 
@@ -380,18 +383,16 @@ rusty_fork_test! {
             .unwrap()
             .extract::<Vec<String>>(py)
             .unwrap();
-        assert_eq!(argv, vec!["prog", "arg0", "arg1"]);
+        assert_eq!(argv, vec![PYTHON_INTERPRETER_PATH, "arg0", "arg1"]);
     }
 
     /// `OxidizedPythonInterpreterConfig.argv` can be used to define `sys.argv`.
     #[test]
     fn test_argv_override() {
         let mut config = default_interpreter_config();
-        config.argv = Some(vec![
-            OsString::from("prog"),
-            OsString::from("foo"),
-            OsString::from("bar"),
-        ]);
+        // keep argv[0] the same because it is used for path calculation.
+        config.argv.as_mut().unwrap().push(OsString::from("foo"));
+        config.argv.as_mut().unwrap().push(OsString::from("bar"));
         config.interpreter_config.argv = Some(vec![OsString::from("shoud-be-ignored")]);
 
         let mut interp = MainPythonInterpreter::new(config).unwrap();
@@ -404,13 +405,13 @@ rusty_fork_test! {
             .unwrap()
             .extract::<Vec<String>>(py)
             .unwrap();
-        assert_eq!(argv, vec!["prog", "foo", "bar"]);
+        assert_eq!(argv, vec![PYTHON_INTERPRETER_PATH, "foo", "bar"]);
     }
 
     #[test]
     fn test_argvb_utf8() {
         let mut config = default_interpreter_config();
-        config.argv = Some(vec![get_unicode_argument()]);
+        config.argv.as_mut().unwrap().push(get_unicode_argument());
         config.argvb = true;
 
         let mut interp = MainPythonInterpreter::new(config).unwrap();
@@ -420,9 +421,9 @@ rusty_fork_test! {
 
         let argvb_raw = sys.get(py, "argvb").unwrap();
         let argvb = argvb_raw.cast_as::<PyList>(py).unwrap();
-        assert_eq!(argvb.len(py), 1);
+        assert_eq!(argvb.len(py), 2);
 
-        let value_raw = argvb.get_item(py, 0);
+        let value_raw = argvb.get_item(py, 1);
         let value_bytes = value_raw.cast_as::<PyBytes>(py).unwrap();
         assert_eq!(
             value_bytes.data(py).to_vec(),
@@ -439,7 +440,7 @@ rusty_fork_test! {
     #[test]
     fn test_argv_utf8() {
         let mut config = default_interpreter_config();
-        config.argv = Some(vec![get_unicode_argument()]);
+        config.argv.as_mut().unwrap().push(get_unicode_argument());
 
         let mut interp = MainPythonInterpreter::new(config).unwrap();
 
@@ -448,9 +449,9 @@ rusty_fork_test! {
 
         let argv_raw = sys.get(py, "argv").unwrap();
         let argv = argv_raw.cast_as::<PyList>(py).unwrap();
-        assert_eq!(argv.len(py), 1);
+        assert_eq!(argv.len(py), 2);
 
-        let value_raw = argv.get_item(py, 0);
+        let value_raw = argv.get_item(py, 1);
         let value_string = value_raw.cast_as::<PyString>(py).unwrap();
         match value_string.data(py) {
             PyStringData::Utf8(b"\xe4\xb8\xad\xe6\x96\x87") => {
@@ -475,7 +476,7 @@ rusty_fork_test! {
     fn test_argv_utf8_isolated() {
         let mut config = default_interpreter_config();
         config.interpreter_config.profile = PythonInterpreterProfile::Isolated;
-        config.argv = Some(vec![get_unicode_argument()]);
+        config.argv.as_mut().unwrap().push(get_unicode_argument());
 
         let mut interp = MainPythonInterpreter::new(config).unwrap();
 
@@ -484,9 +485,9 @@ rusty_fork_test! {
 
         let argv_raw = sys.get(py, "argv").unwrap();
         let argv = argv_raw.cast_as::<PyList>(py).unwrap();
-        assert_eq!(argv.len(py), 1);
+        assert_eq!(argv.len(py), 2);
 
-        let value_raw = argv.get_item(py, 0);
+        let value_raw = argv.get_item(py, 1);
 
         // The cpython crate only converts to PyStringData if the internal
         // representation is UTF-8 and will panic otherwise. Since we're using
@@ -535,7 +536,7 @@ rusty_fork_test! {
         let mut config = default_interpreter_config();
         config.interpreter_config.profile = PythonInterpreterProfile::Isolated;
         config.interpreter_config.configure_locale = Some(true);
-        config.argv = Some(vec![get_unicode_argument()]);
+        config.argv.as_mut().unwrap().push(get_unicode_argument());
 
         let mut interp = MainPythonInterpreter::new(config).unwrap();
 
@@ -544,9 +545,9 @@ rusty_fork_test! {
 
         let argv_raw = sys.get(py, "argv").unwrap();
         let argv = argv_raw.cast_as::<PyList>(py).unwrap();
-        assert_eq!(argv.len(py), 1);
+        assert_eq!(argv.len(py), 2);
 
-        let value_raw = argv.get_item(py, 0);
+        let value_raw = argv.get_item(py, 1);
 
         assert_eq!(unsafe {
             pyffi::PyUnicode_GetLength(value_raw.as_ptr())

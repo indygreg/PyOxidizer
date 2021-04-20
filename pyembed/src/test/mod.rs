@@ -8,6 +8,8 @@ mod importer;
 mod interpreter_config;
 mod main_python_interpreter;
 
+pub const PYTHON_INTERPRETER_PATH: &str = env!("PYTHON_INTERPRETER_PATH");
+
 /// Obtain an [OxidizedPythonInterpreterConfig] suitable for use in tests.
 pub fn default_interpreter_config<'a>() -> OxidizedPythonInterpreterConfig<'a> {
     let mut config = OxidizedPythonInterpreterConfig::default();
@@ -21,7 +23,15 @@ pub fn default_interpreter_config<'a>() -> OxidizedPythonInterpreterConfig<'a> {
     // is the Python interpreter and would calculate paths (e.g. to the stdlib)
     // accordingly. In the context of tests this is wrong because there are no
     // embedded resources.
+    //
+    // In theory this is all we need to do to get a working interpreter, as the
+    // default path layout baked into the interpreter is appropriate. However,
+    // because Python calculates paths relative to argv[0] and argv[0] is a
+    // Rust executable, the resulting calculation would be wrong. So we
+    // forcefully set argv to as if it were the actual interpreter path as a
+    // workaround. Tests related to argv handling need to overwrite accordingly.
     config.set_missing_path_configuration = false;
+    config.argv = Some(vec![std::ffi::OsString::from(PYTHON_INTERPRETER_PATH)]);
 
     config
 }
