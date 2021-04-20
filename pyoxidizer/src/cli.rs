@@ -100,11 +100,13 @@ pub fn run_cli() -> Result<()> {
         .arg(
             Arg::with_name("system_rust")
                 .long("--system-rust")
+                .global(true)
                 .help("Use a system install of Rust instead of a self-managed Rust installation"),
         )
         .arg(
             Arg::with_name("verbose")
                 .long("verbose")
+                .global(true)
                 .help("Enable verbose output"),
         )
         .subcommand(

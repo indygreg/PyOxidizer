@@ -89,6 +89,8 @@ Other Relevant Changes
   new API docs.
 * PyOxidizer now stores persistent artifacts in a per-user *cache* directory.
   See :ref:`pyoxidizer_cache` for more.
+* The ``pyoxidizer`` CLI now accepts ``--verbose`` as a sub-command argument.
+  Previously, it was only accepted as an argument before the sub-command name.
 
 .. _version_0_13_2:
 
