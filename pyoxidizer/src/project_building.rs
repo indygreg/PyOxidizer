@@ -775,6 +775,27 @@ mod tests {
     }
 
     #[test]
+    fn test_empty_project_system_rust() -> Result<()> {
+        let mut env = get_env()?;
+        env.unmanage_rust()?;
+        let logger = get_logger()?;
+        let options = StandalonePythonExecutableBuilderOptions::default();
+        let pre_built = options.new_builder()?;
+
+        build_python_executable(
+            &env,
+            &logger,
+            "myapp",
+            pre_built.as_ref(),
+            env!("HOST"),
+            "0",
+            false,
+        )?;
+
+        Ok(())
+    }
+
+    #[test]
     #[cfg(target_env = "msvc")]
     fn test_empty_project_standalone_static() -> Result<()> {
         let env = get_env()?;
