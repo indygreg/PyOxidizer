@@ -105,11 +105,7 @@ fn main() {
 
         build_with_pyoxidizer_exe(
             env::var("PYOXIDIZER_EXE").ok(),
-            if let Some(target) = &target {
-                Some(target.as_ref())
-            } else {
-                None
-            },
+            target.as_ref().map(|target| target.as_ref()),
         );
     } else if env::var("CARGO_FEATURE_BUILD_MODE_PREBUILT_ARTIFACTS").is_ok() {
         let artifact_dir_env = env::var("PYOXIDIZER_ARTIFACT_DIR");
