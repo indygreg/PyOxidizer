@@ -53,7 +53,7 @@ pub struct MainPythonInterpreter<'python, 'interpreter: 'python, 'resources: 'in
     config: ResolvedOxidizedPythonInterpreterConfig<'resources>,
     interpreter_guard: Option<std::sync::MutexGuard<'interpreter, ()>>,
     pub(crate) allocator: Option<PythonMemoryAllocator>,
-    gil: Option<GILGuard>,
+    _gil: Option<GILGuard>,
     py: Option<Python<'python>>,
     /// File to write containing list of modules when the interpreter finalizes.
     write_modules_path: Option<PathBuf>,
@@ -84,7 +84,7 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
             config,
             interpreter_guard: None,
             allocator: None,
-            gil: None,
+            _gil: None,
             py: None,
             write_modules_path: None,
         };
@@ -366,7 +366,7 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
     /// Ensure the Python GIL is released.
     pub fn release_gil(&mut self) {
         self.py = None;
-        self.gil = None;
+        self._gil = None;
     }
 
     /// Ensure the Python GIL is acquired, returning a handle on the interpreter.
@@ -382,7 +382,7 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
                 let gil = GILGuard::acquire();
                 let py = unsafe { Python::assume_gil_acquired() };
 
-                self.gil = Some(gil);
+                self._gil = Some(gil);
                 self.py = Some(py);
 
                 py
