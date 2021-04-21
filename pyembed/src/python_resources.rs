@@ -1333,7 +1333,7 @@ py_class!(pub(crate) class OxidizedResource |py| {
         if let Some(value) = value {
             self.resource(py).borrow_mut().in_memory_package_resources =
                 pyobject_optional_resources_map_to_owned_bytes(py, &value)?
-                    .map(|x| x.into_iter().map(|(k, v)| (Cow::Owned(k.to_owned()), Cow::Owned(v.to_owned()))).collect());
+                    .map(|x| x.into_iter().map(|(k, v)| (Cow::Owned(k), Cow::Owned(v))).collect());
 
             Ok(())
         } else {
@@ -1352,7 +1352,7 @@ py_class!(pub(crate) class OxidizedResource |py| {
             self.resource(py).borrow_mut().in_memory_distribution_resources =
                 pyobject_optional_resources_map_to_owned_bytes(py, &value)?
                     .map(|x|
-                        x.into_iter().map(|(k, v)| (Cow::Owned(k.to_owned()), Cow::Owned(v.to_owned()))).collect()
+                        x.into_iter().map(|(k, v)| (Cow::Owned(k), Cow::Owned(v))).collect()
                     );
 
             Ok(())
@@ -1385,7 +1385,7 @@ py_class!(pub(crate) class OxidizedResource |py| {
     @shared_library_dependency_names.setter def set_shared_library_dependency_names(&self, value: Option<Option<Vec<String>>>) -> PyResult<()> {
         if let Some(value) = value {
             self.resource(py).borrow_mut().shared_library_dependency_names =
-                value.map(|x| x.into_iter().map(|v| Cow::Owned(v.to_owned())).collect());
+                value.map(|x| x.into_iter().map(Cow::Owned).collect());
 
             Ok(())
         } else {
@@ -1508,7 +1508,7 @@ py_class!(pub(crate) class OxidizedResource |py| {
             self.resource(py).borrow_mut().relative_path_package_resources =
                 pyobject_optional_resources_map_to_pathbuf(py, &value)?
                     .map(|x|
-                        x.into_iter().map(|(k, v)| (Cow::Owned(k.to_owned()), Cow::Owned(v.to_owned()))).collect()
+                        x.into_iter().map(|(k, v)| (Cow::Owned(k), Cow::Owned(v))).collect()
                     );
 
             Ok(())
@@ -1537,7 +1537,7 @@ py_class!(pub(crate) class OxidizedResource |py| {
             self.resource(py).borrow_mut().relative_path_distribution_resources =
                 pyobject_optional_resources_map_to_pathbuf(py, &value)?
                     .map(|x|
-                        x.into_iter().map(|(k, v)| (Cow::Owned(k.to_owned()), Cow::Owned(v.to_owned()))).collect()
+                        x.into_iter().map(|(k, v)| (Cow::Owned(k), Cow::Owned(v))).collect()
                     );
 
             Ok(())
