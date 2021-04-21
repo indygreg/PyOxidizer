@@ -167,6 +167,11 @@ fn module_init(py: Python, m: &PyModule) -> PyResult<()> {
         ),
     )?;
 
+    m.add(
+        py,
+        "OxidizedDistribution",
+        py.get_type::<crate::package_metadata::OxidizedDistribution>(),
+    )?;
     m.add(py, "OxidizedFinder", py.get_type::<OxidizedFinder>())?;
     m.add(py, "OxidizedResource", py.get_type::<OxidizedResource>())?;
     m.add(
@@ -214,8 +219,6 @@ fn module_init(py: Python, m: &PyModule) -> PyResult<()> {
         "PythonExtensionModule",
         py.get_type::<crate::python_resource_types::PythonExtensionModule>(),
     )?;
-
-    crate::package_metadata::module_init(py, m)?;
 
     Ok(())
 }

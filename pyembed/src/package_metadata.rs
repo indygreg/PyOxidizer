@@ -10,8 +10,8 @@ use {
     },
     cpython::{
         exc::{IOError, NotImplementedError, ValueError},
-        py_class, NoArgs, ObjectProtocol, PyBytes, PyClone, PyDict, PyErr, PyList, PyModule,
-        PyObject, PyResult, PyString, PyType, Python, PythonObject, ToPyObject,
+        py_class, NoArgs, ObjectProtocol, PyBytes, PyClone, PyDict, PyErr, PyList, PyObject,
+        PyResult, PyString, PyType, Python, PythonObject, ToPyObject,
     },
     python_packed_resources::data::Resource,
     std::{
@@ -519,14 +519,4 @@ pub(crate) fn metadata_list_directory<'a>(
     }
 
     entries.into_iter().collect::<Vec<_>>()
-}
-
-pub(crate) fn module_init(py: Python, m: &PyModule) -> PyResult<()> {
-    m.add(
-        py,
-        "OxidizedDistribution",
-        py.get_type::<crate::package_metadata::OxidizedDistribution>(),
-    )?;
-
-    Ok(())
 }
