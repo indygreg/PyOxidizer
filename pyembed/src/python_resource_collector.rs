@@ -301,9 +301,7 @@ impl OxidizedResourceCollector {
             Some(p) => p,
             None => {
                 let sys_module = py.import("sys")?;
-                let executable = sys_module.get(py, "executable")?;
-
-                executable
+                sys_module.get(py, "executable")?
             }
         };
         let python_exe = pyobject_to_pathbuf(py, python_exe)?;
