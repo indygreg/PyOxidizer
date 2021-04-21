@@ -356,8 +356,7 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
                     })?
                     .to_string();
 
-                self.write_modules_path =
-                    Some(PathBuf::from(path).join(format!("modules-{}", uuid_str)));
+                self.write_modules_path = Some(path.join(format!("modules-{}", uuid_str)));
             }
         }
 
