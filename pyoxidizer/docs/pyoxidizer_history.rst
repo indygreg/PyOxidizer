@@ -105,10 +105,12 @@ Other Relevant Changes
 * The ``pyoxidizer`` CLI now accepts ``--verbose`` as a sub-command argument.
   Previously, it was only accepted as an argument before the sub-command name.
 * Generated Rust projects (which can be temporary as part of building binaries)
-  now contain a ``Cargo.lock`` file. The content of the ``Cargo.lock`` is
-  static and under version control. The presence of the ``Cargo.lock`` should
-  help ensure that Rust crate versions used by Rust projects approximate those
-  used by the build of PyOxidizer that produced the project.
+  now contain a ``Cargo.lock`` file and are built with ``cargo build --locked``.
+  The template of the ``Cargo.lock`` is static and under version control. The
+  presence of the ``Cargo.lock`` coupled with ``cargo build --locked`` should
+  ensure that Rust crate versions used by Rust projects exactly match those used
+  by the build of PyOxidizer that produced the project. This should result
+  in more deterministic builds and higher reliability of build success.
 
 .. _version_0_13_2:
 

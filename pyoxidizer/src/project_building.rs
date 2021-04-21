@@ -294,6 +294,7 @@ pub fn build_executable_with_rust_project<'a>(
     target_triple: &str,
     opt_level: &str,
     release: bool,
+    locked: bool,
 ) -> Result<BuiltExecutable<'a>> {
     create_dir_all(&artifacts_path).context("creating directory for PyOxidizer build artifacts")?;
 
@@ -336,6 +337,10 @@ pub fn build_executable_with_rust_project<'a>(
 
     args.push("--bin");
     args.push(bin_name);
+
+    if locked {
+        args.push("--locked");
+    }
 
     if release {
         args.push("--release");
@@ -463,6 +468,9 @@ pub fn build_python_executable<'a>(
         target_triple,
         opt_level,
         release,
+        // Always build with locked because we crated a Cargo.lock with the
+        // Rust project we just created.
+        true,
     )
     .context("building executable with Rust project")?;
 
