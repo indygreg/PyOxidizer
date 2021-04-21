@@ -1394,10 +1394,10 @@ py_class!(pub(crate) class OxidizedResource |py| {
     }
 
     @property def relative_path_module_source(&self) -> PyResult<PyObject> {
-        Ok(self.resource(py).borrow().relative_path_module_source.as_ref().map_or_else(
+        self.resource(py).borrow().relative_path_module_source.as_ref().map_or_else(
             || Ok(py.None()),
             |x| path_to_pathlib_path(py, x)
-        )?)
+        )
     }
 
     @relative_path_module_source.setter def set_relative_path_module_source(&self, value: Option<PyObject>) -> PyResult<()> {
@@ -1413,10 +1413,10 @@ py_class!(pub(crate) class OxidizedResource |py| {
     }
 
     @property def relative_path_module_bytecode(&self) -> PyResult<PyObject> {
-        Ok(self.resource(py).borrow().relative_path_module_bytecode.as_ref().map_or_else(
+        self.resource(py).borrow().relative_path_module_bytecode.as_ref().map_or_else(
             || Ok(py.None()),
             |x| path_to_pathlib_path(py, x)
-        )?)
+        )
     }
 
     @relative_path_module_bytecode.setter def set_relative_path_module_bytecode(&self, value: Option<PyObject>) -> PyResult<()> {
@@ -1432,10 +1432,10 @@ py_class!(pub(crate) class OxidizedResource |py| {
     }
 
     @property def relative_path_module_bytecode_opt1(&self) -> PyResult<PyObject> {
-        Ok(self.resource(py).borrow().relative_path_module_bytecode_opt1.as_ref().map_or_else(
+        self.resource(py).borrow().relative_path_module_bytecode_opt1.as_ref().map_or_else(
             || Ok(py.None()),
             |x| path_to_pathlib_path(py, x)
-        )?)
+        )
     }
 
     @relative_path_module_bytecode_opt1.setter def set_relative_path_module_bytecode_opt1(&self, value: Option<PyObject>) -> PyResult<()> {
@@ -1451,10 +1451,10 @@ py_class!(pub(crate) class OxidizedResource |py| {
     }
 
     @property def relative_path_module_bytecode_opt2(&self) -> PyResult<PyObject> {
-        Ok(self.resource(py).borrow().relative_path_module_bytecode_opt2.as_ref().map_or_else(
+        self.resource(py).borrow().relative_path_module_bytecode_opt2.as_ref().map_or_else(
             || Ok(py.None()),
             |x| path_to_pathlib_path(py, x)
-        )?)
+        )
     }
 
     @relative_path_module_bytecode_opt2.setter def set_relative_path_module_bytecode_opt2(&self, value: Option<PyObject>) -> PyResult<()> {
@@ -1470,10 +1470,10 @@ py_class!(pub(crate) class OxidizedResource |py| {
     }
 
     @property def relative_path_extension_module_shared_library(&self) -> PyResult<PyObject> {
-        Ok(self.resource(py).borrow().relative_path_extension_module_shared_library.as_ref().map_or_else(
+        self.resource(py).borrow().relative_path_extension_module_shared_library.as_ref().map_or_else(
             || Ok(py.None()),
             |x| path_to_pathlib_path(py, x)
-        )?)
+        )
     }
 
     @relative_path_extension_module_shared_library.setter def set_relative_path_extension_module_shared_library(&self, value: Option<PyObject>) -> PyResult<()> {
@@ -1489,7 +1489,7 @@ py_class!(pub(crate) class OxidizedResource |py| {
     }
 
     @property def relative_path_package_resources(&self) -> PyResult<PyObject> {
-        Ok(self.resource(py).borrow().relative_path_package_resources.as_ref().map_or_else(
+        self.resource(py).borrow().relative_path_package_resources.as_ref().map_or_else(
             || Ok(py.None()),
             |x| -> PyResult<PyObject> {
                 let res = PyDict::new(py);
@@ -1500,7 +1500,7 @@ py_class!(pub(crate) class OxidizedResource |py| {
 
                 Ok(res.into_object())
             }
-        )?)
+        )
     }
 
     @relative_path_package_resources.setter def set_relative_path_package_resources(&self, value: Option<PyObject>) -> PyResult<()> {
@@ -1518,7 +1518,7 @@ py_class!(pub(crate) class OxidizedResource |py| {
     }
 
     @property def relative_path_distribution_resources(&self) -> PyResult<PyObject> {
-        Ok(self.resource(py).borrow().relative_path_distribution_resources.as_ref().map_or_else(
+        self.resource(py).borrow().relative_path_distribution_resources.as_ref().map_or_else(
             || Ok(py.None()),
             |x| -> PyResult<PyObject> {
                 let res = PyDict::new(py);
@@ -1529,7 +1529,7 @@ py_class!(pub(crate) class OxidizedResource |py| {
 
                 Ok(res.into_object())
             }
-        )?)
+        )
     }
 
     @relative_path_distribution_resources.setter def set_relative_path_distribution_resources(&self, value: Option<PyObject>) -> PyResult<()> {
