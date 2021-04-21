@@ -39,7 +39,6 @@ fs_extra = "1.2"
 glob = "0.3"
 handlebars = "3.5"
 hex = "0.4"
-indoc = "1.0"
 itertools = "0.10"
 libc = "0.2"
 linked-hash-map = "0.5"
@@ -107,5 +106,4 @@ version = "0.3.0-pre"
 path = "../tugger-file-manifest"
 
 [dev-dependencies]
-indoc = "1.0"
 xml-rs = "0.8"
