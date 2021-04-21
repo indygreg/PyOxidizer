@@ -97,6 +97,7 @@ That crate's build script will attempt to find a `libpython` from the
 mod config;
 mod conversion;
 mod error;
+#[allow(clippy::manual_strip, clippy::transmute_ptr_to_ptr, clippy::zero_ptr)]
 mod extension;
 #[allow(clippy::manual_strip, clippy::transmute_ptr_to_ptr, clippy::zero_ptr)]
 mod importer;

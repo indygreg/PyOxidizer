@@ -351,7 +351,7 @@ pub(crate) fn pkg_resources_find_distributions(
 
     find_pkg_resources_distributions(
         py,
-        state.clone(),
+        state,
         &path_item.to_string_lossy(py),
         only,
         finder.get_target_package(py).as_ref().map(|s| s.as_str()),
