@@ -417,7 +417,7 @@ where
     backing_py_objects: Vec<PyObject>,
 
     /// Holds memory mapped file instances that resources data came from.
-    backing_mmaps: Vec<Box<memmap::Mmap>>,
+    backing_mmaps: Vec<memmap::Mmap>,
 }
 
 impl<'a> Default for PythonResourcesState<'a, u8> {
@@ -519,7 +519,7 @@ impl<'a> PythonResourcesState<'a, u8> {
         let path = path.as_ref();
         let f = std::fs::File::open(path).map_err(|e| e.to_string())?;
 
-        let mapped = Box::new(unsafe { memmap::Mmap::map(&f) }.map_err(|e| e.to_string())?);
+        let mapped = unsafe { memmap::Mmap::map(&f) }.map_err(|e| e.to_string())?;
 
         let data = unsafe { std::slice::from_raw_parts::<u8>(mapped.as_ptr(), mapped.len()) };
 
