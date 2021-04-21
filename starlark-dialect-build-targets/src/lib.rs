@@ -813,11 +813,7 @@ fn starlark_resolve_target(
 
         // If we have a resolved value for this target, return it.
         if let Some(v) = if let Some(t) = context.get_target(&target) {
-            if let Some(v) = &t.resolved_value {
-                Some(v.clone())
-            } else {
-                None
-            }
+            t.resolved_value.as_ref().cloned()
         } else {
             None
         } {
