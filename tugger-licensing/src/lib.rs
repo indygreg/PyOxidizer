@@ -236,13 +236,7 @@ impl LicensedComponent {
                 .collect::<BTreeSet<_>>(),
             LicenseFlavor::OtherExpression(expression) => expression
                 .requirements()
-                .filter_map(|req| {
-                    if let Some(id) = req.req.license.id() {
-                        Some((id, req.req.exception))
-                    } else {
-                        None
-                    }
-                })
+                .filter_map(|req| req.req.license.id().map(|id| (id, req.req.exception)))
                 .collect::<BTreeSet<_>>(),
             LicenseFlavor::None | LicenseFlavor::PublicDomain | LicenseFlavor::Unknown(_) => {
                 BTreeSet::new()
