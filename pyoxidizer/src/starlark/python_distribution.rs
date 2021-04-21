@@ -137,7 +137,7 @@ impl PythonDistributionValue {
             })
         })?;
 
-        let python_version_str = python_version.as_ref().map(|x| x.as_str());
+        let python_version_str = python_version.as_deref();
 
         let location = default_distribution_location(&flavor, &build_target, python_version_str)
             .map_err(|e| {
