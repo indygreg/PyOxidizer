@@ -1378,7 +1378,7 @@ py_class!(pub(crate) class OxidizedResource |py| {
 
     @property def shared_library_dependency_names(&self) -> PyResult<Option<Vec<String>>> {
         Ok(self.resource(py).borrow().shared_library_dependency_names.as_ref().map(|x| {
-            x.into_iter().map(|v| v.to_string()).collect()
+            x.iter().map(|v| v.to_string()).collect()
         }))
     }
 
