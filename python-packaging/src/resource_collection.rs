@@ -198,13 +198,10 @@ impl PrePackagedResource {
             } else {
                 None
             },
-            shared_library_dependency_names: if let Some(names) =
-                &self.shared_library_dependency_names
-            {
-                Some(names.iter().map(|x| Cow::Owned(x.clone())).collect())
-            } else {
-                None
-            },
+            shared_library_dependency_names: self
+                .shared_library_dependency_names
+                .as_ref()
+                .map(|x| x.iter().map(|x| Cow::Owned(x.clone())).collect()),
             relative_path_module_source: if let Some((prefix, location)) =
                 &self.relative_path_module_source
             {
