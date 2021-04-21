@@ -30,8 +30,12 @@ pub fn default_interpreter_config<'a>() -> OxidizedPythonInterpreterConfig<'a> {
     // Rust executable, the resulting calculation would be wrong. So we
     // forcefully set argv to as if it were the actual interpreter path as a
     // workaround. Tests related to argv handling need to overwrite accordingly.
+    // But for whatever reason setting argv isn't sufficient on Windows: there
+    // we need to also set the executable path explicitly. We do that globally
+    // because why not (it may help flush out more bugs).
     config.set_missing_path_configuration = false;
     config.argv = Some(vec![std::ffi::OsString::from(PYTHON_INTERPRETER_PATH)]);
+    config.interpreter_config.executable = Some(std::path::PathBuf::from(PYTHON_INTERPRETER_PATH));
 
     config
 }
