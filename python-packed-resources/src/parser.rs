@@ -512,10 +512,7 @@ impl<'a> Iterator for ResourceParserIterator<'a> {
         }
 
         match self.parse_next() {
-            Ok(res) => match res {
-                Some(entry) => Some(Ok(entry)),
-                None => None,
-            },
+            Ok(res) => res.map(Ok),
             Err(e) => Some(Err(e)),
         }
     }
