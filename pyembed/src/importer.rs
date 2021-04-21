@@ -478,7 +478,7 @@ py_class!(pub(crate) class OxidizedFinder |py| {
     }
 
     def invalidate_caches(&self) -> PyResult<PyObject> {
-        self.invalidate_caches_impl(py)
+        Ok(self.invalidate_caches_impl(py))
     }
 
     // End of importlib.abc.MetaPathFinder interface.
@@ -635,8 +635,8 @@ impl OxidizedFinder {
         }
     }
 
-    fn invalidate_caches_impl(&self, py: Python) -> PyResult<PyObject> {
-        Ok(py.None())
+    fn invalidate_caches_impl(&self, py: Python) -> PyObject {
+        py.None()
     }
 
     fn find_module_impl(
@@ -1456,7 +1456,7 @@ py_class!(pub(crate) class PyOxidizerTraversable |py| {
 
     // Return True if self is a dir.
     def is_dir(&self) -> PyResult<PyObject> {
-        self.is_dir_impl(py)
+        Ok(self.is_dir_impl(py))
     }
 
     // Return True if self is a file.
@@ -1497,7 +1497,7 @@ impl PyOxidizerTraversable {
         unimplemented!();
     }
 
-    fn is_dir_impl(&self, py: Python) -> PyResult<PyObject> {
+    fn is_dir_impl(&self, py: Python) -> PyObject {
         let state = self.state(py);
         let path = self.path(py);
 
@@ -1510,11 +1510,11 @@ impl PyOxidizerTraversable {
             .resolve_importable_module(&path, state.optimize_level)
         {
             if entry.is_package {
-                return Ok(py.True().into_object());
+                return py.True().into_object();
             }
         }
 
-        Ok(py.False().into_object())
+        py.False().into_object()
     }
 
     fn is_file_impl(&self, _py: Python) -> PyResult<PyObject> {
@@ -1546,7 +1546,7 @@ py_class!(pub(crate) class OxidizedPkgResourcesProvider |py| {
     // Begin IMetadataProvider interface.
 
     def has_metadata(&self, name: PyString) -> PyResult<bool> {
-        self.has_metadata_impl(py, name)
+        Ok(self.has_metadata_impl(py, name))
     }
 
     def get_metadata(&self, name: PyString) -> PyResult<PyString> {
@@ -1558,11 +1558,11 @@ py_class!(pub(crate) class OxidizedPkgResourcesProvider |py| {
     }
 
     def metadata_isdir(&self, name: PyString) -> PyResult<bool> {
-        self.metadata_isdir_impl(py, name)
+        Ok(self.metadata_isdir_impl(py, name))
     }
 
     def metadata_listdir(&self, name: PyString) -> PyResult<PyList> {
-        self.metadata_listdir_impl(py, name)
+        Ok(self.metadata_listdir_impl(py, name))
     }
 
     def run_script(&self, script_name: PyString, namespace: PyObject) -> PyResult<PyObject> {
@@ -1586,15 +1586,15 @@ py_class!(pub(crate) class OxidizedPkgResourcesProvider |py| {
     }
 
     def has_resource(&self, resource_name: PyString) -> PyResult<bool> {
-        self.has_resource_impl(py, resource_name)
+        Ok(self.has_resource_impl(py, resource_name))
     }
 
     def resource_isdir(&self, resource_name: PyString) -> PyResult<bool> {
-        self.resource_isdir_impl(py, resource_name)
+        Ok(self.resource_isdir_impl(py, resource_name))
     }
 
     def resource_listdir(&self, resource_name: PyString) -> PyResult<PyList> {
-        self.resource_listdir_impl(py, resource_name)
+        Ok(self.resource_listdir_impl(py, resource_name))
     }
 
     // End IResourceProvider interface.
@@ -1633,7 +1633,7 @@ pub(crate) fn create_oxidized_pkg_resources_provider(
 
 // pkg_resources.IMetadataProvider
 impl OxidizedPkgResourcesProvider {
-    fn has_metadata_impl(&self, py: Python, name: PyString) -> PyResult<bool> {
+    fn has_metadata_impl(&self, py: Python, name: PyString) -> bool {
         let state = self.state(py);
         let package = self.package(py);
         let resources_state = state.get_resources_state();
@@ -1648,7 +1648,7 @@ impl OxidizedPkgResourcesProvider {
         )
         .unwrap_or(None);
 
-        Ok(data.is_some())
+        data.is_some()
     }
 
     fn get_metadata_impl(&self, py: Python, name: PyString) -> PyResult<PyString> {
@@ -1681,21 +1681,17 @@ impl OxidizedPkgResourcesProvider {
         pkg_resources.call(py, "yield_lines", (s,), None)
     }
 
-    fn metadata_isdir_impl(&self, py: Python, name: PyString) -> PyResult<bool> {
+    fn metadata_isdir_impl(&self, py: Python, name: PyString) -> bool {
         let state = self.state(py);
         let package = self.package(py);
         let resources_state = state.get_resources_state();
 
         let name = name.to_string_lossy(py);
 
-        Ok(metadata_name_is_directory(
-            &resources_state.resources,
-            &package,
-            &name,
-        ))
+        metadata_name_is_directory(&resources_state.resources, &package, &name)
     }
 
-    fn metadata_listdir_impl(&self, py: Python, name: PyString) -> PyResult<PyList> {
+    fn metadata_listdir_impl(&self, py: Python, name: PyString) -> PyList {
         let state = self.state(py);
         let package = self.package(py);
         let resources_state = state.get_resources_state();
@@ -1707,7 +1703,7 @@ impl OxidizedPkgResourcesProvider {
             .map(|s| PyString::new(py, s).into_object())
             .collect::<Vec<_>>();
 
-        Ok(PyList::new(py, &entries))
+        PyList::new(py, &entries)
     }
 
     fn run_script_impl(
@@ -1764,29 +1760,29 @@ impl OxidizedPkgResourcesProvider {
         fh.call_method(py, "read", NoArgs, None)
     }
 
-    fn has_resource_impl(&self, py: Python, resource_name: PyString) -> PyResult<bool> {
+    fn has_resource_impl(&self, py: Python, resource_name: PyString) -> bool {
         let state = self.state(py);
         let package = self.package(py);
         let resource_name = resource_name.to_string_lossy(py);
 
-        Ok(state
+        state
             .get_resources_state()
             .get_package_resource_file(py, &package, &resource_name)
             .unwrap_or(None)
-            .is_some())
+            .is_some()
     }
 
-    fn resource_isdir_impl(&self, py: Python, resource_name: PyString) -> PyResult<bool> {
+    fn resource_isdir_impl(&self, py: Python, resource_name: PyString) -> bool {
         let state = self.state(py);
         let package = self.package(py);
         let resource_name = resource_name.to_string_lossy(py);
 
-        Ok(state
+        state
             .get_resources_state()
-            .is_package_resource_directory(&package, &resource_name))
+            .is_package_resource_directory(&package, &resource_name)
     }
 
-    fn resource_listdir_impl(&self, py: Python, resource_name: PyString) -> PyResult<PyList> {
+    fn resource_listdir_impl(&self, py: Python, resource_name: PyString) -> PyList {
         let state = self.state(py);
         let package = self.package(py);
         let resource_name = resource_name.to_string_lossy(py);
@@ -1798,7 +1794,7 @@ impl OxidizedPkgResourcesProvider {
             .map(|s| PyString::new(py, &s).into_object())
             .collect::<Vec<_>>();
 
-        Ok(PyList::new(py, &entries))
+        PyList::new(py, &entries)
     }
 }
 
