@@ -97,6 +97,7 @@ That crate's build script will attempt to find a `libpython` from the
 mod config;
 mod conversion;
 mod error;
+mod extension;
 #[allow(clippy::manual_strip, clippy::transmute_ptr_to_ptr, clippy::zero_ptr)]
 mod importer;
 #[cfg(not(library_mode = "extension"))]
@@ -140,7 +141,7 @@ pub use crate::{
 };
 
 #[cfg(library_mode = "extension")]
-pub use crate::importer::PyInit_oxidized_importer;
+pub use crate::extension::PyInit_oxidized_importer;
 
 #[cfg(not(library_mode = "extension"))]
 #[allow(unused_imports)]

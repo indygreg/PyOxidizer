@@ -9,10 +9,8 @@ use {
         config::{OxidizedPythonInterpreterConfig, ResolvedOxidizedPythonInterpreterConfig},
         conversion::osstring_to_bytes,
         error::NewInterpreterError,
-        importer::{
-            install_path_hook, remove_external_importers, replace_meta_path_importers,
-            PyInit_oxidized_importer, OXIDIZED_IMPORTER_NAME, OXIDIZED_IMPORTER_NAME_STR,
-        },
+        extension::{PyInit_oxidized_importer, OXIDIZED_IMPORTER_NAME, OXIDIZED_IMPORTER_NAME_STR},
+        importer::{install_path_hook, remove_external_importers, replace_meta_path_importers},
         osutils::resolve_terminfo_dirs,
         pyalloc::PythonMemoryAllocator,
         python_resources::PythonResourcesState,
