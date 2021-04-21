@@ -449,16 +449,11 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
             return None;
         };
 
-        if let Some(s) = self
-            .target_distribution
+        self.target_distribution
             .crt_features
             .iter()
             .find(|s| s.starts_with("vcruntime:"))
-        {
-            Some((s.split(':').nth(1).unwrap()[0..2].to_string(), platform))
-        } else {
-            None
-        }
+            .map(|s| (s.split(':').nth(1).unwrap()[0..2].to_string(), platform))
     }
 
     fn cache_tag(&self) -> &str {
