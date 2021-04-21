@@ -476,6 +476,7 @@ pub fn build_python_executable<'a>(
 ///
 /// This will resolve `resolve_target` or the default then build it. Built
 /// artifacts (if any) are written to `artifacts_path`.
+#[allow(clippy::too_many_arguments)]
 pub fn build_pyembed_artifacts(
     env: &Environment,
     logger: &slog::Logger,
