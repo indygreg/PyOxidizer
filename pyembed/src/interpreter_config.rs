@@ -144,7 +144,9 @@ fn append_wide_string_list_from_path(
     let value = path
         .as_os_str()
         .to_str()
-        .ok_or_else(|| NewInterpreterError::Simple("unable to convert value to str"))?;
+        .ok_or(NewInterpreterError::Simple(
+            "unable to convert value to str",
+        ))?;
 
     append_wide_string_list_from_str(dest, value, context)
 }
