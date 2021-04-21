@@ -60,9 +60,9 @@ rusty-fork = "0.3"
 
 [features]
 default = ["build-mode-default"]
-jemalloc = ["jemalloc-sys"]
-mimalloc = ["libmimalloc-sys"]
-snmalloc = ["snmalloc-sys"]
+allocator-jemalloc = ["jemalloc-sys"]
+allocator-mimalloc = ["libmimalloc-sys"]
+allocator-snmalloc = ["snmalloc-sys"]
 
 # The default build mode.
 #

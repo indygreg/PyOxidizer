@@ -201,7 +201,7 @@ rusty_fork_test! {
         assert_eq!(interp.allocator.as_ref().unwrap().backend(), MemoryAllocatorBackend::Rust);
     }
 
-    #[cfg(feature = "jemalloc")]
+    #[cfg(feature = "jemalloc-sys")]
     #[test]
     fn test_allocator_jemalloc() {
         let mut config = default_interpreter_config();
@@ -217,7 +217,7 @@ rusty_fork_test! {
         assert_eq!(interp.allocator.as_ref().unwrap().backend(), MemoryAllocatorBackend::Jemalloc);
     }
 
-    #[cfg(feature = "jemalloc")]
+    #[cfg(feature = "jemalloc-sys")]
     #[test]
     fn test_allocator_jemalloc_pymalloc_arena() {
         let mut config = default_interpreter_config();
@@ -232,7 +232,7 @@ rusty_fork_test! {
         assert_eq!(interp.allocator.as_ref().unwrap().backend(), MemoryAllocatorBackend::Jemalloc);
     }
 
-    #[cfg(feature = "mimalloc")]
+    #[cfg(feature = "libmimalloc-sys")]
     #[test]
     fn test_allocator_mimalloc() {
         let mut config = default_interpreter_config();
@@ -248,7 +248,7 @@ rusty_fork_test! {
         assert_eq!(interp.allocator.as_ref().unwrap().backend(), MemoryAllocatorBackend::Mimalloc);
     }
 
-    #[cfg(feature = "mimalloc")]
+    #[cfg(feature = "libmimalloc-sys")]
     #[test]
     fn test_allocator_mimalloc_pymalloc_arena() {
         let mut config = default_interpreter_config();
@@ -263,7 +263,7 @@ rusty_fork_test! {
         assert_eq!(interp.allocator.as_ref().unwrap().backend(), MemoryAllocatorBackend::Mimalloc);
     }
 
-    #[cfg(feature = "snmalloc")]
+    #[cfg(feature = "snmalloc-sys")]
     #[test]
     fn test_allocator_snmalloc() {
         let mut config = default_interpreter_config();
@@ -279,7 +279,7 @@ rusty_fork_test! {
         assert_eq!(interp.allocator.as_ref().unwrap().backend(), MemoryAllocatorBackend::Snmalloc);
     }
 
-    #[cfg(feature = "snmalloc")]
+    #[cfg(feature = "snmalloc-sys")]
     #[test]
     fn test_allocator_snmalloc_pymalloc_arena() {
         let mut config = default_interpreter_config();

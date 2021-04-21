@@ -21,9 +21,9 @@ global-allocator-jemalloc = ["jemallocator"]
 global-allocator-mimalloc = ["mimalloc"]
 global-allocator-snmalloc = ["snmalloc-rs"]
 
-allocator-jemalloc = ["pyembed/jemalloc"]
-allocator-mimalloc = ["pyembed/mimalloc"]
-allocator-snmalloc = ["pyembed/snmalloc"]
+allocator-jemalloc = ["pyembed/allocator-jemalloc"]
+allocator-mimalloc = ["pyembed/allocator-mimalloc"]
+allocator-snmalloc = ["pyembed/allocator-snmalloc"]
 
 build-mode-pyoxidizer-exe = ["pyembed/build-mode-pyoxidizer-exe"]
 build-mode-prebuilt-artifacts = ["pyembed/build-mode-prebuilt-artifacts"]

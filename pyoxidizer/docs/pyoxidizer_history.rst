@@ -67,6 +67,9 @@ Backwards Compatibility Notes
   implementation is simpler and by being stricter should be less brittle at
   run-time. See :ref:`oxidized_finder_path_hooks` for documentation on the path
   hooks behavior.
+* The ``pyembed`` crate has prefixed all its allocator features (``jemalloc``,
+  ``mimalloc``, and ``snmalloc``) with ``allocator-``. This makes the names
+  consistent with the features in auto-generated Rust projects.
 
 New Features
 ^^^^^^^^^^^^
