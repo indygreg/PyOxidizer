@@ -19,6 +19,8 @@ use {
     },
 };
 
+const CARGO_LOCKFILE_NAME: &str = "new-project-cargo.lock";
+
 /// Packages we should disable in the workspace before releasing.
 static DISABLE_PACKAGES: Lazy<Vec<&'static str>> = Lazy::new(|| vec!["oxidized-importer"]);
 
@@ -151,15 +153,27 @@ fn update_cargo_toml_dependency_package_version(
     Ok(version_changed)
 }
 
-enum Location {
-    LocalPath,
+/// Obtain the package version string from a Cargo.toml file.
+fn cargo_toml_package_version(path: &Path) -> Result<String> {
+    let manifest = cargo_toml::Manifest::from_path(path)?;
+
+    Ok(manifest
+        .package
+        .ok_or_else(|| anyhow!("no [package]"))?
+        .version)
+}
+
+enum PackageLocation {
+    /// Relative path inside the PyOxidizer repository.
+    RepoRelative,
+    /// No explicit location, which uses defaults/remote index.
     Remote,
 }
 
 fn update_cargo_toml_dependency_package_location(
     path: &Path,
     package: &str,
-    location: Location,
+    location: PackageLocation,
 ) -> Result<bool> {
     let local_path = format!("path = \"../{}\"", package);
 
@@ -185,8 +199,8 @@ fn update_cargo_toml_dependency_package_location(
                 seen_path = true;
 
                 let new_line = match location {
-                    Location::LocalPath => local_path.clone(),
-                    Location::Remote => format!("# {}", local_path),
+                    PackageLocation::RepoRelative => local_path.clone(),
+                    PackageLocation::Remote => format!("# {}", local_path),
                 };
 
                 if new_line != line {
@@ -287,6 +301,21 @@ fn reflect_package_version_change(
     package: &str,
     version: &semver::Version,
 ) -> Result<()> {
+    // For all version changes, ensure the new project Cargo.lock content stays up
+    // to date.
+    let cargo_lock_path = root
+        .join("pyoxidizer")
+        .join("src")
+        .join(CARGO_LOCKFILE_NAME);
+
+    let lock_current = std::fs::read_to_string(&cargo_lock_path)?;
+    let lock_wanted = generate_new_project_cargo_lock(root)?;
+
+    if lock_current != lock_wanted {
+        println!("updating {} to reflect changes", cargo_lock_path.display());
+        std::fs::write(&cargo_lock_path, &lock_wanted)?;
+    }
+
     match package {
         "pyembed" => {
             update_environment_rs_pyembed_version(root, version)?;
@@ -376,6 +405,11 @@ fn release_package(
         "(to resume from this position use --start-at=pre:{})",
         package
     );
+
+    // This shouldn't be needed. But it serves as an extra guard to prevent
+    // things from getting out of sync.
+    ensure_new_project_cargo_lock_current(root)
+        .context("validating new project Cargo.lock is current")?;
 
     let manifest_path = root.join(package).join("Cargo.toml");
     let manifest = Manifest::from_path(&manifest_path)
@@ -594,7 +628,7 @@ fn release_package(
                     if update_cargo_toml_dependency_package_location(
                         &cargo_toml,
                         package,
-                        Location::Remote
+                        PackageLocation::Remote
                     )? {
                         "updated location"
                     } else {
@@ -664,7 +698,7 @@ fn release_package(
                 if update_cargo_toml_dependency_package_location(
                     &cargo_toml,
                     package,
-                    Location::Remote
+                    PackageLocation::Remote
                 )? {
                     "updated"
                 } else {
@@ -797,7 +831,7 @@ fn update_package_version(
             if update_cargo_toml_dependency_package_location(
                 &cargo_toml,
                 package,
-                Location::LocalPath
+                PackageLocation::RepoRelative
             )? {
                 "updated location"
             } else {
@@ -928,7 +962,13 @@ fn command_release(repo_root: &Path, args: &ArgMatches, repo: &Repository) -> Re
         return Err(anyhow!("repo has uncommited changes; refusing to proceed"));
     }
 
+    // The license content shouldn't change as part of the release.
     ensure_pyembed_license_current(repo_root)?;
+
+    // The cargo lock content will change as part of the release as dependencies
+    // are updated. We verify it multiple times during the release. But we want to
+    // start in a consistent state, so we check it up front as well.
+    ensure_new_project_cargo_lock_current(repo_root)?;
 
     let workspace_toml = repo_root.join("Cargo.toml");
     let workspace_packages =
@@ -1147,6 +1187,89 @@ fn generate_pyembed_license(repo_root: &Path) -> Result<String> {
     Ok(text)
 }
 
+fn generate_new_project_cargo_lock(repo_root: &Path) -> Result<String> {
+    // The lock file is derived from a new Rust project, similarly to the one that
+    // `pyoxidizer init-rust-project` generates. Ideally we'd actually call that command.
+    // However, there's a bit of a chicken and egg problem, especially as we call this
+    // function as part of the release. So/ we emulate what the autogenerated Cargo.toml
+    // would resemble. We don't need it to match exactly: we just need to ensure the
+    // dependency set is complete.
+
+    const PACKAGE_NAME: &str = "placeholder_project";
+
+    let temp_dir = tempfile::TempDir::new()?;
+    let project_path = temp_dir.path().join(PACKAGE_NAME);
+    let cargo_toml_path = project_path.join("Cargo.toml");
+
+    let pyembed_version =
+        cargo_toml_package_version(&repo_root.join("pyembed").join("Cargo.toml"))?;
+
+    cmd(
+        "cargo",
+        vec![
+            "init".to_string(),
+            "--bin".to_string(),
+            format!("{}", project_path.display()),
+        ],
+    )
+    .stdout_to_stderr()
+    .run()?;
+
+    let extra_toml_path = repo_root
+        .join("pyoxidizer")
+        .join("src")
+        .join("templates")
+        .join("cargo-extra.toml.hbs");
+
+    let mut manifest_data = std::fs::read_to_string(&cargo_toml_path)?;
+    manifest_data.push_str(&format!(
+        "[dependencies.pyembed]\nversion = \"{}\"\npath = \"{}\"\n",
+        pyembed_version,
+        repo_root.join("pyembed").display()
+    ));
+    // This is a handlebars template but it has nothing special. So just read as
+    // a regualr file.
+    manifest_data.push_str(&std::fs::read_to_string(&extra_toml_path)?);
+
+    std::fs::write(&cargo_toml_path, manifest_data.as_bytes())?;
+
+    cmd("cargo", vec!["generate-lockfile", "--offline"])
+        .dir(&project_path)
+        .stdout_to_stderr()
+        .run()?;
+
+    let cargo_lock_path = project_path.join("Cargo.lock");
+
+    // Filter out our placeholder package because the value will be different for
+    // generated projects.
+    let mut lock_file = cargo_lock::Lockfile::load(&cargo_lock_path)?;
+
+    lock_file.packages = lock_file
+        .packages
+        .drain(..)
+        .filter(|package| package.name.as_str() != PACKAGE_NAME)
+        .collect::<Vec<_>>();
+
+    Ok(lock_file.to_string())
+}
+
+/// Ensures the new project Cargo lock file in source control is up to date with reality.
+fn ensure_new_project_cargo_lock_current(repo_root: &Path) -> Result<()> {
+    let path = repo_root
+        .join("pyoxidizer")
+        .join("src")
+        .join(CARGO_LOCKFILE_NAME);
+
+    let file_text = std::fs::read_to_string(&path)?;
+    let wanted_text = generate_new_project_cargo_lock(repo_root)?;
+
+    if file_text == wanted_text {
+        Ok(())
+    } else {
+        Err(anyhow!("{} is not up to date", path.display()))
+    }
+}
+
 /// Ensures the `pyembed-license.rs` file in source control is up to date with reality.
 fn ensure_pyembed_license_current(repo_root: &Path) -> Result<()> {
     let path = repo_root
@@ -1165,6 +1288,12 @@ fn ensure_pyembed_license_current(repo_root: &Path) -> Result<()> {
             path.display()
         ))
     }
+}
+
+fn command_generate_new_project_cargo_lock(repo_root: &Path, _args: &ArgMatches) -> Result<()> {
+    print!("{}", generate_new_project_cargo_lock(repo_root)?);
+
+    Ok(())
 }
 
 fn command_generate_pyembed_license(repo_root: &Path, _args: &ArgMatches) -> Result<()> {
@@ -1186,6 +1315,10 @@ fn main_impl() -> Result<()> {
         .version("0.1")
         .author("Gregory Szorc <gregory.szorc@gmail.com>")
         .about("Perform releases from the PyOxidizer repository")
+        .subcommand(
+            SubCommand::with_name("generate-new-project-cargo-lock")
+                .about("Emit a Cargo.lock file for the pyembed crate"),
+        )
         .subcommand(
             SubCommand::with_name("generate-pyembed-license")
                 .about("Emit license information for the pyembed crate"),
@@ -1213,6 +1346,9 @@ fn main_impl() -> Result<()> {
 
     match matches.subcommand() {
         ("release", Some(args)) => command_release(repo_root, args, &repo),
+        ("generate-new-project-cargo-lock", Some(args)) => {
+            command_generate_new_project_cargo_lock(repo_root, args)
+        }
         ("generate-pyembed-license", Some(args)) => {
             command_generate_pyembed_license(repo_root, args)
         }

@@ -15,6 +15,7 @@ use {
         collections::BTreeMap,
         io::Write,
         path::{Path, PathBuf},
+        str::FromStr,
     },
 };
 
@@ -57,6 +58,18 @@ static HANDLEBARS: Lazy<Handlebars<'static>> = Lazy::new(|| {
 
     handlebars
 });
+
+/// Contents of Cargo.lock file for the new Rust projects.
+const NEW_PROJECT_CARGO_LOCK: &str = include_str!("new-project-cargo.lock");
+
+/// Package dependencies of new Rust projects to be recorded in the Cargo.lock.
+const NEW_PROJECT_DEPENDENCIES: &[&str] = &[
+    "embed-resource",
+    "jemallocator",
+    "mimalloc",
+    "pyembed",
+    "snmalloc-rs",
+];
 
 #[derive(Serialize)]
 struct PythonDistribution {
@@ -152,6 +165,61 @@ pub fn write_new_cargo_config(project_path: &Path) -> Result<()> {
     let config_path = cargo_path.join("config");
     println!("writing {}", config_path.display());
     std::fs::write(&config_path, t)?;
+
+    Ok(())
+}
+
+/// Write a Cargo.lock file for a project path.
+///
+/// The Cargo.lock content is under version control and is automatically
+/// updated as part of the release automation. The file is generated in
+/// `--offline` mode and the contents of this `Cargo.lock` should closely
+/// resemble those in this repository's `Cargo.lock`. This helps ensure that
+/// the crate versions used by generated Rust projects match those of the
+/// build/commit of PyOxidizer used to generate the project.
+pub fn write_new_cargo_lock(project_path: &Path, project_name: &str) -> Result<()> {
+    // Add this project's entry to the lock file contents, otherwise the
+    // lock file will need updating on first use.
+    let mut lock_file = cargo_lock::Lockfile::from_str(NEW_PROJECT_CARGO_LOCK)?;
+
+    let dependencies = NEW_PROJECT_DEPENDENCIES
+        .iter()
+        .map(|dep| cargo_lock::Dependency {
+            name: cargo_lock::Name::from_str(dep)
+                .expect("could not convert dependency name to Name"),
+            version: lock_file
+                .packages
+                .iter()
+                .filter_map(|package| {
+                    if package.name.as_str() == *dep {
+                        Some(package.version.clone())
+                    } else {
+                        None
+                    }
+                })
+                .next()
+                .expect("unable to find dependency in frozen Cargo lock; something is out of sync"),
+            source: None,
+        })
+        .collect::<Vec<_>>();
+
+    lock_file.packages.push(cargo_lock::Package {
+        name: cargo_lock::Name::from_str(project_name)?,
+        version: semver::Version::new(0, 1, 0),
+        source: None,
+        checksum: None,
+        dependencies,
+        replace: None,
+    });
+
+    // cargo_lock isn't smart enough to sort the packages. So do that here.
+    lock_file
+        .packages
+        .sort_by(|a, b| a.name.as_str().cmp(&b.name.as_str()));
+
+    let lock_path = project_path.join("Cargo.lock");
+    println!("writing {}", lock_path.display());
+    std::fs::write(&lock_path, &lock_file.to_string())?;
 
     Ok(())
 }
@@ -377,6 +445,7 @@ pub fn initialize_project(
     update_new_cargo_toml(&path.join("Cargo.toml"), &source.as_pyembed_location())
         .context("updating Cargo.toml")?;
     write_new_cargo_config(&path).context("writing cargo config")?;
+    write_new_cargo_lock(&path, name).context("writing Cargo.lock")?;
     write_new_build_rs(&path.join("build.rs"), name).context("writing build.rs")?;
     write_new_main_rs(&path.join("src").join("main.rs"), windows_subsystem)
         .context("writing main.rs")?;

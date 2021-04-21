@@ -384,6 +384,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "cargo-lock"
+version = "6.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e6f16e7adc20969298b1e137ac21ab3a7e7a9412fec71f963ff2fdc41663d70f"
+dependencies = [
+ "semver",
+ "serde",
+ "toml",
+ "url",
+]
+
+[[package]]
 name = "cargo_toml"
 version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2361,6 +2373,7 @@ name = "pyoxidizer"
 version = "0.14.0-pre"
 dependencies = [
  "anyhow",
+ "cargo-lock",
  "cargo_toml",
  "cc",
  "clap",
@@ -2781,6 +2794,7 @@ name = "release"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "cargo-lock",
  "cargo_toml",
  "clap",
  "duct",
@@ -2790,6 +2804,7 @@ dependencies = [
  "semver",
  "serde",
  "serde_json",
+ "tempfile",
  "toml",
  "url",
 ]
@@ -3053,6 +3068,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f301af10236f6df4160f7c3f04eec6dbc70ace82d23326abad5edee88801c6b6"
 dependencies = [
  "semver-parser",
+ "serde",
 ]
 
 [[package]]
