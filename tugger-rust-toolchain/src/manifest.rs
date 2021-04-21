@@ -75,10 +75,9 @@ impl Manifest {
         match self.packages.get(package) {
             Some(package) => match &package.target {
                 PackageTarget::Wildcard => None,
-                PackageTarget::Targeted(targets) => match targets.get(target_triple) {
-                    Some(target) => Some((package.version.clone(), target.clone())),
-                    None => None,
-                },
+                PackageTarget::Targeted(targets) => targets
+                    .get(target_triple)
+                    .map(|target| (package.version.clone(), target.clone())),
             },
             None => None,
         }
