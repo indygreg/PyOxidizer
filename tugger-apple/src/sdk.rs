@@ -227,7 +227,7 @@ pub fn find_xcode_apps(applications_dir: &Path) -> Result<Vec<PathBuf>> {
         })
         .collect::<Result<Vec<_>>>()?
         .into_iter()
-        .filter_map(|x| x)
+        .flatten()
         .collect::<Vec<_>>())
 }
 
