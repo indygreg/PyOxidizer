@@ -246,10 +246,7 @@ pub fn pip_install<'a, S: BuildHasher>(
         return Err(anyhow!("error running pip"));
     }
 
-    let state_dir = match env.get("PYOXIDIZER_DISTUTILS_STATE_DIR") {
-        Some(p) => Some(PathBuf::from(p)),
-        None => None,
-    };
+    let state_dir = env.get("PYOXIDIZER_DISTUTILS_STATE_DIR").map(PathBuf::from);
 
     find_resources(dist, policy, &target_dir, state_dir)
 }
@@ -347,10 +344,9 @@ pub fn setup_py_install<'a, S: BuildHasher>(
         return Err(anyhow!("error running pip"));
     }
 
-    let state_dir = match envs.get("PYOXIDIZER_DISTUTILS_STATE_DIR") {
-        Some(p) => Some(PathBuf::from(p)),
-        None => None,
-    };
+    let state_dir = envs
+        .get("PYOXIDIZER_DISTUTILS_STATE_DIR")
+        .map(PathBuf::from);
     warn!(
         logger,
         "scanning {} for resources",

@@ -93,11 +93,8 @@ impl EvaluationContextBuilder {
     }
 
     pub fn resolve_targets_optional(mut self, targets: Option<Vec<impl ToString>>) -> Self {
-        self.resolve_targets = if let Some(targets) = targets {
-            Some(targets.iter().map(|x| x.to_string()).collect())
-        } else {
-            None
-        };
+        self.resolve_targets =
+            targets.map(|targets| targets.iter().map(|x| x.to_string()).collect());
         self
     }
 
@@ -107,11 +104,7 @@ impl EvaluationContextBuilder {
     }
 
     pub fn resolve_target_optional(mut self, target: Option<impl ToString>) -> Self {
-        self.resolve_targets = if let Some(target) = target {
-            Some(vec![target.to_string()])
-        } else {
-            None
-        };
+        self.resolve_targets = target.map(|target| vec![target.to_string()]);
         self
     }
 

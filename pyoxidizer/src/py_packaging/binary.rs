@@ -459,11 +459,10 @@ impl<'a> EmbeddedPythonContext<'a> {
     ///
     /// This file contains global data structures for libpython defining extension modules.
     pub fn python_config_library_path(&self, dest_dir: impl AsRef<Path>) -> Option<PathBuf> {
-        if let Some(filename) = &self.linking_info.libpyembeddedconfig_filename {
-            Some(dest_dir.as_ref().join(filename))
-        } else {
-            None
-        }
+        self.linking_info
+            .libpyembeddedconfig_filename
+            .as_ref()
+            .map(|filename| dest_dir.as_ref().join(filename))
     }
 
     /// Resolve path to library containing libpython.

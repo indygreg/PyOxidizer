@@ -137,10 +137,7 @@ impl PythonDistributionValue {
             })
         })?;
 
-        let python_version_str = match &python_version {
-            Some(x) => Some(x.as_str()),
-            None => None,
-        };
+        let python_version_str = python_version.as_ref().map(|x| x.as_str());
 
         let location = default_distribution_location(&flavor, &build_target, python_version_str)
             .map_err(|e| {

@@ -787,11 +787,10 @@ impl StandaloneDistribution {
                     name: module.clone(),
                     init_fn: Some(entry.init_fn.clone()),
                     extension_file_suffix,
-                    shared_library: if let Some(path) = &entry.shared_lib {
-                        Some(FileData::Path(python_path.join(path)))
-                    } else {
-                        None
-                    },
+                    shared_library: entry
+                        .shared_lib
+                        .as_ref()
+                        .map(|path| FileData::Path(python_path.join(path))),
                     object_file_data,
                     is_package: false,
                     link_libraries: links,
@@ -926,14 +925,11 @@ impl StandaloneDistribution {
             apple_sdk_info,
             core_license,
             licenses: pi.licenses.clone(),
-            license_path: match pi.license_path {
-                Some(ref path) => Some(PathBuf::from(path)),
-                None => None,
-            },
-            tcl_library_path: match pi.tcl_library_path {
-                Some(ref path) => Some(dist_dir.join("python").join(path)),
-                None => None,
-            },
+            license_path: pi.license_path.as_ref().map(PathBuf::from),
+            tcl_library_path: pi
+                .tcl_library_path
+                .as_ref()
+                .map(|path| dist_dir.join("python").join(path)),
             tcl_library_paths: pi.tcl_library_paths.clone(),
             extension_modules,
             frozen_c,

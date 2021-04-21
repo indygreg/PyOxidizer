@@ -373,11 +373,9 @@ pub fn run_cli() -> Result<()> {
             let release = args.is_present("release");
             let target_triple = args.value_of("target_triple");
             let path = args.value_of("path").unwrap();
-            let resolve_targets = if let Some(values) = args.values_of("targets") {
-                Some(values.map(|x| x.to_string()).collect())
-            } else {
-                None
-            };
+            let resolve_targets = args
+                .values_of("targets")
+                .map(|values| values.map(|x| x.to_string()).collect());
 
             projectmgmt::build(
                 &env,
@@ -393,16 +391,10 @@ pub fn run_cli() -> Result<()> {
         ("cache-clear", Some(_)) => projectmgmt::cache_clear(&env),
 
         ("find-resources", Some(args)) => {
-            let path = if let Some(value) = args.value_of("path") {
-                Some(Path::new(value))
-            } else {
-                None
-            };
-            let distributions_dir = if let Some(value) = args.value_of("distributions_dir") {
-                Some(Path::new(value))
-            } else {
-                None
-            };
+            let path = args.value_of("path").map(|value| Path::new(value));
+            let distributions_dir = args
+                .value_of("distributions_dir")
+                .map(|value| Path::new(value));
             let scan_distribution = args.is_present("scan_distribution");
             let target_triple = args.value_of("target_triple").unwrap();
             let classify_files = !args.is_present("no_classify_files");
