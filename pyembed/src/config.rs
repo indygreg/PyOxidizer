@@ -334,28 +334,22 @@ impl<'a> OxidizedPythonInterpreterConfig<'a> {
             })
             .collect::<Vec<_>>();
 
-        let module_search_paths = match &self.interpreter_config.module_search_paths {
-            Some(paths) => Some(
-                paths
-                    .iter()
+        let module_search_paths = self
+            .interpreter_config
+            .module_search_paths
+            .as_ref()
+            .map(|x| {
+                x.iter()
                     .map(|p| {
                         PathBuf::from(p.display().to_string().replace("$ORIGIN", &origin_string))
                     })
-                    .collect::<Vec<_>>(),
-            ),
-            None => None,
-        };
+                    .collect::<Vec<_>>()
+            });
 
-        let tcl_library = if let Some(tcl_library) = self.tcl_library {
-            Some(PathBuf::from(
-                tcl_library
-                    .display()
-                    .to_string()
-                    .replace("$ORIGIN", &origin_string),
-            ))
-        } else {
-            None
-        };
+        let tcl_library = self
+            .tcl_library
+            .as_ref()
+            .map(|x| PathBuf::from(x.display().to_string().replace("$ORIGIN", &origin_string)));
 
         Ok(ResolvedOxidizedPythonInterpreterConfig {
             inner: Self {
