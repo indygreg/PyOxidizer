@@ -97,7 +97,7 @@ That crate's build script will attempt to find a `libpython` from the
 mod config;
 mod conversion;
 mod error;
-#[allow(clippy::transmute_ptr_to_ptr, clippy::zero_ptr)]
+#[allow(clippy::manual_strip, clippy::transmute_ptr_to_ptr, clippy::zero_ptr)]
 mod importer;
 #[cfg(not(library_mode = "extension"))]
 mod interpreter;
@@ -107,15 +107,20 @@ mod interpreter_config;
 mod memory_dll;
 #[cfg(not(library_mode = "extension"))]
 mod osutils;
-#[allow(clippy::transmute_ptr_to_ptr, clippy::zero_ptr)]
+#[allow(clippy::manual_strip, clippy::transmute_ptr_to_ptr, clippy::zero_ptr)]
 mod package_metadata;
 #[cfg(not(library_mode = "extension"))]
 mod pyalloc;
-#[allow(unused_variables, clippy::transmute_ptr_to_ptr, clippy::zero_ptr)]
+#[allow(
+    unused_variables,
+    clippy::manual_strip,
+    clippy::transmute_ptr_to_ptr,
+    clippy::zero_ptr
+)]
 mod python_resource_collector;
-#[allow(clippy::transmute_ptr_to_ptr, clippy::zero_ptr)]
+#[allow(clippy::manual_strip, clippy::transmute_ptr_to_ptr, clippy::zero_ptr)]
 mod python_resource_types;
-#[allow(clippy::transmute_ptr_to_ptr, clippy::zero_ptr)]
+#[allow(clippy::manual_strip, clippy::transmute_ptr_to_ptr, clippy::zero_ptr)]
 mod python_resources;
 mod resource_scanning;
 #[cfg(not(library_mode = "extension"))]
