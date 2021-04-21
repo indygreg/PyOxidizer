@@ -342,7 +342,7 @@ pub(crate) fn find_distributions(
 /// `only` if True only yield items that would be importable if `search_path` were
 /// on `sys.path`. Otherwise yields items that are in or under `search_path`.
 /// `package_target` is the package target from the `OxidizedPathEntryFinder`.
-pub(crate) fn find_pkg_resources_distributions<'a>(
+pub(crate) fn find_pkg_resources_distributions(
     py: Python,
     state: Arc<ImporterState>,
     search_path: &str,
