@@ -18,10 +18,8 @@ use {
 use {
     crate::{
         conversion::{path_to_pyobject, pyobject_to_pathbuf},
-        package_metadata::{
-            find_pkg_resources_distributions, metadata_list_directory, metadata_name_is_directory,
-            resolve_package_distribution_resource,
-        },
+        package_metadata::find_pkg_resources_distributions,
+        pkg_resources::OxidizedPkgResourcesProvider,
         python_resources::{
             name_at_package_hierarchy, pyobject_to_resource, resource_to_pyobject, ModuleFlavor,
             OptimizeLevel, OxidizedResource, PythonResourcesState,
@@ -29,10 +27,7 @@ use {
         resource_scanning::find_resources_in_path,
     },
     cpython::{
-        exc::{
-            FileNotFoundError, IOError, ImportError, NotImplementedError, TypeError,
-            UnicodeDecodeError, ValueError,
-        },
+        exc::{FileNotFoundError, ImportError, ValueError},
         {
             py_class, py_fn, NoArgs, ObjectProtocol, PyBytes, PyCapsule, PyClone, PyDict, PyErr,
             PyList, PyModule, PyObject, PyResult, PyString, PyTuple, Python, PythonObject,
@@ -1147,6 +1142,10 @@ fn oxidized_finder_new(
 }
 
 impl OxidizedFinder {
+    pub(crate) fn get_state(&self, py: Python) -> Arc<ImporterState> {
+        self.state(py).clone()
+    }
+
     fn path_hook_base_str_impl(&self, py: Python) -> PyResult<PyObject> {
         path_to_pyobject(py, &self.state(py).get_resources_state().current_exe)
     }
@@ -1533,269 +1532,6 @@ impl PyOxidizerTraversable {
         _kwargs: Option<&PyDict>,
     ) -> PyResult<PyObject> {
         unimplemented!();
-    }
-}
-
-py_class!(pub(crate) class OxidizedPkgResourcesProvider |py| {
-    data state: Arc<ImporterState>;
-    data package: String;
-
-    def __new__(_cls, module: PyObject) -> PyResult<OxidizedPkgResourcesProvider> {
-        oxidized_pkg_resources_provider_new(py, module)
-    }
-
-    // Begin IMetadataProvider interface.
-
-    def has_metadata(&self, name: PyString) -> PyResult<bool> {
-        Ok(self.has_metadata_impl(py, name))
-    }
-
-    def get_metadata(&self, name: PyString) -> PyResult<PyString> {
-        self.get_metadata_impl(py, name)
-    }
-
-    def get_metadata_lines(&self, name: PyString) -> PyResult<PyObject> {
-        self.get_metadata_lines_impl(py, name)
-    }
-
-    def metadata_isdir(&self, name: PyString) -> PyResult<bool> {
-        Ok(self.metadata_isdir_impl(py, name))
-    }
-
-    def metadata_listdir(&self, name: PyString) -> PyResult<PyList> {
-        Ok(self.metadata_listdir_impl(py, name))
-    }
-
-    def run_script(&self, script_name: PyString, namespace: PyObject) -> PyResult<PyObject> {
-        self.run_script_impl(py, script_name, namespace)
-    }
-
-    // End IMetadataProvider interface.
-
-    // Begin IResourceProvider interface.
-
-    def get_resource_filename(&self, manager: PyObject, resource_name: PyString) -> PyResult<PyObject> {
-        self.get_resource_filename_impl(py, manager, resource_name)
-    }
-
-    def get_resource_stream(&self, manager: PyObject, resource_name: PyString) -> PyResult<PyObject> {
-        self.get_resource_stream_impl(py, manager, resource_name)
-    }
-
-    def get_resource_string(&self, manager: PyObject, resource_name: PyString) -> PyResult<PyObject> {
-        self.get_resource_string_impl(py, manager, resource_name)
-    }
-
-    def has_resource(&self, resource_name: PyString) -> PyResult<bool> {
-        Ok(self.has_resource_impl(py, resource_name))
-    }
-
-    def resource_isdir(&self, resource_name: PyString) -> PyResult<bool> {
-        Ok(self.resource_isdir_impl(py, resource_name))
-    }
-
-    def resource_listdir(&self, resource_name: PyString) -> PyResult<PyList> {
-        Ok(self.resource_listdir_impl(py, resource_name))
-    }
-
-    // End IResourceProvider interface.
-});
-
-/// OxidizedPkgResourcesProvider.__new__(module)
-fn oxidized_pkg_resources_provider_new(
-    py: Python,
-    module: PyObject,
-) -> PyResult<OxidizedPkgResourcesProvider> {
-    let loader = module.getattr(py, "__loader__")?;
-    let package = module.getattr(py, "__package__")?;
-
-    let loader_type = loader.get_type(py);
-
-    if loader_type != py.get_type::<OxidizedFinder>() {
-        return Err(PyErr::new::<TypeError, _>(
-            py,
-            "__loader__ is not an OxidizedFinder",
-        ));
-    }
-
-    let finder = loader.cast_as::<OxidizedFinder>(py)?;
-    let state = finder.state(py);
-
-    OxidizedPkgResourcesProvider::create_instance(py, state.clone(), package.to_string())
-}
-
-pub(crate) fn create_oxidized_pkg_resources_provider(
-    py: Python,
-    state: Arc<ImporterState>,
-    package: String,
-) -> PyResult<PyObject> {
-    Ok(OxidizedPkgResourcesProvider::create_instance(py, state, package)?.into_object())
-}
-
-// pkg_resources.IMetadataProvider
-impl OxidizedPkgResourcesProvider {
-    fn has_metadata_impl(&self, py: Python, name: PyString) -> bool {
-        let state = self.state(py);
-        let package = self.package(py);
-        let resources_state = state.get_resources_state();
-
-        let name = name.to_string_lossy(py);
-
-        let data = resolve_package_distribution_resource(
-            &resources_state.resources,
-            &resources_state.origin,
-            package,
-            &name,
-        )
-        .unwrap_or(None);
-
-        data.is_some()
-    }
-
-    fn get_metadata_impl(&self, py: Python, name: PyString) -> PyResult<PyString> {
-        let state = self.state(py);
-        let package = self.package(py);
-        let resources_state = state.get_resources_state();
-
-        let name = name.to_string_lossy(py);
-
-        let data = resolve_package_distribution_resource(
-            &resources_state.resources,
-            &resources_state.origin,
-            package,
-            &name,
-        )
-        .map_err(|e| PyErr::new::<IOError, _>(py, format!("error obtaining metadata: {}", e)))?
-        .ok_or_else(|| PyErr::new::<IOError, _>(py, "metadata does not exist"))?;
-
-        let data = String::from_utf8(data.to_vec())
-            .map_err(|_| PyErr::new::<UnicodeDecodeError, _>(py, "metadata is not UTF-8"))?;
-
-        Ok(PyString::new(py, &data))
-    }
-
-    fn get_metadata_lines_impl(&self, py: Python, name: PyString) -> PyResult<PyObject> {
-        let s = self.get_metadata(py, name)?;
-
-        let pkg_resources = py.import("pkg_resources")?;
-
-        pkg_resources.call(py, "yield_lines", (s,), None)
-    }
-
-    fn metadata_isdir_impl(&self, py: Python, name: PyString) -> bool {
-        let state = self.state(py);
-        let package = self.package(py);
-        let resources_state = state.get_resources_state();
-
-        let name = name.to_string_lossy(py);
-
-        metadata_name_is_directory(&resources_state.resources, &package, &name)
-    }
-
-    fn metadata_listdir_impl(&self, py: Python, name: PyString) -> PyList {
-        let state = self.state(py);
-        let package = self.package(py);
-        let resources_state = state.get_resources_state();
-
-        let name = name.to_string_lossy(py);
-
-        let entries = metadata_list_directory(&resources_state.resources, &package, &name)
-            .into_iter()
-            .map(|s| PyString::new(py, s).into_object())
-            .collect::<Vec<_>>();
-
-        PyList::new(py, &entries)
-    }
-
-    fn run_script_impl(
-        &self,
-        py: Python,
-        _script_name: PyString,
-        _namespace: PyObject,
-    ) -> PyResult<PyObject> {
-        Err(PyErr::new::<NotImplementedError, _>(py, NoArgs))
-    }
-}
-
-// pkg_resources.IResourceProvider
-impl OxidizedPkgResourcesProvider {
-    fn get_resource_filename_impl(
-        &self,
-        py: Python,
-        _manager: PyObject,
-        _resource_name: PyString,
-    ) -> PyResult<PyObject> {
-        // Raising NotImplementedError seems allowed per the implementation of
-        // pkg_resources.ZipProvider, which also raises this error when resources
-        // aren't backed by the filesystem.
-        //
-        // We could potentially expose the filename if the resource is backed
-        // by a file. But we keep things simple for now.
-        Err(PyErr::new::<NotImplementedError, _>(py, NoArgs))
-    }
-
-    fn get_resource_stream_impl(
-        &self,
-        py: Python,
-        _manager: PyObject,
-        resource_name: PyString,
-    ) -> PyResult<PyObject> {
-        let state = self.state(py);
-        let package = self.package(py);
-        let resource_name = resource_name.to_string_lossy(py);
-
-        state
-            .get_resources_state()
-            .get_package_resource_file(py, &package, &resource_name)?
-            .ok_or_else(|| PyErr::new::<IOError, _>(py, "resource does not exist"))
-    }
-
-    fn get_resource_string_impl(
-        &self,
-        py: Python,
-        manager: PyObject,
-        resource_name: PyString,
-    ) -> PyResult<PyObject> {
-        let fh = self.get_resource_stream_impl(py, manager, resource_name)?;
-
-        fh.call_method(py, "read", NoArgs, None)
-    }
-
-    fn has_resource_impl(&self, py: Python, resource_name: PyString) -> bool {
-        let state = self.state(py);
-        let package = self.package(py);
-        let resource_name = resource_name.to_string_lossy(py);
-
-        state
-            .get_resources_state()
-            .get_package_resource_file(py, &package, &resource_name)
-            .unwrap_or(None)
-            .is_some()
-    }
-
-    fn resource_isdir_impl(&self, py: Python, resource_name: PyString) -> bool {
-        let state = self.state(py);
-        let package = self.package(py);
-        let resource_name = resource_name.to_string_lossy(py);
-
-        state
-            .get_resources_state()
-            .is_package_resource_directory(&package, &resource_name)
-    }
-
-    fn resource_listdir_impl(&self, py: Python, resource_name: PyString) -> PyList {
-        let state = self.state(py);
-        let package = self.package(py);
-        let resource_name = resource_name.to_string_lossy(py);
-
-        let entries = state
-            .get_resources_state()
-            .package_resources_list_directory(&package, &resource_name)
-            .into_iter()
-            .map(|s| PyString::new(py, &s).into_object())
-            .collect::<Vec<_>>();
-
-        PyList::new(py, &entries)
     }
 }
 

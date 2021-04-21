@@ -109,6 +109,8 @@ mod memory_dll;
 mod osutils;
 #[allow(clippy::manual_strip, clippy::transmute_ptr_to_ptr, clippy::zero_ptr)]
 mod package_metadata;
+#[allow(clippy::manual_strip, clippy::transmute_ptr_to_ptr, clippy::zero_ptr)]
+mod pkg_resources;
 #[cfg(not(library_mode = "extension"))]
 mod pyalloc;
 #[allow(

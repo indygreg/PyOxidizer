@@ -4,7 +4,8 @@
 
 use {
     crate::{
-        importer::{create_oxidized_pkg_resources_provider, ImporterState},
+        importer::ImporterState,
+        pkg_resources::create_oxidized_pkg_resources_provider,
         python_resources::{name_at_package_hierarchy, name_within_package_hierarchy},
     },
     cpython::{
