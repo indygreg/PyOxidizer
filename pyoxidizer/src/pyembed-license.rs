@@ -5,7 +5,8 @@
 pub fn pyembed_licenses() -> anyhow::Result<Vec<tugger_licensing::LicensedComponent>> {
     let mut res = vec![];
 
-    let mut component = tugger_licensing::LicensedComponent::new_spdx("adler32", "Zlib")?;
+    let mut component =
+        tugger_licensing::LicensedComponent::new_spdx("adler", "0BSD OR Apache-2.0 OR MIT")?;
     component.set_flavor(tugger_licensing::ComponentFlavor::RustCrate);
     res.push(component);
 
@@ -160,7 +161,8 @@ pub fn pyembed_licenses() -> anyhow::Result<Vec<tugger_licensing::LicensedCompon
     component.set_flavor(tugger_licensing::ComponentFlavor::RustCrate);
     res.push(component);
 
-    let mut component = tugger_licensing::LicensedComponent::new_spdx("miniz_oxide", "MIT")?;
+    let mut component =
+        tugger_licensing::LicensedComponent::new_spdx("miniz_oxide", "Apache-2.0 OR MIT OR Zlib")?;
     component.set_flavor(tugger_licensing::ComponentFlavor::RustCrate);
     res.push(component);
 
