@@ -310,17 +310,17 @@ class TestImporterPkgResources(unittest.TestCase):
         f = install_distributions_finder()
         sys.path_hooks.clear()
         self.assertEqual(
-            list(pkg_resources.find_distributions(f.current_exe, only=True)), []
+            list(pkg_resources.find_distributions(f.path_hook_base_str, only=True)), []
         )
 
-    def test_find_distributions_not_current_exe_path_hook(self):
+    def test_find_distributions_not_path_hook_base_str_path_hook(self):
         install_distributions_finder()
         self.assertEqual(list(pkg_resources.find_distributions("/some/other/path")), [])
 
     def test_find_distributions_top_level_only_false(self):
         f = install_distributions_finder()
 
-        dists = list(pkg_resources.find_distributions(f.current_exe, only=False))
+        dists = list(pkg_resources.find_distributions(f.path_hook_base_str, only=False))
         self.assertEqual(len(dists), 4)
         self.assert_package0(dists[0])
         self.assert_package0_child0(dists[1])
@@ -329,7 +329,7 @@ class TestImporterPkgResources(unittest.TestCase):
 
     def test_find_distributions_top_level_only_true(self):
         f = install_distributions_finder()
-        search_path = f.current_exe
+        search_path = f.path_hook_base_str
 
         dists = list(pkg_resources.find_distributions(search_path, only=True))
         self.assertEqual(len(dists), 2)
@@ -338,7 +338,7 @@ class TestImporterPkgResources(unittest.TestCase):
 
     def test_find_distributions_search_path_missing(self):
         f = install_distributions_finder()
-        search_path = os.path.join(f.current_exe, "missing_package")
+        search_path = os.path.join(f.path_hook_base_str, "missing_package")
 
         dists = list(pkg_resources.find_distributions(search_path, only=False))
         self.assertEqual(dists, [])
@@ -348,7 +348,7 @@ class TestImporterPkgResources(unittest.TestCase):
 
     def test_find_distributions_search_path_child_only_false(self):
         f = install_distributions_finder()
-        search_path = os.path.join(f.current_exe, "package0")
+        search_path = os.path.join(f.path_hook_base_str, "package0")
 
         dists = list(pkg_resources.find_distributions(search_path, only=False))
         self.assertEqual(len(dists), 2)
@@ -357,7 +357,7 @@ class TestImporterPkgResources(unittest.TestCase):
 
     def test_find_distributions_search_path_child_only_true(self):
         f = install_distributions_finder()
-        search_path = os.path.join(f.current_exe, "package0")
+        search_path = os.path.join(f.path_hook_base_str, "package0")
 
         dists = list(pkg_resources.find_distributions(search_path, only=True))
         self.assertEqual(len(dists), 1)
@@ -365,7 +365,7 @@ class TestImporterPkgResources(unittest.TestCase):
 
     def test_find_distributions_search_path_grandchild_only_false(self):
         f = install_distributions_finder()
-        search_path = os.path.join(f.current_exe, "package0", "p0child0")
+        search_path = os.path.join(f.path_hook_base_str, "package0", "p0child0")
 
         dists = list(pkg_resources.find_distributions(search_path, only=False))
         self.assertEqual(len(dists), 1)
@@ -373,7 +373,7 @@ class TestImporterPkgResources(unittest.TestCase):
 
     def test_find_distributions_search_path_grandchild_only_true(self):
         f = install_distributions_finder()
-        search_path = os.path.join(f.current_exe, "package0", "p0child0")
+        search_path = os.path.join(f.path_hook_base_str, "package0", "p0child0")
 
         dists = list(pkg_resources.find_distributions(search_path, only=True))
         self.assertEqual(len(dists), 1)
@@ -381,7 +381,9 @@ class TestImporterPkgResources(unittest.TestCase):
 
     def test_find_distributions_search_path_too_deep(self):
         f = install_distributions_finder()
-        search_path = os.path.join(f.current_exe, "package0", "p0child0", "grandchild0")
+        search_path = os.path.join(
+            f.path_hook_base_str, "package0", "p0child0", "grandchild0"
+        )
 
         self.assertEqual(
             list(pkg_resources.find_distributions(search_path, only=False)), []

@@ -239,9 +239,9 @@ When installed on ``sys.path_hooks``,
 to the following path values:
 
 * The path to the current executable, as defined by
-  :py:attr:`OxidizedFinder.current_exe`.
+  :py:attr:`OxidizedFinder.path_hook_base_str`.
 * A virtual sub-directory of the path to the current executable, as defined by
-  :py:attr:`OxidizedFinder.current_exe`.
+  :py:attr:`OxidizedFinder.path_hook_base_str`.
 
 .. important::
 
@@ -249,25 +249,25 @@ to the following path values:
    what values it will respond to.
 
    The value **must** be a ``str`` and be equal to
-   :py:attr:`OxidizedFinder.current_exe` or have
-   :py:attr:`OxidizedFinder.current_exe` plus a directory separator
+   :py:attr:`OxidizedFinder.path_hook_base_str` or have
+   :py:attr:`OxidizedFinder.path_hook_base_str` plus a directory separator
    as the exact string prefix.
 
    :py:meth:`path_hook <OxidizedFinder.path_hook>` will **not** respond
    to ``bytes``, ``pathlib.Path``, or any other path-like type.
 
-   :py:attr:`OxidizedFinder.current_exe` **may not** be the same value as
-   ``sys.executable``. Always use :py:attr:`OxidizedFinder.current_exe`
+   :py:attr:`OxidizedFinder.path_hook_base_str` **may not** be the same value as
+   ``sys.executable``. Always use :py:attr:`OxidizedFinder.path_hook_base_str`
    to derive ``sys.path`` values to ensure the path hook will respond.
 
 When :py:meth:`path_hook <OxidizedFinder.path_hook>` is called with its
-:py:attr:`OxidizedFinder.current_exe` value, a
+:py:attr:`OxidizedFinder.path_hook_base_str` value, a
 :py:class:`OxidizedPathEntryFinder` bound to the source
 :py:class:`OxidizedFinder` is returned. This finder is able to service
 *root resources* (i.e. top-level modules and packages).
 
 When :py:meth:`path_hook <OxidizedFinder.path_hook>` is called with
-a virtual sub-directory of :py:attr:`OxidizedFinder.current_exe`, the same
+a virtual sub-directory of :py:attr:`OxidizedFinder.path_hook_base_str`, the same
 thing happens except the returned :py:class:`OxidizedPathEntryFinder`
 will only service resources at the exact package hierarchy specified
 by that virtual sub-directory.
@@ -279,16 +279,16 @@ following:
 
    def path_hook(self, path: str):
        # Path exactly matching current_exe will be bound to resources at root.
-       if path == self.current_exe:
+       if path == self.path_hook_base_str:
            return ...
 
        # Virtual sub-directories must begin with self.current_exe + directory
        # separator.
-       if not path.startswith((self.current_exe + "/", self.current_exe + "\\")):
+       if not path.startswith((self.path_hook_base_str + "/", self.path_hook_base_str + "\\")):
            raise ImportError
 
        # Part after directory separator.
-       package_part = path[len(current_exe) + 1:]
+       package_part = path[len(self.path_hook_base_str) + 1:]
 
        # Normalize to UNIX style directory separators, allowing Windows
        # separators to exist.
@@ -318,11 +318,11 @@ indexes resource names using Rust's UTF-8 backed string type anyway, this seems
 semantically correct from the perspective of ``oxidized_importer``.
 
 As an example, if ``path`` were
-``os.path.join(finder.current_exe, "a")``, the
+``os.path.join(finder.path_hook_base_str, "a")``, the
 finder would only service modules of the form ``a.*``. So ``a``, ``a.b`` would
 match but ``a.b.c`` and ``d`` would not.
 
-For best results, use ``os.path.join(finder.current_exe, str)`` to define
+For best results, use ``os.path.join(finder.path_hook_base_str, str)`` to define
 values that will be accepted by the path hook.
 
 :py:class:`OxidizedPathEntryFinder` complies with the

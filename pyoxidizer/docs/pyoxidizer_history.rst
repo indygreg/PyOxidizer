@@ -60,7 +60,7 @@ Backwards Compatibility Notes
   about the path values it will respond to. Previously, it would accept ``str``,
   ``bytes``, ``pathlib.Path``, or any other path-like type. Now, it only
   responds to ``str`` values. Furthermore, it will only respond to values that
-  exactly match :py:attr:`oxidized_importer.OxidizedFinder.current_exe` or
+  exactly match :py:attr:`oxidized_importer.OxidizedFinder.path_hook_base_str` or
   a well-formed virtual sub-directory thereof. Previously, it would attempt to
   canonicalize path strings, taking into account the current working directory,
   filesystem links, and other factors affecting path normalization. The new
@@ -88,7 +88,7 @@ New Features
   See :ref:`oxidized_finder_pkg_resources` for the full documentation, including
   which features aren't implemented.
 * :py:class:`oxidized_importer.OxidizedFinder` now exposes the properties
-  :py:attr:`oxidized_importer.OxidizedFinder.current_exe` and
+  :py:attr:`oxidized_importer.OxidizedFinder.path_hook_base_str` and
   :py:attr:`oxidized_importer.OxidizedFinder.origin`.
 
 Other Relevant Changes

@@ -42,13 +42,13 @@ class TestImporterConstruction(unittest.TestCase):
         with self.assertRaises(TypeError):
             OxidizedFinder(relative_path_origin=True)
 
-    def test_current_exe(self):
+    def test_path_hook_base_str(self):
         f = OxidizedFinder()
-        # We can't make reasonable assumptions about the value of current_exe
+        # We can't make reasonable assumptions about the value of path_hook_base_str
         # because the test environment does weird things with sys.argv and
         # hence sys.executable. We have to rely on other tests for the
         # correctness of this value.
-        self.assertIsInstance(f.current_exe, str)
+        self.assertIsInstance(f.path_hook_base_str, str)
 
     def test_origin(self):
         f = OxidizedFinder(relative_path_origin="/path/to/origin")

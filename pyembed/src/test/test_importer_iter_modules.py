@@ -132,7 +132,7 @@ class TestImporterIterModules(unittest.TestCase):
         f = self._finder_from_td()
 
         name = "on"
-        path = os.path.join(f.current_exe, name)
+        path = os.path.join(f.path_hook_base_str, name)
         path_entry_finder = f.path_hook(path)
 
         with self.subTest(prefix="", module_iterator="OxidizedPathEntryFinder"):

@@ -42,7 +42,6 @@ class TestImporterModule(unittest.TestCase):
                 "add_resource",
                 "add_resources",
                 "create_module",
-                "current_exe",
                 "exec_module",
                 "find_distributions",
                 "find_module",
@@ -62,6 +61,7 @@ class TestImporterModule(unittest.TestCase):
                 "iter_modules",
                 "origin",
                 "path_hook",
+                "path_hook_base_str",
                 "serialize_indexed_resources",
             },
         )

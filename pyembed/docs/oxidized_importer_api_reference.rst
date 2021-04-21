@@ -79,11 +79,13 @@ The ``OxidizedFinder`` Class
     ``importlib``. This functionality allows you to construct, inspect, and
     manipulate instances.
 
-    .. py:attribute:: current_exe
+    .. py:attribute:: path_hook_base_str
 
-        (``str``) The path to the current executable, as understood by this instance.
+        (``str``) The base path that the path hook handler on this instance
+        will respond to.
 
-        This value may or may not be the same as ``sys.executable``.
+        This value is often the same as ``sys.executable`` but isn't guaranteed
+        to be that exact value.
 
     .. py:attribute:: origin
 

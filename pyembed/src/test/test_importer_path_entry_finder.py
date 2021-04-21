@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 
 PathLike = Union[str, bytes, os.PathLike]
 
-CURRENT_EXE = OxidizedFinder().current_exe
+PATH_HOOK_BASE_STR = OxidizedFinder().path_hook_base_str
 
 
 def make_finder(*modules: Tuple[str, str, bool]) -> OxidizedFinder:
@@ -142,17 +142,17 @@ class TestImporterPathEntryFinder(unittest.TestCase):
 
         self.assertIsInstance(e.exception.__cause__, TypeError)
 
-    def test_current_exe_ok(self):
+    def test_path_hook_base_str_ok(self):
         f = OxidizedFinder()
-        self.assertIsInstance(f.path_hook(CURRENT_EXE), OxidizedPathEntryFinder)
+        self.assertIsInstance(f.path_hook(PATH_HOOK_BASE_STR), OxidizedPathEntryFinder)
 
-    def test_current_exe_parent_rejected(self):
+    def test_path_hook_base_str_parent_rejected(self):
         f = OxidizedFinder()
 
         with self.assertRaises(ImportError):
-            f.path_hook(os.path.dirname(CURRENT_EXE))
+            f.path_hook(os.path.dirname(PATH_HOOK_BASE_STR))
 
-    def test_empty_rejected(self):
+    def test_path_hook_empty_rejected(self):
         f = OxidizedFinder()
 
         with self.assertRaises(ImportError):
@@ -173,10 +173,10 @@ class TestImporterPathEntryFinder(unittest.TestCase):
 
         for suffix in suffixes:
             with self.assertRaises(ImportError):
-                f.path_hook(CURRENT_EXE + "/" + suffix)
+                f.path_hook(PATH_HOOK_BASE_STR + "/" + suffix)
 
             with self.assertRaises(ImportError):
-                f.path_hook(CURRENT_EXE + "\\" + suffix)
+                f.path_hook(PATH_HOOK_BASE_STR + "\\" + suffix)
 
     def test_bad_directory_separators(self):
         suffixes = (
@@ -193,7 +193,7 @@ class TestImporterPathEntryFinder(unittest.TestCase):
             f = OxidizedFinder()
 
             with self.assertRaises(ImportError):
-                f.path_hook(CURRENT_EXE + suffix)
+                f.path_hook(PATH_HOOK_BASE_STR + suffix)
 
     def test_package_resolution(self):
         mapping = (
@@ -213,11 +213,11 @@ class TestImporterPathEntryFinder(unittest.TestCase):
         for (suffix, package) in mapping:
             f = OxidizedFinder()
 
-            pef = f.path_hook(CURRENT_EXE + suffix)
+            pef = f.path_hook(PATH_HOOK_BASE_STR + suffix)
             self.assertEqual(pef._package, package)
 
     def test_find_spec_subdir(self):
-        self.assert_find_spec_nested(os.path.join(CURRENT_EXE, "on"))
+        self.assert_find_spec_nested(os.path.join(PATH_HOOK_BASE_STR, "on"))
 
     def assert_find_spec_top_level(self, path: PathLike) -> None:
         finder = self.finder(path, None)
@@ -230,7 +230,7 @@ class TestImporterPathEntryFinder(unittest.TestCase):
             self.assertIsNone(finder.find_spec(name))
 
     def test_find_spec_top_level(self):
-        self.assert_find_spec_top_level(CURRENT_EXE)
+        self.assert_find_spec_top_level(PATH_HOOK_BASE_STR)
 
     def assert_unicode_path(self, path: PathLike) -> None:
         finder = self.finder(path, "on.tשo")
@@ -238,13 +238,13 @@ class TestImporterPathEntryFinder(unittest.TestCase):
         self.assertCountEqual(finder.iter_modules(), [("۳", False)])
 
     def test_unicode_path_subdir(self):
-        self.assert_unicode_path(os.path.join(CURRENT_EXE, "on", "tשo"))
+        self.assert_unicode_path(os.path.join(PATH_HOOK_BASE_STR, "on", "tשo"))
 
     def test_empty_finder_top_level(self):
-        self.assertIsNone(OxidizedFinder().path_hook(CURRENT_EXE).find_spec("a"))
+        self.assertIsNone(OxidizedFinder().path_hook(PATH_HOOK_BASE_STR).find_spec("a"))
 
     def test_non_existent_pkg(self):
-        path = os.path.join(CURRENT_EXE, "foo", "bar")
+        path = os.path.join(PATH_HOOK_BASE_STR, "foo", "bar")
         finder = self.finder(path, "foo.bar")
         self.assertIsNone(finder.find_spec("foo.bar.baz"))
 
@@ -254,11 +254,11 @@ class TestImporterPathEntryFinder(unittest.TestCase):
 
         # PathFinder can only use it with CURRENT_EXT on sys.path
         with patch("sys.path", sys.path):
-            sys.path = [p for p in sys.path if p != CURRENT_EXE]
+            sys.path = [p for p in sys.path if p != PATH_HOOK_BASE_STR]
             PathFinder.invalidate_caches()
             self.assertIsNone(PathFinder.find_spec("pwd"))
 
-            sys.path.append(CURRENT_EXE)
+            sys.path.append(PATH_HOOK_BASE_STR)
             spec = PathFinder.find_spec("pwd")
         self.assert_spec(
             spec, "pwd", is_pkg=False, Loader=sys.__spec__.loader, origin="built-in"
@@ -270,7 +270,7 @@ class TestImporterPathEntryFinder(unittest.TestCase):
     NOT_FOUND_ERR = "path .* does not begin in .*"
 
     def test_find_spec_no_path_arg(self):
-        finder = self.finder(os.path.join(CURRENT_EXE, "a"), "a")
+        finder = self.finder(os.path.join(PATH_HOOK_BASE_STR, "a"), "a")
         # finder.find_spec does not take a path arg
         self.assertRaisesRegex(
             TypeError, "takes at most 2 arguments", finder.find_spec, "a.b", None, None

@@ -540,8 +540,8 @@ py_class!(pub(crate) class OxidizedFinder |py| {
 
     // Additional methods provided for convenience.
 
-    @property def current_exe(&self) -> PyResult<PyObject> {
-        self.current_exe_impl(py)
+    @property def path_hook_base_str(&self) -> PyResult<PyObject> {
+        self.path_hook_base_str_impl(py)
     }
 
     @property def origin(&self) -> PyResult<PyObject> {
@@ -965,8 +965,8 @@ impl OxidizedFinder {
     ) -> PyResult<OxidizedPathEntryFinder> {
         // We respond to the following paths:
         //
-        // * self.current_exe
-        // * virtual sub-directories under self.current_exe
+        // * self.path_hook_base_str
+        // * virtual sub-directories under self.path_hook_base_str
         //
         // There is a mismatch between the ways that Rust and Python store paths.
         // self.current_exe is a Rust PathBuf and came from Rust. We can get the raw
@@ -982,19 +982,20 @@ impl OxidizedFinder {
         // Only accept str.
         let path = path_original.cast_as::<PyString>(py)?;
 
-        let current_exe = self.current_exe(py)?.cast_into::<PyString>(py)?;
+        let path_hook_base = self.path_hook_base_str(py)?.cast_into::<PyString>(py)?;
 
-        let target_package = if path.as_object().compare(py, current_exe.as_object())?
+        let target_package = if path.as_object().compare(py, path_hook_base.as_object())?
             == std::cmp::Ordering::Equal
         {
             None
         } else {
             // Accept both directory separators as prefix match.
-            let unix_prefix = current_exe
-                .as_object()
-                .call_method(py, "__add__", ("/",), None)?;
+            let unix_prefix =
+                path_hook_base
+                    .as_object()
+                    .call_method(py, "__add__", ("/",), None)?;
             let windows_prefix =
-                current_exe
+                path_hook_base
                     .as_object()
                     .call_method(py, "__add__", ("\\",), None)?;
 
@@ -1010,7 +1011,7 @@ impl OxidizedFinder {
                     format!(
                         "{} is not prefixed by {}",
                         path.to_string_lossy(py),
-                        current_exe.to_string_lossy(py)
+                        path_hook_base.to_string_lossy(py)
                     ),
                 ));
             }
@@ -1028,7 +1029,7 @@ impl OxidizedFinder {
             // filesystem encoding is set to. Since Rust won't handle surrogateescape
             // that well, we use the "replace" error handling strategy to ensure a
             // Rust string valid byte sequence.
-            let current_exe_bytes = current_exe
+            let path_hook_base_bytes = path_hook_base
                 .as_object()
                 .call_method(py, "encode", ("utf-8", "replace"), None)?
                 .extract::<Vec<u8>>(py)?;
@@ -1038,7 +1039,7 @@ impl OxidizedFinder {
                 .extract::<Vec<u8>>(py)?;
 
             // +1 for directory separator, which should always be 1 byte in UTF-8.
-            let path_suffix: &[u8] = &path_bytes[current_exe_bytes.len() + 1..];
+            let path_suffix: &[u8] = &path_bytes[path_hook_base_bytes.len() + 1..];
             let original_package_path = String::from_utf8(path_suffix.to_vec()).map_err(|e| {
                 PyErr::new::<ValueError, _>(
                     py,
@@ -1146,7 +1147,7 @@ fn oxidized_finder_new(
 }
 
 impl OxidizedFinder {
-    fn current_exe_impl(&self, py: Python) -> PyResult<PyObject> {
+    fn path_hook_base_str_impl(&self, py: Python) -> PyResult<PyObject> {
         path_to_pyobject(py, &self.state(py).get_resources_state().current_exe)
     }
 
