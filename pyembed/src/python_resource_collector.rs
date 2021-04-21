@@ -76,7 +76,7 @@ py_class!(pub(crate) class OxidizedResourceCollector |py| {
     }
 
     @property def allowed_locations(&self) -> PyResult<PyObject> {
-        self.allowed_locations_impl(py)
+        Ok(self.allowed_locations_impl(py))
     }
 
     def add_in_memory(&self, resource: PyObject) -> PyResult<PyObject> {
@@ -117,7 +117,7 @@ impl OxidizedResourceCollector {
         OxidizedResourceCollector::create_instance(py, RefCell::new(collector))
     }
 
-    fn allowed_locations_impl(&self, py: Python) -> PyResult<PyObject> {
+    fn allowed_locations_impl(&self, py: Python) -> PyObject {
         let values = self
             .collector(py)
             .borrow()
@@ -126,7 +126,7 @@ impl OxidizedResourceCollector {
             .map(|l| l.to_string().to_py_object(py).into_object())
             .collect::<Vec<PyObject>>();
 
-        Ok(PyList::new(py, &values).into_object())
+        PyList::new(py, &values).into_object()
     }
 
     fn add_in_memory_impl(&self, py: Python, resource: PyObject) -> PyResult<PyObject> {
