@@ -9,6 +9,7 @@ Tugger.
 */
 
 pub mod file_resource;
+pub mod macos_application_bundle_builder;
 pub mod snapcraft;
 #[cfg(test)]
 mod testutil;
@@ -24,6 +25,7 @@ pub fn register_starlark_dialect(
     type_values: &mut TypeValues,
 ) -> Result<(), EnvironmentError> {
     file_resource::file_resource_module(env, type_values);
+    macos_application_bundle_builder::macos_application_bundle_builder_module(env, type_values);
     snapcraft::snapcraft_module(env, type_values);
     wix_bundle_builder::wix_bundle_builder_module(env, type_values);
     wix_installer::wix_installer_module(env, type_values);

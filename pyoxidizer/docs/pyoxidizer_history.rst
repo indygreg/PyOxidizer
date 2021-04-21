@@ -90,6 +90,9 @@ New Features
 * :py:class:`oxidized_importer.OxidizedFinder` now exposes the properties
   :py:attr:`oxidized_importer.OxidizedFinder.path_hook_base_str` and
   :py:attr:`oxidized_importer.OxidizedFinder.origin`.
+* Starlark configuration files can now produce macOS Application Bundles.
+  See :ref:`tugger_starlark_type_macos_application_bundle_builder` for the API
+  documentation.
 
 Other Relevant Changes
 ^^^^^^^^^^^^^^^^^^^^^^

@@ -62,6 +62,7 @@ use {
 /// # Ok(())
 /// # }
 /// ```
+#[derive(Clone, Debug)]
 pub struct MacOsApplicationBundleBuilder {
     /// Files constituting the application bundle.
     files: FileManifest,
