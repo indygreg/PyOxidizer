@@ -50,7 +50,7 @@ py_class!(pub(crate) class OxidizedDistribution |py| {
     }
 
     @classmethod
-    def discover(cls, *args, **kwargs) -> PyResult<PyObject> {
+    def discover(cls, *_args, **kwargs) -> PyResult<PyObject> {
         OxidizedDistribution::discover_impl(py, cls, kwargs)
     }
 
