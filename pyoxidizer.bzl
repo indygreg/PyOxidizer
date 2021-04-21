@@ -69,8 +69,30 @@ def make_exe_installer():
 
     return bundle
 
+
+def make_macos_app_bundle():
+    bundle = MacOsApplicationBundleBuilder("PyOxidizer")
+    bundle.set_info_plist_required_keys(
+        display_name = "PyOxidizer",
+        identifier = "com.gregoryszorc.pyox",
+        version = PYOXIDIZER_VERSION,
+        signature = "pyox",
+        executable = "pyoxidizer",
+    )
+
+    m = FileManifest()
+    m.add_path(
+        path = "target/release/pyoxidizer",
+        strip_prefix = "target/release/",
+    )
+    bundle.add_macos_manifest(m)
+
+    return bundle
+
+
 register_target("msi_x86", make_msi_x86)
 register_target("msi_x86_64", make_msi_x86_64)
 register_target("exe_installer", make_exe_installer, default = True)
+register_target("macos_app_bundle", make_macos_app_bundle)
 
 resolve_targets()

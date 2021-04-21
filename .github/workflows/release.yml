@@ -55,6 +55,65 @@ jobs:
           name: linux-x86_64-bin
           path: target/x86_64-unknown-linux-musl/release/pyoxidizer
 
+  macos_app_bundle:
+    runs-on: 'macos-10.15'
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      SCCACHE_BUCKET: 'pyoxidizer-sccache'
+      SCCACHE_S3_USE_SSL: '1'
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          # Needed by build.rs, which needs to walk the Git history to find the
+          # root commit. Without this, a shallow clone (depth=1) is performed.
+          fetch-depth: 0
+
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          default: true
+          profile: minimal
+          target: aarch64-apple-darwin
+
+      - name: Install sccache
+        run: |
+          wget -O sccache.tar.gz --progress dot:mega https://github.com/mozilla/sccache/releases/download/v0.2.15/sccache-v0.2.15-x86_64-apple-darwin.tar.gz
+          tar -xvzf sccache.tar.gz
+          mv sccache-*/sccache /Users/runner/.cargo/bin/sccache
+          chmod +x /Users/runner/.cargo/bin/sccache
+          sccache --start-server
+
+      - name: Build pyoxidizer Executable (x86_64)
+        env:
+          RUSTC_WRAPPER: sccache
+          # Support running binaries on older macOS releases. Otherwise the
+          # current host OS is likely targeted.
+          OSX_DEPLOYMENT_TARGET: '10.9'
+        run: |
+          rustc --version
+          cargo build --release --target x86_64-apple-darwin --bin pyoxidizer
+
+      - name: Build pyoxidizer Executable (aarch64)
+        env:
+          RUSTC_WRAPPER: sccache
+          OSX_DEPLOYMENT_TARGET: '11.0'
+          SDKROOT: '/Applications/Xcode_12.4.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX11.1.sdk'
+        run: |
+          rustc --version
+          cargo build --release --target aarch64-apple-darwin --bin pyoxidizer
+
+      - name: Build DMG
+        run: |
+          scripts/make-dmg.sh
+
+      - name: Upload DMG
+        uses: actions/upload-artifact@v2
+        with:
+          name: macos_dmg
+          path: |
+            PyOxidizer.dmg
+
   windows_installers:
     runs-on: 'windows-2019'
     env:
