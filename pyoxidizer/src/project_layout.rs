@@ -28,6 +28,12 @@ static HANDLEBARS: Lazy<Handlebars<'static>> = Lazy::new(|| {
         )
         .unwrap();
     handlebars
+        .register_template_string(
+            "cargo-extra.toml",
+            include_str!("templates/cargo-extra.toml.hbs"),
+        )
+        .unwrap();
+    handlebars
         .register_template_string("exe.manifest", include_str!("templates/exe.manifest.hbs"))
         .unwrap();
     handlebars
@@ -327,44 +333,12 @@ pub fn update_new_cargo_toml(path: &Path, pyembed_location: &PyembedLocation) ->
     ));
     content.push('\n');
 
-    content.push_str("[dependencies.jemallocator]\n");
-    content.push_str("version = \"0.3\"\n");
-    content.push_str("optional = true\n");
-    content.push('\n');
-
-    content.push_str("[dependencies.mimalloc]\n");
-    content.push_str("version = \"0.1\"\n");
-    content.push_str("optional = true\n");
-    content.push_str("features = [\"local_dynamic_tls\", \"override\", \"secure\"]\n");
-    content.push('\n');
-
-    content.push_str("[dependencies.snmalloc-rs]\n");
-    content.push_str("version = \"0.2\"\n");
-    content.push_str("optional = true\n");
-    content.push('\n');
-
-    content.push_str("[build-dependencies]\n");
-    content.push_str("embed-resource = \"1.3\"\n");
-
-    content.push('\n');
-    content.push_str("[features]\n");
-    content.push_str("default = [\"build-mode-pyoxidizer-exe\"]\n");
-    content.push('\n');
-    content.push_str("global-allocator-jemalloc = [\"jemallocator\"]\n");
-    content.push_str("global-allocator-mimalloc = [\"mimalloc\"]\n");
-    content.push_str("global-allocator-snmalloc = [\"snmalloc-rs\"]\n");
-    content.push('\n');
-    content.push_str("allocator-jemalloc = [\"pyembed/jemalloc\"]\n");
-    content.push_str("allocator-mimalloc = [\"pyembed/mimalloc\"]\n");
-    content.push_str("allocator-snmalloc = [\"pyembed/snmalloc\"]\n");
-    content.push('\n');
-    content.push_str("build-mode-pyoxidizer-exe = [\"pyembed/build-mode-pyoxidizer-exe\"]\n");
-    content
-        .push_str("build-mode-prebuilt-artifacts = [\"pyembed/build-mode-prebuilt-artifacts\"]\n");
+    let data = TemplateData::new();
     content.push_str(
-        "cpython-link-unresolved-static = [\"pyembed/cpython-link-unresolved-static\"]\n",
+        &HANDLEBARS
+            .render("cargo-extra.toml", &data)
+            .context("rendering cargo-extra.toml template")?,
     );
-    content.push_str("cpython-link-default = [\"pyembed/cpython-link-default\"]\n");
 
     std::fs::write(path, content)?;
 

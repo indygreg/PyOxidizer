@@ -1,0 +1,31 @@
+[dependencies.jemallocator]
+version = "0.3"
+optional = true
+
+[dependencies.mimalloc]
+version = "0.1"
+optional = true
+features = ["local_dynamic_tls", "override", "secure"]
+
+[dependencies.snmalloc-rs]
+version = "0.2"
+optional = true
+
+[build-dependencies]
+embed-resource = "1.3"
+
+[features]
+default = ["build-mode-pyoxidizer-exe"]
+
+global-allocator-jemalloc = ["jemallocator"]
+global-allocator-mimalloc = ["mimalloc"]
+global-allocator-snmalloc = ["snmalloc-rs"]
+
+allocator-jemalloc = ["pyembed/jemalloc"]
+allocator-mimalloc = ["pyembed/mimalloc"]
+allocator-snmalloc = ["pyembed/snmalloc"]
+
+build-mode-pyoxidizer-exe = ["pyembed/build-mode-pyoxidizer-exe"]
+build-mode-prebuilt-artifacts = ["pyembed/build-mode-prebuilt-artifacts"]
+cpython-link-unresolved-static = ["pyembed/cpython-link-unresolved-static"]
+cpython-link-default = ["pyembed/cpython-link-default"]
