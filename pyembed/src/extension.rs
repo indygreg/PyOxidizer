@@ -6,11 +6,11 @@
 
 use {
     crate::{
-        importer::{
-            decode_source, pkg_resources_find_distributions, register_pkg_resources,
-            OxidizedFinder, OxidizedPathEntryFinder, OxidizedResourceReader,
+        importer::{OxidizedFinder, OxidizedPathEntryFinder, OxidizedResourceReader},
+        pkg_resources::{
+            pkg_resources_find_distributions, register_pkg_resources_with_module,
+            OxidizedPkgResourcesProvider,
         },
-        pkg_resources::OxidizedPkgResourcesProvider,
         python_resources::OxidizedResource,
         resource_scanning::find_resources_in_path,
     },
@@ -104,6 +104,32 @@ pub extern "C" fn PyInit_oxidized_importer() -> *mut pyffi::PyObject {
             std::ptr::null_mut()
         }
     }
+}
+
+/// Decodes source bytes into a str.
+///
+/// This is effectively a reimplementation of
+/// importlib._bootstrap_external.decode_source().
+fn decode_source(py: Python, io_module: &PyModule, source_bytes: PyObject) -> PyResult<PyObject> {
+    // .py based module, so can't be instantiated until importing mechanism
+    // is bootstrapped.
+    let tokenize_module = py.import("tokenize")?;
+
+    let buffer = io_module.call(py, "BytesIO", (&source_bytes,), None)?;
+    let readline = buffer.getattr(py, "readline")?;
+    let encoding = tokenize_module.call(py, "detect_encoding", (readline,), None)?;
+    let newline_decoder = io_module.call(
+        py,
+        "IncrementalNewlineDecoder",
+        (py.None(), py.True()),
+        None,
+    )?;
+    let data = source_bytes.call_method(py, "decode", (encoding.get_item(py, 0)?,), None)?;
+    newline_decoder.call_method(py, "decode", (data,), None)
+}
+
+fn register_pkg_resources(py: Python) -> PyResult<PyObject> {
+    register_pkg_resources_with_module(py, py.import("pkg_resources")?.as_object())
 }
 
 /// Initialize the Python module object.

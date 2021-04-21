@@ -19,8 +19,7 @@ use {
     crate::{
         conversion::{path_to_pyobject, pyobject_to_pathbuf},
         extension::{get_module_state, OXIDIZED_IMPORTER_NAME_STR},
-        package_metadata::find_pkg_resources_distributions,
-        pkg_resources::OxidizedPkgResourcesProvider,
+        pkg_resources::register_pkg_resources_with_module,
         python_resources::{
             name_at_package_hierarchy, pyobject_to_resource, resource_to_pyobject, ModuleFlavor,
             OptimizeLevel, OxidizedResource, PythonResourcesState,
@@ -29,9 +28,8 @@ use {
     cpython::{
         exc::{FileNotFoundError, ImportError, ValueError},
         {
-            py_class, py_fn, NoArgs, ObjectProtocol, PyBytes, PyCapsule, PyClone, PyDict, PyErr,
-            PyList, PyModule, PyObject, PyResult, PyString, PyTuple, Python, PythonObject,
-            ToPyObject,
+            py_class, NoArgs, ObjectProtocol, PyBytes, PyCapsule, PyClone, PyDict, PyErr, PyList,
+            PyModule, PyObject, PyResult, PyString, PyTuple, Python, PythonObject, ToPyObject,
         },
     },
     python3_sys as pyffi,
@@ -1297,6 +1295,20 @@ py_class!(pub(crate) class OxidizedPathEntryFinder |py| {
 });
 
 impl OxidizedPathEntryFinder {
+    pub(crate) fn get_finder<'a>(&'a self, py: Python<'a>) -> &'a OxidizedFinder {
+        self.finder(py)
+    }
+
+    pub(crate) fn get_source_path<'a>(&'a self, py: Python<'a>) -> &'a PyString {
+        self.source_path(py)
+    }
+
+    pub(crate) fn get_target_package<'a>(&'a self, py: Python<'a>) -> &'a Option<String> {
+        self.target_package(py)
+    }
+}
+
+impl OxidizedPathEntryFinder {
     fn find_spec_impl(
         &self,
         py: Python,
@@ -1530,108 +1542,6 @@ impl PyOxidizerTraversable {
     ) -> PyResult<PyObject> {
         unimplemented!();
     }
-}
-
-/// Decodes source bytes into a str.
-///
-/// This is effectively a reimplementation of
-/// importlib._bootstrap_external.decode_source().
-pub(crate) fn decode_source(
-    py: Python,
-    io_module: &PyModule,
-    source_bytes: PyObject,
-) -> PyResult<PyObject> {
-    // .py based module, so can't be instantiated until importing mechanism
-    // is bootstrapped.
-    let tokenize_module = py.import("tokenize")?;
-
-    let buffer = io_module.call(py, "BytesIO", (&source_bytes,), None)?;
-    let readline = buffer.getattr(py, "readline")?;
-    let encoding = tokenize_module.call(py, "detect_encoding", (readline,), None)?;
-    let newline_decoder = io_module.call(
-        py,
-        "IncrementalNewlineDecoder",
-        (py.None(), py.True()),
-        None,
-    )?;
-    let data = source_bytes.call_method(py, "decode", (encoding.get_item(py, 0)?,), None)?;
-    newline_decoder.call_method(py, "decode", (data,), None)
-}
-
-/// pkg_resources distribution finder for sys.path items.
-pub(crate) fn pkg_resources_find_distributions(
-    py: Python,
-    importer: PyObject,
-    path_item: PyString,
-    only: bool,
-) -> PyResult<PyList> {
-    let importer_type = importer.get_type(py);
-
-    // This shouldn't happen since that path hook type is mapped to this function.
-    // But you never know.
-    if importer_type != py.get_type::<OxidizedPathEntryFinder>() {
-        return Ok(PyList::new(py, &[]));
-    }
-
-    let finder = importer.cast_as::<OxidizedPathEntryFinder>(py)?;
-
-    // The path_item we're handling should match what was registered to this path
-    // entry finder. Reject if that's not the case.
-    if finder
-        .source_path(py)
-        .as_object()
-        .compare(py, path_item.as_object())?
-        != std::cmp::Ordering::Equal
-    {
-        return Ok(PyList::new(py, &[]));
-    }
-
-    let meta_finder = finder.finder(py);
-    let state = meta_finder.state(py);
-
-    find_pkg_resources_distributions(
-        py,
-        state.clone(),
-        &path_item.to_string_lossy(py),
-        only,
-        finder.target_package(py).as_ref().map(|s| s.as_str()),
-    )
-}
-
-/// Registers our types/callbacks with `pkg_resources`.
-fn register_pkg_resources_with_module(py: Python, pkg_resources: &PyObject) -> PyResult<PyObject> {
-    pkg_resources.call_method(
-        py,
-        "register_finder",
-        (
-            py.get_type::<OxidizedPathEntryFinder>(),
-            py_fn!(
-                py,
-                pkg_resources_find_distributions(
-                    importer: PyObject,
-                    path_item: PyString,
-                    only: Option<bool> = false
-                )
-            ),
-        ),
-        None,
-    )?;
-
-    pkg_resources.call_method(
-        py,
-        "register_loader_type",
-        (
-            py.get_type::<OxidizedFinder>(),
-            py.get_type::<OxidizedPkgResourcesProvider>(),
-        ),
-        None,
-    )?;
-
-    Ok(py.None())
-}
-
-pub(crate) fn register_pkg_resources(py: Python) -> PyResult<PyObject> {
-    register_pkg_resources_with_module(py, py.import("pkg_resources")?.as_object())
 }
 
 /// Replace all meta path importers with an OxidizedFinder instance and return it.

@@ -4,17 +4,17 @@
 
 use {
     crate::{
-        importer::{ImporterState, OxidizedFinder},
+        importer::{ImporterState, OxidizedFinder, OxidizedPathEntryFinder},
         package_metadata::{
-            metadata_list_directory, metadata_name_is_directory,
+            find_pkg_resources_distributions, metadata_list_directory, metadata_name_is_directory,
             resolve_package_distribution_resource,
         },
     },
     cpython::{
         exc::{IOError, NotImplementedError, TypeError, UnicodeDecodeError},
         {
-            py_class, NoArgs, ObjectProtocol, PyErr, PyList, PyObject, PyResult, PyString, Python,
-            PythonObject,
+            py_class, py_fn, NoArgs, ObjectProtocol, PyErr, PyList, PyObject, PyResult, PyString,
+            Python, PythonObject,
         },
     },
     std::sync::Arc,
@@ -281,4 +281,79 @@ impl OxidizedPkgResourcesProvider {
 
         PyList::new(py, &entries)
     }
+}
+
+/// Registers our types/callbacks with `pkg_resources`.
+pub(crate) fn register_pkg_resources_with_module(
+    py: Python,
+    pkg_resources: &PyObject,
+) -> PyResult<PyObject> {
+    pkg_resources.call_method(
+        py,
+        "register_finder",
+        (
+            py.get_type::<OxidizedPathEntryFinder>(),
+            py_fn!(
+                py,
+                pkg_resources_find_distributions(
+                    importer: PyObject,
+                    path_item: PyString,
+                    only: Option<bool> = false
+                )
+            ),
+        ),
+        None,
+    )?;
+
+    pkg_resources.call_method(
+        py,
+        "register_loader_type",
+        (
+            py.get_type::<OxidizedFinder>(),
+            py.get_type::<OxidizedPkgResourcesProvider>(),
+        ),
+        None,
+    )?;
+
+    Ok(py.None())
+}
+
+/// pkg_resources distribution finder for sys.path items.
+pub(crate) fn pkg_resources_find_distributions(
+    py: Python,
+    importer: PyObject,
+    path_item: PyString,
+    only: bool,
+) -> PyResult<PyList> {
+    let importer_type = importer.get_type(py);
+
+    // This shouldn't happen since that path hook type is mapped to this function.
+    // But you never know.
+    if importer_type != py.get_type::<OxidizedPathEntryFinder>() {
+        return Ok(PyList::new(py, &[]));
+    }
+
+    let finder = importer.cast_as::<OxidizedPathEntryFinder>(py)?;
+
+    // The path_item we're handling should match what was registered to this path
+    // entry finder. Reject if that's not the case.
+    if finder
+        .get_source_path(py)
+        .as_object()
+        .compare(py, path_item.as_object())?
+        != std::cmp::Ordering::Equal
+    {
+        return Ok(PyList::new(py, &[]));
+    }
+
+    let meta_finder = finder.get_finder(py);
+    let state = meta_finder.get_state(py);
+
+    find_pkg_resources_distributions(
+        py,
+        state.clone(),
+        &path_item.to_string_lossy(py),
+        only,
+        finder.get_target_package(py).as_ref().map(|s| s.as_str()),
+    )
 }
