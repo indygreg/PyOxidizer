@@ -355,20 +355,16 @@ impl<'a> ImportablePythonModule<'a, u8> {
     /// Obtain the filesystem path to this resource to be used for `ModuleSpec.origin`.
     fn origin_path(&self) -> Option<PathBuf> {
         match self.flavor {
-            ModuleFlavor::SourceBytecode => {
-                if let Some(path) = &self.resource.relative_path_module_source {
-                    Some(self.origin.join(path))
-                } else {
-                    None
-                }
-            }
-            ModuleFlavor::Extension => {
-                if let Some(path) = &self.resource.relative_path_extension_module_shared_library {
-                    Some(self.origin.join(path))
-                } else {
-                    None
-                }
-            }
+            ModuleFlavor::SourceBytecode => self
+                .resource
+                .relative_path_module_source
+                .as_ref()
+                .map(|path| self.origin.join(path)),
+            ModuleFlavor::Extension => self
+                .resource
+                .relative_path_extension_module_shared_library
+                .as_ref()
+                .map(|path| self.origin.join(path)),
             _ => None,
         }
     }
@@ -381,11 +377,9 @@ impl<'a> ImportablePythonModule<'a, u8> {
             OptimizeLevel::Two => &self.resource.relative_path_module_bytecode_opt2,
         };
 
-        if let Some(bytecode_path) = bytecode_path {
-            Some(self.origin.join(bytecode_path))
-        } else {
-            None
-        }
+        bytecode_path
+            .as_ref()
+            .map(|bytecode_path| self.origin.join(bytecode_path))
     }
 
     pub fn in_memory_extension_module_shared_library(&self) -> &'a Option<Cow<'a, [u8]>> {
