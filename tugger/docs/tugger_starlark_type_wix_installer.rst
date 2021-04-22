@@ -1,205 +1,157 @@
 .. py:currentmodule:: starlark_tugger
 
-.. _tugger_starlark_type_wix_installer:
-
 ================
 ``WiXInstaller``
 ================
 
-The ``WiXInstaller`` type represents a Windows installer built with the
-`WiX Toolset <https://wixtoolset.org/>`_.
+.. py:class:: WiXInstaller
 
-``WiXInstaller`` instances allow you to collect ``.wxs`` files for
-processing and to turn these into an installer using the ``light.exe`` tool
-in the WiX Toolset.
+    The ``WiXInstaller`` type represents a Windows installer built with the
+    `WiX Toolset <https://wixtoolset.org/>`_.
 
-.. _tugger_starlark_type_wix_installer_constructors:
+    ``WiXInstaller`` instances allow you to collect ``.wxs`` files for
+    processing and to turn these into an installer using the ``light.exe`` tool
+    in the WiX Toolset.
 
-Constructors
-============
+    .. py:method:: __init__(id: string, filename: string) -> WiXInstaller
 
-``WiXInstaller()``
-------------------
+        ``WiXInstaller()`` is called to construct a new instance. It accepts
+        the following arguments:
 
-``WiXInstaller()`` is called to construct a new instance. It accepts
-the following arguments:
+        ``id``
+           The name of the installer being built.
 
-``id``
-   (``string``) The name of the installer being built.
+           This value is used in ``Id`` attributes in WiX XML files and must
+           conform to limitations imposed by WiX. Notably, this must be alphanumeric
+           and ``-`` cannot be used.
 
-   This value is used in ``Id`` attributes in WiX XML files and must
-   conform to limitations imposed by WiX. Notably, this must be alphanumeric
-   and ``-`` cannot be used.
+           This value is also used to derive GUIDs for the installer.
 
-   This value is also used to derive GUIDs for the installer.
+           This value should reflect the name of the entity being installed and should
+           be unique to prevent collisions with other installers.
 
-   This value should reflect the name of the entity being installed and should
-   be unique to prevent collisions with other installers.
+        ``filename``
+           The name of the file that will be built.
 
-``filename``
-   (``string``) The name of the file that will be built.
+           WiX supports generating multiple installer file types depending on the
+           content of the ``.wxs`` files. You will have to provide a filename that
+           is appropriate for the installer type.
 
-   WiX supports generating multiple installer file types depending on the
-   content of the ``.wxs`` files. You will have to provide a filename that
-   is appropriate for the installer type.
+           File extensions of ``.msi`` and ``.exe`` are common. If using
+           ``add_simple_installer()``, you will want to provide an ``.msi`` filename.
 
-   File extensions of ``.msi`` and ``.exe`` are common. If using
-   ``add_simple_installer()``, you will want to provide an ``.msi`` filename.
+    .. py:method:: add_build_files(manifest: FileManifest)
 
-.. _tugger_starlark_type_wix_installer_methods:
+        This method registers additional files to make available to the build
+        environment. Files will be materialized next to ``.wxs`` files that will
+        be processed as part of building the installer.
 
-Methods
-=======
+        Accepted arguments are:
 
-Sections below document methods available on ``WiXInstaller`` instances.
+        ``manifest``
+           The file manifest defining additional files to install.
 
-.. _tugger_starlark_type_wix_installer_add_build_files:
+    .. py:method:: add_build_file(build_path: string, filesystem_path: string, force_read: Optional[bool] = False)
 
-``WiXInstaller.add_build_files()``
-----------------------------------
+        This method registers a single additional file to make available to the
+        build environment.
 
-This method registers additional files to make available to the build
-environment. Files will be materialized next to ``.wxs`` files that will
-be processed as part of building the installer.
+        Accepted arguments are:
 
-Accepted arguments are:
+        ``build_path``
+           The relative path to materialize inside the build environment
 
-``manifest``
-   (:py:class:`FileManifest`) The file manifest defining additional files to
-   install.
+        ``filesystem_path``
+           The filesystem path of the file to copy into the build environment.
 
-.. _tugger_starlark_type_wix_installer.add_build_file:
+        ``force_read``
+           Whether to read the content of this file into memory when this
+           function is called.
 
-``WiXInstaller.add_build_file()``
----------------------------------
+    .. py:method:: add_install_file(install_path: string, filesystem_path: string, force_read: Optional[bool] = False)
 
-This method registers a single additional file to make available to the
-build environment.
+        Add a file from the filesystem to be installed by the installer.
 
-Accepted arguments are:
+        This methods accepts the following arguments:
 
-``build_path``
-   (``string``) The relative path to materialize inside the build environment
+        ``install_path``
+           The relative path to materialize inside the installation directory.
 
-``filesystem_path``
-   (``string``) The filesystem path of the file to copy into the build environment.
+        ``filesystem_path``
+           The filesystem path of the file to install.
 
-``force_read``
-   (``bool``) Whether to read the content of this file into memory when this
-   function is called.
+        ``force_read``
+           Whether to read the content of this file into memory when this function
+           is called.
 
-   Defaults to ``False``.
+    .. py:method:: add_install_files(manifest: FileManifest)
 
-.. _tugger_starlark_type_wix_installer_add_install_file:
+        Add files defined in a :py:class:`FileManifest` to be installed by the
+        installer.
 
-``WiXInstaller.add_install_file()``
------------------------------------
+        This method accepts the following arguments:
 
-Add a file from the filesystem to be installed by the installer.
+        ``manifest``
+           Defines files to materialize in the installation directory. All these files
+           will be installed by the installer.
 
-This methods accepts the following arguments:
+    .. py:method:: add_msi_builder(builder: WiXMSIBuilder)
 
-``install_path``
-   (``string``) The relative path to materialize inside the installation
-   directory.
+        This method adds a :py:class:`WiXMSIBuilder` instance to this
+        instance, marking it for processing/building.
 
-``filesystem_path``
-   (``string``) The filesystem path of the file to install.
+    .. py:method:: add_simple_installer(product_name: string, product_version: string, product_manufacturer: string, program_files: FileManifest)
 
-``force_read``
-   (``bool``) Whether to read the content of this file into memory when this
-   function is called.
+        This method will populate the installer configuration with a pre-defined
+        and simple/basic configuration suitable for simple applications. This method
+        effectively derives a ``.wxs`` which will produce an MSI that materializes
+        files in the ``Program Files`` directory.
 
-   Defaults to ``False``.
+        Accepted arguments are:
 
-.. _tugger_starlark_type_wix_installer_add_install_files:
+        ``product_name``
+           The name of the installed product. This becomes the value
+           of the ``<Product Name="...">`` attribute in the generated ``.wxs`` file.
 
-``WiXInstaller.add_install_files()``
-------------------------------------
+        ``product_version``
+           The version string of the installed product. This becomes
+           the value of the ``<Product Version="...">`` attribute in the generated
+           ``.wxs`` file.
 
-Add files defined in a :py:class:`FileManifest` to be installed by the installer.
+        ``product_manufacturer``
+           The author of the product. This becomes the value of the
+           ``<Product Manufacturer="...">`` attribute in the generated ``.wxs`` file.
 
-This method accepts the following arguments:
+        ``program_files``
+           Files to materialize in the ``Program Files/<product_name>``
+           directory upon install.
 
-``manifest``
-   (:py:class:`FileManifest`) Defines files to materialize in the installation
-   directory. All these files will be installed by the installer.
+    .. py:method:: add_wxs_file(path: string, preprocessor_parameters: Optional[dict[string, string]])
 
-.. _tugger_starlark_type_wix_installer_add_msi_builder:
+        Adds an existing ``.wxs`` file to be processed as part of building this
+        installer.
 
-``WiXInstaller.add_msi_builder()``
-----------------------------------
+        Accepted arguments are:
 
-This method adds a :ref:`tugger_starlark_type_wix_msi_builder` instance to this
-instance, marking it for processing/building.
+        ``path``
+           The filesystem path to the ``.wxs`` file to add. The file will be
+           copied into a temporary directory as part of building the installer and the
+           destination filename will be the same as the file's name.
 
-This method accepts the following arguments:
+        ``preprocessor_parameters``
+           Preprocessor parameters to define when invoking ``candle.exe`` for this
+           ``.wxs`` file. These effectively constitute ``-p`` arguments to
+           ``candle.exe``.
 
-``builder``
-   (``WiXMSIBuilder``) A :ref:`tugger_starlark_type_wix_msi_builder` representing
-   a ``.wxs`` file to build.
+    .. py:method:: set_variable(key: string, value: Optional[string])
 
-.. _tugger_starlark_type_wix_installer_add_simple_installer:
+        Defines a variable to be passed to ``light.exe`` as ``-d`` arguments.
 
-``WiXInstaller.add_simple_installer()``
----------------------------------------
+        Accepted arguments are:
 
-This method will populate the installer configuration with a pre-defined
-and simple/basic configuration suitable for simple applications. This method
-effectively derives a ``.wxs`` which will produce an MSI that materializes
-files in the ``Program Files`` directory.
+        ``key``
+           The name of the variable.
 
-Accepted arguments are:
-
-``product_name``
-   (``string``) The name of the installed product. This becomes the value
-   of the ``<Product Name="...">`` attribute in the generated ``.wxs`` file.
-
-``product_version``
-   (``string``) The version string of the installed product. This becomes
-   the value of the ``<Product Version="...">`` attribute in the generated
-   ``.wxs`` file.
-
-``product_manufacturer``
-   (``string``) The author of the product. This becomes the value of the
-   ``<Product Manufacturer="...">`` attribute in the generated ``.wxs`` file.
-
-``program_files``
-   (:py:class:`FileManifest`) Files to materialize in the ``Program Files/<product_name>``
-   directory upon install.
-
-.. _tugger_starlark_type_wix_installer_add_wxs_file:
-
-``WiXInstaller.add_wxs_file()``
--------------------------------
-
-Adds an existing ``.wxs`` file to be processed as part of building this
-installer.
-
-Accepted arguments are:
-
-``path``
-   (``string``) The filesystem path to the ``.wxs`` file to add. The file will be
-   copied into a temporary directory as part of building the installer and the
-   destination filename will be the same as the file's name.
-
-``preprocessor_parameters``
-   (``Optional[dict[string, string]]``) Preprocessor parameters to define when
-   invoking ``candle.exe`` for this ``.wxs`` file. These effectively constitute
-   ``-p`` arguments to ``candle.exe``.
-
-.. _tugger_starlark_type_wix_installer_set_variable:
-
-``WiXInstaller.set_variable()``
--------------------------------
-
-Defines a variable to be passed to ``light.exe`` as ``-d`` arguments.
-
-Accepted arguments are:
-
-``key``
-   (``string``) The name of the variable.
-
-``value``
-   (``Optional[string]``) The value of the variable. If ``None`` is used,
-   the variable has no value and is simply defined.
+        ``value``
+           The value of the variable. If ``None`` is used, the variable has no
+           value and is simply defined.

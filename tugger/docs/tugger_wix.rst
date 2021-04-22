@@ -1,3 +1,5 @@
+.. py:currentmodule:: starlark_tugger
+
 .. _tugger_wix:
 
 ===================================================
@@ -43,11 +45,11 @@ which.
    invoke ``candle.exe`` for this file.
 
 ``WiXInstallerBuilder``
-   The ``WiXInstallerBuilder`` Rust struct and
-   :ref:`tugger_starlark_type_wix_installer` Starlark type are used to manage the
-   end-to-end building and linking of ``.wxs`` files. This type knows how to
-   register multiple ``WxsBuilder`` instances and build them as a collection.
-   This type holds all the logic for invoking ``candle.exe`` and ``light.exe``.
+   The ``WiXInstallerBuilder`` Rust struct and :py:class:`WiXInstaller`
+   Starlark type are used to manage the end-to-end building and linking of
+   ``.wxs`` files. This type knows how to register multiple ``WxsBuilder``
+   instances and build them as a collection. This type holds all the logic
+   for invoking ``candle.exe`` and ``light.exe``.
 
 ``WiXSimpleMSIBuilder``
    The ``WiXSimpleMSIBuilder`` Rust struct and
@@ -77,7 +79,7 @@ feature request to request the missing functionality.
 
 Complex applications that have outgrown the limited capabilities of the
 high-level *builder* interfaces will need to use the lower level
-``WiXInstallerBuilder`` / :ref:`tugger_starlark_type_wix_installer` interface.
+``WiXInstallerBuilder`` / :py:class:`WixInstaller` interface.
 This interface allows you to provide your own ``.wxs`` files. This means
 you can still use Tugger for invoking WiX, even if all of your ``.wxs`` files
 are maintained outside of Tugger, enabling Tugger to grow with your needs.
