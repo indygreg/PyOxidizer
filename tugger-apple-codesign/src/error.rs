@@ -142,4 +142,10 @@ pub enum AppleCodesignError {
 
     #[error("unable to parse settings scope: {0}")]
     ParseSettingsScope(String),
+
+    #[error("incorrect password given when decrypting PFX data")]
+    PfxBadPassword,
+
+    #[error("error parsing PFX data: {0}")]
+    PfxParseError(String),
 }

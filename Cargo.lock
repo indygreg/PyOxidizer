@@ -3720,6 +3720,7 @@ dependencies = [
  "cryptographic-message-syntax",
  "goblin",
  "hex",
+ "p12",
  "pem",
  "plist",
  "regex",
@@ -3730,6 +3731,7 @@ dependencies = [
  "slog-term",
  "thiserror",
  "tugger-apple-bundle",
+ "yasna",
 ]
 
 [[package]]
