@@ -129,24 +129,38 @@ pub fn run_cli() -> Result<()> {
                 .arg(Arg::with_name("path").help("Path to executable to analyze")),
         )
         .subcommand(
-            SubCommand::with_name("cache-clear").about("Clear PyOxidizer's user-specific cache"),
-        )
-        .subcommand(
-            SubCommand::with_name("run-build-script")
+            SubCommand::with_name("build")
                 .setting(AppSettings::ArgRequiredElseHelp)
-                .about("Run functionality that a build script would perform")
-                .long_about(RUN_BUILD_SCRIPT_ABOUT)
+                .about("Build a PyOxidizer enabled project")
+                .long_about(BUILD_ABOUT)
                 .arg(
-                    Arg::with_name("build-script-name")
-                        .required(true)
-                        .help("Value to use for Rust build script"),
+                    Arg::with_name("target_triple")
+                        .long("target-triple")
+                        .takes_value(true)
+                        .help("Rust target triple to build for"),
                 )
                 .arg(
-                    Arg::with_name("target")
-                        .long("target")
+                    Arg::with_name("release")
+                        .long("release")
+                        .help("Build a release binary"),
+                )
+                .arg(
+                    Arg::with_name("path")
+                        .long("path")
                         .takes_value(true)
-                        .help("The config file target to resolve"),
+                        .default_value(".")
+                        .value_name("PATH")
+                        .help("Directory containing project to build"),
+                )
+                .arg(
+                    Arg::with_name("targets")
+                        .value_name("TARGET")
+                        .multiple(true)
+                        .help("Target to resolve"),
                 ),
+        )
+        .subcommand(
+            SubCommand::with_name("cache-clear").about("Clear PyOxidizer's user-specific cache"),
         )
         .subcommand(
             SubCommand::with_name("find-resources")
@@ -235,67 +249,6 @@ pub fn run_cli() -> Result<()> {
                 ),
         )
         .subcommand(
-            SubCommand::with_name("build")
-                .setting(AppSettings::ArgRequiredElseHelp)
-                .about("Build a PyOxidizer enabled project")
-                .long_about(BUILD_ABOUT)
-                .arg(
-                    Arg::with_name("target_triple")
-                        .long("target-triple")
-                        .takes_value(true)
-                        .help("Rust target triple to build for"),
-                )
-                .arg(
-                    Arg::with_name("release")
-                        .long("release")
-                        .help("Build a release binary"),
-                )
-                .arg(
-                    Arg::with_name("path")
-                        .long("path")
-                        .takes_value(true)
-                        .default_value(".")
-                        .value_name("PATH")
-                        .help("Directory containing project to build"),
-                )
-                .arg(
-                    Arg::with_name("targets")
-                        .value_name("TARGET")
-                        .multiple(true)
-                        .help("Target to resolve"),
-                ),
-        )
-        .subcommand(
-            SubCommand::with_name("run")
-                .setting(AppSettings::TrailingVarArg)
-                .about("Run a target in a PyOxidizer configuration file")
-                .arg(
-                    Arg::with_name("target_triple")
-                        .long("target-triple")
-                        .takes_value(true)
-                        .help("Rust target triple to build for"),
-                )
-                .arg(
-                    Arg::with_name("release")
-                        .long("release")
-                        .help("Run a release binary"),
-                )
-                .arg(
-                    Arg::with_name("path")
-                        .long("path")
-                        .default_value(".")
-                        .value_name("PATH")
-                        .help("Directory containing project to build"),
-                )
-                .arg(
-                    Arg::with_name("target")
-                        .long("target")
-                        .takes_value(true)
-                        .help("Build target to run"),
-                )
-                .arg(Arg::with_name("extra").multiple(true)),
-        )
-        .subcommand(
             SubCommand::with_name("python-distribution-extract")
                 .about("Extract a Python distribution archive to a directory")
                 .arg(
@@ -335,6 +288,53 @@ pub fn run_cli() -> Result<()> {
                         .value_name("PATH")
                         .help("Path to Python distribution to analyze"),
                 ),
+        )
+        .subcommand(
+            SubCommand::with_name("run-build-script")
+                .setting(AppSettings::ArgRequiredElseHelp)
+                .about("Run functionality that a build script would perform")
+                .long_about(RUN_BUILD_SCRIPT_ABOUT)
+                .arg(
+                    Arg::with_name("build-script-name")
+                        .required(true)
+                        .help("Value to use for Rust build script"),
+                )
+                .arg(
+                    Arg::with_name("target")
+                        .long("target")
+                        .takes_value(true)
+                        .help("The config file target to resolve"),
+                ),
+        )
+        .subcommand(
+            SubCommand::with_name("run")
+                .setting(AppSettings::TrailingVarArg)
+                .about("Run a target in a PyOxidizer configuration file")
+                .arg(
+                    Arg::with_name("target_triple")
+                        .long("target-triple")
+                        .takes_value(true)
+                        .help("Rust target triple to build for"),
+                )
+                .arg(
+                    Arg::with_name("release")
+                        .long("release")
+                        .help("Run a release binary"),
+                )
+                .arg(
+                    Arg::with_name("path")
+                        .long("path")
+                        .default_value(".")
+                        .value_name("PATH")
+                        .help("Directory containing project to build"),
+                )
+                .arg(
+                    Arg::with_name("target")
+                        .long("target")
+                        .takes_value(true)
+                        .help("Build target to run"),
+                )
+                .arg(Arg::with_name("extra").multiple(true)),
         )
         .get_matches();
 
