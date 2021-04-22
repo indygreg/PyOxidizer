@@ -46,6 +46,7 @@ static RELEASE_ORDER: Lazy<Vec<&'static str>> = Lazy::new(|| {
         "tugger-apple",
         "tugger-windows",
         "tugger-windows-codesign",
+        "tugger-code-signing",
         "tugger-wix",
         "tugger",
         "text-stub-library",

@@ -14,6 +14,7 @@ members = [
     'tugger-apple-bundle',
     'tugger-apple-codesign',
     'tugger-binary-analysis',
+    'tugger-code-signing',
     'tugger-common',
     'tugger-debian',
     'tugger-file-manifest',
