@@ -1,163 +1,127 @@
 .. py:currentmodule:: starlark_tugger
 
-.. _tugger_starlark_type_snap_part:
-
 ============
 ``SnapPart``
 ============
 
-The ``SnapPart`` type represents a part entry in a ``snapcraft.yaml`` file.
-Specifically, this type represents the values of ``parts.<part-name>`` keys.
+.. py:class:: SnapPart
 
-See https://snapcraft.io/docs/snapcraft-yaml-reference for more documentation.
+    The ``SnapPart`` type represents a part entry in a ``snapcraft.yaml`` file.
+    Specifically, this type represents the values of ``parts.<part-name>`` keys.
 
-.. _tugger_starlark_type_snap_part_constructors:
+    See https://snapcraft.io/docs/snapcraft-yaml-reference for more documentation.
 
-Constructors
-============
+    Instances of ``SnapPart`` expose attributes that map to the keys within
+    ``parts.<part-name>`` entries in ``snapcraft.yaml`` configuration files.
 
-``SnapPart()``
---------------
+    Currently the attributes are write only.
 
-``SnapPart()`` creates an empty instance. It accepts no arguments.
+    Setting an attribute value to ``None`` has the side-effect of removing that
+    attribute from the serialized ``snapcraft.yaml`` file.
 
-.. _tugger_starlark_type_snap_part_attributes:
+    See https://snapcraft.io/docs/snapcraft-yaml-reference for detailed
+    documentation about what each attribute means.
 
-Attributes
-==========
+    .. py:method:: __init__() -> SnapPart
 
-Instances of ``SnapPart`` expose attributes that map to the keys within
-``parts.<part-name>`` entries in ``snapcraft.yaml`` configuration files.
+        ``SnapPart()`` creates an empty instance. It accepts no arguments.
 
-Currently the attributes are write only.
+    .. py:attribute:: after
 
-Setting an attribute value to ``None`` has the side-effect of removing that
-attribute from the serialized ``snapcraft.yaml`` file.
+        (``Optional[list[string]]``)
 
-See https://snapcraft.io/docs/snapcraft-yaml-reference for detailed
-documentation about what each attribute means.
+    .. py:attribute:: build_attributes
 
-``after``
----------
+        (``Optional[list[string]]``)
 
-(``Optional[list[string]]``)
+    .. py:attribute:: build_environment
 
-``build_attributes``
---------------------
+        (``Optional[list[dict[string, string]]]``)
 
-(``Optional[list[string]]``)
+    .. py:attribute:: build_packages
 
-``build_environment``
----------------------
+        (``Optional[list[string]]``)
 
-(``Optional[list[dict[string, string]]]``)
+    .. py:attribute:: build_snaps
 
-``build_packages``
-------------------
+        (``Optional[list[string]]``)
 
-(``Optional[list[string]]``)
+    .. py:attribute:: filesets
 
-``build_snaps``
----------------
+        (``Optional[dict[string, list[string]]]``)
 
-(``Optional[list[string]]``)
+    .. py:attribute:: organize
 
-``filesets``
-------------
+        (``Optional[dict[string, string]]``)
 
-(``Optional[dict[string, list[string]]]``)
+    .. py:attribute:: override_build
 
-``organize``
-------------
+        (``Optional[string]``)
 
-(``Optional[dict[string, string]]``)
+    .. py:attribute:: override_prime
 
-``override_build``
-------------------
+        (``Optional[string]``)
 
-(``Optional[string]``)
+    .. py:attribute:: override_pull
 
-``override_prime``
-------------------
+        (``Optional[string]``)
 
-(``Optional[string]``)
+    .. py:attribute:: override_stage
 
-``override_pull``
------------------
+        (``Optional[string]``)
 
-(``Optional[string]``)
+    .. py:attribute:: parse_info
 
-``override_stage``
-------------------
+        (``Optional[string]``)
 
-(``Optional[string]``)
+    .. py:attribute:: plugin
 
-``parse_info``
---------------
+        (``Optional[string]``)
 
-(``Optional[string]``)
+    .. py:attribute:: prime
 
-``plugin``
-----------
+        (``Optional[list[string]]``)
 
-(``Optional[string]``)
+    .. py:attribute:: source_branch
 
-``prime``
----------
+        (``Optional[string]``)
 
-(``Optional[list[string]]``)
+    .. py:attribute:: source_checksum
 
-``source_branch``
------------------
+        (``Optional[string]``)
 
-(``Optional[string]``)
+    .. py:attribute:: source_commit
 
-``source_checksum``
--------------------
+        (``Optional[string]``)
 
-(``Optional[string]``)
+    .. py:attribute:: source_depth
 
-``source_commit``
------------------
+        (``Optional[int]``)
 
-(``Optional[string]``)
+    .. py:attribute:: source_subdir
 
-``source_depth``
-----------------
+        (``Optional[string]``)
 
-(``Optional[int]``)
+    .. py:attribute:: source_tag
 
-``source_subdir``
------------------
+        (``Optional[string]``)
 
-(``Optional[string]``)
+    .. py:attribute:: source_type
 
-``source_tag``
---------------
+        (``Optional[string]``)
 
-(``Optional[string]``)
+    .. py:attribute:: source
 
-``source_type``
----------------
+        (``Optional[string]``)
 
-(``Optional[string]``)
+    .. py:attribute:: stage_packages
 
-``source``
-----------
+        (``Optional[list[string]]``)
 
-(``Optional[string]``)
+    .. py:attribute:: stage_snaps
 
-``stage_packages``
-------------------
+        (``Optional[list[string]]``)
 
-(``Optional[list[string]]``)
+    .. py:attribute:: stage
 
-``stage_snaps``
----------------
-
-(``Optional[list[string]]``)
-
-``stage``
----------
-
-(``Optional[list[string]]``)
+        (``Optional[list[string]]``)
