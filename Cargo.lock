@@ -3788,6 +3788,16 @@ dependencies = [
 [[package]]
 name = "tugger-code-signing"
 version = "0.1.0-pre"
+dependencies = [
+ "cryptographic-message-syntax",
+ "goblin",
+ "p12",
+ "thiserror",
+ "tugger-apple-bundle",
+ "tugger-apple-codesign",
+ "tugger-windows-codesign",
+ "yasna",
+]
 
 [[package]]
 name = "tugger-common"
