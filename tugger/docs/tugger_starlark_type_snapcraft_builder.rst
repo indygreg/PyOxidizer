@@ -1,3 +1,5 @@
+.. py:currentmodule:: starlark_tugger
+
 .. _tugger_starlark_type_snapcraft_builder:
 
 ====================
@@ -55,7 +57,7 @@ The following arguments are accepted:
 ----------------------------------------
 
 This method registers the content of a
-:ref:`tugger_starlark_type_file_manifest` with the build environment for
+:py:class:`FileManifest` with the build environment for
 this builder.
 
 When this instance is built, the content of the passed manifest will be
@@ -65,8 +67,7 @@ is building.
 The following arguments are accepted:
 
 ``manifest``
-   (``FileManifest``) A :ref:`tugger_starlark_type_file_manifest` defining
-   files to install in the build environment.
+   (:py:class:`FileManifest`) Defines files to install in the build environment.
 
 .. _tugger_starlark_type_snapcraft_builder_build:
 

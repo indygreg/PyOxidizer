@@ -1,3 +1,5 @@
+.. py:currentmodule:: starlark_tugger
+
 .. _tugger_starlark_type_snap_app:
 
 ===========

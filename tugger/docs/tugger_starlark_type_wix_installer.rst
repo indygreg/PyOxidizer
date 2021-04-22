@@ -1,3 +1,5 @@
+.. py:currentmodule:: starlark_tugger
+
 .. _tugger_starlark_type_wix_installer:
 
 ================
@@ -63,7 +65,7 @@ be processed as part of building the installer.
 Accepted arguments are:
 
 ``manifest``
-   (``FileManifest``) The file manifest defining additional files to
+   (:py:class:`FileManifest`) The file manifest defining additional files to
    install.
 
 .. _tugger_starlark_type_wix_installer.add_build_file:
@@ -115,15 +117,13 @@ This methods accepts the following arguments:
 ``WiXInstaller.add_install_files()``
 ------------------------------------
 
-Add files defined in a :ref:`tugger_starlark_type_file_manifest` to be installed
-by the installer.
+Add files defined in a :py:class:`FileManifest` to be installed by the installer.
 
 This method accepts the following arguments:
 
 ``manifest``
-   (``FileManifest``) A :ref:`tugger_starlark_type_file_manifest` defining files
-   to materialize in the installation directory. All these files will be installed
-   by the installer.
+   (:py:class:`FileManifest`) Defines files to materialize in the installation
+   directory. All these files will be installed by the installer.
 
 .. _tugger_starlark_type_wix_installer_add_msi_builder:
 
@@ -165,7 +165,7 @@ Accepted arguments are:
    ``<Product Manufacturer="...">`` attribute in the generated ``.wxs`` file.
 
 ``program_files``
-   (``FileManifest``) Files to materialize in the ``Program Files/<product_name>``
+   (:py:class:`FileManifest`) Files to materialize in the ``Program Files/<product_name>``
    directory upon install.
 
 .. _tugger_starlark_type_wix_installer_add_wxs_file:

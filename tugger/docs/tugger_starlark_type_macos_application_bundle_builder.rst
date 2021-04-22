@@ -1,3 +1,5 @@
+.. py:currentmodule:: starlark_tugger
+
 .. _tugger_starlark_type_macos_application_bundle_builder:
 
 =================================
@@ -49,13 +51,13 @@ Accepts a ``string`` argument defining the path to a file that will become the
 ``MacOsApplicationBundleBuilder.add_manifest()``
 ------------------------------------------------
 
-Adds file data to the bundle via a ``FileManifest`` instance. All files in the
-manifest will be materialized in the ``Contents/`` directory of the bundle.
+Adds file data to the bundle via a :py:class:`FileManifest` instance. All files
+in the manifest will be materialized in the ``Contents/`` directory of the bundle.
 
 Accepts the following arguments:
 
 ``manifest``
-   (``FileManifest``) Collection of files to materialize.
+   (:py:class:`FileManifest`) Collection of files to materialize.
 
 Bundles have a well-defined structure and files should only be materialized
 in certain locations. This method will allow you to materialize files in
@@ -82,13 +84,13 @@ Accepts the following arguments:
 ``MacOsApplicationBundleBuilder.add_macos_manifest()``
 ------------------------------------------------------
 
-Adds a ``FileManifest`` of content to be materialized in the ``Contents/MacOS``
-directory.
+Adds a :py:class:`FileManifest` of content to be materialized in the
+``Contents/MacOS`` directory.
 
 Accepts the following arguments:
 
 ``manifest``
-   (``FileManifest``) Collection of files to materialize.
+   (:py:class:`FileManifest`) Collection of files to materialize.
 
 .. _tugger_starlark_type_macos_application_bundle_builder.add_resources_file:
 
@@ -111,13 +113,13 @@ Accepts the following arguments:
 ``MacOsApplicationBundleBuilder.add_resources_manifest()``
 ----------------------------------------------------------
 
-Adds a ``FileManifest`` of content to be materialized in the
+Adds a :py:class:`FileManifest` of content to be materialized in the
 ``Contents/Resources`` directory.
 
 Accepts the following arguments:
 
 ``manifest``
-   (``FileManifest``) Collection of files to materialize.
+   (:py:class:`FileManifest`) Collection of files to materialize.
 
 .. _tugger_starlark_type_macos_application_bundle_builder.set_info_plist_key:
 

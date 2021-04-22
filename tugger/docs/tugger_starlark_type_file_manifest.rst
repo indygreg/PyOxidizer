@@ -1,59 +1,49 @@
-.. _tugger_starlark_type_file_manifest:
+.. py:currentmodule:: starlark_tugger
 
 ================
 ``FileManifest``
 ================
 
-The ``FileManifest`` type represents a set of files and their content.
+.. py:class:: FileManifest
 
-``FileManifest`` instances are used to represent things like the final
-filesystem layout of an installed application.
+    The ``FileManifest`` type represents a set of files and their content.
 
-Conceptually, a ``FileManifest`` is a dict mapping relative paths to
-file content.
+    ``FileManifest`` instances are used to represent things like the final
+    filesystem layout of an installed application.
 
-Methods
-=======
+    Conceptually, a ``FileManifest`` is a dict mapping relative paths to
+    file content.
 
-.. _tugger_starlark_type_file_manifest_add_manifest:
+    .. py:method:: add_manifest(manifest: FileManifest)
 
-``FileManifest.add_manifest()``
--------------------------------
+        This method overlays another :py:class`FileManifest` on this one. If the
+        other manifest provides a path already in this manifest, its content
+        will be replaced by what is in the other manifest.
 
-This method overlays another ``FileManifest`` on this one. If the other
-manifest provides a path already in this manifest, its content will be
-replaced by what is in the other manifest.
+    .. py:method:: add_path(path: str, strip_prefix: string, force_read: bool = False)
 
-.. _tugger_starlark_type_file_manifest_add_path:
+        This method adds a file on the filesystem to the manifest.
 
-``FileManifest.add_path()``
----------------------------
+        The following arguments are accepted:
 
-This method adds a file on the filesystem to the manifest.
+        ``path``
+           (``string``) The filesystem path to add.
 
-The following arguments are accepted:
+        ``strip_prefix``
+           (``string``) The string prefix to strip from the path. The remaining path
+           will be stored in the manifest.
 
-``path``
-   (``string``) The filesystem path to add.
+        ``force_read``
+           (``bool``) Whether to read the file data into memory now.
 
-``strip_prefix``
-   (``string``) The string prefix to strip from the path. The remaining path
-   will be stored in the manifest.
+           This can be set when reading temporary files.
 
-``force_read``
-   (``bool``) Whether to read the file data into memory now.
+    .. py:method:: install(path: str, replace: bool = True)
 
-   This can be set when reading temporary files.
+        This method writes the content of the :py:class:`FileManifest` to a
+        directory specified by ``path``. The path is evaluated relative to the
+        path specified by ``BUILD_PATH``.
 
-   Defaults to ``False``.
-
-``FileManifest.install()``
---------------------------
-
-This method writes the content of the ``FileManifest`` to a directory
-specified by ``path``. The path is evaluated relative to the path
-specified by ``BUILD_PATH``.
-
-If ``replace`` is True (the default), the destination directory will
-be deleted and the final state of the destination directory should
-exactly match the state of the ``FileManifest``.
+        If ``replace`` is True (the default), the destination directory will
+        be deleted and the final state of the destination directory should
+        exactly match the state of the :py:class:`FileManifest`.

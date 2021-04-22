@@ -1,3 +1,5 @@
+.. py:currentmodule:: starlark_tugger
+
 .. _tugger_starlark_globals:
 
 ==============
@@ -22,7 +24,7 @@ Tugger's Starlark dialect defines the following custom types:
 :ref:`tugger_starlark_type_file_content`
    Represents the content of a file on the filesystem.
 
-:ref:`tugger_starlark_type_file_manifest`
+:py:class:`FileManifest`
    Represents a mapping of filenames to file content.
 
 :ref:`tugger_starlark_type_snap_app`

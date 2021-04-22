@@ -1,3 +1,5 @@
+.. py:currentmodule:: starlark_tugger
+
 .. _tugger_starlark_filesystem:
 
 =============================================
@@ -10,7 +12,7 @@ Functions for Interacting with the Filesystem
 ==========
 
 The ``glob()`` function resolves file patterns to a
-:ref:`tugger_starlark_type_file_manifest`.
+:py:class:`starlark_tugger.FileManifest`.
 
 This function accepts the following arguments:
 
@@ -31,4 +33,4 @@ This function accepts the following arguments:
    matched files. ``strip_prefix`` is stripped after ``include``
    and ``exclude`` are processed.
 
-Returns a :ref:`tugger_starlark_type_file_manifest`.
+Returns a :py:class:`starlark_tugger.FileManifest`.

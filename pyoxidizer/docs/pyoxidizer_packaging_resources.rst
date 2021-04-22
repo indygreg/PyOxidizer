@@ -125,7 +125,7 @@ The following Starlark types represent individual resources:
 There are also Starlark types that are logically containers for multiple
 resources:
 
-:ref:`tugger_starlark_type_file_manifest`
+:py:class:`starlark_tugger.FileManifest`
    Holds a mapping of relative filesystem paths to ``FileContent`` instances.
    This type effectively allows modeling a directory tree.
 

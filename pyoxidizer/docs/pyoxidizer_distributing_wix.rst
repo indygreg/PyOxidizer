@@ -26,17 +26,18 @@ a method on a Python Starlark type to convert it into an installer.
 PyOxidizer provides the following extensions and integrations with
 :ref:`Tugger's Starlark dialect <tugger_starlark>`:
 
+
 :ref:`config_type_file_manifest.add_python_resource`
    Adds a Python resource type to Tugger's
-   :ref:`tugger_starlark_type_file_manifest` type.
+   :py:class:`starlark_tugger.FileManifest`.
 
 :ref:`config_type_file_manifest.add_python_resources`
    Adds an iterable of Python resource types to Tugger's
-   :ref:`tugger_starlark_type_file_manifest` type.
+   :py:class:`starlark_tugger.FileManifest` type.
 
 :ref:`config_python_executable_to_file_manifest`
    Converts a :ref:`config_type_python_executable` to a
-   :ref:`tugger_starlark_type_file_manifest`. Enables materializing an
+   :py:class:`starlark_tugger.FileManifest`. Enables materializing an
    executable/application as a set of files, which Tugger can easily operate
    against.
 

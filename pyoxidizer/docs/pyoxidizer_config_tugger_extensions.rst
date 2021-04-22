@@ -12,8 +12,8 @@ with addition methods.
 ``FileManifest.add_python_resource()``
 ======================================
 
-This method adds a Python resource to a ``FileManifest`` instance in
-a specified directory prefix.
+This method adds a Python resource to a :py:class:`starlark_tugger.FileManifest`
+instance in a specified directory prefix.
 
 Arguments:
 
@@ -33,9 +33,10 @@ type or action in the filesystem next to an application binary.
 ``FileManifest.add_python_resources()``
 =======================================
 
-This method adds an iterable of Python resources to a ``FileManifest``
-instance in a specified directory prefix. This is effectively a wrapper
-for ``for value in values: self.add_python_resource(prefix, value)``.
+This method adds an iterable of Python resources to a
+:py:class:`starlark_tugger.FileManifest` instance in a specified directory
+prefix. This is effectively a wrapper for
+``for value in values: self.add_python_resource(prefix, value)``.
 
 For example, to place the Python distribution's standard library Python
 source modules in a directory named ``lib``::

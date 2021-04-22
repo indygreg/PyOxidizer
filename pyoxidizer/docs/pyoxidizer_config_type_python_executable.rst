@@ -193,7 +193,8 @@ part of the operation. The types of these objects can be
 :ref:`config_type_python_module_source`,
 :ref:`config_type_python_package_resource`, etc.
 
-The returned resources are typically added to a ``FileManifest`` or
+The returned resources are typically added to a
+:py:class:`starlark_tugger.FileManifest` or
 ``PythonExecutable`` to make them available to a packaged
 application.
 
@@ -230,7 +231,8 @@ Returns a ``list`` of objects representing Python resources found in the
 virtualenv. The types of these objects can be ``PythonModuleSource``,
 ``PythonPackageResource``, etc.
 
-The returned resources are typically added to a ``FileManifest`` or
+The returned resources are typically added to a
+:py:class:`starlark_tugger.FileManifest` or
 ``PythonExecutable`` to make them available to a packaged application.
 
 .. _config_python_executable_read_virtualenv:
@@ -260,7 +262,8 @@ Returns a ``list`` of objects representing Python resources found in the virtual
 The types of these objects can be ``PythonModuleSource``,
 ``PythonPackageResource``, etc.
 
-The returned resources are typically added to a ``FileManifest`` or
+The returned resources are typically added to a
+:py:class:`starlark_tugger.FileManifest` or
 ``PythonExecutable`` to make them available to a packaged application.
 
 .. _config_python_executable_setup_py_install:
@@ -289,7 +292,8 @@ Returns a ``list`` of objects representing Python resources installed
 as part of the operation. The types of these objects can be
 ``PythonModuleSource``, ``PythonPackageResource``, etc.
 
-The returned resources are typically added to a ``FileManifest`` or
+The returned resources are typically added to a
+:py:class:`starlark_tugger.FileManifest` or
 ``PythonExecutable`` to make them available to a packaged application.
 
 .. _config_python_executable_add_python_resource:
@@ -366,16 +370,18 @@ See the :ref:`config_type_python_embedded_resources` type documentation for more
 ``PythonExecutable.to_file_manifest()``
 ---------------------------------------
 
-This method transforms the ``PythonExecutable`` instance to a ``FileManifest``.
-The ``FileManifest`` is populated with the build executable and any file-based
-resources that are registered with the resource collector. A ``libpython``
-shared library will also be present depending on build settings.
+This method transforms the ``PythonExecutable`` instance to a
+:py:class:`starlark_tugger.FileManifest`.
+The :py:class:`starlark_tugger.FileManifest` is populated with the build
+executable and any file-based resources that are registered with the
+resource collector. A ``libpython`` shared library will also be present
+depending on build settings.
 
 This method accepts the following arguments:
 
 ``prefix``
-   (``string``) The directory prefix of files in the ``FileManifest``. Use
-   ``.`` to denote no prefix.
+   (``string``) The directory prefix of files in the
+   :py:class:`starlark_tugger.FileManifest`. Use ``.`` to denote no prefix.
 
 .. _config_python_executable_to_wix_bundle_builder:
 

@@ -129,22 +129,24 @@ for more on this topic, including many examples.
 Install Manifests Copy Files Next to Your Application
 =====================================================
 
-The :ref:`tugger_starlark_type_file_manifest` Starlark type represents a
-collection of files and their content. When ``FileManifest`` instances are
-returned from a target function, their build action results in their contents
+The :py:class:`starlark_tugger.FileManifest` Starlark type represents a
+collection of files and their content. When
+:py:class:`starlark_tugger.FileManifest` instances are returned from a
+target function, their build action results in their contents
 being manifested in a directory having the name of the build target.
 
-``FileManifest`` instances can be used to construct custom file *install
-layouts*.
+:py:class:`starlark_tugger.FileManifest` instances can be used to
+construct custom file *install layouts*.
 
 Say you have an existing directory tree of files you want to copy
 next to your built executable defined by the ``PythonExecutable`` type.
 
 The :ref:`glob() <tugger_starlark_glob>` function can be used to discover
-existing files on the filesystem and turn them into a ``FileManifest``. You
-can then return this ``FileManifest`` directory or overlay it onto another
-instance using :ref:`tugger_starlark_type_file_manifest_add_manifest`. Here's an
-example:
+existing files on the filesystem and turn them into a
+:py:class:`starlark_tugger.FileManifest`. You can then return this
+:py:class:`starlark_tugger.FileManifest` directory or overlay it onto another
+instance using
+:py:meth:`starlark_tugger.FileManifest.add_manifest`. Here's an example:
 
 .. code-block:: python
 
@@ -169,9 +171,9 @@ example:
    register_target("install", make_install, depends=["exe"], default=True)
 
 We introduce a new ``install`` target and ``make_install()`` function which
-returns a ``FileManifest``. It adds the ``PythonExecutable`` (represented
-by the ``exe`` argument/variable) to that manifest in the root directory,
-signified by ``.``.
+returns a :py:class:`starlark_tugger.FileManifest`. It adds the
+``PythonExecutable`` (represented by the ``exe`` argument/variable) to
+that manifest in the root directory, signified by ``.``.
 
 Next, it calls ``glob()`` to find all files in the
 ``/path/to/project/templates/`` directory tree, strips the path prefix

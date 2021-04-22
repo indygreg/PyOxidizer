@@ -1,3 +1,5 @@
+.. py:currentmodule:: starlark_tugger
+
 .. _tugger_starlark_type_wix_msi_builder:
 
 =================
@@ -149,14 +151,13 @@ Sections below document methods available on ``WiXMSIBuilder`` instances.
 ----------------------------------------------
 
 This method registers the content of a
-:ref:`tugger_starlark_type_file_manifest` to be installed in the *Program Files*
+:py:class:`FileManifest` to be installed in the *Program Files*
 directory for this application.
 
 This method accepts the following arguments:
 
 ``manifest``
-   (``FileManifest``) A :ref:`tugger_starlark_type_file_manifest` containing files
-   to register for installation.
+   (:py:class:`FileManifest`) Files to register for installation.
 
 .. _tugger_starlark_type_wix_msi_builder.add_visual_cpp_redistributable:
 

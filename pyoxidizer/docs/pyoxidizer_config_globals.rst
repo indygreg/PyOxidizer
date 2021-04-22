@@ -34,7 +34,7 @@ PyOxidizer's Starlark dialect defines the following custom types:
    (Unlike :ref:`config_type_file`, this does not track the filename
    internally.)
 
-:ref:`tugger_starlark_type_file_manifest`
+:py:class:`starlark_tugger.FileManifest`
    Represents a mapping of filenames to file content.
 
 :ref:`config_type_python_distribution`
@@ -143,7 +143,7 @@ behavior.
 
 The following types have special behavior registered:
 
-:ref:`tugger_starlark_type_file_manifest`
+:py:class:`starlark_tugger.FileManifest`
    Build behavior is to materialize all files in the file manifest.
 
    Run behavior is to run the last added :ref:`config_type_python_executable`
