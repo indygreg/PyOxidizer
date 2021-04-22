@@ -30,7 +30,7 @@ Tugger's Starlark dialect defines the following custom types:
 :py:class:`MacOsApplicationBundleBuilder`
    Used to create macOS Application Bundles (i.e. ``.app`` directories).
 
-:ref:`tugger_starlark_type_snap_app`
+:py:class:`SnapApp`
    Represents an application inside a ``snapcraft.yaml`` file.
 
 :ref:`tugger_starlark_type_snap_part`

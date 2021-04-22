@@ -1,138 +1,108 @@
 .. py:currentmodule:: starlark_tugger
 
-.. _tugger_starlark_type_snap_app:
-
 ===========
 ``SnapApp``
 ===========
 
-The ``SnapApp`` type represents an application entry in a ``snapcraft.yaml``
-file. Specifically, this type represents the values of ``apps.<app-name>`` keys.
+.. py:class:: SnapApp
 
-See https://snapcraft.io/docs/snapcraft-yaml-reference for more documentation.
+    The ``SnapApp`` type represents an application entry in a ``snapcraft.yaml``
+    file. Specifically, this type represents the values of ``apps.<app-name>`` keys.
 
-.. _tugger_starlark_type_snap_app_constructors:
+    See https://snapcraft.io/docs/snapcraft-yaml-reference for more documentation.
 
-Constructors
-============
+    Instances of ``SnapApp`` expose attributes that map to the keys within
+    ``apps.<app-name>`` entries in ``snapcraft.yaml`` configuration files.
 
-``SnapApp()``
--------------
+    Currently the attributes are write only.
 
-``SnapApp()`` creates an empty instance. It accepts no arguments.
+    Setting an attribute value to ``None`` has the side-effect of removing that
+    attribute from the serialized ``snapcraft.yaml`` file.
 
-.. _tugger_starlark_type_snap_app_attributes:
+    See https://snapcraft.io/docs/snapcraft-yaml-reference for detailed
+    documentation about what each attribute means.
 
-Attributes
-==========
 
-Instances of ``SnapApp`` expose attributes that map to the keys within
-``apps.<app-name>`` entries in ``snapcraft.yaml`` configuration files.
+    .. py:method:: __init__() -> SnapApp
 
-Currently the attributes are write only.
+        ``SnapApp()`` creates an empty instance. It accepts no arguments.
 
-Setting an attribute value to ``None`` has the side-effect of removing that
-attribute from the serialized ``snapcraft.yaml`` file.
+    .. py:attribute:: adapter
 
-See https://snapcraft.io/docs/snapcraft-yaml-reference for detailed
-documentation about what each attribute means.
+        (``Optional[str]``)
 
-``adapter``
------------
+    .. py:attribute:: autostart
 
-(``Optional[string]``)
+        (``Optional[str]``)
 
-``autostart``
--------------
+    .. py:attribute:: command_chain
 
-(``Optional[string]``)
+        (``Optional[list[str]]``)
 
-``command_chain``
------------------
+    .. py:attribute:: command
 
-(``Optional[list[string]]``)
+        (``Optional[str]``)
 
-``command``
------------
+    .. py:attribute:: common_id
 
-(``Optional[string]``)
+        (``Optional[str]``)
 
-``common_id``
--------------
+    .. py:attribute:: daemon
 
-(``Optional[string]``)
+        (``Optional[str]``)
 
-``daemon``
-----------
+    .. py:attribute:: desktop
 
-(``Optional[string]``)
+        (``Optional[str]``)
 
-``desktop``
------------
+    .. py:attribute:: environment
 
-(``Optional[string]``)
+        (``Optional[list[str]]``)
 
-``environment``
----------------
+    .. py:attribute:: extensions
 
-(``Optional[list[string]]``)
+        (``Optional[list[str]]``)
 
-``extensions``
---------------
+    .. py:attribute:: listen_stream
 
-(``Optional[list[string]]``)
+        (``Optional[string]``)
 
-``listen_stream``
------------------
+    .. py:attribute:: passthrough
 
-(``Optional[string]``)
+        (``Optional[dict[string, str]]``)
 
-``passthrough``
----------------
+    .. py:attribute:: plugs
 
-(``Optional[dict[string, string]]``)
+        (``Optional[list[str]]``)
 
-``plugs``
----------
+    .. py:attribute:: post_stop_command
 
-(``Optional[list[string]]``)
+        (``Optional[str]``)
 
-``post_stop_command``
----------------------
+    .. py:attribute:: restart_condition
 
-(``Optional[string]``)
+        (``Optional[str]``)
 
-``restart_condition``
----------------------
+    .. py:attribute:: slots
 
-(``Optional[string]``)
+        (``Optional[list[str]]``)
 
-``slots``
----------
+    .. py:attribute:: stop_command
 
-(``Optional[list[string]]``)
+        (``Optional[str]``)
 
-``stop_command``
-----------------
+    .. py:attribute:: stop_timeout
 
-(``Optional[string]``)
+        (``Optional[str]``)
 
-``stop_timeout``
-----------------
+    .. py:attribute:: timer
 
-(``Optional[string]``)
+        (``Optional[str]``)
 
-``timer``
----------
+    .. py:attribute:: socket_mode
 
-(``Optional[string]``)
+        (``Optional[int]``)
 
-``socket_mode``
----------------
+    .. py:attribute:: socket
 
-(``Optional[int]``)
-
-``socket``
-----------
-
-(``Optional[dict[string]]``)
+        (``Optional[dict[str]]``)
