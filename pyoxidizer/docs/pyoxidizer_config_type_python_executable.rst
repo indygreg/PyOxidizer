@@ -396,18 +396,18 @@ the Visual C++ Redistributable as well as an MSI for the build application.
 This method accepts the following arguments:
 
 ``id_prefix``
-   See :ref:`tugger_starlark_type_wix_msi_builder_constructors` for usage.
+   See :py:meth:`starlark_tugger.WiXMSIBuilder.__init__` for usage.
 ``product_name``
-   See :ref:`tugger_starlark_type_wix_msi_builder_constructors` for usage.
+   See :py:meth:`starlark_tugger.WiXMSIBuilder.__init__` for usage.
 ``product_version``
-   See :ref:`tugger_starlark_type_wix_msi_builder_constructors` for usage.
+   See :py:meth:`starlark_tugger.WiXMSIBuilder.__init__` for usage.
 ``product_manufacturer``
-   See :ref:`tugger_starlark_type_wix_msi_builder_constructors` for usage.
+   See :py:meth:`starlark_tugger.WiXMSIBuilder.__init__` for usage.
 ``msi_builder_callback``
    (``function``) A callable function that can be used to modify the
-   :ref:`tugger_starlark_type_wix_msi_builder` constructed for the application.
+   :py:class:`starlark_tugger.WiXMSIBuilder` constructed for the application.
 
-   The function will receive the :ref:`tugger_starlark_type_wix_msi_builder` as
+   The function will receive the :py:class:`starlark_tugger.WiXMSIBuilder` as
    its single argument. The return value is ignored.
 
 The returned value can be further customized before it is built. See
@@ -427,21 +427,21 @@ The returned value can be further customized before it is built. See
 -----------------------------------------
 
 This method transforms the ``PythonExecutable`` instance into a
-:ref:`tugger_starlark_type_wix_msi_builder` instance. The returned value can
+:py:class:`starlark_tugger.WiXMSIBuilder` instance. The returned value can
 be used to generate a Windows MSI installer.
 
 This method accepts the following arguments:
 
 ``id_prefix``
-   See :ref:`tugger_starlark_type_wix_msi_builder_constructors` for usage.
+   See :py:meth:`starlark_tugger.WiXMSIBuilder.__init__` for usage.
 ``product_name``
-   See :ref:`tugger_starlark_type_wix_msi_builder_constructors` for usage.
+   See :py:meth:`starlark_tugger.WiXMSIBuilder.__init__` for usage.
 ``product_version``
-   See :ref:`tugger_starlark_type_wix_msi_builder_constructors` for usage.
+   See :py:meth:`starlark_tugger.WiXMSIBuilder.__init__` for usage.
 ``product_manufacturer``
-   See :ref:`tugger_starlark_type_wix_msi_builder_constructors` for usage.
+   See :py:meth:`starlark_tugger.WiXMSIBuilder.__init__` for usage.
 
 The MSI installer configuration can be customized. See the
-:ref:`tugger_starlark_type_wix_msi_builder` type documentation for more.
+:py:class:`starlark_tugger.WiXMSIBuilder` type documentation for more.
 
 The MSI installer will **not** materialize the Visual C++ Runtime DLL(s).

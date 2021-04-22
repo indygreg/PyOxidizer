@@ -51,9 +51,9 @@ PyOxidizer provides the following extensions and integrations with
 
 :ref:`config_python_executable_to_wix_msi_builder`
    Converts a :ref:`config_type_python_executable` to a
-   :ref:`tugger_starlark_type_wix_msi_builder`.
+   :py:class:`starlark_tugger.WIXMSIBuilder`.
 
-   This method will produce a :ref:`tugger_starlark_type_wix_msi_builder`
+   This method will produce a :py:class:`starlark_tugger.WIXMSIBuilder`
    that is pre-configured to install a Python application and all its
    support files. The MSI will install all files composing the Python
    application, excluding system-level dependencies.
@@ -89,12 +89,12 @@ and this installer will be executed as part of running your application's
 installer. For MSI installers, Tugger will attempt to locate the
 ``vcruntimeXXX.dll`` files on your system (this requires an
 installation of Visual Studio) and copy these files next to your
-built/installed executable.
+built/installed executable.s
 
 If you are not using one of the aforementioned APIs to create your
 installer, you will need to explicitly add the Visual C++ Redistributable
 to your installer.
-The :ref:`tugger_starlark_type_wix_msi_builder.add_visual_cpp_redistributable`
+The :py:meth:`starlark_tugger.WiXMSIBuilder.add_visual_cpp_redistributable`
 and :py:meth:`starlark_tugger.WiXBundleBuilder.add_vc_redistributable`
 Starlark methods can be called to do this. (PyOxidizer's Starlark methods
 for creating WiX installers effectively call these methods.)

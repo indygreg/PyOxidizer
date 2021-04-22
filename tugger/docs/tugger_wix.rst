@@ -52,11 +52,10 @@ which.
    for invoking ``candle.exe`` and ``light.exe``.
 
 ``WiXSimpleMSIBuilder``
-   The ``WiXSimpleMSIBuilder`` Rust struct and
-   :ref:`tugger_starlark_type_wix_msi_builder` Starlark type provide a high-level
-   interface for generating an MSI based installer with common features. It enables
-   you to generate a ``.wxs`` file by providing a few parameters, without having to
-   know WiX XML.
+   The ``WiXSimpleMSIBuilder`` Rust struct and :py:class:`WiXMSIBuilder`
+   Starlark type provide a high-level interface for generating an MSI based
+   installer with common features. It enables you to generate a ``.wxs`` file by
+   providing a few parameters, without having to know WiX XML.
 
    A ``WiXSimpleMSIBuilder`` ultimately is converted to a ``WiXInstallerBuilder``.
 

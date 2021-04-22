@@ -48,7 +48,7 @@ Tugger's Starlark dialect defines the following custom types:
 :py:class:`WiXInstaller`
    Produce a Windows installer using WiX.
 
-:ref:`tugger_starlark_type_wix_msi_builder`
+:py:class:`WiXMSIBuilder`
    Produce a Windows MSI installer with common installer features using WiX.
 
 .. _tugger_starlark_global_functions:
