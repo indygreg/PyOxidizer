@@ -58,5 +58,5 @@ Global Functions
 
 Tugger's Starlark dialect defines the following global functions:
 
-:ref:`tugger_starlark_glob`
+:py:func:`glob`
    Collect files from the filesystem.

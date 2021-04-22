@@ -6,31 +6,23 @@
 Functions for Interacting with the Filesystem
 =============================================
 
-.. _tugger_starlark_glob:
+.. py:function:: glob(include=List[string], exclude=Optional[List[string]], strip_prefix=Optional[string]) -> FileManifest
 
-``glob()``
-==========
+    The ``glob()`` function resolves file patterns to a
+    :py:class:`starlark_tugger.FileManifest`.
 
-The ``glob()`` function resolves file patterns to a
-:py:class:`starlark_tugger.FileManifest`.
+    This function accepts the following arguments:
 
-This function accepts the following arguments:
+    ``include``
+       Defines file patterns that will be matched using the ``glob`` Rust crate.
+       If patterns begin with ``/`` or look like a filesystem absolute path,
+       they are absolute. Otherwise they are evaluated relative to the directory
+       of the current config file.
 
-``include``
-   (``list`` of ``string``) Defines file patterns that will be
-   matched using the ``glob`` Rust crate. If patterns begin with
-   ``/`` or look like a filesystem absolute path, they are absolute.
-   Otherwise they are evaluated relative to the directory of the
-   current config file.
+    ``exclude``
+       File patterns used to exclude files from the result. All patterns in
+       ``include`` are evaluated before ``exclude``.
 
-``exclude``
-   (``list`` of ``string`` or ``None``) File patterns used to
-   exclude files from the result. All patterns in ``include`` are
-   evaluated before ``exclude``.
-
-``strip_prefix``
-   (``string`` or ``None``) Prefix to strip from the beginning of
-   matched files. ``strip_prefix`` is stripped after ``include``
-   and ``exclude`` are processed.
-
-Returns a :py:class:`starlark_tugger.FileManifest`.
+    ``strip_prefix``
+       Prefix to strip from the beginning of matched files. ``strip_prefix`` is
+       stripped after ``include`` and ``exclude`` are processed.

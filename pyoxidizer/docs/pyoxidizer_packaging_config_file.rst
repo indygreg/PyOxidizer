@@ -141,7 +141,7 @@ construct custom file *install layouts*.
 Say you have an existing directory tree of files you want to copy
 next to your built executable defined by the ``PythonExecutable`` type.
 
-The :ref:`glob() <tugger_starlark_glob>` function can be used to discover
+The :py:func:`starlark_tugger.glob` function can be used to discover
 existing files on the filesystem and turn them into a
 :py:class:`starlark_tugger.FileManifest`. You can then return this
 :py:class:`starlark_tugger.FileManifest` directory or overlay it onto another
