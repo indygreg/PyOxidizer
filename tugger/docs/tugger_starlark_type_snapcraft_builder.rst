@@ -17,13 +17,12 @@ Constructors
 ``SnapcraftBuilder()``
 ----------------------
 
-``SnapcraftBuilder()`` constructs a new instance from a
-:ref:`tugger_starlark_type_snap`.
+``SnapcraftBuilder()`` constructs a new instance from a :py:class:`Snap`.
 
 It accepts the following arguments:
 
 ``snap``
-   (``Snap``) The :ref:`tugger_starlark_type_snap` defining the configuration
+   (``Snap``) The ::py:class:`Snap` defining the configuration
    to be used.
 
 .. _tugger_starlark_type_snapcraft_builder_methods:

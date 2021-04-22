@@ -1,156 +1,115 @@
 .. py:currentmodule:: starlark_tugger
 
-.. _tugger_starlark_type_snap:
-
 ========
 ``Snap``
 ========
 
-The ``Snap`` type represents an entire ``snapcraft.yaml`` file.
+.. py:class:: Snap
 
-See https://snapcraft.io/docs/snapcraft-yaml-reference for more documentation.
+    The ``Snap`` type represents an entire ``snapcraft.yaml`` file.
 
-.. _tugger_starlark_type_snap_constructors:
+    See https://snapcraft.io/docs/snapcraft-yaml-reference for more documentation.
 
-Constructors
-============
+    Instances of ``Snap`` expose attributes that map to the keys within
+    ``snapcraft.yaml`` files.
 
-``Snap()``
-----------
+    Currently the attributes are write only.
 
-``Snap()`` creates an instance initialized with required parameters. It accepts
-the following arguments:
+    Setting an attribute value to ``None`` has the side-effect of removing that
+    attribute from the serialized ``snapcraft.yaml`` file.
 
-``name``
-   (``string``)
-``version``
-   (``string``)
-``summary``
-   (``string``)
-``description``
-   (``string``)
+    See https://snapcraft.io/docs/snapcraft-yaml-reference for detailed
+    documentation about what each attribute means.
 
-.. _tugger_starlark_type_snap_attributes:
+    .. py:method:: __init__(name: str, version: str, summary: str, description: str)
 
-Attributes
-==========
+        Creates an instance initialized with required parameters. It accepts
+        the following arguments:
 
-Instances of ``Snapt`` expose attributes that map to the keys within ``snapcraft.yaml``
-files.
+        ``name``
+        ``version``
+        ``summary``
+        ``description``
 
-Currently the attributes are write only.
+    .. py:attribute:: adopt_info
 
-Setting an attribute value to ``None`` has the side-effect of removing that
-attribute from the serialized ``snapcraft.yaml`` file.
+        (``Optional[str]``)
 
-See https://snapcraft.io/docs/snapcraft-yaml-reference for detailed
-documentation about what each attribute means.
+    .. py:attribute:: apps
 
-``adopt_info``
---------------
+        (``Optional[dict[str, SnapApp]]``)
 
-(``Optional[string]``)
+    .. py:attribute:: architectures
 
-``apps``
---------
+        (``Optional[dict["build_on" | "run_on", str]]``)
 
-(``Optional[dict[string, SnapApp]]``)
+    .. py:attribute:: assumes
 
-``architectures``
------------------
+        (``Optional[list[str]]``)
 
-(``Optional[dict["build_on" | "run_on", string]]``)
+    .. py:attribute:: base
 
-``assumes``
------------
+        (``Optional[str]``)
 
-(``Optional[list[string]]``)
+    .. py:attribute:: confinement
 
-``base``
---------
+        (``Optional[str]``)
 
-(``Optional[string]``)
+    .. py:attribute:: description
 
-``confinement``
----------------
+        (``string``)
 
-(``Optional[string]``)
+    .. py:attribute:: grade
 
-``description``
----------------
+        (``Optional[str]``)
 
-(``string``)
+    .. py:attribute:: icon
 
-``grade``
----------
+        (``Optional[str]``)
 
-(``Optional[string]``)
+    .. py:attribute:: license
 
-``icon``
---------
+        (``Optional[str]``)
 
-(``Optional[string]``)
+    .. py:attribute:: name
 
-``license``
------------
+        (``str``)
 
-(``Optional[string]``)
+    .. py:attribute:: passthrough
 
-``name``
---------
+        (``Optional[dict[str, str]]``)
 
-(``string``)
+    .. py:attribute:: parts
 
-``passthrough``
----------------
+        (``Optional[dict[str, SnapPart]]``)
 
-(``Optional[dict[string, string]]``)
+    .. py:attribute:: plugs
 
-``parts``
----------
+        (``Optional[dict[str, list[string]]]``)
 
-(``Optional[dict[string, SnapPart]]``)
+    .. py:attribute:: slots
 
-``plugs``
----------
+        (``Optional[dict[str, list[string]]]``)
 
-(``Optional[dict[string, list[string]]]``)
+    .. py:attribute:: summary
 
-``slots``
----------
+        (``str``)
 
-(``Optional[dict[string, list[string]]]``)
+    .. py:attribute:: title
 
-``summary``
------------
+        (``Optional[str]``)
 
-(``string``)
+    .. py:attribute:: type
 
-``title``
----------
+        (``Optional[str]``)
 
-(``Optional[string]``)
+    .. py:attribute:: version
 
-``type``
---------
+        (``str``)
 
-(``Optional[string]``)
+    .. py:method:: to_builder() -> SnapcraftBuilder
 
-``version``
------------
+        Converts this instance into a :py:class:`SnapcraftBuilder`.
 
-(``string``)
-
-.. _tugger_starlark_type_snap_methods:
-
-Methods
-=======
-
-``Snap.to_builder()``
----------------------
-
-Converts this instance into a :ref:`tugger_starlark_type_snapcraft_builder`.
-
-This method accepts no arguments and returns a
-:ref:`tugger_starlark_type_snapcraft_builder`. It is equivalent to calling
-``SnapcraftBuilder(self)``.
+        This method accepts no arguments and is equivalent to calling
+        ``SnapcraftBuilder(self)``.

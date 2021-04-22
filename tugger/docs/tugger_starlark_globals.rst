@@ -36,7 +36,7 @@ Tugger's Starlark dialect defines the following custom types:
 :ref:`tugger_starlark_type_snap_part`
    Represents a part inside a ``snapcraft.yaml`` file.
 
-:ref:`tugger_starlark_type_snap`
+:py:class:`Snap`
    Represents a ``snapcraft.yaml`` file.
 
 :ref:`tugger_starlark_type_snapcraft_builder`
