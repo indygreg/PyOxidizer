@@ -133,7 +133,7 @@ The following Starlark functionality can be used to bundle the
 Visual C++ Redistributable installer as part of your application installer:
 
 * :ref:`config_python_executable_to_wix_bundle_builder`
-* :ref:`tugger_starlark_type_wix_bundle_builder.add_vc_redistributable`
+* :py:meth:`starlark_tugger.WiXBundleBuilder.add_vc_redistributable`
 
 .. _pyoxidizer_distributing_windows_vc_redist_local:
 

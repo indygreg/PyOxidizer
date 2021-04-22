@@ -59,10 +59,9 @@ which.
    A ``WiXSimpleMSIBuilder`` ultimately is converted to a ``WiXInstallerBuilder``.
 
 ``WiXBundleInstallerBuilder``
-   The ``WiXBundleInstallerBuilder`` Rust struct and
-   :ref:`tugger_starlark_type_wix_bundle_builder` Starlark type provide a
-   high-level interface for generating an ``.exe`` based installed with common
-   features.
+   The ``WiXBundleInstallerBuilder`` Rust struct and :py:class:`WiXBundleBuilder`
+   Starlark type provide a high-level interface for generating an ``.exe``
+   based installed with common features.
 
    A ``WiXBundleInstallerBuilder`` ultimately is converted to a
    ``WiXInstallerBuilder``.

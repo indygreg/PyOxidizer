@@ -43,9 +43,9 @@ PyOxidizer provides the following extensions and integrations with
 
 :ref:`config_python_executable_to_wix_bundle_builder`
    Converts a :ref:`config_type_python_executable` to a
-   :ref:`tugger_starlark_type_wix_bundle_builder`.
+   :py:class:`starlark_tugger.WiXBundleBuilder`.
 
-   This method will produce a :ref:`tugger_starlark_type_wix_bundle_builder`
+   This method will produce a :py:class:`starlark_tugger.WiXBundleBuilder`.
    that is pre-configured with appropriate settings and state for a Python
    application. The produced ``.exe`` installer should *just work*.
 
@@ -95,6 +95,6 @@ If you are not using one of the aforementioned APIs to create your
 installer, you will need to explicitly add the Visual C++ Redistributable
 to your installer.
 The :ref:`tugger_starlark_type_wix_msi_builder.add_visual_cpp_redistributable`
-and :ref:`tugger_starlark_type_wix_bundle_builder.add_vc_redistributable`
+and :py:meth:`starlark_tugger.WiXBundleBuilder.add_vc_redistributable`
 Starlark methods can be called to do this. (PyOxidizer's Starlark methods
 for creating WiX installers effectively call these methods.)

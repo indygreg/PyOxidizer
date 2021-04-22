@@ -42,7 +42,7 @@ Tugger's Starlark dialect defines the following custom types:
 :py:class:`SnapcraftBuilder`
    Manages the environment and invocations of the ``snapcraft`` command.
 
-:ref:`tugger_starlark_type_wix_bundle_builder`
+:py:class:`WiXBundleBuilder`
    Produce a Windows exe installer containing multiple installers using WiX.
 
 :ref:`tugger_starlark_type_wix_installer`

@@ -1,126 +1,96 @@
 .. py:currentmodule:: starlark_tugger
 
-.. _tugger_starlark_type_wix_bundle_builder:
-
 ====================
 ``WiXBundleBuilder``
 ====================
 
-The ``WiXBundleBuilder`` type allows building simple *bundle* installers
-with the  `WiX Toolset <https://wixtoolset.org/>`_.
+.. py:class:: WiXBundleBuilder
 
-``WiXBundleBuilder`` instances allow you to create ``.exe`` installers that are
-composed of a chain of actions. At execution time, each action in the chain is
-evaluated. See the WiX Toolset documentation for more.
+    The ``WiXBundleBuilder`` type allows building simple *bundle* installers
+    with the  `WiX Toolset <https://wixtoolset.org/>`_.
 
-.. _tugger_starlark_type_wix_bundle_builder_constructors:
+    ``WiXBundleBuilder`` instances allow you to create ``.exe`` installers that are
+    composed of a chain of actions. At execution time, each action in the chain is
+    evaluated. See the WiX Toolset documentation for more.
 
-Constructors
-============
+    .. py:method:: __init__(id_prefix: string, name: string, version: string, manufacturer: string) -> WiXBundleBuilder
 
-``WiXBundleBuilder()``
-----------------------
+        ``WiXBundleBuilder()`` is called to construct new instances. It accepts
+        the following arguments:
 
-``WiXBundleBuilder()`` is called to construct new instances. It accepts
-the following arguments:
+        ``id_prefix``
+           The string prefix to add to auto-generated IDs in the ``.wxs`` XML.
 
-``id_prefix``
-   (``string``) The string prefix to add to auto-generated IDs in the ``.wxs``
-   XML.
+           The value must be alphanumeric and ``-`` cannot be used.
 
-   The value must be alphanumeric and ``-`` cannot be used.
+           The value should reflect the application whose installer is being
+           defined.
 
-   The value should reflect the application whose installer is being
-   defined.
+        ``name``
+           The name of the application being installed.
 
-``name``
-   (``string``) The name of the application being installed.
+        ``version``
+           The version of the application being installed.
 
-``version``
-   (``string``) The version of the application being installed.
+           This is a string like ``X.Y.Z``, where each component is an integer.
 
-   This is a string like ``X.Y.Z``, where each component is an integer.
+        ``manufacturer``
+           The author of the application.
 
-``manufacturer``
-   (``string``) The author of the application.
+    .. py:method:: add_condition(condition: string, message: string)
 
-.. _tugger_starlark_type_wix_bundle_builder_methods:
+        Defines a ``<bal:Condition>`` that must be satisfied to run this installer.
 
-Methods
-=======
+        See the WiX Toolkit documentation for more.
 
-Sections below document methods available on ``WiXBundleBuilder`` instances.
+        This method accepts the following arguments:
 
-.. _tugger_starlark_type_wix_bundle_builder.add_condition:
+        ``condition``
+           The condition expression that must be satisfied.
 
-``WiXBundleBuilder.add_condition()``
-------------------------------------
+        ``message``
+           The message that will be displayed if the condition is not met.
 
-Defines a ``<bal:Condition>`` that must be satisfied to run this installer.
+    .. py:method:: add_vc_redistributable(platform: string)
 
-See the WiX Toolkit documentation for more.
+        This method registers the Visual C++ Redistributable to be installed.
 
-This method accepts the following arguments:
+        This method accepts the following arguments:
 
-``condition``
-   (``string``) The condition expression that must be satisfied.
+        ``platform``
+           The architecture to install for. Valid values are ``x86``, ``x64``, and
+           ``arm64``.
 
-``message``
-   (``string``) The message that will be displayed if the condition is
-   not met.
+        The bundle can contain Visual C++ Redistributables for multiple runtime
+        architectures. The bundle installer will only install the Redistributable
+        when running on a machine of that architecture. This allows a single bundle
+        installer to target multiple architectures.
 
-.. _tugger_starlark_type_wix_bundle_builder.add_vc_redistributable:
+    .. py:method:: add_wix_msi_builder(builder: WiXMSIBuilder, display_internal_ui: Optional[bool] = False, install_condition: Optional[string] = None)
 
-``WiXBundleBuilder.add_vc_redistributable()``
----------------------------------------------
+        This method adds a :py:class:`WiXMSIBuilder` to be installed
+        by the produced installer.
 
-This method registers the Visual C++ Redistributable to be installed.
+        This method accepts the following arguments:
 
-This method accepts the following arguments:
+        ``builder``
+           The :py:class:`WiXMSIBuilder` representing an MSI to install.
 
-``platform``
-   (``string``) The architecture to install for. Valid values are ``x86``,
-   ``x64``, and ``arm64``.
+        ``display_internal_ui``
+           Whether to display the UI of the MSI.
 
-The bundle can contain Visual C++ Redistributables for multiple runtime
-architectures. The bundle installer will only install the Redistributable
-when running on a machine of that architecture. This allows a single bundle
-installer to target multiple architectures.
+        ``install_condition``
+           An expression that must be true for this MSI to be installed.
 
-.. _tugger_starlark_type_wix_bundle_builder.add_wix_msi_builder:
+        This method effectively coerces the :py:class:`WiXMSIBuilder` instance to an
+        ``<MsiPackage>`` element and adds it to the ``<Chain>`` in the bundle XML.
+        See the WiX Toolset documentation for more.
 
-``WiXBundleBuilder.add_wix_msi_builder()``
-------------------------------------------
+    .. py:method:: build(target: string) -> ResolvedTarget
 
-This method adds a :ref:`tugger_starlark_type_wix_msi_builder` to be installed
-by the produced installer.
+        This method will build an exe using the WiX Toolset.
 
-This method accepts the following arguments:
+        This method accepts the following arguments:
 
-``builder``
-   (``WiXMSIBuilder``) The :ref:`tugger_starlark_type_wix_msi_builder`
-   representing an MSI to install.
-
-``display_internal_ui``
-   (``Optional[bool]``) Whether to display the UI of the MSI. This is
-   ``False`` by default.
-
-``install_condition``
-   (``Optional[string]``) An expression that must be true for this MSI to
-   be installed.
-
-This method effectively coerces the ``WiXMSIBuilder`` instance to an
-``<MsiPackage>`` element and adds it to the ``<Chain>`` in the bundle XML.
-See the WiX Toolset documentation for more.
-
-.. _tugger_starlark_type_wix_bundle_builder.build:
-
-``WiXBundleBuilder.build()``
-----------------------------
-
-This method will build an exe using the WiX Toolset.
-
-This method accepts the following arguments:
-
-``target``
-   (``string``) The name of the target being built.
+        ``target``
+           The name of the target being built.

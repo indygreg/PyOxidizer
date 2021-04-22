@@ -389,7 +389,7 @@ This method accepts the following arguments:
 --------------------------------------------
 
 This method transforms the ``PythonExecutable`` instance into a
-:ref:`tugger_starlark_type_wix_bundle_builder` instance. The returned value can
+:py:class:`starlark_tugger.WiXBundleBuilder` instance. The returned value can
 be used to generate a Windows ``.exe`` installer. This installer will install
 the Visual C++ Redistributable as well as an MSI for the build application.
 
@@ -411,7 +411,7 @@ This method accepts the following arguments:
    its single argument. The return value is ignored.
 
 The returned value can be further customized before it is built. See
-:ref:`tugger_starlark_type_wix_bundle_builder` type documentation for more.
+:py:class:`starlark_tugger.WiXBundleBuilder` type documentation for more.
 
 .. important::
 
