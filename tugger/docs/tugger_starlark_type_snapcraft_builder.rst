@@ -1,83 +1,61 @@
 .. py:currentmodule:: starlark_tugger
 
-.. _tugger_starlark_type_snapcraft_builder:
-
 ====================
 ``SnapcraftBuilder``
 ====================
 
-The ``SnapcraftBuilder`` type coordinates the invocation of the ``snapcraft``
-command.
+.. py:class:: SnapcraftBuilder
 
-.. _tugger_starlark_type_snapcraft_builder_constructors:
+    The ``SnapcraftBuilder`` type coordinates the invocation of the ``snapcraft``
+    command.
 
-Constructors
-============
+    .. py:method:: __init__(snap: Snap) -> SnapcraftBuilder
 
-``SnapcraftBuilder()``
-----------------------
+        ``SnapcraftBuilder()`` constructs a new instance from a :py:class:`Snap`.
 
-``SnapcraftBuilder()`` constructs a new instance from a :py:class:`Snap`.
+        It accepts the following arguments:
 
-It accepts the following arguments:
+        ``snap``
+           The :py:class:`Snap` defining the configuration to be used.
 
-``snap``
-   (``Snap``) The ::py:class:`Snap` defining the configuration
-   to be used.
+    .. py:method:: add_invocation(args: List[string], purge_build: Optional[bool])
 
-.. _tugger_starlark_type_snapcraft_builder_methods:
+        This method registers an invocation of ``snapcraft`` with the builder. When
+        this instance is built, all registered invocations will be run sequentially.
 
-Methods
-=======
+        The following arguments are accepted:
 
-.. _tugger_starlark_type_snapcraft_builder_add_invocation:
+        ``args``
+           Arguments to pass to ``snapcraft`` executable.
 
-``SnapcraftBuilder.add_invocation()``
--------------------------------------
+        ``purge_build``
+           Whether to purge the build directory before running this invocation.
 
-This method registers an invocation of ``snapcraft`` with the builder. When
-this instance is built, all registered invocations will be run sequentially.
+           If not specified, the build directory is purged for the first registered
+           invocation and not purged for all subsequent invocations.
 
-The following arguments are accepted:
+    .. py:method:: add_file_manifest(manifest: FileManifest)
 
-``args``
-   (``List[String]``) Arguments to pass to ``snapcraft`` executable.
+        This method registers the content of a
+        :py:class:`FileManifest` with the build environment for
+        this builder.
 
-``purge_build``
-   (``Optional[bool]``) Whether to purge the build directory before running
-   this invocation.
+        When this instance is built, the content of the passed manifest will be
+        materialized in a directory next to the ``snapcraft.yaml`` file this instance
+        is building.
 
-   If not specified, the build directory is purged for the first registered
-   invocation and not purged for all subsequent invocations.
+        The following arguments are accepted:
 
-.. _tugger_starlark_type_snapcraft_builder_add_file_manifest:
+        ``manifest``
+           Defines files to install in the build environment.
 
-``SnapcraftBuilder.add_file_manifest()``
-----------------------------------------
+    .. py:method:: build(target: string) -> ResolvedTarget
 
-This method registers the content of a
-:py:class:`FileManifest` with the build environment for
-this builder.
+        This method invokes the builder and runs ``snapcraft``.
 
-When this instance is built, the content of the passed manifest will be
-materialized in a directory next to the ``snapcraft.yaml`` file this instance
-is building.
+        The following arguments are accepted:
 
-The following arguments are accepted:
+        ``target``
+           The name of the build target.
 
-``manifest``
-   (:py:class:`FileManifest`) Defines files to install in the build environment.
-
-.. _tugger_starlark_type_snapcraft_builder_build:
-
-``SnapcraftBuilder.build()``
-----------------------------
-
-This method invokes the builder and runs ``snapcraft``.
-
-The following arguments are accepted:
-
-``target``
-   (``String``) The name of the build target.
-
-This method returns a ``ResolvedTarget``. That target is not runnable.
+        This method returns a ``ResolvedTarget``. That target is not runnable.

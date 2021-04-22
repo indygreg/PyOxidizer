@@ -39,7 +39,7 @@ Tugger's Starlark dialect defines the following custom types:
 :py:class:`Snap`
    Represents a ``snapcraft.yaml`` file.
 
-:ref:`tugger_starlark_type_snapcraft_builder`
+:py:class:`SnapcraftBuilder`
    Manages the environment and invocations of the ``snapcraft`` command.
 
 :ref:`tugger_starlark_type_wix_bundle_builder`
