@@ -115,7 +115,7 @@ The following Starlark types represent individual resources:
 :ref:`config_type_file`
    Represents a filesystem path and its content.
 
-:ref:`tugger_starlark_type_file_content`
+:py:class:`starlark_tugger.FileContent`
    Represents the content of a filesystem file.
 
    This is different from :ref:`config_type_file` in that it only
@@ -126,8 +126,9 @@ There are also Starlark types that are logically containers for multiple
 resources:
 
 :py:class:`starlark_tugger.FileManifest`
-   Holds a mapping of relative filesystem paths to ``FileContent`` instances.
-   This type effectively allows modeling a directory tree.
+   Holds a mapping of relative filesystem paths to
+   :py:class:`starlark_tugger.FileContent` instances. This type effectively
+   allows modeling a directory tree.
 
 :ref:`config_type_python_embedded_resources`
    Holds a collection of Python resources of various types. (This type is often

@@ -28,7 +28,7 @@ PyOxidizer's Starlark dialect defines the following custom types:
 :ref:`config_type_file`
    Represents a filesystem path and content.
 
-:ref:`tugger_starlark_type_file_content`
+:py:class:`starlark_tugger.FileContent`
    Represents the content of a file on the filesystem.
 
    (Unlike :ref:`config_type_file`, this does not track the filename

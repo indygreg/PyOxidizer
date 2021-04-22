@@ -77,7 +77,8 @@ Accepts the following arguments:
    (``string``) Relative path of file under ``Contents/MacOS``.
 
 ``content``
-   (``FileContent``) Object representing file content to materialize.
+   (:py:class:`FileContent`) Object representing file content
+   to materialize.
 
 .. _tugger_starlark_type_macos_application_bundle_builder.add_macos_manifest:
 
@@ -106,7 +107,7 @@ Accepts the following arguments:
    (``string``) Relative path of file under ``Contents/Resources``.
 
 ``content``
-   (``FileContent``) Object representing file content to materialize.
+   (:py:class:`FileContent`) Object representing file content to materialize.
 
 .. _tugger_starlark_type_macos_application_bundle_builder.add_resources_manifest:
 

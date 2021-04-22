@@ -1,9 +1,9 @@
 .. py:currentmodule:: starlark_tugger
 
-.. _tugger_starlark_type_file_content:
-
 ===============
 ``FileContent``
 ===============
 
-This type represents the content of a single file.
+.. py:class:: FileContent
+
+    This type represents the content of a single file.

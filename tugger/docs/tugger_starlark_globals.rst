@@ -21,7 +21,7 @@ Global Types
 
 Tugger's Starlark dialect defines the following custom types:
 
-:ref:`tugger_starlark_type_file_content`
+:py:class:`FileContent`
    Represents the content of a file on the filesystem.
 
 :py:class:`FileManifest`
