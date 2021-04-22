@@ -9,11 +9,13 @@ use {
         environment::{Environment, EnvironmentError, TypeValues},
         values::{
             error::{RuntimeError, ValueError},
+            none::NoneType,
             {Mutable, TypedValue, Value, ValueResult},
         },
     },
     starlark_dialect_build_targets::{get_context_value, EnvironmentContext},
     std::{
+        collections::HashMap,
         path::{Path, PathBuf},
         sync::Arc,
     },
@@ -55,6 +57,9 @@ pub struct PyOxidizerEnvironmentContext {
     /// This exists because constructing a new instance can take a
     /// few seconds in debug builds. And this adds up, especially in tests!
     pub distribution_cache: Arc<DistributionCache>,
+
+    /// Extra variables to inject into Starlark environment.
+    extra_vars: HashMap<String, Option<String>>,
 }
 
 impl PyOxidizerEnvironmentContext {
@@ -69,6 +74,7 @@ impl PyOxidizerEnvironmentContext {
         build_release: bool,
         build_opt_level: &str,
         distribution_cache: Option<Arc<DistributionCache>>,
+        extra_vars: HashMap<String, Option<String>>,
     ) -> Result<PyOxidizerEnvironmentContext> {
         let parent = config_path
             .parent()
@@ -97,6 +103,7 @@ impl PyOxidizerEnvironmentContext {
             build_release,
             build_opt_level: build_opt_level.to_string(),
             distribution_cache,
+            extra_vars,
         })
     }
 
@@ -216,6 +223,16 @@ pub fn populate_environment(
 
     starlark_dialect_build_targets::populate_environment(env, type_values, build_targets_context)?;
     tugger::starlark::populate_environment(env, type_values)?;
+
+    for (name, value) in &context.extra_vars {
+        env.set(
+            name,
+            match value {
+                Some(value) => Value::from(value.as_str()),
+                None => Value::from(NoneType::None),
+            },
+        )?;
+    }
 
     env.set("CWD", Value::from(context.cwd.display().to_string()))?;
     env.set(

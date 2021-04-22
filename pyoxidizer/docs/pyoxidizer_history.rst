@@ -93,6 +93,11 @@ New Features
 * Starlark configuration files can now produce macOS Application Bundles.
   See :ref:`tugger_starlark_type_macos_application_bundle_builder` for the API
   documentation.
+* ``pyoxidizer`` commands that evaluate Starlark files now accept the arguments
+  ``--var`` and ``--var-env`` to define extra variables to define in the
+  evaluated Starlark file. This enables Starlark files to be parameterized based
+  on explicit strings provided via ``--var`` or through the content of
+  environment variables via ``--var-env``.
 
 Other Relevant Changes
 ^^^^^^^^^^^^^^^^^^^^^^

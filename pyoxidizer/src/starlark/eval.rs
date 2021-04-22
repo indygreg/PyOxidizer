@@ -26,6 +26,7 @@ use {
         build_target, run_target, EnvironmentContext, ResolvedTarget,
     },
     std::{
+        collections::HashMap,
         convert::TryFrom,
         path::{Path, PathBuf},
         sync::{Arc, Mutex},
@@ -44,6 +45,7 @@ pub struct EvaluationContextBuilder {
     build_script_mode: bool,
     build_opt_level: String,
     distribution_cache: Option<Arc<DistributionCache>>,
+    extra_vars: HashMap<String, Option<String>>,
 }
 
 impl EvaluationContextBuilder {
@@ -64,6 +66,7 @@ impl EvaluationContextBuilder {
             build_script_mode: false,
             build_opt_level: "0".to_string(),
             distribution_cache: None,
+            extra_vars: HashMap::new(),
         }
     }
 
@@ -122,6 +125,11 @@ impl EvaluationContextBuilder {
         self.distribution_cache = Some(cache);
         self
     }
+
+    pub fn extra_vars(mut self, extra_vars: HashMap<String, Option<String>>) -> Self {
+        self.extra_vars = extra_vars;
+        self
+    }
 }
 
 /// Interface to evaluate Starlark configuration files.
@@ -157,6 +165,7 @@ impl EvaluationContext {
             builder.release,
             &builder.build_opt_level,
             builder.distribution_cache,
+            builder.extra_vars,
         )?;
 
         let (mut parent_env, mut type_values) = starlark::stdlib::global_environment();
@@ -430,6 +439,36 @@ mod tests {
         .verbose(true)
         .into_context()?;
         context.evaluate_file(&config_path)?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn extra_vars() -> Result<()> {
+        let temp_dir = tempfile::Builder::new()
+            .prefix("pyoxidizer-test")
+            .tempdir()?;
+        let env = get_env()?;
+        let logger = get_logger()?;
+
+        let config_path = temp_dir.path().join("pyoxidizer.bzl");
+        std::fs::write(&config_path, "my_var_copy = my_var\nempty_copy = empty\n")?;
+
+        let mut extra_vars = HashMap::new();
+        extra_vars.insert("my_var".to_string(), Some("my_value".to_string()));
+        extra_vars.insert("empty".to_string(), None);
+
+        let context =
+            EvaluationContextBuilder::new(&env, logger, config_path, env!("HOST").to_string())
+                .extra_vars(extra_vars)
+                .into_context()?;
+
+        let v = context.get_var("my_var").unwrap();
+        assert_eq!(v.get_type(), "string");
+        assert_eq!(v.to_string(), "my_value");
+
+        let v = context.get_var("empty").unwrap();
+        assert_eq!(v.get_type(), "NoneType");
 
         Ok(())
     }

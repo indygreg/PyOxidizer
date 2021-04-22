@@ -23,6 +23,7 @@ use {
         filesystem_scanning::find_python_resources, resource::PythonResource, wheel::WheelArchive,
     },
     std::{
+        collections::HashMap,
         fs::create_dir_all,
         io::{Cursor, Read},
         path::{Path, PathBuf},
@@ -95,12 +96,14 @@ pub fn list_targets(env: &Environment, logger: &slog::Logger, project_path: &Pat
 ///
 /// This is a glorified wrapper around `cargo build`. Our goal is to get the
 /// output from repackaging to give the user something for debugging.
+#[allow(clippy::too_many_arguments)]
 pub fn build(
     env: &Environment,
     logger: &slog::Logger,
     project_path: &Path,
     target_triple: Option<&str>,
     resolve_targets: Option<Vec<String>>,
+    extra_vars: HashMap<String, Option<String>>,
     release: bool,
     verbose: bool,
 ) -> Result<()> {
@@ -114,6 +117,7 @@ pub fn build(
 
     let mut context =
         EvaluationContextBuilder::new(env, logger.clone(), config_path.clone(), target_triple)
+            .extra_vars(extra_vars)
             .release(release)
             .verbose(verbose)
             .resolve_targets_optional(resolve_targets)
@@ -136,6 +140,7 @@ pub fn run(
     target_triple: Option<&str>,
     release: bool,
     target: Option<&str>,
+    extra_vars: HashMap<String, Option<String>>,
     _extra_args: &[&str],
     verbose: bool,
 ) -> Result<()> {
@@ -149,6 +154,7 @@ pub fn run(
 
     let mut context =
         EvaluationContextBuilder::new(env, logger.clone(), config_path.clone(), target_triple)
+            .extra_vars(extra_vars)
             .release(release)
             .verbose(verbose)
             .resolve_target_optional(target)

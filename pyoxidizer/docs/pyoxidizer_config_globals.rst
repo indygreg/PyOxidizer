@@ -13,6 +13,11 @@ The Starlark environment contains symbols from the following:
 * :ref:`Tugger's Starlark Dialect <tugger_starlark>`
 * PyOxidizer's Dialect (documented below)
 
+In addition, extra global variables can be injected into the execution
+environment on a per-invocation basis. This is commonly encountered
+with use of the ``--var`` and `--var-env`` arguments to various ``pyoxidizer``
+sub-commands.
+
 .. _config_global_types:
 
 Global Types

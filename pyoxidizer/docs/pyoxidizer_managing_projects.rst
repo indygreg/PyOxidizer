@@ -287,3 +287,38 @@ compatible with the current machine and use that. You can specify a
 
    $ pyoxidizer find-resources --distributions-dir distributions /usr/lib/python3.8
    ...
+
+.. _pyoxidizer_cli_extra_starlark_variables:
+
+Defining Extra Variables in Starlark Environment
+================================================
+
+Various ``pyoxidizer`` commands (like ``build`` and ``run``) accept arguments
+to define extra global variables in the Starlark environment. This feature
+can be used to parameterize and conditionalize the evaluation of configuration
+files.
+
+For example, let's make the name of the built executable dynamic:
+
+.. code-block:: python
+
+   MY_APP_NAME = "default"
+
+   def make_exe(dist):
+       dist = default_python_distribution()
+       return dist.to_python_executable(name = MY_APP_NAME)
+
+   register_target("exe", make_exe)
+
+   resolve_targets()
+
+Then let's build it::
+
+   # Uses `default` as the application name.
+   $ pyoxidizer build
+
+   # Uses `my_app` as the application name.
+   $ pyoxidizer build --var MY_APP_NAME my_app
+
+   # Uses `env_name` as the application name via an environment variable.
+   $ APP_NAME=env_name pyoxidizer build --var-env MY_APP_NAME APP_NAME

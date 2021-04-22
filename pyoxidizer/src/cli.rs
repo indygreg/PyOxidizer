@@ -8,8 +8,11 @@ use {
         logging, project_building, project_layout, projectmgmt,
     },
     anyhow::{anyhow, Context, Result},
-    clap::{App, AppSettings, Arg, SubCommand},
-    std::path::{Path, PathBuf},
+    clap::{App, AppSettings, Arg, ArgMatches, SubCommand},
+    std::{
+        collections::HashMap,
+        path::{Path, PathBuf},
+    },
 };
 
 const ADD_ABOUT: &str = "\
@@ -89,6 +92,81 @@ conversion is critical for properly packaging Python applications and
 bugs can result in incorrect install layouts, missing resources, etc.
 ";
 
+const VAR_HELP: &str = "\
+Defines a single string global variable in the Starlark environment.
+
+This argument can be used to inject variable content into the Starlark
+execution context to influence evaluation.
+
+<name> defines the name of the variable to set and <value> is its string
+value.
+
+For example, `--var my_var my_value` is functionally similar to the
+Starlark expression `my_var = \"my_value\"`.
+
+If a Starlark variable is defined multiple times, an error occurs.
+";
+
+const ENV_VAR_HELP: &str = "\
+Defines a variable in the Starlark environment from an environment variable.
+
+This is like --var except the value of the Starlark variable comes from
+an environment variable.
+
+The <env> environment variable is read and becomes the value of the
+<name> Starlark global variable.
+
+If the <env> environment variable is not set, the Starlark value will
+be `None` instead of a `string`.
+
+If a Starlark variable is defined multiple times, an error occurs.
+";
+
+fn add_env_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
+    app.arg(
+        Arg::with_name("vars")
+            .long("var")
+            .value_names(&["name", "value"])
+            .multiple(true)
+            .help("Define a variable in Starlark environment")
+            .long_help(VAR_HELP),
+    )
+    .arg(
+        Arg::with_name("vars_env")
+            .long("var-env")
+            .value_names(&["name", "env"])
+            .multiple(true)
+            .help("Define an environment variable in Starlark environment")
+            .long_help(ENV_VAR_HELP),
+    )
+}
+
+fn starlark_vars(args: &ArgMatches) -> Result<HashMap<String, Option<String>>> {
+    let mut res = HashMap::new();
+
+    if let Some(mut vars) = args.values_of("vars") {
+        while let (Some(name), Some(value)) = (vars.next(), vars.next()) {
+            if res.contains_key(name) {
+                return Err(anyhow!("Starlark variable {} already defined", name));
+            }
+
+            res.insert(name.to_string(), Some(value.to_string()));
+        }
+    }
+
+    if let Some(mut vars) = args.values_of("vars_env") {
+        while let (Some(name), Some(env)) = (vars.next(), vars.next()) {
+            if res.contains_key(name) {
+                return Err(anyhow!("Starlark variable {} already defined", name));
+            }
+
+            res.insert(name.to_string(), std::env::var(env).ok());
+        }
+    }
+
+    Ok(res)
+}
+
 pub fn run_cli() -> Result<()> {
     let source = PyOxidizerSource::default();
 
@@ -128,7 +206,7 @@ pub fn run_cli() -> Result<()> {
                 .setting(AppSettings::ArgRequiredElseHelp)
                 .arg(Arg::with_name("path").help("Path to executable to analyze")),
         )
-        .subcommand(
+        .subcommand(add_env_args(
             SubCommand::with_name("build")
                 .setting(AppSettings::ArgRequiredElseHelp)
                 .about("Build a PyOxidizer enabled project")
@@ -158,7 +236,7 @@ pub fn run_cli() -> Result<()> {
                         .multiple(true)
                         .help("Target to resolve"),
                 ),
-        )
+        ))
         .subcommand(
             SubCommand::with_name("cache-clear").about("Clear PyOxidizer's user-specific cache"),
         )
@@ -289,7 +367,7 @@ pub fn run_cli() -> Result<()> {
                         .help("Path to Python distribution to analyze"),
                 ),
         )
-        .subcommand(
+        .subcommand(add_env_args(
             SubCommand::with_name("run-build-script")
                 .setting(AppSettings::ArgRequiredElseHelp)
                 .about("Run functionality that a build script would perform")
@@ -305,8 +383,8 @@ pub fn run_cli() -> Result<()> {
                         .takes_value(true)
                         .help("The config file target to resolve"),
                 ),
-        )
-        .subcommand(
+        ))
+        .subcommand(add_env_args(
             SubCommand::with_name("run")
                 .setting(AppSettings::TrailingVarArg)
                 .about("Run a target in a PyOxidizer configuration file")
@@ -335,7 +413,7 @@ pub fn run_cli() -> Result<()> {
                         .help("Build target to run"),
                 )
                 .arg(Arg::with_name("extra").multiple(true)),
-        )
+        ))
         .get_matches();
 
     let verbose = matches.is_present("verbose");
@@ -353,6 +431,8 @@ pub fn run_cli() -> Result<()> {
     if matches.is_present("system_rust") {
         env.unmanage_rust().context("unmanaging Rust")?;
     }
+
+    let starlark_vars = starlark_vars(&matches)?;
 
     match matches.subcommand() {
         ("add", Some(args)) => {
@@ -383,6 +463,7 @@ pub fn run_cli() -> Result<()> {
                 Path::new(path),
                 target_triple,
                 resolve_targets,
+                starlark_vars,
                 release,
                 verbose,
             )
@@ -473,7 +554,13 @@ pub fn run_cli() -> Result<()> {
             let build_script = args.value_of("build-script-name").unwrap();
             let target = args.value_of("target");
 
-            project_building::run_from_build(&env, &logger_context.logger, build_script, target)
+            project_building::run_from_build(
+                &env,
+                &logger_context.logger,
+                build_script,
+                target,
+                starlark_vars,
+            )
         }
 
         ("run", Some(args)) => {
@@ -490,6 +577,7 @@ pub fn run_cli() -> Result<()> {
                 target_triple,
                 release,
                 target,
+                starlark_vars,
                 &extra,
                 verbose,
             )

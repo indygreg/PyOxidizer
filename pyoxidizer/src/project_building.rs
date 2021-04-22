@@ -491,6 +491,7 @@ pub fn build_pyembed_artifacts(
     config_path: &Path,
     artifacts_path: &Path,
     resolve_target: Option<&str>,
+    extra_vars: HashMap<String, Option<String>>,
     target_triple: &str,
     release: bool,
     verbose: bool,
@@ -509,6 +510,7 @@ pub fn build_pyembed_artifacts(
         config_path.to_path_buf(),
         target_triple.to_string(),
     )
+    .extra_vars(extra_vars)
     .release(release)
     .verbose(verbose)
     .resolve_target_optional(resolve_target)
@@ -576,6 +578,7 @@ pub fn run_from_build(
     logger: &slog::Logger,
     build_script: &str,
     resolve_target: Option<&str>,
+    extra_vars: HashMap<String, Option<String>>,
 ) -> Result<()> {
     // Adding our our rerun-if-changed lines will overwrite the default, so
     // we need to emit the build script name explicitly.
@@ -614,6 +617,7 @@ pub fn run_from_build(
         &config_path,
         &dest_dir,
         resolve_target,
+        extra_vars,
         &target,
         profile == "release",
         false,
