@@ -267,6 +267,11 @@ impl Certificate {
         &self.raw_cert
     }
 
+    /// Whether the certificate is self-signed.
+    pub fn is_self_signed(&self) -> bool {
+        self.subject == self.issuer
+    }
+
     /// Serialize this certificate to BER.
     pub fn as_ber(&self) -> Result<Vec<u8>, CmsError> {
         let mut res = Vec::<u8>::new();
