@@ -104,9 +104,7 @@ pub fn macos_keychain_find_certificate_chain(
         })
         .ok_or_else(|| AppleCodesignError::CertificateNotFound(format!("UID={}", user_id)))?;
 
-    let mut chain = vec![];
-    chain.push(start_cert.clone());
-
+    let mut chain = vec![start_cert.clone()];
     let mut last_issuer_name = start_cert.issuer();
 
     loop {
