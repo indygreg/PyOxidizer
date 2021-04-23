@@ -32,7 +32,7 @@ mod verify;
 use {
     crate::{
         bundle_signing::BundleSigner,
-        certificate::create_self_signed_code_signing_certificate,
+        certificate::{create_self_signed_code_signing_certificate, parse_pfx_data},
         code_directory::{CodeDirectoryBlob, CodeSignatureFlags, ExecutableSegmentFlags},
         code_hash::compute_code_hashes,
         code_requirement::CodeRequirements,
@@ -256,22 +256,34 @@ binary and other important entities (such as entitlements and resources).
 This is often referred to as \"ad-hoc\" signing.
 
 To use a code signing key/certificate to derive a cryptographic signature,
-use the --pem-source argument to define paths to files containing PEM encoded
-certificate/key data. (e.g. files with \"===== BEGIN CERTIFICATE =====\").
+you must specify a source certificate to use. This can be done in the following
+ways:
 
-When reading PEM data for signing, there MUST be at least 1
-`BEGIN CERTIFICATE` and 1 `BEGIN PRIVATE KEY` section in the read data.
-(If you use the output from the `generate-self-signed-certificate` command,
-this should just work.) There must be exactly 1 `PRIVATE KEY` defined.
-And, the first `CERTIFICATE` is assumed to be paired with the `PRIVATE KEY`.
-All extra `CERTIFICATE` sections are assumed to belong to the issuing chain
-for the signing certificate.
+* The --pfx-file denotes the location to a PFX formatted file. These are
+  often .pfx or .p12 files. If you use PFX files, remember to specify
+  --pfx-password or --pfx-password-path so an appropriate password is
+  used to read the PFX file.
+* The --pem-source argument defines paths to files containing PEM encoded
+  certificate/key data. (e.g. files with \"===== BEGIN CERTIFICATE =====\").
+
+If you export a code signing certificate from the macOS keychain via the
+`Keychain Access` application as a .p12 file, we should be able to read these
+files via --pfx-file.
+
+When using --pem-source, certificates and public keys are parsed from
+`BEGIN CERTIFICATE` and `BEGIN PRIVATE KEY` sections in the files.
+
+The way certificate discovery works is that --pfx-file is read followed by
+all values to --pem-source. The seen signing keys and certificates are
+collected. After collection, there must be 0 or 1 signing keys present, or
+an error occurs. The first encountered public certificate is assigned
+to be paired with the signing key. All remaining certificates are assumed
+to constitute the CA issuing chain and will be added to the signature
+data to facilitate validation.
 
 For best results, put your private key and its corresponding X.509 certificate
-in a single file. Then make it the first --pem-source argument. It is highly
-recommended to also include the X.509 certificates of the certificate signing
-chain, up to the root CA, as this lowers the risk of verification failures at
-run-time.
+in a single file, either a PFX or PEM formatted file. Then add any additional
+certificates constituting the signing chain in a separate PEM file.
 
 When using a code signing key/certificate, a Time-Stamp Protocol server URL
 can be specified via --timestamp-url. By default, Apple's server is used. The
@@ -737,6 +749,31 @@ fn command_sign(args: &ArgMatches) -> Result<(), AppleCodesignError> {
     let mut private_keys = vec![];
     let mut public_certificates = vec![];
 
+    if let Some(pfx_path) = args.value_of("pfx_path") {
+        let pfx_data = std::fs::read(pfx_path)?;
+
+        let pfx_password = if let Some(password) = args.value_of("pfx_password") {
+            password.to_string()
+        } else if let Some(path) = args.value_of("pfx_password_file") {
+            std::fs::read_to_string(path)?
+                .lines()
+                .next()
+                .expect("should get a single line")
+                .to_string()
+        } else {
+            error!(
+                &log,
+                "--pfx-password or --pfx-password-file must be specified"
+            );
+            return Err(AppleCodesignError::CliBadArgument);
+        };
+
+        let (cert, key) = parse_pfx_data(&pfx_data, &pfx_password)?;
+
+        private_keys.push(key);
+        public_certificates.push(cert);
+    }
+
     if let Some(values) = args.values_of("pem_source") {
         for pem_source in values {
             warn!(&log, "reading PEM data from {}", pem_source);
@@ -744,8 +781,12 @@ fn command_sign(args: &ArgMatches) -> Result<(), AppleCodesignError> {
 
             for pem in pem::parse_many(&pem_data) {
                 match pem.tag.as_str() {
-                    "CERTIFICATE" => public_certificates.push(pem.contents),
-                    "PRIVATE KEY" => private_keys.push(pem.contents),
+                    "CERTIFICATE" => {
+                        public_certificates.push(Certificate::from_der(&pem.contents)?)
+                    }
+                    "PRIVATE KEY" => {
+                        private_keys.push(SigningKey::from_pkcs8_der(&pem.contents, None)?)
+                    }
                     tag => warn!(&log, "(unhandled PEM tag {}; ignoring)", tag),
                 }
             }
@@ -760,7 +801,7 @@ fn command_sign(args: &ArgMatches) -> Result<(), AppleCodesignError> {
     let private = if private_keys.is_empty() {
         None
     } else {
-        Some(SigningKey::from_pkcs8_der(&private_keys[0], None)?)
+        Some(&private_keys[0])
     };
 
     if let Some(signing_key) = &private {
@@ -773,7 +814,6 @@ fn command_sign(args: &ArgMatches) -> Result<(), AppleCodesignError> {
         }
 
         let cert = public_certificates.remove(0);
-        let cert = Certificate::from_der(&cert)?;
 
         warn!(&log, "registering signing key");
         settings.set_signing_key(signing_key, cert);
@@ -788,7 +828,7 @@ fn command_sign(args: &ArgMatches) -> Result<(), AppleCodesignError> {
 
     for cert in public_certificates {
         warn!(&log, "registering extra X.509 certificate");
-        settings.chain_certificate_der(&cert)?;
+        settings.chain_certificate_der(&cert.as_der()?)?;
     }
 
     if let Some(team_name) = args.value_of("team_name") {
@@ -1168,6 +1208,25 @@ fn main_impl() -> Result<(), AppleCodesignError> {
                         .takes_value(true)
                         .multiple(true)
                         .help("Path to file containing PEM encoded certificate/key data"),
+                )
+                .arg(
+                    Arg::with_name("pfx_path")
+                        .long("--pfx-file")
+                        .takes_value(true)
+                        .help("Path to a PFX file containing a certificate key pair")
+                )
+                .arg(
+                    Arg::with_name("pfx_password")
+                        .long("--pfx-password")
+                        .takes_value(true)
+                        .help("The password to use to open the --pfx-file file")
+                )
+                .arg(
+                    Arg::with_name("pfx_password_file")
+                        .long("--pfx-password-file")
+                        .conflicts_with("pfx_password")
+                        .takes_value(true)
+                        .help("Path to file containing password for opening --pfx-file file")
                 )
                 .arg(
                     Arg::with_name(
