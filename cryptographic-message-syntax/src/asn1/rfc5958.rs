@@ -5,13 +5,16 @@
 //! ASN.1 primitives from RFC 5958.
 
 use {
-    crate::asn1::{rfc5280::AlgorithmIdentifier, rfc5915::EcPrivateKey},
+    crate::asn1::{rfc5280::AlgorithmIdentifier, rfc5652::Attribute, rfc5915::EcPrivateKey},
     bcder::{
-        decode::{Constructed, Malformed, Source, Unimplemented},
+        decode::{Constructed, Malformed, Source},
         encode::{self, PrimitiveContent, Values},
         BitString, Integer, Mode, OctetString, Tag,
     },
-    std::convert::TryFrom,
+    std::{
+        convert::TryFrom,
+        ops::{Deref, DerefMut},
+    },
 };
 
 /// A single asymmetric key.
@@ -32,8 +35,7 @@ pub struct OneAsymmetricKey {
     pub version: Version,
     pub private_key_algorithm: PrivateKeyAlgorithmIdentifier,
     pub private_key: PrivateKey,
-    // TODO support.
-    pub attributes: Option<()>,
+    pub attributes: Option<Attributes>,
     pub public_key: Option<PublicKey>,
 }
 
@@ -43,8 +45,15 @@ impl OneAsymmetricKey {
             let version = Version::take_from(cons)?;
             let private_key_algorithm = PrivateKeyAlgorithmIdentifier::take_from(cons)?;
             let private_key = PrivateKey::take_from(cons)?;
-            let attributes =
-                cons.take_opt_constructed_if(Tag::CTX_0, |_| Err(Unimplemented.into()))?;
+            let attributes = cons.take_opt_constructed_if(Tag::CTX_0, |cons| {
+                let mut attributes = Attributes::default();
+
+                while let Some(attribute) = Attribute::take_opt_from(cons)? {
+                    attributes.push(attribute);
+                }
+
+                Ok(attributes)
+            })?;
             let public_key =
                 cons.take_opt_constructed_if(Tag::CTX_1, |cons| BitString::take_from(cons))?;
 
@@ -132,6 +141,34 @@ pub type PublicKey = BitString;
 
 /// Algorithm identifier for the private key.
 pub type PrivateKeyAlgorithmIdentifier = AlgorithmIdentifier;
+
+/// Attributes.
+///
+/// ```asn.1
+/// Attributes ::= SET OF Attribute { { OneAsymmetricKeyAttributes } }
+/// ```
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct Attributes(Vec<Attribute>);
+
+impl Deref for Attributes {
+    type Target = Vec<Attribute>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for Attributes {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+impl Attributes {
+    pub fn encode_ref_as(&self, tag: Tag) -> impl Values + '_ {
+        encode::set_as(tag, encode::slice(&self.0, |x| x.clone().encode()))
+    }
+}
 
 #[cfg(test)]
 mod test {
