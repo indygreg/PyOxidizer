@@ -52,10 +52,7 @@ use {
 };
 
 #[cfg(target_os = "macos")]
-use {
-    crate::macos::macos_keychain_find_certificate_chain,
-    security_framework::os::macos::keychain::SecPreferencesDomain,
-};
+use crate::macos::{macos_keychain_find_certificate_chain, KeychainDomain};
 
 const EXTRACT_ABOUT: &str = "\
 Extract code signature data from a Mach-O binary.
@@ -667,13 +664,8 @@ fn command_keychain_export_certificate_chain(args: &ArgMatches) -> Result<(), Ap
         .value_of("domain")
         .expect("clap should have added default value");
 
-    let domain = match domain {
-        "user" => SecPreferencesDomain::User,
-        "system" => SecPreferencesDomain::System,
-        "common" => SecPreferencesDomain::Common,
-        "dynamic" => SecPreferencesDomain::Dynamic,
-        _ => panic!("clap should have validated domain values"),
-    };
+    let domain =
+        KeychainDomain::try_from(domain).expect("clap should have validated domain values");
 
     let password = if let Some(path) = args.value_of("password_file") {
         let data = std::fs::read_to_string(path)?;

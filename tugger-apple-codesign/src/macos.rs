@@ -16,6 +16,7 @@ use {
             keychain::{SecKeychain, SecPreferencesDomain},
         },
     },
+    std::convert::TryFrom,
 };
 
 /// UserID.
@@ -24,6 +25,43 @@ use {
 pub const OID_UID: ConstOid = Oid(&[9, 146, 38, 137, 147, 242, 44, 100, 1, 1]);
 
 const SYSTEM_ROOTS_KEYCHAIN: &str = "/System/Library/Keychains/SystemRootCertificates.keychain";
+
+/// A wrapper around [SecPreferencesDomain] so we can use crate local types.
+#[derive(Clone, Copy, Debug)]
+pub enum KeychainDomain {
+    User,
+    System,
+    Common,
+    Dynamic,
+}
+
+impl From<KeychainDomain> for SecPreferencesDomain {
+    fn from(v: KeychainDomain) -> Self {
+        match v {
+            KeychainDomain::User => Self::User,
+            KeychainDomain::System => Self::System,
+            KeychainDomain::Common => Self::Common,
+            KeychainDomain::Dynamic => Self::Dynamic,
+        }
+    }
+}
+
+impl TryFrom<&str> for KeychainDomain {
+    type Error = String;
+
+    fn try_from(v: &str) -> Result<Self, Self::Error> {
+        match v {
+            "user" => Ok(Self::User),
+            "system" => Ok(Self::System),
+            "common" => Ok(Self::Common),
+            "dynamic" => Ok(Self::Dynamic),
+            _ => Err(format!(
+                "{} is not a valid keychain domain; use user, system, common, or dynamic",
+                v
+            )),
+        }
+    }
+}
 
 fn find_certificates(keychains: &[SecKeychain]) -> Result<Vec<Certificate>, AppleCodesignError> {
     let mut search = ItemSearchOptions::default();
@@ -70,11 +108,11 @@ fn find_certificates(keychains: &[SecKeychain]) -> Result<Vec<Certificate>, Appl
 /// You can find this in `Keychain Access` by clicking on the certificate in
 /// question and looking for `User ID` under the `Subject Name` section.
 pub fn macos_keychain_find_certificate_chain(
-    domain: SecPreferencesDomain,
+    domain: KeychainDomain,
     password: Option<&str>,
     user_id: &str,
 ) -> Result<Vec<Certificate>, AppleCodesignError> {
-    let mut keychain = SecKeychain::default_for_domain(domain)?;
+    let mut keychain = SecKeychain::default_for_domain(domain.into())?;
     if password.is_some() {
         keychain.unlock(password)?;
     }
