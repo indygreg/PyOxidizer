@@ -181,6 +181,15 @@ pub enum SigningCertificate {
     /// The string defines a value to match against in the certificate's `subject`
     /// field to locate the certificate.
     WindowsStoreSubject((SystemStore, String)),
+
+    /// A certificate stored in a Windows certificate with a specified SHA-1 thumbprint.
+    ///
+    /// See [SystemStore] for the possible system stores. [SystemStore::My] (the
+    /// current user's store) is typically where code signing certificates re located.
+    ///
+    /// The string defines the SHA-1 thumbprint of the certificate. You can find this
+    /// in the `Details` tab of the certificate when viewed in `certmgr.msc`.
+    WindowsStoreSha1Thumbprint((SystemStore, String)),
 }
 
 impl SigningCertificate {
@@ -216,6 +225,27 @@ impl SigningCertificate {
             SystemStore::try_from(store).map_err(SigningError::BadWindowsCertificateStore)?;
 
         Ok(Self::WindowsStoreSubject((store, subject.to_string())))
+    }
+
+    /// Construct an instance referring to a certificate with a SHA-1 thumbprint in a Windows certificate store.
+    ///
+    /// `store` is the name of a Windows certificate store to open. See
+    /// [SystemStore] for possible values. The `My` store (the store for the current
+    /// user) is likely where code signing certificates live.
+    ///
+    /// `thumbprint` is the SHA-1 thumbprint of the certificate. It should uniquely identify
+    /// any X.509 certificate.
+    pub fn windows_store_with_sha1_thumbprint(
+        store: &str,
+        thumbprint: impl ToString,
+    ) -> Result<Self, SigningError> {
+        let store =
+            SystemStore::try_from(store).map_err(SigningError::BadWindowsCertificateStore)?;
+
+        Ok(Self::WindowsStoreSha1Thumbprint((
+            store,
+            thumbprint.to_string(),
+        )))
     }
 }
 

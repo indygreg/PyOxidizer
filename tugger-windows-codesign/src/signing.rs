@@ -63,6 +63,12 @@ pub enum CodeSigningCertificate {
 
     /// An x509 certificate specified by its subject name or substring thereof.
     SubjectName(SystemStore, String),
+
+    /// A certificate specified by its store and SHA-1 thumbprint.
+    ///
+    /// This is the most reliable way to specify a certificate in the Windows
+    /// certificate store because thumbprints should be unique.
+    Sha1Thumbprint(SystemStore, String),
 }
 
 impl From<FileBasedCodeSigningCertificate> for CodeSigningCertificate {

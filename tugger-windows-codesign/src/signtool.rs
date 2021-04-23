@@ -180,6 +180,12 @@ impl SigntoolSign {
                 args.push("/n".to_string());
                 args.push(sn.to_string());
             }
+            CodeSigningCertificate::Sha1Thumbprint(store, sha1) => {
+                args.push("/s".to_string());
+                args.push(store.as_ref().to_string());
+                args.push("/sha1".to_string());
+                args.push(sha1.to_string());
+            }
         }
 
         if let Some(description) = &self.description {
