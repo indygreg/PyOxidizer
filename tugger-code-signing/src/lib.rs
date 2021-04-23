@@ -12,9 +12,10 @@
 
 use {
     cryptographic_message_syntax::{Certificate, SigningKey},
-    std::path::Path,
+    std::{convert::TryFrom, path::Path},
     thiserror::Error,
     tugger_apple_codesign::{AppleCodesignError, MachOSigner},
+    tugger_windows_codesign::SystemStore,
     yasna::ASN1Error,
 };
 
@@ -36,6 +37,9 @@ pub enum SigningError {
 
     #[error("PFX reading error: {0}")]
     PfxRead(String),
+
+    #[error("{0}")]
+    BadWindowsCertificateStore(String),
 }
 
 /// Represents the results of a signability test.
@@ -139,28 +143,60 @@ pub fn data_signable(data: &[u8]) -> Result<Signability, SigningError> {
 }
 
 /// Represents a signing key and public certificate to sign something.
+#[derive(Debug)]
 pub enum SigningCertificate {
     /// A parsed certificate and signing key stored in memory.
     ///
     /// The private key is managed by the `ring` crate.
     Memory((Certificate, SigningKey)),
+
+    /// Use an automatically chosen certificate in the Windows certificate store.
+    WindowsStoreAuto,
+
+    /// A certificate stored in a Windows certificate store with a subject name string.
+    ///
+    /// See [SystemStore] for the possible system stores. [SystemStore::My] (the
+    /// current user's store) is typically where code signing certificates are
+    /// located.
+    ///
+    /// The string defines a value to match against in the certificate's `subject`
+    /// field to locate the certificate.
+    WindowsStoreSubject((SystemStore, String)),
 }
 
 impl SigningCertificate {
-    /// Obtain an instance by parsing PFX data.
+    /// Obtain an instance by parsing PFX / PKCS #12 data.
     ///
-    /// PFX data is commonly encountered in `.p12` files, such as those
-    /// created when exporting certificates from Apple's `Keychain Access`
-    /// application.
+    /// PFX data is commonly encountered in `.pfx` or `.p12` files, such as
+    /// those created when exporting certificates from Apple's `Keychain Access`
+    /// or Windows' `certmgr`.
     ///
-    /// The contents of the PFX file require a password to decrypt. However,
-    /// if no password was provided to create the data, this password
-    /// may be the empty string.
+    /// The contents of the file require a password to decrypt. However, if no
+    /// password was provided to create the data, this password may be the
+    /// empty string.
     pub fn from_pfx_data(data: &[u8], password: &str) -> Result<Self, SigningError> {
         let (cert, key) = tugger_apple_codesign::parse_pfx_data(data, password)
             .map_err(|e| SigningError::PfxRead(format!("{:?}", e)))?;
 
         Ok(Self::Memory((cert, key)))
+    }
+
+    /// Construct an instance referring to a named certificate in a Windows certificate store.
+    ///
+    /// `store` is the name of a Windows certificate store to open. See
+    /// [SystemStore] for possible values. The `My` store (the store for the current
+    /// user) is likely where code signing certificates live.
+    ///
+    /// `subject` is a string to match against the certificate's `subject` field
+    /// to locate the certificate.
+    pub fn windows_store_with_subject(
+        store: &str,
+        subject: impl ToString,
+    ) -> Result<Self, SigningError> {
+        let store =
+            SystemStore::try_from(store).map_err(SigningError::BadWindowsCertificateStore)?;
+
+        Ok(Self::WindowsStoreSubject((store, subject.to_string())))
     }
 }
 
@@ -194,5 +230,11 @@ mod tests {
             tugger_windows_codesign::certificate_to_pfx(&cert, "password", "name").unwrap();
 
         SigningCertificate::from_pfx_data(&pfx_data, "password").unwrap();
+    }
+
+    #[test]
+    fn windows_store_with_subject() {
+        let cert = SigningCertificate::windows_store_with_subject("my", "test user").unwrap();
+        assert!(matches!(cert, SigningCertificate::WindowsStoreSubject(_)));
     }
 }
