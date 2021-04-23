@@ -256,9 +256,8 @@ impl Signer {
     ///
     /// This function can be called to register addition certificates
     /// into the signing chain.
-    pub fn chain_certificate(mut self, certificate: Certificate) -> Self {
+    pub fn chain_certificate(&mut self, certificate: Certificate) {
         self.certificate_chain.push(certificate);
-        self
     }
 
     /// Add PEM encoded X.509 certificates to the certificate chain.
@@ -267,23 +266,22 @@ impl Signer {
     /// PEM encoded data. This is a human readable string like
     /// `-----BEGIN CERTIFICATE-----` and is a common method for encoding
     /// certificate data. The specified data can contain multiple certificates.
-    pub fn chain_certificates_pem(mut self, data: impl AsRef<[u8]>) -> Result<Self, SigningError> {
+    pub fn chain_certificates_pem(&mut self, data: impl AsRef<[u8]>) -> Result<(), SigningError> {
         let certs = Certificate::from_pem_multiple(data)?;
 
         if certs.is_empty() {
             Err(SigningError::NoCertificateData)
         } else {
             self.certificate_chain.extend(certs);
-            Ok(self)
+            Ok(())
         }
     }
 
     /// Add multiple X.509 certificates to the certificate chain.
     ///
     /// See [Self::chain_certificate] for details.
-    pub fn chain_certificates(mut self, certificates: impl Iterator<Item = Certificate>) -> Self {
+    pub fn chain_certificates(&mut self, certificates: impl Iterator<Item = Certificate>) {
         self.certificate_chain.extend(certificates);
-        self
     }
 
     /// Chain X.509 certificates by searching for them in the macOS keychain.
@@ -297,7 +295,7 @@ impl Signer {
     /// This function will error if the signing certificate wasn't self-signed
     /// and its issuer chain could not be resolved.
     #[cfg(target_os = "macos")]
-    pub fn chain_certificates_macos_keychain(mut self) -> Result<Self, SigningError> {
+    pub fn chain_certificates_macos_keychain(&mut self) -> Result<(), SigningError> {
         let cert: &Certificate = match &self.signing_certificate {
             SigningCertificate::Memory((cert, _)) => Ok(cert),
             _ => Err(SigningError::CertificateResolutionFailure(
@@ -306,7 +304,7 @@ impl Signer {
         }?;
 
         if cert.is_self_signed() {
-            return Ok(self);
+            return Ok(());
         }
 
         let subject_rdn = cert.subject_dn()?;
@@ -344,7 +342,7 @@ impl Signer {
         }
 
         self.certificate_chain.extend(certs);
-        Ok(self)
+        Ok(())
     }
 
     /// Chain X.509 certificates by searching for them in the macOS keychain.
@@ -358,7 +356,7 @@ impl Signer {
     /// This function will error if the signing certificate wasn't self-signed
     /// and its issuer chain could not be resolved.
     #[cfg(not(target_os = "macos"))]
-    pub fn chain_certificates_macos_keychain(self) -> Result<Self, SigningError> {
+    pub fn chain_certificates_macos_keychain(&self) -> Result<(), SigningError> {
         Err(SigningError::MacOsKeychainNotSupported)
     }
 
@@ -367,10 +365,10 @@ impl Signer {
     /// If specified, the server will always be used. In some cases, a
     /// Time-Stamp Protocol server will be used automatically if one is
     /// not specified.
-    pub fn time_stamp_url(mut self, url: impl IntoUrl) -> Result<Self, SigningError> {
+    pub fn time_stamp_url(&mut self, url: impl IntoUrl) -> Result<(), SigningError> {
         let url = url.into_url().map_err(SigningError::BadUrl)?;
         self.time_stamp_url = Some(url);
-        Ok(self)
+        Ok(())
     }
 
     /// Compute signability of a given filesystem path.
