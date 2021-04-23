@@ -3,10 +3,14 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    crate::starlark::file_resource::FileManifestValue,
+    crate::starlark::{
+        code_signing::{handle_signable_event, SigningAction, SigningContext},
+        file_resource::FileManifestValue,
+    },
     anyhow::Result,
     starlark::{
         environment::TypeValues,
+        eval::call_stack::CallStack,
         values::{
             error::{
                 RuntimeError, UnsupportedOperation, ValueError, INCORRECT_PARAMETER_TYPE_ERROR_CODE,
@@ -153,7 +157,12 @@ impl WiXMsiBuilderValue {
         Ok(Value::new(NoneType::None))
     }
 
-    pub fn build(&self, type_values: &TypeValues, target: String) -> ValueResult {
+    pub fn build(
+        &self,
+        type_values: &TypeValues,
+        call_stack: &mut CallStack,
+        target: String,
+    ) -> ValueResult {
         let context_value = get_context_value(type_values)?;
         let context = context_value
             .downcast_ref::<EnvironmentContext>()
@@ -181,6 +190,17 @@ impl WiXMsiBuilderValue {
                 label: "build()".to_string(),
             })
         })?;
+
+        let candidate = msi_path.as_path().into();
+        let mut context = SigningContext::new(
+            "build()",
+            SigningAction::WindowsInstallerCreation,
+            self.msi_filename(),
+            &candidate,
+        );
+        context.set_path(&msi_path);
+
+        handle_signable_event(type_values, call_stack, context)?;
 
         Ok(Value::new(ResolvedTargetValue {
             inner: ResolvedTarget {
@@ -227,9 +247,9 @@ starlark_module! { wix_msi_builder_module =>
     }
 
     #[allow(non_snake_case)]
-    WiXMSIBuilder.build(env env, this, target: String) {
+    WiXMSIBuilder.build(env env, call_stack cs, this, target: String) {
         let this = this.downcast_ref::<WiXMsiBuilderValue>().unwrap();
-        this.build(env, target)
+        this.build(env, cs, target)
     }
 }
 

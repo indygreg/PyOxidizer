@@ -164,3 +164,7 @@
 
         ``target``
            The name of the target being built.
+
+        Upon successful generation of an installer, the produced installer
+        will be assessed for code signing with the ``windows-installer-creation``
+        *action*.

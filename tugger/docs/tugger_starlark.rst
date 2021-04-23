@@ -20,6 +20,8 @@ specific to Tugger.
 
    tugger_starlark_globals
    tugger_starlark_filesystem
+   tugger_starlark_type_code_signer
+   tugger_starlark_type_code_signing_request
    tugger_starlark_type_file_content
    tugger_starlark_type_file_manifest
    tugger_starlark_type_macos_application_bundle_builder

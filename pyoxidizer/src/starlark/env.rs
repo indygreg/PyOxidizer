@@ -20,6 +20,7 @@ use {
         path::{Path, PathBuf},
         sync::Arc,
     },
+    tugger::starlark::TuggerContext,
 };
 
 /// Holds state for evaluating a Starlark config file.
@@ -222,8 +223,10 @@ pub fn populate_environment(
         }),
     ));
 
+    let tugger_context = TuggerContext::new(context.logger.clone());
+
     starlark_dialect_build_targets::populate_environment(env, type_values, build_targets_context)?;
-    tugger::starlark::populate_environment(env, type_values)?;
+    tugger::starlark::populate_environment(env, type_values, tugger_context)?;
 
     let mut vars = starlark::values::dict::Dictionary::default();
 

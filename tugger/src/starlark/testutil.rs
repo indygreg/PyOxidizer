@@ -3,7 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    crate::starlark::{populate_environment, register_starlark_dialect},
+    crate::starlark::{populate_environment, register_starlark_dialect, TuggerContext},
     anyhow::{anyhow, Result},
     codemap::CodeMap,
     codemap_diagnostic::{Diagnostic, Emitter},
@@ -29,7 +29,8 @@ impl StarlarkEnvironment {
         let logger = get_logger()?;
         let cwd = std::env::current_dir()?;
 
-        let context = EnvironmentContext::new(&logger, cwd);
+        let target_context = EnvironmentContext::new(&logger, cwd);
+        let tugger_context = TuggerContext::new(logger.clone());
 
         let (mut env, mut type_values) = starlark::stdlib::global_environment();
         starlark_dialect_build_targets::register_starlark_dialect(&mut env, &mut type_values)
@@ -37,9 +38,13 @@ impl StarlarkEnvironment {
         register_starlark_dialect(&mut env, &mut type_values)
             .map_err(|e| anyhow!("error creating Starlark environment: {:?}", e))?;
 
-        starlark_dialect_build_targets::populate_environment(&mut env, &mut type_values, context)
-            .unwrap();
-        populate_environment(&mut env, &mut type_values).unwrap();
+        starlark_dialect_build_targets::populate_environment(
+            &mut env,
+            &mut type_values,
+            target_context,
+        )
+        .unwrap();
+        populate_environment(&mut env, &mut type_values, tugger_context).unwrap();
 
         Ok(Self { env, type_values })
     }

@@ -15,6 +15,7 @@ build = "build.rs"
 anyhow = "1.0"
 codemap = "0.1"
 codemap-diagnostic = "0.1"
+linked-hash-map = "0.5"
 plist = "1.1"
 slog = "2.7"
 starlark = "0.3.1"
@@ -28,6 +29,10 @@ path = "../starlark-dialect-build-targets"
 [dependencies.tugger-apple-bundle]
 version = "0.3.0-pre"
 path = "../tugger-apple-bundle"
+
+[dependencies.tugger-code-signing]
+version = "0.1.0-pre"
+path = "../tugger-code-signing"
 
 [dependencies.tugger-common]
 version = "0.4.0-pre"
@@ -48,3 +53,19 @@ path = "../tugger-wix"
 [dependencies.tugger-file-manifest]
 version = "0.3.0-pre"
 path = "../tugger-file-manifest"
+
+[dev-dependencies]
+chrono = "0.4"
+tempfile = "3.2"
+
+[dev-dependencies.tugger-apple-codesign]
+version = "0.3.0-pre"
+path = "../tugger-apple-codesign"
+
+[dev-dependencies.tugger-windows-codesign]
+version = "0.3.0-pre"
+path = "../tugger-windows-codesign"
+
+[dev-dependencies.x509-certificate]
+version = "0.1.0-pre"
+path = "../x509-certificate"

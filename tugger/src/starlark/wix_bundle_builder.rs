@@ -3,9 +3,13 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    crate::starlark::wix_msi_builder::WiXMsiBuilderValue,
+    crate::starlark::{
+        code_signing::{handle_signable_event, SigningAction, SigningContext},
+        wix_msi_builder::WiXMsiBuilderValue,
+    },
     starlark::{
         environment::TypeValues,
+        eval::call_stack::CallStack,
         values::{
             error::{RuntimeError, ValueError},
             none::NoneType,
@@ -124,7 +128,12 @@ impl<'a> WiXBundleBuilderValue<'a> {
     }
 
     /// WiXBundleBuilder.build(target)
-    pub fn build(&self, type_values: &TypeValues, target: String) -> ValueResult {
+    pub fn build(
+        &self,
+        type_values: &TypeValues,
+        call_stack: &mut CallStack,
+        target: String,
+    ) -> ValueResult {
         let context_value = get_context_value(type_values)?;
         let context = context_value
             .downcast_ref::<EnvironmentContext>()
@@ -134,7 +143,7 @@ impl<'a> WiXBundleBuilderValue<'a> {
 
         // We need to ensure dependent MSIs are built.
         for builder in self.build_msis.iter() {
-            builder.build(type_values, target.clone())?;
+            builder.build(type_values, call_stack, target.clone())?;
         }
 
         let builder = self
@@ -148,7 +157,8 @@ impl<'a> WiXBundleBuilderValue<'a> {
                 })
             })?;
 
-        let exe_path = output_path.join(self.inner.default_exe_filename());
+        let filename = self.inner.default_exe_filename();
+        let exe_path = output_path.join(filename.clone());
 
         builder.build(context.logger(), &exe_path).map_err(|e| {
             ValueError::Runtime(RuntimeError {
@@ -157,6 +167,17 @@ impl<'a> WiXBundleBuilderValue<'a> {
                 label: "build()".to_string(),
             })
         })?;
+
+        let candidate = exe_path.as_path().into();
+        let mut context = SigningContext::new(
+            "build()",
+            SigningAction::WindowsInstallerCreation,
+            filename,
+            &candidate,
+        );
+        context.set_path(&exe_path);
+
+        handle_signable_event(type_values, call_stack, context)?;
 
         Ok(Value::new(ResolvedTargetValue {
             inner: ResolvedTarget {
@@ -198,9 +219,9 @@ starlark_module! { wix_bundle_builder_module =>
         this.add_wix_msi_builder(builder, display_internal_ui, install_condition)
     }
 
-    WiXBundleBuilder.build(env env, this, target: String) {
+    WiXBundleBuilder.build(env env, call_stack cs, this, target: String) {
         let this = this.downcast_ref::<WiXBundleBuilderValue>().unwrap();
-        this.build(env, target)
+        this.build(env, cs, target)
     }
 }
 

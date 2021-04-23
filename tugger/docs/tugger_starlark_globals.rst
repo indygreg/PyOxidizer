@@ -21,6 +21,12 @@ Global Types
 
 Tugger's Starlark dialect defines the following custom types:
 
+:py:class:`CodeSigner`
+   An entity capable of performing code signing.
+
+:py:class:`CodeSigningRequest`
+   Holds settings to influence code signing on a single entity.
+
 :py:class:`FileContent`
    Represents the content of a file on the filesystem.
 

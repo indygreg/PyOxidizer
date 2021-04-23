@@ -3656,20 +3656,27 @@ name = "tugger"
 version = "0.8.0-pre"
 dependencies = [
  "anyhow",
+ "chrono",
  "codemap",
  "codemap-diagnostic",
+ "linked-hash-map",
  "plist",
  "slog",
  "starlark",
  "starlark-dialect-build-targets",
  "tar",
+ "tempfile",
  "tugger-apple-bundle",
+ "tugger-apple-codesign",
+ "tugger-code-signing",
  "tugger-common",
  "tugger-file-manifest",
  "tugger-snapcraft",
  "tugger-windows",
+ "tugger-windows-codesign",
  "tugger-wix",
  "walkdir",
+ "x509-certificate",
 ]
 
 [[package]]

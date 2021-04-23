@@ -8,6 +8,7 @@ The `starlark` module and related sub-modules define the
 Tugger.
 */
 
+pub mod code_signing;
 pub mod file_resource;
 pub mod macos_application_bundle_builder;
 pub mod snapcraft;
@@ -22,17 +23,27 @@ use {
         environment::{Environment, EnvironmentError, TypeValues},
         values::{
             error::{RuntimeError, ValueError},
-            Immutable, Mutable, TypedValue, Value, ValueResult,
+            Mutable, TypedValue, Value, ValueResult,
         },
     },
-    std::ops::Deref,
+    std::ops::{Deref, DerefMut},
 };
 
 /// Holds global context for Tugger Starlark evaluation.
-#[derive(Default)]
-pub struct TuggerContext {}
+pub struct TuggerContext {
+    pub logger: slog::Logger,
+    pub code_signers: Vec<Value>,
+}
 
-#[derive(Default)]
+impl TuggerContext {
+    pub fn new(logger: slog::Logger) -> Self {
+        Self {
+            logger,
+            code_signers: vec![],
+        }
+    }
+}
+
 pub struct TuggerContextValue {
     inner: TuggerContext,
 }
@@ -45,12 +56,18 @@ impl Deref for TuggerContextValue {
     }
 }
 
+impl DerefMut for TuggerContextValue {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.inner
+    }
+}
+
 impl TypedValue for TuggerContextValue {
-    type Holder = Immutable<TuggerContextValue>;
+    type Holder = Mutable<TuggerContextValue>;
     const TYPE: &'static str = "TuggerContext";
 
     fn values_for_descendant_check_and_freeze(&self) -> Box<dyn Iterator<Item = Value>> {
-        Box::new(std::iter::empty())
+        Box::new(self.code_signers.clone().into_iter())
     }
 }
 
@@ -88,6 +105,7 @@ pub fn register_starlark_dialect(
     env: &mut Environment,
     type_values: &mut TypeValues,
 ) -> Result<(), EnvironmentError> {
+    code_signing::code_signing_module(env, type_values);
     file_resource::file_resource_module(env, type_values);
     macos_application_bundle_builder::macos_application_bundle_builder_module(env, type_values);
     snapcraft::snapcraft_module(env, type_values);
@@ -102,10 +120,11 @@ pub fn register_starlark_dialect(
 pub fn populate_environment(
     env: &mut Environment,
     type_values: &mut TypeValues,
+    context: TuggerContext,
 ) -> Result<(), EnvironmentError> {
     env.set(
         ENVIRONMENT_CONTEXT_SYMBOL,
-        Value::new(TuggerContextValue::default()),
+        Value::new(TuggerContextValue { inner: context }),
     )?;
 
     let symbol = &ENVIRONMENT_CONTEXT_SYMBOL;

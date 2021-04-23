@@ -3,10 +3,15 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    crate::starlark::{file_resource::FileManifestValue, wix_msi_builder::WiXMsiBuilderValue},
+    crate::starlark::{
+        code_signing::{handle_signable_event, SigningAction, SigningContext},
+        file_resource::FileManifestValue,
+        wix_msi_builder::WiXMsiBuilderValue,
+    },
     anyhow::Result,
     starlark::{
         environment::TypeValues,
+        eval::call_stack::CallStack,
         values::{
             error::{RuntimeError, ValueError},
             none::NoneType,
@@ -240,7 +245,12 @@ impl WiXInstallerValue {
         Ok(Value::new(NoneType::None))
     }
 
-    fn build(&self, type_values: &TypeValues, target: String) -> ValueResult {
+    fn build(
+        &self,
+        type_values: &TypeValues,
+        call_stack: &mut CallStack,
+        target: String,
+    ) -> ValueResult {
         let context_value = get_context_value(type_values)?;
         let context = context_value
             .downcast_ref::<EnvironmentContext>()
@@ -258,6 +268,17 @@ impl WiXInstallerValue {
                     label: "build()".to_string(),
                 })
             })?;
+
+        let candidate = installer_path.as_path().into();
+        let mut context = SigningContext::new(
+            "build()",
+            SigningAction::WindowsInstallerCreation,
+            &self.filename,
+            &candidate,
+        );
+        context.set_path(&installer_path);
+
+        handle_signable_event(type_values, call_stack, context)?;
 
         Ok(Value::new(ResolvedTargetValue {
             inner: ResolvedTarget {
@@ -341,9 +362,9 @@ starlark_module! { wix_installer_module =>
         this.add_wxs_file(path, preprocessor_parameters)
     }
 
-    WiXInstaller.build(env env, this, target: String) {
+    WiXInstaller.build(env env, call_stack cs, this, target: String) {
         let this = this.downcast_ref::<WiXInstallerValue>().unwrap();
-        this.build(env, target)
+        this.build(env, cs, target)
     }
 
     WiXInstaller.set_variable(this, key: String, value) {
