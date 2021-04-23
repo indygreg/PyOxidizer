@@ -171,6 +171,9 @@ mod tests {
     const APPLE_P12_DATA: &[u8] =
         include_bytes!("../../tugger-apple-codesign/src/apple-codesign-testuser.p12");
 
+    const WINDOWS_PFX_DEFAULT_DATA: &[u8] = include_bytes!("windows-testuser-default.pfx");
+    const WINDOWS_PFX_NO_EXTRAS_DATA: &[u8] = include_bytes!("windows-testuser-no-extras.pfx");
+
     #[test]
     fn parse_apple_p12() {
         SigningCertificate::from_pfx_data(APPLE_P12_DATA, "password123").unwrap();
@@ -178,6 +181,12 @@ mod tests {
 
     #[test]
     fn parse_windows_pfx() {
+        SigningCertificate::from_pfx_data(WINDOWS_PFX_DEFAULT_DATA, "password123").unwrap();
+        SigningCertificate::from_pfx_data(WINDOWS_PFX_NO_EXTRAS_DATA, "password123").unwrap();
+    }
+
+    #[test]
+    fn parse_windows_pfx_dynamic() {
         let cert =
             tugger_windows_codesign::create_self_signed_code_signing_certificate("test user")
                 .unwrap();
