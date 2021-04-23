@@ -174,7 +174,9 @@ impl SigntoolSign {
                     args.push(password.to_string());
                 }
             }
-            X509SigningCertificate::SubjectName(sn) => {
+            X509SigningCertificate::SubjectName(store, sn) => {
+                args.push("/s".to_string());
+                args.push(store.as_ref().to_string());
                 args.push("/n".to_string());
                 args.push(sn.to_string());
             }

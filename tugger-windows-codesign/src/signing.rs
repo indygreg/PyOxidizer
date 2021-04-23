@@ -5,6 +5,7 @@
 /*! Functionality for signing binaries on Windows. */
 
 use {
+    crate::SystemStore,
     anyhow::{anyhow, Result},
     chrono::SubsecRound,
     std::{
@@ -56,7 +57,7 @@ pub enum X509SigningCertificate {
     File(FileBasedX509SigningCertificate),
 
     /// An x509 certificate specified by its subject name or substring thereof.
-    SubjectName(String),
+    SubjectName(SystemStore, String),
 }
 
 impl From<FileBasedX509SigningCertificate> for X509SigningCertificate {
