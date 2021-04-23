@@ -215,6 +215,14 @@ impl Certificate {
         Self::from_der(&pem.contents)
     }
 
+    /// Parse PEM data potentially containing multiple certificate records.
+    pub fn from_pem_multiple(data: impl AsRef<[u8]>) -> Result<Vec<Self>, CmsError> {
+        pem::parse_many(data)
+            .into_iter()
+            .map(|pem| Self::from_der(&pem.contents))
+            .collect::<Result<Vec<_>, CmsError>>()
+    }
+
     /// The serial number of this certificate.
     ///
     /// (Used for identification purposes.)
