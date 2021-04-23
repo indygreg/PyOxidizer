@@ -5,7 +5,7 @@
 /*! Interface to `signtool.exe`. */
 
 use {
-    crate::X509SigningCertificate,
+    crate::signing::CodeSigningCertificate,
     anyhow::{anyhow, Context, Result},
     slog::warn,
     std::{
@@ -56,7 +56,7 @@ pub fn find_signtool() -> Result<PathBuf> {
 /// Represents an invocation of `signtool.exe sign` to sign some files.
 #[derive(Clone, Debug)]
 pub struct SigntoolSign {
-    certificate: X509SigningCertificate,
+    certificate: CodeSigningCertificate,
     verbose: bool,
     debug: bool,
     description: Option<String>,
@@ -68,7 +68,7 @@ pub struct SigntoolSign {
 
 impl SigntoolSign {
     /// Construct a new instance using a specified signing certificate.
-    pub fn new(certificate: X509SigningCertificate) -> Self {
+    pub fn new(certificate: CodeSigningCertificate) -> Self {
         Self {
             certificate,
             verbose: false,
@@ -163,10 +163,10 @@ impl SigntoolSign {
         }
 
         match &self.certificate {
-            X509SigningCertificate::Auto => {
+            CodeSigningCertificate::Auto => {
                 args.push("/a".to_string());
             }
-            X509SigningCertificate::File(file) => {
+            CodeSigningCertificate::File(file) => {
                 args.push("/f".to_string());
                 args.push(file.path().display().to_string());
                 if let Some(password) = file.password() {
@@ -174,7 +174,7 @@ impl SigntoolSign {
                     args.push(password.to_string());
                 }
             }
-            X509SigningCertificate::SubjectName(store, sn) => {
+            CodeSigningCertificate::SubjectName(store, sn) => {
                 args.push("/s".to_string());
                 args.push(store.as_ref().to_string());
                 args.push("/n".to_string());
@@ -238,8 +238,8 @@ mod tests {
     use {
         super::*,
         crate::{
-            certificate_to_pfx, create_self_signed_code_signing_certificate,
-            FileBasedX509SigningCertificate,
+            create_self_signed_code_signing_certificate,
+            signing::{certificate_to_pfx, FileBasedCodeSigningCertificate},
         },
         tugger_common::testutil::*,
     };
@@ -280,7 +280,7 @@ mod tests {
         let current_exe = std::env::current_exe()?;
         std::fs::copy(&current_exe, &sign_path)?;
 
-        let mut c = FileBasedX509SigningCertificate::new(&key_path);
+        let mut c = FileBasedCodeSigningCertificate::new(&key_path);
         c.set_password("some_password");
 
         SigntoolSign::new(c.into())

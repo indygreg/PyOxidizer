@@ -569,7 +569,7 @@ mod tests {
     #[cfg(target_family = "windows")]
     use tugger_windows_codesign::{
         certificate_to_pfx, create_self_signed_code_signing_certificate, is_file_signable,
-        FileBasedX509SigningCertificate, SigntoolSign,
+        FileBasedCodeSigningCertificate, SigntoolSign,
     };
 
     #[test]
@@ -620,7 +620,7 @@ mod tests {
         let key_path = temp_dir.path().join("test_msi_key.pfx");
         std::fs::write(&key_path, &pfx_data)?;
 
-        let mut c = FileBasedX509SigningCertificate::new(&key_path);
+        let mut c = FileBasedCodeSigningCertificate::new(&key_path);
         c.set_password("password");
 
         let mut settings = SigntoolSign::new(c.into());

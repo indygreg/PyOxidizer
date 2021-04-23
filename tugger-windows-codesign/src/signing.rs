@@ -14,16 +14,18 @@ use {
     },
 };
 
-/// Represents an x509 signing certificate backed by a file.
+/// Represents a code signing certificate backed by a file.
+///
+/// Often a `.pfx` file.
 #[derive(Clone, Debug)]
-pub struct FileBasedX509SigningCertificate {
+pub struct FileBasedCodeSigningCertificate {
     /// Path to the certificate file.
     path: PathBuf,
     /// Password used to unlock the certificate.
     password: Option<String>,
 }
 
-impl FileBasedX509SigningCertificate {
+impl FileBasedCodeSigningCertificate {
     /// Construct an instance from a path.
     ///
     /// No validation is done that the path exists.
@@ -47,21 +49,24 @@ impl FileBasedX509SigningCertificate {
     }
 }
 
-/// Represents an x509 certificate used to sign binaries on Windows.
+/// Represents a code signing certificate used to sign binaries on Windows.
+///
+/// This only represents the location of the certificate. It is possible
+/// for instances to refer to entities that don't exist.
 #[derive(Clone, Debug)]
-pub enum X509SigningCertificate {
+pub enum CodeSigningCertificate {
     /// Select the best available signing certificate.
     Auto,
 
     /// An x509 certificate backed by a filesystem file.
-    File(FileBasedX509SigningCertificate),
+    File(FileBasedCodeSigningCertificate),
 
     /// An x509 certificate specified by its subject name or substring thereof.
     SubjectName(SystemStore, String),
 }
 
-impl From<FileBasedX509SigningCertificate> for X509SigningCertificate {
-    fn from(v: FileBasedX509SigningCertificate) -> Self {
+impl From<FileBasedCodeSigningCertificate> for CodeSigningCertificate {
+    fn from(v: FileBasedCodeSigningCertificate) -> Self {
         Self::File(v)
     }
 }
