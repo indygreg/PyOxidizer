@@ -170,12 +170,7 @@ pub fn is_file_signable(path: impl AsRef<Path>) -> Result<bool> {
 
 #[cfg(test)]
 mod tests {
-    use {
-        super::*,
-        anyhow::Result,
-        der_parser::oid,
-        std::{collections::BTreeMap, iter::FromIterator},
-    };
+    use {super::*, anyhow::Result, der_parser::oid, std::collections::BTreeMap};
 
     // PEM encoded key pair generated via Powershell.
     const POWERSHELL_CERTIFICATE_PUBLIC_PEM: &str = "-----BEGIN CERTIFICATE-----\n\
@@ -260,22 +255,28 @@ mod tests {
 
         // Subject Key Identifier differs due to different key pairs in use.
         // Ours also emits a basic constraints extension.
-        let generated_filtered =
-            BTreeMap::from_iter(generated.extensions().iter().filter_map(|(k, ext)| {
+        let generated_filtered = generated
+            .extensions()
+            .iter()
+            .filter_map(|(k, ext)| {
                 if k != &subject_key_identifier_oid && k != &basic_constraints_oid {
-                    Some((k.to_id_string(), ext.clone()))
+                    Some((k.to_id_string(), ext))
                 } else {
                     None
                 }
-            }));
-        let powershell_filtered =
-            BTreeMap::from_iter(powershell.extensions().iter().filter_map(|(k, ext)| {
+            })
+            .collect::<BTreeMap<_, _>>();
+        let powershell_filtered = powershell
+            .extensions()
+            .iter()
+            .filter_map(|(k, ext)| {
                 if k != &subject_key_identifier_oid {
-                    Some((k.to_id_string(), ext.clone()))
+                    Some((k.to_id_string(), ext))
                 } else {
                     None
                 }
-            }));
+            })
+            .collect();
 
         assert_eq!(generated_filtered, powershell_filtered, "extensions match");
 
