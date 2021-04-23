@@ -3789,9 +3789,11 @@ dependencies = [
 name = "tugger-code-signing"
 version = "0.1.0-pre"
 dependencies = [
+ "bcder",
  "cryptographic-message-syntax",
  "goblin",
  "p12",
+ "reqwest",
  "thiserror",
  "tugger-apple-bundle",
  "tugger-apple-codesign",
