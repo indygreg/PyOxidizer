@@ -690,11 +690,7 @@ fn command_keychain_export_certificate_chain(args: &ArgMatches) -> Result<(), Ap
         None
     };
 
-    let certs = macos_keychain_find_certificate_chain(
-        domain,
-        password.as_ref().map(|x| x.as_str()),
-        user_id,
-    )?;
+    let certs = macos_keychain_find_certificate_chain(domain, password.as_deref(), user_id)?;
 
     for (i, cert) in certs.iter().enumerate() {
         if args.is_present("no_print_self") && i == 0 {
