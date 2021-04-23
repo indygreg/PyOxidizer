@@ -247,10 +247,7 @@ mod tests {
         let build_path = context.target_build_path("bundle_builder_test_build");
         let exe_path = build_path.join("name-0.1.exe");
 
-        assert!(
-            exe_path.exists(),
-            format!("exe exists: {}", exe_path.display())
-        );
+        assert!(exe_path.exists(), "exe exist");
 
         Ok(())
     }
@@ -271,10 +268,7 @@ mod tests {
         let build_path = context.target_build_path("bundle_builder_add_wix_msi_builder");
         let exe_path = build_path.join("name-0.1.exe");
 
-        assert!(
-            exe_path.exists(),
-            format!("exe exists: {}", exe_path.display())
-        );
+        assert!(exe_path.exists(), "exe exists");
 
         Ok(())
     }
