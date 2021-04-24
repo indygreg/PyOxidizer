@@ -1,335 +1,265 @@
 .. py:currentmodule:: starlark_pyoxidizer
 
-.. _config_type_python_packaging_policy:
-
 =========================
 ``PythonPackagingPolicy``
 =========================
 
-When building a Python binary, there are various settings that control which
-Python resources are added, where they are imported from, and other various
-settings. This collection of settings is referred to as a *Python Packaging
-Policy*. These settings are represented by the ``PythonPackagingPolicy`` type.
+.. py:class:: PythonPackagingPolicy
 
-Attributes
-==========
+    When building a Python binary, there are various settings that control which
+    Python resources are added, where they are imported from, and other various
+    settings. This collection of settings is referred to as a *Python Packaging
+    Policy*. These settings are represented by the ``PythonPackagingPolicy`` type.
 
-The following sections describe the attributes available on each
-instance.
+    .. py:attribute:: allow_files
 
-.. _config_type_python_packaging_policy_allow_files:
+        (``bool``)
 
-``allow_files``
----------------
+        Whether to allow the collection of generic *file* resources.
 
-(``bool``)
+        If false, all collected/packaged resources must be instances of
+        concrete resource types (``PythonModuleSource``, ``PythonPackageResource``,
+        etc).
 
-Whether to allow the collection of generic *file* resources.
+        If true, :py:class:`File` instances can be added to resource
+        collectors.
 
-If false, all collected/packaged resources must be instances of
-concrete resource types (``PythonModuleSource``, ``PythonPackageResource``,
-etc).
+    .. py:attribute:: allow_in_memory_shared_library_loading
 
-If true, :py:class:`File` instances can be added to resource
-collectors.
+        (``bool``)
 
-.. _config_type_python_packaging_policy_allow_in_memory_shared_library_loading:
+        Whether to allow loading of Python extension modules and shared libraries
+        from memory at run-time.
 
-``allow_in_memory_shared_library_loading``
-------------------------------------------
+        Some platforms (notably Windows) allow opening shared libraries from a
+        memory address. This mode of opening shared libraries allows libraries
+        to be embedded in binaries without having to statically link them. However,
+        not every library works correctly when loaded this way.
 
-(``bool``)
+        This flag defines whether to enable this feature where supported. Its
+        true value can be ignored if the target platform doesn't support loading
+        shared library from memory.
 
-Whether to allow loading of Python extension modules and shared libraries
-from memory at run-time.
+    .. py:attribute:: bytecode_optimize_level_zero
 
-Some platforms (notably Windows) allow opening shared libraries from a
-memory address. This mode of opening shared libraries allows libraries
-to be embedded in binaries without having to statically link them. However,
-not every library works correctly when loaded this way.
+        (``bool``)
 
-This flag defines whether to enable this feature where supported. Its
-true value can be ignored if the target platform doesn't support loading
-shared library from memory.
+        Whether to add Python bytecode at optimization level 0 (the
+        default optimization level the Python interpreter compiles bytecode for).
 
-.. _config_type_python_packaging_policy_bytecode_optimize_level_zero:
+    .. py:attribute:: bytecode_optimize_level_one
 
-``bytecode_optimize_level_zero``
---------------------------------
+        (``bool``)
 
-(``bool``)
+        Whether to add Python bytecode at optimization level 1.
 
-Whether to add Python bytecode at optimization level 0 (the
-default optimization level the Python interpreter compiles bytecode for).
+    .. py:attribute:: bytecode_optimize_level_two
 
-.. _config_type_python_packaging_policy_bytecode_optimize_level_one:
+        (``bool``)
 
-``bytecode_optimize_level_one``
--------------------------------
+        Whether to add Python bytecode at optimization level 2.
 
-(``bool``)
+    .. py:attribute:: extension_module_filter
 
-Whether to add Python bytecode at optimization level 1.
+        (``string``)
 
-.. _config_type_python_packaging_policy_bytecode_optimize_level_two:
+        The filter to apply to determine which extension modules to add.
+        The following values are recognized:
 
-``bytecode_optimize_level_two``
--------------------------------
+        ``all``
+          Every named extension module will be included.
 
-(``bool``)
+        ``minimal``
+          Return only extension modules that are required to initialize a
+          Python interpreter. This is a very small set and various functionality
+          from the Python standard library will not work with this value.
 
-Whether to add Python bytecode at optimization level 2.
+        ``no-libraries``
+          Return only extension modules that don't require any additional libraries.
 
-.. _config_type_python_packaging_policy_extension_module_filter:
+          Most common Python extension modules are included. Extension modules
+          like ``_ssl`` (links against OpenSSL) and ``zlib`` are not included.
 
-``extension_module_filter``
----------------------------
+        ``no-copyleft``
+          Return only extension modules that do not link against *copyleft* licensed
+          libraries.
 
-(``string``)
+          Not all Python distributions may annotate license info for all extensions
+          or the libraries they link against. If license info is missing, the
+          extension is not included because it *could* be *copyleft* licensed.
+          Similarly, the mechanism for determining whether a license is *copyleft* is
+          based on the SPDX license annotations, which could be wrong or out of date.
 
-The filter to apply to determine which extension modules to add.
-The following values are recognized:
+        Default is ``all``.
 
-``all``
-  Every named extension module will be included.
+    .. py:attribute:: file_scanner_classify_files
 
-``minimal``
-  Return only extension modules that are required to initialize a
-  Python interpreter. This is a very small set and various functionality
-  from the Python standard library will not work with this value.
+        (``bool``)
 
-``no-libraries``
-  Return only extension modules that don't require any additional libraries.
+        Whether file scanning should attempt to classify files and emit typed
+        resources corresponding to the detected file type.
 
-  Most common Python extension modules are included. Extension modules
-  like ``_ssl`` (links against OpenSSL) and ``zlib`` are not included.
+        If ``True``, operations that emit resource objects (such as
+        :py:meth:`PythonExecutable.pip_install`) will emit specific
+        types for each resource flavor. e.g. :py:class:`PythonModuleSource`,
+        :py:class:`PythonExtensionModule`, etc.
 
-``no-copyleft``
-  Return only extension modules that do not link against *copyleft* licensed
-  libraries.
+        If ``False``, the file scanner does not attempt to classify the type of
+        a file and this rich resource types are not emitted.
 
-  Not all Python distributions may annotate license info for all extensions
-  or the libraries they link against. If license info is missing, the
-  extension is not included because it *could* be *copyleft* licensed.
-  Similarly, the mechanism for determining whether a license is *copyleft* is
-  based on the SPDX license annotations, which could be wrong or out of date.
+        Can be used in conjunction with
+        :py:attr:`PythonPackagingPolicy.file_scanner_emit_files`. If both
+        are ``True``, there will be a :py:class:`File` and an optional non-file
+        resource for each source file.
 
-Default is ``all``.
+        Default is ``True``.
 
-.. _config_type_python_packaging_policy_file_scanner_classify_files:
+    .. py:attribute:: file_scanner_emit_files
 
-``file_scanner_classify_files``
--------------------------------
+        (``bool``)
 
-(``bool``)
+        Whether file scanning should emit file resources for each seen file.
 
-Whether file scanning should attempt to classify files and emit typed
-resources corresponding to the detected file type.
+        If ``True``, operations that emit resource objects (such as
+        :py:meth:`PythonExecutable.pip_install`) will emit
+        :py:class:`File` instances for each encountered file.
 
-If ``True``, operations that emit resource objects (such as
-:py:meth:`PythonExecutable.pip_install`) will emit specific
-types for each resource flavor. e.g. :py:class:`PythonModuleSource`,
-:py:class:`PythonExtensionModule`, etc.
+        If ``False``, :py:class:`File` instances will not be emitted.
 
-If ``False``, the file scanner does not attempt to classify the type of
-a file and this rich resource types are not emitted.
+        Can be used in conjunction with
+        :py:attr:`PythonPackagingPolicy.file_scanner_classify_files`.
 
-Can be used in conjunction with
-:ref:`config_type_python_packaging_policy_file_scanner_emit_files`. If both
-are ``True``, there will be a :py:class:`File` and an optional non-file
-resource for each source file.
+        Default is ``False``.
 
-Default is ``True``.
+    .. py:attribute:: include_classified_resources
 
-.. _config_type_python_packaging_policy_file_scanner_emit_files:
+        (``bool``)
 
-``file_scanner_emit_files``
----------------------------
+        Whether strongly typed, classified non-``File`` resources have their
+        ``add_include`` attribute set to ``True`` by default.
 
-(``bool``)
+        Default is ``True``.
 
-Whether file scanning should emit file resources for each seen file.
+    .. py:attribute:: include_distribution_sources
 
-If ``True``, operations that emit resource objects (such as
-:py:meth:`PythonExecutable.pip_install`) will emit
-:py:class:`File` instances for each encountered file.
+        (``bool``)
 
-If ``False``, :py:class:`File` instances will not be emitted.
+        Whether to add source code for Python modules in the Python
+        distribution.
 
-Can be used in conjunction with
-:ref:`config_type_python_packaging_policy_file_scanner_classify_files`.
+        Default is ``True``.
 
-Default is ``False``.
+    .. py:attribute:: include_distribution_resources
 
-.. _config_type_python_packaging_policy_include_classified_resources:
+        (``bool``)
 
-``include_classified_resources``
---------------------------------
+        Whether to add Python package resources for Python packages
+        in the Python distribution.
 
-(``bool``)
+        Default is ``False``.
 
-Whether strongly typed, classified non-``File`` resources have their
-``add_include`` attribute set to ``True`` by default.
+    .. py:attribute:: include_file_resources
 
-Default is ``True``.
+        (``bool``)
 
-.. _config_type_python_packaging_policy_include_distribution_sources:
+        Whether :py:class:`File` resources have their ``add_include`` attribute
+        set to ``True`` by default.
 
-``include_distribution_sources``
---------------------------------
+        Default is ``False``.
 
-(``bool``)
+    .. py:attribute:: include_non_distribution_sources
 
-Whether to add source code for Python modules in the Python
-distribution.
+        (``bool``)
 
-Default is ``True``.
+        Whether to add source code for Python modules not in the Python
+        distribution.
 
-.. _config_type_python_packaging_policy_include_distribution_resources:
+    .. py:attribute:: include_test
 
-``include_distribution_resources``
-----------------------------------
+        (``bool``)
 
-(``bool``)
+        Whether to add Python resources related to tests.
 
-Whether to add Python package resources for Python packages
-in the Python distribution.
+        Not all files associated with tests may be properly flagged as such.
+        This is a best effort setting.
 
-Default is ``False``.
+        Default is ``False``.
 
-.. _config_type_python_packaging_policy_include_file_resources:
+    .. py:attribute:: resources_location
 
-``include_file_resources``
---------------------------
+        (``string``)
 
-(``bool``)
+        The location that resources should be added to by default.
 
-Whether :py:class:`File` resources have their ``add_include`` attribute
-set to ``True`` by default.
+        Default is ``in-memory``.
 
-Default is ``False``.
+    .. py:attribute:: resources_location_fallback
 
-.. _config_type_python_packaging_policy_include_non_distribution_sources:
+        (``string`` or ``None``)
 
-``include_non_distribution_sources``
-------------------------------------
+        The fallback location that resources should be added to if
+        ``resources_location`` fails.
 
-(``bool``)
+        Default is ``None``.
 
-Whether to add source code for Python modules not in the Python
-distribution.
+    .. py:attribute:: preferred_extension_module_variants
 
-.. _config_type_python_packaging_policy_include_test:
+        (``dict<string, string>``) (readonly)
 
-``include_test``
-----------------
+        Mapping of extension module name to variant name.
 
-(``bool``)
+        This mapping defines which preferred named variant of an extension module
+        to use. Some Python distributions offer multiple variants of the same
+        extension module. This mapping allows defining which variant of which
+        extension to use when choosing among them.
 
-Whether to add Python resources related to tests.
+        Keys set on this dict are not reflected in the underlying policy. To set
+        a key, call the ``set_preferred_extension_module_variant()`` method.
 
-Not all files associated with tests may be properly flagged as such.
-This is a best effort setting.
 
-Default is ``False``.
+    .. py:method:: register_resource_callback(f: Callable)
 
-.. _config_type_python_packaging_policy_resources_location:
+        This method registers a Starlark function to be called when resource objects
+        are created. The passed function receives 2 arguments: this
+        ``PythonPackagingPolicy`` instance and the resource (e.g.
+        ``PythonModuleSource``) that was created.
 
-``resources_location``
-----------------------
+        The purpose of the callback is to enable Starlark configuration files to
+        mutate resources upon creation so they can globally influence how those
+        resources are packaged.
 
-(``string``)
+    .. py:method:: set_preferred_extension_module_variant(extension: string, variant: string)
 
-The location that resources should be added to by default.
+        This method will set a preferred Python extension module variant to
+        use. See the documentation for ``preferred_extension_module_variants``
+        above for more.
 
-Default is ``in-memory``.
+        It accepts 2 ``string`` arguments defining the extension module name
+        and its preferred variant.
 
-.. _config_type_python_packaging_policy_resources_location_fallback:
+    .. py:method:: set_resource_handling_mode(mode: string)
 
-``resources_location_fallback``
--------------------------------
+        This method takes a string argument denoting the *resource handling mode*
+        to apply to the policy. This string can have the following values:
 
-(``string`` or ``None``)
+        ``classify``
+           Files are classified as typed resources and handled as such.
 
-The fallback location that resources should be added to if
-``resources_location`` fails.
+           Only classified resources can be added by default.
 
-Default is ``None``.
+        ``files``
+           Files are handled as raw files (as opposed to typed resources).
 
-.. _config_type_python_packaging_policy_preferred_extension_module_variants:
+           Only files can be added by default.
 
-``preferred_extension_module_variants``
----------------------------------------
+        This method is effectively a convenience method for bulk-setting
+        multiple attributes on the instance given a behavior mode.
 
-(``dict<string, string>``) (readonly)
+        ``classify`` will configure the file scanner to emit classified resources,
+        configure the ``add_include`` attribute to only be ``True`` on classified
+        resources, and will disable the addition of ``File`` resources on resource
+        collectors.
 
-Mapping of extension module name to variant name.
-
-This mapping defines which preferred named variant of an extension module
-to use. Some Python distributions offer multiple variants of the same
-extension module. This mapping allows defining which variant of which
-extension to use when choosing among them.
-
-Keys set on this dict are not reflected in the underlying policy. To set
-a key, call the ``set_preferred_extension_module_variant()`` method.
-
-Methods
-=======
-
-The following sections describe methods on ``PythonPackagingPolicy`` instances.
-
-.. _config_type_python_packaging_policy_register_resource_callback:
-
-``PythonPackagingPolicy.register_resource_callback()``
-------------------------------------------------------
-
-This method registers a Starlark function to be called when resource objects
-are created. The passed function receives 2 arguments: this
-``PythonPackagingPolicy`` instance and the resource (e.g.
-``PythonModuleSource``) that was created.
-
-The purpose of the callback is to enable Starlark configuration files to
-mutate resources upon creation so they can globally influence how those
-resources are packaged.
-
-.. _config_type_python_packaging_policy_set_preferred_extension_module_variant:
-
-``PythonPackagingPolicy.set_preferred_extension_module_variant()``
-------------------------------------------------------------------
-
-This method will set a preferred Python extension module variant to
-use. See the documentation for ``preferred_extension_module_variants``
-above for more.
-
-It accepts 2 ``string`` arguments defining the extension module name
-and its preferred variant.
-
-.. _config_type_python_packaging_policy_set_resource_handling_mode:
-
-``PythonPackagingPolicy.set_resource_handling_mode()``
-------------------------------------------------------
-
-This method takes a string argument denoting the *resource handling mode*
-to apply to the policy. This string can have the following values:
-
-``classify``
-   Files are classified as typed resources and handled as such.
-
-   Only classified resources can be added by default.
-
-``files``
-   Files are handled as raw files (as opposed to typed resources).
-
-   Only files can be added by default.
-
-This method is effectively a convenience method for bulk-setting
-multiple attributes on the instance given a behavior mode.
-
-``classify`` will configure the file scanner to emit classified resources,
-configure the ``add_include`` attribute to only be ``True`` on classified
-resources, and will disable the addition of ``File`` resources on resource
-collectors.
-
-``files`` will configure the file scanner to only emit ``File`` resources,
-configure the ``add_include`` attribute to ``True`` on ``File`` and *classified*
-resources, and will allow resource collectors to add ``File`` instances.
+        ``files`` will configure the file scanner to only emit ``File`` resources,
+        configure the ``add_include`` attribute to ``True`` on ``File`` and *classified*
+        resources, and will allow resource collectors to add ``File`` instances.

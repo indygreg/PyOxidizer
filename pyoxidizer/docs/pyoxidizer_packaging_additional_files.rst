@@ -211,9 +211,9 @@ Change your configuration file so ``make_exe()`` looks like the following:
 
 There are a few changes here.
 
-We constructed a new :ref:`config_type_python_packaging_policy` via
+We constructed a new :py:class:`PythonPackagingPolicy` via
 :py:meth:`PythonDistribution.make_python_packaging_policy` and set
-its :ref:`config_type_python_packaging_policy_resources_location_fallback`
+its :py:attr:`PythonPackagingPolicy.resources_location_fallback`
 attribute to ``filesystem-relative-lib``. This allows us to install resources
 on the filesystem, relative to the produced binary.
 
@@ -299,14 +299,14 @@ your configuration file to as follows:
 There are a few key lines here.
 
 ``policy.set_resource_handling_mode("files")`` calls a method on the
-:ref:`config_type_python_packaging_policy` to set the resource handling
+:py:class:`PythonPackagingPolicy` to set the resource handling
 mode to *files*. This effectively enables :py:class:`File` based
 resources to work. Without it, resource scanners won't emit
 :py:class:`File` and attempts at adding :py:class:`File`
 to a resource collection will fail.
 
 Next, we enable file-based resource installs by setting
-:ref:`config_type_python_packaging_policy_resources_location_fallback`.
+:py:attr:`PythonPackagingPolicy.resources_location_fallback`.
 
 Another new line is ``python_config.module_search_paths = ["$ORIGIN/lib"]``.
 This all-important line to set

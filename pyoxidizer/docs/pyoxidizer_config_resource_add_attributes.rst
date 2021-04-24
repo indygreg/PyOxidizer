@@ -9,7 +9,7 @@ Resource Attributes Influencing Adding
 Individual Starlark values representing resources expose various
 attributes prefixed with ``add_`` which influence what happens when
 that resource is added to a resource collector. These attributes are
-derived from the :ref:`config_type_python_packaging_policy` attached to
+derived from the :py:class:`PythonPackagingPolicy` attached to
 the entity creating the resource. But they can be modified by Starlark code
 before the resource is added to a collection.
 

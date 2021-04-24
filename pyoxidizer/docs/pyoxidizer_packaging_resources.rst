@@ -67,7 +67,7 @@ Packaging Policies and Adding Resources
 
 The exact mechanism by which *resources* are emitted and added to *resource
 collectors* is influenced by a *packaging policy* (represented by the
-:ref:`config_type_python_packaging_policy` Starlark type) and attributes on
+:py:class:`PythonPackagingPolicy` Starlark type) and attributes on
 each resource object influencing how they are added.
 
 When *resources* are created, the *packaging policy* determines whether
@@ -194,7 +194,7 @@ what the default values of the ``add_*`` attributes are.
 The primary mechanisms for doing this are:
 
 1. Modifying the ``PythonPackagingPolicy`` instance's internal
-   state. See :ref:`config_type_python_packaging_policy` for the full
+   state. See :py:class:`PythonPackagingPolicy` for the full
    list of object attributes and methods that can be set or called.
 2. Registering a function that will be called whenever a resource
    is created. This enables custom Starlark code to perform
@@ -213,7 +213,7 @@ Changing the Resource Handling Mode
 As documented in :ref:`packaging_resources_classified_files`, PyOxidizer
 can operate on *classified* resources or *files*-based resources.
 
-:ref:`config_type_python_packaging_policy_set_resource_handling_mode`
+:py:meth:`PythonPackagingPolicy.set_resource_handling_mode`
 exists to change the operating mode of a ``PythonPackagingPolicy``
 instance.
 
@@ -231,7 +231,7 @@ instance.
        # Set policy attributes to only operate on `File` resource types.
        policy.set_resource_handling_mode("files")
 
-:ref:`config_type_python_packaging_policy_set_resource_handling_mode` is
+:py:meth:`PythonPackagingPolicy.set_resource_handling_mode` is
 just a convenience method for manipulating a collection of attributes on
 ``PythonPackagingPolicy`` instances. If you don't like the behavior of
 its pre-defined modes, feel free to adjust attributes to suit your needs.

@@ -122,7 +122,7 @@ rejected.
 Some extensions and shared libraries are known to not work when
 loaded from memory using the custom shared library loader used by
 PyOxidizer. For this reason,
-:ref:`config_type_python_packaging_policy_allow_in_memory_shared_library_loading`
+:py:attr:`PythonPackagingPolicy.allow_in_memory_shared_library_loading`
 exists to control this behavior.
 
 .. important::

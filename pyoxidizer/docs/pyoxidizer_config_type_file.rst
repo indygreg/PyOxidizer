@@ -10,9 +10,8 @@
     file has a path and content.
 
     Instances can be constructed by calling methods that emit resources
-    with a :ref:`config_type_python_packaging_policy` having
-    :ref:`config_type_python_packaging_policy_file_scanner_emit_files`
-    set to ``True``.
+    with a :py:class:`PythonPackagingPolicy` having
+    :py:attr:`PythonPackagingPolicy.file_scanner_emit_files` set to ``True``.
 
     .. py:attribute:: path
 

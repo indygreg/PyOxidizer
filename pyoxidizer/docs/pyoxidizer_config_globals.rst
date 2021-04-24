@@ -62,7 +62,7 @@ PyOxidizer's Starlark dialect defines the following custom types:
 :py:class:`PythonPackageResource`
    Represents a non-module *resource* data file.
 
-:ref:`config_type_python_packaging_policy`
+:py:class:`PythonPackagingPolicy`
    Represents a policy controlling how Python resources are added to a binary.
 
 :py:class:`PythonModuleSource`

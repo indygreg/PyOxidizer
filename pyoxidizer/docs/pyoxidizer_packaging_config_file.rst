@@ -44,7 +44,7 @@ In this example, we create an executable embedding Python:
 :py:meth:`PythonDistribution.to_python_executable` accepts an optional
 ``PythonPackagingPolicy`` instance that influences how the executable
 is built and what resources are added where. See the
-:ref:`type documentation <config_type_python_packaging_policy>` for the
+:py:class:`type documentation <PythonPackagingPolicy>` for the
 list of parameters that can be influenced. Some of this behavior
 is described in the sections below. Other examples are provided
 throughout the :ref:`packaging` documentation.

@@ -77,11 +77,9 @@
         The interpreter configuration automatically uses settings appropriate
         for the distribution.
 
-    .. py:method:: make_python_packaging_policy()
+    .. py:method:: make_python_packaging_policy() -> PythonPackagingPolicy
 
-        Obtain a
-        :ref:`config_type_python_packaging_policy`
-        derived from the distribution.
+        Obtain a :py:class:`PythonPackagingPolicy` derived from the distribution.
 
         The policy automatically uses settings globally appropriate for the
         distribution.
