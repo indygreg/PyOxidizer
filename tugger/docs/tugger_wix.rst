@@ -78,7 +78,7 @@ feature request to request the missing functionality.
 
 Complex applications that have outgrown the limited capabilities of the
 high-level *builder* interfaces will need to use the lower level
-``WiXInstallerBuilder`` / :py:class:`WixInstaller` interface.
+``WiXInstallerBuilder`` / :py:class:`WiXInstaller` interface.
 This interface allows you to provide your own ``.wxs`` files. This means
 you can still use Tugger for invoking WiX, even if all of your ``.wxs`` files
 are maintained outside of Tugger, enabling Tugger to grow with your needs.
