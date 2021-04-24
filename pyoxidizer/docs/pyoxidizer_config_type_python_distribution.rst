@@ -64,8 +64,8 @@
 
         Returns objects representing Python resources in this distribution. Returned
         values can be
-        :ref:`config_type_python_module_source`,
-        :py:class:`PythonExtensionModule`, :ref:`config_type_python_package_resource`, etc.
+        :py:class:`PythonModuleSource`, :py:class:`PythonExtensionModule`,
+        :ref:`config_type_python_package_resource`, etc.
 
         There may be multiple :py:class:`PythonExtensionModule` with the same name.
 

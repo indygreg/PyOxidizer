@@ -126,7 +126,7 @@ of these as *Python Resources*.
 
 Configuration files represent *Python Resources* via the following types:
 
-* :ref:`config_type_python_module_source`
+* :py:class:`PythonModuleSource`
 * :ref:`config_type_python_package_resource`
 * :ref:`config_type_python_package_distribution_resource`
 * :py:class:`PythonExtensionModule`

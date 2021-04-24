@@ -128,7 +128,7 @@ resources corresponding to the detected file type.
 
 If ``True``, operations that emit resource objects (such as
 :py:meth:`PythonExecutable.pip_install`) will emit specific
-types for each resource flavor. e.g. :ref:`config_type_python_module_source`,
+types for each resource flavor. e.g. :py:class:`PythonModuleSource`,
 :py:class:`PythonExtensionModule`, etc.
 
 If ``False``, the file scanner does not attempt to classify the type of

@@ -112,8 +112,7 @@ will want to add their own Python packages/code.
 
 The Starlark environment defines various types for representing Python
 package resources. These include
-:ref:`config_type_python_module_source`,
-:py:class:`PythonExtensionModule`,
+:py:class:`PythonModuleSource`, :py:class:`PythonExtensionModule`,
 :ref:`config_type_python_package_distribution_resource`,
 and more.
 

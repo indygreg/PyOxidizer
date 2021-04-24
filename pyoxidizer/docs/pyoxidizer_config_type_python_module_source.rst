@@ -1,63 +1,44 @@
 .. py:currentmodule:: starlark_pyoxidizer
 
-.. _config_type_python_module_source:
-
 ======================
 ``PythonModuleSource``
 ======================
 
-This type represents Python source modules, agnostic of location.
+.. py:class:: PythonModuleSource
 
-Instances can be constructed via
-:py:meth:`PythonExecutable.make_python_module_source` or by calling
-methods that emit Python resources.
+    This type represents Python source modules, agnostic of location.
 
-Attributes
-==========
+    Instances can be constructed via
+    :py:meth:`PythonExecutable.make_python_module_source` or by calling
+    methods that emit Python resources.
 
-The following sections describe the attributes available on each
-instance.
+    .. py:attribute:: name
 
-.. _config_type_python_source_module_name:
+        (``string``)
 
-``name``
---------
+        Fully qualified name of the module. e.g. ``foo.bar``.
 
-(``string``)
+    .. py:attribute:: source
 
-Fully qualified name of the module. e.g. ``foo.bar``.
+        (``string``)
 
-.. _config_type_python_source_module_source:
+        The Python source code for this module.
 
-``source``
-----------
+    .. py:attribute:: is_package
 
-(``string``)
+        (``bool``)
 
-The Python source code for this module.
+        Whether this module is also a Python package (or sub-package).
 
-.. _config_type_python_source_module_is_package:
+    .. py:attribute:: is_stdlib
 
-``is_package``
---------------
+        (``bool``)
 
-(``bool``)
+        Whether this module is part of the Python standard library (part of the
+        Python distribution).
 
-Whether this module is also a Python package (or sub-package).
+    .. py:attribute:: add_*
 
-.. _config_type_python_source_module_is_stdlib:
+        (various)
 
-``is_stdlib``
--------------
-
-(``bool``)
-
-Whether this module is part of the Python standard library (part of the
-Python distribution).
-
-``add_*``
----------
-
-(various)
-
-See :ref:`config_resource_add_attributes`.
+        See :ref:`config_resource_add_attributes`.

@@ -117,7 +117,7 @@
 
     .. py:method:: make_python_module_source(name: string, source: string, is_package: bool) -> PythonModuleSource
 
-        This method creates a :ref:`config_type_python_module_source` instance
+        This method creates a :py:class:`PythonModuleSource` instance
         suitable for use with the executable being built.
 
         Arguments are as follows:
@@ -162,8 +162,7 @@
 
         Returns a ``list`` of objects representing Python resources installed as
         part of the operation. The types of these objects can be
-        :ref:`config_type_python_module_source`,
-        :ref:`config_type_python_package_resource`, etc.
+        :py:class:`PythonModuleSource`, :ref:`config_type_python_package_resource`, etc.
 
         The returned resources are typically added to a
         :py:class:`starlark_tugger.FileManifest` or

@@ -28,7 +28,7 @@ Classified Resources Versus Files
 
 All resources in PyOxidizer are ultimately derived from or representable
 by a file or a file-like primitive. For example, a
-:ref:`config_type_python_module_source` is derived from or could be
+:py:class:`PythonModuleSource` is derived from or could be
 manifested as a ``.py`` file.
 
 Various PyOxidizer functionality works by scanning existing files and
@@ -38,8 +38,7 @@ This file scanning functionality has two modes of operation: *classified*
 and *files*. In *files* mode, PyOxidizer simply emits resources corresponding
 to the raw files it encounters. In *classified* mode, PyOxidizer attempts to
 *classify* a file as a particular resource and emit a strongly-typed
-resource like :ref:`config_type_python_module_source` or
-:py:class:`PythonExtensionModule`.
+resource like :py:class:`PythonModuleSource` or :py:class:`PythonExtensionModule`.
 
 *Classified* mode is more powerful because PyOxidizer is able to build
 an *index* of typed resources at packaging time and make this *index*
@@ -81,7 +80,7 @@ When a resource is added (e.g. by calling
 ``add_*`` attributes are consulted and used to influence exactly how that
 *resource* is added/packaged.
 
-For example, a :ref:`config_type_python_module_source` can set attributes
+For example, a :py:class:`PythonModuleSource` can set attributes
 indicating to exclude source code and only generate bytecode at
 a specific optimization level. Or a :py:class:`PythonExtensionModule`
 can set attributes saying to prefer to compile it into the built
@@ -95,7 +94,7 @@ Resource Types
 
 The following Starlark types represent individual resources:
 
-:ref:`config_type_python_module_source`
+:py:class:`PythonModuleSource`
    Source code for a Python module. Roughly equivalent to a ``.py`` file.
 
    This type can also be converted to Python bytecode (roughly equivalent
