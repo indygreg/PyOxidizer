@@ -35,7 +35,7 @@ following:
 ``OxidizedResourceCollector`` Python Type
 =========================================
 
-The :py:class:`OxidizedResourceCollector`` type provides functionality
+The :py:class:`OxidizedResourceCollector` type provides functionality
 for turning instances of Python resource types into a collection
 of ``OxidizedResource`` for loading into an :py:class:`OxidizedFinder`
 instance. It exists as a convenience, as working with individual
