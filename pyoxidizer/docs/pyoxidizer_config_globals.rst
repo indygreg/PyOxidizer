@@ -130,7 +130,7 @@ PyOxidizer's Starlark dialect defines the following global functions:
    Triggers resolution of requested build
    :ref:`targets <config_processing_targets>`.
 
-:any:`set_build_path() <config_set_build_path>`
+:py:func:`set_build_path`
    Set the filesystem path to use for writing files during evaluation.
 
 .. _config_types_with_target_behavior:
