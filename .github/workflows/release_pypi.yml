@@ -62,7 +62,7 @@ jobs:
           profile: minimal
           default: true
       - name: Install maturin
-        run: pip install maturin
+        run: pip install --pre maturin
       - name: Build wheels
         run: |
           maturin build -m pyoxidizer/Cargo.toml -b bin --release --out dist --no-sdist --target ${{ matrix.platform.target }}
