@@ -17,6 +17,7 @@ EXTERNAL_SOURCE_DIRS = (
 HERE = pathlib.Path(os.path.dirname(__file__))
 ROOT = pathlib.Path(os.path.dirname(HERE))
 
+
 release = "unknown"
 
 with (ROOT / "pyoxidizer" / "Cargo.toml").open("r") as fh:
@@ -37,18 +38,50 @@ html_theme = "alabaster"
 master_doc = "index"
 
 # Synchronize external docs into this directory.
-for f in sorted(os.listdir(HERE)):
-    if f.startswith(EXTERNAL_PREFIXES):
-        print("deleting %s" % f)
-        p = HERE / f
-        p.unlink()
 
+# Start by collecting the set of external docs and their content.
+# We'll use this to compute a minimal mutation so incremental Sphinx
+# rebuilds are faster.
+wanted_external_files = {}
 for d in EXTERNAL_SOURCE_DIRS:
     source_dir = ROOT / d
 
-    for f in sorted(os.listdir(source_dir)):
-        if f.endswith(".rst") and f.startswith(EXTERNAL_PREFIXES):
-            source_path = source_dir / f
-            dest_path = HERE / f
-            print("copying %s to %s" % (source_path, dest_path))
-            shutil.copyfile(source_path, dest_path)
+    for f in os.listdir(source_dir):
+        if not f.endswith("rst") or not f.startswith(EXTERNAL_PREFIXES):
+            continue
+
+        source_path = source_dir / f
+        dest_path = HERE / f
+
+        with source_path.open("rb") as fh:
+            source_data = fh.read()
+
+        wanted_external_files[dest_path] = source_data
+
+
+for f in sorted(os.listdir(HERE)):
+    path = HERE / f
+
+    if not f.startswith(EXTERNAL_PREFIXES):
+        continue
+
+    if path in wanted_external_files:
+        with path.open("rb") as fh:
+            current_data = fh.read()
+
+        if current_data == wanted_external_files[path]:
+            print("%s is up to date" % path)
+        else:
+            print("updating %s" % path)
+            with path.open("wb") as fh:
+                fh.write(wanted_external_files[path])
+
+        del wanted_external_files[path]
+    else:
+        print("deleting %s since it disappeared" % path)
+        path.unlink()
+
+for path, data in sorted(wanted_external_files.items()):
+    print("creating %s" % path)
+    with path.open("wb") as fh:
+        fh.write(data)
