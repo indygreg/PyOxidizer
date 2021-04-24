@@ -16,7 +16,7 @@
 
     Instances have multiple attributes, which are write-only.
 
-    .. py:method:: __new__(id_prefix: str, product_name: str, product_version: str, product_manufacturer: str) -> WiXMSIBuilder
+    .. py:method:: __init__(id_prefix: str, product_name: str, product_version: str, product_manufacturer: str) -> WiXMSIBuilder
 
         ``WiXMSIBuilder()`` is called to construct new instances. It accepts
         the following arguments:
