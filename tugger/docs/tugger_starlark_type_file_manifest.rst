@@ -20,21 +20,21 @@
         other manifest provides a path already in this manifest, its content
         will be replaced by what is in the other manifest.
 
-    .. py:method:: add_path(path: str, strip_prefix: string, force_read: bool = False)
+    .. py:method:: add_path(path: str, strip_prefix: str, force_read: bool = False)
 
         This method adds a file on the filesystem to the manifest.
 
         The following arguments are accepted:
 
         ``path``
-           (``string``) The filesystem path to add.
+           The filesystem path to add.
 
         ``strip_prefix``
-           (``string``) The string prefix to strip from the path. The remaining path
+           The string prefix to strip from the path. The remaining path
            will be stored in the manifest.
 
         ``force_read``
-           (``bool``) Whether to read the file data into memory now.
+           Whether to read the file data into memory now.
 
            This can be set when reading temporary files.
 

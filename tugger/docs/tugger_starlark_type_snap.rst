@@ -57,7 +57,7 @@
 
     .. py:attribute:: description
 
-        (``string``)
+        (``str``)
 
     .. py:attribute:: grade
 
@@ -85,11 +85,11 @@
 
     .. py:attribute:: plugs
 
-        (``Optional[dict[str, list[string]]]``)
+        (``Optional[dict[str, list[str]]]``)
 
     .. py:attribute:: slots
 
-        (``Optional[dict[str, list[string]]]``)
+        (``Optional[dict[str, list[str]]]``)
 
     .. py:attribute:: summary
 

@@ -6,7 +6,7 @@
 Functions for Interacting with the Filesystem
 =============================================
 
-.. py:function:: glob(include=List[string], exclude=Optional[List[string]], strip_prefix=Optional[string]) -> FileManifest
+.. py:function:: glob(include=List[str], exclude=Optional[List[str]], strip_prefix=Optional[str]) -> FileManifest
 
     The ``glob()`` function resolves file patterns to a
     :py:class:`starlark_tugger.FileManifest`.

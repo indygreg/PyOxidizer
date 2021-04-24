@@ -65,11 +65,11 @@
 
     .. py:attribute:: listen_stream
 
-        (``Optional[string]``)
+        (``Optional[str]``)
 
     .. py:attribute:: passthrough
 
-        (``Optional[dict[string, str]]``)
+        (``Optional[dict[str, str]]``)
 
     .. py:attribute:: plugs
 

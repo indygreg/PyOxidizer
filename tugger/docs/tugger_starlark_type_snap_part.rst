@@ -28,71 +28,71 @@
 
     .. py:attribute:: after
 
-        (``Optional[list[string]]``)
+        (``Optional[list[str]]``)
 
     .. py:attribute:: build_attributes
 
-        (``Optional[list[string]]``)
+        (``Optional[list[str]]``)
 
     .. py:attribute:: build_environment
 
-        (``Optional[list[dict[string, string]]]``)
+        (``Optional[list[dict[str, str]]]``)
 
     .. py:attribute:: build_packages
 
-        (``Optional[list[string]]``)
+        (``Optional[list[str]]``)
 
     .. py:attribute:: build_snaps
 
-        (``Optional[list[string]]``)
+        (``Optional[list[str]]``)
 
     .. py:attribute:: filesets
 
-        (``Optional[dict[string, list[string]]]``)
+        (``Optional[dict[str, list[str]]]``)
 
     .. py:attribute:: organize
 
-        (``Optional[dict[string, string]]``)
+        (``Optional[dict[str, str]]``)
 
     .. py:attribute:: override_build
 
-        (``Optional[string]``)
+        (``Optional[str]``)
 
     .. py:attribute:: override_prime
 
-        (``Optional[string]``)
+        (``Optional[str]``)
 
     .. py:attribute:: override_pull
 
-        (``Optional[string]``)
+        (``Optional[str]``)
 
     .. py:attribute:: override_stage
 
-        (``Optional[string]``)
+        (``Optional[str]``)
 
     .. py:attribute:: parse_info
 
-        (``Optional[string]``)
+        (``Optional[str]``)
 
     .. py:attribute:: plugin
 
-        (``Optional[string]``)
+        (``Optional[str]``)
 
     .. py:attribute:: prime
 
-        (``Optional[list[string]]``)
+        (``Optional[list[str]]``)
 
     .. py:attribute:: source_branch
 
-        (``Optional[string]``)
+        (``Optional[str]``)
 
     .. py:attribute:: source_checksum
 
-        (``Optional[string]``)
+        (``Optional[str]``)
 
     .. py:attribute:: source_commit
 
-        (``Optional[string]``)
+        (``Optional[str]``)
 
     .. py:attribute:: source_depth
 
@@ -100,28 +100,28 @@
 
     .. py:attribute:: source_subdir
 
-        (``Optional[string]``)
+        (``Optional[str]``)
 
     .. py:attribute:: source_tag
 
-        (``Optional[string]``)
+        (``Optional[str]``)
 
     .. py:attribute:: source_type
 
-        (``Optional[string]``)
+        (``Optional[str]``)
 
     .. py:attribute:: source
 
-        (``Optional[string]``)
+        (``Optional[str]``)
 
     .. py:attribute:: stage_packages
 
-        (``Optional[list[string]]``)
+        (``Optional[list[str]]``)
 
     .. py:attribute:: stage_snaps
 
-        (``Optional[list[string]]``)
+        (``Optional[list[str]]``)
 
     .. py:attribute:: stage
 
-        (``Optional[list[string]]``)
+        (``Optional[list[str]]``)

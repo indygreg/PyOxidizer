@@ -18,7 +18,7 @@
         ``snap``
            The :py:class:`Snap` defining the configuration to be used.
 
-    .. py:method:: add_invocation(args: List[string], purge_build: Optional[bool])
+    .. py:method:: add_invocation(args: List[str], purge_build: Optional[bool])
 
         This method registers an invocation of ``snapcraft`` with the builder. When
         this instance is built, all registered invocations will be run sequentially.
@@ -49,7 +49,7 @@
         ``manifest``
            Defines files to install in the build environment.
 
-    .. py:method:: build(target: string) -> ResolvedTarget
+    .. py:method:: build(target: str) -> ResolvedTarget
 
         This method invokes the builder and runs ``snapcraft``.
 

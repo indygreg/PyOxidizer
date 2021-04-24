@@ -13,7 +13,7 @@
     processing and to turn these into an installer using the ``light.exe`` tool
     in the WiX Toolset.
 
-    .. py:method:: __init__(id: string, filename: string) -> WiXInstaller
+    .. py:method:: __init__(id: str, filename: str) -> WiXInstaller
 
         ``WiXInstaller()`` is called to construct a new instance. It accepts
         the following arguments:
@@ -51,7 +51,7 @@
         ``manifest``
            The file manifest defining additional files to install.
 
-    .. py:method:: add_build_file(build_path: string, filesystem_path: string, force_read: Optional[bool] = False)
+    .. py:method:: add_build_file(build_path: str, filesystem_path: str, force_read: Optional[bool] = False)
 
         This method registers a single additional file to make available to the
         build environment.
@@ -68,7 +68,7 @@
            Whether to read the content of this file into memory when this
            function is called.
 
-    .. py:method:: add_install_file(install_path: string, filesystem_path: string, force_read: Optional[bool] = False)
+    .. py:method:: add_install_file(install_path: str, filesystem_path: str, force_read: Optional[bool] = False)
 
         Add a file from the filesystem to be installed by the installer.
 
@@ -100,7 +100,7 @@
         This method adds a :py:class:`WiXMSIBuilder` instance to this
         instance, marking it for processing/building.
 
-    .. py:method:: add_simple_installer(product_name: string, product_version: string, product_manufacturer: string, program_files: FileManifest)
+    .. py:method:: add_simple_installer(product_name: str, product_version: str, product_manufacturer: str, program_files: FileManifest)
 
         This method will populate the installer configuration with a pre-defined
         and simple/basic configuration suitable for simple applications. This method
@@ -126,7 +126,7 @@
            Files to materialize in the ``Program Files/<product_name>``
            directory upon install.
 
-    .. py:method:: add_wxs_file(path: string, preprocessor_parameters: Optional[dict[string, string]])
+    .. py:method:: add_wxs_file(path: str, preprocessor_parameters: Optional[dict[str, str]])
 
         Adds an existing ``.wxs`` file to be processed as part of building this
         installer.
@@ -143,7 +143,7 @@
            ``.wxs`` file. These effectively constitute ``-p`` arguments to
            ``candle.exe``.
 
-    .. py:method:: set_variable(key: string, value: Optional[string])
+    .. py:method:: set_variable(key: str, value: Optional[str])
 
         Defines a variable to be passed to ``light.exe`` as ``-d`` arguments.
 

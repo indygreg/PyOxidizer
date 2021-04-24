@@ -16,7 +16,7 @@
 
     Instances have multiple attributes, which are write-only.
 
-    .. py:method:: __new__(id_prefix: string, product_name: string, product_version: string, product_manufacturer: string) -> WiXMSIBuilder
+    .. py:method:: __new__(id_prefix: str, product_name: str, product_version: str, product_manufacturer: str) -> WiXMSIBuilder
 
         ``WiXMSIBuilder()`` is called to construct new instances. It accepts
         the following arguments:
@@ -43,40 +43,40 @@
 
     .. py:attribute:: banner_bmp_path
 
-        (``string``)
+        (``str``)
 
         The path to a 493 x 58 pixel BMP file providing the banner to display in
         the installer.
 
     .. py:attribute:: dialog_bmp_path
 
-        (``string``)
+        (``str``)
 
         The path to a 493 x 312 pixel BMP file providing an image to be displayed in
         the installer.
 
     .. py:attribute:: eula_rtf_path
 
-        (``string``)
+        (``str``)
 
         The path to a RTF file containing the EULA that will be shown to users during
         installation.
 
     .. py:attribute:: help_url
 
-        (``string``)
+        (``str``)
 
         A URL that will be presented to provide users with help.
 
     .. py:attribute:: license_path
 
-        (``string``)
+        (``str``)
 
         Path to a file containing the license for the application being installed.
 
     .. py:attribute:: msi_filename
 
-        (``string``)
+        (``str``)
 
         The filename to use for the built MSI.
 
@@ -84,31 +84,31 @@
 
     .. py:attribute:: package_description
 
-        (``string``)
+        (``str``)
 
         A description of the application being installed.
 
     .. py:attribute:: package_keywords
 
-        (``string``)
+        (``str``)
 
         Keywords for the application being installed.
 
     .. py:attribute:: product_icon_path
 
-        (``string``)
+        (``str``)
 
         Path to a file providing the icon for the installed application.
 
     .. py:attribute:: target_triple
 
-        (``string``)
+        (``str``)
 
         The Rust target triple the MSI is being built for.
 
     .. py:attribute:: upgrade_code
 
-        (``string``)
+        (``str``)
 
         A GUID defining the upgrade code for the application.
 
@@ -126,7 +126,7 @@
         ``manifest``
            Files to register for installation.
 
-    .. py:method:: add_visual_cpp_redistributable(redist_version: string, platform: string)
+    .. py:method:: add_visual_cpp_redistributable(redist_version: str, platform: str)
 
         This method will locate and add the Visual C++ Redistributable runtime DLL
         files (e.g. ``vcruntime140.dll``) to the *Program Files* manifest in the builder,
@@ -146,7 +146,7 @@
         a Visual Studio installation. This should *just work* if a modern version of
         Visual Studio is installed. However, it may fail due to system variance.
 
-    .. py:method:: build(target: string) -> ResolvedTarget
+    .. py:method:: build(target: str) -> ResolvedTarget
 
         This method will build an MSI using the WiX Toolset.
 

@@ -13,7 +13,7 @@
     composed of a chain of actions. At execution time, each action in the chain is
     evaluated. See the WiX Toolset documentation for more.
 
-    .. py:method:: __init__(id_prefix: string, name: string, version: string, manufacturer: string) -> WiXBundleBuilder
+    .. py:method:: __init__(id_prefix: str, name: str, version: str, manufacturer: str) -> WiXBundleBuilder
 
         ``WiXBundleBuilder()`` is called to construct new instances. It accepts
         the following arguments:
@@ -37,7 +37,7 @@
         ``manufacturer``
            The author of the application.
 
-    .. py:method:: add_condition(condition: string, message: string)
+    .. py:method:: add_condition(condition: str, message: str)
 
         Defines a ``<bal:Condition>`` that must be satisfied to run this installer.
 
@@ -51,7 +51,7 @@
         ``message``
            The message that will be displayed if the condition is not met.
 
-    .. py:method:: add_vc_redistributable(platform: string)
+    .. py:method:: add_vc_redistributable(platform: str)
 
         This method registers the Visual C++ Redistributable to be installed.
 
@@ -66,7 +66,7 @@
         when running on a machine of that architecture. This allows a single bundle
         installer to target multiple architectures.
 
-    .. py:method:: add_wix_msi_builder(builder: WiXMSIBuilder, display_internal_ui: Optional[bool] = False, install_condition: Optional[string] = None)
+    .. py:method:: add_wix_msi_builder(builder: WiXMSIBuilder, display_internal_ui: Optional[bool] = False, install_condition: Optional[str] = None)
 
         This method adds a :py:class:`WiXMSIBuilder` to be installed
         by the produced installer.
@@ -86,7 +86,7 @@
         ``<MsiPackage>`` element and adds it to the ``<Chain>`` in the bundle XML.
         See the WiX Toolset documentation for more.
 
-    .. py:method:: build(target: string) -> ResolvedTarget
+    .. py:method:: build(target: str) -> ResolvedTarget
 
         This method will build an exe using the WiX Toolset.
 
