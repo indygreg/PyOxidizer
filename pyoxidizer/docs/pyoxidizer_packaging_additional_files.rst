@@ -300,9 +300,9 @@ There are a few key lines here.
 
 ``policy.set_resource_handling_mode("files")`` calls a method on the
 :ref:`config_type_python_packaging_policy` to set the resource handling
-mode to *files*. This effectively enables :ref:`config_type_file` based
+mode to *files*. This effectively enables :py:class:`File` based
 resources to work. Without it, resource scanners won't emit
-:ref:`config_type_file` and attempts at adding :ref:`config_type_file`
+:py:class:`File` and attempts at adding :py:class:`File`
 to a resource collection will fail.
 
 Next, we enable file-based resource installs by setting

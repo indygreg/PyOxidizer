@@ -113,13 +113,13 @@ The following Starlark types represent individual resources:
    Typically accessed via ``importlib.metadata``. This is how files in
    ``*.dist-info`` or ``*.egg-info`` directories are represented.
 
-:ref:`config_type_file`
+:py:class:`File`
    Represents a filesystem path and its content.
 
 :py:class:`starlark_tugger.FileContent`
    Represents the content of a filesystem file.
 
-   This is different from :ref:`config_type_file` in that it only
+   This is different from :py:class:`File` in that it only
    represents file content and doesn't have an associated path. (It is
    likely these 2 types will be merged someday.)
 

@@ -1,45 +1,34 @@
 .. py:currentmodule:: starlark_pyoxidizer
 
-.. _config_type_file:
-
 ========
 ``File``
 ========
 
-This type represents a concrete file in an abstract filesystem. The
-file has a path and content.
+.. py:class:: File
 
-Instances can be constructed by calling methods that emit resources
-with a :ref:`config_type_python_packaging_policy` having
-:ref:`config_type_python_packaging_policy_file_scanner_emit_files`
-set to ``True``.
+    This type represents a concrete file in an abstract filesystem. The
+    file has a path and content.
 
-Attributes
-==========
+    Instances can be constructed by calling methods that emit resources
+    with a :ref:`config_type_python_packaging_policy` having
+    :ref:`config_type_python_packaging_policy_file_scanner_emit_files`
+    set to ``True``.
 
-The following sections describe the attributes available on each
-instance.
+    .. py:attribute:: path
 
-.. _config_type_file_path:
+        (``string``)
 
-``path``
---------
+        The filesystem path represented. Typically relative. Doesn't
+        have to correspond to a valid, existing file on the filesystem.
 
-(``string``)
+    .. py:attribute:: is_executable
 
-The filesystem path represented. Typically relative. Doesn't
-have to correspond to a valid, existing file on the filesystem.
+        (``bool``)
 
-``is_executable``
------------------
+        Whether the file is executable.
 
-(``bool``)
+    .. py:attribute:: is_*
 
-Whether the file is executable.
+        (various)
 
-``add_*``
----------
-
-(various)
-
-See :ref:`config_resource_add_attributes`.
+        See :ref:`config_resource_add_attributes`.
