@@ -29,8 +29,8 @@ Windows ``standalone_static`` distributions.
 However, the tcl support files aren't installed by default.
 
 To install tcl support files, you will need to set the
-:ref:`config_type_python_executable_tcl_files_path` attribute of a
-:ref:`config_type_python_executable` instance to the directory you
+:py:attr:`PythonExecutable.tcl_files_path` attribute of a
+:py:class:`PythonExecutable` instance to the directory you
 want to install these files into. e.g.
 
 .. code-block:: python

@@ -134,7 +134,7 @@ the installer should no-op instead of downgrading what's already installed.
 The following Starlark functionality can be used to bundle the
 Visual C++ Redistributable installer as part of your application installer:
 
-* :ref:`config_python_executable_to_wix_bundle_builder`
+* :py:meth:`PythonExecutable.to_wix_bundle_builder`
 * :py:meth:`starlark_tugger.WiXBundleBuilder.add_vc_redistributable`
 
 .. _pyoxidizer_distributing_windows_vc_redist_local:
@@ -150,16 +150,16 @@ the executable, if the DLLs are present, this should *just work*.
 
 PyOxidizer supports automatically finding and copying the required DLLs
 in this manner. The Starlark setting controlling this behavior is
-:ref:`config_type_python_executable_windows_runtime_dlls_mode`.
+:py:attr:`PythonExecutable.windows_runtime_dlls_mode`.
 
-This setting effectively instructs the ``PythonExecutable`` building code
+This setting effectively instructs the :py:class:`PythonExecutable` building code
 to materialize extra files next to the binary. The Visual C++ files are
 treated just like any other supplementary files (like Python resources).
 This means that Visual C++ files will be materialized on the filesystem when
 running ``pyoxidizer build``, ``pyoxidizer run``. The files will also
 be present in file lists when using Starlark methods like
-:ref:`config_python_executable_to_file_manifest` or
-:ref:`config_python_executable_to_wix_msi_builder`.
+:py:meth:`PythonExecutable.to_file_manifest` or
+:py:meth:`PythonExecutable.to_wix_msi_builder`.
 
 This *local files* mode relies on locating DLLs on the local system. It does
 so using ``vswhere.exe`` to locate a Visual Studio installation containing

@@ -77,7 +77,7 @@ policy* is applied to each created resource to populate the initial values
 for the various ``add_*`` attributes on the Starlark *resource* types.
 
 When a resource is added (e.g. by calling
-``PythonExecutable.add_python_resource()``), these aforementioned
+:py:meth:`PythonExecutable.add_python_resource`), these aforementioned
 ``add_*`` attributes are consulted and used to influence exactly how that
 *resource* is added/packaged.
 
@@ -134,7 +134,7 @@ resources:
 
 :py:class:`PythonEmbeddedResources`
    Holds a collection of Python resources of various types. (This type is often
-   hidden away. e.g. inside a ``PythonExecutable`` instance.)
+   hidden away. e.g. inside a :py:class:`PythonExecutable` instance.)
 
 .. _packaging_resource_locations:
 
@@ -162,7 +162,7 @@ Filesystem-Relative
 When a Python resource is placed in the *filesystem-relative* location,
 the resource will be materialized as a file next to the produced entity.
 e.g. a *filesystem-relative* ``PythonModuleSource`` for the ``foo.bar``
-Python module added to a ``PythonExecutable`` will be materialized as the
+Python module added to a :py:class:`PythonExecutable` will be materialized as the
 file ``foo/bar.py`` or ``foo/bar/__init__.py`` in a directory next to the
 built executable.
 

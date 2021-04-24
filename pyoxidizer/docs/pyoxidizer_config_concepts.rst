@@ -67,7 +67,7 @@ our Starlark dialect have special *build* or *run* behavior associated
 with them. If you run ``pyoxidizer build`` or ``pyoxidizer run`` against
 a target that returns one of these types, that behavior will be performed.
 
-For example, if you return a :ref:`config_type_python_executable`, the
+For example, if you return a :py:class:`PythonExecutable`, the
 *build* behavior is to produce that executable file and the *run* behavior
 is to run that built executable.
 
@@ -104,13 +104,13 @@ since multiple targets may want to reference the distribution instance:
 Python Executables Run Python
 =============================
 
-The :ref:`config_type_python_executable` Starlark type
+The :py:class:`PythonExecutable` Starlark type
 defines an executable file embedding Python. Instances of this type
 are used to build an executable file (and possibly other files needed
 by it) that contains an embedded Python interpreter and other resources
 required by it.
 
-Instances of ``PythonExecutable`` are derived from a
+Instances of :py:class:`PythonExecutable` are derived from a
 :py:class:`PythonDistribution` instance via
 :py:meth:`PythonDistribution.to_python_executable`. There is typically a
 standalone function/target in config files for doing this.

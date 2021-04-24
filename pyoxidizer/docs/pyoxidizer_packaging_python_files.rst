@@ -12,10 +12,9 @@ extension modules, package resources, etc.
 
 For PyOxidizer to recognize these Python resources as Python resources
 (as opposed to regular files), you will need to use the methods on the
-:ref:`config_type_python_executable` Starlark type
-to use the settings from the thing being built to scan for resources, possibly
-performing a Python packaging action (such as invoking ``pip install``) along
-the way.
+:py:class:`PythonExecutable` Starlark type to use the settings from the
+thing being built to scan for resources, possibly performing a Python
+packaging action (such as invoking ``pip install``) along the way.
 
 This documentation covers the available methods and how they can be
 used.
@@ -25,33 +24,32 @@ used.
 ``PythonExecutable`` Python Resources Methods
 =============================================
 
-The ``PythonExecutable`` Starlark type has the following methods that
+The :py:class:`PythonExecutable` Starlark type has the following methods that
 can be called to perform an action and obtain an iterable of objects
 representing discovered resources:
 
-:ref:`pip_download(...) <config_python_executable_pip_download>`
+:py:meth:`PythonExecutable.pip_download`
    Invokes ``pip download`` with specified arguments and collects
    resources discovered from downloaded Python wheels.
 
-:ref:`pip_install(...) <config_python_executable_pip_install>`
+:py:meth:`PythonExecutable.pip_install`
    Invokes ``pip install`` with specified arguments and collects all
    resources installed by that process.
 
-:ref:`read_package_root(...) <config_python_executable_read_package_root>`
+:py:meth:`PythonExecutable.read_package_root`
    Recursively scans a filesystem directory for Python resources in a
    typical Python installation layout.
 
-:ref:`setup_py_install(...) <config_python_executable_setup_py_install>`
+:py:meth:`PythonExecutable.setup_py_install`
    Invokes ``python setup.py install`` for a given path and collects
    resources installed by that process.
 
-:ref:`read_virtualenv(...) <config_python_executable_read_virtualenv>`
+:py:meth:`PythonExecutable.read_virtualenv`
    Reads Python resources present in an already populated virtualenv.
 
 Typically, the Starlark types resolved by these method calls are
 passed into a method that adds the resource to a to-be-generated
-entity, such as the :ref:`PythonExecutable <config_type_python_executable>`
-Starlark type.
+entity, such as the :py:class:`PythonExecutable` Starlark type.
 
 The following sections demonstrate common use cases.
 
@@ -73,31 +71,30 @@ PyOxidizer about pyflakes. Open the ``pyflakes/pyoxidizer.bzl`` file in your
 favorite editor.
 
 Find the ``make_exe()`` function. This function returns a
-:ref:`config_type_python_executable` instance which defines
+:py:class:`PythonExecutable` instance which defines
 a standalone executable containing Python. This function is a registered
 *target*, which is a named entity that can be individually built or run.
 By returning a ``PythonExecutable`` instance, this function/target is saying
 *build an executable containing Python*.
 
-The ``PythonExecutable`` type holds all state needed to package and run
+The :py:class:`PythonExecutable` type holds all state needed to package and run
 a Python interpreter. This includes low-level interpreter configuration
 settings to which Python resources (like source and bytecode modules)
 are embedded in that executable binary. This type exposes an
-:ref:`add_python_resources() <config_python_executable_add_python_resources>`
-method which adds an iterable of objects representing Python resources to the
-set of embedded resources.
+:py:meth:`PythonExecutable.add_python_resources` method which adds an iterable
+of objects representing Python resources to the set of embedded resources.
 
 Elsewhere in this function, the ``dist`` variable holds an instance of
 :py:class:`PythonDistribution`. This type represents a Python distribution,
 which is a fancy way of saying *an implementation of Python*.
 
-Two of the methods exposed by ``PythonExecutable`` are
-:ref:`pip_download() <config_python_executable_pip_download>` and
-:ref:`pip_install() <config_python_executable_pip_install>`, which
+Two of the methods exposed by :py:class:`PythonExecutable` are
+:py:meth:`PythonExecutable.pip_download` and
+:py:meth:`PythonExecutable.pip_install`,  which
 invoke ``pip`` commands with settings to target the built executable.
 
 To add a new Python package to our executable, we call one of these
-methods then add t he results to our ``PythonExecutable`` instance. This
+methods then add t he results to our :py:class:`PythonExecutable` instance. This
 is done like so:
 
 .. code-block:: python
@@ -297,7 +294,7 @@ Each method for obtaining resources has its niche use cases. That being said,
 However, ``pip_download()`` may not work in all cases, which is why other
 methods exist.
 
-:ref:`config_python_executable_pip_download` runs ``pip download`` and
+:py:meth:`PythonExecutable.pip_download` runs ``pip download`` and
 attempts to fetch Python wheels for specified packages, requirements files,
 etc. It then extracts files from inside the wheel and converts them to
 Python resources which can be added to resource collectors.
@@ -344,8 +341,8 @@ to produce a statically linked executable containing custom Python
 extension modules, ``pip_download()`` won't work for you.
 
 After ``pip_download``,
-:ref:`config_python_executable_pip_install` and
-:ref:`config_python_executable_setup_py_install` are the next most-preferred
+:py:meth:`PythonExecutable.pip_install`
+:py:meth:`PythonExecutable.setup_py_install` are the next most-preferred
 packaging methods.
 
 Both of these work by locally running a Python packaging action
@@ -366,8 +363,8 @@ properly or will build those extension modules in such a way that
 they aren't compatible with other machines you want to run them on.
 
 The final options for obtaining Python resources are
-:ref:`config_python_executable_read_package_root` and
-:ref:`config_python_executable_read_virtualenv`. Both of these methods
+:py:meth:`PythonExecutable.read_package_root` and
+:py:meth:`PythonExecutable.read_virtualenv`. Both of these methods
 rely on traversing a filesystem tree that is already populated with Python
 resources. This should *just work* if only pure Python resources are in play.
 **But if there are compiled Python extension modules, all bets are off and

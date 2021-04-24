@@ -102,7 +102,7 @@ standard library importers, you can disable ``oxidized_importer`` by setting
 Another caveat is that indexed resources are embedded in the built executable
 by default. This will bloat the size of the executable for no benefit. To
 disable this functionality, set
-:ref:`config_type_python_executable.packed_resources_load_mode` to ``none``.
+:py:attr:`PythonExecutable.packed_resources_load_mode` ``none``.
 
 Binary Portability
 ==================

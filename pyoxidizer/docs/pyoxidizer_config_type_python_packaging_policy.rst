@@ -127,7 +127,7 @@ Whether file scanning should attempt to classify files and emit typed
 resources corresponding to the detected file type.
 
 If ``True``, operations that emit resource objects (such as
-:ref:`config_python_executable_pip_install`) will emit specific
+:py:meth:`PythonExecutable.pip_install`) will emit specific
 types for each resource flavor. e.g. :ref:`config_type_python_module_source`,
 :ref:`config_type_python_extension_module`, etc.
 
@@ -151,7 +151,7 @@ Default is ``True``.
 Whether file scanning should emit file resources for each seen file.
 
 If ``True``, operations that emit resource objects (such as
-:ref:`config_python_executable_pip_install`) will emit
+:py:meth:`PythonExecutable.pip_install`) will emit
 :ref:`config_type_file` instances for each encountered file.
 
 If ``False``, :ref:`config_type_file` instances will not be emitted.

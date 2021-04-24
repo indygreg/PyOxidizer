@@ -66,7 +66,7 @@ resolved value from calling it.
 This function should be used in cases where 1 target depends on the
 resolved value of another target. For example, a target to create a
 :py:class:`starlark_tugger.FileManifest` may wish to add a
-``PythonExecutable`` that was resolved from another target.
+:py:class:`PythonExecutable` that was resolved from another target.
 
 .. _config_resolve_targets:
 

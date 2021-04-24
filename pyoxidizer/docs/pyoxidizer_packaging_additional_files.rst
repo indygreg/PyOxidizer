@@ -220,7 +220,7 @@ on the filesystem, relative to the produced binary.
 Next, in the ``for resource in exe.pip_install(...)`` loop, we set
 ``resource.add_location = "filesystem-relative:lib"``. What this does
 is tell the subsequent call to
-:ref:`config_python_executable_add_python_resource` to add the resource
+:py:meth:`PythonExecutable.add_python_resource` to add the resource
 as a filesystem-relative resource in the ``lib`` directory.
 
 With the new configuration in place, let's re-build and run the application::

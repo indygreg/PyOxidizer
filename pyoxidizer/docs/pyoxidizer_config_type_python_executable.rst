@@ -1,448 +1,388 @@
 .. py:currentmodule:: starlark_pyoxidizer
 
-.. _config_type_python_executable:
-
 ====================
 ``PythonExecutable``
 ====================
 
-The ``PythonExecutable`` type represents an executable file containing
-the Python interpreter, Python resources to make available to the interpreter,
-and a default run-time configuration for that interpreter.
+.. py:class:: PythonExecutable
 
-Instances are constructed from :py:class:`PythonDistribution` instances
-using :py:meth:`PythonDistribution.to_python_executable`.
+    The :py:class:`PythonExecutable` type represents an executable file containing
+    the Python interpreter, Python resources to make available to the interpreter,
+    and a default run-time configuration for that interpreter.
 
-Attributes
-==========
+    Instances are constructed from :py:class:`PythonDistribution` instances
+    using :py:meth:`PythonDistribution.to_python_executable`.
 
-The following sections describe the attributes available on each instance.
+    .. py:attribute:: packed_resources_load_mode
 
-.. _config_type_python_executable.packed_resources_load_mode:
+        (``string``)
 
-``PythonExecutable.packed_resources_load_mode``
------------------------------------------------
+        Defines how the *packed Python resources data* (see
+        :ref:`python_packed_resources`) is written and loaded at run-time by the
+        embedded Python interpreter.
 
-(``string``)
+        The following values/patterns can be defined:
 
-Defines how the *packed Python resources data* (see
-:ref:`python_packed_resources`) is written and loaded at run-time by the
-embedded Python interpreter.
+        ``none``
+           No resources data will be serialized or loaded at run-time. (Use this
+           if you are using Python's filesystem based module importer and don't
+           want to use PyOxidizer's custom importer.)
 
-The following values/patterns can be defined:
+        ``embedded:<filename>``
+           The packed resources data will be embedded in the binary and loaded
+           from a memory address at run-time.
 
-``none``
-   No resources data will be serialized or loaded at run-time. (Use this
-   if you are using Python's filesystem based module importer and don't
-   want to use PyOxidizer's custom importer.)
+           ``filename`` denotes the path of the on-disk file used at build time.
+           This file is written to the *artifacts* directory that PyOxidizer
+           writes required build files to.
 
-``embedded:<filename>``
-   The packed resources data will be embedded in the binary and loaded
-   from a memory address at run-time.
+        ``binary-relative-memory-mapped:<filename>``
+           The packed resources data will be written to a file relative to the
+           built binary and loaded from there at run-time using memory mapped I/O.
 
-   ``filename`` denotes the path of the on-disk file used at build time.
-   This file is written to the *artifacts* directory that PyOxidizer
-   writes required build files to.
+        The default is ``embedded:packed-resources``.
 
-``binary-relative-memory-mapped:<filename>``
-   The packed resources data will be written to a file relative to the
-   built binary and loaded from there at run-time using memory mapped I/O.
+    .. py:attribute:: tcl_files_path
 
-The default is ``embedded:packed-resources``.
+        (``Optional[string]``)
 
-.. _config_type_python_executable_tcl_files_path:
+        Defines a directory relative to that of the built executable in which to
+        install tcl/tk files.
 
-``PythonExecutable.tcl_files_path``
------------------------------------
+        If set to a value, tcl/tk files present in the Python distribution being
+        used will be installed next to the build executable and the embedded Python
+        interpreter will automatically set the ``TCL_LIBRARY`` environment variable
+        to load tcl files from this directory.
 
-(``Optional[string]``)
+        If ``None`` (the default), no tcl/tk files will be installed.
 
-Defines a directory relative to that of the built executable in which to
-install tcl/tk files.
+    .. py:attribute:: windows_runtime_dlls_mode
 
-If set to a value, tcl/tk files present in the Python distribution being
-used will be installed next to the build executable and the embedded Python
-interpreter will automatically set the ``TCL_LIBRARY`` environment variable
-to load tcl files from this directory.
+        (``string``)
 
-If ``None`` (the default), no tcl/tk files will be installed.
+        Controls how Windows runtime DLLs should be managed when building the binary.
 
-.. _config_type_python_executable_windows_runtime_dlls_mode:
+        Windows binaries often have a dependency on various runtime DLLs, such as
+        ``vcruntime140.dll``. The built executable will need access to these DLLs
+        or it won't work.
 
-``PythonExecutable.windows_runtime_dlls_mode``
-----------------------------------------------
+        This setting controls whether to install required Windows runtime DLLs
+        next to the built binary at build time. For example, if you are producing
+        a ``myapp.exe``, this setting can automatically install a ``vcruntime140.dll``
+        next to that binary.
 
-(``string``)
+        The following values are recognized:
 
-Controls how Windows runtime DLLs should be managed when building the binary.
+        ``never``
+           Never install Windows runtime DLLs.
 
-Windows binaries often have a dependency on various runtime DLLs, such as
-``vcruntime140.dll``. The built executable will need access to these DLLs
-or it won't work.
+        ``when-present``
+           Install Windows runtime DLLs when they can be located. Do nothing if
+           they can't be found.
 
-This setting controls whether to install required Windows runtime DLLs
-next to the built binary at build time. For example, if you are producing
-a ``myapp.exe``, this setting can automatically install a ``vcruntime140.dll``
-next to that binary.
+        ``always``
+           Install Windows runtime DLLs and fail if they can't be located.
 
-The following values are recognized:
+        This setting is ignored when the built binary does not have a dependency
+        on Windows runtime DLLs.
 
-``never``
-   Never install Windows runtime DLLs.
+        See :ref:`pyoxidizer_distributing_windows` for more on runtime DLL requirements.
 
-``when-present``
-   Install Windows runtime DLLs when they can be located. Do nothing if
-   they can't be found.
+    .. py:attribute:: windows_subsystem
 
-``always``
-   Install Windows runtime DLLs and fail if they can't be located.
+        (``string``)
 
-This setting is ignored when the built binary does not have a dependency
-on Windows runtime DLLs.
+        Controls the value to use for the Rust ``#![windows_subsystem = "..."]``
+        attribute added to the autogenerated Rust program to build the executable.
 
-See :ref:`pyoxidizer_distributing_windows` for more on runtime DLL requirements.
+        This attribute only has meaning on Windows. It effectively controls the
+        value passed to the linker's ``/SUBSYSTEM`` flag.
 
-.. _config_type_python_executable_windows_subsystem:
+        Rust only supports certain values but PyOxidizer does not impose limitations
+        on what values are used. Common values include:
 
-``PythonExecutable.windows_subsystem``
---------------------------------------
+        ``console``
+           Win32 character-mode application. A console window will be opened when the
+           application runs.
 
-(``string``)
+           This value is suitable for command-line executables.
 
-Controls the value to use for the Rust ``#![windows_subsystem = "..."]``
-attribute added to the autogenerated Rust program to build the executable.
+        ``windows``
+           Application does not require a console and may provide its own windows.
 
-This attribute only has meaning on Windows. It effectively controls the
-value passed to the linker's ``/SUBSYSTEM`` flag.
+           This value is suitable for GUI applications that do not wish to launch
+           a console window on start.
 
-Rust only supports certain values but PyOxidizer does not impose limitations
-on what values are used. Common values include:
+        Default is ``console``.
 
-``console``
-   Win32 character-mode application. A console window will be opened when the
-   application runs.
+    .. py:method:: make_python_module_source(name: string, source: string, is_package: bool) -> PythonModuleSource
 
-   This value is suitable for command-line executables.
+        This method creates a :ref:`config_type_python_module_source` instance
+        suitable for use with the executable being built.
 
-``windows``
-   Application does not require a console and may provide its own windows.
+        Arguments are as follows:
 
-   This value is suitable for GUI applications that do not wish to launch
-   a console window on start.
+        ``name``
+           The name of the Python module. This is the fully qualified module
+           name. e.g. ``foo`` or ``foo.bar``.
+        ``source``
+           Python source code comprising the module.
+        ``is_package``
+           Whether the Python module is also a package. (e.g. the equivalent of a
+           ``__init__.py`` file or a module without a ``.`` in its name.
 
-Default is ``console``.
+    .. py:method:: pip_download(args: list[string]) -> list[Any]
 
-Methods
-=======
+        This method runs ``pip download <args>`` with settings appropriate to target
+        the executable being built.
 
-.. _config_python_executable_make_python_module_source:
+        This always uses ``--only-binary=:all:``, forcing pip to only download wheel
+        based packages.
 
-``PythonExecutable.make_python_module_source()``
-------------------------------------------------
+        This method accepts the following arguments:
 
-This method creates a :ref:`config_type_python_module_source` instance
-suitable for use with the executable being built.
+        ``args``
+           (``list`` of ``string``) Command line arguments to pass to ``pip download``.
+           Arguments will be added after default arguments added internally.
 
-Arguments are as follows:
+        Returns a ``list`` of objects representing Python resources collected
+        from wheels obtained via ``pip download``.
 
-``name`` (string)
-   The name of the Python module. This is the fully qualified module
-   name. e.g. ``foo`` or ``foo.bar``.
-``source`` (string)
-   Python source code comprising the module.
-``is_package`` (bool)
-   Whether the Python module is also a package. (e.g. the equivalent of a
-   ``__init__.py`` file or a module without a ``.`` in its name.
+    .. py:method:: pip_install(args: list[string], extra_envs: Optional[dict[string, string]]) -> list[Any]
 
-.. _config_python_executable_pip_download:
+        This method runs ``pip install <args>`` with settings appropriate to target
+        the executable being built.
 
-``PythonExecutable.pip_download()``
------------------------------------
+        ``args``
+           List of strings defining raw process arguments to pass to ``pip install``.
 
-This method runs ``pip download <args>`` with settings appropriate to target
-the executable being built.
+        ``extra_envs``
+           Optional dict of string key-value pairs constituting extra environment
+           variables to set in the invoked ``pip`` process.
 
-This always uses ``--only-binary=:all:``, forcing pip to only download wheel
-based packages.
+        Returns a ``list`` of objects representing Python resources installed as
+        part of the operation. The types of these objects can be
+        :ref:`config_type_python_module_source`,
+        :ref:`config_type_python_package_resource`, etc.
 
-This method accepts the following arguments:
+        The returned resources are typically added to a
+        :py:class:`starlark_tugger.FileManifest` or
+        ``PythonExecutable`` to make them available to a packaged
+        application.
 
-``args``
-   (``list`` of ``string``) Command line arguments to pass to ``pip download``.
-   Arguments will be added after default arguments added internally.
+    .. py:method:: read_package_root(path: string, packages: list[string]) -> list[Any]
 
-Returns a ``list`` of objects representing Python resources collected
-from wheels obtained via ``pip download``.
+        This method discovers resources from a directory on the filesystem.
 
-.. _config_python_executable_pip_install:
+        The specified directory will be scanned for resource files. However,
+        only specific named *packages* will be found. e.g. if the directory
+        contains sub-directories ``foo/`` and ``bar``, you must explicitly
+        state that you want the ``foo`` and/or ``bar`` package to be included
+        so files from these directories will be read.
 
-``PythonExecutable.pip_install()``
-----------------------------------
+        This rule is frequently used to pull in packages from local source
+        directories (e.g. directories containing a ``setup.py`` file). This
+        rule doesn't involve any packaging tools and is a purely driven by
+        filesystem walking. It is primitive, yet effective.
 
-This method runs ``pip install <args>`` with settings appropriate to target
-the executable being built.
+        This rule has the following arguments:
 
-``args``
-   List of strings defining raw process arguments to pass to ``pip install``.
+        ``path``
+           The filesystem path to the directory to scan.
 
-``extra_envs``
-   Optional dict of string key-value pairs constituting extra environment
-   variables to set in the invoked ``pip`` process.
+        ``packages``
+           List of package names to include.
 
-Returns a ``list`` of objects representing Python resources installed as
-part of the operation. The types of these objects can be
-:ref:`config_type_python_module_source`,
-:ref:`config_type_python_package_resource`, etc.
+           Filesystem walking will find files in a directory ``<path>/<value>/`` or in
+           a file ``<path>/<value>.py``.
 
-The returned resources are typically added to a
-:py:class:`starlark_tugger.FileManifest` or
-``PythonExecutable`` to make them available to a packaged
-application.
+        Returns a ``list`` of objects representing Python resources found in the
+        virtualenv. The types of these objects can be ``PythonModuleSource``,
+        ``PythonPackageResource``, etc.
 
-.. _config_python_executable_read_package_root:
+        The returned resources are typically added to a
+        :py:class:`starlark_tugger.FileManifest` or
+        ``PythonExecutable`` to make them available to a packaged application.
 
-``PythonExecutable.read_package_root()``
-----------------------------------------
+    .. py:method:: read_virtualenv(path: string) -> list[Any]
 
-This method discovers resources from a directory on the filesystem.
+        This method attempts to read Python resources from an already built
+        virtualenv.
 
-The specified directory will be scanned for resource files. However,
-only specific named *packages* will be found. e.g. if the directory
-contains sub-directories ``foo/`` and ``bar``, you must explicitly
-state that you want the ``foo`` and/or ``bar`` package to be included
-so files from these directories will be read.
+        .. important::
 
-This rule is frequently used to pull in packages from local source
-directories (e.g. directories containing a ``setup.py`` file). This
-rule doesn't involve any packaging tools and is a purely driven by
-filesystem walking. It is primitive, yet effective.
+           PyOxidizer only supports finding modules and resources
+           populated via *traditional* means (e.g. ``pip install`` or ``python setup.py
+           install``). If ``.pth`` or similar mechanisms are used for installing modules,
+           files may not be discovered properly.
 
-This rule has the following arguments:
+        It accepts the following arguments:
 
-``path`` (string)
-   The filesystem path to the directory to scan.
+        ``path``
+           The filesystem path to the root of the virtualenv.
 
-``packages`` (list of string)
-   List of package names to include.
+           Python modules are typically in a ``lib/pythonX.Y/site-packages`` directory
+           (on UNIX) or ``Lib/site-packages`` directory (on Windows) under this path.
 
-   Filesystem walking will find files in a directory ``<path>/<value>/`` or in
-   a file ``<path>/<value>.py``.
+        Returns a ``list`` of objects representing Python resources found in the virtualenv.
+        The types of these objects can be ``PythonModuleSource``,
+        ``PythonPackageResource``, etc.
 
-Returns a ``list`` of objects representing Python resources found in the
-virtualenv. The types of these objects can be ``PythonModuleSource``,
-``PythonPackageResource``, etc.
+        The returned resources are typically added to a
+        :py:class:`starlark_tugger.FileManifest` or
+        ``PythonExecutable`` to make them available to a packaged application.
 
-The returned resources are typically added to a
-:py:class:`starlark_tugger.FileManifest` or
-``PythonExecutable`` to make them available to a packaged application.
+    .. py:method:: setup_py_install(package_path: string, extra_envs: dict[string, string] = {}, extra_global_arguments: dict[string, string] = {}) -> list[Any]
 
-.. _config_python_executable_read_virtualenv:
+        This method runs ``python setup.py install`` against a package at the
+        specified path.
 
-``PythonExecutable.read_virtualenv()``
---------------------------------------
+        It accepts the following arguments:
 
-This method attempts to read Python resources from an already built
-virtualenv.
+        ``package_path``
+           String filesystem path to directory containing a ``setup.py`` to invoke.
 
-.. important::
+        ``extra_envs={}``
+           Optional dict of string key-value pairs constituting extra environment
+           variables to set in the invoked ``python`` process.
 
-   PyOxidizer only supports finding modules and resources
-   populated via *traditional* means (e.g. ``pip install`` or ``python setup.py
-   install``). If ``.pth`` or similar mechanisms are used for installing modules,
-   files may not be discovered properly.
+        ``extra_global_arguments=[]``
+           Optional list of strings of extra command line arguments to pass to
+           ``python setup.py``. These will be added before the ``install``
+           argument.
 
-It accepts the following arguments:
+        Returns a ``list`` of objects representing Python resources installed
+        as part of the operation. The types of these objects can be
+        ``PythonModuleSource``, ``PythonPackageResource``, etc.
 
-``path`` (string)
-   The filesystem path to the root of the virtualenv.
+        The returned resources are typically added to a
+        :py:class:`starlark_tugger.FileManifest` or
+        ``PythonExecutable`` to make them available to a packaged application.
 
-   Python modules are typically in a ``lib/pythonX.Y/site-packages`` directory
-   (on UNIX) or ``Lib/site-packages`` directory (on Windows) under this path.
+    .. py:method:: add_python_resource(resource: Union[PythonModuleSource, PythonPackageResource, PythonExtensionModule])
 
-Returns a ``list`` of objects representing Python resources found in the virtualenv.
-The types of these objects can be ``PythonModuleSource``,
-``PythonPackageResource``, etc.
+        This method registers a Python resource of various types with the instance.
 
-The returned resources are typically added to a
-:py:class:`starlark_tugger.FileManifest` or
-``PythonExecutable`` to make them available to a packaged application.
+        It accepts a ``resource`` argument which can be a ``PythonModuleSource``,
+        ``PythonPackageResource``, or ``PythonExtensionModule`` and registers that
+        resource with this instance.
 
-.. _config_python_executable_setup_py_install:
+        The following arguments are accepted:
 
-``PythonExecutable.setup_py_install()``
----------------------------------------
+        ``resource``
+           The resource to add to the embedded Python environment.
 
-This method runs ``python setup.py install`` against a package at the
-specified path.
+        This method is a glorified proxy to the various ``add_python_*`` methods.
+        Unlike those methods, this one accepts all types that are known Python
+        resources.
 
-It accepts the following arguments:
+    .. py:method:: add_python_resources(resources: list[Union[PythonModuleSource, PythonPackageResource, PythonExtensionModule])
 
-``package_path``
-   String filesystem path to directory containing a ``setup.py`` to invoke.
+        This method registers an iterable of Python resources of various types.
+        This method is identical to :py:meth:`add_python_resource` except the argument is
+        an iterable of resources. All other arguments are identical.
 
-``extra_envs={}``
-   Optional dict of string key-value pairs constituting extra environment
-   variables to set in the invoked ``python`` process.
+    .. py:method:: filter_from_files(files: list[string], glob_files: list[string])
 
-``extra_global_arguments=[]``
-   Optional list of strings of extra command line arguments to pass to
-   ``python setup.py``. These will be added before the ``install``
-   argument.
+        This method filters all embedded resources (source modules, bytecode modules,
+        and resource names) currently present on the instance through a set of
+        resource names resolved from files.
 
-Returns a ``list`` of objects representing Python resources installed
-as part of the operation. The types of these objects can be
-``PythonModuleSource``, ``PythonPackageResource``, etc.
+        This method accepts the following arguments:
 
-The returned resources are typically added to a
-:py:class:`starlark_tugger.FileManifest` or
-``PythonExecutable`` to make them available to a packaged application.
+        ``files``
+           List of filesystem paths to files containing resource names. The file
+           must be valid UTF-8 and consist of a ``\n`` delimited list of resource
+           names. Empty lines and lines beginning with ``#`` are ignored.
 
-.. _config_python_executable_add_python_resource:
+        ``glob_files``
+           List of glob matching patterns of filter files to read. ``*`` denotes
+           all files in a directory. ``**`` denotes recursive directories. This
+           uses the Rust ``glob`` crate under the hood and the documentation for that
+           crate contains more pattern matching info.
 
-``PythonExecutable.add_python_resource()``
-------------------------------------------
+           The files read by this argument must be the same format as documented
+           by the ``files`` argument.
 
-This method registers a Python resource of various types with the instance.
+        All defined files are first read and the resource names encountered are
+        unioned into a set. This set is then used to filter entities currently
+        registered with the instance.
 
-It accepts a ``resource`` argument which can be a ``PythonModuleSource``,
-``PythonPackageResource``, or ``PythonExtensionModule`` and registers that
-resource with this instance.
+    .. py:method:: to_embedded_resources()
 
-The following arguments are accepted:
+        Obtains a :py:class:`PythonEmbeddedResources` instance representing
+        resources to be made available to the Python interpreter.
 
-``resource``
-   The resource to add to the embedded Python environment.
+        See the :py:class:`PythonEmbeddedResources` type documentation for more.
 
-This method is a glorified proxy to the various ``add_python_*`` methods.
-Unlike those methods, this one accepts all types that are known Python
-resources.
+    .. py:method:: to_file_manifest(prefix: string) -> starlark_tugger.FileManifest
 
-.. _config_python_executable_add_python_resources:
+        This method transforms the ``PythonExecutable`` instance to a
+        :py:class:`starlark_tugger.FileManifest`.
+        The :py:class:`starlark_tugger.FileManifest` is populated with the build
+        executable and any file-based resources that are registered with the
+        resource collector. A ``libpython`` shared library will also be present
+        depending on build settings.
 
-``PythonExecutable.add_python_resources()``
--------------------------------------------
+        This method accepts the following arguments:
 
-This method registers an iterable of Python resources of various types.
-This method is identical to
-:ref:`config_python_executable_add_python_resource` except the argument is
-an iterable of resources. All other arguments are identical.
+        ``prefix``
+           The directory prefix of files in the
+           :py:class:`starlark_tugger.FileManifest`. Use ``.`` to denote no prefix.
 
-.. _config_python_executable_filter_from_files:
+    .. py:method:: to_wix_bundle_builder(id_prefix: string, product_name: string, product_version: string, product_manufacturer: string, msi_builder_callback: Callable) -> starlark_tugger.WiXBundleBuilder
 
-``PythonExecutable.filter_from_files()``
-----------------------------------------
+        This method transforms the ``PythonExecutable`` instance into a
+        :py:class:`starlark_tugger.WiXBundleBuilder` instance. The returned value can
+        be used to generate a Windows ``.exe`` installer. This installer will install
+        the Visual C++ Redistributable as well as an MSI for the build application.
 
-This method filters all embedded resources (source modules, bytecode modules,
-and resource names) currently present on the instance through a set of
-resource names resolved from files.
+        This method accepts the following arguments:
 
-This method accepts the following arguments:
+        ``id_prefix``
+           See :py:meth:`starlark_tugger.WiXMSIBuilder.__init__` for usage.
+        ``product_name``
+           See :py:meth:`starlark_tugger.WiXMSIBuilder.__init__` for usage.
+        ``product_version``
+           See :py:meth:`starlark_tugger.WiXMSIBuilder.__init__` for usage.
+        ``product_manufacturer``
+           See :py:meth:`starlark_tugger.WiXMSIBuilder.__init__` for usage.
+        ``msi_builder_callback``
+           (``function``) A callable function that can be used to modify the
+           :py:class:`starlark_tugger.WiXMSIBuilder` constructed for the application.
 
-``files`` (array of string)
-   List of filesystem paths to files containing resource names. The file
-   must be valid UTF-8 and consist of a ``\n`` delimited list of resource
-   names. Empty lines and lines beginning with ``#`` are ignored.
+           The function will receive the :py:class:`starlark_tugger.WiXMSIBuilder` as
+           its single argument. The return value is ignored.
 
-``glob_files`` (array of string)
-   List of glob matching patterns of filter files to read. ``*`` denotes
-   all files in a directory. ``**`` denotes recursive directories. This
-   uses the Rust ``glob`` crate under the hood and the documentation for that
-   crate contains more pattern matching info.
+        The returned value can be further customized before it is built. See
+        :py:class:`starlark_tugger.WiXBundleBuilder` type documentation for more.
 
-   The files read by this argument must be the same format as documented
-   by the ``files`` argument.
+        .. important::
 
-All defined files are first read and the resource names encountered are
-unioned into a set. This set is then used to filter entities currently
-registered with the instance.
+           :py:attr:`PythonExecutable.windows_runtime_dlls_mode` can result
+           in DLLs being installed next to the binary in addition to being installed
+           as part of the installer. When using this method, you probably want to set
+           ``.windows_runtime_dlls_mode = "never"`` to prevent the redundant
+           installation.
 
-.. _config_python_executable_to_embedded_resources:
+    .. py:method:: to_wix_msi_builder(id_prefix: string, product_name: string, product_version: string, product_manufacturer: string) -> starlark_tugger.WiXMSIBuilder
 
-``PythonExecutable.to_embedded_resources()``
---------------------------------------------
+        This method transforms the ``PythonExecutable`` instance into a
+        :py:class:`starlark_tugger.WiXMSIBuilder` instance. The returned value can
+        be used to generate a Windows MSI installer.
 
-Obtains a :py:class:`PythonEmbeddedResources` instance representing
-resources to be made available to the Python interpreter.
+        This method accepts the following arguments:
 
-See the :py:class:`PythonEmbeddedResources` type documentation for more.
+        ``id_prefix``
+           See :py:meth:`starlark_tugger.WiXMSIBuilder.__init__` for usage.
+        ``product_name``
+           See :py:meth:`starlark_tugger.WiXMSIBuilder.__init__` for usage.
+        ``product_version``
+           See :py:meth:`starlark_tugger.WiXMSIBuilder.__init__` for usage.
+        ``product_manufacturer``
+           See :py:meth:`starlark_tugger.WiXMSIBuilder.__init__` for usage.
 
-.. _config_python_executable_to_file_manifest:
+        The MSI installer configuration can be customized. See the
+        :py:class:`starlark_tugger.WiXMSIBuilder` type documentation for more.
 
-``PythonExecutable.to_file_manifest()``
----------------------------------------
-
-This method transforms the ``PythonExecutable`` instance to a
-:py:class:`starlark_tugger.FileManifest`.
-The :py:class:`starlark_tugger.FileManifest` is populated with the build
-executable and any file-based resources that are registered with the
-resource collector. A ``libpython`` shared library will also be present
-depending on build settings.
-
-This method accepts the following arguments:
-
-``prefix``
-   (``string``) The directory prefix of files in the
-   :py:class:`starlark_tugger.FileManifest`. Use ``.`` to denote no prefix.
-
-.. _config_python_executable_to_wix_bundle_builder:
-
-``PythonExecutable.to_wix_bundle_builder()``
---------------------------------------------
-
-This method transforms the ``PythonExecutable`` instance into a
-:py:class:`starlark_tugger.WiXBundleBuilder` instance. The returned value can
-be used to generate a Windows ``.exe`` installer. This installer will install
-the Visual C++ Redistributable as well as an MSI for the build application.
-
-This method accepts the following arguments:
-
-``id_prefix``
-   See :py:meth:`starlark_tugger.WiXMSIBuilder.__init__` for usage.
-``product_name``
-   See :py:meth:`starlark_tugger.WiXMSIBuilder.__init__` for usage.
-``product_version``
-   See :py:meth:`starlark_tugger.WiXMSIBuilder.__init__` for usage.
-``product_manufacturer``
-   See :py:meth:`starlark_tugger.WiXMSIBuilder.__init__` for usage.
-``msi_builder_callback``
-   (``function``) A callable function that can be used to modify the
-   :py:class:`starlark_tugger.WiXMSIBuilder` constructed for the application.
-
-   The function will receive the :py:class:`starlark_tugger.WiXMSIBuilder` as
-   its single argument. The return value is ignored.
-
-The returned value can be further customized before it is built. See
-:py:class:`starlark_tugger.WiXBundleBuilder` type documentation for more.
-
-.. important::
-
-   :ref:`config_type_python_executable_windows_runtime_dlls_mode` can result
-   in DLLs being installed next to the binary in addition to being installed
-   as part of the installer. When using this method, you probably want to set
-   ``.windows_runtime_dlls_mode = "never"`` to prevent the redundant
-   installation.
-
-.. _config_python_executable_to_wix_msi_builder:
-
-``PythonExecutable.to_wix_msi_builder()``
------------------------------------------
-
-This method transforms the ``PythonExecutable`` instance into a
-:py:class:`starlark_tugger.WiXMSIBuilder` instance. The returned value can
-be used to generate a Windows MSI installer.
-
-This method accepts the following arguments:
-
-``id_prefix``
-   See :py:meth:`starlark_tugger.WiXMSIBuilder.__init__` for usage.
-``product_name``
-   See :py:meth:`starlark_tugger.WiXMSIBuilder.__init__` for usage.
-``product_version``
-   See :py:meth:`starlark_tugger.WiXMSIBuilder.__init__` for usage.
-``product_manufacturer``
-   See :py:meth:`starlark_tugger.WiXMSIBuilder.__init__` for usage.
-
-The MSI installer configuration can be customized. See the
-:py:class:`starlark_tugger.WiXMSIBuilder` type documentation for more.
-
-The MSI installer will **not** materialize the Visual C++ Runtime DLL(s).
+        The MSI installer will **not** materialize the Visual C++ Runtime DLL(s).

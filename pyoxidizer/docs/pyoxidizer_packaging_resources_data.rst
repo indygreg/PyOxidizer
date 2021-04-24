@@ -14,7 +14,7 @@ are using this module importer (controlled from the
 which is enabled by default), the interpreter will need to reference this
 *packed resources data* at run-time.
 
-The :ref:`config_type_python_executable.packed_resources_load_mode` attribute
+The :py:attr:`PythonExecutable.packed_resources_load_mode` attribute
 can be used in config files to control how this resources data should be
 read.
 

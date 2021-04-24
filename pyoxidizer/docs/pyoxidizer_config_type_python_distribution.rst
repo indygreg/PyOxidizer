@@ -90,7 +90,7 @@
 
     .. py:method:: to_python_executable(name: string, packaging_policy: PythonPackagingPolicy, config: PythonInterpreterConfig) -> PythonExecutable
 
-        This method constructs a :ref:`config_type_python_executable` instance. It
+        This method constructs a :py:class:`PythonExecutable` instance. It
         essentially says *build an executable embedding Python from this
         distribution*.
 

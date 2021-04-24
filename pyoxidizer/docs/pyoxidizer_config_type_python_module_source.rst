@@ -9,7 +9,7 @@
 This type represents Python source modules, agnostic of location.
 
 Instances can be constructed via
-:ref:`config_python_executable_make_python_module_source` or by calling
+:py:meth:`PythonExecutable.make_python_module_source` or by calling
 methods that emit Python resources.
 
 Attributes

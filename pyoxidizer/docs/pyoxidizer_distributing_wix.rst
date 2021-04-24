@@ -37,22 +37,22 @@ PyOxidizer provides the following extensions and integrations with
    Adds an iterable of Python resource types to Tugger's
    :py:class:`starlark_tugger.FileManifest` type.
 
-:ref:`config_python_executable_to_file_manifest`
-   Converts a :ref:`config_type_python_executable` to a
+:py:meth:`PythonExecutable.to_file_manifest`
+   Converts a :py:class:`PythonExecutable` to a
    :py:class:`starlark_tugger.FileManifest`. Enables materializing an
    executable/application as a set of files, which Tugger can easily operate
    against.
 
-:ref:`config_python_executable_to_wix_bundle_builder`
-   Converts a :ref:`config_type_python_executable` to a
+:py:meth:`PythonExecutable.to_wix_bundle_builder`
+   Converts a :py:class:`PythonExecutable` to a
    :py:class:`starlark_tugger.WiXBundleBuilder`.
 
    This method will produce a :py:class:`starlark_tugger.WiXBundleBuilder`.
    that is pre-configured with appropriate settings and state for a Python
    application. The produced ``.exe`` installer should *just work*.
 
-:ref:`config_python_executable_to_wix_msi_builder`
-   Converts a :ref:`config_type_python_executable` to a
+:py:meth:`PythonExecutable.to_wix_msi_builder`
+   Converts a :py:class:`PythonExecutable` to a
    :py:class:`starlark_tugger.WIXMSIBuilder`.
 
    This method will produce a :py:class:`starlark_tugger.WIXMSIBuilder`
@@ -82,8 +82,8 @@ most of the time. However, on a fresh Windows installation, these required
 files may not exist. So it is important that they be installed with your
 application.
 
-When using :ref:`config_python_executable_to_wix_msi_builder` or
-:ref:`config_python_executable_to_wix_bundle_builder`, PyOxidizer
+When using :py:meth:`PythonExecutable.to_wix_msi_builder` or
+:py:meth:`PythonExecutable.to_wix_bundle_builder`, PyOxidizer
 will automatically add the Visual C++ Redistributable to the installer
 if it is required. However, the method varies. For bundle installers,
 the installer will contain the official ``VC_Redist*.exe`` installer

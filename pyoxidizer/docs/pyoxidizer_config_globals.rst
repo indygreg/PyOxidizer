@@ -47,7 +47,7 @@ PyOxidizer's Starlark dialect defines the following custom types:
 :py:class:`PythonEmbeddedResources`
    Represents resources made available to a Python interpreter.
 
-:ref:`config_type_python_executable`
+:py:class:`PythonExecutable`
    Represents an executable file containing a Python interpreter.
 
 :ref:`config_type_python_extension_module`
@@ -147,7 +147,7 @@ The following types have special behavior registered:
 :py:class:`starlark_tugger.FileManifest`
    Build behavior is to materialize all files in the file manifest.
 
-   Run behavior is to run the last added :ref:`config_type_python_executable`
+   Run behavior is to run the last added :py:class:`PythonExecutable`
    if available, falling back to an executable file installed by the manifest
    if there is exactly 1 executable file.
 
@@ -156,7 +156,7 @@ The following types have special behavior registered:
 
    There is no run behavior.
 
-:ref:`config_type_python_executable`
+:py:class:`PythonExecutable`
    Build behavior is to build the executable file.
 
    Run behavior is to run that built executable.

@@ -199,7 +199,7 @@ PyOxidizer has some support for managing this file for you. See
 
 If PyOxidizer is not materializing this file next your built binary,
 either you've disabled this functionality via your configuration
-file (see :ref:`config_type_python_executable_windows_runtime_dlls_mode`)
+file (see :py:attr:`PythonExecutable.windows_runtime_dlls_mode`)
 or PyOxidizer could not find the Visual Studio component providing this
 file.
 

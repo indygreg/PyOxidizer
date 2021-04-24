@@ -58,13 +58,13 @@ The :ref:`config_type_python_interpreter_config`
 Starlark type configures the default behavior of the Python interpreter
 embedded in built binaries.
 
-A ``PythonInterpreterConfig`` instance is associated with ``PythonExecutable``
+A ``PythonInterpreterConfig`` instance is associated with :py:class:`PythonExecutable`
 instances when they are created. A custom instance can be passed into
 :py:meth:`PythonDistribution.to_python_executable` to use non-default settings.
 
 In this example (similar to above), we construct a custom
 ``PythonInterpreterConfig`` instance using non-defaults and then pass
-this instance into the constructed ``PythonExecutable``:
+this instance into the constructed :py:class:`PythonExecutable`:
 
 .. code-block:: python
 
@@ -104,7 +104,7 @@ required by most configuration files.
 Adding Python Packages to Executables
 =====================================
 
-A just-created ``PythonExecutable`` Starlark type contains just the
+A just-created :py:class:`PythonExecutable` Starlark type contains just the
 Python interpreter and standard library derived from the :py:class:`PythonDistribution`
 from which it came. While you can use PyOxidizer to produce an executable
 containing just a normal Python *distribution* with nothing else, many people
@@ -119,8 +119,8 @@ and more.
 
 Instances of these types can be created dynamically or by performing
 common Python packaging operations (such as invoking ``pip install``) via
-various methods on ``PythonExecutable`` instances. These Python package
-resource instances can then be added to ``PythonExecutable`` instances
+various methods on :py:class:`PythonExecutable` instances. These Python package
+resource instances can then be added to :py:class:`PythonExecutable` instances
 so they are part of the built binary.
 
 See :ref:`packaging_resources` and :ref:`packaging_python_files`
@@ -141,7 +141,7 @@ being manifested in a directory having the name of the build target.
 construct custom file *install layouts*.
 
 Say you have an existing directory tree of files you want to copy
-next to your built executable defined by the ``PythonExecutable`` type.
+next to your built executable defined by the :py:class:`PythonExecutable` type.
 
 The :py:func:`starlark_tugger.glob` function can be used to discover
 existing files on the filesystem and turn them into a
@@ -174,7 +174,7 @@ instance using
 
 We introduce a new ``install`` target and ``make_install()`` function which
 returns a :py:class:`starlark_tugger.FileManifest`. It adds the
-``PythonExecutable`` (represented by the ``exe`` argument/variable) to
+:py:class:`PythonExecutable` (represented by the ``exe`` argument/variable) to
 that manifest in the root directory, signified by ``.``.
 
 Next, it calls ``glob()`` to find all files in the
