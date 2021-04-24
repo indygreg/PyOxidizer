@@ -1,3 +1,5 @@
+.. py:currentmodule:: starlark_pyoxidizer
+
 .. _packaging_masquerading:
 
 =====================================

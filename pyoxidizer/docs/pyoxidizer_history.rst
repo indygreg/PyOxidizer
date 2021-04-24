@@ -1,3 +1,5 @@
+.. py:currentmodule:: starlark_pyoxidizer
+
 .. _history:
 
 ===============
@@ -261,7 +263,7 @@ Backwards Compatibility Notes
 
 * The default Python distribution is now CPython 3.9 instead of 3.8. To use
   3.8, pass the ``python_version="3.8"`` argument to
-  :ref:`config_default_python_distribution` in your configuration file. We
+  :py:func:`default_python_distribution` in your configuration file. We
   don't anticipate dropping support for 3.8 any time soon. However, this may
   be necessary in order to more easily support new Python features.
 * The Python 3.8 distributions no longer support Windows 7 and require Windows

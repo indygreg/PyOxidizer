@@ -1,3 +1,5 @@
+.. py:currentmodule:: starlark_pyoxidizer
+
 .. _packaging_additional_files:
 
 ==============================================
@@ -210,7 +212,7 @@ Change your configuration file so ``make_exe()`` looks like the following:
 There are a few changes here.
 
 We constructed a new :ref:`config_type_python_packaging_policy` via
-:ref:`config_python_distribution_make_python_packaging_policy` and set
+:py:meth:`PythonDistribution.make_python_packaging_policy` and set
 its :ref:`config_type_python_packaging_policy_resources_location_fallback`
 attribute to ``filesystem-relative-lib``. This allows us to install resources
 on the filesystem, relative to the produced binary.

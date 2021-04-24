@@ -1,3 +1,5 @@
+.. py:currentmodule:: starlark_pyoxidizer
+
 .. _config_type_python_executable:
 
 ====================
@@ -8,9 +10,8 @@ The ``PythonExecutable`` type represents an executable file containing
 the Python interpreter, Python resources to make available to the interpreter,
 and a default run-time configuration for that interpreter.
 
-Instances are constructed from :ref:`config_type_python_distribution`
-instances using
-:ref:`config_python_distribution_to_python_executable`.
+Instances are constructed from :py:class:`PythonDistribution` instances
+using :py:meth:`PythonDistribution.to_python_executable`.
 
 Attributes
 ==========

@@ -1,3 +1,5 @@
+.. py:currentmodule:: starlark_pyoxidizer
+
 .. _config_concepts:
 
 ========
@@ -77,19 +79,18 @@ with registered target behaviors.
 Python Distributions Provide Python
 ===================================
 
-The :ref:`config_type_python_distribution` Starlark
-type defines a Python distribution. A Python distribution is an entity
-which contains a Python interpreter, Python standard library, and which
-PyOxidizer knows how to consume and integrate into a new binary.
+The :py:class:`PythonDistribution` Starlark type defines a Python distribution.
+A Python distribution is an entity which contains a Python interpreter, Python
+standard library, and which PyOxidizer knows how to consume and integrate into
+a new binary.
 
-``PythonDistribution`` instances are arguably the most important type
+:py:class:`PythonDistribution` instances are arguably the most important type
 in configuration files because without them you can't perform Python
 packaging actions or construct binaries with Python embedded.
 
-Instances of ``PythonDistribution`` are typically constructed from
-:ref:`default_python_distribution() <config_default_python_distribution>`
-and are registered as their own target, since multiple targets may want
-to reference the distribution instance:
+Instances of :py:class:`PythonDistribution` are typically constructed from
+:py:func:`default_python_distribution` and are registered as their own target,
+since multiple targets may want to reference the distribution instance:
 
 .. code-block:: python
 
@@ -109,11 +110,10 @@ are used to build an executable file (and possibly other files needed
 by it) that contains an embedded Python interpreter and other resources
 required by it.
 
-Instances of ``PythonExecutable`` are derived from a ``PythonDistribution``
-instance via the
-:ref:`PythonDistribution.to_python_executable() <config_python_distribution_to_python_executable>`
-method. There is typically a standalone function/target in config files
-for doing this.
+Instances of ``PythonExecutable`` are derived from a
+:py:class:`PythonDistribution` instance via
+:py:meth:`PythonDistribution.to_python_executable`. There is typically a
+standalone function/target in config files for doing this.
 
 .. _config_python_resources:
 

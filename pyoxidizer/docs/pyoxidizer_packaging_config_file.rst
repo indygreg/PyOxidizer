@@ -1,3 +1,5 @@
+.. py:currentmodule:: starlark_pyoxidizer
+
 .. _packaging_config_file:
 
 ================================================
@@ -39,7 +41,7 @@ In this example, we create an executable embedding Python:
    register_target("dist", make_dist)
    register_target("exe", make_exe, depends=["dist"], default=True)
 
-``PythonDistribution.to_python_executable()`` accepts an optional
+:py:meth:`PythonDistribution.to_python_executable` accepts an optional
 ``PythonPackagingPolicy`` instance that influences how the executable
 is built and what resources are added where. See the
 :ref:`type documentation <config_type_python_packaging_policy>` for the
@@ -58,7 +60,7 @@ embedded in built binaries.
 
 A ``PythonInterpreterConfig`` instance is associated with ``PythonExecutable``
 instances when they are created. A custom instance can be passed into
-``PythonDistribution.to_python_executable()`` to use non-default settings.
+:py:meth:`PythonDistribution.to_python_executable` to use non-default settings.
 
 In this example (similar to above), we construct a custom
 ``PythonInterpreterConfig`` instance using non-defaults and then pass
@@ -103,7 +105,7 @@ Adding Python Packages to Executables
 =====================================
 
 A just-created ``PythonExecutable`` Starlark type contains just the
-Python interpreter and standard library derived from the ``PythonDistribution``
+Python interpreter and standard library derived from the :py:class:`PythonDistribution`
 from which it came. While you can use PyOxidizer to produce an executable
 containing just a normal Python *distribution* with nothing else, many people
 will want to add their own Python packages/code.

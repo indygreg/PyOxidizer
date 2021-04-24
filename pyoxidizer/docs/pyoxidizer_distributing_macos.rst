@@ -1,3 +1,5 @@
+.. py:currentmodule:: starlark_pyoxidizer
+
 .. _pyoxidizer_distributing_macos:
 
 =====================================

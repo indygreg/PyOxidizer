@@ -1,3 +1,5 @@
+.. py:currentmodule:: starlark_pyoxidizer
+
 .. _config_globals:
 
 ==============
@@ -37,7 +39,7 @@ PyOxidizer's Starlark dialect defines the following custom types:
 :py:class:`starlark_tugger.FileManifest`
    Represents a mapping of filenames to file content.
 
-:ref:`config_type_python_distribution`
+:py:class:`PythonDistribution`
    Represents an implementation of Python.
 
    Used for embedding into binaries and running Python code.
@@ -114,9 +116,8 @@ Global Functions
 
 PyOxidizer's Starlark dialect defines the following global functions:
 
-:any:`default_python_distribution() <config_default_python_distribution>`
-   Obtain the default :ref:`config_type_python_distribution`
-   for the active build configuration.
+:py:func:`default_python_distribution`
+   Obtain the default :py:class:`PythonDistribution` for the active build configuration.
 
 :any:`register_target() <config_register_target>`
    Register a named :ref:`target <config_processing_targets>` that can

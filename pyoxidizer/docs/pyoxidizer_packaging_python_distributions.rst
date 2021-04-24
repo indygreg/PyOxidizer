@@ -1,10 +1,12 @@
+.. py:currentmodule:: starlark_pyoxidizer
+
 .. _packaging_python_distributions:
 
 ==================================
 Understanding Python Distributions
 ==================================
 
-The :ref:`config_type_python_distribution` Starlark type represents
+The :py:class:`PythonDistribution` Starlark type represents
 a Python *distribution*, an entity providing a Python installation
 and build files which PyOxidizer uses to build your applications. See
 :ref:`config_concept_python_distribution` for more.
@@ -16,7 +18,7 @@ Available Python Distributions
 
 PyOxidizer ships with its own list of available Python distributions.
 These are constructed via the
-:ref:`config_default_python_distribution` Starlark method. Under
+:py:func:`default_python_distribution` Starlark function. Under
 most circumstances, you'll want to use one of these distributions
 instead of providing your own because these distributions are tested
 and should have maximum compatibility.

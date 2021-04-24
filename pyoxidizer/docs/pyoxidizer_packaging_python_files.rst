@@ -1,3 +1,5 @@
+.. py:currentmodule:: starlark_pyoxidizer
+
 .. _packaging_python_files:
 
 ======================
@@ -86,9 +88,8 @@ method which adds an iterable of objects representing Python resources to the
 set of embedded resources.
 
 Elsewhere in this function, the ``dist`` variable holds an instance of
-:ref:`config_type_python_distribution`. This type
-represents a Python distribution, which is a fancy way of saying
-*an implementation of Python*.
+:py:class:`PythonDistribution`. This type represents a Python distribution,
+which is a fancy way of saying *an implementation of Python*.
 
 Two of the methods exposed by ``PythonExecutable`` are
 :ref:`pip_download() <config_python_executable_pip_download>` and

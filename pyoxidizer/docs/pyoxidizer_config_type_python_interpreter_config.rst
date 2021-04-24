@@ -1,3 +1,5 @@
+.. py:currentmodule:: starlark_pyoxidizer
+
 .. _config_type_python_interpreter_config:
 
 ===========================
@@ -29,7 +31,7 @@ Constructors
 ============
 
 Instances are constructed by calling
-:ref:`config_python_distribution_make_python_interpreter_config`.
+:py:meth:`PythonDistribution.make_python_interpreter_config`.
 
 Attributes
 ==========
