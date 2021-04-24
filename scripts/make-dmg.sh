@@ -22,7 +22,19 @@ fi
 
 # Make a fat binary where pyoxidizer.bzl can find it.
 mkdir -p target/release
-lipo target/aarch64-apple-darwin/release/pyoxidizer target/x86_64-apple-darwin/release/pyoxidizer -create -output target/release/pyoxidizer
+
+if [ -n "${IN_CI}" ]; then
+  # shellcheck disable=SC2125
+  SOURCES=dist/*/pyoxidizer
+else
+  # shellcheck disable=SC2125
+  SOURCES=target/*-apple-darwin/release/pyoxidizer
+fi
+
+# shellcheck disable=SC2086
+lipo ${SOURCES} -create -output target/release/pyoxidizer
+chmod +x target/release/pyoxidizer
+lipo target/release/pyoxidizer -info
 
 # Run pyoxidizer to produce PyOxidizer.app. As a bonus we test that
 # the fat binary works!

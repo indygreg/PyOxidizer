@@ -55,7 +55,12 @@ jobs:
           name: linux-x86_64-bin
           path: target/x86_64-unknown-linux-musl/release/pyoxidizer
 
-  macos_app_bundle:
+  macos-exe:
+    strategy:
+      matrix:
+        target_triple:
+          - 'aarch64-apple-darwin'
+          - 'x86_64-apple-darwin'
     runs-on: 'macos-10.15'
     env:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -74,7 +79,7 @@ jobs:
           toolchain: stable
           default: true
           profile: minimal
-          target: aarch64-apple-darwin
+          target: ${{ matrix.target_triple }}
 
       - name: Install sccache
         run: |
@@ -84,24 +89,75 @@ jobs:
           chmod +x /Users/runner/.cargo/bin/sccache
           sccache --start-server
 
-      - name: Build pyoxidizer Executable (x86_64)
+      - name: Build pyoxidizer Executable
         env:
           RUSTC_WRAPPER: sccache
-          # Support running binaries on older macOS releases. Otherwise the
-          # current host OS is likely targeted.
-          OSX_DEPLOYMENT_TARGET: '10.9'
         run: |
-          rustc --version
-          cargo build --release --target x86_64-apple-darwin --bin pyoxidizer
+          case "${{ matrix.target_triple }}" in
+            aarch64-apple-darwin)
+              export SDKROOT=/Applications/Xcode_12.4.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX11.1.sdk
+              export OSX_DEPLOYMENT_TARGET=11.0
+              ;;
+            x86_64-apple-darwin)
+              export OSX_DEPLOYMENT_TARGET=10.9
+              ;;
+            *)
+              echo "unhandled target triple: ${{ matrix.target_triple }}"
+              exit 1
+              ;;
+          esac
 
-      - name: Build pyoxidizer Executable (aarch64)
-        env:
-          RUSTC_WRAPPER: sccache
-          OSX_DEPLOYMENT_TARGET: '11.0'
-          SDKROOT: '/Applications/Xcode_12.4.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX11.1.sdk'
-        run: |
           rustc --version
-          cargo build --release --target aarch64-apple-darwin --bin pyoxidizer
+          cargo build --target ${{ matrix.target_triple }} --release --bin pyoxidizer
+
+          mkdir -p dist/${{ matrix.target_triple }}
+          mv target/${{ matrix.target_triple }}/release/pyoxidizer dist/${{ matrix.target_triple }}/
+
+      - name: Upload Executable
+        uses: actions/upload-artifact@v2
+        with:
+          name: macos_exes
+          path: |
+            dist/*/*
+
+  macos-universal-exe:
+    needs:
+      - macos-exe
+    runs-on: 'macos-10.15'
+    steps:
+      - name: Download CLI exes
+        uses: actions/download-artifact@v2
+        with:
+          name: macos_exes
+          path: inputs
+
+      - name: Produce Universal Binary
+        run: |
+          mkdir -p dist/macos-universal
+          lipo inputs/*/pyoxidizer -create -output dist/macos-universal/pyoxidizer
+          chmod +x dist/macos-universal/pyoxidizer
+          lipo dist/macos-universal/pyoxidizer -info
+
+      - name: Upload Universal Executable
+        uses: actions/upload-artifact@v2
+        with:
+          name: macos_universal_exe
+          path: dist/*/pyoxidizer
+
+  macos-dmg:
+    needs:
+      - macos-exe
+    runs-on: 'macos-10.15'
+    env:
+      IN_CI: '1'
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Download CLI exes
+        uses: actions/download-artifact@v2
+        with:
+          name: macos_exes
+          path: dist
 
       - name: Build DMG
         run: |
