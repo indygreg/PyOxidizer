@@ -4,7 +4,6 @@
 import os
 import pathlib
 import re
-import shutil
 
 EXTERNAL_PREFIXES = ("oxidized_importer", "pyembed", "pyoxidizer", "tugger")
 
