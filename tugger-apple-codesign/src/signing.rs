@@ -292,7 +292,7 @@ impl<'key> SigningSettings<'key> {
         &self.certificates
     }
 
-    /// Add a DER encoded X.509 public certificate to the signing certificate chain.
+    /// Add a parsed certificate to the signing certificate chain.
     ///
     /// When producing a cryptographic signature (see [SigningSettings::set_signing_key]),
     /// information about the signing key-pair is included in the signature. The signing
@@ -302,19 +302,26 @@ impl<'key> SigningSettings<'key> {
     /// so clients have access to the full certificate chain for validation purposes.
     ///
     /// This setting has no effect if [SigningSettings::set_signing_key] is not called.
+    pub fn chain_certificate(&mut self, cert: Certificate) {
+        self.certificates.push(cert);
+    }
+
+    /// Add a DER encoded X.509 public certificate to the signing certificate chain.
+    ///
+    /// This is like [Self::chain_certificate] except the certificate data is provided in
+    /// its binary, DER encoded form.
     pub fn chain_certificate_der(
         &mut self,
         data: impl AsRef<[u8]>,
     ) -> Result<(), AppleCodesignError> {
-        self.certificates
-            .push(Certificate::from_der(data.as_ref())?);
+        self.chain_certificate(Certificate::from_der(data.as_ref())?);
 
         Ok(())
     }
 
     /// Add a PEM encoded X.509 public certificate to the signing certificate chain.
     ///
-    /// This is like [SigningSettings::chain_certificate_der] except the certificate is
+    /// This is like [Self::chain_certificate] except the certificate is
     /// specified as PEM encoded data. This is a human readable string like
     /// `-----BEGIN CERTIFICATE-----` and is a common method for encoding certificate data.
     /// (PEM is effectively base64 encoded DER data.)
@@ -324,8 +331,7 @@ impl<'key> SigningSettings<'key> {
         &mut self,
         data: impl AsRef<[u8]>,
     ) -> Result<(), AppleCodesignError> {
-        self.certificates
-            .push(Certificate::from_pem(data.as_ref())?);
+        self.chain_certificate(Certificate::from_pem(data.as_ref())?);
 
         Ok(())
     }
