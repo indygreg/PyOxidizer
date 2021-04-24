@@ -16,6 +16,7 @@ use {
     starlark_dialect_build_targets::{get_context_value, EnvironmentContext},
     std::{
         collections::HashMap,
+        convert::TryFrom,
         path::{Path, PathBuf},
         sync::Arc,
     },
@@ -224,16 +225,20 @@ pub fn populate_environment(
     starlark_dialect_build_targets::populate_environment(env, type_values, build_targets_context)?;
     tugger::starlark::populate_environment(env, type_values)?;
 
-    for (name, value) in &context.extra_vars {
-        env.set(
-            name,
-            match value {
-                Some(value) => Value::from(value.as_str()),
+    let mut vars = starlark::values::dict::Dictionary::default();
+
+    for (k, v) in context.extra_vars.iter() {
+        vars.insert(
+            Value::from(k.as_str()),
+            match v {
+                Some(v) => Value::from(v.as_str()),
                 None => Value::from(NoneType::None),
             },
-        )?;
+        )
+        .expect("error inserting variable; this should not happen");
     }
 
+    env.set("VARS", Value::try_from(vars.get_content().clone()).unwrap())?;
     env.set("CWD", Value::from(context.cwd.display().to_string()))?;
     env.set(
         "CONFIG_PATH",

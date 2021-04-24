@@ -93,28 +93,28 @@ bugs can result in incorrect install layouts, missing resources, etc.
 ";
 
 const VAR_HELP: &str = "\
-Defines a single string global variable in the Starlark environment.
+Defines a single string key to set in the VARS global dict.
 
 This argument can be used to inject variable content into the Starlark
 execution context to influence evaluation.
 
-<name> defines the name of the variable to set and <value> is its string
+<name> defines the key in the dict to set and <value> is its string
 value.
 
 For example, `--var my_var my_value` is functionally similar to the
-Starlark expression `my_var = \"my_value\"`.
+Starlark expression `VARS[\"my_var\"] = \"my_value\"`.
 
 If a Starlark variable is defined multiple times, an error occurs.
 ";
 
 const ENV_VAR_HELP: &str = "\
-Defines a variable in the Starlark environment from an environment variable.
+Defines a single string key to set in the VARS global dict from an environment variable.
 
-This is like --var except the value of the Starlark variable comes from
-an environment variable.
+This is like --var except the value of the dict key comes from an
+environment variable.
 
 The <env> environment variable is read and becomes the value of the
-<name> Starlark global variable.
+<name> key in the VARS dict.
 
 If the <env> environment variable is not set, the Starlark value will
 be `None` instead of a `string`.
@@ -432,8 +432,6 @@ pub fn run_cli() -> Result<()> {
         env.unmanage_rust().context("unmanaging Rust")?;
     }
 
-    let starlark_vars = starlark_vars(&matches)?;
-
     match matches.subcommand() {
         ("add", Some(args)) => {
             let path = args.value_of("path").unwrap();
@@ -450,6 +448,7 @@ pub fn run_cli() -> Result<()> {
         }
 
         ("build", Some(args)) => {
+            let starlark_vars = starlark_vars(args)?;
             let release = args.is_present("release");
             let target_triple = args.value_of("target_triple");
             let path = args.value_of("path").unwrap();
@@ -551,6 +550,7 @@ pub fn run_cli() -> Result<()> {
         }
 
         ("run-build-script", Some(args)) => {
+            let starlark_vars = starlark_vars(args)?;
             let build_script = args.value_of("build-script-name").unwrap();
             let target = args.value_of("target");
 
@@ -564,6 +564,7 @@ pub fn run_cli() -> Result<()> {
         }
 
         ("run", Some(args)) => {
+            let starlark_vars = starlark_vars(args)?;
             let target_triple = args.value_of("target_triple");
             let release = args.is_present("release");
             let path = args.value_of("path").unwrap();

@@ -380,7 +380,7 @@ impl EvaluationContext {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, crate::testutil::*};
+    use {super::*, crate::testutil::*, starlark::values::dict::Dictionary};
 
     #[test]
     fn test_load() -> Result<()> {
@@ -463,11 +463,14 @@ mod tests {
                 .extra_vars(extra_vars)
                 .into_context()?;
 
-        let v = context.get_var("my_var").unwrap();
-        assert_eq!(v.get_type(), "string");
+        let vars_value = context.get_var("VARS").unwrap();
+        assert_eq!(vars_value.get_type(), "dict");
+        let vars = vars_value.downcast_ref::<Dictionary>().unwrap();
+
+        let v = vars.get(&Value::from("my_var")).unwrap().unwrap();
         assert_eq!(v.to_string(), "my_value");
 
-        let v = context.get_var("empty").unwrap();
+        let v = vars.get(&Value::from("empty")).unwrap().unwrap();
         assert_eq!(v.get_type(), "NoneType");
 
         Ok(())

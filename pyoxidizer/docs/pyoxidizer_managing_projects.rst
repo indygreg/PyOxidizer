@@ -294,19 +294,27 @@ Defining Extra Variables in Starlark Environment
 ================================================
 
 Various ``pyoxidizer`` commands (like ``build`` and ``run``) accept arguments
-to define extra global variables in the Starlark environment. This feature
-can be used to parameterize and conditionalize the evaluation of configuration
-files.
+to define extra variables in the Starlark environment in the ``VARS``
+global dict. This feature can be used to parameterize and conditionalize the
+evaluation of configuration files.
+
+.. note::
+
+   While we could inject global variables into the Starlark environment,
+   since it is illegal to access an undefined symbol (there's not even a
+   way to test if a symbol is defined) and since we have no hook point to
+   inject variables after the symbol has been defined, we resort to populating
+   a global ``VARS`` dict with variables.
 
 For example, let's make the name of the built executable dynamic:
 
 .. code-block:: python
 
-   MY_APP_NAME = "default"
+   DEFAULT_APP_NAME = "default"
 
    def make_exe(dist):
        dist = default_python_distribution()
-       return dist.to_python_executable(name = MY_APP_NAME)
+       return dist.to_python_executable(name = VARS.get("app_name", DEFAULT_APP_NAME))
 
    register_target("exe", make_exe)
 
@@ -318,7 +326,7 @@ Then let's build it::
    $ pyoxidizer build
 
    # Uses `my_app` as the application name.
-   $ pyoxidizer build --var MY_APP_NAME my_app
+   $ pyoxidizer build --var app_name my_app
 
    # Uses `env_name` as the application name via an environment variable.
-   $ APP_NAME=env_name pyoxidizer build --var-env MY_APP_NAME APP_NAME
+   $ APP_NAME=env_name pyoxidizer build --var-env app_name APP_NAME
