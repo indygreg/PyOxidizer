@@ -114,7 +114,12 @@ jobs:
           path: |
             PyOxidizer.dmg
 
-  windows_installers:
+  windows-exe:
+    strategy:
+      matrix:
+        target_triple:
+          - 'i686-pc-windows-msvc'
+          - 'x86_64-pc-windows-msvc'
     runs-on: 'windows-2019'
     env:
       IN_CI: '1'
@@ -136,7 +141,7 @@ jobs:
           toolchain: stable
           default: true
           profile: minimal
-          target: i686-pc-windows-msvc
+          target: ${{ matrix.target_triple }}
 
       - name: Cache sccache (Windows)
         id: cache-sccache
@@ -160,18 +165,43 @@ jobs:
         run: |
           sccache --start-server
 
-      - name: Build Executables
+      - name: Build Executable
         env:
           RUSTC_WRAPPER: sccache
         run: |
           rustc --version
-          cargo build --target i686-pc-windows-msvc --release --bin pyoxidizer
-          cargo build --target x86_64-pc-windows-msvc --release --bin pyoxidizer
+          cargo build --target ${{ matrix.target_triple }} --release --bin pyoxidizer
 
+          New-Item -ItemType "directory" -Name "dist/${{ matrix.target_triple}}"
+          move target/${{ matrix.target_triple }}/release/pyoxidizer.exe dist/${{ matrix.target_triple }}
+
+      - name: Upload Executable
+        uses: actions/upload-artifact@v2
+        with:
+          name: windows_exes
+          path: |
+            dist/*/*
+
+  windows-installer:
+    needs:
+      - windows-exe
+    runs-on: 'windows-2019'
+    env:
+      IN_CI: '1'
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Download CLI exes
+        uses: actions/download-artifact@v2
+        with:
+          name: windows_exes
+          path: dist
+
+      # We can use the built/downloaded pyoxidizer.exe to package itself. Nice.
       # Building the exe installer will build the MSI installers. 2 birds 1 stone.
       - name: Build Installers
         run: |
-          target/x86_64-pc-windows-msvc/release/pyoxidizer.exe build --release --target-triple x86_64-pc-windows-msvc exe_installer
+          dist/x86_64-pc-windows-msvc/pyoxidizer.exe build --var-env IN_CI IN_CI --release --target-triple x86_64-pc-windows-msvc exe_installer
           move build/x86_64-pc-windows-msvc/release/*/*.msi .
           move build/x86_64-pc-windows-msvc/release/*/*.exe .
 

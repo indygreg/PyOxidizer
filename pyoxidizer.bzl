@@ -1,6 +1,10 @@
 PYOXIDIZER_VERSION = "0.14.0"
 AUTHOR = "Gregory Szorc"
 
+# Whether we are running in CI.
+IN_CI = VARS.get("IN_CI", False)
+
+
 def make_msi(target_triple, add_vc_redist):
     msi = WiXMSIBuilder(
         id_prefix = "pyoxidizer",
@@ -26,7 +30,11 @@ def make_msi(target_triple, add_vc_redist):
 
     m = FileManifest()
 
-    exe_prefix = "target/" + target_triple + "/release/"
+    if IN_CI:
+        exe_prefix = "dist/" + target_triple + "/"
+    else:
+        exe_prefix = "target/" + target_triple + "/release/"
+
     m.add_path(
         path = exe_prefix + "pyoxidizer.exe",
         strip_prefix = exe_prefix,
