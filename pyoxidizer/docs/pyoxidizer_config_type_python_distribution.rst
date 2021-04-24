@@ -65,11 +65,9 @@
         Returns objects representing Python resources in this distribution. Returned
         values can be
         :ref:`config_type_python_module_source`,
-        :ref:`config_type_python_extension_module`,
-        :ref:`config_type_python_package_resource`, etc.
+        :py:class:`PythonExtensionModule`, :ref:`config_type_python_package_resource`, etc.
 
-        There may be multiple :ref:`config_type_python_extension_module` with
-        the same name.
+        There may be multiple :py:class:`PythonExtensionModule` with the same name.
 
     .. py:method:: make_python_interpreter_config() -> PythonInterpreterConfig
 

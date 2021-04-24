@@ -39,7 +39,7 @@ and *files*. In *files* mode, PyOxidizer simply emits resources corresponding
 to the raw files it encounters. In *classified* mode, PyOxidizer attempts to
 *classify* a file as a particular resource and emit a strongly-typed
 resource like :ref:`config_type_python_module_source` or
-:ref:`config_type_python_extension_module`.
+:py:class:`PythonExtensionModule`.
 
 *Classified* mode is more powerful because PyOxidizer is able to build
 an *index* of typed resources at packaging time and make this *index*
@@ -83,7 +83,7 @@ When a resource is added (e.g. by calling
 
 For example, a :ref:`config_type_python_module_source` can set attributes
 indicating to exclude source code and only generate bytecode at
-a specific optimization level. Or a :ref:`config_type_python_extension_module`
+a specific optimization level. Or a :py:class:`PythonExtensionModule`
 can set attributes saying to prefer to compile it into the built
 binary or materialize it as a standalone dynamic extension module
 (e.g. ``my_ext.so`` or ``my_ext.pyd``).
@@ -101,7 +101,7 @@ The following Starlark types represent individual resources:
    This type can also be converted to Python bytecode (roughly equivalent
    to a ``.pyc``) when added to a resource collector.
 
-:ref:`config_type_python_extension_module`
+:py:class:`PythonExtensionModule`
    A Python module defined through compiled, machine-native code. On Linux,
    these are typically encountered as ``.so`` files. On Windows, ``.pyd`` files.
 

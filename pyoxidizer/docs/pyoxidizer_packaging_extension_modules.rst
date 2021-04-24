@@ -98,7 +98,7 @@ experience for Windows packaging, it is recommended to use the
 Loading Extension Modules from ``in-memory`` Location
 -----------------------------------------------------
 
-When you attempt to add a :ref:`config_type_python_extension_module`
+When you attempt to add a :py:class:`PythonExtensionModule`
 Starlark instance to the ``in-memory``
 :ref:`resource location <packaging_resource_locations>`, the request
 may or may not work depending on the state of the extension module
@@ -145,7 +145,7 @@ Python distribution. For example, if your extension module ``foo.so``
 has a run-time dependency on ``bar.so``, PyOxidizer doesn't yet
 detect this and doesn't realize that ``bar.so`` needs to be handled.
 
-This means that if you add a :ref:`config_type_python_extension_module`
+This means that if you add a :py:class:`PythonExtensionModule`
 Starlark type and this extension module depends on an additional
 library, PyOxidizer will likely not realize this and fail to
 distribute that additional library dependency with your application.

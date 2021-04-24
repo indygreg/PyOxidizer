@@ -1,41 +1,28 @@
 .. py:currentmodule:: starlark_pyoxidizer
 
-.. _config_type_python_extension_module:
-
 =========================
 ``PythonExtensionModule``
 =========================
 
-This type represents a compiled Python extension module.
+.. py:class:: PythonExtensionModule
 
-Attributes
-==========
+    This type represents a compiled Python extension module.
 
-The following sections describe the attributes available on each
-instance.
+    .. py:attribute:: name
 
-.. _config_type_python_extension_module_name:
+        (``string``)
 
-``name``
---------
+        Unique name of the module being provided.
 
-(``string``)
+    .. py:attribute:: is_stdlib
 
-Unique name of the module being provided.
+        (``bool``)
 
-.. _config_type_python_extension_module_is_stdlib:
+        Whether this module is part of the Python standard library (part of the
+        Python distribution).
 
-``is_stdlib``
--------------
+    .. py:attribute:: add_*
 
-(``bool``)
+        (various)
 
-Whether this module is part of the Python standard library (part of the
-Python distribution).
-
-``add_*``
----------
-
-(various)
-
-See :ref:`config_resource_add_attributes`.
+        See :ref:`config_resource_add_attributes`.
