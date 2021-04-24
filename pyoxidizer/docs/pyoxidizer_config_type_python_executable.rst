@@ -361,10 +361,10 @@ registered with the instance.
 ``PythonExecutable.to_embedded_resources()``
 --------------------------------------------
 
-Obtains a :ref:`config_type_python_embedded_resources` instance representing
+Obtains a :py:class:`PythonEmbeddedResources` instance representing
 resources to be made available to the Python interpreter.
 
-See the :ref:`config_type_python_embedded_resources` type documentation for more.
+See the :py:class:`PythonEmbeddedResources` type documentation for more.
 
 .. _config_python_executable_to_file_manifest:
 

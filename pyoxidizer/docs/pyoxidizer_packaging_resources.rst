@@ -132,7 +132,7 @@ resources:
    :py:class:`starlark_tugger.FileContent` instances. This type effectively
    allows modeling a directory tree.
 
-:ref:`config_type_python_embedded_resources`
+:py:class:`PythonEmbeddedResources`
    Holds a collection of Python resources of various types. (This type is often
    hidden away. e.g. inside a ``PythonExecutable`` instance.)
 

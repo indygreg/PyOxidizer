@@ -44,7 +44,7 @@ PyOxidizer's Starlark dialect defines the following custom types:
 
    Used for embedding into binaries and running Python code.
 
-:ref:`config_type_python_embedded_resources`
+:py:class:`PythonEmbeddedResources`
    Represents resources made available to a Python interpreter.
 
 :ref:`config_type_python_executable`
@@ -151,7 +151,7 @@ The following types have special behavior registered:
    if available, falling back to an executable file installed by the manifest
    if there is exactly 1 executable file.
 
-:ref:`config_type_python_embedded_resources`
+:py:class:`PythonEmbeddedResources`
    Build behavior is to write out files this type represents.
 
    There is no run behavior.
