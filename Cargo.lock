@@ -3737,14 +3737,18 @@ dependencies = [
 name = "tugger-code-signing"
 version = "0.1.0-pre"
 dependencies = [
+ "anyhow",
  "bcder",
  "cryptographic-message-syntax",
  "goblin",
  "p12",
  "reqwest",
+ "slog",
+ "tempfile",
  "thiserror",
  "tugger-apple-bundle",
  "tugger-apple-codesign",
+ "tugger-file-manifest",
  "tugger-windows-codesign",
  "yasna",
 ]
