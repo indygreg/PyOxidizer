@@ -46,7 +46,7 @@ def make_finder(*modules: Tuple[str, str, bool]) -> OxidizedFinder:
 
 
 @contextmanager
-def chdir(dir: PathLike) -> Iterable[Path]:
+def chdir(dir: os.PathLike) -> Iterable[Path]:
     "Change the current directory to ``dir``, yielding the previous one."
     old_cwd = Path.cwd()
     try:
@@ -57,7 +57,7 @@ def chdir(dir: PathLike) -> Iterable[Path]:
 
 
 class TestImporterPathEntryFinder(unittest.TestCase):
-    def finder(self, path: PathLike, package: str) -> OxidizedPathEntryFinder:
+    def finder(self, path: os.PathLike, package: str) -> OxidizedPathEntryFinder:
         """Add the following package hierarchy to the returned finder:
 
         - ``a`` imports ``a.b`` imports ``a.b.c``
@@ -107,7 +107,7 @@ class TestImporterPathEntryFinder(unittest.TestCase):
             self.assertIsNone(spec.submodule_search_locations, spec)
             self.assertEqual(spec.parent, name.rpartition(".")[0], spec)
 
-    def assert_find_spec_nested(self, path: PathLike) -> None:
+    def assert_find_spec_nested(self, path: os.PathLike) -> None:
         finder = self.finder(path, "on")
         # Return None for modules outside the search path, even if their names
         # are prefixed by the path.
@@ -219,7 +219,7 @@ class TestImporterPathEntryFinder(unittest.TestCase):
     def test_find_spec_subdir(self):
         self.assert_find_spec_nested(os.path.join(PATH_HOOK_BASE_STR, "on"))
 
-    def assert_find_spec_top_level(self, path: PathLike) -> None:
+    def assert_find_spec_top_level(self, path: os.PathLike) -> None:
         finder = self.finder(path, None)
         modules = [("a", True), ("one", True), ("on", True)]
         self.assertCountEqual(finder.iter_modules(), modules)
@@ -232,7 +232,7 @@ class TestImporterPathEntryFinder(unittest.TestCase):
     def test_find_spec_top_level(self):
         self.assert_find_spec_top_level(PATH_HOOK_BASE_STR)
 
-    def assert_unicode_path(self, path: PathLike) -> None:
+    def assert_unicode_path(self, path: os.PathLike) -> None:
         finder = self.finder(path, "on.tשo")
         self.assert_spec(finder.find_spec("on.tשo.۳"), "on.tשo.۳", is_pkg=False)
         self.assertCountEqual(finder.iter_modules(), [("۳", False)])

@@ -92,7 +92,7 @@ The ``OxidizedFinder`` Class
         (``str``) The path this instance is using as the anchor for relative path
         references.
 
-    .. py:method:: __new__(cls, relative_path_origin: Optional[PathLike]) -> OxidizedFinder
+    .. py:method:: __new__(cls, relative_path_origin: Optional[os.PathLike]) -> OxidizedFinder
 
         Construct a new instance of :py:class:`OxidizedFinder`.
 
