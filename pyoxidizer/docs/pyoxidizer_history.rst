@@ -880,7 +880,7 @@ New Features
   more dynamically obtained (e.g. by reading a file). PyOxidizer does
   not yet support such mechanisms, however.
 * ``OxidizedFinder`` instances can now be
-  :py:meth:`constructed from Python code <OxidizedFinder.__new__>`.
+  :py:meth:`constructed from Python code <oxidized_importer.OxidizedFinder.__new__>`.
   This means that a Python application can instantiate and install its
   own oxidized module importer.
 * The resources indexed by ``OxidizedFinder`` instances are now
@@ -890,7 +890,7 @@ New Features
 * ``OxidizedFinder`` instances can now have custom ``OxidizedResource``
   instances registered against them. This means Python code can collect
   its own Python modules and register them with the importer. See
-  :py:meth:`OxidizedFinder.add_resource` for more.
+  :py:meth:`oxidized_importer.OxidizedFinder.add_resource` for more.
 * ``OxidizedFinder`` instances can now serialize indexed resources out
   to a ``bytes``. The serialized data can be loaded into a separate
   ``OxidizedFinder`` instance, perhaps in a different process. This
