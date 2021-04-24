@@ -22,8 +22,12 @@ with (ROOT / "Cargo.toml").open("r") as fh:
 project = "pyembed"
 copyright = "2020, Gregory Szorc"
 author = "Gregory Szorc"
-extensions = []
+extensions = ["sphinx.ext.intersphinx"]
 templates_path = ["_templates"]
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 html_theme = "alabaster"
 master_doc = "index"
+intersphinx_mapping = {
+    "python": ("https://docs.python.org/3", None),
+    "setuptools": ("https://setuptools.readthedocs.io/en/latest", None),
+}
