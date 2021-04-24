@@ -39,7 +39,7 @@ Module Level Functions
    It is safe to call this function multiple times, as behavior should
    be deterministic.
 
-.. py:function:: pkg_resources_find_distributions(finder: OxidizedPathEntryFinder, path_item: str, only=false) -> List[pkg_resources.Distribution]
+.. py:function:: pkg_resources_find_distributions(finder: OxidizedPathEntryFinder, path_item: str, only=false) -> list
 
    Resolve ``pkg_resources.Distribution`` instances given a
    :py:class:`OxidizedPathEntryFinder` and search criteria.
@@ -125,7 +125,7 @@ The ``OxidizedFinder`` Class
 
         This method parses any bytes-like object and indexes the resources within.
 
-    .. py:method:: index_file_memory_mapped(path: Path) -> None
+    .. py:method:: index_file_memory_mapped(path: pathlib.Path) -> None
 
         This method parses the given Path-like argument and indexes the resources
         within. Memory mapped I/O is used to read the file. Rust managed the
@@ -308,7 +308,7 @@ The ``OxidizedPkgResourcesProvider`` Class
       `#384 <https://github.com/indygreg/PyOxidizer/issues/384>`_ if you would like
       this functionality implemented.
 
-   .. py:method:: get_resource_filename(manager: pkg_resources.IResourceManager, resource_name: str)
+   .. py:method:: get_resource_filename(manager, resource_name: str)
 
       Always raises ``NotImplementedError``.
 
@@ -318,9 +318,9 @@ The ``OxidizedPkgResourcesProvider`` Class
       `#383 <https://github.com/indygreg/PyOxidizer/issues/383>`_ if you would like
       this functionality implemented.
 
-   .. py:method:: get_resource_stream(manager: pkg_resources.IResourceManager, resource_name: str) -> io.BytesIO
+   .. py:method:: get_resource_stream(manager, resource_name: str) -> io.BytesIO
 
-   .. py:method:: get_resource_string(manager: pkg_resources.IResourceManager, resource_name: str) -> bytes
+   .. py:method:: get_resource_string(manager, resource_name: str) -> bytes
 
    .. py:method:: has_resource(resource_name: str) -> bool
 
