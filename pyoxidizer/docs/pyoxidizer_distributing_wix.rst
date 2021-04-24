@@ -53,9 +53,9 @@ PyOxidizer provides the following extensions and integrations with
 
 :py:meth:`PythonExecutable.to_wix_msi_builder`
    Converts a :py:class:`PythonExecutable` to a
-   :py:class:`starlark_tugger.WIXMSIBuilder`.
+   :py:class:`starlark_tugger.WiXMSIBuilder`.
 
-   This method will produce a :py:class:`starlark_tugger.WIXMSIBuilder`
+   This method will produce a :py:class:`starlark_tugger.WiXMSIBuilder`
    that is pre-configured to install a Python application and all its
    support files. The MSI will install all files composing the Python
    application, excluding system-level dependencies.
