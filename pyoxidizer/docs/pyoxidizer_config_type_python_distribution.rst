@@ -16,7 +16,7 @@
     :py:func:`default_python_distribution`.
 
 
-    .. py:method:: __init__(sha256: string, local_path: Optional[string] = None, url: Optional[string], flavor: Optional[string] = None) -> PythonDistribution
+    .. py:method:: __init__(sha256: str, local_path: Optional[string] = None, url: Optional[string], flavor: Optional[string] = None) -> PythonDistribution
 
         Construct an instance from arguments.
 
@@ -84,7 +84,7 @@
         The policy automatically uses settings globally appropriate for the
         distribution.
 
-    .. py:method:: to_python_executable(name: string, packaging_policy: PythonPackagingPolicy, config: PythonInterpreterConfig) -> PythonExecutable
+    .. py:method:: to_python_executable(name: str, packaging_policy: PythonPackagingPolicy, config: PythonInterpreterConfig) -> PythonExecutable
 
         This method constructs a :py:class:`PythonExecutable` instance. It
         essentially says *build an executable embedding Python from this
@@ -119,7 +119,7 @@
 ``default_python_distribution()``
 =================================
 
-.. py:function:: default_python_distribution(flavor: string = "standalone", build_target: string = BUILD_TARGET, python_version: string = "3.9") -> PythonDistribution
+.. py:function:: default_python_distribution(flavor: str = "standalone", build_target: str = BUILD_TARGET, python_version: str = "3.9") -> PythonDistribution
 
     Resolves the default :py:class:`PythonDistribution`.
 

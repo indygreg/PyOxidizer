@@ -228,7 +228,7 @@
         mutate resources upon creation so they can globally influence how those
         resources are packaged.
 
-    .. py:method:: set_preferred_extension_module_variant(extension: string, variant: string)
+    .. py:method:: set_preferred_extension_module_variant(extension: str, variant: str)
 
         This method will set a preferred Python extension module variant to
         use. See the documentation for ``preferred_extension_module_variants``
@@ -237,7 +237,7 @@
         It accepts 2 ``string`` arguments defining the extension module name
         and its preferred variant.
 
-    .. py:method:: set_resource_handling_mode(mode: string)
+    .. py:method:: set_resource_handling_mode(mode: str)
 
         This method takes a string argument denoting the *resource handling mode*
         to apply to the policy. This string can have the following values:
