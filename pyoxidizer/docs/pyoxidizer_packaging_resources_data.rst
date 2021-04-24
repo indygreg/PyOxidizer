@@ -10,7 +10,7 @@ PyOxidizer's custom module importer (see :ref:`oxidized_finder`) reads
 data in a custom serialization format (see :ref:`python_packed_resources`)
 to facilitate efficient module importing and resource loading. If you
 are using this module importer (controlled from the
-:ref:`config_type_python_interpreter_config_oxidized_importer` attribute,
+:py:attr:`PythonInterpreterConfig.oxidized_importer` attribute,
 which is enabled by default), the interpreter will need to reference this
 *packed resources data* at run-time.
 
@@ -75,7 +75,7 @@ without PyOxidizer's special run-time code. (See
 :ref:`packaging_python_executable` for more on this topic.)
 
 If this mode is in use, you will need to enable Python's filesystem
-importer (:ref:`config_type_python_interpreter_config_filesystem_importer`)
+importer (:py:attr:`PythonInterpreterConfig.filesystem_importer`)
 or define custom Rust code to have :py:class:`oxidized_importer.OxidizedFinder`
 *index* resources or else the embedded Python interpreter will fail to
 initialize due to missing modules.

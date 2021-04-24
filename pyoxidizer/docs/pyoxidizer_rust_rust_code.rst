@@ -42,7 +42,7 @@ One of the files generated is a Rust source file containing a
 ``fn default_python_config() -> pyembed::OxidizedPythonInterpreterConfig`` which
 emits a ``pyembed::OxidizedPythonInterpreterConfig`` using the configuration
 from the PyOxidizer configuration file. This configuration is based off the
-:ref:`config_type_python_interpreter_config` defined in the PyOxidizer Starlark
+:py:class:`PythonInterpreterConfig` defined in the PyOxidizer Starlark
 configuration file.
 
 The crate's build script will set the ``PYOXIDIZER_DEFAULT_PYTHON_CONFIG_RS``
@@ -71,7 +71,7 @@ If you don't want to use the default
 this will be slightly more complicated.
 
 First, if you use an explicit ``OxidizedPythonInterpreterConfig``, the
-:ref:`config_type_python_interpreter_config` Starlark
+:py:class:`PythonInterpreterConfig` Starlark
 type defined in your PyOxidizer configuration file doesn't matter that much.
 The primary purpose of this Starlark type is to derive the default
 ``OxidizedPythonInterpreterConfig`` Rust struct. And if you are using your own
@@ -85,9 +85,8 @@ a run-time error that the specified allocator is not available.
 
 ``pyembed::OxidizedPythonInterpreterConfig::default()`` can be used to
 construct a new instance, pre-populated with default values for each field.
-The defaults should match what the
-:ref:`config_type_python_interpreter_config` Starlark
-type would yield.
+The defaults should match what the :py:class:`PythonInterpreterConfig`
+Starlark type would yield.
 
 The main catch to constructing the instance manually is that the custom
 *meta path importer* won't be able to service Python ``import`` requests

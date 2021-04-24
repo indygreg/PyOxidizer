@@ -169,7 +169,7 @@ This can be achieved by adding Python resources to a non
 *in-memory* resource location (see :ref:`packaging_resources`) or
 by enabling Python's standard filesystem-based importer by
 enabling ``filesystem_importer=True`` (see
-:ref:`config_type_python_interpreter_config`).
+:py:class:`PythonInterpreterConfig`).
 
 ``error while loading shared libraries: libcrypt.so.1: cannot open shared object file: No such file or directory`` When Building
 ================================================================================================================================

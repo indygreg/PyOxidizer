@@ -387,16 +387,16 @@ New Features
   artifacts. This feature is best effort and relies on packages properly
   advertising their license metadata.
 * Support for configuring Python's memory allocators has been expanded.
-  The Starlark :ref:`PythonInterpreterConfig.allocator_debug <config_type_python_interpreter_config_allocator_debug>`
+  The Starlark :py:attr:`PythonInterpreterConfig.allocator_debug`
   field has been added and allows enabling Python memory allocator debug hooks.
-  The Starlark :ref:`PythonInterpreterConfig.allocator_mem <config_type_python_interpreter_config_allocator_mem>`,
-  :ref:`PythonInterpreterConfig.allocator_obj <config_type_python_interpreter_config_allocator_obj>`,
-  and :ref:`PythonInterpreterConfig.allocator_pymalloc_arena <config_type_python_interpreter_config_allocator_pymalloc_arena>`
+  The Starlark :py:attr:`PythonInterpreterConfig.allocator_mem`,
+  :py:attr:`PythonInterpreterConfig.allocator_obj`,
+  and :py:attr:`PythonInterpreterConfig.allocator_pymalloc_arena`
   fields have been added to control whether to install a custom allocator for
   the *mem* and *obj* domains as well as ``pymalloc``'s arena allocator.
 * The *mimalloc* and *snmalloc* memory allocators can now be used as Python's
   memory allocators. See documentation for
-  :ref:`PythonInterpreterConfig.allocator_backend <config_type_python_interpreter_config_allocator_backend>`.
+  :py:attr:`PythonInterpreterConfig.allocator_backend`.
   Code contributed by Ryan Clanton in #358.
 * The *mimalloc* and *snmalloc* memory allocators will now automatically be used
   as Rust's global allocator when configured to be used by Python.
@@ -1205,7 +1205,7 @@ New Features
   ``python3-sys`` crates instead of a a specific Git commit.
 * Embedded Python interpreters can now be configured to run a file specified
   by a filename. See the ``run_file`` argument of
-  :ref:`config_type_python_interpreter_config`.
+  :py:class:`PythonInterpreterConfig`.
 
 Other Relevant Changes
 ^^^^^^^^^^^^^^^^^^^^^^

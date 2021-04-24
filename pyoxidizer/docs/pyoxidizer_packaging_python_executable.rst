@@ -97,7 +97,7 @@ would do.
 
 If you want the built executable to behave like ``python`` would and use the
 standard library importers, you can disable ``oxidized_importer`` by setting
-:ref:`config_type_python_interpreter_config_oxidized_importer` to ``False``.
+:py:attr:`PythonInterpreterConfig.oxidized_importer` to ``False``.
 
 Another caveat is that indexed resources are embedded in the built executable
 by default. This will bloat the size of the executable for no benefit. To

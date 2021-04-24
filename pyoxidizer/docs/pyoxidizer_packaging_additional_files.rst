@@ -310,7 +310,7 @@ Next, we enable file-based resource installs by setting
 
 Another new line is ``python_config.module_search_paths = ["$ORIGIN/lib"]``.
 This all-important line to set
-:ref:`config_type_python_interpreter_config_module_search_paths` effectively
+:py:attr:`PythonInterpreterConfig.module_search_paths` effectively
 installs the ``lib`` directory next to the executable on ``sys.path`` at
 run-time. And as a side-effect of defining this attribute, Python's built-in
 module importer is enabled (to supplement ``oxidized_importer``). This is

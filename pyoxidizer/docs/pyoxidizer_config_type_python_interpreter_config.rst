@@ -1,1051 +1,891 @@
 .. py:currentmodule:: starlark_pyoxidizer
 
-.. _config_type_python_interpreter_config:
-
 ===========================
 ``PythonInterpreterConfig``
 ===========================
 
-This type configures the default behavior of the embedded Python interpreter.
+.. py:class:: PythonInterpreterConfig
+
+    This type configures the default behavior of the embedded Python interpreter.
+
+    Embedded Python interpreters are configured and instantiated using a
+    Rust ``pyembed::OxidizedPythonInterpreterConfig`` data structure. The
+    ``pyembed`` crate defines a default instance of this data structure with
+    parameters defined by the settings in this type.
+
+    .. note::
+
+       If you are writing custom Rust code and constructing a custom
+       ``pyembed::OxidizedPythonInterpreterConfig`` instance and don't use the
+       default instance, this config type is not relevant to you and can be
+       omitted from your config file.
+
+    .. danger::
+
+       Some of the settings exposed by Python's initialization APIs are
+       extremely low level and brittle. Various combinations can cause
+       the process to crash/exit ungracefully. Be very cautious when setting
+       these low-level settings.
+
+    Instances are constructed by calling
+    :py:meth:`PythonDistribution.make_python_interpreter_config`.
+
+    Instance state is managed via attributes.
+
+    There are a ton of attributes and most attributes are not relevant
+    to most applications. The bulk of the attributes exist to give full
+    control over Python interpreter initialization.
+
+    The following attributes control features provided by the ``pyembed`` Rust crate,
+    which manages the embedded Python interpreter in generated executables.
+    These attributes provide features and level of control over
+    embedded Python interpreters beyond what is possible with Python's
+    `initialization C API <https://docs.python.org/3/c-api/init_config.html>`_.
+
+    * :py:attr:`allocator_backend`
+    * :py:attr:`allocator_raw`
+    * :py:attr:`allocator_mem`
+    * :py:attr:`allocator_obj`
+    * :py:attr:`allocator_pymalloc_arena`
+    * :py:attr:`allocator_debug`
+    * :py:attr:`oxidized_importer`
+    * :py:attr:`filesystem_importer`
+    * :py:attr:`argvb`
+    * :py:attr:`sys_frozen`
+    * :py:attr:`sys_meipass`
+    * :py:attr:`terminfo_resolution`
+    * :py:attr:`write_modules_directory_env`
+
+    The following attributes correspond to fields of the
+    `PyPreConfig <https://docs.python.org/3/c-api/init_config.html#c.PyPreConfig>`_
+    C struct used to initialize the Python interpreter.
+
+    * :py:attr:`config_profile`
+    * :py:attr:`allocator`
+    * :py:attr:`configure_locale`
+    * :py:attr:`coerce_c_locale`
+    * :py:attr:`coerce_c_locale_warn`
+    * :py:attr:`development_mode`
+    * :py:attr:`isolated`
+    * :py:attr:`legacy_windows_fs_encoding`
+    * :py:attr:`parse_argv`
+    * :py:attr:`use_environment`
+    * :py:attr:`utf8_mode`
+
+    The following attributes correspond to fields of the
+    `PyConfig <https://docs.python.org/3/c-api/init_config.html#c.PyConfig>`_
+    C struct used to initialize the Python interpreter.
+
+    * :py:attr:`base_exec_prefix`
+    * :py:attr:`base_executable`
+    * :py:attr:`base_prefix`
+    * :py:attr:`buffered_stdio`
+    * :py:attr:`bytes_warning`
+    * :py:attr:`check_hash_pycs_mode`
+    * :py:attr:`configure_c_stdio`
+    * :py:attr:`dump_refs`
+    * :py:attr:`exec_prefix`
+    * :py:attr:`executable`
+    * :py:attr:`fault_handler`
+    * :py:attr:`filesystem_encoding`
+    * :py:attr:`hash_seed`
+    * :py:attr:`home`
+    * :py:attr:`import_time`
+    * :py:attr:`inspect`
+    * :py:attr:`install_signal_handlers`
+    * :py:attr:`interactive`
+    * :py:attr:`legacy_windows_stdio`
+    * :py:attr:`malloc_stats`
+    * :py:attr:`module_search_paths`
+    * :py:attr:`optimization_level`
+    * :py:attr:`parser_debug`
+    * :py:attr:`pathconfig_warnings`
+    * :py:attr:`prefix`
+    * :py:attr:`program_name`
+    * :py:attr:`pycache_prefix`
+    * :py:attr:`python_path_env`
+    * :py:attr:`quiet`
+    * :py:attr:`run_command`
+    * :py:attr:`run_filename`
+    * :py:attr:`run_module`
+    * :py:attr:`show_ref_count`
+    * :py:attr:`site_import`
+    * :py:attr:`skip_first_source_line`
+    * :py:attr:`stdio_encoding`
+    * :py:attr:`stdio_errors`
+    * :py:attr:`tracemalloc`
+    * :py:attr:`user_site_directory`
+    * :py:attr:`verbose`
+    * :py:attr:`warn_options`
+    * :py:attr:`write_bytecode`
+    * :py:attr:`x_options`
 
-Embedded Python interpreters are configured and instantiated using a
-Rust ``pyembed::OxidizedPythonInterpreterConfig`` data structure. The
-``pyembed`` crate defines a default instance of this data structure with
-parameters defined by the settings in this type.
+    .. py:attribute:: allocator_backend
 
-.. note::
+        (``string``)
 
-   If you are writing custom Rust code and constructing a custom
-   ``pyembed::OxidizedPythonInterpreterConfig`` instance and don't use the
-   default instance, this config type is not relevant to you and can be
-   omitted from your config file.
+        Configures a custom memory allocator to be used by Python.
 
-.. danger::
+        Accepted values are:
 
-   Some of the settings exposed by Python's initialization APIs are
-   extremely low level and brittle. Various combinations can cause
-   the process to crash/exit ungracefully. Be very cautious when setting
-   these low-level settings.
+        ``default``
+           Let Python choose how to configure the allocator.
 
-Constructors
-============
+           This will likely use the ``malloc()``, ``free()``, etc functions
+           linked to the binary.
 
-Instances are constructed by calling
-:py:meth:`PythonDistribution.make_python_interpreter_config`.
+        ``jemalloc``
+           Use the jemalloc allocator.
 
-Attributes
-==========
+           (Not available on Windows.)
 
-The ``PythonInterpreterConfig`` state is managed via attributes.
+        ``mimalloc``
+           Use the mimalloc allocator (https://github.com/microsoft/mimalloc).
 
-There are a ton of attributes and most attributes are not relevant
-to most applications. The bulk of the attributes exist to give full
-control over Python interpreter initialization.
+        ``rust``
+           Use Rust's global allocator (whatever that may be).
 
-.. _config_type_python_interpreter_config_pyembed:
+        ``snmalloc``
+           Use the snmalloc allocator (https://github.com/microsoft/snmalloc).
 
-Attributes For Controlling ``pyembed`` Features
------------------------------------------------
+        The ``jemalloc``, ``mimalloc``, and ``snmalloc`` allocators require the
+        presence of additional Rust crates. A run-time error will occur if these
+        allocators are configured but the binary was built without these crates.
+        (This should not occur when using ``pyoxidizer`` to build the binary.)
 
-This section documents attributes for controlling features
-provided by the ``pyembed`` Rust crate, which manages the embedded
-Python interpreter at run-time.
+        When a custom allocator is configured, the autogenerated Rust crate
+        used to build the binary will configure the Rust global allocator
+        (``#[global_allocator] attribute``) to use the specified allocator.
 
-These attributes provide features and level of control over
-embedded Python interpreters beyond what is possible with Python's
-`initialization C API <https://docs.python.org/3/c-api/init_config.html>`_.
+        .. important::
 
-.. _config_type_python_interpreter_config_allocator_backend:
+           The ``rust`` allocator is not recommended because it introduces performance
+           overhead. But it may help with debugging in some situations.
 
-``allocator_backend``
-^^^^^^^^^^^^^^^^^^^^^
+        .. note::
 
-(``string``)
+           Both ``mimalloc`` and ``snmalloc`` require the ``cmake`` build tool
+           to compile code as part of their build process. If this tool is not
+           available in the build environment, you will encounter a build error
+           with a message similar to ``failed to execute command: The system
+           cannot find the file specified. (os error 2) is `cmake` not installed?``.
 
-Configures a custom memory allocator to be used by Python.
+           The workaround is to install cmake or use a different allocator.
 
-Accepted values are:
+        .. note::
 
-``default``
-   Let Python choose how to configure the allocator.
+           ``snmalloc`` only supports targeting to macOS 10.14 or newer. You will
+           likely see build errors when building a binary targeting macOS 10.13 or
+           older.
 
-   This will likely use the ``malloc()``, ``free()``, etc functions
-   linked to the binary.
+        Default is ``jemalloc`` on non-Windows targets and ``default`` on Windows.
+        (The ``jemalloc-sys`` crate doesn't work on Windows MSVC targets.)
 
-``jemalloc``
-   Use the jemalloc allocator.
+    .. py:attribute:: allocator_raw
 
-   (Not available on Windows.)
+        (``bool``)
 
-``mimalloc``
-   Use the mimalloc allocator (https://github.com/microsoft/mimalloc).
+        Controls whether to install a custom allocator (defined by
+        ``allocator_backend``) into Python's *raw* allocator domain
+        (``PYMEM_DOMAIN_RAW`` in Python C API speak).
 
-``rust``
-   Use Rust's global allocator (whatever that may be).
+        Setting this to ``True`` will replace the system allocator (e.g. ``malloc()``,
+        ``free()``) for this domain.
 
-``snmalloc``
-   Use the snmalloc allocator (https://github.com/microsoft/snmalloc).
+        A value of ``True`` only has an effect if ``allocator_backend`` is some value
+        other than ``default``.
 
-The ``jemalloc``, ``mimalloc``, and ``snmalloc`` allocators require the
-presence of additional Rust crates. A run-time error will occur if these
-allocators are configured but the binary was built without these crates.
-(This should not occur when using ``pyoxidizer`` to build the binary.)
+        Defaults to ``True``.
 
-When a custom allocator is configured, the autogenerated Rust crate
-used to build the binary will configure the Rust global allocator
-(``#[global_allocator] attribute``) to use the specified allocator.
+    .. py:attribute:: allocator_mem
 
-.. important::
+        (``bool``)
 
-   The ``rust`` allocator is not recommended because it introduces performance
-   overhead. But it may help with debugging in some situations.
+        Controls whether to install a custom allocator (defined by
+        ``allocator_backend``) into Python's *mem* allocator domain
+        (``PYMEM_DOMAIN_MEM`` in Python C API speak).
 
-.. note::
+        Setting this to ``True`` will replace ``pymalloc`` as the allocator
+        for this domain.
 
-   Both ``mimalloc`` and ``snmalloc`` require the ``cmake`` build tool
-   to compile code as part of their build process. If this tool is not
-   available in the build environment, you will encounter a build error
-   with a message similar to ``failed to execute command: The system
-   cannot find the file specified. (os error 2) is `cmake` not installed?``.
+        A value of ``True`` only has an effect if ``allocator_backend`` is some value
+        other than ``default``.
 
-   The workaround is to install cmake or use a different allocator.
+        Defaults to ``False``.
 
-.. note::
+    .. py:attribute:: allocator_obj
 
-   ``snmalloc`` only supports targeting to macOS 10.14 or newer. You will
-   likely see build errors when building a binary targeting macOS 10.13 or
-   older.
+        (``bool``)
 
-Default is ``jemalloc`` on non-Windows targets and ``default`` on Windows.
-(The ``jemalloc-sys`` crate doesn't work on Windows MSVC targets.)
+        Controls whether to install a custom allocator (defined by
+        ``allocator_backend``) into Python's *obj* allocator domain
+        (``PYMEM_DOMAIN_OBJ`` in Python C API speak).
 
-.. _config_type_python_interpreter_config_allocator_raw:
+        Setting this to ``True`` will replace ``pymalloc`` as the allocator
+        for this domain.
 
-``allocator_raw``
-^^^^^^^^^^^^^^^^^
+        A value of ``True`` only has an effect if ``allocator_backend`` is some value
+        other than ``default``.
 
-(``bool``)
+        Defaults to ``False``.
 
-Controls whether to install a custom allocator (defined by
-``allocator_backend``) into Python's *raw* allocator domain
-(``PYMEM_DOMAIN_RAW`` in Python C API speak).
+    .. py:attribute:: allocator_pymalloc_arena
 
-Setting this to ``True`` will replace the system allocator (e.g. ``malloc()``,
-``free()``) for this domain.
+        (``bool``)
 
-A value of ``True`` only has an effect if ``allocator_backend`` is some value
-other than ``default``.
+        Controls whether to install a custom allocator (defined by
+        ``allocator_backend``) into Python's ``pymalloc`` to be used as its
+        arena allocator.
 
-Defaults to ``True``.
+        The ``pymalloc`` allocator is used by Python by default and will use
+        the system's allocator functions (``malloc()``, ``VirtualAlloc()``, etc)
+        by default.
 
-.. _config_type_python_interpreter_config_allocator_mem:
+        Setting this to ``True`` will have no effect if ``pymalloc`` is not
+        being used (the ``allocator_mem`` and ``allocator_obj`` settings are
+        ``True`` and have replaced ``pymalloc`` as the allocator backend for these
+        domains).
 
-``allocator_mem``
-^^^^^^^^^^^^^^^^^
+        A value of ``True`` only has an effect if ``allocator_backend`` is some
+        value other than ``default``.
 
-(``bool``)
+        Defaults to ``False``.
 
-Controls whether to install a custom allocator (defined by
-``allocator_backend``) into Python's *mem* allocator domain
-(``PYMEM_DOMAIN_MEM`` in Python C API speak).
+    .. py:attribute:: allocator_debug
 
-Setting this to ``True`` will replace ``pymalloc`` as the allocator
-for this domain.
+        (``bool``)
 
-A value of ``True`` only has an effect if ``allocator_backend`` is some value
-other than ``default``.
+        Whether to enable debug hooks for Python's memory allocators.
 
-Defaults to ``False``.
+        Enabling debug hooks enables debugging of memory-related issues in the
+        Python interpreter. This setting effectively controls whether to call
+        `PyMem_SetupDebugHooks() <https://docs.python.org/3/c-api/memory.html#c.PyMem_SetupDebugHooks>`_
+        during interpreter initialization. See the linked documentation for more.
 
-.. _config_type_python_interpreter_config_allocator_obj:
+        Defaults to ``False``.
 
-``allocator_obj``
-^^^^^^^^^^^^^^^^^
+    .. py:attribute:: oxidized_importer
 
-(``bool``)
+        (``bool``)
 
-Controls whether to install a custom allocator (defined by
-``allocator_backend``) into Python's *obj* allocator domain
-(``PYMEM_DOMAIN_OBJ`` in Python C API speak).
+        Whether to install the ``oxidized_importer`` meta path importer
+        (:ref:`oxidized_importer`) on ``sys.meta_path`` and ``sys.path_hooks`` during
+        interpreter initialization. If installed, we will always occupy the
+        first element in these lists.
 
-Setting this to ``True`` will replace ``pymalloc`` as the allocator
-for this domain.
+        Defaults to ``True``.
 
-A value of ``True`` only has an effect if ``allocator_backend`` is some value
-other than ``default``.
+    .. py:attribute:: filesystem_importer
 
-Defaults to ``False``.
+        (``bool``)
 
-.. _config_type_python_interpreter_config_allocator_pymalloc_arena:
+        Whether to install the standard library path-based importer for
+        loading Python modules from the filesystem.
 
-``allocator_pymalloc_arena``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        If disabled, ``sys.meta_path`` and ``sys.path_hooks`` will not have
+        entries provided by the standard library's path-based importer.
 
-(``bool``)
+        Due to quirks in how the Python interpreter is initialized, the standard
+        library's path-based importer will be registered on ``sys.meta_path``
+        and ``sys.path_hooks`` for a brief moment when the interpreter is
+        initialized. If ``sys.path`` contains valid entries that would be
+        serviced by this importer and ``oxidized_importer`` isn't able to
+        service imports, it is possible for the path-based importer to be
+        used to import some Python modules needed to initialize the Python
+        interpreter. In many cases, this behavior is harmless. In all cases,
+        the path-based importer is disabled after Python interpreter
+        initialization, so future imports won't be serviced by the
+        path-based importer if it is disabled by this flag.
 
-Controls whether to install a custom allocator (defined by
-``allocator_backend``) into Python's ``pymalloc`` to be used as its
-arena allocator.
+        The filesystem importer is enabled automatically if
+        :py:attr:`PythonInterpreterConfig.module_search_paths` is non-empty.
 
-The ``pymalloc`` allocator is used by Python by default and will use
-the system's allocator functions (``malloc()``, ``VirtualAlloc()``, etc)
-by default.
+    .. py:attribute:: argvb
 
-Setting this to ``True`` will have no effect if ``pymalloc`` is not
-being used (the ``allocator_mem`` and ``allocator_obj`` settings are
-``True`` and have replaced ``pymalloc`` as the allocator backend for these
-domains).
+        (``bool``)
 
-A value of ``True`` only has an effect if ``allocator_backend`` is some
-value other than ``default``.
+        Whether to expose a ``sys.argvb`` attribute containing ``bytes`` versions
+        of process arguments.
 
-Defaults to ``False``.
+        On platforms where the process receives ``char *`` arguments, Python
+        normalizes these values to ``unicode`` and makes them available via
+        ``sys.argv``. On platforms where the process receives ``wchar_t *``
+        arguments, Python may interpret the bytes as a certain encoding.
+        This encoding normalization can be lossy.
 
-.. _config_type_python_interpreter_config_allocator_debug:
+        Enabling this feature will give Python applications access to the raw
+        ``bytes`` values of arguments that are actually used. The single or
+        double width bytes nature of the data is preserved.
 
-``allocator_debug``
-^^^^^^^^^^^^^^^^^^^
+        Unlike ``sys.argv`` which may chomp off leading arguments depending
+        on the Python execution mode, ``sys.argvb`` has all the arguments
+        used to initialize the process. The first argument is always the
+        executable.
 
-(``bool``)
+    .. py:attribute:: sys_frozen
 
-Whether to enable debug hooks for Python's memory allocators.
+        (``bool``)
 
-Enabling debug hooks enables debugging of memory-related issues in the
-Python interpreter. This setting effectively controls whether to call
-`PyMem_SetupDebugHooks() <https://docs.python.org/3/c-api/memory.html#c.PyMem_SetupDebugHooks>`_
-during interpreter initialization. See the linked documentation for more.
+        Controls whether to set the ``sys.frozen`` attribute to ``True``. If
+        ``false``, ``sys.frozen`` is not set.
 
-Defaults to ``False``.
+        Default is ``False``.
 
-.. _config_type_python_interpreter_config_oxidized_importer:
+    .. py:attribute:: sys_meipass
 
-``oxidized_importer``
-^^^^^^^^^^^^^^^^^^^^^
+        (``bool``)
 
-(``bool``)
+        Controls whether to set the ``sys._MEIPASS`` attribute to the path of
+        the executable.
 
-Whether to install the ``oxidized_importer`` meta path importer
-(:ref:`oxidized_importer`) on ``sys.meta_path`` and ``sys.path_hooks`` during
-interpreter initialization. If installed, we will always occupy the
-first element in these lists.
+        Setting this and ``sys_frozen`` to ``True`` will emulate the
+        `behavior of PyInstaller <https://pyinstaller.readthedocs.io/en/v3.3.1/runtime-information.html>`_
+        and could possibly help self-contained applications that are aware of
+        PyInstaller also work with PyOxidizer.
 
-Defaults to ``True``.
+        Default is ``False``.
 
-.. _config_type_python_interpreter_config_filesystem_importer:
+    .. py:attribute:: terminfo_resolution
 
-``filesystem_importer``
-^^^^^^^^^^^^^^^^^^^^^^^
+        (``string``)
 
-(``bool``)
+        Defines how the terminal information database (``terminfo``) should be
+        configured.
 
-Whether to install the standard library path-based importer for
-loading Python modules from the filesystem.
+        See :ref:`terminfo_database` for more about terminal databases.
 
-If disabled, ``sys.meta_path`` and ``sys.path_hooks`` will not have
-entries provided by the standard library's path-based importer.
+        Accepted values are:
 
-Due to quirks in how the Python interpreter is initialized, the standard
-library's path-based importer will be registered on ``sys.meta_path``
-and ``sys.path_hooks`` for a brief moment when the interpreter is
-initialized. If ``sys.path`` contains valid entries that would be
-serviced by this importer and ``oxidized_importer`` isn't able to
-service imports, it is possible for the path-based importer to be
-used to import some Python modules needed to initialize the Python
-interpreter. In many cases, this behavior is harmless. In all cases,
-the path-based importer is disabled after Python interpreter
-initialization, so future imports won't be serviced by the
-path-based importer if it is disabled by this flag.
+        ``dynamic``
+           Looks at the currently running operating system and attempts to do something
+           reasonable.
 
-The filesystem importer is enabled automatically if
-:ref:`config_type_python_interpreter_config_module_search_paths` is
-non-empty.
+           For example, on Debian based distributions, it will look for the ``terminfo``
+           database in ``/etc/terminfo``, ``/lib/terminfo``, and ``/usr/share/terminfo``,
+           which is how Debian configures ``ncurses`` to behave normally. Similar
+           behavior exists for other recognized operating systems.
 
-.. _config_type_python_interpreter_config_argvb:
+           If the operating system is unknown, PyOxidizer falls back to looking for the
+           ``terminfo`` database in well-known directories that often contain the
+           database (like ``/usr/share/terminfo``).
 
-``argvb``
-^^^^^^^^^
+        ``none``
+           The value ``none`` indicates that no configuration of the ``terminfo``
+           database path should be performed. This is useful for applications that
+           don't interact with terminals. Using ``none`` can prevent some filesystem
+           I/O at application startup.
 
-(``bool``)
+        ``static:<path>``
+           Indicates that a static path should be used for the path to the ``terminfo``
+           database.
 
-Whether to expose a ``sys.argvb`` attribute containing ``bytes`` versions
-of process arguments.
+           This values consists of a ``:`` delimited list of filesystem paths
+           that ``ncurses`` should be configured to use. This value will be used to
+           populate the ``TERMINFO_DIRS`` environment variable at application run time.
 
-On platforms where the process receives ``char *`` arguments, Python
-normalizes these values to ``unicode`` and makes them available via
-``sys.argv``. On platforms where the process receives ``wchar_t *``
-arguments, Python may interpret the bytes as a certain encoding.
-This encoding normalization can be lossy.
+        ``terminfo`` is not used on Windows and this setting is ignored on that
+        platform.
 
-Enabling this feature will give Python applications access to the raw
-``bytes`` values of arguments that are actually used. The single or
-double width bytes nature of the data is preserved.
+    .. py:attribute:: write_modules_directory_env
 
-Unlike ``sys.argv`` which may chomp off leading arguments depending
-on the Python execution mode, ``sys.argvb`` has all the arguments
-used to initialize the process. The first argument is always the
-executable.
+        (``string`` or ``None``)
 
-.. _config_type_python_interpreter_config_sys_frozen:
+        Environment variable that defines a directory where ``modules-<UUID>`` files
+        containing a ``\n`` delimited list of loaded Python modules (from ``sys.modules``)
+        will be written upon interpreter shutdown.
 
-``sys_frozen``
-^^^^^^^^^^^^^^
+        If this setting is not defined or if the environment variable specified by its
+        value is not present at run-time, no special behavior will occur. Otherwise,
+        the environment variable's value is interpreted as a directory, that directory
+        and any of its parents will be created, and a ``modules-<UUID>`` file will
+        be written to the directory.
 
-(``bool``)
+        This setting is useful for determining which Python modules are loaded when
+        running Python code.
 
-Controls whether to set the ``sys.frozen`` attribute to ``True``. If
-``false``, ``sys.frozen`` is not set.
+    .. py:attribute:: config_profile
 
-Default is ``False``.
+        (``string``)
 
-.. _config_type_python_interpreter_config_sys_meipass:
+        This attribute controls which set of default values to use for
+        attributes that aren't explicitly defined. It effectively controls
+        which C API to use to initialize the ``PyPreConfig`` instance.
 
-``sys_meipass``
-^^^^^^^^^^^^^^^
+        Accepted values are:
 
-(``bool``)
+        ``isolated``
+           Use the `isolated <https://docs.python.org/3/c-api/init_config.html#isolated-configuration>`_
+           configuration.
 
-Controls whether to set the ``sys._MEIPASS`` attribute to the path of
-the executable.
+           This configuration is appropriate for applications existing in isolation
+           and not behaving like ``python`` executables.
 
-Setting this and ``sys_frozen`` to ``True`` will emulate the
-`behavior of PyInstaller <https://pyinstaller.readthedocs.io/en/v3.3.1/runtime-information.html>`_
-and could possibly help self-contained applications that are aware of
-PyInstaller also work with PyOxidizer.
+        ``python``
+           Use the `Python <https://docs.python.org/3/c-api/init_config.html#python-configuration>`_
+           configuration.
 
-Default is ``False``.
+           This configuration is appropriate for applications attempting to behave
+           like a ``python`` executable would.
 
-.. _config_type_python_interpreter_config_terminfo_resolution:
+    .. py:attribute:: allocator
 
-``terminfo_resolution``
-^^^^^^^^^^^^^^^^^^^^^^^
+        (``string`` or ``None``)
 
-(``string``)
+        Controls the value of
+        `PyPreConfig.allocator <https://docs.python.org/3/c-api/init_config.html#c.PyPreConfig.allocator>`_.
 
-Defines how the terminal information database (``terminfo``) should be
-configured.
+        Accepted values are:
 
-See :ref:`terminfo_database` for more about terminal databases.
+        ``None``
+           Use the default.
 
-Accepted values are:
+        ``not-set``
+           ``PYMEM_ALLOCATOR_NOT_SET``
 
-``dynamic``
-   Looks at the currently running operating system and attempts to do something
-   reasonable.
+        ``default``
+           ``PYMEM_ALLOCATOR_DEFAULT``
 
-   For example, on Debian based distributions, it will look for the ``terminfo``
-   database in ``/etc/terminfo``, ``/lib/terminfo``, and ``/usr/share/terminfo``,
-   which is how Debian configures ``ncurses`` to behave normally. Similar
-   behavior exists for other recognized operating systems.
+        ``debug``
+           ``PYMEM_ALLOCATOR_DEBUG``
 
-   If the operating system is unknown, PyOxidizer falls back to looking for the
-   ``terminfo`` database in well-known directories that often contain the
-   database (like ``/usr/share/terminfo``).
+        ``malloc``
+           ``PYMEM_ALLOCATOR_MALLOC``
 
-``none``
-   The value ``none`` indicates that no configuration of the ``terminfo``
-   database path should be performed. This is useful for applications that
-   don't interact with terminals. Using ``none`` can prevent some filesystem
-   I/O at application startup.
+        ``malloc-debug``
+           ``PYMEM_ALLOCATOR_MALLOC_DEBUG``
 
-``static:<path>``
-   Indicates that a static path should be used for the path to the ``terminfo``
-   database.
+        ``py-malloc``
+           ``PYMEM_ALLOCATOR_PYMALLOC``
 
-   This values consists of a ``:`` delimited list of filesystem paths
-   that ``ncurses`` should be configured to use. This value will be used to
-   populate the ``TERMINFO_DIRS`` environment variable at application run time.
+        ``py-malloc-debug``
+           ``PYMEM_ALLOCATOR_PYMALLOC_DEBUG``
 
-``terminfo`` is not used on Windows and this setting is ignored on that
-platform.
+    .. py:attribute:: configure_locale
 
-.. _config_type_python_interpreter_config_write_modules_directory_env:
+        (``bool`` or ``None``)
 
-``write_modules_directory_env``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        Controls the value of
+        `PyPreConfig.configure_locale <https://docs.python.org/3/c-api/init_config.html#c.PyPreConfig.configure_locale>`_.
 
-(``string`` or ``None``)
+    .. py:attribute:: coerce_c_locale
 
-Environment variable that defines a directory where ``modules-<UUID>`` files
-containing a ``\n`` delimited list of loaded Python modules (from ``sys.modules``)
-will be written upon interpreter shutdown.
+        (``string`` or ``None``)
 
-If this setting is not defined or if the environment variable specified by its
-value is not present at run-time, no special behavior will occur. Otherwise,
-the environment variable's value is interpreted as a directory, that directory
-and any of its parents will be created, and a ``modules-<UUID>`` file will
-be written to the directory.
+        Controls the value of
+        `PyPreConfig.coerce_c_locale <https://docs.python.org/3/c-api/init_config.html#c.PyPreConfig.coerce_c_locale>`_.
 
-This setting is useful for determining which Python modules are loaded when
-running Python code.
+        Accepted values are:
 
-.. _config_type_python_interpreter_config_pypreconfig:
+        ``LC_CTYPE``
+           Read ``LC_CTYPE``
 
-Attributes From ``PyPreConfig``
--------------------------------
+        ``C``
+           Coerce the ``C`` locale.
 
-Attributes in this section correspond to fields of the
-`PyPreConfig <https://docs.python.org/3/c-api/init_config.html#c.PyPreConfig>`_
-C struct used to initialize the Python interpreter.
+    .. py:attribute:: coerce_c_locale_warn
 
-.. _config_type_python_interpreter_config_config_profile:
+        (``bool`` or ``None``)
 
-``config_profile``
-^^^^^^^^^^^^^^^^^^
+        Controls the value of
+        `PyPreConfig.coerce_c_locale_warn <https://docs.python.org/3/c-api/init_config.html#c.PyPreConfig.coerce_c_locale_warn>`_.
 
-(``string``)
+    .. py:attribute:: development_mode
 
-This attribute controls which set of default values to use for
-attributes that aren't explicitly defined. It effectively controls
-which C API to use to initialize the ``PyPreConfig`` instance.
+        (``bool`` or ``None``)
 
-Accepted values are:
+        Controls the value of
+        `PyPreConfig.development_mode <https://docs.python.org/3/c-api/init_config.html#c.PyPreConfig.development_mode>`_.
 
-``isolated``
-   Use the `isolated <https://docs.python.org/3/c-api/init_config.html#isolated-configuration>`_
-   configuration.
+    .. py:attribute:: isolated
 
-   This configuration is appropriate for applications existing in isolation
-   and not behaving like ``python`` executables.
+        (``bool`` or ``None``)
 
-``python``
-   Use the `Python <https://docs.python.org/3/c-api/init_config.html#python-configuration>`_
-   configuration.
+        Controls the value of
+        `PyPreConfig.isolated <https://docs.python.org/3/c-api/init_config.html#c.PyPreConfig.isolated>`_.
 
-   This configuration is appropriate for applications attempting to behave
-   like a ``python`` executable would.
+    .. py:attribute:: legacy_windows_fs_encoding
 
-.. _config_type_python_interpreter_config_allocator:
+        (``bool`` or ``None``)
 
-``allocator``
-^^^^^^^^^^^^^
+        Controls the value of
+        `PyPreConfig.legacy_windows_fs_encoding <https://docs.python.org/3/c-api/init_config.html#c.PyPreConfig.legacy_windows_fs_encoding>`_.
 
-(``string`` or ``None``)
+    .. py:attribute:: parse_argv
 
-Controls the value of
-`PyPreConfig.allocator <https://docs.python.org/3/c-api/init_config.html#c.PyPreConfig.allocator>`_.
+        (``bool`` or ``None``)
 
-Accepted values are:
+        Controls the value of
+        `PyPreConfig.parse_argv <https://docs.python.org/3/c-api/init_config.html#c.PyPreConfig.parse_argv>`_.
 
-``None``
-   Use the default.
+    .. py:attribute:: use_environment
 
-``not-set``
-   ``PYMEM_ALLOCATOR_NOT_SET``
+        (``bool`` or ``None``)
 
-``default``
-   ``PYMEM_ALLOCATOR_DEFAULT``
+        Controls the value of
+        `PyPreConfig.use_environment <https://docs.python.org/3/c-api/init_config.html#c.PyPreConfig.use_environment>`_.
 
-``debug``
-   ``PYMEM_ALLOCATOR_DEBUG``
+    .. py:attribute:: utf8_mode
 
-``malloc``
-   ``PYMEM_ALLOCATOR_MALLOC``
+        (``bool`` or ``None``)
 
-``malloc-debug``
-   ``PYMEM_ALLOCATOR_MALLOC_DEBUG``
+        Controls the value of
+        `PyPreConfig.utf8_mode <https://docs.python.org/3/c-api/init_config.html#c.PyPreConfig.utf8_mode>`_.
 
-``py-malloc``
-   ``PYMEM_ALLOCATOR_PYMALLOC``
+    .. py:attribute:: base_exec_prefix
 
-``py-malloc-debug``
-   ``PYMEM_ALLOCATOR_PYMALLOC_DEBUG``
+        (``string`` or ``None``)
 
-.. _config_type_python_interpreter_config_configure_locale:
+        Controls the value of
+        `PyConfig.base_exec_prefix <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.base_exec_prefix>`_.
 
-``configure_locale``
-^^^^^^^^^^^^^^^^^^^^
+    .. py:attribute:: base_executable
 
-(``bool`` or ``None``)
+        (``string`` or ``None``)
 
-Controls the value of
-`PyPreConfig.configure_locale <https://docs.python.org/3/c-api/init_config.html#c.PyPreConfig.configure_locale>`_.
+        Controls the value of
+        `PyConfig.base_exectuable <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.base_executable>`_.
 
-.. _config_type_python_interpreter_config_coerce_c_locale:
+    .. py:attribute:: base_prefix
 
-``coerce_c_locale``
-^^^^^^^^^^^^^^^^^^^
+        (``string`` or ``None``)
 
-(``string`` or ``None``)
+        Controls the value of
+        `PyConfig.base_prefix <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.base_prefix>`_.
 
-Controls the value of
-`PyPreConfig.coerce_c_locale <https://docs.python.org/3/c-api/init_config.html#c.PyPreConfig.coerce_c_locale>`_.
+    .. py:attribute:: buffered_stdio
 
-Accepted values are:
+        (``bool`` or ``None``)
 
-``LC_CTYPE``
-   Read ``LC_CTYPE``
+        Controls the value of
+        `PyConfig.buffered_stdio <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.buffered_stdio>`_.
 
-``C``
-   Coerce the ``C`` locale.
+    .. py:attribute:: bytes_warning
 
-.. _config_type_python_interpreter_config_coerce_c_locale_warn:
+        (``string`` or ``None``)
 
-``coerce_c_locale_warn``
-^^^^^^^^^^^^^^^^^^^^^^^^
+        Controls the value of
+        `PyConfig.bytes_warning <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.bytes_warning>`_.
 
-(``bool`` or ``None``)
+        Accepted values are:
 
-Controls the value of
-`PyPreConfig.coerce_c_locale_warn <https://docs.python.org/3/c-api/init_config.html#c.PyPreConfig.coerce_c_locale_warn>`_.
+        * ``None``
+        * ``none``
+        * ``warn``
+        * ``raise``
 
-.. _config_type_python_interpreter_config_development_mode:
+    .. py:attribute:: check_hash_pycs_mode
 
-``development_mode``
-^^^^^^^^^^^^^^^^^^^^
+        (``string`` or ``None``)
 
-(``bool`` or ``None``)
+        Controls the value of
+        `PyConfig.check_hash_pycs_mode <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.check_hash_pycs_mode>`_.
 
-Controls the value of
-`PyPreConfig.development_mode <https://docs.python.org/3/c-api/init_config.html#c.PyPreConfig.development_mode>`_.
+        Accepted values are:
 
-.. _config_type_python_interpreter_config_isolated:
+        * ``None``
+        * ``always``
+        * ``never``
+        * ``default``
 
-``isolated``
-^^^^^^^^^^^^
+    .. py:attribute:: configure_c_stdio
 
-(``bool`` or ``None``)
+        (``bool`` or ``None``)
 
-Controls the value of
-`PyPreConfig.isolated <https://docs.python.org/3/c-api/init_config.html#c.PyPreConfig.isolated>`_.
+        Controls the value of
+        `PyConfig.configure_c_stdio <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.configure_c_stdio>`_.
 
-.. _config_type_python_interpreter_config_legacy_windows_fs_encoding:
+    .. py:attribute:: dump_refs
 
-``legacy_windows_fs_encoding``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        (``bool`` or ``None``)
 
-(``bool`` or ``None``)
+        Controls the value of
+        `PyConfig.dump_refs <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.dump_refs>`_.
 
-Controls the value of
-`PyPreConfig.legacy_windows_fs_encoding <https://docs.python.org/3/c-api/init_config.html#c.PyPreConfig.legacy_windows_fs_encoding>`_.
+    .. py:attribute:: exec_prefix
 
-.. _config_type_python_interpreter_config_parse_argv:
+        (``string`` or ``None``)
 
-``parse_argv``
-^^^^^^^^^^^^^^
+        Controls the value of
+        `PyConfig.exec_prefix <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.exec_prefix>`_.
 
-(``bool`` or ``None``)
+    .. py:attribute:: executable
 
-Controls the value of
-`PyPreConfig.parse_argv <https://docs.python.org/3/c-api/init_config.html#c.PyPreConfig.parse_argv>`_.
+        (``string`` or ``None``)
 
-.. _config_type_python_interpreter_config_use_environment:
+        Controls the value of
+        `PyConfig.executable <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.executable>`_.
 
-``use_environment``
-^^^^^^^^^^^^^^^^^^^
+    .. py:attribute:: fault_handler
 
-(``bool`` or ``None``)
+        (``bool`` or ``None``)
 
-Controls the value of
-`PyPreConfig.use_environment <https://docs.python.org/3/c-api/init_config.html#c.PyPreConfig.use_environment>`_.
+        Controls the value of
+        `PyConfig.fault_handler <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.fault_handler>`_.
 
-.. _config_type_python_interpreter_config_utf8_mode:
+    .. py:attribute:: filesystem_encoding
 
-``utf8_mode``
-^^^^^^^^^^^^^
+        (``string`` or ``None``)
 
-(``bool`` or ``None``)
+        Controls the value of
+        `PyConfig.filesystem_encoding <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.filesystem_encoding>`_.
 
-Controls the value of
-`PyPreConfig.utf8_mode <https://docs.python.org/3/c-api/init_config.html#c.PyPreConfig.utf8_mode>`_.
+    .. py:attribute:: filesystem_errors
 
-.. _config_type_python_interpreter_config_pyconfig:
+        (``string`` or ``None``)
 
-Attributes From ``PyConfig``
-----------------------------
+        Controls the value of
+        `PyConfig.filesystem_errors <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.filesystem_errors>`_.
 
-Attributes in this section correspond to fields of the
-`PyConfig <https://docs.python.org/3/c-api/init_config.html#c.PyConfig>`_
-C struct used to initialize the Python interpreter.
+    .. py:attribute:: hash_seed
 
-.. _config_type_python_interpreter_config_base_exec_prefix:
+        (``int`` or ``None``)
 
-``base_exec_prefix``
-^^^^^^^^^^^^^^^^^^^^
+        Controls the value of
+        `PyConfig.hash_seed <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.hash_seed>`_.
 
-(``string`` or ``None``)
+        ``PyConfig.use_hash_seed`` will automatically be set if this attribute is
+        defined.
 
-Controls the value of
-`PyConfig.base_exec_prefix <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.base_exec_prefix>`_.
+    .. py:attribute:: home
 
-.. _config_type_python_interpreter_config_base_executable:
+        (``string`` or ``None``)
 
-``base_executable``
-^^^^^^^^^^^^^^^^^^^
+        Controls the value of
+        `PyConfig.home <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.home>`_.
 
-(``string`` or ``None``)
+    .. py:attribute:: import_time
 
-Controls the value of
-`PyConfig.base_exectuable <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.base_executable>`_.
+        Controls the value of
+        `PyConfig.import_time <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.import_time>`_.
 
-.. _config_type_python_interpreter_config_base_prefix:
+    .. py:attribute:: inspect
 
-``base_prefix``
-^^^^^^^^^^^^^^^
+        (``bool`` or ``None``)
 
-(``string`` or ``None``)
+        Controls the value of
+        `PyConfig.inspect <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.inspect>`_.
 
-Controls the value of
-`PyConfig.base_prefix <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.base_prefix>`_.
+    .. py:attribute:: install_signal_handlers
 
-.. _config_type_python_interpreter_config_buffered_stdio:
+        (``bool`` or ``None``)
 
-``buffered_stdio``
-^^^^^^^^^^^^^^^^^^
+        Controls the value of
+        `PyConfig.install_signal_handlers <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.install_signal_handlers>`_.
 
-(``bool`` or ``None``)
+    .. py:attribute:: interactive
 
-Controls the value of
-`PyConfig.buffered_stdio <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.buffered_stdio>`_.
+        (``bool`` or ``None``)
 
-.. _config_type_python_interpreter_config_bytes_warning:
+        Controls the value of
+        `PyConfig.interactive <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.interactive>`_.
 
-``bytes_warning``
-^^^^^^^^^^^^^^^^^
+    .. py:attribute:: legacy_windows_stdio
 
-(``string`` or ``None``)
+        (``bool`` or ``None``)
 
-Controls the value of
-`PyConfig.bytes_warning <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.bytes_warning>`_.
+        Controls the value of
+        `PyConfig.legacy_windows_stdio <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.legacy_windows_stdio>`_.
 
-Accepted values are:
+    .. py:attribute:: malloc_stats
 
-* ``None``
-* ``none``
-* ``warn``
-* ``raise``
+        (``bool`` or ``None``)
 
-.. _config_type_python_interpreter_config_check_hash_pycs_mode:
+        Controls the value of
+        `PyConfig.malloc_stats <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.malloc_stats>`_.
 
-``check_hash_pycs_mode``
-^^^^^^^^^^^^^^^^^^^^^^^^
+    .. py:attribute:: module_search_paths
 
-(``string`` or ``None``)
+        (``list[string]`` or ``None``)
 
-Controls the value of
-`PyConfig.check_hash_pycs_mode <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.check_hash_pycs_mode>`_.
+        Controls the value of
+        `PyConfig.module_search_paths <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.module_search_paths>`_.
 
-Accepted values are:
+        This value effectively controls the initial value of ``sys.path``.
 
-* ``None``
-* ``always``
-* ``never``
-* ``default``
+        The special string ``$ORIGIN`` in values will be expanded to the absolute
+        path of the directory of the executable at run-time. For example,
+        if the executable is ``/opt/my-application/pyapp``, ``$ORIGIN`` will
+        expand to ``/opt/my-application`` and the value ``$ORIGIN/lib`` will
+        expand to ``/opt/my-application/lib``.
 
-.. _config_type_python_interpreter_config_configure_c_stdio:
+        Setting this to a non-empty value also has the side-effect of setting
+        ``filesystem_importer = True``
 
-``configure_c_stdio``
-^^^^^^^^^^^^^^^^^^^^^
+    .. py:attribute:: optimization_level
 
-(``bool`` or ``None``)
+        (``int`` or ``None``)
 
-Controls the value of
-`PyConfig.configure_c_stdio <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.configure_c_stdio>`_.
+        Controls the value of
+        `PyConfig.optimization_level <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.optimization_level>`_.
 
-.. _config_type_python_interpreter_config_dump_refs:
+        Allowed values are:
 
-``dump_refs``
-^^^^^^^^^^^^^
+        * ``None``
+        * ``0``
+        * ``1``
+        * ``2``
 
-(``bool`` or ``None``)
+        This setting is only relevant if ``write_bytecode`` is ``True`` and
+        Python modules are being imported from the filesystem using Python's
+        standard filesystem importer.
 
-Controls the value of
-`PyConfig.dump_refs <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.dump_refs>`_.
+    .. py:attribute:: parser_debug
 
-.. _config_type_python_interpreter_config_exec_prefix:
+        (``bool`` or ``None``)
 
-``exec_prefix``
-^^^^^^^^^^^^^^^
+        Controls the value of
+        `PyConfig.parser_debug <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.parser_debug>`_.
 
-(``string`` or ``None``)
+    .. py:attribute:: pathconfig_warnings
 
-Controls the value of
-`PyConfig.exec_prefix <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.exec_prefix>`_.
+        (``bool`` or ``None``)
 
-.. _config_type_python_interpreter_config_executable:
+        Controls the value of
+        `PyConfig.pathconfig_warnings <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.pathconfig_warnings>`_.
 
-``executable``
-^^^^^^^^^^^^^^
+    .. py:attribute:: prefix
 
-(``string`` or ``None``)
+        (``string`` or ``None``)
 
-Controls the value of
-`PyConfig.executable <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.executable>`_.
+        Controls the value of
+        `PyConfig.prefix <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.prefix>`_.
 
-.. _config_type_python_interpreter_config_fault_handler:
+    .. py:attribute:: program_name
 
-``fault_handler``
-^^^^^^^^^^^^^^^^^
+        (``string`` or ``None``)
 
-(``bool`` or ``None``)
+        Controls the value of
+        `PyConfig.program_name <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.program_name>`_.
 
-Controls the value of
-`PyConfig.fault_handler <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.fault_handler>`_.
+    .. py:attribute:: pycache_prefix
 
-.. _config_type_python_interpreter_config_filesystem_encoding:
+        (``string`` or ``None``)
 
-``filesystem_encoding``
-^^^^^^^^^^^^^^^^^^^^^^^
+        Controls the value of
+        `PyConfig.pycache_prefix <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.pycache_prefix>`_.
 
-(``string`` or ``None``)
+    .. py:attribute:: python_path_env
 
-Controls the value of
-`PyConfig.filesystem_encoding <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.filesystem_encoding>`_.
+        (``string`` or ``None``)
 
-.. _config_type_python_interpreter_config_filesystem_errors:
+        Controls the value of
+        `PyConfig.pythonpath_env <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.pythonpath_env>`_.
 
-``filesystem_errors``
-^^^^^^^^^^^^^^^^^^^^^
+    .. py:attribute:: quiet
 
-(``string`` or ``None``)
+        (``bool`` or ``None``)
 
-Controls the value of
-`PyConfig.filesystem_errors <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.filesystem_errors>`_.
+        Controls the value of
+        `PyConfig.quiet <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.quiet>`_.
 
-.. _config_type_python_interpreter_config_hash_seed:
+    .. py:attribute:: run_command
 
-``hash_seed``
-^^^^^^^^^^^^^
+        (``string`` or ``None``)
 
-(``int`` or ``None``)
+        Controls the value of
+        `PyConfig.run_command <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.run_command>`_.
 
-Controls the value of
-`PyConfig.hash_seed <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.hash_seed>`_.
+    .. py:attribute:: run_filename
 
-``PyConfig.use_hash_seed`` will automatically be set if this attribute is
-defined.
+        (``string`` or ``None``)
 
-.. _config_type_python_interpreter_config_home:
+        Controls the value of
+        `PyConfig.run_filename <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.run_filename>`_.
 
-``home``
-^^^^^^^^
+    .. py:attribute:: run_module
 
-(``string`` or ``None``)
+        (``string`` or ``None``)
 
-Controls the value of
-`PyConfig.home <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.home>`_.
+        Controls the value of
+        `PyConfig.run_module <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.run_module>`_.
 
-.. _config_type_python_interpreter_config_import_time:
+    .. py:attribute:: show_ref_count
 
-``import_time``
-^^^^^^^^^^^^^^^
+        (``bool`` or ``None``)
 
-(``bool`` or ``None``)
+        Controls the value of
+        `PyConfig.show_ref_count <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.show_ref_count>`_.
 
-Controls the value of
-`PyConfig.import_time <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.import_time>`_.
+    .. py:attribute:: site_import
 
-.. _config_type_python_interpreter_config_inspect:
+        (``bool`` or ``None``)
 
-``inspect``
-^^^^^^^^^^^
+        Controls the value of
+        `PyConfig.site_import <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.site_import>`_.
 
-(``bool`` or ``None``)
+        The ``site`` module is typically not needed for standalone/isolated Python
+        applications.
 
-Controls the value of
-`PyConfig.inspect <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.inspect>`_.
+    .. py:attribute:: skip_first_source_line
 
-.. _config_type_python_interpreter_config_install_signal_handlers:
+        (``bool`` or ``None``)
 
-``install_signal_handlers``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        Controls the value of
+        `PyConfig.skip_first_source_line <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.skip_first_source_line>`_.
 
-(``bool`` or ``None``)
+    .. py:attribute:: stdio_encoding
 
-Controls the value of
-`PyConfig.install_signal_handlers <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.install_signal_handlers>`_.
+        (``string`` or ``None``)
 
-.. _config_type_python_interpreter_config_interactive:
+        Controls the value of
+        `PyConfig.stdio_encoding <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.stdio_encoding>`_.
 
-``interactive``
-^^^^^^^^^^^^^^^
+    .. py:attribute:: stdio_errors
 
-(``bool`` or ``None``)
+        (``string`` or ``None``)
 
-Controls the value of
-`PyConfig.interactive <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.interactive>`_.
+        Controls the value of
+        `PyConfig.stdio_errors <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.stdio_errors>`_.
 
-.. _config_type_python_interpreter_config_legacy_windows_stdio:
+    .. py:attribute:: tracemalloc
 
-``legacy_windows_stdio``
-^^^^^^^^^^^^^^^^^^^^^^^^
+        (``bool`` or ``None``)
 
-(``bool`` or ``None``)
+        Controls the value of
+        `PyConfig.tracemalloc <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.tracemalloc>`_.
 
-Controls the value of
-`PyConfig.legacy_windows_stdio <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.legacy_windows_stdio>`_.
+    .. py:attribute:: user_site_directory
 
-.. _config_type_python_interpreter_config_malloc_stats:
+        (``bool`` or ``None``)
 
-``malloc_stats``
-^^^^^^^^^^^^^^^^
+        Controls the value of
+        `PyConfig.user_site_directory <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.user_site_directory>`_.
 
-(``bool`` or ``None``)
+    .. py:attribute:: verbose
 
-Controls the value of
-`PyConfig.malloc_stats <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.malloc_stats>`_.
+        (``bool`` or ``None``)
 
-.. _config_type_python_interpreter_config_module_search_paths:
+        Controls the value of
+        `PyConfig.verbose <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.verbose>`_.
 
-``module_search_paths``
-^^^^^^^^^^^^^^^^^^^^^^^
+    .. py:attribute:: warn_options
 
-(``list[string]`` or ``None``)
+        (``list[string]`` or ``None``)
 
-Controls the value of
-`PyConfig.module_search_paths <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.module_search_paths>`_.
+        Controls the value of
+        `PyConfig.warn_options <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.warn_options>`_.
 
-This value effectively controls the initial value of ``sys.path``.
+    .. py:attribute:: write_bytecode
 
-The special string ``$ORIGIN`` in values will be expanded to the absolute
-path of the directory of the executable at run-time. For example,
-if the executable is ``/opt/my-application/pyapp``, ``$ORIGIN`` will
-expand to ``/opt/my-application`` and the value ``$ORIGIN/lib`` will
-expand to ``/opt/my-application/lib``.
+        (``bool`` or ``None``)
 
-Setting this to a non-empty value also has the side-effect of setting
-``filesystem_importer = True``
+        Controls the value of
+        `PyConfig.write_bytecode <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.write_bytecode>`_.
 
-.. _config_type_python_interpreter_config_optimization_level:
+        This only influences the behavior of Python standard path-based importer
+        (controlled via ``filesystem_importer``).
 
-``optimization_level``
-^^^^^^^^^^^^^^^^^^^^^^
+    .. py:attribute:: x_options
 
-(``int`` or ``None``)
+        (``list[string]`` or ``None``)
 
-Controls the value of
-`PyConfig.optimization_level <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.optimization_level>`_.
-
-Allowed values are:
-
-* ``None``
-* ``0``
-* ``1``
-* ``2``
-
-This setting is only relevant if ``write_bytecode`` is ``True`` and
-Python modules are being imported from the filesystem using Python's
-standard filesystem importer.
-
-.. _config_type_python_interpreter_config_parser_debug:
-
-``parser_debug``
-^^^^^^^^^^^^^^^^
-
-(``bool`` or ``None``)
-
-Controls the value of
-`PyConfig.parser_debug <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.parser_debug>`_.
-
-.. _config_type_python_interpreter_config_pathconfig_warnings:
-
-``pathconfig_warnings``
-^^^^^^^^^^^^^^^^^^^^^^^
-
-(``bool`` or ``None``)
-
-Controls the value of
-`PyConfig.pathconfig_warnings <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.pathconfig_warnings>`_.
-
-.. _config_type_python_interpreter_config_prefix:
-
-``prefix``
-^^^^^^^^^^
-
-(``string`` or ``None``)
-
-Controls the value of
-`PyConfig.prefix <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.prefix>`_.
-
-.. _config_type_python_interpreter_config_program_name:
-
-``program_name``
-^^^^^^^^^^^^^^^^
-
-(``string`` or ``None``)
-
-Controls the value of
-`PyConfig.program_name <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.program_name>`_.
-
-.. _config_type_python_interpreter_config_pycache_prefix:
-
-``pycache_prefix``
-^^^^^^^^^^^^^^^^^^
-
-(``string`` or ``None``)
-
-Controls the value of
-`PyConfig.pycache_prefix <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.pycache_prefix>`_.
-
-.. _config_type_python_interpreter_config_python_path_env:
-
-``python_path_env``
-^^^^^^^^^^^^^^^^^^^
-
-(``string`` or ``None``)
-
-Controls the value of
-`PyConfig.pythonpath_env <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.pythonpath_env>`_.
-
-.. _config_type_python_interpreter_config_quiet:
-
-``quiet``
-^^^^^^^^^
-
-(``bool`` or ``None``)
-
-Controls the value of
-`PyConfig.quiet <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.quiet>`_.
-
-.. _config_type_python_interpreter_config_run_command:
-
-``run_command``
-^^^^^^^^^^^^^^^
-
-(``string`` or ``None``)
-
-Controls the value of
-`PyConfig.run_command <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.run_command>`_.
-
-.. _config_type_python_interpreter_config_run_filename:
-
-``run_filename``
-^^^^^^^^^^^^^^^^
-
-(``string`` or ``None``)
-
-Controls the value of
-`PyConfig.run_filename <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.run_filename>`_.
-
-.. _config_type_python_interpreter_config_run_module:
-
-``run_module``
-^^^^^^^^^^^^^^
-
-(``string`` or ``None``)
-
-Controls the value of
-`PyConfig.run_module <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.run_module>`_.
-
-.. _config_type_python_interpreter_config_show_ref_count:
-
-``show_ref_count``
-^^^^^^^^^^^^^^^^^^
-
-(``bool`` or ``None``)
-
-Controls the value of
-`PyConfig.show_ref_count <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.show_ref_count>`_.
-
-.. _config_type_python_interpreter_config_site_import:
-
-``site_import``
-^^^^^^^^^^^^^^^
-
-(``bool`` or ``None``)
-
-Controls the value of
-`PyConfig.site_import <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.site_import>`_.
-
-The ``site`` module is typically not needed for standalone/isolated Python
-applications.
-
-.. _config_type_python_interpreter_config_skip_first_source_line:
-
-``skip_first_source_line``
-^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-(``bool`` or ``None``)
-
-Controls the value of
-`PyConfig.skip_first_source_line <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.skip_first_source_line>`_.
-
-.. _config_type_python_interpreter_config_stdio_encoding:
-
-``stdio_encoding``
-^^^^^^^^^^^^^^^^^^
-
-(``string`` or ``None``)
-
-Controls the value of
-`PyConfig.stdio_encoding <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.stdio_encoding>`_.
-
-.. _config_type_python_interpreter_config_stdio_errors:
-
-``stdio_errors``
-^^^^^^^^^^^^^^^^
-
-(``string`` or ``None``)
-
-Controls the value of
-`PyConfig.stdio_errors <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.stdio_errors>`_.
-
-.. _config_type_python_interpreter_config_tracemalloc:
-
-``tracemalloc``
-^^^^^^^^^^^^^^^
-
-(``bool`` or ``None``)
-
-Controls the value of
-`PyConfig.tracemalloc <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.tracemalloc>`_.
-
-.. _config_type_python_interpreter_config_user_site_directory:
-
-``user_site_directory``
-^^^^^^^^^^^^^^^^^^^^^^^
-
-(``bool`` or ``None``)
-
-Controls the value of
-`PyConfig.user_site_directory <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.user_site_directory>`_.
-
-.. _config_type_python_interpreter_config_verbose:
-
-``verbose``
-^^^^^^^^^^^
-
-(``bool`` or ``None``)
-
-Controls the value of
-`PyConfig.verbose <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.verbose>`_.
-
-.. _config_type_python_interpreter_config_warn_options:
-
-``warn_options``
-^^^^^^^^^^^^^^^^
-
-(``list[string]`` or ``None``)
-
-Controls the value of
-`PyConfig.warn_options <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.warn_options>`_.
-
-.. _config_type_python_interpreter_config_write_bytecode:
-
-``write_bytecode``
-^^^^^^^^^^^^^^^^^^
-
-(``bool`` or ``None``)
-
-Controls the value of
-`PyConfig.write_bytecode <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.write_bytecode>`_.
-
-This only influences the behavior of Python standard path-based importer
-(controlled via ``filesystem_importer``).
-
-.. _config_type_python_interpreter_config_x_options:
-
-``x_options``
-^^^^^^^^^^^^^^
-
-(``list[string]`` or ``None``)
-
-Controls the value of
-`PyConfig.xoptions <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.xoptions>`_.
+        Controls the value of
+        `PyConfig.xoptions <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.xoptions>`_.
 
 Starlark Caveats
 ================
 
-The ``PythonInterpreterConfig`` Starlark type is backed by a Rust data
+The :py:class:`PythonInterpreterConfig` Starlark type is backed by a Rust data
 structure. And when attributes are retrieved, a copy of the underlying
 Rust struct field is returned.
 

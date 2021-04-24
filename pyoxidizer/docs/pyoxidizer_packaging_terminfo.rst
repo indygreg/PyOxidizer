@@ -43,8 +43,7 @@ configured for the run-time environment.
 
 PyOxidizer applications have the choice of various modes for resolving
 the ``terminfo`` database location. This is facilitated mainly via the
-:ref:`terminfo_resolution <config_type_python_interpreter_config_terminfo_resolution>`
-``PythonInterpreterConfig.terminfo_resolution`` config setting.
+:py:attr:`PythonInterpreterConfig.terminfo_resolution` config setting.
 
 By default, when Python is initialized PyOxidizer will try to identify
 the current operating system and choose an appropriate set of well-known

@@ -54,16 +54,17 @@ throughout the :ref:`packaging` documentation.
 Configuring the Python Interpreter Run-Time Behavior
 ====================================================
 
-The :ref:`config_type_python_interpreter_config`
+The :py:class:`PythonInterpreterConfig`
 Starlark type configures the default behavior of the Python interpreter
 embedded in built binaries.
 
-A ``PythonInterpreterConfig`` instance is associated with :py:class:`PythonExecutable`
-instances when they are created. A custom instance can be passed into
-:py:meth:`PythonDistribution.to_python_executable` to use non-default settings.
+A :py:class:`PythonInterpreterConfig` instance is associated with
+:py:class:`PythonExecutable` instances when they are created. A custom
+instance can be passed into :py:meth:`PythonDistribution.to_python_executable`
+to use non-default settings.
 
 In this example (similar to above), we construct a custom
-``PythonInterpreterConfig`` instance using non-defaults and then pass
+:py:class:`PythonInterpreterConfig` instance using non-defaults and then pass
 this instance into the constructed :py:class:`PythonExecutable`:
 
 .. code-block:: python
@@ -80,8 +81,8 @@ this instance into the constructed :py:class:`PythonExecutable`:
    register_target("dist", make_dist)
    register_target("exe", make_exe, depends=["dist"], default=True)
 
-The ``PythonInterpreterConfig`` type exposes a lot of modifiable settings.
-See the :ref:`API documentation <config_type_python_interpreter_config>` for
+The :py:class:`PythonInterpreterConfig` type exposes a lot of modifiable settings.
+See the :py:class:`API documentation <PythonInterpreterConfig>` for
 the complete list. These settings include but are not limited to:
 
 * Control of low-level Python interpreter settings, such as whether

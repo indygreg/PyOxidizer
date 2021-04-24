@@ -71,7 +71,7 @@
 
     .. py:method:: make_python_interpreter_config() -> PythonInterpreterConfig
 
-        Obtain a :ref:`config_type_python_interpreter_config` derived from the
+        Obtain a :py:class:`PythonInterpreterConfig` derived from the
         distribution.
 
         The interpreter configuration automatically uses settings appropriate
