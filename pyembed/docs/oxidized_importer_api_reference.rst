@@ -232,6 +232,21 @@ The ``OxidizedFinder`` Class
         should have ``.__cause__`` set to an inner exception with more details on why
         the path was rejected.
 
+The ``OxidizedResourceReader`` Class
+====================================
+
+.. py:class:: OxidizedResourceReader
+
+   ``importlib.abc.ResourceReader`` implementer for :py:class:`OxidizedFinder`.
+
+   .. py:method:: open_resource(resource: str)
+
+   .. py:method:: resource_path(resource: str)
+
+   .. py:method:: is_resource(name: str) -> bool
+
+   .. py:method:: contents() -> list[str]
+
 The ``OxidizedPathEntryFinder`` Class
 =====================================
 
