@@ -24,7 +24,7 @@ Arguments:
 
 ``value``
    (various) A *Python resource* instance to add. e.g.
-   :py:class:`PythonModuleSource` or :ref:`config_type_python_package_resource`.
+   :py:class:`PythonModuleSource` or :py:class:`PythonPackageResource`.
 
 This method can be used to place the Python resources derived from another
 type or action in the filesystem next to an application binary.

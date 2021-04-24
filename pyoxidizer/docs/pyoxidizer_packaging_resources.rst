@@ -104,7 +104,7 @@ The following Starlark types represent individual resources:
    A Python module defined through compiled, machine-native code. On Linux,
    these are typically encountered as ``.so`` files. On Windows, ``.pyd`` files.
 
-:ref:`config_type_python_package_resource`
+:py:class:`PythonPackageResource`
    A non-module *resource file* loadable by Python resources APIs, such as
    those in ``importlib.resources``.
 

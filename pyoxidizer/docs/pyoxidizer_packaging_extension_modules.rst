@@ -157,7 +157,7 @@ Starlark code.
 Note that if your shared library exists as a file in Python package
 (a directory with ``__init__.py`` somewhere in the hierarchy), PyOxidizer's
 resource scanning may detect the shared library as a
-:ref:`config_type_python_package_resource` and package this resource.
+:py:class:`PythonPackageResource` and package this resource.
 However, the packaged resource won't be flagged as a shared library.
 This means that the run-time importer won't identify the shared library
 dependency and won't take steps to ensure it is available/loaded before

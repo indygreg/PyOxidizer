@@ -162,7 +162,7 @@
 
         Returns a ``list`` of objects representing Python resources installed as
         part of the operation. The types of these objects can be
-        :py:class:`PythonModuleSource`, :ref:`config_type_python_package_resource`, etc.
+        :py:class:`PythonModuleSource`, :py:class:`PythonPackageResource`, etc.
 
         The returned resources are typically added to a
         :py:class:`starlark_tugger.FileManifest` or

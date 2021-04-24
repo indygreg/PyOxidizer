@@ -1,52 +1,36 @@
 .. py:currentmodule:: starlark_pyoxidizer
 
-.. _config_type_python_package_resource:
-
 =========================
 ``PythonPackageResource``
 =========================
 
-This type represents a resource _file_ in a Python package. It is
-effectively a named blob associated with a Python package. It is
-typically accessed using the ``importlib.resources`` API.
+.. py:class:: PythonPackageResource
 
-Attributes
-==========
+    This type represents a resource _file_ in a Python package. It is
+    effectively a named blob associated with a Python package. It is
+    typically accessed using the ``importlib.resources`` API.
 
-The following sections describe the attributes available on each
-instance.
+    .. py:attribute:: package
 
-.. _config_type_python_package_resource_package:
+        (``string``)
 
-``package``
------------
+        Python package this resource is associated with.
 
-(``string``)
+    .. py:attribute:: name
 
-Python package this resource is associated with.
+        (``string``)
 
-.. _config_type_python_package_resource_name:
+        Name of this resource.
 
-``name``
---------
+    .. py:attribute:: is_stdlib
 
-(``string``)
+        (``bool``)
 
-Name of this resource.
+        Whether this module is part of the Python standard library (part of the
+        Python distribution).
 
-.. _config_type_python_package_resource_is_stdlib:
+    .. py:attribute:: add_*
 
-``is_stdlib``
--------------
+        (various)
 
-(``bool``)
-
-Whether this module is part of the Python standard library (part of the
-Python distribution).
-
-``add_*``
----------
-
-(various)
-
-See :ref:`config_resource_add_attributes`.
+        See :ref:`config_resource_add_attributes`.
