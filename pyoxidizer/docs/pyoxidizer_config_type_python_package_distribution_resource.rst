@@ -1,57 +1,42 @@
 .. py:currentmodule:: starlark_pyoxidizer
 
-.. _config_type_python_package_distribution_resource:
-
 =====================================
 ``PythonPackageDistributionResource``
 =====================================
 
-This type represents a named resource to make available as Python package
-distribution metadata. These files are typically accessed using the
-``importlib.metadata`` API.
+.. py:class:: PythonPackageDistributionResource
 
-Each instance represents a logical file in a ``<package>-<version>.dist-info``
-or ``<package>-<version>.egg-info`` directory. There are specifically named
-files that contain certain data. For example, a ``*.dist-info/METADATA`` file
-describes high-level metadata about a Python package.
+    This type represents a named resource to make available as Python package
+    distribution metadata. These files are typically accessed using the
+    ``importlib.metadata`` API.
 
-Attributes
-==========
+    Each instance represents a logical file in a ``<package>-<version>.dist-info``
+    or ``<package>-<version>.egg-info`` directory. There are specifically named
+    files that contain certain data. For example, a ``*.dist-info/METADATA`` file
+    describes high-level metadata about a Python package.
 
-The following sections describe the attributes available on each
-instance.
 
-.. _config_type_python_package_distribution_resource_package:
+    .. py:attribute:: package
 
-``package``
------------
+        (``string``)
 
-(``string``)
+        Python package this resource is associated with.
 
-Python package this resource is associated with.
+    .. py:attribute:: name
 
-.. _config_type_python_package_distribution_resource_name:
+        (``string``)
 
-``name``
---------
+        Name of this resource.
 
-(``string``)
+    .. py:attribute:: is_stdlib
 
-Name of this resource.
+        (``bool``)
 
-.. _config_type_python_package_distribution_resource_is_stdlib:
+        Whether this module is part of the Python standard library (part of the
+        Python distribution).
 
-``is_stdlib``
--------------
+    .. py:attribute:: add_*
 
-(``bool``)
+        (various)
 
-Whether this module is part of the Python standard library (part of the
-Python distribution).
-
-``add_*``
----------
-
-(various)
-
-See :ref:`config_resource_add_attributes`.
+        See :ref:`config_resource_add_attributes`.

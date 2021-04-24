@@ -108,7 +108,7 @@ The following Starlark types represent individual resources:
    A non-module *resource file* loadable by Python resources APIs, such as
    those in ``importlib.resources``.
 
-:ref:`config_type_python_package_distribution_resource`
+:py:class:`PythonPackageDistributionResource`
    A non-module *resource file* defining metadata for a Python package.
    Typically accessed via ``importlib.metadata``. This is how files in
    ``*.dist-info`` or ``*.egg-info`` directories are represented.
