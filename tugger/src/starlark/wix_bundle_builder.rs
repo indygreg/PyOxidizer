@@ -7,6 +7,7 @@ use {
         code_signing::{handle_signable_event, SigningAction, SigningContext},
         wix_msi_builder::WiXMsiBuilderValue,
     },
+    anyhow::Context,
     starlark::{
         environment::TypeValues,
         eval::call_stack::CallStack,
@@ -27,6 +28,19 @@ use {
     tugger_windows::VcRedistributablePlatform,
     tugger_wix::{MsiPackage, WiXBundleInstallerBuilder},
 };
+
+fn error_context<F, T>(label: &str, f: F) -> Result<T, ValueError>
+where
+    F: FnOnce() -> anyhow::Result<T>,
+{
+    f().map_err(|e| {
+        ValueError::Runtime(RuntimeError {
+            code: "TUGGER_WIX_BUNDLE_BUILDER",
+            message: format!("{:?}", e),
+            label: label.to_string(),
+        })
+    })
+}
 
 #[derive(Clone)]
 pub struct WiXBundleBuilderValue<'a> {
@@ -75,28 +89,19 @@ impl<'a> WiXBundleBuilderValue<'a> {
         type_values: &TypeValues,
         platform: String,
     ) -> ValueResult {
-        let platform = VcRedistributablePlatform::try_from(platform.as_str()).map_err(|e| {
-            ValueError::Runtime(RuntimeError {
-                code: "TUGGER_WIX_BUNDLE_BUILDER",
-                message: e,
-                label: "add_vc_redistributable()".to_string(),
-            })
-        })?;
-
         let context_value = get_context_value(type_values)?;
         let context = context_value
             .downcast_ref::<EnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
 
-        self.inner
-            .add_vc_redistributable(context.logger(), platform, context.build_path())
-            .map_err(|e| {
-                ValueError::Runtime(RuntimeError {
-                    code: "TUGGER_WIX_BUNDLE_BUILDER",
-                    message: format!("{:?}", e),
-                    label: "add_vc_redistributable()".to_string(),
-                })
-            })?;
+        error_context("WiXBundleBuilder.add_vc_redistributable()", || {
+            let platform = VcRedistributablePlatform::try_from(platform.as_str())
+                .context("obtaining VcRedistributablePlatform from str")?;
+
+            self.inner
+                .add_vc_redistributable(context.logger(), platform, context.build_path())
+                .context("adding VC++ Redistributable to bundle builder")
+        })?;
 
         Ok(Value::new(NoneType::None))
     }
@@ -134,6 +139,8 @@ impl<'a> WiXBundleBuilderValue<'a> {
         call_stack: &mut CallStack,
         target: String,
     ) -> ValueResult {
+        const LABEL: &str = "WiXBundleBuilder.build()";
+
         let context_value = get_context_value(type_values)?;
         let context = context_value
             .downcast_ref::<EnvironmentContext>()
@@ -146,31 +153,24 @@ impl<'a> WiXBundleBuilderValue<'a> {
             builder.build(type_values, call_stack, target.clone())?;
         }
 
-        let builder = self
-            .inner
-            .to_installer_builder(&self.id_prefix, &self.target_triple, &output_path)
-            .map_err(|e| {
-                ValueError::Runtime(RuntimeError {
-                    code: "TUGGER_WIX_BUNDLE_BUILDER",
-                    message: format!("{:?}", e),
-                    label: "build()".to_string(),
-                })
-            })?;
+        let builder = error_context(LABEL, || {
+            self.inner
+                .to_installer_builder(&self.id_prefix, &self.target_triple, &output_path)
+                .context("converting to WiXInstallerBuilder")
+        })?;
 
         let filename = self.inner.default_exe_filename();
         let exe_path = output_path.join(filename.clone());
 
-        builder.build(context.logger(), &exe_path).map_err(|e| {
-            ValueError::Runtime(RuntimeError {
-                code: "TUGGER_WIX_BUNDLE_BUILDER",
-                message: format!("{:?}", e),
-                label: "build()".to_string(),
-            })
+        error_context(LABEL, || {
+            builder
+                .build(context.logger(), &exe_path)
+                .context("building WiXInstallerBuilder")
         })?;
 
         let candidate = exe_path.as_path().into();
         let mut context = SigningContext::new(
-            "build()",
+            LABEL,
             SigningAction::WindowsInstallerCreation,
             filename,
             &candidate,
