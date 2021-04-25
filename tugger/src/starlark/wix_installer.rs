@@ -28,7 +28,7 @@ use {
     },
     std::{convert::TryFrom, path::Path},
     tugger_code_signing::SigningDestination,
-    tugger_file_manifest::FileEntry,
+    tugger_file_manifest::{FileEntry, FileManifest},
     tugger_wix::{WiXInstallerBuilder, WiXSimpleMsiBuilder, WxsBuilder},
 };
 
@@ -120,25 +120,38 @@ impl WiXInstallerValue {
         filesystem_path: String,
         force_read: bool,
     ) -> ValueResult {
-        error_context("WiXInstaller.add_install_file()", || {
+        const LABEL: &str = "WiXInstaller.add_install_file()";
+
+        let manifest = error_context(LABEL, || {
+            let mut manifest = FileManifest::default();
+
             let entry = self
                 .resolve_file_entry(&filesystem_path, force_read)
                 .with_context(|| format!("resolving file entry from path {}", filesystem_path))?;
 
-            self.inner
-                .install_files_mut()
+            manifest
                 .add_file_entry(&install_path, entry)
-                .with_context(|| format!("adding file entry to {}", install_path))
+                .context("adding FileEntry to InstallManifest")?;
+
+            Ok(manifest)
         })?;
 
-        Ok(Value::new(NoneType::None))
+        self.add_install_files_from_manifest(LABEL, &manifest)
     }
 
     fn add_install_files(&mut self, manifest: FileManifestValue) -> ValueResult {
-        error_context("WiXInstaller.add_install_files()", || {
+        self.add_install_files_from_manifest("WiXInstaller.add_install_files()", &manifest.manifest)
+    }
+
+    fn add_install_files_from_manifest(
+        &mut self,
+        label: &'static str,
+        manifest: &FileManifest,
+    ) -> ValueResult {
+        error_context(label, || {
             self.inner
                 .install_files_mut()
-                .add_manifest(&manifest.manifest)
+                .add_manifest(manifest)
                 .context("adding install files from FileManifest")
         })?;
 
