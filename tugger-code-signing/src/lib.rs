@@ -81,6 +81,9 @@ use {
     yasna::ASN1Error,
 };
 
+/// URL of Apple's time-stamp protocol server.
+pub const APPLE_TIMESTAMP_URL: &str = "http://timestamp.apple.com/ts01";
+
 /// Represents a signing error.
 #[derive(Debug, Error)]
 pub enum SigningError {
@@ -1009,6 +1012,16 @@ impl<'a> SignableSigner<'a> {
 
         for cert in &self.certificate_chain {
             settings.chain_certificate(cert.clone());
+        }
+
+        if let Some(url) = &self.time_stamp_url {
+            settings
+                .set_time_stamp_url(url.clone())
+                .expect("shouldn't have failed for already parsed URL");
+        } else {
+            settings
+                .set_time_stamp_url(APPLE_TIMESTAMP_URL)
+                .expect("shouldn't have failed for constant URL");
         }
 
         if let Some(cb) = &self.apple_signing_settings_fn {
