@@ -155,3 +155,12 @@
         ``value``
            The value of the variable. If ``None`` is used, the variable has no
            value and is simply defined.
+
+    .. py:method:: build(target: str) -> ResolvedTarget
+
+        This method will build the installer using the WiX Toolset.
+
+        This method accepts the following arguments:
+
+        ``target``
+           The name of the target being built.
