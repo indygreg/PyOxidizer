@@ -1127,12 +1127,17 @@ impl<'a> SignableSigner<'a> {
                         Ok(SignedOutput::Memory(std::fs::read(&sign_path)?))
                     }
                     SigningDestination::File(dest_path) => {
-                        warn!(
-                            logger,
-                            "signing success; copying signed file to {}",
-                            dest_path.display()
-                        );
-                        std::fs::copy(&sign_path, dest_path)?;
+                        if copy_file_needed(&dest_path, &sign_path)? {
+                            warn!(
+                                logger,
+                                "signing success; copying signed file to {}",
+                                dest_path.display()
+                            );
+                            std::fs::copy(&sign_path, dest_path)?;
+                        } else {
+                            warn!(logger, "signing success");
+                        }
+
                         Ok(SignedOutput::File(dest_path.clone()))
                     }
                     SigningDestination::Directory(_) => {
@@ -1177,12 +1182,17 @@ impl<'a> SignableSigner<'a> {
                         Ok(SignedOutput::Memory(std::fs::read(&sign_path)?))
                     }
                     SigningDestination::File(dest_path) => {
-                        warn!(
-                            logger,
-                            "signing success; copying signed file to {}",
-                            dest_path.display()
-                        );
-                        std::fs::copy(&sign_path, dest_path)?;
+                        if copy_file_needed(&sign_path, &dest_path)? {
+                            warn!(
+                                logger,
+                                "signing success; copying signed file to {}",
+                                dest_path.display()
+                            );
+                            std::fs::copy(&sign_path, dest_path)?;
+                        } else {
+                            warn!(logger, "signing success");
+                        }
+
                         Ok(SignedOutput::File(dest_path.clone()))
                     }
                     SigningDestination::Directory(_) => {
@@ -1319,6 +1329,19 @@ impl<'a> SignableSigner<'a> {
                 SigningDestination::Memory | SigningDestination::File(_) => false,
             },
         }
+    }
+}
+
+/// Whether a request to copy between 2 paths needs to be fulfilled.
+///
+/// We can run into cases where we are writing to the input file but we don't
+/// think we are because of path normalization issues. This function adds
+/// a test for that.
+fn copy_file_needed(source: &Path, dest: &Path) -> Result<bool, std::io::Error> {
+    if dest.exists() {
+        Ok(source.canonicalize()? != dest.canonicalize()?)
+    } else {
+        Ok(true)
     }
 }
 
