@@ -144,6 +144,7 @@ pub enum SigningError {
 }
 
 /// Represents a location where signed data should be written.
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum SigningDestination {
     /// Sign to a file at the given path.
     File(PathBuf),
@@ -156,6 +157,7 @@ pub enum SigningDestination {
 }
 
 /// Describes capability of signing some entity to a [SigningDestination].
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum SigningDestinationCompatibility {
     /// Signing to a particular destination is supported.
     Compatible,
@@ -165,6 +167,7 @@ pub enum SigningDestinationCompatibility {
 }
 
 /// Describes the output of a successful signing operation.
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum SignedOutput {
     /// Signed data was written to a file at a given path.
     File(PathBuf),
