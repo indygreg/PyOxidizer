@@ -765,6 +765,7 @@ impl PythonExecutableValue {
 
         let msi_builder_value = self.to_wix_msi_builder(
             type_values,
+            call_stack,
             id_prefix.clone(),
             product_name.clone(),
             product_version.clone(),
@@ -821,6 +822,7 @@ impl PythonExecutableValue {
     pub fn to_wix_msi_builder(
         &self,
         type_values: &TypeValues,
+        call_stack: &mut CallStack,
         id_prefix: String,
         product_name: String,
         product_version: String,
@@ -840,7 +842,7 @@ impl PythonExecutableValue {
             .unwrap()
             .unwrap();
 
-        builder.add_program_files_manifest(manifest.deref().clone())?;
+        builder.add_program_files_manifest(type_values, call_stack, manifest.deref().clone())?;
 
         Ok(builder_value.clone())
     }
@@ -1044,6 +1046,7 @@ starlark_module! { python_executable_env =>
 
     PythonExecutable.to_wix_msi_builder(
         env env,
+        call_stack cs,
         this,
         id_prefix: String,
         product_name: String,
@@ -1051,7 +1054,7 @@ starlark_module! { python_executable_env =>
         product_manufacturer: String
     ) {
         let this = this.downcast_ref::<PythonExecutableValue>().unwrap();
-        this.to_wix_msi_builder(&env, id_prefix, product_name, product_version, product_manufacturer)
+        this.to_wix_msi_builder(env, cs, id_prefix, product_name, product_version, product_manufacturer)
     }
 }
 

@@ -4,6 +4,7 @@
 
 use {
     crate::starlark::{get_context_value, TuggerContextValue},
+    anyhow::{anyhow, Context, Result},
     linked_hash_map::LinkedHashMap,
     slog::{debug, info, warn},
     starlark::{
@@ -21,6 +22,7 @@ use {
     },
     starlark_dialect_build_targets::required_type_arg,
     std::{
+        convert::TryInto,
         fmt::{Display, Formatter},
         path::{Path, PathBuf},
         sync::{Arc, Mutex},
@@ -29,6 +31,7 @@ use {
         SignableCandidate, SignedOutput, Signer, SigningCertificate, SigningDestination,
         SigningError,
     },
+    tugger_file_manifest::{FileEntry, FileManifest},
 };
 
 /// Holds additional code signing settings to influence code signing.
@@ -281,6 +284,7 @@ impl TypedValue for CodeSigningRequestValue {
 #[derive(Clone, Copy, Debug)]
 pub enum SigningAction {
     WindowsInstallerCreation,
+    WindowsInstallerFileAdded,
     Other(&'static str),
 }
 
@@ -288,6 +292,7 @@ impl SigningAction {
     fn as_str(&self) -> &'static str {
         match self {
             Self::WindowsInstallerCreation => "windows-installer-creation",
+            Self::WindowsInstallerFileAdded => "windows-installer-file-added",
             Self::Other(s) => s,
         }
     }
@@ -531,6 +536,57 @@ fn process_callback(
         .unwrap();
 
     Ok(request.settings.clone())
+}
+
+/// Process signability events on a [FileManifest].
+///
+/// This will iterate entries of a [FileManifest] and attempt to sign them.
+///
+/// Returns a new [FileManifest] holding possibly signed files.
+pub fn handle_file_manifest_signable_events(
+    type_values: &TypeValues,
+    call_stack: &mut CallStack,
+    manifest: &FileManifest,
+    label: &'static str,
+    action: SigningAction,
+) -> Result<FileManifest> {
+    let mut new_manifest = FileManifest::default();
+
+    for (path, entry) in manifest.iter_entries() {
+        let filename = path
+            .file_name()
+            .ok_or_else(|| anyhow!("could not resolve file name from FileManifest entry"))?;
+
+        let candidate = entry
+            .try_into()
+            .context("converting FileManifest entry into signing candidate")?;
+        let mut signing_context = SigningContext::new(label, action, filename, &candidate);
+        signing_context.set_path(path);
+        signing_context.set_signing_destination(SigningDestination::Memory);
+
+        let response = handle_signable_event(type_values, call_stack, signing_context)
+            .map_err(|e| anyhow!("{:?}", e))
+            .context("handling Starlark signable event")?;
+
+        let entry = if let Some(output) = response.output {
+            if let SignedOutput::Memory(data) = output {
+                FileEntry {
+                    data: data.into(),
+                    executable: entry.executable,
+                }
+            } else {
+                return Err(anyhow!("SignedOutput::Memory should have been forced"));
+            }
+        } else {
+            entry.clone()
+        };
+
+        new_manifest
+            .add_file_entry(path, entry)
+            .context("adding entry to FileManifest")?;
+    }
+
+    Ok(new_manifest)
 }
 
 starlark_module! { code_signing_module =>

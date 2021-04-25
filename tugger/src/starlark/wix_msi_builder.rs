@@ -4,7 +4,10 @@
 
 use {
     crate::starlark::{
-        code_signing::{handle_signable_event, SigningAction, SigningContext},
+        code_signing::{
+            handle_file_manifest_signable_events, handle_signable_event, SigningAction,
+            SigningContext,
+        },
         file_resource::FileManifestValue,
     },
     anyhow::{Context, Result},
@@ -129,10 +132,25 @@ impl WiXMsiBuilderValue {
         }))
     }
 
-    pub fn add_program_files_manifest(&mut self, manifest: FileManifestValue) -> ValueResult {
-        error_context("WiXMSIBuilder.add_program_files_manifest()", || {
+    pub fn add_program_files_manifest(
+        &mut self,
+        type_values: &TypeValues,
+        call_stack: &mut CallStack,
+        manifest: FileManifestValue,
+    ) -> ValueResult {
+        const LABEL: &str = "WiXMSIBuilder.add_program_files_manifest()";
+
+        error_context(LABEL, || {
+            let manifest = handle_file_manifest_signable_events(
+                type_values,
+                call_stack,
+                &manifest.manifest,
+                LABEL,
+                SigningAction::WindowsInstallerFileAdded,
+            )?;
+
             self.inner
-                .add_program_files_manifest(&manifest.manifest)
+                .add_program_files_manifest(&manifest)
                 .context("adding program files manifest")
         })?;
 
@@ -227,9 +245,9 @@ starlark_module! { wix_msi_builder_module =>
     }
 
     #[allow(non_snake_case)]
-    WiXMSIBuilder.add_program_files_manifest(this, manifest: FileManifestValue) {
+    WiXMSIBuilder.add_program_files_manifest(env env, call_stack cs, this, manifest: FileManifestValue) {
         let mut this = this.downcast_mut::<WiXMsiBuilderValue>().unwrap().unwrap();
-        this.add_program_files_manifest(manifest)
+        this.add_program_files_manifest(env, cs, manifest)
     }
 
     #[allow(non_snake_case)]

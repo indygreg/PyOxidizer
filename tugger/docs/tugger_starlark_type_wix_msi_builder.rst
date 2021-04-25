@@ -126,6 +126,9 @@
         ``manifest``
            Files to register for installation.
 
+        As files are added, they are checked for code signing compatibility with the
+        action ``windows-installer-file-added``.
+
     .. py:method:: add_visual_cpp_redistributable(redist_version: str, platform: str)
 
         This method will locate and add the Visual C++ Redistributable runtime DLL

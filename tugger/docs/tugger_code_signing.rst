@@ -196,6 +196,11 @@ The following named actions are defined by Tugger:
    Methods like :py:meth:`WiXMSIBuilder.build` and
    :py:meth:`WiXBundleBuilder.build` will trigger this action.
 
+``windows-installer-file-added``
+   When a file that will be installed is added to a Windows installer.
+
+   Triggered by :py:meth:`WiXMSIBuilder.add_program_files_manifest`.
+
 Other applications extending Tugger's core functionality may define their own
 actions.
 
