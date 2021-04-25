@@ -10,7 +10,7 @@ use {
     bcder::{decode::Constructed, ConstOid, Oid},
     bytes::Bytes,
     ring::{
-        digest::SHA256,
+        digest::{SHA256, SHA512},
         signature::{EcdsaKeyPair, Ed25519KeyPair, KeyPair, RsaKeyPair, VerificationAlgorithm},
     },
     std::convert::TryFrom,
@@ -21,6 +21,11 @@ use {
 /// 2.16.840.1.101.3.4.2.1
 const OID_SHA256: ConstOid = Oid(&[96, 134, 72, 1, 101, 3, 4, 2, 1]);
 
+/// SHA-512 digest algorithm.
+///
+/// 2.16.840.1.101.3.4.2.3
+const OID_SHA512: ConstOid = Oid(&[96, 134, 72, 1, 101, 3, 4, 2, 3]);
+
 /// RSA+SHA-1 encryption.
 ///
 /// 1.2.840.113549.1.1.5
@@ -30,6 +35,11 @@ const OID_SHA1_RSA: ConstOid = Oid(&[42, 134, 72, 134, 247, 13, 1, 1, 5]);
 ///
 /// 1.2.840.113549.1.1.11
 const OID_SHA256_RSA: ConstOid = Oid(&[42, 134, 72, 134, 247, 13, 1, 1, 11]);
+
+/// RSA+SHA-512 encryption.
+///
+/// 1.2.840.113549.1.1.13
+const OID_SHA512_RSA: ConstOid = Oid(&[42, 134, 72, 134, 247, 13, 1, 1, 13]);
 
 /// RSAES-PKCS1-v1_5
 ///
@@ -68,6 +78,10 @@ pub enum DigestAlgorithm {
     ///
     /// Corresponds to OID 2.16.840.1.101.3.4.2.1.
     Sha256,
+    /// SHA-512.
+    ///
+    /// Corresponds to OID 2.16.840.1.101.3.4.2.3.
+    Sha512,
 }
 
 impl TryFrom<&Oid> for DigestAlgorithm {
@@ -76,6 +90,8 @@ impl TryFrom<&Oid> for DigestAlgorithm {
     fn try_from(v: &Oid) -> Result<Self, Self::Error> {
         if v == &OID_SHA256 {
             Ok(Self::Sha256)
+        } else if v == &OID_SHA512 {
+            Ok(Self::Sha512)
         } else {
             Err(CmsError::UnknownDigestAlgorithm(v.clone()))
         }
@@ -94,6 +110,7 @@ impl From<DigestAlgorithm> for Oid {
     fn from(alg: DigestAlgorithm) -> Self {
         match alg {
             DigestAlgorithm::Sha256 => Oid(Bytes::copy_from_slice(OID_SHA256.as_ref())),
+            DigestAlgorithm::Sha512 => Oid(Bytes::copy_from_slice(OID_SHA512.as_ref())),
         }
     }
 }
@@ -112,6 +129,7 @@ impl DigestAlgorithm {
     pub fn as_hasher(&self) -> ring::digest::Context {
         match self {
             Self::Sha256 => ring::digest::Context::new(&SHA256),
+            Self::Sha512 => ring::digest::Context::new(&SHA512),
         }
     }
 }
@@ -131,6 +149,11 @@ pub enum SignatureAlgorithm {
     ///
     /// Corresponds to OID 1.2.840.113549.1.1.11.
     Sha256Rsa,
+
+    /// SHA-512 with RSA encryption.
+    ///
+    /// Corresponds to OID 1.2.840.113549.1.1.13.
+    Sha512Rsa,
 
     /// RSAES-PKCS1-v1_5 encryption scheme.
     ///
@@ -159,6 +182,7 @@ impl SignatureAlgorithm {
                 &ring::signature::RSA_PKCS1_2048_8192_SHA1_FOR_LEGACY_USE_ONLY
             }
             SignatureAlgorithm::Sha256Rsa => &ring::signature::RSA_PKCS1_2048_8192_SHA256,
+            SignatureAlgorithm::Sha512Rsa => &ring::signature::RSA_PKCS1_2048_8192_SHA512,
             SignatureAlgorithm::RsaesPkcsV15 => {
                 &ring::signature::RSA_PKCS1_1024_8192_SHA256_FOR_LEGACY_USE_ONLY
             }
@@ -176,6 +200,8 @@ impl TryFrom<&Oid> for SignatureAlgorithm {
             Ok(Self::Sha1Rsa)
         } else if v == &OID_SHA256_RSA {
             Ok(Self::Sha256Rsa)
+        } else if v == &OID_SHA512_RSA {
+            Ok(Self::Sha512Rsa)
         } else if v == &OID_RSAES_PKCS_V15 {
             Ok(Self::RsaesPkcsV15)
         } else if v == &OID_ECDSA_SHA256 {
@@ -203,6 +229,7 @@ impl From<SignatureAlgorithm> for Oid {
         match v {
             SignatureAlgorithm::Sha1Rsa => Oid(Bytes::copy_from_slice(OID_SHA1_RSA.as_ref())),
             SignatureAlgorithm::Sha256Rsa => Oid(Bytes::copy_from_slice(OID_SHA256_RSA.as_ref())),
+            SignatureAlgorithm::Sha512Rsa => Oid(Bytes::copy_from_slice(OID_SHA512_RSA.as_ref())),
             SignatureAlgorithm::RsaesPkcsV15 => {
                 Oid(Bytes::copy_from_slice(OID_RSAES_PKCS_V15.as_ref()))
             }
