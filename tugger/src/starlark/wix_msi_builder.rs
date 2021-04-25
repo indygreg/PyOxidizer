@@ -7,14 +7,12 @@ use {
         code_signing::{handle_signable_event, SigningAction, SigningContext},
         file_resource::FileManifestValue,
     },
-    anyhow::Result,
+    anyhow::{Context, Result},
     starlark::{
         environment::TypeValues,
         eval::call_stack::CallStack,
         values::{
-            error::{
-                RuntimeError, UnsupportedOperation, ValueError, INCORRECT_PARAMETER_TYPE_ERROR_CODE,
-            },
+            error::{RuntimeError, UnsupportedOperation, ValueError},
             none::NoneType,
             {Mutable, TypedValue, Value, ValueResult},
         },
@@ -30,6 +28,19 @@ use {
     tugger_windows::VcRedistributablePlatform,
     tugger_wix::WiXSimpleMsiBuilder,
 };
+
+fn error_context<F, T>(label: &str, f: F) -> Result<T, ValueError>
+where
+    F: FnOnce() -> anyhow::Result<T>,
+{
+    f().map_err(|e| {
+        ValueError::Runtime(RuntimeError {
+            code: "TUGGER_WIX_MSI_BUILDER",
+            message: format!("{:?}", e),
+            label: label.to_string(),
+        })
+    })
+}
 
 #[derive(Clone)]
 pub struct WiXMsiBuilderValue {
@@ -118,15 +129,11 @@ impl WiXMsiBuilderValue {
     }
 
     pub fn add_program_files_manifest(&mut self, manifest: FileManifestValue) -> ValueResult {
-        self.inner
-            .add_program_files_manifest(&manifest.manifest)
-            .map_err(|e| {
-                ValueError::Runtime(RuntimeError {
-                    code: "TUGGER_WIX_MSI_BUILDER",
-                    message: format!("{:?}", e),
-                    label: "add_program_files_manifest()".to_string(),
-                })
-            })?;
+        error_context("WiXMSIBuilder.add_program_files_manifest()", || {
+            self.inner
+                .add_program_files_manifest(&manifest.manifest)
+                .context("adding program files manifest")
+        })?;
 
         Ok(Value::new(NoneType::None))
     }
@@ -136,23 +143,14 @@ impl WiXMsiBuilderValue {
         redist_version: String,
         platform: String,
     ) -> ValueResult {
-        let platform = VcRedistributablePlatform::try_from(platform.as_str()).map_err(|e| {
-            ValueError::Runtime(RuntimeError {
-                code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
-                message: format!("{:?}", e),
-                label: "add_visual_cpp_redistributable()".to_string(),
-            })
-        })?;
+        error_context("WiXMSIBuilder.add_visual_cpp_redistributable()", || {
+            let platform = VcRedistributablePlatform::try_from(platform.as_str())
+                .context("obtaining VcRedistributablePlatform from str")?;
 
-        self.inner
-            .add_visual_cpp_redistributable(&redist_version, platform)
-            .map_err(|e| {
-                ValueError::Runtime(RuntimeError {
-                    code: "TUGGER_WIX_MSI_BUILDER",
-                    message: format!("{:?}", e),
-                    label: "add_visual_cpp_redistributable()".to_string(),
-                })
-            })?;
+            self.inner
+                .add_visual_cpp_redistributable(&redist_version, platform)
+                .context("adding Visual C++ redistributable")
+        })?;
 
         Ok(Value::new(NoneType::None))
     }
@@ -163,32 +161,28 @@ impl WiXMsiBuilderValue {
         call_stack: &mut CallStack,
         target: String,
     ) -> ValueResult {
+        const LABEL: &str = "WiXMSIBuilder.build()";
+
         let context_value = get_context_value(type_values)?;
         let context = context_value
             .downcast_ref::<EnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
 
-        let output_path = context.target_build_path(&target);
+        let (msi_path, output_path) = error_context(LABEL, || {
+            let output_path = context.target_build_path(&target);
 
-        let builder = self
-            .inner
-            .to_installer_builder(&self.target_triple, &output_path)
-            .map_err(|e| {
-                ValueError::Runtime(RuntimeError {
-                    code: "TUGGER_WIX_MSI_BUILDER",
-                    message: format!("{:?}", e),
-                    label: "build()".to_string(),
-                })
-            })?;
+            let builder = self
+                .inner
+                .to_installer_builder(&self.target_triple, &output_path)
+                .context("converting WiXSimpleMSiBuilder to WiXInstallerBuilder")?;
 
-        let msi_path = output_path.join(self.msi_filename());
+            let msi_path = output_path.join(self.msi_filename());
 
-        builder.build(context.logger(), &msi_path).map_err(|e| {
-            ValueError::Runtime(RuntimeError {
-                code: "TUGGER_WIX_MSI_BUILDER",
-                message: format!("{:?}", e),
-                label: "build()".to_string(),
-            })
+            builder
+                .build(context.logger(), &msi_path)
+                .context("building WiXInstallerBuilder")?;
+
+            Ok((msi_path, output_path))
         })?;
 
         let candidate = msi_path.as_path().into();
