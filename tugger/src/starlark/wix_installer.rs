@@ -84,8 +84,8 @@ impl WiXInstallerValue {
         Ok(Value::new(NoneType::None))
     }
 
-    fn resolve_file_entry(&self, path: &Path, force_read: bool) -> Result<FileEntry> {
-        let entry = FileEntry::try_from(path)?;
+    fn resolve_file_entry(&self, path: impl AsRef<Path>, force_read: bool) -> Result<FileEntry> {
+        let entry = FileEntry::try_from(path.as_ref())?;
 
         Ok(if force_read {
             entry.to_memory()?
@@ -102,7 +102,7 @@ impl WiXInstallerValue {
     ) -> ValueResult {
         error_context("WiXInstaller.add_build_file()", || {
             let entry = self
-                .resolve_file_entry(Path::new(&filesystem_path), force_read)
+                .resolve_file_entry(&filesystem_path, force_read)
                 .with_context(|| format!("resolving file entry: {}", filesystem_path))?;
 
             self.inner
@@ -121,7 +121,7 @@ impl WiXInstallerValue {
     ) -> ValueResult {
         error_context("WiXInstaller.add_install_file()", || {
             let entry = self
-                .resolve_file_entry(Path::new(&filesystem_path), force_read)
+                .resolve_file_entry(&filesystem_path, force_read)
                 .with_context(|| format!("resolving file entry from path {}", filesystem_path))?;
 
             self.inner
