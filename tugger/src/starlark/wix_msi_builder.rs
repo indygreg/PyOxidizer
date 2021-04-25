@@ -139,7 +139,7 @@ impl WiXMsiBuilderValue {
         let platform = VcRedistributablePlatform::try_from(platform.as_str()).map_err(|e| {
             ValueError::Runtime(RuntimeError {
                 code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
-                message: e,
+                message: format!("{:?}", e),
                 label: "add_visual_cpp_redistributable()".to_string(),
             })
         })?;

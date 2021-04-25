@@ -61,14 +61,14 @@ impl Display for VcRedistributablePlatform {
 }
 
 impl TryFrom<&str> for VcRedistributablePlatform {
-    type Error = String;
+    type Error = anyhow::Error;
 
     fn try_from(value: &str) -> anyhow::Result<Self, Self::Error> {
         match value {
             "x86" => Ok(Self::X86),
             "x64" => Ok(Self::X64),
             "arm64" => Ok(Self::Arm64),
-            _ => Err(format!(
+            _ => Err(anyhow!(
                 "{} is not a valid platform; use 'x86', 'x64', or 'arm64'",
                 value
             )),
