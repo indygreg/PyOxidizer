@@ -391,6 +391,10 @@ pub fn handle_signable_event(
     call_stack: &mut CallStack,
     request_context: SigningContext,
 ) -> Result<SigningResponse, ValueError> {
+    if request_context.destination.is_none() {
+        panic!("SigningContext.destination must be set; logic error in caller");
+    }
+
     let context_value = get_context_value(type_values)?;
     let context = context_value
         .downcast_ref::<TuggerContextValue>()
@@ -615,6 +619,7 @@ mod tests {
                 SigningContext::new(self.label, self.action, &self.filename, &self.candidate);
             context.path = self.path.clone();
             context.set_pretend_output(SignedOutput::Memory(vec![42]));
+            context.set_signing_destination(SigningDestination::Memory);
 
             let response = handle_signable_event(type_values, call_stack, context)?;
 
