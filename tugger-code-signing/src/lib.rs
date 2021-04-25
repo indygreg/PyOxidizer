@@ -867,7 +867,8 @@ impl Signer {
     /// This function will error if the signing certificate wasn't self-signed
     /// and its issuer chain could not be resolved.
     #[cfg(not(target_os = "macos"))]
-    pub fn chain_certificates_macos_keychain(&self) -> Result<(), SigningError> {
+    #[allow(unused_mut)]
+    pub fn chain_certificates_macos_keychain(&mut self) -> Result<(), SigningError> {
         Err(SigningError::MacOsKeychainNotSupported)
     }
 
