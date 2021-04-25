@@ -22,22 +22,19 @@ use {
     },
     std::path::PathBuf,
     tugger_apple_bundle::MacOsApplicationBundleBuilder,
-    tugger_file_manifest::{FileData, FileManifestError},
+    tugger_file_manifest::FileData,
 };
 
-fn to_runtime_error(err: anyhow::Error, label: impl ToString) -> ValueError {
-    ValueError::Runtime(RuntimeError {
-        code: "TUGGER_MACOS_APPLICATION_BUNDLE",
-        message: format!("{:?}", err),
-        label: label.to_string(),
-    })
-}
-
-fn from_file_manifest_error(err: FileManifestError, label: impl ToString) -> ValueError {
-    ValueError::Runtime(RuntimeError {
-        code: "TUGGER_MACOS_APPLICATION_BUNDLE",
-        message: format!("{:?}", err),
-        label: label.to_string(),
+fn error_context<F, T>(label: &str, f: F) -> Result<T, ValueError>
+where
+    F: FnOnce() -> anyhow::Result<T>,
+{
+    f().map_err(|e| {
+        ValueError::Runtime(RuntimeError {
+            code: "TUGGER_MAC_OS_APPLICATION_BUNDLE_BUILDER",
+            message: format!("{:?}", e),
+            label: label.to_string(),
+        })
     })
 }
 
@@ -57,65 +54,82 @@ impl TypedValue for MacOsApplicationBundleBuilderValue {
 
 impl MacOsApplicationBundleBuilderValue {
     pub fn new_from_args(bundle_name: String) -> ValueResult {
-        let inner = MacOsApplicationBundleBuilder::new(bundle_name)
-            .map_err(|e| to_runtime_error(e, "MacOsApplicationBundleBuilder()"))?;
+        let inner = error_context("MacOsApplicationBundleBuilder()", || {
+            MacOsApplicationBundleBuilder::new(bundle_name)
+        })?;
 
         Ok(Value::new(MacOsApplicationBundleBuilderValue { inner }))
     }
 
     pub fn add_icon(&mut self, path: String) -> ValueResult {
-        self.inner
-            .add_icon(FileData::from(PathBuf::from(path)))
-            .map_err(|e| to_runtime_error(e, "add_icon()"))?;
+        error_context("MacOsApplicationBundleBuilder.add_icon()", || {
+            self.inner.add_icon(FileData::from(PathBuf::from(path)))
+        })?;
 
         Ok(Value::new(NoneType::None))
     }
 
     pub fn add_manifest(&mut self, manifest: FileManifestValue) -> ValueResult {
-        for (path, entry) in manifest.manifest.iter_entries() {
-            self.inner
-                .add_file(PathBuf::from("Contents").join(path), entry.clone())
-                .with_context(|| format!("adding {}", path.display()))
-                .map_err(|e| to_runtime_error(e, "add_manifest()"))?;
-        }
+        error_context("MacOsApplicationBundleBuilder.add_manifest()", || {
+            for (path, entry) in manifest.manifest.iter_entries() {
+                self.inner
+                    .add_file(PathBuf::from("Contents").join(path), entry.clone())
+                    .with_context(|| format!("adding {}", path.display()))?;
+            }
+
+            Ok(())
+        })?;
 
         Ok(Value::new(NoneType::None))
     }
 
     pub fn add_macos_file(&mut self, path: String, content: FileContentValue) -> ValueResult {
-        self.inner
-            .add_file_macos(path, content.content)
-            .map_err(|e| from_file_manifest_error(e, "add_macos_file()"))?;
+        error_context("MacOsApplicationBundleBuilder.add_macos_file()", || {
+            self.inner
+                .add_file_macos(path, content.content)
+                .context("adding macOS file")
+        })?;
 
         Ok(Value::new(NoneType::None))
     }
 
     pub fn add_macos_manifest(&mut self, manifest: FileManifestValue) -> ValueResult {
-        for (path, entry) in manifest.manifest.iter_entries() {
-            self.inner
-                .add_file_macos(path, entry.clone())
-                .with_context(|| format!("adding {}", path.display()))
-                .map_err(|e| to_runtime_error(e, "add_macos_manifest()"))?;
-        }
+        error_context("MacOsApplicationBundleBuilder.add_macos_manifest()", || {
+            for (path, entry) in manifest.manifest.iter_entries() {
+                self.inner
+                    .add_file_macos(path, entry.clone())
+                    .with_context(|| format!("adding {}", path.display()))?;
+            }
+
+            Ok(())
+        })?;
 
         Ok(Value::new(NoneType::None))
     }
 
     pub fn add_resources_file(&mut self, path: String, content: FileContentValue) -> ValueResult {
-        self.inner
-            .add_file_resources(path, content.content)
-            .map_err(|e| from_file_manifest_error(e, "add_resources_file()"))?;
+        error_context("MacOsApplicationBundleBuilder.add_resources_file()", || {
+            self.inner
+                .add_file_resources(path, content.content)
+                .context("adding resources file")
+        })?;
 
         Ok(Value::new(NoneType::None))
     }
 
     pub fn add_resources_manifest(&mut self, manifest: FileManifestValue) -> ValueResult {
-        for (path, entry) in manifest.manifest.iter_entries() {
-            self.inner
-                .add_file_resources(path, entry.clone())
-                .with_context(|| format!("adding {}", path.display()))
-                .map_err(|e| to_runtime_error(e, "add_file_resources()"))?;
-        }
+        error_context(
+            "MacOsApplicationBundleBuilder.add_resources_manifest()",
+            || {
+                for (path, entry) in manifest.manifest.iter_entries() {
+                    self.inner
+                        .add_file_resources(path, entry.clone())
+                        .with_context(|| format!("adding {}", path.display()))?;
+                }
+
+                Ok(())
+            },
+        )?;
 
         Ok(Value::new(NoneType::None))
     }
@@ -134,9 +148,11 @@ impl MacOsApplicationBundleBuilderValue {
             }
         };
 
-        self.inner
-            .set_info_plist_key(key, value)
-            .map_err(|e| to_runtime_error(e, "set_info_plist_key()"))?;
+        error_context("MacOsApplicationBundleBuilder.set_info_plist_key()", || {
+            self.inner
+                .set_info_plist_key(key, value)
+                .context("setting info plist key")
+        })?;
 
         Ok(Value::new(NoneType::None))
     }
@@ -149,9 +165,20 @@ impl MacOsApplicationBundleBuilderValue {
         signature: String,
         executable: String,
     ) -> ValueResult {
-        self.inner
-            .set_info_plist_required_keys(display_name, identifier, version, signature, executable)
-            .map_err(|e| to_runtime_error(e, "set_info_plist_required_keys()"))?;
+        error_context(
+            "MacOsApplicationBundleBuilder.set_info_plist_required_keys()",
+            || {
+                self.inner
+                    .set_info_plist_required_keys(
+                        display_name,
+                        identifier,
+                        version,
+                        signature,
+                        executable,
+                    )
+                    .context("setting info plist required keys")
+            },
+        )?;
 
         Ok(Value::new(NoneType::None))
     }
@@ -164,10 +191,11 @@ impl MacOsApplicationBundleBuilderValue {
 
         let output_path = context.target_build_path(&target);
 
-        let bundle_path = self
-            .inner
-            .materialize_bundle(&output_path)
-            .map_err(|e| to_runtime_error(e, "build()"))?;
+        let bundle_path = error_context("MacOsApplicationBundleBuilder.build()", || {
+            self.inner
+                .materialize_bundle(&output_path)
+                .context("materializing bundle")
+        })?;
 
         Ok(Value::new(ResolvedTargetValue {
             inner: ResolvedTarget {
