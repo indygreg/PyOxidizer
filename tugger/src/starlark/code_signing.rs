@@ -303,6 +303,7 @@ pub struct SigningContext<'a> {
     filename: PathBuf,
     candidate: &'a SignableCandidate<'a>,
     path: Option<PathBuf>,
+    destination: Option<SigningDestination>,
     pretend_output: Option<SignedOutput>,
 }
 
@@ -319,6 +320,7 @@ impl<'a> SigningContext<'a> {
             filename: filename.as_ref().to_path_buf(),
             candidate,
             path: None,
+            destination: None,
             pretend_output: None,
         }
     }
@@ -326,6 +328,14 @@ impl<'a> SigningContext<'a> {
     /// Set the path for this context.
     pub fn set_path(&mut self, path: impl AsRef<Path>) {
         self.path = Some(path.as_ref().to_path_buf());
+    }
+
+    /// Set the signing destination for this operation.
+    ///
+    /// Constructors are strongly advised to set this so they have explicit control
+    /// over where the signed entity is written to!
+    pub fn set_signing_destination(&mut self, destination: SigningDestination) {
+        self.destination = Some(destination);
     }
 
     /// Set the pretend output for this operation.
@@ -454,7 +464,10 @@ pub fn handle_signable_event(
                 continue;
             }
 
-            let destination = signable_signer.in_place_destination();
+            let destination = request_context
+                .destination
+                .unwrap_or_else(|| signable_signer.in_place_destination());
+
             warn!(
                 logger,
                 "CodeSigner #{} attempting to sign {} to {}",

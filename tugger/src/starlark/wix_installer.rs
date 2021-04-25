@@ -27,6 +27,7 @@ use {
         ResolvedTargetValue, RunMode,
     },
     std::{convert::TryFrom, path::Path},
+    tugger_code_signing::SigningDestination,
     tugger_file_manifest::FileEntry,
     tugger_wix::{WiXInstallerBuilder, WiXSimpleMsiBuilder, WxsBuilder},
 };
@@ -240,6 +241,7 @@ impl WiXInstallerValue {
             &candidate,
         );
         context.set_path(&installer_path);
+        context.set_signing_destination(SigningDestination::File(installer_path.clone()));
 
         handle_signable_event(type_values, call_stack, context)?;
 

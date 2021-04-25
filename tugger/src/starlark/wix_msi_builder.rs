@@ -25,6 +25,7 @@ use {
         get_context_value, EnvironmentContext, ResolvedTarget, ResolvedTargetValue, RunMode,
     },
     std::convert::TryFrom,
+    tugger_code_signing::SigningDestination,
     tugger_windows::VcRedistributablePlatform,
     tugger_wix::WiXSimpleMsiBuilder,
 };
@@ -193,6 +194,7 @@ impl WiXMsiBuilderValue {
             &candidate,
         );
         context.set_path(&msi_path);
+        context.set_signing_destination(SigningDestination::File(msi_path.clone()));
 
         handle_signable_event(type_values, call_stack, context)?;
 
