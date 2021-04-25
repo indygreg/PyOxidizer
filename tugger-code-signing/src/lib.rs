@@ -213,12 +213,28 @@ impl Deref for SigningMethods {
 }
 
 /// Represents an entity that is a candidate for signing.
+///
+/// Most users will want to use [Self::Path] or [Self::Data], which will go
+/// through signability checks and only turn into signable entities if we have
+/// a high degree of confidence that they can be signed.
+///
+/// The [Self::Forced] variant can be used to forcefully skip signability
+/// validation and supply your own [Signability]. Use this when our signability
+/// heuristics fail (please consider reporting these scenarios as bugs!). This
+/// variant is also useful for testing.
 pub enum SignableCandidate<'a> {
     /// A filesystem path.
+    ///
+    /// Will be checked for signability.
     Path(Cow<'a, Path>),
 
     /// A slice of data in memory.
+    ///
+    /// Will be checked for signability.
     Data(Cow<'a, [u8]>),
+
+    /// Entity whose [Signable] is already computed.
+    Forced(Signable),
 }
 
 impl<'a> From<&'a Path> for SignableCandidate<'a> {
@@ -294,7 +310,7 @@ impl<'a> TryFrom<&File> for SignableCandidate<'static> {
 }
 
 /// Represents a known, typed entity which is signable.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum Signable {
     /// A file that is signable on Windows.
     WindowsFile(PathBuf),
@@ -881,6 +897,7 @@ impl Signer {
         let signability = match candidate {
             SignableCandidate::Path(path) => path_signable(path),
             SignableCandidate::Data(data) => data_signable(data.as_ref()),
+            SignableCandidate::Forced(signable) => Ok(Signability::Signable(signable.clone())),
         }?;
 
         // We don't yet support exporting the key back to PFX for Windows signing.
