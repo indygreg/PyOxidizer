@@ -8,7 +8,7 @@ use {
         file_resource::FileManifestValue,
         wix_msi_builder::WiXMsiBuilderValue,
     },
-    anyhow::Result,
+    anyhow::{Context, Result},
     starlark::{
         environment::TypeValues,
         eval::call_stack::CallStack,
@@ -30,6 +30,19 @@ use {
     tugger_file_manifest::FileEntry,
     tugger_wix::{WiXInstallerBuilder, WiXSimpleMsiBuilder, WxsBuilder},
 };
+
+fn error_context<F, T>(label: &str, f: F) -> Result<T, ValueError>
+where
+    F: FnOnce() -> anyhow::Result<T>,
+{
+    f().map_err(|e| {
+        ValueError::Runtime(RuntimeError {
+            code: "TUGGER_WIX_INSTALLER",
+            message: format!("{:?}", e),
+            label: label.to_string(),
+        })
+    })
+}
 
 pub struct WiXInstallerValue {
     pub inner: WiXInstallerBuilder,
@@ -62,15 +75,11 @@ impl WiXInstallerValue {
     }
 
     fn add_build_files(&mut self, manifest: FileManifestValue) -> ValueResult {
-        self.inner
-            .add_extra_build_files(&manifest.manifest)
-            .map_err(|e| {
-                ValueError::from(RuntimeError {
-                    code: "TUGGER",
-                    message: e.to_string(),
-                    label: "add_build_files()".to_string(),
-                })
-            })?;
+        error_context("WiXInstaller.add_build_files()", || {
+            self.inner
+                .add_extra_build_files(&manifest.manifest)
+                .context("adding extra build files from FileManifest")
+        })?;
 
         Ok(Value::new(NoneType::None))
     }
@@ -91,25 +100,15 @@ impl WiXInstallerValue {
         filesystem_path: String,
         force_read: bool,
     ) -> ValueResult {
-        let entry = self
-            .resolve_file_entry(Path::new(&filesystem_path), force_read)
-            .map_err(|e| {
-                ValueError::Runtime(RuntimeError {
-                    code: "TUGGER_WIX_INSTALLER",
-                    message: format!("{:?}", e),
-                    label: "add_build_file()".to_string(),
-                })
-            })?;
+        error_context("WiXInstaller.add_build_file()", || {
+            let entry = self
+                .resolve_file_entry(Path::new(&filesystem_path), force_read)
+                .with_context(|| format!("resolving file entry: {}", filesystem_path))?;
 
-        self.inner
-            .add_extra_build_file(install_path, entry)
-            .map_err(|e| {
-                ValueError::Runtime(RuntimeError {
-                    code: "TUGGER_WIX_INSTALLER",
-                    message: format!("{:?}", e),
-                    label: "add_build_file()".to_string(),
-                })
-            })?;
+            self.inner
+                .add_extra_build_file(&install_path, entry)
+                .with_context(|| format!("adding extra build file to {}", install_path))
+        })?;
 
         Ok(Value::new(NoneType::None))
     }
@@ -120,56 +119,38 @@ impl WiXInstallerValue {
         filesystem_path: String,
         force_read: bool,
     ) -> ValueResult {
-        let entry = self
-            .resolve_file_entry(Path::new(&filesystem_path), force_read)
-            .map_err(|e| {
-                ValueError::Runtime(RuntimeError {
-                    code: "TUGGER_WIX_INSTALLER",
-                    message: format!("{:?}", e),
-                    label: "add_install_file()".to_string(),
-                })
-            })?;
+        error_context("WiXInstaller.add_install_file()", || {
+            let entry = self
+                .resolve_file_entry(Path::new(&filesystem_path), force_read)
+                .with_context(|| format!("resolving file entry from path {}", filesystem_path))?;
 
-        self.inner
-            .install_files_mut()
-            .add_file_entry(install_path, entry)
-            .map_err(|e| {
-                ValueError::Runtime(RuntimeError {
-                    code: "TUGGER_WIX_INSTALLER",
-                    message: format!("{:?}", e),
-                    label: "add_install_file()".to_string(),
-                })
-            })?;
+            self.inner
+                .install_files_mut()
+                .add_file_entry(&install_path, entry)
+                .with_context(|| format!("adding file entry to {}", install_path))
+        })?;
 
         Ok(Value::new(NoneType::None))
     }
 
     fn add_install_files(&mut self, manifest: FileManifestValue) -> ValueResult {
-        self.inner
-            .install_files_mut()
-            .add_manifest(&manifest.manifest)
-            .map_err(|e| {
-                ValueError::Runtime(RuntimeError {
-                    code: "TUGGER_WIX_INSTALLER",
-                    message: format!("{:?}", e,),
-                    label: "add_install_files()".to_string(),
-                })
-            })?;
+        error_context("WiXInstaller.add_install_files()", || {
+            self.inner
+                .install_files_mut()
+                .add_manifest(&manifest.manifest)
+                .context("adding install files from FileManifest")
+        })?;
 
         Ok(Value::new(NoneType::None))
     }
 
     fn add_msi_builder(&mut self, builder: WiXMsiBuilderValue) -> ValueResult {
-        builder
-            .inner
-            .add_to_installer_builder(&mut self.inner)
-            .map_err(|e| {
-                ValueError::Runtime(RuntimeError {
-                    code: "TUGGER_WIX_INSTALLER",
-                    message: format!("{:?}", e),
-                    label: "add_msi_builder()".to_string(),
-                })
-            })?;
+        error_context("WiXInstaller.add_msi_builder()", || {
+            builder
+                .inner
+                .add_to_installer_builder(&mut self.inner)
+                .context("adding WiXInstallerBuilder")
+        })?;
 
         Ok(Value::new(NoneType::None))
     }
@@ -182,31 +163,21 @@ impl WiXInstallerValue {
         product_manufacturer: String,
         program_files: FileManifestValue,
     ) -> ValueResult {
-        let mut builder = WiXSimpleMsiBuilder::new(
-            &id_prefix,
-            &product_name,
-            &product_version,
-            &product_manufacturer,
-        );
-        builder
-            .add_program_files_manifest(&program_files.manifest)
-            .map_err(|e| {
-                ValueError::from(RuntimeError {
-                    code: "TUGGER",
-                    message: e.to_string(),
-                    label: "add_simple_installer()".to_string(),
-                })
-            })?;
+        error_context("WiXInstaller.add_simple_installer()", || {
+            let mut builder = WiXSimpleMsiBuilder::new(
+                &id_prefix,
+                &product_name,
+                &product_version,
+                &product_manufacturer,
+            );
+            builder
+                .add_program_files_manifest(&program_files.manifest)
+                .context("adding program files manifest")?;
 
-        builder
-            .add_to_installer_builder(&mut self.inner)
-            .map_err(|e| {
-                ValueError::from(RuntimeError {
-                    code: "TUGGER",
-                    message: e.to_string(),
-                    label: "add_simple_installer()".to_string(),
-                })
-            })?;
+            builder
+                .add_to_installer_builder(&mut self.inner)
+                .context("adding to WiXInstallerBuilder")
+        })?;
 
         Ok(Value::new(NoneType::None))
     }
@@ -219,12 +190,8 @@ impl WiXInstallerValue {
             &preprocessor_parameters,
         )?;
 
-        let mut builder = WxsBuilder::from_path(path).map_err(|e| {
-            ValueError::from(RuntimeError {
-                code: "TUGGER",
-                message: e.to_string(),
-                label: "add_wxs_file()".to_string(),
-            })
+        let mut builder = error_context("WiXInstaller.add_wxs_file()", || {
+            WxsBuilder::from_path(path).context("constructing WxsBuilder from path")
         })?;
 
         match preprocessor_parameters.get_type() {
@@ -259,15 +226,11 @@ impl WiXInstallerValue {
         let output_path = context.target_build_path(&target);
         let installer_path = output_path.join(&self.filename);
 
-        self.inner
-            .build(context.logger(), &installer_path)
-            .map_err(|e| {
-                ValueError::from(RuntimeError {
-                    code: "TUGGER",
-                    message: format!("{:?}", e),
-                    label: "build()".to_string(),
-                })
-            })?;
+        error_context("WiXInstaller.build()", || {
+            self.inner
+                .build(context.logger(), &installer_path)
+                .context("building")
+        })?;
 
         let candidate = installer_path.as_path().into();
         let mut context = SigningContext::new(
