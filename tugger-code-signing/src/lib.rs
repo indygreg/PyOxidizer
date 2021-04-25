@@ -789,7 +789,7 @@ impl Signer {
     #[cfg(target_os = "macos")]
     pub fn chain_certificates_macos_keychain(&mut self) -> Result<(), SigningError> {
         let cert: &Certificate = match &self.signing_certificate {
-            SigningCertificate::Memory((cert, _)) => Ok(cert),
+            SigningCertificate::Memory(cert, _) => Ok(cert),
             _ => Err(SigningError::CertificateResolutionFailure(
                 "can only operate on signing certificates loaded into memory".to_string(),
             )),
