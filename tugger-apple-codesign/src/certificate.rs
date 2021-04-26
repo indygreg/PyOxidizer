@@ -29,10 +29,326 @@ const OID_EXTENSION_EXTENDED_KEY_USAGE: ConstOid = Oid(&[85, 29, 37]);
 /// Extended Key Usage purpose for code signing.
 ///
 /// 1.3.6.1.5.5.7.3.3
-const OID_PURPOSE_CODE_SIGNING: ConstOid = Oid(&[43, 6, 1, 5, 5, 7, 3, 3]);
+const OID_EKU_PURPOSE_CODE_SIGNING: ConstOid = Oid(&[43, 6, 1, 5, 5, 7, 3, 3]);
+
+/// Extended Key Usage for purpose of `Safari Developer`.
+///
+/// 1.2.840.113635.100.4.8
+const OID_EKU_PURPOSE_SAFARI_DEVELOPER: ConstOid = Oid(&[42, 134, 72, 134, 247, 99, 100, 4, 8]);
+
+/// Extended Key Usage for purpose of `3rd Party Mac Developer Installer`.
+///
+/// 1.2.840.113635.100.4.9
+const OID_EKU_PURPOSE_3RD_PARTY_MAC_DEVELOPER_INSTALLER: ConstOid =
+    Oid(&[42, 134, 72, 134, 247, 99, 100, 4, 9]);
+
+/// Extended Key Usage for purpose of `Developer ID Installer`.
+///
+/// 1.2.840.113635.100.4.13
+const OID_EKU_PURPOSE_DEVELOPER_ID_INSTALLER: ConstOid =
+    Oid(&[42, 134, 72, 134, 247, 99, 100, 4, 13]);
+
+/// Extension for `Apple Signing`.
+///
+/// 1.2.840.113635.100.6.1.1
+const OID_EXTENSION_APPLE_SIGNING: ConstOid = Oid(&[42, 134, 72, 134, 247, 99, 100, 6, 1, 1]);
+
+/// Extension for `iPhone Developer`.
+///
+/// 1.2.840.113635.100.6.1.2
+const OID_EXTENSION_IPHONE_DEVELOPER: ConstOid = Oid(&[42, 134, 72, 134, 247, 99, 100, 6, 1, 2]);
+
+/// Extension for `Apple iPhone OS Application Signing`
+///
+/// 1.2.840.113635.100.6.1.3
+const OID_EXTENSION_IPHONE_OS_APPLICATION_SIGNING: ConstOid =
+    Oid(&[42, 134, 72, 134, 247, 99, 100, 6, 1, 3]);
+
+/// Extension for `Apple Developer Certificate (Submission)`.
+///
+/// May also be referred to as `iPhone Distribution`.
+///
+/// 1.2.840.113635.100.6.1.4
+const OID_EXTENSION_APPLE_DEVELOPER_CERTIFICATE_SUBMISSION: ConstOid =
+    Oid(&[42, 134, 72, 134, 247, 99, 100, 6, 1, 4]);
+
+/// Extension for `Safari Developer`.
+///
+/// 1.2.840.113635.100.6.1.5
+const OID_EXTENSION_SAFARI_DEVELOPER: ConstOid = Oid(&[42, 134, 72, 134, 247, 99, 100, 6, 1, 5]);
+
+/// Extension for `Apple iPhone OS VPN Signing`
+///
+/// 1.2.840.113635.100.6.1.6
+const OID_EXTENSION_IPHONE_OS_VPN_SIGNING: ConstOid =
+    Oid(&[42, 134, 72, 134, 247, 99, 100, 6, 1, 6]);
+
+/// Extension for `Apple Mac App Signing (Development)`.
+///
+/// May also appear as `3rd Party Mac Developer Application`.
+///
+/// 1.2.840.113635.100.6.1.7
+const OID_EXTENSION_APPLE_MAC_APP_SIGNING_DEVELOPMENT: ConstOid =
+    Oid(&[42, 134, 72, 134, 247, 99, 100, 6, 1, 7]);
+
+/// Extension for `Apple Mac App Signing Submission`.
+///
+/// 1.2.840.113635.100.6.1.8
+const OID_EXTENSION_APPLE_MAC_APP_SIGNING_SUBMISSION: ConstOid =
+    Oid(&[42, 134, 72, 134, 247, 99, 100, 6, 1, 8]);
+
+/// Extension for `Mac App Store Code Signing`.
+///
+/// 1.2.840.113635.100.6.1.9
+const OID_EXTENSION_APPLE_MAC_APP_STORE_CODE_SIGNING: ConstOid =
+    Oid(&[42, 134, 72, 134, 247, 99, 100, 6, 1, 9]);
+
+/// Extension for `Mac App Store Installer Signing`.
+///
+/// 1.2.840.113635.100.6.1.10
+const OID_EXTENSION_APPLE_MAC_APP_STORE_INSTALLER_SIGNING: ConstOid =
+    Oid(&[42, 134, 72, 134, 247, 99, 100, 6, 1, 10]);
+
+// 1.2.840.113635.100.6.1.11 is unknown.
+
+/// Extension for `Mac Developer`.
+///
+/// 1.2.840.113635.100.6.1.12
+const OID_EXTENSION_MAC_DEVELOPER: ConstOid = Oid(&[42, 134, 72, 134, 247, 99, 100, 6, 1, 12]);
+
+/// Extension for `Developer ID Application`.
+///
+/// 1.2.840.113635.100.6.1.13
+const OID_EXTENSION_DEVELOPER_ID_APPLICATION: ConstOid =
+    Oid(&[42, 134, 72, 134, 247, 99, 100, 6, 1, 13]);
+
+/// Extension for `Developer ID Installer`.
+///
+/// 1.2.840.113635.100.6.1.14
+const OID_EXTENSION_DEVELOPER_ID_INSTALLER: ConstOid =
+    Oid(&[42, 134, 72, 134, 247, 99, 100, 6, 1, 14]);
+
+// 1.2.840.113635.100.6.1.15 looks to have something to do with core OS functionality,
+// as it appears in search results for hacking Apple OS booting.
+
+/// Extension for `Apple Pay Passbook Signing`
+///
+/// 1.2.840.113635.100.6.1.16
+const OID_EXTENSION_PASSBOOK_SIGNING: ConstOid = Oid(&[42, 134, 72, 134, 247, 99, 100, 6, 1, 16]);
+
+/// Extension for `Web Site Push Notifications Signing`
+///
+/// 1.2.840.113635.100.6.1.17
+const OID_EXTENSION_WEBSITE_PUSH_NOTIFICATION_SIGNING: ConstOid =
+    Oid(&[42, 134, 72, 134, 247, 99, 100, 6, 1, 17]);
+
+/// Extension for `Developer ID Kernel`.
+///
+/// 1.2.840.113635.100.6.1.18
+const OID_EXTENSION_DEVELOPER_ID_KERNEL: ConstOid =
+    Oid(&[42, 134, 72, 134, 247, 99, 100, 6, 1, 18]);
+
+/// Extension for `Developer ID Date`.
+///
+/// This OID doesn't have a description in Apple tooling. But it
+/// holds a UtcDate (with hours, minutes, and seconds all set to 0) and seems to
+/// denote a date constraint to apply to validation. This is likely used
+/// to validating timestamping constrains for certificate validity.
+///
+/// 1.2.840.113635.100.6.1.33
+const OID_EXTENSION_DEVELOPER_ID_DATE: ConstOid = Oid(&[42, 134, 72, 134, 247, 99, 100, 6, 1, 33]);
+
+/// Extension for `TestFlight`.
+///
+/// 1.2.840.113635.100.6.1.25.1
+const OID_EXTENSION_TEST_FLIGHT: ConstOid = Oid(&[42, 134, 72, 134, 247, 99, 100, 6, 1, 25, 1]);
 
 /// OID used for email address in RDN in Apple generated code signing certificates.
 const OID_EMAIL_ADDRESS: ConstOid = Oid(&[42, 134, 72, 134, 247, 13, 1, 9, 1]);
+
+/// Describes the type of code signing that a certificate is authorized to perform.
+///
+/// Code signing certificates are issued with extended key usage (EKU) attributes
+/// denoting what that certificate will be used for. They basically say *I'm authorized
+/// to sign X*.
+///
+/// This type describes the different code signing key usages defined on Apple
+/// platforms.
+pub enum ExtendedKeyUsagePurpose {
+    /// Code signing.
+    CodeSigning,
+
+    /// Safari Developer.
+    SafariDeveloper,
+
+    /// 3rd Party Mac Developer Installer Packaging Signing.
+    ///
+    /// The certificate can be used to sign Mac installer packages.
+    ThirdPartyMacDeveloperInstaller,
+
+    /// Developer ID Installer.
+    DeveloperIdInstaller,
+}
+
+impl ExtendedKeyUsagePurpose {
+    pub fn as_oid(&self) -> ConstOid {
+        match self {
+            Self::CodeSigning => OID_EKU_PURPOSE_CODE_SIGNING,
+            Self::SafariDeveloper => OID_EKU_PURPOSE_SAFARI_DEVELOPER,
+            Self::ThirdPartyMacDeveloperInstaller => {
+                OID_EKU_PURPOSE_3RD_PARTY_MAC_DEVELOPER_INSTALLER
+            }
+            Self::DeveloperIdInstaller => OID_EKU_PURPOSE_DEVELOPER_ID_INSTALLER,
+        }
+    }
+}
+
+/// Describes one of the many X.509 certificate extensions found on Apple code signing certificates.
+pub enum CodeSigningCertificateExtension {
+    /// Apple Signing.
+    ///
+    /// (Appears to be deprecated).
+    AppleSigning,
+
+    /// iPhone Developer.
+    IPhoneDeveloper,
+
+    /// Apple iPhone OS Application Signing.
+    IPhoneOsApplicationSigning,
+
+    /// Apple Developer Certificate (Submission).
+    ///
+    /// May also be referred to as `iPhone Distribution`.
+    AppleDeveloperCertificateSubmission,
+
+    /// Safari Developer.
+    SafariDeveloper,
+
+    /// Apple iPhone OS VPN Signing.
+    IPhoneOsVpnSigning,
+
+    /// Apple Mac App Signing (Development).
+    ///
+    /// Also known as `3rd Party Mac Developer Application`.
+    AppleMacAppSigningDevelopment,
+
+    /// Apple Mac App Signing Submission.
+    AppleMacAppSigningSubmission,
+
+    /// Mac App Store Code Signing.
+    AppleMacAppStoreCodeSigning,
+
+    /// Mac App Store Installer Signing.
+    AppleMacAppStoreInstallerSigning,
+
+    /// Mac Developer.
+    MacDeveloper,
+
+    /// Developer ID Application.
+    DeveloperIdApplication,
+
+    /// Developer ID Date.
+    DeveloperIdDate,
+
+    /// Developer ID Installer.
+    DeveloperIdInstaller,
+
+    /// Apple Pay Passbook Signing.
+    ApplePayPassbookSigning,
+
+    /// Web Site Push Notifications Signing.
+    WebsitePushNotificationSigning,
+
+    /// Developer ID Kernel.
+    DeveloperIdKernel,
+
+    /// TestFlight.
+    TestFlight,
+}
+
+impl CodeSigningCertificateExtension {
+    pub fn as_oid(&self) -> ConstOid {
+        match self {
+            Self::AppleSigning => OID_EXTENSION_APPLE_SIGNING,
+            Self::IPhoneDeveloper => OID_EXTENSION_IPHONE_DEVELOPER,
+            Self::IPhoneOsApplicationSigning => OID_EXTENSION_IPHONE_OS_APPLICATION_SIGNING,
+            Self::AppleDeveloperCertificateSubmission => {
+                OID_EXTENSION_APPLE_DEVELOPER_CERTIFICATE_SUBMISSION
+            }
+            Self::SafariDeveloper => OID_EXTENSION_SAFARI_DEVELOPER,
+            Self::IPhoneOsVpnSigning => OID_EXTENSION_IPHONE_OS_VPN_SIGNING,
+            Self::AppleMacAppSigningDevelopment => OID_EXTENSION_APPLE_MAC_APP_SIGNING_DEVELOPMENT,
+            Self::AppleMacAppSigningSubmission => OID_EXTENSION_APPLE_MAC_APP_SIGNING_SUBMISSION,
+            Self::AppleMacAppStoreCodeSigning => OID_EXTENSION_APPLE_MAC_APP_STORE_CODE_SIGNING,
+            Self::AppleMacAppStoreInstallerSigning => {
+                OID_EXTENSION_APPLE_MAC_APP_STORE_INSTALLER_SIGNING
+            }
+            Self::MacDeveloper => OID_EXTENSION_MAC_DEVELOPER,
+            Self::DeveloperIdApplication => OID_EXTENSION_DEVELOPER_ID_APPLICATION,
+            Self::DeveloperIdDate => OID_EXTENSION_DEVELOPER_ID_DATE,
+            Self::DeveloperIdInstaller => OID_EXTENSION_DEVELOPER_ID_INSTALLER,
+            Self::ApplePayPassbookSigning => OID_EXTENSION_PASSBOOK_SIGNING,
+            Self::WebsitePushNotificationSigning => OID_EXTENSION_WEBSITE_PUSH_NOTIFICATION_SIGNING,
+            Self::DeveloperIdKernel => OID_EXTENSION_DEVELOPER_ID_KERNEL,
+            Self::TestFlight => OID_EXTENSION_TEST_FLIGHT,
+        }
+    }
+}
+
+/// Describes combinations of key extensions for Apple code signing certificates.
+///
+/// Code signing certificates contain various X.509 extensions denoting them for
+/// code signing.
+///
+/// This type represents various common extensions as used on Apple platforms.
+///
+/// Typically, you'll want to apply at most one of these extensions to a
+/// new certificate in order to mark it as compatible for code signing.
+pub enum KeyExtensions {
+    /// Mac Installer Distribution.
+    ///
+    /// In `Keychain Access.app`, this might render as `3rd Party Mac Developer Installer`.
+    ///
+    /// Certificates are marked for EKU with `3rd Party Developer Installer Package
+    /// Signing`.
+    ///
+    /// They also have the `Apple Mac App Signing (Submission)` extension.
+    ///
+    /// Typically issued by `Apple Worldwide Developer Relations Certificate
+    /// Authority`.
+    MacInstallerDistribution,
+
+    /// Apple Distribution.
+    ///
+    /// Certificates are marked for EKU with `Code Signing`. They also have
+    /// extensions `Apple Mac App Signing (Development)` and
+    /// `Apple Developer Certificate (Submission)`.
+    ///
+    /// Typically issued by `Apple Worldwide Developer Relations Certificate Authority`.
+    AppleDistribution,
+
+    /// Apple Development.
+    ///
+    /// Certificates are marked for EKU with `Code Signing`. They also have
+    /// extensions `Apple Developer Certificate (Development)` and
+    /// `Mac Developer`.
+    ///
+    /// Typically issued by `Apple Worldwide Developer Relations Certificate
+    /// Authority`.
+    AppleDevelopment,
+
+    /// Developer ID Application.
+    ///
+    /// Certificates are marked for EKU with `Code Signing`. They also have
+    /// extensions for `Developer ID Application` and `Developer ID Date`.
+    DeveloperIdApplication,
+
+    /// Developer ID Installer.
+    ///
+    /// Certificates are marked for EKU with `Developer ID Application`. They also
+    /// have extensions `Developer ID Installer` and `Developer ID Date`.
+    DeveloperIdInstaller,
+}
 
 /// Extends functionality of [CapturedX509Certificate] with Apple specific certificate knowledge.
 pub trait AppleCertificate: Sized {}
@@ -214,7 +530,7 @@ pub fn create_self_signed_code_signing_certificate(
     );
 
     let captured =
-        bcder::encode::sequence(Oid(Bytes::from(OID_PURPOSE_CODE_SIGNING.as_ref())).encode())
+        bcder::encode::sequence(Oid(Bytes::from(OID_EKU_PURPOSE_CODE_SIGNING.as_ref())).encode())
             .to_captured(Mode::Der);
 
     builder.add_extension_der_data(
