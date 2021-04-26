@@ -78,11 +78,14 @@ pub fn create_code_directory_hashes_plist<'a>(
 ) -> Result<Vec<u8>, AppleCodesignError> {
     let hashes = code_directories
         .map(|cd| {
-            let blob_data = cd.to_blob_bytes()?;
+            let mut digest = cd.digest_with(digest_type)?;
 
-            let digest = digest_type.digest(&blob_data)?;
+            // While we may use stronger digests, it appears that the XML in the
+            // signed attribute is always truncated so it is the length of a SHA-1
+            // digest.
+            digest.truncate(20);
 
-            Ok(plist::Value::String(base64::encode(&digest)))
+            Ok(plist::Value::Data(digest))
         })
         .collect::<Result<Vec<_>, AppleCodesignError>>()?;
 
