@@ -104,6 +104,9 @@ pub fn create_code_directory_hashes_plist<'a>(
     plist::Value::from(plist)
         .to_writer_xml(&mut buffer)
         .map_err(AppleCodesignError::CodeDirectoryPlist)?;
+    // We also need to include a trailing newline to conform with Apple's XML
+    // writer.
+    buffer.push(b'\n');
 
     Ok(buffer)
 }
