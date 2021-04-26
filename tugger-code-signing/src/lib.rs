@@ -122,6 +122,9 @@ pub enum SigningError {
     #[error("failed to resolve signing certificate: {0}")]
     CertificateResolutionFailure(String),
 
+    #[error("certificate not usable: {0}")]
+    CertificateNotUsable(String),
+
     #[error("error resolving certificate chain: {0}")]
     MacOsCertificateChainResolveFailure(AppleCodesignError),
 
@@ -583,7 +586,12 @@ pub enum SigningCertificate {
     /// A PFX file containing validated certificate data.
     ///
     /// The password to open the file is also tracked.
-    PfxFile(PathBuf, String),
+    PfxFile(
+        PathBuf,
+        String,
+        CapturedX509Certificate,
+        InMemorySigningKeyPair,
+    ),
 
     /// Use an automatically chosen certificate in the Windows certificate store.
     WindowsStoreAuto,
@@ -618,12 +626,14 @@ impl SigningCertificate {
         let data = std::fs::read(path.as_ref())?;
 
         // Validate the certificate is valid.
-        tugger_apple_codesign::parse_pfx_data(&data, password)
+        let (cert, key) = tugger_apple_codesign::parse_pfx_data(&data, password)
             .map_err(|e| SigningError::PfxRead(format!("{:?}", e)))?;
 
         Ok(Self::PfxFile(
             path.as_ref().to_path_buf(),
             password.to_string(),
+            cert,
+            key,
         ))
     }
 
@@ -694,7 +704,7 @@ impl SigningCertificate {
             Self::WindowsStoreSubject(store, subject) => {
                 Ok(CodeSigningCertificate::SubjectName(*store, subject.clone()))
             }
-            Self::PfxFile(path, password) => {
+            Self::PfxFile(path, password, _, _) => {
                 let mut f = FileBasedCodeSigningCertificate::new(path);
                 f.set_password(password);
 
@@ -1015,6 +1025,20 @@ impl<'a> SignableSigner<'a> {
         &self,
     ) -> Result<tugger_apple_codesign::SigningSettings<'_>, SigningError> {
         let mut settings = tugger_apple_codesign::SigningSettings::default();
+
+        match &self.signing_certificate {
+            SigningCertificate::Memory(cert, key) => {
+                settings.set_signing_key(key, cert.clone());
+            }
+            SigningCertificate::PfxFile(_, _, cert, key) => {
+                settings.set_signing_key(key, cert.clone());
+            }
+            SigningCertificate::WindowsStoreSubject(_, _)
+            | SigningCertificate::WindowsStoreSha1Thumbprint(_, _)
+            | SigningCertificate::WindowsStoreAuto => {
+                return Err(SigningError::CertificateNotUsable("certificates in the Windows store are not supported for signing Apple primitives; try using a PFX file-based certificate instead".to_string()));
+            }
+        };
 
         for cert in &self.certificate_chain {
             settings.chain_certificate(cert.clone());
