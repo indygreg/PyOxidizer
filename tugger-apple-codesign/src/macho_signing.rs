@@ -19,9 +19,12 @@ use {
         },
         signing::{SettingsScope, SigningSettings},
     },
-    bcder::Oid,
+    bcder::{encode::PrimitiveContent, Oid},
     bytes::Bytes,
-    cryptographic_message_syntax::{asn1::rfc5652::OID_ID_DATA, SignedDataBuilder, SignerBuilder},
+    cryptographic_message_syntax::{
+        asn1::rfc5652::{AttributeValue, OID_ID_DATA},
+        SignedDataBuilder, SignerBuilder,
+    },
     goblin::mach::{
         constants::{SEG_LINKEDIT, SEG_PAGEZERO},
         fat::FAT_MAGIC,
@@ -36,7 +39,12 @@ use {
 /// OID for signed attribute containing plist of code directory hashes.
 ///
 /// 1.2.840.113635.100.9.1.
-const CDHASH_PLIST_OID: bcder::ConstOid = bcder::Oid(&[42, 134, 72, 134, 247, 99, 100, 9, 1]);
+const CDHASH_PLIST_OID: bcder::ConstOid = Oid(&[42, 134, 72, 134, 247, 99, 100, 9, 1]);
+
+/// OID for signed attribute containing the SHA-256 of code directory digests.
+///
+/// 1.2.840.113635.100.9.2
+const CDHASH_SHA256_OID: bcder::ConstOid = Oid(&[42, 134, 72, 134, 247, 99, 100, 9, 2]);
 
 /// Determines whether this crate is capable of signing a given Mach-O binary.
 ///
@@ -490,9 +498,32 @@ impl<'data> MachOSigner<'data> {
         let signer = SignerBuilder::new(signing_key, signing_cert.clone())
             .message_id_content(code_directory_raw)
             .signed_attribute_octet_string(
-                bcder::Oid(Bytes::copy_from_slice(CDHASH_PLIST_OID.as_ref())),
+                Oid(Bytes::copy_from_slice(CDHASH_PLIST_OID.as_ref())),
                 &code_directory_hashes_plist,
             );
+
+        // If we're using a digest beyond SHA-1, that digest is included as an additional
+        // signed attribute. However, Apple is using unregistered OIDs here. We only know about
+        // the SHA-256 one. It exists as an `(OID, OCTET STRING)` value where the OID
+        // is 2.16.840.1.101.3.4.2.1, which is registered.
+        let signer = if code_directory.hash_type == DigestType::Sha256 {
+            let digest = code_directory.digest_with(DigestType::Sha256)?;
+
+            signer.signed_attribute(
+                Oid(CDHASH_SHA256_OID.as_ref().into()),
+                vec![AttributeValue::new(bcder::Captured::from_values(
+                    bcder::Mode::Der,
+                    bcder::encode::sequence((
+                        Oid::from(cryptographic_message_syntax::DigestAlgorithm::Sha256)
+                            .encode_ref(),
+                        bcder::OctetString::new(digest.into()).encode_ref(),
+                    )),
+                ))],
+            )
+        } else {
+            signer
+        };
+
         let signer = if let Some(time_stamp_url) = settings.time_stamp_url() {
             signer.time_stamp_url(time_stamp_url.clone())?
         } else {

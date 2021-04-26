@@ -924,7 +924,7 @@ impl<'a> RequirementSetBlob<'a> {
 }
 
 /// Represents a digest type from a CS_HASHTYPE_* constants.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum DigestType {
     None,
     Sha1,
