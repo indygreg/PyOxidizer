@@ -363,6 +363,16 @@ impl Name {
     }
 }
 
+impl Deref for Name {
+    type Target = RdnSequence;
+
+    fn deref(&self) -> &Self::Target {
+        match self {
+            Self::RdnSequence(seq) => seq,
+        }
+    }
+}
+
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct RdnSequence(Vec<RelativeDistinguishedName>);
 
