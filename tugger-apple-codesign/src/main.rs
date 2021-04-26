@@ -503,6 +503,16 @@ fn command_extract(args: &ArgMatches) -> Result<(), AppleCodesignError> {
         }
         "segment-info" => {
             println!("segments count: {}", sig.segments_count);
+            for (i, segment) in macho.segments.iter().enumerate() {
+                println!(
+                    "segment #{}; {}; start offset {}; end offset {}; size {}",
+                    i,
+                    segment.name()?,
+                    segment.fileoff,
+                    segment.fileoff as usize + segment.data.len(),
+                    segment.data.len()
+                );
+            }
             println!("__LINKEDIT segment index: {}", sig.linkedit_segment_index);
             println!(
                 "__LINKEDIT segment start offset: {}",
