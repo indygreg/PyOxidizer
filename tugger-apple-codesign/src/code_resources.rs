@@ -694,6 +694,7 @@ impl CodeResources {
             .map_err(AppleCodesignError::ResourcesPlist)?;
 
         let data = String::from_utf8(data).expect("XML should be valid UTF-8");
+        let data = data.replace("<dict />", "<dict/>");
         let data = data.replace("<true />", "<true/>");
 
         writer.write_all(data.as_bytes())?;
