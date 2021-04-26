@@ -448,16 +448,16 @@ impl SignerInfo {
     ///    content-type attribute MUST NOT be included in a countersignature
     ///    unsigned attribute as defined in Section 11.4.  A separate encoding
     ///    of the signedAttrs field is performed for message digest calculation.
-    ///    The IMPLICIT [0] tag in the signedAttrs is not used for the DER
+    ///    The `IMPLICIT [0]` tag in the signedAttrs is not used for the DER
     ///    encoding, rather an EXPLICIT SET OF tag is used.  That is, the DER
-    ///    encoding of the EXPLICIT SET OF tag, rather than of the IMPLICIT [0]
+    ///    encoding of the EXPLICIT SET OF tag, rather than of the `IMPLICIT [0]`
     ///    tag, MUST be included in the message digest calculation along with
     ///    the length and content octets of the SignedAttributes value.
     ///
     /// A few things to note here:
     ///
     /// * We must ensure DER (not BER) encoding of the entire SignedAttrs values.
-    /// * The SignedAttr tag must use EXPLICIT SET OF instead of IMPLICIT [0],
+    /// * The SignedAttr tag must use `EXPLICIT SET OF` instead of `IMPLICIT [0]`,
     ///   so default encoding is not appropriate.
     /// * If this instance came into existence via a parse, we stashed away the
     ///   raw bytes constituting SignedAttributes to ensure we can do a lossless
