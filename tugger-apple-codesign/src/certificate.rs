@@ -166,6 +166,56 @@ const OID_EXTENSION_TEST_FLIGHT: ConstOid = Oid(&[42, 134, 72, 134, 247, 99, 100
 /// OID used for email address in RDN in Apple generated code signing certificates.
 const OID_EMAIL_ADDRESS: ConstOid = Oid(&[42, 134, 72, 134, 247, 13, 1, 9, 1]);
 
+/// Apple Worldwide Developer Relations.
+///
+/// 1.2.840.113635.100.6.2.1
+const OID_CA_EXTENSION_APPLE_WORLDWIDE_DEVELOPER_RELATIONS: ConstOid =
+    Oid(&[42, 134, 72, 134, 247, 99, 100, 6, 2, 1]);
+
+/// Apple Application Integration.
+///
+/// 1.2.840.113635.100.6.2.3
+const OID_CA_EXTENSION_APPLE_APPLICATION_INTEGRATION: ConstOid =
+    Oid(&[42, 134, 72, 134, 247, 99, 100, 6, 2, 3]);
+
+/// Developer ID Certification Authority
+///
+/// 1.2.840.113635.100.6.2.6
+const OID_CA_EXTENSION_DEVELOPER_ID: ConstOid = Oid(&[42, 134, 72, 134, 247, 99, 100, 6, 2, 6]);
+
+/// Apple Timestamp.
+///
+/// 1.2.840.113635.100.6.2.9
+const OID_CA_EXTENSION_APPLE_TIMESTAMP: ConstOid = Oid(&[42, 134, 72, 134, 247, 99, 100, 6, 2, 9]);
+
+/// Developer Authentication Certification Authority.
+///
+/// 1.2.840.113635.100.6.2.11
+const OID_CA_EXTENSION_DEVELOPER_AUTHENTICATION: ConstOid =
+    Oid(&[42, 134, 72, 134, 247, 99, 100, 6, 2, 11]);
+
+/// Apple Worldwide Developer Relations CA - G2
+///
+/// 1.2.840.113635.100.6.2.15
+const OID_CA_EXTENSION_APPLE_WORLDWIDE_DEVELOPER_RELATIONS_G2: ConstOid =
+    Oid(&[42, 134, 72, 134, 247, 99, 100, 6, 2, 15]);
+
+/// Apple Software Update Certification.
+///
+/// 1.2.840.113635.100.6.2.19
+const OID_CA_EXTENSION_APPLE_SOFTWARE_UPDATE_CERTIFICATION: ConstOid =
+    Oid(&[42, 134, 72, 134, 247, 99, 100, 6, 2, 19]);
+
+const ALL_OID_CA_EXTENSIONS: &[&ConstOid; 7] = &[
+    &OID_CA_EXTENSION_APPLE_WORLDWIDE_DEVELOPER_RELATIONS,
+    &OID_CA_EXTENSION_APPLE_APPLICATION_INTEGRATION,
+    &OID_CA_EXTENSION_DEVELOPER_ID,
+    &OID_CA_EXTENSION_APPLE_TIMESTAMP,
+    &OID_CA_EXTENSION_DEVELOPER_AUTHENTICATION,
+    &OID_CA_EXTENSION_APPLE_WORLDWIDE_DEVELOPER_RELATIONS_G2,
+    &OID_CA_EXTENSION_APPLE_SOFTWARE_UPDATE_CERTIFICATION,
+];
+
 /// Describes the type of code signing that a certificate is authorized to perform.
 ///
 /// Code signing certificates are issued with extended key usage (EKU) attributes
@@ -348,6 +398,60 @@ pub enum KeyExtensions {
     /// Certificates are marked for EKU with `Developer ID Application`. They also
     /// have extensions `Developer ID Installer` and `Developer ID Date`.
     DeveloperIdInstaller,
+}
+
+/// Denotes specific certificate extensions on Apple certificate authority certificates.
+///
+/// Apple's CA certificates have extensions that appear to identify the role of
+/// that CA. This enumeration defines those.
+pub enum CertificateAuthorityExtension {
+    /// Apple Worldwide Developer Relations.
+    ///
+    /// An intermediate CA.
+    AppleWorldwideDeveloperRelations,
+
+    /// Apple Application Integration.
+    AppleApplicationIntegration,
+
+    /// Developer ID Certification Authority.
+    DeveloperId,
+
+    /// Apple Timestamp.
+    AppleTimestamp,
+
+    /// Developer Authentication Certification Authority.
+    DeveloperAuthentication,
+
+    /// Apple Worldwide Developer Relations CA - G2.
+    AppleWorldwideDeveloperRelationsG2,
+
+    /// Apple Software Update Certification.
+    AppleSoftwareUpdateCertification,
+}
+
+impl CertificateAuthorityExtension {
+    /// All the known OIDs constituting Apple CA extensions.
+    pub fn all_oids(&self) -> &[&ConstOid] {
+        ALL_OID_CA_EXTENSIONS
+    }
+
+    pub fn as_oid(&self) -> ConstOid {
+        match self {
+            Self::AppleWorldwideDeveloperRelations => {
+                OID_CA_EXTENSION_APPLE_WORLDWIDE_DEVELOPER_RELATIONS
+            }
+            Self::AppleApplicationIntegration => OID_CA_EXTENSION_APPLE_APPLICATION_INTEGRATION,
+            Self::DeveloperId => OID_CA_EXTENSION_DEVELOPER_ID,
+            Self::AppleTimestamp => OID_CA_EXTENSION_APPLE_TIMESTAMP,
+            Self::DeveloperAuthentication => OID_CA_EXTENSION_DEVELOPER_AUTHENTICATION,
+            Self::AppleWorldwideDeveloperRelationsG2 => {
+                OID_CA_EXTENSION_APPLE_WORLDWIDE_DEVELOPER_RELATIONS_G2
+            }
+            Self::AppleSoftwareUpdateCertification => {
+                OID_CA_EXTENSION_APPLE_SOFTWARE_UPDATE_CERTIFICATION
+            }
+        }
+    }
 }
 
 /// Extends functionality of [CapturedX509Certificate] with Apple specific certificate knowledge.
