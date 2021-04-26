@@ -24,6 +24,7 @@ use {
     },
     bytes::Bytes,
     std::{
+        cmp::Ordering,
         convert::{TryFrom, TryInto},
         str::FromStr,
     },
@@ -300,6 +301,22 @@ impl Certificate {
             tag: "CERTIFICATE".to_string(),
             contents: self.as_der()?,
         }))
+    }
+
+    /// Compare 2 instances, sorting so an issuer comes before the issued.
+    pub fn issuer_compare(&self, other: &Self) -> Ordering {
+        // Self signed certificate has no ordering.
+        if self.subject == self.issuer {
+            Ordering::Equal
+        // We were issued by the other certificate. The issuer comes first.
+        } else if self.issuer == other.subject {
+            Ordering::Greater
+        } else if self.subject == other.issuer {
+            // We issued the other certificate. We come first.
+            Ordering::Less
+        } else {
+            Ordering::Equal
+        }
     }
 }
 

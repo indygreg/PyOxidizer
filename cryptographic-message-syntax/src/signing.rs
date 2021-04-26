@@ -29,7 +29,7 @@ use {
     },
     bytes::Bytes,
     reqwest::IntoUrl,
-    std::collections::HashSet,
+    std::{collections::HashSet, convert::TryFrom},
 };
 
 /// Builder type to construct an entity that will sign some data.
@@ -332,12 +332,24 @@ impl<'a> SignedDataBuilder<'a> {
             }
         }));
 
+        // Many consumers prefer the issuing certificate to come before the issued
+        // certificate. So we explicitly sort all the seen certificates in this order,
+        // attempting for all issuing certificates to come before the issued.
+        let mut seen_certificates = seen_certificates
+            .into_iter()
+            .map(|cert| Certificate::try_from(&cert))
+            .collect::<Result<Vec<_>, _>>()?;
+        seen_certificates.sort_by(|a, b| a.issuer_compare(b));
+
         let mut certificates = CertificateSet::default();
         certificates.extend(
-            seen_certificates
-                .into_iter()
-                .map(|cert| CertificateChoices::Certificate(Box::new(cert))),
+            seen_certificates.into_iter().map(|cert| {
+                CertificateChoices::Certificate(Box::new(cert.raw_certificate().clone()))
+            }),
         );
+
+        // The certificates could have been encountered in any order. For best results,
+        // we want issuer certificates before their "children." So we apply sorting here.
 
         let signed_data = SignedData {
             version: CmsVersion::V1,
