@@ -25,6 +25,8 @@ mod macho_signing;
 #[cfg(target_os = "macos")]
 mod macos;
 #[allow(unused)]
+mod policy;
+#[allow(unused)]
 mod signing;
 #[allow(unused)]
 mod specification;

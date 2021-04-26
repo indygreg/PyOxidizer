@@ -174,4 +174,7 @@ pub enum AppleCodesignError {
 
     #[error("the given OID does not match a recognized Apple certificate authority extension")]
     OidIsntCertificateAuthority,
+
+    #[error("unknown code execution policy: {0}")]
+    UnknownPolicy(String),
 }

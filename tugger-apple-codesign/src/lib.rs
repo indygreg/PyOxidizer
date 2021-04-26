@@ -126,6 +126,8 @@ mod macos;
 pub use macos::*;
 mod macho_signing;
 pub use macho_signing::*;
+mod policy;
+pub use policy::*;
 mod signing;
 pub use signing::*;
 pub mod specification;
