@@ -811,29 +811,25 @@ impl From<&CodeResources> for Value {
     fn from(cr: &CodeResources) -> Self {
         let mut dict = Dictionary::new();
 
-        if !cr.files.is_empty() {
-            dict.insert(
-                "files".to_string(),
-                Value::Dictionary(
-                    cr.files
-                        .iter()
-                        .map(|(key, value)| (key.to_string(), Value::from(value)))
-                        .collect::<Dictionary>(),
-                ),
-            );
-        }
+        dict.insert(
+            "files".to_string(),
+            Value::Dictionary(
+                cr.files
+                    .iter()
+                    .map(|(key, value)| (key.to_string(), Value::from(value)))
+                    .collect::<Dictionary>(),
+            ),
+        );
 
-        if !cr.files2.is_empty() {
-            dict.insert(
-                "files2".to_string(),
-                Value::Dictionary(
-                    cr.files2
-                        .iter()
-                        .map(|(key, value)| (key.to_string(), Value::from(value)))
-                        .collect::<Dictionary>(),
-                ),
-            );
-        }
+        dict.insert(
+            "files2".to_string(),
+            Value::Dictionary(
+                cr.files2
+                    .iter()
+                    .map(|(key, value)| (key.to_string(), Value::from(value)))
+                    .collect::<Dictionary>(),
+            ),
+        );
 
         if !cr.rules.is_empty() {
             dict.insert(
