@@ -100,6 +100,19 @@ New Features
   evaluated Starlark file. This enables Starlark files to be parameterized based
   on explicit strings provided via ``--var`` or through the content of
   environment variables via ``--var-env``.
+* PyOxidizer can now automatically add cryptographic code signatures when
+  running. This feature is extensively documented at :ref:`tugger_code_signing`.
+  From a high-level, you instantiate and activate a
+  :py:class:`starlark_tugger.CodeSigner` in your Starlark configuration to
+  define your code signing certificate. As files are processed as part of
+  evaluating your Starlark configuration file, they are examined for the
+  ability to be signed and code signing is automatically attempted. We support
+  signing Windows files using Microsoft's official ``signtool.exe``
+  application and Apple Mach-O and bundle files using a pure Rust
+  reimplementation of Apple's code signing functionality. This functionality
+  is still in its early stages of development and is lacking some power user
+  features to exert low-level control over code signing. Please file feature
+  requests as you encounter limitations with the functionality!
 
 Other Relevant Changes
 ^^^^^^^^^^^^^^^^^^^^^^
