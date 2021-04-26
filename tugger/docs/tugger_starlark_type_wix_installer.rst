@@ -84,6 +84,9 @@
            Whether to read the content of this file into memory when this function
            is called.
 
+        As a file is added, it is checked for code signing compatibility with the
+        action ``windows-installer-file-added``.
+
     .. py:method:: add_install_files(manifest: FileManifest)
 
         Add files defined in a :py:class:`FileManifest` to be installed by the
@@ -94,6 +97,9 @@
         ``manifest``
            Defines files to materialize in the installation directory. All these files
            will be installed by the installer.
+
+        As files are added, they are checked for code signing compatibility with the
+        action ``windows-installer-file-added``.
 
     .. py:method:: add_msi_builder(builder: WiXMSIBuilder)
 

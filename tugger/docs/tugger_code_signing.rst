@@ -199,7 +199,9 @@ The following named actions are defined by Tugger:
 ``windows-installer-file-added``
    When a file that will be installed is added to a Windows installer.
 
-   Triggered by :py:meth:`WiXMSIBuilder.add_program_files_manifest`.
+   Triggered by :py:meth:`WiXMSIBuilder.add_program_files_manifest`,
+   :py:meth:`WiXInstaller.add_install_file`, and
+   :py:meth:`WiXInstaller.add_install_files`.
 
 Other applications extending Tugger's core functionality may define their own
 actions.

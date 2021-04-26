@@ -4,7 +4,10 @@
 
 use {
     crate::starlark::{
-        code_signing::{handle_signable_event, SigningAction, SigningContext},
+        code_signing::{
+            handle_file_manifest_signable_events, handle_signable_event, SigningAction,
+            SigningContext,
+        },
         file_resource::FileManifestValue,
         wix_msi_builder::WiXMsiBuilderValue,
     },
@@ -116,6 +119,8 @@ impl WiXInstallerValue {
 
     fn add_install_file(
         &mut self,
+        type_values: &TypeValues,
+        call_stack: &mut CallStack,
         install_path: String,
         filesystem_path: String,
         force_read: bool,
@@ -136,22 +141,43 @@ impl WiXInstallerValue {
             Ok(manifest)
         })?;
 
-        self.add_install_files_from_manifest(LABEL, &manifest)
+        self.add_install_files_from_manifest(type_values, call_stack, LABEL, &manifest)
     }
 
-    fn add_install_files(&mut self, manifest: FileManifestValue) -> ValueResult {
-        self.add_install_files_from_manifest("WiXInstaller.add_install_files()", &manifest.manifest)
+    fn add_install_files(
+        &mut self,
+        type_values: &TypeValues,
+        call_stack: &mut CallStack,
+        manifest: FileManifestValue,
+    ) -> ValueResult {
+        self.add_install_files_from_manifest(
+            type_values,
+            call_stack,
+            "WiXInstaller.add_install_files()",
+            &manifest.manifest,
+        )
     }
 
     fn add_install_files_from_manifest(
         &mut self,
+        type_values: &TypeValues,
+        call_stack: &mut CallStack,
         label: &'static str,
         manifest: &FileManifest,
     ) -> ValueResult {
         error_context(label, || {
+            let manifest = handle_file_manifest_signable_events(
+                type_values,
+                call_stack,
+                manifest,
+                label,
+                SigningAction::WindowsInstallerFileAdded,
+            )
+            .context("running code signing checks for FileManifest")?;
+
             self.inner
                 .install_files_mut()
-                .add_manifest(manifest)
+                .add_manifest(&manifest)
                 .context("adding install files from FileManifest")
         })?;
 
@@ -298,18 +324,21 @@ starlark_module! { wix_installer_module =>
     }
 
     WiXInstaller.add_install_file(
+        env env,
+        call_stack cs,
         this,
         install_path: String,
         filesystem_path: String,
         force_read: bool = false
     ) {
         let mut this = this.downcast_mut::<WiXInstallerValue>().unwrap().unwrap();
-        this.add_install_file(install_path, filesystem_path, force_read)
+        this.add_install_file(env, cs, install_path, filesystem_path, force_read)
     }
 
-    WiXInstaller.add_install_files(this, manifest: FileManifestValue) {
+    WiXInstaller.add_install_files(
+        env env, call_stack cs, this, manifest: FileManifestValue) {
         let mut this = this.downcast_mut::<WiXInstallerValue>().unwrap().unwrap();
-        this.add_install_files(manifest)
+        this.add_install_files(env, cs, manifest)
     }
 
     WiXInstaller.add_msi_builder(this, builder: WiXMsiBuilderValue) {
