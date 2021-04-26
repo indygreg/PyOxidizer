@@ -283,6 +283,7 @@ impl TypedValue for CodeSigningRequestValue {
 /// their own value via the [Self::Other] variant.
 #[derive(Clone, Copy, Debug)]
 pub enum SigningAction {
+    MacOsApplicationBunderCreation,
     WindowsInstallerCreation,
     WindowsInstallerFileAdded,
     Other(&'static str),
@@ -291,6 +292,7 @@ pub enum SigningAction {
 impl SigningAction {
     fn as_str(&self) -> &'static str {
         match self {
+            Self::MacOsApplicationBunderCreation => "macos-application-bundle-creation",
             Self::WindowsInstallerCreation => "windows-installer-creation",
             Self::WindowsInstallerFileAdded => "windows-installer-file-added",
             Self::Other(s) => s,

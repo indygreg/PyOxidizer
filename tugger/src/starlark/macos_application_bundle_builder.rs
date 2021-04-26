@@ -3,10 +3,14 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    crate::starlark::file_resource::{FileContentValue, FileManifestValue},
-    anyhow::Context,
+    crate::starlark::{
+        code_signing::{handle_signable_event, SigningAction, SigningContext},
+        file_resource::{FileContentValue, FileManifestValue},
+    },
+    anyhow::{anyhow, Context},
     starlark::{
         environment::TypeValues,
+        eval::call_stack::CallStack,
         values::{
             error::{RuntimeError, ValueError, INCORRECT_PARAMETER_TYPE_ERROR_CODE},
             none::NoneType,
@@ -22,6 +26,7 @@ use {
     },
     std::path::PathBuf,
     tugger_apple_bundle::MacOsApplicationBundleBuilder,
+    tugger_code_signing::SigningDestination,
     tugger_file_manifest::FileData,
 };
 
@@ -183,7 +188,14 @@ impl MacOsApplicationBundleBuilderValue {
         Ok(Value::new(NoneType::None))
     }
 
-    pub fn build(&self, type_values: &TypeValues, target: String) -> ValueResult {
+    pub fn build(
+        &self,
+        type_values: &TypeValues,
+        call_stack: &mut CallStack,
+        target: String,
+    ) -> ValueResult {
+        const LABEL: &str = "MacOsApplicationBundleBuilder.build()";
+
         let context_value = get_context_value(type_values)?;
         let context = context_value
             .downcast_ref::<EnvironmentContext>()
@@ -191,11 +203,31 @@ impl MacOsApplicationBundleBuilderValue {
 
         let output_path = context.target_build_path(&target);
 
-        let bundle_path = error_context("MacOsApplicationBundleBuilder.build()", || {
-            self.inner
+        let (bundle_path, filename) = error_context(LABEL, || {
+            let bundle_path = self
+                .inner
                 .materialize_bundle(&output_path)
-                .context("materializing bundle")
+                .context("materializing bundle")?;
+
+            let filename = bundle_path
+                .file_name()
+                .ok_or_else(|| anyhow!("unable to resolve bundle file name"))?
+                .to_os_string();
+
+            Ok((bundle_path, filename))
         })?;
+
+        let candidate = bundle_path.as_path().into();
+        let mut context = SigningContext::new(
+            LABEL,
+            SigningAction::MacOsApplicationBunderCreation,
+            filename,
+            &candidate,
+        );
+        context.set_path(&bundle_path);
+        context.set_signing_destination(SigningDestination::Directory(bundle_path.clone()));
+
+        handle_signable_event(type_values, call_stack, context)?;
 
         Ok(Value::new(ResolvedTargetValue {
             inner: ResolvedTarget {
@@ -276,9 +308,9 @@ starlark_module! { macos_application_bundle_builder_module =>
     }
 
     #[allow(non_snake_case)]
-    MacOsApplicationBundleBuilder.build(env env, this, target: String) {
+    MacOsApplicationBundleBuilder.build(env env, call_stack cs, this, target: String) {
         let this = this.downcast_ref::<MacOsApplicationBundleBuilderValue>().unwrap();
-        this.build(env, target)
+        this.build(env, cs, target)
     }
 }
 

@@ -140,3 +140,8 @@
 
         ``target``
            The name of the target being built.
+
+        Upon successful bundle directory creation, the entire bundle is
+        considered for code signing with the signing action
+        ``macos-application-bundle-creation``. All signable Mach-O files and nested
+        bundles should be signed.
