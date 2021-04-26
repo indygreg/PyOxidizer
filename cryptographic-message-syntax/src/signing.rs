@@ -136,7 +136,6 @@ impl<'a> SignerBuilder<'a> {
 /// Entity for incrementally deriving a SignedData primitive.
 ///
 /// Use this type for generating an RFC 5652 payload for signed data.
-#[derive(Default)]
 pub struct SignedDataBuilder<'a> {
     /// Encapsulated content to sign.
     signed_content: Option<Vec<u8>>,
@@ -146,6 +145,24 @@ pub struct SignedDataBuilder<'a> {
 
     /// X.509 certificates to add to the payload.
     certificates: Vec<crate::asn1::rfc5280::Certificate>,
+
+    /// The OID to use for `ContentInfo.contentType`.
+    ///
+    /// This is supposed to be `signed-data` when there are signatures
+    /// present. But not all data producers use the same OID and this
+    /// can cause problems. So we allow overriding the default.
+    content_type: Oid,
+}
+
+impl<'a> Default for SignedDataBuilder<'a> {
+    fn default() -> Self {
+        Self {
+            signed_content: None,
+            signers: vec![],
+            certificates: vec![],
+            content_type: Oid(OID_ID_SIGNED_DATA.as_ref().into()),
+        }
+    }
 }
 
 impl<'a> SignedDataBuilder<'a> {
@@ -193,6 +210,12 @@ impl<'a> SignedDataBuilder<'a> {
         }
 
         Ok(self)
+    }
+
+    /// Force the OID for the `ContentInfo.contentType` field.
+    pub fn content_type(mut self, oid: Oid) -> Self {
+        self.content_type = oid;
+        self
     }
 
     /// Construct a BER-encoded ASN.1 document containing a `SignedData` object.
@@ -360,7 +383,7 @@ impl<'a> SignedDataBuilder<'a> {
             version: CmsVersion::V1,
             digest_algorithms,
             content_info: EncapsulatedContentInfo {
-                content_type: Oid(Bytes::copy_from_slice(OID_ID_SIGNED_DATA.as_ref())),
+                content_type: self.content_type.clone(),
                 content: if let Some(content) = &self.signed_content {
                     Some(OctetString::new(Bytes::copy_from_slice(content)))
                 } else {

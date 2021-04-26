@@ -19,8 +19,9 @@ use {
         },
         signing::{SettingsScope, SigningSettings},
     },
+    bcder::Oid,
     bytes::Bytes,
-    cryptographic_message_syntax::{SignedDataBuilder, SignerBuilder},
+    cryptographic_message_syntax::{asn1::rfc5652::OID_ID_DATA, SignedDataBuilder, SignerBuilder},
     goblin::mach::{
         constants::{SEG_LINKEDIT, SEG_PAGEZERO},
         fat::FAT_MAGIC,
@@ -496,6 +497,10 @@ impl<'data> MachOSigner<'data> {
         };
 
         let ber = SignedDataBuilder::default()
+            // The default is `signed-data`. But Apple appears to use the `data` content-type,
+            // in violation of RFC 5652 Section 5, which says `signed-data` should be
+            // used when there are signatures.
+            .content_type(Oid(OID_ID_DATA.as_ref().into()))
             .signer(signer)
             .certificates(settings.certificate_chain().iter().cloned())?
             .build_ber()?;
