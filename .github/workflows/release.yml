@@ -286,15 +286,15 @@ jobs:
           profile: minimal
           default: true
       - name: Install maturin
-        run: pip install -r requirements.txt
+        run: pip install maturin==0.10.4_beta.1
       - name: Build wheels - x86_64
         run: |
           maturin build -m pyoxidizer/Cargo.toml -b bin --target x86_64-apple-darwin --release --out dist --no-sdist
           pip install pyoxidizer --no-index --find-links dist --force-reinstall
       - name: Build wheels - universal2
         env:
-          DEVELOPER_DIR: /Applications/Xcode.app/Contents/Developer
           MACOSX_DEPLOYMENT_TARGET: '10.9'
+          SDKROOT: '/Applications/Xcode_12.4.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX11.1.sdk'
         run: |
           maturin build -m pyoxidizer/Cargo.toml -b bin --release --universal2 --out dist --no-sdist
           pip install pyoxidizer --no-index --find-links dist --force-reinstall
@@ -328,7 +328,7 @@ jobs:
           profile: minimal
           default: true
       - name: Install maturin
-        run: pip install -r requirements.txt
+        run: pip install maturin==0.10.4_beta.1
       - name: Build wheels
         run: |
           maturin build -m pyoxidizer/Cargo.toml -b bin --release --out dist --no-sdist --target ${{ matrix.platform.target }}
@@ -363,7 +363,7 @@ jobs:
         run: |
           apt-get update
           apt-get install -y python3-pip
-          pip3 install -r requirements.txt
+          pip3 install maturin==0.10.4_beta.1
           maturin build -m pyoxidizer/Cargo.toml -b bin --no-sdist --release -o dist --target ${{ matrix.platform.target }} --manylinux ${{ matrix.platform.manylinux }}
       - name: Upload wheels
         uses: actions/upload-artifact@v2
