@@ -7,7 +7,7 @@
 use {
     crate::{
         asn1::{
-            rfc3280::{self, AttributeTypeAndValue, DirectoryString, Name},
+            rfc3280::{self, AttributeTypeAndValue, Name},
             rfc4519::{
                 OID_COMMON_NAME, OID_COUNTRY_NAME, OID_ORGANIZATIONAL_UNIT_NAME,
                 OID_ORGANIZATION_NAME,
@@ -20,13 +20,12 @@ use {
     bcder::{
         decode::{self, Constructed},
         encode::Values,
-        Integer, Mode, Oid, Utf8String,
+        Integer, Mode, Oid,
     },
     bytes::Bytes,
     std::{
         cmp::Ordering,
         convert::{TryFrom, TryInto},
-        str::FromStr,
     },
 };
 
@@ -97,11 +96,7 @@ impl RelativeDistinguishedName {
 
     pub fn find_attribute_string(&self, attribute: Oid) -> Result<Option<String>, decode::Error> {
         if let Some(attr) = self.find_attribute(attribute) {
-            (*attr.value).clone().decode(|cons| {
-                let value = DirectoryString::take_from(cons)?;
-
-                Ok(Some(value.to_string()))
-            })
+            Ok(Some(attr.value.to_string()?))
         } else {
             Ok(None)
         }
@@ -112,18 +107,11 @@ impl RelativeDistinguishedName {
         attribute: Oid,
         value: &str,
     ) -> Result<(), bcder::string::CharSetError> {
-        let ds = DirectoryString::Utf8String(Utf8String::from_str(value)?);
-        let captured = bcder::Captured::from_values(Mode::Der, ds);
-
-        if let Some(mut attr) = self.find_attribute_mut(attribute.clone()) {
-            attr.value = captured.into();
-
-            Ok(())
+        if let Some(attr) = self.find_attribute_mut(attribute.clone()) {
+            attr.set_utf8_string_value(value)
         } else {
-            self.0.push(AttributeTypeAndValue {
-                typ: attribute,
-                value: captured.into(),
-            });
+            self.0
+                .push(AttributeTypeAndValue::new_utf8_string(attribute, value)?);
 
             Ok(())
         }

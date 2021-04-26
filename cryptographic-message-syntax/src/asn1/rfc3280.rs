@@ -2,10 +2,9 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use bcder::decode::Error::Malformed;
 use {
     bcder::{
-        decode::{Constructed, Error::Unimplemented, Source},
+        decode::{Constructed, Error::Malformed, Error::Unimplemented, Source},
         encode,
         encode::{PrimitiveContent, Values},
         string::{Ia5String, PrintableString, Utf8String},
@@ -14,6 +13,7 @@ use {
     std::{
         io::Write,
         ops::{Deref, DerefMut},
+        str::FromStr,
     },
 };
 
@@ -503,6 +503,24 @@ impl AttributeTypeAndValue {
     pub fn encode_ref(&self) -> impl Values + '_ {
         encode::sequence((self.typ.encode_ref(), self.value.deref()))
     }
+
+    /// Attempt to coerce the stored value to a Rust string.
+    pub fn to_string(&self) -> Result<String, bcder::decode::Error> {
+        self.value.to_string()
+    }
+
+    /// Construct a new instance with a Utf8String given an OID and Rust string.
+    pub fn new_utf8_string(oid: Oid, s: &str) -> Result<Self, bcder::string::CharSetError> {
+        Ok(Self {
+            typ: oid,
+            value: AttributeValue::new_utf8_string(s)?,
+        })
+    }
+
+    /// Set the captured value to a Utf8String.
+    pub fn set_utf8_string_value(&mut self, s: &str) -> Result<(), bcder::string::CharSetError> {
+        self.value.set_utf8_string_value(s)
+    }
 }
 
 impl PartialEq for AttributeTypeAndValue {
@@ -527,6 +545,59 @@ pub type AttributeType = Oid;
 
 #[derive(Clone, Debug)]
 pub struct AttributeValue(Captured);
+
+impl AttributeValue {
+    /// Construct a new instance containing a Utf8String given a Rust string.
+    pub fn new_utf8_string(s: &str) -> Result<Self, bcder::string::CharSetError> {
+        let mut slf = Self(Captured::empty(Mode::Der));
+
+        slf.set_utf8_string_value(s)?;
+
+        Ok(slf)
+    }
+
+    /// Attempt to convert the inner value to a Rust string.
+    ///
+    /// The inner value can be any number of different types. This will try
+    /// a lot of them and hopefully yield a working result.
+    ///
+    /// If the inner type isn't a known string, a decoding error occurs.
+    pub fn to_string(&self) -> Result<String, bcder::decode::Error> {
+        self.0.clone().decode(|cons| {
+            if let Some(s) = cons.take_opt_value_if(Tag::NUMERIC_STRING, |content| {
+                bcder::NumericString::from_content(content)
+            })? {
+                Ok(s.to_string())
+            } else if let Some(s) = cons.take_opt_value_if(Tag::PRINTABLE_STRING, |content| {
+                bcder::PrintableString::from_content(content)
+            })? {
+                Ok(s.to_string())
+            } else if let Some(s) = cons.take_opt_value_if(Tag::UTF8_STRING, |content| {
+                bcder::Utf8String::from_content(content)
+            })? {
+                Ok(s.to_string())
+            } else if let Some(s) = cons.take_opt_value_if(Tag::IA5_STRING, |content| {
+                bcder::Ia5String::from_content(content)
+            })? {
+                Ok(s.to_string())
+            } else {
+                Ok(DirectoryString::take_from(cons)?.to_string())
+            }
+        })
+    }
+
+    /// Set the captured value to a Utf8String.
+    pub fn set_utf8_string_value(
+        &mut self,
+        value: &str,
+    ) -> Result<(), bcder::string::CharSetError> {
+        let ds = DirectoryString::Utf8String(Utf8String::from_str(value)?);
+        let captured = bcder::Captured::from_values(Mode::Der, ds);
+        self.0 = captured;
+
+        Ok(())
+    }
+}
 
 impl Deref for AttributeValue {
     type Target = Captured;
