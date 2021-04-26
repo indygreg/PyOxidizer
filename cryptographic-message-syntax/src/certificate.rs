@@ -97,7 +97,7 @@ impl RelativeDistinguishedName {
 
     pub fn find_attribute_string(&self, attribute: Oid) -> Result<Option<String>, decode::Error> {
         if let Some(attr) = self.find_attribute(attribute) {
-            attr.value.clone().decode(|cons| {
+            (*attr.value).clone().decode(|cons| {
                 let value = DirectoryString::take_from(cons)?;
 
                 Ok(Some(value.to_string()))
@@ -116,13 +116,13 @@ impl RelativeDistinguishedName {
         let captured = bcder::Captured::from_values(Mode::Der, ds);
 
         if let Some(mut attr) = self.find_attribute_mut(attribute.clone()) {
-            attr.value = captured;
+            attr.value = captured.into();
 
             Ok(())
         } else {
             self.0.push(AttributeTypeAndValue {
                 typ: attribute,
-                value: captured,
+                value: captured.into(),
             });
 
             Ok(())

@@ -493,12 +493,15 @@ impl AttributeTypeAndValue {
             let typ = AttributeType::take_from(cons)?;
             let value = cons.capture_all()?;
 
-            Ok(Self { typ, value })
+            Ok(Self {
+                typ,
+                value: value.into(),
+            })
         })
     }
 
     pub fn encode_ref(&self) -> impl Values + '_ {
-        encode::sequence((self.typ.encode_ref(), &self.value))
+        encode::sequence((self.typ.encode_ref(), self.value.deref()))
     }
 }
 
@@ -522,4 +525,19 @@ impl Values for AttributeTypeAndValue {
 
 pub type AttributeType = Oid;
 
-pub type AttributeValue = Captured;
+#[derive(Clone, Debug)]
+pub struct AttributeValue(Captured);
+
+impl Deref for AttributeValue {
+    type Target = Captured;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl From<Captured> for AttributeValue {
+    fn from(v: Captured) -> Self {
+        Self(v)
+    }
+}
