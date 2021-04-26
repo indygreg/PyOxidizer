@@ -508,28 +508,25 @@ pub enum Signability {
 pub fn path_signable(path: impl AsRef<Path>) -> Result<Signability, SigningError> {
     let path = path.as_ref();
 
-    match tugger_windows_codesign::is_file_signable(path) {
-        Ok(true) => {
-            // But we can only sign Windows binaries on Windows since we call out to
-            // signtool.exe.
-            return if cfg!(target_family = "windows") {
-                Ok(Signability::Signable(Signable::WindowsFile(
-                    path.to_path_buf(),
-                )))
-            } else {
-                Ok(Signability::PlatformUnsupported(
-                    "Windows signing requires running on Windows",
-                ))
-            };
-        }
-        Ok(false) => {}
-        Err(e) => return Err(SigningError::SignableTestError(format!("{:?}", e))),
-    }
-
-    // Apple is a bit more complicated. If the path is a file, we test for Mach-O.
-    // If a directory, we test for a bundle.
-
     if path.is_file() {
+        match tugger_windows_codesign::is_file_signable(path) {
+            Ok(true) => {
+                // But we can only sign Windows binaries on Windows since we call out to
+                // signtool.exe.
+                return if cfg!(target_family = "windows") {
+                    Ok(Signability::Signable(Signable::WindowsFile(
+                        path.to_path_buf(),
+                    )))
+                } else {
+                    Ok(Signability::PlatformUnsupported(
+                        "Windows signing requires running on Windows",
+                    ))
+                };
+            }
+            Ok(false) => {}
+            Err(e) => return Err(SigningError::SignableTestError(format!("{:?}", e))),
+        }
+
         let data = std::fs::read(path)?;
 
         if goblin::mach::Mach::parse(&data).is_ok() {
