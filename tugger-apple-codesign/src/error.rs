@@ -45,6 +45,9 @@ pub enum AppleCodesignError {
     #[error("PEM error: {0}")]
     CertificatePem(pem::PemError),
 
+    #[error("X.509 certificate parsing error: {0}")]
+    X509Parse(String),
+
     #[error("unsupported key algorithm in certificate: {0:?}")]
     CertificateUnsupportedKeyAlgorithm(KeyAlgorithm),
 

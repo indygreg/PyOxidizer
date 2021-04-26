@@ -3708,6 +3708,7 @@ dependencies = [
  "cryptographic-message-syntax",
  "goblin",
  "hex",
+ "once_cell",
  "p12",
  "pem",
  "plist",

@@ -101,6 +101,8 @@
 //! See the `keychain-export-certificate-chain` CLI command for exporting a
 //! code signing certificate's x509 chain as PEM.
 
+mod apple_certificates;
+pub use apple_certificates::*;
 mod bundle_signing;
 pub use bundle_signing::*;
 mod certificate;

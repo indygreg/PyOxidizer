@@ -34,6 +34,11 @@ const OID_PURPOSE_CODE_SIGNING: ConstOid = Oid(&[43, 6, 1, 5, 5, 7, 3, 3]);
 /// OID used for email address in RDN in Apple generated code signing certificates.
 const OID_EMAIL_ADDRESS: ConstOid = Oid(&[42, 134, 72, 134, 247, 13, 1, 9, 1]);
 
+/// Extends functionality of [CapturedX509Certificate] with Apple specific certificate knowledge.
+pub trait AppleCertificate: Sized {}
+
+impl AppleCertificate for CapturedX509Certificate {}
+
 fn bmp_string(s: &str) -> Vec<u8> {
     let utf16: Vec<u16> = s.encode_utf16().collect();
 
