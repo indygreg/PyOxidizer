@@ -262,6 +262,11 @@ impl<'a> SignedDataBuilder<'a> {
 
             signed_attributes.extend(signer.extra_signed_attributes.iter().cloned());
 
+            // According to RFC 5652, signed attributes are DER encoded. This means a SET
+            // (which SignedAttributes is) should be sorted. But bcder doesn't appear to do
+            // this. So we manually sort here.
+            let signed_attributes = signed_attributes.as_sorted()?;
+
             let signed_attributes = Some(signed_attributes);
 
             let signature_algorithm = SignatureAlgorithmIdentifier {

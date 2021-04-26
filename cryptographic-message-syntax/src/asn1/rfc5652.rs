@@ -500,8 +500,11 @@ impl SignerInfo {
                 Ok(Some(buffer))
             } else {
                 // No existing copy present. Serialize from raw data structures.
+                // But we obtain a sorted instance of those attributes first, because
+                // bcder doesn't appear to follow DER encoding rules for sets.
                 let mut der = Vec::new();
                 signed_attributes
+                    .as_sorted()?
                     .encode_ref()
                     .write_encoded(bcder::Mode::Der, &mut der)?;
 
@@ -602,6 +605,17 @@ impl SignedAttributes {
         }
 
         Ok(Self(attributes))
+    }
+
+    /// Obtain an instance where the attributes are sorted according to DER
+    /// rules. See the comment in [SignerInfo::signed_attributes_digested_content].
+    pub fn as_sorted(&self) -> Result<Self, std::io::Error> {
+        // The official rules say you sort by the first element in the container.
+        // That's an Oid, which implements comparisons. So our job is easy.
+        let mut res = self.0.clone();
+        res.sort_by(|a, b| a.typ.as_ref().cmp(b.typ.as_ref()));
+
+        Ok(Self(res))
     }
 
     pub fn encode_ref(&self) -> impl Values + '_ {
