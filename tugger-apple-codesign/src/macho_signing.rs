@@ -13,9 +13,9 @@ use {
         code_requirement::{CodeRequirementExpression, CodeRequirements},
         error::AppleCodesignError,
         macho::{
-            create_superblob, find_signature_data, parse_signature_data, Blob, BlobWrapperBlob,
-            CodeSigningMagic, CodeSigningSlot, Digest, DigestType, EmbeddedSignature,
-            EntitlementsBlob, RequirementSetBlob, RequirementType,
+            create_superblob, find_executable_segment_boundary, find_signature_data,
+            parse_signature_data, Blob, BlobWrapperBlob, CodeSigningMagic, CodeSigningSlot, Digest,
+            DigestType, EmbeddedSignature, EntitlementsBlob, RequirementSetBlob, RequirementType,
         },
         signing::{SettingsScope, SigningSettings},
     },
@@ -591,6 +591,9 @@ impl<'data> MachOSigner<'data> {
         let platform = 0;
         let page_size = 4096u32;
 
+        let (exec_seg_base, exec_seg_limit) = find_executable_segment_boundary(macho)?;
+        let (exec_seg_base, exec_seg_limit) = (Some(exec_seg_base), Some(exec_seg_limit));
+
         let mut exec_seg_flags = None;
 
         match settings.executable_segment_flags(SettingsScope::Main) {
@@ -712,8 +715,8 @@ impl<'data> MachOSigner<'data> {
             scatter_offset: None,
             spare3: None,
             code_limit_64,
-            exec_seg_base: None,
-            exec_seg_limit: None,
+            exec_seg_base,
+            exec_seg_limit,
             exec_seg_flags,
             runtime,
             pre_encrypt_offset: None,

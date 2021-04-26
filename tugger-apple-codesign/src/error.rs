@@ -50,6 +50,9 @@ pub enum AppleCodesignError {
     #[error("bad string value in certificate: {0:?}")]
     CertificateCharset(bcder::string::CharSetError),
 
+    #[error("unable to locate __TEXT segment")]
+    MissingText,
+
     #[error("unable to locate __LINKEDIT segment")]
     MissingLinkedit,
 

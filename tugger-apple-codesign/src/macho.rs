@@ -44,7 +44,11 @@ use {
         code_directory::CodeDirectoryBlob, code_requirement::CodeRequirements,
         error::AppleCodesignError,
     },
-    goblin::mach::{constants::SEG_LINKEDIT, load_command::CommandVariant, MachO},
+    goblin::mach::{
+        constants::{SEG_LINKEDIT, SEG_TEXT},
+        load_command::CommandVariant,
+        MachO,
+    },
     scroll::{IOwrite, Pread},
     std::{
         borrow::Cow,
@@ -1240,6 +1244,26 @@ pub struct Scatter {
     target_offset: u64,
     /// Reserved.
     spare: u64,
+}
+
+/// Determine the start and end offset of the executable segment of a binary.
+pub fn find_executable_segment_boundary(macho: &MachO) -> Result<(u64, u64), AppleCodesignError> {
+    // There might be some Mach-O segment flags we can query for this. For now,
+    // we find the offset after the __TEXT segment.
+
+    let segment = macho
+        .segments
+        .iter()
+        .find(|segment| {
+            if let Ok(name) = segment.name() {
+                name == SEG_TEXT
+            } else {
+                false
+            }
+        })
+        .ok_or(AppleCodesignError::MissingLinkedit)?;
+
+    Ok((segment.fileoff, segment.fileoff + segment.data.len() as u64))
 }
 
 /// Describes signature data embedded within a Mach-O binary.
