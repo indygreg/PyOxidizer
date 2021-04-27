@@ -31,9 +31,10 @@ use {
             EmbeddedSignature,
         },
     },
-    cryptographic_message_syntax::{CmsError, DigestAlgorithm, SignatureAlgorithm, SignedData},
+    cryptographic_message_syntax::{CmsError, SignedData},
     goblin::mach::{Mach, MachO},
     std::path::{Path, PathBuf},
+    x509_certificate::{DigestAlgorithm, SignatureAlgorithm},
 };
 
 /// Context for a verification issue.

@@ -5,15 +5,12 @@
 //! Time-Stamp Protocol (TSP) / RFC 3161 client.
 
 use {
-    crate::{
-        algorithm::DigestAlgorithm,
-        asn1::{
-            rfc3161::{
-                MessageImprint, PkiStatus, TimeStampReq, TimeStampResp, TstInfo,
-                OID_CONTENT_TYPE_TST_INFO,
-            },
-            rfc5652::{SignedData, OID_ID_SIGNED_DATA},
+    crate::asn1::{
+        rfc3161::{
+            MessageImprint, PkiStatus, TimeStampReq, TimeStampResp, TstInfo,
+            OID_CONTENT_TYPE_TST_INFO,
         },
+        rfc5652::{SignedData, OID_ID_SIGNED_DATA},
     },
     bcder::{
         decode::{Constructed, Malformed},
@@ -23,6 +20,7 @@ use {
     reqwest::IntoUrl,
     ring::rand::SecureRandom,
     std::ops::Deref,
+    x509_certificate::DigestAlgorithm,
 };
 
 pub const HTTP_CONTENT_TYPE_REQUEST: &str = "application/timestamp-query";
@@ -195,7 +193,7 @@ pub fn time_stamp_message_http(
     message: &[u8],
     digest_algorithm: DigestAlgorithm,
 ) -> Result<TimeStampResponse, TimeStampError> {
-    let mut h = digest_algorithm.as_hasher();
+    let mut h = digest_algorithm.digester();
     h.update(message);
     let digest = h.finish();
 

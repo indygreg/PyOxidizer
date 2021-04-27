@@ -3,9 +3,8 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    cryptographic_message_syntax::{CertificateKeyAlgorithm, CmsError},
-    std::path::PathBuf,
-    thiserror::Error,
+    cryptographic_message_syntax::CmsError, std::path::PathBuf, thiserror::Error,
+    x509_certificate::KeyAlgorithm,
 };
 
 /// Unified error type for Apple code signing.
@@ -42,7 +41,7 @@ pub enum AppleCodesignError {
     CertificatePem(pem::PemError),
 
     #[error("unsupported key algorithm in certificate: {0:?}")]
-    CertificateUnsupportedKeyAlgorithm(CertificateKeyAlgorithm),
+    CertificateUnsupportedKeyAlgorithm(KeyAlgorithm),
 
     #[error("unspecified cryptography error in certificate")]
     CertificateRing(ring::error::Unspecified),

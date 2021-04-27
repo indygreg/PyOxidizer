@@ -45,10 +45,11 @@ use {
         signing::{SettingsScope, SigningSettings},
     },
     clap::{App, AppSettings, Arg, ArgMatches, SubCommand},
-    cryptographic_message_syntax::{Certificate, CertificateKeyAlgorithm, SignedData, SigningKey},
+    cryptographic_message_syntax::{Certificate, SignedData, SigningKey},
     goblin::mach::{Mach, MachO},
     slog::{error, o, warn, Drain},
     std::{convert::TryFrom, io::Write, path::PathBuf, str::FromStr},
+    x509_certificate::KeyAlgorithm,
 };
 
 #[cfg(target_os = "macos")]
@@ -617,8 +618,8 @@ fn command_generate_self_signed_certificate(args: &ArgMatches) -> Result<(), App
         .value_of("algorithm")
         .ok_or(AppleCodesignError::CliBadArgument)?
     {
-        "ecdsa" => CertificateKeyAlgorithm::Ecdsa,
-        "ed25519" => CertificateKeyAlgorithm::Ed25519,
+        "ecdsa" => KeyAlgorithm::Ecdsa,
+        "ed25519" => KeyAlgorithm::Ed25519,
         value => panic!(
             "algorithm values should have been validated by arg parser: {}",
             value

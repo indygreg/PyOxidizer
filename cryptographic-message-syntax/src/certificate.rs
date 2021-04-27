@@ -6,16 +6,15 @@
 
 use {
     crate::{
-        algorithm::SignatureAlgorithm,
         asn1::rfc5652::{CertificateChoices, IssuerAndSerialNumber},
-        CertificateKeyAlgorithm, CmsError,
+        CmsError,
     },
     bcder::{decode::Constructed, encode::Values, Integer, Mode},
     std::{
         cmp::Ordering,
         convert::{TryFrom, TryInto},
     },
-    x509_certificate::{rfc3280::Name, rfc5280},
+    x509_certificate::{rfc3280::Name, rfc5280, KeyAlgorithm, SignatureAlgorithm},
 };
 
 /// Defines an X.509 certificate used for signing data.
@@ -189,7 +188,7 @@ impl Certificate {
         let spki = other.into();
 
         let signature_algorithm = SignatureAlgorithm::try_from(&self.raw_cert.signature_algorithm)?;
-        let verify_algorithm = signature_algorithm.as_verification_algorithm();
+        let verify_algorithm = signature_algorithm.into();
 
         let key = ring::signature::UnparsedPublicKey::new(
             verify_algorithm,
@@ -262,7 +261,7 @@ impl From<&Certificate> for rfc5280::SubjectPublicKeyInfo {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct CertificatePublicKey {
     /// Key algorithm.
-    pub algorithm: CertificateKeyAlgorithm,
+    pub algorithm: KeyAlgorithm,
 
     /// Raw public key data.
     pub key: Vec<u8>,
@@ -272,7 +271,7 @@ impl TryFrom<&rfc5280::SubjectPublicKeyInfo> for CertificatePublicKey {
     type Error = CmsError;
 
     fn try_from(info: &rfc5280::SubjectPublicKeyInfo) -> Result<Self, Self::Error> {
-        let algorithm = CertificateKeyAlgorithm::try_from(&info.algorithm)?;
+        let algorithm = KeyAlgorithm::try_from(&info.algorithm)?;
         let key = info.subject_public_key.octet_bytes().to_vec();
 
         Ok(Self { algorithm, key })

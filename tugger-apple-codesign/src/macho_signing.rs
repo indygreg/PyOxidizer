@@ -34,6 +34,7 @@ use {
     },
     scroll::{ctx::SizeWith, IOwrite, Pwrite},
     std::{borrow::Cow, cmp::Ordering, collections::HashMap, io::Write},
+    x509_certificate::DigestAlgorithm,
 };
 
 /// OID for signed attribute containing plist of code directory hashes.
@@ -517,8 +518,7 @@ impl<'data> MachOSigner<'data> {
                 vec![AttributeValue::new(bcder::Captured::from_values(
                     bcder::Mode::Der,
                     bcder::encode::sequence((
-                        Oid::from(cryptographic_message_syntax::DigestAlgorithm::Sha256)
-                            .encode_ref(),
+                        Oid::from(DigestAlgorithm::Sha256).encode_ref(),
                         bcder::OctetString::new(digest.into()).encode_ref(),
                     )),
                 ))],

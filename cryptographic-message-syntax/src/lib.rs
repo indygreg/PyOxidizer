@@ -78,7 +78,7 @@ mod signing;
 mod time_stamp_protocol;
 
 pub use {
-    algorithm::{CertificateKeyAlgorithm, DigestAlgorithm, SignatureAlgorithm, SigningKey},
+    algorithm::SigningKey,
     certificate::Certificate,
     signing::{SignedDataBuilder, SignerBuilder},
     time_stamp_protocol::{time_stamp_message_http, time_stamp_request_http, TimeStampError},
@@ -98,7 +98,7 @@ use {
     pem::PemError,
     ring::{digest::Digest, signature::UnparsedPublicKey},
     std::{collections::HashSet, convert::TryFrom, fmt::Display, ops::Deref},
-    x509_certificate::rfc3280::Name,
+    x509_certificate::{rfc3280::Name, DigestAlgorithm, SignatureAlgorithm, X509CertificateError},
 };
 
 #[derive(Debug)]
@@ -168,6 +168,9 @@ pub enum CmsError {
 
     /// Error occurred in Time-Stamp Protocol.
     TimeStampProtocol(TimeStampError),
+
+    /// Error occurred in the x509-certificate crate.
+    X509Certificate(X509CertificateError),
 }
 
 impl std::error::Error for CmsError {}
@@ -221,6 +224,9 @@ impl Display for CmsError {
             Self::TimeStampProtocol(e) => {
                 f.write_fmt(format_args!("Time-Stamp Protocol error: {}", e))
             }
+            Self::X509Certificate(e) => {
+                f.write_fmt(format_args!("X.509 certificate error: {:?}", e))
+            }
         }
     }
 }
@@ -252,6 +258,12 @@ impl From<ring::error::KeyRejected> for CmsError {
 impl From<TimeStampError> for CmsError {
     fn from(e: TimeStampError) -> Self {
         Self::TimeStampProtocol(e)
+    }
+}
+
+impl From<X509CertificateError> for CmsError {
+    fn from(e: X509CertificateError) -> Self {
+        Self::X509Certificate(e)
     }
 }
 
@@ -303,7 +315,7 @@ impl SignedData {
     ///
     /// You can get the raw bytes of the digest by calling its `.as_ref()`.
     pub fn message_digest_with_algorithm(&self, alg: DigestAlgorithm) -> Digest {
-        let mut hasher = alg.as_hasher();
+        let mut hasher = alg.digester();
 
         if let Some(content) = &self.signed_content {
             hasher.update(content);
@@ -347,7 +359,7 @@ impl TryFrom<&crate::asn1::rfc5652::SignedData> for SignedData {
             .digest_algorithms
             .iter()
             .map(DigestAlgorithm::try_from)
-            .collect::<Result<HashSet<_>, CmsError>>()?;
+            .collect::<Result<HashSet<_>, _>>()?;
 
         let signed_content = if let Some(content) = &raw.content_info.content {
             Some(content.to_bytes().to_vec())
@@ -538,10 +550,7 @@ impl SignerInfo {
     where
         C: Iterator<Item = &'a Certificate>,
     {
-        self.signature_verifier_with_algorithm(
-            certs,
-            self.signature_algorithm.as_verification_algorithm(),
-        )
+        self.signature_verifier_with_algorithm(certs, self.signature_algorithm.into())
     }
 
     /// Obtain an entity for validating the signature described by this instance.
@@ -642,7 +651,7 @@ impl SignerInfo {
         content: Option<&[u8]>,
         alg: DigestAlgorithm,
     ) -> Digest {
-        let mut hasher = alg.as_hasher();
+        let mut hasher = alg.digester();
 
         if let Some(content) = content {
             hasher.update(content);

@@ -6,7 +6,7 @@
 
 use {
     crate::{
-        algorithm::{DigestAlgorithm, SignatureAlgorithm, SigningKey},
+        algorithm::SigningKey,
         asn1::{
             rfc3161::OID_TIME_STAMP_TOKEN,
             rfc5652::{
@@ -28,7 +28,10 @@ use {
     bytes::Bytes,
     reqwest::IntoUrl,
     std::{collections::HashSet, convert::TryFrom},
-    x509_certificate::{asn1time::UtcTime, rfc5280},
+    x509_certificate::{
+        DigestAlgorithm, SignatureAlgorithm,
+        {asn1time::UtcTime, rfc5280},
+    },
 };
 
 /// Builder type to construct an entity that will sign some data.
@@ -258,7 +261,7 @@ impl<'a> SignedDataBuilder<'a> {
             // Message digest is computed from override content on the signer
             // or the encapsulated content if present. The "empty" hash is a
             // valid value if no content (only signed attributes) are being signed.
-            let mut hasher = signer.digest_algorithm.as_hasher();
+            let mut hasher = signer.digest_algorithm.digester();
             if let Some(content) = &signer.message_id_content {
                 hasher.update(content);
             } else if let Some(content) = &self.signed_content {
@@ -643,7 +646,7 @@ mod tests {
         let signature = key.sign(message).unwrap();
 
         let public_key = UnparsedPublicKey::new(
-            SignatureAlgorithm::Sha256Rsa.as_verification_algorithm(),
+            SignatureAlgorithm::Sha256Rsa.into(),
             cert.public_key().key.clone(),
         );
 
