@@ -18,6 +18,12 @@ pub mod asn1time;
 pub mod rfc3280;
 pub mod rfc4519;
 pub mod rfc5280;
+pub mod rfc5480;
+pub mod rfc5652;
+pub mod rfc5915;
+pub mod rfc5958;
+pub mod signing;
+pub use signing::InMemorySigningKeyPair;
 
 use thiserror::Error;
 
@@ -32,4 +38,28 @@ pub enum X509CertificateError {
 
     #[error("unknown key algorithm: {0}")]
     UnknownKeyAlgorithm(String),
+
+    #[error("ring rejected loading private key: {0}")]
+    PrivateKeyRejected(&'static str),
+
+    #[error("error when decoding ASN.1 data: {0}")]
+    Asn1Parse(bcder::decode::Error),
+
+    #[error("error decoding PEM data: {0}")]
+    PemDecode(pem::PemError),
+
+    #[error("error creating cryptographic signature with memory-backed key-pair")]
+    SignatureCreationInMemoryKey,
+}
+
+impl From<ring::error::KeyRejected> for X509CertificateError {
+    fn from(e: ring::error::KeyRejected) -> Self {
+        Self::PrivateKeyRejected(e.description_())
+    }
+}
+
+impl From<bcder::decode::Error> for X509CertificateError {
+    fn from(e: bcder::decode::Error) -> Self {
+        Self::Asn1Parse(e)
+    }
 }

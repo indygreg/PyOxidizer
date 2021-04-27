@@ -21,10 +21,7 @@ use {
     },
     bcder::{encode::PrimitiveContent, Oid},
     bytes::Bytes,
-    cryptographic_message_syntax::{
-        asn1::rfc5652::{AttributeValue, OID_ID_DATA},
-        SignedDataBuilder, SignerBuilder,
-    },
+    cryptographic_message_syntax::{asn1::rfc5652::OID_ID_DATA, SignedDataBuilder, SignerBuilder},
     goblin::mach::{
         constants::{SEG_LINKEDIT, SEG_PAGEZERO},
         fat::FAT_MAGIC,
@@ -34,7 +31,7 @@ use {
     },
     scroll::{ctx::SizeWith, IOwrite, Pwrite},
     std::{borrow::Cow, cmp::Ordering, collections::HashMap, io::Write},
-    x509_certificate::DigestAlgorithm,
+    x509_certificate::{rfc5652::AttributeValue, DigestAlgorithm},
 };
 
 /// OID for signed attribute containing plist of code directory hashes.

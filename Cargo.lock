@@ -3752,6 +3752,7 @@ dependencies = [
  "tugger-apple-codesign",
  "tugger-file-manifest",
  "tugger-windows-codesign",
+ "x509-certificate",
  "yasna",
 ]
 
@@ -4281,6 +4282,7 @@ version = "0.1.0-pre"
 dependencies = [
  "bcder",
  "chrono",
+ "pem",
  "ring",
  "thiserror",
 ]

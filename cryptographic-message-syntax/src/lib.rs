@@ -71,14 +71,12 @@ seem to be compatible with BER. So we've recursively defined ASN.1 data
 structures referenced by RFC5652 and taught them to serialize using `bcder`.
 */
 
-mod algorithm;
 pub mod asn1;
 mod certificate;
 mod signing;
 mod time_stamp_protocol;
 
 pub use {
-    algorithm::SigningKey,
     certificate::Certificate,
     signing::{SignedDataBuilder, SignerBuilder},
     time_stamp_protocol::{time_stamp_message_http, time_stamp_request_http, TimeStampError},
@@ -163,9 +161,6 @@ pub enum CmsError {
     /// Error occurred parsing a distinguished name field in a certificate.
     DistinguishedNameParseError,
 
-    /// Ring rejected loading a private key.
-    KeyRejected(ring::error::KeyRejected),
-
     /// Error occurred in Time-Stamp Protocol.
     TimeStampProtocol(TimeStampError),
 
@@ -218,9 +213,6 @@ impl Display for CmsError {
             Self::DistinguishedNameParseError => {
                 f.write_str("could not parse distinguished name data")
             }
-            Self::KeyRejected(reason) => {
-                f.write_fmt(format_args!("private key rejected: {}", reason))
-            }
             Self::TimeStampProtocol(e) => {
                 f.write_fmt(format_args!("Time-Stamp Protocol error: {}", e))
             }
@@ -246,12 +238,6 @@ impl From<std::io::Error> for CmsError {
 impl From<PemError> for CmsError {
     fn from(e: PemError) -> Self {
         Self::Pem(e)
-    }
-}
-
-impl From<ring::error::KeyRejected> for CmsError {
-    fn from(e: ring::error::KeyRejected) -> Self {
-        Self::KeyRejected(e)
     }
 }
 

@@ -11,7 +11,6 @@ use {
         BitString, ConstOid, Mode, OctetString, Oid,
     },
     bytes::Bytes,
-    cryptographic_message_syntax::{asn1::rfc5958::OneAsymmetricKey, SigningKey},
     ring::signature::{EcdsaKeyPair, Ed25519KeyPair, ECDSA_P256_SHA256_ASN1_SIGNING},
     x509_certificate::{
         asn1time::Time,
@@ -20,7 +19,8 @@ use {
             AlgorithmIdentifier, Certificate, Extension, Extensions, SubjectPublicKeyInfo,
             TbsCertificate, Validity, Version,
         },
-        KeyAlgorithm,
+        rfc5958::OneAsymmetricKey,
+        InMemorySigningKeyPair, KeyAlgorithm,
     },
 };
 
@@ -67,7 +67,13 @@ fn bmp_string(s: &str) -> Vec<u8> {
 pub fn parse_pfx_data(
     data: &[u8],
     password: &str,
-) -> Result<(cryptographic_message_syntax::Certificate, SigningKey), AppleCodesignError> {
+) -> Result<
+    (
+        cryptographic_message_syntax::Certificate,
+        InMemorySigningKeyPair,
+    ),
+    AppleCodesignError,
+> {
     let pfx = p12::PFX::parse(data).map_err(|e| {
         AppleCodesignError::PfxParseError(format!("data does not appear to be PFX: {:?}", e))
     })?;
@@ -148,7 +154,7 @@ pub fn parse_pfx_data(
                         )
                     })?;
 
-                    signing_key = Some(SigningKey::from_pkcs8_der(&decrypted, None)?);
+                    signing_key = Some(InMemorySigningKeyPair::from_pkcs8_der(&decrypted, None)?);
                 }
                 p12::SafeBagKind::OtherBagKind(_) => {
                     return Err(AppleCodesignError::PfxParseError(
@@ -189,7 +195,7 @@ pub fn create_self_signed_code_signing_certificate(
 ) -> Result<
     (
         cryptographic_message_syntax::Certificate,
-        SigningKey,
+        InMemorySigningKeyPair,
         Vec<u8>,
     ),
     AppleCodesignError,
@@ -217,7 +223,7 @@ pub fn create_self_signed_code_signing_certificate(
         })
         .map_err(AppleCodesignError::CertificateDecode)?;
 
-    let signing_key = SigningKey::from_pkcs8_der(key_pair_document.as_ref(), None)?;
+    let signing_key = InMemorySigningKeyPair::from_pkcs8_der(key_pair_document.as_ref(), None)?;
 
     let mut name = Name::default();
     name.append_common_name_utf8_string(common_name)
@@ -264,7 +270,10 @@ pub fn create_self_signed_code_signing_certificate(
                 algorithm: key_pair_asn1.private_key_algorithm.algorithm.clone(),
                 parameters: key_pair_asn1.private_key_algorithm.parameters,
             },
-            subject_public_key: BitString::new(0, Bytes::copy_from_slice(signing_key.public_key())),
+            subject_public_key: BitString::new(
+                0,
+                Bytes::copy_from_slice(signing_key.public_key_data()),
+            ),
         },
         issuer_unique_id: None,
         subject_unique_id: None,

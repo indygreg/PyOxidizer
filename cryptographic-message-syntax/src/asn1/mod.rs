@@ -7,7 +7,4 @@
 pub mod rfc3161;
 pub mod rfc3281;
 pub mod rfc4210;
-pub mod rfc5480;
 pub mod rfc5652;
-pub mod rfc5915;
-pub mod rfc5958;

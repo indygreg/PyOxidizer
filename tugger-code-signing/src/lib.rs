@@ -62,7 +62,7 @@
 //! [SignedOutput] describing where the signed content lives.
 
 use {
-    cryptographic_message_syntax::{Certificate, CmsError, SigningKey},
+    cryptographic_message_syntax::{Certificate, CmsError},
     reqwest::{IntoUrl, Url},
     slog::warn,
     std::{
@@ -78,6 +78,7 @@ use {
     tugger_windows_codesign::{
         CodeSigningCertificate, FileBasedCodeSigningCertificate, SystemStore,
     },
+    x509_certificate::InMemorySigningKeyPair,
     yasna::ASN1Error,
 };
 
@@ -577,7 +578,7 @@ pub enum SigningCertificate {
     /// A parsed certificate and signing key stored in memory.
     ///
     /// The private key is managed by the `ring` crate.
-    Memory(Certificate, SigningKey),
+    Memory(Certificate, InMemorySigningKeyPair),
 
     /// A PFX file containing validated certificate data.
     ///

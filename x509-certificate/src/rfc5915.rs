@@ -5,7 +5,7 @@
 //! ASN.1 primitives defined by RFC 5915.
 
 use {
-    crate::asn1::rfc5480::EcParameters,
+    crate::rfc5480::EcParameters,
     bcder::{
         decode::{Constructed, Source},
         encode::{self, PrimitiveContent, Values},

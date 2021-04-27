@@ -3,8 +3,10 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    cryptographic_message_syntax::CmsError, std::path::PathBuf, thiserror::Error,
-    x509_certificate::KeyAlgorithm,
+    cryptographic_message_syntax::CmsError,
+    std::path::PathBuf,
+    thiserror::Error,
+    x509_certificate::{KeyAlgorithm, X509CertificateError},
 };
 
 /// Unified error type for Apple code signing.
@@ -27,6 +29,9 @@ pub enum AppleCodesignError {
 
     #[error("binary does not have code signature data")]
     BinaryNoCodeSignature,
+
+    #[error("X.509 certificate handler error: {0}")]
+    X509(#[from] X509CertificateError),
 
     #[error("CMS error: {0}")]
     Cms(#[from] CmsError),

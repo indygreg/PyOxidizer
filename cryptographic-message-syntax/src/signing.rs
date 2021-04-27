@@ -6,15 +6,14 @@
 
 use {
     crate::{
-        algorithm::SigningKey,
         asn1::{
             rfc3161::OID_TIME_STAMP_TOKEN,
             rfc5652::{
-                Attribute, AttributeValue, CertificateChoices, CertificateSet, CmsVersion,
-                DigestAlgorithmIdentifier, DigestAlgorithmIdentifiers, EncapsulatedContentInfo,
-                IssuerAndSerialNumber, SignatureValue, SignedAttributes, SignedData,
-                SignerIdentifier, SignerInfo, SignerInfos, UnsignedAttributes, OID_CONTENT_TYPE,
-                OID_ID_DATA, OID_ID_SIGNED_DATA, OID_MESSAGE_DIGEST, OID_SIGNING_TIME,
+                CertificateChoices, CertificateSet, CmsVersion, DigestAlgorithmIdentifier,
+                DigestAlgorithmIdentifiers, EncapsulatedContentInfo, IssuerAndSerialNumber,
+                SignatureValue, SignedAttributes, SignedData, SignerIdentifier, SignerInfo,
+                SignerInfos, UnsignedAttributes, OID_CONTENT_TYPE, OID_ID_DATA, OID_ID_SIGNED_DATA,
+                OID_MESSAGE_DIGEST, OID_SIGNING_TIME,
             },
         },
         certificate::Certificate,
@@ -29,8 +28,10 @@ use {
     reqwest::IntoUrl,
     std::{collections::HashSet, convert::TryFrom},
     x509_certificate::{
-        DigestAlgorithm, SignatureAlgorithm,
-        {asn1time::UtcTime, rfc5280},
+        asn1time::UtcTime,
+        rfc5280,
+        rfc5652::{Attribute, AttributeValue},
+        DigestAlgorithm, InMemorySigningKeyPair, SignatureAlgorithm,
     },
 };
 
@@ -40,7 +41,7 @@ use {
 /// will sign data using configured settings.
 pub struct SignerBuilder<'a> {
     /// The cryptographic key pair used for signing content.
-    signing_key: &'a SigningKey,
+    signing_key: &'a InMemorySigningKeyPair,
 
     /// X.509 certificate used for signing.
     signing_certificate: Certificate,
@@ -69,7 +70,7 @@ impl<'a> SignerBuilder<'a> {
     /// Construct a new entity that will sign content.
     ///
     /// An entity is constructed from a signing key, which is mandatory.
-    pub fn new(signing_key: &'a SigningKey, signing_certificate: Certificate) -> Self {
+    pub fn new(signing_key: &'a InMemorySigningKeyPair, signing_certificate: Certificate) -> Self {
         Self {
             signing_key,
             signing_certificate,
@@ -83,7 +84,7 @@ impl<'a> SignerBuilder<'a> {
 
     /// Obtain the signature algorithm used by the signing key.
     pub fn signature_algorithm(&self) -> SignatureAlgorithm {
-        SignatureAlgorithm::from(self.signing_key)
+        SignatureAlgorithm::from(self.signing_key.default_signature_algorithm())
     }
 
     /// Define the content to use to calculate the `message-id` attribute.
@@ -409,12 +410,11 @@ impl<'a> SignedDataBuilder<'a> {
 
 #[cfg(test)]
 mod tests {
-    use ring::signature::KeyPair;
     use {
         super::*,
-        crate::{asn1::rfc5958::OneAsymmetricKey, SignedData},
-        ring::signature::UnparsedPublicKey,
-        x509_certificate::{asn1time::Time, rfc3280::Name, rfc5280},
+        crate::SignedData,
+        ring::signature::{KeyPair, UnparsedPublicKey},
+        x509_certificate::{asn1time::Time, rfc3280::Name, rfc5280, rfc5958::OneAsymmetricKey},
     };
 
     const RSA_PRIVATE_KEY: &str = "-----BEGIN PRIVATE KEY-----\n\
@@ -471,17 +471,19 @@ mod tests {
 
     const APPLE_TIMESTAMP_URL: &str = "http://timestamp.apple.com/ts01";
 
-    fn rsa_private_key() -> SigningKey {
+    fn rsa_private_key() -> InMemorySigningKeyPair {
         let key_der = pem::parse(RSA_PRIVATE_KEY.as_bytes()).unwrap();
 
-        SigningKey::from(ring::signature::RsaKeyPair::from_pkcs8(&key_der.contents).unwrap())
+        InMemorySigningKeyPair::from(
+            ring::signature::RsaKeyPair::from_pkcs8(&key_der.contents).unwrap(),
+        )
     }
 
     fn rsa_cert() -> Certificate {
         Certificate::from_pem(X509_CERTIFICATE.as_bytes()).unwrap()
     }
 
-    fn self_signed_ecdsa_key_pair() -> (Certificate, SigningKey) {
+    fn self_signed_ecdsa_key_pair() -> (Certificate, InMemorySigningKeyPair) {
         let document = ring::signature::EcdsaKeyPair::generate_pkcs8(
             &ring::signature::ECDSA_P256_SHA256_ASN1_SIGNING,
             &ring::rand::SystemRandom::new(),
@@ -499,7 +501,7 @@ mod tests {
         )
         .unwrap();
 
-        let signing_key = SigningKey::from_pkcs8_der(document.as_ref(), None).unwrap();
+        let signing_key = InMemorySigningKeyPair::from_pkcs8_der(document.as_ref(), None).unwrap();
 
         let mut name = Name::default();
         name.append_common_name_utf8_string("test").unwrap();
@@ -555,7 +557,7 @@ mod tests {
         (cert, signing_key)
     }
 
-    fn self_signed_ed25519_key_pair() -> (Certificate, SigningKey) {
+    fn self_signed_ed25519_key_pair() -> (Certificate, InMemorySigningKeyPair) {
         let document =
             ring::signature::Ed25519KeyPair::generate_pkcs8(&ring::rand::SystemRandom::new())
                 .unwrap();
@@ -567,7 +569,7 @@ mod tests {
             .unwrap();
         let key_pair = ring::signature::Ed25519KeyPair::from_pkcs8(document.as_ref()).unwrap();
 
-        let signing_key = SigningKey::from_pkcs8_der(document.as_ref(), None).unwrap();
+        let signing_key = InMemorySigningKeyPair::from_pkcs8_der(document.as_ref(), None).unwrap();
 
         let mut name = Name::default();
         name.append_common_name_utf8_string("test").unwrap();

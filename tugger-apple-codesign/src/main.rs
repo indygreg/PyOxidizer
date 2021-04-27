@@ -45,11 +45,11 @@ use {
         signing::{SettingsScope, SigningSettings},
     },
     clap::{App, AppSettings, Arg, ArgMatches, SubCommand},
-    cryptographic_message_syntax::{Certificate, SignedData, SigningKey},
+    cryptographic_message_syntax::{Certificate, SignedData},
     goblin::mach::{Mach, MachO},
     slog::{error, o, warn, Drain},
     std::{convert::TryFrom, io::Write, path::PathBuf, str::FromStr},
-    x509_certificate::KeyAlgorithm,
+    x509_certificate::{InMemorySigningKeyPair, KeyAlgorithm},
 };
 
 #[cfg(target_os = "macos")]
@@ -783,9 +783,8 @@ fn command_sign(args: &ArgMatches) -> Result<(), AppleCodesignError> {
                     "CERTIFICATE" => {
                         public_certificates.push(Certificate::from_der(&pem.contents)?)
                     }
-                    "PRIVATE KEY" => {
-                        private_keys.push(SigningKey::from_pkcs8_der(&pem.contents, None)?)
-                    }
+                    "PRIVATE KEY" => private_keys
+                        .push(InMemorySigningKeyPair::from_pkcs8_der(&pem.contents, None)?),
                     tag => warn!(&log, "(unhandled PEM tag {}; ignoring)", tag),
                 }
             }

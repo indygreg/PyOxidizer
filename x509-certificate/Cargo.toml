@@ -13,5 +13,6 @@ readme = "README.md"
 [dependencies]
 bcder = "0.6"
 chrono = "0.4"
+pem = "0.8"
 ring = "0.16"
 thiserror = "1.0"

@@ -11,12 +11,13 @@ use {
         error::AppleCodesignError,
         macho::{Blob, DigestType, RequirementBlob},
     },
-    cryptographic_message_syntax::{Certificate, SigningKey},
+    cryptographic_message_syntax::Certificate,
     goblin::mach::cputype::{
         CpuType, CPU_TYPE_ARM, CPU_TYPE_ARM64, CPU_TYPE_ARM64_32, CPU_TYPE_X86_64,
     },
     reqwest::{IntoUrl, Url},
     std::{collections::BTreeMap, convert::TryFrom, fmt::Formatter},
+    x509_certificate::InMemorySigningKeyPair,
 };
 
 /// Denotes the scope for a setting.
@@ -239,7 +240,7 @@ impl TryFrom<&str> for SettingsScope {
 #[derive(Clone, Debug, Default)]
 pub struct SigningSettings<'key> {
     // Global settings.
-    signing_key: Option<(&'key SigningKey, Certificate)>,
+    signing_key: Option<(&'key InMemorySigningKeyPair, Certificate)>,
     certificates: Vec<Certificate>,
     time_stamp_url: Option<Url>,
     team_name: Option<String>,
@@ -273,7 +274,7 @@ impl<'key> SigningSettings<'key> {
     }
 
     /// Obtain the signing key to use.
-    pub fn signing_key(&self) -> Option<&(&'key SigningKey, Certificate)> {
+    pub fn signing_key(&self) -> Option<&(&'key InMemorySigningKeyPair, Certificate)> {
         self.signing_key.as_ref()
     }
 
@@ -283,7 +284,7 @@ impl<'key> SigningSettings<'key> {
     /// contain digests of content. This is known as "ad-hoc" mode. Binaries lacking a
     /// cryptographic signature or signed without a key-pair issued/signed by Apple may
     /// not run in all environments.
-    pub fn set_signing_key(&mut self, private: &'key SigningKey, public: Certificate) {
+    pub fn set_signing_key(&mut self, private: &'key InMemorySigningKeyPair, public: Certificate) {
         self.signing_key = Some((private, public));
     }
 

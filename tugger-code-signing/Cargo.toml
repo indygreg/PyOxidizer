@@ -40,3 +40,7 @@ path = "../tugger-file-manifest"
 [dependencies.tugger-windows-codesign]
 version = "0.3.0-pre"
 path = "../tugger-windows-codesign"
+
+[dependencies.x509-certificate]
+version = "0.1.0-pre"
+path = "../x509-certificate"

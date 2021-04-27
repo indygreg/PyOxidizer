@@ -7,10 +7,13 @@
 The types defined in this module are intended to be extremely low-level
 and only to be used for (de)serialization. See types outside the
 `asn1` module tree for higher-level functionality.
+
+Some RFC 5652 types are defined in the `x509-certificate` crate, which
+this crate relies on for certificate parsing functionality.
 */
 
 use {
-    crate::asn1::rfc3281::*,
+    crate::asn1::rfc3281::AttributeCertificate,
     bcder::{
         decode::{Constructed, Malformed, Source, Unimplemented},
         encode,
@@ -21,7 +24,7 @@ use {
         io::Write,
         ops::{Deref, DerefMut},
     },
-    x509_certificate::{asn1time::*, rfc3280::*, rfc5280::*},
+    x509_certificate::{asn1time::*, rfc3280::*, rfc5280::*, rfc5652::*},
 };
 
 /// The data content type.
@@ -669,99 +672,6 @@ impl UnsignedAttributes {
         encode::set_as(tag, encode::slice(&self.0, |x| x.clone().encode()))
     }
 }
-
-/// A single attribute.
-///
-/// ```ASN.1
-/// Attribute ::= SEQUENCE {
-///   attrType OBJECT IDENTIFIER,
-///   attrValues SET OF AttributeValue }
-/// ```
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct Attribute {
-    pub typ: Oid,
-    pub values: Vec<AttributeValue>,
-}
-
-impl Attribute {
-    pub fn take_opt_from<S: Source>(cons: &mut Constructed<S>) -> Result<Option<Self>, S::Err> {
-        cons.take_opt_sequence(|cons| {
-            let typ = Oid::take_from(cons)?;
-
-            let values = cons.take_set(|cons| {
-                let mut values = Vec::new();
-
-                while let Some(value) = AttributeValue::take_opt_from(cons)? {
-                    values.push(value);
-                }
-
-                Ok(values)
-            })?;
-
-            Ok(Self { typ, values })
-        })
-    }
-
-    pub fn encode_ref(&self) -> impl Values + '_ {
-        encode::sequence((self.typ.encode_ref(), encode::set(&self.values)))
-    }
-
-    pub fn encode(self) -> impl Values {
-        encode::sequence((self.typ.encode(), encode::set(self.values)))
-    }
-}
-
-#[derive(Clone, Debug)]
-pub struct AttributeValue(Captured);
-
-impl AttributeValue {
-    /// Construct a new instance from captured data.
-    pub fn new(captured: Captured) -> Self {
-        Self(captured)
-    }
-
-    pub fn take_opt_from<S: Source>(cons: &mut Constructed<S>) -> Result<Option<Self>, S::Err> {
-        let captured = cons.capture_all()?;
-
-        if captured.is_empty() {
-            Ok(None)
-        } else {
-            Ok(Some(Self(captured)))
-        }
-    }
-}
-
-impl Values for AttributeValue {
-    fn encoded_len(&self, mode: Mode) -> usize {
-        self.0.encoded_len(mode)
-    }
-
-    fn write_encoded<W: Write>(&self, mode: Mode, target: &mut W) -> Result<(), std::io::Error> {
-        self.0.write_encoded(mode, target)
-    }
-}
-
-impl Deref for AttributeValue {
-    type Target = Captured;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl DerefMut for AttributeValue {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
-
-impl PartialEq for AttributeValue {
-    fn eq(&self, other: &Self) -> bool {
-        self.0.as_slice() == other.0.as_slice()
-    }
-}
-
-impl Eq for AttributeValue {}
 
 pub type SignatureValue = OctetString;
 
