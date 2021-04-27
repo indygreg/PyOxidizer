@@ -821,9 +821,9 @@ impl Signer {
             return Ok(());
         }
 
-        let subject_rdn = cert.subject_dn()?;
-        let user_id = subject_rdn
-            .find_attribute_string(bcder::Oid(tugger_apple_codesign::OID_UID.as_ref().into()))
+        let user_id = cert
+            .subject()
+            .find_first_attribute_string(bcder::Oid(tugger_apple_codesign::OID_UID.as_ref().into()))
             .map_err(|e| {
                 SigningError::CertificateResolutionFailure(format!(
                     "failed to decode UID field in signing certificate: {:?}",

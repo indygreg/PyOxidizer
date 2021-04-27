@@ -414,8 +414,8 @@ mod tests {
     use {
         super::*,
         crate::{
-            asn1::{common::Time, rfc5280, rfc5958::OneAsymmetricKey},
-            RelativeDistinguishedName, SignedData,
+            asn1::{common::Time, rfc3280::Name, rfc5280, rfc5958::OneAsymmetricKey},
+            SignedData,
         },
         ring::signature::UnparsedPublicKey,
     };
@@ -504,9 +504,9 @@ mod tests {
 
         let signing_key = SigningKey::from_pkcs8_der(document.as_ref(), None).unwrap();
 
-        let mut rdn = RelativeDistinguishedName::default();
-        rdn.set_common_name("test").unwrap();
-        rdn.set_country_name("US").unwrap();
+        let mut name = Name::default();
+        name.append_common_name_utf8_string("test").unwrap();
+        name.append_country_utf8_string("US").unwrap();
 
         let now = chrono::Utc::now();
         let expires = now + chrono::Duration::hours(1);
@@ -518,12 +518,12 @@ mod tests {
                 algorithm: SignatureAlgorithm::EcdsaSha256.into(),
                 parameters: None,
             },
-            issuer: rdn.clone().into(),
+            issuer: name.clone().into(),
             validity: rfc5280::Validity {
                 not_before: Time::from(now),
                 not_after: Time::from(expires),
             },
-            subject: rdn.into(),
+            subject: name,
             subject_public_key_info: rfc5280::SubjectPublicKeyInfo {
                 algorithm: rfc5280::AlgorithmIdentifier {
                     algorithm: key_pair_asn1.private_key_algorithm.algorithm.clone(),
@@ -575,9 +575,9 @@ mod tests {
 
         let signing_key = SigningKey::from_pkcs8_der(document.as_ref(), None).unwrap();
 
-        let mut rdn = RelativeDistinguishedName::default();
-        rdn.set_common_name("test").unwrap();
-        rdn.set_country_name("US").unwrap();
+        let mut name = Name::default();
+        name.append_common_name_utf8_string("test").unwrap();
+        name.append_country_utf8_string("US").unwrap();
 
         let now = chrono::Utc::now();
         let expires = now + chrono::Duration::hours(1);
@@ -589,12 +589,12 @@ mod tests {
                 algorithm: SignatureAlgorithm::Ed25519.into(),
                 parameters: None,
             },
-            issuer: rdn.clone().into(),
+            issuer: name.clone(),
             validity: rfc5280::Validity {
                 not_before: Time::from(now),
                 not_after: Time::from(expires),
             },
-            subject: rdn.into(),
+            subject: name,
             subject_public_key_info: rfc5280::SubjectPublicKeyInfo {
                 algorithm: rfc5280::AlgorithmIdentifier {
                     algorithm: key_pair_asn1.private_key_algorithm.algorithm.clone(),

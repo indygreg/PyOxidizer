@@ -14,13 +14,14 @@ use {
     cryptographic_message_syntax::{
         asn1::{
             common::Time,
+            rfc3280::Name,
             rfc5280::{
                 AlgorithmIdentifier, Certificate, Extension, Extensions, SubjectPublicKeyInfo,
                 TbsCertificate, Validity, Version,
             },
             rfc5958::OneAsymmetricKey,
         },
-        CertificateKeyAlgorithm, RelativeDistinguishedName, SigningKey,
+        CertificateKeyAlgorithm, SigningKey,
     },
     ring::signature::{EcdsaKeyPair, Ed25519KeyPair, ECDSA_P256_SHA256_ASN1_SIGNING},
 };
@@ -220,12 +221,12 @@ pub fn create_self_signed_code_signing_certificate(
 
     let signing_key = SigningKey::from_pkcs8_der(key_pair_document.as_ref(), None)?;
 
-    let mut rdn = RelativeDistinguishedName::default();
-    rdn.set_common_name(common_name)
+    let mut name = Name::default();
+    name.append_common_name_utf8_string(common_name)
         .map_err(AppleCodesignError::CertificateCharset)?;
-    rdn.set_country_name(country_name)
+    name.append_country_utf8_string(country_name)
         .map_err(AppleCodesignError::CertificateCharset)?;
-    rdn.set_attribute_string(Oid(Bytes::from(OID_EMAIL_ADDRESS.as_ref())), email_address)
+    name.append_utf8_string(Oid(OID_EMAIL_ADDRESS.as_ref().into()), email_address)
         .map_err(AppleCodesignError::CertificateCharset)?;
 
     let now = chrono::Utc::now();
@@ -254,12 +255,12 @@ pub fn create_self_signed_code_signing_certificate(
         version: Version::V3,
         serial_number: 42.into(),
         signature: algorithm.default_signature_algorithm_identifier(),
-        issuer: rdn.clone().into(),
+        issuer: name.clone(),
         validity: Validity {
             not_before: Time::from(now),
             not_after: Time::from(expires),
         },
-        subject: rdn.into(),
+        subject: name,
         subject_public_key_info: SubjectPublicKeyInfo {
             algorithm: AlgorithmIdentifier {
                 algorithm: key_pair_asn1.private_key_algorithm.algorithm.clone(),

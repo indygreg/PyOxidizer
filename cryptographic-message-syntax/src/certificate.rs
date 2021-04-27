@@ -7,144 +7,18 @@
 use {
     crate::{
         asn1::{
-            rfc3280::{self, AttributeTypeAndValue, Name},
-            rfc4519::{
-                OID_COMMON_NAME, OID_COUNTRY_NAME, OID_ORGANIZATIONAL_UNIT_NAME,
-                OID_ORGANIZATION_NAME,
-            },
+            rfc3280::Name,
             rfc5280,
             rfc5652::{CertificateChoices, IssuerAndSerialNumber},
         },
         CertificateKeyAlgorithm, CmsError,
     },
-    bcder::{
-        decode::{self, Constructed},
-        encode::Values,
-        Integer, Mode, Oid,
-    },
-    bytes::Bytes,
+    bcder::{decode::Constructed, encode::Values, Integer, Mode},
     std::{
         cmp::Ordering,
         convert::{TryFrom, TryInto},
     },
 };
-
-/// Represents a Relative Distinguished Name (RDN).
-///
-/// These are what certificate subject and issuer fields are. Manipulating
-/// these yourself is hard. This type makes it easier.
-#[derive(Clone, Debug, Default)]
-pub struct RelativeDistinguishedName(rfc3280::RelativeDistinguishedName);
-
-impl RelativeDistinguishedName {
-    /// Obtain the Common Name (CN) field.
-    pub fn common_name(&self) -> Result<Option<String>, decode::Error> {
-        self.find_attribute_string(Oid(Bytes::from(OID_COMMON_NAME.as_ref())))
-    }
-
-    /// Set the value of the Common Name (CN) field.
-    pub fn set_common_name(&mut self, value: &str) -> Result<(), bcder::string::CharSetError> {
-        self.set_attribute_string(Oid(Bytes::from(OID_COMMON_NAME.as_ref())), value)
-    }
-
-    /// Obtain the Country Name (C) field.
-    pub fn country_name(&self) -> Result<Option<String>, decode::Error> {
-        self.find_attribute_string(Oid(Bytes::from(OID_COUNTRY_NAME.as_ref())))
-    }
-
-    /// Set the value of the Country Name (C) field.
-    pub fn set_country_name(&mut self, value: &str) -> Result<(), bcder::string::CharSetError> {
-        self.set_attribute_string(Oid(Bytes::from(OID_COUNTRY_NAME.as_ref())), value)
-    }
-
-    /// Obtain the Organization Name (O) field.
-    pub fn organization_name(&self) -> Result<Option<String>, decode::Error> {
-        self.find_attribute_string(Oid(Bytes::from(OID_ORGANIZATION_NAME.as_ref())))
-    }
-
-    /// Set the value of the Organization Name (O) field.
-    pub fn set_organization_name(
-        &mut self,
-        value: &str,
-    ) -> Result<(), bcder::string::CharSetError> {
-        self.set_attribute_string(Oid(Bytes::from(OID_ORGANIZATION_NAME.as_ref())), value)
-    }
-
-    /// Obtain the Organizational Unit Name (OU) field.
-    pub fn organizational_unit_name(&self) -> Result<Option<String>, decode::Error> {
-        self.find_attribute_string(Oid(Bytes::from(OID_ORGANIZATIONAL_UNIT_NAME.as_ref())))
-    }
-
-    /// Set the value of the Organizational Unit Name (OU) field.
-    pub fn set_organizational_unit_name(
-        &mut self,
-        value: &str,
-    ) -> Result<(), bcder::string::CharSetError> {
-        self.set_attribute_string(
-            Oid(Bytes::from(OID_ORGANIZATIONAL_UNIT_NAME.as_ref())),
-            value,
-        )
-    }
-
-    fn find_attribute(&self, attribute: Oid) -> Option<&AttributeTypeAndValue> {
-        self.0.iter().find(|attr| attr.typ == attribute)
-    }
-
-    fn find_attribute_mut(&mut self, attribute: Oid) -> Option<&mut AttributeTypeAndValue> {
-        self.0.iter_mut().find(|attr| attr.typ == attribute)
-    }
-
-    pub fn find_attribute_string(&self, attribute: Oid) -> Result<Option<String>, decode::Error> {
-        if let Some(attr) = self.find_attribute(attribute) {
-            Ok(Some(attr.value.to_string()?))
-        } else {
-            Ok(None)
-        }
-    }
-
-    pub fn set_attribute_string(
-        &mut self,
-        attribute: Oid,
-        value: &str,
-    ) -> Result<(), bcder::string::CharSetError> {
-        if let Some(attr) = self.find_attribute_mut(attribute.clone()) {
-            attr.set_utf8_string_value(value)
-        } else {
-            self.0
-                .push(AttributeTypeAndValue::new_utf8_string(attribute, value)?);
-
-            Ok(())
-        }
-    }
-}
-
-impl PartialEq for RelativeDistinguishedName {
-    fn eq(&self, other: &Self) -> bool {
-        self.0.eq(&other.0)
-    }
-}
-
-impl From<RelativeDistinguishedName> for Name {
-    fn from(rdn: RelativeDistinguishedName) -> Self {
-        let mut seq = rfc3280::RdnSequence::default();
-        seq.push(rdn.0);
-
-        Self::RdnSequence(seq)
-    }
-}
-
-impl TryFrom<&Name> for RelativeDistinguishedName {
-    type Error = CmsError;
-
-    fn try_from(name: &Name) -> Result<Self, Self::Error> {
-        match name {
-            Name::RdnSequence(seq) => match seq.iter().next() {
-                Some(rdn) => Ok(RelativeDistinguishedName(rdn.clone())),
-                None => Err(CmsError::DistinguishedNameParseError),
-            },
-        }
-    }
-}
 
 /// Defines an X.509 certificate used for signing data.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -226,21 +100,11 @@ impl Certificate {
         &self.subject
     }
 
-    /// Obtain the subject as a parsed object.
-    pub fn subject_dn(&self) -> Result<RelativeDistinguishedName, CmsError> {
-        RelativeDistinguishedName::try_from(&self.subject)
-    }
-
     /// The issuer of this certificate.
     ///
     /// (Used for identification purposes.)
     pub fn issuer(&self) -> &Name {
         &self.issuer
-    }
-
-    /// Obtain the issuer as a parsed object.
-    pub fn issuer_dn(&self) -> Result<RelativeDistinguishedName, CmsError> {
-        RelativeDistinguishedName::try_from(&self.issuer)
     }
 
     /// Obtain the public key associated with this certificate.

@@ -3,6 +3,9 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
+    crate::asn1::rfc4519::{
+        OID_COMMON_NAME, OID_COUNTRY_NAME, OID_ORGANIZATIONAL_UNIT_NAME, OID_ORGANIZATION_NAME,
+    },
     bcder::{
         decode::{Constructed, Error::Malformed, Error::Unimplemented, Source},
         encode,
@@ -361,12 +364,143 @@ impl Name {
             Self::RdnSequence(seq) => seq.encode_ref_as(tag),
         }
     }
+
+    /// Iterate over relative distinguished name entries in this instance.
+    pub fn iter_rdn(&self) -> impl Iterator<Item = &RelativeDistinguishedName> {
+        self.0.iter()
+    }
+
+    /// Iterate over all attributes in this Name.
+    pub fn iter_attributes(&self) -> impl Iterator<Item = &AttributeTypeAndValue> {
+        self.0.iter().map(|rdn| rdn.iter()).flatten()
+    }
+
+    /// Iterate over all attributes, yielding mutable entries.
+    pub fn iter_mut_attributes(&mut self) -> impl Iterator<Item = &mut AttributeTypeAndValue> {
+        self.0.iter_mut().map(|rdn| rdn.iter_mut()).flatten()
+    }
+
+    /// Iterate over all attributes in this Name having a given OID.
+    pub fn iter_by_oid(&self, oid: Oid) -> impl Iterator<Item = &AttributeTypeAndValue> {
+        self.iter_attributes().filter(move |atv| atv.typ == oid)
+    }
+
+    /// Iterate over all attributes in this Name having a given OID, yielding mutable instances.
+    pub fn iter_mut_by_oid(
+        &mut self,
+        oid: Oid,
+    ) -> impl Iterator<Item = &mut AttributeTypeAndValue> {
+        self.iter_mut_attributes().filter(move |atv| atv.typ == oid)
+    }
+
+    /// Iterate over all Common Name (CN) attributes.
+    pub fn iter_common_name(&self) -> impl Iterator<Item = &AttributeTypeAndValue> {
+        self.iter_by_oid(Oid(OID_COMMON_NAME.as_ref().into()))
+    }
+
+    /// Iterate over all Country (C) attributes.
+    pub fn iter_country(&self) -> impl Iterator<Item = &AttributeTypeAndValue> {
+        self.iter_by_oid(Oid(OID_COUNTRY_NAME.as_ref().into()))
+    }
+
+    /// Iterate over all Organization (O) attributes.
+    pub fn iter_organization(&self) -> impl Iterator<Item = &AttributeTypeAndValue> {
+        self.iter_by_oid(Oid(OID_ORGANIZATION_NAME.as_ref().into()))
+    }
+
+    /// Iterate over all Organizational Unit (OU) attributes.
+    pub fn iter_organizational_unit(&self) -> impl Iterator<Item = &AttributeTypeAndValue> {
+        self.iter_by_oid(Oid(OID_ORGANIZATIONAL_UNIT_NAME.as_ref().into()))
+    }
+
+    /// Find the first attribute given an OID search.
+    pub fn find_attribute(&self, oid: Oid) -> Option<&AttributeTypeAndValue> {
+        self.iter_by_oid(oid).next()
+    }
+
+    /// Attempt to obtain a string attribute given
+    pub fn find_first_attribute_string(
+        &self,
+        oid: Oid,
+    ) -> Result<Option<String>, bcder::decode::Error> {
+        if let Some(atv) = self.find_attribute(oid) {
+            Ok(Some(atv.to_string()?))
+        } else {
+            Ok(None)
+        }
+    }
+
+    /// Appends a Utf8String value for the given OID.
+    ///
+    /// The attribute will always be written to the first RDN. If no
+    /// RDN exists, an empty one will be created.
+    pub fn append_utf8_string(
+        &mut self,
+        oid: Oid,
+        value: &str,
+    ) -> Result<(), bcder::string::CharSetError> {
+        if self.0.is_empty() {
+            self.0.push(RelativeDistinguishedName::default());
+        }
+
+        if let Some(rdn) = self.0.get_mut(0) {
+            rdn.push(AttributeTypeAndValue::new_utf8_string(oid, value)?);
+        }
+
+        Ok(())
+    }
+
+    /// Append a Common Name (CN) attribute to the first RDN.
+    pub fn append_common_name_utf8_string(
+        &mut self,
+        value: &str,
+    ) -> Result<(), bcder::string::CharSetError> {
+        self.append_utf8_string(Oid(OID_COMMON_NAME.as_ref().into()), value)
+    }
+
+    /// Append a Country (C) attribute to the first RDN.
+    pub fn append_country_utf8_string(
+        &mut self,
+        value: &str,
+    ) -> Result<(), bcder::string::CharSetError> {
+        self.append_utf8_string(Oid(OID_COUNTRY_NAME.as_ref().into()), value)
+    }
+
+    /// Append an Organization Name (O) attribute to the first RDN.
+    pub fn append_organization_utf8_string(
+        &mut self,
+        value: &str,
+    ) -> Result<(), bcder::string::CharSetError> {
+        self.append_utf8_string(Oid(OID_ORGANIZATION_NAME.as_ref().into()), value)
+    }
+
+    /// Append an Organizational Unit (OU) attribute to the first RDN.
+    pub fn append_organizational_unit_utf8_string(
+        &mut self,
+        value: &str,
+    ) -> Result<(), bcder::string::CharSetError> {
+        self.append_utf8_string(Oid(OID_ORGANIZATIONAL_UNIT_NAME.as_ref().into()), value)
+    }
+}
+
+impl Default for Name {
+    fn default() -> Self {
+        Self::RdnSequence(RdnSequence::default())
+    }
 }
 
 impl Deref for Name {
     type Target = RdnSequence;
 
     fn deref(&self) -> &Self::Target {
+        match self {
+            Self::RdnSequence(seq) => seq,
+        }
+    }
+}
+
+impl DerefMut for Name {
+    fn deref_mut(&mut self) -> &mut Self::Target {
         match self {
             Self::RdnSequence(seq) => seq,
         }

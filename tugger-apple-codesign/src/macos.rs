@@ -7,7 +7,6 @@
 use {
     crate::error::AppleCodesignError,
     bcder::{ConstOid, Oid},
-    bytes::Bytes,
     cryptographic_message_syntax::Certificate,
     security_framework::{
         item::{ItemClass, ItemSearchOptions, Reference, SearchResult},
@@ -128,14 +127,11 @@ pub fn macos_keychain_find_certificate_chain(
     let start_cert: &Certificate = certs
         .iter()
         .find(|cert| {
-            if let Ok(subject) = cert.subject_dn() {
-                if let Ok(Some(value)) =
-                    subject.find_attribute_string(Oid(Bytes::from(OID_UID.as_ref())))
-                {
-                    value == user_id
-                } else {
-                    false
-                }
+            if let Ok(Some(value)) = cert
+                .subject()
+                .find_first_attribute_string(Oid(OID_UID.as_ref().into()))
+            {
+                value == user_id
             } else {
                 false
             }
