@@ -214,12 +214,10 @@ impl TryFrom<&Oid> for SignatureAlgorithm {
     }
 }
 
-impl TryFrom<&crate::asn1::rfc5652::SignatureAlgorithmIdentifier> for SignatureAlgorithm {
+impl TryFrom<&AlgorithmIdentifier> for SignatureAlgorithm {
     type Error = CmsError;
 
-    fn try_from(
-        v: &crate::asn1::rfc5652::SignatureAlgorithmIdentifier,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(v: &AlgorithmIdentifier) -> Result<Self, Self::Error> {
         Self::try_from(&v.algorithm)
     }
 }
@@ -243,7 +241,7 @@ impl From<SignatureAlgorithm> for Oid {
     }
 }
 
-impl From<SignatureAlgorithm> for crate::asn1::rfc5652::SignatureAlgorithmIdentifier {
+impl From<SignatureAlgorithm> for AlgorithmIdentifier {
     fn from(alg: SignatureAlgorithm) -> Self {
         Self {
             algorithm: alg.into(),

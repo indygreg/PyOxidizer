@@ -13,10 +13,9 @@ use {
             rfc5652::{
                 Attribute, AttributeValue, CertificateChoices, CertificateSet, CmsVersion,
                 DigestAlgorithmIdentifier, DigestAlgorithmIdentifiers, EncapsulatedContentInfo,
-                IssuerAndSerialNumber, SignatureAlgorithmIdentifier, SignatureValue,
-                SignedAttributes, SignedData, SignerIdentifier, SignerInfo, SignerInfos,
-                UnsignedAttributes, OID_CONTENT_TYPE, OID_ID_DATA, OID_ID_SIGNED_DATA,
-                OID_MESSAGE_DIGEST, OID_SIGNING_TIME,
+                IssuerAndSerialNumber, SignatureValue, SignedAttributes, SignedData,
+                SignerIdentifier, SignerInfo, SignerInfos, UnsignedAttributes, OID_CONTENT_TYPE,
+                OID_ID_DATA, OID_ID_SIGNED_DATA, OID_MESSAGE_DIGEST, OID_SIGNING_TIME,
             },
         },
         certificate::Certificate,
@@ -292,10 +291,7 @@ impl<'a> SignedDataBuilder<'a> {
 
             let signed_attributes = Some(signed_attributes);
 
-            let signature_algorithm = SignatureAlgorithmIdentifier {
-                algorithm: signer.signature_algorithm().into(),
-                parameters: None,
-            };
+            let signature_algorithm = signer.signature_algorithm().into();
 
             // The function for computing the signed attributes digested content
             // is on SignerInfo. So construct an instance so we can compute the
@@ -511,84 +507,12 @@ mod tests {
         let now = chrono::Utc::now();
         let expires = now + chrono::Duration::hours(1);
 
-        let tbs_certificate = rfc5280::TbsCertificate {
-            version: rfc5280::Version::V3,
-            serial_number: 42.into(),
-            signature: rfc5280::AlgorithmIdentifier {
-                algorithm: SignatureAlgorithm::EcdsaSha256.into(),
-                parameters: None,
-            },
-            issuer: name.clone().into(),
-            validity: rfc5280::Validity {
-                not_before: Time::from(now),
-                not_after: Time::from(expires),
-            },
-            subject: name,
-            subject_public_key_info: rfc5280::SubjectPublicKeyInfo {
-                algorithm: rfc5280::AlgorithmIdentifier {
-                    algorithm: key_pair_asn1.private_key_algorithm.algorithm.clone(),
-                    parameters: key_pair_asn1.private_key_algorithm.parameters,
-                },
-                subject_public_key: bcder::BitString::new(
-                    0,
-                    Bytes::copy_from_slice(key_pair.public_key().as_ref()),
-                ),
-            },
-            issuer_unique_id: None,
-            subject_unique_id: None,
-            extensions: None,
-        };
-
-        let mut cert_ber = Vec::<u8>::new();
-        tbs_certificate
-            .encode_ref()
-            .write_encoded(bcder::Mode::Ber, &mut cert_ber)
-            .unwrap();
-
-        let signature = signing_key.sign(&cert_ber).unwrap();
-
-        let cert = rfc5280::Certificate {
-            tbs_certificate,
-            signature_algorithm: rfc5280::AlgorithmIdentifier {
-                algorithm: SignatureAlgorithm::EcdsaSha256.into(),
-                parameters: None,
-            },
-            signature: bcder::BitString::new(0, Bytes::copy_from_slice(&signature)),
-        };
-
-        let cert = Certificate::from_parsed_asn1(cert).unwrap();
-
-        (cert, signing_key)
-    }
-
-    fn self_signed_ed25519_key_pair() -> (Certificate, SigningKey) {
-        let document =
-            ring::signature::Ed25519KeyPair::generate_pkcs8(&ring::rand::SystemRandom::new())
-                .unwrap();
-
-        let key_pair_asn1 =
-            bcder::decode::Constructed::decode(document.as_ref(), bcder::Mode::Der, |cons| {
-                OneAsymmetricKey::take_from(cons)
-            })
-            .unwrap();
-        let key_pair = ring::signature::Ed25519KeyPair::from_pkcs8(document.as_ref()).unwrap();
-
-        let signing_key = SigningKey::from_pkcs8_der(document.as_ref(), None).unwrap();
-
-        let mut name = Name::default();
-        name.append_common_name_utf8_string("test").unwrap();
-        name.append_country_utf8_string("US").unwrap();
-
-        let now = chrono::Utc::now();
-        let expires = now + chrono::Duration::hours(1);
+        let signature_algorithm = SignatureAlgorithm::EcdsaSha256;
 
         let tbs_certificate = rfc5280::TbsCertificate {
             version: rfc5280::Version::V3,
             serial_number: 42.into(),
-            signature: rfc5280::AlgorithmIdentifier {
-                algorithm: SignatureAlgorithm::Ed25519.into(),
-                parameters: None,
-            },
+            signature: signature_algorithm.into(),
             issuer: name.clone(),
             validity: rfc5280::Validity {
                 not_before: Time::from(now),
@@ -620,10 +544,74 @@ mod tests {
 
         let cert = rfc5280::Certificate {
             tbs_certificate,
-            signature_algorithm: rfc5280::AlgorithmIdentifier {
-                algorithm: SignatureAlgorithm::Ed25519.into(),
-                parameters: None,
+            signature_algorithm: signature_algorithm.into(),
+            signature: bcder::BitString::new(0, Bytes::copy_from_slice(&signature)),
+        };
+
+        let cert = Certificate::from_parsed_asn1(cert).unwrap();
+
+        (cert, signing_key)
+    }
+
+    fn self_signed_ed25519_key_pair() -> (Certificate, SigningKey) {
+        let document =
+            ring::signature::Ed25519KeyPair::generate_pkcs8(&ring::rand::SystemRandom::new())
+                .unwrap();
+
+        let key_pair_asn1 =
+            bcder::decode::Constructed::decode(document.as_ref(), bcder::Mode::Der, |cons| {
+                OneAsymmetricKey::take_from(cons)
+            })
+            .unwrap();
+        let key_pair = ring::signature::Ed25519KeyPair::from_pkcs8(document.as_ref()).unwrap();
+
+        let signing_key = SigningKey::from_pkcs8_der(document.as_ref(), None).unwrap();
+
+        let mut name = Name::default();
+        name.append_common_name_utf8_string("test").unwrap();
+        name.append_country_utf8_string("US").unwrap();
+
+        let now = chrono::Utc::now();
+        let expires = now + chrono::Duration::hours(1);
+
+        let signature_algorithm = SignatureAlgorithm::Ed25519;
+
+        let tbs_certificate = rfc5280::TbsCertificate {
+            version: rfc5280::Version::V3,
+            serial_number: 42.into(),
+            signature: signature_algorithm.into(),
+            issuer: name.clone(),
+            validity: rfc5280::Validity {
+                not_before: Time::from(now),
+                not_after: Time::from(expires),
             },
+            subject: name,
+            subject_public_key_info: rfc5280::SubjectPublicKeyInfo {
+                algorithm: rfc5280::AlgorithmIdentifier {
+                    algorithm: key_pair_asn1.private_key_algorithm.algorithm.clone(),
+                    parameters: key_pair_asn1.private_key_algorithm.parameters,
+                },
+                subject_public_key: bcder::BitString::new(
+                    0,
+                    Bytes::copy_from_slice(key_pair.public_key().as_ref()),
+                ),
+            },
+            issuer_unique_id: None,
+            subject_unique_id: None,
+            extensions: None,
+        };
+
+        let mut cert_ber = Vec::<u8>::new();
+        tbs_certificate
+            .encode_ref()
+            .write_encoded(bcder::Mode::Ber, &mut cert_ber)
+            .unwrap();
+
+        let signature = signing_key.sign(&cert_ber).unwrap();
+
+        let cert = rfc5280::Certificate {
+            tbs_certificate,
+            signature_algorithm: signature_algorithm.into(),
             signature: bcder::BitString::new(0, Bytes::copy_from_slice(&signature)),
         };
 
