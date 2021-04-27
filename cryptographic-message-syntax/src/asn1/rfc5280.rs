@@ -117,7 +117,9 @@ impl Values for AlgorithmParameter {
     }
 }
 
-/// Certificate.
+/// An X.509 certificate.
+///
+/// This is the main data structure representing an X.509 certificate.
 ///
 /// ```ASN.1
 /// Certificate  ::=  SEQUENCE  {
@@ -156,9 +158,19 @@ impl Certificate {
             self.signature.encode_ref(),
         ))
     }
+
+    /// Iterate over extensions defined on this certificate.
+    pub fn iter_extensions(&self) -> impl Iterator<Item = &Extension> {
+        self.tbs_certificate
+            .extensions
+            .iter()
+            .flat_map(|x| x.iter())
+    }
 }
 
 /// TBS Certificate.
+///
+/// This holds most of the metadata within an X.509 certificate.
 ///
 /// ```ASN.1
 /// TBSCertificate  ::=  SEQUENCE  {
