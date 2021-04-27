@@ -271,6 +271,7 @@ pub fn create_self_signed_code_signing_certificate(
         issuer_unique_id: None,
         subject_unique_id: None,
         extensions: Some(extensions),
+        raw_data: None,
     };
 
     // We need to serialize the TBS certificate so we can sign it with the private

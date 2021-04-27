@@ -6,6 +6,7 @@
 
 use {
     crate::{
+        algorithm::SignatureAlgorithm,
         asn1::{
             rfc3280::Name,
             rfc5280,
@@ -160,7 +161,7 @@ impl Certificate {
         // Self signed certificate has no ordering.
         if self.subject == self.issuer {
             Ordering::Equal
-        // We were issued by the other certificate. The issuer comes first.
+            // We were issued by the other certificate. The issuer comes first.
         } else if self.issuer == other.subject {
             Ordering::Greater
         } else if self.subject == other.issuer {
@@ -169,6 +170,38 @@ impl Certificate {
         } else {
             Ordering::Equal
         }
+    }
+
+    /// Verifies the signature of this certificate using a [rfc5280::SubjectPublicKeyInfo] instance.
+    ///
+    /// The [rfc5280::SubjectPublicKey] should come from another certificate, presumably
+    /// the signer of this one. If this is a self-signed certificate, it comes from self.
+    /// And because we implement `AsRef<SubjectPublicKey>`, you can pass `self` into
+    /// this function to verify a self-signed certificate.
+    pub fn verify_signature(
+        &self,
+        other: impl Into<rfc5280::SubjectPublicKeyInfo>,
+    ) -> Result<(), CmsError> {
+        let tbs_data = self
+            .raw_cert
+            .tbs_certificate
+            .raw_data
+            .as_ref()
+            .ok_or(CmsError::CertificateMissingData)?;
+
+        let spki = other.into();
+
+        let signature_algorithm = SignatureAlgorithm::try_from(&self.raw_cert.signature_algorithm)?;
+        let verify_algorithm = signature_algorithm.as_verification_algorithm();
+
+        let key = ring::signature::UnparsedPublicKey::new(
+            verify_algorithm,
+            spki.subject_public_key.octet_bytes(),
+        );
+        let signature = self.raw_cert.signature.octet_bytes();
+
+        key.verify(tbs_data, signature.as_ref())
+            .map_err(|_| CmsError::SignatureVerificationError)
     }
 }
 
@@ -210,6 +243,21 @@ impl From<Certificate> for IssuerAndSerialNumber {
             issuer: cert.subject,
             serial_number: cert.serial_number,
         }
+    }
+}
+
+impl AsRef<rfc5280::SubjectPublicKeyInfo> for Certificate {
+    fn as_ref(&self) -> &rfc5280::SubjectPublicKeyInfo {
+        &self.raw_cert.tbs_certificate.subject_public_key_info
+    }
+}
+
+impl From<&Certificate> for rfc5280::SubjectPublicKeyInfo {
+    fn from(cert: &Certificate) -> rfc5280::SubjectPublicKeyInfo {
+        cert.raw_cert
+            .tbs_certificate
+            .subject_public_key_info
+            .clone()
     }
 }
 

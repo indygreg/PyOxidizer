@@ -200,38 +200,60 @@ pub struct TbsCertificate {
     pub issuer_unique_id: Option<UniqueIdentifier>,
     pub subject_unique_id: Option<UniqueIdentifier>,
     pub extensions: Option<Extensions>,
+
+    /// Raw bytes this instance was constructed from.
+    ///
+    /// This is what signature verification should be performed against.
+    pub raw_data: Option<Vec<u8>>,
 }
 
 impl TbsCertificate {
     pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, S::Err> {
-        cons.take_sequence(|cons| {
-            let version = cons.take_constructed_if(Tag::CTX_0, Version::take_from)?;
-            let serial_number = CertificateSerialNumber::take_from(cons)?;
-            let signature = AlgorithmIdentifier::take_from(cons)?;
-            let issuer = Name::take_from(cons)?;
-            let validity = Validity::take_from(cons)?;
-            let subject = Name::take_from(cons)?;
-            let subject_public_key_info = SubjectPublicKeyInfo::take_from(cons)?;
-            let issuer_unique_id =
-                cons.take_opt_constructed_if(Tag::CTX_1, |cons| UniqueIdentifier::take_from(cons))?;
-            let subject_unique_id =
-                cons.take_opt_constructed_if(Tag::CTX_2, |cons| UniqueIdentifier::take_from(cons))?;
-            let extensions =
-                cons.take_opt_constructed_if(Tag::CTX_3, |cons| Extensions::take_from(cons))?;
+        // The TbsCertificate data is what's signed by the issuing certificate. To
+        // facilitate signature verification, we stash away the raw data so they
+        // can be accessed later.
+        let mut res = None;
 
-            Ok(Self {
-                version,
-                serial_number,
-                signature,
-                issuer,
-                validity,
-                subject,
-                subject_public_key_info,
-                issuer_unique_id,
-                subject_unique_id,
-                extensions,
+        let captured = cons.capture(|cons| {
+            cons.take_sequence(|cons| {
+                let version = cons.take_constructed_if(Tag::CTX_0, Version::take_from)?;
+                let serial_number = CertificateSerialNumber::take_from(cons)?;
+                let signature = AlgorithmIdentifier::take_from(cons)?;
+                let issuer = Name::take_from(cons)?;
+                let validity = Validity::take_from(cons)?;
+                let subject = Name::take_from(cons)?;
+                let subject_public_key_info = SubjectPublicKeyInfo::take_from(cons)?;
+                let issuer_unique_id = cons.take_opt_constructed_if(Tag::CTX_1, |cons| {
+                    UniqueIdentifier::take_from(cons)
+                })?;
+                let subject_unique_id = cons.take_opt_constructed_if(Tag::CTX_2, |cons| {
+                    UniqueIdentifier::take_from(cons)
+                })?;
+                let extensions =
+                    cons.take_opt_constructed_if(Tag::CTX_3, |cons| Extensions::take_from(cons))?;
+
+                res = Some(Self {
+                    version,
+                    serial_number,
+                    signature,
+                    issuer,
+                    validity,
+                    subject,
+                    subject_public_key_info,
+                    issuer_unique_id,
+                    subject_unique_id,
+                    extensions,
+                    raw_data: None,
+                });
+
+                Ok(())
             })
-        })
+        })?;
+
+        let mut res = res.unwrap();
+        res.raw_data = Some(captured.to_vec());
+
+        Ok(res)
     }
 
     pub fn encode_ref(&self) -> impl Values + '_ {

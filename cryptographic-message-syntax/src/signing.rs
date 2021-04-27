@@ -532,6 +532,7 @@ mod tests {
             issuer_unique_id: None,
             subject_unique_id: None,
             extensions: None,
+            raw_data: None,
         };
 
         let mut cert_ber = Vec::<u8>::new();
@@ -599,6 +600,7 @@ mod tests {
             issuer_unique_id: None,
             subject_unique_id: None,
             extensions: None,
+            raw_data: None,
         };
 
         let mut cert_ber = Vec::<u8>::new();
@@ -618,6 +620,20 @@ mod tests {
         let cert = Certificate::from_parsed_asn1(cert).unwrap();
 
         (cert, signing_key)
+    }
+
+    #[test]
+    fn ecdsa_self_signed_certificate_verification() {
+        let (cert, _) = self_signed_ecdsa_key_pair();
+        let cert = Certificate::from_der(&cert.as_der().unwrap()).unwrap();
+        cert.verify_signature(&cert).unwrap();
+    }
+
+    #[test]
+    fn ed25519_self_signed_certificate_verification() {
+        let (cert, _) = self_signed_ed25519_key_pair();
+        let cert = Certificate::from_der(&cert.as_der().unwrap()).unwrap();
+        cert.verify_signature(&cert).unwrap();
     }
 
     #[test]
