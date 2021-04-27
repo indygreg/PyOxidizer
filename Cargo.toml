@@ -26,4 +26,5 @@ members = [
     'tugger-windows',
     'tugger-windows-codesign',
     'tugger-wix',
+    'x509-certificate',
 ]
