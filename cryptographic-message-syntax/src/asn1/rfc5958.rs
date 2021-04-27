@@ -5,7 +5,7 @@
 //! ASN.1 primitives from RFC 5958.
 
 use {
-    crate::asn1::{rfc5280::AlgorithmIdentifier, rfc5652::Attribute, rfc5915::EcPrivateKey},
+    crate::asn1::{rfc5652::Attribute, rfc5915::EcPrivateKey},
     bcder::{
         decode::{Constructed, Malformed, Source},
         encode::{self, PrimitiveContent, Values},
@@ -15,6 +15,7 @@ use {
         convert::TryFrom,
         ops::{Deref, DerefMut},
     },
+    x509_certificate::rfc5280::AlgorithmIdentifier,
 };
 
 /// A single asymmetric key.

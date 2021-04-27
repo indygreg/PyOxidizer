@@ -8,7 +8,6 @@ use {
     crate::{
         algorithm::{DigestAlgorithm, SignatureAlgorithm, SigningKey},
         asn1::{
-            common::UtcTime,
             rfc3161::OID_TIME_STAMP_TOKEN,
             rfc5652::{
                 Attribute, AttributeValue, CertificateChoices, CertificateSet, CmsVersion,
@@ -29,6 +28,7 @@ use {
     bytes::Bytes,
     reqwest::IntoUrl,
     std::{collections::HashSet, convert::TryFrom},
+    x509_certificate::{asn1time::UtcTime, rfc5280},
 };
 
 /// Builder type to construct an entity that will sign some data.
@@ -143,7 +143,7 @@ pub struct SignedDataBuilder<'a> {
     signers: Vec<SignerBuilder<'a>>,
 
     /// X.509 certificates to add to the payload.
-    certificates: Vec<crate::asn1::rfc5280::Certificate>,
+    certificates: Vec<rfc5280::Certificate>,
 
     /// The OID to use for `ContentInfo.contentType`.
     ///
@@ -183,7 +183,7 @@ impl<'a> SignedDataBuilder<'a> {
     }
 
     /// Add a certificate as defined by parsed ASN.1.
-    pub fn certificate_asn1(mut self, cert: crate::asn1::rfc5280::Certificate) -> Self {
+    pub fn certificate_asn1(mut self, cert: rfc5280::Certificate) -> Self {
         if !self.certificates.iter().any(|x| x == &cert) {
             self.certificates.push(cert);
         }
@@ -409,11 +409,9 @@ mod tests {
     use ring::signature::KeyPair;
     use {
         super::*,
-        crate::{
-            asn1::{common::Time, rfc3280::Name, rfc5280, rfc5958::OneAsymmetricKey},
-            SignedData,
-        },
+        crate::{asn1::rfc5958::OneAsymmetricKey, SignedData},
         ring::signature::UnparsedPublicKey,
+        x509_certificate::{asn1time::Time, rfc3280::Name, rfc5280},
     };
 
     const RSA_PRIVATE_KEY: &str = "-----BEGIN PRIVATE KEY-----\n\

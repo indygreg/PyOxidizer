@@ -2,6 +2,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+//! ASN.1 primitives related to time types.
+
 use {
     bcder::{
         decode::{Constructed, Malformed, Primitive, Source},

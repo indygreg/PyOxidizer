@@ -3,10 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    crate::{
-        asn1::{rfc5280::AlgorithmIdentifier, rfc5958::OneAsymmetricKey},
-        CmsError,
-    },
+    crate::{asn1::rfc5958::OneAsymmetricKey, CmsError},
     bcder::{decode::Constructed, ConstOid, Oid},
     bytes::Bytes,
     ring::{
@@ -14,6 +11,7 @@ use {
         signature::{EcdsaKeyPair, Ed25519KeyPair, KeyPair, RsaKeyPair, VerificationAlgorithm},
     },
     std::convert::TryFrom,
+    x509_certificate::rfc5280::AlgorithmIdentifier,
 };
 
 /// SHA-256 digest algorithm.
@@ -305,10 +303,10 @@ impl TryFrom<&Oid> for CertificateKeyAlgorithm {
     }
 }
 
-impl TryFrom<&crate::asn1::rfc5280::AlgorithmIdentifier> for CertificateKeyAlgorithm {
+impl TryFrom<&AlgorithmIdentifier> for CertificateKeyAlgorithm {
     type Error = CmsError;
 
-    fn try_from(v: &crate::asn1::rfc5280::AlgorithmIdentifier) -> Result<Self, Self::Error> {
+    fn try_from(v: &AlgorithmIdentifier) -> Result<Self, Self::Error> {
         Self::try_from(&v.algorithm)
     }
 }

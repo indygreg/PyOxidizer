@@ -2,10 +2,10 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-/*! ASN.1 type definitions from RFC 5280. */
+/*! ASN.1 types defined RFC 5280. */
 
 use {
-    crate::asn1::{common::*, rfc3280::*},
+    crate::{asn1time::*, rfc3280::*},
     bcder::{
         decode::{Constructed, Malformed, Source, Unimplemented},
         encode,

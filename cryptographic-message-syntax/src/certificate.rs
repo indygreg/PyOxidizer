@@ -7,11 +7,7 @@
 use {
     crate::{
         algorithm::SignatureAlgorithm,
-        asn1::{
-            rfc3280::Name,
-            rfc5280,
-            rfc5652::{CertificateChoices, IssuerAndSerialNumber},
-        },
+        asn1::rfc5652::{CertificateChoices, IssuerAndSerialNumber},
         CertificateKeyAlgorithm, CmsError,
     },
     bcder::{decode::Constructed, encode::Values, Integer, Mode},
@@ -19,6 +15,7 @@ use {
         cmp::Ordering,
         convert::{TryFrom, TryInto},
     },
+    x509_certificate::{rfc3280::Name, rfc5280},
 };
 
 /// Defines an X.509 certificate used for signing data.
@@ -61,7 +58,7 @@ impl Certificate {
 
     pub fn from_der(data: &[u8]) -> Result<Self, CmsError> {
         let cert = Constructed::decode(data, Mode::Der, |cons| {
-            crate::asn1::rfc5280::Certificate::take_from(cons)
+            rfc5280::Certificate::take_from(cons)
         })?;
 
         Ok(Self {
@@ -117,7 +114,7 @@ impl Certificate {
     }
 
     /// Obtain the parsed certificate data structure backing this instance.
-    pub fn raw_certificate(&self) -> &crate::asn1::rfc5280::Certificate {
+    pub fn raw_certificate(&self) -> &rfc5280::Certificate {
         &self.raw_cert
     }
 
@@ -216,10 +213,10 @@ impl TryFrom<&CertificateChoices> for Certificate {
     }
 }
 
-impl TryFrom<&crate::asn1::rfc5280::Certificate> for Certificate {
+impl TryFrom<&rfc5280::Certificate> for Certificate {
     type Error = CmsError;
 
-    fn try_from(cert: &crate::asn1::rfc5280::Certificate) -> Result<Self, Self::Error> {
+    fn try_from(cert: &rfc5280::Certificate) -> Result<Self, Self::Error> {
         let serial_number = cert.tbs_certificate.serial_number.clone();
         let subject = cert.tbs_certificate.subject.clone();
         let issuer = cert.tbs_certificate.issuer.clone();
@@ -271,10 +268,10 @@ pub struct CertificatePublicKey {
     pub key: Vec<u8>,
 }
 
-impl TryFrom<&crate::asn1::rfc5280::SubjectPublicKeyInfo> for CertificatePublicKey {
+impl TryFrom<&rfc5280::SubjectPublicKeyInfo> for CertificatePublicKey {
     type Error = CmsError;
 
-    fn try_from(info: &crate::asn1::rfc5280::SubjectPublicKeyInfo) -> Result<Self, Self::Error> {
+    fn try_from(info: &rfc5280::SubjectPublicKeyInfo) -> Result<Self, Self::Error> {
         let algorithm = CertificateKeyAlgorithm::try_from(&info.algorithm)?;
         let key = info.subject_public_key.octet_bytes().to_vec();
 

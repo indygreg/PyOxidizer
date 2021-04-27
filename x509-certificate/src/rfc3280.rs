@@ -2,8 +2,10 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+//! ASN.1 types defined in RFC 3280.
+
 use {
-    crate::asn1::rfc4519::{
+    crate::rfc4519::{
         OID_COMMON_NAME, OID_COUNTRY_NAME, OID_ORGANIZATIONAL_UNIT_NAME, OID_ORGANIZATION_NAME,
     },
     bcder::{

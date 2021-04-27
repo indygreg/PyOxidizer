@@ -88,7 +88,6 @@ use {
     crate::{
         asn1::{
             rfc3161::OID_TIME_STAMP_TOKEN,
-            rfc3280::Name,
             rfc5652::{
                 SignerIdentifier, Time, OID_CONTENT_TYPE, OID_MESSAGE_DIGEST, OID_SIGNING_TIME,
             },
@@ -99,6 +98,7 @@ use {
     pem::PemError,
     ring::{digest::Digest, signature::UnparsedPublicKey},
     std::{collections::HashSet, convert::TryFrom, fmt::Display, ops::Deref},
+    x509_certificate::rfc3280::Name,
 };
 
 #[derive(Debug)]

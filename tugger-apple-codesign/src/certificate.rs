@@ -12,18 +12,17 @@ use {
     },
     bytes::Bytes,
     cryptographic_message_syntax::{
-        asn1::{
-            common::Time,
-            rfc3280::Name,
-            rfc5280::{
-                AlgorithmIdentifier, Certificate, Extension, Extensions, SubjectPublicKeyInfo,
-                TbsCertificate, Validity, Version,
-            },
-            rfc5958::OneAsymmetricKey,
-        },
-        CertificateKeyAlgorithm, SigningKey,
+        asn1::rfc5958::OneAsymmetricKey, CertificateKeyAlgorithm, SigningKey,
     },
     ring::signature::{EcdsaKeyPair, Ed25519KeyPair, ECDSA_P256_SHA256_ASN1_SIGNING},
+    x509_certificate::{
+        asn1time::Time,
+        rfc3280::Name,
+        rfc5280::{
+            AlgorithmIdentifier, Certificate, Extension, Extensions, SubjectPublicKeyInfo,
+            TbsCertificate, Validity, Version,
+        },
+    },
 };
 
 /// Key Usage extension.

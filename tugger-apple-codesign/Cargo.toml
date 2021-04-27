@@ -44,5 +44,9 @@ version = "0.2.0-pre"
 path = "../tugger-apple-bundle"
 version = "0.3.0-pre"
 
+[dependencies.x509-certificate]
+path = "../x509-certificate"
+version = "0.1.0-pre"
+
 [target.'cfg(target_os = "macos")'.dependencies]
 security-framework = { version = "2.2", features = ["OSX_10_12"] }

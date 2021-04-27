@@ -10,7 +10,7 @@ and only to be used for (de)serialization. See types outside the
 */
 
 use {
-    crate::asn1::{common::*, rfc3280::*, rfc3281::*, rfc5280::*},
+    crate::asn1::rfc3281::*,
     bcder::{
         decode::{Constructed, Malformed, Source, Unimplemented},
         encode,
@@ -21,6 +21,7 @@ use {
         io::Write,
         ops::{Deref, DerefMut},
     },
+    x509_certificate::{asn1time::*, rfc3280::*, rfc5280::*},
 };
 
 /// The data content type.

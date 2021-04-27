@@ -3,11 +3,11 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    crate::asn1::{common::*, rfc3280::*, rfc5280::*},
     bcder::{
         decode::{Constructed, Source, Unimplemented},
         BitString, Oid,
     },
+    x509_certificate::{asn1time::*, rfc3280::*, rfc5280::*},
 };
 
 /// Attribute certificate.

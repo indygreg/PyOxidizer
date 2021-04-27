@@ -669,6 +669,7 @@ dependencies = [
  "pem",
  "reqwest",
  "ring",
+ "x509-certificate",
 ]
 
 [[package]]
@@ -3719,6 +3720,7 @@ dependencies = [
  "slog-term",
  "thiserror",
  "tugger-apple-bundle",
+ "x509-certificate",
  "yasna",
 ]
 
@@ -4276,6 +4278,10 @@ dependencies = [
 [[package]]
 name = "x509-certificate"
 version = "0.1.0-pre"
+dependencies = [
+ "bcder",
+ "chrono",
+]
 
 [[package]]
 name = "x509-parser"
