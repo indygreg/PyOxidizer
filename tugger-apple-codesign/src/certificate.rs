@@ -5,12 +5,13 @@
 //! Functionality related to certificates.
 
 use {
-    crate::error::AppleCodesignError,
+    crate::{apple_certificates::KnownCertificate, error::AppleCodesignError},
     bcder::{
         encode::{PrimitiveContent, Values},
         ConstOid, Mode, Oid,
     },
     bytes::Bytes,
+    std::convert::TryFrom,
     x509_certificate::{
         CapturedX509Certificate, InMemorySigningKeyPair, KeyAlgorithm, X509CertificateBuilder,
     },
@@ -194,6 +195,12 @@ const OID_CA_EXTENSION_APPLE_TIMESTAMP: ConstOid = Oid(&[42, 134, 72, 134, 247, 
 const OID_CA_EXTENSION_DEVELOPER_AUTHENTICATION: ConstOid =
     Oid(&[42, 134, 72, 134, 247, 99, 100, 6, 2, 11]);
 
+/// Apple Application Integration CA - G3
+///
+/// 1.2.840.113635.100.6.2.14
+const OID_CA_EXTENSION_APPLE_APPLICATION_INTEGRATION_G3: ConstOid =
+    Oid(&[42, 134, 72, 134, 247, 99, 100, 6, 2, 14]);
+
 /// Apple Worldwide Developer Relations CA - G2
 ///
 /// 1.2.840.113635.100.6.2.15
@@ -206,12 +213,13 @@ const OID_CA_EXTENSION_APPLE_WORLDWIDE_DEVELOPER_RELATIONS_G2: ConstOid =
 const OID_CA_EXTENSION_APPLE_SOFTWARE_UPDATE_CERTIFICATION: ConstOid =
     Oid(&[42, 134, 72, 134, 247, 99, 100, 6, 2, 19]);
 
-const ALL_OID_CA_EXTENSIONS: &[&ConstOid; 7] = &[
+const ALL_OID_CA_EXTENSIONS: &[&ConstOid; 8] = &[
     &OID_CA_EXTENSION_APPLE_WORLDWIDE_DEVELOPER_RELATIONS,
     &OID_CA_EXTENSION_APPLE_APPLICATION_INTEGRATION,
     &OID_CA_EXTENSION_DEVELOPER_ID,
     &OID_CA_EXTENSION_APPLE_TIMESTAMP,
     &OID_CA_EXTENSION_DEVELOPER_AUTHENTICATION,
+    &OID_CA_EXTENSION_APPLE_APPLICATION_INTEGRATION_G3,
     &OID_CA_EXTENSION_APPLE_WORLDWIDE_DEVELOPER_RELATIONS_G2,
     &OID_CA_EXTENSION_APPLE_SOFTWARE_UPDATE_CERTIFICATION,
 ];
@@ -224,6 +232,7 @@ const ALL_OID_CA_EXTENSIONS: &[&ConstOid; 7] = &[
 ///
 /// This type describes the different code signing key usages defined on Apple
 /// platforms.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum ExtendedKeyUsagePurpose {
     /// Code signing.
     CodeSigning,
@@ -254,6 +263,7 @@ impl ExtendedKeyUsagePurpose {
 }
 
 /// Describes one of the many X.509 certificate extensions found on Apple code signing certificates.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum CodeSigningCertificateExtension {
     /// Apple Signing.
     ///
@@ -354,6 +364,7 @@ impl CodeSigningCertificateExtension {
 ///
 /// Typically, you'll want to apply at most one of these extensions to a
 /// new certificate in order to mark it as compatible for code signing.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum KeyExtensions {
     /// Mac Installer Distribution.
     ///
@@ -404,6 +415,7 @@ pub enum KeyExtensions {
 ///
 /// Apple's CA certificates have extensions that appear to identify the role of
 /// that CA. This enumeration defines those.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum CertificateAuthorityExtension {
     /// Apple Worldwide Developer Relations.
     ///
@@ -422,6 +434,9 @@ pub enum CertificateAuthorityExtension {
     /// Developer Authentication Certification Authority.
     DeveloperAuthentication,
 
+    /// Application Application Integration CA - G3.
+    AppleApplicationIntegrationG3,
+
     /// Apple Worldwide Developer Relations CA - G2.
     AppleWorldwideDeveloperRelationsG2,
 
@@ -431,7 +446,7 @@ pub enum CertificateAuthorityExtension {
 
 impl CertificateAuthorityExtension {
     /// All the known OIDs constituting Apple CA extensions.
-    pub fn all_oids(&self) -> &[&ConstOid] {
+    pub fn all_oids() -> &'static [&'static ConstOid] {
         ALL_OID_CA_EXTENSIONS
     }
 
@@ -444,6 +459,9 @@ impl CertificateAuthorityExtension {
             Self::DeveloperId => OID_CA_EXTENSION_DEVELOPER_ID,
             Self::AppleTimestamp => OID_CA_EXTENSION_APPLE_TIMESTAMP,
             Self::DeveloperAuthentication => OID_CA_EXTENSION_DEVELOPER_AUTHENTICATION,
+            Self::AppleApplicationIntegrationG3 => {
+                OID_CA_EXTENSION_APPLE_APPLICATION_INTEGRATION_G3
+            }
             Self::AppleWorldwideDeveloperRelationsG2 => {
                 OID_CA_EXTENSION_APPLE_WORLDWIDE_DEVELOPER_RELATIONS_G2
             }
@@ -454,10 +472,83 @@ impl CertificateAuthorityExtension {
     }
 }
 
-/// Extends functionality of [CapturedX509Certificate] with Apple specific certificate knowledge.
-pub trait AppleCertificate: Sized {}
+impl TryFrom<&Oid> for CertificateAuthorityExtension {
+    type Error = AppleCodesignError;
 
-impl AppleCertificate for CapturedX509Certificate {}
+    fn try_from(oid: &Oid) -> Result<Self, Self::Error> {
+        // Surely there is a way to use `match`. But the `Oid` type is a bit wonky.
+        if oid.as_ref() == OID_CA_EXTENSION_APPLE_WORLDWIDE_DEVELOPER_RELATIONS.as_ref() {
+            Ok(Self::AppleWorldwideDeveloperRelations)
+        } else if oid.as_ref() == OID_CA_EXTENSION_APPLE_APPLICATION_INTEGRATION.as_ref() {
+            Ok(Self::AppleApplicationIntegration)
+        } else if oid.as_ref() == OID_CA_EXTENSION_DEVELOPER_ID.as_ref() {
+            Ok(Self::DeveloperId)
+        } else if oid.as_ref() == OID_CA_EXTENSION_APPLE_TIMESTAMP.as_ref() {
+            Ok(Self::AppleTimestamp)
+        } else if oid.as_ref() == OID_CA_EXTENSION_DEVELOPER_AUTHENTICATION.as_ref() {
+            Ok(Self::DeveloperAuthentication)
+        } else if oid.as_ref() == OID_CA_EXTENSION_APPLE_APPLICATION_INTEGRATION_G3.as_ref() {
+            Ok(Self::AppleApplicationIntegrationG3)
+        } else if oid.as_ref() == OID_CA_EXTENSION_APPLE_WORLDWIDE_DEVELOPER_RELATIONS_G2.as_ref() {
+            Ok(Self::AppleWorldwideDeveloperRelationsG2)
+        } else if oid.as_ref() == OID_CA_EXTENSION_APPLE_SOFTWARE_UPDATE_CERTIFICATION.as_ref() {
+            Ok(Self::AppleSoftwareUpdateCertification)
+        } else {
+            Err(AppleCodesignError::OidIsntCertificateAuthority)
+        }
+    }
+}
+
+/// Extends functionality of [CapturedX509Certificate] with Apple specific certificate knowledge.
+pub trait AppleCertificate: Sized {
+    /// Whether this is a known Apple root certificate authority.
+    ///
+    /// We define this criteria as a certificate in our built-in list of known
+    /// Apple certificates that has the same subject and issuer Names.
+    fn is_apple_root_ca(&self) -> bool;
+
+    /// Whether this is a known Apple intermediate certificate authority.
+    ///
+    /// This is similar to [Self::is_apple_root_ca] except it doesn't match against
+    /// known self-signed Apple certificates.
+    fn is_apple_intermediate_ca(&self) -> bool;
+
+    /// Find a [CertificateAuthorityExtension] present on this certificate.
+    ///
+    /// If this returns Some(T), the certificate says it is an Apple certificate
+    /// whose role is issuing other certificates using for signing things.
+    ///
+    /// This function does not perform trust validation that the underlying
+    /// certificate is a legitimate Apple issued certificate: just that it has
+    /// the desired property.
+    fn apple_ca_extension(&self) -> Option<CertificateAuthorityExtension>;
+}
+
+impl AppleCertificate for CapturedX509Certificate {
+    fn is_apple_root_ca(&self) -> bool {
+        KnownCertificate::all().iter().any(|cert| {
+            self.constructed_data() == cert.constructed_data() && self.subject_is_issuer()
+        })
+    }
+
+    fn is_apple_intermediate_ca(&self) -> bool {
+        KnownCertificate::all().iter().any(|cert| {
+            self.constructed_data() == cert.constructed_data() && !self.subject_is_issuer()
+        })
+    }
+
+    fn apple_ca_extension(&self) -> Option<CertificateAuthorityExtension> {
+        let cert: &x509_certificate::rfc5280::Certificate = self.as_ref();
+
+        cert.iter_extensions().find_map(|extension| {
+            if let Ok(value) = CertificateAuthorityExtension::try_from(&extension.id) {
+                Some(value)
+            } else {
+                None
+            }
+        })
+    }
+}
 
 fn bmp_string(s: &str) -> Vec<u8> {
     let utf16: Vec<u16> = s.encode_utf16().collect();

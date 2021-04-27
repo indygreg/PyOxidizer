@@ -243,12 +243,66 @@ impl KnownCertificate {
 
 #[cfg(test)]
 mod test {
-    use super::*;
+    use {
+        super::*,
+        crate::certificate::{AppleCertificate, CertificateAuthorityExtension},
+    };
 
     #[test]
     fn all() {
         for cert in KnownCertificate::all() {
             assert!(cert.subject_common_name().is_some());
         }
+    }
+
+    #[test]
+    fn apple_root_ca() {
+        let wanted = vec![
+            &APPLE_INC_ROOT_CERTIFICATE,
+            &APPLE_COMPUTER_INC_ROOT_CERTIFICATE,
+            &APPLE_ROOT_CA_G2_ROOT_CERTIFICATE,
+            &APPLE_ROOT_CA_G3_ROOT_CERTIFICATE,
+        ];
+
+        for cert in KnownCertificate::all() {
+            // There shouldn't be name collisions. So matching on names should be fine.
+            let in_wanted = wanted
+                .iter()
+                .any(|known| cert.subject_name() == known.subject_name());
+
+            if cert.is_apple_root_ca() {
+                assert!(in_wanted);
+            } else {
+                assert!(!in_wanted);
+            }
+        }
+    }
+
+    #[test]
+    fn intermediate_have_apple_ca_extension() {
+        // All intermediate certs should have OIDs identifying them as such.
+        for cert in KnownCertificate::all()
+            .iter()
+            .filter(|cert| !cert.is_apple_root_ca())
+            // There are some intermediate certificates signed by GeoTrust. Filter them out
+            // as well.
+            .filter(|cert| {
+                cert.issuer_name()
+                    .iter_common_name()
+                    .all(|atv| !atv.to_string().unwrap().contains("GeoTrust"))
+            })
+        {
+            assert!(cert.apple_ca_extension().is_some());
+        }
+
+        // Let's spot check a few.
+        assert_eq!(
+            KnownCertificate::DeveloperId.apple_ca_extension(),
+            Some(CertificateAuthorityExtension::DeveloperId)
+        );
+        assert_eq!(
+            KnownCertificate::Wwdr2023.apple_ca_extension(),
+            Some(CertificateAuthorityExtension::AppleWorldwideDeveloperRelations)
+        )
     }
 }

@@ -171,4 +171,7 @@ pub enum AppleCodesignError {
 
     #[error("failed to find certificate satisfying requirements: {0}")]
     CertificateNotFound(String),
+
+    #[error("the given OID does not match a recognized Apple certificate authority extension")]
+    OidIsntCertificateAuthority,
 }
