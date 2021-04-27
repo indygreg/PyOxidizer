@@ -62,7 +62,7 @@
 //! [SignedOutput] describing where the signed content lives.
 
 use {
-    cryptographic_message_syntax::{Certificate, CmsError},
+    cryptographic_message_syntax::CmsError,
     reqwest::{IntoUrl, Url},
     slog::warn,
     std::{
@@ -78,7 +78,7 @@ use {
     tugger_windows_codesign::{
         CodeSigningCertificate, FileBasedCodeSigningCertificate, SystemStore,
     },
-    x509_certificate::InMemorySigningKeyPair,
+    x509_certificate::{CapturedX509Certificate, InMemorySigningKeyPair, X509CertificateError},
     yasna::ASN1Error,
 };
 
@@ -145,6 +145,9 @@ pub enum SigningError {
 
     #[error("error when signing: {0}")]
     GeneralSigning(String),
+
+    #[error("X.509 certificate handling error: {0}")]
+    X509Certificate(#[from] X509CertificateError),
 }
 
 /// Represents a location where signed data should be written.
@@ -578,7 +581,7 @@ pub enum SigningCertificate {
     /// A parsed certificate and signing key stored in memory.
     ///
     /// The private key is managed by the `ring` crate.
-    Memory(Certificate, InMemorySigningKeyPair),
+    Memory(CapturedX509Certificate, InMemorySigningKeyPair),
 
     /// A PFX file containing validated certificate data.
     ///
@@ -731,7 +734,7 @@ pub struct Signer {
     ///
     /// Ideally this contains the full certificate chain, leading to the
     /// root CA.
-    certificate_chain: Vec<Certificate>,
+    certificate_chain: Vec<CapturedX509Certificate>,
 
     /// URL of Time-Stamp Protocol server to use.
     time_stamp_url: Option<Url>,
@@ -771,7 +774,7 @@ impl Signer {
     ///
     /// This function can be called to register addition certificates
     /// into the signing chain.
-    pub fn chain_certificate(&mut self, certificate: Certificate) {
+    pub fn chain_certificate(&mut self, certificate: CapturedX509Certificate) {
         self.certificate_chain.push(certificate);
     }
 
@@ -782,7 +785,7 @@ impl Signer {
     /// `-----BEGIN CERTIFICATE-----` and is a common method for encoding
     /// certificate data. The specified data can contain multiple certificates.
     pub fn chain_certificates_pem(&mut self, data: impl AsRef<[u8]>) -> Result<(), SigningError> {
-        let certs = Certificate::from_pem_multiple(data)?;
+        let certs = CapturedX509Certificate::from_pem_multiple(data)?;
 
         if certs.is_empty() {
             Err(SigningError::NoCertificateData)
@@ -795,7 +798,10 @@ impl Signer {
     /// Add multiple X.509 certificates to the certificate chain.
     ///
     /// See [Self::chain_certificate] for details.
-    pub fn chain_certificates(&mut self, certificates: impl Iterator<Item = Certificate>) {
+    pub fn chain_certificates(
+        &mut self,
+        certificates: impl Iterator<Item = CapturedX509Certificate>,
+    ) {
         self.certificate_chain.extend(certificates);
     }
 
@@ -811,19 +817,19 @@ impl Signer {
     /// and its issuer chain could not be resolved.
     #[cfg(target_os = "macos")]
     pub fn chain_certificates_macos_keychain(&mut self) -> Result<(), SigningError> {
-        let cert: &Certificate = match &self.signing_certificate {
+        let cert: &CapturedX509Certificate = match &self.signing_certificate {
             SigningCertificate::Memory(cert, _) => Ok(cert),
             _ => Err(SigningError::CertificateResolutionFailure(
                 "can only operate on signing certificates loaded into memory".to_string(),
             )),
         }?;
 
-        if cert.is_self_signed() {
+        if cert.subject_is_issuer() {
             return Ok(());
         }
 
         let user_id = cert
-            .subject()
+            .subject_name()
             .find_first_attribute_string(bcder::Oid(tugger_apple_codesign::OID_UID.as_ref().into()))
             .map_err(|e| {
                 SigningError::CertificateResolutionFailure(format!(
@@ -849,7 +855,7 @@ impl Signer {
             ));
         }
 
-        if !certs[certs.len() - 1].is_self_signed() {
+        if !certs[certs.len() - 1].subject_is_issuer() {
             return Err(SigningError::CertificateResolutionFailure(
                 "unable to resolve entire signing certificate chain; root certificate not found"
                     .to_string(),
@@ -960,7 +966,7 @@ pub struct SignableSigner<'a> {
     ///
     /// Ideally this contains the full certificate chain, leading to the
     /// root CA.
-    certificate_chain: Vec<Certificate>,
+    certificate_chain: Vec<CapturedX509Certificate>,
 
     /// URL of Time-Stamp Protocol server to use.
     time_stamp_url: Option<Url>,
@@ -1012,7 +1018,7 @@ impl<'a> SignableSigner<'a> {
         let mut settings = tugger_apple_codesign::SigningSettings::default();
 
         for cert in &self.certificate_chain {
-            settings.chain_certificate(cert.clone());
+            settings.chain_certificate(cert.clone().into());
         }
 
         if let Some(url) = &self.time_stamp_url {

@@ -536,7 +536,7 @@ impl<'data> MachOSigner<'data> {
             // used when there are signatures.
             .content_type(Oid(OID_ID_DATA.as_ref().into()))
             .signer(signer)
-            .certificates(settings.certificate_chain().iter().cloned())?
+            .certificates(settings.certificate_chain().iter().cloned())
             .build_ber()?;
 
         Ok(ber)

@@ -72,31 +72,30 @@ structures referenced by RFC5652 and taught them to serialize using `bcder`.
 */
 
 pub mod asn1;
-mod certificate;
 mod signing;
 mod time_stamp_protocol;
 
 pub use {
-    certificate::Certificate,
     signing::{SignedDataBuilder, SignerBuilder},
     time_stamp_protocol::{time_stamp_message_http, time_stamp_request_http, TimeStampError},
 };
 
 use {
-    crate::{
-        asn1::{
-            rfc3161::OID_TIME_STAMP_TOKEN,
-            rfc5652::{
-                SignerIdentifier, Time, OID_CONTENT_TYPE, OID_MESSAGE_DIGEST, OID_SIGNING_TIME,
-            },
+    crate::asn1::{
+        rfc3161::OID_TIME_STAMP_TOKEN,
+        rfc5652::{
+            CertificateChoices, SignerIdentifier, Time, OID_CONTENT_TYPE, OID_MESSAGE_DIGEST,
+            OID_SIGNING_TIME,
         },
-        certificate::certificate_is_subset_of,
     },
     bcder::{Integer, OctetString, Oid},
     pem::PemError,
     ring::{digest::Digest, signature::UnparsedPublicKey},
     std::{collections::HashSet, convert::TryFrom, fmt::Display, ops::Deref},
-    x509_certificate::{rfc3280::Name, DigestAlgorithm, SignatureAlgorithm, X509CertificateError},
+    x509_certificate::{
+        certificate::certificate_is_subset_of, rfc3280::Name, CapturedX509Certificate,
+        DigestAlgorithm, SignatureAlgorithm, X509Certificate, X509CertificateError,
+    },
 };
 
 #[derive(Debug)]
@@ -282,7 +281,7 @@ pub struct SignedData {
     ///
     /// Typically the root CA is first and the actual signing certificate is
     /// last.
-    certificates: Option<Vec<Certificate>>,
+    certificates: Option<Vec<CapturedX509Certificate>>,
 
     /// Describes content signatures.
     signers: Vec<SignerInfo>,
@@ -321,7 +320,7 @@ impl SignedData {
         }
     }
 
-    pub fn certificates(&self) -> Box<dyn Iterator<Item = &Certificate> + '_> {
+    pub fn certificates(&self) -> Box<dyn Iterator<Item = &CapturedX509Certificate> + '_> {
         match self.certificates.as_ref() {
             Some(certs) => Box::new(certs.iter()),
             None => Box::new(std::iter::empty()),
@@ -357,7 +356,17 @@ impl TryFrom<&crate::asn1::rfc5652::SignedData> for SignedData {
             Some(
                 certs
                     .iter()
-                    .map(Certificate::try_from)
+                    .map(|choice| match choice {
+                        CertificateChoices::Certificate(cert) => {
+                            // Doing the ASN.1 round-tripping here isn't ideal and may
+                            // lead to correctness bugs.
+                            let cert = X509Certificate::from(cert.deref().clone());
+                            let cert_ber = cert.encode_ber()?;
+
+                            Ok(CapturedX509Certificate::from_ber(cert_ber)?)
+                        }
+                        _ => Err(CmsError::UnknownCertificateFormat),
+                    })
                     .collect::<Result<Vec<_>, CmsError>>()?,
             )
         } else {
@@ -534,7 +543,7 @@ impl SignerInfo {
         certs: C,
     ) -> Result<UnparsedPublicKey<Vec<u8>>, CmsError>
     where
-        C: Iterator<Item = &'a Certificate>,
+        C: Iterator<Item = &'a CapturedX509Certificate>,
     {
         self.signature_verifier_with_algorithm(certs, self.signature_algorithm.into())
     }
@@ -555,7 +564,7 @@ impl SignerInfo {
         algorithm: &'static dyn ring::signature::VerificationAlgorithm,
     ) -> Result<UnparsedPublicKey<Vec<u8>>, CmsError>
     where
-        C: Iterator<Item = &'a Certificate>,
+        C: Iterator<Item = &'a CapturedX509Certificate>,
     {
         // The issuer of this signature is matched against the list of certificates.
         let signing_cert = certs
@@ -568,15 +577,15 @@ impl SignerInfo {
                 certificate_is_subset_of(
                     &self.serial_number,
                     &self.issuer,
-                    cert.serial_number(),
-                    cert.issuer(),
+                    cert.serial_number_asn1(),
+                    cert.issuer_name(),
                 )
             })
             .ok_or(CmsError::CertificateNotFound)?;
 
         Ok(UnparsedPublicKey::new(
             algorithm,
-            signing_cert.public_key.key.clone(),
+            signing_cert.public_key_data().to_vec(),
         ))
     }
 

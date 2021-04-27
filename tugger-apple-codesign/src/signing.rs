@@ -11,13 +11,12 @@ use {
         error::AppleCodesignError,
         macho::{Blob, DigestType, RequirementBlob},
     },
-    cryptographic_message_syntax::Certificate,
     goblin::mach::cputype::{
         CpuType, CPU_TYPE_ARM, CPU_TYPE_ARM64, CPU_TYPE_ARM64_32, CPU_TYPE_X86_64,
     },
     reqwest::{IntoUrl, Url},
     std::{collections::BTreeMap, convert::TryFrom, fmt::Formatter},
-    x509_certificate::InMemorySigningKeyPair,
+    x509_certificate::{CapturedX509Certificate, InMemorySigningKeyPair},
 };
 
 /// Denotes the scope for a setting.
@@ -240,8 +239,8 @@ impl TryFrom<&str> for SettingsScope {
 #[derive(Clone, Debug, Default)]
 pub struct SigningSettings<'key> {
     // Global settings.
-    signing_key: Option<(&'key InMemorySigningKeyPair, Certificate)>,
-    certificates: Vec<Certificate>,
+    signing_key: Option<(&'key InMemorySigningKeyPair, CapturedX509Certificate)>,
+    certificates: Vec<CapturedX509Certificate>,
     time_stamp_url: Option<Url>,
     team_name: Option<String>,
     digest_type: DigestType,
@@ -274,7 +273,7 @@ impl<'key> SigningSettings<'key> {
     }
 
     /// Obtain the signing key to use.
-    pub fn signing_key(&self) -> Option<&(&'key InMemorySigningKeyPair, Certificate)> {
+    pub fn signing_key(&self) -> Option<&(&'key InMemorySigningKeyPair, CapturedX509Certificate)> {
         self.signing_key.as_ref()
     }
 
@@ -284,12 +283,16 @@ impl<'key> SigningSettings<'key> {
     /// contain digests of content. This is known as "ad-hoc" mode. Binaries lacking a
     /// cryptographic signature or signed without a key-pair issued/signed by Apple may
     /// not run in all environments.
-    pub fn set_signing_key(&mut self, private: &'key InMemorySigningKeyPair, public: Certificate) {
+    pub fn set_signing_key(
+        &mut self,
+        private: &'key InMemorySigningKeyPair,
+        public: CapturedX509Certificate,
+    ) {
         self.signing_key = Some((private, public));
     }
 
     /// Obtain the certificate chain.
-    pub fn certificate_chain(&self) -> &[Certificate] {
+    pub fn certificate_chain(&self) -> &[CapturedX509Certificate] {
         &self.certificates
     }
 
@@ -303,7 +306,7 @@ impl<'key> SigningSettings<'key> {
     /// so clients have access to the full certificate chain for validation purposes.
     ///
     /// This setting has no effect if [SigningSettings::set_signing_key] is not called.
-    pub fn chain_certificate(&mut self, cert: Certificate) {
+    pub fn chain_certificate(&mut self, cert: CapturedX509Certificate) {
         self.certificates.push(cert);
     }
 
@@ -315,7 +318,7 @@ impl<'key> SigningSettings<'key> {
         &mut self,
         data: impl AsRef<[u8]>,
     ) -> Result<(), AppleCodesignError> {
-        self.chain_certificate(Certificate::from_der(data.as_ref())?);
+        self.chain_certificate(CapturedX509Certificate::from_der(data.as_ref())?);
 
         Ok(())
     }
@@ -332,7 +335,7 @@ impl<'key> SigningSettings<'key> {
         &mut self,
         data: impl AsRef<[u8]>,
     ) -> Result<(), AppleCodesignError> {
-        self.chain_certificate(Certificate::from_pem(data.as_ref())?);
+        self.chain_certificate(CapturedX509Certificate::from_pem(data.as_ref())?);
 
         Ok(())
     }

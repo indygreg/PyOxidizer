@@ -45,7 +45,7 @@ use {
         signing::{SettingsScope, SigningSettings},
     },
     clap::{App, AppSettings, Arg, ArgMatches, SubCommand},
-    cryptographic_message_syntax::{Certificate, SignedData},
+    cryptographic_message_syntax::SignedData,
     goblin::mach::{Mach, MachO},
     slog::{error, o, warn, Drain},
     std::{convert::TryFrom, io::Write, path::PathBuf, str::FromStr},
@@ -54,6 +54,7 @@ use {
 
 #[cfg(target_os = "macos")]
 use crate::macos::{macos_keychain_find_certificate_chain, KeychainDomain};
+use x509_certificate::CapturedX509Certificate;
 
 const EXTRACT_ABOUT: &str = "\
 Extract code signature data from a Mach-O binary.
@@ -649,13 +650,7 @@ fn command_generate_self_signed_certificate(args: &ArgMatches) -> Result<(), App
         validity_duration,
     )?;
 
-    print!(
-        "{}",
-        pem::encode(&pem::Pem {
-            tag: "CERTIFICATE".to_string(),
-            contents: cert.as_ber()?,
-        })
-    );
+    print!("{}", cert.encode_pem());
     print!(
         "{}",
         pem::encode(&pem::Pem {
@@ -700,7 +695,7 @@ fn command_keychain_export_certificate_chain(args: &ArgMatches) -> Result<(), Ap
             continue;
         }
 
-        print!("{}", cert.as_pem()?);
+        print!("{}", cert.encode_pem());
     }
 
     Ok(())
@@ -781,7 +776,7 @@ fn command_sign(args: &ArgMatches) -> Result<(), AppleCodesignError> {
             for pem in pem::parse_many(&pem_data) {
                 match pem.tag.as_str() {
                     "CERTIFICATE" => {
-                        public_certificates.push(Certificate::from_der(&pem.contents)?)
+                        public_certificates.push(CapturedX509Certificate::from_der(pem.contents)?);
                     }
                     "PRIVATE KEY" => private_keys
                         .push(InMemorySigningKeyPair::from_pkcs8_der(&pem.contents, None)?),
@@ -826,7 +821,7 @@ fn command_sign(args: &ArgMatches) -> Result<(), AppleCodesignError> {
 
     for cert in public_certificates {
         warn!(&log, "registering extra X.509 certificate");
-        settings.chain_certificate_der(&cert.as_der()?)?;
+        settings.chain_certificate(cert);
     }
 
     if let Some(team_name) = args.value_of("team_name") {

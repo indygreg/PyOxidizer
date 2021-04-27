@@ -15,6 +15,8 @@
 pub mod algorithm;
 pub use algorithm::{DigestAlgorithm, KeyAlgorithm, SignatureAlgorithm};
 pub mod asn1time;
+pub mod certificate;
+pub use certificate::{CapturedX509Certificate, MutableX509Certificate, X509Certificate};
 pub mod rfc3280;
 pub mod rfc4519;
 pub mod rfc5280;
@@ -45,11 +47,17 @@ pub enum X509CertificateError {
     #[error("error when decoding ASN.1 data: {0}")]
     Asn1Parse(bcder::decode::Error),
 
+    #[error("I/O error occurred: {0}")]
+    Io(#[from] std::io::Error),
+
     #[error("error decoding PEM data: {0}")]
     PemDecode(pem::PemError),
 
     #[error("error creating cryptographic signature with memory-backed key-pair")]
     SignatureCreationInMemoryKey,
+
+    #[error("certificate signature verification failed")]
+    CertificateSignatureVerificationFailed,
 }
 
 impl From<ring::error::KeyRejected> for X509CertificateError {

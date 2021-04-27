@@ -16,7 +16,6 @@ use {
                 OID_MESSAGE_DIGEST, OID_SIGNING_TIME,
             },
         },
-        certificate::Certificate,
         time_stamp_protocol::{time_stamp_message_http, TimeStampError},
         CmsError,
     },
@@ -26,12 +25,11 @@ use {
     },
     bytes::Bytes,
     reqwest::IntoUrl,
-    std::{collections::HashSet, convert::TryFrom},
+    std::collections::HashSet,
     x509_certificate::{
         asn1time::UtcTime,
-        rfc5280,
         rfc5652::{Attribute, AttributeValue},
-        DigestAlgorithm, InMemorySigningKeyPair, SignatureAlgorithm,
+        CapturedX509Certificate, DigestAlgorithm, InMemorySigningKeyPair, SignatureAlgorithm,
     },
 };
 
@@ -44,7 +42,7 @@ pub struct SignerBuilder<'a> {
     signing_key: &'a InMemorySigningKeyPair,
 
     /// X.509 certificate used for signing.
-    signing_certificate: Certificate,
+    signing_certificate: CapturedX509Certificate,
 
     /// Content digest algorithm to use.
     digest_algorithm: DigestAlgorithm,
@@ -70,7 +68,10 @@ impl<'a> SignerBuilder<'a> {
     /// Construct a new entity that will sign content.
     ///
     /// An entity is constructed from a signing key, which is mandatory.
-    pub fn new(signing_key: &'a InMemorySigningKeyPair, signing_certificate: Certificate) -> Self {
+    pub fn new(
+        signing_key: &'a InMemorySigningKeyPair,
+        signing_certificate: CapturedX509Certificate,
+    ) -> Self {
         Self {
             signing_key,
             signing_certificate,
@@ -84,7 +85,7 @@ impl<'a> SignerBuilder<'a> {
 
     /// Obtain the signature algorithm used by the signing key.
     pub fn signature_algorithm(&self) -> SignatureAlgorithm {
-        SignatureAlgorithm::from(self.signing_key.default_signature_algorithm())
+        self.signing_key.default_signature_algorithm()
     }
 
     /// Define the content to use to calculate the `message-id` attribute.
@@ -147,7 +148,7 @@ pub struct SignedDataBuilder<'a> {
     signers: Vec<SignerBuilder<'a>>,
 
     /// X.509 certificates to add to the payload.
-    certificates: Vec<rfc5280::Certificate>,
+    certificates: Vec<CapturedX509Certificate>,
 
     /// The OID to use for `ContentInfo.contentType`.
     ///
@@ -186,8 +187,8 @@ impl<'a> SignedDataBuilder<'a> {
         self
     }
 
-    /// Add a certificate as defined by parsed ASN.1.
-    pub fn certificate_asn1(mut self, cert: rfc5280::Certificate) -> Self {
+    /// Add a certificate defined by our crate's Certificate type.
+    pub fn certificate(mut self, cert: CapturedX509Certificate) -> Self {
         if !self.certificates.iter().any(|x| x == &cert) {
             self.certificates.push(cert);
         }
@@ -195,24 +196,15 @@ impl<'a> SignedDataBuilder<'a> {
         self
     }
 
-    /// Add a certificate defined by our crate's Certificate type.
-    pub fn certificate(self, cert: Certificate) -> Result<Self, CmsError> {
-        Ok(self.certificate_asn1(cert.raw_certificate().clone()))
-    }
-
     /// Add multiple certificates to the certificates chain.
-    pub fn certificates(
-        mut self,
-        certs: impl Iterator<Item = Certificate>,
-    ) -> Result<Self, CmsError> {
+    pub fn certificates(mut self, certs: impl Iterator<Item = CapturedX509Certificate>) -> Self {
         for cert in certs {
-            let cert = cert.raw_certificate();
-            if !self.certificates.iter().any(|x| x == cert) {
-                self.certificates.push(cert.clone());
+            if !self.certificates.iter().any(|x| x == &cert) {
+                self.certificates.push(cert);
             }
         }
 
-        Ok(self)
+        self
     }
 
     /// Force the OID for the `ContentInfo.contentType` field.
@@ -230,9 +222,11 @@ impl<'a> SignedDataBuilder<'a> {
         for signer in &self.signers {
             seen_digest_algorithms.insert(signer.digest_algorithm);
 
-            let cert = signer.signing_certificate.raw_certificate();
-            if !seen_certificates.iter().any(|x| x == cert) {
-                seen_certificates.push(cert.clone());
+            if !seen_certificates
+                .iter()
+                .any(|x| x == &signer.signing_certificate)
+            {
+                seen_certificates.push(signer.signing_certificate.clone());
             }
 
             let version = CmsVersion::V1;
@@ -242,8 +236,8 @@ impl<'a> SignedDataBuilder<'a> {
             };
 
             let sid = SignerIdentifier::IssuerAndSerialNumber(IssuerAndSerialNumber {
-                issuer: signer.signing_certificate.issuer().clone(),
-                serial_number: signer.signing_certificate.serial_number().clone(),
+                issuer: signer.signing_certificate.issuer_name().clone(),
+                serial_number: signer.signing_certificate.serial_number_asn1().clone(),
             });
 
             let mut signed_attributes = SignedAttributes::default();
@@ -363,17 +357,13 @@ impl<'a> SignedDataBuilder<'a> {
         // Many consumers prefer the issuing certificate to come before the issued
         // certificate. So we explicitly sort all the seen certificates in this order,
         // attempting for all issuing certificates to come before the issued.
-        let mut seen_certificates = seen_certificates
-            .into_iter()
-            .map(|cert| Certificate::try_from(&cert))
-            .collect::<Result<Vec<_>, _>>()?;
-        seen_certificates.sort_by(|a, b| a.issuer_compare(b));
+        seen_certificates.sort_by(|a, b| a.compare_issuer(b));
 
         let mut certificates = CertificateSet::default();
         certificates.extend(
-            seen_certificates.into_iter().map(|cert| {
-                CertificateChoices::Certificate(Box::new(cert.raw_certificate().clone()))
-            }),
+            seen_certificates
+                .into_iter()
+                .map(|cert| CertificateChoices::Certificate(Box::new(cert.into()))),
         );
 
         // The certificates could have been encountered in any order. For best results,
@@ -414,7 +404,10 @@ mod tests {
         super::*,
         crate::SignedData,
         ring::signature::{KeyPair, UnparsedPublicKey},
-        x509_certificate::{asn1time::Time, rfc3280::Name, rfc5280, rfc5958::OneAsymmetricKey},
+        std::convert::TryInto,
+        x509_certificate::{
+            asn1time::Time, rfc3280::Name, rfc5280, rfc5958::OneAsymmetricKey, X509Certificate,
+        },
     };
 
     const RSA_PRIVATE_KEY: &str = "-----BEGIN PRIVATE KEY-----\n\
@@ -479,11 +472,11 @@ mod tests {
         )
     }
 
-    fn rsa_cert() -> Certificate {
-        Certificate::from_pem(X509_CERTIFICATE.as_bytes()).unwrap()
+    fn rsa_cert() -> CapturedX509Certificate {
+        CapturedX509Certificate::from_pem(X509_CERTIFICATE.as_bytes()).unwrap()
     }
 
-    fn self_signed_ecdsa_key_pair() -> (Certificate, InMemorySigningKeyPair) {
+    fn self_signed_ecdsa_key_pair() -> (CapturedX509Certificate, InMemorySigningKeyPair) {
         let document = ring::signature::EcdsaKeyPair::generate_pkcs8(
             &ring::signature::ECDSA_P256_SHA256_ASN1_SIGNING,
             &ring::rand::SystemRandom::new(),
@@ -552,12 +545,12 @@ mod tests {
             signature: bcder::BitString::new(0, Bytes::copy_from_slice(&signature)),
         };
 
-        let cert = Certificate::from_parsed_asn1(cert).unwrap();
+        let cert = X509Certificate::from(cert).try_into().unwrap();
 
         (cert, signing_key)
     }
 
-    fn self_signed_ed25519_key_pair() -> (Certificate, InMemorySigningKeyPair) {
+    fn self_signed_ed25519_key_pair() -> (CapturedX509Certificate, InMemorySigningKeyPair) {
         let document =
             ring::signature::Ed25519KeyPair::generate_pkcs8(&ring::rand::SystemRandom::new())
                 .unwrap();
@@ -620,7 +613,7 @@ mod tests {
             signature: bcder::BitString::new(0, Bytes::copy_from_slice(&signature)),
         };
 
-        let cert = Certificate::from_parsed_asn1(cert).unwrap();
+        let cert = X509Certificate::from(cert).try_into().unwrap();
 
         (cert, signing_key)
     }
@@ -628,15 +621,13 @@ mod tests {
     #[test]
     fn ecdsa_self_signed_certificate_verification() {
         let (cert, _) = self_signed_ecdsa_key_pair();
-        let cert = Certificate::from_der(&cert.as_der().unwrap()).unwrap();
-        cert.verify_signature(&cert).unwrap();
+        cert.verify_signed_by_certificate(&cert).unwrap();
     }
 
     #[test]
     fn ed25519_self_signed_certificate_verification() {
         let (cert, _) = self_signed_ed25519_key_pair();
-        let cert = Certificate::from_der(&cert.as_der().unwrap()).unwrap();
-        cert.verify_signature(&cert).unwrap();
+        cert.verify_signed_by_certificate(&cert).unwrap();
     }
 
     #[test]
@@ -647,10 +638,8 @@ mod tests {
 
         let signature = key.sign(message).unwrap();
 
-        let public_key = UnparsedPublicKey::new(
-            SignatureAlgorithm::Sha256Rsa.into(),
-            cert.public_key().key.clone(),
-        );
+        let public_key =
+            UnparsedPublicKey::new(SignatureAlgorithm::Sha256Rsa.into(), cert.public_key_data());
 
         public_key.verify(message, &signature).unwrap();
     }
@@ -712,8 +701,7 @@ mod tests {
 
         let cms = SignedDataBuilder::default()
             .signed_content("hello world".as_bytes().to_vec())
-            .certificate(cert.clone())
-            .unwrap()
+            .certificate(cert.clone().into())
             .signer(SignerBuilder::new(&key, cert.clone()))
             .build_ber()
             .unwrap();
@@ -734,7 +722,6 @@ mod tests {
         let cms = SignedDataBuilder::default()
             .signed_content("hello world".as_bytes().to_vec())
             .certificate(cert.clone())
-            .unwrap()
             .signer(SignerBuilder::new(&key, cert.clone()))
             .build_ber()
             .unwrap();

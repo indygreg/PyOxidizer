@@ -12,6 +12,7 @@ use {
     },
     bytes::Bytes,
     ring::signature::{EcdsaKeyPair, Ed25519KeyPair, ECDSA_P256_SHA256_ASN1_SIGNING},
+    std::convert::TryInto,
     x509_certificate::{
         asn1time::Time,
         rfc3280::Name,
@@ -20,7 +21,7 @@ use {
             TbsCertificate, Validity, Version,
         },
         rfc5958::OneAsymmetricKey,
-        InMemorySigningKeyPair, KeyAlgorithm,
+        CapturedX509Certificate, InMemorySigningKeyPair, KeyAlgorithm, X509Certificate,
     },
 };
 
@@ -67,13 +68,7 @@ fn bmp_string(s: &str) -> Vec<u8> {
 pub fn parse_pfx_data(
     data: &[u8],
     password: &str,
-) -> Result<
-    (
-        cryptographic_message_syntax::Certificate,
-        InMemorySigningKeyPair,
-    ),
-    AppleCodesignError,
-> {
+) -> Result<(CapturedX509Certificate, InMemorySigningKeyPair), AppleCodesignError> {
     let pfx = p12::PFX::parse(data).map_err(|e| {
         AppleCodesignError::PfxParseError(format!("data does not appear to be PFX: {:?}", e))
     })?;
@@ -136,9 +131,7 @@ pub fn parse_pfx_data(
             match bag.bag {
                 p12::SafeBagKind::CertBag(cert_bag) => match cert_bag {
                     p12::CertBag::X509(cert_data) => {
-                        certificate = Some(cryptographic_message_syntax::Certificate::from_der(
-                            &cert_data,
-                        )?);
+                        certificate = Some(CapturedX509Certificate::from_der(cert_data)?);
                     }
                     p12::CertBag::SDSI(_) => {
                         return Err(AppleCodesignError::PfxParseError(
@@ -192,14 +185,7 @@ pub fn create_self_signed_code_signing_certificate(
     country_name: &str,
     email_address: &str,
     validity_duration: chrono::Duration,
-) -> Result<
-    (
-        cryptographic_message_syntax::Certificate,
-        InMemorySigningKeyPair,
-        Vec<u8>,
-    ),
-    AppleCodesignError,
-> {
+) -> Result<(CapturedX509Certificate, InMemorySigningKeyPair, Vec<u8>), AppleCodesignError> {
     let system_random = ring::rand::SystemRandom::new();
 
     let key_pair_document = match algorithm {
@@ -296,7 +282,7 @@ pub fn create_self_signed_code_signing_certificate(
         signature: BitString::new(0, Bytes::copy_from_slice(signature.as_ref())),
     };
 
-    let cert = cryptographic_message_syntax::Certificate::from_parsed_asn1(cert)?;
+    let cert = X509Certificate::from(cert).try_into()?;
 
     Ok((cert, signing_key, key_pair_document.as_ref().to_vec()))
 }
@@ -357,7 +343,6 @@ mod tests {
 
         let cms = SignedDataBuilder::default()
             .certificate(cert.clone())
-            .unwrap()
             .signed_content(plaintext.as_bytes().to_vec())
             .signer(SignerBuilder::new(&signing_key, cert))
             .build_ber()
@@ -387,7 +372,6 @@ mod tests {
 
         let cms = SignedDataBuilder::default()
             .certificate(cert.clone())
-            .unwrap()
             .signed_content(plaintext.as_bytes().to_vec())
             .signer(SignerBuilder::new(&signing_key, cert))
             .build_ber()

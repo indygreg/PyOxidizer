@@ -7,7 +7,6 @@
 use {
     crate::error::AppleCodesignError,
     bcder::{ConstOid, Oid},
-    cryptographic_message_syntax::Certificate,
     security_framework::{
         item::{ItemClass, ItemSearchOptions, Reference, SearchResult},
         os::macos::{
@@ -16,6 +15,7 @@ use {
         },
     },
     std::convert::TryFrom,
+    x509_certificate::CapturedX509Certificate,
 };
 
 /// UserID.
@@ -62,7 +62,9 @@ impl TryFrom<&str> for KeychainDomain {
     }
 }
 
-fn find_certificates(keychains: &[SecKeychain]) -> Result<Vec<Certificate>, AppleCodesignError> {
+fn find_certificates(
+    keychains: &[SecKeychain],
+) -> Result<Vec<CapturedX509Certificate>, AppleCodesignError> {
     let mut search = ItemSearchOptions::default();
     search.keychains(keychains);
     search.class(ItemClass::certificate());
@@ -74,7 +76,7 @@ fn find_certificates(keychains: &[SecKeychain]) -> Result<Vec<Certificate>, Appl
         match item {
             SearchResult::Ref(reference) => match reference {
                 Reference::Certificate(cert) => {
-                    if let Ok(c) = Certificate::from_der(&cert.to_der()) {
+                    if let Ok(c) = CapturedX509Certificate::from_der(cert.to_der()) {
                         certs.push(c);
                     }
                 }
@@ -110,7 +112,7 @@ pub fn macos_keychain_find_certificate_chain(
     domain: KeychainDomain,
     password: Option<&str>,
     user_id: &str,
-) -> Result<Vec<Certificate>, AppleCodesignError> {
+) -> Result<Vec<CapturedX509Certificate>, AppleCodesignError> {
     let mut keychain = SecKeychain::default_for_domain(domain.into())?;
     if password.is_some() {
         keychain.unlock(password)?;
@@ -124,11 +126,11 @@ pub fn macos_keychain_find_certificate_chain(
 
     // Now search for the requested start certificate and pull the thread until
     // we get to a self-signed certificate.
-    let start_cert: &Certificate = certs
+    let start_cert: &CapturedX509Certificate = certs
         .iter()
         .find(|cert| {
             if let Ok(Some(value)) = cert
-                .subject()
+                .subject_name()
                 .find_first_attribute_string(Oid(OID_UID.as_ref().into()))
             {
                 value == user_id
@@ -139,19 +141,21 @@ pub fn macos_keychain_find_certificate_chain(
         .ok_or_else(|| AppleCodesignError::CertificateNotFound(format!("UID={}", user_id)))?;
 
     let mut chain = vec![start_cert.clone()];
-    let mut last_issuer_name = start_cert.issuer();
+    let mut last_issuer_name = start_cert.issuer_name();
 
     loop {
-        let issuer = certs.iter().find(|cert| cert.subject() == last_issuer_name);
+        let issuer = certs
+            .iter()
+            .find(|cert| cert.subject_name() == last_issuer_name);
 
         if let Some(issuer) = issuer {
             chain.push(issuer.clone());
 
             // Self signed. Stop the chain so we don't infinite loop.
-            if issuer.subject() == issuer.issuer() {
+            if issuer.subject_name() == issuer.issuer_name() {
                 break;
             } else {
-                last_issuer_name = issuer.issuer();
+                last_issuer_name = issuer.issuer_name();
             }
         } else {
             // Couldn't find issuer. Stop the search.

@@ -4281,6 +4281,7 @@ name = "x509-certificate"
 version = "0.1.0-pre"
 dependencies = [
  "bcder",
+ "bytes",
  "chrono",
  "pem",
  "ring",
