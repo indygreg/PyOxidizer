@@ -14,7 +14,7 @@ use {
         encode::Values,
         int::Integer,
         string::{BitString, OctetString},
-        Mode, Oid,
+        ConstOid, Mode, Oid,
     },
     bytes::Bytes,
     chrono::{Duration, Utc},
@@ -26,6 +26,16 @@ use {
         ops::{Deref, DerefMut},
     },
 };
+
+/// Key Usage extension.
+///
+/// 2.5.29.15
+const OID_EXTENSION_KEY_USAGE: ConstOid = Oid(&[85, 29, 15]);
+
+/// Basic Constraints X.509 extension.
+///
+/// 2.5.29.19
+const OID_EXTENSION_BASIC_CONSTRAINTS: ConstOid = Oid(&[85, 29, 19]);
 
 /// Provides an interface to the RFC 5280 [rfc5280::Certificate] ASN.1 type.
 ///
@@ -539,6 +549,43 @@ pub fn certificate_is_subset_of(
     a_sequence.iter().all(|rdn| b_sequence.contains(rdn))
 }
 
+/// X.509 extension to define how a certificate can be used.
+///
+/// ```asn.1
+/// KeyUsage ::= BIT STRING {
+/// 	digitalSignature(0),
+/// 	nonRepudiation(1),
+/// 	keyEncipherment(2),
+/// 	dataEncipherment(3),
+/// 	keyAgreement(4),
+/// 	keyCertSign(5),
+/// 	cRLSign(6)
+/// }
+/// ```
+pub enum KeyUsage {
+    DigitalSignature,
+    NonRepudiation,
+    KeyEncipherment,
+    DataEncipherment,
+    KeyAgreement,
+    KeyCertSign,
+    CrlSign,
+}
+
+impl From<KeyUsage> for u8 {
+    fn from(ku: KeyUsage) -> Self {
+        match ku {
+            KeyUsage::DigitalSignature => 0,
+            KeyUsage::NonRepudiation => 1,
+            KeyUsage::KeyEncipherment => 2,
+            KeyUsage::DataEncipherment => 3,
+            KeyUsage::KeyAgreement => 4,
+            KeyUsage::KeyCertSign => 5,
+            KeyUsage::CrlSign => 6,
+        }
+    }
+}
+
 /// Interface for constructing new X.509 certificates.
 ///
 /// This holds fields for various certificate metadata and allows you
@@ -608,6 +655,27 @@ impl X509CertificateBuilder {
     /// Set the expiration time in terms of [Duration] since its currently set start time.
     pub fn validity_duration(&mut self, duration: Duration) {
         self.not_after = self.not_before + duration;
+    }
+
+    /// Add a basic constraint extension that this isn't a CA certificate.
+    pub fn constraint_not_ca(&mut self) {
+        self.extensions.push(rfc5280::Extension {
+            id: Oid(OID_EXTENSION_BASIC_CONSTRAINTS.as_ref().into()),
+            critical: Some(true),
+            value: OctetString::new(Bytes::copy_from_slice(&[0x30, 00])),
+        });
+    }
+
+    /// Add a key usage extension.
+    pub fn key_usage(&mut self, key_usage: KeyUsage) {
+        let value: u8 = key_usage.into();
+
+        self.extensions.push(rfc5280::Extension {
+            id: Oid(OID_EXTENSION_KEY_USAGE.as_ref().into()),
+            critical: Some(true),
+            // Value is a bit string. We just encode it manually since it is easy.
+            value: OctetString::new(Bytes::copy_from_slice(&[3, 2, 7, 128 | value])),
+        });
     }
 
     /// Create a new certificate given settings, using a randomly generated key pair.
