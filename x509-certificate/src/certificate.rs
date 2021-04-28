@@ -27,18 +27,18 @@ use {
     },
 };
 
-/// Provides an interface to the RFC 5280 [Certificate] ASN.1 type.
+/// Provides an interface to the RFC 5280 [rfc5280::Certificate] ASN.1 type.
 ///
 /// This type provides the main high-level API that this crate exposes
 /// for reading and writing X.509 certificates.
 ///
-/// Instances are backed by an actual ASN.1 [Certificate] instance.
+/// Instances are backed by an actual ASN.1 [rfc5280::Certificate] instance.
 /// Read operations are performed against the raw ASN.1 values. Mutations
 /// result in mutations of the ASN.1 data structures.
 ///
-/// Instances can be converted to/from [Certificate] using traits.
+/// Instances can be converted to/from [rfc5280::Certificate] using traits.
 /// [AsRef]/[AsMut] are implemented to obtain a reference to the backing
-/// [Certificate].
+/// [rfc5280::Certificate].
 ///
 /// We have chosen not to implement [Deref]/[DerefMut] because we don't
 /// want to pollute the type's API with lower-level ASN.1 primitives.

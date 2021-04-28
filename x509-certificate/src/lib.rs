@@ -11,6 +11,59 @@
 //!
 //! Higher-level primitives that most end-users will want to use are defined
 //! in sub-modules but exported from the main crate.
+//!
+//! # Features
+//!
+//! * Parse X.509 certificates from BER, DER, and PEM.
+//! * Access and manipulation of low-level ASN.1 data structures defining
+//!   certificates. See [rfc5280::Certificate] for the main X.509 certificate type.
+//! * Serialize X.509 certificates to BER, DER, and PEM.
+//! * Higher-level APIs for interfacing with [rfc3280::Name] types, which
+//!   define subject and issuer fields but have a very difficult to work with
+//!   data structure.
+//! * Rust enums defining key algorithms [KeyAlgorithm], signature algorithms
+//!   [SignatureAlgorithm], and digest algorithms [DigestAlgorithm] commonly
+//!   found in X.509 certificates. These can be converted to/from OIDs as well
+//!   as to their respective ASN.1 types that express them in X.509 certificates.
+//! * Verification of cryptographic signatures in certificates. If you have a
+//!   parsed X.509 certificate and a public key (which is embedded in the
+//!   issuing certificate), we can tell you if that certificate was signed
+//!   by that key/certificate.
+//! * Generating new X.509 certificates with an easy-to-use builder type. See
+//!   [X509CertificateBuilder].
+//!
+//! # Security Disclaimer
+//!
+//! This crate has not been audited by a security professional. It may contain
+//! severe bugs. Use in some security sensitive contexts is not advised.
+//!
+//! In particular, the ASN.1 parser isn't hardened against malicious inputs.
+//! And there are some ASN.1 types in the parsing code that will result in
+//! panics.
+//!
+//! # Known Isuses
+//!
+//! This code was originally developed as part of the [cryptographic-message-syntax]
+//! crate, which was developed to support implement Apple code signing in pure Rust.
+//! After reinventing X.509 certificate handling logic in multiple crates, it was
+//! decided to create this crate as a unified interface to managing X.509 certificates.
+//! While an attempt has been made to make the APIs useful in a standalone context,
+//! some of the history of this crate's intent may leak into its design. PRs that
+//! pass GitHub Actions to improve matters are gladly accepted!
+//!
+//! Not all ASN.1 types are implemented. You may encounter panics for some
+//! less tested code paths. Patches to improve the situation are much appreciated!
+//!
+//! We are using the bcder crate for ASN.1. Use of the yasna crate would be preferred,
+//! as it seems to be more popular. However, the author initially couldn't get yasna
+//! working with RFC 5652 ASN.1. However, this was likely due to his lack of knowledge
+//! of ASN.1 at the time. A port to yasna (or any other ASN.1 parser) might be in the
+//! future.
+//!
+//! Because of the history of this crate, many tests covering its functionality exist
+//! elsewhere in the repo. Overall test coverage could also likely be improved.
+//! There is no fuzzing or corpora of X.509 certificates that we're testing against,
+//! for example.
 
 pub mod algorithm;
 pub use algorithm::{DigestAlgorithm, KeyAlgorithm, SignatureAlgorithm};

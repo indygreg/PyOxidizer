@@ -122,8 +122,7 @@ impl From<Version> for u8 {
 
 /// Private key data.
 ///
-/// This is actually an [crate::asn1::rfc5915::EcPrivateKey] stored as an
-/// OctetString.
+/// This is actually an [EcPrivateKey] stored as an OctetString.
 pub type PrivateKey = OctetString;
 
 impl TryFrom<&PrivateKey> for EcPrivateKey {
