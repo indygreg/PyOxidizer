@@ -6,13 +6,18 @@
 
 use {
     crate::{
-        algorithm::{KeyAlgorithm, SignatureAlgorithm},
-        rfc3280::Name,
-        rfc5280::Certificate,
-        X509CertificateError as Error,
+        asn1time::Time, rfc3280::Name, rfc5280, InMemorySigningKeyPair, KeyAlgorithm,
+        SignatureAlgorithm, X509CertificateError as Error,
     },
-    bcder::{decode::Constructed, encode::Values, int::Integer, Mode},
+    bcder::{
+        decode::Constructed,
+        encode::Values,
+        int::Integer,
+        string::{BitString, OctetString},
+        Mode, Oid,
+    },
     bytes::Bytes,
+    chrono::{Duration, Utc},
     ring::signature,
     std::{
         cmp::Ordering,
@@ -42,13 +47,13 @@ use {
 /// If you want a type that does that, consider [CapturedX509Certificate],
 /// which implements [Deref] and therefore behaves like this type.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct X509Certificate(Certificate);
+pub struct X509Certificate(rfc5280::Certificate);
 
 impl X509Certificate {
     /// Construct an instance by parsing DER encoded ASN.1 data.
     pub fn from_der(data: impl AsRef<[u8]>) -> Result<Self, Error> {
         let cert = Constructed::decode(data.as_ref(), Mode::Der, |cons| {
-            Certificate::take_from(cons)
+            rfc5280::Certificate::take_from(cons)
         })?;
 
         Ok(Self(cert))
@@ -61,7 +66,7 @@ impl X509Certificate {
     /// method is provided.
     pub fn from_ber(data: impl AsRef<[u8]>) -> Result<Self, Error> {
         let cert = Constructed::decode(data.as_ref(), Mode::Ber, |cons| {
-            Certificate::take_from(cons)
+            rfc5280::Certificate::take_from(cons)
         })?;
 
         Ok(Self(cert))
@@ -229,26 +234,26 @@ impl X509Certificate {
     }
 }
 
-impl From<Certificate> for X509Certificate {
-    fn from(v: Certificate) -> Self {
+impl From<rfc5280::Certificate> for X509Certificate {
+    fn from(v: rfc5280::Certificate) -> Self {
         Self(v)
     }
 }
 
-impl From<X509Certificate> for Certificate {
+impl From<X509Certificate> for rfc5280::Certificate {
     fn from(v: X509Certificate) -> Self {
         v.0
     }
 }
 
-impl AsRef<Certificate> for X509Certificate {
-    fn as_ref(&self) -> &Certificate {
+impl AsRef<rfc5280::Certificate> for X509Certificate {
+    fn as_ref(&self) -> &rfc5280::Certificate {
         &self.0
     }
 }
 
-impl AsMut<Certificate> for X509Certificate {
-    fn as_mut(&mut self) -> &mut Certificate {
+impl AsMut<rfc5280::Certificate> for X509Certificate {
+    fn as_mut(&mut self) -> &mut rfc5280::Certificate {
         &mut self.0
     }
 }
@@ -462,7 +467,7 @@ impl TryFrom<X509Certificate> for CapturedX509Certificate {
     }
 }
 
-impl From<CapturedX509Certificate> for Certificate {
+impl From<CapturedX509Certificate> for rfc5280::Certificate {
     fn from(cert: CapturedX509Certificate) -> Self {
         cert.inner.0
     }
@@ -516,4 +521,180 @@ pub fn certificate_is_subset_of(
     let Name::RdnSequence(b_sequence) = &b_name;
 
     a_sequence.iter().all(|rdn| b_sequence.contains(rdn))
+}
+
+/// Interface for constructing new X.509 certificates.
+///
+/// This holds fields for various certificate metadata and allows you
+/// to incrementally derive a new X.509 certificate.
+///
+/// The certificate is populated with defaults:
+///
+/// * The serial number is 1.
+/// * The time validity is now until 1 hour from now.
+/// * There is no issuer. If no attempt is made to define an issuer,
+///   the subject will be copied to the issuer field and this will be
+///   a self-signed certificate.
+pub struct X509CertificateBuilder {
+    key_algorithm: KeyAlgorithm,
+    subject: Name,
+    issuer: Option<Name>,
+    extensions: rfc5280::Extensions,
+    serial_number: i64,
+    not_before: chrono::DateTime<Utc>,
+    not_after: chrono::DateTime<Utc>,
+}
+
+impl X509CertificateBuilder {
+    pub fn new(alg: KeyAlgorithm) -> Self {
+        let not_before = Utc::now();
+        let not_after = not_before + Duration::hours(1);
+
+        Self {
+            key_algorithm: alg,
+            subject: Name::default(),
+            issuer: None,
+            extensions: rfc5280::Extensions::default(),
+            serial_number: 1,
+            not_before,
+            not_after,
+        }
+    }
+
+    /// Obtain a mutable reference to the subject [Name].
+    ///
+    /// The type has functions that will allow you to add attributes with ease.
+    pub fn subject(&mut self) -> &mut Name {
+        &mut self.subject
+    }
+
+    /// Obtain a mutable reference to the issuer [Name].
+    ///
+    /// If no issuer has been created yet, an empty one will be created.
+    pub fn issuer(&mut self) -> &mut Name {
+        self.issuer.get_or_insert_with(Name::default)
+    }
+
+    /// Set the serial number for the certificate.
+    pub fn serial_number(&mut self, value: i64) {
+        self.serial_number = value;
+    }
+
+    /// Add an extension to the certificate with its value as pre-encoded DER data.
+    pub fn add_extension_der_data(&mut self, oid: Oid, critical: bool, data: impl AsRef<[u8]>) {
+        self.extensions.push(rfc5280::Extension {
+            id: oid,
+            critical: Some(critical),
+            value: OctetString::new(Bytes::copy_from_slice(data.as_ref())),
+        });
+    }
+
+    /// Set the expiration time in terms of [Duration] since its currently set start time.
+    pub fn validity_duration(&mut self, duration: Duration) {
+        self.not_after = self.not_before + duration;
+    }
+
+    /// Create a new certificate given settings, using a randomly generated key pair.
+    pub fn create_with_random_keypair(
+        &self,
+    ) -> Result<
+        (
+            CapturedX509Certificate,
+            InMemorySigningKeyPair,
+            ring::pkcs8::Document,
+        ),
+        Error,
+    > {
+        let (key_pair, document) =
+            InMemorySigningKeyPair::generate_random(self.key_algorithm, None)?;
+
+        let signature_algorithm = key_pair.default_signature_algorithm();
+
+        let issuer = if let Some(issuer) = &self.issuer {
+            issuer
+        } else {
+            &self.subject
+        };
+
+        let tbs_certificate = rfc5280::TbsCertificate {
+            version: rfc5280::Version::V3,
+            serial_number: self.serial_number.into(),
+            signature: signature_algorithm.into(),
+            issuer: issuer.clone(),
+            validity: rfc5280::Validity {
+                not_before: Time::from(self.not_before),
+                not_after: Time::from(self.not_after),
+            },
+            subject: self.subject.clone(),
+            subject_public_key_info: rfc5280::SubjectPublicKeyInfo {
+                algorithm: key_pair.key_algorithm().into(),
+                subject_public_key: BitString::new(
+                    0,
+                    Bytes::copy_from_slice(key_pair.public_key_data()),
+                ),
+            },
+            issuer_unique_id: None,
+            subject_unique_id: None,
+            extensions: if self.extensions.is_empty() {
+                None
+            } else {
+                Some(self.extensions.clone())
+            },
+            raw_data: None,
+        };
+
+        // Now encode the TBS certificate so we can sign it with the private key
+        // and include its signature.
+        let mut tbs_der = Vec::<u8>::new();
+        tbs_certificate
+            .encode_ref()
+            .write_encoded(Mode::Der, &mut tbs_der)?;
+
+        let signature = key_pair.sign(&tbs_der)?;
+
+        let cert = rfc5280::Certificate {
+            tbs_certificate,
+            signature_algorithm: signature_algorithm.into(),
+            signature: BitString::new(0, Bytes::copy_from_slice(signature.as_ref())),
+        };
+
+        let cert = X509Certificate::from(cert);
+        let cert_der = cert.encode_der()?;
+
+        let cert = CapturedX509Certificate::from_der(cert_der)?;
+
+        Ok((cert, key_pair, document))
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn builder_ed25519_default() {
+        let builder = X509CertificateBuilder::new(KeyAlgorithm::Ed25519);
+        builder.create_with_random_keypair().unwrap();
+    }
+
+    #[test]
+    fn build_ecdsa_default() {
+        let builder = X509CertificateBuilder::new(KeyAlgorithm::Ecdsa);
+        builder.create_with_random_keypair().unwrap();
+    }
+
+    #[test]
+    fn build_subject_populate() {
+        let mut builder = X509CertificateBuilder::new(KeyAlgorithm::Ed25519);
+        builder
+            .subject()
+            .append_common_name_utf8_string("My Name")
+            .unwrap();
+        builder
+            .subject()
+            .append_country_utf8_string("Wakanda")
+            .unwrap();
+
+        builder.create_with_random_keypair().unwrap();
+    }
 }

@@ -16,7 +16,9 @@ pub mod algorithm;
 pub use algorithm::{DigestAlgorithm, KeyAlgorithm, SignatureAlgorithm};
 pub mod asn1time;
 pub mod certificate;
-pub use certificate::{CapturedX509Certificate, MutableX509Certificate, X509Certificate};
+pub use certificate::{
+    CapturedX509Certificate, MutableX509Certificate, X509Certificate, X509CertificateBuilder,
+};
 pub mod rfc3280;
 pub mod rfc4519;
 pub mod rfc5280;
@@ -60,6 +62,12 @@ pub enum X509CertificateError {
 
     #[error("certificate signature verification failed")]
     CertificateSignatureVerificationFailed,
+
+    #[error("error generating key pair")]
+    KeyPairGenerationError,
+
+    #[error("RSA key generation is not supported")]
+    RsaKeyGenerationNotSupported,
 }
 
 impl From<ring::error::KeyRejected> for X509CertificateError {

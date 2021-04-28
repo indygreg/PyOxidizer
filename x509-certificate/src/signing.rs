@@ -7,7 +7,10 @@ use {
         rfc5958::OneAsymmetricKey, KeyAlgorithm, SignatureAlgorithm, X509CertificateError as Error,
     },
     bcder::decode::Constructed,
-    ring::signature::{self, KeyPair},
+    ring::{
+        rand::SystemRandom,
+        signature::{self, KeyPair},
+    },
     std::convert::TryFrom,
 };
 
@@ -44,6 +47,8 @@ impl InMemorySigningKeyPair {
         let ecdsa_signing_algorithm =
             ecdsa_signing_algorithm.unwrap_or(&ring::signature::ECDSA_P256_SHA256_ASN1_SIGNING);
 
+        // self.key_algorithm() assumes a 1:1 mapping between KeyAlgorithm and our enum
+        // variants. If you change this, change that function as well.
         match algorithm {
             KeyAlgorithm::Rsa => Ok(Self::Rsa(signature::RsaKeyPair::from_pkcs8(data.as_ref())?)),
             KeyAlgorithm::Ecdsa => Ok(Self::Ecdsa(signature::EcdsaKeyPair::from_pkcs8(
@@ -69,12 +74,50 @@ impl InMemorySigningKeyPair {
         Self::from_pkcs8_der(&der.contents, ecdsa_signing_algorithm)
     }
 
+    /// Generate a random key pair given a key algorithm and optional ECDSA signing algorithm.
+    ///
+    /// The raw PKCS#8 document is returned to facilitate access to the private key.
+    ///
+    /// Not attempt is made to protect the private key in memory.
+    pub fn generate_random(
+        key_algorithm: KeyAlgorithm,
+        ecdsa_signing_algorithm: Option<&'static signature::EcdsaSigningAlgorithm>,
+    ) -> Result<(Self, ring::pkcs8::Document), Error> {
+        let rng = SystemRandom::new();
+
+        let ecdsa_signing_algorithm =
+            ecdsa_signing_algorithm.unwrap_or(&signature::ECDSA_P256_SHA256_ASN1_SIGNING);
+
+        let document = match key_algorithm {
+            KeyAlgorithm::Ed25519 => signature::Ed25519KeyPair::generate_pkcs8(&rng)
+                .map_err(|_| Error::KeyPairGenerationError),
+            KeyAlgorithm::Ecdsa => {
+                signature::EcdsaKeyPair::generate_pkcs8(ecdsa_signing_algorithm, &rng)
+                    .map_err(|_| Error::KeyPairGenerationError)
+            }
+            KeyAlgorithm::Rsa => Err(Error::RsaKeyGenerationNotSupported),
+        }?;
+
+        let key_pair = Self::from_pkcs8_der(document.as_ref(), Some(ecdsa_signing_algorithm))?;
+
+        Ok((key_pair, document))
+    }
+
     /// Obtain the raw bytes constituting the key pair's public key.
     pub fn public_key_data(&self) -> &[u8] {
         match self {
             Self::Rsa(key) => key.public_key().as_ref(),
             Self::Ecdsa(key) => key.public_key().as_ref(),
             Self::Ed25519(key) => key.public_key().as_ref(),
+        }
+    }
+
+    /// Obtain the [KeyAlgorithm] in use by this instance.
+    pub fn key_algorithm(&self) -> KeyAlgorithm {
+        match self {
+            Self::Rsa(_) => KeyAlgorithm::Rsa,
+            Self::Ed25519(_) => KeyAlgorithm::Ed25519,
+            Self::Ecdsa(_) => KeyAlgorithm::Ecdsa,
         }
     }
 
@@ -158,6 +201,21 @@ impl From<&InMemorySigningKeyPair> for KeyAlgorithm {
 #[cfg(test)]
 mod test {
     use {super::*, crate::testutil::*, ring::signature::UnparsedPublicKey};
+
+    #[test]
+    fn generate_random_ecdsa() {
+        InMemorySigningKeyPair::generate_random(KeyAlgorithm::Ecdsa, None).unwrap();
+    }
+
+    #[test]
+    fn generate_random_ed25519() {
+        InMemorySigningKeyPair::generate_random(KeyAlgorithm::Ed25519, None).unwrap();
+    }
+
+    #[test]
+    fn generate_random_rsa() {
+        assert!(InMemorySigningKeyPair::generate_random(KeyAlgorithm::Rsa, None).is_err());
+    }
 
     #[test]
     fn signing_key_from_ecdsa_pkcs8() {
