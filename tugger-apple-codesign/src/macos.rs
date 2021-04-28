@@ -5,7 +5,7 @@
 //! Functionality that only works on macOS.
 
 use {
-    crate::error::AppleCodesignError,
+    crate::{certificate::OID_USER_ID, error::AppleCodesignError},
     bcder::{ConstOid, Oid},
     security_framework::{
         item::{ItemClass, ItemSearchOptions, Reference, SearchResult},
@@ -17,11 +17,6 @@ use {
     std::convert::TryFrom,
     x509_certificate::CapturedX509Certificate,
 };
-
-/// UserID.
-///
-/// 0.9.2342.19200300.100.1.1
-pub const OID_UID: ConstOid = Oid(&[9, 146, 38, 137, 147, 242, 44, 100, 1, 1]);
 
 const SYSTEM_ROOTS_KEYCHAIN: &str = "/System/Library/Keychains/SystemRootCertificates.keychain";
 
@@ -131,7 +126,7 @@ pub fn macos_keychain_find_certificate_chain(
         .find(|cert| {
             if let Ok(Some(value)) = cert
                 .subject_name()
-                .find_first_attribute_string(Oid(OID_UID.as_ref().into()))
+                .find_first_attribute_string(Oid(OID_USER_ID.as_ref().into()))
             {
                 value == user_id
             } else {

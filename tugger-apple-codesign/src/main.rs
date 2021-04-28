@@ -36,7 +36,9 @@ mod verify;
 use {
     crate::{
         bundle_signing::BundleSigner,
-        certificate::{create_self_signed_code_signing_certificate, parse_pfx_data},
+        certificate::{
+            create_self_signed_code_signing_certificate, parse_pfx_data, CertificateProfile,
+        },
         code_directory::{CodeDirectoryBlob, CodeSignatureFlags, ExecutableSegmentFlags},
         code_hash::compute_code_hashes,
         code_requirement::CodeRequirements,
@@ -53,12 +55,11 @@ use {
     goblin::mach::{Mach, MachO},
     slog::{error, o, warn, Drain},
     std::{convert::TryFrom, io::Write, path::PathBuf, str::FromStr},
-    x509_certificate::{EcdsaCurve, InMemorySigningKeyPair, KeyAlgorithm},
+    x509_certificate::{CapturedX509Certificate, EcdsaCurve, InMemorySigningKeyPair, KeyAlgorithm},
 };
 
 #[cfg(target_os = "macos")]
 use crate::macos::{macos_keychain_find_certificate_chain, KeychainDomain};
-use x509_certificate::CapturedX509Certificate;
 
 const EXTRACT_ABOUT: &str = "\
 Extract code signature data from a Mach-O binary.
@@ -631,15 +632,20 @@ fn command_generate_self_signed_certificate(args: &ArgMatches) -> Result<(), App
         ),
     };
 
-    let common_name = args
-        .value_of("common_name")
+    let profile = args
+        .value_of("profile")
+        .ok_or(AppleCodesignError::CliBadArgument)?;
+    let profile = CertificateProfile::from_str(profile)?;
+    let team_id = args
+        .value_of("team_id")
+        .ok_or(AppleCodesignError::CliBadArgument)?;
+    let person_name = args
+        .value_of("person_name")
         .ok_or(AppleCodesignError::CliBadArgument)?;
     let country_name = args
         .value_of("country_name")
         .ok_or(AppleCodesignError::CliBadArgument)?;
-    let email_address = args
-        .value_of("email_address")
-        .ok_or(AppleCodesignError::CliBadArgument)?;
+
     let validity_days = args.value_of("validity_days").unwrap();
     let validity_days =
         i64::from_str(validity_days).map_err(|_| AppleCodesignError::CliBadArgument)?;
@@ -648,9 +654,10 @@ fn command_generate_self_signed_certificate(args: &ArgMatches) -> Result<(), App
 
     let (cert, _, raw) = create_self_signed_code_signing_certificate(
         algorithm,
-        common_name,
+        profile,
+        team_id,
+        person_name,
         country_name,
-        email_address,
         validity_duration,
     )?;
 
@@ -1056,12 +1063,22 @@ fn main_impl() -> Result<(), AppleCodesignError> {
                         .default_value("ecdsa")
                         .help("Which key type to use"),
                 )
-                .arg(
-                    Arg::with_name("common_name")
-                        .long("common-name")
-                        .takes_value(true)
-                        .default_value("default-name")
-                        .help("Common Name (CN) value for certificate identifier"),
+                .arg(Arg::with_name("profile")
+                    .long("profile")
+                    .takes_value(true)
+                    .possible_values(CertificateProfile::str_names())
+                    .default_value("apple-development"))
+                .arg(Arg::with_name("team_id")
+                    .long("team-id")
+                    .takes_value(true)
+                    .default_value("unset")
+                    .help("Team ID (this is a short string attached to your Apple Developer account)")
+                )
+                .arg(Arg::with_name("person_name")
+                    .long("person-name")
+                    .takes_value(true)
+                    .required(true)
+                    .help("The name of the person this certificate is for")
                 )
                 .arg(
                     Arg::with_name("country_name")
@@ -1069,13 +1086,6 @@ fn main_impl() -> Result<(), AppleCodesignError> {
                         .takes_value(true)
                         .default_value("XX")
                         .help("Country Name (C) value for certificate identifier"),
-                )
-                .arg(
-                    Arg::with_name("email_address")
-                        .long("email-address")
-                        .takes_value(true)
-                        .default_value("someone@example.com")
-                        .help("Email address value for certificate identifier"),
                 )
                 .arg(
                     Arg::with_name("validity_days")

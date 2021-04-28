@@ -8,24 +8,20 @@ use {
     crate::{apple_certificates::KnownCertificate, error::AppleCodesignError},
     bcder::{
         encode::{PrimitiveContent, Values},
-        ConstOid, Mode, Oid,
+        ConstOid, Oid,
     },
     bytes::Bytes,
-    std::convert::TryFrom,
+    std::{convert::TryFrom, str::FromStr},
     x509_certificate::{
-        CapturedX509Certificate, InMemorySigningKeyPair, KeyAlgorithm, X509CertificateBuilder,
+        certificate::KeyUsage, rfc4519::OID_COUNTRY_NAME, CapturedX509Certificate,
+        InMemorySigningKeyPair, KeyAlgorithm, X509CertificateBuilder,
     },
 };
-
-/// Key Usage extension.
-///
-/// 2.5.29.15
-const OID_EXTENSION_KEY_USAGE: ConstOid = Oid(&[85, 29, 15]);
 
 /// Extended Key Usage extension.
 ///
 /// 2.5.29.37
-const OID_EXTENSION_EXTENDED_KEY_USAGE: ConstOid = Oid(&[85, 29, 37]);
+const OID_EXTENDED_KEY_USAGE: ConstOid = Oid(&[85, 29, 37]);
 
 /// Extended Key Usage purpose for code signing.
 ///
@@ -193,6 +189,11 @@ const ALL_OID_NON_CA_EXTENSIONS: &[&ConstOid; 18] = &[
     &OID_EXTENSION_DEVELOPER_ID_DATE,
     &OID_EXTENSION_TEST_FLIGHT,
 ];
+
+/// UserID.
+///
+/// 0.9.2342.19200300.100.1.1
+pub const OID_USER_ID: ConstOid = Oid(&[9, 146, 38, 137, 147, 242, 44, 100, 1, 1]);
 
 /// OID used for email address in RDN in Apple generated code signing certificates.
 const OID_EMAIL_ADDRESS: ConstOid = Oid(&[42, 134, 72, 134, 247, 13, 1, 9, 1]);
@@ -610,6 +611,44 @@ pub enum CertificateProfile {
     DeveloperIdInstaller,
 }
 
+impl CertificateProfile {
+    pub fn all() -> &'static [Self] {
+        &[
+            Self::MacInstallerDistribution,
+            Self::AppleDistribution,
+            Self::AppleDevelopment,
+            Self::DeveloperIdApplication,
+            Self::DeveloperIdInstaller,
+        ]
+    }
+
+    /// Obtain the string values that variants are recognized as.
+    pub fn str_names() -> &'static [&'static str] {
+        &[
+            "mac-installer-distribution",
+            "apple-distribution",
+            "apple-development",
+            "developer-id-application",
+            "developer-id-installer",
+        ]
+    }
+}
+
+impl FromStr for CertificateProfile {
+    type Err = AppleCodesignError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "apple-distribution" => Ok(Self::AppleDistribution),
+            "apple-development" => Ok(Self::AppleDevelopment),
+            "developer-id-application" => Ok(Self::DeveloperIdApplication),
+            "developer-id-installer" => Ok(Self::DeveloperIdInstaller),
+            "mac-installer-distribution" => Ok(Self::MacInstallerDistribution),
+            _ => Err(AppleCodesignError::UnknownCertificateProfile(s.to_string())),
+        }
+    }
+}
+
 /// Extends functionality of [CapturedX509Certificate] with Apple specific certificate knowledge.
 pub trait AppleCertificate: Sized {
     /// Whether this is a known Apple root certificate authority.
@@ -668,8 +707,311 @@ impl AppleCertificate for CapturedX509Certificate {
 
         cert.iter_extensions()
             .filter_map(|extension| {
-                if let Ok(value) = ExtendedKeyUsagePurpose::try_from(&extension.id) {
-                    Some(value)
+                if extension.id.as_ref() == OID_EXTENDED_KEY_USAGE.as_ref() {
+                    if let Some(oid) = extension.try_decode_sequence_single_oid() {
+                        if let Ok(purpose) = ExtendedKeyUsagePurpose::try_from(&oid) {
+                            Some(purpose)
+                        } else {
+                            None
+                        }
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<_>>()
+    }
+}
+
+/// Extensions to [X509CertificateBuilder] specializing in Apple certificate behavior.
+///
+/// Most callers should call [Self::apple_certificate_profile] to configure
+/// a preset profile for the certificate being generated. After that - and it is
+/// important it is after - call [Self::apple_subject] to define the subject
+/// field. If you call this after registering code signing extensions, it
+/// detects the appropriate format for the Common Name field.
+pub trait AppleCertificateBuilder: Sized {
+    /// This functions defines common attributes on the certificate subject.
+    ///
+    /// `team_id` is your Apple team id. It is a short alphanumeric string. You
+    /// can find this at https://developer.apple.com/account/#/membership/.
+    fn apple_subject(
+        &mut self,
+        team_id: &str,
+        person_name: &str,
+        country: &str,
+    ) -> Result<(), AppleCodesignError>;
+
+    /// Add an email address to the certificate's subject name.
+    fn apple_email_address(&mut self, address: &str) -> Result<(), AppleCodesignError>;
+
+    /// Add an [ExtendedKeyUsagePurpose] to this certificate.
+    fn apple_extended_key_usage(
+        &mut self,
+        usage: ExtendedKeyUsagePurpose,
+    ) -> Result<(), AppleCodesignError>;
+
+    /// Add a certificate extension as defined by a [CodeSigningCertificateExtension] instance.
+    fn apple_code_signing_certificate_extension(
+        &mut self,
+        extension: CodeSigningCertificateExtension,
+    ) -> Result<(), AppleCodesignError>;
+
+    /// Add a [CertificateProfile] to this builder.
+    ///
+    /// All certificate extensions relevant to this profile are added.
+    ///
+    /// This should be the first function you call after creating an instance
+    /// because other functions rely on the state that it sets.
+    fn apple_certificate_profile(
+        &mut self,
+        profile: CertificateProfile,
+    ) -> Result<(), AppleCodesignError>;
+
+    /// Find code signing extensions that are currently registered.
+    fn apple_code_signing_extensions(&self) -> Vec<CodeSigningCertificateExtension>;
+}
+
+impl AppleCertificateBuilder for X509CertificateBuilder {
+    fn apple_subject(
+        &mut self,
+        team_id: &str,
+        person_name: &str,
+        country: &str,
+    ) -> Result<(), AppleCodesignError> {
+        self.subject()
+            .append_utf8_string(Oid(OID_USER_ID.as_ref().into()), team_id)
+            .map_err(|e| AppleCodesignError::CertificateBuildError(format!("{:?}", e)))?;
+
+        // Common Name is derived from the profile in use.
+
+        let extensions = self.apple_code_signing_extensions();
+
+        let common_name =
+            if extensions.contains(&CodeSigningCertificateExtension::DeveloperIdApplication) {
+                format!("Developer ID Application: {} ({})", person_name, team_id)
+            } else if extensions.contains(&CodeSigningCertificateExtension::DeveloperIdInstaller) {
+                format!("Developer ID Installer: {} ({})", person_name, team_id)
+            } else if extensions
+                .contains(&CodeSigningCertificateExtension::AppleDeveloperCertificateSubmission)
+            {
+                format!("Apple Distribution: {} ({})", person_name, team_id)
+            } else if extensions
+                .contains(&CodeSigningCertificateExtension::AppleMacAppSigningSubmission)
+            {
+                format!(
+                    "3rd Party Mac Developer Installer: {} ({})",
+                    person_name, team_id
+                )
+            } else if extensions.contains(&CodeSigningCertificateExtension::MacDeveloper) {
+                format!("Apple Development: {} ({})", person_name, team_id)
+            } else {
+                format!("{} ({})", person_name, team_id)
+            };
+
+        self.subject()
+            .append_common_name_utf8_string(&common_name)
+            .map_err(|e| AppleCodesignError::CertificateBuildError(format!("{:?}", e)))?;
+
+        self.subject()
+            .append_organizational_unit_utf8_string(team_id)
+            .map_err(|e| AppleCodesignError::CertificateBuildError(format!("{:?}", e)))?;
+
+        self.subject()
+            .append_organization_utf8_string(person_name)
+            .map_err(|e| AppleCodesignError::CertificateBuildError(format!("{:?}", e)))?;
+
+        self.subject()
+            .append_printable_string(Oid(OID_COUNTRY_NAME.as_ref().into()), country)
+            .map_err(|e| AppleCodesignError::CertificateBuildError(format!("{:?}", e)))?;
+
+        Ok(())
+    }
+
+    fn apple_email_address(&mut self, address: &str) -> Result<(), AppleCodesignError> {
+        self.subject()
+            .append_utf8_string(Oid(OID_EMAIL_ADDRESS.as_ref().into()), address)
+            .map_err(|e| AppleCodesignError::CertificateBuildError(format!("{:?}", e)))?;
+
+        Ok(())
+    }
+
+    fn apple_extended_key_usage(
+        &mut self,
+        usage: ExtendedKeyUsagePurpose,
+    ) -> Result<(), AppleCodesignError> {
+        let payload =
+            bcder::encode::sequence(Oid(Bytes::copy_from_slice(usage.as_oid().as_ref())).encode())
+                .to_captured(bcder::Mode::Der);
+
+        self.add_extension_der_data(
+            Oid(OID_EXTENDED_KEY_USAGE.as_ref().into()),
+            true,
+            payload.as_slice(),
+        );
+
+        Ok(())
+    }
+
+    fn apple_code_signing_certificate_extension(
+        &mut self,
+        extension: CodeSigningCertificateExtension,
+    ) -> Result<(), AppleCodesignError> {
+        let (critical, payload) = match extension {
+            CodeSigningCertificateExtension::IPhoneDeveloper => {
+                // SEQUENCE (3 elem)
+                //   OBJECT IDENTIFIER 1.2.840.113635.100.6.1.2
+                //   BOOLEAN true
+                //   OCTET STRING (2 byte) 0500
+                //     NULL
+                (true, Bytes::copy_from_slice(&[0x05, 0x00]))
+            }
+            CodeSigningCertificateExtension::AppleDeveloperCertificateSubmission => {
+                // SEQUENCE (3 elem)
+                //   OBJECT IDENTIFIER 1.2.840.113635.100.6.1.4
+                //   BOOLEAN true
+                //   OCTET STRING (2 byte) 0500
+                //     NULL
+                (true, Bytes::copy_from_slice(&[0x05, 0x00]))
+            }
+            CodeSigningCertificateExtension::AppleMacAppSigningDevelopment => {
+                // SEQUENCE (3 elem)
+                //   OBJECT IDENTIFIER 1.2.840.113635.100.6.1.7
+                //   BOOLEAN true
+                //   OCTET STRING (2 byte) 0500
+                //     NULL
+                (true, Bytes::copy_from_slice(&[0x05, 0x00]))
+            }
+            CodeSigningCertificateExtension::AppleMacAppSigningSubmission => {
+                // SEQUENCE (3 elem)
+                //   OBJECT IDENTIFIER 1.2.840.113635.100.6.1.8
+                //   BOOLEAN true
+                //   OCTET STRING (2 byte) 0500
+                //   NULL
+                (true, Bytes::copy_from_slice(&[0x05, 0x00]))
+            }
+            CodeSigningCertificateExtension::MacDeveloper => {
+                // SEQUENCE (3 elem)
+                //   OBJECT IDENTIFIER 1.2.840.113635.100.6.1.12
+                //   BOOLEAN true
+                //   OCTET STRING (2 byte) 0500
+                //     NULL
+                (true, Bytes::copy_from_slice(&[0x05, 0x00]))
+            }
+            CodeSigningCertificateExtension::DeveloperIdApplication => {
+                // SEQUENCE (3 elem)
+                //   OBJECT IDENTIFIER 1.2.840.113635.100.6.1.13
+                //   BOOLEAN true
+                //   OCTET STRING (2 byte) 0500
+                //     NULL
+                (true, Bytes::copy_from_slice(&[0x05, 0x00]))
+            }
+            CodeSigningCertificateExtension::DeveloperIdInstaller => {
+                // SEQUENCE (3 elem)
+                //   OBJECT IDENTIFIER 1.2.840.113635.100.6.1.14
+                //   BOOLEAN true
+                //   OCTET STRING (2 byte) 0500
+                //   NULL
+                (true, Bytes::copy_from_slice(&[0x05, 0x00]))
+            }
+
+            // The rest of these probably have the same payload. But until we see
+            // them, don't take chances.
+            _ => {
+                return Err(AppleCodesignError::CertificateBuildError(format!(
+                    "don't know how to handle code signing extension {:?}",
+                    extension
+                )));
+            }
+        };
+
+        self.add_extension_der_data(
+            Oid(Bytes::copy_from_slice(extension.as_oid().as_ref())),
+            critical,
+            payload,
+        );
+
+        Ok(())
+    }
+
+    fn apple_certificate_profile(
+        &mut self,
+        profile: CertificateProfile,
+    ) -> Result<(), AppleCodesignError> {
+        match profile {
+            CertificateProfile::DeveloperIdApplication => {
+                self.constraint_not_ca();
+                self.apple_extended_key_usage(ExtendedKeyUsagePurpose::CodeSigning)?;
+                self.key_usage(KeyUsage::DigitalSignature);
+
+                // OID_EXTENSION_DEVELOPER_ID_DATE comes next. But we don't know what
+                // that should be. It is a UTF8String instead of an ASN.1 time type
+                // because who knows.
+
+                self.apple_code_signing_certificate_extension(
+                    CodeSigningCertificateExtension::DeveloperIdApplication,
+                )?;
+            }
+            CertificateProfile::DeveloperIdInstaller => {
+                self.constraint_not_ca();
+                self.apple_extended_key_usage(ExtendedKeyUsagePurpose::DeveloperIdInstaller)?;
+                self.key_usage(KeyUsage::DigitalSignature);
+
+                // OID_EXTENSION_DEVELOPER_ID_DATE comes next.
+
+                self.apple_code_signing_certificate_extension(
+                    CodeSigningCertificateExtension::DeveloperIdInstaller,
+                )?;
+            }
+            CertificateProfile::AppleDevelopment => {
+                self.constraint_not_ca();
+                self.apple_extended_key_usage(ExtendedKeyUsagePurpose::CodeSigning)?;
+                self.key_usage(KeyUsage::DigitalSignature);
+                self.apple_code_signing_certificate_extension(
+                    CodeSigningCertificateExtension::IPhoneDeveloper,
+                )?;
+                self.apple_code_signing_certificate_extension(
+                    CodeSigningCertificateExtension::MacDeveloper,
+                )?;
+            }
+            CertificateProfile::AppleDistribution => {
+                self.constraint_not_ca();
+                self.apple_extended_key_usage(ExtendedKeyUsagePurpose::CodeSigning)?;
+                self.key_usage(KeyUsage::DigitalSignature);
+
+                // OID_EXTENSION_DEVELOPER_ID_DATE comes next.
+
+                self.apple_code_signing_certificate_extension(
+                    CodeSigningCertificateExtension::AppleMacAppSigningDevelopment,
+                )?;
+                self.apple_code_signing_certificate_extension(
+                    CodeSigningCertificateExtension::AppleDeveloperCertificateSubmission,
+                )?;
+            }
+            CertificateProfile::MacInstallerDistribution => {
+                self.constraint_not_ca();
+                self.apple_extended_key_usage(
+                    ExtendedKeyUsagePurpose::ThirdPartyMacDeveloperInstaller,
+                )?;
+                self.key_usage(KeyUsage::DigitalSignature);
+
+                self.apple_code_signing_certificate_extension(
+                    CodeSigningCertificateExtension::AppleMacAppSigningSubmission,
+                )?;
+            }
+        }
+
+        Ok(())
+    }
+
+    fn apple_code_signing_extensions(&self) -> Vec<CodeSigningCertificateExtension> {
+        self.extensions()
+            .iter()
+            .filter_map(|ext| {
+                if let Ok(e) = CodeSigningCertificateExtension::try_from(&ext.id) {
+                    Some(e)
                 } else {
                     None
                 }
@@ -816,9 +1158,10 @@ pub fn parse_pfx_data(
 /// function for testing purposes only.
 pub fn create_self_signed_code_signing_certificate(
     algorithm: KeyAlgorithm,
-    common_name: &str,
-    country_name: &str,
-    email_address: &str,
+    profile: CertificateProfile,
+    team_id: &str,
+    person_name: &str,
+    country: &str,
     validity_duration: chrono::Duration,
 ) -> Result<
     (
@@ -830,37 +1173,9 @@ pub fn create_self_signed_code_signing_certificate(
 > {
     let mut builder = X509CertificateBuilder::new(algorithm);
 
-    builder
-        .subject()
-        .append_common_name_utf8_string(common_name)
-        .map_err(AppleCodesignError::CertificateCharset)?;
-    builder
-        .subject()
-        .append_country_utf8_string(country_name)
-        .map_err(AppleCodesignError::CertificateCharset)?;
-    builder
-        .subject()
-        .append_utf8_string(Oid(OID_EMAIL_ADDRESS.as_ref().into()), email_address)
-        .map_err(AppleCodesignError::CertificateCharset)?;
-
+    builder.apple_certificate_profile(profile)?;
+    builder.apple_subject(team_id, person_name, country)?;
     builder.validity_duration(validity_duration);
-
-    // Digital Signature key usage extension.
-    builder.add_extension_der_data(
-        Oid(OID_EXTENSION_KEY_USAGE.as_ref().into()),
-        true,
-        &[3, 2, 7, 128],
-    );
-
-    let captured =
-        bcder::encode::sequence(Oid(Bytes::from(OID_EKU_PURPOSE_CODE_SIGNING.as_ref())).encode())
-            .to_captured(Mode::Der);
-
-    builder.add_extension_der_data(
-        Oid(OID_EXTENSION_EXTENDED_KEY_USAGE.as_ref().into()),
-        true,
-        captured.as_slice(),
-    );
 
     Ok(builder.create_with_random_keypair()?)
 }
@@ -888,9 +1203,10 @@ mod tests {
         for curve in EcdsaCurve::all() {
             create_self_signed_code_signing_certificate(
                 KeyAlgorithm::Ecdsa(*curve),
-                "test",
+                CertificateProfile::DeveloperIdInstaller,
+                "team1",
+                "Joe Developer",
                 "US",
-                "nobody@example.com",
                 chrono::Duration::hours(1),
             )
             .unwrap();
@@ -901,12 +1217,28 @@ mod tests {
     fn generate_self_signed_certificate_ed25519() {
         create_self_signed_code_signing_certificate(
             KeyAlgorithm::Ed25519,
-            "test",
+            CertificateProfile::DeveloperIdInstaller,
+            "team2",
+            "Joe Developer",
             "US",
-            "nobody@example.com",
             chrono::Duration::hours(1),
         )
         .unwrap();
+    }
+
+    #[test]
+    fn generate_all_profiles() {
+        for profile in CertificateProfile::all() {
+            create_self_signed_code_signing_certificate(
+                KeyAlgorithm::Ed25519,
+                *profile,
+                "team",
+                "Joe Developer",
+                "Wakanda",
+                chrono::Duration::hours(1),
+            )
+            .unwrap();
+        }
     }
 
     #[test]
@@ -914,9 +1246,10 @@ mod tests {
         for curve in EcdsaCurve::all() {
             let (cert, signing_key, _) = create_self_signed_code_signing_certificate(
                 KeyAlgorithm::Ecdsa(*curve),
-                "test",
+                CertificateProfile::DeveloperIdInstaller,
+                "team",
+                "Joe Developer",
                 "US",
-                "nobody@example.com",
                 chrono::Duration::hours(1),
             )
             .unwrap();
@@ -926,7 +1259,7 @@ mod tests {
             let cms = SignedDataBuilder::default()
                 .certificate(cert.clone())
                 .signed_content(plaintext.as_bytes().to_vec())
-                .signer(SignerBuilder::new(&signing_key, cert))
+                .signer(SignerBuilder::new(&signing_key, cert.clone()))
                 .build_ber()
                 .unwrap();
 
@@ -944,9 +1277,10 @@ mod tests {
     fn cms_self_signed_certificate_signing_ed25519() {
         let (cert, signing_key, _) = create_self_signed_code_signing_certificate(
             KeyAlgorithm::Ed25519,
-            "test",
+            CertificateProfile::DeveloperIdInstaller,
+            "team",
+            "Joe Developer",
             "US",
-            "nobody@example.com",
             chrono::Duration::hours(1),
         )
         .unwrap();

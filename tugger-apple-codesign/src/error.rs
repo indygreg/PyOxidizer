@@ -181,6 +181,12 @@ pub enum AppleCodesignError {
     #[error("the given OID does not match a recognized Apple code signing extension")]
     OidIsntCodeSigningExtension,
 
+    #[error("error building certificate: {0}")]
+    CertificateBuildError(String),
+
+    #[error("unknown certificate profile: {0}")]
+    UnknownCertificateProfile(String),
+
     #[error("unknown code execution policy: {0}")]
     UnknownPolicy(String),
 }
