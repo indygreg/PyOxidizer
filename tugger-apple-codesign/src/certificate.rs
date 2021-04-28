@@ -172,6 +172,28 @@ const OID_EXTENSION_DEVELOPER_ID_DATE: ConstOid = Oid(&[42, 134, 72, 134, 247, 9
 /// 1.2.840.113635.100.6.1.25.1
 const OID_EXTENSION_TEST_FLIGHT: ConstOid = Oid(&[42, 134, 72, 134, 247, 99, 100, 6, 1, 25, 1]);
 
+/// All OIDs associated with non Certificate Authority extensions.
+const ALL_OID_NON_CA_EXTENSIONS: &[&ConstOid; 18] = &[
+    &OID_EXTENSION_APPLE_SIGNING,
+    &OID_EXTENSION_IPHONE_DEVELOPER,
+    &OID_EXTENSION_IPHONE_OS_APPLICATION_SIGNING,
+    &OID_EXTENSION_APPLE_DEVELOPER_CERTIFICATE_SUBMISSION,
+    &OID_EXTENSION_SAFARI_DEVELOPER,
+    &OID_EXTENSION_IPHONE_OS_VPN_SIGNING,
+    &OID_EXTENSION_APPLE_MAC_APP_SIGNING_DEVELOPMENT,
+    &OID_EXTENSION_APPLE_MAC_APP_SIGNING_SUBMISSION,
+    &OID_EXTENSION_APPLE_MAC_APP_STORE_CODE_SIGNING,
+    &OID_EXTENSION_APPLE_MAC_APP_STORE_INSTALLER_SIGNING,
+    &OID_EXTENSION_MAC_DEVELOPER,
+    &OID_EXTENSION_DEVELOPER_ID_APPLICATION,
+    &OID_EXTENSION_DEVELOPER_ID_INSTALLER,
+    &OID_EXTENSION_PASSBOOK_SIGNING,
+    &OID_EXTENSION_WEBSITE_PUSH_NOTIFICATION_SIGNING,
+    &OID_EXTENSION_DEVELOPER_ID_KERNEL,
+    &OID_EXTENSION_DEVELOPER_ID_DATE,
+    &OID_EXTENSION_TEST_FLIGHT,
+];
+
 /// OID used for email address in RDN in Apple generated code signing certificates.
 const OID_EMAIL_ADDRESS: ConstOid = Oid(&[42, 134, 72, 134, 247, 13, 1, 9, 1]);
 
@@ -358,6 +380,11 @@ pub enum CodeSigningCertificateExtension {
 }
 
 impl CodeSigningCertificateExtension {
+    /// All OIDs known to be extensions in code signing certificates.
+    pub fn all_oids() -> &'static [&'static ConstOid] {
+        ALL_OID_NON_CA_EXTENSIONS
+    }
+
     pub fn as_oid(&self) -> ConstOid {
         match self {
             Self::AppleSigning => OID_EXTENSION_APPLE_SIGNING,
@@ -382,6 +409,55 @@ impl CodeSigningCertificateExtension {
             Self::WebsitePushNotificationSigning => OID_EXTENSION_WEBSITE_PUSH_NOTIFICATION_SIGNING,
             Self::DeveloperIdKernel => OID_EXTENSION_DEVELOPER_ID_KERNEL,
             Self::TestFlight => OID_EXTENSION_TEST_FLIGHT,
+        }
+    }
+}
+
+impl TryFrom<&Oid> for CodeSigningCertificateExtension {
+    type Error = AppleCodesignError;
+
+    fn try_from(oid: &Oid) -> Result<Self, Self::Error> {
+        // Surely there is a way to use `match`. But the `Oid` type is a bit wonky.
+        let o = oid.as_ref();
+
+        if o == OID_EXTENSION_APPLE_SIGNING.as_ref() {
+            Ok(Self::AppleSigning)
+        } else if o == OID_EXTENSION_IPHONE_DEVELOPER.as_ref() {
+            Ok(Self::IPhoneDeveloper)
+        } else if o == OID_EXTENSION_IPHONE_OS_APPLICATION_SIGNING.as_ref() {
+            Ok(Self::IPhoneOsApplicationSigning)
+        } else if o == OID_EXTENSION_APPLE_DEVELOPER_CERTIFICATE_SUBMISSION.as_ref() {
+            Ok(Self::AppleDeveloperCertificateSubmission)
+        } else if o == OID_EXTENSION_SAFARI_DEVELOPER.as_ref() {
+            Ok(Self::SafariDeveloper)
+        } else if o == OID_EXTENSION_IPHONE_OS_VPN_SIGNING.as_ref() {
+            Ok(Self::IPhoneOsVpnSigning)
+        } else if o == OID_EXTENSION_APPLE_MAC_APP_SIGNING_DEVELOPMENT.as_ref() {
+            Ok(Self::AppleMacAppSigningDevelopment)
+        } else if o == OID_EXTENSION_APPLE_MAC_APP_SIGNING_SUBMISSION.as_ref() {
+            Ok(Self::AppleMacAppSigningSubmission)
+        } else if o == OID_EXTENSION_APPLE_MAC_APP_STORE_CODE_SIGNING.as_ref() {
+            Ok(Self::AppleMacAppStoreCodeSigning)
+        } else if o == OID_EXTENSION_APPLE_MAC_APP_STORE_INSTALLER_SIGNING.as_ref() {
+            Ok(Self::AppleMacAppStoreInstallerSigning)
+        } else if o == OID_EXTENSION_MAC_DEVELOPER.as_ref() {
+            Ok(Self::MacDeveloper)
+        } else if o == OID_EXTENSION_DEVELOPER_ID_APPLICATION.as_ref() {
+            Ok(Self::DeveloperIdApplication)
+        } else if o == OID_EXTENSION_DEVELOPER_ID_INSTALLER.as_ref() {
+            Ok(Self::DeveloperIdInstaller)
+        } else if o == OID_EXTENSION_PASSBOOK_SIGNING.as_ref() {
+            Ok(Self::ApplePayPassbookSigning)
+        } else if o == OID_EXTENSION_WEBSITE_PUSH_NOTIFICATION_SIGNING.as_ref() {
+            Ok(Self::WebsitePushNotificationSigning)
+        } else if o == OID_EXTENSION_DEVELOPER_ID_KERNEL.as_ref() {
+            Ok(Self::DeveloperIdKernel)
+        } else if o == OID_EXTENSION_DEVELOPER_ID_DATE.as_ref() {
+            Ok(Self::DeveloperIdDate)
+        } else if o == OID_EXTENSION_TEST_FLIGHT.as_ref() {
+            Ok(Self::TestFlight)
+        } else {
+            Err(AppleCodesignError::OidIsntCodeSigningExtension)
         }
     }
 }

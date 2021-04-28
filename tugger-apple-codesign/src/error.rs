@@ -178,6 +178,9 @@ pub enum AppleCodesignError {
     #[error("the given OID does not match a recognized Apple extended key usage extension")]
     OidIsntExtendedKeyUsage,
 
+    #[error("the given OID does not match a recognized Apple code signing extension")]
+    OidIsntCodeSigningExtension,
+
     #[error("unknown code execution policy: {0}")]
     UnknownPolicy(String),
 }
