@@ -584,13 +584,13 @@ pub fn certificate_is_subset_of(
 ///
 /// ```asn.1
 /// KeyUsage ::= BIT STRING {
-/// 	digitalSignature(0),
-/// 	nonRepudiation(1),
-/// 	keyEncipherment(2),
-/// 	dataEncipherment(3),
-/// 	keyAgreement(4),
-/// 	keyCertSign(5),
-/// 	cRLSign(6)
+///   digitalSignature(0),
+///   nonRepudiation(1),
+///   keyEncipherment(2),
+///   dataEncipherment(3),
+///   keyAgreement(4),
+///   keyCertSign(5),
+///   cRLSign(6)
 /// }
 /// ```
 pub enum KeyUsage {
