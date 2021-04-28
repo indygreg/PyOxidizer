@@ -432,6 +432,26 @@ impl Name {
         }
     }
 
+    /// Appends a PrintableString value for the given OID.
+    ///
+    /// The attribute will always be written to the first RDN. If no RDN
+    /// exists, an empty one will be created.
+    pub fn append_printable_string(
+        &mut self,
+        oid: Oid,
+        value: &str,
+    ) -> Result<(), bcder::string::CharSetError> {
+        if self.0.is_empty() {
+            self.0.push(RelativeDistinguishedName::default());
+        }
+
+        if let Some(rdn) = self.0.get_mut(0) {
+            rdn.push(AttributeTypeAndValue::new_printable_string(oid, value)?)
+        }
+
+        Ok(())
+    }
+
     /// Appends a Utf8String value for the given OID.
     ///
     /// The attribute will always be written to the first RDN. If no
@@ -645,6 +665,14 @@ impl AttributeTypeAndValue {
         self.value.to_string()
     }
 
+    /// Construct a new instance with a PrintableString given an OID and Rust string.
+    pub fn new_printable_string(oid: Oid, s: &str) -> Result<Self, bcder::string::CharSetError> {
+        Ok(Self {
+            typ: oid,
+            value: AttributeValue::new_printable_string(s)?,
+        })
+    }
+
     /// Construct a new instance with a Utf8String given an OID and Rust string.
     pub fn new_utf8_string(oid: Oid, s: &str) -> Result<Self, bcder::string::CharSetError> {
         Ok(Self {
@@ -683,6 +711,15 @@ pub type AttributeType = Oid;
 pub struct AttributeValue(Captured);
 
 impl AttributeValue {
+    /// Construct a new instance containing a PrintableString given a Rust string.
+    pub fn new_printable_string(s: &str) -> Result<Self, bcder::string::CharSetError> {
+        let mut slf = Self(Captured::empty(Mode::Der));
+
+        slf.set_printable_string_value(s)?;
+
+        Ok(slf)
+    }
+
     /// Construct a new instance containing a Utf8String given a Rust string.
     pub fn new_utf8_string(s: &str) -> Result<Self, bcder::string::CharSetError> {
         let mut slf = Self(Captured::empty(Mode::Der));
@@ -720,6 +757,18 @@ impl AttributeValue {
                 Ok(DirectoryString::take_from(cons)?.to_string())
             }
         })
+    }
+
+    /// Set the captured value to a PrintableString.
+    pub fn set_printable_string_value(
+        &mut self,
+        value: &str,
+    ) -> Result<(), bcder::string::CharSetError> {
+        let ps = DirectoryString::PrintableString(PrintableString::from_str(value)?);
+        let captured = bcder::Captured::from_values(Mode::Der, ps);
+        self.0 = captured;
+
+        Ok(())
     }
 
     /// Set the captured value to a Utf8String.
