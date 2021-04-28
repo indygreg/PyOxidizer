@@ -501,6 +501,16 @@ impl Extension {
             self.value.encode_ref(),
         ))
     }
+
+    /// Attempt to decode a single OID present in an outer sequence.
+    ///
+    /// If this works, we return Some. Else None.
+    pub fn try_decode_sequence_single_oid(&self) -> Option<Oid> {
+        Constructed::decode(self.value.to_source(), Mode::Der, |cons| {
+            cons.take_sequence(|cons| Oid::take_from(cons))
+        })
+        .ok()
+    }
 }
 
 impl Values for Extension {
