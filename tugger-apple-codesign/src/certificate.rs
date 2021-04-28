@@ -675,19 +675,52 @@ pub trait AppleCertificate: Sized {
 
     /// Obtain all of Apple's [ExtendedKeyUsagePurpose] in this certificate.
     fn apple_extended_key_usage_purposes(&self) -> Vec<ExtendedKeyUsagePurpose>;
+
+    /// Obtain all of Apple's [CodeSigningCertificateExtension] in this certificate.
+    fn apple_code_signing_extensions(&self) -> Vec<CodeSigningCertificateExtension>;
+
+    /// Attempt to guess the [CertificateProfile] associated with this certificate.
+    ///
+    /// This keys off present certificate extensions to guess which profile it
+    /// belongs to. Incorrect guesses are possible, which is why *guess* is in the
+    /// function name.
+    ///
+    /// Returns `None` if we don't think a [CertificateProfile] is associated with
+    /// this extension.
+    fn apple_guess_profile(&self) -> Option<CertificateProfile>;
+
+    /// Attempt to resolve the certificate issuer chain back to [AppleCertificate].
+    ///
+    /// This is a glorified wrapper around [X509Certificate::resolve_signing_chain]
+    /// that filters matches against certificates in our known set of Apple
+    /// certificates and maps them back to our [AppleCertificate] Rust enumeration.
+    ///
+    /// False negatives (read: missing certificates) can be encountered if
+    /// we don't know about an Apple CA certificate.
+    fn apple_issuing_chain(&self) -> Vec<KnownCertificate>;
+
+    /// Whether this certificate chains back to a known Apple root certificate authority.
+    ///
+    /// This is true if the resolved certificate issuance chain (which is
+    /// confirmed via verifying the cryptographic signatures on certificates)
+    /// ands in a certificate that is known to be an Apple root CA.
+    fn chains_to_apple_root_ca(&self) -> bool;
+
+    /// Obtain the chain of issuing certificates, back to a known Apple root.
+    ///
+    /// The returned chain starts with this certificate and ends with a known
+    /// Apple root certificate authority. None is returned if this certificate
+    /// doesn't appear to chain to a known Apple root CA.
+    fn apple_root_certificate_chain(&self) -> Option<Vec<CapturedX509Certificate>>;
 }
 
 impl AppleCertificate for CapturedX509Certificate {
     fn is_apple_root_ca(&self) -> bool {
-        KnownCertificate::all().iter().any(|cert| {
-            self.constructed_data() == cert.constructed_data() && self.subject_is_issuer()
-        })
+        KnownCertificate::all_roots().contains(&self)
     }
 
     fn is_apple_intermediate_ca(&self) -> bool {
-        KnownCertificate::all().iter().any(|cert| {
-            self.constructed_data() == cert.constructed_data() && !self.subject_is_issuer()
-        })
+        KnownCertificate::all().contains(&self) && !KnownCertificate::all_roots().contains(&self)
     }
 
     fn apple_ca_extension(&self) -> Option<CertificateAuthorityExtension> {
@@ -722,6 +755,85 @@ impl AppleCertificate for CapturedX509Certificate {
                 }
             })
             .collect::<Vec<_>>()
+    }
+
+    fn apple_code_signing_extensions(&self) -> Vec<CodeSigningCertificateExtension> {
+        let cert: &x509_certificate::rfc5280::Certificate = self.as_ref();
+
+        cert.iter_extensions()
+            .filter_map(|extension| {
+                if let Ok(value) = CodeSigningCertificateExtension::try_from(&extension.id) {
+                    Some(value)
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<_>>()
+    }
+
+    fn apple_guess_profile(&self) -> Option<CertificateProfile> {
+        let ekus = self.apple_extended_key_usage_purposes();
+        let signing = self.apple_code_signing_extensions();
+
+        // Some EKUs uniquely identify the certificate profile. We don't yet handle
+        // all EKUs because we don't have profiles defined for them.
+        //
+        // Ideally this logic stays in sync with apple_certificate_profile().
+        if ekus.contains(&ExtendedKeyUsagePurpose::DeveloperIdInstaller) {
+            Some(CertificateProfile::DeveloperIdInstaller)
+        } else if ekus.contains(&ExtendedKeyUsagePurpose::ThirdPartyMacDeveloperInstaller) {
+            Some(CertificateProfile::MacInstallerDistribution)
+            // That's all the EKUs that have a 1:1 to CertificateProfile. Now look at
+            // code signing extensions.
+        } else if signing.contains(&CodeSigningCertificateExtension::DeveloperIdApplication) {
+            Some(CertificateProfile::DeveloperIdApplication)
+        } else if signing.contains(&CodeSigningCertificateExtension::IPhoneDeveloper)
+            && signing.contains(&CodeSigningCertificateExtension::MacDeveloper)
+        {
+            Some(CertificateProfile::AppleDevelopment)
+        } else if signing.contains(&CodeSigningCertificateExtension::AppleMacAppSigningDevelopment)
+            && signing
+                .contains(&CodeSigningCertificateExtension::AppleDeveloperCertificateSubmission)
+        {
+            Some(CertificateProfile::AppleDistribution)
+        } else {
+            None
+        }
+    }
+
+    fn apple_issuing_chain(&self) -> Vec<KnownCertificate> {
+        self.resolve_signing_chain(KnownCertificate::all().iter().copied())
+            .into_iter()
+            .filter_map(|cert| KnownCertificate::try_from(cert).ok())
+            .collect::<Vec<_>>()
+    }
+
+    fn chains_to_apple_root_ca(&self) -> bool {
+        if self.is_apple_root_ca() {
+            true
+        } else {
+            self.resolve_signing_chain(KnownCertificate::all().iter().copied())
+                .into_iter()
+                .any(|cert| cert.is_apple_root_ca())
+        }
+    }
+
+    fn apple_root_certificate_chain(&self) -> Option<Vec<CapturedX509Certificate>> {
+        let mut chain = vec![self.clone()];
+
+        for cert in self.resolve_signing_chain(KnownCertificate::all().iter().copied()) {
+            chain.push(cert.clone());
+
+            if cert.is_apple_root_ca() {
+                break;
+            }
+        }
+
+        if chain.last().unwrap().is_apple_root_ca() {
+            Some(chain)
+        } else {
+            None
+        }
     }
 }
 
@@ -940,6 +1052,7 @@ impl AppleCertificateBuilder for X509CertificateBuilder {
         &mut self,
         profile: CertificateProfile,
     ) -> Result<(), AppleCodesignError> {
+        // Try to keep this logic in sync with apple_guess_profile().
         match profile {
             CertificateProfile::DeveloperIdApplication => {
                 self.constraint_not_ca();
@@ -1301,5 +1414,305 @@ mod tests {
                 .verify_signature_with_signed_data(&signed_data)
                 .unwrap();
         }
+    }
+
+    #[test]
+    fn third_mac_mac() {
+        let der = include_bytes!("testdata/apple-signed-3rd-party-mac.cer");
+        let cert = CapturedX509Certificate::from_der(der.to_vec()).unwrap();
+
+        assert_eq!(
+            cert.apple_extended_key_usage_purposes(),
+            vec![ExtendedKeyUsagePurpose::ThirdPartyMacDeveloperInstaller]
+        );
+        assert_eq!(
+            cert.apple_code_signing_extensions(),
+            vec![CodeSigningCertificateExtension::AppleMacAppSigningSubmission]
+        );
+        assert_eq!(
+            cert.apple_guess_profile(),
+            Some(CertificateProfile::MacInstallerDistribution)
+        );
+        assert_eq!(
+            cert.apple_issuing_chain(),
+            vec![
+                KnownCertificate::Wwdr2030,
+                KnownCertificate::AppleRootCa,
+                KnownCertificate::AppleComputerIncRoot
+            ]
+        );
+        assert!(cert.chains_to_apple_root_ca());
+        assert_eq!(
+            cert.apple_root_certificate_chain(),
+            Some(vec![
+                cert.clone(),
+                (*KnownCertificate::Wwdr2030).clone(),
+                (*KnownCertificate::AppleRootCa).clone()
+            ])
+        );
+
+        let mut builder = X509CertificateBuilder::new(KeyAlgorithm::Ecdsa(EcdsaCurve::Secp256r1));
+        builder
+            .apple_certificate_profile(CertificateProfile::MacInstallerDistribution)
+            .unwrap();
+
+        let built = builder.create_with_random_keypair().unwrap().0;
+
+        assert_eq!(
+            built.apple_extended_key_usage_purposes(),
+            cert.apple_extended_key_usage_purposes()
+        );
+        assert_eq!(
+            built.apple_code_signing_extensions(),
+            cert.apple_code_signing_extensions()
+        );
+        assert_eq!(built.apple_guess_profile(), cert.apple_guess_profile());
+        assert_eq!(built.apple_issuing_chain(), vec![]);
+        assert!(!built.chains_to_apple_root_ca());
+        assert!(built.apple_root_certificate_chain().is_none());
+    }
+
+    #[test]
+    fn apple_development() {
+        let der = include_bytes!("testdata/apple-signed-apple-development.cer");
+        let cert = CapturedX509Certificate::from_der(der.to_vec()).unwrap();
+
+        assert_eq!(
+            cert.apple_extended_key_usage_purposes(),
+            vec![ExtendedKeyUsagePurpose::CodeSigning]
+        );
+        assert_eq!(
+            cert.apple_code_signing_extensions(),
+            vec![
+                CodeSigningCertificateExtension::IPhoneDeveloper,
+                CodeSigningCertificateExtension::MacDeveloper
+            ]
+        );
+        assert_eq!(
+            cert.apple_guess_profile(),
+            Some(CertificateProfile::AppleDevelopment)
+        );
+        assert_eq!(
+            cert.apple_issuing_chain(),
+            vec![
+                KnownCertificate::Wwdr2030,
+                KnownCertificate::AppleRootCa,
+                KnownCertificate::AppleComputerIncRoot
+            ],
+        );
+        assert!(cert.chains_to_apple_root_ca());
+        assert_eq!(
+            cert.apple_root_certificate_chain(),
+            Some(vec![
+                cert.clone(),
+                (*KnownCertificate::Wwdr2030).clone(),
+                (*KnownCertificate::AppleRootCa).clone()
+            ])
+        );
+
+        let mut builder = X509CertificateBuilder::new(KeyAlgorithm::Ecdsa(EcdsaCurve::Secp256r1));
+        builder
+            .apple_certificate_profile(CertificateProfile::AppleDevelopment)
+            .unwrap();
+
+        let built = builder.create_with_random_keypair().unwrap().0;
+
+        assert_eq!(
+            built.apple_extended_key_usage_purposes(),
+            cert.apple_extended_key_usage_purposes()
+        );
+        assert_eq!(
+            built.apple_code_signing_extensions(),
+            cert.apple_code_signing_extensions()
+        );
+        assert_eq!(built.apple_guess_profile(), cert.apple_guess_profile());
+        assert_eq!(built.apple_issuing_chain(), vec![]);
+        assert!(!built.chains_to_apple_root_ca());
+        assert!(built.apple_root_certificate_chain().is_none());
+    }
+
+    #[test]
+    fn apple_distribution() {
+        let der = include_bytes!("testdata/apple-signed-apple-distribution.cer");
+        let cert = CapturedX509Certificate::from_der(der.to_vec()).unwrap();
+
+        assert_eq!(
+            cert.apple_extended_key_usage_purposes(),
+            vec![ExtendedKeyUsagePurpose::CodeSigning]
+        );
+        assert_eq!(
+            cert.apple_code_signing_extensions(),
+            vec![
+                CodeSigningCertificateExtension::AppleMacAppSigningDevelopment,
+                CodeSigningCertificateExtension::AppleDeveloperCertificateSubmission
+            ]
+        );
+        assert_eq!(
+            cert.apple_guess_profile(),
+            Some(CertificateProfile::AppleDistribution)
+        );
+        assert_eq!(
+            cert.apple_issuing_chain(),
+            vec![
+                KnownCertificate::Wwdr2030,
+                KnownCertificate::AppleRootCa,
+                KnownCertificate::AppleComputerIncRoot
+            ],
+        );
+        assert!(cert.chains_to_apple_root_ca());
+        assert_eq!(
+            cert.apple_root_certificate_chain(),
+            Some(vec![
+                cert.clone(),
+                (*KnownCertificate::Wwdr2030).clone(),
+                (*KnownCertificate::AppleRootCa).clone()
+            ])
+        );
+
+        let mut builder = X509CertificateBuilder::new(KeyAlgorithm::Ecdsa(EcdsaCurve::Secp256r1));
+        builder
+            .apple_certificate_profile(CertificateProfile::AppleDistribution)
+            .unwrap();
+
+        let built = builder.create_with_random_keypair().unwrap().0;
+
+        assert_eq!(
+            built.apple_extended_key_usage_purposes(),
+            cert.apple_extended_key_usage_purposes()
+        );
+        assert_eq!(
+            built.apple_code_signing_extensions(),
+            cert.apple_code_signing_extensions()
+        );
+        assert_eq!(built.apple_guess_profile(), cert.apple_guess_profile());
+        assert_eq!(built.apple_issuing_chain(), vec![]);
+        assert!(!built.chains_to_apple_root_ca());
+        assert!(built.apple_root_certificate_chain().is_none());
+    }
+
+    #[test]
+    fn apple_developer_id_application() {
+        let der = include_bytes!("testdata/apple-signed-developer-id-application.cer");
+        let cert = CapturedX509Certificate::from_der(der.to_vec()).unwrap();
+
+        assert_eq!(
+            cert.apple_extended_key_usage_purposes(),
+            vec![ExtendedKeyUsagePurpose::CodeSigning]
+        );
+        assert_eq!(
+            cert.apple_code_signing_extensions(),
+            vec![
+                CodeSigningCertificateExtension::DeveloperIdDate,
+                CodeSigningCertificateExtension::DeveloperIdApplication
+            ]
+        );
+        assert_eq!(
+            cert.apple_guess_profile(),
+            Some(CertificateProfile::DeveloperIdApplication)
+        );
+        assert_eq!(
+            cert.apple_issuing_chain(),
+            vec![
+                KnownCertificate::DeveloperId,
+                KnownCertificate::AppleRootCa,
+                KnownCertificate::AppleComputerIncRoot
+            ]
+        );
+        assert!(cert.chains_to_apple_root_ca());
+        assert_eq!(
+            cert.apple_root_certificate_chain(),
+            Some(vec![
+                cert.clone(),
+                (*KnownCertificate::DeveloperId).clone(),
+                (*KnownCertificate::AppleRootCa).clone()
+            ])
+        );
+
+        let mut builder = X509CertificateBuilder::new(KeyAlgorithm::Ecdsa(EcdsaCurve::Secp256r1));
+        builder
+            .apple_certificate_profile(CertificateProfile::DeveloperIdApplication)
+            .unwrap();
+
+        let built = builder.create_with_random_keypair().unwrap().0;
+
+        assert_eq!(
+            built.apple_extended_key_usage_purposes(),
+            cert.apple_extended_key_usage_purposes()
+        );
+        assert_eq!(
+            built.apple_code_signing_extensions(),
+            // We don't write out the date extension.
+            cert.apple_code_signing_extensions()
+                .into_iter()
+                .filter(|e| !matches!(e, CodeSigningCertificateExtension::DeveloperIdDate))
+                .collect::<Vec<_>>()
+        );
+        assert_eq!(built.apple_guess_profile(), cert.apple_guess_profile());
+        assert_eq!(built.apple_issuing_chain(), vec![]);
+        assert!(!built.chains_to_apple_root_ca());
+        assert!(built.apple_root_certificate_chain().is_none());
+    }
+
+    #[test]
+    fn apple_developer_id_installer() {
+        let der = include_bytes!("testdata/apple-signed-developer-id-installer.cer");
+        let cert = CapturedX509Certificate::from_der(der.to_vec()).unwrap();
+
+        assert_eq!(
+            cert.apple_extended_key_usage_purposes(),
+            vec![ExtendedKeyUsagePurpose::DeveloperIdInstaller]
+        );
+        assert_eq!(
+            cert.apple_code_signing_extensions(),
+            vec![
+                CodeSigningCertificateExtension::DeveloperIdDate,
+                CodeSigningCertificateExtension::DeveloperIdInstaller
+            ]
+        );
+        assert_eq!(
+            cert.apple_guess_profile(),
+            Some(CertificateProfile::DeveloperIdInstaller)
+        );
+        assert_eq!(
+            cert.apple_issuing_chain(),
+            vec![
+                KnownCertificate::DeveloperId,
+                KnownCertificate::AppleRootCa,
+                KnownCertificate::AppleComputerIncRoot
+            ]
+        );
+        assert!(cert.chains_to_apple_root_ca());
+        assert_eq!(
+            cert.apple_root_certificate_chain(),
+            Some(vec![
+                cert.clone(),
+                (*KnownCertificate::DeveloperId).clone(),
+                (*KnownCertificate::AppleRootCa).clone()
+            ])
+        );
+
+        let mut builder = X509CertificateBuilder::new(KeyAlgorithm::Ecdsa(EcdsaCurve::Secp256r1));
+        builder
+            .apple_certificate_profile(CertificateProfile::DeveloperIdInstaller)
+            .unwrap();
+
+        let built = builder.create_with_random_keypair().unwrap().0;
+
+        assert_eq!(
+            built.apple_extended_key_usage_purposes(),
+            cert.apple_extended_key_usage_purposes()
+        );
+        assert_eq!(
+            built.apple_code_signing_extensions(),
+            // We don't write out the date extension.
+            cert.apple_code_signing_extensions()
+                .into_iter()
+                .filter(|e| !matches!(e, CodeSigningCertificateExtension::DeveloperIdDate))
+                .collect::<Vec<_>>()
+        );
+        assert_eq!(built.apple_guess_profile(), cert.apple_guess_profile());
+        assert_eq!(built.apple_issuing_chain(), vec![]);
+        assert!(!built.chains_to_apple_root_ca());
+        assert!(built.apple_root_certificate_chain().is_none());
     }
 }

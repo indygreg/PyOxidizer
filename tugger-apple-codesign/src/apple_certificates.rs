@@ -12,7 +12,11 @@
 //! because the official DER-encoded certificates provided by Apple
 //! do not conform to the encoding standards in RFC 5280.
 
-use {once_cell::sync::Lazy, std::ops::Deref, x509_certificate::CapturedX509Certificate};
+use {
+    once_cell::sync::Lazy,
+    std::{convert::TryFrom, ops::Deref},
+    x509_certificate::CapturedX509Certificate,
+};
 
 /// Apple Inc. Root Certificate
 static APPLE_INC_ROOT_CERTIFICATE: Lazy<CapturedX509Certificate> = Lazy::new(|| {
@@ -130,10 +134,11 @@ static WORLD_WIDE_DEVELOPER_RELATIONS_G2_CERTIFICATE: Lazy<CapturedX509Certifica
 /// All known Apple certificates.
 static KNOWN_CERTIFICATES: Lazy<Vec<&CapturedX509Certificate>> = Lazy::new(|| {
     vec![
+        // We put the 4 roots first, newest to oldest.
+        APPLE_ROOT_CA_G3_ROOT_CERTIFICATE.deref(),
+        APPLE_ROOT_CA_G2_ROOT_CERTIFICATE.deref(),
         APPLE_INC_ROOT_CERTIFICATE.deref(),
         APPLE_COMPUTER_INC_ROOT_CERTIFICATE.deref(),
-        APPLE_ROOT_CA_G2_ROOT_CERTIFICATE.deref(),
-        APPLE_ROOT_CA_G3_ROOT_CERTIFICATE.deref(),
         APPLE_IST_CA_2_G1_CERTIFICATE.deref(),
         APPLE_IST_CA_8_G1_CERTIFICATE.deref(),
         APPLICATION_INTEGRATION_CERTIFICATE.deref(),
@@ -150,6 +155,15 @@ static KNOWN_CERTIFICATES: Lazy<Vec<&CapturedX509Certificate>> = Lazy::new(|| {
     ]
 });
 
+static KNOWN_ROOTS: Lazy<Vec<&CapturedX509Certificate>> = Lazy::new(|| {
+    vec![
+        APPLE_ROOT_CA_G3_ROOT_CERTIFICATE.deref(),
+        APPLE_ROOT_CA_G2_ROOT_CERTIFICATE.deref(),
+        APPLE_INC_ROOT_CERTIFICATE.deref(),
+        APPLE_COMPUTER_INC_ROOT_CERTIFICATE.deref(),
+    ]
+});
+
 /// Defines all known Apple certificates.
 ///
 /// This crate embeds the raw certificate data for the various known
@@ -161,39 +175,89 @@ static KNOWN_CERTIFICATES: Lazy<Vec<&CapturedX509Certificate>> = Lazy::new(|| {
 /// certificate and access its metadata.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum KnownCertificate {
-    /// Apple Inc. Root Certificate
-    AppleIncRoot,
     /// Apple Computer, Inc. Root Certificate.
+    ///
+    /// C = US, O = "Apple Computer, Inc.", OU = Apple Computer Certificate Authority, CN = Apple Root Certificate Authority
     AppleComputerIncRoot,
+
+    /// Apple Inc. Root Certificate
+    ///
+    /// C = US, O = Apple Inc., OU = Apple Certification Authority, CN = Apple Root CA
+    AppleRootCa,
+
     /// Apple Root CA - G2 Root Certificate
+    ///
+    /// CN = Apple Root CA - G2, OU = Apple Certification Authority, O = Apple Inc., C = US
     AppleRootCaG2Root,
+
     /// Apple Root CA - G3 Root Certificate
+    ///
+    /// CN = Apple Root CA - G3, OU = Apple Certification Authority, O = Apple Inc., C = US
     AppleRootCaG3Root,
+
     /// Apple IST CA 2 - G1 Certificate
+    ///
+    /// CN = Apple IST CA 2 - G1, OU = Certification Authority, O = Apple Inc., C = US
     AppleIstCa2G1,
+
     /// Apple IST CA 8 - G1 Certificate
+    ///
+    /// CN = Apple IST CA 8 - G1, OU = Certification Authority, O = Apple Inc., C = US
     AppleIstCa8G1,
+
     /// Application Integration Certificate
+    ///
+    /// C = US, O = Apple Inc., OU = Apple Certification Authority, CN = Apple Application Integration Certification Authority
     ApplicationIntegration,
+
     /// Application Integration 2 Certificate
+    ///
+    /// CN = Apple Application Integration 2 Certification Authority, OU = Apple Certification Authority, O = Apple Inc., C = US
     ApplicationIntegration2,
+
     /// Application Integration - G3 Certificate
+    ///
+    /// CN = Apple Application Integration CA - G3, OU = Apple Certification Authority, O = Apple Inc., C = US
     ApplicationIntegrationG3,
+
     /// Apple Application Integration CA 5 - G1 Certificate
+    ///
+    /// CN = Apple Application Integration CA 5 - G1, OU = Apple Certification Authority, O = Apple Inc., C = US
     AppleApplicationIntegrationCa5G1,
+
     /// Developer Authentication Certificate
+    ///
+    /// CN = Developer Authentication Certification Authority, OU = Apple Worldwide Developer Relations, O = Apple Inc., C = US
     DeveloperAuthentication,
+
     /// Developer ID Certificate
+    ///
+    /// CN = Developer ID Certification Authority, OU = Apple Certification Authority, O = Apple Inc., C = US
     DeveloperId,
+
     /// Software Update Certificate
+    ///
+    /// CN = Apple Software Update Certification Authority, OU = Certification Authority, O = Apple Inc., C = US
     SoftwareUpdate,
+
     /// Timestamp Certificate
+    ///
+    /// CN = Apple Timestamp Certification Authority, OU = Apple Certification Authority, O = Apple Inc., C = US
     Timestamp,
+
     /// WWDR Certificate (Expiring 02/07/2023 21:48:47 UTC)
+    ///
+    /// C = US, O = Apple Inc., OU = Apple Worldwide Developer Relations, CN = Apple Worldwide Developer Relations Certification Authority
     Wwdr2023,
+
     /// WWDR Certificate (Expiring 02/20/2030 12:00:00 UTC)
+    ///
+    /// CN = Apple Worldwide Developer Relations Certification Authority, OU = G3, O = Apple Inc., C = US
     Wwdr2030,
+
     /// Worldwide Developer Relations - G2 Certificate
+    ///
+    /// CN = Apple Worldwide Developer Relations CA - G2, OU = Apple Certification Authority, O = Apple Inc., C = US
     WwdrG2,
 }
 
@@ -202,8 +266,8 @@ impl Deref for KnownCertificate {
 
     fn deref(&self) -> &Self::Target {
         match self {
-            Self::AppleIncRoot => APPLE_INC_ROOT_CERTIFICATE.deref(),
             Self::AppleComputerIncRoot => APPLE_COMPUTER_INC_ROOT_CERTIFICATE.deref(),
+            Self::AppleRootCa => APPLE_INC_ROOT_CERTIFICATE.deref(),
             Self::AppleRootCaG2Root => APPLE_ROOT_CA_G2_ROOT_CERTIFICATE.deref(),
             Self::AppleRootCaG3Root => APPLE_ROOT_CA_G3_ROOT_CERTIFICATE.deref(),
             Self::AppleIstCa2G1 => APPLE_IST_CA_2_G1_CERTIFICATE.deref(),
@@ -231,6 +295,61 @@ impl AsRef<CapturedX509Certificate> for KnownCertificate {
     }
 }
 
+impl TryFrom<&CapturedX509Certificate> for KnownCertificate {
+    type Error = &'static str;
+
+    fn try_from(cert: &CapturedX509Certificate) -> Result<Self, Self::Error> {
+        let want = cert.constructed_data();
+
+        match cert.constructed_data() {
+            _ if APPLE_ROOT_CA_G3_ROOT_CERTIFICATE.constructed_data() == want => {
+                Ok(Self::AppleRootCaG3Root)
+            }
+            _ if APPLE_ROOT_CA_G2_ROOT_CERTIFICATE.constructed_data() == want => {
+                Ok(Self::AppleRootCaG2Root)
+            }
+            _ if APPLE_INC_ROOT_CERTIFICATE.constructed_data() == want => Ok(Self::AppleRootCa),
+            _ if APPLE_COMPUTER_INC_ROOT_CERTIFICATE.constructed_data() == want => {
+                Ok(Self::AppleComputerIncRoot)
+            }
+            _ if APPLE_IST_CA_2_G1_CERTIFICATE.constructed_data() == want => {
+                Ok(Self::AppleIstCa2G1)
+            }
+            _ if APPLE_IST_CA_8_G1_CERTIFICATE.constructed_data() == want => {
+                Ok(Self::AppleIstCa8G1)
+            }
+            _ if APPLICATION_INTEGRATION_CERTIFICATE.constructed_data() == want => {
+                Ok(Self::ApplicationIntegration)
+            }
+            _ if APPLICATION_INTEGRATION_2_CERTIFICATE.constructed_data() == want => {
+                Ok(Self::ApplicationIntegration2)
+            }
+            _ if APPLICATION_INTEGRATION_G3_CERTIFICATE.constructed_data() == want => {
+                Ok(Self::ApplicationIntegrationG3)
+            }
+            _ if APPLE_APPLICATION_INTEGRATION_CA_5_G1_CERTIFICATE.constructed_data() == want => {
+                Ok(Self::AppleApplicationIntegrationCa5G1)
+            }
+            _ if DEVELOPER_AUTHENTICATION_CERTIFICATE.constructed_data() == want => {
+                Ok(Self::DeveloperAuthentication)
+            }
+            _ if DEVELOPER_ID_CERTIFICATE.constructed_data() == want => Ok(Self::DeveloperId),
+            _ if SOFTWARE_UPDATE_CERTIFICATE.constructed_data() == want => Ok(Self::SoftwareUpdate),
+            _ if TIMESTAMP_CERTIFICATE.constructed_data() == want => Ok(Self::Timestamp),
+            _ if WORLD_WIDE_DEVELOPER_RELATIONS_AUTHORITY_2023.constructed_data() == want => {
+                Ok(Self::Wwdr2023)
+            }
+            _ if WORLD_WIDE_DEVELOPER_RELATIONS_AUTHORITY_2030.constructed_data() == want => {
+                Ok(Self::Wwdr2030)
+            }
+            _ if WORLD_WIDE_DEVELOPER_RELATIONS_G2_CERTIFICATE.constructed_data() == want => {
+                Ok(Self::WwdrG2)
+            }
+            _ => Err("certificate not found"),
+        }
+    }
+}
+
 impl KnownCertificate {
     /// Obtain a slice of all known [AppleCertificate].
     ///
@@ -238,6 +357,11 @@ impl KnownCertificate {
     /// this.
     pub fn all() -> &'static [&'static CapturedX509Certificate] {
         KNOWN_CERTIFICATES.deref().as_ref()
+    }
+
+    /// All of Apple's known root certificate authority certificates.
+    pub fn all_roots() -> &'static [&'static CapturedX509Certificate] {
+        KNOWN_ROOTS.deref()
     }
 }
 
@@ -252,29 +376,38 @@ mod test {
     fn all() {
         for cert in KnownCertificate::all() {
             assert!(cert.subject_common_name().is_some());
+            assert!(KnownCertificate::try_from(*cert).is_ok());
         }
     }
 
     #[test]
     fn apple_root_ca() {
+        assert!(APPLE_INC_ROOT_CERTIFICATE.is_apple_root_ca());
+        assert!(!APPLE_INC_ROOT_CERTIFICATE.is_apple_intermediate_ca());
+        assert!(APPLE_COMPUTER_INC_ROOT_CERTIFICATE.is_apple_root_ca());
+        assert!(!APPLE_COMPUTER_INC_ROOT_CERTIFICATE.is_apple_intermediate_ca());
+        assert!(APPLE_ROOT_CA_G2_ROOT_CERTIFICATE.is_apple_root_ca());
+        assert!(!APPLE_ROOT_CA_G2_ROOT_CERTIFICATE.is_apple_intermediate_ca());
+        assert!(APPLE_ROOT_CA_G3_ROOT_CERTIFICATE.is_apple_root_ca());
+        assert!(!APPLE_ROOT_CA_G3_ROOT_CERTIFICATE.is_apple_intermediate_ca());
+
+        assert!(!WORLD_WIDE_DEVELOPER_RELATIONS_AUTHORITY_2030.is_apple_root_ca());
+        assert!(WORLD_WIDE_DEVELOPER_RELATIONS_AUTHORITY_2030.is_apple_intermediate_ca());
+
         let wanted = vec![
-            &APPLE_INC_ROOT_CERTIFICATE,
-            &APPLE_COMPUTER_INC_ROOT_CERTIFICATE,
-            &APPLE_ROOT_CA_G2_ROOT_CERTIFICATE,
-            &APPLE_ROOT_CA_G3_ROOT_CERTIFICATE,
+            APPLE_INC_ROOT_CERTIFICATE.deref(),
+            APPLE_COMPUTER_INC_ROOT_CERTIFICATE.deref(),
+            APPLE_ROOT_CA_G2_ROOT_CERTIFICATE.deref(),
+            APPLE_ROOT_CA_G3_ROOT_CERTIFICATE.deref(),
         ];
 
         for cert in KnownCertificate::all() {
-            // There shouldn't be name collisions. So matching on names should be fine.
-            let in_wanted = wanted
-                .iter()
-                .any(|known| cert.subject_name() == known.subject_name());
-
-            if cert.is_apple_root_ca() {
-                assert!(in_wanted);
-            } else {
-                assert!(!in_wanted);
+            if wanted.contains(cert) {
+                continue;
             }
+
+            assert!(!cert.is_apple_root_ca());
+            assert!(cert.is_apple_intermediate_ca());
         }
     }
 
@@ -304,5 +437,27 @@ mod test {
             KnownCertificate::Wwdr2023.apple_ca_extension(),
             Some(CertificateAuthorityExtension::AppleWorldwideDeveloperRelations)
         )
+    }
+
+    #[test]
+    fn chaining() {
+        let relevant = KnownCertificate::all()
+            .into_iter()
+            .filter(|cert| {
+                cert.issuer_name()
+                    .iter_common_name()
+                    .all(|atv| !atv.to_string().unwrap().contains("GeoTrust"))
+            })
+            .filter(|cert| {
+                cert.constructed_data() != APPLICATION_INTEGRATION_G3_CERTIFICATE.constructed_data()
+                    && cert.constructed_data()
+                        != APPLE_APPLICATION_INTEGRATION_CA_5_G1_CERTIFICATE.constructed_data()
+            });
+
+        for cert in relevant {
+            let chain = cert.resolve_signing_chain(KnownCertificate::all().iter().copied());
+            let apple_chain = cert.apple_issuing_chain();
+            assert_eq!(chain.len(), apple_chain.len());
+        }
     }
 }
