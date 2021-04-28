@@ -6,13 +6,13 @@
 
 use {
     crate::{config::ResolvedOxidizedPythonInterpreterConfig, NewInterpreterError},
-    std::os::raw::c_int;
-    core::{usize, u16};
+    core::{usize,i32,u16},
     python3_sys as pyffi,
     python_packaging::{
         interpreter::{CheckHashPycsMode, PythonInterpreterConfig, PythonInterpreterProfile},
         resource::BytecodeOptimizationLevel,
     },
+    std::os::raw::c_int,
     std::{
         convert::{TryFrom, TryInto},
         ffi::{CString, OsString},
@@ -22,14 +22,18 @@ use {
 
 #[cfg(target_family = "unix")]
 use std::{ffi::NulError, os::unix::ffi::OsStrExt};
+#[cfg(target_family = "unix")]
+type WcharT = i32;
 
 #[cfg(target_family = "windows")]
 use std::os::windows::prelude::OsStrExt;
+#[cfg(target_family = "windows")]
+type WcharT = u16;
 
 /// Set a PyConfig string value from a str.
 fn set_config_string_from_str(
     config: &pyffi::PyConfig,
-    dest: &*mut u16,
+    dest: &*mut WcharT,
     value: &str,
     context: &str,
 ) -> Result<(), NewInterpreterError> {
@@ -56,7 +60,7 @@ fn set_config_string_from_str(
 #[cfg(unix)]
 fn set_config_string_from_path(
     config: &pyffi::PyConfig,
-    dest: &*mut u16,
+    dest: &*mut WcharT,
     path: &Path,
     context: &str,
 ) -> Result<(), NewInterpreterError> {
@@ -81,12 +85,12 @@ fn set_config_string_from_path(
 #[cfg(windows)]
 fn set_config_string_from_path(
     config: &pyffi::PyConfig,
-    dest: &*mut u16,
+    dest: &*mut WcharT,
     path: &Path,
     context: &str,
 ) -> Result<(), NewInterpreterError> {
     let status = unsafe {
-        let mut value: Vec<u16> = path.as_os_str().encode_wide().collect();
+        let mut value: Vec<WcharT> = path.as_os_str().encode_wide().collect();
         // NULL terminate.
         value.push(0);
 
@@ -159,7 +163,7 @@ fn append_wide_string_list_from_path(
     context: &str,
 ) -> Result<(), NewInterpreterError> {
     let status = unsafe {
-        let mut value: Vec<u16> = path.as_os_str().encode_wide().collect();
+        let mut value: Vec<WcharT> = path.as_os_str().encode_wide().collect();
         // NULL terminate.
         value.push(0);
 

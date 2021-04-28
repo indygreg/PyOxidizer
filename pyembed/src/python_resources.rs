@@ -25,6 +25,7 @@ use {
     },
     python3_sys as pyffi,
     python_packed_resources::data::Resource,
+    std::os::raw::c_int,
     std::{
         borrow::Cow,
         cell::RefCell,
@@ -731,8 +732,7 @@ impl<'a> PythonResourcesState<'a, u8> {
             None
         }
     }
-    
-    pub const ENOENT: ::c_int = 2;
+
     /// Obtain a single named resource in a package.
     ///
     /// Err occurs if loading the resource data fails. `Ok(None)` is returned
@@ -949,6 +949,9 @@ impl<'a> PythonResourcesState<'a, u8> {
         // this functionality some day. But it should likely never be the default
         // because it goes against the spirit of requiring all resources to be
         // known ahead-of-time.
+
+        let enoent: c_int = 2;
+
         let native_path = PathBuf::from(path.to_string_lossy(py).to_string());
 
         let (relative_path, check_in_memory, check_relative_path) =
@@ -959,7 +962,7 @@ impl<'a> PythonResourcesState<'a, u8> {
             } else {
                 return Err(PyErr::new::<OSError, _>(
                     py,
-                    (ENOENT, "resource not known", path),
+                    (enoent, "resource not known", path),
                 ));
             };
 
@@ -984,7 +987,7 @@ impl<'a> PythonResourcesState<'a, u8> {
             return Err(PyErr::new::<OSError, _>(
                 py,
                 (
-                    ENOENT,
+                    enoent,
                     "illegal resource name: missing package component",
                     path,
                 ),
@@ -1047,7 +1050,7 @@ impl<'a> PythonResourcesState<'a, u8> {
 
         Err(PyErr::new::<OSError, _>(
             py,
-            (ENOENT, "resource not known", path),
+            (enoent, "resource not known", path),
         ))
     }
 
