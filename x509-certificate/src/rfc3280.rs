@@ -434,40 +434,30 @@ impl Name {
 
     /// Appends a PrintableString value for the given OID.
     ///
-    /// The attribute will always be written to the first RDN. If no RDN
-    /// exists, an empty one will be created.
+    /// The attribute will always be written to a new RDN.
     pub fn append_printable_string(
         &mut self,
         oid: Oid,
         value: &str,
     ) -> Result<(), bcder::string::CharSetError> {
-        if self.0.is_empty() {
-            self.0.push(RelativeDistinguishedName::default());
-        }
-
-        if let Some(rdn) = self.0.get_mut(0) {
-            rdn.push(AttributeTypeAndValue::new_printable_string(oid, value)?)
-        }
+        let mut rdn = RelativeDistinguishedName::default();
+        rdn.push(AttributeTypeAndValue::new_printable_string(oid, value)?);
+        self.0.push(rdn);
 
         Ok(())
     }
 
     /// Appends a Utf8String value for the given OID.
     ///
-    /// The attribute will always be written to the first RDN. If no
-    /// RDN exists, an empty one will be created.
+    /// The attribute will always be written to a new RD.
     pub fn append_utf8_string(
         &mut self,
         oid: Oid,
         value: &str,
     ) -> Result<(), bcder::string::CharSetError> {
-        if self.0.is_empty() {
-            self.0.push(RelativeDistinguishedName::default());
-        }
-
-        if let Some(rdn) = self.0.get_mut(0) {
-            rdn.push(AttributeTypeAndValue::new_utf8_string(oid, value)?);
-        }
+        let mut rdn = RelativeDistinguishedName::default();
+        rdn.push(AttributeTypeAndValue::new_utf8_string(oid, value)?);
+        self.0.push(rdn);
 
         Ok(())
     }
