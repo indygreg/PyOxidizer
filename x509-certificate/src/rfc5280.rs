@@ -12,6 +12,7 @@ use {
         encode::{PrimitiveContent, Values},
         BitString, Captured, Integer, Mode, OctetString, Oid, Tag,
     },
+    bytes::Bytes,
     std::{
         io::Write,
         ops::{Deref, DerefMut},
@@ -84,6 +85,24 @@ impl Values for AlgorithmIdentifier {
 /// make (de)serialization simpler.
 #[derive(Clone, Debug)]
 pub struct AlgorithmParameter(Captured);
+
+impl AlgorithmParameter {
+    /// Construct a new instance consisting of a single OID.
+    pub fn from_oid(oid: Oid) -> Self {
+        let captured = Captured::from_values(Mode::Der, oid.encode());
+
+        Self(captured)
+    }
+
+    /// Attempt to decode a single OID from the captured value.
+    pub fn decode_oid(&self) -> Result<Oid, bcder::decode::Error> {
+        Constructed::decode(
+            Bytes::copy_from_slice(self.0.as_slice()),
+            Mode::Der,
+            |cons| Oid::take_from(cons),
+        )
+    }
+}
 
 impl Deref for AlgorithmParameter {
     type Target = Captured;

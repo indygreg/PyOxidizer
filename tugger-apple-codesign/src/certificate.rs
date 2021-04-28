@@ -138,7 +138,7 @@ pub fn parse_pfx_data(
                         )
                     })?;
 
-                    signing_key = Some(InMemorySigningKeyPair::from_pkcs8_der(&decrypted, None)?);
+                    signing_key = Some(InMemorySigningKeyPair::from_pkcs8_der(&decrypted)?);
                 }
                 p12::SafeBagKind::OtherBagKind(_) => {
                     return Err(AppleCodesignError::PfxParseError(
@@ -226,6 +226,7 @@ mod tests {
     use {
         super::*,
         cryptographic_message_syntax::{SignedData, SignedDataBuilder, SignerBuilder},
+        x509_certificate::EcdsaCurve,
     };
 
     #[test]
@@ -240,14 +241,16 @@ mod tests {
 
     #[test]
     fn generate_self_signed_certificate_ecdsa() {
-        create_self_signed_code_signing_certificate(
-            KeyAlgorithm::Ecdsa,
-            "test",
-            "US",
-            "nobody@example.com",
-            chrono::Duration::hours(1),
-        )
-        .unwrap();
+        for curve in EcdsaCurve::all() {
+            create_self_signed_code_signing_certificate(
+                KeyAlgorithm::Ecdsa(*curve),
+                "test",
+                "US",
+                "nobody@example.com",
+                chrono::Duration::hours(1),
+            )
+            .unwrap();
+        }
     }
 
     #[test]
@@ -264,30 +267,32 @@ mod tests {
 
     #[test]
     fn cms_self_signed_certificate_signing_ecdsa() {
-        let (cert, signing_key, _) = create_self_signed_code_signing_certificate(
-            KeyAlgorithm::Ecdsa,
-            "test",
-            "US",
-            "nobody@example.com",
-            chrono::Duration::hours(1),
-        )
-        .unwrap();
-
-        let plaintext = "hello, world";
-
-        let cms = SignedDataBuilder::default()
-            .certificate(cert.clone())
-            .signed_content(plaintext.as_bytes().to_vec())
-            .signer(SignerBuilder::new(&signing_key, cert))
-            .build_ber()
+        for curve in EcdsaCurve::all() {
+            let (cert, signing_key, _) = create_self_signed_code_signing_certificate(
+                KeyAlgorithm::Ecdsa(*curve),
+                "test",
+                "US",
+                "nobody@example.com",
+                chrono::Duration::hours(1),
+            )
             .unwrap();
 
-        let signed_data = SignedData::parse_ber(&cms).unwrap();
+            let plaintext = "hello, world";
 
-        for signer in signed_data.signers() {
-            signer
-                .verify_signature_with_signed_data(&signed_data)
+            let cms = SignedDataBuilder::default()
+                .certificate(cert.clone())
+                .signed_content(plaintext.as_bytes().to_vec())
+                .signer(SignerBuilder::new(&signing_key, cert))
+                .build_ber()
                 .unwrap();
+
+            let signed_data = SignedData::parse_ber(&cms).unwrap();
+
+            for signer in signed_data.signers() {
+                signer
+                    .verify_signature_with_signed_data(&signed_data)
+                    .unwrap();
+            }
         }
     }
 

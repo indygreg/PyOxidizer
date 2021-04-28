@@ -66,7 +66,7 @@
 //! for example.
 
 pub mod algorithm;
-pub use algorithm::{DigestAlgorithm, KeyAlgorithm, SignatureAlgorithm};
+pub use algorithm::{DigestAlgorithm, EcdsaCurve, KeyAlgorithm, SignatureAlgorithm};
 pub mod asn1time;
 pub mod certificate;
 pub use certificate::{
@@ -97,6 +97,15 @@ pub enum X509CertificateError {
 
     #[error("unknown key algorithm: {0}")]
     UnknownKeyAlgorithm(String),
+
+    #[error("unknown elliptic curve: {0}")]
+    UnknownEllipticCurve(String),
+
+    #[error("KeyAlgorithm encountered unexpected algorithm parameters: {0}")]
+    UnhandledKeyAlgorithmParameters(&'static str),
+
+    #[error("can not verify {1:?} signatures made with key algorithm {0:?}")]
+    UnsupportedSignatureVerification(KeyAlgorithm, SignatureAlgorithm),
 
     #[error("ring rejected loading private key: {0}")]
     PrivateKeyRejected(&'static str),

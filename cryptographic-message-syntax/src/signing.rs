@@ -85,7 +85,7 @@ impl<'a> SignerBuilder<'a> {
 
     /// Obtain the signature algorithm used by the signing key.
     pub fn signature_algorithm(&self) -> SignatureAlgorithm {
-        self.signing_key.default_signature_algorithm()
+        self.signing_key.signature_algorithm()
     }
 
     /// Define the content to use to calculate the `message-id` attribute.
@@ -316,8 +316,10 @@ impl<'a> SignedDataBuilder<'a> {
                 signed_content.extend(attributes_data);
             }
 
-            signer_info.signature =
-                SignatureValue::new(Bytes::from(signer.signing_key.sign(&signed_content)?));
+            let (signature, signature_algorithm) = signer.signing_key.sign(&signed_content)?;
+
+            signer_info.signature = SignatureValue::new(Bytes::from(signature));
+            signer_info.signature_algorithm = signature_algorithm.into();
 
             if let Some(url) = &signer.time_stamp_url {
                 let res =
@@ -400,7 +402,11 @@ impl<'a> SignedDataBuilder<'a> {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, crate::SignedData, x509_certificate::testutil::*};
+    use {
+        super::*,
+        crate::SignedData,
+        x509_certificate::{testutil::*, EcdsaCurve},
+    };
 
     const APPLE_TIMESTAMP_URL: &str = "http://timestamp.apple.com/ts01";
 
@@ -457,21 +463,23 @@ mod tests {
 
     #[test]
     fn simple_ecdsa_signature() {
-        let (cert, key) = self_signed_ecdsa_key_pair();
+        for curve in EcdsaCurve::all() {
+            let (cert, key) = self_signed_ecdsa_key_pair(Some(*curve));
 
-        let cms = SignedDataBuilder::default()
-            .signed_content("hello world".as_bytes().to_vec())
-            .certificate(cert.clone())
-            .signer(SignerBuilder::new(&key, cert))
-            .build_ber()
-            .unwrap();
-
-        let signed_data = SignedData::parse_ber(&cms).unwrap();
-
-        for signer in signed_data.signers() {
-            signer
-                .verify_signature_with_signed_data(&signed_data)
+            let cms = SignedDataBuilder::default()
+                .signed_content("hello world".as_bytes().to_vec())
+                .certificate(cert.clone())
+                .signer(SignerBuilder::new(&key, cert))
+                .build_ber()
                 .unwrap();
+
+            let signed_data = SignedData::parse_ber(&cms).unwrap();
+
+            for signer in signed_data.signers() {
+                signer
+                    .verify_signature_with_signed_data(&signed_data)
+                    .unwrap();
+            }
         }
     }
 

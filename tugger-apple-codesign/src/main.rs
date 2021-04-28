@@ -49,7 +49,7 @@ use {
     goblin::mach::{Mach, MachO},
     slog::{error, o, warn, Drain},
     std::{convert::TryFrom, io::Write, path::PathBuf, str::FromStr},
-    x509_certificate::{InMemorySigningKeyPair, KeyAlgorithm},
+    x509_certificate::{EcdsaCurve, InMemorySigningKeyPair, KeyAlgorithm},
 };
 
 #[cfg(target_os = "macos")]
@@ -619,7 +619,7 @@ fn command_generate_self_signed_certificate(args: &ArgMatches) -> Result<(), App
         .value_of("algorithm")
         .ok_or(AppleCodesignError::CliBadArgument)?
     {
-        "ecdsa" => KeyAlgorithm::Ecdsa,
+        "ecdsa" => KeyAlgorithm::Ecdsa(EcdsaCurve::Secp256r1),
         "ed25519" => KeyAlgorithm::Ed25519,
         value => panic!(
             "algorithm values should have been validated by arg parser: {}",
@@ -778,8 +778,9 @@ fn command_sign(args: &ArgMatches) -> Result<(), AppleCodesignError> {
                     "CERTIFICATE" => {
                         public_certificates.push(CapturedX509Certificate::from_der(pem.contents)?);
                     }
-                    "PRIVATE KEY" => private_keys
-                        .push(InMemorySigningKeyPair::from_pkcs8_der(&pem.contents, None)?),
+                    "PRIVATE KEY" => {
+                        private_keys.push(InMemorySigningKeyPair::from_pkcs8_der(&pem.contents)?)
+                    }
                     tag => warn!(&log, "(unhandled PEM tag {}; ignoring)", tag),
                 }
             }

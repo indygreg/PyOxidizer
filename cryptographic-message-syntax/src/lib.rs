@@ -127,6 +127,9 @@ pub enum CmsError {
     /// A general I/O error occurred.
     Io(std::io::Error),
 
+    /// An unknown signing key algorithm was encountered.
+    UnknownKeyAlgorithm(Oid),
+
     /// An unknown message digest algorithm was encountered.
     UnknownDigestAlgorithm(Oid),
 
@@ -195,6 +198,9 @@ impl Display for CmsError {
                 f.write_str("signer info using subject key identifier is not supported")
             }
             Self::Io(e) => e.fmt(f),
+            Self::UnknownKeyAlgorithm(oid) => {
+                f.write_fmt(format_args!("unknown signing key algorithm: {}", oid))
+            }
             Self::UnknownDigestAlgorithm(oid) => {
                 f.write_fmt(format_args!("unknown digest algorithm: {}", oid))
             }
@@ -534,34 +540,18 @@ impl SignerInfo {
 
     /// Obtain an entity for validating the signature described by this instance.
     ///
-    /// See `signature_verifier_with_algorithm()` for documentation.
-    ///
-    /// This version calls into that with the signature algorithm used
-    /// by this signer.
-    pub fn signature_verifier<'a, C>(
-        &self,
-        certs: C,
-    ) -> Result<UnparsedPublicKey<Vec<u8>>, CmsError>
-    where
-        C: Iterator<Item = &'a CapturedX509Certificate>,
-    {
-        self.signature_verifier_with_algorithm(certs, self.signature_algorithm.into())
-    }
-
-    /// Obtain an entity for validating the signature described by this instance.
-    ///
     /// This will attempt to locate the certificate used by this signing info
     /// structure in the passed iterable of certificates and then construct
     /// a signature verifier that can be used to verify content integrity.
     ///
-    /// The verification algorithm is controllable by the caller.
-    ///
     /// If the certificate referenced by this signing info could not be found,
     /// an error occurs.
-    pub fn signature_verifier_with_algorithm<'a, C>(
+    ///
+    /// If the signing key's algorithm or signature algorithm aren't supported,
+    /// an error occurs.
+    pub fn signature_verifier<'a, C>(
         &self,
         mut certs: C,
-        algorithm: &'static dyn ring::signature::VerificationAlgorithm,
     ) -> Result<UnparsedPublicKey<Vec<u8>>, CmsError>
     where
         C: Iterator<Item = &'a CapturedX509Certificate>,
@@ -583,10 +573,23 @@ impl SignerInfo {
             })
             .ok_or(CmsError::CertificateNotFound)?;
 
-        Ok(UnparsedPublicKey::new(
-            algorithm,
+        let key_algorithm = signing_cert.key_algorithm().ok_or_else(|| {
+            CmsError::UnknownKeyAlgorithm(signing_cert.key_algorithm_oid().clone())
+        })?;
+
+        let signature_algorithm = signing_cert.signature_algorithm().ok_or_else(|| {
+            CmsError::UnknownSignatureAlgorithm(signing_cert.signature_algorithm_oid().clone())
+        })?;
+
+        let verification_algorithm =
+            signature_algorithm.resolve_verification_algorithm(key_algorithm)?;
+
+        let public_key = UnparsedPublicKey::new(
+            verification_algorithm,
             signing_cert.public_key_data().to_vec(),
-        ))
+        );
+
+        Ok(public_key)
     }
 
     /// Obtain the raw bytes of content that was signed given a `SignedData`.

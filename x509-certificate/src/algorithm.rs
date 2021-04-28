@@ -5,7 +5,10 @@
 //! Cryptographic algorithms commonly encountered in X.509 certificates.
 
 use {
-    crate::{rfc5280::AlgorithmIdentifier, X509CertificateError as Error},
+    crate::{
+        rfc5280::{AlgorithmIdentifier, AlgorithmParameter},
+        X509CertificateError as Error,
+    },
     bcder::{ConstOid, Oid},
     ring::{digest, signature},
     std::convert::TryFrom,
@@ -49,12 +52,17 @@ const OID_RSA: ConstOid = Oid(&[42, 134, 72, 134, 247, 13, 1, 1, 1]);
 /// ECDSA with SHA-256.
 ///
 /// 1.2.840.10045.4.3.2
-const OID_ECDSA_SHA256: ConstOid = Oid(&[42, 134, 72, 206, 61, 4, 3, 2]);
+pub(crate) const OID_ECDSA_SHA256: ConstOid = Oid(&[42, 134, 72, 206, 61, 4, 3, 2]);
+
+/// ECDSA with SHA-384.
+///
+/// 1.2.840.10045.4.3.2
+pub(crate) const OID_ECDSA_SHA384: ConstOid = Oid(&[42, 134, 72, 206, 61, 4, 3, 3]);
 
 /// Elliptic curve public key cryptography.
 ///
 /// 1.2.840.10045.2.1
-const OID_EC_PUBLIC_KEY: ConstOid = Oid(&[42, 134, 72, 206, 61, 2, 1]);
+pub(crate) const OID_EC_PUBLIC_KEY: ConstOid = Oid(&[42, 134, 72, 206, 61, 2, 1]);
 
 /// ED25519 key agreement.
 ///
@@ -66,7 +74,17 @@ const OID_ED25519_KEY_AGREEMENT: ConstOid = Oid(&[43, 101, 110]);
 /// 1.3.101.112
 const OID_ED25519_SIGNATURE_ALGORITHM: ConstOid = Oid(&[43, 101, 112]);
 
-/// A hasing algorithm used for digesting data.
+/// Elliptic curve identifier for secp256r1.
+///
+/// 1.2.840.10045.3.1.7
+pub(crate) const OID_EC_SECP256R1: ConstOid = Oid(&[42, 134, 72, 206, 61, 3, 1, 7]);
+
+/// Elliptic curve identifier for secp384r1.
+///
+/// 1.3.132.0.34
+pub(crate) const OID_EC_SECP384R1: ConstOid = Oid(&[43, 129, 4, 0, 34]);
+
+/// A hashing algorithm used for digesting data.
 ///
 /// Instances can be converted to and from [Oid] via `From`/`Into`
 /// implementations.
@@ -182,10 +200,54 @@ pub enum SignatureAlgorithm {
     /// Corresponds to OID 1.2.840.10045.4.3.2.
     EcdsaSha256,
 
+    /// ECDSA with SHA-384.
+    ///
+    /// Corresponds to OID 1.2.840.10045.4.3.3.
+    EcdsaSha384,
+
     /// ED25519
     ///
     /// Corresponds to OID 1.3.101.112.
     Ed25519,
+}
+
+impl SignatureAlgorithm {
+    /// Attempt to resolve the verification algorithm using info about the signing key algorithm.
+    ///
+    /// Only specific combinations of methods are supported. e.g. you can only use
+    /// RSA verification with RSA signing keys. Same for ECDSA and ED25519.
+    pub fn resolve_verification_algorithm(
+        &self,
+        key_algorithm: KeyAlgorithm,
+    ) -> Result<&'static dyn signature::VerificationAlgorithm, Error> {
+        match key_algorithm {
+            KeyAlgorithm::Rsa => match self {
+                Self::Sha1Rsa => Ok(&signature::RSA_PKCS1_2048_8192_SHA1_FOR_LEGACY_USE_ONLY),
+                Self::Sha256Rsa => Ok(&signature::RSA_PKCS1_2048_8192_SHA256),
+                Self::Sha512Rsa => Ok(&signature::RSA_PKCS1_2048_8192_SHA512),
+                Self::RsaesPkcsV15 => {
+                    Ok(&signature::RSA_PKCS1_1024_8192_SHA256_FOR_LEGACY_USE_ONLY)
+                }
+                alg => Err(Error::UnsupportedSignatureVerification(key_algorithm, *alg)),
+            },
+            KeyAlgorithm::Ed25519 => match self {
+                Self::Ed25519 => Ok(&signature::ED25519),
+                alg => Err(Error::UnsupportedSignatureVerification(key_algorithm, *alg)),
+            },
+            KeyAlgorithm::Ecdsa(curve) => match curve {
+                EcdsaCurve::Secp256r1 => match self {
+                    Self::EcdsaSha256 => Ok(&signature::ECDSA_P256_SHA256_ASN1),
+                    Self::EcdsaSha384 => Ok(&signature::ECDSA_P256_SHA384_ASN1),
+                    alg => Err(Error::UnsupportedSignatureVerification(key_algorithm, *alg)),
+                },
+                EcdsaCurve::Secp384r1 => match self {
+                    Self::EcdsaSha256 => Ok(&signature::ECDSA_P384_SHA256_ASN1),
+                    Self::EcdsaSha384 => Ok(&signature::ECDSA_P384_SHA384_ASN1),
+                    alg => Err(Error::UnsupportedSignatureVerification(key_algorithm, *alg)),
+                },
+            },
+        }
+    }
 }
 
 impl From<SignatureAlgorithm> for Oid {
@@ -196,6 +258,7 @@ impl From<SignatureAlgorithm> for Oid {
             SignatureAlgorithm::Sha512Rsa => OID_SHA512_RSA.as_ref(),
             SignatureAlgorithm::RsaesPkcsV15 => OID_RSAES_PKCS_V15.as_ref(),
             SignatureAlgorithm::EcdsaSha256 => OID_ECDSA_SHA256.as_ref(),
+            SignatureAlgorithm::EcdsaSha384 => OID_ECDSA_SHA384.as_ref(),
             SignatureAlgorithm::Ed25519 => OID_ED25519_SIGNATURE_ALGORITHM.as_ref(),
         }
         .into())
@@ -216,6 +279,8 @@ impl TryFrom<&Oid> for SignatureAlgorithm {
             Ok(Self::RsaesPkcsV15)
         } else if v == &OID_ECDSA_SHA256 {
             Ok(Self::EcdsaSha256)
+        } else if v == &OID_ECDSA_SHA384 {
+            Ok(Self::EcdsaSha384)
         } else if v == &OID_ED25519_SIGNATURE_ALGORITHM {
             Ok(Self::Ed25519)
         } else {
@@ -241,19 +306,47 @@ impl From<SignatureAlgorithm> for AlgorithmIdentifier {
     }
 }
 
-impl From<SignatureAlgorithm> for &'static dyn signature::VerificationAlgorithm {
-    fn from(alg: SignatureAlgorithm) -> Self {
-        match alg {
-            SignatureAlgorithm::Sha1Rsa => {
-                &ring::signature::RSA_PKCS1_2048_8192_SHA1_FOR_LEGACY_USE_ONLY
-            }
-            SignatureAlgorithm::Sha256Rsa => &ring::signature::RSA_PKCS1_2048_8192_SHA256,
-            SignatureAlgorithm::Sha512Rsa => &ring::signature::RSA_PKCS1_2048_8192_SHA512,
-            SignatureAlgorithm::RsaesPkcsV15 => {
-                &ring::signature::RSA_PKCS1_1024_8192_SHA256_FOR_LEGACY_USE_ONLY
-            }
-            SignatureAlgorithm::EcdsaSha256 => &ring::signature::ECDSA_P256_SHA256_ASN1,
-            SignatureAlgorithm::Ed25519 => &ring::signature::ED25519,
+/// Represents a known curve used with ECDSA.
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub enum EcdsaCurve {
+    Secp256r1,
+    Secp384r1,
+}
+
+impl EcdsaCurve {
+    /// Obtain all variants of this type.
+    pub fn all() -> &'static [Self] {
+        &[Self::Secp256r1, Self::Secp384r1]
+    }
+
+    /// Obtain the OID representing this elliptic curve.
+    pub fn as_signature_oid(&self) -> Oid {
+        Oid(match self {
+            Self::Secp256r1 => OID_EC_SECP256R1.as_ref().into(),
+            Self::Secp384r1 => OID_EC_SECP384R1.as_ref().into(),
+        })
+    }
+}
+
+impl TryFrom<&Oid> for EcdsaCurve {
+    type Error = Error;
+
+    fn try_from(v: &Oid) -> Result<Self, Self::Error> {
+        if v == &OID_EC_SECP256R1 {
+            Ok(Self::Secp256r1)
+        } else if v == &OID_EC_SECP384R1 {
+            Ok(Self::Secp384r1)
+        } else {
+            Err(Error::UnknownEllipticCurve(format!("{}", v)))
+        }
+    }
+}
+
+impl From<EcdsaCurve> for &'static signature::EcdsaSigningAlgorithm {
+    fn from(curve: EcdsaCurve) -> Self {
+        match curve {
+            EcdsaCurve::Secp256r1 => &signature::ECDSA_P256_SHA256_ASN1_SIGNING,
+            EcdsaCurve::Secp384r1 => &signature::ECDSA_P384_SHA384_ASN1_SIGNING,
         }
     }
 }
@@ -270,7 +363,9 @@ pub enum KeyAlgorithm {
     Rsa,
 
     /// Corresponds to OID 1.2.840.10045.2.1
-    Ecdsa,
+    ///
+    /// The inner OID tracks the curve / parameter in use.
+    Ecdsa(EcdsaCurve),
 
     /// Corresponds to OID 1.3.101.110
     Ed25519,
@@ -283,7 +378,8 @@ impl TryFrom<&Oid> for KeyAlgorithm {
         if v == &OID_RSA {
             Ok(Self::Rsa)
         } else if v == &OID_EC_PUBLIC_KEY {
-            Ok(Self::Ecdsa)
+            // Default to an arbitrary elliptic curve when just the OID is given to us.
+            Ok(Self::Ecdsa(EcdsaCurve::Secp384r1))
         // ED25519 appears to use the signature algorithm OID for private key
         // identification, so we need to accept both.
         } else if v == &OID_ED25519_KEY_AGREEMENT || v == &OID_ED25519_SIGNATURE_ALGORITHM {
@@ -298,7 +394,7 @@ impl From<KeyAlgorithm> for Oid {
     fn from(alg: KeyAlgorithm) -> Self {
         Oid(match alg {
             KeyAlgorithm::Rsa => OID_RSA.as_ref(),
-            KeyAlgorithm::Ecdsa => OID_EC_PUBLIC_KEY.as_ref(),
+            KeyAlgorithm::Ecdsa(_) => OID_EC_PUBLIC_KEY.as_ref(),
             KeyAlgorithm::Ed25519 => OID_ED25519_KEY_AGREEMENT.as_ref(),
         }
         .into())
@@ -309,28 +405,56 @@ impl TryFrom<&AlgorithmIdentifier> for KeyAlgorithm {
     type Error = Error;
 
     fn try_from(v: &AlgorithmIdentifier) -> Result<Self, Self::Error> {
-        Self::try_from(&v.algorithm)
+        // This will obtain a generic instance with defaults for configurable
+        // parameters. So check for and apply parameters.
+        let ka = Self::try_from(&v.algorithm)?;
+
+        let ka = if let Some(params) = &v.parameters {
+            match ka {
+                Self::Ecdsa(_) => {
+                    let curve_oid = params.decode_oid()?;
+                    let curve = EcdsaCurve::try_from(&curve_oid)?;
+
+                    Ok(Self::Ecdsa(curve))
+                }
+                Self::Ed25519 => {
+                    // NULL is meaningless. Just a placeholder. Allow it through.
+                    if params.as_slice() == [0x05, 0x00] {
+                        Ok(ka)
+                    } else {
+                        Err(Error::UnhandledKeyAlgorithmParameters("on ED25519"))
+                    }
+                }
+                Self::Rsa => {
+                    // NULL is meaningless. Just a placeholder. Allow it through.
+                    if params.as_slice() == [0x05, 0x00] {
+                        Ok(ka)
+                    } else {
+                        Err(Error::UnhandledKeyAlgorithmParameters("on RSA"))
+                    }
+                }
+            }?
+        } else {
+            ka
+        };
+
+        Ok(ka)
     }
 }
 
 impl From<KeyAlgorithm> for AlgorithmIdentifier {
     fn from(alg: KeyAlgorithm) -> Self {
+        let parameters = match alg {
+            KeyAlgorithm::Ed25519 => None,
+            KeyAlgorithm::Rsa => None,
+            KeyAlgorithm::Ecdsa(curve) => {
+                Some(AlgorithmParameter::from_oid(curve.as_signature_oid()))
+            }
+        };
+
         Self {
             algorithm: alg.into(),
-            parameters: None,
-        }
-    }
-}
-
-impl KeyAlgorithm {
-    /// Obtain a default signature algorithm used by this key algorithm.
-    ///
-    /// We attempt to make the default choice secure. Use at your own risk.
-    pub fn default_signature_algorithm(&self) -> SignatureAlgorithm {
-        match self {
-            Self::Rsa => SignatureAlgorithm::Sha256Rsa,
-            Self::Ecdsa => SignatureAlgorithm::EcdsaSha256,
-            Self::Ed25519 => SignatureAlgorithm::Ed25519,
+            parameters,
         }
     }
 }

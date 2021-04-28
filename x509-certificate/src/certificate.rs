@@ -206,6 +206,29 @@ impl X509Certificate {
         KeyAlgorithm::try_from(&self.0.tbs_certificate.subject_public_key_info.algorithm).ok()
     }
 
+    /// Obtain the OID of the private key's algorithm.
+    pub fn key_algorithm_oid(&self) -> &Oid {
+        &self
+            .0
+            .tbs_certificate
+            .subject_public_key_info
+            .algorithm
+            .algorithm
+    }
+
+    /// Obtain the [SignatureAlgorithm] used to sign this certificate.
+    ///
+    /// Returns [None] if we failed to resolve an instance (probably because we
+    /// don't recognize that algorithm).
+    pub fn signature_algorithm(&self) -> Option<SignatureAlgorithm> {
+        SignatureAlgorithm::try_from(&self.0.signature_algorithm).ok()
+    }
+
+    /// Obtain the OID of the signature algorithm used to sign this certificate.
+    pub fn signature_algorithm_oid(&self) -> &Oid {
+        &self.0.tbs_certificate.signature.algorithm
+    }
+
     /// Obtain the raw data constituting this certificate's public key.
     ///
     /// A copy of the data is returned.
@@ -440,8 +463,16 @@ impl CapturedX509Certificate {
             .expect("original certificate data should have persisted as part of re-parse");
         let signature = this_cert.0.signature.octet_bytes();
 
+        let key_algorithm = KeyAlgorithm::try_from(
+            &this_cert
+                .0
+                .tbs_certificate
+                .subject_public_key_info
+                .algorithm,
+        )?;
         let signature_algorithm = SignatureAlgorithm::try_from(&this_cert.0.signature_algorithm)?;
-        let verify_algorithm = signature_algorithm.into();
+
+        let verify_algorithm = signature_algorithm.resolve_verification_algorithm(key_algorithm)?;
 
         let public_key = signature::UnparsedPublicKey::new(verify_algorithm, public_key_data);
 
@@ -699,10 +730,9 @@ impl X509CertificateBuilder {
         ),
         Error,
     > {
-        let (key_pair, document) =
-            InMemorySigningKeyPair::generate_random(self.key_algorithm, None)?;
+        let (key_pair, document) = InMemorySigningKeyPair::generate_random(self.key_algorithm)?;
 
-        let signature_algorithm = key_pair.default_signature_algorithm();
+        let key_pair_algorithm = key_pair.signature_algorithm();
 
         let issuer = if let Some(issuer) = &self.issuer {
             issuer
@@ -713,7 +743,7 @@ impl X509CertificateBuilder {
         let tbs_certificate = rfc5280::TbsCertificate {
             version: rfc5280::Version::V3,
             serial_number: self.serial_number.into(),
-            signature: signature_algorithm.into(),
+            signature: key_pair_algorithm.into(),
             issuer: issuer.clone(),
             validity: rfc5280::Validity {
                 not_before: Time::from(self.not_before),
@@ -744,7 +774,7 @@ impl X509CertificateBuilder {
             .encode_ref()
             .write_encoded(Mode::Der, &mut tbs_der)?;
 
-        let signature = key_pair.sign(&tbs_der)?;
+        let (signature, signature_algorithm) = key_pair.sign(&tbs_der)?;
 
         let cert = rfc5280::Certificate {
             tbs_certificate,
@@ -763,7 +793,7 @@ impl X509CertificateBuilder {
 
 #[cfg(test)]
 mod test {
-    use super::*;
+    use {super::*, crate::EcdsaCurve};
 
     #[test]
     fn builder_ed25519_default() {
@@ -773,8 +803,12 @@ mod test {
 
     #[test]
     fn build_ecdsa_default() {
-        let builder = X509CertificateBuilder::new(KeyAlgorithm::Ecdsa);
-        builder.create_with_random_keypair().unwrap();
+        for curve in EcdsaCurve::all() {
+            let key_algorithm = KeyAlgorithm::Ecdsa(*curve);
+
+            let builder = X509CertificateBuilder::new(key_algorithm);
+            builder.create_with_random_keypair().unwrap();
+        }
     }
 
     #[test]
@@ -790,5 +824,35 @@ mod test {
             .unwrap();
 
         builder.create_with_random_keypair().unwrap();
+    }
+
+    #[test]
+    fn ecdsa_p256_sha256_self_signed() {
+        let der = include_bytes!("testdata/ecdsa-p256-sha256-self-signed.cer");
+
+        let cert = CapturedX509Certificate::from_der(der.to_vec()).unwrap();
+        cert.verify_signed_by_certificate(&cert).unwrap();
+    }
+
+    #[test]
+    fn ecdsa_p384_sha256_self_signed() {
+        let der = include_bytes!("testdata/ecdsa-p384-sha256-self-signed.cer");
+
+        let cert = CapturedX509Certificate::from_der(der.to_vec()).unwrap();
+        cert.verify_signed_by_certificate(&cert).unwrap();
+    }
+
+    #[test]
+    fn ecdsa_p512_sha256_self_signed() {
+        let der = include_bytes!("testdata/ecdsa-p512-sha256-self-signed.cer");
+
+        // We can parse this. But we don't support secp512 elliptic curves because ring
+        // doesn't support it.
+        let cert = CapturedX509Certificate::from_der(der.to_vec()).unwrap();
+
+        assert!(matches!(
+            cert.verify_signed_by_certificate(&cert),
+            Err(Error::UnknownEllipticCurve(_))
+        ));
     }
 }
