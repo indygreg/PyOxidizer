@@ -10,6 +10,9 @@ homepage = "https://github.com/indygreg/PyOxidizer"
 repository = "https://github.com/indygreg/PyOxidizer.git"
 readme = "README.md"
 
+[features]
+test = []
+
 [dependencies]
 bcder = "0.6"
 bytes = "1.0"

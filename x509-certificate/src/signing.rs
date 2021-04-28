@@ -157,7 +157,7 @@ impl From<&InMemorySigningKeyPair> for KeyAlgorithm {
 
 #[cfg(test)]
 mod test {
-    use super::*;
+    use {super::*, crate::testutil::*, ring::signature::UnparsedPublicKey};
 
     #[test]
     fn signing_key_from_ecdsa_pkcs8() {
@@ -219,5 +219,31 @@ mod test {
             SignatureAlgorithm::Ed25519.into()
         );
         assert!(key_pair_asn1.private_key_algorithm.parameters.is_none());
+    }
+
+    #[test]
+    fn ecdsa_self_signed_certificate_verification() {
+        let (cert, _) = self_signed_ecdsa_key_pair();
+        cert.verify_signed_by_certificate(&cert).unwrap();
+    }
+
+    #[test]
+    fn ed25519_self_signed_certificate_verification() {
+        let (cert, _) = self_signed_ed25519_key_pair();
+        cert.verify_signed_by_certificate(&cert).unwrap();
+    }
+
+    #[test]
+    fn rsa_signing_roundtrip() {
+        let key = rsa_private_key();
+        let cert = rsa_cert();
+        let message = b"hello, world";
+
+        let signature = key.sign(message).unwrap();
+
+        let public_key =
+            UnparsedPublicKey::new(SignatureAlgorithm::Sha256Rsa.into(), cert.public_key_data());
+
+        public_key.verify(message, &signature).unwrap();
     }
 }

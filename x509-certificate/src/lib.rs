@@ -26,6 +26,8 @@ pub mod rfc5915;
 pub mod rfc5958;
 pub mod signing;
 pub use signing::InMemorySigningKeyPair;
+#[cfg(any(feature = "test", test))]
+pub mod testutil;
 
 use thiserror::Error;
 
