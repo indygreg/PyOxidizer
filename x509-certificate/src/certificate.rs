@@ -455,6 +455,12 @@ impl AsRef<X509Certificate> for CapturedX509Certificate {
     }
 }
 
+impl AsRef<rfc5280::Certificate> for CapturedX509Certificate {
+    fn as_ref(&self) -> &rfc5280::Certificate {
+        self.inner.as_ref()
+    }
+}
+
 impl TryFrom<&X509Certificate> for CapturedX509Certificate {
     type Error = Error;
 
