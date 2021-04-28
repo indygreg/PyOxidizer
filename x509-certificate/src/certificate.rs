@@ -643,6 +643,16 @@ impl X509CertificateBuilder {
         self.serial_number = value;
     }
 
+    /// Obtain the raw certificate extensions.
+    pub fn extensions(&self) -> &rfc5280::Extensions {
+        &self.extensions
+    }
+
+    /// Obtain a mutable reference to raw certificate extensions.
+    pub fn extensions_mut(&mut self) -> &mut rfc5280::Extensions {
+        &mut self.extensions
+    }
+
     /// Add an extension to the certificate with its value as pre-encoded DER data.
     pub fn add_extension_der_data(&mut self, oid: Oid, critical: bool, data: impl AsRef<[u8]>) {
         self.extensions.push(rfc5280::Extension {
