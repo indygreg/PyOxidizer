@@ -1018,7 +1018,7 @@ impl<'a> SignableSigner<'a> {
         let mut settings = tugger_apple_codesign::SigningSettings::default();
 
         for cert in &self.certificate_chain {
-            settings.chain_certificate(cert.clone().into());
+            settings.chain_certificate(cert.clone());
         }
 
         if let Some(url) = &self.time_stamp_url {
