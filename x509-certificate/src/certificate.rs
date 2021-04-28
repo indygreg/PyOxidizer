@@ -118,6 +118,16 @@ impl X509Certificate {
         &self.0.tbs_certificate.subject
     }
 
+    /// Obtain the Common Name (CN) attribute from the certificate's subject, if set and decodable.
+    pub fn subject_common_name(&self) -> Option<String> {
+        self.0
+            .tbs_certificate
+            .subject
+            .iter_common_name()
+            .next()
+            .and_then(|cn| cn.to_string().ok())
+    }
+
     /// Obtain the certificate's issuer, as its ASN.1 [Name] type.
     pub fn issuer_name(&self) -> &Name {
         &self.0.tbs_certificate.issuer
