@@ -731,7 +731,8 @@ impl<'a> PythonResourcesState<'a, u8> {
             None
         }
     }
-
+    
+    pub const ENOENT: ::c_int = 2;
     /// Obtain a single named resource in a package.
     ///
     /// Err occurs if loading the resource data fails. `Ok(None)` is returned
@@ -958,7 +959,7 @@ impl<'a> PythonResourcesState<'a, u8> {
             } else {
                 return Err(PyErr::new::<OSError, _>(
                     py,
-                    (libc::ENOENT, "resource not known", path),
+                    (ENOENT, "resource not known", path),
                 ));
             };
 
@@ -983,7 +984,7 @@ impl<'a> PythonResourcesState<'a, u8> {
             return Err(PyErr::new::<OSError, _>(
                 py,
                 (
-                    libc::ENOENT,
+                    ENOENT,
                     "illegal resource name: missing package component",
                     path,
                 ),
@@ -1046,7 +1047,7 @@ impl<'a> PythonResourcesState<'a, u8> {
 
         Err(PyErr::new::<OSError, _>(
             py,
-            (libc::ENOENT, "resource not known", path),
+            (ENOENT, "resource not known", path),
         ))
     }
 
