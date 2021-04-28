@@ -49,6 +49,14 @@ const OID_EKU_PURPOSE_3RD_PARTY_MAC_DEVELOPER_INSTALLER: ConstOid =
 const OID_EKU_PURPOSE_DEVELOPER_ID_INSTALLER: ConstOid =
     Oid(&[42, 134, 72, 134, 247, 99, 100, 4, 13]);
 
+/// All OIDs known for extended key usage.
+const ALL_OID_EKUS: &[&ConstOid; 4] = &[
+    &OID_EKU_PURPOSE_CODE_SIGNING,
+    &OID_EKU_PURPOSE_SAFARI_DEVELOPER,
+    &OID_EKU_PURPOSE_3RD_PARTY_MAC_DEVELOPER_INSTALLER,
+    &OID_EKU_PURPOSE_DEVELOPER_ID_INSTALLER,
+];
+
 /// Extension for `Apple Signing`.
 ///
 /// 1.2.840.113635.100.6.1.1
@@ -250,6 +258,10 @@ pub enum ExtendedKeyUsagePurpose {
 }
 
 impl ExtendedKeyUsagePurpose {
+    pub fn all_oids() -> &'static [&'static ConstOid] {
+        ALL_OID_EKUS
+    }
+
     pub fn as_oid(&self) -> ConstOid {
         match self {
             Self::CodeSigning => OID_EKU_PURPOSE_CODE_SIGNING,
@@ -258,6 +270,25 @@ impl ExtendedKeyUsagePurpose {
                 OID_EKU_PURPOSE_3RD_PARTY_MAC_DEVELOPER_INSTALLER
             }
             Self::DeveloperIdInstaller => OID_EKU_PURPOSE_DEVELOPER_ID_INSTALLER,
+        }
+    }
+}
+
+impl TryFrom<&Oid> for ExtendedKeyUsagePurpose {
+    type Error = AppleCodesignError;
+
+    fn try_from(oid: &Oid) -> Result<Self, Self::Error> {
+        // Surely there is a way to use `match`. But the `Oid` type is a bit wonky.
+        if oid.as_ref() == OID_EKU_PURPOSE_CODE_SIGNING.as_ref() {
+            Ok(Self::CodeSigning)
+        } else if oid.as_ref() == OID_EKU_PURPOSE_SAFARI_DEVELOPER.as_ref() {
+            Ok(Self::SafariDeveloper)
+        } else if oid.as_ref() == OID_EKU_PURPOSE_3RD_PARTY_MAC_DEVELOPER_INSTALLER.as_ref() {
+            Ok(Self::ThirdPartyMacDeveloperInstaller)
+        } else if oid.as_ref() == OID_EKU_PURPOSE_DEVELOPER_ID_INSTALLER.as_ref() {
+            Ok(Self::DeveloperIdInstaller)
+        } else {
+            Err(AppleCodesignError::OidIsntCertificateAuthority)
         }
     }
 }
@@ -522,6 +553,9 @@ pub trait AppleCertificate: Sized {
     /// certificate is a legitimate Apple issued certificate: just that it has
     /// the desired property.
     fn apple_ca_extension(&self) -> Option<CertificateAuthorityExtension>;
+
+    /// Obtain all of Apple's [ExtendedKeyUsagePurpose] in this certificate.
+    fn apple_extended_key_usage_purposes(&self) -> Vec<ExtendedKeyUsagePurpose>;
 }
 
 impl AppleCertificate for CapturedX509Certificate {
@@ -547,6 +581,20 @@ impl AppleCertificate for CapturedX509Certificate {
                 None
             }
         })
+    }
+
+    fn apple_extended_key_usage_purposes(&self) -> Vec<ExtendedKeyUsagePurpose> {
+        let cert: &x509_certificate::rfc5280::Certificate = self.as_ref();
+
+        cert.iter_extensions()
+            .filter_map(|extension| {
+                if let Ok(value) = ExtendedKeyUsagePurpose::try_from(&extension.id) {
+                    Some(value)
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<_>>()
     }
 }
 
