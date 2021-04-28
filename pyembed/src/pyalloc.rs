@@ -89,7 +89,7 @@ to the allocator will be more efficient.
 */
 
 use {
-    libc::{c_void, size_t},
+    core::{ffi::c_void, usize},
     python3_sys as pyffi,
     python_packaging::interpreter::MemoryAllocatorBackend,
     std::{
@@ -205,7 +205,7 @@ pub(crate) struct TrackingAllocator {
     _state: Box<AllocationTracker>,
 }
 
-extern "C" fn rust_malloc(ctx: *mut c_void, size: size_t) -> *mut c_void {
+extern "C" fn rust_malloc(ctx: *mut c_void, size: usize) -> *mut c_void {
     let size = match size {
         0 => 1,
         val => val,
@@ -222,7 +222,7 @@ extern "C" fn rust_malloc(ctx: *mut c_void, size: size_t) -> *mut c_void {
 }
 
 #[cfg(feature = "jemalloc-sys")]
-extern "C" fn jemalloc_malloc(_ctx: *mut c_void, size: size_t) -> *mut c_void {
+extern "C" fn jemalloc_malloc(_ctx: *mut c_void, size: usize) -> *mut c_void {
     let size = match size {
         0 => 1,
         val => val,
@@ -232,7 +232,7 @@ extern "C" fn jemalloc_malloc(_ctx: *mut c_void, size: size_t) -> *mut c_void {
 }
 
 #[cfg(feature = "libmimalloc-sys")]
-extern "C" fn mimalloc_malloc(_ctx: *mut c_void, size: size_t) -> *mut c_void {
+extern "C" fn mimalloc_malloc(_ctx: *mut c_void, size: usize) -> *mut c_void {
     let size = match size {
         0 => 1,
         val => val,
@@ -242,7 +242,7 @@ extern "C" fn mimalloc_malloc(_ctx: *mut c_void, size: size_t) -> *mut c_void {
 }
 
 #[cfg(feature = "snmalloc-sys")]
-extern "C" fn snmalloc_malloc(_ctx: *mut c_void, size: size_t) -> *mut c_void {
+extern "C" fn snmalloc_malloc(_ctx: *mut c_void, size: usize) -> *mut c_void {
     let size = match size {
         0 => 1,
         val => val,
@@ -251,7 +251,7 @@ extern "C" fn snmalloc_malloc(_ctx: *mut c_void, size: size_t) -> *mut c_void {
     unsafe { snmalloc_sys::sn_malloc(size) as *mut _ }
 }
 
-extern "C" fn rust_calloc(ctx: *mut c_void, nelem: size_t, elsize: size_t) -> *mut c_void {
+extern "C" fn rust_calloc(ctx: *mut c_void, nelem: usize, elsize: usize) -> *mut c_void {
     let size = match nelem * elsize {
         0 => 1,
         val => val,
@@ -268,7 +268,7 @@ extern "C" fn rust_calloc(ctx: *mut c_void, nelem: size_t, elsize: size_t) -> *m
 }
 
 #[cfg(feature = "jemalloc-sys")]
-extern "C" fn jemalloc_calloc(_ctx: *mut c_void, nelem: size_t, elsize: size_t) -> *mut c_void {
+extern "C" fn jemalloc_calloc(_ctx: *mut c_void, nelem: usize, elsize: usize) -> *mut c_void {
     let size = match nelem * elsize {
         0 => 1,
         val => val,
@@ -278,7 +278,7 @@ extern "C" fn jemalloc_calloc(_ctx: *mut c_void, nelem: size_t, elsize: size_t) 
 }
 
 #[cfg(feature = "libmimalloc-sys")]
-extern "C" fn mimalloc_calloc(_ctx: *mut c_void, nelem: size_t, elsize: size_t) -> *mut c_void {
+extern "C" fn mimalloc_calloc(_ctx: *mut c_void, nelem: usize, elsize: usize) -> *mut c_void {
     let size = match nelem * elsize {
         0 => 1,
         val => val,
@@ -288,7 +288,7 @@ extern "C" fn mimalloc_calloc(_ctx: *mut c_void, nelem: size_t, elsize: size_t) 
 }
 
 #[cfg(feature = "snmalloc-sys")]
-extern "C" fn snmalloc_calloc(_ctx: *mut c_void, nelem: size_t, elsize: size_t) -> *mut c_void {
+extern "C" fn snmalloc_calloc(_ctx: *mut c_void, nelem: usize, elsize: usize) -> *mut c_void {
     let size = match nelem * elsize {
         0 => 1,
         val => val,
@@ -297,7 +297,7 @@ extern "C" fn snmalloc_calloc(_ctx: *mut c_void, nelem: size_t, elsize: size_t) 
     unsafe { snmalloc_sys::sn_calloc(nelem, size) as *mut _ }
 }
 
-extern "C" fn rust_realloc(ctx: *mut c_void, ptr: *mut c_void, new_size: size_t) -> *mut c_void {
+extern "C" fn rust_realloc(ctx: *mut c_void, ptr: *mut c_void, new_size: usize) -> *mut c_void {
     if ptr.is_null() {
         return rust_malloc(ctx, new_size);
     }
@@ -324,7 +324,7 @@ extern "C" fn rust_realloc(ctx: *mut c_void, ptr: *mut c_void, new_size: size_t)
 extern "C" fn jemalloc_realloc(
     ctx: *mut c_void,
     ptr: *mut c_void,
-    new_size: size_t,
+    new_size: usize,
 ) -> *mut c_void {
     if ptr.is_null() {
         return jemalloc_malloc(ctx, new_size);
@@ -342,7 +342,7 @@ extern "C" fn jemalloc_realloc(
 extern "C" fn mimalloc_realloc(
     ctx: *mut c_void,
     ptr: *mut c_void,
-    new_size: size_t,
+    new_size: usize,
 ) -> *mut c_void {
     if ptr.is_null() {
         return mimalloc_malloc(ctx, new_size);
@@ -360,7 +360,7 @@ extern "C" fn mimalloc_realloc(
 extern "C" fn snmalloc_realloc(
     ctx: *mut c_void,
     ptr: *mut c_void,
-    new_size: size_t,
+    new_size: usize,
 ) -> *mut c_void {
     if ptr.is_null() {
         return snmalloc_malloc(ctx, new_size);
@@ -418,7 +418,7 @@ extern "C" fn snmalloc_free(_ctx: *mut c_void, ptr: *mut c_void) {
     unsafe { snmalloc_sys::sn_free(ptr as *mut _) }
 }
 
-extern "C" fn rust_arena_free(ctx: *mut c_void, ptr: *mut c_void, _size: size_t) {
+extern "C" fn rust_arena_free(ctx: *mut c_void, ptr: *mut c_void, _size: usize) {
     if ptr.is_null() {
         return;
     }
@@ -437,7 +437,7 @@ extern "C" fn rust_arena_free(ctx: *mut c_void, ptr: *mut c_void, _size: size_t)
 }
 
 #[cfg(feature = "jemalloc-sys")]
-extern "C" fn jemalloc_arena_free(_ctx: *mut c_void, ptr: *mut c_void, _size: size_t) {
+extern "C" fn jemalloc_arena_free(_ctx: *mut c_void, ptr: *mut c_void, _size: usize) {
     if ptr.is_null() {
         return;
     }
@@ -446,7 +446,7 @@ extern "C" fn jemalloc_arena_free(_ctx: *mut c_void, ptr: *mut c_void, _size: si
 }
 
 #[cfg(feature = "libmimalloc-sys")]
-extern "C" fn mimalloc_arena_free(_ctx: *mut c_void, ptr: *mut c_void, _size: size_t) {
+extern "C" fn mimalloc_arena_free(_ctx: *mut c_void, ptr: *mut c_void, _size: usize) {
     if ptr.is_null() {
         return;
     }
@@ -455,7 +455,7 @@ extern "C" fn mimalloc_arena_free(_ctx: *mut c_void, ptr: *mut c_void, _size: si
 }
 
 #[cfg(feature = "snmalloc-sys")]
-extern "C" fn snmalloc_arena_free(_ctx: *mut c_void, ptr: *mut c_void, _size: size_t) {
+extern "C" fn snmalloc_arena_free(_ctx: *mut c_void, ptr: *mut c_void, _size: usize) {
     if ptr.is_null() {
         return;
     }
