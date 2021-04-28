@@ -21,7 +21,9 @@ use {
     ring::signature,
     std::{
         cmp::Ordering,
+        collections::HashSet,
         convert::TryFrom,
+        hash::{Hash, Hasher},
         io::Write,
         ops::{Deref, DerefMut},
     },
@@ -314,7 +316,7 @@ enum OriginalData {
 ///
 /// A copy of the certificate's raw backing data is stored, facilitating
 /// subsequent access.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug)]
 pub struct CapturedX509Certificate {
     original: OriginalData,
     inner: X509Certificate,
@@ -479,6 +481,91 @@ impl CapturedX509Certificate {
         public_key
             .verify(&signed_data, &signature)
             .map_err(|_| Error::CertificateSignatureVerificationFailed)
+    }
+
+    /// Attempt to find the issuing certificate of this one.
+    ///
+    /// Given an iterable of certificates, we find the first certificate
+    /// where we are able to verify that our signature was made by their public
+    /// key.
+    ///
+    /// This function can yield false negatives for cases where we don't
+    /// support the signature algorithm on the incoming certificates.
+    pub fn find_signing_certificate<'a>(
+        &self,
+        mut certs: impl Iterator<Item = &'a Self>,
+    ) -> Option<&'a Self> {
+        certs.find(|candidate| self.verify_signed_by_certificate(candidate).is_ok())
+    }
+
+    /// Attempt to resolve the signing chain of this certificate.
+    ///
+    /// Given an iterable of certificates, we recursively resolve the
+    /// chain of certificates that signed this one until we are no longer able
+    /// to find any more certificates in the input set.
+    ///
+    /// Like [Self::find_signing_certificate], this can yield false
+    /// negatives (read: an incomplete chain) due to run-time failures,
+    /// such as lack of support for a certificate's signature algorithm.
+    ///
+    /// As a certificate is encountered, it is removed from the set of
+    /// future candidates.
+    ///
+    /// The traversal ends when we get to an identical certificate (its
+    /// DER data is equivalent) or we couldn't find a certificate in
+    /// the remaining set that signed the last one.
+    ///
+    /// Because we need to recursively verify certificates, the incoming
+    /// iterator is buffered.
+    pub fn resolve_signing_chain<'a>(
+        &self,
+        certs: impl Iterator<Item = &'a Self>,
+    ) -> Vec<&'a Self> {
+        // The logic here is a bit wonky. As we build up the collection of certificates,
+        // we want to filter out ourself and remove duplicates. We remove duplicates by
+        // storing encountered certificates in a HashSet.
+        let mut seen = HashSet::new();
+        let mut remaining = vec![];
+
+        for cert in certs {
+            if cert == self || seen.contains(cert) {
+                continue;
+            } else {
+                remaining.push(cert);
+                seen.insert(cert);
+            }
+        }
+
+        drop(seen);
+
+        let mut chain = vec![];
+
+        let mut last_cert = self;
+        while let Some(issuer) = last_cert.find_signing_certificate(remaining.iter().copied()) {
+            chain.push(issuer);
+            last_cert = issuer;
+
+            remaining = remaining
+                .drain(..)
+                .filter(|cert| *cert != issuer)
+                .collect::<Vec<_>>();
+        }
+
+        chain
+    }
+}
+
+impl PartialEq for CapturedX509Certificate {
+    fn eq(&self, other: &Self) -> bool {
+        self.constructed_data() == other.constructed_data()
+    }
+}
+
+impl Eq for CapturedX509Certificate {}
+
+impl Hash for CapturedX509Certificate {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        state.write(self.constructed_data());
     }
 }
 
