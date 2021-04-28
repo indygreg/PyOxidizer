@@ -321,11 +321,7 @@ extern "C" fn rust_realloc(ctx: *mut c_void, ptr: *mut c_void, new_size: usize) 
 }
 
 #[cfg(feature = "jemalloc-sys")]
-extern "C" fn jemalloc_realloc(
-    ctx: *mut c_void,
-    ptr: *mut c_void,
-    new_size: usize,
-) -> *mut c_void {
+extern "C" fn jemalloc_realloc(ctx: *mut c_void, ptr: *mut c_void, new_size: usize) -> *mut c_void {
     if ptr.is_null() {
         return jemalloc_malloc(ctx, new_size);
     }
@@ -339,11 +335,7 @@ extern "C" fn jemalloc_realloc(
 }
 
 #[cfg(feature = "libmimalloc-sys")]
-extern "C" fn mimalloc_realloc(
-    ctx: *mut c_void,
-    ptr: *mut c_void,
-    new_size: usize,
-) -> *mut c_void {
+extern "C" fn mimalloc_realloc(ctx: *mut c_void, ptr: *mut c_void, new_size: usize) -> *mut c_void {
     if ptr.is_null() {
         return mimalloc_malloc(ctx, new_size);
     }
@@ -357,11 +349,7 @@ extern "C" fn mimalloc_realloc(
 }
 
 #[cfg(feature = "snmalloc-sys")]
-extern "C" fn snmalloc_realloc(
-    ctx: *mut c_void,
-    ptr: *mut c_void,
-    new_size: usize,
-) -> *mut c_void {
+extern "C" fn snmalloc_realloc(ctx: *mut c_void, ptr: *mut c_void, new_size: usize) -> *mut c_void {
     if ptr.is_null() {
         return snmalloc_malloc(ctx, new_size);
     }

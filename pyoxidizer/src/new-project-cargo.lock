@@ -257,8 +257,8 @@ dependencies = [
  "cpython",
  "dunce",
  "jemalloc-sys",
- "libc",
  "libmimalloc-sys",
+ "libc",
  "memmap",
  "memory-module-sys",
  "once_cell",
@@ -361,6 +361,7 @@ checksum = "73c59324cc36b140b6b46b1379f379eaa7ee9cfb06ec5d7dd0a650de35b9b902"
 dependencies = [
  "cmake",
  "libc",
+ "cc",
 ]
 
 [[package]]

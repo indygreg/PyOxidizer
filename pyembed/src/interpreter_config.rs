@@ -6,13 +6,14 @@
 
 use {
     crate::{config::ResolvedOxidizedPythonInterpreterConfig, NewInterpreterError},
-    std::os::raw::c_int;
-    core::{usize, u16};
+    libc::wchar_t,
+    core::usize,
     python3_sys as pyffi,
     python_packaging::{
         interpreter::{CheckHashPycsMode, PythonInterpreterConfig, PythonInterpreterProfile},
         resource::BytecodeOptimizationLevel,
     },
+    std::os::raw::c_int,
     std::{
         convert::{TryFrom, TryInto},
         ffi::{CString, OsString},
@@ -29,7 +30,7 @@ use std::os::windows::prelude::OsStrExt;
 /// Set a PyConfig string value from a str.
 fn set_config_string_from_str(
     config: &pyffi::PyConfig,
-    dest: &*mut u16,
+    dest: &*mut wchar_t,
     value: &str,
     context: &str,
 ) -> Result<(), NewInterpreterError> {
@@ -56,7 +57,7 @@ fn set_config_string_from_str(
 #[cfg(unix)]
 fn set_config_string_from_path(
     config: &pyffi::PyConfig,
-    dest: &*mut u16,
+    dest: &*mut wchar_t,
     path: &Path,
     context: &str,
 ) -> Result<(), NewInterpreterError> {
@@ -81,12 +82,12 @@ fn set_config_string_from_path(
 #[cfg(windows)]
 fn set_config_string_from_path(
     config: &pyffi::PyConfig,
-    dest: &*mut u16,
+    dest: &*mut wchar_t,
     path: &Path,
     context: &str,
 ) -> Result<(), NewInterpreterError> {
     let status = unsafe {
-        let mut value: Vec<u16> = path.as_os_str().encode_wide().collect();
+        let mut value: Vec<wchar_t> = path.as_os_str().encode_wide().collect();
         // NULL terminate.
         value.push(0);
 
@@ -159,7 +160,7 @@ fn append_wide_string_list_from_path(
     context: &str,
 ) -> Result<(), NewInterpreterError> {
     let status = unsafe {
-        let mut value: Vec<u16> = path.as_os_str().encode_wide().collect();
+        let mut value: Vec<wchar_t> = path.as_os_str().encode_wide().collect();
         // NULL terminate.
         value.push(0);
 
@@ -226,7 +227,7 @@ pub fn set_argv(
     let argv = args
         .iter()
         .map(|x| {
-            let mut buffer = x.encode_wide().collect::<Vec<u16>>();
+            let mut buffer = x.encode_wide().collect::<Vec<wchar_t>>();
             buffer.push(0);
 
             buffer
@@ -234,7 +235,7 @@ pub fn set_argv(
         .collect::<Vec<_>>();
     let argvp = argv
         .iter()
-        .map(|x| x.as_ptr() as *mut u16)
+        .map(|x| x.as_ptr() as *mut wchar_t)
         .collect::<Vec<_>>();
 
     let status = unsafe { pyffi::PyConfig_SetArgv(config as *mut _, argc, argvp.as_ptr()) };
@@ -403,7 +404,7 @@ pub fn python_interpreter_config_to_py_config(
         config.site_import = if site_import { 1 } else { 0 };
     }
     if let Some(bytes_warning) = value.bytes_warning {
-        config.bytes_warning = bytes_warning as i32;
+        config.bytes_warning = bytes_warning as wchar_t;
     }
     if let Some(inspect) = value.inspect {
         config.inspect = if inspect { 1 } else { 0 };
