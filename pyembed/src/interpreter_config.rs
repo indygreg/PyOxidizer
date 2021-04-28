@@ -6,7 +6,8 @@
 
 use {
     crate::{config::ResolvedOxidizedPythonInterpreterConfig, NewInterpreterError},
-    libc::{c_int, size_t, wchar_t},
+    std::os::raw::c_int;
+    core::{usize, u16};
     python3_sys as pyffi,
     python_packaging::{
         interpreter::{CheckHashPycsMode, PythonInterpreterConfig, PythonInterpreterProfile},
@@ -28,7 +29,7 @@ use std::os::windows::prelude::OsStrExt;
 /// Set a PyConfig string value from a str.
 fn set_config_string_from_str(
     config: &pyffi::PyConfig,
-    dest: &*mut wchar_t,
+    dest: &*mut u16,
     value: &str,
     context: &str,
 ) -> Result<(), NewInterpreterError> {
@@ -55,7 +56,7 @@ fn set_config_string_from_str(
 #[cfg(unix)]
 fn set_config_string_from_path(
     config: &pyffi::PyConfig,
-    dest: &*mut wchar_t,
+    dest: &*mut u16,
     path: &Path,
     context: &str,
 ) -> Result<(), NewInterpreterError> {
@@ -80,12 +81,12 @@ fn set_config_string_from_path(
 #[cfg(windows)]
 fn set_config_string_from_path(
     config: &pyffi::PyConfig,
-    dest: &*mut wchar_t,
+    dest: &*mut u16,
     path: &Path,
     context: &str,
 ) -> Result<(), NewInterpreterError> {
     let status = unsafe {
-        let mut value: Vec<wchar_t> = path.as_os_str().encode_wide().collect();
+        let mut value: Vec<u16> = path.as_os_str().encode_wide().collect();
         // NULL terminate.
         value.push(0);
 
@@ -112,7 +113,7 @@ fn append_wide_string_list_from_str(
     let value = CString::new(value)
         .map_err(|_| NewInterpreterError::Simple("unable to convert value to C string"))?;
 
-    let mut len: size_t = 0;
+    let mut len: usize = 0;
 
     let decoded = unsafe { pyffi::Py_DecodeLocale(value.as_ptr() as *const _, &mut len) };
 
@@ -158,7 +159,7 @@ fn append_wide_string_list_from_path(
     context: &str,
 ) -> Result<(), NewInterpreterError> {
     let status = unsafe {
-        let mut value: Vec<wchar_t> = path.as_os_str().encode_wide().collect();
+        let mut value: Vec<u16> = path.as_os_str().encode_wide().collect();
         // NULL terminate.
         value.push(0);
 
