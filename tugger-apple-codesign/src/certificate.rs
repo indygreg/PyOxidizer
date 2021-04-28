@@ -8,20 +8,11 @@ use {
     crate::error::AppleCodesignError,
     bcder::{
         encode::{PrimitiveContent, Values},
-        BitString, ConstOid, Mode, OctetString, Oid,
+        ConstOid, Mode, Oid,
     },
     bytes::Bytes,
-    ring::signature::{EcdsaKeyPair, Ed25519KeyPair, ECDSA_P256_SHA256_ASN1_SIGNING},
-    std::convert::TryInto,
     x509_certificate::{
-        asn1time::Time,
-        rfc3280::Name,
-        rfc5280::{
-            AlgorithmIdentifier, Certificate, Extension, Extensions, SubjectPublicKeyInfo,
-            TbsCertificate, Validity, Version,
-        },
-        rfc5958::OneAsymmetricKey,
-        CapturedX509Certificate, InMemorySigningKeyPair, KeyAlgorithm, X509Certificate,
+        CapturedX509Certificate, InMemorySigningKeyPair, KeyAlgorithm, X509CertificateBuilder,
     },
 };
 
@@ -185,106 +176,49 @@ pub fn create_self_signed_code_signing_certificate(
     country_name: &str,
     email_address: &str,
     validity_duration: chrono::Duration,
-) -> Result<(CapturedX509Certificate, InMemorySigningKeyPair, Vec<u8>), AppleCodesignError> {
-    let system_random = ring::rand::SystemRandom::new();
+) -> Result<
+    (
+        CapturedX509Certificate,
+        InMemorySigningKeyPair,
+        ring::pkcs8::Document,
+    ),
+    AppleCodesignError,
+> {
+    let mut builder = X509CertificateBuilder::new(algorithm);
 
-    let key_pair_document = match algorithm {
-        KeyAlgorithm::Ed25519 => Ed25519KeyPair::generate_pkcs8(&system_random)
-            .map_err(AppleCodesignError::CertificateRing)?,
-        KeyAlgorithm::Ecdsa => {
-            let signing_algorithm = &ECDSA_P256_SHA256_ASN1_SIGNING;
-            EcdsaKeyPair::generate_pkcs8(signing_algorithm, &system_random)
-                .map_err(AppleCodesignError::CertificateRing)?
-        }
-        KeyAlgorithm::Rsa => {
-            return Err(AppleCodesignError::CertificateUnsupportedKeyAlgorithm(
-                algorithm,
-            ));
-        }
-    };
-
-    let key_pair_asn1 =
-        bcder::decode::Constructed::decode(key_pair_document.as_ref(), Mode::Der, |cons| {
-            OneAsymmetricKey::take_from(cons)
-        })
-        .map_err(AppleCodesignError::CertificateDecode)?;
-
-    let signing_key = InMemorySigningKeyPair::from_pkcs8_der(key_pair_document.as_ref(), None)?;
-
-    let mut name = Name::default();
-    name.append_common_name_utf8_string(common_name)
+    builder
+        .subject()
+        .append_common_name_utf8_string(common_name)
         .map_err(AppleCodesignError::CertificateCharset)?;
-    name.append_country_utf8_string(country_name)
+    builder
+        .subject()
+        .append_country_utf8_string(country_name)
         .map_err(AppleCodesignError::CertificateCharset)?;
-    name.append_utf8_string(Oid(OID_EMAIL_ADDRESS.as_ref().into()), email_address)
+    builder
+        .subject()
+        .append_utf8_string(Oid(OID_EMAIL_ADDRESS.as_ref().into()), email_address)
         .map_err(AppleCodesignError::CertificateCharset)?;
 
-    let now = chrono::Utc::now();
-    let expires = now + validity_duration;
-
-    let mut extensions = Extensions::default();
+    builder.validity_duration(validity_duration);
 
     // Digital Signature key usage extension.
-    extensions.push(Extension {
-        id: Oid(Bytes::from(OID_EXTENSION_KEY_USAGE.as_ref())),
-        critical: Some(true),
-        value: OctetString::new(Bytes::copy_from_slice(&[3, 2, 7, 128])),
-    });
+    builder.add_extension_der_data(
+        Oid(OID_EXTENSION_KEY_USAGE.as_ref().into()),
+        true,
+        &[3, 2, 7, 128],
+    );
 
     let captured =
         bcder::encode::sequence(Oid(Bytes::from(OID_PURPOSE_CODE_SIGNING.as_ref())).encode())
-            .to_captured(Mode::Ber);
+            .to_captured(Mode::Der);
 
-    extensions.push(Extension {
-        id: Oid(Bytes::from(OID_EXTENSION_EXTENDED_KEY_USAGE.as_ref())),
-        critical: Some(true),
-        value: OctetString::new(Bytes::copy_from_slice(captured.as_ref())),
-    });
+    builder.add_extension_der_data(
+        Oid(OID_EXTENSION_EXTENDED_KEY_USAGE.as_ref().into()),
+        true,
+        captured.as_slice(),
+    );
 
-    let tbs_certificate = TbsCertificate {
-        version: Version::V3,
-        serial_number: 42.into(),
-        signature: algorithm.default_signature_algorithm().into(),
-        issuer: name.clone(),
-        validity: Validity {
-            not_before: Time::from(now),
-            not_after: Time::from(expires),
-        },
-        subject: name,
-        subject_public_key_info: SubjectPublicKeyInfo {
-            algorithm: AlgorithmIdentifier {
-                algorithm: key_pair_asn1.private_key_algorithm.algorithm.clone(),
-                parameters: key_pair_asn1.private_key_algorithm.parameters,
-            },
-            subject_public_key: BitString::new(
-                0,
-                Bytes::copy_from_slice(signing_key.public_key_data()),
-            ),
-        },
-        issuer_unique_id: None,
-        subject_unique_id: None,
-        extensions: Some(extensions),
-        raw_data: None,
-    };
-
-    // We need to serialize the TBS certificate so we can sign it with the private
-    // key and include its signature.
-    let mut cert_ber = Vec::<u8>::new();
-    tbs_certificate
-        .encode_ref()
-        .write_encoded(Mode::Ber, &mut cert_ber)?;
-
-    let signature = signing_key.sign(&cert_ber)?;
-
-    let cert = Certificate {
-        tbs_certificate,
-        signature_algorithm: algorithm.default_signature_algorithm().into(),
-        signature: BitString::new(0, Bytes::copy_from_slice(signature.as_ref())),
-    };
-
-    let cert = X509Certificate::from(cert).try_into()?;
-
-    Ok((cert, signing_key, key_pair_document.as_ref().to_vec()))
+    Ok(builder.create_with_random_keypair()?)
 }
 
 #[cfg(test)]

@@ -655,7 +655,7 @@ fn command_generate_self_signed_certificate(args: &ArgMatches) -> Result<(), App
         "{}",
         pem::encode(&pem::Pem {
             tag: "PRIVATE KEY".to_string(),
-            contents: raw
+            contents: raw.as_ref().to_vec(),
         })
     );
 
