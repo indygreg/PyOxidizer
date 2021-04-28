@@ -462,62 +462,6 @@ impl TryFrom<&Oid> for CodeSigningCertificateExtension {
     }
 }
 
-/// Describes combinations of key extensions for Apple code signing certificates.
-///
-/// Code signing certificates contain various X.509 extensions denoting them for
-/// code signing.
-///
-/// This type represents various common extensions as used on Apple platforms.
-///
-/// Typically, you'll want to apply at most one of these extensions to a
-/// new certificate in order to mark it as compatible for code signing.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum KeyExtensions {
-    /// Mac Installer Distribution.
-    ///
-    /// In `Keychain Access.app`, this might render as `3rd Party Mac Developer Installer`.
-    ///
-    /// Certificates are marked for EKU with `3rd Party Developer Installer Package
-    /// Signing`.
-    ///
-    /// They also have the `Apple Mac App Signing (Submission)` extension.
-    ///
-    /// Typically issued by `Apple Worldwide Developer Relations Certificate
-    /// Authority`.
-    MacInstallerDistribution,
-
-    /// Apple Distribution.
-    ///
-    /// Certificates are marked for EKU with `Code Signing`. They also have
-    /// extensions `Apple Mac App Signing (Development)` and
-    /// `Apple Developer Certificate (Submission)`.
-    ///
-    /// Typically issued by `Apple Worldwide Developer Relations Certificate Authority`.
-    AppleDistribution,
-
-    /// Apple Development.
-    ///
-    /// Certificates are marked for EKU with `Code Signing`. They also have
-    /// extensions `Apple Developer Certificate (Development)` and
-    /// `Mac Developer`.
-    ///
-    /// Typically issued by `Apple Worldwide Developer Relations Certificate
-    /// Authority`.
-    AppleDevelopment,
-
-    /// Developer ID Application.
-    ///
-    /// Certificates are marked for EKU with `Code Signing`. They also have
-    /// extensions for `Developer ID Application` and `Developer ID Date`.
-    DeveloperIdApplication,
-
-    /// Developer ID Installer.
-    ///
-    /// Certificates are marked for EKU with `Developer ID Application`. They also
-    /// have extensions `Developer ID Installer` and `Developer ID Date`.
-    DeveloperIdInstaller,
-}
-
 /// Denotes specific certificate extensions on Apple certificate authority certificates.
 ///
 /// Apple's CA certificates have extensions that appear to identify the role of
@@ -604,6 +548,66 @@ impl TryFrom<&Oid> for CertificateAuthorityExtension {
             Err(AppleCodesignError::OidIsntCertificateAuthority)
         }
     }
+}
+
+/// Describes combinations of certificate extensions for Apple code signing certificates.
+///
+/// Code signing certificates contain various X.509 extensions denoting them for
+/// code signing.
+///
+/// This type represents various common extensions as used on Apple platforms.
+///
+/// Typically, you'll want to apply at most one of these extensions to a
+/// new certificate in order to mark it as compatible for code signing.
+///
+/// This type essentially encapsulates the logic for handling of different
+/// "profiles" attached to the different code signing certificates that Apple
+/// issues.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum CertificateProfile {
+    /// Mac Installer Distribution.
+    ///
+    /// In `Keychain Access.app`, this might render as `3rd Party Mac Developer Installer`.
+    ///
+    /// Certificates are marked for EKU with `3rd Party Developer Installer Package
+    /// Signing`.
+    ///
+    /// They also have the `Apple Mac App Signing (Submission)` extension.
+    ///
+    /// Typically issued by `Apple Worldwide Developer Relations Certificate
+    /// Authority`.
+    MacInstallerDistribution,
+
+    /// Apple Distribution.
+    ///
+    /// Certificates are marked for EKU with `Code Signing`. They also have
+    /// extensions `Apple Mac App Signing (Development)` and
+    /// `Apple Developer Certificate (Submission)`.
+    ///
+    /// Typically issued by `Apple Worldwide Developer Relations Certificate Authority`.
+    AppleDistribution,
+
+    /// Apple Development.
+    ///
+    /// Certificates are marked for EKU with `Code Signing`. They also have
+    /// extensions `Apple Developer Certificate (Development)` and
+    /// `Mac Developer`.
+    ///
+    /// Typically issued by `Apple Worldwide Developer Relations Certificate
+    /// Authority`.
+    AppleDevelopment,
+
+    /// Developer ID Application.
+    ///
+    /// Certificates are marked for EKU with `Code Signing`. They also have
+    /// extensions for `Developer ID Application` and `Developer ID Date`.
+    DeveloperIdApplication,
+
+    /// Developer ID Installer.
+    ///
+    /// Certificates are marked for EKU with `Developer ID Application`. They also
+    /// have extensions `Developer ID Installer` and `Developer ID Date`.
+    DeveloperIdInstaller,
 }
 
 /// Extends functionality of [CapturedX509Certificate] with Apple specific certificate knowledge.
