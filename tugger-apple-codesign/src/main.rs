@@ -100,6 +100,9 @@ requirements-raw
    Raw binary data composing the requirements blob/slot.
 requirements
    Parsed code requirement statement/expression.
+requirements-rust
+   Dump the internal Rust data structures representing the requirements
+   expressions.
 requirements-serialized
    Reserialize the code requirements blob, parse it again, and then
    print it like `requirements` would.
@@ -472,6 +475,19 @@ fn command_extract(args: &ArgMatches) -> Result<(), AppleCodesignError> {
 
             if let Some(blob) = embedded.find_slot(CodeSigningSlot::RequirementSet) {
                 std::io::stdout().write_all(blob.data)?;
+            } else {
+                eprintln!("no requirements");
+            }
+        }
+        "requirements-rust" => {
+            let embedded = parse_signature_data(&sig.signature_data)?;
+
+            if let Some(reqs) = embedded.code_requirements()? {
+                for (typ, req) in &reqs.requirements {
+                    for expr in req.parse_expressions()?.iter() {
+                        println!("{} => {:#?}", typ, expr);
+                    }
+                }
             } else {
                 eprintln!("no requirements");
             }
@@ -1033,6 +1049,7 @@ fn main_impl() -> Result<(), AppleCodesignError> {
                             "code-directory",
                             "linkedit-segment-raw",
                             "requirements-raw",
+                            "requirements-rust",
                             "requirements-serialized-raw",
                             "requirements-serialized",
                             "requirements",

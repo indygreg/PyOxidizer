@@ -28,13 +28,9 @@ use {
         code_requirement::{CodeRequirementExpression, CodeRequirementMatchExpression},
         error::AppleCodesignError,
     },
-    bcder::Oid,
     once_cell::sync::Lazy,
     std::{convert::TryFrom, ops::Deref},
-    x509_certificate::{
-        rfc4519::{OID_COMMON_NAME, OID_ORGANIZATIONAL_UNIT_NAME},
-        CapturedX509Certificate,
-    },
+    x509_certificate::CapturedX509Certificate,
 };
 
 /// Code signing requirement for Mac Developer ID.
@@ -45,19 +41,19 @@ static POLICY_MAC_DEVELOPER_ID: Lazy<CodeRequirementExpression<'static>> = Lazy:
     CodeRequirementExpression::And(
         Box::new(CodeRequirementExpression::And(
             Box::new(CodeRequirementExpression::AnchorAppleGeneric),
-            Box::new(CodeRequirementExpression::CertificatePolicy(
+            Box::new(CodeRequirementExpression::CertificateGeneric(
                 1,
                 CertificateAuthorityExtension::DeveloperId.as_oid(),
                 CodeRequirementMatchExpression::Exists,
             )),
         )),
         Box::new(CodeRequirementExpression::Or(
-            Box::new(CodeRequirementExpression::CertificatePolicy(
+            Box::new(CodeRequirementExpression::CertificateGeneric(
                 0,
                 CodeSigningCertificateExtension::DeveloperIdInstaller.as_oid(),
                 CodeRequirementMatchExpression::Exists,
             )),
-            Box::new(CodeRequirementExpression::CertificatePolicy(
+            Box::new(CodeRequirementExpression::CertificateGeneric(
                 0,
                 CodeSigningCertificateExtension::DeveloperIdApplication.as_oid(),
                 CodeRequirementMatchExpression::Exists,
@@ -76,13 +72,13 @@ static POLICY_NOTARIZED_EXECUTABLE: Lazy<CodeRequirementExpression<'static>> = L
         Box::new(CodeRequirementExpression::And(
             Box::new(CodeRequirementExpression::And(
                 Box::new(CodeRequirementExpression::AnchorAppleGeneric),
-                Box::new(CodeRequirementExpression::CertificatePolicy(
+                Box::new(CodeRequirementExpression::CertificateGeneric(
                     1,
                     CertificateAuthorityExtension::DeveloperId.as_oid(),
                     CodeRequirementMatchExpression::Exists,
                 )),
             )),
-            Box::new(CodeRequirementExpression::CertificatePolicy(
+            Box::new(CodeRequirementExpression::CertificateGeneric(
                 0,
                 CodeSigningCertificateExtension::DeveloperIdApplication.as_oid(),
                 CodeRequirementMatchExpression::Exists,
@@ -102,19 +98,19 @@ static POLICY_NOTARIZED_INSTALLER: Lazy<CodeRequirementExpression<'static>> = La
         Box::new(CodeRequirementExpression::And(
             Box::new(CodeRequirementExpression::And(
                 Box::new(CodeRequirementExpression::AnchorAppleGeneric),
-                Box::new(CodeRequirementExpression::CertificatePolicy(
+                Box::new(CodeRequirementExpression::CertificateGeneric(
                     1,
                     CertificateAuthorityExtension::DeveloperId.as_oid(),
                     CodeRequirementMatchExpression::Exists,
                 )),
             )),
             Box::new(CodeRequirementExpression::Or(
-                Box::new(CodeRequirementExpression::CertificatePolicy(
+                Box::new(CodeRequirementExpression::CertificateGeneric(
                     0,
                     CodeSigningCertificateExtension::DeveloperIdInstaller.as_oid(),
                     CodeRequirementMatchExpression::Exists,
                 )),
-                Box::new(CodeRequirementExpression::CertificatePolicy(
+                Box::new(CodeRequirementExpression::CertificateGeneric(
                     0,
                     CodeSigningCertificateExtension::DeveloperIdApplication.as_oid(),
                     CodeRequirementMatchExpression::Exists,
@@ -230,13 +226,13 @@ pub fn derive_designated_requirements(
                 Box::new(CodeRequirementExpression::AnchorAppleGeneric),
                 Box::new(CodeRequirementExpression::And(
                     // It was signed by this cert.
-                    Box::new(CodeRequirementExpression::CertificateGeneric(
+                    Box::new(CodeRequirementExpression::CertificateField(
                         0,
-                        Oid(OID_COMMON_NAME.as_ref().into()),
+                        "subject.CN".to_string().into(),
                         CodeRequirementMatchExpression::Equal(cn.into()),
                     )),
                     // That cert was signed by a CA with WWDR extension.
-                    Box::new(CodeRequirementExpression::CertificatePolicy(
+                    Box::new(CodeRequirementExpression::CertificateGeneric(
                         1,
                         CertificateAuthorityExtension::AppleWorldwideDeveloperRelations.as_oid(),
                         CodeRequirementMatchExpression::Exists,
@@ -266,22 +262,22 @@ pub fn derive_designated_requirements(
                 Box::new(CodeRequirementExpression::AnchorAppleGeneric),
                 Box::new(CodeRequirementExpression::And(
                     // Certificate issued by CA with Developer ID extension.
-                    Box::new(CodeRequirementExpression::CertificatePolicy(
+                    Box::new(CodeRequirementExpression::CertificateGeneric(
                         1,
                         CertificateAuthorityExtension::DeveloperId.as_oid(),
                         CodeRequirementMatchExpression::Exists,
                     )),
                     Box::new(CodeRequirementExpression::And(
                         // A certificate entrusted with Developer ID Application signing rights.
-                        Box::new(CodeRequirementExpression::CertificatePolicy(
+                        Box::new(CodeRequirementExpression::CertificateGeneric(
                             0,
                             CodeSigningCertificateExtension::DeveloperIdApplication.as_oid(),
                             CodeRequirementMatchExpression::Exists,
                         )),
                         // Signed by this team ID.
-                        Box::new(CodeRequirementExpression::CertificateGeneric(
+                        Box::new(CodeRequirementExpression::CertificateField(
                             0,
-                            Oid(OID_ORGANIZATIONAL_UNIT_NAME.as_ref().into()),
+                            "subject.OU".to_string().into(),
                             CodeRequirementMatchExpression::Equal(team_id.into()),
                         )),
                     )),
