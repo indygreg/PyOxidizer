@@ -422,7 +422,8 @@ impl SignerInfo {
             &self.sid,
             &self.digest_algorithm,
             if let Some(attrs) = self.signed_attributes.as_ref() {
-                Some(attrs.encode_ref_as(Tag::CTX_0))
+                // Always write signed attributes with DER encoding per RFC 5652.
+                Some(SignedAttributesDer::new(attrs.clone(), Some(Tag::CTX_0)))
             } else {
                 None
             },
@@ -507,10 +508,8 @@ impl SignerInfo {
                 // But we obtain a sorted instance of those attributes first, because
                 // bcder doesn't appear to follow DER encoding rules for sets.
                 let mut der = Vec::new();
-                signed_attributes
-                    .as_sorted()?
-                    .encode_ref()
-                    .write_encoded(bcder::Mode::Der, &mut der)?;
+                // The mode argument here is actually ignored.
+                signed_attributes.write_encoded(Mode::Der, &mut der)?;
 
                 Ok(Some(der))
             }
@@ -622,12 +621,49 @@ impl SignedAttributes {
         Ok(Self(res))
     }
 
-    pub fn encode_ref(&self) -> impl Values + '_ {
+    fn encode_ref(&self) -> impl Values + '_ {
         encode::set(encode::slice(&self.0, |x| x.clone().encode()))
     }
 
-    pub fn encode_ref_as(&self, tag: Tag) -> impl Values + '_ {
+    fn encode_ref_as(&self, tag: Tag) -> impl Values + '_ {
         encode::set_as(tag, encode::slice(&self.0, |x| x.clone().encode()))
+    }
+}
+
+impl Values for SignedAttributes {
+    // SignedAttributes are always written as DER encoded.
+    fn encoded_len(&self, _: Mode) -> usize {
+        self.encode_ref().encoded_len(Mode::Der)
+    }
+
+    fn write_encoded<W: Write>(&self, _: Mode, target: &mut W) -> Result<(), std::io::Error> {
+        self.encode_ref().write_encoded(Mode::Der, target)
+    }
+}
+
+pub struct SignedAttributesDer(SignedAttributes, Option<Tag>);
+
+impl SignedAttributesDer {
+    pub fn new(sa: SignedAttributes, tag: Option<Tag>) -> Self {
+        Self(sa, tag)
+    }
+}
+
+impl Values for SignedAttributesDer {
+    fn encoded_len(&self, _: Mode) -> usize {
+        if let Some(tag) = &self.1 {
+            self.0.encode_ref_as(*tag).encoded_len(Mode::Der)
+        } else {
+            self.0.encode_ref().encoded_len(Mode::Der)
+        }
+    }
+
+    fn write_encoded<W: Write>(&self, _: Mode, target: &mut W) -> Result<(), std::io::Error> {
+        if let Some(tag) = &self.1 {
+            self.0.encode_ref_as(*tag).write_encoded(Mode::Der, target)
+        } else {
+            self.0.encode_ref().write_encoded(Mode::Der, target)
+        }
     }
 }
 
