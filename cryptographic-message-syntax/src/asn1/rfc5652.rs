@@ -420,13 +420,13 @@ impl SignerInfo {
         encode::sequence((
             u8::from(self.version).encode(),
             &self.sid,
-            self.digest_algorithm.encode_ref(),
+            &self.digest_algorithm,
             if let Some(attrs) = self.signed_attributes.as_ref() {
                 Some(attrs.encode_ref_as(Tag::CTX_0))
             } else {
                 None
             },
-            self.signature_algorithm.encode_ref(),
+            &self.signature_algorithm,
             self.signature.encode_ref(),
             if let Some(attrs) = self.unsigned_attributes.as_ref() {
                 Some(attrs.encode_ref_as(Tag::CTX_1))

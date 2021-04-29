@@ -70,7 +70,7 @@ impl OneAsymmetricKey {
     pub fn encode_ref(&self) -> impl Values + '_ {
         encode::sequence((
             self.version.encode(),
-            self.private_key_algorithm.encode_ref(),
+            &self.private_key_algorithm,
             self.private_key.encode_ref(),
             if let Some(attrs) = &self.attributes {
                 Some(attrs.encode_ref_as(Tag::CTX_0))

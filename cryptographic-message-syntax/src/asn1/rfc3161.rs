@@ -129,10 +129,7 @@ impl MessageImprint {
     }
 
     pub fn encode_ref(&self) -> impl Values + '_ {
-        encode::sequence((
-            self.hash_algorithm.encode_ref(),
-            self.hashed_message.encode_ref(),
-        ))
+        encode::sequence((&self.hash_algorithm, self.hashed_message.encode_ref()))
     }
 }
 

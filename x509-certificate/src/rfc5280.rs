@@ -29,7 +29,7 @@ use {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct AlgorithmIdentifier {
     pub algorithm: Oid,
-    pub parameters: AlgorithmParameter,
+    pub parameters: Option<AlgorithmParameter>,
 }
 
 impl AlgorithmIdentifier {
@@ -43,7 +43,13 @@ impl AlgorithmIdentifier {
 
     fn take_sequence<S: Source>(cons: &mut Constructed<S>) -> Result<Self, S::Err> {
         let algorithm = Oid::take_from(cons)?;
-        let parameters = AlgorithmParameter(cons.capture_all()?);
+        let parameters = cons.capture_all()?;
+
+        let parameters = if parameters.is_empty() {
+            None
+        } else {
+            Some(AlgorithmParameter(parameters))
+        };
 
         Ok(Self {
             algorithm,
@@ -51,18 +57,28 @@ impl AlgorithmIdentifier {
         })
     }
 
-    pub fn encode_ref(&self) -> impl Values + '_ {
-        encode::sequence((self.algorithm.clone().encode(), &self.parameters))
+    fn encoded_values(&self, mode: Mode) -> impl Values + '_ {
+        // parameters is strictly OPTIONAL, which means we can omit it completely.
+        // However, it is common to see this field encoded as NULL and some
+        // parsers seem to insist the NULL be there or else they refuse to
+        // parse the ASN.1. So we ensure this field is always set.
+        let captured = if let Some(params) = self.parameters.as_ref() {
+            params.clone()
+        } else {
+            AlgorithmParameter(Captured::from_values(mode, ().encode_as(Tag::NULL)))
+        };
+
+        encode::sequence((self.algorithm.clone().encode(), captured))
     }
 }
 
 impl Values for AlgorithmIdentifier {
     fn encoded_len(&self, mode: Mode) -> usize {
-        self.encode_ref().encoded_len(mode)
+        self.encoded_values(mode).encoded_len(mode)
     }
 
     fn write_encoded<W: Write>(&self, mode: Mode, target: &mut W) -> Result<(), std::io::Error> {
-        self.encode_ref().write_encoded(mode, target)
+        self.encoded_values(mode).write_encoded(mode, target)
     }
 }
 
@@ -74,13 +90,6 @@ impl Values for AlgorithmIdentifier {
 pub struct AlgorithmParameter(Captured);
 
 impl AlgorithmParameter {
-    /// Construct an empty instance.
-    pub fn empty(mode: Mode) -> Self {
-        let mut builder = Captured::builder(mode);
-        builder.extend(().encode_as(Tag::NULL));
-        Self(builder.freeze())
-    }
-
     /// Construct a new instance consisting of a single OID.
     pub fn from_oid(oid: Oid) -> Self {
         let captured = Captured::from_values(Mode::Der, oid.encode());
@@ -167,7 +176,7 @@ impl Certificate {
     pub fn encode_ref(&self) -> impl Values + '_ {
         encode::sequence((
             self.tbs_certificate.encode_ref(),
-            self.signature_algorithm.encode_ref(),
+            &self.signature_algorithm,
             self.signature.encode_ref(),
         ))
     }
@@ -273,7 +282,7 @@ impl TbsCertificate {
         encode::sequence((
             encode::Constructed::new(Tag::CTX_0, u8::from(self.version).encode()),
             (&self.serial_number).encode(),
-            self.signature.encode_ref(),
+            &self.signature,
             self.issuer.encode_ref(),
             self.validity.encode_ref(),
             self.subject.encode_ref(),
@@ -387,10 +396,7 @@ impl SubjectPublicKeyInfo {
     }
 
     pub fn encode_ref(&self) -> impl Values + '_ {
-        encode::sequence((
-            self.algorithm.encode_ref(),
-            self.subject_public_key.encode_ref(),
-        ))
+        encode::sequence((&self.algorithm, self.subject_public_key.encode_ref()))
     }
 }
 
