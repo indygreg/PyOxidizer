@@ -1040,6 +1040,9 @@ impl<'a> SignableSigner<'a> {
             }
         };
 
+        // Automatically register Apple CA certificates for convenience.
+        settings.chain_apple_certificates();
+
         for cert in &self.certificate_chain {
             settings.chain_certificate(cert.clone());
         }

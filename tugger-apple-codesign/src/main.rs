@@ -247,6 +247,12 @@ settings ignored include (but may not be limited to):
 
 # Designated Code Requirements
 
+When using Apple issued code signing certificates, we will attempt to apply
+an appropriate designated requirement automatically during signing which
+matches the behavior of what `codesign` would do. We do not yet support all
+signing certificates and signing targets for this, however. So you may
+need to provide your own requirements. 
+
 Designated code requirements can be specified via --code-requirements-path.
 
 This file MUST contain a binary/compiled code requirements expression. We do
@@ -287,6 +293,10 @@ an error occurs. The first encountered public certificate is assigned
 to be paired with the signing key. All remaining certificates are assumed
 to constitute the CA issuing chain and will be added to the signature
 data to facilitate validation.
+
+If you are using an Apple-issued code signing certificate, we detect this
+and automatically register the Apple CA certificate chain so it is included
+in the digital signature. This matches the behavior of the `codesign` tool.
 
 For best results, put your private key and its corresponding X.509 certificate
 in a single file, either a PFX or PEM formatted file. Then add any additional
@@ -838,6 +848,15 @@ fn command_sign(args: &ArgMatches) -> Result<(), AppleCodesignError> {
 
         warn!(&log, "registering signing key");
         settings.set_signing_key(signing_key, cert);
+        if let Some(certs) = settings.chain_apple_certificates() {
+            for cert in certs {
+                warn!(
+                    &log,
+                    "automatically registered Apple CA certificate: {}",
+                    cert.subject_common_name().unwrap_or("default".into())
+                );
+            }
+        }
 
         if let Some(timestamp_url) = args.value_of("timestamp_url") {
             if timestamp_url != "none" {

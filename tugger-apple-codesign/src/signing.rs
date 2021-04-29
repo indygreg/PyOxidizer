@@ -6,6 +6,7 @@
 
 use {
     crate::{
+        certificate::AppleCertificate,
         code_directory::{CodeSignatureFlags, ExecutableSegmentFlags},
         code_requirement::CodeRequirementExpression,
         error::AppleCodesignError,
@@ -305,6 +306,26 @@ impl<'key> SigningSettings<'key> {
     /// Obtain the certificate chain.
     pub fn certificate_chain(&self) -> &[CapturedX509Certificate] {
         &self.certificates
+    }
+
+    /// Attempt to chain Apple CA certificates from a loaded Apple signed signing key.
+    ///
+    /// If you are calling `set_signing_key()`, you probably want to call this immediately
+    /// afterwards, as it will automatically register Apple CA certificates if you are
+    /// using an Apple signed code signing certificate.
+    pub fn chain_apple_certificates(&mut self) -> Option<Vec<CapturedX509Certificate>> {
+        if let Some((_, cert)) = &self.signing_key {
+            if let Some(chain) = cert.apple_root_certificate_chain() {
+                // The chain starts with self.
+                let chain = chain.into_iter().skip(1).collect::<Vec<_>>();
+                self.certificates.extend(chain.clone());
+                Some(chain)
+            } else {
+                None
+            }
+        } else {
+            None
+        }
     }
 
     /// Add a parsed certificate to the signing certificate chain.
