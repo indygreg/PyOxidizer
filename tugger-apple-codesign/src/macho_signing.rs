@@ -17,7 +17,8 @@ use {
             parse_signature_data, Blob, BlobWrapperBlob, CodeSigningMagic, CodeSigningSlot, Digest,
             DigestType, EmbeddedSignature, EntitlementsBlob, RequirementSetBlob, RequirementType,
         },
-        signing::{SettingsScope, SigningSettings},
+        policy::derive_designated_requirements,
+        signing::{DesignatedRequirementMode, SettingsScope, SigningSettings},
     },
     bcder::{encode::PrimitiveContent, Oid},
     bytes::Bytes,
@@ -789,13 +790,30 @@ impl<'data> MachOSigner<'data> {
     ) -> Result<Vec<(CodeSigningSlot, Vec<u8>)>, AppleCodesignError> {
         let mut res = Vec::new();
 
-        if let Some(exprs) = settings.designated_requirement(SettingsScope::Main) {
-            let mut requirements = CodeRequirements::default();
+        let mut requirements = CodeRequirements::default();
 
-            for expr in exprs {
-                requirements.push(CodeRequirementExpression::from_bytes(expr)?.0);
+        match settings.designated_requirement(SettingsScope::Main) {
+            DesignatedRequirementMode::Auto => {
+                // If we are using an Apple-issued cert, this should automatically
+                // derive appropriate designated requirements.
+                if let Some((_, cert)) = settings.signing_key() {
+                    let identifier = settings
+                        .binary_identifier(SettingsScope::Main)
+                        .map(|x| x.to_string());
+
+                    if let Some(expr) = derive_designated_requirements(cert, identifier)? {
+                        requirements.push(expr);
+                    }
+                }
             }
+            DesignatedRequirementMode::Explicit(exprs) => {
+                for expr in exprs {
+                    requirements.push(CodeRequirementExpression::from_bytes(expr)?.0);
+                }
+            }
+        }
 
+        if !requirements.is_empty() {
             let mut blob = RequirementSetBlob::default();
             requirements.add_to_requirement_set(&mut blob, RequirementType::Designated)?;
 

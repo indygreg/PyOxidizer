@@ -218,6 +218,17 @@ impl TryFrom<&str> for SettingsScope {
     }
 }
 
+/// Describes how to derive designated requirements during signing.
+#[derive(Clone, Debug)]
+pub enum DesignatedRequirementMode {
+    /// Automatically attempt to derive an appropriate expression given the
+    /// code signing certificate and entity being signed.
+    Auto,
+
+    /// Provide an explicit designated requirement.
+    Explicit(Vec<Vec<u8>>),
+}
+
 /// Represents code signing settings.
 ///
 /// This type holds settings related to a single logical signing operation.
@@ -250,7 +261,7 @@ pub struct SigningSettings<'key> {
     // last and last write wins.
     identifiers: BTreeMap<SettingsScope, String>,
     entitlements: BTreeMap<SettingsScope, String>,
-    designated_requirement: BTreeMap<SettingsScope, Vec<Vec<u8>>>,
+    designated_requirement: BTreeMap<SettingsScope, DesignatedRequirementMode>,
     code_signature_flags: BTreeMap<SettingsScope, CodeSignatureFlags>,
     executable_segment_flags: BTreeMap<SettingsScope, ExecutableSegmentFlags>,
     info_plist_data: BTreeMap<SettingsScope, Vec<u8>>,
@@ -399,12 +410,14 @@ impl<'key> SigningSettings<'key> {
         self.entitlements.insert(scope, value.to_string());
     }
 
-    /// Obtain the designated requirements binary expressions for a given scope.
+    /// Obtain the designated requirements for a given scope.
     pub fn designated_requirement(
         &self,
         scope: impl AsRef<SettingsScope>,
-    ) -> Option<&Vec<Vec<u8>>> {
-        self.designated_requirement.get(scope.as_ref())
+    ) -> &DesignatedRequirementMode {
+        self.designated_requirement
+            .get(scope.as_ref())
+            .unwrap_or(&DesignatedRequirementMode::Auto)
     }
 
     /// Set the designated requirement for a Mach-O binary given a [CodeRequirementExpression].
@@ -418,8 +431,10 @@ impl<'key> SigningSettings<'key> {
         scope: SettingsScope,
         expr: &CodeRequirementExpression,
     ) -> Result<(), AppleCodesignError> {
-        self.designated_requirement
-            .insert(scope, vec![expr.to_bytes()?]);
+        self.designated_requirement.insert(
+            scope,
+            DesignatedRequirementMode::Explicit(vec![expr.to_bytes()?]),
+        );
 
         Ok(())
     }
@@ -439,13 +454,29 @@ impl<'key> SigningSettings<'key> {
 
         self.designated_requirement.insert(
             scope,
-            blob.parse_expressions()?
-                .iter()
-                .map(|x| x.to_bytes())
-                .collect::<Result<Vec<_>, AppleCodesignError>>()?,
+            DesignatedRequirementMode::Explicit(
+                blob.parse_expressions()?
+                    .iter()
+                    .map(|x| x.to_bytes())
+                    .collect::<Result<Vec<_>, AppleCodesignError>>()?,
+            ),
         );
 
         Ok(())
+    }
+
+    /// Set the designated requirement mode to auto, which will attempt to derive requirements
+    /// automatically.
+    ///
+    /// This setting recognizes when code signing is being performed with Apple issued code signing
+    /// certificates and automatically applies appropriate settings for the certificate being
+    /// used and the entity being signed.
+    ///
+    /// Not all combinations may be supported. If you get an error, you will need to
+    /// provide your own explicit requirement expression.
+    pub fn set_auto_designated_requirement(&mut self, scope: SettingsScope) {
+        self.designated_requirement
+            .insert(scope, DesignatedRequirementMode::Auto);
     }
 
     /// Obtain the code signature flags for a given scope.

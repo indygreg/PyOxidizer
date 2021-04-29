@@ -131,6 +131,12 @@ impl<'a> From<Cow<'a, str>> for CodeRequirementValue<'a> {
     }
 }
 
+impl<'a> From<String> for CodeRequirementValue<'static> {
+    fn from(v: String) -> Self {
+        Self::String(Cow::Owned(v))
+    }
+}
+
 impl<'a> std::fmt::Display for CodeRequirementValue<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {

@@ -21,12 +21,20 @@
 
 use {
     crate::{
-        certificate::{CertificateAuthorityExtension, CodeSigningCertificateExtension},
+        certificate::{
+            AppleCertificate, CertificateAuthorityExtension, CertificateProfile,
+            CodeSigningCertificateExtension,
+        },
         code_requirement::{CodeRequirementExpression, CodeRequirementMatchExpression},
         error::AppleCodesignError,
     },
+    bcder::Oid,
     once_cell::sync::Lazy,
     std::{convert::TryFrom, ops::Deref},
+    x509_certificate::{
+        rfc4519::{OID_COMMON_NAME, OID_ORGANIZATIONAL_UNIT_NAME},
+        CapturedX509Certificate,
+    },
 };
 
 /// Code signing requirement for Mac Developer ID.
@@ -186,5 +194,114 @@ mod test {
         ExecutionPolicy::DeveloperIdNotarizedInstaller
             .to_bytes()
             .unwrap();
+    }
+}
+
+/// Derive a designated requirements expression given a code signing certificate.
+///
+/// This function figures out what the run-time requirements of a signed binary
+/// should be given its code signing certificate.
+///
+/// We determine the flavor of Apple code signing certificate in use and apply an
+/// appropriate requirements policy. We strive for behavior equivalence with
+/// Apple's `codesign` tool.
+pub fn derive_designated_requirements(
+    cert: &CapturedX509Certificate,
+    identifier: Option<String>,
+) -> Result<Option<CodeRequirementExpression<'static>>, AppleCodesignError> {
+    let profile = if let Some(profile) = cert.apple_guess_profile() {
+        profile
+    } else {
+        return Ok(None);
+    };
+
+    match profile {
+        // These appear to be the same policy.
+        CertificateProfile::AppleDevelopment | CertificateProfile::AppleDistribution => {
+            let cn = cert.subject_common_name().ok_or_else(|| {
+                AppleCodesignError::PolicyFormulationError(format!(
+                    "(deriving for {:?}) certificate common name not available",
+                    profile
+                ))
+            })?;
+
+            let expr = CodeRequirementExpression::And(
+                // It chains to Apple root CA.
+                Box::new(CodeRequirementExpression::AnchorAppleGeneric),
+                Box::new(CodeRequirementExpression::And(
+                    // It was signed by this cert.
+                    Box::new(CodeRequirementExpression::CertificateGeneric(
+                        0,
+                        Oid(OID_COMMON_NAME.as_ref().into()),
+                        CodeRequirementMatchExpression::Equal(cn.into()),
+                    )),
+                    // That cert was signed by a CA with WWDR extension.
+                    Box::new(CodeRequirementExpression::CertificatePolicy(
+                        1,
+                        CertificateAuthorityExtension::AppleWorldwideDeveloperRelations.as_oid(),
+                        CodeRequirementMatchExpression::Exists,
+                    )),
+                )),
+            );
+
+            Ok(Some(if let Some(identifier) = identifier {
+                CodeRequirementExpression::And(
+                    Box::new(CodeRequirementExpression::Identifier(identifier.into())),
+                    Box::new(expr),
+                )
+            } else {
+                expr
+            }))
+        }
+        CertificateProfile::DeveloperIdApplication => {
+            let team_id = cert.apple_team_id().ok_or_else(|| {
+                AppleCodesignError::PolicyFormulationError(format!(
+                    "(deriving for {:?}) could not find team identifier in signing certificate",
+                    profile
+                ))
+            })?;
+
+            let expr = CodeRequirementExpression::And(
+                // Chains to Apple root CA.
+                Box::new(CodeRequirementExpression::AnchorAppleGeneric),
+                Box::new(CodeRequirementExpression::And(
+                    // Certificate issued by CA with Developer ID extension.
+                    Box::new(CodeRequirementExpression::CertificatePolicy(
+                        1,
+                        CertificateAuthorityExtension::DeveloperId.as_oid(),
+                        CodeRequirementMatchExpression::Exists,
+                    )),
+                    Box::new(CodeRequirementExpression::And(
+                        // A certificate entrusted with Developer ID Application signing rights.
+                        Box::new(CodeRequirementExpression::CertificatePolicy(
+                            0,
+                            CodeSigningCertificateExtension::DeveloperIdApplication.as_oid(),
+                            CodeRequirementMatchExpression::Exists,
+                        )),
+                        // Signed by this team ID.
+                        Box::new(CodeRequirementExpression::CertificateGeneric(
+                            0,
+                            Oid(OID_ORGANIZATIONAL_UNIT_NAME.as_ref().into()),
+                            CodeRequirementMatchExpression::Equal(team_id.into()),
+                        )),
+                    )),
+                )),
+            );
+
+            Ok(Some(if let Some(identifier) = identifier {
+                CodeRequirementExpression::And(
+                    Box::new(CodeRequirementExpression::Identifier(identifier.into())),
+                    Box::new(expr),
+                )
+            } else {
+                expr
+            }))
+        }
+        CertificateProfile::MacInstallerDistribution | CertificateProfile::DeveloperIdInstaller => {
+            Err(AppleCodesignError::PolicyFormulationError(format!(
+                "(deriving for {:?}) we do not know how to handle this policy",
+                profile
+            )))
+        }
     }
 }

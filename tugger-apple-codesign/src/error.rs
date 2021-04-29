@@ -189,4 +189,7 @@ pub enum AppleCodesignError {
 
     #[error("unknown code execution policy: {0}")]
     UnknownPolicy(String),
+
+    #[error("unable to generate code requirement policy: {0}")]
+    PolicyFormulationError(String),
 }
