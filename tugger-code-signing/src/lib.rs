@@ -1052,9 +1052,13 @@ impl<'a> SignableSigner<'a> {
                 .set_time_stamp_url(url.clone())
                 .expect("shouldn't have failed for already parsed URL");
         } else {
+
+            // TODO enable once https://github.com/indygreg/PyOxidizer/issues/399 is fixed.
+            /*
             settings
                 .set_time_stamp_url(APPLE_TIMESTAMP_URL)
                 .expect("shouldn't have failed for constant URL");
+             */
         }
 
         if let Some(cb) = &self.apple_signing_settings_fn {
