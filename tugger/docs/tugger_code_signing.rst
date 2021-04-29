@@ -193,7 +193,7 @@ The following named actions are defined by Tugger:
 ``macos-application-bundle-creation``
    When a macOS Application Bundle is created by Tugger.
 
-   This will be triggered by :py:meth:`MacOsApplicationBundlerBuilder.build()`.
+   This will be triggered by :py:meth:`MacOsApplicationBundleBuilder.build()`.
 
 ``windows-installer-creation``
    When a Windows installer file is created by Tugger.
