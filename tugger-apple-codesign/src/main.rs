@@ -837,7 +837,7 @@ fn command_sign(args: &ArgMatches) -> Result<(), AppleCodesignError> {
     }
 
     if let Some(team_name) = args.value_of("team_name") {
-        settings.set_team_name(team_name);
+        settings.set_team_id(team_name);
     }
 
     if let Some(value) = args.value_of("digest") {

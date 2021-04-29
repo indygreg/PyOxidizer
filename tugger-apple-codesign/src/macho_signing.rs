@@ -727,7 +727,7 @@ impl<'data> MachOSigner<'data> {
             }
         });
 
-        let team_name = match settings.team_name() {
+        let team_name = match settings.team_id() {
             Some(team_name) => Some(Cow::Owned(team_name.to_string())),
             None => {
                 if let Some(previous_cd) = &previous_cd {

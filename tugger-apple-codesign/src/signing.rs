@@ -242,7 +242,7 @@ pub struct SigningSettings<'key> {
     signing_key: Option<(&'key InMemorySigningKeyPair, CapturedX509Certificate)>,
     certificates: Vec<CapturedX509Certificate>,
     time_stamp_url: Option<Url>,
-    team_name: Option<String>,
+    team_id: Option<String>,
     digest_type: DigestType,
 
     // Scope-specific settings.
@@ -359,14 +359,14 @@ impl<'key> SigningSettings<'key> {
         Ok(())
     }
 
-    /// Obtain the team name/identifier for signed binaries.
-    pub fn team_name(&self) -> Option<&str> {
-        self.team_name.as_deref()
+    /// Obtain the team identifier for signed binaries.
+    pub fn team_id(&self) -> Option<&str> {
+        self.team_id.as_deref()
     }
 
-    /// Set the team name/identifier for signed binaries.
-    pub fn set_team_name(&mut self, value: impl ToString) {
-        self.team_name = Some(value.to_string());
+    /// Set the team identifier for signed binaries.
+    pub fn set_team_id(&mut self, value: impl ToString) {
+        self.team_id = Some(value.to_string());
     }
 
     /// Obtain the binary identifier string for a given scope.
@@ -655,7 +655,7 @@ impl<'key> SigningSettings<'key> {
             signing_key: self.signing_key.clone(),
             certificates: self.certificates.clone(),
             time_stamp_url: self.time_stamp_url.clone(),
-            team_name: self.team_name.clone(),
+            team_id: self.team_id.clone(),
             digest_type: self.digest_type,
             identifiers: self
                 .identifiers
