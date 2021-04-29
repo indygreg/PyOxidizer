@@ -520,7 +520,7 @@ impl PythonMemoryAllocator {
 
     #[cfg(not(feature = "jemalloc-sys"))]
     pub fn jemalloc() -> Self {
-        panic!("jemalloc is not available in this build configuration");
+        panic!("jemalloc allocator requested but it isn't compiled into this build configuration; try `cargo build --features allocator-jemalloc`");
     }
 
     /// Construct a new instance using mimalloc.
@@ -547,7 +547,7 @@ impl PythonMemoryAllocator {
 
     #[cfg(not(feature = "libmimalloc-sys"))]
     pub fn mimalloc() -> Self {
-        panic!("mimalloc is not available in this build configuration");
+        panic!("mimalloc allocator requested but it isn't compiled into this build configuration; try `cargo build --features allocator-mimalloc`");
     }
 
     /// Construct a new instance using Rust's global allocator.
@@ -602,7 +602,7 @@ impl PythonMemoryAllocator {
 
     #[cfg(not(feature = "snmalloc-sys"))]
     pub fn snmalloc() -> Self {
-        panic!("snmalloc is not available in this build configuration");
+        panic!("snmalloc allocator requested but it isn't compiled into this build configuration; try `cargo build --features allocator-snmalloc`");
     }
 
     /// Obtain the backend used for this instance.
