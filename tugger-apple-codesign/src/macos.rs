@@ -6,7 +6,7 @@
 
 use {
     crate::{certificate::OID_USER_ID, error::AppleCodesignError},
-    bcder::{ConstOid, Oid},
+    bcder::Oid,
     security_framework::{
         item::{ItemClass, ItemSearchOptions, Reference, SearchResult},
         os::macos::{
