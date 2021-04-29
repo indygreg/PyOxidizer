@@ -24,6 +24,19 @@ use {
     std::sync::Arc,
 };
 
+fn error_context<F, T>(label: &str, f: F) -> Result<T, ValueError>
+where
+    F: FnOnce() -> anyhow::Result<T>,
+{
+    f().map_err(|e| {
+        ValueError::Runtime(RuntimeError {
+            code: "PYOXIDIZER_PYTHON_EMBEDDED_RESOURCES",
+            message: format!("{:?}", e),
+            label: label.to_string(),
+        })
+    })
+}
+
 pub struct PythonEmbeddedResourcesValue {
     pub exe: Arc<dyn PythonBinaryBuilder>,
 }
@@ -72,17 +85,11 @@ impl PythonEmbeddedResourcesValue {
             .downcast_ref::<PyOxidizerEnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
 
-        Ok(Value::new(ResolvedTargetValue {
-            inner: self
-                .build(type_values, &target, &pyoxidizer_context)
-                .map_err(|e| {
-                    ValueError::from(RuntimeError {
-                        code: "PYOXIDIZER",
-                        message: e.to_string(),
-                        label: "build()".to_string(),
-                    })
-                })?,
-        }))
+        let inner = error_context("PythonEmbeddedResources.build()", || {
+            self.build(type_values, &target, &pyoxidizer_context)
+        })?;
+
+        Ok(Value::new(ResolvedTargetValue { inner }))
     }
 }
 
