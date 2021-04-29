@@ -317,18 +317,46 @@ pub fn install_rust_toolchain(
 mod tests {
     use {super::*, tugger_common::testutil::get_logger};
 
-    const TEST_TRIPLES: &[&str; 3] = &[
-        "x86_64-apple-darwin",
-        "x86_64-pc-windows-msvc",
-        "x86_64-unknown-linux-gnu",
-    ];
-
     static CACHE_DIR: Lazy<PathBuf> = Lazy::new(|| {
         dirs::cache_dir()
             .expect("unable to obtain cache dir")
             .join("pyoxidizer")
             .join("rust")
     });
+
+    fn do_triple_test(target_triple: &str) -> Result<()> {
+        let logger = get_logger()?;
+
+        let temp_dir = tempfile::Builder::new()
+            .prefix("tugger-rust-toolchain-test")
+            .tempdir()?;
+
+        let toolchain = install_rust_toolchain(
+            &logger,
+            "stable",
+            target_triple,
+            &[],
+            temp_dir.path(),
+            Some(&*CACHE_DIR),
+        )?;
+
+        assert_eq!(
+            toolchain.path,
+            temp_dir.path().join(format!("stable-{}", target_triple))
+        );
+
+        // Doing it again should no-op.
+        install_rust_toolchain(
+            &logger,
+            "stable",
+            target_triple,
+            &[],
+            temp_dir.path(),
+            Some(&*CACHE_DIR),
+        )?;
+
+        Ok(())
+    }
 
     #[test]
     fn fetch_stable() -> Result<()> {
@@ -340,39 +368,17 @@ mod tests {
     }
 
     #[test]
-    fn fetch_common_packages() -> Result<()> {
-        let logger = get_logger()?;
+    fn fetch_apple() -> Result<()> {
+        do_triple_test("x86_64-apple-darwin")
+    }
 
-        for target_triple in TEST_TRIPLES {
-            let temp_dir = tempfile::Builder::new()
-                .prefix("tugger-rust-toolchain-test")
-                .tempdir()?;
+    #[test]
+    fn fetch_linux() -> Result<()> {
+        do_triple_test("x86_64-unknown-linux-gnu")
+    }
 
-            let toolchain = install_rust_toolchain(
-                &logger,
-                "stable",
-                target_triple,
-                &[],
-                temp_dir.path(),
-                Some(&*CACHE_DIR),
-            )?;
-
-            assert_eq!(
-                toolchain.path,
-                temp_dir.path().join(format!("stable-{}", target_triple))
-            );
-
-            // Doing it again should no-op.
-            install_rust_toolchain(
-                &logger,
-                "stable",
-                target_triple,
-                &[],
-                temp_dir.path(),
-                Some(&*CACHE_DIR),
-            )?;
-        }
-
-        Ok(())
+    #[test]
+    fn fetch_windows() -> Result<()> {
+        do_triple_test("x86_64-pc-windows-msvc")
     }
 }
