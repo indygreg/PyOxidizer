@@ -712,6 +712,14 @@ pub trait AppleCertificate: Sized {
     /// Apple root certificate authority. None is returned if this certificate
     /// doesn't appear to chain to a known Apple root CA.
     fn apple_root_certificate_chain(&self) -> Option<Vec<CapturedX509Certificate>>;
+
+    /// Attempt to resolve the *team id* of an Apple issued certificate.
+    ///
+    /// The *team id* is a value like `AB42XYZ789` that is attached to your
+    /// Apple Developer account. It seems to always be embedded in signing
+    /// certificates as the Organizational Unit field of the subject. So this
+    /// function is just a shortcut for retrieving that.
+    fn apple_team_id(&self) -> Option<String>;
 }
 
 impl AppleCertificate for CapturedX509Certificate {
@@ -835,6 +843,16 @@ impl AppleCertificate for CapturedX509Certificate {
             None
         }
     }
+
+    fn apple_team_id(&self) -> Option<String> {
+        self.subject_name()
+            .find_first_attribute_string(Oid(
+                x509_certificate::rfc4519::OID_ORGANIZATIONAL_UNIT_NAME
+                    .as_ref()
+                    .into(),
+            ))
+            .unwrap_or(None)
+    }
 }
 
 /// Extensions to [X509CertificateBuilder] specializing in Apple certificate behavior.
@@ -893,6 +911,10 @@ impl AppleCertificateBuilder for X509CertificateBuilder {
         person_name: &str,
         country: &str,
     ) -> Result<(), AppleCodesignError> {
+        // TODO the subject schema here isn't totally accurate. While OU does always
+        // appear to be the team id, the user id attribute can be something else.
+        // For example, for Apple Development, there are a similarly formatted yet
+        // different value. But the team id does still appear.
         self.subject()
             .append_utf8_string(Oid(OID_USER_ID.as_ref().into()), team_id)
             .map_err(|e| AppleCodesignError::CertificateBuildError(format!("{:?}", e)))?;
@@ -1450,6 +1472,7 @@ mod tests {
                 (*KnownCertificate::AppleRootCa).clone()
             ])
         );
+        assert_eq!(cert.apple_team_id(), Some("MK22MZP987".into()));
 
         let mut builder = X509CertificateBuilder::new(KeyAlgorithm::Ecdsa(EcdsaCurve::Secp256r1));
         builder
@@ -1509,6 +1532,7 @@ mod tests {
                 (*KnownCertificate::AppleRootCa).clone()
             ])
         );
+        assert_eq!(cert.apple_team_id(), Some("MK22MZP987".into()));
 
         let mut builder = X509CertificateBuilder::new(KeyAlgorithm::Ecdsa(EcdsaCurve::Secp256r1));
         builder
@@ -1568,6 +1592,7 @@ mod tests {
                 (*KnownCertificate::AppleRootCa).clone()
             ])
         );
+        assert_eq!(cert.apple_team_id(), Some("MK22MZP987".into()));
 
         let mut builder = X509CertificateBuilder::new(KeyAlgorithm::Ecdsa(EcdsaCurve::Secp256r1));
         builder
@@ -1627,6 +1652,7 @@ mod tests {
                 (*KnownCertificate::AppleRootCa).clone()
             ])
         );
+        assert_eq!(cert.apple_team_id(), Some("MK22MZP987".into()));
 
         let mut builder = X509CertificateBuilder::new(KeyAlgorithm::Ecdsa(EcdsaCurve::Secp256r1));
         builder
@@ -1690,6 +1716,7 @@ mod tests {
                 (*KnownCertificate::AppleRootCa).clone()
             ])
         );
+        assert_eq!(cert.apple_team_id(), Some("MK22MZP987".into()));
 
         let mut builder = X509CertificateBuilder::new(KeyAlgorithm::Ecdsa(EcdsaCurve::Secp256r1));
         builder
