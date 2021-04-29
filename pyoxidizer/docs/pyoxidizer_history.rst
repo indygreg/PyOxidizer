@@ -73,6 +73,12 @@ Backwards Compatibility Notes
   ``mimalloc``, and ``snmalloc``) with ``allocator-``. This makes the names
   consistent with the features in auto-generated Rust projects.
 
+Bug Fixes
+^^^^^^^^^
+
+* Rust projects created with ``pyoxidizer init-rust-project`` no longer fail to
+  build due to a cryptic ``writing packed resources`` error.
+
 New Features
 ^^^^^^^^^^^^
 

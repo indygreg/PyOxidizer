@@ -7,7 +7,7 @@ use {
         py_packaging::binary::PythonBinaryBuilder,
         starlark::env::{get_context, PyOxidizerEnvironmentContext},
     },
-    anyhow::{anyhow, Result},
+    anyhow::{anyhow, Context, Result},
     slog::warn,
     starlark::{
         environment::TypeValues,
@@ -71,6 +71,8 @@ impl PythonEmbeddedResourcesValue {
             .exe
             .to_embedded_python_context(context.logger(), &context.build_opt_level)?;
 
+        std::fs::create_dir_all(&output_path)
+            .with_context(|| format!("creating output directory: {}", output_path.display()))?;
         embedded.write_files(&output_path)?;
 
         Ok(ResolvedTarget {
