@@ -453,7 +453,7 @@ impl<'data> MachOSigner<'data> {
             CodeSigningSlot::CodeDirectory,
             code_directory.to_blob_bytes()?,
         )];
-        blobs.extend(self.create_special_blobs(settings)?);
+        blobs.extend(self.create_special_blobs(settings, signature)?);
 
         // And the CMS signature goes last.
         if settings.signing_key().is_some() {
@@ -541,6 +541,30 @@ impl<'data> MachOSigner<'data> {
             .build_ber()?;
 
         Ok(ber)
+    }
+
+    /// Attempt to resolve the binary identifier to use.
+    ///
+    /// If signing settings have defined one, use it. Otherwise use the last
+    /// identifier on the binary, if present. Otherwise error.
+    fn get_binary_identifier(
+        &self,
+        settings: &SigningSettings,
+        signature: Option<&EmbeddedSignature>,
+    ) -> Result<String, AppleCodesignError> {
+        let previous_cd =
+            signature.and_then(|signature| signature.code_directory().unwrap_or(None));
+
+        match settings.binary_identifier(SettingsScope::Main) {
+            Some(ident) => Ok(ident.to_string()),
+            None => {
+                if let Some(previous_cd) = &previous_cd {
+                    Ok(previous_cd.ident.to_string())
+                } else {
+                    Err(AppleCodesignError::NoIdentifier)
+                }
+            }
+        }
     }
 
     /// Create the `CodeDirectory` for the current configuration.
@@ -661,7 +685,7 @@ impl<'data> MachOSigner<'data> {
                 .collect::<Vec<_>>();
 
         let mut special_hashes = self
-            .create_special_blobs(settings)?
+            .create_special_blobs(settings, signature)?
             .into_iter()
             .map(|(slot, data)| {
                 Ok((
@@ -717,16 +741,7 @@ impl<'data> MachOSigner<'data> {
             }
         }
 
-        let ident = Cow::Owned(match settings.binary_identifier(SettingsScope::Main) {
-            Some(ident) => ident.to_string(),
-            None => {
-                if let Some(previous_cd) = &previous_cd {
-                    previous_cd.ident.to_string()
-                } else {
-                    return Err(AppleCodesignError::NoIdentifier);
-                }
-            }
-        });
+        let ident = Cow::Owned(self.get_binary_identifier(settings, signature)?);
 
         let team_name = match settings.team_id() {
             Some(team_name) => Some(Cow::Owned(team_name.to_string())),
@@ -787,6 +802,7 @@ impl<'data> MachOSigner<'data> {
     pub fn create_special_blobs(
         &self,
         settings: &SigningSettings,
+        signature: Option<&EmbeddedSignature>,
     ) -> Result<Vec<(CodeSigningSlot, Vec<u8>)>, AppleCodesignError> {
         let mut res = Vec::new();
 
@@ -797,9 +813,7 @@ impl<'data> MachOSigner<'data> {
                 // If we are using an Apple-issued cert, this should automatically
                 // derive appropriate designated requirements.
                 if let Some((_, cert)) = settings.signing_key() {
-                    let identifier = settings
-                        .binary_identifier(SettingsScope::Main)
-                        .map(|x| x.to_string());
+                    let identifier = Some(self.get_binary_identifier(settings, signature)?);
 
                     if let Some(expr) = derive_designated_requirements(cert, identifier)? {
                         requirements.push(expr);
