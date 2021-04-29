@@ -609,11 +609,16 @@ fn command_extract(args: &ArgMatches) -> Result<(), AppleCodesignError> {
             println!("blobs:");
             for blob in embedded.blobs {
                 println!("- index: {}", blob.index);
-                println!("  offset: {}", blob.offset);
+                println!(
+                    "  offsets: 0x{:x}-0x{:x} ({}-{})",
+                    blob.offset,
+                    blob.offset + blob.length - 1,
+                    blob.offset,
+                    blob.offset + blob.length - 1
+                );
                 println!("  length: {}", blob.length);
-                println!("  end offset: {}", blob.offset + blob.length - 1);
                 println!("  slot: {:?}", blob.slot);
-                println!("  magic: {:?}", blob.magic);
+                println!("  magic: {:?} (0x{:x})", blob.magic, u32::from(blob.magic));
                 println!(
                     "  sha1: {}",
                     hex::encode(blob.digest_with(DigestType::Sha1)?)
