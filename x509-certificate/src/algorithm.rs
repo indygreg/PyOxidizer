@@ -142,7 +142,7 @@ impl From<DigestAlgorithm> for AlgorithmIdentifier {
     fn from(alg: DigestAlgorithm) -> Self {
         Self {
             algorithm: alg.into(),
-            parameters: None,
+            parameters: AlgorithmParameter::empty(bcder::Mode::Der),
         }
     }
 }
@@ -301,7 +301,7 @@ impl From<SignatureAlgorithm> for AlgorithmIdentifier {
     fn from(alg: SignatureAlgorithm) -> Self {
         Self {
             algorithm: alg.into(),
-            parameters: None,
+            parameters: AlgorithmParameter::empty(bcder::Mode::Der),
         }
     }
 }
@@ -409,34 +409,30 @@ impl TryFrom<&AlgorithmIdentifier> for KeyAlgorithm {
         // parameters. So check for and apply parameters.
         let ka = Self::try_from(&v.algorithm)?;
 
-        let ka = if let Some(params) = &v.parameters {
-            match ka {
-                Self::Ecdsa(_) => {
-                    let curve_oid = params.decode_oid()?;
-                    let curve = EcdsaCurve::try_from(&curve_oid)?;
+        let ka = match ka {
+            Self::Ecdsa(_) => {
+                let curve_oid = v.parameters.decode_oid()?;
+                let curve = EcdsaCurve::try_from(&curve_oid)?;
 
-                    Ok(Self::Ecdsa(curve))
+                Ok(Self::Ecdsa(curve))
+            }
+            Self::Ed25519 => {
+                // NULL is meaningless. Just a placeholder. Allow it through.
+                if v.parameters.as_slice() == [0x05, 0x00] || v.parameters.is_empty() {
+                    Ok(ka)
+                } else {
+                    Err(Error::UnhandledKeyAlgorithmParameters("on ED25519"))
                 }
-                Self::Ed25519 => {
-                    // NULL is meaningless. Just a placeholder. Allow it through.
-                    if params.as_slice() == [0x05, 0x00] {
-                        Ok(ka)
-                    } else {
-                        Err(Error::UnhandledKeyAlgorithmParameters("on ED25519"))
-                    }
+            }
+            Self::Rsa => {
+                // NULL is meaningless. Just a placeholder. Allow it through.
+                if v.parameters.as_slice() == [0x05, 0x00] || v.parameters.is_empty() {
+                    Ok(ka)
+                } else {
+                    Err(Error::UnhandledKeyAlgorithmParameters("on RSA"))
                 }
-                Self::Rsa => {
-                    // NULL is meaningless. Just a placeholder. Allow it through.
-                    if params.as_slice() == [0x05, 0x00] {
-                        Ok(ka)
-                    } else {
-                        Err(Error::UnhandledKeyAlgorithmParameters("on RSA"))
-                    }
-                }
-            }?
-        } else {
-            ka
-        };
+            }
+        }?;
 
         Ok(ka)
     }
@@ -445,11 +441,9 @@ impl TryFrom<&AlgorithmIdentifier> for KeyAlgorithm {
 impl From<KeyAlgorithm> for AlgorithmIdentifier {
     fn from(alg: KeyAlgorithm) -> Self {
         let parameters = match alg {
-            KeyAlgorithm::Ed25519 => None,
-            KeyAlgorithm::Rsa => None,
-            KeyAlgorithm::Ecdsa(curve) => {
-                Some(AlgorithmParameter::from_oid(curve.as_signature_oid()))
-            }
+            KeyAlgorithm::Ed25519 => AlgorithmParameter::empty(bcder::Mode::Der),
+            KeyAlgorithm::Rsa => AlgorithmParameter::empty(bcder::Mode::Ber),
+            KeyAlgorithm::Ecdsa(curve) => AlgorithmParameter::from_oid(curve.as_signature_oid()),
         };
 
         Self {

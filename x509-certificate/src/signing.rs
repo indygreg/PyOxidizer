@@ -270,11 +270,9 @@ mod test {
                 panic!("unhandled test case");
             };
 
-            assert!(key_pair_asn1.private_key_algorithm.parameters.is_some());
             let oid = key_pair_asn1
                 .private_key_algorithm
                 .parameters
-                .unwrap()
                 .decode_oid()
                 .unwrap();
 
@@ -307,7 +305,6 @@ mod test {
             key_pair_asn1.private_key_algorithm.algorithm,
             SignatureAlgorithm::Ed25519.into()
         );
-        assert!(key_pair_asn1.private_key_algorithm.parameters.is_none());
     }
 
     #[test]
@@ -338,16 +335,7 @@ mod test {
                 EcdsaCurve::Secp256r1 => crate::algorithm::OID_EC_SECP256R1,
                 EcdsaCurve::Secp384r1 => crate::algorithm::OID_EC_SECP384R1,
             };
-            assert!(spki.algorithm.parameters.is_some());
-            assert_eq!(
-                spki.algorithm
-                    .parameters
-                    .as_ref()
-                    .unwrap()
-                    .decode_oid()
-                    .unwrap(),
-                expected
-            );
+            assert_eq!(spki.algorithm.parameters.decode_oid().unwrap(), expected);
 
             // This should match the tbs signature algorithm.
             let cert_algorithm = SignatureAlgorithm::try_from(&raw.signature_algorithm).unwrap();

@@ -28,6 +28,7 @@ use {
     std::collections::HashSet,
     x509_certificate::{
         asn1time::UtcTime,
+        rfc5280::AlgorithmParameter,
         rfc5652::{Attribute, AttributeValue},
         CapturedX509Certificate, DigestAlgorithm, InMemorySigningKeyPair, SignatureAlgorithm,
     },
@@ -232,7 +233,7 @@ impl<'a> SignedDataBuilder<'a> {
             let version = CmsVersion::V1;
             let digest_algorithm = DigestAlgorithmIdentifier {
                 algorithm: signer.digest_algorithm.into(),
-                parameters: None,
+                parameters: AlgorithmParameter::empty(Mode::Ber),
             };
 
             let sid = SignerIdentifier::IssuerAndSerialNumber(IssuerAndSerialNumber {
@@ -352,7 +353,7 @@ impl<'a> SignedDataBuilder<'a> {
         digest_algorithms.extend(seen_digest_algorithms.into_iter().map(|alg| {
             DigestAlgorithmIdentifier {
                 algorithm: alg.into(),
-                parameters: None,
+                parameters: AlgorithmParameter::empty(Mode::Ber),
             }
         }));
 

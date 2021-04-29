@@ -29,7 +29,7 @@ use {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct AlgorithmIdentifier {
     pub algorithm: Oid,
-    pub parameters: Option<AlgorithmParameter>,
+    pub parameters: AlgorithmParameter,
 }
 
 impl AlgorithmIdentifier {
@@ -43,13 +43,7 @@ impl AlgorithmIdentifier {
 
     fn take_sequence<S: Source>(cons: &mut Constructed<S>) -> Result<Self, S::Err> {
         let algorithm = Oid::take_from(cons)?;
-        let parameters = cons.capture_all()?;
-
-        let parameters = if parameters.is_empty() {
-            None
-        } else {
-            Some(AlgorithmParameter(parameters))
-        };
+        let parameters = AlgorithmParameter(cons.capture_all()?);
 
         Ok(Self {
             algorithm,
@@ -58,14 +52,7 @@ impl AlgorithmIdentifier {
     }
 
     pub fn encode_ref(&self) -> impl Values + '_ {
-        encode::sequence((
-            self.algorithm.clone().encode(),
-            if let Some(params) = self.parameters.as_ref() {
-                Some(params.clone())
-            } else {
-                None
-            },
-        ))
+        encode::sequence((self.algorithm.clone().encode(), &self.parameters))
     }
 }
 
@@ -87,6 +74,13 @@ impl Values for AlgorithmIdentifier {
 pub struct AlgorithmParameter(Captured);
 
 impl AlgorithmParameter {
+    /// Construct an empty instance.
+    pub fn empty(mode: Mode) -> Self {
+        let mut builder = Captured::builder(mode);
+        builder.extend(().encode_as(Tag::NULL));
+        Self(builder.freeze())
+    }
+
     /// Construct a new instance consisting of a single OID.
     pub fn from_oid(oid: Oid) -> Self {
         let captured = Captured::from_values(Mode::Der, oid.encode());
