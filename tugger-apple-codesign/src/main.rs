@@ -853,7 +853,8 @@ fn command_sign(args: &ArgMatches) -> Result<(), AppleCodesignError> {
                 warn!(
                     &log,
                     "automatically registered Apple CA certificate: {}",
-                    cert.subject_common_name().unwrap_or("default".into())
+                    cert.subject_common_name()
+                        .unwrap_or_else(|| "default".into())
                 );
             }
         }
