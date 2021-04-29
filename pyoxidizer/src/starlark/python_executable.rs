@@ -57,6 +57,19 @@ use {
     tugger_file_manifest::FileData,
 };
 
+fn error_context<F, T>(label: &str, f: F) -> Result<T, ValueError>
+where
+    F: FnOnce() -> anyhow::Result<T>,
+{
+    f().map_err(|e| {
+        ValueError::Runtime(RuntimeError {
+            code: "PYOXIDIZER_PYTHON_EXECUTABLE",
+            message: format!("{:?}", e),
+            label: label.to_string(),
+        })
+    })
+}
+
 /// Represents a builder for a Python executable.
 pub struct PythonExecutableValue {
     pub exe: Box<dyn PythonBinaryBuilder>,
@@ -231,15 +244,9 @@ impl PythonExecutableValue {
             .ok_or(ValueError::IncorrectParameterType)?;
 
         Ok(Value::new(ResolvedTargetValue {
-            inner: self
-                .build_internal(type_values, &target, &pyoxidizer_context)
-                .map_err(|e| {
-                    ValueError::from(RuntimeError {
-                        code: "PYOXIDIZER",
-                        message: format!("{:?}", e),
-                        label: "build()".to_string(),
-                    })
-                })?,
+            inner: error_context("PythonExecutable.build()", || {
+                self.build_internal(type_values, &target, &pyoxidizer_context)
+            })?,
         }))
     }
 
@@ -286,20 +293,15 @@ impl PythonExecutableValue {
 
         let python_packaging_policy = self.python_packaging_policy();
 
-        let resources = self
-            .exe
-            .pip_download(
+        let resources = error_context("PythonExecutable.pip_download()", || {
+            self.exe.pip_download(
                 pyoxidizer_context.logger(),
                 pyoxidizer_context.verbose,
                 &args,
             )
-            .map_err(|e| {
-                ValueError::from(RuntimeError {
-                    code: "PIP_INSTALL_ERROR",
-                    message: format!("error running pip install: {}", e),
-                    label: "pip_install()".to_string(),
-                })
-            })?
+        })?;
+
+        let resources = resources
             .iter()
             .filter(|r| is_resource_starlark_compatible(r))
             .map(|r| python_resource_to_value(type_values, call_stack, r, &python_packaging_policy))
@@ -342,21 +344,16 @@ impl PythonExecutableValue {
 
         let python_packaging_policy = self.python_packaging_policy();
 
-        let resources = self
-            .exe
-            .pip_install(
+        let resources = error_context("PythonExecutable.pip_install()", || {
+            self.exe.pip_install(
                 pyoxidizer_context.logger(),
                 pyoxidizer_context.verbose,
                 &args,
                 &extra_envs,
             )
-            .map_err(|e| {
-                ValueError::from(RuntimeError {
-                    code: "PIP_INSTALL_ERROR",
-                    message: format!("error running pip install: {}", e),
-                    label: "pip_install()".to_string(),
-                })
-            })?
+        })?;
+
+        let resources = resources
             .iter()
             .filter(|r| is_resource_starlark_compatible(r))
             .map(|r| python_resource_to_value(type_values, call_stack, r, &python_packaging_policy))
@@ -388,16 +385,12 @@ impl PythonExecutableValue {
 
         let python_packaging_policy = self.python_packaging_policy();
 
-        let resources = self
-            .exe
-            .read_package_root(pyoxidizer_context.logger(), Path::new(&path), &packages)
-            .map_err(|e| {
-                ValueError::from(RuntimeError {
-                    code: "PACKAGE_ROOT_ERROR",
-                    message: format!("could not find resources: {}", e),
-                    label: "read_package_root()".to_string(),
-                })
-            })?
+        let resources = error_context("PythonExecutable.read_package_root()", || {
+            self.exe
+                .read_package_root(pyoxidizer_context.logger(), Path::new(&path), &packages)
+        })?;
+
+        let resources = resources
             .iter()
             .filter(|r| is_resource_starlark_compatible(r))
             .map(|r| python_resource_to_value(type_values, call_stack, r, &python_packaging_policy))
@@ -420,16 +413,12 @@ impl PythonExecutableValue {
 
         let python_packaging_policy = self.python_packaging_policy();
 
-        let resources = self
-            .exe
-            .read_virtualenv(pyoxidizer_context.logger(), &Path::new(&path))
-            .map_err(|e| {
-                ValueError::from(RuntimeError {
-                    code: "VIRTUALENV_ERROR",
-                    message: format!("could not find resources: {}", e),
-                    label: "read_virtualenv()".to_string(),
-                })
-            })?
+        let resources = error_context("PythonExecutable.read_virtualenv()", || {
+            self.exe
+                .read_virtualenv(pyoxidizer_context.logger(), &Path::new(&path))
+        })?;
+
+        let resources = resources
             .iter()
             .filter(|r| is_resource_starlark_compatible(r))
             .map(|r| python_resource_to_value(type_values, call_stack, r, &python_packaging_policy))
@@ -488,22 +477,17 @@ impl PythonExecutableValue {
 
         let python_packaging_policy = self.python_packaging_policy();
 
-        let resources = self
-            .exe
-            .setup_py_install(
+        let resources = error_context("PythonExecutable.setup_py_install()", || {
+            self.exe.setup_py_install(
                 pyoxidizer_context.logger(),
                 &package_path,
                 pyoxidizer_context.verbose,
                 &extra_envs,
                 &extra_global_arguments,
             )
-            .map_err(|e| {
-                ValueError::from(RuntimeError {
-                    code: "SETUP_PY_ERROR",
-                    message: format!("{:?}", e),
-                    label: "setup_py_install()".to_string(),
-                })
-            })?
+        })?;
+
+        let resources = resources
             .iter()
             .filter(|r| is_resource_starlark_compatible(r))
             .map(|r| python_resource_to_value(type_values, call_stack, r, &python_packaging_policy))
@@ -528,16 +512,12 @@ impl PythonExecutableValue {
             context.logger(),
             "adding Python source module {}", module.inner.name;
         );
-        self.exe
-            .add_python_module_source(&module.inner, module.add_collection_context().clone())
-            .with_context(|| format!("adding {}", module.to_repr()))
-            .map_err(|e| {
-                ValueError::from(RuntimeError {
-                    code: "PYOXIDIZER_BUILD",
-                    message: format!("{:?}", e),
-                    label: label.to_string(),
-                })
-            })?;
+
+        error_context(label, || {
+            self.exe
+                .add_python_module_source(&module.inner, module.add_collection_context().clone())
+                .with_context(|| format!("adding {}", module.to_repr()))
+        })?;
 
         Ok(Value::new(NoneType::None))
     }
@@ -553,16 +533,15 @@ impl PythonExecutableValue {
             "adding Python package resource {}",
             resource.inner.symbolic_name()
         );
-        self.exe
-            .add_python_package_resource(&resource.inner, resource.add_collection_context().clone())
-            .with_context(|| format!("adding {}", resource.to_repr()))
-            .map_err(|e| {
-                ValueError::from(RuntimeError {
-                    code: "PYOXIDIZER_BUILD",
-                    message: format!("{:?}", e),
-                    label: label.to_string(),
-                })
-            })?;
+
+        error_context(label, || {
+            self.exe
+                .add_python_package_resource(
+                    &resource.inner,
+                    resource.add_collection_context().clone(),
+                )
+                .with_context(|| format!("adding {}", resource.to_repr()))
+        })?;
 
         Ok(Value::new(NoneType::None))
     }
@@ -579,19 +558,14 @@ impl PythonExecutableValue {
             resource.inner.package,
             resource.inner.name
         );
-        self.exe
-            .add_python_package_distribution_resource(
-                &resource.inner,
-                resource.add_collection_context().clone(),
-            )
-            .with_context(|| format!("adding {}", resource.to_repr()))
-            .map_err(|e| {
-                ValueError::from(RuntimeError {
-                    code: "PYOXIDIZER_BUILD",
-                    message: format!("{:?}", e),
-                    label: label.to_string(),
-                })
-            })?;
+        error_context(label, || {
+            self.exe
+                .add_python_package_distribution_resource(
+                    &resource.inner,
+                    resource.add_collection_context().clone(),
+                )
+                .with_context(|| format!("adding {}", resource.to_repr()))
+        })?;
 
         Ok(Value::new(NoneType::None))
     }
@@ -606,16 +580,11 @@ impl PythonExecutableValue {
             context.logger(),
             "adding extension module {}", module.inner.name
         );
-        self.exe
-            .add_python_extension_module(&module.inner, module.add_collection_context().clone())
-            .with_context(|| format!("adding {}", module.to_repr()))
-            .map_err(|e| {
-                ValueError::from(RuntimeError {
-                    code: "PYOXIDIZER_BUILD",
-                    message: format!("{:?}", e),
-                    label: label.to_string(),
-                })
-            })?;
+        error_context(label, || {
+            self.exe
+                .add_python_extension_module(&module.inner, module.add_collection_context().clone())
+                .with_context(|| format!("adding {}", module.to_repr()))
+        })?;
 
         Ok(Value::new(NoneType::None))
     }
@@ -630,16 +599,11 @@ impl PythonExecutableValue {
             context.logger(),
             "adding file data {}", file.inner.path.display();
         );
-        self.exe
-            .add_file_data(&file.inner, file.add_collection_context().clone())
-            .with_context(|| format!("adding {}", file.to_repr()))
-            .map_err(|e| {
-                ValueError::from(RuntimeError {
-                    code: "PYOXIDIZER_BUILD",
-                    message: format!("{:?}", e),
-                    label: label.to_string(),
-                })
-            })?;
+        error_context(label, || {
+            self.exe
+                .add_file_data(&file.inner, file.add_collection_context().clone())
+                .with_context(|| format!("adding {}", file.to_repr()))
+        })?;
 
         Ok(Value::new(NoneType::None))
     }
@@ -728,23 +692,18 @@ impl PythonExecutableValue {
             .unwrap()
             .unwrap();
 
-        file_manifest_add_python_executable(
-            &mut manifest,
-            pyoxidizer_context.env(),
-            pyoxidizer_context.logger(),
-            &prefix,
-            self.exe.deref(),
-            &pyoxidizer_context.build_target_triple,
-            pyoxidizer_context.build_release,
-            &pyoxidizer_context.build_opt_level,
-        )
-        .context("adding PythonExecutable to FileManifest")
-        .map_err(|e| {
-            ValueError::from(RuntimeError {
-                code: "PYOXIDIZER_PYTHON_EXECUTABLE",
-                message: format!("{:?}", e),
-                label: "to_file_manifest()".to_string(),
-            })
+        error_context("PythonExecutable.to_file_manifest()", || {
+            file_manifest_add_python_executable(
+                &mut manifest,
+                pyoxidizer_context.env(),
+                pyoxidizer_context.logger(),
+                &prefix,
+                self.exe.deref(),
+                &pyoxidizer_context.build_target_triple,
+                pyoxidizer_context.build_release,
+                &pyoxidizer_context.build_opt_level,
+            )
+            .context("adding PythonExecutable to FileManifest")
         })?;
 
         Ok(manifest_value.clone())
@@ -882,15 +841,13 @@ impl PythonExecutableValue {
             .downcast_ref::<PyOxidizerEnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
 
-        self.exe
-            .filter_resources_from_files(pyoxidizer_context.logger(), &files_refs, &glob_files_refs)
-            .map_err(|e| {
-                ValueError::from(RuntimeError {
-                    code: "RUNTIME_ERROR",
-                    message: format!("{:?}", e),
-                    label: "filter_from_files()".to_string(),
-                })
-            })?;
+        error_context("PythonExecutable.filter_resources_from_files()", || {
+            self.exe.filter_resources_from_files(
+                pyoxidizer_context.logger(),
+                &files_refs,
+                &glob_files_refs,
+            )
+        })?;
 
         Ok(Value::new(NoneType::None))
     }
