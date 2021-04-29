@@ -524,6 +524,7 @@ impl CapturedX509Certificate {
         // The logic here is a bit wonky. As we build up the collection of certificates,
         // we want to filter out ourself and remove duplicates. We remove duplicates by
         // storing encountered certificates in a HashSet.
+        #[allow(clippy::mutable_key_type)]
         let mut seen = HashSet::new();
         let mut remaining = vec![];
 
