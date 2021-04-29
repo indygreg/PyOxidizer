@@ -96,6 +96,8 @@ code-directory-serialized-raw
    for comparing round-tripping of code directory data.
 linkededit-segment-raw
    Complete content of the __LINKEDIT Mach-O segment as binary.
+macho-load-commands
+   Print information about mach-o load commands in the binary.
 requirements-raw
    Raw binary data composing the requirements blob/slot.
 requirements
@@ -479,6 +481,21 @@ fn command_extract(args: &ArgMatches) -> Result<(), AppleCodesignError> {
         }
         "linkedit-segment-raw" => {
             std::io::stdout().write_all(sig.linkedit_segment_data)?;
+        }
+        "macho-load-commands" => {
+            println!("load command count: {}", macho.load_commands.len());
+
+            for command in &macho.load_commands {
+                println!(
+                    "{}; offsets=0x{:x}-0x{:x} ({}-{}); size={}",
+                    goblin::mach::load_command::cmd_to_str(command.command.cmd()),
+                    command.offset,
+                    command.offset + command.command.cmdsize(),
+                    command.offset,
+                    command.offset + command.command.cmdsize(),
+                    command.command.cmdsize(),
+                );
+            }
         }
         "requirements-raw" => {
             let embedded = parse_signature_data(&sig.signature_data)?;
@@ -1068,6 +1085,7 @@ fn main_impl() -> Result<(), AppleCodesignError> {
                             "code-directory-serialized",
                             "code-directory",
                             "linkedit-segment-raw",
+                            "macho-load-commands",
                             "requirements-raw",
                             "requirements-rust",
                             "requirements-serialized-raw",
