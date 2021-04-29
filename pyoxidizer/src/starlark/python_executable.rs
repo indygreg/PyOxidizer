@@ -100,7 +100,8 @@ impl PythonExecutableValue {
             &context.build_target_triple,
             &context.build_opt_level,
             context.build_release,
-        )?;
+        )
+        .context("building Python executable")?;
 
         let output_path = context
             .get_output_path(type_values, target)
@@ -235,7 +236,7 @@ impl PythonExecutableValue {
                 .map_err(|e| {
                     ValueError::from(RuntimeError {
                         code: "PYOXIDIZER",
-                        message: e.to_string(),
+                        message: format!("{:?}", e),
                         label: "build()".to_string(),
                     })
                 })?,

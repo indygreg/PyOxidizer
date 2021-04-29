@@ -553,13 +553,13 @@ impl<'a> EmbeddedPythonContext<'a> {
     /// Write out files needed to build a binary against our configuration.
     pub fn write_files(&self, dest_dir: &Path) -> Result<()> {
         self.write_packed_resources(&dest_dir)
-            .context("writing packed resources")?;
+            .context("write_packed_resources()")?;
         self.write_libpython(&dest_dir)
-            .context("writing libpython")?;
+            .context("write_libpython()")?;
         self.write_interpreter_config_rs(&dest_dir)
-            .context("writing interpreter config Rust source")?;
+            .context("write_interpreter_config_rs()")?;
         self.write_cargo_metadata(&dest_dir)
-            .context("writing cargo metadata file")?;
+            .context("write_cargo_metadata()")?;
 
         Ok(())
     }
