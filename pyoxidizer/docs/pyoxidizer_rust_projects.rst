@@ -2,9 +2,9 @@
 
 .. _rust_projects:
 
-=============
-Rust Projects
-=============
+========================
+PyOxidizer Rust Projects
+========================
 
 PyOxidizer uses Rust projects to build binaries embedding Python.
 
@@ -62,8 +62,51 @@ interpreter. That's our executable.
 The ``pyoxidizer.bzl`` is our auto-generated
 :ref:`PyOxidizer configuration file <config_files>`.
 
+Using Cargo With Generated Rust Projects
+========================================
+
+Rust developers will probably want to use `cargo` instead of `pyoxidizer` for
+building auto-generated Rust projects. This is supported, but behavior can
+be very finicky.
+
+PyOxidizer has to do some non-conventional things to get Rust projects to
+build in very specific ways. Commands like ``pyoxidizer build`` abstract
+away all of this complexity for you.
+
+If you do want to use ``cargo`` directly, the following sections will give you
+some tips.
+
+``build.rs`` Invokes ``pyoxidizer``
+-----------------------------------
+
+The ``build.rs`` of the ``pyembed`` crate dependency will invoke ``pyoxidizer``
+to generate various artifacts needed by the ``pyembed`` crate.
+
+By default, it uses the ``pyoxidizer`` in ``PATH``. If you want to point it
+at an explicit executable (this is common when you run ``pyoxidizer`` from
+Git source checkouts), set the ``PYOXIDIZER_EXE`` environment variable. e.g.::
+
+    $ PYOXIDIZER_EXE=~/src/pyoxidizer/target/debug/pyoxidizer cargo build
+
+You may want to look at the source code of ``pyembed``'s ``build.rs`` for
+all the magic that is being done.
+
+Linking Against the Python Interpreter
+--------------------------------------
+
+The ``pyembed`` crate and some of its dependencies need to invoke a Python
+interpreter to configure the Python interpreter settings. By default, they
+look for ``python``, ``python3.9``, ``pythonX.Y`` executables on ``PATH``.
+
+You can forcefully set the Python interpreter to use by setting the
+``PYTHON_SYS_EXECUTABLE`` environment variable to the path of a Python
+interpreter. For best results, use one of the default Python interpreters
+that your build of PyOxidizer would use. Run
+``pyoxidizer python-distribution-extract --help`` to see how you can
+download and extract one of these distributions with ease.
+
 Cargo Configuration
-===================
+-------------------
 
 Linking a custom libpython into the final Rust binary can be finicky, especially
 when statically linking on Windows.
@@ -74,3 +117,11 @@ file contains some commented out settings that may need to be set for some
 configurations (e.g. the ``standalone_static`` Windows distributions). Please
 consult this file if running into build errors when not building through
 ``pyoxidizer``.
+
+Nightly Rust Features on Windows
+--------------------------------
+
+Some Windows build configurations require unstable Rust features. If your
+build complains about use of nightly-only features, try building with the
+``RUSTC_BOOTSTRAP=1`` environment variable set to enable the use of unstable
+Rust features on any Rust channel.
