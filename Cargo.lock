@@ -3759,7 +3759,7 @@ dependencies = [
  "starlark-dialect-build-targets 0.5.0-pre",
  "tar",
  "tempfile",
- "tugger-apple-bundle 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-apple-bundle 0.4.0-pre",
  "tugger-apple-codesign 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-code-signing 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-common 0.5.0-pre",
@@ -3790,7 +3790,7 @@ dependencies = [
  "starlark",
  "starlark-dialect-build-targets 0.4.0",
  "tar",
- "tugger-apple-bundle 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-apple-bundle 0.3.0",
  "tugger-code-signing 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-common 0.4.0",
  "tugger-file-manifest 0.3.0",
@@ -3829,22 +3829,22 @@ dependencies = [
 [[package]]
 name = "tugger-apple-bundle"
 version = "0.3.0"
-dependencies = [
- "anyhow",
- "plist",
- "tugger-file-manifest 0.4.0-pre",
- "walkdir",
-]
-
-[[package]]
-name = "tugger-apple-bundle"
-version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6624cba3ca405fca05fd78522e16a9e5abd98617c21cdad56d6e87ae4f242c4f"
 dependencies = [
  "anyhow",
  "plist",
  "tugger-file-manifest 0.3.0",
+ "walkdir",
+]
+
+[[package]]
+name = "tugger-apple-bundle"
+version = "0.4.0-pre"
+dependencies = [
+ "anyhow",
+ "plist",
+ "tugger-file-manifest 0.4.0-pre",
  "walkdir",
 ]
 
@@ -3874,7 +3874,7 @@ dependencies = [
  "slog",
  "slog-term",
  "thiserror",
- "tugger-apple-bundle 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-apple-bundle 0.4.0-pre",
  "x509-certificate 0.2.0-pre",
  "yasna 0.3.2",
 ]
@@ -3907,7 +3907,7 @@ dependencies = [
  "slog",
  "slog-term",
  "thiserror",
- "tugger-apple-bundle 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-apple-bundle 0.3.0",
  "x509-certificate 0.1.0",
  "yasna 0.3.2",
 ]
@@ -3936,7 +3936,7 @@ dependencies = [
  "slog",
  "tempfile",
  "thiserror",
- "tugger-apple-bundle 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-apple-bundle 0.4.0-pre",
  "tugger-apple-codesign 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-file-manifest 0.4.0-pre",
  "tugger-windows-codesign 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3959,7 +3959,7 @@ dependencies = [
  "slog",
  "tempfile",
  "thiserror",
- "tugger-apple-bundle 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-apple-bundle 0.3.0",
  "tugger-apple-codesign 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-file-manifest 0.3.0",
  "tugger-windows-codesign 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
