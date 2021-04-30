@@ -136,6 +136,10 @@ Other Relevant Changes
   :ref:`oxidized_importer_api_reference` for the new docs. Various type
   references throughout the generated documentation should now link to the
   new API docs.
+* The Starlark dialect is now documented as native Python classes and functions
+  using Sphinx's support for doing so. The documentation should now look more
+  familiar to Python developers familiar with Sphinx for Python API
+  documentation.
 * PyOxidizer now stores persistent artifacts in a per-user *cache* directory.
   See :ref:`pyoxidizer_cache` for more.
 * The ``pyoxidizer`` CLI now accepts ``--verbose`` as a sub-command argument.
