@@ -22,7 +22,3 @@ ring = "0.16"
 path = "../x509-certificate"
 version = "0.1.0-pre"
 features = ["test"]
-
-[dev-dependencies.x509-certificate]
-path = "../x509-certificate"
-version = "0.1.0-pre"
