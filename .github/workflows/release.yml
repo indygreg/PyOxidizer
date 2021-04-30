@@ -341,10 +341,66 @@ jobs:
 
   linux-wheels:
     runs-on: 'ubuntu-20.04'
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      SCCACHE_BUCKET: 'pyoxidizer-sccache'
+      SCCACHE_S3_USE_SSL: '1'
+    strategy:
+      matrix:
+        target_triple:
+          - 'x86_64-unknown-linux-musl'
+    steps:
+      - name: Install system packages
+        run: |
+          sudo apt install -y --no-install-recommends libbz2-dev musl-tools
+
+      - name: Install Rust Toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          default: true
+          profile: minimal
+          target: ${{ matrix.target_triple }}
+
+      - name: Install Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.9
+
+      - name: Install sccache
+        run: |
+          wget -O sccache.tar.gz --progress dot:mega https://github.com/mozilla/sccache/releases/download/v0.2.15/sccache-v0.2.15-x86_64-unknown-linux-musl.tar.gz
+          tar -xvzf sccache.tar.gz
+          mv sccache-*/sccache /usr/share/rust/.cargo/bin/sccache
+          chmod +x /usr/share/rust/.cargo/bin/sccache
+          sccache --start-server
+
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Install maturin
+        run: python3.9 -m pip install maturin==0.10.4
+
+      - name: Build Wheels
+        env:
+          RUSTC_WRAPPER: sccache
+        run: |
+          rustc --version
+          maturin build -m pyoxidizer/Cargo.toml -b bin --no-sdist --release -o dist --target ${{ matrix.target_triple }} --manylinux 2010
+
+      - name: Upload wheels
+        uses: actions/upload-artifact@v2
+        with:
+          name: wheels
+          path: dist
+
+  linux-wheels-cross:
+    runs-on: 'ubuntu-20.04'
     strategy:
       matrix:
         platform: [
-          { manylinux: '2010', target: "x86_64-unknown-linux-musl", image_tag: "x86_64-musl" },
           { manylinux: '2010', target: "i686-unknown-linux-musl", image_tag: "i686-musl" },
           { manylinux: '2014', target: "aarch64-unknown-linux-musl", image_tag: "aarch64-musl" },
           { manylinux: '2014', target: "armv7-unknown-linux-musleabihf", image_tag: "armv7-musleabihf" },
