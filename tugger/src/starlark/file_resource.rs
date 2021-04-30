@@ -29,6 +29,19 @@ use {
     tugger_file_manifest::{FileEntry, FileManifest},
 };
 
+fn error_context<F, T>(label: &str, f: F) -> Result<T, ValueError>
+where
+    F: FnOnce() -> anyhow::Result<T>,
+{
+    f().map_err(|e| {
+        ValueError::Runtime(RuntimeError {
+            code: "TUGGER_FILE_RESOURCE",
+            message: format!("{:?}", e),
+            label: label.to_string(),
+        })
+    })
+}
+
 // TODO merge this into `FileValue`?
 #[derive(Clone, Debug)]
 pub struct FileContentValue {
@@ -80,20 +93,16 @@ impl FileManifestValue {
 
         let output_path = context.target_build_path(&target);
 
-        warn!(
-            context.logger(),
-            "installing files to {}",
-            output_path.display()
-        );
-        self.manifest
-            .materialize_files_with_replace(&output_path)
-            .map_err(|e| {
-                ValueError::from(RuntimeError {
-                    code: "TUGGER",
-                    message: e.to_string(),
-                    label: "build".to_string(),
-                })
-            })?;
+        error_context("FileManifest.build()", || {
+            warn!(
+                context.logger(),
+                "installing files to {}",
+                output_path.display()
+            );
+            self.manifest
+                .materialize_files_with_replace(&output_path)
+                .map_err(anyhow::Error::new)
+        })?;
 
         // Use the stored run target if available, falling back to the single
         // executable file if non-ambiguous.
@@ -128,12 +137,10 @@ impl FileManifestValue {
 
     /// FileManifest.add_manifest(other)
     pub fn add_manifest(&mut self, other: FileManifestValue) -> ValueResult {
-        self.manifest.add_manifest(&other.manifest).map_err(|e| {
-            ValueError::from(RuntimeError {
-                code: "PYOXIDIZER_BUILD",
-                message: e.to_string(),
-                label: "add_manifest()".to_string(),
-            })
+        error_context("FileManifest.add_manifest()", || {
+            self.manifest
+                .add_manifest(&other.manifest)
+                .map_err(anyhow::Error::new)
         })?;
 
         Ok(Value::new(NoneType::None))
@@ -146,20 +153,16 @@ impl FileManifestValue {
         strip_prefix: String,
         force_read: bool,
     ) -> ValueResult {
-        let path = Path::new(&path);
-        let strip_prefix = Path::new(&strip_prefix);
+        error_context("FileManifest.add_path()", || {
+            let path = Path::new(&path);
+            let strip_prefix = Path::new(&strip_prefix);
 
-        if force_read {
-            self.manifest.add_path_memory(path, strip_prefix)
-        } else {
-            self.manifest.add_path(path, strip_prefix)
-        }
-        .map_err(|e| {
-            ValueError::Runtime(RuntimeError {
-                code: "TUGGER_FILE_MANIFEST",
-                message: format!("{:?}", e),
-                label: "add_path()".to_string(),
-            })
+            if force_read {
+                self.manifest.add_path_memory(path, strip_prefix)
+            } else {
+                self.manifest.add_path(path, strip_prefix)
+            }
+            .map_err(anyhow::Error::new)
         })?;
 
         Ok(Value::new(NoneType::None))
@@ -172,19 +175,15 @@ impl FileManifestValue {
             .downcast_ref::<EnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
 
-        let dest_path = context.build_path().join(path);
+        error_context("FileManifest.install()", || {
+            let dest_path = context.build_path().join(path);
 
-        if replace {
-            self.manifest.materialize_files_with_replace(&dest_path)
-        } else {
-            self.manifest.materialize_files(&dest_path)
-        }
-        .map_err(|e| {
-            ValueError::from(RuntimeError {
-                code: "PYOXIDIZER_INSTALL",
-                message: format!("error installing FileManifest: {}", e),
-                label: "FileManifest.install()".to_string(),
-            })
+            if replace {
+                self.manifest.materialize_files_with_replace(&dest_path)
+            } else {
+                self.manifest.materialize_files(&dest_path)
+            }
+            .map_err(anyhow::Error::new)
         })?;
 
         Ok(Value::new(NoneType::None))
@@ -218,67 +217,39 @@ fn starlark_glob(
         .downcast_ref::<EnvironmentContext>()
         .ok_or(ValueError::IncorrectParameterType)?;
 
-    let mut result = HashSet::new();
+    let manifest = error_context("glob()", || {
+        let mut result = HashSet::new();
 
-    // Evaluate all the includes first.
-    for v in include {
-        for p in evaluate_glob(context.cwd(), &v).map_err(|e| {
-            ValueError::from(RuntimeError {
-                code: "PYOXIDIZER_BUILD",
-                message: e.to_string(),
-                label: "glob()".to_string(),
-            })
-        })? {
-            result.insert(p);
+        // Evaluate all the includes first.
+        for v in include {
+            for p in evaluate_glob(context.cwd(), &v)? {
+                result.insert(p);
+            }
         }
-    }
 
-    // Then apply excludes.
-    for v in exclude {
-        for p in evaluate_glob(context.cwd(), &v).map_err(|e| {
-            ValueError::from(RuntimeError {
-                code: "PYOXIDIZER_BUILD",
-                message: e.to_string(),
-                label: "glob()".to_string(),
-            })
-        })? {
-            result.remove(&p);
+        // Then apply excludes.
+        for v in exclude {
+            for p in evaluate_glob(context.cwd(), &v)? {
+                result.remove(&p);
+            }
         }
-    }
 
-    let mut manifest = FileManifest::default();
+        let mut manifest = FileManifest::default();
 
-    for path in result {
-        let content = FileEntry::try_from(path.as_path()).map_err(|e| {
-            ValueError::from(RuntimeError {
-                code: "PYOXIDIZER_BUILD",
-                message: e.to_string(),
-                label: "glob()".to_string(),
-            })
-        })?;
+        for path in result {
+            let content = FileEntry::try_from(path.as_path())?;
 
-        let path = if let Some(prefix) = &strip_prefix {
-            path.strip_prefix(prefix)
-                .map_err(|e| {
-                    ValueError::from(RuntimeError {
-                        code: "PYOXIDIZER_BUILD",
-                        message: e.to_string(),
-                        label: "glob()".to_string(),
-                    })
-                })?
-                .to_path_buf()
-        } else {
-            path.to_path_buf()
-        };
+            let path = if let Some(prefix) = &strip_prefix {
+                path.strip_prefix(prefix)?.to_path_buf()
+            } else {
+                path.to_path_buf()
+            };
 
-        manifest.add_file_entry(&path, content).map_err(|e| {
-            ValueError::from(RuntimeError {
-                code: "PYOXIDIZER_BUILD",
-                message: e.to_string(),
-                label: "glob()".to_string(),
-            })
-        })?;
-    }
+            manifest.add_file_entry(&path, content)?;
+        }
+
+        Ok(manifest)
+    })?;
 
     Ok(Value::new(FileManifestValue {
         manifest,
