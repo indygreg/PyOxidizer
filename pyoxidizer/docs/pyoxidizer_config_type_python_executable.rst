@@ -385,3 +385,18 @@
         :py:class:`starlark_tugger.WiXMSIBuilder` type documentation for more.
 
         The MSI installer will **not** materialize the Visual C++ Runtime DLL(s).
+
+    .. py:method:: build(target: str) -> starlark_tugger.ResolvedTarget
+
+       Produces a binary executable embedding Python using the settings configured
+       on this instance.
+
+        ``target``
+           The name of the target being built.
+
+       Under the covers, this will generate a temporary Rust project and invoke
+       ``cargo``, Rust's build tool, for generating an executable. The end result
+       of this process is a single executable embedding a Python interpreter.
+
+       Upon successful generation of a binary, the produced binary will be assessed
+       for code signing with the ``python-executable-creation`` *action*.

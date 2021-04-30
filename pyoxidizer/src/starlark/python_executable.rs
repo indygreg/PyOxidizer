@@ -51,9 +51,12 @@ use {
         path::{Path, PathBuf},
     },
     tugger::starlark::{
-        file_resource::FileManifestValue, wix_bundle_builder::WiXBundleBuilderValue,
+        code_signing::{handle_signable_event, SigningAction, SigningContext},
+        file_resource::FileManifestValue,
+        wix_bundle_builder::WiXBundleBuilderValue,
         wix_msi_builder::WiXMsiBuilderValue,
     },
+    tugger_code_signing::SigningDestination,
     tugger_file_manifest::FileData,
 };
 
@@ -102,7 +105,7 @@ impl PythonExecutableValue {
         type_values: &TypeValues,
         target: &str,
         context: &PyOxidizerEnvironmentContext,
-    ) -> Result<ResolvedTarget> {
+    ) -> Result<(ResolvedTarget, PathBuf)> {
         // Build an executable by writing out a temporary Rust project
         // and building it.
         let build = build_python_executable(
@@ -129,13 +132,17 @@ impl PythonExecutableValue {
             .context(format!("creating {}", dest_path.display()))?;
         fh.write_all(&build.exe_data)
             .context(format!("writing {}", dest_path.display()))?;
-
         tugger_file_manifest::set_executable(&mut fh).context("making binary executable")?;
 
-        Ok(ResolvedTarget {
-            run_mode: RunMode::Path { path: dest_path },
-            output_path,
-        })
+        Ok((
+            ResolvedTarget {
+                run_mode: RunMode::Path {
+                    path: dest_path.clone(),
+                },
+                output_path,
+            },
+            dest_path,
+        ))
     }
 }
 
@@ -237,17 +244,43 @@ impl TypedValue for PythonExecutableValue {
 
 // Starlark functions.
 impl PythonExecutableValue {
-    fn build(&self, type_values: &TypeValues, target: String) -> ValueResult {
+    fn build(
+        &self,
+        type_values: &TypeValues,
+        call_stack: &mut CallStack,
+        target: String,
+    ) -> ValueResult {
+        const LABEL: &str = "PythonExecutable.build()";
+
         let pyoxidizer_context_value = get_context(type_values)?;
         let pyoxidizer_context = pyoxidizer_context_value
             .downcast_ref::<PyOxidizerEnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
 
-        Ok(Value::new(ResolvedTargetValue {
-            inner: error_context("PythonExecutable.build()", || {
-                self.build_internal(type_values, &target, &pyoxidizer_context)
+        let (inner, exe_path) = error_context(LABEL, || {
+            self.build_internal(type_values, &target, &pyoxidizer_context)
+        })?;
+
+        let candidate = exe_path.clone().into();
+        let mut context = SigningContext::new(
+            "PythonExecutable.build()",
+            SigningAction::Other("python-executable-creation"),
+            exe_path.file_name().ok_or_else(|| {
+                ValueError::Runtime(RuntimeError {
+                    code: "PYTHON_EXECUTABLE",
+                    message: "could not determine executable filename (this should not happen)"
+                        .to_string(),
+                    label: LABEL.to_string(),
+                })
             })?,
-        }))
+            &candidate,
+        );
+        context.set_path(&exe_path);
+        context.set_signing_destination(SigningDestination::File(exe_path.clone()));
+
+        handle_signable_event(type_values, call_stack, context)?;
+
+        Ok(Value::new(ResolvedTargetValue { inner }))
     }
 
     /// PythonExecutable.make_python_module_source(name, source, is_package=false)
@@ -854,9 +887,9 @@ impl PythonExecutableValue {
 }
 
 starlark_module! { python_executable_env =>
-    PythonExecutable.build(env env, this, target: String) {
+    PythonExecutable.build(env env, call_stack cs, this, target: String) {
         let this = this.downcast_ref::<PythonExecutableValue>().unwrap();
-        this.build(env, target)
+        this.build(env, cs, target)
     }
 
     #[allow(non_snake_case, clippy::ptr_arg)]
