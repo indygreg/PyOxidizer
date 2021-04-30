@@ -298,6 +298,18 @@ Here's how you can do that.
     signer.set_signing_callback(code_signer_callback)
     signer.activate()
 
+You could even use the :py:func:`prompt_confirm` function to prompt whether
+to sign each file:
+
+.. code-block:: python
+
+   def code_signer_callback(request):
+       request.prevent_signing = not prompt_confirm("sign %s?" % request.filename)
+
+   signer = code_signer_from_...()
+   signer.set_signing_callback(code_signer_callback)
+   signer.activate()
+
 .. _tugger_code_signing_certificates:
 
 Understanding Code Signing Certificates
