@@ -885,7 +885,15 @@ fn update_workspace_toml(
 ) -> Result<()> {
     write_workspace_toml(path, workspace_packages).context("writing workspace Cargo.toml")?;
     println!("running cargo update to reflect workspace change");
-    run_cmd("workspace", repo_root, "cargo", vec!["update"], vec![])
+    let mut args = vec!["update".to_string()];
+    args.extend(
+        workspace_packages
+            .iter()
+            .map(|x| vec!["-p".to_string(), x.to_string()])
+            .flatten(),
+    );
+
+    run_cmd("workspace", repo_root, "cargo", args, vec![])
         .context("cargo update to reflect workspace changes")?;
     println!("performing git commit to reflect workspace changes");
     run_cmd(
