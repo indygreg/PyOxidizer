@@ -25,8 +25,8 @@ use {
     },
     python3_sys as pyffi,
     python_packed_resources::data::Resource,
-    std::os::raw::c_int,
     std::{
+		os::raw::c_int,
         borrow::Cow,
         cell::RefCell,
         collections::{hash_map::Entry, BTreeSet, HashMap},
@@ -35,6 +35,9 @@ use {
         path::{Path, PathBuf},
     },
 };
+
+#[allow(non_upper_case_globals)]
+const enoent: c_int = 2;
 
 /// Python bytecode optimization level.
 #[derive(Clone, Copy, Debug)]
@@ -949,8 +952,6 @@ impl<'a> PythonResourcesState<'a, u8> {
         // this functionality some day. But it should likely never be the default
         // because it goes against the spirit of requiring all resources to be
         // known ahead-of-time.
-
-        let enoent: c_int = 2;
 
         let native_path = PathBuf::from(path.to_string_lossy(py).to_string());
 

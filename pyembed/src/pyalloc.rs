@@ -89,7 +89,7 @@ to the allocator will be more efficient.
 */
 
 use {
-    core::{ffi::c_void, usize},
+    core::ffi::c_void,
     python3_sys as pyffi,
     python_packaging::interpreter::MemoryAllocatorBackend,
     std::{
