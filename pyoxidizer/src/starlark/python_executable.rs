@@ -1353,10 +1353,7 @@ mod tests {
             .unwrap()
             .join("product_name-0.1.exe");
 
-        assert!(
-            exe_path.exists(),
-            format!("exe exists: {}", exe_path.display())
-        );
+        assert!(exe_path.exists());
 
         Ok(())
     }
@@ -1374,10 +1371,7 @@ mod tests {
             .unwrap()
             .join("product_name-0.1.msi");
 
-        assert!(
-            msi_path.exists(),
-            format!("msi exists: {}", msi_path.display())
-        );
+        assert!(msi_path.exists());
 
         Ok(())
     }
