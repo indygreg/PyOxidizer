@@ -257,7 +257,6 @@ dependencies = [
  "cpython",
  "dunce",
  "jemalloc-sys",
- "libc",
  "libmimalloc-sys",
  "memmap",
  "memory-module-sys",
@@ -359,6 +358,7 @@ version = "0.2.26"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "73c59324cc36b140b6b46b1379f379eaa7ee9cfb06ec5d7dd0a650de35b9b902"
 dependencies = [
+ "cc",
  "cmake",
  "libc",
 ]

@@ -6,12 +6,12 @@
 
 use {
     crate::{config::ResolvedOxidizedPythonInterpreterConfig, NewInterpreterError},
-    libc::{c_int, size_t, wchar_t},
     python3_sys as pyffi,
     python_packaging::{
         interpreter::{CheckHashPycsMode, PythonInterpreterConfig, PythonInterpreterProfile},
         resource::BytecodeOptimizationLevel,
     },
+    std::os::raw::c_int,
     std::{
         convert::{TryFrom, TryInto},
         ffi::{CString, OsString},
@@ -22,8 +22,16 @@ use {
 #[cfg(target_family = "unix")]
 use std::{ffi::NulError, os::unix::ffi::OsStrExt};
 
+#[allow(non_camel_case_types)]
+#[cfg(target_family = "unix")]
+type wchar_t = i32;
+
 #[cfg(target_family = "windows")]
 use std::os::windows::prelude::OsStrExt;
+
+#[allow(non_camel_case_types)]
+#[cfg(target_family = "windows")]
+type wchar_t = u16;
 
 /// Set a PyConfig string value from a str.
 fn set_config_string_from_str(
@@ -112,7 +120,7 @@ fn append_wide_string_list_from_str(
     let value = CString::new(value)
         .map_err(|_| NewInterpreterError::Simple("unable to convert value to C string"))?;
 
-    let mut len: size_t = 0;
+    let mut len: usize = 0;
 
     let decoded = unsafe { pyffi::Py_DecodeLocale(value.as_ptr() as *const _, &mut len) };
 
