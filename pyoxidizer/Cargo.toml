@@ -106,8 +106,8 @@ version = "0.8.0-pre"
 path = "../tugger"
 
 [dependencies.tugger-file-manifest]
-version = "0.3.0-pre"
-path = "../tugger-file-manifest"
+version = "0.3.0"
+# path = "../tugger-file-manifest"
 
 [dev-dependencies]
 xml-rs = "0.8"
