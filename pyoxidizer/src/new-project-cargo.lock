@@ -262,18 +262,16 @@ dependencies = [
  "memory-module-sys",
  "once_cell",
  "python-packaging",
- "python-packed-resources 0.8.0-pre",
+ "python-packed-resources",
  "python3-sys",
  "snmalloc-sys",
- "tugger-file-manifest 0.4.0-pre",
+ "tugger-file-manifest",
  "winapi",
 ]
 
 [[package]]
 name = "python-packaging"
-version = "0.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fc05b2c2fd476c533f243a7af8b0fd54763a4d84f1fcd1ca31e035af48295e9d"
+version = "0.8.0-pre"
 dependencies = [
  "anyhow",
  "byteorder",
@@ -281,22 +279,12 @@ dependencies = [
  "itertools",
  "mailparse",
  "once_cell",
- "python-packed-resources 0.7.0",
+ "python-packed-resources",
  "regex",
  "spdx",
- "tugger-file-manifest 0.3.0",
+ "tugger-file-manifest",
  "tugger-licensing",
  "walkdir",
-]
-
-[[package]]
-name = "python-packed-resources"
-version = "0.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "15ff4dcea2f72950f431b3b8199f53edb7ac349d710c00983173e0e2499577cd"
-dependencies = [
- "anyhow",
- "byteorder",
 ]
 
 [[package]]
@@ -388,19 +376,11 @@ dependencies = [
 
 [[package]]
 name = "tugger-file-manifest"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1ed041f7eb90349d65655c20644fbfa180c388190197baf6df454b8239edba65"
-
-[[package]]
-name = "tugger-file-manifest"
 version = "0.4.0-pre"
 
 [[package]]
 name = "tugger-licensing"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b8c39190da2ec547b74d97e8137bb35fbe92d85099967354bb1e46f4fdae4811"
+version = "0.4.0-pre"
 dependencies = [
  "anyhow",
  "spdx",
