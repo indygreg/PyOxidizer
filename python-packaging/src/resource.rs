@@ -419,12 +419,16 @@ impl PythonPackageDistributionResource {
 
     /// Resolve filesystem path to this resource file.
     pub fn resolve_path(&self, prefix: &str) -> PathBuf {
+        // The package name has hyphens normalized to underscores when
+        // materialized on the filesystem.
+        let normalized_package = self.package.to_lowercase().replace('-', "_");
+
         let p = match self.location {
             PythonPackageDistributionResourceFlavor::DistInfo => {
-                format!("{}-{}.dist-info", self.package, self.version)
+                format!("{}-{}.dist-info", normalized_package, self.version)
             }
             PythonPackageDistributionResourceFlavor::EggInfo => {
-                format!("{}-{}.egg-info", self.package, self.version)
+                format!("{}-{}.egg-info", normalized_package, self.version)
             }
         };
 
@@ -961,5 +965,34 @@ mod tests {
         assert!(bytecode.is_in_packages(&["foo".to_string()]));
         assert!(!bytecode.is_in_packages(&[]));
         assert!(!bytecode.is_in_packages(&["bar".to_string()]));
+    }
+
+    #[test]
+    fn package_distribution_resources_path_normalization() {
+        // Package names are normalized to lowercase and have hyphens replaced
+        // by underscores.
+        let mut r = PythonPackageDistributionResource {
+            location: PythonPackageDistributionResourceFlavor::DistInfo,
+            package: "FoO-Bar".into(),
+            version: "1.0".into(),
+            name: "resource.txt".into(),
+            data: vec![42].into(),
+        };
+
+        assert_eq!(
+            r.resolve_path("prefix"),
+            PathBuf::from("prefix")
+                .join("foo_bar-1.0.dist-info")
+                .join("resource.txt")
+        );
+
+        r.location = PythonPackageDistributionResourceFlavor::EggInfo;
+
+        assert_eq!(
+            r.resolve_path("prefix"),
+            PathBuf::from("prefix")
+                .join("foo_bar-1.0.egg-info")
+                .join("resource.txt")
+        );
     }
 }

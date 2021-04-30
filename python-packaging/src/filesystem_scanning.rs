@@ -1690,7 +1690,54 @@ mod tests {
         Ok(())
     }
 
-    /// .dist-info with partial METADATA content has no content emitted.
+    #[test]
+    fn distinfo_package_name_normalization() -> Result<()> {
+        // Package names on disk are normalized to lowercase with hyphens replaced
+        // as underscores. Make sure we can still find the original names and
+        // attribute with the proper name.
+        let td = tempfile::Builder::new()
+            .prefix("python-packaging-test")
+            .tempdir()?;
+        let tp = td.path();
+
+        let dist_path = tp.join("foo_bar-1.0.dist-info");
+        create_dir_all(&dist_path)?;
+        let metadata_path = dist_path.join("METADATA");
+        write(&metadata_path, "Name: Foo-BAR\nVersion: 1.0\n")?;
+        let resource_path = dist_path.join("resource.txt");
+        write(&resource_path, "content")?;
+
+        let resources =
+            PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &DEFAULT_SUFFIXES, false, true)
+                .collect::<Result<Vec<_>>>()?;
+        assert_eq!(resources.len(), 2);
+
+        assert_eq!(
+            resources[0],
+            PythonPackageDistributionResource {
+                location: PythonPackageDistributionResourceFlavor::DistInfo,
+                package: "Foo-BAR".into(),
+                version: "1.0".into(),
+                name: "METADATA".into(),
+                data: FileData::Path(metadata_path),
+            }
+            .into()
+        );
+        assert_eq!(
+            resources[1],
+            PythonPackageDistributionResource {
+                location: PythonPackageDistributionResourceFlavor::DistInfo,
+                package: "Foo-BAR".into(),
+                version: "1.0".into(),
+                name: "resource.txt".into(),
+                data: FileData::Path(resource_path),
+            }
+            .into()
+        );
+
+        Ok(())
+    }
+
     #[test]
     fn test_egginfo_valid_metadata() -> Result<()> {
         let td = tempfile::Builder::new()
@@ -1745,6 +1792,54 @@ mod tests {
                 version: "1.2.3".to_string(),
                 name: "subdir/sub.txt".to_string(),
                 data: FileData::Path(subdir_resource_path),
+            }
+            .into()
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn egginfo_package_name_normalization() -> Result<()> {
+        // Package names on disk are normalized to lowercase with hyphens replaced
+        // as underscores. Make sure we can still find the original names and
+        // attribute with the proper name.
+        let td = tempfile::Builder::new()
+            .prefix("python-packaging-test")
+            .tempdir()?;
+        let tp = td.path();
+
+        let dist_path = tp.join("foo_bar-1.0.egg-info");
+        create_dir_all(&dist_path)?;
+        let metadata_path = dist_path.join("PKG-INFO");
+        write(&metadata_path, "Name: Foo-BAR\nVersion: 1.0\n")?;
+        let resource_path = dist_path.join("resource.txt");
+        write(&resource_path, "content")?;
+
+        let resources =
+            PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &DEFAULT_SUFFIXES, false, true)
+                .collect::<Result<Vec<_>>>()?;
+        assert_eq!(resources.len(), 2);
+
+        assert_eq!(
+            resources[0],
+            PythonPackageDistributionResource {
+                location: PythonPackageDistributionResourceFlavor::EggInfo,
+                package: "Foo-BAR".into(),
+                version: "1.0".into(),
+                name: "PKG-INFO".into(),
+                data: FileData::Path(metadata_path),
+            }
+            .into()
+        );
+        assert_eq!(
+            resources[1],
+            PythonPackageDistributionResource {
+                location: PythonPackageDistributionResourceFlavor::EggInfo,
+                package: "Foo-BAR".into(),
+                version: "1.0".into(),
+                name: "resource.txt".into(),
+                data: FileData::Path(resource_path),
             }
             .into()
         );

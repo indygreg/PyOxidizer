@@ -78,6 +78,13 @@ Bug Fixes
 
 * Rust projects created with ``pyoxidizer init-rust-project`` no longer fail to
   build due to a cryptic ``writing packed resources`` error.
+* When materializing Python package distribution resources (i.e. files in
+  ``.dist-info`` and ``.egg-info`` directories) to the filesystem, package names
+  are now normalized to lowercase with hyphens replaced with underscores. The new
+  behavior matches expectations of official Python resource handling APIs like
+  ``importlib.metadata``. Before, APIs like ``importlib.metadata`` would fail
+  to find files materialized by PyOxidizer for package names containing a hyphen
+  or capital latter. (#394)
 
 New Features
 ^^^^^^^^^^^^
