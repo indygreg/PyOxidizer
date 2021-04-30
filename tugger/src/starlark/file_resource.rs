@@ -3,9 +3,11 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
+    crate::starlark::code_signing::{handle_signable_event, SigningAction, SigningContext},
     slog::warn,
     starlark::{
         environment::TypeValues,
+        eval::call_stack::CallStack,
         values::{
             error::{RuntimeError, ValueError},
             none::NoneType,
@@ -25,6 +27,7 @@ use {
         convert::TryFrom,
         path::{Path, PathBuf},
     },
+    tugger_code_signing::SigningDestination,
     tugger_common::glob::evaluate_glob,
     tugger_file_manifest::{FileEntry, FileManifest},
 };
@@ -40,6 +43,35 @@ where
             label: label.to_string(),
         })
     })
+}
+
+/// Run signing checks after a FileManifest has been materialized.
+fn post_materialize_signing_checks(
+    label: &'static str,
+    type_values: &TypeValues,
+    call_stack: &mut CallStack,
+    action: SigningAction,
+    installed_paths: &[PathBuf],
+) -> Result<(), ValueError> {
+    for path in installed_paths {
+        let filename = path.file_name().ok_or_else(|| {
+            ValueError::Runtime(RuntimeError {
+                code: "TUGGER_FILE_RESOURCE",
+                message: "unable to resolve filename of path (this should never happen)"
+                    .to_string(),
+                label: label.to_string(),
+            })
+        })?;
+
+        let candidate = path.as_path().into();
+        let mut context = SigningContext::new(label, action, filename, &candidate);
+        context.set_path(&path);
+        context.set_signing_destination(SigningDestination::File(path.clone()));
+
+        handle_signable_event(type_values, call_stack, context)?;
+    }
+
+    Ok(())
 }
 
 // TODO merge this into `FileValue`?
@@ -85,7 +117,14 @@ impl FileManifestValue {
         }))
     }
 
-    fn build(&self, type_values: &TypeValues, target: String) -> ValueResult {
+    fn build(
+        &self,
+        type_values: &TypeValues,
+        call_stack: &mut CallStack,
+        target: String,
+    ) -> ValueResult {
+        const LABEL: &str = "FileManifest.build()";
+
         let context_value = get_context_value(type_values)?;
         let context = context_value
             .downcast_ref::<EnvironmentContext>()
@@ -93,7 +132,7 @@ impl FileManifestValue {
 
         let output_path = context.target_build_path(&target);
 
-        error_context("FileManifest.build()", || {
+        let installed_paths = error_context("FileManifest.build()", || {
             warn!(
                 context.logger(),
                 "installing files to {}",
@@ -103,6 +142,14 @@ impl FileManifestValue {
                 .materialize_files_with_replace(&output_path)
                 .map_err(anyhow::Error::new)
         })?;
+
+        post_materialize_signing_checks(
+            LABEL,
+            type_values,
+            call_stack,
+            SigningAction::FileManifestInstall,
+            &installed_paths,
+        )?;
 
         // Use the stored run target if available, falling back to the single
         // executable file if non-ambiguous.
@@ -169,13 +216,21 @@ impl FileManifestValue {
     }
 
     /// FileManifest.install(path, replace=true)
-    pub fn install(&self, type_values: &TypeValues, path: String, replace: bool) -> ValueResult {
+    pub fn install(
+        &self,
+        type_values: &TypeValues,
+        call_stack: &mut CallStack,
+        path: String,
+        replace: bool,
+    ) -> ValueResult {
+        const LABEL: &str = "FileManifest.install()";
+
         let raw_context = get_context_value(type_values)?;
         let context = raw_context
             .downcast_ref::<EnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
 
-        error_context("FileManifest.install()", || {
+        let installed_paths = error_context(LABEL, || {
             let dest_path = context.build_path().join(path);
 
             if replace {
@@ -185,6 +240,14 @@ impl FileManifestValue {
             }
             .map_err(anyhow::Error::new)
         })?;
+
+        post_materialize_signing_checks(
+            LABEL,
+            type_values,
+            call_stack,
+            SigningAction::FileManifestInstall,
+            &installed_paths,
+        )?;
 
         Ok(Value::new(NoneType::None))
     }
@@ -277,14 +340,14 @@ starlark_module! { file_resource_module =>
         this.add_path(path, strip_prefix, force_read)
     }
 
-    FileManifest.build(env env, this, target: String) {
+    FileManifest.build(env env, call_stack cs, this, target: String) {
         let this = this.downcast_ref::<FileManifestValue>().unwrap();
-        this.build(env, target)
+        this.build(env, cs, target)
     }
 
-    FileManifest.install(env env, this, path: String, replace: bool = true) {
+    FileManifest.install(env env, call_stack cs, this, path: String, replace: bool = true) {
         let this = this.downcast_ref::<FileManifestValue>().unwrap();
-        this.install(&env, path, replace)
+        this.install(env, cs, path, replace)
     }
 }
 

@@ -190,6 +190,10 @@ sign during certain operations.
 
 The following named actions are defined by Tugger:
 
+``file-manifest-install``
+   Used when a :py:class:`FileManifest` is materialized on the filesystem
+   through an action like :py:meth:`FileManifest.install()`.
+
 ``macos-application-bundle-creation``
    When a macOS Application Bundle is created by Tugger.
 
@@ -210,6 +214,28 @@ The following named actions are defined by Tugger:
 
 Other applications extending Tugger's core functionality may define their own
 actions.
+
+.. _tugger_code_signing_duplicate_events:
+
+Duplicate Events
+----------------
+
+It is possible for the same logical file to trigger multiple signing events
+as it is processed. For example, :py:meth:`MacOsApplicationBundleBuilder.build()`
+may trigger an event for macOS Application Bundle generation then a later
+action loads the bundle files into a :py:class:`FileManifest` and materializes
+them somewhere else via :py:meth:`FileManifest.install()`, which would
+trigger an additional signability check.
+
+As a result, the same file or entity may be signed multiple times.
+
+If this behavior is undesirable, the use of a custom callback function can
+be used to choose which signing requests to respond to.
+
+Unfortunately, we do not yet expose metadata on :py:class:`CodeSigningRequest`
+indicating if a file is signed or not. This would likely be the obvious
+attribute to filter against. This feature is tracked at
+https://github.com/indygreg/PyOxidizer/issues/400.
 
 .. _tugger_code_signing_examples:
 

@@ -47,3 +47,7 @@
         If ``replace`` is True (the default), the destination directory will
         be deleted and the final state of the destination directory should
         exactly match the state of the :py:class:`FileManifest`.
+
+        Upon successful materialization of all files in the manifest, all written
+        files will be assessed for code signing with the ``file-manifest-install``
+        *action*.
