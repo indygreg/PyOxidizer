@@ -1,6 +1,7 @@
 [workspace]
 members = [
     'cryptographic-message-syntax',
+    'oxidized-importer',
     'pyembed',
     'pyoxidizer',
     'python-packaging',
