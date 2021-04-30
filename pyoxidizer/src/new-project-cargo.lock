@@ -265,7 +265,7 @@ dependencies = [
  "python-packed-resources",
  "python3-sys",
  "snmalloc-sys",
- "tugger-file-manifest",
+ "tugger-file-manifest 0.4.0-pre",
  "winapi",
 ]
 
@@ -284,7 +284,7 @@ dependencies = [
  "python-packed-resources",
  "regex",
  "spdx",
- "tugger-file-manifest",
+ "tugger-file-manifest 0.3.0",
  "tugger-licensing",
  "walkdir",
 ]
@@ -383,6 +383,10 @@ name = "tugger-file-manifest"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1ed041f7eb90349d65655c20644fbfa180c388190197baf6df454b8239edba65"
+
+[[package]]
+name = "tugger-file-manifest"
+version = "0.4.0-pre"
 
 [[package]]
 name = "tugger-licensing"
