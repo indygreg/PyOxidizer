@@ -93,6 +93,9 @@ Constructor Functions
     password when exporting the code signing certificate, the password
     is likely the empty string.
 
+    The password can be collected interactively via the :py:func:`prompt_password`
+    function.
+
 .. py:function:: code_signer_from_windows_store_sha1_thumbprint(thumbprint: str, store: str = "my") -> CodeSigner
 
     Construct a :py:class:`CodeSigner` that uses a certificate in the Windows

@@ -12,6 +12,7 @@ pub mod code_signing;
 pub mod file_resource;
 pub mod macos_application_bundle_builder;
 pub mod snapcraft;
+pub mod terminal;
 #[cfg(test)]
 mod testutil;
 pub mod wix_bundle_builder;
@@ -19,6 +20,7 @@ pub mod wix_installer;
 pub mod wix_msi_builder;
 
 use {
+    console::Term,
     starlark::{
         environment::{Environment, EnvironmentError, TypeValues},
         values::{
@@ -32,15 +34,31 @@ use {
 /// Holds global context for Tugger Starlark evaluation.
 pub struct TuggerContext {
     pub logger: slog::Logger,
+    pub term_stdout: Term,
+    pub term_stderr: Term,
     pub code_signers: Vec<Value>,
+    /// Whether to forcefully disable user interaction.
+    ///
+    /// Setting to true causes [Self::can_prompt] to always return false.
+    pub disable_interaction: bool,
 }
 
 impl TuggerContext {
     pub fn new(logger: slog::Logger) -> Self {
         Self {
             logger,
+            // Hard-coded to stdout for now. We'll probably want to make this configurable
+            // to facilitate testing.
+            term_stdout: Term::stdout(),
+            term_stderr: Term::stderr(),
             code_signers: vec![],
+            disable_interaction: false,
         }
+    }
+
+    /// Whether we can prompt for input.
+    pub fn can_prompt(&self) -> bool {
+        !self.disable_interaction && atty::is(atty::Stream::Stdin)
     }
 }
 
@@ -109,6 +127,7 @@ pub fn register_starlark_dialect(
     file_resource::file_resource_module(env, type_values);
     macos_application_bundle_builder::macos_application_bundle_builder_module(env, type_values);
     snapcraft::snapcraft_module(env, type_values);
+    terminal::terminal_module(env, type_values);
     wix_bundle_builder::wix_bundle_builder_module(env, type_values);
     wix_installer::wix_installer_module(env, type_values);
     wix_msi_builder::wix_msi_builder_module(env, type_values);

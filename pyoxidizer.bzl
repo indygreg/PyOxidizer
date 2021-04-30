@@ -1,29 +1,20 @@
 # The following variables can be passed in via --var or --var-env to control
 # behavior:
 #
-# CODE_SIGNING_SHA1_THUMBPRINT
-#    Defines the SHA-1 thumbprint of the code signing certificate in the
-#    Windows certificate store to use.
+# CODE_SIGNING_ENABLE
+#    Whether to enable code signing.
 #
-# CODE_SIGNING_PFX_PATH / CODE_SIGNING_PFX_PASSWORD
-#    Path to code signing certificate PFX file and the password to use to
-#    read it.
+#    If present, will prompt for code signing parameters.
 #
 # TIME_STAMP_SERVER_URL
 #    URL of Time-Stamp Protocol Server to use.
-#
-# CODE_SIGNING_APPLE_KEYCHAIN
-#    Attempt to access the Apple keychain to load issuer certificates.
 
 PYOXIDIZER_VERSION = "0.14.0"
 AUTHOR = "Gregory Szorc"
 
 # Whether we are running in CI.
 IN_CI = VARS.get("IN_CI", False)
-CODE_SIGNING_SHA1_THUMBPRINT = VARS.get("CODE_SIGNING_SHA1_THUMBPRINT")
-CODE_SIGNING_PFX_PATH = VARS.get("CODE_SIGNING_PFX_PATH")
-CODE_SIGNING_PFX_PASSWORD = VARS.get("CODE_SIGNING_PFX_PASSWORD")
-CODE_SIGNING_APPLE_KEYCHAIN = VARS.get("CODE_SIGNING_APPLE_KEYCHAIN")
+CODE_SIGNING_ENABLE = VARS.get("CODE_SIGNING_ENABLE", False)
 TIME_STAMP_SERVER_URL = VARS.get("TIME_STAMP_SERVER_URL", "http://timestamp.digicert.com")
 
 
@@ -123,27 +114,12 @@ def make_macos_app_bundle():
 def register_code_signers():
     signer = None
 
-    if CODE_SIGNING_SHA1_THUMBPRINT:
-        print("registering Windows store signer from SHA-1 thumbprint")
-        signer = code_signer_from_windows_store_sha1_thumbprint(CODE_SIGNING_SHA1_THUMBPRINT)
+    if CODE_SIGNING_ENABLE:
+        pfx_path = prompt_input("path to PFX file")
+        pfx_password = prompt_password("PFX password", confirm=True)
 
-    if CODE_SIGNING_PFX_PATH:
-        if CODE_SIGNING_PFX_PASSWORD:
-            password = CODE_SIGNING_PFX_PASSWORD
-        else:
-            password = ""
-
-        print("registering code signer from PFX file")
-        signer = code_signer_from_pfx_file(CODE_SIGNING_PFX_PATH, password)
-
-    if signer:
-        if CODE_SIGNING_APPLE_KEYCHAIN:
-            signer.chain_issuer_certificates_macos_keychain()
-        else:
-            # Apple time server will be used automatically on Apple.
-            signer.set_time_stamp_server(TIME_STAMP_SERVER_URL)
+        signer = code_signer_from_pfx_file(pfx_path, pfx_password)
         signer.activate()
-
 
 
 register_code_signers()

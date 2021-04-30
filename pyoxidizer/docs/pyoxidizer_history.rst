@@ -126,6 +126,13 @@ New Features
   is still in its early stages of development and is lacking some power user
   features to exert low-level control over code signing. Please file feature
   requests as you encounter limitations with the functionality!
+* The new Starlark functions :py:func:`starlark_tugger.prompt_confirm`,
+  :py:func:`starlark_tugger.prompt_input`,
+  :py:func:`starlark_tugger.prompt_password`,
+  and :py:func:`starlark_tugger.can_prompt` can be used to allow configuration
+  files to perform interaction with the user via the terminal. The functions all
+  allow a default value to be provided, enabling them to be used in scenarios
+  when stdin isn't connected to a TTY and can't be prompted.
 
 Other Relevant Changes
 ^^^^^^^^^^^^^^^^^^^^^^

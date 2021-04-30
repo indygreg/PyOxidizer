@@ -259,6 +259,23 @@ Then when running the configuration file, specify an extra variable. e.g.::
 
     $ pyoxidizer --var PFX_PATH /path/to/certificate.pfx --var PFX_PASSWORD hunter2
 
+Or you could use functions like :py:func:`prompt_confirm`, :py:func:`prompt_input`,
+and :py:func:`prompt_password` to ask the user which certificate to use.
+
+.. code-block:: python
+
+   def make_code_signers():
+       if prompt_confirm("enable code signing?", default=False):
+           pfx_path = prompt_input("enter path to PFX file:")
+           pfx_password = prompt_password("enter path to PFX password:", confirm=True)
+
+           signer = code_signer_from_pfx_file(pfx_path, pfx_password)
+           signer.activate()
+
+   make_code_signers()
+
+
+
 Selectively Ignoring Files to Sign
 ----------------------------------
 

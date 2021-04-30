@@ -30,7 +30,11 @@ impl StarlarkEnvironment {
         let cwd = std::env::current_dir()?;
 
         let target_context = EnvironmentContext::new(&logger, cwd);
-        let tugger_context = TuggerContext::new(logger.clone());
+        let mut tugger_context = TuggerContext::new(logger.clone());
+
+        // Always disable interaction in tests, otherwise reading from stdin can
+        // cause hangs.
+        tugger_context.disable_interaction = true;
 
         let (mut env, mut type_values) = starlark::stdlib::global_environment();
         starlark_dialect_build_targets::register_starlark_dialect(&mut env, &mut type_values)
