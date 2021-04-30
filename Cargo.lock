@@ -2432,7 +2432,7 @@ dependencies = [
  "tar",
  "tempfile",
  "tugger 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "tugger-apple 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-apple",
  "tugger-binary-analysis",
  "tugger-code-signing 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-common 0.5.0-pre",
@@ -3583,7 +3583,7 @@ dependencies = [
  "rayon",
  "serde",
  "serde_yaml",
- "tugger-apple 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-apple",
  "walkdir",
  "yaml-rust",
 ]
@@ -3802,21 +3802,7 @@ dependencies = [
 
 [[package]]
 name = "tugger-apple"
-version = "0.2.0"
-dependencies = [
- "anyhow",
- "duct",
- "once_cell",
- "semver",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "tugger-apple"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5805b939ed4c8b3ce3ffc9a2f723f3ce3d26f6c6dd3aeda7c10c1aa96b79bf62"
+version = "0.3.0-pre"
 dependencies = [
  "anyhow",
  "duct",
