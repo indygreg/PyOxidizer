@@ -1214,6 +1214,24 @@ fn generate_new_project_cargo_lock(repo_root: &Path) -> Result<String> {
     let pyembed_version =
         cargo_toml_package_version(&repo_root.join("pyembed").join("Cargo.toml"))?;
 
+    let pyembed_entry = format!(
+        "[dependencies.pyembed]\nversion = \"{}\"\n",
+        pyembed_version
+    );
+
+    // For pre-releases, refer to pyembed by its repo path, as pre-releases aren't
+    // published. Otherwise, leave as-is: Cargo.lock should pick up the version published
+    // on the registry and embed that metadata.
+    let pyembed_entry = if pyembed_version.ends_with("-pre") {
+        format!(
+            "{}path = \"{}\"\n",
+            pyembed_entry,
+            repo_root.join("pyembed").display()
+        )
+    } else {
+        pyembed_entry
+    };
+
     cmd(
         "cargo",
         vec![
@@ -1232,13 +1250,10 @@ fn generate_new_project_cargo_lock(repo_root: &Path) -> Result<String> {
         .join("cargo-extra.toml.hbs");
 
     let mut manifest_data = std::fs::read_to_string(&cargo_toml_path)?;
-    manifest_data.push_str(&format!(
-        "[dependencies.pyembed]\nversion = \"{}\"\npath = \"{}\"\n",
-        pyembed_version,
-        repo_root.join("pyembed").display()
-    ));
+    manifest_data.push_str(&pyembed_entry);
+
     // This is a handlebars template but it has nothing special. So just read as
-    // a regualr file.
+    // a regualar file.
     manifest_data.push_str(&std::fs::read_to_string(&extra_toml_path)?);
 
     std::fs::write(&cargo_toml_path, manifest_data.as_bytes())?;
