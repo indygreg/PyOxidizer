@@ -2372,7 +2372,7 @@ dependencies = [
  "once_cell",
  "pathdiff",
  "python-packaging 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "python-packed-resources 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "python-packed-resources 0.8.0-pre",
  "python3-sys",
  "rusty-fork",
  "snmalloc-sys",
@@ -2404,7 +2404,7 @@ dependencies = [
  "once_cell",
  "path-dedot",
  "python-packaging 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "python-packed-resources 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "python-packed-resources 0.8.0-pre",
  "remove_dir_all 0.7.0",
  "rustc_version",
  "semver",
@@ -2444,7 +2444,7 @@ dependencies = [
  "itertools 0.10.0",
  "mailparse",
  "once_cell",
- "python-packed-resources 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "python-packed-resources 0.8.0-pre",
  "regex",
  "spdx",
  "tempfile",
@@ -2466,7 +2466,7 @@ dependencies = [
  "itertools 0.10.0",
  "mailparse",
  "once_cell",
- "python-packed-resources 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "python-packed-resources 0.7.0",
  "regex",
  "spdx",
  "tugger-file-manifest 0.3.0",
@@ -2478,6 +2478,8 @@ dependencies = [
 [[package]]
 name = "python-packed-resources"
 version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "15ff4dcea2f72950f431b3b8199f53edb7ac349d710c00983173e0e2499577cd"
 dependencies = [
  "anyhow",
  "byteorder",
@@ -2485,9 +2487,7 @@ dependencies = [
 
 [[package]]
 name = "python-packed-resources"
-version = "0.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "15ff4dcea2f72950f431b3b8199f53edb7ac349d710c00983173e0e2499577cd"
+version = "0.8.0-pre"
 dependencies = [
  "anyhow",
  "byteorder",
