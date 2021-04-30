@@ -106,7 +106,7 @@ New Features
   :py:attr:`oxidized_importer.OxidizedFinder.path_hook_base_str` and
   :py:attr:`oxidized_importer.OxidizedFinder.origin`.
 * Starlark configuration files can now produce macOS Application Bundles.
-  :py:class`starlark_tugger.MacOsApplicationBundleBuilder` for the API
+  See :py:class`starlark_tugger.MacOsApplicationBundleBuilder` for the API
   documentation.
 * ``pyoxidizer`` commands that evaluate Starlark files now accept the arguments
   ``--var`` and ``--var-env`` to define extra variables to define in the
@@ -147,8 +147,9 @@ Other Relevant Changes
   using Sphinx's support for doing so. The documentation should now look more
   familiar to Python developers familiar with Sphinx for Python API
   documentation.
-* PyOxidizer now stores persistent artifacts in a per-user *cache* directory.
-  See :ref:`pyoxidizer_cache` for more.
+* PyOxidizer now stores persistent artifacts (like Rust toolchains) and
+  downloaded Python distributions) in a per-user *cache* directory. See
+  :ref:`pyoxidizer_cache` for more.
 * The ``pyoxidizer`` CLI now accepts ``--verbose`` as a sub-command argument.
   Previously, it was only accepted as an argument before the sub-command name.
 * Generated Rust projects (which can be temporary as part of building binaries)
