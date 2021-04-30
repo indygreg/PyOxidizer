@@ -17,8 +17,8 @@ lazy_static = "1.4"
 python3-sys = "0.6.0"
 
 [dependencies.python-packed-resources]
-version = "0.7.0-pre"
-path = "../python-packed-resources"
+version = "0.7.0"
+# path = "../python-packed-resources"
 
 [dependencies.pyembed]
 version = "0.14.0-pre"
