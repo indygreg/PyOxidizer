@@ -36,7 +36,7 @@ def make_msi(target_triple, add_vc_redist):
     else:
         platform = "unknown"
 
-    msi.msi_filename = "pyoxidizer-" + PYOXIDIZER_VERSION + "-" + platform + ".msi"
+    msi.msi_filename = "PyOxidizer-" + PYOXIDIZER_VERSION + "-" + platform + ".msi"
 
     if add_vc_redist:
         msi.add_visual_cpp_redistributable(redist_version = "14", platform = platform)
