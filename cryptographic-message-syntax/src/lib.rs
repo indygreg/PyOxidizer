@@ -91,7 +91,12 @@ use {
     bcder::{Integer, OctetString, Oid},
     pem::PemError,
     ring::{digest::Digest, signature::UnparsedPublicKey},
-    std::{collections::HashSet, convert::TryFrom, fmt::Display, ops::Deref},
+    std::{
+        collections::HashSet,
+        convert::TryFrom,
+        fmt::{Debug, Display, Formatter},
+        ops::Deref,
+    },
     x509_certificate::{
         certificate::certificate_is_subset_of, rfc3280::Name, CapturedX509Certificate,
         DigestAlgorithm, SignatureAlgorithm, X509Certificate, X509CertificateError,
@@ -173,9 +178,9 @@ pub enum CmsError {
 impl std::error::Error for CmsError {}
 
 impl Display for CmsError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::DecodeErr(e) => e.fmt(f),
+            Self::DecodeErr(e) => std::fmt::Display::fmt(e, f),
             Self::MissingSignedAttributeContentType => {
                 f.write_str("content-type attribute missing from SignedAttributes")
             }
@@ -197,7 +202,7 @@ impl Display for CmsError {
             Self::SubjectKeyIdentifierUnsupported => {
                 f.write_str("signer info using subject key identifier is not supported")
             }
-            Self::Io(e) => e.fmt(f),
+            Self::Io(e) => std::fmt::Display::fmt(e, f),
             Self::UnknownKeyAlgorithm(oid) => {
                 f.write_fmt(format_args!("unknown signing key algorithm: {}", oid))
             }
@@ -268,7 +273,7 @@ impl From<X509CertificateError> for CmsError {
 /// This is a high-level data structure that ultimately gets (de)serialized
 /// from/to ASN.1. It exists to facilitate common interactions with the
 /// low-level ASN.1 without exposing the complexity of ASN.1.
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct SignedData {
     /// Content digest algorithms used.
     digest_algorithms: HashSet<DigestAlgorithm>,
@@ -291,6 +296,20 @@ pub struct SignedData {
 
     /// Describes content signatures.
     signers: Vec<SignerInfo>,
+}
+
+impl Debug for SignedData {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let mut s = f.debug_struct("SignedData");
+        s.field("digest_algorithms", &self.digest_algorithms);
+        s.field(
+            "signed_content",
+            &format_args!("{:?}", self.signed_content.as_ref().map(hex::encode)),
+        );
+        s.field("certificates", &self.certificates);
+        s.field("signers", &self.signers);
+        s.finish()
+    }
 }
 
 impl SignedData {
@@ -402,7 +421,7 @@ impl TryFrom<&crate::asn1::rfc5652::SignedData> for SignedData {
 /// Instances of this type are logically equivalent to a single
 /// signed assertion within a `SignedData` payload. There can be multiple
 /// signers per `SignedData`, which is why this type exists on its own.
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct SignerInfo {
     /// The X.509 certificate issuer.
     issuer: Name,
@@ -427,6 +446,32 @@ pub struct SignerInfo {
 
     /// Parsed unsigned attributes.
     unsigned_attributes: Option<UnsignedAttributes>,
+}
+
+impl Debug for SignerInfo {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let mut s = f.debug_struct("SignerInfo");
+        s.field("issuer", &self.issuer);
+        s.field("serial_number", &self.serial_number);
+        s.field("digest_algorithm", &self.digest_algorithm);
+        s.field("signature_algorithm", &self.signature_algorithm);
+        s.field(
+            "signature",
+            &format_args!("{}", hex::encode(&self.signature)),
+        );
+        s.field("signed_attributes", &self.signed_attributes);
+        s.field(
+            "digested_signed_attributes_data",
+            &format_args!(
+                "{:?}",
+                self.digested_signed_attributes_data
+                    .as_ref()
+                    .map(hex::encode)
+            ),
+        );
+        s.field("unsigned_attributes", &self.unsigned_attributes);
+        s.finish()
+    }
 }
 
 impl SignerInfo {
@@ -791,7 +836,7 @@ impl TryFrom<&crate::asn1::rfc5652::SignerInfo> for SignerInfo {
 /// Represents the contents of a CMS SignedAttributes structure.
 ///
 /// This is a high-level interface to the SignedAttributes ASN.1 type.
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct SignedAttributes {
     /// The content type of the value being signed.
     ///
@@ -803,6 +848,19 @@ pub struct SignedAttributes {
 
     /// The time the signature was created.
     signing_time: Option<chrono::DateTime<chrono::Utc>>,
+}
+
+impl Debug for SignedAttributes {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let mut s = f.debug_struct("SignedAttributes");
+        s.field("content_type", &format_args!("{}", self.content_type));
+        s.field(
+            "message_digest",
+            &format_args!("{}", hex::encode(&self.message_digest)),
+        );
+        s.field("signing_time", &self.signing_time);
+        s.finish()
+    }
 }
 
 #[derive(Clone, Debug)]

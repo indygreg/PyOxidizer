@@ -23,6 +23,7 @@ use {
         cmp::Ordering,
         collections::HashSet,
         convert::TryFrom,
+        fmt::{Debug, Formatter},
         hash::{Hash, Hasher},
         io::Write,
         ops::{Deref, DerefMut},
@@ -303,10 +304,26 @@ impl AsMut<rfc5280::Certificate> for X509Certificate {
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Eq, PartialEq)]
 enum OriginalData {
     Ber(Vec<u8>),
     Der(Vec<u8>),
+}
+
+impl Debug for OriginalData {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!(
+            "{}({})",
+            match self {
+                Self::Ber(_) => "Ber",
+                Self::Der(_) => "Der",
+            },
+            match self {
+                Self::Ber(data) => hex::encode(data),
+                Self::Der(data) => hex::encode(data),
+            }
+        ))
+    }
 }
 
 /// Represents an immutable (read-only) X.509 certificate that was parsed from data.

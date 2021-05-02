@@ -21,6 +21,7 @@ use {
         BitString, Captured, ConstOid, Integer, Mode, OctetString, Oid, Tag,
     },
     std::{
+        fmt::{Debug, Formatter},
         io::Write,
         ops::{Deref, DerefMut},
     },
@@ -303,10 +304,27 @@ impl SignerInfos {
 ///   eContentType ContentType,
 ///   eContent [0] EXPLICIT OCTET STRING OPTIONAL }
 /// ```
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Eq, PartialEq)]
 pub struct EncapsulatedContentInfo {
     pub content_type: ContentType,
     pub content: Option<OctetString>,
+}
+
+impl Debug for EncapsulatedContentInfo {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let mut s = f.debug_struct("EncapsulatedContentInfo");
+        s.field("content_type", &format_args!("{}", self.content_type));
+        s.field(
+            "content",
+            &format_args!(
+                "{:?}",
+                self.content
+                    .as_ref()
+                    .map(|x| hex::encode(x.clone().to_bytes().as_ref()))
+            ),
+        );
+        s.finish()
+    }
 }
 
 impl EncapsulatedContentInfo {
@@ -347,7 +365,7 @@ impl EncapsulatedContentInfo {
 ///   signature SignatureValue,
 ///   unsignedAttrs [1] IMPLICIT UnsignedAttributes OPTIONAL }
 /// ```
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Eq, PartialEq)]
 pub struct SignerInfo {
     pub version: CmsVersion,
     pub sid: SignerIdentifier,
@@ -516,6 +534,34 @@ impl SignerInfo {
         } else {
             Ok(None)
         }
+    }
+}
+
+impl Debug for SignerInfo {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let mut s = f.debug_struct("SignerInfo");
+
+        s.field("version", &self.version);
+        s.field("sid", &self.sid);
+        s.field("digest_algorithm", &self.digest_algorithm);
+        s.field("signed_attributes", &self.signed_attributes);
+        s.field("signature_algorithm", &self.signature_algorithm);
+        s.field(
+            "signature",
+            &format_args!(
+                "{}",
+                hex::encode(self.signature.clone().into_bytes().as_ref())
+            ),
+        );
+        s.field("unsigned_attributes", &self.unsigned_attributes);
+        s.field(
+            "signed_attributes_data",
+            &format_args!(
+                "{:?}",
+                self.signed_attributes_data.as_ref().map(hex::encode)
+            ),
+        );
+        s.finish()
     }
 }
 

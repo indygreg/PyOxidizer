@@ -14,6 +14,7 @@ use {
     },
     bytes::Bytes,
     std::{
+        fmt::{Debug, Formatter},
         io::Write,
         ops::{Deref, DerefMut},
     },
@@ -26,10 +27,19 @@ use {
 ///   algorithm               OBJECT IDENTIFIER,
 ///   parameters              ANY DEFINED BY algorithm OPTIONAL  }
 /// ```
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Eq, PartialEq)]
 pub struct AlgorithmIdentifier {
     pub algorithm: Oid,
     pub parameters: Option<AlgorithmParameter>,
+}
+
+impl Debug for AlgorithmIdentifier {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let mut s = f.debug_struct("AlgorithmIdentifier");
+        s.field("algorithm", &format_args!("{}", self.algorithm));
+        s.field("parameters", &self.parameters);
+        s.finish()
+    }
 }
 
 impl AlgorithmIdentifier {
@@ -149,11 +159,28 @@ impl Values for AlgorithmParameter {
 ///   signatureAlgorithm   AlgorithmIdentifier,
 ///   signature            BIT STRING  }
 /// ```
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Eq, PartialEq)]
 pub struct Certificate {
     pub tbs_certificate: TbsCertificate,
     pub signature_algorithm: AlgorithmIdentifier,
     pub signature: BitString,
+}
+
+impl Debug for Certificate {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let mut s = f.debug_struct("Certificate");
+        s.field("tbs_certificate", &self.tbs_certificate);
+        s.field("signature_algorithm", &self.signature_algorithm);
+        s.field(
+            "signature",
+            &format_args!(
+                "{} (unused {})",
+                hex::encode(self.signature.octet_bytes()),
+                self.signature.unused()
+            ),
+        );
+        s.finish()
+    }
 }
 
 impl Certificate {
@@ -210,7 +237,7 @@ impl Certificate {
 ///      extensions      [3]  Extensions OPTIONAL
 ///                           -- If present, version MUST be v3 --  }
 /// ```
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Eq, PartialEq)]
 pub struct TbsCertificate {
     pub version: Version,
     pub serial_number: CertificateSerialNumber,
@@ -227,6 +254,27 @@ pub struct TbsCertificate {
     ///
     /// This is what signature verification should be performed against.
     pub raw_data: Option<Vec<u8>>,
+}
+
+impl Debug for TbsCertificate {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let mut s = f.debug_struct("TbsCertificate");
+        s.field("version", &self.version);
+        s.field("serial_number", &self.serial_number);
+        s.field("signature", &self.signature);
+        s.field("issuer", &self.issuer);
+        s.field("validity", &self.validity);
+        s.field("subject", &self.subject);
+        s.field("subject_public_key_info", &self.subject_public_key_info);
+        s.field("issuer_unique_id", &self.issuer_unique_id);
+        s.field("subject_unique_id", &self.subject_unique_id);
+        s.field("extensions", &self.extensions);
+        s.field(
+            "raw_data",
+            &format_args!("{:?}", self.raw_data.as_ref().map(hex::encode)),
+        );
+        s.finish()
+    }
 }
 
 impl TbsCertificate {
@@ -376,10 +424,26 @@ pub type UniqueIdentifier = BitString;
 ///   algorithm            AlgorithmIdentifier,
 ///   subjectPublicKey     BIT STRING  }
 /// ```
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Eq, PartialEq)]
 pub struct SubjectPublicKeyInfo {
     pub algorithm: AlgorithmIdentifier,
     pub subject_public_key: BitString,
+}
+
+impl Debug for SubjectPublicKeyInfo {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let mut s = f.debug_struct("SubjectPublicKeyInfo");
+        s.field("algorithm", &self.algorithm);
+        s.field(
+            "subject_public_key",
+            &format_args!(
+                "{} (unused {})",
+                hex::encode(self.subject_public_key.octet_bytes().as_ref()),
+                self.subject_public_key.unused()
+            ),
+        );
+        s.finish()
+    }
 }
 
 impl SubjectPublicKeyInfo {
@@ -462,11 +526,24 @@ impl DerefMut for Extensions {
 ///                  -- by extnID
 ///      }
 /// ```
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Eq, PartialEq)]
 pub struct Extension {
     pub id: Oid,
     pub critical: Option<bool>,
     pub value: OctetString,
+}
+
+impl Debug for Extension {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let mut s = f.debug_struct("Extension");
+        s.field("id", &format_args!("{}", self.id));
+        s.field("critical", &self.critical);
+        s.field(
+            "value",
+            &format_args!("{}", hex::encode(self.value.clone().into_bytes().as_ref())),
+        );
+        s.finish()
+    }
 }
 
 impl Extension {

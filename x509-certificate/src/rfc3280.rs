@@ -16,6 +16,7 @@ use {
         Captured, Mode, OctetString, Oid, Tag,
     },
     std::{
+        fmt::{Debug, Formatter},
         io::Write,
         ops::{Deref, DerefMut},
         str::FromStr,
@@ -627,10 +628,19 @@ impl OrAddress {
 ///   type     AttributeType,
 ///   value    AttributeValue }
 /// ```
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct AttributeTypeAndValue {
     pub typ: AttributeType,
     pub value: AttributeValue,
+}
+
+impl Debug for AttributeTypeAndValue {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let mut s = f.debug_struct("AttributeTypeAndValue");
+        s.field("type", &format_args!("{}", self.typ));
+        s.field("value", &self.value);
+        s.finish()
+    }
 }
 
 impl AttributeTypeAndValue {
@@ -697,8 +707,14 @@ impl Values for AttributeTypeAndValue {
 
 pub type AttributeType = Oid;
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct AttributeValue(Captured);
+
+impl Debug for AttributeValue {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!("{}", hex::encode(self.0.as_slice())))
+    }
+}
 
 impl AttributeValue {
     /// Construct a new instance containing a PrintableString given a Rust string.

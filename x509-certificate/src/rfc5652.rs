@@ -15,6 +15,7 @@ use {
         Captured, Mode, Oid,
     },
     std::{
+        fmt::{Debug, Formatter},
         io::Write,
         ops::{Deref, DerefMut},
     },
@@ -27,10 +28,19 @@ use {
 ///   attrType OBJECT IDENTIFIER,
 ///   attrValues SET OF AttributeValue }
 /// ```
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Eq, PartialEq)]
 pub struct Attribute {
     pub typ: Oid,
     pub values: Vec<AttributeValue>,
+}
+
+impl Debug for Attribute {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let mut s = f.debug_struct("Attribute");
+        s.field("type", &format_args!("{}", self.typ));
+        s.field("values", &self.values);
+        s.finish()
+    }
 }
 
 impl Attribute {
@@ -61,8 +71,17 @@ impl Attribute {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct AttributeValue(Captured);
+
+impl Debug for AttributeValue {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!(
+            "{}",
+            hex::encode(self.0.clone().into_bytes().as_ref())
+        ))
+    }
+}
 
 impl AttributeValue {
     /// Construct a new instance from captured data.
