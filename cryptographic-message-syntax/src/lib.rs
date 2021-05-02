@@ -583,6 +583,35 @@ impl SignerInfo {
         }
     }
 
+    /// Verifies the migest digest stored in signed attributes using explicit encapsulated content.
+    ///
+    /// Typically, the digest is computed over content stored in the [SignedData] instance.
+    /// However, it is possible for the signed content to be external. This function
+    /// allows you to define the source of that external content.
+    ///
+    /// Behavior is very similar to [SignerInfo::verify_message_digest_with_signed_data]
+    /// except the original content that was digested is explicitly passed in. This
+    /// content is appended with the signed attributes data on this [SignerInfo].
+    ///
+    /// The security limitations from [SignerInfo::verify_message_digest_with_signed_data]
+    /// apply to this function as well.
+    pub fn verify_message_digest_with_content(&self, data: &[u8]) -> Result<(), CmsError> {
+        let signed_attributes = self
+            .signed_attributes()
+            .ok_or(CmsError::NoSignedAttributes)?;
+
+        let wanted_digest: &[u8] = signed_attributes.message_digest.as_ref();
+        let got_digest = self.compute_digest(Some(data));
+
+        // Susceptible to timing side-channel but we don't care per function
+        // documentation.
+        if wanted_digest == got_digest.as_ref() {
+            Ok(())
+        } else {
+            Err(CmsError::DigestNotEqual)
+        }
+    }
+
     /// Obtain an entity for validating the signature described by this instance.
     ///
     /// This will attempt to locate the certificate used by this signing info
@@ -878,7 +907,9 @@ mod tests {
 
     // This signature was extracted from the Firefox.app/Contents/MacOS/firefox
     // Mach-O executable on a aarch64 machine.
-    const FIREFOX_SIGNATURE: &[u8] = include_bytes!("firefox.der");
+    const FIREFOX_SIGNATURE: &[u8] = include_bytes!("firefox.ber");
+
+    const FIREFOX_CODE_DIRECTORY: &[u8] = include_bytes!("firefox-code-directory");
 
     #[test]
     fn parse_firefox() {
@@ -895,7 +926,10 @@ mod tests {
 
         let raw2 = crate::asn1::rfc5652::SignedData::decode_ber(&buffer).unwrap();
         assert_eq!(raw, raw2, "BER round tripping is identical");
+    }
 
+    #[test]
+    fn verify_firefox() {
         let signed_data = SignedData::parse_ber(FIREFOX_SIGNATURE).unwrap();
 
         for signer in signed_data.signers.iter() {
@@ -908,6 +942,11 @@ mod tests {
             signer
                 .verify_message_digest_with_signed_data(&signed_data)
                 .unwrap_err();
+
+            // But we know what that value is. So plug it in to verify.
+            signer
+                .verify_message_digest_with_content(FIREFOX_CODE_DIRECTORY)
+                .unwrap();
         }
     }
 }
