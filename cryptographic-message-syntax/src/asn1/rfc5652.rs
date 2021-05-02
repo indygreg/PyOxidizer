@@ -525,6 +525,7 @@ impl SignerInfo {
                 // No existing copy present. Serialize from raw data structures.
                 // But we obtain a sorted instance of those attributes first, because
                 // bcder doesn't appear to follow DER encoding rules for sets.
+                let signed_attributes = signed_attributes.as_sorted()?;
                 let mut der = Vec::new();
                 // The mode argument here is actually ignored.
                 signed_attributes.write_encoded(Mode::Der, &mut der)?;

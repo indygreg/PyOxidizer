@@ -525,6 +525,7 @@ impl SignerInfo {
     /// * DOES NOT verify the digest hash embedded within `SignedAttributes` (if present).
     /// * DOES NOT validate the signing certificate in any way.
     /// * DOES NOT validate that the cryptography used is appropriate.
+    /// * DOES NOT verify the time stamp token, if present.
     ///
     /// See the crate's documentation for more on the security implications.
     pub fn verify_signature_with_signed_data(
@@ -663,6 +664,55 @@ impl SignerInfo {
         Ok(public_key)
     }
 
+    /// Resolve the time-stamp token [SignedData] for this signer.
+    ///
+    /// The time-stamp token is a SignedData ASN.1 structure embedded as an unsigned
+    /// attribute. This is a convenience method to extract it and turn it into
+    /// a [SignedData].
+    ///
+    /// Returns `Ok(Some)` on success, `Ok(None)` if there is no time-stamp token,
+    /// and `Err` if there is a parsing error.
+    pub fn time_stamp_token_signed_data(&self) -> Result<Option<SignedData>, CmsError> {
+        if let Some(attrs) = self.unsigned_attributes() {
+            if let Some(signed_data) = &attrs.time_stamp_token {
+                Ok(Some(SignedData::try_from(signed_data)?))
+            } else {
+                Ok(None)
+            }
+        } else {
+            Ok(None)
+        }
+    }
+
+    /// Verify the time-stamp token in this instance.
+    ///
+    /// The time-stamp token is a SignedData ASN.1 structure embedded as an unsigned
+    /// attribute. So this method reconstructs that data structure and effectively
+    /// calls [SignerInfo::verify_signature_with_signed_data] and
+    /// [SignerInfo::verify_message_digest_with_signed_data].
+    ///
+    /// Returns `Ok(None)` if there is no time-stamp token and `Ok(Some(()))` if
+    /// there is and the token validates. `Err` occurs on any parse or verification
+    /// error.
+    pub fn verify_time_stamp_token(&self) -> Result<Option<()>, CmsError> {
+        let signed_data = if let Some(v) = self.time_stamp_token_signed_data()? {
+            v
+        } else {
+            return Ok(None);
+        };
+
+        if signed_data.signers.is_empty() {
+            return Ok(None);
+        }
+
+        for signer in signed_data.signers() {
+            signer.verify_signature_with_signed_data(&signed_data)?;
+            signer.verify_message_digest_with_signed_data(&signed_data)?;
+        }
+
+        Ok(Some(()))
+    }
+
     /// Obtain the raw bytes of content that was signed given a `SignedData`.
     ///
     /// This joins the encapsulated content from `SignedData` with `SignedAttributes`
@@ -675,22 +725,37 @@ impl SignerInfo {
     /// Obtain the raw bytes of content that were digested and signed.
     ///
     /// The returned value is the message that was signed and whose signature
-    /// of needs to be verified.
+    /// of which needs to be verified.
     ///
     /// The optional content argument is the `encapContentInfo eContent`
     /// field, typically the value of `SignedData.signed_content()`.
     pub fn signed_content(&self, content: Option<&[u8]>) -> Vec<u8> {
-        let mut res = Vec::new();
+        // Per RFC 5652 Section 5.4:
+        //
+        //    The result of the message digest calculation process depends on
+        //    whether the signedAttrs field is present.  When the field is absent,
+        //    the result is just the message digest of the content as described
+        //    above.  When the field is present, however, the result is the message
+        //    digest of the complete DER encoding of the SignedAttrs value
+        //    contained in the signedAttrs field.  Since the SignedAttrs value,
+        //    when present, must contain the content-type and the message-digest
+        //    attributes, those values are indirectly included in the result.  The
+        //    content-type attribute MUST NOT be included in a countersignature
+        //    unsigned attribute as defined in Section 11.4.  A separate encoding
+        //    of the signedAttrs field is performed for message digest calculation.
+        //    The IMPLICIT [0] tag in the signedAttrs is not used for the DER
+        //    encoding, rather an EXPLICIT SET OF tag is used.  That is, the DER
+        //    encoding of the EXPLICIT SET OF tag, rather than of the IMPLICIT [0]
+        //    tag, MUST be included in the message digest calculation along with
+        //    the length and content octets of the SignedAttributes value.
 
-        if let Some(content) = content {
-            res.extend(content);
+        if let Some(signed_attributes_data) = &self.digested_signed_attributes_data {
+            signed_attributes_data.clone()
+        } else if let Some(content) = content {
+            content.to_vec()
+        } else {
+            vec![]
         }
-
-        if let Some(signed_data) = &self.digested_signed_attributes_data {
-            res.extend(signed_data.as_slice());
-        }
-
-        res
     }
 
     /// Compute a message digest using a `SignedData` instance.
@@ -944,6 +1009,19 @@ mod tests {
             signer
                 .verify_message_digest_with_content(FIREFOX_CODE_DIRECTORY)
                 .unwrap();
+
+            // Now verify the time-stamp token embedded as an unsigned attribute.
+            let tst_signed_data = signer.time_stamp_token_signed_data().unwrap().unwrap();
+
+            for signer in tst_signed_data.signers() {
+                signer
+                    .verify_message_digest_with_signed_data(&tst_signed_data)
+                    .unwrap();
+                // TODO this should work.
+                assert!(signer
+                    .verify_signature_with_signed_data(&tst_signed_data)
+                    .is_err());
+            }
         }
     }
 }

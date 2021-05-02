@@ -305,16 +305,12 @@ impl<'a> SignedDataBuilder<'a> {
                 signed_attributes_data: None,
             };
 
-            // The signature is computed over content embedded in the final message.
-            // This content is the optional encapsulated content plus the DER
-            // serialized signed attributes.
-            let mut signed_content = Vec::new();
-            if let Some(encapsulated) = &self.signed_content {
-                signed_content.extend(encapsulated);
-            }
-            if let Some(attributes_data) = signer_info.signed_attributes_digested_content()? {
-                signed_content.extend(attributes_data);
-            }
+            // The content being signed is the DER encoded signed attributes, if present, or the
+            // encapsulated content. Since we always create signed attributes above, it *must* be
+            // the DER encoded signed attributes.
+            let signed_content = signer_info
+                .signed_attributes_digested_content()?
+                .expect("presence of signed attributes should ensure this is Some(T)");
 
             let (signature, signature_algorithm) = signer.signing_key.sign(&signed_content)?;
 
@@ -408,7 +404,7 @@ mod tests {
         x509_certificate::{testutil::*, EcdsaCurve},
     };
 
-    const APPLE_TIMESTAMP_URL: &str = "http://timestamp.apple.com/ts01";
+    const DIGICERT_TIMESTAMP_URL: &str = "http://timestamp.digicert.com";
 
     #[test]
     fn simple_rsa_signature() {
@@ -443,7 +439,7 @@ mod tests {
         let cert = rsa_cert();
 
         let signer = SignerBuilder::new(&key, cert)
-            .time_stamp_url(APPLE_TIMESTAMP_URL)
+            .time_stamp_url(DIGICERT_TIMESTAMP_URL)
             .unwrap();
 
         let ber = SignedDataBuilder::default()
@@ -458,6 +454,18 @@ mod tests {
             let unsigned = signer.unsigned_attributes().unwrap();
             let tst = unsigned.time_stamp_token.as_ref().unwrap();
             assert!(tst.certificates.is_some());
+
+            let tst_signed_data = signer.time_stamp_token_signed_data().unwrap().unwrap();
+            for signer in tst_signed_data.signers() {
+                signer
+                    .verify_message_digest_with_signed_data(&tst_signed_data)
+                    .unwrap();
+                signer
+                    .verify_signature_with_signed_data(&tst_signed_data)
+                    .unwrap();
+            }
+
+            assert!(signer.verify_time_stamp_token().unwrap().is_some());
         }
     }
 

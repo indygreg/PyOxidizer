@@ -163,8 +163,10 @@ pub fn time_stamp_request_http(
                 HTTP_CONTENT_TYPE_RESPONSE,
             ))
     {
+        let response_bytes = response.bytes()?;
+
         let res = TimeStampResponse(Constructed::decode(
-            response.bytes()?,
+            response_bytes.as_ref(),
             bcder::Mode::Der,
             |cons| TimeStampResp::take_from(cons),
         )?);
@@ -219,16 +221,31 @@ pub fn time_stamp_message_http(
 
 #[cfg(test)]
 mod test {
-    use super::*;
+    use {super::*, std::convert::TryFrom};
 
-    const APPLE_TIMESTAMP_URL: &str = "http://timestamp.apple.com/ts01";
+    const DIGICERT_TIMESTAMP_URL: &str = "http://timestamp.digicert.com";
+
+    #[test]
+    fn verify_static() {
+        let signed_data =
+            crate::SignedData::parse_ber(include_bytes!("tsp-signed-data.der")).unwrap();
+
+        for signer in signed_data.signers() {
+            signer
+                .verify_message_digest_with_signed_data(&signed_data)
+                .unwrap();
+            signer
+                .verify_signature_with_signed_data(&signed_data)
+                .unwrap();
+        }
+    }
 
     #[test]
     fn simple_request() {
         let message = b"hello, world";
 
-        let res =
-            time_stamp_message_http(APPLE_TIMESTAMP_URL, message, DigestAlgorithm::Sha256).unwrap();
+        let res = time_stamp_message_http(DIGICERT_TIMESTAMP_URL, message, DigestAlgorithm::Sha256)
+            .unwrap();
 
         let signed_data = res.signed_data().unwrap().unwrap();
         assert_eq!(
@@ -237,5 +254,13 @@ mod test {
         );
         let tst_info = res.tst_info().unwrap().unwrap();
         assert_eq!(tst_info.version, Integer::from(1));
+
+        let parsed = crate::SignedData::try_from(&signed_data).unwrap();
+        for signer in parsed.signers() {
+            signer
+                .verify_message_digest_with_signed_data(&parsed)
+                .unwrap();
+            signer.verify_signature_with_signed_data(&parsed).unwrap();
+        }
     }
 }
