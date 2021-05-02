@@ -651,12 +651,9 @@ impl SignerInfo {
             CmsError::UnknownKeyAlgorithm(signing_cert.key_algorithm_oid().clone())
         })?;
 
-        let signature_algorithm = signing_cert.signature_algorithm().ok_or_else(|| {
-            CmsError::UnknownSignatureAlgorithm(signing_cert.signature_algorithm_oid().clone())
-        })?;
-
-        let verification_algorithm =
-            signature_algorithm.resolve_verification_algorithm(key_algorithm)?;
+        let verification_algorithm = self
+            .signature_algorithm
+            .resolve_verification_algorithm(key_algorithm)?;
 
         let public_key = UnparsedPublicKey::new(
             verification_algorithm,
