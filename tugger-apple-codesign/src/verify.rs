@@ -58,6 +58,7 @@ pub enum VerificationProblemType {
     SignatureNotLastLinkeditData,
     NoCryptographicSignature,
     CmsError(CmsError),
+    CmsOldDigestAlgorithm(DigestAlgorithm),
     CmsOldSignatureAlgorithm(SignatureAlgorithm),
     NoCodeDirectory,
     CodeDirectoryOldDigestAlgorithm(DigestType),
@@ -105,6 +106,9 @@ impl std::fmt::Display for VerificationProblem {
                 "no cryptographic signature present".to_string()
             }
             VerificationProblemType::CmsError(e) => format!("CMS error: {}", e),
+            VerificationProblemType::CmsOldDigestAlgorithm(alg) => {
+                format!("insecure digest algorithm used: {:?}", alg)
+            }
             VerificationProblemType::CmsOldSignatureAlgorithm(alg) => {
                 format!("insecure signature algorithm used: {:?}", alg)
             }
@@ -357,6 +361,14 @@ fn verify_cms_signature(data: &[u8], context: VerificationContext) -> Vec<Verifi
 
     for signer in signed_data.signers() {
         match signer.digest_algorithm() {
+            DigestAlgorithm::Sha1 => {
+                problems.push(VerificationProblem {
+                    context: context.clone(),
+                    problem: VerificationProblemType::CmsOldDigestAlgorithm(
+                        signer.digest_algorithm(),
+                    ),
+                });
+            }
             DigestAlgorithm::Sha256 => {}
             DigestAlgorithm::Sha512 => {}
         }

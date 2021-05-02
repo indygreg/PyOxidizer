@@ -14,6 +14,11 @@ use {
     std::convert::TryFrom,
 };
 
+/// SHA-1 digest algorithm.
+///
+/// 1.3.14.3.2.26
+const OID_SHA1: ConstOid = Oid(&[43, 14, 3, 2, 26]);
+
 /// SHA-256 digest algorithm.
 ///
 /// 2.16.840.1.101.3.4.2.1
@@ -96,6 +101,10 @@ pub(crate) const OID_EC_SECP384R1: ConstOid = Oid(&[43, 129, 4, 0, 34]);
 /// digests via `From`/`Into`.
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum DigestAlgorithm {
+    /// SHA-1.
+    ///
+    /// Corresponds to OID 1.3.14.3.2.26.
+    Sha1,
     /// SHA-256.
     ///
     /// Corresponds to OID 2.16.840.1.101.3.4.2.1.
@@ -109,6 +118,7 @@ pub enum DigestAlgorithm {
 impl From<DigestAlgorithm> for Oid {
     fn from(alg: DigestAlgorithm) -> Self {
         Oid(match alg {
+            DigestAlgorithm::Sha1 => OID_SHA1.as_ref(),
             DigestAlgorithm::Sha256 => OID_SHA256.as_ref(),
             DigestAlgorithm::Sha512 => OID_SHA512.as_ref(),
         }
@@ -120,7 +130,9 @@ impl TryFrom<&Oid> for DigestAlgorithm {
     type Error = Error;
 
     fn try_from(v: &Oid) -> Result<Self, Self::Error> {
-        if v == &OID_SHA256 {
+        if v == &OID_SHA1 {
+            Ok(Self::Sha1)
+        } else if v == &OID_SHA256 {
             Ok(Self::Sha256)
         } else if v == &OID_SHA512 {
             Ok(Self::Sha512)
@@ -150,6 +162,7 @@ impl From<DigestAlgorithm> for AlgorithmIdentifier {
 impl From<DigestAlgorithm> for digest::Context {
     fn from(alg: DigestAlgorithm) -> Self {
         digest::Context::new(match alg {
+            DigestAlgorithm::Sha1 => &digest::SHA1_FOR_LEGACY_USE_ONLY,
             DigestAlgorithm::Sha256 => &digest::SHA256,
             DigestAlgorithm::Sha512 => &digest::SHA512,
         })
