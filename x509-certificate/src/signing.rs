@@ -116,7 +116,7 @@ impl InMemorySigningKeyPair {
     /// for easy inclusion in ASN.1 structures.
     pub fn signature_algorithm(&self) -> SignatureAlgorithm {
         match self {
-            Self::Rsa(_) => SignatureAlgorithm::Sha256Rsa,
+            Self::Rsa(_) => SignatureAlgorithm::RsaSha256,
             Self::Ecdsa(_, curve) => {
                 // ring refuses to mix and match the bitness of curves and signature
                 // algorithms. e.g. it can't pair secp256r1 with SHA-384. It chooses

@@ -191,17 +191,17 @@ pub enum SignatureAlgorithm {
     /// SHA-1 with RSA encryption.
     ///
     /// Corresponds to OID 1.2.840.113549.1.1.5.
-    Sha1Rsa,
+    RsaSha1,
 
     /// SHA-256 with RSA encryption.
     ///
     /// Corresponds to OID 1.2.840.113549.1.1.11.
-    Sha256Rsa,
+    RsaSha256,
 
     /// SHA-512 with RSA encryption.
     ///
     /// Corresponds to OID 1.2.840.113549.1.1.13.
-    Sha512Rsa,
+    RsaSha512,
 
     /// RSAES-PKCS1-v1_5 encryption scheme.
     ///
@@ -235,9 +235,9 @@ impl SignatureAlgorithm {
     ) -> Result<&'static dyn signature::VerificationAlgorithm, Error> {
         match key_algorithm {
             KeyAlgorithm::Rsa => match self {
-                Self::Sha1Rsa => Ok(&signature::RSA_PKCS1_2048_8192_SHA1_FOR_LEGACY_USE_ONLY),
-                Self::Sha256Rsa => Ok(&signature::RSA_PKCS1_2048_8192_SHA256),
-                Self::Sha512Rsa => Ok(&signature::RSA_PKCS1_2048_8192_SHA512),
+                Self::RsaSha1 => Ok(&signature::RSA_PKCS1_2048_8192_SHA1_FOR_LEGACY_USE_ONLY),
+                Self::RsaSha256 => Ok(&signature::RSA_PKCS1_2048_8192_SHA256),
+                Self::RsaSha512 => Ok(&signature::RSA_PKCS1_2048_8192_SHA512),
                 Self::RsaesPkcsV15 => {
                     Ok(&signature::RSA_PKCS1_1024_8192_SHA256_FOR_LEGACY_USE_ONLY)
                 }
@@ -266,9 +266,9 @@ impl SignatureAlgorithm {
 impl From<SignatureAlgorithm> for Oid {
     fn from(alg: SignatureAlgorithm) -> Self {
         Oid(match alg {
-            SignatureAlgorithm::Sha1Rsa => OID_SHA1_RSA.as_ref(),
-            SignatureAlgorithm::Sha256Rsa => OID_SHA256_RSA.as_ref(),
-            SignatureAlgorithm::Sha512Rsa => OID_SHA512_RSA.as_ref(),
+            SignatureAlgorithm::RsaSha1 => OID_SHA1_RSA.as_ref(),
+            SignatureAlgorithm::RsaSha256 => OID_SHA256_RSA.as_ref(),
+            SignatureAlgorithm::RsaSha512 => OID_SHA512_RSA.as_ref(),
             SignatureAlgorithm::RsaesPkcsV15 => OID_RSAES_PKCS_V15.as_ref(),
             SignatureAlgorithm::EcdsaSha256 => OID_ECDSA_SHA256.as_ref(),
             SignatureAlgorithm::EcdsaSha384 => OID_ECDSA_SHA384.as_ref(),
@@ -283,11 +283,11 @@ impl TryFrom<&Oid> for SignatureAlgorithm {
 
     fn try_from(v: &Oid) -> Result<Self, Self::Error> {
         if v == &OID_SHA1_RSA {
-            Ok(Self::Sha1Rsa)
+            Ok(Self::RsaSha1)
         } else if v == &OID_SHA256_RSA {
-            Ok(Self::Sha256Rsa)
+            Ok(Self::RsaSha256)
         } else if v == &OID_SHA512_RSA {
-            Ok(Self::Sha512Rsa)
+            Ok(Self::RsaSha512)
         } else if v == &OID_RSAES_PKCS_V15 {
             Ok(Self::RsaesPkcsV15)
         } else if v == &OID_ECDSA_SHA256 {
