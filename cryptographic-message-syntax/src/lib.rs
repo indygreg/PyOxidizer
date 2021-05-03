@@ -963,6 +963,20 @@ pub struct SignedAttributes {
     signing_time: Option<chrono::DateTime<chrono::Utc>>,
 }
 
+impl SignedAttributes {
+    pub fn content_type(&self) -> &Oid {
+        &self.content_type
+    }
+
+    pub fn message_digest(&self) -> &[u8] {
+        &self.message_digest
+    }
+
+    pub fn signing_time(&self) -> Option<&chrono::DateTime<chrono::Utc>> {
+        self.signing_time.as_ref()
+    }
+}
+
 impl Debug for SignedAttributes {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let mut s = f.debug_struct("SignedAttributes");

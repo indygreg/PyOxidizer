@@ -72,6 +72,8 @@ Possible values are:
 
 blobs
    Low-level information on the records in the embedded code signature.
+cms-info
+   Print important information about the CMS data structure.
 cms-pem
    Like cms-raw except it prints PEM encoded data, which is ASCII and
    safe to print to terminals.
@@ -376,6 +378,167 @@ fn command_compute_code_hashes(args: &ArgMatches) -> Result<(), AppleCodesignErr
     Ok(())
 }
 
+fn print_signed_data(
+    prefix: &str,
+    signed_data: &SignedData,
+    external_content: Option<Vec<u8>>,
+) -> Result<(), AppleCodesignError> {
+    println!(
+        "{}signed content (embedded): {:?}",
+        prefix,
+        signed_data.signed_content().map(hex::encode)
+    );
+    println!(
+        "{}signed content (external): {:?}... ({} bytes)",
+        prefix,
+        external_content.as_ref().map(|x| hex::encode(&x[0..40])),
+        external_content.as_ref().map(|x| x.len()).unwrap_or(0),
+    );
+
+    let content = if let Some(v) = signed_data.signed_content() {
+        Some(v.clone())
+    } else if let Some(v) = external_content.as_ref() {
+        Some(v.as_ref())
+    } else {
+        None
+    };
+
+    if let Some(content) = content {
+        println!(
+            "{}signed content SHA-1:   {}",
+            prefix,
+            hex::encode(DigestType::Sha1.digest(&content)?)
+        );
+        println!(
+            "{}signed content SHA-256: {}",
+            prefix,
+            hex::encode(DigestType::Sha256.digest(&content)?)
+        );
+        println!(
+            "{}signed content SHA-384: {}",
+            prefix,
+            hex::encode(DigestType::Sha384.digest(&content)?)
+        );
+        println!(
+            "{}signed content SHA-512: {}",
+            prefix,
+            hex::encode(DigestType::Sha512.digest(&content)?)
+        );
+    }
+    println!(
+        "{}certificate count: {}",
+        prefix,
+        signed_data.certificates().count()
+    );
+    for (i, cert) in signed_data.certificates().enumerate() {
+        println!(
+            "{}certificate #{}: subject CN={}; self signed={}",
+            prefix,
+            i,
+            cert.subject_common_name()
+                .unwrap_or_else(|| "<unknown>".to_string()),
+            cert.subject_is_issuer()
+        );
+    }
+    println!("{}signer count: {}", prefix, signed_data.signers().count());
+    for (i, signer) in signed_data.signers().enumerate() {
+        println!(
+            "{}signer #{}: digest algorithm: {:?}",
+            prefix,
+            i,
+            signer.digest_algorithm()
+        );
+        println!(
+            "{}signer #{}: signature algorithm: {:?}",
+            prefix,
+            i,
+            signer.signature_algorithm()
+        );
+
+        if let Some(sa) = signer.signed_attributes() {
+            println!(
+                "{}signer #{}: content type: {}",
+                prefix,
+                i,
+                sa.content_type()
+            );
+            println!(
+                "{}signer #{}: message digest: {}",
+                prefix,
+                i,
+                hex::encode(sa.message_digest())
+            );
+            println!(
+                "{}signer #{}: signing time: {:?}",
+                prefix,
+                i,
+                sa.signing_time()
+            );
+        }
+
+        let digested_data = signer.signed_content_with_signed_data(&signed_data);
+
+        println!(
+            "{}signer #{}: signature content SHA-1:   {}",
+            prefix,
+            i,
+            hex::encode(DigestType::Sha1.digest(&digested_data)?)
+        );
+        println!(
+            "{}signer #{}: signature content SHA-256: {}",
+            prefix,
+            i,
+            hex::encode(DigestType::Sha256.digest(&digested_data)?)
+        );
+        println!(
+            "{}signer #{}: signature content SHA-384: {}",
+            prefix,
+            i,
+            hex::encode(DigestType::Sha384.digest(&digested_data)?)
+        );
+        println!(
+            "{}signer #{}: signature content SHA-512: {}",
+            prefix,
+            i,
+            hex::encode(DigestType::Sha512.digest(&digested_data)?)
+        );
+
+        if signed_data.signed_content().is_some() {
+            println!(
+                "{}signer #{}: digest valid: {}",
+                prefix,
+                i,
+                signer
+                    .verify_message_digest_with_signed_data(&signed_data)
+                    .is_ok()
+            );
+        }
+        println!(
+            "{}signer #{}: signature valid: {}",
+            prefix,
+            i,
+            signer
+                .verify_signature_with_signed_data(&signed_data)
+                .is_ok()
+        );
+
+        println!(
+            "{}signer #{}: time-stamp token present: {}",
+            prefix,
+            i,
+            signer.time_stamp_token_signed_data()?.is_some()
+        );
+
+        if let Some(tsp_signed_data) = signer.time_stamp_token_signed_data()? {
+            let prefix = format!("{}signer #{}: time-stamp token: ", prefix, i);
+
+            print_signed_data(&prefix, &tsp_signed_data, None)?;
+        }
+    }
+
+    Ok(())
+}
+
 fn command_extract(args: &ArgMatches) -> Result<(), AppleCodesignError> {
     let path = args
         .value_of("path")
@@ -399,6 +562,22 @@ fn command_extract(args: &ArgMatches) -> Result<(), AppleCodesignError> {
             for blob in embedded.blobs {
                 let parsed = blob.into_parsed_blob()?;
                 println!("{:#?}", parsed);
+            }
+        }
+        "cms-info" => {
+            let embedded = parse_signature_data(&sig.signature_data)?;
+            if let Some(cms) = embedded.signature_data()? {
+                let signed_data = SignedData::parse_ber(cms)?;
+
+                let cd_data = if let Ok(Some(blob)) = embedded.code_directory() {
+                    Some(blob.to_blob_bytes()?)
+                } else {
+                    None
+                };
+
+                print_signed_data("", &signed_data, cd_data)?;
+            } else {
+                eprintln!("no CMS data");
             }
         }
         "cms-pem" => {
@@ -1071,6 +1250,7 @@ fn main_impl() -> Result<(), AppleCodesignError> {
                         .takes_value(true)
                         .possible_values(&[
                             "blobs",
+                            "cms-info",
                             "cms-pem",
                             "cms-raw",
                             "cms",
