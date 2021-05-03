@@ -552,10 +552,10 @@ fn command_extract(args: &ArgMatches) -> Result<(), AppleCodesignError> {
 
     let macho = get_macho_from_data(&data, index)?;
 
-    let sig = find_signature_data(&macho)?.ok_or(AppleCodesignError::BinaryNoCodeSignature)?;
-
     match format {
         "blobs" => {
+            let sig =
+                find_signature_data(&macho)?.ok_or(AppleCodesignError::BinaryNoCodeSignature)?;
             let embedded = parse_signature_data(&sig.signature_data)?;
 
             for blob in embedded.blobs {
@@ -564,6 +564,8 @@ fn command_extract(args: &ArgMatches) -> Result<(), AppleCodesignError> {
             }
         }
         "cms-info" => {
+            let sig =
+                find_signature_data(&macho)?.ok_or(AppleCodesignError::BinaryNoCodeSignature)?;
             let embedded = parse_signature_data(&sig.signature_data)?;
             if let Some(cms) = embedded.signature_data()? {
                 let signed_data = SignedData::parse_ber(cms)?;
@@ -580,6 +582,8 @@ fn command_extract(args: &ArgMatches) -> Result<(), AppleCodesignError> {
             }
         }
         "cms-pem" => {
+            let sig =
+                find_signature_data(&macho)?.ok_or(AppleCodesignError::BinaryNoCodeSignature)?;
             let embedded = parse_signature_data(&sig.signature_data)?;
             if let Some(cms) = embedded.signature_data()? {
                 print!(
@@ -594,6 +598,8 @@ fn command_extract(args: &ArgMatches) -> Result<(), AppleCodesignError> {
             }
         }
         "cms-raw" => {
+            let sig =
+                find_signature_data(&macho)?.ok_or(AppleCodesignError::BinaryNoCodeSignature)?;
             let embedded = parse_signature_data(&sig.signature_data)?;
             if let Some(cms) = embedded.signature_data()? {
                 std::io::stdout().write_all(cms)?;
@@ -602,6 +608,8 @@ fn command_extract(args: &ArgMatches) -> Result<(), AppleCodesignError> {
             }
         }
         "cms" => {
+            let sig =
+                find_signature_data(&macho)?.ok_or(AppleCodesignError::BinaryNoCodeSignature)?;
             let embedded = parse_signature_data(&sig.signature_data)?;
             if let Some(cms) = embedded.signature_data()? {
                 let signed_data = SignedData::parse_ber(cms)?;
@@ -612,6 +620,8 @@ fn command_extract(args: &ArgMatches) -> Result<(), AppleCodesignError> {
             }
         }
         "code-directory-raw" => {
+            let sig =
+                find_signature_data(&macho)?.ok_or(AppleCodesignError::BinaryNoCodeSignature)?;
             let embedded = parse_signature_data(&sig.signature_data)?;
 
             if let Some(blob) = embedded.find_slot(CodeSigningSlot::CodeDirectory) {
@@ -621,6 +631,8 @@ fn command_extract(args: &ArgMatches) -> Result<(), AppleCodesignError> {
             }
         }
         "code-directory-serialized-raw" => {
+            let sig =
+                find_signature_data(&macho)?.ok_or(AppleCodesignError::BinaryNoCodeSignature)?;
             let embedded = parse_signature_data(&sig.signature_data)?;
 
             if let Ok(Some(cd)) = embedded.code_directory() {
@@ -630,6 +642,8 @@ fn command_extract(args: &ArgMatches) -> Result<(), AppleCodesignError> {
             }
         }
         "code-directory-serialized" => {
+            let sig =
+                find_signature_data(&macho)?.ok_or(AppleCodesignError::BinaryNoCodeSignature)?;
             let embedded = parse_signature_data(&sig.signature_data)?;
 
             if let Ok(Some(cd)) = embedded.code_directory() {
@@ -638,6 +652,8 @@ fn command_extract(args: &ArgMatches) -> Result<(), AppleCodesignError> {
             }
         }
         "code-directory" => {
+            let sig =
+                find_signature_data(&macho)?.ok_or(AppleCodesignError::BinaryNoCodeSignature)?;
             let embedded = parse_signature_data(&sig.signature_data)?;
 
             if let Some(cd) = embedded.code_directory()? {
@@ -647,6 +663,8 @@ fn command_extract(args: &ArgMatches) -> Result<(), AppleCodesignError> {
             }
         }
         "linkedit-segment-raw" => {
+            let sig =
+                find_signature_data(&macho)?.ok_or(AppleCodesignError::BinaryNoCodeSignature)?;
             std::io::stdout().write_all(sig.linkedit_segment_data)?;
         }
         "macho-load-commands" => {
@@ -665,6 +683,8 @@ fn command_extract(args: &ArgMatches) -> Result<(), AppleCodesignError> {
             }
         }
         "requirements-raw" => {
+            let sig =
+                find_signature_data(&macho)?.ok_or(AppleCodesignError::BinaryNoCodeSignature)?;
             let embedded = parse_signature_data(&sig.signature_data)?;
 
             if let Some(blob) = embedded.find_slot(CodeSigningSlot::RequirementSet) {
@@ -674,6 +694,8 @@ fn command_extract(args: &ArgMatches) -> Result<(), AppleCodesignError> {
             }
         }
         "requirements-rust" => {
+            let sig =
+                find_signature_data(&macho)?.ok_or(AppleCodesignError::BinaryNoCodeSignature)?;
             let embedded = parse_signature_data(&sig.signature_data)?;
 
             if let Some(reqs) = embedded.code_requirements()? {
@@ -687,6 +709,8 @@ fn command_extract(args: &ArgMatches) -> Result<(), AppleCodesignError> {
             }
         }
         "requirements-serialized-raw" => {
+            let sig =
+                find_signature_data(&macho)?.ok_or(AppleCodesignError::BinaryNoCodeSignature)?;
             let embedded = parse_signature_data(&sig.signature_data)?;
 
             if let Some(reqs) = embedded.code_requirements()? {
@@ -696,6 +720,8 @@ fn command_extract(args: &ArgMatches) -> Result<(), AppleCodesignError> {
             }
         }
         "requirements-serialized" => {
+            let sig =
+                find_signature_data(&macho)?.ok_or(AppleCodesignError::BinaryNoCodeSignature)?;
             let embedded = parse_signature_data(&sig.signature_data)?;
 
             if let Some(reqs) = embedded.code_requirements()? {
@@ -706,6 +732,8 @@ fn command_extract(args: &ArgMatches) -> Result<(), AppleCodesignError> {
             }
         }
         "requirements" => {
+            let sig =
+                find_signature_data(&macho)?.ok_or(AppleCodesignError::BinaryNoCodeSignature)?;
             let embedded = parse_signature_data(&sig.signature_data)?;
 
             if let Some(reqs) = embedded.code_requirements()? {
@@ -719,6 +747,8 @@ fn command_extract(args: &ArgMatches) -> Result<(), AppleCodesignError> {
             }
         }
         "segment-info" => {
+            let sig =
+                find_signature_data(&macho)?.ok_or(AppleCodesignError::BinaryNoCodeSignature)?;
             println!("segments count: {}", sig.segments_count);
             for (i, segment) in macho.segments.iter().enumerate() {
                 println!(
@@ -762,9 +792,13 @@ fn command_extract(args: &ArgMatches) -> Result<(), AppleCodesignError> {
             println!("__LINKEDIT signature size: {}", sig.signature_data.len());
         }
         "signature-raw" => {
+            let sig =
+                find_signature_data(&macho)?.ok_or(AppleCodesignError::BinaryNoCodeSignature)?;
             std::io::stdout().write_all(&sig.signature_data)?;
         }
         "superblob" => {
+            let sig =
+                find_signature_data(&macho)?.ok_or(AppleCodesignError::BinaryNoCodeSignature)?;
             let embedded = parse_signature_data(&sig.signature_data)?;
 
             println!("file start offset: {}", sig.linkedit_signature_start_offset);
