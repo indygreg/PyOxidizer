@@ -1576,7 +1576,7 @@ fn main() {
     let exit_code = match main_impl() {
         Ok(()) => 0,
         Err(err) => {
-            eprintln!("Error: {:?}", err);
+            eprintln!("Error: {}", err);
             1
         }
     };
