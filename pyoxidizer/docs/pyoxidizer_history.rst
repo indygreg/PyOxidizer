@@ -26,6 +26,19 @@ Blog Posts
 Version History
 ===============
 
+.. _version_0_14_1:
+
+0.14.1
+------
+
+Released April 30, 2021.
+
+Bug Fixes
+^^^^^^^^^
+
+* Fixed a bug in the 0.14.0 release where newly created projects won't build
+  due to ``Cargo.lock`` issues.
+
 .. _version_0_14_0:
 
 0.14.0
