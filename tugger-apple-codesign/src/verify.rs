@@ -369,6 +369,7 @@ fn verify_cms_signature(data: &[u8], context: VerificationContext) -> Vec<Verifi
                     ),
                 });
             }
+            DigestAlgorithm::Sha384 => {}
             DigestAlgorithm::Sha256 => {}
             DigestAlgorithm::Sha512 => {}
         }
@@ -380,8 +381,7 @@ fn verify_cms_signature(data: &[u8], context: VerificationContext) -> Vec<Verifi
             | SignatureAlgorithm::EcdsaSha256
             | SignatureAlgorithm::EcdsaSha384
             | SignatureAlgorithm::Ed25519 => {}
-            // RsaesPkcsV15 appears to be in widespread use. Should we still notify?
-            SignatureAlgorithm::RsaesPkcsV15 | SignatureAlgorithm::RsaSha1 => {
+            SignatureAlgorithm::RsaSha1 => {
                 problems.push(VerificationProblem {
                     context: context.clone(),
                     problem: VerificationProblemType::CmsOldSignatureAlgorithm(

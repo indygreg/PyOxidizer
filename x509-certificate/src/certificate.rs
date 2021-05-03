@@ -837,7 +837,7 @@ impl X509CertificateBuilder {
     > {
         let (key_pair, document) = InMemorySigningKeyPair::generate_random(self.key_algorithm)?;
 
-        let key_pair_algorithm = key_pair.signature_algorithm();
+        let key_pair_signature_algorithm = key_pair.signature_algorithm();
 
         let issuer = if let Some(issuer) = &self.issuer {
             issuer
@@ -848,7 +848,7 @@ impl X509CertificateBuilder {
         let tbs_certificate = rfc5280::TbsCertificate {
             version: rfc5280::Version::V3,
             serial_number: self.serial_number.into(),
-            signature: key_pair_algorithm.into(),
+            signature: key_pair_signature_algorithm.into(),
             issuer: issuer.clone(),
             validity: rfc5280::Validity {
                 not_before: Time::from(self.not_before),

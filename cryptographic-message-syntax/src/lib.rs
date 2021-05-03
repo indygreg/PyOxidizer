@@ -824,7 +824,14 @@ impl TryFrom<&crate::asn1::rfc5652::SignerInfo> for SignerInfo {
         };
 
         let digest_algorithm = DigestAlgorithm::try_from(&signer_info.digest_algorithm)?;
-        let signature_algorithm = SignatureAlgorithm::try_from(&signer_info.signature_algorithm)?;
+
+        // The "signature" algorithm can also be a key algorithm identifier. So we
+        // attempt to resolve using the more robust mechanism.
+        let signature_algorithm = SignatureAlgorithm::from_oid_and_digest_algorithm(
+            &signer_info.signature_algorithm.algorithm,
+            digest_algorithm,
+        )?;
+
         let signature = signer_info.signature.to_bytes().to_vec();
 
         let signed_attributes = if let Some(attributes) = &signer_info.signed_attributes {
@@ -1032,10 +1039,9 @@ mod tests {
                 signer
                     .verify_message_digest_with_signed_data(&tst_signed_data)
                     .unwrap();
-                // TODO this should work.
-                assert!(signer
+                signer
                     .verify_signature_with_signed_data(&tst_signed_data)
-                    .is_err());
+                    .unwrap();
             }
         }
     }

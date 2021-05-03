@@ -26,6 +26,11 @@ const OID_SHA256: ConstOid = Oid(&[96, 134, 72, 1, 101, 3, 4, 2, 1]);
 
 /// SHA-512 digest algorithm.
 ///
+/// 2.16.840.1.101.3.4.2.2
+const OID_SHA384: ConstOid = Oid(&[96, 134, 72, 1, 101, 3, 4, 2, 2]);
+
+/// SHA-512 digest algorithm.
+///
 /// 2.16.840.1.101.3.4.2.3
 const OID_SHA512: ConstOid = Oid(&[96, 134, 72, 1, 101, 3, 4, 2, 3]);
 
@@ -48,11 +53,6 @@ const OID_SHA384_RSA: ConstOid = Oid(&[42, 134, 72, 134, 247, 13, 1, 1, 12]);
 ///
 /// 1.2.840.113549.1.1.13
 const OID_SHA512_RSA: ConstOid = Oid(&[42, 134, 72, 134, 247, 13, 1, 1, 13]);
-
-/// RSAES-PKCS1-v1_5
-///
-/// 1.2.840.113549.1.1.1
-const OID_RSAES_PKCS_V15: ConstOid = Oid(&[42, 134, 72, 134, 247, 13, 1, 1, 1]);
 
 /// RSA encryption.
 ///
@@ -110,10 +110,17 @@ pub enum DigestAlgorithm {
     ///
     /// Corresponds to OID 1.3.14.3.2.26.
     Sha1,
+
     /// SHA-256.
     ///
     /// Corresponds to OID 2.16.840.1.101.3.4.2.1.
     Sha256,
+
+    /// SHA-384.
+    ///
+    /// Corresponds to OID 2.16.840.1.101.3.4.2.2.
+    Sha384,
+
     /// SHA-512.
     ///
     /// Corresponds to OID 2.16.840.1.101.3.4.2.3.
@@ -125,6 +132,7 @@ impl From<DigestAlgorithm> for Oid {
         Oid(match alg {
             DigestAlgorithm::Sha1 => OID_SHA1.as_ref(),
             DigestAlgorithm::Sha256 => OID_SHA256.as_ref(),
+            DigestAlgorithm::Sha384 => OID_SHA384.as_ref(),
             DigestAlgorithm::Sha512 => OID_SHA512.as_ref(),
         }
         .into())
@@ -139,6 +147,8 @@ impl TryFrom<&Oid> for DigestAlgorithm {
             Ok(Self::Sha1)
         } else if v == &OID_SHA256 {
             Ok(Self::Sha256)
+        } else if v == &OID_SHA384 {
+            Ok(Self::Sha384)
         } else if v == &OID_SHA512 {
             Ok(Self::Sha512)
         } else {
@@ -169,6 +179,7 @@ impl From<DigestAlgorithm> for digest::Context {
         digest::Context::new(match alg {
             DigestAlgorithm::Sha1 => &digest::SHA1_FOR_LEGACY_USE_ONLY,
             DigestAlgorithm::Sha256 => &digest::SHA256,
+            DigestAlgorithm::Sha384 => &digest::SHA384,
             DigestAlgorithm::Sha512 => &digest::SHA512,
         })
     }
@@ -213,11 +224,6 @@ pub enum SignatureAlgorithm {
     /// Corresponds to OID 1.2.840.113549.1.1.13.
     RsaSha512,
 
-    /// RSAES-PKCS1-v1_5 encryption scheme.
-    ///
-    /// Corresponds to OID 1.2.840.113549.1.1.1.
-    RsaesPkcsV15,
-
     /// ECDSA with SHA-256.
     ///
     /// Corresponds to OID 1.2.840.10045.4.3.2.
@@ -235,6 +241,52 @@ pub enum SignatureAlgorithm {
 }
 
 impl SignatureAlgorithm {
+    /// Attempt to resolve an instance from an OID, known [KeyAlgorithm], and optional [DigestAlgorithm].
+    ///
+    /// Signature algorithm OIDs in the wild are typically either:
+    ///
+    /// a) an OID that denotes the key algorithm and corresponding digest format (what this
+    ///    enumeration represents)
+    /// b) an OID that denotes just the key algorithm.
+    ///
+    /// What this function does is attempt to construct an instance from any OID.
+    /// If the OID defines a key + digest algorithm, we get a [SignatureAlgorithm]
+    /// from that. If we get a key algorithm we combine with the provided [DigestAlgorithm]
+    /// to resolve an appropriate [SignatureAlgorithm].
+    pub fn from_oid_and_digest_algorithm(
+        oid: &Oid,
+        digest_algorithm: DigestAlgorithm,
+    ) -> Result<Self, Error> {
+        if let Ok(alg) = Self::try_from(oid) {
+            Ok(alg)
+        } else if let Ok(key_alg) = KeyAlgorithm::try_from(oid) {
+            match key_alg {
+                KeyAlgorithm::Rsa => match digest_algorithm {
+                    DigestAlgorithm::Sha1 => Ok(Self::RsaSha1),
+                    DigestAlgorithm::Sha256 => Ok(Self::RsaSha256),
+                    DigestAlgorithm::Sha384 => Ok(Self::RsaSha384),
+                    DigestAlgorithm::Sha512 => Ok(Self::RsaSha512),
+                },
+                KeyAlgorithm::Ed25519 => Ok(Self::Ed25519),
+                KeyAlgorithm::Ecdsa(_) => match digest_algorithm {
+                    DigestAlgorithm::Sha256 => Ok(Self::EcdsaSha256),
+                    DigestAlgorithm::Sha384 => Ok(Self::EcdsaSha384),
+                    DigestAlgorithm::Sha1 | DigestAlgorithm::Sha512 => {
+                        Err(Error::UnknownSignatureAlgorithm(format!(
+                            "cannot use digest {:?} with ECDSA",
+                            digest_algorithm
+                        )))
+                    }
+                },
+            }
+        } else {
+            Err(Error::UnknownSignatureAlgorithm(format!(
+                "do not know how to resolve {} to a signature algorithm",
+                oid
+            )))
+        }
+    }
+
     /// Attempt to resolve the verification algorithm using info about the signing key algorithm.
     ///
     /// Only specific combinations of methods are supported. e.g. you can only use
@@ -249,9 +301,6 @@ impl SignatureAlgorithm {
                 Self::RsaSha256 => Ok(&signature::RSA_PKCS1_2048_8192_SHA256),
                 Self::RsaSha384 => Ok(&signature::RSA_PKCS1_2048_8192_SHA384),
                 Self::RsaSha512 => Ok(&signature::RSA_PKCS1_2048_8192_SHA512),
-                Self::RsaesPkcsV15 => {
-                    Ok(&signature::RSA_PKCS1_1024_8192_SHA256_FOR_LEGACY_USE_ONLY)
-                }
                 alg => Err(Error::UnsupportedSignatureVerification(key_algorithm, *alg)),
             },
             KeyAlgorithm::Ed25519 => match self {
@@ -281,7 +330,6 @@ impl From<SignatureAlgorithm> for Oid {
             SignatureAlgorithm::RsaSha256 => OID_SHA256_RSA.as_ref(),
             SignatureAlgorithm::RsaSha384 => OID_SHA384_RSA.as_ref(),
             SignatureAlgorithm::RsaSha512 => OID_SHA512_RSA.as_ref(),
-            SignatureAlgorithm::RsaesPkcsV15 => OID_RSAES_PKCS_V15.as_ref(),
             SignatureAlgorithm::EcdsaSha256 => OID_ECDSA_SHA256.as_ref(),
             SignatureAlgorithm::EcdsaSha384 => OID_ECDSA_SHA384.as_ref(),
             SignatureAlgorithm::Ed25519 => OID_ED25519_SIGNATURE_ALGORITHM.as_ref(),
@@ -302,8 +350,6 @@ impl TryFrom<&Oid> for SignatureAlgorithm {
             Ok(Self::RsaSha384)
         } else if v == &OID_SHA512_RSA {
             Ok(Self::RsaSha512)
-        } else if v == &OID_RSAES_PKCS_V15 {
-            Ok(Self::RsaesPkcsV15)
         } else if v == &OID_ECDSA_SHA256 {
             Ok(Self::EcdsaSha256)
         } else if v == &OID_ECDSA_SHA384 {
