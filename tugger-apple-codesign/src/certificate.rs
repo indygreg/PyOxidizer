@@ -1395,7 +1395,7 @@ mod tests {
                 .certificate(cert.clone())
                 .signed_content(plaintext.as_bytes().to_vec())
                 .signer(SignerBuilder::new(&signing_key, cert.clone()))
-                .build_ber()
+                .build_der()
                 .unwrap();
 
             let signed_data = SignedData::parse_ber(&cms).unwrap();
@@ -1426,7 +1426,7 @@ mod tests {
             .certificate(cert.clone())
             .signed_content(plaintext.as_bytes().to_vec())
             .signer(SignerBuilder::new(&signing_key, cert))
-            .build_ber()
+            .build_der()
             .unwrap();
 
         let signed_data = SignedData::parse_ber(&cms).unwrap();

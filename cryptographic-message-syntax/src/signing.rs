@@ -213,8 +213,12 @@ impl<'a> SignedDataBuilder<'a> {
         self
     }
 
-    /// Construct a BER-encoded ASN.1 document containing a `SignedData` object.
-    pub fn build_ber(&self) -> Result<Vec<u8>, CmsError> {
+    /// Construct a DER-encoded ASN.1 document containing a `SignedData` object.
+    ///
+    /// RFC 5652 says `SignedData` is BER encoded. However, DER is a stricter subset
+    /// of BER. DER encodings are valid BER. So producing DER encoded data is perfectly
+    /// valid. We choose to go with the more well-defined encoding format.
+    pub fn build_der(&self) -> Result<Vec<u8>, CmsError> {
         let mut signer_infos = SignerInfos::default();
         let mut seen_digest_algorithms = HashSet::new();
         let mut seen_certificates = self.certificates.clone();
@@ -390,7 +394,7 @@ impl<'a> SignedDataBuilder<'a> {
         let mut ber = Vec::new();
         signed_data
             .encode_ref()
-            .write_encoded(Mode::Ber, &mut ber)?;
+            .write_encoded(Mode::Der, &mut ber)?;
 
         Ok(ber)
     }
@@ -416,7 +420,7 @@ mod tests {
         let ber = SignedDataBuilder::default()
             .signed_content(vec![42])
             .signer(signer)
-            .build_ber()
+            .build_der()
             .unwrap();
 
         let signed_data = crate::SignedData::parse_ber(&ber).unwrap();
@@ -445,7 +449,7 @@ mod tests {
         let ber = SignedDataBuilder::default()
             .signed_content(vec![42])
             .signer(signer)
-            .build_ber()
+            .build_der()
             .unwrap();
 
         let signed_data = crate::SignedData::parse_ber(&ber).unwrap();
@@ -478,7 +482,7 @@ mod tests {
                 .signed_content("hello world".as_bytes().to_vec())
                 .certificate(cert.clone())
                 .signer(SignerBuilder::new(&key, cert))
-                .build_ber()
+                .build_der()
                 .unwrap();
 
             let signed_data = SignedData::parse_ber(&cms).unwrap();
@@ -499,7 +503,7 @@ mod tests {
             .signed_content("hello world".as_bytes().to_vec())
             .certificate(cert.clone())
             .signer(SignerBuilder::new(&key, cert))
-            .build_ber()
+            .build_der()
             .unwrap();
 
         let signed_data = SignedData::parse_ber(&cms).unwrap();

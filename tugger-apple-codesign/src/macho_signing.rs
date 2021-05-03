@@ -531,16 +531,16 @@ impl<'data> MachOSigner<'data> {
             signer
         };
 
-        let ber = SignedDataBuilder::default()
+        let der = SignedDataBuilder::default()
             // The default is `signed-data`. But Apple appears to use the `data` content-type,
             // in violation of RFC 5652 Section 5, which says `signed-data` should be
             // used when there are signatures.
             .content_type(Oid(OID_ID_DATA.as_ref().into()))
             .signer(signer)
             .certificates(settings.certificate_chain().iter().cloned())
-            .build_ber()?;
+            .build_der()?;
 
-        Ok(ber)
+        Ok(der)
     }
 
     /// Attempt to resolve the binary identifier to use.
