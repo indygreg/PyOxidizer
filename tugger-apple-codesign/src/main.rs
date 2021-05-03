@@ -72,16 +72,12 @@ Possible values are:
 
 blobs
    Low-level information on the records in the embedded code signature.
-cms-ber
-   BER encoded ASN.1 of the CMS SignedObject message containing a
-   cryptographic signature over content. (This will print binary
-   to stdout.)
 cms-pem
-   Like cms-ber except it prints PEM encoded data, which is ASCII and
+   Like cms-raw except it prints PEM encoded data, which is ASCII and
    safe to print to terminals.
 cms-raw
    Print the payload of the CMS blob. This should be well-formed BER
-   encoded ASN.1 data.
+   encoded ASN.1 data. (This will print binary to stdout.)
 cms
    Print the ASN.1 decoded CMS data.
 code-directory-raw
@@ -403,14 +399,6 @@ fn command_extract(args: &ArgMatches) -> Result<(), AppleCodesignError> {
             for blob in embedded.blobs {
                 let parsed = blob.into_parsed_blob()?;
                 println!("{:#?}", parsed);
-            }
-        }
-        "cms-ber" => {
-            let embedded = parse_signature_data(&sig.signature_data)?;
-            if let Some(cms) = embedded.signature_data()? {
-                std::io::stdout().write_all(cms)?;
-            } else {
-                eprintln!("no CMS data");
             }
         }
         "cms-pem" => {
@@ -1083,7 +1071,6 @@ fn main_impl() -> Result<(), AppleCodesignError> {
                         .takes_value(true)
                         .possible_values(&[
                             "blobs",
-                            "cms-ber",
                             "cms-pem",
                             "cms-raw",
                             "cms",
