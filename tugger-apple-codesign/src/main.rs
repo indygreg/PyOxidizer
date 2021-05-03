@@ -307,7 +307,6 @@ can be specified via --timestamp-url. By default, Apple's server is used. The
 special value \"none\" can disable using a timestamp server.
 ";
 
-#[allow(unused)]
 const APPLE_TIMESTAMP_URL: &str = "http://timestamp.apple.com/ts01";
 
 const SUPPORTED_HASHES: &[&str; 6] = &[
@@ -1053,7 +1052,6 @@ fn command_sign(args: &ArgMatches) -> Result<(), AppleCodesignError> {
             if timestamp_url != "none" {
                 warn!(&log, "using time-stamp protocol server {}", timestamp_url);
                 settings.set_time_stamp_url(timestamp_url)?;
-                error!(&log, "use of time-stamp tokens is known to break Apple signature verification; see https://github.com/indygreg/PyOxidizer/issues/399");
             }
         }
     }
@@ -1477,8 +1475,7 @@ fn main_impl() -> Result<(), AppleCodesignError> {
                     Arg::with_name("timestamp_url")
                         .long("timestamp-url")
                         .takes_value(true)
-                        // TODO enable once https://github.com/indygreg/PyOxidizer/issues/399 is fixed.
-                        //.default_value(APPLE_TIMESTAMP_URL)
+                        .default_value(APPLE_TIMESTAMP_URL)
                         .help(
                             "URL of timestamp server to use to obtain a token of the CMS signature",
                         ),

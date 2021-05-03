@@ -26,6 +26,27 @@ Blog Posts
 Version History
 ===============
 
+.. _version_0_15_0:
+
+0.15.0
+------
+
+Not yet released.
+
+Bug Fixes
+^^^^^^^^^
+
+* Apple code signatures using a time-stamp server now validate Apple's code
+  signature checks. Previously, they failed validation due the time-stamped
+  data being incorrect.
+
+New Features
+^^^^^^^^^^^^
+
+* Apple code signatures now include a time-stamp token issued by Apple's
+  time-stamp server by default. Presence of the time-stamp token in code
+  signatures is a requirement to notarize applications.
+
 .. _version_0_14_1:
 
 0.14.1

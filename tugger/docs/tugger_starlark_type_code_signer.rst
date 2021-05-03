@@ -51,12 +51,10 @@
 
         Set the URL of a Time-Stamp Protocol server to use.
 
+        Calling this is not necessary when signing Apple primitives, as Apple's
+        server will be used automatically.
+
         Calling this will force the use of a particular time-stamp protocol server.
-
-        .. important::
-
-           Use of this feature will cause Apple code signatures to not validate
-           correctly. See https://github.com/indygreg/PyOxidizer/issues/399.
 
     .. py:method:: set_signing_callback(f: Callable)
 
