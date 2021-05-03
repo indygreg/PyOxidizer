@@ -1268,9 +1268,6 @@ pub fn find_executable_segment_boundary(macho: &MachO) -> Result<(u64, u64), App
 
 /// Describes signature data embedded within a Mach-O binary.
 pub struct MachOSignatureData<'a> {
-    /// The number of segments in the Mach-O binary.
-    pub segments_count: usize,
-
     /// Which segment offset is the `__LINKEDIT` segment.
     pub linkedit_segment_index: usize,
 
@@ -1342,7 +1339,6 @@ pub fn find_signature_data<'a>(
         let signature_data = &linkedit.data[signature_start_offset..signature_end_offset];
 
         Ok(Some(MachOSignatureData {
-            segments_count: obj.segments.len(),
             linkedit_segment_index,
             linkedit_segment_start_offset,
             linkedit_segment_end_offset,

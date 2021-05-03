@@ -92,10 +92,14 @@ code-directory-serialized
 code-directory-serialized-raw
    Reserialize the parsed code directory and emit its binary. Useful
    for comparing round-tripping of code directory data.
-linkededit-segment-raw
+linkedit-info
+   Information about the __LINKEDIT Mach-O segment in the binary.
+linkedit-segment-raw
    Complete content of the __LINKEDIT Mach-O segment as binary.
 macho-load-commands
    Print information about mach-o load commands in the binary.
+macho-segments
+   Print information about mach-o segments in the binary.
 requirements-raw
    Raw binary data composing the requirements blob/slot.
 requirements
@@ -110,9 +114,6 @@ requirements-serialized-raw
    Reserialize the code requirements blob and emit its binary.
 signature-raw
    Raw binary data composing the signature data embedded in the binary.
-segment-info
-   Information about Mach-O segments in the binary and where the
-   __LINKEDIT is in relationship to the binary.
 superblob
    The SuperBlob record and high-level details of embedded Blob
    records, including digests of every Blob.
@@ -662,6 +663,40 @@ fn command_extract(args: &ArgMatches) -> Result<(), AppleCodesignError> {
                 eprintln!("no code directory");
             }
         }
+        "linkedit-info" => {
+            let sig =
+                find_signature_data(&macho)?.ok_or(AppleCodesignError::BinaryNoCodeSignature)?;
+            println!("__LINKEDIT segment index: {}", sig.linkedit_segment_index);
+            println!(
+                "__LINKEDIT segment start offset: {}",
+                sig.linkedit_segment_start_offset
+            );
+            println!(
+                "__LINKEDIT segment end offset: {}",
+                sig.linkedit_segment_end_offset
+            );
+            println!(
+                "__LINKEDIT segment size: {}",
+                sig.linkedit_segment_data.len()
+            );
+            println!(
+                "__LINKEDIT signature global start offset: {}",
+                sig.linkedit_signature_start_offset
+            );
+            println!(
+                "__LINKEDIT signature global end offset: {}",
+                sig.linkedit_signature_end_offset
+            );
+            println!(
+                "__LINKEDIT signature local segment start offset: {}",
+                sig.signature_start_offset
+            );
+            println!(
+                "__LINKEDIT signature local segment end offset: {}",
+                sig.signature_end_offset
+            );
+            println!("__LINKEDIT signature size: {}", sig.signature_data.len());
+        }
         "linkedit-segment-raw" => {
             let sig =
                 find_signature_data(&macho)?.ok_or(AppleCodesignError::BinaryNoCodeSignature)?;
@@ -679,6 +714,19 @@ fn command_extract(args: &ArgMatches) -> Result<(), AppleCodesignError> {
                     command.offset,
                     command.offset + command.command.cmdsize(),
                     command.command.cmdsize(),
+                );
+            }
+        }
+        "macho-segments" => {
+            println!("segments count: {}", macho.segments.len());
+            for (i, segment) in macho.segments.iter().enumerate() {
+                println!(
+                    "segment #{}; {}; start offset {}; end offset {}; size {}",
+                    i,
+                    segment.name()?,
+                    segment.fileoff,
+                    segment.fileoff as usize + segment.data.len(),
+                    segment.data.len()
                 );
             }
         }
@@ -745,51 +793,6 @@ fn command_extract(args: &ArgMatches) -> Result<(), AppleCodesignError> {
             } else {
                 eprintln!("no requirements");
             }
-        }
-        "segment-info" => {
-            let sig =
-                find_signature_data(&macho)?.ok_or(AppleCodesignError::BinaryNoCodeSignature)?;
-            println!("segments count: {}", sig.segments_count);
-            for (i, segment) in macho.segments.iter().enumerate() {
-                println!(
-                    "segment #{}; {}; start offset {}; end offset {}; size {}",
-                    i,
-                    segment.name()?,
-                    segment.fileoff,
-                    segment.fileoff as usize + segment.data.len(),
-                    segment.data.len()
-                );
-            }
-            println!("__LINKEDIT segment index: {}", sig.linkedit_segment_index);
-            println!(
-                "__LINKEDIT segment start offset: {}",
-                sig.linkedit_segment_start_offset
-            );
-            println!(
-                "__LINKEDIT segment end offset: {}",
-                sig.linkedit_segment_end_offset
-            );
-            println!(
-                "__LINKEDIT segment size: {}",
-                sig.linkedit_segment_data.len()
-            );
-            println!(
-                "__LINKEDIT signature global start offset: {}",
-                sig.linkedit_signature_start_offset
-            );
-            println!(
-                "__LINKEDIT signature global end offset: {}",
-                sig.linkedit_signature_end_offset
-            );
-            println!(
-                "__LINKEDIT signature local segment start offset: {}",
-                sig.signature_start_offset
-            );
-            println!(
-                "__LINKEDIT signature local segment end offset: {}",
-                sig.signature_end_offset
-            );
-            println!("__LINKEDIT signature size: {}", sig.signature_data.len());
         }
         "signature-raw" => {
             let sig =
@@ -1290,18 +1293,19 @@ fn main_impl() -> Result<(), AppleCodesignError> {
                             "code-directory-serialized-raw",
                             "code-directory-serialized",
                             "code-directory",
+                            "linkedit-info",
                             "linkedit-segment-raw",
                             "macho-load-commands",
+                            "macho-segments",
                             "requirements-raw",
                             "requirements-rust",
                             "requirements-serialized-raw",
                             "requirements-serialized",
                             "requirements",
-                            "segment-info",
                             "signature-raw",
                             "superblob",
                         ])
-                        .default_value("segment-info")
+                        .default_value("linkedit-info")
                         .help("Which data to extract and how to format it"),
                 )
                 .arg(
