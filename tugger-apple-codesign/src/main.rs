@@ -719,15 +719,29 @@ fn command_extract(args: &ArgMatches) -> Result<(), AppleCodesignError> {
         }
         "macho-segments" => {
             println!("segments count: {}", macho.segments.len());
-            for (i, segment) in macho.segments.iter().enumerate() {
+            for (segment_index, segment) in macho.segments.iter().enumerate() {
+                let sections = segment.sections()?;
+
                 println!(
-                    "segment #{}; {}; start offset {}; end offset {}; size {}",
-                    i,
+                    "segment #{}; {}; offsets=0x{:x}-0x{:x}; size {}; section count {}",
+                    segment_index,
                     segment.name()?,
                     segment.fileoff,
                     segment.fileoff as usize + segment.data.len(),
-                    segment.data.len()
+                    segment.data.len(),
+                    sections.len()
                 );
+                for (section_index, (section, _)) in sections.into_iter().enumerate() {
+                    println!(
+                        "segment #{}; section #{}: {}; segment offsets=0x{:x}-0x{:x} size {}",
+                        segment_index,
+                        section_index,
+                        section.name()?,
+                        section.offset,
+                        section.offset as u64 + section.size,
+                        section.size
+                    );
+                }
             }
         }
         "requirements-raw" => {
