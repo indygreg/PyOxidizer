@@ -318,12 +318,13 @@ impl<'a> SignedDataBuilder<'a> {
 
             let (signature, signature_algorithm) = signer.signing_key.sign(&signed_content)?;
 
-            signer_info.signature = SignatureValue::new(Bytes::from(signature));
+            signer_info.signature = SignatureValue::new(Bytes::from(signature.clone()));
             signer_info.signature_algorithm = signature_algorithm.into();
 
             if let Some(url) = &signer.time_stamp_url {
+                // The message sent to the TSA (via a digest) is the signature of the signed data.
                 let res =
-                    time_stamp_message_http(url.clone(), &signed_content, signer.digest_algorithm)?;
+                    time_stamp_message_http(url.clone(), &signature, signer.digest_algorithm)?;
 
                 if !res.is_success() {
                     return Err(TimeStampError::Unsuccessful(res.clone()).into());
