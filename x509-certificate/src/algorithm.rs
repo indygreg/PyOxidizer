@@ -39,6 +39,11 @@ const OID_SHA1_RSA: ConstOid = Oid(&[42, 134, 72, 134, 247, 13, 1, 1, 5]);
 /// 1.2.840.113549.1.1.11
 const OID_SHA256_RSA: ConstOid = Oid(&[42, 134, 72, 134, 247, 13, 1, 1, 11]);
 
+/// RSA+SHA-384 encryption.
+///
+/// 1.2.840.113549.1.1.12
+const OID_SHA384_RSA: ConstOid = Oid(&[42, 134, 72, 134, 247, 13, 1, 1, 12]);
+
 /// RSA+SHA-512 encryption.
 ///
 /// 1.2.840.113549.1.1.13
@@ -198,6 +203,11 @@ pub enum SignatureAlgorithm {
     /// Corresponds to OID 1.2.840.113549.1.1.11.
     RsaSha256,
 
+    /// SHA-384 with RSA encryption.
+    ///
+    /// Corresponds to OID 1.2.840.113549.1.1.12.
+    RsaSha384,
+
     /// SHA-512 with RSA encryption.
     ///
     /// Corresponds to OID 1.2.840.113549.1.1.13.
@@ -237,6 +247,7 @@ impl SignatureAlgorithm {
             KeyAlgorithm::Rsa => match self {
                 Self::RsaSha1 => Ok(&signature::RSA_PKCS1_2048_8192_SHA1_FOR_LEGACY_USE_ONLY),
                 Self::RsaSha256 => Ok(&signature::RSA_PKCS1_2048_8192_SHA256),
+                Self::RsaSha384 => Ok(&signature::RSA_PKCS1_2048_8192_SHA384),
                 Self::RsaSha512 => Ok(&signature::RSA_PKCS1_2048_8192_SHA512),
                 Self::RsaesPkcsV15 => {
                     Ok(&signature::RSA_PKCS1_1024_8192_SHA256_FOR_LEGACY_USE_ONLY)
@@ -268,6 +279,7 @@ impl From<SignatureAlgorithm> for Oid {
         Oid(match alg {
             SignatureAlgorithm::RsaSha1 => OID_SHA1_RSA.as_ref(),
             SignatureAlgorithm::RsaSha256 => OID_SHA256_RSA.as_ref(),
+            SignatureAlgorithm::RsaSha384 => OID_SHA384_RSA.as_ref(),
             SignatureAlgorithm::RsaSha512 => OID_SHA512_RSA.as_ref(),
             SignatureAlgorithm::RsaesPkcsV15 => OID_RSAES_PKCS_V15.as_ref(),
             SignatureAlgorithm::EcdsaSha256 => OID_ECDSA_SHA256.as_ref(),
@@ -286,6 +298,8 @@ impl TryFrom<&Oid> for SignatureAlgorithm {
             Ok(Self::RsaSha1)
         } else if v == &OID_SHA256_RSA {
             Ok(Self::RsaSha256)
+        } else if v == &OID_SHA384_RSA {
+            Ok(Self::RsaSha384)
         } else if v == &OID_SHA512_RSA {
             Ok(Self::RsaSha512)
         } else if v == &OID_RSAES_PKCS_V15 {

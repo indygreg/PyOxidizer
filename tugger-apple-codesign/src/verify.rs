@@ -375,6 +375,7 @@ fn verify_cms_signature(data: &[u8], context: VerificationContext) -> Vec<Verifi
 
         match signer.signature_algorithm() {
             SignatureAlgorithm::RsaSha256
+            | SignatureAlgorithm::RsaSha384
             | SignatureAlgorithm::RsaSha512
             | SignatureAlgorithm::EcdsaSha256
             | SignatureAlgorithm::EcdsaSha384
