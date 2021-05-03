@@ -758,6 +758,21 @@ impl SignerInfo {
         }
     }
 
+    /// Obtain the raw bytes constituting `SignerInfo.signedAttrs` as encoded for signatures.
+    ///
+    /// Cryptographic signatures in the `SignerInfo` ASN.1 type are made from the digest
+    /// of the `EXPLICIT SET OF` DER encoding of `SignerInfo.signedAttrs`, if signed
+    /// attributes are present. This function resolves the raw bytes that are used
+    /// for digest computation and later signing.
+    ///
+    /// This should always be `Some` if the instance was constructed from an ASN.1
+    /// value that had signed attributes.
+    pub fn signed_attributes_data(&self) -> Option<&[u8]> {
+        self.digested_signed_attributes_data
+            .as_ref()
+            .map(|x| x.as_ref())
+    }
+
     /// Compute a message digest using a `SignedData` instance.
     ///
     /// This will obtain the encapsulated content blob from a `SignedData`
