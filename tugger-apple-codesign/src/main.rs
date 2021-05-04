@@ -1212,6 +1212,20 @@ fn command_sign(args: &ArgMatches) -> Result<(), AppleCodesignError> {
         .expect("output_path presence should have been validated by clap");
 
     if input_path.is_file() {
+        if settings.binary_identifier(SettingsScope::Main).is_none() {
+            let identifier = input_path
+                .file_name()
+                .ok_or_else(|| {
+                    AppleCodesignError::CliGeneralError(
+                        "unable to resolve file name of binary".into(),
+                    )
+                })?
+                .to_string_lossy();
+
+            warn!(&log, "setting binary identifier to {}", identifier);
+            settings.set_binary_identifier(SettingsScope::Main, identifier);
+        }
+
         warn!(&log, "signing {} as a Mach-O binary", input_path.display());
         let macho_data = std::fs::read(input_path)?;
 
