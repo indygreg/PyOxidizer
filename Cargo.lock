@@ -3731,10 +3731,13 @@ version = "0.3.0-pre"
 dependencies = [
  "anyhow",
  "duct",
+ "goblin",
  "once_cell",
+ "scroll",
  "semver",
  "serde",
  "serde_json",
+ "thiserror",
 ]
 
 [[package]]
@@ -3773,6 +3776,7 @@ dependencies = [
  "slog",
  "slog-term",
  "thiserror",
+ "tugger-apple",
  "tugger-apple-bundle",
  "x509-certificate",
  "yasna 0.3.2",

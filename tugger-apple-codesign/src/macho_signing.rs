@@ -25,16 +25,15 @@ use {
     cryptographic_message_syntax::{asn1::rfc5652::OID_ID_DATA, SignedDataBuilder, SignerBuilder},
     goblin::mach::{
         constants::{SEG_LINKEDIT, SEG_PAGEZERO},
-        fat::FAT_MAGIC,
-        fat::{SIZEOF_FAT_ARCH, SIZEOF_FAT_HEADER},
         load_command::{
             CommandVariant, LinkeditDataCommand, SegmentCommand32, SegmentCommand64,
             LC_CODE_SIGNATURE, SIZEOF_LINKEDIT_DATA_COMMAND,
         },
         parse_magic_and_ctx, Mach, MachO,
     },
-    scroll::{ctx::SizeWith, IOwrite, Pwrite},
+    scroll::{ctx::SizeWith, IOwrite},
     std::{borrow::Cow, cmp::Ordering, collections::HashMap, io::Write},
+    tugger_apple::create_universal_macho,
     x509_certificate::{rfc5652::AttributeValue, DigestAlgorithm},
 };
 
@@ -352,50 +351,10 @@ impl<'data> MachOSigner<'data> {
             })
             .collect::<Result<Vec<_>, AppleCodesignError>>()?;
 
-        match Mach::parse(&self.macho_data).expect("should reparse without error") {
-            Mach::Binary(_) => {
-                assert_eq!(binaries.len(), 1);
-                writer.write_all(&binaries[0])?;
-            }
-            Mach::Fat(multiarch) => {
-                assert_eq!(binaries.len(), multiarch.narches);
-
-                // The fat arch header records the start offset and size of each binary.
-                // Do a pass over the binaries and calculate these offsets.
-                //
-                // Binaries appear to be 4k page aligned, so also collect padding
-                // information so we write nulls later.
-                let mut current_offset = SIZEOF_FAT_HEADER + SIZEOF_FAT_ARCH * binaries.len();
-                let mut write_instructions = Vec::with_capacity(binaries.len());
-
-                for (index, arch) in multiarch.iter_arches().enumerate() {
-                    let mut arch = arch?;
-                    let macho_data = &binaries[index];
-
-                    let pad_bytes = 4096 - current_offset % 4096;
-
-                    arch.offset = (current_offset + pad_bytes) as _;
-                    arch.size = macho_data.len() as _;
-
-                    current_offset += macho_data.len() + pad_bytes;
-
-                    write_instructions.push((arch, pad_bytes, macho_data));
-                }
-
-                writer.iowrite_with(FAT_MAGIC, scroll::BE)?;
-                writer.iowrite_with(multiarch.narches as u32, scroll::BE)?;
-
-                for (fat_arch, _, _) in &write_instructions {
-                    let mut buffer = [0u8; SIZEOF_FAT_ARCH];
-                    buffer.pwrite_with(fat_arch, 0, scroll::BE)?;
-                    writer.write_all(&buffer)?;
-                }
-
-                for (_, pad_bytes, macho_data) in write_instructions {
-                    writer.write_all(&b"\0".repeat(pad_bytes))?;
-                    writer.write_all(macho_data)?;
-                }
-            }
+        if binaries.len() > 1 {
+            create_universal_macho(writer, binaries.iter().map(|x| x.as_slice()))?;
+        } else {
+            writer.write_all(&binaries[0])?;
         }
 
         Ok(())

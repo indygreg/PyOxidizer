@@ -6,6 +6,7 @@ use {
     cryptographic_message_syntax::CmsError,
     std::path::PathBuf,
     thiserror::Error,
+    tugger_apple::UniversalMachOError,
     x509_certificate::{KeyAlgorithm, X509CertificateError},
 };
 
@@ -198,4 +199,7 @@ pub enum AppleCodesignError {
 
     #[error("unable to generate code requirement policy: {0}")]
     PolicyFormulationError(String),
+
+    #[error("error producing universal Mach-O binary: {0}")]
+    UniversalMachO(#[from] UniversalMachOError),
 }
