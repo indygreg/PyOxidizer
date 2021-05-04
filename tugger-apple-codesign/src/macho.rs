@@ -1259,11 +1259,28 @@ pub trait AppleSignable {
     /// The start offset of the code signature data within the __LINKEDIT segment.
     fn code_signature_linkedit_start_offset(&self) -> Option<u32>;
 
+    /// The end offset of the code signature data within the __LINKEDIT segment.
+    fn code_signature_linkedit_end_offset(&self) -> Option<u32>;
+
     /// Obtain slices of segment data suitable for digesting.
     ///
     /// The slices are likely digested as part of computing digests
     /// embedded in the code directory.
     fn digestable_segment_data(&self) -> Vec<&[u8]>;
+
+    /// Determines whether this crate is capable of signing a given Mach-O binary.
+    ///
+    /// Code in this crate is limited in the amount of Mach-O binary manipulation
+    /// it can perform (supporting rewriting all valid Mach-O binaries effectively
+    /// requires low-level awareness of all Mach-O constructs in order to perform
+    /// offset manipulation). This function can be used to test signing
+    /// compatibility.
+    ///
+    /// We currently only support signing Mach-O files already containing an
+    /// embedded signature. Often linked binaries automatically contain an embedded
+    /// signature containing just the code directory (without a cryptographically
+    /// signed signature), so this limitation hopefully isn't impactful.
+    fn check_signing_capability(&self) -> Result<(), AppleCodesignError>;
 }
 
 impl<'a> AppleSignable for MachO<'a> {
@@ -1308,6 +1325,18 @@ impl<'a> AppleSignable for MachO<'a> {
         }
     }
 
+    fn code_signature_linkedit_end_offset(&self) -> Option<u32> {
+        let start_offset = self.code_signature_linkedit_start_offset()?;
+
+        self.load_commands.iter().find_map(|lc| {
+            if let CommandVariant::CodeSignature(c) = lc.command {
+                Some(start_offset + c.datasize)
+            } else {
+                None
+            }
+        })
+    }
+
     fn digestable_segment_data(&self) -> Vec<&[u8]> {
         self.segments
             .iter()
@@ -1326,6 +1355,32 @@ impl<'a> AppleSignable for MachO<'a> {
                 &segment.data[0..max_offset]
             })
             .collect::<Vec<_>>()
+    }
+
+    fn check_signing_capability(&self) -> Result<(), AppleCodesignError> {
+        let last_segment = self
+            .segments
+            .iter()
+            .last()
+            .ok_or(AppleCodesignError::MissingLinkedit)?;
+
+        // Last segment needs to be __LINKEDIT so we don't have to write offsets.
+        if !matches!(last_segment.name(), Ok(SEG_LINKEDIT)) {
+            return Err(AppleCodesignError::LinkeditNotLast);
+        }
+
+        // We only know how to replace existing signatures. And there can be no
+        // data after the signature, as we don't know how to rewrite any references
+        // to it.
+        if let Some(offset) = self.code_signature_linkedit_end_offset() {
+            if offset as usize == last_segment.data.len() {
+                Ok(())
+            } else {
+                Err(AppleCodesignError::DataAfterSignature)
+            }
+        } else {
+            Err(AppleCodesignError::BinaryNoCodeSignature)
+        }
     }
 }
 

@@ -45,37 +45,6 @@ const CDHASH_PLIST_OID: bcder::ConstOid = Oid(&[42, 134, 72, 134, 247, 99, 100, 
 /// 1.2.840.113635.100.9.2
 const CDHASH_SHA256_OID: bcder::ConstOid = Oid(&[42, 134, 72, 134, 247, 99, 100, 9, 2]);
 
-/// Determines whether this crate is capable of signing a given Mach-O binary.
-///
-/// Code in this crate is limited in the amount of Mach-O binary manipulation
-/// it can perform (supporting rewriting all valid Mach-O binaries effectively
-/// requires low-level awareness of all Mach-O constructs in order to perform
-/// offset manipulation). This function can be used to test signing
-/// compatibility.
-///
-/// We currently only support signing Mach-O files already containing an
-/// embedded signature. Often linked binaries automatically contain an embedded
-/// signature containing just the code directory (without a cryptographically
-/// signed signature), so this limitation hopefully isn't impactful.
-pub fn check_signing_capability(macho: &MachO) -> Result<(), AppleCodesignError> {
-    match find_signature_data(macho)? {
-        Some(signature) => {
-            // __LINKEDIT needs to be the final segment so we don't have to rewrite
-            // offsets.
-            if signature.linkedit_segment_index != macho.segments.len() - 1 {
-                Err(AppleCodesignError::LinkeditNotLast)
-            // There can be no meaningful data after the signature because we don't
-            // know how to rewrite it.
-            } else if signature.signature_end_offset != signature.linkedit_segment_data.len() {
-                Err(AppleCodesignError::DataAfterSignature)
-            } else {
-                Ok(())
-            }
-        }
-        None => Err(AppleCodesignError::BinaryNoCodeSignature),
-    }
-}
-
 /// Obtain the XML plist containing code directory hashes.
 ///
 /// This plist is embedded as a signed attribute in the CMS signature.
@@ -120,7 +89,7 @@ fn create_macho_with_signature(
         find_signature_data(macho)?.ok_or(AppleCodesignError::BinaryNoCodeSignature)?;
 
     // This should have already been called. But we do it again out of paranoia.
-    check_signing_capability(macho)?;
+    macho.check_signing_capability()?;
 
     // The assumption made by checking_signing_capability() is that signature data
     // is at the end of the __LINKEDIT segment. So the replacement segment is the
@@ -275,7 +244,7 @@ impl<'data> MachOSigner<'data> {
 
         let machos = match mach {
             Mach::Binary(macho) => {
-                check_signing_capability(&macho)?;
+                macho.check_signing_capability()?;
 
                 vec![macho]
             }
@@ -284,7 +253,7 @@ impl<'data> MachOSigner<'data> {
 
                 for index in 0..multiarch.narches {
                     let macho = multiarch.get(index)?;
-                    check_signing_capability(&macho)?;
+                    macho.check_signing_capability()?;
 
                     machos.push(macho);
                 }
