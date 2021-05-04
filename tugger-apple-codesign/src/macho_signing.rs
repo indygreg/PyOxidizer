@@ -85,9 +85,6 @@ fn create_macho_with_signature(
     macho: &MachO,
     signature_data: &[u8],
 ) -> Result<Vec<u8>, AppleCodesignError> {
-    let existing_signature =
-        find_signature_data(macho)?.ok_or(AppleCodesignError::BinaryNoCodeSignature)?;
-
     // This should have already been called. But we do it again out of paranoia.
     macho.check_signing_capability()?;
 
@@ -95,8 +92,11 @@ fn create_macho_with_signature(
     // is at the end of the __LINKEDIT segment. So the replacement segment is the
     // existing segment truncated at the signature start followed by the new signature
     // data.
-    let new_linkedit_segment_size =
-        existing_signature.signature_start_offset + signature_data.len();
+    let new_linkedit_segment_size = macho
+        .linkedit_data_before_signature()
+        .ok_or(AppleCodesignError::MissingLinkedit)?
+        .len()
+        + signature_data.len();
 
     let mut cursor = std::io::Cursor::new(Vec::<u8>::new());
 
@@ -179,8 +179,9 @@ fn create_macho_with_signature(
         match segment.name() {
             Ok(SEG_LINKEDIT) => {
                 cursor.write_all(
-                    &existing_signature.linkedit_segment_data
-                        [0..existing_signature.signature_start_offset],
+                    macho
+                        .linkedit_data_before_signature()
+                        .expect("__LINKEDIT segment data should resolve"),
                 )?;
                 cursor.write_all(signature_data)?;
             }
