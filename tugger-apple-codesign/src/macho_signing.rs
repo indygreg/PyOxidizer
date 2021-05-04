@@ -13,9 +13,9 @@ use {
         code_requirement::{CodeRequirementExpression, CodeRequirements},
         error::AppleCodesignError,
         macho::{
-            create_superblob, find_signature_data, AppleSignable, Blob, BlobWrapperBlob,
-            CodeSigningMagic, CodeSigningSlot, Digest, DigestType, EmbeddedSignature,
-            EntitlementsBlob, RequirementSetBlob, RequirementType,
+            create_superblob, AppleSignable, Blob, BlobWrapperBlob, CodeSigningMagic,
+            CodeSigningSlot, Digest, DigestType, EmbeddedSignature, EntitlementsBlob,
+            RequirementSetBlob, RequirementType,
         },
         policy::derive_designated_requirements,
         signing::{DesignatedRequirementMode, SettingsScope, SigningSettings},
@@ -549,8 +549,6 @@ impl<'data> MachOSigner<'data> {
         let previous_cd =
             signature.and_then(|signature| signature.code_directory().unwrap_or(None));
 
-        let signature_data = find_signature_data(macho)?;
-
         let mut flags = CodeSignatureFlags::empty();
 
         match settings.code_signature_flags(SettingsScope::Main) {
@@ -575,46 +573,9 @@ impl<'data> MachOSigner<'data> {
         // Code limit fields hold the file offset at which code digests stop. This
         // is the file offset in the `__LINKEDIT` segment when the embedded signature
         // SuperBlob begins.
-        let (code_limit, code_limit_64) = match &signature_data {
-            Some(sig) => {
-                // If binary already has signature data, take existing signature start offset.
-                let limit = sig.linkedit_signature_start_offset;
-
-                if limit > u32::MAX as usize {
-                    (0, Some(limit as u64))
-                } else {
-                    (limit as u32, None)
-                }
-            }
-            None => {
-                // No existing signature in binary. Look for __LINKEDIT and use its
-                // end offset.
-                match macho
-                    .segments
-                    .iter()
-                    .find(|x| matches!(x.name(), Ok("__LINKEDIT")))
-                {
-                    Some(segment) => {
-                        let limit = segment.fileoff as usize + segment.data.len();
-
-                        if limit > u32::MAX as usize {
-                            (0, Some(limit as u64))
-                        } else {
-                            (limit as u32, None)
-                        }
-                    }
-                    None => {
-                        let last_segment = macho.segments.iter().last().unwrap();
-                        let limit = last_segment.fileoff as usize + last_segment.data.len();
-
-                        if limit > u32::MAX as usize {
-                            (0, Some(limit as u64))
-                        } else {
-                            (limit as u32, None)
-                        }
-                    }
-                }
-            }
+        let (code_limit, code_limit_64) = match macho.code_limit_binary_offset()? {
+            x if x > u32::MAX as u64 => (0, Some(x)),
+            x => (x as u32, None),
         };
 
         let platform = 0;

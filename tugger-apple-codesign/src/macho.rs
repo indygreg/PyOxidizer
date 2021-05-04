@@ -1262,6 +1262,12 @@ pub trait AppleSignable {
     /// The end offset of the code signature data within the __LINKEDIT segment.
     fn code_signature_linkedit_end_offset(&self) -> Option<u32>;
 
+    /// The byte offset within the binary at which point "code" stops.
+    ///
+    /// If a signature is present, this is the offset of the start of the
+    /// signature. Else it represents the end of the binary.
+    fn code_limit_binary_offset(&self) -> Result<u64, AppleCodesignError>;
+
     /// Obtain __LINKEDIT segment data before the signature data.
     fn linkedit_data_before_signature(&self) -> Option<&[u8]>;
 
@@ -1338,6 +1344,22 @@ impl<'a> AppleSignable for MachO<'a> {
                 None
             }
         })
+    }
+
+    fn code_limit_binary_offset(&self) -> Result<u64, AppleCodesignError> {
+        let last_segment = self
+            .segments
+            .last()
+            .ok_or(AppleCodesignError::MissingLinkedit)?;
+        if !matches!(last_segment.name(), Ok(SEG_LINKEDIT)) {
+            return Err(AppleCodesignError::LinkeditNotLast);
+        }
+
+        if let Some(offset) = self.code_signature_linkedit_start_offset() {
+            Ok(last_segment.fileoff + offset as u64)
+        } else {
+            Ok(last_segment.fileoff + last_segment.data.len() as u64)
+        }
     }
 
     fn linkedit_data_before_signature(&self) -> Option<&[u8]> {
