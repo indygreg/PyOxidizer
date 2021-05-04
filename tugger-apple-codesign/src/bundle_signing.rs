@@ -8,7 +8,7 @@ use {
     crate::{
         code_resources::{CodeResourcesBuilder, CodeResourcesRule},
         error::AppleCodesignError,
-        macho::{find_signature_data, parse_signature_data, CodeSigningSlot, RequirementType},
+        macho::{AppleSignable, CodeSigningSlot, RequirementType},
         macho_signing::MachOSigner,
         signing::{SettingsScope, SigningSettings},
     },
@@ -150,9 +150,9 @@ impl SignedMachOInfo {
             Mach::Fat(multi_arch) => multi_arch.get(0)?,
         };
 
-        let signature_data =
-            find_signature_data(&macho)?.ok_or(AppleCodesignError::BinaryNoCodeSignature)?;
-        let signature = parse_signature_data(&signature_data.signature_data)?;
+        let signature = macho
+            .code_signature()?
+            .ok_or(AppleCodesignError::BinaryNoCodeSignature)?;
 
         let cd = signature
             .find_slot(CodeSigningSlot::CodeDirectory)

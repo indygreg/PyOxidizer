@@ -13,9 +13,9 @@ use {
         code_requirement::{CodeRequirementExpression, CodeRequirements},
         error::AppleCodesignError,
         macho::{
-            create_superblob, find_signature_data, parse_signature_data, AppleSignable, Blob,
-            BlobWrapperBlob, CodeSigningMagic, CodeSigningSlot, Digest, DigestType,
-            EmbeddedSignature, EntitlementsBlob, RequirementSetBlob, RequirementType,
+            create_superblob, find_signature_data, AppleSignable, Blob, BlobWrapperBlob,
+            CodeSigningMagic, CodeSigningSlot, Digest, DigestType, EmbeddedSignature,
+            EntitlementsBlob, RequirementSetBlob, RequirementType,
         },
         policy::derive_designated_requirements,
         signing::{DesignatedRequirementMode, SettingsScope, SigningSettings},
@@ -314,12 +314,7 @@ impl<'data> MachOSigner<'data> {
                 let settings =
                     settings.as_nested_macho_settings(index, original_macho.header.cputype());
 
-                let signature_data = find_signature_data(original_macho)?;
-                let signature = if let Some(data) = &signature_data {
-                    Some(parse_signature_data(&data.signature_data)?)
-                } else {
-                    None
-                };
+                let signature = original_macho.code_signature()?;
 
                 // Derive an intermediate Mach-O with placeholder NULLs for signature
                 // data so Code Directory digests are correct.

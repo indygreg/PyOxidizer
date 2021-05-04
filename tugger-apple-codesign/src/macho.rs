@@ -1247,11 +1247,27 @@ pub struct Scatter {
 }
 
 pub trait AppleSignable {
+    /// Obtain the code signature in the entity.
+    ///
+    /// Returns `Ok(None)` if no signature exists, `Ok(Some)` if it does, or
+    /// `Err` if there is a parse error.
+    fn code_signature(&self) -> Result<Option<EmbeddedSignature>, AppleCodesignError>;
+
     /// Determine the start and end offset of the executable segment of a binary.
     fn executable_segment_boundary(&self) -> Result<(u64, u64), AppleCodesignError>;
 }
 
 impl<'a> AppleSignable for MachO<'a> {
+    fn code_signature(&self) -> Result<Option<EmbeddedSignature>, AppleCodesignError> {
+        if let Some(signature) = find_signature_data(self)? {
+            Ok(Some(EmbeddedSignature::from_bytes(
+                signature.signature_data,
+            )?))
+        } else {
+            Ok(None)
+        }
+    }
+
     fn executable_segment_boundary(&self) -> Result<(u64, u64), AppleCodesignError> {
         let segment = self
             .segments
@@ -1351,23 +1367,6 @@ pub fn find_signature_data<'a>(
     }
 }
 
-/// Parse raw Mach-O signature data into a data structure.
-///
-/// The source data likely came from the `__LINKEDIT` segment and was
-/// discovered via `find_signature_data()`.
-///
-/// Only a high-level parse of the super blob and its blob indices is performed:
-/// the parser does not look inside individual blob payloads.
-pub fn parse_signature_data(data: &[u8]) -> Result<EmbeddedSignature<'_>, AppleCodesignError> {
-    let magic: u32 = data.pread_with(0, scroll::BE)?;
-
-    if magic == u32::from(CodeSigningMagic::EmbeddedSignature) {
-        EmbeddedSignature::from_bytes(data)
-    } else {
-        Err(AppleCodesignError::BadMagic("embedded signature superblob"))
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use {
@@ -1410,12 +1409,8 @@ mod tests {
     fn find_apple_embedded_signature<'a>(
         macho: &'a goblin::mach::MachO,
     ) -> Option<EmbeddedSignature<'a>> {
-        if let Ok(Some(codesign_data)) = find_signature_data(macho) {
-            if let Ok(signature) = parse_signature_data(codesign_data.signature_data) {
-                Some(signature)
-            } else {
-                None
-            }
+        if let Ok(Some(signature)) = macho.code_signature() {
+            Some(signature)
         } else {
             None
         }

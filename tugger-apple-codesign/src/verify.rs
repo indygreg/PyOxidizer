@@ -27,8 +27,7 @@ use {
         code_hash::compute_code_hashes,
         error::AppleCodesignError,
         macho::{
-            find_signature_data, parse_signature_data, CodeSigningSlot, DigestType,
-            EmbeddedSignature,
+            find_signature_data, AppleSignable, CodeSigningSlot, DigestType, EmbeddedSignature,
         },
     },
     cryptographic_message_syntax::{CmsError, SignedData},
@@ -296,8 +295,11 @@ fn verify_macho_internal(macho: &MachO, context: VerificationContext) -> Vec<Ver
         });
     }
 
-    let signature = match parse_signature_data(&signature_data.signature_data) {
-        Ok(embedded) => embedded,
+    let signature = match macho.code_signature() {
+        Ok(Some(signature)) => signature,
+        Ok(None) => {
+            panic!("no signature should have been handled above");
+        }
         Err(e) => {
             problems.push(VerificationProblem {
                 context,

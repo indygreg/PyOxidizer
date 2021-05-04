@@ -44,7 +44,7 @@ use {
         code_requirement::CodeRequirements,
         error::AppleCodesignError,
         macho::{
-            find_signature_data, parse_signature_data, Blob, CodeSigningSlot, DigestType,
+            find_signature_data, AppleSignable, Blob, CodeSigningSlot, DigestType,
             RequirementSetBlob,
         },
         macho_signing::MachOSigner,
@@ -555,9 +555,9 @@ fn command_extract(args: &ArgMatches) -> Result<(), AppleCodesignError> {
 
     match format {
         "blobs" => {
-            let sig =
-                find_signature_data(&macho)?.ok_or(AppleCodesignError::BinaryNoCodeSignature)?;
-            let embedded = parse_signature_data(&sig.signature_data)?;
+            let embedded = macho
+                .code_signature()?
+                .ok_or(AppleCodesignError::BinaryNoCodeSignature)?;
 
             for blob in embedded.blobs {
                 let parsed = blob.into_parsed_blob()?;
@@ -565,9 +565,10 @@ fn command_extract(args: &ArgMatches) -> Result<(), AppleCodesignError> {
             }
         }
         "cms-info" => {
-            let sig =
-                find_signature_data(&macho)?.ok_or(AppleCodesignError::BinaryNoCodeSignature)?;
-            let embedded = parse_signature_data(&sig.signature_data)?;
+            let embedded = macho
+                .code_signature()?
+                .ok_or(AppleCodesignError::BinaryNoCodeSignature)?;
+
             if let Some(cms) = embedded.signature_data()? {
                 let signed_data = SignedData::parse_ber(cms)?;
 
@@ -583,9 +584,10 @@ fn command_extract(args: &ArgMatches) -> Result<(), AppleCodesignError> {
             }
         }
         "cms-pem" => {
-            let sig =
-                find_signature_data(&macho)?.ok_or(AppleCodesignError::BinaryNoCodeSignature)?;
-            let embedded = parse_signature_data(&sig.signature_data)?;
+            let embedded = macho
+                .code_signature()?
+                .ok_or(AppleCodesignError::BinaryNoCodeSignature)?;
+
             if let Some(cms) = embedded.signature_data()? {
                 print!(
                     "{}",
@@ -599,9 +601,10 @@ fn command_extract(args: &ArgMatches) -> Result<(), AppleCodesignError> {
             }
         }
         "cms-raw" => {
-            let sig =
-                find_signature_data(&macho)?.ok_or(AppleCodesignError::BinaryNoCodeSignature)?;
-            let embedded = parse_signature_data(&sig.signature_data)?;
+            let embedded = macho
+                .code_signature()?
+                .ok_or(AppleCodesignError::BinaryNoCodeSignature)?;
+
             if let Some(cms) = embedded.signature_data()? {
                 std::io::stdout().write_all(cms)?;
             } else {
@@ -609,9 +612,10 @@ fn command_extract(args: &ArgMatches) -> Result<(), AppleCodesignError> {
             }
         }
         "cms" => {
-            let sig =
-                find_signature_data(&macho)?.ok_or(AppleCodesignError::BinaryNoCodeSignature)?;
-            let embedded = parse_signature_data(&sig.signature_data)?;
+            let embedded = macho
+                .code_signature()?
+                .ok_or(AppleCodesignError::BinaryNoCodeSignature)?;
+
             if let Some(cms) = embedded.signature_data()? {
                 let signed_data = SignedData::parse_ber(cms)?;
 
@@ -621,9 +625,9 @@ fn command_extract(args: &ArgMatches) -> Result<(), AppleCodesignError> {
             }
         }
         "code-directory-raw" => {
-            let sig =
-                find_signature_data(&macho)?.ok_or(AppleCodesignError::BinaryNoCodeSignature)?;
-            let embedded = parse_signature_data(&sig.signature_data)?;
+            let embedded = macho
+                .code_signature()?
+                .ok_or(AppleCodesignError::BinaryNoCodeSignature)?;
 
             if let Some(blob) = embedded.find_slot(CodeSigningSlot::CodeDirectory) {
                 std::io::stdout().write_all(blob.data)?;
@@ -632,9 +636,9 @@ fn command_extract(args: &ArgMatches) -> Result<(), AppleCodesignError> {
             }
         }
         "code-directory-serialized-raw" => {
-            let sig =
-                find_signature_data(&macho)?.ok_or(AppleCodesignError::BinaryNoCodeSignature)?;
-            let embedded = parse_signature_data(&sig.signature_data)?;
+            let embedded = macho
+                .code_signature()?
+                .ok_or(AppleCodesignError::BinaryNoCodeSignature)?;
 
             if let Ok(Some(cd)) = embedded.code_directory() {
                 std::io::stdout().write_all(&cd.to_blob_bytes()?)?;
@@ -643,9 +647,9 @@ fn command_extract(args: &ArgMatches) -> Result<(), AppleCodesignError> {
             }
         }
         "code-directory-serialized" => {
-            let sig =
-                find_signature_data(&macho)?.ok_or(AppleCodesignError::BinaryNoCodeSignature)?;
-            let embedded = parse_signature_data(&sig.signature_data)?;
+            let embedded = macho
+                .code_signature()?
+                .ok_or(AppleCodesignError::BinaryNoCodeSignature)?;
 
             if let Ok(Some(cd)) = embedded.code_directory() {
                 let serialized = cd.to_blob_bytes()?;
@@ -653,9 +657,9 @@ fn command_extract(args: &ArgMatches) -> Result<(), AppleCodesignError> {
             }
         }
         "code-directory" => {
-            let sig =
-                find_signature_data(&macho)?.ok_or(AppleCodesignError::BinaryNoCodeSignature)?;
-            let embedded = parse_signature_data(&sig.signature_data)?;
+            let embedded = macho
+                .code_signature()?
+                .ok_or(AppleCodesignError::BinaryNoCodeSignature)?;
 
             if let Some(cd) = embedded.code_directory()? {
                 println!("{:#?}", cd);
@@ -745,9 +749,9 @@ fn command_extract(args: &ArgMatches) -> Result<(), AppleCodesignError> {
             }
         }
         "requirements-raw" => {
-            let sig =
-                find_signature_data(&macho)?.ok_or(AppleCodesignError::BinaryNoCodeSignature)?;
-            let embedded = parse_signature_data(&sig.signature_data)?;
+            let embedded = macho
+                .code_signature()?
+                .ok_or(AppleCodesignError::BinaryNoCodeSignature)?;
 
             if let Some(blob) = embedded.find_slot(CodeSigningSlot::RequirementSet) {
                 std::io::stdout().write_all(blob.data)?;
@@ -756,9 +760,9 @@ fn command_extract(args: &ArgMatches) -> Result<(), AppleCodesignError> {
             }
         }
         "requirements-rust" => {
-            let sig =
-                find_signature_data(&macho)?.ok_or(AppleCodesignError::BinaryNoCodeSignature)?;
-            let embedded = parse_signature_data(&sig.signature_data)?;
+            let embedded = macho
+                .code_signature()?
+                .ok_or(AppleCodesignError::BinaryNoCodeSignature)?;
 
             if let Some(reqs) = embedded.code_requirements()? {
                 for (typ, req) in &reqs.requirements {
@@ -771,9 +775,9 @@ fn command_extract(args: &ArgMatches) -> Result<(), AppleCodesignError> {
             }
         }
         "requirements-serialized-raw" => {
-            let sig =
-                find_signature_data(&macho)?.ok_or(AppleCodesignError::BinaryNoCodeSignature)?;
-            let embedded = parse_signature_data(&sig.signature_data)?;
+            let embedded = macho
+                .code_signature()?
+                .ok_or(AppleCodesignError::BinaryNoCodeSignature)?;
 
             if let Some(reqs) = embedded.code_requirements()? {
                 std::io::stdout().write_all(&reqs.to_blob_bytes()?)?;
@@ -782,9 +786,9 @@ fn command_extract(args: &ArgMatches) -> Result<(), AppleCodesignError> {
             }
         }
         "requirements-serialized" => {
-            let sig =
-                find_signature_data(&macho)?.ok_or(AppleCodesignError::BinaryNoCodeSignature)?;
-            let embedded = parse_signature_data(&sig.signature_data)?;
+            let embedded = macho
+                .code_signature()?
+                .ok_or(AppleCodesignError::BinaryNoCodeSignature)?;
 
             if let Some(reqs) = embedded.code_requirements()? {
                 let serialized = reqs.to_blob_bytes()?;
@@ -794,9 +798,9 @@ fn command_extract(args: &ArgMatches) -> Result<(), AppleCodesignError> {
             }
         }
         "requirements" => {
-            let sig =
-                find_signature_data(&macho)?.ok_or(AppleCodesignError::BinaryNoCodeSignature)?;
-            let embedded = parse_signature_data(&sig.signature_data)?;
+            let embedded = macho
+                .code_signature()?
+                .ok_or(AppleCodesignError::BinaryNoCodeSignature)?;
 
             if let Some(reqs) = embedded.code_requirements()? {
                 for (typ, req) in &reqs.requirements {
@@ -816,7 +820,9 @@ fn command_extract(args: &ArgMatches) -> Result<(), AppleCodesignError> {
         "superblob" => {
             let sig =
                 find_signature_data(&macho)?.ok_or(AppleCodesignError::BinaryNoCodeSignature)?;
-            let embedded = parse_signature_data(&sig.signature_data)?;
+            let embedded = macho
+                .code_signature()?
+                .ok_or(AppleCodesignError::BinaryNoCodeSignature)?;
 
             println!("file start offset: {}", sig.linkedit_signature_start_offset);
             println!("file end offset: {}", sig.linkedit_signature_end_offset);
