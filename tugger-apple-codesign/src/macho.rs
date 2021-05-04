@@ -46,7 +46,7 @@ use {
     },
     goblin::mach::{
         constants::{SEG_LINKEDIT, SEG_PAGEZERO, SEG_TEXT},
-        load_command::CommandVariant,
+        load_command::{CommandVariant, LinkeditDataCommand},
         MachO,
     },
     scroll::{IOwrite, Pread},
@@ -1277,6 +1277,9 @@ pub trait AppleSignable {
     /// embedded in the code directory.
     fn digestable_segment_data(&self) -> Vec<&[u8]>;
 
+    /// Resolve the load command for the code signature.
+    fn code_signature_load_command(&self) -> Option<LinkeditDataCommand>;
+
     /// Determines whether this crate is capable of signing a given Mach-O binary.
     ///
     /// Code in this crate is limited in the amount of Mach-O binary manipulation
@@ -1319,15 +1322,7 @@ impl<'a> AppleSignable for MachO<'a> {
             .iter()
             .find(|segment| matches!(segment.name(), Ok(SEG_LINKEDIT)));
 
-        let command = self.load_commands.iter().find_map(|lc| {
-            if let CommandVariant::CodeSignature(c) = lc.command {
-                Some(c)
-            } else {
-                None
-            }
-        });
-
-        if let (Some(segment), Some(command)) = (segment, command) {
+        if let (Some(segment), Some(command)) = (segment, self.code_signature_load_command()) {
             Some((command.dataoff as u64 - segment.fileoff) as u32)
         } else {
             None
@@ -1337,13 +1332,11 @@ impl<'a> AppleSignable for MachO<'a> {
     fn code_signature_linkedit_end_offset(&self) -> Option<u32> {
         let start_offset = self.code_signature_linkedit_start_offset()?;
 
-        self.load_commands.iter().find_map(|lc| {
-            if let CommandVariant::CodeSignature(c) = lc.command {
-                Some(start_offset + c.datasize)
-            } else {
-                None
-            }
-        })
+        if let Some(command) = self.code_signature_load_command() {
+            Some(start_offset + command.datasize)
+        } else {
+            None
+        }
     }
 
     fn code_limit_binary_offset(&self) -> Result<u64, AppleCodesignError> {
@@ -1392,6 +1385,16 @@ impl<'a> AppleSignable for MachO<'a> {
                 }
             })
             .collect::<Vec<_>>()
+    }
+
+    fn code_signature_load_command(&self) -> Option<LinkeditDataCommand> {
+        self.load_commands.iter().find_map(|lc| {
+            if let CommandVariant::CodeSignature(command) = lc.command {
+                Some(command)
+            } else {
+                None
+            }
+        })
     }
 
     fn check_signing_capability(&self) -> Result<(), AppleCodesignError> {
