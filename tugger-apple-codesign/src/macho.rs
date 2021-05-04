@@ -41,9 +41,10 @@ which allows some access to data within each specific blob type.
 
 use {
     crate::{
-        code_directory::CodeDirectoryBlob, code_requirement::CodeRequirements,
-        error::AppleCodesignError,
+        code_directory::CodeDirectoryBlob, code_hash::compute_code_hashes,
+        code_requirement::CodeRequirements, error::AppleCodesignError, signing::SigningSettings,
     },
+    cryptographic_message_syntax::time_stamp_message_http,
     goblin::mach::{
         constants::{SEG_LINKEDIT, SEG_PAGEZERO, SEG_TEXT},
         load_command::{CommandVariant, LinkeditDataCommand, SIZEOF_LINKEDIT_DATA_COMMAND},
@@ -57,6 +58,7 @@ use {
         convert::{TryFrom, TryInto},
         io::Write,
     },
+    x509_certificate::DigestAlgorithm,
 };
 
 /// Defines a typed slot within code signing data.
@@ -1293,6 +1295,12 @@ pub trait AppleSignable {
     /// signature containing just the code directory (without a cryptographically
     /// signed signature), so this limitation hopefully isn't impactful.
     fn check_signing_capability(&self) -> Result<(), AppleCodesignError>;
+
+    /// Estimate the size in bytes of an embedded code signature.
+    fn estimate_embedded_signature_size(
+        &self,
+        settings: &SigningSettings,
+    ) -> Result<usize, AppleCodesignError>;
 }
 
 impl<'a> AppleSignable for MachO<'a> {
@@ -1452,6 +1460,60 @@ impl<'a> AppleSignable for MachO<'a> {
                 Err(AppleCodesignError::LoadCommandNoRoom)
             }
         }
+    }
+
+    fn estimate_embedded_signature_size(
+        &self,
+        settings: &SigningSettings,
+    ) -> Result<usize, AppleCodesignError> {
+        // Assume the common data structures are 1024 bytes.
+        let mut size = 1024;
+
+        // Reserve room for the code digests, which are proportional to binary size.
+        // We could avoid doing the actual digesting work here. But until people
+        // complain, don't worry about it.
+        size += compute_code_hashes(self, *settings.digest_type(), None)?
+            .into_iter()
+            .map(|x| x.len())
+            .sum::<usize>();
+
+        // Assume the CMS data will take a fixed size.
+        if settings.signing_key().is_some() {
+            size += 4096;
+        }
+
+        // Long certificate chains could blow up the size. Account for those.
+        for cert in settings.certificate_chain() {
+            size += cert.constructed_data().len();
+        }
+
+        // Obtain an actual timestamp token of placeholder data and use its length.
+        // This may be excessive to actually query the time-stamp server and issue
+        // a token. But these operations should be "cheap."
+        if let Some(timestamp_url) = settings.time_stamp_url() {
+            let message = b"deadbeef".repeat(32);
+
+            if let Ok(response) =
+                time_stamp_message_http(timestamp_url.clone(), &message, DigestAlgorithm::Sha256)
+            {
+                if response.is_success() {
+                    if let Some(l) = response.token_content_size() {
+                        size += l;
+                    } else {
+                        size += 8192;
+                    }
+                } else {
+                    size += 8192;
+                }
+            } else {
+                size += 8192;
+            }
+        }
+
+        // Align on 1k boundaries just because.
+        size += 1024 - size % 1024;
+
+        Ok(size)
     }
 }
 

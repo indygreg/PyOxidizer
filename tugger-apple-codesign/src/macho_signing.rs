@@ -249,11 +249,8 @@ fn create_macho_with_signature(
 /// can't be known until the Code Directory, CMS blob, and SuperBlob are all
 /// created.
 ///
-/// Our solution to this problem is to create an intermediate Mach-O binary with
-/// placeholder bytes for the signature. We then digest this. When writing
-/// the final Mach-O binary we simply replace NULLs with actual signature data,
-/// leaving any extra at the end, because truncating the file would require
-/// adjusting Mach-O load commands and changing content digests.
+/// Our solution to this problem is to estimate the size of the embedded
+/// signature data and then pad the unused data will 0s.
 #[derive(Debug)]
 pub struct MachOSigner<'data> {
     /// Raw data backing parsed Mach-O binary.
@@ -312,18 +309,12 @@ impl<'data> MachOSigner<'data> {
                 let settings =
                     settings.as_nested_macho_settings(index, original_macho.header.cputype());
 
-                let original_signature = original_macho.code_signature()?;
+                let signature_len = original_macho.estimate_embedded_signature_size(&settings)?;
 
                 // Derive an intermediate Mach-O with placeholder NULLs for signature
                 // data so Code Directory digests over the load commands are correct.
-                let placeholder_signature_len = self
-                    .create_superblob(&settings, original_macho, original_signature.as_ref())?
-                    .len();
-                let placeholder_signature_data = b"\0".repeat(placeholder_signature_len + 8192);
+                let placeholder_signature_data = b"\0".repeat(signature_len);
 
-                // TODO calling this twice could be undesirable, especially if using
-                // a timestamp server. Should we call in no-op mode or write a size
-                // estimation function instead?
                 let intermediate_macho_data = create_macho_with_signature(
                     self.macho_data(index),
                     original_macho,
@@ -336,7 +327,7 @@ impl<'data> MachOSigner<'data> {
                 let mut signature_data = self.create_superblob(
                     &settings,
                     &intermediate_macho,
-                    original_signature.as_ref(),
+                    original_macho.code_signature()?.as_ref(),
                 )?;
 
                 // The Mach-O writer adjusts load commands based on the signature length. So pad

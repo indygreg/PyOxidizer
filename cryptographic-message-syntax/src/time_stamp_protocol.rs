@@ -100,6 +100,15 @@ impl TimeStampResponse {
         )
     }
 
+    /// Obtain the size of the time-stamp token data.
+    pub fn token_content_size(&self) -> Option<usize> {
+        if let Some(token) = &self.0.time_stamp_token {
+            Some(token.content.len())
+        } else {
+            None
+        }
+    }
+
     /// Decode the `SignedData` value in the response.
     pub fn signed_data(&self) -> Result<Option<SignedData>, bcder::decode::Error> {
         if let Some(token) = &self.0.time_stamp_token {
