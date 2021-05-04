@@ -160,7 +160,7 @@ Filesystem-Relative
 
 When a Python resource is placed in the *filesystem-relative* location,
 the resource will be materialized as a file next to the produced entity.
-e.g. a *filesystem-relative* ``PythonModuleSource`` for the ``foo.bar``
+e.g. a *filesystem-relative* :py:class:`PythonModuleSource` for the ``foo.bar``
 Python module added to a :py:class:`PythonExecutable` will be materialized as the
 file ``foo/bar.py`` or ``foo/bar/__init__.py`` in a directory next to the
 built executable.
@@ -183,17 +183,17 @@ Customizing Python Packaging Policies
 =====================================
 
 As described in :ref:`packaging_resource_packaging_policy`, a
-``PythonPackagingPolicy`` Starlark type instance is bound to every
+:py:class:`PythonPackagingPolicy` Starlark type instance is bound to every
 entity creating *resource* instances and this *packaging policy* is
 used to derive the default ``add_*`` attributes which influence
 what happens when a resource is added to some entity.
 
-``PythonPackagingPolicy`` instances can be customized to influence
+:py:class:`PythonPackagingPolicy` instances can be customized to influence
 what the default values of the ``add_*`` attributes are.
 
 The primary mechanisms for doing this are:
 
-1. Modifying the ``PythonPackagingPolicy`` instance's internal
+1. Modifying the :py:class:`PythonPackagingPolicy` instance's internal
    state. See :py:class:`PythonPackagingPolicy` for the full
    list of object attributes and methods that can be set or called.
 2. Registering a function that will be called whenever a resource
@@ -214,7 +214,7 @@ As documented in :ref:`packaging_resources_classified_files`, PyOxidizer
 can operate on *classified* resources or *files*-based resources.
 
 :py:meth:`PythonPackagingPolicy.set_resource_handling_mode`
-exists to change the operating mode of a ``PythonPackagingPolicy``
+exists to change the operating mode of a :py:class:`PythonPackagingPolicy`
 instance.
 
 .. code-block:: python
@@ -233,7 +233,7 @@ instance.
 
 :py:meth:`PythonPackagingPolicy.set_resource_handling_mode` is
 just a convenience method for manipulating a collection of attributes on
-``PythonPackagingPolicy`` instances. If you don't like the behavior of
+:py:class:`PythonPackagingPolicy` instances. If you don't like the behavior of
 its pre-defined modes, feel free to adjust attributes to suit your needs.
 You can even configure things to emit both *classified* and *files*
 variants simultaneously!
@@ -243,8 +243,8 @@ variants simultaneously!
 Customizing Default Resource Locations
 --------------------------------------
 
-The ``PythonPackagingPolicy.resources_location`` and
-``PythonPackagingPolicy.resources_location_fallback`` attributes define
+The :py:attr:`PythonPackagingPolicy.resources_location` and
+:py:attr:`PythonPackagingPolicy.resources_location_fallback` attributes define
 primary and fallback locations that resources should attempt to be added
 to. These effectively define the default values for the ``add_location``
 and ``add_location_fallback`` attributes on individual resource objects.
@@ -258,7 +258,7 @@ The accepted values are:
    Load resources from the filesystem at a path relative to some entity
    (probably the binary being built).
 
-Additionally, ``PythonPackagingPolicy.resources_location_fallback`` can be
+Additionally, :py:attr:`PythonPackagingPolicy.resources_location_fallback` can be
 set to ``None`` to remove a fallback location.
 
 And here is how you would manage these values in Starlark:
@@ -309,9 +309,9 @@ And here is how you would manage these values in Starlark:
 Using Callbacks to Influence Resource Attributes
 ------------------------------------------------
 
-The ``PythonPackagingPolicy.register_resource_callback(func)`` method will
+The :py:meth:`PythonPackagingPolicy.register_resource_callback` method will
 register a function to be called when resources are created. This function
-receives as arguments the active ``PythonPackagingPolicy`` and the newly
+receives as arguments the active :py:class:`PythonPackagingPolicy` and the newly
 created resource.
 
 Functions registered as resource callbacks are called after the
@@ -360,9 +360,9 @@ else to memory:
 ================================================
 
 Many resources *just work* in any available location. This is not the case for
-``PythonExtensionModule`` instances!
+:py:class:`PythonExtensionModule` instances!
 
-While there only exists a single ``PythonExtensionModule`` type to represent
+While there only exists a single :py:class:`PythonExtensionModule` type to represent
 Python extension modules, Python extension modules come in various flavors.
 Examples of flavors include:
 

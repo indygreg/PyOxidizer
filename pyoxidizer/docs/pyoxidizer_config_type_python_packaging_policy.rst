@@ -135,7 +135,7 @@
 
         (``bool``)
 
-        Whether strongly typed, classified non-``File`` resources have their
+        Whether strongly typed, classified non-:py:class:`File` resources have their
         ``add_include`` attribute set to ``True`` by default.
 
         Default is ``True``.
@@ -257,9 +257,9 @@
 
         ``classify`` will configure the file scanner to emit classified resources,
         configure the ``add_include`` attribute to only be ``True`` on classified
-        resources, and will disable the addition of ``File`` resources on resource
+        resources, and will disable the addition of :py:class:`File` resources on resource
         collectors.
 
-        ``files`` will configure the file scanner to only emit ``File`` resources,
-        configure the ``add_include`` attribute to ``True`` on ``File`` and *classified*
-        resources, and will allow resource collectors to add ``File`` instances.
+        ``files`` will configure the file scanner to only emit :py:class:`File` resources,
+        configure the ``add_include`` attribute to ``True`` on :py:class:`File` and *classified*
+        resources, and will allow resource collectors to add :py:class:`File` instances.

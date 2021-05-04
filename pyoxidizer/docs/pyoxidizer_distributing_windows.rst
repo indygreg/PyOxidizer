@@ -179,8 +179,8 @@ applications. If the files cannot be found, run the Visual Studio Installer,
 
    When including the Visual C++ Redistributable installer as part of your
    deployment solution, it is recommended to set
-   ``PythonExecutable.windows_runtime_dlls_mode = "never"`` to prevent them
-   from being redundantly installed.
+   :py:attr:`PythonExecutable.windows_runtime_dlls_mode` to ``"never"``
+   to prevent them from being redundantly installed.
 
 .. _pyoxidizer_distributing_windows_ucrt:
 

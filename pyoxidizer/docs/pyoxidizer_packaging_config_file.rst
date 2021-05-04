@@ -42,7 +42,7 @@ In this example, we create an executable embedding Python:
    register_target("exe", make_exe, depends=["dist"], default=True)
 
 :py:meth:`PythonDistribution.to_python_executable` accepts an optional
-``PythonPackagingPolicy`` instance that influences how the executable
+:py:class:`PythonPackagingPolicy` instance that influences how the executable
 is built and what resources are added where. See the
 :py:class:`type documentation <PythonPackagingPolicy>` for the
 list of parameters that can be influenced. Some of this behavior

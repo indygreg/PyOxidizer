@@ -74,7 +74,7 @@ Find the ``make_exe()`` function. This function returns a
 :py:class:`PythonExecutable` instance which defines
 a standalone executable containing Python. This function is a registered
 *target*, which is a named entity that can be individually built or run.
-By returning a ``PythonExecutable`` instance, this function/target is saying
+By returning a :py:class:`PythonExecutable` instance, this function/target is saying
 *build an executable containing Python*.
 
 The :py:class:`PythonExecutable` type holds all state needed to package and run

@@ -93,7 +93,7 @@ If ``True``, Python source code will be compiled to bytecode at
 build time.
 
 The default value is whatever
-``PythonPackagingPolicy.bytecode_optimize_level_zero`` is set to.
+:py:attr:`PythonPackagingPolicy.bytecode_optimize_level_zero` is set to.
 
 .. _config_resource_add_bytecode_optimize_level_one:
 
@@ -104,7 +104,7 @@ This ``bool`` attributes defines whether to add Python bytecode for
 optimization level 1.
 
 The default value is whatever
-``PythonPackagingPolicy.bytecode_optimize_level_one`` is set to.
+:py:attr:`PythonPackagingPolicy.bytecode_optimize_level_one` is set to.
 
 .. _config_resource_add_bytecode_optimize_level_two:
 
@@ -115,4 +115,4 @@ This ``bool`` attributes defines whether to add Python bytecode for
 optimization level 2.
 
 The default value is whatever
-``PythonPackagingPolicy.bytecode_optimize_level_two`` is set to.
+:py:attr:`PythonPackagingPolicy.bytecode_optimize_level_two` is set to.
