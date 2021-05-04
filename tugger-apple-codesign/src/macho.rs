@@ -1246,24 +1246,21 @@ pub struct Scatter {
     spare: u64,
 }
 
-/// Determine the start and end offset of the executable segment of a binary.
-pub fn find_executable_segment_boundary(macho: &MachO) -> Result<(u64, u64), AppleCodesignError> {
-    // There might be some Mach-O segment flags we can query for this. For now,
-    // we find the offset after the __TEXT segment.
+pub trait AppleSignable {
+    /// Determine the start and end offset of the executable segment of a binary.
+    fn executable_segment_boundary(&self) -> Result<(u64, u64), AppleCodesignError>;
+}
 
-    let segment = macho
-        .segments
-        .iter()
-        .find(|segment| {
-            if let Ok(name) = segment.name() {
-                name == SEG_TEXT
-            } else {
-                false
-            }
-        })
-        .ok_or(AppleCodesignError::MissingLinkedit)?;
+impl<'a> AppleSignable for MachO<'a> {
+    fn executable_segment_boundary(&self) -> Result<(u64, u64), AppleCodesignError> {
+        let segment = self
+            .segments
+            .iter()
+            .find(|segment| matches!(segment.name(), Ok(SEG_TEXT)))
+            .ok_or_else(|| AppleCodesignError::InvalidBinary("no __TEXT segment".into()))?;
 
-    Ok((segment.fileoff, segment.fileoff + segment.data.len() as u64))
+        Ok((segment.fileoff, segment.fileoff + segment.data.len() as u64))
+    }
 }
 
 /// Describes signature data embedded within a Mach-O binary.

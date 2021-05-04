@@ -27,6 +27,9 @@ pub enum AppleCodesignError {
     #[error("binary parsing error: {0}")]
     Goblin(#[from] goblin::error::Error),
 
+    #[error("invalid Mach-O binary: {0}")]
+    InvalidBinary(String),
+
     #[error("binary does not have code signature data")]
     BinaryNoCodeSignature,
 
