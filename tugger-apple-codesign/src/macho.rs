@@ -1262,6 +1262,9 @@ pub trait AppleSignable {
     /// The end offset of the code signature data within the __LINKEDIT segment.
     fn code_signature_linkedit_end_offset(&self) -> Option<u32>;
 
+    /// Obtain __LINKEDIT segment data before the signature data.
+    fn linkedit_data_before_signature(&self) -> Option<&[u8]>;
+
     /// Obtain slices of segment data suitable for digesting.
     ///
     /// The slices are likely digested as part of computing digests
@@ -1337,22 +1340,34 @@ impl<'a> AppleSignable for MachO<'a> {
         })
     }
 
+    fn linkedit_data_before_signature(&self) -> Option<&[u8]> {
+        let segment = self
+            .segments
+            .iter()
+            .find(|segment| matches!(segment.name(), Ok(SEG_LINKEDIT)));
+
+        if let Some(segment) = segment {
+            if let Some(offset) = self.code_signature_linkedit_start_offset() {
+                Some(&segment.data[0..offset as usize])
+            } else {
+                Some(&segment.data)
+            }
+        } else {
+            None
+        }
+    }
+
     fn digestable_segment_data(&self) -> Vec<&[u8]> {
         self.segments
             .iter()
             .filter(|segment| !matches!(segment.name(), Ok(SEG_PAGEZERO)))
             .map(|segment| {
-                let max_offset = if matches!(segment.name(), Ok(SEG_LINKEDIT)) {
-                    if let Some(offset) = self.code_signature_linkedit_start_offset() {
-                        offset as usize
-                    } else {
-                        segment.data.len()
-                    }
+                if matches!(segment.name(), Ok(SEG_LINKEDIT)) {
+                    self.linkedit_data_before_signature()
+                        .expect("__LINKEDIT data should resolve")
                 } else {
-                    segment.data.len()
-                };
-
-                &segment.data[0..max_offset]
+                    &segment.data
+                }
             })
             .collect::<Vec<_>>()
     }
