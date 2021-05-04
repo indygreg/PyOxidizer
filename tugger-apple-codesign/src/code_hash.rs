@@ -21,7 +21,7 @@ This module contains code related to reading and writing these so-called
 use {
     crate::{
         error::AppleCodesignError,
-        macho::{find_signature_data, DigestType},
+        macho::{AppleSignable, DigestType},
     },
     goblin::mach::MachO,
 };
@@ -37,10 +37,7 @@ pub fn compute_paged_hashes(
     data: &[u8],
     hash: DigestType,
     page_size: usize,
-    max_offset: usize,
 ) -> Result<Vec<Vec<u8>>, AppleCodesignError> {
-    let data = &data[..max_offset];
-
     data.chunks(page_size)
         .map(|chunk| hash.digest(chunk))
         .collect::<Result<Vec<_>, AppleCodesignError>>()
@@ -52,36 +49,13 @@ pub fn compute_code_hashes(
     hash_type: DigestType,
     page_size: Option<usize>,
 ) -> Result<Vec<Vec<u8>>, AppleCodesignError> {
-    let signature = find_signature_data(macho)?;
-
     // TODO validate size.
     let page_size = page_size.unwrap_or(4096);
 
     Ok(macho
-        .segments
-        .iter()
-        .filter(|s| {
-            if let Ok(name) = s.name() {
-                name != "__PAGEZERO"
-            } else {
-                false
-            }
-        })
-        .map(|s| {
-            let max_offset = if s.name().unwrap() == "__LINKEDIT" {
-                // The __LINKEDIT segment is hashed. But only up to the start of
-                // the signature data
-                if let Some(signature) = &signature {
-                    signature.signature_start_offset
-                } else {
-                    s.data.len()
-                }
-            } else {
-                s.data.len()
-            };
-
-            compute_paged_hashes(s.data, hash_type, page_size, max_offset)
-        })
+        .digestable_segment_data()
+        .into_iter()
+        .map(|data| compute_paged_hashes(data, hash_type, page_size))
         .collect::<Result<Vec<_>, AppleCodesignError>>()?
         .into_iter()
         .flatten()

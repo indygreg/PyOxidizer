@@ -45,7 +45,7 @@ use {
         error::AppleCodesignError,
     },
     goblin::mach::{
-        constants::{SEG_LINKEDIT, SEG_TEXT},
+        constants::{SEG_LINKEDIT, SEG_PAGEZERO, SEG_TEXT},
         load_command::CommandVariant,
         MachO,
     },
@@ -1255,6 +1255,15 @@ pub trait AppleSignable {
 
     /// Determine the start and end offset of the executable segment of a binary.
     fn executable_segment_boundary(&self) -> Result<(u64, u64), AppleCodesignError>;
+
+    /// The start offset of the code signature data within the __LINKEDIT segment.
+    fn code_signature_linkedit_start_offset(&self) -> Option<u32>;
+
+    /// Obtain slices of segment data suitable for digesting.
+    ///
+    /// The slices are likely digested as part of computing digests
+    /// embedded in the code directory.
+    fn digestable_segment_data(&self) -> Vec<&[u8]>;
 }
 
 impl<'a> AppleSignable for MachO<'a> {
@@ -1276,6 +1285,47 @@ impl<'a> AppleSignable for MachO<'a> {
             .ok_or_else(|| AppleCodesignError::InvalidBinary("no __TEXT segment".into()))?;
 
         Ok((segment.fileoff, segment.fileoff + segment.data.len() as u64))
+    }
+
+    fn code_signature_linkedit_start_offset(&self) -> Option<u32> {
+        let segment = self
+            .segments
+            .iter()
+            .find(|segment| matches!(segment.name(), Ok(SEG_LINKEDIT)));
+
+        let command = self.load_commands.iter().find_map(|lc| {
+            if let CommandVariant::CodeSignature(c) = lc.command {
+                Some(c)
+            } else {
+                None
+            }
+        });
+
+        if let (Some(segment), Some(command)) = (segment, command) {
+            Some((command.dataoff as u64 - segment.fileoff) as u32)
+        } else {
+            None
+        }
+    }
+
+    fn digestable_segment_data(&self) -> Vec<&[u8]> {
+        self.segments
+            .iter()
+            .filter(|segment| !matches!(segment.name(), Ok(SEG_PAGEZERO)))
+            .map(|segment| {
+                let max_offset = if matches!(segment.name(), Ok(SEG_LINKEDIT)) {
+                    if let Some(offset) = self.code_signature_linkedit_start_offset() {
+                        offset as usize
+                    } else {
+                        segment.data.len()
+                    }
+                } else {
+                    segment.data.len()
+                };
+
+                &segment.data[0..max_offset]
+            })
+            .collect::<Vec<_>>()
     }
 }
 
