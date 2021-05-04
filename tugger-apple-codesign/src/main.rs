@@ -1226,6 +1226,16 @@ fn command_sign(args: &ArgMatches) -> Result<(), AppleCodesignError> {
             settings.set_binary_identifier(SettingsScope::Main, identifier);
         }
 
+        if settings
+            .executable_segment_flags(SettingsScope::Main)
+            .is_none()
+        {
+            settings.set_executable_segment_flags(
+                SettingsScope::Main,
+                ExecutableSegmentFlags::MAIN_BINARY,
+            );
+        }
+
         warn!(&log, "signing {} as a Mach-O binary", input_path.display());
         let macho_data = std::fs::read(input_path)?;
 
