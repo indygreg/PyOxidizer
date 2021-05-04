@@ -27,7 +27,10 @@ use {
         constants::{SEG_LINKEDIT, SEG_PAGEZERO},
         fat::FAT_MAGIC,
         fat::{SIZEOF_FAT_ARCH, SIZEOF_FAT_HEADER},
-        load_command::{CommandVariant, LinkeditDataCommand, SegmentCommand32, SegmentCommand64},
+        load_command::{
+            CommandVariant, LinkeditDataCommand, SegmentCommand32, SegmentCommand64,
+            LC_CODE_SIGNATURE, SIZEOF_LINKEDIT_DATA_COMMAND,
+        },
         parse_magic_and_ctx, Mach, MachO,
     },
     scroll::{ctx::SizeWith, IOwrite, Pwrite},
@@ -106,16 +109,29 @@ fn create_macho_with_signature(
         .1
         .expect("context should have been parsed before");
 
-    cursor.iowrite_with(macho.header, ctx)?;
+    // If there isn't a code signature presently, we'll need to introduce a load
+    // command for it.
+    let mut header = macho.header;
+    if macho.code_signature_load_command().is_none() {
+        header.ncmds += 1;
+        header.sizeofcmds += SIZEOF_LINKEDIT_DATA_COMMAND as u32;
+    }
+
+    cursor.iowrite_with(header, ctx)?;
 
     // Following the header are load commands. We need to update load commands
     // to reflect changes to the signature size and __LINKEDIT segment size.
+
+    let mut seen_signature_load_command = false;
+
     for load_command in &macho.load_commands {
         let original_command_data =
             &macho_data[load_command.offset..load_command.offset + load_command.command.cmdsize()];
 
         let written_len = match &load_command.command {
             CommandVariant::CodeSignature(command) => {
+                seen_signature_load_command = true;
+
                 let mut command = *command;
                 command.datasize = signature_data.len() as _;
 
@@ -163,6 +179,18 @@ fn create_macho_with_signature(
         // For the commands we mutated ourselves, there may be more data after the
         // load command header. Write it out if present.
         cursor.write_all(&original_command_data[written_len..])?;
+    }
+
+    // If we didn't see a signature load command, write one out now.
+    if !seen_signature_load_command {
+        let command = LinkeditDataCommand {
+            cmd: LC_CODE_SIGNATURE,
+            cmdsize: SIZEOF_LINKEDIT_DATA_COMMAND as _,
+            dataoff: macho.code_limit_binary_offset()? as _,
+            datasize: signature_data.len() as _,
+        };
+
+        cursor.iowrite_with(command, ctx.le)?;
     }
 
     // Write out segments, updating the __LINKEDIT segment when we encounter it.
@@ -287,11 +315,11 @@ impl<'data> MachOSigner<'data> {
                 let original_signature = original_macho.code_signature()?;
 
                 // Derive an intermediate Mach-O with placeholder NULLs for signature
-                // data so Code Directory digests are correct.
+                // data so Code Directory digests over the load commands are correct.
                 let placeholder_signature_len = self
                     .create_superblob(&settings, original_macho, original_signature.as_ref())?
                     .len();
-                let placeholder_signature_data = b"\0".repeat(placeholder_signature_len + 1024);
+                let placeholder_signature_data = b"\0".repeat(placeholder_signature_len + 8192);
 
                 // TODO calling this twice could be undesirable, especially if using
                 // a timestamp server. Should we call in no-op mode or write a size

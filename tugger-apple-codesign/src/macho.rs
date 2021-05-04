@@ -46,7 +46,7 @@ use {
     },
     goblin::mach::{
         constants::{SEG_LINKEDIT, SEG_PAGEZERO, SEG_TEXT},
-        load_command::{CommandVariant, LinkeditDataCommand},
+        load_command::{CommandVariant, LinkeditDataCommand, SIZEOF_LINKEDIT_DATA_COMMAND},
         MachO,
     },
     scroll::{IOwrite, Pread},
@@ -1409,9 +1409,15 @@ impl<'a> AppleSignable for MachO<'a> {
             return Err(AppleCodesignError::LinkeditNotLast);
         }
 
-        // We only know how to replace existing signatures. And there can be no
-        // data after the signature, as we don't know how to rewrite any references
-        // to it.
+        // Rules:
+        //
+        // 1. If there is an existing signature, there must be no data in
+        //    the binary after it. (We don't know how to update references to
+        //    other data to reflect offset changes.)
+        // 2. If there isn't an existing signature, there must be "room" between
+        //    the last load command and the first section to write a new load
+        //    command for the signature.
+
         if let Some(offset) = self.code_signature_linkedit_end_offset() {
             if offset as usize == last_segment.data.len() {
                 Ok(())
@@ -1419,7 +1425,32 @@ impl<'a> AppleSignable for MachO<'a> {
                 Err(AppleCodesignError::DataAfterSignature)
             }
         } else {
-            Err(AppleCodesignError::BinaryNoCodeSignature)
+            let last_load_command = self
+                .load_commands
+                .iter()
+                .last()
+                .ok_or_else(|| AppleCodesignError::InvalidBinary("no load commands".into()))?;
+
+            let first_section = self
+                .segments
+                .iter()
+                .map(|segment| segment.sections())
+                .collect::<Result<Vec<_>, _>>()?
+                .into_iter()
+                .flatten()
+                .next()
+                .ok_or_else(|| AppleCodesignError::InvalidBinary("no sections".into()))?;
+
+            let load_commands_end_offset =
+                last_load_command.offset + last_load_command.command.cmdsize();
+
+            if first_section.0.offset as usize - load_commands_end_offset
+                >= SIZEOF_LINKEDIT_DATA_COMMAND
+            {
+                Ok(())
+            } else {
+                Err(AppleCodesignError::LoadCommandNoRoom)
+            }
         }
     }
 }

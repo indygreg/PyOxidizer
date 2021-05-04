@@ -123,6 +123,9 @@ pub enum AppleCodesignError {
     #[error("__LINKEDIT segment contains data after signature")]
     DataAfterSignature,
 
+    #[error("insufficient room to write code signature load command")]
+    LoadCommandNoRoom,
+
     #[error("no identifier string provided")]
     NoIdentifier,
 

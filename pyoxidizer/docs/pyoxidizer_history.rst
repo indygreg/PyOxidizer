@@ -46,6 +46,9 @@ New Features
 * Apple code signatures now include a time-stamp token issued by Apple's
   time-stamp server by default. Presence of the time-stamp token in code
   signatures is a requirement to notarize applications.
+* It is now possible to add code signatures to Mach-O binaries that don't
+  have an existing signature. Previously, it was only possible to sign
+  binaries that had an existing signature.
 
 .. _version_0_14_1:
 
