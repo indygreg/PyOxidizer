@@ -284,14 +284,14 @@ impl<'data> MachOSigner<'data> {
                 let settings =
                     settings.as_nested_macho_settings(index, original_macho.header.cputype());
 
-                let signature = original_macho.code_signature()?;
+                let original_signature = original_macho.code_signature()?;
 
                 // Derive an intermediate Mach-O with placeholder NULLs for signature
                 // data so Code Directory digests are correct.
                 let placeholder_signature_len = self
-                    .create_superblob(&settings, original_macho, signature.as_ref())?
+                    .create_superblob(&settings, original_macho, original_signature.as_ref())?
                     .len();
-                let placeholder_signature = b"\0".repeat(placeholder_signature_len + 1024);
+                let placeholder_signature_data = b"\0".repeat(placeholder_signature_len + 1024);
 
                 // TODO calling this twice could be undesirable, especially if using
                 // a timestamp server. Should we call in no-op mode or write a size
@@ -299,25 +299,28 @@ impl<'data> MachOSigner<'data> {
                 let intermediate_macho_data = create_macho_with_signature(
                     self.macho_data(index),
                     original_macho,
-                    &placeholder_signature,
+                    &placeholder_signature_data,
                 )?;
 
                 // A nice side-effect of this is that it catches bugs if we write malformed Mach-O!
                 let intermediate_macho = MachO::parse(&intermediate_macho_data, 0)?;
 
-                let mut signature_data =
-                    self.create_superblob(&settings, &intermediate_macho, signature.as_ref())?;
+                let mut signature_data = self.create_superblob(
+                    &settings,
+                    &intermediate_macho,
+                    original_signature.as_ref(),
+                )?;
 
                 // The Mach-O writer adjusts load commands based on the signature length. So pad
                 // with NULLs to get to our placeholder length.
-                match signature_data.len().cmp(&placeholder_signature.len()) {
+                match signature_data.len().cmp(&placeholder_signature_data.len()) {
                     Ordering::Greater => {
                         return Err(AppleCodesignError::SignatureDataTooLarge);
                     }
                     Ordering::Equal => {}
                     Ordering::Less => {
                         signature_data.extend_from_slice(
-                            &b"\0".repeat(placeholder_signature.len() - signature_data.len()),
+                            &b"\0".repeat(placeholder_signature_data.len() - signature_data.len()),
                         );
                     }
                 }
@@ -409,16 +412,16 @@ impl<'data> MachOSigner<'data> {
         &self,
         settings: &SigningSettings,
         macho: &MachO,
-        signature: Option<&EmbeddedSignature>,
+        previous_signature: Option<&EmbeddedSignature>,
     ) -> Result<Vec<u8>, AppleCodesignError> {
-        let code_directory = self.create_code_directory(settings, macho, signature)?;
+        let code_directory = self.create_code_directory(settings, macho, previous_signature)?;
 
         // By convention, the Code Directory goes first.
         let mut blobs = vec![(
             CodeSigningSlot::CodeDirectory,
             code_directory.to_blob_bytes()?,
         )];
-        blobs.extend(self.create_special_blobs(settings, signature)?);
+        blobs.extend(self.create_special_blobs(settings, previous_signature)?);
 
         // And the CMS signature goes last.
         if settings.signing_key().is_some() {
@@ -515,10 +518,10 @@ impl<'data> MachOSigner<'data> {
     fn get_binary_identifier(
         &self,
         settings: &SigningSettings,
-        signature: Option<&EmbeddedSignature>,
+        previous_signature: Option<&EmbeddedSignature>,
     ) -> Result<String, AppleCodesignError> {
         let previous_cd =
-            signature.and_then(|signature| signature.code_directory().unwrap_or(None));
+            previous_signature.and_then(|signature| signature.code_directory().unwrap_or(None));
 
         match settings.binary_identifier(SettingsScope::Main) {
             Some(ident) => Ok(ident.to_string()),
@@ -541,13 +544,13 @@ impl<'data> MachOSigner<'data> {
         &self,
         settings: &SigningSettings,
         macho: &MachO,
-        signature: Option<&EmbeddedSignature>,
+        previous_signature: Option<&EmbeddedSignature>,
     ) -> Result<CodeDirectoryBlob<'static>, AppleCodesignError> {
         // TODO support defining or filling in proper values for fields with
         // static values.
 
         let previous_cd =
-            signature.and_then(|signature| signature.code_directory().unwrap_or(None));
+            previous_signature.and_then(|signature| signature.code_directory().unwrap_or(None));
 
         let mut flags = CodeSignatureFlags::empty();
 
@@ -611,7 +614,7 @@ impl<'data> MachOSigner<'data> {
                 .collect::<Vec<_>>();
 
         let mut special_hashes = self
-            .create_special_blobs(settings, signature)?
+            .create_special_blobs(settings, previous_signature)?
             .into_iter()
             .map(|(slot, data)| {
                 Ok((
@@ -667,7 +670,7 @@ impl<'data> MachOSigner<'data> {
             }
         }
 
-        let ident = Cow::Owned(self.get_binary_identifier(settings, signature)?);
+        let ident = Cow::Owned(self.get_binary_identifier(settings, previous_signature)?);
 
         let team_name = match settings.team_id() {
             Some(team_name) => Some(Cow::Owned(team_name.to_string())),
@@ -728,7 +731,7 @@ impl<'data> MachOSigner<'data> {
     pub fn create_special_blobs(
         &self,
         settings: &SigningSettings,
-        signature: Option<&EmbeddedSignature>,
+        previous_signature: Option<&EmbeddedSignature>,
     ) -> Result<Vec<(CodeSigningSlot, Vec<u8>)>, AppleCodesignError> {
         let mut res = Vec::new();
 
@@ -739,7 +742,8 @@ impl<'data> MachOSigner<'data> {
                 // If we are using an Apple-issued cert, this should automatically
                 // derive appropriate designated requirements.
                 if let Some((_, cert)) = settings.signing_key() {
-                    let identifier = Some(self.get_binary_identifier(settings, signature)?);
+                    let identifier =
+                        Some(self.get_binary_identifier(settings, previous_signature)?);
 
                     if let Some(expr) = derive_designated_requirements(cert, identifier)? {
                         requirements.push(expr);
