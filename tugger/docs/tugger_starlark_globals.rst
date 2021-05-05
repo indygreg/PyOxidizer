@@ -21,6 +21,9 @@ Global Types
 
 Tugger's Starlark dialect defines the following custom types:
 
+:py:class:`AppleUniversalBinary`
+   Represents a multi-architecture *universal* binary for Apple platforms.
+
 :py:class:`CodeSigner`
    An entity capable of performing code signing.
 

@@ -3712,6 +3712,7 @@ dependencies = [
  "starlark-dialect-build-targets",
  "tar",
  "tempfile",
+ "tugger-apple",
  "tugger-apple-bundle",
  "tugger-apple-codesign",
  "tugger-code-signing",

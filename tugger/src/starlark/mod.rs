@@ -8,6 +8,7 @@ The `starlark` module and related sub-modules define the
 Tugger.
 */
 
+pub mod apple_universal_binary;
 pub mod code_signing;
 pub mod file_content;
 pub mod file_manifest;
@@ -125,6 +126,7 @@ pub fn register_starlark_dialect(
     env: &mut Environment,
     type_values: &mut TypeValues,
 ) -> Result<(), EnvironmentError> {
+    apple_universal_binary::apple_universal_binary_module(env, type_values);
     code_signing::code_signing_module(env, type_values);
     file_content::file_content_module(env, type_values);
     file_manifest::file_manifest_module(env, type_values);

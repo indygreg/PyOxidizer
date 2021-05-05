@@ -62,6 +62,13 @@ New Features
   Combined with the introduction of :py:meth:`starlark_tugger.FileContent.__init__`,
   it is now possible to add arbitrary file-based or string-based files
   to a :py:class:`starlark_tugger.FileManifest`.
+* Starlark now has a :py:class:`starlark_tugger.AppleUniversalBinary` type
+  that can be used to construct *universal*/*fat*/*multi-architecture* Mach-O
+  binaries, the binary executable format used by Apple operating systems.
+  Starlark primitives like :py:class:`PythonExecutable` can today only yield
+  a single architecture binary. However, with the new type, it is possible
+  to take multiple source binaries and combine them into a *universal* binary,
+  all from Starlark.
 
 .. _version_0_14_1:
 
