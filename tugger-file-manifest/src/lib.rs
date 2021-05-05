@@ -675,4 +675,73 @@ mod tests {
 
         Ok(())
     }
+
+    #[test]
+    fn test_entries_by_directory_windows() -> Result<(), FileManifestError> {
+        let c = FileEntry {
+            data: vec![42].into(),
+            executable: false,
+        };
+
+        let mut m = FileManifest::default();
+        m.add_file_entry(Path::new("root.txt"), c.clone())?;
+        m.add_file_entry(Path::new("dir0\\dir0_file0.txt"), c.clone())?;
+        m.add_file_entry(Path::new("dir0\\child0\\dir0_child0_file0.txt"), c.clone())?;
+        m.add_file_entry(Path::new("dir0\\child0\\dir0_child0_file1.txt"), c.clone())?;
+        m.add_file_entry(Path::new("dir0\\child1\\dir0_child1_file0.txt"), c.clone())?;
+        m.add_file_entry(Path::new("dir1\\child0\\dir1_child0_file0.txt"), c.clone())?;
+
+        let entries = m.entries_by_directory();
+
+        assert_eq!(entries.keys().count(), 6);
+        assert_eq!(
+            entries.keys().collect::<Vec<_>>(),
+            vec![
+                &None,
+                &Some(Path::new("dir0")),
+                &Some(Path::new("dir0/child0")),
+                &Some(Path::new("dir0/child1")),
+                &Some(Path::new("dir1")),
+                &Some(Path::new("dir1/child0")),
+            ]
+        );
+
+        assert_eq!(
+            entries.get(&None).unwrap(),
+            &[(OsStr::new("root.txt"), &c),].iter().cloned().collect()
+        );
+        assert_eq!(
+            entries.get(&Some(Path::new("dir0"))).unwrap(),
+            &[(OsStr::new("dir0_file0.txt"), &c)]
+                .iter()
+                .cloned()
+                .collect()
+        );
+        assert_eq!(
+            entries.get(&Some(Path::new("dir0/child0"))).unwrap(),
+            &[
+                (OsStr::new("dir0_child0_file0.txt"), &c),
+                (OsStr::new("dir0_child0_file1.txt"), &c)
+            ]
+            .iter()
+            .cloned()
+            .collect()
+        );
+        assert_eq!(
+            entries.get(&Some(Path::new("dir0/child1"))).unwrap(),
+            &[(OsStr::new("dir0_child1_file0.txt"), &c)]
+                .iter()
+                .cloned()
+                .collect()
+        );
+        assert_eq!(
+            entries.get(&Some(Path::new("dir1/child0"))).unwrap(),
+            &[(OsStr::new("dir1_child0_file0.txt"), &c)]
+                .iter()
+                .cloned()
+                .collect()
+        );
+
+        Ok(())
+    }
 }
