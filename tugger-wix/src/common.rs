@@ -35,7 +35,10 @@ pub fn directory_to_id(prefix: &str, path: &Path) -> String {
     format!(
         "{}.dir.{}",
         prefix,
-        path.to_string_lossy().replace('/', ".").replace('-', "_")
+        path.to_string_lossy()
+            .replace('\\', "/")
+            .replace('/', ".")
+            .replace('-', "_")
     )
 }
 
@@ -90,6 +93,7 @@ pub fn component_group_id(prefix: &str, path: &Path) -> String {
         prefix,
         path.display()
             .to_string()
+            .replace('\\', "/")
             .replace('/', ".")
             .replace('-', "_")
     )
