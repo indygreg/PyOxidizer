@@ -92,6 +92,8 @@ def make_exe_installer():
 
 
 def make_macos_app_bundle():
+    ARCHES = ["aarch64-apple-darwin", "x86_64-apple-darwin"]
+
     bundle = MacOsApplicationBundleBuilder("PyOxidizer")
     bundle.set_info_plist_required_keys(
         display_name = "PyOxidizer",
@@ -101,11 +103,18 @@ def make_macos_app_bundle():
         executable = "pyoxidizer",
     )
 
+    universal = AppleUniversalBinary("pyoxidizer")
+
+    for arch in ARCHES:
+        if IN_CI:
+            path = "dist/" + arch + "/pyoxidizer"
+        else:
+            path = "target/" + arch + "/release/pyoxidizer"
+
+        universal.add_path(path)
+
     m = FileManifest()
-    m.add_path(
-        path = "target/release/pyoxidizer",
-        strip_prefix = "target/release/",
-    )
+    m.add_file(universal.to_file_content())
     bundle.add_macos_manifest(m)
 
     return bundle

@@ -4,9 +4,6 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 # Script to build DMG for PyOxidizer.
-#
-# It appears that release binaries exist in
-# target/{aarch64,x86_64}-apple-darwin/release.
 
 set -ex
 
@@ -20,25 +17,18 @@ if [ -d /Volumes/PyOxidizer ]; then
 	hdiutil detach "${DEV_NAME}"
 fi
 
-# Make a fat binary where pyoxidizer.bzl can find it.
-mkdir -p target/release
-
 if [ -n "${IN_CI}" ]; then
-  # shellcheck disable=SC2125
-  SOURCES=dist/*/pyoxidizer
+  PYOXIDIZER=dist/x86_64-apple-darwin/pyoxidizer
+  chmod +x ${PYOXIDIZER}
 else
-  # shellcheck disable=SC2125
-  SOURCES=target/*-apple-darwin/release/pyoxidizer
+  if [[ $(uname -m) == 'arm64' ]]; then
+    PYOXIDIZER=target/aarch64-apple-darwin/release/pyoxidizer
+  else
+    PYOXIDIZER=target/x86_64-apple-darwin/release/pyoxidizer
+  fi
 fi
 
-# shellcheck disable=SC2086
-lipo ${SOURCES} -create -output target/release/pyoxidizer
-chmod +x target/release/pyoxidizer
-lipo target/release/pyoxidizer -info
-
-# Run pyoxidizer to produce PyOxidizer.app. As a bonus we test that
-# the fat binary works!
-target/release/pyoxidizer build --release macos_app_bundle
+$PYOXIDIZER build --release --var-env IN_CI IN_CI macos_app_bundle
 
 hdiutil create \
         -srcfolder build/*/release/macos_app_bundle \
