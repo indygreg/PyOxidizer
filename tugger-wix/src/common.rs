@@ -8,7 +8,6 @@ use {
     once_cell::sync::Lazy,
     slog::warn,
     std::{
-        ffi::OsStr,
         io::{BufRead, BufReader, Write},
         path::{Path, PathBuf},
     },
@@ -65,7 +64,7 @@ pub fn component_id(prefix: &str, path: &Path) -> String {
     )
 }
 
-pub fn file_guid(prefix: &str, path: &OsStr) -> String {
+pub fn file_guid(prefix: &str, path: &Path) -> String {
     Uuid::new_v5(
         &Uuid::NAMESPACE_URL,
         format!(
@@ -81,7 +80,7 @@ pub fn file_guid(prefix: &str, path: &OsStr) -> String {
     .to_string()
 }
 
-pub fn file_id(prefix: &str, path: &OsStr) -> String {
+pub fn file_id(prefix: &str, path: &Path) -> String {
     let guid = file_guid(prefix, path);
 
     format!("{}.file.{}", prefix, guid.to_lowercase().replace('-', "_"))
@@ -200,7 +199,7 @@ pub fn write_file_manifest_to_wix<W: Write, P: AsRef<Path>>(
             };
             writer.write(
                 XmlEvent::start_element("File")
-                    .attr("Id", &file_id(id_prefix, filename))
+                    .attr("Id", &file_id(id_prefix, rel_path))
                     .attr("KeyPath", "yes")
                     .attr("Source", &source.display().to_string()),
             )?;
