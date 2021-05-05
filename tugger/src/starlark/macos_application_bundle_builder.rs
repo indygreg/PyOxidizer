@@ -23,7 +23,8 @@ use {
         },
     },
     starlark_dialect_build_targets::{
-        get_context_value, EnvironmentContext, ResolvedTarget, ResolvedTargetValue, RunMode,
+        get_context_value, optional_str_arg, EnvironmentContext, ResolvedTarget,
+        ResolvedTargetValue, RunMode,
     },
     std::path::PathBuf,
     tugger_apple_bundle::MacOsApplicationBundleBuilder,
@@ -89,8 +90,16 @@ impl MacOsApplicationBundleBuilderValue {
         Ok(Value::new(NoneType::None))
     }
 
-    pub fn add_macos_file(&mut self, path: String, content: FileContentValue) -> ValueResult {
+    pub fn add_macos_file(&mut self, content: FileContentValue, path: Value) -> ValueResult {
+        let path = optional_str_arg("path", &path)?;
+
         error_context("MacOsApplicationBundleBuilder.add_macos_file()", || {
+            let path = if let Some(path) = path {
+                PathBuf::from(path)
+            } else {
+                PathBuf::from(&content.filename)
+            };
+
             self.inner
                 .add_file_macos(path, content.content)
                 .context("adding macOS file")
@@ -113,8 +122,16 @@ impl MacOsApplicationBundleBuilderValue {
         Ok(Value::new(NoneType::None))
     }
 
-    pub fn add_resources_file(&mut self, path: String, content: FileContentValue) -> ValueResult {
+    pub fn add_resources_file(&mut self, content: FileContentValue, path: Value) -> ValueResult {
+        let path = optional_str_arg("path", &path)?;
+
         error_context("MacOsApplicationBundleBuilder.add_resources_file()", || {
+            let path = if let Some(path) = path {
+                PathBuf::from(path)
+            } else {
+                PathBuf::from(&content.filename)
+            };
+
             self.inner
                 .add_file_resources(path, content.content)
                 .context("adding resources file")
@@ -260,11 +277,12 @@ starlark_module! { macos_application_bundle_builder_module =>
     #[allow(non_snake_case)]
     MacOsApplicationBundleBuilder.add_macos_file(
         this,
-        path: String,
-        content: FileContentValue)
+        content: FileContentValue,
+        path = NoneType::None
+    )
     {
         let mut this = this.downcast_mut::<MacOsApplicationBundleBuilderValue>().unwrap().unwrap();
-        this.add_macos_file(path, content)
+        this.add_macos_file(content, path)
     }
 
     #[allow(non_snake_case)]
@@ -276,11 +294,11 @@ starlark_module! { macos_application_bundle_builder_module =>
     #[allow(non_snake_case)]
     MacOsApplicationBundleBuilder.add_resources_file(
         this,
-        path: String,
-        content: FileContentValue
+        content: FileContentValue,
+        path = NoneType::None
     ) {
         let mut this = this.downcast_mut::<MacOsApplicationBundleBuilderValue>().unwrap().unwrap();
-        this.add_resources_file(path, content)
+        this.add_resources_file(content, path)
     }
 
     #[allow(non_snake_case)]
@@ -361,6 +379,44 @@ mod tests {
             builder.inner.get_info_plist_key("CFBundleExecutable")?,
             Some("myapp".into())
         );
+
+        Ok(())
+    }
+
+    #[test]
+    fn add_macos_file() -> Result<()> {
+        let mut env = StarlarkEnvironment::new()?;
+
+        env.eval("builder = MacOsApplicationBundleBuilder('myapp')")?;
+        env.eval("builder.add_macos_file(FileContent(filename = 'file', content = 'content'))")?;
+
+        let value = env.eval("builder")?;
+        let builder = value
+            .downcast_ref::<MacOsApplicationBundleBuilderValue>()
+            .unwrap();
+        assert!(builder.inner.files().get("Contents/MacOS/file").is_some());
+
+        Ok(())
+    }
+
+    #[test]
+    fn add_resources_file() -> Result<()> {
+        let mut env = StarlarkEnvironment::new()?;
+
+        env.eval("builder = MacOsApplicationBundleBuilder('myapp')")?;
+        env.eval(
+            "builder.add_resources_file(FileContent(filename = 'file', content = 'content'))",
+        )?;
+
+        let value = env.eval("builder")?;
+        let builder = value
+            .downcast_ref::<MacOsApplicationBundleBuilderValue>()
+            .unwrap();
+        assert!(builder
+            .inner
+            .files()
+            .get("Contents/Resources/file")
+            .is_some());
 
         Ok(())
     }

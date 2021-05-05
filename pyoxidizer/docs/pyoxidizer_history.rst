@@ -33,6 +33,17 @@ Version History
 
 Not yet released.
 
+Backwards Compatibility Notes
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+* The order of the ``content`` and ``path`` arguments to
+  :py:meth:`starlark_tugger.MacOsApplicationBundleBuilder.add_macos_file` and
+  :py:meth:`starlark_tugger.MacOsApplicationBundleBuilder.add_resources_file` has been reversed
+  and ``path`` now defaults to ``None``. While technically a backwards
+  incompatible change, the old method weren't usable in prior versions
+  of PyOxidizer because the :py:class:`starlark_tugger.FileContent` Starlark
+  type couldn't be instantiated!
+
 Bug Fixes
 ^^^^^^^^^
 

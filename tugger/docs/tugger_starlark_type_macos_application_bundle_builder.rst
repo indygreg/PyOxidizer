@@ -44,18 +44,20 @@
         in certain locations. This method will allow you to materialize files in
         locations resulting in a malformed bundle. Use with caution.
 
-    .. py:method:: add_macos_file(path: str, content: FileContent)
+    .. py:method:: add_macos_file(content: FileContent, path: Optional[str] = None)
 
         Adds a single file to be installed in the ``Contents/MacOS`` directory in
         the bundle.
 
         Accepts the following arguments:
 
-        ``path``
-           Relative path of file under ``Contents/MacOS``.
-
         ``content``
            Object representing file content to materialize.
+
+        ``path``
+           Relative path of file under ``Contents/MacOS``. If not defined, the file
+           will be installed into the equivalent of
+           ``os.path.join("Contents/MacOS", content.filename)``.
 
     .. py:method:: add_macos_manifest(manifest: FileManifest))
 
@@ -67,18 +69,20 @@
         ``manifest``
            Collection of files to materialize.
 
-    .. py:method:: add_resources_file(path: str, content: FileContent)
+    .. py:method:: add_resources_file(content: FileContent, path: Optional[str])
 
         Adds a single file to be installed in the ``Contents/Resources`` directory in
         the bundle.
 
         Accepts the following arguments:
 
-        ``path``
-           Relative path of file under ``Contents/Resources``.
-
         ``content``
            Object representing file content to materialize.
+
+        ``path``
+           Relative path of file under ``Contents/Resources``. If not defined, the file
+           will be installed into the equivalent of
+           ``os.path.join("Contents/Resources", content.filename)``.
 
     .. py:method:: add_resources_manifest(manifest: FileManifest)
 
