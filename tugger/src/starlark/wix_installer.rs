@@ -16,7 +16,7 @@ use {
         environment::TypeValues,
         eval::call_stack::CallStack,
         values::{
-            error::{RuntimeError, ValueError},
+            error::{RuntimeError, UnsupportedOperation, ValueError},
             none::NoneType,
             {Mutable, TypedValue, Value, ValueResult},
         },
@@ -59,6 +59,52 @@ impl TypedValue for WiXInstallerValue {
 
     fn values_for_descendant_check_and_freeze(&self) -> Box<dyn Iterator<Item = Value>> {
         Box::new(std::iter::empty())
+    }
+
+    fn get_attr(&self, attribute: &str) -> ValueResult {
+        Ok(match attribute {
+            "install_files_root_directory_id" => {
+                Value::from(self.inner.install_files_root_directory_id())
+            }
+            "install_files_wxs_path" => {
+                Value::from(format!("{}", self.inner.install_files_wxs_path().display()))
+            }
+            _ => {
+                return Err(ValueError::OperationNotSupported {
+                    op: UnsupportedOperation::GetAttr(attribute.to_string()),
+                    left: Self::TYPE.to_string(),
+                    right: None,
+                })
+            }
+        })
+    }
+
+    fn has_attr(&self, attribute: &str) -> Result<bool, ValueError> {
+        Ok(matches!(
+            attribute,
+            "install_files_root_directory_id" | "install_files_wxs_path"
+        ))
+    }
+
+    fn set_attr(&mut self, attribute: &str, value: Value) -> Result<(), ValueError> {
+        match attribute {
+            "install_files_root_directory_id" => {
+                self.inner
+                    .set_install_files_root_directory_id(value.to_string());
+            }
+            "install_files_wxs_path" => {
+                self.inner.set_install_files_wxs_path(value.to_string());
+            }
+            attr => {
+                return Err(ValueError::OperationNotSupported {
+                    op: UnsupportedOperation::SetAttr(attr.to_string()),
+                    left: Self::TYPE.to_string(),
+                    right: None,
+                })
+            }
+        }
+
+        Ok(())
     }
 }
 
