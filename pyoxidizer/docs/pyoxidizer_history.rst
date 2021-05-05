@@ -62,6 +62,10 @@ New Features
   Combined with the introduction of :py:meth:`starlark_tugger.FileContent.__init__`,
   it is now possible to add arbitrary file-based or string-based files
   to a :py:class:`starlark_tugger.FileManifest`.
+* The new :py:meth:`starlark_tugger.FileManifest.get_file` method can be
+  used to retrieve a :py:class:`starlark_tugger.FileContent` from a path in
+  :py:class:`starlark_tugger.FileManifest`. Combined with other existing methods,
+  this enables you to mutate entries within a :py:class:`starlark_tugger.FileManifest`.
 * Starlark now has a :py:class:`starlark_tugger.AppleUniversalBinary` type
   that can be used to construct *universal*/*fat*/*multi-architecture* Mach-O
   binaries, the binary executable format used by Apple operating systems.

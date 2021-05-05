@@ -55,6 +55,15 @@
 
            This can be set when reading temporary files.
 
+    .. py:method:: get_file(path: str) -> Optional[FileContent]
+
+        Obtain a :py:class:`FileContent` at a given path in the manifest, or
+        ``None`` if no such path exists in the manifest.
+
+        A copy of the content in the :py:class:`FileManifest` is returned and
+        mutations on the returned object will not be reflected in the
+        :py:class:`FileManifest`.
+
     .. py:method:: install(path: str, replace: bool = True)
 
         This method writes the content of the :py:class:`FileManifest` to a

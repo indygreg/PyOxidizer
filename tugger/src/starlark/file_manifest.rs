@@ -235,6 +235,33 @@ impl FileManifestValue {
         Ok(Value::new(NoneType::None))
     }
 
+    /// FileManifest.get_file(path) -> FileContent
+    pub fn get_file(&self, path: String) -> ValueResult {
+        const LABEL: &str = "FileManifest.get_file()";
+
+        let (path, filename) = error_context(LABEL, || {
+            let path = PathBuf::from(path);
+            let filename = path
+                .file_name()
+                .ok_or_else(|| {
+                    anyhow!("unable to resolve file name from path: {}", path.display())
+                })?
+                .to_string_lossy()
+                .to_string();
+
+            Ok((path, filename))
+        })?;
+
+        if let Some(entry) = self.manifest.get(path) {
+            Ok(Value::new(FileContentValue {
+                content: entry.clone(),
+                filename,
+            }))
+        } else {
+            Ok(Value::new(NoneType::None))
+        }
+    }
+
     /// FileManifest.install(path, replace=true)
     pub fn install(
         &self,
@@ -302,6 +329,11 @@ starlark_module! { file_manifest_module =>
     FileManifest.build(env env, call_stack cs, this, target: String) {
         let this = this.downcast_ref::<FileManifestValue>().unwrap();
         this.build(env, cs, target)
+    }
+
+    FileManifest.get_file(this, path: String) {
+        let this = this.downcast_ref::<FileManifestValue>().unwrap();
+        this.get_file(path)
     }
 
     FileManifest.install(env env, call_stack cs, this, path: String, replace: bool = true) {
@@ -458,6 +490,22 @@ mod tests {
                     executable: false
                 }
             )]
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn get_file() -> Result<()> {
+        let mut env = StarlarkEnvironment::new()?;
+
+        env.eval("m = FileManifest()")?;
+        assert_eq!(env.eval("m.get_file('missing')")?.get_type(), "NoneType");
+
+        env.eval("m.add_file(FileContent(filename = 'file', content = 'foo'))")?;
+        assert_eq!(
+            env.eval("m.get_file('file')")?.get_type(),
+            FileContentValue::TYPE
         );
 
         Ok(())
