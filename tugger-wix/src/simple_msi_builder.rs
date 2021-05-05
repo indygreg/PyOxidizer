@@ -204,7 +204,8 @@ impl WiXSimpleMsiBuilder {
         builder
             .install_files_mut()
             .add_manifest(&self.program_files_manifest)?;
-        builder.add_files_manifest_wxs("APPLICATIONFOLDER")?;
+        builder.set_install_files_root_directory_id("APPLICATIONFOLDER");
+        builder.add_files_manifest_wxs()?;
 
         if let Some(settings) = &self.auto_sign_signtool_settings {
             builder.auto_sign_signtool(settings.clone_settings());
