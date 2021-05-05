@@ -414,7 +414,9 @@ impl FileManifest {
     /// values of files in that directory.
     ///
     /// The root directory is modeled by the `None` key.
-    pub fn entries_by_directory(&self) -> BTreeMap<Option<&Path>, BTreeMap<&OsStr, &FileEntry>> {
+    pub fn entries_by_directory(
+        &self,
+    ) -> BTreeMap<Option<&Path>, BTreeMap<&OsStr, (&Path, &FileEntry)>> {
         let mut res = BTreeMap::new();
 
         for (path, content) in &self.files {
@@ -431,7 +433,7 @@ impl FileManifest {
             let filename = path.file_name().unwrap();
 
             let entry = res.entry(parent).or_insert_with(BTreeMap::new);
-            entry.insert(filename, content);
+            entry.insert(filename, (path.as_path(), content));
 
             // Ensure there are keys for all parents.
             if let Some(parent) = parent {
@@ -639,20 +641,41 @@ mod tests {
 
         assert_eq!(
             entries.get(&None).unwrap(),
-            &[(OsStr::new("root.txt"), &c),].iter().cloned().collect()
+            &[(
+                OsStr::new("root.txt"),
+                (PathBuf::from("root.txt").as_path(), &c)
+            ),]
+            .iter()
+            .cloned()
+            .collect()
         );
         assert_eq!(
             entries.get(&Some(Path::new("dir0"))).unwrap(),
-            &[(OsStr::new("dir0_file0.txt"), &c)]
-                .iter()
-                .cloned()
-                .collect()
+            &[(
+                OsStr::new("dir0_file0.txt"),
+                (PathBuf::from("dir0/dir0_file0.txt").as_path(), &c)
+            )]
+            .iter()
+            .cloned()
+            .collect()
         );
         assert_eq!(
             entries.get(&Some(Path::new("dir0/child0"))).unwrap(),
             &[
-                (OsStr::new("dir0_child0_file0.txt"), &c),
-                (OsStr::new("dir0_child0_file1.txt"), &c)
+                (
+                    OsStr::new("dir0_child0_file0.txt"),
+                    (
+                        PathBuf::from("dir0/child0/dir0_child0_file0.txt").as_path(),
+                        &c
+                    )
+                ),
+                (
+                    OsStr::new("dir0_child0_file1.txt"),
+                    (
+                        PathBuf::from("dir0/child0/dir0_child0_file1.txt").as_path(),
+                        &c
+                    )
+                )
             ]
             .iter()
             .cloned()
@@ -660,17 +683,29 @@ mod tests {
         );
         assert_eq!(
             entries.get(&Some(Path::new("dir0/child1"))).unwrap(),
-            &[(OsStr::new("dir0_child1_file0.txt"), &c)]
-                .iter()
-                .cloned()
-                .collect()
+            &[(
+                OsStr::new("dir0_child1_file0.txt"),
+                (
+                    PathBuf::from("dir0/child1/dir0_child1_file0.txt").as_path(),
+                    &c
+                )
+            )]
+            .iter()
+            .cloned()
+            .collect()
         );
         assert_eq!(
             entries.get(&Some(Path::new("dir1/child0"))).unwrap(),
-            &[(OsStr::new("dir1_child0_file0.txt"), &c)]
-                .iter()
-                .cloned()
-                .collect()
+            &[(
+                OsStr::new("dir1_child0_file0.txt"),
+                (
+                    PathBuf::from("dir1/child0/dir1_child0_file0.txt").as_path(),
+                    &c
+                )
+            )]
+            .iter()
+            .cloned()
+            .collect()
         );
 
         Ok(())
@@ -708,20 +743,41 @@ mod tests {
 
         assert_eq!(
             entries.get(&None).unwrap(),
-            &[(OsStr::new("root.txt"), &c),].iter().cloned().collect()
+            &[(
+                OsStr::new("root.txt"),
+                (PathBuf::from("root.txt").as_path(), &c)
+            ),]
+            .iter()
+            .cloned()
+            .collect()
         );
         assert_eq!(
             entries.get(&Some(Path::new("dir0"))).unwrap(),
-            &[(OsStr::new("dir0_file0.txt"), &c)]
-                .iter()
-                .cloned()
-                .collect()
+            &[(
+                OsStr::new("dir0_file0.txt"),
+                (PathBuf::from("dir0/dir0_file0.txt").as_path(), &c)
+            )]
+            .iter()
+            .cloned()
+            .collect()
         );
         assert_eq!(
             entries.get(&Some(Path::new("dir0/child0"))).unwrap(),
             &[
-                (OsStr::new("dir0_child0_file0.txt"), &c),
-                (OsStr::new("dir0_child0_file1.txt"), &c)
+                (
+                    OsStr::new("dir0_child0_file0.txt"),
+                    (
+                        PathBuf::from("dir0/child0/dir0_child0_file0.txt").as_path(),
+                        &c
+                    )
+                ),
+                (
+                    OsStr::new("dir0_child0_file1.txt"),
+                    (
+                        PathBuf::from("dir0/child0/dir0_child0_file1.txt").as_path(),
+                        &c
+                    )
+                )
             ]
             .iter()
             .cloned()
@@ -729,17 +785,29 @@ mod tests {
         );
         assert_eq!(
             entries.get(&Some(Path::new("dir0/child1"))).unwrap(),
-            &[(OsStr::new("dir0_child1_file0.txt"), &c)]
-                .iter()
-                .cloned()
-                .collect()
+            &[(
+                OsStr::new("dir0_child1_file0.txt"),
+                (
+                    PathBuf::from("dir0/child1/dir0_child1_file0.txt").as_path(),
+                    &c
+                )
+            )]
+            .iter()
+            .cloned()
+            .collect()
         );
         assert_eq!(
             entries.get(&Some(Path::new("dir1/child0"))).unwrap(),
-            &[(OsStr::new("dir1_child0_file0.txt"), &c)]
-                .iter()
-                .cloned()
-                .collect()
+            &[(
+                OsStr::new("dir1_child0_file0.txt"),
+                (
+                    PathBuf::from("dir1/child0/dir1_child0_file0.txt").as_path(),
+                    &c
+                )
+            )]
+            .iter()
+            .cloned()
+            .collect()
         );
 
         Ok(())

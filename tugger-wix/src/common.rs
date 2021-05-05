@@ -183,12 +183,7 @@ pub fn write_file_manifest_to_wix<W: Write, P: AsRef<Path>>(
         }
 
         // Add `<Component>` for files in this directory.
-        for filename in files.keys() {
-            let rel_path = match directory {
-                Some(d) => d.join(filename),
-                None => PathBuf::from(filename),
-            };
-
+        for (filename, (rel_path, _)) in files {
             let guid = component_guid(id_prefix, &rel_path);
             let id = component_id(id_prefix, &rel_path);
 
