@@ -77,3 +77,9 @@
         Upon successful materialization of all files in the manifest, all written
         files will be assessed for code signing with the ``file-manifest-install``
         *action*.
+
+    .. py:method:: remove(path: str) -> Optional[FileContent]
+
+        Remove the entry in this manifest at ``path``, returning a :py:class:`FileContent`
+        representing the removed entry if there was one or ``None`` if the path
+        isn't tracked by the manifest.

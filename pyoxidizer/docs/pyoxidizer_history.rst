@@ -64,8 +64,11 @@ New Features
   to a :py:class:`starlark_tugger.FileManifest`.
 * The new :py:meth:`starlark_tugger.FileManifest.get_file` method can be
   used to retrieve a :py:class:`starlark_tugger.FileContent` from a path in
-  :py:class:`starlark_tugger.FileManifest`. Combined with other existing methods,
-  this enables you to mutate entries within a :py:class:`starlark_tugger.FileManifest`.
+  :py:class:`starlark_tugger.FileManifest`.
+  The new :py:meth:`starlark_tugger.FileManifest.remove` method can be used
+  to remove a tracked path from a :py:class:`starlark_tugger.FileManifest`.
+  The new methods unlock the ability to mutate the contents of
+  :py:class:`starlark_tugger.FileManifest` instances.
 * Starlark now has a :py:class:`starlark_tugger.AppleUniversalBinary` type
   that can be used to construct *universal*/*fat*/*multi-architecture* Mach-O
   binaries, the binary executable format used by Apple operating systems.

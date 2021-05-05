@@ -298,6 +298,33 @@ impl FileManifestValue {
 
         Ok(Value::new(NoneType::None))
     }
+
+    /// FileManifest.remove(path) -> FileContent
+    pub fn remove(&mut self, path: String) -> ValueResult {
+        const LABEL: &str = "FileManifest.remove()";
+
+        let (path, filename) = error_context(LABEL, || {
+            let path = PathBuf::from(path);
+            let filename = path
+                .file_name()
+                .ok_or_else(|| {
+                    anyhow!("unable to resolve file name from path: {}", path.display())
+                })?
+                .to_string_lossy()
+                .to_string();
+
+            Ok((path, filename))
+        })?;
+
+        if let Some(entry) = self.manifest.remove(path) {
+            Ok(Value::new(FileContentValue {
+                content: entry,
+                filename,
+            }))
+        } else {
+            Ok(Value::new(NoneType::None))
+        }
+    }
 }
 
 starlark_module! { file_manifest_module =>
@@ -339,6 +366,11 @@ starlark_module! { file_manifest_module =>
     FileManifest.install(env env, call_stack cs, this, path: String, replace: bool = true) {
         let this = this.downcast_ref::<FileManifestValue>().unwrap();
         this.install(env, cs, path, replace)
+    }
+
+    FileManifest.remove(this, path: String) {
+        let mut this = this.downcast_mut::<FileManifestValue>().unwrap().unwrap();
+        this.remove(path)
     }
 }
 
@@ -507,6 +539,21 @@ mod tests {
             env.eval("m.get_file('file')")?.get_type(),
             FileContentValue::TYPE
         );
+
+        Ok(())
+    }
+
+    #[test]
+    fn remove() -> Result<()> {
+        let mut env = StarlarkEnvironment::new()?;
+
+        env.eval("m = FileManifest()")?;
+        env.eval("m.add_file(FileContent(filename = 'file', content = 'foo'))")?;
+        assert_eq!(
+            env.eval("m.remove('file')")?.get_type(),
+            FileContentValue::TYPE
+        );
+        assert_eq!(env.eval("m.remove('file')")?.get_type(), "NoneType");
 
         Ok(())
     }

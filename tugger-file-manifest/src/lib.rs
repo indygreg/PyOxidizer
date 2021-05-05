@@ -395,6 +395,11 @@ impl FileManifest {
         self.files.iter().map(|(k, v)| File::new(k, v.clone()))
     }
 
+    /// Remove an entry from this manifest.
+    pub fn remove(&mut self, path: impl AsRef<Path>) -> Option<FileEntry> {
+        self.files.remove(path.as_ref())
+    }
+
     /// Obtain entries in this manifest grouped by directory.
     ///
     /// The returned map has keys corresponding to the relative directory and
