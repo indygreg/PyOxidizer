@@ -108,7 +108,7 @@ fn main() {
             "".to_string(),
         )
     } else {
-        (pkg_version.clone(), format!("v{}", pkg_version))
+        (pkg_version.clone(), format!("pyoxidizer/{}", pkg_version))
     };
 
     println!("cargo:rustc-env=PYOXIDIZER_VERSION={}", pyoxidizer_version);
