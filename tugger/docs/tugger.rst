@@ -26,6 +26,7 @@ Tugger is designed to be a standalone project and doesn't require PyOxidizer.
 
    tugger_overview
    tugger_starlark
+   tugger_files
    tugger_code_signing
    tugger_wix
    tugger_history
