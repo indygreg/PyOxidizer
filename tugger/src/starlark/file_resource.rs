@@ -11,7 +11,7 @@ use {
         values::{
             error::{RuntimeError, ValueError},
             none::NoneType,
-            {Immutable, Mutable, TypedValue, Value, ValueResult},
+            {Mutable, TypedValue, Value, ValueResult},
         },
         {
             starlark_fun, starlark_module, starlark_parse_param_type, starlark_signature,
@@ -72,21 +72,6 @@ fn post_materialize_signing_checks(
     }
 
     Ok(())
-}
-
-// TODO merge this into `FileValue`?
-#[derive(Clone, Debug)]
-pub struct FileContentValue {
-    pub content: FileEntry,
-}
-
-impl TypedValue for FileContentValue {
-    type Holder = Immutable<FileContentValue>;
-    const TYPE: &'static str = "FileContent";
-
-    fn values_for_descendant_check_and_freeze(&self) -> Box<dyn Iterator<Item = Value>> {
-        Box::new(std::iter::empty())
-    }
 }
 
 #[derive(Clone, Debug)]

@@ -9,6 +9,7 @@ Tugger.
 */
 
 pub mod code_signing;
+pub mod file_content;
 pub mod file_resource;
 pub mod macos_application_bundle_builder;
 pub mod snapcraft;
