@@ -43,6 +43,12 @@ Backwards Compatibility Notes
   incompatible change, the old method weren't usable in prior versions
   of PyOxidizer because the :py:class:`starlark_tugger.FileContent` Starlark
   type couldn't be instantiated!
+* :py:class:`starlark_tugger.FileManifest` now performs path normalization and
+  checking on every insertion. Before, there were a few code paths that may have
+  skipped this step, causing *bad* paths to be inserted.
+* Tracked paths in :py:class:`starlark_tugger.FileManifest` should now have
+  Windows-style directory separators (``\``) normalized to UNIX style (``/``).
+
 
 Bug Fixes
 ^^^^^^^^^

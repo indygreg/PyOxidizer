@@ -231,6 +231,25 @@ impl From<std::path::StripPrefixError> for FileManifestError {
     }
 }
 
+/// Normalize a path or error on validation failure.
+///
+/// This is called before inserting paths into a [FileManifest].
+pub fn normalize_path(path: &Path) -> Result<PathBuf, FileManifestError> {
+    // Always store UNIX style directory separators.
+    let path_s = format!("{}", path.display()).replace('\\', "/");
+
+    if path_s.contains("..") {
+        return Err(FileManifestError::IllegalRelativePath(path_s));
+    }
+
+    // is_absolute() on Windows doesn't check for leading /.
+    if path_s.starts_with('/') || path.is_absolute() {
+        return Err(FileManifestError::IllegalAbsolutePath(path_s));
+    }
+
+    Ok(PathBuf::from(path_s))
+}
+
 /// Represents a collection of files.
 ///
 /// Files are keyed by their path. The file content is abstract and can be
@@ -264,7 +283,7 @@ impl FileManifest {
         let add_path = path.strip_prefix(strip_prefix)?;
 
         self.files
-            .insert(add_path.to_path_buf(), FileEntry::try_from(path)?);
+            .insert(normalize_path(add_path)?, FileEntry::try_from(path)?);
 
         Ok(())
     }
@@ -285,7 +304,7 @@ impl FileManifest {
         let add_path = path.strip_prefix(strip_prefix)?;
 
         let entry = FileEntry::try_from(path)?.to_memory()?;
-        self.files.insert(add_path.to_path_buf(), entry);
+        self.files.insert(normalize_path(add_path)?, entry);
 
         Ok(())
     }
@@ -298,19 +317,8 @@ impl FileManifest {
         path: impl AsRef<Path>,
         entry: impl Into<FileEntry>,
     ) -> Result<(), FileManifestError> {
-        let path = path.as_ref();
-        let path_s = path.display().to_string();
-
-        if path_s.contains("..") {
-            return Err(FileManifestError::IllegalRelativePath(path_s));
-        }
-
-        // is_absolute() on Windows doesn't check for leading /.
-        if path_s.starts_with('/') || path.is_absolute() {
-            return Err(FileManifestError::IllegalAbsolutePath(path_s));
-        }
-
-        self.files.insert(path.to_path_buf(), entry.into());
+        self.files
+            .insert(normalize_path(path.as_ref())?, entry.into());
 
         Ok(())
     }
