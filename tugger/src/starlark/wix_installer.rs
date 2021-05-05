@@ -253,7 +253,7 @@ impl WiXInstallerValue {
     }
 
     fn build(
-        &self,
+        &mut self,
         type_values: &TypeValues,
         call_stack: &mut CallStack,
         target: String,
@@ -267,6 +267,10 @@ impl WiXInstallerValue {
         let installer_path = output_path.join(&self.filename);
 
         error_context("WiXInstaller.build()", || {
+            self.inner
+                .add_files_manifest_wxs()
+                .context("generating install_files manifest wxs")?;
+
             self.inner
                 .build(context.logger(), &installer_path)
                 .context("building")
@@ -370,7 +374,7 @@ starlark_module! { wix_installer_module =>
     }
 
     WiXInstaller.build(env env, call_stack cs, this, target: String) {
-        let this = this.downcast_ref::<WiXInstallerValue>().unwrap();
+        let mut this = this.downcast_mut::<WiXInstallerValue>().unwrap().unwrap();
         this.build(env, cs, target)
     }
 

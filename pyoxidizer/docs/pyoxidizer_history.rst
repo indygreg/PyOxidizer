@@ -91,6 +91,14 @@ New Features
   to take multiple source binaries and combine them into a *universal* binary,
   all from Starlark.
 
+Other Relevant Changes
+^^^^^^^^^^^^^^^^^^^^^^
+
+* :py:meth:`starlark_tugger.WiXInstaller.build()` now automatically materializes
+  and builds a ``.wxs`` file containing fragments for files registered for
+  installation. Before, this Starlark type was not very usable without this file,
+  as WiX wouldn't pick up files that had been registered for install.
+
 .. _version_0_14_1:
 
 0.14.1
