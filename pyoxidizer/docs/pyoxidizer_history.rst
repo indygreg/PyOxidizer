@@ -55,6 +55,13 @@ New Features
   mutable attributes :py:attr:`starlark_tugger.FileContent.executable` and
   :py:attr:`starlark_tugger.FileContent.filename` to view and change instance
   state.
+* The new :py:meth:`starlark_tugger.FileManifest.add_file` method can be used
+  to add a :py:class:`starlark_tugger.FileContent` to a
+  :py:class:`starlark_tugger.FileManifest`. The method allows controlling
+  the destination path within the :py:class:`starlark_tugger.FileManifest`.
+  Combined with the introduction of :py:meth:`starlark_tugger.FileContent.__init__`,
+  it is now possible to add arbitrary file-based or string-based files
+  to a :py:class:`starlark_tugger.FileManifest`.
 
 .. _version_0_14_1:
 

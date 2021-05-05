@@ -20,6 +20,23 @@
         other manifest provides a path already in this manifest, its content
         will be replaced by what is in the other manifest.
 
+    .. py:method:: add_file(content: FileContent, path: Optional[str] = None, directory: Optional[str] = None)
+
+        Add a :py:class:`FileContent` instance to this manifest, optionally controlling
+        its path within the manifest.
+
+        If neither ``path`` nor ``directory`` are specified, the file will be
+        materialized in the root directory of the manifest with the filename
+        given by :py:attr:`FileContent.filename`.
+
+        If ``path`` is provided, it defines the exact path within the manifest
+        to use.
+
+        If ``directory`` is provided, the manifest path is effectively computed the
+        same as ``os.path.join(directory, content.filename)``.
+
+        An error occurs if both ``path`` and ``directory`` are non-``None``.
+
     .. py:method:: add_path(path: str, strip_prefix: str, force_read: bool = False)
 
         This method adds a file on the filesystem to the manifest.

@@ -3,7 +3,11 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    crate::starlark::code_signing::{handle_signable_event, SigningAction, SigningContext},
+    crate::starlark::{
+        code_signing::{handle_signable_event, SigningAction, SigningContext},
+        file_content::FileContentValue,
+    },
+    anyhow::anyhow,
     slog::warn,
     starlark::{
         environment::TypeValues,
@@ -19,7 +23,8 @@ use {
         },
     },
     starlark_dialect_build_targets::{
-        get_context_value, EnvironmentContext, ResolvedTarget, ResolvedTargetValue, RunMode,
+        get_context_value, optional_str_arg, EnvironmentContext, ResolvedTarget,
+        ResolvedTargetValue, RunMode,
     },
     std::path::{Path, PathBuf},
     tugger_code_signing::SigningDestination,
@@ -172,6 +177,42 @@ impl FileManifestValue {
         Ok(Value::new(NoneType::None))
     }
 
+    /// FileManifest.add_file(content, path = None, directory = None)
+    pub fn add_file(
+        &mut self,
+        content: FileContentValue,
+        path: Value,
+        directory: Value,
+    ) -> ValueResult {
+        const LABEL: &str = "FileManifest.add_file()";
+
+        let path = optional_str_arg("path", &path)?;
+        let directory = optional_str_arg("directory", &directory)?;
+
+        error_context(LABEL, || {
+            if path.is_some() && directory.is_some() {
+                return Err(anyhow!(
+                    "at most 1 of `path` and `directory` must be specified"
+                ));
+            }
+
+            let path = if let Some(path) = path {
+                PathBuf::from(path)
+            } else if let Some(directory) = directory {
+                PathBuf::from(directory).join(&content.filename)
+            } else {
+                PathBuf::from(&content.filename)
+            };
+
+            self.manifest
+                .add_file_entry(path, content.content.clone())?;
+
+            Ok(())
+        })?;
+
+        Ok(Value::new(NoneType::None))
+    }
+
     /// FileManifest.add_path(path, strip_prefix, force_read=False)
     pub fn add_path(
         &mut self,
@@ -243,6 +284,16 @@ starlark_module! { file_manifest_module =>
         this.add_manifest(other)
     }
 
+    FileManifest.add_file(
+        this,
+        content: FileContentValue,
+        path = NoneType::None,
+        directory = NoneType::None
+    ) {
+        let mut this = this.downcast_mut::<FileManifestValue>().unwrap().unwrap();
+        this.add_file(content, path, directory)
+    }
+
     FileManifest.add_path(this, path: String, strip_prefix: String, force_read: bool = false) {
         let mut this = this.downcast_mut::<FileManifestValue>().unwrap().unwrap();
         this.add_path(path, strip_prefix, force_read)
@@ -262,8 +313,11 @@ starlark_module! { file_manifest_module =>
 #[cfg(test)]
 mod tests {
     use {
-        super::*, crate::starlark::testutil::*, anyhow::Result, tugger_common::testutil::*,
-        tugger_file_manifest::FileEntry,
+        super::*,
+        crate::starlark::testutil::*,
+        anyhow::Result,
+        tugger_common::testutil::*,
+        tugger_file_manifest::{FileData, FileEntry},
     };
 
     #[test]
@@ -326,6 +380,84 @@ mod tests {
                 executable: false,
                 data: vec![42, 42].into(),
             })
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn add_file() -> Result<()> {
+        let mut env = StarlarkEnvironment::new()?;
+
+        env.eval("c = FileContent(filename = 'file', content = 'foo')")?;
+        env.eval("m = FileManifest()")?;
+        env.eval("m.add_file(c)")?;
+
+        let raw = env.eval("m")?;
+        let manifest = raw.downcast_ref::<FileManifestValue>().unwrap();
+
+        let entries = manifest.manifest.iter_entries().collect::<Vec<_>>();
+        assert_eq!(
+            entries,
+            vec![(
+                &PathBuf::from("file"),
+                &FileEntry {
+                    data: FileData::from(b"foo".as_ref()),
+                    executable: false
+                }
+            )]
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn add_file_path() -> Result<()> {
+        let mut env = StarlarkEnvironment::new()?;
+
+        env.eval("c = FileContent(filename = 'file', content = 'foo')")?;
+        env.eval("m = FileManifest()")?;
+        env.eval("m.add_file(c, path = 'foo/bar')")?;
+
+        let raw = env.eval("m")?;
+        let manifest = raw.downcast_ref::<FileManifestValue>().unwrap();
+
+        let entries = manifest.manifest.iter_entries().collect::<Vec<_>>();
+        assert_eq!(
+            entries,
+            vec![(
+                &PathBuf::from("foo/bar"),
+                &FileEntry {
+                    data: FileData::from(b"foo".as_ref()),
+                    executable: false
+                }
+            )]
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn add_file_directory() -> Result<()> {
+        let mut env = StarlarkEnvironment::new()?;
+
+        env.eval("c = FileContent(filename = 'file', content = 'foo')")?;
+        env.eval("m = FileManifest()")?;
+        env.eval("m.add_file(c, directory = 'dir')")?;
+
+        let raw = env.eval("m")?;
+        let manifest = raw.downcast_ref::<FileManifestValue>().unwrap();
+
+        let entries = manifest.manifest.iter_entries().collect::<Vec<_>>();
+        assert_eq!(
+            entries,
+            vec![(
+                &PathBuf::from("dir/file"),
+                &FileEntry {
+                    data: FileData::from(b"foo".as_ref()),
+                    executable: false
+                }
+            )]
         );
 
         Ok(())
