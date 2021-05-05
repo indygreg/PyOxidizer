@@ -108,12 +108,8 @@ pub fn component_group_id(prefix: &str, path: &Path) -> String {
 /// to materialize all files defined by this manifest/wxs file. A common
 /// value is `INSTALLDIR` or `APPLICATIONFOLDER`.
 ///
-/// `directory_id_prefix` defines a string prefix for `<DirectoryRef Id="..."`
-/// values. The IDs will have the form `<directory_id_prefix>.<relative_directory>`,
-/// with some normalization (e.g. `/` is normalized to `.` and `-` to `_`).
-///
-/// `component_id_prefix` defines a string prefix for `<Component Id="..."`
-/// values.
+/// `id_prefix` defines a string prefix for identifiers (`Id` attributes), notably
+/// in `Directory` and `Component` XML elements.
 pub fn write_file_manifest_to_wix<W: Write, P: AsRef<Path>>(
     writer: &mut EventWriter<W>,
     manifest: &FileManifest,
