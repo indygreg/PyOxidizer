@@ -78,6 +78,10 @@
         files will be assessed for code signing with the ``file-manifest-install``
         *action*.
 
+    .. py:method:: paths() -> list[str]
+
+        Obtain all paths currently tracked by this instance.
+
     .. py:method:: remove(path: str) -> Optional[FileContent]
 
         Remove the entry in this manifest at ``path``, returning a :py:class:`FileContent`

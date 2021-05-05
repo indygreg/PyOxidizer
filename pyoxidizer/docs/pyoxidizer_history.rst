@@ -62,6 +62,9 @@ New Features
   Combined with the introduction of :py:meth:`starlark_tugger.FileContent.__init__`,
   it is now possible to add arbitrary file-based or string-based files
   to a :py:class:`starlark_tugger.FileManifest`.
+* The new :py:meth:`starlark_tugger.FileManifest.paths` method can be used
+  to retrieve the paths currently tracked by a
+  :py:class:`starlark_tugger.FileManifest`.
 * The new :py:meth:`starlark_tugger.FileManifest.get_file` method can be
   used to retrieve a :py:class:`starlark_tugger.FileContent` from a path in
   :py:class:`starlark_tugger.FileManifest`.

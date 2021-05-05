@@ -299,6 +299,16 @@ impl FileManifestValue {
         Ok(Value::new(NoneType::None))
     }
 
+    pub fn paths(&self) -> ValueResult {
+        let paths = self
+            .manifest
+            .iter_entries()
+            .map(|(path, _)| Value::from(format!("{}", path.display())))
+            .collect::<Vec<_>>();
+
+        Ok(Value::from(paths))
+    }
+
     /// FileManifest.remove(path) -> FileContent
     pub fn remove(&mut self, path: String) -> ValueResult {
         const LABEL: &str = "FileManifest.remove()";
@@ -366,6 +376,11 @@ starlark_module! { file_manifest_module =>
     FileManifest.install(env env, call_stack cs, this, path: String, replace: bool = true) {
         let this = this.downcast_ref::<FileManifestValue>().unwrap();
         this.install(env, cs, path, replace)
+    }
+
+    FileManifest.paths(this) {
+        let this = this.downcast_ref::<FileManifestValue>().unwrap();
+        this.paths()
     }
 
     FileManifest.remove(this, path: String) {
@@ -539,6 +554,25 @@ mod tests {
             env.eval("m.get_file('file')")?.get_type(),
             FileContentValue::TYPE
         );
+
+        Ok(())
+    }
+
+    #[test]
+    fn paths() -> Result<()> {
+        let mut env = StarlarkEnvironment::new()?;
+
+        env.eval("m = FileManifest()")?;
+        let v = env.eval("m.paths()")?;
+        assert_eq!(v.get_type(), "list");
+        assert_eq!(v.iter().unwrap().iter().count(), 0);
+
+        env.eval("m.add_file(FileContent(filename = 'file', content = 'foo'))")?;
+        let v = env.eval("m.paths()")?;
+
+        let values = v.iter().unwrap().to_vec();
+        assert_eq!(values.len(), 1);
+        assert_eq!(values[0].to_string(), "file");
 
         Ok(())
     }
