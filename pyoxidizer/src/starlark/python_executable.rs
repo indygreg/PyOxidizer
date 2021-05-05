@@ -52,7 +52,7 @@ use {
     },
     tugger::starlark::{
         code_signing::{handle_signable_event, SigningAction, SigningContext},
-        file_resource::FileManifestValue,
+        file_manifest::FileManifestValue,
         wix_bundle_builder::WiXBundleBuilderValue,
         wix_msi_builder::WiXMsiBuilderValue,
     },

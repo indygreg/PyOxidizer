@@ -8,7 +8,7 @@ use {
             handle_file_manifest_signable_events, handle_signable_event, SigningAction,
             SigningContext,
         },
-        file_resource::FileManifestValue,
+        file_manifest::FileManifestValue,
         wix_msi_builder::WiXMsiBuilderValue,
     },
     anyhow::{Context, Result},

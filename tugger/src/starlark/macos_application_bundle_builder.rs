@@ -6,7 +6,7 @@ use {
     crate::starlark::{
         code_signing::{handle_signable_event, SigningAction, SigningContext},
         file_content::FileContentValue,
-        file_resource::FileManifestValue,
+        file_manifest::FileManifestValue,
     },
     anyhow::{anyhow, Context},
     starlark::{

@@ -30,7 +30,7 @@ use {
         },
     },
     std::path::Path,
-    tugger::starlark::file_resource::FileManifestValue,
+    tugger::starlark::file_manifest::FileManifestValue,
     tugger_file_manifest::{FileEntry, FileManifest},
 };
 

@@ -3,7 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    crate::starlark::file_resource::FileManifestValue,
+    crate::starlark::file_manifest::FileManifestValue,
     starlark::{
         environment::TypeValues,
         values::{
