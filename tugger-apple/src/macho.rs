@@ -4,7 +4,10 @@
 
 use {
     anyhow::Result,
-    goblin::mach::fat::{FatArch, FAT_MAGIC, SIZEOF_FAT_ARCH, SIZEOF_FAT_HEADER},
+    goblin::mach::{
+        fat::{FatArch, FAT_MAGIC, SIZEOF_FAT_ARCH, SIZEOF_FAT_HEADER},
+        Mach,
+    },
     scroll::{IOwrite, Pwrite},
     std::io::Write,
     thiserror::Error,
@@ -20,6 +23,41 @@ pub enum UniversalMachOError {
 
     #[error("scroll error: {0}")]
     Scroll(#[from] scroll::Error),
+}
+
+/// Interface for constructing a universal Mach-O binary.
+#[derive(Clone, Default)]
+pub struct UniversalBinaryBuilder {
+    binaries: Vec<Vec<u8>>,
+}
+
+impl UniversalBinaryBuilder {
+    pub fn add_binary(&mut self, data: impl AsRef<[u8]>) -> Result<usize, UniversalMachOError> {
+        let data = data.as_ref();
+
+        match Mach::parse(data)? {
+            Mach::Binary(_) => {
+                self.binaries.push(data.to_vec());
+                Ok(1)
+            }
+            Mach::Fat(multiarch) => {
+                for arch in multiarch.iter_arches() {
+                    let arch = arch?;
+
+                    let data =
+                        &data[arch.offset as usize..arch.offset as usize + arch.size as usize];
+                    self.binaries.push(data.to_vec());
+                }
+
+                Ok(multiarch.narches)
+            }
+        }
+    }
+
+    /// Write a universal Mach-O to the given writer.
+    pub fn write(&self, writer: &mut impl Write) -> Result<(), UniversalMachOError> {
+        create_universal_macho(writer, self.binaries.iter().map(|x| x.as_slice()))
+    }
 }
 
 /// Create a universal mach-o binary from existing mach-o binaries.
