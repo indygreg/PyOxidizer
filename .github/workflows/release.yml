@@ -1,3 +1,11 @@
+# PYOXIDIZER_BUILD_FORCE_GIT_SOURCE is set throughout this file to prevent
+# pyoxidizer's build.rs from writing the filesystem path to the Git checkout
+# in the built binary. With the filesystem path embedded in the binary,
+# pyoxidizer will probe for that path at run-time and will attempt to use
+# it for the location of the pyembed crate. With the filesystem path not
+# set, pyoxidizer will use the canonical github.com repository for any Git
+# references.
+
 on:
   push:
   pull_request:
@@ -39,6 +47,7 @@ jobs:
 
       - name: Build pyoxidizer Executable
         env:
+          PYOXIDIZER_BUILD_FORCE_GIT_SOURCE: '1'
           RUSTC_WRAPPER: sccache
         run: |
           rustc --version
@@ -91,6 +100,7 @@ jobs:
 
       - name: Build pyoxidizer Executable
         env:
+          PYOXIDIZER_BUILD_FORCE_GIT_SOURCE: '1'
           RUSTC_WRAPPER: sccache
         run: |
           case "${{ matrix.target_triple }}" in
@@ -223,6 +233,7 @@ jobs:
 
       - name: Build Executable
         env:
+          PYOXIDIZER_BUILD_FORCE_GIT_SOURCE: '1'
           RUSTC_WRAPPER: sccache
         run: |
           rustc --version
@@ -288,12 +299,15 @@ jobs:
       - name: Install maturin
         run: pip install maturin==0.10.4
       - name: Build wheels - x86_64
+        env:
+          PYOXIDIZER_BUILD_FORCE_GIT_SOURCE: '1'
         run: |
           maturin build -m pyoxidizer/Cargo.toml -b bin --target x86_64-apple-darwin --release --out dist --no-sdist
           pip install pyoxidizer --no-index --find-links dist --force-reinstall
       - name: Build wheels - universal2
         env:
           MACOSX_DEPLOYMENT_TARGET: '10.9'
+          PYOXIDIZER_BUILD_FORCE_GIT_SOURCE: '1'
           SDKROOT: '/Applications/Xcode_12.4.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX11.1.sdk'
         run: |
           maturin build -m pyoxidizer/Cargo.toml -b bin --release --universal2 --out dist --no-sdist
@@ -330,6 +344,8 @@ jobs:
       - name: Install maturin
         run: pip install maturin==0.10.4
       - name: Build wheels
+        env:
+          PYOXIDIZER_BUILD_FORCE_GIT_SOURCE: '1'
         run: |
           maturin build -m pyoxidizer/Cargo.toml -b bin --release --out dist --no-sdist --target ${{ matrix.platform.target }}
           pip install pyoxidizer --no-index --find-links dist --force-reinstall
@@ -385,6 +401,7 @@ jobs:
 
       - name: Build Wheels
         env:
+          PYOXIDIZER_BUILD_FORCE_GIT_SOURCE: '1'
           RUSTC_WRAPPER: sccache
         run: |
           rustc --version
@@ -416,6 +433,8 @@ jobs:
         with:
           fetch-depth: 0
       - name: Build Wheels
+        env:
+          PYOXIDIZER_BUILD_FORCE_GIT_SOURCE: '1'
         run: |
           apt-get update
           apt-get install -y python3-pip
