@@ -49,6 +49,12 @@ New Features
 * It is now possible to add code signatures to Mach-O binaries that don't
   have an existing signature. Previously, it was only possible to sign
   binaries that had an existing signature.
+* The :py:class:`starlark_tugger.FileContent` Starlark type can now be
+  constructed from filesystem paths or string content via
+  :py:meth:`starlark_tugger.FileContent.__init__`. The type also exposes
+  mutable attributes :py:attr:`starlark_tugger.FileContent.executable` and
+  :py:attr:`starlark_tugger.FileContent.filename` to view and change instance
+  state.
 
 .. _version_0_14_1:
 

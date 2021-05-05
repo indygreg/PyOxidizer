@@ -126,6 +126,7 @@ pub fn register_starlark_dialect(
     type_values: &mut TypeValues,
 ) -> Result<(), EnvironmentError> {
     code_signing::code_signing_module(env, type_values);
+    file_content::file_content_module(env, type_values);
     file_manifest::file_manifest_module(env, type_values);
     file_resource::file_resource_module(env, type_values);
     macos_application_bundle_builder::macos_application_bundle_builder_module(env, type_values);
