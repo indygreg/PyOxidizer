@@ -76,9 +76,12 @@ Pre-Built Installers and Executables
 PyOxidizer provides pre-built installers and executables as part of its release
 process. The following should be made available:
 
+* Linux x86-64 statically linked binary.
+* macOS universal binary.
 * Windows x86 (32-bit) MSI installer.
 * Windows amd64 (64-bit) MSI installer.
 * Windows universal (x86+amd64) EXE installer.
+* Python wheels.
 
 These installers can generally be found at
 https://github.com/indygreg/PyOxidizer/releases/latest.
@@ -92,6 +95,18 @@ the release list until you find a PyOxidizer release.
 
 If pre-built artifacts are not available for your machine, you will need to
 compile PyOxidizer from source code.
+
+Python Wheels
+-------------
+
+PyOxidizer is made available as a binary Python wheel (``.whl``) and
+releases are published on PyPI. So you can install PyOxidizer like any
+other Python package::
+
+   $ python3 -m pip install pyoxidizer
+
+   # To upgrade an existing install
+   $ python3 -m pip install --upgrade pyoxidizer
 
 .. _installing_pyoxidizer:
 

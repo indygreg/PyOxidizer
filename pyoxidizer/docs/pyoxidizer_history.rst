@@ -71,6 +71,8 @@ New Features
 
 * Default Python distributions upgraded from 3.8.9 and 3.9.4 to 3.8.10 and
   3.9.5.
+* PyOxidizer releases are now published as pre-built binary wheels to PyPI and
+  can be installed via ``pip install pyoxidizer``.
 * Apple code signatures now include a time-stamp token issued by Apple's
   time-stamp server by default. Presence of the time-stamp token in code
   signatures is a requirement to notarize applications.
