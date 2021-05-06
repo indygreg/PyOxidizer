@@ -302,6 +302,7 @@ fn reflect_package_version_change(
     root: &Path,
     package: &str,
     version: &semver::Version,
+    pyembed_force_path: bool,
 ) -> Result<()> {
     // For all version changes, ensure the new project Cargo.lock content stays up
     // to date.
@@ -311,7 +312,7 @@ fn reflect_package_version_change(
         .join(CARGO_LOCKFILE_NAME);
 
     let lock_current = std::fs::read_to_string(&cargo_lock_path)?;
-    let lock_wanted = generate_new_project_cargo_lock(root)?;
+    let lock_wanted = generate_new_project_cargo_lock(root, pyembed_force_path)?;
 
     if lock_current != lock_wanted {
         println!("updating {} to reflect changes", cargo_lock_path.display());
@@ -643,7 +644,10 @@ fn release_package(
         // We need to ensure Cargo.lock reflects any version changes.
         run_cargo_update_package(root, package)?;
 
-        reflect_package_version_change(root, package, &release_version)?;
+        // Force pyembed to use a path = reference in the Cargo.lock at this point because
+        // the new version may not exist on the registry yet. We'll amend this down below,
+        // after publishing.
+        reflect_package_version_change(root, package, &release_version, package == "pyembed")?;
 
         // We need to perform a Git commit to ensure the working directory is clean, otherwise
         // Cargo complains. We could run with --allow-dirty. But that exposes us to other dangers,
@@ -686,6 +690,11 @@ fn release_package(
             println!("{}: sleeping to wait for crates index to update", package);
             std::thread::sleep(std::time::Duration::from_secs(30));
         };
+
+        if package == "pyembed" {
+            println!("pyembed: updating pyembed publish in new project Cargo.lock");
+            reflect_package_version_change(root, package, &release_version, false)?;
+        }
 
         println!(
             "{}: checking workspace packages for package location updates",
@@ -848,7 +857,7 @@ fn update_package_version(
     );
     run_cmd(package, &root, "cargo", vec!["update"], vec![]).context("running cargo update")?;
 
-    reflect_package_version_change(root, package, &next_version)?;
+    reflect_package_version_change(root, package, &next_version, false)?;
 
     println!("{}: creating Git commit to reflect version bump", package);
     run_cmd(
@@ -1197,7 +1206,7 @@ fn generate_pyembed_license(repo_root: &Path) -> Result<String> {
     Ok(text)
 }
 
-fn generate_new_project_cargo_lock(repo_root: &Path) -> Result<String> {
+fn generate_new_project_cargo_lock(repo_root: &Path, pyembed_force_path: bool) -> Result<String> {
     // The lock file is derived from a new Rust project, similarly to the one that
     // `pyoxidizer init-rust-project` generates. Ideally we'd actually call that command.
     // However, there's a bit of a chicken and egg problem, especially as we call this
@@ -1222,7 +1231,7 @@ fn generate_new_project_cargo_lock(repo_root: &Path) -> Result<String> {
     // For pre-releases, refer to pyembed by its repo path, as pre-releases aren't
     // published. Otherwise, leave as-is: Cargo.lock should pick up the version published
     // on the registry and embed that metadata.
-    let pyembed_entry = if pyembed_version.ends_with("-pre") {
+    let pyembed_entry = if pyembed_version.ends_with("-pre") || pyembed_force_path {
         format!(
             "{}path = \"{}\"\n",
             pyembed_entry,
@@ -1286,7 +1295,7 @@ fn ensure_new_project_cargo_lock_current(repo_root: &Path) -> Result<()> {
         .join(CARGO_LOCKFILE_NAME);
 
     let file_text = std::fs::read_to_string(&path)?;
-    let wanted_text = generate_new_project_cargo_lock(repo_root)?;
+    let wanted_text = generate_new_project_cargo_lock(repo_root, false)?;
 
     if file_text == wanted_text {
         Ok(())
@@ -1316,7 +1325,7 @@ fn ensure_pyembed_license_current(repo_root: &Path) -> Result<()> {
 }
 
 fn command_generate_new_project_cargo_lock(repo_root: &Path, _args: &ArgMatches) -> Result<()> {
-    print!("{}", generate_new_project_cargo_lock(repo_root)?);
+    print!("{}", generate_new_project_cargo_lock(repo_root, false)?);
 
     Ok(())
 }
