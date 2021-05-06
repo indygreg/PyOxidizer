@@ -42,8 +42,8 @@ path = "../cryptographic-message-syntax"
 version = "0.4.0-pre"
 
 [dependencies.tugger-apple]
-# path = "../tugger-apple"
-version = "0.3.0"
+path = "../tugger-apple"
+version = "0.4.0-pre"
 
 [dependencies.tugger-apple-bundle]
 path = "../tugger-apple-bundle"
