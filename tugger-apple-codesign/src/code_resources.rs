@@ -733,8 +733,7 @@ impl CodeResources {
     /// This will digest the content specified and record that digest in the files list.
     ///
     /// To seal a symlink, call [CodeResources::seal_symlink] instead. If the file
-    /// is a Mach-O file, call [CodeResources::seal_macho] or [CodeResources::seal_macho_file]
-    /// instead.
+    /// is a Mach-O file, call [CodeResources::seal_macho] instead.
     pub fn seal_regular_file(
         &mut self,
         path: impl ToString,

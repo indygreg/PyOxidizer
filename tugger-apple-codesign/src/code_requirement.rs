@@ -225,7 +225,7 @@ impl TryFrom<u32> for RequirementOpCode {
 impl RequirementOpCode {
     /// Parse the payload of an opcode.
     ///
-    /// On successful parse, returns an [ExpressionElement] and remaining data in
+    /// On successful parse, returns an [CodeRequirementExpression] and remaining data in
     /// the input slice.
     pub fn parse_payload<'a>(
         &self,

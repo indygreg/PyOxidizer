@@ -691,9 +691,9 @@ pub trait AppleCertificate: Sized {
 
     /// Attempt to resolve the certificate issuer chain back to [AppleCertificate].
     ///
-    /// This is a glorified wrapper around [X509Certificate::resolve_signing_chain]
+    /// This is a glorified wrapper around [CapturedX509Certificate::resolve_signing_chain]
     /// that filters matches against certificates in our known set of Apple
-    /// certificates and maps them back to our [AppleCertificate] Rust enumeration.
+    /// certificates and maps them back to our [KnownCertificate] Rust enumeration.
     ///
     /// False negatives (read: missing certificates) can be encountered if
     /// we don't know about an Apple CA certificate.

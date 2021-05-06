@@ -462,7 +462,7 @@ impl<'key> SigningSettings<'key> {
 
     /// Set the designated requirement expression for a Mach-O binary given serialized bytes.
     ///
-    /// This is like [SigningSettings::designated_requirement_expression] except the
+    /// This is like [SigningSettings::set_designated_requirement_expression] except the
     /// designated requirement expression is given as serialized bytes. The bytes passed are
     /// the value that would be produced by compiling a code requirement expression via
     /// `csreq -b`.

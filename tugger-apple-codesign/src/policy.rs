@@ -131,7 +131,8 @@ static POLICY_NOTARIZED_INSTALLER: Lazy<CodeRequirementExpression<'static>> = La
 /// * `developer-id-notarized-installer`
 pub enum ExecutionPolicy {
     /// Code is signed by a certificate authorized for signing Mac applications or
-    /// installers and that certificate was issued by [KnownAppleCertificate::DeveloperId].
+    /// installers and that certificate was issued by
+    /// [crate::apple_certificates::KnownCertificate::DeveloperId].
     ///
     /// This is the policy that applies when you get a `Developer ID Application` or
     /// `Developer ID Installer` certificate from Apple.

@@ -20,8 +20,8 @@
 //! This crate can:
 //!
 //! * Find code signature data embedded in Mach-O binaries (both single and
-//!   multi-arch/fat/universal binaries). (See [find_signature_data],
-//!   [parse_signature_data].)
+//!   multi-arch/fat/universal binaries). (See [AppleSignable] trait and its
+//!   methods.)
 //! * Deeply parse code signature data into Rust structs. (See
 //!   [EmbeddedSignature], [BlobData], and e.g. [CodeDirectoryBlob].
 //! * Parse and verify the RFC 5652 Cryptographic Message Syntax (CMS)
@@ -31,7 +31,7 @@
 //!   developed in the same repository as this crate.)
 //! * Generate new embedded signature data, including cryptographically
 //!   signing that data using any signing key and X.509 certificate chain
-//!   you provide. (See [MachOSigner] and [MachOSignatureBuilder].)
+//!   you provide. (See [MachOSigner] and [BundleSigner].)
 //! * Writing a new Mach-O file containing new signature data. (See
 //!   [MachOSigner].)
 //! * Parse `CodeResources` XML plist files defining information on nested/signed
@@ -83,9 +83,11 @@
 //! The [MachOSigner] type is your gateway to how code signing
 //! is performed.
 //!
-//! [find_signature_data] and [parse_signature_data] are useful for
-//! finding and then parsing signature data into an [EmbeddedSignature] instance for
-//! examination.
+//! The [AppleSignable] trait extends the [goblin::mach::MachO] type with code
+//! signing functionality.
+//!
+//! The [EmbeddedSignature] type describes existing code signatures on Mach-O
+//! binaries.
 //!
 //! If you'd like to learn about the technical underpinnings of code signing on Apple
 //! platforms, see [specification].

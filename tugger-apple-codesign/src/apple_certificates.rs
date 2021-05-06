@@ -171,7 +171,7 @@ static KNOWN_ROOTS: Lazy<Vec<&CapturedX509Certificate>> = Lazy::new(|| {
 /// https://www.apple.com/certificateauthority/.
 ///
 /// This enumeration defines all the ones we know about. Instances can
-/// be dereferenced into concrete [AppleCertificate] to get at the underlying
+/// be dereferenced into concrete [CapturedX509Certificate] to get at the underlying
 /// certificate and access its metadata.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum KnownCertificate {
@@ -351,7 +351,7 @@ impl TryFrom<&CapturedX509Certificate> for KnownCertificate {
 }
 
 impl KnownCertificate {
-    /// Obtain a slice of all known [AppleCertificate].
+    /// Obtain a slice of all known [KnownCertificate].
     ///
     /// If you want to iterate over all certificates and find one, you can use
     /// this.

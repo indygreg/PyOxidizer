@@ -128,7 +128,7 @@ impl BundleSigner {
 /// bundle's main executable.
 ///
 /// This contains enough metadata to construct references to the file/bundle
-/// in [CodeResources] files.
+/// in [crate::code_resources::CodeResources] files.
 pub struct SignedMachOInfo {
     /// Raw data constituting the code directory blob.
     ///
@@ -137,7 +137,8 @@ pub struct SignedMachOInfo {
 
     /// Designated code requirements string.
     ///
-    /// Typically pccupies a `<key>requirement</key>` in a [CodeResources] file.
+    /// Typically pccupies a `<key>requirement</key>` in a
+    /// [crate::code_resources::CodeResources] file.
     pub designated_code_requirement: Option<String>,
 }
 
@@ -195,7 +196,8 @@ pub trait BundleFileHandler {
 
     /// Sign a Mach-O file and ensure its new content is installed.
     ///
-    /// Returns Mach-O metadata which will be recorded in [CodeResources].
+    /// Returns Mach-O metadata which will be recorded in
+    /// [crate::code_resources::CodeResources].
     fn sign_and_install_macho(
         &self,
         log: &Logger,
