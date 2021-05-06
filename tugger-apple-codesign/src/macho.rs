@@ -1340,11 +1340,8 @@ impl<'a> AppleSignable for MachO<'a> {
     fn code_signature_linkedit_end_offset(&self) -> Option<u32> {
         let start_offset = self.code_signature_linkedit_start_offset()?;
 
-        if let Some(command) = self.code_signature_load_command() {
-            Some(start_offset + command.datasize)
-        } else {
-            None
-        }
+        self.code_signature_load_command()
+            .map(|command| start_offset + command.datasize)
     }
 
     fn code_limit_binary_offset(&self) -> Result<u64, AppleCodesignError> {

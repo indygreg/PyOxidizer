@@ -396,11 +396,9 @@ fn print_signed_data(
     );
 
     let content = if let Some(v) = signed_data.signed_content() {
-        Some(v.clone())
-    } else if let Some(v) = external_content.as_ref() {
-        Some(v.as_ref())
+        Some(v)
     } else {
-        None
+        external_content.as_ref().map(|v| v.as_ref())
     };
 
     if let Some(content) = content {

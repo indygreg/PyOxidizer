@@ -654,11 +654,10 @@ impl<'data> MachOSigner<'data> {
             Some(team_name) => Some(Cow::Owned(team_name.to_string())),
             None => {
                 if let Some(previous_cd) = &previous_cd {
-                    if let Some(name) = &previous_cd.team_name {
-                        Some(Cow::Owned(name.clone().into_owned()))
-                    } else {
-                        None
-                    }
+                    previous_cd
+                        .team_name
+                        .as_ref()
+                        .map(|name| Cow::Owned(name.clone().into_owned()))
                 } else {
                     None
                 }

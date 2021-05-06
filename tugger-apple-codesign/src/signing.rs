@@ -665,10 +665,9 @@ impl<'key> SigningSettings<'key> {
             SettingsScope::Path(path) => {
                 if path == main_path {
                     Some(SettingsScope::Main)
-                } else if let Some(path) = path.strip_prefix(&prefix) {
-                    Some(SettingsScope::Path(path.to_string()))
                 } else {
-                    None
+                    path.strip_prefix(&prefix)
+                        .map(|path| SettingsScope::Path(path.to_string()))
                 }
             }
             SettingsScope::MultiArchIndex(index) => Some(SettingsScope::MultiArchIndex(index)),
@@ -678,22 +677,17 @@ impl<'key> SigningSettings<'key> {
             SettingsScope::PathMultiArchIndex(path, index) => {
                 if path == main_path {
                     Some(SettingsScope::MultiArchIndex(index))
-                } else if let Some(path) = path.strip_prefix(&prefix) {
-                    Some(SettingsScope::PathMultiArchIndex(path.to_string(), index))
                 } else {
-                    None
+                    path.strip_prefix(&prefix)
+                        .map(|path| SettingsScope::PathMultiArchIndex(path.to_string(), index))
                 }
             }
             SettingsScope::PathMultiArchCpuType(path, cpu_type) => {
                 if path == main_path {
                     Some(SettingsScope::MultiArchCpuType(cpu_type))
-                } else if let Some(path) = path.strip_prefix(&prefix) {
-                    Some(SettingsScope::PathMultiArchCpuType(
-                        path.to_string(),
-                        cpu_type,
-                    ))
                 } else {
-                    None
+                    path.strip_prefix(&prefix)
+                        .map(|path| SettingsScope::PathMultiArchCpuType(path.to_string(), cpu_type))
                 }
             }
         })
@@ -713,85 +707,43 @@ impl<'key> SigningSettings<'key> {
                 .identifiers
                 .clone()
                 .into_iter()
-                .filter_map(|(key, value)| {
-                    if let Some(key) = key_map(key) {
-                        Some((key, value))
-                    } else {
-                        None
-                    }
-                })
+                .filter_map(|(key, value)| key_map(key).map(|key| (key, value)))
                 .collect::<BTreeMap<_, _>>(),
             entitlements: self
                 .entitlements
                 .clone()
                 .into_iter()
-                .filter_map(|(key, value)| {
-                    if let Some(key) = key_map(key) {
-                        Some((key, value))
-                    } else {
-                        None
-                    }
-                })
+                .filter_map(|(key, value)| key_map(key).map(|key| (key, value)))
                 .collect::<BTreeMap<_, _>>(),
             designated_requirement: self
                 .designated_requirement
                 .clone()
                 .into_iter()
-                .filter_map(|(key, value)| {
-                    if let Some(key) = key_map(key) {
-                        Some((key, value))
-                    } else {
-                        None
-                    }
-                })
+                .filter_map(|(key, value)| key_map(key).map(|key| (key, value)))
                 .collect::<BTreeMap<_, _>>(),
             code_signature_flags: self
                 .code_signature_flags
                 .clone()
                 .into_iter()
-                .filter_map(|(key, value)| {
-                    if let Some(key) = key_map(key) {
-                        Some((key, value))
-                    } else {
-                        None
-                    }
-                })
+                .filter_map(|(key, value)| key_map(key).map(|key| (key, value)))
                 .collect::<BTreeMap<_, _>>(),
             executable_segment_flags: self
                 .executable_segment_flags
                 .clone()
                 .into_iter()
-                .filter_map(|(key, value)| {
-                    if let Some(key) = key_map(key) {
-                        Some((key, value))
-                    } else {
-                        None
-                    }
-                })
+                .filter_map(|(key, value)| key_map(key).map(|key| (key, value)))
                 .collect::<BTreeMap<_, _>>(),
             info_plist_data: self
                 .info_plist_data
                 .clone()
                 .into_iter()
-                .filter_map(|(key, value)| {
-                    if let Some(key) = key_map(key) {
-                        Some((key, value))
-                    } else {
-                        None
-                    }
-                })
+                .filter_map(|(key, value)| key_map(key).map(|key| (key, value)))
                 .collect::<BTreeMap<_, _>>(),
             code_resources_data: self
                 .code_resources_data
                 .clone()
                 .into_iter()
-                .filter_map(|(key, value)| {
-                    if let Some(key) = key_map(key) {
-                        Some((key, value))
-                    } else {
-                        None
-                    }
-                })
+                .filter_map(|(key, value)| key_map(key).map(|key| (key, value)))
                 .collect::<BTreeMap<_, _>>(),
         }
     }
