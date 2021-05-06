@@ -67,8 +67,8 @@ pub static PYTHON_DISTRIBUTIONS: Lazy<PythonDistributionCollection> = Lazy::new(
         PythonDistributionRecord {
             python_major_minor_version: "3.8".to_string(),
             location: PythonDistributionLocation::Url {
-                url: "https://github.com/indygreg/python-build-standalone/releases/download/20210415/cpython-3.8.9-x86_64-unknown-linux-gnu-pgo-20210414T1515.tar.zst".to_string(),
-                sha256: "70e269473c12f0758ae9d95f6e7ca94de561f4f87cbb304adaaf99297d3a7b5d".to_string(),
+                url: "https://github.com/indygreg/python-build-standalone/releases/download/20210506/cpython-3.8.10-x86_64-unknown-linux-gnu-pgo-20210506T0943.tar.zst".to_string(),
+                sha256: "4ec5e5947059b7e1bd5d754711bca62ae26ff6dbebbd2671fae250f94169fcee".to_string(),
             },
             target_triple: "x86_64-unknown-linux-gnu".to_string(),
             supports_prebuilt_extension_modules: true,
@@ -76,8 +76,8 @@ pub static PYTHON_DISTRIBUTIONS: Lazy<PythonDistributionCollection> = Lazy::new(
         PythonDistributionRecord {
             python_major_minor_version: "3.9".to_string(),
             location: PythonDistributionLocation::Url {
-                url: "https://github.com/indygreg/python-build-standalone/releases/download/20210415/cpython-3.9.4-x86_64-unknown-linux-gnu-pgo-20210414T1515.tar.zst".to_string(),
-                sha256: "60fae850376d18b1282cd76589a4580c7b2bbf45fb263315e43a4ffb35729a19".to_string(),
+                url: "https://github.com/indygreg/python-build-standalone/releases/download/20210506/cpython-3.9.5-x86_64-unknown-linux-gnu-pgo-20210506T0943.tar.zst".to_string(),
+                sha256: "be3f8b6e72bad652625c1129158ad553067891bac8c31a53fc0ef5702f7c0eb7".to_string(),
             },
             target_triple: "x86_64-unknown-linux-gnu".to_string(),
             supports_prebuilt_extension_modules: true,
@@ -87,8 +87,8 @@ pub static PYTHON_DISTRIBUTIONS: Lazy<PythonDistributionCollection> = Lazy::new(
         PythonDistributionRecord {
             python_major_minor_version: "3.8".to_string(),
             location: PythonDistributionLocation::Url {
-                url: "https://github.com/indygreg/python-build-standalone/releases/download/20210415/cpython-3.8.9-x86_64-unknown-linux-musl-noopt-20210414T1515.tar.zst".to_string(),
-                sha256: "2626710a52cc2384b748252210816f6138749b0625d017f1858c5498fb5f30aa".to_string(),
+                url: "https://github.com/indygreg/python-build-standalone/releases/download/20210506/cpython-3.8.10-x86_64-unknown-linux-musl-noopt-20210506T0943.tar.zst".to_string(),
+                sha256: "11ac204410d58354f27a9af00b5eff95430338e792f2aec5854795d9184fcccf".to_string(),
             },
             target_triple: "x86_64-unknown-linux-musl".to_string(),
             supports_prebuilt_extension_modules: false,
@@ -96,8 +96,8 @@ pub static PYTHON_DISTRIBUTIONS: Lazy<PythonDistributionCollection> = Lazy::new(
         PythonDistributionRecord {
             python_major_minor_version: "3.9".to_string(),
             location: PythonDistributionLocation::Url {
-                url: "https://github.com/indygreg/python-build-standalone/releases/download/20210415/cpython-3.9.4-x86_64-unknown-linux-musl-noopt-20210414T1515.tar.zst".to_string(),
-                sha256: "a37c9a26458a4eff40405be1e8368c6e690c0aaaa63ab937e315c4425695c467".to_string(),
+                url: "https://github.com/indygreg/python-build-standalone/releases/download/20210506/cpython-3.9.5-x86_64-unknown-linux-musl-noopt-20210506T0943.tar.zst".to_string(),
+                sha256: "e4f28943fab7a259214c10efeb8a687130b3ed888d7ca50e71902d789db58fd5".to_string(),
             },
             target_triple: "x86_64-unknown-linux-musl".to_string(),
             supports_prebuilt_extension_modules: false,
@@ -114,8 +114,8 @@ pub static PYTHON_DISTRIBUTIONS: Lazy<PythonDistributionCollection> = Lazy::new(
         PythonDistributionRecord {
             python_major_minor_version: "3.8".to_string(),
             location: PythonDistributionLocation::Url {
-                url: "https://github.com/indygreg/python-build-standalone/releases/download/20210415/cpython-3.8.9-i686-pc-windows-msvc-shared-pgo-20210414T1515.tar.zst".to_string(),
-                sha256: "1061523a122911504b525eae1bdf402e4cb129e7658c8fa041bd44032d22dc71".to_string(),
+                url: "https://github.com/indygreg/python-build-standalone/releases/download/20210506/cpython-3.8.10-i686-pc-windows-msvc-shared-pgo-20210506T0943.tar.zst".to_string(),
+                sha256: "6b7d19fc862a41f7d1d009b231e4b151cff5bbabf08ae72d46fc384ffa40df47".to_string(),
             },
             target_triple: "i686-pc-windows-msvc".to_string(),
             supports_prebuilt_extension_modules: true,
@@ -123,8 +123,8 @@ pub static PYTHON_DISTRIBUTIONS: Lazy<PythonDistributionCollection> = Lazy::new(
         PythonDistributionRecord {
             python_major_minor_version: "3.9".to_string(),
             location: PythonDistributionLocation::Url {
-                url: "https://github.com/indygreg/python-build-standalone/releases/download/20210415/cpython-3.9.4-i686-pc-windows-msvc-shared-pgo-20210414T1515.tar.zst".to_string(),
-                sha256: "a609ee67d1079a425da989806fdc747a7b3ba4244029e72a10b02eb068b63276".to_string(),
+                url: "https://github.com/indygreg/python-build-standalone/releases/download/20210506/cpython-3.9.5-i686-pc-windows-msvc-shared-pgo-20210506T0943.tar.zst".to_string(),
+                sha256: "d34fed52264e3eeb58dc72432dbe3000b6bdc5b8e1b20f4b01d56db109072a39".to_string(),
             },
             target_triple: "i686-pc-windows-msvc".to_string(),
             supports_prebuilt_extension_modules: true,
@@ -132,8 +132,8 @@ pub static PYTHON_DISTRIBUTIONS: Lazy<PythonDistributionCollection> = Lazy::new(
         PythonDistributionRecord {
             python_major_minor_version: "3.8".to_string(),
             location: PythonDistributionLocation::Url {
-                url: "https://github.com/indygreg/python-build-standalone/releases/download/20210415/cpython-3.8.9-x86_64-pc-windows-msvc-shared-pgo-20210414T1515.tar.zst".to_string(),
-                sha256: "09f7f405ba86155fded44c0821f05eddebab1008336e0952347e53f09b2d561c".to_string(),
+                url: "https://github.com/indygreg/python-build-standalone/releases/download/20210506/cpython-3.8.10-x86_64-pc-windows-msvc-shared-pgo-20210506T0943.tar.zst".to_string(),
+                sha256: "d0c9d473ff189baee2e214b6fa6ff81ab7865adf85f3360cc95798c4f44a2128".to_string(),
             },
             target_triple: "x86_64-pc-windows-msvc".to_string(),
             supports_prebuilt_extension_modules: true,
@@ -141,8 +141,8 @@ pub static PYTHON_DISTRIBUTIONS: Lazy<PythonDistributionCollection> = Lazy::new(
         PythonDistributionRecord {
             python_major_minor_version: "3.9".to_string(),
             location: PythonDistributionLocation::Url {
-                url: "https://github.com/indygreg/python-build-standalone/releases/download/20210415/cpython-3.9.4-x86_64-pc-windows-msvc-shared-pgo-20210414T1515.tar.zst".to_string(),
-                sha256: "ebf4acc5dff238f8adff18e5b60420f05c688896f4020a0b78e5c484190691fa".to_string(),
+                url: "https://github.com/indygreg/python-build-standalone/releases/download/20210506/cpython-3.9.5-x86_64-pc-windows-msvc-shared-pgo-20210506T0943.tar.zst".to_string(),
+                sha256: "4956b8c29ab2841f04cd9aa465e3073be2107ced59636e2a82d35b0c8815e217".to_string(),
             },
             target_triple: "x86_64-pc-windows-msvc".to_string(),
             supports_prebuilt_extension_modules: true,
@@ -152,8 +152,8 @@ pub static PYTHON_DISTRIBUTIONS: Lazy<PythonDistributionCollection> = Lazy::new(
         PythonDistributionRecord {
             python_major_minor_version: "3.8".to_string(),
             location: PythonDistributionLocation::Url {
-                url: "https://github.com/indygreg/python-build-standalone/releases/download/20210415/cpython-3.8.9-i686-pc-windows-msvc-static-noopt-20210414T1515.tar.zst".to_string(),
-                sha256: "39ee99d34bbb21b40e376877daca260fd13fc69a91aa19a01985ebf3f4bf48ea".to_string(),
+                url: "https://github.com/indygreg/python-build-standalone/releases/download/20210506/cpython-3.8.10-i686-pc-windows-msvc-static-noopt-20210506T0943.tar.zst".to_string(),
+                sha256: "399d7af39f2cc3ec420597475e13a89f4827f27c2674e51a2456343ced1f77cd".to_string(),
             },
             target_triple: "i686-pc-windows-msvc".to_string(),
             supports_prebuilt_extension_modules: false,
@@ -161,8 +161,8 @@ pub static PYTHON_DISTRIBUTIONS: Lazy<PythonDistributionCollection> = Lazy::new(
         PythonDistributionRecord {
             python_major_minor_version: "3.9".to_string(),
             location: PythonDistributionLocation::Url {
-                url: "https://github.com/indygreg/python-build-standalone/releases/download/20210415/cpython-3.9.4-i686-pc-windows-msvc-static-noopt-20210414T1515.tar.zst".to_string(),
-                sha256: "95f965138a25e98e00228cdc72e48d34260da4b3ad1e0185bb5fbab4ba3b28e4".to_string(),
+                url: "https://github.com/indygreg/python-build-standalone/releases/download/20210506/cpython-3.9.5-i686-pc-windows-msvc-static-noopt-20210506T0943.tar.zst".to_string(),
+                sha256: "4bc5c10b3637eeebb95a3308c8d53e5fde9e00ac05d0d99bb18d2809a8630229".to_string(),
             },
             target_triple: "i686-pc-windows-msvc".to_string(),
             supports_prebuilt_extension_modules: false,
@@ -170,8 +170,8 @@ pub static PYTHON_DISTRIBUTIONS: Lazy<PythonDistributionCollection> = Lazy::new(
         PythonDistributionRecord {
             python_major_minor_version: "3.8".to_string(),
             location: PythonDistributionLocation::Url {
-                url: "https://github.com/indygreg/python-build-standalone/releases/download/20210415/cpython-3.8.9-x86_64-pc-windows-msvc-static-noopt-20210414T1515.tar.zst".to_string(),
-                sha256: "fecea6ca47cdfce96e6cac28652d07b5c45f91bf38b4349b51ef40e47e8c3f09".to_string(),
+                url: "https://github.com/indygreg/python-build-standalone/releases/download/20210506/cpython-3.8.10-x86_64-pc-windows-msvc-static-noopt-20210506T0943.tar.zst".to_string(),
+                sha256: "dbcd1e9ea30b80ea459af525d3da488885f133b322854b11248cb63e2fe9d910".to_string(),
             },
             target_triple: "x86_64-pc-windows-msvc".to_string(),
             supports_prebuilt_extension_modules: false,
@@ -179,8 +179,8 @@ pub static PYTHON_DISTRIBUTIONS: Lazy<PythonDistributionCollection> = Lazy::new(
         PythonDistributionRecord {
             python_major_minor_version: "3.9".to_string(),
             location: PythonDistributionLocation::Url {
-                url: "https://github.com/indygreg/python-build-standalone/releases/download/20210415/cpython-3.9.4-x86_64-pc-windows-msvc-static-noopt-20210414T1515.tar.zst".to_string(),
-                sha256: "e5744d8c06a99f541ccb789cc02b0c7149f5538bf241151bbad91a5ff5afc8ba".to_string(),
+                url: "https://github.com/indygreg/python-build-standalone/releases/download/20210506/cpython-3.9.5-x86_64-pc-windows-msvc-static-noopt-20210506T0943.tar.zst".to_string(),
+                sha256: "235f7b7a79aa832a76c05fe52076e26916eed6e42a333d286107c86bb594bbb9".to_string(),
             },
             target_triple: "x86_64-pc-windows-msvc".to_string(),
             supports_prebuilt_extension_modules: false,
@@ -190,8 +190,8 @@ pub static PYTHON_DISTRIBUTIONS: Lazy<PythonDistributionCollection> = Lazy::new(
         PythonDistributionRecord {
             python_major_minor_version: "3.9".to_string(),
             location: PythonDistributionLocation::Url {
-                url: "https://github.com/indygreg/python-build-standalone/releases/download/20210415/cpython-3.9.4-aarch64-apple-darwin-pgo-20210414T1515.tar.zst".to_string(),
-                sha256: "1287d2087056707fc63ecdc2cd0d4ac4b604180b8ae17821dadba08f0cd3f5a3".to_string(),
+                url: "https://github.com/indygreg/python-build-standalone/releases/download/20210506/cpython-3.9.5-aarch64-apple-darwin-pgo-20210506T0943.tar.zst".to_string(),
+                sha256: "10832afecec6c1662229b870497235c239bcf0f221522b41aa77c7fde4f9cc08".to_string(),
             },
             target_triple: "aarch64-apple-darwin".to_string(),
             supports_prebuilt_extension_modules: true,
@@ -199,8 +199,8 @@ pub static PYTHON_DISTRIBUTIONS: Lazy<PythonDistributionCollection> = Lazy::new(
         PythonDistributionRecord {
             python_major_minor_version: "3.8".to_string(),
             location: PythonDistributionLocation::Url {
-                url: "https://github.com/indygreg/python-build-standalone/releases/download/20210415/cpython-3.8.9-x86_64-apple-darwin-pgo-20210414T1515.tar.zst".to_string(),
-                sha256: "0f862f0798ae62a6bb84289361c48ccc52965db449b61ffb79ec6fee302c6130".to_string(),
+                url: "https://github.com/indygreg/python-build-standalone/releases/download/20210506/cpython-3.8.10-x86_64-apple-darwin-pgo-20210506T0943.tar.zst".to_string(),
+                sha256: "517c1e8ef16bb2117e513a2c4200b57b390f3d6fb02616a49b60be2320626e2a".to_string(),
             },
             target_triple: "x86_64-apple-darwin".to_string(),
             supports_prebuilt_extension_modules: true,
@@ -208,8 +208,8 @@ pub static PYTHON_DISTRIBUTIONS: Lazy<PythonDistributionCollection> = Lazy::new(
         PythonDistributionRecord {
             python_major_minor_version: "3.9".to_string(),
             location: PythonDistributionLocation::Url {
-                url: "https://github.com/indygreg/python-build-standalone/releases/download/20210415/cpython-3.9.4-x86_64-apple-darwin-pgo-20210414T1515.tar.zst".to_string(),
-                sha256: "00d8693b26b36add162dc57ca6d31212b2a0e315d04f90ab2d15a7ba0f1cd646".to_string(),
+                url: "https://github.com/indygreg/python-build-standalone/releases/download/20210506/cpython-3.9.5-x86_64-apple-darwin-pgo-20210506T0943.tar.zst".to_string(),
+                sha256: "27f5ef23c5134a2a4debd8d51aab91842a8e9f195f2bd110d117b8f9f7da8a04".to_string(),
             },
             target_triple: "x86_64-apple-darwin".to_string(),
             supports_prebuilt_extension_modules: true,

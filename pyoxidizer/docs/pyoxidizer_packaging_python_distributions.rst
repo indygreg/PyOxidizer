@@ -28,35 +28,35 @@ Here are the built-in Python distributions:
 +---------+---------+--------------------+--------------+------------+
 | Source  | Version | Flavor             | Build Target              |
 +=========+=========+====================+===========================+
-| CPython |   3.8.8 | standalone_dynamic | x86_64-unknown-linux-gnu  |
+| CPython |  3.8.10 | standalone_dynamic | x86_64-unknown-linux-gnu  |
 +---------+---------+--------------------+---------------------------+
-| CPython |   3.9.2 | standalone_dynamic | x86_64-unknown-linux-gnu  |
+| CPython |   3.9.5 | standalone_dynamic | x86_64-unknown-linux-gnu  |
 +---------+---------+--------------------+---------------------------+
-| CPython |   3.8.8 | standalone_static  | x86_64-unknown-linux-musl |
+| CPython |  3.8.10 | standalone_static  | x86_64-unknown-linux-musl |
 +---------+---------+--------------------+---------------------------+
-| CPython |   3.9.2 | standalone_static  | x86_64-unknown-linux-musl |
+| CPython |   3.9.5 | standalone_static  | x86_64-unknown-linux-musl |
 +---------+---------+--------------------+---------------------------+
-| CPython |   3.8.8 | standalone_dynamic | i686-pc-windows-msvc      |
+| CPython |  3.8.10 | standalone_dynamic | i686-pc-windows-msvc      |
 +---------+---------+--------------------+---------------------------+
-| CPython |   3.9.2 | standalone_dynamic | i686-pc-windows-msvc      |
+| CPython |   3.9.5 | standalone_dynamic | i686-pc-windows-msvc      |
 +---------+---------+--------------------+---------------------------+
-| CPython |   3.8.8 | standalone_static  | i686-pc-windows-msvc      |
+| CPython |  3.8.10 | standalone_static  | i686-pc-windows-msvc      |
 +---------+---------+--------------------+---------------------------+
-| CPython |   3.9.2 | standalone_static  | i686-pc-windows-msvc      |
+| CPython |   3.9.5 | standalone_static  | i686-pc-windows-msvc      |
 +---------+---------+--------------------+---------------------------+
-| CPython |   3.8.8 | standalone_dynamic | x86_64-pc-windows-msvc    |
+| CPython |  3.8.10 | standalone_dynamic | x86_64-pc-windows-msvc    |
 +---------+---------+--------------------+---------------------------+
-| CPython |   3.9.2 | standalone_dynamic | x86_64-pc-windows-msvc    |
+| CPython |   3.9.5 | standalone_dynamic | x86_64-pc-windows-msvc    |
 +---------+---------+--------------------+---------------------------+
-| CPython |   3.8.8 | standalone_static  | x86_64-pc-windows-msvc    |
+| CPython |  3.8.10 | standalone_static  | x86_64-pc-windows-msvc    |
 +---------+---------+--------------------+---------------------------+
-| CPython |   3.9.2 | standalone_static  | x86_64-pc-windows-msvc    |
+| CPython |   3.9.5 | standalone_static  | x86_64-pc-windows-msvc    |
 +---------+---------+--------------------+---------------------------+
-| CPython |   3.9.2 | standalone_dynamic | aarch64-apple-darwin      |
+| CPython |   3.9.5 | standalone_dynamic | aarch64-apple-darwin      |
 +---------+---------+--------------------+---------------------------+
-| CPython |   3.8.8 | standalone_dynamic | x86_64-apple-darwin       |
+| CPython |  3.8.10 | standalone_dynamic | x86_64-apple-darwin       |
 +---------+---------+--------------------+---------------------------+
-| CPython |   3.9.2 | standalone_dynamic | x86_64-apple-darwin       |
+| CPython |   3.9.5 | standalone_dynamic | x86_64-apple-darwin       |
 +---------+---------+--------------------+---------------------------+
 
 All of these distributions are provided by the

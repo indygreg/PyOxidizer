@@ -69,6 +69,8 @@ Bug Fixes
 New Features
 ^^^^^^^^^^^^
 
+* Default Python distributions upgraded from 3.8.9 and 3.9.4 to 3.8.10 and
+  3.9.5.
 * Apple code signatures now include a time-stamp token issued by Apple's
   time-stamp server by default. Presence of the time-stamp token in code
   signatures is a requirement to notarize applications.
@@ -119,6 +121,10 @@ Other Relevant Changes
   installation. Before, this Starlark type was not very usable without this file,
   as WiX wouldn't pick up files that had been registered for install.
 * Rust 1.52.0 is now used as the default Rust toolchain (from version 1.51.0).
+* The musl libc linked default Python distributions no longer use the
+  ``reallocarray()`` symbol, which was introduced in musl libc 1.2.2. This
+  should enable musl libc builds to work with musl 1.2.1 and possibly older
+  versions.
 
 .. _version_0_14_1:
 
