@@ -19,8 +19,9 @@
 //!
 //! [SigningCertificate] are converted into [Signer], which is a slightly
 //! broader scoped entity. [Signer] holds additional attributes beyond the
-//! [SigningCertificate], such as a list of issuing [Certificate] constituting
-//! the certificate chain and a Time-Stamp Protocol server URL to use.
+//! [SigningCertificate], such as a list of issuing [CapturedX509Certificate]
+//! constituting the certificate chain and a Time-Stamp Protocol server URL to
+//! use.
 //!
 //! [SignableCandidate] represents the different potential data types that can
 //! be signed. e.g. a filesystem path or slice of data.
