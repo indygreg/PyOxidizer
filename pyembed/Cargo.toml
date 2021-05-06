@@ -41,8 +41,8 @@ features = [
 optional = true
 
 [dependencies.python-packed-resources]
-version = "0.8.0-pre"
-path = "../python-packed-resources"
+version = "0.7.0"
+# path = "../python-packed-resources"
 
 [dependencies.python-packaging]
 version = "0.8.0-pre"
