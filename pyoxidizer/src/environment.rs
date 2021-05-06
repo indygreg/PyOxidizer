@@ -161,21 +161,32 @@ impl Default for PyOxidizerSource {
 impl PyOxidizerSource {
     /// Determine the location of the pyembed crate given a run-time environment.
     ///
-    /// If running from a PyOxidizer Git repository, we reference the pyembed
-    /// crate within the PyOxidizer Git repository. Otherwise we use the pyembed
-    /// crate from the package registry.
+    /// If we were built from a Git clone and we have access to that path, we use
+    /// a local filesystem path.
     ///
-    /// There is room to reference a Git repository+commit. But this isn't implemented
-    /// yet.
+    /// Otherwise, if the pyembed crate version isn't a pre-release version, we
+    /// reference the package registry. But if it is a pre-release version, we
+    /// reference a specific commit in this project's Git repository.
     pub fn as_pyembed_location(&self) -> PyembedLocation {
         match self {
             PyOxidizerSource::LocalPath { path } => {
                 PyembedLocation::Path(canonicalize_path(&path.join("pyembed")).unwrap())
             }
-            PyOxidizerSource::GitUrl { url, commit, .. } => match commit {
-                Some(commit) => PyembedLocation::Git(url.clone(), commit.clone()),
-                None => PyembedLocation::Version(PYEMBED_CRATE_VERSION.to_string()),
-            },
+            PyOxidizerSource::GitUrl { url, commit, tag } => {
+                // Pre-release version only available via Git reference.
+                if PYEMBED_CRATE_VERSION.ends_with("-pre") {
+                    if let Some(tag) = tag {
+                        PyembedLocation::Git(url.clone(), tag.clone())
+                    } else if let Some(commit) = commit {
+                        PyembedLocation::Git(url.clone(), commit.clone())
+                    } else {
+                        // We shouldn't get here. But who knows what's possible.
+                        PyembedLocation::Git(url.clone(), "main".to_string())
+                    }
+                } else {
+                    PyembedLocation::Version(PYEMBED_CRATE_VERSION.to_string())
+                }
+            }
         }
     }
 
