@@ -161,20 +161,19 @@ impl Default for PyOxidizerSource {
 impl PyOxidizerSource {
     /// Determine the location of the pyembed crate given a run-time environment.
     ///
-    /// If we were built from a Git clone and we have access to that path, we use
-    /// a local filesystem path.
+    /// If not a pre-release version, we always reference the plain version,
+    /// presumably available in a registry.
     ///
-    /// Otherwise, if the pyembed crate version isn't a pre-release version, we
-    /// reference the package registry. But if it is a pre-release version, we
-    /// reference a specific commit in this project's Git repository.
+    /// If it is a pre-release version, we reference a local filesystem path, if
+    /// available, or a specific commit in this project's Git repository.
     pub fn as_pyembed_location(&self) -> PyembedLocation {
-        match self {
-            PyOxidizerSource::LocalPath { path } => {
-                PyembedLocation::Path(canonicalize_path(&path.join("pyembed")).unwrap())
-            }
-            PyOxidizerSource::GitUrl { url, commit, tag } => {
-                // Pre-release version only available via Git reference.
-                if PYEMBED_CRATE_VERSION.ends_with("-pre") {
+        // Pre-release version only available via path or Git references.
+        if PYEMBED_CRATE_VERSION.ends_with("-pre") {
+            match self {
+                PyOxidizerSource::LocalPath { path } => {
+                    PyembedLocation::Path(canonicalize_path(&path.join("pyembed")).unwrap())
+                }
+                PyOxidizerSource::GitUrl { url, commit, tag } => {
                     if let Some(tag) = tag {
                         PyembedLocation::Git(url.clone(), tag.clone())
                     } else if let Some(commit) = commit {
@@ -183,10 +182,11 @@ impl PyOxidizerSource {
                         // We shouldn't get here. But who knows what's possible.
                         PyembedLocation::Git(url.clone(), "main".to_string())
                     }
-                } else {
-                    PyembedLocation::Version(PYEMBED_CRATE_VERSION.to_string())
                 }
             }
+        } else {
+            // Published version is always a plain version reference to the registry.
+            PyembedLocation::Version(PYEMBED_CRATE_VERSION.to_string())
         }
     }
 
