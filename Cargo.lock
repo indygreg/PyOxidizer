@@ -2372,12 +2372,12 @@ dependencies = [
  "memory-module-sys",
  "once_cell",
  "pathdiff",
- "python-packaging 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "python-packed-resources 0.8.0-pre",
+ "python-packaging",
+ "python-packed-resources",
  "python3-sys",
  "rusty-fork",
  "snmalloc-sys",
- "tugger-file-manifest 0.5.0-pre",
+ "tugger-file-manifest",
  "winapi 0.3.9",
 ]
 
@@ -2404,8 +2404,8 @@ dependencies = [
  "linked-hash-map",
  "once_cell",
  "path-dedot",
- "python-packaging 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "python-packed-resources 0.8.0-pre",
+ "python-packaging",
+ "python-packed-resources",
  "remove_dir_all 0.7.0",
  "rustc_version",
  "semver",
@@ -2422,8 +2422,8 @@ dependencies = [
  "tugger-binary-analysis",
  "tugger-code-signing",
  "tugger-common",
- "tugger-file-manifest 0.5.0-pre",
- "tugger-licensing 0.4.0-pre",
+ "tugger-file-manifest",
+ "tugger-licensing",
  "tugger-rust-toolchain",
  "tugger-windows",
  "url",
@@ -2437,7 +2437,7 @@ dependencies = [
 
 [[package]]
 name = "python-packaging"
-version = "0.8.0"
+version = "0.9.0-pre"
 dependencies = [
  "anyhow",
  "byteorder",
@@ -2445,45 +2445,14 @@ dependencies = [
  "itertools 0.10.0",
  "mailparse",
  "once_cell",
- "python-packed-resources 0.8.0-pre",
+ "python-packed-resources",
  "regex",
  "spdx",
  "tempfile",
- "tugger-file-manifest 0.5.0-pre",
- "tugger-licensing 0.4.0-pre",
+ "tugger-file-manifest",
+ "tugger-licensing",
  "walkdir",
  "zip",
-]
-
-[[package]]
-name = "python-packaging"
-version = "0.8.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9849ada570c2081721ae70e543d9b6c8d87c143920e2018b6ee7e98fa4e3a61e"
-dependencies = [
- "anyhow",
- "byteorder",
- "encoding_rs",
- "itertools 0.10.0",
- "mailparse",
- "once_cell",
- "python-packed-resources 0.7.0",
- "regex",
- "spdx",
- "tugger-file-manifest 0.4.0",
- "tugger-licensing 0.3.0",
- "walkdir",
- "zip",
-]
-
-[[package]]
-name = "python-packed-resources"
-version = "0.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "15ff4dcea2f72950f431b3b8199f53edb7ac349d710c00983173e0e2499577cd"
-dependencies = [
- "anyhow",
- "byteorder",
 ]
 
 [[package]]
@@ -3734,7 +3703,7 @@ dependencies = [
  "tugger-apple-codesign",
  "tugger-code-signing",
  "tugger-common",
- "tugger-file-manifest 0.5.0-pre",
+ "tugger-file-manifest",
  "tugger-snapcraft",
  "tugger-windows",
  "tugger-windows-codesign",
@@ -3764,7 +3733,7 @@ version = "0.5.0-pre"
 dependencies = [
  "anyhow",
  "plist",
- "tugger-file-manifest 0.5.0-pre",
+ "tugger-file-manifest",
  "walkdir",
 ]
 
@@ -3826,7 +3795,7 @@ dependencies = [
  "thiserror",
  "tugger-apple-bundle",
  "tugger-apple-codesign",
- "tugger-file-manifest 0.5.0-pre",
+ "tugger-file-manifest",
  "tugger-windows-codesign",
  "x509-certificate",
  "yasna 0.3.2",
@@ -3861,30 +3830,14 @@ dependencies = [
  "md5",
  "os_str_bytes",
  "tar",
- "tugger-file-manifest 0.5.0-pre",
+ "tugger-file-manifest",
  "xz2",
  "zstd",
 ]
 
 [[package]]
 name = "tugger-file-manifest"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1ff990ffc253158eef6c3d75323a91887d9db9fd519cb802c2f99fbdcc6e49c9"
-
-[[package]]
-name = "tugger-file-manifest"
 version = "0.5.0-pre"
-
-[[package]]
-name = "tugger-licensing"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b8c39190da2ec547b74d97e8137bb35fbe92d85099967354bb1e46f4fdae4811"
-dependencies = [
- "anyhow",
- "spdx",
-]
 
 [[package]]
 name = "tugger-licensing"
@@ -3902,7 +3855,7 @@ dependencies = [
  "reqwest",
  "spdx",
  "tugger-common",
- "tugger-licensing 0.4.0-pre",
+ "tugger-licensing",
  "url",
 ]
 
@@ -3912,7 +3865,7 @@ version = "0.6.0-pre"
 dependencies = [
  "anyhow",
  "rpm-rs",
- "tugger-file-manifest 0.5.0-pre",
+ "tugger-file-manifest",
 ]
 
 [[package]]
@@ -3932,7 +3885,7 @@ dependencies = [
  "tempfile",
  "toml",
  "tugger-common",
- "tugger-file-manifest 0.5.0-pre",
+ "tugger-file-manifest",
  "xz2",
  "zstd",
 ]
@@ -3948,7 +3901,7 @@ dependencies = [
  "serde_yaml",
  "slog",
  "tugger-common",
- "tugger-file-manifest 0.5.0-pre",
+ "tugger-file-manifest",
 ]
 
 [[package]]
@@ -3993,7 +3946,7 @@ dependencies = [
  "slog",
  "tempfile",
  "tugger-common",
- "tugger-file-manifest 0.5.0-pre",
+ "tugger-file-manifest",
  "tugger-windows",
  "tugger-windows-codesign",
  "url",
