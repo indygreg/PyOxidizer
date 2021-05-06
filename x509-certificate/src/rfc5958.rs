@@ -72,16 +72,12 @@ impl OneAsymmetricKey {
             self.version.encode(),
             &self.private_key_algorithm,
             self.private_key.encode_ref(),
-            if let Some(attrs) = &self.attributes {
-                Some(attrs.encode_ref_as(Tag::CTX_0))
-            } else {
-                None
-            },
-            if let Some(public_key) = &self.public_key {
-                Some(public_key.encode_ref())
-            } else {
-                None
-            },
+            self.attributes
+                .as_ref()
+                .map(|attrs| attrs.encode_ref_as(Tag::CTX_0)),
+            self.public_key
+                .as_ref()
+                .map(|public_key| public_key.encode_ref()),
         ))
     }
 }

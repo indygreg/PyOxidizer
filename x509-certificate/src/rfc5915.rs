@@ -59,16 +59,12 @@ impl EcPrivateKey {
         encode::sequence((
             self.version.encode(),
             self.private_key.encode_ref(),
-            if let Some(parameters) = &self.parameters {
-                Some(parameters.encode_ref_as(Tag::CTX_0))
-            } else {
-                None
-            },
-            if let Some(public_key) = &self.public_key {
-                Some(public_key.encode_ref_as(Tag::CTX_1))
-            } else {
-                None
-            },
+            self.parameters
+                .as_ref()
+                .map(|parameters| parameters.encode_ref_as(Tag::CTX_0)),
+            self.public_key
+                .as_ref()
+                .map(|public_key| public_key.encode_ref_as(Tag::CTX_1)),
         ))
     }
 }

@@ -335,24 +335,15 @@ impl TbsCertificate {
             self.validity.encode_ref(),
             self.subject.encode_ref(),
             self.subject_public_key_info.encode_ref(),
-            if let Some(id) = self.issuer_unique_id.as_ref() {
-                Some(id.encode_ref_as(Tag::CTX_1))
-            } else {
-                None
-            },
-            if let Some(id) = self.subject_unique_id.as_ref() {
-                Some(id.encode_ref_as(Tag::CTX_2))
-            } else {
-                None
-            },
-            if let Some(extensions) = self.extensions.as_ref() {
-                Some(encode::Constructed::new(
-                    Tag::CTX_3,
-                    extensions.encode_ref(),
-                ))
-            } else {
-                None
-            },
+            self.issuer_unique_id
+                .as_ref()
+                .map(|id| id.encode_ref_as(Tag::CTX_1)),
+            self.subject_unique_id
+                .as_ref()
+                .map(|id| id.encode_ref_as(Tag::CTX_2)),
+            self.extensions
+                .as_ref()
+                .map(|extensions| encode::Constructed::new(Tag::CTX_3, extensions.encode_ref())),
         ))
     }
 }

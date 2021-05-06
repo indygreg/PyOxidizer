@@ -256,11 +256,9 @@ impl EdiPartyName {
 
     pub fn encode_ref(&self) -> impl Values + '_ {
         encode::sequence((
-            if let Some(name_assigner) = &self.name_assigner {
-                Some(name_assigner.encode_ref())
-            } else {
-                None
-            },
+            self.name_assigner
+                .as_ref()
+                .map(|name_assigner| name_assigner.encode_ref()),
             self.party_name.encode_ref(),
         ))
     }
@@ -269,11 +267,9 @@ impl EdiPartyName {
         encode::sequence_as(
             tag,
             (
-                if let Some(name_assigner) = &self.name_assigner {
-                    Some(name_assigner.encode_ref())
-                } else {
-                    None
-                },
+                self.name_assigner
+                    .as_ref()
+                    .map(|name_assigner| name_assigner.encode_ref()),
                 self.party_name.encode_ref(),
             ),
         )
