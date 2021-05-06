@@ -78,26 +78,14 @@ impl TimeStampReq {
         encode::sequence((
             (&self.version).encode(),
             self.message_imprint.encode_ref(),
-            if let Some(req_policy) = &self.req_policy {
-                Some(req_policy.encode_ref())
-            } else {
-                None
-            },
-            if let Some(nonce) = &self.nonce {
-                Some(nonce.encode())
-            } else {
-                None
-            },
-            if let Some(cert_req) = &self.cert_req {
-                Some(cert_req.encode_ref())
-            } else {
-                None
-            },
-            if let Some(extensions) = &self.extensions {
-                Some(extensions.encode_ref_as(Tag::CTX_0))
-            } else {
-                None
-            },
+            self.req_policy
+                .as_ref()
+                .map(|req_policy| req_policy.encode_ref()),
+            self.nonce.as_ref().map(|nonce| nonce.encode()),
+            self.cert_req.as_ref().map(|cert_req| cert_req.encode_ref()),
+            self.extensions
+                .as_ref()
+                .map(|extensions| extensions.encode_ref_as(Tag::CTX_0)),
         ))
     }
 }
@@ -206,16 +194,10 @@ impl PkiStatusInfo {
     pub fn encode_ref(&self) -> impl Values + '_ {
         encode::sequence((
             (&self.status).encode(),
-            if let Some(status_string) = &self.status_string {
-                Some(status_string.encode_ref())
-            } else {
-                None
-            },
-            if let Some(fail_info) = &self.fail_info {
-                Some(fail_info.encode())
-            } else {
-                None
-            },
+            self.status_string
+                .as_ref()
+                .map(|status_string| status_string.encode_ref()),
+            self.fail_info.as_ref().map(|fail_info| fail_info.encode()),
         ))
     }
 }
@@ -442,31 +424,15 @@ impl TstInfo {
             self.message_imprint.encode_ref(),
             (&self.serial_number).encode(),
             self.gen_time.encode_ref(),
-            if let Some(accuracy) = &self.accuracy {
-                Some(accuracy.encode_ref())
-            } else {
-                None
-            },
-            if let Some(ordering) = &self.ordering {
-                Some(ordering.encode_ref())
-            } else {
-                None
-            },
-            if let Some(nonce) = &self.nonce {
-                Some(nonce.encode())
-            } else {
-                None
-            },
-            if let Some(tsa) = &self.tsa {
-                Some(tsa.encode_ref().explicit(Tag::CTX_0))
-            } else {
-                None
-            },
-            if let Some(extensions) = &self.extensions {
-                Some(extensions.encode_ref_as(Tag::CTX_1))
-            } else {
-                None
-            },
+            self.accuracy.as_ref().map(|accuracy| accuracy.encode_ref()),
+            self.ordering.as_ref().map(|ordering| ordering.encode_ref()),
+            self.nonce.as_ref().map(|nonce| nonce.encode()),
+            self.tsa
+                .as_ref()
+                .map(|tsa| tsa.encode_ref().explicit(Tag::CTX_0)),
+            self.extensions
+                .as_ref()
+                .map(|extensions| extensions.encode_ref_as(Tag::CTX_1)),
         ))
     }
 }
@@ -506,21 +472,9 @@ impl Accuracy {
 
     pub fn encode_ref(&self) -> impl Values + '_ {
         encode::sequence((
-            if let Some(seconds) = &self.seconds {
-                Some(seconds.encode())
-            } else {
-                None
-            },
-            if let Some(millis) = &self.millis {
-                Some(millis.encode())
-            } else {
-                None
-            },
-            if let Some(micros) = &self.micros {
-                Some(micros.encode())
-            } else {
-                None
-            },
+            self.seconds.as_ref().map(|seconds| seconds.encode()),
+            self.millis.as_ref().map(|millis| millis.encode()),
+            self.micros.as_ref().map(|micros| micros.encode()),
         ))
     }
 }

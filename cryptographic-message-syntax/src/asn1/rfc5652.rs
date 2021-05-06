@@ -202,11 +202,9 @@ impl SignedData {
                     self.version.encode(),
                     self.digest_algorithms.encode_ref(),
                     self.content_info.encode_ref(),
-                    if let Some(certs) = self.certificates.as_ref() {
-                        Some(certs.encode_ref_as(Tag::CTX_0))
-                    } else {
-                        None
-                    },
+                    self.certificates
+                        .as_ref()
+                        .map(|certs| certs.encode_ref_as(Tag::CTX_0)),
                     // TODO crls.
                     self.signer_infos.encode_ref(),
                 )),
@@ -344,11 +342,9 @@ impl EncapsulatedContentInfo {
     pub fn encode_ref(&self) -> impl Values + '_ {
         encode::sequence((
             self.content_type.encode_ref(),
-            if let Some(content) = self.content.as_ref() {
-                Some(encode::sequence_as(Tag::CTX_0, content.encode_ref()))
-            } else {
-                None
-            },
+            self.content
+                .as_ref()
+                .map(|content| encode::sequence_as(Tag::CTX_0, content.encode_ref())),
         ))
     }
 }
@@ -439,19 +435,15 @@ impl SignerInfo {
             u8::from(self.version).encode(),
             &self.sid,
             &self.digest_algorithm,
-            if let Some(attrs) = self.signed_attributes.as_ref() {
-                // Always write signed attributes with DER encoding per RFC 5652.
-                Some(SignedAttributesDer::new(attrs.clone(), Some(Tag::CTX_0)))
-            } else {
-                None
-            },
+            // Always write signed attributes with DER encoding per RFC 5652.
+            self.signed_attributes
+                .as_ref()
+                .map(|attrs| SignedAttributesDer::new(attrs.clone(), Some(Tag::CTX_0))),
             &self.signature_algorithm,
             self.signature.encode_ref(),
-            if let Some(attrs) = self.unsigned_attributes.as_ref() {
-                Some(attrs.encode_ref_as(Tag::CTX_1))
-            } else {
-                None
-            },
+            self.unsigned_attributes
+                .as_ref()
+                .map(|attrs| attrs.encode_ref_as(Tag::CTX_1)),
         ))
     }
 

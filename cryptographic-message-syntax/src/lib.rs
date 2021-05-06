@@ -371,11 +371,11 @@ impl TryFrom<&crate::asn1::rfc5652::SignedData> for SignedData {
             .map(DigestAlgorithm::try_from)
             .collect::<Result<HashSet<_>, _>>()?;
 
-        let signed_content = if let Some(content) = &raw.content_info.content {
-            Some(content.to_bytes().to_vec())
-        } else {
-            None
-        };
+        let signed_content = raw
+            .content_info
+            .content
+            .as_ref()
+            .map(|content| content.to_bytes().to_vec());
 
         let certificates = if let Some(certs) = &raw.certificates {
             Some(

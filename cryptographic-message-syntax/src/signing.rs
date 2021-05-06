@@ -377,11 +377,10 @@ impl<'a> SignedDataBuilder<'a> {
             digest_algorithms,
             content_info: EncapsulatedContentInfo {
                 content_type: self.content_type.clone(),
-                content: if let Some(content) = &self.signed_content {
-                    Some(OctetString::new(Bytes::copy_from_slice(content)))
-                } else {
-                    None
-                },
+                content: self
+                    .signed_content
+                    .as_ref()
+                    .map(|content| OctetString::new(Bytes::copy_from_slice(content))),
             },
             certificates: if certificates.is_empty() {
                 None
