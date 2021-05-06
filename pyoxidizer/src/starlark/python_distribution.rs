@@ -230,7 +230,7 @@ impl PythonDistributionValue {
     #[allow(
         clippy::ptr_arg,
         clippy::too_many_arguments,
-        clippy::clippy::wrong_self_convention
+        clippy::wrong_self_convention
     )]
     fn to_python_executable_starlark(
         &mut self,
