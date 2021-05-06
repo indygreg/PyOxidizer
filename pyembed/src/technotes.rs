@@ -178,11 +178,9 @@ it on `sys.meta_path`. The chief goal of our importer is to support
 importing Python resources using an efficient binary data structure.
 
 Our extension module grabs a handle on the `&[u8]` containing modules
-data embedded into the binary. (See
-[../specifications/index.html](Specifications) for the format of this blob.)
-The in-memory data structure is parsed into a Rust collection type
-(basically a `HashMap<&str, (&[u8], &[u8])>`) mapping Python module names
-to their source and bytecode data.
+data embedded into the binary. The in-memory data structure is parsed
+into a Rust collection type (basically a `HashMap<&str, (&[u8], &[u8])>`)
+mapping Python module names to their source and bytecode data.
 
 The extension module defines an `OxidizedFinder` Python type that
 implements the requisite `importlib.abc.*` interfaces for providing a
