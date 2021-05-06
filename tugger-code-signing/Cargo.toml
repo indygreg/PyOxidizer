@@ -30,8 +30,8 @@ version = "0.4.0"
 # path = "../tugger-apple-bundle"
 
 [dependencies.tugger-apple-codesign]
-version = "0.4.0-pre"
-path = "../tugger-apple-codesign"
+version = "0.4.0"
+# path = "../tugger-apple-codesign"
 
 [dependencies.tugger-file-manifest]
 version = "0.4.0"
