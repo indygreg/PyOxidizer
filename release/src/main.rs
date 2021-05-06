@@ -84,7 +84,7 @@ fn write_workspace_toml(path: &Path, packages: &[String]) -> Result<()> {
     Ok(())
 }
 
-/// Update the [package] version key in a Cargo.toml file.
+/// Update the `[package]` version key in a Cargo.toml file.
 fn update_cargo_toml_package_version(path: &Path, version: &str) -> Result<()> {
     let mut lines = Vec::new();
 
