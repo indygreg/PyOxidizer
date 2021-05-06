@@ -118,6 +118,7 @@ Other Relevant Changes
   and builds a ``.wxs`` file containing fragments for files registered for
   installation. Before, this Starlark type was not very usable without this file,
   as WiX wouldn't pick up files that had been registered for install.
+* Rust 1.52.0 is now used as the default Rust toolchain (from version 1.51.0).
 
 .. _version_0_14_1:
 
