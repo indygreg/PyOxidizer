@@ -404,7 +404,7 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
 }
 
 static mut ORIGINAL_BUILTIN_EXTENSIONS: Option<Vec<pyffi::_inittab>> = None;
-static mut REPLACED_BUILTIN_EXTENSIONS: Option<Box<Vec<pyffi::_inittab>>> = None;
+static mut REPLACED_BUILTIN_EXTENSIONS: Option<Vec<pyffi::_inittab>> = None;
 
 /// Set PyImport_Inittab from config options.
 ///
@@ -438,7 +438,7 @@ fn set_pyimport_inittab(config: &OxidizedPythonInterpreterConfig) {
     }
 
     // Now make a copy and add in new extensions.
-    let mut extensions = Box::new(unsafe { ORIGINAL_BUILTIN_EXTENSIONS.as_ref().unwrap().clone() });
+    let mut extensions = unsafe { ORIGINAL_BUILTIN_EXTENSIONS.as_ref().unwrap().clone() };
 
     if config.oxidized_importer {
         let ptr = PyInit_oxidized_importer as *const ();
