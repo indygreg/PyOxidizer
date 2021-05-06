@@ -467,7 +467,7 @@ impl DistributionCache {
     pub fn new(default_dest_dir: Option<&Path>) -> Self {
         Self {
             cache: Mutex::new(HashMap::new()),
-            default_dest_dir: default_dest_dir.clone().map(|x| x.to_path_buf()),
+            default_dest_dir: default_dest_dir.map(|x| x.to_path_buf()),
         }
     }
 
