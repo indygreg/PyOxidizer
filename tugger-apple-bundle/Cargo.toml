@@ -16,5 +16,5 @@ plist = "1.1"
 walkdir = "2.3"
 
 [dependencies.tugger-file-manifest]
-version = "0.4.0-pre"
-path = "../tugger-file-manifest"
+version = "0.4.0"
+# path = "../tugger-file-manifest"
