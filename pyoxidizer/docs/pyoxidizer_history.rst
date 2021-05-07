@@ -59,6 +59,17 @@ Bug Fixes
   properly update the ``PATH`` environment variable if that installation option
   is active. This affects PyOxidizer's own MSI installers.
 
+Other Relevant Changes
+^^^^^^^^^^^^^^^^^^^^^^
+
+* When building for Apple platforms, we now check for a compatible Apple SDK earlier
+  during binary building (when compiling a custom ``config.c`` for a custom
+  ``libpython``). This should surface missing dependencies sooner in the build
+  and potentially replace cryptic compiler error messages with an actionable one
+  about the Apple SDK. Related to this, we now target a specific Apple SDK when
+  compiling the aforementioned source file to ensure that the same, validated SDK
+  is consistently used.
+
 .. _version_0_15_0:
 
 0.15.0

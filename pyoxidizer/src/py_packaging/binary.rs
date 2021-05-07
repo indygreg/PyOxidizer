@@ -8,6 +8,7 @@ Defining and manipulating binaries embedding Python.
 
 use {
     super::{config::PyembedPythonInterpreterConfig, distribution::AppleSdkInfo},
+    crate::environment::Environment,
     anyhow::{anyhow, Context, Result},
     python_packaging::{
         policy::PythonPackagingPolicy,
@@ -401,6 +402,7 @@ pub trait PythonBinaryBuilder {
     fn to_embedded_python_context(
         &self,
         logger: &slog::Logger,
+        env: &Environment,
         opt_level: &str,
     ) -> Result<EmbeddedPythonContext>;
 }

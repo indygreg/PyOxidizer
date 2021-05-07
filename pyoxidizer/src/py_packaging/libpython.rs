@@ -7,7 +7,8 @@ Building a native binary containing Python.
 */
 
 use {
-    anyhow::{anyhow, Result},
+    crate::{environment::Environment, py_packaging::distribution::AppleSdkInfo},
+    anyhow::{anyhow, Context, Result},
     python_packaging::libpython::LibPythonBuildContext,
     slog::warn,
     std::{
@@ -56,13 +57,16 @@ pub struct LibpythonInfo {
 /// Create a static libpython from a Python distribution.
 ///
 /// Returns a vector of cargo: lines that can be printed in build scripts.
+#[allow(clippy::too_many_arguments)]
 pub fn link_libpython(
     logger: &slog::Logger,
+    env: &Environment,
     context: &LibPythonBuildContext,
     out_dir: &Path,
     host_triple: &str,
     target_triple: &str,
     opt_level: &str,
+    apple_sdk_info: Option<&AppleSdkInfo>,
 ) -> Result<LibpythonInfo> {
     let mut cargo_metadata: Vec<String> = Vec::new();
 
@@ -110,6 +114,23 @@ pub fn link_libpython(
         for flag in flags {
             build.flag(flag);
         }
+    }
+
+    // The cc crate will pick up the default Apple SDK by default. There could be a mismatch
+    // between it and what we want. For example, if we're building for aarch64 but the default
+    // SDK is a 10.15 SDK that doesn't support ARM. We attempt to mitigate this by resolving
+    // a compatible Apple SDK and pointing the compiler invocation at it via compiler flags.
+    if target_triple.contains("-apple-") {
+        let sdk_info = apple_sdk_info.ok_or_else(|| {
+            anyhow!("Apple SDK info should be defined when targeting Apple platforms")
+        })?;
+
+        let sdk = env
+            .resolve_apple_sdk(logger, sdk_info)
+            .context("resolving Apple SDK to use")?;
+
+        build.flag("-isysroot");
+        build.flag(&format!("{}", sdk.path.display()));
     }
 
     build

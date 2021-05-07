@@ -277,7 +277,7 @@ pub fn build_executable_with_rust_project<'a>(
 
     // Derive and write the artifacts needed to build a binary embedding Python.
     let embedded_data = exe
-        .to_embedded_python_context(logger, opt_level)
+        .to_embedded_python_context(logger, env, opt_level)
         .context("obtaining embedded python context")?;
     embedded_data
         .write_files(&artifacts_path)

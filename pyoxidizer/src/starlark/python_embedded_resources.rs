@@ -67,9 +67,11 @@ impl PythonEmbeddedResourcesValue {
             output_path.display()
         );
 
-        let embedded = self
-            .exe
-            .to_embedded_python_context(context.logger(), &context.build_opt_level)?;
+        let embedded = self.exe.to_embedded_python_context(
+            context.logger(),
+            context.env(),
+            &context.build_opt_level,
+        )?;
 
         std::fs::create_dir_all(&output_path)
             .with_context(|| format!("creating output directory: {}", output_path.display()))?;

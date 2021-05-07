@@ -18,6 +18,7 @@ use {
         },
         standalone_distribution::StandaloneDistribution,
     },
+    crate::environment::Environment,
     anyhow::{anyhow, Context, Result},
     once_cell::sync::Lazy,
     python_packaging::{
@@ -308,6 +309,7 @@ impl StandalonePythonExecutableBuilder {
     fn resolve_python_linking_info(
         &self,
         logger: &slog::Logger,
+        env: &Environment,
         opt_level: &str,
     ) -> Result<PythonLinkingInfo> {
         let libpythonxy_filename;
@@ -336,11 +338,13 @@ impl StandalonePythonExecutableBuilder {
 
                 let library_info = link_libpython(
                     logger,
+                    env,
                     &LibPythonBuildContext::merge(&link_contexts),
                     &temp_dir_path,
                     &self.host_triple,
                     &self.target_triple,
                     opt_level,
+                    self.apple_sdk_info(),
                 )?;
 
                 libpythonxy_filename =
@@ -878,6 +882,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
     fn to_embedded_python_context(
         &self,
         logger: &slog::Logger,
+        env: &Environment,
         opt_level: &str,
     ) -> Result<EmbeddedPythonContext> {
         let mut file_seen = false;
@@ -985,7 +990,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
             }
         }
 
-        let linking_info = self.resolve_python_linking_info(logger, opt_level)?;
+        let linking_info = self.resolve_python_linking_info(logger, env, opt_level)?;
 
         if self.link_mode == LibpythonLinkMode::Dynamic {
             if let Some(p) = &self.target_distribution.libpython_shared_library {
@@ -1307,7 +1312,7 @@ pub mod tests {
         let logger = get_logger()?;
         let options = StandalonePythonExecutableBuilderOptions::default();
         let exe = options.new_builder()?;
-        let embedded = exe.to_embedded_python_context(&logger, "0")?;
+        let embedded = exe.to_embedded_python_context(&logger, &get_env()?, "0")?;
 
         let temp_dir = tempfile::Builder::new()
             .prefix("pyoxidizer-test")
@@ -1329,7 +1334,7 @@ pub mod tests {
         exe.resources_load_mode =
             PackedResourcesLoadMode::BinaryRelativePathMemoryMapped("resources".into());
 
-        let embedded = exe.to_embedded_python_context(&logger, "0")?;
+        let embedded = exe.to_embedded_python_context(&logger, &get_env()?, "0")?;
 
         assert_eq!(
             &embedded.config.packed_resources,
