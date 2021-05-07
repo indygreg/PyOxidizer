@@ -26,6 +26,21 @@ Blog Posts
 Version History
 ===============
 
+.. _version_0_16_0:
+
+0.16.0
+------
+
+Not yet released.
+
+Bug Fixes
+^^^^^^^^^
+
+* The Rust build environment now always sets ``RUSTC`` to the path to the
+  Rust compiler that we've detected. This should hopefully prevent
+  ``could not execute process `rustc...`` errors in environments where Rust
+  is not otherwise installed.
+
 .. _version_0_15_0:
 
 0.15.0

@@ -257,6 +257,13 @@ impl BuildEnvironment {
             );
         }
 
+        // We want cargo to use the rustc from our resolved Rust environment. So
+        // always set RUSTC to force it.
+        envs.insert(
+            "RUSTC".to_string(),
+            format!("{}", rust_environment.rustc_exe.display()),
+        );
+
         Ok(Self {
             rust_environment,
             environment_vars: envs,
