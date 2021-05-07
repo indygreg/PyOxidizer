@@ -581,10 +581,19 @@ impl StandaloneDistribution {
                     })?;
                 }
 
+                let now = filetime::FileTime::now();
+
                 // Ensure unpacked files are writable. We've had issues where we
                 // consume archives with read-only file permissions. When we later
                 // copy these files, we can run into trouble overwriting a read-only
                 // file.
+                //
+                // The mtimes in the archive may be 0 / UNIX epoch. This shouldn't
+                // matter. However, pip will sometimes attempt to produce a zip file of
+                // its own content and Python's zip code won't handle times before 1980,
+                // which is later than UNIX epoch. This can lead to pip blowing up at
+                // run-time. We work around this by forcing a modern mtime on
+                // distribution extract.
                 let walk = walkdir::WalkDir::new(&absolute_path);
                 for entry in walk.into_iter() {
                     let entry = entry?;
@@ -598,6 +607,8 @@ impl StandaloneDistribution {
                             format!("unable to mark {} as writable", entry.path().display())
                         })?;
                     }
+
+                    filetime::set_file_mtime(entry.path(), now).context("setting file mtime")?;
                 }
             }
         }
