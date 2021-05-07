@@ -5,6 +5,10 @@
 # it for the location of the pyembed crate. With the filesystem path not
 # set, pyoxidizer will use the canonical github.com repository for any Git
 # references.
+#
+# For the spot tests, we purposefully perform these on separate jobs
+# because we don't want a Python or Rust install from the build environment
+# to impact the testing.
 
 on:
   push:
@@ -63,6 +67,31 @@ jobs:
         with:
           name: linux-x86_64-bin
           path: target/x86_64-unknown-linux-musl/release/pyoxidizer
+
+  linux-x86_64-bin-check:
+    needs:
+      - 'linux-x86_64-bin'
+    runs-on: 'ubuntu-20.04'
+    steps:
+      - name: Install musl compiler
+        run: |
+          sudo apt install -y --no-install-recommends musl-tools
+
+      - name: Download Linux Executable
+        uses: actions/download-artifact@v2
+        with:
+          name: linux-x86_64-bin
+
+      - name: Spot Test (Native Build)
+        run: |
+          chmod +x pyoxidizer
+          ./pyoxidizer init-config-file myapp
+          ./pyoxidizer build --path myapp
+
+      # TODO disabled because of duplicate ffi_type_double, etc symbol failures.
+      #- name: Spot Test (musl Cross)
+      #  run: |
+      #    ./pyoxidizer build --path myapp --target-triple x86_64-unknown-linux-musl
 
   macos-exe:
     strategy:
@@ -153,6 +182,33 @@ jobs:
         with:
           name: macos_universal_exe
           path: dist/*/pyoxidizer
+
+  macos-universal-exe-check:
+    needs:
+      - macos-universal-exe
+    runs-on: 'macos-10.15'
+    steps:
+      - name: Download macOS Executable
+        uses: actions/download-artifact@v2
+        with:
+          name: macos_universal_exe
+
+      - name: Spot Test (Native Build)
+        run: |
+          mv macos-universal/pyoxidizer .
+          chmod +x pyoxidizer
+          ./pyoxidizer init-config-file myapp
+          ./pyoxidizer build --path myapp
+
+      # TODO this is disabled because python3-sys requires use of a host Python
+      # interpreter for configuration.
+      #- name: Spot Test (aarch64 Cross Build)
+      #  env:
+      #    # The default SDK is 10.15 and the 11.x SDK isn't in a default search path.
+      #    # So we need to point pyoxidizer at a more modern SDK.
+      #    SDKROOT: /Applications/Xcode_12.4.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX11.1.sdk
+      #  run: |
+      #    ./pyoxidizer build --path myapp --target-triple aarch64-apple-darwin
 
   macos-dmg:
     needs:
@@ -248,6 +304,32 @@ jobs:
           name: windows_exes
           path: |
             dist/*/*
+
+  windows-exe-check:
+    strategy:
+      matrix:
+        config:
+          - host_triple: 'i686-pc-windows-msvc'
+            target_triple: 'x86_64-pc-windows-msvc'
+          - host_triple: 'x86_64-pc-windows-msvc'
+            target_triple: 'i686-pc-windows-msvc'
+    needs:
+      - windows-exe
+    runs-on: 'windows-2019'
+    steps:
+      - name: Download Windows Executable
+        uses: actions/download-artifact@v2
+        with:
+          name: windows_exes
+
+      - name: Spot Test (Native Build)
+        run: |
+          ${{ matrix.config.host_triple }}/pyoxidizer.exe init-config-file myapp
+          ${{ matrix.config.host_triple }}/pyoxidizer.exe build --path myapp
+
+      - name: Spot Test (Cross-Compile Build)
+        run: |
+          ${{ matrix.config.host_triple }}/pyoxidizer.exe build --path myapp --target-triple ${{ matrix.config.target_triple }}
 
   windows-installer:
     needs:
