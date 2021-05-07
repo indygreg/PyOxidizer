@@ -42,6 +42,9 @@ Bug Fixes
   is not otherwise installed.
 * Pre-release ``pyoxidizer`` binaries built in CI should now generate
   ``Cargo.lock`` files in Rust projects that work with ``cargo build --frozen``.
+* Managed Rust toolchains now properly install the Rust stdlib for cross-compiles.
+  Previously, the logs said it was installing them but didn't actually, leading
+  to build failures due to an incomplete Rust toolchain.
 
 .. _version_0_15_0:
 

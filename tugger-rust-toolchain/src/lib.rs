@@ -174,10 +174,15 @@ pub struct InstalledToolchain {
     pub cargo_path: PathBuf,
 }
 
-fn materialize_archive(archive: &PackageArchive, package: &str, install_dir: &Path) -> Result<()> {
+fn materialize_archive(
+    archive: &PackageArchive,
+    package: &str,
+    triple: &str,
+    install_dir: &Path,
+) -> Result<()> {
     archive.install(&install_dir).context("installing")?;
 
-    let manifest_path = install_dir.join(format!("MANIFEST.{}", package));
+    let manifest_path = install_dir.join(format!("MANIFEST.{}.{}", triple, package));
     let mut fh = std::fs::File::create(&manifest_path).context("opening manifest file")?;
     archive
         .write_installs_manifest(&mut fh)
@@ -204,8 +209,8 @@ fn sha256_path(path: &Path) -> Result<Vec<u8>> {
     Ok(hasher.finalize().to_vec())
 }
 
-fn package_is_fresh(install_dir: &Path, package: &str) -> Result<bool> {
-    let manifest_path = install_dir.join(format!("MANIFEST.{}", package));
+fn package_is_fresh(install_dir: &Path, package: &str, triple: &str) -> Result<bool> {
+    let manifest_path = install_dir.join(format!("MANIFEST.{}.{}", triple, package));
 
     if !manifest_path.exists() {
         return Ok(false);
@@ -275,7 +280,7 @@ pub fn install_rust_toolchain(
     lock.lock_exclusive().context("obtaining lock")?;
 
     for (triple, package) in installs {
-        if package_is_fresh(&install_dir, package)? {
+        if package_is_fresh(&install_dir, package, triple)? {
             warn!(
                 logger,
                 "{} for {} in {} is up-to-date",
@@ -293,7 +298,7 @@ pub fn install_rust_toolchain(
             );
             let archive =
                 resolve_package_archive(logger, &manifest, package, triple, download_cache_dir)?;
-            materialize_archive(&archive, package, &install_dir)?;
+            materialize_archive(&archive, package, triple, &install_dir)?;
         }
     }
 
