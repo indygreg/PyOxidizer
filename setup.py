@@ -76,7 +76,7 @@ with open("oxidized-importer/README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="oxidized_importer",
-    version="0.2dev0",
+    version="0.2",
     author="Gregory Szorc",
     author_email="gregory.szorc@gmail.com",
     url="https://github.com/indygreg/PyOxidizer",
@@ -84,7 +84,7 @@ setuptools.setup(
     long_description=long_description,
     license="MPL 2.0",
     python_requires=">=3.8",
-    classifiers=["Intended Audience :: Developers", "Programming Language :: Rust",],
+    classifiers=["Intended Audience :: Developers", "Programming Language :: Rust"],
     ext_modules=[RustExtension("oxidized_importer")],
     cmdclass={"build_ext": RustBuildExt},
 )
