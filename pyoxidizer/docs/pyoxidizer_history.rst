@@ -55,6 +55,9 @@ Bug Fixes
   *modernize* the mtimes in the extracted Python distributions. The easiest way to
   do this is to clear PyOxidizer's Python distribution cache via
   ``pyoxidizer cache-clear``.
+* MSI installers built with :py:class:`starlark_tugger.WiXMSIBuilder` should now
+  properly update the ``PATH`` environment variable if that installation option
+  is active. This affects PyOxidizer's own MSI installers.
 
 .. _version_0_15_0:
 

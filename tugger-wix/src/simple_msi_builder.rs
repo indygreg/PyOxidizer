@@ -368,7 +368,7 @@ impl WiXSimpleMsiBuilder {
             XmlEvent::start_element("Environment")
                 .attr("Id", "PATH")
                 .attr("Name", "PATH")
-                .attr("Value", "[Bin]")
+                .attr("Value", "[APPLICATIONFOLDER]")
                 .attr("Permanent", "no")
                 .attr("Part", "last")
                 .attr("Action", "set")
