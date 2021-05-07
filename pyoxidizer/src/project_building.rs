@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        environment::{canonicalize_path, resolve_apple_sdk, Environment, RustEnvironment},
+        environment::{canonicalize_path, Environment, RustEnvironment},
         project_layout::initialize_project,
         py_packaging::{
             binary::{EmbeddedPythonContext, LibpythonLinkMode, PythonBinaryBuilder},
@@ -23,7 +23,6 @@ use {
         io::{BufRead, BufReader},
         path::{Path, PathBuf},
     },
-    tugger_apple::AppleSdk,
 };
 
 pub const HOST: &str = env!("HOST");
@@ -169,43 +168,14 @@ impl BuildEnvironment {
                 anyhow!("targeting Apple platform but Apple SDK info not available")
             })?;
 
-            let platform = &sdk_info.platform;
-            let minimum_version = &sdk_info.version;
-            let deployment_target = &sdk_info.deployment_target;
+            let sdk = env
+                .resolve_apple_sdk(logger, sdk_info)
+                .context("resolving Apple SDK")?;
 
-            // Respect the SDKROOT environment variable.
-            let sdk = if let Some(sdk_root) = envs.get("SDKROOT") {
-                warn!(logger, "SDKROOT defined; using Apple SDK at {}", sdk_root);
-                AppleSdk::from_directory(&PathBuf::from(sdk_root)).with_context(|| {
-                    format!("resolving SDK at {} as defined via SDKROOT", sdk_root)
-                })?
-            } else {
-                warn!(
-                    logger,
-                    "locating Apple SDK {}{}+ supporting {}{}",
-                    platform,
-                    minimum_version,
-                    platform,
-                    deployment_target
-                );
-
-                resolve_apple_sdk(logger, platform, minimum_version, deployment_target)
-                    .context("resolving Apple SDK")?
-            };
-
-            warn!(
-                logger,
-                "using SDK {} ({} targeting {}{})",
-                sdk.path.display(),
-                sdk.name,
-                platform,
-                deployment_target
-            );
-
-            let deployment_target_name = sdk.supported_targets.get(platform).ok_or_else(|| {
-                anyhow!("could not find settings for target {} (this shouldn't happen)", platform)
+            let deployment_target_name = sdk.supported_targets.get(&sdk_info.platform).ok_or_else(|| {
+                anyhow!("could not find settings for target {} (this shouldn't happen)", &sdk_info.platform)
             })?.deployment_target_setting_name.as_ref().ok_or_else(|| {
-                anyhow!("unable to identify deployment target environment variable for {} (please report this bug)", platform)
+                anyhow!("unable to identify deployment target environment variable for {} (please report this bug)", &sdk_info.platform)
             })?;
 
             // SDKROOT will instruct rustc and potentially other tools to use exactly this SDK.
@@ -217,7 +187,7 @@ impl BuildEnvironment {
             if envs.get(deployment_target_name).is_none() {
                 envs.insert(
                     deployment_target_name.to_string(),
-                    deployment_target.to_string(),
+                    sdk_info.deployment_target.clone(),
                 );
             }
         }

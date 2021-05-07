@@ -5,7 +5,7 @@
 //! Resolve details about the PyOxidizer execution environment.
 
 use {
-    crate::project_layout::PyembedLocation,
+    crate::{project_layout::PyembedLocation, py_packaging::distribution::AppleSdkInfo},
     anyhow::{anyhow, Context, Result},
     once_cell::sync::Lazy,
     semver::Version,
@@ -415,6 +415,48 @@ impl Environment {
             rustc_exe,
             rust_version,
         })
+    }
+
+    /// Attempt to resolve an appropriate Apple SDK to use given settings.
+    pub fn resolve_apple_sdk(
+        &self,
+        logger: &slog::Logger,
+        sdk_info: &AppleSdkInfo,
+    ) -> Result<AppleSdk> {
+        let platform = &sdk_info.platform;
+        let minimum_version = &sdk_info.version;
+        let deployment_target = &sdk_info.deployment_target;
+
+        let sdk = if let Ok(sdk_root) = std::env::var("SDKROOT") {
+            warn!(logger, "SDKROOT defined; using Apple SDK at {}", &sdk_root);
+
+            AppleSdk::from_directory(&PathBuf::from(&sdk_root)).with_context(|| {
+                format!("resolving Apple SDK at {} as defined by SDKROOT", sdk_root)
+            })?
+        } else {
+            warn!(
+                logger,
+                "locating Apple SDK {}{}+ supporting {}{}",
+                platform,
+                minimum_version,
+                platform,
+                deployment_target
+            );
+
+            resolve_apple_sdk(logger, platform, minimum_version, deployment_target)
+                .context("resolving Apple SDK")?
+        };
+
+        warn!(
+            logger,
+            "using SDK {} ({} targeting {}{})",
+            sdk.path.display(),
+            sdk.name,
+            platform,
+            deployment_target
+        );
+
+        Ok(sdk)
     }
 }
 
