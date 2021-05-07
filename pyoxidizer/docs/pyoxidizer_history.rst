@@ -40,6 +40,8 @@ Bug Fixes
   Rust compiler that we've detected. This should hopefully prevent
   ``could not execute process `rustc...`` errors in environments where Rust
   is not otherwise installed.
+* Pre-release ``pyoxidizer`` binaries built in CI should now generate
+  ``Cargo.lock`` files in Rust projects that work with ``cargo build --frozen``.
 
 .. _version_0_15_0:
 

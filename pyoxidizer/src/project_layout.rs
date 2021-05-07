@@ -177,7 +177,11 @@ pub fn write_new_cargo_config(project_path: &Path) -> Result<()> {
 /// resemble those in this repository's `Cargo.lock`. This helps ensure that
 /// the crate versions used by generated Rust projects match those of the
 /// build/commit of PyOxidizer used to generate the project.
-pub fn write_new_cargo_lock(project_path: &Path, project_name: &str) -> Result<()> {
+pub fn write_new_cargo_lock(
+    project_path: &Path,
+    project_name: &str,
+    pyembed_location: &PyembedLocation,
+) -> Result<()> {
     // Add this project's entry to the lock file contents, otherwise the
     // lock file will need updating on first use.
     let mut lock_file = cargo_lock::Lockfile::from_str(NEW_PROJECT_CARGO_LOCK)?;
@@ -211,6 +215,44 @@ pub fn write_new_cargo_lock(project_path: &Path, project_name: &str) -> Result<(
         dependencies,
         replace: None,
     });
+
+    // The vendored new project Cargo.lock may need updated to properly reference
+    // packages from this repository. Here are the states that the vendored Cargo.lock
+    // can be in.
+    //
+    // a. Ongoing development. e.g. standard state on the `main` branch. Packages
+    //    in this repo are referred to by their version string, which ends in `-pre`.
+    // b. During a release. Version strings lack `-pre` and there are likely
+    //    `source` and `checksum` entries for the package.
+    //
+    // Furthermore, we have to consider how the generated `Cargo.toml` references the
+    // pyembed crate. It can be in one of the states as defined by the `PyembedLocation`
+    // enumeration.
+    //
+    // The pyembed location is important because some state combinations may require
+    // updating the vendored `Cargo.lock` so it doesn't require updates. Here is where
+    // we make those updates.
+
+    // If the pyembed location is referred to by path, no update to Cargo.lock is needed.
+    // If the pyembed location is referred to be a published version, the Cargo.lock should
+    // already have `source` and `checksum` entries for the published version, so it shouldn't
+    // need updates.
+    // If the pyembed location is referred to be a Git repo + commit, we need to define
+    // `source` entries for said packages to keep the Cargo.lock in sync.
+
+    if let PyembedLocation::Git(url, commit) = pyembed_location {
+        for package in lock_file.packages.iter_mut() {
+            if package.version.is_prerelease() && package.source.is_none() {
+                package.source = Some(
+                    cargo_lock::SourceId::for_git(
+                        &url::Url::from_str(url).context("parsing Git url")?,
+                        cargo_lock::package::source::GitReference::Rev(commit.clone()),
+                    )
+                    .context("constructing Cargo.lock Git source")?,
+                );
+            }
+        }
+    }
 
     // cargo_lock isn't smart enough to sort the packages. So do that here.
     lock_file
@@ -445,7 +487,8 @@ pub fn initialize_project(
     update_new_cargo_toml(&path.join("Cargo.toml"), &source.as_pyembed_location())
         .context("updating Cargo.toml")?;
     write_new_cargo_config(&path).context("writing cargo config")?;
-    write_new_cargo_lock(&path, name).context("writing Cargo.lock")?;
+    write_new_cargo_lock(&path, name, &source.as_pyembed_location())
+        .context("writing Cargo.lock")?;
     write_new_build_rs(&path.join("build.rs"), name).context("writing build.rs")?;
     write_new_main_rs(&path.join("src").join("main.rs"), windows_subsystem)
         .context("writing main.rs")?;
