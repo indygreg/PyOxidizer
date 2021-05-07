@@ -387,11 +387,12 @@ pub fn build_executable_with_rust_project<'a>(
     {
         let reader = BufReader::new(&command);
         for line in reader.lines() {
-            warn!(logger, "{}", line?);
+            warn!(logger, "{}", line.context("reading cargo output")?);
         }
     }
     let output = command
-        .try_wait()?
+        .try_wait()
+        .context("waiting on cargo process")?
         .ok_or_else(|| anyhow!("unable to wait on command"))?;
     if !output.status.success() {
         return Err(anyhow!("cargo build failed"));
@@ -409,7 +410,8 @@ pub fn build_executable_with_rust_project<'a>(
         return Err(anyhow!("{} does not exist", exe_path.display()));
     }
 
-    let exe_data = std::fs::read(&exe_path)?;
+    let exe_data =
+        std::fs::read(&exe_path).with_context(|| format!("reading {}", exe_path.display()))?;
     let exe_name = exe_path.file_name().unwrap().to_string_lossy().to_string();
 
     Ok(BuiltExecutable {
