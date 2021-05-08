@@ -17,6 +17,22 @@ IN_CI = VARS.get("IN_CI", False)
 CODE_SIGNING_ENABLE = VARS.get("CODE_SIGNING_ENABLE", False)
 TIME_STAMP_SERVER_URL = VARS.get("TIME_STAMP_SERVER_URL", "http://timestamp.digicert.com")
 
+WHEEL_METADATA = """Metadata-Version: 2.1
+Name: pyoxidizer
+Version: %s
+Summary: Package self-contained Python applications
+Keywords: python
+Home-Page: https://github.com/indygreg/PyOxidizer
+Author: Gregory Szorc <gregory.szorc@gmail.com>
+Author-Email: Gregory Szorc <gregory.szorc@gmail.com>
+License: MPL-2.0
+Description-Content-Type: text/markdown; charset=UTF-8; variant=GFM
+
+PyOxidizer is a utility for producing distributable Python applications.
+
+See the docs at https://pyoxidizer.readthedocs.org/ for more.
+""" % PYOXIDIZER_VERSION
+
 
 def make_msi(target_triple, add_vc_redist):
     msi = WiXMSIBuilder(
@@ -120,6 +136,44 @@ def make_macos_app_bundle():
     return bundle
 
 
+def make_wheel(platform_tag, target_triple):
+    # PyOxidizer's wheel is simply the executable binary as a "script" file.
+    wheel = PythonWheelBuilder("pyoxidizer", PYOXIDIZER_VERSION)
+    wheel.generator = "PyOxidizer (%s)" % PYOXIDIZER_VERSION
+    wheel.tag = "py3-none-%s" % platform_tag
+
+    wheel.add_file_dist_info(FileContent(filename = "METADATA", content = WHEEL_METADATA))
+
+    path = "target/%s/release/pyoxidizer" % target_triple
+
+    if "-windows-" in target_triple:
+        path = "%s.exe" % path
+
+    wheel.add_file_data("scripts", FileContent(path = path))
+
+    return wheel
+
+
+def make_wheel_linux():
+    return make_wheel("manylinux2010_x86_64", "x86_64-unknown-linux-musl")
+
+
+def make_wheel_macos_aarch64():
+    return make_wheel("macosx_11_0_arm64", "aarch64-apple-darwin")
+
+
+def make_wheel_macos_x86_64():
+    return make_wheel("macosx_10_9_x86_64", "x86_64-apple-darwin")
+
+
+def make_wheel_windows_x86():
+    return make_wheel("win32", "i686-pc-windows-msvc")
+
+
+def make_wheel_windows_x86_64():
+    return make_wheel("win_amd64", "x86_64-pc-windows-msvc")
+
+
 def register_code_signers():
     signer = None
 
@@ -137,5 +191,10 @@ register_target("msi_x86", make_msi_x86)
 register_target("msi_x86_64", make_msi_x86_64)
 register_target("exe_installer", make_exe_installer, default = True)
 register_target("macos_app_bundle", make_macos_app_bundle)
+register_target("wheel_linux", make_wheel_linux)
+register_target("wheel_macos_aarch64", make_wheel_macos_aarch64)
+register_target("wheel_macos_x86_64", make_wheel_macos_x86_64)
+register_target("wheel_windows_x86", make_wheel_windows_x86)
+register_target("wheel_windows_x86_64", make_wheel_windows_x86_64)
 
 resolve_targets()

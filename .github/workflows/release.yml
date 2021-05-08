@@ -68,6 +68,18 @@ jobs:
           name: linux-x86_64-bin
           path: target/x86_64-unknown-linux-musl/release/pyoxidizer
 
+      - name: Build Wheel
+        run: |
+          target/x86_64-unknown-linux-musl/release/pyoxidizer build --release wheel_linux
+          mkdir -p wheelhouse
+          mv build/*/*/*/*.whl wheelhouse/
+
+      - name: Upload Wheel
+        uses: actions/upload-artifact@v2
+        with:
+          name: wheels
+          path: wheelhouse
+
   linux-x86_64-bin-check:
     needs:
       - 'linux-x86_64-bin'
@@ -95,6 +107,7 @@ jobs:
 
   macos-exe:
     strategy:
+      fail-fast: false
       matrix:
         target_triple:
           - 'aarch64-apple-darwin'
@@ -158,6 +171,53 @@ jobs:
           name: macos_exes
           path: |
             dist/*/*
+
+  # We need a separate wheel job for macOS because we need a host pyoxidizer to generate
+  # the wheel for cross-compiles.
+  macos-wheel:
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - target_triple: 'aarch64-apple-darwin'
+            wheel_target: 'wheel_macos_aarch64'
+          - target_triple: 'x86_64-apple-darwin'
+            wheel_target: 'wheel_macos_x86_64'
+    needs:
+      - linux-x86_64-bin
+      - macos-exe
+    runs-on: 'ubuntu-20.04'
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Download Linux exe
+        uses: actions/download-artifact@v2
+        with:
+          name: linux-x86_64-bin
+          path: dist
+
+      - name: Download macOS Exes
+        uses: actions/download-artifact@v2
+        with:
+          name: macos_exes
+          path: dist
+
+      - name: Build Wheel
+        run: |
+          mkdir -p target/${{ matrix.config.target_triple }}/release
+          mv dist/${{ matrix.config.target_triple }}/pyoxidizer target/${{ matrix.config.target_triple}}/release/
+
+          chmod +x dist/pyoxidizer
+          dist/pyoxidizer build --release ${{ matrix.config.wheel_target }}
+
+          mkdir wheelhouse
+          mv build/*/*/*/*.whl wheelhouse/
+
+      - name: Upload Wheel
+        uses: actions/upload-artifact@v2
+        with:
+          name: wheels
+          path: wheelhouse
 
   macos-universal-exe:
     needs:
@@ -238,10 +298,13 @@ jobs:
 
   windows-exe:
     strategy:
+      fail-fast: false
       matrix:
-        target_triple:
-          - 'i686-pc-windows-msvc'
-          - 'x86_64-pc-windows-msvc'
+        config:
+          - target_triple: 'i686-pc-windows-msvc'
+            wheel_target: 'wheel_windows_x86'
+          - target_triple: 'x86_64-pc-windows-msvc'
+            wheel_target: 'wheel_windows_x86_64'
     runs-on: 'windows-2019'
     env:
       IN_CI: '1'
@@ -263,7 +326,7 @@ jobs:
           toolchain: stable
           default: true
           profile: minimal
-          target: ${{ matrix.target_triple }}
+          target: ${{ matrix.config.target_triple }}
 
       - name: Cache sccache (Windows)
         id: cache-sccache
@@ -293,10 +356,10 @@ jobs:
           RUSTC_WRAPPER: sccache
         run: |
           rustc --version
-          cargo build --target ${{ matrix.target_triple }} --release --bin pyoxidizer
+          cargo build --target ${{ matrix.config.target_triple }} --release --bin pyoxidizer
 
-          New-Item -ItemType "directory" -Name "dist/${{ matrix.target_triple}}"
-          move target/${{ matrix.target_triple }}/release/pyoxidizer.exe dist/${{ matrix.target_triple }}
+          New-Item -ItemType "directory" -Name "dist/${{ matrix.config.target_triple}}"
+          copy target/${{ matrix.config.target_triple }}/release/pyoxidizer.exe dist/${{ matrix.config.target_triple }}
 
       - name: Upload Executable
         uses: actions/upload-artifact@v2
@@ -305,8 +368,22 @@ jobs:
           path: |
             dist/*/*
 
+      - name: Build Wheel
+        run: |
+          target/${{ matrix.config.target_triple}}/release/pyoxidizer.exe build --release ${{ matrix.config.wheel_target }}
+
+          New-Item -ItemType "directory" -Name "wheelhouse"
+          move build/*/*/*/*.whl wheelhouse/
+
+      - name: Upload Wheel
+        uses: actions/upload-artifact@v2
+        with:
+          name: wheels
+          path: wheelhouse
+
   windows-exe-check:
     strategy:
+      fail-fast: false
       matrix:
         config:
           - host_triple: 'i686-pc-windows-msvc'
@@ -362,148 +439,16 @@ jobs:
             *.exe
             *.msi
 
-  macos-wheels:
-    runs-on: 'macos-10.15'
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          fetch-depth: 0
-      - uses: actions/setup-python@v2
-        with:
-          python-version: 3.9
-      - name: Install Rust toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          target: aarch64-apple-darwin
-          profile: minimal
-          default: true
-      - name: Install maturin
-        run: pip install maturin==0.10.4
-      - name: Build wheels - x86_64
-        env:
-          PYOXIDIZER_BUILD_FORCE_GIT_SOURCE: '1'
-        run: |
-          maturin build -m pyoxidizer/Cargo.toml -b bin --target x86_64-apple-darwin --release --out dist --no-sdist
-          pip install pyoxidizer --no-index --find-links dist --force-reinstall
-      - name: Build wheels - universal2
-        env:
-          MACOSX_DEPLOYMENT_TARGET: '10.9'
-          PYOXIDIZER_BUILD_FORCE_GIT_SOURCE: '1'
-          SDKROOT: '/Applications/Xcode_12.4.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX11.1.sdk'
-        run: |
-          maturin build -m pyoxidizer/Cargo.toml -b bin --release --universal2 --out dist --no-sdist
-          pip install pyoxidizer --no-index --find-links dist --force-reinstall
-      - name: Upload wheels
-        uses: actions/upload-artifact@v2
-        with:
-          name: wheels
-          path: dist
-
-  windows-wheels:
-    runs-on: 'windows-2019'
-    strategy:
-      matrix:
-        platform: [
-          { python-architecture: "x64", target: "x86_64-pc-windows-msvc" },
-          { python-architecture: "x86", target: "i686-pc-windows-msvc" },
-        ]
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          fetch-depth: 0
-      - uses: actions/setup-python@v2
-        with:
-          python-version: 3.9
-          architecture: ${{ matrix.platform.python-architecture }}
-      - name: Install Rust toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          target: ${{ matrix.platform.target }}
-          profile: minimal
-          default: true
-      - name: Install maturin
-        run: pip install maturin==0.10.4
-      - name: Build wheels
-        env:
-          PYOXIDIZER_BUILD_FORCE_GIT_SOURCE: '1'
-        run: |
-          maturin build -m pyoxidizer/Cargo.toml -b bin --release --out dist --no-sdist --target ${{ matrix.platform.target }}
-          pip install pyoxidizer --no-index --find-links dist --force-reinstall
-      - name: Upload wheels
-        uses: actions/upload-artifact@v2
-        with:
-          name: wheels
-          path: dist
-
-  linux-wheels:
-    runs-on: 'ubuntu-20.04'
-    env:
-      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      SCCACHE_BUCKET: 'pyoxidizer-sccache'
-      SCCACHE_S3_USE_SSL: '1'
-    strategy:
-      matrix:
-        target_triple:
-          - 'x86_64-unknown-linux-musl'
-    steps:
-      - name: Install system packages
-        run: |
-          sudo apt install -y --no-install-recommends libbz2-dev musl-tools
-
-      - name: Install Rust Toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          default: true
-          profile: minimal
-          target: ${{ matrix.target_triple }}
-
-      - name: Install Python
-        uses: actions/setup-python@v2
-        with:
-          python-version: 3.9
-
-      - name: Install sccache
-        run: |
-          wget -O sccache.tar.gz --progress dot:mega https://github.com/mozilla/sccache/releases/download/v0.2.15/sccache-v0.2.15-x86_64-unknown-linux-musl.tar.gz
-          tar -xvzf sccache.tar.gz
-          mv sccache-*/sccache /usr/share/rust/.cargo/bin/sccache
-          chmod +x /usr/share/rust/.cargo/bin/sccache
-          sccache --start-server
-
-      - uses: actions/checkout@v2
-        with:
-          fetch-depth: 0
-
-      - name: Install maturin
-        run: python3.9 -m pip install maturin==0.10.4
-
-      - name: Build Wheels
-        env:
-          PYOXIDIZER_BUILD_FORCE_GIT_SOURCE: '1'
-          RUSTC_WRAPPER: sccache
-        run: |
-          rustc --version
-          maturin build -m pyoxidizer/Cargo.toml -b bin --no-sdist --release -o dist --target ${{ matrix.target_triple }} --manylinux 2010
-
-      - name: Upload wheels
-        uses: actions/upload-artifact@v2
-        with:
-          name: wheels
-          path: dist
-
   linux-wheels-cross:
-    runs-on: 'ubuntu-20.04'
     strategy:
+      fail-fast: false
       matrix:
         platform: [
           { manylinux: '2010', target: "i686-unknown-linux-musl", image_tag: "i686-musl" },
           { manylinux: '2014', target: "aarch64-unknown-linux-musl", image_tag: "aarch64-musl" },
           { manylinux: '2014', target: "armv7-unknown-linux-musleabihf", image_tag: "armv7-musleabihf" },
         ]
+    runs-on: 'ubuntu-20.04'
     container:
       image: docker://messense/rust-musl-cross:${{ matrix.platform.image_tag }}
       env:

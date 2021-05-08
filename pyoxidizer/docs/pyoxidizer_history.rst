@@ -65,7 +65,8 @@ New Features
 * The new :py:class:`starlark_tugger.PythonWheelBuilder` type can be used to
   create Python wheel (``.whl``) files. It is currently rather low-level and
   doesn't have any integrations with other Starlark Python types. But it does
-  allow you to create Python wheels from file content.
+  allow you to create Python wheels from file content. PyOxidizer uses the
+  type for building its own wheels (previously it was using ``maturin``).
 
 Other Relevant Changes
 ^^^^^^^^^^^^^^^^^^^^^^
