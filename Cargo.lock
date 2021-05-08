@@ -2453,6 +2453,7 @@ name = "python-packaging"
 version = "0.9.0-pre"
 dependencies = [
  "anyhow",
+ "base64 0.13.0",
  "byteorder",
  "encoding_rs",
  "itertools 0.10.0",
@@ -2460,8 +2461,10 @@ dependencies = [
  "once_cell",
  "python-packed-resources",
  "regex",
+ "sha2 0.9.4",
  "spdx",
  "tempfile",
+ "time",
  "tugger-file-manifest",
  "tugger-licensing",
  "walkdir",

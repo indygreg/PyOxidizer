@@ -23,3 +23,5 @@ pub mod resource_collection;
 
 #[cfg(feature = "wheel")]
 pub mod wheel;
+#[cfg(feature = "wheel")]
+pub mod wheel_builder;
