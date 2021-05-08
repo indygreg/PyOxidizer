@@ -59,6 +59,14 @@ Bug Fixes
   properly update the ``PATH`` environment variable if that installation option
   is active. This affects PyOxidizer's own MSI installers.
 
+New Features
+^^^^^^^^^^^^
+
+* The new :py:class:`starlark_tugger.PythonWheelBuilder` type can be used to
+  create Python wheel (``.whl``) files. It is currently rather low-level and
+  doesn't have any integrations with other Starlark Python types. But it does
+  allow you to create Python wheels from file content.
+
 Other Relevant Changes
 ^^^^^^^^^^^^^^^^^^^^^^
 

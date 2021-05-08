@@ -14,6 +14,7 @@ pub mod file_content;
 pub mod file_manifest;
 pub mod file_resource;
 pub mod macos_application_bundle_builder;
+pub mod python_wheel_builder;
 pub mod snapcraft;
 pub mod terminal;
 #[cfg(test)]
@@ -132,6 +133,7 @@ pub fn register_starlark_dialect(
     file_manifest::file_manifest_module(env, type_values);
     file_resource::file_resource_module(env, type_values);
     macos_application_bundle_builder::macos_application_bundle_builder_module(env, type_values);
+    python_wheel_builder::python_wheel_builder_module(env, type_values);
     snapcraft::snapcraft_module(env, type_values);
     terminal::terminal_module(env, type_values);
     wix_bundle_builder::wix_bundle_builder_module(env, type_values);

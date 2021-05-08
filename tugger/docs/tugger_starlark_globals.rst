@@ -39,6 +39,9 @@ Tugger's Starlark dialect defines the following custom types:
 :py:class:`MacOsApplicationBundleBuilder`
    Used to create macOS Application Bundles (i.e. ``.app`` directories).
 
+:py:class:`PythonWheelBuilder`
+   Create Python wheels (`.whl` files) from settings and file content.
+
 :py:class:`SnapApp`
    Represents an application inside a ``snapcraft.yaml`` file.
 

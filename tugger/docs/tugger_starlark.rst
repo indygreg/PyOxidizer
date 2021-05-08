@@ -27,6 +27,7 @@ specific to Tugger.
    tugger_starlark_type_file_content
    tugger_starlark_type_file_manifest
    tugger_starlark_type_macos_application_bundle_builder
+   tugger_starlark_type_python_wheel_builder
    tugger_starlark_type_resolved_target
    tugger_starlark_type_snap_app
    tugger_starlark_type_snap_part
