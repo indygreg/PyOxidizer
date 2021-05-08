@@ -2407,7 +2407,6 @@ dependencies = [
  "codemap-diagnostic",
  "dirs",
  "duct",
- "filetime",
  "fs2",
  "fs_extra",
  "git2",
