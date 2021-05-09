@@ -3743,7 +3743,7 @@ dependencies = [
  "tugger-snapcraft 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-windows 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-windows-codesign 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "tugger-wix",
+ "tugger-wix 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "walkdir",
  "x509-certificate 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -4178,7 +4178,7 @@ dependencies = [
 
 [[package]]
 name = "tugger-wix"
-version = "0.8.0-pre"
+version = "0.8.0"
 dependencies = [
  "anyhow",
  "duct",
@@ -4186,6 +4186,25 @@ dependencies = [
  "once_cell",
  "slog",
  "tempfile",
+ "tugger-common 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-file-manifest 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-windows 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-windows-codesign 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "url",
+ "uuid",
+ "xml-rs",
+]
+
+[[package]]
+name = "tugger-wix"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7ac8542667f85dc4ba91d8503e739d89cfaf24703369d9444dc5792c0e66f728"
+dependencies = [
+ "anyhow",
+ "duct",
+ "once_cell",
+ "slog",
  "tugger-common 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-file-manifest 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-windows 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
