@@ -892,7 +892,6 @@ starlark_module! { python_executable_env =>
         this.build(env, cs, target)
     }
 
-    #[allow(non_snake_case, clippy::ptr_arg)]
     PythonExecutable.make_python_module_source(
         env env,
         call_stack cs,
@@ -905,7 +904,6 @@ starlark_module! { python_executable_env =>
         this.make_python_module_source(&env, cs, name, source, is_package)
     }
 
-    #[allow(non_snake_case, clippy::ptr_arg)]
     PythonExecutable.pip_download(
         env env,
         call_stack cs,
@@ -916,7 +914,6 @@ starlark_module! { python_executable_env =>
         this.pip_download(&env, cs, &args)
     }
 
-    #[allow(non_snake_case, clippy::ptr_arg)]
     PythonExecutable.pip_install(
         env env,
         call_stack cs,
@@ -928,7 +925,6 @@ starlark_module! { python_executable_env =>
         this.pip_install(&env, cs, &args, &extra_envs)
     }
 
-    #[allow(non_snake_case, clippy::ptr_arg)]
     PythonExecutable.read_package_root(
         env env,
         call_stack cs,
@@ -940,7 +936,6 @@ starlark_module! { python_executable_env =>
         this.read_package_root(&env, cs, path, &packages)
     }
 
-    #[allow(non_snake_case, clippy::ptr_arg)]
     PythonExecutable.read_virtualenv(
         env env,
         call_stack cs,
@@ -951,7 +946,6 @@ starlark_module! { python_executable_env =>
         this.read_virtualenv(&env, cs, path)
     }
 
-    #[allow(non_snake_case, clippy::ptr_arg)]
     PythonExecutable.setup_py_install(
         env env,
         call_stack cs,
@@ -964,7 +958,6 @@ starlark_module! { python_executable_env =>
         this.setup_py_install(&env, cs, package_path, &extra_envs, &extra_global_arguments)
     }
 
-    #[allow(non_snake_case, clippy::ptr_arg)]
     PythonExecutable.add_python_resource(
         env env,
         this,
@@ -978,7 +971,6 @@ starlark_module! { python_executable_env =>
         )
     }
 
-    #[allow(non_snake_case, clippy::ptr_arg)]
     PythonExecutable.add_python_resources(
         env env,
         this,
@@ -991,7 +983,6 @@ starlark_module! { python_executable_env =>
         )
     }
 
-    #[allow(clippy::ptr_arg)]
     PythonExecutable.filter_resources_from_files(
         env env,
         this,
@@ -1002,7 +993,6 @@ starlark_module! { python_executable_env =>
         this.filter_resources_from_files(&env, &files, &glob_files)
     }
 
-    #[allow(clippy::ptr_arg)]
     PythonExecutable.to_embedded_resources(this) {
         let this = this.downcast_ref::<PythonExecutableValue>().unwrap();
         this.to_embedded_resources()
