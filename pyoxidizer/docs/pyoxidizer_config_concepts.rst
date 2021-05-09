@@ -89,15 +89,7 @@ in configuration files because without them you can't perform Python
 packaging actions or construct binaries with Python embedded.
 
 Instances of :py:class:`PythonDistribution` are typically constructed from
-:py:func:`default_python_distribution` and are registered as their own target,
-since multiple targets may want to reference the distribution instance:
-
-.. code-block:: python
-
-   def make_dist():
-      return default_python_distribution()
-
-   register_target("dist", make_dist)
+:py:func:`default_python_distribution`.
 
 .. _config_concept_python_executable:
 

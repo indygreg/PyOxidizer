@@ -3,16 +3,15 @@
 # https://pyoxidizer.readthedocs.io/en/stable/ for details of this
 # configuration file format.
 
-# Obtain the default PythonDistribution for our build target. We link
-# this distribution into our produced executable and extract the Python
-# standard library from it.
-def make_dist():
-    return default_python_distribution()
-
 # Configuration files consist of functions which define build "targets."
 # This function creates a Python executable and installs it in a destination
 # directory.
 def make_exe(dist):
+    # Obtain the default PythonDistribution for our build target. We link
+    # this distribution into our produced executable and extract the Python
+    # standard library from it.
+    dist = default_python_distribution()
+
     # This function creates a `PythonPackagingPolicy` instance, which
     # influences how executables are built and how resources are added to
     # the executable. You can customize the default behavior by assigning
@@ -326,8 +325,7 @@ def register_code_signers():
 register_code_signers()
 
 # Tell PyOxidizer about the build targets defined above.
-register_target("dist", make_dist)
-register_target("exe", make_exe, depends=["dist"])
+register_target("exe", make_exe)
 register_target("resources", make_embedded_resources, depends=["exe"], default_build_script=True)
 register_target("install", make_install, depends=["exe"], default=True)
 register_target("msi_installer", make_msi, depends=["exe"])

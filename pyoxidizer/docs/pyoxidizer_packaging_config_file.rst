@@ -32,14 +32,12 @@ In this example, we create an executable embedding Python:
 
 .. code-block:: python
 
-   def make_dist():
-       return default_python_distribution()
+    def make_exe(dist):
+        dist = default_python_distribution()
 
-   def make_exe(dist):
-       return dist.to_python_executable("myapp")
+        return dist.to_python_executable("myapp")
 
-   register_target("dist", make_dist)
-   register_target("exe", make_exe, depends=["dist"], default=True)
+    register_target("exe", make_exe)
 
 :py:meth:`PythonDistribution.to_python_executable` accepts an optional
 :py:class:`PythonPackagingPolicy` instance that influences how the executable
@@ -69,17 +67,15 @@ this instance into the constructed :py:class:`PythonExecutable`:
 
 .. code-block:: python
 
-   def make_dist():
-       return default_python_distribution()
+    def make_exe(dist):
+        dist = default_python_distribution()
 
-   def make_exe(dist):
-       config = dist.make_python_interpreter_config()
-       config.run_command = "print('hello, world')"
+        config = dist.make_python_interpreter_config()
+        config.run_command = "print('hello, world')"
 
-       return dist.to_python_executable("myapp", config=config)
+        return dist.to_python_executable("myapp", config=config)
 
-   register_target("dist", make_dist)
-   register_target("exe", make_exe, depends=["dist"], default=True)
+    register_target("exe", make_exe)
 
 The :py:class:`PythonInterpreterConfig` type exposes a lot of modifiable settings.
 See the :py:class:`API documentation <PythonInterpreterConfig>` for
@@ -151,25 +147,23 @@ instance using
 
 .. code-block:: python
 
-   def make_dist():
-       return default_python_distribution()
+    def make_exe(dist):
+        dist = default_python_distribution()
 
-   def make_exe(dist):
-       return dist.to_python_executable("myapp")
+        return dist.to_python_executable("myapp")
 
-   def make_install(exe):
-       m = FileManifest()
+    def make_install(exe):
+        m = FileManifest()
 
-       m.add_python_resource(".", exe)
+        m.add_python_resource(".", exe)
 
-       templates = glob(["/path/to/project/templates/**/*"], strip_prefix="/path/to/project/")
-       m.add_manifest(templates)
+        templates = glob(["/path/to/project/templates/**/*"], strip_prefix="/path/to/project/")
+        m.add_manifest(templates)
 
-       return m
+        return m
 
-   register_target("dist", make_dist)
-   register_target("exe", make_exe, depends=["dist"])
-   register_target("install", make_install, depends=["exe"], default=True)
+    register_target("exe", make_exe)
+    register_target("install", make_install, depends=["exe"], default=True)
 
 We introduce a new ``install`` target and ``make_install()`` function which
 returns a :py:class:`starlark_tugger.FileManifest`. It adds the

@@ -18,55 +18,53 @@ file to look something like the following:
 
 .. code-block:: python
 
-   def make_dist():
-       return default_python_distribution()
+    def make_exe(dist):
+        dist = default_python_distribution()
 
-   def make_exe(dist):
-       policy = dist.make_python_packaging_policy()
-       policy.extension_module_filter = "all"
-       policy.include_distribution_resources = True
+        policy = dist.make_python_packaging_policy()
+        policy.extension_module_filter = "all"
+        policy.include_distribution_resources = True
 
-       # Add resources to the filesytem, next to the built executable.
-       # You can add resources to memory too. But this makes the install
-       # layout somewhat consistent with what Python expects.
-       policy.resources_location = "filesystem-relative:lib"
+        # Add resources to the filesytem, next to the built executable.
+        # You can add resources to memory too. But this makes the install
+        # layout somewhat consistent with what Python expects.
+        policy.resources_location = "filesystem-relative:lib"
 
-       python_config = dist.make_python_interpreter_config()
+        python_config = dist.make_python_interpreter_config()
 
-       # This is the all-important line to make the embedded Python interpreter
-       # behave like `python`.
-       python_config.config_profile = "python"
+        # This is the all-important line to make the embedded Python interpreter
+        # behave like `python`.
+        python_config.config_profile = "python"
 
-       # Enable the stdlib path-based importer.
-       python_config.filesystem_importer = True
+        # Enable the stdlib path-based importer.
+        python_config.filesystem_importer = True
 
-       # You could also disable the Rust importer if you really want your
-       # executable to behave like `python`.
-       # python_config.oxidized_importer = False
+        # You could also disable the Rust importer if you really want your
+        # executable to behave like `python`.
+        # python_config.oxidized_importer = False
 
-       exe = dist.to_python_executable(
-           name="python3",
-           packaging_policy = policy,
-           config = python_config,
-       )
+        exe = dist.to_python_executable(
+            name="python3",
+            packaging_policy = policy,
+            config = python_config,
+        )
 
-       return exe
+        return exe
 
-   def make_embedded_resources(exe):
-       return exe.to_embedded_resources()
+    def make_embedded_resources(exe):
+        return exe.to_embedded_resources()
 
-   def make_install(exe):
-       files = FileManifest()
-       files.add_python_resource(".", exe)
+    def make_install(exe):
+        files = FileManifest()
+        files.add_python_resource(".", exe)
 
-       return files
+        return files
 
-   register_target("dist", make_dist)
-   register_target("exe", make_exe, depends=["dist"])
-   register_target("resources", make_embedded_resources, depends=["exe"], default_build_script=True)
-   register_target("install", make_install, depends=["exe"], default=True)
+    register_target("exe", make_exe)
+    register_target("resources", make_embedded_resources, depends=["exe"], default_build_script=True)
+    register_target("install", make_install, depends=["exe"], default=True)
 
-   resolve_targets()
+    resolve_targets()
 
 (The above code is dedicated to the public domain and can be used without
 attribution.)

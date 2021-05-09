@@ -104,8 +104,7 @@ your config file:
 
 .. code-block:: python
 
-   def make_dist():
-       return default_python_distribution(flavor = "standalone_static")
+    dist = default_python_distribution(flavor = "standalone_static")
 
 .. important::
 
