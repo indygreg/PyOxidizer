@@ -270,13 +270,11 @@ starlark_module! { wix_msi_builder_module =>
         WiXMsiBuilderValue::new_from_args(id_prefix, product_name, product_version, product_manufacturer)
     }
 
-    #[allow(non_snake_case)]
     WiXMSIBuilder.add_program_files_manifest(env env, call_stack cs, this, manifest: FileManifestValue) {
         let mut this = this.downcast_mut::<WiXMsiBuilderValue>().unwrap().unwrap();
         this.add_program_files_manifest(env, cs, manifest)
     }
 
-    #[allow(non_snake_case)]
     WiXMSIBuilder.add_visual_cpp_redistributable(
         this,
         redist_version: String,
@@ -286,7 +284,6 @@ starlark_module! { wix_msi_builder_module =>
         this.add_visual_cpp_redistributable(redist_version, platform)
     }
 
-    #[allow(non_snake_case)]
     WiXMSIBuilder.build(env env, call_stack cs, this, target: String) {
         let this = this.downcast_ref::<WiXMsiBuilderValue>().unwrap();
         this.build(env, cs, target)
