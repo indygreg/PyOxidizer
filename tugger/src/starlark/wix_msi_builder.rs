@@ -179,7 +179,7 @@ impl WiXMsiBuilderValue {
         Ok(Value::new(NoneType::None))
     }
 
-    fn materialize(
+    pub fn materialize(
         &self,
         type_values: &TypeValues,
         call_stack: &mut CallStack,

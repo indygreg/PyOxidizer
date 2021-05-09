@@ -24,7 +24,10 @@ use {
     starlark_dialect_build_targets::{
         get_context_value, EnvironmentContext, ResolvedTarget, ResolvedTargetValue, RunMode,
     },
-    std::convert::TryFrom,
+    std::{
+        convert::TryFrom,
+        path::{Path, PathBuf},
+    },
     tugger_code_signing::SigningDestination,
     tugger_windows::VcRedistributablePlatform,
     tugger_wix::{MsiPackage, WiXBundleInstallerBuilder},
@@ -133,6 +136,57 @@ impl<'a> WiXBundleBuilderValue<'a> {
         Ok(Value::new(NoneType::None))
     }
 
+    fn materialize(
+        &self,
+        type_values: &TypeValues,
+        call_stack: &mut CallStack,
+        label: &'static str,
+        dest_dir: &Path,
+    ) -> Result<(PathBuf, String), ValueError> {
+        let logger = {
+            let context_value = get_context_value(type_values)?;
+            let context = context_value
+                .downcast_ref::<EnvironmentContext>()
+                .ok_or(ValueError::IncorrectParameterType)?;
+
+            context.logger().clone()
+        };
+
+        // We need to ensure dependent MSIs are built.
+        for builder in self.build_msis.iter() {
+            builder.materialize(type_values, call_stack, label, dest_dir)?;
+        }
+
+        let builder = error_context(label, || {
+            self.inner
+                .to_installer_builder(&self.id_prefix, &self.target_triple, dest_dir)
+                .context("converting to WiXInstallerBuilder")
+        })?;
+
+        let filename = self.inner.default_exe_filename();
+        let exe_path = dest_dir.join(&filename);
+
+        error_context(label, || {
+            builder
+                .build(&logger, &exe_path)
+                .context("building WiXInstallerBuilder")
+        })?;
+
+        let candidate = exe_path.as_path().into();
+        let mut context = SigningContext::new(
+            label,
+            SigningAction::WindowsInstallerCreation,
+            filename.clone(),
+            &candidate,
+        );
+        context.set_path(&exe_path);
+        context.set_signing_destination(SigningDestination::File(exe_path.clone()));
+
+        handle_signable_event(type_values, call_stack, context)?;
+
+        Ok((exe_path, filename))
+    }
+
     /// WiXBundleBuilder.build(target)
     pub fn build(
         &self,
@@ -142,49 +196,23 @@ impl<'a> WiXBundleBuilderValue<'a> {
     ) -> ValueResult {
         const LABEL: &str = "WiXBundleBuilder.build()";
 
-        let context_value = get_context_value(type_values)?;
-        let context = context_value
-            .downcast_ref::<EnvironmentContext>()
-            .ok_or(ValueError::IncorrectParameterType)?;
+        let dest_dir = {
+            let context_value = get_context_value(type_values)?;
+            let context = context_value
+                .downcast_ref::<EnvironmentContext>()
+                .ok_or(ValueError::IncorrectParameterType)?;
 
-        let output_path = context.target_build_path(&target);
+            context.target_build_path(&target)
+        };
 
-        // We need to ensure dependent MSIs are built.
-        for builder in self.build_msis.iter() {
-            builder.build(type_values, call_stack, target.clone())?;
-        }
-
-        let builder = error_context(LABEL, || {
-            self.inner
-                .to_installer_builder(&self.id_prefix, &self.target_triple, &output_path)
-                .context("converting to WiXInstallerBuilder")
-        })?;
-
-        let filename = self.inner.default_exe_filename();
-        let exe_path = output_path.join(filename.clone());
-
-        error_context(LABEL, || {
-            builder
-                .build(context.logger(), &exe_path)
-                .context("building WiXInstallerBuilder")
-        })?;
-
-        let candidate = exe_path.as_path().into();
-        let mut context = SigningContext::new(
-            LABEL,
-            SigningAction::WindowsInstallerCreation,
-            filename,
-            &candidate,
-        );
-        context.set_path(&exe_path);
-        context.set_signing_destination(SigningDestination::File(exe_path.clone()));
-
-        handle_signable_event(type_values, call_stack, context)?;
+        let exe_path = self
+            .materialize(type_values, call_stack, LABEL, &dest_dir)?
+            .0;
 
         Ok(Value::new(ResolvedTargetValue {
             inner: ResolvedTarget {
                 run_mode: RunMode::Path { path: exe_path },
-                output_path,
+                output_path: dest_dir,
             },
         }))
     }
