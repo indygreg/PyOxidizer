@@ -443,6 +443,36 @@ impl WiXInstallerValue {
             filename,
         }))
     }
+
+    fn write_to_directory(
+        &mut self,
+        type_values: &TypeValues,
+        call_stack: &mut CallStack,
+        path: String,
+    ) -> ValueResult {
+        const LABEL: &str = "WiXInstaller.write_to_directory()";
+
+        let dest_dir = {
+            let context_value = get_context_value(type_values)?;
+            let context = context_value
+                .downcast_ref::<EnvironmentContext>()
+                .ok_or(ValueError::IncorrectParameterType)?;
+
+            context.resolve_path(path)
+        };
+
+        let (entry, filename) = self.materialize_temp_dir(type_values, call_stack, LABEL)?;
+
+        let installer_path = dest_dir.join(&filename);
+
+        error_context(LABEL, || {
+            entry
+                .write_to_path(&installer_path)
+                .with_context(|| format!("writing installer to {}", installer_path.display()))
+        })?;
+
+        Ok(Value::from(format!("{}", installer_path.display())))
+    }
 }
 
 starlark_module! { wix_installer_module =>
@@ -526,10 +556,17 @@ starlark_module! { wix_installer_module =>
         let mut this = this.downcast_mut::<WiXInstallerValue>().unwrap().unwrap();
         this.to_file_content(env, cs)
     }
+
+    WiXInstaller.write_to_directory(env env, call_stack cs, this, path: String) {
+        let mut this = this.downcast_mut::<WiXInstallerValue>().unwrap().unwrap();
+        this.write_to_directory(env, cs, path)
+    }
 }
 
 #[cfg(test)]
 mod tests {
+    #[cfg(windows)]
+    use tugger_common::testutil::*;
     use {super::*, crate::starlark::testutil::*, anyhow::Result};
 
     #[test]
@@ -644,6 +681,29 @@ mod tests {
         )?;
         let value = env.eval("installer.to_file_content()")?;
         assert_eq!(value.get_type(), FileContentValue::TYPE);
+
+        Ok(())
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn write_to_directory() -> Result<()> {
+        let mut env = StarlarkEnvironment::new()?;
+
+        let dest_dir = DEFAULT_TEMP_DIR
+            .path()
+            .join("wix-installer-write-to-directory");
+        let dest_dir_s = dest_dir.to_string_lossy().replace('\\', "/");
+
+        env.eval("installer = WiXInstaller('myapp', 'myapp.msi')")?;
+        env.eval(
+            "installer.add_simple_installer('myapp', 'myapp', '0.1', 'author', FileManifest())",
+        )?;
+        let value = env.eval(&format!("installer.write_to_directory('{}')", dest_dir_s))?;
+        assert_eq!(value.get_type(), "string");
+
+        let path = PathBuf::from(value.to_string());
+        assert!(path.exists());
 
         Ok(())
     }
