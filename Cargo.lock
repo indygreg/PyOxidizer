@@ -2399,7 +2399,7 @@ dependencies = [
 
 [[package]]
 name = "pyoxidizer"
-version = "0.16.0-pre"
+version = "0.16.0"
 dependencies = [
  "anyhow",
  "cargo-lock",
