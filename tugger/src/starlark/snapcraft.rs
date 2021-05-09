@@ -756,7 +756,6 @@ starlark_module! { snapcraft_module =>
         Ok(Value::new(SnapValue::new_from_args(name, version, summary, description)))
     }
 
-    #[allow(non_snake_case)]
     Snap.to_builder(this: SnapValue) {
         Ok(Value::new(SnapcraftBuilderValue::new_from_snap_value(this)))
     }
@@ -766,21 +765,18 @@ starlark_module! { snapcraft_module =>
         Ok(Value::new(SnapcraftBuilderValue::new_from_snap_value(snap)))
     }
 
-    #[allow(non_snake_case)]
     SnapcraftBuilder.add_invocation(this, args: Vec<String>, purge_build = NoneType::None) {
         let mut this = this.downcast_mut::<SnapcraftBuilderValue>().unwrap().unwrap();
 
         this.add_invocation(args, purge_build)
     }
 
-    #[allow(non_snake_case)]
     SnapcraftBuilder.add_file_manifest(this, manifest: FileManifestValue) {
         let mut this = this.downcast_mut::<SnapcraftBuilderValue>().unwrap().unwrap();
 
         this.add_file_manifest(manifest)
     }
 
-    #[allow(non_snake_case)]
     SnapcraftBuilder.build(env env, this, target: String) {
         let this = this.downcast_ref::<SnapcraftBuilderValue>().unwrap();
         this.build(env, target)
