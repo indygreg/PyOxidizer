@@ -286,21 +286,28 @@ impl PythonWheelBuilderValue {
         }))
     }
 
-    pub fn write_to_directory(&self, path: String) -> ValueResult {
+    pub fn write_to_directory(&self, type_values: &TypeValues, path: String) -> ValueResult {
         const LABEL: &str = "PythonWheelBuilder.write_to_directory()";
 
         let inner = self.inner()?;
 
-        let path = error_context(LABEL, || {
+        let context_value = get_context_value(type_values)?;
+        let context = context_value
+            .downcast_ref::<EnvironmentContext>()
+            .ok_or(ValueError::IncorrectParameterType)?;
+
+        let path = context.resolve_path(path);
+
+        let wheel_path = error_context(LABEL, || {
             std::fs::create_dir_all(&path)
-                .with_context(|| format!("creating directory {}", path))?;
+                .with_context(|| format!("creating directory {}", path.display()))?;
 
             inner
-                .write_wheel_into_directory(path)
+                .write_wheel_into_directory(&path)
                 .context("writing wheel to directory")
         })?;
 
-        Ok(Value::from(format!("{}", path.display())))
+        Ok(Value::from(format!("{}", wheel_path.display())))
     }
 
     fn build(&self, type_values: &TypeValues, target: String) -> ValueResult {
@@ -383,9 +390,9 @@ starlark_module! { python_wheel_builder_module =>
         this.to_file_content()
     }
 
-    PythonWheelBuilder.write_to_directory(this, path: String) {
+    PythonWheelBuilder.write_to_directory(env env, this, path: String) {
         let this = this.downcast_ref::<PythonWheelBuilderValue>().unwrap();
-        this.write_to_directory(path)
+        this.write_to_directory(env, path)
     }
 
     PythonWheelBuilder.build(env env, this, target: String) {

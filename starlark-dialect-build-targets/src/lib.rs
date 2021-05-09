@@ -191,6 +191,20 @@ impl EnvironmentContext {
         Ok(())
     }
 
+    /// Resolve an absolute filesystem path from a path input.
+    ///
+    /// If the incoming path is absolute, it is returned. Otherwise relative
+    /// paths are joined with the current build path.
+    pub fn resolve_path(&self, path: impl AsRef<Path>) -> PathBuf {
+        let path = path.as_ref();
+
+        if path.is_absolute() || path.to_string_lossy().starts_with('/') {
+            path.to_path_buf()
+        } else {
+            self.build_path.join(path)
+        }
+    }
+
     /// Set the path prefix to use for per-target build paths.
     ///
     /// If defined, target build paths are of the form `<build_path>/<prefix>/<target>`.

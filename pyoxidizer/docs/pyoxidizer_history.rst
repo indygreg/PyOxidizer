@@ -33,6 +33,13 @@ Version History
 
 Not yet released.
 
+Backwards Compatibility Notes
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+* :py:meth:`starlark_tugger.PythonWheelBuilder.write_to_directory` now interprets
+  relative paths as relative to the currently configured build path, not relative
+  to the process's current working directory.
+
 .. _version_0_16_0:
 
 0.16.0
