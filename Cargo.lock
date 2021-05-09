@@ -380,9 +380,9 @@ dependencies = [
 
 [[package]]
 name = "cargo_toml"
-version = "0.9.0"
+version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d94e66797729c3a52b74980ec7992a9399aace3044bbcde9ce6bb98926abb673"
+checksum = "6363f58dc6fc29a72a25132dd1137f38493566002a9e0e8d5ca0670fb5983d6e"
 dependencies = [
  "serde",
  "serde_derive",
@@ -588,9 +588,12 @@ checksum = "f00177cda1bb5c5b0a05b1b506125c776411cdfc6a41085126881266e0cdc242"
 
 [[package]]
 name = "cpufeatures"
-version = "0.1.0"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5cd5a7748210e7ec1a9696610b1015e6e31fbf58f77a160801f124bd1c36592a"
+checksum = "dec1028182c380cc45a2e2c5ec841134f2dfd0f8f5f0a5bcd68004f81b5efdf4"
+dependencies = [
+ "libc",
+]
 
 [[package]]
 name = "cpython"
@@ -685,7 +688,7 @@ dependencies = [
  "pem",
  "reqwest",
  "ring",
- "x509-certificate 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "x509-certificate 0.3.0-pre",
 ]
 
 [[package]]
@@ -701,7 +704,7 @@ dependencies = [
  "pem",
  "reqwest",
  "ring",
- "x509-certificate 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "x509-certificate 0.2.0",
 ]
 
 [[package]]
@@ -1343,7 +1346,7 @@ dependencies = [
  "log",
  "pest",
  "pest_derive",
- "quick-error 2.0.0",
+ "quick-error 2.0.1",
  "serde",
  "serde_json",
 ]
@@ -1392,9 +1395,9 @@ dependencies = [
 
 [[package]]
 name = "http-body"
-version = "0.4.1"
+version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5dfb77c123b4e2f72a2069aeae0b4b4949cc7e966df277813fc16347e7549737"
+checksum = "60daa14be0e0786db0f03a9e57cb404c9d756eed2b6c62b9ea98ec5743ec75a9"
 dependencies = [
  "bytes",
  "http",
@@ -2534,9 +2537,9 @@ checksum = "a1d01941d82fa2ab50be1e79e6714289dd7cde78eba4c074bc5a4374f650dfe0"
 
 [[package]]
 name = "quick-error"
-version = "2.0.0"
+version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3ac73b1112776fc109b2e61909bc46c7e1bf0d7f690ffb1676553acce16d5cda"
+checksum = "a993555f31e5a609f617c12db6250dedcac1b0a85076912c436e6fc9b2c8e6a3"
 
 [[package]]
 name = "quote"
@@ -3779,7 +3782,7 @@ dependencies = [
  "tugger-windows-codesign 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-wix 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "walkdir",
- "x509-certificate 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "x509-certificate 0.3.0-pre",
 ]
 
 [[package]]
@@ -3895,7 +3898,7 @@ dependencies = [
  "thiserror",
  "tugger-apple 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-apple-bundle 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "x509-certificate 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "x509-certificate 0.3.0-pre",
  "yasna 0.3.2",
 ]
 
@@ -3929,7 +3932,7 @@ dependencies = [
  "thiserror",
  "tugger-apple 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-apple-bundle 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "x509-certificate 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "x509-certificate 0.2.0",
  "yasna 0.3.2",
 ]
 
@@ -3974,7 +3977,7 @@ dependencies = [
  "tugger-apple-codesign 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-file-manifest 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-windows-codesign 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "x509-certificate 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "x509-certificate 0.3.0-pre",
  "yasna 0.3.2",
 ]
 
@@ -3997,7 +4000,7 @@ dependencies = [
  "tugger-apple-codesign 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-file-manifest 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-windows-codesign 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "x509-certificate 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "x509-certificate 0.2.0",
  "yasna 0.3.2",
 ]
 
@@ -4357,9 +4360,9 @@ checksum = "a156c684c91ea7d62626509bce3cb4e1d9ed5c4d978f7b4352658f96a4c26b4a"
 
 [[package]]
 name = "url"
-version = "2.2.1"
+version = "2.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9ccd964113622c8e9322cfac19eb1004a07e636c545f325da085d5cdde6f1f8b"
+checksum = "a507c383b2d33b5fc35d1861e77e6b383d158b2da5e14fe51b83dfedf6fd578c"
 dependencies = [
  "form_urlencoded",
  "idna",
@@ -4649,6 +4652,8 @@ dependencies = [
 [[package]]
 name = "x509-certificate"
 version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8db88fb14fe7adccfee6befbc0a0acb6d99dbf553599c0a742adb631b95c7245"
 dependencies = [
  "bcder",
  "bytes",
@@ -4661,9 +4666,7 @@ dependencies = [
 
 [[package]]
 name = "x509-certificate"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8db88fb14fe7adccfee6befbc0a0acb6d99dbf553599c0a742adb631b95c7245"
+version = "0.3.0-pre"
 dependencies = [
  "bcder",
  "bytes",
