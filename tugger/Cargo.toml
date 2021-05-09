@@ -23,6 +23,7 @@ plist = "1.1"
 slog = "2.7"
 starlark = "0.3.1"
 tar = "0.4"
+tempfile = "3.2"
 time = "0.1"
 walkdir = "2"
 

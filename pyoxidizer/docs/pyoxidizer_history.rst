@@ -50,6 +50,8 @@ New Features
 * :py:class:`starlark_tugger.MacOsApplicationBundleBuilder` has gained the
   :py:meth:`starlark_tugger.MacOsApplicationBundleBuilder.write_to_directory`
   method.
+* :py:class:`starlark_tugger.WiXInstaller` has gained the
+  :py:meth:`starlark_tugger.WiXInstaller.to_file_content` method.
 
 .. _version_0_16_0:
 

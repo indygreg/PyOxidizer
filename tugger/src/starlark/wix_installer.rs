@@ -8,10 +8,11 @@ use {
             handle_file_manifest_signable_events, handle_signable_event, SigningAction,
             SigningContext,
         },
+        file_content::FileContentValue,
         file_manifest::FileManifestValue,
         wix_msi_builder::WiXMsiBuilderValue,
     },
-    anyhow::{Context, Result},
+    anyhow::{anyhow, Context, Result},
     starlark::{
         environment::TypeValues,
         eval::call_stack::CallStack,
@@ -349,6 +350,50 @@ impl WiXInstallerValue {
         Ok(installer_path)
     }
 
+    fn materialize_temp_dir(
+        &mut self,
+        type_values: &TypeValues,
+        call_stack: &mut CallStack,
+        label: &'static str,
+    ) -> Result<(FileEntry, String), ValueError> {
+        let build_path = {
+            let context_value = get_context_value(type_values)?;
+            let context = context_value
+                .downcast_ref::<EnvironmentContext>()
+                .ok_or(ValueError::IncorrectParameterType)?;
+
+            context.build_path().to_path_buf()
+        };
+
+        let dest_dir = error_context(label, || {
+            tempfile::Builder::new()
+                .prefix("wix-installer-")
+                .tempdir_in(&build_path)
+                .context("creating temp directory")
+        })?;
+
+        let installer_path = self.materialize(type_values, call_stack, label, dest_dir.path())?;
+
+        let entry = FileEntry {
+            data: installer_path.clone().into(),
+            executable: false,
+        };
+
+        let (entry, filename) = error_context(label, || {
+            let entry = entry
+                .to_memory()
+                .context("converting FileEntry to in-memory")?;
+
+            let filename = installer_path
+                .file_name()
+                .ok_or_else(|| anyhow!("unable to resolve file name of generated installer"))?;
+
+            Ok((entry, filename.to_string_lossy().to_string()))
+        })?;
+
+        Ok((entry, filename))
+    }
+
     fn build(
         &mut self,
         type_values: &TypeValues,
@@ -381,6 +426,22 @@ impl WiXInstallerValue {
         self.inner.set_variable(key, value);
 
         Ok(Value::new(NoneType::None))
+    }
+
+    #[allow(clippy::wrong_self_convention)]
+    fn to_file_content(
+        &mut self,
+        type_values: &TypeValues,
+        call_stack: &mut CallStack,
+    ) -> ValueResult {
+        const LABEL: &str = "WiXInstaller.to_file_content()";
+
+        let (entry, filename) = self.materialize_temp_dir(type_values, call_stack, LABEL)?;
+
+        Ok(Value::new(FileContentValue {
+            content: entry,
+            filename,
+        }))
     }
 }
 
@@ -459,6 +520,11 @@ starlark_module! { wix_installer_module =>
     WiXInstaller.set_variable(this, key: String, value) {
         let mut this = this.downcast_mut::<WiXInstallerValue>().unwrap().unwrap();
         this.set_variable(key, value)
+    }
+
+    WiXInstaller.to_file_content(env env, call_stack cs, this) {
+        let mut this = this.downcast_mut::<WiXInstallerValue>().unwrap().unwrap();
+        this.to_file_content(env, cs)
     }
 }
 
@@ -563,6 +629,21 @@ mod tests {
             }
         );
         assert!(msi_path.exists());
+
+        Ok(())
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn to_file_content() -> Result<()> {
+        let mut env = StarlarkEnvironment::new()?;
+
+        env.eval("installer = WiXInstaller('myapp', 'myapp.msi')")?;
+        env.eval(
+            "installer.add_simple_installer('myapp', 'myapp', '0.1', 'author', FileManifest())",
+        )?;
+        let value = env.eval("installer.to_file_content()")?;
+        assert_eq!(value.get_type(), FileContentValue::TYPE);
 
         Ok(())
     }
