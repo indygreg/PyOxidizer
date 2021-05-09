@@ -31,7 +31,7 @@ Version History
 0.16.0
 ------
 
-Not yet released.
+Released May 9, 2021.
 
 Bug Fixes
 ^^^^^^^^^
