@@ -27,7 +27,10 @@ use {
     starlark_dialect_build_targets::{
         get_context_value, EnvironmentContext, ResolvedTarget, ResolvedTargetValue, RunMode,
     },
-    std::convert::TryFrom,
+    std::{
+        convert::TryFrom,
+        path::{Path, PathBuf},
+    },
     tugger_code_signing::SigningDestination,
     tugger_windows::VcRedistributablePlatform,
     tugger_wix::WiXSimpleMsiBuilder,
@@ -174,39 +177,40 @@ impl WiXMsiBuilderValue {
         Ok(Value::new(NoneType::None))
     }
 
-    pub fn build(
+    fn materialize(
         &self,
         type_values: &TypeValues,
         call_stack: &mut CallStack,
-        target: String,
-    ) -> ValueResult {
-        const LABEL: &str = "WiXMSIBuilder.build()";
+        label: &'static str,
+        build_dir: &Path,
+    ) -> Result<PathBuf, ValueError> {
+        let logger = {
+            let context_value = get_context_value(type_values)?;
+            let context = context_value
+                .downcast_ref::<EnvironmentContext>()
+                .ok_or(ValueError::IncorrectParameterType)?;
 
-        let context_value = get_context_value(type_values)?;
-        let context = context_value
-            .downcast_ref::<EnvironmentContext>()
-            .ok_or(ValueError::IncorrectParameterType)?;
+            context.logger().clone()
+        };
 
-        let (msi_path, output_path) = error_context(LABEL, || {
-            let output_path = context.target_build_path(&target);
-
+        let msi_path = error_context(label, || {
             let builder = self
                 .inner
-                .to_installer_builder(&self.target_triple, &output_path)
+                .to_installer_builder(&self.target_triple, build_dir)
                 .context("converting WiXSimpleMSiBuilder to WiXInstallerBuilder")?;
 
-            let msi_path = output_path.join(self.msi_filename());
+            let msi_path = build_dir.join(self.msi_filename());
 
             builder
-                .build(context.logger(), &msi_path)
+                .build(&logger, &msi_path)
                 .context("building WiXInstallerBuilder")?;
 
-            Ok((msi_path, output_path))
+            Ok(msi_path)
         })?;
 
         let candidate = msi_path.as_path().into();
         let mut context = SigningContext::new(
-            "build()",
+            label,
             SigningAction::WindowsInstallerCreation,
             self.msi_filename(),
             &candidate,
@@ -216,10 +220,32 @@ impl WiXMsiBuilderValue {
 
         handle_signable_event(type_values, call_stack, context)?;
 
+        Ok(msi_path)
+    }
+
+    pub fn build(
+        &self,
+        type_values: &TypeValues,
+        call_stack: &mut CallStack,
+        target: String,
+    ) -> ValueResult {
+        const LABEL: &str = "WiXMSIBuilder.build()";
+
+        let dest_dir = {
+            let context_value = get_context_value(type_values)?;
+            let context = context_value
+                .downcast_ref::<EnvironmentContext>()
+                .ok_or(ValueError::IncorrectParameterType)?;
+
+            context.target_build_path(&target)
+        };
+
+        let msi_path = self.materialize(type_values, call_stack, LABEL, &dest_dir)?;
+
         Ok(Value::new(ResolvedTargetValue {
             inner: ResolvedTarget {
                 run_mode: RunMode::Path { path: msi_path },
-                output_path,
+                output_path: dest_dir,
             },
         }))
     }
