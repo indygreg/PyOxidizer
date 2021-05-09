@@ -54,3 +54,12 @@
 
         If ``content`` is provided and ``executable`` is not, ``executable`` defaults
         to ``False``.
+
+    .. py:method:: write_to_directory(path: str) -> str
+
+        Materialize this instance as a file in a directory.
+
+        Absolute paths are treated as is. Relative paths are relative to the
+        currently configured build directory.
+
+        Returns the absolute path of the file that was written.

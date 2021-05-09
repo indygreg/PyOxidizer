@@ -3,7 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    anyhow::anyhow,
+    anyhow::{anyhow, Context},
     starlark::{
         environment::TypeValues,
         values::{
@@ -193,6 +193,27 @@ impl FileContentValue {
 
         Ok(Value::new(file_content))
     }
+
+    pub fn write_to_directory(&self, type_values: &TypeValues, path: String) -> ValueResult {
+        const LABEL: &str = "FileContent.write_to_directory()";
+
+        let context_value = get_context_value(type_values)?;
+        let context = context_value
+            .downcast_ref::<EnvironmentContext>()
+            .ok_or(ValueError::IncorrectParameterType)?;
+
+        let dest_path = context.resolve_path(path).join(&self.filename);
+
+        error_context(LABEL, || {
+            self.content
+                .write_to_path(&dest_path)
+                .with_context(|| format!("writing {}", dest_path.display()))?;
+
+            Ok(())
+        })?;
+
+        Ok(Value::from(format!("{}", dest_path.display())))
+    }
 }
 
 starlark_module! { file_content_module =>
@@ -205,6 +226,11 @@ starlark_module! { file_content_module =>
         executable = NoneType::None
     ) {
         FileContentValue::new_from_args(env, path, filename, content, executable)
+    }
+
+    FileContent.write_to_directory(env env, this, path: String) {
+        let this = this.downcast_ref::<FileContentValue>().unwrap();
+        this.write_to_directory(env, path)
     }
 }
 
@@ -293,6 +319,26 @@ mod tests {
 
         assert_eq!(env.eval("c.executable")?.to_bool(), true);
         assert_eq!(env.eval("c.filename")?.to_string(), "renamed");
+
+        Ok(())
+    }
+
+    #[test]
+    fn write_to_directory() -> Result<()> {
+        let mut env = StarlarkEnvironment::new()?;
+
+        let dest_dir = DEFAULT_TEMP_DIR
+            .path()
+            .join("file-content-write-to-directory");
+        let dest_dir_s = dest_dir.to_string_lossy().replace('\\', "/");
+
+        env.eval("c = FileContent(filename = 'file.txt', content = 'foo')")?;
+
+        let dest_path = env.eval(&format!("c.write_to_directory('{}')", dest_dir_s))?;
+        assert_eq!(dest_path.get_type(), "string");
+
+        let dest_path = PathBuf::from(dest_path.to_string());
+        assert!(dest_path.exists());
 
         Ok(())
     }
