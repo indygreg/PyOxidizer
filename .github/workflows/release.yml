@@ -207,7 +207,7 @@ jobs:
           mkdir -p target/${{ matrix.config.target_triple }}/release
           mv dist/${{ matrix.config.target_triple }}/pyoxidizer target/${{ matrix.config.target_triple}}/release/
 
-          chmod +x dist/pyoxidizer
+          chmod +x dist/pyoxidizer dist/*/pyoxidizer
           dist/pyoxidizer build --release ${{ matrix.config.wheel_target }}
 
           mkdir wheelhouse
