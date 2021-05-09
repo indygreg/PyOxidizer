@@ -45,11 +45,11 @@ Bug Fixes
 * Managed Rust toolchains now properly install the Rust stdlib for cross-compiles.
   Previously, the logs said it was installing them but didn't actually, leading
   to build failures due to an incomplete Rust toolchain.
-* The file modified times in files extracted from Python distributions now matches
-  the time in the tar archive. Previously, we did not set an mtime and the Windows
-  mtime could be decades old. This could lead to runtime errors in ``pip`` due to
-  pip attempting to create a zip file of itself and Python's zip file code not
-  supporting times older than 1980. If you see a
+* The file modified times in files extracted from Python distributions are now set
+  to the current time. Previously, we preserved the mtime in the tar archive and
+  the Windows archives had an mtime of the UNIX epoch. This could lead to runtime
+  errors in ``pip`` due to pip attempting to create a zip file of itself and
+  Python's zip file code not supporting times older than 1980. If you see a
   ``ValueError: ZIP does not support timestamps before 1980`` error when running
   ``pip`` as part of running PyOxidizer, you are hitting this bug. You will need
   *modernize* the mtimes in the extracted Python distributions. The easiest way to
