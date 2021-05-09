@@ -271,7 +271,7 @@ dependencies = [
 
 [[package]]
 name = "python-packaging"
-version = "0.9.0-pre"
+version = "0.9.0"
 dependencies = [
  "anyhow",
  "byteorder",
