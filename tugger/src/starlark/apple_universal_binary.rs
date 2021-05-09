@@ -40,13 +40,13 @@ where
 }
 
 #[derive(Clone)]
-pub struct AppleUniversalBinary {
+pub struct AppleUniversalBinaryValue {
     pub filename: String,
     pub builder: Arc<Mutex<UniversalBinaryBuilder>>,
 }
 
-impl TypedValue for AppleUniversalBinary {
-    type Holder = Mutable<AppleUniversalBinary>;
+impl TypedValue for AppleUniversalBinaryValue {
+    type Holder = Mutable<AppleUniversalBinaryValue>;
     const TYPE: &'static str = "AppleUniversalBinary";
 
     fn values_for_descendant_check_and_freeze(&self) -> Box<dyn Iterator<Item = Value>> {
@@ -54,7 +54,7 @@ impl TypedValue for AppleUniversalBinary {
     }
 }
 
-impl AppleUniversalBinary {
+impl AppleUniversalBinaryValue {
     pub fn new_from_args(filename: String) -> ValueResult {
         Ok(Value::new(Self {
             filename,
@@ -174,26 +174,26 @@ impl AppleUniversalBinary {
 starlark_module! { apple_universal_binary_module =>
     #[allow(non_snake_case)]
     AppleUniversalBinary(filename: String) {
-        AppleUniversalBinary::new_from_args(filename)
+        AppleUniversalBinaryValue::new_from_args(filename)
     }
 
     AppleUniversalBinary.add_path(env env, this, path: String) {
-        let mut this = this.downcast_mut::<AppleUniversalBinary>().unwrap().unwrap();
+        let mut this = this.downcast_mut::<AppleUniversalBinaryValue>().unwrap().unwrap();
         this.add_path(env, path)
     }
 
     AppleUniversalBinary.add_file(this, content: FileContentValue) {
-        let mut this = this.downcast_mut::<AppleUniversalBinary>().unwrap().unwrap();
+        let mut this = this.downcast_mut::<AppleUniversalBinaryValue>().unwrap().unwrap();
         this.add_file(content)
     }
 
     AppleUniversalBinary.to_file_content(this) {
-        let this = this.downcast_ref::<AppleUniversalBinary>().unwrap();
+        let this = this.downcast_ref::<AppleUniversalBinaryValue>().unwrap();
         this.to_file_content()
     }
 
     AppleUniversalBinary.write_to_directory(env env, this, path: String) {
-        let this = this.downcast_ref::<AppleUniversalBinary>().unwrap();
+        let this = this.downcast_ref::<AppleUniversalBinaryValue>().unwrap();
         this.write_to_directory(env, path)
     }
 }
@@ -209,9 +209,9 @@ mod tests {
         assert!(env.eval("AppleUniversalBinary()").is_err());
 
         let raw = env.eval("AppleUniversalBinary('binary')")?;
-        assert_eq!(raw.get_type(), AppleUniversalBinary::TYPE);
+        assert_eq!(raw.get_type(), AppleUniversalBinaryValue::TYPE);
 
-        let v = raw.downcast_ref::<AppleUniversalBinary>().unwrap();
+        let v = raw.downcast_ref::<AppleUniversalBinaryValue>().unwrap();
         assert_eq!(v.filename, "binary");
 
         Ok(())
