@@ -8,9 +8,10 @@ use {
             handle_file_manifest_signable_events, handle_signable_event, SigningAction,
             SigningContext,
         },
+        file_content::FileContentValue,
         file_manifest::FileManifestValue,
     },
-    anyhow::{Context, Result},
+    anyhow::{anyhow, Context, Result},
     starlark::{
         environment::TypeValues,
         eval::call_stack::CallStack,
@@ -32,6 +33,7 @@ use {
         path::{Path, PathBuf},
     },
     tugger_code_signing::SigningDestination,
+    tugger_file_manifest::FileEntry,
     tugger_windows::VcRedistributablePlatform,
     tugger_wix::WiXSimpleMsiBuilder,
 };
@@ -223,6 +225,50 @@ impl WiXMsiBuilderValue {
         Ok(msi_path)
     }
 
+    fn materialize_temp_dir(
+        &self,
+        type_values: &TypeValues,
+        call_stack: &mut CallStack,
+        label: &'static str,
+    ) -> Result<(FileEntry, String), ValueError> {
+        let build_path = {
+            let context_value = get_context_value(type_values)?;
+            let context = context_value
+                .downcast_ref::<EnvironmentContext>()
+                .ok_or(ValueError::IncorrectParameterType)?;
+
+            context.build_path().to_path_buf()
+        };
+
+        let dest_dir = error_context(label, || {
+            tempfile::Builder::new()
+                .prefix("wix-msi-builder-")
+                .tempdir_in(&build_path)
+                .context("creating temp directory")
+        })?;
+
+        let installer_path = self.materialize(type_values, call_stack, label, dest_dir.path())?;
+
+        let entry = FileEntry {
+            data: installer_path.clone().into(),
+            executable: false,
+        };
+
+        let (entry, filename) = error_context(label, || {
+            let entry = entry
+                .to_memory()
+                .context("converting FileEntry to in-memory")?;
+
+            let filename = installer_path
+                .file_name()
+                .ok_or_else(|| anyhow!("unable to resolve file name of generated installer"))?;
+
+            Ok((entry, filename.to_string_lossy().to_string()))
+        })?;
+
+        Ok((entry, filename))
+    }
+
     pub fn build(
         &self,
         type_values: &TypeValues,
@@ -257,6 +303,21 @@ impl WiXMsiBuilderValue {
             self.inner.default_msi_filename()
         }
     }
+
+    pub fn to_file_content(
+        &self,
+        type_values: &TypeValues,
+        call_stack: &mut CallStack,
+    ) -> ValueResult {
+        const LABEL: &str = "WiXMSIBuilder.to_file_content()";
+
+        let (entry, filename) = self.materialize_temp_dir(type_values, call_stack, LABEL)?;
+
+        Ok(Value::new(FileContentValue {
+            content: entry,
+            filename,
+        }))
+    }
 }
 
 starlark_module! { wix_msi_builder_module =>
@@ -287,6 +348,11 @@ starlark_module! { wix_msi_builder_module =>
     WiXMSIBuilder.build(env env, call_stack cs, this, target: String) {
         let this = this.downcast_ref::<WiXMsiBuilderValue>().unwrap();
         this.build(env, cs, target)
+    }
+
+    WiXMSIBuilder.to_file_content(env env, call_stack cs, this) {
+        let this = this.downcast_ref::<WiXMsiBuilderValue>().unwrap();
+        this.to_file_content(env, cs)
     }
 }
 
@@ -355,6 +421,19 @@ mod tests {
         let mut env = StarlarkEnvironment::new()?;
         env.eval("msi = WiXMSIBuilder('prefix', 'name', '0.1', 'manufacturer')")?;
         env.eval("msi.add_visual_cpp_redistributable('14', 'x64')")?;
+
+        Ok(())
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn to_file_content() -> Result<()> {
+        let mut env = StarlarkEnvironment::new()?;
+
+        env.eval("msi = WiXMSIBuilder('prefix', 'name', '0.1', 'manufacturer')")?;
+        let value = env.eval("msi.to_file_content()")?;
+
+        assert_eq!(value.get_type(), FileContentValue::TYPE);
 
         Ok(())
     }

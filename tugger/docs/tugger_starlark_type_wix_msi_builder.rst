@@ -161,3 +161,12 @@
         Upon successful generation of an installer, the produced installer
         will be assessed for code signing with the ``windows-installer-creation``
         *action*.
+
+    .. py:method:: to_file_content() -> FileContent
+
+        Builds the MSI using the WiX Toolset and returns a :py:class:`FileContent`
+        representing the built MSI.
+
+        Upon successful generation of an installer, the produced installer
+        will be assessed for code signing with the ``windows-installer-creation``
+        *action*.
