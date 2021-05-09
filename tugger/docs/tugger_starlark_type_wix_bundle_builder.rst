@@ -98,3 +98,12 @@
         Upon successful generation of an installer, the produced installer
         will be assessed for code signing with the ``windows-installer-creation``
         *action*.
+
+    .. py:method:: to_file_content() -> FileContent
+
+        Build an exe installer using the WiX Toolset and return a
+        :py:class:`FileContent` representing the built installer.
+
+        Upon successful generation of an installer, the produced installer
+        will be assessed for code signing with the ``windows-installer-creation``
+        *action*.

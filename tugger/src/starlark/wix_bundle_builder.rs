@@ -5,6 +5,7 @@
 use {
     crate::starlark::{
         code_signing::{handle_signable_event, SigningAction, SigningContext},
+        file_content::FileContentValue,
         wix_msi_builder::WiXMsiBuilderValue,
     },
     anyhow::Context,
@@ -29,6 +30,7 @@ use {
         path::{Path, PathBuf},
     },
     tugger_code_signing::SigningDestination,
+    tugger_file_manifest::FileEntry,
     tugger_windows::VcRedistributablePlatform,
     tugger_wix::{MsiPackage, WiXBundleInstallerBuilder},
 };
@@ -187,6 +189,45 @@ impl<'a> WiXBundleBuilderValue<'a> {
         Ok((exe_path, filename))
     }
 
+    fn materialize_temp_dir(
+        &self,
+        type_values: &TypeValues,
+        call_stack: &mut CallStack,
+        label: &'static str,
+    ) -> Result<(FileEntry, String), ValueError> {
+        let build_path = {
+            let context_value = get_context_value(type_values)?;
+            let context = context_value
+                .downcast_ref::<EnvironmentContext>()
+                .ok_or(ValueError::IncorrectParameterType)?;
+
+            context.build_path().to_path_buf()
+        };
+
+        let dest_dir = error_context(label, || {
+            tempfile::Builder::new()
+                .prefix("wix-bundle-builder-")
+                .tempdir_in(&build_path)
+                .context("creating temp directory")
+        })?;
+
+        let (installer_path, filename) =
+            self.materialize(type_values, call_stack, label, dest_dir.path())?;
+
+        let entry = FileEntry {
+            data: installer_path.clone().into(),
+            executable: false,
+        };
+
+        let entry = error_context(label, || {
+            entry
+                .to_memory()
+                .context("converting FileEntry to in-memory")
+        })?;
+
+        Ok((entry, filename))
+    }
+
     /// WiXBundleBuilder.build(target)
     pub fn build(
         &self,
@@ -215,6 +256,18 @@ impl<'a> WiXBundleBuilderValue<'a> {
                 output_path: dest_dir,
             },
         }))
+    }
+
+    pub fn to_file_content(
+        &self,
+        type_values: &TypeValues,
+        call_stack: &mut CallStack,
+    ) -> ValueResult {
+        const LABEL: &str = "WiXBundleBuilder.to_file_content()";
+
+        let (content, filename) = self.materialize_temp_dir(type_values, call_stack, LABEL)?;
+
+        Ok(Value::new(FileContentValue { content, filename }))
     }
 }
 
@@ -252,6 +305,11 @@ starlark_module! { wix_bundle_builder_module =>
     WiXBundleBuilder.build(env env, call_stack cs, this, target: String) {
         let this = this.downcast_ref::<WiXBundleBuilderValue>().unwrap();
         this.build(env, cs, target)
+    }
+
+    WiXBundleBuilder.to_file_content(env env, call_stack cs, this) {
+        let this = this.downcast_ref::<WiXBundleBuilderValue>().unwrap();
+        this.to_file_content(env, cs)
     }
 }
 
@@ -320,6 +378,20 @@ mod tests {
         let exe_path = build_path.join("name-0.1.exe");
 
         assert!(exe_path.exists(), "exe exists");
+
+        Ok(())
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn to_file_content() -> Result<()> {
+        let mut env = StarlarkEnvironment::new()?;
+
+        env.eval("builder = WiXBundleBuilder('prefix', 'name', '0.1', 'manufacturer')")?;
+        env.eval("builder.add_vc_redistributable('x64')")?;
+        let value = env.eval("builder.to_file_content()")?;
+
+        assert_eq!(value.get_type(), FileContentValue::TYPE);
 
         Ok(())
     }
