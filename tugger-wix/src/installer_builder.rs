@@ -83,6 +83,12 @@ impl WiXInstallerBuilder {
             .insert(key.to_string(), value.map(|x| x.to_string()));
     }
 
+    /// Set the directory to use to build the installer in.
+    pub fn set_build_path(&mut self, path: impl AsRef<Path>) {
+        self.build_path = path.as_ref().to_path_buf();
+    }
+
+    /// Obtain the directory to use for building the installer.
     pub fn build_path(&self) -> &Path {
         &self.build_path
     }
