@@ -57,7 +57,8 @@ New Features
   :py:meth:`starlark_tugger.WiXMSIBuilder.to_file_content` and
   :py:meth:`starlark_tugger.WiXMSIBuilder.write_to_directory` methods.
 * :py:class:`starlark_tugger.WiXBundleBuilder` has gained the
-  :py:meth:`starlark_tugger.WiXBundleBuilder.to_file_content` method.
+  :py:meth:`starlark_tugger.WiXBundleBuilder.to_file_content` and
+  :py:meth:`starlark_tugger.WiXBundleBuilder.write_to_directory` methods.
 
 .. _version_0_16_0:
 

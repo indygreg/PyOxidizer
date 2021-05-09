@@ -107,3 +107,15 @@
         Upon successful generation of an installer, the produced installer
         will be assessed for code signing with the ``windows-installer-creation``
         *action*.
+
+    .. py:method:: write_to_directory(path: str) -> str
+
+        Build an exe installer using the WiX Toolset and write the built installer
+        to the directory specified, returning the absolute path of the written file.
+
+        Absolute paths are treated as-is. Relative paths are relative to the current
+        build path.
+
+        Upon successful generation of an installer, the produced installer
+        will be assessed for code signing with the ``windows-installer-creation``
+        *action*.
