@@ -29,7 +29,10 @@ use {
         get_context_value, optional_dict_arg, optional_str_arg, EnvironmentContext, ResolvedTarget,
         ResolvedTargetValue, RunMode,
     },
-    std::{convert::TryFrom, path::Path},
+    std::{
+        convert::TryFrom,
+        path::{Path, PathBuf},
+    },
     tugger_code_signing::SigningDestination,
     tugger_file_manifest::{FileEntry, FileManifest},
     tugger_wix::{WiXInstallerBuilder, WiXSimpleMsiBuilder, WxsBuilder},
@@ -298,33 +301,42 @@ impl WiXInstallerValue {
         Ok(Value::new(NoneType::None))
     }
 
-    fn build(
+    fn materialize(
         &mut self,
         type_values: &TypeValues,
         call_stack: &mut CallStack,
-        target: String,
-    ) -> ValueResult {
-        let context_value = get_context_value(type_values)?;
-        let context = context_value
-            .downcast_ref::<EnvironmentContext>()
-            .ok_or(ValueError::IncorrectParameterType)?;
+        label: &'static str,
+        dest_dir: &Path,
+    ) -> Result<PathBuf, ValueError> {
+        let logger = {
+            let context_value = get_context_value(type_values)?;
+            let context = context_value
+                .downcast_ref::<EnvironmentContext>()
+                .ok_or(ValueError::IncorrectParameterType)?;
 
-        let output_path = context.target_build_path(&target);
-        let installer_path = output_path.join(&self.filename);
+            context.logger().clone()
+        };
 
-        error_context("WiXInstaller.build()", || {
+        let installer_path = dest_dir.join(&self.filename);
+
+        error_context(label, || {
+            // Update the build directory to use the destination directory.
+            // This helps prevent conflicts between parallel builds, as the default
+            // build path is hard-coded.
+            self.inner.set_build_path(dest_dir);
+
             self.inner
                 .add_files_manifest_wxs()
                 .context("generating install_files manifest wxs")?;
 
             self.inner
-                .build(context.logger(), &installer_path)
+                .build(&logger, &installer_path)
                 .context("building")
         })?;
 
         let candidate = installer_path.as_path().into();
         let mut context = SigningContext::new(
-            "build()",
+            label,
             SigningAction::WindowsInstallerCreation,
             &self.filename,
             &candidate,
@@ -333,6 +345,26 @@ impl WiXInstallerValue {
         context.set_signing_destination(SigningDestination::File(installer_path.clone()));
 
         handle_signable_event(type_values, call_stack, context)?;
+
+        Ok(installer_path)
+    }
+
+    fn build(
+        &mut self,
+        type_values: &TypeValues,
+        call_stack: &mut CallStack,
+        target: String,
+    ) -> ValueResult {
+        const LABEL: &str = "WixInstaller.build()";
+
+        let context_value = get_context_value(type_values)?;
+        let context = context_value
+            .downcast_ref::<EnvironmentContext>()
+            .ok_or(ValueError::IncorrectParameterType)?;
+
+        let output_path = context.target_build_path(&target);
+
+        let installer_path = self.materialize(type_values, call_stack, LABEL, &output_path)?;
 
         Ok(Value::new(ResolvedTargetValue {
             inner: ResolvedTarget {
