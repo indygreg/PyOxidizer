@@ -47,8 +47,8 @@ version = "0.3.0-pre"
 path = "../tugger-code-signing"
 
 [dependencies.tugger-common]
-version = "0.5.0-pre"
-path = "../tugger-common"
+version = "0.4.0"
+# path = "../tugger-common"
 
 [dependencies.tugger-snapcraft]
 version = "0.6.0-pre"
