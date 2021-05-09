@@ -2048,6 +2048,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e293568965aea261bdf010db17df7030e3c9a275c415d51d6112f7cf9b7af012"
 
 [[package]]
+name = "oxidized-importer"
+version = "0.10.0-pre"
+dependencies = [
+ "anyhow",
+ "lazy_static",
+ "memory-module-sys",
+ "pyembed",
+ "python-packed-resources",
+ "python3-sys",
+ "winapi 0.3.9",
+]
+
+[[package]]
 name = "p12"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
