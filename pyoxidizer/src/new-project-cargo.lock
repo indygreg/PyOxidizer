@@ -252,6 +252,8 @@ checksum = "acbf547ad0c65e31259204bd90935776d1c693cec2f4ff7abb7a1bbbd40dfe58"
 [[package]]
 name = "pyembed"
 version = "0.16.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d1a8faca8c08ddcd20483f17ec03bb0de5b6c49167cf2820de4615221cafe028"
 dependencies = [
  "anyhow",
  "cpython",
