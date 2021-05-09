@@ -26,7 +26,7 @@ use {
         get_context_value, optional_str_arg, EnvironmentContext, ResolvedTarget,
         ResolvedTargetValue, RunMode,
     },
-    std::path::PathBuf,
+    std::path::{Path, PathBuf},
     tugger_apple_bundle::MacOsApplicationBundleBuilder,
     tugger_code_signing::SigningDestination,
     tugger_file_manifest::FileData,
@@ -206,6 +206,42 @@ impl MacOsApplicationBundleBuilderValue {
         Ok(Value::new(NoneType::None))
     }
 
+    fn materialize_bundle(
+        &self,
+        type_values: &TypeValues,
+        call_stack: &mut CallStack,
+        label: &'static str,
+        dest_dir: &Path,
+    ) -> Result<PathBuf, ValueError> {
+        let (bundle_path, filename) = error_context(label, || {
+            let bundle_path = self
+                .inner
+                .materialize_bundle(dest_dir)
+                .context("materializing bundle")?;
+
+            let filename = bundle_path
+                .file_name()
+                .ok_or_else(|| anyhow!("unable to resolve bundle file name"))?
+                .to_os_string();
+
+            Ok((bundle_path, filename))
+        })?;
+
+        let candidate = bundle_path.as_path().into();
+        let mut context = SigningContext::new(
+            label,
+            SigningAction::MacOsApplicationBunderCreation,
+            filename,
+            &candidate,
+        );
+        context.set_path(&bundle_path);
+        context.set_signing_destination(SigningDestination::Directory(bundle_path.clone()));
+
+        handle_signable_event(type_values, call_stack, context)?;
+
+        Ok(bundle_path)
+    }
+
     pub fn build(
         &self,
         type_values: &TypeValues,
@@ -221,31 +257,7 @@ impl MacOsApplicationBundleBuilderValue {
 
         let output_path = context.target_build_path(&target);
 
-        let (bundle_path, filename) = error_context(LABEL, || {
-            let bundle_path = self
-                .inner
-                .materialize_bundle(&output_path)
-                .context("materializing bundle")?;
-
-            let filename = bundle_path
-                .file_name()
-                .ok_or_else(|| anyhow!("unable to resolve bundle file name"))?
-                .to_os_string();
-
-            Ok((bundle_path, filename))
-        })?;
-
-        let candidate = bundle_path.as_path().into();
-        let mut context = SigningContext::new(
-            LABEL,
-            SigningAction::MacOsApplicationBunderCreation,
-            filename,
-            &candidate,
-        );
-        context.set_path(&bundle_path);
-        context.set_signing_destination(SigningDestination::Directory(bundle_path.clone()));
-
-        handle_signable_event(type_values, call_stack, context)?;
+        let bundle_path = self.materialize_bundle(type_values, call_stack, LABEL, &output_path)?;
 
         Ok(Value::new(ResolvedTargetValue {
             inner: ResolvedTarget {
@@ -253,6 +265,26 @@ impl MacOsApplicationBundleBuilderValue {
                 output_path,
             },
         }))
+    }
+
+    pub fn write_to_directory(
+        &self,
+        type_values: &TypeValues,
+        call_stack: &mut CallStack,
+        path: String,
+    ) -> ValueResult {
+        const LABEL: &str = "MacOsApplicationBundleBuilder.write_to_directory()";
+
+        let context_value = get_context_value(type_values)?;
+        let context = context_value
+            .downcast_ref::<EnvironmentContext>()
+            .ok_or(ValueError::IncorrectParameterType)?;
+
+        let dest_dir = context.resolve_path(path);
+
+        let bundle_path = self.materialize_bundle(type_values, call_stack, LABEL, &dest_dir)?;
+
+        Ok(Value::from(format!("{}", bundle_path.display())))
     }
 }
 
@@ -322,11 +354,16 @@ starlark_module! { macos_application_bundle_builder_module =>
         let this = this.downcast_ref::<MacOsApplicationBundleBuilderValue>().unwrap();
         this.build(env, cs, target)
     }
+
+    MacOsApplicationBundleBuilder.write_to_directory(env env, call_stack cs, this, path: String) {
+        let this = this.downcast_ref::<MacOsApplicationBundleBuilderValue>().unwrap();
+        this.write_to_directory(env, cs, path)
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use {super::*, crate::starlark::testutil::*, anyhow::Result};
+    use {super::*, crate::starlark::testutil::*, anyhow::Result, tugger_common::testutil::*};
 
     #[test]
     fn constructor() -> Result<()> {
@@ -408,6 +445,29 @@ mod tests {
             .files()
             .get("Contents/Resources/file")
             .is_some());
+
+        Ok(())
+    }
+
+    #[test]
+    fn write_to_directory() -> Result<()> {
+        let mut env = StarlarkEnvironment::new()?;
+
+        env.eval("builder = MacOsApplicationBundleBuilder('myapp')")?;
+        env.eval(
+            "builder.add_resources_file(FileContent(filename = 'file', content = 'content'))",
+        )?;
+
+        let dest_dir = DEFAULT_TEMP_DIR
+            .path()
+            .join("macos-application-bundle-builder-write-to-directory");
+        let dest_dir_s = dest_dir.to_string_lossy().replace('\\', "/");
+
+        let path_value = env.eval(&format!("builder.write_to_directory('{}')", dest_dir_s))?;
+        assert_eq!(path_value.get_type(), "string");
+
+        let path = PathBuf::from(path_value.to_string());
+        assert!(path.is_dir());
 
         Ok(())
     }

@@ -47,6 +47,9 @@ New Features
   :py:meth:`starlark_tugger.AppleUniversalBinary.write_to_directory` method.
 * :py:class:`starlark_tugger.FileContent` has gained the
   :py:meth:`starlark_tugger.FileContent.write_to_directory` method.
+* :py:class:`starlark_tugger.MacOsApplicationBundleBuilder` has gained the
+  :py:meth:`starlark_tugger.MacOsApplicationBundleBuilder.write_to_directory`
+  method.
 
 .. _version_0_16_0:
 

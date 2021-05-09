@@ -149,3 +149,16 @@
         considered for code signing with the signing action
         ``macos-application-bundle-creation``. All signable Mach-O files and nested
         bundles should be signed.
+
+    .. py:method:: write_to_directory(path: str)
+
+        This method will materialize the ``.app`` bundle/directory to the specified
+        directory.
+
+        Absolute paths are treated as-is. Relative paths are relative to the currently
+        configured build path.
+
+        Upon successful bundle directory creation, the entire bundle is
+        considered for code signing with the signing action
+        ``macos-application-bundle-creation``. All signable Mach-O files and nested
+        bundles should be signed.
