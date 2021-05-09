@@ -21,7 +21,7 @@ version = "0.7.0"
 # path = "../python-packed-resources"
 
 [dependencies.pyembed]
-version = "0.16.0-pre"
+version = "0.16.0"
 path = "../pyembed"
 default-features = false
 features = ["build-mode-extension-module"]
