@@ -36,6 +36,16 @@ pub fn pyembed_licenses() -> anyhow::Result<Vec<tugger_licensing::LicensedCompon
     res.push(component);
 
     let mut component =
+        tugger_licensing::LicensedComponent::new_spdx("block-buffer", "Apache-2.0 OR MIT")?;
+    component.set_flavor(tugger_licensing::ComponentFlavor::RustCrate);
+    res.push(component);
+
+    let mut component =
+        tugger_licensing::LicensedComponent::new_spdx("block-padding", "Apache-2.0 OR MIT")?;
+    component.set_flavor(tugger_licensing::ComponentFlavor::RustCrate);
+    res.push(component);
+
+    let mut component =
         tugger_licensing::LicensedComponent::new_spdx("byteorder", "MIT OR Unlicense")?;
     component.set_flavor(tugger_licensing::ComponentFlavor::RustCrate);
     res.push(component);
@@ -69,6 +79,11 @@ pub fn pyembed_licenses() -> anyhow::Result<Vec<tugger_licensing::LicensedCompon
     component.set_flavor(tugger_licensing::ComponentFlavor::RustCrate);
     res.push(component);
 
+    let mut component =
+        tugger_licensing::LicensedComponent::new_spdx("cpufeatures", "Apache-2.0 OR MIT")?;
+    component.set_flavor(tugger_licensing::ComponentFlavor::RustCrate);
+    res.push(component);
+
     let mut component = tugger_licensing::LicensedComponent::new_spdx("cpython", "MIT")?;
     component.set_flavor(tugger_licensing::ComponentFlavor::RustCrate);
     res.push(component);
@@ -79,6 +94,11 @@ pub fn pyembed_licenses() -> anyhow::Result<Vec<tugger_licensing::LicensedCompon
     res.push(component);
 
     let mut component = tugger_licensing::LicensedComponent::new_spdx("cty", "Apache-2.0 OR MIT")?;
+    component.set_flavor(tugger_licensing::ComponentFlavor::RustCrate);
+    res.push(component);
+
+    let mut component =
+        tugger_licensing::LicensedComponent::new_spdx("digest", "Apache-2.0 OR MIT")?;
     component.set_flavor(tugger_licensing::ComponentFlavor::RustCrate);
     res.push(component);
 
@@ -106,6 +126,10 @@ pub fn pyembed_licenses() -> anyhow::Result<Vec<tugger_licensing::LicensedCompon
     res.push(component);
 
     let mut component = tugger_licensing::LicensedComponent::new_spdx("fs_extra", "MIT")?;
+    component.set_flavor(tugger_licensing::ComponentFlavor::RustCrate);
+    res.push(component);
+
+    let mut component = tugger_licensing::LicensedComponent::new_spdx("generic-array", "MIT")?;
     component.set_flavor(tugger_licensing::ComponentFlavor::RustCrate);
     res.push(component);
 
@@ -173,6 +197,11 @@ pub fn pyembed_licenses() -> anyhow::Result<Vec<tugger_licensing::LicensedCompon
 
     let mut component =
         tugger_licensing::LicensedComponent::new_spdx("once_cell", "Apache-2.0 OR MIT")?;
+    component.set_flavor(tugger_licensing::ComponentFlavor::RustCrate);
+    res.push(component);
+
+    let mut component =
+        tugger_licensing::LicensedComponent::new_spdx("opaque-debug", "Apache-2.0 OR MIT")?;
     component.set_flavor(tugger_licensing::ComponentFlavor::RustCrate);
     res.push(component);
 
@@ -282,6 +311,10 @@ pub fn pyembed_licenses() -> anyhow::Result<Vec<tugger_licensing::LicensedCompon
     component.set_flavor(tugger_licensing::ComponentFlavor::RustCrate);
     res.push(component);
 
+    let mut component = tugger_licensing::LicensedComponent::new_spdx("sha2", "Apache-2.0 OR MIT")?;
+    component.set_flavor(tugger_licensing::ComponentFlavor::RustCrate);
+    res.push(component);
+
     let mut component =
         tugger_licensing::LicensedComponent::new_spdx("smallvec", "Apache-2.0 OR MIT")?;
     component.set_flavor(tugger_licensing::ComponentFlavor::RustCrate);
@@ -333,7 +366,17 @@ pub fn pyembed_licenses() -> anyhow::Result<Vec<tugger_licensing::LicensedCompon
     res.push(component);
 
     let mut component =
+        tugger_licensing::LicensedComponent::new_spdx("typenum", "Apache-2.0 OR MIT")?;
+    component.set_flavor(tugger_licensing::ComponentFlavor::RustCrate);
+    res.push(component);
+
+    let mut component =
         tugger_licensing::LicensedComponent::new_spdx("unicode-xid", "Apache-2.0 OR MIT")?;
+    component.set_flavor(tugger_licensing::ComponentFlavor::RustCrate);
+    res.push(component);
+
+    let mut component =
+        tugger_licensing::LicensedComponent::new_spdx("version_check", "Apache-2.0 OR MIT")?;
     component.set_flavor(tugger_licensing::ComponentFlavor::RustCrate);
     res.push(component);
 
