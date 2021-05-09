@@ -262,19 +262,16 @@ starlark_module! { macos_application_bundle_builder_module =>
         MacOsApplicationBundleBuilderValue::new_from_args(bundle_name)
     }
 
-    #[allow(non_snake_case)]
     MacOsApplicationBundleBuilder.add_icon(this, path: String) {
         let mut this = this.downcast_mut::<MacOsApplicationBundleBuilderValue>().unwrap().unwrap();
         this.add_icon(path)
     }
 
-    #[allow(non_snake_case)]
     MacOsApplicationBundleBuilder.add_manifest(this, manifest: FileManifestValue) {
         let mut this = this.downcast_mut::<MacOsApplicationBundleBuilderValue>().unwrap().unwrap();
         this.add_manifest(manifest)
     }
 
-    #[allow(non_snake_case)]
     MacOsApplicationBundleBuilder.add_macos_file(
         this,
         content: FileContentValue,
@@ -285,13 +282,11 @@ starlark_module! { macos_application_bundle_builder_module =>
         this.add_macos_file(content, path)
     }
 
-    #[allow(non_snake_case)]
     MacOsApplicationBundleBuilder.add_macos_manifest(this, manifest: FileManifestValue) {
         let mut this = this.downcast_mut::<MacOsApplicationBundleBuilderValue>().unwrap().unwrap();
         this.add_macos_manifest(manifest)
     }
 
-    #[allow(non_snake_case)]
     MacOsApplicationBundleBuilder.add_resources_file(
         this,
         content: FileContentValue,
@@ -301,19 +296,16 @@ starlark_module! { macos_application_bundle_builder_module =>
         this.add_resources_file(content, path)
     }
 
-    #[allow(non_snake_case)]
     MacOsApplicationBundleBuilder.add_resources_manifest(this, manifest: FileManifestValue) {
         let mut this = this.downcast_mut::<MacOsApplicationBundleBuilderValue>().unwrap().unwrap();
         this.add_resources_manifest(manifest)
     }
 
-    #[allow(non_snake_case)]
     MacOsApplicationBundleBuilder.set_info_plist_key(this, key: String, value: Value) {
         let mut this = this.downcast_mut::<MacOsApplicationBundleBuilderValue>().unwrap().unwrap();
         this.set_info_plist_key(key, value)
     }
 
-    #[allow(non_snake_case)]
     MacOsApplicationBundleBuilder.set_info_plist_required_keys(
         this,
         display_name: String,
@@ -326,7 +318,6 @@ starlark_module! { macos_application_bundle_builder_module =>
         this.set_info_plist_required_keys(display_name, identifier, version, signature, executable)
     }
 
-    #[allow(non_snake_case)]
     MacOsApplicationBundleBuilder.build(env env, call_stack cs, this, target: String) {
         let this = this.downcast_ref::<MacOsApplicationBundleBuilderValue>().unwrap();
         this.build(env, cs, target)
