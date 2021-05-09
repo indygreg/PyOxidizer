@@ -43,3 +43,13 @@
 
         The content of the returned object will be a just-in-time produced *universal*
         Mach-O binary.
+
+    .. py:method:: write_to_directory(path: str) -> str
+
+        Write a file containing this *universal* Mach-O binary into the directory
+        specified.
+
+        Absolute paths are accepted as-is. Relative paths are relative to the
+        currently configured *build* path.
+
+        Returns the absolute path of the written file.

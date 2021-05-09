@@ -40,6 +40,12 @@ Backwards Compatibility Notes
   relative paths as relative to the currently configured build path, not relative
   to the process's current working directory.
 
+New Features
+^^^^^^^^^^^^
+
+* :py:class:`starlark_tugger.AppleUniversalBinary` has gained the
+  :py:meth:`starlark_tugger.AppleUniversalBinary.write_to_directory` method.
+
 .. _version_0_16_0:
 
 0.16.0

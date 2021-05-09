@@ -142,6 +142,33 @@ impl AppleUniversalBinary {
             filename: self.filename.clone(),
         }))
     }
+
+    pub fn write_to_directory(&self, type_values: &TypeValues, path: String) -> ValueResult {
+        const LABEL: &str = "AppleUniversalBinary.write_to_directory()";
+
+        let value = self.to_file_content()?;
+        let file_content = value
+            .downcast_ref::<FileContentValue>()
+            .expect("expected FileContentValue");
+
+        let context_value = get_context_value(type_values)?;
+        let context = context_value
+            .downcast_ref::<EnvironmentContext>()
+            .ok_or(ValueError::IncorrectParameterType)?;
+
+        let dest_path = context.resolve_path(path).join(&self.filename);
+
+        error_context(LABEL, || {
+            file_content
+                .content
+                .write_to_path(&dest_path)
+                .with_context(|| format!("writing {}", dest_path.display()))?;
+
+            Ok(())
+        })?;
+
+        Ok(Value::from(format!("{}", dest_path.display())))
+    }
 }
 
 starlark_module! { apple_universal_binary_module =>
@@ -164,11 +191,16 @@ starlark_module! { apple_universal_binary_module =>
         let this = this.downcast_ref::<AppleUniversalBinary>().unwrap();
         this.to_file_content()
     }
+
+    AppleUniversalBinary.write_to_directory(env env, this, path: String) {
+        let this = this.downcast_ref::<AppleUniversalBinary>().unwrap();
+        this.write_to_directory(env, path)
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use {super::*, crate::starlark::testutil::*, anyhow::Result};
+    use {super::*, crate::starlark::testutil::*, anyhow::Result, tugger_common::testutil::*};
 
     #[test]
     fn new() -> Result<()> {
@@ -205,6 +237,15 @@ mod tests {
 
         let value = env.eval("b.to_file_content()")?;
         assert_eq!(value.get_type(), FileContentValue::TYPE);
+
+        let dest_dir = DEFAULT_TEMP_DIR
+            .path()
+            .join("apple-universal-binary")
+            .to_string_lossy()
+            .replace('\\', "/");
+
+        let path = env.eval(&format!("b.write_to_directory('{}')", dest_dir))?;
+        assert_eq!(path.get_type(), "string");
 
         Ok(())
     }
