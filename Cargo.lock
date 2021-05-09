@@ -2364,7 +2364,7 @@ dependencies = [
 
 [[package]]
 name = "pyembed"
-version = "0.16.0"
+version = "0.17.0-pre"
 dependencies = [
  "anyhow",
  "cpython",
