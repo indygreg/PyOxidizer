@@ -149,7 +149,7 @@ def make_wheel(platform_tag, target_triple):
     if "-windows-" in target_triple:
         path = "%s.exe" % path
 
-    wheel.add_file_data("scripts", FileContent(path = path))
+    wheel.add_file_data("scripts", FileContent(path = path, executable = True))
 
     return wheel
 
