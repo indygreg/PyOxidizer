@@ -60,6 +60,11 @@ New Features
   :py:meth:`starlark_tugger.WiXBundleBuilder.to_file_content` and
   :py:meth:`starlark_tugger.WiXBundleBuilder.write_to_directory` methods.
 
+Other Relevant Changes
+^^^^^^^^^^^^^^^^^^^^^^
+
+* Managed Rust toolchain upgraded from 1.52.0 to 1.52.1.
+
 .. _version_0_16_0:
 
 0.16.0
