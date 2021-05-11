@@ -4,8 +4,7 @@
 
 use {
     crate::{
-        environment::{PyOxidizerSource, PYOXIDIZER_VERSION},
-        logging, project_building, project_layout, projectmgmt,
+        environment::PYOXIDIZER_VERSION, logging, project_building, project_layout, projectmgmt,
     },
     anyhow::{anyhow, Context, Result},
     clap::{App, AppSettings, Arg, ArgMatches, SubCommand},
@@ -168,12 +167,12 @@ fn starlark_vars(args: &ArgMatches) -> Result<HashMap<String, Option<String>>> {
 }
 
 pub fn run_cli() -> Result<()> {
-    let source = PyOxidizerSource::default();
+    let mut env = crate::environment::Environment::new()?;
 
     let matches = App::new("PyOxidizer")
         .setting(AppSettings::ArgRequiredElseHelp)
         .version(PYOXIDIZER_VERSION)
-        .long_version(source.version_long().as_str())
+        .long_version(env.pyoxidizer_source.version_long().as_str())
         .author("Gregory Szorc <gregory.szorc@gmail.com>")
         .long_about("Build and distribute Python applications")
         .arg(
@@ -425,8 +424,6 @@ pub fn run_cli() -> Result<()> {
     };
 
     let logger_context = logging::logger_from_env(log_level);
-
-    let mut env = crate::environment::Environment::new()?;
 
     if matches.is_present("system_rust") {
         env.unmanage_rust().context("unmanaging Rust")?;
