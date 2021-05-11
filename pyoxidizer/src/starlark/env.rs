@@ -267,7 +267,7 @@ pub fn populate_environment(
 
 #[cfg(test)]
 pub mod tests {
-    use super::super::testutil::*;
+    use crate::{environment::default_target_triple, starlark::testutil::*};
 
     #[test]
     fn test_cwd() {
@@ -279,7 +279,7 @@ pub mod tests {
     #[test]
     fn test_build_target() {
         let target = starlark_ok("BUILD_TARGET_TRIPLE");
-        assert_eq!(target.to_str(), crate::project_building::HOST);
+        assert_eq!(target.to_str(), default_target_triple());
     }
 
     #[test]

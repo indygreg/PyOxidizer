@@ -4,6 +4,7 @@
 
 use {
     crate::{
+        environment::default_target_triple,
         logging::PrintlnDrain,
         starlark::eval::{EvaluationContext, EvaluationContextBuilder},
         testutil::{get_env, DISTRIBUTION_CACHE},
@@ -27,12 +28,10 @@ pub fn test_evaluation_context_builder() -> Result<EvaluationContextBuilder> {
         slog::o!(),
     );
 
-    let build_target = crate::project_building::HOST;
-
     let cwd = std::env::current_dir()?;
     let config_path = cwd.join("dummy");
 
-    let builder = EvaluationContextBuilder::new(&env, logger, config_path, build_target)
+    let builder = EvaluationContextBuilder::new(&env, logger, config_path, default_target_triple())
         .distribution_cache(DISTRIBUTION_CACHE.clone());
 
     Ok(builder)

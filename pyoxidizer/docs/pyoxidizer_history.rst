@@ -40,6 +40,14 @@ Backwards Compatibility Notes
   relative paths as relative to the currently configured build path, not relative
   to the process's current working directory.
 
+Bug Fixes
+^^^^^^^^^
+
+* The default target triple is now derived from the target triple of the
+  running binary, not the environment the running binary was built in. In
+  many cases these would be identical. However, they would diverge if the
+  binary was cross-compiled.
+
 New Features
 ^^^^^^^^^^^^
 

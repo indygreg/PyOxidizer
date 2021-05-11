@@ -476,8 +476,10 @@ mod tests {
         },
         super::super::testutil::*,
         super::*,
-        crate::py_packaging::distribution::DistributionFlavor,
-        crate::python_distributions::PYTHON_DISTRIBUTIONS,
+        crate::{
+            environment::default_target_triple, py_packaging::distribution::DistributionFlavor,
+            python_distributions::PYTHON_DISTRIBUTIONS,
+        },
     };
 
     #[test]
@@ -487,7 +489,7 @@ mod tests {
 
         let host_distribution = PYTHON_DISTRIBUTIONS
             .find_distribution(
-                crate::project_building::HOST,
+                default_target_triple(),
                 &DistributionFlavor::Standalone,
                 None,
             )
@@ -508,7 +510,7 @@ mod tests {
 
         let wanted = PYTHON_DISTRIBUTIONS
             .find_distribution(
-                crate::project_building::HOST,
+                default_target_triple(),
                 &DistributionFlavor::Standalone,
                 Some("3.8"),
             )
@@ -529,7 +531,7 @@ mod tests {
 
         let wanted = PYTHON_DISTRIBUTIONS
             .find_distribution(
-                crate::project_building::HOST,
+                default_target_triple(),
                 &DistributionFlavor::Standalone,
                 Some("3.9"),
             )
@@ -549,7 +551,7 @@ mod tests {
 
         let host_distribution = PYTHON_DISTRIBUTIONS
             .find_distribution(
-                crate::project_building::HOST,
+                default_target_triple(),
                 &DistributionFlavor::StandaloneDynamic,
                 None,
             )

@@ -423,7 +423,10 @@ impl PyembedPythonInterpreterConfig {
 
 #[cfg(test)]
 mod tests {
-    use crate::py_packaging::distribution::{BinaryLibpythonLinkMode, PythonDistribution};
+    use crate::{
+        environment::default_target_triple,
+        py_packaging::distribution::{BinaryLibpythonLinkMode, PythonDistribution},
+    };
     use {super::*, crate::testutil::*};
 
     fn assert_contains(haystack: &str, needle: &str) -> Result<()> {
@@ -581,8 +584,8 @@ mod tests {
 
         let builder = dist.as_python_executable_builder(
             &logger,
-            env!("HOST"),
-            env!("HOST"),
+            default_target_triple(),
+            default_target_triple(),
             "all_config_fields",
             BinaryLibpythonLinkMode::Dynamic,
             &policy,
@@ -595,7 +598,7 @@ mod tests {
             &logger,
             "all_config_fields",
             builder.as_ref(),
-            env!("HOST"),
+            default_target_triple(),
             "0",
             false,
         )?;

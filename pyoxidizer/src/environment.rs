@@ -134,6 +134,19 @@ pub fn canonicalize_path(path: &Path) -> Result<PathBuf, std::io::Error> {
     Ok(p)
 }
 
+/// The default target triple to build for.
+///
+/// This typically matches the triple of the current binary. But in some
+/// cases we remap to a more generic target.
+pub fn default_target_triple() -> &'static str {
+    match env!("TARGET") {
+        // Release binaries are typically musl. But Linux GNU is a more
+        // user friendly target to build for. So we perform this mapping.
+        "x86_64-unknown-linux-musl" => "x86_64-unknown-linux-gnu",
+        v => v,
+    }
+}
+
 /// Describes the location of the PyOxidizer source files.
 #[derive(Clone, Debug)]
 pub enum PyOxidizerSource {
@@ -298,11 +311,6 @@ impl Environment {
         }
     }
 
-    /// Obtain the Rust target triple for the current machine.
-    fn rust_host_triple(&self) -> &str {
-        env!("HOST")
-    }
-
     /// Ensure a Rust toolchain suitable for building is available.
     pub fn ensure_rust_toolchain(
         &self,
@@ -321,12 +329,12 @@ impl Environment {
             );
 
             let rust_env = if self.managed_rust {
-                let target_triple = target_triple.unwrap_or_else(|| self.rust_host_triple());
+                let target_triple = target_triple.unwrap_or_else(|| default_target_triple());
 
                 let toolchain = install_rust_toolchain(
                     logger,
                     RUST_TOOLCHAIN_VERSION,
-                    self.rust_host_triple(),
+                    default_target_triple(),
                     &[target_triple],
                     &self.rust_dir(),
                     Some(&self.rust_dir()),

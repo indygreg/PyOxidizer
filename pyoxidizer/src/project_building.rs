@@ -25,8 +25,6 @@ use {
     },
 };
 
-pub const HOST: &str = env!("HOST");
-
 /// Find a pyoxidizer.toml configuration file by walking directory ancestry.
 pub fn find_pyoxidizer_config_file(start_dir: &Path) -> Option<PathBuf> {
     for test_dir in start_dir.ancestors() {
@@ -712,6 +710,7 @@ mod tests {
     use {
         super::*,
         crate::{
+            environment::default_target_triple,
             py_packaging::standalone_builder::tests::StandalonePythonExecutableBuilderOptions,
             testutil::*,
         },
@@ -733,7 +732,7 @@ mod tests {
             &logger,
             "myapp",
             pre_built.as_ref(),
-            env!("HOST"),
+            default_target_triple(),
             "0",
             false,
         )?;
@@ -758,7 +757,7 @@ mod tests {
             &logger,
             "myapp",
             pre_built.as_ref(),
-            env!("HOST"),
+            default_target_triple(),
             "0",
             false,
         )?;
@@ -779,7 +778,7 @@ mod tests {
             &logger,
             "myapp",
             pre_built.as_ref(),
-            env!("HOST"),
+            default_target_triple(),
             "0",
             false,
         )?;
@@ -803,7 +802,7 @@ mod tests {
             &logger,
             "myapp",
             pre_built.as_ref(),
-            env!("HOST"),
+            default_target_triple(),
             "0",
             false,
         )?;
@@ -828,7 +827,7 @@ mod tests {
             &logger,
             "myapp",
             pre_built.as_ref(),
-            env!("HOST"),
+            default_target_triple(),
             "0",
             false,
         )?;
@@ -853,7 +852,7 @@ mod tests {
             &logger,
             "myapp",
             pre_built.as_ref(),
-            env!("HOST"),
+            default_target_triple(),
             "0",
             false,
         )?;
@@ -882,7 +881,7 @@ mod tests {
             &logger,
             "myapp",
             pre_built.as_ref(),
-            env!("HOST"),
+            default_target_triple(),
             "0",
             false,
         )?;
@@ -911,7 +910,7 @@ mod tests {
             &logger,
             "myapp",
             pre_built.as_ref(),
-            env!("HOST"),
+            default_target_triple(),
             "0",
             false,
         )?;

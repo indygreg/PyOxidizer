@@ -4,7 +4,8 @@
 
 use {
     crate::{
-        environment::PYOXIDIZER_VERSION, logging, project_building, project_layout, projectmgmt,
+        environment::{default_target_triple, PYOXIDIZER_VERSION},
+        logging, project_building, project_layout, projectmgmt,
     },
     anyhow::{anyhow, Context, Result},
     clap::{App, AppSettings, Arg, ArgMatches, SubCommand},
@@ -260,7 +261,7 @@ pub fn run_cli() -> Result<()> {
                     Arg::with_name("target_triple")
                         .long("target-triple")
                         .takes_value(true)
-                        .default_value(env!("HOST"))
+                        .default_value(default_target_triple())
                         .help("Target triple of Python distribution to use"),
                 )
                 .arg(

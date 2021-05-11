@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        environment::Environment,
+        environment::{default_target_triple, Environment},
         logging::PrintlnDrain,
         py_packaging::distribution::{
             DistributionCache, DistributionFlavor, PythonDistributionLocation,
@@ -56,7 +56,11 @@ pub fn get_distribution(
 
 pub fn get_default_distribution() -> Result<Arc<StandaloneDistribution>> {
     let record = PYTHON_DISTRIBUTIONS
-        .find_distribution(env!("HOST"), &DistributionFlavor::Standalone, None)
+        .find_distribution(
+            default_target_triple(),
+            &DistributionFlavor::Standalone,
+            None,
+        )
         .ok_or_else(|| anyhow!("unable to find distribution"))?;
 
     get_distribution(&record.location)
@@ -65,7 +69,11 @@ pub fn get_default_distribution() -> Result<Arc<StandaloneDistribution>> {
 #[cfg(windows)]
 pub fn get_default_dynamic_distribution() -> Result<Arc<StandaloneDistribution>> {
     let record = PYTHON_DISTRIBUTIONS
-        .find_distribution(env!("HOST"), &DistributionFlavor::StandaloneDynamic, None)
+        .find_distribution(
+            default_target_triple(),
+            &DistributionFlavor::StandaloneDynamic,
+            None,
+        )
         .ok_or_else(|| anyhow!("unable to find distribution"))?;
 
     get_distribution(&record.location)

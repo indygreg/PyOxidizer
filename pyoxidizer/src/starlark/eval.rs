@@ -4,6 +4,7 @@
 
 use {
     crate::{
+        environment::default_target_triple,
         py_packaging::distribution::DistributionCache,
         starlark::env::{
             populate_environment, register_starlark_dialect, PyOxidizerContext,
@@ -160,7 +161,7 @@ impl EvaluationContext {
             builder.logger,
             builder.verbose,
             &builder.config_path,
-            crate::project_building::HOST,
+            default_target_triple(),
             &builder.build_target_triple,
             builder.release,
             &builder.build_opt_level,
@@ -410,7 +411,7 @@ mod tests {
             &env,
             logger,
             main_path.clone(),
-            env!("HOST").to_string(),
+            default_target_triple().to_string(),
         )
         .verbose(true)
         .into_context()?;
@@ -434,7 +435,7 @@ mod tests {
             &env,
             logger,
             config_path.clone(),
-            env!("HOST").to_string(),
+            default_target_triple().to_string(),
         )
         .verbose(true)
         .into_context()?;
@@ -458,10 +459,14 @@ mod tests {
         extra_vars.insert("my_var".to_string(), Some("my_value".to_string()));
         extra_vars.insert("empty".to_string(), None);
 
-        let context =
-            EvaluationContextBuilder::new(&env, logger, config_path, env!("HOST").to_string())
-                .extra_vars(extra_vars)
-                .into_context()?;
+        let context = EvaluationContextBuilder::new(
+            &env,
+            logger,
+            config_path,
+            default_target_triple().to_string(),
+        )
+        .extra_vars(extra_vars)
+        .into_context()?;
 
         let vars_value = context.get_var("VARS").unwrap();
         assert_eq!(vars_value.get_type(), "dict");

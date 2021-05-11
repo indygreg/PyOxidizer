@@ -119,7 +119,7 @@ fn main() {
     println!("cargo:rustc-env=GIT_COMMIT={}", git_commit);
 
     println!(
-        "cargo:rustc-env=HOST={}",
-        std::env::var("HOST").expect("HOST not set")
+        "cargo:rustc-env=TARGET={}",
+        std::env::var("TARGET").expect("TARGET not set")
     );
 }

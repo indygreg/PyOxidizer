@@ -6,7 +6,7 @@
 
 use {
     crate::{
-        environment::{Environment, PyOxidizerSource},
+        environment::{default_target_triple, Environment, PyOxidizerSource},
         project_building::find_pyoxidizer_config_file_env,
         project_layout::{initialize_project, write_new_pyoxidizer_config_file},
         py_packaging::{
@@ -388,8 +388,11 @@ pub fn python_distribution_extract(
     let dist_path = if let Some(path) = archive_path {
         PathBuf::from(path)
     } else if download_default {
-        let location =
-            default_distribution_location(&DistributionFlavor::Standalone, env!("HOST"), None)?;
+        let location = default_distribution_location(
+            &DistributionFlavor::Standalone,
+            default_target_triple(),
+            None,
+        )?;
 
         resolve_python_distribution_archive(&location, Path::new(dest_path))?
     } else {

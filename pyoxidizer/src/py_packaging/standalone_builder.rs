@@ -1050,9 +1050,12 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
 pub mod tests {
     use {
         super::*,
-        crate::py_packaging::distribution::{BinaryLibpythonLinkMode, DistributionFlavor},
-        crate::python_distributions::PYTHON_DISTRIBUTIONS,
-        crate::testutil::*,
+        crate::{
+            environment::default_target_triple,
+            py_packaging::distribution::{BinaryLibpythonLinkMode, DistributionFlavor},
+            python_distributions::PYTHON_DISTRIBUTIONS,
+            testutil::*,
+        },
         once_cell::sync::Lazy,
         python_packaging::{location::ConcreteResourceLocation, policy::ExtensionModuleFilter},
         std::ops::DerefMut,
@@ -1140,8 +1143,8 @@ pub mod tests {
     impl Default for StandalonePythonExecutableBuilderOptions {
         fn default() -> Self {
             Self {
-                host_triple: env!("HOST").to_string(),
-                target_triple: env!("HOST").to_string(),
+                host_triple: default_target_triple().to_string(),
+                target_triple: default_target_triple().to_string(),
                 distribution_version: None,
                 distribution_flavor: DistributionFlavor::Standalone,
                 app_name: "testapp".to_string(),
