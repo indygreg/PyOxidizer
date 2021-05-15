@@ -3123,4 +3123,42 @@ pub mod tests {
 
         Ok(())
     }
+
+    #[test]
+    fn test_stdlib_tests() -> Result<()> {
+        let host_distribution = get_default_distribution()?;
+
+        for dist in get_all_standalone_distributions()? {
+            let mut policy = dist.create_packaging_policy()?;
+            policy.set_include_test(true);
+
+            let mut builder = StandalonePythonExecutableBuilder::from_distribution(
+                host_distribution.clone(),
+                dist.clone(),
+                host_distribution.target_triple().to_string(),
+                dist.target_triple().to_string(),
+                "myapp".to_string(),
+                BinaryLibpythonLinkMode::Default,
+                policy,
+                dist.create_python_interpreter_config()?,
+            )?;
+
+            builder.add_distribution_resources(None)?;
+
+            let temp_dir = tempfile::Builder::new()
+                .prefix("pyoxidizer-test")
+                .tempdir()?;
+
+            let mut compiler =
+                BytecodeCompiler::new(host_distribution.python_exe_path(), temp_dir.path())?;
+
+            // Some stdlib test modules are malformed and cause resource compiling to fail.
+            assert!(builder
+                .resources_collector
+                .compile_resources(&mut compiler)
+                .is_err());
+        }
+
+        Ok(())
+    }
 }
