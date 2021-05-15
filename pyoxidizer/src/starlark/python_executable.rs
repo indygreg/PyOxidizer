@@ -5,6 +5,7 @@
 use {
     super::{
         env::{get_context, PyOxidizerEnvironmentContext},
+        file::FileValue,
         file_resource::file_manifest_add_python_executable,
         python_embedded_resources::PythonEmbeddedResourcesValue,
         python_extension_module::PythonExtensionModuleValue,
@@ -13,8 +14,7 @@ use {
         python_package_resource::PythonPackageResourceValue,
         python_packaging_policy::PythonPackagingPolicyValue,
         python_resource::{
-            is_resource_starlark_compatible, python_resource_to_value, FileValue,
-            ResourceCollectionContext,
+            is_resource_starlark_compatible, python_resource_to_value, ResourceCollectionContext,
         },
     },
     crate::{

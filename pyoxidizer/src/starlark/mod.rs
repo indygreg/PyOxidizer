@@ -10,6 +10,7 @@ define Oxidized Python binaries.
 
 pub mod env;
 pub mod eval;
+pub mod file;
 pub mod file_resource;
 pub mod python_distribution;
 pub mod python_embedded_resources;
