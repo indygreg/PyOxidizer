@@ -339,7 +339,7 @@ impl PythonDistributionValue {
                 &name,
                 // TODO make configurable
                 BinaryLibpythonLinkMode::Default,
-                &policy.inner,
+                policy.inner(LABEL)?.deref(),
                 config.inner(LABEL)?.deref(),
                 host_distribution,
             )
@@ -368,8 +368,11 @@ impl PythonDistributionValue {
                 // When we call python_resource_to_value(), the Starlark
                 // callbacks are automatically called.
 
-                let value = python_resource_to_value(&type_values, &mut cs, resource, &policy)
-                    .map_err(|e| anyhow!("error converting PythonResource to Value: {:?}", e))?;
+                let value =
+                    python_resource_to_value(LABEL, &type_values, &mut cs, resource, &policy)
+                        .map_err(|e| {
+                            anyhow!("error converting PythonResource to Value: {:?}", e)
+                        })?;
 
                 let new_add_context = add_context_for_value(&value, "to_python_executable")
                     .map_err(|e| anyhow!("error obtaining add context from Value: {:?}", e))?
@@ -399,20 +402,24 @@ impl PythonDistributionValue {
         type_values: &TypeValues,
         call_stack: &mut CallStack,
     ) -> ValueResult {
+        const LABEL: &str = "PythonDistribution.python_resources()";
+
         let dist = self.resolve_distribution(type_values, "resolve_distribution")?;
         let policy =
             PythonPackagingPolicyValue::new(dist.create_packaging_policy().map_err(|e| {
                 ValueError::from(RuntimeError {
-                    code: "PYOXIDIZER_BUILD",
+                    code: "PYTHON_DISTRIBUTION",
                     message: format!("{:?}", e),
-                    label: "python_resources()".to_string(),
+                    label: LABEL.to_string(),
                 })
             })?);
 
         let values = dist
             .python_resources()
             .iter()
-            .map(|resource| python_resource_to_value(type_values, call_stack, resource, &policy))
+            .map(|resource| {
+                python_resource_to_value(LABEL, type_values, call_stack, resource, &policy)
+            })
             .collect::<Result<Vec<Value>, ValueError>>()?;
 
         Ok(Value::from(values))

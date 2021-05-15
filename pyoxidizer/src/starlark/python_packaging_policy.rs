@@ -21,13 +21,16 @@ use {
         },
     },
     starlark_dialect_build_targets::required_type_arg,
-    std::convert::TryFrom,
-    std::ops::Deref,
+    std::{
+        convert::TryFrom,
+        ops::Deref,
+        sync::{Arc, Mutex, MutexGuard},
+    },
 };
 
 #[derive(Debug, Clone)]
 pub struct PythonPackagingPolicyValue {
-    pub inner: PythonPackagingPolicy,
+    inner: Arc<Mutex<PythonPackagingPolicy>>,
 
     /// Starlark functions to influence PythonResourceAddCollectionContext creation.
     derive_context_callbacks: Vec<Value>,
@@ -36,9 +39,19 @@ pub struct PythonPackagingPolicyValue {
 impl PythonPackagingPolicyValue {
     pub fn new(inner: PythonPackagingPolicy) -> Self {
         Self {
-            inner,
+            inner: Arc::new(Mutex::new(inner)),
             derive_context_callbacks: vec![],
         }
+    }
+
+    pub fn inner(&self, label: &str) -> Result<MutexGuard<PythonPackagingPolicy>, ValueError> {
+        self.inner.lock().map_err(|e| {
+            ValueError::Runtime(RuntimeError {
+                code: "PYTHON_PACKAGING_POLICY",
+                message: format!("unable to obtain lock: {}", e),
+                label: label.to_string(),
+            })
+        })
     }
 
     /// Apply this policy to a resource.
@@ -48,6 +61,7 @@ impl PythonPackagingPolicyValue {
     /// currently defined on the resource, a new one will be created so there is.
     pub fn apply_to_resource<T>(
         &self,
+        label: &str,
         type_values: &TypeValues,
         call_stack: &mut CallStack,
         value: &mut T,
@@ -56,7 +70,7 @@ impl PythonPackagingPolicyValue {
         T: TypedValue + ResourceCollectionContext + Clone,
     {
         let new_context = self
-            .inner
+            .inner(label)?
             .derive_add_collection_context(&value.as_python_resource());
         value.add_collection_context_mut().replace(new_context);
 
@@ -105,38 +119,32 @@ impl TypedValue for PythonPackagingPolicyValue {
     }
 
     fn get_attr(&self, attribute: &str) -> ValueResult {
+        let inner = self.inner(&format!("PythonPackagingPolicy.{}", attribute))?;
+
         let v = match attribute {
-            "allow_files" => Value::from(self.inner.allow_files()),
+            "allow_files" => Value::from(inner.allow_files()),
             "allow_in_memory_shared_library_loading" => {
-                Value::from(self.inner.allow_in_memory_shared_library_loading())
+                Value::from(inner.allow_in_memory_shared_library_loading())
             }
-            "bytecode_optimize_level_zero" => {
-                Value::from(self.inner.bytecode_optimize_level_zero())
-            }
-            "bytecode_optimize_level_one" => Value::from(self.inner.bytecode_optimize_level_one()),
-            "bytecode_optimize_level_two" => Value::from(self.inner.bytecode_optimize_level_two()),
-            "extension_module_filter" => Value::from(self.inner.extension_module_filter().as_ref()),
-            "file_scanner_classify_files" => Value::from(self.inner.file_scanner_classify_files()),
-            "file_scanner_emit_files" => Value::from(self.inner.file_scanner_emit_files()),
-            "include_distribution_sources" => {
-                Value::from(self.inner.include_distribution_sources())
-            }
-            "include_distribution_resources" => {
-                Value::from(self.inner.include_distribution_resources())
-            }
-            "include_classified_resources" => {
-                Value::from(self.inner.include_classified_resources())
-            }
-            "include_file_resources" => Value::from(self.inner.include_file_resources()),
+            "bytecode_optimize_level_zero" => Value::from(inner.bytecode_optimize_level_zero()),
+            "bytecode_optimize_level_one" => Value::from(inner.bytecode_optimize_level_one()),
+            "bytecode_optimize_level_two" => Value::from(inner.bytecode_optimize_level_two()),
+            "extension_module_filter" => Value::from(inner.extension_module_filter().as_ref()),
+            "file_scanner_classify_files" => Value::from(inner.file_scanner_classify_files()),
+            "file_scanner_emit_files" => Value::from(inner.file_scanner_emit_files()),
+            "include_distribution_sources" => Value::from(inner.include_distribution_sources()),
+            "include_distribution_resources" => Value::from(inner.include_distribution_resources()),
+            "include_classified_resources" => Value::from(inner.include_classified_resources()),
+            "include_file_resources" => Value::from(inner.include_file_resources()),
             "include_non_distribution_sources" => {
-                Value::from(self.inner.include_non_distribution_sources())
+                Value::from(inner.include_non_distribution_sources())
             }
-            "include_test" => Value::from(self.inner.include_test()),
+            "include_test" => Value::from(inner.include_test()),
             "preferred_extension_module_variants" => {
-                Value::try_from(self.inner.preferred_extension_module_variants().clone())?
+                Value::try_from(inner.preferred_extension_module_variants().clone())?
             }
-            "resources_location" => Value::from(self.inner.resources_location().to_string()),
-            "resources_location_fallback" => match self.inner.resources_location_fallback() {
+            "resources_location" => Value::from(inner.resources_location().to_string()),
+            "resources_location_fallback" => match inner.resources_location_fallback() {
                 Some(location) => Value::from(location.to_string()),
                 None => Value::from(NoneType::None),
             },
@@ -176,22 +184,23 @@ impl TypedValue for PythonPackagingPolicyValue {
     }
 
     fn set_attr(&mut self, attribute: &str, value: Value) -> Result<(), ValueError> {
+        let mut inner = self.inner(&format!("PythonPackagingPolicy.{}", attribute))?;
+
         match attribute {
             "allow_files" => {
-                self.inner.set_allow_files(value.to_bool());
+                inner.set_allow_files(value.to_bool());
             }
             "allow_in_memory_shared_library_loading" => {
-                self.inner
-                    .set_allow_in_memory_shared_library_loading(value.to_bool());
+                inner.set_allow_in_memory_shared_library_loading(value.to_bool());
             }
             "bytecode_optimize_level_zero" => {
-                self.inner.set_bytecode_optimize_level_zero(value.to_bool());
+                inner.set_bytecode_optimize_level_zero(value.to_bool());
             }
             "bytecode_optimize_level_one" => {
-                self.inner.set_bytecode_optimize_level_one(value.to_bool());
+                inner.set_bytecode_optimize_level_one(value.to_bool());
             }
             "bytecode_optimize_level_two" => {
-                self.inner.set_bytecode_optimize_level_two(value.to_bool());
+                inner.set_bytecode_optimize_level_two(value.to_bool());
             }
             "extension_module_filter" => {
                 let filter =
@@ -203,36 +212,34 @@ impl TypedValue for PythonPackagingPolicyValue {
                         })
                     })?;
 
-                self.inner.set_extension_module_filter(filter);
+                inner.set_extension_module_filter(filter);
             }
             "file_scanner_classify_files" => {
-                self.inner.set_file_scanner_classify_files(value.to_bool());
+                inner.set_file_scanner_classify_files(value.to_bool());
             }
             "file_scanner_emit_files" => {
-                self.inner.set_file_scanner_emit_files(value.to_bool());
+                inner.set_file_scanner_emit_files(value.to_bool());
             }
             "include_classified_resources" => {
-                self.inner.set_include_classified_resources(value.to_bool());
+                inner.set_include_classified_resources(value.to_bool());
             }
             "include_distribution_sources" => {
-                self.inner.set_include_distribution_sources(value.to_bool());
+                inner.set_include_distribution_sources(value.to_bool());
             }
             "include_distribution_resources" => {
-                self.inner
-                    .set_include_distribution_resources(value.to_bool());
+                inner.set_include_distribution_resources(value.to_bool());
             }
             "include_file_resources" => {
-                self.inner.set_include_file_resources(value.to_bool());
+                inner.set_include_file_resources(value.to_bool());
             }
             "include_non_distribution_sources" => {
-                self.inner
-                    .set_include_non_distribution_sources(value.to_bool());
+                inner.set_include_non_distribution_sources(value.to_bool());
             }
             "include_test" => {
-                self.inner.set_include_test(value.to_bool());
+                inner.set_include_test(value.to_bool());
             }
             "resources_location" => {
-                self.inner.set_resources_location(
+                inner.set_resources_location(
                     ConcreteResourceLocation::try_from(value.to_string().as_str()).map_err(
                         |e| {
                             ValueError::from(RuntimeError {
@@ -251,9 +258,9 @@ impl TypedValue for PythonPackagingPolicyValue {
             }
             "resources_location_fallback" => {
                 if value.get_type() == "NoneType" {
-                    self.inner.set_resources_location_fallback(None);
+                    inner.set_resources_location_fallback(None);
                 } else {
-                    self.inner.set_resources_location_fallback(Some(
+                    inner.set_resources_location_fallback(Some(
                         ConcreteResourceLocation::try_from(value.to_string().as_str()).map_err(
                             |e| {
                                 ValueError::from(RuntimeError {
@@ -300,22 +307,24 @@ impl PythonPackagingPolicyValue {
         name: String,
         value: String,
     ) -> ValueResult {
-        self.inner
+        self.inner("PythonPackagingPolicy.set_preferred_extension_module_variant()")?
             .set_preferred_extension_module_variant(&name, &value);
 
         Ok(Value::from(NoneType::None))
     }
 
     fn starlark_set_resource_handling_mode(&mut self, value: String) -> ValueResult {
+        const LABEL: &str = "PythonPackagingPolicy.set_resource_handling_mode()";
+
         let mode = ResourceHandlingMode::try_from(value.as_str()).map_err(|e| {
             ValueError::from(RuntimeError {
-                code: "PYOXIDIZER_BUILD",
+                code: "PYTHON_PACKAGING_POLICY",
                 message: e,
-                label: "set_resource_handling_mode()".to_string(),
+                label: LABEL.to_string(),
             })
         })?;
 
-        self.inner.set_resource_handling_mode(mode);
+        self.inner(LABEL)?.set_resource_handling_mode(mode);
 
         Ok(Value::from(NoneType::None))
     }
@@ -374,7 +383,7 @@ mod tests {
                 .unwrap();
 
             // Distribution method should return a policy equivalent to what Starlark gives us.
-            assert_eq!(policy, x.inner);
+            assert_eq!(&policy, x.inner("test").unwrap().deref());
         }
 
         // attributes work

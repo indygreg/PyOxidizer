@@ -695,6 +695,7 @@ pub fn is_resource_starlark_compatible(resource: &PythonResource) -> bool {
 }
 
 pub fn python_resource_to_value(
+    label: &str,
     type_values: &TypeValues,
     call_stack: &mut CallStack,
     resource: &PythonResource,
@@ -703,35 +704,35 @@ pub fn python_resource_to_value(
     match resource {
         PythonResource::ModuleSource(sm) => {
             let mut m = PythonModuleSourceValue::new(sm.clone().into_owned());
-            policy.apply_to_resource(type_values, call_stack, &mut m)?;
+            policy.apply_to_resource(label, type_values, call_stack, &mut m)?;
 
             Ok(Value::new(m))
         }
 
         PythonResource::PackageResource(data) => {
             let mut r = PythonPackageResourceValue::new(data.clone().into_owned());
-            policy.apply_to_resource(type_values, call_stack, &mut r)?;
+            policy.apply_to_resource(label, type_values, call_stack, &mut r)?;
 
             Ok(Value::new(r))
         }
 
         PythonResource::PackageDistributionResource(resource) => {
             let mut r = PythonPackageDistributionResourceValue::new(resource.clone().into_owned());
-            policy.apply_to_resource(type_values, call_stack, &mut r)?;
+            policy.apply_to_resource(label, type_values, call_stack, &mut r)?;
 
             Ok(Value::new(r))
         }
 
         PythonResource::ExtensionModule(em) => {
             let mut em = PythonExtensionModuleValue::new(em.clone().into_owned());
-            policy.apply_to_resource(type_values, call_stack, &mut em)?;
+            policy.apply_to_resource(label, type_values, call_stack, &mut em)?;
 
             Ok(Value::new(em))
         }
 
         PythonResource::File(f) => {
             let mut value = FileValue::new(f.clone().into_owned());
-            policy.apply_to_resource(type_values, call_stack, &mut value)?;
+            policy.apply_to_resource(label, type_values, call_stack, &mut value)?;
 
             Ok(Value::new(value))
         }

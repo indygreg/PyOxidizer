@@ -302,8 +302,12 @@ impl PythonExecutableValue {
         };
 
         let mut value = PythonModuleSourceValue::new(module);
-        self.python_packaging_policy()
-            .apply_to_resource(type_values, call_stack, &mut value)?;
+        self.python_packaging_policy().apply_to_resource(
+            "PythonExecutable.make_python_module_source()",
+            type_values,
+            call_stack,
+            &mut value,
+        )?;
 
         Ok(Value::new(value))
     }
@@ -315,6 +319,8 @@ impl PythonExecutableValue {
         call_stack: &mut CallStack,
         args: &Value,
     ) -> ValueResult {
+        const LABEL: &str = "PythonExecutable.pip_download()";
+
         required_list_arg("args", "string", &args)?;
 
         let args: Vec<String> = args.iter()?.iter().map(|x| x.to_string()).collect();
@@ -337,7 +343,15 @@ impl PythonExecutableValue {
         let resources = resources
             .iter()
             .filter(|r| is_resource_starlark_compatible(r))
-            .map(|r| python_resource_to_value(type_values, call_stack, r, &python_packaging_policy))
+            .map(|r| {
+                python_resource_to_value(
+                    LABEL,
+                    type_values,
+                    call_stack,
+                    r,
+                    &python_packaging_policy,
+                )
+            })
             .collect::<Result<Vec<Value>, ValueError>>()?;
 
         Ok(Value::from(resources))
@@ -351,6 +365,8 @@ impl PythonExecutableValue {
         args: &Value,
         extra_envs: &Value,
     ) -> ValueResult {
+        const LABEL: &str = "PythonExecutable.pip_install()";
+
         required_list_arg("args", "string", &args)?;
         optional_dict_arg("extra_envs", "string", "string", &extra_envs)?;
 
@@ -377,7 +393,7 @@ impl PythonExecutableValue {
 
         let python_packaging_policy = self.python_packaging_policy();
 
-        let resources = error_context("PythonExecutable.pip_install()", || {
+        let resources = error_context(LABEL, || {
             self.exe.pip_install(
                 pyoxidizer_context.logger(),
                 pyoxidizer_context.verbose,
@@ -389,7 +405,15 @@ impl PythonExecutableValue {
         let resources = resources
             .iter()
             .filter(|r| is_resource_starlark_compatible(r))
-            .map(|r| python_resource_to_value(type_values, call_stack, r, &python_packaging_policy))
+            .map(|r| {
+                python_resource_to_value(
+                    LABEL,
+                    type_values,
+                    call_stack,
+                    r,
+                    &python_packaging_policy,
+                )
+            })
             .collect::<Result<Vec<Value>, ValueError>>()?;
 
         Ok(Value::from(resources))
@@ -403,6 +427,8 @@ impl PythonExecutableValue {
         path: String,
         packages: &Value,
     ) -> ValueResult {
+        const LABEL: &str = "PythonExecutable.read_package_root()";
+
         required_list_arg("packages", "string", &packages)?;
 
         let packages = packages
@@ -418,7 +444,7 @@ impl PythonExecutableValue {
 
         let python_packaging_policy = self.python_packaging_policy();
 
-        let resources = error_context("PythonExecutable.read_package_root()", || {
+        let resources = error_context(LABEL, || {
             self.exe
                 .read_package_root(pyoxidizer_context.logger(), Path::new(&path), &packages)
         })?;
@@ -426,7 +452,15 @@ impl PythonExecutableValue {
         let resources = resources
             .iter()
             .filter(|r| is_resource_starlark_compatible(r))
-            .map(|r| python_resource_to_value(type_values, call_stack, r, &python_packaging_policy))
+            .map(|r| {
+                python_resource_to_value(
+                    LABEL,
+                    type_values,
+                    call_stack,
+                    r,
+                    &python_packaging_policy,
+                )
+            })
             .collect::<Result<Vec<Value>, ValueError>>()?;
 
         Ok(Value::from(resources))
@@ -439,6 +473,8 @@ impl PythonExecutableValue {
         call_stack: &mut CallStack,
         path: String,
     ) -> ValueResult {
+        const LABEL: &str = "PythonExecutable.read_virtualenv()";
+
         let pyoxidizer_context_value = get_context(type_values)?;
         let pyoxidizer_context = pyoxidizer_context_value
             .downcast_ref::<PyOxidizerEnvironmentContext>()
@@ -446,7 +482,7 @@ impl PythonExecutableValue {
 
         let python_packaging_policy = self.python_packaging_policy();
 
-        let resources = error_context("PythonExecutable.read_virtualenv()", || {
+        let resources = error_context(LABEL, || {
             self.exe
                 .read_virtualenv(pyoxidizer_context.logger(), &Path::new(&path))
         })?;
@@ -454,7 +490,15 @@ impl PythonExecutableValue {
         let resources = resources
             .iter()
             .filter(|r| is_resource_starlark_compatible(r))
-            .map(|r| python_resource_to_value(type_values, call_stack, r, &python_packaging_policy))
+            .map(|r| {
+                python_resource_to_value(
+                    LABEL,
+                    type_values,
+                    call_stack,
+                    r,
+                    &python_packaging_policy,
+                )
+            })
             .collect::<Result<Vec<Value>, ValueError>>()?;
 
         Ok(Value::from(resources))
@@ -469,6 +513,8 @@ impl PythonExecutableValue {
         extra_envs: &Value,
         extra_global_arguments: &Value,
     ) -> ValueResult {
+        const LABEL: &str = "PythonExecutable.setup_py_install()";
+
         optional_dict_arg("extra_envs", "string", "string", &extra_envs)?;
         optional_list_arg("extra_global_arguments", "string", &extra_global_arguments)?;
 
@@ -510,7 +556,7 @@ impl PythonExecutableValue {
 
         let python_packaging_policy = self.python_packaging_policy();
 
-        let resources = error_context("PythonExecutable.setup_py_install()", || {
+        let resources = error_context(LABEL, || {
             self.exe.setup_py_install(
                 pyoxidizer_context.logger(),
                 &package_path,
@@ -523,7 +569,15 @@ impl PythonExecutableValue {
         let resources = resources
             .iter()
             .filter(|r| is_resource_starlark_compatible(r))
-            .map(|r| python_resource_to_value(type_values, call_stack, r, &python_packaging_policy))
+            .map(|r| {
+                python_resource_to_value(
+                    LABEL,
+                    type_values,
+                    call_stack,
+                    r,
+                    &python_packaging_policy,
+                )
+            })
             .collect::<Result<Vec<Value>, ValueError>>()?;
 
         warn!(
