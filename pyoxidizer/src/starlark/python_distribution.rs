@@ -486,9 +486,9 @@ mod tests {
             py_packaging::distribution::DistributionFlavor,
             python_distributions::PYTHON_DISTRIBUTIONS,
             starlark::{
+                python_extension_module::PythonExtensionModuleValue,
                 python_module_source::PythonModuleSourceValue,
-                python_package_resource::PythonPackageResourceValue,
-                python_resource::PythonExtensionModuleValue, testutil::*,
+                python_package_resource::PythonPackageResourceValue, testutil::*,
             },
         },
     };

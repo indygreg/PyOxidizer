@@ -6,10 +6,10 @@ use {
     super::{
         env::{get_context, PyOxidizerEnvironmentContext},
         python_executable::PythonExecutableValue,
+        python_extension_module::PythonExtensionModuleValue,
         python_module_source::PythonModuleSourceValue,
         python_package_distribution_resource::PythonPackageDistributionResourceValue,
         python_package_resource::PythonPackageResourceValue,
-        python_resource::PythonExtensionModuleValue,
     },
     crate::{
         project_building::build_python_executable,
