@@ -2662,12 +2662,10 @@ pub mod tests {
 
             let builder = options.new_builder()?;
 
-            let builtin_names = builder.extension_build_contexts.keys().collect::<Vec<_>>();
-
             // All distribution extensions are built-ins in static Windows
             // distributions.
             for name in builder.target_distribution.extension_modules.keys() {
-                assert!(builtin_names.contains(&name));
+                assert!(builder.extension_build_contexts.keys().any(|x| x == name));
             }
         }
 
