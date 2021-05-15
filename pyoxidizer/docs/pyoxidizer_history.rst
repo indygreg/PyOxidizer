@@ -56,6 +56,13 @@ Bug Fixes
   running binary, not the environment the running binary was built in. In
   many cases these would be identical. However, they would diverge if the
   binary was cross-compiled.
+* The default Python packaging policy now disables bytecode generation for
+  various modules in the Python standard library in the ``lib2to3.tests`` and
+  ``test`` packages that contain invalid Python 3 source code and would fail
+  to compile to bytecode. This should enable Python resources to compile without
+  error when setting :py:attr:`PythonPackagingPolicy.include_test` to ``True``,
+  without requiring a custom resource handling callback to disable bytecode
+  generation. (#147).
 
 New Features
 ^^^^^^^^^^^^

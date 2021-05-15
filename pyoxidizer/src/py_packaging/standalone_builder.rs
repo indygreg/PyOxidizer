@@ -3153,10 +3153,9 @@ pub mod tests {
                 BytecodeCompiler::new(host_distribution.python_exe_path(), temp_dir.path())?;
 
             // Some stdlib test modules are malformed and cause resource compiling to fail.
-            assert!(builder
+            builder
                 .resources_collector
-                .compile_resources(&mut compiler)
-                .is_err());
+                .compile_resources(&mut compiler)?;
         }
 
         Ok(())

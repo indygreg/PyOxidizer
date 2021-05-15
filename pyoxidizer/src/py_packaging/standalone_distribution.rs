@@ -83,6 +83,31 @@ pub static BROKEN_EXTENSIONS_MACOS: Lazy<Vec<String>> = Lazy::new(|| {
     ]
 });
 
+/// Python modules that we shouldn't generate bytecode for by default.
+///
+/// These are Python modules in the standard library that don't have valid bytecode.
+pub static NO_BYTECODE_MODULES: Lazy<Vec<&'static str>> = Lazy::new(|| {
+    vec![
+        "lib2to3.tests.data.bom",
+        "lib2to3.tests.data.crlf",
+        "lib2to3.tests.data.different_encoding",
+        "lib2to3.tests.data.false_encoding",
+        "lib2to3.tests.data.py2_test_grammar",
+        "lib2to3.tests.data.py3_test_grammar",
+        "test.bad_coding",
+        "test.badsyntax_3131",
+        "test.badsyntax_future3",
+        "test.badsyntax_future4",
+        "test.badsyntax_future5",
+        "test.badsyntax_future6",
+        "test.badsyntax_future7",
+        "test.badsyntax_future8",
+        "test.badsyntax_future9",
+        "test.badsyntax_future10",
+        "test.badsyntax_pep3120",
+    ]
+});
+
 #[derive(Debug, Deserialize)]
 struct LinkEntry {
     name: String,
@@ -1234,6 +1259,10 @@ impl PythonDistribution for StandaloneDistribution {
             for ext in BROKEN_EXTENSIONS_MACOS.iter() {
                 policy.register_broken_extension(triple, ext);
             }
+        }
+
+        for name in NO_BYTECODE_MODULES.iter() {
+            policy.register_no_bytecode_module(name);
         }
 
         Ok(policy)
