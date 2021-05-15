@@ -39,6 +39,15 @@ Backwards Compatibility Notes
 * :py:meth:`starlark_tugger.PythonWheelBuilder.write_to_directory` now interprets
   relative paths as relative to the currently configured build path, not relative
   to the process's current working directory.
+* Various Starlark types now ensure that they cannot get out of sync when
+  cloned. Previously, various Starlark types would clone their underlying Rust
+  struct when the Starlark value was cloned. This could cause Starlark value
+  instances to become out of sync with each other if one value was mutated. Now,
+  all mutable Starlark types should hold a reference to a shared resource,
+  ensuring that cloned Starlark values all refer to the same instance. This
+  change could result in Starlark configuration files behaving differently. For
+  example, before you could mutate a value in a function call and that mutation
+  wouldn't be reflected in the caller's Starlark value. Now, it would be.
 
 Bug Fixes
 ^^^^^^^^^
