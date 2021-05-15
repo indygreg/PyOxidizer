@@ -349,7 +349,7 @@ fn value_to_filesets(
     }
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Debug, Default)]
 pub struct SnapAppValue<'a> {
     pub inner: SnapApp<'a>,
 }
@@ -437,7 +437,7 @@ impl TypedValue for SnapAppValue<'static> {
     }
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Debug, Default)]
 pub struct SnapPartValue<'a> {
     pub inner: SnapPart<'a>,
 }
@@ -659,7 +659,7 @@ impl<'a> SnapValue<'a> {
 }
 
 /// Starlark Value wrapper for `SnapcraftBuilder`.
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct SnapcraftBuilderValue<'a> {
     pub inner: SnapcraftBuilder<'a>,
 }
