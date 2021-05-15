@@ -49,6 +49,7 @@ use {
         io::Write,
         ops::Deref,
         path::{Path, PathBuf},
+        sync::{Arc, Mutex, MutexGuard},
     },
     tugger::starlark::{
         code_signing::{handle_signable_event, SigningAction, SigningContext},
@@ -73,9 +74,56 @@ where
     })
 }
 
+pub fn build_internal(
+    exe: MutexGuard<Box<dyn PythonBinaryBuilder>>,
+    type_values: &TypeValues,
+    target: &str,
+    context: &PyOxidizerEnvironmentContext,
+) -> Result<(ResolvedTarget, PathBuf)> {
+    // Build an executable by writing out a temporary Rust project
+    // and building it.
+    let build = build_python_executable(
+        context.env(),
+        context.logger(),
+        &exe.name(),
+        &**exe,
+        &context.build_target_triple,
+        &context.build_opt_level,
+        context.build_release,
+    )
+    .context("building Python executable")?;
+
+    let output_path = context
+        .get_output_path(type_values, target)
+        .map_err(|_| anyhow!("unable to resolve output path"))?;
+    let dest_path = output_path.join(build.exe_name);
+    warn!(
+        context.logger(),
+        "writing executable to {}",
+        dest_path.display()
+    );
+    let mut fh =
+        std::fs::File::create(&dest_path).context(format!("creating {}", dest_path.display()))?;
+    fh.write_all(&build.exe_data)
+        .context(format!("writing {}", dest_path.display()))?;
+    tugger_file_manifest::set_executable(&mut fh).context("making binary executable")?;
+
+    Ok((
+        ResolvedTarget {
+            run_mode: RunMode::Path {
+                path: dest_path.clone(),
+            },
+            output_path,
+        },
+        dest_path,
+    ))
+}
+
 /// Represents a builder for a Python executable.
 pub struct PythonExecutableValue {
-    pub exe: Box<dyn PythonBinaryBuilder>,
+    // The non-Starlark API to construct the builder returns a Box<T> and it is
+    // easier to wrap a Box<T> then try to unpack it into an Arc<T>.
+    pub exe: Arc<Mutex<Box<dyn PythonBinaryBuilder>>>,
 
     /// The Starlark Value for the Python packaging policy.
     // This is stored as a Vec because I couldn't figure out how to implement
@@ -87,9 +135,22 @@ pub struct PythonExecutableValue {
 impl PythonExecutableValue {
     pub fn new(exe: Box<dyn PythonBinaryBuilder>, policy: PythonPackagingPolicyValue) -> Self {
         Self {
-            exe,
+            exe: Arc::new(Mutex::new(exe)),
             policy: vec![Value::new(policy)],
         }
+    }
+
+    pub fn inner(
+        &self,
+        label: &str,
+    ) -> Result<MutexGuard<Box<dyn PythonBinaryBuilder>>, ValueError> {
+        self.exe.lock().map_err(|e| {
+            ValueError::Runtime(RuntimeError {
+                code: "PYTHON_EXECUTABLE",
+                message: format!("failed to acquire lock: {}", e),
+                label: label.to_string(),
+            })
+        })
     }
 
     /// Obtains a copy of the `PythonPackagingPolicyValue` stored internally.
@@ -98,51 +159,6 @@ impl PythonExecutableValue {
             .downcast_ref::<PythonPackagingPolicyValue>()
             .unwrap()
             .clone()
-    }
-
-    pub fn build_internal(
-        &self,
-        type_values: &TypeValues,
-        target: &str,
-        context: &PyOxidizerEnvironmentContext,
-    ) -> Result<(ResolvedTarget, PathBuf)> {
-        // Build an executable by writing out a temporary Rust project
-        // and building it.
-        let build = build_python_executable(
-            context.env(),
-            context.logger(),
-            &self.exe.name(),
-            self.exe.deref(),
-            &context.build_target_triple,
-            &context.build_opt_level,
-            context.build_release,
-        )
-        .context("building Python executable")?;
-
-        let output_path = context
-            .get_output_path(type_values, target)
-            .map_err(|_| anyhow!("unable to resolve output path"))?;
-        let dest_path = output_path.join(build.exe_name);
-        warn!(
-            context.logger(),
-            "writing executable to {}",
-            dest_path.display()
-        );
-        let mut fh = std::fs::File::create(&dest_path)
-            .context(format!("creating {}", dest_path.display()))?;
-        fh.write_all(&build.exe_data)
-            .context(format!("writing {}", dest_path.display()))?;
-        tugger_file_manifest::set_executable(&mut fh).context("making binary executable")?;
-
-        Ok((
-            ResolvedTarget {
-                run_mode: RunMode::Path {
-                    path: dest_path.clone(),
-                },
-                output_path,
-            },
-            dest_path,
-        ))
     }
 }
 
@@ -157,18 +173,20 @@ impl TypedValue for PythonExecutableValue {
     }
 
     fn get_attr(&self, attribute: &str) -> ValueResult {
+        let exe = self.inner(&format!("PythonExecutable.{}", attribute))?;
+
         match attribute {
-            "packed_resources_load_mode" => Ok(Value::from(
-                self.exe.packed_resources_load_mode().to_string(),
-            )),
-            "tcl_files_path" => match self.exe.tcl_files_path() {
+            "packed_resources_load_mode" => {
+                Ok(Value::from(exe.packed_resources_load_mode().to_string()))
+            }
+            "tcl_files_path" => match exe.tcl_files_path() {
                 Some(value) => Ok(Value::from(value.to_string())),
                 None => Ok(Value::from(NoneType::None)),
             },
-            "windows_runtime_dlls_mode" => Ok(Value::from(
-                self.exe.windows_runtime_dlls_mode().to_string(),
-            )),
-            "windows_subsystem" => Ok(Value::from(self.exe.windows_subsystem())),
+            "windows_runtime_dlls_mode" => {
+                Ok(Value::from(exe.windows_runtime_dlls_mode().to_string()))
+            }
+            "windows_subsystem" => Ok(Value::from(exe.windows_subsystem())),
             _ => Err(ValueError::OperationNotSupported {
                 op: UnsupportedOperation::GetAttr(attribute.to_string()),
                 left: Self::TYPE.to_string(),
@@ -188,9 +206,11 @@ impl TypedValue for PythonExecutableValue {
     }
 
     fn set_attr(&mut self, attribute: &str, value: Value) -> Result<(), ValueError> {
+        let mut exe = self.inner(&format!("PythonExecutable.{}", attribute))?;
+
         match attribute {
             "packed_resources_load_mode" => {
-                self.exe.set_packed_resources_load_mode(
+                exe.set_packed_resources_load_mode(
                     PackedResourcesLoadMode::try_from(value.to_string().as_str()).map_err(|e| {
                         ValueError::from(RuntimeError {
                             code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
@@ -203,12 +223,12 @@ impl TypedValue for PythonExecutableValue {
                 Ok(())
             }
             "tcl_files_path" => {
-                self.exe.set_tcl_files_path(value.to_optional());
+                exe.set_tcl_files_path(value.to_optional());
 
                 Ok(())
             }
             "windows_runtime_dlls_mode" => {
-                self.exe.set_windows_runtime_dlls_mode(
+                exe.set_windows_runtime_dlls_mode(
                     WindowsRuntimeDllsMode::try_from(value.to_string().as_str()).map_err(|e| {
                         ValueError::from(RuntimeError {
                             code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
@@ -221,8 +241,7 @@ impl TypedValue for PythonExecutableValue {
                 Ok(())
             }
             "windows_subsystem" => {
-                self.exe
-                    .set_windows_subsystem(value.to_string().as_str())
+                exe.set_windows_subsystem(value.to_string().as_str())
                     .map_err(|e| {
                         ValueError::from(RuntimeError {
                             code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
@@ -257,8 +276,10 @@ impl PythonExecutableValue {
             .downcast_ref::<PyOxidizerEnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
 
+        let exe = self.inner(LABEL)?;
+
         let (inner, exe_path) = error_context(LABEL, || {
-            self.build_internal(type_values, &target, &pyoxidizer_context)
+            build_internal(exe, type_values, &target, &pyoxidizer_context)
         })?;
 
         let candidate = exe_path.clone().into();
@@ -292,18 +313,20 @@ impl PythonExecutableValue {
         source: String,
         is_package: bool,
     ) -> ValueResult {
+        const LABEL: &str = "PythonExecutable.make_python_module_source()";
+
         let module = PythonModuleSource {
             name,
             source: FileData::Memory(source.into_bytes()),
             is_package,
-            cache_tag: self.exe.cache_tag().to_string(),
+            cache_tag: self.inner(LABEL)?.cache_tag().to_string(),
             is_stdlib: false,
             is_test: false,
         };
 
         let mut value = PythonModuleSourceValue::new(module);
         self.python_packaging_policy().apply_to_resource(
-            "PythonExecutable.make_python_module_source()",
+            LABEL,
             type_values,
             call_stack,
             &mut value,
@@ -332,8 +355,10 @@ impl PythonExecutableValue {
 
         let python_packaging_policy = self.python_packaging_policy();
 
+        let mut exe = self.inner(LABEL)?;
+
         let resources = error_context("PythonExecutable.pip_download()", || {
-            self.exe.pip_download(
+            exe.pip_download(
                 pyoxidizer_context.logger(),
                 pyoxidizer_context.verbose,
                 &args,
@@ -393,8 +418,10 @@ impl PythonExecutableValue {
 
         let python_packaging_policy = self.python_packaging_policy();
 
+        let mut exe = self.inner(LABEL)?;
+
         let resources = error_context(LABEL, || {
-            self.exe.pip_install(
+            exe.pip_install(
                 pyoxidizer_context.logger(),
                 pyoxidizer_context.verbose,
                 &args,
@@ -444,9 +471,10 @@ impl PythonExecutableValue {
 
         let python_packaging_policy = self.python_packaging_policy();
 
+        let mut exe = self.inner(LABEL)?;
+
         let resources = error_context(LABEL, || {
-            self.exe
-                .read_package_root(pyoxidizer_context.logger(), Path::new(&path), &packages)
+            exe.read_package_root(pyoxidizer_context.logger(), Path::new(&path), &packages)
         })?;
 
         let resources = resources
@@ -482,9 +510,10 @@ impl PythonExecutableValue {
 
         let python_packaging_policy = self.python_packaging_policy();
 
+        let mut exe = self.inner(LABEL)?;
+
         let resources = error_context(LABEL, || {
-            self.exe
-                .read_virtualenv(pyoxidizer_context.logger(), &Path::new(&path))
+            exe.read_virtualenv(pyoxidizer_context.logger(), &Path::new(&path))
         })?;
 
         let resources = resources
@@ -556,8 +585,10 @@ impl PythonExecutableValue {
 
         let python_packaging_policy = self.python_packaging_policy();
 
+        let mut exe = self.inner(LABEL)?;
+
         let resources = error_context(LABEL, || {
-            self.exe.setup_py_install(
+            exe.setup_py_install(
                 pyoxidizer_context.logger(),
                 &package_path,
                 pyoxidizer_context.verbose,
@@ -602,9 +633,10 @@ impl PythonExecutableValue {
             "adding Python source module {}", inner.m.name;
         );
 
+        let mut exe = self.inner(label)?;
+
         error_context(label, || {
-            self.exe
-                .add_python_module_source(&inner.m, inner.add_context.clone())
+            exe.add_python_module_source(&inner.m, inner.add_context.clone())
                 .with_context(|| format!("adding {}", module.to_repr()))
         })?;
 
@@ -625,9 +657,10 @@ impl PythonExecutableValue {
             inner.r.symbolic_name()
         );
 
+        let mut exe = self.inner(label)?;
+
         error_context(label, || {
-            self.exe
-                .add_python_package_resource(&inner.r, inner.add_context.clone())
+            exe.add_python_package_resource(&inner.r, inner.add_context.clone())
                 .with_context(|| format!("adding {}", resource.to_repr()))
         })?;
 
@@ -647,9 +680,10 @@ impl PythonExecutableValue {
             "adding package distribution resource {}:{}", inner.r.package, inner.r.name
         );
 
+        let mut exe = self.inner(label)?;
+
         error_context(label, || {
-            self.exe
-                .add_python_package_distribution_resource(&inner.r, inner.add_context.clone())
+            exe.add_python_package_distribution_resource(&inner.r, inner.add_context.clone())
                 .with_context(|| format!("adding {}", resource.to_repr()))
         })?;
 
@@ -669,9 +703,10 @@ impl PythonExecutableValue {
             "adding extension module {}", inner.em.name
         );
 
+        let mut exe = self.inner(label)?;
+
         error_context(label, || {
-            self.exe
-                .add_python_extension_module(&inner.em, inner.add_context.clone())
+            exe.add_python_extension_module(&inner.em, inner.add_context.clone())
                 .with_context(|| format!("adding {}", module.to_repr()))
         })?;
 
@@ -692,9 +727,10 @@ impl PythonExecutableValue {
             inner.file.path.display()
         );
 
+        let mut exe = self.inner(label)?;
+
         error_context(label, || {
-            self.exe
-                .add_file_data(&inner.file, inner.add_context.clone())
+            exe.add_file_data(&inner.file, inner.add_context.clone())
                 .with_context(|| format!("adding {}", file.to_repr()))
         })?;
 
@@ -767,13 +803,17 @@ impl PythonExecutableValue {
 
     /// PythonExecutable.to_embedded_resources()
     pub fn to_embedded_resources(&self) -> ValueResult {
+        const LABEL: &str = "PythonExecutable.to_embedded_resources()";
+
         Ok(Value::new(PythonEmbeddedResourcesValue {
-            exe: self.exe.clone_trait(),
+            exe: self.inner(LABEL)?.clone_trait(),
         }))
     }
 
     /// PythonExecutable.to_file_manifest(prefix)
     pub fn to_file_manifest(&self, type_values: &TypeValues, prefix: String) -> ValueResult {
+        const LABEL: &str = "PythonExecutable.to_file_manifest()";
+
         let pyoxidizer_context_value = get_context(type_values)?;
         let pyoxidizer_context = pyoxidizer_context_value
             .downcast_ref::<PyOxidizerEnvironmentContext>()
@@ -785,13 +825,15 @@ impl PythonExecutableValue {
             .unwrap()
             .unwrap();
 
-        error_context("PythonExecutable.to_file_manifest()", || {
+        let exe = self.inner(LABEL)?;
+
+        error_context(LABEL, || {
             file_manifest_add_python_executable(
                 &mut manifest,
                 pyoxidizer_context.env(),
                 pyoxidizer_context.logger(),
                 &prefix,
-                self.exe.deref(),
+                &**exe,
                 &pyoxidizer_context.build_target_triple,
                 pyoxidizer_context.build_release,
                 &pyoxidizer_context.build_opt_level,
@@ -814,6 +856,8 @@ impl PythonExecutableValue {
         product_manufacturer: String,
         msi_builder_callback: Value,
     ) -> ValueResult {
+        const LABEL: &str = "PythonExecutable.to_wix_bundle_builder()";
+
         optional_type_arg("msi_builder_callback", "function", &msi_builder_callback)?;
 
         let msi_builder_value = self.to_wix_msi_builder(
@@ -852,7 +896,7 @@ impl PythonExecutableValue {
             .unwrap();
 
         // Add the VC++ Redistributable for the target platform.
-        match self.exe.target_triple() {
+        match self.inner(LABEL)?.target_triple() {
             "i686-pc-windows-msvc" => {
                 bundle_builder.add_vc_redistributable(type_values, "x86".to_string())?;
             }
@@ -907,6 +951,8 @@ impl PythonExecutableValue {
         files: &Value,
         glob_files: &Value,
     ) -> ValueResult {
+        const LABEL: &str = "PythonExecutable.filter_resources_from_files()";
+
         optional_list_arg("files", "string", &files)?;
         optional_list_arg("glob_files", "string", &glob_files)?;
 
@@ -934,8 +980,10 @@ impl PythonExecutableValue {
             .downcast_ref::<PyOxidizerEnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
 
-        error_context("PythonExecutable.filter_resources_from_files()", || {
-            self.exe.filter_resources_from_files(
+        let mut exe = self.inner(LABEL)?;
+
+        error_context(LABEL, || {
+            exe.filter_resources_from_files(
                 pyoxidizer_context.logger(),
                 &files_refs,
                 &glob_files_refs,
@@ -1112,12 +1160,11 @@ mod tests {
         assert_eq!(exe.get_type(), "PythonExecutable");
 
         let exe = exe.downcast_ref::<PythonExecutableValue>().unwrap();
-        assert!(exe
-            .exe
+        let inner = exe.inner("ignored").unwrap();
+        assert!(inner
             .iter_resources()
             .any(|(_, r)| r.in_memory_source.is_some()));
-        assert!(exe
-            .exe
+        assert!(inner
             .iter_resources()
             .all(|(_, r)| r.in_memory_resources.is_none()));
 
@@ -1137,8 +1184,8 @@ mod tests {
         assert_eq!(exe.get_type(), "PythonExecutable");
 
         let exe = exe.downcast_ref::<PythonExecutableValue>().unwrap();
-        assert!(exe
-            .exe
+        let inner = exe.inner("ignored").unwrap();
+        assert!(inner
             .iter_resources()
             .all(|(_, r)| r.in_memory_source.is_none()));
 

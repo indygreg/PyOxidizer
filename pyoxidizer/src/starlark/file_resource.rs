@@ -177,7 +177,7 @@ pub fn file_manifest_add_python_resource(
                 warn!(
                     pyoxidizer_context.logger(),
                     "adding Python executable {} to {}",
-                    exe.exe.name(),
+                    exe.inner(LABEL)?.name(),
                     prefix
                 );
                 let exe_manifest_value = exe.to_file_manifest(type_values, prefix)?;
