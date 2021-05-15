@@ -227,11 +227,7 @@ impl PythonDistributionValue {
     ///     packaging_policy=None,
     ///     config=None,
     /// )
-    #[allow(
-        clippy::ptr_arg,
-        clippy::too_many_arguments,
-        clippy::wrong_self_convention
-    )]
+    #[allow(clippy::too_many_arguments, clippy::wrong_self_convention)]
     fn to_python_executable_starlark(
         &mut self,
         type_values: &TypeValues,
@@ -427,7 +423,7 @@ impl PythonDistributionValue {
 }
 
 starlark_module! { python_distribution_module =>
-    #[allow(non_snake_case, clippy::ptr_arg)]
+    #[allow(non_snake_case)]
     PythonDistribution(sha256: String, local_path=NoneType::None, url=NoneType::None, flavor: String = "standalone".to_string()) {
         PythonDistributionValue::from_args(sha256, &local_path, &url, flavor)
     }
@@ -447,7 +443,6 @@ starlark_module! { python_distribution_module =>
         this.python_resources_starlark(&env, cs)
     }
 
-    #[allow(non_snake_case, clippy::ptr_arg)]
     PythonDistribution.to_python_executable(
         env env,
         call_stack cs,
@@ -466,7 +461,6 @@ starlark_module! { python_distribution_module =>
         )
     }
 
-    #[allow(clippy::ptr_arg)]
     default_python_distribution(
         env env,
         flavor: String = "standalone".to_string(),
