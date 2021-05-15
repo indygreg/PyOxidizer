@@ -36,7 +36,7 @@ use {
         },
     },
     starlark_dialect_build_targets::{optional_str_arg, optional_type_arg},
-    std::{convert::TryFrom, sync::Arc},
+    std::{convert::TryFrom, ops::Deref, sync::Arc},
 };
 
 /// A Starlark Value wrapper for `PythonDistribution` traits.
@@ -240,6 +240,8 @@ impl PythonDistributionValue {
         packaging_policy: &Value,
         config: &Value,
     ) -> ValueResult {
+        const LABEL: &str = "PythonDistribution.to_python_executable()";
+
         optional_type_arg(
             "packaging_policy",
             "PythonPackagingPolicy",
@@ -338,7 +340,7 @@ impl PythonDistributionValue {
                 // TODO make configurable
                 BinaryLibpythonLinkMode::Default,
                 &policy.inner,
-                &config.inner,
+                config.inner(LABEL)?.deref(),
                 host_distribution,
             )
             .map_err(|e| {

@@ -20,7 +20,10 @@ use {
         {Mutable, TypedValue, Value, ValueResult},
     },
     starlark_dialect_build_targets::{ToOptional, TryToOptional},
-    std::convert::TryFrom,
+    std::{
+        convert::TryFrom,
+        sync::{Arc, Mutex, MutexGuard},
+    },
 };
 
 impl ToValue for PythonInterpreterProfile {
@@ -107,12 +110,27 @@ fn bytecode_optimization_level_try_to_optional(
 
 #[derive(Debug, Clone)]
 pub struct PythonInterpreterConfigValue {
-    pub inner: PyembedPythonInterpreterConfig,
+    pub inner: Arc<Mutex<PyembedPythonInterpreterConfig>>,
 }
 
 impl PythonInterpreterConfigValue {
     pub fn new(inner: PyembedPythonInterpreterConfig) -> Self {
-        Self { inner }
+        Self {
+            inner: Arc::new(Mutex::new(inner)),
+        }
+    }
+
+    pub fn inner(
+        &self,
+        label: &str,
+    ) -> Result<MutexGuard<PyembedPythonInterpreterConfig>, ValueError> {
+        self.inner.lock().map_err(|e| {
+            ValueError::Runtime(RuntimeError {
+                code: "PYTHON_INTERPRETER_CONFIG",
+                message: format!("error obtaining lock: {}", e),
+                label: label.to_string(),
+            })
+        })
     }
 }
 
@@ -133,75 +151,77 @@ impl TypedValue for PythonInterpreterConfigValue {
     }
 
     fn get_attr(&self, attribute: &str) -> ValueResult {
+        let inner = self.inner(&format!("PythonInterpreterConfig.{}", attribute))?;
+
         let v = match attribute {
-            "config_profile" => self.inner.config.profile.to_value(),
-            "allocator" => self.inner.config.allocator.to_value(),
-            "configure_locale" => self.inner.config.configure_locale.to_value(),
-            "coerce_c_locale" => self.inner.config.coerce_c_locale.to_value(),
-            "coerce_c_locale_warn" => self.inner.config.coerce_c_locale_warn.to_value(),
-            "development_mode" => self.inner.config.development_mode.to_value(),
-            "isolated" => self.inner.config.isolated.to_value(),
-            "legacy_windows_fs_encoding" => self.inner.config.legacy_windows_fs_encoding.to_value(),
-            "parse_argv" => self.inner.config.parse_argv.to_value(),
-            "use_environment" => self.inner.config.use_environment.to_value(),
-            "utf8_mode" => self.inner.config.utf8_mode.to_value(),
-            "base_exec_prefix" => self.inner.config.base_exec_prefix.to_value(),
-            "base_executable" => self.inner.config.base_executable.to_value(),
-            "base_prefix" => self.inner.config.base_prefix.to_value(),
-            "buffered_stdio" => self.inner.config.buffered_stdio.to_value(),
-            "bytes_warning" => self.inner.config.bytes_warning.to_value(),
-            "check_hash_pycs_mode" => self.inner.config.check_hash_pycs_mode.to_value(),
-            "configure_c_stdio" => self.inner.config.configure_c_stdio.to_value(),
-            "dump_refs" => self.inner.config.dump_refs.to_value(),
-            "exec_prefix" => self.inner.config.exec_prefix.to_value(),
-            "executable" => self.inner.config.executable.to_value(),
-            "fault_handler" => self.inner.config.fault_handler.to_value(),
-            "filesystem_encoding" => self.inner.config.filesystem_encoding.to_value(),
-            "filesystem_errors" => self.inner.config.filesystem_errors.to_value(),
-            "hash_seed" => self.inner.config.hash_seed.to_value(),
-            "home" => self.inner.config.home.to_value(),
-            "import_time" => self.inner.config.import_time.to_value(),
-            "inspect" => self.inner.config.inspect.to_value(),
-            "install_signal_handlers" => self.inner.config.install_signal_handlers.to_value(),
-            "interactive" => self.inner.config.interactive.to_value(),
-            "legacy_windows_stdio" => self.inner.config.legacy_windows_stdio.to_value(),
-            "malloc_stats" => self.inner.config.malloc_stats.to_value(),
-            "module_search_paths" => self.inner.config.module_search_paths.to_value(),
-            "optimization_level" => self.inner.config.optimization_level.to_value(),
-            "parser_debug" => self.inner.config.parser_debug.to_value(),
-            "pathconfig_warnings" => self.inner.config.pathconfig_warnings.to_value(),
-            "prefix" => self.inner.config.prefix.to_value(),
-            "program_name" => self.inner.config.program_name.to_value(),
-            "pycache_prefix" => self.inner.config.pycache_prefix.to_value(),
-            "python_path_env" => self.inner.config.python_path_env.to_value(),
-            "quiet" => self.inner.config.quiet.to_value(),
-            "run_command" => self.inner.config.run_command.to_value(),
-            "run_filename" => self.inner.config.run_filename.to_value(),
-            "run_module" => self.inner.config.run_module.to_value(),
-            "show_ref_count" => self.inner.config.show_ref_count.to_value(),
-            "site_import" => self.inner.config.site_import.to_value(),
-            "skip_first_source_line" => self.inner.config.skip_first_source_line.to_value(),
-            "stdio_encoding" => self.inner.config.stdio_encoding.to_value(),
-            "stdio_errors" => self.inner.config.stdio_errors.to_value(),
-            "tracemalloc" => self.inner.config.tracemalloc.to_value(),
-            "user_site_directory" => self.inner.config.user_site_directory.to_value(),
-            "verbose" => self.inner.config.verbose.to_value(),
-            "warn_options" => self.inner.config.warn_options.to_value(),
-            "write_bytecode" => self.inner.config.write_bytecode.to_value(),
-            "x_options" => self.inner.config.x_options.to_value(),
-            "allocator_backend" => self.inner.allocator_backend.to_value(),
-            "allocator_raw" => Value::from(self.inner.allocator_raw),
-            "allocator_mem" => Value::from(self.inner.allocator_mem),
-            "allocator_obj" => Value::from(self.inner.allocator_obj),
-            "allocator_pymalloc_arena" => Value::from(self.inner.allocator_pymalloc_arena),
-            "allocator_debug" => Value::from(self.inner.allocator_debug),
-            "oxidized_importer" => Value::from(self.inner.oxidized_importer),
-            "filesystem_importer" => Value::from(self.inner.filesystem_importer),
-            "argvb" => Value::from(self.inner.argvb),
-            "sys_frozen" => Value::from(self.inner.sys_frozen),
-            "sys_meipass" => Value::from(self.inner.sys_meipass),
-            "terminfo_resolution" => self.inner.terminfo_resolution.to_value(),
-            "write_modules_directory_env" => self.inner.write_modules_directory_env.to_value(),
+            "config_profile" => inner.config.profile.to_value(),
+            "allocator" => inner.config.allocator.to_value(),
+            "configure_locale" => inner.config.configure_locale.to_value(),
+            "coerce_c_locale" => inner.config.coerce_c_locale.to_value(),
+            "coerce_c_locale_warn" => inner.config.coerce_c_locale_warn.to_value(),
+            "development_mode" => inner.config.development_mode.to_value(),
+            "isolated" => inner.config.isolated.to_value(),
+            "legacy_windows_fs_encoding" => inner.config.legacy_windows_fs_encoding.to_value(),
+            "parse_argv" => inner.config.parse_argv.to_value(),
+            "use_environment" => inner.config.use_environment.to_value(),
+            "utf8_mode" => inner.config.utf8_mode.to_value(),
+            "base_exec_prefix" => inner.config.base_exec_prefix.to_value(),
+            "base_executable" => inner.config.base_executable.to_value(),
+            "base_prefix" => inner.config.base_prefix.to_value(),
+            "buffered_stdio" => inner.config.buffered_stdio.to_value(),
+            "bytes_warning" => inner.config.bytes_warning.to_value(),
+            "check_hash_pycs_mode" => inner.config.check_hash_pycs_mode.to_value(),
+            "configure_c_stdio" => inner.config.configure_c_stdio.to_value(),
+            "dump_refs" => inner.config.dump_refs.to_value(),
+            "exec_prefix" => inner.config.exec_prefix.to_value(),
+            "executable" => inner.config.executable.to_value(),
+            "fault_handler" => inner.config.fault_handler.to_value(),
+            "filesystem_encoding" => inner.config.filesystem_encoding.to_value(),
+            "filesystem_errors" => inner.config.filesystem_errors.to_value(),
+            "hash_seed" => inner.config.hash_seed.to_value(),
+            "home" => inner.config.home.to_value(),
+            "import_time" => inner.config.import_time.to_value(),
+            "inspect" => inner.config.inspect.to_value(),
+            "install_signal_handlers" => inner.config.install_signal_handlers.to_value(),
+            "interactive" => inner.config.interactive.to_value(),
+            "legacy_windows_stdio" => inner.config.legacy_windows_stdio.to_value(),
+            "malloc_stats" => inner.config.malloc_stats.to_value(),
+            "module_search_paths" => inner.config.module_search_paths.to_value(),
+            "optimization_level" => inner.config.optimization_level.to_value(),
+            "parser_debug" => inner.config.parser_debug.to_value(),
+            "pathconfig_warnings" => inner.config.pathconfig_warnings.to_value(),
+            "prefix" => inner.config.prefix.to_value(),
+            "program_name" => inner.config.program_name.to_value(),
+            "pycache_prefix" => inner.config.pycache_prefix.to_value(),
+            "python_path_env" => inner.config.python_path_env.to_value(),
+            "quiet" => inner.config.quiet.to_value(),
+            "run_command" => inner.config.run_command.to_value(),
+            "run_filename" => inner.config.run_filename.to_value(),
+            "run_module" => inner.config.run_module.to_value(),
+            "show_ref_count" => inner.config.show_ref_count.to_value(),
+            "site_import" => inner.config.site_import.to_value(),
+            "skip_first_source_line" => inner.config.skip_first_source_line.to_value(),
+            "stdio_encoding" => inner.config.stdio_encoding.to_value(),
+            "stdio_errors" => inner.config.stdio_errors.to_value(),
+            "tracemalloc" => inner.config.tracemalloc.to_value(),
+            "user_site_directory" => inner.config.user_site_directory.to_value(),
+            "verbose" => inner.config.verbose.to_value(),
+            "warn_options" => inner.config.warn_options.to_value(),
+            "write_bytecode" => inner.config.write_bytecode.to_value(),
+            "x_options" => inner.config.x_options.to_value(),
+            "allocator_backend" => inner.allocator_backend.to_value(),
+            "allocator_raw" => Value::from(inner.allocator_raw),
+            "allocator_mem" => Value::from(inner.allocator_mem),
+            "allocator_obj" => Value::from(inner.allocator_obj),
+            "allocator_pymalloc_arena" => Value::from(inner.allocator_pymalloc_arena),
+            "allocator_debug" => Value::from(inner.allocator_debug),
+            "oxidized_importer" => Value::from(inner.oxidized_importer),
+            "filesystem_importer" => Value::from(inner.filesystem_importer),
+            "argvb" => Value::from(inner.argvb),
+            "sys_frozen" => Value::from(inner.sys_frozen),
+            "sys_meipass" => Value::from(inner.sys_meipass),
+            "terminfo_resolution" => inner.terminfo_resolution.to_value(),
+            "write_modules_directory_env" => inner.write_modules_directory_env.to_value(),
             attr => {
                 return Err(ValueError::OperationNotSupported {
                     op: UnsupportedOperation::GetAttr(attr.to_string()),
@@ -289,9 +309,11 @@ impl TypedValue for PythonInterpreterConfigValue {
     }
 
     fn set_attr(&mut self, attribute: &str, value: Value) -> Result<(), ValueError> {
+        let mut inner = self.inner(&format!("PythonInterpreterConfig.{}", attribute))?;
+
         match attribute {
             "config_profile" => {
-                self.inner.config.profile = PythonInterpreterProfile::try_from(
+                inner.config.profile = PythonInterpreterProfile::try_from(
                     value.to_string().as_str(),
                 )
                 .map_err(|e| {
@@ -303,7 +325,7 @@ impl TypedValue for PythonInterpreterConfigValue {
                 })?;
             }
             "allocator" => {
-                self.inner.config.allocator = if value.get_type() == "NoneType" {
+                inner.config.allocator = if value.get_type() == "NoneType" {
                     None
                 } else {
                     Some(
@@ -318,10 +340,10 @@ impl TypedValue for PythonInterpreterConfigValue {
                 };
             }
             "configure_locale" => {
-                self.inner.config.configure_locale = value.to_optional();
+                inner.config.configure_locale = value.to_optional();
             }
             "coerce_c_locale" => {
-                self.inner.config.coerce_c_locale = if value.get_type() == "NoneType" {
+                inner.config.coerce_c_locale = if value.get_type() == "NoneType" {
                     None
                 } else {
                     Some(
@@ -336,40 +358,40 @@ impl TypedValue for PythonInterpreterConfigValue {
                 };
             }
             "coerce_c_locale_warn" => {
-                self.inner.config.coerce_c_locale_warn = value.to_optional();
+                inner.config.coerce_c_locale_warn = value.to_optional();
             }
             "development_mode" => {
-                self.inner.config.development_mode = value.to_optional();
+                inner.config.development_mode = value.to_optional();
             }
             "isolated" => {
-                self.inner.config.isolated = value.to_optional();
+                inner.config.isolated = value.to_optional();
             }
             "legacy_windows_fs_encoding" => {
-                self.inner.config.legacy_windows_fs_encoding = value.to_optional();
+                inner.config.legacy_windows_fs_encoding = value.to_optional();
             }
             "parse_argv" => {
-                self.inner.config.parse_argv = value.to_optional();
+                inner.config.parse_argv = value.to_optional();
             }
             "use_environment" => {
-                self.inner.config.use_environment = value.to_optional();
+                inner.config.use_environment = value.to_optional();
             }
             "utf8_mode" => {
-                self.inner.config.utf8_mode = value.to_optional();
+                inner.config.utf8_mode = value.to_optional();
             }
             "base_exec_prefix" => {
-                self.inner.config.base_exec_prefix = value.to_optional();
+                inner.config.base_exec_prefix = value.to_optional();
             }
             "base_executable" => {
-                self.inner.config.base_executable = value.to_optional();
+                inner.config.base_executable = value.to_optional();
             }
             "base_prefix" => {
-                self.inner.config.base_prefix = value.to_optional();
+                inner.config.base_prefix = value.to_optional();
             }
             "buffered_stdio" => {
-                self.inner.config.buffered_stdio = value.to_optional();
+                inner.config.buffered_stdio = value.to_optional();
             }
             "bytes_warning" => {
-                self.inner.config.bytes_warning = if value.get_type() == "NoneType" {
+                inner.config.bytes_warning = if value.get_type() == "NoneType" {
                     None
                 } else {
                     Some(
@@ -384,7 +406,7 @@ impl TypedValue for PythonInterpreterConfigValue {
                 };
             }
             "check_hash_pycs_mode" => {
-                self.inner.config.check_hash_pycs_mode = if value.get_type() == "NoneType" {
+                inner.config.check_hash_pycs_mode = if value.get_type() == "NoneType" {
                     None
                 } else {
                     Some(
@@ -399,130 +421,130 @@ impl TypedValue for PythonInterpreterConfigValue {
                 };
             }
             "configure_c_stdio" => {
-                self.inner.config.configure_c_stdio = value.to_optional();
+                inner.config.configure_c_stdio = value.to_optional();
             }
             "dump_refs" => {
-                self.inner.config.dump_refs = value.to_optional();
+                inner.config.dump_refs = value.to_optional();
             }
             "exec_prefix" => {
-                self.inner.config.exec_prefix = value.to_optional();
+                inner.config.exec_prefix = value.to_optional();
             }
             "executable" => {
-                self.inner.config.executable = value.to_optional();
+                inner.config.executable = value.to_optional();
             }
             "fault_handler" => {
-                self.inner.config.fault_handler = value.to_optional();
+                inner.config.fault_handler = value.to_optional();
             }
             "filesystem_encoding" => {
-                self.inner.config.filesystem_encoding = value.to_optional();
+                inner.config.filesystem_encoding = value.to_optional();
             }
             "filesystem_errors" => {
-                self.inner.config.filesystem_errors = value.to_optional();
+                inner.config.filesystem_errors = value.to_optional();
             }
             "hash_seed" => {
-                self.inner.config.hash_seed = value.try_to_optional()?;
+                inner.config.hash_seed = value.try_to_optional()?;
             }
             "home" => {
-                self.inner.config.home = value.to_optional();
+                inner.config.home = value.to_optional();
             }
             "import_time" => {
-                self.inner.config.import_time = value.to_optional();
+                inner.config.import_time = value.to_optional();
             }
             "inspect" => {
-                self.inner.config.inspect = value.to_optional();
+                inner.config.inspect = value.to_optional();
             }
             "install_signal_handlers" => {
-                self.inner.config.install_signal_handlers = value.to_optional();
+                inner.config.install_signal_handlers = value.to_optional();
             }
             "interactive" => {
-                self.inner.config.interactive = value.to_optional();
+                inner.config.interactive = value.to_optional();
             }
             "legacy_windows_stdio" => {
-                self.inner.config.legacy_windows_stdio = value.to_optional();
+                inner.config.legacy_windows_stdio = value.to_optional();
             }
             "malloc_stats" => {
-                self.inner.config.malloc_stats = value.to_optional();
+                inner.config.malloc_stats = value.to_optional();
             }
             "module_search_paths" => {
-                self.inner.config.module_search_paths = value.try_to_optional()?;
+                inner.config.module_search_paths = value.try_to_optional()?;
 
                 // Automatically enable filesystem importer if module search paths
                 // are registered.
-                if let Some(paths) = &self.inner.config.module_search_paths {
+                if let Some(paths) = &inner.config.module_search_paths {
                     if !paths.is_empty() {
-                        self.inner.filesystem_importer = true;
+                        inner.filesystem_importer = true;
                     }
                 }
             }
             "optimization_level" => {
-                self.inner.config.optimization_level =
+                inner.config.optimization_level =
                     bytecode_optimization_level_try_to_optional(value)?;
             }
             "parser_debug" => {
-                self.inner.config.parser_debug = value.to_optional();
+                inner.config.parser_debug = value.to_optional();
             }
             "pathconfig_warnings" => {
-                self.inner.config.pathconfig_warnings = value.to_optional();
+                inner.config.pathconfig_warnings = value.to_optional();
             }
             "prefix" => {
-                self.inner.config.prefix = value.to_optional();
+                inner.config.prefix = value.to_optional();
             }
             "program_name" => {
-                self.inner.config.program_name = value.to_optional();
+                inner.config.program_name = value.to_optional();
             }
             "pycache_prefix" => {
-                self.inner.config.pycache_prefix = value.to_optional();
+                inner.config.pycache_prefix = value.to_optional();
             }
             "python_path_env" => {
-                self.inner.config.python_path_env = value.to_optional();
+                inner.config.python_path_env = value.to_optional();
             }
             "quiet" => {
-                self.inner.config.quiet = value.to_optional();
+                inner.config.quiet = value.to_optional();
             }
             "run_command" => {
-                self.inner.config.run_command = value.to_optional();
+                inner.config.run_command = value.to_optional();
             }
             "run_filename" => {
-                self.inner.config.run_filename = value.to_optional();
+                inner.config.run_filename = value.to_optional();
             }
             "run_module" => {
-                self.inner.config.run_module = value.to_optional();
+                inner.config.run_module = value.to_optional();
             }
             "show_ref_count" => {
-                self.inner.config.show_ref_count = value.to_optional();
+                inner.config.show_ref_count = value.to_optional();
             }
             "site_import" => {
-                self.inner.config.site_import = value.to_optional();
+                inner.config.site_import = value.to_optional();
             }
             "skip_first_source_line" => {
-                self.inner.config.skip_first_source_line = value.to_optional();
+                inner.config.skip_first_source_line = value.to_optional();
             }
             "stdio_encoding" => {
-                self.inner.config.stdio_encoding = value.to_optional();
+                inner.config.stdio_encoding = value.to_optional();
             }
             "stdio_errors" => {
-                self.inner.config.stdio_errors = value.to_optional();
+                inner.config.stdio_errors = value.to_optional();
             }
             "tracemalloc" => {
-                self.inner.config.tracemalloc = value.to_optional();
+                inner.config.tracemalloc = value.to_optional();
             }
             "user_site_directory" => {
-                self.inner.config.user_site_directory = value.to_optional();
+                inner.config.user_site_directory = value.to_optional();
             }
             "verbose" => {
-                self.inner.config.configure_locale = value.to_optional();
+                inner.config.configure_locale = value.to_optional();
             }
             "warn_options" => {
-                self.inner.config.warn_options = value.try_to_optional()?;
+                inner.config.warn_options = value.try_to_optional()?;
             }
             "write_bytecode" => {
-                self.inner.config.write_bytecode = value.to_optional();
+                inner.config.write_bytecode = value.to_optional();
             }
             "x_options" => {
-                self.inner.config.x_options = value.try_to_optional()?;
+                inner.config.x_options = value.try_to_optional()?;
             }
             "allocator_backend" => {
-                self.inner.allocator_backend =
+                inner.allocator_backend =
                     MemoryAllocatorBackend::try_from(value.to_string().as_str()).map_err(|e| {
                         ValueError::from(RuntimeError {
                             code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
@@ -532,37 +554,37 @@ impl TypedValue for PythonInterpreterConfigValue {
                     })?;
             }
             "allocator_raw" => {
-                self.inner.allocator_raw = value.to_bool();
+                inner.allocator_raw = value.to_bool();
             }
             "allocator_mem" => {
-                self.inner.allocator_mem = value.to_bool();
+                inner.allocator_mem = value.to_bool();
             }
             "allocator_obj" => {
-                self.inner.allocator_obj = value.to_bool();
+                inner.allocator_obj = value.to_bool();
             }
             "allocator_pymalloc_arena" => {
-                self.inner.allocator_pymalloc_arena = value.to_bool();
+                inner.allocator_pymalloc_arena = value.to_bool();
             }
             "allocator_debug" => {
-                self.inner.allocator_debug = value.to_bool();
+                inner.allocator_debug = value.to_bool();
             }
             "oxidized_importer" => {
-                self.inner.oxidized_importer = value.to_bool();
+                inner.oxidized_importer = value.to_bool();
             }
             "filesystem_importer" => {
-                self.inner.filesystem_importer = value.to_bool();
+                inner.filesystem_importer = value.to_bool();
             }
             "argvb" => {
-                self.inner.argvb = value.to_bool();
+                inner.argvb = value.to_bool();
             }
             "sys_frozen" => {
-                self.inner.sys_frozen = value.to_bool();
+                inner.sys_frozen = value.to_bool();
             }
             "sys_meipass" => {
-                self.inner.sys_meipass = value.to_bool();
+                inner.sys_meipass = value.to_bool();
             }
             "terminfo_resolution" => {
-                self.inner.terminfo_resolution =
+                inner.terminfo_resolution =
                     TerminfoResolution::try_from(value.to_string().as_str()).map_err(|e| {
                         ValueError::from(RuntimeError {
                             code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
@@ -572,7 +594,7 @@ impl TypedValue for PythonInterpreterConfigValue {
                     })?;
             }
             "write_modules_directory_env" => {
-                self.inner.write_modules_directory_env = value.to_optional();
+                inner.write_modules_directory_env = value.to_optional();
             }
             attr => {
                 return Err(ValueError::OperationNotSupported {
