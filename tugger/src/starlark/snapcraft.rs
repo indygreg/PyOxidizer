@@ -718,15 +718,19 @@ impl SnapcraftBuilderValue<'static> {
     }
 
     pub fn add_file_manifest(&mut self, manifest: FileManifestValue) -> ValueResult {
+        const LABEL: &str = "SnapcraftBuilder.add_file_manifest()";
+
+        let manifest = manifest.inner(LABEL)?;
+
         self.inner = self
             .inner
             .clone()
-            .install_manifest(&manifest.manifest)
+            .install_manifest(&manifest)
             .map_err(|e| {
                 ValueError::Runtime(RuntimeError {
                     code: "TUGGER_SNAPCRAFT",
                     message: format!("{:?}", e),
-                    label: "add_file_manifest()".to_string(),
+                    label: LABEL.to_string(),
                 })
             })?;
 

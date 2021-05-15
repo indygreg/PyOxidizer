@@ -165,12 +165,13 @@ impl WiXMsiBuilderValue {
         const LABEL: &str = "WiXMSIBuilder.add_program_files_manifest()";
 
         let mut inner = self.inner(LABEL)?;
+        let manifest = manifest.inner(LABEL)?;
 
         error_context(LABEL, || {
             let manifest = handle_file_manifest_signable_events(
                 type_values,
                 call_stack,
-                &manifest.manifest,
+                &manifest,
                 LABEL,
                 SigningAction::WindowsInstallerFileAdded,
             )?;

@@ -99,10 +99,7 @@ fn starlark_glob(
         Ok(manifest)
     })?;
 
-    Ok(Value::new(FileManifestValue {
-        manifest,
-        run_path: None,
-    }))
+    FileManifestValue::new_from_manifest(manifest)
 }
 
 starlark_module! { file_resource_module =>

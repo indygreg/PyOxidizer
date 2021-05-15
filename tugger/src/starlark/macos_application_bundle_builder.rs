@@ -77,8 +77,12 @@ impl MacOsApplicationBundleBuilderValue {
     }
 
     pub fn add_manifest(&mut self, manifest: FileManifestValue) -> ValueResult {
-        error_context("MacOsApplicationBundleBuilder.add_manifest()", || {
-            for (path, entry) in manifest.manifest.iter_entries() {
+        const LABEL: &str = "MacOsApplicationBundleBuilder.add_manifest()";
+
+        let manifest = manifest.inner(LABEL)?;
+
+        error_context(LABEL, || {
+            for (path, entry) in manifest.iter_entries() {
                 self.inner
                     .add_file(PathBuf::from("Contents").join(path), entry.clone())
                     .with_context(|| format!("adding {}", path.display()))?;
@@ -113,8 +117,12 @@ impl MacOsApplicationBundleBuilderValue {
     }
 
     pub fn add_macos_manifest(&mut self, manifest: FileManifestValue) -> ValueResult {
-        error_context("MacOsApplicationBundleBuilder.add_macos_manifest()", || {
-            for (path, entry) in manifest.manifest.iter_entries() {
+        const LABEL: &str = "MacOsApplicationBundleBuilder.add_macos_manifest()";
+
+        let manifest = manifest.inner(LABEL)?;
+
+        error_context(LABEL, || {
+            for (path, entry) in manifest.iter_entries() {
                 self.inner
                     .add_file_macos(path, entry.clone())
                     .with_context(|| format!("adding {}", path.display()))?;
@@ -149,18 +157,19 @@ impl MacOsApplicationBundleBuilderValue {
     }
 
     pub fn add_resources_manifest(&mut self, manifest: FileManifestValue) -> ValueResult {
-        error_context(
-            "MacOsApplicationBundleBuilder.add_resources_manifest()",
-            || {
-                for (path, entry) in manifest.manifest.iter_entries() {
-                    self.inner
-                        .add_file_resources(path, entry.clone())
-                        .with_context(|| format!("adding {}", path.display()))?;
-                }
+        const LABEL: &str = "MacOsApplicationBundleBuilder.add_resources_manifest()";
 
-                Ok(())
-            },
-        )?;
+        let manifest = manifest.inner(LABEL)?;
+
+        error_context(LABEL, || {
+            for (path, entry) in manifest.iter_entries() {
+                self.inner
+                    .add_file_resources(path, entry.clone())
+                    .with_context(|| format!("adding {}", path.display()))?;
+            }
+
+            Ok(())
+        })?;
 
         Ok(Value::new(NoneType::None))
     }

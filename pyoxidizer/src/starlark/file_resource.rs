@@ -15,7 +15,7 @@ use {
         project_building::build_python_executable,
         py_packaging::{binary::PythonBinaryBuilder, resource::AddToFileManifest},
     },
-    anyhow::{Context, Result},
+    anyhow::{anyhow, Context, Result},
     slog::warn,
     starlark::{
         environment::TypeValues,
@@ -29,7 +29,7 @@ use {
             starlark_signature_extraction, starlark_signatures,
         },
     },
-    std::path::Path,
+    std::{ops::DerefMut, path::Path},
     tugger::starlark::file_manifest::FileManifestValue,
     tugger_file_manifest::{FileEntry, FileManifest},
 };
@@ -45,6 +45,8 @@ pub fn file_manifest_add_python_executable(
     release: bool,
     opt_level: &str,
 ) -> Result<()> {
+    const LABEL: &str = "FileManifest.add_python_executable()";
+
     let build = build_python_executable(env, logger, &exe.name(), exe, target, opt_level, release)
         .context("building Python executable")?;
 
@@ -56,8 +58,8 @@ pub fn file_manifest_add_python_executable(
     let use_prefix = if prefix == "." { "" } else { prefix };
 
     let path = Path::new(use_prefix).join(build.exe_name);
-    manifest
-        .manifest
+    let mut inner = manifest.inner(LABEL).map_err(|e| anyhow!("{:?}", e))?;
+    inner
         .add_file_entry(&path, content)
         .context("adding exe content to manifest")?;
 
@@ -69,7 +71,8 @@ pub fn file_manifest_add_python_executable(
         extra_files.add_file_entry(&Path::new(use_prefix).join(path), entry.clone())?;
     }
 
-    manifest.manifest.add_manifest(&extra_files)?;
+    inner.add_manifest(&extra_files)?;
+    drop(inner);
 
     // Make the last added Python executable the default run target.
     manifest.run_path = Some(path);
@@ -102,7 +105,7 @@ pub fn file_manifest_add_python_resource(
                 "adding source module {} to {}", m.name, prefix
             );
 
-            m.add_to_file_manifest(&mut manifest.manifest, &prefix)
+            m.add_to_file_manifest(manifest.inner(LABEL)?.deref_mut(), &prefix)
                 .map_err(|e| {
                     ValueError::from(RuntimeError {
                         code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
@@ -123,7 +126,7 @@ pub fn file_manifest_add_python_resource(
                 m.symbolic_name(),
                 prefix
             );
-            m.add_to_file_manifest(&mut manifest.manifest, &prefix)
+            m.add_to_file_manifest(manifest.inner(LABEL)?.deref_mut(), &prefix)
                 .map_err(|e| {
                     RuntimeError {
                         code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
@@ -142,7 +145,7 @@ pub fn file_manifest_add_python_resource(
                 pyoxidizer_context.logger(),
                 "adding package distribution resource file {}:{} to {}", m.package, m.name, prefix
             );
-            m.add_to_file_manifest(&mut manifest.manifest, &prefix)
+            m.add_to_file_manifest(manifest.inner(LABEL)?.deref_mut(), &prefix)
                 .map_err(|e| {
                     ValueError::from(RuntimeError {
                         code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
@@ -162,7 +165,7 @@ pub fn file_manifest_add_python_resource(
                 "adding extension module {} to {}", extension.name, prefix
             );
             extension
-                .add_to_file_manifest(&mut manifest.manifest, &prefix)
+                .add_to_file_manifest(manifest.inner(LABEL)?.deref_mut(), &prefix)
                 .map_err(|e| {
                     ValueError::from(RuntimeError {
                         code: "PYOXIDIZER_BUILD",
@@ -185,8 +188,8 @@ pub fn file_manifest_add_python_resource(
                     .downcast_ref::<FileManifestValue>()
                     .unwrap();
                 manifest
-                    .manifest
-                    .add_manifest(&exe_manifest.manifest)
+                    .inner(LABEL)?
+                    .add_manifest(&*exe_manifest.inner(LABEL)?)
                     .map_err(|e| {
                         ValueError::from(RuntimeError {
                             code: "PYOXIDIZER_BUILD",
@@ -251,10 +254,7 @@ mod tests {
 
     #[test]
     fn test_add_python_source_module() -> Result<()> {
-        let m = Value::new(FileManifestValue {
-            manifest: FileManifest::default(),
-            run_path: None,
-        });
+        let m = FileManifestValue::new_from_args().unwrap();
 
         let v = Value::new(PythonModuleSourceValue::new(PythonModuleSource {
             name: "foo.bar".to_string(),
@@ -273,8 +273,9 @@ mod tests {
 
         let m = env.get_var("m").unwrap();
         let m = m.downcast_ref::<FileManifestValue>().unwrap();
+        let inner = m.inner("ignored").unwrap();
 
-        let mut entries = m.manifest.iter_entries();
+        let mut entries = inner.iter_entries();
 
         let (p, c) = entries.next().unwrap();
         assert_eq!(p, &PathBuf::from("lib/foo/__init__.py"));
@@ -303,10 +304,7 @@ mod tests {
 
     #[test]
     fn test_add_python_resource_data() -> Result<()> {
-        let m = Value::new(FileManifestValue {
-            manifest: FileManifest::default(),
-            run_path: None,
-        });
+        let m = FileManifestValue::new_from_args().unwrap();
 
         let v = Value::new(PythonPackageResourceValue::new(PythonPackageResource {
             leaf_package: "foo.bar".to_string(),
@@ -324,8 +322,9 @@ mod tests {
 
         let m = env.get_var("m").unwrap();
         let m = m.downcast_ref::<FileManifestValue>().unwrap();
+        let inner = m.inner("ignored").unwrap();
 
-        let mut entries = m.manifest.iter_entries();
+        let mut entries = inner.iter_entries();
         let (p, c) = entries.next().unwrap();
 
         assert_eq!(p, &PathBuf::from("lib/foo/bar/resource.txt"));
@@ -352,10 +351,7 @@ mod tests {
         let mut env = test_evaluation_context_builder()?.into_context()?;
         add_exe(&mut env)?;
 
-        let m = Value::new(FileManifestValue {
-            manifest: FileManifest::default(),
-            run_path: None,
-        });
+        let m = FileManifestValue::new_from_args().unwrap();
 
         env.set_var("m", m).unwrap();
         env.eval("m.add_python_resource('bin', exe)")?;
@@ -372,10 +368,7 @@ mod tests {
         env.eval("dist = default_python_distribution(python_version='3.8')")?;
         env.eval("exe = dist.to_python_executable('testapp')")?;
 
-        let m = Value::new(FileManifestValue {
-            manifest: FileManifest::default(),
-            run_path: None,
-        });
+        let m = FileManifestValue::new_from_args().unwrap();
 
         env.set_var("m", m).unwrap();
         env.eval("m.add_python_resource('bin', exe)")?;
@@ -388,10 +381,7 @@ mod tests {
         let mut env = test_evaluation_context_builder()?.into_context()?;
         add_exe(&mut env)?;
 
-        let m = Value::new(FileManifestValue {
-            manifest: FileManifest::default(),
-            run_path: None,
-        });
+        let m = FileManifestValue::new_from_args().unwrap();
 
         env.set_var("m", m).unwrap();
 

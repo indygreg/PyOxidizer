@@ -129,9 +129,13 @@ impl WiXInstallerValue {
     }
 
     fn add_build_files(&mut self, manifest: FileManifestValue) -> ValueResult {
-        error_context("WiXInstaller.add_build_files()", || {
+        const LABEL: &str = "WiXInstaller.add_build_files()";
+
+        let manifest = manifest.inner(LABEL)?;
+
+        error_context(LABEL, || {
             self.inner
-                .add_extra_build_files(&manifest.manifest)
+                .add_extra_build_files(&manifest)
                 .context("adding extra build files from FileManifest")
         })?;
 
@@ -200,11 +204,15 @@ impl WiXInstallerValue {
         call_stack: &mut CallStack,
         manifest: FileManifestValue,
     ) -> ValueResult {
+        const LABEL: &str = "WixInstaller.add_install_files()";
+
+        let manifest = manifest.inner(LABEL)?;
+
         self.add_install_files_from_manifest(
             type_values,
             call_stack,
             "WiXInstaller.add_install_files()",
-            &manifest.manifest,
+            &manifest,
         )
     }
 
@@ -257,7 +265,11 @@ impl WiXInstallerValue {
         product_manufacturer: String,
         program_files: FileManifestValue,
     ) -> ValueResult {
-        error_context("WiXInstaller.add_simple_installer()", || {
+        const LABEL: &str = "WiXInstaller.add_simple_installer()";
+
+        let manifest = program_files.inner(LABEL)?;
+
+        error_context(LABEL, || {
             let mut builder = WiXSimpleMsiBuilder::new(
                 &id_prefix,
                 &product_name,
@@ -265,7 +277,7 @@ impl WiXInstallerValue {
                 &product_manufacturer,
             );
             builder
-                .add_program_files_manifest(&program_files.manifest)
+                .add_program_files_manifest(&manifest)
                 .context("adding program files manifest")?;
 
             builder

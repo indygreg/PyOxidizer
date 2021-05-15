@@ -26,7 +26,10 @@ use {
         get_context_value, optional_str_arg, EnvironmentContext, ResolvedTarget,
         ResolvedTargetValue, RunMode,
     },
-    std::path::{Path, PathBuf},
+    std::{
+        path::{Path, PathBuf},
+        sync::{Arc, Mutex, MutexGuard},
+    },
     tugger_code_signing::SigningDestination,
     tugger_file_manifest::FileManifest,
 };
@@ -75,7 +78,7 @@ fn post_materialize_signing_checks(
 
 #[derive(Clone, Debug)]
 pub struct FileManifestValue {
-    pub manifest: FileManifest,
+    inner: Arc<Mutex<FileManifest>>,
     /// Optional path to be the default run target.
     pub run_path: Option<PathBuf>,
 }
@@ -93,12 +96,24 @@ impl TypedValue for FileManifestValue {
 impl FileManifestValue {
     /// FileManifest()
     pub fn new_from_args() -> ValueResult {
-        let manifest = FileManifest::default();
+        Self::new_from_manifest(FileManifest::default())
+    }
 
-        Ok(Value::new(FileManifestValue {
-            manifest,
+    pub fn new_from_manifest(manifest: FileManifest) -> ValueResult {
+        Ok(Value::new(Self {
+            inner: Arc::new(Mutex::new(manifest)),
             run_path: None,
         }))
+    }
+
+    pub fn inner(&self, label: &str) -> Result<MutexGuard<FileManifest>, ValueError> {
+        self.inner.lock().map_err(|e| {
+            ValueError::Runtime(RuntimeError {
+                code: "TUGGER_FILE_MANIFEST",
+                message: format!("error obtaining lock: {}", e),
+                label: label.to_string(),
+            })
+        })
     }
 
     fn build(
@@ -116,13 +131,15 @@ impl FileManifestValue {
 
         let output_path = context.target_build_path(&target);
 
-        let installed_paths = error_context("FileManifest.build()", || {
+        let inner = self.inner(LABEL)?;
+
+        let installed_paths = error_context(LABEL, || {
             warn!(
                 context.logger(),
                 "installing files to {}",
                 output_path.display()
             );
-            self.manifest
+            inner
                 .materialize_files_with_replace(&output_path)
                 .map_err(anyhow::Error::new)
         })?;
@@ -143,8 +160,7 @@ impl FileManifestValue {
                 path: output_path.join(default),
             }
         } else {
-            let exes = self
-                .manifest
+            let exes = inner
                 .iter_entries()
                 .filter(|(_, c)| c.executable)
                 .collect::<Vec<_>>();
@@ -168,10 +184,13 @@ impl FileManifestValue {
 
     /// FileManifest.add_manifest(other)
     pub fn add_manifest(&mut self, other: FileManifestValue) -> ValueResult {
-        error_context("FileManifest.add_manifest()", || {
-            self.manifest
-                .add_manifest(&other.manifest)
-                .map_err(anyhow::Error::new)
+        const LABEL: &str = "FileManifest.add_manifest()";
+
+        let mut inner = self.inner(LABEL)?;
+        let other_inner = other.inner(LABEL)?;
+
+        error_context(LABEL, || {
+            inner.add_manifest(&other_inner).map_err(anyhow::Error::new)
         })?;
 
         Ok(Value::new(NoneType::None))
@@ -189,7 +208,8 @@ impl FileManifestValue {
         let path = optional_str_arg("path", &path)?;
         let directory = optional_str_arg("directory", &directory)?;
 
-        let inner = content.inner(LABEL)?;
+        let mut inner = self.inner(LABEL)?;
+        let content_inner = content.inner(LABEL)?;
 
         error_context(LABEL, || {
             if path.is_some() && directory.is_some() {
@@ -201,12 +221,12 @@ impl FileManifestValue {
             let path = if let Some(path) = path {
                 PathBuf::from(path)
             } else if let Some(directory) = directory {
-                PathBuf::from(directory).join(&inner.filename)
+                PathBuf::from(directory).join(&content_inner.filename)
             } else {
-                PathBuf::from(&inner.filename)
+                PathBuf::from(&content_inner.filename)
             };
 
-            self.manifest.add_file_entry(path, inner.content.clone())?;
+            inner.add_file_entry(path, content_inner.content.clone())?;
 
             Ok(())
         })?;
@@ -221,14 +241,18 @@ impl FileManifestValue {
         strip_prefix: String,
         force_read: bool,
     ) -> ValueResult {
-        error_context("FileManifest.add_path()", || {
+        const LABEL: &str = "FileManifest.add_path()";
+
+        let mut inner = self.inner(LABEL)?;
+
+        error_context(LABEL, || {
             let path = Path::new(&path);
             let strip_prefix = Path::new(&strip_prefix);
 
             if force_read {
-                self.manifest.add_path_memory(path, strip_prefix)
+                inner.add_path_memory(path, strip_prefix)
             } else {
-                self.manifest.add_path(path, strip_prefix)
+                inner.add_path(path, strip_prefix)
             }
             .map_err(anyhow::Error::new)
         })?;
@@ -253,7 +277,9 @@ impl FileManifestValue {
             Ok((path, filename))
         })?;
 
-        if let Some(entry) = self.manifest.get(path) {
+        let inner = self.inner(LABEL)?;
+
+        if let Some(entry) = inner.get(path) {
             Ok(FileContentWrapper {
                 content: entry.clone(),
                 filename,
@@ -279,13 +305,15 @@ impl FileManifestValue {
             .downcast_ref::<EnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
 
+        let inner = self.inner(LABEL)?;
+
         let installed_paths = error_context(LABEL, || {
             let dest_path = context.build_path().join(path);
 
             if replace {
-                self.manifest.materialize_files_with_replace(&dest_path)
+                inner.materialize_files_with_replace(&dest_path)
             } else {
-                self.manifest.materialize_files(&dest_path)
+                inner.materialize_files(&dest_path)
             }
             .map_err(anyhow::Error::new)
         })?;
@@ -302,8 +330,11 @@ impl FileManifestValue {
     }
 
     pub fn paths(&self) -> ValueResult {
-        let paths = self
-            .manifest
+        const LABEL: &str = "FileManifest.paths()";
+
+        let inner = self.inner(LABEL)?;
+
+        let paths = inner
             .iter_entries()
             .map(|(path, _)| Value::from(format!("{}", path.display())))
             .collect::<Vec<_>>();
@@ -328,7 +359,9 @@ impl FileManifestValue {
             Ok((path, filename))
         })?;
 
-        if let Some(entry) = self.manifest.remove(path) {
+        let mut inner = self.inner(LABEL)?;
+
+        if let Some(entry) = inner.remove(path) {
             Ok(FileContentWrapper {
                 content: entry,
                 filename,
@@ -408,7 +441,7 @@ mod tests {
         assert_eq!(m.get_type(), "FileManifest");
 
         let m = m.downcast_ref::<FileManifestValue>().unwrap();
-        assert_eq!(m.manifest, FileManifest::default());
+        assert_eq!(m.inner("ignored").unwrap().clone(), FileManifest::default());
     }
 
     #[test]
@@ -448,21 +481,24 @@ mod tests {
         ))?;
 
         let manifest = manifest_value.downcast_ref::<FileManifestValue>().unwrap();
-        assert_eq!(manifest.manifest.iter_files().count(), 2);
-        assert_eq!(
-            manifest.manifest.get("test_add_path_0"),
-            Some(&FileEntry {
-                executable: false,
-                data: temp_file0.into(),
-            })
-        );
-        assert_eq!(
-            manifest.manifest.get("test_add_path_1"),
-            Some(&FileEntry {
-                executable: false,
-                data: vec![42, 42].into(),
-            })
-        );
+        {
+            let inner = manifest.inner("ignored").unwrap();
+            assert_eq!(inner.iter_files().count(), 2);
+            assert_eq!(
+                inner.get("test_add_path_0"),
+                Some(&FileEntry {
+                    executable: false,
+                    data: temp_file0.into(),
+                })
+            );
+            assert_eq!(
+                inner.get("test_add_path_1"),
+                Some(&FileEntry {
+                    executable: false,
+                    data: vec![42, 42].into(),
+                })
+            );
+        }
 
         Ok(())
     }
@@ -477,8 +513,9 @@ mod tests {
 
         let raw = env.eval("m")?;
         let manifest = raw.downcast_ref::<FileManifestValue>().unwrap();
+        let inner = manifest.inner("ignored").unwrap();
 
-        let entries = manifest.manifest.iter_entries().collect::<Vec<_>>();
+        let entries = inner.iter_entries().collect::<Vec<_>>();
         assert_eq!(
             entries,
             vec![(
@@ -503,8 +540,9 @@ mod tests {
 
         let raw = env.eval("m")?;
         let manifest = raw.downcast_ref::<FileManifestValue>().unwrap();
+        let inner = manifest.inner("ignored").unwrap();
 
-        let entries = manifest.manifest.iter_entries().collect::<Vec<_>>();
+        let entries = inner.iter_entries().collect::<Vec<_>>();
         assert_eq!(
             entries,
             vec![(
@@ -529,8 +567,9 @@ mod tests {
 
         let raw = env.eval("m")?;
         let manifest = raw.downcast_ref::<FileManifestValue>().unwrap();
+        let inner = manifest.inner("ignored").unwrap();
 
-        let entries = manifest.manifest.iter_entries().collect::<Vec<_>>();
+        let entries = inner.iter_entries().collect::<Vec<_>>();
         assert_eq!(
             entries,
             vec![(
