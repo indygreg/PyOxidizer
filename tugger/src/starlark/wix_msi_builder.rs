@@ -31,6 +31,7 @@ use {
     std::{
         convert::TryFrom,
         path::{Path, PathBuf},
+        sync::{Arc, Mutex, MutexGuard},
     },
     tugger_code_signing::SigningDestination,
     tugger_file_manifest::FileEntry,
@@ -51,13 +52,17 @@ where
     })
 }
 
-#[derive(Clone)]
-pub struct WiXMsiBuilderValue {
-    pub inner: WiXSimpleMsiBuilder,
+pub struct WiXMsiBuilderWrapper {
+    pub builder: WiXSimpleMsiBuilder,
     /// Explicit filename to use for the built MSI.
-    msi_filename: Option<String>,
+    pub msi_filename: Option<String>,
     /// The target architecture we are building for.
     pub target_triple: String,
+}
+
+#[derive(Clone)]
+pub struct WiXMsiBuilderValue {
+    inner: Arc<Mutex<WiXMsiBuilderWrapper>>,
 }
 
 impl TypedValue for WiXMsiBuilderValue {
@@ -69,39 +74,41 @@ impl TypedValue for WiXMsiBuilderValue {
     }
 
     fn set_attr(&mut self, attribute: &str, value: Value) -> Result<(), ValueError> {
+        let mut inner = self.inner(&format!("{}.{}", Self::TYPE, &attribute))?;
+
         match attribute {
             "banner_bmp_path" => {
-                self.inner = self.inner.clone().banner_bmp_path(value.to_string());
+                inner.builder = inner.builder.clone().banner_bmp_path(value.to_string());
             }
             "dialog_bmp_path" => {
-                self.inner = self.inner.clone().dialog_bmp_path(value.to_string());
+                inner.builder = inner.builder.clone().dialog_bmp_path(value.to_string());
             }
             "eula_rtf_path" => {
-                self.inner = self.inner.clone().eula_rtf_path(value.to_string());
+                inner.builder = inner.builder.clone().eula_rtf_path(value.to_string());
             }
             "help_url" => {
-                self.inner = self.inner.clone().help_url(value.to_string());
+                inner.builder = inner.builder.clone().help_url(value.to_string());
             }
             "license_path" => {
-                self.inner = self.inner.clone().license_path(value.to_string());
+                inner.builder = inner.builder.clone().license_path(value.to_string());
             }
             "msi_filename" => {
-                self.msi_filename = Some(value.to_string());
+                inner.msi_filename = Some(value.to_string());
             }
             "package_description" => {
-                self.inner = self.inner.clone().package_description(value.to_string());
+                inner.builder = inner.builder.clone().package_description(value.to_string());
             }
             "package_keywords" => {
-                self.inner = self.inner.clone().package_keywords(value.to_string());
+                inner.builder = inner.builder.clone().package_keywords(value.to_string());
             }
             "product_icon_path" => {
-                self.inner = self.inner.clone().product_icon_path(value.to_string());
+                inner.builder = inner.builder.clone().product_icon_path(value.to_string());
             }
             "target_triple" => {
-                self.target_triple = value.to_string();
+                inner.target_triple = value.to_string();
             }
             "upgrade_code" => {
-                self.inner = self.inner.clone().upgrade_code(value.to_string());
+                inner.builder = inner.builder.clone().upgrade_code(value.to_string());
             }
             attr => {
                 return Err(ValueError::OperationNotSupported {
@@ -123,7 +130,7 @@ impl WiXMsiBuilderValue {
         product_version: String,
         product_manufacturer: String,
     ) -> ValueResult {
-        let inner = WiXSimpleMsiBuilder::new(
+        let builder = WiXSimpleMsiBuilder::new(
             &id_prefix,
             &product_name,
             &product_version,
@@ -131,10 +138,22 @@ impl WiXMsiBuilderValue {
         );
 
         Ok(Value::new(WiXMsiBuilderValue {
-            inner,
-            msi_filename: None,
-            target_triple: env!("HOST").to_string(),
+            inner: Arc::new(Mutex::new(WiXMsiBuilderWrapper {
+                builder,
+                msi_filename: None,
+                target_triple: env!("HOST").to_string(),
+            })),
         }))
+    }
+
+    pub fn inner(&self, label: &str) -> Result<MutexGuard<WiXMsiBuilderWrapper>, ValueError> {
+        self.inner.lock().map_err(|e| {
+            ValueError::Runtime(RuntimeError {
+                code: "TUGGER_WIX_MSI_BUILDER",
+                message: format!("error obtaining lock: {}", e),
+                label: label.to_string(),
+            })
+        })
     }
 
     pub fn add_program_files_manifest(
@@ -145,6 +164,8 @@ impl WiXMsiBuilderValue {
     ) -> ValueResult {
         const LABEL: &str = "WiXMSIBuilder.add_program_files_manifest()";
 
+        let mut inner = self.inner(LABEL)?;
+
         error_context(LABEL, || {
             let manifest = handle_file_manifest_signable_events(
                 type_values,
@@ -154,7 +175,8 @@ impl WiXMsiBuilderValue {
                 SigningAction::WindowsInstallerFileAdded,
             )?;
 
-            self.inner
+            inner
+                .builder
                 .add_program_files_manifest(&manifest)
                 .context("adding program files manifest")
         })?;
@@ -167,11 +189,16 @@ impl WiXMsiBuilderValue {
         redist_version: String,
         platform: String,
     ) -> ValueResult {
-        error_context("WiXMSIBuilder.add_visual_cpp_redistributable()", || {
+        const LABEL: &str = "WiXMSIBuilder.add_visual_cpp_redistributable()";
+
+        let mut inner = self.inner(LABEL)?;
+
+        error_context(LABEL, || {
             let platform = VcRedistributablePlatform::try_from(platform.as_str())
                 .context("obtaining VcRedistributablePlatform from str")?;
 
-            self.inner
+            inner
+                .builder
                 .add_visual_cpp_redistributable(&redist_version, platform)
                 .context("adding Visual C++ redistributable")
         })?;
@@ -195,13 +222,16 @@ impl WiXMsiBuilderValue {
             context.logger().clone()
         };
 
+        let msi_filename = self.msi_filename(label)?;
+        let inner = self.inner(label)?;
+
         let msi_path = error_context(label, || {
-            let builder = self
-                .inner
-                .to_installer_builder(&self.target_triple, build_dir)
+            let builder = inner
+                .builder
+                .to_installer_builder(&inner.target_triple, build_dir)
                 .context("converting WiXSimpleMSiBuilder to WiXInstallerBuilder")?;
 
-            let msi_path = build_dir.join(self.msi_filename());
+            let msi_path = build_dir.join(&msi_filename);
 
             builder
                 .build(&logger, &msi_path)
@@ -214,7 +244,7 @@ impl WiXMsiBuilderValue {
         let mut context = SigningContext::new(
             label,
             SigningAction::WindowsInstallerCreation,
-            self.msi_filename(),
+            &msi_filename,
             &candidate,
         );
         context.set_path(&msi_path);
@@ -296,12 +326,14 @@ impl WiXMsiBuilderValue {
         }))
     }
 
-    pub fn msi_filename(&self) -> String {
-        if let Some(filename) = &self.msi_filename {
+    pub fn msi_filename(&self, label: &str) -> Result<String, ValueError> {
+        let inner = self.inner(label)?;
+
+        Ok(if let Some(filename) = &inner.msi_filename {
             filename.clone()
         } else {
-            self.inner.default_msi_filename()
-        }
+            inner.builder.default_msi_filename()
+        })
     }
 
     pub fn to_file_content(

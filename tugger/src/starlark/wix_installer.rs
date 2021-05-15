@@ -235,9 +235,13 @@ impl WiXInstallerValue {
     }
 
     fn add_msi_builder(&mut self, builder: WiXMsiBuilderValue) -> ValueResult {
-        error_context("WiXInstaller.add_msi_builder()", || {
-            builder
-                .inner
+        const LABEL: &str = "WiXInstaller.add_msi_builder()";
+
+        let inner = builder.inner(LABEL)?;
+
+        error_context(LABEL, || {
+            inner
+                .builder
                 .add_to_installer_builder(&mut self.inner)
                 .context("adding WiXInstallerBuilder")
         })?;

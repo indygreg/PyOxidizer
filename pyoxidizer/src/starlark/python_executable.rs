@@ -1435,7 +1435,11 @@ mod tests {
 
         assert_eq!(builder.build_msis.len(), 1);
         let mut writer = xml::EventWriter::new(vec![]);
-        builder.build_msis[0].inner.write_xml(&mut writer)?;
+        builder.build_msis[0]
+            .inner("ignored")
+            .unwrap()
+            .builder
+            .write_xml(&mut writer)?;
 
         let xml = String::from_utf8(writer.into_inner())?;
         assert!(xml.find("Description=\"description\"").is_some());

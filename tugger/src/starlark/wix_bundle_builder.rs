@@ -119,8 +119,10 @@ impl<'a> WiXBundleBuilderValue<'a> {
         display_internal_ui: bool,
         install_condition: Value,
     ) -> ValueResult {
+        const LABEL: &str = "WiXBundleBuilder.add_wix_msi_builder()";
+
         let mut package = MsiPackage {
-            source_file: Some(builder.msi_filename().into()),
+            source_file: Some(builder.msi_filename(LABEL)?.into()),
             ..Default::default()
         };
 
