@@ -216,7 +216,7 @@ impl<'a> WiXBundleBuilderValue<'a> {
             self.materialize(type_values, call_stack, label, dest_dir.path())?;
 
         let entry = FileEntry {
-            data: installer_path.clone().into(),
+            data: installer_path.into(),
             executable: false,
         };
 
