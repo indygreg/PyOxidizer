@@ -7,8 +7,9 @@ use {
         env::{get_context, PyOxidizerEnvironmentContext},
         python_executable::PythonExecutableValue,
         python_module_source::PythonModuleSourceValue,
+        python_package_distribution_resource::PythonPackageDistributionResourceValue,
         python_package_resource::PythonPackageResourceValue,
-        python_resource::{PythonExtensionModuleValue, PythonPackageDistributionResourceValue},
+        python_resource::PythonExtensionModuleValue,
     },
     crate::{
         project_building::build_python_executable,
