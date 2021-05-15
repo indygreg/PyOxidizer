@@ -39,7 +39,6 @@ where
     })
 }
 
-#[derive(Clone)]
 pub struct AppleUniversalBinaryValue {
     pub filename: String,
     pub builder: Arc<Mutex<UniversalBinaryBuilder>>,
