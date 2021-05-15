@@ -63,6 +63,9 @@ Bug Fixes
   error when setting :py:attr:`PythonPackagingPolicy.include_test` to ``True``,
   without requiring a custom resource handling callback to disable bytecode
   generation. (#147).
+* Applications with hyphens (``-``) in their name now build properly on Windows.
+  Previously, there would be a cryptic build failure when running ``rc.exe``.
+  (#402)
 
 New Features
 ^^^^^^^^^^^^
