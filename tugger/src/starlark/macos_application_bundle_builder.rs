@@ -45,7 +45,7 @@ where
     })
 }
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct MacOsApplicationBundleBuilderValue {
     pub inner: MacOsApplicationBundleBuilder,
 }
