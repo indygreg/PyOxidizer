@@ -45,7 +45,7 @@ impl PythonExtensionModuleValue {
         &self,
         label: &str,
     ) -> Result<MutexGuard<PythonExtensionModuleWrapper>, ValueError> {
-        self.inner.lock().map_err(|e| {
+        self.inner.try_lock().map_err(|e| {
             ValueError::Runtime(RuntimeError {
                 code: "PYTHON_EXTENSION_MODULE",
                 message: format!("failed to acquire lock: {}", e),

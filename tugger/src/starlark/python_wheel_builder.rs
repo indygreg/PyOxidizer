@@ -145,7 +145,7 @@ impl TypedValue for PythonWheelBuilderValue {
 
 impl PythonWheelBuilderValue {
     fn inner(&self) -> Result<MutexGuard<'_, WheelBuilder>, ValueError> {
-        self.inner.lock().map_err(|e| {
+        self.inner.try_lock().map_err(|e| {
             ValueError::Runtime(RuntimeError {
                 code: "PYTHON_WHEEL_BUILDER",
                 message: format!("unable to obtain wheel builder lock: {:?}", e),

@@ -45,7 +45,7 @@ impl PythonPackagingPolicyValue {
     }
 
     pub fn inner(&self, label: &str) -> Result<MutexGuard<PythonPackagingPolicy>, ValueError> {
-        self.inner.lock().map_err(|e| {
+        self.inner.try_lock().map_err(|e| {
             ValueError::Runtime(RuntimeError {
                 code: "PYTHON_PACKAGING_POLICY",
                 message: format!("unable to obtain lock: {}", e),

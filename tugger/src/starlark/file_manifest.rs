@@ -107,7 +107,7 @@ impl FileManifestValue {
     }
 
     pub fn inner(&self, label: &str) -> Result<MutexGuard<FileManifest>, ValueError> {
-        self.inner.lock().map_err(|e| {
+        self.inner.try_lock().map_err(|e| {
             ValueError::Runtime(RuntimeError {
                 code: "TUGGER_FILE_MANIFEST",
                 message: format!("error obtaining lock: {}", e),

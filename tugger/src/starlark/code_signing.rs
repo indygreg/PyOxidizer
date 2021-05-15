@@ -117,7 +117,7 @@ impl From<SigningCertificate> for CodeSignerValue {
 
 impl CodeSignerValue {
     fn signer(&self, label: &str) -> Result<std::sync::MutexGuard<Signer>, ValueError> {
-        self.inner.lock().map_err(|e| {
+        self.inner.try_lock().map_err(|e| {
             ValueError::Runtime(RuntimeError {
                 code: "TUGGER_CODE_SIGNING",
                 message: format!("error obtaining signer lock: {:?}", e),

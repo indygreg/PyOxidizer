@@ -218,7 +218,7 @@ impl FileContentValue {
     }
 
     pub fn inner(&self, label: &str) -> Result<MutexGuard<FileContentWrapper>, ValueError> {
-        self.inner.lock().map_err(|e| {
+        self.inner.try_lock().map_err(|e| {
             ValueError::Runtime(RuntimeError {
                 code: "TUGGER_FILE_CONTENT",
                 message: format!("error obtaining lock: {}", e),

@@ -147,7 +147,7 @@ impl WiXMsiBuilderValue {
     }
 
     pub fn inner(&self, label: &str) -> Result<MutexGuard<WiXMsiBuilderWrapper>, ValueError> {
-        self.inner.lock().map_err(|e| {
+        self.inner.try_lock().map_err(|e| {
             ValueError::Runtime(RuntimeError {
                 code: "TUGGER_WIX_MSI_BUILDER",
                 message: format!("error obtaining lock: {}", e),

@@ -83,7 +83,7 @@ impl AppleUniversalBinaryValue {
             };
 
             self.builder
-                .lock()
+                .try_lock()
                 .map_err(|e| anyhow!("could not acquire lock: {}", e))?
                 .add_binary(
                     std::fs::read(&path).with_context(|| format!("reading {}", path.display()))?,
@@ -103,7 +103,7 @@ impl AppleUniversalBinaryValue {
 
         error_context(LABEL, || {
             self.builder
-                .lock()
+                .try_lock()
                 .map_err(|e| anyhow!("could not acquire lock: {}", e))?
                 .add_binary(
                     inner
@@ -127,7 +127,7 @@ impl AppleUniversalBinaryValue {
             let mut data = Vec::<u8>::new();
 
             self.builder
-                .lock()
+                .try_lock()
                 .map_err(|e| anyhow!("could not acquire lock: {}", e))?
                 .write(&mut data)
                 .context("writing universal binary")?;

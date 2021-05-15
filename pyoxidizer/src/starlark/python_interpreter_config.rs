@@ -124,7 +124,7 @@ impl PythonInterpreterConfigValue {
         &self,
         label: &str,
     ) -> Result<MutexGuard<PyembedPythonInterpreterConfig>, ValueError> {
-        self.inner.lock().map_err(|e| {
+        self.inner.try_lock().map_err(|e| {
             ValueError::Runtime(RuntimeError {
                 code: "PYTHON_INTERPRETER_CONFIG",
                 message: format!("error obtaining lock: {}", e),

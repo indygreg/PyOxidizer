@@ -42,7 +42,7 @@ impl PythonModuleSourceValue {
     }
 
     pub fn inner(&self, label: &str) -> Result<MutexGuard<PythonModuleSourceWrapper>, ValueError> {
-        self.inner.lock().map_err(|e| {
+        self.inner.try_lock().map_err(|e| {
             ValueError::Runtime(RuntimeError {
                 code: "PYTHON_MODULE_SOURCE",
                 message: format!("failed to acquire lock: {}", e),

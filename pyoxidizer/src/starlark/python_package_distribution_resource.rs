@@ -48,7 +48,7 @@ impl PythonPackageDistributionResourceValue {
         &self,
         label: &str,
     ) -> Result<MutexGuard<PythonPackageDistributionResourceWrapper>, ValueError> {
-        self.inner.lock().map_err(|e| {
+        self.inner.try_lock().map_err(|e| {
             ValueError::Runtime(RuntimeError {
                 code: "PYTHON_PACKAGE_DISTRIBUTION_RESOURCE",
                 message: format!("failed to acquire lock: {}", e),

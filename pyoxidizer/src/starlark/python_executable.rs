@@ -144,7 +144,7 @@ impl PythonExecutableValue {
         &self,
         label: &str,
     ) -> Result<MutexGuard<Box<dyn PythonBinaryBuilder>>, ValueError> {
-        self.exe.lock().map_err(|e| {
+        self.exe.try_lock().map_err(|e| {
             ValueError::Runtime(RuntimeError {
                 code: "PYTHON_EXECUTABLE",
                 message: format!("failed to acquire lock: {}", e),
