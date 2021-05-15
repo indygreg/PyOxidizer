@@ -3,7 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    crate::starlark::file_content::FileContentValue,
+    crate::starlark::file_content::{FileContentValue, FileContentWrapper},
     anyhow::{anyhow, Context},
     python_packaging::wheel_builder::WheelBuilder,
     slog::warn,
@@ -172,6 +172,7 @@ impl PythonWheelBuilderValue {
         let directory = optional_str_arg("directory", &directory)?;
 
         let mut inner = self.inner()?;
+        let content_inner = content.inner(LABEL)?;
 
         error_context(LABEL, || {
             if path.is_some() && directory.is_some() {
@@ -183,12 +184,12 @@ impl PythonWheelBuilderValue {
             let path = if let Some(path) = path {
                 PathBuf::from(path)
             } else if let Some(directory) = directory {
-                PathBuf::from(directory).join(&content.filename)
+                PathBuf::from(directory).join(&content_inner.filename)
             } else {
-                PathBuf::from(&content.filename)
+                PathBuf::from(&content_inner.filename)
             };
 
-            inner.add_file_dist_info(path, content.content)
+            inner.add_file_dist_info(path, content_inner.content.clone())
         })?;
 
         Ok(Value::new(NoneType::None))
@@ -207,6 +208,7 @@ impl PythonWheelBuilderValue {
         let directory = optional_str_arg("directory", &directory)?;
 
         let mut inner = self.inner()?;
+        let content_inner = content.inner(LABEL)?;
 
         error_context(LABEL, || {
             if path.is_some() && directory.is_some() {
@@ -218,12 +220,12 @@ impl PythonWheelBuilderValue {
             let path = if let Some(path) = path {
                 PathBuf::from(path)
             } else if let Some(directory) = directory {
-                PathBuf::from(directory).join(&content.filename)
+                PathBuf::from(directory).join(&content_inner.filename)
             } else {
-                PathBuf::from(&content.filename)
+                PathBuf::from(&content_inner.filename)
             };
 
-            inner.add_file_data(destination, path, content.content)
+            inner.add_file_data(destination, path, content_inner.content.clone())
         })?;
 
         Ok(Value::new(NoneType::None))
@@ -241,6 +243,7 @@ impl PythonWheelBuilderValue {
         let directory = optional_str_arg("directory", &directory)?;
 
         let mut inner = self.inner()?;
+        let content_inner = content.inner(LABEL)?;
 
         error_context(LABEL, || {
             if path.is_some() && directory.is_some() {
@@ -252,12 +255,12 @@ impl PythonWheelBuilderValue {
             let path = if let Some(path) = path {
                 PathBuf::from(path)
             } else if let Some(directory) = directory {
-                PathBuf::from(directory).join(&content.filename)
+                PathBuf::from(directory).join(&content_inner.filename)
             } else {
-                PathBuf::from(&content.filename)
+                PathBuf::from(&content_inner.filename)
             };
 
-            inner.add_file(path, content.content)
+            inner.add_file(path, content_inner.content.clone())
         })?;
 
         Ok(Value::new(NoneType::None))
@@ -277,13 +280,14 @@ impl PythonWheelBuilderValue {
             Ok(cursor.into_inner())
         })?;
 
-        Ok(Value::new(FileContentValue {
+        Ok(FileContentWrapper {
             content: FileEntry {
                 data: data.into(),
                 executable: false,
             },
             filename: inner.wheel_file_name(),
-        }))
+        }
+        .into())
     }
 
     pub fn write_to_directory(&self, type_values: &TypeValues, path: String) -> ValueResult {
@@ -458,7 +462,8 @@ mod tests {
 
         assert_eq!(f.get_type(), "FileContent");
         let value = f.downcast_ref::<FileContentValue>().unwrap();
-        assert_eq!(value.filename, "package-0.1-py3-none-any.whl");
+        let inner = value.inner("ignored").unwrap();
+        assert_eq!(inner.filename, "package-0.1-py3-none-any.whl");
 
         Ok(())
     }

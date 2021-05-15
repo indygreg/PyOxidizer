@@ -8,7 +8,7 @@ use {
             handle_file_manifest_signable_events, handle_signable_event, SigningAction,
             SigningContext,
         },
-        file_content::FileContentValue,
+        file_content::FileContentWrapper,
         file_manifest::FileManifestValue,
         wix_msi_builder::WiXMsiBuilderValue,
     },
@@ -442,10 +442,11 @@ impl WiXInstallerValue {
 
         let (entry, filename) = self.materialize_temp_dir(type_values, call_stack, LABEL)?;
 
-        Ok(Value::new(FileContentValue {
+        Ok(FileContentWrapper {
             content: entry,
             filename,
-        }))
+        }
+        .into())
     }
 
     fn write_to_directory(
@@ -569,9 +570,9 @@ starlark_module! { wix_installer_module =>
 
 #[cfg(test)]
 mod tests {
-    #[cfg(windows)]
-    use tugger_common::testutil::*;
     use {super::*, crate::starlark::testutil::*, anyhow::Result};
+    #[cfg(windows)]
+    use {crate::starlark::file_content::FileContentValue, tugger_common::testutil::*};
 
     #[test]
     fn test_constructor() -> Result<()> {

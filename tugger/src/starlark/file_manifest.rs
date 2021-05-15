@@ -5,7 +5,7 @@
 use {
     crate::starlark::{
         code_signing::{handle_signable_event, SigningAction, SigningContext},
-        file_content::FileContentValue,
+        file_content::{FileContentValue, FileContentWrapper},
     },
     anyhow::anyhow,
     slog::warn,
@@ -189,6 +189,8 @@ impl FileManifestValue {
         let path = optional_str_arg("path", &path)?;
         let directory = optional_str_arg("directory", &directory)?;
 
+        let inner = content.inner(LABEL)?;
+
         error_context(LABEL, || {
             if path.is_some() && directory.is_some() {
                 return Err(anyhow!(
@@ -199,13 +201,12 @@ impl FileManifestValue {
             let path = if let Some(path) = path {
                 PathBuf::from(path)
             } else if let Some(directory) = directory {
-                PathBuf::from(directory).join(&content.filename)
+                PathBuf::from(directory).join(&inner.filename)
             } else {
-                PathBuf::from(&content.filename)
+                PathBuf::from(&inner.filename)
             };
 
-            self.manifest
-                .add_file_entry(path, content.content.clone())?;
+            self.manifest.add_file_entry(path, inner.content.clone())?;
 
             Ok(())
         })?;
@@ -253,10 +254,11 @@ impl FileManifestValue {
         })?;
 
         if let Some(entry) = self.manifest.get(path) {
-            Ok(Value::new(FileContentValue {
+            Ok(FileContentWrapper {
                 content: entry.clone(),
                 filename,
-            }))
+            }
+            .into())
         } else {
             Ok(Value::new(NoneType::None))
         }
@@ -327,10 +329,11 @@ impl FileManifestValue {
         })?;
 
         if let Some(entry) = self.manifest.remove(path) {
-            Ok(Value::new(FileContentValue {
+            Ok(FileContentWrapper {
                 content: entry,
                 filename,
-            }))
+            }
+            .into())
         } else {
             Ok(Value::new(NoneType::None))
         }

@@ -19,7 +19,11 @@ use {
     starlark_dialect_build_targets::{
         get_context_value, optional_bool_arg, optional_str_arg, EnvironmentContext,
     },
-    std::{convert::TryFrom, path::PathBuf},
+    std::{
+        convert::TryFrom,
+        path::PathBuf,
+        sync::{Arc, Mutex, MutexGuard},
+    },
     tugger_file_manifest::{FileData, FileEntry},
 };
 
@@ -48,11 +52,24 @@ fn validate_filename(label: &str, v: &str) -> Result<(), ValueError> {
     }
 }
 
+#[derive(Debug)]
+pub struct FileContentWrapper {
+    pub content: FileEntry,
+    pub filename: String,
+}
+
+impl From<FileContentWrapper> for Value {
+    fn from(v: FileContentWrapper) -> Self {
+        Value::new(FileContentValue {
+            inner: Arc::new(Mutex::new(v)),
+        })
+    }
+}
+
 // TODO merge this into `FileValue`?
 #[derive(Clone, Debug)]
 pub struct FileContentValue {
-    pub content: FileEntry,
-    pub filename: String,
+    inner: Arc<Mutex<FileContentWrapper>>,
 }
 
 impl TypedValue for FileContentValue {
@@ -64,9 +81,11 @@ impl TypedValue for FileContentValue {
     }
 
     fn get_attr(&self, attribute: &str) -> ValueResult {
+        let inner = self.inner(&format!("{}.{}", Self::TYPE, attribute))?;
+
         Ok(match attribute {
-            "executable" => Value::from(self.content.executable),
-            "filename" => Value::from(self.filename.as_str()),
+            "executable" => Value::from(inner.content.executable),
+            "filename" => Value::from(inner.filename.as_str()),
             _ => {
                 return Err(ValueError::OperationNotSupported {
                     op: UnsupportedOperation::GetAttr(attribute.to_string()),
@@ -82,13 +101,15 @@ impl TypedValue for FileContentValue {
     }
 
     fn set_attr(&mut self, attribute: &str, value: Value) -> Result<(), ValueError> {
+        let mut inner = self.inner(&format!("{}.{}", Self::TYPE, attribute))?;
+
         match attribute {
             "executable" => {
-                self.content.executable = value.to_bool();
+                inner.content.executable = value.to_bool();
             }
             "filename" => {
                 validate_filename("FileContent.filename = ", &value.to_string())?;
-                self.filename = value.to_string();
+                inner.filename = value.to_string();
             }
             attr => {
                 return Err(ValueError::OperationNotSupported {
@@ -164,7 +185,7 @@ impl FileContentValue {
                     file_entry.executable = executable;
                 }
 
-                Ok(FileContentValue {
+                Ok(FileContentWrapper {
                     content: file_entry,
                     filename,
                 })
@@ -180,7 +201,7 @@ impl FileContentValue {
                     executable: executable.unwrap_or(false),
                 };
 
-                Ok(FileContentValue {
+                Ok(FileContentWrapper {
                     content: file_entry,
                     filename,
                 })
@@ -191,7 +212,19 @@ impl FileContentValue {
             }
         })?;
 
-        Ok(Value::new(file_content))
+        Ok(Value::new(FileContentValue {
+            inner: Arc::new(Mutex::new(file_content)),
+        }))
+    }
+
+    pub fn inner(&self, label: &str) -> Result<MutexGuard<FileContentWrapper>, ValueError> {
+        self.inner.lock().map_err(|e| {
+            ValueError::Runtime(RuntimeError {
+                code: "TUGGER_FILE_CONTENT",
+                message: format!("error obtaining lock: {}", e),
+                label: label.to_string(),
+            })
+        })
     }
 
     pub fn write_to_directory(&self, type_values: &TypeValues, path: String) -> ValueResult {
@@ -202,10 +235,13 @@ impl FileContentValue {
             .downcast_ref::<EnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
 
-        let dest_path = context.resolve_path(path).join(&self.filename);
+        let inner = self.inner(LABEL)?;
+
+        let dest_path = context.resolve_path(path).join(&inner.filename);
 
         error_context(LABEL, || {
-            self.content
+            inner
+                .content
                 .write_to_path(&dest_path)
                 .with_context(|| format!("writing {}", dest_path.display()))?;
 
@@ -298,9 +334,11 @@ mod tests {
         assert_eq!(raw.get_type(), FileContentValue::TYPE);
         let v = raw.downcast_ref::<FileContentValue>().unwrap();
 
-        assert_eq!(v.filename, "file");
-        assert_eq!(v.content.executable, false);
-        assert_eq!(v.content.data.resolve()?, b"foo".to_vec());
+        let inner = v.inner("ignored").unwrap();
+
+        assert_eq!(inner.filename, "file");
+        assert_eq!(inner.content.executable, false);
+        assert_eq!(inner.content.data.resolve()?, b"foo".to_vec());
 
         Ok(())
     }

@@ -5,7 +5,7 @@
 use {
     crate::starlark::{
         code_signing::{handle_signable_event, SigningAction, SigningContext},
-        file_content::FileContentValue,
+        file_content::FileContentWrapper,
         wix_msi_builder::WiXMsiBuilderValue,
     },
     anyhow::Context,
@@ -268,7 +268,7 @@ impl<'a> WiXBundleBuilderValue<'a> {
 
         let (content, filename) = self.materialize_temp_dir(type_values, call_stack, LABEL)?;
 
-        Ok(Value::new(FileContentValue { content, filename }))
+        Ok(FileContentWrapper { content, filename }.into())
     }
 
     pub fn write_to_directory(
@@ -351,9 +351,9 @@ starlark_module! { wix_bundle_builder_module =>
 
 #[cfg(test)]
 mod tests {
-    #[cfg(windows)]
-    use tugger_common::testutil::*;
     use {super::*, crate::starlark::testutil::*, anyhow::Result};
+    #[cfg(windows)]
+    use {crate::starlark::file_content::FileContentValue, tugger_common::testutil::*};
 
     #[test]
     fn test_new() -> Result<()> {

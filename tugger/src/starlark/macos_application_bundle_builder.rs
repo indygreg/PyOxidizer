@@ -91,17 +91,21 @@ impl MacOsApplicationBundleBuilderValue {
     }
 
     pub fn add_macos_file(&mut self, content: FileContentValue, path: Value) -> ValueResult {
+        const LABEL: &str = "MacOsApplicationBundleBuilder.add_macos_file()";
+
         let path = optional_str_arg("path", &path)?;
+
+        let inner = content.inner(LABEL)?;
 
         error_context("MacOsApplicationBundleBuilder.add_macos_file()", || {
             let path = if let Some(path) = path {
                 PathBuf::from(path)
             } else {
-                PathBuf::from(&content.filename)
+                PathBuf::from(&inner.filename)
             };
 
             self.inner
-                .add_file_macos(path, content.content)
+                .add_file_macos(path, inner.content.clone())
                 .context("adding macOS file")
         })?;
 
@@ -123,17 +127,21 @@ impl MacOsApplicationBundleBuilderValue {
     }
 
     pub fn add_resources_file(&mut self, content: FileContentValue, path: Value) -> ValueResult {
+        const LABEL: &str = "MacOsApplicationBundleBuilder.add_resources_file()";
+
         let path = optional_str_arg("path", &path)?;
 
-        error_context("MacOsApplicationBundleBuilder.add_resources_file()", || {
+        let inner = content.inner(LABEL)?;
+
+        error_context(LABEL, || {
             let path = if let Some(path) = path {
                 PathBuf::from(path)
             } else {
-                PathBuf::from(&content.filename)
+                PathBuf::from(&inner.filename)
             };
 
             self.inner
-                .add_file_resources(path, content.content)
+                .add_file_resources(path, inner.content.clone())
                 .context("adding resources file")
         })?;
 

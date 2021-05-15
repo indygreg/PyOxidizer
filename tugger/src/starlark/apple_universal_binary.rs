@@ -3,7 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    crate::starlark::file_content::FileContentValue,
+    crate::starlark::file_content::{FileContentValue, FileContentWrapper},
     anyhow::{anyhow, Context},
     starlark::{
         environment::TypeValues,
@@ -99,12 +99,14 @@ impl AppleUniversalBinaryValue {
     pub fn add_file(&mut self, content: FileContentValue) -> ValueResult {
         const LABEL: &str = "AppleUniversalBinary.add_file()";
 
+        let inner = content.inner(LABEL)?;
+
         error_context(LABEL, || {
             self.builder
                 .lock()
                 .map_err(|e| anyhow!("could not acquire lock: {}", e))?
                 .add_binary(
-                    content
+                    inner
                         .content
                         .data
                         .resolve()
@@ -136,10 +138,11 @@ impl AppleUniversalBinaryValue {
             })
         })?;
 
-        Ok(Value::new(FileContentValue {
+        Ok(FileContentWrapper {
             content: v,
             filename: self.filename.clone(),
-        }))
+        }
+        .into())
     }
 
     pub fn write_to_directory(&self, type_values: &TypeValues, path: String) -> ValueResult {
@@ -156,9 +159,10 @@ impl AppleUniversalBinaryValue {
             .ok_or(ValueError::IncorrectParameterType)?;
 
         let dest_path = context.resolve_path(path).join(&self.filename);
+        let inner = file_content.inner(LABEL)?;
 
         error_context(LABEL, || {
-            file_content
+            inner
                 .content
                 .write_to_path(&dest_path)
                 .with_context(|| format!("writing {}", dest_path.display()))?;
