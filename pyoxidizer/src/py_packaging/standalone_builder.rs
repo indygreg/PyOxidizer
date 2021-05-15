@@ -1051,7 +1051,7 @@ pub mod tests {
     use {
         super::*,
         crate::{
-            environment::default_target_triple,
+            environment::{default_target_triple, MACOS_TARGET_TRIPLES},
             py_packaging::distribution::{BinaryLibpythonLinkMode, DistributionFlavor},
             python_distributions::PYTHON_DISTRIBUTIONS,
             testutil::*,
@@ -1067,9 +1067,6 @@ pub mod tests {
 
     pub static WINDOWS_TARGET_TRIPLES: Lazy<Vec<&'static str>> =
         Lazy::new(|| vec!["i686-pc-windows-msvc", "x86_64-pc-windows-msvc"]);
-
-    pub static MACOS_TARGET_TRIPLES: [&'static str; 2] =
-        ["aarch64-apple-darwin", "x86_64-apple-darwin"];
 
     /// An extension module represented by a shared library file.
     pub static EXTENSION_MODULE_SHARED_LIBRARY_ONLY: Lazy<PythonExtensionModule> =
