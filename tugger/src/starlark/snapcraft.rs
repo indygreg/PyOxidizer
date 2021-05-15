@@ -20,7 +20,13 @@ use {
         get_context_value, optional_bool_arg, EnvironmentContext, ResolvedTarget,
         ResolvedTargetValue, RunMode, ToOptional, TryToOptional,
     },
-    std::{borrow::Cow, collections::HashMap, convert::TryFrom},
+    std::{
+        borrow::Cow,
+        collections::HashMap,
+        convert::TryFrom,
+        ops::Deref,
+        sync::{Arc, Mutex, MutexGuard},
+    },
     tugger_snapcraft::{
         Adapter, Architecture, Architectures, BuildAttribute, Confinement, Daemon, Grade,
         RestartCondition, SnapApp, SnapPart, Snapcraft, SnapcraftBuilder, SnapcraftInvocation,
@@ -542,7 +548,7 @@ impl TypedValue for SnapPartValue<'static> {
 
 #[derive(Clone, Debug)]
 pub struct SnapValue<'a> {
-    pub inner: Snapcraft<'a>,
+    pub inner: Arc<Mutex<Snapcraft<'a>>>,
 }
 
 impl TypedValue for SnapValue<'static> {
@@ -554,48 +560,50 @@ impl TypedValue for SnapValue<'static> {
     }
 
     fn set_attr(&mut self, attribute: &str, value: Value) -> Result<(), ValueError> {
+        let mut inner = self.inner(&format!("{}.{}", Self::TYPE, attribute))?;
+
         match attribute {
             "adopt_info" => {
-                self.inner.adopt_info = value.to_optional();
+                inner.adopt_info = value.to_optional();
             }
             "apps" => {
-                self.inner.apps = value_to_apps(value)?;
+                inner.apps = value_to_apps(value)?;
             }
             "architectures" => {
-                self.inner.architectures = value_to_optional_architectures(value)?;
+                inner.architectures = value_to_optional_architectures(value)?;
             }
             "assumes" => {
-                self.inner.assumes = optional_str_vec_to_vec(value)?;
+                inner.assumes = optional_str_vec_to_vec(value)?;
             }
             "base" => {
-                self.inner.base = value.to_optional();
+                inner.base = value.to_optional();
             }
             "confinement" => {
-                self.inner.confinement = value_to_optional_confinement(value)?;
+                inner.confinement = value_to_optional_confinement(value)?;
             }
             "description" => {
-                self.inner.description = Cow::Owned(value.to_string());
+                inner.description = Cow::Owned(value.to_string());
             }
             "grade" => {
-                self.inner.grade = value_to_optional_grade(value)?;
+                inner.grade = value_to_optional_grade(value)?;
             }
             "icon" => {
-                self.inner.icon = value.to_optional();
+                inner.icon = value.to_optional();
             }
             "license" => {
-                self.inner.license = value.to_optional();
+                inner.license = value.to_optional();
             }
             "name" => {
-                self.inner.name = Cow::Owned(value.to_string());
+                inner.name = Cow::Owned(value.to_string());
             }
             "passthrough" => {
-                self.inner.passthrough = optional_str_hashmap_to_hashmap(value)?;
+                inner.passthrough = optional_str_hashmap_to_hashmap(value)?;
             }
             "parts" => {
-                self.inner.parts = value_to_parts(value)?;
+                inner.parts = value_to_parts(value)?;
             }
             "plugs" => {
-                self.inner.plugs = match value.try_to_optional()? {
+                inner.plugs = match value.try_to_optional()? {
                     Some(value) => value,
                     None => {
                         return Err(ValueError::from(RuntimeError {
@@ -608,7 +616,7 @@ impl TypedValue for SnapValue<'static> {
                 }
             }
             "slots" => {
-                self.inner.slots = match value.try_to_optional()? {
+                inner.slots = match value.try_to_optional()? {
                     Some(value) => value,
                     None => {
                         return Err(ValueError::from(RuntimeError {
@@ -621,16 +629,16 @@ impl TypedValue for SnapValue<'static> {
                 }
             }
             "summary" => {
-                self.inner.summary = Cow::Owned(value.to_string());
+                inner.summary = Cow::Owned(value.to_string());
             }
             "title" => {
-                self.inner.title = value.to_optional();
+                inner.title = value.to_optional();
             }
             "type" => {
-                self.inner.snap_type = value_to_optional_type(value)?;
+                inner.snap_type = value_to_optional_type(value)?;
             }
             "version" => {
-                self.inner.version = Cow::Owned(value.to_string());
+                inner.version = Cow::Owned(value.to_string());
             }
             attr => {
                 return Err(ValueError::OperationNotSupported {
@@ -648,13 +656,23 @@ impl TypedValue for SnapValue<'static> {
 impl<'a> SnapValue<'a> {
     fn new_from_args(name: String, version: String, summary: String, description: String) -> Self {
         SnapValue {
-            inner: Snapcraft::new(
+            inner: Arc::new(Mutex::new(Snapcraft::new(
                 Cow::Owned(name),
                 Cow::Owned(version),
                 Cow::Owned(summary),
                 Cow::Owned(description),
-            ),
+            ))),
         }
+    }
+
+    pub fn inner(&self, label: &str) -> Result<MutexGuard<Snapcraft<'a>>, ValueError> {
+        self.inner.lock().map_err(|e| {
+            ValueError::Runtime(RuntimeError {
+                code: "TUGGER_SNAPCRAFT",
+                message: format!("error obtaining lock: {}", e),
+                label: label.to_string(),
+            })
+        })
     }
 }
 
@@ -674,10 +692,12 @@ impl TypedValue for SnapcraftBuilderValue<'static> {
 }
 
 impl SnapcraftBuilderValue<'static> {
-    pub fn new_from_snap_value(value: SnapValue<'static>) -> Self {
-        let inner = SnapcraftBuilder::new(value.inner.clone());
+    pub fn new_from_snap_value(label: &str, value: SnapValue<'static>) -> ValueResult {
+        let inner = value.inner(label)?.deref().clone();
 
-        SnapcraftBuilderValue { inner }
+        let inner = SnapcraftBuilder::new(inner);
+
+        Ok(Value::new(SnapcraftBuilderValue { inner }))
     }
 
     pub fn add_invocation(&mut self, args: Vec<String>, purge_build: Value) -> ValueResult {
@@ -757,12 +777,12 @@ starlark_module! { snapcraft_module =>
     }
 
     Snap.to_builder(this: SnapValue) {
-        Ok(Value::new(SnapcraftBuilderValue::new_from_snap_value(this)))
+        SnapcraftBuilderValue::new_from_snap_value("Snap.to_builder()", this)
     }
 
     #[allow(non_snake_case)]
     SnapcraftBuilder(snap: SnapValue) {
-        Ok(Value::new(SnapcraftBuilderValue::new_from_snap_value(snap)))
+        SnapcraftBuilderValue::new_from_snap_value("SnapcraftBuilder()", snap)
     }
 
     SnapcraftBuilder.add_invocation(this, args: Vec<String>, purge_build = NoneType::None) {
@@ -997,7 +1017,10 @@ mod tests {
         expected.title = Some("title".into());
         expected.snap_type = Some(Type::Kernel);
 
-        assert_eq!(snap.inner, expected);
+        {
+            let inner = snap.inner("ignored").unwrap();
+            assert_eq!(*inner, expected);
+        }
 
         let builder = env.eval("builder = snap.to_builder(); builder")?;
         assert_eq!(builder.get_type(), "SnapcraftBuilder");
