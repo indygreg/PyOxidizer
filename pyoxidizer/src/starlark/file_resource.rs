@@ -6,9 +6,10 @@ use {
     super::{
         env::{get_context, PyOxidizerEnvironmentContext},
         python_executable::PythonExecutableValue,
+        python_module_source::PythonModuleSourceValue,
         python_resource::{
-            PythonExtensionModuleValue, PythonModuleSourceValue,
-            PythonPackageDistributionResourceValue, PythonPackageResourceValue,
+            PythonExtensionModuleValue, PythonPackageDistributionResourceValue,
+            PythonPackageResourceValue,
         },
     },
     crate::{

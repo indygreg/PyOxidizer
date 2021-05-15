@@ -480,14 +480,16 @@ starlark_module! { python_distribution_module =>
 #[cfg(test)]
 mod tests {
     use {
-        super::super::python_resource::{
-            PythonExtensionModuleValue, PythonModuleSourceValue, PythonPackageResourceValue,
-        },
-        super::super::testutil::*,
         super::*,
         crate::{
-            environment::default_target_triple, py_packaging::distribution::DistributionFlavor,
+            environment::default_target_triple,
+            py_packaging::distribution::DistributionFlavor,
             python_distributions::PYTHON_DISTRIBUTIONS,
+            starlark::{
+                python_module_source::PythonModuleSourceValue,
+                python_resource::{PythonExtensionModuleValue, PythonPackageResourceValue},
+                testutil::*,
+            },
         },
     };
 
