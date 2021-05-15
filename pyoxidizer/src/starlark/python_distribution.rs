@@ -487,8 +487,8 @@ mod tests {
             python_distributions::PYTHON_DISTRIBUTIONS,
             starlark::{
                 python_module_source::PythonModuleSourceValue,
-                python_resource::{PythonExtensionModuleValue, PythonPackageResourceValue},
-                testutil::*,
+                python_package_resource::PythonPackageResourceValue,
+                python_resource::PythonExtensionModuleValue, testutil::*,
             },
         },
     };
