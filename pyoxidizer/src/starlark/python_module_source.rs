@@ -12,35 +12,72 @@ use {
         error::{RuntimeError, UnsupportedOperation, ValueError},
         {Mutable, TypedValue, Value, ValueResult},
     },
+    std::sync::{Arc, Mutex, MutexGuard},
 };
+
+#[derive(Debug)]
+pub struct PythonModuleSourceWrapper {
+    pub m: PythonModuleSource,
+    pub add_context: Option<PythonResourceAddCollectionContext>,
+}
 
 /// Starlark value wrapper for `PythonModuleSource`.
 #[derive(Debug, Clone)]
 pub struct PythonModuleSourceValue {
-    pub inner: PythonModuleSource,
-    pub add_context: Option<PythonResourceAddCollectionContext>,
+    inner: Arc<Mutex<PythonModuleSourceWrapper>>,
+    name: String,
 }
 
 impl PythonModuleSourceValue {
     pub fn new(module: PythonModuleSource) -> Self {
+        let name = module.name.clone();
+
         Self {
-            inner: module,
-            add_context: None,
+            inner: Arc::new(Mutex::new(PythonModuleSourceWrapper {
+                m: module,
+                add_context: None,
+            })),
+            name,
         }
+    }
+
+    pub fn inner(&self, label: &str) -> Result<MutexGuard<PythonModuleSourceWrapper>, ValueError> {
+        self.inner.lock().map_err(|e| {
+            ValueError::Runtime(RuntimeError {
+                code: "PYTHON_MODULE_SOURCE",
+                message: format!("failed to acquire lock: {}", e),
+                label: label.to_string(),
+            })
+        })
     }
 }
 
 impl ResourceCollectionContext for PythonModuleSourceValue {
-    fn add_collection_context(&self) -> &Option<PythonResourceAddCollectionContext> {
-        &self.add_context
+    fn add_collection_context(
+        &self,
+    ) -> Result<Option<PythonResourceAddCollectionContext>, ValueError> {
+        Ok(self
+            .inner("PythonModuleSource.add_collection_context()")?
+            .add_context
+            .clone())
     }
 
-    fn add_collection_context_mut(&mut self) -> &mut Option<PythonResourceAddCollectionContext> {
-        &mut self.add_context
+    fn replace_add_collection_context(
+        &mut self,
+        context: PythonResourceAddCollectionContext,
+    ) -> Result<Option<PythonResourceAddCollectionContext>, ValueError> {
+        Ok(self
+            .inner("PythonModuleSource.replace_add_collection_context()")?
+            .add_context
+            .replace(context))
     }
 
-    fn as_python_resource(&self) -> PythonResource<'_> {
-        PythonResource::from(&self.inner)
+    fn as_python_resource(&self) -> Result<PythonResource<'_>, ValueError> {
+        Ok(PythonResource::from(
+            self.inner("PythonModuleSource.as_python_resource()")?
+                .m
+                .clone(),
+        ))
     }
 }
 
@@ -53,7 +90,7 @@ impl TypedValue for PythonModuleSourceValue {
     }
 
     fn to_str(&self) -> String {
-        format!("{}<name={}>", Self::TYPE, self.inner.name)
+        format!("{}<name={}>", Self::TYPE, self.name)
     }
 
     fn to_repr(&self) -> String {
@@ -61,11 +98,13 @@ impl TypedValue for PythonModuleSourceValue {
     }
 
     fn get_attr(&self, attribute: &str) -> ValueResult {
+        let inner = self.inner(&format!("PythonModuleSource.{}", attribute))?;
+
         let v = match attribute {
-            "is_stdlib" => Value::from(self.inner.is_stdlib),
-            "name" => Value::new(self.inner.name.clone()),
+            "is_stdlib" => Value::from(inner.m.is_stdlib),
+            "name" => Value::new(inner.m.name.clone()),
             "source" => {
-                let source = self.inner.source.resolve().map_err(|e| {
+                let source = inner.m.source.resolve().map_err(|e| {
                     ValueError::from(RuntimeError {
                         code: "PYOXIDIZER_SOURCE_ERROR",
                         message: format!("error resolving source code: {}", e),
@@ -83,8 +122,10 @@ impl TypedValue for PythonModuleSourceValue {
 
                 Value::new(source)
             }
-            "is_package" => Value::new(self.inner.is_package),
+            "is_package" => Value::new(inner.m.is_package),
             attr => {
+                drop(inner);
+
                 return if self.add_collection_context_attrs().contains(&attr) {
                     self.get_attr_add_collection_context(attr)
                 } else {

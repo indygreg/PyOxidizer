@@ -9,38 +9,81 @@ use {
         resource_collection::PythonResourceAddCollectionContext,
     },
     starlark::values::{
-        error::{UnsupportedOperation, ValueError},
+        error::{RuntimeError, UnsupportedOperation, ValueError},
         {Mutable, TypedValue, Value, ValueResult},
     },
+    std::sync::{Arc, Mutex, MutexGuard},
 };
+
+#[derive(Debug)]
+pub struct PythonPackageDistributionResourceWrapper {
+    pub r: PythonPackageDistributionResource,
+    pub add_context: Option<PythonResourceAddCollectionContext>,
+}
 
 /// Starlark `Value` wrapper for `PythonPackageDistributionResource`.
 #[derive(Debug, Clone)]
 pub struct PythonPackageDistributionResourceValue {
-    pub inner: PythonPackageDistributionResource,
-    pub add_context: Option<PythonResourceAddCollectionContext>,
+    inner: Arc<Mutex<PythonPackageDistributionResourceWrapper>>,
+    package: String,
+    name: String,
 }
 
 impl PythonPackageDistributionResourceValue {
     pub fn new(resource: PythonPackageDistributionResource) -> Self {
+        let package = resource.package.clone();
+        let name = resource.name.clone();
+
         Self {
-            inner: resource,
-            add_context: None,
+            inner: Arc::new(Mutex::new(PythonPackageDistributionResourceWrapper {
+                r: resource,
+                add_context: None,
+            })),
+            package,
+            name,
         }
+    }
+
+    pub fn inner(
+        &self,
+        label: &str,
+    ) -> Result<MutexGuard<PythonPackageDistributionResourceWrapper>, ValueError> {
+        self.inner.lock().map_err(|e| {
+            ValueError::Runtime(RuntimeError {
+                code: "PYTHON_PACKAGE_DISTRIBUTION_RESOURCE",
+                message: format!("failed to acquire lock: {}", e),
+                label: label.to_string(),
+            })
+        })
     }
 }
 
 impl ResourceCollectionContext for PythonPackageDistributionResourceValue {
-    fn add_collection_context(&self) -> &Option<PythonResourceAddCollectionContext> {
-        &self.add_context
+    fn add_collection_context(
+        &self,
+    ) -> Result<Option<PythonResourceAddCollectionContext>, ValueError> {
+        Ok(self
+            .inner("PythonPackageDistributionResource.add_collection_context()")?
+            .add_context
+            .clone())
     }
 
-    fn add_collection_context_mut(&mut self) -> &mut Option<PythonResourceAddCollectionContext> {
-        &mut self.add_context
+    fn replace_add_collection_context(
+        &mut self,
+        context: PythonResourceAddCollectionContext,
+    ) -> Result<Option<PythonResourceAddCollectionContext>, ValueError> {
+        Ok(self
+            .inner("PythonPackageDistributionResource.replace_add_collection_context()")?
+            .add_context
+            .replace(context))
     }
 
-    fn as_python_resource(&self) -> PythonResource<'_> {
-        PythonResource::from(&self.inner)
+    fn as_python_resource(&self) -> Result<PythonResource<'_>, ValueError> {
+        Ok(PythonResource::from(
+            self.inner("PythonPackageDistributionResource.as_python_resource()")?
+                .r
+                .clone(),
+        ))
     }
 }
 
@@ -56,8 +99,8 @@ impl TypedValue for PythonPackageDistributionResourceValue {
         format!(
             "{}<package={}, name={}>",
             Self::TYPE,
-            self.inner.package,
-            self.inner.name
+            self.package,
+            self.name
         )
     }
 
@@ -70,12 +113,16 @@ impl TypedValue for PythonPackageDistributionResourceValue {
     }
 
     fn get_attr(&self, attribute: &str) -> ValueResult {
+        let inner = self.inner(&format!("PythonPackageDistributionResource.{}", attribute))?;
+
         let v = match attribute {
             "is_stdlib" => Value::from(false),
-            "package" => Value::new(self.inner.package.clone()),
-            "name" => Value::new(self.inner.name.clone()),
+            "package" => Value::new(inner.r.package.clone()),
+            "name" => Value::new(inner.r.name.clone()),
             // TODO expose raw data
             attr => {
+                drop(inner);
+
                 return if self.add_collection_context_attrs().contains(&attr) {
                     self.get_attr_add_collection_context(attr)
                 } else {

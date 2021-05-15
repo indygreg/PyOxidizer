@@ -9,38 +9,78 @@ use {
         resource_collection::PythonResourceAddCollectionContext,
     },
     starlark::values::{
-        error::{UnsupportedOperation, ValueError},
+        error::{RuntimeError, UnsupportedOperation, ValueError},
         {Mutable, TypedValue, Value, ValueResult},
     },
+    std::sync::{Arc, Mutex, MutexGuard},
 };
+
+#[derive(Debug)]
+pub struct PythonExtensionModuleWrapper {
+    pub em: PythonExtensionModule,
+    pub add_context: Option<PythonResourceAddCollectionContext>,
+}
 
 /// Starlark `Value` wrapper for `PythonExtensionModule`.
 #[derive(Debug, Clone)]
 pub struct PythonExtensionModuleValue {
-    pub inner: PythonExtensionModule,
-    pub add_context: Option<PythonResourceAddCollectionContext>,
+    inner: Arc<Mutex<PythonExtensionModuleWrapper>>,
+    name: String,
 }
 
 impl PythonExtensionModuleValue {
     pub fn new(em: PythonExtensionModule) -> Self {
+        let name = em.name.clone();
+
         Self {
-            inner: em,
-            add_context: None,
+            inner: Arc::new(Mutex::new(PythonExtensionModuleWrapper {
+                em,
+                add_context: None,
+            })),
+            name,
         }
+    }
+
+    pub fn inner(
+        &self,
+        label: &str,
+    ) -> Result<MutexGuard<PythonExtensionModuleWrapper>, ValueError> {
+        self.inner.lock().map_err(|e| {
+            ValueError::Runtime(RuntimeError {
+                code: "PYTHON_EXTENSION_MODULE",
+                message: format!("failed to acquire lock: {}", e),
+                label: label.to_string(),
+            })
+        })
     }
 }
 
 impl ResourceCollectionContext for PythonExtensionModuleValue {
-    fn add_collection_context(&self) -> &Option<PythonResourceAddCollectionContext> {
-        &self.add_context
+    fn add_collection_context(
+        &self,
+    ) -> Result<Option<PythonResourceAddCollectionContext>, ValueError> {
+        Ok(self
+            .inner("PythonExtensionModule.add_collection_context()")?
+            .add_context
+            .clone())
     }
 
-    fn add_collection_context_mut(&mut self) -> &mut Option<PythonResourceAddCollectionContext> {
-        &mut self.add_context
+    fn replace_add_collection_context(
+        &mut self,
+        context: PythonResourceAddCollectionContext,
+    ) -> Result<Option<PythonResourceAddCollectionContext>, ValueError> {
+        Ok(self
+            .inner("PythonExtensionModule.replace_add_collection_context()")?
+            .add_context
+            .replace(context))
     }
 
-    fn as_python_resource(&self) -> PythonResource<'_> {
-        PythonResource::from(&self.inner)
+    fn as_python_resource(&self) -> Result<PythonResource<'_>, ValueError> {
+        Ok(PythonResource::from(
+            self.inner("PythonExtensionModule.as_python_resource()")?
+                .em
+                .clone(),
+        ))
     }
 }
 
@@ -53,7 +93,7 @@ impl TypedValue for PythonExtensionModuleValue {
     }
 
     fn to_str(&self) -> String {
-        format!("{}<name={}>", Self::TYPE, self.inner.name)
+        format!("{}<name={}>", Self::TYPE, self.name)
     }
 
     fn to_repr(&self) -> String {
@@ -61,10 +101,14 @@ impl TypedValue for PythonExtensionModuleValue {
     }
 
     fn get_attr(&self, attribute: &str) -> ValueResult {
+        let inner = self.inner(&format!("PythonExtensionModule.{}", attribute))?;
+
         let v = match attribute {
-            "is_stdlib" => Value::from(self.inner.is_stdlib),
-            "name" => Value::new(self.inner.name.clone()),
+            "is_stdlib" => Value::from(inner.em.is_stdlib),
+            "name" => Value::new(inner.em.name.clone()),
             attr => {
+                drop(inner);
+
                 return if self.add_collection_context_attrs().contains(&attr) {
                     self.get_attr_add_collection_context(attr)
                 } else {

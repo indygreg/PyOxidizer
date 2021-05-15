@@ -71,8 +71,8 @@ impl PythonPackagingPolicyValue {
     {
         let new_context = self
             .inner(label)?
-            .derive_add_collection_context(&value.as_python_resource());
-        value.add_collection_context_mut().replace(new_context);
+            .derive_add_collection_context(&value.as_python_resource()?);
+        value.replace_add_collection_context(new_context)?;
 
         for func in &self.derive_context_callbacks {
             // This is a bit wonky. We pass in a `TypeValue`, which isn't a `Value`.
@@ -99,9 +99,7 @@ impl PythonPackagingPolicyValue {
 
             let downcast_value = temp_value.downcast_ref::<T>().unwrap();
             let inner: &T = downcast_value.deref();
-            value
-                .add_collection_context_mut()
-                .replace(inner.add_collection_context().as_ref().unwrap().clone());
+            value.replace_add_collection_context(inner.add_collection_context()?.unwrap())?;
         }
 
         Ok(Value::from(NoneType::None))

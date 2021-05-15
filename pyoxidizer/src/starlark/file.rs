@@ -8,39 +8,74 @@ use {
         resource::PythonResource, resource_collection::PythonResourceAddCollectionContext,
     },
     starlark::values::{
-        error::{UnsupportedOperation, ValueError},
+        error::{RuntimeError, UnsupportedOperation, ValueError},
         {Mutable, TypedValue, Value, ValueResult},
     },
+    std::sync::{Arc, Mutex, MutexGuard},
     tugger_file_manifest::File,
 };
+
+#[derive(Debug)]
+pub struct FileWrapper {
+    pub file: File,
+    pub add_context: Option<PythonResourceAddCollectionContext>,
+}
 
 /// Starlark value wrapper for `File`.
 #[derive(Clone, Debug)]
 pub struct FileValue {
-    pub inner: File,
-    pub add_context: Option<PythonResourceAddCollectionContext>,
+    inner: Arc<Mutex<FileWrapper>>,
+    path: String,
 }
 
 impl FileValue {
     pub fn new(file: File) -> Self {
+        let path = file.path_string();
+
         Self {
-            inner: file,
-            add_context: None,
+            inner: Arc::new(Mutex::new(FileWrapper {
+                file,
+                add_context: None,
+            })),
+            path,
         }
+    }
+
+    pub fn inner(&self, label: &str) -> Result<MutexGuard<FileWrapper>, ValueError> {
+        self.inner.lock().map_err(|e| {
+            ValueError::Runtime(RuntimeError {
+                code: "FILE",
+                message: format!("failed to acquire lock: {}", e),
+                label: label.to_string(),
+            })
+        })
     }
 }
 
 impl ResourceCollectionContext for FileValue {
-    fn add_collection_context(&self) -> &Option<PythonResourceAddCollectionContext> {
-        &self.add_context
+    fn add_collection_context(
+        &self,
+    ) -> Result<Option<PythonResourceAddCollectionContext>, ValueError> {
+        Ok(self
+            .inner("File.add_collection_context()")?
+            .add_context
+            .clone())
     }
 
-    fn add_collection_context_mut(&mut self) -> &mut Option<PythonResourceAddCollectionContext> {
-        &mut self.add_context
+    fn replace_add_collection_context(
+        &mut self,
+        context: PythonResourceAddCollectionContext,
+    ) -> Result<Option<PythonResourceAddCollectionContext>, ValueError> {
+        Ok(self
+            .inner("File.replace_add_collection_context()")?
+            .add_context
+            .replace(context))
     }
 
-    fn as_python_resource(&self) -> PythonResource<'_> {
-        PythonResource::from(&self.inner)
+    fn as_python_resource(&self) -> Result<PythonResource<'_>, ValueError> {
+        Ok(PythonResource::from(
+            self.inner("File.as_python_resource()")?.file.clone(),
+        ))
     }
 }
 
@@ -53,12 +88,7 @@ impl TypedValue for FileValue {
     }
 
     fn to_str(&self) -> String {
-        format!(
-            "{}<path={}, is_executable={}>",
-            Self::TYPE,
-            self.inner.path_string(),
-            self.inner.entry.executable
-        )
+        format!("{}<path={}>", Self::TYPE, self.path,)
     }
 
     fn to_repr(&self) -> String {
@@ -66,10 +96,14 @@ impl TypedValue for FileValue {
     }
 
     fn get_attr(&self, attribute: &str) -> ValueResult {
+        let inner = self.inner(&format!("File.{}", attribute))?;
+
         let v = match attribute {
-            "path" => Value::from(self.inner.path_string()),
-            "is_executable" => Value::from(self.inner.entry.executable),
+            "path" => Value::from(inner.file.path_string()),
+            "is_executable" => Value::from(inner.file.entry.executable),
             attr => {
+                drop(inner);
+
                 return if self.add_collection_context_attrs().contains(&attr) {
                     self.get_attr_add_collection_context(attr)
                 } else {

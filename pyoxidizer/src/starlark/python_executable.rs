@@ -13,9 +13,7 @@ use {
         python_package_distribution_resource::PythonPackageDistributionResourceValue,
         python_package_resource::PythonPackageResourceValue,
         python_packaging_policy::PythonPackagingPolicyValue,
-        python_resource::{
-            is_resource_starlark_compatible, python_resource_to_value, ResourceCollectionContext,
-        },
+        python_resource::{is_resource_starlark_compatible, python_resource_to_value},
     },
     crate::{
         project_building::build_python_executable,
@@ -597,14 +595,16 @@ impl PythonExecutableValue {
         label: &str,
         module: &PythonModuleSourceValue,
     ) -> ValueResult {
+        let inner = module.inner(label)?;
+
         info!(
             context.logger(),
-            "adding Python source module {}", module.inner.name;
+            "adding Python source module {}", inner.m.name;
         );
 
         error_context(label, || {
             self.exe
-                .add_python_module_source(&module.inner, module.add_collection_context().clone())
+                .add_python_module_source(&inner.m, inner.add_context.clone())
                 .with_context(|| format!("adding {}", module.to_repr()))
         })?;
 
@@ -617,18 +617,17 @@ impl PythonExecutableValue {
         label: &str,
         resource: &PythonPackageResourceValue,
     ) -> ValueResult {
+        let inner = resource.inner(label)?;
+
         info!(
             context.logger(),
             "adding Python package resource {}",
-            resource.inner.symbolic_name()
+            inner.r.symbolic_name()
         );
 
         error_context(label, || {
             self.exe
-                .add_python_package_resource(
-                    &resource.inner,
-                    resource.add_collection_context().clone(),
-                )
+                .add_python_package_resource(&inner.r, inner.add_context.clone())
                 .with_context(|| format!("adding {}", resource.to_repr()))
         })?;
 
@@ -641,18 +640,16 @@ impl PythonExecutableValue {
         label: &str,
         resource: &PythonPackageDistributionResourceValue,
     ) -> ValueResult {
+        let inner = resource.inner(label)?;
+
         info!(
             context.logger(),
-            "adding package distribution resource {}:{}",
-            resource.inner.package,
-            resource.inner.name
+            "adding package distribution resource {}:{}", inner.r.package, inner.r.name
         );
+
         error_context(label, || {
             self.exe
-                .add_python_package_distribution_resource(
-                    &resource.inner,
-                    resource.add_collection_context().clone(),
-                )
+                .add_python_package_distribution_resource(&inner.r, inner.add_context.clone())
                 .with_context(|| format!("adding {}", resource.to_repr()))
         })?;
 
@@ -665,13 +662,16 @@ impl PythonExecutableValue {
         label: &str,
         module: &PythonExtensionModuleValue,
     ) -> ValueResult {
+        let inner = module.inner(label)?;
+
         info!(
             context.logger(),
-            "adding extension module {}", module.inner.name
+            "adding extension module {}", inner.em.name
         );
+
         error_context(label, || {
             self.exe
-                .add_python_extension_module(&module.inner, module.add_collection_context().clone())
+                .add_python_extension_module(&inner.em, inner.add_context.clone())
                 .with_context(|| format!("adding {}", module.to_repr()))
         })?;
 
@@ -684,13 +684,17 @@ impl PythonExecutableValue {
         label: &str,
         file: &FileValue,
     ) -> ValueResult {
+        let inner = file.inner(label)?;
+
         info!(
             context.logger(),
-            "adding file data {}", file.inner.path.display();
+            "adding file data {}",
+            inner.file.path.display()
         );
+
         error_context(label, || {
             self.exe
-                .add_file_data(&file.inner, file.add_collection_context().clone())
+                .add_file_data(&inner.file, inner.add_context.clone())
                 .with_context(|| format!("adding {}", file.to_repr()))
         })?;
 
@@ -1203,7 +1207,8 @@ mod tests {
             let v = it.next().unwrap();
             assert_eq!(v.get_type(), PythonModuleSourceValue::TYPE);
             let x = v.downcast_ref::<PythonModuleSourceValue>().unwrap();
-            assert!(x.inner.package().starts_with("pyflakes"));
+            let inner = x.inner("ignored").unwrap();
+            assert!(inner.m.package().starts_with("pyflakes"));
         }
 
         Ok(())
@@ -1227,8 +1232,9 @@ mod tests {
         let v = it.next().unwrap();
         assert_eq!(v.get_type(), PythonModuleSourceValue::TYPE);
         let x = v.downcast_ref::<PythonModuleSourceValue>().unwrap();
-        assert_eq!(x.inner.name, "pyflakes");
-        assert!(x.inner.is_package);
+        let inner = x.inner("ignored").unwrap();
+        assert_eq!(inner.m.name, "pyflakes");
+        assert!(inner.m.is_package);
 
         Ok(())
     }
@@ -1274,16 +1280,20 @@ mod tests {
         let v = it.next().unwrap();
         assert_eq!(v.get_type(), PythonModuleSourceValue::TYPE);
         let x = v.downcast_ref::<PythonModuleSourceValue>().unwrap();
-        assert_eq!(x.inner.name, "bar");
-        assert!(x.inner.is_package);
-        assert_eq!(x.inner.source.resolve().unwrap(), b"# bar");
+        let inner = x.inner("ignored").unwrap();
+        assert_eq!(inner.m.name, "bar");
+        assert!(inner.m.is_package);
+        assert_eq!(inner.m.source.resolve().unwrap(), b"# bar");
+        drop(inner);
 
         let v = it.next().unwrap();
         assert_eq!(v.get_type(), PythonModuleSourceValue::TYPE);
         let x = v.downcast_ref::<PythonModuleSourceValue>().unwrap();
-        assert_eq!(x.inner.name, "foo");
-        assert!(!x.inner.is_package);
-        assert_eq!(x.inner.source.resolve().unwrap(), b"# foo");
+        let inner = x.inner("ignored").unwrap();
+        assert_eq!(inner.m.name, "foo");
+        assert!(!inner.m.is_package);
+        assert_eq!(inner.m.source.resolve().unwrap(), b"# foo");
+        drop(inner);
 
         Ok(())
     }

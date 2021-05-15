@@ -101,13 +101,20 @@ impl From<OptionalResourceLocation> for Option<ConcreteResourceLocation> {
 /// Defines functionality for exposing `PythonResourceAddCollectionContext` from a type.
 pub trait ResourceCollectionContext {
     /// Obtain the `PythonResourceAddCollectionContext` associated with this instance, if available.
-    fn add_collection_context(&self) -> &Option<PythonResourceAddCollectionContext>;
+    fn add_collection_context(
+        &self,
+    ) -> Result<Option<PythonResourceAddCollectionContext>, ValueError>;
 
-    /// Obtain the mutable `PythonResourceAddCollectionContext` associated with this instance, if available.
-    fn add_collection_context_mut(&mut self) -> &mut Option<PythonResourceAddCollectionContext>;
+    /// Set the [PythonResourceAddCollectionContext] value on this instance.
+    ///
+    /// Returns the old value.
+    fn replace_add_collection_context(
+        &mut self,
+        add_context: PythonResourceAddCollectionContext,
+    ) -> Result<Option<PythonResourceAddCollectionContext>, ValueError>;
 
     /// Cast this instance to a `PythonResource`.
-    fn as_python_resource(&self) -> PythonResource;
+    fn as_python_resource(&self) -> Result<PythonResource, ValueError>;
 
     /// Obtains the Starlark object attributes that are defined by the add collection context.
     fn add_collection_context_attrs(&self) -> Vec<&'static str> {
@@ -134,7 +141,7 @@ pub trait ResourceCollectionContext {
             );
         }
 
-        let context = self.add_collection_context();
+        let context = self.add_collection_context()?;
 
         Ok(match context {
             Some(context) => match attribute {
@@ -142,7 +149,7 @@ pub trait ResourceCollectionContext {
                 "add_bytecode_optimization_level_one" => Value::new(context.optimize_level_one),
                 "add_bytecode_optimization_level_two" => Value::new(context.optimize_level_two),
                 "add_include" => Value::new(context.include),
-                "add_location" => Value::new::<String>(context.location.clone().into()),
+                "add_location" => Value::new::<String>(context.location.into()),
                 "add_location_fallback" => match context.location_fallback.as_ref() {
                     Some(location) => Value::new::<String>(location.clone().into()),
                     None => Value::from(NoneType::None),
@@ -159,10 +166,10 @@ pub trait ResourceCollectionContext {
         attribute: &str,
         value: Value,
     ) -> Result<(), ValueError> {
-        let context = self.add_collection_context_mut();
+        let mut context = self.add_collection_context()?;
 
         match context {
-            Some(context) => {
+            Some(ref mut context) => {
                 match attribute {
                     "add_bytecode_optimization_level_zero" => {
                         context.optimize_level_zero = value.to_bool();
@@ -224,7 +231,11 @@ pub trait ResourceCollectionContext {
                 message: "attempting to set a collection context attribute on an object without a context".to_string(),
                 label: "setattr()".to_string()
             }))
-        }
+        }?;
+
+        self.replace_add_collection_context(context.unwrap())?;
+
+        Ok(())
     }
 }
 
@@ -301,28 +312,23 @@ pub fn add_context_for_value(
         "PythonModuleSource" => Ok(value
             .downcast_ref::<PythonModuleSourceValue>()
             .unwrap()
-            .add_collection_context()
-            .clone()),
+            .add_collection_context()?),
         "PythonPackageResource" => Ok(value
             .downcast_ref::<PythonPackageResourceValue>()
             .unwrap()
-            .add_collection_context()
-            .clone()),
+            .add_collection_context()?),
         "PythonPackageDistributionResource" => Ok(value
             .downcast_ref::<PythonPackageDistributionResourceValue>()
             .unwrap()
-            .add_collection_context()
-            .clone()),
+            .add_collection_context()?),
         "PythonExtensionModule" => Ok(value
             .downcast_ref::<PythonExtensionModuleValue>()
             .unwrap()
-            .add_collection_context()
-            .clone()),
+            .add_collection_context()?),
         "File" => Ok(value
             .downcast_ref::<FileValue>()
             .unwrap()
-            .add_collection_context()
-            .clone()),
+            .add_collection_context()?),
         t => Err(ValueError::from(RuntimeError {
             code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
             message: format!("unable to obtain add collection context from {}", t),

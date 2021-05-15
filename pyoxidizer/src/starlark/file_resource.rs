@@ -84,6 +84,8 @@ pub fn file_manifest_add_python_resource(
     prefix: String,
     resource: &Value,
 ) -> ValueResult {
+    const LABEL: &str = "FileManifest.add_python_resource()";
+
     let pyoxidizer_context_value = get_context(type_values)?;
     let pyoxidizer_context = pyoxidizer_context_value
         .downcast_ref::<PyOxidizerEnvironmentContext>()
@@ -92,7 +94,7 @@ pub fn file_manifest_add_python_resource(
     match resource.get_type() {
         "PythonModuleSource" => {
             let m = match resource.downcast_ref::<PythonModuleSourceValue>() {
-                Some(m) => Ok(m.inner.clone()),
+                Some(m) => Ok(m.inner(LABEL)?.m.clone()),
                 None => Err(ValueError::IncorrectParameterType),
             }?;
             warn!(
@@ -111,7 +113,7 @@ pub fn file_manifest_add_python_resource(
         }
         "PythonPackageResource" => {
             let m = match resource.downcast_ref::<PythonPackageResourceValue>() {
-                Some(m) => Ok(m.inner.clone()),
+                Some(m) => Ok(m.inner(LABEL)?.r.clone()),
                 None => Err(ValueError::IncorrectParameterType),
             }?;
 
@@ -133,7 +135,7 @@ pub fn file_manifest_add_python_resource(
         }
         "PythonPackageDistributionResource" => {
             let m = match resource.downcast_ref::<PythonPackageDistributionResourceValue>() {
-                Some(m) => Ok(m.inner.clone()),
+                Some(m) => Ok(m.inner(LABEL)?.r.clone()),
                 None => Err(ValueError::IncorrectParameterType),
             }?;
             warn!(
@@ -151,7 +153,7 @@ pub fn file_manifest_add_python_resource(
         }
         "PythonExtensionModule" => {
             let extension = match resource.downcast_ref::<PythonExtensionModuleValue>() {
-                Some(e) => Ok(e.inner.clone()),
+                Some(e) => Ok(e.inner(LABEL)?.em.clone()),
                 None => Err(ValueError::IncorrectParameterType),
             }?;
 
