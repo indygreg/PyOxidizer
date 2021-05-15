@@ -48,7 +48,6 @@ where
     })
 }
 
-#[derive(Clone)]
 pub struct WiXBundleBuilderValue<'a> {
     pub inner: WiXBundleInstallerBuilder<'a>,
     pub target_triple: String,
