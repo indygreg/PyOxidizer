@@ -54,6 +54,8 @@ Backwards Compatibility Notes
   :py:func:`multiprocessing.set_start_method` may fail with
   ``RuntimeError("context has already been set")`` as a result of this change.
   See :ref:`pyoxidizer_packaging_multiprocessing` for workarounds.
+* :py:attr:`PythonInterpreterConfig.sys_frozen` now defaults to ``True``
+  instead of ``False``.
 
 Bug Fixes
 ^^^^^^^^^

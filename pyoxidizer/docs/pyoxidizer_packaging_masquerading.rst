@@ -20,14 +20,13 @@ Since ``PyOxidizer``'s run-time behavior is similar to other packaging
 tools, ``PyOxidizer`` supports falsely identifying itself as these other
 tools by emulating their fingerprints.
 
-The ``EmbbedPythonConfig`` configuration section defines the
-boolean flag ``sys_frozen`` to control whether ``sys.frozen = True``
-is set. This can allow ``PyOxidizer`` to advertise itself as a *frozen*
-application.
+:py:attr:`PythonInterpreterConfig.sys_frozen` controls whether
+``sys.frozen = True`` is set. This can allow ``PyOxidizer`` to advertise
+itself as a *frozen* application.
 
-In addition, the ``sys_meipass`` boolean flag controls whether a
-``sys._MEIPASS = <exe directory>`` attribute is set. This allows
-``PyOxidizer`` to masquerade as having been built with PyInstaller.
+In addition, the :py:attr:`PythonInterpreterConfig.sys_meipass` boolean flag
+controls whether a ``sys._MEIPASS = <exe directory>`` attribute is set. This
+allows ``PyOxidizer`` to masquerade as having been built with PyInstaller.
 
 .. warning::
 

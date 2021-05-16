@@ -369,7 +369,7 @@
         Controls whether to set the ``sys.frozen`` attribute to ``True``. If
         ``false``, ``sys.frozen`` is not set.
 
-        Default is ``False``.
+        Default is ``True``.
 
     .. py:attribute:: sys_meipass
 

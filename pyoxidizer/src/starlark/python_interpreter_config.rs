@@ -1326,7 +1326,7 @@ mod tests {
     fn test_sys_frozen() -> Result<()> {
         let mut env = get_env()?;
 
-        eval_assert(&mut env, "config.sys_frozen == False")?;
+        eval_assert(&mut env, "config.sys_frozen == True")?;
 
         Ok(())
     }
