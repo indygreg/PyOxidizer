@@ -12,7 +12,8 @@ use {
     python_packaging::{
         interpreter::{
             Allocator, BytesWarning, CheckHashPycsMode, CoerceCLocale, MemoryAllocatorBackend,
-            PythonInterpreterConfig, PythonInterpreterProfile, TerminfoResolution,
+            MultiprocessingStartMethod, PythonInterpreterConfig, PythonInterpreterProfile,
+            TerminfoResolution,
         },
         resource::BytecodeOptimizationLevel,
     },
@@ -127,6 +128,7 @@ pub struct PyembedPythonInterpreterConfig {
     pub filesystem_importer: bool,
     pub packed_resources: Vec<PyembedPackedResourcesSource>,
     pub argvb: bool,
+    pub multiprocessing_start_method: MultiprocessingStartMethod,
     pub sys_frozen: bool,
     pub sys_meipass: bool,
     pub terminfo_resolution: TerminfoResolution,
@@ -160,6 +162,7 @@ impl Default for PyembedPythonInterpreterConfig {
             filesystem_importer: false,
             packed_resources: vec![],
             argvb: false,
+            multiprocessing_start_method: MultiprocessingStartMethod::Auto,
             sys_frozen: false,
             sys_meipass: false,
             terminfo_resolution: TerminfoResolution::None,
@@ -247,6 +250,7 @@ impl PyembedPythonInterpreterConfig {
             extra_extension_modules: None,\n    \
             argv: None,\n    \
             argvb: {},\n    \
+            multiprocessing_start_method: {},\n    \
             sys_frozen: {},\n    \
             sys_meipass: {},\n    \
             terminfo_resolution: {},\n    \
@@ -381,6 +385,18 @@ impl PyembedPythonInterpreterConfig {
                     .join(", ")
             ),
             self.argvb,
+            match self.multiprocessing_start_method {
+                MultiprocessingStartMethod::None =>
+                    "pyembed::MultiprocessingStartMethod::None".to_string(),
+                MultiprocessingStartMethod::Fork =>
+                    "pyembed::MultiprocessingStartMethod::Fork".to_string(),
+                MultiprocessingStartMethod::ForkServer =>
+                    "pyembed::MultiprocessingStartMethod::ForkServer".to_string(),
+                MultiprocessingStartMethod::Spawn =>
+                    "pyembed::MultiprocessingStartMethod::Spawn".to_string(),
+                MultiprocessingStartMethod::Auto =>
+                    "pyembed::MultiprocessingStartMethod::Auto".to_string(),
+            },
             self.sys_frozen,
             self.sys_meipass,
             match self.terminfo_resolution {
@@ -580,6 +596,7 @@ mod tests {
             terminfo_resolution: TerminfoResolution::Dynamic,
             tcl_library: Some("path".into()),
             write_modules_directory_env: Some("env".into()),
+            multiprocessing_start_method: MultiprocessingStartMethod::Spawn,
         };
 
         let builder = dist.as_python_executable_builder(

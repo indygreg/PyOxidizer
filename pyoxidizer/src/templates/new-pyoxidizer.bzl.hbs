@@ -157,6 +157,20 @@ def make_exe():
     # Enable Python memory allocator debug hooks.
     # python_config.allocator_debug = True
 
+    # Automatically calls `multiprocessing.set_start_method()` with an
+    # appropriate value when OxidizedFinder imports the `multiprocessing`
+    # module.
+    # python_config.multiprocessing_start_method = 'auto'
+
+    # Do not call `multiprocessing.set_start_method()` automatically. (This
+    # is the default behavior of Python applications.)
+    # python_config.multiprocessing_start_method = 'none'
+
+    # Call `multiprocessing.set_start_method()` with explicit values.
+    # python_config.multiprocessing_start_method = 'fork'
+    # python_config.multiprocessing_start_method = 'forkserver'
+    # python_config.multiprocessing_start_method = 'spawn'
+
     # Control whether `oxidized_importer` is the first importer on
     # `sys.meta_path`.
     # python_config.oxidized_importer = False

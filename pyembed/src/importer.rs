@@ -267,6 +267,10 @@ pub(crate) struct ImporterState {
     exec_fn: PyObject,
     /// Bytecode optimization level currently in effect.
     optimize_level: OptimizeLevel,
+    /// Value to pass to `multiprocessing.set_start_method()` on import of `multiprocessing`.
+    ///
+    /// If `None`, `set_start_method()` will not be called automatically.
+    multiprocessing_set_start_method: Option<String>,
     /// Whether to automatically register ourself with `pkg_resources` when it is imported.
     pkg_resources_import_auto_register: bool,
     /// Holds state about importable resources.
@@ -393,6 +397,7 @@ impl ImporterState {
             decode_source,
             exec_fn,
             optimize_level,
+            multiprocessing_set_start_method: None,
             // TODO value should come from config.
             pkg_resources_import_auto_register: true,
             resources_state: capsule,
@@ -428,6 +433,11 @@ impl ImporterState {
         }
 
         unsafe { &mut *(ptr as *mut PythonResourcesState<u8>) }
+    }
+
+    /// Set the value to call `multiprocessing.set_start_method()` with on import of `multiprocessing`.
+    pub fn set_multiprocessing_set_start_method(&mut self, value: Option<String>) {
+        self.multiprocessing_set_start_method = value;
     }
 }
 
@@ -745,8 +755,22 @@ impl OxidizedFinder {
             Ok(py.None())
         }?;
 
-        if key == "pkg_resources" && state.pkg_resources_import_auto_register {
-            register_pkg_resources_with_module(py, module)?;
+        // Perform import time side-effects for special modules.
+        match key.as_str() {
+            "multiprocessing" => {
+                if let Some(method) = state.multiprocessing_set_start_method.as_ref() {
+                    // We pass force=True to ensure the call doesn't fail.
+                    let kwargs = PyDict::new(py);
+                    kwargs.set_item(py, "force", true)?;
+                    module.call_method(py, "set_start_method", (method,), Some(&kwargs))?;
+                }
+            }
+            "pkg_resources" => {
+                if state.pkg_resources_import_auto_register {
+                    register_pkg_resources_with_module(py, module)?;
+                }
+            }
+            _ => {}
         }
 
         Ok(py.None())
@@ -1085,18 +1109,24 @@ impl OxidizedFinder {
         py: Python,
         m: &PyModule,
         resources_state: Box<PythonResourcesState<'a, u8>>,
+        importer_state_callback: Option<impl FnOnce(&mut ImporterState)>,
     ) -> PyResult<OxidizedFinder> {
         let bootstrap_module = py.import("_frozen_importlib")?;
 
-        let importer = OxidizedFinder::create_instance(
+        let mut importer_state = Arc::new(ImporterState::new(
             py,
-            Arc::new(ImporterState::new(
-                py,
-                &m,
-                &bootstrap_module,
-                resources_state,
-            )?),
-        )?;
+            &m,
+            &bootstrap_module,
+            resources_state,
+        )?);
+
+        if let Some(cb) = importer_state_callback {
+            let state_ref = Arc::<ImporterState>::get_mut(&mut importer_state)
+                .expect("Arc::get_mut() should work");
+            cb(state_ref);
+        }
+
+        let importer = OxidizedFinder::create_instance(py, importer_state)?;
 
         Ok(importer)
     }
@@ -1553,6 +1583,7 @@ pub(crate) fn replace_meta_path_importers<'a>(
     py: Python,
     oxidized_importer: &PyModule,
     resources_state: Box<PythonResourcesState<'a, u8>>,
+    importer_state_callback: Option<impl FnOnce(&mut ImporterState)>,
 ) -> PyResult<PyObject> {
     let mut state = get_module_state(py, oxidized_importer)?;
 
@@ -1562,8 +1593,12 @@ pub(crate) fn replace_meta_path_importers<'a>(
     // importer is able to handle builtin and frozen modules, the existing meta path
     // importers are removed. The assumption here is that we're called very early
     // during startup and the 2 default meta path importers are installed.
-    let oxidized_finder =
-        OxidizedFinder::new_from_module_and_resources(py, oxidized_importer, resources_state)?;
+    let oxidized_finder = OxidizedFinder::new_from_module_and_resources(
+        py,
+        oxidized_importer,
+        resources_state,
+        importer_state_callback,
+    )?;
 
     let meta_path_object = sys_module.get(py, "meta_path")?;
 

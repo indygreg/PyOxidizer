@@ -149,7 +149,8 @@ pub use crate::extension::PyInit_oxidized_importer;
 pub use python_packaging::{
     interpreter::{
         Allocator, BytesWarning, CheckHashPycsMode, CoerceCLocale, MemoryAllocatorBackend,
-        PythonInterpreterConfig, PythonInterpreterProfile, TerminfoResolution,
+        MultiprocessingStartMethod, PythonInterpreterConfig, PythonInterpreterProfile,
+        TerminfoResolution,
     },
     resource::BytecodeOptimizationLevel,
 };

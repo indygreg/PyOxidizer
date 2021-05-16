@@ -51,6 +51,7 @@
     * :py:attr:`oxidized_importer`
     * :py:attr:`filesystem_importer`
     * :py:attr:`argvb`
+    * :py:attr:`multiprocessing_start_method`
     * :py:attr:`sys_frozen`
     * :py:attr:`sys_meipass`
     * :py:attr:`terminfo_resolution`
@@ -321,6 +322,45 @@
         on the Python execution mode, ``sys.argvb`` has all the arguments
         used to initialize the process. The first argument is always the
         executable.
+
+    .. py:attribute:: multiprocessing_start_method
+
+        (``str``)
+
+        Controls how to call :py:func:`multiprocessing.set_start_method` upon the
+        import of the :py:mod:`multiprocessing` module.
+
+        Accepted values are:
+
+        ``none``
+            Do not call :py:func:`multiprocessing.set_start_method` automatically.
+
+            This mode is what Python programs do by default.
+
+        ``auto``
+            Call :py:func:`multiprocessing.set_start_method` with the appropriate
+            value for the environment. This likely maps to ``spawn`` on Windows and
+            ``fork`` on non-Windows.
+
+        ``fork``
+            Call with the value ``fork``.
+
+        ``forkserver``
+            Call with the value ``forkserver``.
+
+        ``spawn``
+            Call with the value ``spawn``.
+
+        The default value is ``auto``.
+
+        When set to a value that is not ``none``, when
+        :py:class:`oxidized_importer.OxidizedFinder`
+        services an import of the :py:mod:`multiprocessing` module, it will
+        automatically call :py:func:`multiprocessing.set_start_method` to configure
+        how worker processes are created.
+
+        If the :py:mod:`multiprocessing` module is not imported by
+        :py:class:`oxidized_importer.OxidizedFinder`, this setting has no effect.
 
     .. py:attribute:: sys_frozen
 

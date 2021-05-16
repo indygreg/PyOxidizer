@@ -8,8 +8,8 @@ use {
     crate::NewInterpreterError,
     python3_sys as pyffi,
     python_packaging::interpreter::{
-        MemoryAllocatorBackend, PythonInterpreterConfig, PythonInterpreterProfile,
-        TerminfoResolution,
+        MemoryAllocatorBackend, MultiprocessingStartMethod, PythonInterpreterConfig,
+        PythonInterpreterProfile, TerminfoResolution,
     },
     std::{
         convert::TryFrom,
@@ -217,6 +217,9 @@ pub struct OxidizedPythonInterpreterConfig<'a> {
     /// values passed to `int main()`.
     pub argvb: bool,
 
+    /// How to call `multiprocessing.set_start_method()` when `multiprocessing` is imported.
+    pub multiprocessing_start_method: MultiprocessingStartMethod,
+
     /// Whether to set sys.frozen=True.
     ///
     /// Setting this will enable Python to emulate "frozen" binaries, such as
@@ -274,6 +277,7 @@ impl<'a> Default for OxidizedPythonInterpreterConfig<'a> {
             extra_extension_modules: None,
             argv: None,
             argvb: false,
+            multiprocessing_start_method: MultiprocessingStartMethod::Auto,
             sys_frozen: false,
             sys_meipass: false,
             terminfo_resolution: TerminfoResolution::Dynamic,

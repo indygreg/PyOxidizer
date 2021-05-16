@@ -6,7 +6,7 @@
 
 use {
     crate::resource::BytecodeOptimizationLevel,
-    std::{convert::TryFrom, ffi::OsString, os::raw::c_ulong, path::PathBuf},
+    std::{convert::TryFrom, ffi::OsString, os::raw::c_ulong, path::PathBuf, str::FromStr},
 };
 
 /// Defines the profile to use to configure a Python interpreter.
@@ -298,6 +298,49 @@ impl TryFrom<&str> for Allocator {
             "py-malloc" => Ok(Self::PyMalloc),
             "py-malloc-debug" => Ok(Self::PyMallocDebug),
             _ => Err(format!("{} is not a valid allocator value", value)),
+        }
+    }
+}
+
+/// Defines how to call `multiprocessing.set_start_method()` when `multiprocessing` is imported.
+#[derive(Clone, Debug, PartialEq)]
+pub enum MultiprocessingStartMethod {
+    /// Do not call `multiprocessing.set_start_method()`.
+    None,
+    /// Call with value `fork`.
+    Fork,
+    /// Call with value `forkserver`
+    ForkServer,
+    /// Call with value `spawn`
+    Spawn,
+    /// Call with a valid appropriate for the given environment.
+    Auto,
+}
+
+impl ToString for MultiprocessingStartMethod {
+    fn to_string(&self) -> String {
+        match self {
+            Self::None => "none",
+            Self::Fork => "fork",
+            Self::ForkServer => "forkserver",
+            Self::Spawn => "spawn",
+            Self::Auto => "auto",
+        }
+        .to_string()
+    }
+}
+
+impl FromStr for MultiprocessingStartMethod {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "none" => Ok(Self::None),
+            "fork" => Ok(Self::Fork),
+            "forkserver" => Ok(Self::ForkServer),
+            "spawn" => Ok(Self::Spawn),
+            "auto" => Ok(Self::Auto),
+            _ => Err(format!("{} is not a valid multiprocessing start method", s)),
         }
     }
 }

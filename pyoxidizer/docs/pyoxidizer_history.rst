@@ -48,6 +48,12 @@ Backwards Compatibility Notes
   change could result in Starlark configuration files behaving differently. For
   example, before you could mutate a value in a function call and that mutation
   wouldn't be reflected in the caller's Starlark value. Now, it would be.
+* :py:class:`oxidized_importer.OxidizedFinder` will now automatically call
+  :py:func:`multiprocessing.set_start_method` when it imports the
+  :py:mod:`multiprocessing` module. Applications that explicitly call
+  :py:func:`multiprocessing.set_start_method` may fail with
+  ``RuntimeError("context has already been set")`` as a result of this change.
+  See :ref:`pyoxidizer_packaging_multiprocessing` for workarounds.
 
 Bug Fixes
 ^^^^^^^^^
@@ -70,6 +76,14 @@ Bug Fixes
 New Features
 ^^^^^^^^^^^^
 
+* :py:class:`oxidized_importer.OxidizedFinder` now calls
+  :py:func:`multiprocessing.set_start_method` when the :py:mod:`multiprocessing`
+  module is imported. The behavior of this feature can be controlled via the
+  new :py:attr:`PythonInterpreterConfig.multiprocessing_start_method` attribute.
+  On macOS, the default start method is effectively switched from ``spawn`` to
+  ``fork``, as PyOxidizer supports this mode.
+  See :ref:`pyoxidizer_packaging_multiprocessing` for full documentation on
+  ``multiprocessing`` interactions with PyOxidizer.
 * :py:class:`starlark_tugger.AppleUniversalBinary` has gained the
   :py:meth:`starlark_tugger.AppleUniversalBinary.write_to_directory` method.
 * :py:class:`starlark_tugger.FileContent` has gained the

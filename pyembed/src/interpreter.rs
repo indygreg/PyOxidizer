@@ -10,7 +10,10 @@ use {
         conversion::osstring_to_bytes,
         error::NewInterpreterError,
         extension::{PyInit_oxidized_importer, OXIDIZED_IMPORTER_NAME, OXIDIZED_IMPORTER_NAME_STR},
-        importer::{install_path_hook, remove_external_importers, replace_meta_path_importers},
+        importer::{
+            install_path_hook, remove_external_importers, replace_meta_path_importers,
+            ImporterState,
+        },
         osutils::resolve_terminfo_dirs,
         pyalloc::PythonMemoryAllocator,
         python_resources::PythonResourcesState,
@@ -18,7 +21,7 @@ use {
     cpython::{GILGuard, NoArgs, ObjectProtocol, PyDict, PyList, PyString, Python, ToPyObject},
     once_cell::sync::Lazy,
     python3_sys as pyffi,
-    python_packaging::interpreter::TerminfoResolution,
+    python_packaging::interpreter::{MultiprocessingStartMethod, TerminfoResolution},
     std::{
         collections::BTreeSet,
         convert::{TryFrom, TryInto},
@@ -194,6 +197,34 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
                 NewInterpreterError::new_from_pyerr(py, err, "import of oxidized importer module")
             })?;
 
+            let cb = |importer_state: &mut ImporterState| match self
+                .config
+                .multiprocessing_start_method
+            {
+                MultiprocessingStartMethod::None => {}
+                MultiprocessingStartMethod::Fork
+                | MultiprocessingStartMethod::ForkServer
+                | MultiprocessingStartMethod::Spawn => {
+                    importer_state.set_multiprocessing_set_start_method(Some(
+                        self.config.multiprocessing_start_method.to_string(),
+                    ));
+                }
+                MultiprocessingStartMethod::Auto => {
+                    // Windows uses "spawn" because "fork" isn't available.
+                    // Everywhere else uses "fork." The default on macOS is "spawn." This
+                    // is due to https://bugs.python.org/issue33725, which only affects
+                    // Python framework builds. Our assumption is we aren't using a Python
+                    // framework, so "spawn" is safe.
+                    let method = if cfg!(target_family = "windows") {
+                        "spawn"
+                    } else {
+                        "fork"
+                    };
+
+                    importer_state.set_multiprocessing_set_start_method(Some(method.to_string()));
+                }
+            };
+
             // Ownership of the resources state is transferred into the importer, where the Box
             // is summarily leaked. However, the importer tracks a pointer to the resources state
             // and will constitute the struct for dropping when it itself is dropped. We could
@@ -202,15 +233,14 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
             // there should no longer be a Python interpreter around. So it follows that the
             // importer state cannot be dropped after self.
             Some(
-                replace_meta_path_importers(py, &oxidized_importer, resources_state).map_err(
-                    |err| {
+                replace_meta_path_importers(py, &oxidized_importer, resources_state, Some(cb))
+                    .map_err(|err| {
                         NewInterpreterError::new_from_pyerr(
                             py,
                             err,
                             "initialization of oxidized importer",
                         )
-                    },
-                )?,
+                    })?,
             )
         } else {
             None

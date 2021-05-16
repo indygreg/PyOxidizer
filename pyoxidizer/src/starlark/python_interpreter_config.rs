@@ -8,7 +8,7 @@ use {
     python_packaging::{
         interpreter::{
             Allocator, BytesWarning, CheckHashPycsMode, CoerceCLocale, MemoryAllocatorBackend,
-            PythonInterpreterProfile, TerminfoResolution,
+            MultiprocessingStartMethod, PythonInterpreterProfile, TerminfoResolution,
         },
         resource::BytecodeOptimizationLevel,
     },
@@ -22,6 +22,7 @@ use {
     starlark_dialect_build_targets::{ToOptional, TryToOptional},
     std::{
         convert::TryFrom,
+        str::FromStr,
         sync::{Arc, Mutex, MutexGuard},
     },
 };
@@ -218,6 +219,9 @@ impl TypedValue for PythonInterpreterConfigValue {
             "oxidized_importer" => Value::from(inner.oxidized_importer),
             "filesystem_importer" => Value::from(inner.filesystem_importer),
             "argvb" => Value::from(inner.argvb),
+            "multiprocessing_start_method" => {
+                Value::from(inner.multiprocessing_start_method.to_string())
+            }
             "sys_frozen" => Value::from(inner.sys_frozen),
             "sys_meipass" => Value::from(inner.sys_meipass),
             "terminfo_resolution" => inner.terminfo_resolution.to_value(),
@@ -301,6 +305,7 @@ impl TypedValue for PythonInterpreterConfigValue {
                 | "oxidized_importer"
                 | "filesystem_importer"
                 | "argvb"
+                | "multiprocessing_start_method"
                 | "sys_frozen"
                 | "sys_meipass"
                 | "terminfo_resolution"
@@ -576,6 +581,18 @@ impl TypedValue for PythonInterpreterConfigValue {
             }
             "argvb" => {
                 inner.argvb = value.to_bool();
+            }
+            "multiprocessing_start_method" => {
+                inner.multiprocessing_start_method = MultiprocessingStartMethod::from_str(
+                    value.to_string().as_str(),
+                )
+                .map_err(|e| {
+                    ValueError::from(RuntimeError {
+                        code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
+                        message: e,
+                        label: format!("{}.{}", Self::TYPE, attribute),
+                    })
+                })?;
             }
             "sys_frozen" => {
                 inner.sys_frozen = value.to_bool();
@@ -1274,6 +1291,33 @@ mod tests {
         let mut env = get_env()?;
 
         eval_assert(&mut env, "config.argvb == False")?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_multiprocessing_start_method() -> Result<()> {
+        let mut env = get_env()?;
+
+        eval_assert(&mut env, "config.multiprocessing_start_method == 'auto'")?;
+
+        env.eval("config.multiprocessing_start_method = 'none'")?;
+        eval_assert(&mut env, "config.multiprocessing_start_method == 'none'")?;
+
+        env.eval("config.multiprocessing_start_method = 'fork'")?;
+        eval_assert(&mut env, "config.multiprocessing_start_method == 'fork'")?;
+
+        env.eval("config.multiprocessing_start_method = 'forkserver'")?;
+        eval_assert(
+            &mut env,
+            "config.multiprocessing_start_method == 'forkserver'",
+        )?;
+
+        env.eval("config.multiprocessing_start_method = 'spawn'")?;
+        eval_assert(&mut env, "config.multiprocessing_start_method == 'spawn'")?;
+
+        env.eval("config.multiprocessing_start_method = 'auto'")?;
+        eval_assert(&mut env, "config.multiprocessing_start_method == 'auto'")?;
 
         Ok(())
     }
