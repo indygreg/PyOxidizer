@@ -32,5 +32,6 @@ instructions.
    pyoxidizer_packaging_licensing
    pyoxidizer_packaging_terminfo
    pyoxidizer_packaging_multiprocessing
+   pyoxidizer_packaging_ssl_certificates
    pyoxidizer_packaging_tkinter
    pyoxidizer_packaging_python_executable
