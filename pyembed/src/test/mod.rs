@@ -2,7 +2,11 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use crate::OxidizedPythonInterpreterConfig;
+use {
+    crate::{MainPythonInterpreter, OxidizedPythonInterpreterConfig},
+    anyhow::{anyhow, Result},
+    std::path::PathBuf,
+};
 
 mod importer;
 mod interpreter_config;
@@ -52,5 +56,21 @@ pub fn set_sys_paths(config: &mut OxidizedPythonInterpreterConfig) {
 
         config.interpreter_config.module_search_paths =
             Some(vec![parent.join("DLLs"), parent.join("Lib")]);
+    }
+}
+
+pub fn run_py_test(test_filename: &str) -> Result<()> {
+    let test_dir = env!("PYEMBED_TESTS_DIR");
+    let test_path = PathBuf::from(test_dir).join(test_filename);
+
+    let mut config = default_interpreter_config();
+    config.oxidized_importer = true;
+    config.interpreter_config.run_filename = Some(test_path);
+    config.interpreter_config.buffered_stdio = Some(false);
+
+    if MainPythonInterpreter::new(config)?.py_runmain() != 0 {
+        Err(anyhow!("Python code did not exit successfully"))
+    } else {
+        Ok(())
     }
 }

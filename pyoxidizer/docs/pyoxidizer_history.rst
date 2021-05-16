@@ -83,9 +83,14 @@ New Features
   module is imported. The behavior of this feature can be controlled via the
   new :py:attr:`PythonInterpreterConfig.multiprocessing_start_method` attribute.
   On macOS, the default start method is effectively switched from ``spawn`` to
-  ``fork``, as PyOxidizer supports this mode.
-  See :ref:`pyoxidizer_packaging_multiprocessing` for full documentation on
-  ``multiprocessing`` interactions with PyOxidizer.
+  ``fork``, as PyOxidizer supports this mode. The main execution routine of
+  built executables also now recognizes the *signatures* of processes spawned
+  for :py:mod:`multiprocessing` use and will automatically function accordingly.
+  This behavior can be disabled via
+  :py:attr:`PythonInterpreterConfig.multiprocessing_auto_dispatch`. These changes
+  mean that :py:mod:`multiprocessing` should *just work* when default settings are
+  used. See :ref:`pyoxidizer_packaging_multiprocessing` for full documentation of
+  :py:mod:`multiprocessing` interactions with PyOxidizer.
 * :py:class:`starlark_tugger.AppleUniversalBinary` has gained the
   :py:meth:`starlark_tugger.AppleUniversalBinary.write_to_directory` method.
 * :py:class:`starlark_tugger.FileContent` has gained the

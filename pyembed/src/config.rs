@@ -217,6 +217,10 @@ pub struct OxidizedPythonInterpreterConfig<'a> {
     /// values passed to `int main()`.
     pub argvb: bool,
 
+    /// Whether the main Python interpreter run routine will detect use of multiprocessing
+    /// and run a multiprocessing worker process automatically.
+    pub multiprocessing_auto_dispatch: bool,
+
     /// How to call `multiprocessing.set_start_method()` when `multiprocessing` is imported.
     pub multiprocessing_start_method: MultiprocessingStartMethod,
 
@@ -277,6 +281,7 @@ impl<'a> Default for OxidizedPythonInterpreterConfig<'a> {
             extra_extension_modules: None,
             argv: None,
             argvb: false,
+            multiprocessing_auto_dispatch: true,
             multiprocessing_start_method: MultiprocessingStartMethod::Auto,
             sys_frozen: false,
             sys_meipass: false,
@@ -407,6 +412,17 @@ impl<'a> ResolvedOxidizedPythonInterpreterConfig<'a> {
             .origin
             .as_ref()
             .expect("origin should have a value")
+    }
+
+    /// Resolve the effective value of `sys.argv`.
+    pub fn resolve_sys_argv(&self) -> &[OsString] {
+        if let Some(args) = &self.inner.argv {
+            args
+        } else if let Some(args) = &self.inner.interpreter_config.argv {
+            args
+        } else {
+            panic!("1 of .argv or .interpreter_config.argv should be set")
+        }
     }
 
     /// Resolve the value to use for `sys.argvb`.

@@ -3,7 +3,9 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    super::default_interpreter_config, crate::MainPythonInterpreter, rusty_fork::rusty_fork_test,
+    super::{default_interpreter_config, run_py_test},
+    crate::MainPythonInterpreter,
+    rusty_fork::rusty_fork_test,
 };
 
 rusty_fork_test! {
@@ -13,5 +15,10 @@ rusty_fork_test! {
         let mut interp = MainPythonInterpreter::new(config).unwrap();
         let py = interp.acquire_gil();
         py.import("sys").unwrap();
+    }
+
+    #[test]
+    fn multiprocessing_py() {
+        run_py_test("test_multiprocessing.py").unwrap()
     }
 }

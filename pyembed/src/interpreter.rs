@@ -18,7 +18,10 @@ use {
         pyalloc::PythonMemoryAllocator,
         python_resources::PythonResourcesState,
     },
-    cpython::{GILGuard, NoArgs, ObjectProtocol, PyDict, PyList, PyString, Python, ToPyObject},
+    cpython::{
+        exc::RuntimeError, GILGuard, NoArgs, ObjectProtocol, PyDict, PyErr, PyList, PyResult,
+        PyString, Python, PythonObject, ToPyObject,
+    },
     once_cell::sync::Lazy,
     python3_sys as pyffi,
     python_packaging::interpreter::{MultiprocessingStartMethod, TerminfoResolution},
@@ -430,6 +433,98 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
     /// that executes code.
     pub fn py_runmain(self) -> i32 {
         unsafe { pyffi::Py_RunMain() }
+    }
+
+    /// Run in "multiprocessing worker" mode.
+    ///
+    /// This should be called when `sys.argv[1] == "--multiprocessing-fork"`. It
+    /// will parse arguments for the worker from `sys.argv` and call into the
+    /// `multiprocessing` module to perform work.
+    pub fn run_multiprocessing(&mut self) -> PyResult<i32> {
+        // This code effectively reimplements multiprocessing.spawn.freeze_support(),
+        // except entirely in the Rust domain. This function effectively verifies
+        // `sys.argv[1] == "--multiprocessing-fork"` then parsed key=value arguments
+        // from arguments that follow. The keys are well-defined and guaranteed to
+        // be ASCII. The values are either ``None`` or an integer. This enables us
+        // to parse the arguments purely from Rust.
+
+        let argv = self.config.resolve_sys_argv().to_vec();
+
+        if argv.len() < 2 {
+            panic!("run_multiprocessing() called prematurely; sys.argv does not indicate multiprocessing mode");
+        }
+
+        let py = self.acquire_gil();
+        let kwargs = PyDict::new(py);
+
+        for arg in argv.iter().skip(2) {
+            let arg = arg.to_string_lossy();
+
+            let mut parts = arg.splitn(2, '=');
+
+            let key = parts.next().ok_or_else(|| {
+                PyErr::new::<RuntimeError, _>(py, "invalid multiprocessing argument")
+            })?;
+            let value = parts.next().ok_or_else(|| {
+                PyErr::new::<RuntimeError, _>(py, "invalid multiprocessing argument")
+            })?;
+
+            let value = if value == "None" {
+                py.None()
+            } else {
+                let v = value.parse::<isize>().map_err(|e| {
+                    PyErr::new::<RuntimeError, _>(
+                        py,
+                        format!(
+                            "unable to convert multiprocessing argument to integer: {}",
+                            e
+                        ),
+                    )
+                })?;
+
+                v.into_py_object(py).into_object()
+            };
+
+            kwargs.set_item(py, key, value)?;
+        }
+
+        let spawn_module = py.import("multiprocessing.spawn")?;
+        spawn_module.call(py, "spawn_main", NoArgs, Some(&kwargs))?;
+
+        Ok(0)
+    }
+
+    /// Whether the Python interpreter is in "multiprocessing worker" mode.
+    ///
+    /// The `multiprocessing` module can work by spawning new processes
+    /// with arguments `--multiprocessing-fork [key=value] ...`. This function
+    /// detects if the current Python interpreter is configured for said execution.
+    pub fn is_multiprocessing(&self) -> bool {
+        let argv = self.config.resolve_sys_argv();
+
+        argv.len() >= 2 && argv[1] == "--multiprocessing-fork"
+    }
+
+    /// Runs the Python interpreter.
+    ///
+    /// If multiprocessing dispatch is enabled, this will check if the
+    /// current process invocation appears to be a spawned multiprocessing worker
+    /// and dispatch to multiprocessing accordingly.
+    ///
+    /// Otherwise, this delegates to [Self::py_runmain].
+    pub fn run(mut self) -> i32 {
+        if self.config.multiprocessing_auto_dispatch && self.is_multiprocessing() {
+            match self.run_multiprocessing() {
+                Ok(code) => code,
+                Err(e) => {
+                    let py = self.acquire_gil();
+                    e.print(py);
+                    1
+                }
+            }
+        } else {
+            self.py_runmain()
+        }
     }
 }
 

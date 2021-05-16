@@ -128,6 +128,7 @@ pub struct PyembedPythonInterpreterConfig {
     pub filesystem_importer: bool,
     pub packed_resources: Vec<PyembedPackedResourcesSource>,
     pub argvb: bool,
+    pub multiprocessing_auto_dispatch: bool,
     pub multiprocessing_start_method: MultiprocessingStartMethod,
     pub sys_frozen: bool,
     pub sys_meipass: bool,
@@ -162,6 +163,7 @@ impl Default for PyembedPythonInterpreterConfig {
             filesystem_importer: false,
             packed_resources: vec![],
             argvb: false,
+            multiprocessing_auto_dispatch: true,
             multiprocessing_start_method: MultiprocessingStartMethod::Auto,
             sys_frozen: true,
             sys_meipass: false,
@@ -250,6 +252,7 @@ impl PyembedPythonInterpreterConfig {
             extra_extension_modules: None,\n    \
             argv: None,\n    \
             argvb: {},\n    \
+            multiprocessing_auto_dispatch: {},\n    \
             multiprocessing_start_method: {},\n    \
             sys_frozen: {},\n    \
             sys_meipass: {},\n    \
@@ -385,6 +388,7 @@ impl PyembedPythonInterpreterConfig {
                     .join(", ")
             ),
             self.argvb,
+            self.multiprocessing_auto_dispatch,
             match self.multiprocessing_start_method {
                 MultiprocessingStartMethod::None =>
                     "pyembed::MultiprocessingStartMethod::None".to_string(),
@@ -596,6 +600,7 @@ mod tests {
             terminfo_resolution: TerminfoResolution::Dynamic,
             tcl_library: Some("path".into()),
             write_modules_directory_env: Some("env".into()),
+            multiprocessing_auto_dispatch: false,
             multiprocessing_start_method: MultiprocessingStartMethod::Spawn,
         };
 

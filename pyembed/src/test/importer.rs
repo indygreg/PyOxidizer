@@ -3,12 +3,11 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    super::default_interpreter_config,
+    super::{default_interpreter_config, run_py_test},
     crate::MainPythonInterpreter,
-    anyhow::{anyhow, Result},
+    anyhow::Result,
     cpython::{ObjectProtocol, PyObject},
     rusty_fork::rusty_fork_test,
-    std::path::PathBuf,
 };
 
 fn new_interpreter<'python, 'interpreter, 'resources>(
@@ -18,22 +17,6 @@ fn new_interpreter<'python, 'interpreter, 'resources>(
     let interp = MainPythonInterpreter::new(config)?;
 
     Ok(interp)
-}
-
-fn run_py_test(test_filename: &str) -> Result<()> {
-    let test_dir = env!("PYEMBED_TESTS_DIR");
-    let test_path = PathBuf::from(test_dir).join(test_filename);
-
-    let mut config = default_interpreter_config();
-    config.oxidized_importer = true;
-    config.interpreter_config.run_filename = Some(test_path);
-    config.interpreter_config.buffered_stdio = Some(false);
-
-    if MainPythonInterpreter::new(config)?.py_runmain() != 0 {
-        Err(anyhow!("Python code did not exit successfully"))
-    } else {
-        Ok(())
-    }
 }
 
 fn get_importer(interp: &mut MainPythonInterpreter) -> Result<PyObject> {

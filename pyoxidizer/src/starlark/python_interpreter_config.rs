@@ -219,6 +219,7 @@ impl TypedValue for PythonInterpreterConfigValue {
             "oxidized_importer" => Value::from(inner.oxidized_importer),
             "filesystem_importer" => Value::from(inner.filesystem_importer),
             "argvb" => Value::from(inner.argvb),
+            "multiprocessing_auto_dispatch" => Value::from(inner.multiprocessing_auto_dispatch),
             "multiprocessing_start_method" => {
                 Value::from(inner.multiprocessing_start_method.to_string())
             }
@@ -305,6 +306,7 @@ impl TypedValue for PythonInterpreterConfigValue {
                 | "oxidized_importer"
                 | "filesystem_importer"
                 | "argvb"
+                | "multiprocessing_auto_dispatch"
                 | "multiprocessing_start_method"
                 | "sys_frozen"
                 | "sys_meipass"
@@ -581,6 +583,9 @@ impl TypedValue for PythonInterpreterConfigValue {
             }
             "argvb" => {
                 inner.argvb = value.to_bool();
+            }
+            "multiprocessing_auto_dispatch" => {
+                inner.multiprocessing_auto_dispatch = value.to_bool();
             }
             "multiprocessing_start_method" => {
                 inner.multiprocessing_start_method = MultiprocessingStartMethod::from_str(
@@ -1291,6 +1296,18 @@ mod tests {
         let mut env = get_env()?;
 
         eval_assert(&mut env, "config.argvb == False")?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_multiprocessing_auto_dispatch() -> Result<()> {
+        let mut env = get_env()?;
+
+        eval_assert(&mut env, "config.multiprocessing_auto_dispatch == True")?;
+
+        env.eval("config.multiprocessing_auto_dispatch = False")?;
+        eval_assert(&mut env, "config.multiprocessing_auto_dispatch == False")?;
 
         Ok(())
     }

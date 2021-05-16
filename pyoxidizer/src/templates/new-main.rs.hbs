@@ -46,9 +46,12 @@ fn main() {
         match MainPythonInterpreter::new(config) {
             Ok(interp) => {
                 // And run it using the default run configuration as specified by the
-                // configuration. This calls `Py_RunMain()`, which finalizes the
-                // Python interpreter.
-                interp.py_runmain()
+                // configuration.
+                //
+                // This will either call `interp.py_runmain()` or
+                // `interp.run_multiprocessing()`. If `interp.py_runmain()` is called,
+                // the interpreter is guaranteed to be finalized.
+                interp.run()
             }
             Err(msg) => {
                 eprintln!("error instantiating embedded Python interpreter: {}", msg);

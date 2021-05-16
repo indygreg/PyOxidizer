@@ -51,6 +51,7 @@
     * :py:attr:`oxidized_importer`
     * :py:attr:`filesystem_importer`
     * :py:attr:`argvb`
+    * :py:attr:`multiprocessing_auto_dispatch`
     * :py:attr:`multiprocessing_start_method`
     * :py:attr:`sys_frozen`
     * :py:attr:`sys_meipass`
@@ -322,6 +323,23 @@
         on the Python execution mode, ``sys.argvb`` has all the arguments
         used to initialize the process. The first argument is always the
         executable.
+
+    .. py:attribute:: multiprocessing_auto_dispatch
+
+        (``bool``)
+
+        Controls whether the main execution routine of the binary will detect
+        when the process is supposed to act as a :py:mod:`multiprocessing`
+        worker process and will dispatch to :py:mod:`multiprocessing`
+        automatically, instead of any other configured code.
+
+        Values of ``True`` have the same effect as calling
+        :py:func:`multiprocessing.freeze_support` in your application code's
+        ``__main__`` and replace the need to do so.
+
+        Default value is ``True``.
+
+        See :ref:`pyoxidizer_packaging_multiprocessing_dispatch` for more.
 
     .. py:attribute:: multiprocessing_start_method
 
