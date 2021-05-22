@@ -1,0 +1,13 @@
+[package]
+name = "apple-xar"
+version = "0.1.0-pre"
+authors = ["Gregory Szorc <gregory.szorc@gmail.com>"]
+edition = "2018"
+license = "MPL-2.0"
+description = "XAR archive reading and writing"
+keywords = ["apple", "xar"]
+homepage = "https://github.com/indygreg/PyOxidizer"
+repository = "https://github.com/indygreg/PyOxidizer.git"
+readme = "README.md"
+
+[dependencies]
