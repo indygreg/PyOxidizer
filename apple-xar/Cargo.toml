@@ -11,3 +11,19 @@ repository = "https://github.com/indygreg/PyOxidizer.git"
 readme = "README.md"
 
 [dependencies]
+bzip2 = "0.4"
+chrono = { version = "0.4", features = ["serde"] }
+flate2 = "1.0"
+scroll = { version = "0.11", features = ["derive"] }
+serde-xml-rs = "0.5"
+serde = { version = "1.0", features = ["derive"] }
+thiserror = "1.0"
+xz2 = "0.1"
+
+[dependencies.cryptographic-message-syntax]
+path = "../cryptographic-message-syntax"
+version = "0.13.0-pre"
+
+[dependencies.x509-certificate]
+path = "../x509-certificate"
+version = "0.11.0-pre"

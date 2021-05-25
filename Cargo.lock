@@ -148,6 +148,18 @@ dependencies = [
 [[package]]
 name = "apple-xar"
 version = "0.1.0-pre"
+dependencies = [
+ "bzip2",
+ "chrono",
+ "cryptographic-message-syntax",
+ "flate2",
+ "scroll",
+ "serde",
+ "serde-xml-rs",
+ "thiserror",
+ "x509-certificate",
+ "xz2",
+]
 
 [[package]]
 name = "ar"
