@@ -229,7 +229,7 @@ impl X509Certificate {
 
     /// Obtain the OID of the signature algorithm used to sign this certificate.
     pub fn signature_algorithm_oid(&self) -> &Oid {
-        &self.0.tbs_certificate.signature.algorithm
+        &self.0.signature_algorithm.algorithm
     }
 
     /// Obtain the raw data constituting this certificate's public key.
