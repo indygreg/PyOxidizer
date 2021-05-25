@@ -219,6 +219,19 @@ impl X509Certificate {
             .algorithm
     }
 
+    /// Obtain the [SignatureAlgorithm this certificate will use.
+    ///
+    /// Returns [None] if we failed to resolve an instance (probably because we don't
+    /// recognize the algorithm).
+    pub fn signature_algorithm(&self) -> Option<SignatureAlgorithm> {
+        SignatureAlgorithm::try_from(&self.0.tbs_certificate.signature.algorithm).ok()
+    }
+
+    /// Obtain the OID of the signature algorithm this certificate will use.
+    pub fn signature_algorithm_oid(&self) -> &Oid {
+        &self.0.tbs_certificate.signature.algorithm
+    }
+
     /// Obtain the [SignatureAlgorithm] used to sign this certificate.
     ///
     /// Returns [None] if we failed to resolve an instance (probably because we
