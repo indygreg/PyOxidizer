@@ -464,6 +464,24 @@ impl CapturedX509Certificate {
         self.verify_signed_by_public_key(public_key)
     }
 
+    /// Verify a signature over signed data perportedly signed by this certificate.
+    pub fn verify_signed_data(
+        &self,
+        signed_data: impl AsRef<[u8]>,
+        signature: impl AsRef<[u8]>,
+    ) -> Result<(), Error> {
+        let key_algorithm = KeyAlgorithm::try_from(self.key_algorithm_oid())?;
+        let signature_algorithm = SignatureAlgorithm::try_from(self.signature_algorithm_oid())?;
+        let verify_algorithm = signature_algorithm.resolve_verification_algorithm(key_algorithm)?;
+
+        let public_key =
+            signature::UnparsedPublicKey::new(verify_algorithm, self.public_key_data());
+
+        public_key
+            .verify(signed_data.as_ref(), signature.as_ref())
+            .map_err(|_| Error::CertificateSignatureVerificationFailed)
+    }
+
     /// Verifies that this certificate was cryptographically signed using raw public key data from a signing key.
     ///
     /// This function does the low-level work of extracting the signature and
