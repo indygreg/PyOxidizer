@@ -223,12 +223,12 @@ impl X509Certificate {
     ///
     /// Returns [None] if we failed to resolve an instance (probably because we
     /// don't recognize that algorithm).
-    pub fn signature_algorithm(&self) -> Option<SignatureAlgorithm> {
+    pub fn signature_signature_algorithm(&self) -> Option<SignatureAlgorithm> {
         SignatureAlgorithm::try_from(&self.0.signature_algorithm).ok()
     }
 
     /// Obtain the OID of the signature algorithm used to sign this certificate.
-    pub fn signature_algorithm_oid(&self) -> &Oid {
+    pub fn signature_signature_algorithm_oid(&self) -> &Oid {
         &self.0.signature_algorithm.algorithm
     }
 
