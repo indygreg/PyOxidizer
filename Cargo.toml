@@ -2,6 +2,7 @@
 members = [
     'apple-bundles',
     'apple-codesign',
+    'apple-flat-package',
     'apple-xar',
     'cpio-archive',
     'cryptographic-message-syntax',

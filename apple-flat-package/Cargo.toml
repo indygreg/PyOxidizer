@@ -1,0 +1,13 @@
+[package]
+name = "apple-flat-package"
+version = "0.1.0-pre"
+authors = ["Gregory Szorc <gregory.szorc@gmail.com>"]
+edition = "2018"
+license = "MPL-2.0"
+description = "Apple flat package (.pkg) format handling"
+keywords = ["apple", "flat-package", "pkgbuild", "pkg", "productbuild"]
+homepage = "https://github.com/indygreg/PyOxidizer"
+repository = "https://github.com/indygreg/PyOxidizer.git"
+readme = "README.md"
+
+[dependencies]
