@@ -149,6 +149,15 @@ dependencies = [
 [[package]]
 name = "apple-flat-package"
 version = "0.1.0-pre"
+dependencies = [
+ "apple-xar",
+ "cpio-archive",
+ "flate2",
+ "scroll",
+ "serde",
+ "serde-xml-rs",
+ "thiserror",
+]
 
 [[package]]
 name = "apple-xar"
