@@ -30,6 +30,7 @@ static IGNORE_PACKAGES: Lazy<Vec<&'static str>> = Lazy::new(|| vec!["release"]);
 /// Order that packages should be released in.
 static RELEASE_ORDER: Lazy<Vec<&'static str>> = Lazy::new(|| {
     vec![
+        "cpio-archive",
         "x509-certificate",
         "cryptographic-message-syntax",
         "starlark-dialect-build-targets",
