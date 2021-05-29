@@ -390,10 +390,7 @@ impl WiXInstallerValue {
 
         let installer_path = self.materialize(type_values, call_stack, label, dest_dir.path())?;
 
-        let entry = FileEntry {
-            data: installer_path.clone().into(),
-            executable: false,
-        };
+        let entry = FileEntry::new_from_path(&installer_path, false);
 
         let (entry, filename) = error_context(label, || {
             let entry = entry

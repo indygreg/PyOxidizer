@@ -196,10 +196,7 @@ impl FileContentValue {
 
                 let data = FileData::from(content.as_bytes());
 
-                let file_entry = FileEntry {
-                    data,
-                    executable: executable.unwrap_or(false),
-                };
+                let file_entry = FileEntry::new_from_data(data, executable.unwrap_or(false));
 
                 Ok(FileContentWrapper {
                     content: file_entry,

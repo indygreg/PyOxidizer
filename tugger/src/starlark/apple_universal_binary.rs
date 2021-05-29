@@ -132,10 +132,7 @@ impl AppleUniversalBinaryValue {
                 .write(&mut data)
                 .context("writing universal binary")?;
 
-            Ok(FileEntry {
-                data: data.into(),
-                executable: true,
-            })
+            Ok(FileEntry::new_from_data(data, true))
         })?;
 
         Ok(FileContentWrapper {

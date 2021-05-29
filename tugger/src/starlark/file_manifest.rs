@@ -428,11 +428,8 @@ starlark_module! { file_manifest_module =>
 #[cfg(test)]
 mod tests {
     use {
-        super::*,
-        crate::starlark::testutil::*,
-        anyhow::Result,
-        tugger_common::testutil::*,
-        tugger_file_manifest::{FileData, FileEntry},
+        super::*, crate::starlark::testutil::*, anyhow::Result, tugger_common::testutil::*,
+        tugger_file_manifest::FileEntry,
     };
 
     #[test]
@@ -486,18 +483,9 @@ mod tests {
             assert_eq!(inner.iter_files().count(), 2);
             assert_eq!(
                 inner.get("test_add_path_0"),
-                Some(&FileEntry {
-                    executable: false,
-                    data: temp_file0.into(),
-                })
+                Some(&FileEntry::new_from_path(temp_file0, false))
             );
-            assert_eq!(
-                inner.get("test_add_path_1"),
-                Some(&FileEntry {
-                    executable: false,
-                    data: vec![42, 42].into(),
-                })
-            );
+            assert_eq!(inner.get("test_add_path_1"), Some(&vec![42, 42].into()),);
         }
 
         Ok(())
@@ -518,13 +506,7 @@ mod tests {
         let entries = inner.iter_entries().collect::<Vec<_>>();
         assert_eq!(
             entries,
-            vec![(
-                &PathBuf::from("file"),
-                &FileEntry {
-                    data: FileData::from(b"foo".as_ref()),
-                    executable: false
-                }
-            )]
+            vec![(&PathBuf::from("file"), &b"foo".as_ref().into())]
         );
 
         Ok(())
@@ -545,13 +527,7 @@ mod tests {
         let entries = inner.iter_entries().collect::<Vec<_>>();
         assert_eq!(
             entries,
-            vec![(
-                &PathBuf::from("foo/bar"),
-                &FileEntry {
-                    data: FileData::from(b"foo".as_ref()),
-                    executable: false
-                }
-            )]
+            vec![(&PathBuf::from("foo/bar"), &b"foo".as_ref().into())]
         );
 
         Ok(())
@@ -572,13 +548,7 @@ mod tests {
         let entries = inner.iter_entries().collect::<Vec<_>>();
         assert_eq!(
             entries,
-            vec![(
-                &PathBuf::from("dir/file"),
-                &FileEntry {
-                    data: FileData::from(b"foo".as_ref()),
-                    executable: false
-                }
-            )]
+            vec![(&PathBuf::from("dir/file"), &b"foo".as_ref().into())]
         );
 
         Ok(())

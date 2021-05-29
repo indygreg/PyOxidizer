@@ -27,9 +27,12 @@ use {
         get_context_value, optional_str_arg, EnvironmentContext, ResolvedTarget,
         ResolvedTargetValue, RunMode,
     },
-    std::path::{Path, PathBuf},
+    std::{
+        convert::TryFrom,
+        path::{Path, PathBuf},
+    },
     tugger_code_signing::SigningDestination,
-    tugger_file_manifest::FileData,
+    tugger_file_manifest::FileEntry,
 };
 
 fn error_context<F, T>(label: &str, f: F) -> Result<T, ValueError>
@@ -70,7 +73,8 @@ impl MacOsApplicationBundleBuilderValue {
 
     pub fn add_icon(&mut self, path: String) -> ValueResult {
         error_context("MacOsApplicationBundleBuilder.add_icon()", || {
-            self.inner.add_icon(FileData::from(PathBuf::from(path)))
+            self.inner
+                .add_icon(FileEntry::try_from(PathBuf::from(path))?)
         })?;
 
         Ok(Value::new(NoneType::None))

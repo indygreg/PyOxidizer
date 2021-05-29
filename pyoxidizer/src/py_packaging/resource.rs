@@ -25,10 +25,7 @@ pub trait AddToFileManifest {
 
 impl AddToFileManifest for PythonModuleSource {
     fn add_to_file_manifest(&self, manifest: &mut FileManifest, prefix: &str) -> Result<()> {
-        let content = FileEntry {
-            data: self.source.resolve()?.into(),
-            executable: false,
-        };
+        let content = self.source.resolve()?;
 
         manifest.add_file_entry(&self.resolve_path(prefix), content)?;
 
@@ -36,13 +33,7 @@ impl AddToFileManifest for PythonModuleSource {
             let package_path = resolve_path_for_module(prefix, &package, true, None);
 
             if !manifest.has_path(&package_path) {
-                manifest.add_file_entry(
-                    &package_path,
-                    FileEntry {
-                        data: vec![].into(),
-                        executable: false,
-                    },
-                )?;
+                manifest.add_file_entry(&package_path, vec![])?;
             }
         }
 
@@ -54,13 +45,7 @@ impl AddToFileManifest for PythonPackageResource {
     fn add_to_file_manifest(&self, manifest: &mut FileManifest, prefix: &str) -> Result<()> {
         let dest_path = self.resolve_path(prefix);
 
-        manifest.add_file_entry(
-            &dest_path,
-            FileEntry {
-                data: self.data.resolve()?.into(),
-                executable: false,
-            },
-        )?;
+        manifest.add_file_entry(&dest_path, self.data.resolve()?)?;
 
         Ok(())
     }
@@ -70,13 +55,7 @@ impl AddToFileManifest for PythonPackageDistributionResource {
     fn add_to_file_manifest(&self, manifest: &mut FileManifest, prefix: &str) -> Result<()> {
         let dest_path = self.resolve_path(prefix);
 
-        manifest.add_file_entry(
-            &dest_path,
-            FileEntry {
-                data: self.data.resolve()?.into(),
-                executable: false,
-            },
-        )?;
+        manifest.add_file_entry(&dest_path, self.data.resolve()?)?;
 
         Ok(())
     }
@@ -87,10 +66,7 @@ impl AddToFileManifest for PythonExtensionModule {
         if let Some(data) = &self.shared_library {
             manifest.add_file_entry(
                 &self.resolve_path(prefix),
-                FileEntry {
-                    data: data.resolve()?.into(),
-                    executable: true,
-                },
+                FileEntry::new_from_data(data.resolve()?, true),
             )?;
         }
 

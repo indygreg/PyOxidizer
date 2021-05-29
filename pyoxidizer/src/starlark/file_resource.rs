@@ -50,10 +50,7 @@ pub fn file_manifest_add_python_executable(
     let build = build_python_executable(env, logger, &exe.name(), exe, target, opt_level, release)
         .context("building Python executable")?;
 
-    let content = FileEntry {
-        data: build.exe_data.clone().into(),
-        executable: true,
-    };
+    let content = FileEntry::new_from_data(build.exe_data.clone(), true);
 
     let use_prefix = if prefix == "." { "" } else { prefix };
 
@@ -279,23 +276,11 @@ mod tests {
 
         let (p, c) = entries.next().unwrap();
         assert_eq!(p, &PathBuf::from("lib/foo/__init__.py"));
-        assert_eq!(
-            c,
-            &FileEntry {
-                data: vec![].into(),
-                executable: false,
-            }
-        );
+        assert_eq!(c, &vec![].into());
 
         let (p, c) = entries.next().unwrap();
         assert_eq!(p, &PathBuf::from("lib/foo/bar.py"));
-        assert_eq!(
-            c,
-            &FileEntry {
-                data: vec![].into(),
-                executable: false,
-            }
-        );
+        assert_eq!(c, &vec![].into());
 
         assert!(entries.next().is_none());
 
@@ -328,13 +313,7 @@ mod tests {
         let (p, c) = entries.next().unwrap();
 
         assert_eq!(p, &PathBuf::from("lib/foo/bar/resource.txt"));
-        assert_eq!(
-            c,
-            &FileEntry {
-                data: vec![].into(),
-                executable: false,
-            }
-        );
+        assert_eq!(c, &vec![].into());
 
         assert!(entries.next().is_none());
 

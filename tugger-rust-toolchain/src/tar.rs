@@ -66,10 +66,7 @@ impl PackageArchive {
 
             manifest.add_file_entry(
                 path,
-                FileEntry {
-                    data: entry_data.into(),
-                    executable: entry.header().mode()? & 0o111 != 0,
-                },
+                FileEntry::new_from_data(entry_data, entry.header().mode()? & 0o111 != 0),
             )?;
         }
 

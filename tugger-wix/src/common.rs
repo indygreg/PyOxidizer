@@ -471,10 +471,7 @@ mod tests {
 
     #[test]
     fn test_file_manifest_to_wix() -> Result<()> {
-        let c = FileEntry {
-            data: vec![42].into(),
-            executable: false,
-        };
+        let c = FileEntry::from(vec![42]);
 
         let mut m = FileManifest::default();
         m.add_file_entry(Path::new("root.txt"), c.clone())?;

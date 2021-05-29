@@ -12,7 +12,7 @@ use {
     crate::BundlePackageType,
     anyhow::{anyhow, Context, Result},
     std::path::{Path, PathBuf},
-    tugger_file_manifest::{FileData, FileEntry, FileManifest, FileManifestError},
+    tugger_file_manifest::{FileEntry, FileManifest, FileManifestError},
 };
 
 /// Primitive used to iteratively construct a macOS Application Bundle.
@@ -55,10 +55,7 @@ use {
 /// builder.set_info_plist_required_keys("My Program", "com.example.my_program", "0.1", "mypg", "MyProgram")?;
 ///
 /// // Add an executable file providing our main application.
-/// builder.add_file_macos("MyProgram", FileEntry {
-///     data: b"#!/bin/sh\necho 'hello world'\n".to_vec().into(),
-///     executable: true,
-/// })?;
+/// builder.add_file_macos("MyProgram", FileEntry::new_from_data(b"#!/bin/sh\necho 'hello world'\n".to_vec(), true))?;
 /// # Ok(())
 /// # }
 /// ```
@@ -165,13 +162,7 @@ impl MacOsApplicationBundleBuilder {
             .to_writer_xml(&mut data)
             .context("serializing plist dictionary to XML")?;
 
-        Ok(self.add_file(
-            "Contents/Info.plist",
-            FileEntry {
-                data: data.into(),
-                executable: false,
-            },
-        )?)
+        Ok(self.add_file("Contents/Info.plist", data)?)
     }
 
     /// Obtain the value of a key in the `Contents/Info.plist` file.
@@ -258,16 +249,13 @@ impl MacOsApplicationBundleBuilder {
     ///
     /// This will materialize the passed raw image data (can be multiple formats)
     /// into the `Contents/Resources/<BundleName>.icns` file.
-    pub fn add_icon(&mut self, data: impl Into<FileData>) -> Result<()> {
+    pub fn add_icon(&mut self, data: impl Into<FileEntry>) -> Result<()> {
         Ok(self.add_file_resources(
             format!(
                 "{}.icns",
                 self.bundle_name().context("resolving bundle name")?
             ),
-            FileEntry {
-                data: data.into(),
-                executable: false,
-            },
+            data,
         )?)
     }
 
@@ -443,13 +431,7 @@ mod tests {
     fn add_file_macos() -> Result<()> {
         let mut builder = MacOsApplicationBundleBuilder::new("MyProgram")?;
 
-        builder.add_file_macos(
-            "MyProgram",
-            FileEntry {
-                data: vec![42].into(),
-                executable: true,
-            },
-        )?;
+        builder.add_file_macos("MyProgram", FileEntry::new_from_data(vec![42], true))?;
 
         let entries = builder.files.iter_entries().collect::<Vec<_>>();
         assert_eq!(entries.len(), 2);
@@ -462,14 +444,7 @@ mod tests {
     fn add_localized_resources_file() -> Result<()> {
         let mut builder = MacOsApplicationBundleBuilder::new("MyProgram")?;
 
-        builder.add_localized_resources_file(
-            "it",
-            "resource",
-            FileEntry {
-                data: vec![42].into(),
-                executable: false,
-            },
-        )?;
+        builder.add_localized_resources_file("it", "resource", vec![42])?;
 
         let entries = builder.files.iter_entries().collect::<Vec<_>>();
         assert_eq!(entries.len(), 2);

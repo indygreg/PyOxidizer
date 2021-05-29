@@ -4479,10 +4479,7 @@ mod tests {
             .add_file_data(
                 &File {
                     path: PathBuf::from("foo/bar.py"),
-                    entry: FileEntry {
-                        executable: false,
-                        data: vec![42].into(),
-                    }
+                    entry: vec![42].into(),
                 },
                 &ConcreteResourceLocation::InMemory,
             )
@@ -4492,10 +4489,7 @@ mod tests {
         r.add_file_data(
             &File {
                 path: PathBuf::from("foo/bar.py"),
-                entry: FileEntry {
-                    executable: false,
-                    data: vec![42].into(),
-                },
+                entry: vec![42].into(),
             },
             &ConcreteResourceLocation::InMemory,
         )?;
@@ -4542,10 +4536,7 @@ mod tests {
         r.add_file_data(
             &File {
                 path: PathBuf::from("foo/bar.py"),
-                entry: FileEntry {
-                    executable: false,
-                    data: vec![42].into(),
-                },
+                entry: vec![42].into(),
             },
             &ConcreteResourceLocation::RelativePath("prefix".to_string()),
         )?;
@@ -4602,10 +4593,7 @@ mod tests {
 
         let file = File {
             path: PathBuf::from("foo/bar.py"),
-            entry: FileEntry {
-                executable: true,
-                data: vec![42].into(),
-            },
+            entry: FileEntry::new_from_data(vec![42], true),
         };
 
         let mut add_context = PythonResourceAddCollectionContext {

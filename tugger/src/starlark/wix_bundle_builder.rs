@@ -215,10 +215,7 @@ impl<'a> WiXBundleBuilderValue<'a> {
         let (installer_path, filename) =
             self.materialize(type_values, call_stack, label, dest_dir.path())?;
 
-        let entry = FileEntry {
-            data: installer_path.into(),
-            executable: false,
-        };
+        let entry = FileEntry::new_from_path(&installer_path, false);
 
         let entry = error_context(label, || {
             entry

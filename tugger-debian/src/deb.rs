@@ -414,20 +414,8 @@ impl<'a> ControlTarBuilder<'a> {
         let control_data = control_buffer.into_inner()?;
 
         let mut manifest = self.extra_files.clone();
-        manifest.add_file_entry(
-            "control",
-            FileEntry {
-                data: control_data.into(),
-                executable: false,
-            },
-        )?;
-        manifest.add_file_entry(
-            "md5sums",
-            FileEntry {
-                data: self.md5sums.concat::<u8>().into(),
-                executable: false,
-            },
-        )?;
+        manifest.add_file_entry("control", control_data)?;
+        manifest.add_file_entry("md5sums", self.md5sums.concat::<u8>())?;
 
         write_deb_tar(writer, &manifest, self.mtime())
     }
@@ -496,13 +484,7 @@ mod tests {
 
         let builder = ControlTarBuilder::new(control)
             .set_mtime(Some(SystemTime::UNIX_EPOCH))
-            .add_extra_file(
-                "prerm",
-                FileEntry {
-                    data: vec![42].into(),
-                    executable: true,
-                },
-            )?
+            .add_extra_file("prerm", FileEntry::new_from_data(vec![42], true))?
             .add_data_file("usr/bin/myapp", &mut std::io::Cursor::new("data"))?;
 
         let mut buffer = vec![];
@@ -530,13 +512,7 @@ mod tests {
     #[test]
     fn test_write_data_tar_one_file() -> Result<()> {
         let mut manifest = FileManifest::default();
-        manifest.add_file_entry(
-            "foo/bar.txt",
-            FileEntry {
-                data: vec![42].into(),
-                executable: true,
-            },
-        )?;
+        manifest.add_file_entry("foo/bar.txt", FileEntry::new_from_data(vec![42], true))?;
 
         let mut buffer = vec![];
         write_deb_tar(&mut buffer, &manifest, 2)?;
@@ -565,13 +541,7 @@ mod tests {
 
         let mut manifest = FileManifest::default();
 
-        manifest.add_file_entry(
-            &long_path,
-            FileEntry {
-                data: vec![42].into(),
-                executable: false,
-            },
-        )?;
+        manifest.add_file_entry(&long_path, vec![42])?;
 
         let mut buffer = vec![];
         write_deb_tar(&mut buffer, &manifest, 2)?;
@@ -605,13 +575,7 @@ mod tests {
 
         let builder = DebBuilder::new(control)
             .set_compression(DebCompression::Zstandard(3))
-            .install_file(
-                "usr/bin/myapp",
-                FileEntry {
-                    data: vec![42].into(),
-                    executable: true,
-                },
-            )?;
+            .install_file("usr/bin/myapp", FileEntry::new_from_data(vec![42], true))?;
 
         let mut buffer = vec![];
         builder.write(&mut buffer)?;

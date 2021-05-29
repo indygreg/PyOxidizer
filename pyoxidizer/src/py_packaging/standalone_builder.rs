@@ -396,13 +396,8 @@ impl StandalonePythonExecutableBuilder {
                                 path.file_name()
                                     .ok_or_else(|| anyhow!("could not determine file name"))?,
                             );
-                            manifest.add_file_entry(
-                                file_name,
-                                FileEntry {
-                                    data: FileData::Path(path),
-                                    executable: true,
-                                },
-                            )?;
+                            manifest
+                                .add_file_entry(file_name, FileEntry::new_from_path(path, true))?;
                         }
                     }
                     Err(err) => {
@@ -949,10 +944,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         for (path, location, executable) in &compiled_resources.extra_files {
             extra_files.add_file_entry(
                 path,
-                FileEntry {
-                    data: location.resolve()?.into(),
-                    executable: *executable,
-                },
+                FileEntry::new_from_data(location.resolve()?, *executable),
             )?;
         }
 
@@ -974,13 +966,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
                 compiled_resources
                     .write_packed_resources(&mut buffer)
                     .context("serializing packed resources")?;
-                extra_files.add_file_entry(
-                    Path::new(path),
-                    FileEntry {
-                        data: FileData::Memory(buffer),
-                        executable: false,
-                    },
-                )?;
+                extra_files.add_file_entry(Path::new(path), buffer)?;
 
                 config
                     .packed_resources
@@ -995,10 +981,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         if self.link_mode == LibpythonLinkMode::Dynamic {
             if let Some(p) = &self.target_distribution.libpython_shared_library {
                 let manifest_path = Path::new(p.file_name().unwrap());
-                let content = FileEntry {
-                    data: std::fs::read(&p)?.into(),
-                    executable: false,
-                };
+                let content = std::fs::read(&p)?;
 
                 extra_files.add_file_entry(&manifest_path, content)?;
 
@@ -1008,10 +991,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
                 let python3_dll_path = p.with_file_name("python3.dll");
                 let manifest_path = Path::new(python3_dll_path.file_name().unwrap());
                 if python3_dll_path.exists() {
-                    let content = FileEntry {
-                        data: std::fs::read(&python3_dll_path)?.into(),
-                        executable: false,
-                    };
+                    let content = std::fs::read(&python3_dll_path)?;
 
                     extra_files.add_file_entry(&manifest_path, content)?;
                 }
@@ -1022,13 +1002,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
             for (path, location) in self.target_distribution.tcl_files()? {
                 let install_path = PathBuf::from(tcl_files_path).join(path);
 
-                extra_files.add_file_entry(
-                    &install_path,
-                    FileEntry {
-                        data: location.resolve()?.into(),
-                        executable: false,
-                    },
-                )?;
+                extra_files.add_file_entry(&install_path, location.resolve()?)?;
             }
         }
 

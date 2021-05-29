@@ -285,7 +285,7 @@ impl WheelBuilder {
     /// Add a file to the wheel at the given path.
     ///
     /// No validation of the path is performed.
-    pub fn add_file(&mut self, path: impl AsRef<Path>, file: FileEntry) -> Result<()> {
+    pub fn add_file(&mut self, path: impl AsRef<Path>, file: impl Into<FileEntry>) -> Result<()> {
         self.manifest.add_file_entry(path, file)?;
 
         Ok(())
@@ -295,7 +295,11 @@ impl WheelBuilder {
     ///
     /// Attempts to add the `RECORD` file will work. However, the content will be
     /// ignored and regenerated as part of wheel building.
-    pub fn add_file_dist_info(&mut self, path: impl AsRef<Path>, file: FileEntry) -> Result<()> {
+    pub fn add_file_dist_info(
+        &mut self,
+        path: impl AsRef<Path>,
+        file: impl Into<FileEntry>,
+    ) -> Result<()> {
         self.manifest
             .add_file_entry(self.dist_info_path().join(path), file)?;
 
@@ -314,7 +318,7 @@ impl WheelBuilder {
         &mut self,
         destination: impl ToString,
         path: impl AsRef<Path>,
-        file: FileEntry,
+        file: impl Into<FileEntry>,
     ) -> Result<()> {
         self.manifest.add_file_entry(
             PathBuf::from(format!(
@@ -414,10 +418,7 @@ impl WheelBuilder {
         if !m.has_path(self.dist_info_path().join("WHEEL")) {
             m.add_file_entry(
                 self.dist_info_path().join("WHEEL"),
-                FileEntry {
-                    data: self.derive_wheel_file().as_bytes().into(),
-                    executable: false,
-                },
+                self.derive_wheel_file().as_bytes(),
             )?;
         }
 
@@ -425,10 +426,7 @@ impl WheelBuilder {
         if !m.has_path(self.dist_info_path().join("METADATA")) {
             m.add_file_entry(
                 self.dist_info_path().join("METADATA"),
-                FileEntry {
-                    data: self.derive_metadata_file().as_bytes().into(),
-                    executable: false,
-                },
+                self.derive_metadata_file().as_bytes(),
             )?;
         }
 
@@ -438,14 +436,9 @@ impl WheelBuilder {
 
         m.add_file_entry(
             self.dist_info_path().join("RECORD"),
-            FileEntry {
-                data: self
-                    .derive_record_file(&m)
-                    .context("deriving RECORD file")?
-                    .as_bytes()
-                    .into(),
-                executable: false,
-            },
+            self.derive_record_file(&m)
+                .context("deriving RECORD file")?
+                .as_bytes(),
         )?;
 
         Ok(m)
@@ -537,25 +530,19 @@ mod test {
 
         let m = builder.build_file_manifest()?;
         assert_eq!(m.iter_entries().count(), 3);
-        assert_eq!(m.get("my_package-0.1.dist-info/WHEEL"), Some(&FileEntry {
-            data: b"Wheel-Version: 1.0\nGenerator: rust-python-packaging\nRoot-Is-Purelib: false\nTag: py3-none-any\n".as_ref().into(),
-            executable: false
-        }));
+        assert_eq!(m.get("my_package-0.1.dist-info/WHEEL"),
+                   Some(&b"Wheel-Version: 1.0\nGenerator: rust-python-packaging\nRoot-Is-Purelib: false\nTag: py3-none-any\n".as_ref().into()));
         assert_eq!(
             m.get("my_package-0.1.dist-info/METADATA"),
-            Some(&FileEntry {
-                data: b"Metadata-Version: 2.1\nName: my-package\nVersion: 0.1\n"
+            Some(
+                &b"Metadata-Version: 2.1\nName: my-package\nVersion: 0.1\n"
                     .as_ref()
-                    .into(),
-                executable: false
-            })
+                    .into()
+            )
         );
         assert_eq!(
             m.get("my_package-0.1.dist-info/RECORD"),
-            Some(&FileEntry {
-                data: b"my_package-0.1.dist-info/METADATA,sha256=sXUNNYpfVReu7VHhVzSbKiT5ciO4Fwcwm7icBNiYn3Y,52\nmy_package-0.1.dist-info/WHEEL,sha256=76DhAzqMvlOgtCOiUNpWcD643b1CXd507uRH1hq6fQw,93\nmy_package-0.1.dist-info/RECORD,,\n".as_ref().into(),
-                executable: false
-            })
+            Some(&b"my_package-0.1.dist-info/METADATA,sha256=sXUNNYpfVReu7VHhVzSbKiT5ciO4Fwcwm7icBNiYn3Y,52\nmy_package-0.1.dist-info/WHEEL,sha256=76DhAzqMvlOgtCOiUNpWcD643b1CXd507uRH1hq6fQw,93\nmy_package-0.1.dist-info/RECORD,,\n".as_ref().into())
         );
 
         Ok(())
@@ -598,21 +585,12 @@ mod test {
     fn custom_wheel_file() -> Result<()> {
         let mut builder = WheelBuilder::new("my-package", "0.1");
 
-        builder.add_file_dist_info(
-            "WHEEL",
-            FileEntry {
-                data: vec![42].into(),
-                executable: false,
-            },
-        )?;
+        builder.add_file_dist_info("WHEEL", vec![42])?;
 
         let m = builder.build_file_manifest()?;
         assert_eq!(
             m.get("my_package-0.1.dist-info/WHEEL"),
-            Some(&FileEntry {
-                data: vec![42].into(),
-                executable: false
-            })
+            Some(&vec![42].into())
         );
 
         Ok(())
@@ -622,21 +600,12 @@ mod test {
     fn custom_metadata_file() -> Result<()> {
         let mut builder = WheelBuilder::new("my-package", "0.1");
 
-        builder.add_file_dist_info(
-            "METADATA",
-            FileEntry {
-                data: vec![42].into(),
-                executable: false,
-            },
-        )?;
+        builder.add_file_dist_info("METADATA", vec![42])?;
 
         let m = builder.build_file_manifest()?;
         assert_eq!(
             m.get("my_package-0.1.dist-info/METADATA"),
-            Some(&FileEntry {
-                data: vec![42].into(),
-                executable: false
-            })
+            Some(&vec![42].into())
         );
 
         Ok(())
@@ -646,22 +615,12 @@ mod test {
     fn add_file_data() -> Result<()> {
         let mut builder = WheelBuilder::new("my-package", "0.1");
 
-        builder.add_file_data(
-            "purelib",
-            "__init__.py",
-            FileEntry {
-                data: vec![42].into(),
-                executable: false,
-            },
-        )?;
+        builder.add_file_data("purelib", "__init__.py", vec![42])?;
 
         let m = builder.build_file_manifest()?;
         assert_eq!(
             m.get("my_package-0.1.data/purelib/__init__.py"),
-            Some(&FileEntry {
-                data: vec![42].into(),
-                executable: false
-            })
+            Some(&vec![42].into())
         );
 
         Ok(())

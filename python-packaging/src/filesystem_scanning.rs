@@ -554,10 +554,10 @@ impl<'a> Iterator for PythonResourceIterator<'a> {
 
                 let f = File {
                     path: rel_path,
-                    entry: FileEntry {
-                        executable: self.resolve_is_executable(&self.paths[0].path),
-                        data: self.resolve_file_data(&self.paths[0].path),
-                    },
+                    entry: FileEntry::new_from_data(
+                        self.resolve_file_data(&self.paths[0].path),
+                        self.resolve_is_executable(&self.paths[0].path),
+                    ),
                 };
 
                 return Some(Ok(f.into()));
@@ -703,7 +703,10 @@ mod tests {
     use {
         super::*,
         once_cell::sync::Lazy,
-        std::fs::{create_dir_all, write},
+        std::{
+            convert::TryInto,
+            fs::{create_dir_all, write},
+        },
     };
 
     const DEFAULT_CACHE_TAG: &str = "cpython-37";
@@ -745,10 +748,7 @@ mod tests {
             resources[0],
             File {
                 path: PathBuf::from("acme/__init__.py"),
-                entry: FileEntry {
-                    executable: false,
-                    data: acme_path.join("__init__.py").into(),
-                }
+                entry: acme_path.join("__init__.py").try_into()?,
             }
             .into()
         );
@@ -768,10 +768,7 @@ mod tests {
             resources[2],
             File {
                 path: PathBuf::from("acme/a/__init__.py"),
-                entry: FileEntry {
-                    executable: false,
-                    data: acme_a_path.join("__init__.py").into(),
-                }
+                entry: acme_a_path.join("__init__.py").try_into()?,
             }
             .into()
         );
@@ -791,10 +788,7 @@ mod tests {
             resources[4],
             File {
                 path: PathBuf::from("acme/a/foo.py"),
-                entry: FileEntry {
-                    executable: false,
-                    data: acme_a_path.join("foo.py").into(),
-                }
+                entry: acme_a_path.join("foo.py").try_into()?,
             }
             .into()
         );
@@ -814,10 +808,7 @@ mod tests {
             resources[6],
             File {
                 path: PathBuf::from("acme/bar/__init__.py"),
-                entry: FileEntry {
-                    executable: false,
-                    data: acme_bar_path.join("__init__.py").into(),
-                }
+                entry: acme_bar_path.join("__init__.py").try_into()?,
             }
             .into()
         );
@@ -1852,17 +1843,11 @@ mod tests {
         let inputs = vec![
             File {
                 path: PathBuf::from("foo/__init__.py"),
-                entry: FileEntry {
-                    executable: false,
-                    data: vec![0].into(),
-                },
+                entry: vec![0].into(),
             },
             File {
                 path: PathBuf::from("foo/bar.py"),
-                entry: FileEntry {
-                    executable: true,
-                    data: vec![1].into(),
-                },
+                entry: FileEntry::new_from_data(vec![1], true),
             },
         ];
 
@@ -1880,10 +1865,7 @@ mod tests {
             resources[0],
             File {
                 path: PathBuf::from("foo/__init__.py"),
-                entry: FileEntry {
-                    executable: false,
-                    data: vec![0].into(),
-                }
+                entry: vec![0].into(),
             }
             .into()
         );
@@ -1903,10 +1885,7 @@ mod tests {
             resources[2],
             File {
                 path: PathBuf::from("foo/bar.py"),
-                entry: FileEntry {
-                    executable: true,
-                    data: vec![1].into(),
-                }
+                entry: FileEntry::new_from_data(vec![1], true),
             }
             .into()
         );

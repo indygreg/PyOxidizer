@@ -565,7 +565,7 @@ impl WiXSimpleMsiBuilder {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, tugger_common::testutil::*, tugger_file_manifest::FileEntry};
+    use {super::*, tugger_common::testutil::*};
 
     #[cfg(target_family = "windows")]
     use tugger_windows_codesign::{
@@ -578,13 +578,7 @@ mod tests {
         let mut builder = WiXSimpleMsiBuilder::new("prefix", "myapp", "0.1", "author");
 
         let mut m = FileManifest::default();
-        m.add_file_entry(
-            "foo.txt",
-            FileEntry {
-                data: vec![42].into(),
-                executable: false,
-            },
-        )?;
+        m.add_file_entry("foo.txt", vec![42])?;
 
         builder.add_program_files_manifest(&m)?;
 
@@ -606,13 +600,7 @@ mod tests {
         let mut builder = WiXSimpleMsiBuilder::new("prefix", "testapp", "0.1", "author");
 
         let mut m = FileManifest::default();
-        m.add_file_entry(
-            "foo.txt",
-            FileEntry {
-                data: vec![42].into(),
-                executable: false,
-            },
-        )?;
+        m.add_file_entry("foo.txt", vec![42])?;
 
         builder.add_program_files_manifest(&m)?;
 

@@ -66,10 +66,7 @@ impl WheelArchive {
 
             files.add_file_entry(
                 Path::new(file.name()),
-                FileEntry {
-                    data: buffer.into(),
-                    executable: file.unix_mode().unwrap_or(0) & S_IXUSR != 0,
-                },
+                FileEntry::new_from_data(buffer, file.unix_mode().unwrap_or(0) & S_IXUSR != 0),
             )?;
         }
 

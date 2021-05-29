@@ -27,7 +27,6 @@ use {
         path::PathBuf,
         sync::{Arc, Mutex, MutexGuard},
     },
-    tugger_file_manifest::FileEntry,
 };
 
 fn error_context<F, T>(label: &str, f: F) -> Result<T, ValueError>
@@ -281,10 +280,7 @@ impl PythonWheelBuilderValue {
         })?;
 
         Ok(FileContentWrapper {
-            content: FileEntry {
-                data: data.into(),
-                executable: false,
-            },
+            content: data.into(),
             filename: inner.wheel_file_name(),
         }
         .into())

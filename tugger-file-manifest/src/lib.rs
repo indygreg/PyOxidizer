@@ -116,7 +116,49 @@ impl TryFrom<&Path> for FileEntry {
     }
 }
 
+impl TryFrom<PathBuf> for FileEntry {
+    type Error = std::io::Error;
+
+    fn try_from(path: PathBuf) -> Result<Self, Self::Error> {
+        Self::try_from(path.as_path())
+    }
+}
+
+impl From<Vec<u8>> for FileEntry {
+    fn from(data: Vec<u8>) -> Self {
+        Self {
+            data: data.into(),
+            executable: false,
+        }
+    }
+}
+
+impl From<&[u8]> for FileEntry {
+    fn from(data: &[u8]) -> Self {
+        Self {
+            data: data.into(),
+            executable: false,
+        }
+    }
+}
+
 impl FileEntry {
+    /// Construct a new instance given data and an executable bit.
+    pub fn new_from_data(data: impl Into<FileData>, executable: bool) -> Self {
+        Self {
+            data: data.into(),
+            executable,
+        }
+    }
+
+    /// Construct a new instance referencing a path.
+    pub fn new_from_path(path: impl AsRef<Path>, executable: bool) -> Self {
+        Self {
+            data: path.as_ref().into(),
+            executable,
+        }
+    }
+
     /// Obtain a new instance guaranteed to have file data stored in memory.
     pub fn to_memory(&self) -> Result<Self, std::io::Error> {
         Ok(Self {
