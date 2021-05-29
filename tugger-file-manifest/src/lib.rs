@@ -118,9 +118,9 @@ impl From<&[u8]> for FileData {
 #[derive(Clone, Debug, PartialEq)]
 pub struct FileEntry {
     /// The content of the file.
-    pub data: FileData,
+    data: FileData,
     /// Whether the file is executable.
-    pub executable: bool,
+    executable: bool,
 }
 
 impl TryFrom<&Path> for FileEntry {
