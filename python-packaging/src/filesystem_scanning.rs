@@ -155,7 +155,7 @@ impl<'a> PythonResourceIterator<'a> {
         let mut paths = resources
             .iter()
             .map(|file| PathEntry {
-                path: file.path.clone(),
+                path: file.path().to_path_buf(),
                 file_emitted: false,
                 non_file_emitted: false,
             })
@@ -164,7 +164,7 @@ impl<'a> PythonResourceIterator<'a> {
 
         let mut path_content_overrides = FileManifest::default();
         for resource in resources {
-            path_content_overrides.add_file_entry(&resource.path, resource.entry.clone())?;
+            path_content_overrides.add_file_entry(resource.path(), resource.entry().clone())?;
         }
 
         Ok(PythonResourceIterator {

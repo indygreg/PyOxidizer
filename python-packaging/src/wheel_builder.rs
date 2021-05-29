@@ -456,12 +456,14 @@ impl WheelBuilder {
         let mut files = m.iter_files().collect::<Vec<_>>();
         let dist_info_path = self.dist_info_path();
         files.sort_by(|a, b| {
-            if a.path.starts_with(&dist_info_path) && !b.path.starts_with(&dist_info_path) {
+            if a.path().starts_with(&dist_info_path) && !b.path().starts_with(&dist_info_path) {
                 Ordering::Greater
-            } else if b.path.starts_with(&dist_info_path) && !a.path.starts_with(&dist_info_path) {
+            } else if b.path().starts_with(&dist_info_path)
+                && !a.path().starts_with(&dist_info_path)
+            {
                 Ordering::Less
             } else {
-                a.path.cmp(&b.path)
+                a.path().cmp(b.path())
             }
         });
 
@@ -469,7 +471,7 @@ impl WheelBuilder {
 
         for file in files.into_iter() {
             let options = zip::write::FileOptions::default()
-                .unix_permissions(if file.entry.is_executable() {
+                .unix_permissions(if file.entry().is_executable() {
                     0o0755
                 } else {
                     0o0644
@@ -479,14 +481,14 @@ impl WheelBuilder {
                         .map_err(|_| anyhow!("could not convert time to zip::DateTime"))?,
                 );
 
-            zf.start_file(format!("{}", file.path.display()), options)?;
+            zf.start_file(format!("{}", file.path().display()), options)?;
             zf.write_all(
                 &file
-                    .entry
+                    .entry()
                     .resolve_data()
-                    .with_context(|| format!("resolving content of {}", file.path.display()))?,
+                    .with_context(|| format!("resolving content of {}", file.path().display()))?,
             )
-            .with_context(|| format!("writing zip member {}", file.path.display()))?;
+            .with_context(|| format!("writing zip member {}", file.path().display()))?;
         }
 
         zf.finish().context("finishing zip file")?;

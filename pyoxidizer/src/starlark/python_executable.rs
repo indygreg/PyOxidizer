@@ -724,7 +724,7 @@ impl PythonExecutableValue {
         info!(
             context.logger(),
             "adding file data {}",
-            inner.file.path.display()
+            inner.file.path().display()
         );
 
         let mut exe = self.inner(label)?;

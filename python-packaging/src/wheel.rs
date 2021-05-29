@@ -179,7 +179,7 @@ impl WheelArchive {
         let prefix = format!("{}/", self.dist_info_path());
         self.files
             .iter_files()
-            .filter(|f| f.path.starts_with(&prefix))
+            .filter(|f| f.path().starts_with(&prefix))
             .collect::<Vec<_>>()
     }
 
@@ -190,10 +190,10 @@ impl WheelArchive {
         self.files
             .iter_files()
             .filter_map(|f| {
-                if f.path.starts_with(&prefix) {
+                if f.path().starts_with(&prefix) {
                     Some(File::new(
-                        &f.path.display().to_string()[prefix.len()..],
-                        f.entry,
+                        &f.path().display().to_string()[prefix.len()..],
+                        f.entry(),
                     ))
                 } else {
                     None
@@ -252,7 +252,7 @@ impl WheelArchive {
         self.files
             .iter_files()
             .filter(|f| {
-                !(f.path.starts_with(&dist_info_prefix) || f.path.starts_with(&data_prefix))
+                !(f.path().starts_with(&dist_info_prefix) || f.path().starts_with(&data_prefix))
             })
             .collect::<Vec<_>>()
     }

@@ -100,7 +100,7 @@ impl TypedValue for FileValue {
 
         let v = match attribute {
             "path" => Value::from(inner.file.path_string()),
-            "is_executable" => Value::from(inner.file.entry.is_executable()),
+            "is_executable" => Value::from(inner.file.entry().is_executable()),
             attr => {
                 drop(inner);
 

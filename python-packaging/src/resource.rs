@@ -779,7 +779,7 @@ impl<'a> PythonResource<'a> {
             PythonResource::ExtensionModule(em) => em.name.clone(),
             PythonResource::EggFile(_) => "".to_string(),
             PythonResource::PathExtension(_) => "".to_string(),
-            PythonResource::File(f) => format!("{}", f.path.display()),
+            PythonResource::File(f) => format!("{}", f.path().display()),
         }
     }
 

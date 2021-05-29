@@ -1604,18 +1604,18 @@ impl PythonResourceCollector {
                 });
 
         entry.is_utf8_filename_data = true;
-        entry.file_executable = file.entry.is_executable();
+        entry.file_executable = file.entry().is_executable();
 
         match location {
             ConcreteResourceLocation::InMemory => {
-                entry.file_data_embedded = Some(file.entry.file_data().clone());
+                entry.file_data_embedded = Some(file.entry().file_data().clone());
             }
             ConcreteResourceLocation::RelativePath(prefix) => {
-                let path = PathBuf::from(prefix).join(&file.path);
+                let path = PathBuf::from(prefix).join(file.path());
 
                 entry.file_data_utf8_relative_path = Some((
                     PathBuf::from(path.display().to_string().replace('\\', "/")),
-                    file.entry.file_data().clone(),
+                    file.entry().file_data().clone(),
                 ));
             }
         }
@@ -1732,7 +1732,7 @@ impl PythonResourceCollector {
             }
             PythonResource::File(file) => match self
                 .add_file_data(file, location)
-                .with_context(|| format!("adding File<{}>", file.path.display()))
+                .with_context(|| format!("adding File<{}>", file.path().display()))
             {
                 Ok(()) => Ok(()),
                 Err(err) => {
@@ -4608,7 +4608,7 @@ mod tests {
                 name: file.path_string(),
                 is_utf8_filename_data: true,
                 file_executable: true,
-                file_data_embedded: Some(file.entry.file_data().clone()),
+                file_data_embedded: Some(file.entry().file_data().clone()),
                 ..PrePackagedResource::default()
             })
         );
@@ -4627,7 +4627,7 @@ mod tests {
                 file_executable: true,
                 file_data_utf8_relative_path: Some((
                     PathBuf::from("prefix").join(file.path_string()),
-                    file.entry.file_data().clone()
+                    file.entry().file_data().clone()
                 )),
                 ..PrePackagedResource::default()
             })

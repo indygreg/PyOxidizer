@@ -145,6 +145,12 @@ impl TryFrom<PathBuf> for FileEntry {
     }
 }
 
+impl From<&FileEntry> for FileEntry {
+    fn from(entry: &FileEntry) -> Self {
+        entry.clone()
+    }
+}
+
 impl From<Vec<u8>> for FileEntry {
     fn from(data: Vec<u8>) -> Self {
         Self {
@@ -229,8 +235,8 @@ impl FileEntry {
 /// Represents a virtual file, with an associated path.
 #[derive(Clone, Debug, PartialEq)]
 pub struct File {
-    pub path: PathBuf,
-    pub entry: FileEntry,
+    path: PathBuf,
+    entry: FileEntry,
 }
 
 impl TryFrom<&Path> for File {
@@ -259,6 +265,16 @@ impl File {
             path: path.as_ref().to_path_buf(),
             entry: entry.into(),
         }
+    }
+
+    /// The path of this instance.
+    pub fn path(&self) -> &Path {
+        &self.path
+    }
+
+    /// The [FileEntry] holding details about this file.
+    pub fn entry(&self) -> &FileEntry {
+        &self.entry
     }
 
     /// Obtain an instance that is guaranteed to be backed by memory.

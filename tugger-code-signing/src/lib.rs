@@ -311,7 +311,7 @@ impl<'a> TryFrom<File> for SignableCandidate<'static> {
     type Error = anyhow::Error;
 
     fn try_from(file: File) -> Result<Self, Self::Error> {
-        SignableCandidate::try_from(file.entry.file_data())
+        SignableCandidate::try_from(file.entry().file_data())
     }
 }
 
@@ -319,7 +319,7 @@ impl<'a> TryFrom<&File> for SignableCandidate<'static> {
     type Error = anyhow::Error;
 
     fn try_from(file: &File) -> Result<Self, Self::Error> {
-        SignableCandidate::try_from(file.entry.file_data())
+        SignableCandidate::try_from(file.entry().file_data())
     }
 }
 
