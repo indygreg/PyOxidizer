@@ -185,6 +185,16 @@ impl FileEntry {
         &self.data
     }
 
+    /// Whether the file is executable.
+    pub fn is_executable(&self) -> bool {
+        self.executable
+    }
+
+    /// Set whether the file is executable.
+    pub fn set_executable(&mut self, v: bool) {
+        self.executable = v;
+    }
+
     /// Resolve the data constituting this instance.
     pub fn resolve_data(&self) -> Result<Vec<u8>, std::io::Error> {
         self.data.resolve()

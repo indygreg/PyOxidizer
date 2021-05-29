@@ -1604,7 +1604,7 @@ impl PythonResourceCollector {
                 });
 
         entry.is_utf8_filename_data = true;
-        entry.file_executable = file.entry.executable;
+        entry.file_executable = file.entry.is_executable();
 
         match location {
             ConcreteResourceLocation::InMemory => {

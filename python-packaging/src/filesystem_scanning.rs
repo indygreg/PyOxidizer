@@ -183,7 +183,7 @@ impl<'a> PythonResourceIterator<'a> {
 
     fn resolve_is_executable(&self, path: &Path) -> bool {
         match self.path_content_overrides.get(path) {
-            Some(file) => file.executable,
+            Some(file) => file.is_executable(),
             None => {
                 if let Ok(metadata) = path.metadata() {
                     is_executable(&metadata)

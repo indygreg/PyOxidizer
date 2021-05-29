@@ -84,7 +84,7 @@ impl TypedValue for FileContentValue {
         let inner = self.inner(&format!("{}.{}", Self::TYPE, attribute))?;
 
         Ok(match attribute {
-            "executable" => Value::from(inner.content.executable),
+            "executable" => Value::from(inner.content.is_executable()),
             "filename" => Value::from(inner.filename.as_str()),
             _ => {
                 return Err(ValueError::OperationNotSupported {
@@ -105,7 +105,7 @@ impl TypedValue for FileContentValue {
 
         match attribute {
             "executable" => {
-                inner.content.executable = value.to_bool();
+                inner.content.set_executable(value.to_bool());
             }
             "filename" => {
                 validate_filename("FileContent.filename = ", &value.to_string())?;
@@ -182,7 +182,7 @@ impl FileContentValue {
                 let mut file_entry = FileEntry::try_from(path.as_path())?;
 
                 if let Some(executable) = executable {
-                    file_entry.executable = executable;
+                    file_entry.set_executable(executable);
                 }
 
                 Ok(FileContentWrapper {
@@ -334,7 +334,7 @@ mod tests {
         let inner = v.inner("ignored").unwrap();
 
         assert_eq!(inner.filename, "file");
-        assert_eq!(inner.content.executable, false);
+        assert_eq!(inner.content.is_executable(), false);
         assert_eq!(inner.content.resolve_data()?, b"foo".to_vec());
 
         Ok(())

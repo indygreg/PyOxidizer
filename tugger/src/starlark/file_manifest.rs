@@ -162,7 +162,7 @@ impl FileManifestValue {
         } else {
             let exes = inner
                 .iter_entries()
-                .filter(|(_, c)| c.executable)
+                .filter(|(_, c)| c.is_executable())
                 .collect::<Vec<_>>();
 
             if exes.len() == 1 {

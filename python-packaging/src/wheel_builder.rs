@@ -469,7 +469,7 @@ impl WheelBuilder {
 
         for file in files.into_iter() {
             let options = zip::write::FileOptions::default()
-                .unix_permissions(if file.entry.executable {
+                .unix_permissions(if file.entry.is_executable() {
                     0o0755
                 } else {
                     0o0644

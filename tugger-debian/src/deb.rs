@@ -453,7 +453,11 @@ pub fn write_deb_tar<W: Write>(
 
         let mut header = new_tar_header(mtime)?;
         set_header_path(&mut builder, &mut header, rel_path, false)?;
-        header.set_mode(if content.executable { 0o755 } else { 0o644 });
+        header.set_mode(if content.is_executable() {
+            0o755
+        } else {
+            0o644
+        });
         header.set_size(data.len() as _);
         header.set_cksum();
         builder.append(&header, &*data)?;

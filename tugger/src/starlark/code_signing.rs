@@ -574,7 +574,7 @@ pub fn handle_file_manifest_signable_events(
 
         let entry = if let Some(output) = response.output {
             if let SignedOutput::Memory(data) = output {
-                FileEntry::new_from_data(data, entry.executable)
+                FileEntry::new_from_data(data, entry.is_executable())
             } else {
                 return Err(anyhow!("SignedOutput::Memory should have been forced"));
             }

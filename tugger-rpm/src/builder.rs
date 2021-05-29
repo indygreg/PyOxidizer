@@ -59,7 +59,7 @@ impl RpmBuilder {
 
             let mut options = RPMFileOptions::new(rel_path.display().to_string());
 
-            if content.executable {
+            if content.is_executable() {
                 options = options.mode(0o100_775);
             }
 
