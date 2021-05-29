@@ -88,6 +88,14 @@ impl FileData {
     pub fn to_memory(&self) -> Result<Self, std::io::Error> {
         Ok(Self::Memory(self.resolve()?))
     }
+
+    /// Obtain a filesystem path backing this content.
+    pub fn backing_path(&self) -> Option<&Path> {
+        match self {
+            Self::Path(p) => Some(p.as_path()),
+            Self::Memory(_) => None,
+        }
+    }
 }
 
 impl From<&Path> for FileData {

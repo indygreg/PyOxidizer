@@ -456,7 +456,7 @@ pub struct StandaloneDistribution {
     ///
     /// Keys are library names, without the "lib" prefix or file extension.
     /// Values are filesystem paths where library is located.
-    pub libraries: BTreeMap<String, FileData>,
+    pub libraries: BTreeMap<String, PathBuf>,
 
     pub py_modules: BTreeMap<String, PathBuf>,
 
@@ -647,7 +647,7 @@ impl StandaloneDistribution {
         let mut extension_modules: BTreeMap<String, PythonExtensionModuleVariants> =
             BTreeMap::new();
         let mut includes: BTreeMap<String, PathBuf> = BTreeMap::new();
-        let mut libraries: BTreeMap<String, FileData> = BTreeMap::new();
+        let mut libraries = BTreeMap::new();
         let frozen_c: Vec<u8> = Vec::new();
         let mut py_modules: BTreeMap<String, PathBuf> = BTreeMap::new();
         let mut resources: BTreeMap<String, BTreeMap<String, PathBuf>> = BTreeMap::new();
@@ -722,7 +722,9 @@ impl StandaloneDistribution {
             let depends = entry.to_library_dependency(&python_path);
 
             if let Some(p) = &depends.static_library {
-                libraries.insert(depends.name.clone(), p.clone());
+                if let Some(p) = p.backing_path() {
+                    libraries.insert(depends.name.clone(), p.to_path_buf());
+                }
             }
 
             links_core.push(depends);
@@ -782,7 +784,9 @@ impl StandaloneDistribution {
                     let depends = link.to_library_dependency(&python_path);
 
                     if let Some(p) = &depends.static_library {
-                        libraries.insert(depends.name.clone(), p.clone());
+                        if let Some(p) = p.backing_path() {
+                            libraries.insert(depends.name.clone(), p.to_path_buf());
+                        }
                     }
 
                     links.push(depends);

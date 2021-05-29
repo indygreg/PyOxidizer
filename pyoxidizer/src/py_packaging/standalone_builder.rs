@@ -269,16 +269,7 @@ impl StandalonePythonExecutableBuilder {
             // TODO handle static/dynamic libraries.
         }
 
-        for location in self.target_distribution.libraries.values() {
-            let path = match location {
-                FileData::Path(p) => p,
-                FileData::Memory(_) => {
-                    return Err(anyhow!(
-                        "cannot link libraries not backed by the filesystem"
-                    ))
-                }
-            };
-
+        for path in self.target_distribution.libraries.values() {
             self.core_build_context.library_search_paths.insert(
                 path.parent()
                     .ok_or_else(|| anyhow!("unable to resolve parent directory"))?
