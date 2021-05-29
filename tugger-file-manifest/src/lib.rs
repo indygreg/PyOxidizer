@@ -13,6 +13,27 @@ use std::{
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
 
+/// File mode indicating a directory.
+pub const S_IFDIR: u32 = 0o40000;
+/// File mode indicating read bit for owner.
+pub const S_IRUSR: u32 = 0o400;
+/// File mode indicating write bit for owner.
+pub const S_IWUSR: u32 = 0o200;
+/// File mode indicating execute bit for owner.
+pub const S_IXUSR: u32 = 0o100;
+/// File mode indicating read bit for group.
+pub const S_IRGRP: u32 = 0o040;
+/// File mode indicating write bit for group.
+pub const S_IWGRP: u32 = 0o020;
+/// File mode indicating execute bit for group.
+pub const S_IXGRP: u32 = 0o010;
+/// File mode indicating read bit for other.
+pub const S_IROTH: u32 = 0o004;
+/// File mode indicating write bit for other.
+pub const S_IWOTH: u32 = 0o002;
+/// File mode indicating execute bit for other.
+pub const S_IXOTH: u32 = 0o001;
+
 #[cfg(unix)]
 pub fn is_executable(metadata: &std::fs::Metadata) -> bool {
     let permissions = metadata.permissions();
