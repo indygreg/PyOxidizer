@@ -71,7 +71,7 @@ impl FileData {
     /// Resolve the data for this instance.
     ///
     /// If backed by a file, the file will be read.
-    pub fn resolve(&self) -> Result<Vec<u8>, std::io::Error> {
+    pub fn resolve_content(&self) -> Result<Vec<u8>, std::io::Error> {
         match self {
             Self::Path(p) => {
                 let data = std::fs::read(p)?;
@@ -86,7 +86,7 @@ impl FileData {
     ///
     /// This ensures any file-backed data is present in memory.
     pub fn to_memory(&self) -> Result<Self, std::io::Error> {
-        Ok(Self::Memory(self.resolve()?))
+        Ok(Self::Memory(self.resolve_content()?))
     }
 
     /// Obtain a filesystem path backing this content.
@@ -209,9 +209,9 @@ impl FileEntry {
         self.executable = v;
     }
 
-    /// Resolve the data constituting this instance.
-    pub fn resolve_data(&self) -> Result<Vec<u8>, std::io::Error> {
-        self.data.resolve()
+    /// Resolve the data constituting this file.
+    pub fn resolve_content(&self) -> Result<Vec<u8>, std::io::Error> {
+        self.data.resolve_content()
     }
 
     /// Obtain a new instance guaranteed to have file data stored in memory.
@@ -231,7 +231,7 @@ impl FileEntry {
 
         std::fs::create_dir_all(parent)?;
         let mut fh = std::fs::File::create(&dest_path)?;
-        fh.write_all(&self.resolve_data()?)?;
+        fh.write_all(&self.resolve_content()?)?;
         if self.executable {
             set_executable(&mut fh)?;
         }

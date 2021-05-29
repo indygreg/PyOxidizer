@@ -25,7 +25,7 @@ pub trait AddToFileManifest {
 
 impl AddToFileManifest for PythonModuleSource {
     fn add_to_file_manifest(&self, manifest: &mut FileManifest, prefix: &str) -> Result<()> {
-        let content = self.source.resolve()?;
+        let content = self.source.resolve_content()?;
 
         manifest.add_file_entry(&self.resolve_path(prefix), content)?;
 
@@ -45,7 +45,7 @@ impl AddToFileManifest for PythonPackageResource {
     fn add_to_file_manifest(&self, manifest: &mut FileManifest, prefix: &str) -> Result<()> {
         let dest_path = self.resolve_path(prefix);
 
-        manifest.add_file_entry(&dest_path, self.data.resolve()?)?;
+        manifest.add_file_entry(&dest_path, self.data.resolve_content()?)?;
 
         Ok(())
     }
@@ -55,7 +55,7 @@ impl AddToFileManifest for PythonPackageDistributionResource {
     fn add_to_file_manifest(&self, manifest: &mut FileManifest, prefix: &str) -> Result<()> {
         let dest_path = self.resolve_path(prefix);
 
-        manifest.add_file_entry(&dest_path, self.data.resolve()?)?;
+        manifest.add_file_entry(&dest_path, self.data.resolve_content()?)?;
 
         Ok(())
     }
@@ -66,7 +66,7 @@ impl AddToFileManifest for PythonExtensionModule {
         if let Some(data) = &self.shared_library {
             manifest.add_file_entry(
                 &self.resolve_path(prefix),
-                FileEntry::new_from_data(data.resolve()?, true),
+                FileEntry::new_from_data(data.resolve_content()?, true),
             )?;
         }
 

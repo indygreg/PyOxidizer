@@ -331,7 +331,7 @@ impl OxidizedResourceCollector {
         for (path, location, executable) in &prepared.extra_files {
             let path = path_to_pathlib_path(py, path)?;
             let data = location
-                .resolve()
+                .resolve_content()
                 .map_err(|e| PyErr::new::<ValueError, _>(py, e.to_string()))?;
             let data = PyBytes::new(py, &data);
             let executable = executable.to_py_object(py);

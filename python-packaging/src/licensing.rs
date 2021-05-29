@@ -152,7 +152,7 @@ pub fn derive_package_license_infos<'a>(
 
         // This is a special metadata file. Parse it and attempt to extract license info.
         if resource.name == "METADATA" || resource.name == "PKG-INFO" {
-            let metadata = PythonPackageMetadata::from_metadata(&resource.data.resolve()?)
+            let metadata = PythonPackageMetadata::from_metadata(&resource.data.resolve_content()?)
                 .context("parsing package metadata")?;
 
             for value in metadata.find_all_headers("License") {
@@ -175,14 +175,14 @@ pub fn derive_package_license_infos<'a>(
             || resource.name.starts_with("LICENSE")
             || resource.name.starts_with("COPYING")
         {
-            let data = resource.data.resolve()?;
+            let data = resource.data.resolve_content()?;
             let license_text = String::from_utf8_lossy(&data);
 
             entry.license_texts.push(license_text.to_string());
         }
         // This looks like a NOTICE file.
         else if resource.name.starts_with("NOTICE") {
-            let data = resource.data.resolve()?;
+            let data = resource.data.resolve_content()?;
             let notice_text = String::from_utf8_lossy(&data);
 
             entry.notice_texts.push(notice_text.to_string());

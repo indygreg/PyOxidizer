@@ -104,7 +104,7 @@ impl TypedValue for PythonModuleSourceValue {
             "is_stdlib" => Value::from(inner.m.is_stdlib),
             "name" => Value::new(inner.m.name.clone()),
             "source" => {
-                let source = inner.m.source.resolve().map_err(|e| {
+                let source = inner.m.source.resolve_content().map_err(|e| {
                     ValueError::from(RuntimeError {
                         code: "PYOXIDIZER_SOURCE_ERROR",
                         message: format!("error resolving source code: {}", e),

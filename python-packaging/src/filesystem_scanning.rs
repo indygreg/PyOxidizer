@@ -234,7 +234,7 @@ impl<'a> PythonResourceIterator<'a> {
 
         if let Some((metadata_path, location)) = distribution_info {
             let data = if let Some(file) = self.path_content_overrides.get(&metadata_path) {
-                if let Ok(data) = file.resolve_data() {
+                if let Ok(data) = file.resolve_content() {
                     data
                 } else {
                     return None;

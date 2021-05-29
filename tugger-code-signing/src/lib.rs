@@ -279,7 +279,7 @@ impl<'a> TryFrom<FileData> for SignableCandidate<'static> {
     type Error = anyhow::Error;
 
     fn try_from(file: FileData) -> Result<Self, Self::Error> {
-        Ok(Self::Data(Cow::Owned(file.resolve()?)))
+        Ok(Self::Data(Cow::Owned(file.resolve_content()?)))
     }
 }
 
@@ -287,7 +287,7 @@ impl<'a> TryFrom<&FileData> for SignableCandidate<'static> {
     type Error = anyhow::Error;
 
     fn try_from(file: &FileData) -> Result<Self, Self::Error> {
-        Ok(Self::Data(Cow::Owned(file.resolve()?)))
+        Ok(Self::Data(Cow::Owned(file.resolve_content()?)))
     }
 }
 

@@ -108,7 +108,7 @@ impl AppleUniversalBinaryValue {
                 .add_binary(
                     inner
                         .content
-                        .resolve_data()
+                        .resolve_content()
                         .context("resolving FileContent data")?,
                 )
                 .context("adding binary from FileContent")?;

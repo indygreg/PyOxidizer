@@ -114,18 +114,18 @@ impl PrePackagedResource {
             is_package: self.is_package,
             is_namespace_package: self.is_namespace_package,
             in_memory_source: if let Some(location) = &self.in_memory_source {
-                Some(Cow::Owned(location.resolve()?))
+                Some(Cow::Owned(location.resolve_content()?))
             } else {
                 None
             },
             in_memory_bytecode: match &self.in_memory_bytecode {
                 Some(PythonModuleBytecodeProvider::Provided(location)) => {
-                    Some(Cow::Owned(location.resolve()?))
+                    Some(Cow::Owned(location.resolve_content()?))
                 }
                 Some(PythonModuleBytecodeProvider::FromSource(location)) => Some(Cow::Owned(
                     compiler
                         .compile(
-                            &location.resolve()?,
+                            &location.resolve_content()?,
                             &self.name,
                             BytecodeOptimizationLevel::Zero,
                             CompileMode::Bytecode,
@@ -136,12 +136,12 @@ impl PrePackagedResource {
             },
             in_memory_bytecode_opt1: match &self.in_memory_bytecode_opt1 {
                 Some(PythonModuleBytecodeProvider::Provided(location)) => {
-                    Some(Cow::Owned(location.resolve()?))
+                    Some(Cow::Owned(location.resolve_content()?))
                 }
                 Some(PythonModuleBytecodeProvider::FromSource(location)) => Some(Cow::Owned(
                     compiler
                         .compile(
-                            &location.resolve()?,
+                            &location.resolve_content()?,
                             &self.name,
                             BytecodeOptimizationLevel::One,
                             CompileMode::Bytecode,
@@ -152,12 +152,12 @@ impl PrePackagedResource {
             },
             in_memory_bytecode_opt2: match &self.in_memory_bytecode_opt2 {
                 Some(PythonModuleBytecodeProvider::Provided(location)) => {
-                    Some(Cow::Owned(location.resolve()?))
+                    Some(Cow::Owned(location.resolve_content()?))
                 }
                 Some(PythonModuleBytecodeProvider::FromSource(location)) => Some(Cow::Owned(
                     compiler
                         .compile(
-                            &location.resolve()?,
+                            &location.resolve_content()?,
                             &self.name,
                             BytecodeOptimizationLevel::Two,
                             CompileMode::Bytecode,
@@ -169,14 +169,17 @@ impl PrePackagedResource {
             in_memory_extension_module_shared_library: if let Some(location) =
                 &self.in_memory_extension_module_shared_library
             {
-                Some(Cow::Owned(location.resolve()?))
+                Some(Cow::Owned(location.resolve_content()?))
             } else {
                 None
             },
             in_memory_package_resources: if let Some(resources) = &self.in_memory_resources {
                 let mut res = HashMap::new();
                 for (key, location) in resources {
-                    res.insert(Cow::Owned(key.clone()), Cow::Owned(location.resolve()?));
+                    res.insert(
+                        Cow::Owned(key.clone()),
+                        Cow::Owned(location.resolve_content()?),
+                    );
                 }
                 Some(res)
             } else {
@@ -187,14 +190,17 @@ impl PrePackagedResource {
             {
                 let mut res = HashMap::new();
                 for (key, location) in resources {
-                    res.insert(Cow::Owned(key.clone()), Cow::Owned(location.resolve()?));
+                    res.insert(
+                        Cow::Owned(key.clone()),
+                        Cow::Owned(location.resolve_content()?),
+                    );
                 }
                 Some(res)
             } else {
                 None
             },
             in_memory_shared_library: if let Some(location) = &self.in_memory_shared_library {
-                Some(Cow::Owned(location.resolve()?))
+                Some(Cow::Owned(location.resolve_content()?))
             } else {
                 None
             },
@@ -232,7 +238,7 @@ impl PrePackagedResource {
                     FileData::Memory(match provider {
                         PythonModuleBytecodeProvider::FromSource(location) => compiler
                             .compile(
-                                &location.resolve()?,
+                                &location.resolve_content()?,
                                 &self.name,
                                 BytecodeOptimizationLevel::Zero,
                                 CompileMode::PycUncheckedHash,
@@ -243,7 +249,7 @@ impl PrePackagedResource {
                                 compiler.get_magic_number(),
                                 BytecodeHeaderMode::UncheckedHash(0),
                             )?;
-                            data.extend(location.resolve()?);
+                            data.extend(location.resolve_content()?);
 
                             data
                         }
@@ -274,7 +280,7 @@ impl PrePackagedResource {
                     FileData::Memory(match provider {
                         PythonModuleBytecodeProvider::FromSource(location) => compiler
                             .compile(
-                                &location.resolve()?,
+                                &location.resolve_content()?,
                                 &self.name,
                                 BytecodeOptimizationLevel::One,
                                 CompileMode::PycUncheckedHash,
@@ -285,7 +291,7 @@ impl PrePackagedResource {
                                 compiler.get_magic_number(),
                                 BytecodeHeaderMode::UncheckedHash(0),
                             )?;
-                            data.extend(location.resolve()?);
+                            data.extend(location.resolve_content()?);
 
                             data
                         }
@@ -315,7 +321,7 @@ impl PrePackagedResource {
                     path.clone(),
                     FileData::Memory(match provider {
                         PythonModuleBytecodeProvider::FromSource(location) => compiler.compile(
-                            &location.resolve()?,
+                            &location.resolve_content()?,
                             &self.name,
                             BytecodeOptimizationLevel::Two,
                             CompileMode::PycUncheckedHash,
@@ -326,7 +332,7 @@ impl PrePackagedResource {
                                 BytecodeHeaderMode::UncheckedHash(0),
                             )
                             .context("compiling relative path module bytecode opt-2")?;
-                            data.extend(location.resolve()?);
+                            data.extend(location.resolve_content()?);
 
                             data
                         }
@@ -381,7 +387,7 @@ impl PrePackagedResource {
             is_utf8_filename_data: self.is_utf8_filename_data,
             file_executable: self.file_executable,
             file_data_embedded: if let Some(location) = &self.file_data_embedded {
-                Some(Cow::Owned(location.resolve()?))
+                Some(Cow::Owned(location.resolve_content()?))
             } else {
                 None
             },
@@ -1469,7 +1475,7 @@ impl PythonResourceCollector {
         self.check_policy(location.into())?;
 
         let data = match &module.shared_library {
-            Some(location) => location.resolve()?,
+            Some(location) => location.resolve_content()?,
             None => return Err(anyhow!("no shared library data present")),
         };
 
@@ -1756,7 +1762,7 @@ impl PythonResourceCollector {
 
         for (name, module) in &self.resources {
             if let Some(location) = &module.in_memory_source {
-                if has_dunder_file(&location.resolve()?)? {
+                if has_dunder_file(&location.resolve_content()?)? {
                     res.insert(name.clone());
                 }
             }
@@ -1764,7 +1770,7 @@ impl PythonResourceCollector {
             if let Some(PythonModuleBytecodeProvider::FromSource(location)) =
                 &module.in_memory_bytecode
             {
-                if has_dunder_file(&location.resolve()?)? {
+                if has_dunder_file(&location.resolve_content()?)? {
                     res.insert(name.clone());
                 }
             }
@@ -1772,7 +1778,7 @@ impl PythonResourceCollector {
             if let Some(PythonModuleBytecodeProvider::FromSource(location)) =
                 &module.in_memory_bytecode_opt1
             {
-                if has_dunder_file(&location.resolve()?)? {
+                if has_dunder_file(&location.resolve_content()?)? {
                     res.insert(name.clone());
                 }
             }
@@ -1780,7 +1786,7 @@ impl PythonResourceCollector {
             if let Some(PythonModuleBytecodeProvider::FromSource(location)) =
                 &module.in_memory_bytecode_opt2
             {
-                if has_dunder_file(&location.resolve()?)? {
+                if has_dunder_file(&location.resolve_content()?)? {
                     res.insert(name.clone());
                 }
             }

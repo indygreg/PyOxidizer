@@ -146,7 +146,7 @@ impl PythonModuleSource {
 
     /// Whether the source code for this module has __file__
     pub fn has_dunder_file(&self) -> Result<bool> {
-        has_dunder_file(&self.source.resolve()?)
+        has_dunder_file(&self.source.resolve_content()?)
     }
 }
 
@@ -195,7 +195,7 @@ impl PythonModuleBytecodeFromSource {
         mode: CompileMode,
     ) -> Result<Vec<u8>> {
         compiler.compile(
-            &self.source.resolve()?,
+            &self.source.resolve_content()?,
             &self.name,
             self.optimize_level,
             mode,
@@ -215,7 +215,7 @@ impl PythonModuleBytecodeFromSource {
 
     /// Whether the source for this module has __file__.
     pub fn has_dunder_file(&self) -> Result<bool> {
-        has_dunder_file(&self.source.resolve()?)
+        has_dunder_file(&self.source.resolve_content()?)
     }
 }
 

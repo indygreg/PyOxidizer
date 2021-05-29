@@ -103,7 +103,7 @@ impl WheelArchive {
             .get(&path)
             .ok_or_else(|| anyhow!("{} does not exist", path))?;
 
-        PythonPackageMetadata::from_metadata(&file.resolve_data()?)
+        PythonPackageMetadata::from_metadata(&file.resolve_content()?)
     }
 
     /// Obtain the `.dist-info/METADATA` content as a parsed object.
@@ -115,7 +115,7 @@ impl WheelArchive {
             .get(&path)
             .ok_or_else(|| anyhow!("{} does not exist", path))?;
 
-        PythonPackageMetadata::from_metadata(&file.resolve_data()?)
+        PythonPackageMetadata::from_metadata(&file.resolve_content()?)
     }
 
     /// Obtain the first header value from the archive metadata file.

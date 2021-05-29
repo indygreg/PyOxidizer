@@ -935,7 +935,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         for (path, location, executable) in &compiled_resources.extra_files {
             extra_files.add_file_entry(
                 path,
-                FileEntry::new_from_data(location.resolve()?, *executable),
+                FileEntry::new_from_data(location.resolve_content()?, *executable),
             )?;
         }
 

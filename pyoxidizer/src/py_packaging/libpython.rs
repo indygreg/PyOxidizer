@@ -103,7 +103,7 @@ pub fn link_libpython(
             full.parent()
                 .ok_or_else(|| anyhow!("unable to resolve parent directory"))?,
         )?;
-        let data = location.resolve()?;
+        let data = location.resolve_content()?;
         std::fs::write(&full, &data)?;
     }
 

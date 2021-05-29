@@ -1330,7 +1330,7 @@ mod tests {
         let inner = x.inner("ignored").unwrap();
         assert_eq!(inner.m.name, "bar");
         assert!(inner.m.is_package);
-        assert_eq!(inner.m.source.resolve().unwrap(), b"# bar");
+        assert_eq!(inner.m.source.resolve_content().unwrap(), b"# bar");
         drop(inner);
 
         let v = it.next().unwrap();
@@ -1339,7 +1339,7 @@ mod tests {
         let inner = x.inner("ignored").unwrap();
         assert_eq!(inner.m.name, "foo");
         assert!(!inner.m.is_package);
-        assert_eq!(inner.m.source.resolve().unwrap(), b"# foo");
+        assert_eq!(inner.m.source.resolve_content().unwrap(), b"# foo");
         drop(inner);
 
         Ok(())

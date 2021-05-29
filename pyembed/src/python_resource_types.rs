@@ -44,7 +44,7 @@ py_class!(pub(crate) class PythonModuleSource |py| {
     }
 
     @property def source(&self) -> PyResult<PyBytes> {
-        let source = self.resource(py).borrow().source.resolve().map_err(|_| PyErr::new::<ValueError, _>(py, "error resolving source code"))?;
+        let source = self.resource(py).borrow().source.resolve_content().map_err(|_| PyErr::new::<ValueError, _>(py, "error resolving source code"))?;
 
         Ok(PyBytes::new(py, &source))
     }
@@ -205,7 +205,7 @@ py_class!(pub(crate) class PythonPackageResource |py| {
     }
 
     @property def data(&self) -> PyResult<PyBytes> {
-        let data = self.resource(py).borrow().data.resolve().map_err(|_| PyErr::new::<ValueError, _>(py, "error resolving data"))?;
+        let data = self.resource(py).borrow().data.resolve_content().map_err(|_| PyErr::new::<ValueError, _>(py, "error resolving data"))?;
 
         Ok(PyBytes::new(py, &data))
     }
@@ -286,7 +286,7 @@ py_class!(pub(crate) class PythonPackageDistributionResource |py| {
     }
 
     @property def data(&self) -> PyResult<PyBytes> {
-        let data = self.resource(py).borrow().data.resolve().map_err(|_| PyErr::new::<ValueError, _>(py, "error resolving data"))?;
+        let data = self.resource(py).borrow().data.resolve_content().map_err(|_| PyErr::new::<ValueError, _>(py, "error resolving data"))?;
 
         Ok(PyBytes::new(py, &data))
     }

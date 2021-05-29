@@ -335,7 +335,7 @@ mod tests {
 
         assert_eq!(inner.filename, "file");
         assert_eq!(inner.content.is_executable(), false);
-        assert_eq!(inner.content.resolve_data()?, b"foo".to_vec());
+        assert_eq!(inner.content.resolve_content()?, b"foo".to_vec());
 
         Ok(())
     }
