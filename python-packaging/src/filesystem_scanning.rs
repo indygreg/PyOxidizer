@@ -196,7 +196,7 @@ impl<'a> PythonResourceIterator<'a> {
 
     fn resolve_file_data(&self, path: &Path) -> FileData {
         match self.path_content_overrides.get(path) {
-            Some(file) => file.data.clone(),
+            Some(file) => file.file_data().clone(),
             None => FileData::Path(path.to_path_buf()),
         }
     }

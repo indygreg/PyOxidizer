@@ -180,6 +180,11 @@ impl FileEntry {
         }
     }
 
+    /// Obtain the [FileData] backing this instance.
+    pub fn file_data(&self) -> &FileData {
+        &self.data
+    }
+
     /// Resolve the data constituting this instance.
     pub fn resolve_data(&self) -> Result<Vec<u8>, std::io::Error> {
         self.data.resolve()

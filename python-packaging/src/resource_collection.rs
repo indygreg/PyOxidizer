@@ -1608,14 +1608,14 @@ impl PythonResourceCollector {
 
         match location {
             ConcreteResourceLocation::InMemory => {
-                entry.file_data_embedded = Some(file.entry.data.clone());
+                entry.file_data_embedded = Some(file.entry.file_data().clone());
             }
             ConcreteResourceLocation::RelativePath(prefix) => {
                 let path = PathBuf::from(prefix).join(&file.path);
 
                 entry.file_data_utf8_relative_path = Some((
                     PathBuf::from(path.display().to_string().replace('\\', "/")),
-                    file.entry.data.clone(),
+                    file.entry.file_data().clone(),
                 ));
             }
         }
@@ -4620,7 +4620,7 @@ mod tests {
                 name: file.path_string(),
                 is_utf8_filename_data: true,
                 file_executable: true,
-                file_data_embedded: Some(file.entry.data.clone().into()),
+                file_data_embedded: Some(file.entry.file_data().clone()),
                 ..PrePackagedResource::default()
             })
         );
@@ -4639,7 +4639,7 @@ mod tests {
                 file_executable: true,
                 file_data_utf8_relative_path: Some((
                     PathBuf::from("prefix").join(file.path_string()),
-                    file.entry.data.into()
+                    file.entry.file_data().clone()
                 )),
                 ..PrePackagedResource::default()
             })
