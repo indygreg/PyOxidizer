@@ -586,10 +586,7 @@ mod tests {
     #[test]
     fn test_add_file_entry() -> Result<(), FileManifestError> {
         let mut m = FileManifest::default();
-        let f = FileEntry {
-            data: FileData::from(vec![42]),
-            executable: false,
-        };
+        let f = FileEntry::new_from_data(vec![42], false);
 
         m.add_file_entry(Path::new("foo"), f.clone())?;
 
@@ -609,17 +606,11 @@ mod tests {
         let files = vec![
             File {
                 path: Path::new("foo").into(),
-                entry: FileEntry {
-                    data: FileData::from(vec![42]),
-                    executable: false,
-                },
+                entry: vec![42].into(),
             },
             File {
                 path: Path::new("dir0/file0").into(),
-                entry: FileEntry {
-                    data: FileData::from(vec![42]),
-                    executable: false,
-                },
+                entry: vec![42].into(),
             },
         ];
 
@@ -633,10 +624,7 @@ mod tests {
     #[test]
     fn test_add_bad_path() -> Result<(), FileManifestError> {
         let mut m = FileManifest::default();
-        let f = FileEntry {
-            data: FileData::from(vec![]),
-            executable: false,
-        };
+        let f = FileEntry::new_from_data(vec![], false);
 
         let res = m.add_file_entry(Path::new("../etc/passwd"), f.clone());
         let err = res.err().unwrap();
@@ -658,10 +646,7 @@ mod tests {
     #[test]
     fn test_relative_directories() -> Result<(), FileManifestError> {
         let mut m = FileManifest::default();
-        let f = FileEntry {
-            data: FileData::from(vec![]),
-            executable: false,
-        };
+        let f = FileEntry::new_from_data(vec![], false);
 
         m.add_file_entry(Path::new("foo"), f.clone())?;
         let dirs = m.relative_directories();
@@ -680,10 +665,7 @@ mod tests {
     #[test]
     fn test_resolve_directories() -> Result<(), FileManifestError> {
         let mut m = FileManifest::default();
-        let f = FileEntry {
-            data: vec![].into(),
-            executable: false,
-        };
+        let f = FileEntry::new_from_data(vec![], false);
 
         m.add_file_entry(Path::new("foo"), f.clone())?;
         m.add_file_entry(Path::new("dir1/dir2/foo"), f)?;
@@ -703,10 +685,7 @@ mod tests {
 
     #[test]
     fn test_entries_by_directory() -> Result<(), FileManifestError> {
-        let c = FileEntry {
-            data: vec![42].into(),
-            executable: false,
-        };
+        let c = FileEntry::new_from_data(vec![42], false);
 
         let mut m = FileManifest::default();
         m.add_file_entry(Path::new("root.txt"), c.clone())?;
@@ -805,10 +784,7 @@ mod tests {
 
     #[test]
     fn test_entries_by_directory_windows() -> Result<(), FileManifestError> {
-        let c = FileEntry {
-            data: vec![42].into(),
-            executable: false,
-        };
+        let c = FileEntry::new_from_data(vec![42], false);
 
         let mut m = FileManifest::default();
         m.add_file_entry(Path::new("root.txt"), c.clone())?;
