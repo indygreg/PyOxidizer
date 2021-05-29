@@ -1002,7 +1002,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
             for (path, location) in self.target_distribution.tcl_files()? {
                 let install_path = PathBuf::from(tcl_files_path).join(path);
 
-                extra_files.add_file_entry(&install_path, location.resolve()?)?;
+                extra_files.add_file_entry(&install_path, location)?;
             }
         }
 

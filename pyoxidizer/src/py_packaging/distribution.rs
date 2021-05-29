@@ -32,7 +32,7 @@ use {
         sync::{Arc, Mutex},
     },
     tugger_common::http::get_http_client,
-    tugger_file_manifest::FileData,
+    tugger_file_manifest::FileEntry,
     url::Url,
     uuid::Uuid,
 };
@@ -221,7 +221,7 @@ pub trait PythonDistribution {
     /// of file content. If the files are installed in a new directory, it should
     /// be possible to use that directory joined with `tcl_library_path_directory`
     /// as the value of `TCL_LIBRARY`.
-    fn tcl_files(&self) -> Result<Vec<(PathBuf, FileData)>>;
+    fn tcl_files(&self) -> Result<Vec<(PathBuf, FileEntry)>>;
 
     /// The name of the directory to use for `TCL_LIBRARY`
     fn tcl_library_path_directory(&self) -> Option<String>;

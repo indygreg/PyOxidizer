@@ -36,11 +36,12 @@ use {
     slog::{info, warn},
     std::{
         collections::{hash_map::RandomState, BTreeMap, HashMap},
+        convert::TryFrom,
         io::{BufRead, BufReader, Read},
         path::{Path, PathBuf},
         sync::Arc,
     },
-    tugger_file_manifest::FileData,
+    tugger_file_manifest::{FileData, FileEntry},
     tugger_licensing::{ComponentFlavor, LicensedComponent},
 };
 
@@ -1401,7 +1402,7 @@ impl PythonDistribution for StandaloneDistribution {
                 .contains(&"shared-library".to_string())
     }
 
-    fn tcl_files(&self) -> Result<Vec<(PathBuf, FileData)>> {
+    fn tcl_files(&self) -> Result<Vec<(PathBuf, FileEntry)>> {
         let mut res = vec![];
 
         if let Some(root) = &self.tcl_library_path {
@@ -1421,7 +1422,7 @@ impl PythonDistribution for StandaloneDistribution {
 
                         let rel_path = path.strip_prefix(&root)?;
 
-                        res.push((rel_path.to_path_buf(), path.into()));
+                        res.push((rel_path.to_path_buf(), FileEntry::try_from(path)?));
                     }
                 }
             }
