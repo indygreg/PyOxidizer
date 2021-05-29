@@ -5,13 +5,14 @@
 pub mod newc;
 pub use newc::{NewcHeader, NewcReader};
 pub mod odc;
-pub use odc::{OdcHeader, OdcReader};
+pub use odc::{OdcBuilder, OdcHeader, OdcReader};
 
 use {
     chrono::{DateTime, NaiveDateTime, Utc},
     std::{
         fmt::Debug,
         io::{Chain, Cursor, Read},
+        path::PathBuf,
     },
 };
 
@@ -31,6 +32,15 @@ pub enum Error {
 
     #[error("filename could not be decoded")]
     FilenameDecode,
+
+    #[error("Numeric value too large to be encoded")]
+    ValueTooLarge,
+
+    #[error("Size mismatch between header length and provided data")]
+    SizeMismatch,
+
+    #[error("path is not a file: {0}")]
+    NotAFile(PathBuf),
 }
 
 /// Result type for this crate.
@@ -68,7 +78,7 @@ pub trait CpioHeader: Debug {
     }
 
     /// File size in bytes.
-    fn file_size(&self) -> u32;
+    fn file_size(&self) -> u64;
 
     /// File name.
     fn name(&self) -> &str;

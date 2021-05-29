@@ -19,11 +19,21 @@ fn u32_from_hex(data: &[u8]) -> CpioResult<u32> {
     u32::from_str_radix(s, 16).map_err(|_| Error::BadHeaderHex(s.to_string()))
 }
 
-fn read_hex(reader: &mut impl Read, count: usize) -> CpioResult<u32> {
+fn u64_from_hex(data: &[u8]) -> CpioResult<u64> {
+    let s = std::str::from_utf8(data).map_err(|_| Error::BadHeaderString)?;
+    u64::from_str_radix(s, 16).map_err(|_| Error::BadHeaderHex(s.to_string()))
+}
+
+fn read_hex_u32(reader: &mut impl Read, count: usize) -> CpioResult<u32> {
     let mut buffer = vec![0u8; count];
     reader.read_exact(&mut buffer)?;
-
     u32_from_hex(&buffer)
+}
+
+fn read_hex_u64(reader: &mut impl Read, count: usize) -> CpioResult<u64> {
+    let mut buffer = vec![0u8; count];
+    reader.read_exact(&mut buffer)?;
+    u64_from_hex(&buffer)
 }
 
 #[derive(Clone, Debug)]
@@ -34,7 +44,7 @@ pub struct NewcHeader {
     pub gid: u32,
     pub nlink: u32,
     pub mtime: u32,
-    pub file_size: u32,
+    pub file_size: u64,
     pub dev_major: u32,
     pub dev_minor: u32,
     pub rdev_major: u32,
@@ -45,19 +55,19 @@ pub struct NewcHeader {
 
 impl NewcHeader {
     pub fn from_reader(reader: &mut impl Read) -> CpioResult<Self> {
-        let inode = read_hex(reader, 8)?;
-        let mode = read_hex(reader, 8)?;
-        let uid = read_hex(reader, 8)?;
-        let gid = read_hex(reader, 8)?;
-        let nlink = read_hex(reader, 8)?;
-        let mtime = read_hex(reader, 8)?;
-        let file_size = read_hex(reader, 8)?;
-        let dev_major = read_hex(reader, 8)?;
-        let dev_minor = read_hex(reader, 8)?;
-        let rdev_major = read_hex(reader, 8)?;
-        let rdev_minor = read_hex(reader, 8)?;
-        let name_length = read_hex(reader, 8)?;
-        let checksum = read_hex(reader, 8)?;
+        let inode = read_hex_u32(reader, 8)?;
+        let mode = read_hex_u32(reader, 8)?;
+        let uid = read_hex_u32(reader, 8)?;
+        let gid = read_hex_u32(reader, 8)?;
+        let nlink = read_hex_u32(reader, 8)?;
+        let mtime = read_hex_u32(reader, 8)?;
+        let file_size = read_hex_u64(reader, 8)?;
+        let dev_major = read_hex_u32(reader, 8)?;
+        let dev_minor = read_hex_u32(reader, 8)?;
+        let rdev_major = read_hex_u32(reader, 8)?;
+        let rdev_minor = read_hex_u32(reader, 8)?;
+        let name_length = read_hex_u32(reader, 8)?;
+        let checksum = read_hex_u32(reader, 8)?;
 
         let mut name_data = vec![0u8; name_length as usize];
         reader.read_exact(&mut name_data)?;
@@ -122,7 +132,7 @@ impl CpioHeader for NewcHeader {
         self.mtime
     }
 
-    fn file_size(&self) -> u32 {
+    fn file_size(&self) -> u64 {
         self.file_size
     }
 
