@@ -485,6 +485,15 @@ impl FileManifest {
 
         self.materialize_files(dest)
     }
+
+    /// Ensure the content of all entries is backed by memory.
+    pub fn ensure_in_memory(&mut self) -> Result<(), std::io::Error> {
+        for entry in self.files.values_mut() {
+            entry.data = entry.data.to_memory()?;
+        }
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]
