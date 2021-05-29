@@ -12,6 +12,7 @@ use {
         macho_signing::MachOSigner,
         signing::{SettingsScope, SigningSettings},
     },
+    apple_bundle::{DirectoryBundle, DirectoryBundleFile},
     goblin::mach::Mach,
     slog::{info, warn, Logger},
     std::{
@@ -19,7 +20,6 @@ use {
         io::Write,
         path::{Path, PathBuf},
     },
-    tugger_apple_bundle::{DirectoryBundle, DirectoryBundleFile},
 };
 
 /// A primitive for signing an Apple bundle.

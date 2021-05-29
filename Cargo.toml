@@ -1,5 +1,6 @@
 [workspace]
 members = [
+    'apple-bundle',
     'cryptographic-message-syntax',
     'oxidized-importer',
     'pyembed',
@@ -11,7 +12,6 @@ members = [
     'text-stub-library',
     'tugger',
     'tugger-apple',
-    'tugger-apple-bundle',
     'tugger-apple-codesign',
     'tugger-binary-analysis',
     'tugger-code-signing',

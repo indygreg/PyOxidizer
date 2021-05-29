@@ -101,6 +101,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "28b2cd92db5cbd74e8e5028f7e27dd7aa3090e89e4f2a197cc7c8dfb69c7063b"
 
 [[package]]
+name = "apple-bundle"
+version = "0.5.0-pre"
+dependencies = [
+ "anyhow",
+ "plist",
+ "tugger-file-manifest",
+ "walkdir",
+]
+
+[[package]]
 name = "ar"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3704,6 +3714,7 @@ name = "tugger"
 version = "0.11.0-pre"
 dependencies = [
  "anyhow",
+ "apple-bundle",
  "atty",
  "chrono",
  "codemap",
@@ -3720,7 +3731,6 @@ dependencies = [
  "tempfile",
  "time",
  "tugger-apple",
- "tugger-apple-bundle",
  "tugger-apple-codesign",
  "tugger-code-signing",
  "tugger-common",
@@ -3749,20 +3759,11 @@ dependencies = [
 ]
 
 [[package]]
-name = "tugger-apple-bundle"
-version = "0.5.0-pre"
-dependencies = [
- "anyhow",
- "plist",
- "tugger-file-manifest",
- "walkdir",
-]
-
-[[package]]
 name = "tugger-apple-codesign"
 version = "0.5.0-pre"
 dependencies = [
  "anyhow",
+ "apple-bundle",
  "base64 0.13.0",
  "bcder",
  "bitflags",
@@ -3785,7 +3786,6 @@ dependencies = [
  "slog-term",
  "thiserror",
  "tugger-apple",
- "tugger-apple-bundle",
  "x509-certificate",
  "yasna 0.3.2",
 ]
@@ -3806,6 +3806,7 @@ name = "tugger-code-signing"
 version = "0.3.0-pre"
 dependencies = [
  "anyhow",
+ "apple-bundle",
  "bcder",
  "cryptographic-message-syntax",
  "goblin",
@@ -3814,7 +3815,6 @@ dependencies = [
  "slog",
  "tempfile",
  "thiserror",
- "tugger-apple-bundle",
  "tugger-apple-codesign",
  "tugger-file-manifest",
  "tugger-windows-codesign",

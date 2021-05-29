@@ -9,6 +9,7 @@ use {
         file_manifest::FileManifestValue,
     },
     anyhow::{anyhow, Context},
+    apple_bundle::MacOsApplicationBundleBuilder,
     starlark::{
         environment::TypeValues,
         eval::call_stack::CallStack,
@@ -27,7 +28,6 @@ use {
         ResolvedTargetValue, RunMode,
     },
     std::path::{Path, PathBuf},
-    tugger_apple_bundle::MacOsApplicationBundleBuilder,
     tugger_code_signing::SigningDestination,
     tugger_file_manifest::FileData,
 };
