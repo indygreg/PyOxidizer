@@ -73,8 +73,7 @@ impl PackageArchive {
         if manifest
             .get("rust-installer-version")
             .ok_or_else(|| anyhow!("archive does not contain rust-installer-version"))?
-            .data
-            .resolve()?
+            .resolve_data()?
             != b"3\n"
         {
             return Err(anyhow!("rust-installer-version has unsupported version"));
@@ -83,8 +82,7 @@ impl PackageArchive {
         let components = manifest
             .get("components")
             .ok_or_else(|| anyhow!("archive does not contain components file"))?
-            .data
-            .resolve()?;
+            .resolve_data()?;
         let components =
             String::from_utf8(components).context("converting components file to string")?;
         let components = components
@@ -114,7 +112,7 @@ impl PackageArchive {
                 .get(&manifest_path)
                 .ok_or_else(|| anyhow!("{} not found", manifest_path.display()))?;
 
-            let (dirs, files) = Self::parse_manifest(manifest.data.resolve()?)?;
+            let (dirs, files) = Self::parse_manifest(manifest.resolve_data()?)?;
 
             if !dirs.is_empty() {
                 return Err(anyhow!("support for copying directories not implemented"));
@@ -140,7 +138,7 @@ impl PackageArchive {
     pub fn write_installs_manifest(&self, fh: &mut impl Write) -> Result<()> {
         for (path, entry) in self.resolve_installs().context("resolving installs")? {
             let mut hasher = sha2::Sha256::new();
-            hasher.update(entry.data.resolve()?);
+            hasher.update(entry.resolve_data()?);
 
             let line = format!(
                 "{}\t{}\n",

@@ -360,8 +360,7 @@ impl WheelBuilder {
             .iter_entries()
             .map(|(path, entry)| {
                 let content = entry
-                    .data
-                    .resolve()
+                    .resolve_data()
                     .with_context(|| format!("resolving content for {}", path.display()))?;
 
                 let mut digest = sha2::Sha256::new();
@@ -484,8 +483,7 @@ impl WheelBuilder {
             zf.write_all(
                 &file
                     .entry
-                    .data
-                    .resolve()
+                    .resolve_data()
                     .with_context(|| format!("resolving content of {}", file.path.display()))?,
             )
             .with_context(|| format!("writing zip member {}", file.path.display()))?;

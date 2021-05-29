@@ -188,7 +188,7 @@ impl<'control> DebBuilder<'control> {
     ) -> Result<Self, DebError> {
         let entry = entry.into();
 
-        let data = entry.data.resolve()?;
+        let data = entry.resolve_data()?;
         let mut cursor = Cursor::new(&data);
         self.control_builder = self
             .control_builder
@@ -449,7 +449,7 @@ pub fn write_deb_tar<W: Write>(
 
     // FileManifest is backed by a BTreeMap, so iteration is deterministic.
     for (rel_path, content) in files.iter_entries() {
-        let data = content.data.resolve()?;
+        let data = content.resolve_data()?;
 
         let mut header = new_tar_header(mtime)?;
         set_header_path(&mut builder, &mut header, rel_path, false)?;

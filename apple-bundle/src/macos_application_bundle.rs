@@ -120,7 +120,7 @@ impl MacOsApplicationBundleBuilder {
     /// as a plist dictionary.
     pub fn info_plist(&self) -> Result<Option<plist::Dictionary>> {
         if let Some(entry) = self.files.get("Contents/Info.plist") {
-            let data = entry.data.resolve().context("resolving file content")?;
+            let data = entry.resolve_data().context("resolving file content")?;
             let cursor = std::io::Cursor::new(data);
 
             let value = plist::Value::from_reader_xml(cursor).context("parsing plist")?;
@@ -368,7 +368,7 @@ mod tests {
         dict.insert("CFBundlePackageType".to_string(), "APPL".to_string().into());
 
         assert_eq!(builder.info_plist()?, Some(dict));
-        assert!(String::from_utf8(entries[0].1.data.resolve()?)?
+        assert!(String::from_utf8(entries[0].1.resolve_data()?)?
             .starts_with("<?xml version=\"1.0\" encoding=\"UTF-8\"?>"));
 
         Ok(())

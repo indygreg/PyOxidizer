@@ -180,6 +180,11 @@ impl FileEntry {
         }
     }
 
+    /// Resolve the data constituting this instance.
+    pub fn resolve_data(&self) -> Result<Vec<u8>, std::io::Error> {
+        self.data.resolve()
+    }
+
     /// Obtain a new instance guaranteed to have file data stored in memory.
     pub fn to_memory(&self) -> Result<Self, std::io::Error> {
         Ok(Self {
@@ -197,7 +202,7 @@ impl FileEntry {
 
         std::fs::create_dir_all(parent)?;
         let mut fh = std::fs::File::create(&dest_path)?;
-        fh.write_all(&self.data.resolve()?)?;
+        fh.write_all(&self.resolve_data()?)?;
         if self.executable {
             set_executable(&mut fh)?;
         }
