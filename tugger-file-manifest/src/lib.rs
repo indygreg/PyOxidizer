@@ -13,26 +13,44 @@ use std::{
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
 
-/// File mode indicating a directory.
-pub const S_IFDIR: u32 = 0o40000;
-/// File mode indicating read bit for owner.
-pub const S_IRUSR: u32 = 0o400;
-/// File mode indicating write bit for owner.
-pub const S_IWUSR: u32 = 0o200;
+/// File mode indicating execute bit for other.
+pub const S_IXOTH: u32 = 0o1;
+/// File mode indicating write bit for other.
+pub const S_IWOTH: u32 = 0o2;
+/// File mode indicating read bit for other.
+pub const S_IROTH: u32 = 0o4;
+/// File mode indicating execute bit for group.
+pub const S_IXGRP: u32 = 0o10;
+/// File mode indicating write bit for group.
+pub const S_IWGRP: u32 = 0o20;
+/// File mode indicating read bit for group.
+pub const S_IRGRP: u32 = 0o40;
 /// File mode indicating execute bit for owner.
 pub const S_IXUSR: u32 = 0o100;
-/// File mode indicating read bit for group.
-pub const S_IRGRP: u32 = 0o040;
-/// File mode indicating write bit for group.
-pub const S_IWGRP: u32 = 0o020;
-/// File mode indicating execute bit for group.
-pub const S_IXGRP: u32 = 0o010;
-/// File mode indicating read bit for other.
-pub const S_IROTH: u32 = 0o004;
-/// File mode indicating write bit for other.
-pub const S_IWOTH: u32 = 0o002;
-/// File mode indicating execute bit for other.
-pub const S_IXOTH: u32 = 0o001;
+/// File mode indicating write bit for owner.
+pub const S_IWUSR: u32 = 0o200;
+/// File mode indicating read bit for owner.
+pub const S_IRUSR: u32 = 0o400;
+/// Sticky bit.
+pub const S_ISVTX: u32 = 0o1000;
+/// Set GID bit.
+pub const S_ISGID: u32 = 0o2000;
+/// Set UID bit.
+pub const S_ISUID: u32 = 0o4000;
+/// File mode is a fifo / named pipe.
+pub const S_IFIFO: u32 = 0o10000;
+/// File mode is a character device.
+pub const S_IFCHR: u32 = 0o20000;
+/// File mode indicating a directory.
+pub const S_IFDIR: u32 = 0o40000;
+/// File mode indicating a block device.
+pub const S_IFBLK: u32 = 0o60000;
+/// File mode indicating a regular file.
+pub const S_IFREG: u32 = 0o100000;
+/// File mode indicating a symbolic link.
+pub const S_IFLNK: u32 = 0o120000;
+/// File mode indicating a socket.
+pub const S_IFSOCK: u32 = 0o140000;
 
 #[cfg(unix)]
 pub fn is_executable(metadata: &std::fs::Metadata) -> bool {
