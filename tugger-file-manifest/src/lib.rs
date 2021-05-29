@@ -291,6 +291,12 @@ impl File {
     }
 }
 
+impl AsRef<Path> for File {
+    fn as_ref(&self) -> &Path {
+        &self.path
+    }
+}
+
 #[derive(Debug)]
 pub enum FileManifestError {
     IllegalRelativePath(String),
