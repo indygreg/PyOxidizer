@@ -683,17 +683,14 @@ impl PythonPackagingPolicy {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, std::path::PathBuf, tugger_file_manifest::File};
+    use {super::*, tugger_file_manifest::File};
 
     #[test]
     fn test_add_collection_context_file() -> Result<()> {
         let mut policy = PythonPackagingPolicy::default();
         policy.include_file_resources = false;
 
-        let file = File {
-            path: PathBuf::from("foo.py"),
-            entry: vec![42].into(),
-        };
+        let file = File::new("foo.py", vec![42]);
 
         let add_context = policy.derive_add_collection_context(&file.clone().into());
         assert!(!add_context.include);

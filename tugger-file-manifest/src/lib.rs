@@ -254,10 +254,10 @@ impl From<File> for FileEntry {
 
 impl File {
     /// Create a new instance from a path and `FileEntry`.
-    pub fn new(path: impl AsRef<Path>, entry: FileEntry) -> Self {
+    pub fn new(path: impl AsRef<Path>, entry: impl Into<FileEntry>) -> Self {
         Self {
             path: path.as_ref().to_path_buf(),
-            entry,
+            entry: entry.into(),
         }
     }
 
@@ -604,14 +604,8 @@ mod tests {
         let mut m = FileManifest::default();
 
         let files = vec![
-            File {
-                path: Path::new("foo").into(),
-                entry: vec![42].into(),
-            },
-            File {
-                path: Path::new("dir0/file0").into(),
-                entry: vec![42].into(),
-            },
+            File::new("foo", vec![42]),
+            File::new("dir0/file0", vec![42]),
         ];
 
         m.add_files(files.into_iter())?;

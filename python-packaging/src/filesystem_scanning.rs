@@ -552,13 +552,13 @@ impl<'a> Iterator for PythonResourceIterator<'a> {
                     .expect("unable to strip path prefix")
                     .to_path_buf();
 
-                let f = File {
-                    path: rel_path,
-                    entry: FileEntry::new_from_data(
+                let f = File::new(
+                    rel_path,
+                    FileEntry::new_from_data(
                         self.resolve_file_data(&self.paths[0].path),
                         self.resolve_is_executable(&self.paths[0].path),
                     ),
-                };
+                );
 
                 return Some(Ok(f.into()));
             }
@@ -704,7 +704,7 @@ mod tests {
         super::*,
         once_cell::sync::Lazy,
         std::{
-            convert::TryInto,
+            convert::TryFrom,
             fs::{create_dir_all, write},
         },
     };
@@ -746,10 +746,10 @@ mod tests {
 
         assert_eq!(
             resources[0],
-            File {
-                path: PathBuf::from("acme/__init__.py"),
-                entry: acme_path.join("__init__.py").try_into()?,
-            }
+            File::new(
+                "acme/__init__.py",
+                FileEntry::try_from(acme_path.join("__init__.py"))?
+            )
             .into()
         );
         assert_eq!(
@@ -766,10 +766,10 @@ mod tests {
         );
         assert_eq!(
             resources[2],
-            File {
-                path: PathBuf::from("acme/a/__init__.py"),
-                entry: acme_a_path.join("__init__.py").try_into()?,
-            }
+            File::new(
+                "acme/a/__init__.py",
+                FileEntry::try_from(acme_a_path.join("__init__.py"))?
+            )
             .into()
         );
         assert_eq!(
@@ -786,10 +786,10 @@ mod tests {
         );
         assert_eq!(
             resources[4],
-            File {
-                path: PathBuf::from("acme/a/foo.py"),
-                entry: acme_a_path.join("foo.py").try_into()?,
-            }
+            File::new(
+                "acme/a/foo.py",
+                FileEntry::try_from(acme_a_path.join("foo.py"))?
+            )
             .into()
         );
         assert_eq!(
@@ -806,10 +806,10 @@ mod tests {
         );
         assert_eq!(
             resources[6],
-            File {
-                path: PathBuf::from("acme/bar/__init__.py"),
-                entry: acme_bar_path.join("__init__.py").try_into()?,
-            }
+            File::new(
+                "acme/bar/__init__.py",
+                FileEntry::try_from(acme_bar_path.join("__init__.py"))?
+            )
             .into()
         );
         assert_eq!(
@@ -1841,14 +1841,8 @@ mod tests {
     #[test]
     fn test_memory_resources() -> Result<()> {
         let inputs = vec![
-            File {
-                path: PathBuf::from("foo/__init__.py"),
-                entry: vec![0].into(),
-            },
-            File {
-                path: PathBuf::from("foo/bar.py"),
-                entry: FileEntry::new_from_data(vec![1], true),
-            },
+            File::new("foo/__init__.py", vec![0]),
+            File::new("foo/bar.py", FileEntry::new_from_data(vec![1], true)),
         ];
 
         let resources = PythonResourceIterator::from_data_locations(
@@ -1861,14 +1855,7 @@ mod tests {
         .collect::<Result<Vec<_>>>()?;
 
         assert_eq!(resources.len(), 4);
-        assert_eq!(
-            resources[0],
-            File {
-                path: PathBuf::from("foo/__init__.py"),
-                entry: vec![0].into(),
-            }
-            .into()
-        );
+        assert_eq!(resources[0], File::new("foo/__init__.py", vec![0]).into());
         assert_eq!(
             resources[1],
             PythonModuleSource {
@@ -1883,11 +1870,7 @@ mod tests {
         );
         assert_eq!(
             resources[2],
-            File {
-                path: PathBuf::from("foo/bar.py"),
-                entry: FileEntry::new_from_data(vec![1], true),
-            }
-            .into()
+            File::new("foo/bar.py", FileEntry::new_from_data(vec![1], true)).into()
         );
         assert_eq!(
             resources[3],

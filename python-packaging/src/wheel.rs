@@ -11,11 +11,7 @@ use {
     },
     anyhow::{anyhow, Context, Result},
     once_cell::sync::Lazy,
-    std::{
-        borrow::Cow,
-        io::Read,
-        path::{Path, PathBuf},
-    },
+    std::{borrow::Cow, io::Read, path::Path},
     tugger_file_manifest::{File, FileEntry, FileManifest},
     zip::ZipArchive,
 };
@@ -195,10 +191,10 @@ impl WheelArchive {
             .iter_files()
             .filter_map(|f| {
                 if f.path.starts_with(&prefix) {
-                    Some(File {
-                        path: PathBuf::from(&f.path.display().to_string()[prefix.len()..]),
-                        entry: f.entry,
-                    })
+                    Some(File::new(
+                        &f.path.display().to_string()[prefix.len()..],
+                        f.entry,
+                    ))
                 } else {
                     None
                 }

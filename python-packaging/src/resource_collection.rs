@@ -4477,20 +4477,14 @@ mod tests {
         );
         assert!(r
             .add_file_data(
-                &File {
-                    path: PathBuf::from("foo/bar.py"),
-                    entry: vec![42].into(),
-                },
+                &File::new("foo/bar.py", vec![42]),
                 &ConcreteResourceLocation::InMemory,
             )
             .is_err());
 
         r.allow_files = true;
         r.add_file_data(
-            &File {
-                path: PathBuf::from("foo/bar.py"),
-                entry: vec![42].into(),
-            },
+            &File::new("foo/bar.py", vec![42]),
             &ConcreteResourceLocation::InMemory,
         )?;
 
@@ -4534,10 +4528,7 @@ mod tests {
             DEFAULT_CACHE_TAG,
         );
         r.add_file_data(
-            &File {
-                path: PathBuf::from("foo/bar.py"),
-                entry: vec![42].into(),
-            },
+            &File::new("foo/bar.py", vec![42]),
             &ConcreteResourceLocation::RelativePath("prefix".to_string()),
         )?;
 
@@ -4591,10 +4582,7 @@ mod tests {
             DEFAULT_CACHE_TAG,
         );
 
-        let file = File {
-            path: PathBuf::from("foo/bar.py"),
-            entry: FileEntry::new_from_data(vec![42], true),
-        };
+        let file = File::new("foo/bar.py", FileEntry::new_from_data(vec![42], true));
 
         let mut add_context = PythonResourceAddCollectionContext {
             include: false,
