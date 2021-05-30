@@ -3859,6 +3859,9 @@ dependencies = [
 [[package]]
 name = "tugger-file-manifest"
 version = "0.5.0-pre"
+dependencies = [
+ "tempfile",
+]
 
 [[package]]
 name = "tugger-licensing"

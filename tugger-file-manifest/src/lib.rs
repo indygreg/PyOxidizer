@@ -76,6 +76,31 @@ pub fn set_executable(_file: &mut std::fs::File) -> Result<(), std::io::Error> {
     Ok(())
 }
 
+#[cfg(unix)]
+pub fn create_symlink(
+    path: impl AsRef<Path>,
+    target: impl AsRef<Path>,
+) -> Result<(), std::io::Error> {
+    std::os::unix::fs::symlink(target, path)
+}
+
+#[cfg(windows)]
+pub fn create_symlink(
+    path: impl AsRef<Path>,
+    target: impl AsRef<Path>,
+) -> Result<(), std::io::Error> {
+    let target = target.as_ref();
+
+    // The function to call depends on the type of the target.
+    let metadata = std::fs::metadata(target)?;
+
+    if metadata.is_dir() {
+        std::os::windows::fs::symlink_dir(target, path)
+    } else {
+        std::os::windows::fs::symlink_file(target, path)
+    }
+}
+
 /// Represents an abstract location for binary data.
 ///
 /// Data can be backed by the filesystem or in memory.
@@ -145,8 +170,12 @@ impl From<&[u8]> for FileData {
 pub struct FileEntry {
     /// The content of the file.
     data: FileData,
+
     /// Whether the file is executable.
     executable: bool,
+
+    /// Indicates that this file is a link pointing to the specified path.
+    link: Option<PathBuf>,
 }
 
 impl TryFrom<&Path> for FileEntry {
@@ -159,6 +188,7 @@ impl TryFrom<&Path> for FileEntry {
         Ok(Self {
             data: FileData::from(path),
             executable,
+            link: None,
         })
     }
 }
@@ -182,6 +212,7 @@ impl From<Vec<u8>> for FileEntry {
         Self {
             data: data.into(),
             executable: false,
+            link: None,
         }
     }
 }
@@ -191,6 +222,7 @@ impl From<&[u8]> for FileEntry {
         Self {
             data: data.into(),
             executable: false,
+            link: None,
         }
     }
 }
@@ -201,6 +233,7 @@ impl FileEntry {
         Self {
             data: data.into(),
             executable,
+            link: None,
         }
     }
 
@@ -209,6 +242,7 @@ impl FileEntry {
         Self {
             data: path.as_ref().into(),
             executable,
+            link: None,
         }
     }
 
@@ -232,11 +266,17 @@ impl FileEntry {
         self.data.resolve_content()
     }
 
+    /// Obtain the target of a link, if this is a link entry.
+    pub fn link_target(&self) -> Option<&Path> {
+        self.link.as_deref()
+    }
+
     /// Obtain a new instance guaranteed to have file data stored in memory.
     pub fn to_memory(&self) -> Result<Self, std::io::Error> {
         Ok(Self {
             data: self.data.to_memory()?,
             executable: self.executable,
+            link: self.link.clone(),
         })
     }
 
@@ -248,10 +288,15 @@ impl FileEntry {
             .ok_or(FileManifestError::NoParentDirectory)?;
 
         std::fs::create_dir_all(parent)?;
-        let mut fh = std::fs::File::create(&dest_path)?;
-        fh.write_all(&self.resolve_content()?)?;
-        if self.executable {
-            set_executable(&mut fh)?;
+
+        if let Some(link) = &self.link {
+            create_symlink(dest_path, link)?;
+        } else {
+            let mut fh = std::fs::File::create(&dest_path)?;
+            fh.write_all(&self.resolve_content()?)?;
+            if self.executable {
+                set_executable(&mut fh)?;
+            }
         }
 
         Ok(())
@@ -330,6 +375,7 @@ pub enum FileManifestError {
     NoParentDirectory,
     IoError(std::io::Error),
     StripPrefix(std::path::StripPrefixError),
+    LinkNotAllowed,
 }
 
 impl std::fmt::Display for FileManifestError {
@@ -344,6 +390,7 @@ impl std::fmt::Display for FileManifestError {
             Self::NoParentDirectory => f.write_str("could not resolve parent directory"),
             Self::IoError(inner) => inner.fmt(f),
             Self::StripPrefix(inner) => inner.fmt(f),
+            Self::LinkNotAllowed => f.write_str("links are not allowed on this FileManifest"),
         }
     }
 }
@@ -388,9 +435,19 @@ pub fn normalize_path(path: &Path) -> Result<PathBuf, FileManifestError> {
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct FileManifest {
     files: BTreeMap<PathBuf, FileEntry>,
+    /// Whether to allow storage of links.
+    allow_links: bool,
 }
 
 impl FileManifest {
+    /// Create a new instance that allows the storage of links.
+    pub fn new_with_links() -> Self {
+        Self {
+            files: BTreeMap::new(),
+            allow_links: true,
+        }
+    }
+
     /// Whether the instance has any files entries.
     pub fn is_empty(&self) -> bool {
         self.files.is_empty()
@@ -448,8 +505,13 @@ impl FileManifest {
         path: impl AsRef<Path>,
         entry: impl Into<FileEntry>,
     ) -> Result<(), FileManifestError> {
-        self.files
-            .insert(normalize_path(path.as_ref())?, entry.into());
+        let entry = entry.into();
+
+        if entry.link.is_some() && !self.allow_links {
+            return Err(FileManifestError::LinkNotAllowed);
+        }
+
+        self.files.insert(normalize_path(path.as_ref())?, entry);
 
         Ok(())
     }
@@ -464,6 +526,21 @@ impl FileManifest {
         }
 
         Ok(())
+    }
+
+    /// Add a symlink to the manifest.
+    pub fn add_symlink(
+        &mut self,
+        manifest_path: impl AsRef<Path>,
+        link_target: impl AsRef<Path>,
+    ) -> Result<(), FileManifestError> {
+        let entry = FileEntry {
+            data: vec![].into(),
+            executable: false,
+            link: Some(link_target.as_ref().to_path_buf()),
+        };
+
+        self.add_file_entry(manifest_path, entry)
     }
 
     /// Merge the content of another manifest into this one.
@@ -629,7 +706,13 @@ impl FileManifest {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use {super::*, tempfile::TempDir};
+
+    fn temp_dir() -> std::io::Result<TempDir> {
+        tempfile::Builder::new()
+            .prefix("tugger-file-manifest-test-")
+            .tempdir()
+    }
 
     #[test]
     fn test_add_file_entry() -> Result<(), FileManifestError> {
@@ -681,6 +764,38 @@ mod tests {
             FileManifestError::IllegalAbsolutePath(_) => (),
             _ => panic!("error does not match expected"),
         }
+
+        Ok(())
+    }
+
+    #[test]
+    fn add_link_rejected() -> Result<(), FileManifestError> {
+        let mut m = FileManifest::default();
+        let mut f = FileEntry::from(vec![42]);
+        f.link = Some("/etc/passwd".into());
+
+        let res = m.add_file_entry("foo", f);
+        let err = res.err().unwrap();
+        assert!(matches!(err, FileManifestError::LinkNotAllowed));
+
+        Ok(())
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn symlink_unix() -> Result<(), FileManifestError> {
+        let mut m = FileManifest::new_with_links();
+        m.add_symlink("etc", "/etc")?;
+
+        let td = temp_dir()?;
+
+        m.materialize_files(td.path())?;
+
+        let p = td.path().join("etc");
+        let metadata = std::fs::symlink_metadata(&p)?;
+
+        assert_ne!(metadata.permissions().mode() & S_IFLNK, 0);
+        assert_eq!(std::fs::read_link(&p)?, PathBuf::from("/etc"));
 
         Ok(())
     }
