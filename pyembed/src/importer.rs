@@ -540,16 +540,24 @@ py_class!(pub(crate) class OxidizedFinder |py| {
 
     // Additional methods provided for convenience.
 
-    @property def path_hook_base_str(&self) -> PyResult<PyObject> {
-        self.path_hook_base_str_impl(py)
+    def __new__(_cls, relative_path_origin: Option<PyObject> = None) -> PyResult<OxidizedFinder> {
+        oxidized_finder_new(py, relative_path_origin)
+    }
+
+    @property def multiprocessing_set_start_method(&self) -> PyResult<PyObject> {
+        self.multiprocessing_set_start_method_impl(py)
     }
 
     @property def origin(&self) -> PyResult<PyObject> {
         self.origin_impl(py)
     }
 
-    def __new__(_cls, relative_path_origin: Option<PyObject> = None) -> PyResult<OxidizedFinder> {
-        oxidized_finder_new(py, relative_path_origin)
+    @property def path_hook_base_str(&self) -> PyResult<PyObject> {
+        self.path_hook_base_str_impl(py)
+    }
+
+    @property def pkg_resources_import_auto_register(&self) -> PyResult<bool> {
+        self.pkg_resources_import_auto_register_impl(py)
     }
 
     def path_hook(&self, path: PyObject) -> PyResult<OxidizedPathEntryFinder> {
@@ -1171,12 +1179,26 @@ impl OxidizedFinder {
         self.state(py).clone()
     }
 
-    fn path_hook_base_str_impl(&self, py: Python) -> PyResult<PyObject> {
-        path_to_pyobject(py, &self.state(py).get_resources_state().current_exe)
+    fn multiprocessing_set_start_method_impl(&self, py: Python) -> PyResult<PyObject> {
+        let state = self.state(py);
+
+        if let Some(v) = &state.multiprocessing_set_start_method {
+            Ok(PyString::new(py, v.as_str()).into_object())
+        } else {
+            Ok(py.None())
+        }
     }
 
     fn origin_impl(&self, py: Python) -> PyResult<PyObject> {
         path_to_pyobject(py, &self.state(py).get_resources_state().origin)
+    }
+
+    fn path_hook_base_str_impl(&self, py: Python) -> PyResult<PyObject> {
+        path_to_pyobject(py, &self.state(py).get_resources_state().current_exe)
+    }
+
+    fn pkg_resources_import_auto_register_impl(&self, py: Python) -> PyResult<bool> {
+        Ok(self.state(py).pkg_resources_import_auto_register)
     }
 
     fn index_bytes_impl(&self, py: Python, data: PyObject) -> PyResult<PyObject> {

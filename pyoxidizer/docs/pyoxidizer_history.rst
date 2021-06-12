@@ -91,6 +91,9 @@ New Features
   mean that :py:mod:`multiprocessing` should *just work* when default settings are
   used. See :ref:`pyoxidizer_packaging_multiprocessing` for full documentation of
   :py:mod:`multiprocessing` interactions with PyOxidizer.
+* The :py:attr:`oxidized_importer.OxidizedFinder.pkg_resources_import_auto_register`
+  now exposes whether the :py:class:`oxidized_importer.OxidizedFinder` instance will
+  automatically register itself with ``pkg_resources``.
 * :py:class:`starlark_tugger.AppleUniversalBinary` has gained the
   :py:meth:`starlark_tugger.AppleUniversalBinary.write_to_directory` method.
 * :py:class:`starlark_tugger.FileContent` has gained the

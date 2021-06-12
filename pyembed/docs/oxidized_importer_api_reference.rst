@@ -79,6 +79,18 @@ The ``OxidizedFinder`` Class
     ``importlib``. This functionality allows you to construct, inspect, and
     manipulate instances.
 
+    .. py:attribute:: multiprocessing_set_start_method
+
+        (``Opional[str]``) Value to pass to :py:func:`multiprocessing.set_start_method` on
+        import of :py:mod:`multiprocessing` module.
+
+        ``None`` means the method won't be called.
+
+    .. py:attribute:: origin
+
+        (``str``) The path this instance is using as the anchor for relative path
+        references.
+
     .. py:attribute:: path_hook_base_str
 
         (``str``) The base path that the path hook handler on this instance
@@ -87,10 +99,11 @@ The ``OxidizedFinder`` Class
         This value is often the same as ``sys.executable`` but isn't guaranteed
         to be that exact value.
 
-    .. py:attribute:: origin
+    .. py:attribute:: pkg_resources_import_auto_register
 
-        (``str``) The path this instance is using as the anchor for relative path
-        references.
+       (``bool``) Whether this instance will be registered via
+       ``pkg_resources.register_finder()`` upon this instance importing the
+       ``pkg_resources`` module.
 
     .. py:method:: __new__(cls, relative_path_origin: Optional[os.PathLike]) -> OxidizedFinder
 

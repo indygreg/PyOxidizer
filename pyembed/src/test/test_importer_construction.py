@@ -38,6 +38,10 @@ class TestImporterConstruction(unittest.TestCase):
             b"pyembed\x03\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
         )
 
+    def test_multiprocessing_set_start_method(self):
+        f = OxidizedFinder()
+        self.assertIsNone(f.multiprocessing_set_start_method)
+
     def test_origin_bad_value(self):
         with self.assertRaises(TypeError):
             OxidizedFinder(relative_path_origin=True)

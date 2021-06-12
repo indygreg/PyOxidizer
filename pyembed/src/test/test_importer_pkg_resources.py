@@ -306,6 +306,10 @@ class TestImporterPkgResources(unittest.TestCase):
         self.assertEqual(dist.version, "2.0")
         self.assertEqual(dist.requires(), [pkg_resources.Requirement("package0")])
 
+    def test_finder_attribute(self):
+        f = install_distributions_finder()
+        self.assertTrue(f.pkg_resources_import_auto_register)
+
     def test_find_distributions_no_path_hooks(self):
         f = install_distributions_finder()
         sys.path_hooks.clear()

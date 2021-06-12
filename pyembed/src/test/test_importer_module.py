@@ -59,9 +59,11 @@ class TestImporterModule(unittest.TestCase):
                 "indexed_resources",
                 "invalidate_caches",
                 "iter_modules",
+                "multiprocessing_set_start_method",
                 "origin",
                 "path_hook",
                 "path_hook_base_str",
+                "pkg_resources_import_auto_register",
                 "serialize_indexed_resources",
             },
         )
