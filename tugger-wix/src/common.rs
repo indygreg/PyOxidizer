@@ -24,6 +24,7 @@ use {
 };
 
 static WIX_TOOLSET: Lazy<RemoteContent> = Lazy::new(|| RemoteContent {
+    name: "WIX_TOOLSET".to_string(),
     url: "https://github.com/wixtoolset/wix3/releases/download/wix3112rtm/wix311-binaries.zip"
         .to_string(),
     sha256: "2c1888d5d1dba377fc7fa14444cf556963747ff9a0a289a3599cf09da03b9e2e".to_string(),

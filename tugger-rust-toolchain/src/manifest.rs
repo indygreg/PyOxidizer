@@ -151,7 +151,7 @@ impl Package {
                         }
                     }
 
-                    targets.insert(k, ManifestTargetedPackage { available, urls });
+                    targets.insert(k.clone(), ManifestTargetedPackage { name: k, available, urls });
                 }
             }
 
@@ -170,6 +170,7 @@ pub enum PackageTarget {
 
 #[derive(Clone, Debug)]
 pub struct ManifestTargetedPackage {
+    pub name: String,
     pub available: bool,
     pub urls: Vec<(CompressionFormat, String, String)>,
 }
@@ -181,6 +182,7 @@ impl ManifestTargetedPackage {
         Some((
             *format,
             RemoteContent {
+                name: self.name.clone(),
                 url: url.to_string(),
                 sha256: digest.to_string(),
             },
