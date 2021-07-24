@@ -242,7 +242,7 @@ pub fn write_new_cargo_lock(
 
     if let PyembedLocation::Git(url, commit) = pyembed_location {
         for package in lock_file.packages.iter_mut() {
-            if package.version.is_prerelease() && package.source.is_none() {
+            if !package.version.pre.is_empty() && package.source.is_none() {
                 package.source = Some(
                     cargo_lock::SourceId::for_git(
                         &url::Url::from_str(url).context("parsing Git url")?,

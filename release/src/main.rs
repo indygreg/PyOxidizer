@@ -262,8 +262,7 @@ fn update_environment_rs_pyembed_version(root: &Path, version: &semver::Version)
 /// Update version string in pyoxidizer.bzl file.
 fn update_pyoxidizer_bzl_version(root: &Path, version: &semver::Version) -> Result<()> {
     // Version string in file does not have pre-release component.
-    let mut version = version.clone();
-    version.pre.clear();
+    let version = semver::Version::new(version.major, version.minor, version.patch);
 
     let path = root.join("pyoxidizer.bzl");
 
@@ -576,10 +575,11 @@ fn release_package(
         );
         semver::Version::parse(restore_version).context("parsing old released version")?
     } else {
-        let mut v = current_version.clone();
-        v.pre.clear();
-
-        v
+        semver::Version::new(
+            current_version.major,
+            current_version.minor,
+            current_version.patch,
+        )
     };
 
     println!(
@@ -807,11 +807,15 @@ fn update_package_version(
     let mut next_version = semver::Version::parse(version).context("parsing package version")?;
 
     match version_bump {
-        VersionBump::Minor => next_version.increment_minor(),
-        VersionBump::Patch => next_version.increment_patch(),
+        VersionBump::Minor => {
+            next_version.minor += 1;
+        }
+        VersionBump::Patch => {
+            next_version.patch += 1;
+        }
     }
 
-    next_version.pre = vec![semver::AlphaNumeric("pre".to_string())];
+    next_version.pre = semver::Prerelease::new("pre")?;
 
     update_cargo_toml_package_version(&manifest_path, &next_version.to_string())
         .context("updating Cargo.toml package version")?;

@@ -27,7 +27,7 @@ git2 = { version = "0.13", default-features = false }
 
 [dependencies]
 anyhow = "1.0"
-cargo-lock = "6.0"
+cargo-lock = "7.0"
 cargo_toml = "0.9"
 cc = "1.0"
 clap = "2.33"
@@ -45,8 +45,8 @@ linked-hash-map = "0.5"
 once_cell = "1.7"
 path-dedot = "3.0"
 remove_dir_all = "0.7"
-rustc_version = "0.3"
-semver = "0.11"
+rustc_version = "0.4"
+semver = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 sha2 = "0.9"
