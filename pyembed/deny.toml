@@ -5,6 +5,8 @@
 unlicensed = "deny"
 allow = [
     "0BSD",
+    "Apache-2.0",
+    "BSD-3-Clause",
     "CC0-1.0",
     "MIT",
     "MPL-2.0",
