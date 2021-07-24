@@ -149,7 +149,7 @@ pub struct WheelBuilder {
     manifest: FileManifest,
 
     /// The modified time to write for files in the wheel archive.
-    modified_time: time::Tm,
+    modified_time: time::OffsetDateTime,
 }
 
 impl WheelBuilder {
@@ -165,7 +165,7 @@ impl WheelBuilder {
             generator: "rust-python-packaging".to_string(),
             root_is_purelib: false,
             manifest: FileManifest::default(),
-            modified_time: time::now_utc(),
+            modified_time: time::OffsetDateTime::now_utc(),
         }
     }
 
@@ -261,12 +261,12 @@ impl WheelBuilder {
     }
 
     /// Obtain the modified time for files in the wheel archive.
-    pub fn modified_time(&self) -> time::Tm {
+    pub fn modified_time(&self) -> time::OffsetDateTime {
         self.modified_time
     }
 
     /// Set the modified time for files in the wheel archive.
-    pub fn set_modified_time(&mut self, v: time::Tm) {
+    pub fn set_modified_time(&mut self, v: time::OffsetDateTime) {
         self.modified_time = v;
     }
 
@@ -477,8 +477,15 @@ impl WheelBuilder {
                     0o0644
                 })
                 .last_modified_time(
-                    zip::DateTime::from_time(self.modified_time)
-                        .map_err(|_| anyhow!("could not convert time to zip::DateTime"))?,
+                    zip::DateTime::from_date_and_time(
+                        self.modified_time.year() as u16,
+                        self.modified_time.month(),
+                        self.modified_time.day(),
+                        self.modified_time.hour(),
+                        self.modified_time.minute(),
+                        self.modified_time.second(),
+                    )
+                    .map_err(|_| anyhow!("could not convert time to zip::DateTime"))?,
                 );
 
             zf.start_file(format!("{}", file.path().display()), options)?;

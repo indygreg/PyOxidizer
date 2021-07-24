@@ -157,6 +157,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cdb031dd78e28731d87d56cc8ffef4a8f36ca26c38fe2de700543e627f8a464a"
 
 [[package]]
+name = "base-x"
+version = "0.2.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a4521f3e3d031370679b3b140beb36dfe4801b09ac77e30c61941f97df3ef28b"
+
+[[package]]
 name = "base64"
 version = "0.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -384,7 +390,7 @@ version = "7.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7fb04b88bd5b2036e30704f95c6ee16f3b5ca3b4ca307da2889d9006648e5c88"
 dependencies = [
- "semver",
+ "semver 1.0.3",
  "serde",
  "toml",
  "url",
@@ -492,7 +498,7 @@ dependencies = [
  "libc",
  "num-integer",
  "num-traits",
- "time",
+ "time 0.1.43",
  "winapi 0.3.9",
 ]
 
@@ -575,6 +581,12 @@ dependencies = [
  "unicode-width",
  "winapi 0.3.9",
 ]
+
+[[package]]
+name = "const_fn"
+version = "0.4.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f92cfa0fd5690b3cf8c1ef2cabbd9b7ef22fa53cf5e1f92b05103f6d5d1cf6e7"
 
 [[package]]
 name = "core-foundation"
@@ -933,6 +945,12 @@ dependencies = [
  "redox_users",
  "winapi 0.3.9",
 ]
+
+[[package]]
+name = "discard"
+version = "1.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "212d0f5754cb6769937f4501cc0e67f4f4483c8d2c3e1e922ee9edbe4ab4c7c0"
 
 [[package]]
 name = "docopt"
@@ -2435,8 +2453,8 @@ dependencies = [
  "python-packaging",
  "python-packed-resources",
  "remove_dir_all 0.7.0",
- "rustc_version",
- "semver",
+ "rustc_version 0.4.0",
+ "semver 1.0.3",
  "serde",
  "serde_json",
  "sha2 0.9.5",
@@ -2479,7 +2497,7 @@ dependencies = [
  "sha2 0.9.5",
  "spdx",
  "tempfile",
- "time",
+ "time 0.2.27",
  "tugger-file-manifest",
  "tugger-licensing",
  "walkdir",
@@ -2828,7 +2846,7 @@ dependencies = [
  "git2",
  "once_cell",
  "reqwest",
- "semver",
+ "semver 1.0.3",
  "serde",
  "serde_json",
  "tempfile",
@@ -2972,11 +2990,20 @@ dependencies = [
 
 [[package]]
 name = "rustc_version"
+version = "0.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "138e3e0acb6c9fb258b19b67cb8abd63c00679d2851805ea151465464fe9030a"
+dependencies = [
+ "semver 0.9.0",
+]
+
+[[package]]
+name = "rustc_version"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bfa0f585226d2e68097d4f95d113b15b83a82e819ab25717ec0590d9584ef366"
 dependencies = [
- "semver",
+ "semver 1.0.3",
 ]
 
 [[package]]
@@ -3101,12 +3128,27 @@ dependencies = [
 
 [[package]]
 name = "semver"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1d7eb9ef2c18661902cc47e535f9bc51b78acd254da71d375c2f6720d9a40403"
+dependencies = [
+ "semver-parser",
+]
+
+[[package]]
+name = "semver"
 version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5f3aac57ee7f3272d8395c6e4f502f434f0e289fcd62876f70daa008c20dcabe"
 dependencies = [
  "serde",
 ]
+
+[[package]]
+name = "semver-parser"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "388a1df253eca08550bef6c72392cfe7c30914bf41df5269b68cbd6ff8f570a3"
 
 [[package]]
 name = "serde"
@@ -3333,6 +3375,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6e63cff320ae2c57904679ba7cb63280a3dc4613885beafb148ee7bf9aa9042d"
 
 [[package]]
+name = "standback"
+version = "0.2.17"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e113fb6f3de07a243d434a56ec6f186dfd51cb08448239fe7bcae73f87ff28ff"
+dependencies = [
+ "version_check 0.9.3",
+]
+
+[[package]]
 name = "starlark"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3363,6 +3414,55 @@ name = "static_assertions"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
+
+[[package]]
+name = "stdweb"
+version = "0.4.20"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d022496b16281348b52d0e30ae99e01a73d737b2f45d38fed4edf79f9325a1d5"
+dependencies = [
+ "discard",
+ "rustc_version 0.2.3",
+ "stdweb-derive",
+ "stdweb-internal-macros",
+ "stdweb-internal-runtime",
+ "wasm-bindgen",
+]
+
+[[package]]
+name = "stdweb-derive"
+version = "0.5.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c87a60a40fccc84bef0652345bbbbbe20a605bf5d0ce81719fc476f5c03b50ef"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "serde",
+ "serde_derive",
+ "syn",
+]
+
+[[package]]
+name = "stdweb-internal-macros"
+version = "0.2.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "58fa5ff6ad0d98d1ffa8cb115892b6e69d67799f6763e162a1c9db421dc22e11"
+dependencies = [
+ "base-x",
+ "proc-macro2",
+ "quote",
+ "serde",
+ "serde_derive",
+ "serde_json",
+ "sha1",
+ "syn",
+]
+
+[[package]]
+name = "stdweb-internal-runtime"
+version = "0.1.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "213701ba3370744dcd1a12960caa4843b3d68b4d1c0a5d575e0d65b2ee9d16c0"
 
 [[package]]
 name = "stream-cipher"
@@ -3597,6 +3697,44 @@ dependencies = [
 ]
 
 [[package]]
+name = "time"
+version = "0.2.27"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4752a97f8eebd6854ff91f1c1824cd6160626ac4bd44287f7f4ea2035a02a242"
+dependencies = [
+ "const_fn",
+ "libc",
+ "standback",
+ "stdweb",
+ "time-macros",
+ "version_check 0.9.3",
+ "winapi 0.3.9",
+]
+
+[[package]]
+name = "time-macros"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "957e9c6e26f12cb6d0dd7fc776bb67a706312e7299aed74c8dd5b17ebb27e2f1"
+dependencies = [
+ "proc-macro-hack",
+ "time-macros-impl",
+]
+
+[[package]]
+name = "time-macros-impl"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fd3c141a1b43194f3f56a1411225df8646c55781d5f26db825b3d98507eb482f"
+dependencies = [
+ "proc-macro-hack",
+ "proc-macro2",
+ "quote",
+ "standback",
+ "syn",
+]
+
+[[package]]
 name = "tinyvec"
 version = "1.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3722,7 +3860,7 @@ dependencies = [
  "starlark-dialect-build-targets",
  "tar",
  "tempfile",
- "time",
+ "time 0.2.27",
  "tugger-apple",
  "tugger-apple-codesign",
  "tugger-code-signing",
@@ -3745,7 +3883,7 @@ dependencies = [
  "goblin",
  "once_cell",
  "scroll",
- "semver",
+ "semver 1.0.3",
  "serde",
  "serde_json",
  "thiserror",
@@ -3930,7 +4068,7 @@ dependencies = [
  "find-winsdk",
  "glob",
  "once_cell",
- "semver",
+ "semver 1.0.3",
  "tugger-common",
  "winapi 0.3.9",
 ]
@@ -4449,7 +4587,7 @@ dependencies = [
  "crc32fast",
  "flate2",
  "thiserror",
- "time",
+ "time 0.1.43",
 ]
 
 [[package]]

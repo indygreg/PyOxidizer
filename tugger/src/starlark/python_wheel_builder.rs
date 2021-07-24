@@ -68,7 +68,7 @@ impl TypedValue for PythonWheelBuilderValue {
                 }
             }
             "generator" => Value::from(builder.generator()),
-            "modified_time" => Value::from(builder.modified_time().to_timespec().sec),
+            "modified_time" => Value::from(builder.modified_time().unix_timestamp()),
             "platform_tag" => Value::from(builder.platform_tag()),
             "python_tag" => Value::from(builder.python_tag()),
             "root_is_purelib" => Value::from(builder.root_is_purelib()),
@@ -113,7 +113,8 @@ impl TypedValue for PythonWheelBuilderValue {
                 builder.set_generator(value.to_string());
             }
             "modified_time" => {
-                builder.set_modified_time(time::at_utc(time::Timespec::new(value.to_int()?, 0)));
+                builder
+                    .set_modified_time(time::OffsetDateTime::from_unix_timestamp(value.to_int()?));
             }
             "platform_tag" => {
                 builder.set_platform_tag(value.to_string());
