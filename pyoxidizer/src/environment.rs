@@ -92,10 +92,10 @@ pub static GIT_SOURCE: Lazy<PyOxidizerSource> = Lazy::new(|| {
 
 /// Minimum version of Rust required to build PyOxidizer applications.
 ///
-// Remember to update the CI configuration in ci/azure-pipelines-template.yml
+// Remember to update the CI configuration in .github/workflows/
 // and the `Installing Rust` documentation when this changes.
 pub static MINIMUM_RUST_VERSION: Lazy<semver::Version> =
-    Lazy::new(|| semver::Version::new(1, 46, 0));
+    Lazy::new(|| semver::Version::new(1, 51, 0));
 
 /// Version of Rust toolchain to use for our managed Rust install.
 pub const RUST_TOOLCHAIN_VERSION: &str = "1.52.1";

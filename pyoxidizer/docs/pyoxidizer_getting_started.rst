@@ -118,13 +118,13 @@ Installing PyOxidizer from Source
 Installing Rust
 ^^^^^^^^^^^^^^^
 
-PyOxidizer is a Rust application and requires Rust (1.46 or newer) to be
+PyOxidizer is a Rust application and requires Rust (1.51 or newer) to be
 installed in order to build PyOxidizer.
 
 You can verify your installed version of Rust by running::
 
    $ rustc --version
-   rustc 1.46.0 (04488afe3 2020-08-24)
+   rustc 1.51.0 (2fd73fabe 2021-03-23)
 
 If you don't have Rust installed, https://www.rust-lang.org/ has very detailed
 instructions on how to install it.
