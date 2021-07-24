@@ -36,6 +36,8 @@ Not yet released.
 Backwards Compatibility Notes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+* The minimum Rust version has been changed from 1.46 to 1.51 to facilitate
+  use of const generics.
 * :py:meth:`starlark_tugger.PythonWheelBuilder.write_to_directory` now interprets
   relative paths as relative to the currently configured build path, not relative
   to the process's current working directory.
@@ -114,7 +116,7 @@ New Features
 Other Relevant Changes
 ^^^^^^^^^^^^^^^^^^^^^^
 
-* Managed Rust toolchain upgraded from 1.52.0 to 1.52.1.
+* Managed Rust toolchain upgraded from 1.52.0 to 1.53.0.
 
 .. _version_0_16_0:
 
@@ -294,8 +296,6 @@ Released April 30, 2021.
 Backwards Compatibility Notes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-* The minimum Rust version has been changed from 1.46 to 1.51 to facilitate
-  use of const generics.
 * PyOxidizer no longer uses the system's installed Rust toolchain when
   building projects. By default, it will download and use a specific version
   of the Rust toolchain. See :ref:`pyoxidizer_managed_rust` for instructions
