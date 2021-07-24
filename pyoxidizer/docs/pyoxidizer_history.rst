@@ -36,8 +36,8 @@ Not yet released.
 Backwards Compatibility Notes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-* The minimum Rust version has been changed from 1.46 to 1.51 to facilitate
-  use of const generics.
+* The minimum Rust version has been changed from 1.46 to 1.52 to facilitate
+  use of const generics and some other stabilized APIs.
 * :py:meth:`starlark_tugger.PythonWheelBuilder.write_to_directory` now interprets
   relative paths as relative to the currently configured build path, not relative
   to the process's current working directory.

@@ -14,7 +14,7 @@ jobs:
           - 'nightly'
           # Remember to update MINIMUM_RUST_VERSION in pyoxidizer/src/environment.rs
           # and the `Installing Rust` documentation when this changes.
-          - '1.51.0'
+          - '1.52.1'
         os:
           - 'ubuntu-20.04'
           - 'macos-10.15'
@@ -22,7 +22,7 @@ jobs:
           - 'windows-2019'
         exclude:
           - os: 'macos-11.0'
-            rust_toolchain: '1.51.0'
+            rust_toolchain: '1.52.1'
           - os: 'macos-11.0'
             rust_toolchain: 'beta'
           - os: 'macos-11.0'
