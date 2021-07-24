@@ -63,7 +63,7 @@ fn find_certificates(
     let mut search = ItemSearchOptions::default();
     search.keychains(keychains);
     search.class(ItemClass::certificate());
-    search.limit(i32::MAX as _);
+    search.limit(i32::MAX as i64);
 
     let mut certs = vec![];
 
