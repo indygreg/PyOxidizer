@@ -137,7 +137,7 @@ pub fn find_undefined_elf_symbols(buffer: &[u8], elf: &goblin::elf::Elf) -> Vec<
         let versym = *versym_iter.next().unwrap();
 
         if sym.is_import() {
-            let name = dynstrtab.get(sym.st_name).unwrap().unwrap();
+            let name = dynstrtab.get_at(sym.st_name).unwrap();
 
             res.push(if versym > 1 {
                 let (filename, version) =
