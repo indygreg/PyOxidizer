@@ -232,7 +232,7 @@ impl LicensedComponent {
         match &self.license {
             LicenseFlavor::Spdx(expression) => expression
                 .requirements()
-                .map(|req| (req.req.license.id().clone().unwrap(), req.req.exception))
+                .map(|req| (req.req.license.id().unwrap(), req.req.exception))
                 .collect::<BTreeSet<_>>(),
             LicenseFlavor::OtherExpression(expression) => expression
                 .requirements()
