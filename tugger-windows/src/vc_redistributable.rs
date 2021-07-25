@@ -23,22 +23,22 @@ use {crate::find_vswhere, std::collections::BTreeMap};
 
 pub static VC_REDIST_X86: Lazy<RemoteContent> = Lazy::new(|| {
     RemoteContent {
-        url: "https://download.visualstudio.microsoft.com/download/pr/d64b93c3-f270-4750-9e75-bc12b2e899fb/4521ED84B9B1679A706E719423D54EF5E413DC50DDE1CF362232D7359D7E89C4/VC_redist.x86.exe".to_string(),
-        sha256: "4521ed84b9b1679a706e719423d54ef5e413dc50dde1cf362232d7359d7e89c4".to_string(),
+        url: "https://download.visualstudio.microsoft.com/download/pr/888b4c07-c602-499a-9efb-411188496ce7/F3A86393234099BEDD558FD35AB538A6E4D9D4F99AD5ADFA13F603D4FF8A42DC/VC_redist.x86.exe".to_string(),
+        sha256: "f3a86393234099bedd558fd35ab538a6e4d9d4f99ad5adfa13f603d4ff8a42dc".to_string(),
     }
 });
 
 pub static VC_REDIST_X64: Lazy<RemoteContent> = Lazy::new(|| {
     RemoteContent {
-        url: "https://download.visualstudio.microsoft.com/download/pr/cd3a705f-70b6-46f7-b8e2-63e6acc5bd05/F299953673DE262FEFAD9DD19BFBE6A5725A03AE733BEBFEC856F1306F79C9F7/VC_redist.x64.exe".to_string(),
-        sha256: "f299953673de262fefad9dd19bfbe6a5725a03ae733bebfec856f1306f79c9f7".to_string(),
+        url: "https://download.visualstudio.microsoft.com/download/pr/36e45907-8554-4390-ba70-9f6306924167/97CC5066EB3C7246CF89B735AE0F5A5304A7EE33DC087D65D9DFF3A1A73FE803/VC_redist.x64.exe".to_string(),
+        sha256: "97cc5066eb3c7246cf89b735ae0f5a5304a7ee33dc087d65d9dff3a1a73fe803".to_string(),
     }
 });
 
 pub static VC_REDIST_ARM64: Lazy<RemoteContent> = Lazy::new(|| {
     RemoteContent {
-        url: "https://download.visualstudio.microsoft.com/download/pr/cd3a705f-70b6-46f7-b8e2-63e6acc5bd05/D49B964641B8B2B9908A2908851A6196734B47BCC7B198C387287C438C8100B7/VC_redist.arm64.exe".to_string(),
-        sha256: "d49b964641b8b2b9908a2908851a6196734b47bcc7b198c387287c438c8100b7".to_string(),
+        url: "https://download.visualstudio.microsoft.com/download/pr/888b4c07-c602-499a-9efb-411188496ce7/B76EF09CD8B114148EADDDFC6846EF178E6B7797F590191E22CEE29A20B51692/VC_redist.arm64.exe".to_string(),
+        sha256: "b76ef09cd8b114148eadddfc6846ef178e6b7797f590191e22cee29a20b51692".to_string(),
     }
 });
 
