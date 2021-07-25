@@ -72,10 +72,16 @@ Bug Fixes
   to compile to bytecode. This should enable Python resources to compile without
   error when setting :py:attr:`PythonPackagingPolicy.include_test` to ``True``,
   without requiring a custom resource handling callback to disable bytecode
-  generation. (#147).
+  generation. (#147)
 * Applications with hyphens (``-``) in their name now build properly on Windows.
   Previously, there would be a cryptic build failure when running ``rc.exe``.
   (#402)
+* The ELF (read: Linux) binaries in the default Python distributions have
+  changed how they perform dynamic library loading so they should always pick
+  up the libpython from the distribution. Before, ``LD_LIBRARY_PATH``
+  environment variables could result in the wrong libpython being loaded and
+  errors like ``ModuleNotFoundError: No module named '_posixsubprocess'`` being
+  encountered. (#406)
 
 New Features
 ^^^^^^^^^^^^
