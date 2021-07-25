@@ -35,27 +35,27 @@ See the docs at https://pyoxidizer.readthedocs.org/ for more.
 
 
 def make_msi(target_triple, add_vc_redist):
+    if target_triple == "i686-pc-windows-msvc":
+        arch = "x86"
+    elif target_triple == "x86_64-pc-windows-msvc":
+        arch = "x64"
+    else:
+        arch = "unknown"
+
     msi = WiXMSIBuilder(
         id_prefix = "pyoxidizer",
         product_name = "PyOxidizer",
         product_version = PYOXIDIZER_VERSION,
         product_manufacturer = AUTHOR,
+        arch = arch,
     )
     msi.help_url = "https://pyoxidizer.readthedocs.io/"
-    msi.target_triple = target_triple
     msi.license_path = CWD + "/LICENSE"
 
-    if target_triple == "i686-pc-windows-msvc":
-        platform = "x86"
-    elif target_triple == "x86_64-pc-windows-msvc":
-        platform = "x64"
-    else:
-        platform = "unknown"
-
-    msi.msi_filename = "PyOxidizer-" + PYOXIDIZER_VERSION + "-" + platform + ".msi"
+    msi.msi_filename = "PyOxidizer-" + PYOXIDIZER_VERSION + "-" + arch + ".msi"
 
     if add_vc_redist:
-        msi.add_visual_cpp_redistributable(redist_version = "14", platform = platform)
+        msi.add_visual_cpp_redistributable(redist_version = "14", platform = arch)
 
     m = FileManifest()
 
