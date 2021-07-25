@@ -67,6 +67,7 @@ impl TypedValue for WiXInstallerValue {
 
     fn get_attr(&self, attribute: &str) -> ValueResult {
         Ok(match attribute {
+            "arch" => Value::from(self.inner.arch()),
             "install_files_root_directory_id" => {
                 Value::from(self.inner.install_files_root_directory_id())
             }
@@ -86,12 +87,15 @@ impl TypedValue for WiXInstallerValue {
     fn has_attr(&self, attribute: &str) -> Result<bool, ValueError> {
         Ok(matches!(
             attribute,
-            "install_files_root_directory_id" | "install_files_wxs_path"
+            "arch" | "install_files_root_directory_id" | "install_files_wxs_path"
         ))
     }
 
     fn set_attr(&mut self, attribute: &str, value: Value) -> Result<(), ValueError> {
         match attribute {
+            "arch" => {
+                self.inner.set_arch(value.to_string());
+            }
             "install_files_root_directory_id" => {
                 self.inner
                     .set_install_files_root_directory_id(value.to_string());
@@ -591,6 +595,18 @@ mod tests {
 
         let installer = env.eval("WiXInstaller('myapp', 'ignored')")?;
         assert_eq!(installer.get_type(), WiXInstallerValue::TYPE);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_attributes() -> Result<()> {
+        let mut env = StarlarkEnvironment::new()?;
+
+        env.eval("i = WiXInstaller('myapp', 'ignored')")?;
+        env.eval("i.arch = 'x86'")?;
+        let arch = env.eval("i.arch")?;
+        assert_eq!(arch.to_string(), "x86");
 
         Ok(())
     }

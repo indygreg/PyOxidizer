@@ -70,6 +70,16 @@ impl WiXInstallerBuilder {
         }
     }
 
+    /// The WiX architecture of the installer we're building.
+    pub fn arch(&self) -> &str {
+        &self.arch
+    }
+
+    /// Set the WiX architecture of the installer we're building.
+    pub fn set_arch(&mut self, value: impl ToString) {
+        self.arch = value.to_string();
+    }
+
     /// Obtain variables that will be used for `light` invocations.
     pub fn variables(&self) -> std::collections::btree_map::Iter<String, Option<String>> {
         self.variables.iter()

@@ -122,6 +122,9 @@ New Features
 * :py:class:`starlark_tugger.WiXBundleBuilder` has gained the
   :py:meth:`starlark_tugger.WiXBundleBuilder.to_file_content` and
   :py:meth:`starlark_tugger.WiXBundleBuilder.write_to_directory` methods.
+* :py:class:`starlark_tugger.WiXInstaller` has gained the
+  :py:attr:`starlark_tugger.WiXInstaller.arch` attribute to retrieve and modify the
+  architecture of the WiX installer being built.
 
 Other Relevant Changes
 ^^^^^^^^^^^^^^^^^^^^^^

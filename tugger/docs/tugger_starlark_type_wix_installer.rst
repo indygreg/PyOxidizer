@@ -31,6 +31,19 @@
     and ensure :py:attr:`WiXInstaller.install_files_root_directory_id` points to a
     valid ``<Directory Id=`` value.
 
+    .. py:attribute:: arch
+
+        (``str``)
+
+        The WiX architecture of the installer being built.
+
+        Valid values include ``x64``, ``x86``, and ``arm64``.
+
+        No validation of the value or its appropriateness for the installer's
+        content is performed. So invalid architecture values or values that
+        don't match the content in the installer can result in run-time errors
+        or bad/buggy installers.
+
     .. py:attribute:: install_files_root_directory_id
 
         (``str``)
