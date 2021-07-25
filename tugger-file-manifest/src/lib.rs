@@ -708,6 +708,7 @@ impl FileManifest {
 mod tests {
     use {super::*, tempfile::TempDir};
 
+    #[cfg(unix)]
     fn temp_dir() -> std::io::Result<TempDir> {
         tempfile::Builder::new()
             .prefix("tugger-file-manifest-test-")
