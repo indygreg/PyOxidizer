@@ -36,7 +36,7 @@ use {
     tugger_code_signing::SigningDestination,
     tugger_file_manifest::FileEntry,
     tugger_windows::VcRedistributablePlatform,
-    tugger_wix::{target_triple_to_wix_arch, WiXSimpleMsiBuilder},
+    tugger_wix::WiXSimpleMsiBuilder,
 };
 
 fn error_context<F, T>(label: &str, f: F) -> Result<T, ValueError>
@@ -57,7 +57,7 @@ pub struct WiXMsiBuilderWrapper {
     /// Explicit filename to use for the built MSI.
     pub msi_filename: Option<String>,
     /// The target architecture we are building for.
-    pub target_triple: String,
+    pub arch: String,
 }
 
 #[derive(Clone)]
@@ -77,6 +77,9 @@ impl TypedValue for WiXMsiBuilderValue {
         let mut inner = self.inner(&format!("{}.{}", Self::TYPE, &attribute))?;
 
         match attribute {
+            "arch" => {
+                inner.arch = value.to_string();
+            }
             "banner_bmp_path" => {
                 inner.builder = inner.builder.clone().banner_bmp_path(value.to_string());
             }
@@ -104,9 +107,6 @@ impl TypedValue for WiXMsiBuilderValue {
             "product_icon_path" => {
                 inner.builder = inner.builder.clone().product_icon_path(value.to_string());
             }
-            "target_triple" => {
-                inner.target_triple = value.to_string();
-            }
             "upgrade_code" => {
                 inner.builder = inner.builder.clone().upgrade_code(value.to_string());
             }
@@ -129,6 +129,7 @@ impl WiXMsiBuilderValue {
         product_name: String,
         product_version: String,
         product_manufacturer: String,
+        arch: String,
     ) -> ValueResult {
         let builder = WiXSimpleMsiBuilder::new(
             &id_prefix,
@@ -141,7 +142,7 @@ impl WiXMsiBuilderValue {
             inner: Arc::new(Mutex::new(WiXMsiBuilderWrapper {
                 builder,
                 msi_filename: None,
-                target_triple: env!("HOST").to_string(),
+                arch,
             })),
         }))
     }
@@ -227,12 +228,9 @@ impl WiXMsiBuilderValue {
         let inner = self.inner(label)?;
 
         let msi_path = error_context(label, || {
-            let arch = target_triple_to_wix_arch(&inner.target_triple)
-                .ok_or_else(|| anyhow!("unsupported WiX target triple"))?;
-
             let builder = inner
                 .builder
-                .to_installer_builder(arch, build_dir)
+                .to_installer_builder(&inner.arch, build_dir)
                 .context("converting WiXSimpleMSiBuilder to WiXInstallerBuilder")?;
 
             let msi_path = build_dir.join(&msi_filename);
@@ -390,9 +388,10 @@ starlark_module! { wix_msi_builder_module =>
         id_prefix: String,
         product_name: String,
         product_version: String,
-        product_manufacturer: String
+        product_manufacturer: String,
+        arch: String = "x64".to_string()
     ) {
-        WiXMsiBuilderValue::new_from_args(id_prefix, product_name, product_version, product_manufacturer)
+        WiXMsiBuilderValue::new_from_args(id_prefix, product_name, product_version, product_manufacturer, arch)
     }
 
     WiXMSIBuilder.add_program_files_manifest(env env, call_stack cs, this, manifest: FileManifestValue) {
@@ -435,8 +434,10 @@ mod tests {
     fn test_new() -> Result<()> {
         let mut env = StarlarkEnvironment::new()?;
 
-        let v = env.eval("WiXMSIBuilder('prefix', 'name', '0.1', 'manufacturer')")?;
-        assert_eq!(v.get_type(), "WiXMSIBuilder");
+        let builder_value = env.eval("WiXMSIBuilder('prefix', 'name', '0.1', 'manufacturer')")?;
+        assert_eq!(builder_value.get_type(), "WiXMSIBuilder");
+        let builder = builder_value.downcast_ref::<WiXMsiBuilderValue>().unwrap();
+        assert_eq!(builder.inner.lock().unwrap().arch, "x64");
 
         Ok(())
     }

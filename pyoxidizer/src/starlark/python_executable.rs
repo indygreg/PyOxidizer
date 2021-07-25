@@ -59,6 +59,7 @@ use {
     },
     tugger_code_signing::SigningDestination,
     tugger_file_manifest::FileData,
+    tugger_wix::target_triple_to_wix_arch,
 };
 
 fn error_context<F, T>(label: &str, f: F) -> Result<T, ValueError>
@@ -925,14 +926,19 @@ impl PythonExecutableValue {
         product_version: String,
         product_manufacturer: String,
     ) -> ValueResult {
+        const LABEL: &str = "PythonExecutable.to_wix_msi_builder()";
+
         let manifest_value = self.to_file_manifest(type_values, ".".to_string())?;
         let manifest = manifest_value.downcast_ref::<FileManifestValue>().unwrap();
+
+        let arch = target_triple_to_wix_arch(self.inner(LABEL)?.target_triple()).unwrap_or("x64");
 
         let builder_value = WiXMsiBuilderValue::new_from_args(
             id_prefix,
             product_name,
             product_version,
             product_manufacturer,
+            arch.to_string(),
         )?;
         let mut builder = builder_value
             .downcast_mut::<WiXMsiBuilderValue>()

@@ -16,7 +16,7 @@
 
     Instances have multiple attributes, which are write-only.
 
-    .. py:method:: __init__(id_prefix: str, product_name: str, product_version: str, product_manufacturer: str) -> WiXMSIBuilder
+    .. py:method:: __init__(id_prefix: str, product_name: str, product_version: str, product_manufacturer: str, arch: str = "x64") -> WiXMSIBuilder
 
         ``WiXMSIBuilder()`` is called to construct new instances. It accepts
         the following arguments:
@@ -40,6 +40,18 @@
 
         ``product_manufacturer``
            The author of the application.
+
+        ``arch``
+           The WiX architecture of the installer.
+
+    .. py:attribute:: arch
+
+        (``str``)
+
+        The WiX architecture of the installer.
+
+        No validation is performed that the value is a valid WiX architecture or
+        that the content of the installer matches the provided architecture.
 
     .. py:attribute:: banner_bmp_path
 
@@ -99,12 +111,6 @@
         (``str``)
 
         Path to a file providing the icon for the installed application.
-
-    .. py:attribute:: target_triple
-
-        (``str``)
-
-        The Rust target triple the MSI is being built for.
 
     .. py:attribute:: upgrade_code
 
