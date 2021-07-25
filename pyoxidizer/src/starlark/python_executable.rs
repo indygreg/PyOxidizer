@@ -885,11 +885,14 @@ impl PythonExecutableValue {
             .downcast_ref::<WiXMsiBuilderValue>()
             .unwrap();
 
+        let arch = target_triple_to_wix_arch(self.inner(LABEL)?.target_triple()).unwrap_or("x64");
+
         let bundle_builder_value = WiXBundleBuilderValue::new_from_args(
             id_prefix,
             product_name,
             product_version,
             product_manufacturer,
+            arch.to_string(),
         )?;
         let mut bundle_builder = bundle_builder_value
             .downcast_mut::<WiXBundleBuilderValue>()

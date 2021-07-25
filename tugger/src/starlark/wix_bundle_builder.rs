@@ -8,7 +8,7 @@ use {
         file_content::FileContentWrapper,
         wix_msi_builder::WiXMsiBuilderValue,
     },
-    anyhow::{anyhow, Context},
+    anyhow::Context,
     starlark::{
         environment::TypeValues,
         eval::call_stack::CallStack,
@@ -32,7 +32,7 @@ use {
     tugger_code_signing::SigningDestination,
     tugger_file_manifest::FileEntry,
     tugger_windows::VcRedistributablePlatform,
-    tugger_wix::{target_triple_to_wix_arch, MsiPackage, WiXBundleInstallerBuilder},
+    tugger_wix::{MsiPackage, WiXBundleInstallerBuilder},
 };
 
 fn error_context<F, T>(label: &str, f: F) -> Result<T, ValueError>
@@ -50,7 +50,7 @@ where
 
 pub struct WiXBundleBuilderValue<'a> {
     pub inner: WiXBundleInstallerBuilder<'a>,
-    pub target_triple: String,
+    pub arch: String,
     pub id_prefix: String,
     pub build_msis: Vec<WiXMsiBuilderValue>,
 }
@@ -70,12 +70,13 @@ impl<'a> WiXBundleBuilderValue<'a> {
         name: String,
         version: String,
         manufacturer: String,
+        arch: String,
     ) -> ValueResult {
         let inner = WiXBundleInstallerBuilder::new(name, version, manufacturer);
 
         Ok(Value::new(WiXBundleBuilderValue {
             inner,
-            target_triple: env!("HOST").to_string(),
+            arch,
             id_prefix,
             build_msis: vec![],
         }))
@@ -161,11 +162,8 @@ impl<'a> WiXBundleBuilderValue<'a> {
         }
 
         let builder = error_context(label, || {
-            let arch = target_triple_to_wix_arch(&self.target_triple)
-                .ok_or_else(|| anyhow!("unsupported WiX target triple"))?;
-
             self.inner
-                .to_installer_builder(&self.id_prefix, arch, dest_dir)
+                .to_installer_builder(&self.id_prefix, &self.arch, dest_dir)
                 .context("converting to WiXInstallerBuilder")
         })?;
 
@@ -308,9 +306,10 @@ starlark_module! { wix_bundle_builder_module =>
         id_prefix: String,
         name: String,
         version: String,
-        manufacturer: String
+        manufacturer: String,
+        arch: String = "x64".to_string()
     ) {
-        WiXBundleBuilderValue::new_from_args(id_prefix, name, version, manufacturer)
+        WiXBundleBuilderValue::new_from_args(id_prefix, name, version, manufacturer, arch)
     }
 
     WiXBundleBuilder.add_condition(this, condition: String, message: String) {
@@ -364,7 +363,7 @@ mod tests {
 
         let builder = v.downcast_ref::<WiXBundleBuilderValue>().unwrap();
         assert_eq!(builder.id_prefix, "prefix");
-        assert_eq!(builder.target_triple, env!("HOST"));
+        assert_eq!(builder.arch, "x64");
 
         Ok(())
     }

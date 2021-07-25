@@ -13,7 +13,7 @@
     composed of a chain of actions. At execution time, each action in the chain is
     evaluated. See the WiX Toolset documentation for more.
 
-    .. py:method:: __init__(id_prefix: str, name: str, version: str, manufacturer: str) -> WiXBundleBuilder
+    .. py:method:: __init__(id_prefix: str, name: str, version: str, manufacturer: str, arch: str = "x64") -> WiXBundleBuilder
 
         ``WiXBundleBuilder()`` is called to construct new instances. It accepts
         the following arguments:
@@ -36,6 +36,9 @@
 
         ``manufacturer``
            The author of the application.
+
+        ``arch``
+           The WiX architecture of the installer being built.
 
     .. py:method:: add_condition(condition: str, message: str)
 
