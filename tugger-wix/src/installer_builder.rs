@@ -22,8 +22,8 @@ pub struct WiXInstallerBuilder {
     /// components. It should uniquely identify the application/installer.
     id_prefix: String,
 
-    /// Rust target triple we are building for.
-    target_triple: String,
+    /// WiX architecture we are building for.
+    arch: String,
 
     /// Files to install in primary install location.
     install_files: FileManifest,
@@ -55,10 +55,10 @@ pub struct WiXInstallerBuilder {
 
 impl WiXInstallerBuilder {
     /// Create a new instance.
-    pub fn new<P: AsRef<Path>>(id_prefix: String, target_triple: String, build_path: P) -> Self {
+    pub fn new<P: AsRef<Path>>(id_prefix: String, arch: String, build_path: P) -> Self {
         Self {
             id_prefix,
-            target_triple,
+            arch,
             build_path: build_path.as_ref().to_path_buf(),
             install_files: FileManifest::default(),
             install_files_wxs_path: PathBuf::from("install-files.wxs"),
@@ -212,9 +212,6 @@ impl WiXInstallerBuilder {
     /// The output could be an MSI, exe, or other file formats depending on what the
     /// wxs files define.
     pub fn build<P: AsRef<Path>>(&self, logger: &slog::Logger, output_path: P) -> Result<()> {
-        let arch = target_triple_to_wix_arch(&self.target_triple)
-            .ok_or_else(|| anyhow!("cannot map target triple to WiX architecture"))?;
-
         let wix_toolset_path =
             extract_wix(logger, &self.build_path).context("extracting WiX Toolset")?;
 
@@ -264,7 +261,7 @@ impl WiXInstallerBuilder {
                     logger,
                     &wix_toolset_path,
                     &dest_path,
-                    &arch,
+                    &self.arch,
                     wxs.preprocessor_parameters(),
                     None,
                 )

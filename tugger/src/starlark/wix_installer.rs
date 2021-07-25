@@ -36,7 +36,7 @@ use {
     },
     tugger_code_signing::SigningDestination,
     tugger_file_manifest::{FileEntry, FileManifest},
-    tugger_wix::{WiXInstallerBuilder, WiXSimpleMsiBuilder, WxsBuilder},
+    tugger_wix::{target_triple_to_wix_arch, WiXInstallerBuilder, WiXSimpleMsiBuilder, WxsBuilder},
 };
 
 fn error_context<F, T>(label: &str, f: F) -> Result<T, ValueError>
@@ -119,8 +119,10 @@ impl WiXInstallerValue {
             .downcast_ref::<EnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
 
-        // TODO grab target triple properly.
-        let builder = WiXInstallerBuilder::new(id, env!("HOST").to_string(), context.build_path());
+        // TODO obtain default target/arch more properly.
+        let arch = target_triple_to_wix_arch(env!("HOST")).unwrap_or("x64");
+
+        let builder = WiXInstallerBuilder::new(id, arch.to_string(), context.build_path());
 
         Ok(Value::new(WiXInstallerValue {
             inner: builder,

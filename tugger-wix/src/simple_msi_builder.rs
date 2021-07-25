@@ -3,7 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    crate::{WiXInstallerBuilder, WxsBuilder},
+    crate::{target_triple_to_wix_arch, WiXInstallerBuilder, WxsBuilder},
     anyhow::{anyhow, Result},
     std::{
         borrow::Cow,
@@ -228,9 +228,12 @@ impl WiXSimpleMsiBuilder {
         target_triple: &str,
         build_path: P,
     ) -> Result<WiXInstallerBuilder> {
+        let arch = target_triple_to_wix_arch(target_triple)
+            .ok_or_else(|| anyhow!("unsupported WiX installer target triple"))?;
+
         let mut builder = WiXInstallerBuilder::new(
             self.id_prefix.clone(),
-            target_triple.to_string(),
+            arch.to_string(),
             build_path.as_ref().to_path_buf(),
         );
 
@@ -582,7 +585,7 @@ mod tests {
 
         builder.add_program_files_manifest(&m)?;
 
-        let builder = builder.to_installer_builder(env!("HOST"), DEFAULT_TEMP_DIR.path())?;
+        let builder = builder.to_installer_builder("x86_64-pc-windows", DEFAULT_TEMP_DIR.path())?;
 
         assert!(builder.wxs_files().contains_key(&PathBuf::from("main.wxs")));
         assert_eq!(builder.install_files(), &m);

@@ -169,9 +169,12 @@ impl<'a> WiXBundleInstallerBuilder<'a> {
         target_triple: &str,
         build_path: P,
     ) -> Result<WiXInstallerBuilder> {
+        let arch = target_triple_to_wix_arch(target_triple)
+            .ok_or_else(|| anyhow!("unsupported WiX installer target triple"))?;
+
         let mut builder = WiXInstallerBuilder::new(
             id_prefix.to_string(),
-            target_triple.to_string(),
+            arch.to_string(),
             build_path.as_ref().to_path_buf(),
         );
 
