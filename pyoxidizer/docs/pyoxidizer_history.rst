@@ -58,6 +58,10 @@ Backwards Compatibility Notes
   See :ref:`pyoxidizer_packaging_multiprocessing` for workarounds.
 * :py:attr:`PythonInterpreterConfig.sys_frozen` now defaults to ``True``
   instead of ``False``.
+* :py:class:`starlark_tugger.WiXInstaller` instances now always default to
+  building an installer for the ``x64`` WiX architecture. Previously, the
+  default architecture would be derived from the architecture of the running
+  binary.
 
 Bug Fixes
 ^^^^^^^^^
@@ -125,6 +129,8 @@ New Features
 * :py:class:`starlark_tugger.WiXInstaller` has gained the
   :py:attr:`starlark_tugger.WiXInstaller.arch` attribute to retrieve and modify the
   architecture of the WiX installer being built.
+* :py:class:`starlark_tugger.WiXInstaller`'s constructor now accepts an ``arch``
+  argument to control the default WiX architecture of the installer.
 
 Other Relevant Changes
 ^^^^^^^^^^^^^^^^^^^^^^

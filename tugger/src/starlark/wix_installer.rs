@@ -36,7 +36,7 @@ use {
     },
     tugger_code_signing::SigningDestination,
     tugger_file_manifest::{FileEntry, FileManifest},
-    tugger_wix::{target_triple_to_wix_arch, WiXInstallerBuilder, WiXSimpleMsiBuilder, WxsBuilder},
+    tugger_wix::{WiXInstallerBuilder, WiXSimpleMsiBuilder, WxsBuilder},
 };
 
 fn error_context<F, T>(label: &str, f: F) -> Result<T, ValueError>
@@ -117,16 +117,18 @@ impl TypedValue for WiXInstallerValue {
 }
 
 impl WiXInstallerValue {
-    fn new_from_args(type_values: &TypeValues, id: String, filename: String) -> ValueResult {
+    fn new_from_args(
+        type_values: &TypeValues,
+        id: String,
+        filename: String,
+        arch: String,
+    ) -> ValueResult {
         let build_context_value = get_context_value(type_values)?;
         let context = build_context_value
             .downcast_ref::<EnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
 
-        // TODO obtain default target/arch more properly.
-        let arch = target_triple_to_wix_arch(env!("HOST")).unwrap_or("x64");
-
-        let builder = WiXInstallerBuilder::new(id, arch.to_string(), context.build_path());
+        let builder = WiXInstallerBuilder::new(id, arch, context.build_path());
 
         Ok(Value::new(WiXInstallerValue {
             inner: builder,
@@ -497,8 +499,8 @@ impl WiXInstallerValue {
 
 starlark_module! { wix_installer_module =>
     #[allow(non_snake_case)]
-    WiXInstaller(env env, id: String, filename: String) {
-        WiXInstallerValue::new_from_args(env, id, filename)
+    WiXInstaller(env env, id: String, filename: String, arch: String = "x64".to_string()) {
+        WiXInstallerValue::new_from_args(env, id, filename, arch)
     }
 
     WiXInstaller.add_build_file(
@@ -596,6 +598,10 @@ mod tests {
         let installer = env.eval("WiXInstaller('myapp', 'ignored')")?;
         assert_eq!(installer.get_type(), WiXInstallerValue::TYPE);
 
+        let installer_value = env.eval("WiXInstaller('myapp', 'ignored', arch='arch')")?;
+        let installer = installer_value.downcast_ref::<WiXInstallerValue>().unwrap();
+        assert_eq!(installer.inner.arch(), "arch");
+
         Ok(())
     }
 
@@ -604,6 +610,8 @@ mod tests {
         let mut env = StarlarkEnvironment::new()?;
 
         env.eval("i = WiXInstaller('myapp', 'ignored')")?;
+        let arch = env.eval("i.arch")?;
+        assert_eq!(arch.to_string(), "x64");
         env.eval("i.arch = 'x86'")?;
         let arch = env.eval("i.arch")?;
         assert_eq!(arch.to_string(), "x86");

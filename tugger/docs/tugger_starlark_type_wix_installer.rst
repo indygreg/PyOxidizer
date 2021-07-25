@@ -59,7 +59,7 @@
         Defines the filename/path that the auto-generated ``.wxs`` file containing
         fragments for *install files* should be written to.
 
-    .. py:method:: __init__(id: str, filename: str) -> WiXInstaller
+    .. py:method:: __init__(id: str, filename: str, arch: str = "x64") -> WiXInstaller
 
         ``WiXInstaller()`` is called to construct a new instance. It accepts
         the following arguments:
@@ -85,6 +85,11 @@
 
            File extensions of ``.msi`` and ``.exe`` are common. If using
            ``add_simple_installer()``, you will want to provide an ``.msi`` filename.
+
+        ``arch``
+           The WiX architecture of the installer being built.
+
+           This effectively sets the default value for the ``.arch`` attribute.
 
     .. py:method:: add_build_files(manifest: FileManifest)
 
