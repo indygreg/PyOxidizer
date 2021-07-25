@@ -80,6 +80,10 @@ Bug Fixes
 New Features
 ^^^^^^^^^^^^
 
+* Default Python distributions upgraded from 3.8.10 and 3.9.5 to 3.8.11 and
+  3.9.6. Various library dependencies have also been upgraded. See
+  https://github.com/indygreg/python-build-standalone/releases/tag/20210724 for
+  the full list of changes.
 * :py:class:`oxidized_importer.OxidizedFinder` now calls
   :py:func:`multiprocessing.set_start_method` when the :py:mod:`multiprocessing`
   module is imported. The behavior of this feature can be controlled via the

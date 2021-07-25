@@ -63,7 +63,7 @@ def main():
         # cpython-3.8.6-i686-pc-windows-msvc-shared-pgo-20201021T0032.tar.zst
 
         assert name.startswith("cpython-")
-        assert name.endswith(".tar.zst")
+        assert name.endswith((".tar.zst", ".tar.gz"))
 
         parts = name.split("-")
 
