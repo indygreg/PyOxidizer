@@ -166,12 +166,9 @@ impl<'a> WiXBundleInstallerBuilder<'a> {
     pub fn to_installer_builder<P: AsRef<Path>>(
         &self,
         id_prefix: &str,
-        target_triple: &str,
+        arch: &str,
         build_path: P,
     ) -> Result<WiXInstallerBuilder> {
-        let arch = target_triple_to_wix_arch(target_triple)
-            .ok_or_else(|| anyhow!("unsupported WiX installer target triple"))?;
-
         let mut builder = WiXInstallerBuilder::new(
             id_prefix.to_string(),
             arch.to_string(),
@@ -310,7 +307,7 @@ mod tests {
             DEFAULT_DOWNLOAD_DIR.as_path(),
         )?;
 
-        let builder = bundle.to_installer_builder("myapp", env!("HOST"), temp_dir.path())?;
+        let builder = bundle.to_installer_builder("myapp", "x64", temp_dir.path())?;
         let output_path = temp_dir.path().join("myapp.exe");
         builder.build(&logger, &output_path)?;
 

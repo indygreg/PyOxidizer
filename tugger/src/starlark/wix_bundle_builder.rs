@@ -8,7 +8,7 @@ use {
         file_content::FileContentWrapper,
         wix_msi_builder::WiXMsiBuilderValue,
     },
-    anyhow::Context,
+    anyhow::{anyhow, Context},
     starlark::{
         environment::TypeValues,
         eval::call_stack::CallStack,
@@ -32,7 +32,7 @@ use {
     tugger_code_signing::SigningDestination,
     tugger_file_manifest::FileEntry,
     tugger_windows::VcRedistributablePlatform,
-    tugger_wix::{MsiPackage, WiXBundleInstallerBuilder},
+    tugger_wix::{target_triple_to_wix_arch, MsiPackage, WiXBundleInstallerBuilder},
 };
 
 fn error_context<F, T>(label: &str, f: F) -> Result<T, ValueError>
@@ -161,8 +161,11 @@ impl<'a> WiXBundleBuilderValue<'a> {
         }
 
         let builder = error_context(label, || {
+            let arch = target_triple_to_wix_arch(&self.target_triple)
+                .ok_or_else(|| anyhow!("unsupported WiX target triple"))?;
+
             self.inner
-                .to_installer_builder(&self.id_prefix, &self.target_triple, dest_dir)
+                .to_installer_builder(&self.id_prefix, arch, dest_dir)
                 .context("converting to WiXInstallerBuilder")
         })?;
 
