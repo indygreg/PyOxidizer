@@ -36,7 +36,7 @@ use {
     tugger_code_signing::SigningDestination,
     tugger_file_manifest::FileEntry,
     tugger_windows::VcRedistributablePlatform,
-    tugger_wix::WiXSimpleMsiBuilder,
+    tugger_wix::{target_triple_to_wix_arch, WiXSimpleMsiBuilder},
 };
 
 fn error_context<F, T>(label: &str, f: F) -> Result<T, ValueError>
@@ -227,9 +227,12 @@ impl WiXMsiBuilderValue {
         let inner = self.inner(label)?;
 
         let msi_path = error_context(label, || {
+            let arch = target_triple_to_wix_arch(&inner.target_triple)
+                .ok_or_else(|| anyhow!("unsupported WiX target triple"))?;
+
             let builder = inner
                 .builder
-                .to_installer_builder(&inner.target_triple, build_dir)
+                .to_installer_builder(arch, build_dir)
                 .context("converting WiXSimpleMSiBuilder to WiXInstallerBuilder")?;
 
             let msi_path = build_dir.join(&msi_filename);

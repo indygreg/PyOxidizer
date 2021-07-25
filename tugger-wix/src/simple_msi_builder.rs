@@ -3,7 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    crate::{target_triple_to_wix_arch, WiXInstallerBuilder, WxsBuilder},
+    crate::{WiXInstallerBuilder, WxsBuilder},
     anyhow::{anyhow, Result},
     std::{
         borrow::Cow,
@@ -225,12 +225,9 @@ impl WiXSimpleMsiBuilder {
     /// this msi installer.
     pub fn to_installer_builder<P: AsRef<Path>>(
         &self,
-        target_triple: &str,
+        arch: &str,
         build_path: P,
     ) -> Result<WiXInstallerBuilder> {
-        let arch = target_triple_to_wix_arch(target_triple)
-            .ok_or_else(|| anyhow!("unsupported WiX installer target triple"))?;
-
         let mut builder = WiXInstallerBuilder::new(
             self.id_prefix.clone(),
             arch.to_string(),
@@ -585,7 +582,7 @@ mod tests {
 
         builder.add_program_files_manifest(&m)?;
 
-        let builder = builder.to_installer_builder("x86_64-pc-windows", DEFAULT_TEMP_DIR.path())?;
+        let builder = builder.to_installer_builder("x64", DEFAULT_TEMP_DIR.path())?;
 
         assert!(builder.wxs_files().contains_key(&PathBuf::from("main.wxs")));
         assert_eq!(builder.install_files(), &m);
@@ -623,7 +620,7 @@ mod tests {
 
         let builder = builder.auto_sign_signtool(settings);
 
-        let builder = builder.to_installer_builder(env!("HOST"), temp_dir.path())?;
+        let builder = builder.to_installer_builder("x64", temp_dir.path())?;
 
         let output_path = temp_dir.path().join("test.msi");
 
