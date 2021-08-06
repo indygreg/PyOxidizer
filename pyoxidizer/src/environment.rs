@@ -16,9 +16,12 @@ use {
         path::{Path, PathBuf},
         sync::{Arc, RwLock},
     },
-    tugger_apple::{find_command_line_tools_sdks, find_default_developer_sdks, AppleSdk},
     tugger_rust_toolchain::install_rust_toolchain,
 };
+
+#[cfg(target_os = "macos")]
+use tugger_apple::{find_command_line_tools_sdks, find_default_developer_sdks, AppleSdk};
+
 
 /// Version string of PyOxidizer's crate from its Cargo.toml.
 const PYOXIDIZER_CRATE_VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -426,6 +429,7 @@ impl Environment {
     }
 
     /// Attempt to resolve an appropriate Apple SDK to use given settings.
+    #[cfg(target_os = "macos")]
     pub fn resolve_apple_sdk(
         &self,
         logger: &slog::Logger,
@@ -486,6 +490,7 @@ pub struct RustEnvironment {
 /// Given an Apple `platform`, locate an Apple SDK that is of least
 /// `minimum_version` and supports targeting `deployment_target`, which is likely
 /// an OS version string.
+#[cfg(target_os = "macos")]
 pub fn resolve_apple_sdk(
     logger: &slog::Logger,
     platform: &str,

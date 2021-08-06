@@ -7,12 +7,13 @@ The `starlark` module and related sub-modules define the
 [Starlark](https://github.com/bazelbuild/starlark) dialect used by
 Tugger.
 */
-
+#[cfg(target_os = "macos")]
 pub mod apple_universal_binary;
 pub mod code_signing;
 pub mod file_content;
 pub mod file_manifest;
 pub mod file_resource;
+#[cfg(target_os = "macos")]
 pub mod macos_application_bundle_builder;
 pub mod python_wheel_builder;
 pub mod snapcraft;
@@ -127,11 +128,13 @@ pub fn register_starlark_dialect(
     env: &mut Environment,
     type_values: &mut TypeValues,
 ) -> Result<(), EnvironmentError> {
+    #[cfg(target_os = "macos")]
     apple_universal_binary::apple_universal_binary_module(env, type_values);
     code_signing::code_signing_module(env, type_values);
     file_content::file_content_module(env, type_values);
     file_manifest::file_manifest_module(env, type_values);
     file_resource::file_resource_module(env, type_values);
+    #[cfg(target_os = "macos")]
     macos_application_bundle_builder::macos_application_bundle_builder_module(env, type_values);
     python_wheel_builder::python_wheel_builder_module(env, type_values);
     snapcraft::snapcraft_module(env, type_values);

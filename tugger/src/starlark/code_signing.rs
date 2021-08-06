@@ -129,6 +129,7 @@ impl CodeSignerValue {
 
 // Starlark methods.
 impl CodeSignerValue {
+    #[cfg(target_os = "macos")]
     fn from_pfx_file(path: String, password: String) -> ValueResult {
         let pfx_data = std::fs::read(&path).map_err(|e| {
             ValueError::Runtime(RuntimeError {
@@ -591,6 +592,46 @@ pub fn handle_file_manifest_signable_events(
 }
 
 starlark_module! { code_signing_module =>
+    code_signer_from_windows_store_sha1_thumbprint(thumbprint: String, store: String = "my".to_string()) {
+        CodeSignerValue::from_windows_store_sha1_thumbprint(thumbprint, store)
+    }
+
+    code_signer_from_windows_store_subject(subject: String, store: String = "my".to_string()) {
+        CodeSignerValue::from_windows_store_subject(subject, store)
+    }
+
+    code_signer_from_windows_store_auto() {
+        CodeSignerValue::from_windows_store_auto()
+    }
+
+    CodeSigner.activate(env env, this) {
+        let this = this.downcast_ref::<CodeSignerValue>().unwrap();
+        this.activate(env)
+    }
+
+    CodeSigner.chain_issuer_certificates_pem_file(this, path: String) {
+        let this = this.downcast_ref::<CodeSignerValue>().unwrap();
+        this.chain_issuer_certificates_pem_file(path)
+    }
+
+    CodeSigner.chain_issuer_certificates_macos_keychain(this) {
+        let this = this.downcast_ref::<CodeSignerValue>().unwrap();
+        this.chain_issuer_certificates_macos_keychain()
+    }
+
+    CodeSigner.set_time_stamp_server(this, url: String) {
+        let this = this.downcast_ref::<CodeSignerValue>().unwrap();
+        this.set_time_stamp_server(url)
+    }
+
+    CodeSigner.set_signing_callback(this, func) {
+        let mut this = this.downcast_mut::<CodeSignerValue>().unwrap().unwrap();
+        this.set_signing_callback(func)
+    }
+}
+
+#[cfg(target_os = "macos")]
+starlark_module! { code_signing_module =>
     code_signer_from_pfx_file(path: String, password: String) {
         CodeSignerValue::from_pfx_file(path, password)
     }
@@ -737,6 +778,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(target_os = "macos")]
     fn code_signer_from_pfx_file() -> Result<()> {
         let mut env = env_with_pfx_signer()?;
 

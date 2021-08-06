@@ -10,7 +10,7 @@ homepage = "https://github.com/indygreg/PyOxidizer"
 repository = "https://github.com/indygreg/PyOxidizer.git"
 readme = "README.md"
 
-[dependencies]
+[target.'cfg(target_vender="apple")'.dependencies]
 anyhow = "1.0"
 duct = "0.13"
 goblin = "0.4"

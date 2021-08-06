@@ -14,7 +14,7 @@ readme = "README.md"
 name = "rcodesign"
 path = "src/main.rs"
 
-[dependencies]
+[target.'cfg(target_vender="apple")'.dependencies]
 anyhow = "1.0"
 base64 = "0.13"
 bcder = "0.6"
@@ -37,7 +37,7 @@ slog-term = "2.8"
 thiserror = "1.0"
 yasna = "0.3"
 
-[dependencies.apple-bundle]
+[target.'cfg(target_vender="apple")'.dependencies.apple-bundle]
 path = "../apple-bundle"
 version = "0.5.0-pre"
 
@@ -45,7 +45,7 @@ version = "0.5.0-pre"
 path = "../cryptographic-message-syntax"
 version = "0.4.0-pre"
 
-[dependencies.tugger-apple]
+[target.'cfg(target_vender="apple")'.dependencies.tugger-apple]
 path = "../tugger-apple"
 version = "0.4.0-pre"
 
