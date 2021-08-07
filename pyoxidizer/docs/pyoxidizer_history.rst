@@ -144,7 +144,7 @@ New Features
 Other Relevant Changes
 ^^^^^^^^^^^^^^^^^^^^^^
 
-* Managed Rust toolchain upgraded from 1.52.0 to 1.53.0.
+* Managed Rust toolchain upgraded from 1.52.0 to 1.54.0.
 * Visual C++ Redistributable installers upgraded from version 14.28.29910 to
   14.29.30040.
 
