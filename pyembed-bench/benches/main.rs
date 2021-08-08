@@ -55,8 +55,8 @@ fn default_interpreter_config<'a>() -> OxidizedPythonInterpreterConfig<'a> {
     config
 }
 
-fn get_interpreter_plain<'python, 'interpreter, 'resources>(
-) -> Result<MainPythonInterpreter<'python, 'interpreter, 'resources>> {
+fn get_interpreter_plain<'interpreter, 'resources>(
+) -> Result<MainPythonInterpreter<'interpreter, 'resources>> {
     let config = default_interpreter_config();
 
     let interp = MainPythonInterpreter::new(config)
@@ -65,9 +65,9 @@ fn get_interpreter_plain<'python, 'interpreter, 'resources>(
     Ok(interp)
 }
 
-fn get_interpreter_packed<'python, 'interpreter, 'resources>(
+fn get_interpreter_packed<'interpreter, 'resources>(
     packed_resources: &'resources [u8],
-) -> Result<MainPythonInterpreter<'python, 'interpreter, 'resources>> {
+) -> Result<MainPythonInterpreter<'interpreter, 'resources>> {
     let mut config = default_interpreter_config();
     config.oxidized_importer = true;
 

@@ -7,7 +7,7 @@
 use {
     crate::{
         config::{OxidizedPythonInterpreterConfig, ResolvedOxidizedPythonInterpreterConfig},
-        conversion::cpython_osstring_to_bytes,
+        conversion::osstring_to_bytes,
         error::NewInterpreterError,
         extension::{PyInit_oxidized_importer, OXIDIZED_IMPORTER_NAME, OXIDIZED_IMPORTER_NAME_STR},
         importer::{
@@ -18,9 +18,11 @@ use {
         pyalloc::PythonMemoryAllocator,
         python_resources::PythonResourcesState,
     },
-    cpython::{ObjectProtocol, PythonObject, ToPyObject},
     once_cell::sync::Lazy,
-    python3_sys as oldpyffi,
+    pyo3::{
+        exceptions::PyRuntimeError, ffi as pyffi, prelude::*, types::PyDict, PyTypeInfo,
+        ToBorrowedObject,
+    },
     python_packaging::interpreter::{MultiprocessingStartMethod, TerminfoResolution},
     std::{
         collections::BTreeSet,
@@ -46,27 +48,24 @@ static GLOBAL_INTERPRETER_GUARD: Lazy<std::sync::Mutex<()>> =
 /// This type and its various functionality is a glorified wrapper around the
 /// Python C API. But there's a lot of added functionality on top of what the C
 /// API provides.
-///
-/// Both the low-level `python3-sys` and higher-level `cpython` crates are used.
-pub struct MainPythonInterpreter<'python, 'interpreter: 'python, 'resources: 'interpreter> {
+pub struct MainPythonInterpreter<'interpreter, 'resources: 'interpreter> {
     // It is possible to have a use-after-free if config is dropped before the
     // interpreter is finalized/dropped.
     config: ResolvedOxidizedPythonInterpreterConfig<'resources>,
     interpreter_guard: Option<std::sync::MutexGuard<'interpreter, ()>>,
     pub(crate) allocator: Option<PythonMemoryAllocator>,
-    _gil: Option<cpython::GILGuard>,
-    py: Option<cpython::Python<'python>>,
+    gil: Option<GILGuard>,
     /// File to write containing list of modules when the interpreter finalizes.
     write_modules_path: Option<PathBuf>,
 }
 
-impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpreter, 'resources> {
+impl<'interpreter, 'resources> MainPythonInterpreter<'interpreter, 'resources> {
     /// Construct a Python interpreter from a configuration.
     ///
     /// The Python interpreter is initialized as a side-effect. The GIL is held.
     pub fn new(
         config: OxidizedPythonInterpreterConfig<'resources>,
-    ) -> Result<MainPythonInterpreter<'python, 'interpreter, 'resources>, NewInterpreterError> {
+    ) -> Result<MainPythonInterpreter<'interpreter, 'resources>, NewInterpreterError> {
         let config: ResolvedOxidizedPythonInterpreterConfig<'resources> = config.try_into()?;
 
         match config.terminfo_resolution {
@@ -85,8 +84,7 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
             config,
             interpreter_guard: None,
             allocator: None,
-            _gil: None,
-            py: None,
+            gil: None,
             write_modules_path: None,
         };
 
@@ -122,12 +120,12 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
         set_pyimport_inittab(&self.config);
 
         // Pre-configure Python.
-        let pre_config = oldpyffi::PyPreConfig::try_from(&self.config)?;
+        let pre_config = pyffi::PyPreConfig::try_from(&self.config)?;
 
         unsafe {
-            let status = oldpyffi::Py_PreInitialize(&pre_config);
+            let status = pyffi::Py_PreInitialize(&pre_config);
 
-            if oldpyffi::PyStatus_Exception(status) != 0 {
+            if pyffi::PyStatus_Exception(status) != 0 {
                 return Err(NewInterpreterError::new_from_pystatus(
                     &status,
                     "Python pre-initialization",
@@ -140,15 +138,15 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
 
         if let Some(allocator) = &self.allocator {
             if self.config.allocator_raw {
-                allocator.set_allocator(oldpyffi::PyMemAllocatorDomain::PYMEM_DOMAIN_RAW);
+                allocator.set_allocator(pyffi::PyMemAllocatorDomain::PYMEM_DOMAIN_RAW);
             }
 
             if self.config.allocator_mem {
-                allocator.set_allocator(oldpyffi::PyMemAllocatorDomain::PYMEM_DOMAIN_MEM);
+                allocator.set_allocator(pyffi::PyMemAllocatorDomain::PYMEM_DOMAIN_MEM);
             }
 
             if self.config.allocator_obj {
-                allocator.set_allocator(oldpyffi::PyMemAllocatorDomain::PYMEM_DOMAIN_OBJ);
+                allocator.set_allocator(pyffi::PyMemAllocatorDomain::PYMEM_DOMAIN_OBJ);
             }
 
             if self.config.allocator_pymalloc_arena {
@@ -164,18 +162,18 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
         // custom domain allocators.
         if self.config.allocator_debug {
             unsafe {
-                oldpyffi::PyMem_SetupDebugHooks();
+                pyffi::PyMem_SetupDebugHooks();
             }
         }
 
-        let mut py_config: oldpyffi::PyConfig = (&self.config).try_into()?;
+        let mut py_config: pyffi::PyConfig = (&self.config).try_into()?;
 
         // Enable multi-phase initialization. This allows us to initialize
         // our custom importer before Python attempts any imports.
         py_config._init_main = 0;
 
-        let status = unsafe { oldpyffi::Py_InitializeFromConfig(&py_config) };
-        if unsafe { oldpyffi::PyStatus_Exception(status) } != 0 {
+        let status = unsafe { pyffi::Py_InitializeFromConfig(&py_config) };
+        if unsafe { pyffi::PyStatus_Exception(status) } != 0 {
             return Err(NewInterpreterError::new_from_pystatus(
                 &status,
                 "initializing Python core",
@@ -187,71 +185,18 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
         // importlib._bootstrap_external. This is where we work our magic to
         // inject our custom importer.
 
-        let py = unsafe { cpython::Python::assume_gil_acquired() };
-        self.py = Some(py);
-
-        let oxidized_finder = if self.config.oxidized_importer {
-            let resources_state = Box::new(PythonResourcesState::try_from(&self.config)?);
-
-            let oxidized_importer = py.import(OXIDIZED_IMPORTER_NAME_STR).map_err(|err| {
-                NewInterpreterError::new_from_pyerr(py, err, "import of oxidized importer module")
-            })?;
-
-            let cb = |importer_state: &mut ImporterState| match self
-                .config
-                .multiprocessing_start_method
-            {
-                MultiprocessingStartMethod::None => {}
-                MultiprocessingStartMethod::Fork
-                | MultiprocessingStartMethod::ForkServer
-                | MultiprocessingStartMethod::Spawn => {
-                    importer_state.set_multiprocessing_set_start_method(Some(
-                        self.config.multiprocessing_start_method.to_string(),
-                    ));
-                }
-                MultiprocessingStartMethod::Auto => {
-                    // Windows uses "spawn" because "fork" isn't available.
-                    // Everywhere else uses "fork." The default on macOS is "spawn." This
-                    // is due to https://bugs.python.org/issue33725, which only affects
-                    // Python framework builds. Our assumption is we aren't using a Python
-                    // framework, so "spawn" is safe.
-                    let method = if cfg!(target_family = "windows") {
-                        "spawn"
-                    } else {
-                        "fork"
-                    };
-
-                    importer_state.set_multiprocessing_set_start_method(Some(method.to_string()));
-                }
-            };
-
-            // Ownership of the resources state is transferred into the importer, where the Box
-            // is summarily leaked. However, the importer tracks a pointer to the resources state
-            // and will constitute the struct for dropping when it itself is dropped. We could
-            // potentially encounter a use-after-free if the importer is used after self.config
-            // is dropped. However, that would require self to be dropped. And if self is dropped,
-            // there should no longer be a Python interpreter around. So it follows that the
-            // importer state cannot be dropped after self.
-            Some(
-                replace_meta_path_importers(py, &oxidized_importer, resources_state, Some(cb))
-                    .map_err(|err| {
-                        NewInterpreterError::new_from_pyerr(
-                            py,
-                            err,
-                            "initialization of oxidized importer",
-                        )
-                    })?,
-            )
-        } else {
-            None
-        };
+        let oxidized_finder_loaded =
+            unsafe { Python::with_gil_unchecked(|py| self.inject_oxidized_importer(py))? };
 
         // Now proceed with the Python main initialization. This will initialize
         // importlib. And if the custom importlib bytecode was registered above,
         // our extension module will get imported and initialized.
-        let status = unsafe { oldpyffi::_Py_InitializeMain() };
+        let status = unsafe { pyffi::_Py_InitializeMain() };
 
-        if unsafe { oldpyffi::PyStatus_Exception(status) } != 0 {
+        let gil = Python::acquire_gil();
+        let py = gil.python();
+
+        if unsafe { pyffi::PyStatus_Exception(status) } != 0 {
             return Err(NewInterpreterError::new_from_pystatus(
                 &status,
                 "initializing Python main",
@@ -260,7 +205,7 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
 
         let sys_module = py
             .import("sys")
-            .map_err(|err| NewInterpreterError::new_from_pyerr(py, err, "obtaining sys module"))?;
+            .map_err(|e| NewInterpreterError::new_from_pyerr(py, e, "obtaining sys module"))?;
 
         // When the main initialization ran, it initialized the "external"
         // importer (importlib._bootstrap_external), mutating `sys.meta_path`
@@ -278,13 +223,37 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
         // and isn't usable for us.
 
         if !self.config.filesystem_importer {
-            remove_external_importers(py, &sys_module).map_err(|err| {
+            remove_external_importers(sys_module).map_err(|err| {
                 NewInterpreterError::new_from_pyerr(py, err, "removing external importers")
             })?;
         }
 
-        if let Some(finder) = &oxidized_finder {
-            install_path_hook(py, &finder, &sys_module).map_err(|err| {
+        // We aren't able to hold a &PyAny to OxidizedFinder through multi-phase interpreter
+        // initialization. So recover an instance now if it is available.
+        let oxidized_finder = if oxidized_finder_loaded {
+            let finder = sys_module
+                .getattr("meta_path")
+                .map_err(|err| {
+                    NewInterpreterError::new_from_pyerr(py, err, "obtaining sys.meta_path")
+                })?
+                .get_item(0)
+                .map_err(|err| {
+                    NewInterpreterError::new_from_pyerr(py, err, "obtaining sys.meta_path[0]")
+                })?;
+
+            if !crate::importer::OxidizedFinder::is_type_of(finder) {
+                return Err(NewInterpreterError::Simple(
+                    "OxidizedFinder not found on sys.meta_path[0] (this should never happen)",
+                ));
+            }
+
+            Some(finder)
+        } else {
+            None
+        };
+
+        if let Some(finder) = oxidized_finder {
+            install_path_hook(finder, sys_module).map_err(|err| {
                 NewInterpreterError::new_from_pyerr(
                     py,
                     err,
@@ -298,14 +267,14 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
                 .config
                 .resolve_sys_argvb()
                 .iter()
-                .map(|x| cpython_osstring_to_bytes(py, x.clone()))
+                .map(|x| osstring_to_bytes(py, x.clone()))
                 .collect::<Vec<_>>();
 
-            let args = cpython::PyList::new(py, &args_objs);
+            let args = args_objs.to_object(py);
             let argvb = b"argvb\0";
 
             let res = args.with_borrowed_ptr(py, |args_ptr| unsafe {
-                oldpyffi::PySys_SetObject(argvb.as_ptr() as *const i8, args_ptr)
+                pyffi::PySys_SetObject(argvb.as_ptr() as *const i8, args_ptr)
             });
 
             match res {
@@ -318,8 +287,8 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
         // a self-contained application.
         let oxidized = b"oxidized\0";
 
-        let res = py.True().with_borrowed_ptr(py, |py_true| unsafe {
-            oldpyffi::PySys_SetObject(oxidized.as_ptr() as *const i8, py_true)
+        let res = true.into_py(py).with_borrowed_ptr(py, |py_true| unsafe {
+            pyffi::PySys_SetObject(oxidized.as_ptr() as *const i8, py_true)
         });
 
         match res {
@@ -330,8 +299,8 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
         if self.config.sys_frozen {
             let frozen = b"frozen\0";
 
-            match py.True().with_borrowed_ptr(py, |py_true| unsafe {
-                oldpyffi::PySys_SetObject(frozen.as_ptr() as *const i8, py_true)
+            match true.into_py(py).with_borrowed_ptr(py, |py_true| unsafe {
+                pyffi::PySys_SetObject(frozen.as_ptr() as *const i8, py_true)
             }) {
                 0 => (),
                 _ => return Err(NewInterpreterError::Simple("unable to set sys.frozen")),
@@ -340,10 +309,10 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
 
         if self.config.sys_meipass {
             let meipass = b"_MEIPASS\0";
-            let value = cpython::PyString::new(py, &origin_string);
+            let value = origin_string.to_object(py);
 
             match value.with_borrowed_ptr(py, |py_value| unsafe {
-                oldpyffi::PySys_SetObject(meipass.as_ptr() as *const i8, py_value)
+                pyffi::PySys_SetObject(meipass.as_ptr() as *const i8, py_value)
             }) {
                 0 => (),
                 _ => return Err(NewInterpreterError::Simple("unable to set sys._MEIPASS")),
@@ -366,23 +335,16 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
                 let uuid_mod = py.import("uuid").map_err(|e| {
                     NewInterpreterError::new_from_pyerr(py, e, "importing uuid module")
                 })?;
-                let uuid = uuid_mod
-                    .call(py, "uuid4", cpython::NoArgs, None)
-                    .map_err(|e| {
-                        NewInterpreterError::new_from_pyerr(py, e, "calling uuid.uuid()")
-                    })?;
+                let uuid4 = uuid_mod.getattr("uuid4").map_err(|e| {
+                    NewInterpreterError::new_from_pyerr(py, e, "obtaining uuid.uuid4")
+                })?;
+                let uuid = uuid4.call0().map_err(|e| {
+                    NewInterpreterError::new_from_pyerr(py, e, "calling uuid.uuid4()")
+                })?;
                 let uuid_str = uuid
-                    .str(py)
+                    .str()
                     .map_err(|e| {
                         NewInterpreterError::new_from_pyerr(py, e, "converting uuid to str")
-                    })?
-                    .to_string(py)
-                    .map_err(|e| {
-                        NewInterpreterError::new_from_pyerr(
-                            py,
-                            e,
-                            "converting uuid str to Rust string",
-                        )
                     })?
                     .to_string();
 
@@ -393,10 +355,70 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
         Ok(())
     }
 
+    /// Inject OxidizedFinder into Python's importing mechanism.
+    ///
+    /// This function is meant to be called as part of multi-phase interpreter initialization
+    /// after `Py_InitializeFromConfig()` but before `_Py_InitializeMain()`. Calling it
+    /// any other time may result in errors.
+    ///
+    /// Returns whether an `OxidizedFinder` was injected into the interpreter.
+    fn inject_oxidized_importer(&self, py: Python) -> Result<bool, NewInterpreterError> {
+        if !self.config.oxidized_importer {
+            return Ok(false);
+        }
+
+        let resources_state = Box::new(PythonResourcesState::try_from(&self.config)?);
+
+        let oxidized_importer = py.import(OXIDIZED_IMPORTER_NAME_STR).map_err(|err| {
+            NewInterpreterError::new_from_pyerr(py, err, "import of oxidized importer module")
+        })?;
+
+        let cb = |importer_state: &mut ImporterState| match self.config.multiprocessing_start_method
+        {
+            MultiprocessingStartMethod::None => {}
+            MultiprocessingStartMethod::Fork
+            | MultiprocessingStartMethod::ForkServer
+            | MultiprocessingStartMethod::Spawn => {
+                importer_state.set_multiprocessing_set_start_method(Some(
+                    self.config.multiprocessing_start_method.to_string(),
+                ));
+            }
+            MultiprocessingStartMethod::Auto => {
+                // Windows uses "spawn" because "fork" isn't available.
+                // Everywhere else uses "fork." The default on macOS is "spawn." This
+                // is due to https://bugs.python.org/issue33725, which only affects
+                // Python framework builds. Our assumption is we aren't using a Python
+                // framework, so "spawn" is safe.
+                let method = if cfg!(target_family = "windows") {
+                    "spawn"
+                } else {
+                    "fork"
+                };
+
+                importer_state.set_multiprocessing_set_start_method(Some(method.to_string()));
+            }
+        };
+
+        // Ownership of the resources state is transferred into the importer, where the Box
+        // is summarily leaked. However, the importer tracks a pointer to the resources state
+        // and will constitute the struct for dropping when it itself is dropped. We could
+        // potentially encounter a use-after-free if the importer is used after self.config
+        // is dropped. However, that would require self to be dropped. And if self is dropped,
+        // there should no longer be a Python interpreter around. So it follows that the
+        // importer state cannot be dropped after self.
+
+        replace_meta_path_importers(py, oxidized_importer, resources_state, Some(cb)).map_err(
+            |err| {
+                NewInterpreterError::new_from_pyerr(py, err, "initialization of oxidized importer")
+            },
+        )?;
+
+        Ok(true)
+    }
+
     /// Ensure the Python GIL is released.
     pub fn release_gil(&mut self) {
-        self.py = None;
-        self._gil = None;
+        self.gil = None;
     }
 
     /// Ensure the Python GIL is acquired, returning a handle on the interpreter.
@@ -405,19 +427,8 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
     /// instance. This is because `MainPythonInterpreter.drop()` finalizes
     /// the interpreter. The borrow checker should refuse to compile code
     /// where the returned `Python` outlives `self`.
-    pub fn acquire_gil(&mut self) -> cpython::Python<'_> {
-        match self.py {
-            Some(py) => py,
-            None => {
-                let gil = cpython::GILGuard::acquire();
-                let py = unsafe { cpython::Python::assume_gil_acquired() };
-
-                self._gil = Some(gil);
-                self.py = Some(py);
-
-                py
-            }
-        }
+    pub fn acquire_gil(&mut self) -> Python<'_> {
+        self.gil.get_or_insert_with(Python::acquire_gil).python()
     }
 
     /// Runs `Py_RunMain()` and finalizes the interpreter.
@@ -431,7 +442,7 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
     /// the evaluation result, consider calling a function on the interpreter handle
     /// that executes code.
     pub fn py_runmain(self) -> i32 {
-        unsafe { oldpyffi::Py_RunMain() }
+        unsafe { pyffi::Py_RunMain() }
     }
 
     /// Run in "multiprocessing worker" mode.
@@ -439,7 +450,7 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
     /// This should be called when `sys.argv[1] == "--multiprocessing-fork"`. It
     /// will parse arguments for the worker from `sys.argv` and call into the
     /// `multiprocessing` module to perform work.
-    pub fn run_multiprocessing(&mut self) -> cpython::PyResult<i32> {
+    pub fn run_multiprocessing(&mut self) -> PyResult<i32> {
         // This code effectively reimplements multiprocessing.spawn.freeze_support(),
         // except entirely in the Rust domain. This function effectively verifies
         // `sys.argv[1] == "--multiprocessing-fork"` then parsed key=value arguments
@@ -454,47 +465,38 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
         }
 
         let py = self.acquire_gil();
-        let kwargs = cpython::PyDict::new(py);
+        let kwargs = PyDict::new(py);
 
         for arg in argv.iter().skip(2) {
             let arg = arg.to_string_lossy();
 
             let mut parts = arg.splitn(2, '=');
 
-            let key = parts.next().ok_or_else(|| {
-                cpython::PyErr::new::<cpython::exc::RuntimeError, _>(
-                    py,
-                    "invalid multiprocessing argument",
-                )
-            })?;
-            let value = parts.next().ok_or_else(|| {
-                cpython::PyErr::new::<cpython::exc::RuntimeError, _>(
-                    py,
-                    "invalid multiprocessing argument",
-                )
-            })?;
+            let key = parts
+                .next()
+                .ok_or_else(|| PyRuntimeError::new_err("invalid multiprocessing argument"))?;
+            let value = parts
+                .next()
+                .ok_or_else(|| PyRuntimeError::new_err("invalid multiprocessing argument"))?;
 
             let value = if value == "None" {
                 py.None()
             } else {
                 let v = value.parse::<isize>().map_err(|e| {
-                    cpython::PyErr::new::<cpython::exc::RuntimeError, _>(
-                        py,
-                        format!(
-                            "unable to convert multiprocessing argument to integer: {}",
-                            e
-                        ),
-                    )
+                    PyRuntimeError::new_err(format!(
+                        "unable to convert multiprocessing argument to integer: {}",
+                        e
+                    ))
                 })?;
 
-                v.into_py_object(py).into_object()
+                v.into_py(py)
             };
 
-            kwargs.set_item(py, key, value)?;
+            kwargs.set_item(key, value)?;
         }
 
         let spawn_module = py.import("multiprocessing.spawn")?;
-        spawn_module.call(py, "spawn_main", cpython::NoArgs, Some(&kwargs))?;
+        spawn_module.getattr("spawn_main")?.call0()?;
 
         Ok(0)
     }
@@ -533,8 +535,8 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
     }
 }
 
-static mut ORIGINAL_BUILTIN_EXTENSIONS: Option<Vec<oldpyffi::_inittab>> = None;
-static mut REPLACED_BUILTIN_EXTENSIONS: Option<Vec<oldpyffi::_inittab>> = None;
+static mut ORIGINAL_BUILTIN_EXTENSIONS: Option<Vec<pyffi::_inittab>> = None;
+static mut REPLACED_BUILTIN_EXTENSIONS: Option<Vec<pyffi::_inittab>> = None;
 
 /// Set PyImport_Inittab from config options.
 ///
@@ -551,10 +553,10 @@ fn set_pyimport_inittab(config: &OxidizedPythonInterpreterConfig) {
     // copy.
     unsafe {
         if ORIGINAL_BUILTIN_EXTENSIONS.is_none() {
-            let mut entries: Vec<oldpyffi::_inittab> = Vec::new();
+            let mut entries: Vec<pyffi::_inittab> = Vec::new();
 
             for i in 0.. {
-                let record = oldpyffi::PyImport_Inittab.offset(i);
+                let record = pyffi::PyImport_Inittab.offset(i);
 
                 if (*record).name.is_null() {
                     break;
@@ -572,9 +574,11 @@ fn set_pyimport_inittab(config: &OxidizedPythonInterpreterConfig) {
 
     if config.oxidized_importer {
         let ptr = PyInit_oxidized_importer as *const ();
-        extensions.push(oldpyffi::_inittab {
+        extensions.push(pyffi::_inittab {
             name: OXIDIZED_IMPORTER_NAME.as_ptr() as *mut _,
-            initfunc: Some(unsafe { std::mem::transmute::<*const (), extern "C" fn()>(ptr) }),
+            initfun: Some(unsafe {
+                std::mem::transmute::<*const (), extern "C" fn() -> *mut pyffi::PyObject>(ptr)
+            }),
         });
     }
 
@@ -582,23 +586,25 @@ fn set_pyimport_inittab(config: &OxidizedPythonInterpreterConfig) {
     if let Some(extra_extension_modules) = &config.extra_extension_modules {
         for extension in extra_extension_modules {
             let ptr = extension.init_func as *const ();
-            extensions.push(oldpyffi::_inittab {
+            extensions.push(pyffi::_inittab {
                 name: extension.name.as_ptr() as *mut _,
-                initfunc: Some(unsafe { std::mem::transmute::<*const (), extern "C" fn()>(ptr) }),
+                initfun: Some(unsafe {
+                    std::mem::transmute::<*const (), extern "C" fn() -> *mut pyffi::PyObject>(ptr)
+                }),
             });
         }
     }
 
     // Add sentinel record with NULLs.
-    extensions.push(oldpyffi::_inittab {
+    extensions.push(pyffi::_inittab {
         name: std::ptr::null_mut(),
-        initfunc: None,
+        initfun: None,
     });
 
     // And finally replace the static in Python's code with our instance.
     unsafe {
         REPLACED_BUILTIN_EXTENSIONS = Some(extensions);
-        oldpyffi::PyImport_Inittab = REPLACED_BUILTIN_EXTENSIONS.as_mut().unwrap().as_mut_ptr();
+        pyffi::PyImport_Inittab = REPLACED_BUILTIN_EXTENSIONS.as_mut().unwrap().as_mut_ptr();
     }
 }
 
@@ -607,24 +613,24 @@ fn set_pyimport_inittab(config: &OxidizedPythonInterpreterConfig) {
 /// Given a Python interpreter and a path to a directory, this will create a
 /// file in that directory named ``modules-<UUID>`` and write a ``\n`` delimited
 /// list of loaded names from ``sys.modules`` into that file.
-fn write_modules_to_path(py: cpython::Python, path: &Path) -> Result<(), &'static str> {
+fn write_modules_to_path(py: Python, path: &Path) -> Result<(), &'static str> {
     // TODO this needs better error handling all over.
 
     let sys = py
         .import("sys")
         .map_err(|_| "could not obtain sys module")?;
     let modules = sys
-        .get(py, "modules")
+        .getattr("modules")
         .map_err(|_| "could not obtain sys.modules")?;
 
     let modules = modules
-        .cast_as::<cpython::PyDict>(py)
+        .cast_as::<PyDict>()
         .map_err(|_| "sys.modules is not a dict")?;
 
     let mut names = BTreeSet::new();
-    for (key, _value) in modules.items(py) {
+    for (key, _value) in modules.iter() {
         names.insert(
-            key.extract::<String>(py)
+            key.extract::<String>()
                 .map_err(|_| "module name is not a str")?,
         );
     }
@@ -639,9 +645,7 @@ fn write_modules_to_path(py: cpython::Python, path: &Path) -> Result<(), &'stati
     Ok(())
 }
 
-impl<'python, 'interpreter, 'resources> Drop
-    for MainPythonInterpreter<'python, 'interpreter, 'resources>
-{
+impl<'interpreter, 'resources> Drop for MainPythonInterpreter<'interpreter, 'resources> {
     fn drop(&mut self) {
         if let Some(path) = self.write_modules_path.clone() {
             if let Err(msg) = write_modules_to_path(self.acquire_gil(), &path) {
@@ -652,8 +656,8 @@ impl<'python, 'interpreter, 'resources> Drop
         // This will drop the GILGuard if it is defined. This needs to be called
         // before we finalize the interpreter, otherwise GILGuard's drop may try
         // to DECREF objects after they are freed by Py_FinalizeEx().
-        self._gil = None;
+        self.gil = None;
 
-        let _ = unsafe { oldpyffi::Py_FinalizeEx() };
+        let _ = unsafe { pyffi::Py_FinalizeEx() };
     }
 }

@@ -26,6 +26,11 @@ path = "../pyembed"
 default-features = false
 features = ["build-mode-extension-module"]
 
+[dependencies.pyo3]
+version = "0.14.5"
+default-features = false
+features = ["macros"]
+
 [target.'cfg(windows)'.dependencies]
 memory-module-sys = "0.3"
 winapi = { version = "0.3", features = ["libloaderapi", "memoryapi", "minwindef"] }

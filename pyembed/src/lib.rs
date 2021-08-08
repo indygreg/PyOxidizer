@@ -33,7 +33,7 @@ serves as a high-level interface for running code in the interpreter.
 # Dependencies
 
 Under the hood, `pyembed` makes direct use of the `python3-sys` crate for
-low-level Python FFI bindings as well as the `cpython` crate for higher-level
+low-level Python FFI bindings as well as the `cpython`/`pyo3` crate for higher-level
 interfacing.
 
 **It is an explicit goal of this crate to rely on as few external dependencies

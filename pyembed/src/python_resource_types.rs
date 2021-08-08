@@ -5,8 +5,13 @@
 /*! Defines Python type objects that represent Python resources. */
 
 use {
-    crate::conversion::cpython_pyobject_to_owned_bytes,
-    cpython::py_class,
+    crate::conversion::pyobject_to_owned_bytes,
+    pyo3::{
+        exceptions::{PyTypeError, PyValueError},
+        prelude::*,
+        types::PyBytes,
+        PyObjectProtocol,
+    },
     python_packaging::resource::{
         BytecodeOptimizationLevel, PythonExtensionModule as RawPythonExtensionModule,
         PythonModuleBytecode as RawPythonModuleBytecode,
@@ -19,329 +24,433 @@ use {
     tugger_file_manifest::FileData,
 };
 
-py_class!(pub(crate) class PythonModuleSource |py| {
-    data resource: RefCell<RawPythonModuleSource>;
-
-    def __repr__(&self) -> cpython::PyResult<String> {
-        Ok(format!("<PythonModuleSource module=\"{}\">", self.resource(py).borrow().name))
-    }
-
-    @property def module(&self) -> cpython::PyResult<String> {
-        Ok(self.resource(py).borrow().name.to_string())
-    }
-
-    @module.setter def set_module(&self, value: Option<&str>) -> cpython::PyResult<()> {
-        if let Some(value) = value {
-            self.resource(py).borrow_mut().name = value.to_string();
-
-            Ok(())
-        } else {
-            Err(cpython::PyErr::new::<cpython::exc::TypeError, _>(py, "cannot delete module"))
-        }
-    }
-
-    @property def source(&self) -> cpython::PyResult<cpython::PyBytes> {
-        let source = self.resource(py).borrow().source.resolve_content().map_err(|_| cpython::PyErr::new::<cpython::exc::ValueError, _>(py, "error resolving source code"))?;
-
-        Ok(cpython::PyBytes::new(py, &source))
-    }
-
-    @source.setter def set_source(&self, value: Option<cpython::PyObject>) -> cpython::PyResult<()> {
-        if let Some(value) = value {
-            self.resource(py).borrow_mut().source = FileData::Memory(
-                cpython_pyobject_to_owned_bytes(py, &value)?
-            );
-
-            Ok(())
-        } else {
-            Err(cpython::PyErr::new::<cpython::exc::TypeError, _>(py, "cannot delete source"))
-        }
-    }
-
-    @property def is_package(&self) -> cpython::PyResult<bool> {
-        Ok(self.resource(py).borrow().is_package)
-    }
-
-    @is_package.setter def set_is_package(&self, value: Option<bool>) -> cpython::PyResult<()> {
-        if let Some(value) = value {
-            self.resource(py).borrow_mut().is_package = value;
-
-            Ok(())
-        } else {
-            Err(cpython::PyErr::new::<cpython::exc::TypeError, _>(py, "cannot delete is_package"))
-        }
-    }
-});
+#[pyclass(module = "oxidized_importer")]
+pub(crate) struct PythonModuleSource {
+    resource: RefCell<RawPythonModuleSource>,
+}
 
 impl PythonModuleSource {
-    pub fn new(py: cpython::Python, resource: RawPythonModuleSource) -> cpython::PyResult<Self> {
-        PythonModuleSource::create_instance(py, RefCell::new(resource))
+    pub fn new(py: Python, resource: RawPythonModuleSource) -> PyResult<&PyCell<Self>> {
+        PyCell::new(
+            py,
+            PythonModuleSource {
+                resource: RefCell::new(resource),
+            },
+        )
     }
 
-    pub fn get_resource<'a>(&'a self, py: cpython::Python<'a>) -> Ref<'a, RawPythonModuleSource> {
-        self.resource(py).borrow()
+    pub fn get_resource(&self) -> Ref<RawPythonModuleSource> {
+        self.resource.borrow()
     }
 }
 
-py_class!(pub(crate) class PythonModuleBytecode |py| {
-    data resource: RefCell<RawPythonModuleBytecode>;
+#[pyproto]
+impl PyObjectProtocol for PythonModuleSource {
+    fn __repr__(&self) -> String {
+        format!(
+            "<PythonModuleSource module=\"{}\">",
+            self.resource.borrow().name
+        )
+    }
+}
 
-    def __repr__(&self) -> cpython::PyResult<String> {
-        Ok(format!("<PythonModuleBytecode module=\"{}\">", self.resource(py).borrow().name))
+#[pymethods]
+impl PythonModuleSource {
+    #[getter]
+    fn get_module(&self) -> PyResult<String> {
+        Ok(self.resource.borrow().name.to_string())
     }
 
-    @property def module(&self) -> cpython::PyResult<String> {
-        Ok(self.resource(py).borrow().name.to_string())
-    }
-
-    @module.setter def set_module(&self, value: Option<&str>) -> cpython::PyResult<()> {
+    #[setter]
+    fn set_module(&self, value: Option<&str>) -> PyResult<()> {
         if let Some(value) = value {
-            self.resource(py).borrow_mut().name = value.to_string();
+            self.resource.borrow_mut().name = value.to_string();
 
             Ok(())
         } else {
-            Err(cpython::PyErr::new::<cpython::exc::TypeError, _>(py, "cannot delete module"))
+            Err(PyTypeError::new_err("cannot delete module"))
         }
     }
 
-    @property def bytecode(&self) -> cpython::PyResult<cpython::PyBytes> {
-        let bytecode = self.resource(py).borrow().resolve_bytecode().map_err(|_| cpython::PyErr::new::<cpython::exc::ValueError, _>(py, "error resolving bytecode"))?;
+    #[getter]
+    fn get_source<'p>(&self, py: Python<'p>) -> PyResult<&'p PyBytes> {
+        let source = self
+            .resource
+            .borrow()
+            .source
+            .resolve_content()
+            .map_err(|_| PyValueError::new_err("error resolving source code"))?;
 
-        Ok(cpython::PyBytes::new(py, &bytecode))
+        Ok(PyBytes::new(py, &source))
     }
 
-    @bytecode.setter def set_bytecode(&self, value: Option<cpython::PyObject>) -> cpython::PyResult<()> {
+    #[setter]
+    fn set_source(&self, value: Option<&PyAny>) -> PyResult<()> {
         if let Some(value) = value {
-            self.resource(py).borrow_mut().set_bytecode(
-                &cpython_pyobject_to_owned_bytes(py, &value)?
-            );
+            self.resource.borrow_mut().source = FileData::Memory(pyobject_to_owned_bytes(value)?);
 
             Ok(())
         } else {
-            Err(cpython::PyErr::new::<cpython::exc::TypeError, _>(py, "cannot delete bytecode"))
+            Err(PyTypeError::new_err("cannot delete source"))
         }
     }
 
-    @property def optimize_level(&self) -> cpython::PyResult<i32> {
-        Ok(self.resource(py).borrow().optimize_level.into())
+    #[getter]
+    fn get_is_package(&self) -> bool {
+        self.resource.borrow().is_package
     }
 
-    @optimize_level.setter def set_optimize_level(&self, value: Option<i32>) -> cpython::PyResult<()> {
+    #[setter]
+    fn set_is_package(&self, value: Option<bool>) -> PyResult<()> {
         if let Some(value) = value {
-            let value = BytecodeOptimizationLevel::try_from(value).map_err(|_| cpython::PyErr::new::<cpython::exc::ValueError, _>(py, "invalid bytecode optimization level"))?;
-
-            self.resource(py).borrow_mut().optimize_level = value;
+            self.resource.borrow_mut().is_package = value;
 
             Ok(())
         } else {
-            Err(cpython::PyErr::new::<cpython::exc::TypeError, _>(py, "cannot delete optimize_level"))
+            Err(PyTypeError::new_err("cannot delete is_package"))
         }
     }
+}
 
-    @property def is_package(&self) -> cpython::PyResult<bool> {
-        Ok(self.resource(py).borrow().is_package)
-    }
-
-    @is_package.setter def set_is_package(&self, value: Option<bool>) -> cpython::PyResult<()> {
-        if let Some(value) = value {
-            self.resource(py).borrow_mut().is_package = value;
-
-            Ok(())
-        } else {
-            Err(cpython::PyErr::new::<cpython::exc::TypeError, _>(py, "cannot delete is_package"))
-        }
-    }
-});
+#[pyclass(module = "oxidized_importer")]
+pub(crate) struct PythonModuleBytecode {
+    resource: RefCell<RawPythonModuleBytecode>,
+}
 
 impl PythonModuleBytecode {
-    pub fn new(py: cpython::Python, resource: RawPythonModuleBytecode) -> cpython::PyResult<Self> {
-        PythonModuleBytecode::create_instance(py, RefCell::new(resource))
+    pub fn new(py: Python, resource: RawPythonModuleBytecode) -> PyResult<&PyCell<Self>> {
+        PyCell::new(
+            py,
+            Self {
+                resource: RefCell::new(resource),
+            },
+        )
     }
 
-    pub fn get_resource<'a>(&'a self, py: cpython::Python<'a>) -> Ref<'a, RawPythonModuleBytecode> {
-        self.resource(py).borrow()
+    pub fn get_resource(&self) -> Ref<RawPythonModuleBytecode> {
+        self.resource.borrow()
     }
 }
 
-py_class!(pub(crate) class PythonPackageResource |py| {
-    data resource: RefCell<RawPythonPackageResource>;
+#[pyproto]
+impl PyObjectProtocol for PythonModuleBytecode {
+    fn __repr__(&self) -> String {
+        format!(
+            "<PythonModuleBytecode module=\"{}\">",
+            self.resource.borrow().name
+        )
+    }
+}
 
-    def __repr__(&self) -> cpython::PyResult<String> {
-        let resource = self.resource(py).borrow();
-        Ok(format!("<PythonPackageResource package=\"{}\", path=\"{}\">",
-            resource.leaf_package, resource.relative_name
-        ))
+#[pymethods]
+impl PythonModuleBytecode {
+    #[getter]
+    fn get_module(&self) -> String {
+        self.resource.borrow().name.to_string()
     }
 
-    @property def package(&self) -> cpython::PyResult<String> {
-        Ok(self.resource(py).borrow().leaf_package.clone())
-    }
-
-    @package.setter def set_package(&self, value: Option<&str>) -> cpython::PyResult<()> {
+    #[setter]
+    fn set_module(&self, value: Option<&str>) -> PyResult<()> {
         if let Some(value) = value {
-            self.resource(py).borrow_mut().leaf_package = value.to_string();
+            self.resource.borrow_mut().name = value.to_string();
 
             Ok(())
         } else {
-            Err(cpython::PyErr::new::<cpython::exc::TypeError, _>(py, "cannot delete package"))
+            Err(PyTypeError::new_err("cannot delete module"))
         }
     }
 
-    @property def name(&self) -> cpython::PyResult<String> {
-        Ok(self.resource(py).borrow().relative_name.clone())
+    #[getter]
+    fn get_bytecode<'p>(&self, py: Python<'p>) -> PyResult<&'p PyBytes> {
+        let bytecode = self
+            .resource
+            .borrow()
+            .resolve_bytecode()
+            .map_err(|_| PyValueError::new_err("error resolving bytecode"))?;
+
+        Ok(PyBytes::new(py, &bytecode))
     }
 
-    @name.setter def set_name(&self, value: Option<&str>) -> cpython::PyResult<()> {
+    #[setter]
+    fn set_bytecode(&self, value: Option<&PyAny>) -> PyResult<()> {
         if let Some(value) = value {
-            self.resource(py).borrow_mut().relative_name = value.to_string();
+            self.resource
+                .borrow_mut()
+                .set_bytecode(&pyobject_to_owned_bytes(value)?);
 
             Ok(())
         } else {
-            Err(cpython::PyErr::new::<cpython::exc::TypeError, _>(py, "cannot delete name"))
+            Err(PyTypeError::new_err("cannot delete bytecode"))
         }
     }
 
-    @property def data(&self) -> cpython::PyResult<cpython::PyBytes> {
-        let data = self.resource(py).borrow().data.resolve_content().map_err(|_| cpython::PyErr::new::<cpython::exc::ValueError, _>(py, "error resolving data"))?;
-
-        Ok(cpython::PyBytes::new(py, &data))
+    #[getter]
+    fn get_optimize_level(&self) -> i32 {
+        self.resource.borrow().optimize_level.into()
     }
 
-    @data.setter def set_data(&self, value: Option<cpython::PyObject>) -> cpython::PyResult<()> {
+    #[setter]
+    fn set_optimize_level(&self, value: Option<i32>) -> PyResult<()> {
         if let Some(value) = value {
-            self.resource(py).borrow_mut().data = FileData::Memory(
-                cpython_pyobject_to_owned_bytes(py, &value)?
-            );
+            let value = BytecodeOptimizationLevel::try_from(value)
+                .map_err(|_| PyValueError::new_err("invalid bytecode optimization level"))?;
+
+            self.resource.borrow_mut().optimize_level = value;
 
             Ok(())
         } else {
-            Err(cpython::PyErr::new::<cpython::exc::TypeError, _>(py, "cannot delete data"))
+            Err(PyTypeError::new_err("cannot delete optimize_level"))
         }
     }
-});
+
+    #[getter]
+    fn get_is_package(&self) -> bool {
+        self.resource.borrow().is_package
+    }
+
+    #[setter]
+    fn set_is_package(&self, value: Option<bool>) -> PyResult<()> {
+        if let Some(value) = value {
+            self.resource.borrow_mut().is_package = value;
+
+            Ok(())
+        } else {
+            Err(PyTypeError::new_err("cannote delete is_package"))
+        }
+    }
+}
+
+#[pyclass(module = "oxidized_importer")]
+pub(crate) struct PythonPackageResource {
+    resource: RefCell<RawPythonPackageResource>,
+}
 
 impl PythonPackageResource {
-    pub fn new(py: cpython::Python, resource: RawPythonPackageResource) -> cpython::PyResult<Self> {
-        PythonPackageResource::create_instance(py, RefCell::new(resource))
+    pub fn new(py: Python, resource: RawPythonPackageResource) -> PyResult<&PyCell<Self>> {
+        PyCell::new(
+            py,
+            Self {
+                resource: RefCell::new(resource),
+            },
+        )
     }
 
-    pub fn get_resource<'a>(
-        &'a self,
-        py: cpython::Python<'a>,
-    ) -> Ref<'a, RawPythonPackageResource> {
-        self.resource(py).borrow()
+    pub fn get_resource(&self) -> Ref<RawPythonPackageResource> {
+        self.resource.borrow()
     }
 }
 
-py_class!(pub(crate) class PythonPackageDistributionResource |py| {
-    data resource: RefCell<RawPythonPackageDistributionResource>;
+#[pyproto]
+impl PyObjectProtocol for PythonPackageResource {
+    fn __repr__(&self) -> String {
+        let resource = self.resource.borrow();
+        format!(
+            "<PythonPackageResource package=\"{}\", path=\"{}\">",
+            resource.leaf_package, resource.relative_name
+        )
+    }
+}
 
-    def __repr__(&self) -> cpython::PyResult<String> {
-        let resource = self.resource(py).borrow();
-        Ok(format!("<PythonPackageDistributionResource package=\"{}\", path=\"{}\">",
-            resource.package, resource.name
-        ))
+#[pymethods]
+impl PythonPackageResource {
+    #[getter]
+    fn get_package(&self) -> String {
+        self.resource.borrow().leaf_package.clone()
     }
 
-    @property def package(&self) -> cpython::PyResult<String> {
-        Ok(self.resource(py).borrow().package.clone())
-    }
-
-    @package.setter def set_package(&self, value: Option<&str>) -> cpython::PyResult<()> {
+    #[setter]
+    fn set_package(&self, value: Option<&str>) -> PyResult<()> {
         if let Some(value) = value {
-            self.resource(py).borrow_mut().package = value.to_string();
+            self.resource.borrow_mut().leaf_package = value.to_string();
 
             Ok(())
         } else {
-            Err(cpython::PyErr::new::<cpython::exc::TypeError, _>(py, "cannot delete package"))
+            Err(PyTypeError::new_err("cannot delete package"))
         }
     }
 
-    @property def version(&self) -> cpython::PyResult<String> {
-        Ok(self.resource(py).borrow().version.clone())
+    #[getter]
+    fn get_name(&self) -> String {
+        self.resource.borrow().relative_name.clone()
     }
 
-    @version.setter def set_version(&self, value: Option<&str>) -> cpython::PyResult<()> {
+    #[setter]
+    fn set_name(&self, value: Option<&str>) -> PyResult<()> {
         if let Some(value) = value {
-            self.resource(py).borrow_mut().version = value.to_string();
+            self.resource.borrow_mut().relative_name = value.to_string();
 
             Ok(())
         } else {
-            Err(cpython::PyErr::new::<cpython::exc::TypeError, _>(py, "cannot delete version"))
+            Err(PyTypeError::new_err("cannot delete name"))
         }
     }
 
-    @property def name(&self) -> cpython::PyResult<String> {
-        Ok(self.resource(py).borrow().name.clone())
+    #[getter]
+    fn get_data<'p>(&self, py: Python<'p>) -> PyResult<&'p PyBytes> {
+        let data = self
+            .resource
+            .borrow()
+            .data
+            .resolve_content()
+            .map_err(|_| PyValueError::new_err("error resolving data"))?;
+
+        Ok(PyBytes::new(py, &data))
     }
 
-    @name.setter def set_name(&self, value: Option<&str>) -> cpython::PyResult<()> {
+    #[setter]
+    fn set_data(&self, value: Option<&PyAny>) -> PyResult<()> {
         if let Some(value) = value {
-            self.resource(py).borrow_mut().name = value.to_string();
+            self.resource.borrow_mut().data = FileData::Memory(pyobject_to_owned_bytes(value)?);
 
             Ok(())
         } else {
-            Err(cpython::PyErr::new::<cpython::exc::TypeError, _>(py, "cannot delete name"))
+            Err(PyTypeError::new_err("cannot delete data"))
         }
     }
+}
 
-    @property def data(&self) -> cpython::PyResult<cpython::PyBytes> {
-        let data = self.resource(py).borrow().data.resolve_content().map_err(|_| cpython::PyErr::new::<cpython::exc::ValueError, _>(py, "error resolving data"))?;
-
-        Ok(cpython::PyBytes::new(py, &data))
-    }
-
-    @data.setter def set_data(&self, value: Option<cpython::PyObject>) -> cpython::PyResult<()> {
-        if let Some(value) = value {
-            self.resource(py).borrow_mut().data = FileData::Memory(
-                cpython_pyobject_to_owned_bytes(py, &value)?
-            );
-
-            Ok(())
-        } else {
-            Err(cpython::PyErr::new::<cpython::exc::TypeError, _>(py, "cannot delete data"))
-        }
-    }
-});
+#[pyclass(module = "oxidized_importer")]
+pub(crate) struct PythonPackageDistributionResource {
+    resource: RefCell<RawPythonPackageDistributionResource>,
+}
 
 impl PythonPackageDistributionResource {
     pub fn new(
-        py: cpython::Python,
+        py: Python,
         resource: RawPythonPackageDistributionResource,
-    ) -> cpython::PyResult<Self> {
-        PythonPackageDistributionResource::create_instance(py, RefCell::new(resource))
+    ) -> PyResult<&PyCell<Self>> {
+        PyCell::new(
+            py,
+            Self {
+                resource: RefCell::new(resource),
+            },
+        )
     }
 
-    pub fn get_resource<'a>(
-        &'a self,
-        py: cpython::Python<'a>,
-    ) -> Ref<'a, RawPythonPackageDistributionResource> {
-        self.resource(py).borrow()
+    pub fn get_resource(&self) -> Ref<RawPythonPackageDistributionResource> {
+        self.resource.borrow()
     }
 }
 
-py_class!(pub(crate) class PythonExtensionModule |py| {
-    data resource: RefCell<RawPythonExtensionModule>;
+#[pyproto]
+impl PyObjectProtocol for PythonPackageDistributionResource {
+    fn __repr__(&self) -> String {
+        let resource = self.resource.borrow();
+        format!(
+            "<PythonPackageDistributionResource package=\"{}\", path=\"{}\">",
+            resource.package, resource.name
+        )
+    }
+}
 
-    def __repr__(&self) -> cpython::PyResult<String> {
-        Ok(format!("<PythonExtensionModule module=\"{}\">",
-            self.resource(py).borrow().name))
+#[pymethods]
+impl PythonPackageDistributionResource {
+    #[getter]
+    fn get_package(&self) -> String {
+        self.resource.borrow().package.clone()
     }
 
-    @property def name(&self) -> cpython::PyResult<String> {
-        Ok(self.resource(py).borrow().name.clone())
+    #[setter]
+    fn set_package(&self, value: Option<&str>) -> PyResult<()> {
+        if let Some(value) = value {
+            self.resource.borrow_mut().package = value.to_string();
+
+            Ok(())
+        } else {
+            Err(PyTypeError::new_err("cannot delete package"))
+        }
     }
-});
+
+    #[getter]
+    fn get_version(&self) -> String {
+        self.resource.borrow().version.clone()
+    }
+
+    #[setter]
+    fn set_version(&self, value: Option<&str>) -> PyResult<()> {
+        if let Some(value) = value {
+            self.resource.borrow_mut().version = value.to_string();
+
+            Ok(())
+        } else {
+            Err(PyTypeError::new_err("cannote delete version"))
+        }
+    }
+
+    #[getter]
+    fn get_name(&self) -> String {
+        self.resource.borrow().name.clone()
+    }
+
+    #[setter]
+    fn set_name(&self, value: Option<&str>) -> PyResult<()> {
+        if let Some(value) = value {
+            self.resource.borrow_mut().name = value.to_string();
+
+            Ok(())
+        } else {
+            Err(PyTypeError::new_err("cannot delete name"))
+        }
+    }
+
+    #[getter]
+    fn get_data<'p>(&self, py: Python<'p>) -> PyResult<&'p PyBytes> {
+        let data = self
+            .resource
+            .borrow()
+            .data
+            .resolve_content()
+            .map_err(|_| PyValueError::new_err("error resolving data"))?;
+
+        Ok(PyBytes::new(py, &data))
+    }
+
+    #[setter]
+    fn set_data(&self, value: Option<&PyAny>) -> PyResult<()> {
+        if let Some(value) = value {
+            self.resource.borrow_mut().data = FileData::Memory(pyobject_to_owned_bytes(value)?);
+
+            Ok(())
+        } else {
+            Err(PyTypeError::new_err("cannot delete data"))
+        }
+    }
+}
+
+#[pyclass(module = "oxidized_importer")]
+pub(crate) struct PythonExtensionModule {
+    resource: RefCell<RawPythonExtensionModule>,
+}
 
 impl PythonExtensionModule {
-    pub fn new(py: cpython::Python, resource: RawPythonExtensionModule) -> cpython::PyResult<Self> {
-        PythonExtensionModule::create_instance(py, RefCell::new(resource))
+    pub fn new(py: Python, resource: RawPythonExtensionModule) -> PyResult<&PyCell<Self>> {
+        PyCell::new(
+            py,
+            Self {
+                resource: RefCell::new(resource),
+            },
+        )
     }
 
-    pub fn get_resource<'a>(
-        &'a self,
-        py: cpython::Python<'a>,
-    ) -> Ref<'a, RawPythonExtensionModule> {
-        self.resource(py).borrow()
+    pub fn get_resource(&self) -> Ref<RawPythonExtensionModule> {
+        self.resource.borrow()
+    }
+}
+
+#[pyproto]
+impl PyObjectProtocol for PythonExtensionModule {
+    fn __repr__(&self) -> String {
+        format!(
+            "<PythonExtensionModule module=\"{}\">",
+            self.resource.borrow().name
+        )
+    }
+}
+
+#[pymethods]
+impl PythonExtensionModule {
+    #[getter]
+    fn name(&self) -> String {
+        self.resource.borrow().name.clone()
     }
 }

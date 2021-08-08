@@ -6,13 +6,13 @@
 
 use {
     crate::{
-        conversion::cpython_pyobject_to_pathbuf,
+        conversion::pyobject_to_pathbuf,
         python_resource_types::{
             PythonExtensionModule, PythonModuleBytecode, PythonModuleSource,
             PythonPackageDistributionResource, PythonPackageResource,
         },
     },
-    cpython::{ObjectProtocol, PythonObject, ToPyObject},
+    pyo3::{exceptions::PyValueError, prelude::*, types::PyList},
     python_packaging::{
         filesystem_scanning::find_python_resources, module_util::PythonModuleSuffixes,
         resource::PythonResource,
@@ -20,42 +20,38 @@ use {
 };
 
 /// Scans a filesystem path for Python resources and turns them into Python types.
-pub(crate) fn find_resources_in_path(
-    py: cpython::Python,
-    path: cpython::PyObject,
-) -> cpython::PyResult<cpython::PyObject> {
-    let path = cpython_pyobject_to_pathbuf(py, path)?;
+#[pyfunction]
+pub(crate) fn find_resources_in_path<'p>(py: Python<'p>, path: &PyAny) -> PyResult<&'p PyList> {
+    let path = pyobject_to_pathbuf(py, path)?;
 
     if !path.is_dir() {
-        return Err(cpython::PyErr::new::<cpython::exc::ValueError, _>(
-            py,
-            format!("path is not a directory: {}", path.display()),
-        ));
+        return Err(PyValueError::new_err(format!(
+            "path is not a directory: {}",
+            path.display()
+        )));
     }
 
     let sys_module = py.import("sys")?;
-    let implementation = sys_module.get(py, "implementation")?;
-    let cache_tag = implementation
-        .getattr(py, "cache_tag")?
-        .extract::<String>(py)?;
+    let implementation = sys_module.getattr("implementation")?;
+    let cache_tag = implementation.getattr("cache_tag")?.extract::<String>()?;
 
     let importlib_machinery = py.import("importlib.machinery")?;
 
     let source = importlib_machinery
-        .get(py, "SOURCE_SUFFIXES")?
-        .extract::<Vec<String>>(py)?;
+        .getattr("SOURCE_SUFFIXES")?
+        .extract::<Vec<String>>()?;
     let bytecode = importlib_machinery
-        .get(py, "BYTECODE_SUFFIXES")?
-        .extract::<Vec<String>>(py)?;
+        .getattr("BYTECODE_SUFFIXES")?
+        .extract::<Vec<String>>()?;
     let debug_bytecode = importlib_machinery
-        .get(py, "DEBUG_BYTECODE_SUFFIXES")?
-        .extract::<Vec<String>>(py)?;
+        .getattr("DEBUG_BYTECODE_SUFFIXES")?
+        .extract::<Vec<String>>()?;
     let optimized_bytecode = importlib_machinery
-        .get(py, "OPTIMIZED_BYTECODE_SUFFIXES")?
-        .extract::<Vec<String>>(py)?;
+        .getattr("OPTIMIZED_BYTECODE_SUFFIXES")?
+        .extract::<Vec<String>>()?;
     let extension = importlib_machinery
-        .get(py, "EXTENSION_SUFFIXES")?
-        .extract::<Vec<String>>(py)?;
+        .getattr("EXTENSION_SUFFIXES")?
+        .extract::<Vec<String>>()?;
 
     let suffixes = PythonModuleSuffixes {
         source,
@@ -65,33 +61,29 @@ pub(crate) fn find_resources_in_path(
         extension,
     };
 
-    let mut res: Vec<cpython::PyObject> = Vec::new();
+    let mut res: Vec<PyObject> = Vec::new();
 
     let iter = find_python_resources(&path, &cache_tag, &suffixes, false, true);
 
     for resource in iter {
-        let resource = resource.map_err(|e| {
-            cpython::PyErr::new::<cpython::exc::ValueError, _>(
-                py,
-                format!("error scanning filesystem: {}", e),
-            )
-        })?;
+        let resource = resource
+            .map_err(|e| PyValueError::new_err(format!("error scanning filesystem: {}", e)))?;
 
         match resource {
             PythonResource::ModuleSource(source) => {
-                res.push(PythonModuleSource::new(py, source.into_owned())?.into_object());
+                res.push(PythonModuleSource::new(py, source.into_owned())?.to_object(py));
             }
             PythonResource::ModuleBytecode(bytecode) => {
-                res.push(PythonModuleBytecode::new(py, bytecode.into_owned())?.into_object());
+                res.push(PythonModuleBytecode::new(py, bytecode.into_owned())?.to_object(py));
             }
             PythonResource::ExtensionModule(extension) => {
-                res.push(PythonExtensionModule::new(py, extension.into_owned())?.into_object());
+                res.push(PythonExtensionModule::new(py, extension.into_owned())?.to_object(py));
             }
             PythonResource::PackageResource(resource) => {
-                res.push(PythonPackageResource::new(py, resource.into_owned())?.into_object());
+                res.push(PythonPackageResource::new(py, resource.into_owned())?.to_object(py));
             }
             PythonResource::PackageDistributionResource(resource) => res.push(
-                PythonPackageDistributionResource::new(py, resource.into_owned())?.into_object(),
+                PythonPackageDistributionResource::new(py, resource.into_owned())?.to_object(py),
             ),
             PythonResource::ModuleBytecodeRequest(_) => {}
             PythonResource::EggFile(_) => {}
@@ -100,5 +92,11 @@ pub(crate) fn find_resources_in_path(
         }
     }
 
-    Ok(res.into_py_object(py).into_object())
+    Ok(PyList::new(py, &res))
+}
+
+pub(crate) fn init_module(m: &PyModule) -> PyResult<()> {
+    m.add_function(wrap_pyfunction!(find_resources_in_path, m)?)?;
+
+    Ok(())
 }

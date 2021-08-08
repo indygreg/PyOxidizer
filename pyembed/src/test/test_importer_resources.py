@@ -81,7 +81,7 @@ class TestImporterResources(unittest.TestCase):
         resource.is_module = False
         self.assertFalse(resource.is_module)
 
-        with self.assertRaises(TypeError):
+        with self.assertRaises(AttributeError):
             del resource.is_module
 
         with self.assertRaises(TypeError):
@@ -94,7 +94,7 @@ class TestImporterResources(unittest.TestCase):
         resource.is_builtin_extension_module = False
         self.assertFalse(resource.is_builtin_extension_module)
 
-        with self.assertRaises(TypeError):
+        with self.assertRaises(AttributeError):
             del resource.is_builtin_extension_module
 
         with self.assertRaises(TypeError):
@@ -107,7 +107,7 @@ class TestImporterResources(unittest.TestCase):
         resource.is_frozen_module = False
         self.assertFalse(resource.is_frozen_module)
 
-        with self.assertRaises(TypeError):
+        with self.assertRaises(AttributeError):
             del resource.is_frozen_module
 
         with self.assertRaises(TypeError):
@@ -120,7 +120,7 @@ class TestImporterResources(unittest.TestCase):
         resource.is_extension_module = False
         self.assertFalse(resource.is_extension_module)
 
-        with self.assertRaises(TypeError):
+        with self.assertRaises(AttributeError):
             del resource.is_extension_module
 
         with self.assertRaises(TypeError):
@@ -133,7 +133,7 @@ class TestImporterResources(unittest.TestCase):
         resource.is_shared_library = False
         self.assertFalse(resource.is_shared_library)
 
-        with self.assertRaises(TypeError):
+        with self.assertRaises(AttributeError):
             del resource.is_shared_library
 
         with self.assertRaises(TypeError):
@@ -145,7 +145,7 @@ class TestImporterResources(unittest.TestCase):
         resource.name = "foobar"
         self.assertEqual(resource.name, "foobar")
 
-        with self.assertRaises(TypeError):
+        with self.assertRaises(AttributeError):
             del resource.name
 
         with self.assertRaises(TypeError):
@@ -159,7 +159,7 @@ class TestImporterResources(unittest.TestCase):
         resource.is_package = False
         self.assertFalse(resource.is_package)
 
-        with self.assertRaises(TypeError):
+        with self.assertRaises(AttributeError):
             del resource.is_package
 
         with self.assertRaises(TypeError):
@@ -173,7 +173,7 @@ class TestImporterResources(unittest.TestCase):
         resource.is_namespace_package = False
         self.assertFalse(resource.is_namespace_package)
 
-        with self.assertRaises(TypeError):
+        with self.assertRaises(AttributeError):
             del resource.is_namespace_package
 
         with self.assertRaises(TypeError):
@@ -197,7 +197,7 @@ class TestImporterResources(unittest.TestCase):
         resource.in_memory_source = None
         self.assertIsNone(resource.in_memory_source)
 
-        with self.assertRaises(TypeError):
+        with self.assertRaises(AttributeError):
             del resource.in_memory_source
 
         with self.assertRaises(TypeError):
@@ -224,11 +224,11 @@ class TestImporterResources(unittest.TestCase):
         resource.in_memory_bytecode_opt2 = None
         self.assertIsNone(resource.in_memory_bytecode_opt2)
 
-        with self.assertRaises(TypeError):
+        with self.assertRaises(AttributeError):
             del resource.in_memory_bytecode
-        with self.assertRaises(TypeError):
+        with self.assertRaises(AttributeError):
             del resource.in_memory_bytecode_opt1
-        with self.assertRaises(TypeError):
+        with self.assertRaises(AttributeError):
             del resource.in_memory_bytecode_opt2
 
         with self.assertRaises(TypeError):
@@ -247,7 +247,7 @@ class TestImporterResources(unittest.TestCase):
         resource.in_memory_extension_module_shared_library = None
         self.assertIsNone(resource.in_memory_extension_module_shared_library)
 
-        with self.assertRaises(TypeError):
+        with self.assertRaises(AttributeError):
             del resource.in_memory_extension_module_shared_library
 
         with self.assertRaises(TypeError):
@@ -270,7 +270,7 @@ class TestImporterResources(unittest.TestCase):
         resource.in_memory_package_resources["ignored"] = None
         self.assertEqual(resource.in_memory_package_resources, {"foo": b"foo value"})
 
-        with self.assertRaises(TypeError):
+        with self.assertRaises(AttributeError):
             del resource.in_memory_package_resources
 
         with self.assertRaises(TypeError):
@@ -306,7 +306,7 @@ class TestImporterResources(unittest.TestCase):
             resource.in_memory_distribution_resources, {"foo": b"foo value"}
         )
 
-        with self.assertRaises(TypeError):
+        with self.assertRaises(AttributeError):
             del resource.in_memory_distribution_resources
 
         with self.assertRaises(TypeError):
@@ -330,7 +330,7 @@ class TestImporterResources(unittest.TestCase):
         resource.in_memory_shared_library = None
         self.assertIsNone(resource.in_memory_shared_library)
 
-        with self.assertRaises(TypeError):
+        with self.assertRaises(AttributeError):
             del resource.in_memory_shared_library
 
         with self.assertRaises(TypeError):
@@ -353,7 +353,7 @@ class TestImporterResources(unittest.TestCase):
         resource.shared_library_dependency_names.append("bar")
         self.assertEqual(resource.shared_library_dependency_names, ["foo"])
 
-        with self.assertRaises(TypeError):
+        with self.assertRaises(AttributeError):
             del resource.shared_library_dependency_names
 
         with self.assertRaises(TypeError):
@@ -379,7 +379,7 @@ class TestImporterResources(unittest.TestCase):
         resource.relative_path_module_source = None
         self.assertIsNone(resource.relative_path_module_source)
 
-        with self.assertRaises(TypeError):
+        with self.assertRaises(AttributeError):
             del resource.relative_path_module_source
 
         with self.assertRaises(TypeError):
@@ -406,7 +406,7 @@ class TestImporterResources(unittest.TestCase):
         resource.relative_path_module_bytecode = None
         self.assertIsNone(resource.relative_path_module_bytecode)
 
-        with self.assertRaises(TypeError):
+        with self.assertRaises(AttributeError):
             del resource.relative_path_module_bytecode
 
         with self.assertRaises(TypeError):
@@ -433,7 +433,7 @@ class TestImporterResources(unittest.TestCase):
         resource.relative_path_module_bytecode_opt1 = None
         self.assertIsNone(resource.relative_path_module_bytecode_opt1)
 
-        with self.assertRaises(TypeError):
+        with self.assertRaises(AttributeError):
             del resource.relative_path_module_bytecode_opt1
 
         with self.assertRaises(TypeError):
@@ -460,7 +460,7 @@ class TestImporterResources(unittest.TestCase):
         resource.relative_path_module_bytecode_opt2 = None
         self.assertIsNone(resource.relative_path_module_bytecode_opt2)
 
-        with self.assertRaises(TypeError):
+        with self.assertRaises(AttributeError):
             del resource.relative_path_module_bytecode_opt2
 
         with self.assertRaises(TypeError):
@@ -490,7 +490,7 @@ class TestImporterResources(unittest.TestCase):
         resource.relative_path_extension_module_shared_library = None
         self.assertIsNone(resource.relative_path_extension_module_shared_library)
 
-        with self.assertRaises(TypeError):
+        with self.assertRaises(AttributeError):
             del resource.relative_path_extension_module_shared_library
 
         with self.assertRaises(TypeError):
@@ -527,7 +527,7 @@ class TestImporterResources(unittest.TestCase):
             {"resource.txt": pathlib.Path("path/to/resource")},
         )
 
-        with self.assertRaises(TypeError):
+        with self.assertRaises(AttributeError):
             del resource.relative_path_package_resources
 
         with self.assertRaises(TypeError):
@@ -573,7 +573,7 @@ class TestImporterResources(unittest.TestCase):
             {"resource.txt": pathlib.Path("path/to/resource")},
         )
 
-        with self.assertRaises(TypeError):
+        with self.assertRaises(AttributeError):
             del resource.relative_path_distribution_resources
 
         with self.assertRaises(TypeError):

@@ -135,10 +135,15 @@ fn main() {
 
     println!("cargo:rustc-cfg=library_mode=\"{}\"", library_mode);
 
+    let interpreter_config = pyo3_build_config::get();
+
     // Re-export the path to the configured Python interpreter. Tests can
     // use this to derive a useful default config that leverages it.
-    let python_interpreter = env::var("DEP_PYTHON3_PYTHON_INTERPRETER")
-        .expect("DEP_PYTHON3_PYTHON_INTERPRETER not found; this should be set by the build system");
+    let python_interpreter = interpreter_config
+        .executable
+        .as_ref()
+        .expect("PyO3 configuration does not define Python executable path");
+
     println!(
         "cargo:rustc-env=PYTHON_INTERPRETER_PATH={}",
         python_interpreter

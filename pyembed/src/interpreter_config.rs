@@ -6,7 +6,7 @@
 
 use {
     crate::{config::ResolvedOxidizedPythonInterpreterConfig, NewInterpreterError},
-    python3_sys as oldpyffi,
+    pyo3::ffi as pyffi,
     python_packaging::{
         interpreter::{CheckHashPycsMode, PythonInterpreterConfig, PythonInterpreterProfile},
         resource::BytecodeOptimizationLevel,
@@ -35,19 +35,19 @@ type wchar_t = u16;
 
 /// Set a PyConfig string value from a str.
 fn set_config_string_from_str(
-    config: &oldpyffi::PyConfig,
+    config: &pyffi::PyConfig,
     dest: &*mut wchar_t,
     value: &str,
     context: &str,
 ) -> Result<(), NewInterpreterError> {
     match CString::new(value) {
         Ok(value) => unsafe {
-            let status = oldpyffi::PyConfig_SetBytesString(
+            let status = pyffi::PyConfig_SetBytesString(
                 config as *const _ as *mut _,
                 dest as *const *mut _ as *mut *mut _,
                 value.as_ptr(),
             );
-            if oldpyffi::PyStatus_Exception(status) != 0 {
+            if pyffi::PyStatus_Exception(status) != 0 {
                 Err(NewInterpreterError::new_from_pystatus(&status, context))
             } else {
                 Ok(())
@@ -62,7 +62,7 @@ fn set_config_string_from_str(
 
 #[cfg(unix)]
 fn set_config_string_from_path(
-    config: &oldpyffi::PyConfig,
+    config: &pyffi::PyConfig,
     dest: &*mut wchar_t,
     path: &Path,
     context: &str,
@@ -71,14 +71,14 @@ fn set_config_string_from_path(
         .map_err(|_| NewInterpreterError::Simple("cannot convert path to C string"))?;
 
     let status = unsafe {
-        oldpyffi::PyConfig_SetBytesString(
+        pyffi::PyConfig_SetBytesString(
             config as *const _ as *mut _,
             dest as *const *mut _ as *mut *mut _,
             value.as_ptr() as *const _,
         )
     };
 
-    if unsafe { oldpyffi::PyStatus_Exception(status) } != 0 {
+    if unsafe { pyffi::PyStatus_Exception(status) } != 0 {
         Err(NewInterpreterError::new_from_pystatus(&status, context))
     } else {
         Ok(())
@@ -87,7 +87,7 @@ fn set_config_string_from_path(
 
 #[cfg(windows)]
 fn set_config_string_from_path(
-    config: &oldpyffi::PyConfig,
+    config: &pyffi::PyConfig,
     dest: &*mut wchar_t,
     path: &Path,
     context: &str,
@@ -97,14 +97,14 @@ fn set_config_string_from_path(
         // NULL terminate.
         value.push(0);
 
-        oldpyffi::PyConfig_SetString(
+        pyffi::PyConfig_SetString(
             config as *const _ as *mut _,
             dest as *const *mut _ as *mut *mut _,
             value.as_ptr() as *const _,
         )
     };
 
-    if unsafe { oldpyffi::PyStatus_Exception(status) } != 0 {
+    if unsafe { pyffi::PyStatus_Exception(status) } != 0 {
         Err(NewInterpreterError::new_from_pystatus(&status, context))
     } else {
         Ok(())
@@ -113,16 +113,16 @@ fn set_config_string_from_path(
 
 /// Appends a value to a PyWideStringList from an 8-bit char* like source.
 fn append_wide_string_list_from_str(
-    dest: &mut oldpyffi::PyWideStringList,
+    dest: &mut pyffi::PyWideStringList,
     value: &str,
     context: &str,
 ) -> Result<(), NewInterpreterError> {
     let value = CString::new(value)
         .map_err(|_| NewInterpreterError::Simple("unable to convert value to C string"))?;
 
-    let mut len: usize = 0;
+    let mut len: pyffi::Py_ssize_t = 0;
 
-    let decoded = unsafe { oldpyffi::Py_DecodeLocale(value.as_ptr() as *const _, &mut len) };
+    let decoded = unsafe { pyffi::Py_DecodeLocale(value.as_ptr() as *const _, &mut len) };
 
     if decoded.is_null() {
         Err(NewInterpreterError::Dynamic(format!(
@@ -130,12 +130,12 @@ fn append_wide_string_list_from_str(
             context
         )))
     } else {
-        let status = unsafe { oldpyffi::PyWideStringList_Append(dest as *mut _, decoded) };
+        let status = unsafe { pyffi::PyWideStringList_Append(dest as *mut _, decoded) };
         unsafe {
-            oldpyffi::PyMem_RawFree(decoded as *mut _);
+            pyffi::PyMem_RawFree(decoded as *mut _);
         }
 
-        if unsafe { oldpyffi::PyStatus_Exception(status) } != 0 {
+        if unsafe { pyffi::PyStatus_Exception(status) } != 0 {
             Err(NewInterpreterError::new_from_pystatus(&status, context))
         } else {
             Ok(())
@@ -145,7 +145,7 @@ fn append_wide_string_list_from_str(
 
 #[cfg(unix)]
 fn append_wide_string_list_from_path(
-    dest: &mut oldpyffi::PyWideStringList,
+    dest: &mut pyffi::PyWideStringList,
     path: &Path,
     context: &str,
 ) -> Result<(), NewInterpreterError> {
@@ -161,19 +161,18 @@ fn append_wide_string_list_from_path(
 
 #[cfg(windows)]
 fn append_wide_string_list_from_path(
-    dest: &mut oldpyffi::PyWideStringList,
+    dest: &mut pyffi::PyWideStringList,
     path: &Path,
     context: &str,
 ) -> Result<(), NewInterpreterError> {
-    let status = unsafe {
-        let mut value: Vec<wchar_t> = path.as_os_str().encode_wide().collect();
-        // NULL terminate.
-        value.push(0);
+    let mut value: Vec<wchar_t> = path.as_os_str().encode_wide().collect();
+    // NULL terminate.
+    value.push(0);
 
-        oldpyffi::PyWideStringList_Append(dest as *mut _, value.as_ptr() as *const _)
-    };
+    let status =
+        unsafe { pyffi::PyWideStringList_Append(dest as *mut _, value.as_ptr() as *const _) };
 
-    if unsafe { oldpyffi::PyStatus_Exception(status) } != 0 {
+    if unsafe { pyffi::PyStatus_Exception(status) } != 0 {
         Err(NewInterpreterError::new_from_pystatus(&status, context))
     } else {
         Ok(())
@@ -181,24 +180,24 @@ fn append_wide_string_list_from_path(
 }
 
 #[cfg(unix)]
-fn set_windows_fs_encoding(_pre_config: &mut oldpyffi::PyPreConfig, _value: bool) {}
+fn set_windows_fs_encoding(_pre_config: &mut pyffi::PyPreConfig, _value: bool) {}
 
 #[cfg(windows)]
-fn set_windows_fs_encoding(pre_config: &mut oldpyffi::PyPreConfig, value: bool) {
+fn set_windows_fs_encoding(pre_config: &mut pyffi::PyPreConfig, value: bool) {
     pre_config.legacy_windows_fs_encoding = if value { 1 } else { 0 };
 }
 
 #[cfg(unix)]
-fn set_legacy_windows_stdio(_config: &mut oldpyffi::PyConfig, _value: bool) {}
+fn set_legacy_windows_stdio(_config: &mut pyffi::PyConfig, _value: bool) {}
 
 #[cfg(windows)]
-fn set_legacy_windows_stdio(config: &mut oldpyffi::PyConfig, value: bool) {
+fn set_legacy_windows_stdio(config: &mut pyffi::PyConfig, value: bool) {
     config.legacy_windows_stdio = if value { 1 } else { 0 };
 }
 
 #[cfg(target_family = "unix")]
 pub fn set_argv(
-    config: &mut oldpyffi::PyConfig,
+    config: &mut pyffi::PyConfig,
     args: &[OsString],
 ) -> Result<(), NewInterpreterError> {
     let argc = args.len() as isize;
@@ -212,9 +211,10 @@ pub fn set_argv(
         .map(|x| x.as_ptr() as *mut i8)
         .collect::<Vec<_>>();
 
-    let status = unsafe { oldpyffi::PyConfig_SetBytesArgv(config as *mut _, argc, argvp.as_ptr()) };
+    let status =
+        unsafe { pyffi::PyConfig_SetBytesArgv(config as *mut _, argc, argvp.as_ptr() as *mut _) };
 
-    if unsafe { oldpyffi::PyStatus_Exception(status) } != 0 {
+    if unsafe { pyffi::PyStatus_Exception(status) } != 0 {
         Err(NewInterpreterError::new_from_pystatus(
             &status,
             "setting argv",
@@ -226,7 +226,7 @@ pub fn set_argv(
 
 #[cfg(target_family = "windows")]
 pub fn set_argv(
-    config: &mut oldpyffi::PyConfig,
+    config: &mut pyffi::PyConfig,
     args: &[OsString],
 ) -> Result<(), NewInterpreterError> {
     let argc = args.len() as isize;
@@ -244,9 +244,10 @@ pub fn set_argv(
         .map(|x| x.as_ptr() as *mut u16)
         .collect::<Vec<_>>();
 
-    let status = unsafe { oldpyffi::PyConfig_SetArgv(config as *mut _, argc, argvp.as_ptr()) };
+    let status =
+        unsafe { pyffi::PyConfig_SetArgv(config as *mut _, argc, argvp.as_ptr() as *mut _) };
 
-    if unsafe { oldpyffi::PyStatus_Exception(status) } != 0 {
+    if unsafe { pyffi::PyStatus_Exception(status) } != 0 {
         Err(NewInterpreterError::new_from_pystatus(
             &status,
             "setting argv",
@@ -256,20 +257,20 @@ pub fn set_argv(
     }
 }
 
-impl<'a> TryFrom<&ResolvedOxidizedPythonInterpreterConfig<'a>> for oldpyffi::PyPreConfig {
+impl<'a> TryFrom<&ResolvedOxidizedPythonInterpreterConfig<'a>> for pyffi::PyPreConfig {
     type Error = NewInterpreterError;
 
     fn try_from(config: &ResolvedOxidizedPythonInterpreterConfig<'a>) -> Result<Self, Self::Error> {
         let value = &config.interpreter_config;
 
-        let mut pre_config = oldpyffi::PyPreConfig::default();
+        let mut pre_config: pyffi::PyPreConfig = unsafe { core::mem::zeroed() };
         unsafe {
             match value.profile {
                 PythonInterpreterProfile::Python => {
-                    oldpyffi::PyPreConfig_InitPythonConfig(&mut pre_config)
+                    pyffi::PyPreConfig_InitPythonConfig(&mut pre_config)
                 }
                 PythonInterpreterProfile::Isolated => {
-                    oldpyffi::PyPreConfig_InitIsolatedConfig(&mut pre_config)
+                    pyffi::PyPreConfig_InitIsolatedConfig(&mut pre_config)
                 }
             }
         }
@@ -311,14 +312,12 @@ impl<'a> TryFrom<&ResolvedOxidizedPythonInterpreterConfig<'a>> for oldpyffi::PyP
 
 pub fn python_interpreter_config_to_py_config(
     value: &PythonInterpreterConfig,
-) -> Result<oldpyffi::PyConfig, NewInterpreterError> {
-    let mut config = oldpyffi::PyConfig::default();
+) -> Result<pyffi::PyConfig, NewInterpreterError> {
+    let mut config: pyffi::PyConfig = unsafe { std::mem::zeroed() };
     unsafe {
         match value.profile {
-            PythonInterpreterProfile::Isolated => {
-                oldpyffi::PyConfig_InitIsolatedConfig(&mut config)
-            }
-            PythonInterpreterProfile::Python => oldpyffi::PyConfig_InitPythonConfig(&mut config),
+            PythonInterpreterProfile::Isolated => pyffi::PyConfig_InitIsolatedConfig(&mut config),
+            PythonInterpreterProfile::Python => pyffi::PyConfig_InitPythonConfig(&mut config),
         }
     }
 
@@ -580,13 +579,13 @@ pub fn python_interpreter_config_to_py_config(
     Ok(config)
 }
 
-impl<'a> TryInto<oldpyffi::PyConfig> for &'a ResolvedOxidizedPythonInterpreterConfig<'a> {
+impl<'a> TryInto<pyffi::PyConfig> for &'a ResolvedOxidizedPythonInterpreterConfig<'a> {
     type Error = NewInterpreterError;
 
-    fn try_into(self) -> Result<oldpyffi::PyConfig, Self::Error> {
+    fn try_into(self) -> Result<pyffi::PyConfig, Self::Error> {
         // We use the raw configuration as a base then we apply any adjustments,
         // as needed.
-        let mut config: oldpyffi::PyConfig =
+        let mut config: pyffi::PyConfig =
             python_interpreter_config_to_py_config(&self.interpreter_config)?;
 
         if let Some(argv) = &self.argv {
@@ -612,7 +611,7 @@ impl<'a> TryInto<oldpyffi::PyConfig> for &'a ResolvedOxidizedPythonInterpreterCo
                 set_config_string_from_path(
                     &config,
                     &config.program_name,
-                    &exe,
+                    exe,
                     "setting program_name",
                 )?;
             }

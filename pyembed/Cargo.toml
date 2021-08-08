@@ -47,6 +47,11 @@ features = [
 ]
 optional = true
 
+[dependencies.pyo3]
+version = "0.14.5"
+default-features = false
+features = ["macros"]
+
 [dependencies.python-packed-resources]
 version = "0.8.0-pre"
 path = "../python-packed-resources"
@@ -63,6 +68,9 @@ path = "../tugger-file-manifest"
 [target.'cfg(windows)'.dependencies]
 memory-module-sys = "0.3"
 winapi = { version = "0.3", features = ["libloaderapi", "memoryapi", "minwindef"] }
+
+[build-dependencies]
+pyo3-build-config = "0.14.5"
 
 [dev-dependencies]
 pathdiff = "0.2"

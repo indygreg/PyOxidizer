@@ -6,12 +6,12 @@ use {
     super::{default_interpreter_config, run_py_test},
     crate::MainPythonInterpreter,
     anyhow::Result,
-    cpython::ObjectProtocol,
+    pyo3::prelude::*,
     rusty_fork::rusty_fork_test,
 };
 
-fn new_interpreter<'python, 'interpreter, 'resources>(
-) -> Result<MainPythonInterpreter<'python, 'interpreter, 'resources>> {
+fn new_interpreter<'interpreter, 'resources>(
+) -> Result<MainPythonInterpreter<'interpreter, 'resources>> {
     let mut config = default_interpreter_config();
     config.oxidized_importer = true;
     let interp = MainPythonInterpreter::new(config)?;
@@ -19,17 +19,17 @@ fn new_interpreter<'python, 'interpreter, 'resources>(
     Ok(interp)
 }
 
-fn get_importer(interp: &mut MainPythonInterpreter) -> Result<cpython::PyObject> {
+fn get_importer(interp: &mut MainPythonInterpreter) -> Result<PyObject> {
     let py = interp.acquire_gil();
 
     let sys = py.import("sys").unwrap();
-    let meta_path = sys.get(py, "meta_path").unwrap();
-    assert_eq!(meta_path.len(py).unwrap(), 2);
+    let meta_path = sys.getattr("meta_path").unwrap();
+    assert_eq!(meta_path.len().unwrap(), 2);
 
-    let importer = meta_path.get_item(py, 0).unwrap();
-    assert_eq!(importer.get_type(py).name(py), "OxidizedFinder");
+    let importer = meta_path.get_item(0).unwrap();
+    assert_eq!(importer.get_type().name().unwrap(), "OxidizedFinder");
 
-    Ok(importer)
+    Ok(importer.to_object(py))
 }
 
 rusty_fork_test! {
@@ -43,14 +43,14 @@ rusty_fork_test! {
 
         let py = interp.acquire_gil();
         let sys = py.import("sys").unwrap();
-        let meta_path = sys.get(py, "meta_path").unwrap();
-        assert_eq!(meta_path.len(py).unwrap(), 2);
+        let meta_path = sys.getattr("meta_path").unwrap();
+        assert_eq!(meta_path.len().unwrap(), 2);
 
-        let importer = meta_path.get_item(py, 0).unwrap();
-        assert_eq!(importer.get_type(py).name(py), "OxidizedFinder");
+        let importer = meta_path.get_item(0).unwrap();
+        assert_eq!(importer.get_type().name().unwrap(), "OxidizedFinder");
 
         let errno = py.import("errno").unwrap();
-        let loader = errno.get(py, "__loader__").unwrap();
+        let loader = errno.getattr("__loader__").unwrap();
         // It isn't OxidizedFinder because OxidizedFinder is just a proxy.
         assert!(loader
             .to_string()

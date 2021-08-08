@@ -3,8 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    cpython::ObjectProtocol,
-    python3_sys as oldpyffi,
+    pyo3::{ffi as pyffi, prelude::*},
     std::{
         ffi::CStr,
         fmt::{Display, Formatter},
@@ -15,27 +14,24 @@ use {
 ///
 /// This is meant to be called during interpreter initialization. We can't
 /// call PyErr_Print() because sys.stdout may not be available yet.
-fn format_pyerr(py: cpython::Python, err: cpython::PyErr) -> Result<String, &'static str> {
+fn format_pyerr(py: Python, err: PyErr) -> Result<String, &'static str> {
     let type_repr = err
-        .ptype
-        .repr(py)
+        .ptype(py)
+        .repr()
         .map_err(|_| "unable to get repr of error type")?;
 
-    if let Some(value) = &err.pvalue {
-        let value_repr = value
-            .repr(py)
-            .map_err(|_| "unable to get repr of error value")?;
+    let value_repr = err
+        .pvalue(py)
+        .repr()
+        .map_err(|_| "unable to get repr of error value")?;
 
-        let value = format!(
-            "{}: {}",
-            type_repr.to_string_lossy(py),
-            value_repr.to_string_lossy(py)
-        );
+    let value = format!(
+        "{}: {}",
+        type_repr.to_string_lossy(),
+        value_repr.to_string_lossy()
+    );
 
-        Ok(value)
-    } else {
-        Ok(type_repr.to_string_lossy(py).to_string())
-    }
+    Ok(value)
 }
 
 /// Represents an error encountered when creating an embedded Python interpreter.
@@ -63,14 +59,14 @@ impl Display for NewInterpreterError {
 impl std::error::Error for NewInterpreterError {}
 
 impl NewInterpreterError {
-    pub fn new_from_pyerr(py: cpython::Python, err: cpython::PyErr, context: &str) -> Self {
+    pub fn new_from_pyerr(py: Python, err: PyErr, context: &str) -> Self {
         match format_pyerr(py, err) {
             Ok(value) => NewInterpreterError::Dynamic(format!("during {}: {}", context, value)),
             Err(msg) => NewInterpreterError::Dynamic(format!("during {}: {}", context, msg)),
         }
     }
 
-    pub fn new_from_pystatus(status: &oldpyffi::PyStatus, context: &str) -> Self {
+    pub fn new_from_pystatus(status: &pyffi::PyStatus, context: &str) -> Self {
         if !status.func.is_null() && !status.err_msg.is_null() {
             let func = unsafe { CStr::from_ptr(status.func) };
             let msg = unsafe { CStr::from_ptr(status.err_msg) };

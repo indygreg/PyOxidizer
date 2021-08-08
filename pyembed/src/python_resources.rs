@@ -10,16 +10,22 @@ use {
     crate::{
         config::{PackedResourcesSource, ResolvedOxidizedPythonInterpreterConfig},
         conversion::{
-            cpython_path_to_pathlib_path, cpython_path_to_pyobject,
-            cpython_pyobject_optional_resources_map_to_owned_bytes,
-            cpython_pyobject_optional_resources_map_to_pathbuf,
-            cpython_pyobject_to_owned_bytes_optional, cpython_pyobject_to_pathbuf_optional,
+            path_to_pathlib_path, path_to_pyobject, pyobject_optional_resources_map_to_owned_bytes,
+            pyobject_optional_resources_map_to_pathbuf, pyobject_to_owned_bytes_optional,
+            pyobject_to_pathbuf_optional,
         },
         error::NewInterpreterError,
     },
     anyhow::Result,
-    cpython::{py_class, ObjectProtocol, PythonObject, ToPyObject},
-    python3_sys as oldpyffi,
+    pyo3::{
+        buffer::PyBuffer,
+        exceptions::{PyImportError, PyOSError, PyValueError},
+        ffi as pyffi,
+        prelude::*,
+        type_object::PyTypeObject,
+        types::{PyBytes, PyDict, PyList, PyString, PyTuple},
+        PyObjectProtocol,
+    },
     python_packed_resources::data::Resource,
     std::{
         borrow::Cow,
@@ -139,34 +145,34 @@ impl<'a> ImportablePythonModule<'a, u8> {
     /// Will return a PyErr if an error occurs resolving source. If there is no source,
     /// returns `Ok(None)`. Otherwise an `Ok(PyString)` cast into a `PyObject` is
     /// returned.
-    pub fn resolve_source(
+    pub fn resolve_source<'p>(
         &self,
-        py: cpython::Python,
-        decode_source: &cpython::PyObject,
-        io_module: &cpython::PyModule,
-    ) -> cpython::PyResult<Option<cpython::PyObject>> {
+        py: Python<'p>,
+        decode_source: &'p PyAny,
+        io_module: &PyAny,
+    ) -> PyResult<Option<&'p PyAny>> {
         let bytes = if let Some(data) = &self.resource.in_memory_source {
-            Some(cpython::PyBytes::new(py, data))
+            Some(PyBytes::new(py, data))
         } else if let Some(relative_path) = &self.resource.relative_path_module_source {
             let path = self.origin.join(relative_path);
 
             let source = std::fs::read(&path).map_err(|e| {
-                cpython::PyErr::new::<cpython::exc::ImportError, _>(
-                    py,
+                PyErr::from_type(
+                    PyImportError::type_object(py),
                     (
                         format!("error reading module source from {}: {}", path.display(), e),
-                        self.resource.name.clone(),
+                        self.resource.name.clone().into_py(py),
                     ),
                 )
             })?;
 
-            Some(cpython::PyBytes::new(py, &source))
+            Some(PyBytes::new(py, &source))
         } else {
             None
         };
 
         if let Some(bytes) = bytes {
-            Ok(Some(decode_source.call(py, (io_module, bytes), None)?))
+            Ok(Some(decode_source.call((io_module, bytes), None)?))
         } else {
             Ok(None)
         }
@@ -182,74 +188,78 @@ impl<'a> ImportablePythonModule<'a, u8> {
     /// The returned `PyObject` will be an instance of `memoryview`.
     pub fn resolve_bytecode(
         &mut self,
-        py: cpython::Python,
+        py: Python,
         optimize_level: OptimizeLevel,
-        decode_source: &cpython::PyObject,
-        io_module: &cpython::PyModule,
-    ) -> cpython::PyResult<Option<cpython::PyObject>> {
+        decode_source: &PyAny,
+        io_module: &PyModule,
+    ) -> PyResult<Option<PyObject>> {
         if let Some(data) = match optimize_level {
             OptimizeLevel::Zero => &self.resource.in_memory_bytecode,
             OptimizeLevel::One => &self.resource.in_memory_bytecode_opt1,
             OptimizeLevel::Two => &self.resource.in_memory_bytecode_opt2,
         } {
             let ptr = unsafe {
-                oldpyffi::PyMemoryView_FromMemory(
+                pyffi::PyMemoryView_FromMemory(
                     data.as_ptr() as _,
                     data.len() as _,
-                    oldpyffi::PyBUF_READ,
+                    pyffi::PyBUF_READ,
                 )
             };
 
-            Ok(unsafe { cpython::PyObject::from_owned_ptr_opt(py, ptr) })
+            if ptr.is_null() {
+                Ok(None)
+            } else {
+                Ok(Some(unsafe { PyObject::from_owned_ptr(py, ptr) }))
+            }
         } else if let Some(path) = self.bytecode_path(optimize_level) {
             // TODO we could potentially avoid the double allocation for bytecode
             // by reading directly into a buffer transferred to Python.
             let bytecode = std::fs::read(&path).map_err(|e| {
-                cpython::PyErr::new::<cpython::exc::ImportError, _>(
-                    py,
+                PyErr::from_type(
+                    PyImportError::type_object(py),
                     (
-                        format!("error reading bytecode from {}: {}", path.display(), e),
-                        self.resource.name.clone(),
+                        format!("error reading bytecode from {}: {}", path.display(), e)
+                            .into_py(py),
+                        self.resource.name.clone().into_py(py),
                     ),
                 )
             })?;
 
             if bytecode.len() < 16 {
-                return Err(cpython::PyErr::new::<cpython::exc::ImportError, _>(
-                    py,
+                return Err(PyImportError::new_err(
                     "bytecode file does not contain enough data",
                 ));
             }
 
             // First 16 bytes of .pyc files are a header.
-            Ok(Some(
-                cpython::PyBytes::new(py, &bytecode[16..]).into_object(),
-            ))
+            Ok(Some(PyBytes::new(py, &bytecode[16..]).into_py(py)))
         } else if let Some(source) = self.resolve_source(py, decode_source, io_module)? {
             let builtins = py.import("builtins")?;
             let marshal = py.import("marshal")?;
 
-            let code = builtins.call(py, "compile", (source, &self.resource.name, "exec"), None)?;
-            let bytecode = marshal.call(py, "dumps", (code,), None)?;
+            let code = builtins
+                .getattr("compile")?
+                .call((source, self.resource.name.as_ref(), "exec"), None)?;
+            let bytecode = marshal.getattr("dumps")?.call((code,), None)?;
 
-            Ok(Some(bytecode))
+            Ok(Some(bytecode.into_py(py)))
         } else {
             Ok(None)
         }
     }
 
     /// Resolve the `importlib.machinery.ModuleSpec` for this module.
-    pub fn resolve_module_spec(
+    pub fn resolve_module_spec<'p>(
         &self,
-        py: cpython::Python,
-        module_spec_type: &cpython::PyObject,
-        loader: &cpython::PyObject,
+        py: Python,
+        module_spec_type: &'p PyAny,
+        loader: &PyAny,
         optimize_level: OptimizeLevel,
-    ) -> cpython::PyResult<cpython::PyObject> {
-        let name = cpython::PyString::new(py, &self.resource.name);
+    ) -> PyResult<&'p PyAny> {
+        let name = PyString::new(py, &self.resource.name);
 
-        let kwargs = cpython::PyDict::new(py);
-        kwargs.set_item(py, "is_package", self.is_package)?;
+        let kwargs = PyDict::new(py);
+        kwargs.set_item("is_package", self.is_package)?;
 
         // If we pass `origin=` and set `spec.has_location = True`, `__file__`
         // will be set on the module. This is appropriate for modules backed by
@@ -257,18 +267,18 @@ impl<'a> ImportablePythonModule<'a, u8> {
 
         let origin = self.resolve_origin(py)?;
         if let Some(origin) = &origin {
-            kwargs.set_item(py, "origin", origin)?;
+            kwargs.set_item("origin", origin)?;
         }
 
-        let spec = module_spec_type.call(py, (name, loader), Some(&kwargs))?;
+        let spec = module_spec_type.call((name, loader), Some(kwargs))?;
 
         if origin.is_some() {
-            spec.setattr(py, "has_location", py.True())?;
+            spec.setattr("has_location", true)?;
         }
 
         // If we set `spec.cached`, it gets turned into `__cached__`.
         if let Some(cached) = self.resolve_cached(py, optimize_level)? {
-            spec.setattr(py, "cached", cached)?;
+            spec.setattr("cached", cached)?;
         }
 
         // `__path__` MUST be set on packages per
@@ -301,7 +311,7 @@ impl<'a> ImportablePythonModule<'a, u8> {
             // `/path/to/myapp.zip/mypackage/subpackage`.
             let mut locations = if let Some(origin_path) = self.origin_path() {
                 if let Some(parent_path) = origin_path.parent() {
-                    vec![cpython_path_to_pyobject(py, parent_path)?]
+                    vec![path_to_pyobject(py, parent_path)?]
                 } else {
                     vec![]
                 }
@@ -313,10 +323,10 @@ impl<'a> ImportablePythonModule<'a, u8> {
                 let mut path = self.current_exe.to_path_buf();
                 path.extend(self.resource.name.split('.'));
 
-                locations.push(cpython_path_to_pyobject(py, &path)?);
+                locations.push(path_to_pyobject(py, &path)?);
             }
 
-            spec.setattr(py, "submodule_search_locations", locations)?;
+            spec.setattr("submodule_search_locations", locations)?;
         }
 
         Ok(spec)
@@ -325,12 +335,9 @@ impl<'a> ImportablePythonModule<'a, u8> {
     /// Resolve the value of a `ModuleSpec` origin.
     ///
     /// The value gets turned into `__file__`
-    pub fn resolve_origin(
-        &self,
-        py: cpython::Python,
-    ) -> cpython::PyResult<Option<cpython::PyObject>> {
+    pub fn resolve_origin<'p>(&self, py: Python<'p>) -> PyResult<Option<&'p PyAny>> {
         Ok(if let Some(path) = self.origin_path() {
-            Some(cpython_path_to_pyobject(py, &path)?)
+            Some(path_to_pyobject(py, &path)?)
         } else {
             None
         })
@@ -339,18 +346,18 @@ impl<'a> ImportablePythonModule<'a, u8> {
     /// Resolve the value of a `ModuleSpec` `cached` attribute.
     ///
     /// The value gets turned into `__cached__`.
-    fn resolve_cached(
+    fn resolve_cached<'p>(
         &self,
-        py: cpython::Python,
+        py: Python<'p>,
         optimize_level: OptimizeLevel,
-    ) -> cpython::PyResult<Option<cpython::PyObject>> {
+    ) -> PyResult<Option<&'p PyAny>> {
         let path = match self.flavor {
             ModuleFlavor::SourceBytecode => self.bytecode_path(optimize_level),
             _ => None,
         };
 
         Ok(if let Some(path) = path {
-            Some(cpython_path_to_pyobject(py, &path)?)
+            Some(path_to_pyobject(py, &path)?)
         } else {
             None
         })
@@ -412,7 +419,7 @@ where
     ///
     /// Holding a reference to these prevents them from being gc'd and for
     /// memory referenced by `self.resources` from being freed.
-    backing_py_objects: Vec<cpython::PyObject>,
+    backing_py_objects: Vec<PyObject>,
 
     /// Holds memory mapped file instances that resources data came from.
     backing_mmaps: Vec<memmap::Mmap>,
@@ -530,20 +537,15 @@ impl<'a> PythonResourcesState<'a, u8> {
     /// Load resources from packed data stored in a PyObject.
     ///
     /// The `PyObject` must conform to the buffer protocol.
-    pub fn index_pyobject(
-        &mut self,
-        py: cpython::Python,
-        obj: cpython::PyObject,
-    ) -> cpython::PyResult<()> {
-        let buffer = cpython::buffer::PyBuffer::get(py, &obj)?;
+    pub fn index_pyobject(&mut self, py: Python, obj: &PyAny) -> PyResult<()> {
+        let buffer = PyBuffer::<u8>::get(obj)?;
 
         let data = unsafe {
             std::slice::from_raw_parts::<u8>(buffer.buf_ptr() as *const _, buffer.len_bytes())
         };
 
-        self.index_data(data)
-            .map_err(|msg| cpython::PyErr::new::<cpython::exc::ValueError, _>(py, msg))?;
-        self.backing_py_objects.push(obj);
+        self.index_data(data).map_err(PyValueError::new_err)?;
+        self.backing_py_objects.push(obj.to_object(py));
 
         Ok(())
     }
@@ -551,7 +553,7 @@ impl<'a> PythonResourcesState<'a, u8> {
     /// Load `builtin` modules from the Python interpreter.
     pub fn index_interpreter_builtin_extension_modules(&mut self) -> Result<(), &'static str> {
         for i in 0.. {
-            let record = unsafe { oldpyffi::PyImport_Inittab.offset(i) };
+            let record = unsafe { pyffi::PyImport_Inittab.offset(i) };
 
             if unsafe { *record }.name.is_null() {
                 break;
@@ -583,7 +585,7 @@ impl<'a> PythonResourcesState<'a, u8> {
     /// Load `frozen` modules from the Python interpreter.
     pub fn index_interpreter_frozen_modules(&mut self) -> Result<(), &'static str> {
         for i in 0.. {
-            let record = unsafe { oldpyffi::PyImport_FrozenModules.offset(i) };
+            let record = unsafe { pyffi::PyImport_FrozenModules.offset(i) };
 
             if unsafe { *record }.name.is_null() {
                 break;
@@ -745,12 +747,12 @@ impl<'a> PythonResourcesState<'a, u8> {
     /// Err occurs if loading the resource data fails. `Ok(None)` is returned
     /// if the resource does not exist. Otherwise the returned `PyObject`
     /// is a file-like object to read the resource data.
-    pub fn get_package_resource_file(
+    pub fn get_package_resource_file<'p>(
         &self,
-        py: cpython::Python,
+        py: Python<'p>,
         package: &str,
         resource_name: &str,
-    ) -> cpython::PyResult<Option<cpython::PyObject>> {
+    ) -> PyResult<Option<&'p PyAny>> {
         let entry = match self.resources.get(package) {
             Some(entry) => entry,
             None => return Ok(None),
@@ -759,10 +761,10 @@ impl<'a> PythonResourcesState<'a, u8> {
         if let Some(resources) = &entry.in_memory_package_resources {
             if let Some(data) = resources.get(resource_name) {
                 let io_module = py.import("io")?;
-                let bytes_io = io_module.get(py, "BytesIO")?;
+                let bytes_io = io_module.getattr("BytesIO")?;
 
-                let data = cpython::PyBytes::new(py, data);
-                return Ok(Some(bytes_io.call(py, (data,), None)?));
+                let data = PyBytes::new(py, data);
+                return Ok(Some(bytes_io.call((data,), None)?));
             }
         }
 
@@ -771,12 +773,11 @@ impl<'a> PythonResourcesState<'a, u8> {
                 let path = self.origin.join(path);
                 let io_module = py.import("io")?;
 
-                return Ok(Some(io_module.call(
-                    py,
-                    "FileIO",
-                    (cpython_path_to_pyobject(py, &path)?, "r"),
-                    None,
-                )?));
+                return Ok(Some(
+                    io_module
+                        .getattr("FileIO")?
+                        .call((path_to_pyobject(py, &path)?, "r"), None)?,
+                ));
             }
         }
 
@@ -805,14 +806,10 @@ impl<'a> PythonResourcesState<'a, u8> {
     /// Obtain the resources available in a Python package, as a Python list.
     ///
     /// The names are returned in sorted order.
-    pub fn package_resource_names(
-        &self,
-        py: cpython::Python,
-        package: &str,
-    ) -> cpython::PyResult<cpython::PyObject> {
+    pub fn package_resource_names<'p>(&self, py: Python<'p>, package: &str) -> PyResult<&'p PyAny> {
         let entry = match self.resources.get(package) {
             Some(entry) => entry,
-            None => return Ok(cpython::PyList::new(py, &[]).into_object()),
+            None => return Ok(PyList::empty(py).into()),
         };
 
         let mut names = if let Some(resources) = &entry.in_memory_package_resources {
@@ -827,10 +824,10 @@ impl<'a> PythonResourcesState<'a, u8> {
 
         let names = names
             .iter()
-            .map(|x| x.to_py_object(py).into_object())
-            .collect::<Vec<cpython::PyObject>>();
+            .map(|x| x.to_object(py))
+            .collect::<Vec<PyObject>>();
 
-        Ok(cpython::PyList::new(py, &names).into_object())
+        Ok(PyList::new(py, &names).into())
     }
 
     /// Whether the given resource name is a directory with resources.
@@ -920,11 +917,11 @@ impl<'a> PythonResourcesState<'a, u8> {
     ///
     /// This method is meant to be an implementation of `ResourceLoader.get_data()` and
     /// should only be used for that purpose.
-    pub fn resolve_resource_data_from_path(
+    pub fn resolve_resource_data_from_path<'p>(
         &self,
-        py: cpython::Python,
-        path: &cpython::PyString,
-    ) -> cpython::PyResult<cpython::PyObject> {
+        py: Python<'p>,
+        path: &str,
+    ) -> PyResult<&'p PyAny> {
         // Paths prefixed with the current executable path are recognized as
         // in-memory resources. This emulates behavior of zipimporter, which
         // does something similar.
@@ -960,8 +957,8 @@ impl<'a> PythonResourcesState<'a, u8> {
         // this functionality some day. But it should likely never be the default
         // because it goes against the spirit of requiring all resources to be
         // known ahead-of-time.
-
-        let native_path = PathBuf::from(path.to_string_lossy(py).to_string());
+        let path = path.to_owned();
+        let native_path = PathBuf::from(&path);
 
         let (relative_path, check_in_memory, check_relative_path) =
             if let Ok(relative_path) = native_path.strip_prefix(&self.current_exe) {
@@ -969,8 +966,8 @@ impl<'a> PythonResourcesState<'a, u8> {
             } else if let Ok(relative_path) = native_path.strip_prefix(&self.origin) {
                 (relative_path, false, true)
             } else {
-                return Err(cpython::PyErr::new::<cpython::exc::OSError, _>(
-                    py,
+                return Err(PyErr::from_type(
+                    PyOSError::type_object(py),
                     (ENOENT, "resource not known", path),
                 ));
             };
@@ -993,8 +990,8 @@ impl<'a> PythonResourcesState<'a, u8> {
         // Our indexed resources require the existence of a package. So there should be
         // at least 2 components for the path to be valid.
         if components.len() < 2 {
-            return Err(cpython::PyErr::new::<cpython::exc::OSError, _>(
-                py,
+            return Err(PyErr::from_type(
+                PyOSError::type_object(py),
                 (
                     ENOENT,
                     "illegal resource name: missing package component",
@@ -1023,7 +1020,7 @@ impl<'a> PythonResourcesState<'a, u8> {
                 if check_in_memory {
                     if let Some(resources) = &entry.in_memory_package_resources {
                         if let Some(data) = resources.get(resource_name_ref) {
-                            return Ok(cpython::PyBytes::new(py, data).into_object());
+                            return Ok(PyBytes::new(py, data).into());
                         }
                     }
                 }
@@ -1035,14 +1032,11 @@ impl<'a> PythonResourcesState<'a, u8> {
 
                             let io_module = py.import("io")?;
 
-                            let fh = io_module.call(
-                                py,
-                                "FileIO",
-                                (cpython_path_to_pyobject(py, &resource_path)?, "r"),
-                                None,
-                            )?;
+                            let fh = io_module
+                                .getattr("FileIO")?
+                                .call((path_to_pyobject(py, &resource_path)?, "r"), None)?;
 
-                            return fh.call_method(py, "read", cpython::NoArgs, None);
+                            return fh.call_method0("read");
                         }
                     }
                 }
@@ -1057,8 +1051,8 @@ impl<'a> PythonResourcesState<'a, u8> {
 
         // If we got here, we couldn't find a resource in our data structure.
 
-        Err(cpython::PyErr::new::<cpython::exc::OSError, _>(
-            py,
+        Err(PyErr::from_type(
+            PyOSError::type_object(py),
             (ENOENT, "resource not known", path),
         ))
     }
@@ -1069,14 +1063,14 @@ impl<'a> PythonResourcesState<'a, u8> {
     ///
     /// `package_filter` defines the target package to return results for. The
     /// empty string denotes top-level packages only.
-    pub fn pkgutil_modules_infos(
+    pub fn pkgutil_modules_infos<'p>(
         &self,
-        py: cpython::Python,
+        py: Python<'p>,
         package_filter: Option<&str>,
         prefix: Option<String>,
         optimize_level: OptimizeLevel,
-    ) -> cpython::PyResult<cpython::PyObject> {
-        let infos: cpython::PyResult<Vec<cpython::PyObject>> = self
+    ) -> PyResult<&'p PyList> {
+        let infos: PyResult<Vec<_>> = self
             .resources
             .values()
             .filter(|r| {
@@ -1093,18 +1087,16 @@ impl<'a> PythonResourcesState<'a, u8> {
                     name.to_string()
                 };
 
-                let name = name.to_py_object(py).into_object();
-                let is_package = r.is_package.to_py_object(py).into_object();
+                let name = name.to_object(py);
+                let is_package = r.is_package.to_object(py);
 
-                Ok(cpython::PyTuple::new(py, &[name, is_package]).into_object())
+                Ok(PyTuple::new(py, &[name, is_package]))
             })
             .collect();
 
         let infos = infos?;
 
-        let res = cpython::PyList::new(py, &infos);
-
-        Ok(res.into_object())
+        Ok(PyList::new(py, &infos))
     }
 
     /// Serialize resources contained in this data structure.
@@ -1137,440 +1129,502 @@ impl<'a> PythonResourcesState<'a, u8> {
     }
 }
 
-py_class!(pub(crate) class OxidizedResource |py| {
-    data resource: RefCell<Resource<'static, u8>>;
+#[pyclass(module = "oxidized_importer")]
+pub(crate) struct OxidizedResource {
+    resource: RefCell<Resource<'static, u8>>,
+}
 
-    def __new__(_cls) -> cpython::PyResult<OxidizedResource> {
-        let resource = OxidizedResource::create_instance(py, RefCell::new(Resource::<u8>::default()))?;
-
-        Ok(resource)
-    }
-
-    def __repr__(&self) -> cpython::PyResult<String> {
-        Ok(format!("<OxidizedResource name=\"{}\">", self.resource(py).borrow().name.to_string()))
-    }
-
-    @property def is_module(&self) -> cpython::PyResult<bool> {
-        Ok(self.resource(py).borrow().is_module)
-    }
-
-    @is_module.setter def set_is_module(&self, value: Option<bool>) -> cpython::PyResult<()> {
-        if let Some(value) = value {
-            self.resource(py).borrow_mut().is_module = value;
-            Ok(())
-        } else {
-            Err(cpython::PyErr::new::<cpython::exc::TypeError, _>(py, "cannot delete is_module"))
-        }
-    }
-
-    @property def is_builtin_extension_module(&self) -> cpython::PyResult<bool> {
-        Ok(self.resource(py).borrow().is_builtin_extension_module)
-    }
-
-    @is_builtin_extension_module.setter def set_is_builtin_extension_module(&self, value: Option<bool>) -> cpython::PyResult<()> {
-        if let Some(value) = value {
-            self.resource(py).borrow_mut().is_builtin_extension_module = value;
-            Ok(())
-        } else {
-            Err(cpython::PyErr::new::<cpython::exc::TypeError, _>(py, "cannot delete is_builtin_extension_module"))
-        }
-    }
-
-    @property def is_frozen_module(&self) -> cpython::PyResult<bool> {
-        Ok(self.resource(py).borrow().is_frozen_module)
-    }
-
-    @is_frozen_module.setter def set_is_frozen_module(&self, value: Option<bool>) -> cpython::PyResult<()> {
-        if let Some(value) = value {
-            self.resource(py).borrow_mut().is_frozen_module = value;
-            Ok(())
-        } else {
-            Err(cpython::PyErr::new::<cpython::exc::TypeError, _>(py, "cannot delete is_frozen_module"))
-        }
-    }
-
-    @property def is_extension_module(&self) -> cpython::PyResult<bool> {
-        Ok(self.resource(py).borrow().is_extension_module)
-    }
-
-    @is_extension_module.setter def set_is_extension_module(&self, value: Option<bool>) -> cpython::PyResult<()> {
-        if let Some(value) = value {
-            self.resource(py).borrow_mut().is_extension_module = value;
-            Ok(())
-        } else {
-            Err(cpython::PyErr::new::<cpython::exc::TypeError, _>(py, "cannot delete is_extension_module"))
-        }
-    }
-
-    @property def is_shared_library(&self) -> cpython::PyResult<bool> {
-        Ok(self.resource(py).borrow().is_shared_library)
-    }
-
-    @is_shared_library.setter def set_is_shared_library(&self, value: Option<bool>) -> cpython::PyResult<()> {
-        if let Some(value) = value {
-            self.resource(py).borrow_mut().is_shared_library = value;
-            Ok(())
-        } else {
-            Err(cpython::PyErr::new::<cpython::exc::TypeError, _>(py, "cannot delete is_shared_library"))
-        }
-    }
-
-    @property def name(&self) -> cpython::PyResult<String> {
-        Ok(self.resource(py).borrow().name.to_string())
-    }
-
-    @name.setter def set_name(&self, value: Option<&str>) -> cpython::PyResult<()> {
-        if let Some(value) = value {
-            self.resource(py).borrow_mut().name = Cow::Owned(value.to_owned());
-
-            Ok(())
-        } else {
-            Err(cpython::PyErr::new::<cpython::exc::TypeError, _>(py, "cannot delete name"))
-        }
-    }
-
-    @property def is_package(&self) -> cpython::PyResult<bool> {
-        Ok(self.resource(py).borrow().is_package)
-    }
-
-    @is_package.setter def set_is_package(&self, value: Option<bool>) -> cpython::PyResult<()> {
-        if let Some(value) = value {
-            self.resource(py).borrow_mut().is_package = value;
-            Ok(())
-        } else {
-            Err(cpython::PyErr::new::<cpython::exc::TypeError, _>(py, "cannot delete is_package"))
-        }
-    }
-
-    @property def is_namespace_package(&self) -> cpython::PyResult<bool> {
-        Ok(self.resource(py).borrow().is_namespace_package)
-    }
-
-    @is_namespace_package.setter def set_is_namespace_package(&self, value: Option<bool>) -> cpython::PyResult<()> {
-        if let Some(value) = value {
-            self.resource(py).borrow_mut().is_namespace_package = value;
-            Ok(())
-        } else {
-            Err(cpython::PyErr::new::<cpython::exc::TypeError, _>(py, "cannot delete is_namespace_package"))
-        }
-    }
-
-    @property def in_memory_source(&self) -> cpython::PyResult<Option<cpython::PyBytes>> {
-        Ok(self.resource(py).borrow().in_memory_source.as_ref().map(|x| cpython::PyBytes::new(py, x)))
-    }
-
-    @in_memory_source.setter def set_in_memory_source(&self, value: Option<cpython::PyObject>) -> cpython::PyResult<()> {
-        if let Some(value) = value {
-            self.resource(py).borrow_mut().in_memory_source =
-                cpython_pyobject_to_owned_bytes_optional(py, &value)?
-                    .map(Cow::Owned);
-            Ok(())
-        } else {
-            Err(cpython::PyErr::new::<cpython::exc::TypeError, _>(py, "cannot delete in_memory_source"))
-        }
-    }
-
-    @property def in_memory_bytecode(&self) -> cpython::PyResult<Option<cpython::PyBytes>> {
-        Ok(self.resource(py).borrow().in_memory_bytecode.as_ref().map(|x| cpython::PyBytes::new(py, x)))
-    }
-
-    @in_memory_bytecode.setter def set_in_memory_bytecode(&self, value: Option<cpython::PyObject>) -> cpython::PyResult<()> {
-        if let Some(value) = value {
-            self.resource(py).borrow_mut().in_memory_bytecode =
-                cpython_pyobject_to_owned_bytes_optional(py, &value)?
-                    .map(Cow::Owned);
-            Ok(())
-        } else {
-            Err(cpython::PyErr::new::<cpython::exc::TypeError, _>(py, "cannot delete in_memory_bytecode"))
-        }
-    }
-
-    @property def in_memory_bytecode_opt1(&self) -> cpython::PyResult<Option<cpython::PyBytes>> {
-        Ok(self.resource(py).borrow().in_memory_bytecode_opt1.as_ref().map(|x| cpython::PyBytes::new(py, x)))
-    }
-
-    @in_memory_bytecode_opt1.setter def set_in_memory_bytecode_opt1(&self, value: Option<cpython::PyObject>) -> cpython::PyResult<()> {
-        if let Some(value) = value {
-            self.resource(py).borrow_mut().in_memory_bytecode_opt1 =
-                cpython_pyobject_to_owned_bytes_optional(py, &value)?
-                    .map(Cow::Owned);
-            Ok(())
-        } else {
-            Err(cpython::PyErr::new::<cpython::exc::TypeError, _>(py, "cannot delete in_memory_bytecode_opt1"))
-        }
-    }
-
-    @property def in_memory_bytecode_opt2(&self) -> cpython::PyResult<Option<cpython::PyBytes>> {
-        Ok(self.resource(py).borrow().in_memory_bytecode_opt2.as_ref().map(|x| cpython::PyBytes::new(py, x)))
-    }
-
-    @in_memory_bytecode_opt2.setter def set_in_memory_bytecode_opt2(&self, value: Option<cpython::PyObject>) -> cpython::PyResult<()> {
-        if let Some(value) = value {
-            self.resource(py).borrow_mut().in_memory_bytecode_opt2 =
-                cpython_pyobject_to_owned_bytes_optional(py, &value)?
-                    .map(Cow::Owned);
-            Ok(())
-        } else {
-            Err(cpython::PyErr::new::<cpython::exc::TypeError, _>(py, "cannot delete in_memory_bytecode_opt2"))
-        }
-    }
-
-    @property def in_memory_extension_module_shared_library(&self) -> cpython::PyResult<Option<cpython::PyBytes>> {
-        Ok(self.resource(py).borrow().in_memory_extension_module_shared_library.as_ref().map(|x| cpython::PyBytes::new(py, x)))
-    }
-
-    @in_memory_extension_module_shared_library.setter def set_in_memory_extension_module_shared_library(&self, value: Option<cpython::PyObject>) -> cpython::PyResult<()> {
-        if let Some(value) = value {
-            self.resource(py).borrow_mut().in_memory_extension_module_shared_library =
-                cpython_pyobject_to_owned_bytes_optional(py, &value)?
-                    .map(Cow::Owned);
-            Ok(())
-        } else {
-            Err(cpython::PyErr::new::<cpython::exc::TypeError, _>(py, "cannot delete in_memory_extension_module_shared_library"))
-        }
-    }
-
-    @property def in_memory_package_resources(&self) -> cpython::PyResult<Option<HashMap<String, cpython::PyBytes>>> {
-        Ok(self.resource(py).borrow().in_memory_package_resources.as_ref().map(|x| {
-            x.iter().map(|(k, v)| (k.to_string(), cpython::PyBytes::new(py, v))).collect()
-        }))
-    }
-
-    @in_memory_package_resources.setter def set_in_memory_package_resources(&self, value: Option<cpython::PyObject>) -> cpython::PyResult<()> {
-        if let Some(value) = value {
-            self.resource(py).borrow_mut().in_memory_package_resources =
-                cpython_pyobject_optional_resources_map_to_owned_bytes(py, &value)?
-                    .map(|x| x.into_iter().map(|(k, v)| (Cow::Owned(k), Cow::Owned(v))).collect());
-
-            Ok(())
-        } else {
-            Err(cpython::PyErr::new::<cpython::exc::TypeError, _>(py, "cannot delete in_memory_package_resources"))
-        }
-    }
-
-    @property def in_memory_distribution_resources(&self) -> cpython::PyResult<Option<HashMap<String, cpython::PyBytes>>> {
-        Ok(self.resource(py).borrow().in_memory_distribution_resources.as_ref().map(|x| {
-            x.iter().map(|(k, v)| (k.to_string(), cpython::PyBytes::new(py, v))).collect()
-        }))
-    }
-
-    @in_memory_distribution_resources.setter def set_in_memory_distribution_resources(&self, value: Option<cpython::PyObject>) -> cpython::PyResult<()> {
-        if let Some(value) = value {
-            self.resource(py).borrow_mut().in_memory_distribution_resources =
-                cpython_pyobject_optional_resources_map_to_owned_bytes(py, &value)?
-                    .map(|x|
-                        x.into_iter().map(|(k, v)| (Cow::Owned(k), Cow::Owned(v))).collect()
-                    );
-
-            Ok(())
-        } else {
-            Err(cpython::PyErr::new::<cpython::exc::TypeError, _>(py, "cannot delete in_memory_distribution_resources"))
-        }
-    }
-
-    @property def in_memory_shared_library(&self) -> cpython::PyResult<Option<cpython::PyBytes>> {
-        Ok(self.resource(py).borrow().in_memory_shared_library.as_ref().map(|x| cpython::PyBytes::new(py, x)))
-    }
-
-    @in_memory_shared_library.setter def set_in_memory_shared_library(&self, value: Option<cpython::PyObject>) -> cpython::PyResult<()> {
-        if let Some(value) = value {
-            self.resource(py).borrow_mut().in_memory_shared_library =
-                cpython_pyobject_to_owned_bytes_optional(py, &value)?
-                    .map(Cow::Owned);
-            Ok(())
-        } else {
-            Err(cpython::PyErr::new::<cpython::exc::TypeError, _>(py, "cannot delete in_memory_shared_library"))
-        }
-    }
-
-    @property def shared_library_dependency_names(&self) -> cpython::PyResult<Option<Vec<String>>> {
-        Ok(self.resource(py).borrow().shared_library_dependency_names.as_ref().map(|x| {
-            x.iter().map(|v| v.to_string()).collect()
-        }))
-    }
-
-    @shared_library_dependency_names.setter def set_shared_library_dependency_names(&self, value: Option<Option<Vec<String>>>) -> cpython::PyResult<()> {
-        if let Some(value) = value {
-            self.resource(py).borrow_mut().shared_library_dependency_names =
-                value.map(|x| x.into_iter().map(Cow::Owned).collect());
-
-            Ok(())
-        } else {
-            Err(cpython::PyErr::new::<cpython::exc::TypeError, _>(py, "cannot delete shared_library_dependency_names"))
-        }
-    }
-
-    @property def relative_path_module_source(&self) -> cpython::PyResult<cpython::PyObject> {
-        self.resource(py).borrow().relative_path_module_source.as_ref().map_or_else(
-            || Ok(py.None()),
-            |x| cpython_path_to_pathlib_path(py, x)
+#[pyproto]
+impl PyObjectProtocol for OxidizedResource {
+    fn __repr__(&self) -> String {
+        format!(
+            "<OxidizedResource name=\"{}\">",
+            self.resource.borrow().name.to_string()
         )
     }
+}
 
-    @relative_path_module_source.setter def set_relative_path_module_source(&self, value: Option<cpython::PyObject>) -> cpython::PyResult<()> {
-        if let Some(value) = value {
-            self.resource(py).borrow_mut().relative_path_module_source =
-                cpython_pyobject_to_pathbuf_optional(py, value)?
-                    .map(Cow::Owned);
-
-            Ok(())
-        } else {
-            Err(cpython::PyErr::new::<cpython::exc::TypeError, _>(py, "cannot delete relative_path_module_source"))
-        }
+#[pymethods]
+impl OxidizedResource {
+    #[new]
+    fn new() -> PyResult<Self> {
+        Ok(Self {
+            resource: RefCell::new(Resource::<u8>::default()),
+        })
     }
 
-    @property def relative_path_module_bytecode(&self) -> cpython::PyResult<cpython::PyObject> {
-        self.resource(py).borrow().relative_path_module_bytecode.as_ref().map_or_else(
-            || Ok(py.None()),
-            |x| cpython_path_to_pathlib_path(py, x)
-        )
+    #[getter]
+    fn get_is_module(&self) -> bool {
+        self.resource.borrow().is_module
     }
 
-    @relative_path_module_bytecode.setter def set_relative_path_module_bytecode(&self, value: Option<cpython::PyObject>) -> cpython::PyResult<()> {
-        if let Some(value) = value {
-            self.resource(py).borrow_mut().relative_path_module_bytecode =
-                cpython_pyobject_to_pathbuf_optional(py, value)?
-                    .map(Cow::Owned);
+    #[setter]
+    fn set_is_module(&self, value: bool) -> PyResult<()> {
+        self.resource.borrow_mut().is_module = value;
 
-            Ok(())
-        } else {
-            Err(cpython::PyErr::new::<cpython::exc::TypeError, _>(py, "cannot delete relative_path_module_bytecode"))
-        }
+        Ok(())
     }
 
-    @property def relative_path_module_bytecode_opt1(&self) -> cpython::PyResult<cpython::PyObject> {
-        self.resource(py).borrow().relative_path_module_bytecode_opt1.as_ref().map_or_else(
-            || Ok(py.None()),
-            |x| cpython_path_to_pathlib_path(py, x)
-        )
+    #[getter]
+    fn get_is_builtin_extension_module(&self) -> bool {
+        self.resource.borrow().is_builtin_extension_module
     }
 
-    @relative_path_module_bytecode_opt1.setter def set_relative_path_module_bytecode_opt1(&self, value: Option<cpython::PyObject>) -> cpython::PyResult<()> {
-        if let Some(value) = value {
-            self.resource(py).borrow_mut().relative_path_module_bytecode_opt1 =
-                cpython_pyobject_to_pathbuf_optional(py, value)?
-                    .map(Cow::Owned);
+    #[setter]
+    fn set_is_builtin_extension_module(&self, value: bool) -> PyResult<()> {
+        self.resource.borrow_mut().is_builtin_extension_module = value;
 
-            Ok(())
-        } else {
-            Err(cpython::PyErr::new::<cpython::exc::TypeError, _>(py, "cannot delete relative_path_module_bytecode_opt1"))
-        }
+        Ok(())
     }
 
-    @property def relative_path_module_bytecode_opt2(&self) -> cpython::PyResult<cpython::PyObject> {
-        self.resource(py).borrow().relative_path_module_bytecode_opt2.as_ref().map_or_else(
-            || Ok(py.None()),
-            |x| cpython_path_to_pathlib_path(py, x)
-        )
+    #[getter]
+    fn get_is_frozen_module(&self) -> bool {
+        self.resource.borrow().is_frozen_module
     }
 
-    @relative_path_module_bytecode_opt2.setter def set_relative_path_module_bytecode_opt2(&self, value: Option<cpython::PyObject>) -> cpython::PyResult<()> {
-        if let Some(value) = value {
-            self.resource(py).borrow_mut().relative_path_module_bytecode_opt2 =
-                cpython_pyobject_to_pathbuf_optional(py, value)?
-                    .map(Cow::Owned);
+    #[setter]
+    fn set_is_frozen_module(&self, value: bool) -> PyResult<()> {
+        self.resource.borrow_mut().is_frozen_module = value;
 
-            Ok(())
-        } else {
-            Err(cpython::PyErr::new::<cpython::exc::TypeError, _>(py, "cannot delete relative_path_module_bytecode_opt2"))
-        }
+        Ok(())
     }
 
-    @property def relative_path_extension_module_shared_library(&self) -> cpython::PyResult<cpython::PyObject> {
-        self.resource(py).borrow().relative_path_extension_module_shared_library.as_ref().map_or_else(
-            || Ok(py.None()),
-            |x| cpython_path_to_pathlib_path(py, x)
-        )
+    #[getter]
+    fn get_is_extension_module(&self) -> bool {
+        self.resource.borrow().is_extension_module
     }
 
-    @relative_path_extension_module_shared_library.setter def set_relative_path_extension_module_shared_library(&self, value: Option<cpython::PyObject>) -> cpython::PyResult<()> {
-        if let Some(value) = value {
-            self.resource(py).borrow_mut().relative_path_extension_module_shared_library =
-                cpython_pyobject_to_pathbuf_optional(py, value)?
-                    .map(Cow::Owned);
+    #[setter]
+    fn set_is_extension_module(&self, value: bool) -> PyResult<()> {
+        self.resource.borrow_mut().is_extension_module = value;
 
-            Ok(())
-        } else {
-            Err(cpython::PyErr::new::<cpython::exc::TypeError, _>(py, "cannot delete relative_path_extension_module_shared_library"))
-        }
+        Ok(())
     }
 
-    @property def relative_path_package_resources(&self) -> cpython::PyResult<cpython::PyObject> {
-        self.resource(py).borrow().relative_path_package_resources.as_ref().map_or_else(
-            || Ok(py.None()),
-            |x| -> cpython::PyResult<cpython::PyObject> {
-                let res = cpython::PyDict::new(py);
-
-                for (k, v) in x.iter() {
-                    res.set_item(py, k, cpython_path_to_pathlib_path(py, v)?)?;
-                }
-
-                Ok(res.into_object())
-            }
-        )
+    #[getter]
+    fn get_is_shared_library(&self) -> bool {
+        self.resource.borrow().is_shared_library
     }
 
-    @relative_path_package_resources.setter def set_relative_path_package_resources(&self, value: Option<cpython::PyObject>) -> cpython::PyResult<()> {
-        if let Some(value) = value {
-            self.resource(py).borrow_mut().relative_path_package_resources =
-                cpython_pyobject_optional_resources_map_to_pathbuf(py, &value)?
-                    .map(|x|
-                        x.into_iter().map(|(k, v)| (Cow::Owned(k), Cow::Owned(v))).collect()
-                    );
+    #[setter]
+    fn set_is_shared_library(&self, value: bool) -> PyResult<()> {
+        self.resource.borrow_mut().is_shared_library = value;
 
-            Ok(())
-        } else {
-            Err(cpython::PyErr::new::<cpython::exc::TypeError, _>(py, "cannot delete relative_path_package_resources"))
-        }
+        Ok(())
     }
 
-    @property def relative_path_distribution_resources(&self) -> cpython::PyResult<cpython::PyObject> {
-        self.resource(py).borrow().relative_path_distribution_resources.as_ref().map_or_else(
-            || Ok(py.None()),
-            |x| -> cpython::PyResult<cpython::PyObject> {
-                let res = cpython::PyDict::new(py);
-
-                for (k, v) in x.iter() {
-                    res.set_item(py, k, cpython_path_to_pathlib_path(py, v)?)?;
-                }
-
-                Ok(res.into_object())
-            }
-        )
+    #[getter]
+    fn get_name(&self) -> String {
+        self.resource.borrow().name.to_string()
     }
 
-    @relative_path_distribution_resources.setter def set_relative_path_distribution_resources(&self, value: Option<cpython::PyObject>) -> cpython::PyResult<()> {
-        if let Some(value) = value {
-            self.resource(py).borrow_mut().relative_path_distribution_resources =
-                cpython_pyobject_optional_resources_map_to_pathbuf(py, &value)?
-                    .map(|x|
-                        x.into_iter().map(|(k, v)| (Cow::Owned(k), Cow::Owned(v))).collect()
-                    );
+    #[setter]
+    fn set_name(&self, value: &str) -> PyResult<()> {
+        self.resource.borrow_mut().name = Cow::Owned(value.to_owned());
 
-            Ok(())
-        } else {
-            Err(cpython::PyErr::new::<cpython::exc::TypeError, _>(py, "cannot delete relative_path_distribution_resources"))
-        }
+        Ok(())
     }
 
-});
+    #[getter]
+    fn get_is_package(&self) -> bool {
+        self.resource.borrow().is_package
+    }
+
+    #[setter]
+    fn set_is_package(&self, value: bool) -> PyResult<()> {
+        self.resource.borrow_mut().is_package = value;
+
+        Ok(())
+    }
+
+    #[getter]
+    fn get_is_namespace_package(&self) -> bool {
+        self.resource.borrow().is_namespace_package
+    }
+
+    #[setter]
+    fn set_is_namespace_package(&self, value: bool) -> PyResult<()> {
+        self.resource.borrow_mut().is_namespace_package = value;
+
+        Ok(())
+    }
+
+    #[getter]
+    fn get_in_memory_source<'p>(&self, py: Python<'p>) -> Option<&'p PyBytes> {
+        self.resource
+            .borrow()
+            .in_memory_source
+            .as_ref()
+            .map(|x| PyBytes::new(py, x))
+    }
+
+    #[setter]
+    fn set_in_memory_source(&self, value: &PyAny) -> PyResult<()> {
+        self.resource.borrow_mut().in_memory_source =
+            pyobject_to_owned_bytes_optional(value)?.map(Cow::Owned);
+
+        Ok(())
+    }
+
+    #[getter]
+    fn get_in_memory_bytecode<'p>(&self, py: Python<'p>) -> Option<&'p PyBytes> {
+        self.resource
+            .borrow()
+            .in_memory_bytecode
+            .as_ref()
+            .map(|x| PyBytes::new(py, x))
+    }
+
+    #[setter]
+    fn set_in_memory_bytecode(&self, value: &PyAny) -> PyResult<()> {
+        self.resource.borrow_mut().in_memory_bytecode =
+            pyobject_to_owned_bytes_optional(value)?.map(Cow::Owned);
+
+        Ok(())
+    }
+
+    #[getter]
+    fn get_in_memory_bytecode_opt1<'p>(&self, py: Python<'p>) -> Option<&'p PyBytes> {
+        self.resource
+            .borrow()
+            .in_memory_bytecode_opt1
+            .as_ref()
+            .map(|x| PyBytes::new(py, x))
+    }
+
+    #[setter]
+    fn set_in_memory_bytecode_opt1(&self, value: &PyAny) -> PyResult<()> {
+        self.resource.borrow_mut().in_memory_bytecode_opt1 =
+            pyobject_to_owned_bytes_optional(value)?.map(Cow::Owned);
+
+        Ok(())
+    }
+
+    #[getter]
+    fn get_in_memory_bytecode_opt2<'p>(&self, py: Python<'p>) -> Option<&'p PyBytes> {
+        self.resource
+            .borrow()
+            .in_memory_bytecode_opt2
+            .as_ref()
+            .map(|x| PyBytes::new(py, x))
+    }
+
+    #[setter]
+    fn set_in_memory_bytecode_opt2(&self, value: &PyAny) -> PyResult<()> {
+        self.resource.borrow_mut().in_memory_bytecode_opt2 =
+            pyobject_to_owned_bytes_optional(value)?.map(Cow::Owned);
+
+        Ok(())
+    }
+
+    #[getter]
+    fn get_in_memory_extension_module_shared_library<'p>(
+        &self,
+        py: Python<'p>,
+    ) -> Option<&'p PyBytes> {
+        self.resource
+            .borrow()
+            .in_memory_extension_module_shared_library
+            .as_ref()
+            .map(|x| PyBytes::new(py, x))
+    }
+
+    #[setter]
+    fn set_in_memory_extension_module_shared_library(&self, value: &PyAny) -> PyResult<()> {
+        self.resource
+            .borrow_mut()
+            .in_memory_extension_module_shared_library =
+            pyobject_to_owned_bytes_optional(value)?.map(Cow::Owned);
+
+        Ok(())
+    }
+
+    #[getter]
+    fn get_in_memory_package_resources<'p>(
+        &self,
+        py: Python<'p>,
+    ) -> Option<HashMap<String, &'p PyBytes>> {
+        self.resource
+            .borrow()
+            .in_memory_package_resources
+            .as_ref()
+            .map(|x| {
+                x.iter()
+                    .map(|(k, v)| (k.to_string(), PyBytes::new(py, v)))
+                    .collect()
+            })
+    }
+
+    #[setter]
+    fn set_in_memory_package_resources(&self, value: &PyAny) -> PyResult<()> {
+        self.resource.borrow_mut().in_memory_package_resources =
+            pyobject_optional_resources_map_to_owned_bytes(value)?.map(|x| {
+                x.into_iter()
+                    .map(|(k, v)| (Cow::Owned(k), Cow::Owned(v)))
+                    .collect()
+            });
+
+        Ok(())
+    }
+
+    #[getter]
+    fn get_in_memory_distribution_resources<'p>(
+        &self,
+        py: Python<'p>,
+    ) -> Option<HashMap<String, &'p PyBytes>> {
+        self.resource
+            .borrow()
+            .in_memory_distribution_resources
+            .as_ref()
+            .map(|x| {
+                x.iter()
+                    .map(|(k, v)| (k.to_string(), PyBytes::new(py, v)))
+                    .collect()
+            })
+    }
+
+    #[setter]
+    fn set_in_memory_distribution_resources(&self, value: &PyAny) -> PyResult<()> {
+        self.resource.borrow_mut().in_memory_distribution_resources =
+            pyobject_optional_resources_map_to_owned_bytes(value)?.map(|x| {
+                x.into_iter()
+                    .map(|(k, v)| (Cow::Owned(k), Cow::Owned(v)))
+                    .collect()
+            });
+
+        Ok(())
+    }
+
+    #[getter]
+    fn get_in_memory_shared_library<'p>(&self, py: Python<'p>) -> Option<&'p PyBytes> {
+        self.resource
+            .borrow()
+            .in_memory_shared_library
+            .as_ref()
+            .map(|x| PyBytes::new(py, x))
+    }
+
+    #[setter]
+    fn set_in_memory_shared_library(&self, value: &PyAny) -> PyResult<()> {
+        self.resource.borrow_mut().in_memory_shared_library =
+            pyobject_to_owned_bytes_optional(value)?.map(Cow::Owned);
+
+        Ok(())
+    }
+
+    #[getter]
+    fn get_shared_library_dependency_names(&self) -> Option<Vec<String>> {
+        self.resource
+            .borrow()
+            .shared_library_dependency_names
+            .as_ref()
+            .map(|x| x.iter().map(|v| v.to_string()).collect())
+    }
+
+    #[setter]
+    fn set_shared_library_dependency_names(&self, value: Option<Vec<String>>) -> PyResult<()> {
+        self.resource.borrow_mut().shared_library_dependency_names =
+            value.map(|x| x.into_iter().map(Cow::Owned).collect());
+
+        Ok(())
+    }
+
+    #[getter]
+    fn get_relative_path_module_source<'p>(&self, py: Python<'p>) -> PyResult<&'p PyAny> {
+        self.resource
+            .borrow()
+            .relative_path_module_source
+            .as_ref()
+            .map_or_else(
+                || Ok(py.None().into_ref(py)),
+                |x| path_to_pathlib_path(py, x),
+            )
+    }
+
+    #[setter]
+    fn set_relative_path_module_source(&self, py: Python, value: &PyAny) -> PyResult<()> {
+        self.resource.borrow_mut().relative_path_module_source =
+            pyobject_to_pathbuf_optional(py, value)?.map(Cow::Owned);
+
+        Ok(())
+    }
+
+    #[getter]
+    fn get_relative_path_module_bytecode<'p>(&self, py: Python<'p>) -> PyResult<&'p PyAny> {
+        self.resource
+            .borrow()
+            .relative_path_module_bytecode
+            .as_ref()
+            .map_or_else(
+                || Ok(py.None().into_ref(py)),
+                |x| path_to_pathlib_path(py, x),
+            )
+    }
+
+    #[setter]
+    fn set_relative_path_module_bytecode(&self, py: Python, value: &PyAny) -> PyResult<()> {
+        self.resource.borrow_mut().relative_path_module_bytecode =
+            pyobject_to_pathbuf_optional(py, value)?.map(Cow::Owned);
+
+        Ok(())
+    }
+
+    #[getter]
+    fn get_relative_path_module_bytecode_opt1<'p>(&self, py: Python<'p>) -> PyResult<&'p PyAny> {
+        self.resource
+            .borrow()
+            .relative_path_module_bytecode_opt1
+            .as_ref()
+            .map_or_else(
+                || Ok(py.None().into_ref(py)),
+                |x| path_to_pathlib_path(py, x),
+            )
+    }
+
+    #[setter]
+    fn set_relative_path_module_bytecode_opt1(&self, py: Python, value: &PyAny) -> PyResult<()> {
+        self.resource
+            .borrow_mut()
+            .relative_path_module_bytecode_opt1 =
+            pyobject_to_pathbuf_optional(py, value)?.map(Cow::Owned);
+
+        Ok(())
+    }
+
+    #[getter]
+    fn get_relative_path_module_bytecode_opt2<'p>(&self, py: Python<'p>) -> PyResult<&'p PyAny> {
+        self.resource
+            .borrow()
+            .relative_path_module_bytecode_opt2
+            .as_ref()
+            .map_or_else(
+                || Ok(py.None().into_ref(py)),
+                |x| path_to_pathlib_path(py, x),
+            )
+    }
+
+    #[setter]
+    fn set_relative_path_module_bytecode_opt2(&self, py: Python, value: &PyAny) -> PyResult<()> {
+        self.resource
+            .borrow_mut()
+            .relative_path_module_bytecode_opt2 =
+            pyobject_to_pathbuf_optional(py, value)?.map(Cow::Owned);
+
+        Ok(())
+    }
+
+    #[getter]
+    fn get_relative_path_extension_module_shared_library<'p>(
+        &self,
+        py: Python<'p>,
+    ) -> PyResult<&'p PyAny> {
+        self.resource
+            .borrow()
+            .relative_path_extension_module_shared_library
+            .as_ref()
+            .map_or_else(
+                || Ok(py.None().into_ref(py)),
+                |x| path_to_pathlib_path(py, x),
+            )
+    }
+
+    #[setter]
+    fn set_relative_path_extension_module_shared_library(
+        &self,
+        py: Python,
+        value: &PyAny,
+    ) -> PyResult<()> {
+        self.resource
+            .borrow_mut()
+            .relative_path_extension_module_shared_library =
+            pyobject_to_pathbuf_optional(py, value)?.map(Cow::Owned);
+
+        Ok(())
+    }
+
+    #[getter]
+    fn get_relative_path_package_resources<'p>(&self, py: Python<'p>) -> PyResult<&'p PyAny> {
+        self.resource
+            .borrow()
+            .relative_path_package_resources
+            .as_ref()
+            .map_or_else(
+                || Ok(py.None().into_ref(py)),
+                |x| -> PyResult<&PyAny> {
+                    let res = PyDict::new(py);
+
+                    for (k, v) in x.iter() {
+                        res.set_item(k, path_to_pathlib_path(py, v)?)?;
+                    }
+
+                    Ok(res)
+                },
+            )
+    }
+
+    #[setter]
+    fn set_relative_path_package_resources(&self, py: Python, value: &PyAny) -> PyResult<()> {
+        self.resource.borrow_mut().relative_path_package_resources =
+            pyobject_optional_resources_map_to_pathbuf(py, value)?.map(|x| {
+                x.into_iter()
+                    .map(|(k, v)| (Cow::Owned(k), Cow::Owned(v)))
+                    .collect()
+            });
+
+        Ok(())
+    }
+
+    #[getter]
+    fn get_relative_path_distribution_resources<'p>(&self, py: Python<'p>) -> PyResult<&'p PyAny> {
+        self.resource
+            .borrow()
+            .relative_path_distribution_resources
+            .as_ref()
+            .map_or_else(
+                || Ok(py.None().into_ref(py)),
+                |x| -> PyResult<&PyAny> {
+                    let res = PyDict::new(py);
+
+                    for (k, v) in x.iter() {
+                        res.set_item(k, path_to_pathlib_path(py, v)?)?;
+                    }
+
+                    Ok(res.into())
+                },
+            )
+    }
+
+    #[setter]
+    fn set_relative_path_distribution_resources(&self, py: Python, value: &PyAny) -> PyResult<()> {
+        self.resource
+            .borrow_mut()
+            .relative_path_distribution_resources =
+            pyobject_optional_resources_map_to_pathbuf(py, value)?.map(|x| {
+                x.into_iter()
+                    .map(|(k, v)| (Cow::Owned(k), Cow::Owned(v)))
+                    .collect()
+            });
+
+        Ok(())
+    }
+}
 
 /// Convert a Resource to an OxidizedResource.
-pub fn resource_to_pyobject(
-    py: cpython::Python,
+pub(crate) fn resource_to_pyobject<'p>(
+    py: Python<'p>,
     resource: &Resource<u8>,
-) -> cpython::PyResult<cpython::PyObject> {
-    let resource = OxidizedResource::create_instance(py, RefCell::new(resource.to_owned()))?;
-
-    Ok(resource.into_object())
+) -> PyResult<&'p PyCell<OxidizedResource>> {
+    PyCell::new(
+        py,
+        OxidizedResource {
+            resource: RefCell::new(resource.to_owned()),
+        },
+    )
 }
 
 #[inline]
-pub(crate) fn pyobject_to_resource(
-    py: cpython::Python,
-    resource: OxidizedResource,
-) -> Resource<u8> {
-    resource.resource(py).borrow().clone()
+pub(crate) fn pyobject_to_resource(resource: &OxidizedResource) -> Resource<'static, u8> {
+    resource.resource.borrow().clone()
 }
 
 #[cfg(test)]

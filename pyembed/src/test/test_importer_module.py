@@ -132,6 +132,7 @@ COMMON_CLASS_DUNDER_ATTRIBUTES = {
     "__init__",
     "__le__",
     "__lt__",
+    "__module__",
     "__ne__",
     "__reduce__",
     "__reduce_ex__",

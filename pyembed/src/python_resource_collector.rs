@@ -6,7 +6,7 @@
 
 use {
     crate::{
-        conversion::{cpython_path_to_pathlib_path, cpython_pyobject_to_pathbuf},
+        conversion::{path_to_pathlib_path, pyobject_to_pathbuf},
         python_resource_types::{
             PythonExtensionModule, PythonModuleBytecode, PythonModuleSource,
             PythonPackageDistributionResource, PythonPackageResource,
@@ -14,8 +14,13 @@ use {
         python_resources::resource_to_pyobject,
     },
     anyhow::Context,
-    cpython::{py_class, ObjectProtocol, PythonObject, ToPyObject},
-    python3_sys as oldpyffi,
+    pyo3::{
+        exceptions::{PyTypeError, PyValueError},
+        ffi as pyffi,
+        prelude::*,
+        types::{PyBytes, PyList, PyTuple},
+        AsPyPointer, PyObjectProtocol,
+    },
     python_packaging::{
         bytecode::BytecodeCompiler,
         location::{AbstractResourceLocation, ConcreteResourceLocation},
@@ -28,20 +33,22 @@ use {
     },
 };
 
+#[pyclass(module = "oxidized_importer")]
 struct PyTempDir {
-    cleanup: cpython::PyObject,
+    cleanup: Py<PyAny>,
     path: PathBuf,
 }
 
 impl PyTempDir {
-    fn new(py: cpython::Python) -> cpython::PyResult<Self> {
-        let temp_dir =
-            py.import("tempfile")?
-                .call(py, "TemporaryDirectory", cpython::NoArgs, None)?;
-        let cleanup = temp_dir.getattr(py, "cleanup")?;
-        let path = cpython_pyobject_to_pathbuf(py, temp_dir.getattr(py, "name")?)?;
+    fn new(py: Python) -> PyResult<Self> {
+        let temp_dir = py
+            .import("tempfile")?
+            .getattr("TemporaryDirectory")?
+            .call0()?;
+        let cleanup = temp_dir.getattr("cleanup")?.into_py(py);
+        let path = pyobject_to_pathbuf(py, temp_dir.getattr("name")?)?;
 
-        Ok(PyTempDir { cleanup, path })
+        Ok(Self { cleanup, path })
     }
 
     fn path(&self) -> &Path {
@@ -51,56 +58,43 @@ impl PyTempDir {
 
 impl Drop for PyTempDir {
     fn drop(&mut self) {
-        let gil_guard = cpython::Python::acquire_gil();
+        let gil_guard = Python::acquire_gil();
         let py = gil_guard.python();
-        if self.cleanup.call(py, cpython::NoArgs, None).is_err() {
+
+        if self.cleanup.call0(py).is_err() {
             let cleanup = self.cleanup.as_ptr();
-            unsafe { oldpyffi::PyErr_WriteUnraisable(cleanup) }
+            unsafe { pyffi::PyErr_WriteUnraisable(cleanup) }
         }
     }
 }
 
-py_class!(pub(crate) class OxidizedResourceCollector |py| {
-    data collector: RefCell<PythonResourceCollector>;
+#[pyclass(module = "oxidized_importer")]
+pub(crate) struct OxidizedResourceCollector {
+    collector: RefCell<PythonResourceCollector>,
+}
 
-    def __new__(_cls, allowed_locations: Vec<String>) -> cpython::PyResult<OxidizedResourceCollector> {
-        OxidizedResourceCollector::new(py, allowed_locations)
+#[pyproto]
+impl PyObjectProtocol for OxidizedResourceCollector {
+    fn __repr__(&self) -> &'static str {
+        "<OxidizedResourceCollector>"
     }
+}
 
-    def __repr__(&self) -> cpython::PyResult<String> {
-        Ok("<OxidizedResourceCollector>".to_string())
-    }
-
-    @property def allowed_locations(&self) -> cpython::PyResult<cpython::PyObject> {
-        Ok(self.allowed_locations_impl(py))
-    }
-
-    def add_in_memory(&self, resource: cpython::PyObject) -> cpython::PyResult<cpython::PyObject> {
-        self.add_in_memory_impl(py, resource)
-    }
-
-    def add_filesystem_relative(&self, prefix: String, resource: cpython::PyObject) -> cpython::PyResult<cpython::PyObject> {
-        self.add_filesystem_relative_impl(py, prefix, resource)
-    }
-
-    def oxidize(&self, python_exe: Option<cpython::PyObject> = None) -> cpython::PyResult<cpython::PyObject> {
-        self.oxidize_impl(py, python_exe)
-    }
-});
-
+#[pymethods]
 impl OxidizedResourceCollector {
-    pub fn new(py: cpython::Python, allowed_locations: Vec<String>) -> cpython::PyResult<Self> {
+    #[new]
+    fn new(py: Python, allowed_locations: Vec<String>) -> PyResult<Self> {
         let allowed_locations = allowed_locations
             .iter()
             .map(|location| AbstractResourceLocation::try_from(location.as_str()))
             .collect::<Result<Vec<_>, _>>()
-            .map_err(|e| cpython::PyErr::new::<cpython::exc::ValueError, _>(py, e))?;
+            .map_err(PyValueError::new_err)?;
 
         let sys_module = py.import("sys")?;
         let cache_tag = sys_module
-            .get(py, "implementation")?
-            .getattr(py, "cache_tag")?
-            .extract::<String>(py)?;
+            .getattr("implementation")?
+            .getattr("cache_tag")?
+            .extract::<String>()?;
 
         let collector = PythonResourceCollector::new(
             allowed_locations.clone(),
@@ -110,135 +104,118 @@ impl OxidizedResourceCollector {
             &cache_tag,
         );
 
-        OxidizedResourceCollector::create_instance(py, RefCell::new(collector))
+        Ok(Self {
+            collector: RefCell::new(collector),
+        })
     }
 
-    fn allowed_locations_impl(&self, py: cpython::Python) -> cpython::PyObject {
+    #[getter]
+    fn allowed_locations<'p>(&self, py: Python<'p>) -> PyResult<&'p PyList> {
         let values = self
-            .collector(py)
+            .collector
             .borrow()
             .allowed_locations()
             .iter()
-            .map(|l| l.to_string().to_py_object(py).into_object())
-            .collect::<Vec<cpython::PyObject>>();
+            .map(|l| l.to_string().into_py(py))
+            .collect::<Vec<PyObject>>();
 
-        cpython::PyList::new(py, &values).into_object()
+        Ok(PyList::new(py, &values))
     }
 
-    fn add_in_memory_impl(
-        &self,
-        py: cpython::Python,
-        resource: cpython::PyObject,
-    ) -> cpython::PyResult<cpython::PyObject> {
-        let mut collector = self.collector(py).borrow_mut();
-        let typ = resource.get_type(py);
+    fn add_in_memory(&self, py: Python, resource: &PyAny) -> PyResult<()> {
+        let mut collector = self.collector.borrow_mut();
+        let typ = resource.get_type();
+        let repr = resource.repr()?;
 
-        match typ.name(py).as_ref() {
+        match typ.name()? {
             "PythonExtensionModule" => {
-                let module = resource.cast_into::<PythonExtensionModule>(py)?;
-                let repr = module.__repr__(py)?;
-
-                let resource = module.get_resource(py);
+                let module_cell = resource.cast_as::<PyCell<PythonExtensionModule>>()?;
+                let module = module_cell.borrow();
+                let resource = module.get_resource();
 
                 if let Some(location) = &resource.shared_library {
                     collector
                         .add_python_extension_module(&resource, &ConcreteResourceLocation::InMemory)
                         .with_context(|| format!("adding {}", repr))
-                        .map_err(|e| {
-                            cpython::PyErr::new::<cpython::exc::ValueError, _>(
-                                py,
-                                format!("{:?}", e),
-                            )
-                        })?;
+                        .map_err(|e| PyValueError::new_err(format!("{:?}", e)))?;
 
-                    Ok(py.None())
+                    Ok(())
                 } else {
-                    Err(cpython::PyErr::new::<cpython::exc::ValueError, _>(
-                        py,
+                    Err(PyValueError::new_err(
                         "PythonExtensionModule lacks a shared library",
                     ))
                 }
             }
             "PythonModuleBytecode" => {
-                let module = resource.cast_into::<PythonModuleBytecode>(py)?;
-                let repr = module.__repr__(py)?;
+                let module = resource.cast_as::<PyCell<PythonModuleBytecode>>()?;
                 collector
                     .add_python_module_bytecode(
-                        &module.get_resource(py),
+                        &module.borrow().get_resource(),
                         &ConcreteResourceLocation::InMemory,
                     )
                     .with_context(|| format!("adding {}", repr))
-                    .map_err(|e| {
-                        cpython::PyErr::new::<cpython::exc::ValueError, _>(py, format!("{:?}", e))
-                    })?;
+                    .map_err(|e| PyValueError::new_err(format!("{:?}", e)))?;
 
-                Ok(py.None())
+                Ok(())
             }
             "PythonModuleSource" => {
-                let module = resource.cast_into::<PythonModuleSource>(py)?;
-                let repr = module.__repr__(py)?;
+                let module = resource.cast_as::<PyCell<PythonModuleSource>>()?;
                 collector
                     .add_python_module_source(
-                        &module.get_resource(py),
+                        &module.borrow().get_resource(),
                         &ConcreteResourceLocation::InMemory,
                     )
                     .with_context(|| format!("adding {}", repr))
-                    .map_err(|e| {
-                        cpython::PyErr::new::<cpython::exc::ValueError, _>(py, format!("{:?}", e))
-                    })?;
+                    .map_err(|e| PyValueError::new_err(format!("{:?}", e)))?;
 
-                Ok(py.None())
+                Ok(())
             }
             "PythonPackageResource" => {
-                let resource = resource.cast_into::<PythonPackageResource>(py)?;
-                let repr = resource.__repr__(py)?;
+                let resource = resource.cast_as::<PyCell<PythonPackageResource>>()?;
                 collector
                     .add_python_package_resource(
-                        &resource.get_resource(py),
+                        &resource.borrow().get_resource(),
                         &ConcreteResourceLocation::InMemory,
                     )
                     .with_context(|| format!("adding {}", repr))
-                    .map_err(|e| {
-                        cpython::PyErr::new::<cpython::exc::ValueError, _>(py, format!("{:?}", e))
-                    })?;
+                    .map_err(|e| PyValueError::new_err(format!("{:?}", e)))?;
 
-                Ok(py.None())
+                Ok(())
             }
             "PythonPackageDistributionResource" => {
-                let resource = resource.cast_into::<PythonPackageDistributionResource>(py)?;
-                let repr = resource.__repr__(py)?;
+                let resource = resource.cast_as::<PyCell<PythonPackageDistributionResource>>()?;
                 collector
                     .add_python_package_distribution_resource(
-                        &resource.get_resource(py),
+                        &resource.borrow().get_resource(),
                         &ConcreteResourceLocation::InMemory,
                     )
                     .with_context(|| format!("adding {}", repr))
-                    .map_err(|e| {
-                        cpython::PyErr::new::<cpython::exc::ValueError, _>(py, format!("{:?}", e))
-                    })?;
+                    .map_err(|e| PyValueError::new_err(format!("{:?}", e)))?;
 
-                Ok(py.None())
+                Ok(())
             }
-            _ => Err(cpython::PyErr::new::<cpython::exc::TypeError, _>(
-                py,
-                format!("cannot operate on {} values", typ.name(py)),
-            )),
+            type_name => Err(PyTypeError::new_err(format!(
+                "cannot operate on {} values",
+                type_name
+            ))),
         }
     }
 
-    fn add_filesystem_relative_impl(
+    fn add_filesystem_relative(
         &self,
-        py: cpython::Python,
+        py: Python,
         prefix: String,
-        resource: cpython::PyObject,
-    ) -> cpython::PyResult<cpython::PyObject> {
-        let mut collector = self.collector(py).borrow_mut();
+        resource: &PyAny,
+    ) -> PyResult<()> {
+        let mut collector = self.collector.borrow_mut();
 
-        match resource.get_type(py).name(py).as_ref() {
+        let repr = resource.repr()?;
+
+        match resource.get_type().name()? {
             "PythonExtensionModule" => {
-                let module = resource.cast_into::<PythonExtensionModule>(py)?;
-                let repr = module.__repr__(py)?;
-                let resource = module.get_resource(py);
+                let module_cell = resource.cast_as::<PyCell<PythonExtensionModule>>()?;
+                let module = module_cell.borrow();
+                let resource = module.get_resource();
 
                 collector
                     .add_python_extension_module(
@@ -246,111 +223,90 @@ impl OxidizedResourceCollector {
                         &ConcreteResourceLocation::RelativePath(prefix),
                     )
                     .with_context(|| format!("adding {}", repr))
-                    .map_err(|e| {
-                        cpython::PyErr::new::<cpython::exc::ValueError, _>(py, format!("{:?}", e))
-                    })?;
+                    .map_err(|e| PyValueError::new_err(format!("{:?}", e)))?;
 
-                Ok(py.None())
+                Ok(())
             }
             "PythonModuleBytecode" => {
-                let module = resource.cast_into::<PythonModuleBytecode>(py)?;
-                let repr = module.__repr__(py)?;
+                let module = resource.cast_as::<PyCell<PythonModuleBytecode>>()?;
+
                 collector
                     .add_python_module_bytecode(
-                        &module.get_resource(py),
+                        &module.borrow().get_resource(),
                         &ConcreteResourceLocation::RelativePath(prefix),
                     )
                     .with_context(|| format!("adding {}", repr))
-                    .map_err(|e| {
-                        cpython::PyErr::new::<cpython::exc::ValueError, _>(py, format!("{:?}", e))
-                    })?;
+                    .map_err(|e| PyValueError::new_err(format!("{:?}", e)))?;
 
-                Ok(py.None())
+                Ok(())
             }
             "PythonModuleSource" => {
-                let module = resource.cast_into::<PythonModuleSource>(py)?;
-                let repr = module.__repr__(py)?;
+                let module = resource.cast_as::<PyCell<PythonModuleSource>>()?;
+
                 collector
                     .add_python_module_source(
-                        &module.get_resource(py),
+                        &module.borrow().get_resource(),
                         &ConcreteResourceLocation::RelativePath(prefix),
                     )
                     .with_context(|| format!("adding {}", repr))
-                    .map_err(|e| {
-                        cpython::PyErr::new::<cpython::exc::ValueError, _>(py, format!("{:?}", e))
-                    })?;
+                    .map_err(|e| PyValueError::new_err(format!("{:?}", e)))?;
 
-                Ok(py.None())
+                Ok(())
             }
             "PythonPackageResource" => {
-                let resource = resource.cast_into::<PythonPackageResource>(py)?;
-                let repr = resource.__repr__(py)?;
+                let resource = resource.cast_as::<PyCell<PythonPackageResource>>()?;
+
                 collector
                     .add_python_package_resource(
-                        &resource.get_resource(py),
+                        &resource.borrow().get_resource(),
                         &ConcreteResourceLocation::RelativePath(prefix),
                     )
                     .with_context(|| format!("adding {}", repr))
-                    .map_err(|e| {
-                        cpython::PyErr::new::<cpython::exc::ValueError, _>(py, format!("{:?}", e))
-                    })?;
+                    .map_err(|e| PyValueError::new_err(format!("{:?}", e)))?;
 
-                Ok(py.None())
+                Ok(())
             }
             "PythonPackageDistributionResource" => {
-                let resource = resource.cast_into::<PythonPackageDistributionResource>(py)?;
-                let repr = resource.__repr__(py)?;
+                let resource = resource.cast_as::<PyCell<PythonPackageDistributionResource>>()?;
+
                 collector
                     .add_python_package_distribution_resource(
-                        &resource.get_resource(py),
+                        &resource.borrow().get_resource(),
                         &ConcreteResourceLocation::RelativePath(prefix),
                     )
                     .with_context(|| format!("adding {}", repr))
-                    .map_err(|e| {
-                        cpython::PyErr::new::<cpython::exc::ValueError, _>(py, format!("{:?}", e))
-                    })?;
+                    .map_err(|e| PyValueError::new_err(format!("{:?}", e)))?;
 
-                Ok(py.None())
+                Ok(())
             }
-            name => Err(cpython::PyErr::new::<cpython::exc::TypeError, _>(
-                py,
-                format!("cannot operate on {} values", name),
-            )),
+            name => Err(PyTypeError::new_err(format!(
+                "cannot operate on {} values",
+                name
+            ))),
         }
     }
 
-    fn oxidize_impl(
-        &self,
-        py: cpython::Python,
-        python_exe: Option<cpython::PyObject>,
-    ) -> cpython::PyResult<cpython::PyObject> {
+    #[args(python_exe = "None")]
+    fn oxidize<'p>(&self, py: Python<'p>, python_exe: Option<&PyAny>) -> PyResult<&'p PyTuple> {
         let python_exe = match python_exe {
             Some(p) => p,
             None => {
                 let sys_module = py.import("sys")?;
-                sys_module.get(py, "executable")?
+                sys_module.getattr("executable")?
             }
         };
-        let python_exe = cpython_pyobject_to_pathbuf(py, python_exe)?;
+        let python_exe = pyobject_to_pathbuf(py, python_exe)?;
         let temp_dir = PyTempDir::new(py)?;
-        let collector = self.collector(py).borrow();
+        let collector = self.collector.borrow();
 
         let mut compiler = BytecodeCompiler::new(&python_exe, temp_dir.path()).map_err(|e| {
-            cpython::PyErr::new::<cpython::exc::ValueError, _>(
-                py,
-                format!("error constructing bytecode compiler: {:?}", e),
-            )
+            PyValueError::new_err(format!("error constructing bytecode compiler: {:?}", e))
         })?;
 
         let prepared: CompiledResourcesCollection = collector
             .compile_resources(&mut compiler)
             .context("compiling resources")
-            .map_err(|e| {
-                cpython::PyErr::new::<cpython::exc::ValueError, _>(
-                    py,
-                    format!("error oxidizing: {:?}", e),
-                )
-            })?;
+            .map_err(|e| PyValueError::new_err(format!("error oxidizing: {:?}", e)))?;
 
         let mut resources = Vec::new();
 
@@ -361,19 +317,20 @@ impl OxidizedResourceCollector {
         let mut file_installs = Vec::new();
 
         for (path, location, executable) in &prepared.extra_files {
-            let path = cpython_path_to_pathlib_path(py, path)?;
-            let data = location.resolve_content().map_err(|e| {
-                cpython::PyErr::new::<cpython::exc::ValueError, _>(py, e.to_string())
-            })?;
-            let data = cpython::PyBytes::new(py, &data);
-            let executable = executable.to_py_object(py);
+            let path = path_to_pathlib_path(py, path)?;
+            let data = location
+                .resolve_content()
+                .map_err(|e| PyValueError::new_err(e.to_string()))?;
+            let data = PyBytes::new(py, &data);
+            let executable = executable.to_object(py);
 
-            file_installs.push((path, data, executable).into_py_object(py));
+            file_installs.push((path, data, executable).to_object(py));
         }
 
-        Ok((resources.into_py_object(py), file_installs)
-            .into_py_object(py)
-            .into_object())
+        Ok(PyTuple::new(
+            py,
+            &[resources.to_object(py), file_installs.to_object(py)],
+        ))
     }
 }
 
@@ -381,7 +338,7 @@ impl OxidizedResourceCollector {
 mod tests {
     use {super::*, rusty_fork::rusty_fork_test};
 
-    fn get_interpreter<'interp, 'rsrc, 'py>() -> crate::MainPythonInterpreter<'py, 'interp, 'rsrc> {
+    fn get_interpreter<'interp, 'rsrc>() -> crate::MainPythonInterpreter<'interp, 'rsrc> {
         let mut config = crate::OxidizedPythonInterpreterConfig::default();
         config.interpreter_config.parse_argv = Some(false);
         config.set_missing_path_configuration = false;

@@ -273,11 +273,16 @@ class TestImporterPathEntryFinder(unittest.TestCase):
         finder = self.finder(os.path.join(PATH_HOOK_BASE_STR, "a"), "a")
         # finder.find_spec does not take a path arg
         self.assertRaisesRegex(
-            TypeError, "takes at most 2 arguments", finder.find_spec, "a.b", None, None
+            TypeError,
+            r"OxidizedPathEntryFinder\.find_spec\(\) takes from 1 to 2 positional arguments but 3 were given",
+            finder.find_spec,
+            "a.b",
+            None,
+            None,
         )
         self.assertRaisesRegex(
             TypeError,
-            "'path' is an invalid keyword argument",
+            r"OxidizedPathEntryFinder\.find_spec\(\) got an unexpected keyword argument 'path'",
             finder.find_spec,
             "a.b",
             path=None,

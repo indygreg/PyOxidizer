@@ -5,8 +5,11 @@
 use {
     super::{default_interpreter_config, set_sys_paths, PYTHON_INTERPRETER_PATH},
     crate::{MainPythonInterpreter, OxidizedPythonInterpreterConfig},
-    cpython::ObjectProtocol,
-    python3_sys as oldpyffi,
+    pyo3::{
+        ffi as pyffi,
+        prelude::*,
+        types::{PyBytes, PyList, PyString, PyStringData},
+    },
     python_packaging::{
         interpreter::{BytesWarning, MemoryAllocatorBackend, PythonInterpreterProfile},
         resource::BytecodeOptimizationLevel,
@@ -33,9 +36,9 @@ fn get_unicode_argument() -> OsString {
     OsString::from_wide(&[20013, 25991])
 }
 
-fn reprs(py: cpython::Python, container: &cpython::PyObject) -> cpython::PyResult<Vec<String>> {
+fn reprs(container: &PyAny) -> PyResult<Vec<String>> {
     let mut names = Vec::new();
-    for x in container.iter(py)? {
+    for x in container.iter()? {
         names.push(x?.to_string());
     }
     Ok(names)
@@ -50,9 +53,10 @@ fn assert_importer(oxidized: bool, filesystem: bool) {
 
     let py = interp.acquire_gil();
     let sys = py.import("sys").unwrap();
-    let meta_path_reprs = reprs(py, &sys.get(py, "meta_path").unwrap()).unwrap();
-    let path_hook_reprs = reprs(py, &sys.get(py, "path_hooks").unwrap()).unwrap();
-    const PATH_HOOK_REPR: &str = "built-in method path_hook of OxidizedFinder object";
+    let meta_path_reprs = reprs(&sys.getattr("meta_path").unwrap()).unwrap();
+    let path_hook_reprs = reprs(&sys.getattr("path_hooks").unwrap()).unwrap();
+    const PATH_HOOK_REPR: &str =
+        "built-in method path_hook of oxidized_importer.OxidizedFinder object";
 
     // OxidizedFinder should be installed sys.meta_path and sys.path_hooks as first
     // element when enabled. Its presence also replaced BuiltinImporter and
@@ -102,18 +106,18 @@ rusty_fork_test! {
 
         let py = interp.acquire_gil();
         let sys = py.import("sys").unwrap();
-        let meta_path = sys.get(py, "meta_path").unwrap();
-        assert_eq!(meta_path.len(py).unwrap(), 3);
+        let meta_path = sys.getattr("meta_path").unwrap();
+        assert_eq!(meta_path.len().unwrap(), 3);
 
-        let importer = meta_path.get_item(py, 0).unwrap();
+        let importer = meta_path.get_item(0).unwrap();
         assert!(importer
             .to_string()
             .contains("_frozen_importlib.BuiltinImporter"));
-        let importer = meta_path.get_item(py, 1).unwrap();
+        let importer = meta_path.get_item(1).unwrap();
         assert!(importer
             .to_string()
             .contains("_frozen_importlib.FrozenImporter"));
-        let importer = meta_path.get_item(py, 2).unwrap();
+        let importer = meta_path.get_item(2).unwrap();
         assert!(importer
             .to_string()
             .contains("_frozen_importlib_external.PathFinder"));
@@ -149,13 +153,13 @@ rusty_fork_test! {
 
         let py = interp.acquire_gil();
         let sys = py.import("sys").unwrap();
-        let flags = sys.get(py, "flags").unwrap();
+        let flags = sys.getattr("flags").unwrap();
 
         assert_eq!(
             flags
-                .getattr(py, "isolated")
+                .getattr("isolated")
                 .unwrap()
-                .extract::<i32>(py)
+                .extract::<i32>()
                 .unwrap(),
             1
         );
@@ -334,7 +338,7 @@ rusty_fork_test! {
             &Some(vec![PathBuf::from(format!("{}/lib", origin.display()))])
         );
 
-        let py_config: oldpyffi::PyConfig = (&config).try_into().unwrap();
+        let py_config: pyffi::PyConfig = (&config).try_into().unwrap();
 
         assert_eq!(py_config.module_search_paths_set, 1);
         assert_eq!(py_config.module_search_paths.length, 1);
@@ -353,9 +357,9 @@ rusty_fork_test! {
         let sys = py.import("sys").unwrap();
 
         let argv = sys
-            .get(py, "argv")
+            .getattr("argv")
             .unwrap()
-            .extract::<Vec<String>>(py)
+            .extract::<Vec<String>>()
             .unwrap();
         let rust_args = std::env::args().collect::<Vec<_>>();
         assert_eq!(argv, rust_args);
@@ -380,9 +384,9 @@ rusty_fork_test! {
         let sys = py.import("sys").unwrap();
 
         let argv = sys
-            .get(py, "argv")
+            .getattr("argv")
             .unwrap()
-            .extract::<Vec<String>>(py)
+            .extract::<Vec<String>>()
             .unwrap();
         assert_eq!(argv, vec![PYTHON_INTERPRETER_PATH, "arg0", "arg1"]);
     }
@@ -402,9 +406,9 @@ rusty_fork_test! {
         let sys = py.import("sys").unwrap();
 
         let argv = sys
-            .get(py, "argv")
+            .getattr("argv")
             .unwrap()
-            .extract::<Vec<String>>(py)
+            .extract::<Vec<String>>()
             .unwrap();
         assert_eq!(argv, vec![PYTHON_INTERPRETER_PATH, "foo", "bar"]);
     }
@@ -420,14 +424,14 @@ rusty_fork_test! {
         let py = interp.acquire_gil();
         let sys = py.import("sys").unwrap();
 
-        let argvb_raw = sys.get(py, "argvb").unwrap();
-        let argvb = argvb_raw.cast_as::<cpython::PyList>(py).unwrap();
-        assert_eq!(argvb.len(py), 2);
+        let argvb_raw = sys.getattr("argvb").unwrap();
+        let argvb = argvb_raw.cast_as::<PyList>().unwrap();
+        assert_eq!(argvb.len(), 2);
 
-        let value_raw = argvb.get_item(py, 1);
-        let value_bytes = value_raw.cast_as::<cpython::PyBytes>(py).unwrap();
+        let value_raw = argvb.get_item(1);
+        let value_bytes = value_raw.cast_as::<PyBytes>().unwrap();
         assert_eq!(
-            value_bytes.data(py).to_vec(),
+            value_bytes.as_bytes().to_vec(),
             if cfg!(windows) {
                 // UTF-16-LE.
                 b"\x2d\x4e\x87\x65".to_vec()
@@ -448,14 +452,15 @@ rusty_fork_test! {
         let py = interp.acquire_gil();
         let sys = py.import("sys").unwrap();
 
-        let argv_raw = sys.get(py, "argv").unwrap();
-        let argv = argv_raw.cast_as::<cpython::PyList>(py).unwrap();
-        assert_eq!(argv.len(py), 2);
+        let argv_raw = sys.getattr("argv").unwrap();
+        let argv = argv_raw.cast_as::<PyList>().unwrap();
+        assert_eq!(argv.len(), 2);
 
-        let value_raw = argv.get_item(py, 1);
-        let value_string = value_raw.cast_as::<cpython::PyString>(py).unwrap();
-        match value_string.data(py) {
-            cpython::PyStringData::Utf16(&[20013, 25991]) => {},
+        let value_raw = argv.get_item(1);
+        let value_string = value_raw.cast_as::<PyString>().unwrap();
+
+        match unsafe { value_string.data().unwrap() } {
+            PyStringData::Ucs2(&[20013, 25991]) => {},
             value => assert!(false, "{:?}", value),
         }
     }
@@ -472,17 +477,17 @@ rusty_fork_test! {
         let py = interp.acquire_gil();
         let sys = py.import("sys").unwrap();
 
-        let argv_raw = sys.get(py, "argv").unwrap();
-        let argv = argv_raw.cast_as::<cpython::PyList>(py).unwrap();
-        assert_eq!(argv.len(py), 2);
+        let argv_raw = sys.getattr("argv").unwrap();
+        let argv = argv_raw.cast_as::<PyList>().unwrap();
+        assert_eq!(argv.len(), 2);
 
-        let value_raw = argv.get_item(py, 1);
-        let value_string = value_raw.cast_as::<cpython::PyString>(py).unwrap();
+        let value_raw = argv.get_item(1);
+        let value_string = value_raw.cast_as::<PyString>().unwrap();
 
         // The result in isolated mode without configure_locale is kinda wonky.
-        match value_string.data(py) {
+        match unsafe { value_string.data().unwrap() } {
             // This is the correct value.
-            cpython::PyStringData::Utf16(&[20013, 25991]) => {
+            PyStringData::Ucs2(&[20013, 25991]) => {
                 if cfg!(any(target_family = "windows", target_os = "macos")) {
                     assert!(true);
                 } else {
@@ -490,7 +495,7 @@ rusty_fork_test! {
                 }
             }
             // This is some abomination.
-            cpython::PyStringData::Utf16(&[56548, 56504, 56493, 56550, 56470, 56455]) => {
+            PyStringData::Ucs2(&[56548, 56504, 56493, 56550, 56470, 56455]) => {
                 if cfg!(target_family = "unix") {
                     assert!(true);
                 } else {
@@ -514,15 +519,15 @@ rusty_fork_test! {
         let py = interp.acquire_gil();
         let sys = py.import("sys").unwrap();
 
-        let argv_raw = sys.get(py, "argv").unwrap();
-        let argv = argv_raw.cast_as::<cpython::PyList>(py).unwrap();
-        assert_eq!(argv.len(py), 2);
+        let argv_raw = sys.getattr("argv").unwrap();
+        let argv = argv_raw.cast_as::<PyList>().unwrap();
+        assert_eq!(argv.len(), 2);
 
-        let value_raw = argv.get_item(py, 1);
-        let value_string = value_raw.cast_as::<cpython::PyString>(py).unwrap();
+        let value_raw = argv.get_item(1);
+        let value_string = value_raw.cast_as::<PyString>().unwrap();
 
-        match value_string.data(py) {
-            cpython::PyStringData::Utf16(&[20013, 25991]) => {},
+        match unsafe { value_string.data().unwrap() } {
+            PyStringData::Ucs2(&[20013, 25991]) => {},
             value => assert!(false, "unexpected string data: {:?}", value),
         }
     }
@@ -554,8 +559,8 @@ rusty_fork_test! {
         let py = interp.acquire_gil();
         let sys = py.import("sys").unwrap();
 
-        let flags = sys.get(py, "flags").unwrap();
-        assert!(flags.getattr(py, "dev_mode").unwrap().extract::<bool>(py).unwrap());
+        let flags = sys.getattr("flags").unwrap();
+        assert!(flags.getattr("dev_mode").unwrap().extract::<bool>().unwrap());
     }
 
     #[test]
@@ -569,8 +574,8 @@ rusty_fork_test! {
         let py = interp.acquire_gil();
         let sys = py.import("sys").unwrap();
 
-        let flags = sys.get(py, "flags").unwrap();
-        assert_eq!(flags.getattr(py, "ignore_environment").unwrap().extract::<i64>(py).unwrap(), 1);
+        let flags = sys.getattr("flags").unwrap();
+        assert_eq!(flags.getattr("ignore_environment").unwrap().extract::<i64>().unwrap(), 1);
     }
 
     #[test]
@@ -583,8 +588,8 @@ rusty_fork_test! {
         let py = interp.acquire_gil();
         let sys = py.import("sys").unwrap();
 
-        let flags = sys.get(py, "flags").unwrap();
-        assert_eq!(flags.getattr(py, "utf8_mode").unwrap().extract::<i64>(py).unwrap(), 1);
+        let flags = sys.getattr("flags").unwrap();
+        assert_eq!(flags.getattr("utf8_mode").unwrap().extract::<i64>().unwrap(), 1);
     }
 
     #[test]
@@ -597,8 +602,8 @@ rusty_fork_test! {
         let py = interp.acquire_gil();
         let sys = py.import("sys").unwrap();
 
-        let flags = sys.get(py, "flags").unwrap();
-        assert_eq!(flags.getattr(py, "bytes_warning").unwrap().extract::<i64>(py).unwrap(), 1);
+        let flags = sys.getattr("flags").unwrap();
+        assert_eq!(flags.getattr("bytes_warning").unwrap().extract::<i64>().unwrap(), 1);
     }
 
     #[test]
@@ -611,8 +616,8 @@ rusty_fork_test! {
         let py = interp.acquire_gil();
         let sys = py.import("sys").unwrap();
 
-        let flags = sys.get(py, "flags").unwrap();
-        assert_eq!(flags.getattr(py, "bytes_warning").unwrap().extract::<i64>(py).unwrap(), 2);
+        let flags = sys.getattr("flags").unwrap();
+        assert_eq!(flags.getattr("bytes_warning").unwrap().extract::<i64>().unwrap(), 2);
     }
 
     #[test]
@@ -625,8 +630,8 @@ rusty_fork_test! {
         let py = interp.acquire_gil();
         let sys = py.import("sys").unwrap();
 
-        let flags = sys.get(py, "flags").unwrap();
-        assert_eq!(flags.getattr(py, "optimize").unwrap().extract::<i64>(py).unwrap(), 1);
+        let flags = sys.getattr("flags").unwrap();
+        assert_eq!(flags.getattr("optimize").unwrap().extract::<i64>().unwrap(), 1);
     }
 
     #[test]
@@ -639,8 +644,8 @@ rusty_fork_test! {
         let py = interp.acquire_gil();
         let sys = py.import("sys").unwrap();
 
-        let flags = sys.get(py, "flags").unwrap();
-        assert_eq!(flags.getattr(py, "optimize").unwrap().extract::<i64>(py).unwrap(), 2);
+        let flags = sys.getattr("flags").unwrap();
+        assert_eq!(flags.getattr("optimize").unwrap().extract::<i64>().unwrap(), 2);
     }
 
     #[test]
@@ -653,8 +658,8 @@ rusty_fork_test! {
         let py = interp.acquire_gil();
         let sys = py.import("sys").unwrap();
 
-        let flags = sys.get(py, "flags").unwrap();
-        assert_eq!(flags.getattr(py, "inspect").unwrap().extract::<i64>(py).unwrap(), 1);
+        let flags = sys.getattr("flags").unwrap();
+        assert_eq!(flags.getattr("inspect").unwrap().extract::<i64>().unwrap(), 1);
     }
 
     #[test]
@@ -667,8 +672,8 @@ rusty_fork_test! {
         let py = interp.acquire_gil();
         let sys = py.import("sys").unwrap();
 
-        let flags = sys.get(py, "flags").unwrap();
-        assert_eq!(flags.getattr(py, "interactive").unwrap().extract::<i64>(py).unwrap(), 1);
+        let flags = sys.getattr("flags").unwrap();
+        assert_eq!(flags.getattr("interactive").unwrap().extract::<i64>().unwrap(), 1);
     }
 
     #[test]
@@ -681,8 +686,8 @@ rusty_fork_test! {
         let py = interp.acquire_gil();
         let sys = py.import("sys").unwrap();
 
-        let flags = sys.get(py, "flags").unwrap();
-        assert_eq!(flags.getattr(py, "quiet").unwrap().extract::<i64>(py).unwrap(), 1);
+        let flags = sys.getattr("flags").unwrap();
+        assert_eq!(flags.getattr("quiet").unwrap().extract::<i64>().unwrap(), 1);
     }
 
     #[test]
@@ -695,8 +700,8 @@ rusty_fork_test! {
         let py = interp.acquire_gil();
         let sys = py.import("sys").unwrap();
 
-        let flags = sys.get(py, "flags").unwrap();
-        assert_eq!(flags.getattr(py, "no_site").unwrap().extract::<i64>(py).unwrap(), 1);
+        let flags = sys.getattr("flags").unwrap();
+        assert_eq!(flags.getattr("no_site").unwrap().extract::<i64>().unwrap(), 1);
     }
 
     #[test]
@@ -709,8 +714,8 @@ rusty_fork_test! {
         let py = interp.acquire_gil();
         let sys = py.import("sys").unwrap();
 
-        let flags = sys.get(py, "flags").unwrap();
-        assert_eq!(flags.getattr(py, "no_user_site").unwrap().extract::<i64>(py).unwrap(), 1);
+        let flags = sys.getattr("flags").unwrap();
+        assert_eq!(flags.getattr("no_user_site").unwrap().extract::<i64>().unwrap(), 1);
     }
 
     #[test]
@@ -723,7 +728,7 @@ rusty_fork_test! {
         let py = interp.acquire_gil();
         let sys = py.import("sys").unwrap();
 
-        let flags = sys.get(py, "flags").unwrap();
-        assert_eq!(flags.getattr(py, "dont_write_bytecode").unwrap().extract::<i64>(py).unwrap(), 1);
+        let flags = sys.getattr("flags").unwrap();
+        assert_eq!(flags.getattr("dont_write_bytecode").unwrap().extract::<i64>().unwrap(), 1);
     }
 }

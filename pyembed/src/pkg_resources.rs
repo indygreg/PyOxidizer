@@ -10,329 +10,201 @@ use {
             resolve_package_distribution_resource,
         },
     },
-    cpython::{py_class, py_fn, ObjectProtocol, PythonObject},
+    pyo3::{
+        exceptions::{PyIOError, PyNotImplementedError, PyTypeError, PyUnicodeDecodeError},
+        prelude::*,
+        types::{PyList, PyString},
+    },
     std::sync::Arc,
 };
 
-py_class!(pub(crate) class OxidizedPkgResourcesProvider |py| {
-    data state: Arc<ImporterState>;
-    data package: String;
+#[pyclass(module = "oxidized_importer")]
+pub(crate) struct OxidizedPkgResourcesProvider {
+    state: Arc<ImporterState>,
+    package: String,
+}
 
-    def __new__(_cls, module: cpython::PyObject) -> cpython::PyResult<OxidizedPkgResourcesProvider> {
-        oxidized_pkg_resources_provider_new(py, module)
+#[pymethods]
+impl OxidizedPkgResourcesProvider {
+    /// OxidizedPkgResourcesProvider.__new__(module)
+    #[new]
+    fn new(py: Python, module: &PyAny) -> PyResult<Self> {
+        let loader = module.getattr("__loader__")?;
+        let package = module.getattr("__package__")?;
+
+        let loader_type = loader.get_type();
+
+        if loader_type != py.get_type::<OxidizedFinder>() {
+            return Err(PyTypeError::new_err("__loader__ is not an OxidizedFinder"));
+        }
+
+        let finder = loader.cast_as::<PyCell<OxidizedFinder>>()?;
+        let state = finder.borrow().get_state();
+
+        Ok(Self {
+            state,
+            package: package.to_string(),
+        })
     }
 
     // Begin IMetadataProvider interface.
 
-    def has_metadata(&self, name: cpython::PyString) -> cpython::PyResult<bool> {
-        Ok(self.has_metadata_impl(py, name))
+    fn has_metadata(&self, name: &str) -> PyResult<bool> {
+        let resources_state = self.state.get_resources_state();
+
+        let data = resolve_package_distribution_resource(
+            &resources_state.resources,
+            &resources_state.origin,
+            &self.package,
+            name,
+        )
+        .unwrap_or(None);
+
+        Ok(data.is_some())
     }
 
-    def get_metadata(&self, name: cpython::PyString) -> cpython::PyResult<cpython::PyString> {
-        self.get_metadata_impl(py, name)
+    fn get_metadata(&self, name: &str) -> PyResult<String> {
+        let resources_state = self.state.get_resources_state();
+
+        let data = resolve_package_distribution_resource(
+            &resources_state.resources,
+            &resources_state.origin,
+            &self.package,
+            name,
+        )
+        .map_err(|e| PyIOError::new_err(format!("error obtaining metadata: {}", e)))?
+        .ok_or_else(|| PyIOError::new_err("metadata does not exist"))?;
+
+        String::from_utf8(data.to_vec())
+            .map_err(|_| PyUnicodeDecodeError::new_err("metadata is not UTF-8"))
     }
 
-    def get_metadata_lines(&self, name: cpython::PyString) -> cpython::PyResult<cpython::PyObject> {
-        self.get_metadata_lines_impl(py, name)
+    fn get_metadata_lines<'p>(&self, py: Python<'p>, name: &str) -> PyResult<&'p PyAny> {
+        let s = self.get_metadata(name)?;
+
+        let pkg_resources = py.import("pkg_resources")?;
+
+        pkg_resources.getattr("yield_lines")?.call((s,), None)
     }
 
-    def metadata_isdir(&self, name: cpython::PyString) -> cpython::PyResult<bool> {
-        Ok(self.metadata_isdir_impl(py, name))
+    fn metadata_isdir(&self, name: &str) -> PyResult<bool> {
+        let resources_state = self.state.get_resources_state();
+
+        Ok(metadata_name_is_directory(
+            &resources_state.resources,
+            &self.package,
+            name,
+        ))
     }
 
-    def metadata_listdir(&self, name: cpython::PyString) -> cpython::PyResult<cpython::PyList> {
-        Ok(self.metadata_listdir_impl(py, name))
+    fn metadata_listdir<'p>(&self, py: Python<'p>, name: &str) -> PyResult<&'p PyList> {
+        let resources_state = self.state.get_resources_state();
+
+        let entries = metadata_list_directory(&resources_state.resources, &self.package, name)
+            .into_iter()
+            .map(|s| PyString::new(py, s))
+            .collect::<Vec<_>>();
+
+        Ok(PyList::new(py, &entries))
     }
 
-    def run_script(&self, script_name: cpython::PyString, namespace: cpython::PyObject) -> cpython::PyResult<cpython::PyObject> {
-        self.run_script_impl(py, script_name, namespace)
+    #[allow(unused)]
+    fn run_script(&self, script_name: &PyAny, namespace: &PyAny) -> PyResult<&PyAny> {
+        Err(PyNotImplementedError::new_err(()))
     }
 
     // End IMetadataProvider interface.
 
     // Begin IResourceProvider interface.
 
-    def get_resource_filename(&self, manager: cpython::PyObject, resource_name: cpython::PyString) -> cpython::PyResult<cpython::PyObject> {
-        self.get_resource_filename_impl(py, manager, resource_name)
-    }
-
-    def get_resource_stream(&self, manager: cpython::PyObject, resource_name: cpython::PyString) -> cpython::PyResult<cpython::PyObject> {
-        self.get_resource_stream_impl(py, manager, resource_name)
-    }
-
-    def get_resource_string(&self, manager: cpython::PyObject, resource_name: cpython::PyString) -> cpython::PyResult<cpython::PyObject> {
-        self.get_resource_string_impl(py, manager, resource_name)
-    }
-
-    def has_resource(&self, resource_name: cpython::PyString) -> cpython::PyResult<bool> {
-        Ok(self.has_resource_impl(py, resource_name))
-    }
-
-    def resource_isdir(&self, resource_name: cpython::PyString) -> cpython::PyResult<bool> {
-        Ok(self.resource_isdir_impl(py, resource_name))
-    }
-
-    def resource_listdir(&self, resource_name: cpython::PyString) -> cpython::PyResult<cpython::PyList> {
-        Ok(self.resource_listdir_impl(py, resource_name))
-    }
-
-    // End IResourceProvider interface.
-});
-
-/// OxidizedPkgResourcesProvider.__new__(module)
-fn oxidized_pkg_resources_provider_new(
-    py: cpython::Python,
-    module: cpython::PyObject,
-) -> cpython::PyResult<OxidizedPkgResourcesProvider> {
-    let loader = module.getattr(py, "__loader__")?;
-    let package = module.getattr(py, "__package__")?;
-
-    let loader_type = loader.get_type(py);
-
-    if loader_type != py.get_type::<OxidizedFinder>() {
-        return Err(cpython::PyErr::new::<cpython::exc::TypeError, _>(
-            py,
-            "__loader__ is not an OxidizedFinder",
-        ));
-    }
-
-    let finder = loader.cast_as::<OxidizedFinder>(py)?;
-    let state = finder.get_state(py);
-
-    OxidizedPkgResourcesProvider::create_instance(py, state, package.to_string())
-}
-
-pub(crate) fn create_oxidized_pkg_resources_provider(
-    py: cpython::Python,
-    state: Arc<ImporterState>,
-    package: String,
-) -> cpython::PyResult<cpython::PyObject> {
-    Ok(OxidizedPkgResourcesProvider::create_instance(py, state, package)?.into_object())
-}
-
-// pkg_resources.IMetadataProvider
-impl OxidizedPkgResourcesProvider {
-    fn has_metadata_impl(&self, py: cpython::Python, name: cpython::PyString) -> bool {
-        let state = self.state(py);
-        let package = self.package(py);
-        let resources_state = state.get_resources_state();
-
-        let name = name.to_string_lossy(py);
-
-        let data = resolve_package_distribution_resource(
-            &resources_state.resources,
-            &resources_state.origin,
-            package,
-            &name,
-        )
-        .unwrap_or(None);
-
-        data.is_some()
-    }
-
-    fn get_metadata_impl(
-        &self,
-        py: cpython::Python,
-        name: cpython::PyString,
-    ) -> cpython::PyResult<cpython::PyString> {
-        let state = self.state(py);
-        let package = self.package(py);
-        let resources_state = state.get_resources_state();
-
-        let name = name.to_string_lossy(py);
-
-        let data = resolve_package_distribution_resource(
-            &resources_state.resources,
-            &resources_state.origin,
-            package,
-            &name,
-        )
-        .map_err(|e| {
-            cpython::PyErr::new::<cpython::exc::IOError, _>(
-                py,
-                format!("error obtaining metadata: {}", e),
-            )
-        })?
-        .ok_or_else(|| {
-            cpython::PyErr::new::<cpython::exc::IOError, _>(py, "metadata does not exist")
-        })?;
-
-        let data = String::from_utf8(data.to_vec()).map_err(|_| {
-            cpython::PyErr::new::<cpython::exc::UnicodeDecodeError, _>(py, "metadata is not UTF-8")
-        })?;
-
-        Ok(cpython::PyString::new(py, &data))
-    }
-
-    fn get_metadata_lines_impl(
-        &self,
-        py: cpython::Python,
-        name: cpython::PyString,
-    ) -> cpython::PyResult<cpython::PyObject> {
-        let s = self.get_metadata(py, name)?;
-
-        let pkg_resources = py.import("pkg_resources")?;
-
-        pkg_resources.call(py, "yield_lines", (s,), None)
-    }
-
-    fn metadata_isdir_impl(&self, py: cpython::Python, name: cpython::PyString) -> bool {
-        let state = self.state(py);
-        let package = self.package(py);
-        let resources_state = state.get_resources_state();
-
-        let name = name.to_string_lossy(py);
-
-        metadata_name_is_directory(&resources_state.resources, &package, &name)
-    }
-
-    fn metadata_listdir_impl(
-        &self,
-        py: cpython::Python,
-        name: cpython::PyString,
-    ) -> cpython::PyList {
-        let state = self.state(py);
-        let package = self.package(py);
-        let resources_state = state.get_resources_state();
-
-        let name = name.to_string_lossy(py);
-
-        let entries = metadata_list_directory(&resources_state.resources, &package, &name)
-            .into_iter()
-            .map(|s| cpython::PyString::new(py, s).into_object())
-            .collect::<Vec<_>>();
-
-        cpython::PyList::new(py, &entries)
-    }
-
-    fn run_script_impl(
-        &self,
-        py: cpython::Python,
-        _script_name: cpython::PyString,
-        _namespace: cpython::PyObject,
-    ) -> cpython::PyResult<cpython::PyObject> {
-        Err(cpython::PyErr::new::<cpython::exc::NotImplementedError, _>(
-            py,
-            cpython::NoArgs,
-        ))
-    }
-}
-
-// pkg_resources.IResourceProvider
-impl OxidizedPkgResourcesProvider {
-    fn get_resource_filename_impl(
-        &self,
-        py: cpython::Python,
-        _manager: cpython::PyObject,
-        _resource_name: cpython::PyString,
-    ) -> cpython::PyResult<cpython::PyObject> {
+    #[allow(unused)]
+    fn get_resource_filename(&self, manager: &PyAny, resource_name: &PyAny) -> PyResult<&PyAny> {
         // Raising NotImplementedError seems allowed per the implementation of
         // pkg_resources.ZipProvider, which also raises this error when resources
         // aren't backed by the filesystem.
         //
         // We could potentially expose the filename if the resource is backed
         // by a file. But we keep things simple for now.
-        Err(cpython::PyErr::new::<cpython::exc::NotImplementedError, _>(
-            py,
-            cpython::NoArgs,
-        ))
+        Err(PyNotImplementedError::new_err(()))
     }
 
-    fn get_resource_stream_impl(
+    #[allow(unused)]
+    fn get_resource_stream<'p>(
         &self,
-        py: cpython::Python,
-        _manager: cpython::PyObject,
-        resource_name: cpython::PyString,
-    ) -> cpython::PyResult<cpython::PyObject> {
-        let state = self.state(py);
-        let package = self.package(py);
-        let resource_name = resource_name.to_string_lossy(py);
-
-        state
+        py: Python<'p>,
+        manager: &PyAny,
+        resource_name: &str,
+    ) -> PyResult<&'p PyAny> {
+        self.state
             .get_resources_state()
-            .get_package_resource_file(py, &package, &resource_name)?
-            .ok_or_else(|| {
-                cpython::PyErr::new::<cpython::exc::IOError, _>(py, "resource does not exist")
-            })
+            .get_package_resource_file(py, &self.package, resource_name)?
+            .ok_or_else(|| PyIOError::new_err("resource does not exist"))
     }
 
-    fn get_resource_string_impl(
+    fn get_resource_string<'p>(
         &self,
-        py: cpython::Python,
-        manager: cpython::PyObject,
-        resource_name: cpython::PyString,
-    ) -> cpython::PyResult<cpython::PyObject> {
-        let fh = self.get_resource_stream_impl(py, manager, resource_name)?;
+        py: Python<'p>,
+        manager: &PyAny,
+        resource_name: &str,
+    ) -> PyResult<&'p PyAny> {
+        let fh = self.get_resource_stream(py, manager, resource_name)?;
 
-        fh.call_method(py, "read", cpython::NoArgs, None)
+        fh.call_method0("read")
     }
 
-    fn has_resource_impl(&self, py: cpython::Python, resource_name: cpython::PyString) -> bool {
-        let state = self.state(py);
-        let package = self.package(py);
-        let resource_name = resource_name.to_string_lossy(py);
-
-        state
+    fn has_resource(&self, py: Python, resource_name: &str) -> PyResult<bool> {
+        Ok(self
+            .state
             .get_resources_state()
-            .get_package_resource_file(py, &package, &resource_name)
+            .get_package_resource_file(py, &self.package, resource_name)
             .unwrap_or(None)
-            .is_some()
+            .is_some())
     }
 
-    fn resource_isdir_impl(&self, py: cpython::Python, resource_name: cpython::PyString) -> bool {
-        let state = self.state(py);
-        let package = self.package(py);
-        let resource_name = resource_name.to_string_lossy(py);
-
-        state
+    fn resource_isdir(&self, resource_name: &str) -> PyResult<bool> {
+        Ok(self
+            .state
             .get_resources_state()
-            .is_package_resource_directory(&package, &resource_name)
+            .is_package_resource_directory(&self.package, resource_name))
     }
 
-    fn resource_listdir_impl(
-        &self,
-        py: cpython::Python,
-        resource_name: cpython::PyString,
-    ) -> cpython::PyList {
-        let state = self.state(py);
-        let package = self.package(py);
-        let resource_name = resource_name.to_string_lossy(py);
-
-        let entries = state
+    fn resource_listdir<'p>(&self, py: Python<'p>, resource_name: &str) -> PyResult<&'p PyList> {
+        let entries = self
+            .state
             .get_resources_state()
-            .package_resources_list_directory(&package, &resource_name)
+            .package_resources_list_directory(&self.package, resource_name)
             .into_iter()
-            .map(|s| cpython::PyString::new(py, &s).into_object())
+            .map(|s| PyString::new(py, &s))
             .collect::<Vec<_>>();
 
-        cpython::PyList::new(py, &entries)
+        Ok(PyList::new(py, &entries))
     }
+
+    // End IResourceProvider interface.
+}
+
+pub(crate) fn create_oxidized_pkg_resources_provider(
+    state: Arc<ImporterState>,
+    package: String,
+) -> PyResult<OxidizedPkgResourcesProvider> {
+    Ok(OxidizedPkgResourcesProvider { state, package })
 }
 
 /// Registers our types/callbacks with `pkg_resources`.
 pub(crate) fn register_pkg_resources_with_module(
-    py: cpython::Python,
-    pkg_resources: &cpython::PyObject,
-) -> cpython::PyResult<cpython::PyObject> {
+    py: Python,
+    pkg_resources: &PyAny,
+) -> PyResult<()> {
     pkg_resources.call_method(
-        py,
         "register_finder",
         (
             py.get_type::<OxidizedPathEntryFinder>(),
-            py_fn!(
-                py,
-                pkg_resources_find_distributions(
-                    importer: cpython::PyObject,
-                    path_item: cpython::PyString,
-                    only: Option<bool> = false
-                )
-            ),
+            wrap_pyfunction!(pkg_resources_find_distributions)(py)?,
         ),
         None,
     )?;
 
     pkg_resources.call_method(
-        py,
         "register_loader_type",
         (
             py.get_type::<OxidizedFinder>(),
@@ -341,45 +213,50 @@ pub(crate) fn register_pkg_resources_with_module(
         None,
     )?;
 
-    Ok(py.None())
+    Ok(())
 }
 
 /// pkg_resources distribution finder for sys.path items.
-pub(crate) fn pkg_resources_find_distributions(
-    py: cpython::Python,
-    importer: cpython::PyObject,
-    path_item: cpython::PyString,
+#[pyfunction(only = false)]
+pub(crate) fn pkg_resources_find_distributions<'p>(
+    py: Python<'p>,
+    importer: &PyAny,
+    path_item: &PyString,
     only: bool,
-) -> cpython::PyResult<cpython::PyList> {
-    let importer_type = importer.get_type(py);
+) -> PyResult<&'p PyAny> {
+    let importer_type = importer.get_type();
 
     // This shouldn't happen since that path hook type is mapped to this function.
     // But you never know.
     if importer_type != py.get_type::<OxidizedPathEntryFinder>() {
-        return Ok(cpython::PyList::new(py, &[]));
+        return Ok(PyList::empty(py));
     }
 
-    let finder = importer.cast_as::<OxidizedPathEntryFinder>(py)?;
+    let finder_cell = importer.cast_as::<PyCell<OxidizedPathEntryFinder>>()?;
+    let finder = finder_cell.borrow();
 
     // The path_item we're handling should match what was registered to this path
     // entry finder. Reject if that's not the case.
-    if finder
-        .get_source_path(py)
-        .as_object()
-        .compare(py, path_item.as_object())?
-        != std::cmp::Ordering::Equal
-    {
-        return Ok(cpython::PyList::new(py, &[]));
+    if path_item.compare(finder.get_source_path())? != std::cmp::Ordering::Equal {
+        return Ok(PyList::empty(py));
     }
 
-    let meta_finder = finder.get_finder(py);
-    let state = meta_finder.get_state(py);
+    let meta_finder = finder.get_finder().borrow(py);
+    let state = meta_finder.get_state();
 
-    find_pkg_resources_distributions(
+    let dists = find_pkg_resources_distributions(
         py,
         state,
-        &path_item.to_string_lossy(py),
+        &path_item.to_string_lossy(),
         only,
-        finder.get_target_package(py).as_ref().map(|s| s.as_str()),
-    )
+        finder.get_target_package().as_ref().map(|s| s.as_str()),
+    )?;
+
+    dists.call_method0("__iter__")
+}
+
+pub(crate) fn init_module(m: &PyModule) -> PyResult<()> {
+    m.add_function(wrap_pyfunction!(pkg_resources_find_distributions, m)?)?;
+
+    Ok(())
 }
