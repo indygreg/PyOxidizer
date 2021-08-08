@@ -2485,7 +2485,7 @@ dependencies = [
  "tugger-common 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-file-manifest 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-licensing",
- "tugger-rust-toolchain",
+ "tugger-rust-toolchain 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-windows",
  "tugger-wix",
  "url",
@@ -4081,7 +4081,7 @@ dependencies = [
 
 [[package]]
 name = "tugger-rust-toolchain"
-version = "0.4.0-pre"
+version = "0.4.0"
 dependencies = [
  "anyhow",
  "dirs",
@@ -4094,6 +4094,28 @@ dependencies = [
  "slog",
  "tar",
  "tempfile",
+ "toml",
+ "tugger-common 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-file-manifest 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "xz2",
+ "zstd",
+]
+
+[[package]]
+name = "tugger-rust-toolchain"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4c4801d5737279c78864cea20ae0362fc62c33d711db7ac26a391de1180b3e44"
+dependencies = [
+ "anyhow",
+ "flate2",
+ "fs2",
+ "hex",
+ "once_cell",
+ "pgp 0.7.1",
+ "sha2 0.9.5",
+ "slog",
+ "tar",
  "toml",
  "tugger-common 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-file-manifest 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
