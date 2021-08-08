@@ -21,7 +21,7 @@ tempfile = "3.2"
 thiserror = "1.0"
 yasna = "0.3"
 
-[dependencies.apple-bundle]
+[target.'cfg(target_vender="apple")'.dependencies.apple-bundle]
 version = "0.5.0-pre"
 path = "../apple-bundle"
 
@@ -29,7 +29,7 @@ path = "../apple-bundle"
 version = "0.4.0-pre"
 path = "../cryptographic-message-syntax"
 
-[dependencies.tugger-apple-codesign]
+[target.'cfg(target_vender="apple")'.dependencies.tugger-apple-codesign]
 version = "0.5.0-pre"
 path = "../tugger-apple-codesign"
 
@@ -37,7 +37,7 @@ path = "../tugger-apple-codesign"
 version = "0.5.0-pre"
 path = "../tugger-file-manifest"
 
-[dependencies.tugger-windows-codesign]
+[target.'cfg(target_os="windows")'.dependencies.tugger-windows-codesign]
 version = "0.4.0-pre"
 path = "../tugger-windows-codesign"
 

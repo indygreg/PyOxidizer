@@ -120,6 +120,7 @@ pub fn link_libpython(
     // between it and what we want. For example, if we're building for aarch64 but the default
     // SDK is a 10.15 SDK that doesn't support ARM. We attempt to mitigate this by resolving
     // a compatible Apple SDK and pointing the compiler invocation at it via compiler flags.
+    #[cfg(target_os = "macos")]
     if target_triple.contains("-apple-") {
         let sdk_info = apple_sdk_info.ok_or_else(|| {
             anyhow!("Apple SDK info should be defined when targeting Apple platforms")

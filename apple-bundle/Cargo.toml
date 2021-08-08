@@ -10,11 +10,11 @@ homepage = "https://github.com/indygreg/PyOxidizer"
 repository = "https://github.com/indygreg/PyOxidizer.git"
 readme = "README.md"
 
-[dependencies]
+[target.'cfg(target_vender="apple")'.dependencies]
 anyhow = "1.0"
 plist = "1.2"
 walkdir = "2.3"
 
-[dependencies.tugger-file-manifest]
+[target.'cfg(target_vender="apple")'.dependencies.tugger-file-manifest]
 version = "0.5.0-pre"
 path = "../tugger-file-manifest"

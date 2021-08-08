@@ -23,7 +23,7 @@ yasna = "0.3"
 version = "0.5.0-pre"
 path = "../tugger-common"
 
-[dependencies.tugger-windows]
+[target.'cfg(target_os="windows")'.dependencies.tugger-windows]
 version = "0.6.0-pre"
 path = "../tugger-windows"
 

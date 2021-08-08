@@ -161,6 +161,7 @@ impl BuildEnvironment {
         // Here, we validate that the local SDK being used is >= the version used
         // by the Python distribution.
         // TODO validate minimum Clang/linker version as well.
+        #[cfg(target_os = "macos")]
         if target_triple.contains("-apple-") {
             let sdk_info = apple_sdk_info.ok_or_else(|| {
                 anyhow!("targeting Apple platform but Apple SDK info not available")

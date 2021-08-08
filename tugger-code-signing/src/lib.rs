@@ -74,7 +74,6 @@ use {
         sync::Arc,
     },
     thiserror::Error,
-    tugger_apple_codesign::{AppleCodesignError, MachOSigner},
     tugger_file_manifest::{File, FileData, FileEntry},
     tugger_windows_codesign::{
         CodeSigningCertificate, FileBasedCodeSigningCertificate, SystemStore,
@@ -82,6 +81,8 @@ use {
     x509_certificate::{CapturedX509Certificate, InMemorySigningKeyPair, X509CertificateError},
     yasna::ASN1Error,
 };
+#[cfg(target_vendor = "apple")]
+use tugger_apple_codesign::{AppleCodesignError, MachOSigner};
 
 /// URL of Apple's time-stamp protocol server.
 pub const APPLE_TIMESTAMP_URL: &str = "http://timestamp.apple.com/ts01";
@@ -125,16 +126,19 @@ pub enum SigningError {
 
     #[error("certificate not usable: {0}")]
     CertificateNotUsable(String),
-
+    
+    #[cfg(target_os = "macos")]
     #[error("error resolving certificate chain: {0}")]
     MacOsCertificateChainResolveFailure(AppleCodesignError),
 
     #[error("path {0} is not signable")]
     PathNotSignable(PathBuf),
 
+    #[cfg(target_os = "macos")]
     #[error("error signing mach-o binary: {0}")]
     MachOSigningError(AppleCodesignError),
 
+    #[cfg(target_os = "macos")]
     #[error("error signing Apple bundle: {0}")]
     AppleBundleSigningError(AppleCodesignError),
 
@@ -338,12 +342,15 @@ pub enum Signable {
     ///
     /// We have to obtain the Mach-O data as part of evaluating whether it is
     /// signable. So we keep a reference to it to avoid a re-read later.
+    #[cfg(target_os = "macos")]
     MachOFile(PathBuf, Vec<u8>),
 
     /// Signable Mach-O data.
+    #[cfg(target_os = "macos")]
     MachOData(Vec<u8>),
 
     /// An Apple bundle, persisted on the filesystem as a directory.
+    #[cfg(target_os = "macos")]
     AppleBundle(PathBuf),
 }
 
@@ -369,6 +376,7 @@ impl Signable {
                     SigningMethod::Memory,
                 ]
             }
+            #[cfg(target_os = "macos")]
             Self::MachOFile(_, _) => {
                 // tugger-apple-codesign does all of these easily.
                 vec![
@@ -377,10 +385,12 @@ impl Signable {
                     SigningMethod::Memory,
                 ]
             }
+            #[cfg(target_os = "macos")]
             Self::MachOData(_) => {
                 // tugger-apple-codesign does all of these easily.
                 vec![SigningMethod::NewFile, SigningMethod::Memory]
             }
+            #[cfg(target_os = "macos")]
             Self::AppleBundle(_) => {
                 // tugger-apple-codesign can sign in place or to a new directory.
                 vec![SigningMethod::InPlaceDirectory, SigningMethod::NewDirectory]
@@ -394,21 +404,37 @@ impl Signable {
     }
 
     /// Obtain the filesystem path of the signable entity, if it is backed by a file.
+    #[cfg(target_os = "windows")]
     pub fn source_file(&self) -> Option<&Path> {
         match self {
             Self::WindowsFile(p) => Some(p.as_path()),
+            Self::WindowsData(_) => None,
+        }
+    }
+    /// Obtain the filesystem path of the signable entity, if it is backed by a file.
+    #[cfg(target_os = "macos")]
+    pub fn source_file(&self) -> Option<&Path> {
+        match self {
             Self::MachOFile(p, _) => Some(p.as_path()),
-            Self::WindowsData(_) | Self::MachOData(_) | Self::AppleBundle(_) => None,
+            Self::MachOData(_) 
+            | Self::AppleBundle(_)
+            => None,
         }
     }
 
     /// Obtain the filesystem path of the signable directory, if it is backed by a directory.
+    #[cfg(target_os = "windows")]
+    pub fn source_directory(&self) -> Option<&Path> {
+        match self {
+            Self::WindowsFile(_)
+            | Self::WindowsData(_) => None,
+        }
+    }
+    #[cfg(target_os = "macos")]
     pub fn source_directory(&self) -> Option<&Path> {
         match self {
             Self::AppleBundle(p) => Some(p.as_path()),
-            Self::WindowsFile(_)
-            | Self::WindowsData(_)
-            | Self::MachOFile(_, _)
+            Self::MachOFile(_, _)
             | Self::MachOData(_) => None,
         }
     }
@@ -496,6 +522,7 @@ pub enum Signability {
     Unsignable,
 
     /// The entity is a Mach-O binary that cannot be signed.
+    #[cfg(target_os = "macos")]
     UnsignableMachoError(AppleCodesignError),
 
     /// The entity is signable, but not from this platform. Details of the
@@ -509,6 +536,7 @@ pub enum Signability {
 ///
 /// Returns `Err` if we could not fully test the path. This includes
 /// I/O failures.
+#[cfg(target_os = "windows")]
 pub fn path_signable(path: impl AsRef<Path>) -> Result<Signability, SigningError> {
     let path = path.as_ref();
 
@@ -529,10 +557,18 @@ pub fn path_signable(path: impl AsRef<Path>) -> Result<Signability, SigningError
             }
             Ok(false) => {}
             Err(e) => return Err(SigningError::SignableTestError(format!("{:?}", e))),
-        }
+    }}
 
+    Ok(Signability::Unsignable)
+}
+
+#[cfg(target_os = "macos")]
+pub fn path_signable(path: impl AsRef<Path>) -> Result<Signability, SigningError> {
+    let path = path.as_ref();
+
+    if path.is_file() {
         let data = std::fs::read(path)?;
-
+        
         if goblin::mach::Mach::parse(&data).is_ok() {
             // Try to construct a signer to see if the binary is compatible.
             return Ok(match MachOSigner::new(&data) {
@@ -564,7 +600,7 @@ pub fn data_signable(data: &[u8]) -> Result<Signability, SigningError> {
             ))
         };
     }
-
+    #[cfg(target_os = "macos")]
     if goblin::mach::Mach::parse(&data).is_ok() {
         // Try to construct a signer to see if the binary is compatible.
         return Ok(match MachOSigner::new(&data) {
@@ -623,6 +659,7 @@ impl SigningCertificate {
     /// This is like [Self::from_pfx_data] except the certificate is referenced by path
     /// instead of persisted into memory. However, we do read the certificate data
     /// as part of constructing the instance to verify the certificate is well-formed.
+    #[cfg(target_os = "macos")]
     pub fn from_pfx_file(path: impl AsRef<Path>, password: &str) -> Result<Self, SigningError> {
         let data = std::fs::read(path.as_ref())?;
 
@@ -647,6 +684,7 @@ impl SigningCertificate {
     /// The contents of the file require a password to decrypt. However, if no
     /// password was provided to create the data, this password may be the
     /// empty string.
+    #[cfg(target_os = "macos")]
     pub fn from_pfx_data(data: &[u8], password: &str) -> Result<Self, SigningError> {
         let (cert, key) = tugger_apple_codesign::parse_pfx_data(data, password)
             .map_err(|e| SigningError::PfxRead(format!("{:?}", e)))?;
@@ -722,11 +760,13 @@ impl SigningCertificate {
 
 /// A callback for influencing the creation of [tugger_apple_codesign.SigngingSettings]
 /// instances for a given [Signable].
+#[cfg(target_os = "macos")]
 pub type AppleSigningSettingsFn =
     fn(&Signable, &mut tugger_apple_codesign::SigningSettings) -> Result<(), anyhow::Error>;
 
 /// A callback for influencing the creation of [tugger_windows_codesign::SigntoolSign]
 /// instances for a given [Signable].
+#[cfg(target_os = "windows")]
 pub type WindowsSignerFn =
     fn(&Signable, &mut tugger_windows_codesign::SigntoolSign) -> Result<(), anyhow::Error>;
 
@@ -749,10 +789,12 @@ pub struct Signer {
 
     /// Optional function to influence creation of [tugger_apple_codesign::SigningSettings]
     /// used for signing Apple signables.
+    #[cfg(target_os = "macos")]
     apple_signing_settings_fn: Option<Arc<AppleSigningSettingsFn>>,
 
     /// Optional function to influence creation of [tugger_windows_codesign::SigntoolSign]
     /// used for signing Windows signables.
+    #[cfg(target_os = "windows")]
     windows_signer_fn: Option<Arc<WindowsSignerFn>>,
 }
 
@@ -769,7 +811,9 @@ impl Signer {
             signing_certificate,
             certificate_chain: vec![],
             time_stamp_url: None,
+            #[cfg(target_os = "macos")]
             apple_signing_settings_fn: None,
+            #[cfg(target_os = "windows")]
             windows_signer_fn: None,
         }
     }
@@ -904,11 +948,13 @@ impl Signer {
     }
 
     /// Set a callback function to be called to influence settings for signing individual Apple signables.
+    #[cfg(target_os = "macos")]
     pub fn apple_settings_callback(&mut self, cb: AppleSigningSettingsFn) {
         self.apple_signing_settings_fn = Some(Arc::new(cb));
     }
 
     /// Set a callback function to be called to influence settings for signing individual Windows signables.
+    #[cfg(target_os = "windows")]
     pub fn windows_settings_callback(&mut self, cb: WindowsSignerFn) {
         self.windows_signer_fn = Some(Arc::new(cb));
     }
@@ -983,10 +1029,12 @@ pub struct SignableSigner<'a> {
 
     /// Optional function to influence creation of [tugger_apple_codesign::SigningSettings]
     /// used for signing Apple signables.
+    #[cfg(target_os = "macos")]
     apple_signing_settings_fn: Option<Arc<AppleSigningSettingsFn>>,
 
     /// Optional function to influence creation of [tugger_windows_codesign::SigntoolSign]
     /// used for signing Windows signables.
+    #[cfg(target_os = "windows")]
     windows_signer_fn: Option<Arc<WindowsSignerFn>>,
 }
 
@@ -1001,7 +1049,9 @@ impl<'a> SignableSigner<'a> {
             signable,
             certificate_chain,
             time_stamp_url,
+            #[cfg(target_os = "macos")]
             apple_signing_settings_fn: signer.apple_signing_settings_fn.clone(),
+            #[cfg(target_os = "windows")]
             windows_signer_fn: signer.windows_signer_fn.clone(),
         }
     }
@@ -1012,16 +1062,24 @@ impl<'a> SignableSigner<'a> {
     }
 
     /// Obtain a [SigningDestination] that is the same as the input.
+    #[cfg(target_os = "windows")]
     pub fn in_place_destination(&self) -> SigningDestination {
         match &self.signable {
-            Signable::WindowsFile(path) => SigningDestination::File(path.clone()),
+            Signable::WindowsFile(path) => SigningDestination::File(path.clone()),            
+            Signable::WindowsData(_) => SigningDestination::Memory,
+        }
+    }
+    #[cfg(target_os = "macos")]
+    pub fn in_place_destination(&self) -> SigningDestination {
+        match &self.signable {
             Signable::MachOFile(path, _) => SigningDestination::File(path.clone()),
             Signable::AppleBundle(path) => SigningDestination::Directory(path.clone()),
-            Signable::WindowsData(_) | Signable::MachOData(_) => SigningDestination::Memory,
+            Signable::MachOData(_) => SigningDestination::Memory,
         }
     }
 
     /// Obtain a [tugger_apple_codesign::SigningSettings] from this instance.
+    #[cfg(target_os = "macos")]
     pub fn as_apple_signing_settings(
         &self,
     ) -> Result<tugger_apple_codesign::SigningSettings<'_>, SigningError> {
@@ -1042,6 +1100,7 @@ impl<'a> SignableSigner<'a> {
         };
 
         // Automatically register Apple CA certificates for convenience.
+        #[cfg(target_os = "macos")]
         settings.chain_apple_certificates();
 
         for cert in &self.certificate_chain {
@@ -1057,7 +1116,7 @@ impl<'a> SignableSigner<'a> {
                 .set_time_stamp_url(APPLE_TIMESTAMP_URL)
                 .expect("shouldn't have failed for constant URL");
         }
-
+        #[cfg(target_os = "macos")]
         if let Some(cb) = &self.apple_signing_settings_fn {
             cb(&self.signable, &mut settings).map_err(SigningError::SettingsCallback)?;
         }
@@ -1066,6 +1125,7 @@ impl<'a> SignableSigner<'a> {
     }
 
     /// Obtain a [tugger_windows_codesign::SigntoolSign] from this instance.
+    #[cfg(target_os = "windows")]
     pub fn as_windows_signer(&self) -> Result<tugger_windows_codesign::SigntoolSign, SigningError> {
         let cert = self
             .signing_certificate
@@ -1234,18 +1294,20 @@ impl<'a> SignableSigner<'a> {
                     }
                 }
             }
+            #[cfg(target_os = "macos")]
             Signable::MachOData(macho_data) => {
                 warn!(
                     logger,
                     "signing Mach-O binary from in-memory data of size {} bytes",
                     macho_data.len()
                 );
+                #[cfg(target_os = "macos")]
                 let settings = self.as_apple_signing_settings()?;
-
+                #[cfg(target_os = "macos")]
                 let signer = tugger_apple_codesign::MachOSigner::new(&macho_data)
                     .map_err(SigningError::MachOSigningError)?;
-
                 let mut dest = Vec::<u8>::with_capacity(macho_data.len() + 2_usize.pow(17));
+                #[cfg(target_os = "macos")]
                 signer
                     .write_signed_binary(&settings, &mut dest)
                     .map_err(SigningError::MachOSigningError)?;
@@ -1269,15 +1331,17 @@ impl<'a> SignableSigner<'a> {
                     }
                 }
             }
+            #[cfg(target_os = "macos")]
             Signable::MachOFile(source_file, macho_data) => {
                 let settings = self.as_apple_signing_settings()?;
 
                 warn!(logger, "signing {}", source_file.display());
-
+                #[cfg(target_os = "macos")]
                 let signer = tugger_apple_codesign::MachOSigner::new(&macho_data)
                     .map_err(SigningError::MachOSigningError)?;
 
                 let mut dest = Vec::<u8>::with_capacity(macho_data.len() + 2_usize.pow(17));
+                #[cfg(target_os = "macos")]
                 signer
                     .write_signed_binary(&settings, &mut dest)
                     .map_err(SigningError::MachOSigningError)?;
@@ -1301,6 +1365,7 @@ impl<'a> SignableSigner<'a> {
                     }
                 }
             }
+            #[cfg(target_os = "macos")]
             Signable::AppleBundle(source_dir) => {
                 let settings = self.as_apple_signing_settings()?;
 
@@ -1354,10 +1419,12 @@ impl<'a> SignableSigner<'a> {
                 SigningDestination::Directory(_) => false,
             },
             // tugger-apple-codesign does everything in memory and doesn't need files.
+            #[cfg(target_os = "macos")]
             Signable::MachOData(_) | Signable::MachOFile(_, _) => false,
             // But, when we are sending output to the filesystem and the output isn't
             // the input, we go through a temporary directory to prevent writing
             // bad results to the output directory.
+            #[cfg(target_os = "macos")]
             Signable::AppleBundle(source_dir) => match destination {
                 SigningDestination::Directory(dest_dir) => source_dir != dest_dir,
                 SigningDestination::Memory | SigningDestination::File(_) => false,
