@@ -3,7 +3,6 @@ members = [
     'apple-bundle',
     'cpio-archive',
     'cryptographic-message-syntax',
-    'oxidized-importer',
     'pyembed',
     'pyoxidizer',
     'python-packaging',
