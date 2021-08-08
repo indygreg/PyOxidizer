@@ -31,7 +31,7 @@ Version History
 0.17.0
 ------
 
-Not yet released.
+Released August 8, 2021.
 
 Backwards Compatibility Notes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
