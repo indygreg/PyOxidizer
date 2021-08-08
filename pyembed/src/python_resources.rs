@@ -10,9 +10,10 @@ use {
     crate::{
         config::{PackedResourcesSource, ResolvedOxidizedPythonInterpreterConfig},
         conversion::{
-            path_to_pathlib_path, path_to_pyobject, pyobject_optional_resources_map_to_owned_bytes,
-            pyobject_optional_resources_map_to_pathbuf, pyobject_to_owned_bytes_optional,
-            pyobject_to_pathbuf_optional,
+            cpython_path_to_pathlib_path, cpython_path_to_pyobject,
+            cpython_pyobject_optional_resources_map_to_owned_bytes,
+            cpython_pyobject_optional_resources_map_to_pathbuf,
+            cpython_pyobject_to_owned_bytes_optional, cpython_pyobject_to_pathbuf_optional,
         },
         error::NewInterpreterError,
     },
@@ -300,7 +301,7 @@ impl<'a> ImportablePythonModule<'a, u8> {
             // `/path/to/myapp.zip/mypackage/subpackage`.
             let mut locations = if let Some(origin_path) = self.origin_path() {
                 if let Some(parent_path) = origin_path.parent() {
-                    vec![path_to_pyobject(py, parent_path)?]
+                    vec![cpython_path_to_pyobject(py, parent_path)?]
                 } else {
                     vec![]
                 }
@@ -312,7 +313,7 @@ impl<'a> ImportablePythonModule<'a, u8> {
                 let mut path = self.current_exe.to_path_buf();
                 path.extend(self.resource.name.split('.'));
 
-                locations.push(path_to_pyobject(py, &path)?);
+                locations.push(cpython_path_to_pyobject(py, &path)?);
             }
 
             spec.setattr(py, "submodule_search_locations", locations)?;
@@ -329,7 +330,7 @@ impl<'a> ImportablePythonModule<'a, u8> {
         py: cpython::Python,
     ) -> cpython::PyResult<Option<cpython::PyObject>> {
         Ok(if let Some(path) = self.origin_path() {
-            Some(path_to_pyobject(py, &path)?)
+            Some(cpython_path_to_pyobject(py, &path)?)
         } else {
             None
         })
@@ -349,7 +350,7 @@ impl<'a> ImportablePythonModule<'a, u8> {
         };
 
         Ok(if let Some(path) = path {
-            Some(path_to_pyobject(py, &path)?)
+            Some(cpython_path_to_pyobject(py, &path)?)
         } else {
             None
         })
@@ -773,7 +774,7 @@ impl<'a> PythonResourcesState<'a, u8> {
                 return Ok(Some(io_module.call(
                     py,
                     "FileIO",
-                    (path_to_pyobject(py, &path)?, "r"),
+                    (cpython_path_to_pyobject(py, &path)?, "r"),
                     None,
                 )?));
             }
@@ -1037,7 +1038,7 @@ impl<'a> PythonResourcesState<'a, u8> {
                             let fh = io_module.call(
                                 py,
                                 "FileIO",
-                                (path_to_pyobject(py, &resource_path)?, "r"),
+                                (cpython_path_to_pyobject(py, &resource_path)?, "r"),
                                 None,
                             )?;
 
@@ -1261,7 +1262,7 @@ py_class!(pub(crate) class OxidizedResource |py| {
     @in_memory_source.setter def set_in_memory_source(&self, value: Option<cpython::PyObject>) -> cpython::PyResult<()> {
         if let Some(value) = value {
             self.resource(py).borrow_mut().in_memory_source =
-                pyobject_to_owned_bytes_optional(py, &value)?
+                cpython_pyobject_to_owned_bytes_optional(py, &value)?
                     .map(Cow::Owned);
             Ok(())
         } else {
@@ -1276,7 +1277,7 @@ py_class!(pub(crate) class OxidizedResource |py| {
     @in_memory_bytecode.setter def set_in_memory_bytecode(&self, value: Option<cpython::PyObject>) -> cpython::PyResult<()> {
         if let Some(value) = value {
             self.resource(py).borrow_mut().in_memory_bytecode =
-                pyobject_to_owned_bytes_optional(py, &value)?
+                cpython_pyobject_to_owned_bytes_optional(py, &value)?
                     .map(Cow::Owned);
             Ok(())
         } else {
@@ -1291,7 +1292,7 @@ py_class!(pub(crate) class OxidizedResource |py| {
     @in_memory_bytecode_opt1.setter def set_in_memory_bytecode_opt1(&self, value: Option<cpython::PyObject>) -> cpython::PyResult<()> {
         if let Some(value) = value {
             self.resource(py).borrow_mut().in_memory_bytecode_opt1 =
-                pyobject_to_owned_bytes_optional(py, &value)?
+                cpython_pyobject_to_owned_bytes_optional(py, &value)?
                     .map(Cow::Owned);
             Ok(())
         } else {
@@ -1306,7 +1307,7 @@ py_class!(pub(crate) class OxidizedResource |py| {
     @in_memory_bytecode_opt2.setter def set_in_memory_bytecode_opt2(&self, value: Option<cpython::PyObject>) -> cpython::PyResult<()> {
         if let Some(value) = value {
             self.resource(py).borrow_mut().in_memory_bytecode_opt2 =
-                pyobject_to_owned_bytes_optional(py, &value)?
+                cpython_pyobject_to_owned_bytes_optional(py, &value)?
                     .map(Cow::Owned);
             Ok(())
         } else {
@@ -1321,7 +1322,7 @@ py_class!(pub(crate) class OxidizedResource |py| {
     @in_memory_extension_module_shared_library.setter def set_in_memory_extension_module_shared_library(&self, value: Option<cpython::PyObject>) -> cpython::PyResult<()> {
         if let Some(value) = value {
             self.resource(py).borrow_mut().in_memory_extension_module_shared_library =
-                pyobject_to_owned_bytes_optional(py, &value)?
+                cpython_pyobject_to_owned_bytes_optional(py, &value)?
                     .map(Cow::Owned);
             Ok(())
         } else {
@@ -1338,7 +1339,7 @@ py_class!(pub(crate) class OxidizedResource |py| {
     @in_memory_package_resources.setter def set_in_memory_package_resources(&self, value: Option<cpython::PyObject>) -> cpython::PyResult<()> {
         if let Some(value) = value {
             self.resource(py).borrow_mut().in_memory_package_resources =
-                pyobject_optional_resources_map_to_owned_bytes(py, &value)?
+                cpython_pyobject_optional_resources_map_to_owned_bytes(py, &value)?
                     .map(|x| x.into_iter().map(|(k, v)| (Cow::Owned(k), Cow::Owned(v))).collect());
 
             Ok(())
@@ -1356,7 +1357,7 @@ py_class!(pub(crate) class OxidizedResource |py| {
     @in_memory_distribution_resources.setter def set_in_memory_distribution_resources(&self, value: Option<cpython::PyObject>) -> cpython::PyResult<()> {
         if let Some(value) = value {
             self.resource(py).borrow_mut().in_memory_distribution_resources =
-                pyobject_optional_resources_map_to_owned_bytes(py, &value)?
+                cpython_pyobject_optional_resources_map_to_owned_bytes(py, &value)?
                     .map(|x|
                         x.into_iter().map(|(k, v)| (Cow::Owned(k), Cow::Owned(v))).collect()
                     );
@@ -1374,7 +1375,7 @@ py_class!(pub(crate) class OxidizedResource |py| {
     @in_memory_shared_library.setter def set_in_memory_shared_library(&self, value: Option<cpython::PyObject>) -> cpython::PyResult<()> {
         if let Some(value) = value {
             self.resource(py).borrow_mut().in_memory_shared_library =
-                pyobject_to_owned_bytes_optional(py, &value)?
+                cpython_pyobject_to_owned_bytes_optional(py, &value)?
                     .map(Cow::Owned);
             Ok(())
         } else {
@@ -1402,14 +1403,14 @@ py_class!(pub(crate) class OxidizedResource |py| {
     @property def relative_path_module_source(&self) -> cpython::PyResult<cpython::PyObject> {
         self.resource(py).borrow().relative_path_module_source.as_ref().map_or_else(
             || Ok(py.None()),
-            |x| path_to_pathlib_path(py, x)
+            |x| cpython_path_to_pathlib_path(py, x)
         )
     }
 
     @relative_path_module_source.setter def set_relative_path_module_source(&self, value: Option<cpython::PyObject>) -> cpython::PyResult<()> {
         if let Some(value) = value {
             self.resource(py).borrow_mut().relative_path_module_source =
-                pyobject_to_pathbuf_optional(py, value)?
+                cpython_pyobject_to_pathbuf_optional(py, value)?
                     .map(Cow::Owned);
 
             Ok(())
@@ -1421,14 +1422,14 @@ py_class!(pub(crate) class OxidizedResource |py| {
     @property def relative_path_module_bytecode(&self) -> cpython::PyResult<cpython::PyObject> {
         self.resource(py).borrow().relative_path_module_bytecode.as_ref().map_or_else(
             || Ok(py.None()),
-            |x| path_to_pathlib_path(py, x)
+            |x| cpython_path_to_pathlib_path(py, x)
         )
     }
 
     @relative_path_module_bytecode.setter def set_relative_path_module_bytecode(&self, value: Option<cpython::PyObject>) -> cpython::PyResult<()> {
         if let Some(value) = value {
             self.resource(py).borrow_mut().relative_path_module_bytecode =
-                pyobject_to_pathbuf_optional(py, value)?
+                cpython_pyobject_to_pathbuf_optional(py, value)?
                     .map(Cow::Owned);
 
             Ok(())
@@ -1440,14 +1441,14 @@ py_class!(pub(crate) class OxidizedResource |py| {
     @property def relative_path_module_bytecode_opt1(&self) -> cpython::PyResult<cpython::PyObject> {
         self.resource(py).borrow().relative_path_module_bytecode_opt1.as_ref().map_or_else(
             || Ok(py.None()),
-            |x| path_to_pathlib_path(py, x)
+            |x| cpython_path_to_pathlib_path(py, x)
         )
     }
 
     @relative_path_module_bytecode_opt1.setter def set_relative_path_module_bytecode_opt1(&self, value: Option<cpython::PyObject>) -> cpython::PyResult<()> {
         if let Some(value) = value {
             self.resource(py).borrow_mut().relative_path_module_bytecode_opt1 =
-                pyobject_to_pathbuf_optional(py, value)?
+                cpython_pyobject_to_pathbuf_optional(py, value)?
                     .map(Cow::Owned);
 
             Ok(())
@@ -1459,14 +1460,14 @@ py_class!(pub(crate) class OxidizedResource |py| {
     @property def relative_path_module_bytecode_opt2(&self) -> cpython::PyResult<cpython::PyObject> {
         self.resource(py).borrow().relative_path_module_bytecode_opt2.as_ref().map_or_else(
             || Ok(py.None()),
-            |x| path_to_pathlib_path(py, x)
+            |x| cpython_path_to_pathlib_path(py, x)
         )
     }
 
     @relative_path_module_bytecode_opt2.setter def set_relative_path_module_bytecode_opt2(&self, value: Option<cpython::PyObject>) -> cpython::PyResult<()> {
         if let Some(value) = value {
             self.resource(py).borrow_mut().relative_path_module_bytecode_opt2 =
-                pyobject_to_pathbuf_optional(py, value)?
+                cpython_pyobject_to_pathbuf_optional(py, value)?
                     .map(Cow::Owned);
 
             Ok(())
@@ -1478,14 +1479,14 @@ py_class!(pub(crate) class OxidizedResource |py| {
     @property def relative_path_extension_module_shared_library(&self) -> cpython::PyResult<cpython::PyObject> {
         self.resource(py).borrow().relative_path_extension_module_shared_library.as_ref().map_or_else(
             || Ok(py.None()),
-            |x| path_to_pathlib_path(py, x)
+            |x| cpython_path_to_pathlib_path(py, x)
         )
     }
 
     @relative_path_extension_module_shared_library.setter def set_relative_path_extension_module_shared_library(&self, value: Option<cpython::PyObject>) -> cpython::PyResult<()> {
         if let Some(value) = value {
             self.resource(py).borrow_mut().relative_path_extension_module_shared_library =
-                pyobject_to_pathbuf_optional(py, value)?
+                cpython_pyobject_to_pathbuf_optional(py, value)?
                     .map(Cow::Owned);
 
             Ok(())
@@ -1501,7 +1502,7 @@ py_class!(pub(crate) class OxidizedResource |py| {
                 let res = cpython::PyDict::new(py);
 
                 for (k, v) in x.iter() {
-                    res.set_item(py, k, path_to_pathlib_path(py, v)?)?;
+                    res.set_item(py, k, cpython_path_to_pathlib_path(py, v)?)?;
                 }
 
                 Ok(res.into_object())
@@ -1512,7 +1513,7 @@ py_class!(pub(crate) class OxidizedResource |py| {
     @relative_path_package_resources.setter def set_relative_path_package_resources(&self, value: Option<cpython::PyObject>) -> cpython::PyResult<()> {
         if let Some(value) = value {
             self.resource(py).borrow_mut().relative_path_package_resources =
-                pyobject_optional_resources_map_to_pathbuf(py, &value)?
+                cpython_pyobject_optional_resources_map_to_pathbuf(py, &value)?
                     .map(|x|
                         x.into_iter().map(|(k, v)| (Cow::Owned(k), Cow::Owned(v))).collect()
                     );
@@ -1530,7 +1531,7 @@ py_class!(pub(crate) class OxidizedResource |py| {
                 let res = cpython::PyDict::new(py);
 
                 for (k, v) in x.iter() {
-                    res.set_item(py, k, path_to_pathlib_path(py, v)?)?;
+                    res.set_item(py, k, cpython_path_to_pathlib_path(py, v)?)?;
                 }
 
                 Ok(res.into_object())
@@ -1541,7 +1542,7 @@ py_class!(pub(crate) class OxidizedResource |py| {
     @relative_path_distribution_resources.setter def set_relative_path_distribution_resources(&self, value: Option<cpython::PyObject>) -> cpython::PyResult<()> {
         if let Some(value) = value {
             self.resource(py).borrow_mut().relative_path_distribution_resources =
-                pyobject_optional_resources_map_to_pathbuf(py, &value)?
+                cpython_pyobject_optional_resources_map_to_pathbuf(py, &value)?
                     .map(|x|
                         x.into_iter().map(|(k, v)| (Cow::Owned(k), Cow::Owned(v))).collect()
                     );

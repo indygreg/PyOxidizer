@@ -7,7 +7,7 @@
 use {
     crate::{
         config::{OxidizedPythonInterpreterConfig, ResolvedOxidizedPythonInterpreterConfig},
-        conversion::osstring_to_bytes,
+        conversion::cpython_osstring_to_bytes,
         error::NewInterpreterError,
         extension::{PyInit_oxidized_importer, OXIDIZED_IMPORTER_NAME, OXIDIZED_IMPORTER_NAME_STR},
         importer::{
@@ -298,7 +298,7 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
                 .config
                 .resolve_sys_argvb()
                 .iter()
-                .map(|x| osstring_to_bytes(py, x.clone()))
+                .map(|x| cpython_osstring_to_bytes(py, x.clone()))
                 .collect::<Vec<_>>();
 
             let args = cpython::PyList::new(py, &args_objs);

@@ -6,7 +6,7 @@
 
 use {
     crate::{
-        conversion::{path_to_pathlib_path, pyobject_to_pathbuf},
+        conversion::{cpython_path_to_pathlib_path, cpython_pyobject_to_pathbuf},
         python_resource_types::{
             PythonExtensionModule, PythonModuleBytecode, PythonModuleSource,
             PythonPackageDistributionResource, PythonPackageResource,
@@ -39,7 +39,7 @@ impl PyTempDir {
             py.import("tempfile")?
                 .call(py, "TemporaryDirectory", cpython::NoArgs, None)?;
         let cleanup = temp_dir.getattr(py, "cleanup")?;
-        let path = pyobject_to_pathbuf(py, temp_dir.getattr(py, "name")?)?;
+        let path = cpython_pyobject_to_pathbuf(py, temp_dir.getattr(py, "name")?)?;
 
         Ok(PyTempDir { cleanup, path })
     }
@@ -331,7 +331,7 @@ impl OxidizedResourceCollector {
                 sys_module.get(py, "executable")?
             }
         };
-        let python_exe = pyobject_to_pathbuf(py, python_exe)?;
+        let python_exe = cpython_pyobject_to_pathbuf(py, python_exe)?;
         let temp_dir = PyTempDir::new(py)?;
         let collector = self.collector(py).borrow();
 
@@ -361,7 +361,7 @@ impl OxidizedResourceCollector {
         let mut file_installs = Vec::new();
 
         for (path, location, executable) in &prepared.extra_files {
-            let path = path_to_pathlib_path(py, path)?;
+            let path = cpython_path_to_pathlib_path(py, path)?;
             let data = location.resolve_content().map_err(|e| {
                 cpython::PyErr::new::<cpython::exc::ValueError, _>(py, e.to_string())
             })?;

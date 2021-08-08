@@ -5,7 +5,7 @@
 /*! Defines Python type objects that represent Python resources. */
 
 use {
-    crate::conversion::pyobject_to_owned_bytes,
+    crate::conversion::cpython_pyobject_to_owned_bytes,
     cpython::py_class,
     python_packaging::resource::{
         BytecodeOptimizationLevel, PythonExtensionModule as RawPythonExtensionModule,
@@ -49,7 +49,7 @@ py_class!(pub(crate) class PythonModuleSource |py| {
     @source.setter def set_source(&self, value: Option<cpython::PyObject>) -> cpython::PyResult<()> {
         if let Some(value) = value {
             self.resource(py).borrow_mut().source = FileData::Memory(
-                pyobject_to_owned_bytes(py, &value)?
+                cpython_pyobject_to_owned_bytes(py, &value)?
             );
 
             Ok(())
@@ -113,7 +113,7 @@ py_class!(pub(crate) class PythonModuleBytecode |py| {
     @bytecode.setter def set_bytecode(&self, value: Option<cpython::PyObject>) -> cpython::PyResult<()> {
         if let Some(value) = value {
             self.resource(py).borrow_mut().set_bytecode(
-                &pyobject_to_owned_bytes(py, &value)?
+                &cpython_pyobject_to_owned_bytes(py, &value)?
             );
 
             Ok(())
@@ -210,7 +210,7 @@ py_class!(pub(crate) class PythonPackageResource |py| {
     @data.setter def set_data(&self, value: Option<cpython::PyObject>) -> cpython::PyResult<()> {
         if let Some(value) = value {
             self.resource(py).borrow_mut().data = FileData::Memory(
-                pyobject_to_owned_bytes(py, &value)?
+                cpython_pyobject_to_owned_bytes(py, &value)?
             );
 
             Ok(())
@@ -294,7 +294,7 @@ py_class!(pub(crate) class PythonPackageDistributionResource |py| {
     @data.setter def set_data(&self, value: Option<cpython::PyObject>) -> cpython::PyResult<()> {
         if let Some(value) = value {
             self.resource(py).borrow_mut().data = FileData::Memory(
-                pyobject_to_owned_bytes(py, &value)?
+                cpython_pyobject_to_owned_bytes(py, &value)?
             );
 
             Ok(())

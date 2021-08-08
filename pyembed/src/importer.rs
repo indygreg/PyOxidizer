@@ -17,7 +17,7 @@ use {
 };
 use {
     crate::{
-        conversion::{path_to_pyobject, pyobject_to_pathbuf},
+        conversion::{cpython_path_to_pyobject, cpython_pyobject_to_pathbuf},
         extension::{get_module_state, OXIDIZED_IMPORTER_NAME_STR},
         pkg_resources::register_pkg_resources_with_module,
         python_resources::{
@@ -1211,7 +1211,7 @@ fn oxidized_finder_new(
 
     // Update origin if a value is given.
     if let Some(py_origin) = relative_path_origin {
-        resources_state.origin = pyobject_to_pathbuf(py, py_origin)?;
+        resources_state.origin = cpython_pyobject_to_pathbuf(py, py_origin)?;
     }
 
     let importer = OxidizedFinder::create_instance(
@@ -1246,11 +1246,11 @@ impl OxidizedFinder {
     }
 
     fn origin_impl(&self, py: cpython::Python) -> cpython::PyResult<cpython::PyObject> {
-        path_to_pyobject(py, &self.state(py).get_resources_state().origin)
+        cpython_path_to_pyobject(py, &self.state(py).get_resources_state().origin)
     }
 
     fn path_hook_base_str_impl(&self, py: cpython::Python) -> cpython::PyResult<cpython::PyObject> {
-        path_to_pyobject(py, &self.state(py).get_resources_state().current_exe)
+        cpython_path_to_pyobject(py, &self.state(py).get_resources_state().current_exe)
     }
 
     fn pkg_resources_import_auto_register_impl(
@@ -1277,7 +1277,7 @@ impl OxidizedFinder {
         py: cpython::Python,
         path: cpython::PyObject,
     ) -> cpython::PyResult<cpython::PyObject> {
-        let path = pyobject_to_pathbuf(py, path)?;
+        let path = cpython_pyobject_to_pathbuf(py, path)?;
 
         let resources_state: &mut PythonResourcesState<u8> =
             self.state(py).get_resources_state_mut();

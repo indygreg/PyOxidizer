@@ -30,7 +30,7 @@ const SURROGATEESCAPE: &[u8] = b"surrogateescape\0";
 /// The optional encoding is the name of a Python encoding. If not used,
 /// the default system encoding will be used.
 #[cfg(target_family = "unix")]
-pub fn osstr_to_pyobject(
+pub fn cpython_osstr_to_pyobject(
     py: cpython::Python,
     s: &OsStr,
     encoding: Option<&str>,
@@ -65,7 +65,7 @@ pub fn osstr_to_pyobject(
 }
 
 #[cfg(target_family = "windows")]
-pub fn osstr_to_pyobject(
+pub fn cpython_osstr_to_pyobject(
     py: cpython::Python,
     s: &OsStr,
     _encoding: Option<&str>,
@@ -81,7 +81,7 @@ pub fn osstr_to_pyobject(
 }
 
 #[cfg(all(unix, not(library_mode = "extension")))]
-pub fn osstring_to_bytes(py: cpython::Python, s: OsString) -> cpython::PyObject {
+pub fn cpython_osstring_to_bytes(py: cpython::Python, s: OsString) -> cpython::PyObject {
     let b = s.as_bytes();
     unsafe {
         let o = oldpyffi::PyBytes_FromStringAndSize(b.as_ptr() as *const i8, b.len() as isize);
@@ -90,7 +90,7 @@ pub fn osstring_to_bytes(py: cpython::Python, s: OsString) -> cpython::PyObject 
 }
 
 #[cfg(all(windows, not(library_mode = "extension")))]
-pub fn osstring_to_bytes(py: cpython::Python, s: OsString) -> cpython::PyObject {
+pub fn cpython_osstring_to_bytes(py: cpython::Python, s: OsString) -> cpython::PyObject {
     let w: Vec<u16> = s.encode_wide().collect();
     unsafe {
         let o = oldpyffi::PyBytes_FromStringAndSize(w.as_ptr() as *const i8, w.len() as isize * 2);
@@ -98,7 +98,10 @@ pub fn osstring_to_bytes(py: cpython::Python, s: OsString) -> cpython::PyObject 
     }
 }
 
-pub fn path_to_pyobject(py: cpython::Python, path: &Path) -> cpython::PyResult<cpython::PyObject> {
+pub fn cpython_path_to_pyobject(
+    py: cpython::Python,
+    path: &Path,
+) -> cpython::PyResult<cpython::PyObject> {
     let encoding_ptr = unsafe { oldpyffi::Py_FileSystemDefaultEncoding };
 
     let encoding = if encoding_ptr.is_null() {
@@ -111,16 +114,16 @@ pub fn path_to_pyobject(py: cpython::Python, path: &Path) -> cpython::PyResult<c
         )
     };
 
-    osstr_to_pyobject(py, path.as_os_str(), encoding)
+    cpython_osstr_to_pyobject(py, path.as_os_str(), encoding)
         .map_err(|e| cpython::PyErr::new::<cpython::exc::UnicodeDecodeError, _>(py, e))
 }
 
 /// Convert a Rust Path to a pathlib.Path.
-pub fn path_to_pathlib_path(
+pub fn cpython_path_to_pathlib_path(
     py: cpython::Python,
     path: &Path,
 ) -> cpython::PyResult<cpython::PyObject> {
-    let py_str = path_to_pyobject(py, path)?;
+    let py_str = cpython_path_to_pyobject(py, path)?;
 
     let pathlib = py.import("pathlib")?;
 
@@ -128,7 +131,7 @@ pub fn path_to_pathlib_path(
 }
 
 #[cfg(unix)]
-pub fn pyobject_to_pathbuf(
+pub fn cpython_pyobject_to_pathbuf(
     py: cpython::Python,
     value: cpython::PyObject,
 ) -> cpython::PyResult<PathBuf> {
@@ -143,7 +146,7 @@ pub fn pyobject_to_pathbuf(
 }
 
 #[cfg(windows)]
-pub fn pyobject_to_pathbuf(
+pub fn cpython_pyobject_to_pathbuf(
     py: cpython::Python,
     value: cpython::PyObject,
 ) -> cpython::PyResult<PathBuf> {
@@ -168,19 +171,19 @@ pub fn pyobject_to_pathbuf(
     Ok(PathBuf::from(rust_normalized))
 }
 
-pub fn pyobject_to_pathbuf_optional(
+pub fn cpython_pyobject_to_pathbuf_optional(
     py: cpython::Python,
     value: cpython::PyObject,
 ) -> cpython::PyResult<Option<PathBuf>> {
     if value == py.None() {
         Ok(None)
     } else {
-        Ok(Some(pyobject_to_pathbuf(py, value)?))
+        Ok(Some(cpython_pyobject_to_pathbuf(py, value)?))
     }
 }
 
 /// Attempt to convert a PyObject to an owned Vec<u8>.
-pub fn pyobject_to_owned_bytes(
+pub fn cpython_pyobject_to_owned_bytes(
     py: cpython::Python,
     value: &cpython::PyObject,
 ) -> cpython::PyResult<Vec<u8>> {
@@ -196,18 +199,18 @@ pub fn pyobject_to_owned_bytes(
 /// Attempt to convert a PyObject to owned Vec<u8>.
 ///
 /// Returns Ok(None) if PyObject is None.
-pub fn pyobject_to_owned_bytes_optional(
+pub fn cpython_pyobject_to_owned_bytes_optional(
     py: cpython::Python,
     value: &cpython::PyObject,
 ) -> cpython::PyResult<Option<Vec<u8>>> {
     if value == &py.None() {
         Ok(None)
     } else {
-        Ok(Some(pyobject_to_owned_bytes(py, value)?))
+        Ok(Some(cpython_pyobject_to_owned_bytes(py, value)?))
     }
 }
 
-pub fn pyobject_optional_resources_map_to_owned_bytes(
+pub fn cpython_pyobject_optional_resources_map_to_owned_bytes(
     py: cpython::Python,
     value: &cpython::PyObject,
 ) -> cpython::PyResult<Option<HashMap<String, Vec<u8>>>> {
@@ -218,14 +221,17 @@ pub fn pyobject_optional_resources_map_to_owned_bytes(
         let mut res = HashMap::with_capacity(source.len(py));
 
         for (k, v) in source.items(py) {
-            res.insert(k.extract::<String>(py)?, pyobject_to_owned_bytes(py, &v)?);
+            res.insert(
+                k.extract::<String>(py)?,
+                cpython_pyobject_to_owned_bytes(py, &v)?,
+            );
         }
 
         Ok(Some(res))
     }
 }
 
-pub fn pyobject_optional_resources_map_to_pathbuf(
+pub fn cpython_pyobject_optional_resources_map_to_pathbuf(
     py: cpython::Python,
     value: &cpython::PyObject,
 ) -> cpython::PyResult<Option<HashMap<String, PathBuf>>> {
@@ -236,7 +242,10 @@ pub fn pyobject_optional_resources_map_to_pathbuf(
         let mut res = HashMap::with_capacity(source.len(py));
 
         for (k, v) in source.items(py) {
-            res.insert(k.extract::<String>(py)?, pyobject_to_pathbuf(py, v)?);
+            res.insert(
+                k.extract::<String>(py)?,
+                cpython_pyobject_to_pathbuf(py, v)?,
+            );
         }
 
         Ok(Some(res))

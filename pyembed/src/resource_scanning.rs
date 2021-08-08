@@ -6,7 +6,7 @@
 
 use {
     crate::{
-        conversion::pyobject_to_pathbuf,
+        conversion::cpython_pyobject_to_pathbuf,
         python_resource_types::{
             PythonExtensionModule, PythonModuleBytecode, PythonModuleSource,
             PythonPackageDistributionResource, PythonPackageResource,
@@ -24,7 +24,7 @@ pub(crate) fn find_resources_in_path(
     py: cpython::Python,
     path: cpython::PyObject,
 ) -> cpython::PyResult<cpython::PyObject> {
-    let path = pyobject_to_pathbuf(py, path)?;
+    let path = cpython_pyobject_to_pathbuf(py, path)?;
 
     if !path.is_dir() {
         return Err(cpython::PyErr::new::<cpython::exc::ValueError, _>(
