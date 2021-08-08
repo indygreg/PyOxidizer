@@ -10,7 +10,7 @@ use {
         exc::UnicodeDecodeError,
         {PyDict, PyErr, PyObject, PyResult, Python},
     },
-    python3_sys as pyffi,
+    python3_sys as oldpyffi,
     std::{
         collections::HashMap,
         ffi::{CStr, OsStr},
@@ -49,7 +49,7 @@ pub fn osstr_to_pyobject(
             CString::new(encoding.as_bytes()).map_err(|_| "encoding not a valid C string")?;
 
         unsafe {
-            pyffi::PyUnicode_Decode(
+            oldpyffi::PyUnicode_Decode(
                 b.as_ptr() as *const i8,
                 b.to_bytes().len() as isize,
                 encoding_cstring.as_ptr(),
@@ -58,7 +58,7 @@ pub fn osstr_to_pyobject(
         }
     } else {
         unsafe {
-            pyffi::PyUnicode_DecodeLocaleAndSize(
+            oldpyffi::PyUnicode_DecodeLocaleAndSize(
                 b.as_ptr() as *const i8,
                 b.to_bytes().len() as isize,
                 SURROGATEESCAPE.as_ptr() as *const i8,
@@ -80,7 +80,7 @@ pub fn osstr_to_pyobject(
     unsafe {
         Ok(PyObject::from_owned_ptr(
             py,
-            pyffi::PyUnicode_FromWideChar(w.as_ptr(), w.len() as isize),
+            oldpyffi::PyUnicode_FromWideChar(w.as_ptr(), w.len() as isize),
         ))
     }
 }
@@ -89,7 +89,7 @@ pub fn osstr_to_pyobject(
 pub fn osstring_to_bytes(py: Python, s: OsString) -> PyObject {
     let b = s.as_bytes();
     unsafe {
-        let o = pyffi::PyBytes_FromStringAndSize(b.as_ptr() as *const i8, b.len() as isize);
+        let o = oldpyffi::PyBytes_FromStringAndSize(b.as_ptr() as *const i8, b.len() as isize);
         PyObject::from_owned_ptr(py, o)
     }
 }
@@ -98,13 +98,13 @@ pub fn osstring_to_bytes(py: Python, s: OsString) -> PyObject {
 pub fn osstring_to_bytes(py: Python, s: OsString) -> PyObject {
     let w: Vec<u16> = s.encode_wide().collect();
     unsafe {
-        let o = pyffi::PyBytes_FromStringAndSize(w.as_ptr() as *const i8, w.len() as isize * 2);
+        let o = oldpyffi::PyBytes_FromStringAndSize(w.as_ptr() as *const i8, w.len() as isize * 2);
         PyObject::from_owned_ptr(py, o)
     }
 }
 
 pub fn path_to_pyobject(py: Python, path: &Path) -> PyResult<PyObject> {
-    let encoding_ptr = unsafe { pyffi::Py_FileSystemDefaultEncoding };
+    let encoding_ptr = unsafe { oldpyffi::Py_FileSystemDefaultEncoding };
 
     let encoding = if encoding_ptr.is_null() {
         None

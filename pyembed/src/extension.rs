@@ -21,7 +21,7 @@ use {
             PythonObject,
         },
     },
-    python3_sys as pyffi,
+    python3_sys as oldpyffi,
 };
 
 pub const OXIDIZED_IMPORTER_NAME_STR: &str = "oxidized_importer";
@@ -29,8 +29,8 @@ pub const OXIDIZED_IMPORTER_NAME: &[u8] = b"oxidized_importer\0";
 
 const DOC: &[u8] = b"A highly-performant importer implemented in Rust\0";
 
-static mut MODULE_DEF: pyffi::PyModuleDef = pyffi::PyModuleDef {
-    m_base: pyffi::PyModuleDef_HEAD_INIT,
+static mut MODULE_DEF: oldpyffi::PyModuleDef = oldpyffi::PyModuleDef {
+    m_base: oldpyffi::PyModuleDef_HEAD_INIT,
     m_name: OXIDIZED_IMPORTER_NAME.as_ptr() as *const _,
     m_doc: DOC.as_ptr() as *const _,
     m_size: std::mem::size_of::<ModuleState>() as isize,
@@ -62,7 +62,7 @@ pub(crate) fn get_module_state<'a>(
     m: &'a PyModule,
 ) -> Result<&'a mut ModuleState, PyErr> {
     let ptr = m.as_object().as_ptr();
-    let state = unsafe { pyffi::PyModule_GetState(ptr) as *mut ModuleState };
+    let state = unsafe { oldpyffi::PyModule_GetState(ptr) as *mut ModuleState };
 
     if state.is_null() {
         let err = PyErr::new::<ValueError, _>(py, "unable to retrieve module state");
@@ -80,10 +80,10 @@ pub(crate) fn get_module_state<'a>(
 /// opinionated about how things should work. e.g. they call
 /// PyEval_InitThreads(), which is undesired. We want total control.
 #[allow(non_snake_case)]
-pub extern "C" fn PyInit_oxidized_importer() -> *mut pyffi::PyObject {
+pub extern "C" fn PyInit_oxidized_importer() -> *mut oldpyffi::PyObject {
     let py = unsafe { cpython::Python::assume_gil_acquired() };
 
-    let module = unsafe { pyffi::PyModule_Create(&mut MODULE_DEF) };
+    let module = unsafe { oldpyffi::PyModule_Create(&mut MODULE_DEF) };
 
     if module.is_null() {
         return module;

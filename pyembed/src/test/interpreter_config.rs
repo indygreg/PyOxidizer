@@ -6,7 +6,7 @@ use {
     super::{default_interpreter_config, set_sys_paths, PYTHON_INTERPRETER_PATH},
     crate::{MainPythonInterpreter, OxidizedPythonInterpreterConfig},
     cpython::{ObjectProtocol, PyBytes, PyList, PyObject, PyString, PyStringData},
-    python3_sys as pyffi,
+    python3_sys as oldpyffi,
     python_packaging::{
         interpreter::{BytesWarning, MemoryAllocatorBackend, PythonInterpreterProfile},
         resource::BytecodeOptimizationLevel,
@@ -334,7 +334,7 @@ rusty_fork_test! {
             &Some(vec![PathBuf::from(format!("{}/lib", origin.display()))])
         );
 
-        let py_config: pyffi::PyConfig = (&config).try_into().unwrap();
+        let py_config: oldpyffi::PyConfig = (&config).try_into().unwrap();
 
         assert_eq!(py_config.module_search_paths_set, 1);
         assert_eq!(py_config.module_search_paths.length, 1);

@@ -6,7 +6,7 @@
 
 use {
     crate::NewInterpreterError,
-    python3_sys as pyffi,
+    python3_sys as oldpyffi,
     python_packaging::interpreter::{
         MemoryAllocatorBackend, MultiprocessingStartMethod, PythonInterpreterConfig,
         PythonInterpreterProfile, TerminfoResolution,
@@ -26,7 +26,7 @@ pub struct ExtensionModule {
     pub name: CString,
 
     /// Extension module initialization function.
-    pub init_func: unsafe extern "C" fn() -> *mut pyffi::PyObject,
+    pub init_func: unsafe extern "C" fn() -> *mut oldpyffi::PyObject,
 }
 
 /// A source for packed resources data.

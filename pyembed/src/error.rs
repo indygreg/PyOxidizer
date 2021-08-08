@@ -4,7 +4,7 @@
 
 use {
     cpython::{ObjectProtocol, PyErr, Python},
-    python3_sys as pyffi,
+    python3_sys as oldpyffi,
     std::{
         ffi::CStr,
         fmt::{Display, Formatter},
@@ -70,7 +70,7 @@ impl NewInterpreterError {
         }
     }
 
-    pub fn new_from_pystatus(status: &pyffi::PyStatus, context: &str) -> Self {
+    pub fn new_from_pystatus(status: &oldpyffi::PyStatus, context: &str) -> Self {
         if !status.func.is_null() && !status.err_msg.is_null() {
             let func = unsafe { CStr::from_ptr(status.func) };
             let msg = unsafe { CStr::from_ptr(status.err_msg) };

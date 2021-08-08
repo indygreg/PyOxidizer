@@ -32,13 +32,13 @@ use {
             PyModule, PyObject, PyResult, PyString, PyTuple, Python, PythonObject, ToPyObject,
         },
     },
-    python3_sys as pyffi,
+    python3_sys as oldpyffi,
     std::sync::Arc,
 };
 
 #[cfg(windows)]
 #[allow(non_camel_case_types)]
-type py_init_fn = extern "C" fn() -> *mut pyffi::PyObject;
+type py_init_fn = extern "C" fn() -> *mut oldpyffi::PyObject;
 
 /// Implementation of `Loader.create_module()` for in-memory extension modules.
 ///
@@ -68,7 +68,7 @@ fn extension_module_shared_library_create_module(
     let origin = PyString::new(py, "memory");
 
     let existing_module = unsafe {
-        pyffi::_PyImport_FindExtensionObject(name_py.as_ptr(), origin.as_object().as_ptr())
+        oldpyffi::_PyImport_FindExtensionObject(name_py.as_ptr(), origin.as_object().as_ptr())
     };
 
     // We found an existing module object. Return it.
@@ -77,7 +77,7 @@ fn extension_module_shared_library_create_module(
     }
 
     // An error occurred calling _PyImport_FindExtensionObjectEx(). Raise it.
-    if !unsafe { pyffi::PyErr_Occurred() }.is_null() {
+    if !unsafe { oldpyffi::PyErr_Occurred() }.is_null() {
         return Err(PyErr::fetch(py));
     }
 
@@ -155,14 +155,14 @@ fn load_dynamic_library(
 
     // Package context is needed for single-phase init.
     let py_module = unsafe {
-        let old_context = pyffi::_Py_PackageContext;
-        pyffi::_Py_PackageContext = name_cstring.as_ptr();
+        let old_context = oldpyffi::_Py_PackageContext;
+        oldpyffi::_Py_PackageContext = name_cstring.as_ptr();
         let py_module = init_fn();
-        pyffi::_Py_PackageContext = old_context;
+        oldpyffi::_Py_PackageContext = old_context;
         py_module
     };
 
-    if py_module.is_null() && unsafe { pyffi::PyErr_Occurred().is_null() } {
+    if py_module.is_null() && unsafe { oldpyffi::PyErr_Occurred().is_null() } {
         return Err(PyErr::new::<SystemError, _>(
             py,
             format!(
@@ -175,9 +175,9 @@ fn load_dynamic_library(
     // Cast to owned type to help prevent refcount/memory leaks.
     let py_module = unsafe { PyObject::from_owned_ptr(py, py_module) };
 
-    if !unsafe { pyffi::PyErr_Occurred().is_null() } {
+    if !unsafe { oldpyffi::PyErr_Occurred().is_null() } {
         unsafe {
-            pyffi::PyErr_Clear();
+            oldpyffi::PyErr_Clear();
         }
         return Err(PyErr::new::<SystemError, _>(
             py,
@@ -185,7 +185,7 @@ fn load_dynamic_library(
         ));
     }
 
-    if unsafe { pyffi::Py_TYPE(py_module.as_ptr()) }.is_null() {
+    if unsafe { oldpyffi::Py_TYPE(py_module.as_ptr()) }.is_null() {
         return Err(PyErr::new::<SystemError, _>(
             py,
             format!("init function of {} returned uninitialized object", name),
@@ -193,10 +193,12 @@ fn load_dynamic_library(
     }
 
     // If initialization returned a `PyModuleDef`, construct a module from it.
-    if unsafe { pyffi::PyObject_TypeCheck(py_module.as_ptr(), &mut pyffi::PyModuleDef_Type) } != 0 {
+    if unsafe { oldpyffi::PyObject_TypeCheck(py_module.as_ptr(), &mut oldpyffi::PyModuleDef_Type) }
+        != 0
+    {
         let py_module = unsafe {
-            pyffi::PyModule_FromDefAndSpec(
-                py_module.as_ptr() as *mut pyffi::PyModuleDef,
+            oldpyffi::PyModule_FromDefAndSpec(
+                py_module.as_ptr() as *mut oldpyffi::PyModuleDef,
                 spec.as_ptr(),
             )
         };
@@ -210,7 +212,7 @@ fn load_dynamic_library(
 
     // Else fall back to single-phase init mechanism.
 
-    let mut module_def = unsafe { pyffi::PyModule_GetDef(py_module.as_ptr()) };
+    let mut module_def = unsafe { oldpyffi::PyModule_GetDef(py_module.as_ptr()) };
     if module_def.is_null() {
         return Err(PyErr::new::<SystemError, _>(
             py,
@@ -228,7 +230,7 @@ fn load_dynamic_library(
     // If we wanted to assign __file__ we would do it here.
 
     let fixup_result = unsafe {
-        pyffi::_PyImport_FixupExtensionObject(
+        oldpyffi::_PyImport_FixupExtensionObject(
             py_module.as_ptr(),
             name_py.as_ptr(),
             name_py.as_ptr(),
@@ -330,7 +332,7 @@ impl ImporterState {
         let module_spec_type = bootstrap_module.get(py, "ModuleSpec")?;
 
         let builtins_module =
-            match unsafe { PyObject::from_borrowed_ptr_opt(py, pyffi::PyEval_GetBuiltins()) } {
+            match unsafe { PyObject::from_borrowed_ptr_opt(py, oldpyffi::PyEval_GetBuiltins()) } {
                 Some(o) => o.cast_into::<PyDict>(py),
                 None => {
                     return Err(PyErr::new::<ValueError, _>(
@@ -365,7 +367,7 @@ impl ImporterState {
         }?;
 
         let capsule = unsafe {
-            let ptr = pyffi::PyCapsule_New(
+            let ptr = oldpyffi::PyCapsule_New(
                 &*resources_state as *const PythonResourcesState<u8> as *mut _,
                 std::ptr::null(),
                 None,
@@ -408,7 +410,10 @@ impl ImporterState {
     #[inline]
     pub fn get_resources_state<'a>(&self) -> &PythonResourcesState<'a, u8> {
         let ptr = unsafe {
-            pyffi::PyCapsule_GetPointer(self.resources_state.as_object().as_ptr(), std::ptr::null())
+            oldpyffi::PyCapsule_GetPointer(
+                self.resources_state.as_object().as_ptr(),
+                std::ptr::null(),
+            )
         };
 
         if ptr.is_null() {
@@ -425,7 +430,10 @@ impl ImporterState {
     #[allow(clippy::mut_from_ref)]
     pub fn get_resources_state_mut<'a>(&self) -> &mut PythonResourcesState<'a, u8> {
         let ptr = unsafe {
-            pyffi::PyCapsule_GetPointer(self.resources_state.as_object().as_ptr(), std::ptr::null())
+            oldpyffi::PyCapsule_GetPointer(
+                self.resources_state.as_object().as_ptr(),
+                std::ptr::null(),
+            )
         };
 
         if ptr.is_null() {
@@ -444,7 +452,10 @@ impl ImporterState {
 impl Drop for ImporterState {
     fn drop(&mut self) {
         let ptr = unsafe {
-            pyffi::PyCapsule_GetPointer(self.resources_state.as_object().as_ptr(), std::ptr::null())
+            oldpyffi::PyCapsule_GetPointer(
+                self.resources_state.as_object().as_ptr(),
+                std::ptr::null(),
+            )
         };
 
         if !ptr.is_null() {

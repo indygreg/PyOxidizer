@@ -23,7 +23,7 @@ use {
         PyString, Python, PythonObject, ToPyObject,
     },
     once_cell::sync::Lazy,
-    python3_sys as pyffi,
+    python3_sys as oldpyffi,
     python_packaging::interpreter::{MultiprocessingStartMethod, TerminfoResolution},
     std::{
         collections::BTreeSet,
@@ -125,12 +125,12 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
         set_pyimport_inittab(&self.config);
 
         // Pre-configure Python.
-        let pre_config = pyffi::PyPreConfig::try_from(&self.config)?;
+        let pre_config = oldpyffi::PyPreConfig::try_from(&self.config)?;
 
         unsafe {
-            let status = pyffi::Py_PreInitialize(&pre_config);
+            let status = oldpyffi::Py_PreInitialize(&pre_config);
 
-            if pyffi::PyStatus_Exception(status) != 0 {
+            if oldpyffi::PyStatus_Exception(status) != 0 {
                 return Err(NewInterpreterError::new_from_pystatus(
                     &status,
                     "Python pre-initialization",
@@ -143,15 +143,15 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
 
         if let Some(allocator) = &self.allocator {
             if self.config.allocator_raw {
-                allocator.set_allocator(pyffi::PyMemAllocatorDomain::PYMEM_DOMAIN_RAW);
+                allocator.set_allocator(oldpyffi::PyMemAllocatorDomain::PYMEM_DOMAIN_RAW);
             }
 
             if self.config.allocator_mem {
-                allocator.set_allocator(pyffi::PyMemAllocatorDomain::PYMEM_DOMAIN_MEM);
+                allocator.set_allocator(oldpyffi::PyMemAllocatorDomain::PYMEM_DOMAIN_MEM);
             }
 
             if self.config.allocator_obj {
-                allocator.set_allocator(pyffi::PyMemAllocatorDomain::PYMEM_DOMAIN_OBJ);
+                allocator.set_allocator(oldpyffi::PyMemAllocatorDomain::PYMEM_DOMAIN_OBJ);
             }
 
             if self.config.allocator_pymalloc_arena {
@@ -167,18 +167,18 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
         // custom domain allocators.
         if self.config.allocator_debug {
             unsafe {
-                pyffi::PyMem_SetupDebugHooks();
+                oldpyffi::PyMem_SetupDebugHooks();
             }
         }
 
-        let mut py_config: pyffi::PyConfig = (&self.config).try_into()?;
+        let mut py_config: oldpyffi::PyConfig = (&self.config).try_into()?;
 
         // Enable multi-phase initialization. This allows us to initialize
         // our custom importer before Python attempts any imports.
         py_config._init_main = 0;
 
-        let status = unsafe { pyffi::Py_InitializeFromConfig(&py_config) };
-        if unsafe { pyffi::PyStatus_Exception(status) } != 0 {
+        let status = unsafe { oldpyffi::Py_InitializeFromConfig(&py_config) };
+        if unsafe { oldpyffi::PyStatus_Exception(status) } != 0 {
             return Err(NewInterpreterError::new_from_pystatus(
                 &status,
                 "initializing Python core",
@@ -252,9 +252,9 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
         // Now proceed with the Python main initialization. This will initialize
         // importlib. And if the custom importlib bytecode was registered above,
         // our extension module will get imported and initialized.
-        let status = unsafe { pyffi::_Py_InitializeMain() };
+        let status = unsafe { oldpyffi::_Py_InitializeMain() };
 
-        if unsafe { pyffi::PyStatus_Exception(status) } != 0 {
+        if unsafe { oldpyffi::PyStatus_Exception(status) } != 0 {
             return Err(NewInterpreterError::new_from_pystatus(
                 &status,
                 "initializing Python main",
@@ -308,7 +308,7 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
             let argvb = b"argvb\0";
 
             let res = args.with_borrowed_ptr(py, |args_ptr| unsafe {
-                pyffi::PySys_SetObject(argvb.as_ptr() as *const i8, args_ptr)
+                oldpyffi::PySys_SetObject(argvb.as_ptr() as *const i8, args_ptr)
             });
 
             match res {
@@ -322,7 +322,7 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
         let oxidized = b"oxidized\0";
 
         let res = py.True().with_borrowed_ptr(py, |py_true| unsafe {
-            pyffi::PySys_SetObject(oxidized.as_ptr() as *const i8, py_true)
+            oldpyffi::PySys_SetObject(oxidized.as_ptr() as *const i8, py_true)
         });
 
         match res {
@@ -334,7 +334,7 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
             let frozen = b"frozen\0";
 
             match py.True().with_borrowed_ptr(py, |py_true| unsafe {
-                pyffi::PySys_SetObject(frozen.as_ptr() as *const i8, py_true)
+                oldpyffi::PySys_SetObject(frozen.as_ptr() as *const i8, py_true)
             }) {
                 0 => (),
                 _ => return Err(NewInterpreterError::Simple("unable to set sys.frozen")),
@@ -346,7 +346,7 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
             let value = PyString::new(py, &origin_string);
 
             match value.with_borrowed_ptr(py, |py_value| unsafe {
-                pyffi::PySys_SetObject(meipass.as_ptr() as *const i8, py_value)
+                oldpyffi::PySys_SetObject(meipass.as_ptr() as *const i8, py_value)
             }) {
                 0 => (),
                 _ => return Err(NewInterpreterError::Simple("unable to set sys._MEIPASS")),
@@ -432,7 +432,7 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
     /// the evaluation result, consider calling a function on the interpreter handle
     /// that executes code.
     pub fn py_runmain(self) -> i32 {
-        unsafe { pyffi::Py_RunMain() }
+        unsafe { oldpyffi::Py_RunMain() }
     }
 
     /// Run in "multiprocessing worker" mode.
@@ -528,8 +528,8 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
     }
 }
 
-static mut ORIGINAL_BUILTIN_EXTENSIONS: Option<Vec<pyffi::_inittab>> = None;
-static mut REPLACED_BUILTIN_EXTENSIONS: Option<Vec<pyffi::_inittab>> = None;
+static mut ORIGINAL_BUILTIN_EXTENSIONS: Option<Vec<oldpyffi::_inittab>> = None;
+static mut REPLACED_BUILTIN_EXTENSIONS: Option<Vec<oldpyffi::_inittab>> = None;
 
 /// Set PyImport_Inittab from config options.
 ///
@@ -546,10 +546,10 @@ fn set_pyimport_inittab(config: &OxidizedPythonInterpreterConfig) {
     // copy.
     unsafe {
         if ORIGINAL_BUILTIN_EXTENSIONS.is_none() {
-            let mut entries: Vec<pyffi::_inittab> = Vec::new();
+            let mut entries: Vec<oldpyffi::_inittab> = Vec::new();
 
             for i in 0.. {
-                let record = pyffi::PyImport_Inittab.offset(i);
+                let record = oldpyffi::PyImport_Inittab.offset(i);
 
                 if (*record).name.is_null() {
                     break;
@@ -567,7 +567,7 @@ fn set_pyimport_inittab(config: &OxidizedPythonInterpreterConfig) {
 
     if config.oxidized_importer {
         let ptr = PyInit_oxidized_importer as *const ();
-        extensions.push(pyffi::_inittab {
+        extensions.push(oldpyffi::_inittab {
             name: OXIDIZED_IMPORTER_NAME.as_ptr() as *mut _,
             initfunc: Some(unsafe { std::mem::transmute::<*const (), extern "C" fn()>(ptr) }),
         });
@@ -577,7 +577,7 @@ fn set_pyimport_inittab(config: &OxidizedPythonInterpreterConfig) {
     if let Some(extra_extension_modules) = &config.extra_extension_modules {
         for extension in extra_extension_modules {
             let ptr = extension.init_func as *const ();
-            extensions.push(pyffi::_inittab {
+            extensions.push(oldpyffi::_inittab {
                 name: extension.name.as_ptr() as *mut _,
                 initfunc: Some(unsafe { std::mem::transmute::<*const (), extern "C" fn()>(ptr) }),
             });
@@ -585,7 +585,7 @@ fn set_pyimport_inittab(config: &OxidizedPythonInterpreterConfig) {
     }
 
     // Add sentinel record with NULLs.
-    extensions.push(pyffi::_inittab {
+    extensions.push(oldpyffi::_inittab {
         name: std::ptr::null_mut(),
         initfunc: None,
     });
@@ -593,7 +593,7 @@ fn set_pyimport_inittab(config: &OxidizedPythonInterpreterConfig) {
     // And finally replace the static in Python's code with our instance.
     unsafe {
         REPLACED_BUILTIN_EXTENSIONS = Some(extensions);
-        pyffi::PyImport_Inittab = REPLACED_BUILTIN_EXTENSIONS.as_mut().unwrap().as_mut_ptr();
+        oldpyffi::PyImport_Inittab = REPLACED_BUILTIN_EXTENSIONS.as_mut().unwrap().as_mut_ptr();
     }
 }
 
@@ -644,6 +644,6 @@ impl<'python, 'interpreter, 'resources> Drop
             }
         }
 
-        let _ = unsafe { pyffi::Py_FinalizeEx() };
+        let _ = unsafe { oldpyffi::Py_FinalizeEx() };
     }
 }

@@ -23,7 +23,7 @@ use {
         py_class, NoArgs, ObjectProtocol, PyBytes, PyDict, PyErr, PyList, PyModule, PyObject,
         PyResult, PyString, PyTuple, Python, PythonObject, ToPyObject,
     },
-    python3_sys as pyffi,
+    python3_sys as oldpyffi,
     python_packed_resources::data::Resource,
     std::{
         borrow::Cow,
@@ -197,10 +197,10 @@ impl<'a> ImportablePythonModule<'a, u8> {
             OptimizeLevel::Two => &self.resource.in_memory_bytecode_opt2,
         } {
             let ptr = unsafe {
-                pyffi::PyMemoryView_FromMemory(
+                oldpyffi::PyMemoryView_FromMemory(
                     data.as_ptr() as _,
                     data.len() as _,
-                    pyffi::PyBUF_READ,
+                    oldpyffi::PyBUF_READ,
                 )
             };
 
@@ -546,7 +546,7 @@ impl<'a> PythonResourcesState<'a, u8> {
     /// Load `builtin` modules from the Python interpreter.
     pub fn index_interpreter_builtin_extension_modules(&mut self) -> Result<(), &'static str> {
         for i in 0.. {
-            let record = unsafe { pyffi::PyImport_Inittab.offset(i) };
+            let record = unsafe { oldpyffi::PyImport_Inittab.offset(i) };
 
             if unsafe { *record }.name.is_null() {
                 break;
@@ -578,7 +578,7 @@ impl<'a> PythonResourcesState<'a, u8> {
     /// Load `frozen` modules from the Python interpreter.
     pub fn index_interpreter_frozen_modules(&mut self) -> Result<(), &'static str> {
         for i in 0.. {
-            let record = unsafe { pyffi::PyImport_FrozenModules.offset(i) };
+            let record = unsafe { oldpyffi::PyImport_FrozenModules.offset(i) };
 
             if unsafe { *record }.name.is_null() {
                 break;

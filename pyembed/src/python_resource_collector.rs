@@ -19,7 +19,7 @@ use {
         py_class, NoArgs, ObjectProtocol, PyBytes, PyErr, PyList, PyObject, PyResult, Python,
         PythonObject, ToPyObject,
     },
-    python3_sys as pyffi,
+    python3_sys as oldpyffi,
     python_packaging::{
         bytecode::BytecodeCompiler,
         location::{AbstractResourceLocation, ConcreteResourceLocation},
@@ -59,7 +59,7 @@ impl Drop for PyTempDir {
         let py = gil_guard.python();
         if self.cleanup.call(py, NoArgs, None).is_err() {
             let cleanup = self.cleanup.as_ptr();
-            unsafe { pyffi::PyErr_WriteUnraisable(cleanup) }
+            unsafe { oldpyffi::PyErr_WriteUnraisable(cleanup) }
         }
     }
 }
