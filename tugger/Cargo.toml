@@ -27,9 +27,9 @@ tempfile = "3.2"
 time = "0.2"
 walkdir = "2"
 
-[dependencies.apple-bundle]
+[dependencies.apple-bundles]
 version = "0.5.0-pre"
-path = "../apple-bundle"
+path = "../apple-bundles"
 
 [dependencies.python-packaging]
 version = "0.10.0-pre"

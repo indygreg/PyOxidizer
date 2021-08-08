@@ -1,11 +1,11 @@
-# apple-bundle
+# apple-bundles
 
-`apple-bundle` is a library crate implementing functionality related
+`apple-bundles` is a library crate implementing functionality related
 to Apple *bundles*, a foundational primitive in Apple operating systems for
 encapsulating code and resources. (The ``.app`` *directories* in
 ``/Applications`` are *application bundles*, for example.)
 
-`apple-bundle` is part of the
+`apple-bundles` is part of the
 [PyOxidizer](https://github.com/indygreg/PyOxidizer.git) project and this
 crate is developed in that repository.
 

@@ -37,8 +37,8 @@ slog-term = "2.8"
 thiserror = "1.0"
 yasna = "0.3"
 
-[dependencies.apple-bundle]
-path = "../apple-bundle"
+[dependencies.apple-bundles]
+path = "../apple-bundles"
 version = "0.5.0-pre"
 
 [dependencies.cryptographic-message-syntax]

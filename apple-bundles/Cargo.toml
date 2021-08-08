@@ -1,5 +1,5 @@
 [package]
-name = "apple-bundle"
+name = "apple-bundles"
 version = "0.5.0-pre"
 authors = ["Gregory Szorc <gregory.szorc@gmail.com>"]
 edition = "2018"
