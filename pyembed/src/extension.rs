@@ -14,13 +14,7 @@ use {
         python_resources::OxidizedResource,
         resource_scanning::find_resources_in_path,
     },
-    cpython::{
-        exc::{ImportError, ValueError},
-        {
-            py_fn, ObjectProtocol, PyErr, PyModule, PyObject, PyResult, PyString, Python,
-            PythonObject,
-        },
-    },
+    cpython::{py_fn, ObjectProtocol, PythonObject},
     python3_sys as oldpyffi,
 };
 
@@ -58,14 +52,17 @@ pub(crate) struct ModuleState {
 ///
 /// Doesn't do type checking that the PyModule is of the appropriate type.
 pub(crate) fn get_module_state<'a>(
-    py: Python,
-    m: &'a PyModule,
-) -> Result<&'a mut ModuleState, PyErr> {
+    py: cpython::Python,
+    m: &'a cpython::PyModule,
+) -> Result<&'a mut ModuleState, cpython::PyErr> {
     let ptr = m.as_object().as_ptr();
     let state = unsafe { oldpyffi::PyModule_GetState(ptr) as *mut ModuleState };
 
     if state.is_null() {
-        let err = PyErr::new::<ValueError, _>(py, "unable to retrieve module state");
+        let err = cpython::PyErr::new::<cpython::exc::ValueError, _>(
+            py,
+            "unable to retrieve module state",
+        );
         return Err(err);
     }
 
@@ -89,10 +86,12 @@ pub extern "C" fn PyInit_oxidized_importer() -> *mut oldpyffi::PyObject {
         return module;
     }
 
-    let module = match unsafe { PyObject::from_owned_ptr(py, module).cast_into::<PyModule>(py) } {
+    let module = match unsafe {
+        cpython::PyObject::from_owned_ptr(py, module).cast_into::<cpython::PyModule>(py)
+    } {
         Ok(m) => m,
         Err(e) => {
-            PyErr::from(e).restore(py);
+            cpython::PyErr::from(e).restore(py);
             return std::ptr::null_mut();
         }
     };
@@ -110,7 +109,11 @@ pub extern "C" fn PyInit_oxidized_importer() -> *mut oldpyffi::PyObject {
 ///
 /// This is effectively a reimplementation of
 /// importlib._bootstrap_external.decode_source().
-fn decode_source(py: Python, io_module: &PyModule, source_bytes: PyObject) -> PyResult<PyObject> {
+fn decode_source(
+    py: cpython::Python,
+    io_module: &cpython::PyModule,
+    source_bytes: cpython::PyObject,
+) -> cpython::PyResult<cpython::PyObject> {
     // .py based module, so can't be instantiated until importing mechanism
     // is bootstrapped.
     let tokenize_module = py.import("tokenize")?;
@@ -128,7 +131,7 @@ fn decode_source(py: Python, io_module: &PyModule, source_bytes: PyObject) -> Py
     newline_decoder.call_method(py, "decode", (data,), None)
 }
 
-fn register_pkg_resources(py: Python) -> PyResult<PyObject> {
+fn register_pkg_resources(py: cpython::Python) -> cpython::PyResult<cpython::PyObject> {
     register_pkg_resources_with_module(py, py.import("pkg_resources")?.as_object())
 }
 
@@ -140,7 +143,7 @@ fn register_pkg_resources(py: Python) -> PyResult<PyObject> {
 /// This receives a handle to the current Python interpreter and just-created
 /// Python module instance. It populates the internal module state and registers
 /// functions on the module object for usage by Python.
-fn module_init(py: Python, m: &PyModule) -> PyResult<()> {
+fn module_init(py: cpython::Python, m: &cpython::PyModule) -> cpython::PyResult<()> {
     // Enforce minimum Python version requirement.
     //
     // Some features likely work on older Python versions. But we can't
@@ -152,7 +155,7 @@ fn module_init(py: Python, m: &PyModule) -> PyResult<()> {
     let minor_version = version_info.getattr(py, "minor")?.extract::<i32>(py)?;
 
     if major_version < 3 || minor_version < 8 {
-        return Err(PyErr::new::<ImportError, _>(
+        return Err(cpython::PyErr::new::<cpython::exc::ImportError, _>(
             py,
             "module requires Python 3.8+",
         ));
@@ -167,13 +170,16 @@ fn module_init(py: Python, m: &PyModule) -> PyResult<()> {
         "decode_source",
         py_fn!(
             py,
-            decode_source(io_module: &PyModule, source_bytes: PyObject)
+            decode_source(
+                io_module: &cpython::PyModule,
+                source_bytes: cpython::PyObject
+            )
         ),
     )?;
     m.add(
         py,
         "find_resources_in_path",
-        py_fn!(py, find_resources_in_path(path: PyObject)),
+        py_fn!(py, find_resources_in_path(path: cpython::PyObject)),
     )?;
     m.add(
         py,
@@ -186,8 +192,8 @@ fn module_init(py: Python, m: &PyModule) -> PyResult<()> {
         py_fn!(
             py,
             pkg_resources_find_distributions(
-                importer: PyObject,
-                path_item: PyString,
+                importer: cpython::PyObject,
+                path_item: cpython::PyString,
                 only: Option<bool> = false,
             )
         ),

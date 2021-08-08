@@ -12,10 +12,7 @@ use {
             PythonPackageDistributionResource, PythonPackageResource,
         },
     },
-    cpython::{
-        exc::ValueError, ObjectProtocol, PyErr, PyObject, PyResult, Python, PythonObject,
-        ToPyObject,
-    },
+    cpython::{ObjectProtocol, PythonObject, ToPyObject},
     python_packaging::{
         filesystem_scanning::find_python_resources, module_util::PythonModuleSuffixes,
         resource::PythonResource,
@@ -23,11 +20,14 @@ use {
 };
 
 /// Scans a filesystem path for Python resources and turns them into Python types.
-pub(crate) fn find_resources_in_path(py: Python, path: PyObject) -> PyResult<PyObject> {
+pub(crate) fn find_resources_in_path(
+    py: cpython::Python,
+    path: cpython::PyObject,
+) -> cpython::PyResult<cpython::PyObject> {
     let path = pyobject_to_pathbuf(py, path)?;
 
     if !path.is_dir() {
-        return Err(PyErr::new::<ValueError, _>(
+        return Err(cpython::PyErr::new::<cpython::exc::ValueError, _>(
             py,
             format!("path is not a directory: {}", path.display()),
         ));
@@ -65,13 +65,16 @@ pub(crate) fn find_resources_in_path(py: Python, path: PyObject) -> PyResult<PyO
         extension,
     };
 
-    let mut res: Vec<PyObject> = Vec::new();
+    let mut res: Vec<cpython::PyObject> = Vec::new();
 
     let iter = find_python_resources(&path, &cache_tag, &suffixes, false, true);
 
     for resource in iter {
         let resource = resource.map_err(|e| {
-            PyErr::new::<ValueError, _>(py, format!("error scanning filesystem: {}", e))
+            cpython::PyErr::new::<cpython::exc::ValueError, _>(
+                py,
+                format!("error scanning filesystem: {}", e),
+            )
         })?;
 
         match resource {

@@ -18,10 +18,7 @@ use {
         pyalloc::PythonMemoryAllocator,
         python_resources::PythonResourcesState,
     },
-    cpython::{
-        exc::RuntimeError, GILGuard, NoArgs, ObjectProtocol, PyDict, PyErr, PyList, PyResult,
-        PyString, Python, PythonObject, ToPyObject,
-    },
+    cpython::{ObjectProtocol, PythonObject, ToPyObject},
     once_cell::sync::Lazy,
     python3_sys as oldpyffi,
     python_packaging::interpreter::{MultiprocessingStartMethod, TerminfoResolution},
@@ -57,8 +54,8 @@ pub struct MainPythonInterpreter<'python, 'interpreter: 'python, 'resources: 'in
     config: ResolvedOxidizedPythonInterpreterConfig<'resources>,
     interpreter_guard: Option<std::sync::MutexGuard<'interpreter, ()>>,
     pub(crate) allocator: Option<PythonMemoryAllocator>,
-    _gil: Option<GILGuard>,
-    py: Option<Python<'python>>,
+    _gil: Option<cpython::GILGuard>,
+    py: Option<cpython::Python<'python>>,
     /// File to write containing list of modules when the interpreter finalizes.
     write_modules_path: Option<PathBuf>,
 }
@@ -190,7 +187,7 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
         // importlib._bootstrap_external. This is where we work our magic to
         // inject our custom importer.
 
-        let py = unsafe { Python::assume_gil_acquired() };
+        let py = unsafe { cpython::Python::assume_gil_acquired() };
         self.py = Some(py);
 
         let oxidized_finder = if self.config.oxidized_importer {
@@ -304,7 +301,7 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
                 .map(|x| osstring_to_bytes(py, x.clone()))
                 .collect::<Vec<_>>();
 
-            let args = PyList::new(py, &args_objs);
+            let args = cpython::PyList::new(py, &args_objs);
             let argvb = b"argvb\0";
 
             let res = args.with_borrowed_ptr(py, |args_ptr| unsafe {
@@ -343,7 +340,7 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
 
         if self.config.sys_meipass {
             let meipass = b"_MEIPASS\0";
-            let value = PyString::new(py, &origin_string);
+            let value = cpython::PyString::new(py, &origin_string);
 
             match value.with_borrowed_ptr(py, |py_value| unsafe {
                 oldpyffi::PySys_SetObject(meipass.as_ptr() as *const i8, py_value)
@@ -369,9 +366,11 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
                 let uuid_mod = py.import("uuid").map_err(|e| {
                     NewInterpreterError::new_from_pyerr(py, e, "importing uuid module")
                 })?;
-                let uuid = uuid_mod.call(py, "uuid4", NoArgs, None).map_err(|e| {
-                    NewInterpreterError::new_from_pyerr(py, e, "calling uuid.uuid()")
-                })?;
+                let uuid = uuid_mod
+                    .call(py, "uuid4", cpython::NoArgs, None)
+                    .map_err(|e| {
+                        NewInterpreterError::new_from_pyerr(py, e, "calling uuid.uuid()")
+                    })?;
                 let uuid_str = uuid
                     .str(py)
                     .map_err(|e| {
@@ -406,12 +405,12 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
     /// instance. This is because `MainPythonInterpreter.drop()` finalizes
     /// the interpreter. The borrow checker should refuse to compile code
     /// where the returned `Python` outlives `self`.
-    pub fn acquire_gil(&mut self) -> Python<'_> {
+    pub fn acquire_gil(&mut self) -> cpython::Python<'_> {
         match self.py {
             Some(py) => py,
             None => {
-                let gil = GILGuard::acquire();
-                let py = unsafe { Python::assume_gil_acquired() };
+                let gil = cpython::GILGuard::acquire();
+                let py = unsafe { cpython::Python::assume_gil_acquired() };
 
                 self._gil = Some(gil);
                 self.py = Some(py);
@@ -440,7 +439,7 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
     /// This should be called when `sys.argv[1] == "--multiprocessing-fork"`. It
     /// will parse arguments for the worker from `sys.argv` and call into the
     /// `multiprocessing` module to perform work.
-    pub fn run_multiprocessing(&mut self) -> PyResult<i32> {
+    pub fn run_multiprocessing(&mut self) -> cpython::PyResult<i32> {
         // This code effectively reimplements multiprocessing.spawn.freeze_support(),
         // except entirely in the Rust domain. This function effectively verifies
         // `sys.argv[1] == "--multiprocessing-fork"` then parsed key=value arguments
@@ -455,7 +454,7 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
         }
 
         let py = self.acquire_gil();
-        let kwargs = PyDict::new(py);
+        let kwargs = cpython::PyDict::new(py);
 
         for arg in argv.iter().skip(2) {
             let arg = arg.to_string_lossy();
@@ -463,17 +462,23 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
             let mut parts = arg.splitn(2, '=');
 
             let key = parts.next().ok_or_else(|| {
-                PyErr::new::<RuntimeError, _>(py, "invalid multiprocessing argument")
+                cpython::PyErr::new::<cpython::exc::RuntimeError, _>(
+                    py,
+                    "invalid multiprocessing argument",
+                )
             })?;
             let value = parts.next().ok_or_else(|| {
-                PyErr::new::<RuntimeError, _>(py, "invalid multiprocessing argument")
+                cpython::PyErr::new::<cpython::exc::RuntimeError, _>(
+                    py,
+                    "invalid multiprocessing argument",
+                )
             })?;
 
             let value = if value == "None" {
                 py.None()
             } else {
                 let v = value.parse::<isize>().map_err(|e| {
-                    PyErr::new::<RuntimeError, _>(
+                    cpython::PyErr::new::<cpython::exc::RuntimeError, _>(
                         py,
                         format!(
                             "unable to convert multiprocessing argument to integer: {}",
@@ -489,7 +494,7 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
         }
 
         let spawn_module = py.import("multiprocessing.spawn")?;
-        spawn_module.call(py, "spawn_main", NoArgs, Some(&kwargs))?;
+        spawn_module.call(py, "spawn_main", cpython::NoArgs, Some(&kwargs))?;
 
         Ok(0)
     }
@@ -602,7 +607,7 @@ fn set_pyimport_inittab(config: &OxidizedPythonInterpreterConfig) {
 /// Given a Python interpreter and a path to a directory, this will create a
 /// file in that directory named ``modules-<UUID>`` and write a ``\n`` delimited
 /// list of loaded names from ``sys.modules`` into that file.
-fn write_modules_to_path(py: Python, path: &Path) -> Result<(), &'static str> {
+fn write_modules_to_path(py: cpython::Python, path: &Path) -> Result<(), &'static str> {
     // TODO this needs better error handling all over.
 
     let sys = py
@@ -613,7 +618,7 @@ fn write_modules_to_path(py: Python, path: &Path) -> Result<(), &'static str> {
         .map_err(|_| "could not obtain sys.modules")?;
 
     let modules = modules
-        .cast_as::<PyDict>(py)
+        .cast_as::<cpython::PyDict>(py)
         .map_err(|_| "sys.modules is not a dict")?;
 
     let mut names = BTreeSet::new();

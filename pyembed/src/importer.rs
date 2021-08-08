@@ -25,13 +25,7 @@ use {
             OptimizeLevel, OxidizedResource, PythonResourcesState,
         },
     },
-    cpython::{
-        exc::{FileNotFoundError, ImportError, ValueError},
-        {
-            py_class, NoArgs, ObjectProtocol, PyBytes, PyCapsule, PyClone, PyDict, PyErr, PyList,
-            PyModule, PyObject, PyResult, PyString, PyTuple, Python, PythonObject, ToPyObject,
-        },
-    },
+    cpython::{py_class, ObjectProtocol, PyClone, PythonObject, ToPyObject},
     python3_sys as oldpyffi,
     std::sync::Arc,
 };
@@ -58,14 +52,14 @@ type py_init_fn = extern "C" fn() -> *mut oldpyffi::PyObject;
 #[cfg(windows)]
 fn extension_module_shared_library_create_module(
     resources_state: &PythonResourcesState<u8>,
-    py: Python,
-    sys_modules: PyObject,
-    spec: &PyObject,
-    name_py: PyObject,
+    py: cpython::Python,
+    sys_modules: cpython::PyObject,
+    spec: &cpython::PyObject,
+    name_py: cpython::PyObject,
     name: &str,
     library_data: &[u8],
-) -> PyResult<PyObject> {
-    let origin = PyString::new(py, "memory");
+) -> cpython::PyResult<cpython::PyObject> {
+    let origin = cpython::PyString::new(py, "memory");
 
     let existing_module = unsafe {
         oldpyffi::_PyImport_FindExtensionObject(name_py.as_ptr(), origin.as_object().as_ptr())
@@ -73,12 +67,12 @@ fn extension_module_shared_library_create_module(
 
     // We found an existing module object. Return it.
     if !existing_module.is_null() {
-        return Ok(unsafe { PyObject::from_owned_ptr(py, existing_module) });
+        return Ok(unsafe { cpython::PyObject::from_owned_ptr(py, existing_module) });
     }
 
     // An error occurred calling _PyImport_FindExtensionObjectEx(). Raise it.
     if !unsafe { oldpyffi::PyErr_Occurred() }.is_null() {
-        return Err(PyErr::fetch(py));
+        return Err(cpython::PyErr::fetch(py));
     }
 
     // New module load request. Proceed to _PyImport_LoadDynamicModuleWithSpec()
@@ -87,7 +81,7 @@ fn extension_module_shared_library_create_module(
     let module = unsafe { load_library_memory(resources_state, library_data) };
 
     if module.is_null() {
-        return Err(PyErr::new::<ImportError, _>(
+        return Err(cpython::PyErr::new::<cpython::exc::ImportError, _>(
             py,
             ("unable to load extension module library from memory", name),
         ));
@@ -107,26 +101,26 @@ fn extension_module_shared_library_create_module(
 #[cfg(unix)]
 fn extension_module_shared_library_create_module(
     _resources_state: &PythonResourcesState<u8>,
-    _py: Python,
-    _sys_modules: PyObject,
-    _spec: &PyObject,
-    _name_py: PyObject,
+    _py: cpython::Python,
+    _sys_modules: cpython::PyObject,
+    _spec: &cpython::PyObject,
+    _name_py: cpython::PyObject,
     _name: &str,
     _library_data: &[u8],
-) -> PyResult<PyObject> {
+) -> cpython::PyResult<cpython::PyObject> {
     panic!("should only be called on Windows");
 }
 
 /// Reimplementation of `_PyImport_LoadDynamicModuleWithSpec()`.
 #[cfg(windows)]
 fn load_dynamic_library(
-    py: Python,
-    sys_modules: PyObject,
-    spec: &PyObject,
-    name_py: PyObject,
+    py: cpython::Python,
+    sys_modules: cpython::PyObject,
+    spec: &cpython::PyObject,
+    name_py: cpython::PyObject,
     name: &str,
     library_module: *const c_void,
-) -> PyResult<PyObject> {
+) -> cpython::PyResult<cpython::PyObject> {
     // The init function is `PyInit_<stem>`.
     let last_name_part = if name.contains('.') {
         name.split('.').last().unwrap()
@@ -139,7 +133,7 @@ fn load_dynamic_library(
 
     let address = unsafe { get_proc_address_memory(library_module, &init_fn_name) };
     if address.is_null() {
-        return Err(PyErr::new::<ImportError, _>(
+        return Err(cpython::PyErr::new::<cpython::exc::ImportError, _>(
             py,
             (
                 format!(
@@ -163,7 +157,7 @@ fn load_dynamic_library(
     };
 
     if py_module.is_null() && unsafe { oldpyffi::PyErr_Occurred().is_null() } {
-        return Err(PyErr::new::<SystemError, _>(
+        return Err(cpython::PyErr::new::<SystemError, _>(
             py,
             format!(
                 "initialization of {} failed without raising an exception",
@@ -173,20 +167,20 @@ fn load_dynamic_library(
     }
 
     // Cast to owned type to help prevent refcount/memory leaks.
-    let py_module = unsafe { PyObject::from_owned_ptr(py, py_module) };
+    let py_module = unsafe { cpython::PyObject::from_owned_ptr(py, py_module) };
 
     if !unsafe { oldpyffi::PyErr_Occurred().is_null() } {
         unsafe {
             oldpyffi::PyErr_Clear();
         }
-        return Err(PyErr::new::<SystemError, _>(
+        return Err(cpython::PyErr::new::<SystemError, _>(
             py,
             format!("initialization of {} raised unreported exception", name),
         ));
     }
 
     if unsafe { oldpyffi::Py_TYPE(py_module.as_ptr()) }.is_null() {
-        return Err(PyErr::new::<SystemError, _>(
+        return Err(cpython::PyErr::new::<SystemError, _>(
             py,
             format!("init function of {} returned uninitialized object", name),
         ));
@@ -204,9 +198,9 @@ fn load_dynamic_library(
         };
 
         return if py_module.is_null() {
-            Err(PyErr::fetch(py))
+            Err(cpython::PyErr::fetch(py))
         } else {
-            Ok(unsafe { PyObject::from_owned_ptr(py, py_module) })
+            Ok(unsafe { cpython::PyObject::from_owned_ptr(py, py_module) })
         };
     }
 
@@ -214,7 +208,7 @@ fn load_dynamic_library(
 
     let mut module_def = unsafe { oldpyffi::PyModule_GetDef(py_module.as_ptr()) };
     if module_def.is_null() {
-        return Err(PyErr::new::<SystemError, _>(
+        return Err(cpython::PyErr::new::<SystemError, _>(
             py,
             format!(
                 "initialization of {} did not return an extension module",
@@ -239,7 +233,7 @@ fn load_dynamic_library(
     };
 
     if fixup_result < 0 {
-        Err(PyErr::fetch(py))
+        Err(cpython::PyErr::fetch(py))
     } else {
         Ok(py_module)
     }
@@ -248,25 +242,25 @@ fn load_dynamic_library(
 /// Holds state for the custom MetaPathFinder.
 pub(crate) struct ImporterState {
     /// `imp` Python module.
-    imp_module: PyModule,
+    imp_module: cpython::PyModule,
     /// `sys` Python module.
-    sys_module: PyModule,
+    sys_module: cpython::PyModule,
     /// `_io` Python module.
-    io_module: PyModule,
+    io_module: cpython::PyModule,
     /// `marshal.loads` Python callable.
-    marshal_loads: PyObject,
+    marshal_loads: cpython::PyObject,
     /// `_frozen_importlib.BuiltinImporter` meta path importer for built-in extension modules.
-    builtin_importer: PyObject,
+    builtin_importer: cpython::PyObject,
     /// `_frozen_importlib.FrozenImporter` meta path importer for frozen modules.
-    frozen_importer: PyObject,
+    frozen_importer: cpython::PyObject,
     /// `importlib._bootstrap._call_with_frames_removed` function.
-    call_with_frames_removed: PyObject,
+    call_with_frames_removed: cpython::PyObject,
     /// `importlib._bootstrap.ModuleSpec` class.
-    module_spec_type: PyObject,
+    module_spec_type: cpython::PyObject,
     /// Our `decode_source()` function.
-    decode_source: PyObject,
+    decode_source: cpython::PyObject,
     /// `builtins.exec` function.
-    exec_fn: PyObject,
+    exec_fn: cpython::PyObject,
     /// Bytecode optimization level currently in effect.
     optimize_level: OptimizeLevel,
     /// Value to pass to `multiprocessing.set_start_method()` on import of `multiprocessing`.
@@ -289,25 +283,25 @@ pub(crate) struct ImporterState {
     /// objects be 'static. This allows us to use proper lifetimes for
     /// the backing memory instead of forcing all resource data to be backed
     /// by 'static.
-    resources_state: PyCapsule,
+    resources_state: cpython::PyCapsule,
 }
 
 impl ImporterState {
     fn new<'a>(
-        py: Python,
-        importer_module: &PyModule,
-        bootstrap_module: &PyModule,
+        py: cpython::Python,
+        importer_module: &cpython::PyModule,
+        bootstrap_module: &cpython::PyModule,
         resources_state: Box<PythonResourcesState<'a, u8>>,
-    ) -> Result<Self, PyErr> {
+    ) -> Result<Self, cpython::PyErr> {
         let decode_source = importer_module.get(py, "decode_source")?;
 
         let io_module = py.import("_io")?;
         let marshal_module = py.import("marshal")?;
 
         let imp_module = bootstrap_module.get(py, "_imp")?;
-        let imp_module = imp_module.cast_into::<PyModule>(py)?;
+        let imp_module = imp_module.cast_into::<cpython::PyModule>(py)?;
         let sys_module = bootstrap_module.get(py, "sys")?;
-        let sys_module = sys_module.cast_into::<PyModule>(py)?;
+        let sys_module = sys_module.cast_into::<cpython::PyModule>(py)?;
         let meta_path_object = sys_module.get(py, "meta_path")?;
 
         // We should be executing as part of
@@ -316,9 +310,9 @@ impl ImporterState {
         // sys.meta_path with [BuiltinImporter, FrozenImporter]. Those should be the
         // only meta path importers present.
 
-        let meta_path = meta_path_object.cast_as::<PyList>(py)?;
+        let meta_path = meta_path_object.cast_as::<cpython::PyList>(py)?;
         if meta_path.len(py) < 2 {
-            return Err(PyErr::new::<ValueError, _>(
+            return Err(cpython::PyErr::new::<cpython::exc::ValueError, _>(
                 py,
                 "sys.meta_path does not contain 2 values",
             ));
@@ -331,21 +325,22 @@ impl ImporterState {
         let call_with_frames_removed = bootstrap_module.get(py, "_call_with_frames_removed")?;
         let module_spec_type = bootstrap_module.get(py, "ModuleSpec")?;
 
-        let builtins_module =
-            match unsafe { PyObject::from_borrowed_ptr_opt(py, oldpyffi::PyEval_GetBuiltins()) } {
-                Some(o) => o.cast_into::<PyDict>(py),
-                None => {
-                    return Err(PyErr::new::<ValueError, _>(
-                        py,
-                        "unable to obtain __builtins__",
-                    ));
-                }
-            }?;
+        let builtins_module = match unsafe {
+            cpython::PyObject::from_borrowed_ptr_opt(py, oldpyffi::PyEval_GetBuiltins())
+        } {
+            Some(o) => o.cast_into::<cpython::PyDict>(py),
+            None => {
+                return Err(cpython::PyErr::new::<cpython::exc::ValueError, _>(
+                    py,
+                    "unable to obtain __builtins__",
+                ));
+            }
+        }?;
 
         let exec_fn = match builtins_module.get_item(py, "exec") {
             Some(v) => v,
             None => {
-                return Err(PyErr::new::<ValueError, _>(
+                return Err(cpython::PyErr::new::<cpython::exc::ValueError, _>(
                     py,
                     "could not obtain __builtins__.exec",
                 ));
@@ -360,7 +355,7 @@ impl ImporterState {
             0 => Ok(OptimizeLevel::Zero),
             1 => Ok(OptimizeLevel::One),
             2 => Ok(OptimizeLevel::Two),
-            _ => Err(PyErr::new::<ValueError, _>(
+            _ => Err(cpython::PyErr::new::<cpython::exc::ValueError, _>(
                 py,
                 "unexpected value for sys.flags.optimize",
             )),
@@ -374,13 +369,13 @@ impl ImporterState {
             );
 
             if ptr.is_null() {
-                return Err(PyErr::new::<ValueError, _>(
+                return Err(cpython::PyErr::new::<cpython::exc::ValueError, _>(
                     py,
                     "unable to convert PythonResourcesState to capsule",
                 ));
             }
 
-            PyObject::from_owned_ptr(py, ptr).unchecked_cast_into()
+            cpython::PyObject::from_owned_ptr(py, ptr).unchecked_cast_into()
         };
 
         // We store a pointer to the heap memory and take care of destroying
@@ -480,15 +475,15 @@ py_class!(pub(crate) class OxidizedFinder |py| {
 
     // Start of importlib.abc.MetaPathFinder interface.
 
-    def find_spec(&self, fullname: &PyString, path: &PyObject, target: Option<PyObject> = None) -> PyResult<PyObject> {
+    def find_spec(&self, fullname: &cpython::PyString, path: &cpython::PyObject, target: Option<cpython::PyObject> = None) -> cpython::PyResult<cpython::PyObject> {
         self.find_spec_impl(py, fullname, path, target)
     }
 
-    def find_module(&self, fullname: &PyObject, path: &PyObject) -> PyResult<PyObject> {
+    def find_module(&self, fullname: &cpython::PyObject, path: &cpython::PyObject) -> cpython::PyResult<cpython::PyObject> {
         self.find_module_impl(py, fullname, path)
     }
 
-    def invalidate_caches(&self) -> PyResult<PyObject> {
+    def invalidate_caches(&self) -> cpython::PyResult<cpython::PyObject> {
         Ok(self.invalidate_caches_impl(py))
     }
 
@@ -496,11 +491,11 @@ py_class!(pub(crate) class OxidizedFinder |py| {
 
     // Start of importlib.abc.Loader interface.
 
-    def create_module(&self, spec: &PyObject) -> PyResult<PyObject> {
+    def create_module(&self, spec: &cpython::PyObject) -> cpython::PyResult<cpython::PyObject> {
         self.create_module_impl(py, spec)
     }
 
-    def exec_module(&self, module: &PyObject) -> PyResult<PyObject> {
+    def exec_module(&self, module: &cpython::PyObject) -> cpython::PyResult<cpython::PyObject> {
         self.exec_module_impl(py, module)
     }
 
@@ -508,7 +503,7 @@ py_class!(pub(crate) class OxidizedFinder |py| {
 
     // Start of importlib.abc.ResourceLoader interface.
 
-    def get_data(&self, path: &PyString) -> PyResult<PyObject> {
+    def get_data(&self, path: &cpython::PyString) -> cpython::PyResult<cpython::PyObject> {
         self.get_data_impl(py, path)
     }
 
@@ -516,17 +511,17 @@ py_class!(pub(crate) class OxidizedFinder |py| {
 
     // Start of importlib.abc.InspectLoader interface.
 
-    def get_code(&self, fullname: &PyString) -> PyResult<PyObject> {
+    def get_code(&self, fullname: &cpython::PyString) -> cpython::PyResult<cpython::PyObject> {
         self.get_code_impl(py, fullname)
     }
 
-    def get_source(&self, fullname: &PyString) -> PyResult<PyObject> {
+    def get_source(&self, fullname: &cpython::PyString) -> cpython::PyResult<cpython::PyObject> {
         self.get_source_impl(py, fullname)
     }
 
     // Start of importlib.abc.ExecutionLoader interface.
 
-    def get_filename(&self, fullname: &PyString) -> PyResult<PyObject> {
+    def get_filename(&self, fullname: &cpython::PyString) -> cpython::PyResult<cpython::PyObject> {
         self.get_filename_impl(py, fullname)
     }
 
@@ -535,79 +530,79 @@ py_class!(pub(crate) class OxidizedFinder |py| {
     // End of importlib.abc.InspectLoader interface.
 
     // Support obtaining ResourceReader instances.
-    def get_resource_reader(&self, fullname: &PyString) -> PyResult<PyObject> {
+    def get_resource_reader(&self, fullname: &cpython::PyString) -> cpython::PyResult<cpython::PyObject> {
         self.get_resource_reader_impl(py, fullname)
     }
 
     // importlib.metadata interface.
-    def find_distributions(&self, context: Option<PyObject> = None) -> PyResult<PyObject> {
+    def find_distributions(&self, context: Option<cpython::PyObject> = None) -> cpython::PyResult<cpython::PyObject> {
         self.find_distributions_impl(py, context)
     }
 
     // pkgutil methods.
-    def iter_modules(&self, prefix: Option<PyString> = None) -> PyResult<PyObject> {
+    def iter_modules(&self, prefix: Option<cpython::PyString> = None) -> cpython::PyResult<cpython::PyObject> {
         self.iter_modules_impl(py, prefix)
     }
 
     // Additional methods provided for convenience.
 
-    def __new__(_cls, relative_path_origin: Option<PyObject> = None) -> PyResult<OxidizedFinder> {
+    def __new__(_cls, relative_path_origin: Option<cpython::PyObject> = None) -> cpython::PyResult<OxidizedFinder> {
         oxidized_finder_new(py, relative_path_origin)
     }
 
-    @property def multiprocessing_set_start_method(&self) -> PyResult<PyObject> {
+    @property def multiprocessing_set_start_method(&self) -> cpython::PyResult<cpython::PyObject> {
         self.multiprocessing_set_start_method_impl(py)
     }
 
-    @property def origin(&self) -> PyResult<PyObject> {
+    @property def origin(&self) -> cpython::PyResult<cpython::PyObject> {
         self.origin_impl(py)
     }
 
-    @property def path_hook_base_str(&self) -> PyResult<PyObject> {
+    @property def path_hook_base_str(&self) -> cpython::PyResult<cpython::PyObject> {
         self.path_hook_base_str_impl(py)
     }
 
-    @property def pkg_resources_import_auto_register(&self) -> PyResult<bool> {
+    @property def pkg_resources_import_auto_register(&self) -> cpython::PyResult<bool> {
         self.pkg_resources_import_auto_register_impl(py)
     }
 
-    def path_hook(&self, path: PyObject) -> PyResult<OxidizedPathEntryFinder> {
+    def path_hook(&self, path: cpython::PyObject) -> cpython::PyResult<OxidizedPathEntryFinder> {
         self.path_hook_impl(py, path)
     }
 
-    def index_bytes(&self, data: PyObject) -> PyResult<PyObject> {
+    def index_bytes(&self, data: cpython::PyObject) -> cpython::PyResult<cpython::PyObject> {
         self.index_bytes_impl(py, data)
     }
 
-    def index_file_memory_mapped(&self, path: PyObject) -> PyResult<PyObject> {
+    def index_file_memory_mapped(&self, path: cpython::PyObject) -> cpython::PyResult<cpython::PyObject> {
         self.index_file_memory_mapped_impl(py, path)
     }
 
-    def index_interpreter_builtins(&self) -> PyResult<PyObject> {
+    def index_interpreter_builtins(&self) -> cpython::PyResult<cpython::PyObject> {
         self.index_interpreter_builtins_impl(py)
     }
 
-    def index_interpreter_builtin_extension_modules(&self) -> PyResult<PyObject> {
+    def index_interpreter_builtin_extension_modules(&self) -> cpython::PyResult<cpython::PyObject> {
         self.index_interpreter_builtin_extension_modules_impl(py)
     }
 
-    def index_interpreter_frozen_modules(&self) -> PyResult<PyObject> {
+    def index_interpreter_frozen_modules(&self) -> cpython::PyResult<cpython::PyObject> {
         self.index_interpreter_frozen_modules_impl(py)
     }
 
-    def indexed_resources(&self) -> PyResult<PyObject> {
+    def indexed_resources(&self) -> cpython::PyResult<cpython::PyObject> {
         self.indexed_resources_impl(py)
     }
 
-    def add_resource(&self, resource: OxidizedResource) -> PyResult<PyObject> {
+    def add_resource(&self, resource: OxidizedResource) -> cpython::PyResult<cpython::PyObject> {
         self.add_resource_impl(py, resource)
     }
 
-    def add_resources(&self, resources: Vec<OxidizedResource>) -> PyResult<PyObject> {
+    def add_resources(&self, resources: Vec<OxidizedResource>) -> cpython::PyResult<cpython::PyObject> {
         self.add_resources_impl(py, resources)
     }
 
-    def serialize_indexed_resources(&self, ignore_builtin: bool = true, ignore_frozen: bool = true) -> PyResult<PyObject> {
+    def serialize_indexed_resources(&self, ignore_builtin: bool = true, ignore_frozen: bool = true) -> cpython::PyResult<cpython::PyObject> {
         self.serialize_indexed_resources_impl(py, ignore_builtin, ignore_frozen)
     }
 });
@@ -616,11 +611,11 @@ py_class!(pub(crate) class OxidizedFinder |py| {
 impl OxidizedFinder {
     fn find_spec_impl(
         &self,
-        py: Python,
-        fullname: &PyString,
-        path: &PyObject,
-        target: Option<PyObject>,
-    ) -> PyResult<PyObject> {
+        py: cpython::Python,
+        fullname: &cpython::PyString,
+        path: &cpython::PyObject,
+        target: Option<cpython::PyObject>,
+    ) -> cpython::PyResult<cpython::PyObject> {
         let state = self.state(py);
         let key = fullname.to_string(py)?;
 
@@ -654,16 +649,16 @@ impl OxidizedFinder {
         }
     }
 
-    fn invalidate_caches_impl(&self, py: Python) -> PyObject {
+    fn invalidate_caches_impl(&self, py: cpython::Python) -> cpython::PyObject {
         py.None()
     }
 
     fn find_module_impl(
         &self,
-        py: Python,
-        fullname: &PyObject,
-        path: &PyObject,
-    ) -> PyResult<PyObject> {
+        py: cpython::Python,
+        fullname: &cpython::PyObject,
+        path: &cpython::PyObject,
+    ) -> cpython::PyResult<cpython::PyObject> {
         let finder = self.as_object();
         let find_spec = finder.getattr(py, "find_spec")?;
         let spec = find_spec.call(py, (fullname, path), None)?;
@@ -678,7 +673,11 @@ impl OxidizedFinder {
 
 // importlib.abc.MetaPathFinder interface.
 impl OxidizedFinder {
-    fn create_module_impl(&self, py: Python, spec: &PyObject) -> PyResult<PyObject> {
+    fn create_module_impl(
+        &self,
+        py: cpython::Python,
+        spec: &cpython::PyObject,
+    ) -> cpython::PyResult<cpython::PyObject> {
         let state = self.state(py);
         let name = spec.getattr(py, "name")?;
         let key = name.extract::<String>(py)?;
@@ -726,7 +725,11 @@ impl OxidizedFinder {
         }
     }
 
-    fn exec_module_impl(&self, py: Python, module: &PyObject) -> PyResult<PyObject> {
+    fn exec_module_impl(
+        &self,
+        py: cpython::Python,
+        module: &cpython::PyObject,
+    ) -> cpython::PyResult<cpython::PyObject> {
         let state = self.state(py);
         let name = module.getattr(py, "__name__")?;
         let key = name.extract::<String>(py)?;
@@ -779,7 +782,7 @@ impl OxidizedFinder {
             "multiprocessing" => {
                 if let Some(method) = state.multiprocessing_set_start_method.as_ref() {
                     // We pass force=True to ensure the call doesn't fail.
-                    let kwargs = PyDict::new(py);
+                    let kwargs = cpython::PyDict::new(py);
                     kwargs.set_item(py, "force", true)?;
                     module.call_method(py, "set_start_method", (method,), Some(&kwargs))?;
                 }
@@ -805,7 +808,11 @@ impl OxidizedFinder {
     /// to the data stored. OSError is to be raised if the path cannot be
     /// found. The path is expected to be constructed using a module’s __file__
     /// attribute or an item from a package’s __path__.
-    fn get_data_impl(&self, py: Python, path: &PyString) -> PyResult<PyObject> {
+    fn get_data_impl(
+        &self,
+        py: cpython::Python,
+        path: &cpython::PyString,
+    ) -> cpython::PyResult<cpython::PyObject> {
         self.state(py)
             .get_resources_state()
             .resolve_resource_data_from_path(py, path)
@@ -814,7 +821,11 @@ impl OxidizedFinder {
 
 // importlib.abc.InspectLoader interface.
 impl OxidizedFinder {
-    fn get_code_impl(&self, py: Python, fullname: &PyString) -> PyResult<PyObject> {
+    fn get_code_impl(
+        &self,
+        py: cpython::Python,
+        fullname: &cpython::PyString,
+    ) -> cpython::PyResult<cpython::PyObject> {
         let state = self.state(py);
         let key = fullname.to_string(py)?;
 
@@ -842,7 +853,11 @@ impl OxidizedFinder {
         }
     }
 
-    fn get_source_impl(&self, py: Python, fullname: &PyString) -> PyResult<PyObject> {
+    fn get_source_impl(
+        &self,
+        py: cpython::Python,
+        fullname: &cpython::PyString,
+    ) -> cpython::PyResult<cpython::PyObject> {
         let state = self.state(py);
         let key = fullname.to_string(py)?;
 
@@ -872,11 +887,17 @@ impl OxidizedFinder {
     ///
     /// If source code is available, then the method should return the path to the
     /// source file, regardless of whether a bytecode was used to load the module.
-    fn get_filename_impl(&self, py: Python, fullname: &PyString) -> PyResult<PyObject> {
+    fn get_filename_impl(
+        &self,
+        py: cpython::Python,
+        fullname: &cpython::PyString,
+    ) -> cpython::PyResult<cpython::PyObject> {
         let state = self.state(py);
         let key = fullname.to_string(py)?;
 
-        let make_error = |msg: &str| -> PyErr { PyErr::new::<ImportError, _>(py, (msg, &key)) };
+        let make_error = |msg: &str| -> cpython::PyErr {
+            cpython::PyErr::new::<cpython::exc::ImportError, _>(py, (msg, &key))
+        };
 
         let module = state
             .get_resources_state()
@@ -892,7 +913,11 @@ impl OxidizedFinder {
 
 // Resource loading interface.
 impl OxidizedFinder {
-    fn get_resource_reader_impl(&self, py: Python, fullname: &PyString) -> PyResult<PyObject> {
+    fn get_resource_reader_impl(
+        &self,
+        py: cpython::Python,
+        fullname: &cpython::PyString,
+    ) -> cpython::PyResult<cpython::PyObject> {
         let state = self.state(py);
         let key = fullname.to_string(py)?;
 
@@ -932,7 +957,11 @@ impl OxidizedFinder {
     /// Distribution and implement the abstract methods. Then from a custom
     /// finder, return instances of this derived Distribution in the
     /// find_distributions() method.
-    fn find_distributions_impl(&self, py: Python, context: Option<PyObject>) -> PyResult<PyObject> {
+    fn find_distributions_impl(
+        &self,
+        py: cpython::Python,
+        context: Option<cpython::PyObject>,
+    ) -> cpython::PyResult<cpython::PyObject> {
         let state = self.state(py);
 
         let (path, name) = if let Some(context) = context {
@@ -957,7 +986,11 @@ impl OxidizedFinder {
 // pkgutil support.
 impl OxidizedFinder {
     /// def iter_modules(prefix="")
-    fn iter_modules_impl(&self, py: Python, prefix: Option<PyString>) -> PyResult<PyObject> {
+    fn iter_modules_impl(
+        &self,
+        py: cpython::Python,
+        prefix: Option<cpython::PyString>,
+    ) -> cpython::PyResult<cpython::PyObject> {
         let state: &ImporterState = self.state(py);
         let resources_state = state.get_resources_state();
 
@@ -973,10 +1006,16 @@ impl OxidizedFinder {
 
 // Path hooks support.
 impl OxidizedFinder {
-    fn path_hook_impl(&self, py: Python, path: PyObject) -> PyResult<OxidizedPathEntryFinder> {
+    fn path_hook_impl(
+        &self,
+        py: cpython::Python,
+        path: cpython::PyObject,
+    ) -> cpython::PyResult<OxidizedPathEntryFinder> {
         self.path_hook_inner(py, path).map_err(|mut inner| {
-            let mut err =
-                PyErr::new::<ImportError, _>(py, "error running OxidizedFinder.path_hook");
+            let mut err = cpython::PyErr::new::<cpython::exc::ImportError, _>(
+                py,
+                "error running OxidizedFinder.path_hook",
+            );
 
             if let Err(err) = err.instance(py).setattr(py, "__suppress_context__", true) {
                 err
@@ -993,9 +1032,9 @@ impl OxidizedFinder {
 
     fn path_hook_inner(
         &self,
-        py: Python,
-        path_original: PyObject,
-    ) -> PyResult<OxidizedPathEntryFinder> {
+        py: cpython::Python,
+        path_original: cpython::PyObject,
+    ) -> cpython::PyResult<OxidizedPathEntryFinder> {
         // We respond to the following paths:
         //
         // * self.path_hook_base_str
@@ -1013,9 +1052,11 @@ impl OxidizedFinder {
         // can coerce to a Rust String easily, as Python str are Unicode.
 
         // Only accept str.
-        let path = path_original.cast_as::<PyString>(py)?;
+        let path = path_original.cast_as::<cpython::PyString>(py)?;
 
-        let path_hook_base = self.path_hook_base_str(py)?.cast_into::<PyString>(py)?;
+        let path_hook_base = self
+            .path_hook_base_str(py)?
+            .cast_into::<cpython::PyString>(py)?;
 
         let target_package = if path.as_object().compare(py, path_hook_base.as_object())?
             == std::cmp::Ordering::Equal
@@ -1032,14 +1073,14 @@ impl OxidizedFinder {
                     .as_object()
                     .call_method(py, "__add__", ("\\",), None)?;
 
-            let prefix = PyTuple::new(py, &[unix_prefix, windows_prefix]);
+            let prefix = cpython::PyTuple::new(py, &[unix_prefix, windows_prefix]);
 
             if !path
                 .as_object()
                 .call_method(py, "startswith", (prefix,), None)?
                 .extract::<bool>(py)?
             {
-                return Err(PyErr::new::<ValueError, _>(
+                return Err(cpython::PyErr::new::<cpython::exc::ValueError, _>(
                     py,
                     format!(
                         "{} is not prefixed by {}",
@@ -1074,7 +1115,7 @@ impl OxidizedFinder {
             // +1 for directory separator, which should always be 1 byte in UTF-8.
             let path_suffix: &[u8] = &path_bytes[path_hook_base_bytes.len() + 1..];
             let original_package_path = String::from_utf8(path_suffix.to_vec()).map_err(|e| {
-                PyErr::new::<ValueError, _>(
+                cpython::PyErr::new::<cpython::exc::ValueError, _>(
                     py,
                     format!("error coercing package suffix to Rust string: {}", e),
                 )
@@ -1084,12 +1125,12 @@ impl OxidizedFinder {
 
             // Ban leading and trailing directory separators.
             if package_path.starts_with('/') || package_path.ends_with('/') {
-                return Err(PyErr::new::<ValueError, _>(py, format!("rejecting virtual sub-directory because package part contains leading or trailing directory separator: {}", original_package_path)));
+                return Err(cpython::PyErr::new::<cpython::exc::ValueError, _>(py, format!("rejecting virtual sub-directory because package part contains leading or trailing directory separator: {}", original_package_path)));
             }
 
             // Ban consecutive directory separators.
             if package_path.contains("//") {
-                return Err(PyErr::new::<ValueError, _>(
+                return Err(cpython::PyErr::new::<cpython::exc::ValueError, _>(
                     py, format!("rejecting virtual sub-directory because it has consecutive directory separators: {}", original_package_path))
                 );
             }
@@ -1100,7 +1141,7 @@ impl OxidizedFinder {
                 .split('/')
                 .any(|s| s.starts_with('.') || s.ends_with('.') || s.contains(".."))
             {
-                return Err(PyErr::new::<ValueError, _>(
+                return Err(cpython::PyErr::new::<cpython::exc::ValueError, _>(
                     py, format!("rejecting virtual sub-directory because package part contains illegal dot characters: {}", original_package_path)
                 ));
             }
@@ -1125,11 +1166,11 @@ impl OxidizedFinder {
     /// Construct an instance from a module and resources state.
     #[cfg(not(library_mode = "extension"))]
     fn new_from_module_and_resources<'a>(
-        py: Python,
-        m: &PyModule,
+        py: cpython::Python,
+        m: &cpython::PyModule,
         resources_state: Box<PythonResourcesState<'a, u8>>,
         importer_state_callback: Option<impl FnOnce(&mut ImporterState)>,
-    ) -> PyResult<OxidizedFinder> {
+    ) -> cpython::PyResult<OxidizedFinder> {
         let bootstrap_module = py.import("_frozen_importlib")?;
 
         let mut importer_state = Arc::new(ImporterState::new(
@@ -1153,9 +1194,9 @@ impl OxidizedFinder {
 
 /// OxidizedFinder.__new__(relative_path_origin=None))
 fn oxidized_finder_new(
-    py: Python,
-    relative_path_origin: Option<PyObject>,
-) -> PyResult<OxidizedFinder> {
+    py: cpython::Python,
+    relative_path_origin: Option<cpython::PyObject>,
+) -> cpython::PyResult<OxidizedFinder> {
     // We need to obtain an ImporterState instance. This requires handles on a
     // few items...
 
@@ -1164,7 +1205,8 @@ fn oxidized_finder_new(
     let bootstrap_module = py.import("_frozen_importlib")?;
 
     let mut resources_state = Box::new(
-        PythonResourcesState::new_from_env().map_err(|err| PyErr::new::<ValueError, _>(py, err))?,
+        PythonResourcesState::new_from_env()
+            .map_err(|err| cpython::PyErr::new::<cpython::exc::ValueError, _>(py, err))?,
     );
 
     // Update origin if a value is given.
@@ -1186,33 +1228,43 @@ fn oxidized_finder_new(
 }
 
 impl OxidizedFinder {
-    pub(crate) fn get_state(&self, py: Python) -> Arc<ImporterState> {
+    pub(crate) fn get_state(&self, py: cpython::Python) -> Arc<ImporterState> {
         self.state(py).clone()
     }
 
-    fn multiprocessing_set_start_method_impl(&self, py: Python) -> PyResult<PyObject> {
+    fn multiprocessing_set_start_method_impl(
+        &self,
+        py: cpython::Python,
+    ) -> cpython::PyResult<cpython::PyObject> {
         let state = self.state(py);
 
         if let Some(v) = &state.multiprocessing_set_start_method {
-            Ok(PyString::new(py, v.as_str()).into_object())
+            Ok(cpython::PyString::new(py, v.as_str()).into_object())
         } else {
             Ok(py.None())
         }
     }
 
-    fn origin_impl(&self, py: Python) -> PyResult<PyObject> {
+    fn origin_impl(&self, py: cpython::Python) -> cpython::PyResult<cpython::PyObject> {
         path_to_pyobject(py, &self.state(py).get_resources_state().origin)
     }
 
-    fn path_hook_base_str_impl(&self, py: Python) -> PyResult<PyObject> {
+    fn path_hook_base_str_impl(&self, py: cpython::Python) -> cpython::PyResult<cpython::PyObject> {
         path_to_pyobject(py, &self.state(py).get_resources_state().current_exe)
     }
 
-    fn pkg_resources_import_auto_register_impl(&self, py: Python) -> PyResult<bool> {
+    fn pkg_resources_import_auto_register_impl(
+        &self,
+        py: cpython::Python,
+    ) -> cpython::PyResult<bool> {
         Ok(self.state(py).pkg_resources_import_auto_register)
     }
 
-    fn index_bytes_impl(&self, py: Python, data: PyObject) -> PyResult<PyObject> {
+    fn index_bytes_impl(
+        &self,
+        py: cpython::Python,
+        data: cpython::PyObject,
+    ) -> cpython::PyResult<cpython::PyObject> {
         let resources_state: &mut PythonResourcesState<u8> =
             self.state(py).get_resources_state_mut();
         resources_state.index_pyobject(py, data)?;
@@ -1220,49 +1272,62 @@ impl OxidizedFinder {
         Ok(py.None())
     }
 
-    fn index_file_memory_mapped_impl(&self, py: Python, path: PyObject) -> PyResult<PyObject> {
+    fn index_file_memory_mapped_impl(
+        &self,
+        py: cpython::Python,
+        path: cpython::PyObject,
+    ) -> cpython::PyResult<cpython::PyObject> {
         let path = pyobject_to_pathbuf(py, path)?;
 
         let resources_state: &mut PythonResourcesState<u8> =
             self.state(py).get_resources_state_mut();
         resources_state
             .index_path_memory_mapped(path)
-            .map_err(|e| PyErr::new::<ValueError, _>(py, e))?;
+            .map_err(|e| cpython::PyErr::new::<cpython::exc::ValueError, _>(py, e))?;
 
         Ok(py.None())
     }
 
-    fn index_interpreter_builtins_impl(&self, py: Python) -> PyResult<PyObject> {
+    fn index_interpreter_builtins_impl(
+        &self,
+        py: cpython::Python,
+    ) -> cpython::PyResult<cpython::PyObject> {
         let resources_state: &mut PythonResourcesState<u8> =
             self.state(py).get_resources_state_mut();
         resources_state
             .index_interpreter_builtins()
-            .map_err(|e| PyErr::new::<ValueError, _>(py, e))?;
+            .map_err(|e| cpython::PyErr::new::<cpython::exc::ValueError, _>(py, e))?;
 
         Ok(py.None())
     }
 
-    fn index_interpreter_builtin_extension_modules_impl(&self, py: Python) -> PyResult<PyObject> {
+    fn index_interpreter_builtin_extension_modules_impl(
+        &self,
+        py: cpython::Python,
+    ) -> cpython::PyResult<cpython::PyObject> {
         let resources_state: &mut PythonResourcesState<u8> =
             self.state(py).get_resources_state_mut();
         resources_state
             .index_interpreter_builtin_extension_modules()
-            .map_err(|e| PyErr::new::<ValueError, _>(py, e))?;
+            .map_err(|e| cpython::PyErr::new::<cpython::exc::ValueError, _>(py, e))?;
 
         Ok(py.None())
     }
 
-    fn index_interpreter_frozen_modules_impl(&self, py: Python) -> PyResult<PyObject> {
+    fn index_interpreter_frozen_modules_impl(
+        &self,
+        py: cpython::Python,
+    ) -> cpython::PyResult<cpython::PyObject> {
         let resources_state: &mut PythonResourcesState<u8> =
             self.state(py).get_resources_state_mut();
         resources_state
             .index_interpreter_frozen_modules()
-            .map_err(|e| PyErr::new::<ValueError, _>(py, e))?;
+            .map_err(|e| cpython::PyErr::new::<cpython::exc::ValueError, _>(py, e))?;
 
         Ok(py.None())
     }
 
-    fn indexed_resources_impl(&self, py: Python) -> PyResult<PyObject> {
+    fn indexed_resources_impl(&self, py: cpython::Python) -> cpython::PyResult<cpython::PyObject> {
         let resources_state: &PythonResourcesState<u8> = self.state(py).get_resources_state();
 
         let mut resources = resources_state
@@ -1272,7 +1337,7 @@ impl OxidizedFinder {
 
         resources.sort_by_key(|r| &r.name);
 
-        let objects: Result<Vec<PyObject>, PyErr> = resources
+        let objects: Result<Vec<cpython::PyObject>, cpython::PyErr> = resources
             .iter()
             .map(|r| resource_to_pyobject(py, r))
             .collect();
@@ -1280,29 +1345,43 @@ impl OxidizedFinder {
         Ok(objects?.to_py_object(py).into_object())
     }
 
-    fn add_resource_impl(&self, py: Python, resource: OxidizedResource) -> PyResult<PyObject> {
+    fn add_resource_impl(
+        &self,
+        py: cpython::Python,
+        resource: OxidizedResource,
+    ) -> cpython::PyResult<cpython::PyObject> {
         let resources_state: &mut PythonResourcesState<u8> =
             self.state(py).get_resources_state_mut();
 
         resources_state
             .add_resource(pyobject_to_resource(py, resource))
-            .map_err(|_| PyErr::new::<ValueError, _>(py, "unable to add resource to finder"))?;
+            .map_err(|_| {
+                cpython::PyErr::new::<cpython::exc::ValueError, _>(
+                    py,
+                    "unable to add resource to finder",
+                )
+            })?;
 
         Ok(py.None())
     }
 
     fn add_resources_impl(
         &self,
-        py: Python,
+        py: cpython::Python,
         resources: Vec<OxidizedResource>,
-    ) -> PyResult<PyObject> {
+    ) -> cpython::PyResult<cpython::PyObject> {
         let resources_state: &mut PythonResourcesState<u8> =
             self.state(py).get_resources_state_mut();
 
         for resource in resources {
             resources_state
                 .add_resource(pyobject_to_resource(py, resource))
-                .map_err(|_| PyErr::new::<ValueError, _>(py, "unable to add resource to finder"))?;
+                .map_err(|_| {
+                    cpython::PyErr::new::<cpython::exc::ValueError, _>(
+                        py,
+                        "unable to add resource to finder",
+                    )
+                })?;
         }
 
         Ok(py.None())
@@ -1310,17 +1389,22 @@ impl OxidizedFinder {
 
     fn serialize_indexed_resources_impl(
         &self,
-        py: Python,
+        py: cpython::Python,
         ignore_builtin: bool,
         ignore_frozen: bool,
-    ) -> PyResult<PyObject> {
+    ) -> cpython::PyResult<cpython::PyObject> {
         let resources_state: &PythonResourcesState<u8> = self.state(py).get_resources_state();
 
         let data = resources_state
             .serialize_resources(ignore_builtin, ignore_frozen)
-            .map_err(|e| PyErr::new::<ValueError, _>(py, format!("error serializing: {}", e)))?;
+            .map_err(|e| {
+                cpython::PyErr::new::<cpython::exc::ValueError, _>(
+                    py,
+                    format!("error serializing: {}", e),
+                )
+            })?;
 
-        Ok(PyBytes::new(py, &data).into_object())
+        Ok(cpython::PyBytes::new(py, &data).into_object())
     }
 }
 
@@ -1332,41 +1416,41 @@ py_class!(pub(crate) class OxidizedPathEntryFinder |py| {
     data finder: OxidizedFinder;
 
     // The sys.path value this instance was created with.
-    data source_path: PyString;
+    data source_path: cpython::PyString;
 
     // Name of package being targeted.
     //
     // None is the top-level. Some(T) is a specific package in the hierarchy.
     data target_package: Option<String>;
 
-    def find_spec(&self, fullname: &str, target: Option<PyModule> = None) -> PyResult<Option<PyObject>> {
+    def find_spec(&self, fullname: &str, target: Option<cpython::PyModule> = None) -> cpython::PyResult<Option<cpython::PyObject>> {
         self.find_spec_impl(py, fullname, target)
     }
 
-    def invalidate_caches(&self) -> PyResult<PyObject> {
-        self.finder(py).as_object().call_method(py, "invalidate_caches", NoArgs, None)
+    def invalidate_caches(&self) -> cpython::PyResult<cpython::PyObject> {
+        self.finder(py).as_object().call_method(py, "invalidate_caches", cpython::NoArgs, None)
     }
 
-    def iter_modules(&self, prefix: &str = "") -> PyResult<PyList> {
+    def iter_modules(&self, prefix: &str = "") -> cpython::PyResult<cpython::PyList> {
         self.iter_modules_impl(py, prefix)
     }
 
     // Private getter. Just for testing.
-    @property def _package(&self) -> PyResult<Option<String>> {
+    @property def _package(&self) -> cpython::PyResult<Option<String>> {
         Ok(self.target_package(py).clone())
     }
 });
 
 impl OxidizedPathEntryFinder {
-    pub(crate) fn get_finder<'a>(&'a self, py: Python<'a>) -> &'a OxidizedFinder {
+    pub(crate) fn get_finder<'a>(&'a self, py: cpython::Python<'a>) -> &'a OxidizedFinder {
         self.finder(py)
     }
 
-    pub(crate) fn get_source_path<'a>(&'a self, py: Python<'a>) -> &'a PyString {
+    pub(crate) fn get_source_path<'a>(&'a self, py: cpython::Python<'a>) -> &'a cpython::PyString {
         self.source_path(py)
     }
 
-    pub(crate) fn get_target_package<'a>(&'a self, py: Python<'a>) -> &'a Option<String> {
+    pub(crate) fn get_target_package<'a>(&'a self, py: cpython::Python<'a>) -> &'a Option<String> {
         self.target_package(py)
     }
 }
@@ -1374,10 +1458,10 @@ impl OxidizedPathEntryFinder {
 impl OxidizedPathEntryFinder {
     fn find_spec_impl(
         &self,
-        py: Python,
+        py: cpython::Python,
         fullname: &str,
-        target: Option<PyModule>,
-    ) -> PyResult<Option<PyObject>> {
+        target: Option<cpython::PyModule>,
+    ) -> cpython::PyResult<Option<cpython::PyObject>> {
         if !name_at_package_hierarchy(
             fullname,
             self.target_package(py).as_ref().map(|s| s.as_str()),
@@ -1392,7 +1476,8 @@ impl OxidizedPathEntryFinder {
                 "find_spec",
                 (
                     fullname,
-                    PyList::new(py, &[self.source_path(py).as_object().clone_ref(py)]).as_object(),
+                    cpython::PyList::new(py, &[self.source_path(py).as_object().clone_ref(py)])
+                        .as_object(),
                     target,
                 ),
                 None,
@@ -1400,7 +1485,11 @@ impl OxidizedPathEntryFinder {
             .map(|spec| if spec == py.None() { None } else { Some(spec) })
     }
 
-    fn iter_modules_impl(&self, py: Python, prefix: &str) -> PyResult<PyList> {
+    fn iter_modules_impl(
+        &self,
+        py: cpython::Python,
+        prefix: &str,
+    ) -> cpython::PyResult<cpython::PyList> {
         let state = self.finder(py).state(py);
         let modules = state.get_resources_state().pkgutil_modules_infos(
             py,
@@ -1421,19 +1510,19 @@ py_class!(pub(crate) class OxidizedResourceReader |py| {
     data state: Arc<ImporterState>;
     data package: String;
 
-    def open_resource(&self, resource: &PyString) -> PyResult<PyObject> {
+    def open_resource(&self, resource: &cpython::PyString) -> cpython::PyResult<cpython::PyObject> {
         self.open_resource_impl(py, resource)
     }
 
-    def resource_path(&self, resource: &PyString) -> PyResult<PyObject> {
+    def resource_path(&self, resource: &cpython::PyString) -> cpython::PyResult<cpython::PyObject> {
         self.resource_path_impl(py, resource)
     }
 
-    def is_resource(&self, name: &PyString) -> PyResult<PyObject> {
+    def is_resource(&self, name: &cpython::PyString) -> cpython::PyResult<cpython::PyObject> {
         self.is_resource_impl(py, name)
     }
 
-    def contents(&self) -> PyResult<PyObject> {
+    def contents(&self) -> cpython::PyResult<cpython::PyObject> {
         self.contents_impl(py)
     }
 });
@@ -1442,7 +1531,11 @@ impl OxidizedResourceReader {
     /// Returns an opened, file-like object for binary reading of the resource.
     ///
     /// If the resource cannot be found, FileNotFoundError is raised.
-    fn open_resource_impl(&self, py: Python, resource: &PyString) -> PyResult<PyObject> {
+    fn open_resource_impl(
+        &self,
+        py: cpython::Python,
+        resource: &cpython::PyString,
+    ) -> cpython::PyResult<cpython::PyObject> {
         let state = self.state(py);
         let package = self.package(py);
 
@@ -1453,7 +1546,10 @@ impl OxidizedResourceReader {
         )? {
             Ok(file)
         } else {
-            Err(PyErr::new::<FileNotFoundError, _>(py, "resource not found"))
+            Err(cpython::PyErr::new::<cpython::exc::FileNotFoundError, _>(
+                py,
+                "resource not found",
+            ))
         }
     }
 
@@ -1461,8 +1557,12 @@ impl OxidizedResourceReader {
     ///
     /// If the resource does not concretely exist on the file system, raise
     /// FileNotFoundError.
-    fn resource_path_impl(&self, py: Python, _resource: &PyString) -> PyResult<PyObject> {
-        Err(PyErr::new::<FileNotFoundError, _>(
+    fn resource_path_impl(
+        &self,
+        py: cpython::Python,
+        _resource: &cpython::PyString,
+    ) -> cpython::PyResult<cpython::PyObject> {
+        Err(cpython::PyErr::new::<cpython::exc::FileNotFoundError, _>(
             py,
             "in-memory resources do not have filesystem paths",
         ))
@@ -1470,7 +1570,11 @@ impl OxidizedResourceReader {
 
     /// Returns True if the named name is considered a resource. FileNotFoundError
     /// is raised if name does not exist.
-    fn is_resource_impl(&self, py: Python, name: &PyString) -> PyResult<PyObject> {
+    fn is_resource_impl(
+        &self,
+        py: cpython::Python,
+        name: &cpython::PyString,
+    ) -> cpython::PyResult<cpython::PyObject> {
         let state = self.state(py);
         let package = self.package(py);
 
@@ -1480,7 +1584,10 @@ impl OxidizedResourceReader {
         {
             Ok(py.True().as_object().clone_ref(py))
         } else {
-            Err(PyErr::new::<FileNotFoundError, _>(py, "resource not found"))
+            Err(cpython::PyErr::new::<cpython::exc::FileNotFoundError, _>(
+                py,
+                "resource not found",
+            ))
         }
     }
 
@@ -1494,7 +1601,7 @@ impl OxidizedResourceReader {
     /// For instance, returning subdirectory names is allowed so that when it is known that the
     /// package and resources are stored on the file system then those subdirectory names can be
     /// used directly.
-    fn contents_impl(&self, py: Python) -> PyResult<PyObject> {
+    fn contents_impl(&self, py: cpython::Python) -> cpython::PyResult<cpython::PyObject> {
         let state = self.state(py);
         let package = self.package(py);
 
@@ -1512,37 +1619,37 @@ py_class!(pub(crate) class PyOxidizerTraversable |py| {
     data path: String;
 
     // Yield Traversable objects in self.
-    def iterdir(&self) -> PyResult<PyObject> {
+    def iterdir(&self) -> cpython::PyResult<cpython::PyObject> {
         self.iterdir_impl(py)
     }
 
     // Read contents of self as bytes.
-    def read_bytes(&self) -> PyResult<PyObject> {
+    def read_bytes(&self) -> cpython::PyResult<cpython::PyObject> {
         self.read_bytes_impl(py)
     }
 
     // Read contents of self as text.
-    def read_text(&self) -> PyResult<PyObject> {
+    def read_text(&self) -> cpython::PyResult<cpython::PyObject> {
         self.read_text_impl(py)
     }
 
     // Return True if self is a dir.
-    def is_dir(&self) -> PyResult<PyObject> {
+    def is_dir(&self) -> cpython::PyResult<cpython::PyObject> {
         Ok(self.is_dir_impl(py))
     }
 
     // Return True if self is a file.
-    def is_file(&self) -> PyResult<PyObject> {
+    def is_file(&self) -> cpython::PyResult<cpython::PyObject> {
         self.is_file_impl(py)
     }
 
     // Return Traversable child in self.
-    def joinpath(&self, child: &PyObject) -> PyResult<PyObject> {
+    def joinpath(&self, child: &cpython::PyObject) -> cpython::PyResult<cpython::PyObject> {
         self.joinpath_impl(py, child)
     }
 
     /// Return Traversable child in self.
-    def __truediv__(&self, child: &PyObject) -> PyResult<PyObject> {
+    def __truediv__(&self, child: &cpython::PyObject) -> cpython::PyResult<cpython::PyObject> {
         self.joinpath_impl(py, child)
     }
 
@@ -1551,25 +1658,25 @@ py_class!(pub(crate) class PyOxidizerTraversable |py| {
     //
     // When opening as text, accepts encoding parameters such as those
     // accepted by io.TextIOWrapper.
-    def open(&self, *args, **kwargs) -> PyResult<PyObject> {
+    def open(&self, *args, **kwargs) -> cpython::PyResult<cpython::PyObject> {
         self.open_impl(py, args, kwargs)
     }
 });
 
 impl PyOxidizerTraversable {
-    fn iterdir_impl(&self, _py: Python) -> PyResult<PyObject> {
+    fn iterdir_impl(&self, _py: cpython::Python) -> cpython::PyResult<cpython::PyObject> {
         unimplemented!();
     }
 
-    fn read_bytes_impl(&self, _py: Python) -> PyResult<PyObject> {
+    fn read_bytes_impl(&self, _py: cpython::Python) -> cpython::PyResult<cpython::PyObject> {
         unimplemented!();
     }
 
-    fn read_text_impl(&self, _py: Python) -> PyResult<PyObject> {
+    fn read_text_impl(&self, _py: cpython::Python) -> cpython::PyResult<cpython::PyObject> {
         unimplemented!();
     }
 
-    fn is_dir_impl(&self, py: Python) -> PyObject {
+    fn is_dir_impl(&self, py: cpython::Python) -> cpython::PyObject {
         let state = self.state(py);
         let path = self.path(py);
 
@@ -1589,20 +1696,24 @@ impl PyOxidizerTraversable {
         py.False().into_object()
     }
 
-    fn is_file_impl(&self, _py: Python) -> PyResult<PyObject> {
+    fn is_file_impl(&self, _py: cpython::Python) -> cpython::PyResult<cpython::PyObject> {
         unimplemented!();
     }
 
-    fn joinpath_impl(&self, _py: Python, _child: &PyObject) -> PyResult<PyObject> {
+    fn joinpath_impl(
+        &self,
+        _py: cpython::Python,
+        _child: &cpython::PyObject,
+    ) -> cpython::PyResult<cpython::PyObject> {
         unimplemented!();
     }
 
     fn open_impl(
         &self,
-        _py: Python,
-        _args: &PyTuple,
-        _kwargs: Option<&PyDict>,
-    ) -> PyResult<PyObject> {
+        _py: cpython::Python,
+        _args: &cpython::PyTuple,
+        _kwargs: Option<&cpython::PyDict>,
+    ) -> cpython::PyResult<cpython::PyObject> {
         unimplemented!();
     }
 }
@@ -1613,11 +1724,11 @@ impl PyOxidizerTraversable {
 /// module. Its state struct is updated.
 #[cfg(not(library_mode = "extension"))]
 pub(crate) fn replace_meta_path_importers<'a>(
-    py: Python,
-    oxidized_importer: &PyModule,
+    py: cpython::Python,
+    oxidized_importer: &cpython::PyModule,
     resources_state: Box<PythonResourcesState<'a, u8>>,
     importer_state_callback: Option<impl FnOnce(&mut ImporterState)>,
-) -> PyResult<PyObject> {
+) -> cpython::PyResult<cpython::PyObject> {
     let mut state = get_module_state(py, oxidized_importer)?;
 
     let sys_module = py.import("sys")?;
@@ -1635,7 +1746,7 @@ pub(crate) fn replace_meta_path_importers<'a>(
 
     let meta_path_object = sys_module.get(py, "meta_path")?;
 
-    meta_path_object.call_method(py, "clear", NoArgs, None)?;
+    meta_path_object.call_method(py, "clear", cpython::NoArgs, None)?;
     meta_path_object.call_method(py, "append", (oxidized_finder.clone_ref(py),), None)?;
 
     state.initialized = true;
@@ -1648,9 +1759,12 @@ pub(crate) fn replace_meta_path_importers<'a>(
 /// This will remove types that aren't defined by this extension from
 /// `sys.meta_path` and `sys.path_hooks`.
 #[cfg(not(library_mode = "extension"))]
-pub(crate) fn remove_external_importers(py: Python, sys_module: &PyModule) -> PyResult<()> {
+pub(crate) fn remove_external_importers(
+    py: cpython::Python,
+    sys_module: &cpython::PyModule,
+) -> cpython::PyResult<()> {
     let meta_path = sys_module.get(py, "meta_path")?;
-    let meta_path = meta_path.cast_into::<PyList>(py)?;
+    let meta_path = meta_path.cast_into::<cpython::PyList>(py)?;
 
     // We need to mutate the lists in place so any updates are reflected
     // in references to the lists.
@@ -1671,7 +1785,7 @@ pub(crate) fn remove_external_importers(py: Python, sys_module: &PyModule) -> Py
             index += 1;
         } else if entry
             .getattr(py, "__module__")?
-            .cast_as::<PyString>(py)?
+            .cast_as::<cpython::PyString>(py)?
             .to_string_lossy(py)
             == "_frozen_importlib"
         {
@@ -1684,7 +1798,7 @@ pub(crate) fn remove_external_importers(py: Python, sys_module: &PyModule) -> Py
     }
 
     let path_hooks = sys_module.get(py, "path_hooks")?;
-    let path_hooks = path_hooks.cast_into::<PyList>(py)?;
+    let path_hooks = path_hooks.cast_into::<cpython::PyList>(py)?;
 
     let mut index = 0;
     while index < path_hooks.len(py) {
@@ -1712,7 +1826,11 @@ pub(crate) fn remove_external_importers(py: Python, sys_module: &PyModule) -> Py
 /// [`sys.path_hooks`]: https://docs.python.org/3/library/sys.html#sys.path_hooks
 /// [`sys`]: https://docs.python.org/3/library/sys.html
 #[cfg(not(library_mode = "extension"))]
-pub(crate) fn install_path_hook(py: Python, finder: &PyObject, sys: &PyModule) -> PyResult<()> {
+pub(crate) fn install_path_hook(
+    py: cpython::Python,
+    finder: &cpython::PyObject,
+    sys: &cpython::PyModule,
+) -> cpython::PyResult<()> {
     let hook = finder.getattr(py, "path_hook")?;
     sys.get(py, "path_hooks")?
         .call_method(py, "insert", (0, hook), None)

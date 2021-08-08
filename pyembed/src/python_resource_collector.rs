@@ -14,11 +14,7 @@ use {
         python_resources::resource_to_pyobject,
     },
     anyhow::Context,
-    cpython::{
-        exc::{TypeError, ValueError},
-        py_class, NoArgs, ObjectProtocol, PyBytes, PyErr, PyList, PyObject, PyResult, Python,
-        PythonObject, ToPyObject,
-    },
+    cpython::{py_class, ObjectProtocol, PythonObject, ToPyObject},
     python3_sys as oldpyffi,
     python_packaging::{
         bytecode::BytecodeCompiler,
@@ -33,15 +29,15 @@ use {
 };
 
 struct PyTempDir {
-    cleanup: PyObject,
+    cleanup: cpython::PyObject,
     path: PathBuf,
 }
 
 impl PyTempDir {
-    fn new(py: Python) -> PyResult<Self> {
-        let temp_dir = py
-            .import("tempfile")?
-            .call(py, "TemporaryDirectory", NoArgs, None)?;
+    fn new(py: cpython::Python) -> cpython::PyResult<Self> {
+        let temp_dir =
+            py.import("tempfile")?
+                .call(py, "TemporaryDirectory", cpython::NoArgs, None)?;
         let cleanup = temp_dir.getattr(py, "cleanup")?;
         let path = pyobject_to_pathbuf(py, temp_dir.getattr(py, "name")?)?;
 
@@ -55,9 +51,9 @@ impl PyTempDir {
 
 impl Drop for PyTempDir {
     fn drop(&mut self) {
-        let gil_guard = Python::acquire_gil();
+        let gil_guard = cpython::Python::acquire_gil();
         let py = gil_guard.python();
-        if self.cleanup.call(py, NoArgs, None).is_err() {
+        if self.cleanup.call(py, cpython::NoArgs, None).is_err() {
             let cleanup = self.cleanup.as_ptr();
             unsafe { oldpyffi::PyErr_WriteUnraisable(cleanup) }
         }
@@ -67,38 +63,38 @@ impl Drop for PyTempDir {
 py_class!(pub(crate) class OxidizedResourceCollector |py| {
     data collector: RefCell<PythonResourceCollector>;
 
-    def __new__(_cls, allowed_locations: Vec<String>) -> PyResult<OxidizedResourceCollector> {
+    def __new__(_cls, allowed_locations: Vec<String>) -> cpython::PyResult<OxidizedResourceCollector> {
         OxidizedResourceCollector::new(py, allowed_locations)
     }
 
-    def __repr__(&self) -> PyResult<String> {
+    def __repr__(&self) -> cpython::PyResult<String> {
         Ok("<OxidizedResourceCollector>".to_string())
     }
 
-    @property def allowed_locations(&self) -> PyResult<PyObject> {
+    @property def allowed_locations(&self) -> cpython::PyResult<cpython::PyObject> {
         Ok(self.allowed_locations_impl(py))
     }
 
-    def add_in_memory(&self, resource: PyObject) -> PyResult<PyObject> {
+    def add_in_memory(&self, resource: cpython::PyObject) -> cpython::PyResult<cpython::PyObject> {
         self.add_in_memory_impl(py, resource)
     }
 
-    def add_filesystem_relative(&self, prefix: String, resource: PyObject) -> PyResult<PyObject> {
+    def add_filesystem_relative(&self, prefix: String, resource: cpython::PyObject) -> cpython::PyResult<cpython::PyObject> {
         self.add_filesystem_relative_impl(py, prefix, resource)
     }
 
-    def oxidize(&self, python_exe: Option<PyObject> = None) -> PyResult<PyObject> {
+    def oxidize(&self, python_exe: Option<cpython::PyObject> = None) -> cpython::PyResult<cpython::PyObject> {
         self.oxidize_impl(py, python_exe)
     }
 });
 
 impl OxidizedResourceCollector {
-    pub fn new(py: Python, allowed_locations: Vec<String>) -> PyResult<Self> {
+    pub fn new(py: cpython::Python, allowed_locations: Vec<String>) -> cpython::PyResult<Self> {
         let allowed_locations = allowed_locations
             .iter()
             .map(|location| AbstractResourceLocation::try_from(location.as_str()))
             .collect::<Result<Vec<_>, _>>()
-            .map_err(|e| PyErr::new::<ValueError, _>(py, e))?;
+            .map_err(|e| cpython::PyErr::new::<cpython::exc::ValueError, _>(py, e))?;
 
         let sys_module = py.import("sys")?;
         let cache_tag = sys_module
@@ -117,19 +113,23 @@ impl OxidizedResourceCollector {
         OxidizedResourceCollector::create_instance(py, RefCell::new(collector))
     }
 
-    fn allowed_locations_impl(&self, py: Python) -> PyObject {
+    fn allowed_locations_impl(&self, py: cpython::Python) -> cpython::PyObject {
         let values = self
             .collector(py)
             .borrow()
             .allowed_locations()
             .iter()
             .map(|l| l.to_string().to_py_object(py).into_object())
-            .collect::<Vec<PyObject>>();
+            .collect::<Vec<cpython::PyObject>>();
 
-        PyList::new(py, &values).into_object()
+        cpython::PyList::new(py, &values).into_object()
     }
 
-    fn add_in_memory_impl(&self, py: Python, resource: PyObject) -> PyResult<PyObject> {
+    fn add_in_memory_impl(
+        &self,
+        py: cpython::Python,
+        resource: cpython::PyObject,
+    ) -> cpython::PyResult<cpython::PyObject> {
         let mut collector = self.collector(py).borrow_mut();
         let typ = resource.get_type(py);
 
@@ -144,11 +144,16 @@ impl OxidizedResourceCollector {
                     collector
                         .add_python_extension_module(&resource, &ConcreteResourceLocation::InMemory)
                         .with_context(|| format!("adding {}", repr))
-                        .map_err(|e| PyErr::new::<ValueError, _>(py, format!("{:?}", e)))?;
+                        .map_err(|e| {
+                            cpython::PyErr::new::<cpython::exc::ValueError, _>(
+                                py,
+                                format!("{:?}", e),
+                            )
+                        })?;
 
                     Ok(py.None())
                 } else {
-                    Err(PyErr::new::<ValueError, _>(
+                    Err(cpython::PyErr::new::<cpython::exc::ValueError, _>(
                         py,
                         "PythonExtensionModule lacks a shared library",
                     ))
@@ -163,7 +168,9 @@ impl OxidizedResourceCollector {
                         &ConcreteResourceLocation::InMemory,
                     )
                     .with_context(|| format!("adding {}", repr))
-                    .map_err(|e| PyErr::new::<ValueError, _>(py, format!("{:?}", e)))?;
+                    .map_err(|e| {
+                        cpython::PyErr::new::<cpython::exc::ValueError, _>(py, format!("{:?}", e))
+                    })?;
 
                 Ok(py.None())
             }
@@ -176,7 +183,9 @@ impl OxidizedResourceCollector {
                         &ConcreteResourceLocation::InMemory,
                     )
                     .with_context(|| format!("adding {}", repr))
-                    .map_err(|e| PyErr::new::<ValueError, _>(py, format!("{:?}", e)))?;
+                    .map_err(|e| {
+                        cpython::PyErr::new::<cpython::exc::ValueError, _>(py, format!("{:?}", e))
+                    })?;
 
                 Ok(py.None())
             }
@@ -189,7 +198,9 @@ impl OxidizedResourceCollector {
                         &ConcreteResourceLocation::InMemory,
                     )
                     .with_context(|| format!("adding {}", repr))
-                    .map_err(|e| PyErr::new::<ValueError, _>(py, format!("{:?}", e)))?;
+                    .map_err(|e| {
+                        cpython::PyErr::new::<cpython::exc::ValueError, _>(py, format!("{:?}", e))
+                    })?;
 
                 Ok(py.None())
             }
@@ -202,11 +213,13 @@ impl OxidizedResourceCollector {
                         &ConcreteResourceLocation::InMemory,
                     )
                     .with_context(|| format!("adding {}", repr))
-                    .map_err(|e| PyErr::new::<ValueError, _>(py, format!("{:?}", e)))?;
+                    .map_err(|e| {
+                        cpython::PyErr::new::<cpython::exc::ValueError, _>(py, format!("{:?}", e))
+                    })?;
 
                 Ok(py.None())
             }
-            _ => Err(PyErr::new::<TypeError, _>(
+            _ => Err(cpython::PyErr::new::<cpython::exc::TypeError, _>(
                 py,
                 format!("cannot operate on {} values", typ.name(py)),
             )),
@@ -215,10 +228,10 @@ impl OxidizedResourceCollector {
 
     fn add_filesystem_relative_impl(
         &self,
-        py: Python,
+        py: cpython::Python,
         prefix: String,
-        resource: PyObject,
-    ) -> PyResult<PyObject> {
+        resource: cpython::PyObject,
+    ) -> cpython::PyResult<cpython::PyObject> {
         let mut collector = self.collector(py).borrow_mut();
 
         match resource.get_type(py).name(py).as_ref() {
@@ -233,7 +246,9 @@ impl OxidizedResourceCollector {
                         &ConcreteResourceLocation::RelativePath(prefix),
                     )
                     .with_context(|| format!("adding {}", repr))
-                    .map_err(|e| PyErr::new::<ValueError, _>(py, format!("{:?}", e)))?;
+                    .map_err(|e| {
+                        cpython::PyErr::new::<cpython::exc::ValueError, _>(py, format!("{:?}", e))
+                    })?;
 
                 Ok(py.None())
             }
@@ -246,7 +261,9 @@ impl OxidizedResourceCollector {
                         &ConcreteResourceLocation::RelativePath(prefix),
                     )
                     .with_context(|| format!("adding {}", repr))
-                    .map_err(|e| PyErr::new::<ValueError, _>(py, format!("{:?}", e)))?;
+                    .map_err(|e| {
+                        cpython::PyErr::new::<cpython::exc::ValueError, _>(py, format!("{:?}", e))
+                    })?;
 
                 Ok(py.None())
             }
@@ -259,7 +276,9 @@ impl OxidizedResourceCollector {
                         &ConcreteResourceLocation::RelativePath(prefix),
                     )
                     .with_context(|| format!("adding {}", repr))
-                    .map_err(|e| PyErr::new::<ValueError, _>(py, format!("{:?}", e)))?;
+                    .map_err(|e| {
+                        cpython::PyErr::new::<cpython::exc::ValueError, _>(py, format!("{:?}", e))
+                    })?;
 
                 Ok(py.None())
             }
@@ -272,7 +291,9 @@ impl OxidizedResourceCollector {
                         &ConcreteResourceLocation::RelativePath(prefix),
                     )
                     .with_context(|| format!("adding {}", repr))
-                    .map_err(|e| PyErr::new::<ValueError, _>(py, format!("{:?}", e)))?;
+                    .map_err(|e| {
+                        cpython::PyErr::new::<cpython::exc::ValueError, _>(py, format!("{:?}", e))
+                    })?;
 
                 Ok(py.None())
             }
@@ -285,18 +306,24 @@ impl OxidizedResourceCollector {
                         &ConcreteResourceLocation::RelativePath(prefix),
                     )
                     .with_context(|| format!("adding {}", repr))
-                    .map_err(|e| PyErr::new::<ValueError, _>(py, format!("{:?}", e)))?;
+                    .map_err(|e| {
+                        cpython::PyErr::new::<cpython::exc::ValueError, _>(py, format!("{:?}", e))
+                    })?;
 
                 Ok(py.None())
             }
-            name => Err(PyErr::new::<TypeError, _>(
+            name => Err(cpython::PyErr::new::<cpython::exc::TypeError, _>(
                 py,
                 format!("cannot operate on {} values", name),
             )),
         }
     }
 
-    fn oxidize_impl(&self, py: Python, python_exe: Option<PyObject>) -> PyResult<PyObject> {
+    fn oxidize_impl(
+        &self,
+        py: cpython::Python,
+        python_exe: Option<cpython::PyObject>,
+    ) -> cpython::PyResult<cpython::PyObject> {
         let python_exe = match python_exe {
             Some(p) => p,
             None => {
@@ -309,7 +336,7 @@ impl OxidizedResourceCollector {
         let collector = self.collector(py).borrow();
 
         let mut compiler = BytecodeCompiler::new(&python_exe, temp_dir.path()).map_err(|e| {
-            PyErr::new::<ValueError, _>(
+            cpython::PyErr::new::<cpython::exc::ValueError, _>(
                 py,
                 format!("error constructing bytecode compiler: {:?}", e),
             )
@@ -318,7 +345,12 @@ impl OxidizedResourceCollector {
         let prepared: CompiledResourcesCollection = collector
             .compile_resources(&mut compiler)
             .context("compiling resources")
-            .map_err(|e| PyErr::new::<ValueError, _>(py, format!("error oxidizing: {:?}", e)))?;
+            .map_err(|e| {
+                cpython::PyErr::new::<cpython::exc::ValueError, _>(
+                    py,
+                    format!("error oxidizing: {:?}", e),
+                )
+            })?;
 
         let mut resources = Vec::new();
 
@@ -330,10 +362,10 @@ impl OxidizedResourceCollector {
 
         for (path, location, executable) in &prepared.extra_files {
             let path = path_to_pathlib_path(py, path)?;
-            let data = location
-                .resolve_content()
-                .map_err(|e| PyErr::new::<ValueError, _>(py, e.to_string()))?;
-            let data = PyBytes::new(py, &data);
+            let data = location.resolve_content().map_err(|e| {
+                cpython::PyErr::new::<cpython::exc::ValueError, _>(py, e.to_string())
+            })?;
+            let data = cpython::PyBytes::new(py, &data);
             let executable = executable.to_py_object(py);
 
             file_installs.push((path, data, executable).into_py_object(py));

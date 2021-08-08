@@ -6,7 +6,7 @@ use {
     super::{default_interpreter_config, run_py_test},
     crate::MainPythonInterpreter,
     anyhow::Result,
-    cpython::{ObjectProtocol, PyObject},
+    cpython::ObjectProtocol,
     rusty_fork::rusty_fork_test,
 };
 
@@ -19,7 +19,7 @@ fn new_interpreter<'python, 'interpreter, 'resources>(
     Ok(interp)
 }
 
-fn get_importer(interp: &mut MainPythonInterpreter) -> Result<PyObject> {
+fn get_importer(interp: &mut MainPythonInterpreter) -> Result<cpython::PyObject> {
     let py = interp.acquire_gil();
 
     let sys = py.import("sys").unwrap();

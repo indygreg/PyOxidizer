@@ -5,7 +5,7 @@
 use {
     super::{default_interpreter_config, set_sys_paths, PYTHON_INTERPRETER_PATH},
     crate::{MainPythonInterpreter, OxidizedPythonInterpreterConfig},
-    cpython::{ObjectProtocol, PyBytes, PyList, PyObject, PyString, PyStringData},
+    cpython::ObjectProtocol,
     python3_sys as oldpyffi,
     python_packaging::{
         interpreter::{BytesWarning, MemoryAllocatorBackend, PythonInterpreterProfile},
@@ -33,7 +33,7 @@ fn get_unicode_argument() -> OsString {
     OsString::from_wide(&[20013, 25991])
 }
 
-fn reprs(py: cpython::Python, container: &PyObject) -> cpython::PyResult<Vec<String>> {
+fn reprs(py: cpython::Python, container: &cpython::PyObject) -> cpython::PyResult<Vec<String>> {
     let mut names = Vec::new();
     for x in container.iter(py)? {
         names.push(x?.to_string());
@@ -421,11 +421,11 @@ rusty_fork_test! {
         let sys = py.import("sys").unwrap();
 
         let argvb_raw = sys.get(py, "argvb").unwrap();
-        let argvb = argvb_raw.cast_as::<PyList>(py).unwrap();
+        let argvb = argvb_raw.cast_as::<cpython::PyList>(py).unwrap();
         assert_eq!(argvb.len(py), 2);
 
         let value_raw = argvb.get_item(py, 1);
-        let value_bytes = value_raw.cast_as::<PyBytes>(py).unwrap();
+        let value_bytes = value_raw.cast_as::<cpython::PyBytes>(py).unwrap();
         assert_eq!(
             value_bytes.data(py).to_vec(),
             if cfg!(windows) {
@@ -449,13 +449,13 @@ rusty_fork_test! {
         let sys = py.import("sys").unwrap();
 
         let argv_raw = sys.get(py, "argv").unwrap();
-        let argv = argv_raw.cast_as::<PyList>(py).unwrap();
+        let argv = argv_raw.cast_as::<cpython::PyList>(py).unwrap();
         assert_eq!(argv.len(py), 2);
 
         let value_raw = argv.get_item(py, 1);
-        let value_string = value_raw.cast_as::<PyString>(py).unwrap();
+        let value_string = value_raw.cast_as::<cpython::PyString>(py).unwrap();
         match value_string.data(py) {
-            PyStringData::Utf16(&[20013, 25991]) => {},
+            cpython::PyStringData::Utf16(&[20013, 25991]) => {},
             value => assert!(false, "{:?}", value),
         }
     }
@@ -473,16 +473,16 @@ rusty_fork_test! {
         let sys = py.import("sys").unwrap();
 
         let argv_raw = sys.get(py, "argv").unwrap();
-        let argv = argv_raw.cast_as::<PyList>(py).unwrap();
+        let argv = argv_raw.cast_as::<cpython::PyList>(py).unwrap();
         assert_eq!(argv.len(py), 2);
 
         let value_raw = argv.get_item(py, 1);
-        let value_string = value_raw.cast_as::<PyString>(py).unwrap();
+        let value_string = value_raw.cast_as::<cpython::PyString>(py).unwrap();
 
         // The result in isolated mode without configure_locale is kinda wonky.
         match value_string.data(py) {
             // This is the correct value.
-            PyStringData::Utf16(&[20013, 25991]) => {
+            cpython::PyStringData::Utf16(&[20013, 25991]) => {
                 if cfg!(any(target_family = "windows", target_os = "macos")) {
                     assert!(true);
                 } else {
@@ -490,7 +490,7 @@ rusty_fork_test! {
                 }
             }
             // This is some abomination.
-            PyStringData::Utf16(&[56548, 56504, 56493, 56550, 56470, 56455]) => {
+            cpython::PyStringData::Utf16(&[56548, 56504, 56493, 56550, 56470, 56455]) => {
                 if cfg!(target_family = "unix") {
                     assert!(true);
                 } else {
@@ -515,14 +515,14 @@ rusty_fork_test! {
         let sys = py.import("sys").unwrap();
 
         let argv_raw = sys.get(py, "argv").unwrap();
-        let argv = argv_raw.cast_as::<PyList>(py).unwrap();
+        let argv = argv_raw.cast_as::<cpython::PyList>(py).unwrap();
         assert_eq!(argv.len(py), 2);
 
         let value_raw = argv.get_item(py, 1);
-        let value_string = value_raw.cast_as::<PyString>(py).unwrap();
+        let value_string = value_raw.cast_as::<cpython::PyString>(py).unwrap();
 
         match value_string.data(py) {
-            PyStringData::Utf16(&[20013, 25991]) => {},
+            cpython::PyStringData::Utf16(&[20013, 25991]) => {},
             value => assert!(false, "unexpected string data: {:?}", value),
         }
     }
