@@ -12,7 +12,6 @@ for importing Python modules from memory.
 #[cfg(windows)]
 use {
     crate::memory_dll::{free_library_memory, get_proc_address_memory, load_library_memory},
-    cpython::exc::SystemError,
     std::ffi::{c_void, CString},
 };
 use {
@@ -157,7 +156,7 @@ fn load_dynamic_library(
     };
 
     if py_module.is_null() && unsafe { oldpyffi::PyErr_Occurred().is_null() } {
-        return Err(cpython::PyErr::new::<SystemError, _>(
+        return Err(cpython::PyErr::new::<cpython::exc::SystemError, _>(
             py,
             format!(
                 "initialization of {} failed without raising an exception",
@@ -173,14 +172,14 @@ fn load_dynamic_library(
         unsafe {
             oldpyffi::PyErr_Clear();
         }
-        return Err(cpython::PyErr::new::<SystemError, _>(
+        return Err(cpython::PyErr::new::<cpython::exc::SystemError, _>(
             py,
             format!("initialization of {} raised unreported exception", name),
         ));
     }
 
     if unsafe { oldpyffi::Py_TYPE(py_module.as_ptr()) }.is_null() {
-        return Err(cpython::PyErr::new::<SystemError, _>(
+        return Err(cpython::PyErr::new::<cpython::exc::SystemError, _>(
             py,
             format!("init function of {} returned uninitialized object", name),
         ));
@@ -208,7 +207,7 @@ fn load_dynamic_library(
 
     let mut module_def = unsafe { oldpyffi::PyModule_GetDef(py_module.as_ptr()) };
     if module_def.is_null() {
-        return Err(cpython::PyErr::new::<SystemError, _>(
+        return Err(cpython::PyErr::new::<cpython::exc::SystemError, _>(
             py,
             format!(
                 "initialization of {} did not return an extension module",
