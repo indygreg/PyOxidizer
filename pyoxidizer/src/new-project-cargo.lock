@@ -368,6 +368,8 @@ dependencies = [
 [[package]]
 name = "tugger-file-manifest"
 version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e8c547e8873b1e3325c1e7ad517747b09d26ec36b13ab0d286a5ab349f261197"
 
 [[package]]
 name = "tugger-licensing"
