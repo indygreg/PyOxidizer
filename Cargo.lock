@@ -2266,7 +2266,7 @@ dependencies = [
  "tugger-file-manifest 0.6.0-pre",
  "tugger-licensing 0.5.0-pre",
  "tugger-rust-toolchain",
- "tugger-windows 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-windows 0.7.0-pre",
  "tugger-wix 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "url",
  "uuid",
@@ -3678,7 +3678,7 @@ dependencies = [
  "tugger-common 0.5.0-pre",
  "tugger-file-manifest 0.6.0-pre",
  "tugger-snapcraft 0.7.0-pre",
- "tugger-windows 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-windows 0.7.0-pre",
  "tugger-windows-codesign 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-wix 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "walkdir",
@@ -3712,7 +3712,7 @@ dependencies = [
  "tugger-common 0.4.0",
  "tugger-file-manifest 0.5.0",
  "tugger-snapcraft 0.6.0",
- "tugger-windows 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-windows 0.6.0",
  "tugger-wix 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "walkdir",
 ]
@@ -4021,20 +4021,6 @@ dependencies = [
 [[package]]
 name = "tugger-windows"
 version = "0.6.0"
-dependencies = [
- "anyhow",
- "duct",
- "find-winsdk",
- "glob",
- "once_cell",
- "semver 1.0.4",
- "tugger-common 0.5.0-pre",
- "winapi 0.3.9",
-]
-
-[[package]]
-name = "tugger-windows"
-version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "181f60fe853f5918c7a76263deb4005d519ae8bf15d408c70309236e1c2911e6"
 dependencies = [
@@ -4045,6 +4031,20 @@ dependencies = [
  "once_cell",
  "semver 1.0.4",
  "tugger-common 0.4.0",
+ "winapi 0.3.9",
+]
+
+[[package]]
+name = "tugger-windows"
+version = "0.7.0-pre"
+dependencies = [
+ "anyhow",
+ "duct",
+ "find-winsdk",
+ "glob",
+ "once_cell",
+ "semver 1.0.4",
+ "tugger-common 0.5.0-pre",
  "winapi 0.3.9",
 ]
 
@@ -4060,7 +4060,7 @@ dependencies = [
  "rcgen",
  "slog",
  "tugger-common 0.5.0-pre",
- "tugger-windows 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-windows 0.7.0-pre",
  "x509-parser",
  "yasna 0.3.2",
 ]
@@ -4078,7 +4078,7 @@ dependencies = [
  "rcgen",
  "slog",
  "tugger-common 0.4.0",
- "tugger-windows 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-windows 0.6.0",
  "yasna 0.3.2",
 ]
 
@@ -4094,7 +4094,7 @@ dependencies = [
  "tempfile",
  "tugger-common 0.5.0-pre",
  "tugger-file-manifest 0.6.0-pre",
- "tugger-windows 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-windows 0.7.0-pre",
  "tugger-windows-codesign 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "url",
  "uuid",
@@ -4113,7 +4113,7 @@ dependencies = [
  "slog",
  "tugger-common 0.4.0",
  "tugger-file-manifest 0.5.0",
- "tugger-windows 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-windows 0.6.0",
  "tugger-windows-codesign 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "url",
  "uuid",
