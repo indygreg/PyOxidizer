@@ -675,11 +675,18 @@ fn release_package(
             package
         );
     } else if publish {
+        // rpm-rs has issues with package dependency pinning.
+        let args = if package == "tugger-rpm" {
+            vec!["publish", "--no-verify"]
+        } else {
+            vec!["publish"]
+        };
+
         if run_cmd(
             package,
             &root.join(package),
             "cargo",
-            vec!["publish"],
+            args,
             vec![format!(
                 "crate version `{}` is already uploaded",
                 release_version
