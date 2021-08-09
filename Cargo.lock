@@ -4095,7 +4095,7 @@ dependencies = [
 
 [[package]]
 name = "tugger-rpm"
-version = "0.6.0-pre"
+version = "0.6.0"
 dependencies = [
  "anyhow",
  "rpm-rs",
