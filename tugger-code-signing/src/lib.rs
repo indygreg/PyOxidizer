@@ -540,7 +540,7 @@ pub fn path_signable(path: impl AsRef<Path>) -> Result<Signability, SigningError
                 Err(e) => Signability::UnsignableMachoError(e),
             });
         }
-    } else if path.is_dir() && apple_bundle::DirectoryBundle::new_from_path(path).is_ok() {
+    } else if path.is_dir() && apple_bundles::DirectoryBundle::new_from_path(path).is_ok() {
         return Ok(Signability::Signable(Signable::AppleBundle(
             path.to_path_buf(),
         )));

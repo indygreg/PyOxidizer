@@ -21,7 +21,7 @@ use {
         error::AppleCodesignError,
         macho::DigestType,
     },
-    apple_bundle::DirectoryBundleFile,
+    apple_bundles::DirectoryBundleFile,
     plist::{Dictionary, Value},
     slog::{debug, info, Logger},
     std::{cmp::Ordering, collections::BTreeMap, convert::TryFrom, io::Write},

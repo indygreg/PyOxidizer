@@ -45,7 +45,7 @@ use {
 /// # Examples
 ///
 /// ```
-/// use apple_bundle::MacOsApplicationBundleBuilder;
+/// use apple_bundles::MacOsApplicationBundleBuilder;
 /// use tugger_file_manifest::FileEntry;
 ///
 /// # fn main() -> anyhow::Result<()> {

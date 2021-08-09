@@ -9,7 +9,7 @@ use {
         file_manifest::FileManifestValue,
     },
     anyhow::{anyhow, Context},
-    apple_bundle::MacOsApplicationBundleBuilder,
+    apple_bundles::MacOsApplicationBundleBuilder,
     starlark::{
         environment::TypeValues,
         eval::call_stack::CallStack,

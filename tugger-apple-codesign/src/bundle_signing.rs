@@ -12,7 +12,7 @@ use {
         macho_signing::MachOSigner,
         signing::{SettingsScope, SigningSettings},
     },
-    apple_bundle::{DirectoryBundle, DirectoryBundleFile},
+    apple_bundles::{DirectoryBundle, DirectoryBundleFile},
     goblin::mach::Mach,
     slog::{info, warn, Logger},
     std::{
