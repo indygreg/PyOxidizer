@@ -3673,7 +3673,7 @@ dependencies = [
  "tempfile",
  "time 0.2.27",
  "tugger-apple 0.5.0-pre",
- "tugger-apple-codesign 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-apple-codesign 0.6.0-pre",
  "tugger-code-signing 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-common 0.5.0-pre",
  "tugger-file-manifest 0.6.0-pre",
@@ -3752,38 +3752,6 @@ dependencies = [
 [[package]]
 name = "tugger-apple-codesign"
 version = "0.5.0"
-dependencies = [
- "anyhow",
- "apple-bundles 0.6.0-pre",
- "base64 0.13.0",
- "bcder",
- "bitflags",
- "bytes",
- "chrono",
- "clap",
- "cryptographic-message-syntax 0.5.0-pre",
- "goblin",
- "hex",
- "once_cell",
- "p12",
- "pem",
- "plist",
- "regex",
- "reqwest",
- "ring",
- "scroll",
- "security-framework",
- "slog",
- "slog-term",
- "thiserror",
- "tugger-apple 0.5.0-pre",
- "x509-certificate 0.4.0-pre",
- "yasna 0.3.2",
-]
-
-[[package]]
-name = "tugger-apple-codesign"
-version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a72aac7c9a840619501060548951142c74fde9ffdf6c95df916f51f3a7cfd21b"
 dependencies = [
@@ -3816,6 +3784,38 @@ dependencies = [
 ]
 
 [[package]]
+name = "tugger-apple-codesign"
+version = "0.6.0-pre"
+dependencies = [
+ "anyhow",
+ "apple-bundles 0.6.0-pre",
+ "base64 0.13.0",
+ "bcder",
+ "bitflags",
+ "bytes",
+ "chrono",
+ "clap",
+ "cryptographic-message-syntax 0.5.0-pre",
+ "goblin",
+ "hex",
+ "once_cell",
+ "p12",
+ "pem",
+ "plist",
+ "regex",
+ "reqwest",
+ "ring",
+ "scroll",
+ "security-framework",
+ "slog",
+ "slog-term",
+ "thiserror",
+ "tugger-apple 0.5.0-pre",
+ "x509-certificate 0.4.0-pre",
+ "yasna 0.3.2",
+]
+
+[[package]]
 name = "tugger-binary-analysis"
 version = "0.4.0-pre"
 dependencies = [
@@ -3840,7 +3840,7 @@ dependencies = [
  "slog",
  "tempfile",
  "thiserror",
- "tugger-apple-codesign 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-apple-codesign 0.6.0-pre",
  "tugger-file-manifest 0.6.0-pre",
  "tugger-windows-codesign 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "x509-certificate 0.4.0-pre",
@@ -3863,7 +3863,7 @@ dependencies = [
  "slog",
  "tempfile",
  "thiserror",
- "tugger-apple-codesign 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-apple-codesign 0.5.0",
  "tugger-file-manifest 0.5.0",
  "tugger-windows-codesign 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "x509-certificate 0.3.0",
