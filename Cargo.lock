@@ -2214,7 +2214,7 @@ dependencies = [
  "once_cell",
  "pathdiff",
  "python-packaging 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "python-packed-resources 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "python-packed-resources 0.8.0-pre",
  "python3-sys",
  "rusty-fork",
  "snmalloc-sys",
@@ -2246,7 +2246,7 @@ dependencies = [
  "once_cell",
  "path-dedot",
  "python-packaging 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "python-packed-resources 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "python-packed-resources 0.8.0-pre",
  "remove_dir_all 0.7.0",
  "rustc_version 0.4.0",
  "semver 1.0.4",
@@ -2288,7 +2288,7 @@ dependencies = [
  "itertools 0.10.1",
  "mailparse",
  "once_cell",
- "python-packed-resources 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "python-packed-resources 0.8.0-pre",
  "regex",
  "sha2 0.9.5",
  "spdx",
@@ -2313,7 +2313,7 @@ dependencies = [
  "itertools 0.10.1",
  "mailparse",
  "once_cell",
- "python-packed-resources 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "python-packed-resources 0.7.0",
  "regex",
  "sha2 0.9.5",
  "spdx",
@@ -2327,6 +2327,8 @@ dependencies = [
 [[package]]
 name = "python-packed-resources"
 version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "15ff4dcea2f72950f431b3b8199f53edb7ac349d710c00983173e0e2499577cd"
 dependencies = [
  "anyhow",
  "byteorder",
@@ -2334,9 +2336,7 @@ dependencies = [
 
 [[package]]
 name = "python-packed-resources"
-version = "0.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "15ff4dcea2f72950f431b3b8199f53edb7ac349d710c00983173e0e2499577cd"
+version = "0.8.0-pre"
 dependencies = [
  "anyhow",
  "byteorder",
