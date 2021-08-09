@@ -266,6 +266,8 @@ dependencies = [
 [[package]]
 name = "python-packaging"
 version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8f2bfdb422d2defa8ba839c7ece25ec4e9964948d79bcd48f23b80180025e7c2"
 dependencies = [
  "anyhow",
  "byteorder",
