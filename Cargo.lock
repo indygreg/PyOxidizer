@@ -2433,7 +2433,7 @@ dependencies = [
  "memory-module-sys",
  "once_cell",
  "pathdiff",
- "python-packaging",
+ "python-packaging 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "python-packed-resources 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "python3-sys",
  "rusty-fork",
@@ -2465,7 +2465,7 @@ dependencies = [
  "linked-hash-map",
  "once_cell",
  "path-dedot",
- "python-packaging",
+ "python-packaging 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "python-packed-resources 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "remove_dir_all 0.7.0",
  "rustc_version 0.4.0",
@@ -2499,7 +2499,7 @@ dependencies = [
 
 [[package]]
 name = "python-packaging"
-version = "0.10.0-pre"
+version = "0.10.0"
 dependencies = [
  "anyhow",
  "base64 0.13.0",
@@ -2513,6 +2513,30 @@ dependencies = [
  "sha2 0.9.5",
  "spdx",
  "tempfile",
+ "time 0.2.27",
+ "tugger-file-manifest 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-licensing 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "walkdir",
+ "zip",
+]
+
+[[package]]
+name = "python-packaging"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8f2bfdb422d2defa8ba839c7ece25ec4e9964948d79bcd48f23b80180025e7c2"
+dependencies = [
+ "anyhow",
+ "base64 0.13.0",
+ "byteorder",
+ "encoding_rs",
+ "itertools 0.10.1",
+ "mailparse",
+ "once_cell",
+ "python-packed-resources 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "regex",
+ "sha2 0.9.5",
+ "spdx",
  "time 0.2.27",
  "tugger-file-manifest 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-licensing 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3895,7 +3919,7 @@ dependencies = [
  "dialoguer",
  "linked-hash-map",
  "plist",
- "python-packaging",
+ "python-packaging 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "slog",
  "starlark",
  "starlark-dialect-build-targets 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
