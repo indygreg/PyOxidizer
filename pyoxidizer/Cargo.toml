@@ -110,8 +110,8 @@ version = "0.10.0-pre"
 path = "../tugger-wix"
 
 [dependencies.tugger]
-version = "0.11.0"
-# path = "../tugger"
+version = "0.12.0-pre"
+path = "../tugger"
 
 [dev-dependencies]
 xml-rs = "0.8"
