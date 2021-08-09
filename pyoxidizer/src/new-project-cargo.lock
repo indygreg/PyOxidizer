@@ -245,9 +245,7 @@ checksum = "acbf547ad0c65e31259204bd90935776d1c693cec2f4ff7abb7a1bbbd40dfe58"
 
 [[package]]
 name = "pyembed"
-version = "0.17.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "175b9083824935676c79356edf1c7ca3d43b7ce76654a9ee065ec97c31c01efa"
+version = "0.18.0-pre"
 dependencies = [
  "anyhow",
  "cpython",
@@ -267,9 +265,7 @@ dependencies = [
 
 [[package]]
 name = "python-packaging"
-version = "0.10.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8f2bfdb422d2defa8ba839c7ece25ec4e9964948d79bcd48f23b80180025e7c2"
+version = "0.11.0-pre"
 dependencies = [
  "anyhow",
  "byteorder",
@@ -287,9 +283,7 @@ dependencies = [
 
 [[package]]
 name = "python-packed-resources"
-version = "0.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "15ff4dcea2f72950f431b3b8199f53edb7ac349d710c00983173e0e2499577cd"
+version = "0.8.0-pre"
 dependencies = [
  "anyhow",
  "byteorder",
@@ -373,15 +367,11 @@ dependencies = [
 
 [[package]]
 name = "tugger-file-manifest"
-version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e8c547e8873b1e3325c1e7ad517747b09d26ec36b13ab0d286a5ab349f261197"
+version = "0.6.0-pre"
 
 [[package]]
 name = "tugger-licensing"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3970b3e4e908d06dd8c799ac276ba2a56566b47a863b58d5552d88e142867e69"
+version = "0.5.0-pre"
 dependencies = [
  "anyhow",
  "spdx",
