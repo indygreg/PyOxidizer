@@ -2259,7 +2259,7 @@ dependencies = [
  "tar",
  "tempfile",
  "tugger 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "tugger-apple 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-apple 0.5.0-pre",
  "tugger-binary-analysis",
  "tugger-code-signing 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-common 0.5.0-pre",
@@ -3454,7 +3454,7 @@ dependencies = [
  "rayon",
  "serde",
  "serde_yaml",
- "tugger-apple 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-apple 0.5.0-pre",
  "walkdir",
  "yaml-rust",
 ]
@@ -3672,7 +3672,7 @@ dependencies = [
  "tar",
  "tempfile",
  "time 0.2.27",
- "tugger-apple 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-apple 0.5.0-pre",
  "tugger-apple-codesign 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-code-signing 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-common 0.5.0-pre",
@@ -3707,7 +3707,7 @@ dependencies = [
  "tar",
  "tempfile",
  "time 0.2.27",
- "tugger-apple 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-apple 0.4.0",
  "tugger-code-signing 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-common 0.4.0",
  "tugger-file-manifest 0.5.0",
@@ -3720,6 +3720,8 @@ dependencies = [
 [[package]]
 name = "tugger-apple"
 version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "168ae21255ac7a40bde40bdbd6078267936f77d9f52962406d7574279053544e"
 dependencies = [
  "anyhow",
  "duct",
@@ -3734,9 +3736,7 @@ dependencies = [
 
 [[package]]
 name = "tugger-apple"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "168ae21255ac7a40bde40bdbd6078267936f77d9f52962406d7574279053544e"
+version = "0.5.0-pre"
 dependencies = [
  "anyhow",
  "duct",
@@ -3776,7 +3776,7 @@ dependencies = [
  "slog",
  "slog-term",
  "thiserror",
- "tugger-apple 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-apple 0.5.0-pre",
  "x509-certificate 0.4.0-pre",
  "yasna 0.3.2",
 ]
@@ -3810,7 +3810,7 @@ dependencies = [
  "slog",
  "slog-term",
  "thiserror",
- "tugger-apple 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-apple 0.4.0",
  "x509-certificate 0.3.0",
  "yasna 0.3.2",
 ]
