@@ -20,7 +20,6 @@ members = [
     'tugger-file-manifest',
     'tugger-licensing',
     'tugger-licensing-net',
-    'tugger-rpm',
     'tugger-rust-toolchain',
     'tugger-snapcraft',
     'tugger-windows',
