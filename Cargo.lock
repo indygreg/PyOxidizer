@@ -2261,7 +2261,7 @@ dependencies = [
  "tugger 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-apple 0.5.0-pre",
  "tugger-binary-analysis",
- "tugger-code-signing 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-code-signing 0.4.0-pre",
  "tugger-common 0.5.0-pre",
  "tugger-file-manifest 0.6.0-pre",
  "tugger-licensing 0.5.0-pre",
@@ -3674,7 +3674,7 @@ dependencies = [
  "time 0.2.27",
  "tugger-apple 0.5.0-pre",
  "tugger-apple-codesign 0.6.0-pre",
- "tugger-code-signing 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-code-signing 0.4.0-pre",
  "tugger-common 0.5.0-pre",
  "tugger-file-manifest 0.6.0-pre",
  "tugger-snapcraft 0.7.0-pre",
@@ -3708,7 +3708,7 @@ dependencies = [
  "tempfile",
  "time 0.2.27",
  "tugger-apple 0.4.0",
- "tugger-code-signing 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-code-signing 0.3.0",
  "tugger-common 0.4.0",
  "tugger-file-manifest 0.5.0",
  "tugger-snapcraft 0.6.0",
@@ -3829,27 +3829,6 @@ dependencies = [
 [[package]]
 name = "tugger-code-signing"
 version = "0.3.0"
-dependencies = [
- "anyhow",
- "apple-bundles 0.6.0-pre",
- "bcder",
- "cryptographic-message-syntax 0.5.0-pre",
- "goblin",
- "p12",
- "reqwest",
- "slog",
- "tempfile",
- "thiserror",
- "tugger-apple-codesign 0.6.0-pre",
- "tugger-file-manifest 0.6.0-pre",
- "tugger-windows-codesign 0.5.0-pre",
- "x509-certificate 0.4.0-pre",
- "yasna 0.3.2",
-]
-
-[[package]]
-name = "tugger-code-signing"
-version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6c283ee97434b5741947e33674d66b626985ea2be9e6ece2e2df29618750c58c"
 dependencies = [
@@ -3867,6 +3846,27 @@ dependencies = [
  "tugger-file-manifest 0.5.0",
  "tugger-windows-codesign 0.4.0",
  "x509-certificate 0.3.0",
+ "yasna 0.3.2",
+]
+
+[[package]]
+name = "tugger-code-signing"
+version = "0.4.0-pre"
+dependencies = [
+ "anyhow",
+ "apple-bundles 0.6.0-pre",
+ "bcder",
+ "cryptographic-message-syntax 0.5.0-pre",
+ "goblin",
+ "p12",
+ "reqwest",
+ "slog",
+ "tempfile",
+ "thiserror",
+ "tugger-apple-codesign 0.6.0-pre",
+ "tugger-file-manifest 0.6.0-pre",
+ "tugger-windows-codesign 0.5.0-pre",
+ "x509-certificate 0.4.0-pre",
  "yasna 0.3.2",
 ]
 
