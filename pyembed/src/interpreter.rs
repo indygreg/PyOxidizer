@@ -649,6 +649,11 @@ impl<'python, 'interpreter, 'resources> Drop
             }
         }
 
+        // This will drop the GILGuard if it is defined. This needs to be called
+        // before we finalize the interpreter, otherwise GILGuard's drop may try
+        // to DECREF objects after they are freed by Py_FinalizeEx().
+        self._gil = None;
+
         let _ = unsafe { oldpyffi::Py_FinalizeEx() };
     }
 }
