@@ -20,9 +20,8 @@ The features are described in the following sections.
 This is the default build mode. It is enabled by default.
 
 This build mode uses default Python linking behavior and feature detection
-as implemented by the ``cpython`` and ``python3-sys`` crates. It will attempt
-to find a ``python`` in ``PATH`` or from the ``PYTHON_SYS_EXECUTABLE``
-environment variable and dynamically link against it.
+as implemented by the ``pyo3``. It will attempt to find a ``python`` in
+``PATH`` or from the ``PYO3_PYTHON`` environment variable and link against it.
 
 This is the default mode for convenience, as it enables the ``pyembed`` crate
 to build in the most environments. However, the built binaries will have a
@@ -69,39 +68,13 @@ artifacts.
 
 Do not attempt to invoke ``pyoxidizer`` or find artifacts it would have
 built. It is possible to build the ``pyembed`` crate in this mode if
-the ``rust-cpython`` and ``python3-sys`` crates can find a Python
-interpreter. But, the ``pyembed`` crate may not be usable or work in
-the way you want it to.
+the ``pyo3`` crate can find a Python interpreter. But, the ``pyembed``
+crate may not be usable or work in the way you want it to.
 
 This mode is intended to be used for performing quick testing on the
 ``pyembed`` crate. It is quite possible that linking errors will occur
 in this mode unless you take additional actions to point Cargo at
 appropriate libraries.
-
-``cpython-link-unresolved-static``
-----------------------------------
-
-Configures the link mode of the ``cpython`` crate to use a static
-``pythonXY`` library without resolving the symbol at its own build
-time. The ``pyembed`` crate or a crate building it will need to emit
-``cargo:rustc-link-lib=static=pythonXY`` and any
-``cargo:rustc-link-search=native={}`` lines to specify an explicit
-``pythonXY`` library to link against.
-
-This is the link mode used to produce self-contained binaries containing
-``libpython`` and ``pyembed`` code.
-
-``cpython-link-default``
-------------------------
-
-Configures the link mode of the ``cpython`` crate to use default
-semantics. The crate's build script will find a pre-built Python
-library by querying the ``python`` defined by ``PYTHON_SYS_EXECUTABLE``
-or found on ``PATH``. See the ``cpython`` crate's documentation for
-more.
-
-This link mode should be used when linking against an existing ``libpython``
-that can be found by the ``cpython`` crate's build script.
 
 .. _pyembed_build_artifacts:
 

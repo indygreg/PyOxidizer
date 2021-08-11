@@ -61,6 +61,10 @@ walkdir = "2"
 which = "4"
 zstd = "0.9"
 
+[dependencies.pyo3-build-config]
+version = "0.14.5"
+default-features = false
+
 [dependencies.python-packaging]
 version = "0.11.0-pre"
 path = "../python-packaging"

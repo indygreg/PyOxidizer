@@ -36,7 +36,7 @@ use it:
 
 Since CPython's API relies on static variables (sadly), if you really wanted
 to, you could call out to CPython C APIs directly (probably via the
-bindings in the ``python3-sys`` crate) and they would interact with the
+bindings in the ``pyo3`` crate) and they would interact with the
 interpreter started by the ``pyembed`` crate. This is all ``unsafe``, of course,
 so tread at your own peril.
 

@@ -16,12 +16,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "28ae2b3dec75a406790005a200b1bd89785afc02517a00ca99ecfe093ee9e6cf"
 
 [[package]]
-name = "autocfg"
-version = "1.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cdb031dd78e28731d87d56cc8ffef4a8f36ca26c38fe2de700543e627f8a464a"
-
-[[package]]
 name = "base64"
 version = "0.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -77,18 +71,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "eb6210b637171dfba4cda12e579ac6dc73f5165ad56133e5d72ef3131f320855"
 dependencies = [
  "cc",
-]
-
-[[package]]
-name = "cpython"
-version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8094679a4e9bfc8035572162624bc800eda35b5f9eff2537b9cd9aacc3d9782e"
-dependencies = [
- "libc",
- "num-traits",
- "paste 1.0.5",
- "python3-sys",
 ]
 
 [[package]]
@@ -270,15 +252,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "num-traits"
-version = "0.2.14"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9a64b1ec5cda2586e284722486d802acf1f7dbdc623e2bfc57e65ca1cd099290"
-dependencies = [
- "autocfg",
-]
-
-[[package]]
 name = "once_cell"
 version = "1.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -320,12 +293,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "paste"
-version = "1.0.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "acbf547ad0c65e31259204bd90935776d1c693cec2f4ff7abb7a1bbbd40dfe58"
-
-[[package]]
 name = "paste-impl"
 version = "0.1.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -354,7 +321,6 @@ name = "pyembed"
 version = "0.18.0-pre"
 dependencies = [
  "anyhow",
- "cpython",
  "dunce",
  "jemalloc-sys",
  "libmimalloc-sys",
@@ -365,7 +331,6 @@ dependencies = [
  "pyo3-build-config",
  "python-packaging",
  "python-packed-resources",
- "python3-sys",
  "snmalloc-sys",
  "tugger-file-manifest",
  "winapi",
@@ -381,7 +346,7 @@ dependencies = [
  "indoc",
  "libc",
  "parking_lot",
- "paste 0.1.18",
+ "paste",
  "pyo3-build-config",
  "pyo3-macros",
  "unindent",
@@ -443,16 +408,6 @@ version = "0.8.0-pre"
 dependencies = [
  "anyhow",
  "byteorder",
-]
-
-[[package]]
-name = "python3-sys"
-version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b78af21b29594951a47fc3dac9b9eff0a3f077dec2f780ee943ae16a668f3b6a"
-dependencies = [
- "libc",
- "regex",
 ]
 
 [[package]]

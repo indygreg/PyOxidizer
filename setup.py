@@ -33,7 +33,7 @@ class RustExtension(distutils.extension.Extension):
 
     def build(self, build_dir: pathlib.Path, get_ext_path_fn):
         env = os.environ.copy()
-        env["PYTHON_SYS_EXECUTABLE"] = sys.executable
+        env["PYO3_PYTHON"] = sys.executable
 
         args = [
             "cargo",

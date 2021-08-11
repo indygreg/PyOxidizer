@@ -101,6 +101,9 @@ pub fn osstring_to_bytes<'p>(py: Python<'p>, s: OsString) -> &'p PyAny {
     }
 }
 
+/// Convert a Rust path to a Python object.
+///
+/// TODO remove and use PyO3 conversion traits instead.
 pub fn path_to_pyobject<'p>(py: Python<'p>, path: &Path) -> PyResult<&'p PyAny> {
     let encoding_ptr = unsafe { pyffi::Py_FileSystemDefaultEncoding };
 

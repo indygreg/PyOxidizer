@@ -570,18 +570,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "cpython"
-version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8094679a4e9bfc8035572162624bc800eda35b5f9eff2537b9cd9aacc3d9782e"
-dependencies = [
- "libc",
- "num-traits",
- "paste 1.0.5",
- "python3-sys",
-]
-
-[[package]]
 name = "crc24"
 version = "0.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2087,7 +2075,6 @@ dependencies = [
  "pyembed",
  "pyo3",
  "python-packed-resources",
- "python3-sys",
  "winapi 0.3.9",
 ]
 
@@ -2141,12 +2128,6 @@ dependencies = [
  "paste-impl",
  "proc-macro-hack",
 ]
-
-[[package]]
-name = "paste"
-version = "1.0.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "acbf547ad0c65e31259204bd90935776d1c693cec2f4ff7abb7a1bbbd40dfe58"
 
 [[package]]
 name = "paste-impl"
@@ -2415,7 +2396,6 @@ name = "pyembed"
 version = "0.18.0-pre"
 dependencies = [
  "anyhow",
- "cpython",
  "dunce",
  "jemalloc-sys",
  "libmimalloc-sys",
@@ -2427,7 +2407,6 @@ dependencies = [
  "pyo3-build-config",
  "python-packaging",
  "python-packed-resources",
- "python3-sys",
  "rusty-fork",
  "snmalloc-sys",
  "tugger-file-manifest",
@@ -2459,7 +2438,7 @@ dependencies = [
  "indoc",
  "libc",
  "parking_lot",
- "paste 0.1.18",
+ "paste",
  "pyo3-build-config",
  "pyo3-macros",
  "unindent",
@@ -2520,6 +2499,7 @@ dependencies = [
  "linked-hash-map",
  "once_cell",
  "path-dedot",
+ "pyo3-build-config",
  "python-packaging",
  "python-packed-resources",
  "remove_dir_all 0.7.0",
@@ -2581,16 +2561,6 @@ version = "0.8.0-pre"
 dependencies = [
  "anyhow",
  "byteorder",
-]
-
-[[package]]
-name = "python3-sys"
-version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b78af21b29594951a47fc3dac9b9eff0a3f077dec2f780ee943ae16a668f3b6a"
-dependencies = [
- "libc",
- "regex",
 ]
 
 [[package]]

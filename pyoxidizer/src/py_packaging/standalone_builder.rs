@@ -6,8 +6,9 @@ use {
     super::{
         binary::{
             pyembed_licenses, EmbeddedPythonContext, LibpythonLinkMode, LibpythonLinkSettings,
-            LinkSharedLibraryPath, LinkStaticLibraryData, PackedResourcesLoadMode,
-            PythonBinaryBuilder, ResourceAddCollectionContextCallback, WindowsRuntimeDllsMode,
+            LinkSharedLibraryPath, LinkStaticLibraryData, LinkingAnnotation,
+            PackedResourcesLoadMode, PythonBinaryBuilder, ResourceAddCollectionContextCallback,
+            WindowsRuntimeDllsMode,
         },
         config::{PyembedPackedResourcesSource, PyembedPythonInterpreterConfig},
         distribution::{AppleSdkInfo, BinaryLibpythonLinkMode, PythonDistribution},
@@ -21,6 +22,7 @@ use {
     crate::environment::Environment,
     anyhow::{anyhow, Context, Result},
     once_cell::sync::Lazy,
+    pyo3_build_config::{BuildFlag, BuildFlags, PythonImplementation, PythonVersion},
     python_packaging::{
         bytecode::BytecodeCompiler,
         interpreter::MemoryAllocatorBackend,
@@ -41,6 +43,7 @@ use {
         collections::{BTreeMap, BTreeSet, HashMap},
         convert::TryInto,
         path::{Path, PathBuf},
+        str::FromStr,
         sync::Arc,
     },
     tugger_file_manifest::{File, FileData, FileEntry, FileManifest},
@@ -299,7 +302,7 @@ impl StandalonePythonExecutableBuilder {
     /// linking info.
     ///
     /// If we need to derive a custom libpython, a static library will be built.
-    fn resolve_python_linking_info(
+    fn resolve_python_link_settings(
         &self,
         logger: &slog::Logger,
         env: &Environment,
@@ -343,7 +346,31 @@ impl StandalonePythonExecutableBuilder {
                         anyhow!("target Python distribution does not have a shared libpython")
                     })?;
 
-                Ok(LinkSharedLibraryPath { library_path }.into())
+                let filename = library_path
+                    .file_name()
+                    .ok_or_else(|| anyhow!("unable to resolve shared library filename"))?
+                    .to_string_lossy();
+
+                let library_search_path = library_path
+                    .parent()
+                    .ok_or_else(|| anyhow!("unable to obtain shared library directory"))?;
+
+                // On Windows, the linker needs the .lib files, which are in a separate directory.
+                let library_search_path = if filename.ends_with(".dll") {
+                    library_search_path.join("libs")
+                } else {
+                    library_search_path.to_path_buf()
+                };
+
+                let linking_annotations =
+                    vec![LinkingAnnotation::SearchNative(library_search_path)];
+
+                Ok(LinkSharedLibraryPath {
+                    library_path,
+
+                    linking_annotations,
+                }
+                .into())
             }
         }
     }
@@ -945,7 +972,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
             }
         }
 
-        let link_settings = self.resolve_python_linking_info(logger, env, opt_level)?;
+        let link_settings = self.resolve_python_link_settings(logger, env, opt_level)?;
 
         if self.link_mode == LibpythonLinkMode::Dynamic {
             if let Some(p) = &self.target_distribution.libpython_shared_library {
@@ -978,6 +1005,68 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         // Install Windows runtime DLLs if told to do so.
         extra_files.add_manifest(&self.resolve_windows_runtime_dll_files()?)?;
 
+        let python_implementation = if self
+            .target_distribution
+            .python_implementation
+            .starts_with("cpython")
+        {
+            PythonImplementation::CPython
+        } else if self
+            .target_distribution
+            .python_implementation
+            .starts_with("pypy")
+        {
+            PythonImplementation::PyPy
+        } else {
+            return Err(anyhow!(
+                "unknown Python implementation: {}",
+                self.target_distribution.python_implementation
+            ));
+        };
+
+        let python_version =
+            PythonVersion::from_str(&self.target_distribution.python_major_minor_version())
+                .map_err(|e| anyhow!("unable to determine Python version: {}", e))?;
+
+        // Populate build flags that influence PyO3 configuration.
+        let mut python_build_flags = BuildFlags::new();
+
+        if self
+            .target_distribution
+            .python_config_vars()
+            .get("Py_DEBUG")
+            == Some(&"1".to_string())
+        {
+            python_build_flags.0.insert(BuildFlag::Py_DEBUG);
+        }
+        if self
+            .target_distribution
+            .python_config_vars()
+            .get("Py_REF_DEBUG")
+            == Some(&"1".to_string())
+        {
+            python_build_flags.0.insert(BuildFlag::Py_REF_DEBUG);
+        }
+        if self
+            .target_distribution
+            .python_config_vars()
+            .get("Py_TRACE_REFS")
+            == Some(&"1".to_string())
+        {
+            python_build_flags.0.insert(BuildFlag::Py_TRACE_REFS);
+        }
+        if self
+            .target_distribution
+            .python_config_vars()
+            .get("COUNT_ALLOCS")
+            == Some(&"1".to_string())
+        {
+            python_build_flags.0.insert(BuildFlag::COUNT_ALLOCS);
+        }
+
+        // WITH_THREAD is always enabled on Python 3.7+.
+        python_build_flags.0.insert(BuildFlag::WITH_THREAD);
+
         Ok(EmbeddedPythonContext {
             config,
             link_settings,
@@ -985,6 +1074,10 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
             extra_files,
             host_triple: self.host_triple.clone(),
             target_triple: self.target_triple.clone(),
+            python_implementation,
+            python_version,
+            python_exe_host: self.host_python_exe.clone(),
+            python_build_flags,
         })
     }
 }

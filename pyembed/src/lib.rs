@@ -32,9 +32,8 @@ serves as a high-level interface for running code in the interpreter.
 
 # Dependencies
 
-Under the hood, `pyembed` makes direct use of the `python3-sys` crate for
-low-level Python FFI bindings as well as the `cpython`/`pyo3` crate for higher-level
-interfacing.
+Under the hood, `pyembed` makes direct use of the `pyo3` crate for
+low-level Python FFI bindings as well as higher-level interfacing.
 
 **It is an explicit goal of this crate to rely on as few external dependencies
 as possible.** This is because we want to minimize bloat in produced binaries.
@@ -75,18 +74,6 @@ to build required artifacts.
 `PyOxidizer` out-of-band. In this mode, the `PYOXIDIZER_ARTIFACT_DIR`
 environment variable can refer to the directory containing build artifacts
 that this crate needs. If not set, `OUT_DIR` will be used.
-
-The exist mutually exclusive `cpython-link-*` features to control how
-the `cpython`/`python3-sys` crates are built.
-
-`cpython-link-unresolved-static` instructs to leave the Python symbols
-as unresolved. This crate will provide a static library providing the
-symbols.
-
-`cpython-link-default` builds `cpython` with default link mode control.
-That crate's build script will attempt to find a `libpython` from the
-`python` defined by `PYTHON_SYS_EXECUTABLE` or present on `PATH`.
-
 */
 
 #[allow(unused)]
