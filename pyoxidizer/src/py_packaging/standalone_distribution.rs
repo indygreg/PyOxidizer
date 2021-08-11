@@ -485,6 +485,9 @@ pub struct StandaloneDistribution {
 
     /// List of strings denoting C Runtime requirements.
     pub crt_features: Vec<String>,
+
+    /// Configuration variables used by Python.
+    config_vars: HashMap<String, String>,
 }
 
 impl StandaloneDistribution {
@@ -984,6 +987,7 @@ impl StandaloneDistribution {
             cache_tag: pi.python_implementation_cache_tag,
             module_suffixes,
             crt_features: pi.crt_features,
+            config_vars: pi.python_config_vars,
         })
     }
 
@@ -1224,6 +1228,10 @@ impl PythonDistribution for StandaloneDistribution {
 
     fn python_module_suffixes(&self) -> Result<PythonModuleSuffixes> {
         Ok(self.module_suffixes.clone())
+    }
+
+    fn python_config_vars(&self) -> &HashMap<String, String> {
+        &self.config_vars
     }
 
     fn stdlib_test_packages(&self) -> Vec<String> {

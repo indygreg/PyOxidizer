@@ -136,6 +136,9 @@ pub trait PythonDistribution {
     /// Obtain file suffixes for various Python module flavors.
     fn python_module_suffixes(&self) -> Result<PythonModuleSuffixes>;
 
+    /// Python configuration variables.
+    fn python_config_vars(&self) -> &HashMap<String, String>;
+
     /// Obtain Python packages in the standard library that provide tests.
     fn stdlib_test_packages(&self) -> Vec<String>;
 
