@@ -7,9 +7,14 @@ Defining and manipulating binaries embedding Python.
 */
 
 use {
-    super::{config::PyembedPythonInterpreterConfig, distribution::AppleSdkInfo},
-    crate::environment::Environment,
+    crate::{
+        environment::Environment,
+        py_packaging::{config::PyembedPythonInterpreterConfig, distribution::AppleSdkInfo},
+    },
     anyhow::{anyhow, Context, Result},
+    pyo3_build_config::{
+        BuildFlags, InterpreterConfig as PyO3InterpreterConfig, PythonImplementation, PythonVersion,
+    },
     python_packaging::{
         policy::PythonPackagingPolicy,
         resource::{
@@ -454,7 +459,9 @@ pub trait LinkablePython {
     ///
     /// `dest_dir` will be the directory where any files written by `write_files()` will
     /// be located.
-    fn linking_annotations(&self, dest_dir: &Path) -> Result<Vec<LinkingAnnotation>>;
+    ///
+    /// `alias` denotes whether to alias the library name to `pythonXY`.
+    fn linking_annotations(&self, dest_dir: &Path, alias: bool) -> Result<Vec<LinkingAnnotation>>;
 }
 
 /// Link against a shared library on the filesystem.
@@ -462,11 +469,13 @@ pub trait LinkablePython {
 pub struct LinkSharedLibraryPath {
     /// Path to dynamic library to link.
     pub library_path: PathBuf,
+
+    /// Additional linking annotations.
+    pub linking_annotations: Vec<LinkingAnnotation>,
 }
 
 impl LinkSharedLibraryPath {
     /// Resolve the name of the library.
-    #[allow(unused)]
     fn library_name(&self) -> Result<String> {
         let filename = self
             .library_path
@@ -500,15 +509,24 @@ impl LinkablePython for LinkSharedLibraryPath {
         Ok(())
     }
 
-    fn linking_annotations(&self, _dest_dir: &Path) -> Result<Vec<LinkingAnnotation>> {
+    fn linking_annotations(&self, _dest_dir: &Path, alias: bool) -> Result<Vec<LinkingAnnotation>> {
         let lib_dir = self
             .library_path
             .parent()
             .ok_or_else(|| anyhow!("could not derive parent directory of library path"))?;
 
-        // We don't need to emit an annotation to link the actual library because
-        // this annotation is already added by the python3-sys/cpython crate.
-        Ok(vec![LinkingAnnotation::SearchNative(lib_dir.to_path_buf())])
+        let mut annotations = vec![
+            LinkingAnnotation::LinkLibrary(if alias {
+                format!("pythonXY:{}", self.library_name()?)
+            } else {
+                self.library_name()?
+            }),
+            LinkingAnnotation::SearchNative(lib_dir.to_path_buf()),
+        ];
+
+        annotations.extend(self.linking_annotations.iter().cloned());
+
+        Ok(annotations)
     }
 }
 
@@ -523,25 +541,8 @@ pub struct LinkStaticLibraryData {
 }
 
 impl LinkStaticLibraryData {
-    /// Name of the static library containing Python.
-    ///
-    /// python3-sys uses `#[link(name="pythonXY")]` attributes heavily on Windows. Its
-    /// build.rs then remaps ``pythonXY`` to e.g. ``python37``. This causes Cargo to
-    /// link against ``python37.lib`` (or ``pythonXY.lib`` if the
-    /// ``rustc-link-lib=pythonXY:python{}{}`` line is missing, which is the case
-    /// in our invocation).
-    ///
-    /// We don't want the "real" libpython being linked. And this is a very real
-    /// possibility since the path to it could be in an environment variable
-    /// outside of our control!
-    ///
-    /// In addition, we can't naively remap ``pythonXY`` ourselves without adding
-    /// a ``#[link]`` to the crate.
-    ///
-    /// Our current workaround is to produce a ``pythonXY.lib`` file. This satisfies
-    /// the requirement of ``python3-sys`` that a ``pythonXY.lib`` file exists.
     fn library_name(&self) -> &'static str {
-        "pythonXY"
+        "python3"
     }
 
     fn library_path(&self, dest_dir: impl AsRef<Path>, target_triple: &str) -> PathBuf {
@@ -565,9 +566,13 @@ impl LinkablePython for LinkStaticLibraryData {
         Ok(())
     }
 
-    fn linking_annotations(&self, dest_dir: &Path) -> Result<Vec<LinkingAnnotation>> {
+    fn linking_annotations(&self, dest_dir: &Path, alias: bool) -> Result<Vec<LinkingAnnotation>> {
         let mut annotations = vec![
-            LinkingAnnotation::LinkLibraryStatic(self.library_name().to_string()),
+            LinkingAnnotation::LinkLibraryStatic(if alias {
+                format!("pythonXY:{}", self.library_name())
+            } else {
+                self.library_name().to_string()
+            }),
             LinkingAnnotation::SearchNative(dest_dir.to_path_buf()),
         ];
 
@@ -593,10 +598,10 @@ impl LinkablePython for LibpythonLinkSettings {
         }
     }
 
-    fn linking_annotations(&self, dest_dir: &Path) -> Result<Vec<LinkingAnnotation>> {
+    fn linking_annotations(&self, dest_dir: &Path, alias: bool) -> Result<Vec<LinkingAnnotation>> {
         match self {
-            Self::ExistingDynamic(l) => l.linking_annotations(dest_dir),
-            Self::StaticData(l) => l.linking_annotations(dest_dir),
+            Self::ExistingDynamic(l) => l.linking_annotations(dest_dir, alias),
+            Self::StaticData(l) => l.linking_annotations(dest_dir, alias),
         }
     }
 }
@@ -632,6 +637,20 @@ pub struct EmbeddedPythonContext<'a> {
 
     /// Rust target triple for the target we are building for.
     pub target_triple: String,
+
+    /// Name of the Python implementation.
+    pub python_implementation: PythonImplementation,
+
+    /// Python interpreter version.
+    pub python_version: PythonVersion,
+
+    /// Path to a `python` executable that runs on the host/build machine.
+    pub python_exe_host: PathBuf,
+
+    /// Python build flags.
+    ///
+    /// To pass to PyO3.
+    pub python_build_flags: BuildFlags,
 }
 
 impl<'a> EmbeddedPythonContext<'a> {
@@ -647,27 +666,58 @@ impl<'a> EmbeddedPythonContext<'a> {
         dest_dir.as_ref().join("cargo_metadata.txt")
     }
 
+    /// Resolve the filesystem path to the PyO3 configuration file.
+    pub fn pyo3_config_path(&self, dest_dir: impl AsRef<Path>) -> PathBuf {
+        dest_dir.as_ref().join("pyo3-build-config-file.txt")
+    }
+
     /// Obtain lines constituting cargo metadata.
     ///
-    /// These should be printed from a build script. The printed lines enable
-    /// linking with our libpython.
+    /// These should be printed from a build script.
     pub fn cargo_metadata_lines(&self, dest_dir: impl AsRef<Path>) -> Result<Vec<String>> {
-        let dest_dir = dest_dir.as_ref();
+        Ok(vec![
+            // Give dependent crates the path to the default config file.
+            format!(
+                "cargo:default-python-config-rs={}",
+                self.interpreter_config_rs_path(dest_dir.as_ref()).display()
+            ),
+        ])
+    }
 
-        let mut lines = self
-            .link_settings
-            .linking_annotations(dest_dir)?
-            .into_iter()
-            .map(|la| la.to_cargo_annotation())
-            .collect::<Vec<_>>();
-
-        // Give dependent crates the path to the default config file.
-        lines.push(format!(
-            "cargo:default-python-config-rs={}",
-            self.interpreter_config_rs_path(dest_dir).display()
-        ));
-
-        Ok(lines)
+    /// Resolve a [PyO3InterpreterConfig] for this instance.
+    pub fn pyo3_interpreter_config(
+        &self,
+        dest_dir: impl AsRef<Path>,
+    ) -> Result<PyO3InterpreterConfig> {
+        Ok(PyO3InterpreterConfig {
+            implementation: self.python_implementation,
+            version: self.python_version,
+            // Irrelevant since we control link settings below.
+            shared: matches!(
+                &self.link_settings,
+                LibpythonLinkSettings::ExistingDynamic(_)
+            ),
+            // pyembed requires the full Python API.
+            abi3: false,
+            // We define linking info via explicit build script lines.
+            lib_name: None,
+            lib_dir: None,
+            executable: Some(self.python_exe_host.to_string_lossy().to_string()),
+            // TODO set from Python distribution metadata.
+            pointer_width: Some(if self.target_triple.starts_with("i686-") {
+                32
+            } else {
+                64
+            }),
+            build_flags: BuildFlags(self.python_build_flags.0.clone()),
+            suppress_build_script_link_lines: true,
+            extra_build_script_lines: self
+                .link_settings
+                .linking_annotations(dest_dir.as_ref(), self.target_triple.contains("-windows-"))?
+                .iter()
+                .map(|la| la.to_cargo_annotation())
+                .collect::<Vec<_>>(),
+        })
     }
 
     /// Ensure packed resources files are written.
@@ -709,6 +759,18 @@ impl<'a> EmbeddedPythonContext<'a> {
         Ok(())
     }
 
+    /// Write the PyO3 configuration file.
+    pub fn write_pyo3_config(&self, dest_dir: impl AsRef<Path>) -> Result<()> {
+        let dest_dir = dest_dir.as_ref();
+
+        let mut fh = std::fs::File::create(self.pyo3_config_path(dest_dir))?;
+        self.pyo3_interpreter_config(dest_dir)?
+            .to_writer(&mut fh)
+            .map_err(|e| anyhow!("error writing PyO3 config file: {}", e))?;
+
+        Ok(())
+    }
+
     /// Write out files needed to build a binary against our configuration.
     pub fn write_files(&self, dest_dir: &Path) -> Result<()> {
         self.write_packed_resources(&dest_dir)
@@ -719,6 +781,8 @@ impl<'a> EmbeddedPythonContext<'a> {
             .context("write_interpreter_config_rs()")?;
         self.write_cargo_metadata(&dest_dir)
             .context("write_cargo_metadata()")?;
+        self.write_pyo3_config(&dest_dir)
+            .context("write_pyo3_config()")?;
 
         Ok(())
     }
@@ -768,6 +832,7 @@ mod tests {
         assert_eq!(
             LinkSharedLibraryPath {
                 library_path: "libpython3.9.so".into(),
+                linking_annotations: vec![],
             }
             .library_name()?,
             "python3.9"
@@ -776,6 +841,7 @@ mod tests {
         assert_eq!(
             LinkSharedLibraryPath {
                 library_path: "libpython3.9.dylib".into(),
+                linking_annotations: vec![],
             }
             .library_name()?,
             "python3.9"
@@ -784,6 +850,7 @@ mod tests {
         assert_eq!(
             LinkSharedLibraryPath {
                 library_path: "python3.dll".into(),
+                linking_annotations: vec![],
             }
             .library_name()?,
             "python3"

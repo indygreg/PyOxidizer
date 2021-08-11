@@ -99,9 +99,9 @@ interpreter to configure the Python interpreter settings. By default, they
 look for ``python``, ``python3.9``, ``pythonX.Y`` executables on ``PATH``.
 
 You can forcefully set the Python interpreter to use by setting the
-``PYTHON_SYS_EXECUTABLE`` environment variable to the path of a Python
-interpreter. For best results, use one of the default Python interpreters
-that your build of PyOxidizer would use. Run
+``PYO3_PYTHON`` environment variable to the path of a Python interpreter.
+For best results, use one of the default Python interpreters that your build
+of PyOxidizer would use. Run
 ``pyoxidizer python-distribution-extract --help`` to see how you can
 download and extract one of these distributions with ease.
 
@@ -117,11 +117,3 @@ file contains some commented out settings that may need to be set for some
 configurations (e.g. the ``standalone_static`` Windows distributions). Please
 consult this file if running into build errors when not building through
 ``pyoxidizer``.
-
-Nightly Rust Features on Windows
---------------------------------
-
-Some Windows build configurations require unstable Rust features. If your
-build complains about use of nightly-only features, try building with the
-``RUSTC_BOOTSTRAP=1`` environment variable set to enable the use of unstable
-Rust features on any Rust channel.

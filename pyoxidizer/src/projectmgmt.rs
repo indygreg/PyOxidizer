@@ -371,7 +371,7 @@ pub fn init_rust_project(
     println!("IMPORTANT: use of `cargo` for direct project building and running");
     println!("is possible, but likely requires setting environment variables");
     println!("like PYOXIDIZER_EXE (the path to the `pyoxidizer` that the build.rs");
-    println!("build script should use) and PYTHON_SYS_EXECUTABLE (the path to the");
+    println!("build script should use) and PYO3_PYTHON (the path to the");
     println!("Python interpreter executable used to configure the Rust crates that");
     println!("link against libpython). Search the documentation for references to");
     println!("these variables for troubleshooting tips. For best results, use");

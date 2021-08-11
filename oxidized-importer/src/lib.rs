@@ -7,7 +7,7 @@
 // due to unbound symbols. So we suppress clippy as a workaround.
 
 #[cfg(not(feature = "cargo-clippy"))]
-use python3_sys as pyffi;
+use pyo3::ffi as pyffi;
 
 #[cfg(not(feature = "cargo-clippy"))]
 #[no_mangle]

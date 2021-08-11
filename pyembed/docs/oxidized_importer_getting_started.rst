@@ -49,7 +49,7 @@ If you don't have a Python 3.9 ``python3`` executable in your ``PATH``, you
 will need to tell the Rust build system which ``python3`` executable to use to
 help derive the build configuration for the Python extension::
 
-   $ PYTHON_SYS_EXECUTABLE=/path/to/python3.9 cargo build
+   $ PYO3_PYTHON=/path/to/python3.9 cargo build
 
 Using
 =====

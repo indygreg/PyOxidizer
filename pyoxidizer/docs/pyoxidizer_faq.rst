@@ -65,17 +65,17 @@ this wasn't perceived as a significant annoyance.
 ==================================================================
 
 This is due to a dependent crate insisting that a Python executable
-exist on ``PATH``. Set the ``PYTHON_SYS_EXECUTABLE`` environment
-variable to the path of a Python 3.7 executable and try again. e.g.::
+exist on ``PATH``. Set the ``PYO3_PYTHON`` environment variable to
+the path of a Python 3.8+ executable and try again. e.g.::
 
    # UNIX
-   $ export PYTHON_SYS_EXECUTABLE=/usr/bin/python3.7
+   $ export PYO3_PYTHON=/usr/bin/python3.9
    # Windows
-   $ SET PYTHON_SYS_EXECUTABLE=c:\python37\python.exe
+   $ SET PYO3_PYTHON=c:\python39\python.exe
 
 .. note::
 
-   The ``pyoxidizer`` tool should take care of setting ``PYTHON_SYS_EXECUTABLE``
+   The ``pyoxidizer`` tool should take care of setting ``PYO3_PYTHON``
    and prevent this error. If you see this error and you are building with
    ``pyoxidizer``, it is a bug that should be reported.
 

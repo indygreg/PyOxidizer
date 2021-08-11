@@ -7,10 +7,7 @@ use {
         environment::{canonicalize_path, Environment, RustEnvironment},
         project_layout::initialize_project,
         py_packaging::{
-            binary::{
-                EmbeddedPythonContext, LibpythonLinkMode, LibpythonLinkSettings,
-                PythonBinaryBuilder,
-            },
+            binary::{EmbeddedPythonContext, LibpythonLinkMode, PythonBinaryBuilder},
             distribution::AppleSdkInfo,
         },
         starlark::eval::{EvaluationContext, EvaluationContextBuilder},
@@ -99,7 +96,7 @@ impl BuildEnvironment {
         logger: &slog::Logger,
         target_triple: &str,
         artifacts_path: &Path,
-        target_python_path: &Path,
+        pyo3_config_path: impl AsRef<Path>,
         libpython_link_mode: LibpythonLinkMode,
         apple_sdk_info: Option<&AppleSdkInfo>,
     ) -> Result<Self> {
@@ -118,21 +115,12 @@ impl BuildEnvironment {
         // Tells any invoked pyoxidizer process to reuse artifacts if they are up to date.
         envs.insert("PYOXIDIZER_REUSE_ARTIFACTS".to_string(), "1".to_string());
 
-        // Set PYTHON_SYS_EXECUTABLE so python3-sys uses our distribution's Python to configure
-        // itself.
-        // TODO the build environment requiring use of target arch executable prevents
-        // cross-compiling. We should be able to pass in all state without having to
-        // run an executable in a build script.
+        // Give PyO3 an explicit configuration file to use. This bypasses the dynamic interpreter
+        // probing that PyO3's build script normally performs.
         envs.insert(
-            "PYTHON_SYS_EXECUTABLE".to_string(),
-            target_python_path.display().to_string(),
+            "PYO3_CONFIG_FILE".to_string(),
+            pyo3_config_path.as_ref().display().to_string(),
         );
-
-        // static-nobundle link kind requires nightly Rust compiler until
-        // https://github.com/rust-lang/rust/issues/37403 is resolved.
-        if target_triple.contains("-windows-") {
-            envs.insert("RUSTC_BOOTSTRAP".to_string(), "1".to_string());
-        }
 
         // When targeting Apple platforms and using Apple SDKs, you can very
         // easily run into SDK and toolchain compatibility issues when your
@@ -275,7 +263,7 @@ pub fn build_executable_with_rust_project<'a>(
         logger,
         exe.target_triple(),
         artifacts_path,
-        exe.target_python_exe_path(),
+        embedded_data.pyo3_config_path(&artifacts_path),
         exe.libpython_link_mode(),
         exe.apple_sdk_info(),
     )
@@ -311,13 +299,6 @@ pub fn build_executable_with_rust_project<'a>(
 
     args.push("--no-default-features");
     let mut features = vec!["build-mode-prebuilt-artifacts"];
-
-    // If we have a real libpython, let cpython crate link against it. Otherwise
-    // leave symbols unresolved, as we'll provide them.
-    features.push(match embedded_data.link_settings {
-        LibpythonLinkSettings::StaticData(_) => "cpython-link-unresolved-static",
-        LibpythonLinkSettings::ExistingDynamic(_) => "cpython-link-default",
-    });
 
     if exe.requires_jemalloc() {
         features.push("global-allocator-jemalloc");

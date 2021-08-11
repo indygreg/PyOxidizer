@@ -15,7 +15,7 @@ PYEMBED_PATH = ROOT / "pyembed"
 PYTHON_EXE = pathlib.Path(sys.executable)
 PYTHON_DIR = PYTHON_EXE.parent
 
-os.environ["PYTHON_SYS_EXECUTABLE"] = str(PYTHON_EXE)
+os.environ["PYO3_PYTHON"] = str(PYTHON_EXE)
 
 if os.name == "nt":
     os.environ["PATH"] = "%s;%s" % (PYTHON_DIR, os.environ["PATH"])

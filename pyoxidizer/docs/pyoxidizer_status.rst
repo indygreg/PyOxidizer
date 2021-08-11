@@ -148,20 +148,6 @@ Binary resources are currently stored as raw data. They could be
 stored compressed to keep binary size in check (at the cost of run-time
 memory usage and CPU overhead).
 
-Nightly Rust Required on Windows
---------------------------------
-
-Windows currently requires a Nightly Rust to build (you can set the
-environment variable ``RUSTC_BOOTSTRAP=1`` to work around this) because
-the ``static-nobundle`` library type is required.
-https://github.com/rust-lang/rust/issues/37403 tracks making this feature
-stable. It *might* be possible to work around this by adding an
-``__imp_`` prefixed symbol in the right place or by producing a empty
-import library to satisfy requirements of the ``static`` linkage kind.
-See
-https://github.com/rust-lang/rust/issues/26591#issuecomment-123513631 for
-more.
-
 Cross Compiling
 ---------------
 

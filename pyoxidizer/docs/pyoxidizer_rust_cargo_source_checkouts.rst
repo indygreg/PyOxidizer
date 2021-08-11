@@ -69,10 +69,10 @@ In its default configuration, a Python 3.9 executable needs to be found on
 ``No python interpreter found of version 3.*`` error at build time.
 
 To work around this, add a ``python3.9`` or ``python3`` executable to
-``PATH`` or run ``cargo build`` with the ``PYTHON_SYS_EXECUTABLE`` environment
+``PATH`` or run ``cargo build`` with the ``PYO3_PYTHON`` environment
 variable pointing to a specific Python 3 executable. e.g.
 
-    $ PYTHON_SYS_EXECUTABLE=/path/to/python3.9 cargo build -p pyembed
+    $ PYO3_PYTHON=/path/to/python3.9 cargo build -p pyembed
 
 ``oxidized-importer`` Crate
 ===========================
@@ -83,4 +83,3 @@ needed for :ref:`oxidized_importer`.
 
 Because this crate is a thin shim, the caveats that apply to building
 ``pyembed`` apply to it as well.
-
