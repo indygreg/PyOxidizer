@@ -232,10 +232,6 @@ pub fn link_libpython(
     });
 
     cargo_metadata.push("cargo:rustc-link-lib=static=pythonXY".to_string());
-    cargo_metadata.push(format!(
-        "cargo:rustc-link-search=native={}",
-        out_dir.display()
-    ));
 
     for path in &context.library_search_paths {
         cargo_metadata.push(format!("cargo:rustc-link-search=native={}", path.display()));
