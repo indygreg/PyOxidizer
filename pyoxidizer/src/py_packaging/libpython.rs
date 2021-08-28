@@ -3,7 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 /*!
-Building a native binary containing Python.
+Build a custom libraries containing Python.
 */
 
 use {
@@ -47,6 +47,7 @@ where
     lines.join("\n")
 }
 
+/// Represents a built libpython.
 #[derive(Debug)]
 pub struct LibpythonInfo {
     pub libpython_path: PathBuf,
@@ -56,7 +57,7 @@ pub struct LibpythonInfo {
 
 /// Create a static libpython from a Python distribution.
 ///
-/// Returns a vector of cargo: lines that can be printed in build scripts.
+/// Returns a struct describing the generated libpython.
 #[allow(clippy::too_many_arguments)]
 pub fn link_libpython(
     logger: &slog::Logger,
