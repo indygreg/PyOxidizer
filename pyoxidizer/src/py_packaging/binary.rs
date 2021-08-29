@@ -9,7 +9,7 @@ Defining and manipulating binaries embedding Python.
 use {
     super::{config::PyembedPythonInterpreterConfig, distribution::AppleSdkInfo},
     crate::environment::Environment,
-    anyhow::{Context, Result},
+    anyhow::{anyhow, Context, Result},
     python_packaging::{
         policy::PythonPackagingPolicy,
         resource::{
@@ -528,11 +528,19 @@ impl<'a> EmbeddedPythonContext<'a> {
     ///
     /// These should be printed from a build script. The printed lines enable
     /// linking with our libpython.
-    pub fn cargo_metadata_lines(&self, dest_dir: impl AsRef<Path>) -> Vec<String> {
+    pub fn cargo_metadata_lines(&self, dest_dir: impl AsRef<Path>) -> Result<Vec<String>> {
         let mut lines = vec![];
 
-        // Tell Cargo to link our static libpython and where that library is.
-        if self.linking_info.dynamic_libpython_path.is_none() {
+        // Tell Cargo to link our libpython and where that library is.
+        if let Some(lib_path) = &self.linking_info.dynamic_libpython_path {
+            let lib_dir = lib_path
+                .parent()
+                .ok_or_else(|| anyhow!("unable to find parent directory of dynamic libpython"))?;
+
+            // We don't emit a LinkLibraryDynamic for historical (possibly incorrect) reasons.
+            lines
+                .push(LinkingAnnotation::SearchNative(lib_dir.to_path_buf()).to_cargo_annotation());
+        } else {
             lines.push(
                 LinkingAnnotation::LinkLibraryStatic(self.static_library_name().to_string())
                     .to_cargo_annotation(),
@@ -556,7 +564,7 @@ impl<'a> EmbeddedPythonContext<'a> {
             self.interpreter_config_rs_path(dest_dir).display()
         ));
 
-        lines
+        Ok(lines)
     }
 
     /// Ensure packed resources files are written.
@@ -595,7 +603,7 @@ impl<'a> EmbeddedPythonContext<'a> {
     /// Write file containing cargo metadata lines.
     pub fn write_cargo_metadata(&self, dest_dir: impl AsRef<Path>) -> Result<()> {
         let mut fh = std::fs::File::create(self.cargo_metadata_path(&dest_dir))?;
-        fh.write_all(self.cargo_metadata_lines(dest_dir).join("\n").as_bytes())?;
+        fh.write_all(self.cargo_metadata_lines(dest_dir)?.join("\n").as_bytes())?;
 
         Ok(())
     }

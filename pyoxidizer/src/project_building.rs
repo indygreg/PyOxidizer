@@ -98,7 +98,6 @@ impl BuildEnvironment {
         artifacts_path: &Path,
         target_python_path: &Path,
         libpython_link_mode: LibpythonLinkMode,
-        libpython_filename: Option<&Path>,
         apple_sdk_info: Option<&AppleSdkInfo>,
     ) -> Result<Self> {
         let rust_environment = env
@@ -125,20 +124,6 @@ impl BuildEnvironment {
             "PYTHON_SYS_EXECUTABLE".to_string(),
             target_python_path.display().to_string(),
         );
-
-        let mut rust_flags = vec![];
-
-        // If linking against an existing dynamic library on Windows, add the path to that
-        // library so the linker can find it.
-        if let Some(libpython_filename) = libpython_filename {
-            if target_triple.contains("-windows-") {
-                let libpython_dir = libpython_filename
-                    .parent()
-                    .ok_or_else(|| anyhow!("unable to find parent directory of python DLL"))?;
-
-                rust_flags.push(format!("-L{}", libpython_dir.display()));
-            }
-        }
 
         // static-nobundle link kind requires nightly Rust compiler until
         // https://github.com/rust-lang/rust/issues/37403 is resolved.
@@ -189,6 +174,8 @@ impl BuildEnvironment {
                 );
             }
         }
+
+        let mut rust_flags = vec![];
 
         // Windows standalone_static distributions require the non-DLL CRT.
         // This requires telling Rust to use the static CRT.
@@ -288,7 +275,6 @@ pub fn build_executable_with_rust_project<'a>(
         artifacts_path,
         exe.target_python_exe_path(),
         exe.libpython_link_mode(),
-        embedded_data.linking_info.dynamic_libpython_path.as_deref(),
         exe.apple_sdk_info(),
     )
     .context("resolving build environment")?;

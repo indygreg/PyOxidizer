@@ -293,10 +293,12 @@ impl StandalonePythonExecutableBuilder {
         Ok(())
     }
 
-    /// Build a Python library suitable for linking.
+    /// Resolve a Python library suitable for linking.
     ///
-    /// This will take the underlying distribution, resources, and
-    /// configuration and produce a new executable binary.
+    /// This will take the underlying distribution, resources, and configuration and resolve
+    /// linking info.
+    ///
+    /// If we need to derive a custom libpython, a static library will be built.
     fn resolve_python_linking_info(
         &self,
         logger: &slog::Logger,
