@@ -326,17 +326,17 @@ impl StandalonePythonExecutableBuilder {
                 )?;
 
                 Ok(PythonLinkingInfo {
-                    libpythonxy_filename: PathBuf::from(library_info.libpython_filename),
-                    libpythonxy_data: library_info.libpython_data,
-                    libpython_filename: None,
+                    static_libpython_filename: PathBuf::from(library_info.libpython_filename),
+                    static_libpython_data: library_info.libpython_data,
+                    dynamic_libpython_path: None,
                     linking_annotations: library_info.linking_annotations,
                 })
             }
 
             LibpythonLinkMode::Dynamic => Ok(PythonLinkingInfo {
-                libpythonxy_filename: PathBuf::from("pythonXY.lib"),
-                libpythonxy_data: vec![],
-                libpython_filename: self.target_distribution.libpython_shared_library.clone(),
+                static_libpython_filename: PathBuf::from("pythonXY.lib"),
+                static_libpython_data: vec![],
+                dynamic_libpython_path: self.target_distribution.libpython_shared_library.clone(),
                 linking_annotations: vec![],
             }),
         }

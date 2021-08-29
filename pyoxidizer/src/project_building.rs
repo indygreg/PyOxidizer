@@ -288,7 +288,7 @@ pub fn build_executable_with_rust_project<'a>(
         artifacts_path,
         exe.target_python_exe_path(),
         exe.libpython_link_mode(),
-        embedded_data.linking_info.libpython_filename.as_deref(),
+        embedded_data.linking_info.dynamic_libpython_path.as_deref(),
         exe.apple_sdk_info(),
     )
     .context("resolving build environment")?;
@@ -326,11 +326,13 @@ pub fn build_executable_with_rust_project<'a>(
 
     // If we have a real libpython, let cpython crate link against it. Otherwise
     // leave symbols unresolved, as we'll provide them.
-    features.push(if embedded_data.linking_info.libpython_filename.is_some() {
-        "cpython-link-default"
-    } else {
-        "cpython-link-unresolved-static"
-    });
+    features.push(
+        if embedded_data.linking_info.dynamic_libpython_path.is_some() {
+            "cpython-link-default"
+        } else {
+            "cpython-link-unresolved-static"
+        },
+    );
 
     if exe.requires_jemalloc() {
         features.push("global-allocator-jemalloc");

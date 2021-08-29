@@ -445,16 +445,17 @@ pub trait PythonBinaryBuilder {
 
 /// Describes how to link a binary against Python.
 pub struct PythonLinkingInfo {
-    /// Path to a `pythonXY` library to link against.
-    pub libpythonxy_filename: PathBuf,
+    /// Filename of a static library containing Python.
+    pub static_libpython_filename: PathBuf,
 
-    /// The contents of `libpythonxy_filename`.
-    pub libpythonxy_data: Vec<u8>,
+    /// Contents of a static library containing Python.
+    pub static_libpython_data: Vec<u8>,
 
-    /// Path to an existing `libpython` to link against. If present, this is
-    /// the actual library containing Python symbols and `libpythonXY` is
-    /// a placeholder.
-    pub libpython_filename: Option<PathBuf>,
+    /// Path to an existing dynamic `libpython` to link against.
+    ///
+    /// If present, this is the actual library containing Python symbols and
+    /// our static libpython is a placeholder.
+    pub dynamic_libpython_path: Option<PathBuf>,
 
     /// Describes how to link against libpython.
     pub linking_annotations: Vec<LinkingAnnotation>,
@@ -491,7 +492,7 @@ impl<'a> EmbeddedPythonContext<'a> {
     pub fn libpython_path(&self, dest_dir: impl AsRef<Path>) -> PathBuf {
         dest_dir
             .as_ref()
-            .join(&self.linking_info.libpythonxy_filename)
+            .join(&self.linking_info.static_libpython_filename)
     }
 
     /// Resolve the filesystem path to the file containing cargo: lines.
@@ -509,7 +510,7 @@ impl<'a> EmbeddedPythonContext<'a> {
         let mut lines = vec![];
 
         // Tell Cargo to link our static libpython and where that library is.
-        if self.linking_info.libpython_filename.is_none() {
+        if self.linking_info.dynamic_libpython_path.is_none() {
             lines.push(
                 LinkingAnnotation::LinkLibraryStatic("pythonXY".to_string()).to_cargo_annotation(),
             );
@@ -555,7 +556,7 @@ impl<'a> EmbeddedPythonContext<'a> {
     /// Ensure files required by libpython are written.
     pub fn write_libpython(&self, dest_dir: impl AsRef<Path>) -> Result<()> {
         let mut fh = std::fs::File::create(self.libpython_path(&dest_dir))?;
-        fh.write_all(&self.linking_info.libpythonxy_data)?;
+        fh.write_all(&self.linking_info.static_libpython_data)?;
 
         Ok(())
     }
