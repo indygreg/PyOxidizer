@@ -5,9 +5,9 @@
 use {
     super::{
         binary::{
-            pyembed_licenses, EmbeddedPythonContext, LibpythonLinkMode, PackedResourcesLoadMode,
-            PythonBinaryBuilder, PythonLinkingInfo, ResourceAddCollectionContextCallback,
-            WindowsRuntimeDllsMode,
+            pyembed_licenses, EmbeddedPythonContext, LibpythonLinkMode, LibpythonLinkSettings,
+            LinkSharedLibraryPath, LinkStaticLibraryData, PackedResourcesLoadMode,
+            PythonBinaryBuilder, ResourceAddCollectionContextCallback, WindowsRuntimeDllsMode,
         },
         config::{PyembedPackedResourcesSource, PyembedPythonInterpreterConfig},
         distribution::{AppleSdkInfo, BinaryLibpythonLinkMode, PythonDistribution},
@@ -304,7 +304,7 @@ impl StandalonePythonExecutableBuilder {
         logger: &slog::Logger,
         env: &Environment,
         opt_level: &str,
-    ) -> Result<PythonLinkingInfo> {
+    ) -> Result<LibpythonLinkSettings> {
         match self.link_mode {
             LibpythonLinkMode::Static => {
                 warn!(
@@ -327,18 +327,24 @@ impl StandalonePythonExecutableBuilder {
                     self.apple_sdk_info(),
                 )?;
 
-                Ok(PythonLinkingInfo {
-                    static_libpython_data: library_info.libpython_data,
-                    dynamic_libpython_path: None,
+                Ok(LinkStaticLibraryData {
+                    library_data: library_info.libpython_data,
                     linking_annotations: library_info.linking_annotations,
-                })
+                }
+                .into())
             }
 
-            LibpythonLinkMode::Dynamic => Ok(PythonLinkingInfo {
-                static_libpython_data: vec![],
-                dynamic_libpython_path: self.target_distribution.libpython_shared_library.clone(),
-                linking_annotations: vec![],
-            }),
+            LibpythonLinkMode::Dynamic => {
+                let library_path = self
+                    .target_distribution
+                    .libpython_shared_library
+                    .clone()
+                    .ok_or_else(|| {
+                        anyhow!("target Python distribution does not have a shared libpython")
+                    })?;
+
+                Ok(LinkSharedLibraryPath { library_path }.into())
+            }
         }
     }
 
@@ -939,7 +945,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
             }
         }
 
-        let linking_info = self.resolve_python_linking_info(logger, env, opt_level)?;
+        let link_settings = self.resolve_python_linking_info(logger, env, opt_level)?;
 
         if self.link_mode == LibpythonLinkMode::Dynamic {
             if let Some(p) = &self.target_distribution.libpython_shared_library {
@@ -974,7 +980,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
 
         Ok(EmbeddedPythonContext {
             config,
-            linking_info,
+            link_settings,
             pending_resources,
             extra_files,
             host_triple: self.host_triple.clone(),

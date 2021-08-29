@@ -443,43 +443,55 @@ pub trait PythonBinaryBuilder {
     ) -> Result<EmbeddedPythonContext>;
 }
 
-/// Describes how to link a binary against Python.
-pub struct PythonLinkingInfo {
-    /// Contents of a static library containing Python.
-    pub static_libpython_data: Vec<u8>,
-
-    /// Path to an existing dynamic `libpython` to link against.
+/// Represents a linkable target defining a Python implementation.
+pub trait LinkablePython {
+    /// Write any files that need to exist to support linking.
     ///
-    /// If present, this is the actual library containing Python symbols and
-    /// our static libpython is a placeholder.
-    pub dynamic_libpython_path: Option<PathBuf>,
+    /// Files will be written to the directory specified.
+    fn write_files(&self, dest_dir: &Path, target_triple: &str) -> Result<()>;
 
-    /// Describes how to link against libpython.
+    /// Obtain linker annotations needed to link this libpython.
+    ///
+    /// `dest_dir` will be the directory where any files written by `write_files()` will
+    /// be located.
+    fn linking_annotations(&self, dest_dir: &Path) -> Result<Vec<LinkingAnnotation>>;
+}
+
+/// Link against a shared library on the filesystem.
+#[derive(Clone, Debug)]
+pub struct LinkSharedLibraryPath {
+    /// Path to dynamic library to link.
+    pub library_path: PathBuf,
+}
+
+impl LinkablePython for LinkSharedLibraryPath {
+    fn write_files(&self, _dest_dir: &Path, _target_triple: &str) -> Result<()> {
+        Ok(())
+    }
+
+    fn linking_annotations(&self, _dest_dir: &Path) -> Result<Vec<LinkingAnnotation>> {
+        let lib_dir = self
+            .library_path
+            .parent()
+            .ok_or_else(|| anyhow!("could not derive parent directory of library path"))?;
+
+        // We don't need to emit an annotation to link the actual library because
+        // this annotation is already added by the python3-sys/cpython crate.
+        Ok(vec![LinkingAnnotation::SearchNative(lib_dir.to_path_buf())])
+    }
+}
+
+/// Link against a custom built static library with tracked library data.
+#[derive(Clone, Debug)]
+pub struct LinkStaticLibraryData {
+    /// libpython static library content.
+    pub library_data: Vec<u8>,
+
+    /// Additional linker directives to link this static library.
     pub linking_annotations: Vec<LinkingAnnotation>,
 }
 
-/// Holds context necessary to embed Python in a binary.
-pub struct EmbeddedPythonContext<'a> {
-    /// The configuration for the embedded interpreter.
-    pub config: PyembedPythonInterpreterConfig,
-
-    /// Information on how to link against Python.
-    pub linking_info: PythonLinkingInfo,
-
-    /// Python resources that need to be serialized to a file.
-    pub pending_resources: Vec<(CompiledResourcesCollection<'a>, PathBuf)>,
-
-    /// Extra files to install next to produced binary.
-    pub extra_files: FileManifest,
-
-    /// Rust target triple for the host we are running on.
-    pub host_triple: String,
-
-    /// Rust target triple for the target we are building for.
-    pub target_triple: String,
-}
-
-impl<'a> EmbeddedPythonContext<'a> {
+impl LinkStaticLibraryData {
     /// Name of the static library containing Python.
     ///
     /// python3-sys uses `#[link(name="pythonXY")]` attributes heavily on Windows. Its
@@ -497,24 +509,104 @@ impl<'a> EmbeddedPythonContext<'a> {
     ///
     /// Our current workaround is to produce a ``pythonXY.lib`` file. This satisfies
     /// the requirement of ``python3-sys`` that a ``pythonXY.lib`` file exists.
-    pub fn static_library_name(&self) -> &'static str {
+    fn library_name(&self) -> &'static str {
         "pythonXY"
     }
 
+    fn library_path(&self, dest_dir: impl AsRef<Path>, target_triple: &str) -> PathBuf {
+        dest_dir
+            .as_ref()
+            .join(if target_triple.contains("-windows-") {
+                format!("{}.lib", self.library_name())
+            } else {
+                format!("lib{}.a", self.library_name())
+            })
+    }
+}
+
+impl LinkablePython for LinkStaticLibraryData {
+    fn write_files(&self, dest_dir: &Path, target_triple: &str) -> Result<()> {
+        let lib_path = self.library_path(dest_dir, target_triple);
+
+        std::fs::write(&lib_path, &self.library_data)
+            .with_context(|| format!("writing {}", lib_path.display()))?;
+
+        Ok(())
+    }
+
+    fn linking_annotations(&self, dest_dir: &Path) -> Result<Vec<LinkingAnnotation>> {
+        let mut annotations = vec![
+            LinkingAnnotation::LinkLibraryStatic(self.library_name().to_string()),
+            LinkingAnnotation::SearchNative(dest_dir.to_path_buf()),
+        ];
+
+        annotations.extend(self.linking_annotations.iter().cloned());
+
+        Ok(annotations)
+    }
+}
+
+/// Describes how to link a `libpython`.
+pub enum LibpythonLinkSettings {
+    /// Link against an existing shared library.
+    ExistingDynamic(LinkSharedLibraryPath),
+    /// Link against a custom static library.
+    StaticData(LinkStaticLibraryData),
+}
+
+impl LinkablePython for LibpythonLinkSettings {
+    fn write_files(&self, dest_dir: &Path, target_triple: &str) -> Result<()> {
+        match self {
+            Self::ExistingDynamic(l) => l.write_files(dest_dir, target_triple),
+            Self::StaticData(l) => l.write_files(dest_dir, target_triple),
+        }
+    }
+
+    fn linking_annotations(&self, dest_dir: &Path) -> Result<Vec<LinkingAnnotation>> {
+        match self {
+            Self::ExistingDynamic(l) => l.linking_annotations(dest_dir),
+            Self::StaticData(l) => l.linking_annotations(dest_dir),
+        }
+    }
+}
+
+impl From<LinkSharedLibraryPath> for LibpythonLinkSettings {
+    fn from(l: LinkSharedLibraryPath) -> Self {
+        Self::ExistingDynamic(l)
+    }
+}
+
+impl From<LinkStaticLibraryData> for LibpythonLinkSettings {
+    fn from(l: LinkStaticLibraryData) -> Self {
+        Self::StaticData(l)
+    }
+}
+
+/// Holds context necessary to embed Python in a binary.
+pub struct EmbeddedPythonContext<'a> {
+    /// The configuration for the embedded interpreter.
+    pub config: PyembedPythonInterpreterConfig,
+
+    /// Information on how to link against Python.
+    pub link_settings: LibpythonLinkSettings,
+
+    /// Python resources that need to be serialized to a file.
+    pub pending_resources: Vec<(CompiledResourcesCollection<'a>, PathBuf)>,
+
+    /// Extra files to install next to produced binary.
+    pub extra_files: FileManifest,
+
+    /// Rust target triple for the host we are running on.
+    pub host_triple: String,
+
+    /// Rust target triple for the target we are building for.
+    pub target_triple: String,
+}
+
+impl<'a> EmbeddedPythonContext<'a> {
     /// Obtain the filesystem of the generated Rust source file containing the interpreter configuration.
     pub fn interpreter_config_rs_path(&self, dest_dir: impl AsRef<Path>) -> PathBuf {
         dest_dir.as_ref().join("default_python_config.rs")
-    }
-
-    /// Resolve path to library containing libpython.
-    pub fn libpython_path(&self, dest_dir: impl AsRef<Path>) -> PathBuf {
-        dest_dir
-            .as_ref()
-            .join(if self.target_triple.contains("-windows-") {
-                format!("{}.lib", self.static_library_name())
-            } else {
-                format!("lib{}.a", self.static_library_name())
-            })
     }
 
     /// Resolve the filesystem path to the file containing cargo: lines.
@@ -529,34 +621,14 @@ impl<'a> EmbeddedPythonContext<'a> {
     /// These should be printed from a build script. The printed lines enable
     /// linking with our libpython.
     pub fn cargo_metadata_lines(&self, dest_dir: impl AsRef<Path>) -> Result<Vec<String>> {
-        let mut lines = vec![];
+        let dest_dir = dest_dir.as_ref();
 
-        // Tell Cargo to link our libpython and where that library is.
-        if let Some(lib_path) = &self.linking_info.dynamic_libpython_path {
-            let lib_dir = lib_path
-                .parent()
-                .ok_or_else(|| anyhow!("unable to find parent directory of dynamic libpython"))?;
-
-            // We don't emit a LinkLibraryDynamic for historical (possibly incorrect) reasons.
-            lines
-                .push(LinkingAnnotation::SearchNative(lib_dir.to_path_buf()).to_cargo_annotation());
-        } else {
-            lines.push(
-                LinkingAnnotation::LinkLibraryStatic(self.static_library_name().to_string())
-                    .to_cargo_annotation(),
-            );
-            lines.push(
-                LinkingAnnotation::SearchNative(dest_dir.as_ref().to_path_buf())
-                    .to_cargo_annotation(),
-            );
-        }
-
-        lines.extend(
-            self.linking_info
-                .linking_annotations
-                .iter()
-                .map(|la| la.to_cargo_annotation()),
-        );
+        let mut lines = self
+            .link_settings
+            .linking_annotations(dest_dir)?
+            .into_iter()
+            .map(|la| la.to_cargo_annotation())
+            .collect::<Vec<_>>();
 
         // Give dependent crates the path to the default config file.
         lines.push(format!(
@@ -586,10 +658,8 @@ impl<'a> EmbeddedPythonContext<'a> {
 
     /// Ensure files required by libpython are written.
     pub fn write_libpython(&self, dest_dir: impl AsRef<Path>) -> Result<()> {
-        let mut fh = std::fs::File::create(self.libpython_path(&dest_dir))?;
-        fh.write_all(&self.linking_info.static_libpython_data)?;
-
-        Ok(())
+        self.link_settings
+            .write_files(dest_dir.as_ref(), &self.target_triple)
     }
 
     /// Write the file containing the default interpreter configuration Rust struct.

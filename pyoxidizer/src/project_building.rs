@@ -7,7 +7,10 @@ use {
         environment::{canonicalize_path, Environment, RustEnvironment},
         project_layout::initialize_project,
         py_packaging::{
-            binary::{EmbeddedPythonContext, LibpythonLinkMode, PythonBinaryBuilder},
+            binary::{
+                EmbeddedPythonContext, LibpythonLinkMode, LibpythonLinkSettings,
+                PythonBinaryBuilder,
+            },
             distribution::AppleSdkInfo,
         },
         starlark::eval::{EvaluationContext, EvaluationContextBuilder},
@@ -312,13 +315,10 @@ pub fn build_executable_with_rust_project<'a>(
 
     // If we have a real libpython, let cpython crate link against it. Otherwise
     // leave symbols unresolved, as we'll provide them.
-    features.push(
-        if embedded_data.linking_info.dynamic_libpython_path.is_some() {
-            "cpython-link-default"
-        } else {
-            "cpython-link-unresolved-static"
-        },
-    );
+    features.push(match &embedded_data.link_settings {
+        &LibpythonLinkSettings::StaticData(_) => "cpython-link-unresolved-static",
+        &LibpythonLinkSettings::ExistingDynamic(_) => "cpython-link-default",
+    });
 
     if exe.requires_jemalloc() {
         features.push("global-allocator-jemalloc");
