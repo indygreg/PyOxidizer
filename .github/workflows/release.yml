@@ -260,15 +260,13 @@ jobs:
           ./pyoxidizer init-config-file myapp
           ./pyoxidizer build --path myapp
 
-      # TODO this is disabled because python3-sys requires use of a host Python
-      # interpreter for configuration.
-      #- name: Spot Test (aarch64 Cross Build)
-      #  env:
-      #    # The default SDK is 10.15 and the 11.x SDK isn't in a default search path.
-      #    # So we need to point pyoxidizer at a more modern SDK.
-      #    SDKROOT: /Applications/Xcode_12.4.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX11.1.sdk
-      #  run: |
-      #    ./pyoxidizer build --path myapp --target-triple aarch64-apple-darwin
+      - name: Spot Test (aarch64 Cross Build)
+        env:
+          # The default SDK is 10.15 and the 11.x SDK isn't in a default search path.
+          # So we need to point pyoxidizer at a more modern SDK.
+          SDKROOT: /Applications/Xcode_12.4.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX11.1.sdk
+        run: |
+          ./pyoxidizer build --path myapp --target-triple aarch64-apple-darwin
 
   macos-dmg:
     needs:
