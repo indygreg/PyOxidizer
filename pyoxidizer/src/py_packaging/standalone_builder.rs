@@ -307,8 +307,6 @@ impl StandalonePythonExecutableBuilder {
         let mut cargo_metadata: Vec<String> = Vec::new();
         let libpythonxy_data;
         let libpython_filename: Option<PathBuf>;
-        let libpyembeddedconfig_data: Option<Vec<u8>>;
-        let libpyembeddedconfig_filename: Option<PathBuf>;
 
         match self.link_mode {
             LibpythonLinkMode::Static => {
@@ -337,17 +335,12 @@ impl StandalonePythonExecutableBuilder {
                 libpythonxy_filename = PathBuf::from(library_info.libpython_filename);
                 libpythonxy_data = library_info.libpython_data;
                 libpython_filename = None;
-                libpyembeddedconfig_filename =
-                    Some(PathBuf::from(library_info.libpyembeddedconfig_filename));
-                libpyembeddedconfig_data = Some(library_info.libpyembeddedconfig_data);
             }
 
             LibpythonLinkMode::Dynamic => {
                 libpythonxy_filename = PathBuf::from("pythonXY.lib");
                 libpythonxy_data = Vec::new();
                 libpython_filename = self.target_distribution.libpython_shared_library.clone();
-                libpyembeddedconfig_filename = None;
-                libpyembeddedconfig_data = None;
             }
         }
 
@@ -355,8 +348,6 @@ impl StandalonePythonExecutableBuilder {
             libpythonxy_filename,
             libpythonxy_data,
             libpython_filename,
-            libpyembeddedconfig_filename,
-            libpyembeddedconfig_data,
             cargo_metadata,
         })
     }

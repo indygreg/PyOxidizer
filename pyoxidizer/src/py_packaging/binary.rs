@@ -9,7 +9,7 @@ Defining and manipulating binaries embedding Python.
 use {
     super::{config::PyembedPythonInterpreterConfig, distribution::AppleSdkInfo},
     crate::environment::Environment,
-    anyhow::{anyhow, Context, Result},
+    anyhow::{Context, Result},
     python_packaging::{
         policy::PythonPackagingPolicy,
         resource::{
@@ -420,12 +420,6 @@ pub struct PythonLinkingInfo {
     /// a placeholder.
     pub libpython_filename: Option<PathBuf>,
 
-    /// Path to a library containing an alternate `config.c`.
-    pub libpyembeddedconfig_filename: Option<PathBuf>,
-
-    /// The contents of `libpyembeddedconfig_filename`.
-    pub libpyembeddedconfig_data: Option<Vec<u8>>,
-
     /// Lines that need to be emitted from a Cargo build script.
     pub cargo_metadata: Vec<String>,
 }
@@ -455,16 +449,6 @@ impl<'a> EmbeddedPythonContext<'a> {
     /// Obtain the filesystem of the generated Rust source file containing the interpreter configuration.
     pub fn interpreter_config_rs_path(&self, dest_dir: impl AsRef<Path>) -> PathBuf {
         dest_dir.as_ref().join("default_python_config.rs")
-    }
-
-    /// Obtain path to a compiled library containing content of a compiled `config.c` file.
-    ///
-    /// This file contains global data structures for libpython defining extension modules.
-    pub fn python_config_library_path(&self, dest_dir: impl AsRef<Path>) -> Option<PathBuf> {
-        self.linking_info
-            .libpyembeddedconfig_filename
-            .as_ref()
-            .map(|filename| dest_dir.as_ref().join(filename))
     }
 
     /// Resolve path to library containing libpython.
@@ -524,14 +508,6 @@ impl<'a> EmbeddedPythonContext<'a> {
     pub fn write_libpython(&self, dest_dir: impl AsRef<Path>) -> Result<()> {
         let mut fh = std::fs::File::create(self.libpython_path(&dest_dir))?;
         fh.write_all(&self.linking_info.libpythonxy_data)?;
-
-        if let Some(data) = &self.linking_info.libpyembeddedconfig_data {
-            let path = self.python_config_library_path(&dest_dir).ok_or_else(|| {
-                anyhow!("embedded Python config library data defined without path")
-            })?;
-            let mut fh = std::fs::File::create(&path)?;
-            fh.write_all(data)?;
-        }
 
         Ok(())
     }
