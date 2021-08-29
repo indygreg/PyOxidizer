@@ -330,7 +330,9 @@ impl StandalonePythonExecutableBuilder {
                     self.apple_sdk_info(),
                 )?;
 
-                cargo_metadata.extend(library_info.cargo_metadata);
+                for la in library_info.linking_annotations {
+                    cargo_metadata.push(la.to_cargo_annotation());
+                }
 
                 libpythonxy_filename = PathBuf::from(library_info.libpython_filename);
                 libpythonxy_data = library_info.libpython_data;

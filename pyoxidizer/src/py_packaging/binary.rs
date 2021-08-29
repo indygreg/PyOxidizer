@@ -148,6 +148,42 @@ impl TryFrom<&str> for WindowsRuntimeDllsMode {
     }
 }
 
+/// Describes extra behavior for a linker invocation.
+#[derive(Clone, Debug, PartialEq)]
+pub enum LinkingAnnotation {
+    /// Link an Apple framework library of the given name.
+    LinkFramework(String),
+
+    /// Link a library of the given name.
+    LinkLibrary(String),
+
+    /// Link a static library of the given name.
+    LinkLibraryStatic(String),
+
+    /// A search path for libraries.
+    Search(PathBuf),
+
+    /// A search path for native libraries.
+    SearchNative(PathBuf),
+}
+
+impl LinkingAnnotation {
+    /// Convert the instance to a `cargo:*` string representing this annotation.
+    pub fn to_cargo_annotation(&self) -> String {
+        match self {
+            Self::LinkFramework(framework) => {
+                format!("cargo:rustc-link-lib=framework={}", framework)
+            }
+            Self::LinkLibrary(lib) => format!("cargo:rustc-link-lib={}", lib),
+            Self::LinkLibraryStatic(lib) => format!("cargo:rustc-link-lib=static={}", lib),
+            Self::Search(path) => format!("cargo:rustc-link-search={}", path.display()),
+            Self::SearchNative(path) => {
+                format!("cargo:rustc-link-search=native={}", path.display())
+            }
+        }
+    }
+}
+
 /// A callable that can influence PythonResourceAddCollectionContext.
 pub type ResourceAddCollectionContextCallback<'a> = Box<
     dyn Fn(

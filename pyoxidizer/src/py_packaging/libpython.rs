@@ -7,7 +7,10 @@ Build a custom libraries containing Python.
 */
 
 use {
-    crate::{environment::Environment, py_packaging::distribution::AppleSdkInfo},
+    crate::{
+        environment::Environment,
+        py_packaging::{binary::LinkingAnnotation, distribution::AppleSdkInfo},
+    },
     anyhow::{anyhow, Context, Result},
     python_packaging::libpython::LibPythonBuildContext,
     slog::warn,
@@ -48,10 +51,12 @@ where
 pub struct LibpythonInfo {
     /// Suggested filename of libpython.
     pub libpython_filename: String,
+
     /// Raw data constituting static libpython library.
     pub libpython_data: Vec<u8>,
-    /// Lines to emit from a cargo build script describing how to link the library.
-    pub cargo_metadata: Vec<String>,
+
+    /// Describes annotations necessary to link this libpython.
+    pub linking_annotations: Vec<LinkingAnnotation>,
 }
 
 /// Create a static libpython from a Python distribution.
@@ -78,7 +83,7 @@ pub fn link_libpython(
     let libpython_dir = temp_dir.path().join("libpython");
     std::fs::create_dir(&libpython_dir).context("creating libpython subdirectory")?;
 
-    let mut cargo_metadata: Vec<String> = Vec::new();
+    let mut linking_annotations = vec![];
 
     let windows = crate::environment::WINDOWS_TARGET_TRIPLES.contains(&target_triple);
 
@@ -170,19 +175,19 @@ pub fn link_libpython(
     }
 
     for framework in &context.frameworks {
-        cargo_metadata.push(format!("cargo:rustc-link-lib=framework={}", framework));
+        linking_annotations.push(LinkingAnnotation::LinkFramework(framework.to_string()));
     }
 
     for lib in &context.system_libraries {
-        cargo_metadata.push(format!("cargo:rustc-link-lib={}", lib));
+        linking_annotations.push(LinkingAnnotation::LinkLibrary(lib.to_string()));
     }
 
     for lib in &context.dynamic_libraries {
-        cargo_metadata.push(format!("cargo:rustc-link-lib={}", lib));
+        linking_annotations.push(LinkingAnnotation::LinkLibrary(lib.to_string()));
     }
 
     for lib in &context.static_libraries {
-        cargo_metadata.push(format!("cargo:rustc-link-lib=static={}", lib));
+        linking_annotations.push(LinkingAnnotation::LinkLibraryStatic(lib.to_string()));
     }
 
     // Python 3.9+ on macOS uses __builtin_available(), which requires
@@ -193,10 +198,10 @@ pub fn link_libpython(
     // `clang_rt.<platform>` as a library dependency of our static libpython.
     if target_triple.ends_with("-apple-darwin") {
         if let Some(path) = macos_clang_search_path()? {
-            cargo_metadata.push(format!("cargo:rustc-link-search={}", path.display()));
+            linking_annotations.push(LinkingAnnotation::Search(path));
         }
 
-        cargo_metadata.push("cargo:rustc-link-lib=clang_rt.osx".to_string());
+        linking_annotations.push(LinkingAnnotation::LinkLibrary("clang_rt.osx".to_string()));
     }
 
     // python3-sys uses #[link(name="pythonXY")] attributes heavily on Windows. Its
@@ -229,16 +234,16 @@ pub fn link_libpython(
     let libpython_data =
         std::fs::read(libpython_dir.join(&libpython_filename)).context("reading libpython")?;
 
-    cargo_metadata.push("cargo:rustc-link-lib=static=pythonXY".to_string());
+    linking_annotations.push(LinkingAnnotation::LinkLibraryStatic("pythonXY".to_string()));
 
     for path in &context.library_search_paths {
-        cargo_metadata.push(format!("cargo:rustc-link-search=native={}", path.display()));
+        linking_annotations.push(LinkingAnnotation::SearchNative(path.clone()));
     }
 
     Ok(LibpythonInfo {
         libpython_filename,
         libpython_data,
-        cargo_metadata,
+        linking_annotations,
     })
 }
 
