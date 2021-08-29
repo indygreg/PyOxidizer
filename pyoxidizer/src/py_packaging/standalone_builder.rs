@@ -338,17 +338,14 @@ impl StandalonePythonExecutableBuilder {
                     self.apple_sdk_info(),
                 )?;
 
-                libpythonxy_filename =
-                    PathBuf::from(library_info.libpython_path.file_name().unwrap());
                 cargo_metadata.extend(library_info.cargo_metadata);
 
-                libpythonxy_data = std::fs::read(&library_info.libpython_path)?;
+                libpythonxy_filename = PathBuf::from(library_info.libpython_filename);
+                libpythonxy_data = library_info.libpython_data;
                 libpython_filename = None;
-                libpyembeddedconfig_filename = Some(PathBuf::from(
-                    library_info.libpyembeddedconfig_path.file_name().unwrap(),
-                ));
-                libpyembeddedconfig_data =
-                    Some(std::fs::read(&library_info.libpyembeddedconfig_path)?);
+                libpyembeddedconfig_filename =
+                    Some(PathBuf::from(library_info.libpyembeddedconfig_filename));
+                libpyembeddedconfig_data = Some(library_info.libpyembeddedconfig_data);
             }
 
             LibpythonLinkMode::Dynamic => {

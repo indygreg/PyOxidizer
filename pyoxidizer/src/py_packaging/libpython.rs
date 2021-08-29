@@ -50,8 +50,15 @@ where
 /// Represents a built libpython.
 #[derive(Debug)]
 pub struct LibpythonInfo {
-    pub libpython_path: PathBuf,
-    pub libpyembeddedconfig_path: PathBuf,
+    /// Suggested filename of libpython.
+    pub libpython_filename: String,
+    /// Raw data constituting static libpython library.
+    pub libpython_data: Vec<u8>,
+    /// Suggested filename of libpyembeddedconfig library.
+    pub libpyembeddedconfig_filename: String,
+    /// Raw data constituting static libpyembeddedconfig library.
+    pub libpyembeddedconfig_data: Vec<u8>,
+    /// Lines to emit from a cargo build script describing how to link the library.
     pub cargo_metadata: Vec<String>,
 }
 
@@ -144,11 +151,15 @@ pub fn link_libpython(
         .cargo_metadata(false)
         .compile("pyembeddedconfig");
 
-    let libpyembeddedconfig_path = out_dir.join(if windows {
+    let libpyembeddedconfig_filename = if windows {
         "pyembeddedconfig.lib"
     } else {
         "libpyembeddedconfig.a"
-    });
+    }
+    .to_string();
+
+    let libpyembeddedconfig_data = std::fs::read(out_dir.join(&libpyembeddedconfig_filename))
+        .context("reading libpyembeddedconfig")?;
 
     // Since we disabled cargo metadata lines above.
     cargo_metadata.push("cargo:rustc-link-lib=static=pyembeddedconfig".to_string());
@@ -225,11 +236,15 @@ pub fn link_libpython(
     build.compile("pythonXY");
     warn!(logger, "libpythonXY created");
 
-    let libpython_path = out_dir.join(if windows {
+    let libpython_filename = if windows {
         "pythonXY.lib"
     } else {
         "libpythonXY.a"
-    });
+    }
+    .to_string();
+
+    let libpython_data =
+        std::fs::read(out_dir.join(&libpython_filename)).context("reading libpython")?;
 
     cargo_metadata.push("cargo:rustc-link-lib=static=pythonXY".to_string());
 
@@ -238,8 +253,10 @@ pub fn link_libpython(
     }
 
     Ok(LibpythonInfo {
-        libpython_path,
-        libpyembeddedconfig_path,
+        libpython_filename,
+        libpython_data,
+        libpyembeddedconfig_filename,
+        libpyembeddedconfig_data,
         cargo_metadata,
     })
 }
