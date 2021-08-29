@@ -303,11 +303,6 @@ impl StandalonePythonExecutableBuilder {
         env: &Environment,
         opt_level: &str,
     ) -> Result<PythonLinkingInfo> {
-        let libpythonxy_filename;
-        let mut linking_annotations = vec![];
-        let libpythonxy_data;
-        let libpython_filename: Option<PathBuf>;
-
         match self.link_mode {
             LibpythonLinkMode::Static => {
                 warn!(
@@ -330,25 +325,21 @@ impl StandalonePythonExecutableBuilder {
                     self.apple_sdk_info(),
                 )?;
 
-                linking_annotations = library_info.linking_annotations;
-                libpythonxy_filename = PathBuf::from(library_info.libpython_filename);
-                libpythonxy_data = library_info.libpython_data;
-                libpython_filename = None;
+                Ok(PythonLinkingInfo {
+                    libpythonxy_filename: PathBuf::from(library_info.libpython_filename),
+                    libpythonxy_data: library_info.libpython_data,
+                    libpython_filename: None,
+                    linking_annotations: library_info.linking_annotations,
+                })
             }
 
-            LibpythonLinkMode::Dynamic => {
-                libpythonxy_filename = PathBuf::from("pythonXY.lib");
-                libpythonxy_data = Vec::new();
-                libpython_filename = self.target_distribution.libpython_shared_library.clone();
-            }
+            LibpythonLinkMode::Dynamic => Ok(PythonLinkingInfo {
+                libpythonxy_filename: PathBuf::from("pythonXY.lib"),
+                libpythonxy_data: vec![],
+                libpython_filename: self.target_distribution.libpython_shared_library.clone(),
+                linking_annotations: vec![],
+            }),
         }
-
-        Ok(PythonLinkingInfo {
-            libpythonxy_filename,
-            libpythonxy_data,
-            libpython_filename,
-            linking_annotations,
-        })
     }
 
     /// Resolves Windows runtime DLLs file needed for this binary given current settings.
