@@ -304,7 +304,7 @@ impl StandalonePythonExecutableBuilder {
         opt_level: &str,
     ) -> Result<PythonLinkingInfo> {
         let libpythonxy_filename;
-        let mut cargo_metadata: Vec<String> = Vec::new();
+        let mut linking_annotations = vec![];
         let libpythonxy_data;
         let libpython_filename: Option<PathBuf>;
 
@@ -330,10 +330,7 @@ impl StandalonePythonExecutableBuilder {
                     self.apple_sdk_info(),
                 )?;
 
-                for la in library_info.linking_annotations {
-                    cargo_metadata.push(la.to_cargo_annotation());
-                }
-
+                linking_annotations = library_info.linking_annotations;
                 libpythonxy_filename = PathBuf::from(library_info.libpython_filename);
                 libpythonxy_data = library_info.libpython_data;
                 libpython_filename = None;
@@ -350,7 +347,7 @@ impl StandalonePythonExecutableBuilder {
             libpythonxy_filename,
             libpythonxy_data,
             libpython_filename,
-            cargo_metadata,
+            linking_annotations,
         })
     }
 

@@ -456,8 +456,8 @@ pub struct PythonLinkingInfo {
     /// a placeholder.
     pub libpython_filename: Option<PathBuf>,
 
-    /// Lines that need to be emitted from a Cargo build script.
-    pub cargo_metadata: Vec<String>,
+    /// Describes how to link against libpython.
+    pub linking_annotations: Vec<LinkingAnnotation>,
 }
 
 /// Holds context necessary to embed Python in a binary.
@@ -506,7 +506,12 @@ impl<'a> EmbeddedPythonContext<'a> {
     /// These should be printed from a build script. The printed lines enable
     /// linking with our libpython.
     pub fn cargo_metadata_lines(&self, dest_dir: impl AsRef<Path>) -> Vec<String> {
-        let mut lines = self.linking_info.cargo_metadata.clone();
+        let mut lines = self
+            .linking_info
+            .linking_annotations
+            .iter()
+            .map(|la| la.to_cargo_annotation())
+            .collect::<Vec<_>>();
 
         // Tell Cargo where libpythonXY is located.
         lines.push(format!(
