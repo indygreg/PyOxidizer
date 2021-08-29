@@ -464,6 +464,37 @@ pub struct LinkSharedLibraryPath {
     pub library_path: PathBuf,
 }
 
+impl LinkSharedLibraryPath {
+    /// Resolve the name of the library.
+    #[allow(unused)]
+    fn library_name(&self) -> Result<String> {
+        let filename = self
+            .library_path
+            .file_name()
+            .ok_or_else(|| anyhow!("unable to resolve shared library file name"))?
+            .to_string_lossy();
+
+        if filename.ends_with(".dll") {
+            Ok(filename.trim_end_matches(".dll").to_string())
+        } else if filename.ends_with(".dylib") {
+            Ok(filename
+                .trim_end_matches(".dylib")
+                .trim_start_matches("lib")
+                .to_string())
+        } else if filename.ends_with(".so") {
+            Ok(filename
+                .trim_end_matches(".so")
+                .trim_start_matches("lib")
+                .to_string())
+        } else {
+            Err(anyhow!(
+                "unhandled libpython shared library filename: {}",
+                filename
+            ))
+        }
+    }
+}
+
 impl LinkablePython for LinkSharedLibraryPath {
     fn write_files(&self, _dest_dir: &Path, _target_triple: &str) -> Result<()> {
         Ok(())
@@ -727,6 +758,35 @@ mod tests {
         assert_eq!(
             PackedResourcesLoadMode::try_from("binary-relative-memory-mapped:relative").unwrap(),
             PackedResourcesLoadMode::BinaryRelativePathMemoryMapped("relative".into())
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_dynamic_library_name() -> Result<()> {
+        assert_eq!(
+            LinkSharedLibraryPath {
+                library_path: "libpython3.9.so".into(),
+            }
+            .library_name()?,
+            "python3.9"
+        );
+
+        assert_eq!(
+            LinkSharedLibraryPath {
+                library_path: "libpython3.9.dylib".into(),
+            }
+            .library_name()?,
+            "python3.9"
+        );
+
+        assert_eq!(
+            LinkSharedLibraryPath {
+                library_path: "python3.dll".into(),
+            }
+            .library_name()?,
+            "python3"
         );
 
         Ok(())
