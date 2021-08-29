@@ -445,9 +445,6 @@ pub trait PythonBinaryBuilder {
 
 /// Describes how to link a binary against Python.
 pub struct PythonLinkingInfo {
-    /// Filename of a static library containing Python.
-    pub static_libpython_filename: PathBuf,
-
     /// Contents of a static library containing Python.
     pub static_libpython_data: Vec<u8>,
 
@@ -492,7 +489,11 @@ impl<'a> EmbeddedPythonContext<'a> {
     pub fn libpython_path(&self, dest_dir: impl AsRef<Path>) -> PathBuf {
         dest_dir
             .as_ref()
-            .join(&self.linking_info.static_libpython_filename)
+            .join(if self.target_triple.contains("-windows-") {
+                "pythonXY.lib"
+            } else {
+                "libpythonXY.a"
+            })
     }
 
     /// Resolve the filesystem path to the file containing cargo: lines.

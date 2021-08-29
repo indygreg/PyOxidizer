@@ -49,9 +49,6 @@ where
 /// Represents a built libpython.
 #[derive(Debug)]
 pub struct LibpythonInfo {
-    /// Suggested filename of libpython.
-    pub libpython_filename: String,
-
     /// Raw data constituting static libpython library.
     pub libpython_data: Vec<u8>,
 
@@ -224,22 +221,18 @@ pub fn link_libpython(
     build.compile("pythonXY");
     warn!(logger, "libpythonXY created");
 
-    let libpython_filename = if windows {
+    let libpython_data = std::fs::read(libpython_dir.join(if windows {
         "pythonXY.lib"
     } else {
         "libpythonXY.a"
-    }
-    .to_string();
-
-    let libpython_data =
-        std::fs::read(libpython_dir.join(&libpython_filename)).context("reading libpython")?;
+    }))
+    .context("reading libpython")?;
 
     for path in &context.library_search_paths {
         linking_annotations.push(LinkingAnnotation::SearchNative(path.clone()));
     }
 
     Ok(LibpythonInfo {
-        libpython_filename,
         libpython_data,
         linking_annotations,
     })
