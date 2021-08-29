@@ -201,16 +201,18 @@ pub fn link_libpython(
         linking_annotations.push(LinkingAnnotation::LinkLibrary("clang_rt.osx".to_string()));
     }
 
-    warn!(logger, "compiling libpythonXY...");
-    build.compile("pythonXY");
-    warn!(logger, "libpythonXY created");
+    warn!(logger, "linking customized Python library...");
+    build.compile("python");
 
-    let libpython_data = std::fs::read(libpython_dir.join(if windows {
-        "pythonXY.lib"
-    } else {
-        "libpythonXY.a"
-    }))
-    .context("reading libpython")?;
+    let libpython_data =
+        std::fs::read(libpython_dir.join(if windows { "python.lib" } else { "libpython.a" }))
+            .context("reading libpython")?;
+
+    warn!(
+        logger,
+        "{} byte Python library created",
+        libpython_data.len()
+    );
 
     for path in &context.library_search_paths {
         linking_annotations.push(LinkingAnnotation::SearchNative(path.clone()));
