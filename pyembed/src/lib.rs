@@ -46,10 +46,6 @@ support loading DLLs from memory. We also have an optional direct dependency
 on the `jemalloc-sys`, `libmimalloc-sys`, and `snmalloc-sys` crates for custom
 memory allocators.
 
-This crate requires linking against a library providing CPython C symbols.
-(This dependency is via the `python3-sys` crate.) On Windows, this library
-must be named `pythonXY`.
-
 # Features
 
 The optional `jemalloc` feature controls support for using

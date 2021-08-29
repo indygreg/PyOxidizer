@@ -11,10 +11,17 @@ description = "Embed a Python interpreter"
 homepage = "https://github.com/indygreg/PyOxidizer"
 repository = "https://github.com/indygreg/PyOxidizer.git"
 build = "build.rs"
-# Adding this line enables DEP_* environment variables to be set in
-# dependent crates. We rely on this to allow crates embedding this one
-# to access the artifacts we build.
-links = "pythonXY"
+
+# This line is a lie. It says we are emitting build annotations that
+# we link against the specified library. However, we do no such thing! Rather
+# we rely on the presence of this line to cause cargo to set `DEP_*`
+# environment variables in dependent crates' build scripts. PyOxidizer's
+# Rust projects rely on this to pass metadata about the PyOxidizer build
+# through Cargo. Essentially, the PyOxidizer build modes (controlled via
+# cargo feature flags) cause our build script to emit metadata, which will
+# be consumed via `DEP_*` environment variables in downstream build
+# scripts. It is a bit hacky. But it gets the job done.
+links = "pyembed"
 
 [dependencies]
 # Update documentation in lib.rs when new dependencies are added.

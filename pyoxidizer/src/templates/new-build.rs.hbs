@@ -32,7 +32,7 @@ fn main() {
         embed_resource::compile("{{{ program_name }}}-manifest.rc");
     }
 
-    if let Ok(config_rs) = std::env::var("DEP_PYTHONXY_DEFAULT_PYTHON_CONFIG_RS") {
+    if let Ok(config_rs) = std::env::var("DEP_PYEMBED_DEFAULT_PYTHON_CONFIG_RS") {
         println!(
             "cargo:rustc-env=PYOXIDIZER_DEFAULT_PYTHON_CONFIG_RS={}",
             config_rs
