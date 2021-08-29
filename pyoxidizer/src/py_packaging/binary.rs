@@ -506,16 +506,24 @@ impl<'a> EmbeddedPythonContext<'a> {
     /// These should be printed from a build script. The printed lines enable
     /// linking with our libpython.
     pub fn cargo_metadata_lines(&self, dest_dir: impl AsRef<Path>) -> Vec<String> {
-        let mut lines = self
-            .linking_info
-            .linking_annotations
-            .iter()
-            .map(|la| la.to_cargo_annotation())
-            .collect::<Vec<_>>();
+        let mut lines = vec![];
 
-        // Tell Cargo where libpythonXY is located.
-        lines.push(
-            LinkingAnnotation::SearchNative(dest_dir.as_ref().to_path_buf()).to_cargo_annotation(),
+        // Tell Cargo to link our static libpython and where that library is.
+        if self.linking_info.libpython_filename.is_none() {
+            lines.push(
+                LinkingAnnotation::LinkLibraryStatic("pythonXY".to_string()).to_cargo_annotation(),
+            );
+            lines.push(
+                LinkingAnnotation::SearchNative(dest_dir.as_ref().to_path_buf())
+                    .to_cargo_annotation(),
+            );
+        }
+
+        lines.extend(
+            self.linking_info
+                .linking_annotations
+                .iter()
+                .map(|la| la.to_cargo_annotation()),
         );
 
         // Give dependent crates the path to the default config file.

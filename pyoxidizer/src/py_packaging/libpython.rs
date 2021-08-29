@@ -234,8 +234,6 @@ pub fn link_libpython(
     let libpython_data =
         std::fs::read(libpython_dir.join(&libpython_filename)).context("reading libpython")?;
 
-    linking_annotations.push(LinkingAnnotation::LinkLibraryStatic("pythonXY".to_string()));
-
     for path in &context.library_search_paths {
         linking_annotations.push(LinkingAnnotation::SearchNative(path.clone()));
     }
