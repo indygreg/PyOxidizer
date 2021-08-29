@@ -514,10 +514,9 @@ impl<'a> EmbeddedPythonContext<'a> {
             .collect::<Vec<_>>();
 
         // Tell Cargo where libpythonXY is located.
-        lines.push(format!(
-            "cargo:rustc-link-search=native={}",
-            dest_dir.as_ref().display()
-        ));
+        lines.push(
+            LinkingAnnotation::SearchNative(dest_dir.as_ref().to_path_buf()).to_cargo_annotation(),
+        );
 
         // Give dependent crates the path to the default config file.
         lines.push(format!(
