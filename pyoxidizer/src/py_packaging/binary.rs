@@ -480,6 +480,27 @@ pub struct EmbeddedPythonContext<'a> {
 }
 
 impl<'a> EmbeddedPythonContext<'a> {
+    /// Name of the static library containing Python.
+    ///
+    /// python3-sys uses `#[link(name="pythonXY")]` attributes heavily on Windows. Its
+    /// build.rs then remaps ``pythonXY`` to e.g. ``python37``. This causes Cargo to
+    /// link against ``python37.lib`` (or ``pythonXY.lib`` if the
+    /// ``rustc-link-lib=pythonXY:python{}{}`` line is missing, which is the case
+    /// in our invocation).
+    ///
+    /// We don't want the "real" libpython being linked. And this is a very real
+    /// possibility since the path to it could be in an environment variable
+    /// outside of our control!
+    ///
+    /// In addition, we can't naively remap ``pythonXY`` ourselves without adding
+    /// a ``#[link]`` to the crate.
+    ///
+    /// Our current workaround is to produce a ``pythonXY.lib`` file. This satisfies
+    /// the requirement of ``python3-sys`` that a ``pythonXY.lib`` file exists.
+    pub fn static_library_name(&self) -> &'static str {
+        "pythonXY"
+    }
+
     /// Obtain the filesystem of the generated Rust source file containing the interpreter configuration.
     pub fn interpreter_config_rs_path(&self, dest_dir: impl AsRef<Path>) -> PathBuf {
         dest_dir.as_ref().join("default_python_config.rs")
@@ -490,9 +511,9 @@ impl<'a> EmbeddedPythonContext<'a> {
         dest_dir
             .as_ref()
             .join(if self.target_triple.contains("-windows-") {
-                "pythonXY.lib"
+                format!("{}.lib", self.static_library_name())
             } else {
-                "libpythonXY.a"
+                format!("lib{}.a", self.static_library_name())
             })
     }
 
@@ -513,7 +534,8 @@ impl<'a> EmbeddedPythonContext<'a> {
         // Tell Cargo to link our static libpython and where that library is.
         if self.linking_info.dynamic_libpython_path.is_none() {
             lines.push(
-                LinkingAnnotation::LinkLibraryStatic("pythonXY".to_string()).to_cargo_annotation(),
+                LinkingAnnotation::LinkLibraryStatic(self.static_library_name().to_string())
+                    .to_cargo_annotation(),
             );
             lines.push(
                 LinkingAnnotation::SearchNative(dest_dir.as_ref().to_path_buf())

@@ -201,22 +201,6 @@ pub fn link_libpython(
         linking_annotations.push(LinkingAnnotation::LinkLibrary("clang_rt.osx".to_string()));
     }
 
-    // python3-sys uses #[link(name="pythonXY")] attributes heavily on Windows. Its
-    // build.rs then remaps ``pythonXY`` to e.g. ``python37``. This causes Cargo to
-    // link against ``python37.lib`` (or ``pythonXY.lib`` if the
-    // ``rustc-link-lib=pythonXY:python{}{}`` line is missing, which is the case
-    // in our invocation).
-    //
-    // We don't want the "real" libpython being linked. And this is a very real
-    // possibility since the path to it could be in an environment variable
-    // outside of our control!
-    //
-    // In addition, we can't naively remap ``pythonXY`` ourselves without adding
-    // a ``#[link]`` to the crate.
-    //
-    // Our current workaround is to produce a ``pythonXY.lib`` file. This satisfies
-    // the requirement of ``python3-sys`` that a ``pythonXY.lib`` file exists.
-
     warn!(logger, "compiling libpythonXY...");
     build.compile("pythonXY");
     warn!(logger, "libpythonXY created");
