@@ -312,11 +312,6 @@ impl StandalonePythonExecutableBuilder {
 
         match self.link_mode {
             LibpythonLinkMode::Static => {
-                let temp_dir = tempfile::Builder::new()
-                    .prefix("pyoxidizer-build-exe-packaging")
-                    .tempdir()?;
-                let temp_dir_path = temp_dir.path();
-
                 warn!(
                     logger,
                     "generating custom link library containing Python..."
@@ -331,7 +326,6 @@ impl StandalonePythonExecutableBuilder {
                     logger,
                     env,
                     &LibPythonBuildContext::merge(&link_contexts),
-                    &temp_dir_path,
                     &self.host_triple,
                     &self.target_triple,
                     opt_level,

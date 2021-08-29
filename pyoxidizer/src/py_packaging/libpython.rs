@@ -11,11 +11,7 @@ use {
     anyhow::{anyhow, Context, Result},
     python_packaging::libpython::LibPythonBuildContext,
     slog::warn,
-    std::{
-        fs,
-        fs::create_dir_all,
-        path::{Path, PathBuf},
-    },
+    std::{fs, fs::create_dir_all, path::PathBuf},
     tugger_file_manifest::FileData,
 };
 
@@ -70,23 +66,25 @@ pub fn link_libpython(
     logger: &slog::Logger,
     env: &Environment,
     context: &LibPythonBuildContext,
-    out_dir: &Path,
     host_triple: &str,
     target_triple: &str,
     opt_level: &str,
     apple_sdk_info: Option<&AppleSdkInfo>,
 ) -> Result<LibpythonInfo> {
+    let temp_dir = tempfile::Builder::new()
+        .prefix("pyoxidizer-libpython-")
+        .tempdir()
+        .context("creating temp directory")?;
+
+    let config_c_dir = temp_dir.path().join("config_c");
+    std::fs::create_dir(&config_c_dir).context("creating config_c subdirectory")?;
+
+    let libpython_dir = temp_dir.path().join("libpython");
+    std::fs::create_dir(&libpython_dir).context("creating libpython subdirectory")?;
+
     let mut cargo_metadata: Vec<String> = Vec::new();
 
-    let temp_dir = tempfile::Builder::new().prefix("libpython").tempdir()?;
-    let temp_dir_path = temp_dir.path();
-
     let windows = crate::environment::WINDOWS_TARGET_TRIPLES.contains(&target_triple);
-
-    // Sometimes we have canonicalized paths. These can break cc/cl.exe when they
-    // are \\?\ paths on Windows for some reason. We hack around this by doing
-    // operations in the temp directory and copying files to their final resting
-    // place.
 
     // We derive a custom Modules/config.c from the set of extension modules.
     // We need to do this because config.c defines the built-in extensions and
@@ -98,15 +96,13 @@ pub fn link_libpython(
         context.init_functions.len()
     );
     let config_c_source = make_config_c(&context.init_functions.iter().collect::<Vec<_>>());
-    let config_c_path = out_dir.join("config.c");
-    let config_c_temp_path = temp_dir_path.join("config.c");
+    let config_c_path = config_c_dir.join("config.c");
 
     fs::write(&config_c_path, config_c_source.as_bytes())?;
-    fs::write(&config_c_temp_path, config_c_source.as_bytes())?;
 
     // Gather all includes into the temporary directory.
     for (rel_path, location) in &context.includes {
-        let full = temp_dir_path.join(rel_path);
+        let full = config_c_dir.join(rel_path);
         create_dir_all(
             full.parent()
                 .ok_or_else(|| anyhow!("unable to resolve parent directory"))?,
@@ -142,12 +138,12 @@ pub fn link_libpython(
     }
 
     build
-        .out_dir(out_dir)
+        .out_dir(&config_c_dir)
         .host(host_triple)
         .target(target_triple)
         .opt_level_str(opt_level)
-        .file(config_c_temp_path)
-        .include(temp_dir_path)
+        .file(&config_c_path)
+        .include(&config_c_dir)
         .cargo_metadata(false)
         .compile("pyembeddedconfig");
 
@@ -158,7 +154,7 @@ pub fn link_libpython(
     }
     .to_string();
 
-    let libpyembeddedconfig_data = std::fs::read(out_dir.join(&libpyembeddedconfig_filename))
+    let libpyembeddedconfig_data = std::fs::read(config_c_dir.join(&libpyembeddedconfig_filename))
         .context("reading libpyembeddedconfig")?;
 
     // Since we disabled cargo metadata lines above.
@@ -166,7 +162,7 @@ pub fn link_libpython(
 
     warn!(logger, "resolving inputs for custom Python library...");
     let mut build = cc::Build::new();
-    build.out_dir(out_dir);
+    build.out_dir(&libpython_dir);
     build.host(host_triple);
     build.target(target_triple);
     build.opt_level_str(opt_level);
@@ -176,7 +172,7 @@ pub fn link_libpython(
     for (i, location) in context.object_files.iter().enumerate() {
         match location {
             FileData::Memory(data) => {
-                let out_path = temp_dir_path.join(format!("libpython.{}.o", i));
+                let out_path = libpython_dir.join(format!("libpython.{}.o", i));
                 fs::write(&out_path, data)?;
                 build.object(&out_path);
             }
@@ -244,7 +240,7 @@ pub fn link_libpython(
     .to_string();
 
     let libpython_data =
-        std::fs::read(out_dir.join(&libpython_filename)).context("reading libpython")?;
+        std::fs::read(libpython_dir.join(&libpython_filename)).context("reading libpython")?;
 
     cargo_metadata.push("cargo:rustc-link-lib=static=pythonXY".to_string());
 
