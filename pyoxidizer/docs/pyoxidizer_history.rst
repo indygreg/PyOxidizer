@@ -39,6 +39,15 @@ Bug Fixes
   has been replaced to automatically assume the use of ``MACOSX_DEPLOYMENT_TARGET``.
   A warning message that this will possibly lead to build failures is printed. (#414)
 
+Other Relevant Changes
+^^^^^^^^^^^^^^^^^^^^^^
+
+* When Apple SDKs are found via the ``SDKROOT`` environment variables, a hard
+  error now occurs if that SDK does not support the target platform or deployment
+  target. Previously, we would allow the use of the SDK, only to likely encounter
+  a hard-to-debug compile error. If the SDKs version does not meet the desired
+  minimum version, a warning message is printed but the build proceeds. (#431)
+
 .. _version_0_17_0:
 
 0.17.0

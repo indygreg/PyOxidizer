@@ -438,9 +438,54 @@ impl Environment {
         let sdk = if let Ok(sdk_root) = std::env::var("SDKROOT") {
             warn!(logger, "SDKROOT defined; using Apple SDK at {}", &sdk_root);
 
-            AppleSdk::from_directory(&PathBuf::from(&sdk_root)).with_context(|| {
+            let sdk = AppleSdk::from_directory(&PathBuf::from(&sdk_root)).with_context(|| {
                 format!("resolving Apple SDK at {} as defined by SDKROOT", sdk_root)
-            })?
+            })?;
+
+            // The environment variable may force the use of an SDK that otherwise
+            // wouldn't be allowed by our platform, minimum version, or deployment
+            // target criteria.
+            //
+            // This is a hard failure when the platform or deployment target isn't
+            // compatible because this would just lead to compile errors.
+            //
+            // Failure to meet minimum version requirements is a soft warning because
+            // sometimes things will work. e.g. you may get lucky being able to compile
+            // with a 11.2 SDK even if an 11.3 SDK is wanted.
+
+            if let Some(support_targets) = sdk.supported_targets.get(platform) {
+                if !support_targets
+                    .valid_deployment_targets
+                    .contains(deployment_target)
+                {
+                    return Err(anyhow!(
+                        "SDKROOT defined SDK does not support deployment target {} (supported: {}); refusing to proceed. (Try setting SDKROOT to an older or newer SDK depending on the failure or unset to use automatic SDK discovery.)",
+                        deployment_target,
+                        support_targets.valid_deployment_targets.join(", ")
+                    ));
+                }
+            } else {
+                return Err(anyhow!(
+                    "SDKROOT defined SDK does not support target platform {}; refusing to proceed. (Set SDKROOT to the appropriate Apple platform SDK or unset to use automatic SDK discovery.)",
+                    platform
+                ));
+            }
+
+            let minimum_semver = Version::parse(&format!("{}.0", minimum_version))?;
+
+            if sdk
+                .version_as_semver()
+                .context("resolving Apple SDK version")?
+                < minimum_semver
+            {
+                warn!(
+                    logger,
+                    "WARNING: SDKROOT defined Apple SDK does not meet minimum version requirement of {}; build errors or unexpected behavior may occur",
+                    minimum_version
+                );
+            }
+
+            sdk
         } else {
             warn!(
                 logger,
