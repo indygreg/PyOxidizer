@@ -160,9 +160,11 @@ impl BuildEnvironment {
 
             let deployment_target_name = sdk.supported_targets.get(&sdk_info.platform).ok_or_else(|| {
                 anyhow!("could not find settings for target {} (this shouldn't happen)", &sdk_info.platform)
-            })?.deployment_target_setting_name.as_ref().ok_or_else(|| {
-                anyhow!("unable to identify deployment target environment variable for {} (please report this bug)", &sdk_info.platform)
-            })?;
+            })?.deployment_target_setting_name.clone().unwrap_or_else(|| {
+                warn!(logger, "Apple SDK does not define deployment target name; assuming MACOSX_DEPLOYMENT_TARGET");
+                warn!(logger, "(If you see this message, the SDK you are attempting to use may be too old and build failures may occur.)");
+                "MACOSX_DEPLOYMENT_TARGET".to_string()
+            });
 
             // SDKROOT will instruct rustc and potentially other tools to use exactly this SDK.
             envs.insert("SDKROOT".to_string(), sdk.path.display().to_string());
@@ -170,11 +172,8 @@ impl BuildEnvironment {
             // This (e.g. MACOSX_DEPLOYMENT_TARGET) will instruct compilers to target a specific
             // minimum version of the target platform. We respect an explicit value if one
             // is given.
-            if envs.get(deployment_target_name).is_none() {
-                envs.insert(
-                    deployment_target_name.to_string(),
-                    sdk_info.deployment_target.clone(),
-                );
+            if envs.get(&deployment_target_name).is_none() {
+                envs.insert(deployment_target_name, sdk_info.deployment_target.clone());
             }
         }
 
