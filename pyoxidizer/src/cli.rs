@@ -503,7 +503,7 @@ pub fn run_cli() -> Result<()> {
             let path = args.value_of("path").unwrap();
             let config_path = Path::new(path);
 
-            projectmgmt::init_config_file(&env.pyoxidizer_source, &config_path, code, &pip_install)
+            projectmgmt::init_config_file(&env.pyoxidizer_source, config_path, code, &pip_install)
         }
 
         ("list-targets", Some(args)) => {
@@ -516,7 +516,7 @@ pub fn run_cli() -> Result<()> {
             let path = args.value_of("path").unwrap();
             let project_path = Path::new(path);
 
-            projectmgmt::init_rust_project(&env, &logger_context.logger, &project_path)
+            projectmgmt::init_rust_project(&env, &logger_context.logger, project_path)
         }
 
         ("python-distribution-extract", Some(args)) => {

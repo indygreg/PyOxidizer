@@ -437,7 +437,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
     }
 
     fn target_python_exe_path(&self) -> &Path {
-        &self.target_distribution.python_exe_path()
+        self.target_distribution.python_exe_path()
     }
 
     fn apple_sdk_info(&self) -> Option<&AppleSdkInfo> {
@@ -680,7 +680,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         {
             let mut add_context = self
                 .packaging_policy
-                .derive_add_collection_context(&resource);
+                .derive_add_collection_context(resource);
 
             if let Some(callback) = &callback {
                 callback(&self.packaging_policy, resource, &mut add_context)?;
@@ -1181,7 +1181,7 @@ pub mod tests {
                 object_files: extension.object_file_data.clone(),
                 init_functions: [(
                     extension.name.to_string(),
-                    extension.init_fn.as_ref().clone().unwrap().to_string()
+                    extension.init_fn.as_ref().unwrap().to_string()
                 )]
                 .iter()
                 .cloned()

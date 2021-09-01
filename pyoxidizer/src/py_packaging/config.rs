@@ -101,7 +101,7 @@ impl ToString for PyembedPackedResourcesSource {
             Self::MemoryMappedPath(path) => {
                 format!(
                     "pyembed::PackedResourcesSource::MemoryMappedPath({})",
-                    path_to_string(&path)
+                    path_to_string(path)
                 )
             }
         }

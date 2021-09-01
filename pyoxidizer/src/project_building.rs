@@ -70,7 +70,7 @@ pub fn find_pyoxidizer_config_file_env(logger: &slog::Logger, start_dir: &Path) 
 
     if let Ok(path) = std::env::var("OUT_DIR") {
         warn!(logger, "looking for config file in ancestry of {}", path);
-        let res = find_pyoxidizer_config_file(&Path::new(&path));
+        let res = find_pyoxidizer_config_file(Path::new(&path));
         if res.is_some() {
             return res;
         }
@@ -267,7 +267,7 @@ pub fn build_executable_with_rust_project<'a>(
         .to_embedded_python_context(logger, env, opt_level)
         .context("obtaining embedded python context")?;
     embedded_data
-        .write_files(&artifacts_path)
+        .write_files(artifacts_path)
         .context("writing embedded python context files")?;
 
     let build_env = BuildEnvironment::new(
@@ -314,9 +314,9 @@ pub fn build_executable_with_rust_project<'a>(
 
     // If we have a real libpython, let cpython crate link against it. Otherwise
     // leave symbols unresolved, as we'll provide them.
-    features.push(match &embedded_data.link_settings {
-        &LibpythonLinkSettings::StaticData(_) => "cpython-link-unresolved-static",
-        &LibpythonLinkSettings::ExistingDynamic(_) => "cpython-link-default",
+    features.push(match embedded_data.link_settings {
+        LibpythonLinkSettings::StaticData(_) => "cpython-link-unresolved-static",
+        LibpythonLinkSettings::ExistingDynamic(_) => "cpython-link-default",
     });
 
     if exe.requires_jemalloc() {

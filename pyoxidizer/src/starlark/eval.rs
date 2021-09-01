@@ -254,7 +254,7 @@ impl EvaluationContext {
         let file_loader_env = self.child_env.clone();
 
         starlark::eval::simple::eval(
-            &map,
+            map,
             path,
             code,
             Dialect::Bzl,

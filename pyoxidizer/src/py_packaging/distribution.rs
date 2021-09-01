@@ -358,7 +358,7 @@ pub fn copy_local_distribution(path: &Path, sha256: &str, cache_dir: &Path) -> R
         }
     }
 
-    let source_hash = sha256_path(&path);
+    let source_hash = sha256_path(path);
 
     if source_hash != expected_hash {
         return Err(anyhow!("sha256 of Python distribution does not validate"));
@@ -549,7 +549,7 @@ impl DistributionCache {
             Ok(dist.clone())
         } else {
             let dist = Arc::new(StandaloneDistribution::from_location(
-                logger, location, &dest_dir,
+                logger, location, dest_dir,
             )?);
 
             lock.replace(dist.clone());
@@ -569,7 +569,7 @@ pub fn resolve_distribution(
     dest_dir: &Path,
 ) -> Result<Box<dyn PythonDistribution>> {
     Ok(Box::new(StandaloneDistribution::from_location(
-        logger, &location, dest_dir,
+        logger, location, dest_dir,
     )?) as Box<dyn PythonDistribution>)
 }
 

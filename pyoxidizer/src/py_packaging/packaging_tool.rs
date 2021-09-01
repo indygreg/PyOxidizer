@@ -45,7 +45,7 @@ pub fn find_resources<'a>(
     };
 
     for r in find_python_resources(
-        &path,
+        path,
         dist.cache_tag(),
         &dist.python_module_suffixes()?,
         policy.file_scanner_emit_files(),
@@ -294,7 +294,7 @@ pub fn setup_py_install<'a, S: BuildHasher>(
 
     let mut envs: HashMap<String, String, RandomState> = std::env::vars().collect();
     for (k, v) in dist.resolve_distutils(
-        &logger,
+        logger,
         libpython_link_mode,
         temp_dir.path(),
         &[&python_paths.site_packages, &python_paths.stdlib],

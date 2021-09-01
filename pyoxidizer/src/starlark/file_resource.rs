@@ -228,12 +228,12 @@ pub fn file_manifest_add_python_resources(
 starlark_module! { file_resource_env =>
     FileManifest.add_python_resource(env env, this, prefix: String, resource) {
         let mut this = this.downcast_mut::<FileManifestValue>().unwrap().unwrap();
-        file_manifest_add_python_resource(&mut this, &env, prefix, &resource)
+        file_manifest_add_python_resource(&mut this, env, prefix, &resource)
     }
 
     FileManifest.add_python_resources(env env, this, prefix: String, resources) {
         let mut this = this.downcast_mut::<FileManifestValue>().unwrap().unwrap();
-        file_manifest_add_python_resources(&mut this, &env, prefix, &resources)
+        file_manifest_add_python_resources(&mut this, env, prefix, &resources)
     }
 }
 

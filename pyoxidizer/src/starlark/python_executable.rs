@@ -345,7 +345,7 @@ impl PythonExecutableValue {
     ) -> ValueResult {
         const LABEL: &str = "PythonExecutable.pip_download()";
 
-        required_list_arg("args", "string", &args)?;
+        required_list_arg("args", "string", args)?;
 
         let args: Vec<String> = args.iter()?.iter().map(|x| x.to_string()).collect();
 
@@ -393,8 +393,8 @@ impl PythonExecutableValue {
     ) -> ValueResult {
         const LABEL: &str = "PythonExecutable.pip_install()";
 
-        required_list_arg("args", "string", &args)?;
-        optional_dict_arg("extra_envs", "string", "string", &extra_envs)?;
+        required_list_arg("args", "string", args)?;
+        optional_dict_arg("extra_envs", "string", "string", extra_envs)?;
 
         let args: Vec<String> = args.iter()?.iter().map(|x| x.to_string()).collect();
 
@@ -457,7 +457,7 @@ impl PythonExecutableValue {
     ) -> ValueResult {
         const LABEL: &str = "PythonExecutable.read_package_root()";
 
-        required_list_arg("packages", "string", &packages)?;
+        required_list_arg("packages", "string", packages)?;
 
         let packages = packages
             .iter()?
@@ -514,7 +514,7 @@ impl PythonExecutableValue {
         let mut exe = self.inner(LABEL)?;
 
         let resources = error_context(LABEL, || {
-            exe.read_virtualenv(pyoxidizer_context.logger(), &Path::new(&path))
+            exe.read_virtualenv(pyoxidizer_context.logger(), Path::new(&path))
         })?;
 
         let resources = resources
@@ -545,8 +545,8 @@ impl PythonExecutableValue {
     ) -> ValueResult {
         const LABEL: &str = "PythonExecutable.setup_py_install()";
 
-        optional_dict_arg("extra_envs", "string", "string", &extra_envs)?;
-        optional_list_arg("extra_global_arguments", "string", &extra_global_arguments)?;
+        optional_dict_arg("extra_envs", "string", "string", extra_envs)?;
+        optional_list_arg("extra_global_arguments", "string", extra_global_arguments)?;
 
         let extra_envs = match extra_envs.get_type() {
             "dict" => extra_envs
@@ -962,8 +962,8 @@ impl PythonExecutableValue {
     ) -> ValueResult {
         const LABEL: &str = "PythonExecutable.filter_resources_from_files()";
 
-        optional_list_arg("files", "string", &files)?;
-        optional_list_arg("glob_files", "string", &glob_files)?;
+        optional_list_arg("files", "string", files)?;
+        optional_list_arg("glob_files", "string", glob_files)?;
 
         let files = match files.get_type() {
             "list" => files
@@ -1018,7 +1018,7 @@ starlark_module! { python_executable_env =>
         is_package: bool = false
     ) {
         let this = this.downcast_ref::<PythonExecutableValue>().unwrap();
-        this.make_python_module_source(&env, cs, name, source, is_package)
+        this.make_python_module_source(env, cs, name, source, is_package)
     }
 
     PythonExecutable.pip_download(
@@ -1028,7 +1028,7 @@ starlark_module! { python_executable_env =>
         args
     ) {
         let mut this = this.downcast_mut::<PythonExecutableValue>().unwrap().unwrap();
-        this.pip_download(&env, cs, &args)
+        this.pip_download(env, cs, &args)
     }
 
     PythonExecutable.pip_install(
@@ -1039,7 +1039,7 @@ starlark_module! { python_executable_env =>
         extra_envs=NoneType::None
     ) {
         let mut this = this.downcast_mut::<PythonExecutableValue>().unwrap().unwrap();
-        this.pip_install(&env, cs, &args, &extra_envs)
+        this.pip_install(env, cs, &args, &extra_envs)
     }
 
     PythonExecutable.read_package_root(
@@ -1050,7 +1050,7 @@ starlark_module! { python_executable_env =>
         packages
     ) {
         let mut this = this.downcast_mut::<PythonExecutableValue>().unwrap().unwrap();
-        this.read_package_root(&env, cs, path, &packages)
+        this.read_package_root(env, cs, path, &packages)
     }
 
     PythonExecutable.read_virtualenv(
@@ -1060,7 +1060,7 @@ starlark_module! { python_executable_env =>
         path: String
     ) {
         let mut this = this.downcast_mut::<PythonExecutableValue>().unwrap().unwrap();
-        this.read_virtualenv(&env, cs, path)
+        this.read_virtualenv(env, cs, path)
     }
 
     PythonExecutable.setup_py_install(
@@ -1072,7 +1072,7 @@ starlark_module! { python_executable_env =>
         extra_global_arguments=NoneType::None
     ) {
         let mut this = this.downcast_mut::<PythonExecutableValue>().unwrap().unwrap();
-        this.setup_py_install(&env, cs, package_path, &extra_envs, &extra_global_arguments)
+        this.setup_py_install(env, cs, package_path, &extra_envs, &extra_global_arguments)
     }
 
     PythonExecutable.add_python_resource(
@@ -1082,7 +1082,7 @@ starlark_module! { python_executable_env =>
     ) {
         let mut this = this.downcast_mut::<PythonExecutableValue>().unwrap().unwrap();
         this.add_python_resource(
-            &env,
+            env,
             &resource,
             "add_python_resource",
         )
@@ -1095,7 +1095,7 @@ starlark_module! { python_executable_env =>
     ) {
         let mut this = this.downcast_mut::<PythonExecutableValue>().unwrap().unwrap();
         this.add_python_resources(
-            &env,
+            env,
             &resources,
         )
     }
@@ -1107,7 +1107,7 @@ starlark_module! { python_executable_env =>
         glob_files=NoneType::None)
     {
         let mut this = this.downcast_mut::<PythonExecutableValue>().unwrap().unwrap();
-        this.filter_resources_from_files(&env, &files, &glob_files)
+        this.filter_resources_from_files(env, &files, &glob_files)
     }
 
     PythonExecutable.to_embedded_resources(this) {
@@ -1117,7 +1117,7 @@ starlark_module! { python_executable_env =>
 
     PythonExecutable.to_file_manifest(env env, this, prefix: String) {
         let this = this.downcast_ref::<PythonExecutableValue>().unwrap();
-        this.to_file_manifest(&env, prefix)
+        this.to_file_manifest(env, prefix)
     }
 
     PythonExecutable.to_wix_bundle_builder(
@@ -1231,14 +1231,12 @@ mod tests {
         assert_eq!(m.get_type(), PythonModuleSourceValue::TYPE);
         assert_eq!(m.get_attr("name").unwrap().to_str(), "foo");
         assert_eq!(m.get_attr("source").unwrap().to_str(), "import bar");
-        assert_eq!(m.get_attr("is_package").unwrap().to_bool(), false);
-        assert_eq!(m.get_attr("add_source").unwrap().to_bool(), true);
-        assert_eq!(
-            m.get_attr("add_bytecode_optimization_level_two")
-                .unwrap()
-                .to_bool(),
-            true
-        );
+        assert!(!m.get_attr("is_package").unwrap().to_bool());
+        assert!(m.get_attr("add_source").unwrap().to_bool());
+        assert!(m
+            .get_attr("add_bytecode_optimization_level_two")
+            .unwrap()
+            .to_bool(),);
 
         Ok(())
     }

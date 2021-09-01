@@ -139,7 +139,7 @@ fn populate_template_data(source: &PyOxidizerSource, data: &mut TemplateData) {
 pub fn find_pyoxidizer_files(root: &Path) -> Vec<PathBuf> {
     let mut res: Vec<PathBuf> = Vec::new();
 
-    for f in walk_tree_files(&root) {
+    for f in walk_tree_files(root) {
         let path = f.path().strip_prefix(root).expect("unable to strip prefix");
         let path_s = path.to_str().expect("unable to convert path to str");
 
@@ -257,7 +257,7 @@ pub fn write_new_cargo_lock(
     // cargo_lock isn't smart enough to sort the packages. So do that here.
     lock_file
         .packages
-        .sort_by(|a, b| a.name.as_str().cmp(&b.name.as_str()));
+        .sort_by(|a, b| a.name.as_str().cmp(b.name.as_str()));
 
     let lock_path = project_path.join("Cargo.lock");
     println!("writing {}", lock_path.display());
@@ -365,7 +365,7 @@ pub fn write_application_manifest(project_dir: &Path, program_name: &str) -> Res
 /// The Rust source files added to the target project are installed into
 /// a sub-directory defined by ``module_name``.
 pub fn add_pyoxidizer(project_dir: &Path, _suppress_help: bool) -> Result<()> {
-    let existing_files = find_pyoxidizer_files(&project_dir);
+    let existing_files = find_pyoxidizer_files(project_dir);
 
     if !existing_files.is_empty() {
         return Err(anyhow!("existing PyOxidizer files found; cannot add"));
@@ -492,9 +492,9 @@ pub fn initialize_project(
     write_new_build_rs(&path.join("build.rs"), name).context("writing build.rs")?;
     write_new_main_rs(&path.join("src").join("main.rs"), windows_subsystem)
         .context("writing main.rs")?;
-    write_new_pyoxidizer_config_file(source, &path, &name, code, pip_install)
+    write_new_pyoxidizer_config_file(source, &path, name, code, pip_install)
         .context("writing PyOxidizer config file")?;
-    write_application_manifest(&path, &name).context("writing application manifest")?;
+    write_application_manifest(&path, name).context("writing application manifest")?;
 
     Ok(())
 }

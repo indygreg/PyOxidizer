@@ -525,7 +525,7 @@ impl StandaloneDistribution {
         let reader = BufReader::new(fh);
         warn!(logger, "reading data from Python distribution...");
 
-        Self::from_tar_zst(reader, &extract_dir)
+        Self::from_tar_zst(reader, extract_dir)
     }
 
     /// Extract and analyze a standalone distribution from a zstd compressed tar stream.
@@ -1041,7 +1041,7 @@ impl StandaloneDistribution {
 
         let python_paths = resolve_python_paths(&venv_base, &self.version);
 
-        invoke_python(&python_paths, &logger, &["-m", "ensurepip"]);
+        invoke_python(&python_paths, logger, &["-m", "ensurepip"]);
 
         prepare_hacked_distutils(logger, &self.stdlib_path.join("distutils"), &venv_base, &[])
             .unwrap();
@@ -1055,16 +1055,16 @@ impl StandaloneDistribution {
         let venv_dir_s = path.display().to_string();
 
         // This will recreate it, if it was deleted
-        let python_paths = self.create_hacked_base(&logger);
+        let python_paths = self.create_hacked_base(logger);
 
         if path.exists() {
             warn!(logger, "re-using {} {}", "venv", venv_dir_s);
         } else {
             warn!(logger, "creating {} {}", "venv", venv_dir_s);
-            invoke_python(&python_paths, &logger, &["-m", "venv", venv_dir_s.as_str()]);
+            invoke_python(&python_paths, logger, &["-m", "venv", venv_dir_s.as_str()]);
         }
 
-        resolve_python_paths(&path, &self.version)
+        resolve_python_paths(path, &self.version)
     }
 
     /// Create or re-use an existing venv
@@ -1074,7 +1074,7 @@ impl StandaloneDistribution {
         logger: &slog::Logger,
         venv_dir_path: &Path,
     ) -> Result<(PythonPaths, HashMap<String, String>)> {
-        let python_paths = self.create_venv(logger, &venv_dir_path);
+        let python_paths = self.create_venv(logger, venv_dir_path);
 
         let mut extra_envs = HashMap::new();
 
@@ -1339,7 +1339,7 @@ impl PythonDistribution for StandaloneDistribution {
             PythonResource::from(PythonModuleSource {
                 name: name.clone(),
                 source: FileData::Path(path.clone()),
-                is_package: is_package_from_path(&path),
+                is_package: is_package_from_path(path),
                 cache_tag: self.cache_tag.clone(),
                 is_stdlib: true,
                 is_test: self.is_stdlib_test_package(name),
@@ -1356,7 +1356,7 @@ impl PythonDistribution for StandaloneDistribution {
                         relative_name: name.clone(),
                         data: FileData::Path(path.clone()),
                         is_stdlib: true,
-                        is_test: self.is_stdlib_test_package(&package),
+                        is_test: self.is_stdlib_test_package(package),
                     })
                 })
             })
@@ -1377,7 +1377,7 @@ impl PythonDistribution for StandaloneDistribution {
 
         if !pip_path.exists() {
             warn!(logger, "{} doesnt exist", pip_path.display().to_string());
-            invoke_python(&python_paths, &logger, &["-m", "ensurepip"]);
+            invoke_python(&python_paths, logger, &["-m", "ensurepip"]);
         }
 
         Ok(pip_path)

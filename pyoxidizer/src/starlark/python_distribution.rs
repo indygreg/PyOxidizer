@@ -117,7 +117,7 @@ impl PythonDistributionValue {
         python_version: &Value,
     ) -> ValueResult {
         let build_target = optional_str_arg("build_target", build_target)?;
-        let python_version = optional_str_arg("python_version", &python_version)?;
+        let python_version = optional_str_arg("python_version", python_version)?;
 
         let pyoxidizer_context_value = get_context(type_values)?;
         let pyoxidizer_context = pyoxidizer_context_value
@@ -241,9 +241,9 @@ impl PythonDistributionValue {
         optional_type_arg(
             "packaging_policy",
             "PythonPackagingPolicy",
-            &packaging_policy,
+            packaging_policy,
         )?;
-        optional_type_arg("config", "PythonInterpreterConfig", &config)?;
+        optional_type_arg("config", "PythonInterpreterConfig", config)?;
 
         let dist = self.resolve_distribution(type_values, "resolve_distribution()")?;
 
@@ -365,7 +365,7 @@ impl PythonDistributionValue {
                 // callbacks are automatically called.
 
                 let value =
-                    python_resource_to_value(LABEL, &type_values, &mut cs, resource, &policy)
+                    python_resource_to_value(LABEL, type_values, &mut cs, resource, &policy)
                         .map_err(|e| {
                             anyhow!("error converting PythonResource to Value: {:?}", e)
                         })?;
@@ -430,17 +430,17 @@ starlark_module! { python_distribution_module =>
 
     PythonDistribution.make_python_packaging_policy(env env, this) {
         let mut this = this.downcast_mut::<PythonDistributionValue>().unwrap().unwrap();
-        this.make_python_packaging_policy_starlark(&env)
+        this.make_python_packaging_policy_starlark(env)
     }
 
     PythonDistribution.make_python_interpreter_config(env env, this) {
         let mut this = this.downcast_mut::<PythonDistributionValue>().unwrap().unwrap();
-        this.make_python_interpreter_config_starlark(&env)
+        this.make_python_interpreter_config_starlark(env)
     }
 
     PythonDistribution.python_resources(env env, call_stack cs, this) {
         let mut this = this.downcast_mut::<PythonDistributionValue>().unwrap().unwrap();
-        this.python_resources_starlark(&env, cs)
+        this.python_resources_starlark(env, cs)
     }
 
     PythonDistribution.to_python_executable(
@@ -453,7 +453,7 @@ starlark_module! { python_distribution_module =>
     ) {
         let mut this = this.downcast_mut::<PythonDistributionValue>().unwrap().unwrap();
         this.to_python_executable_starlark(
-            &env,
+            env,
             cs,
             name,
             &packaging_policy,
@@ -467,7 +467,7 @@ starlark_module! { python_distribution_module =>
         build_target=NoneType::None,
         python_version=NoneType::None
     ) {
-        PythonDistributionValue::default_python_distribution(&env, flavor, &build_target, &python_version)
+        PythonDistributionValue::default_python_distribution(env, flavor, &build_target, &python_version)
     }
 }
 
