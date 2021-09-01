@@ -104,7 +104,7 @@ fn starlark_glob(
 
 starlark_module! { file_resource_module =>
     glob(env env, include, exclude=NoneType::None, strip_prefix=NoneType::None) {
-        starlark_glob(&env, &include, &exclude, &strip_prefix)
+        starlark_glob(env, &include, &exclude, &strip_prefix)
     }
 
 }

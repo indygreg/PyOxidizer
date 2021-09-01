@@ -140,7 +140,7 @@ impl FileContentValue {
         let executable = optional_bool_arg("executable", &executable)?;
 
         if let Some(filename) = &filename {
-            validate_filename(LABEL, &filename)?;
+            validate_filename(LABEL, filename)?;
         }
 
         let cwd = {
@@ -346,13 +346,13 @@ mod tests {
 
         env.eval("c = FileContent(filename = 'file', content = 'foo')")?;
 
-        assert_eq!(env.eval("c.executable")?.to_bool(), false);
+        assert!(!env.eval("c.executable")?.to_bool());
         assert_eq!(env.eval("c.filename")?.to_string(), "file");
 
         env.eval("c.executable = True")?;
         env.eval("c.filename = 'renamed'")?;
 
-        assert_eq!(env.eval("c.executable")?.to_bool(), true);
+        assert!(env.eval("c.executable")?.to_bool());
         assert_eq!(env.eval("c.filename")?.to_string(), "renamed");
 
         Ok(())
