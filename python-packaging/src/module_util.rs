@@ -29,7 +29,7 @@ pub struct PythonModuleSuffixes {
 pub fn packages_from_module_name(module: &str) -> BTreeSet<String> {
     let mut package_names = BTreeSet::new();
 
-    let mut search: &str = &module;
+    let mut search: &str = module;
 
     while let Some(idx) = search.rfind('.') {
         package_names.insert(search[0..idx].to_string());

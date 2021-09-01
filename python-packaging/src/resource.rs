@@ -801,7 +801,7 @@ impl<'a> PythonResource<'a> {
             // name matches through the filter because this makes sense for filtering.
             // The package annotation is really only useful to influence file layout,
             // when __init__.py files need to be materialized.
-            if name == package || packages_from_module_name(&name).contains(package) {
+            if name == package || packages_from_module_name(name).contains(package) {
                 return true;
             }
         }

@@ -17,7 +17,7 @@ pub struct PythonPackageMetadata {
 impl PythonPackageMetadata {
     /// Create an instance from data in a METADATA file.
     pub fn from_metadata(data: &[u8]) -> Result<PythonPackageMetadata> {
-        let message = parse_mail(&data).context("parsing metadata file")?;
+        let message = parse_mail(data).context("parsing metadata file")?;
 
         let headers = message
             .headers

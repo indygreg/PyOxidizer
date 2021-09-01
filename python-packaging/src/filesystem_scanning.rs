@@ -404,7 +404,7 @@ impl<'a> PythonResourceIterator<'a> {
                 PythonModuleSource {
                     name: full_module_name,
                     source: self.resolve_file_data(path),
-                    is_package: is_package_from_path(&path),
+                    is_package: is_package_from_path(path),
                     cache_tag: self.cache_tag.clone(),
                     is_stdlib: false,
                     is_test: false,
@@ -479,7 +479,7 @@ impl<'a> PythonResourceIterator<'a> {
             let mut full_module_name: Vec<&str> = package_parts.to_vec();
 
             if module_name != "__init__" {
-                full_module_name.push(&module_name);
+                full_module_name.push(module_name);
             }
 
             let full_module_name = itertools::join(full_module_name, ".");
