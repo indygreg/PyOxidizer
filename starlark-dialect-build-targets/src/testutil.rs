@@ -77,7 +77,7 @@ impl StarlarkEnvironment {
         code: &str,
     ) -> Result<Value, Diagnostic> {
         starlark::eval::simple::eval(
-            &map,
+            map,
             "<test>",
             code,
             Dialect::Bzl,

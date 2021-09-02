@@ -944,7 +944,7 @@ fn starlark_set_build_path(type_values: &TypeValues, path: String) -> ValueResul
 
 starlark_module! { build_targets_module =>
     print(env env, *args) {
-        starlark_print(&env, &args)
+        starlark_print(env, &args)
     }
 
     register_target(
@@ -959,15 +959,15 @@ starlark_module! { build_targets_module =>
     }
 
     resolve_target(env env, call_stack cs, target: String) {
-        starlark_resolve_target(&env, cs, target)
+        starlark_resolve_target(env, cs, target)
     }
 
     resolve_targets(env env, call_stack cs) {
-        starlark_resolve_targets(&env, cs)
+        starlark_resolve_targets(env, cs)
     }
 
     set_build_path(env env, path: String) {
-        starlark_set_build_path(&env, path)
+        starlark_set_build_path(env, path)
     }
 }
 
