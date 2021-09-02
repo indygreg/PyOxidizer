@@ -527,7 +527,7 @@ impl CapturedX509Certificate {
         let public_key = signature::UnparsedPublicKey::new(verify_algorithm, public_key_data);
 
         public_key
-            .verify(&signed_data, &signature)
+            .verify(signed_data, &signature)
             .map_err(|_| Error::CertificateSignatureVerificationFailed)
     }
 
