@@ -1210,7 +1210,7 @@ mod tests {
         assert_eq!(m.get_type(), PythonModuleSourceValue::TYPE);
         assert_eq!(m.get_attr("name").unwrap().to_str(), "foo");
         assert_eq!(m.get_attr("source").unwrap().to_str(), "import bar");
-        assert_eq!(m.get_attr("is_package").unwrap().to_bool(), false);
+        assert!(!m.get_attr("is_package").unwrap().to_bool());
 
         Ok(())
     }

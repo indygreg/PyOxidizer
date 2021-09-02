@@ -194,13 +194,13 @@ mod tests {
         assert_eq!(m.get_attr("source").unwrap().to_str(), "import bar");
 
         assert!(m.has_attr("is_package").unwrap());
-        assert_eq!(m.get_attr("is_package").unwrap().to_bool(), false);
+        assert!(!m.get_attr("is_package").unwrap().to_bool());
 
         assert!(m.has_attr("add_include").unwrap());
         assert_eq!(m.get_attr("add_include").unwrap().get_type(), "bool");
-        assert_eq!(m.get_attr("add_include").unwrap().to_bool(), true);
+        assert!(m.get_attr("add_include").unwrap().to_bool());
         m.set_attr("add_include", Value::new(false)).unwrap();
-        assert_eq!(m.get_attr("add_include").unwrap().to_bool(), false);
+        assert!(!m.get_attr("add_include").unwrap().to_bool());
 
         assert!(m.has_attr("add_location").unwrap());
         assert_eq!(m.get_attr("add_location").unwrap().to_str(), "in-memory");
@@ -253,9 +253,9 @@ mod tests {
 
         assert!(m.has_attr("add_source").unwrap());
         assert_eq!(m.get_attr("add_source").unwrap().get_type(), "bool");
-        assert_eq!(m.get_attr("add_source").unwrap().to_bool(), true);
+        assert!(m.get_attr("add_source").unwrap().to_bool());
         m.set_attr("add_source", Value::new(false)).unwrap();
-        assert_eq!(m.get_attr("add_source").unwrap().to_bool(), false);
+        assert!(!m.get_attr("add_source").unwrap().to_bool());
 
         assert!(m.has_attr("add_bytecode_optimization_level_zero").unwrap());
         assert_eq!(
@@ -264,20 +264,16 @@ mod tests {
                 .get_type(),
             "bool"
         );
-        assert_eq!(
-            m.get_attr("add_bytecode_optimization_level_zero")
-                .unwrap()
-                .to_bool(),
-            true
-        );
+        assert!(m
+            .get_attr("add_bytecode_optimization_level_zero")
+            .unwrap()
+            .to_bool(),);
         m.set_attr("add_bytecode_optimization_level_zero", Value::new(false))
             .unwrap();
-        assert_eq!(
-            m.get_attr("add_bytecode_optimization_level_zero")
-                .unwrap()
-                .to_bool(),
-            false
-        );
+        assert!(!m
+            .get_attr("add_bytecode_optimization_level_zero")
+            .unwrap()
+            .to_bool());
 
         assert!(m.has_attr("add_bytecode_optimization_level_one").unwrap());
         assert_eq!(
@@ -286,20 +282,16 @@ mod tests {
                 .get_type(),
             "bool"
         );
-        assert_eq!(
-            m.get_attr("add_bytecode_optimization_level_one")
-                .unwrap()
-                .to_bool(),
-            false
-        );
+        assert!(!m
+            .get_attr("add_bytecode_optimization_level_one")
+            .unwrap()
+            .to_bool());
         m.set_attr("add_bytecode_optimization_level_one", Value::new(true))
             .unwrap();
-        assert_eq!(
-            m.get_attr("add_bytecode_optimization_level_one")
-                .unwrap()
-                .to_bool(),
-            true
-        );
+        assert!(m
+            .get_attr("add_bytecode_optimization_level_one")
+            .unwrap()
+            .to_bool(),);
 
         assert!(m.has_attr("add_bytecode_optimization_level_two").unwrap());
         assert_eq!(
@@ -308,20 +300,16 @@ mod tests {
                 .get_type(),
             "bool"
         );
-        assert_eq!(
-            m.get_attr("add_bytecode_optimization_level_two")
-                .unwrap()
-                .to_bool(),
-            false
-        );
+        assert!(!m
+            .get_attr("add_bytecode_optimization_level_two")
+            .unwrap()
+            .to_bool());
         m.set_attr("add_bytecode_optimization_level_two", Value::new(true))
             .unwrap();
-        assert_eq!(
-            m.get_attr("add_bytecode_optimization_level_two")
-                .unwrap()
-                .to_bool(),
-            true
-        );
+        assert!(m
+            .get_attr("add_bytecode_optimization_level_two")
+            .unwrap()
+            .to_bool());
 
         Ok(())
     }
