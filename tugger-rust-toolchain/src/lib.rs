@@ -180,7 +180,7 @@ fn materialize_archive(
     triple: &str,
     install_dir: &Path,
 ) -> Result<()> {
-    archive.install(&install_dir).context("installing")?;
+    archive.install(install_dir).context("installing")?;
 
     let manifest_path = install_dir.join(format!("MANIFEST.{}.{}", triple, package));
     let mut fh = std::fs::File::create(&manifest_path).context("opening manifest file")?;

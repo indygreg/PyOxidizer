@@ -146,7 +146,7 @@ impl PackageArchive {
                 path.display()
             );
 
-            fh.write_all(&line.as_bytes())?;
+            fh.write_all(line.as_bytes())?;
         }
 
         Ok(())
