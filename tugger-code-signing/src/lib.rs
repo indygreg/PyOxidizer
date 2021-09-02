@@ -565,9 +565,9 @@ pub fn data_signable(data: &[u8]) -> Result<Signability, SigningError> {
         };
     }
 
-    if goblin::mach::Mach::parse(&data).is_ok() {
+    if goblin::mach::Mach::parse(data).is_ok() {
         // Try to construct a signer to see if the binary is compatible.
-        return Ok(match MachOSigner::new(&data) {
+        return Ok(match MachOSigner::new(data) {
             Ok(_) => Signability::Signable(Signable::MachOData(data.to_vec())),
             Err(e) => Signability::UnsignableMachoError(e),
         });
@@ -953,7 +953,7 @@ impl Signer {
         let signability = self.resolve_signability(candidate)?;
 
         if let Signability::Signable(entity) = signability {
-            Ok(Some(SignableSigner::new(&self, entity)))
+            Ok(Some(SignableSigner::new(self, entity)))
         } else {
             Ok(None)
         }
@@ -1161,7 +1161,7 @@ impl<'a> SignableSigner<'a> {
                         Ok(SignedOutput::Memory(std::fs::read(&sign_path)?))
                     }
                     SigningDestination::File(dest_path) => {
-                        if copy_file_needed(&dest_path, &sign_path)? {
+                        if copy_file_needed(dest_path, &sign_path)? {
                             warn!(
                                 logger,
                                 "signing success; copying signed file to {}",
@@ -1216,7 +1216,7 @@ impl<'a> SignableSigner<'a> {
                         Ok(SignedOutput::Memory(std::fs::read(&sign_path)?))
                     }
                     SigningDestination::File(dest_path) => {
-                        if copy_file_needed(&sign_path, &dest_path)? {
+                        if copy_file_needed(&sign_path, dest_path)? {
                             warn!(
                                 logger,
                                 "signing success; copying signed file to {}",
@@ -1242,7 +1242,7 @@ impl<'a> SignableSigner<'a> {
                 );
                 let settings = self.as_apple_signing_settings()?;
 
-                let signer = tugger_apple_codesign::MachOSigner::new(&macho_data)
+                let signer = tugger_apple_codesign::MachOSigner::new(macho_data)
                     .map_err(SigningError::MachOSigningError)?;
 
                 let mut dest = Vec::<u8>::with_capacity(macho_data.len() + 2_usize.pow(17));
@@ -1274,7 +1274,7 @@ impl<'a> SignableSigner<'a> {
 
                 warn!(logger, "signing {}", source_file.display());
 
-                let signer = tugger_apple_codesign::MachOSigner::new(&macho_data)
+                let signer = tugger_apple_codesign::MachOSigner::new(macho_data)
                     .map_err(SigningError::MachOSigningError)?;
 
                 let mut dest = Vec::<u8>::with_capacity(macho_data.len() + 2_usize.pow(17));
