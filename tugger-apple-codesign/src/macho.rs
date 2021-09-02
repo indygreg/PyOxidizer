@@ -625,7 +625,7 @@ impl<'a> BlobEntry<'a> {
 
     /// Compute the content digest of this blob using the specified hash type.
     pub fn digest_with(&self, hash: DigestType) -> Result<Vec<u8>, AppleCodesignError> {
-        hash.digest(&self.data)
+        hash.digest(self.data)
     }
 }
 
@@ -642,7 +642,7 @@ pub struct ParsedBlob<'a> {
 impl<'a> ParsedBlob<'a> {
     /// Compute the content digest of this blob using the specified hash type.
     pub fn digest_with(&self, hash: DigestType) -> Result<Vec<u8>, AppleCodesignError> {
-        hash.digest(&self.blob_entry.data)
+        hash.digest(self.blob_entry.data)
     }
 }
 
@@ -1224,7 +1224,7 @@ impl<'a> Blob<'a> for OtherBlob<'a> {
         let mut res = Vec::with_capacity(self.data.len() + 8);
         res.iowrite_with(self.magic, scroll::BE)?;
         res.iowrite_with(self.data.len() as u32 + 8, scroll::BE)?;
-        res.write_all(&self.data)?;
+        res.write_all(self.data)?;
 
         Ok(res)
     }
@@ -1370,7 +1370,7 @@ impl<'a> AppleSignable for MachO<'a> {
             if let Some(offset) = self.code_signature_linkedit_start_offset() {
                 Some(&segment.data[0..offset as usize])
             } else {
-                Some(&segment.data)
+                Some(segment.data)
             }
         } else {
             None
@@ -1694,7 +1694,7 @@ mod tests {
 
             // Found a CMS signed data blob.
             if let Ok(Some(cms)) = signature.signature_data() {
-                match SignedData::parse_ber(&cms) {
+                match SignedData::parse_ber(cms) {
                     Ok(signed_data) => {
                         for signer in signed_data.signers() {
                             if let Err(e) = signer.verify_signature_with_signed_data(&signed_data) {

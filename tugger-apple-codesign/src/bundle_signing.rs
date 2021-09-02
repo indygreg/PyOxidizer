@@ -347,7 +347,7 @@ impl SingleBundleSigner {
 
         let handler = SingleBundleHandler {
             dest_dir: dest_dir_root.clone(),
-            settings: &settings,
+            settings,
         };
 
         let mut main_exe = None;

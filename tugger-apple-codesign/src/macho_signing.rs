@@ -104,7 +104,7 @@ fn create_macho_with_signature(
 
     // Mach-O data structures are variable endian. So use the endian defined
     // by the magic when writing.
-    let ctx = parse_magic_and_ctx(&macho_data, 0)?
+    let ctx = parse_magic_and_ctx(macho_data, 0)?
         .1
         .expect("context should have been parsed before");
 
@@ -362,8 +362,8 @@ impl<'data> MachOSigner<'data> {
 
     /// Derive the data slice belonging to a Mach-O binary.
     fn macho_data(&self, index: usize) -> &[u8] {
-        match Mach::parse(&self.macho_data).expect("should reparse without error") {
-            Mach::Binary(_) => &self.macho_data,
+        match Mach::parse(self.macho_data).expect("should reparse without error") {
+            Mach::Binary(_) => self.macho_data,
             Mach::Fat(multiarch) => {
                 let arch = multiarch
                     .iter_arches()

@@ -1030,7 +1030,7 @@ impl CodeResourcesBuilder {
                 }
             }
 
-            rule.re.is_match(&path)
+            rule.re.is_match(path)
         });
 
         if let Some(rule) = rule {
