@@ -183,8 +183,8 @@ pub fn write_file_manifest_to_wix<W: Write, P: AsRef<Path>>(
 
         // Add `<Component>` for files in this directory.
         for (filename, (rel_path, _)) in files {
-            let guid = component_guid(id_prefix, &rel_path);
-            let id = component_id(id_prefix, &rel_path);
+            let guid = component_guid(id_prefix, rel_path);
+            let id = component_id(id_prefix, rel_path);
 
             writer.write(
                 XmlEvent::start_element("Component")
@@ -239,7 +239,7 @@ pub fn write_file_manifest_to_wix<W: Write, P: AsRef<Path>>(
                 Some(p)
             }
         }) {
-            let component_id = component_id(id_prefix, &p);
+            let component_id = component_id(id_prefix, p);
 
             writer.write(XmlEvent::start_element("ComponentRef").attr("Id", &component_id))?;
             writer.write(XmlEvent::end_element())?;
