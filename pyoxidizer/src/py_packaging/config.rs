@@ -500,8 +500,10 @@ mod tests {
 
     #[test]
     fn test_backslash_in_path() -> Result<()> {
-        let mut config = PyembedPythonInterpreterConfig::default();
-        config.tcl_library = Some(PathBuf::from("c:\\windows"));
+        let config = PyembedPythonInterpreterConfig {
+            tcl_library: Some(PathBuf::from("c:\\windows")),
+            ..Default::default()
+        };
 
         let code = config.to_oxidized_python_interpreter_config_rs()?;
 
