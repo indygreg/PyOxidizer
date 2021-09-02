@@ -22,7 +22,7 @@ pub fn analyze_file(path: PathBuf) {
 pub fn analyze_data(buffer: &[u8]) {
     match goblin::Object::parse(buffer).unwrap() {
         goblin::Object::Elf(elf) => {
-            let mut undefined_symbols = find_undefined_elf_symbols(&buffer, &elf);
+            let mut undefined_symbols = find_undefined_elf_symbols(buffer, &elf);
             undefined_symbols.sort();
 
             analyze_elf_libraries(&elf.libraries, &undefined_symbols);
@@ -120,7 +120,7 @@ pub fn analyze_elf_libraries(libs: &[&str], undefined_symbols: &[UndefinedSymbol
                 println!("Minimum Version: {}", version);
                 println!("Minimum Distro Versions:");
 
-                for s in find_minimum_distro_version(&version, &GLIBC_VERSIONS_BY_DISTRO) {
+                for s in find_minimum_distro_version(version, &GLIBC_VERSIONS_BY_DISTRO) {
                     println!("  {}", s);
                 }
             }
@@ -132,7 +132,7 @@ pub fn analyze_elf_libraries(libs: &[&str], undefined_symbols: &[UndefinedSymbol
                 println!("Minimum Version: {}", version);
                 println!("Minimum Distro Versions:");
 
-                for s in find_minimum_distro_version(&version, &GCC_VERSIONS_BY_DISTRO) {
+                for s in find_minimum_distro_version(version, &GCC_VERSIONS_BY_DISTRO) {
                     println!("  {}", s);
                 }
             }

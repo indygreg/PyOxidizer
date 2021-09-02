@@ -141,7 +141,7 @@ pub fn find_undefined_elf_symbols(buffer: &[u8], elf: &goblin::elf::Elf) -> Vec<
 
             res.push(if versym > 1 {
                 let (filename, version) =
-                    resolve_verneed(&verneed_entries, &verneed_names_data, versym);
+                    resolve_verneed(&verneed_entries, verneed_names_data, versym);
 
                 UndefinedSymbol {
                     symbol: String::from(name),
