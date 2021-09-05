@@ -6,7 +6,10 @@ use {
     anyhow::{anyhow, Result},
     criterion::{criterion_group, criterion_main, Criterion},
     once_cell::sync::Lazy,
-    pyembed::PythonResourcesState,
+    pyembed::{
+        MainPythonInterpreter, OxidizedPythonInterpreterConfig, PackedResourcesSource,
+        PythonResourcesState,
+    },
     pyoxidizerlib::{
         environment::{default_target_triple, Environment},
         logging::PrintlnDrain,
@@ -40,6 +43,16 @@ fn get_logger() -> Result<Logger> {
         .fuse(),
         slog::o!(),
     ))
+}
+
+fn default_interpreter_config<'a>() -> OxidizedPythonInterpreterConfig<'a> {
+    let mut config = OxidizedPythonInterpreterConfig::default();
+    config.interpreter_config.parse_argv = Some(false);
+    config.set_missing_path_configuration = false;
+    config.argv = Some(vec!["python".into()]);
+    config.interpreter_config.executable = Some("python".into());
+
+    config
 }
 
 fn resolve_packed_resources() -> Result<Vec<u8>> {
@@ -115,6 +128,33 @@ fn python_resources_state_index(data: &[u8]) -> Result<()> {
     Ok(())
 }
 
+fn python_interpreter_startup_teardown_plain() -> Result<()> {
+    let mut config = default_interpreter_config();
+    config.interpreter_config.run_command = Some("i = 42".to_string());
+
+    let interp = MainPythonInterpreter::new(config)
+        .map_err(|e| anyhow!("error creating new interpreter: {}", e.to_string()))?;
+    interp.run();
+
+    Ok(())
+}
+
+fn python_interpreter_startup_teardown_packed_resources(packed_resources: &[u8]) -> Result<()> {
+    let mut config = default_interpreter_config();
+    config.oxidized_importer = true;
+
+    config
+        .packed_resources
+        .push(PackedResourcesSource::Memory(packed_resources));
+    config.interpreter_config.run_command = Some("i = 42".to_string());
+
+    let interp = MainPythonInterpreter::new(config)
+        .map_err(|e| anyhow!("error creating new interpreter: {}", e.to_string()))?;
+    interp.run();
+
+    Ok(())
+}
+
 pub fn criterion_benchmark(c: &mut Criterion) {
     let packed_resources = resolve_packed_resources().expect("failed to resolve packed resources");
 
@@ -126,6 +166,17 @@ pub fn criterion_benchmark(c: &mut Criterion) {
 
     c.bench_function("PythonResourcesState.index_data", |b| {
         b.iter(|| python_resources_state_index(&packed_resources).expect("failed to index data"))
+    });
+
+    c.bench_function("pyembed.new_interpreter_plain", |b| {
+        b.iter(|| python_interpreter_startup_teardown_plain().expect("Python interpreter run"))
+    });
+
+    c.bench_function("pyembed.new_interpreter_packed_resources", |b| {
+        b.iter(|| {
+            python_interpreter_startup_teardown_packed_resources(&packed_resources)
+                .expect("Python interpreter run")
+        })
     });
 }
 
