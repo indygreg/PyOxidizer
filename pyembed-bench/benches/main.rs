@@ -55,7 +55,33 @@ fn default_interpreter_config<'a>() -> OxidizedPythonInterpreterConfig<'a> {
     config
 }
 
-fn resolve_packed_resources() -> Result<Vec<u8>> {
+fn get_interpreter_plain<'python, 'interpreter, 'resources>(
+) -> Result<MainPythonInterpreter<'python, 'interpreter, 'resources>> {
+    let config = default_interpreter_config();
+
+    let interp = MainPythonInterpreter::new(config)
+        .map_err(|e| anyhow!("error creating new interpreter: {}", e.to_string()))?;
+
+    Ok(interp)
+}
+
+fn get_interpreter_packed<'python, 'interpreter, 'resources>(
+    packed_resources: &'resources [u8],
+) -> Result<MainPythonInterpreter<'python, 'interpreter, 'resources>> {
+    let mut config = default_interpreter_config();
+    config.oxidized_importer = true;
+
+    config
+        .packed_resources
+        .push(PackedResourcesSource::Memory(packed_resources));
+
+    let interp = MainPythonInterpreter::new(config)
+        .map_err(|e| anyhow!("error creating new interpreter: {}", e.to_string()))?;
+
+    Ok(interp)
+}
+
+fn resolve_packed_resources() -> Result<(Vec<u8>, Vec<String>)> {
     let logger = get_logger()?;
 
     let record = PYTHON_DISTRIBUTIONS
@@ -104,7 +130,87 @@ fn resolve_packed_resources() -> Result<Vec<u8>> {
     let mut buffer = Vec::<u8>::new();
     compiled.write_packed_resources(&mut buffer)?;
 
-    Ok(buffer)
+    let names = compiled.resources.keys().cloned().collect::<Vec<_>>();
+
+    Ok((buffer, names))
+}
+
+fn filter_module_names(modules: &[String]) -> Vec<&str> {
+    modules
+        .iter()
+        .filter_map(|x| {
+            if !matches!(
+                x.as_str(),
+                    // Opens a browser.
+                    "antigravity"
+                    // POSIX only.
+                    | "asyncio.unix_events"
+                    // Windows only.
+                    | "asyncio.windows_events"
+                    | "asyncio.windows_utils"
+                    // POSIX only.
+                    | "crypt"
+                    // POSIX only.
+                    | "dbm.gnu"
+                    | "dbm.ndbm"
+                    // Prints output from libmpdec.
+                    | "decimal"
+                    // Windows only.
+                    | "encodings.mbcs"
+                    | "encodings.oem"
+                    // Prints output from libmpdec.
+                    | "fractions"
+                    // POSIX only.
+                    | "multiprocessing.popen_fork"
+                    | "multiprocessing.popen_forkserver"
+                    | "multiprocessing.popen_spawn_posix"
+                    // Windows only.
+                    | "multiprocessing.popen_spawn_win32"
+                    // POSIX only.
+                    | "pty"
+                    // Prints output from libmpdec.
+                    | "statistics"
+                    | "this"
+                    // Build dependent.
+                    | "tracemalloc"
+                    // POSIX only.
+                    | "tty"
+                    // Prints output from libmpdec.
+                    | "xmlrpc.client"
+                    | "xmlrpc.server"
+            )
+                // Prints output
+                && !x.starts_with("__phello__")
+                && !x.starts_with("config-")
+                && !x.starts_with("ctypes")
+                // POSIX only.
+                && !x.starts_with("curses")
+                // Lots of platform-specific modules.
+                && !x.starts_with("distutils")
+                // Attempts to execute things.
+                && !x.starts_with("ensurepip")
+                // Attempts to do GUI things.
+                && !x.starts_with("idlelib")
+                // Bleh.
+                && !x.starts_with("lib2to3")
+                // Windows only.
+                && !x.starts_with("msilib")
+                // Platform specific modules.
+                && !x.starts_with("pip")
+                // Platform specific modules.
+                && !x.starts_with("setuptools")
+                // GUI things.
+                && !x.starts_with("tkinter")
+                && !x.starts_with("turtle")
+                // Platform specific modules.
+                && !x.starts_with("venv")
+            {
+                Some(x.as_str())
+            } else {
+                None
+            }
+        })
+        .collect::<Vec<_>>()
 }
 
 fn parse_packed_resources(data: &[u8]) -> Result<()> {
@@ -155,8 +261,33 @@ fn python_interpreter_startup_teardown_packed_resources(packed_resources: &[u8])
     Ok(())
 }
 
+fn python_interpreter_import_all_modules(
+    interp: &mut MainPythonInterpreter,
+    modules: &[&str],
+) -> Result<()> {
+    let py = interp.acquire_gil();
+
+    for name in modules {
+        // println!("{}", name);
+        py.import(name).map_err(|e| {
+            e.print(py);
+            anyhow!("error importing module {}", name)
+        })?;
+    }
+
+    Ok(())
+}
+
 pub fn criterion_benchmark(c: &mut Criterion) {
-    let packed_resources = resolve_packed_resources().expect("failed to resolve packed resources");
+    let (packed_resources, names) =
+        resolve_packed_resources().expect("failed to resolve packed resources");
+    let importable_modules = filter_module_names(&names);
+    println!(
+        "{} bytes packed resources data for {} modules; {} importable",
+        packed_resources.len(),
+        names.len(),
+        importable_modules.len()
+    );
 
     c.bench_function("python-packed-resources.parse", |b| {
         b.iter(|| {
@@ -177,6 +308,28 @@ pub fn criterion_benchmark(c: &mut Criterion) {
             python_interpreter_startup_teardown_packed_resources(&packed_resources)
                 .expect("Python interpreter run")
         })
+    });
+
+    c.bench_function("pyembed.import_all_modules_plain", |b| {
+        b.iter_with_setup(
+            || get_interpreter_plain().expect("unable to obtain interpreter"),
+            |mut interp| {
+                python_interpreter_import_all_modules(&mut interp, &importable_modules)
+                    .expect("failed to import all modules");
+                std::mem::drop(interp);
+            },
+        )
+    });
+
+    c.bench_function("pyembed.import_all_modules_packed", |b| {
+        b.iter_with_setup(
+            || get_interpreter_packed(&packed_resources).expect("unable to obtain interpreter"),
+            |mut interp| {
+                python_interpreter_import_all_modules(&mut interp, &importable_modules)
+                    .expect("failed to import all modules");
+                std::mem::drop(interp);
+            },
+        )
     });
 }
 
