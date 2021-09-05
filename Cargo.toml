@@ -4,6 +4,7 @@ members = [
     'cpio-archive',
     'cryptographic-message-syntax',
     'oxidized-importer',
+    'pyembed-bench',
     'pyembed',
     'pyoxidizer',
     'python-packaging',

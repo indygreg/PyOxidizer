@@ -107,14 +107,14 @@ jobs:
           RUSTC_WRAPPER: sccache
         run: |
           rustc --version
-          cargo build --release --workspace --exclude pyembed --exclude oxidized-importer
-          cargo test --release --workspace --exclude pyembed --exclude oxidized-importer --no-run
+          cargo build --release --workspace --exclude pyembed --exclude pyembed-bench --exclude oxidized-importer
+          cargo test --release --workspace --exclude pyembed --exclude pyembed-bench --exclude oxidized-importer --no-run
 
       - name: Test Workspace
         env:
           RUSTC_WRAPPER: sccache
         run: |
-          cargo test --release --workspace --exclude pyembed --exclude oxidized-importer
+          cargo test --release --workspace --exclude pyembed --exclude pyembed-bench --exclude oxidized-importer
 
       # To minimize potential for Python interference, we delay install Python
       # until we need it for pyembed.
