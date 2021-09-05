@@ -36,7 +36,7 @@ const ENOENT: c_int = 2;
 
 /// Python bytecode optimization level.
 #[derive(Clone, Copy, Debug)]
-pub(crate) enum OptimizeLevel {
+pub enum OptimizeLevel {
     Zero,
     One,
     Two,
@@ -103,7 +103,7 @@ pub(crate) fn name_within_package_hierarchy(fullname: &str, package_target: Opti
 
 /// Describes the type of an importable Python module.
 #[derive(Debug, PartialEq)]
-pub(crate) enum ModuleFlavor {
+pub enum ModuleFlavor {
     Builtin,
     Frozen,
     Extension,
@@ -114,7 +114,7 @@ pub(crate) enum ModuleFlavor {
 ///
 /// This essentially is an abstraction over raw `Resource` entries that
 /// allows the importer code to be simpler.
-pub(crate) struct ImportablePythonModule<'a, X: 'a>
+pub struct ImportablePythonModule<'a, X: 'a>
 where
     [X]: ToOwned<Owned = Vec<X>>,
 {
@@ -393,7 +393,7 @@ impl<'a> ImportablePythonModule<'a, u8> {
 
 /// Defines Python resources available for import.
 #[derive(Debug)]
-pub(crate) struct PythonResourcesState<'a, X>
+pub struct PythonResourcesState<'a, X>
 where
     [X]: ToOwned<Owned = Vec<X>>,
 {

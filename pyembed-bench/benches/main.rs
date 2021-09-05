@@ -6,6 +6,7 @@ use {
     anyhow::{anyhow, Result},
     criterion::{criterion_group, criterion_main, Criterion},
     once_cell::sync::Lazy,
+    pyembed::PythonResourcesState,
     pyoxidizerlib::{
         environment::{default_target_triple, Environment},
         logging::PrintlnDrain,
@@ -103,13 +104,28 @@ fn parse_packed_resources(data: &[u8]) -> Result<()> {
     Ok(())
 }
 
+fn python_resources_state_index(data: &[u8]) -> Result<()> {
+    let mut state = PythonResourcesState::new_from_env()
+        .map_err(|e| anyhow!("error obtaining PythonResourcesState: {}", e))?;
+
+    state
+        .index_data(data)
+        .map_err(|e| anyhow!("error indexing data: {}", e))?;
+
+    Ok(())
+}
+
 pub fn criterion_benchmark(c: &mut Criterion) {
     let packed_resources = resolve_packed_resources().expect("failed to resolve packed resources");
 
-    c.bench_function("packed-resources parse", |b| {
+    c.bench_function("python-packed-resources.parse", |b| {
         b.iter(|| {
             parse_packed_resources(&packed_resources).expect("failed to parse packed resources")
         })
+    });
+
+    c.bench_function("PythonResourcesState.index_data", |b| {
+        b.iter(|| python_resources_state_index(&packed_resources).expect("failed to index data"))
     });
 }
 

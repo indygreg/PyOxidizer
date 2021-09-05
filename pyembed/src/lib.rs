@@ -133,8 +133,11 @@ pub use crate::{config::PackedResourcesSource, error::NewInterpreterError};
 #[cfg(not(library_mode = "extension"))]
 #[allow(unused_imports)]
 pub use crate::{
-    config::{ExtensionModule, OxidizedPythonInterpreterConfig},
+    config::{
+        ExtensionModule, OxidizedPythonInterpreterConfig, ResolvedOxidizedPythonInterpreterConfig,
+    },
     interpreter::MainPythonInterpreter,
+    python_resources::PythonResourcesState,
 };
 
 #[cfg(library_mode = "extension")]
