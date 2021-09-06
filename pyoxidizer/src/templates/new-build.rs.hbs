@@ -6,7 +6,14 @@
 
 use embed_resource;
 
+#[allow(clippy::if_same_then_else)]
 fn main() {
+    if std::env::var("CARGO_FEATURE_BUILD_MODE_PYOXIDIZER_EXE").is_ok() {
+    } else if std::env::var("CARGO_FEATURE_BUILD_MODE_PREBUILT_ARTIFACTS").is_ok() {
+    } else {
+        panic!("build-mode-* feature not set");
+    }
+
     let target_family =
         std::env::var("CARGO_CFG_TARGET_FAMILY").expect("CARGO_CFG_TARGET_FAMILY not defined");
 
