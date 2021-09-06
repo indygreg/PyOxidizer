@@ -89,39 +89,5 @@ producing equivalent artifacts via other means and having ``pyembed`` consume
 them.
 
 The way this mode works is the build script is pointed at a directory
-containing artifacts. The only required artifact is a ``cargo_metadata.txt``
-file. This file contains lines which will be printed to stdout by the
-crate build script. These lines typically contain ``cargo:`` lines, which
-influence Cargo's configuration for the crate.
-
-The ``cargo:`` lines **must** define a pre-built ``pythonXY`` library to
-link against. That library name is literally ``pythonXY`` and ``XY`` is not
-a placeholder for a version string!
-
-Use cases like PyOxidizer derive a custom library containing Python's
-core symbols. The ``cargo:`` lines for this use case will look something
-like the following::
-
-   cargo:rustc-link-lib=depend0
-   cargo:rustc-link-lib=depend1
-   cargo:rustc-link-lib=static=depend2
-   cargo:rustc-link-lib=static=depend3
-   cargo:rustc-link-lib=static=pythonXY
-   cargo:rustc-link-search=native=/path/to/libraries
-
-Essentially what PyOxidizer does is compile a custom library containing Python.
-This will be named ``pythonXY.lib`` or ``pythonXY.dll`` on Windows and
-``libpythonXY.a`` or ``libpythonXY.so`` on UNIX platforms. It then lists link
-library dependencies as needed and registers the generated ``pythonXY`` library
-to be linked from the context of the ``pyembed`` crate.
-
-Deriving a custom library containing Python is fairly complex! From the
-perspective of ``build-mode-prebuilt-artifacts``, all that is strictly
-needed is for the ``cargo_metadata.txt`` to define how to link against a
-``pythonXY`` library. It is even possible to alias ``pythonXY`` to an
-existing Python library already on your system (this is effectively
-what ``build-mode-default`` does). So a minimal ``cargo_metadata.txt``
-might look something like this:
-
-   cargo:rustc-link-lib=pythonXY:python3.9
-   cargo:rustc-link-search=native=/path/to/directory/containing/python/library
+The only required artifact is a ``default_python_config.rs``
+file. This file defines the default embedded Python interpreter configuration.
