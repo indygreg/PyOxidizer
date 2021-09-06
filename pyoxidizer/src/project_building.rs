@@ -7,7 +7,10 @@ use {
         environment::{canonicalize_path, Environment, RustEnvironment},
         project_layout::initialize_project,
         py_packaging::{
-            binary::{EmbeddedPythonContext, LibpythonLinkMode, PythonBinaryBuilder},
+            binary::{
+                EmbeddedPythonContext, LibpythonLinkMode, PythonBinaryBuilder,
+                DEFAULT_PYTHON_CONFIG_FILENAME,
+            },
             distribution::AppleSdkInfo,
         },
         starlark::eval::{EvaluationContext, EvaluationContextBuilder},
@@ -468,9 +471,10 @@ pub fn build_pyembed_artifacts(
     for target in context.targets_to_resolve()? {
         let resolved: ResolvedTarget = context.build_resolved_target(&target)?;
 
-        let cargo_metadata = resolved.output_path.join("cargo_metadata.txt");
-
-        if !cargo_metadata.exists() {
+        // Presence of the generated default python config file implies this is a valid
+        // artifacts directory.
+        let default_python_config = resolved.output_path.join(DEFAULT_PYTHON_CONFIG_FILENAME);
+        if !default_python_config.exists() {
             continue;
         }
 
@@ -488,13 +492,13 @@ pub fn build_pyembed_artifacts(
             ))?;
         }
 
-        // TODO should we normalize paths to pyoxidizer build directory in cargo_metadata.txt
-        // with the new artifacts directory?
-
         return Ok(());
     }
 
-    Err(anyhow!("unable to find generated cargo_metadata.txt; did you specify the correct target to resolve?"))
+    Err(anyhow!(
+        "unable to find generated {}; did you specify the correct target to resolve?",
+        DEFAULT_PYTHON_CONFIG_FILENAME
+    ))
 }
 
 /// Runs packaging/embedding from the context of a Rust build script.
@@ -568,12 +572,11 @@ pub fn run_from_build(
         false,
     )?;
 
-    let cargo_metadata = dest_dir.join("cargo_metadata.txt");
-
-    let content =
-        std::fs::read(&cargo_metadata).context(format!("reading {}", cargo_metadata.display()))?;
-    let content = String::from_utf8(content).context("converting cargo_metadata.txt to string")?;
-    println!("{}", content);
+    let default_python_config_path = dest_dir.join(DEFAULT_PYTHON_CONFIG_FILENAME);
+    println!(
+        "cargo:default-python-config-rs={}",
+        default_python_config_path.display()
+    );
 
     Ok(())
 }
@@ -611,23 +614,23 @@ fn dependency_current(
 
 /// Determines whether PyOxidizer artifacts are current.
 fn artifacts_current(logger: &slog::Logger, config_path: &Path, artifacts_path: &Path) -> bool {
-    let metadata_path = artifacts_path.join("cargo_metadata.txt");
+    let python_config_path = artifacts_path.join(DEFAULT_PYTHON_CONFIG_FILENAME);
 
-    if !metadata_path.exists() {
+    if !python_config_path.exists() {
         warn!(logger, "no existing PyOxidizer artifacts found");
         return false;
     }
 
     // We assume the mtime of the metadata file is the built time. If we
     // encounter any modified times newer than that file, we're not up to date.
-    let built_time = match metadata_path.metadata() {
+    let built_time = match python_config_path.metadata() {
         Ok(md) => match md.modified() {
             Ok(t) => t,
             Err(_) => {
                 warn!(
                     logger,
                     "error determining mtime of {}",
-                    metadata_path.display()
+                    python_config_path.display()
                 );
                 return false;
             }
@@ -636,29 +639,11 @@ fn artifacts_current(logger: &slog::Logger, config_path: &Path, artifacts_path: 
             warn!(
                 logger,
                 "error resolving metadata of {}",
-                metadata_path.display()
+                python_config_path.display()
             );
             return false;
         }
     };
-
-    let metadata_data = match std::fs::read_to_string(&metadata_path) {
-        Ok(data) => data,
-        Err(_) => {
-            warn!(logger, "error reading {}", metadata_path.display());
-            return false;
-        }
-    };
-
-    for line in metadata_data.split('\n') {
-        if line.starts_with("cargo:rerun-if-changed=") {
-            let path = PathBuf::from(&line[23..line.len()]);
-
-            if !dependency_current(logger, &path, built_time) {
-                return false;
-            }
-        }
-    }
 
     let current_exe = std::env::current_exe().expect("unable to determine current exe");
     if !dependency_current(logger, &current_exe, built_time) {

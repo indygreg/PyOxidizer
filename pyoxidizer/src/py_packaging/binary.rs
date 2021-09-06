@@ -28,7 +28,6 @@ use {
     std::{
         collections::HashMap,
         convert::TryFrom,
-        io::Write,
         path::{Path, PathBuf},
         sync::Arc,
     },
@@ -618,6 +617,9 @@ impl From<LinkStaticLibraryData> for LibpythonLinkSettings {
     }
 }
 
+/// Filename of artifact containing the default PythonInterpreterConfig.
+pub const DEFAULT_PYTHON_CONFIG_FILENAME: &str = "default_python_config.rs";
+
 /// Holds context necessary to embed Python in a binary.
 pub struct EmbeddedPythonContext<'a> {
     /// The configuration for the embedded interpreter.
@@ -656,32 +658,12 @@ pub struct EmbeddedPythonContext<'a> {
 impl<'a> EmbeddedPythonContext<'a> {
     /// Obtain the filesystem of the generated Rust source file containing the interpreter configuration.
     pub fn interpreter_config_rs_path(&self, dest_dir: impl AsRef<Path>) -> PathBuf {
-        dest_dir.as_ref().join("default_python_config.rs")
-    }
-
-    /// Resolve the filesystem path to the file containing cargo: lines.
-    ///
-    /// The `cargo:` lines will enabling linking with the appropriate libpython.
-    pub fn cargo_metadata_path(&self, dest_dir: impl AsRef<Path>) -> PathBuf {
-        dest_dir.as_ref().join("cargo_metadata.txt")
+        dest_dir.as_ref().join(DEFAULT_PYTHON_CONFIG_FILENAME)
     }
 
     /// Resolve the filesystem path to the PyO3 configuration file.
     pub fn pyo3_config_path(&self, dest_dir: impl AsRef<Path>) -> PathBuf {
         dest_dir.as_ref().join("pyo3-build-config-file.txt")
-    }
-
-    /// Obtain lines constituting cargo metadata.
-    ///
-    /// These should be printed from a build script.
-    pub fn cargo_metadata_lines(&self, dest_dir: impl AsRef<Path>) -> Result<Vec<String>> {
-        Ok(vec![
-            // Give dependent crates the path to the default config file.
-            format!(
-                "cargo:default-python-config-rs={}",
-                self.interpreter_config_rs_path(dest_dir.as_ref()).display()
-            ),
-        ])
     }
 
     /// Resolve a [PyO3InterpreterConfig] for this instance.
@@ -751,14 +733,6 @@ impl<'a> EmbeddedPythonContext<'a> {
         Ok(())
     }
 
-    /// Write file containing cargo metadata lines.
-    pub fn write_cargo_metadata(&self, dest_dir: impl AsRef<Path>) -> Result<()> {
-        let mut fh = std::fs::File::create(self.cargo_metadata_path(&dest_dir))?;
-        fh.write_all(self.cargo_metadata_lines(dest_dir)?.join("\n").as_bytes())?;
-
-        Ok(())
-    }
-
     /// Write the PyO3 configuration file.
     pub fn write_pyo3_config(&self, dest_dir: impl AsRef<Path>) -> Result<()> {
         let dest_dir = dest_dir.as_ref();
@@ -779,8 +753,6 @@ impl<'a> EmbeddedPythonContext<'a> {
             .context("write_libpython()")?;
         self.write_interpreter_config_rs(&dest_dir)
             .context("write_interpreter_config_rs()")?;
-        self.write_cargo_metadata(&dest_dir)
-            .context("write_cargo_metadata()")?;
         self.write_pyo3_config(&dest_dir)
             .context("write_pyo3_config()")?;
 

@@ -8,19 +8,17 @@ Build script to embed Python in a binary.
 The goal of this build script is to emit metadata to tell the build
 system how to embed a Python interpreter into a binary.
 
-This is done by printing the content of an artifact (cargo_metadata.txt)
-produced by PyOxidizer. This artifact in turn references other build
-artifacts.
+This is done by reading artifacts produced by PyOxidizer.
 
 The following strategies exist for obtaining the build artifacts needed
 by this crate:
 
 1. Call `pyoxidizer run-build-script` and use its output verbatim.
 2. Call into the PyOxidizer library directly to perform the equivalent
-   of `pyoxidizer run-build-script`. (See bottom of file for an example.)
+   of `pyoxidizer run-build-script`. (See commented out section of file for
+   an example.)
 3. Build artifacts out-of-band and consume them manually in this script
-   (e.g. by calling `pyoxidizer build` and then reading the generated
-   `cargo_metadata.txt` file manually.)
+   (e.g. by calling `pyoxidizer build` and then reading the generated files.)
 */
 
 use {
@@ -28,15 +26,23 @@ use {
     std::path::{Path, PathBuf},
 };
 
+/// Filename of artifact containing the default PythonInterpreterConfig definition.
+const DEFAULT_PYTHON_CONFIG_FILENAME: &str = "default_python_config.rs";
+
 /// Build with PyOxidizer artifacts in a directory.
 fn build_with_artifacts_in_dir(path: &Path) {
     println!("using pre-built artifacts from {}", path.display());
 
-    // Emit the cargo metadata lines to register libraries for linking.
-    let cargo_metadata_path = path.join("cargo_metadata.txt");
-    let metadata = std::fs::read_to_string(&cargo_metadata_path)
-        .unwrap_or_else(|_| panic!("failed to read {}", cargo_metadata_path.display()));
-    println!("{}", metadata);
+    let config_path = path.join(DEFAULT_PYTHON_CONFIG_FILENAME);
+    if !config_path.exists() {
+        panic!(
+            "{} does not exist; is {} a valid artifacts directory?",
+            config_path.display(),
+            path.display()
+        );
+    }
+
+    println!("cargo:default-python-config-rs={}", config_path.display());
 }
 
 /// Build by calling a `pyoxidizer` executable to generate build artifacts.
