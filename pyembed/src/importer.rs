@@ -17,7 +17,7 @@ use {
 };
 use {
     crate::{
-        conversion::{path_to_pyobject, pyobject_to_pathbuf},
+        conversion::pyobject_to_pathbuf,
         extension::{get_module_state, OXIDIZED_IMPORTER_NAME_STR},
         pkg_resources::register_pkg_resources_with_module,
         python_resources::{
@@ -907,13 +907,17 @@ impl OxidizedFinder {
     }
 
     #[getter]
-    fn origin<'p>(&self, py: Python<'p>) -> PyResult<&'p PyAny> {
-        path_to_pyobject(py, &self.state.get_resources_state().origin)
+    fn origin<'p>(&self, py: Python<'p>) -> &'p PyAny {
+        (&self.state.get_resources_state().origin)
+            .into_py(py)
+            .into_ref(py)
     }
 
     #[getter]
-    fn path_hook_base_str<'p>(&self, py: Python<'p>) -> PyResult<&'p PyAny> {
-        path_to_pyobject(py, &self.state.get_resources_state().current_exe)
+    fn path_hook_base_str<'p>(&self, py: Python<'p>) -> &'p PyAny {
+        (&self.state.get_resources_state().current_exe)
+            .into_py(py)
+            .into_ref(py)
     }
 
     #[getter]
@@ -1071,7 +1075,7 @@ impl OxidizedFinder {
         // Only accept str.
         let path = path_original.cast_as::<PyString>()?;
 
-        let path_hook_base = finder.path_hook_base_str(py)?.cast_as::<PyString>()?;
+        let path_hook_base = finder.path_hook_base_str(py).cast_as::<PyString>()?;
 
         let target_package = if path.compare(path_hook_base)? == std::cmp::Ordering::Equal {
             None

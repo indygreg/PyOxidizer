@@ -5,12 +5,9 @@
 //! Bridge Rust and Python string types.
 
 use {
-    pyo3::{
-        buffer::PyBuffer, exceptions::PyUnicodeDecodeError, ffi as pyffi, prelude::*, types::PyDict,
-    },
+    pyo3::{buffer::PyBuffer, ffi as pyffi, prelude::*, types::PyDict},
     std::{
         collections::HashMap,
-        ffi::{CStr, OsStr},
         path::{Path, PathBuf},
     },
 };
@@ -19,69 +16,10 @@ use {
 use std::ffi::OsString;
 
 #[cfg(target_family = "unix")]
-use std::{ffi::CString, os::unix::ffi::OsStrExt};
+use std::{ffi::OsStr, os::unix::ffi::OsStrExt};
 
 #[cfg(target_family = "windows")]
 use std::os::windows::prelude::OsStrExt;
-
-#[cfg(target_family = "unix")]
-const SURROGATEESCAPE: &[u8] = b"surrogateescape\0";
-
-/// Convert an &OsStr to a PyObject, using an optional encoding.
-///
-/// The optional encoding is the name of a Python encoding. If not used,
-/// the default system encoding will be used.
-#[cfg(target_family = "unix")]
-pub fn osstr_to_pyobject<'p>(
-    py: Python<'p>,
-    s: &OsStr,
-    encoding: Option<&str>,
-) -> Result<&'p PyAny, &'static str> {
-    // PyUnicode_DecodeLocaleAndSize says the input must have a trailing NULL.
-    // So use a CString for that.
-    let b = CString::new(s.as_bytes()).map_err(|_| "not a valid C string")?;
-
-    let raw_object = if let Some(encoding) = encoding {
-        let encoding_cstring =
-            CString::new(encoding.as_bytes()).map_err(|_| "encoding not a valid C string")?;
-
-        unsafe {
-            pyffi::PyUnicode_Decode(
-                b.as_ptr() as *const i8,
-                b.to_bytes().len() as isize,
-                encoding_cstring.as_ptr(),
-                SURROGATEESCAPE.as_ptr() as *const i8,
-            )
-        }
-    } else {
-        unsafe {
-            pyffi::PyUnicode_DecodeLocaleAndSize(
-                b.as_ptr() as *const i8,
-                b.to_bytes().len() as isize,
-                SURROGATEESCAPE.as_ptr() as *const i8,
-            )
-        }
-    };
-
-    unsafe { Ok(PyObject::from_owned_ptr(py, raw_object).into_ref(py)) }
-}
-
-#[cfg(target_family = "windows")]
-pub fn osstr_to_pyobject<'p>(
-    py: Python<'p>,
-    s: &OsStr,
-    _encoding: Option<&str>,
-) -> Result<&'p PyAny, &'static str> {
-    // Windows OsString should be valid UTF-16. So we can ignore encoding.
-    let w: Vec<u16> = s.encode_wide().collect();
-    unsafe {
-        Ok(PyObject::from_owned_ptr(
-            py,
-            pyffi::PyUnicode_FromWideChar(w.as_ptr(), w.len() as isize),
-        )
-        .into_ref(py))
-    }
-}
 
 #[cfg(all(unix, not(library_mode = "extension")))]
 pub fn osstring_to_bytes(py: Python, s: OsString) -> &PyAny {
@@ -101,27 +39,9 @@ pub fn osstring_to_bytes<'p>(py: Python<'p>, s: OsString) -> &'p PyAny {
     }
 }
 
-/// Convert a Rust path to a Python object.
-///
-/// TODO remove and use PyO3 conversion traits instead.
-pub fn path_to_pyobject<'p>(py: Python<'p>, path: &Path) -> PyResult<&'p PyAny> {
-    let encoding_ptr = unsafe { pyffi::Py_FileSystemDefaultEncoding };
-
-    let encoding = if encoding_ptr.is_null() {
-        None
-    } else {
-        Some(
-            unsafe { CStr::from_ptr(encoding_ptr).to_str() }
-                .map_err(|e| PyUnicodeDecodeError::new_err(e.to_string()))?,
-        )
-    };
-
-    osstr_to_pyobject(py, path.as_os_str(), encoding).map_err(PyUnicodeDecodeError::new_err)
-}
-
 /// Convert a Rust Path to a pathlib.Path.
 pub fn path_to_pathlib_path<'p>(py: Python<'p>, path: &Path) -> PyResult<&'p PyAny> {
-    let py_str = path_to_pyobject(py, path)?;
+    let py_str = path.into_py(py).into_ref(py);
 
     let pathlib = py.import("pathlib")?;
 

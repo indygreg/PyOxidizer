@@ -10,7 +10,7 @@ use {
     crate::{
         config::{PackedResourcesSource, ResolvedOxidizedPythonInterpreterConfig},
         conversion::{
-            path_to_pathlib_path, path_to_pyobject, pyobject_optional_resources_map_to_owned_bytes,
+            path_to_pathlib_path, pyobject_optional_resources_map_to_owned_bytes,
             pyobject_optional_resources_map_to_pathbuf, pyobject_to_owned_bytes_optional,
             pyobject_to_pathbuf_optional,
         },
@@ -311,7 +311,7 @@ impl<'a> ImportablePythonModule<'a, u8> {
             // `/path/to/myapp.zip/mypackage/subpackage`.
             let mut locations = if let Some(origin_path) = self.origin_path() {
                 if let Some(parent_path) = origin_path.parent() {
-                    vec![path_to_pyobject(py, parent_path)?]
+                    vec![parent_path.into_py(py).into_ref(py)]
                 } else {
                     vec![]
                 }
@@ -323,7 +323,7 @@ impl<'a> ImportablePythonModule<'a, u8> {
                 let mut path = self.current_exe.to_path_buf();
                 path.extend(self.resource.name.split('.'));
 
-                locations.push(path_to_pyobject(py, &path)?);
+                locations.push(path.into_py(py).into_ref(py));
             }
 
             spec.setattr("submodule_search_locations", locations)?;
@@ -337,7 +337,7 @@ impl<'a> ImportablePythonModule<'a, u8> {
     /// The value gets turned into `__file__`
     pub fn resolve_origin<'p>(&self, py: Python<'p>) -> PyResult<Option<&'p PyAny>> {
         Ok(if let Some(path) = self.origin_path() {
-            Some(path_to_pyobject(py, &path)?)
+            Some(path.into_py(py).into_ref(py))
         } else {
             None
         })
@@ -357,7 +357,7 @@ impl<'a> ImportablePythonModule<'a, u8> {
         };
 
         Ok(if let Some(path) = path {
-            Some(path_to_pyobject(py, &path)?)
+            Some(path.into_py(py).into_ref(py))
         } else {
             None
         })
@@ -776,7 +776,7 @@ impl<'a> PythonResourcesState<'a, u8> {
                 return Ok(Some(
                     io_module
                         .getattr("FileIO")?
-                        .call((path_to_pyobject(py, &path)?, "r"), None)?,
+                        .call((path.into_py(py), "r"), None)?,
                 ));
             }
         }
@@ -1034,7 +1034,7 @@ impl<'a> PythonResourcesState<'a, u8> {
 
                             let fh = io_module
                                 .getattr("FileIO")?
-                                .call((path_to_pyobject(py, &resource_path)?, "r"), None)?;
+                                .call((resource_path.into_py(py).into_ref(py), "r"), None)?;
 
                             return fh.call_method0("read");
                         }
