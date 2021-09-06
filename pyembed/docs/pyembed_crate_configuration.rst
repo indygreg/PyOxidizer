@@ -14,8 +14,8 @@ control how build artifacts are created and consumed.
 
 The features are described in the following sections.
 
-``build-mode-default``
-----------------------
+``build-mode-standalone``
+-------------------------
 
 This is the default build mode. It is enabled by default.
 
@@ -27,6 +27,16 @@ This is the default mode for convenience, as it enables the ``pyembed`` crate
 to build in the most environments. However, the built binaries will have a
 dependency against a foreign ``libpython`` and likely aren't suitable for
 distribution.
+
+This mode does not attempt to invoke ``pyoxidizer`` or find artifacts it would
+have built. It is possible to build the ``pyembed`` crate in this mode if
+the ``pyo3`` crate can find a Python interpreter. But, the ``pyembed``
+crate may not be usable or work in the way you want it to.
+
+This mode is intended to be used for performing quick testing on the
+``pyembed`` crate. It is quite possible that linking errors will occur
+in this mode unless you take additional actions to point Cargo at
+appropriate libraries.
 
 ``pyembed`` has a dependency on Python 3.8+. If an older Python is detected,
 it can result in build errors, including unresolved symbol errors.
@@ -63,19 +73,6 @@ specified by ``PYOXIDIZER_ARTIFACT_DIR`` if set, falling back to ``OUT_DIR``.
 See :ref:`pyembed_build_artifacts` for documentation on the required
 artifacts.
 
-``build-mode-standalone``
--------------------------
-
-Do not attempt to invoke ``pyoxidizer`` or find artifacts it would have
-built. It is possible to build the ``pyembed`` crate in this mode if
-the ``pyo3`` crate can find a Python interpreter. But, the ``pyembed``
-crate may not be usable or work in the way you want it to.
-
-This mode is intended to be used for performing quick testing on the
-``pyembed`` crate. It is quite possible that linking errors will occur
-in this mode unless you take additional actions to point Cargo at
-appropriate libraries.
-
 .. _pyembed_build_artifacts:
 
 Build Artifacts
@@ -89,5 +86,5 @@ producing equivalent artifacts via other means and having ``pyembed`` consume
 them.
 
 The way this mode works is the build script is pointed at a directory
-The only required artifact is a ``default_python_config.rs``
+containing artifacts. The only required artifact is a ``default_python_config.rs``
 file. This file defines the default embedded Python interpreter configuration.

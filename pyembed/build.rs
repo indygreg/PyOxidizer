@@ -99,8 +99,7 @@ fn build_with_pyoxidizer_native(resolve_target: Option<&str>) {
 fn main() {
     let mut library_mode = "pyembed";
 
-    if env::var("CARGO_FEATURE_BUILD_MODE_DEFAULT").is_ok() {
-    } else if env::var("CARGO_FEATURE_BUILD_MODE_STANDALONE").is_ok() {
+    if env::var("CARGO_FEATURE_BUILD_MODE_STANDALONE").is_ok() {
     } else if env::var("CARGO_FEATURE_BUILD_MODE_PYOXIDIZER_EXE").is_ok() {
         let target = if let Ok(target) = env::var("PYOXIDIZER_BUILD_TARGET") {
             Some(target)

@@ -75,16 +75,10 @@ pathdiff = "0.2"
 rusty-fork = "0.3"
 
 [features]
-default = ["build-mode-default"]
+default = ["build-mode-standalone"]
 allocator-jemalloc = ["jemalloc-sys"]
 allocator-mimalloc = ["libmimalloc-sys"]
 allocator-snmalloc = ["snmalloc-sys"]
-
-# The default build mode.
-#
-# This crate links against whatever Python is picked up by the cpython crate
-# using its default link semantics.
-build-mode-default = []
 
 # Build this crate in isolation, without using PyOxidizer.
 build-mode-standalone = []
