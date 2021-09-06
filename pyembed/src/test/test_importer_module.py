@@ -111,9 +111,13 @@ SYMBOL_ATTRIBUTES = {
     "PythonModuleSource": {"is_package", "module", "source"},
     "PythonPackageDistributionResource": {"data", "name", "package", "version"},
     "PythonPackageResource": {"data", "name", "package"},
+    "decode_source": set(),
+    "find_resources_in_path": set(),
+    "pkg_resources_find_distributions": set(),
+    "register_pkg_resources": set(),
 }
 
-COMMON_DUNDER_ATTRIBUTES = {
+COMMON_CLASS_DUNDER_ATTRIBUTES = {
     "__class__",
     "__delattr__",
     "__dir__",
@@ -139,6 +143,38 @@ COMMON_DUNDER_ATTRIBUTES = {
     "__new__",
 }
 
+COMMON_FUNCTION_DUNDER_ATTRIBUTES = {
+    "__call__",
+    "__class__",
+    "__delattr__",
+    "__dir__",
+    "__doc__",
+    "__eq__",
+    "__format__",
+    "__ge__",
+    "__getattribute__",
+    "__gt__",
+    "__hash__",
+    "__init__",
+    "__init_subclass__",
+    "__le__",
+    "__lt__",
+    "__module__",
+    "__name__",
+    "__ne__",
+    "__new__",
+    "__qualname__",
+    "__reduce__",
+    "__reduce_ex__",
+    "__repr__",
+    "__self__",
+    "__setattr__",
+    "__sizeof__",
+    "__str__",
+    "__subclasshook__",
+    "__text_signature__",
+}
+
 
 class TestImporterModule(unittest.TestCase):
     def test_module(self):
@@ -146,35 +182,22 @@ class TestImporterModule(unittest.TestCase):
 
         attrs = {a for a in dir(importer) if not a.startswith("__")}
         self.assertEqual(
-            attrs,
-            {
-                "decode_source",
-                "find_resources_in_path",
-                "pkg_resources_find_distributions",
-                "register_pkg_resources",
-                "OxidizedDistribution",
-                "OxidizedFinder",
-                "OxidizedPathEntryFinder",
-                "OxidizedPkgResourcesProvider",
-                "OxidizedResourceCollector",
-                "OxidizedResourceReader",
-                "OxidizedResource",
-                "PythonExtensionModule",
-                "PythonModuleBytecode",
-                "PythonModuleSource",
-                "PythonPackageDistributionResource",
-                "PythonPackageResource",
-            },
+            attrs, set(SYMBOL_ATTRIBUTES.keys()), "module symbols match expected"
         )
 
     def test_symbol_attrs(self):
         import oxidized_importer as importer
 
         for (symbol, expected) in sorted(SYMBOL_ATTRIBUTES.items()):
-            # All classes have common dunder attributes plus type-specific ones.
-            expected = COMMON_DUNDER_ATTRIBUTES | expected
-
             o = getattr(importer, symbol)
+
+            if symbol.lower() == symbol:
+                extra = COMMON_FUNCTION_DUNDER_ATTRIBUTES
+            else:
+                extra = COMMON_CLASS_DUNDER_ATTRIBUTES
+
+            expected = extra | expected
+
             attrs = set(dir(o))
             self.assertEqual(attrs, expected, "attributes on %s" % symbol)
 
