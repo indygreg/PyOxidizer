@@ -101,7 +101,6 @@ fn main() {
 
     if env::var("CARGO_FEATURE_BUILD_MODE_DEFAULT").is_ok() {
     } else if env::var("CARGO_FEATURE_BUILD_MODE_STANDALONE").is_ok() {
-    } else if env::var("CARGO_FEATURE_BUILD_MODE_TEST").is_ok() {
     } else if env::var("CARGO_FEATURE_BUILD_MODE_PYOXIDIZER_EXE").is_ok() {
         let target = if let Ok(target) = env::var("PYOXIDIZER_BUILD_TARGET") {
             Some(target)

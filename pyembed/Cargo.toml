@@ -102,6 +102,3 @@ build-mode-prebuilt-artifacts = []
 build-mode-extension-module = [
     "pyo3/extension-module",
 ]
-
-# Build mode for running tests.
-build-mode-test = []
