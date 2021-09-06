@@ -23,7 +23,7 @@ path = "../python-packed-resources"
 version = "0.18.0-pre"
 path = "../pyembed"
 default-features = false
-features = ["build-mode-extension-module"]
+features = ["extension-module"]
 
 [dependencies.pyo3]
 version = "0.14.5"

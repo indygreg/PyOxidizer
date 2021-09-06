@@ -45,7 +45,7 @@ from the PyOxidizer configuration file. This configuration is based off the
 :py:class:`PythonInterpreterConfig` defined in the PyOxidizer Starlark
 configuration file.
 
-The crate's build script will set the ``PYOXIDIZER_DEFAULT_PYTHON_CONFIG_RS``
+The crate's build script will set the ``DEFAULT_PYTHON_CONFIG_RS``
 environment variable to the path to this file, exposing it to Rust code.
 
 This all means that to use the auto-generated
@@ -54,7 +54,7 @@ you simply need to do something like the following:
 
 .. code-block:: rust
 
-   include!(env!("PYOXIDIZER_DEFAULT_PYTHON_CONFIG_RS"));
+   include!(env!("DEFAULT_PYTHON_CONFIG_RS"));
 
    fn create_interpreter() -> Result<pyembed::MainPythonInterpreter> {
        // Calls function from include!()'d file.

@@ -574,7 +574,7 @@ pub fn run_from_build(
 
     let default_python_config_path = dest_dir.join(DEFAULT_PYTHON_CONFIG_FILENAME);
     println!(
-        "cargo:default-python-config-rs={}",
+        "cargo:rustc-env=DEFAULT_PYTHON_CONFIG_RS={}",
         default_python_config_path.display()
     );
 

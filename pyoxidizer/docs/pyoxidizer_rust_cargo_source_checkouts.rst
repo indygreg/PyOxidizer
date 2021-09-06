@@ -52,17 +52,13 @@ This is a standard Rust crate and should always build without issue. e.g.
 
 The ``pyembed`` crate provides the bulk of the run-time functionality for
 binaries embedding Python interpreters. Because the crate needs to consult
-with a Python interpreter at build time and link against it and because
-it needs to exchange state with PyOxidizer, its build configuration is...
-*special*.
+with a Python interpreter at build time and link against it, its build
+configuration can be fragile.
 
 .. important::
 
    Almost all workspace build failures are somehow related to the ``pyembed``
    crate.
-
-The ``pyembed`` crate defines various *features* to control how it is built.
-See :ref:`pyembed_crate_configuration` for details.
 
 In its default configuration, a Python 3.9 executable needs to be found on
 ``PATH``. If said executable can't be found, you'll get a

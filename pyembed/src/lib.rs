@@ -10,18 +10,14 @@ Python interpreter running in the current process.
 
 `pyembed` provides significant additional functionality over what is covered
 by the official
-[Embedding Python in Another Application](https://docs.python.org/3.7/extending/embedding.html)
-docs and provided by the [CPython C API](https://docs.python.org/3.7/c-api/).
+[Embedding Python in Another Application](https://docs.python.org/3/extending/embedding.html)
+docs and provided by the [CPython C API](https://docs.python.org/3/c-api/).
 For example, `pyembed` defines a custom Python *meta path importer* that can
 import Python module bytecode from memory using 0-copy.
 
-While this crate is conceptually generic and can be used as a high-level
-manager of an embedded Python interpreter (it has a high-level API that
-makes running an embedded Python interpreter relatively easy), the crate
-was designed for use with [PyOxidizer](https://github.com/indygreg/PyOxidizer).
-If you are leveraging the advanced features like the module importer that can
-import modules from memory using 0-copy, you probably want to use this crate
-with `PyOxidizer`.
+This crate was initially designed for and is maintained as part of the
+[PyOxidizer](https://github.com/indygreg/PyOxidizer) project. However,
+the crate is generic and can be used outside the PyOxidizer project.
 
 The most important types in this crate are
 [`OxidizedPythonInterpreterConfig`](struct.OxidizedPythonInterpreterConfig.html)
@@ -61,19 +57,8 @@ The optional `snmalloc` feature controls support for using
 [snmalloc](https://github.com/microsoft/snmalloc) as Python's memory allocator.
 The feature behaves similarly to `jemalloc`, which is documented above.
 
-There exist mutually exclusive `build-mode-*` features to control how the
-`build.rs` build script works.
-
-`build-mode-standalone` (the default) builds the crate as a standalone crate
-and doesn't attempt to do anything special at build time.
-
-`build-mode-pyoxidizer-exe` attempts to invoke a `pyoxidizer` executable
-to build required artifacts.
-
-`build-mode-prebuilt-artifacts` will attempt to use artifacts produced by
-`PyOxidizer` out-of-band. In this mode, the `PYOXIDIZER_ARTIFACT_DIR`
-environment variable can refer to the directory containing build artifacts
-that this crate needs. If not set, `OUT_DIR` will be used.
+The optional `extension-module` feature changes the way the crate is built
+so that the built crate can be used as a Python extension module.
 */
 
 #[allow(unused)]

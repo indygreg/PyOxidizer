@@ -58,6 +58,14 @@ Backwards Compatibility Notes
   crate).
 * The ``pyoxidizer add`` command has been removed because it didn't work as
   advertised.
+* The ``pyembed`` crate no longer has ``build-mode-*`` features and its build
+  script no longer attempts to integrate with PyOxidizer or its build artifacts.
+* The ``pyembed`` crate no longer annotates a ``links`` entry.
+* The mechanism by which auto-generated Rust projects integrate with the
+  ``pyembed`` crate has changed substantially. If you had created a standalone
+  Rust project via ``pyoxidizer init-rust-project``, you may wish to create a
+  fresh project and reconcile differences in the auto-generated files to ensure
+  things now build as expected.
 
 Other Relevant Changes
 ^^^^^^^^^^^^^^^^^^^^^^
@@ -79,6 +87,9 @@ Other Relevant Changes
   PyO3 crate supporting a configuration file to configure all attributes of
   linking, the PyO3 crate now fully links against ``libpython`` and ``pyembed``
   doesn't care about linking ``libpython`` at all.
+* The ``pyembed`` crate is now generic and no longer attempts to integrate with
+  ``pyoxidizer`` or its build artifacts. The crate can now be used by any Rust
+  application wishing to embed a Python interpreter.
 
 .. _version_0_17_0:
 

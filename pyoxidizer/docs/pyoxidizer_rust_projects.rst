@@ -28,7 +28,10 @@ Generated Rust projects all have a similar layout::
    $ find pyapp -type f | grep -v .git
    .cargo/config
    Cargo.toml
+   Cargo.lock
    build.rs
+   pyapp.exe.manifest
+   pyapp-manifest.rc
    pyoxidizer.bzl
    src/main.rs
 
@@ -44,10 +47,10 @@ The magic lines in this file to enable PyOxidizer are the following::
    pyembed = ...
 
 These lines declare a dependency on the ``pyembed`` package, which holds
-the smarts for embedding Python in a binary.
+the smarts for running an embedded Python interpreter.
 
-In addition, the ``build = "build.rs"`` tells runs a script that hooks up
-the output of the ``pyembed`` crate with this project.
+In addition, the ``build = "build.rs"`` helps to dynamically configure the
+crate.
 
 Next let's look at ``src/main.rs``. If you aren't familiar with Rust
 projects, the ``src/main.rs`` file is the default location for the source
@@ -62,11 +65,107 @@ interpreter. That's our executable.
 The ``pyoxidizer.bzl`` is our auto-generated
 :ref:`PyOxidizer configuration file <config_files>`.
 
+Crate Features
+==============
+
+The auto-generated Rust project defines a number of features to control
+behavior. These are documented in the sections below.
+
+``build-mode-standalone``
+-------------------------
+
+This is the default build mode. It is enabled by default.
+
+This build mode uses default Python linking behavior and feature detection
+as implemented by the ``pyo3``. It will attempt to find a ``python`` in
+``PATH`` or from the ``PYO3_PYTHON`` environment variable and link against it.
+
+This is the default mode for convenience, as it enables the ``pyembed`` crate
+to build in the most environments. However, the built binaries will have a
+dependency against a foreign ``libpython`` and likely aren't suitable for
+distribution.
+
+This mode does not attempt to invoke ``pyoxidizer`` or find artifacts it would
+have built. It is possible to build the ``pyembed`` crate in this mode if
+the ``pyo3`` crate can find a Python interpreter. But, the ``pyembed``
+crate may not be usable or work in the way you want it to.
+
+This mode is intended to be used for performing quick testing on the
+``pyembed`` crate. It is quite possible that linking errors will occur
+in this mode unless you take additional actions to point Cargo at
+appropriate libraries.
+
+``pyembed`` has a dependency on Python 3.8+. If an older Python is detected,
+it can result in build errors, including unresolved symbol errors.
+
+``build-mode-pyoxidizer-exe``
+-----------------------------
+
+A ``pyoxidizer`` executable will be run to generate build artifacts.
+
+The path to this executable can be defined via the ``PYOXIDIZER_EXE``
+environment variable. Otherwise ``PATH`` will be used.
+
+At build time, ``pyoxidizer run-build-script`` will be run. A
+``PyOxidizer`` configuration file will be discovered using PyOxidizer's
+heuristics for doing so. ``OUT_DIR`` will be set if running from ``cargo``,
+so a ``pyoxidizer.bzl`` next to the main Rust project being built should
+be found and used.
+
+``pyoxidizer run-build-script`` will resolve the default build script target
+by default. To override which target should be resolved, specify the target
+name via the ``PYOXIDIZER_BUILD_TARGET`` environment variable. e.g.::
+
+   $ PYOXIDIZER_BUILD_TARGET=build-artifacts cargo build
+
+``build-mode-prebuilt-artifacts``
+---------------------------------
+
+This mode tells the build script to reuse artifacts that were already built.
+(Perhaps you called ``pyoxidizer build`` or ``pyoxidizer run-build-script``
+outside the context of a normal ``cargo build``.)
+
+In this mode, the build script will look for artifacts in the directory
+specified by ``PYOXIDIZER_ARTIFACT_DIR`` if set, falling back to ``OUT_DIR``.
+
+``global-allocator-jemalloc``
+-----------------------------
+
+This feature will configure the Rust global allocator to use ``jemalloc``.
+
+``global-allocator-mimalloc``
+-----------------------------
+
+This feature will configure the Rust global allocator to use ``mimalloc``.
+
+``global-allocator-snmalloc``
+-----------------------------
+
+This feature will configure the Rust global allocator to use ``snmalloc``.
+
+``allocator-jemalloc``
+----------------------
+
+This configures the ``pyembed`` crate with support for having the Python
+interpreter use the ``jemalloc`` allocator.
+
+``allocator-mimalloc``
+----------------------
+
+This configures the ``pyembed`` crate with support for having the Python
+interpreter use the ``mimalloc`` allocator.
+
+``allocator-snmalloc``
+----------------------
+
+This configures the ``pyembed`` crate with support for having the Python
+interpreter use the ``snmalloc`` allocator.
+
 Using Cargo With Generated Rust Projects
 ========================================
 
-Rust developers will probably want to use `cargo` instead of `pyoxidizer` for
-building auto-generated Rust projects. This is supported, but behavior can
+Rust developers will probably want to use ``cargo`` instead of ``pyoxidizer``
+for building auto-generated Rust projects. This is supported, but behavior can
 be very finicky.
 
 PyOxidizer has to do some non-conventional things to get Rust projects to
