@@ -113,6 +113,32 @@ SYMBOL_ATTRIBUTES = {
     "PythonPackageResource": {"data", "name", "package"},
 }
 
+COMMON_DUNDER_ATTRIBUTES = {
+    "__class__",
+    "__delattr__",
+    "__dir__",
+    "__doc__",
+    "__eq__",
+    "__format__",
+    "__ge__",
+    "__getattribute__",
+    "__gt__",
+    "__hash__",
+    "__init_subclass__",
+    "__init__",
+    "__le__",
+    "__lt__",
+    "__ne__",
+    "__reduce__",
+    "__reduce_ex__",
+    "__repr__",
+    "__setattr__",
+    "__sizeof__",
+    "__str__",
+    "__subclasshook__",
+    "__new__",
+}
+
 
 class TestImporterModule(unittest.TestCase):
     def test_module(self):
@@ -145,8 +171,11 @@ class TestImporterModule(unittest.TestCase):
         import oxidized_importer as importer
 
         for (symbol, expected) in sorted(SYMBOL_ATTRIBUTES.items()):
+            # All classes have common dunder attributes plus type-specific ones.
+            expected = COMMON_DUNDER_ATTRIBUTES | expected
+
             o = getattr(importer, symbol)
-            attrs = {a for a in dir(o) if not a.startswith("__")}
+            attrs = set(dir(o))
             self.assertEqual(attrs, expected, "attributes on %s" % symbol)
 
 
