@@ -29,8 +29,8 @@ jobs:
           python-version: ${{ matrix.py.version }}
       - name: Run cibuildwheel
         run: |
-          python${{ matrix.py.version }} -m pip install --upgrade pip==21.1.1
-          python${{ matrix.py.version }} -m pip install cibuildwheel==1.11.0
+          python${{ matrix.py.version }} -m pip install --upgrade pip==21.2.4
+          python${{ matrix.py.version }} -m pip install cibuildwheel==2.1.1
           python${{ matrix.py.version }} -m cibuildwheel --output-dir wheelhouse .
 
       - name: Upload wheels
@@ -63,8 +63,8 @@ jobs:
           python-version: ${{ matrix.py.version }}
       - name: Run cibuildwheel
         run: |
-          python${{ matrix.py.version }} -m pip install --upgrade pip==21.1.1
-          python${{ matrix.py.version }} -m pip install cibuildwheel==1.11.0
+          python${{ matrix.py.version }} -m pip install --upgrade pip==21.2.4
+          python${{ matrix.py.version }} -m pip install cibuildwheel==2.1.1
           python${{ matrix.py.version }} -m cibuildwheel --output-dir wheelhouse .
 
       - name: Upload wheels
@@ -97,8 +97,8 @@ jobs:
           python-version: ${{ matrix.py.version }}
       - name: Run cibuildwheel
         run: |
-          python -m pip install --upgrade pip==21.1.1
-          python -m pip install cibuildwheel==1.11.0
+          python -m pip install --upgrade pip==21.2.4
+          python -m pip install cibuildwheel==2.1.1
           python -m cibuildwheel --output-dir wheelhouse .
 
       - name: Upload wheels
