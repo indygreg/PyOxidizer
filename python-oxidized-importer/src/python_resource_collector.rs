@@ -34,13 +34,13 @@ use {
 };
 
 #[pyclass(module = "oxidized_importer")]
-struct PyTempDir {
+pub struct PyTempDir {
     cleanup: Py<PyAny>,
     path: PathBuf,
 }
 
 impl PyTempDir {
-    fn new(py: Python) -> PyResult<Self> {
+    pub fn new(py: Python) -> PyResult<Self> {
         let temp_dir = py
             .import("tempfile")?
             .getattr("TemporaryDirectory")?
@@ -51,7 +51,7 @@ impl PyTempDir {
         Ok(Self { cleanup, path })
     }
 
-    fn path(&self) -> &Path {
+    pub fn path(&self) -> &Path {
         &self.path
     }
 }
@@ -122,7 +122,7 @@ impl OxidizedResourceCollector {
         Ok(PyList::new(py, &values))
     }
 
-    fn add_in_memory(&self, py: Python, resource: &PyAny) -> PyResult<()> {
+    fn add_in_memory(&self, resource: &PyAny) -> PyResult<()> {
         let mut collector = self.collector.borrow_mut();
         let typ = resource.get_type();
         let repr = resource.repr()?;
@@ -133,7 +133,7 @@ impl OxidizedResourceCollector {
                 let module = module_cell.borrow();
                 let resource = module.get_resource();
 
-                if let Some(location) = &resource.shared_library {
+                if let Some(_) = &resource.shared_library {
                     collector
                         .add_python_extension_module(&resource, &ConcreteResourceLocation::InMemory)
                         .with_context(|| format!("adding {}", repr))
@@ -201,12 +201,7 @@ impl OxidizedResourceCollector {
         }
     }
 
-    fn add_filesystem_relative(
-        &self,
-        py: Python,
-        prefix: String,
-        resource: &PyAny,
-    ) -> PyResult<()> {
+    fn add_filesystem_relative(&self, prefix: String, resource: &PyAny) -> PyResult<()> {
         let mut collector = self.collector.borrow_mut();
 
         let repr = resource.repr()?;
@@ -331,34 +326,5 @@ impl OxidizedResourceCollector {
             py,
             &[resources.to_object(py), file_installs.to_object(py)],
         ))
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use {super::*, rusty_fork::rusty_fork_test};
-
-    fn get_interpreter<'interp, 'rsrc>() -> crate::MainPythonInterpreter<'interp, 'rsrc> {
-        let mut config = crate::OxidizedPythonInterpreterConfig::default();
-        config.interpreter_config.parse_argv = Some(false);
-        config.set_missing_path_configuration = false;
-        let interp = crate::MainPythonInterpreter::new(config).unwrap();
-
-        interp
-    }
-
-    rusty_fork_test! {
-        #[test]
-        fn py_temp_dir_lifetimes() {
-            let path = {
-                let mut interp = get_interpreter();
-                let py = interp.acquire_gil();
-                let temp_dir = PyTempDir::new(py).unwrap();
-                drop(py); // PyTempDir::drop reacquires the GIL for itself
-                assert!(temp_dir.path().is_dir());
-                temp_dir.path().to_path_buf()
-            };
-            assert!(!path.is_dir());
-        }
     }
 }

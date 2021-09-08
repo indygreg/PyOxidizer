@@ -7,6 +7,7 @@
 use {
     crate::NewInterpreterError,
     pyo3::ffi as pyffi,
+    python_oxidized_importer::{PackedResourcesSource, PythonResourcesState},
     python_packaging::interpreter::{
         MemoryAllocatorBackend, MultiprocessingStartMethod, PythonInterpreterConfig,
         PythonInterpreterProfile, TerminfoResolution,
@@ -27,22 +28,6 @@ pub struct ExtensionModule {
 
     /// Extension module initialization function.
     pub init_func: unsafe extern "C" fn() -> *mut pyffi::PyObject,
-}
-
-/// A source for packed resources data.
-#[derive(Clone, Debug, PartialEq)]
-pub enum PackedResourcesSource<'a> {
-    /// A reference to raw resources data in memory.
-    Memory(&'a [u8]),
-
-    /// Load resources data from a filesystem path using memory mapped I/O.
-    MemoryMappedPath(PathBuf),
-}
-
-impl<'a> From<&'a [u8]> for PackedResourcesSource<'a> {
-    fn from(data: &'a [u8]) -> Self {
-        Self::Memory(data)
-    }
 }
 
 /// Configure a Python interpreter.
@@ -434,6 +419,41 @@ impl<'a> ResolvedOxidizedPythonInterpreterConfig<'a> {
         } else {
             std::env::args_os().collect::<Vec<_>>()
         }
+    }
+}
+
+impl<'a, 'config: 'a> TryFrom<&ResolvedOxidizedPythonInterpreterConfig<'config>>
+    for PythonResourcesState<'a, u8>
+{
+    type Error = NewInterpreterError;
+
+    fn try_from(
+        config: &ResolvedOxidizedPythonInterpreterConfig<'config>,
+    ) -> Result<Self, Self::Error> {
+        let mut state = Self::default();
+        state.current_exe = config.exe().clone();
+        state.origin = config.origin().clone();
+
+        for source in &config.packed_resources {
+            match source {
+                PackedResourcesSource::Memory(data) => {
+                    state
+                        .index_data(data)
+                        .map_err(NewInterpreterError::Simple)?;
+                }
+                PackedResourcesSource::MemoryMappedPath(path) => {
+                    state
+                        .index_path_memory_mapped(path)
+                        .map_err(NewInterpreterError::Dynamic)?;
+                }
+            }
+        }
+
+        state
+            .index_interpreter_builtins()
+            .map_err(NewInterpreterError::Simple)?;
+
+        Ok(state)
     }
 }
 

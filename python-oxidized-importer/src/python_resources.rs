@@ -7,14 +7,10 @@ Management of Python resources.
 */
 
 use {
-    crate::{
-        config::{PackedResourcesSource, ResolvedOxidizedPythonInterpreterConfig},
-        conversion::{
-            path_to_pathlib_path, pyobject_optional_resources_map_to_owned_bytes,
-            pyobject_optional_resources_map_to_pathbuf, pyobject_to_owned_bytes_optional,
-            pyobject_to_pathbuf_optional,
-        },
-        error::NewInterpreterError,
+    crate::conversion::{
+        path_to_pathlib_path, pyobject_optional_resources_map_to_owned_bytes,
+        pyobject_optional_resources_map_to_pathbuf, pyobject_to_owned_bytes_optional,
+        pyobject_to_pathbuf_optional,
     },
     anyhow::Result,
     pyo3::{
@@ -31,7 +27,6 @@ use {
         borrow::Cow,
         cell::RefCell,
         collections::{hash_map::Entry, BTreeSet, HashMap},
-        convert::TryFrom,
         ffi::CStr,
         os::raw::c_int,
         path::{Path, PathBuf},
@@ -398,6 +393,23 @@ impl<'a> ImportablePythonModule<'a, u8> {
     }
 }
 
+/// A source for packed resources data.
+#[derive(Clone, Debug, PartialEq)]
+pub enum PackedResourcesSource<'a> {
+    /// A reference to raw resources data in memory.
+    Memory(&'a [u8]),
+
+    /// Load resources data from a filesystem path using memory mapped I/O.
+    #[allow(unused)]
+    MemoryMappedPath(PathBuf),
+}
+
+impl<'a> From<&'a [u8]> for PackedResourcesSource<'a> {
+    fn from(data: &'a [u8]) -> Self {
+        Self::Memory(data)
+    }
+}
+
 /// Defines Python resources available for import.
 #[derive(Debug)]
 pub struct PythonResourcesState<'a, X>
@@ -434,43 +446,6 @@ impl<'a> Default for PythonResourcesState<'a, u8> {
             backing_py_objects: vec![],
             backing_mmaps: vec![],
         }
-    }
-}
-
-impl<'a, 'config: 'a> TryFrom<&ResolvedOxidizedPythonInterpreterConfig<'config>>
-    for PythonResourcesState<'a, u8>
-{
-    type Error = NewInterpreterError;
-
-    fn try_from(
-        config: &ResolvedOxidizedPythonInterpreterConfig<'config>,
-    ) -> Result<Self, Self::Error> {
-        let mut state = Self {
-            current_exe: config.exe().clone(),
-            origin: config.origin().clone(),
-            ..Default::default()
-        };
-
-        for source in &config.packed_resources {
-            match source {
-                PackedResourcesSource::Memory(data) => {
-                    state
-                        .index_data(data)
-                        .map_err(NewInterpreterError::Simple)?;
-                }
-                PackedResourcesSource::MemoryMappedPath(path) => {
-                    state
-                        .index_path_memory_mapped(path)
-                        .map_err(NewInterpreterError::Dynamic)?;
-                }
-            }
-        }
-
-        state
-            .index_interpreter_builtins()
-            .map_err(NewInterpreterError::Simple)?;
-
-        Ok(state)
     }
 }
 
@@ -1625,99 +1600,4 @@ pub(crate) fn resource_to_pyobject<'p>(
 #[inline]
 pub(crate) fn pyobject_to_resource(resource: &OxidizedResource) -> Resource<'static, u8> {
     resource.resource.borrow().clone()
-}
-
-#[cfg(test)]
-mod tests {
-    use {super::*, crate::OxidizedPythonInterpreterConfig, anyhow::anyhow};
-
-    #[test]
-    fn multiple_resource_blobs() -> Result<()> {
-        let mut state0 = PythonResourcesState::default();
-        state0
-            .add_resource(Resource {
-                name: "foo".into(),
-                is_module: true,
-                in_memory_source: Some(vec![42].into()),
-                ..Default::default()
-            })
-            .unwrap();
-        let data0 = state0.serialize_resources(true, true)?;
-
-        let mut state1 = PythonResourcesState::default();
-        state1
-            .add_resource(Resource {
-                name: "bar".into(),
-                is_module: true,
-                in_memory_source: Some(vec![42, 42].into()),
-                ..Default::default()
-            })
-            .unwrap();
-        let data1 = state1.serialize_resources(true, true)?;
-
-        let config = OxidizedPythonInterpreterConfig::default().resolve()?;
-
-        let mut resources = PythonResourcesState::try_from(&config)?;
-        resources.index_data(&data0).unwrap();
-        resources.index_data(&data1).unwrap();
-
-        assert!(resources.resources.contains_key("foo".into()));
-        assert!(resources.resources.contains_key("bar".into()));
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_memory_mapped_file_resources() -> Result<()> {
-        let current_dir = std::env::current_exe()?
-            .parent()
-            .ok_or_else(|| anyhow!("unable to find current exe parent"))?
-            .to_path_buf();
-
-        let mut state0 = PythonResourcesState::default();
-        state0
-            .add_resource(Resource {
-                name: "foo".into(),
-                is_module: true,
-                in_memory_source: Some(vec![42].into()),
-                ..Default::default()
-            })
-            .unwrap();
-        let data0 = state0.serialize_resources(true, true)?;
-
-        let resources_dir = current_dir.join("resources");
-        if !resources_dir.exists() {
-            std::fs::create_dir(&resources_dir)?;
-        }
-
-        let resources_path = resources_dir.join("test_memory_mapped_file_resources");
-        std::fs::write(&resources_path, &data0)?;
-
-        // Absolute path should work.
-        let mut config = OxidizedPythonInterpreterConfig::default();
-        config
-            .packed_resources
-            .push(PackedResourcesSource::MemoryMappedPath(
-                resources_path.clone(),
-            ));
-
-        let resolved = config.clone().resolve()?;
-        let resources = PythonResourcesState::try_from(&resolved)?;
-
-        assert!(resources.resources.contains_key("foo".into()));
-
-        // Now let's try with relative paths.
-        let relative_path =
-            pathdiff::diff_paths(&resources_path, std::env::current_dir()?).unwrap();
-        config.packed_resources.clear();
-        config
-            .packed_resources
-            .push(PackedResourcesSource::MemoryMappedPath(relative_path));
-
-        let resolved = config.resolve()?;
-        let resources = PythonResourcesState::try_from(&resolved)?;
-        assert!(resources.resources.contains_key("foo".into()));
-
-        Ok(())
-    }
 }

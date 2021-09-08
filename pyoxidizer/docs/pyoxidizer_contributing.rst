@@ -42,15 +42,13 @@ program and run it. Use it like ``cargo run --bin pyoxidizer -- init
 ~/tmp/myapp`` to run ``pyoxidizer init ~/tmp/myapp`` for example.
 
 The ``Cargo.toml`` in the root of the repository defines a Cargo workspace
-containing many crates. If you attempt to ``cargo build`` or ``cargo test``,
-you will likely get errors, as different crates have different, conflicting
-build requirements. The ``oxidized-importer`` crate is particularly troublesome.
+containing many crates.
 
-Try building/testing everything with
-``cargo build --workspace --exclude oxidized-importer`` or
-``cargo test --workspace --exclude oxidized-importer``. Or just target the crate
-you want by adding the ``-p`` argument. e.g. ``cargo build -p pyembed`` or
-``cargo test -p pyoxidizer``.
+Some crates have build/link dependencies against a Python interpreter. If you
+run into build errors, try targeting just the crate you care about by adding
+the ``-p`` argument. e.g. ``cargo build -p pyoxidizer``. Or exclude troublesome
+crates like ``cargo build --workspace --exclude python-oxidized-importer
+--exclude pyembed``.
 
 Financial Contributions
 =======================

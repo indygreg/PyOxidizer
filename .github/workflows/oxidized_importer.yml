@@ -6,6 +6,7 @@ on:
 jobs:
   wheel_linux:
     strategy:
+      fail-fast: false
       matrix:
         py:
           - build: 'cp38-manylinux_x86_64'
@@ -42,6 +43,7 @@ jobs:
 
   wheel_macos:
     strategy:
+      fail-fast: false
       matrix:
         py:
           - build: 'cp38-macosx_x86_64'
@@ -76,6 +78,7 @@ jobs:
 
   wheel_windows:
     strategy:
+      fail-fast: false
       matrix:
         py:
           - build: 'cp38-win_amd64'

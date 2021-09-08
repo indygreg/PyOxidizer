@@ -107,31 +107,32 @@ jobs:
           RUSTC_WRAPPER: sccache
         run: |
           rustc --version
-          cargo build --release --workspace --exclude pyembed --exclude pyembed-bench --exclude oxidized-importer
-          cargo test --release --workspace --exclude pyembed --exclude pyembed-bench --exclude oxidized-importer --no-run
+          cargo build --release --workspace --exclude pyembed --exclude pyembed-bench --exclude python-oxidized-importer
+          cargo test --release --workspace --exclude pyembed --exclude pyembed-bench --exclude python-oxidized-importer --no-run
 
       - name: Test Workspace
         env:
           RUSTC_WRAPPER: sccache
         run: |
-          cargo test --release --workspace --exclude pyembed --exclude pyembed-bench --exclude oxidized-importer
+          cargo test --release --workspace --exclude pyembed --exclude pyembed-bench --exclude python-oxidized-importer
 
       # To minimize potential for Python interference, we delay install Python
-      # until we need it for pyembed.
+      # until we need it for python-oxidized-importer/pyembed.
       - uses: actions/setup-python@v2
         with:
           python-version: '3.9'
 
-      - name: Test pyembed
+      - name: Test Python Crates
         run: |
-          python scripts/run-pyembed-tests.py
+          python scripts/run-pyembed-tests.py python-oxidized-importer
+          python scripts/run-pyembed-tests.py pyembed
 
       - uses: actions-rs/clippy@master
         if: ${{ matrix.rust_toolchain == 'stable' || matrix.rust_toolchain == 'beta' }}
         env:
           RUSTC_WRAPPER: sccache
         with:
-          args: --release --workspace --exclude oxidized-importer
+          args: --release --workspace
 
       - name: Stop sccache
         run: |

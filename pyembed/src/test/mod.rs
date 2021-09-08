@@ -11,6 +11,7 @@ use {
 mod importer;
 mod interpreter_config;
 mod main_python_interpreter;
+mod python_resources;
 
 pub const PYTHON_INTERPRETER_PATH: &str = env!("PYTHON_INTERPRETER_PATH");
 

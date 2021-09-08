@@ -90,6 +90,10 @@ Other Relevant Changes
 * The ``pyembed`` crate is now generic and no longer attempts to integrate with
   ``pyoxidizer`` or its build artifacts. The crate can now be used by any Rust
   application wishing to embed a Python interpreter.
+* The ``oxidized_importer`` Python extension has been extracted from the
+  ``pyembed`` crate and is now defined in the ``python-oxidized-importer``
+  crate. The ``pyembed`` crate now depends on this crate to provide the
+  custom importer functionality.
 
 .. _version_0_17_0:
 

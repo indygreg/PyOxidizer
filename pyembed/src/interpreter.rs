@@ -9,19 +9,18 @@ use {
         config::{OxidizedPythonInterpreterConfig, ResolvedOxidizedPythonInterpreterConfig},
         conversion::osstring_to_bytes,
         error::NewInterpreterError,
-        extension::{PyInit_oxidized_importer, OXIDIZED_IMPORTER_NAME, OXIDIZED_IMPORTER_NAME_STR},
-        importer::{
-            install_path_hook, remove_external_importers, replace_meta_path_importers,
-            ImporterState,
-        },
         osutils::resolve_terminfo_dirs,
         pyalloc::PythonMemoryAllocator,
-        python_resources::PythonResourcesState,
     },
     once_cell::sync::Lazy,
     pyo3::{
         exceptions::PyRuntimeError, ffi as pyffi, prelude::*, types::PyDict, PyTypeInfo,
         ToBorrowedObject,
+    },
+    python_oxidized_importer::{
+        install_path_hook, remove_external_importers, replace_meta_path_importers, ImporterState,
+        OxidizedFinder, PyInit_oxidized_importer, PythonResourcesState, OXIDIZED_IMPORTER_NAME,
+        OXIDIZED_IMPORTER_NAME_STR,
     },
     python_packaging::interpreter::{MultiprocessingStartMethod, TerminfoResolution},
     std::{
@@ -241,7 +240,7 @@ impl<'interpreter, 'resources> MainPythonInterpreter<'interpreter, 'resources> {
                     NewInterpreterError::new_from_pyerr(py, err, "obtaining sys.meta_path[0]")
                 })?;
 
-            if !crate::importer::OxidizedFinder::is_type_of(finder) {
+            if !OxidizedFinder::is_type_of(finder) {
                 return Err(NewInterpreterError::Simple(
                     "OxidizedFinder not found on sys.meta_path[0] (this should never happen)",
                 ));

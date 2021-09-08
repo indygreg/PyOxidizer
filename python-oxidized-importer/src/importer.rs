@@ -18,12 +18,13 @@ use {
 use {
     crate::{
         conversion::pyobject_to_pathbuf,
-        extension::{get_module_state, OXIDIZED_IMPORTER_NAME_STR},
+        get_module_state,
         pkg_resources::register_pkg_resources_with_module,
         python_resources::{
             name_at_package_hierarchy, pyobject_to_resource, resource_to_pyobject, ModuleFlavor,
             OptimizeLevel, OxidizedResource, PythonResourcesState,
         },
+        OXIDIZED_IMPORTER_NAME_STR,
     },
     pyo3::{
         exceptions::{PyFileNotFoundError, PyImportError, PyValueError},
@@ -233,7 +234,7 @@ fn load_dynamic_library(
 }
 
 /// Holds state for the custom MetaPathFinder.
-pub(crate) struct ImporterState {
+pub struct ImporterState {
     /// `imp` Python module.
     imp_module: Py<PyModule>,
     /// `sys` Python module.
@@ -414,6 +415,7 @@ impl ImporterState {
     }
 
     /// Set the value to call `multiprocessing.set_start_method()` with on import of `multiprocessing`.
+    #[allow(unused)]
     pub fn set_multiprocessing_set_start_method(&mut self, value: Option<String>) {
         self.multiprocessing_set_start_method = value;
     }
@@ -438,7 +440,7 @@ impl Drop for ImporterState {
 /// finding/loading modules. It supports loading various flavors of modules,
 /// allowing it to be the only registered sys.meta_path importer.
 #[pyclass(module = "oxidized_importer")]
-pub(crate) struct OxidizedFinder {
+pub struct OxidizedFinder {
     state: Arc<ImporterState>,
 }
 
@@ -448,8 +450,7 @@ impl OxidizedFinder {
     }
 
     /// Construct an instance from a module and resources state.
-    #[cfg(not(library_mode = "extension"))]
-    fn new_from_module_and_resources<'a>(
+    pub fn new_from_module_and_resources<'a>(
         py: Python,
         m: &PyModule,
         resources_state: Box<PythonResourcesState<'a, u8>>,
@@ -1406,8 +1407,7 @@ impl PyOxidizerTraversable {
 ///
 /// The [OxidizedFinder] is guaranteed to be on `sys.meta_path[0]` after successful
 /// completion.
-#[cfg(not(library_mode = "extension"))]
-pub(crate) fn replace_meta_path_importers<'a, 'p>(
+pub fn replace_meta_path_importers<'a, 'p>(
     py: Python<'p>,
     oxidized_importer: &PyModule,
     resources_state: Box<PythonResourcesState<'a, u8>>,
@@ -1445,8 +1445,7 @@ pub(crate) fn replace_meta_path_importers<'a, 'p>(
 ///
 /// This will remove types that aren't defined by this extension from
 /// `sys.meta_path` and `sys.path_hooks`.
-#[cfg(not(library_mode = "extension"))]
-pub(crate) fn remove_external_importers(sys_module: &PyModule) -> PyResult<()> {
+pub fn remove_external_importers(sys_module: &PyModule) -> PyResult<()> {
     let meta_path = sys_module.getattr("meta_path")?;
     let meta_path = meta_path.cast_as::<PyList>()?;
 
@@ -1507,8 +1506,7 @@ pub(crate) fn remove_external_importers(sys_module: &PyModule) -> PyResult<()> {
 ///
 /// [`sys.path_hooks`]: https://docs.python.org/3/library/sys.html#sys.path_hooks
 /// [`sys`]: https://docs.python.org/3/library/sys.html
-#[cfg(not(library_mode = "extension"))]
-pub(crate) fn install_path_hook(finder: &PyAny, sys: &PyModule) -> PyResult<()> {
+pub fn install_path_hook(finder: &PyAny, sys: &PyModule) -> PyResult<()> {
     let hook = finder.getattr("path_hook")?;
     let path_hooks = sys.getattr("path_hooks")?;
     path_hooks

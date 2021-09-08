@@ -5,6 +5,7 @@ docs/pyembed*
 docs/pyoxidizer*
 docs/tugger*
 pyembed/docs/_build/
+python-oxidized-importer/docs/_build/
 target/
 tugger/docs/_build/
 venv/

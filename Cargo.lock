@@ -2066,19 +2066,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6acbef58a60fe69ab50510a55bc8cdd4d6cf2283d27ad338f54cb52747a9cf2d"
 
 [[package]]
-name = "oxidized-importer"
-version = "0.10.0-pre"
-dependencies = [
- "anyhow",
- "lazy_static",
- "memory-module-sys",
- "pyembed",
- "pyo3",
- "python-packed-resources",
- "winapi 0.3.9",
-]
-
-[[package]]
 name = "p12"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2399,18 +2386,15 @@ dependencies = [
  "dunce",
  "jemalloc-sys",
  "libmimalloc-sys",
- "memmap",
- "memory-module-sys",
  "once_cell",
  "pathdiff",
  "pyo3",
  "pyo3-build-config",
+ "python-oxidized-importer",
  "python-packaging",
  "python-packed-resources",
  "rusty-fork",
  "snmalloc-sys",
- "tugger-file-manifest",
- "winapi 0.3.9",
 ]
 
 [[package]]
@@ -2530,6 +2514,22 @@ dependencies = [
  "which",
  "xml-rs",
  "zstd",
+]
+
+[[package]]
+name = "python-oxidized-importer"
+version = "0.3.0-pre"
+dependencies = [
+ "anyhow",
+ "lazy_static",
+ "memmap",
+ "memory-module-sys",
+ "once_cell",
+ "pyo3",
+ "python-packaging",
+ "python-packed-resources",
+ "tugger-file-manifest",
+ "winapi 0.3.9",
 ]
 
 [[package]]

@@ -10,7 +10,6 @@ import sys
 
 
 ROOT = pathlib.Path(os.path.abspath(os.path.dirname(__file__))).parent
-PYEMBED_PATH = ROOT / "pyembed"
 
 PYTHON_EXE = pathlib.Path(sys.executable)
 PYTHON_DIR = PYTHON_EXE.parent
@@ -33,6 +32,8 @@ else:
 
 sys.exit(
     subprocess.run(
-        ["cargo", "test", "-p", "pyembed"], cwd=str(ROOT), env=os.environ
+        ["cargo", "test", "-p", sys.argv[1]],
+        cwd=str(ROOT),
+        env=os.environ,
     ).returncode
 )

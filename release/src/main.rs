@@ -21,9 +21,6 @@ use {
 
 const CARGO_LOCKFILE_NAME: &str = "new-project-cargo.lock";
 
-/// Packages we should disable in the workspace before releasing.
-static DISABLE_PACKAGES: Lazy<Vec<&'static str>> = Lazy::new(|| vec!["oxidized-importer"]);
-
 /// Packages in the workspace we should ignore.
 static IGNORE_PACKAGES: Lazy<Vec<&'static str>> = Lazy::new(|| vec!["release"]);
 
@@ -54,6 +51,7 @@ static RELEASE_ORDER: Lazy<Vec<&'static str>> = Lazy::new(|| {
         "python-packaging",
         "tugger",
         "text-stub-library",
+        "python-oxidized-importer",
         "pyembed",
         "pyoxidizer",
     ]
@@ -65,24 +63,6 @@ fn get_workspace_members(path: &Path) -> Result<Vec<String>> {
         .workspace
         .ok_or_else(|| anyhow!("no [workspace] section"))?
         .members)
-}
-
-fn write_workspace_toml(path: &Path, packages: &[String]) -> Result<()> {
-    let members = packages
-        .iter()
-        .map(|x| toml::Value::String(x.to_string()))
-        .collect::<Vec<_>>();
-    let mut workspace = toml::value::Table::new();
-    workspace.insert("members".to_string(), toml::Value::from(members));
-
-    let mut manifest = toml::value::Table::new();
-    manifest.insert("workspace".to_string(), toml::Value::Table(workspace));
-
-    let s =
-        toml::to_string_pretty(&manifest).context("serializing new workspace TOML to string")?;
-    std::fs::write(path, s.as_bytes()).context("writing new workspace Cargo.toml")?;
-
-    Ok(())
 }
 
 /// Update the `[package]` version key in a Cargo.toml file.
@@ -891,37 +871,6 @@ enum VersionBump {
     Patch,
 }
 
-fn update_workspace_toml(
-    repo_root: &Path,
-    path: &Path,
-    workspace_packages: &[String],
-    commit_message: &str,
-) -> Result<()> {
-    write_workspace_toml(path, workspace_packages).context("writing workspace Cargo.toml")?;
-    println!("running cargo update to reflect workspace change");
-    let mut args = vec!["update".to_string()];
-    args.extend(
-        workspace_packages
-            .iter()
-            .map(|x| vec!["-p".to_string(), x.to_string()])
-            .flatten(),
-    );
-
-    run_cmd("workspace", repo_root, "cargo", args, vec![])
-        .context("cargo update to reflect workspace changes")?;
-    println!("performing git commit to reflect workspace changes");
-    run_cmd(
-        "workspace",
-        repo_root,
-        "git",
-        vec!["commit", "-a", "-m", commit_message],
-        vec![],
-    )
-    .context("git commit to reflect workspace changes")?;
-
-    Ok(())
-}
-
 fn command_release(repo_root: &Path, args: &ArgMatches, repo: &Repository) -> Result<()> {
     let publish = !args.is_present("no_publish");
 
@@ -998,23 +947,7 @@ fn command_release(repo_root: &Path, args: &ArgMatches, repo: &Repository) -> Re
     let workspace_packages =
         get_workspace_members(&workspace_toml).context("parsing workspace Cargo.toml")?;
 
-    let new_workspace_packages = workspace_packages
-        .iter()
-        .filter(|p| !DISABLE_PACKAGES.contains(&p.as_str()))
-        .cloned()
-        .collect::<Vec<_>>();
-
-    if new_workspace_packages != workspace_packages {
-        println!("removing packages from {}", workspace_toml.display());
-        update_workspace_toml(
-            repo_root,
-            &workspace_toml,
-            &new_workspace_packages,
-            "releasebot: pre-release-workspace-normalize",
-        )?;
-    }
-
-    let problems = new_workspace_packages
+    let problems = workspace_packages
         .iter()
         .filter(|p| !RELEASE_ORDER.contains(&p.as_str()) && !IGNORE_PACKAGES.contains(&p.as_str()))
         .collect::<Vec<_>>();
@@ -1031,7 +964,6 @@ fn command_release(repo_root: &Path, args: &ArgMatches, repo: &Repository) -> Re
     // workspace members may have already been pruned, leading to these packages
     // not being considered.
     let mut dependency_update_packages = RELEASE_ORDER.clone();
-    dependency_update_packages.extend(DISABLE_PACKAGES.iter());
     dependency_update_packages.extend(IGNORE_PACKAGES.iter());
     dependency_update_packages.sort_unstable();
 
@@ -1085,34 +1017,6 @@ fn command_release(repo_root: &Path, args: &ArgMatches, repo: &Repository) -> Re
             )
             .with_context(|| format!("incrementing version for {}", package))?;
         }
-    }
-
-    // This is done after all version updates are performed because oxidized-importer
-    // referencing pyembed can confuse Cargo due to conflicting requirements for the
-    // pythonXY dependency.
-    let workspace_packages = get_workspace_members(&workspace_toml)?;
-    let workspace_missing_disabled = DISABLE_PACKAGES
-        .iter()
-        .any(|p| !workspace_packages.contains(&p.to_string()));
-
-    if workspace_missing_disabled {
-        println!(
-            "re-adding disabled packages from {}",
-            workspace_toml.display()
-        );
-        let mut packages = workspace_packages;
-        for p in DISABLE_PACKAGES.iter() {
-            packages.push(p.to_string());
-        }
-
-        packages.sort();
-
-        update_workspace_toml(
-            repo_root,
-            &workspace_toml,
-            &packages,
-            "releasebot: post-release-workspace-normalize",
-        )?;
     }
 
     Ok(())

@@ -3,20 +3,12 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 fn main() {
-    let library_mode = if std::env::var("CARGO_FEATURE_EXTENSION_MODULE").is_ok() {
-        "extension"
-    } else {
-        "pyembed"
-    };
-
     // We're always able to derive this. So always set it, even though it is likely
     // only used by test mode.
     println!(
         "cargo:rustc-env=PYEMBED_TESTS_DIR={}/src/test",
         std::env::var("CARGO_MANIFEST_DIR").unwrap()
     );
-
-    println!("cargo:rustc-cfg=library_mode=\"{}\"", library_mode);
 
     let interpreter_config = pyo3_build_config::get();
 

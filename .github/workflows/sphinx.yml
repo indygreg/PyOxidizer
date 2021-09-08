@@ -4,6 +4,18 @@ on:
   schedule:
     - cron: '13 15 * * *'
 jobs:
+  sphinx_oxidized_importer:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: '3.9'
+      - name: Run Sphinx
+        run: |
+          python3.9 -m pip install Sphinx==3.5.3
+          make -C python-oxidized-importer/docs html
+
   sphinx_pyoxidizer:
     runs-on: ubuntu-20.04
     steps:

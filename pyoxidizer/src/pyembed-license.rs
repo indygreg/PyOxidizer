@@ -309,6 +309,13 @@ pub fn pyembed_licenses() -> anyhow::Result<Vec<tugger_licensing::LicensedCompon
     component.set_flavor(tugger_licensing::ComponentFlavor::RustCrate);
     res.push(component);
 
+    let mut component = tugger_licensing::LicensedComponent::new_spdx(
+        "python-oxidized-importer",
+        "MPL-2.0 OR Python-2.0",
+    )?;
+    component.set_flavor(tugger_licensing::ComponentFlavor::RustCrate);
+    res.push(component);
+
     let mut component =
         tugger_licensing::LicensedComponent::new_spdx("python-packaging", "MPL-2.0")?;
     component.set_flavor(tugger_licensing::ComponentFlavor::RustCrate);

@@ -2,11 +2,31 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-//! Python extension initialization.
+//! oxidized_importer Python extension.
+
+mod conversion;
+mod importer;
+#[cfg(windows)]
+mod memory_dll;
+mod package_metadata;
+mod pkg_resources;
+mod python_resource_collector;
+mod python_resource_types;
+mod python_resources;
+mod resource_scanning;
+
+pub use crate::{
+    importer::{
+        install_path_hook, remove_external_importers, replace_meta_path_importers, ImporterState,
+        OxidizedFinder,
+    },
+    python_resource_collector::PyTempDir,
+    python_resources::{PackedResourcesSource, PythonResourcesState},
+};
 
 use {
     crate::{
-        importer::{OxidizedFinder, OxidizedPathEntryFinder, OxidizedResourceReader},
+        importer::{OxidizedPathEntryFinder, OxidizedResourceReader},
         pkg_resources::{register_pkg_resources_with_module, OxidizedPkgResourcesProvider},
         python_resources::OxidizedResource,
     },
@@ -18,7 +38,10 @@ use {
     },
 };
 
+/// Name of Python extension module.
 pub const OXIDIZED_IMPORTER_NAME_STR: &str = "oxidized_importer";
+
+/// Null terminated [OXIDIZED_IMPORTER_NAME_STR].
 pub const OXIDIZED_IMPORTER_NAME: &[u8] = b"oxidized_importer\0";
 
 const DOC: &[u8] = b"A highly-performant importer implemented in Rust\0";
@@ -70,6 +93,7 @@ pub(crate) fn get_module_state(m: &PyModule) -> Result<&mut ModuleState, PyErr> 
 /// opinionated about how things should work. e.g. they call
 /// PyEval_InitThreads(), which is undesired. We want total control.
 #[allow(non_snake_case)]
+#[no_mangle]
 pub extern "C" fn PyInit_oxidized_importer() -> *mut pyffi::PyObject {
     let py = unsafe { Python::assume_gil_acquired() };
 

@@ -10,6 +10,7 @@ EXTERNAL_PREFIXES = ("oxidized_importer", "pyembed", "pyoxidizer", "tugger")
 EXTERNAL_SOURCE_DIRS = (
     pathlib.Path("pyembed") / "docs",
     pathlib.Path("pyoxidizer") / "docs",
+    pathlib.Path("python-oxidized-importer") / "docs",
     pathlib.Path("tugger") / "docs",
 )
 

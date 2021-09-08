@@ -70,12 +70,11 @@ variable pointing to a specific Python 3 executable. e.g.
 
     $ PYO3_PYTHON=/path/to/python3.9 cargo build -p pyembed
 
-``oxidized-importer`` Crate
-===========================
+``python-oxidized-importer`` Crate
+==================================
 
-This crate is a very small shim around the ``pyembed`` crate which builds
-the ``pyembed`` crate in a specific manner so it provides just the functionality
-needed for :ref:`oxidized_importer`.
+This crate defines a Python extension module defining a Python meta path
+importer. See :ref:`oxidized_importer`.
 
-Because this crate is a thin shim, the caveats that apply to building
-``pyembed`` apply to it as well.
+This crate needs to link against a Python interpreter and the same
+caveats for the ``pyembed`` crate apply to it as well.
