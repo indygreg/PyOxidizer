@@ -133,7 +133,7 @@ impl<'a> ResourceParserIterator<'a> {
 
                     return res;
                 }
-                ResourceField::ModuleName => {
+                ResourceField::Name => {
                     let l = self
                         .reader
                         .read_u16::<LittleEndian>()

@@ -271,7 +271,7 @@ where
             ResourceField::EndOfIndex => 0,
             ResourceField::StartOfEntry => 0,
             ResourceField::EndOfEntry => 0,
-            ResourceField::ModuleName => self.name.as_bytes().len(),
+            ResourceField::Name => self.name.as_bytes().len(),
             ResourceField::IsPackage => 0,
             ResourceField::IsNamespacePackage => 0,
             ResourceField::InMemorySource => {
@@ -432,7 +432,7 @@ where
             ResourceField::EndOfIndex => 0,
             ResourceField::StartOfEntry => 0,
             ResourceField::EndOfEntry => 0,
-            ResourceField::ModuleName => 1,
+            ResourceField::Name => 1,
             ResourceField::IsPackage => 0,
             ResourceField::IsNamespacePackage => 0,
             ResourceField::InMemorySource => {
@@ -586,7 +586,7 @@ where
         dest.write_u8(ResourceField::StartOfEntry.into())
             .context("writing start of index entry")?;
 
-        dest.write_u8(ResourceField::ModuleName.into())
+        dest.write_u8(ResourceField::Name.into())
             .context("writing resource name field")?;
 
         dest.write_u16::<LittleEndian>(name_len)
@@ -903,7 +903,7 @@ pub fn write_packed_resources_v3<'a, T: AsRef<Resource<'a, u8>>, W: Write>(
         let resource = resource.as_ref();
         module_index_length += resource.index_v1_length();
 
-        process_field(&mut blob_sections, resource, ResourceField::ModuleName);
+        process_field(&mut blob_sections, resource, ResourceField::Name);
         process_field(&mut blob_sections, resource, ResourceField::InMemorySource);
         process_field(
             &mut blob_sections,
@@ -1223,14 +1223,14 @@ mod tests {
         // Blobs index.
         expected.write_u8(BlobSectionField::StartOfEntry.into())?;
         expected.write_u8(BlobSectionField::ResourceFieldType.into())?;
-        expected.write_u8(ResourceField::ModuleName.into())?;
+        expected.write_u8(ResourceField::Name.into())?;
         expected.write_u8(BlobSectionField::RawPayloadLength.into())?;
         expected.write_u64::<LittleEndian>(b"foo".len() as u64)?;
         expected.write_u8(BlobSectionField::EndOfEntry.into())?;
         expected.write_u8(BlobSectionField::EndOfIndex.into())?;
         // Module index.
         expected.write_u8(ResourceField::StartOfEntry.into())?;
-        expected.write_u8(ResourceField::ModuleName.into())?;
+        expected.write_u8(ResourceField::Name.into())?;
         expected.write_u16::<LittleEndian>(b"foo".len() as u16)?;
         expected.write_u8(ResourceField::EndOfEntry.into())?;
         expected.write_u8(ResourceField::EndOfIndex.into())?;

@@ -79,7 +79,7 @@ pub enum ResourceField {
     StartOfEntry = 0x01,
     EndOfEntry = 0xff,
     // Flavor previously occupied slot 0x02.
-    ModuleName = 0x03,
+    Name = 0x03,
     IsPackage = 0x04,
     IsNamespacePackage = 0x05,
     InMemorySource = 0x06,
@@ -114,7 +114,7 @@ impl From<ResourceField> for u8 {
         match field {
             ResourceField::EndOfIndex => 0x00,
             ResourceField::StartOfEntry => 0x01,
-            ResourceField::ModuleName => 0x03,
+            ResourceField::Name => 0x03,
             ResourceField::IsPackage => 0x04,
             ResourceField::IsNamespacePackage => 0x05,
             ResourceField::InMemorySource => 0x06,
@@ -154,7 +154,7 @@ impl TryFrom<u8> for ResourceField {
         match value {
             0x00 => Ok(ResourceField::EndOfIndex),
             0x01 => Ok(ResourceField::StartOfEntry),
-            0x03 => Ok(ResourceField::ModuleName),
+            0x03 => Ok(ResourceField::Name),
             0x04 => Ok(ResourceField::IsPackage),
             0x05 => Ok(ResourceField::IsNamespacePackage),
             0x06 => Ok(ResourceField::InMemorySource),
