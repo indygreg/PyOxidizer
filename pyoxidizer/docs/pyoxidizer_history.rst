@@ -56,6 +56,8 @@ Backwards Compatibility Notes
   longer have ``cpython-link-unresolved-static`` and ``cpython-link-default``
   features (which existed as proxies to these features in the ``pyembed``
   crate).
+* The ``pyoxidizer add`` command has been removed because it didn't work as
+  advertised.
 
 Other Relevant Changes
 ^^^^^^^^^^^^^^^^^^^^^^

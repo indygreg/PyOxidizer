@@ -9,7 +9,6 @@ use {
     anyhow::{anyhow, Context, Result},
     handlebars::Handlebars,
     once_cell::sync::Lazy,
-    python_packaging::filesystem_scanning::walk_tree_files,
     serde::Serialize,
     std::{
         collections::BTreeMap,
@@ -133,22 +132,6 @@ fn populate_template_data(source: &PyOxidizerSource, data: &mut TemplateData) {
             }
         }
     }
-}
-
-/// Find existing PyOxidizer files in a project directory.
-pub fn find_pyoxidizer_files(root: &Path) -> Vec<PathBuf> {
-    let mut res: Vec<PathBuf> = Vec::new();
-
-    for f in walk_tree_files(root) {
-        let path = f.path().strip_prefix(root).expect("unable to strip prefix");
-        let path_s = path.to_str().expect("unable to convert path to str");
-
-        if path_s.contains("pyoxidizer") || path_s.contains("pyembed") {
-            res.push(path.to_path_buf());
-        }
-    }
-
-    res
 }
 
 /// Write a new .cargo/config file for a project path.
@@ -353,43 +336,6 @@ pub fn write_application_manifest(project_dir: &Path, program_name: &str) -> Res
     Ok(())
 }
 
-/// Add PyOxidizer to an existing Rust project on the filesystem.
-///
-/// The target directory must not already have PyOxidizer files. This
-/// will be verified during execution.
-///
-/// When called, various Rust source files required to embed Python
-/// are created at the target directory. Instructions for finalizing the
-/// configuration are also printed to stdout.
-///
-/// The Rust source files added to the target project are installed into
-/// a sub-directory defined by ``module_name``.
-pub fn add_pyoxidizer(project_dir: &Path, _suppress_help: bool) -> Result<()> {
-    let existing_files = find_pyoxidizer_files(project_dir);
-
-    if !existing_files.is_empty() {
-        return Err(anyhow!("existing PyOxidizer files found; cannot add"));
-    }
-
-    let cargo_toml = project_dir.to_path_buf().join("Cargo.toml");
-
-    if !cargo_toml.exists() {
-        return Err(anyhow!("Cargo.toml does not exist at destination"));
-    }
-
-    let cargo_toml_data = std::fs::read(cargo_toml)?;
-    let manifest = cargo_toml::Manifest::from_slice(&cargo_toml_data)?;
-
-    let _package = match &manifest.package {
-        Some(package) => package,
-        None => panic!("no [package]; that's weird"),
-    };
-
-    // TODO look for pyembed dependency and print message about adding it.
-
-    Ok(())
-}
-
 /// How to define the ``pyembed`` crate dependency.
 pub enum PyembedLocation {
     /// Use a specific version, installed from the crate registry.
@@ -483,7 +429,6 @@ pub fn initialize_project(
 
     let path = PathBuf::from(project_path);
     let name = path.iter().last().unwrap().to_str().unwrap();
-    add_pyoxidizer(&path, true).context("adding PyOxidizer to Rust project")?;
     update_new_cargo_toml(&path.join("Cargo.toml"), &source.as_pyembed_location())
         .context("updating Cargo.toml")?;
     write_new_cargo_config(&path).context("writing cargo config")?;

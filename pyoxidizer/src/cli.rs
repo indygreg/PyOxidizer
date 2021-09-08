@@ -5,7 +5,7 @@
 use {
     crate::{
         environment::{default_target_triple, PYOXIDIZER_VERSION},
-        logging, project_building, project_layout, projectmgmt,
+        logging, project_building, projectmgmt,
     },
     anyhow::{anyhow, Context, Result},
     clap::{App, AppSettings, Arg, ArgMatches, SubCommand},
@@ -14,24 +14,6 @@ use {
         path::{Path, PathBuf},
     },
 };
-
-const ADD_ABOUT: &str = "\
-Add PyOxidizer to an existing Rust project.
-
-The PATH argument is a filesystem path to a directory containing an
-existing Cargo.toml file. The destination directory MUST NOT have files
-belonging to PyOxidizer.
-
-This command will install files and make file modifications required to
-embed a Python interpreter in the existing Rust project.
-
-It is highly recommended to have the destination directory under version
-control so any unwanted changes can be reverted.
-
-The installed PyOxidizer scaffolding inherits settings such as Python
-distribution URLs and dependency crate versions and locations from the
-PyOxidizer executable that runs this command.
-";
 
 const BUILD_ABOUT: &str = "\
 Build a PyOxidizer project.
@@ -187,18 +169,6 @@ pub fn run_cli() -> Result<()> {
                 .long("verbose")
                 .global(true)
                 .help("Enable verbose output"),
-        )
-        .subcommand(
-            SubCommand::with_name("add")
-                .setting(AppSettings::ArgRequiredElseHelp)
-                .about("Add PyOxidizer to an existing Rust project. (EXPERIMENTAL)")
-                .long_about(ADD_ABOUT)
-                .arg(
-                    Arg::with_name("path")
-                        .required(true)
-                        .value_name("PATH")
-                        .help("Directory of existing Rust project"),
-                ),
         )
         .subcommand(
             SubCommand::with_name("analyze")
@@ -431,12 +401,6 @@ pub fn run_cli() -> Result<()> {
     }
 
     match matches.subcommand() {
-        ("add", Some(args)) => {
-            let path = args.value_of("path").unwrap();
-
-            project_layout::add_pyoxidizer(Path::new(path), false)
-        }
-
         ("analyze", Some(args)) => {
             let path = args.value_of("path").unwrap();
             let path = PathBuf::from(path);

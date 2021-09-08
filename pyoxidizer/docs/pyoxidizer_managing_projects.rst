@@ -93,35 +93,6 @@ after a Python interpreter runs in the process.
 
 See :ref:`rust_projects` for more on the composition of Rust projects.
 
-Adding PyOxidizer to an Existing Project with ``add``
-=====================================================
-
-Do you have an existing Rust project that you want to add an embedded
-Python interpreter to? PyOxidizer can help with that too! The
-``pyoxidizer add`` command can be used to add an embedded Python
-interpreter to an existing Rust project. Simply give the directory
-to a project containing a ``Cargo.toml`` file::
-
-   $ cargo init myrustapp
-     Created binary (application) package
-   $ pyoxidizer add myrustapp
-
-This will add required files and make required modifications to add
-an embedded Python interpreter to the target project.
-
-.. important::
-
-   It is highly recommended to have the destination project under version
-   control so you can see what changes are made by ``pyoxidizer add`` and
-   so you can undo any unwanted changes.
-
-.. danger::
-
-   This command isn't very well tested. And results have been known to be
-   wrong. If it doesn't *just work*, you may want to run ``pyoxidizer init``
-   and incorporate relevant files into your project manually. Sorry for
-   the inconvenience.
-
 Building PyObject Projects with ``build``
 =========================================
 

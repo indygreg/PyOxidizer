@@ -69,7 +69,7 @@ See also :ref:`pitfall_extension_modules`.
 Incomplete ``pyoxidizer`` Commands
 ----------------------------------
 
-``pyoxidizer add`` and ``pyoxidizer analyze`` aren't fully implemented.
+``pyoxidizer analyze`` aren't fully implemented.
 
 There is no ``pyoxidizer upgrade`` command.
 
