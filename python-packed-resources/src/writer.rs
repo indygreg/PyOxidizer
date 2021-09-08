@@ -136,7 +136,7 @@ where
         // Start of index entry.
         let mut index = 1;
 
-        // Module name field + module length.
+        // Resource name field + name length.
         index += 3;
 
         if self.is_package {
@@ -578,7 +578,7 @@ where
         elements_count * overhead
     }
 
-    /// Write the version 1 index entry for a module instance.
+    /// Write the version 1 index entry for a resource instance.
     pub fn write_index_v1<W: Write>(&self, dest: &mut W) -> Result<()> {
         let name_len =
             u16::try_from(self.name.as_bytes().len()).context("converting name to u16")?;
@@ -587,10 +587,10 @@ where
             .context("writing start of index entry")?;
 
         dest.write_u8(ResourceField::ModuleName.into())
-            .context("writing module name field")?;
+            .context("writing resource name field")?;
 
         dest.write_u16::<LittleEndian>(name_len)
-            .context("writing module name length")?;
+            .context("writing resource name length")?;
 
         if self.is_package {
             dest.write_u8(ResourceField::IsPackage.into())
@@ -856,7 +856,7 @@ where
 /// Write packed resources data, version 3.
 #[allow(clippy::cognitive_complexity)]
 pub fn write_packed_resources_v3<'a, T: AsRef<Resource<'a, u8>>, W: Write>(
-    modules: &[T],
+    resources: &[T],
     dest: &mut W,
     interior_padding: Option<BlobInteriorPadding>,
 ) -> Result<()> {
@@ -899,87 +899,95 @@ pub fn write_packed_resources_v3<'a, T: AsRef<Resource<'a, u8>>, W: Write>(
         Ok(())
     };
 
-    for module in modules {
-        let module = module.as_ref();
-        module_index_length += module.index_v1_length();
+    for resource in resources {
+        let resource = resource.as_ref();
+        module_index_length += resource.index_v1_length();
 
-        process_field(&mut blob_sections, module, ResourceField::ModuleName);
-        process_field(&mut blob_sections, module, ResourceField::InMemorySource);
-        process_field(&mut blob_sections, module, ResourceField::InMemoryBytecode);
+        process_field(&mut blob_sections, resource, ResourceField::ModuleName);
+        process_field(&mut blob_sections, resource, ResourceField::InMemorySource);
         process_field(
             &mut blob_sections,
-            module,
+            resource,
+            ResourceField::InMemoryBytecode,
+        );
+        process_field(
+            &mut blob_sections,
+            resource,
             ResourceField::InMemoryBytecodeOpt1,
         );
         process_field(
             &mut blob_sections,
-            module,
+            resource,
             ResourceField::InMemoryBytecodeOpt2,
         );
         process_field(
             &mut blob_sections,
-            module,
+            resource,
             ResourceField::InMemoryExtensionModuleSharedLibrary,
         );
         process_field(
             &mut blob_sections,
-            module,
+            resource,
             ResourceField::InMemoryResourcesData,
         );
         process_field(
             &mut blob_sections,
-            module,
+            resource,
             ResourceField::InMemoryDistributionResource,
         );
         process_field(
             &mut blob_sections,
-            module,
+            resource,
             ResourceField::InMemorySharedLibrary,
         );
         process_field(
             &mut blob_sections,
-            module,
+            resource,
             ResourceField::SharedLibraryDependencyNames,
         );
         process_field(
             &mut blob_sections,
-            module,
+            resource,
             ResourceField::RelativeFilesystemModuleSource,
         );
         process_field(
             &mut blob_sections,
-            module,
+            resource,
             ResourceField::RelativeFilesystemModuleBytecode,
         );
         process_field(
             &mut blob_sections,
-            module,
+            resource,
             ResourceField::RelativeFilesystemModuleBytecodeOpt1,
         );
         process_field(
             &mut blob_sections,
-            module,
+            resource,
             ResourceField::RelativeFilesystemModuleBytecodeOpt2,
         );
         process_field(
             &mut blob_sections,
-            module,
+            resource,
             ResourceField::RelativeFilesystemExtensionModuleSharedLibrary,
         );
         process_field(
             &mut blob_sections,
-            module,
+            resource,
             ResourceField::RelativeFilesystemPackageResources,
         );
         process_field(
             &mut blob_sections,
-            module,
+            resource,
             ResourceField::RelativeFilesystemDistributionResource,
         );
-        process_field(&mut blob_sections, module, ResourceField::FileDataEmbedded);
         process_field(
             &mut blob_sections,
-            module,
+            resource,
+            ResourceField::FileDataEmbedded,
+        );
+        process_field(
+            &mut blob_sections,
+            resource,
             ResourceField::FileDataUtf8RelativePath,
         );
     }
@@ -993,7 +1001,7 @@ pub fn write_packed_resources_v3<'a, T: AsRef<Resource<'a, u8>>, W: Write>(
 
     dest.write_u8(blob_section_count)?;
     dest.write_u32::<LittleEndian>(blob_index_length as u32)?;
-    dest.write_u32::<LittleEndian>(modules.len() as u32)?;
+    dest.write_u32::<LittleEndian>(resources.len() as u32)?;
     dest.write_u32::<LittleEndian>(module_index_length as u32)?;
 
     // Write the blob index.
@@ -1003,54 +1011,54 @@ pub fn write_packed_resources_v3<'a, T: AsRef<Resource<'a, u8>>, W: Write>(
     dest.write_u8(ResourceField::EndOfIndex.into())?;
 
     // Write the resources index.
-    for module in modules {
-        module.as_ref().write_index_v1(dest)?;
+    for resource in resources {
+        resource.as_ref().write_index_v1(dest)?;
     }
     dest.write_u8(ResourceField::EndOfIndex.into())?;
 
     // Write blob data, one field at a time.
-    for module in modules {
-        dest.write_all(module.as_ref().name.as_bytes())?;
+    for resource in resources {
+        dest.write_all(resource.as_ref().name.as_bytes())?;
         add_interior_padding(dest)?;
     }
 
-    for module in modules {
-        if let Some(data) = &module.as_ref().in_memory_source {
+    for resource in resources {
+        if let Some(data) = &resource.as_ref().in_memory_source {
             dest.write_all(data)?;
             add_interior_padding(dest)?;
         }
     }
 
-    for module in modules {
-        if let Some(data) = &module.as_ref().in_memory_bytecode {
+    for resource in resources {
+        if let Some(data) = &resource.as_ref().in_memory_bytecode {
             dest.write_all(data)?;
             add_interior_padding(dest)?;
         }
     }
 
-    for module in modules {
-        if let Some(data) = &module.as_ref().in_memory_bytecode_opt1 {
+    for resource in resources {
+        if let Some(data) = &resource.as_ref().in_memory_bytecode_opt1 {
             dest.write_all(data)?;
             add_interior_padding(dest)?;
         }
     }
 
-    for module in modules {
-        if let Some(data) = &module.as_ref().in_memory_bytecode_opt2 {
+    for resource in resources {
+        if let Some(data) = &resource.as_ref().in_memory_bytecode_opt2 {
             dest.write_all(data)?;
             add_interior_padding(dest)?;
         }
     }
 
-    for module in modules {
-        if let Some(data) = &module.as_ref().in_memory_extension_module_shared_library {
+    for resource in resources {
+        if let Some(data) = &resource.as_ref().in_memory_extension_module_shared_library {
             dest.write_all(data)?;
             add_interior_padding(dest)?;
         }
     }
 
-    for module in modules {
-        if let Some(resources) = &module.as_ref().in_memory_package_resources {
+    for resource in resources {
+        if let Some(resources) = &resource.as_ref().in_memory_package_resources {
             for (key, value) in resources.iter() {
                 dest.write_all(key.as_bytes())?;
                 add_interior_padding(dest)?;
@@ -1060,8 +1068,8 @@ pub fn write_packed_resources_v3<'a, T: AsRef<Resource<'a, u8>>, W: Write>(
         }
     }
 
-    for module in modules {
-        if let Some(resources) = &module.as_ref().in_memory_distribution_resources {
+    for resource in resources {
+        if let Some(resources) = &resource.as_ref().in_memory_distribution_resources {
             for (key, value) in resources {
                 dest.write_all(key.as_bytes())?;
                 add_interior_padding(dest)?;
@@ -1071,15 +1079,15 @@ pub fn write_packed_resources_v3<'a, T: AsRef<Resource<'a, u8>>, W: Write>(
         }
     }
 
-    for module in modules {
-        if let Some(data) = &module.as_ref().in_memory_shared_library {
+    for resource in resources {
+        if let Some(data) = &resource.as_ref().in_memory_shared_library {
             dest.write_all(data)?;
             add_interior_padding(dest)?;
         }
     }
 
-    for module in modules {
-        if let Some(names) = &module.as_ref().shared_library_dependency_names {
+    for resource in resources {
+        if let Some(names) = &resource.as_ref().shared_library_dependency_names {
             for name in names {
                 dest.write_all(name.as_bytes())?;
                 add_interior_padding(dest)?;
@@ -1087,36 +1095,36 @@ pub fn write_packed_resources_v3<'a, T: AsRef<Resource<'a, u8>>, W: Write>(
         }
     }
 
-    for module in modules {
-        if let Some(path) = &module.as_ref().relative_path_module_source {
+    for resource in resources {
+        if let Some(path) = &resource.as_ref().relative_path_module_source {
             dest.write_all(&path_to_bytes(path))?;
             add_interior_padding(dest)?;
         }
     }
 
-    for module in modules {
-        if let Some(path) = &module.as_ref().relative_path_module_bytecode {
+    for resource in resources {
+        if let Some(path) = &resource.as_ref().relative_path_module_bytecode {
             dest.write_all(&path_to_bytes(path))?;
             add_interior_padding(dest)?;
         }
     }
 
-    for module in modules {
-        if let Some(path) = &module.as_ref().relative_path_module_bytecode_opt1 {
+    for resource in resources {
+        if let Some(path) = &resource.as_ref().relative_path_module_bytecode_opt1 {
             dest.write_all(&path_to_bytes(path))?;
             add_interior_padding(dest)?;
         }
     }
 
-    for module in modules {
-        if let Some(path) = &module.as_ref().relative_path_module_bytecode_opt2 {
+    for resource in resources {
+        if let Some(path) = &resource.as_ref().relative_path_module_bytecode_opt2 {
             dest.write_all(&path_to_bytes(path))?;
             add_interior_padding(dest)?;
         }
     }
 
-    for module in modules {
-        if let Some(path) = &module
+    for resource in resources {
+        if let Some(path) = &resource
             .as_ref()
             .relative_path_extension_module_shared_library
         {
@@ -1125,8 +1133,8 @@ pub fn write_packed_resources_v3<'a, T: AsRef<Resource<'a, u8>>, W: Write>(
         }
     }
 
-    for module in modules {
-        if let Some(resources) = &module.as_ref().relative_path_package_resources {
+    for resource in resources {
+        if let Some(resources) = &resource.as_ref().relative_path_package_resources {
             for (key, path) in resources.iter() {
                 dest.write_all(key.as_bytes())?;
                 add_interior_padding(dest)?;
@@ -1136,8 +1144,8 @@ pub fn write_packed_resources_v3<'a, T: AsRef<Resource<'a, u8>>, W: Write>(
         }
     }
 
-    for module in modules {
-        if let Some(resources) = &module.as_ref().relative_path_distribution_resources {
+    for resource in resources {
+        if let Some(resources) = &resource.as_ref().relative_path_distribution_resources {
             for (key, path) in resources {
                 dest.write_all(key.as_bytes())?;
                 add_interior_padding(dest)?;
@@ -1147,15 +1155,15 @@ pub fn write_packed_resources_v3<'a, T: AsRef<Resource<'a, u8>>, W: Write>(
         }
     }
 
-    for module in modules {
-        if let Some(data) = &module.as_ref().file_data_embedded {
+    for resource in resources {
+        if let Some(data) = &resource.as_ref().file_data_embedded {
             dest.write_all(data)?;
             add_interior_padding(dest)?;
         }
     }
 
-    for module in modules {
-        if let Some(path) = &module.as_ref().file_data_utf8_relative_path {
+    for resource in resources {
+        if let Some(path) = &resource.as_ref().file_data_utf8_relative_path {
             dest.write_all(path.as_bytes())?;
             add_interior_padding(dest)?;
         }
@@ -1193,14 +1201,14 @@ mod tests {
     }
 
     #[test]
-    fn test_write_module_name() -> Result<()> {
+    fn test_write_resource_name() -> Result<()> {
         let mut data = Vec::new();
-        let module = Resource {
+        let resource = Resource {
             name: Cow::Owned("foo".to_string()),
             ..Resource::default()
         };
 
-        write_packed_resources_v3(&[module], &mut data, None)?;
+        write_packed_resources_v3(&[resource], &mut data, None)?;
 
         let mut expected: Vec<u8> = b"pyembed\x03".to_vec();
         // Number of blob sections.
