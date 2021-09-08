@@ -20,7 +20,7 @@ use {
         },
     },
     anyhow::{anyhow, Context, Result},
-    python_packed_resources::data::{Resource, ResourceFlavor},
+    python_packed_resources::data::Resource,
     std::{
         borrow::Cow,
         collections::{BTreeMap, BTreeSet, HashMap},
@@ -109,7 +109,6 @@ impl PrePackagedResource {
         let mut installs = Vec::new();
 
         let resource = Resource {
-            flavor: ResourceFlavor::None,
             name: Cow::Owned(self.name.clone()),
             is_package: self.is_package,
             is_namespace_package: self.is_namespace_package,

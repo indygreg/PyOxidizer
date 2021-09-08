@@ -174,12 +174,9 @@ the field. The values of each defined metadata type follow.
    parser state.
 
 ``0x02``
-   Resource flavor. Declares the type of resource this entry represents.
-   A ``u8`` defining the resource flavor immediately follows this byte. See the
-   section below for valid resource flavors.
-
-   This field is deprecated in version 2 in favor of the individual fields
-   expressing presence of a resource type. (See fields starting at ``0x16``.)
+   Previously held the resource *flavor*. This field is deprecated in version 2
+   in favor of the individual fields expressing presence of a resource type.
+   (See fields starting at ``0x16``.)
 
 ``0xff``
    End of resource entry. The next encountered ``u8`` in the index should
@@ -344,40 +341,6 @@ the field. The values of each defined metadata type follow.
    is UTF-8 encoded.
 
    A ``u32`` denoting the length of the UTF-8 relative path (in bytes) follows.
-
-Resource Flavors
-----------------
-
-.. important::
-
-   Enumerated resource flavors are deprecated after version 1. You should
-   use individual fields to express resource identity instead.
-
-The data format allows defining different types/flavors of resources.
-This flavor of a resource is identified by a ``u8``. The declared flavors are:
-
-``0x00``
-   No flavor. Should not be encountered.
-
-``0x01``
-   Python module/package. This is equivalent to resource field
-   ``0x16`` being set.
-
-``0x02``
-   Builtin Python extension module. This is equivalent to resource
-   field ``0x17`` being set.
-
-``0x03``
-   Frozen Python module. This is equivalent to resource field ``0x18``
-   being set.
-
-``0x04``
-   Python extension. This is equivalent to resource field ``0x19``
-   being set.
-
-``0x05``
-   Shared library. This is equivalent to resource field ``0x1a`` being
-   set.
 
 ``pyembed\x01`` Format
 ----------------------

@@ -5,9 +5,7 @@
 /*! Parsing of packed resources data blobs. */
 
 use {
-    super::data::{
-        BlobInteriorPadding, BlobSectionField, Resource, ResourceField, ResourceFlavor, HEADER_V3,
-    },
+    super::data::{BlobInteriorPadding, BlobSectionField, Resource, ResourceField, HEADER_V3},
     byteorder::{LittleEndian, ReadBytesExt},
     std::{
         borrow::Cow,
@@ -123,7 +121,6 @@ impl<'a> ResourceParserIterator<'a> {
                     current_resource = Resource::default();
                     current_resource_name = None;
                 }
-
                 ResourceField::EndOfEntry => {
                     let res = if let Some(name) = current_resource_name {
                         Ok(Some(current_resource))
@@ -136,15 +133,6 @@ impl<'a> ResourceParserIterator<'a> {
 
                     return res;
                 }
-                ResourceField::Flavor => {
-                    let flavor = self
-                        .reader
-                        .read_u8()
-                        .map_err(|_| "failed reading flavor value")?;
-
-                    current_resource.flavor = ResourceFlavor::try_from(flavor)?;
-                }
-
                 ResourceField::ModuleName => {
                     let l = self
                         .reader
@@ -1381,7 +1369,6 @@ mod tests {
         );
 
         let resource = Resource {
-            flavor: ResourceFlavor::Module,
             name: Cow::from("module"),
             is_package: true,
             is_namespace_package: true,
@@ -1423,7 +1410,6 @@ mod tests {
 
         let entry = &resources[0];
 
-        assert_eq!(entry.flavor, ResourceFlavor::Module);
         assert!(entry.is_package);
         assert!(entry.is_namespace_package);
         assert_eq!(entry.in_memory_source.as_ref().unwrap().as_ref(), b"source");
@@ -1531,14 +1517,14 @@ mod tests {
     fn test_fields_mix() {
         let resources: Vec<Resource<u8>> = vec![
             Resource {
-                flavor: ResourceFlavor::Module,
                 name: Cow::from("foo"),
+                is_module: true,
                 in_memory_source: Some(Cow::from(b"import io".to_vec())),
                 ..Resource::default()
             },
             Resource {
-                flavor: ResourceFlavor::Module,
                 name: Cow::from("bar"),
+                is_module: true,
                 in_memory_bytecode: Some(Cow::from(b"fake bytecode".to_vec())),
                 ..Resource::default()
             },

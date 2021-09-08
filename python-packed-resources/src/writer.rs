@@ -5,9 +5,7 @@
 /*! Serializing of structures into packed resources blobs. */
 
 use {
-    super::data::{
-        BlobInteriorPadding, BlobSectionField, Resource, ResourceField, ResourceFlavor, HEADER_V3,
-    },
+    super::data::{BlobInteriorPadding, BlobSectionField, Resource, ResourceField, HEADER_V3},
     anyhow::{anyhow, Context, Result},
     byteorder::{LittleEndian, WriteBytesExt},
     std::{collections::BTreeMap, convert::TryFrom, io::Write, path::Path},
@@ -137,11 +135,6 @@ where
     pub fn index_v1_length(&self) -> usize {
         // Start of index entry.
         let mut index = 1;
-
-        if self.flavor != ResourceFlavor::None {
-            // Flavor field + value.
-            index += 2;
-        }
 
         // Module name field + module length.
         index += 3;
@@ -278,7 +271,6 @@ where
             ResourceField::EndOfIndex => 0,
             ResourceField::StartOfEntry => 0,
             ResourceField::EndOfEntry => 0,
-            ResourceField::Flavor => 0,
             ResourceField::ModuleName => self.name.as_bytes().len(),
             ResourceField::IsPackage => 0,
             ResourceField::IsNamespacePackage => 0,
@@ -440,7 +432,6 @@ where
             ResourceField::EndOfIndex => 0,
             ResourceField::StartOfEntry => 0,
             ResourceField::EndOfEntry => 0,
-            ResourceField::Flavor => 0,
             ResourceField::ModuleName => 1,
             ResourceField::IsPackage => 0,
             ResourceField::IsNamespacePackage => 0,
@@ -594,13 +585,6 @@ where
 
         dest.write_u8(ResourceField::StartOfEntry.into())
             .context("writing start of index entry")?;
-
-        if self.flavor != ResourceFlavor::None {
-            dest.write_u8(ResourceField::Flavor.into())
-                .context("writing flavor field")?;
-            dest.write_u8(self.flavor.into())
-                .context("writing flavor value")?;
-        }
 
         dest.write_u8(ResourceField::ModuleName.into())
             .context("writing module name field")?;
@@ -1182,7 +1166,7 @@ pub fn write_packed_resources_v3<'a, T: AsRef<Resource<'a, u8>>, W: Write>(
 
 #[cfg(test)]
 mod tests {
-    use {super::*, crate::data::ResourceFlavor, std::borrow::Cow};
+    use {super::*, std::borrow::Cow};
 
     #[test]
     fn test_write_empty() -> Result<()> {
@@ -1212,7 +1196,6 @@ mod tests {
     fn test_write_module_name() -> Result<()> {
         let mut data = Vec::new();
         let module = Resource {
-            flavor: ResourceFlavor::Module,
             name: Cow::Owned("foo".to_string()),
             ..Resource::default()
         };
@@ -1228,7 +1211,7 @@ mod tests {
         expected.write_u32::<LittleEndian>(1)?;
         // Length of index. Start of entry, flavor field, flavor value, module name length field,
         // module name length, end of entry, end of index.
-        expected.write_u32::<LittleEndian>(1 + 1 + 1 + 1 + 2 + 1 + 1)?;
+        expected.write_u32::<LittleEndian>(1 + 1 + 2 + 1 + 1)?;
         // Blobs index.
         expected.write_u8(BlobSectionField::StartOfEntry.into())?;
         expected.write_u8(BlobSectionField::ResourceFieldType.into())?;
@@ -1239,8 +1222,6 @@ mod tests {
         expected.write_u8(BlobSectionField::EndOfIndex.into())?;
         // Module index.
         expected.write_u8(ResourceField::StartOfEntry.into())?;
-        expected.write_u8(ResourceField::Flavor.into())?;
-        expected.write_u8(ResourceFlavor::Module.into())?;
         expected.write_u8(ResourceField::ModuleName.into())?;
         expected.write_u16::<LittleEndian>(b"foo".len() as u16)?;
         expected.write_u8(ResourceField::EndOfEntry.into())?;

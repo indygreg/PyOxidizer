@@ -9,55 +9,6 @@ use std::{borrow::Cow, collections::HashMap, convert::TryFrom, path::Path};
 /// Header value for version 2 of resources payload.
 pub const HEADER_V3: &[u8] = b"pyembed\x03";
 
-/// Defines the type of a resource.
-///
-/// This is deprecated in favor of individual boolean fields on resources
-/// declaring type affinity.
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub enum ResourceFlavor {
-    None = 0x00,
-    Module = 0x01,
-    BuiltinExtensionModule = 0x02,
-    FrozenModule = 0x03,
-    Extension = 0x04,
-    SharedLibrary = 0x05,
-}
-
-impl Default for ResourceFlavor {
-    fn default() -> Self {
-        ResourceFlavor::None
-    }
-}
-
-impl From<ResourceFlavor> for u8 {
-    fn from(source: ResourceFlavor) -> Self {
-        match source {
-            ResourceFlavor::None => 0x00,
-            ResourceFlavor::Module => 0x01,
-            ResourceFlavor::BuiltinExtensionModule => 0x02,
-            ResourceFlavor::FrozenModule => 0x03,
-            ResourceFlavor::Extension => 0x04,
-            ResourceFlavor::SharedLibrary => 0x05,
-        }
-    }
-}
-
-impl TryFrom<u8> for ResourceFlavor {
-    type Error = &'static str;
-
-    fn try_from(value: u8) -> Result<Self, Self::Error> {
-        match value {
-            0x00 => Ok(ResourceFlavor::None),
-            0x01 => Ok(ResourceFlavor::Module),
-            0x02 => Ok(ResourceFlavor::BuiltinExtensionModule),
-            0x03 => Ok(ResourceFlavor::FrozenModule),
-            0x04 => Ok(ResourceFlavor::Extension),
-            0x05 => Ok(ResourceFlavor::SharedLibrary),
-            _ => Err("unrecognized resource flavor"),
-        }
-    }
-}
-
 /// Defines interior padding mechanism between entries in blob sections.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum BlobInteriorPadding {
@@ -127,7 +78,7 @@ pub enum ResourceField {
     EndOfIndex = 0x00,
     StartOfEntry = 0x01,
     EndOfEntry = 0xff,
-    Flavor = 0x02,
+    // Flavor previously occupied slot 0x02.
     ModuleName = 0x03,
     IsPackage = 0x04,
     IsNamespacePackage = 0x05,
@@ -163,7 +114,6 @@ impl From<ResourceField> for u8 {
         match field {
             ResourceField::EndOfIndex => 0x00,
             ResourceField::StartOfEntry => 0x01,
-            ResourceField::Flavor => 0x02,
             ResourceField::ModuleName => 0x03,
             ResourceField::IsPackage => 0x04,
             ResourceField::IsNamespacePackage => 0x05,
@@ -204,7 +154,6 @@ impl TryFrom<u8> for ResourceField {
         match value {
             0x00 => Ok(ResourceField::EndOfIndex),
             0x01 => Ok(ResourceField::StartOfEntry),
-            0x02 => Ok(ResourceField::Flavor),
             0x03 => Ok(ResourceField::ModuleName),
             0x04 => Ok(ResourceField::IsPackage),
             0x05 => Ok(ResourceField::IsNamespacePackage),
@@ -254,11 +203,6 @@ pub struct Resource<'a, X: 'a>
 where
     [X]: ToOwned<Owned = Vec<X>>,
 {
-    /// The flavor of the resource.
-    ///
-    /// Deprecated in favor of `is_*` fields declaring type affinity.
-    pub flavor: ResourceFlavor,
-
     /// The resource name.
     pub name: Cow<'a, str>,
 
@@ -359,7 +303,6 @@ where
 {
     fn default() -> Self {
         Resource {
-            flavor: ResourceFlavor::None,
             name: Cow::Borrowed(""),
             is_module: false,
             is_builtin_extension_module: false,
@@ -486,7 +429,6 @@ where
 
     pub fn to_owned(&self) -> Resource<'static, X> {
         Resource {
-            flavor: self.flavor,
             name: Cow::Owned(self.name.clone().into_owned()),
             is_module: self.is_module,
             is_builtin_extension_module: self.is_builtin_extension_module,
