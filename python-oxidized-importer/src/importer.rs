@@ -33,7 +33,7 @@ use {
         ffi as pyffi,
         prelude::*,
         types::{PyBytes, PyDict, PyList, PyString, PyTuple},
-        AsPyPointer, FromPyPointer, PyNativeType,
+        AsPyPointer, FromPyPointer, PyGCProtocol, PyNativeType, PyTraverseError, PyVisit,
     },
     std::sync::Arc,
 };
@@ -387,6 +387,27 @@ impl ImporterState {
         })
     }
 
+    /// Perform garbage collection traversal on this instance.
+    ///
+    /// Do NOT make this pub(crate) because in most cases holders do not need to traverse
+    /// into this since they have an `Arc<T>` reference, not a `Py<T>` reference. Only the
+    /// canonical holder of this instance should call Python's gc visiting.
+    fn gc_traverse(&self, visit: PyVisit) -> Result<(), PyTraverseError> {
+        visit.call(&self.imp_module)?;
+        visit.call(&self.sys_module)?;
+        visit.call(&self.io_module)?;
+        visit.call(&self.marshal_loads)?;
+        visit.call(&self.builtin_importer)?;
+        visit.call(&self.frozen_importer)?;
+        visit.call(&self.call_with_frames_removed)?;
+        visit.call(&self.module_spec_type)?;
+        visit.call(&self.decode_source)?;
+        visit.call(&self.exec_fn)?;
+        visit.call(&self.resources_state)?;
+
+        Ok(())
+    }
+
     /// Obtain the `PythonResourcesState` associated with this instance.
     #[inline]
     pub fn get_resources_state<'a>(&self) -> &PythonResourcesState<'a, u8> {
@@ -441,7 +462,7 @@ impl Drop for ImporterState {
 /// This type implements the importlib.abc.MetaPathFinder interface for
 /// finding/loading modules. It supports loading various flavors of modules,
 /// allowing it to be the only registered sys.meta_path importer.
-#[pyclass(module = "oxidized_importer")]
+#[pyclass(module = "oxidized_importer", gc)]
 pub struct OxidizedFinder {
     pub(crate) state: Arc<ImporterState>,
 }
@@ -477,6 +498,15 @@ impl OxidizedFinder {
             state: importer_state,
         })
     }
+}
+
+#[pyproto]
+impl PyGCProtocol for OxidizedFinder {
+    fn __traverse__(&self, visit: PyVisit) -> Result<(), PyTraverseError> {
+        self.state.gc_traverse(visit)
+    }
+
+    fn __clear__(&mut self) {}
 }
 
 #[pymethods]
