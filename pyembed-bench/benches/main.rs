@@ -13,7 +13,10 @@ use {
     pyoxidizerlib::{
         environment::{default_target_triple, Environment},
         logging::PrintlnDrain,
-        py_packaging::distribution::{DistributionCache, DistributionFlavor, PythonDistribution},
+        py_packaging::{
+            distribution::{DistributionCache, DistributionFlavor, PythonDistribution},
+            standalone_distribution::StandaloneDistribution,
+        },
         python_distributions::PYTHON_DISTRIBUTIONS,
     },
     python_packaging::{
@@ -43,6 +46,24 @@ fn get_logger() -> Result<Logger> {
         .fuse(),
         slog::o!(),
     ))
+}
+
+fn get_python_distribution() -> Result<Arc<StandaloneDistribution>> {
+    let logger = get_logger()?;
+
+    let record = PYTHON_DISTRIBUTIONS
+        .find_distribution(
+            default_target_triple(),
+            &DistributionFlavor::Standalone,
+            None,
+        )
+        .ok_or_else(|| anyhow!("unable to find distribution"))?;
+
+    DISTRIBUTION_CACHE.resolve_distribution(
+        &logger,
+        &record.location,
+        Some(&ENVIRONMENT.cache_dir().join("python_distributions")),
+    )
 }
 
 fn default_interpreter_config<'a>() -> OxidizedPythonInterpreterConfig<'a> {
@@ -82,21 +103,7 @@ fn get_interpreter_packed<'interpreter, 'resources>(
 }
 
 fn resolve_packed_resources() -> Result<(Vec<u8>, Vec<String>)> {
-    let logger = get_logger()?;
-
-    let record = PYTHON_DISTRIBUTIONS
-        .find_distribution(
-            default_target_triple(),
-            &DistributionFlavor::Standalone,
-            None,
-        )
-        .ok_or_else(|| anyhow!("unable to find distribution"))?;
-
-    let dist = DISTRIBUTION_CACHE.resolve_distribution(
-        &logger,
-        &record.location,
-        Some(&ENVIRONMENT.cache_dir().join("python_distributions")),
-    )?;
+    let dist = get_python_distribution()?;
 
     let mut collector = PythonResourceCollector::new(
         vec![AbstractResourceLocation::InMemory],
