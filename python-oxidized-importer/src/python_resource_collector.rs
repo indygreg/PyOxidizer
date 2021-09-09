@@ -117,7 +117,7 @@ impl OxidizedResourceCollector {
             .allowed_locations()
             .iter()
             .map(|l| l.to_string().into_py(py))
-            .collect::<Vec<PyObject>>();
+            .collect::<Vec<Py<PyAny>>>();
 
         Ok(PyList::new(py, &values))
     }

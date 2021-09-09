@@ -61,7 +61,7 @@ pub(crate) fn find_resources_in_path<'p>(py: Python<'p>, path: &PyAny) -> PyResu
         extension,
     };
 
-    let mut res: Vec<PyObject> = Vec::new();
+    let mut res: Vec<Py<PyAny>> = Vec::new();
 
     let iter = find_python_resources(&path, &cache_tag, &suffixes, false, true);
 

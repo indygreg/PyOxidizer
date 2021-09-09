@@ -64,7 +64,7 @@ fn extension_module_shared_library_create_module(
     name_py: &PyAny,
     name: &str,
     library_data: &[u8],
-) -> PyResult<PyObject> {
+) -> PyResult<Py<PyAny>> {
     let origin = PyString::new(py, "memory");
 
     let existing_module =
@@ -112,7 +112,7 @@ fn extension_module_shared_library_create_module(
     _name_py: &PyAny,
     _name: &str,
     _library_data: &[u8],
-) -> PyResult<PyObject> {
+) -> PyResult<Py<PyAny>> {
     panic!("should only be called on Windows");
 }
 
@@ -125,7 +125,7 @@ fn load_dynamic_library(
     name_py: &PyAny,
     name: &str,
     library_module: *const c_void,
-) -> PyResult<PyObject> {
+) -> PyResult<Py<PyAny>> {
     // The init function is `PyInit_<stem>`.
     let last_name_part = if name.contains('.') {
         name.split('.').last().unwrap()
@@ -547,7 +547,7 @@ impl OxidizedFinder {
 
     // Start of importlib.abc.Loader interface.
 
-    fn create_module(slf: &PyCell<Self>, spec: &PyAny) -> PyResult<PyObject> {
+    fn create_module(slf: &PyCell<Self>, spec: &PyAny) -> PyResult<Py<PyAny>> {
         let py = slf.py();
         let finder = slf.borrow();
         let state = &finder.state;
@@ -598,7 +598,7 @@ impl OxidizedFinder {
         }
     }
 
-    fn exec_module(slf: &PyCell<Self>, module: &PyAny) -> PyResult<PyObject> {
+    fn exec_module(slf: &PyCell<Self>, module: &PyAny) -> PyResult<Py<PyAny>> {
         let py = slf.py();
         let finder = slf.borrow();
         let state = &finder.state;
@@ -692,7 +692,7 @@ impl OxidizedFinder {
 
     // Start of importlib.abc.InspectLoader interface.
 
-    fn get_code(slf: &PyCell<Self>, fullname: &str) -> PyResult<PyObject> {
+    fn get_code(slf: &PyCell<Self>, fullname: &str) -> PyResult<Py<PyAny>> {
         let py = slf.py();
         let finder = slf.borrow();
         let state = &finder.state;
@@ -723,7 +723,7 @@ impl OxidizedFinder {
         }
     }
 
-    fn get_source(slf: &PyCell<Self>, fullname: &str) -> PyResult<PyObject> {
+    fn get_source(slf: &PyCell<Self>, fullname: &str) -> PyResult<Py<PyAny>> {
         let py = slf.py();
         let finder = slf.borrow();
         let state = &finder.state;
@@ -783,7 +783,7 @@ impl OxidizedFinder {
 
     // Support obtaining ResourceReader instances.
 
-    fn get_resource_reader(slf: &PyCell<Self>, fullname: &str) -> PyResult<PyObject> {
+    fn get_resource_reader(slf: &PyCell<Self>, fullname: &str) -> PyResult<Py<PyAny>> {
         let finder = slf.borrow();
         let state = &finder.state;
         let key = fullname.to_string();
@@ -1212,7 +1212,7 @@ impl OxidizedPathEntryFinder {
         py: Python,
         fullname: &str,
         target: Option<&PyModule>,
-    ) -> PyResult<PyObject> {
+    ) -> PyResult<Py<PyAny>> {
         if !name_at_package_hierarchy(fullname, self.target_package.as_deref()) {
             return Ok(py.None());
         }
@@ -1229,7 +1229,7 @@ impl OxidizedPathEntryFinder {
         )
     }
 
-    fn invalidate_caches(&self, py: Python) -> PyResult<PyObject> {
+    fn invalidate_caches(&self, py: Python) -> PyResult<Py<PyAny>> {
         self.finder.call_method0(py, "invalidate_caches")
     }
 

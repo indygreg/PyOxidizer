@@ -187,7 +187,7 @@ impl<'a> ImportablePythonModule<'a, u8> {
         optimize_level: OptimizeLevel,
         decode_source: &PyAny,
         io_module: &PyModule,
-    ) -> PyResult<Option<PyObject>> {
+    ) -> PyResult<Option<Py<PyAny>>> {
         if let Some(data) = match optimize_level {
             OptimizeLevel::Zero => &self.resource.in_memory_bytecode,
             OptimizeLevel::One => &self.resource.in_memory_bytecode_opt1,
@@ -431,7 +431,7 @@ where
     ///
     /// Holding a reference to these prevents them from being gc'd and for
     /// memory referenced by `self.resources` from being freed.
-    backing_py_objects: Vec<PyObject>,
+    backing_py_objects: Vec<Py<PyAny>>,
 
     /// Holds memory mapped file instances that resources data came from.
     backing_mmaps: Vec<memmap::Mmap>,
@@ -800,7 +800,7 @@ impl<'a> PythonResourcesState<'a, u8> {
         let names = names
             .iter()
             .map(|x| x.to_object(py))
-            .collect::<Vec<PyObject>>();
+            .collect::<Vec<Py<PyAny>>>();
 
         Ok(PyList::new(py, &names).into())
     }
