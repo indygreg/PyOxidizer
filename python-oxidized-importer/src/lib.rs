@@ -14,6 +14,7 @@ mod pkg_resources;
 mod python_resource_collector;
 mod python_resource_types;
 mod python_resources;
+mod resource_reader;
 mod resource_scanning;
 
 pub use crate::{
@@ -27,10 +28,10 @@ pub use crate::{
 
 use {
     crate::{
-        importer::OxidizedResourceReader,
         path_entry_finder::OxidizedPathEntryFinder,
         pkg_resources::{register_pkg_resources_with_module, OxidizedPkgResourcesProvider},
         python_resources::OxidizedResource,
+        resource_reader::OxidizedResourceReader,
     },
     pyo3::{
         exceptions::{PyImportError, PyValueError},
