@@ -133,7 +133,7 @@ impl OxidizedResourceCollector {
                 let module = module_cell.borrow();
                 let resource = module.get_resource();
 
-                if let Some(_) = &resource.shared_library {
+                if resource.shared_library.is_some() {
                     collector
                         .add_python_extension_module(&resource, &ConcreteResourceLocation::InMemory)
                         .with_context(|| format!("adding {}", repr))
