@@ -151,7 +151,7 @@ pub fn generate_aggregate_license_text<'a>(
             writeln!(
                 &mut text,
                 "{}",
-                licensed_component_spdx_license_texts(&component, &client)?.join("\n")
+                licensed_component_spdx_license_texts(component, client)?.join("\n")
             )?;
         } else {
             writeln!(&mut text, "{}", component.license_texts().join("\n"))?;
