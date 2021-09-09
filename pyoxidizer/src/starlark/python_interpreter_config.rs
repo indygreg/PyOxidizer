@@ -1149,6 +1149,12 @@ mod tests {
         let mut env = get_env()?;
 
         eval_assert(&mut env, "config.user_site_directory == None")?;
+        env.eval("config.user_site_directory = True")?;
+        let v = env.eval("config.user_site_directory")?;
+        assert!(v.to_bool());
+        env.eval("config.user_site_directory = False")?;
+        let v = env.eval("config.user_site_directory")?;
+        assert!(!v.to_bool());
 
         Ok(())
     }
