@@ -38,46 +38,51 @@ https://github.com/indygreg/PyOxidizer/tree/main/python-packed-resources.
 This crate is published to crates.io at
 https://crates.io/crates/python-packed-resources.
 
-Specification
-=============
+Concepts
+========
 
-From a high level, the data structure defines an iterable of
-*resources*. A *resource* is an entity with a name, metadata, and
-blob fields. Typically the most common *resource* is a Python
-module/package. But other resource types (such as shared libraries)
-are defined.
+The data structure is logically an iterable of *resources*.
+
+A *resource* is a sparse collection of *attributes* or *fields*.
+
+Each *attribute* describes behavior of the *resource* or defines data for that
+resource. For example, there are *attributes* that denote the type of
+a resource. A *Python module* *resource* might have an attribute holding
+its Python sourcecode or bytecode.
+
+In Rust speak, a *resource* is a ``struct`` and *attributes* are fields
+in that ``struct``. Many fields are ``Option<T>`` because they are
+optional and not always defined.
+
+Serialization Format
+====================
+
+High-Level Overview
+-------------------
+
+The serialization format consists of:
+
+* A *global header* containing identifying magic and describing the overall
+  payload.
+* An index describing data for each distinct *attribute* type. This is
+  called the *blob index*.
+* An index describing each resource and its attributes. This is called the
+  *resources index*.
+* A series of sections holding data for each distinct *attribute* type. We
+  call these *blob sections*.
+
+All integers are little-endian.
+
+Global Header
+-------------
 
 The first 8 bytes of the data structure are a magic header identifying
 the content as our data structure and the version of it. The first
 7 bytes are ``pyembed`` and the following 1 byte denotes a version.
 Semantics of each version are denoted in sections below.
 
-High-Level Layout
------------------
-
-From a high-level, the serialized format consists of:
-
-* A *global header* describing the overall payload.
-* An index describing the blob sections present in the payload.
-* An index describing each resource and its content.
-* A series of blob sections holding the data referenced by the resources
-  index.
-
-A resource is composed of various *fields* that describe it. Examples
-of fields include the resource name, source code, and bytecode. The resources
-index describes which fields are present and where to find them in the payload.
-
-The actual content of fields (e.g. the raw bytes containing source code)
-is stored in field-specific sections after the index. Each field has its
-own section and data for all resources is stored next to each other. e.g.
-you will have all the data for resource names followed by all data for
-module sourcecode.
-
-The low-level data format is described below. All integers are
-little-endian.
-
-The first 13 bytes after the magic header denote a global header.
-The global header consists of:
+The first 13 bytes after the magic header describe the *blob* and
+*resource* indices as follows:
 
 * A ``u8`` denoting the number of blob sections, ``blob_sections_count``.
 * A ``u32`` denoting the length of the blob index, ``blob_index_length``.
@@ -86,35 +91,23 @@ The global header consists of:
 * A ``u32`` denoting the length of the resources index,
   ``resources_index_length``.
 
-Following the *global header* is the *blob index*. The blob index describes
-the various blob sections present in the payload following the *resources
-index*.
+Blob Index
+----------
+
+Following the *global header* is the *blob index*, which describes the
+*blob sections* present later in the data structure.
 
 Each entry in the *blob index* logically consists of a set of fields defining
 metadata about each *blob section*. This is encoded by a *start of entry*
 ``u8`` marker followed by N ``u8`` field type values and their corresponding
-metadata, followed by an *end of entry* ``u8`` marker. The *blob index* is
-terminated by an *end of index* ``u8`` marker. The total number of bytes in
-the *blob index* including the *end of index* marker should be
-``blob_index_length``.
+metadata, followed by an *end of entry* ``u8`` marker.
 
-Following the *blob index* is the *resources index*. Each entry in this index
-defines a sparse set of metadata describing a single resource. Entries are
-composed of a series of ``u8`` identifying pieces of metadata, followed by
-field-specific supplementary descriptions. For example, a value of ``0x02``
-denotes the length of the resources's name and is immediately followed by a
-``u16`` holding said length. See the section below for each field
-tracked by this index.
+The *blob index* is terminated by an *end of index* ``u8`` marker.
 
-Following the *resources index* is blob data. Blob data is logically consisted
-of different sections holding data for different fields for different resources.
-But there is no internal structure or separators: all the individual
-blobs are just laid out next to each other.
+The total number of bytes in the *blob index* including the *end of index*
+marker should be ``blob_index_length``.
 
-Blob Field Types
-----------------
-
-The Blob Index allows attributing a sparse set of metadata with every blob
+The *blob index* allows attributing a sparse set of metadata with every blob
 section entry. The type of metadata being conveyed is defined by a ``u8``.
 Some field types have additional metadata following that field.
 
@@ -157,13 +150,30 @@ The various field types and their semantics follow.
    consists of discrete resources (e.g. Python package resource files), then
    padding applies to these sub-elements as well.
 
-Resource Field Types
---------------------
+For example, a *blob index* byte sequence of
+``0x01 0x02 0x03 0x03 0x0000000000000042 0x04 0x01 0xff 0x00`` would be decoded as:
 
-The Resources Index allows attributing a sparse set of metadata
-with every resource. A ``u8`` indicates what metadata is being conveyed. Some
-field types have additional metadata following this ``[u8]`` further defining
-the field. The values of each defined metadata type follow.
+* ``0x01`` - Start of blob section entry.
+* ``0x02 0x03`` - Resource field type definition (``0x02``) for field ``0x03``.
+* ``0x03 0x0000000000000042`` - Blob section length (``0x03``) of ``0x42`` bytes
+  long.
+* ``0x04 0x01`` - Interior padding in blob section (``0x04``) is defined as
+  no padding (``0x01``).
+* ``0xff`` - End of blob section entry.
+* ``0x00`` - End of index.
+
+Resources Index
+---------------
+
+Following the *blob index* is the *resources index*.
+
+Each entry in this index defines a sparse set of metadata describing a
+single resource.
+
+Entries are composed of a series of ``u8`` identifying pieces of metadata,
+followed by field-specific supplementary descriptions.
+
+The following ``u8`` fields and their behavior/payloads are as follows:
 
 ``0x00``
    End of index. Special type to denote the end of an index.
@@ -341,6 +351,17 @@ the field. The values of each defined metadata type follow.
    is UTF-8 encoded.
 
    A ``u32`` denoting the length of the UTF-8 relative path (in bytes) follows.
+
+Blob Sections
+-------------
+
+Following the *resources index* is blob data.
+
+Blob data is logically composed of different sections holding data for
+different fields for different resources. But there is no internal structure
+or separators: all the individual blobs are just laid out next to each other.
+The *resources index* for a given field will describe where in a blob
+section a particular value occurs.
 
 ``pyembed\x01`` Format
 ----------------------
