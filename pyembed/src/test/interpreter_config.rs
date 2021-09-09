@@ -53,8 +53,8 @@ fn assert_importer(oxidized: bool, filesystem: bool) {
 
     let py = interp.acquire_gil();
     let sys = py.import("sys").unwrap();
-    let meta_path_reprs = reprs(&sys.getattr("meta_path").unwrap()).unwrap();
-    let path_hook_reprs = reprs(&sys.getattr("path_hooks").unwrap()).unwrap();
+    let meta_path_reprs = reprs(sys.getattr("meta_path").unwrap()).unwrap();
+    let path_hook_reprs = reprs(sys.getattr("path_hooks").unwrap()).unwrap();
     const PATH_HOOK_REPR: &str =
         "built-in method path_hook of oxidized_importer.OxidizedFinder object";
 
