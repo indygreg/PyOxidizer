@@ -4,11 +4,12 @@
 
 use {
     crate::{
-        importer::{ImporterState, OxidizedFinder, OxidizedPathEntryFinder},
+        importer::{ImporterState, OxidizedFinder},
         package_metadata::{
             find_pkg_resources_distributions, metadata_list_directory, metadata_name_is_directory,
             resolve_package_distribution_resource,
         },
+        path_entry_finder::OxidizedPathEntryFinder,
     },
     pyo3::{
         exceptions::{PyIOError, PyNotImplementedError, PyTypeError, PyUnicodeDecodeError},

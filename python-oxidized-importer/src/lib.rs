@@ -9,6 +9,7 @@ mod importer;
 #[cfg(windows)]
 mod memory_dll;
 mod package_metadata;
+mod path_entry_finder;
 mod pkg_resources;
 mod python_resource_collector;
 mod python_resource_types;
@@ -26,7 +27,8 @@ pub use crate::{
 
 use {
     crate::{
-        importer::{OxidizedPathEntryFinder, OxidizedResourceReader},
+        importer::OxidizedResourceReader,
+        path_entry_finder::OxidizedPathEntryFinder,
         pkg_resources::{register_pkg_resources_with_module, OxidizedPkgResourcesProvider},
         python_resources::OxidizedResource,
     },

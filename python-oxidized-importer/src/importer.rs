@@ -19,10 +19,11 @@ use {
     crate::{
         conversion::pyobject_to_pathbuf,
         get_module_state,
+        path_entry_finder::OxidizedPathEntryFinder,
         pkg_resources::register_pkg_resources_with_module,
         python_resources::{
-            name_at_package_hierarchy, pyobject_to_resource, resource_to_pyobject, ModuleFlavor,
-            OptimizeLevel, OxidizedResource, PythonResourcesState,
+            pyobject_to_resource, resource_to_pyobject, ModuleFlavor, OptimizeLevel,
+            OxidizedResource, PythonResourcesState,
         },
         OXIDIZED_IMPORTER_NAME_STR,
     },
@@ -236,33 +237,33 @@ fn load_dynamic_library(
 /// Holds state for the custom MetaPathFinder.
 pub struct ImporterState {
     /// `imp` Python module.
-    imp_module: Py<PyModule>,
+    pub(crate) imp_module: Py<PyModule>,
     /// `sys` Python module.
-    sys_module: Py<PyModule>,
+    pub(crate) sys_module: Py<PyModule>,
     /// `_io` Python module.
-    io_module: Py<PyModule>,
+    pub(crate) io_module: Py<PyModule>,
     /// `marshal.loads` Python callable.
-    marshal_loads: Py<PyAny>,
+    pub(crate) marshal_loads: Py<PyAny>,
     /// `_frozen_importlib.BuiltinImporter` meta path importer for built-in extension modules.
-    builtin_importer: Py<PyAny>,
+    pub(crate) builtin_importer: Py<PyAny>,
     /// `_frozen_importlib.FrozenImporter` meta path importer for frozen modules.
-    frozen_importer: Py<PyAny>,
+    pub(crate) frozen_importer: Py<PyAny>,
     /// `importlib._bootstrap._call_with_frames_removed` function.
-    call_with_frames_removed: Py<PyAny>,
+    pub(crate) call_with_frames_removed: Py<PyAny>,
     /// `importlib._bootstrap.ModuleSpec` class.
-    module_spec_type: Py<PyAny>,
+    pub(crate) module_spec_type: Py<PyAny>,
     /// Our `decode_source()` function.
-    decode_source: Py<PyAny>,
+    pub(crate) decode_source: Py<PyAny>,
     /// `builtins.exec` function.
-    exec_fn: Py<PyAny>,
+    pub(crate) exec_fn: Py<PyAny>,
     /// Bytecode optimization level currently in effect.
-    optimize_level: OptimizeLevel,
+    pub(crate) optimize_level: OptimizeLevel,
     /// Value to pass to `multiprocessing.set_start_method()` on import of `multiprocessing`.
     ///
     /// If `None`, `set_start_method()` will not be called automatically.
-    multiprocessing_set_start_method: Option<String>,
+    pub(crate) multiprocessing_set_start_method: Option<String>,
     /// Whether to automatically register ourself with `pkg_resources` when it is imported.
-    pkg_resources_import_auto_register: bool,
+    pub(crate) pkg_resources_import_auto_register: bool,
     /// Holds state about importable resources.
     ///
     /// This field is a PyCapsule and is a glorified wrapper around
@@ -277,7 +278,7 @@ pub struct ImporterState {
     /// objects be 'static. This allows us to use proper lifetimes for
     /// the backing memory instead of forcing all resource data to be backed
     /// by 'static.
-    resources_state: Py<PyAny>,
+    pub(crate) resources_state: Py<PyAny>,
 }
 
 impl ImporterState {
@@ -441,7 +442,7 @@ impl Drop for ImporterState {
 /// allowing it to be the only registered sys.meta_path importer.
 #[pyclass(module = "oxidized_importer")]
 pub struct OxidizedFinder {
-    state: Arc<ImporterState>,
+    pub(crate) state: Arc<ImporterState>,
 }
 
 impl OxidizedFinder {
@@ -1170,85 +1171,6 @@ impl OxidizedFinder {
             source_path: path.into_py(py),
             target_package,
         })
-    }
-}
-
-/// A (mostly compliant) `importlib.abc.PathEntryFinder` that delegates paths
-/// within the current executable to the `OxidizedFinder` whose `path_hook`
-/// method created it.
-#[pyclass(module = "oxidized_importer")]
-pub(crate) struct OxidizedPathEntryFinder {
-    /// A clone of the meta path finder from which we came.
-    finder: Py<OxidizedFinder>,
-
-    /// The sys.path value this instance was created with.
-    source_path: Py<PyString>,
-
-    /// Name of package being targeted.
-    ///
-    /// None is the top-level. Some(T) is a specific package in the hierarchy.
-    target_package: Option<String>,
-}
-
-impl OxidizedPathEntryFinder {
-    pub(crate) fn get_finder(&self) -> &Py<OxidizedFinder> {
-        &self.finder
-    }
-
-    pub(crate) fn get_source_path(&self) -> &Py<PyString> {
-        &self.source_path
-    }
-
-    pub(crate) fn get_target_package(&self) -> &Option<String> {
-        &self.target_package
-    }
-}
-
-#[pymethods]
-impl OxidizedPathEntryFinder {
-    #[args(target = "None")]
-    fn find_spec(
-        &self,
-        py: Python,
-        fullname: &str,
-        target: Option<&PyModule>,
-    ) -> PyResult<Py<PyAny>> {
-        if !name_at_package_hierarchy(fullname, self.target_package.as_deref()) {
-            return Ok(py.None());
-        }
-
-        self.finder.call_method(
-            py,
-            "find_spec",
-            (
-                fullname,
-                PyList::new(py, &[self.source_path.clone_ref(py)]),
-                target,
-            ),
-            None,
-        )
-    }
-
-    fn invalidate_caches(&self, py: Python) -> PyResult<Py<PyAny>> {
-        self.finder.call_method0(py, "invalidate_caches")
-    }
-
-    #[args(prefix = "\"\"")]
-    fn iter_modules<'p>(&self, py: Python<'p>, prefix: &str) -> PyResult<&'p PyList> {
-        let finder = self.finder.borrow(py);
-
-        finder.state.get_resources_state().pkgutil_modules_infos(
-            py,
-            self.target_package.as_deref(),
-            Some(prefix.to_string()),
-            finder.state.optimize_level,
-        )
-    }
-
-    /// Private getter. Just for testing.
-    #[getter]
-    fn _package(&self) -> Option<String> {
-        self.target_package.clone()
     }
 }
 
