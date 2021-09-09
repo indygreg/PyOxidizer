@@ -405,22 +405,22 @@ fn print_signed_data(
         println!(
             "{}signed content SHA-1:   {}",
             prefix,
-            hex::encode(DigestType::Sha1.digest(&content)?)
+            hex::encode(DigestType::Sha1.digest(content)?)
         );
         println!(
             "{}signed content SHA-256: {}",
             prefix,
-            hex::encode(DigestType::Sha256.digest(&content)?)
+            hex::encode(DigestType::Sha256.digest(content)?)
         );
         println!(
             "{}signed content SHA-384: {}",
             prefix,
-            hex::encode(DigestType::Sha384.digest(&content)?)
+            hex::encode(DigestType::Sha384.digest(content)?)
         );
         println!(
             "{}signed content SHA-512: {}",
             prefix,
-            hex::encode(DigestType::Sha512.digest(&content)?)
+            hex::encode(DigestType::Sha512.digest(content)?)
         );
     }
     println!(
@@ -474,7 +474,7 @@ fn print_signed_data(
             );
         }
 
-        let digested_data = signer.signed_content_with_signed_data(&signed_data);
+        let digested_data = signer.signed_content_with_signed_data(signed_data);
 
         println!(
             "{}signer #{}: signature content SHA-1:   {}",
@@ -507,7 +507,7 @@ fn print_signed_data(
                 prefix,
                 i,
                 signer
-                    .verify_message_digest_with_signed_data(&signed_data)
+                    .verify_message_digest_with_signed_data(signed_data)
                     .is_ok()
             );
         }
@@ -516,7 +516,7 @@ fn print_signed_data(
             prefix,
             i,
             signer
-                .verify_signature_with_signed_data(&signed_data)
+                .verify_signature_with_signed_data(signed_data)
                 .is_ok()
         );
 
@@ -813,7 +813,7 @@ fn command_extract(args: &ArgMatches) -> Result<(), AppleCodesignError> {
         "signature-raw" => {
             let sig =
                 find_signature_data(&macho)?.ok_or(AppleCodesignError::BinaryNoCodeSignature)?;
-            std::io::stdout().write_all(&sig.signature_data)?;
+            std::io::stdout().write_all(sig.signature_data)?;
         }
         "superblob" => {
             let sig =
