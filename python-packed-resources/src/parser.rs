@@ -147,11 +147,11 @@ impl<'a> ResourceParserIterator<'a> {
                     current_resource_name = Some(name);
                     current_resource.name = Cow::Borrowed(name);
                 }
-                ResourceField::IsPackage => {
-                    current_resource.is_package = true;
+                ResourceField::IsPythonPackage => {
+                    current_resource.is_python_package = true;
                 }
-                ResourceField::IsNamespacePackage => {
-                    current_resource.is_namespace_package = true;
+                ResourceField::IsPythonNamespacePackage => {
+                    current_resource.is_python_namespace_package = true;
                 }
                 ResourceField::InMemorySource => {
                     let l = self
@@ -436,20 +436,20 @@ impl<'a> ResourceParserIterator<'a> {
                     current_resource.relative_path_distribution_resources = Some(resources);
                 }
 
-                ResourceField::IsModule => {
-                    current_resource.is_module = true;
+                ResourceField::IsPythonModule => {
+                    current_resource.is_python_module = true;
                 }
 
-                ResourceField::IsBuiltinExtensionModule => {
-                    current_resource.is_builtin_extension_module = true;
+                ResourceField::IsPythonBuiltinExtensionModule => {
+                    current_resource.is_python_builtin_extension_module = true;
                 }
 
-                ResourceField::IsFrozenModule => {
-                    current_resource.is_frozen_module = true;
+                ResourceField::IsPythonFrozenModule => {
+                    current_resource.is_python_frozen_module = true;
                 }
 
-                ResourceField::IsExtensionModule => {
-                    current_resource.is_extension_module = true;
+                ResourceField::IsPythonExtensionModule => {
+                    current_resource.is_python_extension_module = true;
                 }
 
                 ResourceField::IsSharedLibrary => {
@@ -1370,8 +1370,8 @@ mod tests {
 
         let resource = Resource {
             name: Cow::from("module"),
-            is_package: true,
-            is_namespace_package: true,
+            is_python_package: true,
+            is_python_namespace_package: true,
             in_memory_source: Some(Cow::from(b"source".to_vec())),
             in_memory_bytecode: Some(Cow::from(b"bytecode".to_vec())),
             in_memory_bytecode_opt1: Some(Cow::from(b"bytecodeopt1".to_vec())),
@@ -1388,10 +1388,10 @@ mod tests {
             relative_path_extension_module_shared_library: Some(Cow::from(Path::new("em_path"))),
             relative_path_package_resources: Some(relative_path_resources),
             relative_path_distribution_resources: Some(relative_path_distribution),
-            is_module: true,
-            is_builtin_extension_module: true,
-            is_frozen_module: true,
-            is_extension_module: true,
+            is_python_module: true,
+            is_python_builtin_extension_module: true,
+            is_python_frozen_module: true,
+            is_python_extension_module: true,
             is_shared_library: true,
             is_utf8_filename_data: true,
             file_executable: true,
@@ -1410,8 +1410,8 @@ mod tests {
 
         let entry = &resources[0];
 
-        assert!(entry.is_package);
-        assert!(entry.is_namespace_package);
+        assert!(entry.is_python_package);
+        assert!(entry.is_python_namespace_package);
         assert_eq!(entry.in_memory_source.as_ref().unwrap().as_ref(), b"source");
         assert_eq!(
             entry.in_memory_bytecode.as_ref().unwrap().as_ref(),
@@ -1496,10 +1496,10 @@ mod tests {
             distribution.get("resource.txt"),
             Some(&Cow::Borrowed(Path::new("package/resource.txt")))
         );
-        assert!(entry.is_module);
-        assert!(entry.is_builtin_extension_module);
-        assert!(entry.is_frozen_module);
-        assert!(entry.is_extension_module);
+        assert!(entry.is_python_module);
+        assert!(entry.is_python_builtin_extension_module);
+        assert!(entry.is_python_frozen_module);
+        assert!(entry.is_python_extension_module);
         assert!(entry.is_shared_library);
         assert!(entry.is_utf8_filename_data);
         assert!(entry.file_executable);
@@ -1518,13 +1518,13 @@ mod tests {
         let resources: Vec<Resource<u8>> = vec![
             Resource {
                 name: Cow::from("foo"),
-                is_module: true,
+                is_python_module: true,
                 in_memory_source: Some(Cow::from(b"import io".to_vec())),
                 ..Resource::default()
             },
             Resource {
                 name: Cow::from("bar"),
-                is_module: true,
+                is_python_module: true,
                 in_memory_bytecode: Some(Cow::from(b"fake bytecode".to_vec())),
                 ..Resource::default()
             },

@@ -110,8 +110,8 @@ impl PrePackagedResource {
 
         let resource = Resource {
             name: Cow::Owned(self.name.clone()),
-            is_package: self.is_package,
-            is_namespace_package: self.is_namespace_package,
+            is_python_package: self.is_package,
+            is_python_namespace_package: self.is_namespace_package,
             in_memory_source: if let Some(location) = &self.in_memory_source {
                 Some(Cow::Owned(location.resolve_content()?))
             } else {
@@ -378,10 +378,10 @@ impl PrePackagedResource {
             } else {
                 None
             },
-            is_module: self.is_module,
-            is_builtin_extension_module: self.is_builtin_extension_module,
-            is_frozen_module: self.is_frozen_module,
-            is_extension_module: self.is_extension_module,
+            is_python_module: self.is_module,
+            is_python_builtin_extension_module: self.is_builtin_extension_module,
+            is_python_frozen_module: self.is_frozen_module,
+            is_python_extension_module: self.is_extension_module,
             is_shared_library: self.is_shared_library,
             is_utf8_filename_data: self.is_utf8_filename_data,
             file_executable: self.file_executable,
@@ -1886,10 +1886,10 @@ mod tests {
         assert_eq!(
             resource,
             Resource {
-                is_module: true,
+                is_python_module: true,
                 name: Cow::Owned("module".to_string()),
-                is_package: true,
-                is_namespace_package: true,
+                is_python_package: true,
+                is_python_namespace_package: true,
                 ..Resource::default()
             }
         );
@@ -1915,7 +1915,7 @@ mod tests {
         assert_eq!(
             resource,
             Resource {
-                is_module: true,
+                is_python_module: true,
                 name: Cow::Owned("module".to_string()),
                 in_memory_source: Some(Cow::Owned(b"source".to_vec())),
                 ..Resource::default()
@@ -1945,7 +1945,7 @@ mod tests {
         assert_eq!(
             resource,
             Resource {
-                is_module: true,
+                is_python_module: true,
                 name: Cow::Owned("module".to_string()),
                 in_memory_bytecode: Some(Cow::Owned(b"bytecode".to_vec())),
                 ..Resource::default()
@@ -1974,7 +1974,7 @@ mod tests {
         assert_eq!(
             resource,
             Resource {
-                is_module: true,
+                is_python_module: true,
                 name: Cow::Owned("module".to_string()),
                 in_memory_bytecode: Some(Cow::Owned(b"bc0source".to_vec())),
                 ..Resource::default()
@@ -2003,7 +2003,7 @@ mod tests {
         assert_eq!(
             resource,
             Resource {
-                is_module: true,
+                is_python_module: true,
                 name: Cow::Owned("module".to_string()),
                 in_memory_bytecode_opt1: Some(Cow::Owned(b"bytecode".to_vec())),
                 ..Resource::default()
@@ -2032,7 +2032,7 @@ mod tests {
         assert_eq!(
             resource,
             Resource {
-                is_module: true,
+                is_python_module: true,
                 name: Cow::Owned("module".to_string()),
                 in_memory_bytecode_opt1: Some(Cow::Owned(b"bc1source".to_vec())),
                 ..Resource::default()
@@ -2061,7 +2061,7 @@ mod tests {
         assert_eq!(
             resource,
             Resource {
-                is_module: true,
+                is_python_module: true,
                 name: Cow::Owned("module".to_string()),
                 in_memory_bytecode_opt2: Some(Cow::Owned(b"bytecode".to_vec())),
                 ..Resource::default()
@@ -2090,7 +2090,7 @@ mod tests {
         assert_eq!(
             resource,
             Resource {
-                is_module: true,
+                is_python_module: true,
                 name: Cow::Owned("module".to_string()),
                 in_memory_bytecode_opt2: Some(Cow::Owned(b"bc2source".to_vec())),
                 ..Resource::default()
@@ -2117,7 +2117,7 @@ mod tests {
         assert_eq!(
             resource,
             Resource {
-                is_module: true,
+                is_python_module: true,
                 name: Cow::Owned("module".to_string()),
                 in_memory_extension_module_shared_library: Some(Cow::Owned(b"library".to_vec())),
                 ..Resource::default()
@@ -2151,7 +2151,7 @@ mod tests {
         assert_eq!(
             resource,
             Resource {
-                is_module: true,
+                is_python_module: true,
                 name: Cow::Owned("module".to_string()),
                 in_memory_package_resources: Some(resources),
                 ..Resource::default()
@@ -2185,7 +2185,7 @@ mod tests {
         assert_eq!(
             resource,
             Resource {
-                is_module: true,
+                is_python_module: true,
                 name: Cow::Owned("module".to_string()),
                 in_memory_distribution_resources: Some(resources),
                 ..Resource::default()
@@ -2249,7 +2249,7 @@ mod tests {
         assert_eq!(
             resource,
             Resource {
-                is_module: true,
+                is_python_module: true,
                 name: Cow::Owned("module".to_string()),
                 relative_path_module_source: Some(Cow::Owned(PathBuf::from("prefix/module.py"))),
                 ..Resource::default()
@@ -2288,7 +2288,7 @@ mod tests {
         assert_eq!(
             resource,
             Resource {
-                is_module: true,
+                is_python_module: true,
                 name: Cow::Owned("foo.bar".to_string()),
                 relative_path_module_bytecode: Some(Cow::Owned(PathBuf::from(
                     "prefix/foo/__pycache__/bar.tag.pyc"
@@ -2332,7 +2332,7 @@ mod tests {
         assert_eq!(
             resource,
             Resource {
-                is_module: true,
+                is_python_module: true,
                 name: Cow::Owned("foo.bar".to_string()),
                 relative_path_module_bytecode: Some(Cow::Owned(PathBuf::from(
                     "prefix/foo/__pycache__/bar.tag.pyc"
@@ -2373,7 +2373,7 @@ mod tests {
         assert_eq!(
             resource,
             Resource {
-                is_module: true,
+                is_python_module: true,
                 name: Cow::Owned("foo.bar".to_string()),
                 relative_path_module_bytecode_opt1: Some(Cow::Owned(PathBuf::from(
                     "prefix/foo/__pycache__/bar.tag.opt-1.pyc"
@@ -2417,7 +2417,7 @@ mod tests {
         assert_eq!(
             resource,
             Resource {
-                is_module: true,
+                is_python_module: true,
                 name: Cow::Owned("foo.bar".to_string()),
                 relative_path_module_bytecode_opt1: Some(Cow::Owned(PathBuf::from(
                     "prefix/foo/__pycache__/bar.tag.opt-1.pyc"
@@ -2458,7 +2458,7 @@ mod tests {
         assert_eq!(
             resource,
             Resource {
-                is_module: true,
+                is_python_module: true,
                 name: Cow::Owned("foo.bar".to_string()),
                 relative_path_module_bytecode_opt2: Some(Cow::Owned(PathBuf::from(
                     "prefix/foo/__pycache__/bar.tag.opt-2.pyc"
@@ -2502,7 +2502,7 @@ mod tests {
         assert_eq!(
             resource,
             Resource {
-                is_module: true,
+                is_python_module: true,
                 name: Cow::Owned("foo.bar".to_string()),
                 relative_path_module_bytecode_opt2: Some(Cow::Owned(PathBuf::from(
                     "prefix/foo/__pycache__/bar.tag.opt-2.pyc"
@@ -2542,7 +2542,7 @@ mod tests {
         assert_eq!(
             resource,
             Resource {
-                is_module: true,
+                is_python_module: true,
                 name: Cow::Owned("module".to_string()),
                 relative_path_extension_module_shared_library: Some(Cow::Owned(PathBuf::from(
                     "prefix/ext.so"
@@ -2606,9 +2606,9 @@ mod tests {
         assert_eq!(
             resource,
             Resource {
-                is_module: true,
+                is_python_module: true,
                 name: Cow::Owned("module".to_string()),
-                is_package: true,
+                is_python_package: true,
                 relative_path_package_resources: Some(resources),
                 ..Resource::default()
             }
@@ -2661,7 +2661,7 @@ mod tests {
         assert_eq!(
             resource,
             Resource {
-                is_module: true,
+                is_python_module: true,
                 name: Cow::Owned("module".to_string()),
                 relative_path_distribution_resources: Some(resources),
                 ..Resource::default()
@@ -2955,7 +2955,7 @@ mod tests {
         assert_eq!(
             resources.resources.get("foo"),
             Some(&Resource {
-                is_module: true,
+                is_python_module: true,
                 name: Cow::Owned("foo".to_string()),
                 in_memory_source: Some(Cow::Owned(vec![42])),
                 ..Resource::default()
@@ -3007,9 +3007,9 @@ mod tests {
         assert_eq!(
             resources.resources.get("root"),
             Some(&Resource {
-                is_module: true,
+                is_python_module: true,
                 name: Cow::Owned("root".to_string()),
-                is_package: true,
+                is_python_package: true,
                 in_memory_source: Some(Cow::Owned(vec![])),
                 ..Resource::default()
             })
@@ -3017,9 +3017,9 @@ mod tests {
         assert_eq!(
             resources.resources.get("root.parent"),
             Some(&Resource {
-                is_module: true,
+                is_python_module: true,
                 name: Cow::Owned("root.parent".to_string()),
-                is_package: true,
+                is_python_package: true,
                 in_memory_source: Some(Cow::Owned(vec![])),
                 ..Resource::default()
             })
@@ -3027,9 +3027,9 @@ mod tests {
         assert_eq!(
             resources.resources.get("root.parent.child"),
             Some(&Resource {
-                is_module: true,
+                is_python_module: true,
                 name: Cow::Owned("root.parent.child".to_string()),
-                is_package: true,
+                is_python_package: true,
                 in_memory_source: Some(Cow::Owned(vec![42])),
                 ..Resource::default()
             })
@@ -3084,9 +3084,9 @@ mod tests {
         assert_eq!(
             resources.resources.get("foo"),
             Some(&Resource {
-                is_module: true,
+                is_python_module: true,
                 name: Cow::Owned("foo".to_string()),
-                is_package: true,
+                is_python_package: true,
                 relative_path_module_source: Some(Cow::Owned(PathBuf::from(
                     "prefix/foo/__init__.py"
                 ))),
@@ -3096,7 +3096,7 @@ mod tests {
         assert_eq!(
             resources.resources.get("foo.bar"),
             Some(&Resource {
-                is_module: true,
+                is_python_module: true,
                 name: Cow::Owned("foo.bar".to_string()),
                 relative_path_module_source: Some(Cow::Owned(PathBuf::from("prefix/foo/bar.py"))),
                 ..Resource::default()
@@ -3284,7 +3284,7 @@ mod tests {
         assert_eq!(
             resources.resources.get("foo"),
             Some(&Resource {
-                is_module: true,
+                is_python_module: true,
                 name: Cow::Owned("foo".to_string()),
                 in_memory_bytecode: Some(Cow::Owned(vec![42])),
                 ..Resource::default()
@@ -3339,7 +3339,7 @@ mod tests {
         assert_eq!(
             resources.resources.get("foo"),
             Some(&Resource {
-                is_module: true,
+                is_python_module: true,
                 name: Cow::Owned("foo".to_string()),
                 in_memory_bytecode: Some(Cow::Owned(b"bc0\x2a".to_vec())),
                 ..Resource::default()
@@ -3514,9 +3514,9 @@ mod tests {
         assert_eq!(
             resources.resources.get("root"),
             Some(&Resource {
-                is_module: true,
+                is_python_module: true,
                 name: Cow::Owned("root".to_string()),
-                is_package: true,
+                is_python_package: true,
                 in_memory_bytecode_opt1: Some(Cow::Owned(b"bc1".to_vec())),
                 ..Resource::default()
             })
@@ -3524,9 +3524,9 @@ mod tests {
         assert_eq!(
             resources.resources.get("root.parent"),
             Some(&Resource {
-                is_module: true,
+                is_python_module: true,
                 name: Cow::Owned("root.parent".to_string()),
-                is_package: true,
+                is_python_package: true,
                 in_memory_bytecode_opt1: Some(Cow::Owned(b"bc1".to_vec())),
                 ..Resource::default()
             })
@@ -3534,9 +3534,9 @@ mod tests {
         assert_eq!(
             resources.resources.get("root.parent.child"),
             Some(&Resource {
-                is_module: true,
+                is_python_module: true,
                 name: Cow::Owned("root.parent.child".to_string()),
-                is_package: true,
+                is_python_package: true,
                 in_memory_bytecode_opt1: Some(Cow::Owned(b"bc1\x2a".to_vec())),
                 ..Resource::default()
             })
@@ -3713,9 +3713,9 @@ mod tests {
         assert_eq!(
             resources.resources.get("foo"),
             Some(&Resource {
-                is_module: true,
+                is_python_module: true,
                 name: Cow::Owned("foo".to_string()),
-                is_package: true,
+                is_python_package: true,
                 in_memory_package_resources: Some(
                     [(Cow::Owned("resource.txt".to_string()), Cow::Owned(vec![42]))]
                         .iter()
@@ -3781,9 +3781,9 @@ mod tests {
         assert_eq!(
             resources.resources.get("foo"),
             Some(&Resource {
-                is_module: true,
+                is_python_module: true,
                 name: Cow::Owned("foo".to_string()),
-                is_package: true,
+                is_python_package: true,
                 relative_path_package_resources: Some(
                     [(
                         Cow::Owned("resource.txt".to_string()),
@@ -3941,9 +3941,9 @@ mod tests {
         assert_eq!(
             resources.resources.get("mypackage"),
             Some(&Resource {
-                is_module: true,
+                is_python_module: true,
                 name: Cow::Owned("mypackage".to_string()),
-                is_package: true,
+                is_python_package: true,
                 in_memory_distribution_resources: Some(
                     [(Cow::Owned("resource.txt".to_string()), Cow::Owned(vec![42]))]
                         .iter()
@@ -4009,9 +4009,9 @@ mod tests {
         assert_eq!(
             resources.resources.get("mypackage"),
             Some(&Resource {
-                is_module: true,
+                is_python_module: true,
                 name: Cow::Owned("mypackage".to_string()),
-                is_package: true,
+                is_python_package: true,
                 relative_path_distribution_resources: Some(
                     [(
                         Cow::Owned("resource.txt".to_string()),
@@ -4163,7 +4163,7 @@ mod tests {
         assert_eq!(
             resources.resources.get("_io"),
             Some(&Resource {
-                is_builtin_extension_module: true,
+                is_python_builtin_extension_module: true,
                 name: Cow::Owned("_io".to_string()),
                 ..Resource::default()
             })
@@ -4248,7 +4248,7 @@ mod tests {
         assert_eq!(
             resources.resources.get("myext"),
             Some(&Resource {
-                is_extension_module: true,
+                is_python_extension_module: true,
                 name: Cow::Owned("myext".to_string()),
                 in_memory_extension_module_shared_library: Some(Cow::Owned(vec![42])),
                 shared_library_dependency_names: Some(vec![Cow::Owned("foo".to_string())]),
@@ -4358,18 +4358,18 @@ mod tests {
         assert_eq!(
             resources.resources.get("foo"),
             Some(&Resource {
-                is_module: true,
+                is_python_module: true,
                 name: Cow::Owned("foo".to_string()),
-                is_package: true,
+                is_python_package: true,
                 ..Resource::default()
             })
         );
         assert_eq!(
             resources.resources.get("foo.bar"),
             Some(&Resource {
-                is_extension_module: true,
+                is_python_extension_module: true,
                 name: Cow::Owned("foo.bar".to_string()),
-                is_package: false,
+                is_python_package: false,
                 relative_path_extension_module_shared_library: Some(Cow::Owned(PathBuf::from(
                     "prefix/foo/bar.so"
                 ))),
@@ -4458,10 +4458,10 @@ mod tests {
         assert_eq!(
             resources.resources.get("foo"),
             Some(&Resource {
-                is_module: true,
+                is_python_module: true,
                 is_shared_library: true,
                 name: Cow::Owned("foo".to_string()),
-                is_package: true,
+                is_python_package: true,
                 in_memory_source: Some(Cow::Owned(vec![1])),
                 in_memory_shared_library: Some(Cow::Owned(vec![2])),
                 ..Resource::default()

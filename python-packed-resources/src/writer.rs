@@ -110,8 +110,8 @@ where
     ///
     /// The resource is meaningful if it has data attached or is a package.
     pub fn is_meaningful(&self) -> bool {
-        self.is_package
-            || self.is_namespace_package
+        self.is_python_package
+            || self.is_python_namespace_package
             || self.in_memory_source.is_some()
             || self.in_memory_bytecode.is_some()
             || self.in_memory_bytecode_opt1.is_some()
@@ -139,11 +139,11 @@ where
         // Resource name field + name length.
         index += 3;
 
-        if self.is_package {
+        if self.is_python_package {
             index += 1;
         }
 
-        if self.is_namespace_package {
+        if self.is_python_namespace_package {
             index += 1;
         }
 
@@ -221,19 +221,19 @@ where
             index += 6 * metadata.len();
         }
 
-        if self.is_module {
+        if self.is_python_module {
             index += 1;
         }
 
-        if self.is_builtin_extension_module {
+        if self.is_python_builtin_extension_module {
             index += 1;
         }
 
-        if self.is_frozen_module {
+        if self.is_python_frozen_module {
             index += 1;
         }
 
-        if self.is_extension_module {
+        if self.is_python_extension_module {
             index += 1;
         }
 
@@ -272,8 +272,8 @@ where
             ResourceField::StartOfEntry => 0,
             ResourceField::EndOfEntry => 0,
             ResourceField::Name => self.name.as_bytes().len(),
-            ResourceField::IsPackage => 0,
-            ResourceField::IsNamespacePackage => 0,
+            ResourceField::IsPythonPackage => 0,
+            ResourceField::IsPythonNamespacePackage => 0,
             ResourceField::InMemorySource => {
                 if let Some(source) = &self.in_memory_source {
                     source.len()
@@ -398,10 +398,10 @@ where
                     0
                 }
             }
-            ResourceField::IsModule => 0,
-            ResourceField::IsBuiltinExtensionModule => 0,
-            ResourceField::IsFrozenModule => 0,
-            ResourceField::IsExtensionModule => 0,
+            ResourceField::IsPythonModule => 0,
+            ResourceField::IsPythonBuiltinExtensionModule => 0,
+            ResourceField::IsPythonFrozenModule => 0,
+            ResourceField::IsPythonExtensionModule => 0,
             ResourceField::IsSharedLibrary => 0,
             ResourceField::IsUtf8FilenameData => 0,
             ResourceField::FileExecutable => 0,
@@ -433,8 +433,8 @@ where
             ResourceField::StartOfEntry => 0,
             ResourceField::EndOfEntry => 0,
             ResourceField::Name => 1,
-            ResourceField::IsPackage => 0,
-            ResourceField::IsNamespacePackage => 0,
+            ResourceField::IsPythonPackage => 0,
+            ResourceField::IsPythonNamespacePackage => 0,
             ResourceField::InMemorySource => {
                 if self.in_memory_source.is_some() {
                     1
@@ -547,10 +547,10 @@ where
                     0
                 }
             }
-            ResourceField::IsModule => 0,
-            ResourceField::IsBuiltinExtensionModule => 0,
-            ResourceField::IsFrozenModule => 0,
-            ResourceField::IsExtensionModule => 0,
+            ResourceField::IsPythonModule => 0,
+            ResourceField::IsPythonBuiltinExtensionModule => 0,
+            ResourceField::IsPythonFrozenModule => 0,
+            ResourceField::IsPythonExtensionModule => 0,
             ResourceField::IsSharedLibrary => 0,
             ResourceField::IsUtf8FilenameData => 0,
             ResourceField::FileExecutable => 0,
@@ -592,13 +592,13 @@ where
         dest.write_u16::<LittleEndian>(name_len)
             .context("writing resource name length")?;
 
-        if self.is_package {
-            dest.write_u8(ResourceField::IsPackage.into())
+        if self.is_python_package {
+            dest.write_u8(ResourceField::IsPythonPackage.into())
                 .context("writing is_package field")?;
         }
 
-        if self.is_namespace_package {
-            dest.write_u8(ResourceField::IsNamespacePackage.into())
+        if self.is_python_namespace_package {
+            dest.write_u8(ResourceField::IsPythonNamespacePackage.into())
                 .context("writing is_namespace field")?;
         }
 
@@ -793,23 +793,23 @@ where
             }
         }
 
-        if self.is_module {
-            dest.write_u8(ResourceField::IsModule.into())
+        if self.is_python_module {
+            dest.write_u8(ResourceField::IsPythonModule.into())
                 .context("writing is_module field")?;
         }
 
-        if self.is_builtin_extension_module {
-            dest.write_u8(ResourceField::IsBuiltinExtensionModule.into())
+        if self.is_python_builtin_extension_module {
+            dest.write_u8(ResourceField::IsPythonBuiltinExtensionModule.into())
                 .context("writing is_builtin_extension_module field")?;
         }
 
-        if self.is_frozen_module {
-            dest.write_u8(ResourceField::IsFrozenModule.into())
+        if self.is_python_frozen_module {
+            dest.write_u8(ResourceField::IsPythonFrozenModule.into())
                 .context("writing is_frozen_module field")?;
         }
 
-        if self.is_extension_module {
-            dest.write_u8(ResourceField::IsExtensionModule.into())
+        if self.is_python_extension_module {
+            dest.write_u8(ResourceField::IsPythonExtensionModule.into())
                 .context("writing is_extension_module field")?;
         }
 

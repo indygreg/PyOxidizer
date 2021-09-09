@@ -17,7 +17,7 @@ fn multiple_resource_blobs() -> Result<()> {
     state0
         .add_resource(Resource {
             name: "foo".into(),
-            is_module: true,
+            is_python_module: true,
             in_memory_source: Some(vec![42].into()),
             ..Default::default()
         })
@@ -28,7 +28,7 @@ fn multiple_resource_blobs() -> Result<()> {
     state1
         .add_resource(Resource {
             name: "bar".into(),
-            is_module: true,
+            is_python_module: true,
             in_memory_source: Some(vec![42, 42].into()),
             ..Default::default()
         })
@@ -58,7 +58,7 @@ fn test_memory_mapped_file_resources() -> Result<()> {
     state0
         .add_resource(Resource {
             name: "foo".into(),
-            is_module: true,
+            is_python_module: true,
             in_memory_source: Some(vec![42].into()),
             ..Default::default()
         })

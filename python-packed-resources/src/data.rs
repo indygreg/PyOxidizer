@@ -80,8 +80,8 @@ pub enum ResourceField {
     EndOfEntry = 0xff,
     // Flavor previously occupied slot 0x02.
     Name = 0x03,
-    IsPackage = 0x04,
-    IsNamespacePackage = 0x05,
+    IsPythonPackage = 0x04,
+    IsPythonNamespacePackage = 0x05,
     InMemorySource = 0x06,
     InMemoryBytecode = 0x07,
     InMemoryBytecodeOpt1 = 0x08,
@@ -98,10 +98,10 @@ pub enum ResourceField {
     RelativeFilesystemExtensionModuleSharedLibrary = 0x13,
     RelativeFilesystemPackageResources = 0x14,
     RelativeFilesystemDistributionResource = 0x15,
-    IsModule = 0x16,
-    IsBuiltinExtensionModule = 0x17,
-    IsFrozenModule = 0x18,
-    IsExtensionModule = 0x19,
+    IsPythonModule = 0x16,
+    IsPythonBuiltinExtensionModule = 0x17,
+    IsPythonFrozenModule = 0x18,
+    IsPythonExtensionModule = 0x19,
     IsSharedLibrary = 0x1a,
     IsUtf8FilenameData = 0x1b,
     FileExecutable = 0x1c,
@@ -115,8 +115,8 @@ impl From<ResourceField> for u8 {
             ResourceField::EndOfIndex => 0x00,
             ResourceField::StartOfEntry => 0x01,
             ResourceField::Name => 0x03,
-            ResourceField::IsPackage => 0x04,
-            ResourceField::IsNamespacePackage => 0x05,
+            ResourceField::IsPythonPackage => 0x04,
+            ResourceField::IsPythonNamespacePackage => 0x05,
             ResourceField::InMemorySource => 0x06,
             ResourceField::InMemoryBytecode => 0x07,
             ResourceField::InMemoryBytecodeOpt1 => 0x08,
@@ -133,10 +133,10 @@ impl From<ResourceField> for u8 {
             ResourceField::RelativeFilesystemExtensionModuleSharedLibrary => 0x13,
             ResourceField::RelativeFilesystemPackageResources => 0x14,
             ResourceField::RelativeFilesystemDistributionResource => 0x15,
-            ResourceField::IsModule => 0x16,
-            ResourceField::IsBuiltinExtensionModule => 0x17,
-            ResourceField::IsFrozenModule => 0x18,
-            ResourceField::IsExtensionModule => 0x19,
+            ResourceField::IsPythonModule => 0x16,
+            ResourceField::IsPythonBuiltinExtensionModule => 0x17,
+            ResourceField::IsPythonFrozenModule => 0x18,
+            ResourceField::IsPythonExtensionModule => 0x19,
             ResourceField::IsSharedLibrary => 0x1a,
             ResourceField::IsUtf8FilenameData => 0x1b,
             ResourceField::FileExecutable => 0x1c,
@@ -155,8 +155,8 @@ impl TryFrom<u8> for ResourceField {
             0x00 => Ok(ResourceField::EndOfIndex),
             0x01 => Ok(ResourceField::StartOfEntry),
             0x03 => Ok(ResourceField::Name),
-            0x04 => Ok(ResourceField::IsPackage),
-            0x05 => Ok(ResourceField::IsNamespacePackage),
+            0x04 => Ok(ResourceField::IsPythonPackage),
+            0x05 => Ok(ResourceField::IsPythonNamespacePackage),
             0x06 => Ok(ResourceField::InMemorySource),
             0x07 => Ok(ResourceField::InMemoryBytecode),
             0x08 => Ok(ResourceField::InMemoryBytecodeOpt1),
@@ -173,10 +173,10 @@ impl TryFrom<u8> for ResourceField {
             0x13 => Ok(ResourceField::RelativeFilesystemExtensionModuleSharedLibrary),
             0x14 => Ok(ResourceField::RelativeFilesystemPackageResources),
             0x15 => Ok(ResourceField::RelativeFilesystemDistributionResource),
-            0x16 => Ok(ResourceField::IsModule),
-            0x17 => Ok(ResourceField::IsBuiltinExtensionModule),
-            0x18 => Ok(ResourceField::IsFrozenModule),
-            0x19 => Ok(ResourceField::IsExtensionModule),
+            0x16 => Ok(ResourceField::IsPythonModule),
+            0x17 => Ok(ResourceField::IsPythonBuiltinExtensionModule),
+            0x18 => Ok(ResourceField::IsPythonFrozenModule),
+            0x19 => Ok(ResourceField::IsPythonExtensionModule),
             0x1a => Ok(ResourceField::IsSharedLibrary),
             0x1b => Ok(ResourceField::IsUtf8FilenameData),
             0x1c => Ok(ResourceField::FileExecutable),
@@ -207,16 +207,16 @@ where
     pub name: Cow<'a, str>,
 
     /// Whether this resource defines a Python module/package.
-    pub is_module: bool,
+    pub is_python_module: bool,
 
     /// Whether this resource defines a builtin extension module.
-    pub is_builtin_extension_module: bool,
+    pub is_python_builtin_extension_module: bool,
 
     /// Whether this resource defines a frozen Python module.
-    pub is_frozen_module: bool,
+    pub is_python_frozen_module: bool,
 
     /// Whether this resource defines a Python extension module.
-    pub is_extension_module: bool,
+    pub is_python_extension_module: bool,
 
     /// Whether this resource defines a shared library.
     pub is_shared_library: bool,
@@ -229,10 +229,10 @@ where
     pub is_utf8_filename_data: bool,
 
     /// Whether the Python module is a package.
-    pub is_package: bool,
+    pub is_python_package: bool,
 
     /// Whether the Python module is a namespace package.
-    pub is_namespace_package: bool,
+    pub is_python_namespace_package: bool,
 
     /// Python module source code to use to import module from memory.
     pub in_memory_source: Option<Cow<'a, [X]>>,
@@ -304,14 +304,14 @@ where
     fn default() -> Self {
         Resource {
             name: Cow::Borrowed(""),
-            is_module: false,
-            is_builtin_extension_module: false,
-            is_frozen_module: false,
-            is_extension_module: false,
+            is_python_module: false,
+            is_python_builtin_extension_module: false,
+            is_python_frozen_module: false,
+            is_python_extension_module: false,
             is_shared_library: false,
             is_utf8_filename_data: false,
-            is_package: false,
-            is_namespace_package: false,
+            is_python_package: false,
+            is_python_namespace_package: false,
             in_memory_source: None,
             in_memory_bytecode: None,
             in_memory_bytecode_opt1: None,
@@ -356,14 +356,14 @@ where
             return Err("resource names must be identical to perform a merge");
         }
 
-        self.is_module |= other.is_module;
-        self.is_builtin_extension_module |= other.is_builtin_extension_module;
-        self.is_frozen_module |= other.is_frozen_module;
-        self.is_extension_module |= other.is_extension_module;
+        self.is_python_module |= other.is_python_module;
+        self.is_python_builtin_extension_module |= other.is_python_builtin_extension_module;
+        self.is_python_frozen_module |= other.is_python_frozen_module;
+        self.is_python_extension_module |= other.is_python_extension_module;
         self.is_shared_library |= other.is_shared_library;
         self.is_utf8_filename_data |= other.is_utf8_filename_data;
-        self.is_package |= other.is_package;
-        self.is_namespace_package |= other.is_namespace_package;
+        self.is_python_package |= other.is_python_package;
+        self.is_python_namespace_package |= other.is_python_namespace_package;
         if let Some(value) = other.in_memory_source {
             self.in_memory_source.replace(value);
         }
@@ -430,14 +430,14 @@ where
     pub fn to_owned(&self) -> Resource<'static, X> {
         Resource {
             name: Cow::Owned(self.name.clone().into_owned()),
-            is_module: self.is_module,
-            is_builtin_extension_module: self.is_builtin_extension_module,
-            is_frozen_module: self.is_frozen_module,
-            is_extension_module: self.is_extension_module,
+            is_python_module: self.is_python_module,
+            is_python_builtin_extension_module: self.is_python_builtin_extension_module,
+            is_python_frozen_module: self.is_python_frozen_module,
+            is_python_extension_module: self.is_python_extension_module,
             is_shared_library: self.is_shared_library,
             is_utf8_filename_data: self.is_utf8_filename_data,
-            is_package: self.is_package,
-            is_namespace_package: self.is_namespace_package,
+            is_python_package: self.is_python_package,
+            is_python_namespace_package: self.is_python_namespace_package,
             in_memory_source: self
                 .in_memory_source
                 .as_ref()

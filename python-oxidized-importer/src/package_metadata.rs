@@ -264,7 +264,7 @@ pub(crate) fn find_distributions<'p>(
         let name_cow = Cow::Borrowed::<str>(&name);
 
         if let Some(resource) = resources.get(&name_cow) {
-            if resource.is_package
+            if resource.is_python_package
                 && (resource.in_memory_distribution_resources.is_some()
                     || resource.relative_path_distribution_resources.is_some())
             {
@@ -283,7 +283,7 @@ pub(crate) fn find_distributions<'p>(
         let mut distributions = Vec::new();
 
         for (k, v) in resources.iter() {
-            if v.is_package
+            if v.is_python_package
                 && (v.in_memory_distribution_resources.is_some()
                     || v.relative_path_distribution_resources.is_some())
             {
@@ -323,7 +323,7 @@ pub(crate) fn find_pkg_resources_distributions<'p>(
         .values()
         // Find packages with distribution resources.
         .filter(|r| {
-            r.is_package
+            r.is_python_package
                 && (r.in_memory_distribution_resources.is_some()
                     || r.relative_path_distribution_resources.is_some())
         })

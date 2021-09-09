@@ -545,10 +545,10 @@ impl<'a> PythonResourcesState<'a, u8> {
             self.resources
                 .entry(name_str.into())
                 .and_modify(|r| {
-                    r.is_builtin_extension_module = true;
+                    r.is_python_builtin_extension_module = true;
                 })
                 .or_insert_with(|| Resource {
-                    is_builtin_extension_module: true,
+                    is_python_builtin_extension_module: true,
                     name: Cow::Owned(name_str.to_string()),
                     ..Resource::default()
                 });
@@ -577,10 +577,10 @@ impl<'a> PythonResourcesState<'a, u8> {
             self.resources
                 .entry(name_str.into())
                 .and_modify(|r| {
-                    r.is_frozen_module = true;
+                    r.is_python_frozen_module = true;
                 })
                 .or_insert_with(|| Resource {
-                    is_frozen_module: true,
+                    is_python_frozen_module: true,
                     name: Cow::Owned(name_str.to_string()),
                     ..Resource::default()
                 });
@@ -676,38 +676,38 @@ impl<'a> PythonResourcesState<'a, u8> {
         // 3. extension modules
         // 4. module (covers both source and bytecode)
 
-        if resource.is_builtin_extension_module {
+        if resource.is_python_builtin_extension_module {
             Some(ImportablePythonModule {
                 resource,
                 current_exe: &self.current_exe,
                 origin: &self.origin,
                 flavor: ModuleFlavor::Builtin,
-                is_package: resource.is_package,
+                is_package: resource.is_python_package,
             })
-        } else if resource.is_frozen_module {
+        } else if resource.is_python_frozen_module {
             Some(ImportablePythonModule {
                 resource,
                 current_exe: &self.current_exe,
                 origin: &self.origin,
                 flavor: ModuleFlavor::Frozen,
-                is_package: resource.is_package,
+                is_package: resource.is_python_package,
             })
-        } else if resource.is_extension_module {
+        } else if resource.is_python_extension_module {
             Some(ImportablePythonModule {
                 resource,
                 current_exe: &self.current_exe,
                 origin: &self.origin,
                 flavor: ModuleFlavor::Extension,
-                is_package: resource.is_package,
+                is_package: resource.is_python_package,
             })
-        } else if resource.is_module {
+        } else if resource.is_python_module {
             if is_module_importable(resource, optimize_level) {
                 Some(ImportablePythonModule {
                     resource,
                     current_exe: &self.current_exe,
                     origin: &self.origin,
                     flavor: ModuleFlavor::SourceBytecode,
-                    is_package: resource.is_package,
+                    is_package: resource.is_python_package,
                 })
             } else {
                 None
@@ -1049,7 +1049,8 @@ impl<'a> PythonResourcesState<'a, u8> {
             .resources
             .values()
             .filter(|r| {
-                r.is_extension_module || (r.is_module && is_module_importable(r, optimize_level))
+                r.is_python_extension_module
+                    || (r.is_python_module && is_module_importable(r, optimize_level))
             })
             .filter(|r| name_at_package_hierarchy(&r.name, package_filter))
             .map(|r| {
@@ -1063,7 +1064,7 @@ impl<'a> PythonResourcesState<'a, u8> {
                 };
 
                 let name = name.to_object(py);
-                let is_package = r.is_package.to_object(py);
+                let is_package = r.is_python_package.to_object(py);
 
                 Ok(PyTuple::new(py, &[name, is_package]))
             })
@@ -1088,8 +1089,8 @@ impl<'a> PythonResourcesState<'a, u8> {
             .values()
             .filter(|resource| {
                 // This assumes builtins and frozen are mutually exclusive with other types.
-                !((resource.is_builtin_extension_module && ignore_builtin)
-                    || (resource.is_frozen_module && ignore_frozen))
+                !((resource.is_python_builtin_extension_module && ignore_builtin)
+                    || (resource.is_python_frozen_module && ignore_frozen))
             })
             .collect::<Vec<&Resource<u8>>>();
 
@@ -1130,48 +1131,50 @@ impl OxidizedResource {
 
     #[getter]
     fn get_is_module(&self) -> bool {
-        self.resource.borrow().is_module
+        self.resource.borrow().is_python_module
     }
 
     #[setter]
     fn set_is_module(&self, value: bool) -> PyResult<()> {
-        self.resource.borrow_mut().is_module = value;
+        self.resource.borrow_mut().is_python_module = value;
 
         Ok(())
     }
 
     #[getter]
     fn get_is_builtin_extension_module(&self) -> bool {
-        self.resource.borrow().is_builtin_extension_module
+        self.resource.borrow().is_python_builtin_extension_module
     }
 
     #[setter]
     fn set_is_builtin_extension_module(&self, value: bool) -> PyResult<()> {
-        self.resource.borrow_mut().is_builtin_extension_module = value;
+        self.resource
+            .borrow_mut()
+            .is_python_builtin_extension_module = value;
 
         Ok(())
     }
 
     #[getter]
     fn get_is_frozen_module(&self) -> bool {
-        self.resource.borrow().is_frozen_module
+        self.resource.borrow().is_python_frozen_module
     }
 
     #[setter]
     fn set_is_frozen_module(&self, value: bool) -> PyResult<()> {
-        self.resource.borrow_mut().is_frozen_module = value;
+        self.resource.borrow_mut().is_python_frozen_module = value;
 
         Ok(())
     }
 
     #[getter]
     fn get_is_extension_module(&self) -> bool {
-        self.resource.borrow().is_extension_module
+        self.resource.borrow().is_python_extension_module
     }
 
     #[setter]
     fn set_is_extension_module(&self, value: bool) -> PyResult<()> {
-        self.resource.borrow_mut().is_extension_module = value;
+        self.resource.borrow_mut().is_python_extension_module = value;
 
         Ok(())
     }
@@ -1202,24 +1205,24 @@ impl OxidizedResource {
 
     #[getter]
     fn get_is_package(&self) -> bool {
-        self.resource.borrow().is_package
+        self.resource.borrow().is_python_package
     }
 
     #[setter]
     fn set_is_package(&self, value: bool) -> PyResult<()> {
-        self.resource.borrow_mut().is_package = value;
+        self.resource.borrow_mut().is_python_package = value;
 
         Ok(())
     }
 
     #[getter]
     fn get_is_namespace_package(&self) -> bool {
-        self.resource.borrow().is_namespace_package
+        self.resource.borrow().is_python_namespace_package
     }
 
     #[setter]
     fn set_is_namespace_package(&self, value: bool) -> PyResult<()> {
-        self.resource.borrow_mut().is_namespace_package = value;
+        self.resource.borrow_mut().is_python_namespace_package = value;
 
         Ok(())
     }
