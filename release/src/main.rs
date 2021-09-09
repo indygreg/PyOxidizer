@@ -368,7 +368,7 @@ fn run_cargo_update_package(root: &Path, package: &str) -> Result<i32> {
     );
     run_cmd(
         package,
-        &root,
+        root,
         "cargo",
         vec!["update", "-p", package],
         vec![],
@@ -487,7 +487,7 @@ fn release_package(
                         "{}: ignoring releasebot commit: {} ({})",
                         package,
                         oid,
-                        message.strip_suffix("\n").unwrap_or(message),
+                        message.strip_suffix('\n').unwrap_or(message),
                     );
                     continue;
                 } else if let Some(s) = message.strip_prefix("release-version-change ") {
@@ -495,7 +495,7 @@ fn release_package(
                     // and version change to see if it impacts us.
 
                     let parts = s
-                        .strip_suffix("\n")
+                        .strip_suffix('\n')
                         .unwrap_or(&*message)
                         .split(' ')
                         .collect::<Vec<_>>();
@@ -705,7 +705,7 @@ fn release_package(
         );
         run_cmd(
             package,
-            &root,
+            root,
             "cargo",
             vec!["update", "-p", package],
             vec![],
@@ -840,7 +840,7 @@ fn update_package_version(
         "{}: running cargo update to reflect version increment",
         package
     );
-    run_cmd(package, &root, "cargo", vec!["update"], vec![]).context("running cargo update")?;
+    run_cmd(package, root, "cargo", vec!["update"], vec![]).context("running cargo update")?;
 
     reflect_package_version_change(root, package, &next_version, false)?;
 
@@ -991,7 +991,7 @@ fn command_release(repo_root: &Path, args: &ArgMatches, repo: &Repository) -> Re
                 }
 
                 release_package(
-                    &repo_root,
+                    repo_root,
                     repo,
                     &dependency_update_packages,
                     *package,
