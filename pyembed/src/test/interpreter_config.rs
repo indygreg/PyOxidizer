@@ -691,7 +691,7 @@ rusty_fork_test! {
     }
 
     #[test]
-    fn test_site_import() {
+    fn test_site_import_false() {
         let mut config = default_interpreter_config();
         config.interpreter_config.site_import = Some(false);
 
@@ -705,7 +705,20 @@ rusty_fork_test! {
     }
 
     #[test]
-    fn test_user_site_directory() {
+    fn test_site_import_true() {
+        let mut config = default_interpreter_config();
+        config.interpreter_config.site_import = Some(true);
+        let mut interp = MainPythonInterpreter::new(config).unwrap();
+
+        let py = interp.acquire_gil();
+        let sys = py.import("sys").unwrap();
+
+        let flags = sys.getattr("flags").unwrap();
+        assert_eq!(flags.getattr("no_site").unwrap().extract::<i64>().unwrap(), 0);
+    }
+
+    #[test]
+    fn test_user_site_directory_false() {
         let mut config = default_interpreter_config();
         config.interpreter_config.user_site_directory = Some(false);
 
@@ -716,6 +729,21 @@ rusty_fork_test! {
 
         let flags = sys.getattr("flags").unwrap();
         assert_eq!(flags.getattr("no_user_site").unwrap().extract::<i64>().unwrap(), 1);
+
+    }
+
+    #[test]
+    fn test_user_site_directory_true() {
+        let mut config = default_interpreter_config();
+        config.interpreter_config.user_site_directory = Some(true);
+
+        let mut interp = MainPythonInterpreter::new(config).unwrap();
+
+        let py = interp.acquire_gil();
+        let sys = py.import("sys").unwrap();
+
+        let flags = sys.getattr("flags").unwrap();
+        assert_eq!(flags.getattr("no_user_site").unwrap().extract::<i64>().unwrap(), 0);
     }
 
     #[test]
