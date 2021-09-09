@@ -935,14 +935,8 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         };
 
         let mut pending_resources = vec![];
-        let mut extra_files = FileManifest::default();
 
-        for (path, location, executable) in &compiled_resources.extra_files {
-            extra_files.add_file_entry(
-                path,
-                FileEntry::new_from_data(location.resolve_content()?, *executable),
-            )?;
-        }
+        let mut extra_files = compiled_resources.extra_files_manifest()?;
 
         let mut config = self.config.clone();
 

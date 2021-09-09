@@ -27,7 +27,7 @@ use {
         convert::TryFrom,
         path::PathBuf,
     },
-    tugger_file_manifest::{File, FileData},
+    tugger_file_manifest::{File, FileData, FileEntry, FileManifest},
     tugger_licensing::{ComponentFlavor, LicensedComponent, LicensedComponents},
 };
 
@@ -634,6 +634,20 @@ impl<'a> CompiledResourcesCollection<'a> {
             writer,
             None,
         )
+    }
+
+    /// Convert the file installs to a [FileManifest].
+    pub fn extra_files_manifest(&self) -> Result<FileManifest> {
+        let mut m = FileManifest::default();
+
+        for (path, location, executable) in &self.extra_files {
+            m.add_file_entry(
+                path,
+                FileEntry::new_from_data(location.resolve_content()?, *executable),
+            )?;
+        }
+
+        Ok(m)
     }
 }
 
