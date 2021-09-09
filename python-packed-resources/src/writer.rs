@@ -867,7 +867,7 @@ pub fn write_packed_resources_v3<'a, T: AsRef<Resource<'a, u8>>, W: Write>(
     let mut blob_index_length = 1;
 
     // 1 for end of index field.
-    let mut module_index_length = 1;
+    let mut resource_index_length = 1;
 
     let process_field = |blob_sections: &mut BTreeMap<ResourceField, BlobSection>,
                          resource: &Resource<u8>,
@@ -901,7 +901,7 @@ pub fn write_packed_resources_v3<'a, T: AsRef<Resource<'a, u8>>, W: Write>(
 
     for resource in resources {
         let resource = resource.as_ref();
-        module_index_length += resource.index_v1_length();
+        resource_index_length += resource.index_v1_length();
 
         process_field(&mut blob_sections, resource, ResourceField::Name);
         process_field(&mut blob_sections, resource, ResourceField::InMemorySource);
@@ -1002,7 +1002,7 @@ pub fn write_packed_resources_v3<'a, T: AsRef<Resource<'a, u8>>, W: Write>(
     dest.write_u8(blob_section_count)?;
     dest.write_u32::<LittleEndian>(blob_index_length as u32)?;
     dest.write_u32::<LittleEndian>(resources.len() as u32)?;
-    dest.write_u32::<LittleEndian>(module_index_length as u32)?;
+    dest.write_u32::<LittleEndian>(resource_index_length as u32)?;
 
     // Write the blob index.
     for section in blob_sections.values() {
@@ -1187,7 +1187,7 @@ mod tests {
         expected.write_u8(0)?;
         // Length of blob index (end of index marker).
         expected.write_u32::<LittleEndian>(1)?;
-        // Number of modules.
+        // Number of resources.
         expected.write_u32::<LittleEndian>(0)?;
         // Lenght of index (end of index marker).
         expected.write_u32::<LittleEndian>(1)?;
@@ -1215,10 +1215,10 @@ mod tests {
         expected.write_u8(1)?;
         // Length of blob index. Start of entry, field type, field value, length field, length, end of entry, end of index.
         expected.write_u32::<LittleEndian>(1 + 1 + 1 + 1 + 8 + 1 + 1)?;
-        // Number of modules.
+        // Number of resources.
         expected.write_u32::<LittleEndian>(1)?;
-        // Length of index. Start of entry, flavor field, flavor value, module name length field,
-        // module name length, end of entry, end of index.
+        // Length of index. Start of entry, flavor field, flavor value, resource name length field,
+        // resource name length, end of entry, end of index.
         expected.write_u32::<LittleEndian>(1 + 1 + 2 + 1 + 1)?;
         // Blobs index.
         expected.write_u8(BlobSectionField::StartOfEntry.into())?;
@@ -1228,7 +1228,7 @@ mod tests {
         expected.write_u64::<LittleEndian>(b"foo".len() as u64)?;
         expected.write_u8(BlobSectionField::EndOfEntry.into())?;
         expected.write_u8(BlobSectionField::EndOfIndex.into())?;
-        // Module index.
+        // Resource index.
         expected.write_u8(ResourceField::StartOfEntry.into())?;
         expected.write_u8(ResourceField::Name.into())?;
         expected.write_u16::<LittleEndian>(b"foo".len() as u16)?;
