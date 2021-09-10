@@ -479,7 +479,7 @@ impl WheelBuilder {
                 .last_modified_time(
                     zip::DateTime::from_date_and_time(
                         self.modified_time.year() as u16,
-                        self.modified_time.month(),
+                        self.modified_time.month() as u8,
                         self.modified_time.day(),
                         self.modified_time.hour(),
                         self.modified_time.minute(),
