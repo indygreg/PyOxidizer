@@ -113,8 +113,15 @@ impl TypedValue for PythonWheelBuilderValue {
                 builder.set_generator(value.to_string());
             }
             "modified_time" => {
-                builder
-                    .set_modified_time(time::OffsetDateTime::from_unix_timestamp(value.to_int()?));
+                builder.set_modified_time(
+                    time::OffsetDateTime::from_unix_timestamp(value.to_int()?).map_err(|e| {
+                        ValueError::Runtime(RuntimeError {
+                            code: "PYTHON_WHEEL_BUILDER",
+                            message: format!("unable to parse time: {}", e),
+                            label: format!("{}.modified_time", Self::TYPE.to_string()),
+                        })
+                    })?,
+                );
             }
             "platform_tag" => {
                 builder.set_platform_tag(value.to_string());
