@@ -37,5 +37,5 @@ version = "0.6.0-pre"
 path = "../tugger-file-manifest"
 
 [dev-dependencies]
-msi = "0.3"
+msi = "0.4"
 tempfile = "3.2"

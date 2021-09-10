@@ -381,9 +381,9 @@ dependencies = [
 
 [[package]]
 name = "cfb"
-version = "0.5.0"
+version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "89b7c36ddce1d7e43c62b71e9653ee581d9d8305f404f25b8081028712291b10"
+checksum = "07309a99f9a823ea66c324f8ce0e7c204080e23529c3d5fffadaf9c8ec8a35d0"
 dependencies = [
  "byteorder",
  "uuid",
@@ -1852,9 +1852,9 @@ dependencies = [
 
 [[package]]
 name = "msi"
-version = "0.3.1"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "48abbafdb025732ae34a613578e8acc8379fb3d35b29b2094edad3480aa6431e"
+checksum = "5e13d63451762860877abbdb23e8bb67ddf408f48dfc3ac2a1eef8575fc5d2ce"
 dependencies = [
  "byteorder",
  "cfb",
