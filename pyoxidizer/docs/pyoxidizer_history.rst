@@ -42,6 +42,8 @@ Bug Fixes
 Backwards Compatibility Notes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+* The minimum Rust version has been changed from 1.52 to 1.53 to facilitate
+  use of the newest versions of some Rust crates.
 * The run-time Rust code for interfacing with the Python interpreter now uses
   the [PyO3](https://github.com/PyO3/pyo3) crate instead of
   [cpython](https://github.com/dgrunwald/rust-cpython). The code port was quite
