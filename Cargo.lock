@@ -341,17 +341,6 @@ dependencies = [
 
 [[package]]
 name = "cargo_toml"
-version = "0.9.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9c3596addfb02dcdc06f5252ddda9f3785f9230f5827fb4284645240fa05ad92"
-dependencies = [
- "serde",
- "serde_derive",
- "toml",
-]
-
-[[package]]
-name = "cargo_toml"
 version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "067a0b9ae9282dd1f63b6c1e76a065d741fc1733e566dc50b5b5d8a84d7e3c4a"
@@ -2459,7 +2448,6 @@ version = "0.18.0-pre"
 dependencies = [
  "anyhow",
  "cargo-lock",
- "cargo_toml 0.9.2",
  "cc",
  "clap",
  "codemap",
@@ -2880,7 +2868,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "cargo-lock",
- "cargo_toml 0.10.0",
+ "cargo_toml",
  "clap",
  "duct",
  "git2",
