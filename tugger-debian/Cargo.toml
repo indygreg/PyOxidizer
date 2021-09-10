@@ -12,7 +12,7 @@ readme = "README.md"
 
 [dependencies]
 anyhow = "1.0"
-ar = "0.8"
+ar = "0.9"
 chrono = "0.4"
 libflate = "1.0"
 md5 = "0.7"
