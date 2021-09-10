@@ -1847,41 +1847,14 @@ impl PythonResourceCollector {
 mod tests {
     use {
         super::*,
-        crate::resource::{LibraryDependency, PythonPackageDistributionResourceFlavor},
+        crate::{
+            resource::{LibraryDependency, PythonPackageDistributionResourceFlavor},
+            testutil::FakeBytecodeCompiler,
+        },
         tugger_file_manifest::FileEntry,
     };
 
     const DEFAULT_CACHE_TAG: &str = "cpython-39";
-
-    pub struct FakeBytecodeCompiler {
-        magic_number: u32,
-    }
-
-    impl PythonBytecodeCompiler for FakeBytecodeCompiler {
-        fn get_magic_number(&self) -> u32 {
-            self.magic_number
-        }
-
-        fn compile(
-            &mut self,
-            source: &[u8],
-            _filename: &str,
-            optimize: BytecodeOptimizationLevel,
-            _output_mode: CompileMode,
-        ) -> Result<Vec<u8>> {
-            let mut res = Vec::new();
-
-            res.extend(match optimize {
-                BytecodeOptimizationLevel::Zero => b"bc0",
-                BytecodeOptimizationLevel::One => b"bc1",
-                BytecodeOptimizationLevel::Two => b"bc2",
-            });
-
-            res.extend(source);
-
-            Ok(res)
-        }
-    }
 
     #[test]
     fn test_resource_conversion_basic() -> Result<()> {

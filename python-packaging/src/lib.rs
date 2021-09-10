@@ -20,8 +20,11 @@ pub mod policy;
 pub mod python_source;
 pub mod resource;
 pub mod resource_collection;
-
+#[cfg(test)]
+mod testutil;
 #[cfg(feature = "wheel")]
 pub mod wheel;
 #[cfg(feature = "wheel")]
 pub mod wheel_builder;
+#[cfg(feature = "zip")]
+pub mod zip_app_builder;
