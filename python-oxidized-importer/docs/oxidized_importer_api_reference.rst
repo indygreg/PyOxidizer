@@ -558,6 +558,50 @@ The ``OxidizedResourceReader`` Class
 
    See :ref:`resource_reader_support` for more.
 
+The ``OxidizedZipFinder`` Class
+===============================
+
+.. py:class:: OxidizedZipFinder
+
+   A `meta path finder`_ that operates on zip files.
+
+   This type attempts to be a pure Rust reimplementation of the Python standard
+   library ``zipimport.zipimporter`` type.
+
+   This type implements the following interfaces:
+
+   * ``importlib.abc.MetaPathFinder``
+   * ``importlib.abc.Loader``
+   * ``importlib.abc.InspectLoader``
+
+   .. py:method:: from_zip_data(cls, source: bytes, path: Union[bytes, str, pathlib.Path, None] = None) -> OxidizedZipFinder
+
+      Construct an instance from zip archive data.
+
+      The source argument can be any bytes-like object. A reference to the
+      original Python object will be kept and zip I/O will be performed against
+      the memory tracked by that object. It is possible to trigger an
+      out-of-bounds memory read if the source object is mutated after being
+      passed into this function.
+
+      The ``path`` argument denotes the path to the zip archive. This path will
+      be advertised in ``__file__`` attributes. If not defined, the path of the
+      current executable will be used.
+
+   .. py:method:: from_path(cls, path: Union[bytes, str, pathlib.Path]) -> OxidizedZipFinder
+
+      Construct an instance from a filesystem path.
+
+      The source represents the path to a file containing zip archive data.
+      The file will be opened using Rust file I/O. The content of the file
+      will be read lazily.
+
+      If you don't already have a copy of the zip data and the zip file will
+      be immutable for the lifetime of the constructed instance, this method
+      may yield better performance than opening the file, reading its content,
+      and calling :py:meth:`OxidizedZipFinder.from_zip_data` because it may
+      incur less overall I/O.
+
 The ``PythonModuleSource`` Class
 ================================
 

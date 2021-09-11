@@ -11,16 +11,26 @@ repository = "https://github.com/indygreg/PyOxidizer.git"
 [dependencies]
 anyhow = "1.0"
 once_cell = "1.8"
+pyo3 = "0.14.5"
 slog = "2.7"
 tempfile = "3.2"
+zip = "0.5"
 
 [dependencies.pyembed]
 version = "0.18.0-pre"
 path = "../pyembed"
+default-features = false
+features = ["zipimport"]
 
 [dependencies.pyoxidizer]
 version = "0.18.0-pre"
 path = "../pyoxidizer"
+
+[dependencies.python-oxidized-importer]
+version = "0.3.0-pre"
+path = "../python-oxidized-importer"
+default-features = false
+features = ["zipimport"]
 
 [dependencies.python-packaging]
 version = "0.11.0-pre"

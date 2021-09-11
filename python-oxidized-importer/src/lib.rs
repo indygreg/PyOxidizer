@@ -16,6 +16,8 @@ mod python_resource_types;
 mod python_resources;
 mod resource_reader;
 mod resource_scanning;
+#[cfg(feature = "zipimport")]
+mod zip_import;
 
 pub use crate::{
     importer::{
@@ -25,6 +27,9 @@ pub use crate::{
     python_resource_collector::PyTempDir,
     python_resources::{PackedResourcesSource, PythonResourcesState},
 };
+
+#[cfg(feature = "zipimport")]
+pub use crate::zip_import::{OxidizedZipFinder, ZipIndex};
 
 use {
     crate::{
@@ -128,7 +133,7 @@ pub extern "C" fn PyInit_oxidized_importer() -> *mut pyffi::PyObject {
 /// This is effectively a reimplementation of
 /// importlib._bootstrap_external.decode_source().
 #[pyfunction]
-fn decode_source<'p>(
+pub(crate) fn decode_source<'p>(
     py: Python,
     io_module: &'p PyModule,
     source_bytes: &PyAny,
@@ -194,5 +199,19 @@ fn module_init(py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<crate::python_resource_types::PythonPackageDistributionResource>()?;
     m.add_class::<crate::python_resource_types::PythonExtensionModule>()?;
 
+    init_zipimport(m)?;
+
+    Ok(())
+}
+
+#[cfg(feature = "zipimport")]
+fn init_zipimport(m: &PyModule) -> PyResult<()> {
+    m.add_class::<crate::zip_import::OxidizedZipFinder>()?;
+
+    Ok(())
+}
+
+#[cfg(not(feature = "zipimport"))]
+fn init_zipimport(_m: &PyModule) -> PyResult<()> {
     Ok(())
 }

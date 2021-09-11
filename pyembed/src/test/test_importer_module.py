@@ -101,6 +101,18 @@ SYMBOL_ATTRIBUTES = {
         "open_resource",
         "resource_path",
     },
+    "OxidizedZipFinder": {
+        "create_module",
+        "exec_module",
+        "find_module",
+        "find_spec",
+        "from_path",
+        "from_zip_data",
+        "get_code",
+        "get_source",
+        "invalidate_caches",
+        "is_package",
+    },
     "PythonExtensionModule": {"name"},
     "PythonModuleBytecode": {
         "bytecode",

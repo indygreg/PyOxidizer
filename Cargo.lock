@@ -2390,11 +2390,14 @@ dependencies = [
  "criterion",
  "once_cell",
  "pyembed",
+ "pyo3",
  "pyoxidizer",
+ "python-oxidized-importer",
  "python-packaging",
  "python-packed-resources",
  "slog",
  "tempfile",
+ "zip",
 ]
 
 [[package]]
@@ -2514,6 +2517,7 @@ dependencies = [
  "python-packed-resources",
  "tugger-file-manifest",
  "winapi 0.3.9",
+ "zip",
 ]
 
 [[package]]

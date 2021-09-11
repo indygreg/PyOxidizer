@@ -153,4 +153,10 @@ rusty_fork_test! {
     fn importer_path_entry_finder_py() {
         run_py_test("test_importer_path_entry_finder.py").unwrap()
     }
+
+    /// Run test_zip_importer.py
+    #[test]
+    fn zip_importer_py() {
+        run_py_test("test_zip_importer.py").unwrap()
+    }
 }

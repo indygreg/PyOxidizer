@@ -33,14 +33,23 @@ features = ["macros"]
 version = "0.6.0-pre"
 path = "../tugger-file-manifest"
 
+[dependencies.zip]
+version = "0.5"
+optional = true
+default-features = false
+features = ["deflate"]
+
 [target.'cfg(windows)'.dependencies]
 memory-module-sys = "0.3"
 winapi = { version = "0.3", features = ["libloaderapi", "memoryapi", "minwindef"] }
 
 [features]
-default = []
+default = ["zipimport"]
 
 # Build the crate in Python extension module mode. This will make linking
 # correct so the resulting library can be loaded as a Python extension
 # module.
 extension-module = ["pyo3/extension-module"]
+
+# Enable support for importing from zip files.
+zipimport = ["zip"]

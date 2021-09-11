@@ -36,6 +36,7 @@ optional = true
 [dependencies.python-oxidized-importer]
 version = "0.3.0-pre"
 path = "../python-oxidized-importer"
+default-features = false
 
 [dependencies.pyo3]
 version = "0.14.5"
@@ -59,7 +60,8 @@ version = "0.8.0-pre"
 path = "../python-packed-resources"
 
 [features]
-default = []
+default = ["zipimport"]
 allocator-jemalloc = ["jemalloc-sys"]
 allocator-mimalloc = ["libmimalloc-sys"]
 allocator-snmalloc = ["snmalloc-sys"]
+zipimport = ["python-oxidized-importer/zipimport"]
