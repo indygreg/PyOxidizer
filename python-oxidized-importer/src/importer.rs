@@ -22,8 +22,8 @@ use {
         path_entry_finder::OxidizedPathEntryFinder,
         pkg_resources::register_pkg_resources_with_module,
         python_resources::{
-            pyobject_to_resource, resource_to_pyobject, ModuleFlavor, OptimizeLevel,
-            OxidizedResource, PythonResourcesState,
+            pyobject_to_resource, resource_to_pyobject, ModuleFlavor, OxidizedResource,
+            PythonResourcesState,
         },
         resource_reader::OxidizedResourceReader,
         OXIDIZED_IMPORTER_NAME_STR,
@@ -35,6 +35,7 @@ use {
         types::{PyBytes, PyDict, PyList, PyString, PyTuple},
         AsPyPointer, FromPyPointer, PyGCProtocol, PyNativeType, PyTraverseError, PyVisit,
     },
+    python_packaging::resource::BytecodeOptimizationLevel,
     std::sync::Arc,
 };
 
@@ -258,7 +259,7 @@ pub struct ImporterState {
     /// `builtins.exec` function.
     pub(crate) exec_fn: Py<PyAny>,
     /// Bytecode optimization level currently in effect.
-    pub(crate) optimize_level: OptimizeLevel,
+    pub(crate) optimize_level: BytecodeOptimizationLevel,
     /// Value to pass to `multiprocessing.set_start_method()` on import of `multiprocessing`.
     ///
     /// If `None`, `set_start_method()` will not be called automatically.
@@ -340,9 +341,9 @@ impl ImporterState {
         let optimize_value = optimize_value.extract::<i64>()?;
 
         let optimize_level = match optimize_value {
-            0 => Ok(OptimizeLevel::Zero),
-            1 => Ok(OptimizeLevel::One),
-            2 => Ok(OptimizeLevel::Two),
+            0 => Ok(BytecodeOptimizationLevel::Zero),
+            1 => Ok(BytecodeOptimizationLevel::One),
+            2 => Ok(BytecodeOptimizationLevel::Two),
             _ => Err(PyValueError::new_err(
                 "unexpected value for sys.flags.optimize",
             )),

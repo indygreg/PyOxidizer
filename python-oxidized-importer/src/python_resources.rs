@@ -22,6 +22,7 @@ use {
         types::{PyBytes, PyDict, PyList, PyString, PyTuple},
         PyObjectProtocol,
     },
+    python_packaging::resource::BytecodeOptimizationLevel,
     python_packed_resources::data::Resource,
     std::{
         borrow::Cow,
@@ -35,31 +36,23 @@ use {
 
 const ENOENT: c_int = 2;
 
-/// Python bytecode optimization level.
-#[derive(Clone, Copy, Debug)]
-pub enum OptimizeLevel {
-    Zero,
-    One,
-    Two,
-}
-
 /// Determines whether an entry represents an importable Python module.
 ///
 /// Should only be called on module flavors.
-fn is_module_importable<X>(entry: &Resource<X>, optimize_level: OptimizeLevel) -> bool
+fn is_module_importable<X>(entry: &Resource<X>, optimize_level: BytecodeOptimizationLevel) -> bool
 where
     [X]: ToOwned<Owned = Vec<X>>,
 {
     entry.in_memory_source.is_some()
         || entry.relative_path_module_source.is_some()
         || match optimize_level {
-            OptimizeLevel::Zero => {
+            BytecodeOptimizationLevel::Zero => {
                 entry.in_memory_bytecode.is_some() || entry.relative_path_module_bytecode.is_some()
             }
-            OptimizeLevel::One => {
+            BytecodeOptimizationLevel::One => {
                 entry.in_memory_bytecode_opt1.is_some() || entry.in_memory_bytecode_opt1.is_some()
             }
-            OptimizeLevel::Two => {
+            BytecodeOptimizationLevel::Two => {
                 entry.in_memory_bytecode_opt2.is_some() || entry.in_memory_bytecode_opt2.is_some()
             }
         }
@@ -184,14 +177,14 @@ impl<'a> ImportablePythonModule<'a, u8> {
     pub fn resolve_bytecode(
         &mut self,
         py: Python,
-        optimize_level: OptimizeLevel,
+        optimize_level: BytecodeOptimizationLevel,
         decode_source: &PyAny,
         io_module: &PyModule,
     ) -> PyResult<Option<Py<PyAny>>> {
         if let Some(data) = match optimize_level {
-            OptimizeLevel::Zero => &self.resource.in_memory_bytecode,
-            OptimizeLevel::One => &self.resource.in_memory_bytecode_opt1,
-            OptimizeLevel::Two => &self.resource.in_memory_bytecode_opt2,
+            BytecodeOptimizationLevel::Zero => &self.resource.in_memory_bytecode,
+            BytecodeOptimizationLevel::One => &self.resource.in_memory_bytecode_opt1,
+            BytecodeOptimizationLevel::Two => &self.resource.in_memory_bytecode_opt2,
         } {
             let ptr = unsafe {
                 pyffi::PyMemoryView_FromMemory(
@@ -249,7 +242,7 @@ impl<'a> ImportablePythonModule<'a, u8> {
         py: Python,
         module_spec_type: &'p PyAny,
         loader: &PyAny,
-        optimize_level: OptimizeLevel,
+        optimize_level: BytecodeOptimizationLevel,
     ) -> PyResult<&'p PyAny> {
         let name = PyString::new(py, &self.resource.name);
 
@@ -344,7 +337,7 @@ impl<'a> ImportablePythonModule<'a, u8> {
     fn resolve_cached<'p>(
         &self,
         py: Python<'p>,
-        optimize_level: OptimizeLevel,
+        optimize_level: BytecodeOptimizationLevel,
     ) -> PyResult<Option<&'p PyAny>> {
         let path = match self.flavor {
             ModuleFlavor::SourceBytecode => self.bytecode_path(optimize_level),
@@ -376,11 +369,11 @@ impl<'a> ImportablePythonModule<'a, u8> {
     }
 
     /// Obtain the filesystem path to bytecode for this module.
-    fn bytecode_path(&self, optimize_level: OptimizeLevel) -> Option<PathBuf> {
+    fn bytecode_path(&self, optimize_level: BytecodeOptimizationLevel) -> Option<PathBuf> {
         let bytecode_path = match optimize_level {
-            OptimizeLevel::Zero => &self.resource.relative_path_module_bytecode,
-            OptimizeLevel::One => &self.resource.relative_path_module_bytecode_opt1,
-            OptimizeLevel::Two => &self.resource.relative_path_module_bytecode_opt2,
+            BytecodeOptimizationLevel::Zero => &self.resource.relative_path_module_bytecode,
+            BytecodeOptimizationLevel::One => &self.resource.relative_path_module_bytecode_opt1,
+            BytecodeOptimizationLevel::Two => &self.resource.relative_path_module_bytecode_opt2,
         };
 
         bytecode_path
@@ -618,7 +611,7 @@ impl<'a> PythonResourcesState<'a, u8> {
     pub fn resolve_importable_module(
         &self,
         name: &str,
-        optimize_level: OptimizeLevel,
+        optimize_level: BytecodeOptimizationLevel,
     ) -> Option<ImportablePythonModule<u8>> {
         // Python's filesystem based importer accepts `foo.__init__` as a valid
         // module name. When these names are encountered, it fails to recognize
@@ -1043,7 +1036,7 @@ impl<'a> PythonResourcesState<'a, u8> {
         py: Python<'p>,
         package_filter: Option<&str>,
         prefix: Option<String>,
-        optimize_level: OptimizeLevel,
+        optimize_level: BytecodeOptimizationLevel,
     ) -> PyResult<&'p PyList> {
         let infos: PyResult<Vec<_>> = self
             .resources
