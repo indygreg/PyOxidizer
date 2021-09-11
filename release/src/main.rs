@@ -1133,7 +1133,7 @@ fn generate_new_project_cargo_lock(repo_root: &Path, pyembed_force_path: bool) -
         cargo_toml_package_version(&repo_root.join("pyembed").join("Cargo.toml"))?;
 
     let pyembed_entry = format!(
-        "[dependencies.pyembed]\nversion = \"{}\"\n",
+        "[dependencies.pyembed]\nversion = \"{}\"\ndefault-features = false\n",
         pyembed_version
     );
 
