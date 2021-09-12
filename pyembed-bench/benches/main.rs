@@ -14,7 +14,7 @@ use {
 };
 
 fn parse_packed_resources(data: &[u8]) -> Result<()> {
-    let resources = python_packed_resources::parser::load_resources(data)
+    let resources = python_packed_resources::load_resources(data)
         .map_err(|e| anyhow!("failed loaded packed resources data: {}", e))?;
     for r in resources {
         r.map_err(|e| anyhow!("resource error: {}", e))?;

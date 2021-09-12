@@ -1028,7 +1028,7 @@ impl OxidizedFinder {
         let mut resources = resources_state
             .resources
             .values()
-            .collect::<Vec<&python_packed_resources::data::Resource<u8>>>();
+            .collect::<Vec<&python_packed_resources::Resource<u8>>>();
 
         resources.sort_by_key(|r| &r.name);
 

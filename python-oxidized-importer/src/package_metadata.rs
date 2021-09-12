@@ -13,7 +13,7 @@ use {
         prelude::*,
         types::{PyBytes, PyDict, PyList, PyString, PyTuple, PyType},
     },
-    python_packed_resources::data::Resource,
+    python_packed_resources::Resource,
     std::{
         borrow::Cow,
         collections::{BTreeMap, BTreeSet, HashMap},

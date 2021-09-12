@@ -20,7 +20,7 @@ use {
         },
     },
     anyhow::{anyhow, Context, Result},
-    python_packed_resources::data::Resource,
+    python_packed_resources::Resource,
     std::{
         borrow::Cow,
         collections::{BTreeMap, BTreeSet, HashMap},
@@ -625,7 +625,7 @@ pub struct CompiledResourcesCollection<'a> {
 impl<'a> CompiledResourcesCollection<'a> {
     /// Write resources to packed resources data, version 1.
     pub fn write_packed_resources<W: std::io::Write>(&self, writer: &mut W) -> Result<()> {
-        python_packed_resources::writer::write_packed_resources_v3(
+        python_packed_resources::write_packed_resources_v3(
             &self
                 .resources
                 .values()

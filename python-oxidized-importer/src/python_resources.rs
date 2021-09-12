@@ -23,7 +23,7 @@ use {
         PyObjectProtocol,
     },
     python_packaging::resource::BytecodeOptimizationLevel,
-    python_packed_resources::data::Resource,
+    python_packed_resources::Resource,
     std::{
         borrow::Cow,
         cell::RefCell,
@@ -465,7 +465,7 @@ impl<'a> PythonResourcesState<'a, u8> {
     ///
     /// If an entry doesn't exist, the resource will be inserted as-is.
     pub fn index_data(&mut self, data: &'a [u8]) -> Result<(), &'static str> {
-        let resources = python_packed_resources::parser::load_resources(data)?;
+        let resources = python_packed_resources::load_resources(data)?;
 
         // Reserve space for expected number of incoming items so we can avoid extra
         // allocations.
@@ -1092,7 +1092,7 @@ impl<'a> PythonResourcesState<'a, u8> {
 
         let mut buffer = Vec::new();
 
-        python_packed_resources::writer::write_packed_resources_v3(&resources, &mut buffer, None)?;
+        python_packed_resources::write_packed_resources_v3(&resources, &mut buffer, None)?;
 
         Ok(buffer)
     }
