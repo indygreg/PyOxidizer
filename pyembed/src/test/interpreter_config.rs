@@ -461,7 +461,7 @@ rusty_fork_test! {
 
         match unsafe { value_string.data().unwrap() } {
             PyStringData::Ucs2(&[20013, 25991]) => {},
-            value => assert!(false, "{:?}", value),
+            value => panic!("{:?}", value),
         }
     }
 
@@ -488,21 +488,17 @@ rusty_fork_test! {
         match unsafe { value_string.data().unwrap() } {
             // This is the correct value.
             PyStringData::Ucs2(&[20013, 25991]) => {
-                if cfg!(any(target_family = "windows", target_os = "macos")) {
-                    assert!(true);
-                } else {
-                    assert!(false);
+                if !cfg!(any(target_family = "windows", target_os = "macos")) {
+                    panic!("Unexpected result");
                 }
             }
             // This is some abomination.
             PyStringData::Ucs2(&[56548, 56504, 56493, 56550, 56470, 56455]) => {
-                if cfg!(target_family = "unix") {
-                    assert!(true);
-                } else {
-                    assert!(false);
+                if !cfg!(target_family = "unix") {
+                    panic!("Unexpected result");
                 }
             }
-            value => assert!(false, "unexpected string data: {:?}", value),
+            value => panic!("unexpected string data: {:?}", value),
         }
     }
 
@@ -528,7 +524,7 @@ rusty_fork_test! {
 
         match unsafe { value_string.data().unwrap() } {
             PyStringData::Ucs2(&[20013, 25991]) => {},
-            value => assert!(false, "unexpected string data: {:?}", value),
+            value => panic!("unexpected string data: {:?}", value),
         }
     }
 
