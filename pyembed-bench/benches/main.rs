@@ -62,7 +62,7 @@ fn python_resources_state_resolve_modules(
 ) -> Result<()> {
     for name in modules {
         state
-            .resolve_importable_module(&name, BytecodeOptimizationLevel::Zero)
+            .resolve_importable_module(name, BytecodeOptimizationLevel::Zero)
             .expect("failed to retrieve module");
     }
 
@@ -114,11 +114,6 @@ fn python_interpreter_import_all_modules(
 }
 
 pub fn criterion_benchmark(c: &mut Criterion) {
-    let temp_dir = tempfile::Builder::new()
-        .prefix("pyoxidizer-bench-")
-        .tempdir()
-        .expect("failed to create temp directory");
-
     let (packed_resources, names) =
         resolve_packed_resources().expect("failed to resolve packed resources");
     let importable_modules = filter_module_names(&names);
@@ -128,11 +123,6 @@ pub fn criterion_benchmark(c: &mut Criterion) {
         names.len(),
         importable_modules.len()
     );
-
-    let zip_data = resolve_zip_archive().expect("failed to resolve zip archive");
-    println!("zip archive {} bytes", zip_data.len());
-    let zip_path = temp_dir.path().join("stdlib.zip");
-    std::fs::write(&zip_path, &zip_data).expect("failed to write zip archive");
 
     let mut resources_state =
         PythonResourcesState::new_from_env().expect("failed to create resources state");
@@ -159,6 +149,64 @@ pub fn criterion_benchmark(c: &mut Criterion) {
             })
         },
     );
+
+    c.bench_function("pyembed.new_interpreter_plain", |b| {
+        b.iter(|| python_interpreter_startup_teardown_plain().expect("Python interpreter run"))
+    });
+
+    c.bench_function("pyembed.new_interpreter_packed_resources", |b| {
+        b.iter(|| {
+            python_interpreter_startup_teardown_packed_resources(&packed_resources)
+                .expect("Python interpreter run")
+        })
+    });
+
+    c.bench_function("oxidized_importer.import_all_modules.filesystem", |b| {
+        b.iter_with_setup(
+            || get_interpreter_plain().expect("unable to obtain interpreter"),
+            |mut interp| {
+                python_interpreter_import_all_modules(&mut interp, &importable_modules)
+                    .expect("failed to import all modules");
+                std::mem::drop(interp);
+            },
+        )
+    });
+
+    c.bench_function(
+        "oxidized_importer.import_all_modules.OxidizedFinder.in_memory",
+        |b| {
+            b.iter_with_setup(
+                || get_interpreter_packed(&packed_resources).expect("unable to obtain interpreter"),
+                |mut interp| {
+                    python_interpreter_import_all_modules(&mut interp, &importable_modules)
+                        .expect("failed to import all modules");
+                    std::mem::drop(interp);
+                },
+            )
+        },
+    );
+}
+
+pub fn bench_zip(c: &mut Criterion) {
+    let temp_dir = tempfile::Builder::new()
+        .prefix("pyoxidizer-bench-")
+        .tempdir()
+        .expect("failed to create temp directory");
+
+    let (packed_resources, names) =
+        resolve_packed_resources().expect("failed to resolve packed resources");
+    let importable_modules = filter_module_names(&names);
+    println!(
+        "{} bytes packed resources data for {} modules; {} importable",
+        packed_resources.len(),
+        names.len(),
+        importable_modules.len()
+    );
+
+    let zip_data = resolve_zip_archive().expect("failed to resolve zip archive");
+    println!("zip archive {} bytes", zip_data.len());
+    let zip_path = temp_dir.path().join("stdlib.zip");
+    std::fs::write(&zip_path, &zip_data).expect("failed to write zip archive");
 
     c.bench_function("zip.parse_rust.memory.no_read", |b| {
         b.iter(|| {
@@ -234,29 +282,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
         })
     });
 
-    c.bench_function("pyembed.new_interpreter_plain", |b| {
-        b.iter(|| python_interpreter_startup_teardown_plain().expect("Python interpreter run"))
-    });
-
-    c.bench_function("pyembed.new_interpreter_packed_resources", |b| {
-        b.iter(|| {
-            python_interpreter_startup_teardown_packed_resources(&packed_resources)
-                .expect("Python interpreter run")
-        })
-    });
-
-    c.bench_function("oxidized_importer.import_all_modules.filesystem", |b| {
-        b.iter_with_setup(
-            || get_interpreter_plain().expect("unable to obtain interpreter"),
-            |mut interp| {
-                python_interpreter_import_all_modules(&mut interp, &importable_modules)
-                    .expect("failed to import all modules");
-                std::mem::drop(interp);
-            },
-        )
-    });
-
-    c.bench_function("oxidized_importer.import_all_modules.zipimport", |b| {
+    c.bench_function("oxidized_importer.zipimport.import_all_modules", |b| {
         b.iter_with_setup(
             || get_interpreter_zip(&zip_path).expect("unable to obtain interpreter"),
             |mut interp| {
@@ -268,21 +294,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
     });
 
     c.bench_function(
-        "oxidized_importer.import_all_modules.OxidizedFinder.in_memory",
-        |b| {
-            b.iter_with_setup(
-                || get_interpreter_packed(&packed_resources).expect("unable to obtain interpreter"),
-                |mut interp| {
-                    python_interpreter_import_all_modules(&mut interp, &importable_modules)
-                        .expect("failed to import all modules");
-                    std::mem::drop(interp);
-                },
-            )
-        },
-    );
-
-    c.bench_function(
-        "oxidized_importer.import_all_modules.OxidizedZipFinder.from_data",
+        "oxidized_importer.OxidizedZipFinder.from_data.import_all_modules",
         |b| {
             b.iter_with_setup(
                 || {
@@ -314,7 +326,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
     );
 
     c.bench_function(
-        "oxidized_importer.import_all_modules.OxidizedZipFinder.from_path",
+        "oxidized_importer.OxidizedZipFinder.from_path.import_all_modules",
         |b| {
             b.iter_with_setup(
                 || get_interpreter_with_oxidized().expect("unable to obtain interpreter"),
@@ -341,5 +353,5 @@ pub fn criterion_benchmark(c: &mut Criterion) {
     );
 }
 
-criterion_group!(benches, criterion_benchmark);
+criterion_group!(benches, criterion_benchmark, bench_zip);
 criterion_main!(benches);
