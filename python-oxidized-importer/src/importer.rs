@@ -22,8 +22,7 @@ use {
         path_entry_finder::OxidizedPathEntryFinder,
         pkg_resources::register_pkg_resources_with_module,
         python_resources::{
-            pyobject_to_resource, resource_to_pyobject, ModuleFlavor, OxidizedResource,
-            PythonResourcesState,
+            pyobject_to_resource, ModuleFlavor, OxidizedResource, PythonResourcesState,
         },
         resource_reader::OxidizedResourceReader,
         OXIDIZED_IMPORTER_NAME_STR,
@@ -1025,19 +1024,7 @@ impl OxidizedFinder {
     fn indexed_resources<'p>(&self, py: Python<'p>) -> PyResult<&'p PyList> {
         let resources_state = self.state.get_resources_state();
 
-        let mut resources = resources_state
-            .resources
-            .values()
-            .collect::<Vec<&python_packed_resources::Resource<u8>>>();
-
-        resources.sort_by_key(|r| &r.name);
-
-        let objects: Result<Vec<_>, _> = resources
-            .iter()
-            .map(|r| resource_to_pyobject(py, r))
-            .collect();
-
-        Ok(PyList::new(py, objects?))
+        resources_state.resources_as_py_list(py)
     }
 
     fn add_resource(&self, resource: &OxidizedResource) -> PyResult<()> {

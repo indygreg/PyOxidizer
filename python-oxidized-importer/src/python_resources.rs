@@ -1068,6 +1068,19 @@ impl<'a> PythonResourcesState<'a, u8> {
         Ok(PyList::new(py, &infos))
     }
 
+    /// Convert indexed resources to a [PyList].
+    pub fn resources_as_py_list<'p>(&self, py: Python<'p>) -> PyResult<&'p PyList> {
+        let mut resources = self.resources.values().collect::<Vec<_>>();
+        resources.sort_by_key(|r| &r.name);
+
+        let objects = resources
+            .iter()
+            .map(|r| resource_to_pyobject(py, r))
+            .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(PyList::new(py, objects))
+    }
+
     /// Serialize resources contained in this data structure.
     ///
     /// `ignore_built` and `ignore_frozen` specify whether to ignore built-in
