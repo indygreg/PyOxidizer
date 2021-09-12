@@ -37,8 +37,6 @@ struct BlobSectionReadState {
     interior_padding: BlobInteriorPadding,
 }
 
-pub type PythonPackageResources<'a> = HashMap<&'a str, &'a [u8]>;
-
 pub struct ResourceParserIterator<'a> {
     done: bool,
     data: &'a [u8],
