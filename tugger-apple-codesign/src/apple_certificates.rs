@@ -442,7 +442,7 @@ mod test {
     #[test]
     fn chaining() {
         let relevant = KnownCertificate::all()
-            .into_iter()
+            .iter()
             .filter(|cert| {
                 cert.issuer_name()
                     .iter_common_name()
