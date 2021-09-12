@@ -116,6 +116,7 @@ rusty_fork_test! {
             let mut interp = get_interpreter();
             let py = interp.acquire_gil();
             let temp_dir = PyTempDir::new(py).unwrap();
+            #[allow(clippy::drop_copy)]
             drop(py); // PyTempDir::drop reacquires the GIL for itself
             assert!(temp_dir.path().is_dir());
             temp_dir.path().to_path_buf()
