@@ -44,5 +44,13 @@ path = "../python-packed-resources"
 criterion = "0.3"
 
 [[bench]]
-name = "main"
+name = "zip"
+harness = false
+
+[[bench]]
+name = "oxidized_finder"
+harness = false
+
+[[bench]]
+name = "embedded_interpreter"
 harness = false
