@@ -5,7 +5,7 @@
 use {
     crate::{
         importer::{ImporterState, OxidizedFinder},
-        package_metadata::{find_pkg_resources_distributions, metadata_list_directory},
+        package_metadata::find_pkg_resources_distributions,
         path_entry_finder::OxidizedPathEntryFinder,
     },
     pyo3::{
@@ -86,7 +86,8 @@ impl OxidizedPkgResourcesProvider {
     fn metadata_listdir<'p>(&self, py: Python<'p>, name: &str) -> PyResult<&'p PyList> {
         let resources_state = self.state.get_resources_state();
 
-        let entries = metadata_list_directory(&resources_state.resources, &self.package, name)
+        let entries = resources_state
+            .package_distribution_resources_list_directory(&self.package, name)
             .into_iter()
             .map(|s| PyString::new(py, s))
             .collect::<Vec<_>>();

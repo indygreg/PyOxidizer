@@ -13,12 +13,7 @@ use {
         prelude::*,
         types::{PyBytes, PyDict, PyList, PyString, PyTuple, PyType},
     },
-    python_packed_resources::Resource,
-    std::{
-        borrow::Cow,
-        collections::{BTreeMap, BTreeSet, HashMap},
-        sync::Arc,
-    },
+    std::{borrow::Cow, collections::BTreeMap, sync::Arc},
 };
 
 // Emulates importlib.metadata.Distribution._discover_resolvers().
@@ -354,59 +349,4 @@ pub(crate) fn find_pkg_resources_distributions<'p>(
             .map(|(_, v)| v)
             .collect::<Vec<_>>(),
     ))
-}
-
-/// List contents of a metadata directory.
-pub(crate) fn metadata_list_directory<'a>(
-    resources: &'a HashMap<Cow<'a, str>, Resource<'a, u8>>,
-    package: &str,
-    name: &str,
-) -> Vec<&'a str> {
-    let name = name.replace('\\', "/");
-
-    let prefix = if name.ends_with('/') {
-        Some(name)
-    } else if name.is_empty() {
-        None
-    } else {
-        Some(format!("{}/", name))
-    };
-
-    let filter_map_resource = |path: &'a Cow<'a, str>| -> Option<&'a str> {
-        match &prefix {
-            Some(prefix) => {
-                if let Some(name) = path.strip_prefix(prefix) {
-                    if name.contains('/') {
-                        None
-                    } else {
-                        Some(name)
-                    }
-                } else {
-                    None
-                }
-            }
-            None => {
-                // Empty string input matches root directory.
-                if path.contains('/') {
-                    None
-                } else {
-                    Some(path)
-                }
-            }
-        }
-    };
-
-    let mut entries = BTreeSet::new();
-
-    if let Some(entry) = resources.get(package) {
-        if let Some(resources) = &entry.in_memory_distribution_resources {
-            entries.extend(resources.keys().filter_map(filter_map_resource));
-        }
-
-        if let Some(resources) = &entry.relative_path_distribution_resources {
-            entries.extend(resources.keys().filter_map(filter_map_resource));
-        }
-    }
-
-    entries.into_iter().collect::<Vec<_>>()
 }

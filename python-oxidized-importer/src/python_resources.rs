@@ -1129,6 +1129,61 @@ impl<'a> PythonResourcesState<'a, u8> {
         }
     }
 
+    /// Obtain contents in a package distribution resources "directory."
+    pub fn package_distribution_resources_list_directory<'slf>(
+        &'slf self,
+        package: &str,
+        name: &str,
+    ) -> Vec<&'slf str> {
+        let name = name.replace('\\', "/");
+
+        let prefix = if name.ends_with('/') {
+            Some(name)
+        } else if name.is_empty() {
+            None
+        } else {
+            Some(format!("{}/", name))
+        };
+
+        let filter_map_resource = |path: &'slf Cow<'slf, str>| -> Option<&'slf str> {
+            match &prefix {
+                Some(prefix) => {
+                    if let Some(name) = path.strip_prefix(prefix) {
+                        if name.contains('/') {
+                            None
+                        } else {
+                            Some(name)
+                        }
+                    } else {
+                        None
+                    }
+                }
+                None => {
+                    // Empty string input matches root directory.
+                    if path.contains('/') {
+                        None
+                    } else {
+                        Some(path)
+                    }
+                }
+            }
+        };
+
+        let mut entries = BTreeSet::new();
+
+        if let Some(entry) = self.resources.get(package) {
+            if let Some(resources) = &entry.in_memory_distribution_resources {
+                entries.extend(resources.keys().filter_map(filter_map_resource));
+            }
+
+            if let Some(resources) = &entry.relative_path_distribution_resources {
+                entries.extend(resources.keys().filter_map(filter_map_resource));
+            }
+        }
+
+        entries.into_iter().collect::<Vec<_>>()
+    }
+
     /// Convert indexed resources to a [PyList].
     pub fn resources_as_py_list<'p>(&self, py: Python<'p>) -> PyResult<&'p PyList> {
         let mut resources = self.resources.values().collect::<Vec<_>>();
