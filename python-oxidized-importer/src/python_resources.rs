@@ -1096,6 +1096,39 @@ impl<'a> PythonResourcesState<'a, u8> {
         }
     }
 
+    /// Whether a package distribution resource name is a directory.
+    pub fn package_distribution_resource_name_is_directory(
+        &self,
+        package: &str,
+        name: &str,
+    ) -> bool {
+        let name = name.replace('\\', "/");
+
+        let prefix = if name.ends_with('/') {
+            name
+        } else {
+            format!("{}/", name)
+        };
+
+        if let Some(entry) = &self.resources.get(package) {
+            if let Some(resources) = &entry.in_memory_distribution_resources {
+                if resources.keys().any(|path| path.starts_with(&prefix)) {
+                    return true;
+                }
+            }
+
+            if let Some(resources) = &entry.relative_path_distribution_resources {
+                if resources.keys().any(|path| path.starts_with(&prefix)) {
+                    return true;
+                }
+            }
+
+            false
+        } else {
+            false
+        }
+    }
+
     /// Convert indexed resources to a [PyList].
     pub fn resources_as_py_list<'p>(&self, py: Python<'p>) -> PyResult<&'p PyList> {
         let mut resources = self.resources.values().collect::<Vec<_>>();

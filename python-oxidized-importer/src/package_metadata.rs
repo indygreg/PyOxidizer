@@ -356,39 +356,6 @@ pub(crate) fn find_pkg_resources_distributions<'p>(
     ))
 }
 
-/// Whether a metadata resource name is a directory.
-pub(crate) fn metadata_name_is_directory<'a>(
-    resources: &'a HashMap<Cow<'a, str>, Resource<'a, u8>>,
-    package: &str,
-    name: &str,
-) -> bool {
-    let name = name.replace('\\', "/");
-
-    let prefix = if name.ends_with('/') {
-        name
-    } else {
-        format!("{}/", name)
-    };
-
-    if let Some(entry) = resources.get(package) {
-        if let Some(resources) = &entry.in_memory_distribution_resources {
-            if resources.keys().any(|path| path.starts_with(&prefix)) {
-                return true;
-            }
-        }
-
-        if let Some(resources) = &entry.relative_path_distribution_resources {
-            if resources.keys().any(|path| path.starts_with(&prefix)) {
-                return true;
-            }
-        }
-
-        false
-    } else {
-        false
-    }
-}
-
 /// List contents of a metadata directory.
 pub(crate) fn metadata_list_directory<'a>(
     resources: &'a HashMap<Cow<'a, str>, Resource<'a, u8>>,

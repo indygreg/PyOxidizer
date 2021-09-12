@@ -5,9 +5,7 @@
 use {
     crate::{
         importer::{ImporterState, OxidizedFinder},
-        package_metadata::{
-            find_pkg_resources_distributions, metadata_list_directory, metadata_name_is_directory,
-        },
+        package_metadata::{find_pkg_resources_distributions, metadata_list_directory},
         path_entry_finder::OxidizedPathEntryFinder,
     },
     pyo3::{
@@ -82,11 +80,7 @@ impl OxidizedPkgResourcesProvider {
     fn metadata_isdir(&self, name: &str) -> PyResult<bool> {
         let resources_state = self.state.get_resources_state();
 
-        Ok(metadata_name_is_directory(
-            &resources_state.resources,
-            &self.package,
-            name,
-        ))
+        Ok(resources_state.package_distribution_resource_name_is_directory(&self.package, name))
     }
 
     fn metadata_listdir<'p>(&self, py: Python<'p>, name: &str) -> PyResult<&'p PyList> {
