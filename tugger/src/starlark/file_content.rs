@@ -334,7 +334,7 @@ mod tests {
         let inner = v.inner("ignored").unwrap();
 
         assert_eq!(inner.filename, "file");
-        assert_eq!(inner.content.is_executable(), false);
+        assert!(!inner.content.is_executable());
         assert_eq!(inner.content.resolve_content()?, b"foo".to_vec());
 
         Ok(())
