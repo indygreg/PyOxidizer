@@ -6,8 +6,8 @@
 
 use {
     crate::{
-        data::{BlobInteriorPadding, BlobSectionField, ResourceField, HEADER_V3},
         resource::Resource,
+        serialization::{BlobInteriorPadding, BlobSectionField, ResourceField, HEADER_V3},
     },
     byteorder::{LittleEndian, ReadBytesExt},
     std::{
@@ -640,7 +640,10 @@ fn load_resources_v3<'a>(data: &'a [u8]) -> Result<ResourceParserIterator<'a>, &
 mod tests {
     use {
         super::*,
-        crate::{data::BlobInteriorPadding, resource::Resource, writer::write_packed_resources_v3},
+        crate::{
+            resource::Resource, serialization::BlobInteriorPadding,
+            writer::write_packed_resources_v3,
+        },
     };
 
     #[test]

@@ -25,14 +25,14 @@ be used outside the PyOxidizer project. See the aforementioned docs
 for the canonical specification of this format.
 */
 
-mod data;
 mod parser;
 mod resource;
+mod serialization;
 mod writer;
 
 pub use crate::{
-    data::HEADER_V3,
     parser::{load_resources, ResourceParserIterator},
     resource::Resource,
+    serialization::HEADER_V3,
     writer::write_packed_resources_v3,
 };

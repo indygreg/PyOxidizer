@@ -6,8 +6,8 @@
 
 use {
     crate::{
-        data::{BlobInteriorPadding, BlobSectionField, ResourceField, HEADER_V3},
         resource::Resource,
+        serialization::{BlobInteriorPadding, BlobSectionField, ResourceField, HEADER_V3},
     },
     anyhow::{anyhow, Context, Result},
     byteorder::{LittleEndian, WriteBytesExt},
