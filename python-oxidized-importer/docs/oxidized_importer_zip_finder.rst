@@ -90,4 +90,4 @@ within the same environment.)
 Python API
 ==========
 
-See :py:class:`OxidizedFinder` for the Python API documentation.
+See :py:class:`OxidizedZipFinder` for the Python API documentation.
