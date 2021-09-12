@@ -10,13 +10,11 @@ use {
         serialization::{BlobInteriorPadding, BlobSectionField, ResourceField, HEADER_V3},
     },
     byteorder::{LittleEndian, ReadBytesExt},
-    std::{
-        borrow::Cow, collections::HashMap, convert::TryFrom, ffi::OsStr, io::Cursor, path::Path,
-    },
+    std::{borrow::Cow, collections::HashMap, convert::TryFrom, io::Cursor, path::Path},
 };
 
 #[cfg(unix)]
-use std::os::unix::ffi::OsStrExt;
+use std::{ffi::OsStr, os::unix::ffi::OsStrExt};
 #[cfg(windows)]
 use {std::ffi::OsString, std::os::windows::ffi::OsStringExt, std::path::PathBuf};
 
