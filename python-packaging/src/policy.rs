@@ -687,8 +687,10 @@ mod tests {
 
     #[test]
     fn test_add_collection_context_file() -> Result<()> {
-        let mut policy = PythonPackagingPolicy::default();
-        policy.include_file_resources = false;
+        let mut policy = PythonPackagingPolicy {
+            include_file_resources: false,
+            ..Default::default()
+        };
 
         let file = File::new("foo.py", vec![42]);
 
