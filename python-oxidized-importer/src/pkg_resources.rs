@@ -7,7 +7,6 @@ use {
         importer::{ImporterState, OxidizedFinder},
         package_metadata::{
             find_pkg_resources_distributions, metadata_list_directory, metadata_name_is_directory,
-            resolve_package_distribution_resource,
         },
         path_entry_finder::OxidizedPathEntryFinder,
     },
@@ -53,13 +52,9 @@ impl OxidizedPkgResourcesProvider {
     fn has_metadata(&self, name: &str) -> PyResult<bool> {
         let resources_state = self.state.get_resources_state();
 
-        let data = resolve_package_distribution_resource(
-            &resources_state.resources,
-            &resources_state.origin,
-            &self.package,
-            name,
-        )
-        .unwrap_or(None);
+        let data = resources_state
+            .resolve_package_distribution_resource(&self.package, name)
+            .unwrap_or(None);
 
         Ok(data.is_some())
     }
@@ -67,14 +62,10 @@ impl OxidizedPkgResourcesProvider {
     fn get_metadata(&self, name: &str) -> PyResult<String> {
         let resources_state = self.state.get_resources_state();
 
-        let data = resolve_package_distribution_resource(
-            &resources_state.resources,
-            &resources_state.origin,
-            &self.package,
-            name,
-        )
-        .map_err(|e| PyIOError::new_err(format!("error obtaining metadata: {}", e)))?
-        .ok_or_else(|| PyIOError::new_err("metadata does not exist"))?;
+        let data = resources_state
+            .resolve_package_distribution_resource(&self.package, name)
+            .map_err(|e| PyIOError::new_err(format!("error obtaining metadata: {}", e)))?
+            .ok_or_else(|| PyIOError::new_err("metadata does not exist"))?;
 
         String::from_utf8(data.to_vec())
             .map_err(|_| PyUnicodeDecodeError::new_err("metadata is not UTF-8"))

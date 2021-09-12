@@ -1068,6 +1068,34 @@ impl<'a> PythonResourcesState<'a, u8> {
         Ok(PyList::new(py, &infos))
     }
 
+    /// Resolve data belonging to a package distribution resource.
+    pub fn resolve_package_distribution_resource(
+        &self,
+        package: &str,
+        name: &str,
+    ) -> Result<Option<Cow<'_, [u8]>>> {
+        if let Some(entry) = self.resources.get(package) {
+            if let Some(resources) = &entry.in_memory_distribution_resources {
+                if let Some(data) = resources.get(name) {
+                    return Ok(Some(Cow::Borrowed(data.as_ref())));
+                }
+            }
+
+            if let Some(resources) = &entry.relative_path_distribution_resources {
+                if let Some(path) = resources.get(name) {
+                    let path = &self.origin.join(path);
+                    let data = std::fs::read(&path)?;
+
+                    return Ok(Some(Cow::Owned(data)));
+                }
+            }
+
+            Ok(None)
+        } else {
+            Ok(None)
+        }
+    }
+
     /// Convert indexed resources to a [PyList].
     pub fn resources_as_py_list<'p>(&self, py: Python<'p>) -> PyResult<&'p PyList> {
         let mut resources = self.resources.values().collect::<Vec<_>>();

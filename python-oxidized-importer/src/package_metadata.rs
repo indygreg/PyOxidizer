@@ -17,7 +17,6 @@ use {
     std::{
         borrow::Cow,
         collections::{BTreeMap, BTreeSet, HashMap},
-        path::Path,
         sync::Arc,
     },
 };
@@ -130,13 +129,9 @@ impl OxidizedDistribution {
     fn read_text<'p>(&self, py: Python<'p>, filename: String) -> PyResult<&'p PyAny> {
         let resources_state = self.state.get_resources_state();
 
-        let data = resolve_package_distribution_resource(
-            &resources_state.resources,
-            &resources_state.origin,
-            &self.package,
-            &filename,
-        )
-        .map_err(|e| PyIOError::new_err(format!("error when resolving resource: {}", e)))?;
+        let data = resources_state
+            .resolve_package_distribution_resource(&self.package, &filename)
+            .map_err(|e| PyIOError::new_err(format!("error when resolving resource: {}", e)))?;
 
         // Missing resource returns None.
         let data = if let Some(data) = data {
@@ -165,25 +160,17 @@ impl OxidizedDistribution {
     fn metadata<'p>(&self, py: Python<'p>) -> PyResult<&'p PyAny> {
         let resources_state = self.state.get_resources_state();
 
-        let data = resolve_package_distribution_resource(
-            &resources_state.resources,
-            &resources_state.origin,
-            &self.package,
-            "METADATA",
-        )
-        .map_err(|e| PyIOError::new_err(format!("error when resolving resource: {}", e)))?;
+        let data = resources_state
+            .resolve_package_distribution_resource(&self.package, "METADATA")
+            .map_err(|e| PyIOError::new_err(format!("error when resolving resource: {}", e)))?;
 
         let data = if let Some(data) = data {
             data
         } else {
-            resolve_package_distribution_resource(
-                &resources_state.resources,
-                &resources_state.origin,
-                &self.package,
-                "PKG-INFO",
-            )
-            .map_err(|e| PyIOError::new_err(format!("error when resolving resource: {}", e)))?
-            .ok_or_else(|| PyIOError::new_err("package metadata not found"))?
+            resources_state
+                .resolve_package_distribution_resource(&self.package, "PKG-INFO")
+                .map_err(|e| PyIOError::new_err(format!("error when resolving resource: {}", e)))?
+                .ok_or_else(|| PyIOError::new_err("package metadata not found"))?
         };
 
         let data = PyBytes::new(py, &data);
@@ -367,34 +354,6 @@ pub(crate) fn find_pkg_resources_distributions<'p>(
             .map(|(_, v)| v)
             .collect::<Vec<_>>(),
     ))
-}
-
-pub(crate) fn resolve_package_distribution_resource<'a>(
-    resources: &'a HashMap<Cow<'a, str>, Resource<'a, u8>>,
-    origin: &Path,
-    package: &str,
-    name: &str,
-) -> anyhow::Result<Option<Cow<'a, [u8]>>> {
-    if let Some(entry) = resources.get(package) {
-        if let Some(resources) = &entry.in_memory_distribution_resources {
-            if let Some(data) = resources.get(name) {
-                return Ok(Some(Cow::Borrowed(data.as_ref())));
-            }
-        }
-
-        if let Some(resources) = &entry.relative_path_distribution_resources {
-            if let Some(path) = resources.get(name) {
-                let path = origin.join(path);
-                let data = std::fs::read(&path)?;
-
-                return Ok(Some(Cow::Owned(data)));
-            }
-        }
-
-        Ok(None)
-    } else {
-        Ok(None)
-    }
 }
 
 /// Whether a metadata resource name is a directory.
