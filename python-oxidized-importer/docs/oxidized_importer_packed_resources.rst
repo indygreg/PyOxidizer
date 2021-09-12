@@ -1,4 +1,4 @@
-.. py:currentmodule:: starlark_pyoxidizer
+.. py:currentmodule:: oxidized_importer
 
 .. _python_packed_resources:
 
@@ -6,7 +6,7 @@
 Python Packed Resources
 =======================
 
-PyOxidizer has defined a custom data format for storing resources
+This project has defined a custom data format for storing resources
 useful to the execution of a Python interpreter. We call this data
 format *Python packed resources*.
 
@@ -16,12 +16,9 @@ and bytecode, non-module resource/data files, extension modules, and
 shared libraries. Metadata about these resources and sometimes the
 raw resource data itself is serialized to a binary data structure.
 
-At Python interpreter run time, this data structure is loaded (it
-can be embedded in a binary or exist as a standalone file) and parsed.
-A custom :ref:`oxidized_importer_meta_path_finders`
-(:ref:`OxidizedFinder <oxidized_finder>` from
-:ref:`oxidized_importer`) then uses the parsed data structure to power
-Python module importing.
+At Python interpreter run time, an instance of the :py:class:`OxidizedFinder`
+*meta path finder* parses this data structure and uses it to power Python
+module importing.
 
 This functionality is similar to using a ``.zip`` file for holding
 Python modules. However, the *Python packed resources* data structure
@@ -37,6 +34,11 @@ https://github.com/indygreg/PyOxidizer/tree/main/python-packed-resources.
 
 This crate is published to crates.io at
 https://crates.io/crates/python-packed-resources.
+
+The ``oxidized_importer`` Rust crate / Python extension defines the
+:py:class:`OxidizedFinder` Python class for using this data structure
+to power importing. That extension also exposes APIs to interact with
+instances of the data structure.
 
 Concepts
 ========
