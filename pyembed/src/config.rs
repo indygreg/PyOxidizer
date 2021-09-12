@@ -432,7 +432,7 @@ impl<'a, 'config: 'a> TryFrom<&ResolvedOxidizedPythonInterpreterConfig<'config>>
     ) -> Result<Self, Self::Error> {
         let mut state = Self::default();
         state.set_current_exe(config.exe().to_path_buf());
-        state.origin = config.origin().clone();
+        state.set_origin(config.origin().to_path_buf());
 
         for source in &config.packed_resources {
             match source {

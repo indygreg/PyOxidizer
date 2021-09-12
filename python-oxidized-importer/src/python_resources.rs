@@ -415,7 +415,7 @@ where
     /// Directory from which relative paths should be evaluated.
     ///
     /// Probably the directory of `current_exe`.
-    pub origin: PathBuf,
+    origin: PathBuf,
 
     /// Named resources available for loading.
     resources: HashMap<Cow<'a, str>, Resource<'a, X>>,
@@ -466,6 +466,16 @@ impl<'a> PythonResourcesState<'a, u8> {
     /// Set the path of the current executable.
     pub fn set_current_exe(&mut self, path: PathBuf) {
         self.current_exe = path;
+    }
+
+    /// Obtain the source path that relative paths are relative to.
+    pub fn origin(&self) -> &Path {
+        &self.origin
+    }
+
+    /// Set the source path that relative paths are relative to.
+    pub fn set_origin(&mut self, path: PathBuf) {
+        self.origin = path;
     }
 
     /// Load resources by parsing a blob.

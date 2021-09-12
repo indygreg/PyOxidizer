@@ -917,7 +917,7 @@ impl OxidizedFinder {
 
         // Update origin if a value is given.
         if let Some(py_origin) = relative_path_origin {
-            resources_state.origin = pyobject_to_pathbuf(py, py_origin)?;
+            resources_state.set_origin(pyobject_to_pathbuf(py, py_origin)?);
         }
 
         Ok(OxidizedFinder {
@@ -941,7 +941,9 @@ impl OxidizedFinder {
 
     #[getter]
     fn origin<'p>(&self, py: Python<'p>) -> &'p PyAny {
-        (&self.state.get_resources_state().origin)
+        self.state
+            .get_resources_state()
+            .origin()
             .into_py(py)
             .into_ref(py)
     }
