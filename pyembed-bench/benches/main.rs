@@ -9,6 +9,7 @@ use {
     pyembed_bench::*,
     pyo3::IntoPy,
     python_oxidized_importer::ZipIndex,
+    python_packaging::resource::BytecodeOptimizationLevel,
     std::io::{BufReader, Cursor, Read, Seek},
     zip::read::ZipArchive,
 };
@@ -51,6 +52,19 @@ fn python_resources_state_index(data: &[u8]) -> Result<()> {
     state
         .index_data(data)
         .map_err(|e| anyhow!("error indexing data: {}", e))?;
+
+    Ok(())
+}
+
+fn python_resources_state_resolve_modules(
+    state: &PythonResourcesState<u8>,
+    modules: &[String],
+) -> Result<()> {
+    for name in modules {
+        state
+            .resolve_importable_module(&name, BytecodeOptimizationLevel::Zero)
+            .expect("failed to retrieve module");
+    }
 
     Ok(())
 }
@@ -120,15 +134,31 @@ pub fn criterion_benchmark(c: &mut Criterion) {
     let zip_path = temp_dir.path().join("stdlib.zip");
     std::fs::write(&zip_path, &zip_data).expect("failed to write zip archive");
 
+    let mut resources_state =
+        PythonResourcesState::new_from_env().expect("failed to create resources state");
+    resources_state
+        .index_data(&packed_resources)
+        .expect("failed to index resources data");
+
     c.bench_function("python-packed-resources.parse", |b| {
         b.iter(|| {
             parse_packed_resources(&packed_resources).expect("failed to parse packed resources")
         })
     });
 
-    c.bench_function("PythonResourcesState.index_data", |b| {
+    c.bench_function("oxidized_importer.PythonResourcesState.index_data", |b| {
         b.iter(|| python_resources_state_index(&packed_resources).expect("failed to index data"))
     });
+
+    c.bench_function(
+        "oxidized_importer.PythonResourcesState.resolve_modules",
+        |b| {
+            b.iter(|| {
+                python_resources_state_resolve_modules(&resources_state, &names)
+                    .expect("failed to resolve modules")
+            })
+        },
+    );
 
     c.bench_function("zip.parse_rust.memory.no_read", |b| {
         b.iter(|| {
