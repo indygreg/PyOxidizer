@@ -1068,6 +1068,20 @@ impl<'a> PythonResourcesState<'a, u8> {
         Ok(PyList::new(py, &infos))
     }
 
+    /// Resolve the names of package distributions matching a name filter.
+    pub fn package_distribution_names(&self, filter: impl Fn(&str) -> bool) -> Vec<&'_ str> {
+        self.resources
+            .values()
+            .filter(|r| {
+                r.is_python_package
+                    && (r.in_memory_distribution_resources.is_some()
+                        || r.relative_path_distribution_resources.is_some())
+            })
+            .filter(|r| filter(r.name.as_ref()))
+            .map(|r| r.name.as_ref())
+            .collect::<Vec<_>>()
+    }
+
     /// Resolve data belonging to a package distribution resource.
     pub fn resolve_package_distribution_resource(
         &self,

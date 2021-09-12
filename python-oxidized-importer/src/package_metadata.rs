@@ -296,39 +296,31 @@ pub(crate) fn find_pkg_resources_distributions<'p>(
     only: bool,
     package_target: Option<&str>,
 ) -> PyResult<&'p PyList> {
-    let resources = &state.get_resources_state().resources;
+    let resources = &state.get_resources_state();
 
     let pkg_resources = py.import("pkg_resources")?;
     let distribution_type = pkg_resources.getattr("Distribution")?;
 
     let distributions = resources
-        .values()
-        // Find packages with distribution resources.
-        .filter(|r| {
-            r.is_python_package
-                && (r.in_memory_distribution_resources.is_some()
-                    || r.relative_path_distribution_resources.is_some())
-        })
-        .filter(|r| {
+        .package_distribution_names(|name| {
             if only {
-                name_at_package_hierarchy(&r.name, package_target)
+                name_at_package_hierarchy(name, package_target)
             } else {
-                name_within_package_hierarchy(&r.name, package_target)
+                name_within_package_hierarchy(name, package_target)
             }
         })
-        .map(|r| {
-            let oxidized_distribution =
-                OxidizedDistribution::new(state.clone(), r.name.to_string());
+        .into_iter()
+        .map(|name| {
+            let oxidized_distribution = OxidizedDistribution::new(state.clone(), name.to_string());
 
             let metadata = oxidized_distribution.metadata(py)?;
 
             let project_name = metadata.get_item("Name")?;
             let version = metadata.get_item("Version")?;
 
-            let location = format!("{}/{}", search_path, r.name.replace('.', "/"));
+            let location = format!("{}/{}", search_path, name.replace('.', "/"));
 
-            let provider =
-                create_oxidized_pkg_resources_provider(state.clone(), r.name.to_string())?;
+            let provider = create_oxidized_pkg_resources_provider(state.clone(), name.to_string())?;
 
             let kwargs = PyDict::new(py);
             kwargs.set_item("location", PyString::new(py, &location))?;
@@ -336,7 +328,7 @@ pub(crate) fn find_pkg_resources_distributions<'p>(
             kwargs.set_item("project_name", project_name)?;
             kwargs.set_item("version", version)?;
 
-            Ok((&r.name, distribution_type.call((), Some(kwargs))?))
+            Ok((name, distribution_type.call((), Some(kwargs))?))
         })
         // Collect into a BTreeMap to deduplicate and facilitate deterministic output.
         .filter_map(|kv: PyResult<(_, &PyAny)>| kv.ok())
