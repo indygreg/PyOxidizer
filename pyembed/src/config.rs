@@ -484,8 +484,11 @@ mod tests {
 
     #[test]
     fn test_packed_resources_explicit_origin() -> Result<()> {
-        let mut config = OxidizedPythonInterpreterConfig::default();
-        config.origin = Some(PathBuf::from("/other/origin"));
+        let mut config = OxidizedPythonInterpreterConfig {
+            origin: Some(PathBuf::from("/other/origin")),
+            ..Default::default()
+        };
+
         config
             .packed_resources
             .push(PackedResourcesSource::MemoryMappedPath(PathBuf::from(
