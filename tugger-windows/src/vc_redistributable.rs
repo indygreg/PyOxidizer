@@ -145,7 +145,7 @@ pub fn find_visual_cpp_redistributable(
             .entry(semver::Version::parse(
                 version_path.as_os_str().to_string_lossy().as_ref(),
             )?)
-            .or_insert(vec![])
+            .or_insert_with(Vec::new)
             .push(path);
     }
 
