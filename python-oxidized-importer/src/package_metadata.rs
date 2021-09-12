@@ -13,7 +13,7 @@ use {
         prelude::*,
         types::{PyBytes, PyDict, PyList, PyString, PyTuple, PyType},
     },
-    std::{borrow::Cow, collections::BTreeMap, sync::Arc},
+    std::{collections::BTreeMap, sync::Arc},
 };
 
 // Emulates importlib.metadata.Distribution._discover_resolvers().
@@ -237,47 +237,27 @@ pub(crate) fn find_distributions<'p>(
     name: Option<&PyAny>,
     _path: Option<&PyAny>,
 ) -> PyResult<&'p PyList> {
-    let resources = &state.get_resources_state().resources;
+    let distributions = state
+        .get_resources_state()
+        .package_distribution_names(|match_name| {
+            if let Some(name) = name {
+                // Python normalizes the name. We do the same.
+                let name = name.to_string();
+                let name = name.to_lowercase().replace('-', "_");
 
-    let distributions = if let Some(name) = name {
-        // Python normalizes the name. We do the same.
-        let name = name.to_string();
-        let name = name.to_lowercase().replace('-', "_");
-        let name_cow = Cow::Borrowed::<str>(&name);
-
-        if let Some(resource) = resources.get(&name_cow) {
-            if resource.is_python_package
-                && (resource.in_memory_distribution_resources.is_some()
-                    || resource.relative_path_distribution_resources.is_some())
-            {
-                vec![PyCell::new(
-                    py,
-                    OxidizedDistribution::new(state.clone(), name),
-                )?]
+                match_name == name
             } else {
-                vec![]
+                true
             }
-        } else {
-            vec![]
-        }
-    } else {
-        // Return all distributions.
-        let mut distributions = Vec::new();
-
-        for (k, v) in resources.iter() {
-            if v.is_python_package
-                && (v.in_memory_distribution_resources.is_some()
-                    || v.relative_path_distribution_resources.is_some())
-            {
-                distributions.push(PyCell::new(
-                    py,
-                    OxidizedDistribution::new(state.clone(), k.to_string()),
-                )?);
-            }
-        }
-
-        distributions
-    };
+        })
+        .into_iter()
+        .map(|name| {
+            PyCell::new(
+                py,
+                OxidizedDistribution::new(state.clone(), name.to_string()),
+            )
+        })
+        .collect::<Result<Vec<_>, _>>()?;
 
     Ok(PyList::new(py, &distributions))
 }
