@@ -24,7 +24,7 @@ pub fn osstring_to_bytes(py: Python, s: OsString) -> &PyAny {
 }
 
 #[cfg(windows)]
-pub fn osstring_to_bytes<'p>(py: Python<'p>, s: OsString) -> &'p PyAny {
+pub fn osstring_to_bytes(py: Python, s: OsString) -> &PyAny {
     let w: Vec<u16> = s.encode_wide().collect();
     unsafe {
         let o = pyffi::PyBytes_FromStringAndSize(w.as_ptr() as *const i8, w.len() as isize * 2);
