@@ -33,6 +33,10 @@ struct BlobSectionReadState {
     interior_padding: BlobInteriorPadding,
 }
 
+/// An iterator over an actively parsed packed resources data structure.
+///
+/// The iterator emits [Resource] instances. The index data for a given resource is
+/// not read or validated until the iterator attempts to deserialize it.
 pub struct ResourceParserIterator<'a> {
     done: bool,
     data: &'a [u8],
@@ -497,6 +501,14 @@ impl<'a> Iterator for ResourceParserIterator<'a> {
     }
 }
 
+/// Parse a packed resources data structure.
+///
+/// The data structure is parsed lazily via an iterator that emits reconstructed
+/// [Resource] instances.
+///
+/// Performance note: we once attempted to switch to anyhow for error handling and
+/// this decreased performance by ~15%. Given the performance sensitivity of this
+/// code, we need to keep error handling primitive.
 pub fn load_resources<'a>(data: &'a [u8]) -> Result<ResourceParserIterator<'a>, &'static str> {
     if data.len() < HEADER_V3.len() {
         return Err("error reading 8 byte header");
