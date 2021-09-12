@@ -113,7 +113,23 @@ fn python_interpreter_import_all_modules(
     Ok(())
 }
 
-pub fn criterion_benchmark(c: &mut Criterion) {
+pub fn bench_embedded_interpreter(c: &mut Criterion) {
+    let (packed_resources, _) =
+        resolve_packed_resources().expect("failed to resolve packed resources");
+
+    c.bench_function("pyembed.new_interpreter_plain", |b| {
+        b.iter(|| python_interpreter_startup_teardown_plain().expect("Python interpreter run"))
+    });
+
+    c.bench_function("pyembed.new_interpreter_packed_resources", |b| {
+        b.iter(|| {
+            python_interpreter_startup_teardown_packed_resources(&packed_resources)
+                .expect("Python interpreter run")
+        })
+    });
+}
+
+pub fn bench_oxidized_finder(c: &mut Criterion) {
     let (packed_resources, names) =
         resolve_packed_resources().expect("failed to resolve packed resources");
     let importable_modules = filter_module_names(&names);
@@ -150,18 +166,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
         },
     );
 
-    c.bench_function("pyembed.new_interpreter_plain", |b| {
-        b.iter(|| python_interpreter_startup_teardown_plain().expect("Python interpreter run"))
-    });
-
-    c.bench_function("pyembed.new_interpreter_packed_resources", |b| {
-        b.iter(|| {
-            python_interpreter_startup_teardown_packed_resources(&packed_resources)
-                .expect("Python interpreter run")
-        })
-    });
-
-    c.bench_function("oxidized_importer.import_all_modules.filesystem", |b| {
+    c.bench_function("oxidized_importer.PathFinder.import_all_modules", |b| {
         b.iter_with_setup(
             || get_interpreter_plain().expect("unable to obtain interpreter"),
             |mut interp| {
@@ -173,7 +178,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
     });
 
     c.bench_function(
-        "oxidized_importer.import_all_modules.OxidizedFinder.in_memory",
+        "oxidized_importer.OxidizedFinder.in_memory.import_all_modules",
         |b| {
             b.iter_with_setup(
                 || get_interpreter_packed(&packed_resources).expect("unable to obtain interpreter"),
@@ -353,5 +358,10 @@ pub fn bench_zip(c: &mut Criterion) {
     );
 }
 
-criterion_group!(benches, criterion_benchmark, bench_zip);
+criterion_group!(
+    benches,
+    bench_embedded_interpreter,
+    bench_oxidized_finder,
+    bench_zip
+);
 criterion_main!(benches);
