@@ -404,10 +404,7 @@ mod tests {
 
         let ems = resources
             .iter()
-            .filter(|r| match r {
-                PythonResource::ExtensionModule { .. } => true,
-                _ => false,
-            })
+            .filter(|r| matches!(r, PythonResource::ExtensionModule { .. }))
             .collect::<Vec<&PythonResource>>();
 
         assert_eq!(ems.len(), 1);
