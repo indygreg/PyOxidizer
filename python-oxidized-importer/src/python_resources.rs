@@ -418,7 +418,7 @@ where
     pub origin: PathBuf,
 
     /// Named resources available for loading.
-    pub resources: HashMap<Cow<'a, str>, Resource<'a, X>>,
+    resources: HashMap<Cow<'a, str>, Resource<'a, X>>,
 
     /// List of `PyObject` that back indexed data.
     ///
