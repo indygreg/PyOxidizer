@@ -5,7 +5,10 @@
 /*! Serializing of structures into packed resources blobs. */
 
 use {
-    super::data::{BlobInteriorPadding, BlobSectionField, Resource, ResourceField, HEADER_V3},
+    crate::{
+        data::{BlobInteriorPadding, BlobSectionField, ResourceField, HEADER_V3},
+        resource::Resource,
+    },
     anyhow::{anyhow, Context, Result},
     byteorder::{LittleEndian, WriteBytesExt},
     std::{collections::BTreeMap, convert::TryFrom, io::Write, path::Path},

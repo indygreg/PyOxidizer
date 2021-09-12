@@ -26,12 +26,13 @@ for the canonical specification of this format.
 */
 
 mod data;
-#[allow(unused)]
 mod parser;
+mod resource;
 mod writer;
 
 pub use crate::{
-    data::{Resource, HEADER_V3},
+    data::HEADER_V3,
     parser::{load_resources, ResourceParserIterator},
+    resource::Resource,
     writer::write_packed_resources_v3,
 };

@@ -5,15 +5,13 @@
 /*! Parsing of packed resources data blobs. */
 
 use {
-    super::data::{BlobInteriorPadding, BlobSectionField, Resource, ResourceField, HEADER_V3},
+    crate::{
+        data::{BlobInteriorPadding, BlobSectionField, ResourceField, HEADER_V3},
+        resource::Resource,
+    },
     byteorder::{LittleEndian, ReadBytesExt},
     std::{
-        borrow::Cow,
-        collections::{HashMap, HashSet},
-        convert::TryFrom,
-        ffi::OsStr,
-        io::{Cursor, Read},
-        path::Path,
+        borrow::Cow, collections::HashMap, convert::TryFrom, ffi::OsStr, io::Cursor, path::Path,
     },
 };
 
@@ -120,7 +118,7 @@ impl<'a> ResourceParserIterator<'a> {
                     current_resource_name = None;
                 }
                 ResourceField::EndOfEntry => {
-                    let res = if let Some(name) = current_resource_name {
+                    let res = if current_resource_name.is_some() {
                         Ok(Some(current_resource))
                     } else {
                         Err("resource name field is required")
@@ -642,9 +640,7 @@ fn load_resources_v3<'a>(data: &'a [u8]) -> Result<ResourceParserIterator<'a>, &
 mod tests {
     use {
         super::*,
-        crate::data::{BlobInteriorPadding, Resource},
-        crate::writer::write_packed_resources_v3,
-        std::collections::BTreeMap,
+        crate::{data::BlobInteriorPadding, resource::Resource, writer::write_packed_resources_v3},
     };
 
     #[test]
