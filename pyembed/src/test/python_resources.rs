@@ -41,8 +41,8 @@ fn multiple_resource_blobs() -> Result<()> {
     resources.index_data(&data0).unwrap();
     resources.index_data(&data1).unwrap();
 
-    assert!(resources.resources.contains_key("foo"));
-    assert!(resources.resources.contains_key("bar"));
+    assert!(resources.has_resource("foo"));
+    assert!(resources.has_resource("bar"));
 
     Ok(())
 }
@@ -84,7 +84,7 @@ fn test_memory_mapped_file_resources() -> Result<()> {
     let resolved = config.clone().resolve()?;
     let resources = PythonResourcesState::try_from(&resolved)?;
 
-    assert!(resources.resources.contains_key("foo"));
+    assert!(resources.has_resource("foo"));
 
     // Now let's try with relative paths.
     let relative_path = pathdiff::diff_paths(&resources_path, std::env::current_dir()?).unwrap();
@@ -95,7 +95,7 @@ fn test_memory_mapped_file_resources() -> Result<()> {
 
     let resolved = config.resolve()?;
     let resources = PythonResourcesState::try_from(&resolved)?;
-    assert!(resources.resources.contains_key("foo"));
+    assert!(resources.has_resource("foo"));
 
     Ok(())
 }

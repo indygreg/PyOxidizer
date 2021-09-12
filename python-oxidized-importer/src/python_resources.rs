@@ -594,6 +594,11 @@ impl<'a> PythonResourcesState<'a, u8> {
         Ok(())
     }
 
+    /// Says whether a named resource exists.
+    pub fn has_resource(&self, name: &str) -> bool {
+        self.resources.contains_key(name)
+    }
+
     /// Add a resource to the instance.
     ///
     /// Memory in the resource must live for at least as long as the lifetime of
