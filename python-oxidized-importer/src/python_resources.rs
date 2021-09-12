@@ -1198,6 +1198,19 @@ impl<'a> PythonResourcesState<'a, u8> {
         entries.into_iter().collect::<Vec<_>>()
     }
 
+    /// Resolve content of a shared library to load from memory.
+    pub fn resolve_in_memory_shared_library_data(&self, name: &str) -> Option<&[u8]> {
+        if let Some(entry) = &self.resources.get(name) {
+            if let Some(library_data) = &entry.in_memory_shared_library {
+                Some(library_data.as_ref())
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    }
+
     /// Convert indexed resources to a [PyList].
     pub fn resources_as_py_list<'p>(&self, py: Python<'p>) -> PyResult<&'p PyList> {
         let mut resources = self.resources.values().collect::<Vec<_>>();

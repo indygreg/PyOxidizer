@@ -157,26 +157,24 @@ extern "C" fn custom_load_library(filename: LPCSTR, user_data: *mut c_void) -> H
             .unwrap()
     };
 
-    if let Some(entry) = resources_state.resources.get(name.as_ref()) {
-        if let Some(library_data) = &entry.in_memory_shared_library {
-            let res = unsafe { load_library_memory(resources_state, library_data) };
+    if let Some(library_data) = resources_state.resolve_in_memory_shared_library_data(&name) {
+        let res = unsafe { load_library_memory(resources_state, library_data) };
 
-            // If we loaded a module, store its state. Otherwise return its failure (NULL).
-            if !res.is_null() {
-                let mut memory_state = MEMORY_MODULES.lock().unwrap();
+        // If we loaded a module, store its state. Otherwise return its failure (NULL).
+        if !res.is_null() {
+            let mut memory_state = MEMORY_MODULES.lock().unwrap();
 
-                memory_state.modules.insert(
-                    name.to_string(),
-                    MemoryModule {
-                        ptr: res,
-                        ref_count: AtomicUsize::new(1),
-                    },
-                );
-                memory_state.module_ptrs.push(res);
-            }
-
-            return res;
+            memory_state.modules.insert(
+                name.to_string(),
+                MemoryModule {
+                    ptr: res,
+                    ref_count: AtomicUsize::new(1),
+                },
+            );
+            memory_state.module_ptrs.push(res);
         }
+
+        return res;
     }
 
     // No memory loaded module found. Fall back to system default.
