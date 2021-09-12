@@ -948,7 +948,9 @@ impl OxidizedFinder {
 
     #[getter]
     fn path_hook_base_str<'p>(&self, py: Python<'p>) -> &'p PyAny {
-        (&self.state.get_resources_state().current_exe)
+        self.state
+            .get_resources_state()
+            .current_exe()
             .into_py(py)
             .into_ref(py)
     }

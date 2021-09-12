@@ -410,7 +410,7 @@ where
     [X]: ToOwned<Owned = Vec<X>>,
 {
     /// Path to currently running executable.
-    pub current_exe: PathBuf,
+    current_exe: PathBuf,
 
     /// Directory from which relative paths should be evaluated.
     ///
@@ -456,6 +456,16 @@ impl<'a> PythonResourcesState<'a, u8> {
             origin,
             ..Default::default()
         })
+    }
+
+    /// Obtain the path of the current executable.
+    pub fn current_exe(&self) -> &Path {
+        &self.current_exe
+    }
+
+    /// Set the path of the current executable.
+    pub fn set_current_exe(&mut self, path: PathBuf) {
+        self.current_exe = path;
     }
 
     /// Load resources by parsing a blob.
