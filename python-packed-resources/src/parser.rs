@@ -126,9 +126,6 @@ impl<'a> ResourceParserIterator<'a> {
                         Err("resource name field is required")
                     };
 
-                    current_resource = Resource::default();
-                    current_resource_name = None;
-
                     return res;
                 }
                 ResourceField::Name => {
