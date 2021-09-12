@@ -6,6 +6,7 @@ use {
     anyhow::{anyhow, Result},
     once_cell::sync::Lazy,
     pyembed::{MainPythonInterpreter, OxidizedPythonInterpreterConfig, PackedResourcesSource},
+    pyo3::{prelude::*, types::PyBytes},
     pyoxidizerlib::{
         environment::{default_target_triple, Environment},
         logging::PrintlnDrain,
@@ -122,6 +123,30 @@ pub fn get_interpreter_with_oxidized<'interpreter, 'resources>(
 
     MainPythonInterpreter::new(config)
         .map_err(|e| anyhow!("error creating new interpreter: {}", e.to_string()))
+}
+
+pub fn get_interpreter_and_oxidized_finder<'interpreter, 'resources>(
+    packed_resources: &'resources [u8],
+) -> Result<(MainPythonInterpreter<'interpreter, 'resources>, Py<PyAny>)> {
+    let mut interp = get_interpreter_with_oxidized()?;
+    let py = interp.acquire_gil();
+
+    let finder_fn = || -> PyResult<_> {
+        let oxidized_importer = py.import("oxidized_importer")?;
+        let finder_type = oxidized_importer.getattr("OxidizedFinder")?;
+        let finder = finder_type.call0()?;
+
+        let resources_bytes = PyBytes::new(py, packed_resources);
+        finder.call_method("index_bytes", (resources_bytes,), None)?;
+
+        let finder = finder.into_py(py);
+
+        Ok(finder)
+    };
+
+    let finder = finder_fn().map_err(|e| anyhow!("error executing Python code: {}", e))?;
+
+    Ok((interp, finder))
 }
 
 pub fn resolve_packed_resources() -> Result<(Vec<u8>, Vec<String>)> {

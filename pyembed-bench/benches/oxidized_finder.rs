@@ -98,6 +98,72 @@ pub fn bench_oxidized_finder(c: &mut Criterion) {
         },
     );
 
+    c.bench_function(
+        "oxidized_importer.OxidizedFinder.in_memory.find_spec.all_modules",
+        |b| {
+            b.iter_with_setup(
+                || {
+                    get_interpreter_and_oxidized_finder(&packed_resources)
+                        .expect("failed to obtain OxidizedFinder")
+                },
+                |(mut interp, finder)| {
+                    let py = interp.acquire_gil();
+                    let finder = finder.as_ref(py);
+
+                    for name in &names {
+                        finder
+                            .call_method("find_spec", (name, py.None()), None)
+                            .expect("find_spec call failed");
+                    }
+                },
+            )
+        },
+    );
+
+    c.bench_function(
+        "oxidized_importer.OxidizedFinder.in_memory.get_source.all_modules",
+        |b| {
+            b.iter_with_setup(
+                || {
+                    get_interpreter_and_oxidized_finder(&packed_resources)
+                        .expect("failed to obtain OxidizedFinder")
+                },
+                |(mut interp, finder)| {
+                    let py = interp.acquire_gil();
+                    let finder = finder.as_ref(py);
+
+                    for name in &names {
+                        finder
+                            .call_method("get_source", (name,), None)
+                            .expect("get_source call failed");
+                    }
+                },
+            )
+        },
+    );
+
+    c.bench_function(
+        "oxidized_importer.OxidizedFinder.in_memory.get_code.all_modules",
+        |b| {
+            b.iter_with_setup(
+                || {
+                    get_interpreter_and_oxidized_finder(&packed_resources)
+                        .expect("failed to obtain OxidizedFinder")
+                },
+                |(mut interp, finder)| {
+                    let py = interp.acquire_gil();
+                    let finder = finder.as_ref(py);
+
+                    for name in &names {
+                        finder
+                            .call_method("get_code", (name,), None)
+                            .expect("get_code call failed");
+                    }
+                },
+            )
+        },
+    );
+
     c.bench_function("oxidized_importer.PathFinder.import_all_modules", |b| {
         b.iter_with_setup(
             || get_interpreter_plain().expect("unable to obtain interpreter"),
