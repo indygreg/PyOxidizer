@@ -706,7 +706,10 @@ impl FileManifest {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, tempfile::TempDir};
+    use super::*;
+
+    #[cfg(unix)]
+    use tempfile::TempDir;
 
     #[cfg(unix)]
     fn temp_dir() -> std::io::Result<TempDir> {
