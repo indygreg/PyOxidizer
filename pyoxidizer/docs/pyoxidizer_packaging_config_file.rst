@@ -32,12 +32,13 @@ In this example, we create an executable embedding Python:
 
 .. code-block:: python
 
-    def make_exe(dist):
+    def make_exe():
         dist = default_python_distribution()
 
         return dist.to_python_executable("myapp")
 
     register_target("exe", make_exe)
+    resolve_targets()
 
 :py:meth:`PythonDistribution.to_python_executable` accepts an optional
 :py:class:`PythonPackagingPolicy` instance that influences how the executable
@@ -67,7 +68,7 @@ this instance into the constructed :py:class:`PythonExecutable`:
 
 .. code-block:: python
 
-    def make_exe(dist):
+    def make_exe():
         dist = default_python_distribution()
 
         config = dist.make_python_interpreter_config()
@@ -76,6 +77,7 @@ this instance into the constructed :py:class:`PythonExecutable`:
         return dist.to_python_executable("myapp", config=config)
 
     register_target("exe", make_exe)
+    resolve_targets()
 
 The :py:class:`PythonInterpreterConfig` type exposes a lot of modifiable settings.
 See the :py:class:`API documentation <PythonInterpreterConfig>` for
@@ -147,7 +149,7 @@ instance using
 
 .. code-block:: python
 
-    def make_exe(dist):
+    def make_exe():
         dist = default_python_distribution()
 
         return dist.to_python_executable("myapp")
@@ -164,6 +166,7 @@ instance using
 
     register_target("exe", make_exe)
     register_target("install", make_install, depends=["exe"], default=True)
+    resolve_targets()
 
 We introduce a new ``install`` target and ``make_install()`` function which
 returns a :py:class:`starlark_tugger.FileManifest`. It adds the
