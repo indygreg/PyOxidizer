@@ -2505,6 +2505,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "pyoxy"
+version = "0.1.0-pre"
+
+[[package]]
 name = "python-oxidized-importer"
 version = "0.3.0-pre"
 dependencies = [

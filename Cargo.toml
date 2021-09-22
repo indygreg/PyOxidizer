@@ -6,6 +6,7 @@ members = [
     'pyembed-bench',
     'pyembed',
     'pyoxidizer',
+    'pyoxy',
     'python-oxidized-importer',
     'python-packaging',
     'python-packed-resources',

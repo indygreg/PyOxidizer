@@ -1,0 +1,13 @@
+[package]
+name = "pyoxy"
+version = "0.1.0-pre"
+authors = ["Gregory Szorc <gregory.szorc@gmail.com>"]
+license = "MPL-2.0"
+description = "Self-contained Python distribution and application runner."
+readme = "README.md"
+homepage = "https://github.com/indygreg/PyOxidizer"
+repository = "https://github.com/indygreg/PyOxidizer.git"
+keywords = ["python"]
+edition = "2018"
+
+[dependencies]
