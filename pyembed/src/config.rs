@@ -46,7 +46,7 @@ pub struct ExtensionModule {
 /// This defines the defaults for various fields of the `PyPreConfig` and
 /// `PyConfig` instances that are initialized as part of interpreter
 /// initialization. See
-/// https://docs.python.org/3/c-api/init_config.html#isolated-configuration for
+/// <https://docs.python.org/3/c-api/init_config.html#isolated-configuration> for
 /// more.
 ///
 /// During interpreter initialization, we produce a `PyPreConfig` and
@@ -84,7 +84,7 @@ pub struct OxidizedPythonInterpreterConfig<'a> {
 
     /// Whether to install the custom allocator for the `raw` memory domain.
     ///
-    /// See https://docs.python.org/3/c-api/memory.html for documentation on how Python
+    /// See <https://docs.python.org/3/c-api/memory.html> for documentation on how Python
     /// memory allocator domains work.
     ///
     /// Has no effect if `allocator_backend` is `MemoryAllocatorBackend::Default`.
@@ -92,7 +92,7 @@ pub struct OxidizedPythonInterpreterConfig<'a> {
 
     /// Whether to install the custom allocator for the `mem` memory domain.
     ///
-    /// See https://docs.python.org/3/c-api/memory.html for documentation on how Python
+    /// See <https://docs.python.org/3/c-api/memory.html> for documentation on how Python
     /// memory allocator domains work.
     ///
     /// Has no effect if `allocator_backend` is `MemoryAllocatorBackend::Default`.
@@ -100,7 +100,7 @@ pub struct OxidizedPythonInterpreterConfig<'a> {
 
     /// Whether to install the custom allocator for the `obj` memory domain.
     ///
-    /// See https://docs.python.org/3/c-api/memory.html for documentation on how Python
+    /// See <https://docs.python.org/3/c-api/memory.html> for documentation on how Python
     /// memory allocator domains work.
     ///
     /// Has no effect if `allocator_backend` is `MemoryAllocatorBackend::Default`.
@@ -108,7 +108,7 @@ pub struct OxidizedPythonInterpreterConfig<'a> {
 
     /// Whether to install the custom allocator for the `pymalloc` arena allocator.
     ///
-    /// See https://docs.python.org/3/c-api/memory.html for documentation on how Python
+    /// See <https://docs.python.org/3/c-api/memory.html> for documentation on how Python
     /// memory allocation works.
     ///
     /// This setting requires the `pymalloc` allocator to be used for the `mem`
@@ -127,7 +127,7 @@ pub struct OxidizedPythonInterpreterConfig<'a> {
     /// Whether to automatically set missing "path configuration" fields.
     ///
     /// If `true`, various path configuration
-    /// (https://docs.python.org/3/c-api/init_config.html#path-configuration) fields
+    /// (<https://docs.python.org/3/c-api/init_config.html#path-configuration>) fields
     /// will be set automatically if their corresponding `.interpreter_config`
     /// fields are `None`. For example, `program_name` will be set to the current
     /// executable and `home` will be set to the executable's directory.
