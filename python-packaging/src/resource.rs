@@ -23,11 +23,18 @@ use {
     tugger_licensing::LicensedComponent,
 };
 
+#[cfg(feature = "serialization")]
+use serde::{Deserialize, Serialize};
+
 /// An optimization level for Python bytecode.
 #[derive(Clone, Copy, Debug, PartialEq)]
+#[cfg_attr(feature = "serialization", derive(Deserialize, Serialize))]
 pub enum BytecodeOptimizationLevel {
+    #[cfg_attr(feature = "serialization", serde(rename = "0"))]
     Zero,
+    #[cfg_attr(feature = "serialization", serde(rename = "1"))]
     One,
+    #[cfg_attr(feature = "serialization", serde(rename = "2"))]
     Two,
 }
 

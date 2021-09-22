@@ -19,6 +19,7 @@ itertools = "0.10"
 mailparse = "0.13"
 once_cell = "1.7"
 regex = "1.5"
+serde = { version = "1.0", features = ["derive"], optional = true }
 sha2 = { version = "0.9", optional = true }
 spdx = "0.6"
 time = { version = "0.3", optional = true }
@@ -44,4 +45,5 @@ tempfile = "3.2"
 # want to bloat the dependency tree with.
 [features]
 default = ["wheel"]
+serialization = ["serde"]
 wheel = ["base64", "sha2", "time", "zip"]

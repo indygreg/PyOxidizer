@@ -2533,6 +2533,7 @@ dependencies = [
  "once_cell",
  "python-packed-resources",
  "regex",
+ "serde",
  "sha2 0.9.8",
  "spdx",
  "tempfile",

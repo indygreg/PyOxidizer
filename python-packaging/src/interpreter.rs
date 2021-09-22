@@ -9,8 +9,13 @@ use {
     std::{convert::TryFrom, ffi::OsString, os::raw::c_ulong, path::PathBuf, str::FromStr},
 };
 
+#[cfg(feature = "serialization")]
+use serde::{Deserialize, Serialize};
+
 /// Defines the profile to use to configure a Python interpreter.
 #[derive(Clone, Copy, Debug, PartialEq)]
+#[cfg_attr(feature = "serialization", derive(Deserialize, Serialize))]
+#[cfg_attr(feature = "serialization", serde(try_from = "String", into = "String"))]
 pub enum PythonInterpreterProfile {
     /// Python is isolated from the system.
     ///
@@ -39,6 +44,12 @@ impl ToString for PythonInterpreterProfile {
     }
 }
 
+impl From<PythonInterpreterProfile> for String {
+    fn from(v: PythonInterpreterProfile) -> Self {
+        v.to_string()
+    }
+}
+
 impl TryFrom<&str> for PythonInterpreterProfile {
     type Error = String;
 
@@ -54,8 +65,18 @@ impl TryFrom<&str> for PythonInterpreterProfile {
     }
 }
 
+impl TryFrom<String> for PythonInterpreterProfile {
+    type Error = String;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        Self::try_from(value.as_str())
+    }
+}
+
 /// Defines `terminfo`` database resolution semantics.
 #[derive(Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "serialization", derive(Deserialize, Serialize))]
+#[cfg_attr(feature = "serialization", serde(try_from = "String", into = "String"))]
 pub enum TerminfoResolution {
     /// Resolve `terminfo` database using appropriate behavior for current OS.
     Dynamic,
@@ -72,6 +93,12 @@ impl ToString for TerminfoResolution {
             Self::None => "none".to_string(),
             Self::Static(value) => format!("static:{}", value),
         }
+    }
+}
+
+impl From<TerminfoResolution> for String {
+    fn from(t: TerminfoResolution) -> Self {
+        t.to_string()
     }
 }
 
@@ -94,8 +121,18 @@ impl TryFrom<&str> for TerminfoResolution {
     }
 }
 
+impl TryFrom<String> for TerminfoResolution {
+    type Error = String;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        Self::try_from(value.as_str())
+    }
+}
+
 /// Defines a backend for a memory allocator.
 #[derive(Clone, Copy, Debug, PartialEq)]
+#[cfg_attr(feature = "serialization", derive(Deserialize, Serialize))]
+#[cfg_attr(feature = "serialization", serde(try_from = "String", into = "String"))]
 pub enum MemoryAllocatorBackend {
     /// The default allocator as configured by Python.
     Default,
@@ -132,6 +169,12 @@ impl ToString for MemoryAllocatorBackend {
     }
 }
 
+impl From<MemoryAllocatorBackend> for String {
+    fn from(v: MemoryAllocatorBackend) -> Self {
+        v.to_string()
+    }
+}
+
 impl TryFrom<&str> for MemoryAllocatorBackend {
     type Error = String;
 
@@ -147,10 +190,20 @@ impl TryFrom<&str> for MemoryAllocatorBackend {
     }
 }
 
+impl TryFrom<String> for MemoryAllocatorBackend {
+    type Error = String;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        Self::try_from(value.as_str())
+    }
+}
+
 /// Holds values for coerce_c_locale.
 ///
 /// See https://docs.python.org/3/c-api/init_config.html#c.PyPreConfig.coerce_c_locale.
 #[derive(Clone, Copy, Debug, PartialEq)]
+#[cfg_attr(feature = "serialization", derive(Deserialize, Serialize))]
+#[cfg_attr(feature = "serialization", serde(try_from = "String", into = "String"))]
 pub enum CoerceCLocale {
     #[allow(clippy::upper_case_acronyms)]
     LCCtype = 1,
@@ -167,6 +220,12 @@ impl ToString for CoerceCLocale {
     }
 }
 
+impl From<CoerceCLocale> for String {
+    fn from(v: CoerceCLocale) -> Self {
+        v.to_string()
+    }
+}
+
 impl TryFrom<&str> for CoerceCLocale {
     type Error = String;
 
@@ -179,10 +238,20 @@ impl TryFrom<&str> for CoerceCLocale {
     }
 }
 
+impl TryFrom<String> for CoerceCLocale {
+    type Error = String;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        Self::try_from(value.as_str())
+    }
+}
+
 /// Defines what to do when comparing bytes with str.
 ///
 /// See https://docs.python.org/3/c-api/init_config.html#c.PyConfig.bytes_warning.
 #[derive(Clone, Copy, Debug, PartialEq)]
+#[cfg_attr(feature = "serialization", derive(Deserialize, Serialize))]
+#[cfg_attr(feature = "serialization", serde(try_from = "String", into = "String"))]
 pub enum BytesWarning {
     None = 0,
     Warn = 1,
@@ -200,6 +269,12 @@ impl ToString for BytesWarning {
     }
 }
 
+impl From<BytesWarning> for String {
+    fn from(v: BytesWarning) -> Self {
+        v.to_string()
+    }
+}
+
 impl TryFrom<&str> for BytesWarning {
     type Error = String;
 
@@ -210,6 +285,14 @@ impl TryFrom<&str> for BytesWarning {
             "raise" => Ok(Self::Raise),
             _ => Err(format!("{} is not a valid bytes warning value", value)),
         }
+    }
+}
+
+impl TryFrom<String> for BytesWarning {
+    type Error = String;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        Self::try_from(value.as_str())
     }
 }
 
@@ -225,6 +308,8 @@ impl From<i32> for BytesWarning {
 
 /// See https://docs.python.org/3/c-api/init_config.html#c.PyConfig.check_hash_pycs_mode.
 #[derive(Clone, Copy, Debug, PartialEq)]
+#[cfg_attr(feature = "serialization", derive(Deserialize, Serialize))]
+#[cfg_attr(feature = "serialization", serde(try_from = "String", into = "String"))]
 pub enum CheckHashPycsMode {
     Always,
     Never,
@@ -239,6 +324,12 @@ impl ToString for CheckHashPycsMode {
             Self::Default => "default",
         }
         .to_string()
+    }
+}
+
+impl From<CheckHashPycsMode> for String {
+    fn from(v: CheckHashPycsMode) -> Self {
+        v.to_string()
     }
 }
 
@@ -258,8 +349,18 @@ impl TryFrom<&str> for CheckHashPycsMode {
     }
 }
 
+impl TryFrom<String> for CheckHashPycsMode {
+    type Error = String;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        Self::try_from(value.as_str())
+    }
+}
+
 /// See https://docs.python.org/3/c-api/init_config.html#c.PyPreConfig.allocator.
 #[derive(Clone, Copy, Debug, PartialEq)]
+#[cfg_attr(feature = "serialization", derive(Deserialize, Serialize))]
+#[cfg_attr(feature = "serialization", serde(try_from = "String", into = "String"))]
 pub enum Allocator {
     NotSet = 0,
     Default = 1,
@@ -285,6 +386,12 @@ impl ToString for Allocator {
     }
 }
 
+impl From<Allocator> for String {
+    fn from(v: Allocator) -> Self {
+        v.to_string()
+    }
+}
+
 impl TryFrom<&str> for Allocator {
     type Error = String;
 
@@ -302,8 +409,18 @@ impl TryFrom<&str> for Allocator {
     }
 }
 
+impl TryFrom<String> for Allocator {
+    type Error = String;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        Self::try_from(value.as_str())
+    }
+}
+
 /// Defines how to call `multiprocessing.set_start_method()` when `multiprocessing` is imported.
 #[derive(Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "serialization", derive(Deserialize, Serialize))]
+#[cfg_attr(feature = "serialization", serde(try_from = "String", into = "String"))]
 pub enum MultiprocessingStartMethod {
     /// Do not call `multiprocessing.set_start_method()`.
     None,
@@ -330,6 +447,12 @@ impl ToString for MultiprocessingStartMethod {
     }
 }
 
+impl From<MultiprocessingStartMethod> for String {
+    fn from(v: MultiprocessingStartMethod) -> Self {
+        v.to_string()
+    }
+}
+
 impl FromStr for MultiprocessingStartMethod {
     type Err = String;
 
@@ -345,6 +468,22 @@ impl FromStr for MultiprocessingStartMethod {
     }
 }
 
+impl TryFrom<&str> for MultiprocessingStartMethod {
+    type Error = String;
+
+    fn try_from(v: &str) -> Result<Self, Self::Error> {
+        Self::from_str(v)
+    }
+}
+
+impl TryFrom<String> for MultiprocessingStartMethod {
+    type Error = String;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        Self::try_from(value.as_str())
+    }
+}
+
 /// Holds configuration of a Python interpreter.
 ///
 /// This struct holds fields that are exposed by `PyPreConfig` and
@@ -354,6 +493,8 @@ impl FromStr for MultiprocessingStartMethod {
 /// `PyPreConfig` and `PyConfig`), all fields are optional. Only fields
 /// with `Some(T)` will be updated from the defaults.
 #[derive(Clone, Debug, Default, PartialEq)]
+#[cfg_attr(feature = "serialization", derive(Deserialize, Serialize))]
+#[cfg_attr(feature = "serialization", serde(default))]
 pub struct PythonInterpreterConfig {
     /// Profile to use to initialize pre-config and config state of interpreter.
     pub profile: PythonInterpreterProfile,
