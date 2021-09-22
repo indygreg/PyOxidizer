@@ -2379,6 +2379,7 @@ dependencies = [
  "python-packaging",
  "python-packed-resources",
  "rusty-fork",
+ "serde",
  "snmalloc-sys",
 ]
 

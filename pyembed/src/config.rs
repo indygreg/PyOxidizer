@@ -20,6 +20,9 @@ use {
     },
 };
 
+#[cfg(feature = "serialization")]
+use serde::{Deserialize, Serialize};
+
 /// Defines an extra extension module to load.
 #[derive(Clone, Debug)]
 pub struct ExtensionModule {
@@ -60,6 +63,8 @@ pub struct ExtensionModule {
 /// configuration API and `OxidizedPythonInterpreterConfig` exists to
 /// hold higher-level configuration for features specific to this crate.
 #[derive(Clone, Debug)]
+#[cfg_attr(feature = "serialization", derive(Deserialize, Serialize))]
+#[cfg_attr(feature = "serialization", serde(default))]
 pub struct OxidizedPythonInterpreterConfig<'a> {
     /// The path of the currently executing executable.
     ///
@@ -178,11 +183,13 @@ pub struct OxidizedPythonInterpreterConfig<'a> {
     /// to the directory of the current executable or the value of
     /// `self.origin` if set. Relative paths without `$ORIGIN` will be evaluated
     /// relative to the process's current working directory.
+    #[cfg_attr(feature = "serialization", serde(skip))]
     pub packed_resources: Vec<PackedResourcesSource<'a>>,
 
     /// Extra extension modules to make available to the interpreter.
     ///
     /// The values will effectively be passed to ``PyImport_ExtendInitTab()``.
+    #[cfg_attr(feature = "serialization", serde(skip))]
     pub extra_extension_modules: Option<Vec<ExtensionModule>>,
 
     /// Command line arguments to initialize `sys.argv` with.
