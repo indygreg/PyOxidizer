@@ -35,6 +35,7 @@ The creator and maintainer of ``PyOxidizer`` is
    pyembed
    pyoxidizer_rust
    tugger
+   pyoxy
    pyoxidizer_faq
    pyoxidizer_status
    pyoxidizer_comparisons

@@ -3,6 +3,7 @@ docs/_build/
 docs/oxidized_importer*
 docs/pyembed*
 docs/pyoxidizer*
+docs/pyoxy*
 docs/tugger*
 pyembed/docs/_build/
 python-oxidized-importer/docs/_build/

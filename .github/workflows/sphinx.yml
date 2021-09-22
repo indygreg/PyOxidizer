@@ -11,6 +11,7 @@ jobs:
         dir:
           - python-oxidized-importer/docs
           - pyembed/docs
+          - pyoxy/docs
           - tugger/docs
           - docs
     runs-on: ubuntu-20.04
