@@ -1371,7 +1371,7 @@ pub fn remove_external_importers(sys_module: &PyModule) -> PyResult<()> {
     Ok(())
 }
 
-/// Append [`OxidizedFinder::path_hook`] to [`sys.path_hooks`].
+/// Prepend a path hook to [`sys.path_hooks`] that works with [OxidizedFinder].
 ///
 /// `sys` must be a reference to the [`sys`] module.
 ///
