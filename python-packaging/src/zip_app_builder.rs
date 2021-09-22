@@ -182,7 +182,7 @@ impl ZipAppBuilder {
 
     /// Define the function called when the zip-based application is executed.
     ///
-    /// This defines a __main__.py[c] that invokes the `func` function in the `module` module.
+    /// This defines a `__main__.py[c]` that invokes the `func` function in the `module` module.
     pub fn add_main(&mut self, module: &str, func: &str, prefix: &str) -> Result<()> {
         let source = format!(
             "# -*- coding: utf-8 -*-\nimport {}\n{}.{}()\n",

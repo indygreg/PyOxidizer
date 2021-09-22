@@ -31,8 +31,8 @@ static RE_FILENAME_ESCAPE: Lazy<regex::Regex> =
 /// a *version*, a *compatibility tag*, and an optional *build tag*.
 ///
 /// The *compatibility tag* defines the Python, ABI, and platform
-/// compatibility of the wheel. See PEP 425
-/// (https://www.python.org/dev/peps/pep-0425/) for an overview of the
+/// compatibility of the wheel. See
+/// [PEP 425](https://www.python.org/dev/peps/pep-0425/) for an overview of the
 /// components of the compatibility tag and their potential values.
 ///
 /// Our default *compatibility tag* value is `py3-none-any`. This is
@@ -118,7 +118,7 @@ static RE_FILENAME_ESCAPE: Lazy<regex::Regex> =
 /// to the caller to supply settings and content that constitutes a well-formed
 /// wheel.
 ///
-/// Supplementary tools like auditwheel (https://pypi.org/project/auditwheel/) can
+/// Supplementary tools like [auditwheel](https://pypi.org/project/auditwheel/) can
 /// be useful for validating the content of wheels.
 pub struct WheelBuilder {
     /// The primary name of the wheel.
