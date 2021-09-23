@@ -31,6 +31,8 @@ pub fn run_yaml_str(yaml: &str, exe: &Path, args: &[&OsStr]) -> Result<i32> {
     let mut config: Config =
         serde_yaml::from_str(yaml).context("parsing YAML to data structure")?;
 
+    config.apply_environment();
+
     if config.exe.is_none() {
         config.exe = Some(exe.to_path_buf());
     }

@@ -3,5 +3,4 @@
 ---
 interpreter_config:
   run_command: 'print("hello, world")'
-set_missing_path_configuration: false
 ...

@@ -9,6 +9,7 @@ homepage = "https://github.com/indygreg/PyOxidizer"
 repository = "https://github.com/indygreg/PyOxidizer.git"
 keywords = ["python"]
 edition = "2018"
+build = "build.rs"
 
 [dependencies]
 anyhow = "1.0"
