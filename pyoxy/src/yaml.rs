@@ -5,44 +5,16 @@
 /*! Functionality for running from a YAML file. */
 
 use {
+    crate::interpreter::Config,
     anyhow::{anyhow, Context, Result},
-    pyembed::{MainPythonInterpreter, OxidizedPythonInterpreterConfig},
-    serde::{Deserialize, Serialize},
+    pyembed::MainPythonInterpreter,
     std::{
         ffi::OsStr,
         fs::File,
         io::{BufRead, BufReader, Read},
-        ops::{Deref, DerefMut},
         path::Path,
     },
 };
-
-/// A YAML-based configuration.
-#[derive(Debug, Default, Deserialize, Serialize)]
-#[serde(default, transparent)]
-struct Config<'a> {
-    inner: OxidizedPythonInterpreterConfig<'a>,
-}
-
-impl<'a> Deref for Config<'a> {
-    type Target = OxidizedPythonInterpreterConfig<'a>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.inner
-    }
-}
-
-impl<'a> DerefMut for Config<'a> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.inner
-    }
-}
-
-impl<'a> From<Config<'a>> for OxidizedPythonInterpreterConfig<'a> {
-    fn from(c: Config<'a>) -> Self {
-        c.inner
-    }
-}
 
 /// Run with YAML content provided by a string.
 ///

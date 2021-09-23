@@ -2587,6 +2587,7 @@ dependencies = [
  "pyembed",
  "serde",
  "serde_yaml",
+ "tempfile",
 ]
 
 [[package]]

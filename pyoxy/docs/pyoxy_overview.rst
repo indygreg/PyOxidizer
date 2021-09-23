@@ -52,3 +52,24 @@ With ``pyoxy``, you can:
 ``pyoxy`` aims to expose all the value-added features implemented in the
 ``pyembed`` Rust crate via the CLI so Python developers can harness these
 features without having to use something more heavyweight, like PyOxidizer.
+
+Masquerading as ``python``
+==========================
+
+The ``pyoxy run-python`` command can be used to make the executable behave like
+``python`` would. e.g. ``pyoxy run-python -- -c "print('hello, world')"``.
+
+In addition, if the ``pyoxy`` executable's file name begins with ``python``
+(e.g. ``python``, ``python3``, ``python3.9``, ``python.exe``), its custom
+argument parsing is short-circuited and the executable will behave as if it
+is actually ``python``. This theoretically enables ``pyoxy`` to be used as
+a drop-in replacement for ``python``.
+
+.. code-block::
+
+   $ mv pyoxy python
+   $ ./python
+   Python 3.9.5 (default, May 11 2021, 08:20:37)
+   [GCC 10.3.0] on linux
+   Type "help", "copyright", "credits" or "license" for more information.
+   >>>

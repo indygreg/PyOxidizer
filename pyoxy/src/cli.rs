@@ -3,19 +3,44 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    crate::yaml::run_yaml_path,
-    anyhow::{anyhow, Result},
+    crate::{interpreter::run_python, yaml::run_yaml_path},
+    anyhow::{anyhow, Context, Result},
     clap::{App, AppSettings, Arg, SubCommand},
-    std::path::PathBuf,
+    std::path::{Path, PathBuf},
 };
 
 const PYOXY_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 pub fn run() -> Result<i32> {
+    let exe = std::env::current_exe().context("resolving current executable")?;
+
+    // If the current executable looks like `python`, we effectively dispatch to
+    // `pyoxy run-python -- <args>`.
+    if let Some(stem) = exe.file_stem() {
+        if stem.to_string_lossy().starts_with("python") {
+            return run_python(&exe, &std::env::args_os().skip(1).collect::<Vec<_>>());
+        }
+    }
+
+    run_normal(&exe)
+}
+
+fn run_normal(exe: &Path) -> Result<i32> {
     let app = App::new("pyoxy")
         .setting(AppSettings::ArgRequiredElseHelp)
         .version(PYOXY_VERSION)
         .author("Gregory Szorc <gregory.szorc@gmail.com>");
+
+    let app = app.subcommand(
+        SubCommand::with_name("run-python")
+            .about("Make the executable behave like a `python` executable")
+            .arg(
+                Arg::with_name("args")
+                    .help("Arguments to Python interpreter")
+                    .multiple(true)
+                    .last(true),
+            ),
+    );
 
     let app = app.subcommand(
         SubCommand::with_name("run-yaml")
@@ -37,6 +62,14 @@ pub fn run() -> Result<i32> {
     let matches = app.get_matches();
 
     match matches.subcommand() {
+        ("run-python", Some(args)) => {
+            let program_args = args
+                .values_of_os("args")
+                .unwrap_or_default()
+                .collect::<Vec<_>>();
+
+            run_python(exe, &program_args)
+        }
         ("run-yaml", Some(args)) => {
             let yaml_path = PathBuf::from(
                 args.value_of_os("yaml_path")

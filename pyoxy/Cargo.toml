@@ -26,6 +26,11 @@ features = ["serialization", "zipimport"]
 assert_cmd = "2.0"
 glob = "0.3"
 predicates = "2.0"
+tempfile = "3.2"
+
+[[test]]
+name = "python"
+harness = false
 
 [[test]]
 name = "yaml"
