@@ -123,6 +123,8 @@ jobs:
           python-version: '3.9'
 
       - name: Test Python Crates
+        env:
+          RUSTC_WRAPPER: sccache
         run: |
           python scripts/run-pyembed-tests.py python-oxidized-importer
           python scripts/run-pyembed-tests.py pyembed
