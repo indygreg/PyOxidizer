@@ -335,16 +335,26 @@ else to memory:
 .. code-block:: python
 
    def resource_callback(policy, resource):
-       if type(resource) in ("PythonModuleSource", "PythonPackageResource", "PythonPackageDistributionResource"):
-           if resource.package == "my_package":
-               resource.add_location = "filesystem-relative:lib"
-           else:
-               resource.add_location = "in-memory"
+       package_name = "my_package"
+
+       if (
+           type(resource) in ("PythonPackageResource", "PythonPackageDistributionResource")
+           and resource.package == package_name
+       ):
+           resource.add_location = "filesystem-relative:lib"
+           return
+
+       if type(resource) in ("PythonModuleSource") and resource.name == package_name:
+           resource.add_location = "filesystem-relative:lib"
+           return
+
+       resource.add_location = "in-memory"
 
    def make_exe():
        dist = default_python_distribution()
 
        policy = dist.make_python_packaging_policy()
+       policy.resources_location_fallback = "filesystem-relative:lib"
        policy.register_resource_callback(resource_callback)
 
        exe = dist.to_python_executable(
