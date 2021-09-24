@@ -16,7 +16,7 @@ on:
   schedule:
     - cron: '13 15 * * *'
 jobs:
-  linux-x86_64-bin:
+  pyoxidizer-linux-x86_64-bin:
     runs-on: 'ubuntu-20.04'
     env:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -65,7 +65,7 @@ jobs:
       - name: Upload Binary
         uses: actions/upload-artifact@v2
         with:
-          name: linux-x86_64-bin
+          name: pyoxidizer-linux-x86_64-bin
           path: target/x86_64-unknown-linux-musl/release/pyoxidizer
 
       - name: Build Wheel
@@ -77,12 +77,12 @@ jobs:
       - name: Upload Wheel
         uses: actions/upload-artifact@v2
         with:
-          name: wheels
+          name: pyoxidizer-wheels
           path: wheelhouse
 
-  linux-x86_64-bin-check:
+  pyoxidizer-linux-x86_64-bin-check:
     needs:
-      - 'linux-x86_64-bin'
+      - 'pyoxidizer-linux-x86_64-bin'
     runs-on: 'ubuntu-20.04'
     steps:
       - name: Install musl compiler
@@ -92,7 +92,7 @@ jobs:
       - name: Download Linux Executable
         uses: actions/download-artifact@v2
         with:
-          name: linux-x86_64-bin
+          name: pyoxidizer-linux-x86_64-bin
 
       - name: Spot Test (Native Build)
         run: |
@@ -105,7 +105,7 @@ jobs:
       #  run: |
       #    ./pyoxidizer build --path myapp --target-triple x86_64-unknown-linux-musl
 
-  macos-exe:
+  pyoxidizer-macos-exe:
     strategy:
       fail-fast: false
       matrix:
@@ -168,13 +168,13 @@ jobs:
       - name: Upload Executable
         uses: actions/upload-artifact@v2
         with:
-          name: macos_exes
+          name: pyoxidizer-macos_exes
           path: |
             dist/*/*
 
   # We need a separate wheel job for macOS because we need a host pyoxidizer to generate
   # the wheel for cross-compiles.
-  macos-wheel:
+  pyoxidizer-macos-wheel:
     strategy:
       fail-fast: false
       matrix:
@@ -184,8 +184,8 @@ jobs:
           - target_triple: 'x86_64-apple-darwin'
             wheel_target: 'wheel_macos_x86_64'
     needs:
-      - linux-x86_64-bin
-      - macos-exe
+      - pyoxidizer-linux-x86_64-bin
+      - pyoxidizer-macos-exe
     runs-on: 'ubuntu-20.04'
     steps:
       - uses: actions/checkout@v2
@@ -193,13 +193,13 @@ jobs:
       - name: Download Linux exe
         uses: actions/download-artifact@v2
         with:
-          name: linux-x86_64-bin
+          name: pyoxidizer-linux-x86_64-bin
           path: dist
 
       - name: Download macOS Exes
         uses: actions/download-artifact@v2
         with:
-          name: macos_exes
+          name: pyoxidizer-macos_exes
           path: dist
 
       - name: Build Wheel
@@ -216,18 +216,18 @@ jobs:
       - name: Upload Wheel
         uses: actions/upload-artifact@v2
         with:
-          name: wheels
+          name: pyoxidizer-wheels
           path: wheelhouse
 
-  macos-universal-exe:
+  pyoxidizer-macos-universal-exe:
     needs:
-      - macos-exe
+      - pyoxidizer-macos-exe
     runs-on: 'macos-10.15'
     steps:
       - name: Download CLI exes
         uses: actions/download-artifact@v2
         with:
-          name: macos_exes
+          name: pyoxidizer-macos_exes
           path: inputs
 
       - name: Produce Universal Binary
@@ -240,18 +240,18 @@ jobs:
       - name: Upload Universal Executable
         uses: actions/upload-artifact@v2
         with:
-          name: macos_universal_exe
+          name: pyoxidizer-macos_universal_exe
           path: dist/*/pyoxidizer
 
-  macos-universal-exe-check:
+  pyoxidizer-macos-universal-exe-check:
     needs:
-      - macos-universal-exe
+      - pyoxidizer-macos-universal-exe
     runs-on: 'macos-10.15'
     steps:
       - name: Download macOS Executable
         uses: actions/download-artifact@v2
         with:
-          name: macos_universal_exe
+          name: pyoxidizer-macos_universal_exe
 
       - name: Spot Test (Native Build)
         run: |
@@ -268,9 +268,9 @@ jobs:
         run: |
           ./pyoxidizer build --path myapp --target-triple aarch64-apple-darwin
 
-  macos-dmg:
+  pyoxidizer-macos-dmg:
     needs:
-      - macos-exe
+      - pyoxidizer-macos-exe
     runs-on: 'macos-10.15'
     env:
       IN_CI: '1'
@@ -280,7 +280,7 @@ jobs:
       - name: Download CLI exes
         uses: actions/download-artifact@v2
         with:
-          name: macos_exes
+          name: pyoxidizer-macos_exes
           path: dist
 
       - name: Build DMG
@@ -290,11 +290,11 @@ jobs:
       - name: Upload DMG
         uses: actions/upload-artifact@v2
         with:
-          name: macos_dmg
+          name: pyoxidizer-macos_dmg
           path: |
             PyOxidizer.dmg
 
-  windows-exe:
+  pyoxidizer-windows-exe:
     strategy:
       fail-fast: false
       matrix:
@@ -362,7 +362,7 @@ jobs:
       - name: Upload Executable
         uses: actions/upload-artifact@v2
         with:
-          name: windows_exes
+          name: pyoxidizer-windows_exes
           path: |
             dist/*/*
 
@@ -376,10 +376,10 @@ jobs:
       - name: Upload Wheel
         uses: actions/upload-artifact@v2
         with:
-          name: wheels
+          name: pyoxidizer-wheels
           path: wheelhouse
 
-  windows-exe-check:
+  pyoxidizer-windows-exe-check:
     strategy:
       fail-fast: false
       matrix:
@@ -389,13 +389,13 @@ jobs:
           - host_triple: 'x86_64-pc-windows-msvc'
             target_triple: 'i686-pc-windows-msvc'
     needs:
-      - windows-exe
+      - pyoxidizer-windows-exe
     runs-on: 'windows-2019'
     steps:
       - name: Download Windows Executable
         uses: actions/download-artifact@v2
         with:
-          name: windows_exes
+          name: pyoxidizer-windows_exes
 
       - name: Spot Test (Native Build)
         run: |
@@ -406,9 +406,9 @@ jobs:
         run: |
           ${{ matrix.config.host_triple }}/pyoxidizer.exe build --path myapp --target-triple ${{ matrix.config.target_triple }}
 
-  windows-installer:
+  pyoxidizer-windows-installer:
     needs:
-      - windows-exe
+      - pyoxidizer-windows-exe
     runs-on: 'windows-2019'
     env:
       IN_CI: '1'
@@ -418,7 +418,7 @@ jobs:
       - name: Download CLI exes
         uses: actions/download-artifact@v2
         with:
-          name: windows_exes
+          name: pyoxidizer-windows_exes
           path: dist
 
       # We can use the built/downloaded pyoxidizer.exe to package itself. Nice.
@@ -432,12 +432,12 @@ jobs:
       - name: Upload installers
         uses: actions/upload-artifact@v2
         with:
-          name: windows_installers
+          name: pyoxidizer-windows_installers
           path: |
             *.exe
             *.msi
 
-  linux-wheels-cross:
+  pyoxidizer-linux-wheels-cross:
     strategy:
       fail-fast: false
       matrix:
@@ -468,5 +468,5 @@ jobs:
       - name: Upload wheels
         uses: actions/upload-artifact@v2
         with:
-          name: wheels
+          name: pyoxidizer-wheels
           path: dist
