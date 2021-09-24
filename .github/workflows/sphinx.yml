@@ -21,5 +21,5 @@ jobs:
           python-version: '3.9'
       - name: Run Sphinx
         run: |
-          python3.9 -m pip install Sphinx==3.5.3
+          python3.9 -m pip install Sphinx==4.2.0
           make -C ${{ matrix.dir }} html
