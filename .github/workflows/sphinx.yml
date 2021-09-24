@@ -4,7 +4,15 @@ on:
   schedule:
     - cron: '13 15 * * *'
 jobs:
-  sphinx_oxidized_importer:
+  sphinx:
+    strategy:
+      fail-fast: false
+      matrix:
+        dir:
+          - python-oxidized-importer/docs
+          - pyembed/docs
+          - tugger/docs
+          - docs
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
@@ -14,40 +22,4 @@ jobs:
       - name: Run Sphinx
         run: |
           python3.9 -m pip install Sphinx==3.5.3
-          make -C python-oxidized-importer/docs html
-
-  sphinx_pyoxidizer:
-    runs-on: ubuntu-20.04
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
-        with:
-          python-version: '3.9'
-      - name: Run Sphinx
-        run: |
-          python3.9 -m pip install Sphinx==3.5.3
-          make -C docs html
-
-  sphinx_pyembed:
-    runs-on: ubuntu-20.04
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
-        with:
-          python-version: '3.9'
-      - name: Run Sphinx
-        run: |
-          python3.9 -m pip install Sphinx==3.5.3
-          make -C pyembed/docs html
-
-  sphinx_tugger:
-    runs-on: ubuntu-20.04
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
-        with:
-          python-version: '3.9'
-      - name: Run Sphinx
-        run: |
-          python3.9 -m pip install Sphinx==3.5.3
-          make -C tugger/docs html
+          make -C ${{ matrix.dir }} html
