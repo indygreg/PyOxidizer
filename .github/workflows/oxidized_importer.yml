@@ -10,9 +10,7 @@ jobs:
       matrix:
         py:
           - build: 'cp38-manylinux_x86_64'
-            version: '3.8'
           - build: 'cp39-manylinux_x86_64'
-            version: '3.9'
     runs-on: ubuntu-20.04
     env:
       CIBW_ENVIRONMENT: 'PATH="$PATH:$HOME/.cargo/bin"'
@@ -27,12 +25,12 @@ jobs:
           profile: minimal
       - uses: actions/setup-python@v2
         with:
-          python-version: ${{ matrix.py.version }}
+          python-version: 3.9
       - name: Run cibuildwheel
         run: |
-          python${{ matrix.py.version }} -m pip install --upgrade pip==21.2.4
-          python${{ matrix.py.version }} -m pip install cibuildwheel==2.1.2
-          python${{ matrix.py.version }} -m cibuildwheel --output-dir wheelhouse .
+          python3 -m pip install --upgrade pip==21.2.4
+          python3 -m pip install cibuildwheel==2.1.2
+          python3 -m cibuildwheel --output-dir wheelhouse .
 
       - name: Upload wheels
         uses: actions/upload-artifact@v2
@@ -47,9 +45,7 @@ jobs:
       matrix:
         py:
           - build: 'cp38-macosx_x86_64'
-            version: '3.8'
           - build: 'cp39-macosx_x86_64'
-            version: '3.9'
     runs-on: macos-11
     env:
       CIBW_BUILD: ${{ matrix.py.build }}
@@ -62,12 +58,12 @@ jobs:
           profile: minimal
       - uses: actions/setup-python@v2
         with:
-          python-version: ${{ matrix.py.version }}
+          python-version: 3.9
       - name: Run cibuildwheel
         run: |
-          python${{ matrix.py.version }} -m pip install --upgrade pip==21.2.4
-          python${{ matrix.py.version }} -m pip install cibuildwheel==2.1.2
-          python${{ matrix.py.version }} -m cibuildwheel --output-dir wheelhouse .
+          python3 -m pip install --upgrade pip==21.2.4
+          python3 -m pip install cibuildwheel==2.1.2
+          python3 -m cibuildwheel --output-dir wheelhouse .
 
       - name: Upload wheels
         uses: actions/upload-artifact@v2
@@ -82,9 +78,7 @@ jobs:
       matrix:
         py:
           - build: 'cp38-win_amd64'
-            version: '3.8'
           - build: 'cp39-win_amd64'
-            version: '3.9'
     runs-on: windows-2019
     env:
       CIBW_BUILD_VERBOSITY: '1'
@@ -97,7 +91,7 @@ jobs:
           profile: minimal
       - uses: actions/setup-python@v2
         with:
-          python-version: ${{ matrix.py.version }}
+          python-version: 3.9
       - name: Run cibuildwheel
         run: |
           python -m pip install --upgrade pip==21.2.4
