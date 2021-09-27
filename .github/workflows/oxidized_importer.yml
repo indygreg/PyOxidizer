@@ -50,7 +50,7 @@ jobs:
             version: '3.8'
           - build: 'cp39-macosx_x86_64'
             version: '3.9'
-    runs-on: macos-10.15
+    runs-on: macos-11
     env:
       CIBW_BUILD: ${{ matrix.py.build }}
       CIBW_BUILD_VERBOSITY: '1'
