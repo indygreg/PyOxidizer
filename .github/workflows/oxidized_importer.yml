@@ -13,7 +13,7 @@ jobs:
             version: '3.8'
           - build: 'cp39-manylinux_x86_64'
             version: '3.9'
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     env:
       CIBW_ENVIRONMENT: 'PATH="$PATH:$HOME/.cargo/bin"'
       CIBW_BEFORE_BUILD: 'ci/install-rust-linux.sh'
