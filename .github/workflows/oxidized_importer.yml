@@ -11,6 +11,7 @@ jobs:
         py:
           - build: 'cp38-manylinux_x86_64'
           - build: 'cp39-manylinux_x86_64'
+          - build: 'cp310-manylinux_x86_64'
     runs-on: ubuntu-20.04
     env:
       CIBW_ENVIRONMENT: 'PATH="$PATH:$HOME/.cargo/bin"'
@@ -46,6 +47,7 @@ jobs:
         py:
           - build: 'cp38-macosx_x86_64'
           - build: 'cp39-macosx_x86_64'
+          - build: 'cp310-macosx_x86_64'
     runs-on: macos-11
     env:
       CIBW_BUILD: ${{ matrix.py.build }}
@@ -79,6 +81,7 @@ jobs:
         py:
           - build: 'cp38-win_amd64'
           - build: 'cp39-win_amd64'
+          # Can't add Python 3.10 until we stop using _PyImport_FindExtensionObject().
     runs-on: windows-2019
     env:
       CIBW_BUILD_VERBOSITY: '1'
