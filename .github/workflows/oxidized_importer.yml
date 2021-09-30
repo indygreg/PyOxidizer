@@ -9,13 +9,31 @@ jobs:
       fail-fast: false
       matrix:
         py:
-          - build: 'cp38-manylinux_x86_64'
-          - build: 'cp39-manylinux_x86_64'
-          - build: 'cp310-manylinux_x86_64'
+          - arch: 'aarch64'
+            build: 'cp38-manylinux_aarch64'
+          - arch: 'i686'
+            build: 'cp38-manylinux_i686'
+          - arch: 'x86_64'
+            build: 'cp38-manylinux_x86_64'
+
+          - arch: 'aarch64'
+            build: 'cp39-manylinux_aarch64'
+          - arch: 'i686'
+            build: 'cp39-manylinux_i686'
+          - arch: 'x86_64'
+            build: 'cp39-manylinux_x86_64'
+
+          - arch: 'aarch64'
+            build: 'cp310-manylinux_aarch64'
+          - arch: 'i686'
+            build: 'cp310-manylinux_i686'
+          - arch: 'x86_64'
+            build: 'cp310-manylinux_x86_64'
     runs-on: ubuntu-20.04
     env:
       CIBW_ENVIRONMENT: 'PATH="$PATH:$HOME/.cargo/bin"'
       CIBW_BEFORE_BUILD: 'ci/install-rust-linux.sh'
+      CIBW_ARCHS: ${{ matrix.py.arch }}
       CIBW_BUILD: ${{ matrix.py.build }}
       CIBW_BUILD_VERBOSITY: '1'
     steps:
@@ -29,6 +47,10 @@ jobs:
           python-version: 3.9
       - name: Run cibuildwheel
         run: |
+          if [ "${CIBW_ARCHS}" = "aarch64" ]; then
+              sudo apt install -y qemu binfmt-support qemu-user-static
+          fi
+
           python3 -m pip install --upgrade pip==21.2.4
           python3 -m pip install cibuildwheel==2.1.2
           python3 -m cibuildwheel --output-dir wheelhouse .
