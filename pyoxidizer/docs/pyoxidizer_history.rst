@@ -100,6 +100,9 @@ Other Relevant Changes
   ``pyembed`` crate and is now defined in the ``python-oxidized-importer``
   crate. The ``pyembed`` crate now depends on this crate to provide the
   custom importer functionality.
+* Previous versions of PyOxidizer would not build on Rust 1.56+ due to
+  incompatibilities with an older version of the ``starlark`` crate. The crate
+  was upgraded to version 0.3.2 to fix this issue.
 
 .. _version_0_17_0:
 
