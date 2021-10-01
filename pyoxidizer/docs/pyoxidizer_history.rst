@@ -38,6 +38,10 @@ Bug Fixes
   report this bug)`` error message seen when attempting to use a too-old macOS SDK
   has been replaced to automatically assume the use of ``MACOSX_DEPLOYMENT_TARGET``.
   A warning message that this will possibly lead to build failures is printed. (#414)
+* Invocation of ``signtool.exe`` on Windows now always passes ``/fd SHA256`` by
+  default. Previously, we did not specify ``/fd`` unless a signing algorithm was
+  explicitly requested. Newer versions of ``signtool.exe`` appear to insist that
+  ``/fd`` be specified.
 
 Backwards Compatibility Notes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

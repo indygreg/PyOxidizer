@@ -60,7 +60,7 @@ pub struct SigntoolSign {
     verbose: bool,
     debug: bool,
     description: Option<String>,
-    file_digest_algorithm: Option<String>,
+    file_digest_algorithm: String,
     timestamp_server: Option<TimestampServer>,
     extra_args: Vec<String>,
     sign_files: Vec<PathBuf>,
@@ -74,7 +74,7 @@ impl SigntoolSign {
             verbose: false,
             debug: false,
             description: None,
-            file_digest_algorithm: None,
+            file_digest_algorithm: "SHA256".to_string(),
             timestamp_server: None,
             extra_args: vec![],
             sign_files: vec![],
@@ -123,7 +123,7 @@ impl SigntoolSign {
     ///
     /// This is passed into the `/fd` argument.
     pub fn file_digest_algorithm(&mut self, algorithm: impl ToString) -> &mut Self {
-        self.file_digest_algorithm = Some(algorithm.to_string());
+        self.file_digest_algorithm = algorithm.to_string();
         self
     }
 
@@ -193,10 +193,8 @@ impl SigntoolSign {
             args.push(description.to_string());
         }
 
-        if let Some(algorithm) = &self.file_digest_algorithm {
-            args.push("/fd".to_string());
-            args.push(algorithm.to_string());
-        }
+        args.push("/fd".to_string());
+        args.push(self.file_digest_algorithm.clone());
 
         if let Some(server) = &self.timestamp_server {
             match server {
