@@ -42,6 +42,13 @@ Bug Fixes
   default. Previously, we did not specify ``/fd`` unless a signing algorithm was
   explicitly requested. Newer versions of ``signtool.exe`` appear to insist that
   ``/fd`` be specified.
+* Default Python distributions now properly advertise system library dependencies
+  on Linux and macOS. The older distributions failed to annotate some library
+  dependencies, which could lead to missing symbol errors in some build
+  environments.
+* Linux default Python distributions no longer utilize the ``pthread_yield()``
+  function, enabling them to be linked against glibc 2.34+, which deprecated
+  the symbol. (#463)
 
 Backwards Compatibility Notes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -72,6 +79,17 @@ Backwards Compatibility Notes
   Rust project via ``pyoxidizer init-rust-project``, you may wish to create a
   fresh project and reconcile differences in the auto-generated files to ensure
   things now build as expected.
+* Default Python distributions on macOS aarch64 are now built with macOS SDK
+  11.3. macOS x86_64 are now built with macOS SDK 11.1.
+
+New Features
+^^^^^^^^^^^^
+
+* Default Python distributions upgraded from 3.8.11 and 3.9.6 to 3.8.12 and
+  3.9.7. Various library dependencies have also been upgraded. See
+  https://github.com/indygreg/python-build-standalone/releases/tag/20211012 and
+  https://github.com/indygreg/python-build-standalone/releases/tag/20211017 for
+  the full list of changes.
 
 Other Relevant Changes
 ^^^^^^^^^^^^^^^^^^^^^^
