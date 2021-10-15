@@ -939,6 +939,23 @@ impl PythonExecutableValue {
 
         Ok(Value::new(NoneType::None))
     }
+
+    /// PythonExecutable.write_licenses(path)
+    pub fn write_licenses(&self, path: &str) -> ValueResult {
+        const LABEL: &str = "PythonExecutable.write_aggregate_license_text()";
+
+        let exe = self.inner(LABEL)?;
+
+        error_context(LABEL, || {
+            let text = exe.licensed_components()?.aggregate_license_document()?;
+
+            std::fs::write(path, text.as_bytes()).context("writing license file")?;
+
+            Ok(())
+        })?;
+
+        Ok(Value::new(NoneType::None))
+    }
 }
 
 starlark_module! { python_executable_env =>
@@ -1086,6 +1103,15 @@ starlark_module! { python_executable_env =>
     ) {
         let this = this.downcast_ref::<PythonExecutableValue>().unwrap();
         this.to_wix_msi_builder(env, cs, id_prefix, product_name, product_version, product_manufacturer)
+    }
+
+
+    PythonExecutable.write_licenses(
+        this,
+        path: String
+    ) {
+        let this = this.downcast_ref::<PythonExecutableValue>().unwrap();
+        this.write_licenses(&path)
     }
 }
 

@@ -400,3 +400,13 @@
 
        Upon successful generation of a binary, the produced binary will be assessed
        for code signing with the ``python-executable-creation`` *action*.
+
+    .. py:method:: write_licenses(path)
+
+        Writes software component licensing info to the file specified via ``path``.
+
+        The file will contain a bill of materials of all software components included
+        in the resulting binary and licensing information related to them. This includes
+        license texts, when available.
+
+        Licensing info is best effort.

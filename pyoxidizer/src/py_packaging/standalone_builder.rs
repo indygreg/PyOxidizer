@@ -30,7 +30,9 @@ use {
         bytecode::BytecodeCompiler,
         interpreter::MemoryAllocatorBackend,
         libpython::LibPythonBuildContext,
-        licensing::{derive_package_license_infos, ComponentFlavor, LicensedComponent},
+        licensing::{
+            derive_package_license_infos, ComponentFlavor, LicensedComponent, LicensedComponents,
+        },
         location::AbstractResourceLocation,
         policy::PythonPackagingPolicy,
         resource::{
@@ -849,6 +851,10 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
 
     fn requires_snmalloc(&self) -> bool {
         self.config.allocator_backend == MemoryAllocatorBackend::Snmalloc
+    }
+
+    fn licensed_components(&self) -> Result<LicensedComponents> {
+        Ok(self.resources_collector.normalized_licensed_components())
     }
 
     fn to_embedded_python_context(

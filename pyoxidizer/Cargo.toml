@@ -66,6 +66,7 @@ zstd = "0.9"
 [dependencies.python-packaging]
 version = "0.13.0-pre"
 path = "../python-packaging"
+features = ["spdx-text"]
 
 [dependencies.python-packed-resources]
 version = "0.9.0-pre"

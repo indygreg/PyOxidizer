@@ -58,6 +58,8 @@ New Features
   these distributions at
   https://github.com/indygreg/python-build-standalone/releases/tag/20220318
   and https://github.com/indygreg/python-build-standalone/releases/tag/20220501.
+* The new Starlark method :py:meth:`PythonExecutable.write_licenses` can be used
+  to write out a file holding licensing information for the built executable.
 
 Other Relevant Changes
 ^^^^^^^^^^^^^^^^^^^^^^

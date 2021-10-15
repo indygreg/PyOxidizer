@@ -13,6 +13,7 @@ use {
     },
     anyhow::Result,
     python_packaging::{
+        licensing::LicensedComponents,
         policy::PythonPackagingPolicy,
         resource::{
             PythonExtensionModule, PythonModuleSource, PythonPackageDistributionResource,
@@ -380,6 +381,9 @@ pub trait PythonBinaryBuilder {
 
     /// Whether the binary requires the Snmalloc library.
     fn requires_snmalloc(&self) -> bool;
+
+    /// Obtain software licensing information.
+    fn licensed_components(&self) -> Result<LicensedComponents>;
 
     /// Obtain an `EmbeddedPythonContext` instance from this one.
     fn to_embedded_python_context(
