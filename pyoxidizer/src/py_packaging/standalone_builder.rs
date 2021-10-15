@@ -523,6 +523,12 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         Box::new(self.resources_collector.iter_resources())
     }
 
+    fn iter_components<'a>(
+        &'a self,
+    ) -> Box<dyn Iterator<Item = &'a LicensedComponent> + 'a> {
+        Box::new(self.resources_collector.iter_licensed_components())
+    }
+
     fn index_package_license_info_from_resources<'a>(
         &mut self,
         resources: &[PythonResource<'a>],

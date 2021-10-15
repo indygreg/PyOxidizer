@@ -2514,6 +2514,7 @@ dependencies = [
  "tugger-common",
  "tugger-file-manifest",
  "tugger-licensing",
+ "tugger-licensing-net",
  "tugger-rust-toolchain",
  "tugger-windows",
  "tugger-wix",

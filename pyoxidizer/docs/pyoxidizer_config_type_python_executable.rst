@@ -400,3 +400,8 @@
 
        Upon successful generation of a binary, the produced binary will be assessed
        for code signing with the ``python-executable-creation`` *action*.
+
+    .. py:method:: write_aggregate_license_text(path, preamble = tugger_licensing_net::DEFAULT_LICENSE_PREAMBLE)
+
+        Writes an aggregated license text to `path`. This includes all registered
+        software components, this should be all python modules and rust crates.

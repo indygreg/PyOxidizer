@@ -34,6 +34,7 @@ use {
     tugger_file_manifest::{File, FileManifest},
     tugger_windows::VcRedistributablePlatform,
 };
+use tugger_licensing::LicensedComponent;
 
 include!("../pyembed-license.rs");
 
@@ -281,6 +282,11 @@ pub trait PythonBinaryBuilder {
     fn iter_resources<'a>(
         &'a self,
     ) -> Box<dyn Iterator<Item = (&'a String, &'a PrePackagedResource)> + 'a>;
+
+    /// Obtain an iterator over all licensed components
+    fn iter_components<'a>(
+        &'a self,
+    ) -> Box<dyn Iterator<Item = &'a LicensedComponent> + 'a>;
 
     /// Resolve license metadata from an iterable of `PythonResource` and store that data.
     ///

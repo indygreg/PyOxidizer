@@ -61,6 +61,7 @@ use {
     tugger_file_manifest::FileData,
     tugger_wix::target_triple_to_wix_arch,
 };
+use tugger_licensing_net;
 
 fn error_context<F, T>(label: &str, f: F) -> Result<T, ValueError>
 where
@@ -1001,6 +1002,42 @@ impl PythonExecutableValue {
 
         Ok(Value::new(NoneType::None))
     }
+
+
+    /// PythonExecutable.write_aggregate_license_text(path, preamble=tugger_licensing_net::DEFAULT_LICENSE_PREAMBLE)
+    pub fn write_aggregate_license_text(&self, path: &str, preamble: &str) -> ValueResult {
+        const LABEL: &str = "PythonExecutable.write_aggregate_license_text()";
+        let exe = self.inner(LABEL)?;
+        let client = tugger_common::http::get_http_client().map_err(|e| {
+                ValueError::Runtime(RuntimeError {
+                    code: "PYTHON_EXECUTABLE",
+                    message: format!("Failed to get tugger http client {:?}", e),
+                    label: LABEL.to_string(),
+                })
+            })?;
+        let license_aggretate = tugger_licensing_net::generate_aggregate_license_text(exe.iter_components(), &client, &preamble).map_err(|e| {
+                ValueError::Runtime(RuntimeError {
+                    code: "PYTHON_EXECUTABLE",
+                    message: format!("Failed to generate aggregate license text: {:?}", e),
+                    label: LABEL.to_string(),
+                })
+            })?;
+        let mut file = std::fs::File::create(path).map_err(|e| {
+                ValueError::Runtime(RuntimeError {
+                    code: "PYTHON_EXECUTABLE",
+                    message: format!("Failed to open output file: {:?}", e),
+                    label: LABEL.to_string(),
+                })
+            })?;
+        file.write_all(license_aggretate.as_bytes()).map_err(|e| {
+                ValueError::Runtime(RuntimeError {
+                    code: "PYTHON_EXECUTABLE",
+                    message: format!("Failed to write aggregate license text {:?}", e),
+                    label: LABEL.to_string(),
+                })
+            })?;
+        Ok(Value::new(NoneType::None))
+    }
 }
 
 starlark_module! { python_executable_env =>
@@ -1153,6 +1190,16 @@ starlark_module! { python_executable_env =>
     ) {
         let this = this.downcast_ref::<PythonExecutableValue>().unwrap();
         this.to_wix_msi_builder(env, cs, id_prefix, product_name, product_version, product_manufacturer)
+    }
+
+
+    PythonExecutable.write_aggregate_license_text(
+        this,
+        path: String,
+        preamble: String = tugger_licensing_net::DEFAULT_LICENSE_PREAMBLE.to_string()
+    ) {
+        let this = this.downcast_ref::<PythonExecutableValue>().unwrap();
+        this.write_aggregate_license_text(&path, &preamble)
     }
 }
 

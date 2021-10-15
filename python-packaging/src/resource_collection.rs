@@ -845,6 +845,11 @@ impl PythonResourceCollector {
         Ok(())
     }
 
+    /// Get a iterator over the registered licensed software components of this collection
+    pub fn iter_licensed_components(&self) -> impl Iterator<Item = &LicensedComponent> {
+        self.licensed_components.iter_components()
+    }
+
     /// Add Python module source with a specific location.
     pub fn add_python_module_source(
         &mut self,
