@@ -39,11 +39,12 @@ def download_and_hash(url):
         return h.hexdigest()
 
 
-
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--api-token", help="GitHub API token", required=True)
-    parser.add_argument("--tag", help="python-build-standalone release tag", required=True)
+    parser.add_argument(
+        "--tag", help="python-build-standalone release tag", required=True
+    )
 
     args = parser.parse_args()
 
@@ -79,8 +80,9 @@ def main():
             target_triple = "-".join(parts[0:-1])
             flavor = parts[-1]
 
-        supports_prebuilt_extension_modules = target_triple != "x86_64-unknown-linux-musl" and \
-            flavor != "static-noopt"
+        supports_prebuilt_extension_modules = (
+            target_triple != "x86_64-unknown-linux-musl" and flavor != "static-noopt"
+        )
 
         key = "%s-%s-%s" % (major_minor, target_triple, flavor)
 
@@ -90,7 +92,9 @@ def main():
             "sha256": sha256,
             "major_minor": major_minor,
             "target_triple": target_triple,
-            "supports_prebuilt_extension_modules": "true" if supports_prebuilt_extension_modules else "false",
+            "supports_prebuilt_extension_modules": "true"
+            if supports_prebuilt_extension_modules
+            else "false",
         }
 
     lines = [
