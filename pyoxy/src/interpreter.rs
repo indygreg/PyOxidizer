@@ -57,8 +57,11 @@ impl<'a> Config<'a> {
             self.oxidized_importer = true;
 
             // The default sys.path doesn't exist in self-contained binaries. So
-            // prevent it from materializing.
-            self.interpreter_config.module_search_paths = Some(vec![]);
+            // prevent it from materializing by default. But don't overwrite a custom
+            // search path setting if one is already defined!
+            if self.interpreter_config.module_search_paths.is_none() {
+                self.interpreter_config.module_search_paths = Some(vec![]);
+            }
 
             // Without this, Python will attempt to derive these automatically and will likely
             // emit warnings about the paths not existing.
