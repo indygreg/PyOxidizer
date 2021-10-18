@@ -23,7 +23,10 @@ use {
 #[cfg(feature = "serialization")]
 use serde::{Deserialize, Serialize};
 
-/// Defines an extra extension module to load.
+/// Defines a Python extension module and its initialization function.
+///
+/// Essentially represents a module name and pointer to its initialization
+/// function.
 #[derive(Clone, Debug)]
 pub struct ExtensionModule {
     /// Name of the extension module.
@@ -33,53 +36,88 @@ pub struct ExtensionModule {
     pub init_func: unsafe extern "C" fn() -> *mut pyffi::PyObject,
 }
 
-/// Configure a Python interpreter.
+/// Configuration for a Python interpreter.
 ///
-/// This type defines the configuration of a Python interpreter. It is used
-/// to initialize a Python interpreter embedded in the current process.
+/// This type is used to create a [crate::MainPythonInterpreter], which manages
+/// a Python interpreter running in the current process.
 ///
-/// The type contains a reference to a `PythonInterpreterConfig` instance,
-/// which is an abstraction over the low-level C structs that Python uses during
-/// interpreter initialization.
+/// This type wraps a [PythonInterpreterConfig], which is an abstraction over
+/// the low-level C structs (`PyPreConfig` and `PyConfig`) used as part of
+/// Python's C initialization API. In addition to this data structure, the
+/// fields on this type facilitate control of additional features provided by
+/// this crate.
 ///
-/// The `PythonInterpreterConfig` has a single non-optional field: `profile`.
-/// This defines the defaults for various fields of the `PyPreConfig` and
-/// `PyConfig` instances that are initialized as part of interpreter
-/// initialization. See
+/// The [PythonInterpreterConfig] has a single non-optional field:
+/// [PythonInterpreterConfig::profile]. This defines the defaults for various
+/// fields of the `PyPreConfig` and `PyConfig` C structs. See
 /// <https://docs.python.org/3/c-api/init_config.html#isolated-configuration> for
 /// more.
 ///
-/// During interpreter initialization, we produce a `PyPreConfig` and
-/// `PyConfig` derived from this type. Config settings are applied in
-/// layers. First, we use the `PythonInterpreterConfig.profile` to derive
-/// a default instance given a profile. Next, we override fields if the
-/// `PythonInterpreterConfig` has `Some(T)` value set. Finally, we populate
-/// some fields if they are missing but required for the given configuration.
-/// For example, when in *isolated* mode, we set `program_name` and `home`
-/// unless an explicit value was provided in the `PythonInterpreterConfig`.
+/// When this type is converted to `PyPreConfig` and `PyConfig`, instances
+/// of these C structs are created from the specified profile. e.g. by calling
+/// `PyPreConfig_InitPythonConfig()`, `PyPreConfig_InitIsolatedConfig`,
+/// `PyConfig_InitPythonConfig`, and `PyConfig_InitIsolatedConfig`. Then
+/// for each field in `PyPreConfig` and `PyConfig`, if a corresponding field
+/// on [PythonInterpreterConfig] is [Some], then the `PyPreConfig` or
+/// `PyConfig` field will be updated accordingly.
 ///
-/// Generally speaking, the `PythonInterpreterConfig` exists to hold
-/// configuration that is defined in the CPython initialization and
-/// configuration API and `OxidizedPythonInterpreterConfig` exists to
-/// hold higher-level configuration for features specific to this crate.
+/// During interpreter initialization, [Self::resolve()] is called to
+/// resolve/finalize any missing values and convert the instance into a
+/// [ResolvedOxidizedPythonInterpreterConfig]. It is this type that is
+/// used to produce a `PyPreConfig` and `PyConfig`, which are used to
+/// initialize the Python interpreter.
+///
+/// Some fields on this type are redundant or conflict with those on
+/// [PythonInterpreterConfig]. Read the documentation of each field to
+/// understand how they interact. Since [PythonInterpreterConfig] is defined
+/// in a different crate, its docs are not aware of the existence of
+/// this crate/type.
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "serialization", derive(Deserialize, Serialize))]
 #[cfg_attr(feature = "serialization", serde(default))]
 pub struct OxidizedPythonInterpreterConfig<'a> {
     /// The path of the currently executing executable.
     ///
-    /// If not set, [std::env::current_exe()] will be used.
+    /// This value will always be [Some] on [ResolvedOxidizedPythonInterpreterConfig]
+    /// instances.
     ///
-    /// In all cases, the path will be canonicalized.
+    /// Default value: [None].
+    ///
+    /// [Self::resolve()] behavior: sets to [std::env::current_exe()] if not set.
+    /// Will canonicalize the final path, which may entail filesystem I/O.
     pub exe: Option<PathBuf>,
 
     /// The filesystem path from which relative paths will be interpreted.
+    ///
+    /// This value will always be [Some] on [ResolvedOxidizedPythonInterpreterConfig]
+    /// instances.
+    ///
+    /// Default value: [None].
+    ///
+    /// [Self::resolve()] behavior: sets to [Self::exe.parent()] if not set.
     pub origin: Option<PathBuf>,
 
     /// Low-level configuration of Python interpreter.
+    ///
+    /// Default value: [PythonInterpreterConfig::default()] with
+    /// [PythonInterpreterConfig::profile] always set to [PythonInterpreterProfile::Python].
+    ///
+    /// [Self::resolve()] behavior: most fields are copied verbatim.
+    /// [PythonInterpreterConfig::module_search_paths] entries have the special token
+    /// `$ORIGIN` expanded to the resolved value of [Self::origin].
     pub interpreter_config: PythonInterpreterConfig,
 
     /// Memory allocator backend to use.
+    ///
+    /// Default value: [MemoryAllocatorBackend::Default].
+    ///
+    /// Interpreter initialization behavior: after `Py_PreInitialize()` is called,
+    /// [crate::pyalloc::PythonMemoryAllocator::from_backend()] is called. If this
+    /// resolves to a [crate::pyalloc::PythonMemoryAllocator], that allocator will
+    /// be installed as per [Self::allocator_raw], [Self::allocator_mem],
+    /// [Self::allocator_obj], and [Self::allocator_pymalloc_arena]. If a custom
+    /// allocator backend is defined but all the `allocator_*` flags are [false],
+    /// the allocator won't be used.
     pub allocator_backend: MemoryAllocatorBackend,
 
     /// Whether to install the custom allocator for the `raw` memory domain.
@@ -87,7 +125,12 @@ pub struct OxidizedPythonInterpreterConfig<'a> {
     /// See <https://docs.python.org/3/c-api/memory.html> for documentation on how Python
     /// memory allocator domains work.
     ///
-    /// Has no effect if `allocator_backend` is `MemoryAllocatorBackend::Default`.
+    /// Default value: [true]
+    ///
+    /// Interpreter initialization behavior: controls whether [Self::allocator_backend]
+    /// is used for the `raw` memory domain.
+    ///
+    /// Has no effect if [Self::allocator_backend] is [MemoryAllocatorBackend::Default].
     pub allocator_raw: bool,
 
     /// Whether to install the custom allocator for the `mem` memory domain.
@@ -95,7 +138,12 @@ pub struct OxidizedPythonInterpreterConfig<'a> {
     /// See <https://docs.python.org/3/c-api/memory.html> for documentation on how Python
     /// memory allocator domains work.
     ///
-    /// Has no effect if `allocator_backend` is `MemoryAllocatorBackend::Default`.
+    /// Default value: [false]
+    ///
+    /// Interpreter initialization behavior: controls whether [Self::allocator_backend]
+    /// is used for the `mem` memory domain.
+    ///
+    /// Has no effect if [Self::allocator_backend] is [MemoryAllocatorBackend::Default].
     pub allocator_mem: bool,
 
     /// Whether to install the custom allocator for the `obj` memory domain.
@@ -103,7 +151,12 @@ pub struct OxidizedPythonInterpreterConfig<'a> {
     /// See <https://docs.python.org/3/c-api/memory.html> for documentation on how Python
     /// memory allocator domains work.
     ///
-    /// Has no effect if `allocator_backend` is `MemoryAllocatorBackend::Default`.
+    /// Default value: [false]
+    ///
+    /// Interpreter initialization behavior: controls whether [Self::allocator_backend]
+    /// is used for the `obj` memory domain.
+    ///
+    /// Has no effect if [Self::allocator_backend] is [MemoryAllocatorBackend::Default].
     pub allocator_obj: bool,
 
     /// Whether to install the custom allocator for the `pymalloc` arena allocator.
@@ -111,17 +164,26 @@ pub struct OxidizedPythonInterpreterConfig<'a> {
     /// See <https://docs.python.org/3/c-api/memory.html> for documentation on how Python
     /// memory allocation works.
     ///
+    /// Default value: [false]
+    ///
+    /// Interpreter initialization behavior: controls whether [Self::allocator_backend]
+    /// is used for the `pymalloc` arena allocator.
+    ///
     /// This setting requires the `pymalloc` allocator to be used for the `mem`
     /// or `obj` domains (`allocator_mem = false` and `allocator_obj = false` - this is
-    /// the default behavior) and for a custom allocator backend to not be
-    /// `MemoryAllocatorBackend::Default`.
+    /// the default behavior) and for [Self::allocator_backend] to not be
+    /// [MemoryAllocatorBackend::Default].
     pub allocator_pymalloc_arena: bool,
 
     /// Whether to set up Python allocator debug hooks to detect memory bugs.
     ///
-    /// This setting triggers the calling of `PyMem_SetupDebugHooks()` during
-    /// interpreter initialization. It can be used with or without custom
-    /// Python allocators.
+    /// Default value: [false]
+    ///
+    /// Interpreter initialization behavior: triggers the calling of
+    /// `PyMem_SetupDebugHooks()` after custom allocators are installed.
+    ///
+    /// This setting can be used with or without custom memory allocators
+    /// (see other `allocator_*` fields).
     pub allocator_debug: bool,
 
     /// Whether to automatically set missing "path configuration" fields.
@@ -150,25 +212,46 @@ pub struct OxidizedPythonInterpreterConfig<'a> {
     /// these errors, it means the automatic path config resolutions built into
     /// libpython didn't work because the run-time layout didn't match the
     /// build-time configuration.
+    ///
+    /// Default value: [true]
     pub set_missing_path_configuration: bool,
 
-    /// Whether to install our custom meta path importer on interpreter init,
-    /// and, if [`filesystem_importer`] is `true`, to add its ``path_hook``
-    /// method to [`sys.path_hooks`] for `PathFinder`'s and [`pkgutil`]'s use.
+    /// Whether to install `oxidized_importer` during interpreter initialization.
     ///
-    /// [`filesystem_importer`]: #structfield.filesystem_importer
+    /// If [true], `oxidized_importer` will be imported during interpreter
+    /// initialization and an instance of `oxidized_importer.OxidizedFinder`
+    /// will be installed on `sys.meta_path` as the first element.
+    ///
+    /// If [Self::packed_resources] are defined, they will be loaded into the
+    /// `OxidizedFinder`.
+    ///
+    /// If [Self::filesystem_importer] is [true], its *path hook* will be
+    /// registered on [`sys.path_hooks`] so `PathFinder` (the standard filesystem
+    /// based importer) and [`pkgutil`] can use it.
+    ///
+    /// Default value: [false]
+    ///
+    /// Interpreter initialization behavior: See above.
+    ///
     /// [`sys.path_hooks`]: https://docs.python.org/3/library/sys.html#sys.path_hooks
     /// [`pkgutil`]: https://docs.python.org/3/library/pkgutil.html
     pub oxidized_importer: bool,
 
-    /// Whether to install the default `PathFinder` meta path finder and, if
-    /// [`oxidized_importer`] is `true`, to add our custom meta path
-    /// importer's ``path_hook`` method to [`sys.path_hooks`] for `PathFinder`'s
-    /// and [`pkgutil`]'s use.
+    /// Whether to install the path-based finder.
     ///
-    /// [`oxidized_importer`]: #structfield.oxidized_importer
+    /// Controls whether to install the Python standard library `PathFinder` meta
+    /// path finder (this is the meta path finder that loads Python modules and
+    /// resources from the filesystem).
+    ///
+    /// Also controls whether to add `OxidizedFinder`'s path hook to
+    /// [`sys.path_hooks`].
+    ///
+    /// Default value: [true]
+    ///
+    /// Interpreter initialization behavior: If false, path-based finders are removed
+    /// from `sys.meta_path` and `sys.path_hooks` is cleared.
+    ///
     /// [`sys.path_hooks`]: https://docs.python.org/3/library/sys.html#sys.path_hooks
-    /// [`pkgutil`]: https://docs.python.org/3/library/pkgutil.html
     pub filesystem_importer: bool,
 
     /// References to packed resources data.
@@ -179,56 +262,103 @@ pub struct OxidizedPythonInterpreterConfig<'a> {
     /// `oxidized_importer=true`. If `oxidized_importer=false`, this field
     /// is ignored.
     ///
-    /// For `Path`-based sources, the special string `$ORIGIN` will be expanded
-    /// to the directory of the current executable or the value of
-    /// `self.origin` if set. Relative paths without `$ORIGIN` will be evaluated
-    /// relative to the process's current working directory.
+    /// If paths are relative, that will be evaluated relative to the process's
+    /// current working directory following the operating system's standard
+    /// path expansion behavior.
+    ///
+    /// Default value: `vec![]`
+    ///
+    /// [Self::resolve()] behavior: [PackedResourcesSource::MemoryMappedPath] members
+    /// have the special string `$ORIGIN` expanded to the string value that
+    /// [Self::origin] resolves to.
     #[cfg_attr(feature = "serialization", serde(skip))]
     pub packed_resources: Vec<PackedResourcesSource<'a>>,
 
     /// Extra extension modules to make available to the interpreter.
     ///
     /// The values will effectively be passed to ``PyImport_ExtendInitTab()``.
+    ///
+    /// Default value: [None]
+    ///
+    /// Interpreter initialization behavior: `PyImport_Inittab` will be extended
+    /// with entries from this list. This makes the extensions available as
+    /// built-in extension modules.
     #[cfg_attr(feature = "serialization", serde(skip))]
     pub extra_extension_modules: Option<Vec<ExtensionModule>>,
 
     /// Command line arguments to initialize `sys.argv` with.
     ///
-    /// If `Some(T)`, interpreter initialization will set `PyConfig.argv`
-    /// to a value derived from this value, overwriting an existing
-    /// `.interpreter_config.argv` value, if set.
+    /// Default value: [None]
     ///
-    /// `None` is evaluated to `Some(std::env::args_os().collect::<Vec<_>>()`
-    /// if `.interpreter_config.argv` is `None` or `None` if
-    /// `.interpreter_config.argv` is `Some(T)`.
+    /// [Self::resolve()] behavior: [Some] value is used if set. Otherwise
+    /// [PythonInterpreterConfig::argv] is used if set. Otherwise
+    /// [std::env::args_os()] is called.
+    ///
+    /// Interpreter initialization behavior: the resolved [Some] value is used
+    /// to populate `PyConfig.argv`.
     pub argv: Option<Vec<OsString>>,
 
-    /// Whether to set sys.argvb with bytes versions of process arguments.
+    /// Whether to set `sys.argvb` with bytes versions of process arguments.
     ///
     /// On Windows, bytes will be UTF-16. On POSIX, bytes will be raw char*
     /// values passed to `int main()`.
+    ///
+    /// Default value: [false]
+    ///
+    /// Interpreter initialization behavior: `sys.argvb` will be set to a
+    /// `list[bytes]`. `sys.argv` and `sys.argvb` should have the same number
+    /// of elements.
     pub argvb: bool,
 
-    /// Whether the main Python interpreter run routine will detect use of multiprocessing
-    /// and run a multiprocessing worker process automatically.
+    /// Automatically detect and run in `multiprocessing` mode.
+    ///
+    /// If set, [crate::MainPythonInterpreter::run()] will detect when the invoked
+    /// interpreter looks like it is supposed to be a `multiprocessing` worker and
+    /// will automatically call into the `multiprocessing` module instead of running
+    /// the configured code.
+    ///
+    /// Default value: [true]
     pub multiprocessing_auto_dispatch: bool,
 
-    /// How to call `multiprocessing.set_start_method()` when `multiprocessing` is imported.
+    /// Controls how to call `multiprocessing.set_start_method()`.
+    ///
+    /// Default value: [MultiprocessingStartMethod::Auto]
+    ///
+    /// Interpreter initialization behavior: if [Self::oxidized_importer] is [true],
+    /// the `OxidizedImporter` will be taught to call `multiprocessing.set_start_method()`
+    /// when `multiprocessing` is imported. If [false], this value has no effect.
     pub multiprocessing_start_method: MultiprocessingStartMethod,
 
     /// Whether to set sys.frozen=True.
     ///
     /// Setting this will enable Python to emulate "frozen" binaries, such as
     /// those used by PyInstaller.
+    ///
+    /// Default value: [false]
+    ///
+    /// Interpreter initialization behavior: If [true], `sys.frozen = True`.
+    /// If [false], `sys.frozen` is not defined.
     pub sys_frozen: bool,
 
     /// Whether to set sys._MEIPASS to the directory of the executable.
     ///
     /// Setting this will enable Python to emulate PyInstaller's behavior
     /// of setting this attribute.
+    ///
+    /// Default value: [false]
+    ///
+    /// Interpreter initialization behavior: If [true], `sys._MEIPASS` will
+    /// be set to a `str` holding the value of [Self::origin]. If [false],
+    /// `sys._MEIPASS` will not be defined.
     pub sys_meipass: bool,
 
     /// How to resolve the `terminfo` database.
+    ///
+    /// Default value: [TerminfoResolution::Dynamic]
+    ///
+    /// Interpreter initialization behavior: the `TERMINFO_DIRS` environment
+    /// variable may be set for this process depending on what [TerminfoResolution]
+    /// instructs to do.
     pub terminfo_resolution: TerminfoResolution,
 
     /// Path to use to define the `TCL_LIBRARY` environment variable.
@@ -236,8 +366,13 @@ pub struct OxidizedPythonInterpreterConfig<'a> {
     /// This directory should contain an `init.tcl` file. It is commonly
     /// a directory named `tclX.Y`. e.g. `tcl8.6`.
     ///
-    /// `$ORIGIN` in the path is expanded to the directory of the current
-    /// executable.
+    /// Default value: [None]
+    ///
+    /// [Self::resolve()] behavior: the token `$ORIGIN` is expanded to the
+    /// resolved value of [Self::origin].
+    ///
+    /// Interpreter initialization behavior: if set, the `TCL_LIBRARY` environment
+    /// variable will be set for the current process.
     pub tcl_library: Option<PathBuf>,
 
     /// Environment variable holding the directory to write a loaded modules file.
@@ -246,6 +381,8 @@ pub struct OxidizedPythonInterpreterConfig<'a> {
     /// on interpreter shutdown, we will write a ``modules-<random>`` file to
     /// the directory specified containing a ``\n`` delimited list of modules
     /// loaded in ``sys.modules``.
+    ///
+    /// Default value: [None]
     pub write_modules_directory_env: Option<String>,
 }
 

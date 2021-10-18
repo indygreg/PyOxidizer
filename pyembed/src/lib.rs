@@ -19,10 +19,9 @@ This crate was initially designed for and is maintained as part of the
 the crate is generic and can be used outside the PyOxidizer project.
 
 The most important types in this crate are
-[`OxidizedPythonInterpreterConfig`](struct.OxidizedPythonInterpreterConfig.html)
-and [`MainPythonInterpreter`](struct.MainPythonInterpreter.html). An
-`OxidizedPythonInterpreterConfig` defines how a Python interpreter is to
-behave. A `MainPythonInterpreter` creates and manages that interpreter and
+[OxidizedPythonInterpreterConfig] and [MainPythonInterpreter]. An
+[OxidizedPythonInterpreterConfig] defines how a Python interpreter is to
+behave. A [MainPythonInterpreter] creates and manages that interpreter and
 serves as a high-level interface for running code in the interpreter.
 
 # Dependencies
@@ -35,19 +34,23 @@ as possible.** This is because we want to minimize bloat in produced binaries.
 
 # Features
 
-The optional `jemalloc` feature controls support for using
+The optional `allocator-jemalloc` feature controls support for using
 [jemalloc](http://jemalloc.net/) as Python's memory allocator. Use of Jemalloc
 from Python is a run-time configuration option controlled by the
-`OxidizedPythonInterpreterConfig` type and having `jemalloc` compiled into the
+[OxidizedPythonInterpreterConfig] type and having `jemalloc` compiled into the
 binary does not mean it is being used!
 
-The optional `mimalloc` feature controls support for using
+The optional `allocator-mimalloc` feature controls support for using
 [mimalloc](https://github.com/microsoft/mimalloc) as Python's memory allocator.
 The feature behaves similarly to `jemalloc`, which is documented above.
 
-The optional `snmalloc` feature controls support for using
+The optional `allocator-snmalloc` feature controls support for using
 [snmalloc](https://github.com/microsoft/snmalloc) as Python's memory allocator.
 The feature behaves similarly to `jemalloc`, which is documented above.
+
+The optional `serialization` feature controls whether configuration types
+(such as [OxidizedPythonInterpreterConfig]) implement `Serialize` and
+`Deserialize`.
 */
 
 #[allow(unused)]
@@ -71,6 +74,7 @@ pub use {
         },
         error::NewInterpreterError,
         interpreter::MainPythonInterpreter,
+        pyalloc::PythonMemoryAllocator,
     },
     python_oxidized_importer::{PackedResourcesSource, PythonResourcesState},
     python_packaging::{

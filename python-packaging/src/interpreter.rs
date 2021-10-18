@@ -500,168 +500,284 @@ pub struct PythonInterpreterConfig {
     pub profile: PythonInterpreterProfile,
 
     // The following fields are from PyPreConfig or are shared with PyConfig.
+    /// Name of the memory allocator.
+    ///
     /// See <https://docs.python.org/3/c-api/init_config.html#c.PyPreConfig.allocator>.
     pub allocator: Option<Allocator>,
 
+    /// Whether to set the LC_CTYPE locale to the user preferred locale.
+    ///
     /// See <https://docs.python.org/3/c-api/init_config.html#c.PyPreConfig.configure_locale>.
     pub configure_locale: Option<bool>,
 
+    /// How to coerce the locale settings.
+    ///
     /// See <https://docs.python.org/3/c-api/init_config.html#c.PyPreConfig.coerce_c_locale>.
     pub coerce_c_locale: Option<CoerceCLocale>,
 
+    /// Whether to emit a warning if the C locale is coerced.
+    ///
     /// See <https://docs.python.org/3/c-api/init_config.html#c.PyPreConfig.coerce_c_locale_warn>.
     pub coerce_c_locale_warn: Option<bool>,
 
+    /// Whether to enable Python development mode.
+    ///
     /// See <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.dev_mode>.
     pub development_mode: Option<bool>,
 
+    /// Isolated mode.
+    ///
     /// See <https://docs.python.org/3/c-api/init_config.html#c.PyPreConfig.isolated>.
     pub isolated: Option<bool>,
 
+    /// Whether to use legacy filesystem encodings on Windows.
+    ///
     /// See <https://docs.python.org/3/c-api/init_config.html#c.PyPreConfig.legacy_windows_fs_encoding>.
     pub legacy_windows_fs_encoding: Option<bool>,
 
+    /// Whether argv should be parsed the way `python` parses them.
+    ///
     /// See <https://docs.python.org/3/c-api/init_config.html#c.PyPreConfig.parse_argv>.
     pub parse_argv: Option<bool>,
 
+    /// Whether environment variables are read to control the interpreter configuration.
+    ///
     /// See <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.use_environment>.
     pub use_environment: Option<bool>,
 
+    /// Controls Python UTF-8 mode.
+    ///
     /// See <https://docs.python.org/3/c-api/init_config.html#c.PyPreConfig.utf8_mode>.
     pub utf8_mode: Option<bool>,
     // The following fields are from PyConfig.
+    /// Command line arguments.
+    ///
+    /// These will become `sys.argv`.
+    ///
     /// See <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.argv>.
     pub argv: Option<Vec<OsString>>,
 
+    /// Controls `sys.base_exec_prefix`.
+    ///
     /// See <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.base_exec_prefix>.
     pub base_exec_prefix: Option<PathBuf>,
 
+    /// Controls `sys._base_executable`.
+    ///
     /// See <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.base_executable>.
     pub base_executable: Option<PathBuf>,
 
+    /// Controls `sys.base_prefix`.
+    ///
     /// See <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.base_prefix>.
     pub base_prefix: Option<PathBuf>,
 
+    /// Controls buffering on `stdout` and `stderr`.
+    ///
     /// See <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.buffered_stdio>.
     pub buffered_stdio: Option<bool>,
 
+    /// Controls warnings/errors for some bytes type coercions.
+    ///
     /// See <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.bytes_warning>.
     pub bytes_warning: Option<BytesWarning>,
 
+    /// Validation mode for `.pyc` files.
+    ///
     /// See <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.check_hash_pycs_mode>.
     pub check_hash_pycs_mode: Option<CheckHashPycsMode>,
 
+    /// Controls binary mode and buffering on C standard streams.
+    ///
     /// See <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.configure_c_stdio>.
     pub configure_c_stdio: Option<bool>,
 
+    /// Dump Python references.
+    ///
     /// See <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.dump_refs>.
     pub dump_refs: Option<bool>,
 
+    /// Controls `sys.exec_prefix`.
+    ///
     /// See <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.exec_prefix>.
     pub exec_prefix: Option<PathBuf>,
 
+    /// Controls `sys.executable`.
+    ///
     /// See <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.executable>.
     pub executable: Option<PathBuf>,
 
+    /// Enable `faulthandler`.
+    ///
     /// See <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.faulthandler>.
     pub fault_handler: Option<bool>,
 
+    /// Controls the encoding to use for filesystems/paths.
+    ///
     /// See <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.filesystem_encoding>.
     pub filesystem_encoding: Option<String>,
 
+    /// Filesystem encoding error handler.
+    ///
     /// See <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.filesystem_errors>.
     pub filesystem_errors: Option<String>,
 
+    /// Randomized hash function seed.
+    ///
     /// See <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.hash_seed>.
     pub hash_seed: Option<c_ulong>,
 
+    /// Python home directory.
+    ///
     /// See <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.home>.
     pub home: Option<PathBuf>,
 
+    /// Whether to profile `import` time.
+    ///
     /// See <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.import_time>.
     pub import_time: Option<bool>,
 
+    /// Enter interactive mode after executing a script or a command.
+    ///
     /// See <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.inspect>.
     pub inspect: Option<bool>,
 
+    /// Whether to install Python signal handlers.
+    ///
     /// See <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.install_signal_handlers>.
     pub install_signal_handlers: Option<bool>,
 
+    /// Whether to enable the interactive REPL mode.
+    ///
     /// See <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.interactive>.
     pub interactive: Option<bool>,
 
+    /// Controls legacy stdio behavior on Windows.
+    ///
     /// See <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.legacy_windows_stdio>.
     pub legacy_windows_stdio: Option<bool>,
 
+    /// Whether to dump statistics from the `pymalloc` allocator on exit.
+    ///
     /// See <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.malloc_stats>.
     pub malloc_stats: Option<bool>,
 
+    /// Defines `sys.path`.
+    ///
     /// See <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.module_search_paths>.
     pub module_search_paths: Option<Vec<PathBuf>>,
 
+    /// Bytecode optimization level.
+    ///
     /// See <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.optimization_level>.
     pub optimization_level: Option<BytecodeOptimizationLevel>,
 
+    /// Parser debug mode.
+    ///
     /// See <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.parser_debug>.
     pub parser_debug: Option<bool>,
 
+    /// Whether calculating the Python path configuration can emit warnings.
+    ///
     /// See <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.pathconfig_warnings>.
     pub pathconfig_warnings: Option<bool>,
 
+    /// Defines `sys.prefix`.
+    ///
     /// See <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.prefix>.
     pub prefix: Option<PathBuf>,
 
+    /// Program named used to initialize state during path configuration.
+    ///
     /// See <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.program_name>.
     pub program_name: Option<PathBuf>,
 
+    /// Directory where `.pyc` files are written.
+    ///
     /// See <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.pycache_prefix>.
     pub pycache_prefix: Option<PathBuf>,
 
     /// See <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.pythonpath_env>.
     pub python_path_env: Option<String>,
 
+    /// Quiet mode.
+    ///
     /// See <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.quiet>.
     pub quiet: Option<bool>,
 
+    /// Value of the `-c` command line option.
+    ///
+    /// Effectively defines Python code to evaluate in `Py_RunMain()`.
+    ///
     /// See <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.run_command>.
     pub run_command: Option<String>,
 
+    /// Filename passed on the command line.
+    ///
+    /// Effectively defines the Python file to run in `Py_RunMain()`.
+    ///
     /// See <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.run_filename>.
     pub run_filename: Option<PathBuf>,
 
+    /// Value of the `-m` command line option.
+    ///
+    /// Effectively defines the Python module to run as `__main__` in `Py_RunMain()`.
+    ///
     /// See <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.run_module>.
     pub run_module: Option<String>,
 
+    /// Whether to show the total reference count at exit.
+    ///
     /// See <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.show_ref_count>.
     pub show_ref_count: Option<bool>,
 
+    /// Whether to import the `site` module at startup.
+    ///
     /// See <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.site_import>.
     pub site_import: Option<bool>,
 
+    /// Whether to skip the first line of [Self::run_filename].
+    ///
     /// See <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.skip_source_first_line>.
     pub skip_first_source_line: Option<bool>,
 
+    /// Encoding of `sys.stdout`, `sys.stderr`, and `sys.stdin`.
+    ///
     /// See <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.stdio_encoding>.
     pub stdio_encoding: Option<String>,
 
+    /// Encoding error handler for `sys.stdout` and `sys.stdin`.
+    ///
     /// See <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.stdio_errors>.
     pub stdio_errors: Option<String>,
 
+    /// Whether to enable `tracemalloc`.
+    ///
     /// See <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.tracemalloc>.
     pub tracemalloc: Option<bool>,
 
+    /// Whether to add the user site directory to `sys.path`.
+    ///
     /// See <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.user_site_directory>.
     pub user_site_directory: Option<bool>,
 
+    /// Verbose mode.
+    ///
     /// See <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.verbose>.
     pub verbose: Option<bool>,
 
+    /// Options of the `warning` module to control behavior.
+    ///
     /// See <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.warnoptions>.
     pub warn_options: Option<Vec<String>>,
 
+    /// Controls `sys.dont_write_bytecode`.
+    ///
     /// See <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.write_bytecode>.
     pub write_bytecode: Option<bool>,
 
+    /// Values of the `-X` command line options / `sys._xoptions`.
+    ///
     /// See <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.xoptions>.
     pub x_options: Option<Vec<String>>,
 }

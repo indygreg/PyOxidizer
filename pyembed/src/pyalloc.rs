@@ -462,7 +462,7 @@ enum AllocatorInstance {
 }
 
 /// Represents a custom memory allocator that can be registered with Python.
-pub(crate) struct PythonMemoryAllocator {
+pub struct PythonMemoryAllocator {
     /// The allocator being used (for identification purposes).
     backend: MemoryAllocatorBackend,
 
