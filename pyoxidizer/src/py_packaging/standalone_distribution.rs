@@ -1540,12 +1540,19 @@ pub mod tests {
                 .cloned()
                 .collect::<Vec<_>>();
 
-            let linux_dropped = vec![
-                ("_gdbm".to_string(), Some("default".to_string())),
-                ("readline".to_string(), Some("default".to_string())),
-            ];
-
-            let linux_added = vec![("readline".to_string(), Some("libedit".to_string()))];
+            // 3.10 distributions stopped shipping GPL licensed extensions.
+            let (linux_dropped, linux_added) =
+                if ["3.8", "3.9"].contains(&dist.python_major_minor_version().as_str()) {
+                    (
+                        vec![
+                            ("_gdbm".to_string(), Some("default".to_string())),
+                            ("readline".to_string(), Some("default".to_string())),
+                        ],
+                        vec![("readline".to_string(), Some("libedit".to_string()))],
+                    )
+                } else {
+                    (vec![], vec![])
+                };
 
             let (wanted_dropped, wanted_added) = match (
                 dist.python_major_minor_version().as_str(),

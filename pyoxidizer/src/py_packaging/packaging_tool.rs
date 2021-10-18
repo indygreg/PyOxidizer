@@ -534,14 +534,24 @@ mod tests {
             policy.set_file_scanner_emit_files(true);
             policy.set_file_scanner_classify_files(true);
 
-            let resources = pip_download(
+            let res = pip_download(
                 &logger,
                 &*host_dist,
                 &*target_dist,
                 &policy,
                 false,
                 &["numpy==1.21.3".to_string()],
-            )?;
+            );
+
+            // numpy wheel not available for 3.10 win32.
+            if target_dist.python_major_minor_version() == "3.10"
+                && target_dist.python_platform_tag() == "win32"
+            {
+                assert!(res.is_err());
+                continue;
+            }
+
+            let resources = res?;
 
             assert!(!resources.is_empty());
 

@@ -356,6 +356,21 @@ mod tests {
     }
 
     #[test]
+    fn test_add_python_executable_310() -> Result<()> {
+        let mut env = test_evaluation_context_builder()?.into_context()?;
+
+        env.eval("dist = default_python_distribution(python_version='3.10')")?;
+        env.eval("exe = dist.to_python_executable('testapp')")?;
+
+        let m = FileManifestValue::new_from_args().unwrap();
+
+        env.set_var("m", m).unwrap();
+        env.eval("m.add_python_resource('bin', exe)")?;
+
+        Ok(())
+    }
+
+    #[test]
     fn test_install() -> Result<()> {
         let mut env = test_evaluation_context_builder()?.into_context()?;
         add_exe(&mut env)?;

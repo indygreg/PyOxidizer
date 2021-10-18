@@ -716,6 +716,29 @@ mod tests {
     }
 
     #[test]
+    fn test_empty_project_python_310() -> Result<()> {
+        let env = get_env()?;
+        let logger = get_logger()?;
+        let options = StandalonePythonExecutableBuilderOptions {
+            distribution_version: Some("3.10".to_string()),
+            ..Default::default()
+        };
+        let pre_built = options.new_builder()?;
+
+        build_python_executable(
+            &env,
+            &logger,
+            "myapp",
+            pre_built.as_ref(),
+            default_target_triple(),
+            "0",
+            false,
+        )?;
+
+        Ok(())
+    }
+
+    #[test]
     fn test_empty_project_system_rust() -> Result<()> {
         let mut env = get_env()?;
         env.unmanage_rust()?;
@@ -767,6 +790,31 @@ mod tests {
         let logger = get_logger()?;
         let options = StandalonePythonExecutableBuilderOptions {
             distribution_version: Some("3.8".to_string()),
+            distribution_flavor: DistributionFlavor::StandaloneStatic,
+            ..Default::default()
+        };
+        let pre_built = options.new_builder()?;
+
+        build_python_executable(
+            &env,
+            &logger,
+            "myapp",
+            pre_built.as_ref(),
+            default_target_triple(),
+            "0",
+            false,
+        )?;
+
+        Ok(())
+    }
+
+    #[test]
+    #[cfg(target_env = "msvc")]
+    fn test_empty_project_standalone_static_310() -> Result<()> {
+        let env = get_env()?;
+        let logger = get_logger()?;
+        let options = StandalonePythonExecutableBuilderOptions {
+            distribution_version: Some("3.10".to_string()),
             distribution_flavor: DistributionFlavor::StandaloneStatic,
             ..Default::default()
         };

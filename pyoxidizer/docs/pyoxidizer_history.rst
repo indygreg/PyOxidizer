@@ -33,8 +33,16 @@ Version History
 
 Not yet released.
 
-Changes
-^^^^^^^
+New Features
+^^^^^^^^^^^^
+
+* Support for Python 3.10 on all previously supported platforms. Python 3.9 is
+  still the default Python version. Target Python 3.10 by passing
+  ``python_version = "3.10"`` to the :py:func:`default_python_distribution`
+  Starlark function.
+
+Other Relevant Changes
+^^^^^^^^^^^^^^^^^^^^^^
 
 * PyO3 Rust crate upgraded from version ``0.14`` to ``0.15``.
 * Managed Rust toolchain upgraded from 1.56.0 to 1.56.1.

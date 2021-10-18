@@ -103,7 +103,7 @@ jobs:
         py:
           - build: 'cp38-win_amd64'
           - build: 'cp39-win_amd64'
-          # Can't add Python 3.10 until we stop using _PyImport_FindExtensionObject().
+          - build: 'cp310-win_amd64'
     runs-on: windows-2019
     env:
       CIBW_BUILD_VERBOSITY: '1'

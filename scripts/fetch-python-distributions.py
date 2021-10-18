@@ -71,7 +71,7 @@ def main():
         parts = parts[:-1]
 
         _python_flavor = parts.pop(0)
-        major_minor = parts.pop(0)[0:3]
+        major_minor = parts.pop(0).rsplit(".", 1)[0]
 
         if parts[-2] in ("shared", "static"):
             target_triple = "-".join(parts[0:-2])
@@ -101,10 +101,12 @@ def main():
         "// Linux glibc linked.",
         ENTRY.format(**records["3.8-x86_64-unknown-linux-gnu-pgo"]),
         ENTRY.format(**records["3.9-x86_64-unknown-linux-gnu-pgo"]),
+        ENTRY.format(**records["3.10-x86_64-unknown-linux-gnu-pgo"]),
         "",
         "// Linux musl.",
         ENTRY.format(**records["3.8-x86_64-unknown-linux-musl-noopt"]),
         ENTRY.format(**records["3.9-x86_64-unknown-linux-musl-noopt"]),
+        ENTRY.format(**records["3.10-x86_64-unknown-linux-musl-noopt"]),
         "",
         "// The order here is important because we will choose the",
         "// first one. We prefer shared distributions on Windows because",
@@ -116,19 +118,25 @@ def main():
         "// Windows shared.",
         ENTRY.format(**records["3.8-i686-pc-windows-msvc-shared-pgo"]),
         ENTRY.format(**records["3.9-i686-pc-windows-msvc-shared-pgo"]),
+        ENTRY.format(**records["3.10-i686-pc-windows-msvc-shared-pgo"]),
         ENTRY.format(**records["3.8-x86_64-pc-windows-msvc-shared-pgo"]),
         ENTRY.format(**records["3.9-x86_64-pc-windows-msvc-shared-pgo"]),
+        ENTRY.format(**records["3.10-x86_64-pc-windows-msvc-shared-pgo"]),
         "",
         "// Windows static.",
         ENTRY.format(**records["3.8-i686-pc-windows-msvc-static-noopt"]),
         ENTRY.format(**records["3.9-i686-pc-windows-msvc-static-noopt"]),
+        ENTRY.format(**records["3.10-i686-pc-windows-msvc-static-noopt"]),
         ENTRY.format(**records["3.8-x86_64-pc-windows-msvc-static-noopt"]),
         ENTRY.format(**records["3.9-x86_64-pc-windows-msvc-static-noopt"]),
+        ENTRY.format(**records["3.10-x86_64-pc-windows-msvc-static-noopt"]),
         "",
         "// macOS.",
         ENTRY.format(**records["3.9-aarch64-apple-darwin-pgo"]),
+        ENTRY.format(**records["3.10-aarch64-apple-darwin-pgo"]),
         ENTRY.format(**records["3.8-x86_64-apple-darwin-pgo"]),
         ENTRY.format(**records["3.9-x86_64-apple-darwin-pgo"]),
+        ENTRY.format(**records["3.10-x86_64-apple-darwin-pgo"]),
     ]
 
     print("\n".join(lines))

@@ -138,7 +138,7 @@
        ``X.Y`` *major.minor* string denoting the Python release version
        to use.
 
-       Supported values are ``3.8`` and ``3.9``.
+       Supported values are ``3.8``, ``3.9``, and ``3.10``.
 
     ``flavor`` is a string denoting the distribution *flavor*. Values can be one
     of the following:
