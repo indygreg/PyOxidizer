@@ -49,6 +49,8 @@ Bug Fixes
 * Linux default Python distributions no longer utilize the ``pthread_yield()``
   function, enabling them to be linked against glibc 2.34+, which deprecated
   the symbol. (#463)
+* Python ``.whl`` resources parsing now ignores directories. Previously,
+  directories may have been emitted as 0-sized resources.
 
 Backwards Compatibility Notes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

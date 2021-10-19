@@ -57,6 +57,12 @@ impl WheelArchive {
 
         for i in 0..archive.len() {
             let mut file = archive.by_index(i)?;
+
+            // We only index files.
+            if file.is_dir() {
+                continue;
+            }
+
             let mut buffer = Vec::with_capacity(file.size() as usize);
             file.read_to_end(&mut buffer)?;
 
