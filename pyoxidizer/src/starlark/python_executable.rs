@@ -632,16 +632,17 @@ impl PythonExecutableValue {
     ) -> ValueResult {
         let inner = module.inner(label)?;
 
-        info!(
-            context.logger(),
-            "adding Python source module {}", inner.m.name;
-        );
-
         let mut exe = self.inner(label)?;
 
         error_context(label, || {
-            exe.add_python_module_source(&inner.m, inner.add_context.clone())
-                .with_context(|| format!("adding {}", module.to_repr()))
+            for action in exe
+                .add_python_module_source(&inner.m, inner.add_context.clone())
+                .with_context(|| format!("adding {}", module.to_repr()))?
+            {
+                info!(context.logger(), "{}", action.to_string());
+            }
+
+            Ok(())
         })?;
 
         Ok(Value::new(NoneType::None))
@@ -655,17 +656,17 @@ impl PythonExecutableValue {
     ) -> ValueResult {
         let inner = resource.inner(label)?;
 
-        info!(
-            context.logger(),
-            "adding Python package resource {}",
-            inner.r.symbolic_name()
-        );
-
         let mut exe = self.inner(label)?;
 
         error_context(label, || {
-            exe.add_python_package_resource(&inner.r, inner.add_context.clone())
-                .with_context(|| format!("adding {}", resource.to_repr()))
+            for action in exe
+                .add_python_package_resource(&inner.r, inner.add_context.clone())
+                .with_context(|| format!("adding {}", resource.to_repr()))?
+            {
+                info!(context.logger(), "{}", action.to_string());
+            }
+
+            Ok(())
         })?;
 
         Ok(Value::new(NoneType::None))
@@ -679,16 +680,17 @@ impl PythonExecutableValue {
     ) -> ValueResult {
         let inner = resource.inner(label)?;
 
-        info!(
-            context.logger(),
-            "adding package distribution resource {}:{}", inner.r.package, inner.r.name
-        );
-
         let mut exe = self.inner(label)?;
 
         error_context(label, || {
-            exe.add_python_package_distribution_resource(&inner.r, inner.add_context.clone())
-                .with_context(|| format!("adding {}", resource.to_repr()))
+            for action in exe
+                .add_python_package_distribution_resource(&inner.r, inner.add_context.clone())
+                .with_context(|| format!("adding {}", resource.to_repr()))?
+            {
+                info!(context.logger(), "{}", action.to_string());
+            }
+
+            Ok(())
         })?;
 
         Ok(Value::new(NoneType::None))
@@ -702,16 +704,17 @@ impl PythonExecutableValue {
     ) -> ValueResult {
         let inner = module.inner(label)?;
 
-        info!(
-            context.logger(),
-            "adding extension module {}", inner.em.name
-        );
-
         let mut exe = self.inner(label)?;
 
         error_context(label, || {
-            exe.add_python_extension_module(&inner.em, inner.add_context.clone())
-                .with_context(|| format!("adding {}", module.to_repr()))
+            for action in exe
+                .add_python_extension_module(&inner.em, inner.add_context.clone())
+                .with_context(|| format!("adding {}", module.to_repr()))?
+            {
+                info!(context.logger(), "{}", action.to_string());
+            }
+
+            Ok(())
         })?;
 
         Ok(Value::new(NoneType::None))
@@ -725,17 +728,17 @@ impl PythonExecutableValue {
     ) -> ValueResult {
         let inner = file.inner(label)?;
 
-        info!(
-            context.logger(),
-            "adding file data {}",
-            inner.file.path().display()
-        );
-
         let mut exe = self.inner(label)?;
 
         error_context(label, || {
-            exe.add_file_data(&inner.file, inner.add_context.clone())
-                .with_context(|| format!("adding {}", file.to_repr()))
+            for action in exe
+                .add_file_data(&inner.file, inner.add_context.clone())
+                .with_context(|| format!("adding {}", file.to_repr()))?
+            {
+                info!(context.logger(), "{}", action.to_string());
+            }
+
+            Ok(())
         })?;
 
         Ok(Value::new(NoneType::None))

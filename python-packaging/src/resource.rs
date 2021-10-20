@@ -97,6 +97,10 @@ pub struct PythonModuleSource {
 }
 
 impl PythonModuleSource {
+    pub fn description(&self) -> String {
+        format!("source code for Python module {}", self.name)
+    }
+
     pub fn to_memory(&self) -> Result<Self> {
         Ok(Self {
             name: self.name.clone(),
@@ -183,6 +187,13 @@ pub struct PythonModuleBytecodeFromSource {
 }
 
 impl PythonModuleBytecodeFromSource {
+    pub fn description(&self) -> String {
+        format!(
+            "bytecode for Python module {} at O{} (compiled from source)",
+            self.name, self.optimize_level as i32
+        )
+    }
+
     pub fn to_memory(&self) -> Result<Self> {
         Ok(Self {
             name: self.name.clone(),
@@ -284,6 +295,13 @@ impl PythonModuleBytecode {
         }
     }
 
+    pub fn description(&self) -> String {
+        format!(
+            "bytecode for Python module {} at O{}",
+            self.name, self.optimize_level as i32
+        )
+    }
+
     pub fn to_memory(&self) -> Result<Self> {
         Ok(Self {
             name: self.name.clone(),
@@ -347,6 +365,10 @@ pub struct PythonPackageResource {
 }
 
 impl PythonPackageResource {
+    pub fn description(&self) -> String {
+        format!("Python package resource {}", self.symbolic_name())
+    }
+
     pub fn to_memory(&self) -> Result<Self> {
         Ok(Self {
             leaf_package: self.leaf_package.clone(),
@@ -414,6 +436,13 @@ pub struct PythonPackageDistributionResource {
 }
 
 impl PythonPackageDistributionResource {
+    pub fn description(&self) -> String {
+        format!(
+            "Python package distribution resource {}:{}",
+            self.package, self.name
+        )
+    }
+
     pub fn to_memory(&self) -> Result<Self> {
         Ok(Self {
             location: self.location.clone(),
@@ -526,6 +555,12 @@ impl TryFrom<&LibraryDependency> for SharedLibrary {
     }
 }
 
+impl SharedLibrary {
+    pub fn description(&self) -> String {
+        format!("shared library {}", self.name)
+    }
+}
+
 /// Represents a Python extension module.
 #[derive(Clone, Debug, PartialEq)]
 pub struct PythonExtensionModule {
@@ -565,6 +600,10 @@ pub struct PythonExtensionModule {
 }
 
 impl PythonExtensionModule {
+    pub fn description(&self) -> String {
+        format!("Python extension module {}", self.name)
+    }
+
     pub fn to_memory(&self) -> Result<Self> {
         Ok(Self {
             name: self.name.clone(),

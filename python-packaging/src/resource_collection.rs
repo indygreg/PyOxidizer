@@ -596,6 +596,38 @@ impl PythonResourceAddCollectionContext {
     }
 }
 
+/// Describes the result of adding a resource to a collector.
+#[derive(Clone, Debug)]
+pub enum AddResourceAction {
+    /// Resource with specified description wasn't added because add_include=false.
+    NoInclude(String),
+    /// Resource not added because of Python bytecode optimization level mismatch.
+    BytecodeOptimizationLevelMismatch(String),
+    /// Resource with specified description was added to the specified location.
+    Added(String, ConcreteResourceLocation),
+    /// Built-in Python extension module.
+    AddedBuiltinExtensionModule(String),
+}
+
+impl ToString for AddResourceAction {
+    fn to_string(&self) -> String {
+        match self {
+            Self::NoInclude(name) => {
+                format!("ignored adding {} because fails inclusion filter", name)
+            }
+            Self::BytecodeOptimizationLevelMismatch(name) => {
+                format!("ignored adding Python module bytecode for {} because of optimization level mismatch", name)
+            }
+            Self::Added(name, location) => {
+                format!("added {} to {}", name, location.to_string())
+            }
+            Self::AddedBuiltinExtensionModule(name) => {
+                format!("added builtin Python extension module {}", name)
+            }
+        }
+    }
+}
+
 /// Describes the state of licensing for resources in a given resources collection.
 #[derive(Clone, Debug, Default)]
 pub struct ResourcesLicenseReport {
@@ -850,7 +882,7 @@ impl PythonResourceCollector {
         &mut self,
         module: &PythonModuleSource,
         location: &ConcreteResourceLocation,
-    ) -> Result<()> {
+    ) -> Result<Vec<AddResourceAction>> {
         self.check_policy(location.into())?;
 
         let entry = self
@@ -874,7 +906,10 @@ impl PythonResourceCollector {
             }
         }
 
-        Ok(())
+        Ok(vec![AddResourceAction::Added(
+            module.description(),
+            location.clone(),
+        )])
     }
 
     /// Add Python module source using an add context to influence operation.
@@ -891,51 +926,59 @@ impl PythonResourceCollector {
         &mut self,
         module: &PythonModuleSource,
         add_context: &PythonResourceAddCollectionContext,
-    ) -> Result<()> {
+    ) -> Result<Vec<AddResourceAction>> {
         if !add_context.include {
-            return Ok(());
+            return Ok(vec![AddResourceAction::NoInclude(module.description())]);
         }
 
+        let mut actions = vec![];
+
         if add_context.store_source {
-            self.add_python_resource_with_locations(
+            actions.extend(self.add_python_resource_with_locations(
                 &module.into(),
                 &add_context.location,
                 &add_context.location_fallback,
-            )?;
+            )?);
         }
 
         // Derive bytecode as requested.
         if add_context.optimize_level_zero {
-            self.add_python_resource_with_locations(
-                &module
-                    .as_bytecode_module(BytecodeOptimizationLevel::Zero)
-                    .into(),
-                &add_context.location,
-                &add_context.location_fallback,
-            )?;
+            actions.extend(
+                self.add_python_resource_with_locations(
+                    &module
+                        .as_bytecode_module(BytecodeOptimizationLevel::Zero)
+                        .into(),
+                    &add_context.location,
+                    &add_context.location_fallback,
+                )?,
+            );
         }
 
         if add_context.optimize_level_one {
-            self.add_python_resource_with_locations(
-                &module
-                    .as_bytecode_module(BytecodeOptimizationLevel::One)
-                    .into(),
-                &add_context.location,
-                &add_context.location_fallback,
-            )?;
+            actions.extend(
+                self.add_python_resource_with_locations(
+                    &module
+                        .as_bytecode_module(BytecodeOptimizationLevel::One)
+                        .into(),
+                    &add_context.location,
+                    &add_context.location_fallback,
+                )?,
+            );
         }
 
         if add_context.optimize_level_two {
-            self.add_python_resource_with_locations(
-                &module
-                    .as_bytecode_module(BytecodeOptimizationLevel::Two)
-                    .into(),
-                &add_context.location,
-                &add_context.location_fallback,
-            )?;
+            actions.extend(
+                self.add_python_resource_with_locations(
+                    &module
+                        .as_bytecode_module(BytecodeOptimizationLevel::Two)
+                        .into(),
+                    &add_context.location,
+                    &add_context.location_fallback,
+                )?,
+            );
         }
 
-        Ok(())
+        Ok(actions)
     }
 
     /// Add Python module bytecode to the specified location.
@@ -943,7 +986,7 @@ impl PythonResourceCollector {
         &mut self,
         module: &PythonModuleBytecode,
         location: &ConcreteResourceLocation,
-    ) -> Result<()> {
+    ) -> Result<Vec<AddResourceAction>> {
         self.check_policy(location.into())?;
 
         let entry = self
@@ -990,7 +1033,10 @@ impl PythonResourceCollector {
             },
         }
 
-        Ok(())
+        Ok(vec![AddResourceAction::Added(
+            module.description(),
+            location.clone(),
+        )])
     }
 
     /// Add Python module bytecode using an add context.
@@ -1003,9 +1049,9 @@ impl PythonResourceCollector {
         &mut self,
         module: &PythonModuleBytecode,
         add_context: &PythonResourceAddCollectionContext,
-    ) -> Result<()> {
+    ) -> Result<Vec<AddResourceAction>> {
         if !add_context.include {
-            return Ok(());
+            return Ok(vec![AddResourceAction::NoInclude(module.description())]);
         }
 
         match module.optimize_level {
@@ -1017,7 +1063,9 @@ impl PythonResourceCollector {
                         &add_context.location_fallback,
                     )
                 } else {
-                    Ok(())
+                    Ok(vec![AddResourceAction::BytecodeOptimizationLevelMismatch(
+                        module.name.clone(),
+                    )])
                 }
             }
             BytecodeOptimizationLevel::One => {
@@ -1028,7 +1076,9 @@ impl PythonResourceCollector {
                         &add_context.location_fallback,
                     )
                 } else {
-                    Ok(())
+                    Ok(vec![AddResourceAction::BytecodeOptimizationLevelMismatch(
+                        module.name.clone(),
+                    )])
                 }
             }
             BytecodeOptimizationLevel::Two => {
@@ -1039,7 +1089,9 @@ impl PythonResourceCollector {
                         &add_context.location_fallback,
                     )
                 } else {
-                    Ok(())
+                    Ok(vec![AddResourceAction::BytecodeOptimizationLevelMismatch(
+                        module.name.clone(),
+                    )])
                 }
             }
         }
@@ -1050,7 +1102,7 @@ impl PythonResourceCollector {
         &mut self,
         module: &PythonModuleBytecodeFromSource,
         location: &ConcreteResourceLocation,
-    ) -> Result<()> {
+    ) -> Result<Vec<AddResourceAction>> {
         self.check_policy(location.into())?;
 
         let entry = self
@@ -1094,7 +1146,10 @@ impl PythonResourceCollector {
             },
         }
 
-        Ok(())
+        Ok(vec![AddResourceAction::Added(
+            module.description(),
+            location.clone(),
+        )])
     }
 
     /// Add Python module bytecode from source using an add context to influence operations.
@@ -1109,9 +1164,9 @@ impl PythonResourceCollector {
         &mut self,
         module: &PythonModuleBytecodeFromSource,
         add_context: &PythonResourceAddCollectionContext,
-    ) -> Result<()> {
+    ) -> Result<Vec<AddResourceAction>> {
         if !add_context.include {
-            return Ok(());
+            return Ok(vec![AddResourceAction::NoInclude(module.description())]);
         }
 
         match module.optimize_level {
@@ -1123,7 +1178,9 @@ impl PythonResourceCollector {
                         &add_context.location_fallback,
                     )
                 } else {
-                    Ok(())
+                    Ok(vec![AddResourceAction::BytecodeOptimizationLevelMismatch(
+                        module.name.clone(),
+                    )])
                 }
             }
             BytecodeOptimizationLevel::One => {
@@ -1134,7 +1191,9 @@ impl PythonResourceCollector {
                         &add_context.location_fallback,
                     )
                 } else {
-                    Ok(())
+                    Ok(vec![AddResourceAction::BytecodeOptimizationLevelMismatch(
+                        module.name.clone(),
+                    )])
                 }
             }
             BytecodeOptimizationLevel::Two => {
@@ -1145,7 +1204,9 @@ impl PythonResourceCollector {
                         &add_context.location_fallback,
                     )
                 } else {
-                    Ok(())
+                    Ok(vec![AddResourceAction::BytecodeOptimizationLevelMismatch(
+                        module.name.clone(),
+                    )])
                 }
             }
         }
@@ -1158,7 +1219,7 @@ impl PythonResourceCollector {
         &mut self,
         resource: &PythonPackageResource,
         location: &ConcreteResourceLocation,
-    ) -> Result<()> {
+    ) -> Result<Vec<AddResourceAction>> {
         self.check_policy(location.into())?;
 
         let entry = self
@@ -1200,7 +1261,10 @@ impl PythonResourceCollector {
             }
         }
 
-        Ok(())
+        Ok(vec![AddResourceAction::Added(
+            resource.description(),
+            location.clone(),
+        )])
     }
 
     /// Add a Python package resource using an add context.
@@ -1211,9 +1275,9 @@ impl PythonResourceCollector {
         &mut self,
         resource: &PythonPackageResource,
         add_context: &PythonResourceAddCollectionContext,
-    ) -> Result<()> {
+    ) -> Result<Vec<AddResourceAction>> {
         if !add_context.include {
-            return Ok(());
+            return Ok(vec![AddResourceAction::NoInclude(resource.description())]);
         }
 
         self.add_python_resource_with_locations(
@@ -1228,7 +1292,7 @@ impl PythonResourceCollector {
         &mut self,
         resource: &PythonPackageDistributionResource,
         location: &ConcreteResourceLocation,
-    ) -> Result<()> {
+    ) -> Result<Vec<AddResourceAction>> {
         self.check_policy(location.into())?;
 
         let entry = self
@@ -1271,7 +1335,10 @@ impl PythonResourceCollector {
             }
         }
 
-        Ok(())
+        Ok(vec![AddResourceAction::Added(
+            resource.description(),
+            location.clone(),
+        )])
     }
 
     /// Add a Python package distribution resource using an add context.
@@ -1282,9 +1349,9 @@ impl PythonResourceCollector {
         &mut self,
         resource: &PythonPackageDistributionResource,
         add_context: &PythonResourceAddCollectionContext,
-    ) -> Result<()> {
+    ) -> Result<Vec<AddResourceAction>> {
         if !add_context.include {
-            return Ok(());
+            return Ok(vec![AddResourceAction::NoInclude(resource.description())]);
         }
 
         self.add_python_resource_with_locations(
@@ -1300,7 +1367,7 @@ impl PythonResourceCollector {
         &mut self,
         extension_module: &PythonExtensionModule,
         add_context: &PythonResourceAddCollectionContext,
-    ) -> Result<Option<LibPythonBuildContext>> {
+    ) -> Result<(Vec<AddResourceAction>, Option<LibPythonBuildContext>)> {
         // TODO consult this attribute (it isn't set for built-ins for some reason)
         //if !add_context.include {
         //    return Ok(None);
@@ -1434,9 +1501,9 @@ impl PythonResourceCollector {
                 build_context.object_files.push(location.clone());
             }
 
-            self.add_builtin_python_extension_module(extension_module)?;
+            let actions = self.add_builtin_python_extension_module(extension_module)?;
 
-            Ok(Some(build_context))
+            Ok((actions, Some(build_context)))
         } else {
             // If we're not producing a builtin, we're producing a shared library
             // extension module. We currently only support extension modules that
@@ -1451,9 +1518,9 @@ impl PythonResourceCollector {
                 }
             };
 
-            self.add_python_extension_module(extension_module, &location)?;
+            let actions = self.add_python_extension_module(extension_module, &location)?;
 
-            Ok(None)
+            Ok((actions, None))
         }
     }
 
@@ -1464,7 +1531,7 @@ impl PythonResourceCollector {
     pub fn add_builtin_python_extension_module(
         &mut self,
         module: &PythonExtensionModule,
-    ) -> Result<()> {
+    ) -> Result<Vec<AddResourceAction>> {
         let entry = self
             .resources
             .entry(module.name.clone())
@@ -1476,7 +1543,9 @@ impl PythonResourceCollector {
         entry.is_builtin_extension_module = true;
         entry.is_package = module.is_package;
 
-        Ok(())
+        Ok(vec![AddResourceAction::AddedBuiltinExtensionModule(
+            module.name.clone(),
+        )])
     }
 
     /// Add a Python extension module shared library that should be imported from memory.
@@ -1484,7 +1553,7 @@ impl PythonResourceCollector {
         &mut self,
         module: &PythonExtensionModule,
         location: &ConcreteResourceLocation,
-    ) -> Result<()> {
+    ) -> Result<Vec<AddResourceAction>> {
         self.check_policy(location.into())?;
 
         let data = match &module.shared_library {
@@ -1511,7 +1580,8 @@ impl PythonResourceCollector {
             }
         }
 
-        let mut depends = Vec::new();
+        let mut depends = vec![];
+        let mut actions = vec![];
 
         for link in &module.link_libraries {
             if link.dynamic_library.is_some() {
@@ -1533,7 +1603,7 @@ impl PythonResourceCollector {
 
                 let library = SharedLibrary::try_from(link).map_err(|e| anyhow!(e.to_string()))?;
 
-                self.add_shared_library(&library, &library_location)?;
+                actions.extend(self.add_shared_library(&library, &library_location)?);
                 depends.push(link.name.to_string());
             }
         }
@@ -1563,8 +1633,12 @@ impl PythonResourceCollector {
         }
 
         entry.shared_library_dependency_names = Some(depends);
+        actions.push(AddResourceAction::Added(
+            module.description(),
+            location.clone(),
+        ));
 
-        Ok(())
+        Ok(actions)
     }
 
     /// Add a shared library to be loaded from a location.
@@ -1572,7 +1646,7 @@ impl PythonResourceCollector {
         &mut self,
         library: &SharedLibrary,
         location: &ConcreteResourceLocation,
-    ) -> Result<()> {
+    ) -> Result<Vec<AddResourceAction>> {
         self.check_policy(location.into())?;
 
         let entry = self
@@ -1598,14 +1672,17 @@ impl PythonResourceCollector {
             },
         }
 
-        Ok(())
+        Ok(vec![AddResourceAction::Added(
+            library.description(),
+            location.clone(),
+        )])
     }
 
     pub fn add_file_data(
         &mut self,
         file: &File,
         location: &ConcreteResourceLocation,
-    ) -> Result<()> {
+    ) -> Result<Vec<AddResourceAction>> {
         if !self.allow_files {
             return Err(anyhow!(
                 "untyped files are now allowed on this resource collector"
@@ -1639,16 +1716,22 @@ impl PythonResourceCollector {
             }
         }
 
-        Ok(())
+        Ok(vec![AddResourceAction::Added(
+            format!("file {}", file.path_string()),
+            location.clone(),
+        )])
     }
 
     pub fn add_file_data_with_context(
         &mut self,
         file: &File,
         add_context: &PythonResourceAddCollectionContext,
-    ) -> Result<()> {
+    ) -> Result<Vec<AddResourceAction>> {
         if !add_context.include {
-            return Ok(());
+            return Ok(vec![AddResourceAction::NoInclude(format!(
+                "file {}",
+                file.path_string()
+            ))]);
         }
 
         self.add_python_resource_with_locations(
@@ -1663,14 +1746,14 @@ impl PythonResourceCollector {
         resource: &PythonResource,
         location: &ConcreteResourceLocation,
         fallback_location: &Option<ConcreteResourceLocation>,
-    ) -> Result<()> {
+    ) -> Result<Vec<AddResourceAction>> {
         match resource {
             PythonResource::ModuleSource(module) => {
                 match self
                     .add_python_module_source(module, location)
                     .with_context(|| format!("adding PythonModuleSource<{}>", module.name))
                 {
-                    Ok(()) => Ok(()),
+                    Ok(actions) => Ok(actions),
                     Err(err) => {
                         if let Some(location) = fallback_location {
                             self.add_python_module_source(module, location)
@@ -1686,7 +1769,7 @@ impl PythonResourceCollector {
                     .with_context(|| {
                         format!("adding PythonModuleBytecodeFromSource<{}>", module.name)
                     }) {
-                    Ok(()) => Ok(()),
+                    Ok(actions) => Ok(actions),
                     Err(err) => {
                         if let Some(location) = fallback_location {
                             self.add_python_module_bytecode_from_source(module, location)
@@ -1701,7 +1784,7 @@ impl PythonResourceCollector {
                     .add_python_module_bytecode(module, location)
                     .with_context(|| format!("adding PythonModuleBytecode<{}>", module.name))
                 {
-                    Ok(()) => Ok(()),
+                    Ok(actions) => Ok(actions),
                     Err(err) => {
                         if let Some(location) = fallback_location {
                             self.add_python_module_bytecode(module, location)
@@ -1720,7 +1803,7 @@ impl PythonResourceCollector {
                             resource.leaf_package, resource.relative_name
                         )
                     }) {
-                    Ok(()) => Ok(()),
+                    Ok(actions) => Ok(actions),
                     Err(err) => {
                         if let Some(location) = fallback_location {
                             self.add_python_package_resource(resource, location)
@@ -1739,7 +1822,7 @@ impl PythonResourceCollector {
                             resource.package, resource.name
                         )
                     }) {
-                    Ok(()) => Ok(()),
+                    Ok(actions) => Ok(actions),
                     Err(err) => {
                         if let Some(location) = fallback_location {
                             self.add_python_package_distribution_resource(resource, location)
@@ -1753,7 +1836,7 @@ impl PythonResourceCollector {
                 .add_file_data(file, location)
                 .with_context(|| format!("adding File<{}>", file.path().display()))
             {
-                Ok(()) => Ok(()),
+                Ok(actions) => Ok(actions),
                 Err(err) => {
                     if let Some(location) = fallback_location {
                         self.add_file_data(file, location)

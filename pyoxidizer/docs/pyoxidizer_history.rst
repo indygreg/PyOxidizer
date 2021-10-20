@@ -95,6 +95,15 @@ New Features
   https://github.com/indygreg/python-build-standalone/releases/tag/20211012 and
   https://github.com/indygreg/python-build-standalone/releases/tag/20211017 for
   the full list of changes.
+* When in verbose mode, messages will be printed displaying the actual result
+  of every request to add a resource. Before, the Starlark code would emit a
+  message like ``adding extension module foo`` before requesting the addition
+  and the operation could no-op. This behavior was misleading and hard to debug
+  since it often implied a resource was added when in fact it wasn't! The new
+  behavior is for the resource collector to tell its callers exactly what
+  actions it took and for the actual results to be displayed to the end-user.
+  This should hopefully make it easier to debug issues with how resources are
+  added to binaries.
 
 Other Relevant Changes
 ^^^^^^^^^^^^^^^^^^^^^^

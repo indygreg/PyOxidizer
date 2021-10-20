@@ -22,6 +22,7 @@ use {
         policy::PythonPackagingPolicy, resource::PythonResource,
         resource_collection::PythonResourceAddCollectionContext,
     },
+    slog::info,
     starlark::{
         environment::TypeValues,
         eval::call_stack::CallStack,
@@ -380,7 +381,7 @@ impl PythonDistributionValue {
             },
         );
 
-        builder
+        for action in builder
             .add_distribution_resources(Some(callback))
             .map_err(|e| {
                 ValueError::from(RuntimeError {
@@ -388,7 +389,10 @@ impl PythonDistributionValue {
                     message: format!("{:?}", e),
                     label: "to_python_executable()".to_string(),
                 })
-            })?;
+            })?
+        {
+            info!(pyoxidizer_context.logger(), "{}", action.to_string());
+        }
 
         Ok(Value::new(PythonExecutableValue::new(builder, policy)))
     }

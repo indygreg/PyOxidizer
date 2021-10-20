@@ -35,7 +35,8 @@ use {
             PythonPackageResource, PythonResource,
         },
         resource_collection::{
-            PrePackagedResource, PythonResourceAddCollectionContext, PythonResourceCollector,
+            AddResourceAction, PrePackagedResource, PythonResourceAddCollectionContext,
+            PythonResourceCollector,
         },
     },
     slog::warn,
@@ -657,7 +658,9 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
     fn add_distribution_resources(
         &mut self,
         callback: Option<ResourceAddCollectionContextCallback>,
-    ) -> Result<()> {
+    ) -> Result<Vec<AddResourceAction>> {
+        let mut actions = vec![];
+
         let core_component = self
             .target_distribution
             .core_license
@@ -686,7 +689,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
                     .add_licensed_component(component.clone())?;
             }
 
-            self.add_python_extension_module(&ext, Some(add_context))?;
+            actions.extend(self.add_python_extension_module(&ext, Some(add_context))?);
         }
 
         for resource in self
@@ -725,23 +728,23 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
                     component.set_flavor(ComponentFlavor::PythonPackage);
 
                     self.resources_collector.add_licensed_component(component)?;
-                    self.add_python_module_source(source, Some(add_context))?;
+                    actions.extend(self.add_python_module_source(source, Some(add_context))?);
                 }
                 PythonResource::PackageResource(r) => {
-                    self.add_python_package_resource(r, Some(add_context))?;
+                    actions.extend(self.add_python_package_resource(r, Some(add_context))?);
                 }
                 _ => panic!("should not get here since resources should be filtered above"),
             }
         }
 
-        Ok(())
+        Ok(actions)
     }
 
     fn add_python_module_source(
         &mut self,
         module: &PythonModuleSource,
         add_context: Option<PythonResourceAddCollectionContext>,
-    ) -> Result<()> {
+    ) -> Result<Vec<AddResourceAction>> {
         let add_context = add_context.unwrap_or_else(|| {
             self.packaging_policy
                 .derive_add_collection_context(&module.into())
@@ -755,7 +758,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         &mut self,
         resource: &PythonPackageResource,
         add_context: Option<PythonResourceAddCollectionContext>,
-    ) -> Result<()> {
+    ) -> Result<Vec<AddResourceAction>> {
         let add_context = add_context.unwrap_or_else(|| {
             self.packaging_policy
                 .derive_add_collection_context(&resource.into())
@@ -769,7 +772,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         &mut self,
         resource: &PythonPackageDistributionResource,
         add_context: Option<PythonResourceAddCollectionContext>,
-    ) -> Result<()> {
+    ) -> Result<Vec<AddResourceAction>> {
         let add_context = add_context.unwrap_or_else(|| {
             self.packaging_policy
                 .derive_add_collection_context(&resource.into())
@@ -783,16 +786,17 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         &mut self,
         extension_module: &PythonExtensionModule,
         add_context: Option<PythonResourceAddCollectionContext>,
-    ) -> Result<()> {
+    ) -> Result<Vec<AddResourceAction>> {
         let add_context = add_context.unwrap_or_else(|| {
             self.packaging_policy
                 .derive_add_collection_context(&extension_module.into())
         });
 
-        if let Some(mut build_context) = self
+        let (actions, build_context) = self
             .resources_collector
-            .add_python_extension_module_with_context(extension_module, &add_context)?
-        {
+            .add_python_extension_module_with_context(extension_module, &add_context)?;
+
+        if let Some(mut build_context) = build_context {
             // Resources collector doesn't doesn't know about ignored libraries. So filter
             // them here.
             build_context.static_libraries = build_context
@@ -816,14 +820,14 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
                 .insert(extension_module.name.clone(), build_context);
         }
 
-        Ok(())
+        Ok(actions)
     }
 
     fn add_file_data(
         &mut self,
         file: &File,
         add_context: Option<PythonResourceAddCollectionContext>,
-    ) -> Result<()> {
+    ) -> Result<Vec<AddResourceAction>> {
         let add_context = add_context.unwrap_or_else(|| {
             self.packaging_policy
                 .derive_add_collection_context(&file.into())

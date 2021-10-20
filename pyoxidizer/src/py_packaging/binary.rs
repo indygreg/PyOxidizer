@@ -22,7 +22,8 @@ use {
             PythonPackageResource, PythonResource,
         },
         resource_collection::{
-            CompiledResourcesCollection, PrePackagedResource, PythonResourceAddCollectionContext,
+            AddResourceAction, CompiledResourcesCollection, PrePackagedResource,
+            PythonResourceAddCollectionContext,
         },
     },
     std::{
@@ -361,7 +362,7 @@ pub trait PythonBinaryBuilder {
     fn add_distribution_resources(
         &mut self,
         callback: Option<ResourceAddCollectionContextCallback>,
-    ) -> Result<()>;
+    ) -> Result<Vec<AddResourceAction>>;
 
     /// Add a `PythonModuleSource` to the resources collection.
     ///
@@ -372,7 +373,7 @@ pub trait PythonBinaryBuilder {
         &mut self,
         module: &PythonModuleSource,
         add_context: Option<PythonResourceAddCollectionContext>,
-    ) -> Result<()>;
+    ) -> Result<Vec<AddResourceAction>>;
 
     /// Add a `PythonPackageResource` to the resources collection.
     ///
@@ -383,7 +384,7 @@ pub trait PythonBinaryBuilder {
         &mut self,
         resource: &PythonPackageResource,
         add_context: Option<PythonResourceAddCollectionContext>,
-    ) -> Result<()>;
+    ) -> Result<Vec<AddResourceAction>>;
 
     /// Add a `PythonPackageDistributionResource` to the resources collection.
     ///
@@ -394,7 +395,7 @@ pub trait PythonBinaryBuilder {
         &mut self,
         resource: &PythonPackageDistributionResource,
         add_context: Option<PythonResourceAddCollectionContext>,
-    ) -> Result<()>;
+    ) -> Result<Vec<AddResourceAction>>;
 
     /// Add a `PythonExtensionModule` to make available.
     ///
@@ -408,14 +409,14 @@ pub trait PythonBinaryBuilder {
         &mut self,
         extension_module: &PythonExtensionModule,
         add_context: Option<PythonResourceAddCollectionContext>,
-    ) -> Result<()>;
+    ) -> Result<Vec<AddResourceAction>>;
 
     /// Add a `File` to the resource collection.
     fn add_file_data(
         &mut self,
         file: &File,
         add_context: Option<PythonResourceAddCollectionContext>,
-    ) -> Result<()>;
+    ) -> Result<Vec<AddResourceAction>>;
 
     /// Filter embedded resources against names in files.
     ///
