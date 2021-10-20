@@ -352,8 +352,13 @@ starlark_module! { python_packaging_policy_module =>
 #[cfg(test)]
 mod tests {
     use {
-        super::super::python_distribution::PythonDistributionValue, super::super::testutil::*,
-        super::*, anyhow::Result,
+        super::super::testutil::*,
+        super::super::{
+            python_distribution::PythonDistributionValue, python_executable::PythonExecutableValue,
+        },
+        super::*,
+        anyhow::Result,
+        indoc::indoc,
     };
 
     #[test]
@@ -629,6 +634,152 @@ mod tests {
 
         env.eval("policy.set_resource_handling_mode('classify')")?;
         env.eval("policy.set_resource_handling_mode('files')")?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_stdlib_extension_module_enable() -> Result<()> {
+        let mut env = test_evaluation_context_builder()?.into_context()?;
+
+        let exe_value = env.eval(indoc! {r#"
+            dist = default_python_distribution()
+            policy = dist.make_python_packaging_policy()
+            policy.extension_module_filter = "minimal"
+            policy.resources_location_fallback = "filesystem-relative:lib"
+
+            def cb(policy, resource):
+                if type(resource) == "PythonExtensionModule":
+                    if resource.name == "_ssl":
+                        resource.add_include = True
+
+            policy.register_resource_callback(cb)
+
+            exe = dist.to_python_executable(
+                name = "myapp",
+                packaging_policy = policy
+            )
+
+            exe
+        "#})?;
+
+        let exe = exe_value.downcast_ref::<PythonExecutableValue>().unwrap();
+        let inner = exe.inner("ignored").unwrap();
+
+        assert_eq!(
+            inner
+                .iter_resources()
+                .filter(|(_, r)| { r.is_extension_module && r.name == "_ssl" })
+                .count(),
+            // TODO arguably should be 1.
+            0,
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_stdlib_extension_module_disable() -> Result<()> {
+        let mut env = test_evaluation_context_builder()?.into_context()?;
+
+        let exe_value = env.eval(indoc! {r#"
+            dist = default_python_distribution()
+            policy = dist.make_python_packaging_policy()
+            policy.resources_location_fallback = "filesystem-relative:lib"
+
+            def cb(policy, resource):
+                if type(resource) == "PythonExtensionModule":
+                    if resource.name == "_ssl":
+                        resource.add_include = False
+
+            policy.register_resource_callback(cb)
+
+            exe = dist.to_python_executable(
+                name = "myapp",
+                packaging_policy = policy
+            )
+
+            exe
+        "#})?;
+
+        let exe = exe_value.downcast_ref::<PythonExecutableValue>().unwrap();
+        let inner = exe.inner("ignored").unwrap();
+
+        assert_eq!(
+            inner
+                .iter_resources()
+                .filter(|(_, r)| { r.is_extension_module && r.name == "_ssl" })
+                .count(),
+            // TODO this seems buggy.
+            if cfg!(windows) { 1 } else { 0 }
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_ignore_non_stdlib_extension_module() -> Result<()> {
+        let mut env = test_evaluation_context_builder()?.into_context()?;
+
+        let exe_value = env.eval(indoc! {r#"
+            dist = default_python_distribution()
+            policy = dist.make_python_packaging_policy()
+            policy.resources_location_fallback = "filesystem-relative:lib"
+
+            exe = dist.to_python_executable(
+                name = "myapp",
+                packaging_policy = policy
+            )
+
+            exe.add_python_resources(exe.pip_install(["zstandard==0.16.0"]))
+
+            exe
+        "#})?;
+
+        let exe = exe_value.downcast_ref::<PythonExecutableValue>().unwrap();
+        let inner = exe.inner("ignored").unwrap();
+
+        assert_eq!(
+            inner
+                .iter_resources()
+                .filter(|(_, r)| { r.is_extension_module && r.name == "zstandard.backend_c" })
+                .count(),
+            1
+        );
+
+        let exe_value = env.eval(indoc! {r#"
+            dist = default_python_distribution()
+            policy = dist.make_python_packaging_policy()
+            policy.resources_location_fallback = "filesystem-relative:lib"
+
+            def cb(policy, resource):
+                if type(resource) == "PythonExtensionModule":
+                    if resource.name == "zstandard.backend_c":
+                        resource.add_include = False
+
+            policy.register_resource_callback(cb)
+
+            exe = dist.to_python_executable(
+                name = "myapp",
+                packaging_policy = policy,
+            )
+
+            exe.add_python_resources(exe.pip_install(["zstandard==0.16.0"]))
+
+            exe
+        "#})?;
+
+        let exe = exe_value.downcast_ref::<PythonExecutableValue>().unwrap();
+        let inner = exe.inner("ignored").unwrap();
+
+        assert_eq!(
+            inner
+                .iter_resources()
+                .filter(|(_, r)| { r.is_extension_module && r.name == "zstandard.backend_c" })
+                .count(),
+            // TODO should be 0.
+            1
+        );
 
         Ok(())
     }

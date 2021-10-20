@@ -117,4 +117,5 @@ version = "0.12.0-pre"
 path = "../tugger"
 
 [dev-dependencies]
+indoc = "1.0"
 xml-rs = "0.8"
