@@ -26,3 +26,6 @@
         (various)
 
         See :ref:`config_resource_add_attributes`.
+
+        Note: `add_include` is currently ignored for builtin modules, and can not
+        be used to control their inclusion.

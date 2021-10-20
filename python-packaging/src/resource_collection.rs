@@ -1301,10 +1301,10 @@ impl PythonResourceCollector {
         extension_module: &PythonExtensionModule,
         add_context: &PythonResourceAddCollectionContext,
     ) -> Result<Option<LibPythonBuildContext>> {
-        // TODO consult this attribute (it isn't set for built-ins for some reason)
-        //if !add_context.include {
-        //    return Ok(None);
-        // }
+        // TODO: investigate why `include` is always false for stdlib modules
+        if !add_context.include && !extension_module.is_stdlib {
+            return Ok(None);
+        }
 
         // Whether we can load extension modules as standalone shared library files.
         let can_load_standalone = self
