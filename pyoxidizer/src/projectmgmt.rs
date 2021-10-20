@@ -356,26 +356,26 @@ pub fn init_rust_project(
         "A new Rust binary application has been created in {}",
         project_path.display()
     );
-    println!();
-    println!("This application can be built by doing the following:");
-    println!();
-    println!("  $ cd {}", project_path.display());
-    println!("  $ pyoxidizer build");
-    println!("  $ pyoxidizer run");
-    println!();
-    println!("The default configuration is to invoke a Python REPL. You can");
-    println!("edit the various pyoxidizer.*.bzl config files or the main.rs ");
-    println!("file to change behavior. The application will need to be rebuilt ");
-    println!("for configuration changes to take effect.");
-    println!();
-    println!("IMPORTANT: use of `cargo` for direct project building and running");
-    println!("is possible, but likely requires setting environment variables");
-    println!("like PYOXIDIZER_EXE (the path to the `pyoxidizer` that the build.rs");
-    println!("build script should use) and PYO3_PYTHON (the path to the");
-    println!("Python interpreter executable used to configure the Rust crates that");
-    println!("link against libpython). Search the documentation for references to");
-    println!("these variables for troubleshooting tips. For best results, use");
-    println!("the aforementioned `pyoxidizer` commands to build Rust projects.");
+    print!(
+        r#"
+This application can be built most easily by doing the following:
+
+  $ cd {project_path}
+  $ pyoxidizer run
+
+Note however that this will bypass all the Rust code in the project
+folder, and build the project as if you had only created a pyoxidizer.bzl
+file. Building from Rust is more involved, and requires multiple steps.
+Please see the "PyOxidizer Rust Projects" section of the manual for more
+information.
+
+The default configuration is to invoke a Python REPL. You can
+edit the various pyoxidizer.*.bzl config files or the main.rs 
+file to change behavior. The application will need to be rebuilt 
+for configuration changes to take effect.
+"#,
+        project_path = project_path.display()
+    );
 
     Ok(())
 }

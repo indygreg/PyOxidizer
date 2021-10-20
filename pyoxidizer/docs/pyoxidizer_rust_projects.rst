@@ -164,10 +164,7 @@ interpreter use the ``snmalloc`` allocator.
 Using Cargo With Generated Rust Projects
 ========================================
 
-Rust developers will probably want to use ``cargo`` instead of ``pyoxidizer``
-for building auto-generated Rust projects. This is supported, but behavior can
-be very finicky.
-
+Building from a Rust project is not turn-key like PyOxidizer is.
 PyOxidizer has to do some non-conventional things to get Rust projects to
 build in very specific ways. Commands like ``pyoxidizer build`` abstract
 away all of this complexity for you.
@@ -216,3 +213,41 @@ file contains some commented out settings that may need to be set for some
 configurations (e.g. the ``standalone_static`` Windows distributions). Please
 consult this file if running into build errors when not building through
 ``pyoxidizer``.
+
+An Example and Further Reference
+==================================
+
+Starting from a project freshly created with ``pyoxidizer init-rust-project sample``,
+you'll first need to generate the build artifacts::
+
+   $ PYOXIDIZER_EXECUTABLE=$HOME/.cargo/bin/pyoxidizer \
+      PYO3_PYTHON=$HOME/python/install/bin/python3.9 \
+      PYOXIDIZER_CONFIG=$(pwd)/pyoxidizer.bzl \
+      TARGET=x86_64-apple-darwin \
+      CARGO_MANIFEST_DIR=. \
+      OUT_DIR=target/out \
+      PROFILE=debug \
+      pyoxidizer run-build-script build.rs
+
+That will put the artifacts in target/out.
+
+Then you can run cargo to build your crate::
+
+   $ PYOXIDIZER_REUSE_ARTIFACTS=1 \
+      PYOXIDIZER_ARTIFACT_DIR=$(pwd)/target/out \
+      PYOXIDIZER_EXECUTABLE=$HOME/.cargo/bin/pyoxidizer \
+      PYOXIDIZER_CONFIG=$(pwd)/pyoxidizer.bzl \
+      PYO3_CONFIG_FILE=$(pwd)/target/out/pyo3-build-config-file.txt cargo \
+      build --no-default-features --features \
+         "build-mode-prebuilt-artifacts global-allocator-jemalloc allocator-jemalloc"
+
+After building, you should find an executable in target/debug/.
+
+Note that currently this does not produce any files that have been redirected to the filesystem,
+such as extension modules. For now you'll need to copy them in from a normal pyoxidizer run, or
+see https://github.com/indygreg/PyOxidizer/pull/466
+
+On Windows, the paths will need updating, and the jemalloc features will need to be removed.
+
+If you wish to dig further into how PyOxidizer builds projects, project_building.rs
+is a good place to start.
