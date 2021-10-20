@@ -51,6 +51,9 @@ Bug Fixes
   the symbol. (#463)
 * Python ``.whl`` resources parsing now ignores directories. Previously,
   directories may have been emitted as 0-sized resources.
+* In some ``pyoxidizer.bzl`` configurations, an error would occur due to attempting
+  to write a built executable to a directory that doesn't exist. This should no
+  longer occur. (#447)
 
 Backwards Compatibility Notes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

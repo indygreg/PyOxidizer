@@ -97,6 +97,9 @@ pub fn build_internal(
     let output_path = context
         .get_output_path(type_values, target)
         .map_err(|_| anyhow!("unable to resolve output path"))?;
+    std::fs::create_dir_all(&output_path)
+        .with_context(|| format!("creating output directory {}", output_path.display()))?;
+
     let dest_path = output_path.join(build.exe_name);
     warn!(
         context.logger(),
