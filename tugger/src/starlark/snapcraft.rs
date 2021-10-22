@@ -23,7 +23,6 @@ use {
     std::{
         borrow::Cow,
         collections::HashMap,
-        convert::TryFrom,
         ops::Deref,
         sync::{Arc, Mutex, MutexGuard},
     },

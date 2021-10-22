@@ -45,7 +45,6 @@ use {
     },
     std::{
         collections::HashMap,
-        convert::TryFrom,
         io::Write,
         ops::Deref,
         path::{Path, PathBuf},

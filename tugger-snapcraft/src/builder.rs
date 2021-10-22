@@ -8,7 +8,6 @@ use {
     duct::cmd,
     slog::warn,
     std::{
-        convert::TryFrom,
         io::{BufRead, BufReader},
         path::Path,
     },

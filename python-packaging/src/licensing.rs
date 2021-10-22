@@ -8,7 +8,6 @@ use {
     std::{
         cmp::Ordering,
         collections::{BTreeMap, BTreeSet},
-        convert::TryInto,
     },
     tugger_licensing::{ComponentFlavor, LicensedComponent},
 };

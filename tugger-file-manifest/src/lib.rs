@@ -4,7 +4,6 @@
 
 use std::{
     collections::{BTreeMap, BTreeSet},
-    convert::TryFrom,
     ffi::OsStr,
     io::Write,
     path::{Path, PathBuf},

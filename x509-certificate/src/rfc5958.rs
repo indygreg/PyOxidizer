@@ -11,10 +11,7 @@ use {
         encode::{self, PrimitiveContent, Values},
         BitString, Integer, Mode, OctetString, Tag,
     },
-    std::{
-        convert::TryFrom,
-        ops::{Deref, DerefMut},
-    },
+    std::ops::{Deref, DerefMut},
 };
 
 /// A single asymmetric key.

@@ -68,7 +68,6 @@ use {
     slog::warn,
     std::{
         borrow::Cow,
-        convert::TryFrom,
         ops::Deref,
         path::{Path, PathBuf},
         sync::Arc,

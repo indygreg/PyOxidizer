@@ -29,7 +29,6 @@ use {
         get_context_value, EnvironmentContext, ResolvedTarget, ResolvedTargetValue, RunMode,
     },
     std::{
-        convert::TryFrom,
         path::{Path, PathBuf},
         sync::{Arc, Mutex, MutexGuard},
     },

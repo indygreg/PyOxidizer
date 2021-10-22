@@ -14,10 +14,7 @@ use {
         resource_collection::PythonResourceAddCollectionContext,
     },
     anyhow::Result,
-    std::{
-        collections::{HashMap, HashSet},
-        convert::TryFrom,
-    },
+    std::collections::{HashMap, HashSet},
     tugger_licensing::LicenseFlavor,
 };
 

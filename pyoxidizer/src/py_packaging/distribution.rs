@@ -23,7 +23,6 @@ use {
     slog::warn,
     std::{
         collections::HashMap,
-        convert::TryFrom,
         fs,
         fs::{create_dir_all, File},
         io::Read,

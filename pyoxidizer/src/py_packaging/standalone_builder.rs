@@ -42,7 +42,6 @@ use {
     slog::warn,
     std::{
         collections::{BTreeMap, BTreeSet, HashMap},
-        convert::TryInto,
         path::{Path, PathBuf},
         str::FromStr,
         sync::Arc,

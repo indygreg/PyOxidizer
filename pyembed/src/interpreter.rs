@@ -25,7 +25,6 @@ use {
     python_packaging::interpreter::{MultiprocessingStartMethod, TerminfoResolution},
     std::{
         collections::BTreeSet,
-        convert::{TryFrom, TryInto},
         env, fs,
         io::Write,
         path::{Path, PathBuf},

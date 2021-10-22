@@ -8,7 +8,6 @@ use {
     python_oxidized_importer::{PackedResourcesSource, PyTempDir, PythonResourcesState},
     python_packed_resources::Resource,
     rusty_fork::rusty_fork_test,
-    std::convert::TryFrom,
 };
 
 #[test]

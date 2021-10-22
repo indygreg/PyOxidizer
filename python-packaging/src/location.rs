@@ -4,8 +4,6 @@
 
 /*! Functionality related to resource locations. */
 
-use std::convert::TryFrom;
-
 /// Describes the location of a Python resource.
 ///
 /// The location is abstract because a concrete location (such as the

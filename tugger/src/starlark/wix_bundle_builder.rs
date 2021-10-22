@@ -25,10 +25,7 @@ use {
     starlark_dialect_build_targets::{
         get_context_value, EnvironmentContext, ResolvedTarget, ResolvedTargetValue, RunMode,
     },
-    std::{
-        convert::TryFrom,
-        path::{Path, PathBuf},
-    },
+    std::path::{Path, PathBuf},
     tugger_code_signing::SigningDestination,
     tugger_file_manifest::FileEntry,
     tugger_windows::VcRedistributablePlatform,

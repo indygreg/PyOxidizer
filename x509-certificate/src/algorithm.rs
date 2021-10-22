@@ -11,7 +11,6 @@ use {
     },
     bcder::{ConstOid, Oid},
     ring::{digest, signature},
-    std::convert::TryFrom,
 };
 
 /// SHA-1 digest algorithm.

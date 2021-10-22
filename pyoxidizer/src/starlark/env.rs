@@ -16,7 +16,6 @@ use {
     starlark_dialect_build_targets::{get_context_value, EnvironmentContext},
     std::{
         collections::HashMap,
-        convert::TryFrom,
         path::{Path, PathBuf},
         sync::Arc,
     },

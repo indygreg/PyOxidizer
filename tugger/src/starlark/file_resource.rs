@@ -20,7 +20,7 @@ use {
         get_context_value, optional_list_arg, optional_str_arg, required_list_arg,
         EnvironmentContext,
     },
-    std::{collections::HashSet, convert::TryFrom},
+    std::collections::HashSet,
     tugger_common::glob::evaluate_glob,
     tugger_file_manifest::{FileEntry, FileManifest},
 };

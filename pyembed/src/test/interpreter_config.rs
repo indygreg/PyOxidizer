@@ -15,7 +15,7 @@ use {
         resource::BytecodeOptimizationLevel,
     },
     rusty_fork::rusty_fork_test,
-    std::{convert::TryInto, ffi::OsString, path::PathBuf},
+    std::{ffi::OsString, path::PathBuf},
 };
 
 #[cfg(target_family = "unix")]

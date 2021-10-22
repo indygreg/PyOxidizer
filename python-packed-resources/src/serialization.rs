@@ -4,8 +4,6 @@
 
 /*! Declares the foundational data primitives inside packed resources data. */
 
-use std::convert::TryFrom;
-
 /// Header value for version 2 of resources payload.
 pub const HEADER_V3: &[u8] = b"pyembed\x03";
 

@@ -36,7 +36,6 @@ use {
     slog::{info, warn},
     std::{
         collections::{hash_map::RandomState, BTreeMap, HashMap},
-        convert::TryFrom,
         io::{BufRead, BufReader, Read},
         path::{Path, PathBuf},
         sync::Arc,

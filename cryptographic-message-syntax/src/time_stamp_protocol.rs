@@ -229,7 +229,7 @@ pub fn time_stamp_message_http(
 
 #[cfg(test)]
 mod test {
-    use {super::*, std::convert::TryFrom};
+    use super::*;
 
     const DIGICERT_TIMESTAMP_URL: &str = "http://timestamp.digicert.com";
 

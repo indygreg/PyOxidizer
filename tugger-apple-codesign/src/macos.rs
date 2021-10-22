@@ -14,7 +14,6 @@ use {
             keychain::{SecKeychain, SecPreferencesDomain},
         },
     },
-    std::convert::TryFrom,
     x509_certificate::CapturedX509Certificate,
 };
 

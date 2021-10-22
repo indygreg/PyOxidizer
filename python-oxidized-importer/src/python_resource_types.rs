@@ -20,7 +20,6 @@ use {
         PythonPackageResource as RawPythonPackageResource,
     },
     std::cell::{Ref, RefCell},
-    std::convert::TryFrom,
     tugger_file_manifest::FileData,
 };
 

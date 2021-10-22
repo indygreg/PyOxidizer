@@ -21,7 +21,6 @@ use {
     starlark_dialect_build_targets::ResolvedTarget,
     std::{
         collections::HashMap,
-        convert::TryInto,
         fs::create_dir_all,
         io::{BufRead, BufReader},
         path::{Path, PathBuf},

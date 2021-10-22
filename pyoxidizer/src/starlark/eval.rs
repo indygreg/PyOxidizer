@@ -28,7 +28,6 @@ use {
     },
     std::{
         collections::HashMap,
-        convert::TryFrom,
         path::{Path, PathBuf},
         sync::{Arc, Mutex},
     },

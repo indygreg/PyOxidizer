@@ -22,7 +22,6 @@ use {
     },
     starlark_dialect_build_targets::required_type_arg,
     std::{
-        convert::TryFrom,
         ops::Deref,
         sync::{Arc, Mutex, MutexGuard},
     },

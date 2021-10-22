@@ -22,7 +22,6 @@ use {
     std::{
         cmp::Ordering,
         collections::HashSet,
-        convert::TryFrom,
         fmt::{Debug, Formatter},
         hash::{Hash, Hasher},
         io::Write,

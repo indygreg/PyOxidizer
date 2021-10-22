@@ -24,7 +24,7 @@ use {
     apple_bundles::DirectoryBundleFile,
     plist::{Dictionary, Value},
     slog::{debug, info, Logger},
-    std::{cmp::Ordering, collections::BTreeMap, convert::TryFrom, io::Write},
+    std::{cmp::Ordering, collections::BTreeMap, io::Write},
 };
 
 #[derive(Clone, PartialEq)]

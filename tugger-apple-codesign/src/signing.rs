@@ -16,7 +16,7 @@ use {
         CpuType, CPU_TYPE_ARM, CPU_TYPE_ARM64, CPU_TYPE_ARM64_32, CPU_TYPE_X86_64,
     },
     reqwest::{IntoUrl, Url},
-    std::{collections::BTreeMap, convert::TryFrom, fmt::Formatter},
+    std::{collections::BTreeMap, fmt::Formatter},
     x509_certificate::{CapturedX509Certificate, InMemorySigningKeyPair},
 };
 

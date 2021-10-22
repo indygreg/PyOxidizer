@@ -36,7 +36,6 @@ use {
     scroll::{IOwrite, Pread},
     std::{
         borrow::Cow,
-        convert::TryFrom,
         io::Write,
         ops::{Deref, DerefMut},
     },

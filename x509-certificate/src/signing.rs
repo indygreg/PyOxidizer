@@ -12,7 +12,6 @@ use {
         rand::SystemRandom,
         signature::{self, KeyPair},
     },
-    std::convert::TryFrom,
 };
 
 /// Represents a key pair that exists in memory and can be used to create cryptographic signatures.

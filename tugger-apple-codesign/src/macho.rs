@@ -51,13 +51,7 @@ use {
         MachO,
     },
     scroll::{IOwrite, Pread},
-    std::{
-        borrow::Cow,
-        cmp::Ordering,
-        collections::HashMap,
-        convert::{TryFrom, TryInto},
-        io::Write,
-    },
+    std::{borrow::Cow, cmp::Ordering, collections::HashMap, io::Write},
     x509_certificate::DigestAlgorithm,
 };
 

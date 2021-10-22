@@ -22,7 +22,6 @@ use {
     },
     starlark_dialect_build_targets::required_type_arg,
     std::{
-        convert::TryInto,
         fmt::{Display, Formatter},
         path::{Path, PathBuf},
         sync::{Arc, Mutex},

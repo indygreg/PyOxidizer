@@ -29,7 +29,7 @@ use {
         error::AppleCodesignError,
     },
     once_cell::sync::Lazy,
-    std::{convert::TryFrom, ops::Deref},
+    std::ops::Deref,
     x509_certificate::CapturedX509Certificate,
 };
 

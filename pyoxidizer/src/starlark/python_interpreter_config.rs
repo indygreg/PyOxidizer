@@ -21,7 +21,6 @@ use {
     },
     starlark_dialect_build_targets::{ToOptional, TryToOptional},
     std::{
-        convert::TryFrom,
         str::FromStr,
         sync::{Arc, Mutex, MutexGuard},
     },

@@ -10,7 +10,7 @@ use {
         serialization::{BlobInteriorPadding, BlobSectionField, ResourceField, HEADER_V3},
     },
     byteorder::{LittleEndian, ReadBytesExt},
-    std::{borrow::Cow, collections::HashMap, convert::TryFrom, io::Cursor, path::Path},
+    std::{borrow::Cow, collections::HashMap, io::Cursor, path::Path},
 };
 
 #[cfg(unix)]

@@ -28,7 +28,6 @@ use {
     },
     std::{
         cell::RefCell,
-        convert::TryFrom,
         path::{Path, PathBuf},
     },
 };

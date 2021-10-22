@@ -4,8 +4,6 @@
 
 /*! Code signing on Windows. */
 
-use std::convert::TryFrom;
-
 mod signing;
 pub use signing::*;
 mod signtool;

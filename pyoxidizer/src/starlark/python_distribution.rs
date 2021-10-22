@@ -37,7 +37,7 @@ use {
         },
     },
     starlark_dialect_build_targets::{optional_str_arg, optional_type_arg},
-    std::{convert::TryFrom, ops::Deref, sync::Arc},
+    std::{ops::Deref, sync::Arc},
 };
 
 /// A Starlark Value wrapper for `PythonDistribution` traits.

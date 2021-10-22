@@ -703,10 +703,7 @@ mod tests {
     use {
         super::*,
         once_cell::sync::Lazy,
-        std::{
-            convert::TryFrom,
-            fs::{create_dir_all, write},
-        },
+        std::fs::{create_dir_all, write},
     };
 
     const DEFAULT_CACHE_TAG: &str = "cpython-37";

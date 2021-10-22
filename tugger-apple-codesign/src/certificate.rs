@@ -11,7 +11,7 @@ use {
         ConstOid, Oid,
     },
     bytes::Bytes,
-    std::{convert::TryFrom, str::FromStr},
+    std::str::FromStr,
     x509_certificate::{
         certificate::KeyUsage, rfc4519::OID_COUNTRY_NAME, CapturedX509Certificate,
         InMemorySigningKeyPair, KeyAlgorithm, X509CertificateBuilder,

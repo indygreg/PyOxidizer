@@ -13,7 +13,6 @@ use {
     },
     std::os::raw::c_int,
     std::{
-        convert::{TryFrom, TryInto},
         ffi::{CString, OsString},
         path::Path,
     },

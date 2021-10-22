@@ -14,9 +14,7 @@ use {
     std::{
         borrow::Cow,
         collections::HashMap,
-        convert::TryFrom,
         hash::BuildHasher,
-        iter::FromIterator,
         path::{Path, PathBuf},
     },
     tugger_file_manifest::{File, FileData},

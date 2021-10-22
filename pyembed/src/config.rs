@@ -13,7 +13,6 @@ use {
         PythonInterpreterProfile, TerminfoResolution,
     },
     std::{
-        convert::TryFrom,
         ffi::{CString, OsString},
         ops::Deref,
         path::PathBuf,

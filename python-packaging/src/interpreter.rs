@@ -6,7 +6,7 @@
 
 use {
     crate::resource::BytecodeOptimizationLevel,
-    std::{convert::TryFrom, ffi::OsString, os::raw::c_ulong, path::PathBuf, str::FromStr},
+    std::{ffi::OsString, os::raw::c_ulong, path::PathBuf, str::FromStr},
 };
 
 #[cfg(feature = "serialization")]

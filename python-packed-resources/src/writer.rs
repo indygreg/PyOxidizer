@@ -11,7 +11,7 @@ use {
     },
     anyhow::{anyhow, Context, Result},
     byteorder::{LittleEndian, WriteBytesExt},
-    std::{collections::BTreeMap, convert::TryFrom, io::Write, path::Path},
+    std::{collections::BTreeMap, io::Write, path::Path},
 };
 
 #[cfg(unix)]

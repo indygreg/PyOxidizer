@@ -24,7 +24,6 @@ use {
     std::{
         borrow::Cow,
         collections::{BTreeMap, BTreeSet, HashMap},
-        convert::TryFrom,
         path::PathBuf,
     },
     tugger_file_manifest::{File, FileData, FileEntry, FileManifest},

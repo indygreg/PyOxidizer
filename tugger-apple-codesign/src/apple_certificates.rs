@@ -12,11 +12,7 @@
 //! because the official DER-encoded certificates provided by Apple
 //! do not conform to the encoding standards in RFC 5280.
 
-use {
-    once_cell::sync::Lazy,
-    std::{convert::TryFrom, ops::Deref},
-    x509_certificate::CapturedX509Certificate,
-};
+use {once_cell::sync::Lazy, std::ops::Deref, x509_certificate::CapturedX509Certificate};
 
 /// Apple Inc. Root Certificate
 static APPLE_INC_ROOT_CERTIFICATE: Lazy<CapturedX509Certificate> = Lazy::new(|| {

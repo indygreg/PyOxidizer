@@ -54,7 +54,7 @@ use {
     cryptographic_message_syntax::SignedData,
     goblin::mach::{Mach, MachO},
     slog::{error, o, warn, Drain},
-    std::{convert::TryFrom, io::Write, path::PathBuf, str::FromStr},
+    std::{io::Write, path::PathBuf, str::FromStr},
     x509_certificate::{CapturedX509Certificate, EcdsaCurve, InMemorySigningKeyPair, KeyAlgorithm},
 };
 

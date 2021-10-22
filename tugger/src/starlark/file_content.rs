@@ -20,7 +20,6 @@ use {
         get_context_value, optional_bool_arg, optional_str_arg, EnvironmentContext,
     },
     std::{
-        convert::TryFrom,
         path::PathBuf,
         sync::{Arc, Mutex, MutexGuard},
     },

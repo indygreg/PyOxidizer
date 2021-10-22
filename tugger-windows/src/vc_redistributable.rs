@@ -6,7 +6,6 @@ use {
     anyhow::{anyhow, Result},
     once_cell::sync::Lazy,
     std::{
-        convert::TryFrom,
         fmt::{Display, Formatter},
         path::PathBuf,
     },

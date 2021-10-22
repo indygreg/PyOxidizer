@@ -27,10 +27,7 @@ use {
         get_context_value, optional_str_arg, EnvironmentContext, ResolvedTarget,
         ResolvedTargetValue, RunMode,
     },
-    std::{
-        convert::TryFrom,
-        path::{Path, PathBuf},
-    },
+    std::path::{Path, PathBuf},
     tugger_code_signing::SigningDestination,
     tugger_file_manifest::FileEntry,
 };

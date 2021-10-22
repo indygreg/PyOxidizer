@@ -93,7 +93,6 @@ use {
     ring::{digest::Digest, signature::UnparsedPublicKey},
     std::{
         collections::HashSet,
-        convert::TryFrom,
         fmt::{Debug, Display, Formatter},
         ops::Deref,
     },

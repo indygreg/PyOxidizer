@@ -4,7 +4,7 @@
 
 use {
     serde::{Deserialize, Serialize},
-    std::{borrow::Cow, collections::HashMap, convert::TryFrom},
+    std::{borrow::Cow, collections::HashMap},
 };
 
 /// Represents the value of the `type` field.
