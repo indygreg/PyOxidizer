@@ -153,13 +153,8 @@ impl TypedValue for PyOxidizerEnvironmentContext {
 }
 
 /// Starlark type holding context for PyOxidizer.
+#[derive(Default)]
 pub struct PyOxidizerContext {}
-
-impl Default for PyOxidizerContext {
-    fn default() -> Self {
-        PyOxidizerContext {}
-    }
-}
 
 impl TypedValue for PyOxidizerContext {
     type Holder = Mutable<PyOxidizerContext>;
