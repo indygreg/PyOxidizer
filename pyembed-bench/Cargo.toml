@@ -2,7 +2,7 @@
 name = "pyembed-bench"
 version = "0.1.0-pre"
 authors = ["Gregory Szorc <gregory.szorc@gmail.com>"]
-edition = "2018"
+edition = "2021"
 license = "Python-2.0 OR MPL-2.0"
 description = "Benchmarks for the pyembed crate"
 homepage = "https://github.com/indygreg/PyOxidizer"

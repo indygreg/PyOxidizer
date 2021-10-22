@@ -2,7 +2,7 @@
 name = "tugger-rpm"
 version = "0.6.0"
 authors = ["Gregory Szorc <gregory.szorc@gmail.com>"]
-edition = "2018"
+edition = "2021"
 license = "MPL-2.0"
 description = "RPM packaging primitives"
 keywords = ["package", "rpm", "tugger"]

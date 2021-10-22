@@ -7,7 +7,7 @@ readme = "README.md"
 description = "A Starlark dialect providing simple build system primitives"
 homepage = "https://github.com/indygreg/PyOxidizer"
 repository = "https://github.com/indygreg/PyOxidizer.git"
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 anyhow = "1.0"

@@ -2,7 +2,7 @@
 name = "tugger-wix"
 version = "0.10.0-pre"
 authors = ["Gregory Szorc <gregory.szorc@gmail.com>"]
-edition = "2018"
+edition = "2021"
 license = "MPL-2.0"
 description = "Interfaces to the WiX Toolset to produce Windows installers"
 keywords = ["package", "tugger", "windows", "wix", "wix-toolset"]

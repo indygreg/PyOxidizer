@@ -8,7 +8,7 @@ readme = "../README.md"
 homepage = "https://github.com/indygreg/PyOxidizer"
 repository = "https://github.com/indygreg/PyOxidizer.git"
 keywords = ["python"]
-edition = "2018"
+edition = "2021"
 build = "build.rs"
 
 # We rename the library so we can have crate documentation for both the
