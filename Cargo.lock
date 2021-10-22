@@ -681,7 +681,7 @@ dependencies = [
  "bytes",
  "chrono",
  "hex",
- "pem",
+ "pem 1.0.0",
  "reqwest",
  "ring",
  "x509-certificate",
@@ -2142,6 +2142,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "pem"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3f2373df5233932a893d3bc2c78a0bf3f6d12590a1edd546b4fbefcac32c5c0f"
+dependencies = [
+ "base64 0.13.0",
+ "once_cell",
+ "regex",
+]
+
+[[package]]
 name = "percent-encoding"
 version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2756,7 +2767,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2351cbef4bf91837f5ff7face6091cb277ba960d1638d2c5ae2327859912fbba"
 dependencies = [
  "chrono",
- "pem",
+ "pem 0.8.3",
  "ring",
  "yasna 0.4.0",
 ]
@@ -2926,7 +2937,7 @@ dependencies = [
  "num-integer",
  "num-iter",
  "num-traits",
- "pem",
+ "pem 0.8.3",
  "rand 0.7.3",
  "sha2",
  "simple_asn1",
@@ -3707,7 +3718,7 @@ dependencies = [
  "hex",
  "once_cell",
  "p12",
- "pem",
+ "pem 1.0.0",
  "plist",
  "regex",
  "reqwest",
@@ -4238,7 +4249,7 @@ dependencies = [
  "bytes",
  "chrono",
  "hex",
- "pem",
+ "pem 1.0.0",
  "ring",
  "thiserror",
 ]

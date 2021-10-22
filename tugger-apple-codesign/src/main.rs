@@ -1054,7 +1054,7 @@ fn command_sign(args: &ArgMatches) -> Result<(), AppleCodesignError> {
             warn!(&log, "reading PEM data from {}", pem_source);
             let pem_data = std::fs::read(pem_source)?;
 
-            for pem in pem::parse_many(&pem_data) {
+            for pem in pem::parse_many(&pem_data).map_err(AppleCodesignError::CertificatePem)? {
                 match pem.tag.as_str() {
                     "CERTIFICATE" => {
                         public_certificates.push(CapturedX509Certificate::from_der(pem.contents)?);

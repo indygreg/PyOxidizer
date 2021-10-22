@@ -112,7 +112,7 @@ impl X509Certificate {
         data: impl AsRef<[u8]>,
         tags: &[&str],
     ) -> Result<Vec<Self>, Error> {
-        let pem = pem::parse_many(data.as_ref());
+        let pem = pem::parse_many(data.as_ref()).map_err(Error::PemDecode)?;
 
         pem.into_iter()
             .filter(|pem| tags.contains(&pem.tag.as_str()))
@@ -412,7 +412,7 @@ impl CapturedX509Certificate {
         data: impl AsRef<[u8]>,
         tags: &[&str],
     ) -> Result<Vec<Self>, Error> {
-        let pem = pem::parse_many(data.as_ref());
+        let pem = pem::parse_many(data.as_ref()).map_err(Error::PemDecode)?;
 
         pem.into_iter()
             .filter(|pem| tags.contains(&pem.tag.as_str()))
