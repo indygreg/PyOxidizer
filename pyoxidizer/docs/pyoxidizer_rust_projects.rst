@@ -172,21 +172,6 @@ away all of this complexity for you.
 If you do want to use ``cargo`` directly, the following sections will give you
 some tips.
 
-``build.rs`` Invokes ``pyoxidizer``
------------------------------------
-
-The ``build.rs`` of the ``pyembed`` crate dependency will invoke ``pyoxidizer``
-to generate various artifacts needed by the ``pyembed`` crate.
-
-By default, it uses the ``pyoxidizer`` in ``PATH``. If you want to point it
-at an explicit executable (this is common when you run ``pyoxidizer`` from
-Git source checkouts), set the ``PYOXIDIZER_EXE`` environment variable. e.g.::
-
-    $ PYOXIDIZER_EXE=~/src/pyoxidizer/target/debug/pyoxidizer cargo build
-
-You may want to look at the source code of ``pyembed``'s ``build.rs`` for
-all the magic that is being done.
-
 Linking Against the Python Interpreter
 --------------------------------------
 
