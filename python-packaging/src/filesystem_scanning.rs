@@ -69,7 +69,7 @@ struct ResourceFile {
 
 #[derive(Debug, PartialEq)]
 enum PathItem<'a> {
-    PythonResource(PythonResource<'a>),
+    PythonResource(Box<PythonResource<'a>>),
     ResourceFile(ResourceFile),
 }
 
@@ -257,7 +257,7 @@ impl<'a> PythonResourceIterator<'a> {
             // Name of resource is file path after the initial directory.
             let name = components[1..components.len()].join("/");
 
-            return Some(PathItem::PythonResource(
+            return Some(PathItem::PythonResource(Box::new(
                 PythonPackageDistributionResource {
                     location,
                     package: package.to_string(),
@@ -266,7 +266,7 @@ impl<'a> PythonResourceIterator<'a> {
                     data: self.resolve_file_data(path),
                 }
                 .into(),
-            ));
+            )));
         }
 
         // site-packages directories are package roots within package roots. Treat them as
@@ -350,7 +350,7 @@ impl<'a> PythonResourceIterator<'a> {
                 let final_name = module_components[module_components.len() - 1];
                 let init_fn = Some(format!("PyInit_{}", final_name));
 
-                return Some(PathItem::PythonResource(
+                return Some(PathItem::PythonResource(Box::new(
                     PythonExtensionModule {
                         name: full_module_name,
                         init_fn,
@@ -366,7 +366,7 @@ impl<'a> PythonResourceIterator<'a> {
                         license: None,
                     }
                     .into(),
-                ));
+                )));
             }
         }
 
@@ -400,7 +400,7 @@ impl<'a> PythonResourceIterator<'a> {
 
             self.seen_packages.insert(package);
 
-            return Some(PathItem::PythonResource(
+            return Some(PathItem::PythonResource(Box::new(
                 PythonModuleSource {
                     name: full_module_name,
                     source: self.resolve_file_data(path),
@@ -410,7 +410,7 @@ impl<'a> PythonResourceIterator<'a> {
                     is_test: false,
                 }
                 .into(),
-            ));
+            )));
         }
 
         if self
@@ -490,7 +490,7 @@ impl<'a> PythonResourceIterator<'a> {
 
             self.seen_packages.insert(package);
 
-            return Some(PathItem::PythonResource(
+            return Some(PathItem::PythonResource(Box::new(
                 PythonModuleBytecode::from_path(
                     &full_module_name,
                     optimization_level,
@@ -498,22 +498,22 @@ impl<'a> PythonResourceIterator<'a> {
                     path,
                 )
                 .into(),
-            ));
+            )));
         }
 
         let resource = match rel_path.extension().and_then(OsStr::to_str) {
-            Some("egg") => PathItem::PythonResource(
+            Some("egg") => PathItem::PythonResource(Box::new(
                 PythonEggFile {
                     data: self.resolve_file_data(path),
                 }
                 .into(),
-            ),
-            Some("pth") => PathItem::PythonResource(
+            )),
+            Some("pth") => PathItem::PythonResource(Box::new(
                 PythonPathExtension {
                     data: self.resolve_file_data(path),
                 }
                 .into(),
-            ),
+            )),
             _ => {
                 // If it is some other file type, we categorize it as a resource
                 // file. The package name and resource name are resolved later,
@@ -576,7 +576,7 @@ impl<'a> Iterator for PythonResourceIterator<'a> {
                             self.resources.push(resource);
                         }
                         PathItem::PythonResource(resource) => {
-                            return Some(Ok(resource));
+                            return Some(Ok(*resource));
                         }
                     }
                 }
