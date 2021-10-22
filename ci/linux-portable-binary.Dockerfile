@@ -61,7 +61,7 @@ USER build
 RUN curl https://raw.githubusercontent.com/rust-lang/rustup/ce5817a94ac372804babe32626ba7fd2d5e1b6ac/rustup-init.sh > rustup-init.sh && \
   echo 'a3cb081f88a6789d104518b30d4aa410009cd08c3822a1226991d6cf0442a0f8  rustup-init.sh' | sha256sum -c - && \
   chmod +x rustup-init.sh && \
-  ./rustup-init.sh -y --default-toolchain 1.55.0 --profile minimal
+  ./rustup-init.sh -y --default-toolchain 1.56.0 --profile minimal
 
 RUN curl -L https://github.com/indygreg/python-build-standalone/releases/download/20210724/cpython-3.9.6-x86_64-unknown-linux-gnu-install_only-20210724T1424.tar.gz > python.tar.gz && \
   echo 'a5e1f952a50a3a660922a7b558911d56c4d046078c67a83ec048f81ee4d3b8bd  python.tar.gz' | sha256sum -c - && \
