@@ -152,10 +152,12 @@ fn starlark_vars(args: &ArgMatches) -> Result<HashMap<String, Option<String>>> {
 pub fn run_cli() -> Result<()> {
     let mut env = crate::environment::Environment::new()?;
 
-    let matches = App::new("PyOxidizer")
+    let version = env.pyoxidizer_source.version_long();
+
+    let app = App::new("PyOxidizer")
         .setting(AppSettings::ArgRequiredElseHelp)
         .version(PYOXIDIZER_VERSION)
-        .long_version(env.pyoxidizer_source.version_long().as_str())
+        .long_version(version.as_str())
         .author("Gregory Szorc <gregory.szorc@gmail.com>")
         .long_about("Build and distribute Python applications")
         .arg(
@@ -169,222 +171,235 @@ pub fn run_cli() -> Result<()> {
                 .long("verbose")
                 .global(true)
                 .help("Enable verbose output"),
-        )
-        .subcommand(
-            SubCommand::with_name("analyze")
-                .about("Analyze a built binary")
-                .setting(AppSettings::ArgRequiredElseHelp)
-                .arg(Arg::with_name("path").help("Path to executable to analyze")),
-        )
-        .subcommand(add_env_args(
-            SubCommand::with_name("build")
-                .setting(AppSettings::ArgRequiredElseHelp)
-                .about("Build a PyOxidizer enabled project")
-                .long_about(BUILD_ABOUT)
-                .arg(
-                    Arg::with_name("target_triple")
-                        .long("target-triple")
-                        .takes_value(true)
-                        .help("Rust target triple to build for"),
-                )
-                .arg(
-                    Arg::with_name("release")
-                        .long("release")
-                        .help("Build a release binary"),
-                )
-                .arg(
-                    Arg::with_name("path")
-                        .long("path")
-                        .takes_value(true)
-                        .default_value(".")
-                        .value_name("PATH")
-                        .help("Directory containing project to build"),
-                )
-                .arg(
-                    Arg::with_name("targets")
-                        .value_name("TARGET")
-                        .multiple(true)
-                        .help("Target to resolve"),
-                ),
-        ))
-        .subcommand(
-            SubCommand::with_name("cache-clear").about("Clear PyOxidizer's user-specific cache"),
-        )
-        .subcommand(
-            SubCommand::with_name("find-resources")
-                .about("Find resources in a file or directory")
-                .long_about(RESOURCES_SCAN_ABOUT)
-                .setting(AppSettings::ArgRequiredElseHelp)
-                .arg(
-                    Arg::with_name("distributions_dir")
-                        .long("distributions-dir")
-                        .takes_value(true)
-                        .value_name("PATH")
-                        .help("Directory to extract downloaded Python distributions into"),
-                )
-                .arg(
-                    Arg::with_name("scan_distribution")
-                        .long("--scan-distribution")
-                        .help("Scan the Python distribution instead of a path"),
-                )
-                .arg(
-                    Arg::with_name("target_triple")
-                        .long("target-triple")
-                        .takes_value(true)
-                        .default_value(default_target_triple())
-                        .help("Target triple of Python distribution to use"),
-                )
-                .arg(
-                    Arg::with_name("no_classify_files")
-                        .long("no-classify-files")
-                        .help("Whether to skip classifying files as typed resources"),
-                )
-                .arg(
-                    Arg::with_name("no_emit_files")
-                        .long("no-emit-files")
-                        .help("Whether to skip emitting File resources"),
-                )
-                .arg(Arg::with_name("path").value_name("PATH").help(
-                    "Filesystem path to scan for resources. Must be a directory or Python wheel",
-                )),
-        )
-        .subcommand(
-            SubCommand::with_name("init-config-file")
-                .setting(AppSettings::ArgRequiredElseHelp)
-                .about("Create a new PyOxidizer configuration file.")
-                .arg(
-                    Arg::with_name("python-code")
-                        .long("python-code")
-                        .takes_value(true)
-                        .help("Default Python code to execute in built executable"),
-                )
-                .arg(
-                    Arg::with_name("pip-install")
-                        .long("pip-install")
-                        .takes_value(true)
-                        .multiple(true)
-                        .number_of_values(1)
-                        .help("Python package to install via `pip install`"),
-                )
-                .arg(
-                    Arg::with_name("path")
-                        .required(true)
-                        .value_name("PATH")
-                        .help("Directory where configuration file should be created"),
-                ),
-        )
-        .subcommand(
-            SubCommand::with_name("init-rust-project")
-                .setting(AppSettings::ArgRequiredElseHelp)
-                .about("Create a new Rust project embedding a Python interpreter")
-                .long_about(INIT_RUST_PROJECT_ABOUT)
-                .arg(
-                    Arg::with_name("path")
-                        .required(true)
-                        .value_name("PATH")
-                        .help("Path of project directory to create"),
-                ),
-        )
-        .subcommand(
-            SubCommand::with_name("list-targets")
-                .setting(AppSettings::ArgRequiredElseHelp)
-                .about("List targets available to resolve in a configuration file")
-                .arg(
-                    Arg::with_name("path")
-                        .default_value(".")
-                        .value_name("PATH")
-                        .help("Path to project to evaluate"),
-                ),
-        )
-        .subcommand(
-            SubCommand::with_name("python-distribution-extract")
-                .about("Extract a Python distribution archive to a directory")
-                .arg(
-                    Arg::with_name("download-default")
-                        .long("--download-default")
-                        .help("Download and extract the default distribution for this platform"),
-                )
-                .arg(
-                    Arg::with_name("archive-path")
-                        .long("--archive-path")
-                        .value_name("DISTRIBUTION_PATH")
-                        .help("Path to a Python distribution archive"),
-                )
-                .arg(
-                    Arg::with_name("dest_path")
-                        .required(true)
-                        .value_name("DESTINATION_PATH")
-                        .help("Path to directory where distribution should be extracted"),
-                ),
-        )
-        .subcommand(
-            SubCommand::with_name("python-distribution-info")
-                .about("Show information about a Python distribution archive")
-                .arg(
-                    Arg::with_name("path")
-                        .required(true)
-                        .value_name("PATH")
-                        .help("Path to Python distribution archive to analyze"),
-                ),
-        )
-        .subcommand(
-            SubCommand::with_name("python-distribution-licenses")
-                .about("Show licenses for a given Python distribution")
-                .arg(
-                    Arg::with_name("path")
-                        .required(true)
-                        .value_name("PATH")
-                        .help("Path to Python distribution to analyze"),
-                ),
-        )
-        .subcommand(add_env_args(
-            SubCommand::with_name("run-build-script")
-                .setting(AppSettings::ArgRequiredElseHelp)
-                .about("Run functionality that a build script would perform")
-                .long_about(RUN_BUILD_SCRIPT_ABOUT)
-                .arg(
-                    Arg::with_name("build-script-name")
-                        .required(true)
-                        .help("Value to use for Rust build script"),
-                )
-                .arg(
-                    Arg::with_name("target")
-                        .long("target")
-                        .takes_value(true)
-                        .help("The config file target to resolve"),
-                ),
-        ))
-        .subcommand(add_env_args(
-            SubCommand::with_name("run")
-                .setting(AppSettings::TrailingVarArg)
-                .about("Run a target in a PyOxidizer configuration file")
-                .arg(
-                    Arg::with_name("target_triple")
-                        .long("target-triple")
-                        .takes_value(true)
-                        .help("Rust target triple to build for"),
-                )
-                .arg(
-                    Arg::with_name("release")
-                        .long("release")
-                        .help("Run a release binary"),
-                )
-                .arg(
-                    Arg::with_name("path")
-                        .long("path")
-                        .default_value(".")
-                        .value_name("PATH")
-                        .help("Directory containing project to build"),
-                )
-                .arg(
-                    Arg::with_name("target")
-                        .long("target")
-                        .takes_value(true)
-                        .help("Build target to run"),
-                )
-                .arg(Arg::with_name("extra").multiple(true)),
-        ))
-        .get_matches();
+        );
+
+    let app = app.subcommand(
+        SubCommand::with_name("analyze")
+            .about("Analyze a built binary")
+            .setting(AppSettings::ArgRequiredElseHelp)
+            .arg(Arg::with_name("path").help("Path to executable to analyze")),
+    );
+
+    let app = app.subcommand(add_env_args(
+        SubCommand::with_name("build")
+            .setting(AppSettings::ArgRequiredElseHelp)
+            .about("Build a PyOxidizer enabled project")
+            .long_about(BUILD_ABOUT)
+            .arg(
+                Arg::with_name("target_triple")
+                    .long("target-triple")
+                    .takes_value(true)
+                    .help("Rust target triple to build for"),
+            )
+            .arg(
+                Arg::with_name("release")
+                    .long("release")
+                    .help("Build a release binary"),
+            )
+            .arg(
+                Arg::with_name("path")
+                    .long("path")
+                    .takes_value(true)
+                    .default_value(".")
+                    .value_name("PATH")
+                    .help("Directory containing project to build"),
+            )
+            .arg(
+                Arg::with_name("targets")
+                    .value_name("TARGET")
+                    .multiple(true)
+                    .help("Target to resolve"),
+            ),
+    ));
+
+    let app = app.subcommand(
+        SubCommand::with_name("cache-clear").about("Clear PyOxidizer's user-specific cache"),
+    );
+
+    let app = app.subcommand(
+        SubCommand::with_name("find-resources")
+            .about("Find resources in a file or directory")
+            .long_about(RESOURCES_SCAN_ABOUT)
+            .setting(AppSettings::ArgRequiredElseHelp)
+            .arg(
+                Arg::with_name("distributions_dir")
+                    .long("distributions-dir")
+                    .takes_value(true)
+                    .value_name("PATH")
+                    .help("Directory to extract downloaded Python distributions into"),
+            )
+            .arg(
+                Arg::with_name("scan_distribution")
+                    .long("--scan-distribution")
+                    .help("Scan the Python distribution instead of a path"),
+            )
+            .arg(
+                Arg::with_name("target_triple")
+                    .long("target-triple")
+                    .takes_value(true)
+                    .default_value(default_target_triple())
+                    .help("Target triple of Python distribution to use"),
+            )
+            .arg(
+                Arg::with_name("no_classify_files")
+                    .long("no-classify-files")
+                    .help("Whether to skip classifying files as typed resources"),
+            )
+            .arg(
+                Arg::with_name("no_emit_files")
+                    .long("no-emit-files")
+                    .help("Whether to skip emitting File resources"),
+            )
+            .arg(Arg::with_name("path").value_name("PATH").help(
+                "Filesystem path to scan for resources. Must be a directory or Python wheel",
+            )),
+    );
+
+    let app = app.subcommand(
+        SubCommand::with_name("init-config-file")
+            .setting(AppSettings::ArgRequiredElseHelp)
+            .about("Create a new PyOxidizer configuration file.")
+            .arg(
+                Arg::with_name("python-code")
+                    .long("python-code")
+                    .takes_value(true)
+                    .help("Default Python code to execute in built executable"),
+            )
+            .arg(
+                Arg::with_name("pip-install")
+                    .long("pip-install")
+                    .takes_value(true)
+                    .multiple(true)
+                    .number_of_values(1)
+                    .help("Python package to install via `pip install`"),
+            )
+            .arg(
+                Arg::with_name("path")
+                    .required(true)
+                    .value_name("PATH")
+                    .help("Directory where configuration file should be created"),
+            ),
+    );
+
+    let app = app.subcommand(
+        SubCommand::with_name("init-rust-project")
+            .setting(AppSettings::ArgRequiredElseHelp)
+            .about("Create a new Rust project embedding a Python interpreter")
+            .long_about(INIT_RUST_PROJECT_ABOUT)
+            .arg(
+                Arg::with_name("path")
+                    .required(true)
+                    .value_name("PATH")
+                    .help("Path of project directory to create"),
+            ),
+    );
+
+    let app = app.subcommand(
+        SubCommand::with_name("list-targets")
+            .setting(AppSettings::ArgRequiredElseHelp)
+            .about("List targets available to resolve in a configuration file")
+            .arg(
+                Arg::with_name("path")
+                    .default_value(".")
+                    .value_name("PATH")
+                    .help("Path to project to evaluate"),
+            ),
+    );
+
+    let app = app.subcommand(
+        SubCommand::with_name("python-distribution-extract")
+            .about("Extract a Python distribution archive to a directory")
+            .arg(
+                Arg::with_name("download-default")
+                    .long("--download-default")
+                    .help("Download and extract the default distribution for this platform"),
+            )
+            .arg(
+                Arg::with_name("archive-path")
+                    .long("--archive-path")
+                    .value_name("DISTRIBUTION_PATH")
+                    .help("Path to a Python distribution archive"),
+            )
+            .arg(
+                Arg::with_name("dest_path")
+                    .required(true)
+                    .value_name("DESTINATION_PATH")
+                    .help("Path to directory where distribution should be extracted"),
+            ),
+    );
+
+    let app = app.subcommand(
+        SubCommand::with_name("python-distribution-info")
+            .about("Show information about a Python distribution archive")
+            .arg(
+                Arg::with_name("path")
+                    .required(true)
+                    .value_name("PATH")
+                    .help("Path to Python distribution archive to analyze"),
+            ),
+    );
+
+    let app = app.subcommand(
+        SubCommand::with_name("python-distribution-licenses")
+            .about("Show licenses for a given Python distribution")
+            .arg(
+                Arg::with_name("path")
+                    .required(true)
+                    .value_name("PATH")
+                    .help("Path to Python distribution to analyze"),
+            ),
+    );
+
+    let app = app.subcommand(add_env_args(
+        SubCommand::with_name("run-build-script")
+            .setting(AppSettings::ArgRequiredElseHelp)
+            .about("Run functionality that a build script would perform")
+            .long_about(RUN_BUILD_SCRIPT_ABOUT)
+            .arg(
+                Arg::with_name("build-script-name")
+                    .required(true)
+                    .help("Value to use for Rust build script"),
+            )
+            .arg(
+                Arg::with_name("target")
+                    .long("target")
+                    .takes_value(true)
+                    .help("The config file target to resolve"),
+            ),
+    ));
+
+    let app = app.subcommand(add_env_args(
+        SubCommand::with_name("run")
+            .setting(AppSettings::TrailingVarArg)
+            .about("Run a target in a PyOxidizer configuration file")
+            .arg(
+                Arg::with_name("target_triple")
+                    .long("target-triple")
+                    .takes_value(true)
+                    .help("Rust target triple to build for"),
+            )
+            .arg(
+                Arg::with_name("release")
+                    .long("release")
+                    .help("Run a release binary"),
+            )
+            .arg(
+                Arg::with_name("path")
+                    .long("path")
+                    .default_value(".")
+                    .value_name("PATH")
+                    .help("Directory containing project to build"),
+            )
+            .arg(
+                Arg::with_name("target")
+                    .long("target")
+                    .takes_value(true)
+                    .help("Build target to run"),
+            )
+            .arg(Arg::with_name("extra").multiple(true)),
+    ));
+
+    let matches = app.get_matches();
 
     let verbose = matches.is_present("verbose");
 
