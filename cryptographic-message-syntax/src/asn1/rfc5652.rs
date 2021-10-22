@@ -1104,7 +1104,7 @@ impl RevocationInfoChoices {
 /// ```
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum RevocationInfoChoice {
-    Crl(CertificateList),
+    Crl(Box<CertificateList>),
     Other(OtherRevocationInfoFormat),
 }
 
