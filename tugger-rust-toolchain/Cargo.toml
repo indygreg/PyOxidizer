@@ -33,5 +33,5 @@ version = "0.6.0-pre"
 path = "../tugger-file-manifest"
 
 [dev-dependencies]
-dirs = "3.0"
+dirs = "4.0"
 tempfile = "3.2"
