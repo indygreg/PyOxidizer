@@ -18,5 +18,6 @@ generic crate and can be used outside the context of PyOxidizer.
 .. toctree::
    :maxdepth: 2
 
+   pyembed_building
    pyembed_controlling_python
    pyembed_extension_modules
