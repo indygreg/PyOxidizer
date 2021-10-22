@@ -690,15 +690,9 @@ impl PythonExtensionModule {
 }
 
 /// Represents a collection of variants for a given Python extension module.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct PythonExtensionModuleVariants {
     extensions: Vec<PythonExtensionModule>,
-}
-
-impl Default for PythonExtensionModuleVariants {
-    fn default() -> Self {
-        Self { extensions: vec![] }
-    }
 }
 
 impl FromIterator<PythonExtensionModule> for PythonExtensionModuleVariants {
