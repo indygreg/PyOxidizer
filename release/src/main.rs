@@ -1026,7 +1026,6 @@ fn command_release(repo_root: &Path, args: &ArgMatches, repo: &Repository) -> Re
 #[derive(Debug, Deserialize)]
 struct CargoDenyLicenseList {
     licenses: Vec<(String, Vec<String>)>,
-    unlicensed: Vec<String>,
 }
 
 fn generate_pyembed_license(repo_root: &Path) -> Result<String> {
