@@ -82,26 +82,15 @@ impl PyObjectProtocol for OxidizedResourceCollector {
 #[pymethods]
 impl OxidizedResourceCollector {
     #[new]
-    fn new(py: Python, allowed_locations: Vec<String>) -> PyResult<Self> {
+    fn new(allowed_locations: Vec<String>) -> PyResult<Self> {
         let allowed_locations = allowed_locations
             .iter()
             .map(|location| AbstractResourceLocation::try_from(location.as_str()))
             .collect::<Result<Vec<_>, _>>()
             .map_err(PyValueError::new_err)?;
 
-        let sys_module = py.import("sys")?;
-        let cache_tag = sys_module
-            .getattr("implementation")?
-            .getattr("cache_tag")?
-            .extract::<String>()?;
-
-        let collector = PythonResourceCollector::new(
-            allowed_locations.clone(),
-            allowed_locations,
-            true,
-            true,
-            &cache_tag,
-        );
+        let collector =
+            PythonResourceCollector::new(allowed_locations.clone(), allowed_locations, true, true);
 
         Ok(Self {
             collector: RefCell::new(collector),

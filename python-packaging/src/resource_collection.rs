@@ -719,9 +719,6 @@ pub struct PythonResourceCollector {
     /// Named resources that have been collected.
     resources: BTreeMap<String, PrePackagedResource>,
 
-    /// Bytecode cache tag to use for compiled bytecode modules.
-    cache_tag: String,
-
     /// Collection of software components which are licensed.
     licensed_components: LicensedComponents,
 }
@@ -739,7 +736,6 @@ impl PythonResourceCollector {
         allowed_extension_module_locations: Vec<AbstractResourceLocation>,
         allow_new_builtin_extension_modules: bool,
         allow_files: bool,
-        cache_tag: &str,
     ) -> Self {
         Self {
             allowed_locations,
@@ -747,7 +743,6 @@ impl PythonResourceCollector {
             allow_new_builtin_extension_modules,
             allow_files,
             resources: BTreeMap::new(),
-            cache_tag: cache_tag.to_string(),
             licensed_components: LicensedComponents::default(),
         }
     }
@@ -2990,7 +2985,6 @@ mod tests {
             vec![],
             false,
             false,
-            DEFAULT_CACHE_TAG,
         );
         r.add_python_module_source(
             &PythonModuleSource {
@@ -3042,7 +3036,6 @@ mod tests {
             vec![],
             false,
             false,
-            DEFAULT_CACHE_TAG,
         );
         r.add_python_module_source(
             &PythonModuleSource {
@@ -3116,7 +3109,6 @@ mod tests {
             vec![],
             false,
             false,
-            DEFAULT_CACHE_TAG,
         );
         r.add_python_module_source(
             &PythonModuleSource {
@@ -3197,7 +3189,6 @@ mod tests {
             vec![],
             false,
             false,
-            DEFAULT_CACHE_TAG,
         );
 
         let module = PythonModuleSource {
@@ -3318,7 +3309,6 @@ mod tests {
             vec![],
             false,
             false,
-            DEFAULT_CACHE_TAG,
         );
         r.add_python_module_bytecode(
             &PythonModuleBytecode::new(
@@ -3371,7 +3361,6 @@ mod tests {
             vec![],
             false,
             false,
-            DEFAULT_CACHE_TAG,
         );
         r.add_python_module_bytecode_from_source(
             &PythonModuleBytecodeFromSource {
@@ -3426,7 +3415,6 @@ mod tests {
             vec![],
             false,
             false,
-            DEFAULT_CACHE_TAG,
         );
 
         let mut module = PythonModuleBytecode::new(
@@ -3546,7 +3534,6 @@ mod tests {
             vec![],
             false,
             false,
-            DEFAULT_CACHE_TAG,
         );
         r.add_python_module_bytecode_from_source(
             &PythonModuleBytecodeFromSource {
@@ -3622,7 +3609,6 @@ mod tests {
             vec![],
             false,
             false,
-            DEFAULT_CACHE_TAG,
         );
 
         let mut module = PythonModuleBytecodeFromSource {
@@ -3744,7 +3730,6 @@ mod tests {
             vec![],
             false,
             false,
-            DEFAULT_CACHE_TAG,
         );
         r.add_python_package_resource(
             &PythonPackageResource {
@@ -3806,7 +3791,6 @@ mod tests {
             vec![],
             false,
             false,
-            DEFAULT_CACHE_TAG,
         );
         r.add_python_package_resource(
             &PythonPackageResource {
@@ -3884,7 +3868,6 @@ mod tests {
             vec![],
             false,
             false,
-            DEFAULT_CACHE_TAG,
         );
 
         let resource = PythonPackageResource {
@@ -3972,7 +3955,6 @@ mod tests {
             vec![],
             false,
             false,
-            DEFAULT_CACHE_TAG,
         );
         r.add_python_package_distribution_resource(
             &PythonPackageDistributionResource {
@@ -4034,7 +4016,6 @@ mod tests {
             vec![],
             false,
             false,
-            DEFAULT_CACHE_TAG,
         );
         r.add_python_package_distribution_resource(
             &PythonPackageDistributionResource {
@@ -4112,7 +4093,6 @@ mod tests {
             vec![],
             false,
             false,
-            DEFAULT_CACHE_TAG,
         );
 
         let resource = PythonPackageDistributionResource {
@@ -4195,7 +4175,6 @@ mod tests {
             vec![AbstractResourceLocation::InMemory],
             false,
             false,
-            DEFAULT_CACHE_TAG,
         );
 
         let em = PythonExtensionModule {
@@ -4272,7 +4251,6 @@ mod tests {
             vec![],
             false,
             false,
-            DEFAULT_CACHE_TAG,
         );
 
         let res = c.add_python_extension_module(&em, &ConcreteResourceLocation::InMemory);
@@ -4284,7 +4262,6 @@ mod tests {
             vec![AbstractResourceLocation::InMemory],
             false,
             false,
-            DEFAULT_CACHE_TAG,
         );
 
         c.add_python_extension_module(&em, &ConcreteResourceLocation::InMemory)?;
@@ -4369,7 +4346,6 @@ mod tests {
             vec![],
             false,
             false,
-            DEFAULT_CACHE_TAG,
         );
         let res = c.add_python_extension_module(
             &em,
@@ -4383,7 +4359,6 @@ mod tests {
             vec![AbstractResourceLocation::RelativePath],
             false,
             false,
-            DEFAULT_CACHE_TAG,
         );
 
         c.add_python_extension_module(
@@ -4481,7 +4456,6 @@ mod tests {
             vec![],
             false,
             false,
-            DEFAULT_CACHE_TAG,
         );
 
         r.add_python_module_source(
@@ -4547,7 +4521,6 @@ mod tests {
             vec![],
             false,
             false,
-            DEFAULT_CACHE_TAG,
         );
         assert!(r
             .add_file_data(
@@ -4599,7 +4572,6 @@ mod tests {
             vec![],
             false,
             true,
-            DEFAULT_CACHE_TAG,
         );
         r.add_file_data(
             &File::new("foo/bar.py", vec![42]),
@@ -4653,7 +4625,6 @@ mod tests {
             vec![],
             false,
             true,
-            DEFAULT_CACHE_TAG,
         );
 
         let file = File::new("foo/bar.py", FileEntry::new_from_data(vec![42], true));
@@ -4717,7 +4688,6 @@ mod tests {
             vec![],
             false,
             false,
-            DEFAULT_CACHE_TAG,
         );
         assert_eq!(r.find_dunder_file()?.len(), 0);
 

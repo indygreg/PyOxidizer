@@ -157,7 +157,6 @@ pub fn resolve_packed_resources() -> Result<(Vec<u8>, Vec<String>)> {
         vec![AbstractResourceLocation::InMemory],
         false,
         true,
-        dist.cache_tag(),
     );
 
     for resource in dist.python_resources().into_iter() {

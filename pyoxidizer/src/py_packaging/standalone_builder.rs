@@ -140,7 +140,6 @@ impl StandalonePythonExecutableBuilder {
         config: PyembedPythonInterpreterConfig,
     ) -> Result<Box<Self>> {
         let host_python_exe = host_distribution.python_exe_path().to_path_buf();
-        let cache_tag = target_distribution.cache_tag.clone();
 
         let (supports_static_libpython, supports_dynamic_libpython) =
             target_distribution.libpython_link_support();
@@ -213,7 +212,6 @@ impl StandalonePythonExecutableBuilder {
                 allowed_extension_module_locations,
                 allow_new_builtin_extension_modules,
                 packaging_policy.allow_files(),
-                &cache_tag,
             ),
             resources_load_mode: PackedResourcesLoadMode::EmbeddedInBinary(
                 "packed-resources".to_string(),
