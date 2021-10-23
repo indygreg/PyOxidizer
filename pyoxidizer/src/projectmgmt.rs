@@ -6,21 +6,26 @@
 
 use {
     crate::{
-        environment::{default_target_triple, Environment, PyOxidizerSource},
+        environment::{canonicalize_path, default_target_triple, Environment, PyOxidizerSource},
         project_building::find_pyoxidizer_config_file_env,
         project_layout::{initialize_project, write_new_pyoxidizer_config_file},
         py_packaging::{
             distribution::{
                 default_distribution_location, resolve_distribution,
-                resolve_python_distribution_archive, DistributionFlavor,
+                resolve_python_distribution_archive, BinaryLibpythonLinkMode, DistributionCache,
+                DistributionFlavor, PythonDistribution,
             },
             standalone_distribution::StandaloneDistribution,
         },
+        python_distributions::PYTHON_DISTRIBUTIONS,
         starlark::eval::EvaluationContextBuilder,
     },
     anyhow::{anyhow, Context, Result},
     python_packaging::{
-        filesystem_scanning::find_python_resources, resource::PythonResource, wheel::WheelArchive,
+        filesystem_scanning::find_python_resources,
+        interpreter::{MemoryAllocatorBackend, PythonInterpreterProfile},
+        resource::PythonResource,
+        wheel::WheelArchive,
     },
     std::{
         collections::HashMap,
@@ -28,7 +33,7 @@ use {
         io::{Cursor, Read},
         path::{Path, PathBuf},
     },
-    tugger_file_manifest::FileData,
+    tugger_file_manifest::{FileData, FileManifest},
     tugger_licensing::LicenseFlavor,
 };
 
@@ -573,6 +578,103 @@ pub fn python_distribution_licenses(path: &str) -> Result<()> {
             println!();
         }
     }
+
+    Ok(())
+}
+
+/// Generate artifacts for embedding Python in a binary.
+pub fn generate_python_embedding_artifacts(
+    env: &Environment,
+    logger: &slog::Logger,
+    target_triple: &str,
+    flavor: &str,
+    python_version: Option<&str>,
+    dest_path: &Path,
+) -> Result<()> {
+    let flavor = DistributionFlavor::try_from(flavor).map_err(|e| anyhow!("{}", e))?;
+
+    std::fs::create_dir_all(dest_path)
+        .with_context(|| format!("creating directory {}", dest_path.display()))?;
+
+    let dest_path = canonicalize_path(dest_path).context("canonicalizing destination directory")?;
+
+    let distribution_record = PYTHON_DISTRIBUTIONS
+        .find_distribution(target_triple, &flavor, python_version)
+        .ok_or_else(|| anyhow!("could not find Python distribution matching requirements"))?;
+
+    let distribution_cache = DistributionCache::new(Some(&env.python_distributions_dir()));
+
+    let dist = distribution_cache
+        .resolve_distribution(logger, &distribution_record.location, None)
+        .context("resolving Python distribution")?;
+
+    let host_dist = distribution_cache
+        .host_distribution(
+            logger,
+            Some(dist.python_major_minor_version().as_str()),
+            None,
+        )
+        .context("resolving host distribution")?;
+
+    let policy = dist
+        .create_packaging_policy()
+        .context("creating packaging policy")?;
+
+    let mut interpreter_config = dist
+        .create_python_interpreter_config()
+        .context("creating Python interpreter config")?;
+
+    interpreter_config.config.profile = PythonInterpreterProfile::Python;
+    interpreter_config.allocator_backend = MemoryAllocatorBackend::Default;
+
+    let mut builder = dist.as_python_executable_builder(
+        logger,
+        default_target_triple(),
+        target_triple,
+        "python",
+        BinaryLibpythonLinkMode::Default,
+        &policy,
+        &interpreter_config,
+        Some(host_dist.clone_trait()),
+    )?;
+
+    builder.set_tcl_files_path(Some("tcl".to_string()));
+
+    builder
+        .add_distribution_resources(None)
+        .context("adding distribution resources")?;
+
+    let embedded_context = builder
+        .to_embedded_python_context(logger, env, "1")
+        .context("resolving embedded context")?;
+
+    embedded_context
+        .write_files(&dest_path)
+        .context("writing embedded artifact files")?;
+
+    embedded_context
+        .extra_files
+        .materialize_files(&dest_path)
+        .context("writing extra files")?;
+
+    // Write out a copy of the standard library.
+    let mut m = FileManifest::default();
+    for resource in find_python_resources(
+        &dist.stdlib_path,
+        dist.cache_tag(),
+        &dist.python_module_suffixes()?,
+        true,
+        false,
+    ) {
+        if let PythonResource::File(file) = resource? {
+            m.add_file_entry(file.path(), file.entry())?;
+        } else {
+            panic!("find_python_resources() should only emit File variant");
+        }
+    }
+
+    m.materialize_files_with_replace(dest_path.join("stdlib"))
+        .context("writing standard library")?;
 
     Ok(())
 }

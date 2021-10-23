@@ -44,6 +44,30 @@ they were created with.
 On success, instructions on potential next steps are printed.
 ";
 
+const GENERATE_PYTHON_EMBEDDING_ARTIFACTS_ABOUT: &str = "\
+Generate files useful for embedding Python in a [Rust] binary.
+
+This low-level command can be used to write files that facilitate the
+embedding of Python in a larger binary. It can be used to write:
+
+* A custom libpython that can be linked into a binary.
+* A configuration file for the PyO3 Rust crate telling it how to
+  link against the aforementioned custom libpython.
+* A Python packed resources file containing the entirety of the Python
+  standard library.
+* A Rust file defining a default `pyembed::OxidizedPythonInterpreterConfig`
+  struct for configuring the embedded Python interpreter.
+* tcl/tk support files (for tkinter module support).
+* Microsoft Visual C++ Redistributable Runtime DLLs (Windows only).
+
+This command essentially does what the `run-build-script` command does except
+it doesn't require the presence of a PyOxidizer configuration file. Instead,
+it uses an opinionated default configuration suitable for producing a set of
+files suitable for common Python embedding scenarios. If the defaults are not
+appropriate for your use case, you can always define a configuration file to
+customize them and use `run-build-script` to produce similar output files.
+";
+
 const RUN_BUILD_SCRIPT_ABOUT: &str = "\
 Runs a crate build script to generate Python artifacts.
 
@@ -120,6 +144,29 @@ fn add_env_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
             .multiple(true)
             .help("Define an environment variable in Starlark environment")
             .long_help(ENV_VAR_HELP),
+    )
+}
+
+fn add_python_distribution_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
+    app.arg(
+        Arg::with_name("target_triple")
+            .long("--target-triple")
+            .help("Rust target triple being targeted")
+            .takes_value(true)
+            .default_value(default_target_triple()),
+    )
+    .arg(
+        Arg::with_name("flavor")
+            .long("--flavor")
+            .help("Python distribution flavor")
+            .takes_value(true)
+            .default_value("standalone"),
+    )
+    .arg(
+        Arg::with_name("python_version")
+            .long("--python-version")
+            .help("Python version (X.Y) to use")
+            .takes_value(true),
     )
 }
 
@@ -254,6 +301,18 @@ pub fn run_cli() -> Result<()> {
                 "Filesystem path to scan for resources. Must be a directory or Python wheel",
             )),
     );
+
+    let app = app.subcommand(add_python_distribution_args(
+        SubCommand::with_name("generate-python-embedding-artifacts")
+            .about("Generate files useful for embedding Python in a [Rust] binary")
+            .long_about(GENERATE_PYTHON_EMBEDDING_ARTIFACTS_ABOUT)
+            .arg(
+                Arg::with_name("dest_path")
+                    .value_name("DESTINATION_PATH")
+                    .required(true)
+                    .help("Output directory for written files"),
+            ),
+    ));
 
     let app = app.subcommand(
         SubCommand::with_name("init-config-file")
@@ -468,6 +527,27 @@ pub fn run_cli() -> Result<()> {
                     emit_files,
                 )
             }
+        }
+
+        ("generate-python-embedding-artifacts", Some(args)) => {
+            let target_triple = args
+                .value_of("target_triple")
+                .expect("target_triple should have default");
+            let flavor = args.value_of("flavor").expect("flavor should have default");
+            let python_version = args.value_of("python_version");
+            let dest_path = Path::new(
+                args.value_of("dest_path")
+                    .expect("dest_path should be required"),
+            );
+
+            projectmgmt::generate_python_embedding_artifacts(
+                &env,
+                &logger_context.logger,
+                target_triple,
+                flavor,
+                python_version,
+                dest_path,
+            )
         }
 
         ("init-config-file", Some(args)) => {

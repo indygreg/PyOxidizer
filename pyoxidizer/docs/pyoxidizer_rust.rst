@@ -22,6 +22,7 @@ can be leveraged to build more advanced applications embedding Python.
    :maxdepth: 2
 
    pyoxidizer_rust_cargo_source_checkouts
+   pyoxidizer_rust_generic_embedding
    pyoxidizer_rust_projects
    pyoxidizer_rust_rust_code
    pyoxidizer_rust_porting

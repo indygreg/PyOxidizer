@@ -105,6 +105,11 @@ New Features
   actions it took and for the actual results to be displayed to the end-user.
   This should hopefully make it easier to debug issues with how resources are
   added to binaries.
+* A new ``pyoxidizer generate-python-embedding-artifacts`` command that writes
+  out file artifacts useful for embedding Python in another project. The command
+  essentially enables other projects to use PyOxidizer's embeddable Python
+  distributions without using PyOxidizer to build them. See
+  :ref:`pyoxidizer_rust_generic_embedding` for documentation.
 
 Other Relevant Changes
 ^^^^^^^^^^^^^^^^^^^^^^

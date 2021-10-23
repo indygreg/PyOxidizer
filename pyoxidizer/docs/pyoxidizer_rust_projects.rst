@@ -6,7 +6,11 @@
 PyOxidizer Rust Projects
 ========================
 
-PyOxidizer uses Rust projects to build binaries embedding Python.
+PyOxidizer uses Rust projects to build binaries embedding Python. This
+documentation describes how they work. If you are only interested in
+embedding Python in a Rust application without using PyOxidizer as part
+of the regular development workflow, see
+:ref:`pyoxidizer_rust_generic_embedding` for instructions.
 
 If you just have a standalone configuration file (such as when running
 ``pyoxidizer init-config-file``), a temporary Rust project will be
@@ -189,35 +193,11 @@ Python linking settings of the ``pyembed`` crate.
    custom Python, Python won't be linked into your binary the way that
    ``pyoxidizer build`` would link it.
 
-Default Build Settings with PyOxidizer's Python Distributions
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-To converge on PyOxidizer's behavior, you should at least use the same
-Python distributions that PyOxidizer uses. Run
-``pyoxidizer python-distribution-extract --help`` to see how you can
-download and extract one of these distributions. Then, you can set
-``PYO3_PYTHON`` to point to the Python interpreter within. e.g.::
-
-   # Download the Python distribution that runs on this machine to the
-   # current directory. This will create a python/ directory with the
-   # extracted distribution.
-   pyoxidizer python-distribution-extract --download-default .
-
-   # Linux and macOS
-   export PYO3_PYTHON=python/install/bin/python3
-
-   # Windows
-   set PYO3_PYTHON=python\install\python.exe
-
-   # Cargo build scripts will pick up PYO3_BUILD and use PyOxidizer's special
-   # Python distributions.
-   cargo build
-
-This works, but the only difference from not setting ``PYO3_PYTHON`` is you
-are using PyOxidizer's Python distributions instead of whatever is on ``PATH``.
-This can still be significantly different from what ``pyoxidizer build`` would
-produce. Notably, ``libpython`` is likely not statically linked into the build
-binary.
+For best results, you'll want to use a Python library built the same
+way that PyOxidizer builds it. The
+``pyoxidizer generate-python-embedding-artifacts`` command can be used to
+produce such a library along with a PyO3 configuration file for linking it.
+See :ref:`pyoxidizer_rust_generic_embedding` for details.
 
 Cargo Configuration
 -------------------
@@ -228,44 +208,63 @@ when statically linking on Windows.
 The auto-generated ``.cargo/config`` file defines some custom compiler settings
 to enable things to work. However, this only works for some configurations. The
 file contains some commented out settings that may need to be set for some
-configurations (e.g. the ``standalone_static`` Windows distributions). Please
-consult this file if running into build errors when not building through
+configurations (e.g. the ``standalone_static`` Windows distributions).
+
+Please consult this file if running into build errors when not building through
 ``pyoxidizer``.
 
-An Example and Further Reference
+Also consider porting these linker settings to your own crate.
+
+Building with Cargo and PyOxidizer
 ==================================
 
+It is possible to use ``cargo`` to drive builds but still invoke ``pyoxidizer``
+as part of the build. This is an advanced workflow that hasn't been optimized
+for ergonomics and it requires setting many environment variables to get things
+to play together nicely.
+
+This is essentially a 2 step process:
+
+1. Generate build artifacts consumed by the ``pyembed`` and ``pyo3`` crates.
+2. Build with ``cargo``.
+
 Starting from a project freshly created with ``pyoxidizer init-rust-project sample``,
-you'll first need to generate the build artifacts::
+you'll first need to generate required build artifacts::
 
-   $ PYOXIDIZER_EXECUTABLE=$HOME/.cargo/bin/pyoxidizer \
-      PYO3_PYTHON=$HOME/python/install/bin/python3.9 \
-      PYOXIDIZER_CONFIG=$(pwd)/pyoxidizer.bzl \
-      TARGET=x86_64-apple-darwin \
-      CARGO_MANIFEST_DIR=. \
-      OUT_DIR=target/out \
-      PROFILE=debug \
-      pyoxidizer run-build-script build.rs
+   $ CARGO_MANIFEST_DIR=. \
+     TARGET=x86_64-unknown-linux-gnu \
+     PROFILE=debug \
+     OUT_DIR=target/out \
+     pyoxidizer run-build-script build.rs
 
-That will put the artifacts in target/out.
+This command will evaluate your PyOxidizer configuration file and write output
+files. The environment variables simulate the Cargo environment from which this
+command is usually called.
 
-Then you can run cargo to build your crate::
+If all works correctly, build artifacts will be written to ``target/out``.
 
-   $ PYOXIDIZER_REUSE_ARTIFACTS=1 \
-      PYOXIDIZER_ARTIFACT_DIR=$(pwd)/target/out \
-      PYOXIDIZER_EXECUTABLE=$HOME/.cargo/bin/pyoxidizer \
-      PYOXIDIZER_CONFIG=$(pwd)/pyoxidizer.bzl \
-      PYO3_CONFIG_FILE=$(pwd)/target/out/pyo3-build-config-file.txt cargo \
-      build --no-default-features --features \
-         "build-mode-prebuilt-artifacts global-allocator-jemalloc allocator-jemalloc"
+Then you can run ``cargo`` to build your crate, consuming the built artifacts::
 
-After building, you should find an executable in target/debug/.
+   $ PYOXIDIZER_ARTIFACT_DIR=$(pwd)/target/out \
+     PYO3_CONFIG_FILE=$(pwd)/target/out/pyo3-build-config-file.txt \
+     cargo build \
+       --no-default-features \
+       --features "build-mode-prebuilt-artifacts global-allocator-jemalloc allocator-jemalloc"
 
-Note that currently this does not produce any files that have been redirected to the filesystem,
-such as extension modules. For now you'll need to copy them in from a normal pyoxidizer run, or
-see https://github.com/indygreg/PyOxidizer/pull/466
+After building, you should find an executable in ``target/debug/``.
 
-On Windows, the paths will need updating, and the jemalloc features will need to be removed.
+.. note::
 
-If you wish to dig further into how PyOxidizer builds projects, project_building.rs
-is a good place to start.
+   On Windows, you should remove the features referencing ``jemalloc``, as
+   this feature isn't available on Windows.
+
+.. important::
+
+   When building through ``cargo``, additional files are not copied into place
+   next to the built crate. This can include required shared libraries,
+   extension modules, and even the Python standard library. This can result
+   in the embedded Python interpreter not working correctly.
+
+   You may need to manually copy additional files for the built binary to work
+   as expected. The easiest way to do this is to build your project with
+   ``pyoxidizer build`` and copy the files from its output.

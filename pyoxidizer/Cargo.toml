@@ -117,5 +117,12 @@ version = "0.12.0-pre"
 path = "../tugger"
 
 [dev-dependencies]
+assert_cmd = "2.0"
+assert_fs = "1.0"
 indoc = "1.0"
+predicates = "2.0"
 xml-rs = "0.8"
+
+[[test]]
+name = "cli_generate_python_embedding_artifacts"
+harness = false
