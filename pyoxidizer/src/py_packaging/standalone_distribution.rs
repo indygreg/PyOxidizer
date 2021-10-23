@@ -1164,7 +1164,8 @@ impl PythonDistribution for StandaloneDistribution {
     }
 
     fn python_major_minor_version(&self) -> String {
-        self.version[0..3].to_string()
+        let parts = self.version.split('.').take(2).collect::<Vec<_>>();
+        parts.join(".")
     }
 
     fn python_implementation(&self) -> &str {
