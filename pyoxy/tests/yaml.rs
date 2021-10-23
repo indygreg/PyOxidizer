@@ -17,7 +17,7 @@ fn run() -> Result<()> {
             .arg(&yaml_path)
             .assert()
             .success()
-            .stdout(predicate::str::contains(&expected_stdout));
+            .stdout(predicate::str::contains(&expected_stdout).normalize());
     }
 
     Ok(())

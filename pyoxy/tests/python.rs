@@ -16,7 +16,7 @@ fn run() -> Result<()> {
         .arg("print('hello, world')")
         .assert()
         .success()
-        .stdout(predicate::eq("hello, world\n"));
+        .stdout(predicate::eq("hello, world\n").normalize());
 
     // If the executable is named `python` it behaves like `python`.
     for bin_name in ["python", "python3", "python3.9", "pythonfoo"] {
@@ -33,7 +33,7 @@ fn run() -> Result<()> {
             .arg("print('hello, world')")
             .assert()
             .success()
-            .stdout(predicate::eq("hello, world\n"));
+            .stdout(predicate::eq("hello, world\n").normalize());
     }
 
     Ok(())
