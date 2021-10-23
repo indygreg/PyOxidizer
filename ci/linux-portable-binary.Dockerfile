@@ -37,9 +37,12 @@ RUN apt-get install \
   make \
   xz-utils
 
+# We use `curl --insecure` throughout this file. This is reasonably safe since
+# we validate the SHA-256 of all downloaded files to prevent tampering.
+
 # The binutils is Jessie is too old to link the python-build-standalone distributions
 # due to a R_X86_64_REX_GOTPCRELX relocation. So install a newer binutils.
-RUN curl https://ftp.gnu.org/gnu/binutils/binutils-2.36.1.tar.xz > binutils.tar.xz && \
+RUN curl --insecure https://ftp.gnu.org/gnu/binutils/binutils-2.36.1.tar.xz > binutils.tar.xz && \
   echo 'e81d9edf373f193af428a0f256674aea62a9d74dfe93f65192d4eae030b0f3b0  binutils.tar.xz' | sha256sum -c - && \
   tar -xf binutils.tar.xz && \
   rm binutils.tar.xz && \
@@ -58,12 +61,12 @@ RUN curl https://ftp.gnu.org/gnu/binutils/binutils-2.36.1.tar.xz > binutils.tar.
 
 USER build
 
-RUN curl https://raw.githubusercontent.com/rust-lang/rustup/ce5817a94ac372804babe32626ba7fd2d5e1b6ac/rustup-init.sh > rustup-init.sh && \
+RUN curl --insecure https://raw.githubusercontent.com/rust-lang/rustup/ce5817a94ac372804babe32626ba7fd2d5e1b6ac/rustup-init.sh > rustup-init.sh && \
   echo 'a3cb081f88a6789d104518b30d4aa410009cd08c3822a1226991d6cf0442a0f8  rustup-init.sh' | sha256sum -c - && \
   chmod +x rustup-init.sh && \
   ./rustup-init.sh -y --default-toolchain 1.56.0 --profile minimal
 
-RUN curl -L https://github.com/indygreg/python-build-standalone/releases/download/20210724/cpython-3.9.6-x86_64-unknown-linux-gnu-install_only-20210724T1424.tar.gz > python.tar.gz && \
+RUN curl --insecure -L https://github.com/indygreg/python-build-standalone/releases/download/20210724/cpython-3.9.6-x86_64-unknown-linux-gnu-install_only-20210724T1424.tar.gz > python.tar.gz && \
   echo 'a5e1f952a50a3a660922a7b558911d56c4d046078c67a83ec048f81ee4d3b8bd  python.tar.gz' | sha256sum -c - && \
   tar -xf python.tar.gz && \
   rm python.tar.gz && \
