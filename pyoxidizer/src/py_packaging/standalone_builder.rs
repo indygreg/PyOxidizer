@@ -3039,9 +3039,9 @@ pub mod tests {
 
     #[test]
     fn test_vcruntime_requirements() -> Result<()> {
-        let host_distribution = get_default_distribution()?;
-
         for dist in get_all_standalone_distributions()? {
+            let host_distribution = get_host_distribution_from_target(&dist)?;
+
             let builder = StandalonePythonExecutableBuilder::from_distribution(
                 host_distribution.clone(),
                 dist.clone(),
@@ -3075,9 +3075,9 @@ pub mod tests {
 
     #[test]
     fn test_install_windows_runtime_dlls() -> Result<()> {
-        let host_distribution = get_default_distribution()?;
-
         for dist in get_all_standalone_distributions()? {
+            let host_distribution = get_host_distribution_from_target(&dist)?;
+
             let mut builder = StandalonePythonExecutableBuilder::from_distribution(
                 host_distribution.clone(),
                 dist.clone(),
@@ -3157,9 +3157,9 @@ pub mod tests {
 
     #[test]
     fn test_stdlib_tests() -> Result<()> {
-        let host_distribution = get_default_distribution()?;
-
         for dist in get_all_standalone_distributions()? {
+            let host_distribution = get_host_distribution_from_target(&dist)?;
+
             let mut policy = dist.create_packaging_policy()?;
             policy.set_include_test(true);
 

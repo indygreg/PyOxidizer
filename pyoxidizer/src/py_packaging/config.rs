@@ -519,7 +519,7 @@ mod tests {
     fn test_build_all_fields() -> Result<()> {
         let env = get_env()?;
         let logger = get_logger()?;
-        let dist = get_default_distribution()?;
+        let dist = get_default_distribution(None)?;
         let policy = dist.create_packaging_policy()?;
 
         let config = PyembedPythonInterpreterConfig {

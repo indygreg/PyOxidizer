@@ -366,7 +366,7 @@ mod tests {
     #[test]
     fn test_install_black() -> Result<()> {
         let logger = get_logger()?;
-        let distribution = get_default_distribution()?;
+        let distribution = get_default_distribution(None)?;
 
         let resources: Vec<PythonResource> = pip_install(
             &logger,
@@ -417,12 +417,12 @@ mod tests {
     fn test_pip_download_zstandard() -> Result<()> {
         let logger = get_logger()?;
 
-        let host_dist = get_default_distribution()?;
-
         for target_dist in get_all_standalone_distributions()? {
             if target_dist.python_platform_compatibility_tag() == "none" {
                 continue;
             }
+
+            let host_dist = get_host_distribution_from_target(&target_dist)?;
 
             warn!(
                 logger,
@@ -515,12 +515,12 @@ mod tests {
     fn test_pip_download_numpy() -> Result<()> {
         let logger = get_logger()?;
 
-        let host_dist = get_default_distribution()?;
-
         for target_dist in get_all_standalone_distributions()? {
             if target_dist.python_platform_compatibility_tag() == "none" {
                 continue;
             }
+
+            let host_dist = get_host_distribution_from_target(&target_dist)?;
 
             warn!(
                 logger,

@@ -2,6 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+use crate::py_packaging::distribution::PythonDistribution;
 use {
     crate::{
         environment::{default_target_triple, Environment},
@@ -54,16 +55,36 @@ pub fn get_distribution(
     DISTRIBUTION_CACHE.resolve_distribution(&logger, location, Some(&dest_path))
 }
 
-pub fn get_default_distribution() -> Result<Arc<StandaloneDistribution>> {
+pub fn get_default_distribution(
+    python_major_minor_version: Option<&str>,
+) -> Result<Arc<StandaloneDistribution>> {
     let record = PYTHON_DISTRIBUTIONS
         .find_distribution(
             default_target_triple(),
             &DistributionFlavor::Standalone,
-            None,
+            python_major_minor_version,
         )
         .ok_or_else(|| anyhow!("unable to find distribution"))?;
 
     get_distribution(&record.location)
+}
+
+/// Obtain a suitable host distribution from a target distribution.
+pub fn get_host_distribution_from_target(
+    target: &Arc<StandaloneDistribution>,
+) -> Result<Arc<StandaloneDistribution>> {
+    // We have a matching host distribution for each (major-minor, triple) tuple except
+    // for 3.8 aarch64-apple-darwin, where we don't have a 3.8 distribution. So in that
+    // scenario return a 3.9 distribution.
+    let major_minor = if target.python_major_minor_version() == "3.8"
+        && default_target_triple() == "aarch64-apple-darwin"
+    {
+        "3.9".to_string()
+    } else {
+        target.python_major_minor_version()
+    };
+
+    get_default_distribution(Some(major_minor.as_str()))
 }
 
 #[cfg(windows)]

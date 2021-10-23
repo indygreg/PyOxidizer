@@ -1463,7 +1463,7 @@ pub mod tests {
 
     #[test]
     fn test_stdlib_annotations() -> Result<()> {
-        let distribution = get_default_distribution()?;
+        let distribution = get_default_distribution(None)?;
 
         for resource in distribution.python_resources() {
             match resource {
@@ -1581,7 +1581,7 @@ pub mod tests {
 
     #[test]
     fn compile_syntax_error() -> Result<()> {
-        let dist = get_default_distribution()?;
+        let dist = get_default_distribution(None)?;
 
         let temp_dir = tempfile::TempDir::new()?;
 
