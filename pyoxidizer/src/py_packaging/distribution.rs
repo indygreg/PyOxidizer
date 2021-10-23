@@ -53,6 +53,19 @@ pub enum PythonDistributionLocation {
     Url { url: String, sha256: String },
 }
 
+impl std::fmt::Display for PythonDistributionLocation {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Local { local_path, sha256 } => {
+                write!(f, "{} (sha256={})", local_path, sha256)
+            }
+            Self::Url { url, sha256 } => {
+                write!(f, "{} (sha256={})", url, sha256)
+            }
+        }
+    }
+}
+
 /// Describes an obtainable Python distribution.
 #[derive(Clone, Debug, PartialEq)]
 pub struct PythonDistributionRecord {
@@ -405,7 +418,7 @@ pub fn resolve_python_distribution_from_location(
     location: &PythonDistributionLocation,
     distributions_dir: &Path,
 ) -> Result<(PathBuf, PathBuf)> {
-    warn!(logger, "resolving Python distribution {:?}", location);
+    warn!(logger, "resolving Python distribution {}", location);
     let path = resolve_python_distribution_archive(location, distributions_dir)?;
     warn!(
         logger,
