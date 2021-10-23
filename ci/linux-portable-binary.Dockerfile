@@ -18,7 +18,7 @@ CMD ["/bin/bash", "--login"]
 WORKDIR '/build'
 
 RUN for s in debian_jessie debian_jessie-updates debian-security_jessie/updates; do \
-      echo "deb http://snapshot.debian.org/archive/${s%_*}/20210923T205029Z/ ${s#*_} main"; \
+      echo "deb http://snapshot.debian.org/archive/${s%_*}/20211022T210008Z/ ${s#*_} main"; \
     done > /etc/apt/sources.list && \
     ( echo 'quiet "true";'; \
       echo 'APT::Get::Assume-Yes "true";'; \
