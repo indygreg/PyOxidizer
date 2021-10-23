@@ -556,6 +556,24 @@ impl DistributionCache {
             Ok(dist)
         }
     }
+
+    /// Resolve a Python distribution that runs on the current machine.
+    pub fn host_distribution(
+        &self,
+        logger: &slog::Logger,
+        python_major_minor_version: Option<&str>,
+        dest_dir: Option<&Path>,
+    ) -> Result<Arc<StandaloneDistribution>> {
+        let location = default_distribution_location(
+            &DistributionFlavor::Standalone,
+            crate::environment::default_target_triple(),
+            python_major_minor_version,
+        )
+        .context("resolving host distribution location")?;
+
+        self.resolve_distribution(logger, &location, dest_dir)
+            .context("resolving host distribution from location")
+    }
 }
 
 /// Obtain a `PythonDistribution` implementation of a flavor and from a location.

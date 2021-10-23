@@ -295,37 +295,22 @@ impl PythonDistributionValue {
         {
             Some(dist.clone())
         } else {
-            let flavor = DistributionFlavor::Standalone;
-            let location = default_distribution_location(
-                &flavor,
-                &pyoxidizer_context.build_host_triple,
-                Some(dist.python_major_minor_version().as_str()),
-            )
-            .map_err(|e| {
-                ValueError::from(RuntimeError {
-                    code: "PYOXIDIZER_BUILD",
-                    message: format!("unable to find host Python distribution: {}", e),
-                    label: "to_python_executable()".to_string(),
-                })
-            })?;
+            let host_dist = pyoxidizer_context
+                .distribution_cache
+                .host_distribution(
+                    pyoxidizer_context.logger(),
+                    Some(dist.python_major_minor_version().as_str()),
+                    Some(&python_distributions_path),
+                )
+                .map_err(|e| {
+                    ValueError::from(RuntimeError {
+                        code: "PYOXIDIZER_BUILD",
+                        message: format!("{:?}", e),
+                        label: "to_python_executable()".to_string(),
+                    })
+                })?;
 
-            Some(
-                pyoxidizer_context
-                    .distribution_cache
-                    .resolve_distribution(
-                        pyoxidizer_context.logger(),
-                        &location,
-                        Some(&python_distributions_path),
-                    )
-                    .map_err(|e| {
-                        ValueError::from(RuntimeError {
-                            code: "PYOXIDIZER_BUILD",
-                            message: format!("unable to resolve host Python distribution: {}", e),
-                            label: "to_python_executable".to_string(),
-                        })
-                    })?
-                    .clone_trait(),
-            )
+            Some(host_dist.clone_trait())
         };
 
         let mut builder = dist
