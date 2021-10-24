@@ -14,11 +14,10 @@ readme = "README.md"
 anyhow = "1.0"
 chrono = "0.4"
 duct = "0.13"
-p12 = "0.2"
+p12 = "^0.2.1"
 rcgen = "0.8"
 slog = "2.7"
-# p12 0.2 uses version 0.3 and we need to match.
-yasna = "0.3"
+yasna = "0.4"
 
 [dependencies.tugger-common]
 version = "0.5.0-pre"
@@ -29,5 +28,5 @@ version = "0.7.0-pre"
 path = "../tugger-windows"
 
 [dev-dependencies]
-der-parser = "5"
-x509-parser = "0.9"
+der-parser = "6"
+x509-parser = "0.12"

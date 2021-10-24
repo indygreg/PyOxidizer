@@ -35,7 +35,7 @@ scroll = "0.10"
 slog = "2.7"
 slog-term = "2.8"
 thiserror = "1.0"
-yasna = "0.3"
+yasna = "0.4"
 
 [dependencies.apple-bundles]
 path = "../apple-bundles"

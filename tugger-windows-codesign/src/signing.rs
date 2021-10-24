@@ -182,7 +182,8 @@ pub fn is_file_signable(path: impl AsRef<Path>) -> Result<bool> {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, anyhow::Result, der_parser::oid, std::collections::BTreeMap};
+
+    use {super::*, anyhow::Result, der_parser::oid, x509_parser::prelude::*};
 
     // PEM encoded key pair generated via Powershell.
     const POWERSHELL_CERTIFICATE_PUBLIC_PEM: &str = "-----BEGIN CERTIFICATE-----\n\
@@ -202,6 +203,13 @@ mod tests {
         rWiPM5PgwTcsYMm6ojX9OAz1AIehRANCAARudHAsKwW0mCB42pLnH5BUMAcchC2q\n\
         qt+muZd9/swuboJ4f8wzaf7cYThB6Fm+ysYHni7A1OX5xOaOy1jMHhxe\n\
         -----END PRIVATE KEY-----\n";
+
+    fn find_extension<'a>(
+        cert: &'a X509Certificate,
+        oid: &x509_parser::der_parser::oid::Oid,
+    ) -> Option<&'a X509Extension<'a>> {
+        cert.extensions().iter().find(|ext| &ext.oid == oid)
+    }
 
     #[test]
     fn test_create_self_signed_certificate() -> Result<()> {
@@ -231,64 +239,52 @@ mod tests {
         let extended_usage_oid = oid!(2.5.29 .37);
         let key_usage_oid = oid!(2.5.29 .15);
 
-        assert!(generated
-            .extensions()
-            .contains_key(&subject_key_identifier_oid));
+        assert!(find_extension(&generated, &subject_key_identifier_oid).is_some());
+        assert!(find_extension(&powershell, &subject_key_identifier_oid).is_some());
         assert_ne!(
-            generated.extensions().get(&subject_key_identifier_oid),
-            powershell.extensions().get(&subject_key_identifier_oid),
-            "subject key identifier extension differs"
-        );
-        assert!(generated.extensions().contains_key(&basic_constraints_oid));
-        assert!(!powershell.extensions().contains_key(&basic_constraints_oid));
-
-        assert!(generated
-            .extensions()
-            .contains_key(&subject_alternative_name_oid));
-        assert_eq!(
-            generated.extensions().get(&subject_alternative_name_oid),
-            powershell.extensions().get(&subject_alternative_name_oid),
-            "subject alternative name extension identical"
+            find_extension(&generated, &subject_key_identifier_oid),
+            find_extension(&powershell, &subject_key_identifier_oid),
+            "subject key identifier extension differ"
         );
 
-        assert!(generated.extensions().contains_key(&extended_usage_oid));
+        assert!(find_extension(&generated, &basic_constraints_oid).is_some());
+        assert!(find_extension(&powershell, &basic_constraints_oid).is_none());
+
+        assert!(find_extension(&generated, &subject_alternative_name_oid).is_some());
         assert_eq!(
-            generated.extensions().get(&extended_usage_oid),
-            powershell.extensions().get(&extended_usage_oid),
-            "extended key usage extension identical"
+            find_extension(&generated, &subject_alternative_name_oid),
+            find_extension(&powershell, &subject_alternative_name_oid),
+            "subject alternative name extension equal"
         );
 
-        assert!(generated.extensions().contains_key(&key_usage_oid));
+        assert!(find_extension(&generated, &extended_usage_oid).is_some());
         assert_eq!(
-            generated.extensions().get(&key_usage_oid),
-            powershell.extensions().get(&key_usage_oid),
+            find_extension(&generated, &extended_usage_oid),
+            find_extension(&powershell, &extended_usage_oid),
+            "extended usage extension identical"
+        );
+
+        assert!(find_extension(&generated, &key_usage_oid).is_some());
+        assert_eq!(
+            find_extension(&generated, &key_usage_oid),
+            find_extension(&powershell, &key_usage_oid),
             "key usage extension identical"
         );
 
         // Subject Key Identifier differs due to different key pairs in use.
         // Ours also emits a basic constraints extension.
-        let generated_filtered = generated
+        let mut generated_filtered = generated
             .extensions()
             .iter()
-            .filter_map(|(k, ext)| {
-                if k != &subject_key_identifier_oid && k != &basic_constraints_oid {
-                    Some((k.to_id_string(), ext))
-                } else {
-                    None
-                }
-            })
-            .collect::<BTreeMap<_, _>>();
-        let powershell_filtered = powershell
+            .filter(|ext| ext.oid != subject_key_identifier_oid && ext.oid != basic_constraints_oid)
+            .collect::<Vec<_>>();
+        generated_filtered.sort_by(|a, b| a.value.cmp(b.value));
+        let mut powershell_filtered = powershell
             .extensions()
             .iter()
-            .filter_map(|(k, ext)| {
-                if k != &subject_key_identifier_oid {
-                    Some((k.to_id_string(), ext))
-                } else {
-                    None
-                }
-            })
-            .collect();
+            .filter(|ext| ext.oid != subject_key_identifier_oid)
+            .collect::<Vec<_>>();
+        powershell_filtered.sort_by(|a, b| a.value.cmp(b.value));
 
         assert_eq!(generated_filtered, powershell_filtered, "extensions match");
 

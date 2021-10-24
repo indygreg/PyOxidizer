@@ -19,7 +19,7 @@ reqwest = { version = "0.11", default-features = false, features = ["blocking", 
 slog = "2.7"
 tempfile = "3.2"
 thiserror = "1.0"
-yasna = "0.3"
+yasna = "0.4"
 
 [dependencies.apple-bundles]
 version = "0.6.0-pre"
