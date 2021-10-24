@@ -157,7 +157,7 @@
         This method adds a :py:class:`WiXMSIBuilder` instance to this
         instance, marking it for processing/building.
 
-    .. py:method:: add_simple_installer(product_name: str, product_version: str, product_manufacturer: str, program_files: FileManifest)
+    .. py:method:: add_simple_installer(id_prefix: str, product_name: str, product_version: str, product_manufacturer: str, program_files: FileManifest)
 
         This method will populate the installer configuration with a pre-defined
         and simple/basic configuration suitable for simple applications. This method
@@ -165,6 +165,9 @@
         files in the ``Program Files`` directory.
 
         Accepted arguments are:
+
+        ``id_prefix``
+           String prefix for generated WiX identifiers.
 
         ``product_name``
            The name of the installed product. This becomes the value
