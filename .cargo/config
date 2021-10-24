@@ -40,9 +40,17 @@ opt-level = 3
 opt-level = 3
 [profile.test.package.rle-decode-fast]
 opt-level = 3
+[profile.dev.package.serde_yaml]
+opt-level = 3
+[profile.test.package.serde_yaml]
+opt-level = 3
 [profile.dev.package.sha2]
 opt-level = 3
 [profile.test.package.sha2]
+opt-level = 3
+[profile.dev.package.yaml-rust]
+opt-level = 3
+[profile.test.package.yaml-rust]
 opt-level = 3
 [profile.dev.package.zip]
 opt-level = 3
