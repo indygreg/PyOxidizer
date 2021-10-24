@@ -14,7 +14,7 @@ Configuring PyO3
 ``pyembed`` pulls in a Python library link dependency via the ``pyo3``
 crate. At ``cargo build`` time, ``pyo3`` (technically ``pyo3-build-config``)
 will attempt to locate a ``libpython`` to link against. This behavior is
-documented at https://pyo3.rs/v0.14.5/building_and_distribution.html.
+documented at https://pyo3.rs/v0.15.0/building_and_distribution.html.
 
 Generally speaking, all the caveats documented by ``pyo3`` apply to
 ``pyembed`` as well, since this project is a glorified, value-adding

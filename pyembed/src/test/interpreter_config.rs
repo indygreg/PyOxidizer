@@ -428,7 +428,7 @@ rusty_fork_test! {
         let argvb = argvb_raw.cast_as::<PyList>().unwrap();
         assert_eq!(argvb.len(), 2);
 
-        let value_raw = argvb.get_item(1);
+        let value_raw = argvb.get_item(1).unwrap();
         let value_bytes = value_raw.cast_as::<PyBytes>().unwrap();
         assert_eq!(
             value_bytes.as_bytes().to_vec(),
@@ -456,7 +456,7 @@ rusty_fork_test! {
         let argv = argv_raw.cast_as::<PyList>().unwrap();
         assert_eq!(argv.len(), 2);
 
-        let value_raw = argv.get_item(1);
+        let value_raw = argv.get_item(1).unwrap();
         let value_string = value_raw.cast_as::<PyString>().unwrap();
 
         match unsafe { value_string.data().unwrap() } {
@@ -481,7 +481,7 @@ rusty_fork_test! {
         let argv = argv_raw.cast_as::<PyList>().unwrap();
         assert_eq!(argv.len(), 2);
 
-        let value_raw = argv.get_item(1);
+        let value_raw = argv.get_item(1).unwrap();
         let value_string = value_raw.cast_as::<PyString>().unwrap();
 
         // The result in isolated mode without configure_locale is kinda wonky.
@@ -519,7 +519,7 @@ rusty_fork_test! {
         let argv = argv_raw.cast_as::<PyList>().unwrap();
         assert_eq!(argv.len(), 2);
 
-        let value_raw = argv.get_item(1);
+        let value_raw = argv.get_item(1).unwrap();
         let value_string = value_raw.cast_as::<PyString>().unwrap();
 
         match unsafe { value_string.data().unwrap() } {

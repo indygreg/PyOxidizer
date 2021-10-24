@@ -41,7 +41,7 @@ path = "../python-oxidized-importer"
 default-features = false
 
 [dependencies.pyo3]
-version = "0.14.5"
+version = "0.15.0"
 default-features = false
 features = ["macros"]
 
@@ -51,7 +51,7 @@ path = "../python-packaging"
 default-features = false
 
 [build-dependencies]
-pyo3-build-config = "0.14.5"
+pyo3-build-config = "0.15.0"
 
 [dev-dependencies]
 pathdiff = "0.2"

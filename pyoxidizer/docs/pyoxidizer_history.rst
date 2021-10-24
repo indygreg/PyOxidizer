@@ -33,6 +33,11 @@ Version History
 
 Not yet released.
 
+Changes
+^^^^^^^
+
+* PyO3 Rust crate upgraded from version ``0.14`` to ``0.15``.
+
 .. _version_0_19_0:
 
 0.19.0

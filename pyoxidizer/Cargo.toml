@@ -61,7 +61,7 @@ which = "4"
 zstd = "0.9"
 
 [dependencies.pyo3-build-config]
-version = "0.14.5"
+version = "0.15.0"
 default-features = false
 
 [dependencies.python-packaging]

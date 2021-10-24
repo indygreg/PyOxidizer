@@ -313,8 +313,8 @@ impl ImporterState {
             ));
         }
 
-        let builtin_importer = meta_path.get_item(0).into_py(py);
-        let frozen_importer = meta_path.get_item(1).into_py(py);
+        let builtin_importer = meta_path.get_item(0)?.into_py(py);
+        let frozen_importer = meta_path.get_item(1)?.into_py(py);
 
         let marshal_loads = marshal_module.getattr("loads")?.into_py(py);
         let call_with_frames_removed = bootstrap_module
@@ -1326,7 +1326,7 @@ pub fn remove_external_importers(sys_module: &PyModule) -> PyResult<()> {
     let mut oxidized_path_hooks = vec![];
     let mut index = 0;
     while index < meta_path.len() {
-        let entry = meta_path.get_item(index as _);
+        let entry = meta_path.get_item(index as _)?;
 
         // We want to preserve `_frozen_importlib.BuiltinImporter` and
         // `_frozen_importlib.FrozenImporter`, if present. Ideally we'd
@@ -1356,7 +1356,7 @@ pub fn remove_external_importers(sys_module: &PyModule) -> PyResult<()> {
 
     let mut index = 0;
     while index < path_hooks.len() {
-        let entry = path_hooks.get_item(index as _);
+        let entry = path_hooks.get_item(index as _)?;
 
         if oxidized_path_hooks
             .iter()
