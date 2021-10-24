@@ -736,10 +736,25 @@ impl<'a> EmbeddedPythonContext<'a> {
     /// Write the PyO3 configuration file.
     pub fn write_pyo3_config(&self, dest_dir: impl AsRef<Path>) -> Result<()> {
         let dest_dir = dest_dir.as_ref();
+        let dest_path = self.pyo3_config_path(dest_dir);
 
-        let mut fh = std::fs::File::create(self.pyo3_config_path(dest_dir))?;
+        // Serialize our contents to a vec first.
+        let mut new_file_contents = vec![];
         self.pyo3_interpreter_config(dest_dir)?
-            .to_writer(&mut fh)
+            .to_writer(&mut new_file_contents)
+            .map_err(|e| anyhow!("error serializing PyO3 config file: {}", e))?;
+
+        if let Ok(existing_file_contents) = std::fs::read(&dest_path) {
+            if new_file_contents == existing_file_contents {
+                // Contents are identical. If we wrote the file out again, it would
+                // cause various pyo3 crates to be recompiled, so we skip the write
+                // and return early.
+                return Ok(());
+            }
+        }
+
+        // Write contents out.
+        std::fs::write(dest_path, new_file_contents)
             .map_err(|e| anyhow!("error writing PyO3 config file: {}", e))?;
 
         Ok(())
