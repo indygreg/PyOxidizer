@@ -3155,38 +3155,81 @@ pub mod tests {
         Ok(())
     }
 
+    // This test is expensive so shard for parallelism.
+    fn test_stdlib(dist: Arc<StandaloneDistribution>) -> Result<()> {
+        let host_distribution = get_host_distribution_from_target(&dist)?;
+
+        let mut policy = dist.create_packaging_policy()?;
+        policy.set_include_test(true);
+
+        let mut builder = StandalonePythonExecutableBuilder::from_distribution(
+            host_distribution.clone(),
+            dist.clone(),
+            host_distribution.target_triple().to_string(),
+            dist.target_triple().to_string(),
+            "myapp".to_string(),
+            BinaryLibpythonLinkMode::Default,
+            policy,
+            dist.create_python_interpreter_config()?,
+        )?;
+
+        builder.add_distribution_resources(None)?;
+
+        let temp_dir = tempfile::Builder::new()
+            .prefix("pyoxidizer-test")
+            .tempdir()?;
+
+        let mut compiler =
+            BytecodeCompiler::new(host_distribution.python_exe_path(), temp_dir.path())?;
+
+        // Some stdlib test modules are malformed and cause resource compiling to fail.
+        builder
+            .resources_collector
+            .compile_resources(&mut compiler)?;
+
+        Ok(())
+    }
+
     #[test]
-    fn test_stdlib_tests() -> Result<()> {
-        for dist in get_all_standalone_distributions()? {
-            let host_distribution = get_host_distribution_from_target(&dist)?;
+    fn test_stdlib_tests_0() -> Result<()> {
+        for dist in get_all_standalone_distributions_chunk(0, 5)? {
+            test_stdlib(dist)?;
+        }
 
-            let mut policy = dist.create_packaging_policy()?;
-            policy.set_include_test(true);
+        Ok(())
+    }
 
-            let mut builder = StandalonePythonExecutableBuilder::from_distribution(
-                host_distribution.clone(),
-                dist.clone(),
-                host_distribution.target_triple().to_string(),
-                dist.target_triple().to_string(),
-                "myapp".to_string(),
-                BinaryLibpythonLinkMode::Default,
-                policy,
-                dist.create_python_interpreter_config()?,
-            )?;
+    #[test]
+    fn test_stdlib_tests_1() -> Result<()> {
+        for dist in get_all_standalone_distributions_chunk(1, 5)? {
+            test_stdlib(dist)?;
+        }
 
-            builder.add_distribution_resources(None)?;
+        Ok(())
+    }
 
-            let temp_dir = tempfile::Builder::new()
-                .prefix("pyoxidizer-test")
-                .tempdir()?;
+    #[test]
+    fn test_stdlib_tests_2() -> Result<()> {
+        for dist in get_all_standalone_distributions_chunk(2, 5)? {
+            test_stdlib(dist)?;
+        }
 
-            let mut compiler =
-                BytecodeCompiler::new(host_distribution.python_exe_path(), temp_dir.path())?;
+        Ok(())
+    }
 
-            // Some stdlib test modules are malformed and cause resource compiling to fail.
-            builder
-                .resources_collector
-                .compile_resources(&mut compiler)?;
+    #[test]
+    fn test_stdlib_tests_3() -> Result<()> {
+        for dist in get_all_standalone_distributions_chunk(3, 5)? {
+            test_stdlib(dist)?;
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_stdlib_tests_4() -> Result<()> {
+        for dist in get_all_standalone_distributions_chunk(4, 5)? {
+            test_stdlib(dist)?;
         }
 
         Ok(())

@@ -107,3 +107,19 @@ pub fn get_all_standalone_distributions() -> Result<Vec<Arc<StandaloneDistributi
         .map(|record| get_distribution(&record.location))
         .collect::<Result<Vec<_>>>()
 }
+
+/// Obtain all [StandaloneDistribution] in a given chunk.
+///
+pub fn get_all_standalone_distributions_chunk(
+    current_chunk: usize,
+    total_chunks: usize,
+) -> Result<Vec<Arc<StandaloneDistribution>>> {
+    assert!(current_chunk < total_chunks);
+
+    PYTHON_DISTRIBUTIONS
+        .iter()
+        .enumerate()
+        .filter(|(i, _)| i % total_chunks == current_chunk)
+        .map(|(_, record)| get_distribution(&record.location))
+        .collect::<Result<Vec<_>>>()
+}
