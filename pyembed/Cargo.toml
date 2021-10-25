@@ -57,8 +57,8 @@ pathdiff = "0.2"
 rusty-fork = "0.3"
 
 [dev-dependencies.python-packed-resources]
-version = "0.8.0-pre"
-path = "../python-packed-resources"
+version = "0.8.0"
+# path = "../python-packed-resources"
 
 [features]
 default = ["zipimport"]

@@ -69,8 +69,8 @@ version = "0.11.0-pre"
 path = "../python-packaging"
 
 [dependencies.python-packed-resources]
-version = "0.8.0-pre"
-path = "../python-packed-resources"
+version = "0.8.0"
+# path = "../python-packed-resources"
 
 [dependencies.starlark-dialect-build-targets]
 version = "0.6.0"
