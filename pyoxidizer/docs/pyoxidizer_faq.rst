@@ -113,20 +113,6 @@ problems, such as parsing ELF, DWARF, etc executables, cross-compiling,
 integrating custom memory allocators, etc. A minor factor was the author's
 desire to learn more about Rust by starting a *real* Rust project.
 
-Why is the Rust Code... Not Great?
-==================================
-
-This is the project author's first real Rust project. Suggestions to improve
-the Rust code would be very much appreciated!
-
-Keep in mind that the ``pyoxidizer`` crate is a build-time only
-crate and arguably doesn't need to live up to quality standards as
-crates containing run-time code. Things like aggressive ``.unwrap()``
-usage are arguably tolerable.
-
-The run-time code that produced binaries run (``pyembed``) is held to
-a higher standard and is largely ``panic!`` free.
-
 What is the *Magic Sauce* That Makes PyOxidizer Special?
 ========================================================
 
