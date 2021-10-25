@@ -1,6 +1,6 @@
 [package]
 name = "python-oxidized-importer"
-version = "0.3.0-pre"
+version = "0.3.0"
 authors = ["Gregory Szorc <gregory.szorc@gmail.com>"]
 edition = "2021"
 license = "Python-2.0 OR MPL-2.0"

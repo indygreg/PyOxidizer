@@ -388,7 +388,7 @@ dependencies = [
 
 [[package]]
 name = "python-oxidized-importer"
-version = "0.3.0-pre"
+version = "0.3.0"
 dependencies = [
  "anyhow",
  "lazy_static",
