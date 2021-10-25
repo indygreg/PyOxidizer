@@ -30,8 +30,8 @@ version = "0.6.0-pre"
 path = "../cryptographic-message-syntax"
 
 [dependencies.tugger-apple-codesign]
-version = "0.6.0"
-# path = "../tugger-apple-codesign"
+version = "0.7.0-pre"
+path = "../tugger-apple-codesign"
 
 [dependencies.tugger-file-manifest]
 version = "0.7.0-pre"
