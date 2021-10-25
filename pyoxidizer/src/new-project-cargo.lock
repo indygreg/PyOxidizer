@@ -538,6 +538,8 @@ checksum = "29e91ac69050080a0a9fd50af05da5baa8562347ca7b8909f8ed3adbc6ef026f"
 [[package]]
 name = "tugger-licensing"
 version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e9472c127a36aa00f28d83d7894caeb9cdf98d0fb3be67e6c0ad49a3f14d1f8e"
 dependencies = [
  "anyhow",
  "spdx",
