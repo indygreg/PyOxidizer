@@ -71,8 +71,8 @@ Backwards Compatibility Notes
   use of the newest versions of some Rust crates, Rust 2021 edition, and
   some Cargo features to enhance linker control.
 * The run-time Rust code for interfacing with the Python interpreter now uses
-  the [PyO3](https://github.com/PyO3/pyo3) crate instead of
-  [cpython](https://github.com/dgrunwald/rust-cpython). The code port was quite
+  the `PyO3 <https://github.com/PyO3/pyo3>`_ crate instead of
+  `cpython <https://github.com/dgrunwald/rust-cpython>`_. The code port was quite
   extensive and while we believe all important run-time functionality is
   backwards compatible, there are possibly subtle differences in behavior. Please
   file GitHub issues to report any undesired changes in behavior.
