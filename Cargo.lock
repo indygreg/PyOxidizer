@@ -2600,7 +2600,7 @@ dependencies = [
  "starlark-dialect-build-targets 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tar",
  "tempfile",
- "tugger",
+ "tugger 0.12.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-apple 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-binary-analysis 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-code-signing 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3758,7 +3758,7 @@ dependencies = [
 
 [[package]]
 name = "tugger"
-version = "0.12.0-pre"
+version = "0.12.0"
 dependencies = [
  "anyhow",
  "apple-bundles 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3788,6 +3788,38 @@ dependencies = [
  "tugger-wix 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "walkdir",
  "x509-certificate 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "tugger"
+version = "0.12.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e58c338c1be4882291c82156886e88964408e26a18ec745efc547767d7e5358d"
+dependencies = [
+ "anyhow",
+ "apple-bundles 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "atty",
+ "codemap",
+ "codemap-diagnostic",
+ "console",
+ "dialoguer",
+ "linked-hash-map",
+ "plist",
+ "python-packaging 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "slog",
+ "starlark",
+ "starlark-dialect-build-targets 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tar",
+ "tempfile",
+ "time 0.3.3",
+ "tugger-apple 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-code-signing 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-common 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-file-manifest 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-snapcraft 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-windows 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-wix 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "walkdir",
 ]
 
 [[package]]
