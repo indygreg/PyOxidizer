@@ -34,8 +34,8 @@ version = "0.6.0-pre"
 path = "../tugger-apple-codesign"
 
 [dependencies.tugger-file-manifest]
-version = "0.6.0-pre"
-path = "../tugger-file-manifest"
+version = "0.6.0"
+# path = "../tugger-file-manifest"
 
 [dependencies.tugger-windows-codesign]
 version = "0.5.0-pre"
