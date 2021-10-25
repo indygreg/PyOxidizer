@@ -9,7 +9,7 @@
 # TIME_STAMP_SERVER_URL
 #    URL of Time-Stamp Protocol Server to use.
 
-PYOXIDIZER_VERSION = "0.18.0"
+PYOXIDIZER_VERSION = "0.19.0"
 AUTHOR = "Gregory Szorc"
 
 # Whether we are running in CI.
