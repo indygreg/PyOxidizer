@@ -2608,7 +2608,7 @@ dependencies = [
  "tugger-file-manifest 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-licensing 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-rust-toolchain 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "tugger-windows",
+ "tugger-windows 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-wix",
  "url",
  "uuid",
@@ -3748,7 +3748,7 @@ dependencies = [
  "tugger-common 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-file-manifest 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-snapcraft 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "tugger-windows",
+ "tugger-windows 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-windows-codesign",
  "tugger-wix",
  "walkdir",
@@ -4070,7 +4070,23 @@ dependencies = [
 
 [[package]]
 name = "tugger-windows"
-version = "0.7.0-pre"
+version = "0.7.0"
+dependencies = [
+ "anyhow",
+ "duct",
+ "find-winsdk",
+ "glob",
+ "once_cell",
+ "semver",
+ "tugger-common 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "winapi",
+]
+
+[[package]]
+name = "tugger-windows"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "862f31d91b88b479a2671584a9772f81ec3d21b8314adc4fdf17619b12f8750c"
 dependencies = [
  "anyhow",
  "duct",
@@ -4094,7 +4110,7 @@ dependencies = [
  "rcgen",
  "slog",
  "tugger-common 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "tugger-windows",
+ "tugger-windows 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "x509-parser",
  "yasna",
 ]
@@ -4111,7 +4127,7 @@ dependencies = [
  "tempfile",
  "tugger-common 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-file-manifest 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "tugger-windows",
+ "tugger-windows 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-windows-codesign",
  "url",
  "uuid",
