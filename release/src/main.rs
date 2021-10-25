@@ -54,7 +54,7 @@ static RELEASE_ORDER: Lazy<Vec<&'static str>> = Lazy::new(|| {
         "python-oxidized-importer",
         "pyembed",
         "pyoxidizer",
-        "pyoxy",
+        // "pyoxy",
     ]
 });
 
