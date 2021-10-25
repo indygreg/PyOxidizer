@@ -2603,7 +2603,7 @@ dependencies = [
  "tugger",
  "tugger-apple 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-binary-analysis 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "tugger-code-signing",
+ "tugger-code-signing 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-common 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-file-manifest 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-licensing 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3744,7 +3744,7 @@ dependencies = [
  "time 0.3.3",
  "tugger-apple 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-apple-codesign 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "tugger-code-signing",
+ "tugger-code-signing 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-common 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-file-manifest 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-snapcraft 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3879,7 +3879,30 @@ dependencies = [
 
 [[package]]
 name = "tugger-code-signing"
-version = "0.4.0-pre"
+version = "0.4.0"
+dependencies = [
+ "anyhow",
+ "apple-bundles 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "bcder",
+ "cryptographic-message-syntax 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "goblin",
+ "p12",
+ "reqwest",
+ "slog",
+ "tempfile",
+ "thiserror",
+ "tugger-apple-codesign 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-file-manifest 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-windows-codesign 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "x509-certificate 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "yasna",
+]
+
+[[package]]
+name = "tugger-code-signing"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fc2cc5c4198c044a93ec7af13cf001ea48141be6b12e58e8a71a63eb5427371d"
 dependencies = [
  "anyhow",
  "apple-bundles 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
