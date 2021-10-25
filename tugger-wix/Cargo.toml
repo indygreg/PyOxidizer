@@ -25,8 +25,8 @@ version = "0.5.0"
 # path = "../tugger-common"
 
 [dependencies.tugger-windows-codesign]
-version = "0.5.0-pre"
-path = "../tugger-windows-codesign"
+version = "0.5.0"
+# path = "../tugger-windows-codesign"
 
 [dependencies.tugger-windows]
 version = "0.7.0"
