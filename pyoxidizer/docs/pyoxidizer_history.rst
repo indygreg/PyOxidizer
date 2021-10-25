@@ -31,6 +31,8 @@ Version History
 0.18.0
 ------
 
+Released October 24, 2021.
+
 Bug Fixes
 ^^^^^^^^^
 
