@@ -3563,7 +3563,7 @@ checksum = "76565a2f8df1d2170b5c365aa39d0623fd93fec20545edde299233cea82d0f16"
 
 [[package]]
 name = "text-stub-library"
-version = "0.6.0-pre"
+version = "0.6.0"
 dependencies = [
  "rand 0.8.4",
  "rayon",
