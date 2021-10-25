@@ -22,7 +22,8 @@ use {
 const CARGO_LOCKFILE_NAME: &str = "new-project-cargo.lock";
 
 /// Packages in the workspace we should ignore.
-static IGNORE_PACKAGES: Lazy<Vec<&'static str>> = Lazy::new(|| vec!["release"]);
+static IGNORE_PACKAGES: Lazy<Vec<&'static str>> =
+    Lazy::new(|| vec!["pyembed-bench", "pyoxy", "release"]);
 
 /// Order that packages should be released in.
 static RELEASE_ORDER: Lazy<Vec<&'static str>> = Lazy::new(|| {
