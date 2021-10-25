@@ -537,7 +537,7 @@ checksum = "29e91ac69050080a0a9fd50af05da5baa8562347ca7b8909f8ed3adbc6ef026f"
 
 [[package]]
 name = "tugger-licensing"
-version = "0.5.0-pre"
+version = "0.5.0"
 dependencies = [
  "anyhow",
  "spdx",

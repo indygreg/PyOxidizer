@@ -17,8 +17,8 @@ spdx = "0.6"
 url = "2.2"
 
 [dependencies.tugger-licensing]
-version = "0.5.0-pre"
-path = "../tugger-licensing"
+version = "0.5.0"
+# path = "../tugger-licensing"
 
 [dev-dependencies.tugger-common]
 version = "0.5.0"
