@@ -72,13 +72,29 @@ class RustBuildExt(distutils.command.build_ext.build_ext):
         )
 
 
-with open("python-oxidized-importer/README.md", "r", encoding="utf-8") as fh:
+def get_package_version():
+    with open(OXIDIZED_IMPORTER / "Cargo.toml", "r", encoding="utf-8") as fh:
+        for line in fh:
+            line = line.rstrip()
+
+            if line.startswith("version = "):
+                version = line[len('version = "') : -1]
+
+                if version.endswith("-pre"):
+                    version = "%s.dev0" % version[:-4]
+
+                return version
+
+    raise Exception("could not resolve crate version")
+
+
+with open(OXIDIZED_IMPORTER / "README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 
 setuptools.setup(
     name="oxidized_importer",
-    version="0.3dev0",
+    version=get_package_version(),
     author="Gregory Szorc",
     author_email="gregory.szorc@gmail.com",
     url="https://github.com/indygreg/PyOxidizer",
