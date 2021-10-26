@@ -27,3 +27,4 @@ templates_path = ["_templates"]
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 html_theme = "alabaster"
 master_doc = "index"
+tags.add("tugger")

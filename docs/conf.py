@@ -41,6 +41,7 @@ intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
     "setuptools": ("https://setuptools.readthedocs.io/en/latest", None),
 }
+tags.add("global")
 
 # Synchronize external docs into this directory.
 
