@@ -11,6 +11,7 @@ description = "Embed a Python interpreter"
 homepage = "https://github.com/indygreg/PyOxidizer"
 repository = "https://github.com/indygreg/PyOxidizer.git"
 build = "build.rs"
+readme = "README.md"
 
 [dependencies]
 # Update documentation in lib.rs when new dependencies are added.
