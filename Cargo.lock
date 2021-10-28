@@ -2098,9 +2098,9 @@ dependencies = [
 
 [[package]]
 name = "p12"
-version = "0.2.1"
+version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8989113c3b1fb9fe71f4122dd6f5842b6c333c623c994c5c656c3b185220f1e6"
+checksum = "10105b08ad3c4cd872ddf396860544f9dbc1800fed7d552f10aa5b585ac79e1d"
 dependencies = [
  "block-modes 0.8.1",
  "des 0.7.0",
