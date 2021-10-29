@@ -2609,7 +2609,7 @@ dependencies = [
  "tugger-licensing 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-rust-toolchain 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-windows 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "tugger-wix",
+ "tugger-wix 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "url",
  "uuid",
  "version-compare",
@@ -3750,7 +3750,7 @@ dependencies = [
  "tugger-snapcraft 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-windows 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-windows-codesign 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "tugger-wix",
+ "tugger-wix 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "walkdir",
  "x509-certificate 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -4157,7 +4157,7 @@ dependencies = [
 
 [[package]]
 name = "tugger-wix"
-version = "0.11.0-pre"
+version = "0.11.0"
 dependencies = [
  "anyhow",
  "duct",
@@ -4165,6 +4165,25 @@ dependencies = [
  "once_cell",
  "slog",
  "tempfile",
+ "tugger-common 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-file-manifest 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-windows 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-windows-codesign 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "url",
+ "uuid",
+ "xml-rs",
+]
+
+[[package]]
+name = "tugger-wix"
+version = "0.11.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7cf597c3a4b272e1bfbbfc527202027a2ebce202aebf22fff47f3954be3cc73d"
+dependencies = [
+ "anyhow",
+ "duct",
+ "once_cell",
+ "slog",
  "tugger-common 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-file-manifest 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-windows 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
