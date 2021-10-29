@@ -389,6 +389,8 @@ dependencies = [
 [[package]]
 name = "python-oxidized-importer"
 version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9c95025e6c572ff9dfc932043a72e74886fa42e43b203719d845136cf0cd3a3d"
 dependencies = [
  "anyhow",
  "lazy_static",
