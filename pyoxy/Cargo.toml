@@ -18,7 +18,7 @@ serde = { version = "1.0", features = ["derive"] }
 serde_yaml = "0.8"
 
 [dependencies.pyembed]
-version = "0.19.0-pre"
+version = "0.19.0"
 path = "../pyembed"
 default-features = false
 features = ["serialization", "zipimport"]
