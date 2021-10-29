@@ -22,8 +22,8 @@ thiserror = "1.0"
 yasna = "0.4"
 
 [dependencies.apple-bundles]
-version = "0.7.0-pre"
-path = "../apple-bundles"
+version = "0.6.0"
+# path = "../apple-bundles"
 
 [dependencies.cryptographic-message-syntax]
 version = "0.5.0"

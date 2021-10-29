@@ -28,8 +28,8 @@ time = "0.3"
 walkdir = "2"
 
 [dependencies.apple-bundles]
-version = "0.7.0-pre"
-path = "../apple-bundles"
+version = "0.6.0"
+# path = "../apple-bundles"
 
 [dependencies.python-packaging]
 version = "0.12.0-pre"
