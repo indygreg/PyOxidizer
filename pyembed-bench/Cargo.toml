@@ -33,8 +33,8 @@ default-features = false
 features = ["zipimport"]
 
 [dependencies.python-packaging]
-version = "0.12.0-pre"
-path = "../python-packaging"
+version = "0.11.0"
+# path = "../python-packaging"
 
 [dependencies.python-packed-resources]
 version = "0.8.0"

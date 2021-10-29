@@ -46,8 +46,8 @@ default-features = false
 features = ["macros"]
 
 [dependencies.python-packaging]
-version = "0.12.0-pre"
-path = "../python-packaging"
+version = "0.11.0"
+# path = "../python-packaging"
 default-features = false
 
 [build-dependencies]
