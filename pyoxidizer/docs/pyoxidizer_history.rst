@@ -31,7 +31,16 @@ Version History
 0.19.0
 ------
 
-Not yet released.
+Released October 28, 2021.
+
+Changes
+^^^^^^^
+
+* ``p12`` Rust crate updated to avoid dependency on version yanked from
+  crates.io (version 0.18.0 could not be installed via ``cargo`` in some
+  configurations because of this).
+* PyOxidizer's documentation is now more isolated from the rest of the
+  projects in the same repository.
 
 .. _version_0_18_0:
 
