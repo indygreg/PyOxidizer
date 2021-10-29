@@ -2602,7 +2602,7 @@ dependencies = [
  "tempfile",
  "tugger",
  "tugger-apple",
- "tugger-binary-analysis",
+ "tugger-binary-analysis 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-code-signing",
  "tugger-common 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-file-manifest 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3804,7 +3804,20 @@ dependencies = [
 
 [[package]]
 name = "tugger-binary-analysis"
-version = "0.5.0-pre"
+version = "0.4.0"
+dependencies = [
+ "anyhow",
+ "byteorder",
+ "goblin",
+ "once_cell",
+ "version-compare",
+]
+
+[[package]]
+name = "tugger-binary-analysis"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ece8babc9ef893f357082efa596d758e1ecb72c20bee390ff689e4eda05133b4"
 dependencies = [
  "anyhow",
  "byteorder",

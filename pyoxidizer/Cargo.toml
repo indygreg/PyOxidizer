@@ -81,8 +81,8 @@ version = "0.6.0-pre"
 path = "../tugger-apple"
 
 [dependencies.tugger-binary-analysis]
-version = "0.5.0-pre"
-path = "../tugger-binary-analysis"
+version = "0.4.0"
+# path = "../tugger-binary-analysis"
 
 [dependencies.tugger-code-signing]
 version = "0.5.0-pre"
