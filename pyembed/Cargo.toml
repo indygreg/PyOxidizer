@@ -36,8 +36,8 @@ features = [
 optional = true
 
 [dependencies.python-oxidized-importer]
-version = "0.4.0"
-# path = "../python-oxidized-importer"
+version = "0.5.0-pre"
+path = "../python-oxidized-importer"
 default-features = false
 
 [dependencies.pyo3]

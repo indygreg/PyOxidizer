@@ -27,8 +27,8 @@ version = "0.19.0"
 # path = "../pyoxidizer"
 
 [dependencies.python-oxidized-importer]
-version = "0.4.0"
-# path = "../python-oxidized-importer"
+version = "0.5.0-pre"
+path = "../python-oxidized-importer"
 default-features = false
 features = ["zipimport"]
 
