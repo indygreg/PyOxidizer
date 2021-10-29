@@ -113,8 +113,8 @@ version = "0.11.0"
 # path = "../tugger-wix"
 
 [dependencies.tugger]
-version = "0.13.0-pre"
-path = "../tugger"
+version = "0.13.0"
+# path = "../tugger"
 
 [dev-dependencies]
 assert_cmd = "2.0"
