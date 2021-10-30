@@ -138,100 +138,28 @@ interpreter is ready to execute the user's Python code!
 
 ## Our Importing Mechanism
 
-We have made significant modifications to how the Python importing
-mechanism is initialized and configured. (Note: we do not require these
-modifications. It is possible to initialize a Python interpreter with
-*default* behavior, without support for in-memory module importing.)
+We use the multi-phase initialization mechanism provided by CPython 3.8+
+(PEP-587) to import `oxidized_importer` and inject its `OxidizedFinder`
+onto `sys.meta_path` during interpreter initialization.
 
-The `importer` Rust module of this crate defines a Python extension module.
-To the Python interpreter, an extension module is a C function that calls
-into the CPython C APIs and returns a `PyObject*` representing the
-constructed Python module object. This extension module behaves like any
-other extension module you've seen. The main differences are it is implemented
-in Rust (instead of C) and it is compiled into the binary containing Python,
-as opposed to being a standalone shared library that is loaded into the Python
-process.
+Essentially:
 
-This extension module provides the `oxidized_importer` Python module,
-which defines a meta path importer.
+1. Add `oxidized_importer` to `PyImport_Inittab` so it can be serviced by
+   `BuiltinImporter`.
+2. Enable multi-phase initialization by setting `PyConfig._init_main = 0`.
+3. Call `Py_InitializeFromConfig()` to initialize Python up to the point
+   where `.py` based modules need to be loaded.
+4. Construct an `OxidizedFinder` and install it on `sys.meta_path`. This entails
+   loading resources data, indexing built-ins and frozen modules, and clearing out
+   `sys.met_path` of the default meta path importers.
+5. Call `_Py_InitializeMain()` to finish Python initialization. `OxidizedFinder` is
+   able to service Python standard library imports.
+6. Clear out `sys.meta_path` and `sys.path_hooks` from unwanted changes made as part
+   of initializing "external" importers.
 
-When we initialize the Python interpreter, the `oxidized_importer`
-extension module is appended to the global `PyImport_Inittab` array,
-allowing it to be recognized as a *built-in* extension module and
-imported as such.
-
-We use the PEP-587
-[Python Initialization Configuration](https://docs.python.org/3/c-api/init_config.html)
-API to have granular control over Python initialization. Our most
-notable departure is we force a multi-phase initialization so
-initialization pauses between _core_ and _main_ initialization.
-
-When _core_ is initialized, `_frozen_importlib._install()` is called to
-register `BuiltinImporter` and `FrozenImporter` on `sys.meta_path`.
-At our break point after _core_ initialization, we import our
-`oxidized_importer` module using the Python C APIs. This import
-is serviced by `BuiltinImporter`. Our Rust-implemented module initialization
-function runs and creates a module object. We then call another Rust
-function to complete the module initialization given the current
-configuration. This will create a new *meta path importer* and register
-it on `sys.meta_path`. The chief goal of our importer is to support
-importing Python resources using an efficient binary data structure.
-
-Our extension module grabs a handle on the `&[u8]` containing modules
-data embedded into the binary. The in-memory data structure is parsed
-into a Rust collection type (basically a `HashMap<&str, (&[u8], &[u8])>`)
-mapping Python module names to their source and bytecode data.
-
-The extension module defines an `OxidizedFinder` Python type that
-implements the requisite `importlib.abc.*` interfaces for providing a
-*meta path importer*. An instance of this type is constructed from the
-parsed data structure containing known Python modules. That instance is
-registered as the first entry on `sys.meta_path`.
-
-When our module's `_setup()` completes, we trigger the *main*
-initialization. This will *always* register the traditional filesystem
-importer (`PathFinder`) on `sys.meta_path`. But, since our finder is
-registered first, it should always be used.
-
-As part of _main_ interpreter initialization, Python attempts various
-imports of `.py` based modules. The standard `sys.meta_path` traversal
-is performed. The Rust-implemented `OxidizedFinder` converts the
-requested Python module name to a Rust `&str` and does a lookup in a
-`HashMap<&str, ...>` to see if it knows about the module. Assuming the
-module is found, a `&[u8]` handle on that module's source or bytecode is
-obtained. That pointer is used to construct a Python `memoryview` object,
-which allows Python to access the raw bytes without a memory copy.
-Depending on the type, the source code is decoded to a Python `str` or
-the bytecode is sent to `marshal.loads()`, converted into a Python `code`
-object, which is then executed via the equivalent of
-`exec(code, module.__dict__)` to populate an empty Python module object.
-
-In addition, `OxidizedFinder` indexes the built-in extension modules
-and frozen modules. It removes `BuiltinImporter` and `FrozenImporter`
-from `sys.meta_path`. When `OxidizedFinder` sees a request for a
-built-in or frozen module, it dispatches to `BuiltinImporter` or
-`FrozenImporter` to complete the request. The reason we do this is
-performance. Imports have to traverse `sys.meta_path` entries until a
-registered finder says it can service the request. So the more entries
-there are, the more overhead there is. Compounding the problem is that
-`BuiltinImporter` and `FrozenImporter` do a `strcmp()`
-against the global module arrays when trying to service an import.
-`OxidizedFinder` already has an index of module name to data. So it
-was not that much effort to also index built-in and frozen modules
-so there's a fixed, low cost for finding modules (a Rust `HashMap` key
-lookup).
-
-It's worth explicitly noting that it is important for our custom importer
-to run *before* the _main_ initialization phase completes. This
-is because Python interpreter initialization relies on the fact that
-`.py` implemented standard library modules are available for import
-during initialization. For example, initializing the filesystem encoding
-needs to import the `encodings` module, which is provided by a `.py` file
-on the filesystem in standard installations.
-
-After the _main_ initialization phase completes, we remove `PathFinder`
-from `sys.meta_path` if the configuration says to disable filesystem
-based imports. The overhead of registering then unregistering it should
-be trivial and no I/O should have been performed.
+By injecting `OxidizedFinder` onto `sys.meta_path[0]`, we effectively make it the
+highest priority importer. And if it has indexed everything needed as part of
+Python interpreter initialization, it essentially preempts the other standard
+library importers from doing anything.
 
 */
