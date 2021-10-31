@@ -12,6 +12,7 @@ pub mod binary;
 pub mod config;
 pub mod distribution;
 pub mod distutils;
+pub mod embedding;
 pub mod filtering;
 pub mod libpython;
 pub mod packaging_tool;

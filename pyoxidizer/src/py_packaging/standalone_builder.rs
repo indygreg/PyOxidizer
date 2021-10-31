@@ -5,13 +5,15 @@
 use {
     super::{
         binary::{
-            pyembed_licenses, EmbeddedPythonContext, LibpythonLinkMode, LibpythonLinkSettings,
-            LinkSharedLibraryPath, LinkStaticLibraryData, LinkingAnnotation,
-            PackedResourcesLoadMode, PythonBinaryBuilder, ResourceAddCollectionContextCallback,
-            WindowsRuntimeDllsMode,
+            pyembed_licenses, LibpythonLinkMode, PackedResourcesLoadMode, PythonBinaryBuilder,
+            ResourceAddCollectionContextCallback, WindowsRuntimeDllsMode,
         },
         config::{PyembedPackedResourcesSource, PyembedPythonInterpreterConfig},
         distribution::{AppleSdkInfo, BinaryLibpythonLinkMode, PythonDistribution},
+        embedding::{
+            EmbeddedPythonContext, LibpythonLinkSettings, LinkSharedLibraryPath,
+            LinkStaticLibraryData, LinkingAnnotation,
+        },
         filtering::{filter_btreemap, resolve_resource_names_from_files},
         libpython::link_libpython,
         packaging_tool::{

@@ -9,7 +9,7 @@ Build a custom libraries containing Python.
 use {
     crate::{
         environment::Environment,
-        py_packaging::{binary::LinkingAnnotation, distribution::AppleSdkInfo},
+        py_packaging::{distribution::AppleSdkInfo, embedding::LinkingAnnotation},
     },
     anyhow::{anyhow, Context, Result},
     python_packaging::libpython::LibPythonBuildContext,

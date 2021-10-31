@@ -7,11 +7,9 @@ use {
         environment::{canonicalize_path, Environment, RustEnvironment},
         project_layout::initialize_project,
         py_packaging::{
-            binary::{
-                EmbeddedPythonContext, LibpythonLinkMode, PythonBinaryBuilder,
-                DEFAULT_PYTHON_CONFIG_FILENAME,
-            },
+            binary::{LibpythonLinkMode, PythonBinaryBuilder},
             distribution::AppleSdkInfo,
+            embedding::{EmbeddedPythonContext, DEFAULT_PYTHON_CONFIG_FILENAME},
         },
         starlark::eval::{EvaluationContext, EvaluationContextBuilder},
     },
