@@ -745,6 +745,13 @@ impl<'a> EmbeddedPythonContext<'a> {
         Ok(())
     }
 
+    /// Write extra files like dynamic extension modules to the build folder.
+    pub fn write_extra_files(&self, dest_dir: impl AsRef<Path>) -> Result<()> {
+        self.extra_files
+            .materialize_files(dest_dir.as_ref().join("extra_files"))?;
+        Ok(())
+    }
+
     /// Write out files needed to build a binary against our configuration.
     pub fn write_files(&self, dest_dir: &Path) -> Result<()> {
         self.write_packed_resources(&dest_dir)
@@ -755,6 +762,8 @@ impl<'a> EmbeddedPythonContext<'a> {
             .context("write_interpreter_config_rs()")?;
         self.write_pyo3_config(&dest_dir)
             .context("write_pyo3_config()")?;
+        self.write_extra_files(&dest_dir)
+            .context("write_extra_files()")?;
 
         Ok(())
     }

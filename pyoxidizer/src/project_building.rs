@@ -483,6 +483,10 @@ pub fn build_pyembed_artifacts(
         ))? {
             let p = p?;
 
+            // leave the extra files in the build dir; we do not need them to build the binary
+            if p.file_name() == "extra_files" {
+                continue;
+            }
             let dest_path = artifacts_path.join(p.file_name());
             std::fs::copy(&p.path(), &dest_path).context(format!(
                 "copying {} to {}",
