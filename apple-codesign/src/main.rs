@@ -1277,131 +1277,142 @@ fn command_verify(args: &ArgMatches) -> Result<(), AppleCodesignError> {
 }
 
 fn main_impl() -> Result<(), AppleCodesignError> {
-    let matches = App::new("Oxidized Apple Codesigning")
+    let app = App::new("Oxidized Apple Codesigning")
         .setting(AppSettings::ArgRequiredElseHelp)
         .version("0.1")
         .author("Gregory Szorc <gregory.szorc@gmail.com>")
-        .about("Do things related to code signing of Apple binaries")
-        .subcommand(
-            SubCommand::with_name("compute-code-hashes")
-                .about("Compute code hashes for a binary")
-                .arg(
-                    Arg::with_name("path")
-                        .required(true)
-                        .help("path to Mach-O binary to examine"),
-                )
-                .arg(
-                    Arg::with_name("hash")
-                        .long("hash")
-                        .takes_value(true)
-                        .possible_values(SUPPORTED_HASHES)
-                        .default_value("sha256")
-                        .help("Hashing algorithm to use"),
-                )
-                .arg(
-                    Arg::with_name("page_size")
-                        .long("page-size")
-                        .takes_value(true)
-                        .help("Chunk size to digest over"),
-                )
-                .arg(
-                    Arg::with_name("universal_index")
-                        .long("universal-index")
-                        .takes_value(true)
-                        .default_value("0")
-                        .help("Index of Mach-O binary to operate on within a universal/fat binary"),
-                ),
-        )
-        .subcommand(
-            SubCommand::with_name("extract")
-                .about("Extracts code signature data from a Mach-O binary")
-                .long_about(EXTRACT_ABOUT)
-                .arg(
-                    Arg::with_name("path")
-                        .required(true)
-                        .help("Path to Mach-O binary to examine"),
-                )
-                .arg(
-                    Arg::with_name("data")
-                        .long("data")
-                        .takes_value(true)
-                        .possible_values(&[
-                            "blobs",
-                            "cms-info",
-                            "cms-pem",
-                            "cms-raw",
-                            "cms",
-                            "code-directory-raw",
-                            "code-directory-serialized-raw",
-                            "code-directory-serialized",
-                            "code-directory",
-                            "linkedit-info",
-                            "linkedit-segment-raw",
-                            "macho-load-commands",
-                            "macho-segments",
-                            "requirements-raw",
-                            "requirements-rust",
-                            "requirements-serialized-raw",
-                            "requirements-serialized",
-                            "requirements",
-                            "signature-raw",
-                            "superblob",
-                        ])
-                        .default_value("linkedit-info")
-                        .help("Which data to extract and how to format it"),
-                )
-                .arg(
-                    Arg::with_name("universal_index")
-                        .long("universal-index")
-                        .takes_value(true)
-                        .default_value("0")
-                        .help("Index of Mach-O binary to operate on within a universal/fat binary"),
-                ),
-        )
-        .subcommand(
-            SubCommand::with_name("generate-self-signed-certificate")
-                .about("Generate a self-signed certificate for code signing")
-                .long_about(GENERATE_SELF_SIGNED_CERTIFICATE_ABOUT)
-                .arg(
-                    Arg::with_name("algorithm")
-                        .long("algorithm")
-                        .takes_value(true)
-                        .possible_values(&["ecdsa", "ed25519"])
-                        .default_value("ecdsa")
-                        .help("Which key type to use"),
-                )
-                .arg(Arg::with_name("profile")
+        .about("Do things related to code signing of Apple binaries");
+
+    let app = app.subcommand(
+        SubCommand::with_name("compute-code-hashes")
+            .about("Compute code hashes for a binary")
+            .arg(
+                Arg::with_name("path")
+                    .required(true)
+                    .help("path to Mach-O binary to examine"),
+            )
+            .arg(
+                Arg::with_name("hash")
+                    .long("hash")
+                    .takes_value(true)
+                    .possible_values(SUPPORTED_HASHES)
+                    .default_value("sha256")
+                    .help("Hashing algorithm to use"),
+            )
+            .arg(
+                Arg::with_name("page_size")
+                    .long("page-size")
+                    .takes_value(true)
+                    .help("Chunk size to digest over"),
+            )
+            .arg(
+                Arg::with_name("universal_index")
+                    .long("universal-index")
+                    .takes_value(true)
+                    .default_value("0")
+                    .help("Index of Mach-O binary to operate on within a universal/fat binary"),
+            ),
+    );
+
+    let app = app.subcommand(
+        SubCommand::with_name("extract")
+            .about("Extracts code signature data from a Mach-O binary")
+            .long_about(EXTRACT_ABOUT)
+            .arg(
+                Arg::with_name("path")
+                    .required(true)
+                    .help("Path to Mach-O binary to examine"),
+            )
+            .arg(
+                Arg::with_name("data")
+                    .long("data")
+                    .takes_value(true)
+                    .possible_values(&[
+                        "blobs",
+                        "cms-info",
+                        "cms-pem",
+                        "cms-raw",
+                        "cms",
+                        "code-directory-raw",
+                        "code-directory-serialized-raw",
+                        "code-directory-serialized",
+                        "code-directory",
+                        "linkedit-info",
+                        "linkedit-segment-raw",
+                        "macho-load-commands",
+                        "macho-segments",
+                        "requirements-raw",
+                        "requirements-rust",
+                        "requirements-serialized-raw",
+                        "requirements-serialized",
+                        "requirements",
+                        "signature-raw",
+                        "superblob",
+                    ])
+                    .default_value("linkedit-info")
+                    .help("Which data to extract and how to format it"),
+            )
+            .arg(
+                Arg::with_name("universal_index")
+                    .long("universal-index")
+                    .takes_value(true)
+                    .default_value("0")
+                    .help("Index of Mach-O binary to operate on within a universal/fat binary"),
+            ),
+    );
+
+    let app = app.subcommand(
+        SubCommand::with_name("generate-self-signed-certificate")
+            .about("Generate a self-signed certificate for code signing")
+            .long_about(GENERATE_SELF_SIGNED_CERTIFICATE_ABOUT)
+            .arg(
+                Arg::with_name("algorithm")
+                    .long("algorithm")
+                    .takes_value(true)
+                    .possible_values(&["ecdsa", "ed25519"])
+                    .default_value("ecdsa")
+                    .help("Which key type to use"),
+            )
+            .arg(
+                Arg::with_name("profile")
                     .long("profile")
                     .takes_value(true)
                     .possible_values(CertificateProfile::str_names())
-                    .default_value("apple-development"))
-                .arg(Arg::with_name("team_id")
+                    .default_value("apple-development"),
+            )
+            .arg(
+                Arg::with_name("team_id")
                     .long("team-id")
                     .takes_value(true)
                     .default_value("unset")
-                    .help("Team ID (this is a short string attached to your Apple Developer account)")
-                )
-                .arg(Arg::with_name("person_name")
+                    .help(
+                        "Team ID (this is a short string attached to your Apple Developer account)",
+                    ),
+            )
+            .arg(
+                Arg::with_name("person_name")
                     .long("person-name")
                     .takes_value(true)
                     .required(true)
-                    .help("The name of the person this certificate is for")
-                )
-                .arg(
-                    Arg::with_name("country_name")
-                        .long("country-name")
-                        .takes_value(true)
-                        .default_value("XX")
-                        .help("Country Name (C) value for certificate identifier"),
-                )
-                .arg(
-                    Arg::with_name("validity_days")
-                        .long("validity-days")
-                        .takes_value(true)
-                        .default_value("365")
-                        .help("How many days the certificate should be valid for"),
-                ),
-        ).
+                    .help("The name of the person this certificate is for"),
+            )
+            .arg(
+                Arg::with_name("country_name")
+                    .long("country-name")
+                    .takes_value(true)
+                    .default_value("XX")
+                    .help("Country Name (C) value for certificate identifier"),
+            )
+            .arg(
+                Arg::with_name("validity_days")
+                    .long("validity-days")
+                    .takes_value(true)
+                    .default_value("365")
+                    .help("How many days the certificate should be valid for"),
+            ),
+    );
+
+    let app = app.
         subcommand(SubCommand::with_name("keychain-export-certificate-chain")
             .about("Export Apple CA certificates from the macOS Keychain")
             .arg(
@@ -1436,8 +1447,10 @@ fn main_impl() -> Result<(), AppleCodesignError> {
                     .required(true)
                     .help("User ID value of code signing certificate to find and whose CA chain to export")
            ),
-        )
-        .subcommand(SubCommand::with_name("parse-code-signing-requirement")
+        );
+
+    let app = app.subcommand(
+        SubCommand::with_name("parse-code-signing-requirement")
             .about("Parse binary Code Signing Requirement data into a human readable string")
             .long_about(PARSE_CODE_SIGNING_REQUIREMENT_ABOUT)
             .arg(
@@ -1446,14 +1459,16 @@ fn main_impl() -> Result<(), AppleCodesignError> {
                     .required(true)
                     .possible_values(&["csrl", "expression-tree"])
                     .default_value("csrl")
-                    .help("Output format")
+                    .help("Output format"),
             )
             .arg(
                 Arg::with_name("input_path")
                     .required(true)
-                    .help("Path to file to parse")
-            )
-        )
+                    .help("Path to file to parse"),
+            ),
+    );
+
+    let app = app
         .subcommand(
             SubCommand::with_name("sign")
                 .about("Sign a Mach-O binary or bundle")
@@ -1570,17 +1585,19 @@ fn main_impl() -> Result<(), AppleCodesignError> {
                         .required(true)
                         .help("Path to signed Mach-O binary to write"),
                 ),
-        )
-        .subcommand(
-            SubCommand::with_name("verify")
-                .about("Verifies code signature data")
-                .arg(
-                    Arg::with_name("path")
-                        .required(true)
-                        .help("Path of Mach-O binary to examine"),
-                ),
-        )
-        .get_matches();
+        );
+
+    let app = app.subcommand(
+        SubCommand::with_name("verify")
+            .about("Verifies code signature data")
+            .arg(
+                Arg::with_name("path")
+                    .required(true)
+                    .help("Path of Mach-O binary to examine"),
+            ),
+    );
+
+    let matches = app.get_matches();
 
     match matches.subcommand() {
         ("compute-code-hashes", Some(args)) => command_compute_code_hashes(args),
