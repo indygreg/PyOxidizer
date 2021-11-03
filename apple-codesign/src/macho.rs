@@ -10,8 +10,8 @@ what is actually implemented.
 
 The best source of the specification comes from Apple's open source headers,
 notably cs_blobs.h (e.g.
-https://opensource.apple.com/source/xnu/xnu-7195.81.3/osfmk/kern/cs_blobs.h.auto.html).
-(Go to https://opensource.apple.com/source/xnu and check for newer versions of xnu
+<https://opensource.apple.com/source/xnu/xnu-7195.81.3/osfmk/kern/cs_blobs.h.auto.html>).
+(Go to <https://opensource.apple.com/source/xnu> and check for newer versions of xnu
 to look for new features.)
 
 Code signing data is embedded within the named `__LINKEDIT` segment of

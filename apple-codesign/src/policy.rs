@@ -17,7 +17,7 @@
 //! constructed to match those employed by Apple's official signing tools.
 //!
 //! Apple's certificates can be found at
-//! https://www.apple.com/certificateauthority/.
+//! <https://www.apple.com/certificateauthority/>.
 
 use {
     crate::{

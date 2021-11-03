@@ -22,7 +22,7 @@ been tampered with as well as to validate trust with the entity that
 produced that signature.
 
 See
-https://developer.apple.com/library/archive/technotes/tn2206/_index.html#//apple_ref/doc/uid/DTS40007919
+<https://developer.apple.com/library/archive/technotes/tn2206/_index.html#//apple_ref/doc/uid/DTS40007919>
 for an additional overview of how code signing works on Apple platforms.
 
 # The Important Data Structures

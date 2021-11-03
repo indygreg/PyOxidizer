@@ -866,7 +866,7 @@ pub trait AppleCertificateBuilder: Sized {
     /// This functions defines common attributes on the certificate subject.
     ///
     /// `team_id` is your Apple team id. It is a short alphanumeric string. You
-    /// can find this at https://developer.apple.com/account/#/membership/.
+    /// can find this at <https://developer.apple.com/account/#/membership/>.
     fn apple_subject(
         &mut self,
         team_id: &str,

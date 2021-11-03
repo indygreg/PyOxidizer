@@ -6,7 +6,7 @@
 //!
 //! This module defines well-known Apple X.509 certificates.
 //!
-//! The canonical source of this data is https://www.apple.com/certificateauthority/.
+//! The canonical source of this data is <https://www.apple.com/certificateauthority/>.
 //!
 //! Note that some certificates are commented out and not available
 //! because the official DER-encoded certificates provided by Apple
@@ -164,7 +164,7 @@ static KNOWN_ROOTS: Lazy<Vec<&CapturedX509Certificate>> = Lazy::new(|| {
 ///
 /// This crate embeds the raw certificate data for the various known
 /// Apple certificate authorities, as advertised at
-/// https://www.apple.com/certificateauthority/.
+/// <https://www.apple.com/certificateauthority/>.
 ///
 /// This enumeration defines all the ones we know about. Instances can
 /// be dereferenced into concrete [CapturedX509Certificate] to get at the underlying
