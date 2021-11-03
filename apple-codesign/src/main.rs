@@ -132,9 +132,15 @@ However, because it is a self-signed certificate and isn't signed by a
 trusted certificate authority, Apple operating systems may refuse to
 load binaries signed with it.
 
-The command prints 2 PEM encoded blocks. One block is for the X.509 public
-certificate. The other is for the PKCS#8 private key (which can include
-the public key).
+By default the command prints 2 PEM encoded blocks. One block is for the
+X.509 public certificate. The other is for the PKCS#8 private key (which
+can include the public key).
+
+The `--pem-filename` argument can be specified to write the generated
+certificate pair to a pair of files. The destination files will have
+`.crt` and `.key` appended to the value provided.
+
+When the certificate is written to a file, it isn't printed to stdout.
 ";
 
 const PARSE_CODE_SIGNING_REQUIREMENT_ABOUT: &str = "\
@@ -920,6 +926,8 @@ fn command_generate_self_signed_certificate(args: &ArgMatches) -> Result<(), App
     let validity_days =
         i64::from_str(validity_days).map_err(|_| AppleCodesignError::CliBadArgument)?;
 
+    let pem_filename = args.value_of("pem_filename");
+
     let validity_duration = chrono::Duration::days(validity_days);
 
     let (cert, _, raw) = create_self_signed_code_signing_certificate(
@@ -931,14 +939,34 @@ fn command_generate_self_signed_certificate(args: &ArgMatches) -> Result<(), App
         validity_duration,
     )?;
 
-    print!("{}", cert.encode_pem());
-    print!(
-        "{}",
-        pem::encode(&pem::Pem {
-            tag: "PRIVATE KEY".to_string(),
-            contents: raw.as_ref().to_vec(),
-        })
-    );
+    let cert_pem = cert.encode_pem();
+    let key_pem = pem::encode(&pem::Pem {
+        tag: "PRIVATE KEY".to_string(),
+        contents: raw.as_ref().to_vec(),
+    });
+
+    let mut wrote_file = false;
+
+    if let Some(pem_filename) = pem_filename {
+        let cert_path = PathBuf::from(format!("{}.crt", pem_filename));
+        let key_path = PathBuf::from(format!("{}.key", pem_filename));
+
+        if let Some(parent) = cert_path.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+
+        println!("writing public certificate to {}", cert_path.display());
+        std::fs::write(&cert_path, cert_pem.as_bytes())?;
+        println!("writing private signing key to {}", key_path.display());
+        std::fs::write(&key_path, key_pem.as_bytes())?;
+
+        wrote_file = true;
+    }
+
+    if !wrote_file {
+        print!("{}", cert_pem);
+        print!("{}", key_pem);
+    }
 
     Ok(())
 }
@@ -1409,6 +1437,12 @@ fn main_impl() -> Result<(), AppleCodesignError> {
                     .takes_value(true)
                     .default_value("365")
                     .help("How many days the certificate should be valid for"),
+            )
+            .arg(
+                Arg::with_name("pem_filename")
+                    .long("pem-filename")
+                    .takes_value(true)
+                    .help("Base name of files to write PEM encoded certificate to"),
             ),
     );
 
