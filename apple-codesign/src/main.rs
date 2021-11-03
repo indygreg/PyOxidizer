@@ -1304,6 +1304,28 @@ fn command_verify(args: &ArgMatches) -> Result<(), AppleCodesignError> {
     }
 }
 
+fn command_x509_oids(_args: &ArgMatches) -> Result<(), AppleCodesignError> {
+    println!("# Extended Key Usage (EKU) Extension OIDs");
+    println!();
+    for ekup in crate::certificate::ExtendedKeyUsagePurpose::all() {
+        println!("{}\t{:?}", ekup.as_oid(), ekup);
+    }
+    println!();
+    println!("# Code Signing Certificate Extension OIDs");
+    println!();
+    for ext in crate::certificate::CodeSigningCertificateExtension::all() {
+        println!("{}\t{:?}", ext.as_oid(), ext);
+    }
+    println!();
+    println!("# Certificate Authority Certificate Extension OIDs");
+    println!();
+    for ext in crate::certificate::CertificateAuthorityExtension::all() {
+        println!("{}\t{:?}", ext.as_oid(), ext);
+    }
+
+    Ok(())
+}
+
 fn main_impl() -> Result<(), AppleCodesignError> {
     let app = App::new("Oxidized Apple Codesigning")
         .setting(AppSettings::ArgRequiredElseHelp)
@@ -1631,6 +1653,11 @@ fn main_impl() -> Result<(), AppleCodesignError> {
             ),
     );
 
+    let app = app.subcommand(
+        SubCommand::with_name("x509-oids")
+            .about("Print information about X.509 OIDs related to Apple code signing"),
+    );
+
     let matches = app.get_matches();
 
     match matches.subcommand() {
@@ -1647,6 +1674,7 @@ fn main_impl() -> Result<(), AppleCodesignError> {
         }
         ("sign", Some(args)) => command_sign(args),
         ("verify", Some(args)) => command_verify(args),
+        ("x509-oids", Some(args)) => command_x509_oids(args),
         _ => Err(AppleCodesignError::CliUnknownCommand),
     }
 }

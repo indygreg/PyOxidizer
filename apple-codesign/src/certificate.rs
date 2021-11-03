@@ -281,6 +281,16 @@ pub enum ExtendedKeyUsagePurpose {
 }
 
 impl ExtendedKeyUsagePurpose {
+    /// Obtain all variants of this enumeration.
+    pub fn all() -> Vec<Self> {
+        vec![
+            Self::CodeSigning,
+            Self::SafariDeveloper,
+            Self::ThirdPartyMacDeveloperInstaller,
+            Self::DeveloperIdInstaller,
+        ]
+    }
+
     pub fn all_oids() -> &'static [&'static ConstOid] {
         ALL_OID_EKUS
     }
@@ -381,6 +391,30 @@ pub enum CodeSigningCertificateExtension {
 }
 
 impl CodeSigningCertificateExtension {
+    /// Obtain all variants of this enumeration.
+    pub fn all() -> Vec<Self> {
+        vec![
+            Self::AppleSigning,
+            Self::IPhoneDeveloper,
+            Self::IPhoneOsApplicationSigning,
+            Self::AppleDeveloperCertificateSubmission,
+            Self::SafariDeveloper,
+            Self::IPhoneOsVpnSigning,
+            Self::AppleMacAppSigningDevelopment,
+            Self::AppleMacAppSigningSubmission,
+            Self::AppleMacAppStoreCodeSigning,
+            Self::AppleMacAppStoreInstallerSigning,
+            Self::MacDeveloper,
+            Self::DeveloperIdApplication,
+            Self::DeveloperIdDate,
+            Self::DeveloperIdInstaller,
+            Self::ApplePayPassbookSigning,
+            Self::WebsitePushNotificationSigning,
+            Self::DeveloperIdKernel,
+            Self::TestFlight,
+        ]
+    }
+
     /// All OIDs known to be extensions in code signing certificates.
     pub fn all_oids() -> &'static [&'static ConstOid] {
         ALL_OID_NON_CA_EXTENSIONS
@@ -497,6 +531,20 @@ pub enum CertificateAuthorityExtension {
 }
 
 impl CertificateAuthorityExtension {
+    /// Obtain all variants of this enumeration.
+    pub fn all() -> Vec<Self> {
+        vec![
+            Self::AppleWorldwideDeveloperRelations,
+            Self::AppleApplicationIntegration,
+            Self::DeveloperId,
+            Self::AppleTimestamp,
+            Self::DeveloperAuthentication,
+            Self::AppleApplicationIntegrationG3,
+            Self::AppleWorldwideDeveloperRelationsG2,
+            Self::AppleSoftwareUpdateCertification,
+        ]
+    }
+
     /// All the known OIDs constituting Apple CA extensions.
     pub fn all_oids() -> &'static [&'static ConstOid] {
         ALL_OID_CA_EXTENSIONS
