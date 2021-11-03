@@ -1,5 +1,5 @@
 [package]
-name = "tugger-apple-codesign"
+name = "apple-codesign"
 version = "0.8.0-pre"
 authors = ["Gregory Szorc <gregory.szorc@gmail.com>"]
 edition = "2021"

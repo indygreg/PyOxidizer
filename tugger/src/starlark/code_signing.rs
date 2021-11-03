@@ -638,7 +638,7 @@ mod tests {
         super::*,
         crate::starlark::testutil::*,
         anyhow::Result,
-        tugger_apple_codesign::CertificateProfile,
+        apple_codesign::CertificateProfile,
         tugger_code_signing::Signable,
         tugger_common::testutil::*,
         tugger_windows_codesign::{
@@ -785,7 +785,7 @@ mod tests {
         let mut env = StarlarkEnvironment::new()?;
 
         // We obtain an X509 certificate by generating a key pair.
-        let (cert, _, _) = tugger_apple_codesign::create_self_signed_code_signing_certificate(
+        let (cert, _, _) = apple_codesign::create_self_signed_code_signing_certificate(
             KeyAlgorithm::Ecdsa(EcdsaCurve::Secp256r1),
             CertificateProfile::AppleDevelopment,
             "teamid",

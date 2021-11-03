@@ -28,7 +28,7 @@
 //!
 //! [Signer] exposes a concrete test for whether a [SignableCandidate] is
 //! signable, via [Signer::resolve_signability]. The test relies on heuristics
-//! in the supported signing *backends* (e.g. [tugger_apple_codesign] and
+//! in the supported signing *backends* (e.g. [apple_codesign] and
 //! [tugger_windows_codesign]) as well as [Signer] specific state to determine
 //! if an entity is signable. False positives and negatives are possible:
 //! please report bugs! If an entity is signable, it will be converted to a
@@ -63,6 +63,7 @@
 //! [SignedOutput] describing where the signed content lives.
 
 use {
+    apple_codesign::{AppleCodesignError, MachOSigner},
     cryptographic_message_syntax::CmsError,
     reqwest::{IntoUrl, Url},
     slog::warn,
@@ -73,7 +74,6 @@ use {
         sync::Arc,
     },
     thiserror::Error,
-    tugger_apple_codesign::{AppleCodesignError, MachOSigner},
     tugger_file_manifest::{File, FileData, FileEntry},
     tugger_windows_codesign::{
         CodeSigningCertificate, FileBasedCodeSigningCertificate, SystemStore,
@@ -369,7 +369,7 @@ impl Signable {
                 ]
             }
             Self::MachOFile(_, _) => {
-                // tugger-apple-codesign does all of these easily.
+                // apple-codesign does all of these easily.
                 vec![
                     SigningMethod::InPlaceFile,
                     SigningMethod::NewFile,
@@ -377,11 +377,11 @@ impl Signable {
                 ]
             }
             Self::MachOData(_) => {
-                // tugger-apple-codesign does all of these easily.
+                // apple-codesign does all of these easily.
                 vec![SigningMethod::NewFile, SigningMethod::Memory]
             }
             Self::AppleBundle(_) => {
-                // tugger-apple-codesign can sign in place or to a new directory.
+                // apple-codesign can sign in place or to a new directory.
                 vec![SigningMethod::InPlaceDirectory, SigningMethod::NewDirectory]
             }
         })
@@ -626,7 +626,7 @@ impl SigningCertificate {
         let data = std::fs::read(path.as_ref())?;
 
         // Validate the certificate is valid.
-        let (cert, key) = tugger_apple_codesign::parse_pfx_data(&data, password)
+        let (cert, key) = apple_codesign::parse_pfx_data(&data, password)
             .map_err(|e| SigningError::PfxRead(format!("{:?}", e)))?;
 
         Ok(Self::PfxFile(
@@ -647,7 +647,7 @@ impl SigningCertificate {
     /// password was provided to create the data, this password may be the
     /// empty string.
     pub fn from_pfx_data(data: &[u8], password: &str) -> Result<Self, SigningError> {
-        let (cert, key) = tugger_apple_codesign::parse_pfx_data(data, password)
+        let (cert, key) = apple_codesign::parse_pfx_data(data, password)
             .map_err(|e| SigningError::PfxRead(format!("{:?}", e)))?;
 
         Ok(Self::Memory(cert, key))
@@ -719,10 +719,10 @@ impl SigningCertificate {
     }
 }
 
-/// A callback for influencing the creation of [tugger_apple_codesign.SigngingSettings]
+/// A callback for influencing the creation of [apple_codesign::SigningSettings]
 /// instances for a given [Signable].
 pub type AppleSigningSettingsFn =
-    fn(&Signable, &mut tugger_apple_codesign::SigningSettings) -> Result<(), anyhow::Error>;
+    fn(&Signable, &mut apple_codesign::SigningSettings) -> Result<(), anyhow::Error>;
 
 /// A callback for influencing the creation of [tugger_windows_codesign::SigntoolSign]
 /// instances for a given [Signable].
@@ -746,7 +746,7 @@ pub struct Signer {
     /// URL of Time-Stamp Protocol server to use.
     time_stamp_url: Option<Url>,
 
-    /// Optional function to influence creation of [tugger_apple_codesign::SigningSettings]
+    /// Optional function to influence creation of [apple_codesign::SigningSettings]
     /// used for signing Apple signables.
     apple_signing_settings_fn: Option<Arc<AppleSigningSettingsFn>>,
 
@@ -837,9 +837,7 @@ impl Signer {
 
         let user_id = cert
             .subject_name()
-            .find_first_attribute_string(bcder::Oid(
-                tugger_apple_codesign::OID_USER_ID.as_ref().into(),
-            ))
+            .find_first_attribute_string(bcder::Oid(apple_codesign::OID_USER_ID.as_ref().into()))
             .map_err(|e| {
                 SigningError::CertificateResolutionFailure(format!(
                     "failed to decode UID field in signing certificate: {:?}",
@@ -852,11 +850,10 @@ impl Signer {
                 )
             })?;
 
-        let domain = tugger_apple_codesign::KeychainDomain::User;
+        let domain = apple_codesign::KeychainDomain::User;
 
-        let certs =
-            tugger_apple_codesign::macos_keychain_find_certificate_chain(domain, None, &user_id)
-                .map_err(SigningError::MacOsCertificateChainResolveFailure)?;
+        let certs = apple_codesign::macos_keychain_find_certificate_chain(domain, None, &user_id)
+            .map_err(SigningError::MacOsCertificateChainResolveFailure)?;
 
         if certs.is_empty() {
             return Err(SigningError::CertificateResolutionFailure(
@@ -980,7 +977,7 @@ pub struct SignableSigner<'a> {
     /// URL of Time-Stamp Protocol server to use.
     time_stamp_url: Option<Url>,
 
-    /// Optional function to influence creation of [tugger_apple_codesign::SigningSettings]
+    /// Optional function to influence creation of [apple_codesign::SigningSettings]
     /// used for signing Apple signables.
     apple_signing_settings_fn: Option<Arc<AppleSigningSettingsFn>>,
 
@@ -1020,11 +1017,11 @@ impl<'a> SignableSigner<'a> {
         }
     }
 
-    /// Obtain a [tugger_apple_codesign::SigningSettings] from this instance.
+    /// Obtain a [apple_codesign::SigningSettings] from this instance.
     pub fn as_apple_signing_settings(
         &self,
-    ) -> Result<tugger_apple_codesign::SigningSettings<'_>, SigningError> {
-        let mut settings = tugger_apple_codesign::SigningSettings::default();
+    ) -> Result<apple_codesign::SigningSettings<'_>, SigningError> {
+        let mut settings = apple_codesign::SigningSettings::default();
 
         match &self.signing_certificate {
             SigningCertificate::Memory(cert, key) => {
@@ -1241,7 +1238,7 @@ impl<'a> SignableSigner<'a> {
                 );
                 let settings = self.as_apple_signing_settings()?;
 
-                let signer = tugger_apple_codesign::MachOSigner::new(macho_data)
+                let signer = apple_codesign::MachOSigner::new(macho_data)
                     .map_err(SigningError::MachOSigningError)?;
 
                 let mut dest = Vec::<u8>::with_capacity(macho_data.len() + 2_usize.pow(17));
@@ -1273,7 +1270,7 @@ impl<'a> SignableSigner<'a> {
 
                 warn!(logger, "signing {}", source_file.display());
 
-                let signer = tugger_apple_codesign::MachOSigner::new(macho_data)
+                let signer = apple_codesign::MachOSigner::new(macho_data)
                     .map_err(SigningError::MachOSigningError)?;
 
                 let mut dest = Vec::<u8>::with_capacity(macho_data.len() + 2_usize.pow(17));
@@ -1316,7 +1313,7 @@ impl<'a> SignableSigner<'a> {
                     dest_dir.display()
                 );
 
-                let signer = tugger_apple_codesign::BundleSigner::new_from_path(source_dir)
+                let signer = apple_codesign::BundleSigner::new_from_path(source_dir)
                     .map_err(SigningError::AppleBundleSigningError)?;
 
                 signer
@@ -1352,7 +1349,7 @@ impl<'a> SignableSigner<'a> {
                 // Signing to a directory isn't supported.
                 SigningDestination::Directory(_) => false,
             },
-            // tugger-apple-codesign does everything in memory and doesn't need files.
+            // apple-codesign does everything in memory and doesn't need files.
             Signable::MachOData(_) | Signable::MachOFile(_, _) => false,
             // But, when we are sending output to the filesystem and the output isn't
             // the input, we go through a temporary directory to prevent writing
@@ -1383,7 +1380,7 @@ mod tests {
     use super::*;
 
     const APPLE_P12_DATA: &[u8] =
-        include_bytes!("../../tugger-apple-codesign/src/apple-codesign-testuser.p12");
+        include_bytes!("../../apple-codesign/src/apple-codesign-testuser.p12");
 
     const WINDOWS_PFX_DEFAULT_DATA: &[u8] = include_bytes!("windows-testuser-default.pfx");
     const WINDOWS_PFX_NO_EXTRAS_DATA: &[u8] = include_bytes!("windows-testuser-no-extras.pfx");

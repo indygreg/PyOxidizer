@@ -80,6 +80,38 @@ dependencies = [
 ]
 
 [[package]]
+name = "apple-codesign"
+version = "0.8.0-pre"
+dependencies = [
+ "anyhow",
+ "apple-bundles",
+ "base64 0.13.0",
+ "bcder",
+ "bitflags",
+ "bytes",
+ "chrono",
+ "clap",
+ "cryptographic-message-syntax",
+ "goblin",
+ "hex",
+ "once_cell",
+ "p12",
+ "pem 1.0.1",
+ "plist",
+ "regex",
+ "reqwest",
+ "ring",
+ "scroll",
+ "security-framework",
+ "slog",
+ "slog-term",
+ "thiserror",
+ "tugger-apple",
+ "x509-certificate",
+ "yasna",
+]
+
+[[package]]
 name = "ar"
 version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3684,6 +3716,7 @@ version = "0.14.0-pre"
 dependencies = [
  "anyhow",
  "apple-bundles",
+ "apple-codesign",
  "atty",
  "chrono",
  "codemap",
@@ -3700,7 +3733,6 @@ dependencies = [
  "tempfile",
  "time 0.3.4",
  "tugger-apple",
- "tugger-apple-codesign",
  "tugger-code-signing",
  "tugger-common",
  "tugger-file-manifest",
@@ -3728,38 +3760,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tugger-apple-codesign"
-version = "0.8.0-pre"
-dependencies = [
- "anyhow",
- "apple-bundles",
- "base64 0.13.0",
- "bcder",
- "bitflags",
- "bytes",
- "chrono",
- "clap",
- "cryptographic-message-syntax",
- "goblin",
- "hex",
- "once_cell",
- "p12",
- "pem 1.0.1",
- "plist",
- "regex",
- "reqwest",
- "ring",
- "scroll",
- "security-framework",
- "slog",
- "slog-term",
- "thiserror",
- "tugger-apple",
- "x509-certificate",
- "yasna",
-]
-
-[[package]]
 name = "tugger-binary-analysis"
 version = "0.5.0-pre"
 dependencies = [
@@ -3776,6 +3776,7 @@ version = "0.6.0-pre"
 dependencies = [
  "anyhow",
  "apple-bundles",
+ "apple-codesign",
  "bcder",
  "cryptographic-message-syntax",
  "goblin",
@@ -3784,7 +3785,6 @@ dependencies = [
  "slog",
  "tempfile",
  "thiserror",
- "tugger-apple-codesign",
  "tugger-file-manifest",
  "tugger-windows-codesign",
  "x509-certificate",

@@ -10,8 +10,7 @@ arbitrary content.
 CMS is used to power the digital signatures embedded within Mach-O binaries
 on Apple platforms such as macOS and iOS. The primitives in this crate could
 be used to sign and authenticate Mach-O binaries. (See the sister
-`tugger-apple-codesign` crate in the Git repository for code that does
-just this.)
+`apple-codesign` crate in the Git repository for code that does just this.)
 
 This crate is developed as part of the
 [PyOxidizer](https://github.com/indygreg/PyOxidizer.git) project and is

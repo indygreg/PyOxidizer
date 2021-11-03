@@ -37,7 +37,7 @@ can also be excluded.
 Generally, the following crates are sensitive to changes in this one:
 
 * `cryptographic-message-syntax`
-* `tugger-apple-codesign`
+* `apple-codesign`
 * `tugger-code-signing`
 * `tugger-windows-codesign`
 
