@@ -37,7 +37,8 @@ use {
     crate::{
         bundle_signing::BundleSigner,
         certificate::{
-            create_self_signed_code_signing_certificate, parse_pfx_data, CertificateProfile,
+            create_self_signed_code_signing_certificate, parse_pfx_data, AppleCertificate,
+            CertificateProfile,
         },
         code_directory::{CodeDirectoryBlob, CodeSignatureFlags, ExecutableSegmentFlags},
         code_hash::compute_code_hashes,
@@ -60,6 +61,18 @@ use {
 
 #[cfg(target_os = "macos")]
 use crate::macos::{macos_keychain_find_certificate_chain, KeychainDomain};
+
+const ANALYZE_CERTIFICATE_ABOUT: &str = "\
+Analyze an X.509 certificate for Apple code signing properties.
+
+Given the path to a PEM encoded X.509 certificate, this command will read
+the certificate and print information about it relevant to Apple code
+signing.
+
+The output of the command can be useful to learn about X.509 certificate
+extensions used by code signing certificates and to debug low-level
+properties related to certificates.
+";
 
 const EXTRACT_ABOUT: &str = "\
 Extract code signature data from a Mach-O binary.
@@ -357,6 +370,164 @@ fn get_macho_from_data(data: &[u8], universal_index: usize) -> Result<MachO, App
             Ok(multiarch.get(universal_index)?)
         }
     }
+}
+
+fn add_certificate_source_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
+    app.arg(
+        Arg::with_name("pem_source")
+            .long("pem-source")
+            .takes_value(true)
+            .multiple(true)
+            .help("Path to file containing PEM encoded certificate/key data"),
+    )
+    .arg(
+        Arg::with_name("pfx_path")
+            .long("--pfx-file")
+            .takes_value(true)
+            .help("Path to a PFX file containing a certificate key pair"),
+    )
+    .arg(
+        Arg::with_name("pfx_password")
+            .long("--pfx-password")
+            .takes_value(true)
+            .help("The password to use to open the --pfx-file file"),
+    )
+    .arg(
+        Arg::with_name("pfx_password_file")
+            .long("--pfx-password-file")
+            .conflicts_with("pfx_password")
+            .takes_value(true)
+            .help("Path to file containing password for opening --pfx-file file"),
+    )
+}
+
+fn command_analyze_certificate(args: &ArgMatches) -> Result<(), AppleCodesignError> {
+    let log = get_logger();
+
+    let mut certs = vec![];
+
+    if let Some(pfx_path) = args.value_of("pfx_path") {
+        let pfx_data = std::fs::read(pfx_path)?;
+
+        let pfx_password = if let Some(password) = args.value_of("pfx_password") {
+            password.to_string()
+        } else if let Some(path) = args.value_of("pfx_password_file") {
+            std::fs::read_to_string(path)?
+                .lines()
+                .next()
+                .expect("should get a single line")
+                .to_string()
+        } else {
+            error!(
+                &log,
+                "--pfx-password or --pfx-password-file must be specified"
+            );
+            return Err(AppleCodesignError::CliBadArgument);
+        };
+
+        certs.push(parse_pfx_data(&pfx_data, &pfx_password)?.0);
+    }
+
+    if let Some(values) = args.values_of("der_source") {
+        for der_source in values {
+            warn!(&log, "reading DER file {}", der_source);
+            let der_data = std::fs::read(der_source)?;
+
+            certs.push(CapturedX509Certificate::from_der(der_data)?);
+        }
+    }
+
+    if let Some(values) = args.values_of("pem_source") {
+        for pem_source in values {
+            warn!(&log, "reading PEM file {}", pem_source);
+            let pem_data = std::fs::read(pem_source)?;
+
+            for pem in pem::parse_many(&pem_data).map_err(AppleCodesignError::CertificatePem)? {
+                if matches!(pem.tag.as_str(), "CERTIFICATE") {
+                    certs.push(CapturedX509Certificate::from_der(pem.contents)?);
+                } else {
+                    warn!(&log, "(unhandled PEM tag {}; ignoring)", pem.tag)
+                }
+            }
+        }
+    }
+
+    for (i, cert) in certs.into_iter().enumerate() {
+        println!("# Certificate {}", i);
+        println!();
+        println!(
+            "Subject CN:                  {}",
+            cert.subject_common_name()
+                .unwrap_or_else(|| "<missing>".to_string())
+        );
+        println!(
+            "Issuer CN:                   {}",
+            cert.issuer_common_name()
+                .unwrap_or_else(|| "<missing>".to_string())
+        );
+        println!("Subject is Issuer?:          {}", cert.subject_is_issuer());
+        println!(
+            "Team ID:                     {}",
+            cert.apple_team_id()
+                .unwrap_or_else(|| "<missing>".to_string())
+        );
+        println!(
+            "SHA-1 fingerprint:           {}",
+            hex::encode(cert.sha1_fingerprint()?)
+        );
+        println!(
+            "SHA-256 fingerprint:         {}",
+            hex::encode(cert.sha256_fingerprint()?)
+        );
+        println!(
+            "Signed by Apple?:            {}",
+            cert.chains_to_apple_root_ca()
+        );
+        if cert.chains_to_apple_root_ca() {
+            println!("Apple Issuing Chain:");
+            for signer in cert.apple_issuing_chain() {
+                println!(
+                    "  - {}",
+                    signer
+                        .subject_common_name()
+                        .unwrap_or_else(|| "<unknown>".to_string())
+                );
+            }
+        }
+
+        println!(
+            "Guessed Certificate Profile: {}",
+            if let Some(profile) = cert.apple_guess_profile() {
+                format!("{:?}", profile)
+            } else {
+                "none".to_string()
+            }
+        );
+        println!("Is Apple Root CA?:           {}", cert.is_apple_root_ca());
+        println!(
+            "Is Apple Intermediate CA?:   {}",
+            cert.is_apple_intermediate_ca()
+        );
+        println!(
+            "Apple CA Extension:          {}",
+            if let Some(ext) = cert.apple_ca_extension() {
+                format!("{} ({:?})", ext.as_oid(), ext)
+            } else {
+                "none".to_string()
+            }
+        );
+        println!("Apple Extended Key Usage Purpose Extensions:");
+        for purpose in cert.apple_extended_key_usage_purposes() {
+            println!("  - {} ({:?})", purpose.as_oid(), purpose);
+        }
+        println!("Apple Code Signing Extensions:");
+        for ext in cert.apple_code_signing_extensions() {
+            println!("  - {} ({:?})", ext.as_oid(), ext);
+        }
+        println!();
+    }
+
+    Ok(())
 }
 
 fn command_compute_code_hashes(args: &ArgMatches) -> Result<(), AppleCodesignError> {
@@ -1333,6 +1504,19 @@ fn main_impl() -> Result<(), AppleCodesignError> {
         .author("Gregory Szorc <gregory.szorc@gmail.com>")
         .about("Do things related to code signing of Apple binaries");
 
+    let app = app.subcommand(add_certificate_source_args(
+        SubCommand::with_name("analyze-certificate")
+            .about("Analyze an X.509 certificate for Apple code signing properties")
+            .long_about(ANALYZE_CERTIFICATE_ABOUT)
+            .arg(
+                Arg::with_name("der_source")
+                    .long("der-source")
+                    .takes_value(true)
+                    .multiple(true)
+                    .help("Path to files containing DER encoded certificate data"),
+            ),
+    ));
+
     let app = app.subcommand(
         SubCommand::with_name("compute-code-hashes")
             .about("Compute code hashes for a binary")
@@ -1526,7 +1710,7 @@ fn main_impl() -> Result<(), AppleCodesignError> {
 
     let app = app
         .subcommand(
-            SubCommand::with_name("sign")
+            add_certificate_source_args(SubCommand::with_name("sign")
                 .about("Sign a Mach-O binary or bundle")
                 .long_about(SIGN_ABOUT)
                 .arg(
@@ -1589,32 +1773,6 @@ fn main_impl() -> Result<(), AppleCodesignError> {
                         .help("Path to an Info.plist file whose digest to include in Mach-O signature")
                 )
                 .arg(
-                    Arg::with_name("pem_source")
-                        .long("pem-source")
-                        .takes_value(true)
-                        .multiple(true)
-                        .help("Path to file containing PEM encoded certificate/key data"),
-                )
-                .arg(
-                    Arg::with_name("pfx_path")
-                        .long("--pfx-file")
-                        .takes_value(true)
-                        .help("Path to a PFX file containing a certificate key pair")
-                )
-                .arg(
-                    Arg::with_name("pfx_password")
-                        .long("--pfx-password")
-                        .takes_value(true)
-                        .help("The password to use to open the --pfx-file file")
-                )
-                .arg(
-                    Arg::with_name("pfx_password_file")
-                        .long("--pfx-password-file")
-                        .conflicts_with("pfx_password")
-                        .takes_value(true)
-                        .help("Path to file containing password for opening --pfx-file file")
-                )
-                .arg(
                     Arg::with_name(
                         "team_name")
                         .long("team-name")
@@ -1641,7 +1799,7 @@ fn main_impl() -> Result<(), AppleCodesignError> {
                         .required(true)
                         .help("Path to signed Mach-O binary to write"),
                 ),
-        );
+        ));
 
     let app = app.subcommand(
         SubCommand::with_name("verify")
@@ -1661,6 +1819,7 @@ fn main_impl() -> Result<(), AppleCodesignError> {
     let matches = app.get_matches();
 
     match matches.subcommand() {
+        ("analyze-certificate", Some(args)) => command_analyze_certificate(args),
         ("compute-code-hashes", Some(args)) => command_compute_code_hashes(args),
         ("extract", Some(args)) => command_extract(args),
         ("generate-self-signed-certificate", Some(args)) => {

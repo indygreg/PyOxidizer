@@ -6,8 +6,8 @@
 
 use {
     crate::{
-        asn1time::Time, rfc3280::Name, rfc5280, InMemorySigningKeyPair, KeyAlgorithm,
-        SignatureAlgorithm, X509CertificateError as Error,
+        algorithm::DigestAlgorithm, asn1time::Time, rfc3280::Name, rfc5280, InMemorySigningKeyPair,
+        KeyAlgorithm, SignatureAlgorithm, X509CertificateError as Error,
     },
     bcder::{
         decode::Constructed,
@@ -143,6 +143,21 @@ impl X509Certificate {
     /// Obtain the certificate's issuer, as its ASN.1 [Name] type.
     pub fn issuer_name(&self) -> &Name {
         &self.0.tbs_certificate.issuer
+    }
+
+    /// Obtain the Common Name (CN) attribute from the certificate's issuer, if set and decodable.
+    pub fn issuer_common_name(&self) -> Option<String> {
+        self.0
+            .tbs_certificate
+            .issuer
+            .iter_common_name()
+            .next()
+            .and_then(|cn| cn.to_string().ok())
+    }
+
+    /// Iterate over extensions defined in this certificate.
+    pub fn iter_extensions(&self) -> impl Iterator<Item = &crate::rfc5280::Extension> {
+        self.0.iter_extensions()
     }
 
     /// Encode the certificate data structure using DER encoding.
@@ -289,6 +304,29 @@ impl X509Certificate {
     /// being self-signed.
     pub fn subject_is_issuer(&self) -> bool {
         self.0.tbs_certificate.subject == self.0.tbs_certificate.issuer
+    }
+
+    /// Obtain the fingerprint for this certificate given a digest algorithm.
+    pub fn fingerprint(
+        &self,
+        algorithm: DigestAlgorithm,
+    ) -> Result<ring::digest::Digest, std::io::Error> {
+        let raw = self.encode_der()?;
+
+        let mut h = algorithm.digester();
+        h.update(&raw);
+
+        Ok(h.finish())
+    }
+
+    /// Obtain the SHA-1 fingerprint of this certificate.
+    pub fn sha1_fingerprint(&self) -> Result<ring::digest::Digest, std::io::Error> {
+        self.fingerprint(DigestAlgorithm::Sha1)
+    }
+
+    /// Obtain the SHA-256 fingerprint of this certificate.
+    pub fn sha256_fingerprint(&self) -> Result<ring::digest::Digest, std::io::Error> {
+        self.fingerprint(DigestAlgorithm::Sha256)
     }
 }
 
