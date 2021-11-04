@@ -74,6 +74,10 @@
 //!   value in doing this. This crate could be used to build such functionality
 //!   elsewhere, however.
 //!
+//! # End-User Documentation
+//!
+//! See [tutorial] for end-user documentation showing how this crate can be used.
+//!
 //! # Getting Started
 //!
 //! This crate is still in early phases of development. Until things are more mature,
@@ -133,5 +137,6 @@ pub use policy::*;
 mod signing;
 pub use signing::*;
 pub mod specification;
+pub mod tutorial;
 mod verify;
 pub use verify::*;

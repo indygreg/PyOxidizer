@@ -31,6 +31,8 @@ mod signing;
 #[allow(unused)]
 mod specification;
 #[allow(unused)]
+mod tutorial;
+#[allow(unused)]
 mod verify;
 
 use {
