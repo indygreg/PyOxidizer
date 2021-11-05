@@ -37,6 +37,7 @@ Changes
 ^^^^^^^
 
 * PyO3 Rust crate upgraded from version ``0.14`` to ``0.15``.
+* Managed Rust toolchain upgraded from 1.56.0 to 1.56.1.
 
 .. _version_0_19_0:
 
