@@ -5,10 +5,10 @@
 use {
     anyhow::{anyhow, Result},
     criterion::{criterion_group, criterion_main, Criterion},
+    oxidized_importer::ZipIndex,
     pyembed::MainPythonInterpreter,
     pyembed_bench::*,
     pyo3::IntoPy,
-    python_oxidized_importer::ZipIndex,
     std::io::{BufReader, Cursor, Read, Seek},
     zip::read::ZipArchive,
 };

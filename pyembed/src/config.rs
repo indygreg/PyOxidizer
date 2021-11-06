@@ -6,8 +6,8 @@
 
 use {
     crate::NewInterpreterError,
+    oxidized_importer::{PackedResourcesSource, PythonResourcesState},
     pyo3::ffi as pyffi,
-    python_oxidized_importer::{PackedResourcesSource, PythonResourcesState},
     python_packaging::interpreter::{
         MemoryAllocatorBackend, MultiprocessingStartMethod, PythonInterpreterConfig,
         PythonInterpreterProfile, TerminfoResolution,

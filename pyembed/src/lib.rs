@@ -76,7 +76,7 @@ pub use {
         interpreter::MainPythonInterpreter,
         pyalloc::PythonMemoryAllocator,
     },
-    python_oxidized_importer::{PackedResourcesSource, PythonResourcesState},
+    oxidized_importer::{PackedResourcesSource, PythonResourcesState},
     python_packaging::{
         interpreter::{
             Allocator, BytesWarning, CheckHashPycsMode, CoerceCLocale, MemoryAllocatorBackend,

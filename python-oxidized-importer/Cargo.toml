@@ -8,6 +8,7 @@ description = "A Rust-powered Python importer"
 readme = "README.md"
 
 [lib]
+name = "oxidized_importer"
 crate-type = ["cdylib", "lib"]
 
 [dependencies]

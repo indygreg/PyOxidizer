@@ -13,14 +13,14 @@ use {
         pyalloc::PythonMemoryAllocator,
     },
     once_cell::sync::Lazy,
-    pyo3::{
-        exceptions::PyRuntimeError, ffi as pyffi, prelude::*, types::PyDict, PyTypeInfo,
-        ToBorrowedObject,
-    },
-    python_oxidized_importer::{
+    oxidized_importer::{
         install_path_hook, remove_external_importers, replace_meta_path_importers, ImporterState,
         OxidizedFinder, PyInit_oxidized_importer, PythonResourcesState, OXIDIZED_IMPORTER_NAME,
         OXIDIZED_IMPORTER_NAME_STR,
+    },
+    pyo3::{
+        exceptions::PyRuntimeError, ffi as pyffi, prelude::*, types::PyDict, PyTypeInfo,
+        ToBorrowedObject,
     },
     python_packaging::interpreter::{MultiprocessingStartMethod, TerminfoResolution},
     std::{

@@ -50,11 +50,11 @@ class RustExtension(distutils.extension.Extension):
         dest_path = pathlib.Path(get_ext_path_fn(self.name))
 
         if os.name == "nt":
-            rust_lib_filename = "python_%s.dll" % self.name
+            rust_lib_filename = "%s.dll" % self.name
         elif sys.platform == "darwin":
-            rust_lib_filename = "libpython_%s.dylib" % self.name
+            rust_lib_filename = "lib%s.dylib" % self.name
         else:
-            rust_lib_filename = "libpython_%s.so" % self.name
+            rust_lib_filename = "lib%s.so" % self.name
 
         rust_lib = build_dir / "release" / rust_lib_filename
 
