@@ -37,5 +37,7 @@ version = "0.7.0-pre"
 path = "../tugger-file-manifest"
 
 [dev-dependencies]
-msi = "0.4"
 tempfile = "3.2"
+
+[target.'cfg(windows)'.dev-dependencies]
+msi = "0.4"
