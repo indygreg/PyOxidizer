@@ -2,9 +2,15 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+/*! Debian packaging primitives.
+
+This crate defines pure Rust implementations of Debian packaging primitives.
+*/
+
 mod changelog;
 mod control;
 mod deb;
+pub mod repository;
 
 pub use {
     changelog::{Changelog, ChangelogEntry},

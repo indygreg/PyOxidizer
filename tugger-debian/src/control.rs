@@ -8,36 +8,24 @@ See https://www.debian.org/doc/debian-policy/ch-controlfields.html
 for the canonical source of truth for how control files work.
 */
 
-use std::{
-    borrow::Cow,
-    io::{BufRead, Write},
+use {
+    std::{
+        borrow::Cow,
+        io::{BufRead, Write},
+    },
+    thiserror::Error,
 };
 
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub enum ControlError {
-    IoError(std::io::Error),
+    #[error("I/O error: {0}")]
+    IoError(#[from] std::io::Error),
+    #[error("parse error: {0}")]
     ParseError(String),
 }
 
-impl From<std::io::Error> for ControlError {
-    fn from(e: std::io::Error) -> Self {
-        Self::IoError(e)
-    }
-}
-
-impl std::fmt::Display for ControlError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::IoError(inner) => write!(f, "I/O error: {}", inner),
-            Self::ParseError(msg) => write!(f, "parse error: {}", msg),
-        }
-    }
-}
-
-impl std::error::Error for ControlError {}
-
 /// A field value in a control file.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, PartialOrd)]
 pub enum ControlFieldValue<'a> {
     Simple(Cow<'a, str>),
     Folded(Cow<'a, str>),
@@ -45,6 +33,40 @@ pub enum ControlFieldValue<'a> {
 }
 
 impl<'a> ControlFieldValue<'a> {
+    /// Obtain the field value as a [&str].
+    ///
+    /// The raw stored value is returned. For multiline variants, lines will have leading
+    /// whitespace.
+    pub fn as_str(&self) -> &str {
+        match self {
+            Self::Simple(v) => v,
+            Self::Folded(v) => v,
+            Self::Multiline(v) => v,
+        }
+    }
+
+    /// Obtain an iterator over string values in this field.
+    ///
+    /// [Self::Simple] variants will emit a single item.
+    ///
+    /// [Self::Folded] and [Self::Multiline] may emit multiple items.
+    ///
+    /// For variants stored as multiple lines, leading whitespace will be trimmed, as necessary.
+    pub fn iter_values(&self) -> Box<(dyn Iterator<Item = &str> + '_)> {
+        match self {
+            Self::Simple(v) => Box::new([v.as_ref()].into_iter()),
+            Self::Folded(values) => Box::new(values.split('\n').map(|x| x.trim_start())),
+            Self::Multiline(values) => Box::new(values.split('\n').map(|x| x.trim_start())),
+        }
+    }
+
+    /// Obtain an iterator over words in the string value.
+    ///
+    /// The result may be non-meaningful for multiple line variants.
+    pub fn iter_value_words(&self) -> Box<(dyn Iterator<Item = &str> + '_)> {
+        Box::new(self.as_str().split_ascii_whitespace())
+    }
+
     /// Write this value to a writer.
     pub fn write<W: Write>(&self, writer: &mut W) -> std::io::Result<()> {
         let data = match self {
@@ -95,6 +117,28 @@ impl<'a> ControlField<'a> {
         Ok(Self { name: key, value })
     }
 
+    /// Obtain the value as a [&str].
+    ///
+    /// The value's original file formatting (including newlines and leading whitespace)
+    /// is included.
+    pub fn value_str(&self) -> &str {
+        self.value.as_str()
+    }
+
+    /// Obtain an iterator over string values in this field.
+    ///
+    /// See [ControlField::iter_values] for behavior.
+    pub fn iter_values(&self) -> Box<(dyn Iterator<Item = &str> + '_)> {
+        self.value.iter_values()
+    }
+
+    /// Obtain an iterator over string words in this field.
+    ///
+    /// See [ControlField::iter_value_words] for behavior.
+    pub fn iter_value_words(&self) -> Box<(dyn Iterator<Item = &str> + '_)> {
+        self.value.iter_value_words()
+    }
+
     /// Write the contents of this field to a writer.
     pub fn write<W: Write>(&self, writer: &mut W) -> std::io::Result<()> {
         writer.write_all(self.name.as_bytes())?;
@@ -113,6 +157,13 @@ pub struct ControlParagraph<'a> {
 }
 
 impl<'a> ControlParagraph<'a> {
+    /// Whether the paragraph is empty.
+    ///
+    /// Empty is defined by the lack of any fields.
+    pub fn is_empty(&self) -> bool {
+        self.fields.is_empty()
+    }
+
     /// Add a `ControlField` to this instance.
     pub fn add_field(&mut self, field: ControlField<'a>) {
         self.fields.push(field);
@@ -134,14 +185,40 @@ impl<'a> ControlParagraph<'a> {
         self.fields.iter().any(|f| f.name == name)
     }
 
+    /// Iterate over fields in this paragraph.
+    pub fn iter_fields(&self) -> impl Iterator<Item = &ControlField<'a>> {
+        self.fields.iter()
+    }
+
     /// Obtain the first field with a given name in this paragraph.
-    pub fn get_field(&self, name: &str) -> Option<&ControlField> {
+    pub fn first_field(&self, name: &str) -> Option<&ControlField> {
         self.fields.iter().find(|f| f.name == name)
     }
 
     /// Obtain a mutable reference to the first field with a given name.
-    pub fn get_field_mut(&mut self, name: &str) -> Option<&'a mut ControlField> {
+    pub fn first_field_mut(&mut self, name: &str) -> Option<&'a mut ControlField> {
         self.fields.iter_mut().find(|f| f.name == name)
+    }
+
+    /// Obtain the raw string value of the first occurrence of a named field.
+    pub fn first_field_str(&self, name: &str) -> Option<&str> {
+        self.first_field(name).map(|f| f.value_str())
+    }
+
+    /// Obtain an iterator of values of the first occurrence of a named field.
+    pub fn first_field_iter_values(
+        &self,
+        name: &str,
+    ) -> Option<Box<(dyn Iterator<Item = &str> + '_)>> {
+        self.first_field(name).map(|f| f.iter_values())
+    }
+
+    /// Obtain an iterator of words in the first occurrence of a named field.
+    pub fn first_field_iter_value_words(
+        &self,
+        name: &str,
+    ) -> Option<Box<(dyn Iterator<Item = &str> + '_)>> {
+        self.first_field(name).map(|f| f.iter_value_words())
     }
 
     /// Serialize the paragraph to a writer.
@@ -214,7 +291,7 @@ impl<'a> ControlFile<'a> {
                 // the end of the paragraph with no field to flush. Just flush the
                 // paragraph if it is non-empty.
                 (true, _, _) => {
-                    if !current_paragraph.fields.is_empty() {
+                    if !current_paragraph.is_empty() {
                         paragraphs.push(current_paragraph);
                         current_paragraph = ControlParagraph::default();
                     }
@@ -234,6 +311,10 @@ impl<'a> ControlFile<'a> {
             if bytes_read == 0 {
                 break;
             }
+        }
+
+        if !current_paragraph.is_empty() {
+            paragraphs.push(current_paragraph);
         }
 
         Ok(Self { paragraphs })
@@ -315,6 +396,75 @@ impl<'a> SourceControl<'a> {
 #[cfg(test)]
 mod tests {
     use {super::*, anyhow::Result};
+
+    #[test]
+    fn parse_paragraph_release() -> Result<(), ControlError> {
+        let mut reader = std::io::Cursor::new(include_bytes!("testdata/release-debian-bullseye"));
+        let cf = ControlFile::parse_reader(&mut reader)?;
+        assert_eq!(cf.paragraphs.len(), 1);
+
+        let p = &cf.paragraphs[0];
+        assert_eq!(p.fields.len(), 14);
+
+        assert!(p.has_field("Origin"));
+        assert!(p.has_field("Version"));
+        assert!(!p.has_field("Missing"));
+
+        assert!(p.first_field("Version").is_some());
+
+        let fields = &p.fields;
+        assert_eq!(fields[0].name, "Origin");
+        assert_eq!(fields[0].value, ControlFieldValue::Simple("Debian".into()));
+
+        assert_eq!(fields[3].name, "Version");
+        assert_eq!(fields[3].value, ControlFieldValue::Simple("11.1".into()));
+
+        assert!(matches!(
+            p.first_field("MD5Sum").unwrap().value,
+            ControlFieldValue::Folded(_)
+        ));
+        assert!(matches!(
+            p.first_field("SHA256").unwrap().value,
+            ControlFieldValue::Folded(_)
+        ));
+
+        assert_eq!(fields[0].iter_values().collect::<Vec<_>>(), vec!["Debian"]);
+
+        let values = p
+            .first_field_iter_values("MD5Sum")
+            .unwrap()
+            .collect::<Vec<_>>();
+        assert_eq!(values.len(), 600);
+        assert_eq!(
+            values[0],
+            "7fdf4db15250af5368cc52a91e8edbce   738242 contrib/Contents-all"
+        );
+        assert_eq!(
+            values[1],
+            "cbd7bc4d3eb517ac2b22f929dfc07b47    57319 contrib/Contents-all.gz"
+        );
+        assert_eq!(
+            values[599],
+            "e3830f6fc5a946b5a5b46e8277e1d86f    80488 non-free/source/Sources.xz"
+        );
+
+        let values = p
+            .first_field_iter_values("SHA256")
+            .unwrap()
+            .collect::<Vec<_>>();
+        assert_eq!(values.len(), 600);
+        assert_eq!(
+            values[0],
+            "3957f28db16e3f28c7b34ae84f1c929c567de6970f3f1b95dac9b498dd80fe63   738242 contrib/Contents-all",
+        );
+        assert_eq!(
+            values[1],
+            "3e9a121d599b56c08bc8f144e4830807c77c29d7114316d6984ba54695d3db7b    57319 contrib/Contents-all.gz",
+        );
+        assert_eq!(values[599], "30f3f996941badb983141e3b29b2ed5941d28cf81f9b5f600bb48f782d386fc7    80488 non-free/source/Sources.xz");
+
+        Ok(())
+    }
 
     #[test]
     fn test_parse_system_lists() -> Result<()> {
