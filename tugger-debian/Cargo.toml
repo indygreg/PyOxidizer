@@ -11,7 +11,6 @@ repository = "https://github.com/indygreg/PyOxidizer.git"
 readme = "README.md"
 
 [dependencies]
-anyhow = "1.0"
 ar = "0.9"
 chrono = "0.4"
 libflate = "1.0"
@@ -26,4 +25,5 @@ version = "0.7.0-pre"
 path = "../tugger-file-manifest"
 
 [dev-dependencies]
+anyhow = "1.0"
 glob = "0.3"
