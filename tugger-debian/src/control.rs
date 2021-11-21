@@ -55,8 +55,8 @@ impl<'a> ControlFieldValue<'a> {
     pub fn iter_values(&self) -> Box<(dyn Iterator<Item = &str> + '_)> {
         match self {
             Self::Simple(v) => Box::new([v.as_ref()].into_iter()),
-            Self::Folded(values) => Box::new(values.split('\n').map(|x| x.trim_start())),
-            Self::Multiline(values) => Box::new(values.split('\n').map(|x| x.trim_start())),
+            Self::Folded(values) => Box::new(values.lines().map(|x| x.trim_start())),
+            Self::Multiline(values) => Box::new(values.lines().map(|x| x.trim_start())),
         }
     }
 
