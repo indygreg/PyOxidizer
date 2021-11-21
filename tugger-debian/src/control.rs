@@ -247,6 +247,9 @@ impl<'a> ControlParagraph<'a> {
 }
 
 /// Holds parsing state for Debian control files.
+///
+/// Instances of this type are essentially fed lines of text and periodically emit
+/// [ControlParagraph] instances as they are completed.
 #[derive(Clone, Debug, Default)]
 pub struct ControlFileParser {
     paragraph: ControlParagraph<'static>,
@@ -321,12 +324,16 @@ impl ControlFileParser {
     ///
     /// If a non-empty paragraph is present in the instance, it will be returned. Else if there
     /// is no unflushed state, None is returned.
-    pub fn finish(self) -> Option<ControlParagraph<'static>> {
-        if self.paragraph.is_empty() {
+    pub fn finish(mut self) -> Result<Option<ControlParagraph<'static>>, ControlError> {
+        if let Some(field) = self.field.take() {
+            self.flush_field(field)?;
+        }
+
+        Ok(if self.paragraph.is_empty() {
             None
         } else {
             Some(self.paragraph)
-        }
+        })
     }
 
     fn flush_field(&mut self, v: String) -> Result<(), ControlError> {
@@ -370,17 +377,17 @@ impl<'a> ControlFile<'a> {
             let mut line = String::new();
             let bytes_read = reader.read_line(&mut line)?;
 
-            if let Some(paragraph) = parser.write_line(&line)? {
-                paragraphs.push(paragraph);
-            }
-
             // .read_line() indicates EOF by Ok(0).
             if bytes_read == 0 {
                 break;
             }
+
+            if let Some(paragraph) = parser.write_line(&line)? {
+                paragraphs.push(paragraph);
+            }
         }
 
-        if let Some(paragraph) = parser.finish() {
+        if let Some(paragraph) = parser.finish()? {
             paragraphs.push(paragraph);
         }
 
