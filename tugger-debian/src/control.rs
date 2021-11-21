@@ -273,28 +273,7 @@ impl ControlFileParser {
             // We have a field on the stack and got an unindented line. This
             // must be the beginning of a new field. Flush the current field.
             (_, Some(v), false) => {
-                let mut parts = v.splitn(2, ':');
-
-                let name = parts.next().ok_or_else(|| {
-                    ControlError::ParseError(format!(
-                        "error parsing line '{}'; missing colon",
-                        line
-                    ))
-                })?;
-                let value = parts
-                    .next()
-                    .ok_or_else(|| {
-                        ControlError::ParseError(format!(
-                            "error parsing field '{}'; could not detect value",
-                            v
-                        ))
-                    })?
-                    .trim();
-
-                self.paragraph.add_field_from_string(
-                    Cow::Owned(name.to_string()),
-                    Cow::Owned(value.to_string()),
-                )?;
+                self.flush_field(v)?;
 
                 self.field = if is_empty_line {
                     None
@@ -348,6 +327,28 @@ impl ControlFileParser {
         } else {
             Some(self.paragraph)
         }
+    }
+
+    fn flush_field(&mut self, v: String) -> Result<(), ControlError> {
+        let mut parts = v.splitn(2, ':');
+
+        let name = parts.next().ok_or_else(|| {
+            ControlError::ParseError(format!("error parsing line '{}'; missing colon", v))
+        })?;
+        let value = parts
+            .next()
+            .ok_or_else(|| {
+                ControlError::ParseError(format!(
+                    "error parsing field '{}'; could not detect value",
+                    v
+                ))
+            })?
+            .trim();
+
+        self.paragraph
+            .add_field_from_string(Cow::Owned(name.to_string()), Cow::Owned(value.to_string()))?;
+
+        Ok(())
     }
 }
 
