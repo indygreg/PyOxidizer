@@ -558,7 +558,20 @@ mod tests {
             let fh = std::fs::File::open(&path)?;
             let mut reader = std::io::BufReader::new(fh);
 
-            ControlFile::parse_reader(&mut reader)?;
+            let mut parser = ControlFileParser::default();
+
+            loop {
+                let mut line = String::new();
+                let read_count = reader.read_line(&mut line)?;
+
+                if read_count == 0 {
+                    break;
+                }
+
+                parser.write_line(&line)?;
+            }
+
+            parser.finish()?;
         }
 
         Ok(())
