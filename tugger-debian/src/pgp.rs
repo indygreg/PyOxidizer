@@ -28,7 +28,7 @@ const SIGNATURE_ARMOR_CRLF: &str = "-----BEGIN PGP SIGNATURE-----\r\n";
 
 /// Wrapper around content digesting to work around lack of clone() in pgp crate.
 #[derive(Clone)]
-enum MyHasher {
+pub enum MyHasher {
     Md5(md5::Md5),
     Sha1(sha1::Sha1),
     Sha256(sha2::Sha256),
