@@ -246,6 +246,111 @@ impl<'a> ControlParagraph<'a> {
     }
 }
 
+/// Holds parsing state for Debian control files.
+#[derive(Clone, Debug, Default)]
+pub struct ControlFileParser {
+    paragraph: ControlParagraph<'static>,
+    field: Option<String>,
+}
+
+impl ControlFileParser {
+    /// Write a line to the parser.
+    ///
+    /// If the line terminates an in-progress paragraph, that paragraph will be returned.
+    /// Otherwise `Ok(None)` is returned.
+    ///
+    /// `Err` is returned if the control file in invalid.
+    pub fn write_line(
+        &mut self,
+        line: &str,
+    ) -> Result<Option<ControlParagraph<'static>>, ControlError> {
+        let is_empty_line = line.trim().is_empty();
+        let is_indented = line.starts_with(' ') && line.len() > 1;
+
+        let current_field = self.field.take();
+
+        match (is_empty_line, current_field, is_indented) {
+            // We have a field on the stack and got an unindented line. This
+            // must be the beginning of a new field. Flush the current field.
+            (_, Some(v), false) => {
+                let mut parts = v.splitn(2, ':');
+
+                let name = parts.next().ok_or_else(|| {
+                    ControlError::ParseError(format!(
+                        "error parsing line '{}'; missing colon",
+                        line
+                    ))
+                })?;
+                let value = parts
+                    .next()
+                    .ok_or_else(|| {
+                        ControlError::ParseError(format!(
+                            "error parsing field '{}'; could not detect value",
+                            v
+                        ))
+                    })?
+                    .trim();
+
+                self.paragraph.add_field_from_string(
+                    Cow::Owned(name.to_string()),
+                    Cow::Owned(value.to_string()),
+                )?;
+
+                self.field = if is_empty_line {
+                    None
+                } else {
+                    Some(line.to_string())
+                };
+
+                Ok(None)
+            }
+
+            // If we're an empty line and no fields is on the stack, we're at
+            // the end of the paragraph with no field to flush. Just flush the
+            // paragraph if it is non-empty.
+            (true, _, _) => {
+                self.field = None;
+
+                Ok(if self.paragraph.is_empty() {
+                    None
+                } else {
+                    let para = self.paragraph.clone();
+                    self.paragraph = ControlParagraph::default();
+
+                    Some(para)
+                })
+            }
+            // We got a non-empty line and no field is currently being
+            // processed. This must be the start of a new field.
+            (false, None, _) => {
+                self.field = Some(line.to_string());
+
+                Ok(None)
+            }
+            // We have a field on the stack and got an indented line. This
+            // must be a field value continuation. Add it to the current
+            // field.
+            (false, Some(v), true) => {
+                self.field = Some(v + line);
+
+                Ok(None)
+            }
+        }
+    }
+
+    /// Finish parsing, consuming self.
+    ///
+    /// If a non-empty paragraph is present in the instance, it will be returned. Else if there
+    /// is no unflushed state, None is returned.
+    pub fn finish(self) -> Option<ControlParagraph<'static>> {
+        if self.paragraph.is_empty() {
+            None
+        } else {
+            Some(self.paragraph)
+        }
+    }
+}
+
 /// A debian control file.
 ///
 /// A control file is an ordered series of paragraphs.
@@ -258,69 +363,15 @@ impl<'a> ControlFile<'a> {
     /// Construct a new instance by parsing data from a reader.
     pub fn parse_reader<R: BufRead>(reader: &mut R) -> Result<Self, ControlError> {
         let mut paragraphs = Vec::new();
-        let mut current_paragraph = ControlParagraph::default();
-        let mut current_field: Option<String> = None;
+        let mut parser = ControlFileParser::default();
 
         loop {
             let mut line = String::new();
             let bytes_read = reader.read_line(&mut line)?;
 
-            let is_empty_line = line.trim().is_empty();
-            let is_indented = line.starts_with(' ') && line.len() > 1;
-
-            current_field = match (is_empty_line, current_field, is_indented) {
-                // We have a field on the stack and got an unindented line. This
-                // must be the beginning of a new field. Flush the current field.
-                (_, Some(v), false) => {
-                    let mut parts = v.splitn(2, ':');
-
-                    let name = parts.next().ok_or_else(|| {
-                        ControlError::ParseError(format!(
-                            "error parsing line '{}'; missing colon",
-                            line
-                        ))
-                    })?;
-                    let value = parts
-                        .next()
-                        .ok_or_else(|| {
-                            ControlError::ParseError(format!(
-                                "error parsing field '{}'; could not detect value",
-                                v
-                            ))
-                        })?
-                        .trim();
-
-                    current_paragraph.add_field_from_string(
-                        Cow::Owned(name.to_string()),
-                        Cow::Owned(value.to_string()),
-                    )?;
-
-                    if is_empty_line {
-                        None
-                    } else {
-                        Some(line)
-                    }
-                }
-
-                // If we're an empty line and no fields is on the stack, we're at
-                // the end of the paragraph with no field to flush. Just flush the
-                // paragraph if it is non-empty.
-                (true, _, _) => {
-                    if !current_paragraph.is_empty() {
-                        paragraphs.push(current_paragraph);
-                        current_paragraph = ControlParagraph::default();
-                    }
-
-                    None
-                }
-                // We got a non-empty line and no field is currently being
-                // processed. This must be the start of a new field.
-                (false, None, _) => Some(line),
-                // We have a field on the stack and got an indented line. This
-                // must be a field value continuation. Add it to the current
-                // field.
-                (false, Some(v), true) => Some(v + &line),
-            };
+            if let Some(paragraph) = parser.write_line(&line)? {
+                paragraphs.push(paragraph);
+            }
 
             // .read_line() indicates EOF by Ok(0).
             if bytes_read == 0 {
@@ -328,8 +379,8 @@ impl<'a> ControlFile<'a> {
             }
         }
 
-        if !current_paragraph.is_empty() {
-            paragraphs.push(current_paragraph);
+        if let Some(paragraph) = parser.finish() {
+            paragraphs.push(paragraph);
         }
 
         Ok(Self { paragraphs })
