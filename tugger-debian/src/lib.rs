@@ -10,6 +10,7 @@ This crate defines pure Rust implementations of Debian packaging primitives.
 mod changelog;
 mod control;
 mod deb;
+pub mod pgp;
 pub mod repository;
 
 pub use {

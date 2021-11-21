@@ -10,7 +10,12 @@ use {
     },
     chrono::{DateTime, TimeZone, Utc},
     mailparse::{dateparse, MailParseError},
-    std::{borrow::Cow, io::BufRead, num::ParseIntError, str::FromStr},
+    std::{
+        borrow::Cow,
+        io::{BufRead, Read},
+        num::ParseIntError,
+        str::FromStr,
+    },
     thiserror::Error,
 };
 
@@ -43,6 +48,12 @@ pub enum ReleaseError {
 
     #[error("index entry path unexpectedly has spaces: {0}")]
     PathWithSpaces(String),
+
+    #[error("No PGP signatures found")]
+    NoSignatures,
+
+    #[error("No PGP signatures found from the specified key")]
+    NoSignaturesByKey,
 }
 
 /// Checksum type / digest mechanism used in a release file.
@@ -212,9 +223,11 @@ impl<'a> ReleaseFileEntry<'a> {
 ///
 /// Instances are wrappers around a [ControlParagraph]. [AsRef] and [AsMut] are
 /// implemented to allow obtaining the inner [ControlParagraph].
-#[derive(Clone, Debug)]
 pub struct ReleaseFile<'a> {
     paragraph: ControlParagraph<'a>,
+
+    /// Parsed PGP signatures for this file.
+    signatures: Option<crate::pgp::CleartextSignatures>,
 }
 
 impl<'a> ReleaseFile<'a> {
@@ -240,7 +253,31 @@ impl<'a> ReleaseFile<'a> {
             .expect("validated paragraph count above")
             .clone();
 
-        Ok(Self { paragraph })
+        Ok(Self {
+            paragraph,
+            signatures: None,
+        })
+    }
+
+    /// Construct an instance by reading data from a reader containing a PGP cleartext signature.
+    ///
+    /// This can be used to parse content from an `InRelease` file, which begins
+    /// with `-----BEGIN PGP SIGNED MESSAGE-----`.
+    ///
+    /// An error occurs if the PGP cleartext file is not well-formed or if a PGP parsing
+    /// error occurs.
+    ///
+    /// The PGP signature is NOT validated. The file will be parsed despite lack of
+    /// signature verification. This is conceptually insecure. But since Rust has memory
+    /// safety, some risk is prevented.
+    pub fn from_armored_reader<R: Read>(reader: R) -> Result<Self, ReleaseError> {
+        let reader = crate::pgp::CleartextSignatureReader::new(reader);
+        let mut reader = std::io::BufReader::new(reader);
+
+        let mut slf = Self::from_reader(&mut reader)?;
+        slf.signatures = Some(reader.into_inner().finalize());
+
+        Ok(slf)
     }
 
     /// Obtain the first occurrence of the given field.
@@ -444,7 +481,7 @@ impl<'a> AsMut<ControlParagraph<'a>> for ReleaseFile<'a> {
 
 #[cfg(test)]
 mod test {
-    use super::*;
+    use {super::*, pgp::Deserializable};
 
     #[test]
     fn parse_bullseye_release() -> Result<(), ReleaseError> {
@@ -667,6 +704,44 @@ mod test {
                 is_installer: true
             }
         );
+
+        Ok(())
+    }
+
+    fn bullseye_signing_key() -> pgp::SignedPublicKey {
+        pgp::SignedPublicKey::from_armor_single(std::io::Cursor::new(include_bytes!(
+            "../testdata/release-key-bullseye.asc"
+        )))
+        .unwrap()
+        .0
+    }
+
+    #[test]
+    fn parse_bullseye_inrelease() -> Result<(), ReleaseError> {
+        let reader = std::io::Cursor::new(include_bytes!("../testdata/inrelease-debian-bullseye"));
+
+        let release = ReleaseFile::from_armored_reader(reader)?;
+
+        let signing_key = bullseye_signing_key();
+
+        assert_eq!(release.signatures.unwrap().verify(&signing_key).unwrap(), 1);
+
+        Ok(())
+    }
+
+    #[test]
+    fn bad_signature_rejection() -> Result<(), ReleaseError> {
+        let reader = std::io::Cursor::new(
+            include_str!("../testdata/inrelease-debian-bullseye").replace(
+                "d41d8cd98f00b204e9800998ecf8427e",
+                "d41d8cd98f00b204e9800998ecf80000",
+            ),
+        );
+        let release = ReleaseFile::from_armored_reader(reader)?;
+
+        let signing_key = bullseye_signing_key();
+
+        assert!(release.signatures.unwrap().verify(&signing_key).is_err());
 
         Ok(())
     }
