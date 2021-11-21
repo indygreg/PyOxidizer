@@ -6,7 +6,8 @@
 
 use {
     crate::{
-        repository::IndexFileCompression, ControlError, ControlField, ControlFile, ControlParagraph,
+        pgp::MyHasher, repository::IndexFileCompression, ControlError, ControlField, ControlFile,
+        ControlParagraph,
     },
     chrono::{DateTime, TimeZone, Utc},
     mailparse::{dateparse, MailParseError},
@@ -77,6 +78,15 @@ impl ChecksumType {
             Self::Sha1 => "SHA1",
             Self::Sha256 => "SHA256",
         }
+    }
+
+    /// Obtain a new hasher for this checksum flavor.
+    pub fn new_hasher(&self) -> Box<dyn pgp::crypto::Hasher> {
+        Box::new(match self {
+            Self::Md5 => MyHasher::md5(),
+            Self::Sha1 => MyHasher::sha1(),
+            Self::Sha256 => MyHasher::sha256(),
+        })
     }
 }
 
@@ -461,6 +471,36 @@ impl<'a> ReleaseFile<'a> {
                 Ok(entry) => entry.to_packages_file_entry().map(Ok),
                 Err(e) => Some(Err(e)),
             })))
+        } else {
+            None
+        }
+    }
+
+    /// Find a [PackagesFileEntry] given search constraints.
+    pub fn find_packages_indices(
+        &self,
+        checksum: ChecksumType,
+        compression: IndexFileCompression,
+        component: &str,
+        arch: &str,
+        is_installer: bool,
+    ) -> Option<PackagesFileEntry> {
+        if let Some(mut iter) = self.iter_packages_indices(checksum) {
+            iter.find_map(|entry| {
+                if let Ok(entry) = entry {
+                    if entry.component == component
+                        && entry.architecture == arch
+                        && entry.is_installer == is_installer
+                        && entry.compression == compression
+                    {
+                        Some(entry)
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            })
         } else {
             None
         }
