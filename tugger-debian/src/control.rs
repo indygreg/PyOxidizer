@@ -11,6 +11,7 @@ for the canonical source of truth for how control files work.
 use {
     std::{
         borrow::Cow,
+        collections::HashMap,
         io::{BufRead, Write},
     },
     thiserror::Error,
@@ -221,6 +222,20 @@ impl<'a> ControlParagraph<'a> {
         self.first_field(name).map(|f| f.iter_value_words())
     }
 
+    /// Convert this paragraph to a [HashMap].
+    ///
+    /// Values will be the string normalization of the field value, including newlines and
+    /// leading whitespace.
+    ///
+    /// If a field occurs multiple times, its last value will be recorded in the returned map.
+    pub fn as_str_hash_map(&self) -> HashMap<&str, &str> {
+        HashMap::from_iter(
+            self.fields
+                .iter()
+                .map(|field| (field.name.as_ref(), field.value_str())),
+        )
+    }
+
     /// Serialize the paragraph to a writer.
     pub fn write<W: Write>(&self, writer: &mut W) -> std::io::Result<()> {
         for field in &self.fields {
@@ -334,6 +349,11 @@ impl<'a> ControlFile<'a> {
     /// Obtain paragraphs in this control file.
     pub fn paragraphs(&self) -> impl Iterator<Item = &ControlParagraph<'a>> {
         self.paragraphs.iter()
+    }
+
+    /// Obtain paragraphs in this control file, consuming self.
+    pub fn into_paragraphs(self) -> impl Iterator<Item = ControlParagraph<'a>> {
+        self.paragraphs.into_iter()
     }
 
     /// Serialize the control file to a writer.
