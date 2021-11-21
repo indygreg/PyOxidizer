@@ -9,6 +9,7 @@ The .deb file specification lives at https://manpages.debian.org/unstable/dpkg-d
 
 use {
     crate::ControlFile,
+    md5::Digest,
     os_str_bytes::OsStrBytes,
     std::{
         io::{BufWriter, Cursor, Read, Write},
@@ -368,7 +369,7 @@ impl<'a> ControlTarBuilder<'a> {
         path: P,
         reader: &mut R,
     ) -> Result<Self, DebError> {
-        let mut context = md5::Context::new();
+        let mut context = md5::Md5::new();
 
         let mut buffer = [0; 32768];
 
@@ -378,10 +379,10 @@ impl<'a> ControlTarBuilder<'a> {
                 break;
             }
 
-            context.consume(&buffer[0..read]);
+            context.update(&buffer[0..read]);
         }
 
-        let digest = context.compute();
+        let digest = context.finalize();
 
         let mut entry = Vec::new();
         entry.write_all(&digest.to_ascii_lowercase())?;
