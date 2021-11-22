@@ -5,8 +5,11 @@ to Debian packaging. The following functionality is (partially)
 implemented:
 
 * Parsing and serializing control files
-* Writing changelog files
-* Writing `.deb` files (deterministically)
+* Parsing `Release` and `InRelease` files.
+* Parsing `Packages` files.
+* Fetching Debian repository files from an HTTP server.
+* Writing changelog files.
+* Writing `.deb` files (deterministically).
 
 `tugger-debian` is part of the Tugger application distribution tool
 but exists as its own crate to facilitate code reuse for other tools
