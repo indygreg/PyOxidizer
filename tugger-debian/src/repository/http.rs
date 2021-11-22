@@ -56,7 +56,13 @@ pub struct HttpRepositoryClient {
     /// HTTP client to use.
     client: Client,
 
-    base_url: Url,
+    /// Base URL for Debian projects.
+    ///
+    /// Pool paths are relative to this.
+    debian_base_url: Url,
+
+    /// Base URL for this repository (where the `InRelease` file is).
+    repository_url: Url,
 }
 
 impl HttpRepositoryClient {
@@ -69,27 +75,35 @@ impl HttpRepositoryClient {
     ///
     /// The URL should have an `InRelease` or `Release` file under it.
     pub fn new_client(client: Client, url: impl IntoUrl) -> Result<Self, HttpError> {
-        let base_url = url.into_url()?;
+        let repository_url = url.into_url()?;
 
-        Ok(Self { client, base_url })
+        // Pool paths are relative to what's known as the Debian base URL, which is
+        // typically 2 path components up from where we are.
+        let debian_base_url = repository_url
+            .join("../..")
+            .unwrap_or_else(|_| repository_url.clone());
+
+        Ok(Self {
+            client,
+            debian_base_url,
+            repository_url,
+        })
     }
 
-    /// Perform an HTTP GET to the repository.
-    pub async fn get_path(&self, path: &str) -> Result<Response, HttpError> {
-        let url = self.base_url.join(path)?;
+    /// Set the Debian base URL for this fetcher.
+    ///
+    /// This is the directory from which package/pool paths are relative to. It is
+    /// typically 2 directory levels up from where the `InRelease` file is located.
+    pub fn set_debian_base_url(&mut self, url: impl IntoUrl) -> Result<(), HttpError> {
+        self.debian_base_url = url.into_url()?;
 
-        let res = self.client.get(url).send().await?;
-
-        Ok(res.error_for_status()?)
+        Ok(())
     }
 
-    pub async fn get_path_stream_decompressed(
-        &self,
-        path: &str,
+    async fn transform_http_response(
+        res: Response,
         compression: IndexFileCompression,
     ) -> Result<Pin<Box<dyn AsyncRead>>, HttpError> {
-        let res = self.get_path(path).await?;
-
         let stream = res
             .bytes_stream()
             .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, format!("{:?}", e)));
@@ -103,11 +117,56 @@ impl HttpRepositoryClient {
         })
     }
 
+    /// Perform an HTTP GET for a path relative to the Debian root directory.
+    ///
+    /// This is typically called to retrieve non-index files (e.g. .deb packages).
+    pub async fn get_debian_path(&self, path: &str) -> Result<Response, HttpError> {
+        let url = self.debian_base_url.join(path)?;
+        let res = self.client.get(url).send().await?;
+
+        Ok(res.error_for_status()?)
+    }
+
+    /// Perform an HTTP GET for a path relative to the Debian root directory.
+    ///
+    /// This transforms the response to an async reader for reading the HTTP response body.
+    pub async fn get_debian_path_reader(
+        &self,
+        path: &str,
+        compression: IndexFileCompression,
+    ) -> Result<Pin<Box<dyn AsyncRead>>, HttpError> {
+        let res = self.get_debian_path(path).await?;
+
+        Self::transform_http_response(res, compression).await
+    }
+
+    /// Perform an HTTP GET for a path relative to the repository root directory.
+    pub async fn get_repository_path(&self, path: &str) -> Result<Response, HttpError> {
+        let url = self.repository_url.join(path)?;
+        let res = self.client.get(url).send().await?;
+
+        Ok(res.error_for_status()?)
+    }
+
+    /// Perform an HTTP GET for a path relative to the repository root directory.
+    ///
+    /// Returns a reader that can be used to read HTTP response body payload, with an
+    /// optional decompression content transformation transparently applied.
+    pub async fn get_repository_path_reader(
+        &self,
+        path: &str,
+        compression: IndexFileCompression,
+    ) -> Result<Pin<Box<dyn AsyncRead>>, HttpError> {
+        let res = self.get_repository_path(path).await?;
+
+        Self::transform_http_response(res, compression).await
+    }
+
     /// Fetch and parse the `InRelease` file from the repository.
     ///
     /// Returns a new object bound to the parsed `InRelease` file.
     pub async fn fetch_inrelease(&self) -> Result<HttpReleaseClient<'_>, HttpError> {
-        let res = self.get_path("InRelease").await?;
+        let res = self.get_repository_path("InRelease").await?;
 
         let data = res.bytes().await?;
 
@@ -170,7 +229,7 @@ impl<'client> HttpReleaseClient<'client> {
 
         let mut reader = ControlParagraphAsyncReader::new(futures::io::BufReader::new(
             self.base_client
-                .get_path_stream_decompressed(path, entry.compression)
+                .get_repository_path_reader(path, entry.compression)
                 .await?,
         ));
 
