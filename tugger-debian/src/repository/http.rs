@@ -7,7 +7,7 @@ use {
         binary_package_control::BinaryPackageControlFile,
         control::{ControlError, ControlParagraphAsyncReader},
         repository::{
-            release::{ChecksumType, ReleaseError, ReleaseFile},
+            release::{ChecksumType, PackagesFileEntry, ReleaseError, ReleaseFile},
             IndexFileCompression,
         },
     },
@@ -181,6 +181,21 @@ impl<'client> HttpReleaseClient<'client> {
         }
 
         Ok(res)
+    }
+
+    /// Obtain all file entries for `Packages*` files matching our fetch criteria.
+    pub fn packages_indices_entries(&self) -> Result<Vec<PackagesFileEntry>, HttpError> {
+        Ok(
+            if let Some(entries) = self.release.iter_packages_indices(self.fetch_checksum) {
+                entries
+                    .collect::<Result<Vec<_>, _>>()?
+                    .into_iter()
+                    .filter(|entry| entry.compression == self.fetch_compression)
+                    .collect::<Vec<_>>()
+            } else {
+                vec![]
+            },
+        )
     }
 }
 
