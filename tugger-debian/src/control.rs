@@ -272,10 +272,25 @@ impl ControlFileParser {
 
         let current_field = self.field.take();
 
-        match (is_empty_line, current_field, is_indented) {
+        // Empty lines signify the end of a paragraph. Flush any state.
+        if is_empty_line {
+            if let Some(field) = current_field {
+                self.flush_field(field)?;
+            }
+
+            return Ok(if self.paragraph.is_empty() {
+                None
+            } else {
+                let para = self.paragraph.clone();
+                self.paragraph = ControlParagraph::default();
+                Some(para)
+            });
+        }
+
+        match (current_field, is_indented) {
             // We have a field on the stack and got an unindented line. This
             // must be the beginning of a new field. Flush the current field.
-            (_, Some(v), false) => {
+            (Some(v), false) => {
                 self.flush_field(v)?;
 
                 self.field = if is_empty_line {
@@ -287,24 +302,9 @@ impl ControlFileParser {
                 Ok(None)
             }
 
-            // If we're an empty line and no fields is on the stack, we're at
-            // the end of the paragraph with no field to flush. Just flush the
-            // paragraph if it is non-empty.
-            (true, _, _) => {
-                self.field = None;
-
-                Ok(if self.paragraph.is_empty() {
-                    None
-                } else {
-                    let para = self.paragraph.clone();
-                    self.paragraph = ControlParagraph::default();
-
-                    Some(para)
-                })
-            }
             // We got a non-empty line and no field is currently being
             // processed. This must be the start of a new field.
-            (false, None, _) => {
+            (None, _) => {
                 self.field = Some(line.to_string());
 
                 Ok(None)
@@ -312,7 +312,7 @@ impl ControlFileParser {
             // We have a field on the stack and got an indented line. This
             // must be a field value continuation. Add it to the current
             // field.
-            (false, Some(v), true) => {
+            (Some(v), true) => {
                 self.field = Some(v + line);
 
                 Ok(None)
