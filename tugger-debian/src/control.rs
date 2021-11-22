@@ -17,6 +17,12 @@ use {
     thiserror::Error,
 };
 
+#[cfg(feature = "async")]
+use {
+    futures::{AsyncBufRead, AsyncBufReadExt},
+    std::pin::Pin,
+};
+
 #[derive(Debug, Error)]
 pub enum ControlError {
     #[error("I/O error: {0}")]
@@ -420,6 +426,59 @@ impl<R: BufRead> Iterator for ControlParagraphReader<R> {
                 Ok(Some(para)) => Some(Ok(para)),
                 Ok(None) => None,
                 Err(e) => Some(Err(e)),
+            }
+        }
+    }
+}
+
+/// An asynchronous reader of [ControlParagraph].
+///
+/// Instances are bound to a reader, which is capable of reading lines.
+#[cfg(feature = "async")]
+pub struct ControlParagraphAsyncReader<R: AsyncBufRead> {
+    reader: Pin<Box<R>>,
+    parser: Option<ControlFileParser>,
+}
+
+#[cfg(feature = "async")]
+impl<R: AsyncBufRead> ControlParagraphAsyncReader<R> {
+    /// Create a new instance bound to a reader.
+    pub fn new(reader: R) -> Self {
+        Self {
+            reader: Box::pin(reader),
+            parser: Some(ControlFileParser::default()),
+        }
+    }
+
+    /// Read the next available paragraph from this reader.
+    ///
+    /// Resolves to [None] on end of input.
+    pub async fn read_paragraph(
+        &mut self,
+    ) -> Result<Option<ControlParagraph<'static>>, ControlError> {
+        let mut parser = if let Some(parser) = self.parser.take() {
+            parser
+        } else {
+            return Ok(None);
+        };
+
+        loop {
+            let mut line = String::new();
+
+            let bytes_read = self.reader.read_line(&mut line).await?;
+
+            if bytes_read != 0 {
+                if let Some(paragraph) = parser.write_line(&line)? {
+                    self.parser.replace(parser);
+                    return Ok(Some(paragraph));
+                }
+                // Continue reading.
+            } else {
+                return if let Some(paragraph) = parser.finish()? {
+                    Ok(Some(paragraph))
+                } else {
+                    Ok(None)
+                };
             }
         }
     }

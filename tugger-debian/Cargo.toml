@@ -14,6 +14,7 @@ readme = "README.md"
 ar = "0.9"
 chrono = "0.4"
 digest = "0.9"
+hex = "0.4"
 libflate = "1.0"
 mailparse = "0.13"
 md-5 = "0.9"
@@ -23,8 +24,29 @@ sha-1 = "0.9"
 sha2 = "0.9"
 tar = "0.4"
 thiserror = "1.0"
+url = "2.2"
 xz2 = "0.1"
 zstd = "0.9"
+
+[dependencies.async-compression]
+version = "0.3"
+optional = true
+features = ["bzip2", "futures-io", "gzip", "lzma", "xz"]
+
+[dependencies.futures]
+version = "0.3"
+optional = true
+
+[dependencies.reqwest]
+version = "0.11"
+optional = true
+default-features = false
+features = ["rustls-tls", "stream"]
+
+[dependencies.tokio]
+version = "1.14"
+optional = true
+features = ["macros"]
 
 [dependencies.tugger-file-manifest]
 version = "0.7.0-pre"
@@ -33,3 +55,8 @@ path = "../tugger-file-manifest"
 [dev-dependencies]
 anyhow = "1.0"
 glob = "0.3"
+
+[features]
+default = ["async", "http"]
+async = ["futures"]
+http = ["async-compression", "async", "futures", "reqwest", "tokio"]

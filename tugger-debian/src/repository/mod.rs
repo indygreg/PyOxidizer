@@ -9,6 +9,9 @@ support primitives. See [https://wiki.debian.org/DebianRepository/Format]
 for the canonical definition of a Debian repository.
 */
 
+#[cfg(feature = "http")]
+pub mod http;
+
 pub mod release;
 
 /// Compression format used by index files.
