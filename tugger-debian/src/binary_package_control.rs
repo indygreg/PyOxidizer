@@ -5,7 +5,10 @@
 /*! Debian binary package control files. */
 
 use {
-    crate::control::{ControlField, ControlParagraph},
+    crate::{
+        control::{ControlField, ControlParagraph},
+        dependency::{DependencyError, DependencyList},
+    },
     std::{num::ParseIntError, str::FromStr},
     thiserror::Error,
 };
@@ -17,6 +20,9 @@ pub enum BinaryPackageControlError {
 
     #[error("integer parsing error: {0}")]
     IntegerParse(#[from] ParseIntError),
+
+    #[error("dependency error: {0:?}")]
+    Depends(#[from] DependencyError),
 }
 
 pub type Result<T> = std::result::Result<T, BinaryPackageControlError>;
@@ -124,5 +130,35 @@ impl<'a> BinaryPackageControlFile<'a> {
 
     pub fn built_using(&self) -> Option<&str> {
         self.paragraph.first_field_str("Built-Using")
+    }
+
+    pub fn depends(&self) -> Option<Result<DependencyList>> {
+        self.paragraph
+            .first_field_str("Depends")
+            .map(|x| Ok(DependencyList::parse(x)?))
+    }
+
+    pub fn recommends(&self) -> Option<Result<DependencyList>> {
+        self.paragraph
+            .first_field_str("Recommends")
+            .map(|x| Ok(DependencyList::parse(x)?))
+    }
+
+    pub fn suggests(&self) -> Option<Result<DependencyList>> {
+        self.paragraph
+            .first_field_str("Suggests")
+            .map(|x| Ok(DependencyList::parse(x)?))
+    }
+
+    pub fn enhances(&self) -> Option<Result<DependencyList>> {
+        self.paragraph
+            .first_field_str("Enhances")
+            .map(|x| Ok(DependencyList::parse(x)?))
+    }
+
+    pub fn pre_depends(&self) -> Option<Result<DependencyList>> {
+        self.paragraph
+            .first_field_str("Pre-Depends")
+            .map(|x| Ok(DependencyList::parse(x)?))
     }
 }

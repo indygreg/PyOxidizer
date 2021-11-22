@@ -11,6 +11,7 @@ pub mod binary_package_control;
 mod changelog;
 mod control;
 mod deb;
+pub mod dependency;
 pub mod error;
 pub mod pgp;
 pub mod repository;

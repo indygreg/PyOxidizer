@@ -214,6 +214,25 @@ mod test {
             Some("6e35f5805e808c19becd3b9ce25c4cf40c41aa0cf5d81fab317198ded917fec1")
         );
 
+        // Make sure dependency syntax parsing works.
+        for p in &packages {
+            if let Some(deps) = p.depends() {
+                deps?;
+            }
+            if let Some(deps) = p.recommends() {
+                deps?;
+            }
+            if let Some(deps) = p.suggests() {
+                deps?;
+            }
+            if let Some(deps) = p.enhances() {
+                deps?;
+            }
+            if let Some(deps) = p.pre_depends() {
+                deps?;
+            }
+        }
+
         Ok(())
     }
 }
