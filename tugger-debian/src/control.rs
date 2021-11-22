@@ -359,6 +359,72 @@ impl ControlFileParser {
     }
 }
 
+/// A reader for [ControlParagraph].
+///
+/// Instances are bound to a reader, which is capable of feeding lines into a parser.
+///
+/// Instances can be consumed as an iterator. Each call into the iterator will attempt to
+/// read a full paragraph from the underlying reader.
+pub struct ControlParagraphReader<R: BufRead> {
+    reader: R,
+    parser: Option<ControlFileParser>,
+}
+
+impl<R: BufRead> ControlParagraphReader<R> {
+    /// Create a new instance bound to a reader.
+    pub fn new(reader: R) -> Self {
+        Self {
+            reader,
+            parser: Some(ControlFileParser::default()),
+        }
+    }
+
+    /// Consumes the instance, returning the original reader.
+    pub fn into_inner(self) -> R {
+        self.reader
+    }
+
+    fn get_next(&mut self) -> Result<Option<ControlParagraph<'static>>, ControlError> {
+        let mut parser = self.parser.take().unwrap();
+
+        loop {
+            let mut line = String::new();
+
+            let bytes_read = self.reader.read_line(&mut line)?;
+
+            if bytes_read != 0 {
+                if let Some(paragraph) = parser.write_line(&line)? {
+                    self.parser.replace(parser);
+                    return Ok(Some(paragraph));
+                }
+                // Continue reading.
+            } else {
+                return if let Some(paragraph) = parser.finish()? {
+                    Ok(Some(paragraph))
+                } else {
+                    Ok(None)
+                };
+            }
+        }
+    }
+}
+
+impl<R: BufRead> Iterator for ControlParagraphReader<R> {
+    type Item = Result<ControlParagraph<'static>, ControlError>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.parser.is_none() {
+            None
+        } else {
+            match self.get_next() {
+                Ok(Some(para)) => Some(Ok(para)),
+                Ok(None) => None,
+                Err(e) => Some(Err(e)),
+            }
+        }
+    }
+}
+
 /// A debian control file.
 ///
 /// A control file is an ordered series of paragraphs.
@@ -478,11 +544,14 @@ mod tests {
 
     #[test]
     fn parse_paragraph_release() -> Result<(), ControlError> {
-        let mut reader = std::io::Cursor::new(include_bytes!("testdata/release-debian-bullseye"));
-        let cf = ControlFile::parse_reader(&mut reader)?;
-        assert_eq!(cf.paragraphs.len(), 1);
+        let paragraphs = ControlParagraphReader::new(std::io::Cursor::new(include_bytes!(
+            "testdata/release-debian-bullseye"
+        )))
+        .collect::<Result<Vec<_>, _>>()?;
 
-        let p = &cf.paragraphs[0];
+        assert_eq!(paragraphs.len(), 1);
+        let p = &paragraphs[0];
+
         assert_eq!(p.fields.len(), 14);
 
         assert!(p.has_field("Origin"));
@@ -556,22 +625,11 @@ mod tests {
 
             eprintln!("parsing {}", path.display());
             let fh = std::fs::File::open(&path)?;
-            let mut reader = std::io::BufReader::new(fh);
+            let reader = std::io::BufReader::new(fh);
 
-            let mut parser = ControlFileParser::default();
-
-            loop {
-                let mut line = String::new();
-                let read_count = reader.read_line(&mut line)?;
-
-                if read_count == 0 {
-                    break;
-                }
-
-                parser.write_line(&line)?;
+            for para in ControlParagraphReader::new(reader) {
+                para?;
             }
-
-            parser.finish()?;
         }
 
         Ok(())

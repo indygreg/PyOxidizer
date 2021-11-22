@@ -16,7 +16,8 @@ pub mod repository;
 pub use {
     changelog::{Changelog, ChangelogEntry},
     control::{
-        ControlError, ControlField, ControlFieldValue, ControlFile, ControlParagraph, SourceControl,
+        ControlError, ControlField, ControlFieldValue, ControlFile, ControlParagraph,
+        ControlParagraphReader, SourceControl,
     },
     deb::{write_deb_tar, ControlTarBuilder, DebBuilder, DebError},
 };

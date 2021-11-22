@@ -6,8 +6,8 @@
 
 use {
     crate::{
-        pgp::MyHasher, repository::IndexFileCompression, ControlError, ControlField, ControlFile,
-        ControlParagraph,
+        pgp::MyHasher, repository::IndexFileCompression, ControlError, ControlField,
+        ControlParagraph, ControlParagraphReader,
     },
     chrono::{DateTime, TimeZone, Utc},
     mailparse::{dateparse, MailParseError},
@@ -247,21 +247,20 @@ impl<'a> ReleaseFile<'a> {
     ///
     /// The source must not be PGP armored. i.e. do not feed it raw `InRelease`
     /// files that begin with `-----BEGIN PGP SIGNED MESSAGE-----`.
-    pub fn from_reader<R: BufRead>(reader: &mut R) -> Result<Self, ReleaseError> {
-        let cf = ControlFile::parse_reader(reader)?;
+    pub fn from_reader<R: BufRead>(reader: R) -> Result<Self, ReleaseError> {
+        let paragraphs = ControlParagraphReader::new(reader).collect::<Result<Vec<_>, _>>()?;
 
         // A Release control file should have a single paragraph.
-        if cf.paragraphs().count() != 1 {
-            return Err(ReleaseError::ControlParagraphMismatch(
-                cf.paragraphs().count(),
-            ));
+
+        // A Release control file should have a single paragraph.
+        if paragraphs.len() != 1 {
+            return Err(ReleaseError::ControlParagraphMismatch(paragraphs.len()));
         }
 
-        let paragraph = cf
-            .paragraphs()
+        let paragraph = paragraphs
+            .into_iter()
             .next()
-            .expect("validated paragraph count above")
-            .clone();
+            .expect("validated paragraph count above");
 
         Ok(Self {
             paragraph,
