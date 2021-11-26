@@ -7,45 +7,24 @@
 The .deb file specification lives at https://manpages.debian.org/unstable/dpkg-dev/deb.5.en.html.
 */
 
-use {std::io::Read, tugger_file_manifest::FileManifestError};
+use {std::io::Read, thiserror::Error, tugger_file_manifest::FileManifestError};
 
 pub mod builder;
 
 /// Represents an error related to .deb file handling.
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub enum DebError {
-    IoError(std::io::Error),
+    #[error("I/O error: {0}")]
+    IoError(#[from] std::io::Error),
+    #[error("path error: {0}")]
     PathError(String),
-    FileManifestError(FileManifestError),
-}
-
-impl std::fmt::Display for DebError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::IoError(inner) => write!(f, "I/O error: {}", inner),
-            Self::PathError(msg) => write!(f, "path error: {}", msg),
-            Self::FileManifestError(inner) => write!(f, "file manifest error: {}", inner),
-        }
-    }
-}
-
-impl std::error::Error for DebError {}
-
-impl From<std::io::Error> for DebError {
-    fn from(e: std::io::Error) -> Self {
-        Self::IoError(e)
-    }
+    #[error("file manifest error: {0}")]
+    FileManifestError(#[from] FileManifestError),
 }
 
 impl<W> From<std::io::IntoInnerError<W>> for DebError {
     fn from(e: std::io::IntoInnerError<W>) -> Self {
         Self::IoError(e.into())
-    }
-}
-
-impl From<FileManifestError> for DebError {
-    fn from(e: FileManifestError) -> Self {
-        Self::FileManifestError(e)
     }
 }
 
