@@ -10,6 +10,7 @@ The .deb file specification lives at https://manpages.debian.org/unstable/dpkg-d
 use {std::io::Read, thiserror::Error, tugger_file_manifest::FileManifestError};
 
 pub mod builder;
+pub mod reader;
 
 /// Represents an error related to .deb file handling.
 #[derive(Debug, Error)]
@@ -20,6 +21,10 @@ pub enum DebError {
     PathError(String),
     #[error("file manifest error: {0}")]
     FileManifestError(#[from] FileManifestError),
+    #[error("Unknown binary package entry: {0}")]
+    UnknownBinaryPackageEntry(String),
+    #[error("Unknown compression for filename: {0}")]
+    UnknownCompression(String),
 }
 
 impl<W> From<std::io::IntoInnerError<W>> for DebError {
@@ -27,6 +32,9 @@ impl<W> From<std::io::IntoInnerError<W>> for DebError {
         Self::IoError(e.into())
     }
 }
+
+/// Result type for .deb functionality.
+pub type Result<T> = std::result::Result<T, DebError>;
 
 /// Compression format to apply to `.deb` files.
 pub enum DebCompression {
@@ -52,7 +60,7 @@ impl DebCompression {
     }
 
     /// Compress input data from a reader.
-    pub fn compress(&self, reader: &mut impl Read) -> Result<Vec<u8>, DebError> {
+    pub fn compress(&self, reader: &mut impl Read) -> Result<Vec<u8>> {
         let mut buffer = vec![];
 
         match self {
