@@ -90,6 +90,11 @@ impl HttpRepositoryClient {
         })
     }
 
+    /// Debian base URL for this fetcher.
+    pub fn debian_base_url(&self) -> &Url {
+        &self.debian_base_url
+    }
+
     /// Set the Debian base URL for this fetcher.
     ///
     /// This is the directory from which package/pool paths are relative to. It is
@@ -98,6 +103,11 @@ impl HttpRepositoryClient {
         self.debian_base_url = url.into_url()?;
 
         Ok(())
+    }
+
+    /// Repository URL for this fetcher.
+    pub fn repository_url(&self) -> &Url {
+        &self.repository_url
     }
 
     async fn transform_http_response(
