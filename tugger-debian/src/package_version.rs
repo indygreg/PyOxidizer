@@ -40,7 +40,7 @@ pub type Result<T> = std::result::Result<T, VersionError>;
 ///
 /// The concise version is the format is `[epoch:]upstream_version[-debian_revision]`
 /// and each component has rules about what characters are allowed.
-#[derive(Clone, Debug, Eq, PartialEq, Ord)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct PackageVersion {
     epoch: Option<u32>,
     upstream_version: String,
@@ -333,7 +333,7 @@ fn compare_component(a: &str, b: &str) -> Ordering {
     }
 }
 
-impl PartialOrd for PackageVersion {
+impl PartialOrd<Self> for PackageVersion {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         // Epoch is compared numerically. Then upstream and debian components are compared
         // using a custom algorithm. The absence of a debian revision is equivalent to `0`.
@@ -354,6 +354,12 @@ impl PartialOrd for PackageVersion {
                 }
             }
         }
+    }
+}
+
+impl Ord for PackageVersion {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.partial_cmp(other).unwrap()
     }
 }
 
