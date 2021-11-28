@@ -8,6 +8,7 @@ See [https://www.debian.org/doc/debian-policy/ch-relationships.html] for the spe
  */
 
 use {
+    crate::package_version::{PackageVersion, VersionError},
     once_cell::sync::Lazy,
     regex::Regex,
     std::{
@@ -61,6 +62,9 @@ pub static RE_DEPENDENCY: Lazy<Regex> = Lazy::new(|| {
 pub enum DependencyError {
     #[error("failed to parse dependency expression: {0}")]
     DependencyParse(String),
+
+    #[error("version parsing error: {0:?}")]
+    Version(#[from] VersionError),
 }
 
 /// Result type for dependency handling.
@@ -92,7 +96,7 @@ impl Display for VersionRelationship {
 pub struct SingleDependency {
     /// Package the dependency is on.
     pub package: String,
-    pub dependency: Option<(VersionRelationship, String)>,
+    pub dependency: Option<(VersionRelationship, PackageVersion)>,
     pub architecture: Option<(bool, String)>,
 }
 
@@ -128,7 +132,9 @@ impl SingleDependency {
                     v => panic!("unexpected version relationship: {}", v),
                 };
 
-                Some((relop, version.as_str().to_string()))
+                let version = PackageVersion::parse(version.as_str())?;
+
+                Some((relop, version))
             }
             _ => None,
         };
@@ -238,7 +244,10 @@ mod test {
             dl.dependencies[0].0[0],
             SingleDependency {
                 package: "libc6".into(),
-                dependency: Some((VersionRelationship::LaterOrEqual, "2.4".into())),
+                dependency: Some((
+                    VersionRelationship::LaterOrEqual,
+                    PackageVersion::parse("2.4").unwrap(),
+                )),
                 architecture: None,
             }
         );
