@@ -13,6 +13,7 @@ mod control;
 pub mod deb;
 pub mod dependency;
 pub mod error;
+pub mod package_version;
 pub mod pgp;
 pub mod repository;
 

@@ -8,6 +8,7 @@ use {
     crate::{
         control::{ControlField, ControlParagraph},
         dependency::{DependencyError, DependencyList},
+        package_version::{PackageVersion, VersionError},
     },
     std::{num::ParseIntError, str::FromStr},
     thiserror::Error,
@@ -23,6 +24,9 @@ pub enum BinaryPackageControlError {
 
     #[error("dependency error: {0:?}")]
     Depends(#[from] DependencyError),
+
+    #[error("version error: {0:?}")]
+    Version(#[from] VersionError),
 }
 
 pub type Result<T> = std::result::Result<T, BinaryPackageControlError>;
@@ -86,8 +90,14 @@ impl<'a> BinaryPackageControlFile<'a> {
         self.required_field("Package")
     }
 
-    pub fn version(&self) -> Result<&str> {
+    /// The `Version` field as its original string.
+    pub fn version_str(&self) -> Result<&str> {
         self.required_field("Version")
+    }
+
+    /// The `Version` field parsed into a [PackageVersion].
+    pub fn version(&self) -> Result<PackageVersion> {
+        Ok(PackageVersion::parse(self.version_str()?)?)
     }
 
     pub fn architecture(&self) -> Result<&str> {

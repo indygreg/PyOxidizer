@@ -300,6 +300,8 @@ mod test {
 
         // Make sure dependency syntax parsing works.
         for p in &packages {
+            p.version()?;
+
             if let Some(deps) = p.depends() {
                 deps?;
             }
