@@ -12,6 +12,7 @@ use {
     once_cell::sync::Lazy,
     regex::Regex,
     std::{
+        cmp::Ordering,
         fmt::{Display, Formatter},
         ops::{Deref, DerefMut},
     },
@@ -50,7 +51,7 @@ pub static RE_DEPENDENCY: Lazy<Regex> = Lazy::new(|| {
             (?P<arch_negate>!)?
             \s*
             # The architecture. May have spaces.
-            (?P<arch>[^\]+])
+            (?P<arch>[^\]]+)
         \])?
         "#,
     )
@@ -115,6 +116,7 @@ impl Display for SingleDependency {
 }
 
 impl SingleDependency {
+    /// Parse a single package dependency expression into a [SingleDependency].
     pub fn parse(s: &str) -> Result<Self> {
         let caps = RE_DEPENDENCY
             .captures(s)
@@ -138,8 +140,10 @@ impl SingleDependency {
             }
             _ => None,
         };
+
         let architecture = match (caps.name("arch_negate"), caps.name("arch")) {
             (Some(_), Some(arch)) => Some((true, arch.as_str().to_string())),
+            (None, Some(arch)) => Some((false, arch.as_str().to_string())),
             _ => None,
         };
 
@@ -148,6 +152,49 @@ impl SingleDependency {
             dependency,
             architecture,
         })
+    }
+
+    /// Evaluate whether a package satisfies the requirements of this parsed expression.
+    ///
+    /// This takes as arguments the low-level package components needed for checking.
+    pub fn package_satisfies(
+        &self,
+        package: &str,
+        version: &PackageVersion,
+        architecture: &str,
+    ) -> bool {
+        if self.package == package {
+            if let Some((negate, arch)) = &self.architecture {
+                // Requesting an arch mismatch.
+                if (*negate && arch == architecture) || (!*negate && arch != architecture) {
+                    return false;
+                }
+            }
+
+            // Package and arch requirements match. Go on to version compare.
+            if let Some((wanted_relationship, wanted_version)) = &self.dependency {
+                matches!(
+                    (version.cmp(wanted_version), *wanted_relationship),
+                    (
+                        Ordering::Equal,
+                        VersionRelationship::ExactlyEqual
+                            | VersionRelationship::LaterOrEqual
+                            | VersionRelationship::EarlierOrEqual,
+                    ) | (
+                        Ordering::Less,
+                        VersionRelationship::StrictlyEarlier | VersionRelationship::EarlierOrEqual,
+                    ) | (
+                        Ordering::Greater,
+                        VersionRelationship::StrictlyLater | VersionRelationship::LaterOrEqual,
+                    )
+                )
+            } else {
+                // No version constraint means yes.
+                true
+            }
+        } else {
+            false
+        }
     }
 }
 
@@ -182,7 +229,19 @@ impl DerefMut for DependencyVariants {
     }
 }
 
-/// Represents an ordered list of dependencies.
+impl DependencyVariants {
+    /// Evaluate whether a package satisfies the requirements of this set of variants.
+    ///
+    /// This calls [SingleDependency.satisfies()] for each tracked variant. Returns true
+    /// if the given package satisfies any variant.
+    pub fn package_satisfies(&self, package: &str, version: &PackageVersion, arch: &str) -> bool {
+        self.0
+            .iter()
+            .any(|variant| variant.package_satisfies(package, version, arch))
+    }
+}
+
+/// Represents an ordered list of dependencies, delimited by commas (`,`).
 #[derive(Clone, Debug, PartialEq)]
 pub struct DependencyList {
     dependencies: Vec<DependencyVariants>,
@@ -227,6 +286,13 @@ impl DependencyList {
 
         Ok(Self { dependencies: els })
     }
+
+    /// Evaluate whether a package satisfies at least one expression in this list.
+    pub fn package_satisfies(&self, package: &str, version: &PackageVersion, arch: &str) -> bool {
+        self.dependencies
+            .iter()
+            .any(|variants| variants.package_satisfies(package, version, arch))
+    }
 }
 
 #[cfg(test)]
@@ -259,6 +325,175 @@ mod test {
                 architecture: None,
             }
         );
+
+        let dl = DependencyList::parse("libc [amd64]")?;
+        assert_eq!(dl.dependencies.len(), 1);
+        assert_eq!(dl.dependencies[0].0.len(), 1);
+        assert_eq!(
+            dl.dependencies[0].0[0],
+            SingleDependency {
+                package: "libc".into(),
+                dependency: None,
+                architecture: Some((false, "amd64".into())),
+            }
+        );
+
+        let dl = DependencyList::parse("libc [!amd64]")?;
+        assert_eq!(dl.dependencies.len(), 1);
+        assert_eq!(dl.dependencies[0].0.len(), 1);
+        assert_eq!(
+            dl.dependencies[0].0[0],
+            SingleDependency {
+                package: "libc".into(),
+                dependency: None,
+                architecture: Some((true, "amd64".into())),
+            }
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn satisfies_version_constraints() -> Result<()> {
+        let dl = DependencyList::parse("libc (= 2.4)")?;
+        assert!(dl.dependencies[0].package_satisfies(
+            "libc",
+            &PackageVersion::parse("2.4")?,
+            "ignored"
+        ));
+        assert!(!dl.dependencies[0].package_satisfies(
+            "libc",
+            &PackageVersion::parse("2.3")?,
+            "ignored"
+        ));
+        assert!(!dl.dependencies[0].package_satisfies(
+            "libc",
+            &PackageVersion::parse("2.5")?,
+            "ignored"
+        ));
+        assert!(!dl.dependencies[0].package_satisfies(
+            "other",
+            &PackageVersion::parse("2.4")?,
+            "ignored"
+        ));
+
+        let dl = DependencyList::parse("libc (<= 2.4)")?;
+        assert!(dl.dependencies[0].package_satisfies(
+            "libc",
+            &PackageVersion::parse("2.3")?,
+            "ignored"
+        ));
+        assert!(dl.dependencies[0].package_satisfies(
+            "libc",
+            &PackageVersion::parse("2.4")?,
+            "ignored"
+        ));
+        assert!(!dl.dependencies[0].package_satisfies(
+            "libc",
+            &PackageVersion::parse("2.5")?,
+            "ignored"
+        ));
+        assert!(!dl.dependencies[0].package_satisfies(
+            "other",
+            &PackageVersion::parse("2.4")?,
+            "ignored"
+        ));
+
+        let dl = DependencyList::parse("libc (>= 2.4)")?;
+        assert!(!dl.dependencies[0].package_satisfies(
+            "libc",
+            &PackageVersion::parse("2.3")?,
+            "ignored"
+        ));
+        assert!(dl.dependencies[0].package_satisfies(
+            "libc",
+            &PackageVersion::parse("2.4")?,
+            "ignored"
+        ));
+        assert!(dl.dependencies[0].package_satisfies(
+            "libc",
+            &PackageVersion::parse("2.5")?,
+            "ignored"
+        ));
+        assert!(!dl.dependencies[0].package_satisfies(
+            "other",
+            &PackageVersion::parse("2.4")?,
+            "ignored"
+        ));
+
+        let dl = DependencyList::parse("libc (<< 2.4)")?;
+        assert!(dl.dependencies[0].package_satisfies(
+            "libc",
+            &PackageVersion::parse("2.3")?,
+            "ignored"
+        ));
+        assert!(!dl.dependencies[0].package_satisfies(
+            "libc",
+            &PackageVersion::parse("2.4")?,
+            "ignored"
+        ));
+        assert!(!dl.dependencies[0].package_satisfies(
+            "libc",
+            &PackageVersion::parse("2.5")?,
+            "ignored"
+        ));
+        assert!(!dl.dependencies[0].package_satisfies(
+            "other",
+            &PackageVersion::parse("2.3")?,
+            "ignored"
+        ));
+
+        let dl = DependencyList::parse("libc (>> 2.4)")?;
+        assert!(!dl.dependencies[0].package_satisfies(
+            "libc",
+            &PackageVersion::parse("2.3")?,
+            "ignored"
+        ));
+        assert!(!dl.dependencies[0].package_satisfies(
+            "libc",
+            &PackageVersion::parse("2.4")?,
+            "ignored"
+        ));
+        assert!(dl.dependencies[0].package_satisfies(
+            "libc",
+            &PackageVersion::parse("2.5")?,
+            "ignored"
+        ));
+        assert!(!dl.dependencies[0].package_satisfies(
+            "other",
+            &PackageVersion::parse("2.5")?,
+            "ignored"
+        ));
+
+        Ok(())
+    }
+
+    #[test]
+    fn satisfies_architecture_constraints() -> Result<()> {
+        let dl = DependencyList::parse("libc [amd64]")?;
+
+        assert!(dl.dependencies[0].package_satisfies(
+            "libc",
+            &PackageVersion::parse("2.4")?,
+            "amd64"
+        ));
+        assert!(!dl.dependencies[0].package_satisfies(
+            "libc",
+            &PackageVersion::parse("2.3")?,
+            "x86"
+        ));
+
+        let dl = DependencyList::parse("libc [!amd64]")?;
+        assert!(!dl.dependencies[0].package_satisfies(
+            "libc",
+            &PackageVersion::parse("2.4")?,
+            "amd64"
+        ));
+        assert!(dl.dependencies[0].package_satisfies(
+            "libc",
+            &PackageVersion::parse("2.3")?,
+            "x86"
+        ));
 
         Ok(())
     }
