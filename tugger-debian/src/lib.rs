@@ -8,19 +8,11 @@ This crate defines pure Rust implementations of Debian packaging primitives.
 */
 
 pub mod binary_package_control;
-mod changelog;
-mod control;
+pub mod changelog;
+pub mod control;
 pub mod deb;
 pub mod dependency;
 pub mod error;
 pub mod package_version;
 pub mod pgp;
 pub mod repository;
-
-pub use {
-    changelog::{Changelog, ChangelogEntry},
-    control::{
-        ControlError, ControlField, ControlFieldValue, ControlFile, ControlParagraph,
-        ControlParagraphReader, SourceControl,
-    },
-};

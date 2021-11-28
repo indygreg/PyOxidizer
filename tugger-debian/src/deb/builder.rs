@@ -378,7 +378,7 @@ pub fn write_deb_tar<W: Write>(
 mod tests {
     use {
         super::*,
-        crate::ControlParagraph,
+        crate::control::ControlParagraph,
         anyhow::{anyhow, Result},
         std::path::PathBuf,
     };

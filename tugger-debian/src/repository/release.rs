@@ -6,8 +6,9 @@
 
 use {
     crate::{
-        pgp::MyHasher, repository::IndexFileCompression, ControlError, ControlField,
-        ControlParagraph, ControlParagraphReader,
+        control::{ControlError, ControlField, ControlParagraph, ControlParagraphReader},
+        pgp::MyHasher,
+        repository::IndexFileCompression,
     },
     chrono::{DateTime, TimeZone, Utc},
     mailparse::{dateparse, MailParseError},
