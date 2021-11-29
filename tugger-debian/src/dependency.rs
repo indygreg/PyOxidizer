@@ -264,7 +264,9 @@ impl Display for DependencyList {
 impl DependencyList {
     /// Parse a dependency list from a string.
     ///
-    /// A dependency list is a comma-delimited list of expressions.
+    /// A dependency list is a comma-delimited list of expressions. Each expression is a
+    /// `|` delimited list of expressions of the form
+    /// `package (version_relationship version) [arch]`.
     pub fn parse(s: &str) -> Result<Self> {
         let mut els = vec![];
 
@@ -292,6 +294,14 @@ impl DependencyList {
         self.dependencies
             .iter()
             .any(|variants| variants.package_satisfies(package, version, arch))
+    }
+
+    /// Obtain the individual requirements constituting this list of dependencies.
+    ///
+    /// Each requirement is itself a set of expressions to match against. The length of
+    /// this set is commonly 1.
+    pub fn requirements(&self) -> impl Iterator<Item = &DependencyVariants> {
+        self.dependencies.iter()
     }
 }
 

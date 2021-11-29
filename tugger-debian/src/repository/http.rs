@@ -5,6 +5,7 @@
 use {
     crate::{
         binary_package_control::BinaryPackageControlFile,
+        binary_package_list::BinaryPackageList,
         control::{ControlError, ControlParagraphAsyncReader},
         repository::{
             release::{ChecksumType, PackagesFileEntry, ReleaseError, ReleaseFile},
@@ -221,7 +222,7 @@ impl<'client> HttpReleaseClient<'client> {
         component: &str,
         arch: &str,
         is_installer: bool,
-    ) -> Result<Vec<BinaryPackageControlFile<'static>>, HttpError> {
+    ) -> Result<BinaryPackageList<'static>, HttpError> {
         let entry = self
             .release
             .find_packages_indices(
@@ -243,7 +244,7 @@ impl<'client> HttpReleaseClient<'client> {
                 .await?,
         ));
 
-        let mut res = vec![];
+        let mut res = BinaryPackageList::default();
 
         while let Some(paragraph) = reader.read_paragraph().await? {
             res.push(BinaryPackageControlFile::from(paragraph));
@@ -284,14 +285,14 @@ mod test {
         let packages = release.fetch_packages("main", "amd64", false).await?;
         assert_eq!(packages.len(), 58606);
 
-        let p = &packages[0];
+        let p = packages.iter().next().unwrap();
         assert_eq!(p.package()?, "0ad");
         assert_eq!(
             p.first_field_str("SHA256"),
             Some("610e9f9c41be18af516dd64a6dc1316dbfe1bb8989c52bafa556de9e381d3e29")
         );
 
-        let p = &packages[packages.len() - 1];
+        let p = packages.iter().last().unwrap();
         assert_eq!(p.package()?, "python3-zzzeeksphinx");
         assert_eq!(
             p.first_field_str("SHA256"),
@@ -299,7 +300,7 @@ mod test {
         );
 
         // Make sure dependency syntax parsing works.
-        for p in &packages {
+        for p in packages.iter() {
             p.version()?;
 
             if let Some(deps) = p.depends() {

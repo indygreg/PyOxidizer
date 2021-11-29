@@ -8,6 +8,7 @@ This crate defines pure Rust implementations of Debian packaging primitives.
 */
 
 pub mod binary_package_control;
+pub mod binary_package_list;
 pub mod changelog;
 pub mod control;
 pub mod deb;

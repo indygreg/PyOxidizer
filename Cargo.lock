@@ -3869,6 +3869,7 @@ dependencies = [
  "futures",
  "glob",
  "hex",
+ "indoc 1.0.3",
  "libflate",
  "mailparse",
  "md-5",
