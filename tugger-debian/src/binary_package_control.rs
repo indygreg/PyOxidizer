@@ -7,7 +7,7 @@
 use {
     crate::{
         control::{ControlField, ControlParagraph},
-        dependency::{DependencyError, DependencyList},
+        dependency::{DependencyError, DependencyList, PackageDependencyFields},
         package_version::{PackageVersion, VersionError},
     },
     std::{num::ParseIntError, str::FromStr},
@@ -170,5 +170,10 @@ impl<'a> BinaryPackageControlFile<'a> {
         self.paragraph
             .first_field_str("Pre-Depends")
             .map(|x| Ok(DependencyList::parse(x)?))
+    }
+
+    /// Obtain parsed values of all fields defining dependencies.
+    pub fn package_dependency_fields(&self) -> Result<PackageDependencyFields> {
+        Ok(PackageDependencyFields::from_paragraph(&self.paragraph)?)
     }
 }

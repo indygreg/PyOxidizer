@@ -8,7 +8,10 @@ See [https://www.debian.org/doc/debian-policy/ch-relationships.html] for the spe
  */
 
 use {
-    crate::package_version::{PackageVersion, VersionError},
+    crate::{
+        control::ControlParagraph,
+        package_version::{PackageVersion, VersionError},
+    },
     once_cell::sync::Lazy,
     regex::Regex,
     std::{
@@ -302,6 +305,96 @@ impl DependencyList {
     /// this set is commonly 1.
     pub fn requirements(&self) -> impl Iterator<Item = &DependencyVariants> {
         self.dependencies.iter()
+    }
+}
+
+/// Holds all fields related to package dependency metadata.
+///
+/// Instances of this type effectively describe the relationships between the package it
+/// describes and other packages.
+///
+/// See [https://www.debian.org/doc/debian-policy/ch-relationships.html] for a list of all the
+/// fields and what they mean.
+#[derive(Clone, Debug)]
+pub struct PackageDependencyFields {
+    /// `Depends`.
+    pub depends: Option<DependencyList>,
+
+    /// `Recommends`.
+    pub recommends: Option<DependencyList>,
+
+    /// `Suggests`.
+    pub suggests: Option<DependencyList>,
+
+    /// `Enhances`.
+    pub enhances: Option<DependencyList>,
+
+    /// `Pre-Depends`.
+    pub pre_depends: Option<DependencyList>,
+
+    /// `Breaks`.
+    pub breaks: Option<DependencyList>,
+
+    /// `Conflicts`.
+    pub conflicts: Option<DependencyList>,
+
+    /// `Provides`.
+    pub provides: Option<DependencyList>,
+
+    /// `Replaces`.
+    pub replaces: Option<DependencyList>,
+
+    /// `Build-Depends`.
+    pub build_depends: Option<DependencyList>,
+
+    /// `Build-Depends-Indep`.
+    pub build_depends_indep: Option<DependencyList>,
+
+    /// `Build-Depends-Arch`.
+    pub build_depends_arch: Option<DependencyList>,
+
+    /// `Build-Conflicts`.
+    pub build_conflicts: Option<DependencyList>,
+
+    /// `Build-Conflicts-Indep`.
+    pub build_conflicts_indep: Option<DependencyList>,
+
+    /// `Build-Conflicts-Arch`.
+    pub build_conflicts_arch: Option<DependencyList>,
+
+    /// `Built-Using`.
+    pub built_using: Option<DependencyList>,
+}
+
+impl PackageDependencyFields {
+    /// Construct an instance from a control paragraph.
+    pub fn from_paragraph(para: &ControlParagraph) -> Result<Self> {
+        let get_field = |field| -> Result<Option<DependencyList>> {
+            if let Some(value) = para.first_field_str(field) {
+                Ok(Some(DependencyList::parse(value)?))
+            } else {
+                Ok(None)
+            }
+        };
+
+        Ok(Self {
+            depends: get_field("Depends")?,
+            recommends: get_field("Recommends")?,
+            suggests: get_field("Suggests")?,
+            enhances: get_field("Enhances")?,
+            pre_depends: get_field("Pre-Depends")?,
+            breaks: get_field("Breaks")?,
+            conflicts: get_field("Conflicts")?,
+            provides: get_field("Provides")?,
+            replaces: get_field("Replaces")?,
+            build_depends: get_field("Build-Depends")?,
+            build_depends_indep: get_field("Build-Depends-Indep")?,
+            build_depends_arch: get_field("Build-Depends-Arch")?,
+            build_conflicts: get_field("Build-Conflicts")?,
+            build_conflicts_indep: get_field("Build-Conflicts-Indep")?,
+            build_conflicts_arch: get_field("Build-Conflicts-Arch")?,
+            built_using: get_field("Built-Using")?,
+        })
     }
 }
 

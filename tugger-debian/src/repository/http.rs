@@ -302,22 +302,7 @@ mod test {
         // Make sure dependency syntax parsing works.
         for p in packages.iter() {
             p.version()?;
-
-            if let Some(deps) = p.depends() {
-                deps?;
-            }
-            if let Some(deps) = p.recommends() {
-                deps?;
-            }
-            if let Some(deps) = p.suggests() {
-                deps?;
-            }
-            if let Some(deps) = p.enhances() {
-                deps?;
-            }
-            if let Some(deps) = p.pre_depends() {
-                deps?;
-            }
+            p.package_dependency_fields()?;
         }
 
         Ok(())
