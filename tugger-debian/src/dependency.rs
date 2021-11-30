@@ -4,7 +4,7 @@
 
 /*! Debian package dependency syntax handling.
 
-See [https://www.debian.org/doc/debian-policy/ch-relationships.html] for the specification.
+See <https://www.debian.org/doc/debian-policy/ch-relationships.html> for the specification.
  */
 
 use {
@@ -379,7 +379,7 @@ impl DependencyList {
 /// Describes the dependency relationship for a binary package.
 ///
 /// Variants correspond to fields in binary control file, as described at
-/// [https://www.debian.org/doc/debian-policy/ch-relationships.html#binary-dependencies-depends-recommends-suggests-enhances-pre-depends].
+/// <https://www.debian.org/doc/debian-policy/ch-relationships.html#binary-dependencies-depends-recommends-suggests-enhances-pre-depends>.
 #[derive(Clone, Copy, Debug)]
 pub enum BinaryDependency {
     Depends,
@@ -422,7 +422,7 @@ impl BinaryDependency {
 /// Instances of this type effectively describe the relationships between the package it
 /// describes and other packages.
 ///
-/// See [https://www.debian.org/doc/debian-policy/ch-relationships.html] for a list of all the
+/// See <https://www.debian.org/doc/debian-policy/ch-relationships.html> for a list of all the
 /// fields and what they mean.
 #[derive(Clone, Debug)]
 pub struct PackageDependencyFields {

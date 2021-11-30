@@ -129,7 +129,7 @@ enum ReaderState {
 
 /// A reader capable of extracting PGP cleartext signatures as defined by RFC 4880 Section 7.
 ///
-/// https://datatracker.ietf.org/doc/html/rfc4880.html#section-7.
+/// <https://datatracker.ietf.org/doc/html/rfc4880.html#section-7>.
 ///
 /// The source reader is expected to initially emit a
 /// `'-----BEGIN PGP SIGNED MESSAGE-----` line.

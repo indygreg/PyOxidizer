@@ -5,7 +5,7 @@
 /*! Debian repository primitives.
 
 A Debian repository is a collection of files holding packages and other
-support primitives. See [https://wiki.debian.org/DebianRepository/Format]
+support primitives. See <https://wiki.debian.org/DebianRepository/Format>
 for the canonical definition of a Debian repository.
 */
 

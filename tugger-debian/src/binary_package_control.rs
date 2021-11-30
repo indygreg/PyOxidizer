@@ -33,7 +33,7 @@ pub type Result<T> = std::result::Result<T, BinaryPackageControlError>;
 
 /// A Debian binary package control file.
 ///
-/// See [https://www.debian.org/doc/debian-policy/ch-controlfields.html#binary-package-control-files-debian-control].
+/// See <https://www.debian.org/doc/debian-policy/ch-controlfields.html#binary-package-control-files-debian-control>.
 ///
 /// Binary package control files are defined by a single paragraph with well-defined
 /// fields. This type is a low-level wrapper around an inner [ControlParagraph].

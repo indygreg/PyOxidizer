@@ -4,7 +4,7 @@
 
 /*! Interfaces for .deb package files.
 
-The .deb file specification lives at https://manpages.debian.org/unstable/dpkg-dev/deb.5.en.html.
+The .deb file specification lives at <https://manpages.debian.org/unstable/dpkg-dev/deb.5.en.html>.
 */
 
 use {std::io::Read, thiserror::Error, tugger_file_manifest::FileManifestError};

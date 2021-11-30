@@ -35,7 +35,7 @@ pub type Result<T> = std::result::Result<T, VersionError>;
 ///
 /// Debian package versions consist of multiple sub-components and have rules about
 /// sorting. The semantics are defined at
-/// [https://www.debian.org/doc/debian-policy/ch-controlfields.html#version]. This type
+/// <https://www.debian.org/doc/debian-policy/ch-controlfields.html#version>. This type
 /// attempts to implement all the details.
 ///
 /// The concise version is the format is `[epoch:]upstream_version[-debian_revision]`

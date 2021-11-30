@@ -4,7 +4,7 @@
 
 /*! Defines primitives in control files.
 
-See https://www.debian.org/doc/debian-policy/ch-controlfields.html
+See <https://www.debian.org/doc/debian-policy/ch-controlfields.html>
 for the canonical source of truth for how control files work.
 */
 
@@ -555,7 +555,7 @@ impl<'a> ControlFile<'a> {
 
 /// Represents a `debian/control` file.
 ///
-/// Specified at https://www.debian.org/doc/debian-policy/ch-controlfields.html#source-package-control-files-debian-control.
+/// Specified at <https://www.debian.org/doc/debian-policy/ch-controlfields.html#source-package-control-files-debian-control>.
 #[derive(Default)]
 pub struct SourceControl<'a> {
     general: ControlParagraph<'a>,

@@ -4,7 +4,7 @@
 
 /*! Defines types representing debian/changelog files.
 
-See https://www.debian.org/doc/debian-policy/ch-source.html#debian-changelog-debian-changelog
+See <https://www.debian.org/doc/debian-policy/ch-source.html#debian-changelog-debian-changelog>
 for the specification.
 */
 
