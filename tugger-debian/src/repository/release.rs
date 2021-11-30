@@ -91,6 +91,36 @@ impl ChecksumType {
     }
 }
 
+/// A typed digest in a release file.
+#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
+pub enum ReleaseFileDigest<'a> {
+    Md5(&'a str),
+    Sha1(&'a str),
+    Sha256(&'a str),
+}
+
+impl<'a> ReleaseFileDigest<'a> {
+    /// Create a new instance given the checksum type and a digest value.
+    pub fn new(checksum: ChecksumType, value: &'a str) -> Self {
+        match checksum {
+            ChecksumType::Md5 => Self::Md5(value),
+            ChecksumType::Sha1 => Self::Sha1(value),
+            ChecksumType::Sha256 => Self::Sha256(value),
+        }
+    }
+
+    /// The name of the `Release` paragraph field from which this digest came.
+    ///
+    /// Is also the `by-hash` path component.
+    pub fn field_name(&self) -> &'static str {
+        match self {
+            Self::Md5(_) => ChecksumType::Md5.field_name(),
+            Self::Sha1(_) => ChecksumType::Sha1.field_name(),
+            Self::Sha256(_) => ChecksumType::Sha256.field_name(),
+        }
+    }
+}
+
 /// An entry for a file in a parsed `Release` file.
 ///
 /// Instances correspond to a line in a `MD5Sum`, `SHA1`, or `SHA256` field.
@@ -100,7 +130,7 @@ pub struct ReleaseFileEntry<'a> {
     pub path: &'a str,
 
     /// The hex digest of this file.
-    pub digest: &'a str,
+    pub digest: ReleaseFileDigest<'a>,
 
     /// The size of the file in bytes.
     pub size: usize,
@@ -411,7 +441,7 @@ impl<'a> ReleaseFile<'a> {
             .paragraph
             .first_field_iter_values(checksum.field_name())
         {
-            Some(Box::new(iter.map(|v| {
+            Some(Box::new(iter.map(move |v| {
                 // Values are of form: <digest> <size> <path>
 
                 let mut parts = v.split_ascii_whitespace();
@@ -425,6 +455,7 @@ impl<'a> ReleaseFile<'a> {
                     return Err(ReleaseError::PathWithSpaces(v.to_string()));
                 }
 
+                let digest = ReleaseFileDigest::new(checksum, digest);
                 let size = usize::from_str(size)?;
 
                 Ok(ReleaseFileEntry { path, digest, size })
@@ -573,7 +604,7 @@ mod test {
             entries[0],
             ReleaseFileEntry {
                 path: "contrib/Contents-all",
-                digest: "7fdf4db15250af5368cc52a91e8edbce",
+                digest: ReleaseFileDigest::Md5("7fdf4db15250af5368cc52a91e8edbce"),
                 size: 738242,
             }
         );
@@ -581,7 +612,7 @@ mod test {
             entries[1],
             ReleaseFileEntry {
                 path: "contrib/Contents-all.gz",
-                digest: "cbd7bc4d3eb517ac2b22f929dfc07b47",
+                digest: ReleaseFileDigest::Md5("cbd7bc4d3eb517ac2b22f929dfc07b47"),
                 size: 57319,
             }
         );
@@ -589,7 +620,7 @@ mod test {
             entries[599],
             ReleaseFileEntry {
                 path: "non-free/source/Sources.xz",
-                digest: "e3830f6fc5a946b5a5b46e8277e1d86f",
+                digest: ReleaseFileDigest::Md5("e3830f6fc5a946b5a5b46e8277e1d86f"),
                 size: 80488,
             }
         );
@@ -605,7 +636,9 @@ mod test {
             entries[0],
             ReleaseFileEntry {
                 path: "contrib/Contents-all",
-                digest: "3957f28db16e3f28c7b34ae84f1c929c567de6970f3f1b95dac9b498dd80fe63",
+                digest: ReleaseFileDigest::Sha256(
+                    "3957f28db16e3f28c7b34ae84f1c929c567de6970f3f1b95dac9b498dd80fe63"
+                ),
                 size: 738242,
             }
         );
@@ -613,14 +646,18 @@ mod test {
             entries[1],
             ReleaseFileEntry {
                 path: "contrib/Contents-all.gz",
-                digest: "3e9a121d599b56c08bc8f144e4830807c77c29d7114316d6984ba54695d3db7b",
+                digest: ReleaseFileDigest::Sha256(
+                    "3e9a121d599b56c08bc8f144e4830807c77c29d7114316d6984ba54695d3db7b"
+                ),
                 size: 57319,
             }
         );
         assert_eq!(
             entries[599],
             ReleaseFileEntry {
-                digest: "30f3f996941badb983141e3b29b2ed5941d28cf81f9b5f600bb48f782d386fc7",
+                digest: ReleaseFileDigest::Sha256(
+                    "30f3f996941badb983141e3b29b2ed5941d28cf81f9b5f600bb48f782d386fc7"
+                ),
                 size: 80488,
                 path: "non-free/source/Sources.xz",
             }
@@ -637,7 +674,9 @@ mod test {
             ContentsFileEntry {
                 entry: ReleaseFileEntry {
                     path: "contrib/Contents-all",
-                    digest: "3957f28db16e3f28c7b34ae84f1c929c567de6970f3f1b95dac9b498dd80fe63",
+                    digest: ReleaseFileDigest::Sha256(
+                        "3957f28db16e3f28c7b34ae84f1c929c567de6970f3f1b95dac9b498dd80fe63"
+                    ),
                     size: 738242,
                 },
                 component: "contrib".into(),
@@ -651,7 +690,9 @@ mod test {
             ContentsFileEntry {
                 entry: ReleaseFileEntry {
                     path: "contrib/Contents-all.gz",
-                    digest: "3e9a121d599b56c08bc8f144e4830807c77c29d7114316d6984ba54695d3db7b",
+                    digest: ReleaseFileDigest::Sha256(
+                        "3e9a121d599b56c08bc8f144e4830807c77c29d7114316d6984ba54695d3db7b"
+                    ),
                     size: 57319,
                 },
                 component: "contrib".into(),
@@ -665,7 +706,9 @@ mod test {
             ContentsFileEntry {
                 entry: ReleaseFileEntry {
                     path: "contrib/Contents-udeb-amd64",
-                    digest: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                    digest: ReleaseFileDigest::Sha256(
+                        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                    ),
                     size: 0,
                 },
                 component: "contrib".into(),
@@ -686,7 +729,9 @@ mod test {
             PackagesFileEntry {
                 entry: ReleaseFileEntry {
                     path: "contrib/binary-all/Packages",
-                    digest: "48cfe101cd84f16baf720b99e8f2ff89fd7e063553966d8536b472677acb82f0",
+                    digest: ReleaseFileDigest::Sha256(
+                        "48cfe101cd84f16baf720b99e8f2ff89fd7e063553966d8536b472677acb82f0"
+                    ),
                     size: 103223,
                 },
                 component: "contrib".into(),
@@ -700,7 +745,9 @@ mod test {
             PackagesFileEntry {
                 entry: ReleaseFileEntry {
                     path: "contrib/binary-all/Packages.gz",
-                    digest: "86057fcd3eff667ec8e3fbabb2a75e229f5e99f39ace67ff0db4a8509d0707e4",
+                    digest: ReleaseFileDigest::Sha256(
+                        "86057fcd3eff667ec8e3fbabb2a75e229f5e99f39ace67ff0db4a8509d0707e4"
+                    ),
                     size: 27334,
                 },
                 component: "contrib".into(),
@@ -714,7 +761,9 @@ mod test {
             PackagesFileEntry {
                 entry: ReleaseFileEntry {
                     path: "contrib/binary-all/Packages.xz",
-                    digest: "706c840235798e098d4d6013d1dabbc967f894d0ffa02c92ac959dcea85ddf54",
+                    digest: ReleaseFileDigest::Sha256(
+                        "706c840235798e098d4d6013d1dabbc967f894d0ffa02c92ac959dcea85ddf54"
+                    ),
                     size: 23912,
                 },
                 component: "contrib".into(),
@@ -735,7 +784,9 @@ mod test {
             PackagesFileEntry {
                 entry: ReleaseFileEntry {
                     path: "contrib/debian-installer/binary-all/Packages",
-                    digest: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                    digest: ReleaseFileDigest::Sha256(
+                        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                    ),
                     size: 0,
                 },
                 component: "contrib".into(),
