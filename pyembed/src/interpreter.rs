@@ -190,16 +190,15 @@ impl<'interpreter, 'resources> MainPythonInterpreter<'interpreter, 'resources> {
         // importlib. And if the custom importlib bytecode was registered above,
         // our extension module will get imported and initialized.
         let status = unsafe { pyffi::_Py_InitializeMain() };
-
-        let gil = Python::acquire_gil();
-        let py = gil.python();
-
         if unsafe { pyffi::PyStatus_Exception(status) } != 0 {
             return Err(NewInterpreterError::new_from_pystatus(
                 &status,
                 "initializing Python main",
             ));
         }
+
+        let gil = Python::acquire_gil();
+        let py = gil.python();
 
         let sys_module = py
             .import("sys")
