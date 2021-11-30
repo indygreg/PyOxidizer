@@ -54,7 +54,7 @@ pub static RE_DEPENDENCY: Lazy<Regex> = Lazy::new(|| {
             # Optional negation operator.
             (?P<arch_negate>!)?
             \s*
-            # The architecture. May have spaces.
+            # The architecture. May have spaces to delimit multiple values.
             (?P<arch>[^\]]+)
         \])?
         "#,
@@ -112,7 +112,7 @@ pub struct SingleDependency {
     /// Package the dependency is on.
     pub package: String,
     pub version_constraint: Option<DependencyVersionConstraint>,
-    pub architecture: Option<(bool, String)>,
+    pub architectures: Option<(bool, Vec<String>)>,
 }
 
 impl Display for SingleDependency {
@@ -121,8 +121,8 @@ impl Display for SingleDependency {
         if let Some(constraint) = &self.version_constraint {
             write!(f, " ({} {})", constraint.relationship, constraint.version)?;
         }
-        if let Some((negate, arch)) = &self.architecture {
-            write!(f, " [{}{}]", if *negate { "!" } else { "" }, arch)?;
+        if let Some((negate, arch)) = &self.architectures {
+            write!(f, " [{}{}]", if *negate { "!" } else { "" }, arch.join(" "))?;
         }
 
         Ok(())
@@ -158,16 +158,28 @@ impl SingleDependency {
             _ => None,
         };
 
-        let architecture = match (caps.name("arch_negate"), caps.name("arch")) {
-            (Some(_), Some(arch)) => Some((true, arch.as_str().to_string())),
-            (None, Some(arch)) => Some((false, arch.as_str().to_string())),
+        let architectures = match (caps.name("arch_negate"), caps.name("arch")) {
+            (Some(_), Some(arch)) => Some((
+                true,
+                arch.as_str()
+                    .split_ascii_whitespace()
+                    .map(|x| x.to_string())
+                    .collect::<Vec<_>>(),
+            )),
+            (None, Some(arch)) => Some((
+                false,
+                arch.as_str()
+                    .split_ascii_whitespace()
+                    .map(|x| x.to_string())
+                    .collect::<Vec<_>>(),
+            )),
             _ => None,
         };
 
         Ok(Self {
             package,
             version_constraint: dependency,
-            architecture,
+            architectures,
         })
     }
 
@@ -181,9 +193,11 @@ impl SingleDependency {
         architecture: &str,
     ) -> bool {
         if self.package == package {
-            if let Some((negate, arch)) = &self.architecture {
+            if let Some((negate, arches)) = &self.architectures {
+                let contains = arches.iter().any(|x| x == architecture);
+
                 // Requesting an arch mismatch.
-                if (*negate && arch == architecture) || (!*negate && arch != architecture) {
+                if (*negate && contains) || (!*negate && !contains) {
                     return false;
                 }
             }
@@ -537,7 +551,7 @@ mod test {
                     relationship: VersionRelationship::LaterOrEqual,
                     version: PackageVersion::parse("2.4").unwrap()
                 }),
-                architecture: None,
+                architectures: None,
             }
         );
         assert_eq!(
@@ -545,7 +559,7 @@ mod test {
             SingleDependency {
                 package: "libx11-6".into(),
                 version_constraint: None,
-                architecture: None,
+                architectures: None,
             }
         );
 
@@ -557,11 +571,11 @@ mod test {
             SingleDependency {
                 package: "libc".into(),
                 version_constraint: None,
-                architecture: Some((false, "amd64".into())),
+                architectures: Some((false, vec!["amd64".into()])),
             }
         );
 
-        let dl = DependencyList::parse("libc [!amd64]")?;
+        let dl = DependencyList::parse("libc [!amd64 i386]")?;
         assert_eq!(dl.dependencies.len(), 1);
         assert_eq!(dl.dependencies[0].0.len(), 1);
         assert_eq!(
@@ -569,7 +583,7 @@ mod test {
             SingleDependency {
                 package: "libc".into(),
                 version_constraint: None,
-                architecture: Some((true, "amd64".into())),
+                architectures: Some((true, vec!["amd64".into(), "i386".into()])),
             }
         );
 
@@ -694,7 +708,6 @@ mod test {
     #[test]
     fn satisfies_architecture_constraints() -> Result<()> {
         let dl = DependencyList::parse("libc [amd64]")?;
-
         assert!(dl.dependencies[0].package_satisfies(
             "libc",
             &PackageVersion::parse("2.4")?,
@@ -704,6 +717,23 @@ mod test {
             "libc",
             &PackageVersion::parse("2.3")?,
             "x86"
+        ));
+
+        let dl = DependencyList::parse("libc [amd64 i386]")?;
+        assert!(dl.dependencies[0].package_satisfies(
+            "libc",
+            &PackageVersion::parse("2.4")?,
+            "amd64"
+        ));
+        assert!(dl.dependencies[0].package_satisfies(
+            "libc",
+            &PackageVersion::parse("2.3")?,
+            "i386"
+        ));
+        assert!(!dl.dependencies[0].package_satisfies(
+            "libc",
+            &PackageVersion::parse("2.3")?,
+            "arm64"
         ));
 
         let dl = DependencyList::parse("libc [!amd64]")?;
@@ -716,6 +746,23 @@ mod test {
             "libc",
             &PackageVersion::parse("2.3")?,
             "x86"
+        ));
+
+        let dl = DependencyList::parse("libc [!amd64 i386]")?;
+        assert!(!dl.dependencies[0].package_satisfies(
+            "libc",
+            &PackageVersion::parse("2.4")?,
+            "amd64"
+        ));
+        assert!(!dl.dependencies[0].package_satisfies(
+            "libc",
+            &PackageVersion::parse("2.3")?,
+            "i386"
+        ));
+        assert!(dl.dependencies[0].package_satisfies(
+            "libc",
+            &PackageVersion::parse("2.3")?,
+            "arm64"
         ));
 
         Ok(())
