@@ -43,6 +43,9 @@ Bug Fixes
   ``spawn``. This resolves a ``TypeError: spawn_main() missing 1 required
   positional argument: 'pipe_handle'`` run-time error that would occur in this
   configuration. (#483)
+* The ``pyembed`` crate better handles errors during interpreter initialization.
+  This fixes a regression to the error handling introduced by the port to PyO3
+  in version 0.18.0. (#481)
 
 New Features
 ^^^^^^^^^^^^
