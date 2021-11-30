@@ -119,6 +119,15 @@ impl<'a> ReleaseFileDigest<'a> {
             Self::Sha256(_) => ChecksumType::Sha256.field_name(),
         }
     }
+
+    /// Obtain the tracked digest value.
+    pub fn digest(&self) -> &'a str {
+        match self {
+            Self::Md5(v) => v,
+            Self::Sha1(v) => v,
+            Self::Sha256(v) => v,
+        }
+    }
 }
 
 /// An entry for a file in a parsed `Release` file.
@@ -134,6 +143,26 @@ pub struct ReleaseFileEntry<'a> {
 
     /// The size of the file in bytes.
     pub size: usize,
+}
+
+impl<'a> ReleaseFileEntry<'a> {
+    /// Obtain the `by-hash` path variant for this entry.
+    pub fn by_hash_path(&self) -> String {
+        if let Some((prefix, _)) = self.path.rsplit_once('/') {
+            format!(
+                "{}/by-hash/{}/{}",
+                prefix,
+                self.digest.field_name(),
+                self.digest.digest()
+            )
+        } else {
+            format!(
+                "by-hash/{}/{}",
+                self.digest.field_name(),
+                self.digest.digest()
+            )
+        }
+    }
 }
 
 /// A type of [ReleaseFileEntry] that describes a `Contents` file.
@@ -609,6 +638,10 @@ mod test {
             }
         );
         assert_eq!(
+            entries[0].by_hash_path(),
+            "contrib/by-hash/MD5Sum/7fdf4db15250af5368cc52a91e8edbce"
+        );
+        assert_eq!(
             entries[1],
             ReleaseFileEntry {
                 path: "contrib/Contents-all.gz",
@@ -617,12 +650,20 @@ mod test {
             }
         );
         assert_eq!(
+            entries[1].by_hash_path(),
+            "contrib/by-hash/MD5Sum/cbd7bc4d3eb517ac2b22f929dfc07b47"
+        );
+        assert_eq!(
             entries[599],
             ReleaseFileEntry {
                 path: "non-free/source/Sources.xz",
                 digest: ReleaseFileDigest::Md5("e3830f6fc5a946b5a5b46e8277e1d86f"),
                 size: 80488,
             }
+        );
+        assert_eq!(
+            entries[599].by_hash_path(),
+            "non-free/source/by-hash/MD5Sum/e3830f6fc5a946b5a5b46e8277e1d86f"
         );
 
         assert!(release.iter_index_files(ChecksumType::Sha1).is_none());
@@ -642,6 +683,7 @@ mod test {
                 size: 738242,
             }
         );
+        assert_eq!(entries[0].by_hash_path(), "contrib/by-hash/SHA256/3957f28db16e3f28c7b34ae84f1c929c567de6970f3f1b95dac9b498dd80fe63");
         assert_eq!(
             entries[1],
             ReleaseFileEntry {
@@ -652,6 +694,7 @@ mod test {
                 size: 57319,
             }
         );
+        assert_eq!(entries[1].by_hash_path(), "contrib/by-hash/SHA256/3e9a121d599b56c08bc8f144e4830807c77c29d7114316d6984ba54695d3db7b");
         assert_eq!(
             entries[599],
             ReleaseFileEntry {
@@ -662,6 +705,7 @@ mod test {
                 path: "non-free/source/Sources.xz",
             }
         );
+        assert_eq!(entries[599].by_hash_path(), "non-free/source/by-hash/SHA256/30f3f996941badb983141e3b29b2ed5941d28cf81f9b5f600bb48f782d386fc7");
 
         let contents = release
             .iter_components_indices(ChecksumType::Sha256)

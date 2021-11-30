@@ -280,13 +280,18 @@ impl<'client> HttpReleaseClient<'client> {
                 is_installer,
             )
             .ok_or(HttpError::PackagesIndicesEntryNotFound)?;
-        let path = entry.entry.path;
+
+        let path = if self.release.acquire_by_hash().unwrap_or_default() {
+            entry.entry.by_hash_path()
+        } else {
+            entry.entry.path.to_string()
+        };
 
         // TODO perform digest verification.
         // TODO make this stream output.
 
         let mut reader = ControlParagraphAsyncReader::new(futures::io::BufReader::new(
-            self.get_path_reader(path, entry.compression).await?,
+            self.get_path_reader(&path, entry.compression).await?,
         ));
 
         let mut res = BinaryPackageList::default();
