@@ -13,6 +13,7 @@ pub mod changelog;
 pub mod control;
 pub mod deb;
 pub mod dependency;
+pub mod dependency_resolution;
 pub mod error;
 pub mod package_version;
 pub mod pgp;

@@ -18,6 +18,7 @@ use {
         cmp::Ordering,
         fmt::{Display, Formatter},
         ops::{Deref, DerefMut},
+        str::FromStr,
     },
     thiserror::Error,
 };
@@ -69,6 +70,9 @@ pub enum DependencyError {
 
     #[error("version parsing error: {0:?}")]
     Version(#[from] VersionError),
+
+    #[error("unknown binary dependency field: {0}")]
+    UnknownBinaryDependencyField(String),
 }
 
 /// Result type for dependency handling.
@@ -95,20 +99,27 @@ impl Display for VersionRelationship {
     }
 }
 
+/// Represents a version constraint on a given package.
+#[derive(Clone, Debug, PartialEq)]
+pub struct DependencyVersionConstraint {
+    pub relationship: VersionRelationship,
+    pub version: PackageVersion,
+}
+
 /// A dependency of a package.
 #[derive(Clone, Debug, PartialEq)]
 pub struct SingleDependency {
     /// Package the dependency is on.
     pub package: String,
-    pub dependency: Option<(VersionRelationship, PackageVersion)>,
+    pub version_constraint: Option<DependencyVersionConstraint>,
     pub architecture: Option<(bool, String)>,
 }
 
 impl Display for SingleDependency {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         write!(f, "{}", self.package)?;
-        if let Some((rel, version)) = &self.dependency {
-            write!(f, " ({} {})", rel, version)?;
+        if let Some(constraint) = &self.version_constraint {
+            write!(f, " ({} {})", constraint.relationship, constraint.version)?;
         }
         if let Some((negate, arch)) = &self.architecture {
             write!(f, " [{}{}]", if *negate { "!" } else { "" }, arch)?;
@@ -128,7 +139,7 @@ impl SingleDependency {
         let package = caps["package"].to_string();
         let dependency = match (caps.name("relop"), caps.name("version")) {
             (Some(relop), Some(version)) => {
-                let relop = match relop.as_str() {
+                let relationship = match relop.as_str() {
                     "<<" => VersionRelationship::StrictlyEarlier,
                     "<=" => VersionRelationship::EarlierOrEqual,
                     "=" => VersionRelationship::ExactlyEqual,
@@ -139,7 +150,10 @@ impl SingleDependency {
 
                 let version = PackageVersion::parse(version.as_str())?;
 
-                Some((relop, version))
+                Some(DependencyVersionConstraint {
+                    relationship,
+                    version,
+                })
             }
             _ => None,
         };
@@ -152,7 +166,7 @@ impl SingleDependency {
 
         Ok(Self {
             package,
-            dependency,
+            version_constraint: dependency,
             architecture,
         })
     }
@@ -175,9 +189,9 @@ impl SingleDependency {
             }
 
             // Package and arch requirements match. Go on to version compare.
-            if let Some((wanted_relationship, wanted_version)) = &self.dependency {
+            if let Some(constaint) = &self.version_constraint {
                 matches!(
-                    (version.cmp(wanted_version), *wanted_relationship),
+                    (version.cmp(&constaint.version), constaint.relationship),
                     (
                         Ordering::Equal,
                         VersionRelationship::ExactlyEqual
@@ -193,6 +207,60 @@ impl SingleDependency {
                 )
             } else {
                 // No version constraint means yes.
+                true
+            }
+        } else {
+            false
+        }
+    }
+
+    /// Whether a package satisfies a virtual package constraint.
+    ///
+    /// These are processed a bit differently in that architecture doesn't come into play and
+    /// version constraints in the source package are optional.
+    pub fn package_satisfies_virtual(
+        &self,
+        package: &str,
+        provides: Option<&DependencyVersionConstraint>,
+    ) -> bool {
+        if self.package == package {
+            // If we don't provide a constraint, all provided versions match.
+            // If the incoming constraint isn't defined, it matches all our constraints.
+            // In either case, all variants other than (Some, Some) satisfy the requirements.
+            if let (Some(wanted_constraint), Some(provides)) =
+                (&self.version_constraint.as_ref(), provides)
+            {
+                matches!(
+                    (
+                        provides.version.cmp(&wanted_constraint.version),
+                        wanted_constraint.relationship,
+                        provides.relationship,
+                    ),
+                    // If provided versions are equal, we satisfy if our constraint contains equal
+                    // and equal is provided.
+                    (
+                        Ordering::Equal,
+                        VersionRelationship::ExactlyEqual
+                        | VersionRelationship::LaterOrEqual
+                        | VersionRelationship::EarlierOrEqual,
+                        VersionRelationship::ExactlyEqual
+                        | VersionRelationship::LaterOrEqual
+                        | VersionRelationship::EarlierOrEqual,
+                    )
+                |
+                    // TODO this is probably subtly wrong. Add tests!
+                    (
+                        Ordering::Less,
+                        VersionRelationship::EarlierOrEqual | VersionRelationship::StrictlyEarlier,
+                        VersionRelationship::EarlierOrEqual | VersionRelationship::StrictlyEarlier,
+                    ) |
+                    (
+                        Ordering::Greater,
+                        VersionRelationship::LaterOrEqual | VersionRelationship::StrictlyLater,
+                        VersionRelationship::LaterOrEqual | VersionRelationship::StrictlyLater,
+                    )
+                )
+            } else {
                 true
             }
         } else {
@@ -308,6 +376,47 @@ impl DependencyList {
     }
 }
 
+/// Describes the dependency relationship for a binary package.
+///
+/// Variants correspond to fields in binary control file, as described at
+/// [https://www.debian.org/doc/debian-policy/ch-relationships.html#binary-dependencies-depends-recommends-suggests-enhances-pre-depends].
+#[derive(Clone, Copy, Debug)]
+pub enum BinaryDependency {
+    Depends,
+    Recommends,
+    Suggests,
+    Enhances,
+    PreDepends,
+}
+
+impl FromStr for BinaryDependency {
+    type Err = DependencyError;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        match s {
+            "Depends" => Ok(Self::Depends),
+            "Recommends" => Ok(Self::Recommends),
+            "Suggests" => Ok(Self::Suggests),
+            "Enhances" => Ok(Self::Enhances),
+            "Pre-Depends" => Ok(Self::PreDepends),
+            _ => Err(Self::Err::UnknownBinaryDependencyField(s.to_string())),
+        }
+    }
+}
+
+impl BinaryDependency {
+    /// Obtain all variants of this enum.
+    pub fn values() -> &'static [Self] {
+        &[
+            Self::Depends,
+            Self::Recommends,
+            Self::Suggests,
+            Self::Enhances,
+            Self::PreDepends,
+        ]
+    }
+}
+
 /// Holds all fields related to package dependency metadata.
 ///
 /// Instances of this type effectively describe the relationships between the package it
@@ -396,6 +505,17 @@ impl PackageDependencyFields {
             built_using: get_field("Built-Using")?,
         })
     }
+
+    /// Resolve the value of a given [BinaryDependency] field.
+    pub fn binary_dependency(&self, field: BinaryDependency) -> Option<&DependencyList> {
+        match field {
+            BinaryDependency::Depends => self.depends.as_ref(),
+            BinaryDependency::Recommends => self.recommends.as_ref(),
+            BinaryDependency::Suggests => self.suggests.as_ref(),
+            BinaryDependency::Enhances => self.enhances.as_ref(),
+            BinaryDependency::PreDepends => self.pre_depends.as_ref(),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -413,10 +533,10 @@ mod test {
             dl.dependencies[0].0[0],
             SingleDependency {
                 package: "libc6".into(),
-                dependency: Some((
-                    VersionRelationship::LaterOrEqual,
-                    PackageVersion::parse("2.4").unwrap(),
-                )),
+                version_constraint: Some(DependencyVersionConstraint {
+                    relationship: VersionRelationship::LaterOrEqual,
+                    version: PackageVersion::parse("2.4").unwrap()
+                }),
                 architecture: None,
             }
         );
@@ -424,7 +544,7 @@ mod test {
             dl.dependencies[1].0[0],
             SingleDependency {
                 package: "libx11-6".into(),
-                dependency: None,
+                version_constraint: None,
                 architecture: None,
             }
         );
@@ -436,7 +556,7 @@ mod test {
             dl.dependencies[0].0[0],
             SingleDependency {
                 package: "libc".into(),
-                dependency: None,
+                version_constraint: None,
                 architecture: Some((false, "amd64".into())),
             }
         );
@@ -448,7 +568,7 @@ mod test {
             dl.dependencies[0].0[0],
             SingleDependency {
                 package: "libc".into(),
-                dependency: None,
+                version_constraint: None,
                 architecture: Some((true, "amd64".into())),
             }
         );

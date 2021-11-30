@@ -271,7 +271,12 @@ impl<'client> HttpReleaseClient<'client> {
 
 #[cfg(test)]
 mod test {
-    use {super::*, crate::error::Result};
+    use {
+        super::*,
+        crate::{
+            dependency::BinaryDependency, dependency_resolution::DependencyResolver, error::Result,
+        },
+    };
 
     const BULLSEYE_URL: &str =
         "http://snapshot.debian.org/archive/debian/20211120T085721Z/dists/bullseye/";
@@ -300,9 +305,13 @@ mod test {
         );
 
         // Make sure dependency syntax parsing works.
+        let mut resolver = DependencyResolver::default();
+        resolver.load_binary_packages(packages.iter()).unwrap();
+
         for p in packages.iter() {
-            p.version()?;
-            p.package_dependency_fields()?;
+            resolver
+                .find_direct_binary_file_dependencies(p, BinaryDependency::Depends)
+                .unwrap();
         }
 
         Ok(())

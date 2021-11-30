@@ -8,7 +8,6 @@ use {
     crate::{
         binary_package_control::{BinaryPackageControlError, BinaryPackageControlFile},
         control::ControlError,
-        dependency::{DependencyVariants, SingleDependency},
     },
     std::ops::{Deref, DerefMut},
     thiserror::Error,
@@ -59,46 +58,6 @@ impl<'a> BinaryPackageList<'a> {
         self.packages
             .iter()
             .filter(move |cf| matches!(cf.package(), Ok(name) if name == package))
-    }
-
-    /// Find all packages satisfying a given dependency constraint.
-    ///
-    /// The order of the returned packages is not specified. All packages matching the
-    /// given constraint will be returned.
-    ///
-    /// This only resolves direct dependencies.
-    pub fn find_packages_satisfying_dependency_constraint(
-        &self,
-        dependency: SingleDependency,
-    ) -> impl Iterator<Item = &BinaryPackageControlFile<'a>> {
-        self.packages.iter().filter(move |cf| {
-            match (cf.package(), cf.version(), cf.architecture()) {
-                (Ok(package), Ok(version), Ok(architecture)) => {
-                    dependency.package_satisfies(package, &version, architecture)
-                }
-                _ => false,
-            }
-        })
-    }
-
-    /// Find all packages satisfying at least constraint in a set of alternatives.
-    ///
-    /// The order of the returned packages is not specified. All packages matching the
-    /// given set of alternative constraints will be returned.
-    ///
-    /// This only resolves direct dependencies.
-    pub fn find_packages_satisfying_dependency_alternatives(
-        &self,
-        alternatives: DependencyVariants,
-    ) -> impl Iterator<Item = &BinaryPackageControlFile<'a>> {
-        self.packages.iter().filter(move |cf| {
-            match (cf.package(), cf.version(), cf.architecture()) {
-                (Ok(package), Ok(version), Ok(architecture)) => {
-                    alternatives.package_satisfies(package, &version, architecture)
-                }
-                _ => false,
-            }
-        })
     }
 }
 
@@ -154,17 +113,7 @@ mod test {
         assert_eq!(packages[0].version_str()?, "1.2");
 
         let packages = l.find_packages_with_name("bar".into()).collect::<Vec<_>>();
-
-        let depends = packages[0].depends().unwrap()?;
-        let reqs = depends.requirements().collect::<Vec<_>>();
-        assert_eq!(reqs.len(), 1);
-
-        let satisfies = l
-            .find_packages_satisfying_dependency_alternatives(reqs[0].clone())
-            .collect::<Vec<_>>();
-
-        assert_eq!(satisfies.len(), 1);
-        assert_eq!(satisfies[0].package()?, "foo");
+        assert_eq!(packages.len(), 1);
 
         Ok(())
     }
