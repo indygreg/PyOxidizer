@@ -37,7 +37,7 @@ pub type Result<T> = std::result::Result<T, BinaryPackageControlError>;
 ///
 /// Binary package control files are defined by a single paragraph with well-defined
 /// fields. This type is a low-level wrapper around an inner [ControlParagraph].
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct BinaryPackageControlFile<'a> {
     paragraph: ControlParagraph<'a>,
 }

@@ -32,7 +32,7 @@ pub enum ControlError {
 }
 
 /// A field value in a control file.
-#[derive(Clone, Debug, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum ControlFieldValue<'a> {
     Simple(Cow<'a, str>),
     Folded(Cow<'a, str>),
@@ -101,7 +101,7 @@ impl<'a> From<Cow<'a, str>> for ControlFieldValue<'a> {
 }
 
 /// A field in a control file.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct ControlField<'a> {
     name: Cow<'a, str>,
     value: ControlFieldValue<'a>,
@@ -158,7 +158,7 @@ impl<'a> ControlField<'a> {
 /// A paragraph in a control file.
 ///
 /// A paragraph is an ordered series of control fields.
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct ControlParagraph<'a> {
     fields: Vec<ControlField<'a>>,
 }

@@ -361,9 +361,24 @@ mod test {
 
         for p in packages.iter() {
             resolver
-                .find_direct_binary_file_dependencies(p, BinaryDependency::Depends)
+                .find_direct_binary_package_dependencies(p, BinaryDependency::Depends)
                 .unwrap();
         }
+
+        let deps = resolver
+            .find_transitive_binary_package_dependencies(
+                p,
+                [
+                    BinaryDependency::Depends,
+                    BinaryDependency::PreDepends,
+                    BinaryDependency::Recommends,
+                ]
+                .into_iter(),
+            )
+            .unwrap();
+
+        let sources = deps.packages_with_sources().collect::<Vec<_>>();
+        assert_eq!(sources.len(), 128);
 
         Ok(())
     }

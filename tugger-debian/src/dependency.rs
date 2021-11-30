@@ -418,6 +418,22 @@ impl FromStr for BinaryDependency {
     }
 }
 
+impl Display for BinaryDependency {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                Self::Depends => "Depends",
+                Self::Recommends => "Recommends",
+                Self::Suggests => "Suggests",
+                Self::Enhances => "Enhances",
+                Self::PreDepends => "Pre-Depends",
+            }
+        )
+    }
+}
+
 impl BinaryDependency {
     /// Obtain all variants of this enum.
     pub fn values() -> &'static [Self] {
