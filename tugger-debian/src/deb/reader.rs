@@ -5,9 +5,13 @@
 /*! .deb file reading functionality. */
 
 use {
-    crate::deb::{DebError, Result},
+    crate::{
+        binary_package_control::BinaryPackageControlFile,
+        control::ControlParagraphReader,
+        deb::{DebError, Result},
+    },
     std::{
-        io::Read,
+        io::{Cursor, Read},
         ops::{Deref, DerefMut},
     },
 };
@@ -119,6 +123,130 @@ impl DerefMut for ControlTarReader {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.archive
     }
+}
+
+impl ControlTarReader {
+    /// Obtain the entries in the `control.tar` file.
+    ///
+    /// This can only be called once, immediately after the reader/archive is opened.
+    /// It is a glorified wrapper around [tar::Archive::entries()] and has the same
+    /// semantics.
+    pub fn entries(&mut self) -> Result<ControlTarEntries<'_>> {
+        let entries = self.archive.entries()?;
+
+        Ok(ControlTarEntries { entries })
+    }
+}
+
+/// Represents entries in a `control.tar` file.
+///
+/// Ideally this type wouldn't exist. It is a glorified wrapper around
+/// [tar::Entries] that is needed to placate the borrow checker.
+pub struct ControlTarEntries<'a> {
+    entries: tar::Entries<'a, Box<dyn Read>>,
+}
+
+impl<'a> Iterator for ControlTarEntries<'a> {
+    type Item = Result<ControlTarEntry<'a>>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self.entries.next() {
+            Some(Ok(entry)) => Some(Ok(ControlTarEntry { inner: entry })),
+            Some(Err(e)) => Some(Err(e.into())),
+            None => None,
+        }
+    }
+}
+
+/// A wrapper around [tar::Entry] for representing content in `control.tar` files.
+///
+/// Facilitates access to the raw [tar::Entry] as well as for obtaining a higher
+/// level type that decodes known files within `control.tar` files.
+pub struct ControlTarEntry<'a> {
+    inner: tar::Entry<'a, Box<dyn Read>>,
+}
+
+impl<'a> Deref for ControlTarEntry<'a> {
+    type Target = tar::Entry<'a, Box<dyn Read>>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.inner
+    }
+}
+
+impl<'a> DerefMut for ControlTarEntry<'a> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.inner
+    }
+}
+
+impl<'a> ControlTarEntry<'a> {
+    /// Attempt to convert this tar entry to a [ControlTarFile].
+    ///
+    ///
+    pub fn to_control_file(&mut self) -> Result<(&'_ tar::Header, ControlTarFile)> {
+        let path_bytes = self.inner.path_bytes().to_vec();
+        let path = String::from_utf8_lossy(&path_bytes);
+
+        let mut data = vec![];
+        self.inner.read_to_end(&mut data)?;
+
+        match path.trim_start_matches("./") {
+            "control" => {
+                let mut reader = ControlParagraphReader::new(Cursor::new(data));
+                let paragraph = reader.next().ok_or(DebError::ControlFileNoParagraph)??;
+                let control = BinaryPackageControlFile::from(paragraph);
+
+                Ok((self.inner.header(), ControlTarFile::Control(control)))
+            }
+            "conffiles" => Ok((self.inner.header(), ControlTarFile::Conffiles(data))),
+            "triggers" => Ok((self.inner.header(), ControlTarFile::Triggers(data))),
+            "shlibs" => Ok((self.inner.header(), ControlTarFile::Shlibs(data))),
+            "symbols" => Ok((self.inner.header(), ControlTarFile::Symbols(data))),
+            "preinst" => Ok((self.inner.header(), ControlTarFile::Preinst(data))),
+            "postinst" => Ok((self.inner.header(), ControlTarFile::Postinst(data))),
+            "prerm" => Ok((self.inner.header(), ControlTarFile::Prerm(data))),
+            "postrm" => Ok((self.inner.header(), ControlTarFile::Postrm(data))),
+            _ => Ok((self.inner.header(), ControlTarFile::Other(path_bytes, data))),
+        }
+    }
+}
+
+/// Represents a parsed file in a `control.tar` archive.
+///
+/// Each variant encodes a known file in a `control.tar` archive.
+pub enum ControlTarFile {
+    /// The `control` file.
+    Control(BinaryPackageControlFile<'static>),
+
+    /// The `conffiles` file.
+    Conffiles(Vec<u8>),
+
+    /// The `triggers` file.
+    Triggers(Vec<u8>),
+
+    /// The `shlibs` file.
+    Shlibs(Vec<u8>),
+
+    /// The `symbols` file.
+    Symbols(Vec<u8>),
+
+    /// The `preinst` file.
+    Preinst(Vec<u8>),
+
+    /// The `postinst` file.
+    Postinst(Vec<u8>),
+
+    /// The `prerm` file.
+    Prerm(Vec<u8>),
+
+    /// The `postrm` file.
+    Postrm(Vec<u8>),
+
+    /// An unclassified file.
+    ///
+    /// First element is the path name as bytes. Second is the raw file content.
+    Other(Vec<u8>, Vec<u8>),
 }
 
 /// A reader for `data.tar` files.

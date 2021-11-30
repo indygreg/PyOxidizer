@@ -7,7 +7,10 @@
 The .deb file specification lives at <https://manpages.debian.org/unstable/dpkg-dev/deb.5.en.html>.
 */
 
-use {std::io::Read, thiserror::Error, tugger_file_manifest::FileManifestError};
+use {
+    crate::control::ControlError, std::io::Read, thiserror::Error,
+    tugger_file_manifest::FileManifestError,
+};
 
 pub mod builder;
 pub mod reader;
@@ -21,10 +24,14 @@ pub enum DebError {
     PathError(String),
     #[error("file manifest error: {0}")]
     FileManifestError(#[from] FileManifestError),
+    #[error("control file error: {0:?}")]
+    Control(#[from] ControlError),
     #[error("Unknown binary package entry: {0}")]
     UnknownBinaryPackageEntry(String),
     #[error("Unknown compression for filename: {0}")]
     UnknownCompression(String),
+    #[error("Control file lacks a paragraph")]
+    ControlFileNoParagraph,
 }
 
 impl<W> From<std::io::IntoInnerError<W>> for DebError {

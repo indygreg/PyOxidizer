@@ -59,7 +59,7 @@ pub enum ReleaseError {
 }
 
 /// Checksum type / digest mechanism used in a release file.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum ChecksumType {
     /// MD5.
     Md5,

@@ -49,6 +49,15 @@ impl<'a> DerefMut for BinaryPackageList<'a> {
     }
 }
 
+impl<'a> IntoIterator for BinaryPackageList<'a> {
+    type Item = BinaryPackageControlFile<'a>;
+    type IntoIter = std::vec::IntoIter<Self::Item>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.packages.into_iter()
+    }
+}
+
 impl<'a> BinaryPackageList<'a> {
     /// Find instances of a package within this collection.
     pub fn find_packages_with_name(
