@@ -267,3 +267,22 @@ impl DerefMut for DataTarReader {
         &mut self.archive
     }
 }
+
+/// Resolve the `control` file from the `control.tar` file within a `.deb` archive.
+pub fn resolve_control_file(reader: impl Read) -> Result<BinaryPackageControlFile<'static>> {
+    let mut reader = BinaryPackageReader::new(reader)?;
+
+    while let Some(entry) = reader.next_entry() {
+        if let BinaryPackageEntry::Control(mut control) = entry? {
+            let mut entries = control.entries()?;
+
+            while let Some(entry) = entries.next() {
+                if let ControlTarFile::Control(control) = entry?.to_control_file()?.1 {
+                    return Ok(control);
+                }
+            }
+        }
+    }
+
+    Err(DebError::ControlFileNotFound)
+}

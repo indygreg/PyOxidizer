@@ -8,7 +8,12 @@ The .deb file specification lives at <https://manpages.debian.org/unstable/dpkg-
 */
 
 use {
-    crate::control::ControlError, std::io::Read, thiserror::Error,
+    crate::{
+        binary_package_control::BinaryPackageControlFile, control::ControlError,
+        deb::reader::resolve_control_file, repository::release::ChecksumType,
+    },
+    std::io::Read,
+    thiserror::Error,
     tugger_file_manifest::FileManifestError,
 };
 
@@ -32,6 +37,8 @@ pub enum DebError {
     UnknownCompression(String),
     #[error("Control file lacks a paragraph")]
     ControlFileNoParagraph,
+    #[error("Control file not found")]
+    ControlFileNotFound,
 }
 
 impl<W> From<std::io::IntoInnerError<W>> for DebError {
@@ -97,5 +104,63 @@ impl DebCompression {
         }
 
         Ok(buffer)
+    }
+}
+
+/// Describes a reference to a `.deb` Debian package existing somewhere.
+///
+/// This trait is used as a generic way to refer to a `.deb` package, without implementations
+/// necessarily having immediate access to the full content/data of that `.deb` package.
+pub trait DebPackageReference {
+    /// Obtain the size in bytes of the `.deb` file.
+    ///
+    /// This becomes the `Size` field in `Packages*` control files.
+    fn size_bytes(&self) -> usize;
+
+    /// Obtains the binary digest of this file given a checksum flavor.
+    ///
+    /// Implementations can compute the digest at run-time or return a cached value.
+    fn digest(&self, checksum: ChecksumType) -> Result<Vec<u8>>;
+
+    /// Obtain the filename of this `.deb`.
+    ///
+    /// This should be just the file name, without any directory components.
+    fn filename(&self) -> String;
+
+    /// Obtain the parsed `control` file from the `control.tar` file inside the `.deb`.
+    fn control_file<'a>(&self) -> Result<BinaryPackageControlFile<'a>>;
+}
+
+/// Holds the content of a `.deb` file in-memory.
+pub struct InMemoryDebFile {
+    filename: String,
+    data: Vec<u8>,
+}
+
+impl InMemoryDebFile {
+    /// Create a new instance bound to memory.
+    pub fn new(filename: String, data: Vec<u8>) -> Self {
+        Self { filename, data }
+    }
+}
+
+impl DebPackageReference for InMemoryDebFile {
+    fn size_bytes(&self) -> usize {
+        self.data.len()
+    }
+
+    fn digest(&self, checksum: ChecksumType) -> Result<Vec<u8>> {
+        let mut h = checksum.new_hasher();
+        h.update(&self.data);
+
+        Ok(h.finish().to_vec())
+    }
+
+    fn filename(&self) -> String {
+        self.filename.clone()
+    }
+
+    fn control_file<'a>(&self) -> Result<BinaryPackageControlFile<'a>> {
+        resolve_control_file(std::io::Cursor::new(&self.data))
     }
 }

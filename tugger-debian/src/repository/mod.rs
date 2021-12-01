@@ -9,13 +9,13 @@ support primitives. See <https://wiki.debian.org/DebianRepository/Format>
 for the canonical definition of a Debian repository.
 */
 
+pub mod builder;
 #[cfg(feature = "http")]
 pub mod http;
-
 pub mod release;
 
 /// Compression format used by index files.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum IndexFileCompression {
     /// No compression (no extension).
     None,

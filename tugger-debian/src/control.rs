@@ -124,6 +124,11 @@ impl<'a> ControlField<'a> {
         Ok(Self { name: key, value })
     }
 
+    /// The name of this field.
+    pub fn name(&self) -> &str {
+        self.name.as_ref()
+    }
+
     /// Obtain the value as a [&str].
     ///
     /// The value's original file formatting (including newlines and leading whitespace)
