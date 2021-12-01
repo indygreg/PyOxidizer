@@ -62,7 +62,7 @@ jobs:
         uses: actions/cache@v2
         with:
           path: C:/Rust/.cargo/bin/sccache.exe
-          key: ${{ runner.os }}-sccache-0
+          key: ${{ runner.os }}-sccache-0.2.15-0
 
       - name: Install sccache build dependencies (Windows)
         if: runner.os == 'Windows' && steps.cache-sccache-windows.outputs.cache-hit != 'true'
@@ -73,23 +73,23 @@ jobs:
       - name: Install sccache (Linux)
         if: runner.os == 'Linux'
         run: |
-          wget -O sccache.tar.gz --progress dot:mega https://github.com/mozilla/sccache/releases/download/0.2.13/sccache-0.2.13-x86_64-unknown-linux-musl.tar.gz
+          wget -O sccache.tar.gz --progress dot:mega https://github.com/mozilla/sccache/releases/download/v0.2.15/sccache-v0.2.15-x86_64-unknown-linux-musl.tar.gz
           tar -xvzf sccache.tar.gz
-          mv sccache-0.2.13-x86_64-unknown-linux-musl/sccache /usr/share/rust/.cargo/bin/sccache
+          mv sccache-v0.2.15-x86_64-unknown-linux-musl/sccache /usr/share/rust/.cargo/bin/sccache
+          chmod +x /usr/share/rust/.cargo/bin/sccache
 
       - name: Install sccache (macOS)
         if: runner.os == 'macOS'
         run: |
-          wget -O sccache.tar.gz --progress dot:mega https://github.com/mozilla/sccache/releases/download/0.2.13/sccache-0.2.13-x86_64-apple-darwin.tar.gz
+          wget -O sccache.tar.gz --progress dot:mega https://github.com/mozilla/sccache/releases/download/v0.2.15/sccache-v0.2.15-x86_64-apple-darwin.tar.gz
           tar -xvzf sccache.tar.gz
-          mv sccache-0.2.13-x86_64-apple-darwin/sccache /Users/runner/.cargo/bin/sccache
+          mv sccache-v0.2.15-x86_64-apple-darwin/sccache /Users/runner/.cargo/bin/sccache
+          chmod +x /Users/runner/.cargo/bin/sccache
 
       - name: Install sccache (Windows)
         if: steps.cache-sccache-windows.outputs.cache-hit != 'true' && runner.os == 'Windows'
-        # sccache doesn't work with Rust 1.48. https://github.com/mozilla/sccache/issues/887
         run: |
-          rustup install 1.47.0
-          cargo +1.47.0 install --features 'azure s3' sccache
+          cargo install --features 's3' --version 0.2.15 sccache
 
       - name: Start sccache
         run: |
