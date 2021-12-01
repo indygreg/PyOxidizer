@@ -9,6 +9,16 @@ support primitives. See <https://wiki.debian.org/DebianRepository/Format>
 for the canonical definition of a Debian repository.
 */
 
+use thiserror::Error;
+
+#[cfg(feature = "async")]
+use {
+    async_compression::futures::bufread::{BzDecoder, GzipDecoder, LzmaDecoder, XzDecoder},
+    async_trait::async_trait,
+    futures::{AsyncBufRead, AsyncRead},
+    std::pin::Pin,
+};
+
 pub mod builder;
 #[cfg(feature = "http")]
 pub mod http;
@@ -43,5 +53,44 @@ impl IndexFileCompression {
             Self::Bzip2 => ".bz2",
             Self::Lzma => ".lzma",
         }
+    }
+}
+
+/// Errors related to reading from repositories.
+#[derive(Debug, Error)]
+pub enum RepositoryReadError {
+    #[error("I/O error reading path {0}: {0:?}")]
+    IoPath(String, std::io::Error),
+}
+
+/// Provides a transport-agnostic mechanism for reading from Debian repositories.
+///
+/// This trait essentially abstracts I/O for reading files in Debian repositories.
+#[cfg_attr(feature = "async", async_trait)]
+pub trait RepositoryReader {
+    /// Get the content of a relative path as an async reader.
+    ///
+    /// This obtains a reader for path data and returns the raw data without any
+    /// decoding applied.
+    #[cfg(feature = "async")]
+    async fn get_path(&self, path: &str)
+        -> Result<Pin<Box<dyn AsyncBufRead>>, RepositoryReadError>;
+
+    /// Get the content of a relative path with decompression transparently applied.
+    #[cfg(feature = "async")]
+    async fn get_path_decoded(
+        &self,
+        path: &str,
+        compression: IndexFileCompression,
+    ) -> Result<Pin<Box<dyn AsyncRead>>, RepositoryReadError> {
+        let stream = self.get_path(path).await?;
+
+        Ok(match compression {
+            IndexFileCompression::None => Box::pin(stream),
+            IndexFileCompression::Gzip => Box::pin(GzipDecoder::new(stream)),
+            IndexFileCompression::Xz => Box::pin(XzDecoder::new(stream)),
+            IndexFileCompression::Bzip2 => Box::pin(BzDecoder::new(stream)),
+            IndexFileCompression::Lzma => Box::pin(LzmaDecoder::new(stream)),
+        })
     }
 }

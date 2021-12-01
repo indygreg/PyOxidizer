@@ -31,12 +31,12 @@ use {
         control::{ControlError, ControlParagraphAsyncReader},
         repository::{
             release::{ChecksumType, PackagesFileEntry, ReleaseError, ReleaseFile},
-            IndexFileCompression,
+            IndexFileCompression, RepositoryReadError, RepositoryReader,
         },
     },
-    async_compression::futures::bufread::{BzDecoder, GzipDecoder, LzmaDecoder, XzDecoder},
-    futures::{stream::TryStreamExt, AsyncRead},
-    reqwest::{Client, IntoUrl, Response, Url},
+    async_trait::async_trait,
+    futures::{stream::TryStreamExt, AsyncBufRead, AsyncReadExt},
+    reqwest::{Client, IntoUrl, Url},
     std::{io::Cursor, pin::Pin},
     thiserror::Error,
 };
@@ -52,6 +52,9 @@ pub enum HttpError {
     #[error("URL error: {0:?}")]
     Url(#[from] url::ParseError),
 
+    #[error("Repository reading error: {0:?}")]
+    RepositoryRead(#[from] RepositoryReadError),
+
     #[error("Control file error: {0:?}")]
     Control(#[from] ControlError),
 
@@ -66,23 +69,6 @@ pub enum HttpError {
 
     #[error("Could not find packages indices entry")]
     PackagesIndicesEntryNotFound,
-}
-
-async fn transform_http_response(
-    res: Response,
-    compression: IndexFileCompression,
-) -> Result<Pin<Box<dyn AsyncRead>>, HttpError> {
-    let stream = res
-        .bytes_stream()
-        .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, format!("{:?}", e)));
-
-    Ok(match compression {
-        IndexFileCompression::None => Box::pin(stream.into_async_read()),
-        IndexFileCompression::Gzip => Box::pin(GzipDecoder::new(stream.into_async_read())),
-        IndexFileCompression::Xz => Box::pin(XzDecoder::new(stream.into_async_read())),
-        IndexFileCompression::Bzip2 => Box::pin(BzDecoder::new(stream.into_async_read())),
-        IndexFileCompression::Lzma => Box::pin(LzmaDecoder::new(stream.into_async_read())),
-    })
 }
 
 /// Client for a Debian repository served via HTTP.
@@ -132,26 +118,6 @@ impl HttpRepositoryClient {
         &self.root_url
     }
 
-    /// Perform an HTTP GET for a path relative to the root directory/URL.
-    pub async fn get_path(&self, path: &str) -> Result<Response, HttpError> {
-        let res = self.client.get(self.root_url.join(path)?).send().await?;
-
-        Ok(res.error_for_status()?)
-    }
-
-    /// Perform an HTTP GET for a path relative to the root directory/URL.
-    ///
-    /// This transforms the response to an async reader for reading the HTTP response body.
-    pub async fn get_path_reader(
-        &self,
-        path: &str,
-        compression: IndexFileCompression,
-    ) -> Result<Pin<Box<dyn AsyncRead>>, HttpError> {
-        let res = self.get_path(path).await?;
-
-        transform_http_response(res, compression).await
-    }
-
     /// Obtain a [HttpDistributionClient] for a given distribution name/path.
     ///
     /// The returned client has its root URL set to `self.root_url().join("dists/{distribution}")`.
@@ -174,6 +140,52 @@ impl HttpRepositoryClient {
     }
 }
 
+#[async_trait]
+impl RepositoryReader for HttpRepositoryClient {
+    async fn get_path(
+        &self,
+        path: &str,
+    ) -> Result<Pin<Box<dyn AsyncBufRead>>, RepositoryReadError> {
+        let res = self
+            .client
+            .get(self.root_url.join(path).map_err(|e| {
+                RepositoryReadError::IoPath(
+                    path.to_string(),
+                    std::io::Error::new(
+                        std::io::ErrorKind::Other,
+                        format!("error joining URL: {:?}", e),
+                    ),
+                )
+            })?)
+            .send()
+            .await
+            .map_err(|e| {
+                RepositoryReadError::IoPath(
+                    path.to_string(),
+                    std::io::Error::new(
+                        std::io::ErrorKind::Other,
+                        format!("error sending HTTP request: {:?}", e),
+                    ),
+                )
+            })?;
+        let res = res.error_for_status().map_err(|e| {
+            RepositoryReadError::IoPath(
+                path.to_string(),
+                std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    format!("bad HTTP status code: {:?}", e),
+                ),
+            )
+        })?;
+
+        Ok(Box::pin(
+            res.bytes_stream()
+                .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, format!("{:?}", e)))
+                .into_async_read(),
+        ))
+    }
+}
+
 fn join_path(a: &str, b: &str) -> String {
     format!("{}/{}", a.trim_matches('/'), b.trim_start_matches('/'))
 }
@@ -190,21 +202,28 @@ pub struct HttpDistributionClient<'client> {
     distribution_path: String,
 }
 
-impl<'client> HttpDistributionClient<'client> {
-    /// Perform an HTTP GET for a path relative to the distribution's root directory.
-    pub async fn get_path(&self, path: &str) -> Result<Response, HttpError> {
-        self.root_client
+#[async_trait]
+impl<'client> RepositoryReader for HttpDistributionClient<'client> {
+    async fn get_path(
+        &self,
+        path: &str,
+    ) -> Result<Pin<Box<dyn AsyncBufRead>>, RepositoryReadError> {
+        Ok(self
+            .root_client
             .get_path(&join_path(&self.distribution_path, path))
-            .await
+            .await?)
     }
+}
 
+impl<'client> HttpDistributionClient<'client> {
     /// Fetch and parse the `InRelease` file from the repository.
     ///
     /// Returns a new object bound to the parsed `InRelease` file.
     pub async fn fetch_inrelease(&self) -> Result<HttpReleaseClient<'client>, HttpError> {
-        let res = self.get_path("InRelease").await?;
+        let mut reader = self.get_path("InRelease").await?;
 
-        let data = res.bytes().await?;
+        let mut data = vec![];
+        reader.read_to_end(&mut data).await?;
 
         let release = ReleaseFile::from_armored_reader(Cursor::new(data))?;
 
@@ -236,6 +255,19 @@ pub struct HttpReleaseClient<'client> {
     fetch_compression: IndexFileCompression,
 }
 
+#[async_trait]
+impl<'client> RepositoryReader for HttpReleaseClient<'client> {
+    async fn get_path(
+        &self,
+        path: &str,
+    ) -> Result<Pin<Box<dyn AsyncBufRead>>, RepositoryReadError> {
+        Ok(self
+            .root_client
+            .get_path(&join_path(&self.distribution_path, path))
+            .await?)
+    }
+}
+
 impl<'client> AsRef<ReleaseFile<'static>> for HttpReleaseClient<'client> {
     fn as_ref(&self) -> &ReleaseFile<'static> {
         &self.release
@@ -243,26 +275,6 @@ impl<'client> AsRef<ReleaseFile<'static>> for HttpReleaseClient<'client> {
 }
 
 impl<'client> HttpReleaseClient<'client> {
-    /// Perform an HTTP GET for a path relative to the distribution's root directory.
-    pub async fn get_path(&self, path: &str) -> Result<Response, HttpError> {
-        self.root_client
-            .get_path(&join_path(&self.distribution_path, path))
-            .await
-    }
-
-    /// Perform an HTTP GET for a path relative to the distribution's root directory.
-    ///
-    /// This transforms the response to an async reader for reading the HTTP response body.
-    pub async fn get_path_reader(
-        &self,
-        path: &str,
-        compression: IndexFileCompression,
-    ) -> Result<Pin<Box<dyn AsyncRead>>, HttpError> {
-        let res = self.get_path(path).await?;
-
-        transform_http_response(res, compression).await
-    }
-
     /// Fetch a `Packages` file and convert it to a stream of [BinaryPackageControlFile] instances.
     pub async fn fetch_packages(
         &self,
@@ -291,7 +303,7 @@ impl<'client> HttpReleaseClient<'client> {
         // TODO make this stream output.
 
         let mut reader = ControlParagraphAsyncReader::new(futures::io::BufReader::new(
-            self.get_path_reader(&path, entry.compression).await?,
+            self.get_path_decoded(&path, entry.compression).await?,
         ));
 
         let mut res = BinaryPackageList::default();
