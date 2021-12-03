@@ -45,8 +45,8 @@ jobs:
         run: |
           wget -O sccache.tar.gz --progress dot:mega https://github.com/mozilla/sccache/releases/download/v0.2.15/sccache-v0.2.15-x86_64-unknown-linux-musl.tar.gz
           tar -xvzf sccache.tar.gz
-          mv sccache-*/sccache /usr/share/rust/.cargo/bin/sccache
-          chmod +x /usr/share/rust/.cargo/bin/sccache
+          mv sccache-*/sccache /home/runner/.cargo/bin/sccache
+          chmod +x /home/runner/.cargo/bin/sccache
           sccache --start-server
 
       - name: Build pyoxidizer Executable
