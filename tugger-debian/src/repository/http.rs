@@ -30,9 +30,9 @@ use {
         IndexFileCompression, ReleaseReader, RepositoryReadError, RepositoryRootReader,
     },
     async_trait::async_trait,
-    futures::{stream::TryStreamExt, AsyncBufRead, AsyncReadExt},
+    futures::{stream::TryStreamExt, AsyncBufRead},
     reqwest::{Client, IntoUrl, Url},
-    std::{io::Cursor, pin::Pin},
+    std::pin::Pin,
     thiserror::Error,
 };
 
@@ -138,19 +138,14 @@ impl HttpRepositoryClient {
     /// Fetch and parse the `InRelease` file from the repository.
     ///
     /// Returns a new object bound to the parsed `InRelease` file.
-    pub async fn fetch_inrelease(
+    pub async fn resolve_release_client(
         &self,
         distribution_path: &str,
     ) -> Result<HttpReleaseClient<'_>, HttpError> {
         let distribution_path = distribution_path.trim_matches('/').to_string();
         let release_path = join_path(&distribution_path, "InRelease");
 
-        let mut reader = self.get_path(&release_path).await?;
-
-        let mut data = vec![];
-        reader.read_to_end(&mut data).await?;
-
-        let release = ReleaseFile::from_armored_reader(Cursor::new(data))?;
+        let release = self.fetch_inrelease(&release_path).await?;
 
         let fetch_compression = IndexFileCompression::default_preferred_order()
             .next()
@@ -227,7 +222,7 @@ mod test {
     async fn bullseye_release() -> Result<()> {
         let root = HttpRepositoryClient::new(BULLSEYE_URL)?;
 
-        let release = root.fetch_inrelease("dists/bullseye").await?;
+        let release = root.resolve_release_client("dists/bullseye").await?;
 
         let packages = release
             .resolve_packages("main", "amd64", false)

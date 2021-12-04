@@ -25,7 +25,7 @@ use {
     },
     async_compression::futures::bufread::{BzDecoder, GzipDecoder, LzmaDecoder, XzDecoder},
     async_trait::async_trait,
-    futures::{AsyncBufRead, AsyncRead},
+    futures::{AsyncBufRead, AsyncRead, AsyncReadExt},
     std::pin::Pin,
 };
 
@@ -133,6 +133,30 @@ pub trait RepositoryRootReader {
         compression: IndexFileCompression,
     ) -> Result<Pin<Box<dyn AsyncRead + Send>>, RepositoryReadError> {
         get_path_decoded(self.get_path(path).await?, compression).await
+    }
+
+    /// Fetch and parse an `InRelease` file at the relative path specified.
+    ///
+    /// `path` is typically a value like `dists/<distribution>/InRelease`. e.g.
+    /// `dists/bullseye/InRelease`.
+    ///
+    /// The default implementation of this trait should be sufficient for most types.
+    #[cfg(feature = "async")]
+    async fn fetch_inrelease(
+        &self,
+        path: &str,
+    ) -> Result<ReleaseFile<'static>, RepositoryReadError> {
+        let mut reader = self.get_path(path).await?;
+
+        let mut data = vec![];
+        reader
+            .read_to_end(&mut data)
+            .await
+            .map_err(|e| RepositoryReadError::IoPath(path.to_string(), e))?;
+
+        Ok(ReleaseFile::from_armored_reader(std::io::Cursor::new(
+            data,
+        ))?)
     }
 }
 
