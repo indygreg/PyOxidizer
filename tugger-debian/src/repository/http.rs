@@ -130,11 +130,6 @@ impl HttpRepositoryClient {
         Ok(Self { client, root_url })
     }
 
-    /// Base URL for this fetcher.
-    pub fn root_url(&self) -> &Url {
-        &self.root_url
-    }
-
     /// Fetch and parse the `InRelease` file from the repository.
     ///
     /// Returns a new object bound to the parsed `InRelease` file.
@@ -169,6 +164,10 @@ impl HttpRepositoryClient {
 
 #[async_trait]
 impl RepositoryRootReader for HttpRepositoryClient {
+    fn url(&self) -> &Url {
+        &self.root_url
+    }
+
     async fn get_path(
         &self,
         path: &str,

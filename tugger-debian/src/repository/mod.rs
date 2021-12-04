@@ -115,6 +115,9 @@ async fn get_path_decoded(
 /// *releases* within the repository.
 #[cfg_attr(feature = "async", async_trait)]
 pub trait RepositoryRootReader {
+    /// Obtain the URL to which this reader is bound.  
+    fn url(&self) -> &url::Url;
+
     /// Get the content of a relative path as an async reader.
     ///
     /// This obtains a reader for path data and returns the raw data without any
