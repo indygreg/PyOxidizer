@@ -25,14 +25,9 @@ by calling [HttpDistributionClient.fetch_inrelease()].
 */
 
 use {
-    crate::{
-        binary_package_control::BinaryPackageControlFile,
-        binary_package_list::BinaryPackageList,
-        control::{ControlError, ControlParagraphAsyncReader},
-        repository::{
-            release::{ChecksumType, PackagesFileEntry, ReleaseError, ReleaseFile},
-            IndexFileCompression, RepositoryReadError, RepositoryReader,
-        },
+    crate::repository::{
+        release::{ReleaseError, ReleaseFile},
+        IndexFileCompression, ReleaseReader, RepositoryReadError, RepositoryReader,
     },
     async_trait::async_trait,
     futures::{stream::TryStreamExt, AsyncBufRead, AsyncReadExt},
@@ -55,20 +50,11 @@ pub enum HttpError {
     #[error("Repository reading error: {0:?}")]
     RepositoryRead(#[from] RepositoryReadError),
 
-    #[error("Control file error: {0:?}")]
-    Control(#[from] ControlError),
-
-    #[error("Release file error: {0:?}")]
-    Release(#[from] ReleaseError),
-
-    #[error("Release file does not contain supported checksum flavor")]
-    NoKnownChecksum,
-
     #[error("No packages indices for checksum {0}")]
     NoPackagesIndices(&'static str),
 
-    #[error("Could not find packages indices entry")]
-    PackagesIndicesEntryNotFound,
+    #[error("Release file error: {0:?}")]
+    Release(#[from] ReleaseError),
 }
 
 /// Client for a Debian repository served via HTTP.
@@ -145,7 +131,7 @@ impl RepositoryReader for HttpRepositoryClient {
     async fn get_path(
         &self,
         path: &str,
-    ) -> Result<Pin<Box<dyn AsyncBufRead>>, RepositoryReadError> {
+    ) -> Result<Pin<Box<dyn AsyncBufRead + Send>>, RepositoryReadError> {
         let res = self
             .client
             .get(self.root_url.join(path).map_err(|e| {
@@ -207,7 +193,7 @@ impl<'client> RepositoryReader for HttpDistributionClient<'client> {
     async fn get_path(
         &self,
         path: &str,
-    ) -> Result<Pin<Box<dyn AsyncBufRead>>, RepositoryReadError> {
+    ) -> Result<Pin<Box<dyn AsyncBufRead + Send>>, RepositoryReadError> {
         Ok(self
             .root_client
             .get_path(&join_path(&self.distribution_path, path))
@@ -227,19 +213,14 @@ impl<'client> HttpDistributionClient<'client> {
 
         let release = ReleaseFile::from_armored_reader(Cursor::new(data))?;
 
-        // Determine which checksum flavor to fetch from the strongest present.
-        let fetch_checksum = &[ChecksumType::Sha256, ChecksumType::Sha1, ChecksumType::Md5]
-            .iter()
-            .find(|variant| release.first_field(variant.field_name()).is_some())
-            .ok_or(HttpError::NoKnownChecksum)?;
-
-        let fetch_compression = IndexFileCompression::Xz;
+        let fetch_compression = IndexFileCompression::default_preferred_order()
+            .next()
+            .expect("iterator should not be empty");
 
         Ok(HttpReleaseClient {
             root_client: self.root_client,
             distribution_path: self.distribution_path.clone(),
             release,
-            fetch_checksum: **fetch_checksum,
             fetch_compression,
         })
     }
@@ -250,8 +231,6 @@ pub struct HttpReleaseClient<'client> {
     root_client: &'client HttpRepositoryClient,
     distribution_path: String,
     release: ReleaseFile<'static>,
-    /// Which checksum flavor to fetch and verify.
-    fetch_checksum: ChecksumType,
     fetch_compression: IndexFileCompression,
 }
 
@@ -260,7 +239,7 @@ impl<'client> RepositoryReader for HttpReleaseClient<'client> {
     async fn get_path(
         &self,
         path: &str,
-    ) -> Result<Pin<Box<dyn AsyncBufRead>>, RepositoryReadError> {
+    ) -> Result<Pin<Box<dyn AsyncBufRead + Send>>, RepositoryReadError> {
         Ok(self
             .root_client
             .get_path(&join_path(&self.distribution_path, path))
@@ -268,66 +247,18 @@ impl<'client> RepositoryReader for HttpReleaseClient<'client> {
     }
 }
 
-impl<'client> AsRef<ReleaseFile<'static>> for HttpReleaseClient<'client> {
-    fn as_ref(&self) -> &ReleaseFile<'static> {
+#[async_trait]
+impl<'client> ReleaseReader for HttpReleaseClient<'client> {
+    fn release_file(&self) -> &ReleaseFile<'static> {
         &self.release
     }
-}
 
-impl<'client> HttpReleaseClient<'client> {
-    /// Fetch a `Packages` file and convert it to a stream of [BinaryPackageControlFile] instances.
-    pub async fn fetch_packages(
-        &self,
-        component: &str,
-        arch: &str,
-        is_installer: bool,
-    ) -> Result<BinaryPackageList<'static>, HttpError> {
-        let entry = self
-            .release
-            .find_packages_indices(
-                self.fetch_checksum,
-                self.fetch_compression,
-                component,
-                arch,
-                is_installer,
-            )
-            .ok_or(HttpError::PackagesIndicesEntryNotFound)?;
-
-        let path = if self.release.acquire_by_hash().unwrap_or_default() {
-            entry.entry.by_hash_path()
-        } else {
-            entry.entry.path.to_string()
-        };
-
-        // TODO perform digest verification.
-        // TODO make this stream output.
-
-        let mut reader = ControlParagraphAsyncReader::new(futures::io::BufReader::new(
-            self.get_path_decoded(&path, entry.compression).await?,
-        ));
-
-        let mut res = BinaryPackageList::default();
-
-        while let Some(paragraph) = reader.read_paragraph().await? {
-            res.push(BinaryPackageControlFile::from(paragraph));
-        }
-
-        Ok(res)
+    fn preferred_compression(&self) -> IndexFileCompression {
+        self.fetch_compression
     }
 
-    /// Obtain all file entries for `Packages*` files matching our fetch criteria.
-    pub fn packages_indices_entries(&self) -> Result<Vec<PackagesFileEntry>, HttpError> {
-        Ok(
-            if let Some(entries) = self.release.iter_packages_indices(self.fetch_checksum) {
-                entries
-                    .collect::<Result<Vec<_>, _>>()?
-                    .into_iter()
-                    .filter(|entry| entry.compression == self.fetch_compression)
-                    .collect::<Vec<_>>()
-            } else {
-                vec![]
-            },
-        )
+    fn set_preferred_compression(&mut self, compression: IndexFileCompression) {
+        self.fetch_compression = compression;
     }
 }
 
@@ -350,7 +281,10 @@ mod test {
 
         let release = dist.fetch_inrelease().await?;
 
-        let packages = release.fetch_packages("main", "amd64", false).await?;
+        let packages = release
+            .resolve_packages("main", "amd64", false)
+            .await
+            .unwrap();
         assert_eq!(packages.len(), 58606);
 
         let p = packages.iter().next().unwrap();
