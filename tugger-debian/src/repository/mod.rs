@@ -90,6 +90,9 @@ pub enum RepositoryReadError {
 
     #[error("Release file error: {0:?}")]
     Release(#[from] ReleaseError),
+
+    #[error("URL error: {0:?}")]
+    Url(#[from] url::ParseError),
 }
 
 /// Provides a transport-agnostic mechanism for reading from Debian repositories.

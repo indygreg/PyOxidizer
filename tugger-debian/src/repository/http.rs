@@ -134,15 +134,7 @@ impl RepositoryReader for HttpRepositoryClient {
     ) -> Result<Pin<Box<dyn AsyncBufRead + Send>>, RepositoryReadError> {
         let res = self
             .client
-            .get(self.root_url.join(path).map_err(|e| {
-                RepositoryReadError::IoPath(
-                    path.to_string(),
-                    std::io::Error::new(
-                        std::io::ErrorKind::Other,
-                        format!("error joining URL: {:?}", e),
-                    ),
-                )
-            })?)
+            .get(self.root_url.join(path)?)
             .send()
             .await
             .map_err(|e| {
