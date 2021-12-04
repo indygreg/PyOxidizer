@@ -20,7 +20,7 @@ use {
 #[cfg(feature = "async")]
 use {
     futures::{AsyncBufRead, AsyncBufReadExt},
-    std::pin::Pin,
+    pin_project::pin_project,
 };
 
 #[derive(Debug, Error)]
@@ -440,19 +440,29 @@ impl<R: BufRead> Iterator for ControlParagraphReader<R> {
 ///
 /// Instances are bound to a reader, which is capable of reading lines.
 #[cfg(feature = "async")]
-pub struct ControlParagraphAsyncReader<R: AsyncBufRead> {
-    reader: Pin<Box<R>>,
+#[pin_project]
+pub struct ControlParagraphAsyncReader<R> {
+    #[pin]
+    reader: R,
     parser: Option<ControlFileParser>,
 }
 
 #[cfg(feature = "async")]
-impl<R: AsyncBufRead> ControlParagraphAsyncReader<R> {
+impl<R> ControlParagraphAsyncReader<R>
+where
+    R: AsyncBufRead + Unpin,
+{
     /// Create a new instance bound to a reader.
     pub fn new(reader: R) -> Self {
         Self {
-            reader: Box::pin(reader),
+            reader,
             parser: Some(ControlFileParser::default()),
         }
+    }
+
+    /// Consumes self, returning the inner reading.
+    pub fn into_inner(self) -> R {
+        self.reader
     }
 
     /// Read the next available paragraph from this reader.
