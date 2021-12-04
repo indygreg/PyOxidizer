@@ -141,9 +141,16 @@ impl HttpRepositoryClient {
     pub async fn resolve_release_client(
         &self,
         distribution_path: &str,
-    ) -> Result<HttpReleaseClient<'_>, HttpError> {
+    ) -> Result<HttpReleaseClient, HttpError> {
         let distribution_path = distribution_path.trim_matches('/').to_string();
         let release_path = join_path(&distribution_path, "InRelease");
+        let mut root_url = self.root_url.join(&distribution_path)?;
+
+        // Trailing URLs are significant to the Url type when we .join(). So ensure
+        // the URL has a trailing path.
+        if !root_url.path().ends_with('/') {
+            root_url.set_path(&format!("{}/", root_url.path()));
+        }
 
         let release = self.fetch_inrelease(&release_path).await?;
 
@@ -152,8 +159,8 @@ impl HttpRepositoryClient {
             .expect("iterator should not be empty");
 
         Ok(HttpReleaseClient {
-            root_client: self,
-            distribution_path,
+            client: self.client.clone(),
+            root_url,
             release,
             fetch_compression,
         })
@@ -175,23 +182,20 @@ fn join_path(a: &str, b: &str) -> String {
 }
 
 /// Repository HTTP client bound to a parsed `Release` or `InRelease` file.
-pub struct HttpReleaseClient<'client> {
-    root_client: &'client HttpRepositoryClient,
-    distribution_path: String,
+pub struct HttpReleaseClient {
+    client: Client,
+    root_url: Url,
     release: ReleaseFile<'static>,
     fetch_compression: IndexFileCompression,
 }
 
 #[async_trait]
-impl<'client> ReleaseReader for HttpReleaseClient<'client> {
+impl ReleaseReader for HttpReleaseClient {
     async fn get_path(
         &self,
         path: &str,
     ) -> Result<Pin<Box<dyn AsyncBufRead + Send>>, RepositoryReadError> {
-        Ok(self
-            .root_client
-            .get_path(&join_path(&self.distribution_path, path))
-            .await?)
+        fetch_url(&self.client, &self.root_url, path).await
     }
 
     fn release_file(&self) -> &ReleaseFile<'static> {
