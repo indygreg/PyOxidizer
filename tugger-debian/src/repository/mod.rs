@@ -95,6 +95,20 @@ pub enum RepositoryReadError {
     Url(#[from] url::ParseError),
 }
 
+#[cfg(feature = "async")]
+async fn get_path_decoded(
+    stream: Pin<Box<dyn AsyncBufRead + Send>>,
+    compression: IndexFileCompression,
+) -> Result<Pin<Box<dyn AsyncRead + Send>>, RepositoryReadError> {
+    Ok(match compression {
+        IndexFileCompression::None => Box::pin(stream),
+        IndexFileCompression::Gzip => Box::pin(GzipDecoder::new(stream)),
+        IndexFileCompression::Xz => Box::pin(XzDecoder::new(stream)),
+        IndexFileCompression::Bzip2 => Box::pin(BzDecoder::new(stream)),
+        IndexFileCompression::Lzma => Box::pin(LzmaDecoder::new(stream)),
+    })
+}
+
 /// Provides a transport-agnostic mechanism for reading from Debian repositories.
 ///
 /// This trait essentially abstracts I/O for reading files in Debian repositories.
@@ -117,15 +131,7 @@ pub trait RepositoryReader {
         path: &str,
         compression: IndexFileCompression,
     ) -> Result<Pin<Box<dyn AsyncRead + Send>>, RepositoryReadError> {
-        let stream = self.get_path(path).await?;
-
-        Ok(match compression {
-            IndexFileCompression::None => Box::pin(stream),
-            IndexFileCompression::Gzip => Box::pin(GzipDecoder::new(stream)),
-            IndexFileCompression::Xz => Box::pin(XzDecoder::new(stream)),
-            IndexFileCompression::Bzip2 => Box::pin(BzDecoder::new(stream)),
-            IndexFileCompression::Lzma => Box::pin(LzmaDecoder::new(stream)),
-        })
+        get_path_decoded(self.get_path(path).await?, compression).await
     }
 }
 
