@@ -129,15 +129,26 @@ impl HttpRepositoryClient {
 
         Ok(Self { client, root_url })
     }
+}
 
-    /// Fetch and parse the `InRelease` file from the repository.
-    ///
-    /// Returns a new object bound to the parsed `InRelease` file.
-    pub async fn resolve_release_client(
+#[async_trait]
+impl RepositoryRootReader for HttpRepositoryClient {
+    fn url(&self) -> &Url {
+        &self.root_url
+    }
+
+    async fn get_path(
         &self,
-        distribution_path: &str,
-    ) -> Result<HttpReleaseClient, HttpError> {
-        let distribution_path = distribution_path.trim_matches('/').to_string();
+        path: &str,
+    ) -> Result<Pin<Box<dyn AsyncBufRead + Send>>, RepositoryReadError> {
+        fetch_url(&self.client, &self.root_url, path).await
+    }
+
+    async fn release_reader_with_distribution_path(
+        &self,
+        path: &str,
+    ) -> Result<Box<dyn ReleaseReader>, RepositoryReadError> {
+        let distribution_path = path.trim_matches('/').to_string();
         let release_path = join_path(&distribution_path, "InRelease");
         let mut root_url = self.root_url.join(&distribution_path)?;
 
@@ -153,26 +164,12 @@ impl HttpRepositoryClient {
             .next()
             .expect("iterator should not be empty");
 
-        Ok(HttpReleaseClient {
+        Ok(Box::new(HttpReleaseClient {
             client: self.client.clone(),
             root_url,
             release,
             fetch_compression,
-        })
-    }
-}
-
-#[async_trait]
-impl RepositoryRootReader for HttpRepositoryClient {
-    fn url(&self) -> &Url {
-        &self.root_url
-    }
-
-    async fn get_path(
-        &self,
-        path: &str,
-    ) -> Result<Pin<Box<dyn AsyncBufRead + Send>>, RepositoryReadError> {
-        fetch_url(&self.client, &self.root_url, path).await
+        }))
     }
 }
 
@@ -225,12 +222,9 @@ mod test {
     async fn bullseye_release() -> Result<()> {
         let root = HttpRepositoryClient::new(BULLSEYE_URL)?;
 
-        let release = root.resolve_release_client("dists/bullseye").await?;
+        let release = root.release_reader("bullseye").await?;
 
-        let packages = release
-            .resolve_packages("main", "amd64", false)
-            .await
-            .unwrap();
+        let packages = release.resolve_packages("main", "amd64", false).await?;
         assert_eq!(packages.len(), 58606);
 
         let p = packages.iter().next().unwrap();

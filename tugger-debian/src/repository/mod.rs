@@ -138,6 +138,32 @@ pub trait RepositoryRootReader {
         get_path_decoded(self.get_path(path).await?, compression).await
     }
 
+    /// Obtain a [ReleaseReader] for a given distribution.
+    ///
+    /// This assumes the `InRelease` file is located in `dists/{distribution}/`. This is the case
+    /// for most repositories.
+    #[cfg(feature = "async")]
+    async fn release_reader(
+        &self,
+        distribution: &str,
+    ) -> Result<Box<dyn ReleaseReader>, RepositoryReadError> {
+        self.release_reader_with_distribution_path(&format!(
+            "dists/{}",
+            distribution.trim_matches('/')
+        ))
+        .await
+    }
+
+    /// Obtain a [ReleaseReader] given a distribution path.
+    ///
+    /// Typically distributions exist at `dists/<distribution>/`. However, this may not
+    /// always be the case. This method allows explicitly passing in the relative path
+    /// holding the `InRelease` file.
+    async fn release_reader_with_distribution_path(
+        &self,
+        path: &str,
+    ) -> Result<Box<dyn ReleaseReader>, RepositoryReadError>;
+
     /// Fetch and parse an `InRelease` file at the relative path specified.
     ///
     /// `path` is typically a value like `dists/<distribution>/InRelease`. e.g.
@@ -165,7 +191,7 @@ pub trait RepositoryRootReader {
 
 /// Provides a transport-agnostic mechanism for reading from a parsed `[In]Release` file.
 #[cfg_attr(feature = "async", async_trait)]
-pub trait ReleaseReader {
+pub trait ReleaseReader: Sync {
     /// Get the content of a relative path as an async reader.
     ///
     /// This obtains a reader for path data and returns the raw data without any

@@ -4,8 +4,9 @@
 
 use {
     crate::{
-        binary_package_control::BinaryPackageControlError, control::ControlError,
-        repository::release::ReleaseError,
+        binary_package_control::BinaryPackageControlError,
+        control::ControlError,
+        repository::{release::ReleaseError, RepositoryReadError},
     },
     thiserror::Error,
 };
@@ -23,6 +24,9 @@ pub enum DebianError {
 
     #[error("release file error: {0:?}")]
     Release(#[from] ReleaseError),
+
+    #[error("repository read error: {0:?}")]
+    RepositoryRead(#[from] RepositoryReadError),
 
     #[cfg(feature = "http")]
     #[error("HTTP error: {0:?}")]
