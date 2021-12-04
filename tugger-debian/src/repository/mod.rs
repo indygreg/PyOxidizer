@@ -192,6 +192,9 @@ pub trait RepositoryRootReader {
 /// Provides a transport-agnostic mechanism for reading from a parsed `[In]Release` file.
 #[cfg_attr(feature = "async", async_trait)]
 pub trait ReleaseReader: Sync {
+    /// Obtain the base URL to which this instance is bound.
+    fn url(&self) -> &url::Url;
+
     /// Get the content of a relative path as an async reader.
     ///
     /// This obtains a reader for path data and returns the raw data without any

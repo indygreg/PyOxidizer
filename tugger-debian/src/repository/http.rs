@@ -187,6 +187,10 @@ pub struct HttpReleaseClient {
 
 #[async_trait]
 impl ReleaseReader for HttpReleaseClient {
+    fn url(&self) -> &Url {
+        &self.root_url
+    }
+
     async fn get_path(
         &self,
         path: &str,
