@@ -135,25 +135,33 @@ impl HttpRepositoryClient {
         &self.root_url
     }
 
-    /// Obtain a [HttpDistributionClient] for a given distribution name/path.
+    /// Fetch and parse the `InRelease` file from the repository.
     ///
-    /// The returned client has its root URL set to `self.root_url().join("dists/{distribution}")`.
-    pub fn distribution_client(&self, distribution: &str) -> HttpDistributionClient<'_> {
-        HttpDistributionClient {
-            root_client: self,
-            distribution_path: format!("dists/{}", distribution.trim_matches('/')),
-        }
-    }
+    /// Returns a new object bound to the parsed `InRelease` file.
+    pub async fn fetch_inrelease(
+        &self,
+        distribution_path: &str,
+    ) -> Result<HttpReleaseClient<'_>, HttpError> {
+        let distribution_path = distribution_path.trim_matches('/').to_string();
+        let release_path = join_path(&distribution_path, "InRelease");
 
-    /// Obtain a [HttpDistributionClient] for a given sub-directory.
-    ///
-    /// The root URL of the returned client is `self.root_url().join(path)`, without
-    /// `dists/` prepended. This allows specifying non-standard paths to the distribution.
-    pub fn distribution_client_raw_path(&self, path: &str) -> HttpDistributionClient<'_> {
-        HttpDistributionClient {
+        let mut reader = self.get_path(&release_path).await?;
+
+        let mut data = vec![];
+        reader.read_to_end(&mut data).await?;
+
+        let release = ReleaseFile::from_armored_reader(Cursor::new(data))?;
+
+        let fetch_compression = IndexFileCompression::default_preferred_order()
+            .next()
+            .expect("iterator should not be empty");
+
+        Ok(HttpReleaseClient {
             root_client: self,
-            distribution_path: path.trim_matches('/').to_string(),
-        }
+            distribution_path,
+            release,
+            fetch_compression,
+        })
     }
 }
 
@@ -169,56 +177,6 @@ impl RepositoryReader for HttpRepositoryClient {
 
 fn join_path(a: &str, b: &str) -> String {
     format!("{}/{}", a.trim_matches('/'), b.trim_start_matches('/'))
-}
-
-/// An HTTP client bound to a specific distribution.
-///
-/// Debian repositories have the form `<root>/dists/<distribution>/` where the
-/// *distribution* directory contains an `InRelease` and/or `Release` file.
-///
-/// This type models a client interface to a specific distribution path under a root
-/// directory.
-pub struct HttpDistributionClient<'client> {
-    root_client: &'client HttpRepositoryClient,
-    distribution_path: String,
-}
-
-#[async_trait]
-impl<'client> RepositoryReader for HttpDistributionClient<'client> {
-    async fn get_path(
-        &self,
-        path: &str,
-    ) -> Result<Pin<Box<dyn AsyncBufRead + Send>>, RepositoryReadError> {
-        Ok(self
-            .root_client
-            .get_path(&join_path(&self.distribution_path, path))
-            .await?)
-    }
-}
-
-impl<'client> HttpDistributionClient<'client> {
-    /// Fetch and parse the `InRelease` file from the repository.
-    ///
-    /// Returns a new object bound to the parsed `InRelease` file.
-    pub async fn fetch_inrelease(&self) -> Result<HttpReleaseClient<'client>, HttpError> {
-        let mut reader = self.get_path("InRelease").await?;
-
-        let mut data = vec![];
-        reader.read_to_end(&mut data).await?;
-
-        let release = ReleaseFile::from_armored_reader(Cursor::new(data))?;
-
-        let fetch_compression = IndexFileCompression::default_preferred_order()
-            .next()
-            .expect("iterator should not be empty");
-
-        Ok(HttpReleaseClient {
-            root_client: self.root_client,
-            distribution_path: self.distribution_path.clone(),
-            release,
-            fetch_compression,
-        })
-    }
 }
 
 /// Repository HTTP client bound to a parsed `Release` or `InRelease` file.
@@ -269,9 +227,7 @@ mod test {
     async fn bullseye_release() -> Result<()> {
         let root = HttpRepositoryClient::new(BULLSEYE_URL)?;
 
-        let dist = root.distribution_client("bullseye");
-
-        let release = dist.fetch_inrelease().await?;
+        let release = root.fetch_inrelease("dists/bullseye").await?;
 
         let packages = release
             .resolve_packages("main", "amd64", false)
