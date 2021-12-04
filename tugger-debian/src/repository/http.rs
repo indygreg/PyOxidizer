@@ -57,6 +57,37 @@ pub enum HttpError {
     Release(#[from] ReleaseError),
 }
 
+async fn fetch_url(
+    client: &Client,
+    root_url: &Url,
+    path: &str,
+) -> Result<Pin<Box<dyn AsyncBufRead + Send>>, RepositoryReadError> {
+    let res = client.get(root_url.join(path)?).send().await.map_err(|e| {
+        RepositoryReadError::IoPath(
+            path.to_string(),
+            std::io::Error::new(
+                std::io::ErrorKind::Other,
+                format!("error sending HTTP request: {:?}", e),
+            ),
+        )
+    })?;
+    let res = res.error_for_status().map_err(|e| {
+        RepositoryReadError::IoPath(
+            path.to_string(),
+            std::io::Error::new(
+                std::io::ErrorKind::Other,
+                format!("bad HTTP status code: {:?}", e),
+            ),
+        )
+    })?;
+
+    Ok(Box::pin(
+        res.bytes_stream()
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, format!("{:?}", e)))
+            .into_async_read(),
+    ))
+}
+
 /// Client for a Debian repository served via HTTP.
 ///
 /// Instances are bound to a base URL, which represents the base directory.
@@ -132,35 +163,7 @@ impl RepositoryReader for HttpRepositoryClient {
         &self,
         path: &str,
     ) -> Result<Pin<Box<dyn AsyncBufRead + Send>>, RepositoryReadError> {
-        let res = self
-            .client
-            .get(self.root_url.join(path)?)
-            .send()
-            .await
-            .map_err(|e| {
-                RepositoryReadError::IoPath(
-                    path.to_string(),
-                    std::io::Error::new(
-                        std::io::ErrorKind::Other,
-                        format!("error sending HTTP request: {:?}", e),
-                    ),
-                )
-            })?;
-        let res = res.error_for_status().map_err(|e| {
-            RepositoryReadError::IoPath(
-                path.to_string(),
-                std::io::Error::new(
-                    std::io::ErrorKind::Other,
-                    format!("bad HTTP status code: {:?}", e),
-                ),
-            )
-        })?;
-
-        Ok(Box::pin(
-            res.bytes_stream()
-                .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, format!("{:?}", e)))
-                .into_async_read(),
-        ))
+        fetch_url(&self.client, &self.root_url, path).await
     }
 }
 
