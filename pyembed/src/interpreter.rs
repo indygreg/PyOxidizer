@@ -494,7 +494,7 @@ impl<'interpreter, 'resources> MainPythonInterpreter<'interpreter, 'resources> {
         }
 
         let spawn_module = py.import("multiprocessing.spawn")?;
-        spawn_module.getattr("spawn_main")?.call0()?;
+        spawn_module.getattr("spawn_main")?.call1((kwargs,))?;
 
         Ok(0)
     }

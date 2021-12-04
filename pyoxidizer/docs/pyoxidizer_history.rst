@@ -33,6 +33,17 @@ Version History
 
 Not yet released.
 
+Bug Fixes
+^^^^^^^^^
+
+* The ``pyembed`` crate will now properly call
+  ``multiprocessing.spawn.spawn_main()`` when the ``multiprocessing`` auto
+  dispatch function as configured by
+  :py:attr:`PythonInterpreterConfig.multiprocessing_start_method` is set to
+  ``spawn``. This resolves a ``TypeError: spawn_main() missing 1 required
+  positional argument: 'pipe_handle'`` run-time error that would occur in this
+  configuration. (#483)
+
 New Features
 ^^^^^^^^^^^^
 
