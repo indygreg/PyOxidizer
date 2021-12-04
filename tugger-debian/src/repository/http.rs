@@ -230,7 +230,7 @@ pub struct HttpReleaseClient<'client> {
 }
 
 #[async_trait]
-impl<'client> RepositoryReader for HttpReleaseClient<'client> {
+impl<'client> ReleaseReader for HttpReleaseClient<'client> {
     async fn get_path(
         &self,
         path: &str,
@@ -240,10 +240,7 @@ impl<'client> RepositoryReader for HttpReleaseClient<'client> {
             .get_path(&join_path(&self.distribution_path, path))
             .await?)
     }
-}
 
-#[async_trait]
-impl<'client> ReleaseReader for HttpReleaseClient<'client> {
     fn release_file(&self) -> &ReleaseFile<'static> {
         &self.release
     }

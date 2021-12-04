@@ -137,7 +137,27 @@ pub trait RepositoryReader {
 
 /// Provides a transport-agnostic mechanism for reading from a parsed `[In]Release` file.
 #[cfg_attr(feature = "async", async_trait)]
-pub trait ReleaseReader: RepositoryReader {
+pub trait ReleaseReader {
+    /// Get the content of a relative path as an async reader.
+    ///
+    /// This obtains a reader for path data and returns the raw data without any
+    /// decoding applied.
+    #[cfg(feature = "async")]
+    async fn get_path(
+        &self,
+        path: &str,
+    ) -> Result<Pin<Box<dyn AsyncBufRead + Send>>, RepositoryReadError>;
+
+    /// Get the content of a relative path with decompression transparently applied.
+    #[cfg(feature = "async")]
+    async fn get_path_decoded(
+        &self,
+        path: &str,
+        compression: IndexFileCompression,
+    ) -> Result<Pin<Box<dyn AsyncRead + Send>>, RepositoryReadError> {
+        get_path_decoded(self.get_path(path).await?, compression).await
+    }
+
     /// Obtain the parsed `[In]Release` file from which this reader is derived.
     fn release_file(&self) -> &ReleaseFile<'static>;
 
