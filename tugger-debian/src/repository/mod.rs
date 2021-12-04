@@ -109,11 +109,12 @@ async fn get_path_decoded(
     })
 }
 
-/// Provides a transport-agnostic mechanism for reading from Debian repositories.
+/// Debian repository reader bound to the root of the repository.
 ///
-/// This trait essentially abstracts I/O for reading files in Debian repositories.
+/// This trait facilitates access to *pool* as well as to multiple
+/// *releases* within the repository.
 #[cfg_attr(feature = "async", async_trait)]
-pub trait RepositoryReader {
+pub trait RepositoryRootReader {
     /// Get the content of a relative path as an async reader.
     ///
     /// This obtains a reader for path data and returns the raw data without any

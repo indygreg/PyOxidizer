@@ -27,7 +27,7 @@ by calling [HttpDistributionClient.fetch_inrelease()].
 use {
     crate::repository::{
         release::{ReleaseError, ReleaseFile},
-        IndexFileCompression, ReleaseReader, RepositoryReadError, RepositoryReader,
+        IndexFileCompression, ReleaseReader, RepositoryReadError, RepositoryRootReader,
     },
     async_trait::async_trait,
     futures::{stream::TryStreamExt, AsyncBufRead, AsyncReadExt},
@@ -166,7 +166,7 @@ impl HttpRepositoryClient {
 }
 
 #[async_trait]
-impl RepositoryReader for HttpRepositoryClient {
+impl RepositoryRootReader for HttpRepositoryClient {
     async fn get_path(
         &self,
         path: &str,
