@@ -20,6 +20,8 @@ use {
 };
 
 pub mod builder;
+#[cfg(feature = "async")]
+pub mod filesystem;
 #[cfg(feature = "http")]
 pub mod http;
 pub mod release;
@@ -93,4 +95,24 @@ pub trait RepositoryReader {
             IndexFileCompression::Lzma => Box::pin(LzmaDecoder::new(stream)),
         })
     }
+}
+
+/// Errors related to writing to repositories.
+#[derive(Debug, Error)]
+pub enum RepositoryWriteError {
+    #[error("I/O error write path {0}: {0:?}")]
+    IoPath(String, std::io::Error),
+}
+
+#[cfg_attr(feature = "async", async_trait)]
+pub trait RepositoryWriter {
+    /// Write data to a given path.
+    ///
+    /// The data to write is provided by an [AsyncRead] reader.
+    #[cfg(feature = "async")]
+    async fn write_path(
+        &self,
+        path: &str,
+        reader: Pin<Box<dyn AsyncRead + Send>>,
+    ) -> Result<u64, RepositoryWriteError>;
 }
