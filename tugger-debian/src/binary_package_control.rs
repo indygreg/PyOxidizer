@@ -7,11 +7,13 @@
 use {
     crate::{
         control::{ControlField, ControlParagraph},
-        deb::{DebError, DebPackageReference},
         dependency::{DependencyError, DependencyList, PackageDependencyFields},
         io::ContentDigest,
         package_version::{PackageVersion, VersionError},
-        repository::release::ChecksumType,
+        repository::{
+            builder::{DebPackageReference, Result as RepositoryBuilderResult},
+            release::ChecksumType,
+        },
     },
     std::{num::ParseIntError, str::FromStr},
     thiserror::Error,
@@ -30,6 +32,9 @@ pub enum BinaryPackageControlError {
 
     #[error("version error: {0:?}")]
     Version(#[from] VersionError),
+
+    #[error("invalid hexadecimal in content digest: {0:?}")]
+    FromHex(#[from] hex::FromHexError),
 }
 
 pub type Result<T> = std::result::Result<T, BinaryPackageControlError>;
@@ -188,19 +193,18 @@ impl<'a> BinaryPackageControlFile<'a> {
 }
 
 impl<'cf, 'a: 'cf> DebPackageReference<'cf> for BinaryPackageControlFile<'a> {
-    fn size_bytes(&self) -> crate::deb::Result<usize> {
-        self.size()
-            .ok_or_else(|| DebError::Other("Size field missing".into()))?
-            .map_err(|e| DebError::Other(format!("error parsing Size: {:?}", e)))
+    fn size_bytes(&self) -> RepositoryBuilderResult<usize> {
+        Ok(self
+            .size()
+            .ok_or_else(|| BinaryPackageControlError::RequiredFieldMissing("Size"))??)
     }
 
-    fn digest(&self, checksum: ChecksumType) -> crate::deb::Result<ContentDigest> {
-        let hex_digest = self
-            .first_field_str(checksum.field_name())
-            .ok_or_else(|| DebError::Other(format!("{} field missing", checksum.field_name())))?;
+    fn digest(&self, checksum: ChecksumType) -> RepositoryBuilderResult<ContentDigest> {
+        let hex_digest = self.first_field_str(checksum.field_name()).ok_or_else(|| {
+            BinaryPackageControlError::RequiredFieldMissing(checksum.field_name())
+        })?;
 
-        let digest = hex::decode(hex_digest)
-            .map_err(|e| DebError::Other(format!("error decoding hex digest: {:?}", e)))?;
+        let digest = hex::decode(hex_digest).map_err(BinaryPackageControlError::FromHex)?;
 
         Ok(match checksum {
             ChecksumType::Md5 => ContentDigest::Md5(digest),
@@ -209,10 +213,10 @@ impl<'cf, 'a: 'cf> DebPackageReference<'cf> for BinaryPackageControlFile<'a> {
         })
     }
 
-    fn filename(&self) -> crate::deb::Result<String> {
+    fn filename(&self) -> RepositoryBuilderResult<String> {
         let filename = self
             .first_field_str("Filename")
-            .ok_or_else(|| DebError::Other("Filename field missing".into()))?;
+            .ok_or(BinaryPackageControlError::RequiredFieldMissing("Filename"))?;
 
         Ok(if let Some((_, s)) = filename.rsplit_once('/') {
             s.to_string()
@@ -221,7 +225,9 @@ impl<'cf, 'a: 'cf> DebPackageReference<'cf> for BinaryPackageControlFile<'a> {
         })
     }
 
-    fn control_file_for_packages_index(&self) -> crate::deb::Result<BinaryPackageControlFile<'cf>> {
+    fn control_file_for_packages_index(
+        &self,
+    ) -> RepositoryBuilderResult<BinaryPackageControlFile<'cf>> {
         Ok(self.clone())
     }
 }

@@ -14,10 +14,10 @@ Primitives in this module facilitate constructing your own repositories.
 
 use {
     crate::{
-        binary_package_control::BinaryPackageControlError,
+        binary_package_control::{BinaryPackageControlError, BinaryPackageControlFile},
         control::{ControlError, ControlParagraph},
-        deb::{DebError, DebPackageReference},
-        io::read_compressed,
+        deb::{reader::resolve_control_file, DebError},
+        io::{read_compressed, ContentDigest},
         repository::{release::ChecksumType, Compression},
     },
     chrono::{DateTime, Utc},
@@ -35,9 +35,6 @@ pub enum RepositoryBuilderError {
     #[error("binary package control file error: {0:?}")]
     BinaryPackageControl(#[from] BinaryPackageControlError),
 
-    #[error("deb file handling error: {0:?}")]
-    Deb(#[from] DebError),
-
     #[error("attempting to add package to undefined component: {0}")]
     UnknownComponent(String),
 
@@ -46,6 +43,9 @@ pub enum RepositoryBuilderError {
 
     #[error("pool layout cannot be changed after content is indexed")]
     PoolLayoutImmutable,
+
+    #[error("deb file error: {0:?}")]
+    Deb(#[from] DebError),
 }
 
 /// Result type having [RepositoryBuilderError].
@@ -89,6 +89,74 @@ impl PoolLayout {
                 format!("pool/{}/{}/{}", component, name_prefix, filename)
             }
         }
+    }
+}
+
+/// Describes a reference to a `.deb` Debian package existing somewhere.
+///
+/// This trait is used as a generic way to refer to a `.deb` package, without implementations
+/// necessarily having immediate access to the full content/data of that `.deb` package.
+pub trait DebPackageReference<'cf> {
+    /// Obtain the size in bytes of the `.deb` file.
+    ///
+    /// This becomes the `Size` field in `Packages*` control files.
+    fn size_bytes(&self) -> Result<usize>;
+
+    /// Obtains the binary digest of this file given a checksum flavor.
+    ///
+    /// Implementations can compute the digest at run-time or return a cached value.
+    fn digest(&self, checksum: ChecksumType) -> Result<ContentDigest>;
+
+    /// Obtain the filename of this `.deb`.
+    ///
+    /// This should be just the file name, without any directory components.
+    fn filename(&self) -> Result<String>;
+
+    /// Obtain a [BinaryPackageControlFile] representing content for a `Packages` index file.
+    ///
+    /// The returned content can come from a `control` file in a `control.tar` or from
+    /// an existing `Packages` control file.
+    ///
+    /// The control file must have at least `Package`, `Version`, and `Architecture` fields.
+    fn control_file_for_packages_index(&self) -> Result<BinaryPackageControlFile<'cf>>;
+}
+
+/// Holds the content of a `.deb` file in-memory.
+pub struct InMemoryDebFile {
+    filename: String,
+    data: Vec<u8>,
+}
+
+impl InMemoryDebFile {
+    /// Create a new instance bound to memory.
+    pub fn new(filename: String, data: Vec<u8>) -> Self {
+        Self { filename, data }
+    }
+}
+
+impl<'cf> DebPackageReference<'cf> for InMemoryDebFile {
+    fn size_bytes(&self) -> Result<usize> {
+        Ok(self.data.len())
+    }
+
+    fn digest(&self, checksum: ChecksumType) -> Result<ContentDigest> {
+        let mut h = checksum.new_hasher();
+        h.update(&self.data);
+        let digest = h.finish().to_vec();
+
+        Ok(match checksum {
+            ChecksumType::Md5 => ContentDigest::Md5(digest),
+            ChecksumType::Sha1 => ContentDigest::Sha1(digest),
+            ChecksumType::Sha256 => ContentDigest::Sha256(digest),
+        })
+    }
+
+    fn filename(&self) -> Result<String> {
+        Ok(self.filename.clone())
+    }
+
+    fn control_file_for_packages_index(&self) -> Result<BinaryPackageControlFile<'cf>> {
+        Ok(resolve_control_file(std::io::Cursor::new(&self.data))?)
     }
 }
 
