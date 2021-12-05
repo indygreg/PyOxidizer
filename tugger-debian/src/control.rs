@@ -165,6 +165,8 @@ impl<'a> ToString for ControlField<'a> {
 /// A paragraph in a control file.
 ///
 /// A paragraph is an ordered series of control fields.
+///
+/// Field names are case insensitive on read and case preserving on set.
 #[derive(Clone, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct ControlParagraph<'a> {
     fields: Vec<ControlField<'a>>,
@@ -196,7 +198,9 @@ impl<'a> ControlParagraph<'a> {
 
     /// Whether a named field is present in this paragraph.
     pub fn has_field(&self, name: &str) -> bool {
-        self.fields.iter().any(|f| f.name == name)
+        self.fields
+            .iter()
+            .any(|f| f.name.as_ref().to_lowercase() == name.to_lowercase())
     }
 
     /// Iterate over fields in this paragraph.
@@ -206,12 +210,16 @@ impl<'a> ControlParagraph<'a> {
 
     /// Obtain the first field with a given name in this paragraph.
     pub fn first_field(&self, name: &str) -> Option<&ControlField> {
-        self.fields.iter().find(|f| f.name == name)
+        self.fields
+            .iter()
+            .find(|f| f.name.as_ref().to_lowercase() == name.to_lowercase())
     }
 
     /// Obtain a mutable reference to the first field with a given name.
     pub fn first_field_mut(&mut self, name: &str) -> Option<&'a mut ControlField> {
-        self.fields.iter_mut().find(|f| f.name == name)
+        self.fields
+            .iter_mut()
+            .find(|f| f.name.as_ref().to_lowercase() == name.to_lowercase())
     }
 
     /// Obtain the raw string value of the first occurrence of a named field.
