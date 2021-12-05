@@ -14,6 +14,9 @@ use {
         binary_package_control::BinaryPackageControlFile,
         binary_package_list::BinaryPackageList,
         control::{ControlError, ControlParagraphAsyncReader},
+        io::{
+            drain_reader, read_decompressed, Compression, ContentDigest, ContentValidatingReader,
+        },
         repository::{
             contents::{ContentsError, ContentsFile, ContentsFileAsyncReader},
             release::{
@@ -22,14 +25,9 @@ use {
             },
         },
     },
-    async_compression::futures::bufread::{BzDecoder, GzipDecoder, LzmaDecoder, XzDecoder},
     async_trait::async_trait,
     futures::{AsyncBufRead, AsyncRead, AsyncReadExt},
-    pin_project::pin_project,
-    std::{
-        pin::Pin,
-        task::{Context, Poll},
-    },
+    std::pin::Pin,
     thiserror::Error,
 };
 
@@ -39,43 +37,6 @@ pub mod filesystem;
 #[cfg(feature = "http")]
 pub mod http;
 pub mod release;
-
-/// Compression format used by index files.
-#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub enum IndexFileCompression {
-    /// No compression (no extension).
-    None,
-
-    /// XZ compression (.xz extension).
-    Xz,
-
-    /// Gzip compression (.gz extension).
-    Gzip,
-
-    /// Bzip2 compression (.bz2 extension).
-    Bzip2,
-
-    /// LZMA compression (.lzma extension).
-    Lzma,
-}
-
-impl IndexFileCompression {
-    /// Filename extension for files compressed in this format.
-    pub fn extension(&self) -> &'static str {
-        match self {
-            Self::None => "",
-            Self::Xz => ".xz",
-            Self::Gzip => ".gz",
-            Self::Bzip2 => ".bz2",
-            Self::Lzma => ".lzma",
-        }
-    }
-
-    /// The default retrieval preference order for client.
-    pub fn default_preferred_order() -> impl Iterator<Item = IndexFileCompression> {
-        [Self::Xz, Self::Lzma, Self::Gzip, Self::Bzip2, Self::None].into_iter()
-    }
-}
 
 /// Errors related to reading from repositories.
 #[derive(Debug, Error)]
@@ -103,112 +64,6 @@ pub enum RepositoryReadError {
 
     #[error("URL error: {0:?}")]
     Url(#[from] url::ParseError),
-}
-
-async fn get_path_decoded(
-    stream: Pin<Box<dyn AsyncBufRead + Send>>,
-    compression: IndexFileCompression,
-) -> Result<Pin<Box<dyn AsyncRead + Send>>, RepositoryReadError> {
-    Ok(match compression {
-        IndexFileCompression::None => Box::pin(stream),
-        IndexFileCompression::Gzip => Box::pin(GzipDecoder::new(stream)),
-        IndexFileCompression::Xz => Box::pin(XzDecoder::new(stream)),
-        IndexFileCompression::Bzip2 => Box::pin(BzDecoder::new(stream)),
-        IndexFileCompression::Lzma => Box::pin(LzmaDecoder::new(stream)),
-    })
-}
-
-/// An adapter for [AsyncRead] streams that validates source size and digest.
-#[pin_project]
-struct DigestValidatingStreamReader<R> {
-    hasher: Option<Box<dyn pgp::crypto::Hasher + Send>>,
-    expected_size: usize,
-    expected_digest: Vec<u8>,
-    #[pin]
-    source: R,
-    bytes_read: usize,
-}
-
-impl<R> DigestValidatingStreamReader<R> {
-    fn new(
-        source: R,
-        expected_size: usize,
-        digest_type: ChecksumType,
-        expected_digest: Vec<u8>,
-    ) -> Self {
-        Self {
-            hasher: Some(digest_type.new_hasher()),
-            expected_size,
-            expected_digest,
-            source,
-            bytes_read: 0,
-        }
-    }
-}
-
-impl<R> AsyncRead for DigestValidatingStreamReader<R>
-where
-    R: AsyncRead + Unpin,
-{
-    fn poll_read(
-        self: Pin<&mut Self>,
-        cx: &mut Context<'_>,
-        buf: &mut [u8],
-    ) -> Poll<std::io::Result<usize>> {
-        let mut this = self.project();
-
-        match this.source.as_mut().poll_read(cx, buf) {
-            Poll::Ready(Ok(size)) => {
-                if size > 0 {
-                    if let Some(hasher) = this.hasher.as_mut() {
-                        hasher.update(&buf[0..size]);
-                    } else {
-                        panic!("hasher destroyed prematurely");
-                    }
-
-                    *this.bytes_read += size;
-                }
-
-                match this.bytes_read.cmp(&this.expected_size) {
-                    std::cmp::Ordering::Equal => {
-                        if let Some(hasher) = this.hasher.take() {
-                            let got_digest = hasher.finish();
-
-                            if &got_digest != this.expected_digest {
-                                return Poll::Ready(Err(std::io::Error::new(
-                                    std::io::ErrorKind::Other,
-                                    format!(
-                                        "digest mismatch of retrieved content: expected {}, got {}",
-                                        hex::encode(this.expected_digest),
-                                        hex::encode(got_digest)
-                                    ),
-                                )));
-                            }
-                        }
-                    }
-                    std::cmp::Ordering::Greater => {
-                        return Poll::Ready(Err(std::io::Error::new(
-                            std::io::ErrorKind::Other,
-                            format!(
-                                "extra bytes read: expected {}; got {}",
-                                this.expected_size, this.bytes_read
-                            ),
-                        )));
-                    }
-                    std::cmp::Ordering::Less => {}
-                }
-
-                Poll::Ready(Ok(size))
-            }
-            res => res,
-        }
-    }
-}
-
-/// Drain content from a reader to a black hole.
-async fn drain_reader(reader: impl AsyncRead) -> std::io::Result<u64> {
-    let mut sink = futures::io::sink();
-    futures::io::copy(reader, &mut sink).await
 }
 
 /// Debian repository reader bound to the root of the repository.
@@ -242,14 +97,12 @@ pub trait RepositoryRootReader {
         &self,
         path: &str,
         expected_size: usize,
-        checksum: ChecksumType,
-        digest: Vec<u8>,
+        expected_digest: ContentDigest,
     ) -> Result<Pin<Box<dyn AsyncRead>>, RepositoryReadError> {
-        Ok(Box::pin(DigestValidatingStreamReader::new(
+        Ok(Box::pin(ContentValidatingReader::new(
             self.get_path(path).await?,
             expected_size,
-            checksum,
-            digest,
+            expected_digest,
         )))
     }
 
@@ -257,9 +110,11 @@ pub trait RepositoryRootReader {
     async fn get_path_decoded(
         &self,
         path: &str,
-        compression: IndexFileCompression,
+        compression: Compression,
     ) -> Result<Pin<Box<dyn AsyncRead + Send>>, RepositoryReadError> {
-        get_path_decoded(self.get_path(path).await?, compression).await
+        read_decompressed(self.get_path(path).await?, compression)
+            .await
+            .map_err(|e| RepositoryReadError::IoPath(path.to_string(), e))
     }
 
     /// Obtain a [ReleaseReader] for a given distribution.
@@ -339,14 +194,12 @@ pub trait ReleaseReader: Sync {
         &self,
         path: &str,
         expected_size: usize,
-        checksum: ChecksumType,
-        digest: Vec<u8>,
+        expected_digest: ContentDigest,
     ) -> Result<Pin<Box<dyn AsyncRead + Send>>, RepositoryReadError> {
-        Ok(Box::pin(DigestValidatingStreamReader::new(
+        Ok(Box::pin(ContentValidatingReader::new(
             self.get_path(path).await?,
             expected_size,
-            checksum,
-            digest,
+            expected_digest,
         )))
     }
 
@@ -354,9 +207,11 @@ pub trait ReleaseReader: Sync {
     async fn get_path_decoded(
         &self,
         path: &str,
-        compression: IndexFileCompression,
+        compression: Compression,
     ) -> Result<Pin<Box<dyn AsyncRead + Send>>, RepositoryReadError> {
-        get_path_decoded(self.get_path(path).await?, compression).await
+        read_decompressed(self.get_path(path).await?, compression)
+            .await
+            .map_err(|e| RepositoryReadError::IoPath(path.to_string(), e))
     }
 
     /// Like [Self::get_path_decoded()] but also perform content integrity verification.
@@ -365,16 +220,17 @@ pub trait ReleaseReader: Sync {
     async fn get_path_decoded_with_digest_verification(
         &self,
         path: &str,
-        compression: IndexFileCompression,
+        compression: Compression,
         expected_size: usize,
-        checksum: ChecksumType,
-        digest: Vec<u8>,
+        expected_digest: ContentDigest,
     ) -> Result<Pin<Box<dyn AsyncRead + Send>>, RepositoryReadError> {
         let reader = self
-            .get_path_with_digest_verification(path, expected_size, checksum, digest)
+            .get_path_with_digest_verification(path, expected_size, expected_digest)
             .await?;
 
-        get_path_decoded(Box::pin(futures::io::BufReader::new(reader)), compression).await
+        read_decompressed(Box::pin(futures::io::BufReader::new(reader)), compression)
+            .await
+            .map_err(|e| RepositoryReadError::IoPath(path.to_string(), e))
     }
 
     /// Obtain the parsed `[In]Release` file from which this reader is derived.
@@ -396,14 +252,14 @@ pub trait ReleaseReader: Sync {
     }
 
     /// Obtain the preferred compression format to retrieve index files in.
-    fn preferred_compression(&self) -> IndexFileCompression;
+    fn preferred_compression(&self) -> Compression;
 
     /// Set the preferred compression format for retrieved index files.
     ///
     /// Index files are often published in multiple compression formats, including no
     /// compression. This function can be used to instruct the reader which compression
     /// format to prefer.
-    fn set_preferred_compression(&mut self, compression: IndexFileCompression);
+    fn set_preferred_compression(&mut self, compression: Compression);
 
     /// Obtain parsed `Packages` file entries within this Release file.
     ///
@@ -490,7 +346,7 @@ pub trait ReleaseReader: Sync {
         {
             Ok(entry.clone())
         } else {
-            for compression in IndexFileCompression::default_preferred_order() {
+            for compression in Compression::default_preferred_order() {
                 if let Some(entry) = entries
                     .iter()
                     .find(|entry| entry.compression == compression)
@@ -525,8 +381,7 @@ pub trait ReleaseReader: Sync {
                 &path,
                 entry.compression,
                 entry.entry.size,
-                self.retrieve_checksum()?,
-                entry.entry.digest_bytes()?,
+                entry.entry.digest.as_content_digest()?,
             )
             .await?,
         ));
@@ -565,7 +420,7 @@ pub trait ReleaseReader: Sync {
         {
             Ok(entry.clone())
         } else {
-            for compression in IndexFileCompression::default_preferred_order() {
+            for compression in Compression::default_preferred_order() {
                 if let Some(entry) = entries
                     .iter()
                     .find(|entry| entry.compression == compression)
@@ -598,8 +453,7 @@ pub trait ReleaseReader: Sync {
                 &path,
                 entry.compression,
                 entry.entry.size,
-                self.retrieve_checksum()?,
-                entry.entry.digest_bytes()?,
+                entry.entry.digest.as_content_digest()?,
             )
             .await?;
 

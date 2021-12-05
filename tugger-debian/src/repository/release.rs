@@ -7,8 +7,9 @@
 use {
     crate::{
         control::{ControlError, ControlField, ControlParagraph, ControlParagraphReader},
+        io::ContentDigest,
         pgp::MyHasher,
-        repository::IndexFileCompression,
+        repository::Compression,
     },
     chrono::{DateTime, TimeZone, Utc},
     mailparse::{dateparse, MailParseError},
@@ -131,6 +132,23 @@ impl<'a> ReleaseFileDigest<'a> {
             Self::Sha256(v) => v,
         }
     }
+
+    /// Attempt to convert this instance to a [ContentDigest].
+    pub fn as_content_digest(&self) -> Result<ContentDigest, ReleaseError> {
+        self.try_into()
+    }
+}
+
+impl<'a> TryFrom<&ReleaseFileDigest<'a>> for ContentDigest {
+    type Error = ReleaseError;
+
+    fn try_from(digest: &ReleaseFileDigest) -> Result<Self, Self::Error> {
+        match digest {
+            ReleaseFileDigest::Md5(v) => Ok(ContentDigest::Md5(hex::decode(v)?)),
+            ReleaseFileDigest::Sha1(v) => Ok(ContentDigest::Sha1(hex::decode(v)?)),
+            ReleaseFileDigest::Sha256(v) => Ok(ContentDigest::Sha256(hex::decode(v)?)),
+        }
+    }
 }
 
 /// An entry for a file in a parsed `Release` file.
@@ -161,7 +179,7 @@ pub struct ContentsFileEntry<'a> {
     pub architecture: Cow<'a, str>,
 
     /// File-level compression format being used.
-    pub compression: IndexFileCompression,
+    pub compression: Compression,
 
     /// Whether this refers to udeb packages used by installers.
     pub is_installer: bool,
@@ -180,7 +198,7 @@ pub struct PackagesFileEntry<'a> {
     pub architecture: Cow<'a, str>,
 
     /// File-level compression format being used.
-    pub compression: IndexFileCompression,
+    pub compression: Compression,
 
     /// Whether this refers to udeb packages used by installers.
     pub is_installer: bool,
@@ -190,7 +208,7 @@ pub struct PackagesFileEntry<'a> {
 #[derive(Clone, Debug, PartialEq)]
 pub struct SourcesFileEntry<'a> {
     pub entry: ReleaseFileEntry<'a>,
-    pub compression: IndexFileCompression,
+    pub compression: Compression,
 }
 
 impl<'a> ReleaseFileEntry<'a> {
@@ -231,9 +249,9 @@ impl<'a> ReleaseFileEntry<'a> {
         let suffix = filename.strip_prefix("Contents-")?;
 
         let (architecture, compression) = if let Some(v) = suffix.strip_suffix(".gz") {
-            (v, IndexFileCompression::Gzip)
+            (v, Compression::Gzip)
         } else {
-            (suffix, IndexFileCompression::None)
+            (suffix, Compression::None)
         };
 
         let (architecture, is_installer) = if let Some(v) = architecture.strip_prefix("udeb-") {
@@ -262,11 +280,11 @@ impl<'a> ReleaseFileEntry<'a> {
         let parts = self.path.split('/').collect::<Vec<_>>();
 
         let compression = match *parts.last()? {
-            "Packages" => IndexFileCompression::None,
-            "Packages.xz" => IndexFileCompression::Xz,
-            "Packages.gz" => IndexFileCompression::Gzip,
-            "Packages.bz2" => IndexFileCompression::Bzip2,
-            "Packages.lzma" => IndexFileCompression::Lzma,
+            "Packages" => Compression::None,
+            "Packages.xz" => Compression::Xz,
+            "Packages.gz" => Compression::Gzip,
+            "Packages.bz2" => Compression::Bzip2,
+            "Packages.lzma" => Compression::Lzma,
             _ => {
                 return None;
             }
@@ -309,11 +327,11 @@ impl<'a> ReleaseFileEntry<'a> {
         let parts = self.path.split('/').collect::<Vec<_>>();
 
         let compression = match *parts.last()? {
-            "Sources" => IndexFileCompression::None,
-            "Sources.gz" => IndexFileCompression::Gzip,
-            "Sources.xz" => IndexFileCompression::Xz,
-            "Sources.bz2" => IndexFileCompression::Bzip2,
-            "Sources.lzma" => IndexFileCompression::Lzma,
+            "Sources" => Compression::None,
+            "Sources.gz" => Compression::Gzip,
+            "Sources.xz" => Compression::Xz,
+            "Sources.bz2" => Compression::Bzip2,
+            "Sources.lzma" => Compression::Lzma,
             _ => {
                 return None;
             }
@@ -596,7 +614,7 @@ impl<'a> ReleaseFile<'a> {
     pub fn find_packages_indices(
         &self,
         checksum: ChecksumType,
-        compression: IndexFileCompression,
+        compression: Compression,
         component: &str,
         arch: &str,
         is_installer: bool,
@@ -781,7 +799,7 @@ mod test {
                 },
                 component: "contrib".into(),
                 architecture: "all".into(),
-                compression: IndexFileCompression::None,
+                compression: Compression::None,
                 is_installer: false
             }
         );
@@ -797,7 +815,7 @@ mod test {
                 },
                 component: "contrib".into(),
                 architecture: "all".into(),
-                compression: IndexFileCompression::Gzip,
+                compression: Compression::Gzip,
                 is_installer: false
             }
         );
@@ -813,7 +831,7 @@ mod test {
                 },
                 component: "contrib".into(),
                 architecture: "amd64".into(),
-                compression: IndexFileCompression::None,
+                compression: Compression::None,
                 is_installer: true
             }
         );
@@ -836,7 +854,7 @@ mod test {
                 },
                 component: "contrib".into(),
                 architecture: "all".into(),
-                compression: IndexFileCompression::None,
+                compression: Compression::None,
                 is_installer: false
             }
         );
@@ -852,7 +870,7 @@ mod test {
                 },
                 component: "contrib".into(),
                 architecture: "all".into(),
-                compression: IndexFileCompression::Gzip,
+                compression: Compression::Gzip,
                 is_installer: false
             }
         );
@@ -868,7 +886,7 @@ mod test {
                 },
                 component: "contrib".into(),
                 architecture: "all".into(),
-                compression: IndexFileCompression::Xz,
+                compression: Compression::Xz,
                 is_installer: false
             }
         );
@@ -891,7 +909,7 @@ mod test {
                 },
                 component: "contrib".into(),
                 architecture: "all".into(),
-                compression: IndexFileCompression::None,
+                compression: Compression::None,
                 is_installer: true
             }
         );

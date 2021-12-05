@@ -15,6 +15,7 @@ pub mod deb;
 pub mod dependency;
 pub mod dependency_resolution;
 pub mod error;
+pub mod io;
 pub mod package_version;
 pub mod pgp;
 pub mod repository;

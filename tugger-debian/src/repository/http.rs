@@ -27,7 +27,7 @@ by calling [HttpDistributionClient.fetch_inrelease()].
 use {
     crate::repository::{
         release::{ReleaseError, ReleaseFile},
-        IndexFileCompression, ReleaseReader, RepositoryReadError, RepositoryRootReader,
+        Compression, ReleaseReader, RepositoryReadError, RepositoryRootReader,
     },
     async_trait::async_trait,
     futures::{stream::TryStreamExt, AsyncBufRead},
@@ -160,7 +160,7 @@ impl RepositoryRootReader for HttpRepositoryClient {
 
         let release = self.fetch_inrelease(&release_path).await?;
 
-        let fetch_compression = IndexFileCompression::default_preferred_order()
+        let fetch_compression = Compression::default_preferred_order()
             .next()
             .expect("iterator should not be empty");
 
@@ -182,7 +182,7 @@ pub struct HttpReleaseClient {
     client: Client,
     root_url: Url,
     release: ReleaseFile<'static>,
-    fetch_compression: IndexFileCompression,
+    fetch_compression: Compression,
 }
 
 #[async_trait]
@@ -202,11 +202,11 @@ impl ReleaseReader for HttpReleaseClient {
         &self.release
     }
 
-    fn preferred_compression(&self) -> IndexFileCompression {
+    fn preferred_compression(&self) -> Compression {
         self.fetch_compression
     }
 
-    fn set_preferred_compression(&mut self, compression: IndexFileCompression) {
+    fn set_preferred_compression(&mut self, compression: Compression) {
         self.fetch_compression = compression;
     }
 }
