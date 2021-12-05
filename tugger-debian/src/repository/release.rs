@@ -56,6 +56,9 @@ pub enum ReleaseError {
 
     #[error("No PGP signatures found from the specified key")]
     NoSignaturesByKey,
+
+    #[error("invalid hexadecimal in content digest: {0:?}")]
+    FromHex(#[from] hex::FromHexError),
 }
 
 /// Checksum type / digest mechanism used in a release file.
@@ -82,7 +85,7 @@ impl ChecksumType {
     }
 
     /// Obtain a new hasher for this checksum flavor.
-    pub fn new_hasher(&self) -> Box<dyn pgp::crypto::Hasher> {
+    pub fn new_hasher(&self) -> Box<dyn pgp::crypto::Hasher + Send> {
         Box::new(match self {
             Self::Md5 => MyHasher::md5(),
             Self::Sha1 => MyHasher::sha1(),
@@ -162,6 +165,11 @@ impl<'a> ReleaseFileEntry<'a> {
                 self.digest.digest()
             )
         }
+    }
+
+    /// Obtain the content digest as bytes.
+    pub fn digest_bytes(&self) -> Result<Vec<u8>, ReleaseError> {
+        Ok(hex::decode(self.digest.digest())?)
     }
 }
 

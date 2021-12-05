@@ -26,7 +26,11 @@ use {
     async_compression::futures::bufread::{BzDecoder, GzipDecoder, LzmaDecoder, XzDecoder},
     async_trait::async_trait,
     futures::{AsyncBufRead, AsyncRead, AsyncReadExt},
-    std::pin::Pin,
+    pin_project::pin_project,
+    std::{
+        pin::Pin,
+        task::{Context, Poll},
+    },
 };
 
 pub mod builder;
@@ -109,6 +113,95 @@ async fn get_path_decoded(
     })
 }
 
+/// An adapter for [AsyncRead] streams that validates source size and digest.
+#[cfg(feature = "async")]
+#[pin_project]
+struct DigestValidatingStreamReader<R> {
+    hasher: Option<Box<dyn pgp::crypto::Hasher + Send>>,
+    expected_size: usize,
+    expected_digest: Vec<u8>,
+    #[pin]
+    source: R,
+    bytes_read: usize,
+}
+
+impl<R> DigestValidatingStreamReader<R> {
+    fn new(
+        source: R,
+        expected_size: usize,
+        digest_type: ChecksumType,
+        expected_digest: Vec<u8>,
+    ) -> Self {
+        Self {
+            hasher: Some(digest_type.new_hasher()),
+            expected_size,
+            expected_digest,
+            source,
+            bytes_read: 0,
+        }
+    }
+}
+
+#[cfg(feature = "async")]
+impl<R> AsyncRead for DigestValidatingStreamReader<R>
+where
+    R: AsyncRead + Unpin,
+{
+    fn poll_read(
+        self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+        buf: &mut [u8],
+    ) -> Poll<std::io::Result<usize>> {
+        let mut this = self.project();
+
+        match this.source.as_mut().poll_read(cx, buf) {
+            Poll::Ready(Ok(size)) => {
+                if size > 0 {
+                    if let Some(hasher) = this.hasher.as_mut() {
+                        hasher.update(&buf[0..size]);
+                    } else {
+                        panic!("hasher destroyed prematurely");
+                    }
+
+                    *this.bytes_read += size;
+                }
+
+                match this.bytes_read.cmp(&this.expected_size) {
+                    std::cmp::Ordering::Equal => {
+                        if let Some(hasher) = this.hasher.take() {
+                            let got_digest = hasher.finish();
+
+                            if &got_digest != this.expected_digest {
+                                return Poll::Ready(Err(std::io::Error::new(
+                                    std::io::ErrorKind::Other,
+                                    format!(
+                                        "digest mismatch of retrieved content: expected {}, got {}",
+                                        hex::encode(this.expected_digest),
+                                        hex::encode(got_digest)
+                                    ),
+                                )));
+                            }
+                        }
+                    }
+                    std::cmp::Ordering::Greater => {
+                        return Poll::Ready(Err(std::io::Error::new(
+                            std::io::ErrorKind::Other,
+                            format!(
+                                "extra bytes read: expected {}; got {}",
+                                this.expected_size, this.bytes_read
+                            ),
+                        )));
+                    }
+                    std::cmp::Ordering::Less => {}
+                }
+
+                Poll::Ready(Ok(size))
+            }
+            res => res,
+        }
+    }
+}
+
 /// Debian repository reader bound to the root of the repository.
 ///
 /// This trait facilitates access to *pool* as well as to multiple
@@ -127,6 +220,31 @@ pub trait RepositoryRootReader {
         &self,
         path: &str,
     ) -> Result<Pin<Box<dyn AsyncBufRead + Send>>, RepositoryReadError>;
+
+    /// Obtain a reader that performs content integrity checking.
+    ///
+    /// Because content digests can only be computed once all content is read, the reader
+    /// emits data as it is streaming but only compares the cryptographic digest once all
+    /// data has been read. If there is a content digest mismatch, an error will be raised
+    /// once the final byte is read.
+    ///
+    /// Validation only occurs if the stream is read to completion. Failure to read the
+    /// entire stream could result in reading of unexpected content.
+    #[cfg(feature = "async")]
+    async fn get_path_with_digest_verification(
+        &self,
+        path: &str,
+        expected_size: usize,
+        checksum: ChecksumType,
+        digest: Vec<u8>,
+    ) -> Result<Pin<Box<dyn AsyncRead>>, RepositoryReadError> {
+        Ok(Box::pin(DigestValidatingStreamReader::new(
+            self.get_path(path).await?,
+            expected_size,
+            checksum,
+            digest,
+        )))
+    }
 
     /// Get the content of a relative path with decompression transparently applied.
     #[cfg(feature = "async")]
@@ -205,6 +323,31 @@ pub trait ReleaseReader: Sync {
         path: &str,
     ) -> Result<Pin<Box<dyn AsyncBufRead + Send>>, RepositoryReadError>;
 
+    /// Obtain a reader that performs content integrity checking.
+    ///
+    /// Because content digests can only be computed once all content is read, the reader
+    /// emits data as it is streaming but only compares the cryptographic digest once all
+    /// data has been read. If there is a content digest mismatch, an error will be raised
+    /// once the final byte is read.
+    ///
+    /// Validation only occurs if the stream is read to completion. Failure to read the
+    /// entire stream could result in reading of unexpected content.
+    #[cfg(feature = "async")]
+    async fn get_path_with_digest_verification(
+        &self,
+        path: &str,
+        expected_size: usize,
+        checksum: ChecksumType,
+        digest: Vec<u8>,
+    ) -> Result<Pin<Box<dyn AsyncRead + Send>>, RepositoryReadError> {
+        Ok(Box::pin(DigestValidatingStreamReader::new(
+            self.get_path(path).await?,
+            expected_size,
+            checksum,
+            digest,
+        )))
+    }
+
     /// Get the content of a relative path with decompression transparently applied.
     #[cfg(feature = "async")]
     async fn get_path_decoded(
@@ -213,6 +356,24 @@ pub trait ReleaseReader: Sync {
         compression: IndexFileCompression,
     ) -> Result<Pin<Box<dyn AsyncRead + Send>>, RepositoryReadError> {
         get_path_decoded(self.get_path(path).await?, compression).await
+    }
+
+    /// Like [Self::get_path_decoded()] but also perform content integrity verification.
+    ///
+    /// The digest is matched against the original fetched content, before decompression.
+    async fn get_path_decoded_with_digest_verification(
+        &self,
+        path: &str,
+        compression: IndexFileCompression,
+        expected_size: usize,
+        checksum: ChecksumType,
+        digest: Vec<u8>,
+    ) -> Result<Pin<Box<dyn AsyncRead + Send>>, RepositoryReadError> {
+        let reader = self
+            .get_path_with_digest_verification(path, expected_size, checksum, digest)
+            .await?;
+
+        get_path_decoded(Box::pin(futures::io::BufReader::new(reader)), compression).await
     }
 
     /// Obtain the parsed `[In]Release` file from which this reader is derived.
@@ -321,11 +482,15 @@ pub trait ReleaseReader: Sync {
             entry.entry.path.to_string()
         };
 
-        // TODO perform digest verification.
-        // TODO make this stream output.
-
         let mut reader = ControlParagraphAsyncReader::new(futures::io::BufReader::new(
-            self.get_path_decoded(&path, entry.compression).await?,
+            self.get_path_decoded_with_digest_verification(
+                &path,
+                entry.compression,
+                entry.entry.size,
+                self.retrieve_checksum()?,
+                entry.entry.digest_bytes()?,
+            )
+            .await?,
         ));
 
         let mut res = BinaryPackageList::default();
