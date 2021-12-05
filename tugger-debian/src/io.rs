@@ -8,6 +8,7 @@ use {
     crate::pgp::MyHasher,
     async_compression::futures::bufread::{BzDecoder, GzipDecoder, LzmaDecoder, XzDecoder},
     futures::{AsyncBufRead, AsyncRead},
+    pgp::crypto::Hasher,
     pin_project::pin_project,
     std::{
         pin::Pin,
@@ -27,7 +28,7 @@ pub enum ContentDigest {
 
 impl ContentDigest {
     /// Create a new hasher matching for the type of this digest.
-    pub fn new_hasher(&self) -> Box<dyn pgp::crypto::Hasher + Send> {
+    pub fn new_hasher(&self) -> Box<dyn Hasher + Send> {
         Box::new(match self {
             Self::Md5(_) => MyHasher::md5(),
             Self::Sha1(_) => MyHasher::sha1(),
@@ -187,6 +188,99 @@ where
                         )));
                     }
                     std::cmp::Ordering::Less => {}
+                }
+
+                Poll::Ready(Ok(size))
+            }
+            res => res,
+        }
+    }
+}
+
+/// Holds multiple flavors of content digests.
+pub struct MultiContentDigest {
+    pub md5: ContentDigest,
+    pub sha1: ContentDigest,
+    pub sha256: ContentDigest,
+}
+
+/// A content digester that simultaneously computes multiple digest types.
+pub struct MultiDigester {
+    md5: Box<dyn Hasher + Send>,
+    sha1: Box<dyn Hasher + Send>,
+    sha256: Box<dyn Hasher + Send>,
+}
+
+impl Default for MultiDigester {
+    fn default() -> Self {
+        Self {
+            md5: Box::new(MyHasher::md5()),
+            sha1: Box::new(MyHasher::sha1()),
+            sha256: Box::new(MyHasher::sha256()),
+        }
+    }
+}
+
+impl MultiDigester {
+    /// Write content into the digesters.
+    pub fn update(&mut self, data: &[u8]) {
+        self.md5.update(data);
+        self.sha1.update(data);
+        self.sha256.update(data);
+    }
+
+    /// Finish digesting content.
+    ///
+    /// Consumes the instance and returns a [MultiContentDigest] holding all the digests.
+    pub fn finish(self) -> MultiContentDigest {
+        MultiContentDigest {
+            md5: ContentDigest::Md5(self.md5.finish()),
+            sha1: ContentDigest::Sha1(self.sha1.finish()),
+            sha256: ContentDigest::Sha256(self.sha256.finish()),
+        }
+    }
+}
+
+/// An [AsyncRead] stream adapter that computes multiple [ContentDigest] as data is read.
+#[pin_project]
+pub struct DigestingReader<R> {
+    digester: MultiDigester,
+    #[pin]
+    source: R,
+}
+
+impl<R> DigestingReader<R> {
+    /// Construct a new instance from a source reader.
+    pub fn new(source: R) -> Self {
+        Self {
+            digester: MultiDigester::default(),
+            source,
+        }
+    }
+
+    /// Finish the stream.
+    ///
+    /// Returns the source reader and a resolved [MultiContentDigest].
+    pub fn finish(self) -> (R, MultiContentDigest) {
+        (self.source, self.digester.finish())
+    }
+}
+
+impl<R> AsyncRead for DigestingReader<R>
+where
+    R: AsyncRead + Unpin,
+{
+    fn poll_read(
+        self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+        buf: &mut [u8],
+    ) -> Poll<std::io::Result<usize>> {
+        let mut this = self.project();
+
+        match this.source.as_mut().poll_read(cx, buf) {
+            Poll::Ready(Ok(size)) => {
+                if size > 0 {
+                    this.digester.update(&buf[0..size]);
                 }
 
                 Poll::Ready(Ok(size))
