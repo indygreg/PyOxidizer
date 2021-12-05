@@ -156,6 +156,12 @@ impl<'a> ControlField<'a> {
     }
 }
 
+impl<'a> ToString for ControlField<'a> {
+    fn to_string(&self) -> String {
+        format!("{}: {}\n", self.name, self.value_str())
+    }
+}
+
 /// A paragraph in a control file.
 ///
 /// A paragraph is an ordered series of control fields.
@@ -250,6 +256,18 @@ impl<'a> ControlParagraph<'a> {
         }
 
         writer.write_all(b"\n")
+    }
+}
+
+impl<'a> ToString for ControlParagraph<'a> {
+    fn to_string(&self) -> String {
+        let fields = self
+            .fields
+            .iter()
+            .map(|f| f.to_string())
+            .collect::<Vec<_>>();
+
+        format!("{}\n", fields.join(""))
     }
 }
 

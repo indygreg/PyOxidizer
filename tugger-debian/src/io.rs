@@ -6,7 +6,10 @@
 
 use {
     crate::pgp::MyHasher,
-    async_compression::futures::bufread::{BzDecoder, GzipDecoder, LzmaDecoder, XzDecoder},
+    async_compression::futures::bufread::{
+        BzDecoder, BzEncoder, GzipDecoder, GzipEncoder, LzmaDecoder, LzmaEncoder, XzDecoder,
+        XzEncoder,
+    },
     futures::{AsyncBufRead, AsyncRead},
     pgp::crypto::Hasher,
     pin_project::pin_project,
@@ -100,6 +103,20 @@ pub async fn read_decompressed(
         Compression::Bzip2 => Box::pin(BzDecoder::new(stream)),
         Compression::Lzma => Box::pin(LzmaDecoder::new(stream)),
     })
+}
+
+/// Wrap a reader with transparent compression.
+pub fn read_compressed<'a>(
+    stream: impl AsyncBufRead + Unpin + 'a,
+    compression: Compression,
+) -> Box<dyn AsyncRead + Unpin + 'a> {
+    match compression {
+        Compression::None => Box::new(stream),
+        Compression::Gzip => Box::new(GzipEncoder::new(stream)),
+        Compression::Xz => Box::new(XzEncoder::new(stream)),
+        Compression::Bzip2 => Box::new(BzEncoder::new(stream)),
+        Compression::Lzma => Box::new(LzmaEncoder::new(stream)),
+    }
 }
 
 /// Drain content from a reader to a black hole.

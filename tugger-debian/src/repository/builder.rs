@@ -17,9 +17,11 @@ use {
         binary_package_control::BinaryPackageControlError,
         control::{ControlError, ControlParagraph},
         deb::{DebError, DebPackageReference},
+        io::read_compressed,
         repository::{release::ChecksumType, Compression},
     },
     chrono::{DateTime, Utc},
+    futures::{AsyncRead, TryStreamExt},
     std::collections::{BTreeMap, BTreeSet},
     thiserror::Error,
 };
@@ -87,6 +89,26 @@ impl PoolLayout {
                 format!("pool/{}/{}/{}", component, name_prefix, filename)
             }
         }
+    }
+}
+
+/// Describes a `Packages` index file and provides a source of its content.
+pub struct BinaryPackagesIndexReader<'a> {
+    pub component: &'a str,
+    pub architecture: &'a str,
+    pub compression: Compression,
+    pub reader: Box<dyn AsyncRead + Unpin + 'a>,
+}
+
+impl<'a> BinaryPackagesIndexReader<'a> {
+    /// Obtain the path of this entry, relative to the `Release` file.
+    pub fn path(&self) -> String {
+        format!(
+            "{}/binary-{}/Packages{}",
+            self.component,
+            self.architecture,
+            self.compression.extension()
+        )
     }
 }
 
@@ -404,11 +426,105 @@ impl RepositoryBuilder {
 
         Ok(())
     }
+
+    /// Obtain all components having binary packages.
+    ///
+    /// The iterator contains 2-tuples of `(component, architecture)`.
+    pub fn binary_package_components(&self) -> impl Iterator<Item = (&str, &str)> + '_ {
+        self.binary_packages
+            .keys()
+            .map(|(a, b)| (a.as_str(), b.as_str()))
+    }
+
+    /// Obtain an iterator of [ControlParagraph] for binary packages in a given component + architecture.
+    ///
+    /// This method forms the basic building block for constructing `Packages` files. `Packages`
+    /// files can be built by serializing the [ControlParagraph] to a string/writer.
+    pub fn iter_component_binary_packages(
+        &self,
+        component: impl ToString,
+        architecture: impl ToString,
+    ) -> Box<dyn Iterator<Item = &'_ ControlParagraph> + Send + '_> {
+        if let Some(packages) = self
+            .binary_packages
+            .get(&(component.to_string(), architecture.to_string()))
+        {
+            Box::new(packages.values())
+        } else {
+            Box::new(std::iter::empty())
+        }
+    }
+
+    /// Obtain an [AsyncRead] that reads contents of a `Packages` file for binary packages.
+    ///
+    /// This is a wrapper around [Self::iter_component_binary_packages()] that normalizes the
+    /// [ControlParagraph] to data and converts it to an [AsyncRead].
+    pub fn component_binary_packages_reader(
+        &self,
+        component: impl ToString,
+        architecture: impl ToString,
+    ) -> impl AsyncRead + '_ {
+        futures::stream::iter(
+            self.iter_component_binary_packages(component, architecture)
+                .map(|p| Ok(p.to_string())),
+        )
+        .into_async_read()
+    }
+
+    /// Like [Self::component_binary_packages_reader()] except data is compressed.
+    pub fn component_binary_packages_reader_compression(
+        &self,
+        component: impl ToString,
+        architecture: impl ToString,
+        compression: Compression,
+    ) -> Box<dyn AsyncRead + Unpin + '_> {
+        read_compressed(
+            futures::io::BufReader::new(
+                self.component_binary_packages_reader(
+                    component.to_string(),
+                    architecture.to_string(),
+                ),
+            ),
+            compression,
+        )
+    }
+
+    /// Obtain a descriptor of each `Packages` file to write.
+    pub fn binary_packages_indices(
+        &self,
+    ) -> impl Iterator<Item = BinaryPackagesIndexReader<'_>> + '_ {
+        self.binary_packages
+            .keys()
+            .map(move |(component, architecture)| {
+                self.index_file_compressions.iter().map(move |compression| {
+                    BinaryPackagesIndexReader {
+                        component,
+                        architecture,
+                        compression: *compression,
+                        reader: self.component_binary_packages_reader_compression(
+                            component,
+                            architecture,
+                            *compression,
+                        ),
+                    }
+                })
+            })
+            .flatten()
+    }
 }
 
 #[cfg(test)]
 mod test {
-    use super::*;
+    use {
+        super::*,
+        crate::{
+            deb::InMemoryDebFile,
+            repository::{http::HttpRepositoryClient, RepositoryRootReader},
+        },
+        futures::AsyncReadExt,
+    };
+
+    const BULLSEYE_URL: &str = "http://snapshot.debian.org/archive/debian/20211120T085721Z";
 
     #[test]
     fn pool_layout_paths() {
@@ -422,5 +538,68 @@ mod test {
             layout.path("main", "libzstd", "zstd_1.4.8+dfsg-2.1_amd64.deb"),
             "pool/main/libz/libzstd/zstd_1.4.8+dfsg-2.1_amd64.deb"
         );
+    }
+
+    #[tokio::test]
+    async fn bullseye_binary_packages_reader() -> Result<()> {
+        let root = HttpRepositoryClient::new(BULLSEYE_URL).unwrap();
+        let release = root.release_reader("bullseye").await.unwrap();
+
+        let packages = release
+            .resolve_packages("main", "amd64", false)
+            .await
+            .unwrap();
+
+        let git_packages = packages
+            .find_packages_with_name("git".into())
+            .collect::<Vec<_>>();
+        assert_eq!(git_packages.len(), 1);
+        let git = git_packages[0];
+
+        let git_pool_path = git.first_field_str("Filename").unwrap();
+
+        let mut deb_data = vec![];
+        root.get_path(git_pool_path)
+            .await
+            .unwrap()
+            .read_to_end(&mut deb_data)
+            .await
+            .unwrap();
+
+        let git_filename = git
+            .first_field_str("Filename")
+            .unwrap()
+            .rsplit_once('/')
+            .unwrap()
+            .1;
+
+        let deb_package = InMemoryDebFile::new(git_filename.into(), deb_data);
+
+        let mut builder = RepositoryBuilder::new_recommended(
+            ["amd64"].iter(),
+            ["main"].iter(),
+            "suite",
+            "codename",
+        );
+        builder.add_binary_deb("main", deb_package)?;
+
+        let mut packages_data = vec![];
+        builder
+            .component_binary_packages_reader("main", "amd64")
+            .read_to_end(&mut packages_data)
+            .await
+            .unwrap();
+
+        let mut entries = builder.binary_packages_indices().collect::<Vec<_>>();
+        assert_eq!(entries.len(), 3);
+        assert!(entries.iter().all(|entry| entry.component == "main"));
+        assert!(entries.iter().all(|entry| entry.architecture == "amd64"));
+
+        for entry in entries.iter_mut() {
+            let mut buf = vec![];
+            entry.reader.read_to_end(&mut buf).await.unwrap();
+        }
+
+        Ok(())
     }
 }
