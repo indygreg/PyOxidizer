@@ -9,18 +9,14 @@ for the canonical source of truth for how control files work.
 */
 
 use {
+    futures::{AsyncBufRead, AsyncBufReadExt},
+    pin_project::pin_project,
     std::{
         borrow::Cow,
         collections::HashMap,
         io::{BufRead, Write},
     },
     thiserror::Error,
-};
-
-#[cfg(feature = "async")]
-use {
-    futures::{AsyncBufRead, AsyncBufReadExt},
-    pin_project::pin_project,
 };
 
 #[derive(Debug, Error)]
@@ -439,7 +435,6 @@ impl<R: BufRead> Iterator for ControlParagraphReader<R> {
 /// An asynchronous reader of [ControlParagraph].
 ///
 /// Instances are bound to a reader, which is capable of reading lines.
-#[cfg(feature = "async")]
 #[pin_project]
 pub struct ControlParagraphAsyncReader<R> {
     #[pin]
@@ -447,7 +442,6 @@ pub struct ControlParagraphAsyncReader<R> {
     parser: Option<ControlFileParser>,
 }
 
-#[cfg(feature = "async")]
 impl<R> ControlParagraphAsyncReader<R>
 where
     R: AsyncBufRead + Unpin,

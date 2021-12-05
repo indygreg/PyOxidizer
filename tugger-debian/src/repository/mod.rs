@@ -11,17 +11,10 @@ for the canonical definition of a Debian repository.
 
 use {
     crate::{
-        control::ControlError,
+        binary_package_control::BinaryPackageControlFile,
+        binary_package_list::BinaryPackageList,
+        control::{ControlError, ControlParagraphAsyncReader},
         repository::release::{ChecksumType, PackagesFileEntry, ReleaseError, ReleaseFile},
-    },
-    thiserror::Error,
-};
-
-#[cfg(feature = "async")]
-use {
-    crate::{
-        binary_package_control::BinaryPackageControlFile, binary_package_list::BinaryPackageList,
-        control::ControlParagraphAsyncReader,
     },
     async_compression::futures::bufread::{BzDecoder, GzipDecoder, LzmaDecoder, XzDecoder},
     async_trait::async_trait,
@@ -31,10 +24,10 @@ use {
         pin::Pin,
         task::{Context, Poll},
     },
+    thiserror::Error,
 };
 
 pub mod builder;
-#[cfg(feature = "async")]
 pub mod filesystem;
 #[cfg(feature = "http")]
 pub mod http;
@@ -99,7 +92,6 @@ pub enum RepositoryReadError {
     Url(#[from] url::ParseError),
 }
 
-#[cfg(feature = "async")]
 async fn get_path_decoded(
     stream: Pin<Box<dyn AsyncBufRead + Send>>,
     compression: IndexFileCompression,
@@ -114,7 +106,6 @@ async fn get_path_decoded(
 }
 
 /// An adapter for [AsyncRead] streams that validates source size and digest.
-#[cfg(feature = "async")]
 #[pin_project]
 struct DigestValidatingStreamReader<R> {
     hasher: Option<Box<dyn pgp::crypto::Hasher + Send>>,
@@ -142,7 +133,6 @@ impl<R> DigestValidatingStreamReader<R> {
     }
 }
 
-#[cfg(feature = "async")]
 impl<R> AsyncRead for DigestValidatingStreamReader<R>
 where
     R: AsyncRead + Unpin,
@@ -206,7 +196,7 @@ where
 ///
 /// This trait facilitates access to *pool* as well as to multiple
 /// *releases* within the repository.
-#[cfg_attr(feature = "async", async_trait)]
+#[async_trait]
 pub trait RepositoryRootReader {
     /// Obtain the URL to which this reader is bound.  
     fn url(&self) -> &url::Url;
@@ -215,7 +205,6 @@ pub trait RepositoryRootReader {
     ///
     /// This obtains a reader for path data and returns the raw data without any
     /// decoding applied.
-    #[cfg(feature = "async")]
     async fn get_path(
         &self,
         path: &str,
@@ -230,7 +219,6 @@ pub trait RepositoryRootReader {
     ///
     /// Validation only occurs if the stream is read to completion. Failure to read the
     /// entire stream could result in reading of unexpected content.
-    #[cfg(feature = "async")]
     async fn get_path_with_digest_verification(
         &self,
         path: &str,
@@ -247,7 +235,6 @@ pub trait RepositoryRootReader {
     }
 
     /// Get the content of a relative path with decompression transparently applied.
-    #[cfg(feature = "async")]
     async fn get_path_decoded(
         &self,
         path: &str,
@@ -260,7 +247,6 @@ pub trait RepositoryRootReader {
     ///
     /// This assumes the `InRelease` file is located in `dists/{distribution}/`. This is the case
     /// for most repositories.
-    #[cfg(feature = "async")]
     async fn release_reader(
         &self,
         distribution: &str,
@@ -288,7 +274,6 @@ pub trait RepositoryRootReader {
     /// `dists/bullseye/InRelease`.
     ///
     /// The default implementation of this trait should be sufficient for most types.
-    #[cfg(feature = "async")]
     async fn fetch_inrelease(
         &self,
         path: &str,
@@ -308,7 +293,7 @@ pub trait RepositoryRootReader {
 }
 
 /// Provides a transport-agnostic mechanism for reading from a parsed `[In]Release` file.
-#[cfg_attr(feature = "async", async_trait)]
+#[async_trait]
 pub trait ReleaseReader: Sync {
     /// Obtain the base URL to which this instance is bound.
     fn url(&self) -> &url::Url;
@@ -317,7 +302,6 @@ pub trait ReleaseReader: Sync {
     ///
     /// This obtains a reader for path data and returns the raw data without any
     /// decoding applied.
-    #[cfg(feature = "async")]
     async fn get_path(
         &self,
         path: &str,
@@ -332,7 +316,6 @@ pub trait ReleaseReader: Sync {
     ///
     /// Validation only occurs if the stream is read to completion. Failure to read the
     /// entire stream could result in reading of unexpected content.
-    #[cfg(feature = "async")]
     async fn get_path_with_digest_verification(
         &self,
         path: &str,
@@ -349,7 +332,6 @@ pub trait ReleaseReader: Sync {
     }
 
     /// Get the content of a relative path with decompression transparently applied.
-    #[cfg(feature = "async")]
     async fn get_path_decoded(
         &self,
         path: &str,
@@ -465,7 +447,6 @@ pub trait ReleaseReader: Sync {
     }
 
     /// Resolve packages given parameters to resolve a `Packages` file.
-    #[cfg(feature = "async")]
     async fn resolve_packages(
         &self,
         component: &str,
@@ -510,12 +491,11 @@ pub enum RepositoryWriteError {
     IoPath(String, std::io::Error),
 }
 
-#[cfg_attr(feature = "async", async_trait)]
+#[async_trait]
 pub trait RepositoryWriter {
     /// Write data to a given path.
     ///
     /// The data to write is provided by an [AsyncRead] reader.
-    #[cfg(feature = "async")]
     async fn write_path(
         &self,
         path: &str,
