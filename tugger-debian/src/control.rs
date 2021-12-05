@@ -454,7 +454,7 @@ where
         }
     }
 
-    /// Consumes self, returning the inner reading.
+    /// Consumes self, returning the inner reader.
     pub fn into_inner(self) -> R {
         self.reader
     }

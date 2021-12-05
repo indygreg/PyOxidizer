@@ -31,6 +31,9 @@ pub enum DebianError {
     #[cfg(feature = "http")]
     #[error("HTTP error: {0:?}")]
     Http(#[from] HttpError),
+
+    #[error("I/O error: {0:?}")]
+    Io(#[from] std::io::Error),
 }
 
 /// Result wrapper for this crate.

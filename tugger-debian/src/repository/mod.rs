@@ -14,9 +14,12 @@ use {
         binary_package_control::BinaryPackageControlFile,
         binary_package_list::BinaryPackageList,
         control::{ControlError, ControlParagraphAsyncReader},
-        repository::release::{
-            ChecksumType, ContentsFileEntry, PackagesFileEntry, ReleaseError, ReleaseFile,
-            SourcesFileEntry,
+        repository::{
+            contents::{ContentsError, ContentsFile, ContentsFileAsyncReader},
+            release::{
+                ChecksumType, ContentsFileEntry, PackagesFileEntry, ReleaseError, ReleaseFile,
+                SourcesFileEntry,
+            },
         },
     },
     async_compression::futures::bufread::{BzDecoder, GzipDecoder, LzmaDecoder, XzDecoder},
@@ -31,6 +34,7 @@ use {
 };
 
 pub mod builder;
+pub mod contents;
 pub mod filesystem;
 #[cfg(feature = "http")]
 pub mod http;
@@ -82,8 +86,14 @@ pub enum RepositoryReadError {
     #[error("Release file does not contain supported checksum flavor")]
     NoKnownChecksum,
 
+    #[error("Could not find Contents indices entry")]
+    ContentsIndicesEntryNotFound,
+
     #[error("Could not find packages indices entry")]
     PackagesIndicesEntryNotFound,
+
+    #[error("Contents file error: {0:?}")]
+    Contents(#[from] ContentsError),
 
     #[error("Control file error: {0:?}")]
     Control(#[from] ControlError),
@@ -193,6 +203,12 @@ where
             res => res,
         }
     }
+}
+
+/// Drain content from a reader to a black hole.
+async fn drain_reader(reader: impl AsyncRead) -> std::io::Result<u64> {
+    let mut sink = futures::io::sink();
+    futures::io::copy(reader, &mut sink).await
 }
 
 /// Debian repository reader bound to the root of the repository.
@@ -522,6 +538,81 @@ pub trait ReleaseReader: Sync {
         }
 
         Ok(res)
+    }
+
+    /// Resolve a reference to a `Contents` file to fetch given search criteria.
+    ///
+    /// This will attempt to find the entry for a `Contents` file given search criteria.
+    fn contents_entry(
+        &self,
+        component: &str,
+        architecture: &str,
+        is_installer: bool,
+    ) -> Result<ContentsFileEntry, RepositoryReadError> {
+        let entries = self
+            .contents_indices_entries()?
+            .into_iter()
+            .filter(|entry| {
+                entry.component == component
+                    && entry.architecture == architecture
+                    && entry.is_installer == is_installer
+            })
+            .collect::<Vec<_>>();
+
+        if let Some(entry) = entries
+            .iter()
+            .find(|entry| entry.compression == self.preferred_compression())
+        {
+            Ok(entry.clone())
+        } else {
+            for compression in IndexFileCompression::default_preferred_order() {
+                if let Some(entry) = entries
+                    .iter()
+                    .find(|entry| entry.compression == compression)
+                {
+                    return Ok(entry.clone());
+                }
+            }
+
+            Err(RepositoryReadError::ContentsIndicesEntryNotFound)
+        }
+    }
+
+    async fn resolve_contents(
+        &self,
+        component: &str,
+        architecture: &str,
+        is_installer: bool,
+    ) -> Result<ContentsFile, RepositoryReadError> {
+        let release = self.release_file();
+        let entry = self.contents_entry(component, architecture, is_installer)?;
+
+        let path = if release.acquire_by_hash().unwrap_or_default() {
+            entry.entry.by_hash_path()
+        } else {
+            entry.entry.path.to_string()
+        };
+
+        let reader = self
+            .get_path_decoded_with_digest_verification(
+                &path,
+                entry.compression,
+                entry.entry.size,
+                self.retrieve_checksum()?,
+                entry.entry.digest_bytes()?,
+            )
+            .await?;
+
+        let mut reader = ContentsFileAsyncReader::new(futures::io::BufReader::new(reader));
+        reader.read_all().await?;
+
+        let (contents, reader) = reader.consume();
+
+        drain_reader(reader)
+            .await
+            .map_err(|e| RepositoryReadError::IoPath(path, e))?;
+
+        Ok(contents)
     }
 }
 

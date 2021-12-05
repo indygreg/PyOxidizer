@@ -228,9 +228,6 @@ mod test {
 
         let release = root.release_reader("bullseye").await?;
 
-        let contents = release.contents_indices_entries()?;
-        assert_eq!(contents.len(), 126);
-
         let packages = release.resolve_packages("main", "amd64", false).await?;
         assert_eq!(packages.len(), 58606);
 
@@ -275,6 +272,43 @@ mod test {
 
         let sources = deps.packages_with_sources().collect::<Vec<_>>();
         assert_eq!(sources.len(), 128);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn bullseye_contents() -> Result<()> {
+        let root = HttpRepositoryClient::new(BULLSEYE_URL)?;
+
+        let release = root.release_reader("bullseye").await?;
+
+        let contents_entries = release.contents_indices_entries()?;
+        assert_eq!(contents_entries.len(), 126);
+
+        let contents = release.resolve_contents("contrib", "all", false).await?;
+
+        let packages = contents
+            .packages_with_path("etc/cron.d/zfs-auto-snapshot")
+            .collect::<Vec<_>>();
+        assert_eq!(packages, vec!["contrib/utils/zfs-auto-snapshot"]);
+
+        let paths = contents
+            .package_paths("contrib/utils/zfs-auto-snapshot")
+            .collect::<Vec<_>>();
+        assert_eq!(
+            paths,
+            vec![
+                "etc/cron.d/zfs-auto-snapshot",
+                "etc/cron.daily/zfs-auto-snapshot",
+                "etc/cron.hourly/zfs-auto-snapshot",
+                "etc/cron.monthly/zfs-auto-snapshot",
+                "etc/cron.weekly/zfs-auto-snapshot",
+                "usr/sbin/zfs-auto-snapshot",
+                "usr/share/doc/zfs-auto-snapshot/changelog.Debian.gz",
+                "usr/share/doc/zfs-auto-snapshot/copyright",
+                "usr/share/man/man8/zfs-auto-snapshot.8.gz"
+            ]
+        );
 
         Ok(())
     }
