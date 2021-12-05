@@ -7,8 +7,11 @@
 use {
     crate::{
         control::{ControlField, ControlParagraph},
+        deb::{DebError, DebPackageReference},
         dependency::{DependencyError, DependencyList, PackageDependencyFields},
+        io::ContentDigest,
         package_version::{PackageVersion, VersionError},
+        repository::release::ChecksumType,
     },
     std::{num::ParseIntError, str::FromStr},
     thiserror::Error,
@@ -138,6 +141,12 @@ impl<'a> BinaryPackageControlFile<'a> {
             .map(|x| Ok(usize::from_str(x)?))
     }
 
+    pub fn size(&self) -> Option<Result<usize>> {
+        self.paragraph
+            .first_field_str("Size")
+            .map(|x| Ok(usize::from_str(x)?))
+    }
+
     pub fn built_using(&self) -> Option<&str> {
         self.paragraph.first_field_str("Built-Using")
     }
@@ -175,5 +184,44 @@ impl<'a> BinaryPackageControlFile<'a> {
     /// Obtain parsed values of all fields defining dependencies.
     pub fn package_dependency_fields(&self) -> Result<PackageDependencyFields> {
         Ok(PackageDependencyFields::from_paragraph(&self.paragraph)?)
+    }
+}
+
+impl<'cf, 'a: 'cf> DebPackageReference<'cf> for BinaryPackageControlFile<'a> {
+    fn size_bytes(&self) -> crate::deb::Result<usize> {
+        self.size()
+            .ok_or_else(|| DebError::Other("Size field missing".into()))?
+            .map_err(|e| DebError::Other(format!("error parsing Size: {:?}", e)))
+    }
+
+    fn digest(&self, checksum: ChecksumType) -> crate::deb::Result<ContentDigest> {
+        let hex_digest = self
+            .first_field_str(checksum.field_name())
+            .ok_or_else(|| DebError::Other(format!("{} field missing", checksum.field_name())))?;
+
+        let digest = hex::decode(hex_digest)
+            .map_err(|e| DebError::Other(format!("error decoding hex digest: {:?}", e)))?;
+
+        Ok(match checksum {
+            ChecksumType::Md5 => ContentDigest::Md5(digest),
+            ChecksumType::Sha1 => ContentDigest::Sha1(digest),
+            ChecksumType::Sha256 => ContentDigest::Sha256(digest),
+        })
+    }
+
+    fn filename(&self) -> crate::deb::Result<String> {
+        let filename = self
+            .first_field_str("Filename")
+            .ok_or_else(|| DebError::Other("Filename field missing".into()))?;
+
+        Ok(if let Some((_, s)) = filename.rsplit_once('/') {
+            s.to_string()
+        } else {
+            filename.to_string()
+        })
+    }
+
+    fn control_file_for_packages_index(&self) -> crate::deb::Result<BinaryPackageControlFile<'cf>> {
+        Ok(self.clone())
     }
 }

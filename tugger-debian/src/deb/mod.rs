@@ -39,6 +39,8 @@ pub enum DebError {
     ControlFileNoParagraph,
     #[error("Control file not found")]
     ControlFileNotFound,
+    #[error("General error: {0}")]
+    Other(String),
 }
 
 impl<W> From<std::io::IntoInnerError<W>> for DebError {
@@ -111,11 +113,11 @@ impl DebCompression {
 ///
 /// This trait is used as a generic way to refer to a `.deb` package, without implementations
 /// necessarily having immediate access to the full content/data of that `.deb` package.
-pub trait DebPackageReference {
+pub trait DebPackageReference<'cf> {
     /// Obtain the size in bytes of the `.deb` file.
     ///
     /// This becomes the `Size` field in `Packages*` control files.
-    fn size_bytes(&self) -> usize;
+    fn size_bytes(&self) -> Result<usize>;
 
     /// Obtains the binary digest of this file given a checksum flavor.
     ///
@@ -125,10 +127,15 @@ pub trait DebPackageReference {
     /// Obtain the filename of this `.deb`.
     ///
     /// This should be just the file name, without any directory components.
-    fn filename(&self) -> String;
+    fn filename(&self) -> Result<String>;
 
-    /// Obtain the parsed `control` file from the `control.tar` file inside the `.deb`.
-    fn control_file<'a>(&self) -> Result<BinaryPackageControlFile<'a>>;
+    /// Obtain a [BinaryPackageControlFile] representing content for a `Packages` index file.
+    ///
+    /// The returned content can come from a `control` file in a `control.tar` or from
+    /// an existing `Packages` control file.
+    ///
+    /// The control file must have at least `Package`, `Version`, and `Architecture` fields.
+    fn control_file_for_packages_index(&self) -> Result<BinaryPackageControlFile<'cf>>;
 }
 
 /// Holds the content of a `.deb` file in-memory.
@@ -144,9 +151,9 @@ impl InMemoryDebFile {
     }
 }
 
-impl DebPackageReference for InMemoryDebFile {
-    fn size_bytes(&self) -> usize {
-        self.data.len()
+impl<'cf> DebPackageReference<'cf> for InMemoryDebFile {
+    fn size_bytes(&self) -> Result<usize> {
+        Ok(self.data.len())
     }
 
     fn digest(&self, checksum: ChecksumType) -> Result<ContentDigest> {
@@ -161,11 +168,11 @@ impl DebPackageReference for InMemoryDebFile {
         })
     }
 
-    fn filename(&self) -> String {
-        self.filename.clone()
+    fn filename(&self) -> Result<String> {
+        Ok(self.filename.clone())
     }
 
-    fn control_file<'a>(&self) -> Result<BinaryPackageControlFile<'a>> {
+    fn control_file_for_packages_index(&self) -> Result<BinaryPackageControlFile<'cf>> {
         resolve_control_file(std::io::Cursor::new(&self.data))
     }
 }

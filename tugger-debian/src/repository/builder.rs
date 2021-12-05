@@ -151,7 +151,7 @@ type ComponentBinaryPackages<'a> = BTreeMap<(String, String), IndexedBinaryPacka
 /// After basic metadata is in place, `.deb` packages are registered against the builder via
 /// [Self::add_deb()].
 #[derive(Debug, Default)]
-pub struct RepositoryBuilder {
+pub struct RepositoryBuilder<'cf> {
     // Release file fields.
     architectures: BTreeSet<String>,
     components: BTreeSet<String>,
@@ -167,13 +167,13 @@ pub struct RepositoryBuilder {
     checksums: BTreeSet<ChecksumType>,
     pool_layout: PoolLayout,
     index_file_compressions: BTreeSet<Compression>,
-    binary_packages: ComponentBinaryPackages<'static>,
-    installer_packages: ComponentBinaryPackages<'static>,
-    source_packages: BTreeMap<String, IndexedBinaryPackages<'static>>,
+    binary_packages: ComponentBinaryPackages<'cf>,
+    installer_packages: ComponentBinaryPackages<'cf>,
+    source_packages: BTreeMap<String, IndexedBinaryPackages<'cf>>,
     translations: BTreeMap<String, ()>,
 }
 
-impl RepositoryBuilder {
+impl<'cf> RepositoryBuilder<'cf> {
     /// Create a new instance with recommended settings.
     ///
     /// Files that should almost always be set (like `Architectures` and `Components`)
@@ -338,14 +338,18 @@ impl RepositoryBuilder {
     ///
     /// The specified [component] name must be registered with this instance or an error will
     /// occur.
-    pub fn add_binary_deb(&mut self, component: &str, deb: impl DebPackageReference) -> Result<()> {
+    pub fn add_binary_deb(
+        &mut self,
+        component: &str,
+        deb: &impl DebPackageReference<'cf>,
+    ) -> Result<()> {
         if !self.components.contains(component) {
             return Err(RepositoryBuilderError::UnknownComponent(
                 component.to_string(),
             ));
         }
 
-        let original_control_file = deb.control_file()?;
+        let original_control_file = deb.control_file_for_packages_index()?;
 
         let package = original_control_file.package()?;
         let version = original_control_file.version_str()?;
@@ -402,12 +406,12 @@ impl RepositoryBuilder {
         }
 
         // The `Filename` is derived from the pool layout scheme in effect.
-        let filename = self.pool_layout.path(component, package, &deb.filename());
+        let filename = self.pool_layout.path(component, package, &deb.filename()?);
         para.add_field_from_string("Filename".into(), filename.into())?;
 
         // `Size` shouldn't be in the original control file, since it is a property of the
         // `.deb` in which the control file is embedded.
-        para.add_field_from_string("Size".into(), format!("{}", deb.size_bytes()).into())?;
+        para.add_field_from_string("Size".into(), format!("{}", deb.size_bytes()?).into())?;
 
         // Add all configured digests for this repository.
         for checksum in &self.checksums {
@@ -516,10 +520,7 @@ impl RepositoryBuilder {
 mod test {
     use {
         super::*,
-        crate::{
-            deb::InMemoryDebFile,
-            repository::{http::HttpRepositoryClient, RepositoryRootReader},
-        },
+        crate::repository::{http::HttpRepositoryClient, RepositoryRootReader},
         futures::AsyncReadExt,
     };
 
@@ -549,50 +550,24 @@ mod test {
             .await
             .unwrap();
 
-        let git_packages = packages
-            .find_packages_with_name("git".into())
-            .collect::<Vec<_>>();
-        assert_eq!(git_packages.len(), 1);
-        let git = git_packages[0];
-
-        let git_pool_path = git.first_field_str("Filename").unwrap();
-
-        let mut deb_data = vec![];
-        root.get_path(git_pool_path)
-            .await
-            .unwrap()
-            .read_to_end(&mut deb_data)
-            .await
-            .unwrap();
-
-        let git_filename = git
-            .first_field_str("Filename")
-            .unwrap()
-            .rsplit_once('/')
-            .unwrap()
-            .1;
-
-        let deb_package = InMemoryDebFile::new(git_filename.into(), deb_data);
-
         let mut builder = RepositoryBuilder::new_recommended(
-            ["amd64"].iter(),
+            ["all", "amd64"].iter(),
             ["main"].iter(),
             "suite",
             "codename",
         );
-        builder.add_binary_deb("main", deb_package)?;
 
-        let mut packages_data = vec![];
-        builder
-            .component_binary_packages_reader("main", "amd64")
-            .read_to_end(&mut packages_data)
-            .await
-            .unwrap();
+        // Cap total work by limiting packages examined.
+        for package in packages.iter().take(100) {
+            builder.add_binary_deb("main", package)?;
+        }
 
         let mut entries = builder.binary_packages_indices().collect::<Vec<_>>();
-        assert_eq!(entries.len(), 3);
+        assert_eq!(entries.len(), 6);
         assert!(entries.iter().all(|entry| entry.component == "main"));
-        assert!(entries.iter().all(|entry| entry.architecture == "amd64"));
+        assert!(entries
+            .iter()
+            .all(|entry| entry.architecture == "amd64" || entry.architecture == "all"));
 
         for entry in entries.iter_mut() {
             let mut buf = vec![];
