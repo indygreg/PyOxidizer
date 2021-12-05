@@ -509,7 +509,7 @@ impl<'a> ReleaseFile<'a> {
     /// The emitted entries have component and architecture values derived by the
     /// file paths. These values are not checked against the list of components
     /// and architectures defined by this file.
-    pub fn iter_components_indices(
+    pub fn iter_contents_indices(
         &self,
         checksum: ChecksumType,
     ) -> Option<Box<(dyn Iterator<Item = Result<ContentsFileEntry, ReleaseError>> + '_)>> {
@@ -716,7 +716,7 @@ mod test {
         assert_eq!(entries[599].by_hash_path(), "non-free/source/by-hash/SHA256/30f3f996941badb983141e3b29b2ed5941d28cf81f9b5f600bb48f782d386fc7");
 
         let contents = release
-            .iter_components_indices(ChecksumType::Sha256)
+            .iter_contents_indices(ChecksumType::Sha256)
             .unwrap()
             .collect::<Result<Vec<_>, _>>()?;
         assert_eq!(contents.len(), 126);
