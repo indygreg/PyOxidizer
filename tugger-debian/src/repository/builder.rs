@@ -412,9 +412,8 @@ impl RepositoryBuilder {
         // Add all configured digests for this repository.
         for checksum in &self.checksums {
             let digest = deb.digest(*checksum)?;
-            let hex_digest = hex::encode(&digest);
 
-            para.add_field_from_string(checksum.field_name().into(), hex_digest.into())?;
+            para.add_field_from_string(checksum.field_name().into(), digest.digest_hex().into())?;
         }
 
         let component_key = (component.to_string(), arch.to_string());

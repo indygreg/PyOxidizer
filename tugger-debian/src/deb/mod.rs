@@ -10,7 +10,7 @@ The .deb file specification lives at <https://manpages.debian.org/unstable/dpkg-
 use {
     crate::{
         binary_package_control::BinaryPackageControlFile, control::ControlError,
-        deb::reader::resolve_control_file, repository::release::ChecksumType,
+        deb::reader::resolve_control_file, io::ContentDigest, repository::release::ChecksumType,
     },
     std::io::Read,
     thiserror::Error,
@@ -120,7 +120,7 @@ pub trait DebPackageReference {
     /// Obtains the binary digest of this file given a checksum flavor.
     ///
     /// Implementations can compute the digest at run-time or return a cached value.
-    fn digest(&self, checksum: ChecksumType) -> Result<Vec<u8>>;
+    fn digest(&self, checksum: ChecksumType) -> Result<ContentDigest>;
 
     /// Obtain the filename of this `.deb`.
     ///
@@ -149,11 +149,16 @@ impl DebPackageReference for InMemoryDebFile {
         self.data.len()
     }
 
-    fn digest(&self, checksum: ChecksumType) -> Result<Vec<u8>> {
+    fn digest(&self, checksum: ChecksumType) -> Result<ContentDigest> {
         let mut h = checksum.new_hasher();
         h.update(&self.data);
+        let digest = h.finish().to_vec();
 
-        Ok(h.finish().to_vec())
+        Ok(match checksum {
+            ChecksumType::Md5 => ContentDigest::Md5(digest),
+            ChecksumType::Sha1 => ContentDigest::Sha1(digest),
+            ChecksumType::Sha256 => ContentDigest::Sha256(digest),
+        })
     }
 
     fn filename(&self) -> String {
