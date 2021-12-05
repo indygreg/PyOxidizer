@@ -234,6 +234,9 @@ mod test {
         let packages = release.resolve_packages("main", "amd64", false).await?;
         assert_eq!(packages.len(), 58606);
 
+        let sources = release.sources_indices_entries()?;
+        assert_eq!(sources.len(), 9);
+
         let p = packages.iter().next().unwrap();
         assert_eq!(p.package()?, "0ad");
         assert_eq!(

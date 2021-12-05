@@ -148,31 +148,6 @@ pub struct ReleaseFileEntry<'a> {
     pub size: usize,
 }
 
-impl<'a> ReleaseFileEntry<'a> {
-    /// Obtain the `by-hash` path variant for this entry.
-    pub fn by_hash_path(&self) -> String {
-        if let Some((prefix, _)) = self.path.rsplit_once('/') {
-            format!(
-                "{}/by-hash/{}/{}",
-                prefix,
-                self.digest.field_name(),
-                self.digest.digest()
-            )
-        } else {
-            format!(
-                "by-hash/{}/{}",
-                self.digest.field_name(),
-                self.digest.digest()
-            )
-        }
-    }
-
-    /// Obtain the content digest as bytes.
-    pub fn digest_bytes(&self) -> Result<Vec<u8>, ReleaseError> {
-        Ok(hex::decode(self.digest.digest())?)
-    }
-}
-
 /// A type of [ReleaseFileEntry] that describes a `Contents` file.
 #[derive(Clone, Debug, PartialEq)]
 pub struct ContentsFileEntry<'a> {
@@ -209,6 +184,38 @@ pub struct PackagesFileEntry<'a> {
 
     /// Whether this refers to udeb packages used by installers.
     pub is_installer: bool,
+}
+
+/// A type of [ReleaseFileEntry] that describes a `Sources` file.
+#[derive(Clone, Debug, PartialEq)]
+pub struct SourcesFileEntry<'a> {
+    pub entry: ReleaseFileEntry<'a>,
+    pub compression: IndexFileCompression,
+}
+
+impl<'a> ReleaseFileEntry<'a> {
+    /// Obtain the `by-hash` path variant for this entry.
+    pub fn by_hash_path(&self) -> String {
+        if let Some((prefix, _)) = self.path.rsplit_once('/') {
+            format!(
+                "{}/by-hash/{}/{}",
+                prefix,
+                self.digest.field_name(),
+                self.digest.digest()
+            )
+        } else {
+            format!(
+                "by-hash/{}/{}",
+                self.digest.field_name(),
+                self.digest.digest()
+            )
+        }
+    }
+
+    /// Obtain the content digest as bytes.
+    pub fn digest_bytes(&self) -> Result<Vec<u8>, ReleaseError> {
+        Ok(hex::decode(self.digest.digest())?)
+    }
 }
 
 impl<'a> ReleaseFileEntry<'a> {
@@ -291,6 +298,30 @@ impl<'a> ReleaseFileEntry<'a> {
             architecture: architecture.into(),
             compression,
             is_installer: is_udeb,
+        })
+    }
+
+    /// Attempt to convert this instance to a [SourcesFileEntry].
+    ///
+    /// Resolves to [Some] if the conversion succeeded or [None] if this (likely) isn't a
+    /// `Sources` file.
+    pub fn to_sources_file_entry(self) -> Option<SourcesFileEntry<'a>> {
+        let parts = self.path.split('/').collect::<Vec<_>>();
+
+        let compression = match *parts.last()? {
+            "Sources" => IndexFileCompression::None,
+            "Sources.gz" => IndexFileCompression::Gzip,
+            "Sources.xz" => IndexFileCompression::Xz,
+            "Sources.bz2" => IndexFileCompression::Bzip2,
+            "Sources.lzma" => IndexFileCompression::Lzma,
+            _ => {
+                return None;
+            }
+        };
+
+        Some(SourcesFileEntry {
+            entry: self,
+            compression,
         })
     }
 }
@@ -537,6 +568,23 @@ impl<'a> ReleaseFile<'a> {
         if let Some(iter) = self.iter_index_files(checksum) {
             Some(Box::new(iter.filter_map(|entry| match entry {
                 Ok(entry) => entry.to_packages_file_entry().map(Ok),
+                Err(e) => Some(Err(e)),
+            })))
+        } else {
+            None
+        }
+    }
+
+    /// Obtain `Sources` indices entries given a checksum flavor.
+    ///
+    /// This essentially looks for `Sources*` files in the file lists.
+    pub fn iter_sources_indices(
+        &self,
+        checksum: ChecksumType,
+    ) -> Option<Box<(dyn Iterator<Item = Result<SourcesFileEntry, ReleaseError>> + '_)>> {
+        if let Some(iter) = self.iter_index_files(checksum) {
+            Some(Box::new(iter.filter_map(|entry| match entry {
+                Ok(entry) => entry.to_sources_file_entry().map(Ok),
                 Err(e) => Some(Err(e)),
             })))
         } else {
@@ -847,6 +895,12 @@ mod test {
                 is_installer: true
             }
         );
+
+        let sources = release
+            .iter_sources_indices(ChecksumType::Sha256)
+            .unwrap()
+            .collect::<Result<Vec<_>, _>>()?;
+        assert_eq!(sources.len(), 9);
 
         Ok(())
     }
