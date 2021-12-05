@@ -228,6 +228,9 @@ mod test {
 
         let release = root.release_reader("bullseye").await?;
 
+        let contents = release.contents_indices_entries()?;
+        assert_eq!(contents.len(), 126);
+
         let packages = release.resolve_packages("main", "amd64", false).await?;
         assert_eq!(packages.len(), 58606);
 

@@ -14,7 +14,9 @@ use {
         binary_package_control::BinaryPackageControlFile,
         binary_package_list::BinaryPackageList,
         control::{ControlError, ControlParagraphAsyncReader},
-        repository::release::{ChecksumType, PackagesFileEntry, ReleaseError, ReleaseFile},
+        repository::release::{
+            ChecksumType, ContentsFileEntry, PackagesFileEntry, ReleaseError, ReleaseFile,
+        },
     },
     async_compression::futures::bufread::{BzDecoder, GzipDecoder, LzmaDecoder, XzDecoder},
     async_trait::async_trait,
@@ -398,6 +400,25 @@ pub trait ReleaseReader: Sync {
             if let Some(entries) = self
                 .release_file()
                 .iter_packages_indices(self.retrieve_checksum()?)
+            {
+                entries.collect::<Result<Vec<_>, _>>()?
+            } else {
+                vec![]
+            },
+        )
+    }
+
+    /// Resolve indices for `Contents` files.
+    ///
+    /// Only entries for the checksum as defined by [Self::retrieve_checksum()] are returned.
+    ///
+    /// Multiple entries for the same logical file with varying compression formats may be
+    /// returned.
+    fn contents_indices_entries(&self) -> Result<Vec<ContentsFileEntry>, RepositoryReadError> {
+        Ok(
+            if let Some(entries) = self
+                .release_file()
+                .iter_contents_indices(self.retrieve_checksum()?)
             {
                 entries.collect::<Result<Vec<_>, _>>()?
             } else {
