@@ -14,9 +14,7 @@ use {
         binary_package_control::BinaryPackageControlFile,
         binary_package_list::BinaryPackageList,
         control::{ControlError, ControlParagraphAsyncReader},
-        io::{
-            drain_reader, read_decompressed, Compression, ContentDigest, ContentValidatingReader,
-        },
+        io::{drain_reader, Compression, ContentDigest, DataResolver},
         repository::{
             contents::{ContentsError, ContentsFile, ContentsFileAsyncReader},
             release::{
@@ -26,7 +24,7 @@ use {
         },
     },
     async_trait::async_trait,
-    futures::{AsyncBufRead, AsyncRead, AsyncReadExt},
+    futures::{AsyncRead, AsyncReadExt},
     std::pin::Pin,
     thiserror::Error,
 };
@@ -71,51 +69,9 @@ pub enum RepositoryReadError {
 /// This trait facilitates access to *pool* as well as to multiple
 /// *releases* within the repository.
 #[async_trait]
-pub trait RepositoryRootReader {
+pub trait RepositoryRootReader: DataResolver + Sync {
     /// Obtain the URL to which this reader is bound.  
     fn url(&self) -> &url::Url;
-
-    /// Get the content of a relative path as an async reader.
-    ///
-    /// This obtains a reader for path data and returns the raw data without any
-    /// decoding applied.
-    async fn get_path(
-        &self,
-        path: &str,
-    ) -> Result<Pin<Box<dyn AsyncBufRead + Send>>, RepositoryReadError>;
-
-    /// Obtain a reader that performs content integrity checking.
-    ///
-    /// Because content digests can only be computed once all content is read, the reader
-    /// emits data as it is streaming but only compares the cryptographic digest once all
-    /// data has been read. If there is a content digest mismatch, an error will be raised
-    /// once the final byte is read.
-    ///
-    /// Validation only occurs if the stream is read to completion. Failure to read the
-    /// entire stream could result in reading of unexpected content.
-    async fn get_path_with_digest_verification(
-        &self,
-        path: &str,
-        expected_size: usize,
-        expected_digest: ContentDigest,
-    ) -> Result<Pin<Box<dyn AsyncRead>>, RepositoryReadError> {
-        Ok(Box::pin(ContentValidatingReader::new(
-            self.get_path(path).await?,
-            expected_size,
-            expected_digest,
-        )))
-    }
-
-    /// Get the content of a relative path with decompression transparently applied.
-    async fn get_path_decoded(
-        &self,
-        path: &str,
-        compression: Compression,
-    ) -> Result<Pin<Box<dyn AsyncRead + Send>>, RepositoryReadError> {
-        read_decompressed(self.get_path(path).await?, compression)
-            .await
-            .map_err(|e| RepositoryReadError::IoPath(path.to_string(), e))
-    }
 
     /// Obtain a [ReleaseReader] for a given distribution.
     ///
@@ -152,7 +108,10 @@ pub trait RepositoryRootReader {
         &self,
         path: &str,
     ) -> Result<ReleaseFile<'static>, RepositoryReadError> {
-        let mut reader = self.get_path(path).await?;
+        let mut reader = self
+            .get_path(path)
+            .await
+            .map_err(|e| RepositoryReadError::IoPath(path.to_string(), e))?;
 
         let mut data = vec![];
         reader
@@ -168,70 +127,9 @@ pub trait RepositoryRootReader {
 
 /// Provides a transport-agnostic mechanism for reading from a parsed `[In]Release` file.
 #[async_trait]
-pub trait ReleaseReader: Sync {
+pub trait ReleaseReader: DataResolver + Sync {
     /// Obtain the base URL to which this instance is bound.
     fn url(&self) -> &url::Url;
-
-    /// Get the content of a relative path as an async reader.
-    ///
-    /// This obtains a reader for path data and returns the raw data without any
-    /// decoding applied.
-    async fn get_path(
-        &self,
-        path: &str,
-    ) -> Result<Pin<Box<dyn AsyncBufRead + Send>>, RepositoryReadError>;
-
-    /// Obtain a reader that performs content integrity checking.
-    ///
-    /// Because content digests can only be computed once all content is read, the reader
-    /// emits data as it is streaming but only compares the cryptographic digest once all
-    /// data has been read. If there is a content digest mismatch, an error will be raised
-    /// once the final byte is read.
-    ///
-    /// Validation only occurs if the stream is read to completion. Failure to read the
-    /// entire stream could result in reading of unexpected content.
-    async fn get_path_with_digest_verification(
-        &self,
-        path: &str,
-        expected_size: usize,
-        expected_digest: ContentDigest,
-    ) -> Result<Pin<Box<dyn AsyncRead + Send>>, RepositoryReadError> {
-        Ok(Box::pin(ContentValidatingReader::new(
-            self.get_path(path).await?,
-            expected_size,
-            expected_digest,
-        )))
-    }
-
-    /// Get the content of a relative path with decompression transparently applied.
-    async fn get_path_decoded(
-        &self,
-        path: &str,
-        compression: Compression,
-    ) -> Result<Pin<Box<dyn AsyncRead + Send>>, RepositoryReadError> {
-        read_decompressed(self.get_path(path).await?, compression)
-            .await
-            .map_err(|e| RepositoryReadError::IoPath(path.to_string(), e))
-    }
-
-    /// Like [Self::get_path_decoded()] but also perform content integrity verification.
-    ///
-    /// The digest is matched against the original fetched content, before decompression.
-    async fn get_path_decoded_with_digest_verification(
-        &self,
-        path: &str,
-        compression: Compression,
-        expected_size: usize,
-        expected_digest: ContentDigest,
-    ) -> Result<Pin<Box<dyn AsyncRead + Send>>, RepositoryReadError> {
-        let reader = self
-            .get_path_with_digest_verification(path, expected_size, expected_digest)
-            .await?;
-
-        read_decompressed(Box::pin(futures::io::BufReader::new(reader)), compression)
-            .await
-            .map_err(|e| RepositoryReadError::IoPath(path.to_string(), e))
-    }
 
     /// Obtain the parsed `[In]Release` file from which this reader is derived.
     fn release_file(&self) -> &ReleaseFile<'static>;
@@ -383,7 +281,8 @@ pub trait ReleaseReader: Sync {
                 entry.entry.size,
                 entry.entry.digest.as_content_digest()?,
             )
-            .await?,
+            .await
+            .map_err(|e| RepositoryReadError::IoPath(path.to_string(), e))?,
         ));
 
         let mut res = BinaryPackageList::default();
@@ -455,7 +354,8 @@ pub trait ReleaseReader: Sync {
                 entry.entry.size,
                 entry.entry.digest.as_content_digest()?,
             )
-            .await?;
+            .await
+            .map_err(|e| RepositoryReadError::IoPath(path.to_string(), e))?;
 
         let mut reader = ContentsFileAsyncReader::new(futures::io::BufReader::new(reader));
         reader.read_all().await?;

@@ -25,9 +25,12 @@ by calling [HttpDistributionClient.fetch_inrelease()].
 */
 
 use {
-    crate::repository::{
-        release::{ReleaseError, ReleaseFile},
-        Compression, ReleaseReader, RepositoryReadError, RepositoryRootReader,
+    crate::{
+        io::DataResolver,
+        repository::{
+            release::{ReleaseError, ReleaseFile},
+            Compression, ReleaseReader, RepositoryReadError, RepositoryRootReader,
+        },
     },
     async_trait::async_trait,
     futures::{stream::TryStreamExt, AsyncBufRead},
@@ -132,16 +135,26 @@ impl HttpRepositoryClient {
 }
 
 #[async_trait]
-impl RepositoryRootReader for HttpRepositoryClient {
-    fn url(&self) -> &Url {
-        &self.root_url
-    }
-
+impl DataResolver for HttpRepositoryClient {
     async fn get_path(
         &self,
         path: &str,
-    ) -> Result<Pin<Box<dyn AsyncBufRead + Send>>, RepositoryReadError> {
-        fetch_url(&self.client, &self.root_url, path).await
+    ) -> Result<Pin<Box<dyn AsyncBufRead + Send>>, std::io::Error> {
+        fetch_url(&self.client, &self.root_url, path)
+            .await
+            .map_err(|e| {
+                std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    format!("repository read error: {0:?}", e),
+                )
+            })
+    }
+}
+
+#[async_trait]
+impl RepositoryRootReader for HttpRepositoryClient {
+    fn url(&self) -> &Url {
+        &self.root_url
     }
 
     async fn release_reader_with_distribution_path(
@@ -186,16 +199,26 @@ pub struct HttpReleaseClient {
 }
 
 #[async_trait]
-impl ReleaseReader for HttpReleaseClient {
-    fn url(&self) -> &Url {
-        &self.root_url
-    }
-
+impl DataResolver for HttpReleaseClient {
     async fn get_path(
         &self,
         path: &str,
-    ) -> Result<Pin<Box<dyn AsyncBufRead + Send>>, RepositoryReadError> {
-        fetch_url(&self.client, &self.root_url, path).await
+    ) -> Result<Pin<Box<dyn AsyncBufRead + Send>>, std::io::Error> {
+        fetch_url(&self.client, &self.root_url, path)
+            .await
+            .map_err(|e| {
+                std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    format!("repository read error: {0:?}", e),
+                )
+            })
+    }
+}
+
+#[async_trait]
+impl ReleaseReader for HttpReleaseClient {
+    fn url(&self) -> &Url {
+        &self.root_url
     }
 
     fn release_file(&self) -> &ReleaseFile<'static> {

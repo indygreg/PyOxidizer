@@ -10,6 +10,7 @@ use {
         BzDecoder, BzEncoder, GzipDecoder, GzipEncoder, LzmaDecoder, LzmaEncoder, XzDecoder,
         XzEncoder,
     },
+    async_trait::async_trait,
     futures::{AsyncBufRead, AsyncRead},
     pgp::crypto::Hasher,
     pin_project::pin_project,
@@ -330,5 +331,72 @@ where
             }
             res => res,
         }
+    }
+}
+
+/// Generic mechanism for obtaining content at a given path.
+///
+/// This trait is used to define a generic mechanism for resolving content given
+/// a lookup key/path.
+///
+/// Implementations only need to implement `get_path()`. The other members have
+/// default implementations that should do the correct thing by default.
+#[async_trait]
+pub trait DataResolver: Sync {
+    /// Get the content of a relative path as an async reader.
+    ///
+    /// This obtains a reader for path data and returns the raw data without any
+    /// decoding applied.
+    async fn get_path(
+        &self,
+        path: &str,
+    ) -> Result<Pin<Box<dyn AsyncBufRead + Send>>, std::io::Error>;
+
+    /// Obtain a reader that performs content integrity checking.
+    ///
+    /// Because content digests can only be computed once all content is read, the reader
+    /// emits data as it is streaming but only compares the cryptographic digest once all
+    /// data has been read. If there is a content digest mismatch, an error will be raised
+    /// once the final byte is read.
+    ///
+    /// Validation only occurs if the stream is read to completion. Failure to read the
+    /// entire stream could result in reading of unexpected content.
+    async fn get_path_with_digest_verification(
+        &self,
+        path: &str,
+        expected_size: usize,
+        expected_digest: ContentDigest,
+    ) -> Result<Pin<Box<dyn AsyncRead + Send>>, std::io::Error> {
+        Ok(Box::pin(ContentValidatingReader::new(
+            self.get_path(path).await?,
+            expected_size,
+            expected_digest,
+        )))
+    }
+
+    /// Get the content of a relative path with decompression transparently applied.
+    async fn get_path_decoded(
+        &self,
+        path: &str,
+        compression: Compression,
+    ) -> Result<Pin<Box<dyn AsyncRead + Send>>, std::io::Error> {
+        read_decompressed(self.get_path(path).await?, compression).await
+    }
+
+    /// Like [Self::get_path_decoded()] but also perform content integrity verification.
+    ///
+    /// The digest is matched against the original fetched content, before decompression.
+    async fn get_path_decoded_with_digest_verification(
+        &self,
+        path: &str,
+        compression: Compression,
+        expected_size: usize,
+        expected_digest: ContentDigest,
+    ) -> Result<Pin<Box<dyn AsyncRead + Send>>, std::io::Error> {
+        let reader = self
+            .get_path_with_digest_verification(path, expected_size, expected_digest)
+            .await?;
+
+        read_decompressed(Box::pin(futures::io::BufReader::new(reader)), compression).await
     }
 }

@@ -23,12 +23,10 @@ use {
             RepositoryReadError, RepositoryWriteError, RepositoryWriter,
         },
     },
-    async_trait::async_trait,
     chrono::{DateTime, Utc},
     futures::{AsyncRead, StreamExt, TryStreamExt},
     std::{
         collections::{BTreeMap, BTreeSet},
-        pin::Pin,
         str::FromStr,
     },
     thiserror::Error,
@@ -778,7 +776,9 @@ mod test {
             http::HttpRepositoryClient, RepositoryPathVerification,
             RepositoryPathVerificationState, RepositoryRootReader, RepositoryWriteError,
         },
+        async_trait::async_trait,
         futures::AsyncReadExt,
+        std::pin::Pin,
     };
 
     const BULLSEYE_URL: &str = "http://snapshot.debian.org/archive/debian/20211120T085721Z";
