@@ -11,14 +11,11 @@ use {
         io::ContentDigest,
         package_version::{PackageVersion, VersionError},
         repository::{
-            builder::{
-                DebPackageReference, RepositoryBuilderError, Result as RepositoryBuilderResult,
-            },
+            builder::{DebPackageReference, Result as RepositoryBuilderResult},
             release::ChecksumType,
         },
     },
-    async_trait::async_trait,
-    std::{num::ParseIntError, pin::Pin, str::FromStr},
+    std::{num::ParseIntError, str::FromStr},
     thiserror::Error,
 };
 
@@ -195,7 +192,6 @@ impl<'a> BinaryPackageControlFile<'a> {
     }
 }
 
-#[async_trait]
 impl<'cf, 'a: 'cf> DebPackageReference<'cf> for BinaryPackageControlFile<'a> {
     fn deb_size_bytes(&self) -> RepositoryBuilderResult<usize> {
         Ok(self
@@ -233,13 +229,5 @@ impl<'cf, 'a: 'cf> DebPackageReference<'cf> for BinaryPackageControlFile<'a> {
         &self,
     ) -> RepositoryBuilderResult<BinaryPackageControlFile<'cf>> {
         Ok(self.clone())
-    }
-
-    async fn deb_data_reader(
-        &self,
-    ) -> RepositoryBuilderResult<Pin<Box<dyn futures::AsyncRead + '_>>> {
-        Err(RepositoryBuilderError::DebNotAvailable(
-            "BinaryPackageControlFile does not implement deb_data_reader()",
-        ))
     }
 }

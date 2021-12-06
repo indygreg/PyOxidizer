@@ -116,7 +116,6 @@ impl PoolLayout {
 ///
 /// This trait is used as a generic way to refer to a `.deb` package, without implementations
 /// necessarily having immediate access to the full content/data of that `.deb` package.
-#[async_trait]
 pub trait DebPackageReference<'cf> {
     /// Obtain the size in bytes of the `.deb` file.
     ///
@@ -140,11 +139,6 @@ pub trait DebPackageReference<'cf> {
     ///
     /// The control file must have at least `Package`, `Version`, and `Architecture` fields.
     fn control_file_for_packages_index(&self) -> Result<BinaryPackageControlFile<'cf>>;
-
-    /// Obtain an [AsyncRead] for obtaining the content of this `.deb` file.
-    ///
-    /// The reader emits the content of the `.deb` file, which is an ar archive.
-    async fn deb_data_reader(&self) -> Result<Pin<Box<dyn AsyncRead + '_>>>;
 }
 
 /// Holds the content of a `.deb` file in-memory.
@@ -160,7 +154,6 @@ impl InMemoryDebFile {
     }
 }
 
-#[async_trait]
 impl<'cf> DebPackageReference<'cf> for InMemoryDebFile {
     fn deb_size_bytes(&self) -> Result<usize> {
         Ok(self.data.len())
@@ -184,10 +177,6 @@ impl<'cf> DebPackageReference<'cf> for InMemoryDebFile {
 
     fn control_file_for_packages_index(&self) -> Result<BinaryPackageControlFile<'cf>> {
         Ok(resolve_control_file(std::io::Cursor::new(&self.data))?)
-    }
-
-    async fn deb_data_reader(&self) -> Result<Pin<Box<dyn AsyncRead + '_>>> {
-        Ok(Box::pin(futures::io::Cursor::new(&self.data)))
     }
 }
 

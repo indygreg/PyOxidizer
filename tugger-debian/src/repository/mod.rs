@@ -11,14 +11,13 @@ for the canonical definition of a Debian repository.
 
 use {
     crate::{
-        binary_package_control::{BinaryPackageControlError, BinaryPackageControlFile},
+        binary_package_control::BinaryPackageControlFile,
         binary_package_list::BinaryPackageList,
         control::{ControlError, ControlParagraphAsyncReader},
         io::{
             drain_reader, read_decompressed, Compression, ContentDigest, ContentValidatingReader,
         },
         repository::{
-            builder::DebPackageReference,
             contents::{ContentsError, ContentsFile, ContentsFileAsyncReader},
             release::{
                 ChecksumType, ContentsFileEntry, PackagesFileEntry, ReleaseError, ReleaseFile,
@@ -65,63 +64,6 @@ pub enum RepositoryReadError {
 
     #[error("URL error: {0:?}")]
     Url(#[from] url::ParseError),
-}
-
-/// A [BinaryPackageControlFile] bound to a repository.
-pub struct BinaryPackageControlFileWithRepository<'control, 'reader, R> {
-    cf: BinaryPackageControlFile<'control>,
-    repo: &'reader R,
-}
-
-#[async_trait]
-impl<'cf, 'control: 'cf, 'reader, R: RepositoryRootReader + Sync> DebPackageReference<'cf>
-    for BinaryPackageControlFileWithRepository<'control, 'reader, R>
-{
-    fn deb_size_bytes(&self) -> builder::Result<usize> {
-        self.cf.deb_size_bytes()
-    }
-
-    fn deb_digest(&self, checksum: ChecksumType) -> builder::Result<ContentDigest> {
-        self.cf.deb_digest(checksum)
-    }
-
-    fn deb_filename(&self) -> builder::Result<String> {
-        self.cf.deb_filename()
-    }
-
-    fn control_file_for_packages_index(&self) -> builder::Result<BinaryPackageControlFile<'cf>> {
-        self.cf.control_file_for_packages_index()
-    }
-
-    async fn deb_data_reader(&self) -> builder::Result<Pin<Box<dyn AsyncRead + '_>>> {
-        let filename = self
-            .cf
-            .first_field_str("Filename")
-            .ok_or(BinaryPackageControlError::RequiredFieldMissing("Filename"))?;
-        let size = self.deb_size_bytes()?;
-
-        let digest = ChecksumType::preferred_order()
-            .filter_map(|c| {
-                if let Ok(digest) = self.deb_digest(c) {
-                    Some(digest)
-                } else {
-                    None
-                }
-            })
-            .next()
-            .ok_or_else(|| {
-                BinaryPackageControlError::RequiredFieldMissing(
-                    ChecksumType::preferred_order().next().unwrap().field_name(),
-                )
-            })?;
-
-        let reader = self
-            .repo
-            .get_path_with_digest_verification(filename, size, digest)
-            .await?;
-
-        Ok(reader)
-    }
 }
 
 /// Debian repository reader bound to the root of the repository.
