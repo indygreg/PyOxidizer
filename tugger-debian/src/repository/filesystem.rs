@@ -3,9 +3,15 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    crate::repository::{RepositoryWriteError, RepositoryWriter},
+    crate::{
+        io::{ContentDigest, DigestingReader},
+        repository::{
+            RepositoryPathVerification, RepositoryPathVerificationState, RepositoryWriteError,
+            RepositoryWriter,
+        },
+    },
     async_trait::async_trait,
-    futures::AsyncRead,
+    futures::{AsyncRead, AsyncReadExt},
     std::{
         path::{Path, PathBuf},
         pin::Pin,
@@ -30,6 +36,71 @@ impl FilesystemRepositoryWriter {
 
 #[async_trait]
 impl RepositoryWriter for FilesystemRepositoryWriter {
+    async fn verify_path<'path>(
+        &self,
+        path: &'path str,
+        expected_content: Option<(usize, ContentDigest)>,
+    ) -> Result<RepositoryPathVerification<'path>, RepositoryWriteError> {
+        let dest_path = self.root_dir.join(path);
+
+        let metadata = async_std::fs::metadata(&dest_path)
+            .await
+            .map_err(|e| RepositoryWriteError::io_path(path, e))?;
+
+        if metadata.is_file() {
+            if let Some((expected_size, expected_digest)) = expected_content {
+                if metadata.len() != expected_size as u64 {
+                    Ok(RepositoryPathVerification {
+                        path,
+                        state: RepositoryPathVerificationState::ExistsIntegrityMismatch,
+                    })
+                } else {
+                    let f = async_std::fs::File::open(&dest_path)
+                        .await
+                        .map_err(|e| RepositoryWriteError::io_path(path, e))?;
+
+                    let mut remaining = expected_size;
+                    let mut reader = DigestingReader::new(f);
+                    let mut buf = [0u8; 16384];
+
+                    loop {
+                        let size = reader
+                            .read(&mut buf[..])
+                            .await
+                            .map_err(|e| RepositoryWriteError::io_path(path, e))?;
+
+                        if size >= remaining || size == 0 {
+                            break;
+                        }
+
+                        remaining -= size;
+                    }
+
+                    let digest = reader.finish().1;
+
+                    Ok(RepositoryPathVerification {
+                        path,
+                        state: if digest.matches_digest(&expected_digest) {
+                            RepositoryPathVerificationState::ExistsIntegrityVerified
+                        } else {
+                            RepositoryPathVerificationState::ExistsIntegrityMismatch
+                        },
+                    })
+                }
+            } else {
+                Ok(RepositoryPathVerification {
+                    path,
+                    state: RepositoryPathVerificationState::ExistsNoIntegrityCheck,
+                })
+            }
+        } else {
+            Ok(RepositoryPathVerification {
+                path,
+                state: RepositoryPathVerificationState::Missing,
+            })
+        }
+    }
+
     async fn write_path(
         &self,
         path: &str,

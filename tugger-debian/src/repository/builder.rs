@@ -18,14 +18,18 @@ use {
         control::{ControlError, ControlParagraph},
         deb::{reader::resolve_control_file, DebError},
         io::{read_compressed, ContentDigest},
-        repository::{release::ChecksumType, Compression, RepositoryReadError},
+        repository::{
+            release::ChecksumType, Compression, RepositoryPathVerificationState,
+            RepositoryReadError, RepositoryWriteError, RepositoryWriter,
+        },
     },
     async_trait::async_trait,
     chrono::{DateTime, Utc},
-    futures::{AsyncRead, TryStreamExt},
+    futures::{AsyncRead, StreamExt, TryStreamExt},
     std::{
         collections::{BTreeMap, BTreeSet},
         pin::Pin,
+        str::FromStr,
     },
     thiserror::Error,
 };
@@ -42,6 +46,9 @@ pub enum RepositoryBuilderError {
     #[error("repository read error: {0:?}")]
     RepositoryRead(#[from] RepositoryReadError),
 
+    #[error("repository write error: {0:?}")]
+    RepositoryWrite(#[from] RepositoryWriteError),
+
     #[error("attempting to add package to undefined component: {0}")]
     UnknownComponent(String),
 
@@ -56,6 +63,9 @@ pub enum RepositoryBuilderError {
 
     #[error("deb file error: {0:?}")]
     Deb(#[from] DebError),
+
+    #[error("hex parsing error: {0:?}")]
+    Hex(#[from] hex::FromHexError),
 }
 
 /// Result type having [RepositoryBuilderError].
@@ -198,6 +208,56 @@ impl<'a> BinaryPackagesIndexReader<'a> {
             self.architecture,
             self.compression.extension()
         )
+    }
+}
+
+/// Describes a file in the *pool* to support a binary package.
+#[derive(Debug)]
+pub struct BinaryPackagePoolArtifact<'a> {
+    /// The file path relative to the repository root.
+    pub path: &'a str,
+    /// The expected size of the file.
+    pub size: usize,
+    /// The expected digest of the file.
+    pub digest: ContentDigest,
+}
+
+/// Represents a publishing event.
+pub enum PublishEvent {
+    ResolvedPoolArtifacts(usize),
+
+    /// A pool artifact with the given path is current and was not updated.
+    PoolArtifactCurrent(String),
+
+    /// A pool artifact with the given path is missing and will be created.
+    PoolArtifactMissing(String),
+
+    /// Total number of pool artifacts to publish.
+    PoolArtifactsToPublish(usize),
+
+    /// A pool artifact with the given path and size was created.
+    PoolArtifactCreated(String, usize),
+}
+
+impl std::fmt::Display for PublishEvent {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::ResolvedPoolArtifacts(count) => {
+                write!(f, "resolved {} needed pool artifacts", count)
+            }
+            Self::PoolArtifactCurrent(path) => {
+                write!(f, "pool path {} is present", path)
+            }
+            Self::PoolArtifactMissing(path) => {
+                write!(f, "pool path {} will be written", path)
+            }
+            Self::PoolArtifactsToPublish(count) => {
+                write!(f, "{} pool artifacts will be written", count)
+            }
+            Self::PoolArtifactCreated(path, size) => {
+                write!(f, "wrote {} bytes to {}", size, path)
+            }
+        }
     }
 }
 
@@ -549,6 +609,40 @@ impl<'cf> RepositoryBuilder<'cf> {
         }
     }
 
+    /// Obtain an iterator of pool artifacts for binary packages that will need to exist.
+    pub fn iter_component_binary_package_pool_artifacts(
+        &self,
+        component: impl ToString,
+        architecture: impl ToString,
+    ) -> impl Iterator<Item = Result<BinaryPackagePoolArtifact<'_>>> + '_ {
+        self.iter_component_binary_packages(component, architecture)
+            .map(|para| {
+                let path = para
+                    .first_field_str("Filename")
+                    .expect("Filename should have been populated at package add time");
+                let size = usize::from_str(
+                    para.first_field_str("Size")
+                        .expect("Size should have been populated at package add time"),
+                )
+                .expect("Size should parse to an integer");
+
+                // Checksums are stored in a BTreeSet and sort from weakest to strongest. So use the
+                // strongest available checksum.
+                let strongest_checksum = self
+                    .checksums
+                    .iter()
+                    .last()
+                    .expect("should have at least 1 checksum defined");
+
+                let digest_hex = para
+                    .first_field_str(strongest_checksum.field_name())
+                    .expect("checksum's field should have been set");
+                let digest = ContentDigest::from_hex_checksum(*strongest_checksum, digest_hex)?;
+
+                Ok(BinaryPackagePoolArtifact { path, size, digest })
+            })
+    }
+
     /// Obtain an [AsyncRead] that reads contents of a `Packages` file for binary packages.
     ///
     /// This is a wrapper around [Self::iter_component_binary_packages()] that normalizes the
@@ -605,17 +699,124 @@ impl<'cf> RepositoryBuilder<'cf> {
             })
             .flatten()
     }
+
+    /// Obtain records describing pool artifacts needed to support binary packages.
+    pub fn iter_binary_packages_pool_artifacts(
+        &self,
+    ) -> impl Iterator<Item = Result<BinaryPackagePoolArtifact<'_>>> + '_ {
+        self.binary_packages
+            .keys()
+            .map(move |(component, architecture)| {
+                self.iter_component_binary_package_pool_artifacts(component, architecture)
+            })
+            .flatten()
+    }
+
+    /// Publish artifacts to the *pool*.
+    ///
+    /// The *pool* is the area of a Debian repository holding files like the .deb packages.
+    ///
+    /// Content must be published to the pool before indices data is written, otherwise there
+    /// is a race condition where the indices could refer to files not yet in the pool.
+    pub async fn publish_pool_artifacts<F>(
+        &self,
+        writer: &impl RepositoryWriter,
+        threads: usize,
+        progress_cb: Option<F>,
+    ) -> Result<()>
+    where
+        F: Fn(PublishEvent),
+    {
+        let artifacts = self
+            .iter_binary_packages_pool_artifacts()
+            .collect::<Result<Vec<_>>>()?;
+
+        if let Some(ref cb) = progress_cb {
+            cb(PublishEvent::ResolvedPoolArtifacts(artifacts.len()));
+        }
+
+        // Queue a verification check for each artifact.
+        let mut fs = futures::stream::iter(
+            artifacts
+                .iter()
+                .map(|a| writer.verify_path(a.path, Some((a.size, a.digest.clone())))),
+        )
+        .buffer_unordered(threads);
+
+        let mut missing_paths = BTreeSet::new();
+
+        while let Some(result) = fs.next().await {
+            let result = result?;
+
+            match result.state {
+                RepositoryPathVerificationState::ExistsNoIntegrityCheck
+                | RepositoryPathVerificationState::ExistsIntegrityVerified => {
+                    if let Some(ref cb) = progress_cb {
+                        cb(PublishEvent::PoolArtifactCurrent(result.path.to_string()));
+                    }
+                }
+                RepositoryPathVerificationState::ExistsIntegrityMismatch
+                | RepositoryPathVerificationState::Missing => {
+                    if let Some(ref cb) = progress_cb {
+                        cb(PublishEvent::PoolArtifactMissing(result.path.to_string()));
+                    }
+
+                    missing_paths.insert(result.path);
+                }
+            }
+        }
+
+        if let Some(ref cb) = progress_cb {
+            cb(PublishEvent::PoolArtifactsToPublish(missing_paths.len()));
+        }
+
+        // Now pull out the artifacts that need to be written.
+        let publish = artifacts
+            .iter()
+            .filter(|a| missing_paths.contains(a.path))
+            .collect::<Vec<_>>();
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]
 mod test {
+
     use {
         super::*,
-        crate::repository::{http::HttpRepositoryClient, RepositoryRootReader},
+        crate::repository::{
+            http::HttpRepositoryClient, RepositoryPathVerification,
+            RepositoryPathVerificationState, RepositoryRootReader, RepositoryWriteError,
+        },
         futures::AsyncReadExt,
     };
 
     const BULLSEYE_URL: &str = "http://snapshot.debian.org/archive/debian/20211120T085721Z";
+
+    struct NoopWriter {}
+
+    #[async_trait]
+    impl RepositoryWriter for NoopWriter {
+        async fn verify_path<'path>(
+            &self,
+            path: &'path str,
+            _expected_content: Option<(usize, ContentDigest)>,
+        ) -> std::result::Result<RepositoryPathVerification<'path>, RepositoryWriteError> {
+            Ok(RepositoryPathVerification {
+                path,
+                state: RepositoryPathVerificationState::Missing,
+            })
+        }
+
+        async fn write_path(
+            &self,
+            _path: &str,
+            _reader: Pin<Box<dyn AsyncRead + Send>>,
+        ) -> std::result::Result<u64, RepositoryWriteError> {
+            todo!()
+        }
+    }
 
     #[test]
     fn pool_layout_paths() {
@@ -653,6 +854,11 @@ mod test {
             builder.add_binary_deb("main", package)?;
         }
 
+        let pool_artifacts = builder
+            .iter_binary_packages_pool_artifacts()
+            .collect::<Result<Vec<_>>>()?;
+        assert_eq!(pool_artifacts.len(), 100);
+
         let mut entries = builder.binary_packages_indices().collect::<Vec<_>>();
         assert_eq!(entries.len(), 6);
         assert!(entries.iter().all(|entry| entry.component == "main"));
@@ -664,6 +870,14 @@ mod test {
             let mut buf = vec![];
             entry.reader.read_to_end(&mut buf).await.unwrap();
         }
+
+        let writer = NoopWriter {};
+
+        let cb = |event| {
+            eprintln!("{}", event);
+        };
+
+        builder.publish_pool_artifacts(&writer, 1, Some(cb)).await?;
 
         Ok(())
     }

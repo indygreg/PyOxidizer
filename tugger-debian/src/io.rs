@@ -5,7 +5,7 @@
 /*! I/O helpers. */
 
 use {
-    crate::pgp::MyHasher,
+    crate::{pgp::MyHasher, repository::release::ChecksumType},
     async_compression::futures::bufread::{
         BzDecoder, BzEncoder, GzipDecoder, GzipEncoder, LzmaDecoder, LzmaEncoder, XzDecoder,
         XzEncoder,
@@ -20,6 +20,7 @@ use {
 };
 
 /// Represents a content digest.
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ContentDigest {
     /// An MD5 digest.
     Md5(Vec<u8>),
@@ -30,6 +31,20 @@ pub enum ContentDigest {
 }
 
 impl ContentDigest {
+    /// Obtain an instance by parsing a hex string as a [ChecksumType].
+    pub fn from_hex_checksum(
+        checksum: ChecksumType,
+        digest: &str,
+    ) -> Result<Self, hex::FromHexError> {
+        let digest = hex::decode(digest)?;
+
+        Ok(match checksum {
+            ChecksumType::Md5 => Self::Md5(digest),
+            ChecksumType::Sha1 => Self::Sha1(digest),
+            ChecksumType::Sha256 => Self::Sha256(digest),
+        })
+    }
+
     /// Create a new hasher matching for the type of this digest.
     pub fn new_hasher(&self) -> Box<dyn Hasher + Send> {
         Box::new(match self {
@@ -219,6 +234,17 @@ pub struct MultiContentDigest {
     pub md5: ContentDigest,
     pub sha1: ContentDigest,
     pub sha256: ContentDigest,
+}
+
+impl MultiContentDigest {
+    /// Whether this digest matches another one.
+    pub fn matches_digest(&self, other: &ContentDigest) -> bool {
+        match other {
+            ContentDigest::Md5(_) => &self.md5 == other,
+            ContentDigest::Sha1(_) => &self.sha1 == other,
+            ContentDigest::Sha256(_) => &self.sha256 == other,
+        }
+    }
 }
 
 /// A content digester that simultaneously computes multiple digest types.

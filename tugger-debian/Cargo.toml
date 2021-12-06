@@ -12,6 +12,7 @@ readme = "README.md"
 
 [dependencies]
 ar = "0.9"
+async-std = "1.10"
 async-trait = "0.1"
 chrono = "0.4"
 digest = "0.9"

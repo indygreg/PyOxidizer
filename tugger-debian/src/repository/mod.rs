@@ -535,8 +535,66 @@ pub enum RepositoryWriteError {
     IoPath(String, std::io::Error),
 }
 
+impl RepositoryWriteError {
+    pub fn io_path(path: impl ToString, err: std::io::Error) -> Self {
+        Self::IoPath(path.to_string(), err)
+    }
+}
+
+/// Describes a repository path verification state.
+#[derive(Clone, Copy, Debug)]
+pub enum RepositoryPathVerificationState {
+    /// The path exists but its integrity was not verified.
+    ExistsNoIntegrityCheck,
+    /// The path exists and its integrity was verified.
+    ExistsIntegrityVerified,
+    /// The path exists and its integrity didn't match expectations.
+    ExistsIntegrityMismatch,
+    /// The path is missing.
+    Missing,
+}
+
+/// Represents the result of a repository path verification check.
+#[derive(Clone, Debug)]
+pub struct RepositoryPathVerification<'a> {
+    /// The path that was tested.
+    pub path: &'a str,
+    /// The state of the path.
+    pub state: RepositoryPathVerificationState,
+}
+
+impl<'a> std::fmt::Display for RepositoryPathVerification<'a> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self.state {
+            RepositoryPathVerificationState::ExistsNoIntegrityCheck => {
+                write!(f, "{} exists (no integrity check performed)", self.path)
+            }
+            RepositoryPathVerificationState::ExistsIntegrityVerified => {
+                write!(f, "{} exists (integrity verified)", self.path)
+            }
+            RepositoryPathVerificationState::ExistsIntegrityMismatch => {
+                write!(f, "{} exists (integrity mismatch!)", self.path)
+            }
+            RepositoryPathVerificationState::Missing => {
+                write!(f, "{} missing", self.path)
+            }
+        }
+    }
+}
+
 #[async_trait]
 pub trait RepositoryWriter {
+    /// Verify the existence of a path with optional content integrity checking.
+    ///
+    /// If the size and digest are [Some] implementations *may* perform additional
+    /// content integrity verification. Or they may not. They should not lie about
+    /// whether integrity verification was performed in the returned value, however.
+    async fn verify_path<'path>(
+        &self,
+        path: &'path str,
+        expected_content: Option<(usize, ContentDigest)>,
+    ) -> Result<RepositoryPathVerification<'path>, RepositoryWriteError>;
+
     /// Write data to a given path.
     ///
     /// The data to write is provided by an [AsyncRead] reader.
