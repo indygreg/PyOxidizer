@@ -195,7 +195,7 @@ impl<'file, 'data: 'file> BinaryPackageTransitiveDependenciesResolution<'file, '
 
     /// Obtain all packages in this collection along with annotations of its reverse dependencies.
     ///
-    /// Packages are emitted in the same order as [packages()]. Associated with each entry
+    /// Packages are emitted in the same order as [Self::packages()]. Associated with each entry
     /// is a list of direct dependency sources that caused this package to be present.
     pub fn packages_with_sources(
         &self,

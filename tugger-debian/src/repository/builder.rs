@@ -288,7 +288,7 @@ type ComponentBinaryPackages<'a> = BTreeMap<(String, String), IndexedBinaryPacka
 /// fields are used for.
 ///
 /// After basic metadata is in place, `.deb` packages are registered against the builder via
-/// [Self::add_deb()].
+/// [Self::add_binary_deb()].
 ///
 /// Once everything is registered against the builder, it is time to *publish* (read: write)
 /// the repository content.
@@ -297,13 +297,14 @@ type ComponentBinaryPackages<'a> = BTreeMap<(String, String), IndexedBinaryPacka
 /// where blobs (like `.deb` packages) are stored. To publish the pool, call
 /// [Self::publish_pool_artifacts()]. This takes a [DataResolver] for obtaining missing pool
 /// content. Its content retrieval functions will be called for each pool path that needs to be
-/// copied to the writer. Since [RepositoryRootReader] must implement [DataResolver], you can pass
-/// an instance as the [DataResolver] to effectively copy artifacts from another Debian repository.
-/// Note: for this to work, the source repository must have the same [PoolLayout] as this
-/// repository. This may not always be the case! To more robustly copy files from another
-/// repository, instantiate a [crate::io::PathMappingDataResolver] and call
-/// [crate::io::PathMappingDataResolver::add_path_map()] with the result from [Self::add_deb()]
-/// (and similar function) to install a path mapping.
+/// copied to the writer. Since [crate::repository::RepositoryRootReader] must implement
+/// [DataResolver], you can pass an instance as the [DataResolver] to effectively copy
+/// artifacts from another Debian repository. Note: for this to work, the source repository
+/// must have the same [PoolLayout] as this repository. This may not always be the case!
+/// To more robustly copy files from another repository, instantiate a
+/// [crate::io::PathMappingDataResolver] and call
+/// [crate::io::PathMappingDataResolver::add_path_map()] with the result from
+/// [Self::add_binary_deb()] (and similar function) to install a path mapping.
 #[derive(Debug, Default)]
 pub struct RepositoryBuilder<'cf> {
     // Release file fields.
@@ -490,7 +491,7 @@ impl<'cf> RepositoryBuilder<'cf> {
     /// packages differently. For example, the trait members may be implemented by just-in-time
     /// parsing of an actual `.deb` file or by retrieving the data from a cache.
     ///
-    /// The specified [component] name must be registered with this instance or an error will
+    /// The specified `component` name must be registered with this instance or an error will
     /// occur.
     ///
     /// Returns the pool path / `Filename` field that this binary package `.deb` will occupy

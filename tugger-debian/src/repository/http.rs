@@ -16,9 +16,6 @@ architectures are supported, what *components* are available, etc.
 
 Our [HttpRepositoryClient] models a client bound to a root URL.
 
-Our [HttpDistributionClient] models a client bound to a virtual sub-directory
-under the root URL. You can obtain instances by calling [HttpRepositoryClient.distribution_client()].
-
 The `InRelease`/`Release` files define the contents of a given *distribution*. Our
 [HttpReleaseClient] models a client bound to a parsed file. You can obtain instances
 by calling [HttpDistributionClient.fetch_inrelease()].
