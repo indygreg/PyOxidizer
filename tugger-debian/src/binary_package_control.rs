@@ -11,11 +11,14 @@ use {
         io::ContentDigest,
         package_version::{PackageVersion, VersionError},
         repository::{
-            builder::{DebPackageReference, Result as RepositoryBuilderResult},
+            builder::{
+                DebPackageReference, RepositoryBuilderError, Result as RepositoryBuilderResult,
+            },
             release::ChecksumType,
         },
     },
-    std::{num::ParseIntError, str::FromStr},
+    async_trait::async_trait,
+    std::{num::ParseIntError, pin::Pin, str::FromStr},
     thiserror::Error,
 };
 
@@ -192,14 +195,15 @@ impl<'a> BinaryPackageControlFile<'a> {
     }
 }
 
+#[async_trait]
 impl<'cf, 'a: 'cf> DebPackageReference<'cf> for BinaryPackageControlFile<'a> {
-    fn size_bytes(&self) -> RepositoryBuilderResult<usize> {
+    fn deb_size_bytes(&self) -> RepositoryBuilderResult<usize> {
         Ok(self
             .size()
-            .ok_or_else(|| BinaryPackageControlError::RequiredFieldMissing("Size"))??)
+            .ok_or(BinaryPackageControlError::RequiredFieldMissing("Size"))??)
     }
 
-    fn digest(&self, checksum: ChecksumType) -> RepositoryBuilderResult<ContentDigest> {
+    fn deb_digest(&self, checksum: ChecksumType) -> RepositoryBuilderResult<ContentDigest> {
         let hex_digest = self.first_field_str(checksum.field_name()).ok_or_else(|| {
             BinaryPackageControlError::RequiredFieldMissing(checksum.field_name())
         })?;
@@ -213,7 +217,7 @@ impl<'cf, 'a: 'cf> DebPackageReference<'cf> for BinaryPackageControlFile<'a> {
         })
     }
 
-    fn filename(&self) -> RepositoryBuilderResult<String> {
+    fn deb_filename(&self) -> RepositoryBuilderResult<String> {
         let filename = self
             .first_field_str("Filename")
             .ok_or(BinaryPackageControlError::RequiredFieldMissing("Filename"))?;
@@ -229,5 +233,13 @@ impl<'cf, 'a: 'cf> DebPackageReference<'cf> for BinaryPackageControlFile<'a> {
         &self,
     ) -> RepositoryBuilderResult<BinaryPackageControlFile<'cf>> {
         Ok(self.clone())
+    }
+
+    async fn deb_data_reader(
+        &self,
+    ) -> RepositoryBuilderResult<Pin<Box<dyn futures::AsyncRead + '_>>> {
+        Err(RepositoryBuilderError::DebNotAvailable(
+            "BinaryPackageControlFile does not implement deb_data_reader()",
+        ))
     }
 }

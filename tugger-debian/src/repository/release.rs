@@ -76,6 +76,11 @@ pub enum ChecksumType {
 }
 
 impl ChecksumType {
+    /// Emit variants in their preferred usage order.
+    pub fn preferred_order() -> impl Iterator<Item = ChecksumType> {
+        [Self::Sha256, Self::Sha1, Self::Md5].into_iter()
+    }
+
     /// Name of the control field in `Release` files holding this variant type.
     pub fn field_name(&self) -> &'static str {
         match self {

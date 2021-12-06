@@ -18,11 +18,15 @@ use {
         control::{ControlError, ControlParagraph},
         deb::{reader::resolve_control_file, DebError},
         io::{read_compressed, ContentDigest},
-        repository::{release::ChecksumType, Compression},
+        repository::{release::ChecksumType, Compression, RepositoryReadError},
     },
+    async_trait::async_trait,
     chrono::{DateTime, Utc},
     futures::{AsyncRead, TryStreamExt},
-    std::collections::{BTreeMap, BTreeSet},
+    std::{
+        collections::{BTreeMap, BTreeSet},
+        pin::Pin,
+    },
     thiserror::Error,
 };
 
@@ -35,6 +39,9 @@ pub enum RepositoryBuilderError {
     #[error("binary package control file error: {0:?}")]
     BinaryPackageControl(#[from] BinaryPackageControlError),
 
+    #[error("repository read error: {0:?}")]
+    RepositoryRead(#[from] RepositoryReadError),
+
     #[error("attempting to add package to undefined component: {0}")]
     UnknownComponent(String),
 
@@ -43,6 +50,9 @@ pub enum RepositoryBuilderError {
 
     #[error("pool layout cannot be changed after content is indexed")]
     PoolLayoutImmutable,
+
+    #[error(".deb not available: {0}")]
+    DebNotAvailable(&'static str),
 
     #[error("deb file error: {0:?}")]
     Deb(#[from] DebError),
@@ -96,21 +106,22 @@ impl PoolLayout {
 ///
 /// This trait is used as a generic way to refer to a `.deb` package, without implementations
 /// necessarily having immediate access to the full content/data of that `.deb` package.
+#[async_trait]
 pub trait DebPackageReference<'cf> {
     /// Obtain the size in bytes of the `.deb` file.
     ///
     /// This becomes the `Size` field in `Packages*` control files.
-    fn size_bytes(&self) -> Result<usize>;
+    fn deb_size_bytes(&self) -> Result<usize>;
 
     /// Obtains the binary digest of this file given a checksum flavor.
     ///
     /// Implementations can compute the digest at run-time or return a cached value.
-    fn digest(&self, checksum: ChecksumType) -> Result<ContentDigest>;
+    fn deb_digest(&self, checksum: ChecksumType) -> Result<ContentDigest>;
 
     /// Obtain the filename of this `.deb`.
     ///
     /// This should be just the file name, without any directory components.
-    fn filename(&self) -> Result<String>;
+    fn deb_filename(&self) -> Result<String>;
 
     /// Obtain a [BinaryPackageControlFile] representing content for a `Packages` index file.
     ///
@@ -119,6 +130,11 @@ pub trait DebPackageReference<'cf> {
     ///
     /// The control file must have at least `Package`, `Version`, and `Architecture` fields.
     fn control_file_for_packages_index(&self) -> Result<BinaryPackageControlFile<'cf>>;
+
+    /// Obtain an [AsyncRead] for obtaining the content of this `.deb` file.
+    ///
+    /// The reader emits the content of the `.deb` file, which is an ar archive.
+    async fn deb_data_reader(&self) -> Result<Pin<Box<dyn AsyncRead + '_>>>;
 }
 
 /// Holds the content of a `.deb` file in-memory.
@@ -134,12 +150,13 @@ impl InMemoryDebFile {
     }
 }
 
+#[async_trait]
 impl<'cf> DebPackageReference<'cf> for InMemoryDebFile {
-    fn size_bytes(&self) -> Result<usize> {
+    fn deb_size_bytes(&self) -> Result<usize> {
         Ok(self.data.len())
     }
 
-    fn digest(&self, checksum: ChecksumType) -> Result<ContentDigest> {
+    fn deb_digest(&self, checksum: ChecksumType) -> Result<ContentDigest> {
         let mut h = checksum.new_hasher();
         h.update(&self.data);
         let digest = h.finish().to_vec();
@@ -151,12 +168,16 @@ impl<'cf> DebPackageReference<'cf> for InMemoryDebFile {
         })
     }
 
-    fn filename(&self) -> Result<String> {
+    fn deb_filename(&self) -> Result<String> {
         Ok(self.filename.clone())
     }
 
     fn control_file_for_packages_index(&self) -> Result<BinaryPackageControlFile<'cf>> {
         Ok(resolve_control_file(std::io::Cursor::new(&self.data))?)
+    }
+
+    async fn deb_data_reader(&self) -> Result<Pin<Box<dyn AsyncRead + '_>>> {
+        Ok(Box::pin(futures::io::Cursor::new(&self.data)))
     }
 }
 
@@ -474,16 +495,18 @@ impl<'cf> RepositoryBuilder<'cf> {
         }
 
         // The `Filename` is derived from the pool layout scheme in effect.
-        let filename = self.pool_layout.path(component, package, &deb.filename()?);
+        let filename = self
+            .pool_layout
+            .path(component, package, &deb.deb_filename()?);
         para.add_field_from_string("Filename".into(), filename.into())?;
 
         // `Size` shouldn't be in the original control file, since it is a property of the
         // `.deb` in which the control file is embedded.
-        para.add_field_from_string("Size".into(), format!("{}", deb.size_bytes()?).into())?;
+        para.add_field_from_string("Size".into(), format!("{}", deb.deb_size_bytes()?).into())?;
 
         // Add all configured digests for this repository.
         for checksum in &self.checksums {
-            let digest = deb.digest(*checksum)?;
+            let digest = deb.deb_digest(*checksum)?;
 
             para.add_field_from_string(checksum.field_name().into(), digest.digest_hex().into())?;
         }
