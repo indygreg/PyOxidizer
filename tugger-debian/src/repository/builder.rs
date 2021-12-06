@@ -731,7 +731,7 @@ impl<'cf> RepositoryBuilder<'cf> {
         resolver: &impl DataResolver,
         writer: &impl RepositoryWriter,
         threads: usize,
-        progress_cb: Option<F>,
+        progress_cb: &Option<F>,
     ) -> Result<()>
     where
         F: Fn(PublishEvent),
@@ -799,6 +799,50 @@ impl<'cf> RepositoryBuilder<'cf> {
                 ));
             }
         }
+
+        Ok(())
+    }
+
+    /// Publish index files.
+    ///
+    /// Repository index files describe the contents of the repository. Index files are
+    /// referred to by the `InRelease` and `Release` files.
+    ///
+    /// Indices should only be published after pool artifacts are published. Otherwise
+    /// there is a race condition where an index file could refer to a file in the pool
+    /// that does not exist.
+    pub async fn publish_indices<F>(
+        &self,
+        _writer: &impl RepositoryWriter,
+        _threads: usize,
+        _progress_cb: &Option<F>,
+    ) -> Result<()> {
+        todo!()
+    }
+
+    /// Publish the repository to the given [RepositoryWriter].
+    ///
+    /// This is the main function for *writing out* the desired state in this builder.
+    ///
+    /// Publishing effectively works in 3 phases:
+    ///
+    /// 1. Publish missing pool artifacts.
+    /// 2. Publish *indices* files (e.g. `Packages` lists).
+    /// 3. Publish the `InRelease` and `Release` file.
+    pub async fn publish<F>(
+        &self,
+        writer: &impl RepositoryWriter,
+        resolver: &impl DataResolver,
+        threads: usize,
+        progress_cb: &Option<F>,
+    ) -> Result<()>
+    where
+        F: Fn(PublishEvent),
+    {
+        self.publish_pool_artifacts(resolver, writer, threads, progress_cb)
+            .await?;
+
+        self.publish_indices(writer, threads, progress_cb).await?;
 
         Ok(())
     }
@@ -946,7 +990,7 @@ mod test {
         };
 
         builder
-            .publish_pool_artifacts(&mapping_resolver, &writer, 10, Some(cb))
+            .publish_pool_artifacts(&mapping_resolver, &writer, 10, &Some(cb))
             .await?;
 
         Ok(())

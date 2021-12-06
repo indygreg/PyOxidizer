@@ -425,7 +425,7 @@ impl<'a> std::fmt::Display for RepositoryPathVerification<'a> {
 }
 
 #[async_trait]
-pub trait RepositoryWriter {
+pub trait RepositoryWriter: Sync {
     /// Verify the existence of a path with optional content integrity checking.
     ///
     /// If the size and digest are [Some] implementations *may* perform additional
