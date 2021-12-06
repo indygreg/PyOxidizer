@@ -274,9 +274,7 @@ pub fn resolve_control_file(reader: impl Read) -> Result<BinaryPackageControlFil
 
     while let Some(entry) = reader.next_entry() {
         if let BinaryPackageEntry::Control(mut control) = entry? {
-            let mut entries = control.entries()?;
-
-            while let Some(entry) = entries.next() {
+            for entry in control.entries()? {
                 if let ControlTarFile::Control(control) = entry?.to_control_file()?.1 {
                     return Ok(control);
                 }
