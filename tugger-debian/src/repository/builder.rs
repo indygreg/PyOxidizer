@@ -17,7 +17,7 @@ use {
         binary_package_control::{BinaryPackageControlError, BinaryPackageControlFile},
         control::{ControlError, ControlParagraph},
         deb::{reader::resolve_control_file, DebError},
-        io::{read_compressed, ContentDigest},
+        io::{read_compressed, ContentDigest, DataResolver},
         repository::{
             release::ChecksumType, Compression, RepositoryPathVerificationState,
             RepositoryReadError, RepositoryWriteError, RepositoryWriter,
@@ -64,6 +64,9 @@ pub enum RepositoryBuilderError {
 
     #[error("hex parsing error: {0:?}")]
     Hex(#[from] hex::FromHexError),
+
+    #[error("I/O error: {0:?}")]
+    Io(#[from] std::io::Error),
 }
 
 /// Result type having [RepositoryBuilderError].
@@ -286,6 +289,21 @@ type ComponentBinaryPackages<'a> = BTreeMap<(String, String), IndexedBinaryPacka
 ///
 /// After basic metadata is in place, `.deb` packages are registered against the builder via
 /// [Self::add_deb()].
+///
+/// Once everything is registered against the builder, it is time to *publish* (read: write)
+/// the repository content.
+///
+/// Publishing works by first writing *pool* content. The *pool* is an area of the repository
+/// where blobs (like `.deb` packages) are stored. To publish the pool, call
+/// [Self::publish_pool_artifacts()]. This takes a [DataResolver] for obtaining missing pool
+/// content. Its content retrieval functions will be called for each pool path that needs to be
+/// copied to the writer. Since [RepositoryRootReader] must implement [DataResolver], you can pass
+/// an instance as the [DataResolver] to effectively copy artifacts from another Debian repository.
+/// Note: for this to work, the source repository must have the same [PoolLayout] as this
+/// repository. This may not always be the case! To more robustly copy files from another
+/// repository, instantiate a [crate::io::PathMappingDataResolver] and call
+/// [crate::io::PathMappingDataResolver::add_path_map()] with the result from [Self::add_deb()]
+/// (and similar function) to install a path mapping.
 #[derive(Debug, Default)]
 pub struct RepositoryBuilder<'cf> {
     // Release file fields.
@@ -474,11 +492,14 @@ impl<'cf> RepositoryBuilder<'cf> {
     ///
     /// The specified [component] name must be registered with this instance or an error will
     /// occur.
+    ///
+    /// Returns the pool path / `Filename` field that this binary package `.deb` will occupy
+    /// in the repository.
     pub fn add_binary_deb(
         &mut self,
         component: &str,
         deb: &impl DebPackageReference<'cf>,
-    ) -> Result<()> {
+    ) -> Result<String> {
         if !self.components.contains(component) {
             return Err(RepositoryBuilderError::UnknownComponent(
                 component.to_string(),
@@ -545,7 +566,7 @@ impl<'cf> RepositoryBuilder<'cf> {
         let filename = self
             .pool_layout
             .path(component, package, &deb.deb_filename()?);
-        para.add_field_from_string("Filename".into(), filename.into())?;
+        para.add_field_from_string("Filename".into(), filename.clone().into())?;
 
         // `Size` shouldn't be in the original control file, since it is a property of the
         // `.deb` in which the control file is embedded.
@@ -565,7 +586,7 @@ impl<'cf> RepositoryBuilder<'cf> {
             .or_default()
             .insert(package_key, para);
 
-        Ok(())
+        Ok(filename)
     }
 
     /// Obtain all components having binary packages.
@@ -707,6 +728,7 @@ impl<'cf> RepositoryBuilder<'cf> {
     /// is a race condition where the indices could refer to files not yet in the pool.
     pub async fn publish_pool_artifacts<F>(
         &self,
+        resolver: &impl DataResolver,
         writer: &impl RepositoryWriter,
         threads: usize,
         progress_cb: Option<F>,
@@ -757,14 +779,46 @@ impl<'cf> RepositoryBuilder<'cf> {
             cb(PublishEvent::PoolArtifactsToPublish(missing_paths.len()));
         }
 
-        // Now pull out the artifacts that need to be written.
-        let publish = artifacts
-            .iter()
-            .filter(|a| missing_paths.contains(a.path))
-            .collect::<Vec<_>>();
+        // Now we need to copy files from our source.
+
+        let mut fs = futures::stream::iter(
+            artifacts
+                .iter()
+                .filter(|a| missing_paths.contains(a.path))
+                .map(|a| get_path_and_copy(resolver, writer, a)),
+        )
+        .buffer_unordered(threads);
+
+        while let Some(artifact) = fs.next().await {
+            let artifact = artifact?;
+
+            if let Some(ref cb) = progress_cb {
+                cb(PublishEvent::PoolArtifactCreated(
+                    artifact.path.to_string(),
+                    artifact.size,
+                ));
+            }
+        }
 
         Ok(())
     }
+}
+
+async fn get_path_and_copy<'a, 'b>(
+    resolver: &impl DataResolver,
+    writer: &impl RepositoryWriter,
+    artifact: &'a BinaryPackagePoolArtifact<'b>,
+) -> Result<&'a BinaryPackagePoolArtifact<'b>> {
+    // It would be slightly more defensive to plug in the content validator
+    // explicitly here. However, the API contract is a contract. Let's let
+    // implementations shoot themselves in the foot.
+    let reader = resolver
+        .get_path_with_digest_verification(artifact.path, artifact.size, artifact.digest.clone())
+        .await?;
+
+    writer.write_path(artifact.path, reader).await?;
+
+    Ok(artifact)
 }
 
 #[cfg(test)]
@@ -772,9 +826,12 @@ mod test {
 
     use {
         super::*,
-        crate::repository::{
-            http::HttpRepositoryClient, RepositoryPathVerification,
-            RepositoryPathVerificationState, RepositoryRootReader, RepositoryWriteError,
+        crate::{
+            io::PathMappingDataResolver,
+            repository::{
+                http::HttpRepositoryClient, RepositoryPathVerification,
+                RepositoryPathVerificationState, RepositoryRootReader, RepositoryWriteError,
+            },
         },
         async_trait::async_trait,
         futures::AsyncReadExt,
@@ -800,10 +857,16 @@ mod test {
 
         async fn write_path(
             &self,
-            _path: &str,
-            _reader: Pin<Box<dyn AsyncRead + Send>>,
+            path: &str,
+            mut reader: Pin<Box<dyn AsyncRead + Send>>,
         ) -> std::result::Result<u64, RepositoryWriteError> {
-            todo!()
+            let mut buf = vec![];
+            reader
+                .read_to_end(&mut buf)
+                .await
+                .map_err(|e| RepositoryWriteError::io_path(path, e))?;
+
+            Ok(0)
         }
     }
 
@@ -838,15 +901,31 @@ mod test {
             "codename",
         );
 
+        let mut mapping_resolver = PathMappingDataResolver::new(root);
+
         // Cap total work by limiting packages examined.
-        for package in packages.iter().take(100) {
-            builder.add_binary_deb("main", package)?;
+        for package in packages
+            .iter()
+            .filter(|cf| {
+                if let Some(Ok(size)) = cf.size() {
+                    size < 1000000
+                } else {
+                    false
+                }
+            })
+            .take(10)
+        {
+            let dest_filename = builder.add_binary_deb("main", package)?;
+
+            let source_filename = package.first_field_str("Filename").unwrap();
+
+            mapping_resolver.add_path_map(dest_filename, source_filename);
         }
 
         let pool_artifacts = builder
             .iter_binary_packages_pool_artifacts()
             .collect::<Result<Vec<_>>>()?;
-        assert_eq!(pool_artifacts.len(), 100);
+        assert_eq!(pool_artifacts.len(), 10);
 
         let mut entries = builder.binary_packages_indices().collect::<Vec<_>>();
         assert_eq!(entries.len(), 6);
@@ -866,7 +945,9 @@ mod test {
             eprintln!("{}", event);
         };
 
-        builder.publish_pool_artifacts(&writer, 1, Some(cb)).await?;
+        builder
+            .publish_pool_artifacts(&mapping_resolver, &writer, 10, Some(cb))
+            .await?;
 
         Ok(())
     }

@@ -15,6 +15,7 @@ use {
     pgp::crypto::Hasher,
     pin_project::pin_project,
     std::{
+        collections::HashMap,
         pin::Pin,
         task::{Context, Poll},
     },
@@ -398,5 +399,41 @@ pub trait DataResolver: Sync {
             .await?;
 
         read_decompressed(Box::pin(futures::io::BufReader::new(reader)), compression).await
+    }
+}
+
+/// A [DataResolver] that maintains a path translation table and transparently redirects lookups.
+pub struct PathMappingDataResolver<R> {
+    source: R,
+    path_map: HashMap<String, String>,
+}
+
+impl<R: DataResolver + Send> PathMappingDataResolver<R> {
+    /// Construct a new instance that forwards to a source [DataResolver].
+    pub fn new(source: R) -> Self {
+        Self {
+            source,
+            path_map: HashMap::default(),
+        }
+    }
+
+    /// Register a mapping of 1 path to another.
+    ///
+    /// Future looks up `from_path` will resolve to `to_path`.
+    pub fn add_path_map(&mut self, from_path: impl ToString, to_path: impl ToString) {
+        self.path_map
+            .insert(from_path.to_string(), to_path.to_string());
+    }
+}
+
+#[async_trait]
+impl<R: DataResolver + Send> DataResolver for PathMappingDataResolver<R> {
+    async fn get_path(
+        &self,
+        path: &str,
+    ) -> Result<Pin<Box<dyn AsyncBufRead + Send>>, std::io::Error> {
+        self.source
+            .get_path(self.path_map.get(path).map(|s| s.as_str()).unwrap_or(path))
+            .await
     }
 }
