@@ -22,7 +22,14 @@ use {
 use std::{ffi::NulError, os::unix::ffi::OsStrExt};
 
 #[allow(non_camel_case_types)]
-#[cfg(target_family = "unix")]
+#[cfg(all(target_os = "linux", target_arch = "aarch64"))]
+type wchar_t = u32;
+
+#[allow(non_camel_case_types)]
+#[cfg(all(
+    target_family = "unix",
+    not(all(target_arch = "aarch64", target_os = "linux"))
+))]
 type wchar_t = i32;
 
 #[cfg(target_family = "windows")]

@@ -4,6 +4,7 @@
 
 //! Manage an embedded Python interpreter.
 
+use std::os::raw::c_char;
 use {
     crate::{
         config::{OxidizedPythonInterpreterConfig, ResolvedOxidizedPythonInterpreterConfig},
@@ -272,7 +273,7 @@ impl<'interpreter, 'resources> MainPythonInterpreter<'interpreter, 'resources> {
             let argvb = b"argvb\0";
 
             let res = args.with_borrowed_ptr(py, |args_ptr| unsafe {
-                pyffi::PySys_SetObject(argvb.as_ptr() as *const i8, args_ptr)
+                pyffi::PySys_SetObject(argvb.as_ptr() as *const c_char, args_ptr)
             });
 
             match res {
@@ -286,7 +287,7 @@ impl<'interpreter, 'resources> MainPythonInterpreter<'interpreter, 'resources> {
         let oxidized = b"oxidized\0";
 
         let res = true.into_py(py).with_borrowed_ptr(py, |py_true| unsafe {
-            pyffi::PySys_SetObject(oxidized.as_ptr() as *const i8, py_true)
+            pyffi::PySys_SetObject(oxidized.as_ptr() as *const c_char, py_true)
         });
 
         match res {
@@ -298,7 +299,7 @@ impl<'interpreter, 'resources> MainPythonInterpreter<'interpreter, 'resources> {
             let frozen = b"frozen\0";
 
             match true.into_py(py).with_borrowed_ptr(py, |py_true| unsafe {
-                pyffi::PySys_SetObject(frozen.as_ptr() as *const i8, py_true)
+                pyffi::PySys_SetObject(frozen.as_ptr() as *const c_char, py_true)
             }) {
                 0 => (),
                 _ => return Err(NewInterpreterError::Simple("unable to set sys.frozen")),
@@ -310,7 +311,7 @@ impl<'interpreter, 'resources> MainPythonInterpreter<'interpreter, 'resources> {
             let value = origin_string.to_object(py);
 
             match value.with_borrowed_ptr(py, |py_value| unsafe {
-                pyffi::PySys_SetObject(meipass.as_ptr() as *const i8, py_value)
+                pyffi::PySys_SetObject(meipass.as_ptr() as *const c_char, py_value)
             }) {
                 0 => (),
                 _ => return Err(NewInterpreterError::Simple("unable to set sys._MEIPASS")),
