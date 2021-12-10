@@ -16,13 +16,14 @@ use {
     pin_project::pin_project,
     std::{
         collections::HashMap,
+        fmt::Formatter,
         pin::Pin,
         task::{Context, Poll},
     },
 };
 
 /// Represents a content digest.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Eq, PartialEq)]
 pub enum ContentDigest {
     /// An MD5 digest.
     Md5(Vec<u8>),
@@ -30,6 +31,16 @@ pub enum ContentDigest {
     Sha1(Vec<u8>),
     /// A SHA-256 digest.
     Sha256(Vec<u8>),
+}
+
+impl std::fmt::Debug for ContentDigest {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Md5(data) => write!(f, "Md5({})", hex::encode(data)),
+            Self::Sha1(data) => write!(f, "Sha1({})", hex::encode(data)),
+            Self::Sha256(data) => write!(f, "Sha256({})", hex::encode(data)),
+        }
+    }
 }
 
 impl ContentDigest {
@@ -232,6 +243,7 @@ where
 }
 
 /// Holds multiple flavors of content digests.
+#[derive(Clone, Debug)]
 pub struct MultiContentDigest {
     pub md5: ContentDigest,
     pub sha1: ContentDigest,
