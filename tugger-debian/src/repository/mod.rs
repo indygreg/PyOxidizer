@@ -14,7 +14,7 @@ use {
         binary_package_control::BinaryPackageControlFile,
         binary_package_list::BinaryPackageList,
         control::{ControlError, ControlParagraphAsyncReader},
-        io::{drain_reader, Compression, ContentDigest, DataResolver},
+        io::{drain_reader, Compression, ContentDigest, DataResolver, MultiContentDigest},
         repository::{
             contents::{ContentsError, ContentsFile, ContentsFileAsyncReader},
             release::{
@@ -424,6 +424,16 @@ impl<'a> std::fmt::Display for RepositoryPathVerification<'a> {
     }
 }
 
+#[derive(Clone, Debug)]
+pub struct RepositoryWrite<'a> {
+    /// The path that was written.
+    pub path: Cow<'a, str>,
+    /// The number of bytes written.
+    pub bytes_written: u64,
+    /// Content digests of written content.
+    pub digests: MultiContentDigest,
+}
+
 #[async_trait]
 pub trait RepositoryWriter: Sync {
     /// Verify the existence of a path with optional content integrity checking.
@@ -444,5 +454,5 @@ pub trait RepositoryWriter: Sync {
         &self,
         path: Cow<'path, str>,
         reader: Pin<Box<dyn AsyncRead + Send + 'reader>>,
-    ) -> Result<u64, RepositoryWriteError>;
+    ) -> Result<RepositoryWrite<'path>, RepositoryWriteError>;
 }

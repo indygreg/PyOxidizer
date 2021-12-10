@@ -231,6 +231,9 @@ pub enum PublishEvent {
 
     /// The path to an index file to write.
     IndexFileToWrite(String),
+
+    /// An index file that was written.
+    IndexFileWritten(String, u64),
 }
 
 impl std::fmt::Display for PublishEvent {
@@ -253,6 +256,9 @@ impl std::fmt::Display for PublishEvent {
             }
             Self::IndexFileToWrite(path) => {
                 write!(f, "index file {} will be written", path)
+            }
+            Self::IndexFileWritten(path, size) => {
+                write!(f, "wrote {} bytes to {}", size, path)
             }
         }
     }
@@ -829,6 +835,9 @@ impl<'cf> RepositoryBuilder<'cf> {
     where
         F: Fn(PublishEvent),
     {
+        let mut index_paths = BTreeMap::new();
+
+        // TODO honor by-hash paths.
         let mut fs = futures::stream::iter(self.binary_packages_indices().map(|bpir| {
             let path = if let Some(prefix) = path_prefix {
                 format!("{}/{}", prefix.trim_matches('/'), bpir.path())
@@ -844,9 +853,20 @@ impl<'cf> RepositoryBuilder<'cf> {
         }))
         .buffer_unordered(threads);
 
-        while let Some(res) = fs.next().await {
-            res?;
+        while let Some(write) = fs.next().await {
+            let write = write?;
+
+            if let Some(cb) = progress_cb {
+                cb(PublishEvent::IndexFileWritten(
+                    write.path.to_string(),
+                    write.bytes_written,
+                ));
+            }
+
+            index_paths.insert(write.path.to_string(), (write.bytes_written, write.digests));
         }
+
+        // TODO write [In]Release from index files.
 
         Ok(())
     }
@@ -913,10 +933,11 @@ mod test {
     use {
         super::*,
         crate::{
-            io::PathMappingDataResolver,
+            io::{DigestingWriter, PathMappingDataResolver},
             repository::{
                 http::HttpRepositoryClient, RepositoryPathVerification,
-                RepositoryPathVerificationState, RepositoryRootReader, RepositoryWriteError,
+                RepositoryPathVerificationState, RepositoryRootReader, RepositoryWrite,
+                RepositoryWriteError,
             },
         },
         async_trait::async_trait,
@@ -944,15 +965,21 @@ mod test {
         async fn write_path<'path, 'reader>(
             &self,
             path: Cow<'path, str>,
-            mut reader: Pin<Box<dyn AsyncRead + Send + 'reader>>,
-        ) -> std::result::Result<u64, RepositoryWriteError> {
-            let mut buf = vec![];
-            reader
-                .read_to_end(&mut buf)
-                .await
-                .map_err(|e| RepositoryWriteError::io_path(path, e))?;
+            reader: Pin<Box<dyn AsyncRead + Send + 'reader>>,
+        ) -> std::result::Result<RepositoryWrite<'path>, RepositoryWriteError> {
+            let mut writer = DigestingWriter::new(futures::io::sink());
 
-            Ok(0)
+            let bytes_written = futures::io::copy(reader, &mut writer)
+                .await
+                .map_err(|e| RepositoryWriteError::io_path(path.clone(), e))?;
+
+            let digests = writer.finish().1;
+
+            Ok(RepositoryWrite {
+                path,
+                bytes_written,
+                digests,
+            })
         }
     }
 

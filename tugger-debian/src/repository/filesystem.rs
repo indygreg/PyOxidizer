@@ -4,10 +4,10 @@
 
 use {
     crate::{
-        io::{ContentDigest, DigestingReader},
+        io::{ContentDigest, DigestingReader, DigestingWriter},
         repository::{
-            RepositoryPathVerification, RepositoryPathVerificationState, RepositoryWriteError,
-            RepositoryWriter,
+            RepositoryPathVerification, RepositoryPathVerificationState, RepositoryWrite,
+            RepositoryWriteError, RepositoryWriter,
         },
     },
     async_trait::async_trait,
@@ -106,7 +106,7 @@ impl RepositoryWriter for FilesystemRepositoryWriter {
         &self,
         path: Cow<'path, str>,
         reader: Pin<Box<dyn AsyncRead + Send + 'reader>>,
-    ) -> Result<u64, RepositoryWriteError> {
+    ) -> Result<RepositoryWrite<'path>, RepositoryWriteError> {
         let dest_path = self.root_dir.join(path.as_ref());
 
         if let Some(parent) = dest_path.parent() {
@@ -117,10 +117,18 @@ impl RepositoryWriter for FilesystemRepositoryWriter {
         let fh = std::fs::File::create(&dest_path)
             .map_err(|e| RepositoryWriteError::IoPath(format!("{}", dest_path.display()), e))?;
 
-        let mut writer = futures::io::AllowStdIo::new(fh);
+        let mut writer = DigestingWriter::new(futures::io::AllowStdIo::new(fh));
 
-        Ok(futures::io::copy(reader, &mut writer)
+        let bytes_written = futures::io::copy(reader, &mut writer)
             .await
-            .map_err(|e| RepositoryWriteError::IoPath(format!("{}", dest_path.display()), e))?)
+            .map_err(|e| RepositoryWriteError::IoPath(format!("{}", dest_path.display()), e))?;
+
+        let digests = writer.finish().1;
+
+        Ok(RepositoryWrite {
+            path,
+            bytes_written,
+            digests,
+        })
     }
 }
