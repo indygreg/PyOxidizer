@@ -228,6 +228,9 @@ pub enum PublishEvent {
 
     /// A pool artifact with the given path and size was created.
     PoolArtifactCreated(String, usize),
+
+    /// The path to an index file to write.
+    IndexFileToWrite(String),
 }
 
 impl std::fmt::Display for PublishEvent {
@@ -247,6 +250,9 @@ impl std::fmt::Display for PublishEvent {
             }
             Self::PoolArtifactCreated(path, size) => {
                 write!(f, "wrote {} bytes to {}", size, path)
+            }
+            Self::IndexFileToWrite(path) => {
+                write!(f, "index file {} will be written", path)
             }
         }
     }
@@ -815,11 +821,34 @@ impl<'cf> RepositoryBuilder<'cf> {
     /// that does not exist.
     pub async fn publish_indices<F>(
         &self,
-        _writer: &impl RepositoryWriter,
-        _threads: usize,
-        _progress_cb: &Option<F>,
-    ) -> Result<()> {
-        todo!()
+        writer: &impl RepositoryWriter,
+        path_prefix: Option<&str>,
+        threads: usize,
+        progress_cb: &Option<F>,
+    ) -> Result<()>
+    where
+        F: Fn(PublishEvent),
+    {
+        let mut fs = futures::stream::iter(self.binary_packages_indices().map(|bpir| {
+            let path = if let Some(prefix) = path_prefix {
+                format!("{}/{}", prefix.trim_matches('/'), bpir.path())
+            } else {
+                bpir.path()
+            };
+
+            if let Some(cb) = progress_cb {
+                cb(PublishEvent::IndexFileToWrite(path.clone()));
+            }
+
+            writer.write_path(path.into(), bpir.reader)
+        }))
+        .buffer_unordered(threads);
+
+        while let Some(res) = fs.next().await {
+            res?;
+        }
+
+        Ok(())
     }
 
     /// Publish the repository to the given [RepositoryWriter].
@@ -831,10 +860,20 @@ impl<'cf> RepositoryBuilder<'cf> {
     /// 1. Publish missing pool artifacts.
     /// 2. Publish *indices* files (e.g. `Packages` lists).
     /// 3. Publish the `InRelease` and `Release` file.
+    ///
+    /// `writer` is a [RepositoryWriter] used to perform I/O for writing output files.
+    /// `resolver` is a [DataResolver] for resolving pool paths. It will be consulted
+    /// to obtain paths of `.deb` and other pool files.
+    /// `distribution_path` is the relative path under `writer` to write indices files
+    /// under. It typically begins with `dists/`. e.g. `dists/bullseye`. This value
+    /// becomes the directory with the generated `InRelease` file.
+    /// `threads` is the number of parallel threads to use for I/O.
+    /// `progress_cb` provides an optional function to receive progress updates.
     pub async fn publish<F>(
         &self,
         writer: &impl RepositoryWriter,
         resolver: &impl DataResolver,
+        distribution_path: &str,
         threads: usize,
         progress_cb: &Option<F>,
     ) -> Result<()>
@@ -844,7 +883,8 @@ impl<'cf> RepositoryBuilder<'cf> {
         self.publish_pool_artifacts(resolver, writer, threads, progress_cb)
             .await?;
 
-        self.publish_indices(writer, threads, progress_cb).await?;
+        self.publish_indices(writer, Some(distribution_path), threads, progress_cb)
+            .await?;
 
         Ok(())
     }
@@ -992,7 +1032,7 @@ mod test {
         };
 
         builder
-            .publish_pool_artifacts(&mapping_resolver, &writer, 10, &Some(cb))
+            .publish(&writer, &mapping_resolver, "dists/mydist", 10, &Some(cb))
             .await?;
 
         Ok(())
