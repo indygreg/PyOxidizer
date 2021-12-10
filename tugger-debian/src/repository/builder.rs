@@ -862,7 +862,7 @@ async fn get_path_and_copy<'a, 'b>(
         .get_path_with_digest_verification(artifact.path, artifact.size, artifact.digest.clone())
         .await?;
 
-    writer.write_path(artifact.path, reader).await?;
+    writer.write_path(artifact.path.into(), reader).await?;
 
     Ok(artifact)
 }
@@ -881,7 +881,7 @@ mod test {
         },
         async_trait::async_trait,
         futures::AsyncReadExt,
-        std::pin::Pin,
+        std::borrow::Cow,
     };
 
     const BULLSEYE_URL: &str = "http://snapshot.debian.org/archive/debian/20211120T085721Z";
@@ -901,9 +901,9 @@ mod test {
             })
         }
 
-        async fn write_path<'reader>(
+        async fn write_path<'path, 'reader>(
             &self,
-            path: &str,
+            path: Cow<'path, str>,
             mut reader: Pin<Box<dyn AsyncRead + Send + 'reader>>,
         ) -> std::result::Result<u64, RepositoryWriteError> {
             let mut buf = vec![];

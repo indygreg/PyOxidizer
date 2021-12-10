@@ -13,6 +13,7 @@ use {
     async_trait::async_trait,
     futures::{AsyncRead, AsyncReadExt},
     std::{
+        borrow::Cow,
         path::{Path, PathBuf},
         pin::Pin,
     },
@@ -101,12 +102,12 @@ impl RepositoryWriter for FilesystemRepositoryWriter {
         }
     }
 
-    async fn write_path<'reader>(
+    async fn write_path<'path, 'reader>(
         &self,
-        path: &str,
+        path: Cow<'path, str>,
         reader: Pin<Box<dyn AsyncRead + Send + 'reader>>,
     ) -> Result<u64, RepositoryWriteError> {
-        let dest_path = self.root_dir.join(path);
+        let dest_path = self.root_dir.join(path.as_ref());
 
         if let Some(parent) = dest_path.parent() {
             std::fs::create_dir_all(parent)

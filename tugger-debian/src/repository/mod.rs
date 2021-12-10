@@ -25,7 +25,7 @@ use {
     },
     async_trait::async_trait,
     futures::{AsyncRead, AsyncReadExt},
-    std::pin::Pin,
+    std::{borrow::Cow, pin::Pin},
     thiserror::Error,
 };
 
@@ -440,9 +440,9 @@ pub trait RepositoryWriter: Sync {
     /// Write data to a given path.
     ///
     /// The data to write is provided by an [AsyncRead] reader.
-    async fn write_path<'reader>(
+    async fn write_path<'path, 'reader>(
         &self,
-        path: &str,
+        path: Cow<'path, str>,
         reader: Pin<Box<dyn AsyncRead + Send + 'reader>>,
     ) -> Result<u64, RepositoryWriteError>;
 }
