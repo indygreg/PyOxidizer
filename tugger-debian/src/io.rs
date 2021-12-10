@@ -11,7 +11,7 @@ use {
         XzEncoder,
     },
     async_trait::async_trait,
-    futures::{AsyncBufRead, AsyncRead},
+    futures::{AsyncBufRead, AsyncRead, AsyncWrite},
     pgp::crypto::Hasher,
     pin_project::pin_project,
     std::{
@@ -332,6 +332,63 @@ where
             }
             res => res,
         }
+    }
+}
+
+/// An [AsyncWrite] stream adapter that computes multiple [ContentDigest] as data is written.
+#[pin_project]
+pub struct DigestingWriter<W> {
+    digester: MultiDigester,
+    #[pin]
+    dest: W,
+}
+
+impl<W> DigestingWriter<W> {
+    /// Construct a new instance from a destination writer.
+    pub fn new(dest: W) -> Self {
+        Self {
+            digester: MultiDigester::default(),
+            dest,
+        }
+    }
+
+    /// Finish the stream.
+    ///
+    /// Returns the destination writer and a resolved [MultiContentDigest].
+    pub fn finish(self) -> (W, MultiContentDigest) {
+        (self.dest, self.digester.finish())
+    }
+}
+
+impl<W> AsyncWrite for DigestingWriter<W>
+where
+    W: AsyncWrite + Unpin,
+{
+    fn poll_write(
+        self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+        buf: &[u8],
+    ) -> Poll<std::io::Result<usize>> {
+        let mut this = self.project();
+
+        match this.dest.as_mut().poll_write(cx, buf) {
+            Poll::Ready(Ok(size)) => {
+                if size > 0 {
+                    this.digester.update(&buf[0..size]);
+                }
+
+                Poll::Ready(Ok(size))
+            }
+            res => res,
+        }
+    }
+
+    fn poll_flush(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<std::io::Result<()>> {
+        self.project().dest.as_mut().poll_flush(cx)
+    }
+
+    fn poll_close(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<std::io::Result<()>> {
+        self.project().dest.as_mut().poll_close(cx)
     }
 }
 
