@@ -27,6 +27,7 @@ use {
     futures::{AsyncRead, StreamExt, TryStreamExt},
     std::{
         collections::{BTreeMap, BTreeSet},
+        pin::Pin,
         str::FromStr,
     },
     thiserror::Error,
@@ -186,7 +187,7 @@ pub struct BinaryPackagesIndexReader<'a> {
     pub component: &'a str,
     pub architecture: &'a str,
     pub compression: Compression,
-    pub reader: Box<dyn AsyncRead + Unpin + 'a>,
+    pub reader: Pin<Box<dyn AsyncRead + Send + 'a>>,
 }
 
 impl<'a> BinaryPackagesIndexReader<'a> {
@@ -674,7 +675,7 @@ impl<'cf> RepositoryBuilder<'cf> {
         component: impl ToString,
         architecture: impl ToString,
         compression: Compression,
-    ) -> Box<dyn AsyncRead + Unpin + '_> {
+    ) -> Pin<Box<dyn AsyncRead + Send + '_>> {
         read_compressed(
             futures::io::BufReader::new(
                 self.component_binary_packages_reader(

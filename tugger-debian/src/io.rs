@@ -124,15 +124,15 @@ pub async fn read_decompressed(
 
 /// Wrap a reader with transparent compression.
 pub fn read_compressed<'a>(
-    stream: impl AsyncBufRead + Unpin + 'a,
+    stream: impl AsyncBufRead + Send + 'a,
     compression: Compression,
-) -> Box<dyn AsyncRead + Unpin + 'a> {
+) -> Pin<Box<dyn AsyncRead + Send + 'a>> {
     match compression {
-        Compression::None => Box::new(stream),
-        Compression::Gzip => Box::new(GzipEncoder::new(stream)),
-        Compression::Xz => Box::new(XzEncoder::new(stream)),
-        Compression::Bzip2 => Box::new(BzEncoder::new(stream)),
-        Compression::Lzma => Box::new(LzmaEncoder::new(stream)),
+        Compression::None => Box::pin(stream),
+        Compression::Gzip => Box::pin(GzipEncoder::new(stream)),
+        Compression::Xz => Box::pin(XzEncoder::new(stream)),
+        Compression::Bzip2 => Box::pin(BzEncoder::new(stream)),
+        Compression::Lzma => Box::pin(LzmaEncoder::new(stream)),
     }
 }
 
