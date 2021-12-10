@@ -900,10 +900,10 @@ mod test {
             })
         }
 
-        async fn write_path(
+        async fn write_path<'reader>(
             &self,
             path: &str,
-            mut reader: Pin<Box<dyn AsyncRead + Send>>,
+            mut reader: Pin<Box<dyn AsyncRead + Send + 'reader>>,
         ) -> std::result::Result<u64, RepositoryWriteError> {
             let mut buf = vec![];
             reader

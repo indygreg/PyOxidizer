@@ -440,9 +440,9 @@ pub trait RepositoryWriter: Sync {
     /// Write data to a given path.
     ///
     /// The data to write is provided by an [AsyncRead] reader.
-    async fn write_path(
+    async fn write_path<'reader>(
         &self,
         path: &str,
-        reader: Pin<Box<dyn AsyncRead + Send>>,
+        reader: Pin<Box<dyn AsyncRead + Send + 'reader>>,
     ) -> Result<u64, RepositoryWriteError>;
 }

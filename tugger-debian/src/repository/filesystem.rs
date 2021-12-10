@@ -101,10 +101,10 @@ impl RepositoryWriter for FilesystemRepositoryWriter {
         }
     }
 
-    async fn write_path(
+    async fn write_path<'reader>(
         &self,
         path: &str,
-        reader: Pin<Box<dyn AsyncRead + Send>>,
+        reader: Pin<Box<dyn AsyncRead + Send + 'reader>>,
     ) -> Result<u64, RepositoryWriteError> {
         let dest_path = self.root_dir.join(path);
 
