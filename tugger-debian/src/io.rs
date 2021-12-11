@@ -80,6 +80,22 @@ impl ContentDigest {
     pub fn digest_hex(&self) -> String {
         hex::encode(self.digest_bytes())
     }
+
+    /// Obtain the [ChecksumType] for this digest.
+    pub fn checksum_type(&self) -> ChecksumType {
+        match self {
+            Self::Md5(_) => ChecksumType::Md5,
+            Self::Sha1(_) => ChecksumType::Sha1,
+            Self::Sha256(_) => ChecksumType::Sha256,
+        }
+    }
+
+    /// Obtain the name of the field in `[In]Release` files that holds this digest type.
+    ///
+    /// This also corresponds to the directory name for `by-hash` paths.
+    pub fn release_field_name(&self) -> &'static str {
+        self.checksum_type().field_name()
+    }
 }
 
 /// Compression format used by Debian primitives.
@@ -257,6 +273,15 @@ impl MultiContentDigest {
             ContentDigest::Md5(_) => &self.md5 == other,
             ContentDigest::Sha1(_) => &self.sha1 == other,
             ContentDigest::Sha256(_) => &self.sha256 == other,
+        }
+    }
+
+    /// Obtain the [ContentDigest] for a given [ChecksumType].
+    pub fn digest_from_checksum(&self, checksum: ChecksumType) -> &ContentDigest {
+        match checksum {
+            ChecksumType::Md5 => &self.md5,
+            ChecksumType::Sha1 => &self.sha1,
+            ChecksumType::Sha256 => &self.sha256,
         }
     }
 }

@@ -204,6 +204,16 @@ impl<'a> IndexFileReader<'a> {
             self.compression.extension()
         )
     }
+
+    /// Obtain the `by-hash` path given a [ContentDigest].
+    pub fn by_hash_path(&self, digest: &ContentDigest) -> String {
+        format!(
+            "{}/by-hash/{}/{}",
+            self.directory,
+            digest.release_field_name(),
+            digest.digest_hex()
+        )
+    }
 }
 
 /// Describes a file in the *pool* to support a binary package.
