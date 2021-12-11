@@ -734,6 +734,13 @@ impl<'cf> RepositoryBuilder<'cf> {
             .flatten()
     }
 
+    /// Obtain all [IndexFileReader] to be published.
+    ///
+    /// Each item corresponds to a logical item in an `[In]Release`.
+    pub fn index_file_readers(&self) -> impl Iterator<Item = IndexFileReader<'_>> + '_ {
+        self.binary_packages_index_readers()
+    }
+
     /// Obtain records describing pool artifacts needed to support binary packages.
     pub fn iter_binary_packages_pool_artifacts(
         &self,
@@ -850,7 +857,7 @@ impl<'cf> RepositoryBuilder<'cf> {
         let mut index_paths = BTreeMap::new();
 
         // TODO honor by-hash paths.
-        let mut fs = futures::stream::iter(self.binary_packages_index_readers().map(|ifr| {
+        let mut fs = futures::stream::iter(self.index_file_readers().map(|ifr| {
             let path = if let Some(prefix) = path_prefix {
                 format!("{}/{}", prefix.trim_matches('/'), ifr.canonical_path())
             } else {
