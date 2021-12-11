@@ -182,21 +182,25 @@ impl<'cf> DebPackageReference<'cf> for InMemoryDebFile {
     }
 }
 
-/// Describes a `Packages` index file and provides a source of its content.
-pub struct BinaryPackagesIndexReader<'a> {
-    pub component: &'a str,
-    pub architecture: &'a str,
-    pub compression: Compression,
+/// Describes an index file to write.
+pub struct IndexFileReader<'a> {
+    /// Provides the uncompressed content of the file.
     pub reader: Pin<Box<dyn AsyncRead + Send + 'a>>,
+    /// The compression to apply to the written file.
+    pub compression: Compression,
+    /// The directory the index file is based in.
+    pub directory: String,
+    /// The filename of the index file (without the compression suffix).
+    pub filename: String,
 }
 
-impl<'a> BinaryPackagesIndexReader<'a> {
-    /// Obtain the path of this entry, relative to the `Release` file.
-    pub fn path(&self) -> String {
+impl<'a> IndexFileReader<'a> {
+    /// Obtain the canonical path of this entry as it would appear in an `[In]Release` file.
+    pub fn canonical_path(&self) -> String {
         format!(
-            "{}/binary-{}/Packages{}",
-            self.component,
-            self.architecture,
+            "{}/{}{}",
+            self.directory,
+            self.filename,
             self.compression.extension()
         )
     }
@@ -699,25 +703,23 @@ impl<'cf> RepositoryBuilder<'cf> {
         )
     }
 
-    /// Obtain a descriptor of each `Packages` file to write.
-    pub fn binary_packages_indices(
-        &self,
-    ) -> impl Iterator<Item = BinaryPackagesIndexReader<'_>> + '_ {
+    /// Obtain [IndexFileReader] for each logical `Packages` file.
+    pub fn binary_packages_index_readers(&self) -> impl Iterator<Item = IndexFileReader<'_>> + '_ {
         self.binary_packages
             .keys()
             .map(move |(component, architecture)| {
-                self.index_file_compressions.iter().map(move |compression| {
-                    BinaryPackagesIndexReader {
-                        component,
-                        architecture,
-                        compression: *compression,
+                self.index_file_compressions
+                    .iter()
+                    .map(move |compression| IndexFileReader {
                         reader: self.component_binary_packages_reader_compression(
                             component,
                             architecture,
                             *compression,
                         ),
-                    }
-                })
+                        compression: *compression,
+                        directory: format!("{}/binary-{}", component, architecture),
+                        filename: "Packages".to_string(),
+                    })
             })
             .flatten()
     }
@@ -838,18 +840,18 @@ impl<'cf> RepositoryBuilder<'cf> {
         let mut index_paths = BTreeMap::new();
 
         // TODO honor by-hash paths.
-        let mut fs = futures::stream::iter(self.binary_packages_indices().map(|bpir| {
+        let mut fs = futures::stream::iter(self.binary_packages_index_readers().map(|ifr| {
             let path = if let Some(prefix) = path_prefix {
-                format!("{}/{}", prefix.trim_matches('/'), bpir.path())
+                format!("{}/{}", prefix.trim_matches('/'), ifr.canonical_path())
             } else {
-                bpir.path()
+                ifr.canonical_path()
             };
 
             if let Some(cb) = progress_cb {
                 cb(PublishEvent::IndexFileToWrite(path.clone()));
             }
 
-            writer.write_path(path.into(), bpir.reader)
+            writer.write_path(path.into(), ifr.reader)
         }))
         .buffer_unordered(threads);
 
@@ -1040,12 +1042,11 @@ mod test {
             .collect::<Result<Vec<_>>>()?;
         assert_eq!(pool_artifacts.len(), 10);
 
-        let mut entries = builder.binary_packages_indices().collect::<Vec<_>>();
+        let mut entries = builder.binary_packages_index_readers().collect::<Vec<_>>();
         assert_eq!(entries.len(), 6);
-        assert!(entries.iter().all(|entry| entry.component == "main"));
         assert!(entries
             .iter()
-            .all(|entry| entry.architecture == "amd64" || entry.architecture == "all"));
+            .all(|entry| entry.canonical_path().starts_with("main/binary-")));
 
         for entry in entries.iter_mut() {
             let mut buf = vec![];
