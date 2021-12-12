@@ -36,6 +36,18 @@ pub enum ControlFieldValue<'a> {
 }
 
 impl<'a> ControlFieldValue<'a> {
+    /// Construct a [Self::Multiline] variant from a source of lines.
+    pub fn multiline_from_lines(lines: impl Iterator<Item = String>) -> Self {
+        Self::Multiline(
+            lines
+                .enumerate()
+                .map(|(i, line)| if i == 0 { line } else { format!(" {}", line) })
+                .collect::<Vec<_>>()
+                .join("\n")
+                .into(),
+        )
+    }
+
     /// Obtain the field value as a [&str].
     ///
     /// The raw stored value is returned. For multiline variants, lines will have leading

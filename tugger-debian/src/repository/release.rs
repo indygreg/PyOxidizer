@@ -22,6 +22,9 @@ use {
     thiserror::Error,
 };
 
+/// Formatter string for dates in release files.
+pub const DATE_FORMAT: &str = "%a, %d %b %Y %H:%M:%S %z";
+
 /// Describes an error related to `Release` file handling.
 #[derive(Debug, Error)]
 pub enum ReleaseError {
@@ -642,6 +645,15 @@ impl<'a> ReleaseFile<'a> {
             })
         } else {
             None
+        }
+    }
+}
+
+impl<'a> From<ControlParagraph<'a>> for ReleaseFile<'a> {
+    fn from(paragraph: ControlParagraph<'a>) -> Self {
+        Self {
+            paragraph,
+            signatures: None,
         }
     }
 }

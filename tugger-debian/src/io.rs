@@ -284,6 +284,11 @@ impl MultiContentDigest {
             ChecksumType::Sha256 => &self.sha256,
         }
     }
+
+    /// Obtain an iterator of [ContentDigest] in this instance.
+    pub fn iter_digests(&self) -> impl Iterator<Item = &ContentDigest> + '_ {
+        [&self.md5, &self.sha1, &self.sha256].into_iter()
+    }
 }
 
 /// A content digester that simultaneously computes multiple digest types.

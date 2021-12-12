@@ -15,18 +15,20 @@ Primitives in this module facilitate constructing your own repositories.
 use {
     crate::{
         binary_package_control::{BinaryPackageControlError, BinaryPackageControlFile},
-        control::{ControlError, ControlParagraph},
+        control::{ControlError, ControlField, ControlFieldValue, ControlParagraph},
         deb::{reader::resolve_control_file, DebError},
         io::{read_compressed, ContentDigest, DataResolver, MultiContentDigest, MultiDigester},
         repository::{
-            release::ChecksumType, Compression, RepositoryPathVerificationState,
-            RepositoryReadError, RepositoryWriteError, RepositoryWriter,
+            release::{ChecksumType, ReleaseFile, DATE_FORMAT},
+            Compression, RepositoryPathVerificationState, RepositoryReadError,
+            RepositoryWriteError, RepositoryWriter,
         },
     },
     chrono::{DateTime, Utc},
     futures::{AsyncRead, AsyncReadExt, StreamExt, TryStreamExt},
     std::{
-        collections::{BTreeMap, BTreeSet},
+        borrow::Cow,
+        collections::{BTreeMap, BTreeSet, HashMap},
         pin::Pin,
         str::FromStr,
     },
@@ -873,6 +875,129 @@ impl<'cf> RepositoryBuilder<'cf> {
         }
     }
 
+    /// Derive fields for `Release` files that aren't related to indices lists.
+    fn static_release_fields(&self) -> impl Iterator<Item = ControlField<'_>> {
+        let mut fields: BTreeMap<Cow<'_, str>, Cow<'_, str>> = BTreeMap::new();
+
+        fields.insert(
+            "Components".into(),
+            self.components
+                .iter()
+                .map(|x| x.as_str())
+                .collect::<Vec<_>>()
+                .join(" ")
+                .into(),
+        );
+
+        fields.insert(
+            "Architectures".into(),
+            self.architectures
+                .iter()
+                .map(|x| x.as_str())
+                .collect::<Vec<_>>()
+                .join(" ")
+                .into(),
+        );
+
+        if let Some(suite) = &self.suite {
+            fields.insert("Suite".into(), suite.into());
+        }
+        if let Some(codename) = &self.codename {
+            fields.insert("Codename".into(), codename.into());
+        }
+        if let Some(date) = &self.date {
+            fields.insert(
+                "Date".into(),
+                format!("{}", date.format(DATE_FORMAT)).into(),
+            );
+        }
+        if let Some(valid_until) = &self.valid_until {
+            fields.insert(
+                "Valid-Until".into(),
+                format!("{}", valid_until.format(DATE_FORMAT)).into(),
+            );
+        }
+        if let Some(description) = &self.description {
+            fields.insert("Description".into(), description.into());
+        }
+        if let Some(origin) = &self.origin {
+            fields.insert("Origin".into(), origin.into());
+        }
+        if let Some(label) = &self.label {
+            fields.insert("Label".into(), label.into());
+        }
+        if let Some(version) = &self.version {
+            fields.insert("Version".into(), version.into());
+        }
+        if let Some(acquire_by_hash) = self.acquire_by_hash {
+            fields.insert(
+                "Acquire-By-Hash".into(),
+                if acquire_by_hash { "yes" } else { "no" }.into(),
+            );
+        }
+
+        fields
+            .into_iter()
+            .map(|(k, v)| ControlField::new(k, ControlFieldValue::Simple(v)))
+    }
+
+    /// Derive a [ReleaseFile] representing the content of the `Release` file.
+    ///
+    /// This takes an iterable describing indices files. This iterable is typically derived
+    /// from [Self::index_file_readers()].
+    pub fn create_release_file(
+        &self,
+        indices: impl Iterator<Item = (String, (u64, MultiContentDigest))>,
+    ) -> Result<ReleaseFile<'_>> {
+        let mut para = ControlParagraph::default();
+
+        for field in self.static_release_fields() {
+            para.add_field(field);
+        }
+
+        let mut digests_by_field = HashMap::new();
+
+        for (path, (size, digests)) in indices {
+            for digest in digests.iter_digests() {
+                digests_by_field
+                    .entry(digest.release_field_name())
+                    .or_insert_with(BTreeMap::new)
+                    .insert(path.clone(), (size, digest.digest_hex()));
+            }
+        }
+
+        for checksum in self.checksums.iter() {
+            let entries = digests_by_field
+                .get(checksum.field_name())
+                .expect("digest field should be populated");
+
+            let longest_path = entries.keys().map(|x| x.len()).max().unwrap_or_default();
+            let longest_size = entries
+                .values()
+                .map(|(size, _)| format!("{}", size).len())
+                .max()
+                .unwrap_or_default();
+
+            para.add_field(ControlField::new(
+                checksum.field_name().into(),
+                ControlFieldValue::multiline_from_lines(std::iter::once("".to_string()).chain(
+                    entries.iter().map(|(path, (size, digest))| {
+                        format!(
+                            "{:<path_width$} {:>size_width$} {}",
+                            path,
+                            size,
+                            digest,
+                            path_width = longest_path,
+                            size_width = longest_size
+                        )
+                    }),
+                )),
+            ));
+        }
+
+        Ok(para.into())
+    }
+
     /// Publish index files.
     ///
     /// Repository index files describe the contents of the repository. Index files are
@@ -916,7 +1041,7 @@ impl<'cf> RepositoryBuilder<'cf> {
 
                 index_paths.insert(
                     eif.canonical_path.clone(),
-                    (eif.data.len(), eif.digests.clone()),
+                    (eif.data.len() as u64, eif.digests.clone()),
                 );
 
                 iters.push(eif);
@@ -940,7 +1065,40 @@ impl<'cf> RepositoryBuilder<'cf> {
             }
         }
 
-        // TODO write [In]Release from index files.
+        // Now with all the indices files written, we can write the `[In]Release` files.
+
+        let release = self.create_release_file(index_paths.into_iter())?;
+
+        let (release_path, _) = if let Some(prefix) = path_prefix {
+            (
+                format!("{}/Release", prefix.trim_matches('/')),
+                format!("{}/InRelease", prefix.trim_matches('/')),
+            )
+        } else {
+            ("Release".to_string(), "InRelease".to_string())
+        };
+
+        if let Some(cb) = progress_cb {
+            cb(PublishEvent::IndexFileToWrite(release_path.clone()))
+        }
+
+        let release_write = writer
+            .write_path(
+                release_path.into(),
+                Box::pin(futures::io::Cursor::new(
+                    release.as_ref().to_string().into_bytes(),
+                )),
+            )
+            .await?;
+
+        if let Some(cb) = progress_cb {
+            cb(PublishEvent::IndexFileWritten(
+                release_write.path.to_string(),
+                release_write.bytes_written,
+            ));
+        }
+
+        // TODO write InRelease if signing key provided.
 
         Ok(())
     }
