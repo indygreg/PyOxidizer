@@ -4142,6 +4142,7 @@ dependencies = [
  "reqwest",
  "sha-1 0.9.8",
  "sha2",
+ "smallvec",
  "tar",
  "thiserror",
  "tokio",

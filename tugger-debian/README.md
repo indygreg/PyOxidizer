@@ -10,6 +10,7 @@ implemented:
 * Fetching Debian repository files from an HTTP server.
 * Writing changelog files.
 * Writing `.deb` files (deterministically).
+* Creating repositories.
 
 `tugger-debian` is part of the Tugger application distribution tool
 but exists as its own crate to facilitate code reuse for other tools

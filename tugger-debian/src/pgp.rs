@@ -5,17 +5,19 @@
 /*! PGP functionality. */
 
 use {
+    chrono::SubsecRound,
     digest::Digest,
     pgp::{
         crypto::{HashAlgorithm, Hasher},
-        packet::Packet,
-        types::PublicKeyTrait,
+        packet::{Packet, SignatureConfig, SignatureType, Subpacket},
+        types::{KeyVersion, PublicKeyTrait, SecretKeyTrait},
         Signature,
     },
+    smallvec::SmallVec,
     std::{
         cmp::Ordering,
         collections::HashMap,
-        io::{self, BufRead, BufReader, Read},
+        io::{self, BufRead, BufReader, Cursor, Read},
     },
 };
 
@@ -472,4 +474,116 @@ impl CleartextSignatures {
             _ => Ok(valid_signatures),
         }
     }
+}
+
+/// Produce a cleartext signature over data.
+pub fn cleartext_sign<PW, R>(
+    key: &impl SecretKeyTrait,
+    key_pw: PW,
+    hash_algorithm: HashAlgorithm,
+    data: R,
+) -> pgp::errors::Result<String>
+where
+    PW: FnOnce() -> String,
+    R: BufRead,
+{
+    if !matches!(
+        hash_algorithm,
+        HashAlgorithm::MD5
+            | HashAlgorithm::SHA1
+            | HashAlgorithm::RIPEMD160
+            | HashAlgorithm::SHA2_256
+            | HashAlgorithm::SHA2_384
+            | HashAlgorithm::SHA2_512
+            | HashAlgorithm::SHA2_224,
+    ) {
+        return Err(pgp::errors::Error::Unsupported(
+            "hash algorithm unsupported for cleartext signatures".to_string(),
+        ));
+    }
+
+    // The message digest is computed using the source data. The emitted cleartext
+    // signature contains the dash-escaped normalization of the source data. Furthermore,
+    // line endings in the source data are normalized to CRLF for signature creation.
+
+    let mut dashed_lines = vec![];
+    let mut source_lines = vec![];
+
+    for line in data.lines() {
+        let line = line?;
+
+        // From https://datatracker.ietf.org/doc/html/rfc4880.html#section-7.1:
+        //
+        // Dash-escaped cleartext is the ordinary cleartext where every line
+        // starting with a dash '-' (0x2D) is prefixed by the sequence dash '-'
+        // (0x2D) and space ' ' (0x20). ... An implementation MAY dash-escape any
+        // line, SHOULD dash-escape lines commencing "From" followed by a space, and
+        // MUST dash-escape any line commencing in a dash. ... Also, any trailing
+        // whitespace -- spaces (0x20) and tabs (0x09) -- at the end of any line is
+        // removed when the cleartext signature is generated.
+        dashed_lines.push(if line.starts_with('-') || line.starts_with("From ") {
+            format!("- {}", line.trim_end())
+        } else {
+            line.trim_end().to_string()
+        });
+
+        source_lines.push(line.trim_end().to_string());
+    }
+
+    let cleartext = source_lines.join("\r\n").into_bytes();
+
+    // TODO these sets should be audited by someone who knows PGP.
+    let hashed_subpackets = vec![
+        Subpacket::IssuerFingerprint(KeyVersion::V4, SmallVec::from_slice(&key.fingerprint())),
+        Subpacket::SignatureCreationTime(chrono::Utc::now().trunc_subsecs(0)),
+    ];
+    let unhashed_subpackets = vec![Subpacket::Issuer(key.key_id())];
+
+    let config = SignatureConfig::new_v4(
+        Default::default(),
+        SignatureType::Text,
+        key.algorithm(),
+        hash_algorithm,
+        hashed_subpackets,
+        unhashed_subpackets,
+    );
+
+    let signature = config.sign(key, key_pw, Cursor::new(cleartext))?;
+
+    // The armoring consists of a signature packet.
+    let packet = Packet::Signature(signature);
+    let mut writer = Cursor::new(Vec::<u8>::new());
+    pgp::armor::write(&packet, pgp::armor::BlockType::Signature, &mut writer, None)?;
+
+    // The armoring should always produce valid UTF-8. But we are careful.
+    let signature_string = String::from_utf8(writer.into_inner())
+        .map_err(|e| pgp::errors::Error::Utf8Error(e.utf8_error()))?;
+
+    // The cleartext consists of the header, the hash identifier, an empty line, the
+    // dash-escaped lines, and finally the signature armor.
+    let lines = vec![
+        HEADER.to_string(),
+        format!(
+            "Hash: {}",
+            match hash_algorithm {
+                HashAlgorithm::MD5 => "MD5",
+                HashAlgorithm::SHA1 => "SHA1",
+                HashAlgorithm::RIPEMD160 => "RIPEMD160",
+                HashAlgorithm::SHA2_256 => "SHA256",
+                HashAlgorithm::SHA2_384 => "SHA384",
+                HashAlgorithm::SHA2_512 => "SHA512",
+                HashAlgorithm::SHA2_224 => "SHA224",
+                _ => panic!("hash algorithm should have been validated above"),
+            }
+        ),
+        "".to_string(),
+    ]
+    .into_iter()
+    .chain(dashed_lines.into_iter())
+    .chain(std::iter::once(signature_string))
+    .collect::<Vec<_>>();
+
+    // We could potentially make the line ending configurable, as a cleartext reader
+    // must normalize lines.
+    Ok(lines.join("\n"))
 }

@@ -18,6 +18,7 @@ use {
         control::{ControlError, ControlField, ControlFieldValue, ControlParagraph},
         deb::{reader::resolve_control_file, DebError},
         io::{read_compressed, ContentDigest, DataResolver, MultiContentDigest, MultiDigester},
+        pgp::cleartext_sign,
         repository::{
             release::{ChecksumType, ReleaseFile, DATE_FORMAT},
             Compression, RepositoryPathVerificationState, RepositoryReadError,
@@ -26,6 +27,7 @@ use {
     },
     chrono::{DateTime, Utc},
     futures::{AsyncRead, AsyncReadExt, StreamExt, TryStreamExt},
+    pgp::{crypto::HashAlgorithm, types::SecretKeyTrait},
     std::{
         borrow::Cow,
         collections::{BTreeMap, BTreeSet, HashMap},
@@ -70,6 +72,9 @@ pub enum RepositoryBuilderError {
 
     #[error("I/O error: {0:?}")]
     Io(#[from] std::io::Error),
+
+    #[error("PGP error: {0:?}")]
+    Pgp(#[from] pgp::errors::Error),
 }
 
 /// Result type having [RepositoryBuilderError].
@@ -1006,15 +1011,17 @@ impl<'cf> RepositoryBuilder<'cf> {
     /// Indices should only be published after pool artifacts are published. Otherwise
     /// there is a race condition where an index file could refer to a file in the pool
     /// that does not exist.
-    pub async fn publish_indices<F>(
+    pub async fn publish_indices<F, PW>(
         &self,
         writer: &impl RepositoryWriter,
         path_prefix: Option<&str>,
         threads: usize,
         progress_cb: &Option<F>,
+        signing_key: Option<(&impl SecretKeyTrait, PW)>,
     ) -> Result<()>
     where
         F: Fn(PublishEvent),
+        PW: FnOnce() -> String,
     {
         let mut index_paths = BTreeMap::new();
 
@@ -1069,7 +1076,7 @@ impl<'cf> RepositoryBuilder<'cf> {
 
         let release = self.create_release_file(index_paths.into_iter())?;
 
-        let (release_path, _) = if let Some(prefix) = path_prefix {
+        let (release_path, inrelease_path) = if let Some(prefix) = path_prefix {
             (
                 format!("{}/Release", prefix.trim_matches('/')),
                 format!("{}/InRelease", prefix.trim_matches('/')),
@@ -1098,7 +1105,32 @@ impl<'cf> RepositoryBuilder<'cf> {
             ));
         }
 
-        // TODO write InRelease if signing key provided.
+        if let Some((key, password)) = signing_key {
+            let inrelease_content = cleartext_sign(
+                key,
+                password,
+                HashAlgorithm::SHA2_256,
+                std::io::Cursor::new(release.as_ref().to_string().as_bytes()),
+            )?;
+
+            if let Some(cb) = progress_cb {
+                cb(PublishEvent::IndexFileToWrite(inrelease_path.clone()));
+            }
+
+            let inrelease_write = writer
+                .write_path(
+                    inrelease_path.into(),
+                    Box::pin(futures::io::Cursor::new(inrelease_content.into_bytes())),
+                )
+                .await?;
+
+            if let Some(cb) = progress_cb {
+                cb(PublishEvent::IndexFileWritten(
+                    inrelease_write.path.to_string(),
+                    inrelease_write.bytes_written,
+                ));
+            }
+        }
 
         Ok(())
     }
@@ -1121,22 +1153,32 @@ impl<'cf> RepositoryBuilder<'cf> {
     /// becomes the directory with the generated `InRelease` file.
     /// `threads` is the number of parallel threads to use for I/O.
     /// `progress_cb` provides an optional function to receive progress updates.
-    pub async fn publish<F>(
+    /// `signing_key` provides a signing key for PGP signing and an optional function to
+    /// obtain the password to unlock that key.
+    pub async fn publish<F, PW>(
         &self,
         writer: &impl RepositoryWriter,
         resolver: &impl DataResolver,
         distribution_path: &str,
         threads: usize,
         progress_cb: &Option<F>,
+        signing_key: Option<(&impl SecretKeyTrait, PW)>,
     ) -> Result<()>
     where
         F: Fn(PublishEvent),
+        PW: FnOnce() -> String,
     {
         self.publish_pool_artifacts(resolver, writer, threads, progress_cb)
             .await?;
 
-        self.publish_indices(writer, Some(distribution_path), threads, progress_cb)
-            .await?;
+        self.publish_indices(
+            writer,
+            Some(distribution_path),
+            threads,
+            progress_cb,
+            signing_key,
+        )
+        .await?;
 
         Ok(())
     }
@@ -1174,15 +1216,25 @@ mod test {
         },
         async_trait::async_trait,
         futures::AsyncReadExt,
+        smallvec::smallvec,
         std::borrow::Cow,
     };
 
     const BULLSEYE_URL: &str = "http://snapshot.debian.org/archive/debian/20211120T085721Z";
 
-    struct NoopWriter {}
+    #[derive(Default)]
+    struct CapturingWriter {
+        paths: std::sync::Mutex<HashMap<String, Vec<u8>>>,
+    }
+
+    impl CapturingWriter {
+        fn get_path(&self, path: impl ToString) -> Option<Vec<u8>> {
+            self.paths.lock().unwrap().get(&path.to_string()).cloned()
+        }
+    }
 
     #[async_trait]
-    impl RepositoryWriter for NoopWriter {
+    impl RepositoryWriter for CapturingWriter {
         async fn verify_path<'path>(
             &self,
             path: &'path str,
@@ -1199,11 +1251,16 @@ mod test {
             path: Cow<'path, str>,
             reader: Pin<Box<dyn AsyncRead + Send + 'reader>>,
         ) -> std::result::Result<RepositoryWrite<'path>, RepositoryWriteError> {
-            let mut writer = futures::io::sink();
+            let mut writer = futures::io::Cursor::new(Vec::<u8>::new());
 
             let bytes_written = futures::io::copy(reader, &mut writer)
                 .await
                 .map_err(|e| RepositoryWriteError::io_path(path.clone(), e))?;
+
+            self.paths
+                .lock()
+                .unwrap()
+                .insert(path.to_string(), writer.into_inner());
 
             Ok(RepositoryWrite {
                 path,
@@ -1280,15 +1337,63 @@ mod test {
             entry.reader.read_to_end(&mut buf).await.unwrap();
         }
 
-        let writer = NoopWriter {};
+        let writer = CapturingWriter::default();
 
         let cb = |event| {
             eprintln!("{}", event);
         };
 
+        let mut key_params = pgp::composed::key::SecretKeyParamsBuilder::default();
+        key_params
+            .key_type(pgp::composed::KeyType::Rsa(2048))
+            .can_create_certificates(false)
+            .can_sign(true)
+            .primary_user_id("Me <me@example.com>".into())
+            .preferred_symmetric_algorithms(smallvec![pgp::crypto::SymmetricKeyAlgorithm::AES256])
+            .preferred_hash_algorithms(smallvec![pgp::crypto::HashAlgorithm::SHA2_256])
+            .preferred_compression_algorithms(smallvec![
+                pgp::types::CompressionAlgorithm::Uncompressed
+            ]);
+        let secret_key_params = key_params.build().unwrap();
+        let secret_key = secret_key_params.generate().unwrap();
+        let passwd_fn = String::new;
+        let signed_secret_key = secret_key.sign(passwd_fn).unwrap();
+
         builder
-            .publish(&writer, &mapping_resolver, "dists/mydist", 10, &Some(cb))
+            .publish(
+                &writer,
+                &mapping_resolver,
+                "dists/mydist",
+                10,
+                &Some(cb),
+                Some((&signed_secret_key, passwd_fn)),
+            )
             .await?;
+
+        let wanted_paths = vec!["dists/mydist/Release", "dists/mydist/InRelease"];
+
+        assert!(wanted_paths.iter().all(|path| writer
+            .paths
+            .lock()
+            .unwrap()
+            .contains_key(&path.to_string())));
+
+        let release = ReleaseFile::from_armored_reader(std::io::Cursor::new(
+            writer.get_path("dists/mydist/InRelease").unwrap(),
+        ))
+        .unwrap();
+
+        let signatures = release
+            .signatures()
+            .expect("PGP signatures should have been parsed");
+        assert_eq!(
+            signatures
+                .iter_signatures_from_key(&signed_secret_key)
+                .count(),
+            1
+        );
+
+        signatures.verify(&signed_secret_key).unwrap();
 
         Ok(())
     }

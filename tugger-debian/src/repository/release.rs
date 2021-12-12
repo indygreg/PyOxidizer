@@ -414,6 +414,11 @@ impl<'a> ReleaseFile<'a> {
         Ok(slf)
     }
 
+    /// Obtain PGP signatures from this `InRelease` file.
+    pub fn signatures(&self) -> Option<&crate::pgp::CleartextSignatures> {
+        self.signatures.as_ref()
+    }
+
     /// Obtain the first occurrence of the given field.
     pub fn first_field(&self, name: &str) -> Option<&ControlField<'_>> {
         self.paragraph.first_field(name)

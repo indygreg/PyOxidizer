@@ -28,6 +28,7 @@ pgp = "0.7"
 regex = "1.5"
 sha-1 = "0.9"
 sha2 = "0.9"
+smallvec = "1.7"
 tar = "0.4"
 thiserror = "1.0"
 tokio = { version = "1.14", features = ["macros"] }
