@@ -20,6 +20,13 @@ use {
 };
 
 /// A field value in a control file.
+///
+/// This represents the value after the colon (`:`) in field definitions.
+///
+/// There are canonically 3 types of field values: *simple*, *folded*, and *multiline*.
+/// The differences between *folded* and *multiline* are semantic. *folded* is logically
+/// a single line spanning multiple formatted lines and whitespace is not significant.
+/// *multiline* has similar syntax as *folded* but whitespace is significant.
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum ControlFieldValue<'a> {
     Simple(Cow<'a, str>),
@@ -29,6 +36,8 @@ pub enum ControlFieldValue<'a> {
 
 impl<'a> ControlFieldValue<'a> {
     /// Construct a [Self::Multiline] variant from a source of lines.
+    ///
+    /// Each line should not have leading whitespace.
     pub fn multiline_from_lines(lines: impl Iterator<Item = String>) -> Self {
         Self::Multiline(
             lines
@@ -46,9 +55,9 @@ impl<'a> ControlFieldValue<'a> {
     /// whitespace.
     pub fn as_str(&self) -> &str {
         match self {
-            Self::Simple(v) => v,
-            Self::Folded(v) => v,
-            Self::Multiline(v) => v,
+            Self::Simple(v) => v.as_ref(),
+            Self::Folded(v) => v.as_ref(),
+            Self::Multiline(v) => v.as_ref(),
         }
     }
 
