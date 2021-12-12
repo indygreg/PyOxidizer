@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        io::{ContentDigest, DigestingReader, DigestingWriter},
+        io::{ContentDigest, DigestingReader},
         repository::{
             RepositoryPathVerification, RepositoryPathVerificationState, RepositoryWrite,
             RepositoryWriteError, RepositoryWriter,
@@ -117,18 +117,15 @@ impl RepositoryWriter for FilesystemRepositoryWriter {
         let fh = std::fs::File::create(&dest_path)
             .map_err(|e| RepositoryWriteError::IoPath(format!("{}", dest_path.display()), e))?;
 
-        let mut writer = DigestingWriter::new(futures::io::AllowStdIo::new(fh));
+        let mut writer = futures::io::AllowStdIo::new(fh);
 
         let bytes_written = futures::io::copy(reader, &mut writer)
             .await
             .map_err(|e| RepositoryWriteError::IoPath(format!("{}", dest_path.display()), e))?;
 
-        let digests = writer.finish().1;
-
         Ok(RepositoryWrite {
             path,
             bytes_written,
-            digests,
         })
     }
 }

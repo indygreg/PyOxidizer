@@ -1007,7 +1007,7 @@ mod test {
     use {
         super::*,
         crate::{
-            io::{DigestingWriter, PathMappingDataResolver},
+            io::PathMappingDataResolver,
             repository::{
                 http::HttpRepositoryClient, RepositoryPathVerification,
                 RepositoryPathVerificationState, RepositoryRootReader, RepositoryWrite,
@@ -1041,18 +1041,15 @@ mod test {
             path: Cow<'path, str>,
             reader: Pin<Box<dyn AsyncRead + Send + 'reader>>,
         ) -> std::result::Result<RepositoryWrite<'path>, RepositoryWriteError> {
-            let mut writer = DigestingWriter::new(futures::io::sink());
+            let mut writer = futures::io::sink();
 
             let bytes_written = futures::io::copy(reader, &mut writer)
                 .await
                 .map_err(|e| RepositoryWriteError::io_path(path.clone(), e))?;
 
-            let digests = writer.finish().1;
-
             Ok(RepositoryWrite {
                 path,
                 bytes_written,
-                digests,
             })
         }
     }

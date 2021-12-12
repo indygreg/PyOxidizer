@@ -14,7 +14,7 @@ use {
         binary_package_control::BinaryPackageControlFile,
         binary_package_list::BinaryPackageList,
         control::{ControlError, ControlParagraphAsyncReader},
-        io::{drain_reader, Compression, ContentDigest, DataResolver, MultiContentDigest},
+        io::{drain_reader, Compression, ContentDigest, DataResolver},
         repository::{
             contents::{ContentsError, ContentsFile, ContentsFileAsyncReader},
             release::{
@@ -430,8 +430,6 @@ pub struct RepositoryWrite<'a> {
     pub path: Cow<'a, str>,
     /// The number of bytes written.
     pub bytes_written: u64,
-    /// Content digests of written content.
-    pub digests: MultiContentDigest,
 }
 
 #[async_trait]
