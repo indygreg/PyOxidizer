@@ -141,7 +141,7 @@ impl<'cf> DebPackageReference<'cf> for InMemoryDebFile {
     }
 
     fn control_file_for_packages_index(&self) -> Result<BinaryPackageControlFile<'cf>> {
-        Ok(resolve_control_file(std::io::Cursor::new(&self.data))?)
+        resolve_control_file(std::io::Cursor::new(&self.data))
     }
 }
 

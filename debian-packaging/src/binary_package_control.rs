@@ -82,7 +82,7 @@ impl<'a> BinaryPackageControlFile<'a> {
 
     /// The `Version` field parsed into a [PackageVersion].
     pub fn version(&self) -> Result<PackageVersion> {
-        Ok(PackageVersion::parse(self.version_str()?)?)
+        PackageVersion::parse(self.version_str()?)
     }
 
     pub fn architecture(&self) -> Result<&str> {
@@ -136,46 +136,45 @@ impl<'a> BinaryPackageControlFile<'a> {
     pub fn depends(&self) -> Option<Result<DependencyList>> {
         self.paragraph
             .first_field_str("Depends")
-            .map(|x| Ok(DependencyList::parse(x)?))
+            .map(DependencyList::parse)
     }
 
     pub fn recommends(&self) -> Option<Result<DependencyList>> {
         self.paragraph
             .first_field_str("Recommends")
-            .map(|x| Ok(DependencyList::parse(x)?))
+            .map(DependencyList::parse)
     }
 
     pub fn suggests(&self) -> Option<Result<DependencyList>> {
         self.paragraph
             .first_field_str("Suggests")
-            .map(|x| Ok(DependencyList::parse(x)?))
+            .map(DependencyList::parse)
     }
 
     pub fn enhances(&self) -> Option<Result<DependencyList>> {
         self.paragraph
             .first_field_str("Enhances")
-            .map(|x| Ok(DependencyList::parse(x)?))
+            .map(DependencyList::parse)
     }
 
     pub fn pre_depends(&self) -> Option<Result<DependencyList>> {
         self.paragraph
             .first_field_str("Pre-Depends")
-            .map(|x| Ok(DependencyList::parse(x)?))
+            .map(DependencyList::parse)
     }
 
     /// Obtain parsed values of all fields defining dependencies.
     pub fn package_dependency_fields(&self) -> Result<PackageDependencyFields> {
-        Ok(PackageDependencyFields::from_paragraph(&self.paragraph)?)
+        PackageDependencyFields::from_paragraph(&self.paragraph)
     }
 }
 
 impl<'cf, 'a: 'cf> DebPackageReference<'cf> for BinaryPackageControlFile<'a> {
     fn deb_size_bytes(&self) -> Result<usize> {
-        Ok(self
-            .size()
+        self.size()
             .ok_or(DebianError::BinaryPackageControlRequiredFiledMissing(
                 "Size",
-            ))??)
+            ))?
     }
 
     fn deb_digest(&self, checksum: ChecksumType) -> Result<ContentDigest> {
