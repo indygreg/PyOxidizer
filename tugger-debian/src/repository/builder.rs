@@ -1213,10 +1213,10 @@ mod test {
                 RepositoryPathVerificationState, RepositoryRootReader, RepositoryWrite,
                 RepositoryWriteError,
             },
+            signing_key::{create_self_signed_key, signing_secret_key_params_builder},
         },
         async_trait::async_trait,
         futures::AsyncReadExt,
-        smallvec::smallvec,
         std::borrow::Cow,
     };
 
@@ -1343,21 +1343,15 @@ mod test {
             eprintln!("{}", event);
         };
 
-        let mut key_params = pgp::composed::key::SecretKeyParamsBuilder::default();
-        key_params
-            .key_type(pgp::composed::KeyType::Rsa(2048))
-            .can_create_certificates(false)
-            .can_sign(true)
-            .primary_user_id("Me <me@example.com>".into())
-            .preferred_symmetric_algorithms(smallvec![pgp::crypto::SymmetricKeyAlgorithm::AES256])
-            .preferred_hash_algorithms(smallvec![pgp::crypto::HashAlgorithm::SHA2_256])
-            .preferred_compression_algorithms(smallvec![
-                pgp::types::CompressionAlgorithm::Uncompressed
-            ]);
-        let secret_key_params = key_params.build().unwrap();
-        let secret_key = secret_key_params.generate().unwrap();
         let passwd_fn = String::new;
-        let signed_secret_key = secret_key.sign(passwd_fn).unwrap();
+        let signed_secret_key = create_self_signed_key(
+            signing_secret_key_params_builder("Me <someone@example.com>")
+                .build()
+                .unwrap(),
+            passwd_fn,
+        )
+        .unwrap()
+        .0;
 
         builder
             .publish(
