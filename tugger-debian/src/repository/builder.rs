@@ -699,7 +699,7 @@ impl<'cf> RepositoryBuilder<'cf> {
     ) -> impl AsyncRead + '_ {
         futures::stream::iter(
             self.iter_component_binary_packages(component, architecture)
-                .map(|p| Ok(p.to_string())),
+                .map(|p| Ok(format!("{}\n", p.to_string()))),
         )
         .into_async_read()
     }

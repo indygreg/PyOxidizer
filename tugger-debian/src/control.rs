@@ -270,12 +270,17 @@ impl<'a> ControlParagraph<'a> {
     }
 
     /// Serialize the paragraph to a writer.
+    ///
+    /// A trailing newline is written as part of the final field. However, an
+    /// extra newline is not present. So if serializing multiple paragraphs, an
+    /// additional line break must be written to effectively terminate this paragraph
+    /// if the writer is not at EOF.
     pub fn write<W: Write>(&self, writer: &mut W) -> std::io::Result<()> {
         for field in &self.fields {
             field.write(writer)?;
         }
 
-        writer.write_all(b"\n")
+        Ok(())
     }
 }
 
@@ -287,7 +292,7 @@ impl<'a> ToString for ControlParagraph<'a> {
             .map(|f| f.to_string())
             .collect::<Vec<_>>();
 
-        format!("{}\n", fields.join(""))
+        fields.join("")
     }
 }
 
@@ -591,10 +596,8 @@ impl<'a> ControlFile<'a> {
     pub fn write<W: Write>(&self, writer: &mut W) -> std::io::Result<()> {
         for p in &self.paragraphs {
             p.write(writer)?;
+            writer.write_all(b"\n")?;
         }
-
-        // Paragraph writer adds additional line break. So no need to
-        // add another here.
 
         Ok(())
     }
