@@ -7,45 +7,10 @@
 The .deb file specification lives at <https://manpages.debian.org/unstable/dpkg-dev/deb.5.en.html>.
 */
 
-use {
-    crate::control::ControlError, std::io::Read, thiserror::Error,
-    tugger_file_manifest::FileManifestError,
-};
+use {crate::error::Result, std::io::Read};
 
 pub mod builder;
 pub mod reader;
-
-/// Represents an error related to .deb file handling.
-#[derive(Debug, Error)]
-pub enum DebError {
-    #[error("I/O error: {0}")]
-    IoError(#[from] std::io::Error),
-    #[error("path error: {0}")]
-    PathError(String),
-    #[error("file manifest error: {0}")]
-    FileManifestError(#[from] FileManifestError),
-    #[error("control file error: {0:?}")]
-    Control(#[from] ControlError),
-    #[error("Unknown binary package entry: {0}")]
-    UnknownBinaryPackageEntry(String),
-    #[error("Unknown compression for filename: {0}")]
-    UnknownCompression(String),
-    #[error("Control file lacks a paragraph")]
-    ControlFileNoParagraph,
-    #[error("Control file not found")]
-    ControlFileNotFound,
-    #[error("General error: {0}")]
-    Other(String),
-}
-
-impl<W> From<std::io::IntoInnerError<W>> for DebError {
-    fn from(e: std::io::IntoInnerError<W>) -> Self {
-        Self::IoError(e.into())
-    }
-}
-
-/// Result type for .deb functionality.
-pub type Result<T> = std::result::Result<T, DebError>;
 
 /// Compression format to apply to `.deb` files.
 pub enum DebCompression {

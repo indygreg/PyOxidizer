@@ -8,7 +8,7 @@ use {
     crate::{
         binary_package_control::BinaryPackageControlFile,
         control::ControlParagraphReader,
-        deb::{DebError, Result},
+        error::{DebianError, Result},
     },
     std::{
         io::{Cursor, Read},
@@ -22,7 +22,7 @@ fn reader_from_filename(extension: &str, data: std::io::Cursor<Vec<u8>>) -> Resu
         ".gz" => Ok(Box::new(libflate::gzip::Decoder::new(data)?)),
         ".xz" => Ok(Box::new(xz2::read::XzDecoder::new(data))),
         ".zst" => Ok(Box::new(zstd::Decoder::new(data)?)),
-        _ => Err(DebError::UnknownCompression(extension.to_string())),
+        _ => Err(DebianError::DebUnknownCompression(extension.to_string())),
     }
 }
 
@@ -83,7 +83,7 @@ impl<R: Read> BinaryPackageReader<R> {
                             Err(e) => Some(Err(e)),
                         }
                     } else {
-                        Some(Err(DebError::UnknownBinaryPackageEntry(
+                        Some(Err(DebianError::DebUnknownBinaryPackageEntry(
                             filename.to_string(),
                         )))
                     }
@@ -194,7 +194,7 @@ impl<'a> ControlTarEntry<'a> {
         match path.trim_start_matches("./") {
             "control" => {
                 let mut reader = ControlParagraphReader::new(Cursor::new(data));
-                let paragraph = reader.next().ok_or(DebError::ControlFileNoParagraph)??;
+                let paragraph = reader.next().ok_or(DebianError::ControlFileNoParagraph)??;
                 let control = BinaryPackageControlFile::from(paragraph);
 
                 Ok((self.inner.header(), ControlTarFile::Control(control)))
@@ -282,5 +282,5 @@ pub fn resolve_control_file(reader: impl Read) -> Result<BinaryPackageControlFil
         }
     }
 
-    Err(DebError::ControlFileNotFound)
+    Err(DebianError::ControlFileNotFound)
 }

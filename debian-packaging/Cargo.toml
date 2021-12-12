@@ -53,7 +53,6 @@ version = "0.7.0-pre"
 path = "../tugger-file-manifest"
 
 [dev-dependencies]
-anyhow = "1.0"
 glob = "0.3"
 indoc = "1.0"
 

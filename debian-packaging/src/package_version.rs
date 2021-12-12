@@ -5,31 +5,13 @@
 /*! Debian package version string handling. */
 
 use {
+    crate::error::{DebianError, Result},
     std::{
         cmp::Ordering,
         fmt::{Display, Formatter},
-        num::ParseIntError,
         str::FromStr,
     },
-    thiserror::Error,
 };
-
-#[derive(Clone, Debug, Error)]
-pub enum VersionError {
-    #[error("error parsing string to integer: {0}")]
-    ParseInt(#[from] ParseIntError),
-
-    #[error("the epoch component has non-digit characters: {0}")]
-    EpochNonNumeric(String),
-
-    #[error("upstream_version component has illegal character: {0}")]
-    UpstreamVersionIllegalChar(String),
-
-    #[error("debian_revision component has illegal character: {0}")]
-    DebianRevisionIllegalChar(String),
-}
-
-pub type Result<T> = std::result::Result<T, VersionError>;
 
 /// A Debian package version.
 ///
@@ -70,7 +52,7 @@ impl PackageVersion {
         // The epoch is numeric.
         let epoch = if let Some(epoch) = epoch {
             if !epoch.chars().all(|c| c.is_ascii_digit()) {
-                return Err(VersionError::EpochNonNumeric(s.to_string()));
+                return Err(DebianError::EpochNonNumeric(s.to_string()));
             }
 
             Some(u32::from_str(epoch)?)
@@ -87,7 +69,7 @@ impl PackageVersion {
             '-' => debian.is_some(),
             _ => false,
         }) {
-            return Err(VersionError::UpstreamVersionIllegalChar(s.to_string()));
+            return Err(DebianError::UpstreamVersionIllegalChar(s.to_string()));
         }
 
         let upstream_version = upstream.to_string();
@@ -99,7 +81,7 @@ impl PackageVersion {
                 '+' | '.' | '~' => true,
                 _ => false,
             }) {
-                return Err(VersionError::DebianRevisionIllegalChar(s.to_string()));
+                return Err(DebianError::DebianRevisionIllegalChar(s.to_string()));
             }
 
             Some(debian.to_string())

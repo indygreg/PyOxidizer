@@ -23,47 +23,23 @@ by calling [HttpDistributionClient.fetch_inrelease()].
 
 use {
     crate::{
+        error::{DebianError, Result},
         io::DataResolver,
-        repository::{
-            release::{ReleaseError, ReleaseFile},
-            Compression, ReleaseReader, RepositoryReadError, RepositoryRootReader,
-        },
+        repository::{release::ReleaseFile, Compression, ReleaseReader, RepositoryRootReader},
     },
     async_trait::async_trait,
     futures::{stream::TryStreamExt, AsyncBufRead},
     reqwest::{Client, IntoUrl, Url},
     std::pin::Pin,
-    thiserror::Error,
 };
-
-#[derive(Debug, Error)]
-pub enum HttpError {
-    #[error("I/O error: {0:?}")]
-    Io(#[from] std::io::Error),
-
-    #[error("HTTP error: {0:?}")]
-    Reqwest(#[from] reqwest::Error),
-
-    #[error("URL error: {0:?}")]
-    Url(#[from] url::ParseError),
-
-    #[error("Repository reading error: {0:?}")]
-    RepositoryRead(#[from] RepositoryReadError),
-
-    #[error("No packages indices for checksum {0}")]
-    NoPackagesIndices(&'static str),
-
-    #[error("Release file error: {0:?}")]
-    Release(#[from] ReleaseError),
-}
 
 async fn fetch_url(
     client: &Client,
     root_url: &Url,
     path: &str,
-) -> Result<Pin<Box<dyn AsyncBufRead + Send>>, RepositoryReadError> {
+) -> Result<Pin<Box<dyn AsyncBufRead + Send>>> {
     let res = client.get(root_url.join(path)?).send().await.map_err(|e| {
-        RepositoryReadError::IoPath(
+        DebianError::RepositoryIoPath(
             path.to_string(),
             std::io::Error::new(
                 std::io::ErrorKind::Other,
@@ -72,7 +48,7 @@ async fn fetch_url(
         )
     })?;
     let res = res.error_for_status().map_err(|e| {
-        RepositoryReadError::IoPath(
+        DebianError::RepositoryIoPath(
             path.to_string(),
             std::io::Error::new(
                 std::io::ErrorKind::Other,
@@ -107,7 +83,7 @@ pub struct HttpRepositoryClient {
 
 impl HttpRepositoryClient {
     /// Construct an instance bound to the specified URL.
-    pub fn new(url: impl IntoUrl) -> Result<Self, HttpError> {
+    pub fn new(url: impl IntoUrl) -> Result<Self> {
         Self::new_client(Client::default(), url)
     }
 
@@ -118,7 +94,7 @@ impl HttpRepositoryClient {
     /// `deb https://deb.debian.org/debian stable main`, the value would be
     /// `https://deb.debian.org/debian`. The URL typically has a `dists/` directory
     /// underneath.
-    pub fn new_client(client: Client, url: impl IntoUrl) -> Result<Self, HttpError> {
+    pub fn new_client(client: Client, url: impl IntoUrl) -> Result<Self> {
         let mut root_url = url.into_url()?;
 
         // Trailing URLs are significant to the Url type when we .join(). So ensure
@@ -133,18 +109,8 @@ impl HttpRepositoryClient {
 
 #[async_trait]
 impl DataResolver for HttpRepositoryClient {
-    async fn get_path(
-        &self,
-        path: &str,
-    ) -> Result<Pin<Box<dyn AsyncBufRead + Send>>, std::io::Error> {
-        fetch_url(&self.client, &self.root_url, path)
-            .await
-            .map_err(|e| {
-                std::io::Error::new(
-                    std::io::ErrorKind::Other,
-                    format!("repository read error: {0:?}", e),
-                )
-            })
+    async fn get_path(&self, path: &str) -> Result<Pin<Box<dyn AsyncBufRead + Send>>> {
+        fetch_url(&self.client, &self.root_url, path).await
     }
 }
 
@@ -157,7 +123,7 @@ impl RepositoryRootReader for HttpRepositoryClient {
     async fn release_reader_with_distribution_path(
         &self,
         path: &str,
-    ) -> Result<Box<dyn ReleaseReader>, RepositoryReadError> {
+    ) -> Result<Box<dyn ReleaseReader>> {
         let distribution_path = path.trim_matches('/').to_string();
         let release_path = join_path(&distribution_path, "InRelease");
         let mut root_url = self.root_url.join(&distribution_path)?;
@@ -197,18 +163,8 @@ pub struct HttpReleaseClient {
 
 #[async_trait]
 impl DataResolver for HttpReleaseClient {
-    async fn get_path(
-        &self,
-        path: &str,
-    ) -> Result<Pin<Box<dyn AsyncBufRead + Send>>, std::io::Error> {
-        fetch_url(&self.client, &self.root_url, path)
-            .await
-            .map_err(|e| {
-                std::io::Error::new(
-                    std::io::ErrorKind::Other,
-                    format!("repository read error: {0:?}", e),
-                )
-            })
+    async fn get_path(&self, path: &str) -> Result<Pin<Box<dyn AsyncBufRead + Send>>> {
+        fetch_url(&self.client, &self.root_url, path).await
     }
 }
 

@@ -9,6 +9,7 @@ for the canonical source of truth for how control files work.
 */
 
 use {
+    crate::error::{DebianError, Result},
     futures::{AsyncBufRead, AsyncBufReadExt},
     pin_project::pin_project,
     std::{
@@ -16,16 +17,7 @@ use {
         collections::HashMap,
         io::{BufRead, Write},
     },
-    thiserror::Error,
 };
-
-#[derive(Debug, Error)]
-pub enum ControlError {
-    #[error("I/O error: {0}")]
-    IoError(#[from] std::io::Error),
-    #[error("parse error: {0}")]
-    ParseError(String),
-}
 
 /// A field value in a control file.
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -126,7 +118,7 @@ impl<'a> ControlField<'a> {
     /// The type of the field value will be derived from the key name.
     ///
     /// Unknown keys will be rejected.
-    pub fn from_string_value(key: Cow<'a, str>, value: Cow<'a, str>) -> Result<Self, ControlError> {
+    pub fn from_string_value(key: Cow<'a, str>, value: Cow<'a, str>) -> Result<Self> {
         let value = ControlFieldValue::from(value);
 
         Ok(Self { name: key, value })
@@ -198,11 +190,7 @@ impl<'a> ControlParagraph<'a> {
     }
 
     /// Add a field defined via strings.
-    pub fn add_field_from_string(
-        &mut self,
-        name: Cow<'a, str>,
-        value: Cow<'a, str>,
-    ) -> Result<(), ControlError> {
+    pub fn add_field_from_string(&mut self, name: Cow<'a, str>, value: Cow<'a, str>) -> Result<()> {
         self.fields
             .push(ControlField::from_string_value(name, value)?);
         Ok(())
@@ -313,10 +301,7 @@ impl ControlFileParser {
     /// Otherwise `Ok(None)` is returned.
     ///
     /// `Err` is returned if the control file in invalid.
-    pub fn write_line(
-        &mut self,
-        line: &str,
-    ) -> Result<Option<ControlParagraph<'static>>, ControlError> {
+    pub fn write_line(&mut self, line: &str) -> Result<Option<ControlParagraph<'static>>> {
         let is_empty_line = line.trim().is_empty();
         let is_indented = line.starts_with(' ') && line.len() > 1;
 
@@ -374,7 +359,7 @@ impl ControlFileParser {
     ///
     /// If a non-empty paragraph is present in the instance, it will be returned. Else if there
     /// is no unflushed state, None is returned.
-    pub fn finish(mut self) -> Result<Option<ControlParagraph<'static>>, ControlError> {
+    pub fn finish(mut self) -> Result<Option<ControlParagraph<'static>>> {
         if let Some(field) = self.field.take() {
             self.flush_field(field)?;
         }
@@ -386,16 +371,16 @@ impl ControlFileParser {
         })
     }
 
-    fn flush_field(&mut self, v: String) -> Result<(), ControlError> {
+    fn flush_field(&mut self, v: String) -> Result<()> {
         let mut parts = v.splitn(2, ':');
 
         let name = parts.next().ok_or_else(|| {
-            ControlError::ParseError(format!("error parsing line '{}'; missing colon", v))
+            DebianError::ControlParseError(format!("error parsing line '{}'; missing colon", v))
         })?;
         let value = parts
             .next()
             .ok_or_else(|| {
-                ControlError::ParseError(format!(
+                DebianError::ControlParseError(format!(
                     "error parsing field '{}'; could not detect value",
                     v
                 ))
@@ -434,7 +419,7 @@ impl<R: BufRead> ControlParagraphReader<R> {
         self.reader
     }
 
-    fn get_next(&mut self) -> Result<Option<ControlParagraph<'static>>, ControlError> {
+    fn get_next(&mut self) -> Result<Option<ControlParagraph<'static>>> {
         let mut parser = self.parser.take().unwrap();
 
         loop {
@@ -460,7 +445,7 @@ impl<R: BufRead> ControlParagraphReader<R> {
 }
 
 impl<R: BufRead> Iterator for ControlParagraphReader<R> {
-    type Item = Result<ControlParagraph<'static>, ControlError>;
+    type Item = Result<ControlParagraph<'static>>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.parser.is_none() {
@@ -505,9 +490,7 @@ where
     /// Read the next available paragraph from this reader.
     ///
     /// Resolves to [None] on end of input.
-    pub async fn read_paragraph(
-        &mut self,
-    ) -> Result<Option<ControlParagraph<'static>>, ControlError> {
+    pub async fn read_paragraph(&mut self) -> Result<Option<ControlParagraph<'static>>> {
         let mut parser = if let Some(parser) = self.parser.take() {
             parser
         } else {
@@ -546,7 +529,7 @@ pub struct ControlFile<'a> {
 
 impl<'a> ControlFile<'a> {
     /// Construct a new instance by parsing data from a reader.
-    pub fn parse_reader<R: BufRead>(reader: &mut R) -> Result<Self, ControlError> {
+    pub fn parse_reader<R: BufRead>(reader: &mut R) -> Result<Self> {
         let mut paragraphs = Vec::new();
         let mut parser = ControlFileParser::default();
 
@@ -572,7 +555,7 @@ impl<'a> ControlFile<'a> {
     }
 
     /// Parse a control file from a string.
-    pub fn parse_str(s: &str) -> Result<Self, ControlError> {
+    pub fn parse_str(s: &str) -> Result<Self> {
         let mut reader = std::io::BufReader::new(s.as_bytes());
         Self::parse_reader(&mut reader)
     }
@@ -614,7 +597,7 @@ pub struct SourceControl<'a> {
 
 impl<'a> SourceControl<'a> {
     /// Construct an instance by parsing a control file from a reader.
-    pub fn parse_reader<R: BufRead>(reader: &mut R) -> Result<Self, ControlError> {
+    pub fn parse_reader<R: BufRead>(reader: &mut R) -> Result<Self> {
         let control = ControlFile::parse_reader(reader)?;
 
         let mut paragraphs = control.paragraphs();
@@ -622,7 +605,9 @@ impl<'a> SourceControl<'a> {
         let general = paragraphs
             .next()
             .ok_or_else(|| {
-                ControlError::ParseError("no general paragraph in source control file".to_string())
+                DebianError::ControlParseError(
+                    "no general paragraph in source control file".to_string(),
+                )
             })?
             .to_owned();
 
@@ -631,7 +616,7 @@ impl<'a> SourceControl<'a> {
         Ok(Self { general, binaries })
     }
 
-    pub fn parse_str(s: &str) -> Result<Self, ControlError> {
+    pub fn parse_str(s: &str) -> Result<Self> {
         let mut reader = std::io::BufReader::new(s.as_bytes());
         Self::parse_reader(&mut reader)
     }
@@ -649,14 +634,14 @@ impl<'a> SourceControl<'a> {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, anyhow::Result};
+    use super::*;
 
     #[test]
-    fn parse_paragraph_release() -> Result<(), ControlError> {
+    fn parse_paragraph_release() -> Result<()> {
         let paragraphs = ControlParagraphReader::new(std::io::Cursor::new(include_bytes!(
             "testdata/release-debian-bullseye"
         )))
-        .collect::<Result<Vec<_>, _>>()?;
+        .collect::<Result<Vec<_>>>()?;
 
         assert_eq!(paragraphs.len(), 1);
         let p = &paragraphs[0];
@@ -725,12 +710,13 @@ mod tests {
 
     #[test]
     fn test_parse_system_lists() -> Result<()> {
-        let paths = glob::glob("/var/lib/apt/lists/*_Packages")?
-            .chain(glob::glob("/var/lib/apt/lists/*_Sources")?)
-            .chain(glob::glob("/var/lib/apt/lists/*i18n_Translation-*")?);
+        let paths = glob::glob("/var/lib/apt/lists/*_Packages")
+            .unwrap()
+            .chain(glob::glob("/var/lib/apt/lists/*_Sources").unwrap())
+            .chain(glob::glob("/var/lib/apt/lists/*i18n_Translation-*").unwrap());
 
         for path in paths {
-            let path = path?;
+            let path = path.unwrap();
 
             eprintln!("parsing {}", path.display());
             let fh = std::fs::File::open(&path)?;

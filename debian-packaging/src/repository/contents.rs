@@ -5,23 +5,14 @@
 /*! `Contents` index file handling. */
 
 use {
+    crate::error::Result,
     futures::{AsyncBufRead, AsyncBufReadExt},
     pin_project::pin_project,
     std::{
         collections::{BTreeMap, BTreeSet},
         io::{BufRead, Write},
     },
-    thiserror::Error,
 };
-
-/// An error related to a `Contents` file.
-#[derive(Debug, Error)]
-pub enum ContentsError {
-    #[error("I/O error: {0:?}")]
-    Io(#[from] std::io::Error),
-}
-
-pub type Result<T> = std::result::Result<T, ContentsError>;
 
 /// Represents a `Contents` file.
 ///

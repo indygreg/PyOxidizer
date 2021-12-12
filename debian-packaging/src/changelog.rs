@@ -91,7 +91,7 @@ impl<'a> Changelog<'a> {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, anyhow::Result};
+    use {super::*, crate::error::Result};
 
     #[test]
     fn test_write() -> Result<()> {
@@ -113,7 +113,7 @@ mod tests {
         let mut buf = vec![];
         changelog.write(&mut buf)?;
 
-        let s = String::from_utf8(buf)?;
+        let s = String::from_utf8(buf).unwrap();
         assert_eq!(s, "mypackage (0.1) mydist; urgency=low\n\ndetails\n-- maintainer <me@example.com>  Tue, 30 Dec 2014 21:26:40 -0700\n\n");
 
         Ok(())

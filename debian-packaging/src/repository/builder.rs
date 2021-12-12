@@ -14,15 +14,15 @@ Primitives in this module facilitate constructing your own repositories.
 
 use {
     crate::{
-        binary_package_control::{BinaryPackageControlError, BinaryPackageControlFile},
-        control::{ControlError, ControlField, ControlFieldValue, ControlParagraph},
-        deb::{reader::resolve_control_file, DebError},
+        binary_package_control::BinaryPackageControlFile,
+        control::{ControlField, ControlFieldValue, ControlParagraph},
+        deb::reader::resolve_control_file,
+        error::{DebianError, Result},
         io::{read_compressed, ContentDigest, DataResolver, MultiContentDigest, MultiDigester},
         pgp::cleartext_sign,
         repository::{
             release::{ChecksumType, ReleaseFile, DATE_FORMAT},
-            Compression, RepositoryPathVerificationState, RepositoryReadError,
-            RepositoryWriteError, RepositoryWriter,
+            Compression, RepositoryPathVerificationState, RepositoryWriter,
         },
     },
     chrono::{DateTime, Utc},
@@ -34,51 +34,7 @@ use {
         pin::Pin,
         str::FromStr,
     },
-    thiserror::Error,
 };
-
-/// Error related to creating Debian package repositories.
-#[derive(Debug, Error)]
-pub enum RepositoryBuilderError {
-    #[error("control file error: {0:?}")]
-    Control(#[from] ControlError),
-
-    #[error("binary package control file error: {0:?}")]
-    BinaryPackageControl(#[from] BinaryPackageControlError),
-
-    #[error("repository read error: {0:?}")]
-    RepositoryRead(#[from] RepositoryReadError),
-
-    #[error("repository write error: {0:?}")]
-    RepositoryWrite(#[from] RepositoryWriteError),
-
-    #[error("attempting to add package to undefined component: {0}")]
-    UnknownComponent(String),
-
-    #[error("attempting to add package to undefined architecture: {0}")]
-    UnknownArchitecture(String),
-
-    #[error("pool layout cannot be changed after content is indexed")]
-    PoolLayoutImmutable,
-
-    #[error(".deb not available: {0}")]
-    DebNotAvailable(&'static str),
-
-    #[error("deb file error: {0:?}")]
-    Deb(#[from] DebError),
-
-    #[error("hex parsing error: {0:?}")]
-    Hex(#[from] hex::FromHexError),
-
-    #[error("I/O error: {0:?}")]
-    Io(#[from] std::io::Error),
-
-    #[error("PGP error: {0:?}")]
-    Pgp(#[from] pgp::errors::Error),
-}
-
-/// Result type having [RepositoryBuilderError].
-pub type Result<T> = std::result::Result<T, RepositoryBuilderError>;
 
 /// Describes the layout of the `pool` part of the repository.
 ///
@@ -512,7 +468,7 @@ impl<'cf> RepositoryBuilder<'cf> {
     /// indexed, this function will error.
     pub fn set_pool_layout(&mut self, layout: PoolLayout) -> Result<()> {
         if self.have_entries() {
-            Err(RepositoryBuilderError::PoolLayoutImmutable)
+            Err(DebianError::RepositoryBuildPoolLayoutImmutable)
         } else {
             self.pool_layout = layout;
             Ok(())
@@ -543,7 +499,7 @@ impl<'cf> RepositoryBuilder<'cf> {
         deb: &impl DebPackageReference<'cf>,
     ) -> Result<String> {
         if !self.components.contains(component) {
-            return Err(RepositoryBuilderError::UnknownComponent(
+            return Err(DebianError::RepositoryBuildUnknownComponent(
                 component.to_string(),
             ));
         }
@@ -555,7 +511,7 @@ impl<'cf> RepositoryBuilder<'cf> {
         let arch = original_control_file.architecture()?;
 
         if !self.architectures.contains(arch) {
-            return Err(RepositoryBuilderError::UnknownArchitecture(
+            return Err(DebianError::RepositoryBuildUnknownArchitecture(
                 arch.to_string(),
             ));
         }
@@ -1217,7 +1173,6 @@ mod test {
             repository::{
                 http::HttpRepositoryClient, RepositoryPathVerification,
                 RepositoryPathVerificationState, RepositoryRootReader, RepositoryWrite,
-                RepositoryWriteError,
             },
             signing_key::{create_self_signed_key, signing_secret_key_params_builder},
         },
@@ -1245,7 +1200,7 @@ mod test {
             &self,
             path: &'path str,
             _expected_content: Option<(usize, ContentDigest)>,
-        ) -> std::result::Result<RepositoryPathVerification<'path>, RepositoryWriteError> {
+        ) -> Result<RepositoryPathVerification<'path>> {
             Ok(RepositoryPathVerification {
                 path,
                 state: RepositoryPathVerificationState::Missing,
@@ -1256,12 +1211,12 @@ mod test {
             &self,
             path: Cow<'path, str>,
             reader: Pin<Box<dyn AsyncRead + Send + 'reader>>,
-        ) -> std::result::Result<RepositoryWrite<'path>, RepositoryWriteError> {
+        ) -> Result<RepositoryWrite<'path>> {
             let mut writer = futures::io::Cursor::new(Vec::<u8>::new());
 
             let bytes_written = futures::io::copy(reader, &mut writer)
                 .await
-                .map_err(|e| RepositoryWriteError::io_path(path.clone(), e))?;
+                .map_err(|e| DebianError::RepositoryIoPath(path.to_string(), e))?;
 
             self.paths
                 .lock()

@@ -6,24 +6,16 @@
 
 use {
     crate::{
-        binary_package_control::{BinaryPackageControlError, BinaryPackageControlFile},
+        binary_package_control::BinaryPackageControlFile,
         dependency::{
             BinaryDependency, DependencyVersionConstraint, PackageDependencyFields,
             SingleDependency,
         },
+        error::Result,
         package_version::PackageVersion,
     },
     std::collections::{HashMap, HashSet, VecDeque},
-    thiserror::Error,
 };
-
-#[derive(Debug, Error)]
-pub enum DependencyResolutionError {
-    #[error("binary package control file error: {0:?}")]
-    BinaryPackageControl(#[from] BinaryPackageControlError),
-}
-
-pub type Result<T> = std::result::Result<T, DependencyResolutionError>;
 
 /// Holds [BinaryPackageControlFile] references satisfying a single dependency expression.
 #[derive(Clone, Debug)]

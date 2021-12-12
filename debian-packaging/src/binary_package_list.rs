@@ -5,24 +5,9 @@
 /*! Interface with a collection of binary package control definitions. */
 
 use {
-    crate::{
-        binary_package_control::{BinaryPackageControlError, BinaryPackageControlFile},
-        control::ControlError,
-    },
+    crate::binary_package_control::BinaryPackageControlFile,
     std::ops::{Deref, DerefMut},
-    thiserror::Error,
 };
-
-#[derive(Debug, Error)]
-pub enum BinaryPackageListError {
-    #[error("control file error: {0:?}")]
-    Control(#[from] ControlError),
-
-    #[error("binary package control error: {0:?}")]
-    BinaryPackageControl(#[from] BinaryPackageControlError),
-}
-
-pub type Result<T> = std::result::Result<T, BinaryPackageListError>;
 
 /// Represents a collection of binary package control files.
 ///
@@ -72,8 +57,12 @@ impl<'a> BinaryPackageList<'a> {
 
 #[cfg(test)]
 mod test {
-
-    use {super::*, crate::control::ControlParagraphReader, indoc::indoc, std::io::Cursor};
+    use {
+        super::*,
+        crate::{control::ControlParagraphReader, error::Result},
+        indoc::indoc,
+        std::io::Cursor,
+    };
 
     const FOO_1_2: &str = indoc! {"
         Package: foo

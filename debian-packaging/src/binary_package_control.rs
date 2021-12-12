@@ -7,37 +7,14 @@
 use {
     crate::{
         control::{ControlField, ControlParagraph},
-        dependency::{DependencyError, DependencyList, PackageDependencyFields},
+        dependency::{DependencyList, PackageDependencyFields},
+        error::{DebianError, Result},
         io::ContentDigest,
-        package_version::{PackageVersion, VersionError},
-        repository::{
-            builder::{DebPackageReference, Result as RepositoryBuilderResult},
-            release::ChecksumType,
-        },
+        package_version::PackageVersion,
+        repository::{builder::DebPackageReference, release::ChecksumType},
     },
-    std::{num::ParseIntError, str::FromStr},
-    thiserror::Error,
+    std::str::FromStr,
 };
-
-#[derive(Debug, Error)]
-pub enum BinaryPackageControlError {
-    #[error("required field missing: {0}")]
-    RequiredFieldMissing(&'static str),
-
-    #[error("integer parsing error: {0}")]
-    IntegerParse(#[from] ParseIntError),
-
-    #[error("dependency error: {0:?}")]
-    Depends(#[from] DependencyError),
-
-    #[error("version error: {0:?}")]
-    Version(#[from] VersionError),
-
-    #[error("invalid hexadecimal in content digest: {0:?}")]
-    FromHex(#[from] hex::FromHexError),
-}
-
-pub type Result<T> = std::result::Result<T, BinaryPackageControlError>;
 
 /// A Debian binary package control file.
 ///
@@ -91,7 +68,7 @@ impl<'a> BinaryPackageControlFile<'a> {
     fn required_field(&self, field: &'static str) -> Result<&str> {
         self.paragraph
             .first_field_str(field)
-            .ok_or(BinaryPackageControlError::RequiredFieldMissing(field))
+            .ok_or(DebianError::BinaryPackageControlRequiredFiledMissing(field))
     }
 
     pub fn package(&self) -> Result<&str> {
@@ -193,18 +170,20 @@ impl<'a> BinaryPackageControlFile<'a> {
 }
 
 impl<'cf, 'a: 'cf> DebPackageReference<'cf> for BinaryPackageControlFile<'a> {
-    fn deb_size_bytes(&self) -> RepositoryBuilderResult<usize> {
+    fn deb_size_bytes(&self) -> Result<usize> {
         Ok(self
             .size()
-            .ok_or(BinaryPackageControlError::RequiredFieldMissing("Size"))??)
+            .ok_or(DebianError::BinaryPackageControlRequiredFiledMissing(
+                "Size",
+            ))??)
     }
 
-    fn deb_digest(&self, checksum: ChecksumType) -> RepositoryBuilderResult<ContentDigest> {
+    fn deb_digest(&self, checksum: ChecksumType) -> Result<ContentDigest> {
         let hex_digest = self.first_field_str(checksum.field_name()).ok_or_else(|| {
-            BinaryPackageControlError::RequiredFieldMissing(checksum.field_name())
+            DebianError::BinaryPackageControlRequiredFiledMissing(checksum.field_name())
         })?;
 
-        let digest = hex::decode(hex_digest).map_err(BinaryPackageControlError::FromHex)?;
+        let digest = hex::decode(hex_digest)?;
 
         Ok(match checksum {
             ChecksumType::Md5 => ContentDigest::Md5(digest),
@@ -213,10 +192,10 @@ impl<'cf, 'a: 'cf> DebPackageReference<'cf> for BinaryPackageControlFile<'a> {
         })
     }
 
-    fn deb_filename(&self) -> RepositoryBuilderResult<String> {
-        let filename = self
-            .first_field_str("Filename")
-            .ok_or(BinaryPackageControlError::RequiredFieldMissing("Filename"))?;
+    fn deb_filename(&self) -> Result<String> {
+        let filename = self.first_field_str("Filename").ok_or(
+            DebianError::BinaryPackageControlRequiredFiledMissing("Filename"),
+        )?;
 
         Ok(if let Some((_, s)) = filename.rsplit_once('/') {
             s.to_string()
@@ -225,9 +204,7 @@ impl<'cf, 'a: 'cf> DebPackageReference<'cf> for BinaryPackageControlFile<'a> {
         })
     }
 
-    fn control_file_for_packages_index(
-        &self,
-    ) -> RepositoryBuilderResult<BinaryPackageControlFile<'cf>> {
+    fn control_file_for_packages_index(&self) -> Result<BinaryPackageControlFile<'cf>> {
         Ok(self.clone())
     }
 }

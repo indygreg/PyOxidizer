@@ -13,20 +13,19 @@ use {
     crate::{
         binary_package_control::BinaryPackageControlFile,
         binary_package_list::BinaryPackageList,
-        control::{ControlError, ControlParagraphAsyncReader},
+        control::ControlParagraphAsyncReader,
+        error::{DebianError, Result},
         io::{drain_reader, Compression, ContentDigest, DataResolver},
         repository::{
-            contents::{ContentsError, ContentsFile, ContentsFileAsyncReader},
+            contents::{ContentsFile, ContentsFileAsyncReader},
             release::{
-                ChecksumType, ContentsFileEntry, PackagesFileEntry, ReleaseError, ReleaseFile,
-                SourcesFileEntry,
+                ChecksumType, ContentsFileEntry, PackagesFileEntry, ReleaseFile, SourcesFileEntry,
             },
         },
     },
     async_trait::async_trait,
     futures::{AsyncRead, AsyncReadExt},
     std::{borrow::Cow, pin::Pin},
-    thiserror::Error,
 };
 
 pub mod builder;
@@ -35,34 +34,6 @@ pub mod filesystem;
 #[cfg(feature = "http")]
 pub mod http;
 pub mod release;
-
-/// Errors related to reading from repositories.
-#[derive(Debug, Error)]
-pub enum RepositoryReadError {
-    #[error("I/O error reading path {0}: {0:?}")]
-    IoPath(String, std::io::Error),
-
-    #[error("Release file does not contain supported checksum flavor")]
-    NoKnownChecksum,
-
-    #[error("Could not find Contents indices entry")]
-    ContentsIndicesEntryNotFound,
-
-    #[error("Could not find packages indices entry")]
-    PackagesIndicesEntryNotFound,
-
-    #[error("Contents file error: {0:?}")]
-    Contents(#[from] ContentsError),
-
-    #[error("Control file error: {0:?}")]
-    Control(#[from] ControlError),
-
-    #[error("Release file error: {0:?}")]
-    Release(#[from] ReleaseError),
-
-    #[error("URL error: {0:?}")]
-    Url(#[from] url::ParseError),
-}
 
 /// Debian repository reader bound to the root of the repository.
 ///
@@ -77,10 +48,7 @@ pub trait RepositoryRootReader: DataResolver + Sync {
     ///
     /// This assumes the `InRelease` file is located in `dists/{distribution}/`. This is the case
     /// for most repositories.
-    async fn release_reader(
-        &self,
-        distribution: &str,
-    ) -> Result<Box<dyn ReleaseReader>, RepositoryReadError> {
+    async fn release_reader(&self, distribution: &str) -> Result<Box<dyn ReleaseReader>> {
         self.release_reader_with_distribution_path(&format!(
             "dists/{}",
             distribution.trim_matches('/')
@@ -96,7 +64,7 @@ pub trait RepositoryRootReader: DataResolver + Sync {
     async fn release_reader_with_distribution_path(
         &self,
         path: &str,
-    ) -> Result<Box<dyn ReleaseReader>, RepositoryReadError>;
+    ) -> Result<Box<dyn ReleaseReader>>;
 
     /// Fetch and parse an `InRelease` file at the relative path specified.
     ///
@@ -104,20 +72,11 @@ pub trait RepositoryRootReader: DataResolver + Sync {
     /// `dists/bullseye/InRelease`.
     ///
     /// The default implementation of this trait should be sufficient for most types.
-    async fn fetch_inrelease(
-        &self,
-        path: &str,
-    ) -> Result<ReleaseFile<'static>, RepositoryReadError> {
-        let mut reader = self
-            .get_path(path)
-            .await
-            .map_err(|e| RepositoryReadError::IoPath(path.to_string(), e))?;
+    async fn fetch_inrelease(&self, path: &str) -> Result<ReleaseFile<'static>> {
+        let mut reader = self.get_path(path).await?;
 
         let mut data = vec![];
-        reader
-            .read_to_end(&mut data)
-            .await
-            .map_err(|e| RepositoryReadError::IoPath(path.to_string(), e))?;
+        reader.read_to_end(&mut data).await?;
 
         Ok(ReleaseFile::from_armored_reader(std::io::Cursor::new(
             data,
@@ -138,13 +97,13 @@ pub trait ReleaseReader: DataResolver + Sync {
     ///
     /// By default, this will prefer the strongest known checksum advertised in the
     /// release file.
-    fn retrieve_checksum(&self) -> Result<ChecksumType, RepositoryReadError> {
+    fn retrieve_checksum(&self) -> Result<ChecksumType> {
         let release = self.release_file();
 
         let checksum = &[ChecksumType::Sha256, ChecksumType::Sha1, ChecksumType::Md5]
             .iter()
             .find(|variant| release.first_field(variant.field_name()).is_some())
-            .ok_or(RepositoryReadError::NoKnownChecksum)?;
+            .ok_or(DebianError::RepositoryReadReleaseNoKnownChecksum)?;
 
         Ok(**checksum)
     }
@@ -166,13 +125,13 @@ pub trait ReleaseReader: DataResolver + Sync {
     /// There may be multiple entries for a given logical `Packages` file corresponding
     /// to different compression formats. Use [Self::packages_entry()] to resolve the entry
     /// for the `Packages` file for the preferred configuration.
-    fn packages_indices_entries(&self) -> Result<Vec<PackagesFileEntry>, RepositoryReadError> {
+    fn packages_indices_entries(&self) -> Result<Vec<PackagesFileEntry>> {
         Ok(
             if let Some(entries) = self
                 .release_file()
                 .iter_packages_indices(self.retrieve_checksum()?)
             {
-                entries.collect::<Result<Vec<_>, _>>()?
+                entries.collect::<Result<Vec<_>>>()?
             } else {
                 vec![]
             },
@@ -185,13 +144,13 @@ pub trait ReleaseReader: DataResolver + Sync {
     ///
     /// Multiple entries for the same logical file with varying compression formats may be
     /// returned.
-    fn contents_indices_entries(&self) -> Result<Vec<ContentsFileEntry>, RepositoryReadError> {
+    fn contents_indices_entries(&self) -> Result<Vec<ContentsFileEntry>> {
         Ok(
             if let Some(entries) = self
                 .release_file()
                 .iter_contents_indices(self.retrieve_checksum()?)
             {
-                entries.collect::<Result<Vec<_>, _>>()?
+                entries.collect::<Result<Vec<_>>>()?
             } else {
                 vec![]
             },
@@ -204,13 +163,13 @@ pub trait ReleaseReader: DataResolver + Sync {
     ///
     /// Multiple entries for the same logical file with varying compression formats may be
     /// returned.
-    fn sources_indices_entries(&self) -> Result<Vec<SourcesFileEntry>, RepositoryReadError> {
+    fn sources_indices_entries(&self) -> Result<Vec<SourcesFileEntry>> {
         Ok(
             if let Some(entries) = self
                 .release_file()
                 .iter_sources_indices(self.retrieve_checksum()?)
             {
-                entries.collect::<Result<Vec<_>, _>>()?
+                entries.collect::<Result<Vec<_>>>()?
             } else {
                 vec![]
             },
@@ -227,7 +186,7 @@ pub trait ReleaseReader: DataResolver + Sync {
         component: &str,
         architecture: &str,
         is_installer: bool,
-    ) -> Result<PackagesFileEntry, RepositoryReadError> {
+    ) -> Result<PackagesFileEntry> {
         let entries = self
             .packages_indices_entries()?
             .into_iter()
@@ -253,7 +212,7 @@ pub trait ReleaseReader: DataResolver + Sync {
                 }
             }
 
-            Err(RepositoryReadError::PackagesIndicesEntryNotFound)
+            Err(DebianError::RepositoryReadPackagesIndicesEntryNotFound)
         }
     }
 
@@ -263,7 +222,7 @@ pub trait ReleaseReader: DataResolver + Sync {
         component: &str,
         arch: &str,
         is_installer: bool,
-    ) -> Result<BinaryPackageList<'static>, RepositoryReadError> {
+    ) -> Result<BinaryPackageList<'static>> {
         let release = self.release_file();
 
         let entry = self.packages_entry(component, arch, is_installer)?;
@@ -281,8 +240,7 @@ pub trait ReleaseReader: DataResolver + Sync {
                 entry.entry.size,
                 entry.entry.digest.as_content_digest()?,
             )
-            .await
-            .map_err(|e| RepositoryReadError::IoPath(path.to_string(), e))?,
+            .await?,
         ));
 
         let mut res = BinaryPackageList::default();
@@ -302,7 +260,7 @@ pub trait ReleaseReader: DataResolver + Sync {
         component: &str,
         architecture: &str,
         is_installer: bool,
-    ) -> Result<ContentsFileEntry, RepositoryReadError> {
+    ) -> Result<ContentsFileEntry> {
         let entries = self
             .contents_indices_entries()?
             .into_iter()
@@ -328,7 +286,7 @@ pub trait ReleaseReader: DataResolver + Sync {
                 }
             }
 
-            Err(RepositoryReadError::ContentsIndicesEntryNotFound)
+            Err(DebianError::RepositoryReadContentsIndicesEntryNotFound)
         }
     }
 
@@ -337,7 +295,7 @@ pub trait ReleaseReader: DataResolver + Sync {
         component: &str,
         architecture: &str,
         is_installer: bool,
-    ) -> Result<ContentsFile, RepositoryReadError> {
+    ) -> Result<ContentsFile> {
         let release = self.release_file();
         let entry = self.contents_entry(component, architecture, is_installer)?;
 
@@ -354,8 +312,7 @@ pub trait ReleaseReader: DataResolver + Sync {
                 entry.entry.size,
                 entry.entry.digest.as_content_digest()?,
             )
-            .await
-            .map_err(|e| RepositoryReadError::IoPath(path.to_string(), e))?;
+            .await?;
 
         let mut reader = ContentsFileAsyncReader::new(futures::io::BufReader::new(reader));
         reader.read_all().await?;
@@ -364,22 +321,9 @@ pub trait ReleaseReader: DataResolver + Sync {
 
         drain_reader(reader)
             .await
-            .map_err(|e| RepositoryReadError::IoPath(path, e))?;
+            .map_err(|e| DebianError::RepositoryIoPath(path, e))?;
 
         Ok(contents)
-    }
-}
-
-/// Errors related to writing to repositories.
-#[derive(Debug, Error)]
-pub enum RepositoryWriteError {
-    #[error("I/O error write path {0}: {0:?}")]
-    IoPath(String, std::io::Error),
-}
-
-impl RepositoryWriteError {
-    pub fn io_path(path: impl ToString, err: std::io::Error) -> Self {
-        Self::IoPath(path.to_string(), err)
     }
 }
 
@@ -443,7 +387,7 @@ pub trait RepositoryWriter: Sync {
         &self,
         path: &'path str,
         expected_content: Option<(usize, ContentDigest)>,
-    ) -> Result<RepositoryPathVerification<'path>, RepositoryWriteError>;
+    ) -> Result<RepositoryPathVerification<'path>>;
 
     /// Write data to a given path.
     ///
@@ -452,5 +396,5 @@ pub trait RepositoryWriter: Sync {
         &self,
         path: Cow<'path, str>,
         reader: Pin<Box<dyn AsyncRead + Send + 'reader>>,
-    ) -> Result<RepositoryWrite<'path>, RepositoryWriteError>;
+    ) -> Result<RepositoryWrite<'path>>;
 }

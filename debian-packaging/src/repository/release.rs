@@ -6,64 +6,23 @@
 
 use {
     crate::{
-        control::{ControlError, ControlField, ControlParagraph, ControlParagraphReader},
+        control::{ControlField, ControlParagraph, ControlParagraphReader},
+        error::{DebianError, Result},
         io::ContentDigest,
         pgp::MyHasher,
         repository::Compression,
     },
     chrono::{DateTime, TimeZone, Utc},
-    mailparse::{dateparse, MailParseError},
+    mailparse::dateparse,
     std::{
         borrow::Cow,
         io::{BufRead, Read},
-        num::ParseIntError,
         str::FromStr,
     },
-    thiserror::Error,
 };
 
 /// Formatter string for dates in release files.
 pub const DATE_FORMAT: &str = "%a, %d %b %Y %H:%M:%S %z";
-
-/// Describes an error related to `Release` file handling.
-#[derive(Debug, Error)]
-pub enum ReleaseError {
-    #[error("I/O error: {0}")]
-    Io(#[from] std::io::Error),
-
-    #[error("Date parsing error: {0}")]
-    DateParse(#[from] MailParseError),
-
-    #[error("control file error: {0}")]
-    Control(#[from] ControlError),
-
-    #[error("expected 1 paragraph in control file; got {0}")]
-    ControlParagraphMismatch(usize),
-
-    #[error("digest missing from index entry")]
-    MissingDigest,
-
-    #[error("size missing from index entry")]
-    MissingSize,
-
-    #[error("path missing from index entry")]
-    MissingPath,
-
-    #[error("error parsing size field: {0}")]
-    SizeParse(#[from] ParseIntError),
-
-    #[error("index entry path unexpectedly has spaces: {0}")]
-    PathWithSpaces(String),
-
-    #[error("No PGP signatures found")]
-    NoSignatures,
-
-    #[error("No PGP signatures found from the specified key")]
-    NoSignaturesByKey,
-
-    #[error("invalid hexadecimal in content digest: {0:?}")]
-    FromHex(#[from] hex::FromHexError),
-}
 
 /// Checksum type / digest mechanism used in a release file.
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -142,15 +101,15 @@ impl<'a> ReleaseFileDigest<'a> {
     }
 
     /// Attempt to convert this instance to a [ContentDigest].
-    pub fn as_content_digest(&self) -> Result<ContentDigest, ReleaseError> {
+    pub fn as_content_digest(&self) -> Result<ContentDigest> {
         self.try_into()
     }
 }
 
 impl<'a> TryFrom<&ReleaseFileDigest<'a>> for ContentDigest {
-    type Error = ReleaseError;
+    type Error = DebianError;
 
-    fn try_from(digest: &ReleaseFileDigest) -> Result<Self, Self::Error> {
+    fn try_from(digest: &ReleaseFileDigest) -> std::result::Result<Self, Self::Error> {
         match digest {
             ReleaseFileDigest::Md5(v) => Ok(ContentDigest::Md5(hex::decode(v)?)),
             ReleaseFileDigest::Sha1(v) => Ok(ContentDigest::Sha1(hex::decode(v)?)),
@@ -239,7 +198,7 @@ impl<'a> ReleaseFileEntry<'a> {
     }
 
     /// Obtain the content digest as bytes.
-    pub fn digest_bytes(&self) -> Result<Vec<u8>, ReleaseError> {
+    pub fn digest_bytes(&self) -> Result<Vec<u8>> {
         Ok(hex::decode(self.digest.digest())?)
     }
 }
@@ -372,14 +331,16 @@ impl<'a> ReleaseFile<'a> {
     ///
     /// The source must not be PGP armored. i.e. do not feed it raw `InRelease`
     /// files that begin with `-----BEGIN PGP SIGNED MESSAGE-----`.
-    pub fn from_reader<R: BufRead>(reader: R) -> Result<Self, ReleaseError> {
-        let paragraphs = ControlParagraphReader::new(reader).collect::<Result<Vec<_>, _>>()?;
+    pub fn from_reader<R: BufRead>(reader: R) -> Result<Self> {
+        let paragraphs = ControlParagraphReader::new(reader).collect::<Result<Vec<_>>>()?;
 
         // A Release control file should have a single paragraph.
 
         // A Release control file should have a single paragraph.
         if paragraphs.len() != 1 {
-            return Err(ReleaseError::ControlParagraphMismatch(paragraphs.len()));
+            return Err(DebianError::ReleaseControlParagraphMismatch(
+                paragraphs.len(),
+            ));
         }
 
         let paragraph = paragraphs
@@ -404,7 +365,7 @@ impl<'a> ReleaseFile<'a> {
     /// The PGP signature is NOT validated. The file will be parsed despite lack of
     /// signature verification. This is conceptually insecure. But since Rust has memory
     /// safety, some risk is prevented.
-    pub fn from_armored_reader<R: Read>(reader: R) -> Result<Self, ReleaseError> {
+    pub fn from_armored_reader<R: Read>(reader: R) -> Result<Self> {
         let reader = crate::pgp::CleartextSignatureReader::new(reader);
         let mut reader = std::io::BufReader::new(reader);
 
@@ -490,7 +451,7 @@ impl<'a> ReleaseFile<'a> {
     /// Time the release file was created, as a [DateTime].
     ///
     /// The timezone from the original file is always normalized to UTC.
-    pub fn date(&self) -> Option<Result<DateTime<Utc>, ReleaseError>> {
+    pub fn date(&self) -> Option<Result<DateTime<Utc>>> {
         self.date_str().map(|v| Ok(Utc.timestamp(dateparse(v)?, 0)))
     }
 
@@ -500,7 +461,7 @@ impl<'a> ReleaseFile<'a> {
     }
 
     /// Time the release file should be considered expired by the client.
-    pub fn valid_until(&self) -> Option<Result<DateTime<Utc>, ReleaseError>> {
+    pub fn valid_until(&self) -> Option<Result<DateTime<Utc>>> {
         self.valid_until_str()
             .map(|v| Ok(Utc.timestamp(dateparse(v)?, 0)))
     }
@@ -535,7 +496,7 @@ impl<'a> ReleaseFile<'a> {
     pub fn iter_index_files(
         &self,
         checksum: ChecksumType,
-    ) -> Option<Box<(dyn Iterator<Item = Result<ReleaseFileEntry, ReleaseError>> + '_)>> {
+    ) -> Option<Box<(dyn Iterator<Item = Result<ReleaseFileEntry>> + '_)>> {
         if let Some(iter) = self
             .paragraph
             .first_field_iter_values(checksum.field_name())
@@ -545,13 +506,13 @@ impl<'a> ReleaseFile<'a> {
 
                 let mut parts = v.split_ascii_whitespace();
 
-                let digest = parts.next().ok_or(ReleaseError::MissingDigest)?;
-                let size = parts.next().ok_or(ReleaseError::MissingSize)?;
-                let path = parts.next().ok_or(ReleaseError::MissingPath)?;
+                let digest = parts.next().ok_or(DebianError::ReleaseMissingDigest)?;
+                let size = parts.next().ok_or(DebianError::ReleaseMissingSize)?;
+                let path = parts.next().ok_or(DebianError::ReleaseMissingPath)?;
 
                 // Are paths with spaces allowed?
                 if parts.next().is_some() {
-                    return Err(ReleaseError::PathWithSpaces(v.to_string()));
+                    return Err(DebianError::ReleasePathWithSpaces(v.to_string()));
                 }
 
                 let digest = ReleaseFileDigest::new(checksum, digest);
@@ -574,7 +535,7 @@ impl<'a> ReleaseFile<'a> {
     pub fn iter_contents_indices(
         &self,
         checksum: ChecksumType,
-    ) -> Option<Box<(dyn Iterator<Item = Result<ContentsFileEntry, ReleaseError>> + '_)>> {
+    ) -> Option<Box<(dyn Iterator<Item = Result<ContentsFileEntry>> + '_)>> {
         if let Some(iter) = self.iter_index_files(checksum) {
             Some(Box::new(iter.filter_map(|entry| match entry {
                 Ok(entry) => entry.to_contents_file_entry().map(Ok),
@@ -595,7 +556,7 @@ impl<'a> ReleaseFile<'a> {
     pub fn iter_packages_indices(
         &self,
         checksum: ChecksumType,
-    ) -> Option<Box<(dyn Iterator<Item = Result<PackagesFileEntry, ReleaseError>> + '_)>> {
+    ) -> Option<Box<(dyn Iterator<Item = Result<PackagesFileEntry>> + '_)>> {
         if let Some(iter) = self.iter_index_files(checksum) {
             Some(Box::new(iter.filter_map(|entry| match entry {
                 Ok(entry) => entry.to_packages_file_entry().map(Ok),
@@ -612,7 +573,7 @@ impl<'a> ReleaseFile<'a> {
     pub fn iter_sources_indices(
         &self,
         checksum: ChecksumType,
-    ) -> Option<Box<(dyn Iterator<Item = Result<SourcesFileEntry, ReleaseError>> + '_)>> {
+    ) -> Option<Box<(dyn Iterator<Item = Result<SourcesFileEntry>> + '_)>> {
         if let Some(iter) = self.iter_index_files(checksum) {
             Some(Box::new(iter.filter_map(|entry| match entry {
                 Ok(entry) => entry.to_sources_file_entry().map(Ok),
@@ -680,7 +641,7 @@ mod test {
     use super::*;
 
     #[test]
-    fn parse_bullseye_release() -> Result<(), ReleaseError> {
+    fn parse_bullseye_release() -> Result<()> {
         let mut reader =
             std::io::Cursor::new(include_bytes!("../testdata/release-debian-bullseye"));
 
@@ -723,7 +684,7 @@ mod test {
         let entries = release
             .iter_index_files(ChecksumType::Md5)
             .unwrap()
-            .collect::<Result<Vec<_>, _>>()?;
+            .collect::<Result<Vec<_>>>()?;
         assert_eq!(entries.len(), 600);
         assert_eq!(
             entries[0],
@@ -767,7 +728,7 @@ mod test {
         let entries = release
             .iter_index_files(ChecksumType::Sha256)
             .unwrap()
-            .collect::<Result<Vec<_>, _>>()?;
+            .collect::<Result<Vec<_>>>()?;
         assert_eq!(entries.len(), 600);
         assert_eq!(
             entries[0],
@@ -806,7 +767,7 @@ mod test {
         let contents = release
             .iter_contents_indices(ChecksumType::Sha256)
             .unwrap()
-            .collect::<Result<Vec<_>, _>>()?;
+            .collect::<Result<Vec<_>>>()?;
         assert_eq!(contents.len(), 126);
 
         assert_eq!(
@@ -861,7 +822,7 @@ mod test {
         let packages = release
             .iter_packages_indices(ChecksumType::Sha256)
             .unwrap()
-            .collect::<Result<Vec<_>, _>>()?;
+            .collect::<Result<Vec<_>>>()?;
         assert_eq!(packages.len(), 180);
 
         assert_eq!(
@@ -939,7 +900,7 @@ mod test {
         let sources = release
             .iter_sources_indices(ChecksumType::Sha256)
             .unwrap()
-            .collect::<Result<Vec<_>, _>>()?;
+            .collect::<Result<Vec<_>>>()?;
         assert_eq!(sources.len(), 9);
 
         Ok(())
@@ -950,7 +911,7 @@ mod test {
     }
 
     #[test]
-    fn parse_bullseye_inrelease() -> Result<(), ReleaseError> {
+    fn parse_bullseye_inrelease() -> Result<()> {
         let reader = std::io::Cursor::new(include_bytes!("../testdata/inrelease-debian-bullseye"));
 
         let release = ReleaseFile::from_armored_reader(reader)?;
@@ -963,7 +924,7 @@ mod test {
     }
 
     #[test]
-    fn bad_signature_rejection() -> Result<(), ReleaseError> {
+    fn bad_signature_rejection() -> Result<()> {
         let reader = std::io::Cursor::new(
             include_str!("../testdata/inrelease-debian-bullseye").replace(
                 "d41d8cd98f00b204e9800998ecf8427e",

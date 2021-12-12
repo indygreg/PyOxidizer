@@ -5,7 +5,7 @@
 /*! I/O helpers. */
 
 use {
-    crate::{pgp::MyHasher, repository::release::ChecksumType},
+    crate::{error::Result, pgp::MyHasher, repository::release::ChecksumType},
     async_compression::futures::bufread::{
         BzDecoder, BzEncoder, GzipDecoder, GzipEncoder, LzmaDecoder, LzmaEncoder, XzDecoder,
         XzEncoder,
@@ -45,10 +45,7 @@ impl std::fmt::Debug for ContentDigest {
 
 impl ContentDigest {
     /// Obtain an instance by parsing a hex string as a [ChecksumType].
-    pub fn from_hex_checksum(
-        checksum: ChecksumType,
-        digest: &str,
-    ) -> Result<Self, hex::FromHexError> {
+    pub fn from_hex_checksum(checksum: ChecksumType, digest: &str) -> Result<Self> {
         let digest = hex::decode(digest)?;
 
         Ok(match checksum {
@@ -139,7 +136,7 @@ impl Compression {
 pub async fn read_decompressed(
     stream: Pin<Box<dyn AsyncBufRead + Send>>,
     compression: Compression,
-) -> Result<Pin<Box<dyn AsyncRead + Send>>, std::io::Error> {
+) -> Result<Pin<Box<dyn AsyncRead + Send>>> {
     Ok(match compression {
         Compression::None => Box::pin(stream),
         Compression::Gzip => Box::pin(GzipDecoder::new(stream)),
@@ -447,10 +444,7 @@ pub trait DataResolver: Sync {
     ///
     /// This obtains a reader for path data and returns the raw data without any
     /// decoding applied.
-    async fn get_path(
-        &self,
-        path: &str,
-    ) -> Result<Pin<Box<dyn AsyncBufRead + Send>>, std::io::Error>;
+    async fn get_path(&self, path: &str) -> Result<Pin<Box<dyn AsyncBufRead + Send>>>;
 
     /// Obtain a reader that performs content integrity checking.
     ///
@@ -466,7 +460,7 @@ pub trait DataResolver: Sync {
         path: &str,
         expected_size: usize,
         expected_digest: ContentDigest,
-    ) -> Result<Pin<Box<dyn AsyncRead + Send>>, std::io::Error> {
+    ) -> Result<Pin<Box<dyn AsyncRead + Send>>> {
         Ok(Box::pin(ContentValidatingReader::new(
             self.get_path(path).await?,
             expected_size,
@@ -479,7 +473,7 @@ pub trait DataResolver: Sync {
         &self,
         path: &str,
         compression: Compression,
-    ) -> Result<Pin<Box<dyn AsyncRead + Send>>, std::io::Error> {
+    ) -> Result<Pin<Box<dyn AsyncRead + Send>>> {
         read_decompressed(self.get_path(path).await?, compression).await
     }
 
@@ -492,7 +486,7 @@ pub trait DataResolver: Sync {
         compression: Compression,
         expected_size: usize,
         expected_digest: ContentDigest,
-    ) -> Result<Pin<Box<dyn AsyncRead + Send>>, std::io::Error> {
+    ) -> Result<Pin<Box<dyn AsyncRead + Send>>> {
         let reader = self
             .get_path_with_digest_verification(path, expected_size, expected_digest)
             .await?;
@@ -527,10 +521,7 @@ impl<R: DataResolver + Send> PathMappingDataResolver<R> {
 
 #[async_trait]
 impl<R: DataResolver + Send> DataResolver for PathMappingDataResolver<R> {
-    async fn get_path(
-        &self,
-        path: &str,
-    ) -> Result<Pin<Box<dyn AsyncBufRead + Send>>, std::io::Error> {
+    async fn get_path(&self, path: &str) -> Result<Pin<Box<dyn AsyncBufRead + Send>>> {
         self.source
             .get_path(self.path_map.get(path).map(|s| s.as_str()).unwrap_or(path))
             .await

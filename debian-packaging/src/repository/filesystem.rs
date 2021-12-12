@@ -4,10 +4,11 @@
 
 use {
     crate::{
+        error::{DebianError, Result},
         io::{ContentDigest, DigestingReader},
         repository::{
             RepositoryPathVerification, RepositoryPathVerificationState, RepositoryWrite,
-            RepositoryWriteError, RepositoryWriter,
+            RepositoryWriter,
         },
     },
     async_trait::async_trait,
@@ -41,12 +42,12 @@ impl RepositoryWriter for FilesystemRepositoryWriter {
         &self,
         path: &'path str,
         expected_content: Option<(usize, ContentDigest)>,
-    ) -> Result<RepositoryPathVerification<'path>, RepositoryWriteError> {
+    ) -> Result<RepositoryPathVerification<'path>> {
         let dest_path = self.root_dir.join(path);
 
         let metadata = async_std::fs::metadata(&dest_path)
             .await
-            .map_err(|e| RepositoryWriteError::io_path(path, e))?;
+            .map_err(|e| DebianError::RepositoryIoPath(path.to_string(), e))?;
 
         if metadata.is_file() {
             if let Some((expected_size, expected_digest)) = expected_content {
@@ -58,7 +59,7 @@ impl RepositoryWriter for FilesystemRepositoryWriter {
                 } else {
                     let f = async_std::fs::File::open(&dest_path)
                         .await
-                        .map_err(|e| RepositoryWriteError::io_path(path, e))?;
+                        .map_err(|e| DebianError::RepositoryIoPath(path.to_string(), e))?;
 
                     let mut remaining = expected_size;
                     let mut reader = DigestingReader::new(f);
@@ -68,7 +69,7 @@ impl RepositoryWriter for FilesystemRepositoryWriter {
                         let size = reader
                             .read(&mut buf[..])
                             .await
-                            .map_err(|e| RepositoryWriteError::io_path(path, e))?;
+                            .map_err(|e| DebianError::RepositoryIoPath(path.to_string(), e))?;
 
                         if size >= remaining || size == 0 {
                             break;
@@ -106,22 +107,22 @@ impl RepositoryWriter for FilesystemRepositoryWriter {
         &self,
         path: Cow<'path, str>,
         reader: Pin<Box<dyn AsyncRead + Send + 'reader>>,
-    ) -> Result<RepositoryWrite<'path>, RepositoryWriteError> {
+    ) -> Result<RepositoryWrite<'path>> {
         let dest_path = self.root_dir.join(path.as_ref());
 
         if let Some(parent) = dest_path.parent() {
             std::fs::create_dir_all(parent)
-                .map_err(|e| RepositoryWriteError::IoPath(format!("{}", parent.display()), e))?;
+                .map_err(|e| DebianError::RepositoryIoPath(format!("{}", parent.display()), e))?;
         }
 
         let fh = std::fs::File::create(&dest_path)
-            .map_err(|e| RepositoryWriteError::IoPath(format!("{}", dest_path.display()), e))?;
+            .map_err(|e| DebianError::RepositoryIoPath(format!("{}", dest_path.display()), e))?;
 
         let mut writer = futures::io::AllowStdIo::new(fh);
 
         let bytes_written = futures::io::copy(reader, &mut writer)
             .await
-            .map_err(|e| RepositoryWriteError::IoPath(format!("{}", dest_path.display()), e))?;
+            .map_err(|e| DebianError::RepositoryIoPath(format!("{}", dest_path.display()), e))?;
 
         Ok(RepositoryWrite {
             path,

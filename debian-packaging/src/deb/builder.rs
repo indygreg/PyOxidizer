@@ -5,10 +5,7 @@
 /*! Create .deb package files and their components. */
 
 use {
-    crate::{
-        control::ControlFile,
-        deb::{DebCompression, DebError},
-    },
+    crate::{control::ControlFile, deb::DebCompression, error::Result},
     md5::Digest,
     os_str_bytes::OsStrBytes,
     std::{
@@ -75,7 +72,7 @@ impl<'control> DebBuilder<'control> {
         mut self,
         path: impl AsRef<Path>,
         entry: impl Into<FileEntry>,
-    ) -> Result<Self, DebError> {
+    ) -> Result<Self> {
         self.control_builder = self.control_builder.add_extra_file(path, entry)?;
         Ok(self)
     }
@@ -91,7 +88,7 @@ impl<'control> DebBuilder<'control> {
         mut self,
         path: impl AsRef<Path> + Clone,
         entry: impl Into<FileEntry> + Clone,
-    ) -> Result<Self, DebError> {
+    ) -> Result<Self> {
         let entry = entry.into();
 
         let data = entry.resolve_content()?;
@@ -108,7 +105,7 @@ impl<'control> DebBuilder<'control> {
     /// Write `.deb` file content to a writer.
     ///
     /// This effectively materialized the `.deb` package somewhere.
-    pub fn write<W: Write>(&self, writer: &mut W) -> Result<(), DebError> {
+    pub fn write<W: Write>(&self, writer: &mut W) -> Result<()> {
         let mut ar_builder = ar::Builder::new(writer);
 
         // First entry is a debian-binary file with static content.
@@ -123,7 +120,7 @@ impl<'control> DebBuilder<'control> {
         // Second entry is a control.tar with metadata.
         let mut control_writer = BufWriter::new(Vec::new());
         self.control_builder.write(&mut control_writer)?;
-        let control_tar = control_writer.into_inner()?;
+        let control_tar = control_writer.into_inner().map_err(|e| e.into_error())?;
         let control_tar = self
             .compression
             .compress(&mut std::io::Cursor::new(control_tar))?;
@@ -141,7 +138,7 @@ impl<'control> DebBuilder<'control> {
         // Third entry is a data.tar with file content.
         let mut data_writer = BufWriter::new(Vec::new());
         write_deb_tar(&mut data_writer, &self.install_files, self.mtime())?;
-        let data_tar = data_writer.into_inner()?;
+        let data_tar = data_writer.into_inner().map_err(|e| e.into_error())?;
         let data_tar = self
             .compression
             .compress(&mut std::io::Cursor::new(data_tar))?;
@@ -160,7 +157,7 @@ impl<'control> DebBuilder<'control> {
     }
 }
 
-fn new_tar_header(mtime: u64) -> Result<tar::Header, DebError> {
+fn new_tar_header(mtime: u64) -> Result<tar::Header> {
     let mut header = tar::Header::new_gnu();
     header.set_uid(0);
     header.set_gid(0);
@@ -176,7 +173,7 @@ fn set_header_path(
     header: &mut tar::Header,
     path: &Path,
     is_directory: bool,
-) -> Result<(), DebError> {
+) -> Result<()> {
     // Debian archives in the wild have filenames beginning with `./`. And
     // paths ending with `/` are directories. However, we cannot call
     // `header.set_path()` with `./` on anything except the root directory
@@ -253,7 +250,7 @@ impl<'a> ControlTarBuilder<'a> {
         mut self,
         path: impl AsRef<Path>,
         entry: impl Into<FileEntry>,
-    ) -> Result<Self, DebError> {
+    ) -> Result<Self> {
         self.extra_files.add_file_entry(path, entry)?;
 
         Ok(self)
@@ -273,7 +270,7 @@ impl<'a> ControlTarBuilder<'a> {
         mut self,
         path: P,
         reader: &mut R,
-    ) -> Result<Self, DebError> {
+    ) -> Result<Self> {
         let mut context = md5::Md5::new();
 
         let mut buffer = [0; 32768];
@@ -314,10 +311,10 @@ impl<'a> ControlTarBuilder<'a> {
     }
 
     /// Write the `control.tar` file to a writer.
-    pub fn write<W: Write>(&self, writer: &mut W) -> Result<(), DebError> {
+    pub fn write<W: Write>(&self, writer: &mut W) -> Result<()> {
         let mut control_buffer = BufWriter::new(Vec::new());
         self.control.write(&mut control_buffer)?;
-        let control_data = control_buffer.into_inner()?;
+        let control_data = control_buffer.into_inner().map_err(|e| e.into_error())?;
 
         let mut manifest = self.extra_files.clone();
         manifest.add_file_entry("control", control_data)?;
@@ -328,11 +325,7 @@ impl<'a> ControlTarBuilder<'a> {
 }
 
 /// Write a tar archive suitable for inclusion in a `.deb` archive.
-pub fn write_deb_tar<W: Write>(
-    writer: W,
-    files: &FileManifest,
-    mtime: u64,
-) -> Result<(), DebError> {
+pub fn write_deb_tar<W: Write>(writer: W, files: &FileManifest, mtime: u64) -> Result<()> {
     let mut builder = tar::Builder::new(writer);
 
     // Add root directory entry.
@@ -376,12 +369,7 @@ pub fn write_deb_tar<W: Write>(
 
 #[cfg(test)]
 mod tests {
-    use {
-        super::*,
-        crate::control::ControlParagraph,
-        anyhow::{anyhow, Result},
-        std::path::PathBuf,
-    };
+    use {super::*, crate::control::ControlParagraph, std::path::PathBuf};
 
     #[test]
     fn test_write_control_tar_simple() -> Result<()> {
@@ -410,7 +398,7 @@ mod tests {
                 1 => Path::new("./control"),
                 2 => Path::new("./md5sums"),
                 3 => Path::new("./prerm"),
-                _ => return Err(anyhow!("unexpected archive entry")),
+                _ => panic!("unexpected archive entry"),
             };
 
             assert_eq!(entry.path()?, path, "entry {} path matches", i);
@@ -436,7 +424,7 @@ mod tests {
                 0 => Path::new("./"),
                 1 => Path::new("./foo/"),
                 2 => Path::new("./foo/bar.txt"),
-                _ => return Err(anyhow!("unexpected archive entry")),
+                _ => panic!("unexpected archive entry"),
             };
 
             assert_eq!(entry.path()?, path, "entry {} path matches", i);

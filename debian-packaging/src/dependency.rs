@@ -10,7 +10,8 @@ See <https://www.debian.org/doc/debian-policy/ch-relationships.html> for the spe
 use {
     crate::{
         control::ControlParagraph,
-        package_version::{PackageVersion, VersionError},
+        error::{DebianError, Result},
+        package_version::PackageVersion,
     },
     once_cell::sync::Lazy,
     regex::Regex,
@@ -20,7 +21,6 @@ use {
         ops::{Deref, DerefMut},
         str::FromStr,
     },
-    thiserror::Error,
 };
 
 /// Regular expression to parse dependency expressions.
@@ -61,22 +61,6 @@ pub static RE_DEPENDENCY: Lazy<Regex> = Lazy::new(|| {
     )
     .unwrap()
 });
-
-/// Errors related to dependency handling.
-#[derive(Debug, Error)]
-pub enum DependencyError {
-    #[error("failed to parse dependency expression: {0}")]
-    DependencyParse(String),
-
-    #[error("version parsing error: {0:?}")]
-    Version(#[from] VersionError),
-
-    #[error("unknown binary dependency field: {0}")]
-    UnknownBinaryDependencyField(String),
-}
-
-/// Result type for dependency handling.
-pub type Result<T> = std::result::Result<T, DependencyError>;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum VersionRelationship {
@@ -134,7 +118,7 @@ impl SingleDependency {
     pub fn parse(s: &str) -> Result<Self> {
         let caps = RE_DEPENDENCY
             .captures(s)
-            .ok_or_else(|| DependencyError::DependencyParse(s.to_string()))?;
+            .ok_or_else(|| DebianError::DependencyParse(s.to_string()))?;
 
         let package = caps["package"].to_string();
         let dependency = match (caps.name("relop"), caps.name("version")) {
@@ -404,7 +388,7 @@ pub enum BinaryDependency {
 }
 
 impl FromStr for BinaryDependency {
-    type Err = DependencyError;
+    type Err = DebianError;
 
     fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
         match s {
