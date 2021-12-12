@@ -1,6 +1,6 @@
-# tugger-debian
+# debian-packaging
 
-`tugger-debian` is a library crate implementing functionality related
+`debian-packaging` is a library crate implementing functionality related
 to Debian packaging. The following functionality is (partially)
 implemented:
 
@@ -12,12 +12,14 @@ implemented:
 * Writing `.deb` files (deterministically).
 * Creating repositories.
 
-`tugger-debian` is part of the Tugger application distribution tool
-but exists as its own crate to facilitate code reuse for other tools
-wishing to have a low-level interface to Debian packaging primitives.
-Tugger is part of the
+See the crate's documentation for more.
+
+# Project Relationship
+
+`debian-packaging` is part of the
 [PyOxidizer](https://github.com/indygreg/PyOxidizer.git) project and
 this crate is developed in that repository.
 
 While this crate is developed as part of a larger project, modifications
-to support its use outside of its primary use case are very much welcome!
+to support its use outside of its primary use case are very much welcomed
+and encouraged!

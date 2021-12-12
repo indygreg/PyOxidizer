@@ -53,9 +53,7 @@ Modular Crate Architecture
 Tugger is composed of a series - a *fleet* if you will - of Rust crates.
 Each Rust crate provides domain-specific functionality. While the Rust
 crates are part of the Tugger project, an attempt is made to implement
-them such that they can be used outside of Tugger. For example, the
-``tugger-debian`` crate contains generic code for building ``.deb`` files
-from scratch.
+them such that they can be used outside of Tugger.
 
 The following crates compose Tugger's crate *fleet*:
 

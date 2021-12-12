@@ -156,7 +156,7 @@ pub fn signing_secret_key_params_builder(primary_user_id: impl ToString) -> Secr
 /// produced by this function in a production capacity.
 ///
 /// ```rust
-/// use tugger_debian::signing_key::*;
+/// use debian_packaging::signing_key::*;
 ///
 /// let builder = signing_secret_key_params_builder("someone@example.com");
 /// // This is where you would further customize the key parameters.
