@@ -677,7 +677,7 @@ impl<'a> AsMut<ControlParagraph<'a>> for ReleaseFile<'a> {
 
 #[cfg(test)]
 mod test {
-    use {super::*, pgp::Deserializable};
+    use super::*;
 
     #[test]
     fn parse_bullseye_release() -> Result<(), ReleaseError> {
@@ -946,11 +946,7 @@ mod test {
     }
 
     fn bullseye_signing_key() -> pgp::SignedPublicKey {
-        pgp::SignedPublicKey::from_armor_single(std::io::Cursor::new(include_bytes!(
-            "../testdata/release-key-bullseye.asc"
-        )))
-        .unwrap()
-        .0
+        crate::signing_key::DistroSigningKey::Debian11Release.public_key()
     }
 
     #[test]
