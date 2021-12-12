@@ -17,14 +17,14 @@ use {
         binary_package_control::{BinaryPackageControlError, BinaryPackageControlFile},
         control::{ControlError, ControlParagraph},
         deb::{reader::resolve_control_file, DebError},
-        io::{read_compressed, ContentDigest, DataResolver},
+        io::{read_compressed, ContentDigest, DataResolver, MultiContentDigest, MultiDigester},
         repository::{
             release::ChecksumType, Compression, RepositoryPathVerificationState,
             RepositoryReadError, RepositoryWriteError, RepositoryWriter,
         },
     },
     chrono::{DateTime, Utc},
-    futures::{AsyncRead, StreamExt, TryStreamExt},
+    futures::{AsyncRead, AsyncReadExt, StreamExt, TryStreamExt},
     std::{
         collections::{BTreeMap, BTreeSet},
         pin::Pin,
@@ -214,6 +214,13 @@ impl<'a> IndexFileReader<'a> {
             digest.digest_hex()
         )
     }
+}
+
+struct ExpandedIndexFile {
+    canonical_path: String,
+    write_path: String,
+    digests: MultiContentDigest,
+    data: Vec<u8>,
 }
 
 /// Describes a file in the *pool* to support a binary package.
@@ -836,6 +843,36 @@ impl<'cf> RepositoryBuilder<'cf> {
         Ok(())
     }
 
+    async fn expand_index_file_reader<'ifr, 'slf: 'ifr>(
+        &'slf self,
+        mut ifr: IndexFileReader<'ifr>,
+    ) -> Result<Box<dyn Iterator<Item = ExpandedIndexFile> + 'ifr>> {
+        let mut buf = vec![];
+        ifr.reader.read_to_end(&mut buf).await?;
+
+        let mut digester = MultiDigester::default();
+        digester.update(&buf);
+        let digests = digester.finish();
+
+        if self.acquire_by_hash == Some(true) {
+            Ok(Box::new(self.checksums.iter().map(move |checksum| {
+                ExpandedIndexFile {
+                    canonical_path: ifr.canonical_path(),
+                    write_path: ifr.by_hash_path(digests.digest_from_checksum(*checksum)),
+                    digests: digests.clone(),
+                    data: buf.clone(),
+                }
+            })))
+        } else {
+            Ok(Box::new(std::iter::once(ExpandedIndexFile {
+                canonical_path: ifr.canonical_path(),
+                write_path: ifr.canonical_path(),
+                digests,
+                data: buf,
+            })))
+        }
+    }
+
     /// Publish index files.
     ///
     /// Repository index files describe the contents of the repository. Index files are
@@ -856,33 +893,51 @@ impl<'cf> RepositoryBuilder<'cf> {
     {
         let mut index_paths = BTreeMap::new();
 
-        // TODO honor by-hash paths.
-        let mut fs = futures::stream::iter(self.index_file_readers().map(|ifr| {
-            let path = if let Some(prefix) = path_prefix {
-                format!("{}/{}", prefix.trim_matches('/'), ifr.canonical_path())
-            } else {
-                ifr.canonical_path()
-            };
+        // This will effectively buffer all indices files in memory. This could be avoided if
+        // we want to limit memory use.
 
-            if let Some(cb) = progress_cb {
-                cb(PublishEvent::IndexFileToWrite(path.clone()));
+        let mut fs = futures::stream::iter(
+            self.index_file_readers()
+                .map(|ifr| self.expand_index_file_reader(ifr)),
+        )
+        .buffer_unordered(threads);
+
+        let mut iters = vec![];
+
+        while let Some(res) = fs.try_next().await? {
+            for mut eif in res {
+                if let Some(prefix) = path_prefix {
+                    eif.write_path = format!("{}/{}", prefix.trim_matches('/'), eif.write_path);
+                }
+
+                if let Some(cb) = progress_cb {
+                    cb(PublishEvent::IndexFileToWrite(eif.write_path.clone()));
+                }
+
+                index_paths.insert(
+                    eif.canonical_path.clone(),
+                    (eif.data.len(), eif.digests.clone()),
+                );
+
+                iters.push(eif);
             }
+        }
 
-            writer.write_path(path.into(), ifr.reader)
+        let mut fs = futures::stream::iter(iters.into_iter().map(|eif| {
+            writer.write_path(
+                eif.write_path.into(),
+                Box::pin(futures::io::Cursor::new(eif.data)),
+            )
         }))
         .buffer_unordered(threads);
 
-        while let Some(write) = fs.next().await {
-            let write = write?;
-
+        while let Some(write) = fs.try_next().await? {
             if let Some(cb) = progress_cb {
                 cb(PublishEvent::IndexFileWritten(
                     write.path.to_string(),
                     write.bytes_written,
                 ));
             }
-
-            index_paths.insert(write.path.to_string(), (write.bytes_written, write.digests));
         }
 
         // TODO write [In]Release from index files.
