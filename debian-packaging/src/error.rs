@@ -115,6 +115,9 @@ pub enum DebianError {
 
     #[error("required field missing in binary package control file: {0}")]
     BinaryPackageControlRequiredFiledMissing(&'static str),
+
+    #[error("{0}")]
+    Other(String),
 }
 
 /// Result wrapper for this crate.

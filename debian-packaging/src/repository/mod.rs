@@ -42,7 +42,7 @@ pub mod release;
 #[async_trait]
 pub trait RepositoryRootReader: DataResolver + Sync {
     /// Obtain the URL to which this reader is bound.  
-    fn url(&self) -> &url::Url;
+    fn url(&self) -> Result<url::Url>;
 
     /// Obtain a [ReleaseReader] for a given distribution.
     ///
@@ -88,7 +88,7 @@ pub trait RepositoryRootReader: DataResolver + Sync {
 #[async_trait]
 pub trait ReleaseReader: DataResolver + Sync {
     /// Obtain the base URL to which this instance is bound.
-    fn url(&self) -> &url::Url;
+    fn url(&self) -> Result<url::Url>;
 
     /// Obtain the parsed `[In]Release` file from which this reader is derived.
     fn release_file(&self) -> &ReleaseFile<'static>;

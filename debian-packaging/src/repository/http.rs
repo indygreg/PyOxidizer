@@ -116,8 +116,8 @@ impl DataResolver for HttpRepositoryClient {
 
 #[async_trait]
 impl RepositoryRootReader for HttpRepositoryClient {
-    fn url(&self) -> &Url {
-        &self.root_url
+    fn url(&self) -> Result<Url> {
+        Ok(self.root_url.clone())
     }
 
     async fn release_reader_with_distribution_path(
@@ -170,8 +170,8 @@ impl DataResolver for HttpReleaseClient {
 
 #[async_trait]
 impl ReleaseReader for HttpReleaseClient {
-    fn url(&self) -> &Url {
-        &self.root_url
+    fn url(&self) -> Result<Url> {
+        Ok(self.root_url.clone())
     }
 
     fn release_file(&self) -> &ReleaseFile<'static> {

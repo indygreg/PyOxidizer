@@ -2,23 +2,123 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+/*! Filesystem based Debian repositories. */
+
 use {
     crate::{
         error::{DebianError, Result},
-        io::{ContentDigest, DigestingReader},
+        io::{Compression, ContentDigest, DataResolver, DigestingReader},
         repository::{
-            RepositoryPathVerification, RepositoryPathVerificationState, RepositoryWrite,
+            release::ReleaseFile, ReleaseReader, RepositoryPathVerification,
+            RepositoryPathVerificationState, RepositoryRootReader, RepositoryWrite,
             RepositoryWriter,
         },
     },
     async_trait::async_trait,
-    futures::{AsyncRead, AsyncReadExt},
+    futures::{io::BufReader, AsyncBufRead, AsyncRead, AsyncReadExt},
     std::{
         borrow::Cow,
         path::{Path, PathBuf},
         pin::Pin,
     },
+    url::Url,
 };
+
+/// A readable interface to a Debian repository backed by a filesystem.
+#[derive(Clone, Debug)]
+pub struct FilesystemRepositoryReader {
+    root_dir: PathBuf,
+}
+
+impl FilesystemRepositoryReader {
+    /// Construct a new instance, bound to the root directory specified.
+    ///
+    /// No validation of the passed path is performed.
+    pub fn new(path: impl AsRef<Path>) -> Self {
+        Self {
+            root_dir: path.as_ref().to_path_buf(),
+        }
+    }
+}
+
+#[async_trait]
+impl DataResolver for FilesystemRepositoryReader {
+    async fn get_path(&self, path: &str) -> Result<Pin<Box<dyn AsyncBufRead + Send>>> {
+        let path = self.root_dir.join(path);
+
+        let f = std::fs::File::open(&path)
+            .map_err(|e| DebianError::RepositoryIoPath(format!("{}", path.display()), e))?;
+
+        Ok(Box::pin(BufReader::new(futures::io::AllowStdIo::new(f))))
+    }
+}
+
+#[async_trait]
+impl RepositoryRootReader for FilesystemRepositoryReader {
+    fn url(&self) -> Result<Url> {
+        Url::from_file_path(&self.root_dir)
+            .map_err(|_| DebianError::Other("error converting filesystem path to URL".to_string()))
+    }
+
+    async fn release_reader_with_distribution_path(
+        &self,
+        path: &str,
+    ) -> Result<Box<dyn ReleaseReader>> {
+        let distribution_path = path.trim_matches('/').to_string();
+        let release_path = format!("{}/InRelease", distribution_path);
+        let distribution_dir = self.root_dir.join(&distribution_path);
+
+        let release = self.fetch_inrelease(&release_path).await?;
+
+        let fetch_compression = Compression::default_preferred_order()
+            .next()
+            .expect("iterator should not be empty");
+
+        Ok(Box::new(FilesystemReleaseClient {
+            distribution_dir,
+            release,
+            fetch_compression,
+        }))
+    }
+}
+
+pub struct FilesystemReleaseClient {
+    distribution_dir: PathBuf,
+    release: ReleaseFile<'static>,
+    fetch_compression: Compression,
+}
+
+#[async_trait]
+impl DataResolver for FilesystemReleaseClient {
+    async fn get_path(&self, path: &str) -> Result<Pin<Box<dyn AsyncBufRead + Send>>> {
+        let path = self.distribution_dir.join(path);
+
+        let f = std::fs::File::open(&path)
+            .map_err(|e| DebianError::RepositoryIoPath(format!("{}", path.display()), e))?;
+
+        Ok(Box::pin(BufReader::new(futures::io::AllowStdIo::new(f))))
+    }
+}
+
+#[async_trait]
+impl ReleaseReader for FilesystemReleaseClient {
+    fn url(&self) -> Result<Url> {
+        Url::from_file_path(&self.distribution_dir)
+            .map_err(|_| DebianError::Other("error converting filesystem path to URL".to_string()))
+    }
+
+    fn release_file(&self) -> &ReleaseFile<'static> {
+        &self.release
+    }
+
+    fn preferred_compression(&self) -> Compression {
+        self.fetch_compression
+    }
+
+    fn set_preferred_compression(&mut self, compression: Compression) {
+        self.fetch_compression = compression;
+    }
+}
 
 /// A writable Debian repository backed by a filesystem.
 pub struct FilesystemRepositoryWriter {
