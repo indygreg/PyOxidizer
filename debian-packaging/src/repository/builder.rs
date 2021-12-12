@@ -605,9 +605,15 @@ impl<'cf> RepositoryBuilder<'cf> {
         }
 
         // The `Filename` is derived from the pool layout scheme in effect.
-        let filename = self
-            .pool_layout
-            .path(component, package, &deb.deb_filename()?);
+        let filename = self.pool_layout.path(
+            component,
+            if let Some(name) = original_control_file.source() {
+                name
+            } else {
+                package
+            },
+            &deb.deb_filename()?,
+        );
         para.add_field_from_string("Filename".into(), filename.clone().into())?;
 
         // `Size` shouldn't be in the original control file, since it is a property of the
