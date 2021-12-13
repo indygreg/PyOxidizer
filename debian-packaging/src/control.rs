@@ -9,7 +9,10 @@ for the canonical source of truth for how control files work.
 */
 
 use {
-    crate::error::{DebianError, Result},
+    crate::{
+        dependency::DependencyList,
+        error::{DebianError, Result},
+    },
     futures::{AsyncBufRead, AsyncBufReadExt},
     pin_project::pin_project,
     std::{
@@ -282,6 +285,11 @@ impl<'a> ControlParagraph<'a> {
         self.field_str(name).map(|x| {
             u64::from_str(x).map_err(|e| DebianError::ControlFieldIntParse(name.to_string(), e))
         })
+    }
+
+    /// Obtain the value of a field, parsed as a [DependencyList].
+    pub fn field_dependency_list(&self, name: &str) -> Option<Result<DependencyList>> {
+        self.field_str(name).map(DependencyList::parse)
     }
 
     /// Obtain the field with the given name as a [ControlFieldValue::Simple], if possible.

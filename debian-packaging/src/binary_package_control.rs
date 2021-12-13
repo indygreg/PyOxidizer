@@ -102,33 +102,23 @@ impl<'a> BinaryPackageControlFile<'a> {
     }
 
     pub fn depends(&self) -> Option<Result<DependencyList>> {
-        self.paragraph
-            .field_str("Depends")
-            .map(DependencyList::parse)
+        self.paragraph.field_dependency_list("Depends")
     }
 
     pub fn recommends(&self) -> Option<Result<DependencyList>> {
-        self.paragraph
-            .field_str("Recommends")
-            .map(DependencyList::parse)
+        self.paragraph.field_dependency_list("Recommends")
     }
 
     pub fn suggests(&self) -> Option<Result<DependencyList>> {
-        self.paragraph
-            .field_str("Suggests")
-            .map(DependencyList::parse)
+        self.paragraph.field_dependency_list("Suggests")
     }
 
     pub fn enhances(&self) -> Option<Result<DependencyList>> {
-        self.paragraph
-            .field_str("Enhances")
-            .map(DependencyList::parse)
+        self.paragraph.field_dependency_list("Enhances")
     }
 
     pub fn pre_depends(&self) -> Option<Result<DependencyList>> {
-        self.paragraph
-            .field_str("Pre-Depends")
-            .map(DependencyList::parse)
+        self.paragraph.field_dependency_list("Pre-Depends")
     }
 
     /// Obtain parsed values of all fields defining dependencies.
