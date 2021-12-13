@@ -9,8 +9,9 @@ implemented:
 * Parsing `Packages` files.
 * Fetching Debian repository files from an HTTP server.
 * Writing changelog files.
-* Writing `.deb` files (deterministically).
+* Reading and writing `.deb` files.
 * Creating repositories.
+* PGP signing and verification operations.
 
 See the crate's documentation for more.
 
