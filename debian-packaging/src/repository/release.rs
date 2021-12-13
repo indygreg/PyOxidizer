@@ -482,7 +482,7 @@ impl<'a> ReleaseFile<'a> {
     pub fn iter_index_files(
         &self,
         checksum: ChecksumType,
-    ) -> Option<Box<(dyn Iterator<Item = Result<ReleaseFileEntry>> + '_)>> {
+    ) -> Option<Box<(dyn Iterator<Item = Result<ReleaseFileEntry<'_>>> + '_)>> {
         if let Some(iter) = self.paragraph.iter_field_lines(checksum.field_name()) {
             Some(Box::new(iter.map(move |v| {
                 // Values are of form: <digest> <size> <path>
@@ -518,7 +518,7 @@ impl<'a> ReleaseFile<'a> {
     pub fn iter_contents_indices(
         &self,
         checksum: ChecksumType,
-    ) -> Option<Box<(dyn Iterator<Item = Result<ContentsFileEntry>> + '_)>> {
+    ) -> Option<Box<(dyn Iterator<Item = Result<ContentsFileEntry<'_>>> + '_)>> {
         if let Some(iter) = self.iter_index_files(checksum) {
             Some(Box::new(iter.filter_map(|entry| match entry {
                 Ok(entry) => entry.to_contents_file_entry().map(Ok),
@@ -539,7 +539,7 @@ impl<'a> ReleaseFile<'a> {
     pub fn iter_packages_indices(
         &self,
         checksum: ChecksumType,
-    ) -> Option<Box<(dyn Iterator<Item = Result<PackagesFileEntry>> + '_)>> {
+    ) -> Option<Box<(dyn Iterator<Item = Result<PackagesFileEntry<'_>>> + '_)>> {
         if let Some(iter) = self.iter_index_files(checksum) {
             Some(Box::new(iter.filter_map(|entry| match entry {
                 Ok(entry) => entry.to_packages_file_entry().map(Ok),
@@ -556,7 +556,7 @@ impl<'a> ReleaseFile<'a> {
     pub fn iter_sources_indices(
         &self,
         checksum: ChecksumType,
-    ) -> Option<Box<(dyn Iterator<Item = Result<SourcesFileEntry>> + '_)>> {
+    ) -> Option<Box<(dyn Iterator<Item = Result<SourcesFileEntry<'_>>> + '_)>> {
         if let Some(iter) = self.iter_index_files(checksum) {
             Some(Box::new(iter.filter_map(|entry| match entry {
                 Ok(entry) => entry.to_sources_file_entry().map(Ok),
@@ -575,7 +575,7 @@ impl<'a> ReleaseFile<'a> {
         component: &str,
         arch: &str,
         is_installer: bool,
-    ) -> Option<PackagesFileEntry> {
+    ) -> Option<PackagesFileEntry<'_>> {
         if let Some(mut iter) = self.iter_packages_indices(checksum) {
             iter.find_map(|entry| {
                 if let Ok(entry) = entry {
