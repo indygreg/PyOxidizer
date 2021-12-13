@@ -34,33 +34,17 @@ pub enum ControlFieldValue<'a> {
     Multiline(Cow<'a, str>),
 }
 
-impl<'a> ControlFieldValue<'a> {
-    /// Construct a [Self::Multiline] variant from a source of lines.
-    ///
-    /// Each line should not have leading whitespace.
-    pub fn multiline_from_lines(lines: impl Iterator<Item = String>) -> Self {
-        Self::Multiline(
-            lines
-                .enumerate()
-                .map(|(i, line)| if i == 0 { line } else { format!(" {}", line) })
-                .collect::<Vec<_>>()
-                .join("\n")
-                .into(),
-        )
-    }
-
-    /// Obtain the field value as a [&str].
-    ///
-    /// The raw stored value is returned. For multiline variants, lines will have leading
-    /// whitespace.
-    pub fn as_str(&self) -> &str {
+impl<'a> AsRef<Cow<'a, str>> for ControlFieldValue<'a> {
+    fn as_ref(&self) -> &Cow<'a, str> {
         match self {
-            Self::Simple(v) => v.as_ref(),
-            Self::Folded(v) => v.as_ref(),
-            Self::Multiline(v) => v.as_ref(),
+            Self::Simple(v) => v,
+            Self::Folded(v) => v,
+            Self::Multiline(v) => v,
         }
     }
+}
 
+impl<'a> ControlFieldValue<'a> {
     /// Obtain an iterator over string values in this field.
     ///
     /// [Self::Simple] variants will emit a single item.
@@ -68,7 +52,7 @@ impl<'a> ControlFieldValue<'a> {
     /// [Self::Folded] and [Self::Multiline] may emit multiple items.
     ///
     /// For variants stored as multiple lines, leading whitespace will be trimmed, as necessary.
-    pub fn iter_values(&self) -> Box<(dyn Iterator<Item = &str> + '_)> {
+    pub fn iter_lines(&self) -> Box<(dyn Iterator<Item = &str> + '_)> {
         match self {
             Self::Simple(v) => Box::new([v.as_ref()].into_iter()),
             Self::Folded(values) => Box::new(values.lines().map(|x| x.trim_start())),
@@ -80,7 +64,7 @@ impl<'a> ControlFieldValue<'a> {
     ///
     /// The result may be non-meaningful for multiple line variants.
     pub fn iter_words(&self) -> Box<(dyn Iterator<Item = &str> + '_)> {
-        Box::new(self.as_str().split_ascii_whitespace())
+        Box::new(self.as_ref().split_ascii_whitespace())
     }
 
     /// Write this value to a writer.
@@ -93,19 +77,19 @@ impl<'a> ControlFieldValue<'a> {
 
         writer.write_all(data.as_bytes())
     }
-}
 
-impl<'a> From<Cow<'a, str>> for ControlFieldValue<'a> {
-    fn from(value: Cow<'a, str>) -> Self {
-        if value.contains('\n') {
-            if value.starts_with(' ') || value.starts_with('\t') {
-                ControlFieldValue::Multiline(value)
-            } else {
-                ControlFieldValue::Folded(value)
-            }
-        } else {
-            ControlFieldValue::Simple(value)
+    /// Obtain the inner string backing this value and consume this instance.
+    pub fn into_inner(self) -> Cow<'a, str> {
+        match self {
+            Self::Simple(v) => v,
+            Self::Folded(v) => v,
+            Self::Multiline(v) => v,
         }
+    }
+
+    /// Convert this strongly typed value into a [ControlField].
+    pub fn to_control_field(self, name: Cow<'a, str>) -> ControlField<'a> {
+        ControlField::new(name, self.into_inner())
     }
 }
 
@@ -113,24 +97,27 @@ impl<'a> From<Cow<'a, str>> for ControlFieldValue<'a> {
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct ControlField<'a> {
     name: Cow<'a, str>,
-    value: ControlFieldValue<'a>,
+    value: Cow<'a, str>,
 }
 
 impl<'a> ControlField<'a> {
-    /// Construct an instance from a field name and typed value.
-    pub fn new(name: Cow<'a, str>, value: ControlFieldValue<'a>) -> Self {
+    /// Construct an instance from a field name and value.
+    pub fn new(name: Cow<'a, str>, value: Cow<'a, str>) -> Self {
         Self { name, value }
     }
 
-    /// Construct a field from a named key and string value.
+    /// Construct an instance from an iterable of lines.
     ///
-    /// The type of the field value will be derived from the key name.
-    ///
-    /// Unknown keys will be rejected.
-    pub fn from_string_value(key: Cow<'a, str>, value: Cow<'a, str>) -> Result<Self> {
-        let value = ControlFieldValue::from(value);
+    /// Each line should not have leading whitespace.
+    pub fn from_lines(name: Cow<'a, str>, lines: impl Iterator<Item = String>) -> Self {
+        let value = lines
+            .enumerate()
+            .map(|(i, line)| if i == 0 { line } else { format!(" {}", line) })
+            .collect::<Vec<_>>()
+            .join("\n")
+            .into();
 
-        Ok(Self { name: key, value })
+        Self { name, value }
     }
 
     /// The name of this field.
@@ -143,28 +130,47 @@ impl<'a> ControlField<'a> {
     /// The value's original file formatting (including newlines and leading whitespace)
     /// is included.
     pub fn value_str(&self) -> &str {
-        self.value.as_str()
+        self.value.as_ref()
     }
 
-    /// Obtain an iterator over string values in this field.
+    /// Obtain the value as a [ControlFieldValue::Simple] if possible.
     ///
-    /// See [ControlField::iter_values] for behavior.
-    pub fn iter_values(&self) -> Box<(dyn Iterator<Item = &str> + '_)> {
-        self.value.iter_values()
+    /// This will fail if the tracked value has multiple lines.
+    pub fn as_simple(&self) -> Result<ControlFieldValue<'a>> {
+        if self.value.as_ref().contains('\n') {
+            Err(DebianError::ControlSimpleValueNoMultiline)
+        } else {
+            Ok(ControlFieldValue::Simple(self.value.clone()))
+        }
     }
 
-    /// Obtain an iterator over string words in this field.
+    /// Obtain the value as a [ControlFieldValue::Folded].
+    pub fn as_folded(&self) -> ControlFieldValue<'a> {
+        ControlFieldValue::Folded(self.value.clone())
+    }
+
+    /// Obtain the value as a [ControlFieldValue::Multiline].
+    pub fn as_multiline(&self) -> ControlFieldValue<'a> {
+        ControlFieldValue::Multiline(self.value.clone())
+    }
+
+    /// Obtain an iterator of words in the value.
+    pub fn iter_words(&self) -> Box<(dyn Iterator<Item = &str> + '_)> {
+        Box::new(self.value.as_ref().split_ascii_whitespace())
+    }
+
+    /// Obtain an iterator of lines in the value.
     ///
-    /// See [ControlField::iter_value_words] for behavior.
-    pub fn iter_value_words(&self) -> Box<(dyn Iterator<Item = &str> + '_)> {
-        self.value.iter_words()
+    /// Leading whitespace from each line is stripped.
+    pub fn iter_lines(&self) -> Box<(dyn Iterator<Item = &str> + '_)> {
+        Box::new(self.value.lines().map(|x| x.trim_start()))
     }
 
     /// Write the contents of this field to a writer.
     pub fn write<W: Write>(&self, writer: &mut W) -> std::io::Result<()> {
         writer.write_all(self.name.as_bytes())?;
         writer.write_all(b": ")?;
-        self.value.write(writer)?;
+        writer.write_all(self.value.as_ref().as_bytes())?;
         writer.write_all(b"\n")
     }
 }
@@ -199,10 +205,8 @@ impl<'a> ControlParagraph<'a> {
     }
 
     /// Add a field defined via strings.
-    pub fn add_field_from_string(&mut self, name: Cow<'a, str>, value: Cow<'a, str>) -> Result<()> {
-        self.fields
-            .push(ControlField::from_string_value(name, value)?);
-        Ok(())
+    pub fn add_field_from_string(&mut self, name: Cow<'a, str>, value: Cow<'a, str>) {
+        self.fields.push(ControlField::new(name, value));
     }
 
     /// Whether a named field is present in this paragraph.
@@ -218,7 +222,7 @@ impl<'a> ControlParagraph<'a> {
     }
 
     /// Obtain the first field with a given name in this paragraph.
-    pub fn first_field(&self, name: &str) -> Option<&ControlField> {
+    pub fn first_field(&self, name: &str) -> Option<&'_ ControlField<'a>> {
         self.fields
             .iter()
             .find(|f| f.name.as_ref().to_lowercase() == name.to_lowercase())
@@ -236,12 +240,19 @@ impl<'a> ControlParagraph<'a> {
         self.first_field(name).map(|f| f.value_str())
     }
 
-    /// Obtain an iterator of values of the first occurrence of a named field.
-    pub fn first_field_iter_values(
-        &self,
-        name: &str,
-    ) -> Option<Box<(dyn Iterator<Item = &str> + '_)>> {
-        self.first_field(name).map(|f| f.iter_values())
+    /// Obtain the field with the given name as a [ControlFieldValue::Simple], if possible.
+    pub fn first_field_simple(&self, name: &str) -> Option<Result<ControlFieldValue<'a>>> {
+        self.first_field(name).map(|cf| cf.as_simple())
+    }
+
+    /// Obtain the field with the given name as a [ControlFieldValue::Folded].
+    pub fn first_field_folded(&self, name: &str) -> Option<ControlFieldValue<'a>> {
+        self.first_field(name).map(|cf| cf.as_folded())
+    }
+
+    /// Obtain the field with the given name as a [ControlFieldValue::Multiline].
+    pub fn first_field_multiline(&self, name: &str) -> Option<ControlFieldValue<'a>> {
+        self.first_field(name).map(|cf| cf.as_multiline())
     }
 
     /// Obtain an iterator of words in the first occurrence of a named field.
@@ -249,7 +260,16 @@ impl<'a> ControlParagraph<'a> {
         &self,
         name: &str,
     ) -> Option<Box<(dyn Iterator<Item = &str> + '_)>> {
-        self.first_field(name).map(|f| f.iter_value_words())
+        self.first_field(name)
+            .map(|f| Box::new(f.value.split_ascii_whitespace()) as Box<dyn Iterator<Item = &str>>)
+    }
+
+    /// Obtain an iterator of lines in the first occurrence of a named field.
+    pub fn first_field_iter_value_lines(
+        &self,
+        name: &str,
+    ) -> Option<Box<(dyn Iterator<Item = &str> + '_)>> {
+        self.first_field(name).map(|f| f.iter_lines())
     }
 
     /// Convert this paragraph to a [HashMap].
@@ -397,7 +417,7 @@ impl ControlFileParser {
             .trim();
 
         self.paragraph
-            .add_field_from_string(Cow::Owned(name.to_string()), Cow::Owned(value.to_string()))?;
+            .add_field_from_string(Cow::Owned(name.to_string()), Cow::Owned(value.to_string()));
 
         Ok(())
     }
@@ -665,26 +685,29 @@ mod tests {
 
         let fields = &p.fields;
         assert_eq!(fields[0].name, "Origin");
-        assert_eq!(fields[0].value, ControlFieldValue::Simple("Debian".into()));
+        assert_eq!(fields[0].value, "Debian");
 
         assert_eq!(fields[3].name, "Version");
-        assert_eq!(fields[3].value, ControlFieldValue::Simple("11.1".into()));
+        assert_eq!(fields[3].value, "11.1");
 
-        assert!(matches!(
-            p.first_field("MD5Sum").unwrap().value,
-            ControlFieldValue::Folded(_)
-        ));
-        assert!(matches!(
-            p.first_field("SHA256").unwrap().value,
-            ControlFieldValue::Folded(_)
-        ));
+        let ml = p.first_field_multiline("MD5Sum").unwrap();
+        assert_eq!(ml.iter_lines().count(), 600);
+        assert_eq!(
+            ml.iter_lines().next().unwrap(),
+            "7fdf4db15250af5368cc52a91e8edbce   738242 contrib/Contents-all"
+        );
 
-        assert_eq!(fields[0].iter_values().collect::<Vec<_>>(), vec!["Debian"]);
+        assert!(p.first_field_multiline("SHA256").is_some());
+
+        assert_eq!(fields[0].iter_words().collect::<Vec<_>>(), vec!["Debian"]);
 
         let values = p
-            .first_field_iter_values("MD5Sum")
+            .first_field_multiline("MD5Sum")
             .unwrap()
+            .iter_lines()
+            .map(|x| x.to_string())
             .collect::<Vec<_>>();
+
         assert_eq!(values.len(), 600);
         assert_eq!(
             values[0],
@@ -700,8 +723,10 @@ mod tests {
         );
 
         let values = p
-            .first_field_iter_values("SHA256")
+            .first_field_multiline("SHA256")
             .unwrap()
+            .iter_lines()
+            .map(|x| x.to_string())
             .collect::<Vec<_>>();
         assert_eq!(values.len(), 600);
         assert_eq!(

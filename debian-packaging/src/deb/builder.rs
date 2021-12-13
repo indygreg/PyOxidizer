@@ -374,8 +374,8 @@ mod tests {
     #[test]
     fn test_write_control_tar_simple() -> Result<()> {
         let mut control_para = ControlParagraph::default();
-        control_para.add_field_from_string("Package".into(), "mypackage".into())?;
-        control_para.add_field_from_string("Architecture".into(), "amd64".into())?;
+        control_para.add_field_from_string("Package".into(), "mypackage".into());
+        control_para.add_field_from_string("Architecture".into(), "amd64".into());
 
         let mut control = ControlFile::default();
         control.add_paragraph(control_para);
@@ -465,8 +465,8 @@ mod tests {
     #[test]
     fn test_write_deb() -> Result<()> {
         let mut control_para = ControlParagraph::default();
-        control_para.add_field_from_string("Package".into(), "mypackage".into())?;
-        control_para.add_field_from_string("Architecture".into(), "amd64".into())?;
+        control_para.add_field_from_string("Package".into(), "mypackage".into());
+        control_para.add_field_from_string("Architecture".into(), "amd64".into());
 
         let mut control = ControlFile::default();
         control.add_paragraph(control_para);

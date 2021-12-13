@@ -499,7 +499,7 @@ impl<'a> ReleaseFile<'a> {
     ) -> Option<Box<(dyn Iterator<Item = Result<ReleaseFileEntry>> + '_)>> {
         if let Some(iter) = self
             .paragraph
-            .first_field_iter_values(checksum.field_name())
+            .first_field_iter_value_lines(checksum.field_name())
         {
             Some(Box::new(iter.map(move |v| {
                 // Values are of form: <digest> <size> <path>

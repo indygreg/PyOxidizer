@@ -15,7 +15,7 @@ Primitives in this module facilitate constructing your own repositories.
 use {
     crate::{
         binary_package_control::BinaryPackageControlFile,
-        control::{ControlField, ControlFieldValue, ControlParagraph},
+        control::{ControlField, ControlParagraph},
         deb::reader::resolve_control_file,
         error::{DebianError, Result},
         io::{read_compressed, ContentDigest, DataResolver, MultiContentDigest, MultiDigester},
@@ -553,10 +553,10 @@ impl<'cf> RepositoryBuilder<'cf> {
                 para.add_field_from_string(
                     "Description".into(),
                     (&description[0..index]).to_string().into(),
-                )?;
-                para.add_field_from_string("Description-md5".into(), hex::encode(digest).into())?;
+                );
+                para.add_field_from_string("Description-md5".into(), hex::encode(digest).into());
             } else {
-                para.add_field_from_string("Description".into(), description.to_string().into())?;
+                para.add_field_from_string("Description".into(), description.to_string().into());
             }
         }
 
@@ -570,17 +570,17 @@ impl<'cf> RepositoryBuilder<'cf> {
             },
             &deb.deb_filename()?,
         );
-        para.add_field_from_string("Filename".into(), filename.clone().into())?;
+        para.add_field_from_string("Filename".into(), filename.clone().into());
 
         // `Size` shouldn't be in the original control file, since it is a property of the
         // `.deb` in which the control file is embedded.
-        para.add_field_from_string("Size".into(), format!("{}", deb.deb_size_bytes()?).into())?;
+        para.add_field_from_string("Size".into(), format!("{}", deb.deb_size_bytes()?).into());
 
         // Add all configured digests for this repository.
         for checksum in &self.checksums {
             let digest = deb.deb_digest(*checksum)?;
 
-            para.add_field_from_string(checksum.field_name().into(), digest.digest_hex().into())?;
+            para.add_field_from_string(checksum.field_name().into(), digest.digest_hex().into());
         }
 
         let component_key = (component.to_string(), arch.to_string());
@@ -903,9 +903,7 @@ impl<'cf> RepositoryBuilder<'cf> {
             );
         }
 
-        fields
-            .into_iter()
-            .map(|(k, v)| ControlField::new(k, ControlFieldValue::Simple(v)))
+        fields.into_iter().map(|(k, v)| ControlField::new(k, v))
     }
 
     /// Derive a [ReleaseFile] representing the content of the `Release` file.
@@ -947,18 +945,20 @@ impl<'cf> RepositoryBuilder<'cf> {
 
             para.add_field(ControlField::new(
                 checksum.field_name().into(),
-                ControlFieldValue::multiline_from_lines(std::iter::once("".to_string()).chain(
-                    entries.iter().map(|(path, (size, digest))| {
+                std::iter::once("".to_string())
+                    .chain(entries.iter().map(|(path, (size, digest))| {
                         format!(
-                            "{:<path_width$} {:>size_width$} {}",
+                            " {:<path_width$} {:>size_width$} {}",
                             path,
                             size,
                             digest,
                             path_width = longest_path,
                             size_width = longest_size
                         )
-                    }),
-                )),
+                    }))
+                    .collect::<Vec<_>>()
+                    .join("\n")
+                    .into(),
             ));
         }
 

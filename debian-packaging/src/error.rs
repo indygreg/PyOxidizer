@@ -44,6 +44,9 @@ pub enum DebianError {
     #[error("Control file not found")]
     ControlFileNotFound,
 
+    #[error("cannot convert to simple field value since value contains line breaks")]
+    ControlSimpleValueNoMultiline,
+
     #[error("unknown entry in binary package archive: {0}")]
     DebUnknownBinaryPackageEntry(String),
 
