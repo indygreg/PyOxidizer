@@ -906,6 +906,8 @@ fn command_release(repo_root: &Path, args: &ArgMatches, repo: &Repository) -> Re
             (true, None, None)
         };
 
+    let up_to = args.value_of("up_to");
+
     let head_commit = repo.head()?.peel_to_commit()?;
     println!(
         "HEAD at {}; to abort release, run `git reset --hard {}`",
@@ -1001,6 +1003,12 @@ fn command_release(repo_root: &Path, args: &ArgMatches, repo: &Repository) -> Re
                 )
                 .with_context(|| format!("releasing {}", package))?;
             }
+
+            // This is the final package we're releasing. Stop here.
+            if Some(*package) == up_to {
+                eprintln!("stopping release process at {}", package);
+                break;
+            }
         }
     }
 
@@ -1018,6 +1026,10 @@ fn command_release(repo_root: &Path, args: &ArgMatches, repo: &Repository) -> Re
                 version_bump,
             )
             .with_context(|| format!("incrementing version for {}", package))?;
+        }
+
+        if Some(*package) == up_to {
+            break;
         }
     }
 
@@ -1284,6 +1296,12 @@ fn main_impl() -> Result<()> {
                         .long("start-at")
                         .takes_value(true)
                         .help("Where to resume the release process"),
+                )
+                .arg(
+                    Arg::with_name("up_to")
+                        .long("up-to")
+                        .takes_value(true)
+                        .help("Name of final package to release"),
                 ),
         )
         .get_matches();
