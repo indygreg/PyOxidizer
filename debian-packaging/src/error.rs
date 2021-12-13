@@ -50,6 +50,9 @@ pub enum DebianError {
     #[error("required control paragraph field not found: {0}")]
     ControlRequiredFieldMissing(String),
 
+    #[error("control field {0} can not be parsed as an integer: {0:?}")]
+    ControlFieldIntParse(String, std::num::ParseIntError),
+
     #[error("unknown entry in binary package archive: {0}")]
     DebUnknownBinaryPackageEntry(String),
 

@@ -4,16 +4,13 @@
 
 /*! Debian binary package control files. */
 
-use {
-    crate::{
-        control::ControlParagraph,
-        dependency::{DependencyList, PackageDependencyFields},
-        error::{DebianError, Result},
-        io::ContentDigest,
-        package_version::PackageVersion,
-        repository::{builder::DebPackageReference, release::ChecksumType},
-    },
-    std::str::FromStr,
+use crate::{
+    control::ControlParagraph,
+    dependency::{DependencyList, PackageDependencyFields},
+    error::{DebianError, Result},
+    io::ContentDigest,
+    package_version::PackageVersion,
+    repository::{builder::DebPackageReference, release::ChecksumType},
 };
 
 /// A Debian binary package control file.
@@ -93,15 +90,11 @@ impl<'a> BinaryPackageControlFile<'a> {
     }
 
     pub fn installed_size(&self) -> Option<Result<usize>> {
-        self.paragraph
-            .field_str("Installed-Size")
-            .map(|x| Ok(usize::from_str(x)?))
+        self.paragraph.field_usize("Installed-Size")
     }
 
     pub fn size(&self) -> Option<Result<usize>> {
-        self.paragraph
-            .field_str("Size")
-            .map(|x| Ok(usize::from_str(x)?))
+        self.paragraph.field_usize("Size")
     }
 
     pub fn built_using(&self) -> Option<&str> {

@@ -16,6 +16,7 @@ use {
         borrow::Cow,
         collections::HashMap,
         io::{BufRead, Write},
+        str::FromStr,
     },
 };
 
@@ -267,6 +268,20 @@ impl<'a> ControlParagraph<'a> {
     /// The field is [true] iff its string value is `yes`.
     pub fn field_bool(&self, name: &str) -> Option<bool> {
         self.field_str(name).map(|v| matches!(v, "yes"))
+    }
+
+    /// Obtain the value of a field, evaluated as a [usize].
+    pub fn field_usize(&self, name: &str) -> Option<Result<usize>> {
+        self.field_str(name).map(|x| {
+            usize::from_str(x).map_err(|e| DebianError::ControlFieldIntParse(name.to_string(), e))
+        })
+    }
+
+    /// Obtain the value of a field, evaluated as a [u64].
+    pub fn field_u64(&self, name: &str) -> Option<Result<u64>> {
+        self.field_str(name).map(|x| {
+            u64::from_str(x).map_err(|e| DebianError::ControlFieldIntParse(name.to_string(), e))
+        })
     }
 
     /// Obtain the field with the given name as a [ControlFieldValue::Simple], if possible.
