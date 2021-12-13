@@ -91,7 +91,7 @@ pub trait ReleaseReader: DataResolver + Sync {
     fn url(&self) -> Result<url::Url>;
 
     /// Obtain the parsed `[In]Release` file from which this reader is derived.
-    fn release_file(&self) -> &ReleaseFile<'static>;
+    fn release_file(&self) -> &ReleaseFile<'_>;
 
     /// Obtain the checksum flavor of content to retrieve.
     ///
