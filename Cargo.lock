@@ -71,23 +71,11 @@ checksum = "8b26702f315f53b6071259e15dd9d64528213b44d61de1ec926eca7715d62203"
 
 [[package]]
 name = "apple-bundles"
-version = "0.6.0"
+version = "0.7.0-pre"
 dependencies = [
  "anyhow",
  "plist",
- "tugger-file-manifest 0.7.0-pre",
- "walkdir",
-]
-
-[[package]]
-name = "apple-bundles"
-version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "48681b45ff6789616b243c0758d6d97639951f937ccc0ea635363505d72cdec3"
-dependencies = [
- "anyhow",
- "plist",
- "tugger-file-manifest 0.6.0",
+ "tugger-file-manifest",
  "walkdir",
 ]
 
@@ -96,7 +84,7 @@ name = "apple-codesign"
 version = "0.8.0-pre"
 dependencies = [
  "anyhow",
- "apple-bundles 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "apple-bundles",
  "base64 0.13.0",
  "bcder",
  "bitflags",
@@ -772,7 +760,7 @@ dependencies = [
  "chrono",
  "is_executable",
  "thiserror",
- "tugger-file-manifest 0.7.0-pre",
+ "tugger-file-manifest",
 ]
 
 [[package]]
@@ -1032,7 +1020,7 @@ dependencies = [
  "tar",
  "thiserror",
  "tokio",
- "tugger-file-manifest 0.7.0-pre",
+ "tugger-file-manifest",
  "url",
  "xz2",
  "zstd",
@@ -2936,7 +2924,7 @@ dependencies = [
  "tugger-binary-analysis",
  "tugger-code-signing",
  "tugger-common",
- "tugger-file-manifest 0.7.0-pre",
+ "tugger-file-manifest",
  "tugger-licensing",
  "tugger-rust-toolchain",
  "tugger-windows",
@@ -2976,7 +2964,7 @@ dependencies = [
  "pyo3",
  "python-packaging",
  "python-packed-resources",
- "tugger-file-manifest 0.7.0-pre",
+ "tugger-file-manifest",
  "winapi",
  "zip",
 ]
@@ -2999,7 +2987,7 @@ dependencies = [
  "spdx",
  "tempfile",
  "time 0.3.5",
- "tugger-file-manifest 0.7.0-pre",
+ "tugger-file-manifest",
  "tugger-licensing",
  "walkdir",
  "zip",
@@ -4085,7 +4073,7 @@ name = "tugger"
 version = "0.14.0-pre"
 dependencies = [
  "anyhow",
- "apple-bundles 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "apple-bundles",
  "apple-codesign",
  "atty",
  "chrono",
@@ -4105,7 +4093,7 @@ dependencies = [
  "tugger-apple",
  "tugger-code-signing",
  "tugger-common",
- "tugger-file-manifest 0.7.0-pre",
+ "tugger-file-manifest",
  "tugger-snapcraft",
  "tugger-windows",
  "tugger-windows-codesign",
@@ -4145,7 +4133,7 @@ name = "tugger-code-signing"
 version = "0.6.0-pre"
 dependencies = [
  "anyhow",
- "apple-bundles 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "apple-bundles",
  "apple-codesign",
  "bcder",
  "cryptographic-message-syntax",
@@ -4155,7 +4143,7 @@ dependencies = [
  "slog",
  "tempfile",
  "thiserror",
- "tugger-file-manifest 0.7.0-pre",
+ "tugger-file-manifest",
  "tugger-windows-codesign",
  "x509-certificate",
  "yasna",
@@ -4177,12 +4165,6 @@ dependencies = [
  "url",
  "zip",
 ]
-
-[[package]]
-name = "tugger-file-manifest"
-version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "29e91ac69050080a0a9fd50af05da5baa8562347ca7b8909f8ed3adbc6ef026f"
 
 [[package]]
 name = "tugger-file-manifest"
@@ -4228,7 +4210,7 @@ dependencies = [
  "tempfile",
  "toml",
  "tugger-common",
- "tugger-file-manifest 0.7.0-pre",
+ "tugger-file-manifest",
  "xz2",
  "zstd",
 ]
@@ -4244,7 +4226,7 @@ dependencies = [
  "serde_yaml",
  "slog",
  "tugger-common",
- "tugger-file-manifest 0.7.0-pre",
+ "tugger-file-manifest",
 ]
 
 [[package]]
@@ -4289,7 +4271,7 @@ dependencies = [
  "slog",
  "tempfile",
  "tugger-common",
- "tugger-file-manifest 0.7.0-pre",
+ "tugger-file-manifest",
  "tugger-windows",
  "tugger-windows-codesign",
  "url",
