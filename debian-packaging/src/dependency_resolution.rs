@@ -225,9 +225,11 @@ struct VirtualBinaryPackageEntry<'file, 'data: 'file> {
     provided_version: Option<DependencyVersionConstraint>,
 
     /// The package providing it.
+    #[allow(unused)]
     name: String,
 
     /// The version of the package providing it.
+    #[allow(unused)]
     version: PackageVersion,
 }
 
