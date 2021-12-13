@@ -49,8 +49,8 @@ default-features = false
 features = ["rustls-tls", "stream"]
 
 [dependencies.tugger-file-manifest]
-version = "0.7.0-pre"
-path = "../tugger-file-manifest"
+version = "0.6.0"
+# path = "../tugger-file-manifest"
 
 [dev-dependencies]
 glob = "0.3"
