@@ -25,7 +25,7 @@ use {
     },
     async_trait::async_trait,
     futures::{AsyncRead, AsyncReadExt},
-    std::{borrow::Cow, pin::Pin},
+    std::{borrow::Cow, collections::HashMap, pin::Pin},
 };
 
 pub mod builder;
@@ -138,6 +138,48 @@ pub trait ReleaseReader: DataResolver + Sync {
         )
     }
 
+    /// Like [Self::packages_indices_entries()] except it deduplicates entries.
+    ///
+    /// If there are multiple entries for a `Packages` file with varying compression, the most
+    /// preferred compression format is returned.
+    fn packages_indices_entries_preferred_compression(&self) -> Result<Vec<PackagesFileEntry>> {
+        let mut entries = HashMap::new();
+
+        for entry in self.packages_indices_entries()? {
+            entries
+                .entry((
+                    entry.component.clone(),
+                    entry.architecture.clone(),
+                    entry.is_installer,
+                ))
+                .or_insert_with(Vec::new)
+                .push(entry);
+        }
+
+        entries
+            .into_values()
+            .map(|candidates| {
+                if let Some(entry) = candidates
+                    .iter()
+                    .find(|entry| entry.compression == self.preferred_compression())
+                {
+                    Ok(entry.clone())
+                } else {
+                    for compression in Compression::default_preferred_order() {
+                        if let Some(entry) = candidates
+                            .iter()
+                            .find(|entry| entry.compression == compression)
+                        {
+                            return Ok(entry.clone());
+                        }
+                    }
+
+                    Err(DebianError::RepositoryReadPackagesIndicesEntryNotFound)
+                }
+            })
+            .collect::<Result<Vec<_>>>()
+    }
+
     /// Resolve indices for `Contents` files.
     ///
     /// Only entries for the checksum as defined by [Self::retrieve_checksum()] are returned.
@@ -187,33 +229,14 @@ pub trait ReleaseReader: DataResolver + Sync {
         architecture: &str,
         is_installer: bool,
     ) -> Result<PackagesFileEntry> {
-        let entries = self
-            .packages_indices_entries()?
+        self.packages_indices_entries_preferred_compression()?
             .into_iter()
-            .filter(|entry| {
+            .find(|entry| {
                 entry.component == component
                     && entry.architecture == architecture
                     && entry.is_installer == is_installer
             })
-            .collect::<Vec<_>>();
-
-        if let Some(entry) = entries
-            .iter()
-            .find(|entry| entry.compression == self.preferred_compression())
-        {
-            Ok(entry.clone())
-        } else {
-            for compression in Compression::default_preferred_order() {
-                if let Some(entry) = entries
-                    .iter()
-                    .find(|entry| entry.compression == compression)
-                {
-                    return Ok(entry.clone());
-                }
-            }
-
-            Err(DebianError::RepositoryReadPackagesIndicesEntryNotFound)
-        }
+            .ok_or(DebianError::RepositoryReadPackagesIndicesEntryNotFound)
     }
 
     /// Resolve packages given parameters to resolve a `Packages` file.
