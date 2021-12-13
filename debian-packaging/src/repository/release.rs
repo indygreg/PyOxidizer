@@ -130,7 +130,7 @@ pub struct ReleaseFileEntry<'a> {
     pub digest: ReleaseFileDigest<'a>,
 
     /// The size of the file in bytes.
-    pub size: usize,
+    pub size: u64,
 }
 
 /// A type of [ReleaseFileEntry] that describes a `Contents` file.
@@ -499,7 +499,7 @@ impl<'a> ReleaseFile<'a> {
                 }
 
                 let digest = ReleaseFileDigest::new(checksum, digest);
-                let size = usize::from_str(size)?;
+                let size = u64::from_str(size)?;
 
                 Ok(ReleaseFileEntry { path, digest, size })
             })))

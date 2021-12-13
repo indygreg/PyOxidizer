@@ -176,16 +176,16 @@ pub async fn drain_reader(reader: impl AsyncRead) -> std::io::Result<u64> {
 #[pin_project]
 pub struct ContentValidatingReader<R> {
     hasher: Option<Box<dyn pgp::crypto::Hasher + Send>>,
-    expected_size: usize,
+    expected_size: u64,
     expected_digest: ContentDigest,
     #[pin]
     source: R,
-    bytes_read: usize,
+    bytes_read: u64,
 }
 
 impl<R> ContentValidatingReader<R> {
     /// Create a new instance bound to a source and having expected size and content digest.
-    pub fn new(source: R, expected_size: usize, expected_digest: ContentDigest) -> Self {
+    pub fn new(source: R, expected_size: u64, expected_digest: ContentDigest) -> Self {
         Self {
             hasher: Some(expected_digest.new_hasher()),
             expected_size,
@@ -216,7 +216,7 @@ where
                         panic!("hasher destroyed prematurely");
                     }
 
-                    *this.bytes_read += size;
+                    *this.bytes_read += size as u64;
                 }
 
                 match this.bytes_read.cmp(&this.expected_size) {
@@ -458,7 +458,7 @@ pub trait DataResolver: Sync {
     async fn get_path_with_digest_verification(
         &self,
         path: &str,
-        expected_size: usize,
+        expected_size: u64,
         expected_digest: ContentDigest,
     ) -> Result<Pin<Box<dyn AsyncRead + Send>>> {
         Ok(Box::pin(ContentValidatingReader::new(
@@ -484,7 +484,7 @@ pub trait DataResolver: Sync {
         &self,
         path: &str,
         compression: Compression,
-        expected_size: usize,
+        expected_size: u64,
         expected_digest: ContentDigest,
     ) -> Result<Pin<Box<dyn AsyncRead + Send>>> {
         let reader = self

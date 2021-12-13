@@ -32,7 +32,6 @@ use {
         borrow::Cow,
         collections::{BTreeMap, BTreeSet, HashMap},
         pin::Pin,
-        str::FromStr,
     },
 };
 
@@ -85,7 +84,7 @@ pub trait DebPackageReference<'cf> {
     /// Obtain the size in bytes of the `.deb` file.
     ///
     /// This becomes the `Size` field in `Packages*` control files.
-    fn deb_size_bytes(&self) -> Result<usize>;
+    fn deb_size_bytes(&self) -> Result<u64>;
 
     /// Obtains the binary digest of this file given a checksum flavor.
     ///
@@ -120,8 +119,8 @@ impl InMemoryDebFile {
 }
 
 impl<'cf> DebPackageReference<'cf> for InMemoryDebFile {
-    fn deb_size_bytes(&self) -> Result<usize> {
-        Ok(self.data.len())
+    fn deb_size_bytes(&self) -> Result<u64> {
+        Ok(self.data.len() as u64)
     }
 
     fn deb_digest(&self, checksum: ChecksumType) -> Result<ContentDigest> {
@@ -192,7 +191,7 @@ pub struct BinaryPackagePoolArtifact<'a> {
     /// The file path relative to the repository root.
     pub path: &'a str,
     /// The expected size of the file.
-    pub size: usize,
+    pub size: u64,
     /// The expected digest of the file.
     pub digest: ContentDigest,
 }
@@ -211,7 +210,7 @@ pub enum PublishEvent {
     PoolArtifactsToPublish(usize),
 
     /// A pool artifact with the given path and size was created.
-    PoolArtifactCreated(String, usize),
+    PoolArtifactCreated(String, u64),
 
     /// The path to an index file to write.
     IndexFileToWrite(String),
@@ -632,11 +631,10 @@ impl<'cf> RepositoryBuilder<'cf> {
                 let path = para
                     .field_str("Filename")
                     .expect("Filename should have been populated at package add time");
-                let size = usize::from_str(
-                    para.field_str("Size")
-                        .expect("Size should have been populated at package add time"),
-                )
-                .expect("Size should parse to an integer");
+                let size = para
+                    .field_u64("Size")
+                    .expect("Size should have been populated at package add time")
+                    .expect("Size should parse to an integer");
 
                 // Checksums are stored in a BTreeSet and sort from weakest to strongest. So use the
                 // strongest available checksum.
@@ -1199,7 +1197,7 @@ mod test {
         async fn verify_path<'path>(
             &self,
             path: &'path str,
-            _expected_content: Option<(usize, ContentDigest)>,
+            _expected_content: Option<(u64, ContentDigest)>,
         ) -> Result<RepositoryPathVerification<'path>> {
             Ok(RepositoryPathVerification {
                 path,

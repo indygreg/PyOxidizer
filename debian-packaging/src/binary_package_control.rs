@@ -89,12 +89,12 @@ impl<'a> BinaryPackageControlFile<'a> {
         self.paragraph.field_str("Homepage")
     }
 
-    pub fn installed_size(&self) -> Option<Result<usize>> {
-        self.paragraph.field_usize("Installed-Size")
+    pub fn installed_size(&self) -> Option<Result<u64>> {
+        self.paragraph.field_u64("Installed-Size")
     }
 
-    pub fn size(&self) -> Option<Result<usize>> {
-        self.paragraph.field_usize("Size")
+    pub fn size(&self) -> Option<Result<u64>> {
+        self.paragraph.field_u64("Size")
     }
 
     pub fn built_using(&self) -> Option<&str> {
@@ -128,7 +128,7 @@ impl<'a> BinaryPackageControlFile<'a> {
 }
 
 impl<'cf, 'a: 'cf> DebPackageReference<'cf> for BinaryPackageControlFile<'a> {
-    fn deb_size_bytes(&self) -> Result<usize> {
+    fn deb_size_bytes(&self) -> Result<u64> {
         self.size()
             .ok_or_else(|| DebianError::ControlRequiredFieldMissing("Size".to_string()))?
     }

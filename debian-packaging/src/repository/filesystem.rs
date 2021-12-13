@@ -141,7 +141,7 @@ impl RepositoryWriter for FilesystemRepositoryWriter {
     async fn verify_path<'path>(
         &self,
         path: &'path str,
-        expected_content: Option<(usize, ContentDigest)>,
+        expected_content: Option<(u64, ContentDigest)>,
     ) -> Result<RepositoryPathVerification<'path>> {
         let dest_path = self.root_dir.join(path);
 
@@ -169,7 +169,8 @@ impl RepositoryWriter for FilesystemRepositoryWriter {
                         let size = reader
                             .read(&mut buf[..])
                             .await
-                            .map_err(|e| DebianError::RepositoryIoPath(path.to_string(), e))?;
+                            .map_err(|e| DebianError::RepositoryIoPath(path.to_string(), e))?
+                            as u64;
 
                         if size >= remaining || size == 0 {
                             break;

@@ -495,7 +495,7 @@ pub trait RepositoryWriter: Sync {
     async fn verify_path<'path>(
         &self,
         path: &'path str,
-        expected_content: Option<(usize, ContentDigest)>,
+        expected_content: Option<(u64, ContentDigest)>,
     ) -> Result<RepositoryPathVerification<'path>>;
 
     /// Write data to a given path.

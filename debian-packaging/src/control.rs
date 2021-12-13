@@ -273,13 +273,6 @@ impl<'a> ControlParagraph<'a> {
         self.field_str(name).map(|v| matches!(v, "yes"))
     }
 
-    /// Obtain the value of a field, evaluated as a [usize].
-    pub fn field_usize(&self, name: &str) -> Option<Result<usize>> {
-        self.field_str(name).map(|x| {
-            usize::from_str(x).map_err(|e| DebianError::ControlFieldIntParse(name.to_string(), e))
-        })
-    }
-
     /// Obtain the value of a field, evaluated as a [u64].
     pub fn field_u64(&self, name: &str) -> Option<Result<u64>> {
         self.field_str(name).map(|x| {
