@@ -333,7 +333,7 @@ pub trait ReleaseReader: DataResolver + Sync {
     /// The caller can specify a filter function to choose which packages to retrieve.
     /// Filtering works in 2 stages.
     ///
-    /// First, `packages_file_filter` is called with each [ReleaseFileEntry] defining
+    /// First, `packages_file_filter` is called with each [PackagesFileEntry] defining
     /// a `Packages*` file. If the filter returns true, this list of packages will be
     /// retrieved and expanded.
     ///
