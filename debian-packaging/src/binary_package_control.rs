@@ -46,19 +46,13 @@ impl<'a> From<ControlParagraph<'a>> for BinaryPackageControlFile<'a> {
 }
 
 impl<'a> BinaryPackageControlFile<'a> {
-    fn required_field(&self, field: &'static str) -> Result<&str> {
-        self.paragraph
-            .field_str(field)
-            .ok_or(DebianError::BinaryPackageControlRequiredFiledMissing(field))
-    }
-
     pub fn package(&self) -> Result<&str> {
-        self.required_field("Package")
+        self.paragraph.required_field_str("Package")
     }
 
     /// The `Version` field as its original string.
     pub fn version_str(&self) -> Result<&str> {
-        self.required_field("Version")
+        self.paragraph.required_field_str("Version")
     }
 
     /// The `Version` field parsed into a [PackageVersion].
@@ -67,15 +61,15 @@ impl<'a> BinaryPackageControlFile<'a> {
     }
 
     pub fn architecture(&self) -> Result<&str> {
-        self.required_field("Architecture")
+        self.paragraph.required_field_str("Architecture")
     }
 
     pub fn maintainer(&self) -> Result<&str> {
-        self.required_field("Maintainer")
+        self.paragraph.required_field_str("Maintainer")
     }
 
     pub fn description(&self) -> Result<&str> {
-        self.required_field("Description")
+        self.paragraph.required_field_str("Description")
     }
 
     pub fn source(&self) -> Option<&str> {
@@ -153,9 +147,7 @@ impl<'a> BinaryPackageControlFile<'a> {
 impl<'cf, 'a: 'cf> DebPackageReference<'cf> for BinaryPackageControlFile<'a> {
     fn deb_size_bytes(&self) -> Result<usize> {
         self.size()
-            .ok_or(DebianError::BinaryPackageControlRequiredFiledMissing(
-                "Size",
-            ))?
+            .ok_or_else(|| DebianError::ControlRequiredFieldMissing("Size".to_string()))?
     }
 
     fn deb_digest(&self, checksum: ChecksumType) -> Result<ContentDigest> {
@@ -163,7 +155,7 @@ impl<'cf, 'a: 'cf> DebPackageReference<'cf> for BinaryPackageControlFile<'a> {
             .paragraph
             .field_str(checksum.field_name())
             .ok_or_else(|| {
-                DebianError::BinaryPackageControlRequiredFiledMissing(checksum.field_name())
+                DebianError::ControlRequiredFieldMissing(checksum.field_name().to_string())
             })?;
 
         let digest = hex::decode(hex_digest)?;
@@ -176,9 +168,10 @@ impl<'cf, 'a: 'cf> DebPackageReference<'cf> for BinaryPackageControlFile<'a> {
     }
 
     fn deb_filename(&self) -> Result<String> {
-        let filename = self.paragraph.field_str("Filename").ok_or(
-            DebianError::BinaryPackageControlRequiredFiledMissing("Filename"),
-        )?;
+        let filename = self
+            .paragraph
+            .field_str("Filename")
+            .ok_or_else(|| DebianError::ControlRequiredFieldMissing("Filename".to_string()))?;
 
         Ok(if let Some((_, s)) = filename.rsplit_once('/') {
             s.to_string()

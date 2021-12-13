@@ -246,9 +246,20 @@ impl<'a> ControlParagraph<'a> {
             .find(|f| f.name.as_ref().to_lowercase() == name.to_lowercase())
     }
 
+    /// Obtain the named field and error if it isn't defined.
+    pub fn required_field(&self, name: &str) -> Result<&'_ ControlField<'a>> {
+        self.field(name)
+            .ok_or_else(|| DebianError::ControlRequiredFieldMissing(name.to_string()))
+    }
+
     /// Obtain the raw string value of the named field.
     pub fn field_str(&self, name: &str) -> Option<&str> {
         self.field(name).map(|f| f.value_str())
+    }
+
+    /// Obtain the raw string value of the named field, erroring if the field is not present.
+    pub fn required_field_str(&self, name: &str) -> Result<&str> {
+        Ok(self.required_field(name)?.value_str())
     }
 
     /// Obtain the value of a field, evaluated as a boolean.

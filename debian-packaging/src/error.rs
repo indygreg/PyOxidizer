@@ -47,6 +47,9 @@ pub enum DebianError {
     #[error("cannot convert to simple field value since value contains line breaks")]
     ControlSimpleValueNoMultiline,
 
+    #[error("required control paragraph field not found: {0}")]
+    ControlRequiredFieldMissing(String),
+
     #[error("unknown entry in binary package archive: {0}")]
     DebUnknownBinaryPackageEntry(String),
 
@@ -115,9 +118,6 @@ pub enum DebianError {
 
     #[error("debian_revision component has illegal character: {0}")]
     DebianRevisionIllegalChar(String),
-
-    #[error("required field missing in binary package control file: {0}")]
-    BinaryPackageControlRequiredFiledMissing(&'static str),
 
     #[error("{0}")]
     Other(String),
