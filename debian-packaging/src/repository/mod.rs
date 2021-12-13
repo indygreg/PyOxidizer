@@ -24,7 +24,7 @@ use {
         },
     },
     async_trait::async_trait,
-    futures::{AsyncRead, AsyncReadExt},
+    futures::{AsyncRead, AsyncReadExt, StreamExt, TryStreamExt},
     std::{borrow::Cow, collections::HashMap, pin::Pin},
 };
 
@@ -34,6 +34,19 @@ pub mod filesystem;
 #[cfg(feature = "http")]
 pub mod http;
 pub mod release;
+
+pub struct BinaryPackageFetch<'a> {
+    /// The binary package control paragraph from which this entry came.
+    pub control_file: BinaryPackageControlFile<'a>,
+    /// The relative path of this binary package.
+    ///
+    /// Corresponds to the `Filename` field.
+    pub path: String,
+    /// The expected size of the retrieved file.
+    pub size: u64,
+    /// The expected content digest of the retrieved file.
+    pub digest: ContentDigest,
+}
 
 /// Debian repository reader bound to the root of the repository.
 ///
@@ -281,6 +294,71 @@ pub trait ReleaseReader: DataResolver + Sync {
         let entry = self.packages_entry(component, arch, is_installer)?;
 
         self.resolve_packages_from_entry(&entry).await
+    }
+
+    /// Retrieve fetch instructions for binary packages.
+    ///
+    /// The caller can specify a filter function to choose which packages to retrieve.
+    /// Filtering works in 2 stages.
+    ///
+    /// First, `packages_file_filter` is called with each [ReleaseFileEntry] defining
+    /// a `Packages*` file. If the filter returns true, this list of packages will be
+    /// retrieved and expanded.
+    ///
+    /// Second, `binary_package_filter` is called for each binary package entry seen
+    /// in parsed `Packages*` files. If the function returns true, this binary package
+    /// will be retrieved.
+    async fn resolve_package_fetches(
+        &self,
+        packages_file_filter: Box<dyn (Fn(PackagesFileEntry) -> bool) + Send>,
+        binary_package_filter: Box<dyn (Fn(BinaryPackageControlFile) -> bool) + Send>,
+        threads: usize,
+    ) -> Result<Vec<BinaryPackageFetch<'_>>> {
+        let packages_entries = self.packages_indices_entries_preferred_compression()?;
+
+        let fs = packages_entries
+            .iter()
+            .filter(|entry| packages_file_filter((*entry).clone()))
+            .map(|entry| self.resolve_packages_from_entry(entry))
+            .collect::<Vec<_>>();
+
+        let mut packages_fs = futures::stream::iter(fs).buffer_unordered(threads);
+
+        let mut fetches = vec![];
+
+        while let Some(pl) = packages_fs.try_next().await? {
+            for cf in pl.into_iter() {
+                // Needed by IDE for type hinting for some reason.
+                let cf: BinaryPackageControlFile = cf;
+
+                if binary_package_filter(cf.clone()) {
+                    let path = cf.as_ref().required_field_str("Filename")?.to_string();
+
+                    let size = cf.as_ref().field_u64("Size").ok_or_else(|| {
+                        DebianError::ControlRequiredFieldMissing("Size".to_string())
+                    })??;
+
+                    let digest = ChecksumType::preferred_order()
+                        .find_map(|checksum| {
+                            cf.as_ref()
+                                .field_str(checksum.field_name())
+                                .map(|hex_digest| {
+                                    ContentDigest::from_hex_checksum(checksum, hex_digest)
+                                })
+                        })
+                        .ok_or(DebianError::RepositoryReadCouldNotDeterminePackageDigest)??;
+
+                    fetches.push(BinaryPackageFetch {
+                        control_file: cf,
+                        path,
+                        size,
+                        digest,
+                    });
+                }
+            }
+        }
+
+        Ok(fetches)
     }
 
     /// Resolve a reference to a `Contents` file to fetch given search criteria.
