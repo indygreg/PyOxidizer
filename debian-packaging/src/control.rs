@@ -251,6 +251,13 @@ impl<'a> ControlParagraph<'a> {
         self.field(name).map(|f| f.value_str())
     }
 
+    /// Obtain the value of a field, evaluated as a boolean.
+    ///
+    /// The field is [true] iff its string value is `yes`.
+    pub fn field_bool(&self, name: &str) -> Option<bool> {
+        self.field_str(name).map(|v| matches!(v, "yes"))
+    }
+
     /// Obtain the field with the given name as a [ControlFieldValue::Simple], if possible.
     pub fn field_simple(&self, name: &str) -> Option<Result<ControlFieldValue<'a>>> {
         self.field(name).map(|cf| cf.as_simple())

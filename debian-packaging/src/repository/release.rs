@@ -6,7 +6,7 @@
 
 use {
     crate::{
-        control::{ControlField, ControlParagraph, ControlParagraphReader},
+        control::{ControlParagraph, ControlParagraphReader},
         error::{DebianError, Result},
         io::ContentDigest,
         pgp::MyHasher,
@@ -380,18 +380,6 @@ impl<'a> ReleaseFile<'a> {
         self.signatures.as_ref()
     }
 
-    /// Obtain the given field.
-    pub fn field(&self, name: &str) -> Option<&ControlField<'_>> {
-        self.paragraph.field(name)
-    }
-
-    /// Obtain the field value, evaluated as a boolean.
-    ///
-    /// The field is [true] iff its string value is `yes`.
-    pub fn field_bool(&self, name: &str) -> Option<bool> {
-        self.paragraph.field_str(name).map(|v| matches!(v, "yes"))
-    }
-
     /// Description of this repository.
     pub fn description(&self) -> Option<&str> {
         self.paragraph.field_str("Description")
@@ -468,19 +456,19 @@ impl<'a> ReleaseFile<'a> {
     ///
     /// `true` is returned iff the value is `yes`. `no` and other values result in `false`.
     pub fn not_automatic(&self) -> Option<bool> {
-        self.field_bool("NotAutomatic")
+        self.paragraph.field_bool("NotAutomatic")
     }
 
     /// Evaluated value for `ButAutomaticUpgrades` field.
     ///
     /// `true` is returned iff the value is `yes`. `no` and other values result in `false`.
     pub fn but_automatic_upgrades(&self) -> Option<bool> {
-        self.field_bool("ButAutomaticUpgrades")
+        self.paragraph.field_bool("ButAutomaticUpgrades")
     }
 
     /// Whether to acquire files by hash.
     pub fn acquire_by_hash(&self) -> Option<bool> {
-        self.field_bool("Acquire-By-Hash")
+        self.paragraph.field_bool("Acquire-By-Hash")
     }
 
     /// Obtain indexed files in this repository.

@@ -541,7 +541,7 @@ impl<'cf> RepositoryBuilder<'cf> {
         // The `Description` field is a bit wonky in Packages files. Instead of capturing multiline
         // values, `Description` is just the first line and a `Description-md5` contains the md5
         // of the multiline value.
-        if let Some(description) = original_control_file.field("Description") {
+        if let Some(description) = original_control_file.as_ref().field("Description") {
             let description = description.value_str();
 
             if let Some(index) = description.find('\n') {
@@ -1277,7 +1277,7 @@ mod test {
         {
             let dest_filename = builder.add_binary_deb("main", package)?;
 
-            let source_filename = package.field_str("Filename").unwrap();
+            let source_filename = package.as_ref().field_str("Filename").unwrap();
 
             mapping_resolver.add_path_map(dest_filename, source_filename);
         }

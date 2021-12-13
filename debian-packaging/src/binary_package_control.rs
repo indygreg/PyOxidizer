@@ -6,7 +6,7 @@
 
 use {
     crate::{
-        control::{ControlField, ControlParagraph},
+        control::ControlParagraph,
         dependency::{DependencyList, PackageDependencyFields},
         error::{DebianError, Result},
         io::ContentDigest,
@@ -46,23 +46,6 @@ impl<'a> From<ControlParagraph<'a>> for BinaryPackageControlFile<'a> {
 }
 
 impl<'a> BinaryPackageControlFile<'a> {
-    /// Obtain the the given field.
-    pub fn field(&self, name: &str) -> Option<&ControlField<'_>> {
-        self.paragraph.field(name)
-    }
-
-    /// Obtain the string value of the given field.
-    pub fn field_str(&self, name: &str) -> Option<&str> {
-        self.paragraph.field_str(name)
-    }
-
-    /// Obtain the value of a field, evaluated as a boolean.
-    ///
-    /// The field is [true] iff its string value is `yes`.
-    pub fn field_bool(&self, name: &str) -> Option<bool> {
-        self.paragraph.field_str(name).map(|v| matches!(v, "yes"))
-    }
-
     fn required_field(&self, field: &'static str) -> Result<&str> {
         self.paragraph
             .field_str(field)
@@ -176,9 +159,12 @@ impl<'cf, 'a: 'cf> DebPackageReference<'cf> for BinaryPackageControlFile<'a> {
     }
 
     fn deb_digest(&self, checksum: ChecksumType) -> Result<ContentDigest> {
-        let hex_digest = self.field_str(checksum.field_name()).ok_or_else(|| {
-            DebianError::BinaryPackageControlRequiredFiledMissing(checksum.field_name())
-        })?;
+        let hex_digest = self
+            .paragraph
+            .field_str(checksum.field_name())
+            .ok_or_else(|| {
+                DebianError::BinaryPackageControlRequiredFiledMissing(checksum.field_name())
+            })?;
 
         let digest = hex::decode(hex_digest)?;
 
@@ -190,7 +176,7 @@ impl<'cf, 'a: 'cf> DebPackageReference<'cf> for BinaryPackageControlFile<'a> {
     }
 
     fn deb_filename(&self) -> Result<String> {
-        let filename = self.field_str("Filename").ok_or(
+        let filename = self.paragraph.field_str("Filename").ok_or(
             DebianError::BinaryPackageControlRequiredFiledMissing("Filename"),
         )?;
 
