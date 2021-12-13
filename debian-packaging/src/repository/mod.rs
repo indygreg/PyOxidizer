@@ -239,16 +239,12 @@ pub trait ReleaseReader: DataResolver + Sync {
             .ok_or(DebianError::RepositoryReadPackagesIndicesEntryNotFound)
     }
 
-    /// Resolve packages given parameters to resolve a `Packages` file.
-    async fn resolve_packages(
-        &self,
-        component: &str,
-        arch: &str,
-        is_installer: bool,
+    /// Fetch and parse a `Packages` file described by a [PackagesFileEntry].
+    async fn resolve_packages_from_entry<'entry, 'slf: 'entry>(
+        &'slf self,
+        entry: &'entry PackagesFileEntry,
     ) -> Result<BinaryPackageList<'static>> {
         let release = self.release_file();
-
-        let entry = self.packages_entry(component, arch, is_installer)?;
 
         let path = if release.acquire_by_hash().unwrap_or_default() {
             entry.entry.by_hash_path()
@@ -273,6 +269,18 @@ pub trait ReleaseReader: DataResolver + Sync {
         }
 
         Ok(res)
+    }
+
+    /// Resolve packages given parameters to resolve a `Packages` file.
+    async fn resolve_packages(
+        &self,
+        component: &str,
+        arch: &str,
+        is_installer: bool,
+    ) -> Result<BinaryPackageList<'static>> {
+        let entry = self.packages_entry(component, arch, is_installer)?;
+
+        self.resolve_packages_from_entry(&entry).await
     }
 
     /// Resolve a reference to a `Contents` file to fetch given search criteria.
