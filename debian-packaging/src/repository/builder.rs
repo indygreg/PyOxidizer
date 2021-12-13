@@ -534,7 +534,7 @@ impl<'cf> RepositoryBuilder<'cf> {
             ]
             .contains(&field.name())
             {
-                para.add_field(field.clone());
+                para.set_field(field.clone());
             }
         }
 
@@ -550,13 +550,13 @@ impl<'cf> RepositoryBuilder<'cf> {
                 h.update(b"\n");
                 let digest = h.finish();
 
-                para.add_field_from_string(
+                para.set_field_from_string(
                     "Description".into(),
                     (&description[0..index]).to_string().into(),
                 );
-                para.add_field_from_string("Description-md5".into(), hex::encode(digest).into());
+                para.set_field_from_string("Description-md5".into(), hex::encode(digest).into());
             } else {
-                para.add_field_from_string("Description".into(), description.to_string().into());
+                para.set_field_from_string("Description".into(), description.to_string().into());
             }
         }
 
@@ -570,17 +570,17 @@ impl<'cf> RepositoryBuilder<'cf> {
             },
             &deb.deb_filename()?,
         );
-        para.add_field_from_string("Filename".into(), filename.clone().into());
+        para.set_field_from_string("Filename".into(), filename.clone().into());
 
         // `Size` shouldn't be in the original control file, since it is a property of the
         // `.deb` in which the control file is embedded.
-        para.add_field_from_string("Size".into(), format!("{}", deb.deb_size_bytes()?).into());
+        para.set_field_from_string("Size".into(), format!("{}", deb.deb_size_bytes()?).into());
 
         // Add all configured digests for this repository.
         for checksum in &self.checksums {
             let digest = deb.deb_digest(*checksum)?;
 
-            para.add_field_from_string(checksum.field_name().into(), digest.digest_hex().into());
+            para.set_field_from_string(checksum.field_name().into(), digest.digest_hex().into());
         }
 
         let component_key = (component.to_string(), arch.to_string());
@@ -917,7 +917,7 @@ impl<'cf> RepositoryBuilder<'cf> {
         let mut para = ControlParagraph::default();
 
         for field in self.static_release_fields() {
-            para.add_field(field);
+            para.set_field(field);
         }
 
         let mut digests_by_field = HashMap::new();
@@ -943,7 +943,7 @@ impl<'cf> RepositoryBuilder<'cf> {
                 .max()
                 .unwrap_or_default();
 
-            para.add_field(ControlField::new(
+            para.set_field(ControlField::new(
                 checksum.field_name().into(),
                 std::iter::once("".to_string())
                     .chain(entries.iter().map(|(path, (size, digest))| {

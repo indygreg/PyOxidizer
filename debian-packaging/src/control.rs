@@ -187,8 +187,8 @@ impl<'a> ToString for ControlField<'a> {
 ///
 /// Field names are case insensitive on read and case preserving on set.
 ///
-/// Paragraphs can only contain a single occurrence of a field. However, this type does not
-/// currently enforce this and it is possible to store fields multiple times.
+/// Paragraphs can only contain a single occurrence of a field and this is enforced through
+/// the mutation APIs.
 #[derive(Clone, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct ControlParagraph<'a> {
     fields: Vec<ControlField<'a>>,
@@ -202,24 +202,32 @@ impl<'a> ControlParagraph<'a> {
         self.fields.is_empty()
     }
 
-    /// Add a `ControlField` to this instance.
-    pub fn add_field(&mut self, field: ControlField<'a>) {
+    /// Set the value of a field via a [ControlField].
+    ///
+    /// If a field with the same name (case insensitive compare) already exists, the old value
+    /// will be replaced by the incoming value.
+    pub fn set_field(&mut self, field: ControlField<'a>) {
+        self.fields
+            .retain(|cf| cf.name.to_lowercase() != field.name.to_lowercase());
         self.fields.push(field);
     }
 
-    /// Add a field defined via strings.
-    pub fn add_field_from_string(&mut self, name: Cow<'a, str>, value: Cow<'a, str>) {
-        self.add_field(ControlField::new(name, value));
+    /// Set the value of a field defined via strings.
+    ///
+    /// If a field with the same name (case insensitive compare) already exists, the old value
+    /// will be replaced by the incoming value.
+    pub fn set_field_from_string(&mut self, name: Cow<'a, str>, value: Cow<'a, str>) {
+        self.set_field(ControlField::new(name, value));
     }
 
     /// Whether a named field is present in this paragraph.
     pub fn has_field(&self, name: &str) -> bool {
-        self.fields
-            .iter()
-            .any(|f| f.name.as_ref().to_lowercase() == name.to_lowercase())
+        self.field(name).is_some()
     }
 
     /// Iterate over fields in this paragraph.
+    ///
+    /// Iteration order is insertion order.
     pub fn iter_fields(&self) -> impl Iterator<Item = &ControlField<'a>> {
         self.fields.iter()
     }
@@ -420,7 +428,7 @@ impl ControlFileParser {
             .trim();
 
         self.paragraph
-            .add_field_from_string(Cow::Owned(name.to_string()), Cow::Owned(value.to_string()));
+            .set_field_from_string(Cow::Owned(name.to_string()), Cow::Owned(value.to_string()));
 
         Ok(())
     }
@@ -667,6 +675,21 @@ impl<'a> SourceControl<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn control_paragraph_field_semantics() {
+        let mut p = ControlParagraph::default();
+
+        // Same cased field name results in overwrite.
+        p.set_field_from_string("foo".into(), "bar".into());
+        p.set_field_from_string("foo".into(), "baz".into());
+        assert_eq!(p.field("foo").unwrap().value, "baz");
+
+        // Different case results in overwrite.
+        p.set_field_from_string("FOO".into(), "bar".into());
+        assert_eq!(p.field("foo").unwrap().value, "bar");
+        assert_eq!(p.field("FOO").unwrap().value, "bar");
+    }
 
     #[test]
     fn parse_paragraph_release() -> Result<()> {
