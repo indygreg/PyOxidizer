@@ -125,7 +125,7 @@ pub trait ReleaseReader: DataResolver + Sync {
     /// There may be multiple entries for a given logical `Packages` file corresponding
     /// to different compression formats. Use [Self::packages_entry()] to resolve the entry
     /// for the `Packages` file for the preferred configuration.
-    fn packages_indices_entries(&self) -> Result<Vec<PackagesFileEntry>> {
+    fn packages_indices_entries(&self) -> Result<Vec<PackagesFileEntry<'_>>> {
         Ok(
             if let Some(entries) = self
                 .release_file()
@@ -142,7 +142,7 @@ pub trait ReleaseReader: DataResolver + Sync {
     ///
     /// If there are multiple entries for a `Packages` file with varying compression, the most
     /// preferred compression format is returned.
-    fn packages_indices_entries_preferred_compression(&self) -> Result<Vec<PackagesFileEntry>> {
+    fn packages_indices_entries_preferred_compression(&self) -> Result<Vec<PackagesFileEntry<'_>>> {
         let mut entries = HashMap::new();
 
         for entry in self.packages_indices_entries()? {
@@ -186,7 +186,7 @@ pub trait ReleaseReader: DataResolver + Sync {
     ///
     /// Multiple entries for the same logical file with varying compression formats may be
     /// returned.
-    fn contents_indices_entries(&self) -> Result<Vec<ContentsFileEntry>> {
+    fn contents_indices_entries(&self) -> Result<Vec<ContentsFileEntry<'_>>> {
         Ok(
             if let Some(entries) = self
                 .release_file()
@@ -205,7 +205,7 @@ pub trait ReleaseReader: DataResolver + Sync {
     ///
     /// Multiple entries for the same logical file with varying compression formats may be
     /// returned.
-    fn sources_indices_entries(&self) -> Result<Vec<SourcesFileEntry>> {
+    fn sources_indices_entries(&self) -> Result<Vec<SourcesFileEntry<'_>>> {
         Ok(
             if let Some(entries) = self
                 .release_file()
@@ -228,7 +228,7 @@ pub trait ReleaseReader: DataResolver + Sync {
         component: &str,
         architecture: &str,
         is_installer: bool,
-    ) -> Result<PackagesFileEntry> {
+    ) -> Result<PackagesFileEntry<'_>> {
         self.packages_indices_entries_preferred_compression()?
             .into_iter()
             .find(|entry| {
@@ -242,7 +242,7 @@ pub trait ReleaseReader: DataResolver + Sync {
     /// Fetch and parse a `Packages` file described by a [PackagesFileEntry].
     async fn resolve_packages_from_entry<'entry, 'slf: 'entry>(
         &'slf self,
-        entry: &'entry PackagesFileEntry,
+        entry: &'entry PackagesFileEntry<'slf>,
     ) -> Result<BinaryPackageList<'static>> {
         let release = self.release_file();
 
