@@ -14,6 +14,7 @@ use {
         binary_package_control::BinaryPackageControlFile,
         binary_package_list::BinaryPackageList,
         control::ControlParagraphAsyncReader,
+        deb::reader::BinaryPackageReader,
         error::{DebianError, Result},
         io::{drain_reader, Compression, ContentDigest, DataResolver},
         repository::{
@@ -35,6 +36,8 @@ pub mod filesystem;
 pub mod http;
 pub mod release;
 
+/// Describes how to fetch a binary package from a repository.
+#[derive(Clone, Debug)]
 pub struct BinaryPackageFetch<'a> {
     /// The binary package control paragraph from which this entry came.
     pub control_file: BinaryPackageControlFile<'a>,
@@ -94,6 +97,35 @@ pub trait RepositoryRootReader: DataResolver + Sync {
         Ok(ReleaseFile::from_armored_reader(std::io::Cursor::new(
             data,
         ))?)
+    }
+
+    /// Fetch a binary package given a [BinaryPackageFetch] instruction.
+    ///
+    /// Returns a generic [AsyncRead] to obtain the raw file content.
+    async fn fetch_binary_package_generic<'fetch>(
+        &self,
+        fetch: BinaryPackageFetch<'fetch>,
+    ) -> Result<Pin<Box<dyn AsyncRead + Send>>> {
+        self.get_path_with_digest_verification(&fetch.path, fetch.size, fetch.digest)
+            .await
+    }
+
+    /// Fetch a binary package given a [BinaryPackageFetch] instruction.
+    ///
+    /// Returns a [BinaryPackageReader] capable of parsing the package.
+    ///
+    /// Due to limitations in [BinaryPackageReader], the entire package content is buffered
+    /// in memory and isn't read lazily.
+    async fn fetch_binary_package_deb_reader<'fetch>(
+        &self,
+        fetch: BinaryPackageFetch<'fetch>,
+    ) -> Result<BinaryPackageReader<std::io::Cursor<Vec<u8>>>> {
+        let mut reader = self.fetch_binary_package_generic(fetch).await?;
+        // TODO implement an async reader.
+        let mut buf = vec![];
+        reader.read_to_end(&mut buf).await?;
+
+        Ok(BinaryPackageReader::new(std::io::Cursor::new(buf))?)
     }
 }
 
@@ -308,6 +340,10 @@ pub trait ReleaseReader: DataResolver + Sync {
     /// Second, `binary_package_filter` is called for each binary package entry seen
     /// in parsed `Packages*` files. If the function returns true, this binary package
     /// will be retrieved.
+    ///
+    /// The emitted values can be fed into [RepositoryRootReader::fetch_binary_package_generic()]
+    /// and [RepositoryRootReader::fetch_binary_package_deb_reader()] to fetch the binary package
+    /// content.
     async fn resolve_package_fetches(
         &self,
         packages_file_filter: Box<dyn (Fn(PackagesFileEntry) -> bool) + Send>,
