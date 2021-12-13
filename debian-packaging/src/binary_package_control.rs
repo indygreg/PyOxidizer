@@ -46,28 +46,26 @@ impl<'a> From<ControlParagraph<'a>> for BinaryPackageControlFile<'a> {
 }
 
 impl<'a> BinaryPackageControlFile<'a> {
-    /// Obtain the first occurrence of the given field.
-    pub fn first_field(&self, name: &str) -> Option<&ControlField<'_>> {
-        self.paragraph.first_field(name)
+    /// Obtain the the given field.
+    pub fn field(&self, name: &str) -> Option<&ControlField<'_>> {
+        self.paragraph.field(name)
     }
 
-    /// Obtain the string value of the first occurrence of the given field.
-    pub fn first_field_str(&self, name: &str) -> Option<&str> {
-        self.paragraph.first_field_str(name)
+    /// Obtain the string value of the given field.
+    pub fn field_str(&self, name: &str) -> Option<&str> {
+        self.paragraph.field_str(name)
     }
 
-    /// Obtain the first value of a field, evaluated as a boolean.
+    /// Obtain the value of a field, evaluated as a boolean.
     ///
     /// The field is [true] iff its string value is `yes`.
-    pub fn first_field_bool(&self, name: &str) -> Option<bool> {
-        self.paragraph
-            .first_field_str(name)
-            .map(|v| matches!(v, "yes"))
+    pub fn field_bool(&self, name: &str) -> Option<bool> {
+        self.paragraph.field_str(name).map(|v| matches!(v, "yes"))
     }
 
     fn required_field(&self, field: &'static str) -> Result<&str> {
         self.paragraph
-            .first_field_str(field)
+            .field_str(field)
             .ok_or(DebianError::BinaryPackageControlRequiredFiledMissing(field))
     }
 
@@ -98,68 +96,68 @@ impl<'a> BinaryPackageControlFile<'a> {
     }
 
     pub fn source(&self) -> Option<&str> {
-        self.paragraph.first_field_str("Source")
+        self.paragraph.field_str("Source")
     }
 
     pub fn section(&self) -> Option<&str> {
-        self.paragraph.first_field_str("Section")
+        self.paragraph.field_str("Section")
     }
 
     pub fn priority(&self) -> Option<&str> {
-        self.paragraph.first_field_str("Priority")
+        self.paragraph.field_str("Priority")
     }
 
     pub fn essential(&self) -> Option<&str> {
-        self.paragraph.first_field_str("Essential")
+        self.paragraph.field_str("Essential")
     }
 
     pub fn homepage(&self) -> Option<&str> {
-        self.paragraph.first_field_str("Homepage")
+        self.paragraph.field_str("Homepage")
     }
 
     pub fn installed_size(&self) -> Option<Result<usize>> {
         self.paragraph
-            .first_field_str("Installed-Size")
+            .field_str("Installed-Size")
             .map(|x| Ok(usize::from_str(x)?))
     }
 
     pub fn size(&self) -> Option<Result<usize>> {
         self.paragraph
-            .first_field_str("Size")
+            .field_str("Size")
             .map(|x| Ok(usize::from_str(x)?))
     }
 
     pub fn built_using(&self) -> Option<&str> {
-        self.paragraph.first_field_str("Built-Using")
+        self.paragraph.field_str("Built-Using")
     }
 
     pub fn depends(&self) -> Option<Result<DependencyList>> {
         self.paragraph
-            .first_field_str("Depends")
+            .field_str("Depends")
             .map(DependencyList::parse)
     }
 
     pub fn recommends(&self) -> Option<Result<DependencyList>> {
         self.paragraph
-            .first_field_str("Recommends")
+            .field_str("Recommends")
             .map(DependencyList::parse)
     }
 
     pub fn suggests(&self) -> Option<Result<DependencyList>> {
         self.paragraph
-            .first_field_str("Suggests")
+            .field_str("Suggests")
             .map(DependencyList::parse)
     }
 
     pub fn enhances(&self) -> Option<Result<DependencyList>> {
         self.paragraph
-            .first_field_str("Enhances")
+            .field_str("Enhances")
             .map(DependencyList::parse)
     }
 
     pub fn pre_depends(&self) -> Option<Result<DependencyList>> {
         self.paragraph
-            .first_field_str("Pre-Depends")
+            .field_str("Pre-Depends")
             .map(DependencyList::parse)
     }
 
@@ -178,7 +176,7 @@ impl<'cf, 'a: 'cf> DebPackageReference<'cf> for BinaryPackageControlFile<'a> {
     }
 
     fn deb_digest(&self, checksum: ChecksumType) -> Result<ContentDigest> {
-        let hex_digest = self.first_field_str(checksum.field_name()).ok_or_else(|| {
+        let hex_digest = self.field_str(checksum.field_name()).ok_or_else(|| {
             DebianError::BinaryPackageControlRequiredFiledMissing(checksum.field_name())
         })?;
 
@@ -192,7 +190,7 @@ impl<'cf, 'a: 'cf> DebPackageReference<'cf> for BinaryPackageControlFile<'a> {
     }
 
     fn deb_filename(&self) -> Result<String> {
-        let filename = self.first_field_str("Filename").ok_or(
+        let filename = self.field_str("Filename").ok_or(
             DebianError::BinaryPackageControlRequiredFiledMissing("Filename"),
         )?;
 

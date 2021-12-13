@@ -186,6 +186,9 @@ impl<'a> ToString for ControlField<'a> {
 /// A paragraph is an ordered series of control fields.
 ///
 /// Field names are case insensitive on read and case preserving on set.
+///
+/// Paragraphs can only contain a single occurrence of a field. However, this type does not
+/// currently enforce this and it is possible to store fields multiple times.
 #[derive(Clone, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct ControlParagraph<'a> {
     fields: Vec<ControlField<'a>>,
@@ -221,55 +224,55 @@ impl<'a> ControlParagraph<'a> {
         self.fields.iter()
     }
 
-    /// Obtain the first field with a given name in this paragraph.
-    pub fn first_field(&self, name: &str) -> Option<&'_ ControlField<'a>> {
+    /// Obtain the field with a given name in this paragraph.
+    pub fn field(&self, name: &str) -> Option<&'_ ControlField<'a>> {
         self.fields
             .iter()
             .find(|f| f.name.as_ref().to_lowercase() == name.to_lowercase())
     }
 
-    /// Obtain a mutable reference to the first field with a given name.
-    pub fn first_field_mut(&mut self, name: &str) -> Option<&'a mut ControlField> {
+    /// Obtain a mutable reference to the field with a given name.
+    pub fn field_mut(&mut self, name: &str) -> Option<&'a mut ControlField> {
         self.fields
             .iter_mut()
             .find(|f| f.name.as_ref().to_lowercase() == name.to_lowercase())
     }
 
-    /// Obtain the raw string value of the first occurrence of a named field.
-    pub fn first_field_str(&self, name: &str) -> Option<&str> {
-        self.first_field(name).map(|f| f.value_str())
+    /// Obtain the raw string value of the named field.
+    pub fn field_str(&self, name: &str) -> Option<&str> {
+        self.field(name).map(|f| f.value_str())
     }
 
     /// Obtain the field with the given name as a [ControlFieldValue::Simple], if possible.
-    pub fn first_field_simple(&self, name: &str) -> Option<Result<ControlFieldValue<'a>>> {
-        self.first_field(name).map(|cf| cf.as_simple())
+    pub fn field_simple(&self, name: &str) -> Option<Result<ControlFieldValue<'a>>> {
+        self.field(name).map(|cf| cf.as_simple())
     }
 
     /// Obtain the field with the given name as a [ControlFieldValue::Folded].
-    pub fn first_field_folded(&self, name: &str) -> Option<ControlFieldValue<'a>> {
-        self.first_field(name).map(|cf| cf.as_folded())
+    pub fn field_folded(&self, name: &str) -> Option<ControlFieldValue<'a>> {
+        self.field(name).map(|cf| cf.as_folded())
     }
 
     /// Obtain the field with the given name as a [ControlFieldValue::Multiline].
-    pub fn first_field_multiline(&self, name: &str) -> Option<ControlFieldValue<'a>> {
-        self.first_field(name).map(|cf| cf.as_multiline())
+    pub fn field_multiline(&self, name: &str) -> Option<ControlFieldValue<'a>> {
+        self.field(name).map(|cf| cf.as_multiline())
     }
 
-    /// Obtain an iterator of words in the first occurrence of a named field.
-    pub fn first_field_iter_value_words(
+    /// Obtain an iterator of words in the named field.
+    pub fn field_iter_value_words(
         &self,
         name: &str,
     ) -> Option<Box<(dyn Iterator<Item = &str> + '_)>> {
-        self.first_field(name)
+        self.field(name)
             .map(|f| Box::new(f.value.split_ascii_whitespace()) as Box<dyn Iterator<Item = &str>>)
     }
 
-    /// Obtain an iterator of lines in the first occurrence of a named field.
-    pub fn first_field_iter_value_lines(
+    /// Obtain an iterator of lines in the named field.
+    pub fn field_iter_value_lines(
         &self,
         name: &str,
     ) -> Option<Box<(dyn Iterator<Item = &str> + '_)>> {
-        self.first_field(name).map(|f| f.iter_lines())
+        self.field(name).map(|f| f.iter_lines())
     }
 
     /// Convert this paragraph to a [HashMap].
@@ -681,7 +684,7 @@ mod tests {
         assert!(p.has_field("Version"));
         assert!(!p.has_field("Missing"));
 
-        assert!(p.first_field("Version").is_some());
+        assert!(p.field("Version").is_some());
 
         let fields = &p.fields;
         assert_eq!(fields[0].name, "Origin");
@@ -690,19 +693,19 @@ mod tests {
         assert_eq!(fields[3].name, "Version");
         assert_eq!(fields[3].value, "11.1");
 
-        let ml = p.first_field_multiline("MD5Sum").unwrap();
+        let ml = p.field_multiline("MD5Sum").unwrap();
         assert_eq!(ml.iter_lines().count(), 600);
         assert_eq!(
             ml.iter_lines().next().unwrap(),
             "7fdf4db15250af5368cc52a91e8edbce   738242 contrib/Contents-all"
         );
 
-        assert!(p.first_field_multiline("SHA256").is_some());
+        assert!(p.field_multiline("SHA256").is_some());
 
         assert_eq!(fields[0].iter_words().collect::<Vec<_>>(), vec!["Debian"]);
 
         let values = p
-            .first_field_multiline("MD5Sum")
+            .field_multiline("MD5Sum")
             .unwrap()
             .iter_lines()
             .map(|x| x.to_string())
@@ -723,7 +726,7 @@ mod tests {
         );
 
         let values = p
-            .first_field_multiline("SHA256")
+            .field_multiline("SHA256")
             .unwrap()
             .iter_lines()
             .map(|x| x.to_string())

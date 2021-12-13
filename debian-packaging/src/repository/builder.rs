@@ -541,7 +541,7 @@ impl<'cf> RepositoryBuilder<'cf> {
         // The `Description` field is a bit wonky in Packages files. Instead of capturing multiline
         // values, `Description` is just the first line and a `Description-md5` contains the md5
         // of the multiline value.
-        if let Some(description) = original_control_file.first_field("Description") {
+        if let Some(description) = original_control_file.field("Description") {
             let description = description.value_str();
 
             if let Some(index) = description.find('\n') {
@@ -630,10 +630,10 @@ impl<'cf> RepositoryBuilder<'cf> {
         self.iter_component_binary_packages(component, architecture)
             .map(|para| {
                 let path = para
-                    .first_field_str("Filename")
+                    .field_str("Filename")
                     .expect("Filename should have been populated at package add time");
                 let size = usize::from_str(
-                    para.first_field_str("Size")
+                    para.field_str("Size")
                         .expect("Size should have been populated at package add time"),
                 )
                 .expect("Size should parse to an integer");
@@ -647,7 +647,7 @@ impl<'cf> RepositoryBuilder<'cf> {
                     .expect("should have at least 1 checksum defined");
 
                 let digest_hex = para
-                    .first_field_str(strongest_checksum.field_name())
+                    .field_str(strongest_checksum.field_name())
                     .expect("checksum's field should have been set");
                 let digest = ContentDigest::from_hex_checksum(*strongest_checksum, digest_hex)?;
 
@@ -1277,7 +1277,7 @@ mod test {
         {
             let dest_filename = builder.add_binary_deb("main", package)?;
 
-            let source_filename = package.first_field_str("Filename").unwrap();
+            let source_filename = package.field_str("Filename").unwrap();
 
             mapping_resolver.add_path_map(dest_filename, source_filename);
         }

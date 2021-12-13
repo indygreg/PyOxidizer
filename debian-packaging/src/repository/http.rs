@@ -213,14 +213,14 @@ mod test {
         let p = packages.iter().next().unwrap();
         assert_eq!(p.package()?, "0ad");
         assert_eq!(
-            p.first_field_str("SHA256"),
+            p.field_str("SHA256"),
             Some("610e9f9c41be18af516dd64a6dc1316dbfe1bb8989c52bafa556de9e381d3e29")
         );
 
         let p = packages.iter().last().unwrap();
         assert_eq!(p.package()?, "python3-zzzeeksphinx");
         assert_eq!(
-            p.first_field_str("SHA256"),
+            p.field_str("SHA256"),
             Some("6e35f5805e808c19becd3b9ce25c4cf40c41aa0cf5d81fab317198ded917fec1")
         );
 

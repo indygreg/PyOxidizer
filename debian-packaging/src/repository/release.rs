@@ -380,52 +380,50 @@ impl<'a> ReleaseFile<'a> {
         self.signatures.as_ref()
     }
 
-    /// Obtain the first occurrence of the given field.
-    pub fn first_field(&self, name: &str) -> Option<&ControlField<'_>> {
-        self.paragraph.first_field(name)
+    /// Obtain the given field.
+    pub fn field(&self, name: &str) -> Option<&ControlField<'_>> {
+        self.paragraph.field(name)
     }
 
-    /// Obtain the first value of a field, evaluated as a boolean.
+    /// Obtain the field value, evaluated as a boolean.
     ///
     /// The field is [true] iff its string value is `yes`.
-    pub fn first_field_bool(&self, name: &str) -> Option<bool> {
-        self.paragraph
-            .first_field_str(name)
-            .map(|v| matches!(v, "yes"))
+    pub fn field_bool(&self, name: &str) -> Option<bool> {
+        self.paragraph.field_str(name).map(|v| matches!(v, "yes"))
     }
 
     /// Description of this repository.
     pub fn description(&self) -> Option<&str> {
-        self.paragraph.first_field_str("Description")
+        self.paragraph.field_str("Description")
     }
 
     /// Origin of the repository.
     pub fn origin(&self) -> Option<&str> {
-        self.paragraph.first_field_str("Origin")
+        self.paragraph.field_str("Origin")
     }
 
     /// Label for the repository.
     pub fn label(&self) -> Option<&str> {
-        self.paragraph.first_field_str("Label")
+        self.paragraph.field_str("Label")
     }
 
     /// Version of this repository.
     ///
     /// Typically a sequence of `.` delimited integers.
     pub fn version(&self) -> Option<&str> {
-        self.paragraph.first_field_str("Version")
+        self.paragraph.field_str("Version")
     }
 
     /// Suite of this repository.
     ///
     /// e.g. `stable`, `unstable`, `experimental`.
     pub fn suite(&self) -> Option<&str> {
-        self.paragraph.first_field_str("Suite")
+        self.paragraph.field_str("Suite")
     }
 
     /// Codename of this repository.
     pub fn codename(&self) -> Option<&str> {
-        self.paragraph.first_field_str("Codename")
+        self.paragraph.field_str("Codename")
     }
 
     /// Names of components within this repository.
@@ -433,19 +431,19 @@ impl<'a> ReleaseFile<'a> {
     /// These are areas within the repository. Values may contain path characters.
     /// e.g. `main`, `updates/main`.
     pub fn components(&self) -> Option<Box<(dyn Iterator<Item = &str> + '_)>> {
-        self.paragraph.first_field_iter_value_words("Components")
+        self.paragraph.field_iter_value_words("Components")
     }
 
     /// Debian machine architectures supported by this repository.
     ///
     /// e.g. `all`, `amd64`, `arm64`.
     pub fn architectures(&self) -> Option<Box<(dyn Iterator<Item = &str> + '_)>> {
-        self.paragraph.first_field_iter_value_words("Architectures")
+        self.paragraph.field_iter_value_words("Architectures")
     }
 
     /// Time the release file was created, as its raw string value.
     pub fn date_str(&self) -> Option<&str> {
-        self.paragraph.first_field_str("Date")
+        self.paragraph.field_str("Date")
     }
 
     /// Time the release file was created, as a [DateTime].
@@ -457,7 +455,7 @@ impl<'a> ReleaseFile<'a> {
 
     /// Time the release file should be considered expired by the client, as its raw string value.
     pub fn valid_until_str(&self) -> Option<&str> {
-        self.paragraph.first_field_str("Valid-Until")
+        self.paragraph.field_str("Valid-Until")
     }
 
     /// Time the release file should be considered expired by the client.
@@ -470,19 +468,19 @@ impl<'a> ReleaseFile<'a> {
     ///
     /// `true` is returned iff the value is `yes`. `no` and other values result in `false`.
     pub fn not_automatic(&self) -> Option<bool> {
-        self.first_field_bool("NotAutomatic")
+        self.field_bool("NotAutomatic")
     }
 
     /// Evaluated value for `ButAutomaticUpgrades` field.
     ///
     /// `true` is returned iff the value is `yes`. `no` and other values result in `false`.
     pub fn but_automatic_upgrades(&self) -> Option<bool> {
-        self.first_field_bool("ButAutomaticUpgrades")
+        self.field_bool("ButAutomaticUpgrades")
     }
 
     /// Whether to acquire files by hash.
     pub fn acquire_by_hash(&self) -> Option<bool> {
-        self.first_field_bool("Acquire-By-Hash")
+        self.field_bool("Acquire-By-Hash")
     }
 
     /// Obtain indexed files in this repository.
@@ -497,10 +495,7 @@ impl<'a> ReleaseFile<'a> {
         &self,
         checksum: ChecksumType,
     ) -> Option<Box<(dyn Iterator<Item = Result<ReleaseFileEntry>> + '_)>> {
-        if let Some(iter) = self
-            .paragraph
-            .first_field_iter_value_lines(checksum.field_name())
-        {
+        if let Some(iter) = self.paragraph.field_iter_value_lines(checksum.field_name()) {
             Some(Box::new(iter.map(move |v| {
                 // Values are of form: <digest> <size> <path>
 

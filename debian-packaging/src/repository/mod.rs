@@ -102,7 +102,7 @@ pub trait ReleaseReader: DataResolver + Sync {
 
         let checksum = &[ChecksumType::Sha256, ChecksumType::Sha1, ChecksumType::Md5]
             .iter()
-            .find(|variant| release.first_field(variant.field_name()).is_some())
+            .find(|variant| release.field(variant.field_name()).is_some())
             .ok_or(DebianError::RepositoryReadReleaseNoKnownChecksum)?;
 
         Ok(**checksum)

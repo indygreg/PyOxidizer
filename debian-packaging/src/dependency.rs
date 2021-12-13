@@ -493,7 +493,7 @@ impl PackageDependencyFields {
     /// Construct an instance from a control paragraph.
     pub fn from_paragraph(para: &ControlParagraph) -> Result<Self> {
         let get_field = |field| -> Result<Option<DependencyList>> {
-            if let Some(value) = para.first_field_str(field) {
+            if let Some(value) = para.field_str(field) {
                 Ok(Some(DependencyList::parse(value)?))
             } else {
                 Ok(None)
