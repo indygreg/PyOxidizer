@@ -661,52 +661,6 @@ impl<'a> ControlFile<'a> {
     }
 }
 
-/// Represents a `debian/control` file.
-///
-/// Specified at <https://www.debian.org/doc/debian-policy/ch-controlfields.html#source-package-control-files-debian-control>.
-#[derive(Default)]
-pub struct SourceControl<'a> {
-    general: ControlParagraph<'a>,
-    binaries: Vec<ControlParagraph<'a>>,
-}
-
-impl<'a> SourceControl<'a> {
-    /// Construct an instance by parsing a control file from a reader.
-    pub fn parse_reader<R: BufRead>(reader: &mut R) -> Result<Self> {
-        let control = ControlFile::parse_reader(reader)?;
-
-        let mut paragraphs = control.paragraphs();
-
-        let general = paragraphs
-            .next()
-            .ok_or_else(|| {
-                DebianError::ControlParseError(
-                    "no general paragraph in source control file".to_string(),
-                )
-            })?
-            .to_owned();
-
-        let binaries = paragraphs.map(|x| x.to_owned()).collect();
-
-        Ok(Self { general, binaries })
-    }
-
-    pub fn parse_str(s: &str) -> Result<Self> {
-        let mut reader = std::io::BufReader::new(s.as_bytes());
-        Self::parse_reader(&mut reader)
-    }
-
-    /// Obtain a handle on the general paragraph.
-    pub fn general_paragraph(&self) -> &ControlParagraph<'a> {
-        &self.general
-    }
-
-    /// Obtain an iterator over paragraphs defining binaries.
-    pub fn binary_paragraphs(&self) -> impl Iterator<Item = &ControlParagraph<'a>> {
-        self.binaries.iter()
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
