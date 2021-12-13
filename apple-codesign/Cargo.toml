@@ -42,8 +42,8 @@ yasna = "0.4"
 version = "0.6.0"
 
 [dependencies.cryptographic-message-syntax]
-# path = "../cryptographic-message-syntax"
-version = "0.6.0"
+path = "../cryptographic-message-syntax"
+version = "0.7.0-pre"
 
 [dependencies.tugger-apple]
 path = "../tugger-apple"
