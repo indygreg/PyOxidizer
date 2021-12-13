@@ -419,14 +419,14 @@ impl<'a> ReleaseFile<'a> {
     /// These are areas within the repository. Values may contain path characters.
     /// e.g. `main`, `updates/main`.
     pub fn components(&self) -> Option<Box<(dyn Iterator<Item = &str> + '_)>> {
-        self.paragraph.field_iter_value_words("Components")
+        self.paragraph.iter_field_words("Components")
     }
 
     /// Debian machine architectures supported by this repository.
     ///
     /// e.g. `all`, `amd64`, `arm64`.
     pub fn architectures(&self) -> Option<Box<(dyn Iterator<Item = &str> + '_)>> {
-        self.paragraph.field_iter_value_words("Architectures")
+        self.paragraph.iter_field_words("Architectures")
     }
 
     /// Time the release file was created, as its raw string value.
@@ -483,7 +483,7 @@ impl<'a> ReleaseFile<'a> {
         &self,
         checksum: ChecksumType,
     ) -> Option<Box<(dyn Iterator<Item = Result<ReleaseFileEntry>> + '_)>> {
-        if let Some(iter) = self.paragraph.field_iter_value_lines(checksum.field_name()) {
+        if let Some(iter) = self.paragraph.iter_field_lines(checksum.field_name()) {
             Some(Box::new(iter.map(move |v| {
                 // Values are of form: <digest> <size> <path>
 

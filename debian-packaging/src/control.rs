@@ -285,19 +285,13 @@ impl<'a> ControlParagraph<'a> {
     }
 
     /// Obtain an iterator of words in the named field.
-    pub fn field_iter_value_words(
-        &self,
-        name: &str,
-    ) -> Option<Box<(dyn Iterator<Item = &str> + '_)>> {
+    pub fn iter_field_words(&self, name: &str) -> Option<Box<(dyn Iterator<Item = &str> + '_)>> {
         self.field(name)
             .map(|f| Box::new(f.value.split_ascii_whitespace()) as Box<dyn Iterator<Item = &str>>)
     }
 
     /// Obtain an iterator of lines in the named field.
-    pub fn field_iter_value_lines(
-        &self,
-        name: &str,
-    ) -> Option<Box<(dyn Iterator<Item = &str> + '_)>> {
+    pub fn iter_field_lines(&self, name: &str) -> Option<Box<(dyn Iterator<Item = &str> + '_)>> {
         self.field(name).map(|f| f.iter_lines())
     }
 
