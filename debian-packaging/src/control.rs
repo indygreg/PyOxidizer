@@ -209,7 +209,7 @@ impl<'a> ControlParagraph<'a> {
 
     /// Add a field defined via strings.
     pub fn add_field_from_string(&mut self, name: Cow<'a, str>, value: Cow<'a, str>) {
-        self.fields.push(ControlField::new(name, value));
+        self.add_field(ControlField::new(name, value));
     }
 
     /// Whether a named field is present in this paragraph.
