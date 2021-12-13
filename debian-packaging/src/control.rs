@@ -79,7 +79,7 @@ impl<'a> ControlFieldValue<'a> {
     /// Obtain an iterator over words in the string value.
     ///
     /// The result may be non-meaningful for multiple line variants.
-    pub fn iter_value_words(&self) -> Box<(dyn Iterator<Item = &str> + '_)> {
+    pub fn iter_words(&self) -> Box<(dyn Iterator<Item = &str> + '_)> {
         Box::new(self.as_str().split_ascii_whitespace())
     }
 
@@ -157,7 +157,7 @@ impl<'a> ControlField<'a> {
     ///
     /// See [ControlField::iter_value_words] for behavior.
     pub fn iter_value_words(&self) -> Box<(dyn Iterator<Item = &str> + '_)> {
-        self.value.iter_value_words()
+        self.value.iter_words()
     }
 
     /// Write the contents of this field to a writer.
