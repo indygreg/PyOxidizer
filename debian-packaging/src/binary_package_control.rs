@@ -162,7 +162,7 @@ impl<'a> BinaryPackageControlFile<'a> {
 
     /// Obtain parsed values of all fields defining dependencies.
     pub fn package_dependency_fields(&self) -> Result<PackageDependencyFields> {
-        PackageDependencyFields::from_paragraph(&self)
+        PackageDependencyFields::from_paragraph(self)
     }
 }
 
