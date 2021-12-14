@@ -1,19 +1,11 @@
 # tugger-debian
 
-`tugger-debian` is a library crate implementing functionality related
-to Debian packaging. The following functionality is (partially)
-implemented:
+This crate is deprecated following the effective renaming of this crate to
+`debian-packaging` in December 2021.
 
-* Parsing and serializing control files
-* Writing changelog files
-* Writing `.deb` files (deterministically)
+Version 0.7.0 was the last non-deprecated release and 0.7.1 is the
+last planned release of the crate under the `tugger-debian` name.
 
-`tugger-debian` is part of the Tugger application distribution tool
-but exists as its own crate to facilitate code reuse for other tools
-wishing to have a low-level interface to Debian packaging primitives.
-Tugger is part of the
-[PyOxidizer](https://github.com/indygreg/PyOxidizer.git) project and
-this crate is developed in that repository.
-
-While this crate is developed as part of a larger project, modifications
-to support its use outside of its primary use case are very much welcome!
+The crate lives on under the `debian-packaging` name. See
+https://crates.io/crates/debian-packaging and
+https://github.com/indygreg/PyOxidizer/.

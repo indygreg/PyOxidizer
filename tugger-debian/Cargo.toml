@@ -1,11 +1,11 @@
 [package]
 name = "tugger-debian"
-version = "0.7.0"
+version = "0.7.1"
 authors = ["Gregory Szorc <gregory.szorc@gmail.com>"]
 edition = "2021"
 license = "MPL-2.0"
 description = "Debian packaging primitives"
-keywords = ["debian", "package", "tugger"]
+keywords = []
 homepage = "https://github.com/indygreg/PyOxidizer"
 repository = "https://github.com/indygreg/PyOxidizer.git"
 readme = "README.md"
