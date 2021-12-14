@@ -180,13 +180,7 @@ impl<'cf, 'a: 'cf> DebPackageReference<'cf> for BinaryPackageControlFile<'a> {
                 DebianError::ControlRequiredFieldMissing(checksum.field_name().to_string())
             })?;
 
-        let digest = hex::decode(hex_digest)?;
-
-        Ok(match checksum {
-            ChecksumType::Md5 => ContentDigest::Md5(digest),
-            ChecksumType::Sha1 => ContentDigest::Sha1(digest),
-            ChecksumType::Sha256 => ContentDigest::Sha256(digest),
-        })
+        ContentDigest::from_hex_digest(checksum, hex_digest)
     }
 
     fn deb_filename(&self) -> Result<String> {
