@@ -371,6 +371,35 @@ pub struct ReleaseFile<'a> {
     signatures: Option<crate::pgp::CleartextSignatures>,
 }
 
+impl<'a> From<ControlParagraph<'a>> for ReleaseFile<'a> {
+    fn from(paragraph: ControlParagraph<'a>) -> Self {
+        Self {
+            paragraph,
+            signatures: None,
+        }
+    }
+}
+
+impl<'a> From<ReleaseFile<'a>> for ControlParagraph<'a> {
+    fn from(release: ReleaseFile<'a>) -> Self {
+        release.paragraph
+    }
+}
+
+impl<'a> Deref for ReleaseFile<'a> {
+    type Target = ControlParagraph<'a>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.paragraph
+    }
+}
+
+impl<'a> DerefMut for ReleaseFile<'a> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.paragraph
+    }
+}
+
 impl<'a> ReleaseFile<'a> {
     /// Construct an instance by reading data from a reader.
     ///
@@ -652,35 +681,6 @@ impl<'a> ReleaseFile<'a> {
         } else {
             None
         }
-    }
-}
-
-impl<'a> From<ControlParagraph<'a>> for ReleaseFile<'a> {
-    fn from(paragraph: ControlParagraph<'a>) -> Self {
-        Self {
-            paragraph,
-            signatures: None,
-        }
-    }
-}
-
-impl<'a> From<ReleaseFile<'a>> for ControlParagraph<'a> {
-    fn from(release: ReleaseFile<'a>) -> Self {
-        release.paragraph
-    }
-}
-
-impl<'a> Deref for ReleaseFile<'a> {
-    type Target = ControlParagraph<'a>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.paragraph
-    }
-}
-
-impl<'a> DerefMut for ReleaseFile<'a> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.paragraph
     }
 }
 
