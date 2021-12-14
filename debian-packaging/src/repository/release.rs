@@ -19,6 +19,9 @@ Additional types describe more strongly typed indices file variants:
 * [ContentsFileEntry] (`Contents` files)
 * [PackagesFileEntry] (`Packages` files)
 * [SourcesFileEntry] (`Sources` files)
+
+The [ClassifiedReleaseFileEntry] enum wraps all these types and attempts to
+classify each entry as the strongest type possible.
 */
 
 use {
@@ -354,6 +357,42 @@ impl<'a> TryFrom<ReleaseFileEntry<'a>> for SourcesFileEntry<'a> {
     }
 }
 
+/// A `[In]Release` file entry cast to its stronger type, if possible.
+pub enum ClassifiedReleaseFileEntry<'a> {
+    /// A `Contents` file.
+    Contents(ContentsFileEntry<'a>),
+    /// A `Packages` file.
+    Packages(PackagesFileEntry<'a>),
+    /// A `Sources` file.
+    Sources(SourcesFileEntry<'a>),
+    /// Some other file type.
+    Other(ReleaseFileEntry<'a>),
+}
+
+impl<'a> Deref for ClassifiedReleaseFileEntry<'a> {
+    type Target = ReleaseFileEntry<'a>;
+
+    fn deref(&self) -> &Self::Target {
+        match self {
+            Self::Contents(v) => &v.entry,
+            Self::Packages(v) => &v.entry,
+            Self::Sources(v) => &v.entry,
+            Self::Other(v) => v,
+        }
+    }
+}
+
+impl<'a> DerefMut for ClassifiedReleaseFileEntry<'a> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        match self {
+            Self::Contents(v) => &mut v.entry,
+            Self::Packages(v) => &mut v.entry,
+            Self::Sources(v) => &mut v.entry,
+            Self::Other(v) => v,
+        }
+    }
+}
+
 /// A Debian repository `Release` file.
 ///
 /// Release files contain metadata and list the index files for a *repository*.
@@ -576,6 +615,63 @@ impl<'a> ReleaseFile<'a> {
                 let size = u64::from_str(size)?;
 
                 Ok(ReleaseFileEntry { path, digest, size })
+            })))
+        } else {
+            None
+        }
+    }
+
+    /// Obtain indexed files in this repository classified to their type.
+    ///
+    /// This is like [Self::iter_index_files()] except it attempts classify each [ReleaseFileEntry]
+    /// into a well-defined file type, returning a [ClassifiedReleaseFileEntry].
+    ///
+    /// If an entry doesn't map to a more well-defined type, [ClassifiedReleaseFileEntry::Other]
+    /// will be emitted. If an error occurs when coercing an entry to its stronger type,
+    /// [Err] will be emitted instead of [ClassifiedReleaseFileEntry::Other].
+    pub fn iter_classified_index_files(
+        &self,
+        checksum: ChecksumType,
+    ) -> Option<Box<(dyn Iterator<Item = Result<ClassifiedReleaseFileEntry<'_>>> + '_)>> {
+        if let Some(iter) = self.iter_index_files(checksum) {
+            Some(Box::new(iter.map(|entry| match entry {
+                Ok(entry) => {
+                    // This isn't the most efficient implementation or even the most semantically
+                    // correct way to do it. But it should get the job done.
+
+                    match ContentsFileEntry::try_from(entry.clone()) {
+                        Ok(contents) => {
+                            return Ok(ClassifiedReleaseFileEntry::Contents(contents));
+                        }
+                        Err(DebianError::ReleaseIndicesEntryWrongType) => {}
+                        Err(e) => {
+                            return Err(e);
+                        }
+                    }
+
+                    match PackagesFileEntry::try_from(entry.clone()) {
+                        Ok(packages) => {
+                            return Ok(ClassifiedReleaseFileEntry::Packages(packages));
+                        }
+                        Err(DebianError::ReleaseIndicesEntryWrongType) => {}
+                        Err(e) => {
+                            return Err(e);
+                        }
+                    }
+
+                    match SourcesFileEntry::try_from(entry.clone()) {
+                        Ok(sources) => {
+                            return Ok(ClassifiedReleaseFileEntry::Sources(sources));
+                        }
+                        Err(DebianError::ReleaseIndicesEntryWrongType) => {}
+                        Err(e) => {
+                            return Err(e);
+                        }
+                    }
+
+                    Ok(ClassifiedReleaseFileEntry::Other(entry))
+                }
+                Err(e) => Err(e),
             })))
         } else {
             None
@@ -815,11 +911,51 @@ mod test {
         );
         assert_eq!(entries[599].by_hash_path(), "non-free/source/by-hash/SHA256/30f3f996941badb983141e3b29b2ed5941d28cf81f9b5f600bb48f782d386fc7");
 
+        const EXPECTED_CONTENTS: usize = 126;
+        const EXPECTED_PACKAGES: usize = 180;
+        const EXPECTED_SOURCES: usize = 9;
+        const EXPECTED_OTHER: usize =
+            600 - EXPECTED_CONTENTS - EXPECTED_PACKAGES - EXPECTED_SOURCES;
+
+        let entries = release
+            .iter_classified_index_files(ChecksumType::Sha256)
+            .unwrap()
+            .collect::<Result<Vec<_>>>()?;
+        assert_eq!(entries.len(), 600);
+        assert_eq!(
+            entries
+                .iter()
+                .filter(|entry| matches!(entry, ClassifiedReleaseFileEntry::Contents(_)))
+                .count(),
+            EXPECTED_CONTENTS
+        );
+        assert_eq!(
+            entries
+                .iter()
+                .filter(|entry| matches!(entry, ClassifiedReleaseFileEntry::Packages(_)))
+                .count(),
+            EXPECTED_PACKAGES
+        );
+        assert_eq!(
+            entries
+                .iter()
+                .filter(|entry| matches!(entry, ClassifiedReleaseFileEntry::Sources(_)))
+                .count(),
+            EXPECTED_SOURCES
+        );
+        assert_eq!(
+            entries
+                .iter()
+                .filter(|entry| matches!(entry, ClassifiedReleaseFileEntry::Other(_)))
+                .count(),
+            EXPECTED_OTHER
+        );
+
         let contents = release
             .iter_contents_indices(ChecksumType::Sha256)
             .unwrap()
             .collect::<Result<Vec<_>>>()?;
-        assert_eq!(contents.len(), 126);
+        assert_eq!(contents.len(), EXPECTED_CONTENTS);
 
         assert_eq!(
             contents[0],
@@ -877,7 +1013,7 @@ mod test {
             .iter_packages_indices(ChecksumType::Sha256)
             .unwrap()
             .collect::<Result<Vec<_>>>()?;
-        assert_eq!(packages.len(), 180);
+        assert_eq!(packages.len(), EXPECTED_PACKAGES);
 
         assert_eq!(
             packages[0],
@@ -959,7 +1095,7 @@ mod test {
             .iter_sources_indices(ChecksumType::Sha256)
             .unwrap()
             .collect::<Result<Vec<_>>>()?;
-        assert_eq!(sources.len(), 9);
+        assert_eq!(sources.len(), EXPECTED_SOURCES);
 
         Ok(())
     }
