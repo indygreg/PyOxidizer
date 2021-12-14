@@ -162,6 +162,32 @@ pub struct ReleaseFileEntry<'a> {
     pub size: u64,
 }
 
+impl<'a> ReleaseFileEntry<'a> {
+    /// Obtain the `by-hash` path variant for this entry.
+    pub fn by_hash_path(&self) -> String {
+        if let Some((prefix, _)) = self.path.rsplit_once('/') {
+            format!(
+                "{}/by-hash/{}/{}",
+                prefix,
+                self.digest.field_name(),
+                self.digest.hex_digest()
+            )
+        } else {
+            format!(
+                "by-hash/{}/{}",
+                self.digest.field_name(),
+                self.digest.hex_digest()
+            )
+        }
+    }
+
+    /// Obtain the content digest as bytes.
+    pub fn digest_bytes(&self) -> Result<Vec<u8>> {
+        hex::decode(self.digest.hex_digest())
+            .map_err(|e| DebianError::ContentDigestBadHex(self.digest.hex_digest().to_string(), e))
+    }
+}
+
 /// A type of [ReleaseFileEntry] that describes a `Contents` file.
 ///
 /// This represents a pre-parsed wrapper around a [ReleaseFileEntry].
@@ -392,32 +418,6 @@ impl<'a> TryFrom<ReleaseFileEntry<'a>> for SourcesFileEntry<'a> {
         };
 
         Ok(Self { entry, compression })
-    }
-}
-
-impl<'a> ReleaseFileEntry<'a> {
-    /// Obtain the `by-hash` path variant for this entry.
-    pub fn by_hash_path(&self) -> String {
-        if let Some((prefix, _)) = self.path.rsplit_once('/') {
-            format!(
-                "{}/by-hash/{}/{}",
-                prefix,
-                self.digest.field_name(),
-                self.digest.hex_digest()
-            )
-        } else {
-            format!(
-                "by-hash/{}/{}",
-                self.digest.field_name(),
-                self.digest.hex_digest()
-            )
-        }
-    }
-
-    /// Obtain the content digest as bytes.
-    pub fn digest_bytes(&self) -> Result<Vec<u8>> {
-        hex::decode(self.digest.hex_digest())
-            .map_err(|e| DebianError::ContentDigestBadHex(self.digest.hex_digest().to_string(), e))
     }
 }
 
