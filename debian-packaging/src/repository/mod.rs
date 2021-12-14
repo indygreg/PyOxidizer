@@ -377,7 +377,7 @@ pub trait ReleaseReader: DataResolver + Sync {
                     let digest = ChecksumType::preferred_order()
                         .find_map(|checksum| {
                             cf.field_str(checksum.field_name()).map(|hex_digest| {
-                                ContentDigest::from_hex_checksum(checksum, hex_digest)
+                                ContentDigest::from_hex_digest(checksum, hex_digest)
                             })
                         })
                         .ok_or(DebianError::RepositoryReadCouldNotDeterminePackageDigest)??;

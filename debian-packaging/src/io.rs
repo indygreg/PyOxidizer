@@ -45,7 +45,7 @@ impl std::fmt::Debug for ContentDigest {
 
 impl ContentDigest {
     /// Obtain an instance by parsing a hex string as a [ChecksumType].
-    pub fn from_hex_checksum(checksum: ChecksumType, digest: &str) -> Result<Self> {
+    pub fn from_hex_digest(checksum: ChecksumType, digest: &str) -> Result<Self> {
         let digest = hex::decode(digest)?;
 
         Ok(match checksum {

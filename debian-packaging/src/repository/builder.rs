@@ -647,7 +647,7 @@ impl<'cf> RepositoryBuilder<'cf> {
                 let digest_hex = para
                     .field_str(strongest_checksum.field_name())
                     .expect("checksum's field should have been set");
-                let digest = ContentDigest::from_hex_checksum(*strongest_checksum, digest_hex)?;
+                let digest = ContentDigest::from_hex_digest(*strongest_checksum, digest_hex)?;
 
                 Ok(BinaryPackagePoolArtifact { path, size, digest })
             })

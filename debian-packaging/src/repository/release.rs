@@ -120,7 +120,7 @@ impl<'a> TryFrom<&ReleaseFileDigest<'a>> for ContentDigest {
     type Error = DebianError;
 
     fn try_from(digest: &ReleaseFileDigest) -> std::result::Result<Self, Self::Error> {
-        Self::from_hex_checksum(digest.checksum_type(), digest.hex_digest())
+        Self::from_hex_digest(digest.checksum_type(), digest.hex_digest())
     }
 }
 
