@@ -302,7 +302,7 @@ pub trait ReleaseReader: DataResolver + Sync {
                 &path,
                 entry.compression,
                 entry.size,
-                entry.digest.as_content_digest()?,
+                entry.digest.clone(),
             )
             .await?,
         ));
@@ -453,7 +453,7 @@ pub trait ReleaseReader: DataResolver + Sync {
                 &path,
                 entry.compression,
                 entry.size,
-                entry.digest.as_content_digest()?,
+                entry.digest.clone(),
             )
             .await?;
 

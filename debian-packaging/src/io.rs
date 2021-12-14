@@ -27,7 +27,7 @@ use {
 };
 
 /// Represents a content digest.
-#[derive(Clone, Eq, PartialEq)]
+#[derive(Clone, Eq, PartialEq, PartialOrd)]
 pub enum ContentDigest {
     /// An MD5 digest.
     Md5(Vec<u8>),
@@ -48,6 +48,21 @@ impl std::fmt::Debug for ContentDigest {
 }
 
 impl ContentDigest {
+    /// Create a new MD5 instance by parsing a hex digest.
+    pub fn md5_hex(digest: &str) -> Result<Self> {
+        Self::from_hex_digest(ChecksumType::Md5, digest)
+    }
+
+    /// Create a new SHA-1 instance by parsing a hex digest.
+    pub fn sha1_hex(digest: &str) -> Result<Self> {
+        Self::from_hex_digest(ChecksumType::Sha1, digest)
+    }
+
+    /// Create a new SHA-256 instance by parsing a hex digest.
+    pub fn sha256_hex(digest: &str) -> Result<Self> {
+        Self::from_hex_digest(ChecksumType::Sha256, digest)
+    }
+
     /// Obtain an instance by parsing a hex string as a [ChecksumType].
     pub fn from_hex_digest(checksum: ChecksumType, digest: &str) -> Result<Self> {
         let digest = hex::decode(digest)
