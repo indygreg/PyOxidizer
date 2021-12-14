@@ -92,12 +92,21 @@ impl<'a> ReleaseFileDigest<'a> {
         }
     }
 
-    /// Obtain the tracked digest value.
-    pub fn digest(&self) -> &'a str {
+    /// Obtain the tracked digest value as a hexadecimal string.
+    pub fn hex_digest(&self) -> &'a str {
         match self {
             Self::Md5(v) => v,
             Self::Sha1(v) => v,
             Self::Sha256(v) => v,
+        }
+    }
+
+    /// Obtain the [ChecksumType] that this digest stores.
+    pub fn checksum_type(&self) -> ChecksumType {
+        match self {
+            Self::Md5(_) => ChecksumType::Md5,
+            Self::Sha1(_) => ChecksumType::Sha1,
+            Self::Sha256(_) => ChecksumType::Sha256,
         }
     }
 
@@ -111,11 +120,7 @@ impl<'a> TryFrom<&ReleaseFileDigest<'a>> for ContentDigest {
     type Error = DebianError;
 
     fn try_from(digest: &ReleaseFileDigest) -> std::result::Result<Self, Self::Error> {
-        match digest {
-            ReleaseFileDigest::Md5(v) => Ok(ContentDigest::Md5(hex::decode(v)?)),
-            ReleaseFileDigest::Sha1(v) => Ok(ContentDigest::Sha1(hex::decode(v)?)),
-            ReleaseFileDigest::Sha256(v) => Ok(ContentDigest::Sha256(hex::decode(v)?)),
-        }
+        Self::from_hex_checksum(digest.checksum_type(), digest.hex_digest())
     }
 }
 
@@ -187,20 +192,20 @@ impl<'a> ReleaseFileEntry<'a> {
                 "{}/by-hash/{}/{}",
                 prefix,
                 self.digest.field_name(),
-                self.digest.digest()
+                self.digest.hex_digest()
             )
         } else {
             format!(
                 "by-hash/{}/{}",
                 self.digest.field_name(),
-                self.digest.digest()
+                self.digest.hex_digest()
             )
         }
     }
 
     /// Obtain the content digest as bytes.
     pub fn digest_bytes(&self) -> Result<Vec<u8>> {
-        Ok(hex::decode(self.digest.digest())?)
+        Ok(hex::decode(self.digest.hex_digest())?)
     }
 }
 
