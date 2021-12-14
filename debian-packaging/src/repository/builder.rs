@@ -522,7 +522,7 @@ impl<'cf> RepositoryBuilder<'cf> {
         // Different packages have different fields and it is effectively impossible to maintain
         // an numeration of all known fields. So, copy over all fields and ignore the special ones,
         // which we handle later.
-        for field in original_control_file.as_ref().iter_fields() {
+        for field in original_control_file.iter_fields() {
             if ![
                 "Description",
                 "Filename",
@@ -540,7 +540,7 @@ impl<'cf> RepositoryBuilder<'cf> {
         // The `Description` field is a bit wonky in Packages files. Instead of capturing multiline
         // values, `Description` is just the first line and a `Description-md5` contains the md5
         // of the multiline value.
-        if let Some(description) = original_control_file.as_ref().field("Description") {
+        if let Some(description) = original_control_file.field("Description") {
             let description = description.value_str();
 
             if let Some(index) = description.find('\n') {
@@ -1052,9 +1052,7 @@ impl<'cf> RepositoryBuilder<'cf> {
         let release_write = writer
             .write_path(
                 release_path.into(),
-                Box::pin(futures::io::Cursor::new(
-                    release.as_ref().to_string().into_bytes(),
-                )),
+                Box::pin(futures::io::Cursor::new(release.to_string().into_bytes())),
             )
             .await?;
 
@@ -1070,7 +1068,7 @@ impl<'cf> RepositoryBuilder<'cf> {
                 key,
                 password,
                 HashAlgorithm::SHA2_256,
-                std::io::Cursor::new(release.as_ref().to_string().as_bytes()),
+                std::io::Cursor::new(release.to_string().as_bytes()),
             )?;
 
             if let Some(cb) = progress_cb {
@@ -1275,7 +1273,7 @@ mod test {
         {
             let dest_filename = builder.add_binary_deb("main", package)?;
 
-            let source_filename = package.as_ref().field_str("Filename").unwrap();
+            let source_filename = package.field_str("Filename").unwrap();
 
             mapping_resolver.add_path_map(dest_filename, source_filename);
         }

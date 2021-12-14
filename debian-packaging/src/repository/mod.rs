@@ -147,7 +147,7 @@ pub trait ReleaseReader: DataResolver + Sync {
 
         let checksum = &[ChecksumType::Sha256, ChecksumType::Sha1, ChecksumType::Md5]
             .iter()
-            .find(|variant| release.as_ref().field(variant.field_name()).is_some())
+            .find(|variant| release.field(variant.field_name()).is_some())
             .ok_or(DebianError::RepositoryReadReleaseNoKnownChecksum)?;
 
         Ok(**checksum)
@@ -368,19 +368,17 @@ pub trait ReleaseReader: DataResolver + Sync {
                 let cf: BinaryPackageControlFile = cf;
 
                 if binary_package_filter(cf.clone()) {
-                    let path = cf.as_ref().required_field_str("Filename")?.to_string();
+                    let path = cf.required_field_str("Filename")?.to_string();
 
-                    let size = cf.as_ref().field_u64("Size").ok_or_else(|| {
+                    let size = cf.field_u64("Size").ok_or_else(|| {
                         DebianError::ControlRequiredFieldMissing("Size".to_string())
                     })??;
 
                     let digest = ChecksumType::preferred_order()
                         .find_map(|checksum| {
-                            cf.as_ref()
-                                .field_str(checksum.field_name())
-                                .map(|hex_digest| {
-                                    ContentDigest::from_hex_checksum(checksum, hex_digest)
-                                })
+                            cf.field_str(checksum.field_name()).map(|hex_digest| {
+                                ContentDigest::from_hex_checksum(checksum, hex_digest)
+                            })
                         })
                         .ok_or(DebianError::RepositoryReadCouldNotDeterminePackageDigest)??;
 
