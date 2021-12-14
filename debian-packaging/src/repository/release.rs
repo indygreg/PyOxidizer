@@ -32,8 +32,7 @@ use {
         pgp::MyHasher,
         repository::Compression,
     },
-    chrono::{DateTime, TimeZone, Utc},
-    mailparse::dateparse,
+    chrono::{DateTime, Utc},
     std::{
         borrow::Cow,
         io::{BufRead, Read},
@@ -551,7 +550,7 @@ impl<'a> ReleaseFile<'a> {
     ///
     /// The timezone from the original file is always normalized to UTC.
     pub fn date(&self) -> Option<Result<DateTime<Utc>>> {
-        self.date_str().map(|v| Ok(Utc.timestamp(dateparse(v)?, 0)))
+        self.field_datetime_rfc5322("Date")
     }
 
     /// Time the release file should be considered expired by the client, as its raw string value.
@@ -561,8 +560,7 @@ impl<'a> ReleaseFile<'a> {
 
     /// Time the release file should be considered expired by the client.
     pub fn valid_until(&self) -> Option<Result<DateTime<Utc>>> {
-        self.valid_until_str()
-            .map(|v| Ok(Utc.timestamp(dateparse(v)?, 0)))
+        self.field_datetime_rfc5322("Valid-Until")
     }
 
     /// Evaluated value for `NotAutomatic` field.

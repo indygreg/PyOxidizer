@@ -13,6 +13,7 @@ use {
         dependency::DependencyList,
         error::{DebianError, Result},
     },
+    chrono::{DateTime, TimeZone, Utc},
     futures::{AsyncBufRead, AsyncBufReadExt},
     pin_project::pin_project,
     std::{
@@ -283,6 +284,17 @@ impl<'a> ControlParagraph<'a> {
     /// Obtain the value of a field, parsed as a [DependencyList].
     pub fn field_dependency_list(&self, name: &str) -> Option<Result<DependencyList>> {
         self.field_str(name).map(DependencyList::parse)
+    }
+
+    /// Obtain the value of a field parsed as an RFC 5322 date string.
+    ///
+    /// This will parse values like `Sat, 09 Oct 2021 09:34:56 UTC`.
+    ///
+    /// The timezone is always normalized to UTC even if it is expressed differently in the
+    /// source string.
+    pub fn field_datetime_rfc5322(&self, name: &str) -> Option<Result<DateTime<Utc>>> {
+        self.field_str(name)
+            .map(|v| Ok(Utc.timestamp(mailparse::dateparse(v)?, 0)))
     }
 
     /// Obtain the field with the given name as a [ControlFieldValue::Simple], if possible.
