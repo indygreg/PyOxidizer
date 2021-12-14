@@ -292,17 +292,17 @@ pub trait ReleaseReader: DataResolver + Sync {
         let release = self.release_file();
 
         let path = if release.acquire_by_hash().unwrap_or_default() {
-            entry.entry.by_hash_path()
+            entry.by_hash_path()
         } else {
-            entry.entry.path.to_string()
+            entry.path.to_string()
         };
 
         let mut reader = ControlParagraphAsyncReader::new(futures::io::BufReader::new(
             self.get_path_decoded_with_digest_verification(
                 &path,
                 entry.compression,
-                entry.entry.size,
-                entry.entry.digest.as_content_digest()?,
+                entry.size,
+                entry.digest.as_content_digest()?,
             )
             .await?,
         ));
@@ -443,17 +443,17 @@ pub trait ReleaseReader: DataResolver + Sync {
         let entry = self.contents_entry(component, architecture, is_installer)?;
 
         let path = if release.acquire_by_hash().unwrap_or_default() {
-            entry.entry.by_hash_path()
+            entry.by_hash_path()
         } else {
-            entry.entry.path.to_string()
+            entry.path.to_string()
         };
 
         let reader = self
             .get_path_decoded_with_digest_verification(
                 &path,
                 entry.compression,
-                entry.entry.size,
-                entry.entry.digest.as_content_digest()?,
+                entry.size,
+                entry.digest.as_content_digest()?,
             )
             .await?;
 

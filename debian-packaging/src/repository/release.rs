@@ -2,7 +2,24 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-/*! `Release` file primitives. */
+/*! `Release` file primitives.
+
+`Release` files (or `InRelease` if it contains a PGP cleartext signature) are
+the main definition of a Debian repository. They are a control paragraph that
+defines repository-level metadata as well as a list of additional *indices* files
+that further define the content of the repository.
+
+[ReleaseFile] represents a parsed `Release` or `InRelease` file. It exposes
+accessor functions for obtaining well-known metadata fields. It also exposes
+various functions for obtaining index file entries.
+
+[ReleaseFileEntry] is the most generic type describing an *indices* file.
+Additional types describe more strongly typed indices file variants:
+
+* [ContentsFileEntry] (`Contents` files)
+* [PackagesFileEntry] (`Packages` files)
+* [SourcesFileEntry] (`Sources` files)
+*/
 
 use {
     crate::{
@@ -140,10 +157,12 @@ pub struct ReleaseFileEntry<'a> {
 }
 
 /// A type of [ReleaseFileEntry] that describes a `Contents` file.
+///
+/// This represents a pre-parsed wrapper around a [ReleaseFileEntry].
 #[derive(Clone, Debug, PartialEq)]
 pub struct ContentsFileEntry<'a> {
     /// The [ReleaseFileEntry] from which this instance was derived.
-    pub entry: ReleaseFileEntry<'a>,
+    entry: ReleaseFileEntry<'a>,
 
     /// The parsed component name (from the entry's path).
     pub component: Cow<'a, str>,
@@ -156,13 +175,33 @@ pub struct ContentsFileEntry<'a> {
 
     /// Whether this refers to udeb packages used by installers.
     pub is_installer: bool,
+}
+
+impl<'a> Deref for ContentsFileEntry<'a> {
+    type Target = ReleaseFileEntry<'a>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.entry
+    }
+}
+
+impl<'a> DerefMut for ContentsFileEntry<'a> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.entry
+    }
+}
+
+impl<'a> From<ContentsFileEntry<'a>> for ReleaseFileEntry<'a> {
+    fn from(v: ContentsFileEntry<'a>) -> Self {
+        v.entry
+    }
 }
 
 /// A special type of [ReleaseFileEntry] that describes a `Packages` file.
 #[derive(Clone, Debug, PartialEq)]
 pub struct PackagesFileEntry<'a> {
     /// The [ReleaseFileEntry] from which this instance was derived.
-    pub entry: ReleaseFileEntry<'a>,
+    entry: ReleaseFileEntry<'a>,
 
     /// The parsed component name (from the entry's path).
     pub component: Cow<'a, str>,
@@ -177,11 +216,51 @@ pub struct PackagesFileEntry<'a> {
     pub is_installer: bool,
 }
 
+impl<'a> Deref for PackagesFileEntry<'a> {
+    type Target = ReleaseFileEntry<'a>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.entry
+    }
+}
+
+impl<'a> DerefMut for PackagesFileEntry<'a> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.entry
+    }
+}
+
+impl<'a> From<PackagesFileEntry<'a>> for ReleaseFileEntry<'a> {
+    fn from(v: PackagesFileEntry<'a>) -> Self {
+        v.entry
+    }
+}
+
 /// A type of [ReleaseFileEntry] that describes a `Sources` file.
 #[derive(Clone, Debug, PartialEq)]
 pub struct SourcesFileEntry<'a> {
-    pub entry: ReleaseFileEntry<'a>,
+    entry: ReleaseFileEntry<'a>,
     pub compression: Compression,
+}
+
+impl<'a> Deref for SourcesFileEntry<'a> {
+    type Target = ReleaseFileEntry<'a>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.entry
+    }
+}
+
+impl<'a> DerefMut for SourcesFileEntry<'a> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.entry
+    }
+}
+
+impl<'a> From<SourcesFileEntry<'a>> for ReleaseFileEntry<'a> {
+    fn from(v: SourcesFileEntry<'a>) -> Self {
+        v.entry
+    }
 }
 
 impl<'a> ReleaseFileEntry<'a> {
@@ -208,9 +287,7 @@ impl<'a> ReleaseFileEntry<'a> {
         hex::decode(self.digest.hex_digest())
             .map_err(|e| DebianError::ContentDigestBadHex(self.digest.hex_digest().to_string(), e))
     }
-}
 
-impl<'a> ReleaseFileEntry<'a> {
     /// Attempt to convert this instance to a [ContentsFileEntry].
     ///
     /// Resolves to [Some] if the conversion succeeded or [None] if this (likely)
@@ -321,6 +398,8 @@ impl<'a> ReleaseFileEntry<'a> {
 /// A Debian repository `Release` file.
 ///
 /// Release files contain metadata and list the index files for a *repository*.
+/// They are effectively the entrypoint for defining a Debian repository and its
+/// content.
 ///
 /// Instances are wrappers around a [ControlParagraph]. [Deref] and [DerefMut] are
 /// implemented to allow obtaining the inner [ControlParagraph]. [From] and [Into]
