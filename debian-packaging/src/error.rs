@@ -16,9 +16,6 @@ pub enum DebianError {
     #[error("URL error: {0:?}")]
     Url(#[from] url::ParseError),
 
-    #[error("hex parsing error: {0:?}")]
-    Hex(#[from] hex::FromHexError),
-
     #[error("PGP error: {0:?}")]
     Pgp(#[from] pgp::errors::Error),
 
@@ -34,6 +31,9 @@ pub enum DebianError {
 
     #[error("integer parsing error: {0:?}")]
     ParseInt(#[from] std::num::ParseIntError),
+
+    #[error("invalid hex string (`{0}`) when parsing content digest: {0:?}")]
+    ContentDigestBadHex(String, hex::FromHexError),
 
     #[error("control file parse error: {0}")]
     ControlParseError(String),

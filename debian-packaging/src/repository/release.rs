@@ -205,7 +205,8 @@ impl<'a> ReleaseFileEntry<'a> {
 
     /// Obtain the content digest as bytes.
     pub fn digest_bytes(&self) -> Result<Vec<u8>> {
-        Ok(hex::decode(self.digest.hex_digest())?)
+        hex::decode(self.digest.hex_digest())
+            .map_err(|e| DebianError::ContentDigestBadHex(self.digest.hex_digest().to_string(), e))
     }
 }
 

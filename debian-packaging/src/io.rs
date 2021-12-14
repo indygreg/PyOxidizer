@@ -5,7 +5,11 @@
 /*! I/O helpers. */
 
 use {
-    crate::{error::Result, pgp::MyHasher, repository::release::ChecksumType},
+    crate::{
+        error::{DebianError, Result},
+        pgp::MyHasher,
+        repository::release::ChecksumType,
+    },
     async_compression::futures::bufread::{
         BzDecoder, BzEncoder, GzipDecoder, GzipEncoder, LzmaDecoder, LzmaEncoder, XzDecoder,
         XzEncoder,
@@ -46,7 +50,8 @@ impl std::fmt::Debug for ContentDigest {
 impl ContentDigest {
     /// Obtain an instance by parsing a hex string as a [ChecksumType].
     pub fn from_hex_digest(checksum: ChecksumType, digest: &str) -> Result<Self> {
-        let digest = hex::decode(digest)?;
+        let digest = hex::decode(digest)
+            .map_err(|e| DebianError::ContentDigestBadHex(digest.to_string(), e))?;
 
         Ok(match checksum {
             ChecksumType::Md5 => Self::Md5(digest),
