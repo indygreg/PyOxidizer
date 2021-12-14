@@ -382,8 +382,6 @@ impl<'a> ReleaseFile<'a> {
         let paragraphs = ControlParagraphReader::new(reader).collect::<Result<Vec<_>>>()?;
 
         // A Release control file should have a single paragraph.
-
-        // A Release control file should have a single paragraph.
         if paragraphs.len() != 1 {
             return Err(DebianError::ReleaseControlParagraphMismatch(
                 paragraphs.len(),
