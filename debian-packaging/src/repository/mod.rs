@@ -2,11 +2,61 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-/*! Debian repository primitives.
+/*! Debian repositories.
 
 A Debian repository is a collection of files holding packages and other
 support primitives. See <https://wiki.debian.org/DebianRepository/Format>
 for the canonical definition of a Debian repository.
+
+Here's the concise version.
+
+A Debian repository is a collection of files rooted at a given path or URL.
+In Apt sources files, this is the value after lines beginning with `apt`. e.g.
+`deb http://us.archive.ubuntu.com/ubuntu/ impish main` defines the repository
+rooted at `http://us.archive.ubuntu.com/ubuntu/`.
+
+Under the root are `dists/<distribution>/` directories. Each of these
+directories (`<distribution>` can have `/` within them) has a `Release`
+and/or `InRelease` file. These files serve as the main *index* for a given
+*distribution*. (`InRelease` is the same as `Release` except it has a PGP
+cleartext signature and may be encoded slightly differently as a result.)
+
+Each `[In]Release` file defines metadata for a *distribution* as well as
+provides a manifest of additional files further defining the content of the
+*distribution*. These additional files define available binary packages (what
+you typically install), sources packages, lists of which packages provide which
+filenames, etc.
+
+In addition to *distributions*, a repository also contains a *pool* where
+non-distribution blob data is stored. This typically exists under the
+`pool/` path relative to the repository root.
+
+Since repositories are logically a virtual filesystem and can be backed
+by any key-value blob store, we've abstracted repository I/O through a
+series of traits.
+
+[DataResolver] is a generic trait for providing path/key based I/O.
+
+[RepositoryRootReader] describes an interface for reading from the root of
+a repository. It is used to obtain and parse `[In]Release` files and to read
+from the *pool*.
+
+[ReleaseReader] describes an interface for reading from a *distribution*
+and a parsed `[In]Release` file describing the distribution.
+
+[RepositoryWriter] describes an interface for writing to a repository.
+
+Concrete implementations of repositories exist in submodules. [http]
+provides [http::HttpRepositoryClient], which implements [RepositoryRootReader]
+and serves as the primary HTTP-based client. [filesystem] provides
+[filesystem::FilesystemRepositoryReader] and [filesystem::FilesystemRepositoryWriter]
+for reading and writing repositories using a local filesystem.
+
+Modules like [contents] and [release] define primitives encountered in
+repositories, such as `[In]Release` files.
+
+The [builder] module contains functionality for creating/publishing
+repositories.
 */
 
 use {
@@ -519,6 +569,12 @@ pub struct RepositoryWrite<'a> {
     pub bytes_written: u64,
 }
 
+/// An interface for writing to a repository.
+///
+/// From the perspective of this trait, writing to a repository is a matter of
+/// providing I/O for testing for path/key existence/integrity and storing new
+/// data under a path/key. Additional logic about what to write where is
+/// implemented elsewhere.
 #[async_trait]
 pub trait RepositoryWriter: Sync {
     /// Verify the existence of a path with optional content integrity checking.

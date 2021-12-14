@@ -6,19 +6,6 @@
 
 This module provides functionality for interfacing with HTTP based Debian
 repositories.
-
-See <https://wiki.debian.org/DebianRepository/Format> for a definition of a
-Debian repository layout. Essentially, there's a root URL. Under that root URL
-are `dists/<distribution>/` directories. Each of these directories (which can
-have multiple path separators) has an `InRelease` and/or `Release` file. These
-files define the contents of a given *distribution*. This includes which
-architectures are supported, what *components* are available, etc.
-
-Our [HttpRepositoryClient] models a client bound to a root URL.
-
-The `InRelease`/`Release` files define the contents of a given *distribution*. Our
-[HttpReleaseClient] models a client bound to a parsed file. You can obtain instances
-by calling [HttpDistributionClient.fetch_inrelease()].
 */
 
 use {
