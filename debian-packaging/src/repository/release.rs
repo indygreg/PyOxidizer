@@ -144,6 +144,12 @@ impl<'a> TryFrom<&ReleaseFileDigest<'a>> for ContentDigest {
 /// An entry for a file in a parsed `Release` file.
 ///
 /// Instances correspond to a line in a `MD5Sum`, `SHA1`, or `SHA256` field.
+///
+/// This is the most generic way to represent an indices file in a `Release` file.
+///
+/// Instances can be fallibly converted into more strongly typed release entries
+/// via [TryFrom]/[TryInto]. Other entry types include [ContentsFileEntry],
+/// [PackagesFileEntry], and [SourcesFileEntry].
 #[derive(Clone, Debug, PartialEq, PartialOrd)]
 pub struct ReleaseFileEntry<'a> {
     /// The path to this file within the repository.
@@ -197,6 +203,45 @@ impl<'a> From<ContentsFileEntry<'a>> for ReleaseFileEntry<'a> {
     }
 }
 
+impl<'a> TryFrom<ReleaseFileEntry<'a>> for ContentsFileEntry<'a> {
+    type Error = DebianError;
+
+    fn try_from(entry: ReleaseFileEntry<'a>) -> std::result::Result<Self, Self::Error> {
+        let parts = entry.path.split('/').collect::<Vec<_>>();
+
+        let filename = *parts
+            .last()
+            .ok_or(DebianError::ReleaseIndicesEntryWrongType)?;
+
+        let suffix = filename
+            .strip_prefix("Contents-")
+            .ok_or(DebianError::ReleaseIndicesEntryWrongType)?;
+
+        let (architecture, compression) = if let Some(v) = suffix.strip_suffix(".gz") {
+            (v, Compression::Gzip)
+        } else {
+            (suffix, Compression::None)
+        };
+
+        let (architecture, is_installer) = if let Some(v) = architecture.strip_prefix("udeb-") {
+            (v, true)
+        } else {
+            (architecture, false)
+        };
+
+        // The component is the part up until the `/Contents*` final path component.
+        let component = &entry.path[..entry.path.len() - filename.len() - 1];
+
+        Ok(Self {
+            entry,
+            component: component.into(),
+            architecture: architecture.into(),
+            compression,
+            is_installer,
+        })
+    }
+}
+
 /// A special type of [ReleaseFileEntry] that describes a `Packages` file.
 #[derive(Clone, Debug, PartialEq)]
 pub struct PackagesFileEntry<'a> {
@@ -236,6 +281,69 @@ impl<'a> From<PackagesFileEntry<'a>> for ReleaseFileEntry<'a> {
     }
 }
 
+impl<'a> TryFrom<ReleaseFileEntry<'a>> for PackagesFileEntry<'a> {
+    type Error = DebianError;
+
+    fn try_from(entry: ReleaseFileEntry<'a>) -> std::result::Result<Self, Self::Error> {
+        let parts = entry.path.split('/').collect::<Vec<_>>();
+
+        let compression = match *parts
+            .last()
+            .ok_or(DebianError::ReleaseIndicesEntryWrongType)?
+        {
+            "Packages" => Compression::None,
+            "Packages.xz" => Compression::Xz,
+            "Packages.gz" => Compression::Gzip,
+            "Packages.bz2" => Compression::Bzip2,
+            "Packages.lzma" => Compression::Lzma,
+            _ => {
+                return Err(DebianError::ReleaseIndicesEntryWrongType);
+            }
+        };
+
+        // The component and architecture are the directory components before the
+        // filename. The architecture is limited to a single directory component but
+        // the component can have multiple directories.
+
+        let architecture_component = *parts
+            .iter()
+            .rev()
+            .nth(1)
+            .ok_or(DebianError::ReleaseIndicesEntryWrongType)?;
+
+        let search = &entry.path[..entry.path.len()
+            - parts
+                .last()
+                .ok_or(DebianError::ReleaseIndicesEntryWrongType)?
+                .len()
+            - 1];
+        let component = &search[0..search
+            .rfind('/')
+            .ok_or(DebianError::ReleaseIndicesEntryWrongType)?];
+
+        // The architecture part is prefixed with `binary-`.
+        let architecture = architecture_component
+            .strip_prefix("binary-")
+            .ok_or(DebianError::ReleaseIndicesEntryWrongType)?;
+
+        // udeps have a `debian-installer` path component following the component.
+        let (component, is_udeb) =
+            if let Some(component) = component.strip_suffix("/debian-installer") {
+                (component, true)
+            } else {
+                (component, false)
+            };
+
+        Ok(Self {
+            entry,
+            component: component.into(),
+            architecture: architecture.into(),
+            compression,
+            is_installer: is_udeb,
+        })
+    }
+}
+
 /// A type of [ReleaseFileEntry] that describes a `Sources` file.
 #[derive(Clone, Debug, PartialEq)]
 pub struct SourcesFileEntry<'a> {
@@ -263,6 +371,30 @@ impl<'a> From<SourcesFileEntry<'a>> for ReleaseFileEntry<'a> {
     }
 }
 
+impl<'a> TryFrom<ReleaseFileEntry<'a>> for SourcesFileEntry<'a> {
+    type Error = DebianError;
+
+    fn try_from(entry: ReleaseFileEntry<'a>) -> std::result::Result<Self, Self::Error> {
+        let parts = entry.path.split('/').collect::<Vec<_>>();
+
+        let compression = match *parts
+            .last()
+            .ok_or(DebianError::ReleaseIndicesEntryWrongType)?
+        {
+            "Sources" => Compression::None,
+            "Sources.gz" => Compression::Gzip,
+            "Sources.xz" => Compression::Xz,
+            "Sources.bz2" => Compression::Bzip2,
+            "Sources.lzma" => Compression::Lzma,
+            _ => {
+                return Err(DebianError::ReleaseIndicesEntryWrongType);
+            }
+        };
+
+        Ok(Self { entry, compression })
+    }
+}
+
 impl<'a> ReleaseFileEntry<'a> {
     /// Obtain the `by-hash` path variant for this entry.
     pub fn by_hash_path(&self) -> String {
@@ -286,112 +418,6 @@ impl<'a> ReleaseFileEntry<'a> {
     pub fn digest_bytes(&self) -> Result<Vec<u8>> {
         hex::decode(self.digest.hex_digest())
             .map_err(|e| DebianError::ContentDigestBadHex(self.digest.hex_digest().to_string(), e))
-    }
-
-    /// Attempt to convert this instance to a [ContentsFileEntry].
-    ///
-    /// Resolves to [Some] if the conversion succeeded or [None] if this (likely)
-    /// isn't a `Contents*` file.
-    pub fn to_contents_file_entry(self) -> Option<ContentsFileEntry<'a>> {
-        let parts = self.path.split('/').collect::<Vec<_>>();
-
-        let filename = *parts.last()?;
-
-        let suffix = filename.strip_prefix("Contents-")?;
-
-        let (architecture, compression) = if let Some(v) = suffix.strip_suffix(".gz") {
-            (v, Compression::Gzip)
-        } else {
-            (suffix, Compression::None)
-        };
-
-        let (architecture, is_installer) = if let Some(v) = architecture.strip_prefix("udeb-") {
-            (v, true)
-        } else {
-            (architecture, false)
-        };
-
-        // The component is the part up until the `/Contents*` final path component.
-        let component = &self.path[..self.path.len() - filename.len() - 1];
-
-        Some(ContentsFileEntry {
-            entry: self,
-            component: component.into(),
-            architecture: architecture.into(),
-            compression,
-            is_installer,
-        })
-    }
-
-    /// Attempt to convert this instance to a [PackagesFileEntry].
-    ///
-    /// Resolves to [Some] if the conversion succeeded or [None] if this (likely)
-    /// isn't a `Packages*` file.
-    pub fn to_packages_file_entry(self) -> Option<PackagesFileEntry<'a>> {
-        let parts = self.path.split('/').collect::<Vec<_>>();
-
-        let compression = match *parts.last()? {
-            "Packages" => Compression::None,
-            "Packages.xz" => Compression::Xz,
-            "Packages.gz" => Compression::Gzip,
-            "Packages.bz2" => Compression::Bzip2,
-            "Packages.lzma" => Compression::Lzma,
-            _ => {
-                return None;
-            }
-        };
-
-        // The component and architecture are the directory components before the
-        // filename. The architecture is limited to a single directory component but
-        // the component can have multiple directories.
-
-        let architecture_component = *parts.iter().rev().nth(1)?;
-
-        let search = &self.path[..self.path.len() - parts.last()?.len() - 1];
-        let component = &search[0..search.rfind('/')?];
-
-        // The architecture part is prefixed with `binary-`.
-        let architecture = architecture_component.strip_prefix("binary-")?;
-
-        // udeps have a `debian-installer` path component following the component.
-        let (component, is_udeb) =
-            if let Some(component) = component.strip_suffix("/debian-installer") {
-                (component, true)
-            } else {
-                (component, false)
-            };
-
-        Some(PackagesFileEntry {
-            entry: self,
-            component: component.into(),
-            architecture: architecture.into(),
-            compression,
-            is_installer: is_udeb,
-        })
-    }
-
-    /// Attempt to convert this instance to a [SourcesFileEntry].
-    ///
-    /// Resolves to [Some] if the conversion succeeded or [None] if this (likely) isn't a
-    /// `Sources` file.
-    pub fn to_sources_file_entry(self) -> Option<SourcesFileEntry<'a>> {
-        let parts = self.path.split('/').collect::<Vec<_>>();
-
-        let compression = match *parts.last()? {
-            "Sources" => Compression::None,
-            "Sources.gz" => Compression::Gzip,
-            "Sources.xz" => Compression::Xz,
-            "Sources.bz2" => Compression::Bzip2,
-            "Sources.lzma" => Compression::Lzma,
-            _ => {
-                return None;
-            }
-        };
-
-        Some(SourcesFileEntry {
-            entry: self,
-            compression,
-        })
     }
 }
 
@@ -609,7 +635,11 @@ impl<'a> ReleaseFile<'a> {
     ) -> Option<Box<(dyn Iterator<Item = Result<ContentsFileEntry<'_>>> + '_)>> {
         if let Some(iter) = self.iter_index_files(checksum) {
             Some(Box::new(iter.filter_map(|entry| match entry {
-                Ok(entry) => entry.to_contents_file_entry().map(Ok),
+                Ok(entry) => match ContentsFileEntry::try_from(entry) {
+                    Ok(v) => Some(Ok(v)),
+                    Err(DebianError::ReleaseIndicesEntryWrongType) => None,
+                    Err(e) => Some(Err(e)),
+                },
                 Err(e) => Some(Err(e)),
             })))
         } else {
@@ -630,7 +660,11 @@ impl<'a> ReleaseFile<'a> {
     ) -> Option<Box<(dyn Iterator<Item = Result<PackagesFileEntry<'_>>> + '_)>> {
         if let Some(iter) = self.iter_index_files(checksum) {
             Some(Box::new(iter.filter_map(|entry| match entry {
-                Ok(entry) => entry.to_packages_file_entry().map(Ok),
+                Ok(entry) => match PackagesFileEntry::try_from(entry) {
+                    Ok(v) => Some(Ok(v)),
+                    Err(DebianError::ReleaseIndicesEntryWrongType) => None,
+                    Err(e) => Some(Err(e)),
+                },
                 Err(e) => Some(Err(e)),
             })))
         } else {
@@ -647,7 +681,11 @@ impl<'a> ReleaseFile<'a> {
     ) -> Option<Box<(dyn Iterator<Item = Result<SourcesFileEntry<'_>>> + '_)>> {
         if let Some(iter) = self.iter_index_files(checksum) {
             Some(Box::new(iter.filter_map(|entry| match entry {
-                Ok(entry) => entry.to_sources_file_entry().map(Ok),
+                Ok(entry) => match SourcesFileEntry::try_from(entry) {
+                    Ok(v) => Some(Ok(v)),
+                    Err(DebianError::ReleaseIndicesEntryWrongType) => None,
+                    Err(e) => Some(Err(e)),
+                },
                 Err(e) => Some(Err(e)),
             })))
         } else {

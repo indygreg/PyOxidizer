@@ -104,6 +104,9 @@ pub enum DebianError {
     #[error("index entry path unexpectedly has spaces: {0}")]
     ReleasePathWithSpaces(String),
 
+    #[error("release indices file cannot be converted to the given type")]
+    ReleaseIndicesEntryWrongType,
+
     #[error("No PGP signatures found")]
     ReleaseNoSignatures,
 
