@@ -21,7 +21,24 @@ use {
 /// attempts to implement all the details.
 ///
 /// The concise version is the format is `[epoch:]upstream_version[-debian_revision]`
-/// and each component has rules about what characters are allowed.
+/// and each component has rules about what characters are allowed. Our
+/// [Self::parse()] should be compliant with the specification and reject invalid
+/// version strings and parse components to the appropriate field.
+///
+/// This type implements a custom ordering function that implements the complex rules
+/// around Debian package version ordering.
+///
+/// ```rust
+/// use debian_packaging::package_version::PackageVersion;
+///
+/// let v = PackageVersion::parse("1:4.7.0+dfsg1-2").unwrap();
+/// assert_eq!(v.epoch(), Some(1));
+/// assert_eq!(v.upstream_version(), "4.7.0+dfsg1");
+/// assert_eq!(v.debian_revision(), Some("2"));
+/// assert_eq!(format!("{}", v), "1:4.7.0+dfsg1-2");
+///
+/// assert!(v < PackageVersion::parse("1:4.7.0+dfsg1-3").unwrap());
+/// ```
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct PackageVersion {
     epoch: Option<u32>,
