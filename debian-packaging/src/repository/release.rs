@@ -647,6 +647,74 @@ impl<'a> TryFrom<ReleaseFileEntry<'a>> for TranslationFileEntry<'a> {
     }
 }
 
+/// A type of [ReleaseFileEntry] that describes a manifest of files with content digests.
+///
+/// This represents `MD5SUMS` and `SHA256SUMS` files which hold an additional list of files
+/// and their content manifests.
+#[derive(Clone, Debug, PartialEq)]
+pub struct FileManifestEntry<'a> {
+    /// The [ReleaseFileEntry] from which this instance was derived.
+    entry: ReleaseFileEntry<'a>,
+
+    /// The digest format stored in this file.
+    pub checksum: ChecksumType,
+
+    /// The root path for files in this manifest.
+    pub root_path: Cow<'a, str>,
+}
+
+impl<'a> Deref for FileManifestEntry<'a> {
+    type Target = ReleaseFileEntry<'a>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.entry
+    }
+}
+
+impl<'a> DerefMut for FileManifestEntry<'a> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.entry
+    }
+}
+
+impl<'a> From<FileManifestEntry<'a>> for ReleaseFileEntry<'a> {
+    fn from(v: FileManifestEntry<'a>) -> Self {
+        v.entry
+    }
+}
+
+impl<'a> TryFrom<ReleaseFileEntry<'a>> for FileManifestEntry<'a> {
+    type Error = DebianError;
+
+    fn try_from(entry: ReleaseFileEntry<'a>) -> std::result::Result<Self, Self::Error> {
+        let parts = entry.path.split('/').collect::<Vec<_>>();
+
+        let filename = *parts
+            .last()
+            .ok_or(DebianError::ReleaseIndicesEntryWrongType)?;
+
+        let checksum = match filename {
+            "MD5SUMS" => ChecksumType::Md5,
+            "SHA256SUMS" => ChecksumType::Sha256,
+            _ => {
+                return Err(DebianError::ReleaseIndicesEntryWrongType);
+            }
+        };
+
+        let root_path = entry
+            .path
+            .rsplit_once('/')
+            .ok_or(DebianError::ReleaseIndicesEntryWrongType)?
+            .0;
+
+        Ok(Self {
+            entry,
+            checksum,
+            root_path: root_path.into(),
+        })
+    }
+}
+
 /// A `[In]Release` file entry cast to its stronger type, if possible.
 pub enum ClassifiedReleaseFileEntry<'a> {
     /// A `Contents` file.
@@ -663,6 +731,8 @@ pub enum ClassifiedReleaseFileEntry<'a> {
     AppStreamIcons(AppStreamIconsFileEntry<'a>),
     /// A `Translation` file.
     Translation(TranslationFileEntry<'a>),
+    /// A `*SUMS` file containing content digests of additional files.
+    FileManifest(FileManifestEntry<'a>),
     /// Some other file type.
     Other(ReleaseFileEntry<'a>),
 }
@@ -679,6 +749,7 @@ impl<'a> Deref for ClassifiedReleaseFileEntry<'a> {
             Self::AppStreamComponents(v) => &v.entry,
             Self::AppStreamIcons(v) => &v.entry,
             Self::Translation(v) => &v.entry,
+            Self::FileManifest(v) => &v.entry,
             Self::Other(v) => v,
         }
     }
@@ -694,6 +765,7 @@ impl<'a> DerefMut for ClassifiedReleaseFileEntry<'a> {
             Self::AppStreamComponents(v) => &mut v.entry,
             Self::AppStreamIcons(v) => &mut v.entry,
             Self::Translation(v) => &mut v.entry,
+            Self::FileManifest(v) => &mut v.entry,
             Self::Other(v) => v,
         }
     }
@@ -947,6 +1019,16 @@ impl<'a> ReleaseFile<'a> {
                     match ContentsFileEntry::try_from(entry.clone()) {
                         Ok(contents) => {
                             return Ok(ClassifiedReleaseFileEntry::Contents(contents));
+                        }
+                        Err(DebianError::ReleaseIndicesEntryWrongType) => {}
+                        Err(e) => {
+                            return Err(e);
+                        }
+                    }
+
+                    match FileManifestEntry::try_from(entry.clone()) {
+                        Ok(entry) => {
+                            return Ok(ClassifiedReleaseFileEntry::FileManifest(entry));
                         }
                         Err(DebianError::ReleaseIndicesEntryWrongType) => {}
                         Err(e) => {
@@ -1263,6 +1345,7 @@ mod test {
         const EXPECTED_APPSTREAM_COMPONENTS: usize = 72;
         const EXPECTED_APPSTREAM_ICONS: usize = 18;
         const EXPECTED_TRANSLATION: usize = 78;
+        const EXPECTED_FILEMANIFEST: usize = 54;
         const EXPECTED_OTHER: usize = 600
             - EXPECTED_CONTENTS
             - EXPECTED_PACKAGES
@@ -1270,7 +1353,10 @@ mod test {
             - EXPECTED_RELEASE
             - EXPECTED_APPSTREAM_COMPONENTS
             - EXPECTED_APPSTREAM_ICONS
-            - EXPECTED_TRANSLATION;
+            - EXPECTED_TRANSLATION
+            - EXPECTED_FILEMANIFEST;
+
+        assert_eq!(EXPECTED_OTHER, 0);
 
         let entries = release
             .iter_classified_index_files(ChecksumType::Sha256)
@@ -1325,6 +1411,13 @@ mod test {
                 .filter(|entry| matches!(entry, ClassifiedReleaseFileEntry::Translation(_)))
                 .count(),
             EXPECTED_TRANSLATION
+        );
+        assert_eq!(
+            entries
+                .iter()
+                .filter(|entry| matches!(entry, ClassifiedReleaseFileEntry::FileManifest(_)))
+                .count(),
+            EXPECTED_FILEMANIFEST
         );
         assert_eq!(
             entries
