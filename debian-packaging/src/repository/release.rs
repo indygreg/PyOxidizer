@@ -123,6 +123,166 @@ impl<'a> ReleaseFileEntry<'a> {
     }
 }
 
+/// A type of [ReleaseFileEntry] that describes an AppStream `Components` YAML file.
+///
+/// Files typically exist in paths named `<component>/dep11/Components-<architecture><compression>`.
+#[derive(Clone, Debug, PartialEq)]
+pub struct AppStreamComponentsEntry<'a> {
+    /// The [ReleaseFileEntry] from which this instance was derived.
+    entry: ReleaseFileEntry<'a>,
+    /// The repository component name.
+    pub component: Cow<'a, str>,
+    /// The architecture name.
+    pub architecture: Cow<'a, str>,
+    /// File-level compression format.
+    pub compression: Compression,
+}
+
+impl<'a> Deref for AppStreamComponentsEntry<'a> {
+    type Target = ReleaseFileEntry<'a>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.entry
+    }
+}
+
+impl<'a> DerefMut for AppStreamComponentsEntry<'a> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.entry
+    }
+}
+
+impl<'a> From<AppStreamComponentsEntry<'a>> for ReleaseFileEntry<'a> {
+    fn from(v: AppStreamComponentsEntry<'a>) -> Self {
+        v.entry
+    }
+}
+
+impl<'a> TryFrom<ReleaseFileEntry<'a>> for AppStreamComponentsEntry<'a> {
+    type Error = DebianError;
+
+    fn try_from(entry: ReleaseFileEntry<'a>) -> std::result::Result<Self, Self::Error> {
+        let parts = entry.path.split('/').collect::<Vec<_>>();
+
+        let filename = *parts
+            .last()
+            .ok_or(DebianError::ReleaseIndicesEntryWrongType)?;
+
+        let suffix = filename
+            .strip_prefix("Components-")
+            .ok_or(DebianError::ReleaseIndicesEntryWrongType)?;
+
+        let (architecture, remainder) = suffix
+            .split_once('.')
+            .ok_or(DebianError::ReleaseIndicesEntryWrongType)?;
+
+        let compression = match remainder {
+            "yml" => Compression::None,
+            "yml.bz2" => Compression::Bzip2,
+            "yml.gz" => Compression::Gzip,
+            "yml.lzma" => Compression::Lzma,
+            "yml.xz" => Compression::Xz,
+            _ => {
+                return Err(DebianError::ReleaseIndicesEntryWrongType);
+            }
+        };
+
+        // The component is the part up until the `/dep11/Components-` pattern.
+        let component_end = entry
+            .path
+            .find("/dep11/Components-")
+            .ok_or(DebianError::ReleaseIndicesEntryWrongType)?;
+        let component = &entry.path[0..component_end];
+
+        Ok(Self {
+            entry,
+            component: component.into(),
+            architecture: architecture.into(),
+            compression,
+        })
+    }
+}
+
+/// A type of [ReleaseFileEntry] that describes an AppStream `icons` archive.
+///
+/// Files typically exist in paths named `<component>/dep11/icons-<size><compression>`.
+#[derive(Clone, Debug, PartialEq)]
+pub struct AppStreamIconsFileEntry<'a> {
+    /// The [ReleaseFileEntry] from which this instance was derived.
+    entry: ReleaseFileEntry<'a>,
+    /// The repository component name.
+    pub component: Cow<'a, str>,
+    /// The pixel resolution of the icons. e.g. `128x128`.
+    pub resolution: Cow<'a, str>,
+    /// File-level compression format.s
+    pub compression: Compression,
+}
+
+impl<'a> Deref for AppStreamIconsFileEntry<'a> {
+    type Target = ReleaseFileEntry<'a>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.entry
+    }
+}
+
+impl<'a> DerefMut for AppStreamIconsFileEntry<'a> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.entry
+    }
+}
+
+impl<'a> From<AppStreamIconsFileEntry<'a>> for ReleaseFileEntry<'a> {
+    fn from(v: AppStreamIconsFileEntry<'a>) -> Self {
+        v.entry
+    }
+}
+
+impl<'a> TryFrom<ReleaseFileEntry<'a>> for AppStreamIconsFileEntry<'a> {
+    type Error = DebianError;
+
+    fn try_from(entry: ReleaseFileEntry<'a>) -> std::result::Result<Self, Self::Error> {
+        let parts = entry.path.split('/').collect::<Vec<_>>();
+
+        let filename = *parts
+            .last()
+            .ok_or(DebianError::ReleaseIndicesEntryWrongType)?;
+
+        let suffix = filename
+            .strip_prefix("icons-")
+            .ok_or(DebianError::ReleaseIndicesEntryWrongType)?;
+
+        let (resolution, remainder) = suffix
+            .split_once('.')
+            .ok_or(DebianError::ReleaseIndicesEntryWrongType)?;
+
+        let compression = match remainder {
+            "tar" => Compression::None,
+            "tar.bz2" => Compression::Bzip2,
+            "tar.gz" => Compression::Gzip,
+            "tar.lzma" => Compression::Lzma,
+            "tar.xz" => Compression::Xz,
+            _ => {
+                return Err(DebianError::ReleaseIndicesEntryWrongType);
+            }
+        };
+
+        // The component is the part up until the `/dep11/icons-` pattern.
+        let component_end = entry
+            .path
+            .find("/dep11/icons-")
+            .ok_or(DebianError::ReleaseIndicesEntryWrongType)?;
+        let component = &entry.path[0..component_end];
+
+        Ok(Self {
+            entry,
+            component: component.into(),
+            resolution: resolution.into(),
+            compression,
+        })
+    }
+}
+
 /// A type of [ReleaseFileEntry] that describes a `Contents` file.
 ///
 /// This represents a pre-parsed wrapper around a [ReleaseFileEntry].
@@ -413,6 +573,10 @@ pub enum ClassifiedReleaseFileEntry<'a> {
     Sources(SourcesFileEntry<'a>),
     /// A nested `Release` file.
     Release(ReleaseReleaseFileEntry<'a>),
+    /// An AppStream `Components` YAML file.
+    AppStreamComponents(AppStreamComponentsEntry<'a>),
+    /// An AppStream `Icons` file.
+    AppStreamIcons(AppStreamIconsFileEntry<'a>),
     /// Some other file type.
     Other(ReleaseFileEntry<'a>),
 }
@@ -426,6 +590,8 @@ impl<'a> Deref for ClassifiedReleaseFileEntry<'a> {
             Self::Packages(v) => &v.entry,
             Self::Sources(v) => &v.entry,
             Self::Release(v) => &v.entry,
+            Self::AppStreamComponents(v) => &v.entry,
+            Self::AppStreamIcons(v) => &v.entry,
             Self::Other(v) => v,
         }
     }
@@ -438,6 +604,8 @@ impl<'a> DerefMut for ClassifiedReleaseFileEntry<'a> {
             Self::Packages(v) => &mut v.entry,
             Self::Sources(v) => &mut v.entry,
             Self::Release(v) => &mut v.entry,
+            Self::AppStreamComponents(v) => &mut v.entry,
+            Self::AppStreamIcons(v) => &mut v.entry,
             Self::Other(v) => v,
         }
     }
@@ -718,6 +886,26 @@ impl<'a> ReleaseFile<'a> {
                         }
                     }
 
+                    match AppStreamComponentsEntry::try_from(entry.clone()) {
+                        Ok(components) => {
+                            return Ok(ClassifiedReleaseFileEntry::AppStreamComponents(components));
+                        }
+                        Err(DebianError::ReleaseIndicesEntryWrongType) => {}
+                        Err(e) => {
+                            return Err(e);
+                        }
+                    }
+
+                    match AppStreamIconsFileEntry::try_from(entry.clone()) {
+                        Ok(icons) => {
+                            return Ok(ClassifiedReleaseFileEntry::AppStreamIcons(icons));
+                        }
+                        Err(DebianError::ReleaseIndicesEntryWrongType) => {}
+                        Err(e) => {
+                            return Err(e);
+                        }
+                    }
+
                     match SourcesFileEntry::try_from(entry.clone()) {
                         Ok(sources) => {
                             return Ok(ClassifiedReleaseFileEntry::Sources(sources));
@@ -974,8 +1162,15 @@ mod test {
         const EXPECTED_PACKAGES: usize = 180;
         const EXPECTED_SOURCES: usize = 9;
         const EXPECTED_RELEASE: usize = 63;
-        const EXPECTED_OTHER: usize =
-            600 - EXPECTED_CONTENTS - EXPECTED_PACKAGES - EXPECTED_SOURCES - EXPECTED_RELEASE;
+        const EXPECTED_APPSTREAM_COMPONENTS: usize = 72;
+        const EXPECTED_APPSTREAM_ICONS: usize = 18;
+        const EXPECTED_OTHER: usize = 600
+            - EXPECTED_CONTENTS
+            - EXPECTED_PACKAGES
+            - EXPECTED_SOURCES
+            - EXPECTED_RELEASE
+            - EXPECTED_APPSTREAM_COMPONENTS
+            - EXPECTED_APPSTREAM_ICONS;
 
         let entries = release
             .iter_classified_index_files(ChecksumType::Sha256)
@@ -1009,6 +1204,20 @@ mod test {
                 .filter(|entry| matches!(entry, ClassifiedReleaseFileEntry::Release(_)))
                 .count(),
             EXPECTED_RELEASE
+        );
+        assert_eq!(
+            entries
+                .iter()
+                .filter(|entry| matches!(entry, ClassifiedReleaseFileEntry::AppStreamComponents(_)))
+                .count(),
+            EXPECTED_APPSTREAM_COMPONENTS
+        );
+        assert_eq!(
+            entries
+                .iter()
+                .filter(|entry| matches!(entry, ClassifiedReleaseFileEntry::AppStreamIcons(_)))
+                .count(),
+            EXPECTED_APPSTREAM_ICONS
         );
         assert_eq!(
             entries
