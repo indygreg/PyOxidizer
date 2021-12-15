@@ -563,6 +563,90 @@ impl<'a> TryFrom<ReleaseFileEntry<'a>> for SourcesFileEntry<'a> {
     }
 }
 
+/// A special type of [ReleaseFileEntry] that describes a `Translations` file.
+///
+/// These typically exist under paths named `<component>/i18n/Translation-<locale><compression>`.
+#[derive(Clone, Debug, PartialEq)]
+pub struct TranslationFileEntry<'a> {
+    /// The [ReleaseFileEntry] from which this instance was derived.
+    entry: ReleaseFileEntry<'a>,
+
+    /// The parsed component name (from the entry's path).
+    pub component: Cow<'a, str>,
+
+    /// The locale the translation is for.
+    pub locale: Cow<'a, str>,
+
+    /// File-level compression format being used.
+    pub compression: Compression,
+}
+
+impl<'a> Deref for TranslationFileEntry<'a> {
+    type Target = ReleaseFileEntry<'a>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.entry
+    }
+}
+
+impl<'a> DerefMut for TranslationFileEntry<'a> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.entry
+    }
+}
+
+impl<'a> From<TranslationFileEntry<'a>> for ReleaseFileEntry<'a> {
+    fn from(v: TranslationFileEntry<'a>) -> Self {
+        v.entry
+    }
+}
+
+impl<'a> TryFrom<ReleaseFileEntry<'a>> for TranslationFileEntry<'a> {
+    type Error = DebianError;
+
+    fn try_from(entry: ReleaseFileEntry<'a>) -> std::result::Result<Self, Self::Error> {
+        // The component is the part up to `/i18n/Translation-`.
+        let component_end = entry
+            .path
+            .find("/i18n/Translation-")
+            .ok_or(DebianError::ReleaseIndicesEntryWrongType)?;
+        let component = &entry.path[0..component_end];
+
+        let parts = entry.path.split('/').collect::<Vec<_>>();
+
+        let filename = parts
+            .last()
+            .ok_or(DebianError::ReleaseIndicesEntryWrongType)?;
+
+        let remainder = filename
+            .strip_prefix("Translation-")
+            .ok_or(DebianError::ReleaseIndicesEntryWrongType)?;
+
+        let (locale, compression) = if let Some((locale, extension)) = remainder.split_once('.') {
+            let compression = match extension {
+                "gz" => Compression::Gzip,
+                "bz2" => Compression::Bzip2,
+                "lzma" => Compression::Lzma,
+                "xz" => Compression::Xz,
+                _ => {
+                    return Err(DebianError::ReleaseIndicesEntryWrongType);
+                }
+            };
+
+            (locale, compression)
+        } else {
+            (remainder, Compression::None)
+        };
+
+        Ok(Self {
+            entry,
+            component: component.into(),
+            locale: locale.into(),
+            compression,
+        })
+    }
+}
+
 /// A `[In]Release` file entry cast to its stronger type, if possible.
 pub enum ClassifiedReleaseFileEntry<'a> {
     /// A `Contents` file.
@@ -577,6 +661,8 @@ pub enum ClassifiedReleaseFileEntry<'a> {
     AppStreamComponents(AppStreamComponentsEntry<'a>),
     /// An AppStream `Icons` file.
     AppStreamIcons(AppStreamIconsFileEntry<'a>),
+    /// A `Translation` file.
+    Translation(TranslationFileEntry<'a>),
     /// Some other file type.
     Other(ReleaseFileEntry<'a>),
 }
@@ -592,6 +678,7 @@ impl<'a> Deref for ClassifiedReleaseFileEntry<'a> {
             Self::Release(v) => &v.entry,
             Self::AppStreamComponents(v) => &v.entry,
             Self::AppStreamIcons(v) => &v.entry,
+            Self::Translation(v) => &v.entry,
             Self::Other(v) => v,
         }
     }
@@ -606,6 +693,7 @@ impl<'a> DerefMut for ClassifiedReleaseFileEntry<'a> {
             Self::Release(v) => &mut v.entry,
             Self::AppStreamComponents(v) => &mut v.entry,
             Self::AppStreamIcons(v) => &mut v.entry,
+            Self::Translation(v) => &mut v.entry,
             Self::Other(v) => v,
         }
     }
@@ -906,6 +994,16 @@ impl<'a> ReleaseFile<'a> {
                         }
                     }
 
+                    match TranslationFileEntry::try_from(entry.clone()) {
+                        Ok(entry) => {
+                            return Ok(ClassifiedReleaseFileEntry::Translation(entry));
+                        }
+                        Err(DebianError::ReleaseIndicesEntryWrongType) => {}
+                        Err(e) => {
+                            return Err(e);
+                        }
+                    }
+
                     match SourcesFileEntry::try_from(entry.clone()) {
                         Ok(sources) => {
                             return Ok(ClassifiedReleaseFileEntry::Sources(sources));
@@ -1164,13 +1262,15 @@ mod test {
         const EXPECTED_RELEASE: usize = 63;
         const EXPECTED_APPSTREAM_COMPONENTS: usize = 72;
         const EXPECTED_APPSTREAM_ICONS: usize = 18;
+        const EXPECTED_TRANSLATION: usize = 78;
         const EXPECTED_OTHER: usize = 600
             - EXPECTED_CONTENTS
             - EXPECTED_PACKAGES
             - EXPECTED_SOURCES
             - EXPECTED_RELEASE
             - EXPECTED_APPSTREAM_COMPONENTS
-            - EXPECTED_APPSTREAM_ICONS;
+            - EXPECTED_APPSTREAM_ICONS
+            - EXPECTED_TRANSLATION;
 
         let entries = release
             .iter_classified_index_files(ChecksumType::Sha256)
@@ -1218,6 +1318,13 @@ mod test {
                 .filter(|entry| matches!(entry, ClassifiedReleaseFileEntry::AppStreamIcons(_)))
                 .count(),
             EXPECTED_APPSTREAM_ICONS
+        );
+        assert_eq!(
+            entries
+                .iter()
+                .filter(|entry| matches!(entry, ClassifiedReleaseFileEntry::Translation(_)))
+                .count(),
+            EXPECTED_TRANSLATION
         );
         assert_eq!(
             entries
