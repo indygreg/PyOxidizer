@@ -305,6 +305,53 @@ impl<'a> TryFrom<ReleaseFileEntry<'a>> for PackagesFileEntry<'a> {
     }
 }
 
+/// A type of [ReleaseFileEntry] that describes a nested `Release` file.
+///
+/// These often appear next to `Packages` or `Sources` files and contain a control paragraph
+/// to describe the defined component.
+#[derive(Clone, Debug, PartialEq)]
+pub struct ReleaseReleaseFileEntry<'a> {
+    entry: ReleaseFileEntry<'a>,
+}
+
+impl<'a> Deref for ReleaseReleaseFileEntry<'a> {
+    type Target = ReleaseFileEntry<'a>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.entry
+    }
+}
+
+impl<'a> DerefMut for ReleaseReleaseFileEntry<'a> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.entry
+    }
+}
+
+impl<'a> From<ReleaseReleaseFileEntry<'a>> for ReleaseFileEntry<'a> {
+    fn from(v: ReleaseReleaseFileEntry<'a>) -> Self {
+        v.entry
+    }
+}
+
+impl<'a> TryFrom<ReleaseFileEntry<'a>> for ReleaseReleaseFileEntry<'a> {
+    type Error = DebianError;
+
+    fn try_from(entry: ReleaseFileEntry<'a>) -> std::result::Result<Self, Self::Error> {
+        let parts = entry.path.split('/').collect::<Vec<_>>();
+
+        if *parts
+            .last()
+            .ok_or(DebianError::ReleaseIndicesEntryWrongType)?
+            != "Release"
+        {
+            return Err(DebianError::ReleaseIndicesEntryWrongType);
+        }
+
+        Ok(Self { entry })
+    }
+}
+
 /// A type of [ReleaseFileEntry] that describes a `Sources` file.
 #[derive(Clone, Debug, PartialEq)]
 pub struct SourcesFileEntry<'a> {
@@ -364,6 +411,8 @@ pub enum ClassifiedReleaseFileEntry<'a> {
     Packages(PackagesFileEntry<'a>),
     /// A `Sources` file.
     Sources(SourcesFileEntry<'a>),
+    /// A nested `Release` file.
+    Release(ReleaseReleaseFileEntry<'a>),
     /// Some other file type.
     Other(ReleaseFileEntry<'a>),
 }
@@ -376,6 +425,7 @@ impl<'a> Deref for ClassifiedReleaseFileEntry<'a> {
             Self::Contents(v) => &v.entry,
             Self::Packages(v) => &v.entry,
             Self::Sources(v) => &v.entry,
+            Self::Release(v) => &v.entry,
             Self::Other(v) => v,
         }
     }
@@ -387,6 +437,7 @@ impl<'a> DerefMut for ClassifiedReleaseFileEntry<'a> {
             Self::Contents(v) => &mut v.entry,
             Self::Packages(v) => &mut v.entry,
             Self::Sources(v) => &mut v.entry,
+            Self::Release(v) => &mut v.entry,
             Self::Other(v) => v,
         }
     }
@@ -657,6 +708,16 @@ impl<'a> ReleaseFile<'a> {
                         }
                     }
 
+                    match ReleaseReleaseFileEntry::try_from(entry.clone()) {
+                        Ok(release) => {
+                            return Ok(ClassifiedReleaseFileEntry::Release(release));
+                        }
+                        Err(DebianError::ReleaseIndicesEntryWrongType) => {}
+                        Err(e) => {
+                            return Err(e);
+                        }
+                    }
+
                     match SourcesFileEntry::try_from(entry.clone()) {
                         Ok(sources) => {
                             return Ok(ClassifiedReleaseFileEntry::Sources(sources));
@@ -912,8 +973,9 @@ mod test {
         const EXPECTED_CONTENTS: usize = 126;
         const EXPECTED_PACKAGES: usize = 180;
         const EXPECTED_SOURCES: usize = 9;
+        const EXPECTED_RELEASE: usize = 63;
         const EXPECTED_OTHER: usize =
-            600 - EXPECTED_CONTENTS - EXPECTED_PACKAGES - EXPECTED_SOURCES;
+            600 - EXPECTED_CONTENTS - EXPECTED_PACKAGES - EXPECTED_SOURCES - EXPECTED_RELEASE;
 
         let entries = release
             .iter_classified_index_files(ChecksumType::Sha256)
@@ -940,6 +1002,13 @@ mod test {
                 .filter(|entry| matches!(entry, ClassifiedReleaseFileEntry::Sources(_)))
                 .count(),
             EXPECTED_SOURCES
+        );
+        assert_eq!(
+            entries
+                .iter()
+                .filter(|entry| matches!(entry, ClassifiedReleaseFileEntry::Release(_)))
+                .count(),
+            EXPECTED_RELEASE
         );
         assert_eq!(
             entries
