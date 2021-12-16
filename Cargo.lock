@@ -392,6 +392,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "block-buffer"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f1d36a02058e76b040de25a4464ba1c80935655595b661505c8b39b664828b95"
+dependencies = [
+ "generic-array 0.14.4",
+]
+
+[[package]]
 name = "block-cipher"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -874,6 +883,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7a81dae078cea95a014a339291cec439d2f232ebe854a9d672b796c6afafa9b7"
 
 [[package]]
+name = "crypto-common"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "683d6b536309245c849479fba3da410962a43ed8e51c26b729208ec0ac2798d0"
+dependencies = [
+ "generic-array 0.14.4",
+]
+
+[[package]]
 name = "crypto-mac"
 version = "0.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -998,22 +1016,22 @@ dependencies = [
  "async-std",
  "async-trait",
  "chrono",
- "digest 0.9.0",
+ "digest 0.10.1",
  "futures",
  "glob",
  "hex",
  "indoc 1.0.3",
  "libflate",
  "mailparse",
- "md-5",
+ "md-5 0.10.0",
  "once_cell",
  "os_str_bytes",
  "pgp",
  "pin-project",
  "regex",
  "reqwest",
- "sha-1 0.9.8",
- "sha2",
+ "sha-1 0.10.0",
+ "sha2 0.10.0",
  "smallvec",
  "strum",
  "strum_macros",
@@ -1140,6 +1158,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "digest"
+version = "0.10.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b697d66081d42af4fba142d56918a3cb21dc8eb63372c6b85d14f44fb9c5979b"
+dependencies = [
+ "block-buffer 0.10.0",
+ "crypto-common",
+ "generic-array 0.14.4",
+]
+
+[[package]]
 name = "dirs"
 version = "4.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1223,7 +1252,7 @@ dependencies = [
  "ed25519",
  "rand 0.7.3",
  "serde",
- "sha2",
+ "sha2 0.9.8",
  "zeroize",
 ]
 
@@ -2133,6 +2162,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "md-5"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e6a38fc55c8bbc10058782919516f88826e70320db6d206aebc49611d24216ae"
+dependencies = [
+ "digest 0.10.1",
+]
+
+[[package]]
 name = "memchr"
 version = "2.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2602,7 +2640,7 @@ dependencies = [
  "hex",
  "lazy_static",
  "log",
- "md-5",
+ "md-5 0.9.1",
  "nom 4.2.3",
  "num-bigint-dig",
  "num-derive",
@@ -2611,7 +2649,7 @@ dependencies = [
  "ripemd160",
  "rsa",
  "sha-1 0.9.8",
- "sha2",
+ "sha2 0.9.8",
  "sha3",
  "signature",
  "smallvec",
@@ -2913,7 +2951,7 @@ dependencies = [
  "semver",
  "serde",
  "serde_json",
- "sha2",
+ "sha2 0.10.0",
  "slog",
  "starlark",
  "starlark-dialect-build-targets",
@@ -2983,7 +3021,7 @@ dependencies = [
  "python-packed-resources",
  "regex",
  "serde",
- "sha2",
+ "sha2 0.10.0",
  "spdx",
  "tempfile",
  "time 0.3.5",
@@ -3324,7 +3362,7 @@ dependencies = [
  "num-traits",
  "pem 0.8.3",
  "rand 0.7.3",
- "sha2",
+ "sha2 0.9.8",
  "simple_asn1",
  "subtle",
  "thiserror",
@@ -3568,6 +3606,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "sha-1"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "028f48d513f9678cda28f6e4064755b3fbb2af6acd672f2c209b62323f7aea0f"
+dependencies = [
+ "cfg-if 1.0.0",
+ "cpufeatures",
+ "digest 0.10.1",
+]
+
+[[package]]
 name = "sha1"
 version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3584,6 +3633,17 @@ dependencies = [
  "cpufeatures",
  "digest 0.9.0",
  "opaque-debug 0.3.0",
+]
+
+[[package]]
+name = "sha2"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "900d964dd36bb15bcf2f2b35694c072feab74969a54f2bbeec7a2d725d2bdcb6"
+dependencies = [
+ "cfg-if 1.0.0",
+ "cpufeatures",
+ "digest 0.10.1",
 ]
 
 [[package]]
@@ -4159,7 +4219,7 @@ dependencies = [
  "hex",
  "once_cell",
  "reqwest",
- "sha2",
+ "sha2 0.10.0",
  "slog",
  "tempfile",
  "url",
@@ -4204,7 +4264,7 @@ dependencies = [
  "hex",
  "once_cell",
  "pgp",
- "sha2",
+ "sha2 0.10.0",
  "slog",
  "tar",
  "tempfile",
