@@ -2442,9 +2442,9 @@ dependencies = [
 
 [[package]]
 name = "os_str_bytes"
-version = "5.0.0"
+version = "6.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eec548a9ec896e20392939de0f32aabcdd8507358840f5ee4867792f3afcf494"
+checksum = "8e22443d1643a904602595ba1cd8f7d896afe56d26712531c5ff73a15b2fbf64"
 dependencies = [
  "memchr",
 ]
