@@ -14,7 +14,7 @@ readme = "README.md"
 anyhow = "1.0"
 bcder = "0.6"
 goblin = "0.4"
-p12 = "0.3"
+p12 = "0.4"
 reqwest = { version = "0.11", default-features = false, features = ["blocking", "rustls-tls"] }
 slog = "2.7"
 tempfile = "3.2"

@@ -892,16 +892,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "crypto-mac"
-version = "0.11.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b1d1a86f49236c215f271d40892d5fc950490551400b02ef360692c29815c714"
-dependencies = [
- "generic-array 0.14.4",
- "subtle",
-]
-
-[[package]]
 name = "cryptographic-message-syntax"
 version = "0.7.0-pre"
 dependencies = [
@@ -1166,6 +1156,7 @@ dependencies = [
  "block-buffer 0.10.0",
  "crypto-common",
  "generic-array 0.14.4",
+ "subtle",
 ]
 
 [[package]]
@@ -1736,12 +1727,11 @@ checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
 
 [[package]]
 name = "hmac"
-version = "0.11.0"
+version = "0.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2a2a2320eb7ec0ebe8da8f744d7812d9fc4cb4d09344ac01898dbcb6a20ae69b"
+checksum = "ddca131f3e7f2ce2df364b57949a9d47915cfbd35e46cfee355ccebbf794d6a2"
 dependencies = [
- "crypto-mac",
- "digest 0.9.0",
+ "digest 0.10.1",
 ]
 
 [[package]]
@@ -2450,9 +2440,9 @@ dependencies = [
 
 [[package]]
 name = "p12"
-version = "0.3.3"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "10105b08ad3c4cd872ddf396860544f9dbc1800fed7d552f10aa5b585ac79e1d"
+checksum = "55a97f513ac60e90aec6d9db783b1924a25839a2635036a3ab64f2ca78cd4518"
 dependencies = [
  "block-modes 0.8.1",
  "des 0.7.0",
@@ -2460,7 +2450,7 @@ dependencies = [
  "hmac",
  "lazy_static",
  "rc2",
- "sha-1 0.9.8",
+ "sha-1 0.10.0",
  "yasna",
 ]
 
