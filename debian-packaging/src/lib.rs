@@ -60,6 +60,8 @@ and [control::ControlParagraphAsyncReader] implements an asynchronous streaming 
 There are different flavors of *control files* within Debian packaging.
 [binary_package_control::BinaryPackageControlFile] defines a *control file* for a binary package.
 This type provides helper functions for resolving common fields on binary control files.
+[debian_source_control::DebianSourceControlFile] defines a *control file* for a source package,
+as expressed in a `.dsc` file.
 
 There is a meta language for expressing dependencies between Debian packages. The
 [dependency] module defines types for parsing and writing this language. e.g.
@@ -115,6 +117,7 @@ pub mod binary_package_list;
 pub mod changelog;
 pub mod control;
 pub mod deb;
+pub mod debian_source_control;
 pub mod dependency;
 pub mod dependency_resolution;
 pub mod error;

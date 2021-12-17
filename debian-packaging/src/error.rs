@@ -53,6 +53,12 @@ pub enum DebianError {
     #[error("control field {0} can not be parsed as an integer: {0:?}")]
     ControlFieldIntParse(String, std::num::ParseIntError),
 
+    #[error("missing field {0} in Package-List entry")]
+    ControlPackageListMissingField(&'static str),
+
+    #[error("expected 1 control paragraph in Debian source control file; got {0}")]
+    DebianSourceControlFileParagraphMismatch(usize),
+
     #[error("unknown entry in binary package archive: {0}")]
     DebUnknownBinaryPackageEntry(String),
 

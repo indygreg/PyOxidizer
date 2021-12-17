@@ -171,6 +171,13 @@ impl<'a> ControlField<'a> {
         Box::new(self.value.lines().map(|x| x.trim_start()))
     }
 
+    /// Obtain an iterator of comma delimited values in the value.
+    ///
+    /// Whitespace surrounding the comma is trimmed.
+    pub fn iter_comma_delimited(&self) -> Box<(dyn Iterator<Item = &str> + '_)> {
+        Box::new(self.value.as_ref().split(',').map(|v| v.trim()))
+    }
+
     /// Write the contents of this field to a writer.
     pub fn write<W: Write>(&self, writer: &mut W) -> std::io::Result<()> {
         writer.write_all(self.name.as_bytes())?;
@@ -321,6 +328,14 @@ impl<'a> ControlParagraph<'a> {
     /// Obtain an iterator of lines in the named field.
     pub fn iter_field_lines(&self, name: &str) -> Option<Box<(dyn Iterator<Item = &str> + '_)>> {
         self.field(name).map(|f| f.iter_lines())
+    }
+
+    /// Obtain an iterator of comma-delimited values in the named field.
+    pub fn iter_field_comma_delimited(
+        &self,
+        name: &str,
+    ) -> Option<Box<(dyn Iterator<Item = &str> + '_)>> {
+        self.field(name).map(|f| f.iter_comma_delimited())
     }
 
     /// Convert this paragraph to a [HashMap].
