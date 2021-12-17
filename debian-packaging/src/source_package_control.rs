@@ -15,13 +15,16 @@ use {
 /// Represents a `debian/control` file.
 ///
 /// Specified at <https://www.debian.org/doc/debian-policy/ch-controlfields.html#source-package-control-files-debian-control>.
+///
+/// The 1st paragraph defines the source package. Subsequent paragraphs define binary packages
+/// that the source tree builds.
 #[derive(Default)]
-pub struct SourceControlFile<'a> {
+pub struct SourcePackageControlFile<'a> {
     general: ControlParagraph<'a>,
     binaries: Vec<ControlParagraph<'a>>,
 }
 
-impl<'a> SourceControlFile<'a> {
+impl<'a> SourcePackageControlFile<'a> {
     /// Construct an instance from an iterable of [ControlParagraph].
     pub fn from_paragraphs(
         mut paragraphs: impl Iterator<Item = ControlParagraph<'a>>,
