@@ -516,6 +516,9 @@ impl<'a> TryFrom<ReleaseFileEntry<'a>> for ReleaseReleaseFileEntry<'a> {
 #[derive(Clone, Debug, PartialEq)]
 pub struct SourcesFileEntry<'a> {
     entry: ReleaseFileEntry<'a>,
+    /// The component the sources belong to.
+    pub component: Cow<'a, str>,
+    /// The compression format of the sources index.
     pub compression: Compression,
 }
 
@@ -559,7 +562,15 @@ impl<'a> TryFrom<ReleaseFileEntry<'a>> for SourcesFileEntry<'a> {
             }
         };
 
-        Ok(Self { entry, compression })
+        let component = *parts
+            .first()
+            .ok_or(DebianError::ReleaseIndicesEntryWrongType)?;
+
+        Ok(Self {
+            entry,
+            component: component.into(),
+            compression,
+        })
     }
 }
 
@@ -1155,6 +1166,36 @@ impl<'a> ReleaseFile<'a> {
         }
     }
 
+    /// Find a [PackagesFileEntry] given search constraints.
+    pub fn find_packages_indices(
+        &self,
+        checksum: ChecksumType,
+        compression: Compression,
+        component: &str,
+        arch: &str,
+        is_installer: bool,
+    ) -> Option<PackagesFileEntry<'_>> {
+        if let Some(mut iter) = self.iter_packages_indices(checksum) {
+            iter.find_map(|entry| {
+                if let Ok(entry) = entry {
+                    if entry.component == component
+                        && entry.architecture == arch
+                        && entry.is_installer == is_installer
+                        && entry.compression == compression
+                    {
+                        Some(entry)
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            })
+        } else {
+            None
+        }
+    }
+
     /// Obtain `Sources` indices entries given a checksum flavor.
     ///
     /// This essentially looks for `Sources*` files in the file lists.
@@ -1176,23 +1217,17 @@ impl<'a> ReleaseFile<'a> {
         }
     }
 
-    /// Find a [PackagesFileEntry] given search constraints.
-    pub fn find_packages_indices(
+    /// Find a [SourcesFileEntry] given search constraints.
+    pub fn find_sources_indices(
         &self,
         checksum: ChecksumType,
         compression: Compression,
         component: &str,
-        arch: &str,
-        is_installer: bool,
-    ) -> Option<PackagesFileEntry<'_>> {
-        if let Some(mut iter) = self.iter_packages_indices(checksum) {
+    ) -> Option<SourcesFileEntry<'_>> {
+        if let Some(mut iter) = self.iter_sources_indices(checksum) {
             iter.find_map(|entry| {
                 if let Ok(entry) = entry {
-                    if entry.component == component
-                        && entry.architecture == arch
-                        && entry.is_installer == is_installer
-                        && entry.compression == compression
-                    {
+                    if entry.component == component && entry.compression == compression {
                         Some(entry)
                     } else {
                         None
@@ -1572,6 +1607,25 @@ mod test {
             .unwrap()
             .collect::<Result<Vec<_>>>()?;
         assert_eq!(sources.len(), EXPECTED_SOURCES);
+
+        let entry = release
+            .find_sources_indices(ChecksumType::Sha256, Compression::Xz, "main")
+            .unwrap();
+        assert_eq!(
+            entry,
+            SourcesFileEntry {
+                entry: ReleaseFileEntry {
+                    path: "main/source/Sources.xz",
+                    digest: ContentDigest::sha256_hex(
+                        "1801d18c1135168d5dd86a8cb85fb5cd5bd81e16174acc25d900dee11389e9cd"
+                    )
+                    .unwrap(),
+                    size: 8616784,
+                },
+                component: "main".into(),
+                compression: Compression::Xz
+            }
+        );
 
         Ok(())
     }
