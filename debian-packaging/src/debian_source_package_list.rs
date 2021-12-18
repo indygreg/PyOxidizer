@@ -43,3 +43,51 @@ impl<'a> IntoIterator for DebianSourcePackageList<'a> {
         self.packages.into_iter()
     }
 }
+
+impl<'a> DebianSourcePackageList<'a> {
+    /// Find source packages having the given name.
+    ///
+    /// This patches against the `Package` field in the control files.
+    pub fn iter_with_package_name(
+        &self,
+        package: String,
+    ) -> impl Iterator<Item = &DebianSourceControlFile<'a>> {
+        self.packages.iter().filter(
+            move |cf| matches!(cf.required_field_str("Package"), Ok(name) if name == package),
+        )
+    }
+
+    /// Find source packages providing the given binary package.
+    ///
+    /// This consults the list of binary packages in the `Binary` field and returns control
+    /// paragraphs where `package` appears in that list.
+    pub fn iter_with_binary_package(
+        &self,
+        package: String,
+    ) -> impl Iterator<Item = &DebianSourceControlFile<'a>> {
+        self.packages.iter().filter(move |cf| {
+            if let Some(mut packages) = cf.binary() {
+                packages.any(|p| p == package)
+            } else {
+                false
+            }
+        })
+    }
+
+    /// Find source packages providing packages for the given architecture.
+    ///
+    /// This consults the list of architectures in the `Architecture` field and returns
+    /// control paragraphs where `architecture` appears in that list.
+    pub fn iter_with_architecture(
+        &self,
+        architecture: String,
+    ) -> impl Iterator<Item = &DebianSourceControlFile<'a>> {
+        self.packages.iter().filter(move |cf| {
+            if let Some(mut architectures) = cf.architecture() {
+                architectures.any(|a| a == architecture)
+            } else {
+                false
+            }
+        })
+    }
+}

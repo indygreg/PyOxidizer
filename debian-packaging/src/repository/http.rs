@@ -297,6 +297,21 @@ mod test {
             }
         }
 
+        let controls = sources
+            .iter_with_package_name("libzstd".to_string())
+            .collect::<Vec<_>>();
+        assert_eq!(controls.len(), 1);
+
+        let controls = sources
+            .iter_with_binary_package("zstd".to_string())
+            .collect::<Vec<_>>();
+        assert_eq!(controls.len(), 1);
+
+        let controls = sources
+            .iter_with_architecture("amd64".to_string())
+            .collect::<Vec<_>>();
+        assert_eq!(controls.len(), 297);
+
         Ok(())
     }
 
