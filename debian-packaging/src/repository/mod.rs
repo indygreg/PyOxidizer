@@ -65,6 +65,7 @@ use {
         binary_package_list::BinaryPackageList,
         control::ControlParagraphAsyncReader,
         deb::reader::BinaryPackageReader,
+        debian_source_package_list::DebianSourcePackageList,
         error::{DebianError, Result},
         io::{drain_reader, Compression, ContentDigest, DataResolver},
         repository::{
@@ -493,6 +494,50 @@ pub trait ReleaseReader: DataResolver + Sync {
             .into_iter()
             .find(|entry| entry.component == component)
             .ok_or(DebianError::RepositoryReadSourcesIndicesEntryNotFound)
+    }
+
+    /// Fetch a `Sources` file and parse source package entries inside.
+    ///
+    /// The file to fetch is specified from a [SourcesFileEntry] describing it.
+    async fn resolve_sources_from_entry<'entry, 'slf: 'entry>(
+        &'slf self,
+        entry: &'entry SourcesFileEntry<'slf>,
+    ) -> Result<DebianSourcePackageList<'static>> {
+        let release = self.release_file();
+
+        let path = if release.acquire_by_hash().unwrap_or_default() {
+            entry.by_hash_path()
+        } else {
+            entry.path.to_string()
+        };
+
+        let mut reader = ControlParagraphAsyncReader::new(futures::io::BufReader::new(
+            self.get_path_decoded_with_digest_verification(
+                &path,
+                entry.compression,
+                entry.size,
+                entry.digest.clone(),
+            )
+            .await?,
+        ));
+
+        let mut res = DebianSourcePackageList::default();
+
+        while let Some(paragraph) = reader.read_paragraph().await? {
+            res.push(paragraph.into());
+        }
+
+        Ok(res)
+    }
+
+    /// Fetch a `Sources` file for the given component and parse source package entries inside.
+    ///
+    /// This will call [Self::sources_entry] to resolve the [SourcesFileEntry] for the given
+    /// `component` then will call [Self::resolve_sources_from_entry] to fetch and parse it.
+    async fn resolve_sources(&self, component: &str) -> Result<DebianSourcePackageList<'static>> {
+        let entry = self.sources_entry(component)?;
+
+        self.resolve_sources_from_entry(&entry).await
     }
 
     /// Resolve a reference to a `Contents` file to fetch given search criteria.

@@ -262,6 +262,41 @@ mod test {
         assert_eq!(entry.component, "main");
         assert_eq!(entry.compression, Compression::Xz);
 
+        let sources = release.resolve_sources("main").await?;
+        assert_eq!(sources.len(), 30952);
+
+        let source = sources.iter().next().unwrap();
+        assert_eq!(source.binary().unwrap().collect::<Vec<_>>(), vec!["0ad"]);
+        assert_eq!(source.version_str()?, "0.0.23.1-5");
+
+        // Make sure field extraction works.
+        for source in sources.iter() {
+            source.required_field_str("Package")?;
+            source.required_field_str("Directory")?;
+            source.format()?;
+            source.version()?;
+            source.maintainer()?;
+            source.package_dependency_fields()?;
+            if let Some(packages) = source.package_list() {
+                for p in packages {
+                    p?;
+                }
+            }
+            if let Some(entries) = source.checksums_sha1() {
+                for entry in entries {
+                    entry?;
+                }
+            }
+            if let Some(entries) = source.checksums_sha256() {
+                for entry in entries {
+                    entry?;
+                }
+            }
+            for entry in source.files()? {
+                entry?;
+            }
+        }
+
         Ok(())
     }
 

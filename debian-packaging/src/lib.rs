@@ -118,6 +118,7 @@ pub mod changelog;
 pub mod control;
 pub mod deb;
 pub mod debian_source_control;
+pub mod debian_source_package_list;
 pub mod dependency;
 pub mod dependency_resolution;
 pub mod error;
