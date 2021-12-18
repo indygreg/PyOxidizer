@@ -74,6 +74,9 @@ pub enum DebianError {
     #[error("could not find packages indices entry in Release file")]
     RepositoryReadPackagesIndicesEntryNotFound,
 
+    #[error("could not find Sources indices entry in Release file")]
+    RepositoryReadSourcesIndicesEntryNotFound,
+
     #[error("could not determine content digest of binary package")]
     RepositoryReadCouldNotDeterminePackageDigest,
 

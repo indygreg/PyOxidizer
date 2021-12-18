@@ -180,6 +180,7 @@ mod test {
         super::*,
         crate::{
             dependency::BinaryDependency, dependency_resolution::DependencyResolver, error::Result,
+            io::ContentDigest,
         },
     };
 
@@ -235,6 +236,31 @@ mod test {
 
         let sources = deps.packages_with_sources().collect::<Vec<_>>();
         assert_eq!(sources.len(), 128);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn bullseye_sources() -> Result<()> {
+        let root = HttpRepositoryClient::new(BULLSEYE_URL)?;
+
+        let release = root.release_reader("bullseye").await?;
+
+        let sources_entries = release.sources_indices_entries()?;
+        assert_eq!(sources_entries.len(), 9);
+
+        let entry = release.sources_entry("main")?;
+        assert_eq!(entry.path, "main/source/Sources.xz");
+        assert_eq!(
+            entry.digest,
+            ContentDigest::sha256_hex(
+                "1801d18c1135168d5dd86a8cb85fb5cd5bd81e16174acc25d900dee11389e9cd"
+            )
+            .unwrap()
+        );
+        assert_eq!(entry.size, 8616784);
+        assert_eq!(entry.component, "main");
+        assert_eq!(entry.compression, Compression::Xz);
 
         Ok(())
     }

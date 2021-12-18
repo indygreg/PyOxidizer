@@ -313,6 +313,44 @@ pub trait ReleaseReader: DataResolver + Sync {
         )
     }
 
+    /// Like [Self::sources_indices_entries] except it deduplicates entries.
+    ///
+    /// If there are multiple entries for a `Sources` file with varying compression, the most
+    /// preferred compression format is returned.
+    fn sources_indices_entries_preferred_compression(&self) -> Result<Vec<SourcesFileEntry<'_>>> {
+        let mut entries = HashMap::new();
+
+        for entry in self.sources_indices_entries()? {
+            entries
+                .entry(entry.component.clone())
+                .or_insert_with(Vec::new)
+                .push(entry);
+        }
+
+        entries
+            .into_values()
+            .map(|candidates| {
+                if let Some(entry) = candidates
+                    .iter()
+                    .find(|entry| entry.compression == self.preferred_compression())
+                {
+                    Ok(entry.clone())
+                } else {
+                    for compression in Compression::default_preferred_order() {
+                        if let Some(entry) = candidates
+                            .iter()
+                            .find(|entry| entry.compression == compression)
+                        {
+                            return Ok(entry.clone());
+                        }
+                    }
+
+                    Err(DebianError::RepositoryReadPackagesIndicesEntryNotFound)
+                }
+            })
+            .collect::<Result<Vec<_>>>()
+    }
+
     /// Resolve a reference to a `Packages` file to fetch given search criteria.
     ///
     /// This will find all entries defining the desired `Packages` file. It will filter
@@ -443,6 +481,18 @@ pub trait ReleaseReader: DataResolver + Sync {
         }
 
         Ok(fetches)
+    }
+
+    /// Resolve the [SourcesFileEntry] for a given component.
+    ///
+    /// This returns the entry variant that is preferred given digest and compression
+    /// settings. If no entry is found, [DebianError::RepositoryReadSourcesIndicesEntryNotFound]
+    /// is returned.
+    fn sources_entry(&self, component: &str) -> Result<SourcesFileEntry<'_>> {
+        self.sources_indices_entries_preferred_compression()?
+            .into_iter()
+            .find(|entry| entry.component == component)
+            .ok_or(DebianError::RepositoryReadSourcesIndicesEntryNotFound)
     }
 
     /// Resolve a reference to a `Contents` file to fetch given search criteria.
