@@ -33,6 +33,21 @@ pub struct DebianSourceControlFileEntry<'a> {
     pub size: u64,
 }
 
+impl<'a> DebianSourceControlFileEntry<'a> {
+    /// Convert this instance to a [DebianSourceControlFileFetch].
+    ///
+    /// The path in the fetch is prefixed with the given `directory` value. It usually
+    /// comes from the `Directory` field of the control paragraph from which the entry was
+    /// derived.
+    pub fn as_fetch(&self, directory: &str) -> DebianSourceControlFileFetch {
+        DebianSourceControlFileFetch {
+            path: format!("{}/{}", directory, self.filename),
+            digest: self.digest.clone(),
+            size: self.size,
+        }
+    }
+}
+
 /// Describes a single binary package entry in a `Package-List` field in a [DebianSourceControlFile].
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct DebianSourceControlFilePackage<'a> {
@@ -46,6 +61,18 @@ pub struct DebianSourceControlFilePackage<'a> {
     pub priority: &'a str,
     /// Extra fields.
     pub extra: Vec<&'a str>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct DebianSourceControlFileFetch {
+    /// The path relative to the repository root to fetch.
+    pub path: String,
+
+    /// The digest of the file.
+    pub digest: ContentDigest,
+
+    /// The size of the file in bytes.
+    pub size: u64,
 }
 
 /// A Debian source control file/paragraph.
@@ -138,6 +165,14 @@ impl<'a> DebianSourceControlFile<'a> {
         slf.signatures = Some(reader.into_inner().finalize());
 
         Ok(slf)
+    }
+
+    /// Clone without preserving signatures data.
+    pub fn clone_no_signatures(&self) -> Self {
+        Self {
+            paragraph: self.paragraph.clone(),
+            signatures: None,
+        }
     }
 
     /// Obtain PGP signatures from this possibly signed file.
@@ -356,6 +391,38 @@ impl<'a> DebianSourceControlFile<'a> {
         } else {
             None
         }
+    }
+
+    /// Obtain [DebianSourceControlFileFetch] for a given digest variant.
+    ///
+    /// This obtains records that instruct how to fetch the files that compose this
+    /// source package.
+    pub fn file_fetches(
+        &self,
+        checksum: ChecksumType,
+    ) -> Result<Box<(dyn Iterator<Item = Result<DebianSourceControlFileFetch>> + '_)>> {
+        let entries = match checksum {
+            ChecksumType::Md5 => self.files()?,
+            ChecksumType::Sha1 => {
+                self.checksums_sha1()
+                    .ok_or(DebianError::ControlRequiredFieldMissing(
+                        "Checksums-Sha1".to_string(),
+                    ))?
+            }
+            ChecksumType::Sha256 => {
+                self.checksums_sha256()
+                    .ok_or(DebianError::ControlRequiredFieldMissing(
+                        "Checksums-Sha256".to_string(),
+                    ))?
+            }
+        };
+
+        Ok(Box::new(entries.map(move |entry| {
+            let entry = entry?;
+            let directory = self.required_field_str("Directory")?;
+
+            Ok(entry.as_fetch(directory))
+        })))
     }
 }
 

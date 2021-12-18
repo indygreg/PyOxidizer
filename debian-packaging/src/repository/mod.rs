@@ -65,6 +65,7 @@ use {
         binary_package_list::BinaryPackageList,
         control::ControlParagraphAsyncReader,
         deb::reader::BinaryPackageReader,
+        debian_source_control::{DebianSourceControlFile, DebianSourceControlFileFetch},
         debian_source_package_list::DebianSourcePackageList,
         error::{DebianError, Result},
         io::{drain_reader, Compression, ContentDigest, DataResolver},
@@ -77,7 +78,7 @@ use {
     },
     async_trait::async_trait,
     futures::{AsyncRead, AsyncReadExt, StreamExt, TryStreamExt},
-    std::{borrow::Cow, collections::HashMap, pin::Pin},
+    std::{borrow::Cow, collections::HashMap, ops::Deref, pin::Pin},
 };
 
 pub mod builder;
@@ -100,6 +101,22 @@ pub struct BinaryPackageFetch<'a> {
     pub size: u64,
     /// The expected content digest of the retrieved file.
     pub digest: ContentDigest,
+}
+
+/// Describes how to fetch a source package from a repository.
+pub struct SourcePackageFetch<'a> {
+    /// The control file from which this these fetches were derived.
+    pub control_file: DebianSourceControlFile<'a>,
+    /// Fetch instruction for a file in this package.
+    fetch: DebianSourceControlFileFetch,
+}
+
+impl<'a> Deref for SourcePackageFetch<'a> {
+    type Target = DebianSourceControlFileFetch;
+
+    fn deref(&self) -> &Self::Target {
+        &self.fetch
+    }
 }
 
 /// Debian repository reader bound to the root of the repository.
@@ -177,6 +194,17 @@ pub trait RepositoryRootReader: DataResolver + Sync {
         reader.read_to_end(&mut buf).await?;
 
         Ok(BinaryPackageReader::new(std::io::Cursor::new(buf))?)
+    }
+
+    /// Fetch a source package file given a [SourcePackageFetch] instruction.
+    ///
+    /// Returns a generic [AsyncRead] to obtain the raw file content.
+    async fn fetch_source_package_generic<'fetch>(
+        &self,
+        fetch: SourcePackageFetch<'fetch>,
+    ) -> Result<Pin<Box<dyn AsyncRead + Send>>> {
+        self.get_path_with_digest_verification(&fetch.path, fetch.size, fetch.digest.clone())
+            .await
     }
 }
 
@@ -538,6 +566,57 @@ pub trait ReleaseReader: DataResolver + Sync {
         let entry = self.sources_entry(component)?;
 
         self.resolve_sources_from_entry(&entry).await
+    }
+
+    /// Resolves [SourcePackageFetch] for describing files to fetch for source packages.
+    ///
+    /// The caller specifies filter functions to choose which source packages' files to
+    /// retrieve. Filtering works in 2 stages.
+    ///
+    /// First, `sources_filter_filter` is called with each [SourcesFileEntry] defining a
+    /// `Sources` file. If the filter returns true, this list of packages will be retrieved
+    /// and expanded.
+    ///
+    /// Second, `source_package_filter` is called for each source package entry seen in
+    /// parsed `Sources` files. If the function returns true, the instructions for fetching
+    /// the files comprising this source package will returned.
+    ///
+    /// The returned [SourcePackageFetch] can be fed into
+    /// [RepositoryRootReader::fetch_source_package_generic()] to retrieve the file content.
+    async fn resolve_source_fetches(
+        &self,
+        sources_file_filter: Box<dyn (Fn(SourcesFileEntry) -> bool) + Send>,
+        source_package_filter: Box<dyn (Fn(DebianSourceControlFile) -> bool) + Send>,
+        threads: usize,
+    ) -> Result<Vec<SourcePackageFetch<'_>>> {
+        let sources_entries = self.sources_indices_entries_preferred_compression()?;
+
+        let fs = sources_entries
+            .iter()
+            .filter(|entry| sources_file_filter((*entry).clone()))
+            .map(|entry| self.resolve_sources_from_entry(entry))
+            .collect::<Vec<_>>();
+
+        let mut sources_fs = futures::stream::iter(fs).buffer_unordered(threads);
+
+        let mut fetches = vec![];
+
+        while let Some(pl) = sources_fs.try_next().await? {
+            for cf in pl.into_iter() {
+                if source_package_filter(cf.clone_no_signatures()) {
+                    for fetch in cf.file_fetches(self.retrieve_checksum()?)? {
+                        let fetch = fetch?;
+
+                        fetches.push(SourcePackageFetch {
+                            control_file: cf.clone_no_signatures(),
+                            fetch,
+                        });
+                    }
+                }
+            }
+        }
+
+        Ok(fetches)
     }
 
     /// Resolve a reference to a `Contents` file to fetch given search criteria.

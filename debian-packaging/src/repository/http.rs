@@ -180,7 +180,7 @@ mod test {
         super::*,
         crate::{
             dependency::BinaryDependency, dependency_resolution::DependencyResolver, error::Result,
-            io::ContentDigest,
+            io::ContentDigest, repository::release::ChecksumType,
         },
     };
 
@@ -294,6 +294,9 @@ mod test {
             }
             for entry in source.files()? {
                 entry?;
+            }
+            for fetch in source.file_fetches(ChecksumType::Sha256)? {
+                fetch?;
             }
         }
 
