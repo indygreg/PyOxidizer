@@ -15,7 +15,7 @@ use {
         },
     },
     async_trait::async_trait,
-    futures::{io::BufReader, AsyncBufRead, AsyncRead, AsyncReadExt},
+    futures::{io::BufReader, AsyncRead, AsyncReadExt},
     std::{
         borrow::Cow,
         path::{Path, PathBuf},
@@ -43,13 +43,13 @@ impl FilesystemRepositoryReader {
 
 #[async_trait]
 impl DataResolver for FilesystemRepositoryReader {
-    async fn get_path(&self, path: &str) -> Result<Pin<Box<dyn AsyncBufRead + Send>>> {
+    async fn get_path(&self, path: &str) -> Result<Pin<Box<dyn AsyncRead + Send>>> {
         let path = self.root_dir.join(path);
 
         let f = std::fs::File::open(&path)
             .map_err(|e| DebianError::RepositoryIoPath(format!("{}", path.display()), e))?;
 
-        Ok(Box::pin(BufReader::new(futures::io::AllowStdIo::new(f))))
+        Ok(Box::pin(futures::io::AllowStdIo::new(f)))
     }
 }
 
@@ -90,7 +90,7 @@ pub struct FilesystemReleaseClient {
 
 #[async_trait]
 impl DataResolver for FilesystemReleaseClient {
-    async fn get_path(&self, path: &str) -> Result<Pin<Box<dyn AsyncBufRead + Send>>> {
+    async fn get_path(&self, path: &str) -> Result<Pin<Box<dyn AsyncRead + Send>>> {
         let path = self.distribution_dir.join(path);
 
         let f = std::fs::File::open(&path)

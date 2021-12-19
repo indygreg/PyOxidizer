@@ -15,7 +15,7 @@ use {
         repository::{release::ReleaseFile, Compression, ReleaseReader, RepositoryRootReader},
     },
     async_trait::async_trait,
-    futures::{stream::TryStreamExt, AsyncBufRead},
+    futures::{stream::TryStreamExt, AsyncRead},
     reqwest::{Client, IntoUrl, Url},
     std::pin::Pin,
 };
@@ -24,7 +24,7 @@ async fn fetch_url(
     client: &Client,
     root_url: &Url,
     path: &str,
-) -> Result<Pin<Box<dyn AsyncBufRead + Send>>> {
+) -> Result<Pin<Box<dyn AsyncRead + Send>>> {
     let res = client.get(root_url.join(path)?).send().await.map_err(|e| {
         DebianError::RepositoryIoPath(
             path.to_string(),
@@ -96,7 +96,7 @@ impl HttpRepositoryClient {
 
 #[async_trait]
 impl DataResolver for HttpRepositoryClient {
-    async fn get_path(&self, path: &str) -> Result<Pin<Box<dyn AsyncBufRead + Send>>> {
+    async fn get_path(&self, path: &str) -> Result<Pin<Box<dyn AsyncRead + Send>>> {
         fetch_url(&self.client, &self.root_url, path).await
     }
 }
@@ -150,7 +150,7 @@ pub struct HttpReleaseClient {
 
 #[async_trait]
 impl DataResolver for HttpReleaseClient {
-    async fn get_path(&self, path: &str) -> Result<Pin<Box<dyn AsyncBufRead + Send>>> {
+    async fn get_path(&self, path: &str) -> Result<Pin<Box<dyn AsyncRead + Send>>> {
         fetch_url(&self.client, &self.root_url, path).await
     }
 }

@@ -464,7 +464,7 @@ pub trait DataResolver: Sync {
     ///
     /// This obtains a reader for path data and returns the raw data without any
     /// decoding applied.
-    async fn get_path(&self, path: &str) -> Result<Pin<Box<dyn AsyncBufRead + Send>>>;
+    async fn get_path(&self, path: &str) -> Result<Pin<Box<dyn AsyncRead + Send>>>;
 
     /// Obtain a reader that performs content integrity checking.
     ///
@@ -494,7 +494,11 @@ pub trait DataResolver: Sync {
         path: &str,
         compression: Compression,
     ) -> Result<Pin<Box<dyn AsyncRead + Send>>> {
-        read_decompressed(self.get_path(path).await?, compression).await
+        read_decompressed(
+            Box::pin(futures::io::BufReader::new(self.get_path(path).await?)),
+            compression,
+        )
+        .await
     }
 
     /// Like [Self::get_path_decoded()] but also perform content integrity verification.
@@ -541,7 +545,7 @@ impl<R: DataResolver + Send> PathMappingDataResolver<R> {
 
 #[async_trait]
 impl<R: DataResolver + Send> DataResolver for PathMappingDataResolver<R> {
-    async fn get_path(&self, path: &str) -> Result<Pin<Box<dyn AsyncBufRead + Send>>> {
+    async fn get_path(&self, path: &str) -> Result<Pin<Box<dyn AsyncRead + Send>>> {
         self.source
             .get_path(self.path_map.get(path).map(|s| s.as_str()).unwrap_or(path))
             .await
