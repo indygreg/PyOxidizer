@@ -16,9 +16,13 @@ use {
     },
     async_trait::async_trait,
     futures::{stream::TryStreamExt, AsyncRead},
-    reqwest::{Client, IntoUrl, Url},
+    reqwest::{Client, ClientBuilder, IntoUrl, Url},
     std::pin::Pin,
 };
+
+/// Default HTTP user agent string.
+pub const USER_AGENT: &str =
+    "debian-packaging Rust crate (https://crates.io/crates/debian-packaging)";
 
 async fn fetch_url(
     client: &Client,
@@ -71,7 +75,9 @@ pub struct HttpRepositoryClient {
 impl HttpRepositoryClient {
     /// Construct an instance bound to the specified URL.
     pub fn new(url: impl IntoUrl) -> Result<Self> {
-        Self::new_client(Client::default(), url)
+        let builder = ClientBuilder::new().user_agent(USER_AGENT);
+
+        Self::new_client(builder.build()?, url)
     }
 
     /// Construct an instance using the given [Client] and URL.
