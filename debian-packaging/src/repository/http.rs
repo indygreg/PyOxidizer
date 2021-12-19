@@ -16,7 +16,7 @@ use {
     },
     async_trait::async_trait,
     futures::{stream::TryStreamExt, AsyncRead},
-    reqwest::{Client, ClientBuilder, IntoUrl, Url},
+    reqwest::{Client, ClientBuilder, IntoUrl, StatusCode, Url},
     std::pin::Pin,
 };
 
@@ -29,7 +29,9 @@ async fn fetch_url(
     root_url: &Url,
     path: &str,
 ) -> Result<Pin<Box<dyn AsyncRead + Send>>> {
-    let res = client.get(root_url.join(path)?).send().await.map_err(|e| {
+    let request_url = root_url.join(path)?;
+
+    let res = client.get(request_url.clone()).send().await.map_err(|e| {
         DebianError::RepositoryIoPath(
             path.to_string(),
             std::io::Error::new(
@@ -38,14 +40,25 @@ async fn fetch_url(
             ),
         )
     })?;
+
     let res = res.error_for_status().map_err(|e| {
-        DebianError::RepositoryIoPath(
-            path.to_string(),
-            std::io::Error::new(
-                std::io::ErrorKind::Other,
-                format!("bad HTTP status code: {:?}", e),
-            ),
-        )
+        if e.status() == Some(StatusCode::NOT_FOUND) {
+            DebianError::RepositoryIoPath(
+                path.to_string(),
+                std::io::Error::new(
+                    std::io::ErrorKind::NotFound,
+                    format!("HTTP 404 for {}", request_url),
+                ),
+            )
+        } else {
+            DebianError::RepositoryIoPath(
+                path.to_string(),
+                std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    format!("bad HTTP status code: {:?}", e),
+                ),
+            )
+        }
     })?;
 
     Ok(Box::pin(
