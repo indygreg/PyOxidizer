@@ -1,0 +1,19 @@
+[package]
+name = "debian-repo-tool"
+version = "0.1.0"
+edition = "2021"
+authors = ["Gregory Szorc <gregory.szorc@gmail.com>"]
+license = "MPL-2.0"
+description = "CLI tool to interact with Debian repositories"
+keywords = ["debian", "package", "apt", "deb"]
+homepage = "https://github.com/indygreg/PyOxidizer"
+repository = "https://github.com/indygreg/PyOxidizer.git"
+readme = "README.md"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+
+[dependencies.debian-packaging]
+version = "0.9.0-pre"
+path = "../debian-packaging"

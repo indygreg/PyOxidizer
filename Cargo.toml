@@ -5,6 +5,7 @@ members = [
     'cpio-archive',
     'cryptographic-message-syntax',
     'debian-packaging',
+    "debian-repo-tool",
     'pyembed-bench',
     'pyembed',
     'pyoxidizer',
