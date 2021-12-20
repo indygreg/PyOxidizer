@@ -8,13 +8,62 @@ use {
     crate::{
         error::{DebianError, Result},
         io::ContentDigest,
-        repository::{PublishEvent, ReleaseReader, RepositoryRootReader, RepositoryWriter},
+        repository::{
+            reader_from_str, writer_from_str, PublishEvent, ReleaseReader, RepositoryRootReader,
+            RepositoryWriter,
+        },
     },
     futures::StreamExt,
+    serde::{Deserialize, Serialize},
 };
 
 /// Well-known files at the root of distribution/release directories.
 const RELEASE_FILES: &[&str; 4] = &["ChangeLog", "InRelease", "Release", "Release.gpg"];
+
+/// A configuration for initializing a [RepositoryCopier].
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct RepositoryCopierConfig {
+    /// The URL or path of the source repository to copy from.
+    pub source_url: String,
+
+    /// The URL or path of the destination repository to copy from.
+    pub destination_url: String,
+
+    /// Names of distributions to copy.
+    #[serde(default)]
+    pub distributions: Vec<String>,
+
+    /// Repository root relative paths of distributions to copy.
+    #[serde(default)]
+    pub distribution_paths: Vec<String>,
+
+    /// Filter of components to copy.
+    ///
+    /// If not defined, all components will be copied.
+    pub only_components: Option<Vec<String>>,
+
+    /// Whether to copy binary packages.
+    pub binary_packages_copy: Option<bool>,
+
+    /// Filter of architectures of binary packages to copy.
+    ///
+    /// If not defined, all architectures will be copied if binary packages are
+    /// being copied.
+    pub binary_packages_only_architectures: Option<Vec<String>>,
+
+    /// Whether to copy installer binary packages.
+    pub installer_binary_packages_copy: Option<bool>,
+
+    /// Filter of architectures of installer binary packages to copy.
+    ///
+    /// If not defined, all architectures will be copied if installer binary packages
+    /// are being copied.
+    pub installer_binary_packages_only_architectures: Option<Vec<String>>,
+
+    /// Whether to copy source packages.
+    pub sources_copy: Option<bool>,
+}
 
 struct GenericCopy {
     source_path: String,
@@ -116,6 +165,50 @@ impl RepositoryCopier {
     /// Set whether to copy sources package files.
     pub fn set_sources_copy(&mut self, value: bool) {
         self.sources_copy = value;
+    }
+
+    /// Perform a copy operation as defined by a [RepositoryCopierConfig].
+    pub async fn copy_from_config(
+        config: RepositoryCopierConfig,
+        threads: usize,
+        progress_cb: &Option<Box<dyn Fn(PublishEvent) + Sync>>,
+    ) -> Result<()> {
+        let root_reader = reader_from_str(config.source_url)?;
+        let writer = writer_from_str(config.destination_url).await?;
+
+        let mut copier = Self::default();
+
+        if let Some(v) = config.only_components {
+            copier.set_only_components(v.into_iter());
+        }
+        if let Some(v) = config.binary_packages_copy {
+            copier.set_binary_packages_copy(v);
+        }
+        if let Some(v) = config.binary_packages_only_architectures {
+            copier.set_binary_packages_only_arches(v.into_iter());
+        }
+        if let Some(v) = config.installer_binary_packages_copy {
+            copier.set_installer_binary_packages_copy(v);
+        }
+        if let Some(v) = config.installer_binary_packages_only_architectures {
+            copier.set_installer_binary_packages_only_arches(v.into_iter());
+        }
+        if let Some(v) = config.sources_copy {
+            copier.set_sources_copy(v);
+        }
+
+        for dist in config.distributions {
+            copier
+                .copy_distribution(&root_reader, &writer, &dist, threads, progress_cb)
+                .await?;
+        }
+        for path in config.distribution_paths {
+            copier
+                .copy_distribution_path(&root_reader, &writer, &path, threads, progress_cb)
+                .await?;
+        }
+
+        Ok(())
     }
 
     /// Copy content for a given distribution given a distribution name.
@@ -362,9 +455,15 @@ async fn perform_copies(
     allow_not_found: bool,
     progress_cb: &Option<Box<dyn Fn(PublishEvent) + Sync>>,
 ) -> Result<()> {
+    let mut total_size = 0;
+
     let fs = copies
         .into_iter()
         .map(|op| {
+            if let Some((size, _)) = op.expected_content {
+                total_size += size;
+            }
+
             writer.copy_from(
                 root_reader,
                 op.source_path.into(),
@@ -375,11 +474,21 @@ async fn perform_copies(
         })
         .collect::<Vec<_>>();
 
+    if let Some(cb) = progress_cb {
+        cb(PublishEvent::WriteSequenceBeginWithTotalBytes(total_size));
+    }
+
     let mut buffered = futures::stream::iter(fs).buffer_unordered(threads);
 
     while let Some(res) = buffered.next().await {
         match res {
-            Ok(_) => {}
+            Ok(write) => {
+                if let Some(cb) = progress_cb {
+                    cb(PublishEvent::WriteSequenceProgressBytes(
+                        write.bytes_written(),
+                    ));
+                }
+            }
             Err(DebianError::RepositoryIoPath(path, err))
                 if allow_not_found && matches!(err.kind(), std::io::ErrorKind::NotFound) =>
             {
@@ -389,6 +498,10 @@ async fn perform_copies(
             }
             Err(e) => return Err(e),
         }
+    }
+
+    if let Some(cb) = progress_cb {
+        cb(PublishEvent::WriteSequenceFinished);
     }
 
     Ok(())

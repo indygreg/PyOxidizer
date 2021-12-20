@@ -6,7 +6,7 @@
 
 use {
     crate::{
-        error::Result,
+        error::{DebianError, Result},
         io::ContentDigest,
         repository::{
             RepositoryPathVerification, RepositoryPathVerificationState, RepositoryWrite,
@@ -15,7 +15,7 @@ use {
     },
     async_trait::async_trait,
     futures::AsyncRead,
-    std::{borrow::Cow, pin::Pin},
+    std::{borrow::Cow, pin::Pin, str::FromStr},
 };
 
 /// How [RepositoryWriter::verify_path()] should behave for [SinkWriter] instances.
@@ -42,6 +42,20 @@ impl From<SinkWriterVerifyBehavior> for RepositoryPathVerificationState {
     }
 }
 
+impl FromStr for SinkWriterVerifyBehavior {
+    type Err = DebianError;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        match s {
+            "exists-no-integrity-check" => Ok(Self::ExistsNoIntegrityCheck),
+            "exists-integrity-verified" => Ok(Self::ExistsIntegrityVerified),
+            "exists-integrity-mismatch" => Ok(Self::ExistsIntegrityMismatch),
+            "missing" => Ok(Self::Missing),
+            _ => Err(DebianError::SinkWriterVerifyBehaviorUnknown(s.to_string())),
+        }
+    }
+}
+
 /// A [RepositoryWriter] that writes data to a black hole.
 pub struct SinkWriter {
     verify_behavior: SinkWriterVerifyBehavior,
@@ -52,6 +66,13 @@ impl Default for SinkWriter {
         Self {
             verify_behavior: SinkWriterVerifyBehavior::Missing,
         }
+    }
+}
+
+impl SinkWriter {
+    /// Set the behavior for [RepositoryWriter::verify_path()] on this instance.
+    pub fn set_verify_behavior(&mut self, behavior: SinkWriterVerifyBehavior) {
+        self.verify_behavior = behavior;
     }
 }
 

@@ -15,10 +15,10 @@ use {
     futures::{AsyncRead, AsyncReadExt as FuturesAsyncReadExt},
     rusoto_core::{ByteStream, Client, Region, RusotoError},
     rusoto_s3::{
-        GetObjectError, GetObjectRequest, HeadObjectError, HeadObjectRequest, PutObjectRequest,
-        S3Client, S3,
+        GetBucketLocationRequest, GetObjectError, GetObjectRequest, HeadObjectError,
+        HeadObjectRequest, PutObjectRequest, S3Client, S3,
     },
-    std::{borrow::Cow, pin::Pin},
+    std::{borrow::Cow, pin::Pin, str::FromStr},
     tokio::io::AsyncReadExt as TokioAsyncReadExt,
 };
 
@@ -204,5 +204,36 @@ impl RepositoryWriter for S3Writer {
                 std::io::Error::new(std::io::ErrorKind::Other, format!("S3 error: {:?}", e)),
             )),
         }
+    }
+}
+
+/// Attempt to resolve the AWS region of an S3 bucket.
+pub async fn get_bucket_region(bucket: impl ToString) -> Result<Region> {
+    get_bucket_region_with_client(S3Client::new(Region::UsEast1), bucket).await
+}
+
+/// Attempt to resolve the AWS region of an S3 bucket using a provided [S3Client].
+pub async fn get_bucket_region_with_client(
+    client: S3Client,
+    bucket: impl ToString,
+) -> Result<Region> {
+    let req = GetBucketLocationRequest {
+        bucket: bucket.to_string(),
+        ..Default::default()
+    };
+
+    match client.get_bucket_location(req).await {
+        Ok(res) => {
+            if let Some(constraint) = res.location_constraint {
+                Ok(Region::from_str(&constraint)
+                    .map_err(|_| DebianError::S3BadRegion(constraint))?)
+            } else {
+                Ok(Region::UsEast1)
+            }
+        }
+        Err(e) => Err(DebianError::Io(std::io::Error::new(
+            std::io::ErrorKind::Other,
+            format!("S3 error: {:?}", e),
+        ))),
     }
 }

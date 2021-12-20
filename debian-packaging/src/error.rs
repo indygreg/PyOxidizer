@@ -65,6 +65,12 @@ pub enum DebianError {
     #[error("unknown compression in deb archive file: {0}")]
     DebUnknownCompression(String),
 
+    #[error("do not know how to construct repository reader from URL: {0}")]
+    RepositoryReaderUnrecognizedUrl(String),
+
+    #[error("do not know how to construct repository writer from URL: {0}")]
+    RepositoryWriterUnrecognizedUrl(String),
+
     #[error("release file does not contain supported checksum flavor")]
     RepositoryReadReleaseNoKnownChecksum,
 
@@ -139,6 +145,12 @@ pub enum DebianError {
 
     #[error("debian_revision component has illegal character: {0}")]
     DebianRevisionIllegalChar(String),
+
+    #[error("unknown S3 region: {0}")]
+    S3BadRegion(String),
+
+    #[error("unknown verify behavior for null:// destination: {0}")]
+    SinkWriterVerifyBehaviorUnknown(String),
 
     #[error("{0}")]
     Other(String),

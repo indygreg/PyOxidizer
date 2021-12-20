@@ -10,9 +10,17 @@ homepage = "https://github.com/indygreg/PyOxidizer"
 repository = "https://github.com/indygreg/PyOxidizer.git"
 readme = "README.md"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[[bin]]
+name = "drt"
+path = "src/main.rs"
 
 [dependencies]
+clap = "2.33"
+num_cpus = "1.13"
+pbr = "1.0"
+serde_yaml = "0.8"
+thiserror = "1.0"
+tokio = { version = "1.15", features = ["full"] }
 
 [dependencies.debian-packaging]
 version = "0.9.0-pre"

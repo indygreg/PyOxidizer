@@ -85,7 +85,7 @@ use {
     },
     async_trait::async_trait,
     futures::{AsyncRead, AsyncReadExt, StreamExt, TryStreamExt},
-    std::{borrow::Cow, collections::HashMap, ops::Deref, pin::Pin},
+    std::{borrow::Cow, collections::HashMap, ops::Deref, pin::Pin, str::FromStr},
 };
 
 pub mod builder;
@@ -794,6 +794,15 @@ pub enum PublishEvent {
 
     /// Copying an indices file but the source wasn't found.
     CopyIndicesPathNotFound(String),
+
+    /// Begin a write sequence where we will write N total bytes.
+    WriteSequenceBeginWithTotalBytes(u64),
+
+    /// Report that N bytes have been written as part of a write operation.
+    WriteSequenceProgressBytes(u64),
+
+    /// Report the conclusion of a logical write sequence.
+    WriteSequenceFinished,
 }
 
 impl std::fmt::Display for PublishEvent {
@@ -833,7 +842,27 @@ impl std::fmt::Display for PublishEvent {
                     path
                 )
             }
+            Self::WriteSequenceBeginWithTotalBytes(_)
+            | Self::WriteSequenceProgressBytes(_)
+            | Self::WriteSequenceFinished => Ok(()),
         }
+    }
+}
+
+impl PublishEvent {
+    /// Whether this even contains a meaningful log message.
+    pub fn is_loggable(&self) -> bool {
+        !self.is_progress()
+    }
+
+    /// Whether this is a progress update.
+    pub fn is_progress(&self) -> bool {
+        matches!(
+            self,
+            Self::WriteSequenceBeginWithTotalBytes(_)
+                | Self::WriteSequenceProgressBytes(_)
+                | Self::WriteSequenceFinished
+        )
     }
 }
 
@@ -850,7 +879,16 @@ pub enum RepositoryWriteOperation<'a> {
     /// A path was written.
     PathWritten(RepositoryWrite<'a>),
     /// The operation didn't do anything meaningful.
-    Noop(Cow<'a, str>),
+    Noop(Cow<'a, str>, u64),
+}
+
+impl<'a> RepositoryWriteOperation<'a> {
+    pub fn bytes_written(&self) -> u64 {
+        match self {
+            Self::PathWritten(write) => write.bytes_written,
+            Self::Noop(_, size) => *size,
+        }
+    }
 }
 
 /// An interface for writing to a repository.
@@ -914,7 +952,14 @@ pub trait RepositoryWriter: Sync {
             verification.state,
             RepositoryPathVerificationState::ExistsIntegrityVerified
         ) {
-            return Ok(RepositoryWriteOperation::Noop(dest_path));
+            return Ok(RepositoryWriteOperation::Noop(
+                dest_path,
+                if let Some((size, _)) = expected_content {
+                    size
+                } else {
+                    0
+                },
+            ));
         }
 
         if let Some(cb) = progress_cb {
@@ -935,5 +980,84 @@ pub trait RepositoryWriter: Sync {
         let write = self.write_path(dest_path, reader).await?;
 
         Ok(RepositoryWriteOperation::PathWritten(write))
+    }
+}
+
+/// Construct a [RepositoryRootReader] from a string/URL.
+///
+/// If the string contains `://` it will be parsed as a URL. `file://`, `http://`,
+/// and `https://` are recognized.
+///
+/// Otherwise the string will be interpreted as a filesystem path. No test for whether
+/// the repository exists is performed.
+pub fn reader_from_str(s: impl ToString) -> Result<Box<dyn RepositoryRootReader>> {
+    let s = s.to_string();
+
+    if s.contains("://") {
+        let url = url::Url::parse(&s)?;
+
+        match url.scheme() {
+            "file" => Ok(Box::new(filesystem::FilesystemRepositoryReader::new(
+                url.to_file_path()
+                    .expect("path conversion should always work for file://"),
+            ))),
+            #[cfg(feature = "http")]
+            "http" | "https" => Ok(Box::new(http::HttpRepositoryClient::new(url)?)),
+            _ => Err(DebianError::RepositoryReaderUnrecognizedUrl(s)),
+        }
+    } else {
+        // Assume a filesystem path.
+        Ok(Box::new(filesystem::FilesystemRepositoryReader::new(s)))
+    }
+}
+
+/// Construct a [RepositoryWriter] from a string/URL.
+///
+/// If the string contains `://` it will be parsed as a URL. `file://`, `null://`, and `s3://` are
+/// recognized.
+///
+/// Otherwise the string will be interpreted as a filesystem path. No test for
+/// whether the repository exists is performed.
+pub async fn writer_from_str(s: impl ToString) -> Result<Box<dyn RepositoryWriter>> {
+    let s = s.to_string();
+
+    if s.contains("://") {
+        let url = url::Url::parse(&s)?;
+
+        match url.scheme() {
+            "file" => Ok(Box::new(filesystem::FilesystemRepositoryWriter::new(
+                url.to_file_path()
+                    .expect("path conversion should always work for file://"),
+            ))),
+            "null" => {
+                let mut writer = sink_writer::SinkWriter::default();
+
+                let behavior = match url.host_str() {
+                    Some(s) => sink_writer::SinkWriterVerifyBehavior::from_str(s)?,
+                    None => sink_writer::SinkWriterVerifyBehavior::Missing,
+                };
+
+                writer.set_verify_behavior(behavior);
+
+                Ok(Box::new(writer))
+            }
+            #[cfg(feature = "s3")]
+            "s3" => {
+                let path = url.path();
+
+                if let Some((bucket, prefix)) = path.trim_matches('/').split_once('/') {
+                    let region = s3::get_bucket_region(bucket).await?;
+
+                    Ok(Box::new(s3::S3Writer::new(region, bucket, Some(prefix))))
+                } else {
+                    let region = s3::get_bucket_region(path).await?;
+
+                    Ok(Box::new(s3::S3Writer::new(region, path, None)))
+                }
+            }
+            _ => Err(DebianError::RepositoryWriterUnrecognizedUrl(s)),
+        }
+    } else {
+        Ok(Box::new(filesystem::FilesystemRepositoryWriter::new(s)))
     }
 }

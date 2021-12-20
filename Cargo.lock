@@ -1043,6 +1043,7 @@ dependencies = [
  "reqwest",
  "rusoto_core",
  "rusoto_s3",
+ "serde",
  "sha-1 0.10.0",
  "sha2 0.10.0",
  "smallvec",
@@ -1061,7 +1062,13 @@ dependencies = [
 name = "debian-repo-tool"
 version = "0.1.0"
 dependencies = [
+ "clap",
  "debian-packaging",
+ "num_cpus",
+ "pbr",
+ "serde_yaml",
+ "thiserror",
+ "tokio",
 ]
 
 [[package]]
@@ -2587,6 +2594,18 @@ name = "pathdiff"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8835116a5c179084a830efb3adc117ab007512b535bc1a21c991d3b32a6b44dd"
+
+[[package]]
+name = "pbr"
+version = "1.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ff5751d87f7c00ae6403eb1fcbba229b9c76c9a30de8c1cf87182177b168cea2"
+dependencies = [
+ "crossbeam-channel",
+ "libc",
+ "time 0.1.43",
+ "winapi",
+]
 
 [[package]]
 name = "pem"
@@ -4238,6 +4257,7 @@ dependencies = [
  "mio",
  "num_cpus",
  "once_cell",
+ "parking_lot",
  "pin-project-lite",
  "signal-hook-registry",
  "tokio-macros",
