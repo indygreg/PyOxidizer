@@ -151,9 +151,16 @@ impl RepositoryWriter for FilesystemRepositoryWriter {
     ) -> Result<RepositoryPathVerification<'path>> {
         let dest_path = self.root_dir.join(path);
 
-        let metadata = async_std::fs::metadata(&dest_path)
-            .await
-            .map_err(|e| DebianError::RepositoryIoPath(path.to_string(), e))?;
+        let metadata = match async_std::fs::metadata(&dest_path).await {
+            Ok(res) => res,
+            Err(err) if err.kind() == std::io::ErrorKind::NotFound => {
+                return Ok(RepositoryPathVerification {
+                    path,
+                    state: RepositoryPathVerificationState::Missing,
+                });
+            }
+            Err(e) => return Err(DebianError::RepositoryIoPath(path.to_string(), e)),
+        };
 
         if metadata.is_file() {
             if let Some((expected_size, expected_digest)) = expected_content {
