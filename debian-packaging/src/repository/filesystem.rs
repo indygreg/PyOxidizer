@@ -76,6 +76,7 @@ impl RepositoryRootReader for FilesystemRepositoryReader {
 
         Ok(Box::new(FilesystemReleaseClient {
             distribution_dir,
+            relative_path: distribution_path,
             release,
             fetch_compression,
         }))
@@ -84,6 +85,7 @@ impl RepositoryRootReader for FilesystemRepositoryReader {
 
 pub struct FilesystemReleaseClient {
     distribution_dir: PathBuf,
+    relative_path: String,
     release: ReleaseFile<'static>,
     fetch_compression: Compression,
 }
@@ -105,6 +107,10 @@ impl ReleaseReader for FilesystemReleaseClient {
     fn url(&self) -> Result<Url> {
         Url::from_file_path(&self.distribution_dir)
             .map_err(|_| DebianError::Other("error converting filesystem path to URL".to_string()))
+    }
+
+    fn root_relative_path(&self) -> &str {
+        &self.relative_path
     }
 
     fn release_file(&self) -> &ReleaseFile<'static> {

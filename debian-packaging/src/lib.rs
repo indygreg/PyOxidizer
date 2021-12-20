@@ -96,6 +96,9 @@ The [repository::builder] module contains functionality for creating and publish
 Debian repositories. [repository::builder::RepositoryBuilder] is the main type for
 publishing Debian repositories.
 
+The [repository::copier] module contains functionality for copying Debian repositories.
+[repository::copier::RepositoryCopier] is the main type for copying Debian repositories.
+
 The [signing_key] module provides functionality related to PGP signing.
 [signing_key::DistroSigningKey] defines PGP public keys for well-known signing keys used by
 popular Linux distributions. [signing_key::signing_secret_key_params_builder()] and

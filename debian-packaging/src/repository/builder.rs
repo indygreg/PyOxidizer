@@ -22,7 +22,7 @@ use {
         pgp::cleartext_sign,
         repository::{
             release::{ChecksumType, ReleaseFile, DATE_FORMAT},
-            Compression, RepositoryPathVerificationState, RepositoryWriter,
+            Compression, PublishEvent, RepositoryPathVerificationState, RepositoryWriter,
         },
     },
     chrono::{DateTime, Utc},
@@ -194,57 +194,6 @@ pub struct BinaryPackagePoolArtifact<'a> {
     pub size: u64,
     /// The expected digest of the file.
     pub digest: ContentDigest,
-}
-
-/// Represents a publishing event.
-pub enum PublishEvent {
-    ResolvedPoolArtifacts(usize),
-
-    /// A pool artifact with the given path is current and was not updated.
-    PoolArtifactCurrent(String),
-
-    /// A pool artifact with the given path is missing and will be created.
-    PoolArtifactMissing(String),
-
-    /// Total number of pool artifacts to publish.
-    PoolArtifactsToPublish(usize),
-
-    /// A pool artifact with the given path and size was created.
-    PoolArtifactCreated(String, u64),
-
-    /// The path to an index file to write.
-    IndexFileToWrite(String),
-
-    /// An index file that was written.
-    IndexFileWritten(String, u64),
-}
-
-impl std::fmt::Display for PublishEvent {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::ResolvedPoolArtifacts(count) => {
-                write!(f, "resolved {} needed pool artifacts", count)
-            }
-            Self::PoolArtifactCurrent(path) => {
-                write!(f, "pool path {} is present", path)
-            }
-            Self::PoolArtifactMissing(path) => {
-                write!(f, "pool path {} will be written", path)
-            }
-            Self::PoolArtifactsToPublish(count) => {
-                write!(f, "{} pool artifacts will be written", count)
-            }
-            Self::PoolArtifactCreated(path, size) => {
-                write!(f, "wrote {} bytes to {}", size, path)
-            }
-            Self::IndexFileToWrite(path) => {
-                write!(f, "index file {} will be written", path)
-            }
-            Self::IndexFileWritten(path, size) => {
-                write!(f, "wrote {} bytes to {}", size, path)
-            }
-        }
-    }
 }
 
 // (Package, Version) -> paragraph.
@@ -1161,7 +1110,6 @@ async fn get_path_and_copy<'a, 'b>(
 
 #[cfg(test)]
 mod test {
-
     use {
         super::*,
         crate::{

@@ -52,6 +52,11 @@ and serves as the primary HTTP-based client. [filesystem] provides
 [filesystem::FilesystemRepositoryReader] and [filesystem::FilesystemRepositoryWriter]
 for reading and writing repositories using a local filesystem.
 
+A couple of special [RepositoryWriter] exist. [sink_writer::SinkWriter] provides a writer
+that will send its content to a black hole. It can be used for testing writing without
+actually performing writes. [proxy_writer::ProxyWriter] proxies an inner writer and
+can override behavior on certain I/O operations.
+
 Modules like [contents] and [release] define primitives encountered in
 repositories, such as `[In]Release` files.
 
@@ -72,7 +77,8 @@ use {
         repository::{
             contents::{ContentsFile, ContentsFileAsyncReader},
             release::{
-                ChecksumType, ContentsFileEntry, PackagesFileEntry, ReleaseFile, SourcesFileEntry,
+                ChecksumType, ClassifiedReleaseFileEntry, ContentsFileEntry, PackagesFileEntry,
+                ReleaseFile, SourcesFileEntry,
             },
         },
     },
@@ -83,10 +89,13 @@ use {
 
 pub mod builder;
 pub mod contents;
+pub mod copier;
 pub mod filesystem;
 #[cfg(feature = "http")]
 pub mod http;
+pub mod proxy_writer;
 pub mod release;
+pub mod sink_writer;
 
 /// Describes how to fetch a binary package from a repository.
 #[derive(Clone, Debug)]
@@ -214,6 +223,13 @@ pub trait ReleaseReader: DataResolver + Sync {
     /// Obtain the base URL to which this instance is bound.
     fn url(&self) -> Result<url::Url>;
 
+    /// Obtain the path relative to the repository root this instance is bound to.
+    ///
+    /// e.g. `dists/bullseye`.
+    ///
+    /// Implementations must not return a string with a leading or trailing `/`.
+    fn root_relative_path(&self) -> &str;
+
     /// Obtain the parsed `[In]Release` file from which this reader is derived.
     fn release_file(&self) -> &ReleaseFile<'_>;
 
@@ -241,6 +257,14 @@ pub trait ReleaseReader: DataResolver + Sync {
     /// compression. This function can be used to instruct the reader which compression
     /// format to prefer.
     fn set_preferred_compression(&mut self, compression: Compression);
+
+    /// Obtain [ClassifiedReleaseFileEntry] within the parsed `Release` file.
+    fn classified_indices_entries(&self) -> Result<Vec<ClassifiedReleaseFileEntry<'_>>> {
+        self.release_file()
+            .iter_classified_index_files(self.retrieve_checksum()?)
+            .ok_or(DebianError::ReleaseNoIndicesFiles)?
+            .collect::<Result<Vec<_>>>()
+    }
 
     /// Obtain parsed `Packages` file entries within this Release file.
     ///
@@ -735,12 +759,95 @@ impl<'a> std::fmt::Display for RepositoryPathVerification<'a> {
     }
 }
 
+/// Represents a repository publishing event.
+///
+/// Instances are sent to callbacks during repository writing to inform of activity.
+pub enum PublishEvent {
+    ResolvedPoolArtifacts(usize),
+
+    /// A pool artifact with the given path is current and was not updated.
+    PoolArtifactCurrent(String),
+
+    /// A pool artifact with the given path is missing and will be created.
+    PoolArtifactMissing(String),
+
+    /// Total number of pool artifacts to publish.
+    PoolArtifactsToPublish(usize),
+
+    /// A pool artifact with the given path and size was created.
+    PoolArtifactCreated(String, u64),
+
+    /// The path to an index file to write.
+    IndexFileToWrite(String),
+
+    /// An index file that was written.
+    IndexFileWritten(String, u64),
+
+    /// A path is being verified.
+    VerifyingDestinationPath(String),
+
+    /// Copying a path from a source to a destination.
+    CopyingPath(String, String),
+
+    /// Copying an indices file but the source wasn't found.
+    CopyIndicesPathNotFound(String),
+}
+
+impl std::fmt::Display for PublishEvent {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::ResolvedPoolArtifacts(count) => {
+                write!(f, "resolved {} needed pool artifacts", count)
+            }
+            Self::PoolArtifactCurrent(path) => {
+                write!(f, "pool path {} is present", path)
+            }
+            Self::PoolArtifactMissing(path) => {
+                write!(f, "pool path {} will be written", path)
+            }
+            Self::PoolArtifactsToPublish(count) => {
+                write!(f, "{} pool artifacts will be written", count)
+            }
+            Self::PoolArtifactCreated(path, size) => {
+                write!(f, "wrote {} bytes to {}", size, path)
+            }
+            Self::IndexFileToWrite(path) => {
+                write!(f, "index file {} will be written", path)
+            }
+            Self::IndexFileWritten(path, size) => {
+                write!(f, "wrote {} bytes to {}", size, path)
+            }
+            Self::VerifyingDestinationPath(path) => {
+                write!(f, "verifying destination path {}", path)
+            }
+            Self::CopyingPath(source, dest) => {
+                write!(f, "copying {} to {}", source, dest)
+            }
+            Self::CopyIndicesPathNotFound(path) => {
+                write!(
+                    f,
+                    "copying indices file {} failed because it wasn't found",
+                    path
+                )
+            }
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct RepositoryWrite<'a> {
     /// The path that was written.
     pub path: Cow<'a, str>,
     /// The number of bytes written.
     pub bytes_written: u64,
+}
+
+/// Describes the result of a repository write operation.
+pub enum RepositoryWriteOperation<'a> {
+    /// A path was written.
+    PathWritten(RepositoryWrite<'a>),
+    /// The operation didn't do anything meaningful.
+    Noop(Cow<'a, str>),
 }
 
 /// An interface for writing to a repository.
@@ -770,4 +877,63 @@ pub trait RepositoryWriter: Sync {
         path: Cow<'path, str>,
         reader: Pin<Box<dyn AsyncRead + Send + 'reader>>,
     ) -> Result<RepositoryWrite<'path>>;
+
+    /// Copy a path from a reader to this writer.
+    ///
+    /// The source reader is a [RepositoryRootReader] and the path is relative to the repository
+    /// root.
+    ///
+    /// The default implementation verifies the integrity of the destination and will no-op if
+    /// the desired content is already present.
+    ///
+    /// Implementations of this trait may have a custom implementation that changes semantics.
+    /// For example, a writer could operate in a dry-run mode where it doesn't actually attempt
+    /// any I/O. Custom implementations should call `progress_cb` with events, as appropriate.
+    async fn copy_from<'path, F>(
+        &self,
+        reader: &Box<dyn RepositoryRootReader>,
+        source_path: Cow<'path, str>,
+        expected_content: Option<(u64, ContentDigest)>,
+        dest_path: Cow<'path, str>,
+        progress_cb: &Option<F>,
+    ) -> Result<RepositoryWriteOperation<'path>>
+    where
+        F: Fn(PublishEvent) + Sync,
+    {
+        if let Some(cb) = progress_cb {
+            cb(PublishEvent::VerifyingDestinationPath(
+                dest_path.to_string(),
+            ));
+        }
+
+        let verification = self
+            .verify_path(dest_path.as_ref(), expected_content.clone())
+            .await?;
+
+        if matches!(
+            verification.state,
+            RepositoryPathVerificationState::ExistsIntegrityVerified
+        ) {
+            return Ok(RepositoryWriteOperation::Noop(dest_path));
+        }
+
+        if let Some(cb) = progress_cb {
+            cb(PublishEvent::CopyingPath(
+                source_path.to_string(),
+                dest_path.to_string(),
+            ));
+        }
+
+        let reader = if let Some((size, digest)) = expected_content {
+            reader
+                .get_path_with_digest_verification(source_path.as_ref(), size, digest)
+                .await?
+        } else {
+            reader.get_path(source_path.as_ref()).await?
+        };
+
+        let write = self.write_path(dest_path, reader).await?;
+
+        Ok(RepositoryWriteOperation::PathWritten(write))
+    }
 }

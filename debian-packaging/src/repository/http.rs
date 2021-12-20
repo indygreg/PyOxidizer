@@ -149,6 +149,7 @@ impl RepositoryRootReader for HttpRepositoryClient {
         Ok(Box::new(HttpReleaseClient {
             client: self.client.clone(),
             root_url,
+            relative_path: distribution_path,
             release,
             fetch_compression,
         }))
@@ -163,6 +164,7 @@ fn join_path(a: &str, b: &str) -> String {
 pub struct HttpReleaseClient {
     client: Client,
     root_url: Url,
+    relative_path: String,
     release: ReleaseFile<'static>,
     fetch_compression: Compression,
 }
@@ -178,6 +180,10 @@ impl DataResolver for HttpReleaseClient {
 impl ReleaseReader for HttpReleaseClient {
     fn url(&self) -> Result<Url> {
         Ok(self.root_url.clone())
+    }
+
+    fn root_relative_path(&self) -> &str {
+        &self.relative_path
     }
 
     fn release_file(&self) -> &ReleaseFile<'static> {

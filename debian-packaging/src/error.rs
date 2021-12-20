@@ -122,6 +122,9 @@ pub enum DebianError {
     #[error("No PGP signatures found from the specified key")]
     ReleaseNoSignaturesByKey,
 
+    #[error("indices files not found in Release file")]
+    ReleaseNoIndicesFiles,
+
     #[error("failed to parse dependency expression: {0}")]
     DependencyParse(String),
 
