@@ -892,17 +892,14 @@ pub trait RepositoryWriter: Sync {
     /// Implementations of this trait may have a custom implementation that changes semantics.
     /// For example, a writer could operate in a dry-run mode where it doesn't actually attempt
     /// any I/O. Custom implementations should call `progress_cb` with events, as appropriate.
-    async fn copy_from<'path, F>(
+    async fn copy_from<'path>(
         &self,
         reader: &Box<dyn RepositoryRootReader>,
         source_path: Cow<'path, str>,
         expected_content: Option<(u64, ContentDigest)>,
         dest_path: Cow<'path, str>,
-        progress_cb: &Option<F>,
-    ) -> Result<RepositoryWriteOperation<'path>>
-    where
-        F: Fn(PublishEvent) + Sync,
-    {
+        progress_cb: &Option<Box<dyn Fn(PublishEvent) + Sync>>,
+    ) -> Result<RepositoryWriteOperation<'path>> {
         if let Some(cb) = progress_cb {
             cb(PublishEvent::VerifyingDestinationPath(
                 dest_path.to_string(),

@@ -123,17 +123,14 @@ impl RepositoryCopier {
     /// This is a proxy for [Self::copy_distribution_path()] which simply passes
     /// `dists/{distribution}` as the path value. This is the standard layout for Debian
     /// repositories.
-    pub async fn copy_distribution<F>(
+    pub async fn copy_distribution(
         &self,
         root_reader: &Box<dyn RepositoryRootReader>,
         writer: &impl RepositoryWriter,
         distribution: &str,
         threads: usize,
-        progress_cb: &Option<F>,
-    ) -> Result<()>
-    where
-        F: Fn(PublishEvent) + Sync,
-    {
+        progress_cb: &Option<Box<dyn Fn(PublishEvent) + Sync>>,
+    ) -> Result<()> {
         self.copy_distribution_path(
             root_reader,
             writer,
@@ -148,17 +145,14 @@ impl RepositoryCopier {
     ///
     /// The given `distribution_path` is usually prefixed with `dists/`. e.g. `dists/bullseye`.
     /// But it can be something else for non-standard repository layouts.
-    pub async fn copy_distribution_path<F>(
+    pub async fn copy_distribution_path(
         &self,
         root_reader: &Box<dyn RepositoryRootReader>,
         writer: &impl RepositoryWriter,
         distribution_path: &str,
         threads: usize,
-        progress_cb: &Option<F>,
-    ) -> Result<()>
-    where
-        F: Fn(PublishEvent) + Sync,
-    {
+        progress_cb: &Option<Box<dyn Fn(PublishEvent) + Sync>>,
+    ) -> Result<()> {
         let release = root_reader
             .release_reader_with_distribution_path(distribution_path)
             .await?;
@@ -198,18 +192,15 @@ impl RepositoryCopier {
         Ok(())
     }
 
-    async fn copy_binary_packages<F>(
+    async fn copy_binary_packages(
         &self,
         root_reader: &Box<dyn RepositoryRootReader>,
         writer: &impl RepositoryWriter,
         release: &Box<dyn ReleaseReader>,
         installer_packages: bool,
         threads: usize,
-        progress_cb: &Option<F>,
-    ) -> Result<()>
-    where
-        F: Fn(PublishEvent) + Sync,
-    {
+        progress_cb: &Option<Box<dyn Fn(PublishEvent) + Sync>>,
+    ) -> Result<()> {
         let only_arches = if installer_packages {
             self.installer_binary_packages_only_arches.clone()
         } else {
@@ -251,17 +242,14 @@ impl RepositoryCopier {
         Ok(())
     }
 
-    async fn copy_source_packages<F>(
+    async fn copy_source_packages(
         &self,
         root_reader: &Box<dyn RepositoryRootReader>,
         writer: &impl RepositoryWriter,
         release: &Box<dyn ReleaseReader>,
         threads: usize,
-        progress_cb: &Option<F>,
-    ) -> Result<()>
-    where
-        F: Fn(PublishEvent) + Sync,
-    {
+        progress_cb: &Option<Box<dyn Fn(PublishEvent) + Sync>>,
+    ) -> Result<()> {
         // TODO There's probably a way to filter components in here.
         let copies = release
             .resolve_source_fetches(Box::new(move |_| true), Box::new(move |_| true), threads)
@@ -279,33 +267,27 @@ impl RepositoryCopier {
         Ok(())
     }
 
-    async fn copy_installers<F>(
+    async fn copy_installers(
         &self,
         _root_reader: &Box<dyn RepositoryRootReader>,
         _writer: &impl RepositoryWriter,
         _release: &Box<dyn ReleaseReader>,
         _threads: usize,
-        _progress_cb: &Option<F>,
-    ) -> Result<()>
-    where
-        F: Fn(PublishEvent) + Sync,
-    {
+        _progress_cb: &Option<Box<dyn Fn(PublishEvent) + Sync>>,
+    ) -> Result<()> {
         // Not yet supported since this requires teaching content validating fetching about
         // optional sizes.
         todo!();
     }
 
-    async fn copy_release_indices<F>(
+    async fn copy_release_indices(
         &self,
         root_reader: &Box<dyn RepositoryRootReader>,
         writer: &impl RepositoryWriter,
         release: &Box<dyn ReleaseReader>,
         threads: usize,
-        progress_cb: &Option<F>,
-    ) -> Result<()>
-    where
-        F: Fn(PublishEvent) + Sync,
-    {
+        progress_cb: &Option<Box<dyn Fn(PublishEvent) + Sync>>,
+    ) -> Result<()> {
         let by_hash = release.release_file().acquire_by_hash().unwrap_or(false);
 
         let copies = release
@@ -342,17 +324,14 @@ impl RepositoryCopier {
         Ok(())
     }
 
-    async fn copy_release_files<F>(
+    async fn copy_release_files(
         &self,
         root_reader: &Box<dyn RepositoryRootReader>,
         writer: &impl RepositoryWriter,
         distribution_path: &str,
         threads: usize,
-        progress_cb: &Option<F>,
-    ) -> Result<()>
-    where
-        F: Fn(PublishEvent) + Sync,
-    {
+        progress_cb: &Option<Box<dyn Fn(PublishEvent) + Sync>>,
+    ) -> Result<()> {
         let copies = RELEASE_FILES
             .iter()
             .map(|path| {
@@ -375,17 +354,14 @@ impl RepositoryCopier {
 }
 
 /// Perform a sequence of copy operations between a reader and writer.
-async fn perform_copies<F>(
+async fn perform_copies(
     root_reader: &Box<dyn RepositoryRootReader>,
     writer: &impl RepositoryWriter,
     copies: Vec<GenericCopy>,
     threads: usize,
     allow_not_found: bool,
-    progress_cb: &Option<F>,
-) -> Result<()>
-where
-    F: Fn(PublishEvent) + Sync,
-{
+    progress_cb: &Option<Box<dyn Fn(PublishEvent) + Sync>>,
+) -> Result<()> {
     let fs = copies
         .into_iter()
         .map(|op| {
@@ -443,7 +419,7 @@ mod test {
         copier.set_installer_binary_packages_copy(false);
         copier.set_sources_copy(false);
 
-        let cb = |_| {};
+        let cb = Box::new(|_| {});
 
         copier
             .copy_distribution(&root, &writer, "bullseye", 8, &Some(cb))
