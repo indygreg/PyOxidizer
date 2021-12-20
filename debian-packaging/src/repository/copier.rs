@@ -126,7 +126,7 @@ impl RepositoryCopier {
     pub async fn copy_distribution(
         &self,
         root_reader: &Box<dyn RepositoryRootReader>,
-        writer: &impl RepositoryWriter,
+        writer: &Box<dyn RepositoryWriter>,
         distribution: &str,
         threads: usize,
         progress_cb: &Option<Box<dyn Fn(PublishEvent) + Sync>>,
@@ -148,7 +148,7 @@ impl RepositoryCopier {
     pub async fn copy_distribution_path(
         &self,
         root_reader: &Box<dyn RepositoryRootReader>,
-        writer: &impl RepositoryWriter,
+        writer: &Box<dyn RepositoryWriter>,
         distribution_path: &str,
         threads: usize,
         progress_cb: &Option<Box<dyn Fn(PublishEvent) + Sync>>,
@@ -195,7 +195,7 @@ impl RepositoryCopier {
     async fn copy_binary_packages(
         &self,
         root_reader: &Box<dyn RepositoryRootReader>,
-        writer: &impl RepositoryWriter,
+        writer: &Box<dyn RepositoryWriter>,
         release: &Box<dyn ReleaseReader>,
         installer_packages: bool,
         threads: usize,
@@ -245,7 +245,7 @@ impl RepositoryCopier {
     async fn copy_source_packages(
         &self,
         root_reader: &Box<dyn RepositoryRootReader>,
-        writer: &impl RepositoryWriter,
+        writer: &Box<dyn RepositoryWriter>,
         release: &Box<dyn ReleaseReader>,
         threads: usize,
         progress_cb: &Option<Box<dyn Fn(PublishEvent) + Sync>>,
@@ -270,7 +270,7 @@ impl RepositoryCopier {
     async fn copy_installers(
         &self,
         _root_reader: &Box<dyn RepositoryRootReader>,
-        _writer: &impl RepositoryWriter,
+        _writer: &Box<dyn RepositoryWriter>,
         _release: &Box<dyn ReleaseReader>,
         _threads: usize,
         _progress_cb: &Option<Box<dyn Fn(PublishEvent) + Sync>>,
@@ -283,7 +283,7 @@ impl RepositoryCopier {
     async fn copy_release_indices(
         &self,
         root_reader: &Box<dyn RepositoryRootReader>,
-        writer: &impl RepositoryWriter,
+        writer: &Box<dyn RepositoryWriter>,
         release: &Box<dyn ReleaseReader>,
         threads: usize,
         progress_cb: &Option<Box<dyn Fn(PublishEvent) + Sync>>,
@@ -327,7 +327,7 @@ impl RepositoryCopier {
     async fn copy_release_files(
         &self,
         root_reader: &Box<dyn RepositoryRootReader>,
-        writer: &impl RepositoryWriter,
+        writer: &Box<dyn RepositoryWriter>,
         distribution_path: &str,
         threads: usize,
         progress_cb: &Option<Box<dyn Fn(PublishEvent) + Sync>>,
@@ -356,7 +356,7 @@ impl RepositoryCopier {
 /// Perform a sequence of copy operations between a reader and writer.
 async fn perform_copies(
     root_reader: &Box<dyn RepositoryRootReader>,
-    writer: &impl RepositoryWriter,
+    writer: &Box<dyn RepositoryWriter>,
     copies: Vec<GenericCopy>,
     threads: usize,
     allow_not_found: bool,
@@ -413,6 +413,7 @@ mod test {
             Box::new(HttpRepositoryClient::new(DEBIAN_URL)?) as Box<dyn RepositoryRootReader>;
         let mut writer = ProxyWriter::new(SinkWriter::default());
         writer.set_verify_behavior(ProxyVerifyBehavior::AlwaysExistsIntegrityVerified);
+        let writer: Box<dyn RepositoryWriter> = Box::new(writer);
 
         let mut copier = RepositoryCopier::default();
         copier.set_binary_packages_copy(false);
