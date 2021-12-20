@@ -50,7 +50,8 @@ Concrete implementations of repositories exist in submodules. [http]
 provides [http::HttpRepositoryClient], which implements [RepositoryRootReader]
 and serves as the primary HTTP-based client. [filesystem] provides
 [filesystem::FilesystemRepositoryReader] and [filesystem::FilesystemRepositoryWriter]
-for reading and writing repositories using a local filesystem.
+for reading and writing repositories using a local filesystem. [s3] provides
+[s3::S3Writer].
 
 A couple of special [RepositoryWriter] exist. [sink_writer::SinkWriter] provides a writer
 that will send its content to a black hole. It can be used for testing writing without
@@ -95,6 +96,8 @@ pub mod filesystem;
 pub mod http;
 pub mod proxy_writer;
 pub mod release;
+#[cfg(feature = "s3")]
+pub mod s3;
 pub mod sink_writer;
 
 /// Describes how to fetch a binary package from a repository.
