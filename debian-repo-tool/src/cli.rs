@@ -113,6 +113,12 @@ distribution_paths (optional) (list[string])
 
    Use this if a distribution isn't in a directory named `dists/<value>`.
 
+only_components (optional) (list[string])
+   Names of components to copy. Common component names include `contrib` and
+   `main`.
+
+   If not specified, all advertised components are copied.
+
 binary_packages_copy (optional) (bool)
    Whether to copy binary packages.
 
@@ -127,6 +133,24 @@ installer_binary_packages_only_architectures (optional) (list[string])
 
 sources_copy (optional) (bool)
    Whether to copy source packages.
+
+# Partial Copying
+
+By default, a copy operation will copy all content in the specified
+distributions. However, it is possible to limit the content that is
+copied.
+
+Our definition of _copy_ preserves the repository indices (the
+cryptographically signed documents advertising the repository content).
+When performing a partial _copy_, rewriting the indices to advertise a
+different set of content would invalidate the existing cryptographic
+signature, which is not something we want to allow in _copy_ mode.
+
+If partial copying is being performed, all indices files are preserved
+without modification, therefore preserving their cryptographic signature.
+However, these indices may refer to content that doesn't exist in the
+destination. This can result in packaging clients encountering missing
+files.
 ";
 
 #[derive(Debug, Error)]
