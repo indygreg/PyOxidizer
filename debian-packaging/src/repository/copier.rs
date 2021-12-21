@@ -170,7 +170,7 @@ impl RepositoryCopier {
     /// Perform a copy operation as defined by a [RepositoryCopierConfig].
     pub async fn copy_from_config(
         config: RepositoryCopierConfig,
-        threads: usize,
+        max_copy_operations: usize,
         progress_cb: &Option<Box<dyn Fn(PublishEvent) + Sync>>,
     ) -> Result<()> {
         let root_reader = reader_from_str(config.source_url)?;
@@ -199,12 +199,24 @@ impl RepositoryCopier {
 
         for dist in config.distributions {
             copier
-                .copy_distribution(&root_reader, &writer, &dist, threads, progress_cb)
+                .copy_distribution(
+                    &root_reader,
+                    &writer,
+                    &dist,
+                    max_copy_operations,
+                    progress_cb,
+                )
                 .await?;
         }
         for path in config.distribution_paths {
             copier
-                .copy_distribution_path(&root_reader, &writer, &path, threads, progress_cb)
+                .copy_distribution_path(
+                    &root_reader,
+                    &writer,
+                    &path,
+                    max_copy_operations,
+                    progress_cb,
+                )
                 .await?;
         }
 
@@ -221,14 +233,14 @@ impl RepositoryCopier {
         root_reader: &Box<dyn RepositoryRootReader>,
         writer: &Box<dyn RepositoryWriter>,
         distribution: &str,
-        threads: usize,
+        max_copy_operations: usize,
         progress_cb: &Option<Box<dyn Fn(PublishEvent) + Sync>>,
     ) -> Result<()> {
         self.copy_distribution_path(
             root_reader,
             writer,
             &format!("dists/{}", distribution),
-            threads,
+            max_copy_operations,
             progress_cb,
         )
         .await
@@ -243,7 +255,7 @@ impl RepositoryCopier {
         root_reader: &Box<dyn RepositoryRootReader>,
         writer: &Box<dyn RepositoryWriter>,
         distribution_path: &str,
-        threads: usize,
+        max_copy_operations: usize,
         progress_cb: &Option<Box<dyn Fn(PublishEvent) + Sync>>,
     ) -> Result<()> {
         let release = root_reader
@@ -257,8 +269,15 @@ impl RepositoryCopier {
             if let Some(cb) = progress_cb {
                 cb(PublishEvent::CopyPhaseBegin(CopyPhase::BinaryPackages));
             }
-            self.copy_binary_packages(root_reader, writer, &release, false, threads, progress_cb)
-                .await?;
+            self.copy_binary_packages(
+                root_reader,
+                writer,
+                &release,
+                false,
+                max_copy_operations,
+                progress_cb,
+            )
+            .await?;
             if let Some(cb) = progress_cb {
                 cb(PublishEvent::CopyPhaseEnd(CopyPhase::BinaryPackages));
             }
@@ -270,8 +289,15 @@ impl RepositoryCopier {
                     CopyPhase::InstallerBinaryPackages,
                 ));
             }
-            self.copy_binary_packages(root_reader, writer, &release, true, threads, progress_cb)
-                .await?;
+            self.copy_binary_packages(
+                root_reader,
+                writer,
+                &release,
+                true,
+                max_copy_operations,
+                progress_cb,
+            )
+            .await?;
             if let Some(cb) = progress_cb {
                 cb(PublishEvent::CopyPhaseEnd(
                     CopyPhase::InstallerBinaryPackages,
@@ -283,8 +309,14 @@ impl RepositoryCopier {
             if let Some(cb) = progress_cb {
                 cb(PublishEvent::CopyPhaseBegin(CopyPhase::Sources));
             }
-            self.copy_source_packages(root_reader, writer, &release, threads, progress_cb)
-                .await?;
+            self.copy_source_packages(
+                root_reader,
+                writer,
+                &release,
+                max_copy_operations,
+                progress_cb,
+            )
+            .await?;
             if let Some(cb) = progress_cb {
                 cb(PublishEvent::CopyPhaseEnd(CopyPhase::Sources));
             }
@@ -294,8 +326,14 @@ impl RepositoryCopier {
             if let Some(cb) = progress_cb {
                 cb(PublishEvent::CopyPhaseBegin(CopyPhase::Installers));
             }
-            self.copy_installers(root_reader, writer, &release, threads, progress_cb)
-                .await?;
+            self.copy_installers(
+                root_reader,
+                writer,
+                &release,
+                max_copy_operations,
+                progress_cb,
+            )
+            .await?;
             if let Some(cb) = progress_cb {
                 cb(PublishEvent::CopyPhaseEnd(CopyPhase::Installers));
             }
@@ -306,8 +344,14 @@ impl RepositoryCopier {
         if let Some(cb) = progress_cb {
             cb(PublishEvent::CopyPhaseBegin(CopyPhase::ReleaseIndices));
         }
-        self.copy_release_indices(root_reader, writer, &release, threads, progress_cb)
-            .await?;
+        self.copy_release_indices(
+            root_reader,
+            writer,
+            &release,
+            max_copy_operations,
+            progress_cb,
+        )
+        .await?;
         if let Some(cb) = progress_cb {
             cb(PublishEvent::CopyPhaseEnd(CopyPhase::ReleaseIndices));
         }
@@ -316,8 +360,14 @@ impl RepositoryCopier {
         if let Some(cb) = progress_cb {
             cb(PublishEvent::CopyPhaseBegin(CopyPhase::ReleaseFiles));
         }
-        self.copy_release_files(root_reader, writer, distribution_path, threads, progress_cb)
-            .await?;
+        self.copy_release_files(
+            root_reader,
+            writer,
+            distribution_path,
+            max_copy_operations,
+            progress_cb,
+        )
+        .await?;
         if let Some(cb) = progress_cb {
             cb(PublishEvent::CopyPhaseEnd(CopyPhase::ReleaseFiles));
         }
@@ -331,7 +381,7 @@ impl RepositoryCopier {
         writer: &Box<dyn RepositoryWriter>,
         release: &Box<dyn ReleaseReader>,
         installer_packages: bool,
-        threads: usize,
+        max_copy_operations: usize,
         progress_cb: &Option<Box<dyn Fn(PublishEvent) + Sync>>,
     ) -> Result<()> {
         let only_arches = if installer_packages {
@@ -359,7 +409,7 @@ impl RepositoryCopier {
                     component_allowed && arch_allowed && entry.is_installer == installer_packages
                 }),
                 Box::new(move |_| true),
-                threads,
+                max_copy_operations,
             )
             .await?
             .into_iter()
@@ -370,7 +420,15 @@ impl RepositoryCopier {
             })
             .collect::<Vec<_>>();
 
-        perform_copies(root_reader, writer, copies, threads, false, progress_cb).await?;
+        perform_copies(
+            root_reader,
+            writer,
+            copies,
+            max_copy_operations,
+            false,
+            progress_cb,
+        )
+        .await?;
 
         Ok(())
     }
@@ -380,7 +438,7 @@ impl RepositoryCopier {
         root_reader: &Box<dyn RepositoryRootReader>,
         writer: &Box<dyn RepositoryWriter>,
         release: &Box<dyn ReleaseReader>,
-        threads: usize,
+        max_copy_operations: usize,
         progress_cb: &Option<Box<dyn Fn(PublishEvent) + Sync>>,
     ) -> Result<()> {
         let only_components = self.only_components.clone();
@@ -395,7 +453,7 @@ impl RepositoryCopier {
                     }
                 }),
                 Box::new(move |_| true),
-                threads,
+                max_copy_operations,
             )
             .await?
             .into_iter()
@@ -406,7 +464,15 @@ impl RepositoryCopier {
             })
             .collect::<Vec<_>>();
 
-        perform_copies(root_reader, writer, copies, threads, false, progress_cb).await?;
+        perform_copies(
+            root_reader,
+            writer,
+            copies,
+            max_copy_operations,
+            false,
+            progress_cb,
+        )
+        .await?;
 
         Ok(())
     }
@@ -416,7 +482,7 @@ impl RepositoryCopier {
         _root_reader: &Box<dyn RepositoryRootReader>,
         _writer: &Box<dyn RepositoryWriter>,
         _release: &Box<dyn ReleaseReader>,
-        _threads: usize,
+        _max_copy_operations: usize,
         _progress_cb: &Option<Box<dyn Fn(PublishEvent) + Sync>>,
     ) -> Result<()> {
         // Not yet supported since this requires teaching content validating fetching about
@@ -429,7 +495,7 @@ impl RepositoryCopier {
         root_reader: &Box<dyn RepositoryRootReader>,
         writer: &Box<dyn RepositoryWriter>,
         release: &Box<dyn ReleaseReader>,
-        threads: usize,
+        max_copy_operations: usize,
         progress_cb: &Option<Box<dyn Fn(PublishEvent) + Sync>>,
     ) -> Result<()> {
         let by_hash = release.release_file().acquire_by_hash().unwrap_or(false);
@@ -463,7 +529,15 @@ impl RepositoryCopier {
         // the checksums of the uncompressed file variant but the uncompressed file won't
         // actually be present in the repository! These errors are OK to ignore. But we still
         // report on them.
-        perform_copies(root_reader, writer, copies, threads, true, progress_cb).await?;
+        perform_copies(
+            root_reader,
+            writer,
+            copies,
+            max_copy_operations,
+            true,
+            progress_cb,
+        )
+        .await?;
 
         Ok(())
     }
@@ -473,7 +547,7 @@ impl RepositoryCopier {
         root_reader: &Box<dyn RepositoryRootReader>,
         writer: &Box<dyn RepositoryWriter>,
         distribution_path: &str,
-        threads: usize,
+        max_copy_operations: usize,
         progress_cb: &Option<Box<dyn Fn(PublishEvent) + Sync>>,
     ) -> Result<()> {
         let copies = RELEASE_FILES
@@ -491,7 +565,15 @@ impl RepositoryCopier {
 
         // Not all the well-known files exist. So ignore missing file errors.
         // TODO we probably want a hard error if `Release` or `InRelease` fail.
-        perform_copies(root_reader, writer, copies, threads, true, progress_cb).await?;
+        perform_copies(
+            root_reader,
+            writer,
+            copies,
+            max_copy_operations,
+            true,
+            progress_cb,
+        )
+        .await?;
 
         Ok(())
     }
@@ -502,7 +584,7 @@ async fn perform_copies(
     root_reader: &Box<dyn RepositoryRootReader>,
     writer: &Box<dyn RepositoryWriter>,
     copies: Vec<GenericCopy>,
-    threads: usize,
+    max_copy_operations: usize,
     allow_not_found: bool,
     progress_cb: &Option<Box<dyn Fn(PublishEvent) + Sync>>,
 ) -> Result<()> {
@@ -529,7 +611,7 @@ async fn perform_copies(
         cb(PublishEvent::WriteSequenceBeginWithTotalBytes(total_size));
     }
 
-    let mut buffered = futures::stream::iter(fs).buffer_unordered(threads);
+    let mut buffered = futures::stream::iter(fs).buffer_unordered(max_copy_operations);
 
     while let Some(res) = buffered.next().await {
         match res {
