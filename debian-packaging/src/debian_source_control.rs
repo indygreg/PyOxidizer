@@ -403,18 +403,12 @@ impl<'a> DebianSourceControlFile<'a> {
     ) -> Result<Box<(dyn Iterator<Item = Result<DebianSourceControlFileFetch>> + '_)>> {
         let entries = match checksum {
             ChecksumType::Md5 => self.files()?,
-            ChecksumType::Sha1 => {
-                self.checksums_sha1()
-                    .ok_or(DebianError::ControlRequiredFieldMissing(
-                        "Checksums-Sha1".to_string(),
-                    ))?
-            }
-            ChecksumType::Sha256 => {
-                self.checksums_sha256()
-                    .ok_or(DebianError::ControlRequiredFieldMissing(
-                        "Checksums-Sha256".to_string(),
-                    ))?
-            }
+            ChecksumType::Sha1 => self.checksums_sha1().ok_or_else(|| {
+                DebianError::ControlRequiredFieldMissing("Checksums-Sha1".to_string())
+            })?,
+            ChecksumType::Sha256 => self.checksums_sha256().ok_or_else(|| {
+                DebianError::ControlRequiredFieldMissing("Checksums-Sha256".to_string())
+            })?,
         };
 
         Ok(Box::new(entries.map(move |entry| {
