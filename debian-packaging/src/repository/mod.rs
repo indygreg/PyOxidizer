@@ -65,6 +65,7 @@ The [builder] module contains functionality for creating/publishing
 repositories.
 */
 
+use std::fmt::Formatter;
 use {
     crate::{
         binary_package_control::BinaryPackageControlFile,
@@ -762,6 +763,34 @@ impl<'a> std::fmt::Display for RepositoryPathVerification<'a> {
     }
 }
 
+/// A phase during a repository copy operation.
+#[derive(Clone, Copy, Debug)]
+pub enum CopyPhase {
+    BinaryPackages,
+    InstallerBinaryPackages,
+    Sources,
+    Installers,
+    ReleaseIndices,
+    ReleaseFiles,
+}
+
+impl std::fmt::Display for CopyPhase {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                Self::BinaryPackages => "binary packages",
+                Self::InstallerBinaryPackages => "installer binary packages",
+                Self::Sources => "sources",
+                Self::Installers => "installers",
+                Self::ReleaseIndices => "release indices",
+                Self::ReleaseFiles => "release files",
+            }
+        )
+    }
+}
+
 /// Represents a repository publishing event.
 ///
 /// Instances are sent to callbacks during repository writing to inform of activity.
@@ -789,11 +818,23 @@ pub enum PublishEvent {
     /// A path is being verified.
     VerifyingDestinationPath(String),
 
+    /// A phase in a copy operation has begin.
+    CopyPhaseBegin(CopyPhase),
+
+    /// A phase in a copy operation has finished.
+    CopyPhaseEnd(CopyPhase),
+
     /// Copying a path from a source to a destination.
     CopyingPath(String, String),
 
     /// Copying an indices file but the source wasn't found.
     CopyIndicesPathNotFound(String),
+
+    /// A path was copied.
+    PathCopied(String, u64),
+
+    /// A path copy was a no-op.
+    PathCopyNoop(String),
 
     /// Begin a write sequence where we will write N total bytes.
     WriteSequenceBeginWithTotalBytes(u64),
@@ -832,6 +873,12 @@ impl std::fmt::Display for PublishEvent {
             Self::VerifyingDestinationPath(path) => {
                 write!(f, "verifying destination path {}", path)
             }
+            Self::CopyPhaseBegin(phase) => {
+                write!(f, "beginning copying of {}", phase)
+            }
+            Self::CopyPhaseEnd(phase) => {
+                write!(f, "finished copying of {}", phase)
+            }
             Self::CopyingPath(source, dest) => {
                 write!(f, "copying {} to {}", source, dest)
             }
@@ -841,6 +888,12 @@ impl std::fmt::Display for PublishEvent {
                     "copying indices file {} failed because it wasn't found",
                     path
                 )
+            }
+            Self::PathCopied(path, size) => {
+                write!(f, "copied {} bytes to {}", size, path)
+            }
+            Self::PathCopyNoop(path) => {
+                write!(f, "copy of {} was a no-op", path)
             }
             Self::WriteSequenceBeginWithTotalBytes(_)
             | Self::WriteSequenceProgressBytes(_)

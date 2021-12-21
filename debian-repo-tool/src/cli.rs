@@ -208,35 +208,32 @@ async fn command_copy_repository(args: &ArgMatches<'_>) -> Result<()> {
 
     let pb = Arc::new(Mutex::new(None));
 
-    let cb = Box::new(move |event: PublishEvent| {
-        if !event.is_progress() {
-            return;
-        }
+    let cb = Box::new(move |event: PublishEvent| match event {
+        PublishEvent::WriteSequenceBeginWithTotalBytes(total) => {
+            let mut bar = pbr::ProgressBar::new(total);
+            bar.set_units(pbr::Units::Bytes);
 
-        match event {
-            PublishEvent::WriteSequenceBeginWithTotalBytes(total) => {
-                let mut bar = pbr::ProgressBar::new(total);
-                bar.set_units(pbr::Units::Bytes);
-
-                pb.lock().unwrap().replace(bar);
-            }
-            PublishEvent::WriteSequenceProgressBytes(count) => {
-                pb.lock()
-                    .unwrap()
-                    .as_mut()
-                    .expect("progress bar should be defined")
-                    .add(count);
-            }
-            PublishEvent::WriteSequenceFinished => {
-                let mut guard = pb.lock().unwrap();
-                guard
-                    .as_mut()
-                    .expect("progress bar should be defined")
-                    .finish();
-                guard.take();
-            }
-            _ => panic!("unexpected publish event: {}", event),
+            pb.lock().unwrap().replace(bar);
         }
+        PublishEvent::WriteSequenceProgressBytes(count) => {
+            pb.lock()
+                .unwrap()
+                .as_mut()
+                .expect("progress bar should be defined")
+                .add(count);
+        }
+        PublishEvent::WriteSequenceFinished => {
+            let mut guard = pb.lock().unwrap();
+            guard
+                .as_mut()
+                .expect("progress bar should be defined")
+                .finish();
+            guard.take();
+        }
+        PublishEvent::CopyPhaseBegin(_) | PublishEvent::CopyPhaseEnd(_) => {
+            println!("{}", event);
+        }
+        _ => {}
     });
 
     RepositoryCopier::copy_from_config(config, max_parallel_io, &Some(cb)).await?;

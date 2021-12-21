@@ -9,8 +9,8 @@ use {
         error::{DebianError, Result},
         io::ContentDigest,
         repository::{
-            reader_from_str, writer_from_str, PublishEvent, ReleaseReader, RepositoryRootReader,
-            RepositoryWriter,
+            reader_from_str, writer_from_str, CopyPhase, PublishEvent, ReleaseReader,
+            RepositoryRootReader, RepositoryWriteOperation, RepositoryWriter,
         },
     },
     futures::StreamExt,
@@ -254,33 +254,73 @@ impl RepositoryCopier {
         // file referring to a pool file that isn't available yet.
 
         if self.binary_packages_copy {
+            if let Some(cb) = progress_cb {
+                cb(PublishEvent::CopyPhaseBegin(CopyPhase::BinaryPackages));
+            }
             self.copy_binary_packages(root_reader, writer, &release, false, threads, progress_cb)
                 .await?;
+            if let Some(cb) = progress_cb {
+                cb(PublishEvent::CopyPhaseEnd(CopyPhase::BinaryPackages));
+            }
         }
 
         if self.installer_binary_packages_copy {
+            if let Some(cb) = progress_cb {
+                cb(PublishEvent::CopyPhaseBegin(
+                    CopyPhase::InstallerBinaryPackages,
+                ));
+            }
             self.copy_binary_packages(root_reader, writer, &release, true, threads, progress_cb)
                 .await?;
+            if let Some(cb) = progress_cb {
+                cb(PublishEvent::CopyPhaseEnd(
+                    CopyPhase::InstallerBinaryPackages,
+                ));
+            }
         }
 
         if self.sources_copy {
+            if let Some(cb) = progress_cb {
+                cb(PublishEvent::CopyPhaseBegin(CopyPhase::Sources));
+            }
             self.copy_source_packages(root_reader, writer, &release, threads, progress_cb)
                 .await?;
+            if let Some(cb) = progress_cb {
+                cb(PublishEvent::CopyPhaseEnd(CopyPhase::Sources));
+            }
         }
 
         if self.installers_copy {
+            if let Some(cb) = progress_cb {
+                cb(PublishEvent::CopyPhaseBegin(CopyPhase::Installers));
+            }
             self.copy_installers(root_reader, writer, &release, threads, progress_cb)
                 .await?;
+            if let Some(cb) = progress_cb {
+                cb(PublishEvent::CopyPhaseEnd(CopyPhase::Installers));
+            }
         }
 
         // All the pool artifacts are in place. Publish the indices files.
 
+        if let Some(cb) = progress_cb {
+            cb(PublishEvent::CopyPhaseBegin(CopyPhase::ReleaseIndices));
+        }
         self.copy_release_indices(root_reader, writer, &release, threads, progress_cb)
             .await?;
+        if let Some(cb) = progress_cb {
+            cb(PublishEvent::CopyPhaseEnd(CopyPhase::ReleaseIndices));
+        }
 
         // And finally publish the Release files.
+        if let Some(cb) = progress_cb {
+            cb(PublishEvent::CopyPhaseBegin(CopyPhase::ReleaseFiles));
+        }
         self.copy_release_files(root_reader, writer, distribution_path, threads, progress_cb)
             .await?;
+        if let Some(cb) = progress_cb {
+            cb(PublishEvent::CopyPhaseEnd(CopyPhase::ReleaseFiles));
+        }
 
         Ok(())
     }
@@ -487,6 +527,18 @@ async fn perform_copies(
                     cb(PublishEvent::WriteSequenceProgressBytes(
                         write.bytes_written(),
                     ));
+
+                    match write {
+                        RepositoryWriteOperation::PathWritten(write) => {
+                            cb(PublishEvent::PathCopied(
+                                write.path.to_string(),
+                                write.bytes_written,
+                            ));
+                        }
+                        RepositoryWriteOperation::Noop(path, _) => {
+                            cb(PublishEvent::PathCopyNoop(path.to_string()));
+                        }
+                    }
                 }
             }
             Err(DebianError::RepositoryIoPath(path, err))
