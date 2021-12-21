@@ -383,9 +383,20 @@ impl RepositoryCopier {
         threads: usize,
         progress_cb: &Option<Box<dyn Fn(PublishEvent) + Sync>>,
     ) -> Result<()> {
-        // TODO There's probably a way to filter components in here.
+        let only_components = self.only_components.clone();
+
         let copies = release
-            .resolve_source_fetches(Box::new(move |_| true), Box::new(move |_| true), threads)
+            .resolve_source_fetches(
+                Box::new(move |entry| {
+                    if let Some(only_components) = &only_components {
+                        only_components.contains(&entry.component.to_string())
+                    } else {
+                        true
+                    }
+                }),
+                Box::new(move |_| true),
+                threads,
+            )
             .await?
             .into_iter()
             .map(|spf| GenericCopy {
