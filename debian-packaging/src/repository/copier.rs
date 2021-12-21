@@ -200,8 +200,8 @@ impl RepositoryCopier {
         for dist in config.distributions {
             copier
                 .copy_distribution(
-                    &root_reader,
-                    &writer,
+                    root_reader.as_ref(),
+                    writer.as_ref(),
                     &dist,
                     max_copy_operations,
                     progress_cb,
@@ -211,8 +211,8 @@ impl RepositoryCopier {
         for path in config.distribution_paths {
             copier
                 .copy_distribution_path(
-                    &root_reader,
-                    &writer,
+                    root_reader.as_ref(),
+                    writer.as_ref(),
                     &path,
                     max_copy_operations,
                     progress_cb,
@@ -230,8 +230,8 @@ impl RepositoryCopier {
     /// repositories.
     pub async fn copy_distribution(
         &self,
-        root_reader: &Box<dyn RepositoryRootReader>,
-        writer: &Box<dyn RepositoryWriter>,
+        root_reader: &dyn RepositoryRootReader,
+        writer: &dyn RepositoryWriter,
         distribution: &str,
         max_copy_operations: usize,
         progress_cb: &Option<Box<dyn Fn(PublishEvent) + Sync>>,
@@ -252,8 +252,8 @@ impl RepositoryCopier {
     /// But it can be something else for non-standard repository layouts.
     pub async fn copy_distribution_path(
         &self,
-        root_reader: &Box<dyn RepositoryRootReader>,
-        writer: &Box<dyn RepositoryWriter>,
+        root_reader: &dyn RepositoryRootReader,
+        writer: &dyn RepositoryWriter,
         distribution_path: &str,
         max_copy_operations: usize,
         progress_cb: &Option<Box<dyn Fn(PublishEvent) + Sync>>,
@@ -272,7 +272,7 @@ impl RepositoryCopier {
             self.copy_binary_packages(
                 root_reader,
                 writer,
-                &release,
+                release.as_ref(),
                 false,
                 max_copy_operations,
                 progress_cb,
@@ -292,7 +292,7 @@ impl RepositoryCopier {
             self.copy_binary_packages(
                 root_reader,
                 writer,
-                &release,
+                release.as_ref(),
                 true,
                 max_copy_operations,
                 progress_cb,
@@ -312,7 +312,7 @@ impl RepositoryCopier {
             self.copy_source_packages(
                 root_reader,
                 writer,
-                &release,
+                release.as_ref(),
                 max_copy_operations,
                 progress_cb,
             )
@@ -329,7 +329,7 @@ impl RepositoryCopier {
             self.copy_installers(
                 root_reader,
                 writer,
-                &release,
+                release.as_ref(),
                 max_copy_operations,
                 progress_cb,
             )
@@ -347,7 +347,7 @@ impl RepositoryCopier {
         self.copy_release_indices(
             root_reader,
             writer,
-            &release,
+            release.as_ref(),
             max_copy_operations,
             progress_cb,
         )
@@ -377,9 +377,9 @@ impl RepositoryCopier {
 
     async fn copy_binary_packages(
         &self,
-        root_reader: &Box<dyn RepositoryRootReader>,
-        writer: &Box<dyn RepositoryWriter>,
-        release: &Box<dyn ReleaseReader>,
+        root_reader: &dyn RepositoryRootReader,
+        writer: &dyn RepositoryWriter,
+        release: &dyn ReleaseReader,
         installer_packages: bool,
         max_copy_operations: usize,
         progress_cb: &Option<Box<dyn Fn(PublishEvent) + Sync>>,
@@ -435,9 +435,9 @@ impl RepositoryCopier {
 
     async fn copy_source_packages(
         &self,
-        root_reader: &Box<dyn RepositoryRootReader>,
-        writer: &Box<dyn RepositoryWriter>,
-        release: &Box<dyn ReleaseReader>,
+        root_reader: &dyn RepositoryRootReader,
+        writer: &dyn RepositoryWriter,
+        release: &dyn ReleaseReader,
         max_copy_operations: usize,
         progress_cb: &Option<Box<dyn Fn(PublishEvent) + Sync>>,
     ) -> Result<()> {
@@ -479,9 +479,9 @@ impl RepositoryCopier {
 
     async fn copy_installers(
         &self,
-        _root_reader: &Box<dyn RepositoryRootReader>,
-        _writer: &Box<dyn RepositoryWriter>,
-        _release: &Box<dyn ReleaseReader>,
+        _root_reader: &dyn RepositoryRootReader,
+        _writer: &dyn RepositoryWriter,
+        _release: &dyn ReleaseReader,
         _max_copy_operations: usize,
         _progress_cb: &Option<Box<dyn Fn(PublishEvent) + Sync>>,
     ) -> Result<()> {
@@ -492,9 +492,9 @@ impl RepositoryCopier {
 
     async fn copy_release_indices(
         &self,
-        root_reader: &Box<dyn RepositoryRootReader>,
-        writer: &Box<dyn RepositoryWriter>,
-        release: &Box<dyn ReleaseReader>,
+        root_reader: &dyn RepositoryRootReader,
+        writer: &dyn RepositoryWriter,
+        release: &dyn ReleaseReader,
         max_copy_operations: usize,
         progress_cb: &Option<Box<dyn Fn(PublishEvent) + Sync>>,
     ) -> Result<()> {
@@ -544,8 +544,8 @@ impl RepositoryCopier {
 
     async fn copy_release_files(
         &self,
-        root_reader: &Box<dyn RepositoryRootReader>,
-        writer: &Box<dyn RepositoryWriter>,
+        root_reader: &dyn RepositoryRootReader,
+        writer: &dyn RepositoryWriter,
         distribution_path: &str,
         max_copy_operations: usize,
         progress_cb: &Option<Box<dyn Fn(PublishEvent) + Sync>>,
@@ -581,8 +581,8 @@ impl RepositoryCopier {
 
 /// Perform a sequence of copy operations between a reader and writer.
 async fn perform_copies(
-    root_reader: &Box<dyn RepositoryRootReader>,
-    writer: &Box<dyn RepositoryWriter>,
+    root_reader: &dyn RepositoryRootReader,
+    writer: &dyn RepositoryWriter,
     copies: Vec<GenericCopy>,
     max_copy_operations: usize,
     allow_not_found: bool,
@@ -681,7 +681,7 @@ mod test {
         let cb = Box::new(|_| {});
 
         copier
-            .copy_distribution(&root, &writer, "bullseye", 8, &Some(cb))
+            .copy_distribution(root.as_ref(), writer.as_ref(), "bullseye", 8, &Some(cb))
             .await?;
 
         Ok(())

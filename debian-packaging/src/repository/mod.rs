@@ -985,7 +985,7 @@ pub trait RepositoryWriter: Sync {
     /// any I/O. Custom implementations should call `progress_cb` with events, as appropriate.
     async fn copy_from<'path>(
         &self,
-        reader: &Box<dyn RepositoryRootReader>,
+        reader: &dyn RepositoryRootReader,
         source_path: Cow<'path, str>,
         expected_content: Option<(u64, ContentDigest)>,
         dest_path: Cow<'path, str>,
