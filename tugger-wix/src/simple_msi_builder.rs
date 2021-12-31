@@ -231,7 +231,7 @@ impl WiXSimpleMsiBuilder {
         let mut builder = WiXInstallerBuilder::new(
             self.id_prefix.clone(),
             arch.to_string(),
-            build_path.as_ref().to_path_buf(),
+            build_path.as_ref(),
         );
 
         self.add_to_installer_builder(&mut builder)?;

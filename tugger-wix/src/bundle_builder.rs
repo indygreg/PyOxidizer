@@ -172,7 +172,7 @@ impl<'a> WiXBundleInstallerBuilder<'a> {
         let mut builder = WiXInstallerBuilder::new(
             id_prefix.to_string(),
             arch.to_string(),
-            build_path.as_ref().to_path_buf(),
+            build_path.as_ref(),
         );
 
         self.add_to_installer_builder(&mut builder)?;
