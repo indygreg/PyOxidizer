@@ -118,7 +118,7 @@ impl TypedValue for PythonWheelBuilderValue {
                         ValueError::Runtime(RuntimeError {
                             code: "PYTHON_WHEEL_BUILDER",
                             message: format!("unable to parse time: {}", e),
-                            label: format!("{}.modified_time", Self::TYPE.to_string()),
+                            label: format!("{}.modified_time", Self::TYPE),
                         })
                     })?,
                 );
