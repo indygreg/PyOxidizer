@@ -17,7 +17,7 @@ use {
 ///
 /// Note that this context is only for producing libpython: it is very
 /// linker centric and doesn't track state like Python resources.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct LibPythonBuildContext {
     /// Compiled flags to use when compiling the object containing Py_inittab.
     pub inittab_cflags: Option<Vec<String>>,
@@ -55,23 +55,6 @@ pub struct LibPythonBuildContext {
 
     /// Holds licensing info for things being linked together.
     pub licensed_components: LicensedComponents,
-}
-
-impl Default for LibPythonBuildContext {
-    fn default() -> Self {
-        Self {
-            inittab_cflags: None,
-            includes: BTreeMap::new(),
-            object_files: Vec::new(),
-            library_search_paths: BTreeSet::new(),
-            system_libraries: BTreeSet::new(),
-            dynamic_libraries: BTreeSet::new(),
-            static_libraries: BTreeSet::new(),
-            frameworks: BTreeSet::new(),
-            init_functions: BTreeMap::new(),
-            licensed_components: LicensedComponents::default(),
-        }
-    }
 }
 
 impl LibPythonBuildContext {
