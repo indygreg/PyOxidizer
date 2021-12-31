@@ -79,6 +79,7 @@ pub mod rfc5480;
 pub mod rfc5652;
 pub mod rfc5915;
 pub mod rfc5958;
+pub mod rfc8017;
 pub mod signing;
 pub use signing::InMemorySigningKeyPair;
 #[cfg(any(feature = "test", test))]
