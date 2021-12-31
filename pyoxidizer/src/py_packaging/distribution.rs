@@ -437,6 +437,7 @@ pub fn resolve_python_distribution_from_location(
 }
 
 /// Describes the flavor of a distribution.
+#[allow(clippy::enum_variant_names)]
 #[derive(Debug, PartialEq)]
 pub enum DistributionFlavor {
     /// Distributions coming from the `python-build-standalone` project.
