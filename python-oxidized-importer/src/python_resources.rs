@@ -1289,7 +1289,7 @@ impl PyObjectProtocol for OxidizedResource {
     fn __repr__(&self) -> String {
         format!(
             "<OxidizedResource name=\"{}\">",
-            self.resource.borrow().name.to_string()
+            self.resource.borrow().name
         )
     }
 }
