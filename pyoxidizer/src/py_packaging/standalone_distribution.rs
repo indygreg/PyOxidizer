@@ -1335,9 +1335,7 @@ impl PythonDistribution for StandaloneDistribution {
     fn python_resources<'a>(&self) -> Vec<PythonResource<'a>> {
         let extension_modules = self
             .extension_modules
-            .iter()
-            .map(|(_, exts)| exts.iter().map(|e| PythonResource::from(e.to_owned())))
-            .flatten();
+            .iter().flat_map(|(_, exts)| exts.iter().map(|e| PythonResource::from(e.to_owned())));
 
         let module_sources = self.py_modules.iter().map(|(name, path)| {
             PythonResource::from(PythonModuleSource {
@@ -1352,8 +1350,7 @@ impl PythonDistribution for StandaloneDistribution {
 
         let resource_datas = self
             .resources
-            .iter()
-            .map(|(package, inner)| {
+            .iter().flat_map(|(package, inner)| {
                 inner.iter().map(move |(name, path)| {
                     PythonResource::from(PythonPackageResource {
                         leaf_package: package.clone(),
@@ -1363,8 +1360,7 @@ impl PythonDistribution for StandaloneDistribution {
                         is_test: self.is_stdlib_test_package(package),
                     })
                 })
-            })
-            .flatten();
+            });
 
         extension_modules
             .chain(module_sources)
