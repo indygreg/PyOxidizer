@@ -144,6 +144,7 @@ impl LinkEntry {
     }
 }
 
+#[allow(unused)]
 #[derive(Debug, Deserialize)]
 struct PythonBuildExtensionInfo {
     in_core: bool,
@@ -159,6 +160,7 @@ struct PythonBuildExtensionInfo {
     variant: String,
 }
 
+#[allow(unused)]
 #[derive(Debug, Deserialize)]
 struct PythonBuildCoreInfo {
     objs: Vec<String>,
@@ -167,6 +169,7 @@ struct PythonBuildCoreInfo {
     static_lib: Option<String>,
 }
 
+#[allow(unused)]
 #[derive(Debug, Deserialize)]
 struct PythonBuildInfo {
     core: PythonBuildCoreInfo,
@@ -177,6 +180,7 @@ struct PythonBuildInfo {
     object_file_format: String,
 }
 
+#[allow(unused)]
 #[derive(Debug, Deserialize)]
 struct PythonJsonMain {
     version: String,
