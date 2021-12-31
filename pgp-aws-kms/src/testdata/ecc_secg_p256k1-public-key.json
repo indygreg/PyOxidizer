@@ -1,0 +1,9 @@
+{
+    "KeyId": "arn:aws:kms:us-west-1:1234567890:key/443d6819-309a-4697-ac7d-0b47b446c18f",
+    "PublicKey": "MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEKnmcz3U5mld59JedrcNKsCxkCVS328q2/42s8JJ1tnjkry94gqOx+b5Nb/uMWUpUswhKIpGm8D9zxfqdc6YkQA==",
+    "CustomerMasterKeySpec": "ECC_SECG_P256K1",
+    "KeyUsage": "SIGN_VERIFY",
+    "SigningAlgorithms": [
+        "ECDSA_SHA_256"
+    ]
+}

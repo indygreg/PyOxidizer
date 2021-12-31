@@ -1,0 +1,35 @@
+[package]
+name = "pgp-aws-kms"
+version = "0.1.0-pre"
+edition = "2021"
+license = "MPL-2.0"
+description = "Use AWS KMS keys with PGP"
+keywords = ["aws", "cryptography", "kms", "pgp"]
+
+[dependencies]
+bcder = "0.6"
+bytes = "1.1"
+byteorder = "1.4"
+pgp = "0.7"
+rand = "0.7"
+rsa = "^0.3.0"
+sha1 = "0.6"
+tokio = "1.15"
+thiserror = "1.0"
+
+[dependencies.rusoto_core]
+version = "0.47"
+default-features = false
+features = ["rustls"]
+
+[dependencies.rusoto_kms]
+version = "0.47"
+default-features = false
+features = ["rustls"]
+
+[dependencies.x509-certificate]
+version = "0.6.0-pre"
+path = "../x509-certificate"
+
+[dev-dependencies]
+serde_json = "1.0"

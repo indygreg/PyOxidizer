@@ -29,6 +29,7 @@ static IGNORE_PACKAGES: Lazy<Vec<&'static str>> =
 static RELEASE_ORDER: Lazy<Vec<&'static str>> = Lazy::new(|| {
     vec![
         "x509-certificate",
+        "pgp-aws-kms",
         "cryptographic-message-syntax",
         "starlark-dialect-build-targets",
         "tugger-common",

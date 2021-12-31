@@ -1,0 +1,14 @@
+{
+    "KeyId": "arn:aws:kms:us-west-1:1234567890:key/ddb5b4e4-443a-4330-a1b2-20dd305a9a82",
+    "PublicKey": "MIIBojANBgkqhkiG9w0BAQEFAAOCAY8AMIIBigKCAYEAwcRwbpJQ1pXDjtfCJ/uM3ver65ZSURXCvDhVRGeSg2rNac7yGOFURYSbN5+4abLrvMl+uYJvxT3EVKhJUepAjGlX/8bksnT2cXJ+KodqoUTl2QRxGfrJ7vZQZiP3crY5i7vA7skoT/4dtR/dMP1EbImY5YeGNA2nS98CQh94nuoSM1+zC9a2b5ck2kKUv8Qb2ZKpuJSvu3klwLyBBQoZVA4SPEWgX3A1OQLX80eS2IniFmg9wy7PBP6N7kkY8tx3iHMjJq5Lc6Af03uHlnt2G6yC671Pk/fRU0EUOnMyknawokEetdDHUpQ1AIyxoaFvR3Mu3v2Ex1/EGrxT45dq1VvO+Cl1oL7o/DcI6zjcDEk2+JUjqmSswfyV4YrfZwwuIdr2+ZrZJ4y+tPOi0s05SOJvhywgMtKi/JYAUa3D4EaZbDIa90xgweHKvfAXBPztKH76x5G+5X213h35HM/M/X5Fgc3aWEbhYJvAXTeRwqZ6cwK/8YXAaWG5ehUrfdjzAgMBAAE=",
+    "CustomerMasterKeySpec": "RSA_3072",
+    "KeyUsage": "SIGN_VERIFY",
+    "SigningAlgorithms": [
+        "RSASSA_PKCS1_V1_5_SHA_256",
+        "RSASSA_PKCS1_V1_5_SHA_384",
+        "RSASSA_PKCS1_V1_5_SHA_512",
+        "RSASSA_PSS_SHA_256",
+        "RSASSA_PSS_SHA_384",
+        "RSASSA_PSS_SHA_512"
+    ]
+}

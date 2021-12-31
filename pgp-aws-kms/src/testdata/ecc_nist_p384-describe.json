@@ -1,0 +1,18 @@
+{
+    "KeyMetadata": {
+        "AWSAccountId": "1234567890",
+        "KeyId": "9aed1e9a-5215-4ab2-956c-c79be12c0fa5",
+        "Arn": "arn:aws:kms:us-west-1:1234567890:key/9aed1e9a-5215-4ab2-956c-c79be12c0fa5",
+        "CreationDate": 1640148479.848,
+        "Enabled": false,
+        "Description": "test",
+        "KeyUsage": "SIGN_VERIFY",
+        "KeyState": "Disabled",
+        "Origin": "AWS_KMS",
+        "KeyManager": "CUSTOMER",
+        "CustomerMasterKeySpec": "ECC_NIST_P384",
+        "SigningAlgorithms": [
+            "ECDSA_SHA_384"
+        ]
+    }
+}

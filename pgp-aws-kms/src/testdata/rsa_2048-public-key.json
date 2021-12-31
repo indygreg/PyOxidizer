@@ -1,0 +1,14 @@
+{
+    "KeyId": "arn:aws:kms:us-west-1:1234567890:key/bbe983ba-3922-4480-b6c3-fe684e9df54d",
+    "PublicKey": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0z70ACa/1iwL6iowdTcADZhzvb8fR+RHHzlxK0i4fcjJjS9m4Teoyp3w2CuPDBPj4xeGUPl71r5O6jiEsrsncOlTpQBzYoIcXCa0mfN1w7IBJGdichlKNK5X5ADrEkR8Vp7tU6btZ2959uJlcRSfgYgKT7MAFt1iaRNuwdzgHpewmFv9mGaeWJkemb8e183iwjPs1OdB6j6lbd1Hym1BjI8Xx2GIklxWONx8fucbBZ7hfKZ5lQfdm2u7EzVKAg3hKPqnc7bJWJIwFvxqNOwuVKz4bK3/XhRfW3bPu1hqx5CwkWd0TPKIRy6V5yHBDQsEeAr2hukd/kFqhLOfz99nhwIDAQAB",
+    "CustomerMasterKeySpec": "RSA_2048",
+    "KeyUsage": "SIGN_VERIFY",
+    "SigningAlgorithms": [
+        "RSASSA_PKCS1_V1_5_SHA_256",
+        "RSASSA_PKCS1_V1_5_SHA_384",
+        "RSASSA_PKCS1_V1_5_SHA_512",
+        "RSASSA_PSS_SHA_256",
+        "RSASSA_PSS_SHA_384",
+        "RSASSA_PSS_SHA_512"
+    ]
+}

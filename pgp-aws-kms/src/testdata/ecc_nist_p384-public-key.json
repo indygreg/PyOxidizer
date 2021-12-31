@@ -1,0 +1,9 @@
+{
+    "KeyId": "arn:aws:kms:us-west-1:1234567890:key/9aed1e9a-5215-4ab2-956c-c79be12c0fa5",
+    "PublicKey": "MHYwEAYHKoZIzj0CAQYFK4EEACIDYgAE+nA9Qt5rzT0q1m+KUxoRCdYGUSlZklMHgOaY3Fr2nGr80k7vPvDm+6/fHqq22YtZAqaNpaZfsMpMfyurUMovqGsUpIbm65pHYziclYopkBbfeXyvdbkxUNyVzJ6hoOiw",
+    "CustomerMasterKeySpec": "ECC_NIST_P384",
+    "KeyUsage": "SIGN_VERIFY",
+    "SigningAlgorithms": [
+        "ECDSA_SHA_384"
+    ]
+}

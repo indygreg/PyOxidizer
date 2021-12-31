@@ -2739,6 +2739,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "pgp-aws-kms"
+version = "0.1.0-pre"
+dependencies = [
+ "bcder",
+ "byteorder",
+ "bytes",
+ "pgp",
+ "rand 0.7.3",
+ "rsa",
+ "rusoto_core",
+ "rusoto_kms",
+ "serde_json",
+ "sha1",
+ "thiserror",
+ "tokio",
+ "x509-certificate",
+]
+
+[[package]]
 name = "phf_shared"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3488,6 +3507,20 @@ dependencies = [
  "shlex",
  "tokio",
  "zeroize",
+]
+
+[[package]]
+name = "rusoto_kms"
+version = "0.47.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d7892cd2cca7644d33bd6fafdb2236efd3659162fd7b73ca68d3877f0528399c"
+dependencies = [
+ "async-trait",
+ "bytes",
+ "futures",
+ "rusoto_core",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
