@@ -719,10 +719,9 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
                 PythonResource::ModuleSource(source) => {
                     let mut component = LicensedComponent::new_spdx(
                         source.top_level_package(),
-                        &core_component
+                        core_component
                             .spdx_expression()
-                            .ok_or_else(|| anyhow!("should have resolved SPDX expression"))?
-                            .to_string(),
+                            .ok_or_else(|| anyhow!("should have resolved SPDX expression"))?.as_ref(),
                     )?;
                     component.set_flavor(ComponentFlavor::PythonPackage);
 

@@ -806,10 +806,9 @@ impl StandaloneDistribution {
                 } else if let Some(core) = &core_license {
                     LicensedComponent::new_spdx(
                         module,
-                        &core
+                        core
                             .spdx_expression()
-                            .ok_or_else(|| anyhow!("could not resolve SPDX license for core"))?
-                            .to_string(),
+                            .ok_or_else(|| anyhow!("could not resolve SPDX license for core"))?.as_ref(),
                     )?
                 } else {
                     LicensedComponent::new_none(module)
