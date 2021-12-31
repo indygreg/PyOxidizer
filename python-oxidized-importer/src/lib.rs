@@ -5,18 +5,22 @@
 //! oxidized_importer Python extension.
 
 mod conversion;
+#[allow(clippy::needless_option_as_deref)]
 mod importer;
 #[cfg(windows)]
 mod memory_dll;
 mod package_metadata;
+#[allow(clippy::needless_option_as_deref)]
 mod path_entry_finder;
 mod pkg_resources;
+#[allow(clippy::needless_option_as_deref)]
 mod python_resource_collector;
 mod python_resource_types;
 mod python_resources;
 mod resource_reader;
 mod resource_scanning;
 #[cfg(feature = "zipimport")]
+#[allow(clippy::needless_option_as_deref)]
 mod zip_import;
 
 pub use crate::{
