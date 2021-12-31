@@ -280,8 +280,7 @@ impl LicensedComponents {
     pub fn all_spdx_licenses(&self) -> BTreeSet<(LicenseId, Option<ExceptionId>)> {
         self.components
             .values()
-            .map(|component| component.all_spdx_licenses())
-            .flatten()
+            .flat_map(|component| component.all_spdx_licenses())
             .collect::<BTreeSet<_>>()
     }
 }
