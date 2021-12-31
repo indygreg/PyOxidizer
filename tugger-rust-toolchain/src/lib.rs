@@ -73,7 +73,7 @@ pub fn fetch_channel_manifest(logger: &slog::Logger, channel: &str) -> Result<Ma
     let mut hasher = sha2::Sha256::new();
     hasher.update(&manifest_data);
 
-    let manifest_digest_got = hex::encode(hasher.finalize().to_vec());
+    let manifest_digest_got = hex::encode(hasher.finalize());
 
     if manifest_digest_got != manifest_digest_wanted {
         return Err(anyhow!(
