@@ -329,6 +329,8 @@ impl Environment {
             );
 
             let rust_env = if self.managed_rust {
+                // Compiler complains about lifetimes without the closure.
+                #[allow(clippy::redundant_closure)]
                 let target_triple = target_triple.unwrap_or_else(|| default_target_triple());
 
                 let toolchain = install_rust_toolchain(
