@@ -324,7 +324,7 @@ impl<'interpreter, 'resources> MainPythonInterpreter<'interpreter, 'resources> {
                 std::fs::create_dir_all(&path).map_err(|e| {
                     NewInterpreterError::Dynamic(format!(
                         "error creating directory for loaded modules files: {}",
-                        e.to_string()
+                        e
                     ))
                 })?;
 
