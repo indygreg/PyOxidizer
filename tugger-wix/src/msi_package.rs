@@ -23,7 +23,7 @@ pub struct MsiPackage<'a> {
 
 impl<'a> From<MsiPackage<'a>> for ChainElement<'a> {
     fn from(value: MsiPackage<'a>) -> Self {
-        Self::MsiPackage(value)
+        Self::MsiPackage(Box::new(value))
     }
 }
 

@@ -68,7 +68,7 @@ pub struct ExePackage<'a> {
 
 impl<'a> From<ExePackage<'a>> for ChainElement<'a> {
     fn from(exe: ExePackage<'a>) -> Self {
-        Self::ExePackage(exe)
+        Self::ExePackage(Box::new(exe))
     }
 }
 
