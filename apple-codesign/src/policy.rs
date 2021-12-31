@@ -129,6 +129,7 @@ static POLICY_NOTARIZED_INSTALLER: Lazy<CodeRequirementExpression<'static>> = La
 /// * `developer-id-signed`
 /// * `developer-id-notarized-executable`
 /// * `developer-id-notarized-installer`
+#[allow(clippy::enum_variant_names)]
 pub enum ExecutionPolicy {
     /// Code is signed by a certificate authorized for signing Mac applications or
     /// installers and that certificate was issued by
