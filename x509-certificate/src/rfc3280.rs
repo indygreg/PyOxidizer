@@ -371,12 +371,12 @@ impl Name {
 
     /// Iterate over all attributes in this Name.
     pub fn iter_attributes(&self) -> impl Iterator<Item = &AttributeTypeAndValue> {
-        self.0.iter().map(|rdn| rdn.iter()).flatten()
+        self.0.iter().flat_map(|rdn| rdn.iter())
     }
 
     /// Iterate over all attributes, yielding mutable entries.
     pub fn iter_mut_attributes(&mut self) -> impl Iterator<Item = &mut AttributeTypeAndValue> {
-        self.0.iter_mut().map(|rdn| rdn.iter_mut()).flatten()
+        self.0.iter_mut().flat_map(|rdn| rdn.iter_mut())
     }
 
     /// Iterate over all attributes in this Name having a given OID.
