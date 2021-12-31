@@ -18,7 +18,7 @@ fn canonicalize_path(path: &Path) -> Result<PathBuf, std::io::Error> {
 
     // Strip \\?\ prefix on Windows and replace \ with /, which is valid.
     if cfg!(windows) {
-        let mut s = p.display().to_string().replace("\\", "/");
+        let mut s = p.display().to_string().replace('\\', "/");
         if s.starts_with("//?/") {
             s = s[4..].to_string();
         }

@@ -295,7 +295,7 @@ pub fn write_new_pyoxidizer_config_file(
     if let Some(code) = code {
         // Replace " with \" to work around
         // https://github.com/google/starlark-rust/issues/230.
-        data.code = Some(code.replace("\"", "\\\""));
+        data.code = Some(code.replace('\"', "\\\""));
     }
 
     data.pip_install_simple = pip_install.iter().map(|v| (*v).to_string()).collect();
