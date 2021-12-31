@@ -1380,7 +1380,7 @@ impl<'a> AppleSignable for MachO<'a> {
                     self.linkedit_data_before_signature()
                         .expect("__LINKEDIT data should resolve")
                 } else {
-                    &segment.data
+                    segment.data
                 }
             })
             .collect::<Vec<_>>()
