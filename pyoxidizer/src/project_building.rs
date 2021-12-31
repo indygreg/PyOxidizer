@@ -452,7 +452,7 @@ pub fn build_pyembed_artifacts(
     let mut context: EvaluationContext = EvaluationContextBuilder::new(
         env,
         logger.clone(),
-        config_path.to_path_buf(),
+        config_path,
         target_triple.to_string(),
     )
     .extra_vars(extra_vars)
