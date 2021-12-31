@@ -177,6 +177,8 @@ impl Default for PyembedPythonInterpreterConfig {
 impl PyembedPythonInterpreterConfig {
     /// Convert the instance to Rust code that constructs a `pyembed::OxidizedPythonInterpreterConfig`.
     pub fn to_oxidized_python_interpreter_config_rs(&self) -> Result<String> {
+        // This code is complicated enough. Let's not worry about format! in format!.
+        #[allow(unknown_lints, clippy::format_in_format_args)]
         let code = format!(
             "pyembed::OxidizedPythonInterpreterConfig {{\n    \
             exe: None,\n    \
