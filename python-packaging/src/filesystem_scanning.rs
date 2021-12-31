@@ -234,23 +234,12 @@ impl<'a> PythonResourceIterator<'a> {
 
         if let Some((metadata_path, location)) = distribution_info {
             let data = if let Some(file) = self.path_content_overrides.get(&metadata_path) {
-                if let Ok(data) = file.resolve_content() {
-                    data
-                } else {
-                    return None;
-                }
-            } else if let Ok(data) = std::fs::read(&metadata_path) {
-                data
+                file.resolve_content().ok()?
             } else {
-                return None;
+                std::fs::read(&metadata_path).ok()?
             };
 
-            let metadata = if let Ok(metadata) = PythonPackageMetadata::from_metadata(&data) {
-                metadata
-            } else {
-                return None;
-            };
-
+            let metadata = PythonPackageMetadata::from_metadata(&data).ok()?;
             let package = metadata.name()?;
             let version = metadata.version()?;
 
