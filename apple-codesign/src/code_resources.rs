@@ -1057,7 +1057,7 @@ impl CodeResourcesBuilder {
         file_handler: &dyn BundleFileHandler,
     ) -> Result<(), AppleCodesignError> {
         // Always use UNIX style directory separators.
-        let relative_path = file.relative_path().to_string_lossy().replace("\\", "/");
+        let relative_path = file.relative_path().to_string_lossy().replace('\\', "/");
 
         // The Contents/ prefix is also removed for pattern matching and references in the
         // resources file.
@@ -1102,7 +1102,7 @@ impl CodeResourcesBuilder {
             .symlink_target()
             .map_err(AppleCodesignError::DirectoryBundle)?
         {
-            let target = target.to_string_lossy().replace("\\", "/");
+            let target = target.to_string_lossy().replace('\\', "/");
 
             info!(log, "sealing symlink {} -> {}", relative_path, target);
             self.resources.seal_symlink(relative_path, target);
