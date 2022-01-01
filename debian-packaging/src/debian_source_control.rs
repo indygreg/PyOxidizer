@@ -14,7 +14,7 @@ use {
         repository::release::ChecksumType,
     },
     std::{
-        io::{BufRead, Read},
+        io::BufRead,
         ops::{Deref, DerefMut},
         str::FromStr,
     },
@@ -157,7 +157,7 @@ impl<'a> DebianSourceControlFile<'a> {
     /// The PGP signature is NOT validated. The file will be parsed despite lack of
     /// signature verification. This is conceptually insecure. But since Rust has memory
     /// safety, some risk is prevented.
-    pub fn from_armored_reader<R: Read>(reader: R) -> Result<Self> {
+    pub fn from_armored_reader<R: BufRead>(reader: R) -> Result<Self> {
         let reader = pgp_cleartext::CleartextSignatureReader::new(reader);
         let mut reader = std::io::BufReader::new(reader);
 

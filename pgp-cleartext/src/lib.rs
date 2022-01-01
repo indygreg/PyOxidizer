@@ -40,7 +40,7 @@ use {
     std::{
         cmp::Ordering,
         collections::HashMap,
-        io::{self, BufRead, BufReader, Cursor, Read},
+        io::{self, BufRead, Cursor, Read},
     },
 };
 
@@ -169,8 +169,8 @@ enum ReaderState {
 ///
 /// Important: reading does not validate signatures. Use [CleartextSignatures] after
 /// parsing/reading to validate signatures.
-pub struct CleartextSignatureReader<R: Read> {
-    reader: BufReader<R>,
+pub struct CleartextSignatureReader<R: BufRead> {
+    reader: R,
     state: ReaderState,
 
     /// Hash types as advertised by the `Hash: ` header.
@@ -180,12 +180,12 @@ pub struct CleartextSignatureReader<R: Read> {
     signatures: Vec<Signature>,
 }
 
-impl<R: Read> CleartextSignatureReader<R> {
+impl<R: BufRead> CleartextSignatureReader<R> {
     /// Construct a new instance from a reader.
     pub fn new(reader: R) -> Self {
         Self {
             state: ReaderState::Initial,
-            reader: BufReader::new(reader),
+            reader,
             hashers: HashMap::new(),
             signatures: vec![],
         }
@@ -200,7 +200,7 @@ impl<R: Read> CleartextSignatureReader<R> {
     }
 }
 
-impl<'a, R: Read> Read for CleartextSignatureReader<R> {
+impl<'a, R: BufRead> Read for CleartextSignatureReader<R> {
     fn read(&mut self, dest: &mut [u8]) -> std::io::Result<usize> {
         loop {
             match &mut self.state {
