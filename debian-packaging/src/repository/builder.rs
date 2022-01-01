@@ -19,7 +19,6 @@ use {
         deb::reader::resolve_control_file,
         error::{DebianError, Result},
         io::{read_compressed, ContentDigest, DataResolver, MultiContentDigest, MultiDigester},
-        pgp::cleartext_sign,
         repository::{
             release::{ChecksumType, ReleaseFile, DATE_FORMAT},
             Compression, PublishEvent, RepositoryPathVerificationState, RepositoryWriter,
@@ -28,6 +27,7 @@ use {
     chrono::{DateTime, Utc},
     futures::{AsyncRead, AsyncReadExt, StreamExt, TryStreamExt},
     pgp::{crypto::HashAlgorithm, types::SecretKeyTrait},
+    pgp_cleartext::cleartext_sign,
     std::{
         borrow::Cow,
         collections::{BTreeMap, BTreeSet, HashMap},

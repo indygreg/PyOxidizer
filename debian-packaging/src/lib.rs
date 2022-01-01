@@ -107,7 +107,6 @@ repositories.
 
 Various other modules provide miscellaneous functionality. [io] defines I/O helpers, including
 stream adapters for validating content digests on read and computing content digests on write.
-[pgp] contains helpers for interacting with PGP primitives.
 
 # Crate Features
 
@@ -127,7 +126,6 @@ pub mod dependency_resolution;
 pub mod error;
 pub mod io;
 pub mod package_version;
-pub mod pgp;
 pub mod repository;
 pub mod signing_key;
 pub mod source_package_control;

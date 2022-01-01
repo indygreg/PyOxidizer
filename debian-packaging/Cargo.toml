@@ -44,6 +44,10 @@ zstd = "0.9"
 version = "0.3"
 features = ["bzip2", "futures-io", "gzip", "lzma", "xz"]
 
+[dependencies.pgp-cleartext]
+version = "0.1.0-pre"
+path = "../pgp-cleartext"
+
 [dependencies.reqwest]
 version = "0.11"
 optional = true

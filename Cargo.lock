@@ -1038,6 +1038,7 @@ dependencies = [
  "once_cell",
  "os_str_bytes",
  "pgp",
+ "pgp-cleartext",
  "pin-project",
  "regex",
  "reqwest",
@@ -2736,6 +2737,19 @@ dependencies = [
  "twofish",
  "x25519-dalek",
  "zeroize",
+]
+
+[[package]]
+name = "pgp-cleartext"
+version = "0.1.0-pre"
+dependencies = [
+ "chrono",
+ "digest 0.10.1",
+ "md-5 0.10.0",
+ "pgp",
+ "sha-1 0.10.0",
+ "sha2 0.10.0",
+ "smallvec",
 ]
 
 [[package]]

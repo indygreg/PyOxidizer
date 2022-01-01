@@ -29,10 +29,10 @@ use {
         control::{ControlParagraph, ControlParagraphReader},
         error::{DebianError, Result},
         io::ContentDigest,
-        pgp::MyHasher,
         repository::Compression,
     },
     chrono::{DateTime, Utc},
+    pgp_cleartext::CleartextHasher,
     std::{
         borrow::Cow,
         io::{BufRead, Read},
@@ -75,9 +75,9 @@ impl ChecksumType {
     /// Obtain a new hasher for this checksum flavor.
     pub fn new_hasher(&self) -> Box<dyn pgp::crypto::Hasher + Send> {
         Box::new(match self {
-            Self::Md5 => MyHasher::md5(),
-            Self::Sha1 => MyHasher::sha1(),
-            Self::Sha256 => MyHasher::sha256(),
+            Self::Md5 => CleartextHasher::md5(),
+            Self::Sha1 => CleartextHasher::sha1(),
+            Self::Sha256 => CleartextHasher::sha256(),
         })
     }
 }
@@ -796,7 +796,7 @@ pub struct ReleaseFile<'a> {
     paragraph: ControlParagraph<'a>,
 
     /// Parsed PGP signatures for this file.
-    signatures: Option<crate::pgp::CleartextSignatures>,
+    signatures: Option<pgp_cleartext::CleartextSignatures>,
 }
 
 impl<'a> From<ControlParagraph<'a>> for ReleaseFile<'a> {
@@ -868,7 +868,7 @@ impl<'a> ReleaseFile<'a> {
     /// signature verification. This is conceptually insecure. But since Rust has memory
     /// safety, some risk is prevented.
     pub fn from_armored_reader<R: Read>(reader: R) -> Result<Self> {
-        let reader = crate::pgp::CleartextSignatureReader::new(reader);
+        let reader = pgp_cleartext::CleartextSignatureReader::new(reader);
         let mut reader = std::io::BufReader::new(reader);
 
         let mut slf = Self::from_reader(&mut reader)?;
@@ -878,7 +878,7 @@ impl<'a> ReleaseFile<'a> {
     }
 
     /// Obtain PGP signatures from this `InRelease` file.
-    pub fn signatures(&self) -> Option<&crate::pgp::CleartextSignatures> {
+    pub fn signatures(&self) -> Option<&pgp_cleartext::CleartextSignatures> {
         self.signatures.as_ref()
     }
 

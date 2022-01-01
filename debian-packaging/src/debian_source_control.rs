@@ -86,7 +86,7 @@ pub struct DebianSourceControlFileFetch {
 pub struct DebianSourceControlFile<'a> {
     paragraph: ControlParagraph<'a>,
     /// Parsed PGP signatures for this file.
-    signatures: Option<crate::pgp::CleartextSignatures>,
+    signatures: Option<pgp_cleartext::CleartextSignatures>,
 }
 
 impl<'a> Deref for DebianSourceControlFile<'a> {
@@ -158,7 +158,7 @@ impl<'a> DebianSourceControlFile<'a> {
     /// signature verification. This is conceptually insecure. But since Rust has memory
     /// safety, some risk is prevented.
     pub fn from_armored_reader<R: Read>(reader: R) -> Result<Self> {
-        let reader = crate::pgp::CleartextSignatureReader::new(reader);
+        let reader = pgp_cleartext::CleartextSignatureReader::new(reader);
         let mut reader = std::io::BufReader::new(reader);
 
         let mut slf = Self::from_reader(&mut reader)?;
@@ -176,7 +176,7 @@ impl<'a> DebianSourceControlFile<'a> {
     }
 
     /// Obtain PGP signatures from this possibly signed file.
-    pub fn signatures(&self) -> Option<&crate::pgp::CleartextSignatures> {
+    pub fn signatures(&self) -> Option<&pgp_cleartext::CleartextSignatures> {
         self.signatures.as_ref()
     }
 

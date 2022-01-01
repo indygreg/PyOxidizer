@@ -2,7 +2,30 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-/*! PGP functionality. */
+/*! PGP cleartext framework
+
+The PGP cleartext framework is a mechanism to store PGP signatures inline with
+the cleartext data that is being signed.
+
+The cleartext framework is defined by
+[RFC 4880 Section 7](https://datatracker.ietf.org/doc/html/rfc4880.html#section-7)
+and this implementation aims to be conformant with the specification.
+
+PGP cleartext signatures are text documents beginning with
+`-----BEGIN PGP SIGNED MESSAGE-----`. They have the form:
+
+```text
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: <digest>
+
+<normalized signed content>
+-----BEGIN PGP SIGNATURE-----
+<headers>
+
+<signature data>
+-----END PGP SIGNATURE-----
+```
+*/
 
 use {
     chrono::SubsecRound,
@@ -30,7 +53,7 @@ const SIGNATURE_ARMOR_CRLF: &str = "-----BEGIN PGP SIGNATURE-----\r\n";
 
 /// Wrapper around content digesting to work around lack of clone() in pgp crate.
 #[derive(Clone)]
-pub enum MyHasher {
+pub enum CleartextHasher {
     Md5(md5::Md5),
     Sha1(sha1::Sha1),
     Sha256(sha2::Sha256),
@@ -38,7 +61,7 @@ pub enum MyHasher {
     Sha512(sha2::Sha512),
 }
 
-impl MyHasher {
+impl CleartextHasher {
     pub fn md5() -> Self {
         Self::Md5(md5::Md5::new())
     }
@@ -70,7 +93,7 @@ impl MyHasher {
     }
 }
 
-impl std::io::Write for MyHasher {
+impl std::io::Write for CleartextHasher {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         self.update(buf);
         Ok(buf.len())
@@ -81,7 +104,7 @@ impl std::io::Write for MyHasher {
     }
 }
 
-impl Hasher for MyHasher {
+impl Hasher for CleartextHasher {
     fn update(&mut self, data: &[u8]) {
         match self {
             Self::Md5(digest) => digest.update(data),
@@ -95,10 +118,10 @@ impl Hasher for MyHasher {
     fn finish(self: Box<Self>) -> Vec<u8> {
         match *self {
             Self::Md5(digest) => digest.finalize().to_vec(),
-            MyHasher::Sha1(digest) => digest.finalize().to_vec(),
-            MyHasher::Sha256(digest) => digest.finalize().to_vec(),
-            MyHasher::Sha384(digest) => digest.finalize().to_vec(),
-            MyHasher::Sha512(digest) => digest.finalize().to_vec(),
+            CleartextHasher::Sha1(digest) => digest.finalize().to_vec(),
+            CleartextHasher::Sha256(digest) => digest.finalize().to_vec(),
+            CleartextHasher::Sha384(digest) => digest.finalize().to_vec(),
+            CleartextHasher::Sha512(digest) => digest.finalize().to_vec(),
         }
     }
 }
@@ -136,12 +159,22 @@ enum ReaderState {
 /// The source reader is expected to initially emit a
 /// `'-----BEGIN PGP SIGNED MESSAGE-----` line.
 ///
+/// This type is effectively a filtering [Read] implementation. Given a source reader
+/// that will emit bytes constituting cleartext signature data, this reader will parse
+/// the special syntax defining the cleartext signature and store state in the instance.
+/// Only the original / signed cleartext bytes will be returned by `read()` calls.
+///
+/// Once EOF is reached, call [Self::finalize()] to consume the reader and return a
+/// [CleartextSignatures] holding parsed cleartext signature state.
+///
+/// Important: reading does not validate signatures. Use [CleartextSignatures] after
+/// parsing/reading to validate signatures.
 pub struct CleartextSignatureReader<R: Read> {
     reader: BufReader<R>,
     state: ReaderState,
 
     /// Hash types as advertised by the `Hash: ` header.
-    hashers: HashMap<u8, MyHasher>,
+    hashers: HashMap<u8, CleartextHasher>,
 
     /// Parsed PGP signatures.
     signatures: Vec<Signature>,
@@ -202,11 +235,11 @@ impl<'a, R: Read> Read for CleartextSignatureReader<R> {
 
                             if !hash.is_empty() {
                                 let hasher = match hash {
-                                    "MD5" => MyHasher::md5(),
-                                    "SHA1" => MyHasher::sha1(),
-                                    "SHA256" => MyHasher::sha256(),
-                                    "SHA384" => MyHasher::sha384(),
-                                    "SHA512" => MyHasher::sha512(),
+                                    "MD5" => CleartextHasher::md5(),
+                                    "SHA1" => CleartextHasher::sha1(),
+                                    "SHA256" => CleartextHasher::sha256(),
+                                    "SHA384" => CleartextHasher::sha384(),
+                                    "SHA512" => CleartextHasher::sha512(),
                                     _ => {
                                         return Err(io::Error::new(
                                             io::ErrorKind::InvalidData,
@@ -400,18 +433,31 @@ impl<'a, R: Read> Read for CleartextSignatureReader<R> {
     }
 }
 
+/// Parsed cleartext signatures data.
+///
+/// This type represents the results of parsing cleartext signature data.
+///
+/// When a document containing PGP cleartext signatures is parsed, [CleartextSignatureReader]
+/// derives hashers of the signed content as well as the parsed PGP signature packets. This
+/// data is held by this type to facilitate signature verification.
 pub struct CleartextSignatures {
-    hashers: HashMap<u8, MyHasher>,
+    hashers: HashMap<u8, CleartextHasher>,
     signatures: Vec<Signature>,
 }
 
 impl CleartextSignatures {
     /// Iterate over signatures in this instance.
+    ///
+    /// This obtains the parsed signature packets as derived from
+    /// `-----BEGIN PGP SIGNATURE-----` sections in the source document.
     pub fn iter_signatures(&self) -> impl Iterator<Item = &Signature> {
         self.signatures.iter()
     }
 
     /// Iterate over signatures made by a specific key.
+    ///
+    /// This is a convenience wrapper for [Self::iter_signatures()] that filters based on the
+    /// signature's issuer matching the key ID of the specified key.
     pub fn iter_signatures_from_key<'slf, 'key: 'slf>(
         &'slf self,
         key: &'key impl PublicKeyTrait,
@@ -428,6 +474,12 @@ impl CleartextSignatures {
     /// Verify a signature made from a known key.
     ///
     /// Returns the numbers of signatures verified against this key.
+    ///
+    /// If there are no signatures at all or no signatures from the specified key, an error is
+    /// returned.
+    ///
+    /// Errors also occur if a signature could not be verified (possibly due to implementation
+    /// bugs) or if the signature is invalid.
     pub fn verify(&self, key: &impl PublicKeyTrait) -> pgp::errors::Result<usize> {
         if self.signatures.is_empty() {
             return Err(pgp::errors::Error::Message(
@@ -469,7 +521,7 @@ impl CleartextSignatures {
 
         match valid_signatures {
             0 => Err(pgp::errors::Error::Message(
-                "no signatured signed by provided key".into(),
+                "no signatures signed by provided key".into(),
             )),
             _ => Ok(valid_signatures),
         }
@@ -477,6 +529,16 @@ impl CleartextSignatures {
 }
 
 /// Produce a cleartext signature over data.
+///
+/// The original cleartext data to be signed is provided by a reader.
+///
+/// The returned value is a multiline string with LF line endings containing the PGP
+/// cleartext framework encoded cleartext and signature. The signature is produced by
+/// the provided key using the specified hashing algorithm.
+///
+/// Normalizing the line endings to a different format (e.g. `\r\n` is allowed, as
+/// cleartext signature framework readers should properly recognize alternate line
+/// endings.
 pub fn cleartext_sign<PW, R>(
     key: &impl SecretKeyTrait,
     key_pw: PW,

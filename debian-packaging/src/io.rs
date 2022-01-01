@@ -7,7 +7,6 @@
 use {
     crate::{
         error::{DebianError, Result},
-        pgp::MyHasher,
         repository::release::ChecksumType,
     },
     async_compression::futures::bufread::{
@@ -17,6 +16,7 @@ use {
     async_trait::async_trait,
     futures::{AsyncBufRead, AsyncRead, AsyncWrite},
     pgp::crypto::Hasher,
+    pgp_cleartext::CleartextHasher,
     pin_project::pin_project,
     std::{
         collections::HashMap,
@@ -78,9 +78,9 @@ impl ContentDigest {
     /// Create a new hasher matching for the type of this digest.
     pub fn new_hasher(&self) -> Box<dyn Hasher + Send> {
         Box::new(match self {
-            Self::Md5(_) => MyHasher::md5(),
-            Self::Sha1(_) => MyHasher::sha1(),
-            Self::Sha256(_) => MyHasher::sha256(),
+            Self::Md5(_) => CleartextHasher::md5(),
+            Self::Sha1(_) => CleartextHasher::sha1(),
+            Self::Sha256(_) => CleartextHasher::sha256(),
         })
     }
 
@@ -318,9 +318,9 @@ pub struct MultiDigester {
 impl Default for MultiDigester {
     fn default() -> Self {
         Self {
-            md5: Box::new(MyHasher::md5()),
-            sha1: Box::new(MyHasher::sha1()),
-            sha256: Box::new(MyHasher::sha256()),
+            md5: Box::new(CleartextHasher::md5()),
+            sha1: Box::new(CleartextHasher::sha1()),
+            sha256: Box::new(CleartextHasher::sha256()),
         }
     }
 }
