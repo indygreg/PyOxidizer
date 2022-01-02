@@ -15,6 +15,7 @@ members = [
     'python-packaging',
     'python-packed-resources',
     'release',
+    'rpm-repository',
     'starlark-dialect-build-targets',
     'text-stub-library',
     'tugger',
