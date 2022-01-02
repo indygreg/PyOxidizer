@@ -26,6 +26,25 @@ fn reader_from_filename(extension: &str, data: std::io::Cursor<Vec<u8>>) -> Resu
     }
 }
 
+fn reader_from_filename_async(
+    extension: &str,
+    data: futures::io::Cursor<Vec<u8>>,
+) -> Result<Box<dyn futures::AsyncRead + Unpin>> {
+    match extension {
+        "" => Ok(Box::new(data)),
+        ".gz" => Ok(Box::new(
+            async_compression::futures::bufread::GzipDecoder::new(data),
+        )),
+        ".xz" => Ok(Box::new(
+            async_compression::futures::bufread::XzDecoder::new(data),
+        )),
+        ".zst" => Ok(Box::new(
+            async_compression::futures::bufread::ZstdDecoder::new(data),
+        )),
+        _ => Err(DebianError::DebUnknownCompression(extension.to_string())),
+    }
+}
+
 /// A reader of .deb files.
 ///
 /// A .deb binary package file is an ar archive with 3 entries:
@@ -64,21 +83,21 @@ impl<R: Read> BinaryPackageReader<R> {
                         }
                     }
 
-                    let data = std::io::Cursor::new(data);
-
                     if filename == "debian-binary" {
-                        Some(Ok(BinaryPackageEntry::DebianBinary(data)))
+                        Some(Ok(BinaryPackageEntry::DebianBinary(std::io::Cursor::new(
+                            data,
+                        ))))
                     } else if let Some(tail) = filename.strip_prefix("control.tar") {
-                        match reader_from_filename(tail, data) {
+                        match reader_from_filename(tail, std::io::Cursor::new(data)) {
                             Ok(res) => Some(Ok(BinaryPackageEntry::Control(ControlTarReader {
                                 archive: tar::Archive::new(res),
                             }))),
                             Err(e) => Some(Err(e)),
                         }
                     } else if let Some(tail) = filename.strip_prefix("data.tar") {
-                        match reader_from_filename(tail, data) {
+                        match reader_from_filename_async(tail, futures::io::Cursor::new(data)) {
                             Ok(res) => Some(Ok(BinaryPackageEntry::Data(DataTarReader {
-                                archive: tar::Archive::new(res),
+                                archive: async_tar::Archive::new(res),
                             }))),
                             Err(e) => Some(Err(e)),
                         }
@@ -251,11 +270,11 @@ pub enum ControlTarFile {
 
 /// A reader for `data.tar` files.
 pub struct DataTarReader {
-    archive: tar::Archive<Box<dyn Read>>,
+    archive: async_tar::Archive<Box<dyn futures::io::AsyncRead + Unpin>>,
 }
 
 impl Deref for DataTarReader {
-    type Target = tar::Archive<Box<dyn Read>>;
+    type Target = async_tar::Archive<Box<dyn futures::io::AsyncRead + Unpin>>;
 
     fn deref(&self) -> &Self::Target {
         &self.archive
@@ -265,6 +284,13 @@ impl Deref for DataTarReader {
 impl DerefMut for DataTarReader {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.archive
+    }
+}
+
+impl DataTarReader {
+    /// Obtain the inner [async_tar::Archive] to which this instance is bound.
+    pub fn into_inner(self) -> async_tar::Archive<Box<dyn futures::io::AsyncRead + Unpin>> {
+        self.archive
     }
 }
 

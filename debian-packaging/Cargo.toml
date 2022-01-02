@@ -13,6 +13,7 @@ readme = "README.md"
 [dependencies]
 ar = "0.9"
 async-std = "1.10"
+async-tar = "0.4"
 async-trait = "0.1"
 bytes = "1.1"
 chrono = "0.4"
@@ -42,7 +43,7 @@ zstd = "0.7"
 
 [dependencies.async-compression]
 version = "0.3"
-features = ["bzip2", "futures-io", "gzip", "lzma", "xz"]
+features = ["bzip2", "futures-io", "gzip", "lzma", "xz", "zstd"]
 
 [dependencies.pgp-cleartext]
 version = "0.1.0-pre"
