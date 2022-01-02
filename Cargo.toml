@@ -6,6 +6,7 @@ members = [
     'cryptographic-message-syntax',
     'debian-packaging',
     "debian-repo-tool",
+    'linux-package-analyzer',
     'pgp-cleartext',
     'pyembed-bench',
     'pyembed',

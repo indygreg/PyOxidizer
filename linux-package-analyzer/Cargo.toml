@@ -1,0 +1,47 @@
+[package]
+name = "linux-package-analyzer"
+version = "0.1.0-pre"
+edition = "2021"
+authors = ["Gregory Szorc <gregory.szorc@gmail.com>"]
+license = "MPL-2.0"
+description = "CLI tool to analyze Linux packages"
+keywords = ["apt", "debian", "deb", "package", "rpm", "yum"]
+homepage = "https://github.com/indygreg/PyOxidizer"
+repository = "https://github.com/indygreg/PyOxidizer.git"
+readme = "README.md"
+
+[[bin]]
+name = "lpa"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "1.0"
+clap = "3.0"
+cpio = "0.2"
+futures = "0.3"
+futures-util = "0.3"
+iced-x86 = "1.15"
+indoc = "1.0"
+num_cpus = "1.13"
+object = "0.28"
+once_cell = "1.9"
+pbr = "1.0"
+rusqlite = { version = "0.26", features = ["bundled"] }
+symbolic-demangle = "8.5"
+tokio = { version = "1.15", features = ["full"] }
+url = "2.2"
+xz2 = "0.1"
+zip = "0.5"
+zstd = "0.7"
+
+[dependencies.debian-packaging]
+version = "0.10.0-pre"
+path = "../debian-packaging"
+
+[dependencies.rpm-repository]
+version = "0.2.0-pre"
+path = "../rpm-repository"
+
+[dependencies.rpm-rs]
+git = "https://github.com/indygreg/rpm-rs"
+branch = "downgrade-zstd"
