@@ -58,7 +58,7 @@ uuid = { version = "0.8", features = ["v4", "v5"] }
 version-compare = "0.1"
 walkdir = "2"
 which = "4"
-zstd = "0.9"
+zstd = "0.7"
 
 [dependencies.pyo3-build-config]
 version = "0.15.0"
