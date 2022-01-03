@@ -3094,7 +3094,7 @@ dependencies = [
  "sha2 0.10.0",
  "slog",
  "starlark",
- "starlark-dialect-build-targets",
+ "starlark-dialect-build-targets 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tar",
  "tempfile",
  "tugger",
@@ -4085,7 +4085,22 @@ dependencies = [
 
 [[package]]
 name = "starlark-dialect-build-targets"
-version = "0.7.0-pre"
+version = "0.6.0"
+dependencies = [
+ "anyhow",
+ "codemap",
+ "codemap-diagnostic",
+ "linked-hash-map",
+ "path-dedot",
+ "slog",
+ "starlark",
+]
+
+[[package]]
+name = "starlark-dialect-build-targets"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "33b08a49489ce95a961a425153657d36b45c56ed78523dafbb9b19d71cc3e1bf"
 dependencies = [
  "anyhow",
  "codemap",
@@ -4472,7 +4487,7 @@ dependencies = [
  "python-packaging",
  "slog",
  "starlark",
- "starlark-dialect-build-targets",
+ "starlark-dialect-build-targets 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tar",
  "tempfile",
  "time 0.3.5",
