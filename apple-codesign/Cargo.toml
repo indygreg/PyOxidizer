@@ -38,8 +38,8 @@ thiserror = "1.0"
 yasna = "0.4"
 
 [dependencies.apple-bundles]
-# path = "../apple-bundles"
-version = "0.6.0"
+path = "../apple-bundles"
+version = "0.7.0-pre"
 
 [dependencies.cryptographic-message-syntax]
 path = "../cryptographic-message-syntax"
