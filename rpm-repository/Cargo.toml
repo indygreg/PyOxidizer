@@ -25,7 +25,7 @@ url = "2.2"
 
 [dependencies.async-compression]
 version = "0.3"
-features = ["futures-io", "gzip", "xz"]
+features = ["futures-io", "gzip", "xz", "zstd"]
 
 [dependencies.reqwest]
 version = "0.11"
