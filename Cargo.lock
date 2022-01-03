@@ -3544,7 +3544,7 @@ checksum = "cabe4fa914dec5870285fa7f71f602645da47c486e68486d2b4ceb4a343e90ac"
 
 [[package]]
 name = "rpm-repository"
-version = "0.1.0-pre"
+version = "0.1.0"
 dependencies = [
  "async-compression",
  "digest 0.10.1",
