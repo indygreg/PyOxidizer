@@ -108,7 +108,7 @@ dependencies = [
  "hex",
  "once_cell",
  "p12",
- "pem 1.0.1",
+ "pem 1.0.2",
  "plist",
  "regex",
  "reqwest",
@@ -938,7 +938,7 @@ dependencies = [
  "bytes",
  "chrono",
  "hex",
- "pem 1.0.1",
+ "pem 1.0.2",
  "reqwest",
  "ring",
  "x509-certificate 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -954,7 +954,7 @@ dependencies = [
  "bytes",
  "chrono",
  "hex",
- "pem 1.0.1",
+ "pem 1.0.2",
  "reqwest",
  "ring",
  "x509-certificate 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1083,7 +1083,7 @@ dependencies = [
  "once_cell",
  "os_str_bytes",
  "pgp",
- "pgp-cleartext 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "pgp-cleartext 0.2.0-pre",
  "pin-project",
  "regex",
  "reqwest",
@@ -1126,7 +1126,7 @@ dependencies = [
  "once_cell",
  "os_str_bytes",
  "pgp",
- "pgp-cleartext 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "pgp-cleartext 0.1.0",
  "pin-project",
  "regex",
  "reqwest",
@@ -2709,13 +2709,11 @@ dependencies = [
 
 [[package]]
 name = "pem"
-version = "1.0.1"
+version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "06673860db84d02a63942fa69cd9543f2624a5df3aea7f33173048fa7ad5cf1a"
+checksum = "e9a3b09a20e374558580a4914d3b7d89bd61b954a5a5e1dcbea98753addb1947"
 dependencies = [
  "base64 0.13.0",
- "once_cell",
- "regex",
 ]
 
 [[package]]
@@ -2830,6 +2828,8 @@ dependencies = [
 [[package]]
 name = "pgp-cleartext"
 version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "23d4dd74a6589d7a8a96b2fbf7b76ff15bf90ae52f751152c2952eb4cd22da52"
 dependencies = [
  "chrono",
  "digest 0.10.1",
@@ -2842,9 +2842,7 @@ dependencies = [
 
 [[package]]
 name = "pgp-cleartext"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "23d4dd74a6589d7a8a96b2fbf7b76ff15bf90ae52f751152c2952eb4cd22da52"
+version = "0.2.0-pre"
 dependencies = [
  "chrono",
  "digest 0.10.1",
@@ -3384,7 +3382,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5911d1403f4143c9d56a702069d593e8d0f3fab880a85e103604d0893ea31ba7"
 dependencies = [
  "chrono",
- "pem 1.0.1",
+ "pem 1.0.2",
  "ring",
  "yasna",
 ]
@@ -3858,9 +3856,9 @@ dependencies = [
 
 [[package]]
 name = "serde"
-version = "1.0.132"
+version = "1.0.133"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8b9875c23cf305cd1fd7eb77234cbb705f21ea6a72c637a5c6db5fe4b8e7f008"
+checksum = "97565067517b60e2d1ea8b268e59ce036de907ac523ad83a0475da04e818989a"
 dependencies = [
  "serde_derive",
 ]
@@ -3889,9 +3887,9 @@ dependencies = [
 
 [[package]]
 name = "serde_derive"
-version = "1.0.132"
+version = "1.0.133"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ecc0db5cb2556c0e558887d9bbdcf6ac4471e83ff66cf696e5419024d1606276"
+checksum = "ed201699328568d8d08208fdd080e3ff594e6c422e438b6705905da01005d537"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -3900,9 +3898,9 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.73"
+version = "1.0.74"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bcbd0344bc6533bc7ec56df11d42fb70f1b912351c0825ccb7211b59d8af7cf5"
+checksum = "ee2bb9cd061c5865d345bb02ca49fcef1391741b672b54a0bf7b679badec3142"
 dependencies = [
  "itoa 1.0.1",
  "ryu",
@@ -5132,7 +5130,7 @@ dependencies = [
  "bytes",
  "chrono",
  "hex",
- "pem 1.0.1",
+ "pem 1.0.2",
  "ring",
  "thiserror",
 ]
@@ -5147,7 +5145,7 @@ dependencies = [
  "bytes",
  "chrono",
  "hex",
- "pem 1.0.1",
+ "pem 1.0.2",
  "ring",
  "thiserror",
 ]
