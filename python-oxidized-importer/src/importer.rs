@@ -199,7 +199,7 @@ fn load_dynamic_library(
         return if py_module.is_null() {
             Err(PyErr::fetch(py))
         } else {
-            Ok(unsafe { PyObject::from_borrowed_ptr(py, py_module) })
+            Ok(unsafe { PyObject::from_borrowed_ptr(py, py_module) }) //This is to match description of PEP
         };
     }
 
