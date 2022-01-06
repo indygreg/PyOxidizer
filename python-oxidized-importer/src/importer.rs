@@ -157,7 +157,7 @@ fn load_dynamic_library(
         pyffi::_Py_PackageContext = name_cstring.as_ptr();
         let py_module = init_fn();
         pyffi::_Py_PackageContext = old_context;
-        py_module
+        pyffi::_Py_XNewRef(py_module)
     };
 
     if py_module.is_null() && unsafe { pyffi::PyErr_Occurred().is_null() } {
@@ -199,13 +199,14 @@ fn load_dynamic_library(
         return if py_module.is_null() {
             Err(PyErr::fetch(py))
         } else {
-            Ok(unsafe { PyObject::from_borrowed_ptr(py, py_module) })
+            Ok(unsafe { PyObject::from_owned_ptr(py, py_module) })
         };
     }
 
     // Else fall back to single-phase init mechanism.
 
-    let mut module_def = unsafe { pyffi::PyModule_GetDef(py_module.as_ptr()) };
+    let mut module_def = unsafe { pyffi::Py_DECREF(py_module.as_ptr()); // undo the newref call which was needed to suport multiphase initialisation
+                                  pyffi::PyModule_GetDef(py_module.as_ptr()) };
     if module_def.is_null() {
         return Err(PySystemError::new_err(format!(
             "initialization of {} did not return an extension module",
