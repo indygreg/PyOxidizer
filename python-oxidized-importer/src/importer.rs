@@ -199,12 +199,13 @@ fn load_dynamic_library(
         return if py_module.is_null() {
             Err(PyErr::fetch(py))
         } else {
+            println!("going to borrow ref.. multiphase");
             Ok(unsafe { PyObject::from_borrowed_ptr(py, py_module) }) //This is to match description of PEP
         };
     }
 
     // Else fall back to single-phase init mechanism.
-
+    println!("no multiphase");
     let mut module_def = unsafe { pyffi::PyModule_GetDef(py_module.as_ptr()) };
     if module_def.is_null() {
         return Err(PySystemError::new_err(format!(
