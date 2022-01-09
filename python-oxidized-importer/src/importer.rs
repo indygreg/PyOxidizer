@@ -168,9 +168,8 @@ fn load_dynamic_library(
     }
 
     // Cast to owned type to help prevent refcount/memory leaks.
-    let py_module = unsafe { PyObject::from_owned_ptr(py, py_module) };
-
-    if !unsafe { pyffi::PyErr_Occurred().is_null() } {
+    let py_module = unsafe { PyObject::from_borrowed_ptr(py, py_module) };
+pyffi::PyErr_Occurred().is_null() } {
         unsafe {
             pyffi::PyErr_Clear();
         }
@@ -200,7 +199,7 @@ fn load_dynamic_library(
             Err(PyErr::fetch(py))
         } else {
             println!("going to borrow ref.. multiphase");
-            Ok(unsafe { PyObject::from_borrowed_ptr(py, py_module) }) //This is to match description of PEP
+            Ok(unsafe { py_module}) //This is to match description of PEP
         };
     }
 
