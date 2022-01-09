@@ -169,7 +169,8 @@ fn load_dynamic_library(
 
     // Cast to owned type to help prevent refcount/memory leaks.
     let py_module = unsafe { PyObject::from_owned_ptr(py, py_module) };
-pyffi::PyErr_Occurred().is_null() } {
+
+    if !unsafe { pyffi::PyErr_Occurred().is_null() } {
         unsafe {
             pyffi::PyErr_Clear();
         }
@@ -198,14 +199,16 @@ pyffi::PyErr_Occurred().is_null() } {
         return if py_module.is_null() {
             Err(PyErr::fetch(py))
         } else {
-            println!("going to borrow ref.. multiphase");
+            println!("going to incref.. multiphase");
             pyffi::Py_INCREF(py_module);
+            println!("did incref.. multiphase");
             Ok(unsafe { PyObject::from_owned_ptr(py, py_module) })
         };
     }
 
     // Else fall back to single-phase init mechanism.
-    println!("no multiphase");
+    println!("single phase");
+            
     let mut module_def = unsafe { pyffi::PyModule_GetDef(py_module.as_ptr()) };
     if module_def.is_null() {
         return Err(PySystemError::new_err(format!(
