@@ -199,7 +199,7 @@ pyffi::PyErr_Occurred().is_null() } {
             Err(PyErr::fetch(py))
         } else {
             println!("going to borrow ref.. multiphase");
-            Ok(unsafe { py_module}) //This is to match description of PEP
+            Ok(unsafe { py_module}); //This is to match description of PEP
         };
     }
 
