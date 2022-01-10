@@ -12,7 +12,7 @@ readme = "README.md"
 
 [dependencies]
 ar = "0.9"
-async-std = "1.10"
+async-std = { version = "1.10", features = ["unstable"] }
 async-tar = "0.4"
 async-trait = "0.1"
 bytes = "1.1"
