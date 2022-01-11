@@ -152,7 +152,7 @@ fn load_dynamic_library(
     let init_fn: py_init_fn = unsafe { std::mem::transmute(address) };
 
     // Package context is needed for single-phase init.
-    let py_module_initial_handle = unsafe {
+    let py_module = unsafe {
         let old_context = pyffi::_Py_PackageContext;
         pyffi::_Py_PackageContext = name_cstring.as_ptr();
         let py_module = init_fn();
@@ -205,7 +205,7 @@ fn load_dynamic_library(
 
     // Else fall back to single-phase init mechanism.
 
-    let mut module_def = unsafe { pyffi::Py_DECREF(py_module.as_ptr()); // undo the newref call which was needed to suport multiphase initialisation 
+    let mut module_def = unsafe { pyffi::Py_DECREF(py_module.as_ptr()); // undo the newref call which was needed to suport multiphase initialisation
                                   pyffi::PyModule_GetDef(py_module.as_ptr()) };
     if module_def.is_null() {
         return Err(PySystemError::new_err(format!(
