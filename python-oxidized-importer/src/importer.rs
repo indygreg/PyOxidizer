@@ -152,12 +152,12 @@ fn load_dynamic_library(
     let init_fn: py_init_fn = unsafe { std::mem::transmute(address) };
 
     // Package context is needed for single-phase init.
-    let py_module = unsafe {
+    let py_module_initial_handle = unsafe {
         let old_context = pyffi::_Py_PackageContext;
         pyffi::_Py_PackageContext = name_cstring.as_ptr();
         let py_module = init_fn();
         pyffi::_Py_PackageContext = old_context;
-        pyffi::_Py_NewRef(py_module)
+        pyffi::_Py_XNewRef(py_module)
     };
 
     if py_module.is_null() && unsafe { pyffi::PyErr_Occurred().is_null() } {
@@ -199,15 +199,14 @@ fn load_dynamic_library(
         return if py_module.is_null() {
             Err(PyErr::fetch(py))
         } else {
-            println!("going to incref.. multiphase");
-            Ok(unsafe { PyObject::from_owned_ptr(py, py_module)})
+            Ok(unsafe { PyObject::from_owned_ptr(py, py_module) })
         };
     }
 
     // Else fall back to single-phase init mechanism.
-    println!("single phase");
-            
-    let mut module_def = unsafe { pyffi::PyModule_GetDef(py_module.as_ptr()) };
+
+    let mut module_def = unsafe { pyffi::Py_DECREF(py_module); // undo the newref call which was needed to suport multiphase initialisation 
+                                  pyffi::PyModule_GetDef(py_module.as_ptr()) };
     if module_def.is_null() {
         return Err(PySystemError::new_err(format!(
             "initialization of {} did not return an extension module",
