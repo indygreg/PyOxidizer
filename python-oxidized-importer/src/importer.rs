@@ -157,7 +157,7 @@ fn load_dynamic_library(
         pyffi::_Py_PackageContext = name_cstring.as_ptr();
         let py_module = init_fn();
         pyffi::_Py_PackageContext = old_context;
-        py_module
+        pyffi::_Py_NewRef(py_module)
     };
 
     if py_module.is_null() && unsafe { pyffi::PyErr_Occurred().is_null() } {
@@ -200,7 +200,7 @@ fn load_dynamic_library(
             Err(PyErr::fetch(py))
         } else {
             println!("going to incref.. multiphase");
-            Ok(unsafe { pyffi::_Py_NewRef(py_module) })
+            Ok(unsafe { PyObject::from_owned_ptr(py, py_module)})
         };
     }
 
