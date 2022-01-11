@@ -200,7 +200,7 @@ fn load_dynamic_library(
             Err(PyErr::fetch(py))
         } else {
             println!("going to incref.. multiphase");
-            Ok(unsafe { PyObject::from_owned_ptr(py, pyffi::_Py_NewRef(py_module)) })
+            Ok(unsafe { pyffi::_Py_NewRef(py_module) })
         };
     }
 
