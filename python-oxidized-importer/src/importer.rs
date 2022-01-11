@@ -205,7 +205,7 @@ fn load_dynamic_library(
 
     // Else fall back to single-phase init mechanism.
 
-    let mut module_def = unsafe { pyffi::Py_DECREF(py_module); // undo the newref call which was needed to suport multiphase initialisation 
+    let mut module_def = unsafe { pyffi::Py_DECREF(py_module.as_ptr()); // undo the newref call which was needed to suport multiphase initialisation 
                                   pyffi::PyModule_GetDef(py_module.as_ptr()) };
     if module_def.is_null() {
         return Err(PySystemError::new_err(format!(
