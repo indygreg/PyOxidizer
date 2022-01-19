@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        environment::{canonicalize_path, Environment, RustEnvironment},
+        environment::{Environment, RustEnvironment},
         project_layout::initialize_project,
         py_packaging::{
             binary::{LibpythonLinkMode, PythonBinaryBuilder},
@@ -17,6 +17,7 @@ use {
     duct::cmd,
     slog::warn,
     starlark_dialect_build_targets::ResolvedTarget,
+    starlark::values::Value,
     std::{
         collections::HashMap,
         fs::create_dir_all,
@@ -443,12 +444,6 @@ pub fn build_pyembed_artifacts(
 ) -> Result<()> {
     create_dir_all(artifacts_path)?;
 
-    let artifacts_path = canonicalize_path(artifacts_path)?;
-
-    if artifacts_current(logger, config_path, &artifacts_path) {
-        return Ok(());
-    }
-
     let mut context: EvaluationContext = EvaluationContextBuilder::new(
         env,
         logger.clone(),
@@ -462,6 +457,8 @@ pub fn build_pyembed_artifacts(
     .build_script_mode(true)
     .try_into()?;
 
+    context.set_var("_OUT_DIR", Value::from(artifacts_path.to_str().unwrap())).unwrap();
+    context.eval("set_build_path(_OUT_DIR)")?;
     context.evaluate_file(config_path)?;
 
     // TODO should we honor only the specified target if one is given?
@@ -471,25 +468,9 @@ pub fn build_pyembed_artifacts(
         // Presence of the generated default python config file implies this is a valid
         // artifacts directory.
         let default_python_config = resolved.output_path.join(DEFAULT_PYTHON_CONFIG_FILENAME);
-        if !default_python_config.exists() {
-            continue;
+        if default_python_config.exists() {
+            return Ok(());
         }
-
-        for p in std::fs::read_dir(&resolved.output_path).context(format!(
-            "reading directory {}",
-            &resolved.output_path.display()
-        ))? {
-            let p = p?;
-
-            let dest_path = artifacts_path.join(p.file_name());
-            std::fs::copy(&p.path(), &dest_path).context(format!(
-                "copying {} to {}",
-                p.path().display(),
-                dest_path.display()
-            ))?;
-        }
-
-        return Ok(());
     }
 
     Err(anyhow!(

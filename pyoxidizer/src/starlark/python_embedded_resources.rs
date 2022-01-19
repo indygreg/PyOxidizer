@@ -58,7 +58,7 @@ impl PythonEmbeddedResourcesValue {
         context: &PyOxidizerEnvironmentContext,
     ) -> Result<ResolvedTarget> {
         let output_path = context
-            .get_output_path(type_values, target)
+            .build_path(type_values)
             .map_err(|_| anyhow!("unable to resolve output path"))?;
 
         warn!(
