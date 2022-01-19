@@ -76,6 +76,7 @@ impl PythonEmbeddedResourcesValue {
         std::fs::create_dir_all(&output_path)
             .with_context(|| format!("creating output directory: {}", output_path.display()))?;
         embedded.write_files(&output_path)?;
+        embedded.write_extra_files(&output_path)?;
 
         Ok(ResolvedTarget {
             run_mode: RunMode::None,
