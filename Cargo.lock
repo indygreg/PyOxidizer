@@ -2427,6 +2427,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "memmap2"
+version = "0.5.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fe3179b85e1fd8b14447cbebadb75e45a1002f541b925f0bfec366d56a81c56d"
+dependencies = [
+ "libc",
+]
+
+[[package]]
 name = "memoffset"
 version = "0.6.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3319,7 +3328,7 @@ name = "python-oxidized-importer"
 version = "0.5.0-pre"
 dependencies = [
  "anyhow",
- "memmap",
+ "memmap2",
  "memory-module-sys",
  "once_cell",
  "pyo3",

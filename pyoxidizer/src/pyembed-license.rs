@@ -185,7 +185,7 @@ pub fn pyembed_licenses() -> anyhow::Result<Vec<tugger_licensing::LicensedCompon
     res.push(component);
 
     let mut component =
-        tugger_licensing::LicensedComponent::new_spdx("memmap", "Apache-2.0 OR MIT")?;
+        tugger_licensing::LicensedComponent::new_spdx("memmap2", "Apache-2.0 OR MIT")?;
     component.set_flavor(tugger_licensing::ComponentFlavor::RustCrate);
     res.push(component);
 
