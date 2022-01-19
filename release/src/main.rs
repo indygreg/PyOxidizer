@@ -1262,6 +1262,22 @@ fn command_generate_pyembed_license(repo_root: &Path, _args: &ArgMatches) -> Res
     Ok(())
 }
 
+fn command_synchronize_generated_files(repo_root: &Path) -> Result<()> {
+    let cargo_lock = generate_new_project_cargo_lock(repo_root, false)?;
+    let pyembed_license = generate_pyembed_license(repo_root)?;
+
+    let pyoxidizer_src_path = repo_root.join("pyoxidizer").join("src");
+    let lock_path = pyoxidizer_src_path.join("new-project-cargo.lock");
+    let license_path = pyoxidizer_src_path.join("pyembed-license.rs");
+
+    println!("writing {}", lock_path.display());
+    std::fs::write(&lock_path, cargo_lock.as_bytes())?;
+    println!("writing {}", license_path.display());
+    std::fs::write(&license_path, pyembed_license.as_bytes())?;
+
+    Ok(())
+}
+
 fn main_impl() -> Result<()> {
     let cwd = std::env::current_dir()?;
 
@@ -1308,6 +1324,9 @@ fn main_impl() -> Result<()> {
                         .help("Name of final package to release"),
                 ),
         )
+        .subcommand(
+            SubCommand::with_name("synchronize-generated-files").about("Write out generated files"),
+        )
         .get_matches();
 
     match matches.subcommand() {
@@ -1318,6 +1337,7 @@ fn main_impl() -> Result<()> {
         ("generate-pyembed-license", Some(args)) => {
             command_generate_pyembed_license(repo_root, args)
         }
+        ("synchronize-generated-files", Some(_)) => command_synchronize_generated_files(repo_root),
         _ => Err(anyhow!("invalid sub-command")),
     }
 }
