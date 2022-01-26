@@ -831,7 +831,7 @@ checksum = "f00177cda1bb5c5b0a05b1b506125c776411cdfc6a41085126881266e0cdc242"
 
 [[package]]
 name = "cpio-archive"
-version = "0.3.0-pre"
+version = "0.2.0"
 dependencies = [
  "chrono",
  "is_executable",
