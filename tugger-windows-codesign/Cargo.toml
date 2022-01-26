@@ -20,8 +20,8 @@ slog = "2.7"
 yasna = "0.4"
 
 [dependencies.tugger-common]
-version = "0.7.0-pre"
-path = "../tugger-common"
+version = "0.6.0"
+# path = "../tugger-common"
 
 [dependencies.tugger-windows]
 version = "0.8.0-pre"
