@@ -93,6 +93,10 @@ pub fn pyembed_licenses() -> anyhow::Result<Vec<tugger_licensing::LicensedCompon
     component.set_flavor(tugger_licensing::ComponentFlavor::RustCrate);
     res.push(component);
 
+    let mut component = tugger_licensing::LicensedComponent::new_spdx("data-encoding", "MIT")?;
+    component.set_flavor(tugger_licensing::ComponentFlavor::RustCrate);
+    res.push(component);
+
     let mut component =
         tugger_licensing::LicensedComponent::new_spdx("digest", "Apache-2.0 OR MIT")?;
     component.set_flavor(tugger_licensing::ComponentFlavor::RustCrate);
@@ -196,6 +200,11 @@ pub fn pyembed_licenses() -> anyhow::Result<Vec<tugger_licensing::LicensedCompon
 
     let mut component =
         tugger_licensing::LicensedComponent::new_spdx("miniz_oxide", "Apache-2.0 OR MIT OR Zlib")?;
+    component.set_flavor(tugger_licensing::ComponentFlavor::RustCrate);
+    res.push(component);
+
+    let mut component =
+        tugger_licensing::LicensedComponent::new_spdx("num_threads", "Apache-2.0 OR MIT")?;
     component.set_flavor(tugger_licensing::ComponentFlavor::RustCrate);
     res.push(component);
 
