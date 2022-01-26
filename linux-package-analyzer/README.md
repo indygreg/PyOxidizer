@@ -9,6 +9,9 @@ Run `lpa help` for more details.
 # Installing
 
 ```
+# From the latest released version on crates.io:
+$ cargo install linux-package-analyzer
+
 # From the latest commit in the canonical Git repository:
 $ cargo install --git https://github.com/indygreg/PyOxidizer linux-package-analyzer
 
