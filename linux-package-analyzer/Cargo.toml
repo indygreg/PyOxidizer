@@ -26,13 +26,14 @@ num_cpus = "1.13"
 object = "0.28"
 once_cell = "1.9"
 pbr = "1.0"
+rpm-rs = "0.8"
 rusqlite = { version = "0.26", features = ["bundled"] }
 symbolic-demangle = "8.5"
 tokio = { version = "1.15", features = ["full"] }
 url = "2.2"
 xz2 = "0.1"
 zip = "0.5"
-zstd = "0.7"
+zstd = "0.9"
 
 [dependencies.debian-packaging]
 version = "0.10.0-pre"
@@ -41,7 +42,3 @@ path = "../debian-packaging"
 [dependencies.rpm-repository]
 version = "0.2.0-pre"
 path = "../rpm-repository"
-
-[dependencies.rpm-rs]
-git = "https://github.com/indygreg/rpm-rs"
-branch = "downgrade-zstd"

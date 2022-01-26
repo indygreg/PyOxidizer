@@ -22,7 +22,7 @@ slog = "2.7"
 tar = "0.4"
 toml = "0.5"
 xz2 = "0.1"
-zstd = "0.7"
+zstd = "0.9"
 
 [dependencies.tugger-common]
 version = "0.7.0-pre"
