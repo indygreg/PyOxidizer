@@ -2404,7 +2404,6 @@ dependencies = [
  "tokio",
  "url",
  "xz2",
- "zip",
  "zstd",
 ]
 
