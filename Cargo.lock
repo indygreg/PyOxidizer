@@ -2397,7 +2397,7 @@ dependencies = [
  "object",
  "once_cell",
  "pbr",
- "rpm-repository",
+ "rpm-repository 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rpm-rs",
  "rusqlite",
  "symbolic-demangle",
@@ -3777,7 +3777,28 @@ checksum = "cabe4fa914dec5870285fa7f71f602645da47c486e68486d2b4ceb4a343e90ac"
 
 [[package]]
 name = "rpm-repository"
-version = "0.2.0-pre"
+version = "0.1.0"
+dependencies = [
+ "async-compression",
+ "digest 0.10.1",
+ "futures",
+ "hex",
+ "pin-project",
+ "reqwest",
+ "serde",
+ "serde-xml-rs",
+ "sha-1 0.10.0",
+ "sha2 0.10.1",
+ "thiserror",
+ "tokio",
+ "url",
+]
+
+[[package]]
+name = "rpm-repository"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fc2f296f3a5bfd4b6bab65065b6099884bc395a9118f3d41fd79298cba345c4e"
 dependencies = [
  "async-compression",
  "digest 0.10.1",
