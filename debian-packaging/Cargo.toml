@@ -46,8 +46,8 @@ version = "0.3"
 features = ["bzip2", "futures-io", "gzip", "lzma", "xz", "zstd"]
 
 [dependencies.pgp-cleartext]
-version = "0.2.0-pre"
-path = "../pgp-cleartext"
+version = "0.1.0"
+# path = "../pgp-cleartext"
 
 [dependencies.reqwest]
 version = "0.11"
