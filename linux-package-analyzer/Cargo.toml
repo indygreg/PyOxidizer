@@ -36,8 +36,8 @@ zip = "0.5"
 zstd = "0.9"
 
 [dependencies.debian-packaging]
-version = "0.10.0-pre"
-path = "../debian-packaging"
+version = "0.10.0"
+# path = "../debian-packaging"
 
 [dependencies.rpm-repository]
 version = "0.2.0-pre"
