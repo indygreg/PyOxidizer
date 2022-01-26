@@ -114,7 +114,7 @@ dependencies = [
  "bytes",
  "chrono",
  "clap 2.34.0",
- "cryptographic-message-syntax 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cryptographic-message-syntax",
  "goblin",
  "hex",
  "once_cell",
@@ -130,7 +130,7 @@ dependencies = [
  "slog-term",
  "thiserror",
  "tugger-apple",
- "x509-certificate 0.7.0-pre",
+ "x509-certificate",
  "yasna",
 ]
 
@@ -991,7 +991,7 @@ dependencies = [
 
 [[package]]
 name = "cryptographic-message-syntax"
-version = "0.7.0"
+version = "0.8.0-pre"
 dependencies = [
  "bcder",
  "bytes",
@@ -1000,23 +1000,7 @@ dependencies = [
  "pem 1.0.2",
  "reqwest",
  "ring",
- "x509-certificate 0.7.0-pre",
-]
-
-[[package]]
-name = "cryptographic-message-syntax"
-version = "0.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "63363b0beb9e839342fa730d5e3091c5a5337fc2a1f9b2b12a4a905bf01486a2"
-dependencies = [
- "bcder",
- "bytes",
- "chrono",
- "hex",
- "pem 1.0.2",
- "reqwest",
- "ring",
- "x509-certificate 0.6.0",
+ "x509-certificate",
 ]
 
 [[package]]
@@ -4926,7 +4910,7 @@ dependencies = [
  "tugger-windows-codesign",
  "tugger-wix",
  "walkdir",
- "x509-certificate 0.7.0-pre",
+ "x509-certificate",
 ]
 
 [[package]]
@@ -4963,7 +4947,7 @@ dependencies = [
  "apple-bundles 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "apple-codesign",
  "bcder",
- "cryptographic-message-syntax 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cryptographic-message-syntax",
  "goblin",
  "p12",
  "reqwest",
@@ -4972,7 +4956,7 @@ dependencies = [
  "thiserror",
  "tugger-file-manifest 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-windows-codesign",
- "x509-certificate 0.7.0-pre",
+ "x509-certificate",
  "yasna",
 ]
 
@@ -5493,21 +5477,6 @@ dependencies = [
  "curve25519-dalek",
  "rand_core 0.5.1",
  "zeroize",
-]
-
-[[package]]
-name = "x509-certificate"
-version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d4d5a5a04e3be0cd0dbf59eceaf99878d3df6d8856431e5bf17671ec0381718b"
-dependencies = [
- "bcder",
- "bytes",
- "chrono",
- "hex",
- "pem 1.0.2",
- "ring",
- "thiserror",
 ]
 
 [[package]]
