@@ -89,12 +89,15 @@ pub fn get_interpreter_zip<'interpreter, 'resources>(
     // Ideally we'd set up an interpreter with only zip importing. But for
     // maximum compatibility we need to support filesystem import of extension
     // modules.
-    let mut interp = get_interpreter_plain()?;
+    let interp = get_interpreter_plain()?;
 
-    let py = interp.acquire_gil();
-    let sys = py.import("sys")?;
-    let sys_path = sys.getattr("path")?;
-    sys_path.call_method("insert", (0, zip_path), None)?;
+    interp.with_gil(|py| -> PyResult<()> {
+        let sys = py.import("sys")?;
+        let sys_path = sys.getattr("path")?;
+        sys_path.call_method("insert", (0, zip_path), None)?;
+
+        Ok(())
+    })?;
 
     Ok(interp)
 }
@@ -128,10 +131,9 @@ pub fn get_interpreter_with_oxidized<'interpreter, 'resources>(
 pub fn get_interpreter_and_oxidized_finder<'interpreter, 'resources>(
     packed_resources: &'resources [u8],
 ) -> Result<(MainPythonInterpreter<'interpreter, 'resources>, Py<PyAny>)> {
-    let mut interp = get_interpreter_with_oxidized()?;
-    let py = interp.acquire_gil();
+    let interp = get_interpreter_with_oxidized()?;
 
-    let finder_fn = || -> PyResult<_> {
+    let finder = interp.with_gil(|py| -> PyResult<_> {
         let oxidized_importer = py.import("oxidized_importer")?;
         let finder_type = oxidized_importer.getattr("OxidizedFinder")?;
         let finder = finder_type.call0()?;
@@ -142,9 +144,7 @@ pub fn get_interpreter_and_oxidized_finder<'interpreter, 'resources>(
         let finder = finder.into_py(py);
 
         Ok(finder)
-    };
-
-    let finder = finder_fn().map_err(|e| anyhow!("error executing Python code: {}", e))?;
+    })?;
 
     Ok((interp, finder))
 }
@@ -223,24 +223,27 @@ pub fn resolve_zip_archive() -> Result<Vec<u8>> {
     }
 
     let config = default_interpreter_config();
-    let mut interp = MainPythonInterpreter::new(config)
+    let interp = MainPythonInterpreter::new(config)
         .map_err(|e| anyhow!("error creating Python interpreter: {}", e.to_string()))?;
-    let py = interp.acquire_gil();
 
-    let zipapp = py.import("zipapp")?;
+    let archive_path = interp.with_gil(|py| -> PyResult<_> {
+        let zipapp = py.import("zipapp")?;
 
-    let archive_path = temp_dir.path().join("stdlib.zip");
+        let archive_path = temp_dir.path().join("stdlib.zip");
 
-    zipapp.call_method(
-        "create_archive",
-        (
-            temp_dir.path().join("lib"),
-            &archive_path,
-            py.None(),
-            "json:tool",
-        ),
-        None,
-    )?;
+        zipapp.call_method(
+            "create_archive",
+            (
+                temp_dir.path().join("lib"),
+                &archive_path,
+                py.None(),
+                "json:tool",
+            ),
+            None,
+        )?;
+
+        Ok(archive_path)
+    })?;
 
     let data = std::fs::read(&archive_path)?;
 

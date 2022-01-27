@@ -45,18 +45,20 @@ fn python_resources_state_resolve_modules(
 }
 
 fn python_interpreter_import_all_modules(
-    interp: &mut MainPythonInterpreter,
+    interp: &MainPythonInterpreter,
     modules: &[&str],
 ) -> Result<()> {
-    let py = interp.acquire_gil();
+    interp.with_gil(|py| -> Result<_> {
+        for name in modules {
+            // println!("{}", name);
+            py.import(name).map_err(|e| {
+                e.print(py);
+                anyhow!("error importing module {}", name)
+            })?;
+        }
 
-    for name in modules {
-        // println!("{}", name);
-        py.import(name).map_err(|e| {
-            e.print(py);
-            anyhow!("error importing module {}", name)
-        })?;
-    }
+        Ok(())
+    })?;
 
     Ok(())
 }
@@ -106,15 +108,17 @@ pub fn bench_oxidized_finder(c: &mut Criterion) {
                     get_interpreter_and_oxidized_finder(&packed_resources)
                         .expect("failed to obtain OxidizedFinder")
                 },
-                |(mut interp, finder)| {
-                    let py = interp.acquire_gil();
-                    let finder = finder.as_ref(py);
+                |(interp, finder)| {
+                    interp.with_gil(|py| {
+                        let finder = finder.as_ref(py);
 
-                    for name in &names {
-                        finder
-                            .call_method("find_spec", (name, py.None()), None)
-                            .expect("find_spec call failed");
-                    }
+                        for name in &names {
+                            finder
+                                .call_method("find_spec", (name, py.None()), None)
+                                .expect("find_spec call failed");
+                        }
+                    });
+                    std::mem::drop(interp);
                 },
             )
         },
@@ -128,15 +132,17 @@ pub fn bench_oxidized_finder(c: &mut Criterion) {
                     get_interpreter_and_oxidized_finder(&packed_resources)
                         .expect("failed to obtain OxidizedFinder")
                 },
-                |(mut interp, finder)| {
-                    let py = interp.acquire_gil();
-                    let finder = finder.as_ref(py);
+                |(interp, finder)| {
+                    interp.with_gil(|py| {
+                        let finder = finder.as_ref(py);
 
-                    for name in &names {
-                        finder
-                            .call_method("get_source", (name,), None)
-                            .expect("get_source call failed");
-                    }
+                        for name in &names {
+                            finder
+                                .call_method("get_source", (name,), None)
+                                .expect("get_source call failed");
+                        }
+                    });
+                    std::mem::drop(interp);
                 },
             )
         },
@@ -150,15 +156,17 @@ pub fn bench_oxidized_finder(c: &mut Criterion) {
                     get_interpreter_and_oxidized_finder(&packed_resources)
                         .expect("failed to obtain OxidizedFinder")
                 },
-                |(mut interp, finder)| {
-                    let py = interp.acquire_gil();
-                    let finder = finder.as_ref(py);
+                |(interp, finder)| {
+                    interp.with_gil(|py| {
+                        let finder = finder.as_ref(py);
 
-                    for name in &names {
-                        finder
-                            .call_method("get_code", (name,), None)
-                            .expect("get_code call failed");
-                    }
+                        for name in &names {
+                            finder
+                                .call_method("get_code", (name,), None)
+                                .expect("get_code call failed");
+                        }
+                    });
+                    std::mem::drop(interp);
                 },
             )
         },
@@ -167,8 +175,8 @@ pub fn bench_oxidized_finder(c: &mut Criterion) {
     c.bench_function("oxidized_importer.PathFinder.import_all_modules", |b| {
         b.iter_with_setup(
             || get_interpreter_plain().expect("unable to obtain interpreter"),
-            |mut interp| {
-                python_interpreter_import_all_modules(&mut interp, &importable_modules)
+            |interp| {
+                python_interpreter_import_all_modules(&interp, &importable_modules)
                     .expect("failed to import all modules");
                 std::mem::drop(interp);
             },
@@ -180,8 +188,8 @@ pub fn bench_oxidized_finder(c: &mut Criterion) {
         |b| {
             b.iter_with_setup(
                 || get_interpreter_packed(&packed_resources).expect("unable to obtain interpreter"),
-                |mut interp| {
-                    python_interpreter_import_all_modules(&mut interp, &importable_modules)
+                |interp| {
+                    python_interpreter_import_all_modules(&interp, &importable_modules)
                         .expect("failed to import all modules");
                     std::mem::drop(interp);
                 },

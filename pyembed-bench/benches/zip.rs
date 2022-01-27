@@ -35,20 +35,20 @@ fn zip_index(source: impl Read + Seek) -> Result<()> {
 }
 
 fn python_interpreter_import_all_modules(
-    interp: &mut MainPythonInterpreter,
+    interp: &MainPythonInterpreter,
     modules: &[&str],
 ) -> Result<()> {
-    let py = interp.acquire_gil();
+    interp.with_gil(|py| {
+        for name in modules {
+            // println!("{}", name);
+            py.import(name).map_err(|e| {
+                e.print(py);
+                anyhow!("error importing module {}", name)
+            })?;
+        }
 
-    for name in modules {
-        // println!("{}", name);
-        py.import(name).map_err(|e| {
-            e.print(py);
-            anyhow!("error importing module {}", name)
-        })?;
-    }
-
-    Ok(())
+        Ok(())
+    })
 }
 
 pub fn bench_zip(c: &mut Criterion) {
@@ -149,8 +149,8 @@ pub fn bench_zip(c: &mut Criterion) {
     c.bench_function("oxidized_importer.zipimport.import_all_modules", |b| {
         b.iter_with_setup(
             || get_interpreter_zip(&zip_path).expect("unable to obtain interpreter"),
-            |mut interp| {
-                python_interpreter_import_all_modules(&mut interp, &importable_modules)
+            |interp| {
+                python_interpreter_import_all_modules(&interp, &importable_modules)
                     .expect("failed to import all modules");
                 std::mem::drop(interp);
             },
@@ -162,16 +162,14 @@ pub fn bench_zip(c: &mut Criterion) {
         |b| {
             b.iter_with_setup(
                 || {
-                    let mut interp =
+                    let interp =
                         get_interpreter_with_oxidized().expect("unable to obtain interpreter");
-                    let py = interp.acquire_gil();
-                    let zip_data_bytes = zip_data.as_slice().into_py(py);
+                    let zip_data_bytes = interp.with_gil(|py| zip_data.as_slice().into_py(py));
 
                     (interp, zip_data_bytes)
                 },
-                |(mut interp, zip_data_bytes)| {
-                    {
-                        let py = interp.acquire_gil();
+                |(interp, zip_data_bytes)| {
+                    interp.with_gil(|py| {
                         let oxidized_importer = py.import("oxidized_importer").unwrap();
                         let zip_type = oxidized_importer.getattr("OxidizedZipFinder").unwrap();
                         let constructor = zip_type.getattr("from_zip_data").unwrap();
@@ -179,9 +177,9 @@ pub fn bench_zip(c: &mut Criterion) {
                         let sys = py.import("sys").unwrap();
                         let meta_path = sys.getattr("meta_path").unwrap();
                         meta_path.call_method("insert", (0, finder), None).unwrap();
-                    }
+                    });
 
-                    python_interpreter_import_all_modules(&mut interp, &importable_modules)
+                    python_interpreter_import_all_modules(&interp, &importable_modules)
                         .expect("failed to import all modules");
                     std::mem::drop(interp);
                 },
@@ -194,9 +192,8 @@ pub fn bench_zip(c: &mut Criterion) {
         |b| {
             b.iter_with_setup(
                 || get_interpreter_with_oxidized().expect("unable to obtain interpreter"),
-                |mut interp| {
-                    {
-                        let py = interp.acquire_gil();
+                |interp| {
+                    interp.with_gil(|py| {
                         let oxidized_importer = py.import("oxidized_importer").unwrap();
                         let zip_type = oxidized_importer.getattr("OxidizedZipFinder").unwrap();
                         let constructor = zip_type.getattr("from_path").unwrap();
@@ -206,9 +203,9 @@ pub fn bench_zip(c: &mut Criterion) {
                         let sys = py.import("sys").unwrap();
                         let meta_path = sys.getattr("meta_path").unwrap();
                         meta_path.call_method("insert", (0, finder), None).unwrap();
-                    }
+                    });
 
-                    python_interpreter_import_all_modules(&mut interp, &importable_modules)
+                    python_interpreter_import_all_modules(&interp, &importable_modules)
                         .expect("failed to import all modules");
                     std::mem::drop(interp);
                 },
