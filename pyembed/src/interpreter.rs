@@ -707,9 +707,12 @@ fn write_modules_to_path(py: Python, path: &Path) -> Result<(), &'static str> {
 
 impl<'interpreter, 'resources> Drop for MainPythonInterpreter<'interpreter, 'resources> {
     fn drop(&mut self) {
-        if let Some(path) = self.write_modules_path.clone() {
-            if let Err(msg) = write_modules_to_path(self.acquire_gil(), &path) {
-                eprintln!("error writing modules file: {}", msg);
+        if let Some(path) = self.write_modules_path.as_ref() {
+            match self.with_gil(|py| write_modules_to_path(py, path)) {
+                Ok(_) => {}
+                Err(msg) => {
+                    eprintln!("error writing modules file: {}", msg);
+                }
             }
         }
 
