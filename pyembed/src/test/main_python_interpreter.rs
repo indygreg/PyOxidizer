@@ -5,6 +5,7 @@
 use {
     super::{default_interpreter_config, run_py_test},
     crate::MainPythonInterpreter,
+    pyo3::ffi as pyffi,
     rusty_fork::rusty_fork_test,
 };
 
@@ -16,6 +17,22 @@ rusty_fork_test! {
         interp.with_gil(|py| {
             py.import("sys").unwrap();
         });
+    }
+
+    #[test]
+    fn interpreter_gil_state() {
+        let config = default_interpreter_config();
+        let interp = MainPythonInterpreter::new(config).unwrap();
+
+        assert_eq!(unsafe { pyffi::PyGILState_Check() }, 1);
+
+        interp.with_gil(|_| {
+            assert_eq!(unsafe { pyffi::PyGILState_Check() }, 1);
+        });
+
+        assert_eq!(unsafe { pyffi::PyGILState_Check() }, 1);
+
+        std::mem::drop(interp);
     }
 
     #[test]

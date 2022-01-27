@@ -211,6 +211,9 @@ impl<'interpreter, 'resources> MainPythonInterpreter<'interpreter, 'resources> {
             ));
         }
 
+        // The GIL is held.
+        debug_assert_eq!(unsafe { pyffi::PyGILState_Check() }, 1);
+
         // At this point, the core of Python is initialized.
         // importlib._bootstrap has been loaded. But not
         // importlib._bootstrap_external. This is where we work our magic to
@@ -230,8 +233,12 @@ impl<'interpreter, 'resources> MainPythonInterpreter<'interpreter, 'resources> {
             ));
         }
 
+        debug_assert_eq!(unsafe { pyffi::PyGILState_Check() }, 1);
+
         self.write_modules_path =
             self.with_gil(|py| self.init_post_main(py, oxidized_finder_loaded))?;
+
+        debug_assert_eq!(unsafe { pyffi::PyGILState_Check() }, 1);
 
         Ok(())
     }
