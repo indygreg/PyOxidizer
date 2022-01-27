@@ -89,7 +89,6 @@ pub struct MainPythonInterpreter<'interpreter, 'resources: 'interpreter> {
     config: ResolvedOxidizedPythonInterpreterConfig<'resources>,
     interpreter_guard: Option<std::sync::MutexGuard<'interpreter, ()>>,
     pub(crate) allocator: Option<PythonMemoryAllocator>,
-    gil: Option<GILGuard>,
     /// File to write containing list of modules when the interpreter finalizes.
     write_modules_path: Option<PathBuf>,
 }
@@ -119,7 +118,6 @@ impl<'interpreter, 'resources> MainPythonInterpreter<'interpreter, 'resources> {
             config,
             interpreter_guard: None,
             allocator: None,
-            gil: None,
             write_modules_path: None,
         };
 
@@ -461,21 +459,6 @@ impl<'interpreter, 'resources> MainPythonInterpreter<'interpreter, 'resources> {
         Ok(write_modules_path)
     }
 
-    /// Ensure the Python GIL is released.
-    pub fn release_gil(&mut self) {
-        self.gil = None;
-    }
-
-    /// Ensure the Python GIL is acquired, returning a handle on the interpreter.
-    ///
-    /// The returned value has a lifetime of the `MainPythonInterpreter`
-    /// instance. This is because `MainPythonInterpreter.drop()` finalizes
-    /// the interpreter. The borrow checker should refuse to compile code
-    /// where the returned `Python` outlives `self`.
-    pub fn acquire_gil(&mut self) -> Python<'_> {
-        self.gil.get_or_insert_with(Python::acquire_gil).python()
-    }
-
     /// Proxy for [Python::with_gil()].
     ///
     /// This allows running Python code via the PyO3 Rust APIs. Alternatively,
@@ -715,11 +698,6 @@ impl<'interpreter, 'resources> Drop for MainPythonInterpreter<'interpreter, 'res
                 }
             }
         }
-
-        // This will drop the GILGuard if it is defined. This needs to be called
-        // before we finalize the interpreter, otherwise GILGuard's drop may try
-        // to DECREF objects after they are freed by Py_FinalizeEx().
-        self.gil = None;
 
         let _ = unsafe { pyffi::Py_FinalizeEx() };
     }

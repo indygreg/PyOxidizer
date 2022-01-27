@@ -52,7 +52,8 @@ Backwards Compatibility Notes
 
 * The ``pyembed::MainPythonInterpreter`` Rust API for controlling embedded
   Python interpreters has been refactored. Various methods now take
-  `&self` instead of `&mut self`.
+  ``&self`` instead of ``&mut self``. ``acquire_gil()`` and ``release_gil()``
+  have been removed (use ``with_gil()`` instead).
 
 New Features
 ^^^^^^^^^^^^
