@@ -109,8 +109,6 @@ impl<'interpreter, 'resources> MainPythonInterpreter<'interpreter, 'resources> {
             NewInterpreterError::Simple("unable to acquire global interpreter guard")
         })?);
 
-        let origin_string = self.config.origin().display().to_string();
-
         if let Some(tcl_library) = &self.config.tcl_library {
             std::env::set_var("TCL_LIBRARY", tcl_library);
         }
@@ -197,9 +195,76 @@ impl<'interpreter, 'resources> MainPythonInterpreter<'interpreter, 'resources> {
             ));
         }
 
-        let gil = Python::acquire_gil();
-        let py = gil.python();
+        Python::with_gil(|py| self.init_post_main(py, oxidized_finder_loaded))
+    }
 
+    /// Inject OxidizedFinder into Python's importing mechanism.
+    ///
+    /// This function is meant to be called as part of multi-phase interpreter initialization
+    /// after `Py_InitializeFromConfig()` but before `_Py_InitializeMain()`. Calling it
+    /// any other time may result in errors.
+    ///
+    /// Returns whether an `OxidizedFinder` was injected into the interpreter.
+    fn inject_oxidized_importer(&self, py: Python) -> Result<bool, NewInterpreterError> {
+        if !self.config.oxidized_importer {
+            return Ok(false);
+        }
+
+        let resources_state = Box::new(PythonResourcesState::try_from(&self.config)?);
+
+        let oxidized_importer = py.import(OXIDIZED_IMPORTER_NAME_STR).map_err(|err| {
+            NewInterpreterError::new_from_pyerr(py, err, "import of oxidized importer module")
+        })?;
+
+        let cb = |importer_state: &mut ImporterState| match self.config.multiprocessing_start_method
+        {
+            MultiprocessingStartMethod::None => {}
+            MultiprocessingStartMethod::Fork
+            | MultiprocessingStartMethod::ForkServer
+            | MultiprocessingStartMethod::Spawn => {
+                importer_state.set_multiprocessing_set_start_method(Some(
+                    self.config.multiprocessing_start_method.to_string(),
+                ));
+            }
+            MultiprocessingStartMethod::Auto => {
+                // Windows uses "spawn" because "fork" isn't available.
+                // Everywhere else uses "fork." The default on macOS is "spawn." This
+                // is due to https://bugs.python.org/issue33725, which only affects
+                // Python framework builds. Our assumption is we aren't using a Python
+                // framework, so "spawn" is safe.
+                let method = if cfg!(target_family = "windows") {
+                    "spawn"
+                } else {
+                    "fork"
+                };
+
+                importer_state.set_multiprocessing_set_start_method(Some(method.to_string()));
+            }
+        };
+
+        // Ownership of the resources state is transferred into the importer, where the Box
+        // is summarily leaked. However, the importer tracks a pointer to the resources state
+        // and will constitute the struct for dropping when it itself is dropped. We could
+        // potentially encounter a use-after-free if the importer is used after self.config
+        // is dropped. However, that would require self to be dropped. And if self is dropped,
+        // there should no longer be a Python interpreter around. So it follows that the
+        // importer state cannot be dropped after self.
+
+        replace_meta_path_importers(py, oxidized_importer, resources_state, Some(cb)).map_err(
+            |err| {
+                NewInterpreterError::new_from_pyerr(py, err, "initialization of oxidized importer")
+            },
+        )?;
+
+        Ok(true)
+    }
+
+    /// Performs interpreter configuration after main interpreter initialization.
+    fn init_post_main(
+        &mut self,
+        py: Python,
+        oxidized_finder_loaded: bool,
+    ) -> Result<(), NewInterpreterError> {
         let sys_module = py
             .import("sys")
             .map_err(|e| NewInterpreterError::new_from_pyerr(py, e, "obtaining sys module"))?;
@@ -306,7 +371,7 @@ impl<'interpreter, 'resources> MainPythonInterpreter<'interpreter, 'resources> {
 
         if self.config.sys_meipass {
             let meipass = b"_MEIPASS\0";
-            let value = origin_string.to_object(py);
+            let value = self.config.origin().display().to_string().to_object(py);
 
             match value.with_borrowed_ptr(py, |py_value| unsafe {
                 pyffi::PySys_SetObject(meipass.as_ptr() as *const i8, py_value)
@@ -350,67 +415,6 @@ impl<'interpreter, 'resources> MainPythonInterpreter<'interpreter, 'resources> {
         }
 
         Ok(())
-    }
-
-    /// Inject OxidizedFinder into Python's importing mechanism.
-    ///
-    /// This function is meant to be called as part of multi-phase interpreter initialization
-    /// after `Py_InitializeFromConfig()` but before `_Py_InitializeMain()`. Calling it
-    /// any other time may result in errors.
-    ///
-    /// Returns whether an `OxidizedFinder` was injected into the interpreter.
-    fn inject_oxidized_importer(&self, py: Python) -> Result<bool, NewInterpreterError> {
-        if !self.config.oxidized_importer {
-            return Ok(false);
-        }
-
-        let resources_state = Box::new(PythonResourcesState::try_from(&self.config)?);
-
-        let oxidized_importer = py.import(OXIDIZED_IMPORTER_NAME_STR).map_err(|err| {
-            NewInterpreterError::new_from_pyerr(py, err, "import of oxidized importer module")
-        })?;
-
-        let cb = |importer_state: &mut ImporterState| match self.config.multiprocessing_start_method
-        {
-            MultiprocessingStartMethod::None => {}
-            MultiprocessingStartMethod::Fork
-            | MultiprocessingStartMethod::ForkServer
-            | MultiprocessingStartMethod::Spawn => {
-                importer_state.set_multiprocessing_set_start_method(Some(
-                    self.config.multiprocessing_start_method.to_string(),
-                ));
-            }
-            MultiprocessingStartMethod::Auto => {
-                // Windows uses "spawn" because "fork" isn't available.
-                // Everywhere else uses "fork." The default on macOS is "spawn." This
-                // is due to https://bugs.python.org/issue33725, which only affects
-                // Python framework builds. Our assumption is we aren't using a Python
-                // framework, so "spawn" is safe.
-                let method = if cfg!(target_family = "windows") {
-                    "spawn"
-                } else {
-                    "fork"
-                };
-
-                importer_state.set_multiprocessing_set_start_method(Some(method.to_string()));
-            }
-        };
-
-        // Ownership of the resources state is transferred into the importer, where the Box
-        // is summarily leaked. However, the importer tracks a pointer to the resources state
-        // and will constitute the struct for dropping when it itself is dropped. We could
-        // potentially encounter a use-after-free if the importer is used after self.config
-        // is dropped. However, that would require self to be dropped. And if self is dropped,
-        // there should no longer be a Python interpreter around. So it follows that the
-        // importer state cannot be dropped after self.
-
-        replace_meta_path_importers(py, oxidized_importer, resources_state, Some(cb)).map_err(
-            |err| {
-                NewInterpreterError::new_from_pyerr(py, err, "initialization of oxidized importer")
-            },
-        )?;
-
-        Ok(true)
     }
 
     /// Ensure the Python GIL is released.
