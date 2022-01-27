@@ -19,17 +19,17 @@ fn new_interpreter<'interpreter, 'resources>(
     Ok(interp)
 }
 
-fn get_importer(interp: &mut MainPythonInterpreter) -> Result<PyObject> {
-    let py = interp.acquire_gil();
+fn get_importer(interp: &MainPythonInterpreter) -> Result<PyObject> {
+    interp.with_gil(|py| {
+        let sys = py.import("sys").unwrap();
+        let meta_path = sys.getattr("meta_path").unwrap();
+        assert_eq!(meta_path.len().unwrap(), 2);
 
-    let sys = py.import("sys").unwrap();
-    let meta_path = sys.getattr("meta_path").unwrap();
-    assert_eq!(meta_path.len().unwrap(), 2);
+        let importer = meta_path.get_item(0).unwrap();
+        assert_eq!(importer.get_type().name().unwrap(), "OxidizedFinder");
 
-    let importer = meta_path.get_item(0).unwrap();
-    assert_eq!(importer.get_type().name().unwrap(), "OxidizedFinder");
-
-    Ok(importer.to_object(py))
+        Ok(importer.to_object(py))
+    })
 }
 
 rusty_fork_test! {
@@ -39,43 +39,46 @@ rusty_fork_test! {
     fn no_resources() {
         let mut config = default_interpreter_config();
         config.oxidized_importer = true;
-        let mut interp = MainPythonInterpreter::new(config).unwrap();
+        let interp = MainPythonInterpreter::new(config).unwrap();
 
-        let py = interp.acquire_gil();
-        let sys = py.import("sys").unwrap();
-        let meta_path = sys.getattr("meta_path").unwrap();
-        assert_eq!(meta_path.len().unwrap(), 2);
+        interp.with_gil(|py| {
+            let sys = py.import("sys").unwrap();
+            let meta_path = sys.getattr("meta_path").unwrap();
+            assert_eq!(meta_path.len().unwrap(), 2);
 
-        let importer = meta_path.get_item(0).unwrap();
-        assert_eq!(importer.get_type().name().unwrap(), "OxidizedFinder");
+            let importer = meta_path.get_item(0).unwrap();
+            assert_eq!(importer.get_type().name().unwrap(), "OxidizedFinder");
 
-        let errno = py.import("errno").unwrap();
-        let loader = errno.getattr("__loader__").unwrap();
-        // It isn't OxidizedFinder because OxidizedFinder is just a proxy.
-        assert!(loader
-            .to_string()
-            .contains("_frozen_importlib.BuiltinImporter"));
+            let errno = py.import("errno").unwrap();
+            let loader = errno.getattr("__loader__").unwrap();
+            // It isn't OxidizedFinder because OxidizedFinder is just a proxy.
+            assert!(loader
+                .to_string()
+                .contains("_frozen_importlib.BuiltinImporter"));
+        });
+
     }
 
     /// find_spec() returns None on missing module.
     #[test]
     fn find_spec_missing() {
-        let mut interp = new_interpreter().unwrap();
-        let importer = get_importer(&mut interp).unwrap();
-        let py = interp.acquire_gil();
+        let interp = new_interpreter().unwrap();
+        let importer = get_importer(&interp).unwrap();
 
-        assert_eq!(
-            importer
-                .call_method(py, "find_spec", ("missing_package", py.None()), None)
-                .unwrap(),
-            py.None()
-        );
-        assert_eq!(
-            importer
-                .call_method(py, "find_spec", ("foo.bar", py.None()), None)
-                .unwrap(),
-            py.None()
-        );
+        interp.with_gil(|py| {
+            assert_eq!(
+                importer
+                    .call_method(py, "find_spec", ("missing_package", py.None()), None)
+                    .unwrap(),
+                py.None()
+            );
+            assert_eq!(
+                importer
+                    .call_method(py, "find_spec", ("foo.bar", py.None()), None)
+                    .unwrap(),
+                py.None()
+            );
+        });
     }
 
     /// Run test_importer_builtins.py.

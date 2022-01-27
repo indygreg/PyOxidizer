@@ -49,78 +49,80 @@ fn assert_importer(oxidized: bool, filesystem: bool) {
 
     config.oxidized_importer = oxidized;
     config.filesystem_importer = filesystem;
-    let mut interp = MainPythonInterpreter::new(config).unwrap();
+    let interp = MainPythonInterpreter::new(config).unwrap();
 
-    let py = interp.acquire_gil();
-    let sys = py.import("sys").unwrap();
-    let meta_path_reprs = reprs(sys.getattr("meta_path").unwrap()).unwrap();
-    let path_hook_reprs = reprs(sys.getattr("path_hooks").unwrap()).unwrap();
-    const PATH_HOOK_REPR: &str =
-        "built-in method path_hook of oxidized_importer.OxidizedFinder object";
+    interp.with_gil(|py| {
+        let sys = py.import("sys").unwrap();
+        let meta_path_reprs = reprs(sys.getattr("meta_path").unwrap()).unwrap();
+        let path_hook_reprs = reprs(sys.getattr("path_hooks").unwrap()).unwrap();
+        const PATH_HOOK_REPR: &str =
+            "built-in method path_hook of oxidized_importer.OxidizedFinder object";
 
-    // OxidizedFinder should be installed sys.meta_path and sys.path_hooks as first
-    // element when enabled. Its presence also replaced BuiltinImporter and
-    // FrozenImporter.
-    if oxidized {
-        assert!(meta_path_reprs[0].contains("OxidizedFinder"));
-        assert!(path_hook_reprs[0].contains(PATH_HOOK_REPR));
+        // OxidizedFinder should be installed sys.meta_path and sys.path_hooks as first
+        // element when enabled. Its presence also replaced BuiltinImporter and
+        // FrozenImporter.
+        if oxidized {
+            assert!(meta_path_reprs[0].contains("OxidizedFinder"));
+            assert!(path_hook_reprs[0].contains(PATH_HOOK_REPR));
 
-        assert!(meta_path_reprs
-            .iter()
-            .all(|s| !s.contains("_frozen_importlib.BuiltinImporter")));
-        assert!(meta_path_reprs
-            .iter()
-            .all(|s| !s.contains("_frozen_importlib.FrozenImporter")));
-    } else {
-        assert!(meta_path_reprs
-            .iter()
-            .all(|s| !s.contains("OxidizedFinder")));
-        assert!(path_hook_reprs.iter().all(|s| !s.contains(PATH_HOOK_REPR)));
+            assert!(meta_path_reprs
+                .iter()
+                .all(|s| !s.contains("_frozen_importlib.BuiltinImporter")));
+            assert!(meta_path_reprs
+                .iter()
+                .all(|s| !s.contains("_frozen_importlib.FrozenImporter")));
+        } else {
+            assert!(meta_path_reprs
+                .iter()
+                .all(|s| !s.contains("OxidizedFinder")));
+            assert!(path_hook_reprs.iter().all(|s| !s.contains(PATH_HOOK_REPR)));
 
-        assert!(meta_path_reprs
-            .iter()
-            .any(|s| s.contains("_frozen_importlib.BuiltinImporter")));
-        assert!(meta_path_reprs
-            .iter()
-            .any(|s| s.contains("_frozen_importlib.FrozenImporter")));
-    }
+            assert!(meta_path_reprs
+                .iter()
+                .any(|s| s.contains("_frozen_importlib.BuiltinImporter")));
+            assert!(meta_path_reprs
+                .iter()
+                .any(|s| s.contains("_frozen_importlib.FrozenImporter")));
+        }
 
-    // PathFinder should only be present when filesystem importer is enabled.
-    if filesystem {
-        assert!(meta_path_reprs
-            .last()
-            .unwrap()
-            .contains("_frozen_importlib_external.PathFinder"));
-    } else {
-        assert!(meta_path_reprs
-            .iter()
-            .all(|s| !s.contains("_frozen_importlib_external.PathFinder")));
-    }
+        // PathFinder should only be present when filesystem importer is enabled.
+        if filesystem {
+            assert!(meta_path_reprs
+                .last()
+                .unwrap()
+                .contains("_frozen_importlib_external.PathFinder"));
+        } else {
+            assert!(meta_path_reprs
+                .iter()
+                .all(|s| !s.contains("_frozen_importlib_external.PathFinder")));
+        }
+    });
 }
 
 rusty_fork_test! {
     #[test]
     fn test_default_interpreter() {
         let config = default_interpreter_config();
-        let mut interp = MainPythonInterpreter::new(config).unwrap();
+        let interp = MainPythonInterpreter::new(config).unwrap();
 
-        let py = interp.acquire_gil();
-        let sys = py.import("sys").unwrap();
-        let meta_path = sys.getattr("meta_path").unwrap();
-        assert_eq!(meta_path.len().unwrap(), 3);
+        interp.with_gil(|py| {
+            let sys = py.import("sys").unwrap();
+            let meta_path = sys.getattr("meta_path").unwrap();
+            assert_eq!(meta_path.len().unwrap(), 3);
 
-        let importer = meta_path.get_item(0).unwrap();
-        assert!(importer
-            .to_string()
-            .contains("_frozen_importlib.BuiltinImporter"));
-        let importer = meta_path.get_item(1).unwrap();
-        assert!(importer
-            .to_string()
-            .contains("_frozen_importlib.FrozenImporter"));
-        let importer = meta_path.get_item(2).unwrap();
-        assert!(importer
-            .to_string()
-            .contains("_frozen_importlib_external.PathFinder"));
+            let importer = meta_path.get_item(0).unwrap();
+            assert!(importer
+                .to_string()
+                .contains("_frozen_importlib.BuiltinImporter"));
+            let importer = meta_path.get_item(1).unwrap();
+            assert!(importer
+                .to_string()
+                .contains("_frozen_importlib.FrozenImporter"));
+            let importer = meta_path.get_item(2).unwrap();
+            assert!(importer
+                .to_string()
+                .contains("_frozen_importlib_external.PathFinder"));
+        });
     }
 
     #[test]
@@ -149,20 +151,21 @@ rusty_fork_test! {
         config.interpreter_config.profile = PythonInterpreterProfile::Isolated;
         set_sys_paths(&mut config);
 
-        let mut interp = MainPythonInterpreter::new(config).unwrap();
+        let interp = MainPythonInterpreter::new(config).unwrap();
 
-        let py = interp.acquire_gil();
-        let sys = py.import("sys").unwrap();
-        let flags = sys.getattr("flags").unwrap();
+        interp.with_gil(|py| {
+            let sys = py.import("sys").unwrap();
+            let flags = sys.getattr("flags").unwrap();
 
-        assert_eq!(
-            flags
-                .getattr("isolated")
-                .unwrap()
-                .extract::<i32>()
-                .unwrap(),
-            1
-        );
+            assert_eq!(
+                flags
+                    .getattr("isolated")
+                    .unwrap()
+                    .extract::<i32>()
+                    .unwrap(),
+                1
+            );
+        });
     }
 
     #[test]
@@ -351,18 +354,19 @@ rusty_fork_test! {
         // Undo defaults from default_interpreter_config().
         config.argv = None;
 
-        let mut interp = MainPythonInterpreter::new(config).unwrap();
+        let interp = MainPythonInterpreter::new(config).unwrap();
 
-        let py = interp.acquire_gil();
-        let sys = py.import("sys").unwrap();
+        interp.with_gil(|py| {
+            let sys = py.import("sys").unwrap();
 
-        let argv = sys
-            .getattr("argv")
-            .unwrap()
-            .extract::<Vec<String>>()
-            .unwrap();
-        let rust_args = std::env::args().collect::<Vec<_>>();
-        assert_eq!(argv, rust_args);
+            let argv = sys
+                .getattr("argv")
+                .unwrap()
+                .extract::<Vec<String>>()
+                .unwrap();
+            let rust_args = std::env::args().collect::<Vec<_>>();
+            assert_eq!(argv, rust_args);
+        });
     }
 
     /// `OxidizedPythonInterpreterConfig.interpreter_config.argv` is respected.
@@ -378,17 +382,18 @@ rusty_fork_test! {
         ]);
         config.argv = None;
 
-        let mut interp = MainPythonInterpreter::new(config).unwrap();
+        let interp = MainPythonInterpreter::new(config).unwrap();
 
-        let py = interp.acquire_gil();
-        let sys = py.import("sys").unwrap();
+        interp.with_gil(|py| {
+            let sys = py.import("sys").unwrap();
 
-        let argv = sys
-            .getattr("argv")
-            .unwrap()
-            .extract::<Vec<String>>()
-            .unwrap();
-        assert_eq!(argv, vec![PYTHON_INTERPRETER_PATH, "arg0", "arg1"]);
+            let argv = sys
+                .getattr("argv")
+                .unwrap()
+                .extract::<Vec<String>>()
+                .unwrap();
+            assert_eq!(argv, vec![PYTHON_INTERPRETER_PATH, "arg0", "arg1"]);
+        });
     }
 
     /// `OxidizedPythonInterpreterConfig.argv` can be used to define `sys.argv`.
@@ -400,17 +405,18 @@ rusty_fork_test! {
         config.argv.as_mut().unwrap().push(OsString::from("bar"));
         config.interpreter_config.argv = Some(vec![OsString::from("shoud-be-ignored")]);
 
-        let mut interp = MainPythonInterpreter::new(config).unwrap();
+        let interp = MainPythonInterpreter::new(config).unwrap();
 
-        let py = interp.acquire_gil();
-        let sys = py.import("sys").unwrap();
+        interp.with_gil(|py| {
+            let sys = py.import("sys").unwrap();
 
-        let argv = sys
-            .getattr("argv")
-            .unwrap()
-            .extract::<Vec<String>>()
-            .unwrap();
-        assert_eq!(argv, vec![PYTHON_INTERPRETER_PATH, "foo", "bar"]);
+            let argv = sys
+                .getattr("argv")
+                .unwrap()
+                .extract::<Vec<String>>()
+                .unwrap();
+            assert_eq!(argv, vec![PYTHON_INTERPRETER_PATH, "foo", "bar"]);
+        });
     }
 
     #[test]
@@ -419,27 +425,28 @@ rusty_fork_test! {
         config.argv.as_mut().unwrap().push(get_unicode_argument());
         config.argvb = true;
 
-        let mut interp = MainPythonInterpreter::new(config).unwrap();
+        let interp = MainPythonInterpreter::new(config).unwrap();
 
-        let py = interp.acquire_gil();
-        let sys = py.import("sys").unwrap();
+        interp.with_gil(|py| {
+            let sys = py.import("sys").unwrap();
 
-        let argvb_raw = sys.getattr("argvb").unwrap();
-        let argvb = argvb_raw.cast_as::<PyList>().unwrap();
-        assert_eq!(argvb.len(), 2);
+            let argvb_raw = sys.getattr("argvb").unwrap();
+            let argvb = argvb_raw.cast_as::<PyList>().unwrap();
+            assert_eq!(argvb.len(), 2);
 
-        let value_raw = argvb.get_item(1).unwrap();
-        let value_bytes = value_raw.cast_as::<PyBytes>().unwrap();
-        assert_eq!(
-            value_bytes.as_bytes().to_vec(),
-            if cfg!(windows) {
-                // UTF-16-LE.
-                b"\x2d\x4e\x87\x65".to_vec()
-            } else {
-                // UTF-8.
-                b"\xe4\xb8\xad\xe6\x96\x87".to_vec()
-            }
-        );
+            let value_raw = argvb.get_item(1).unwrap();
+            let value_bytes = value_raw.cast_as::<PyBytes>().unwrap();
+            assert_eq!(
+                value_bytes.as_bytes().to_vec(),
+                if cfg!(windows) {
+                    // UTF-16-LE.
+                    b"\x2d\x4e\x87\x65".to_vec()
+                } else {
+                    // UTF-8.
+                    b"\xe4\xb8\xad\xe6\x96\x87".to_vec()
+                }
+            );
+        });
     }
 
     #[test]
@@ -447,22 +454,23 @@ rusty_fork_test! {
         let mut config = default_interpreter_config();
         config.argv.as_mut().unwrap().push(get_unicode_argument());
 
-        let mut interp = MainPythonInterpreter::new(config).unwrap();
+        let interp = MainPythonInterpreter::new(config).unwrap();
 
-        let py = interp.acquire_gil();
-        let sys = py.import("sys").unwrap();
+        interp.with_gil(|py| {
+            let sys = py.import("sys").unwrap();
 
-        let argv_raw = sys.getattr("argv").unwrap();
-        let argv = argv_raw.cast_as::<PyList>().unwrap();
-        assert_eq!(argv.len(), 2);
+            let argv_raw = sys.getattr("argv").unwrap();
+            let argv = argv_raw.cast_as::<PyList>().unwrap();
+            assert_eq!(argv.len(), 2);
 
-        let value_raw = argv.get_item(1).unwrap();
-        let value_string = value_raw.cast_as::<PyString>().unwrap();
+            let value_raw = argv.get_item(1).unwrap();
+            let value_string = value_raw.cast_as::<PyString>().unwrap();
 
-        match unsafe { value_string.data().unwrap() } {
-            PyStringData::Ucs2(&[20013, 25991]) => {},
-            value => panic!("{:?}", value),
-        }
+            match unsafe { value_string.data().unwrap() } {
+                PyStringData::Ucs2(&[20013, 25991]) => {},
+                value => panic!("{:?}", value),
+            }
+        });
     }
 
     #[test]
@@ -472,34 +480,35 @@ rusty_fork_test! {
         config.argv.as_mut().unwrap().push(get_unicode_argument());
         set_sys_paths(&mut config);
 
-        let mut interp = MainPythonInterpreter::new(config).unwrap();
+        let interp = MainPythonInterpreter::new(config).unwrap();
 
-        let py = interp.acquire_gil();
-        let sys = py.import("sys").unwrap();
+        interp.with_gil(|py| {
+            let sys = py.import("sys").unwrap();
 
-        let argv_raw = sys.getattr("argv").unwrap();
-        let argv = argv_raw.cast_as::<PyList>().unwrap();
-        assert_eq!(argv.len(), 2);
+            let argv_raw = sys.getattr("argv").unwrap();
+            let argv = argv_raw.cast_as::<PyList>().unwrap();
+            assert_eq!(argv.len(), 2);
 
-        let value_raw = argv.get_item(1).unwrap();
-        let value_string = value_raw.cast_as::<PyString>().unwrap();
+            let value_raw = argv.get_item(1).unwrap();
+            let value_string = value_raw.cast_as::<PyString>().unwrap();
 
-        // The result in isolated mode without configure_locale is kinda wonky.
-        match unsafe { value_string.data().unwrap() } {
-            // This is the correct value.
-            PyStringData::Ucs2(&[20013, 25991]) => {
-                if !cfg!(any(target_family = "windows", target_os = "macos")) {
-                    panic!("Unexpected result");
+            // The result in isolated mode without configure_locale is kinda wonky.
+            match unsafe { value_string.data().unwrap() } {
+                // This is the correct value.
+                PyStringData::Ucs2(&[20013, 25991]) => {
+                    if !cfg!(any(target_family = "windows", target_os = "macos")) {
+                        panic!("Unexpected result");
+                    }
                 }
-            }
-            // This is some abomination.
-            PyStringData::Ucs2(&[56548, 56504, 56493, 56550, 56470, 56455]) => {
-                if !cfg!(target_family = "unix") {
-                    panic!("Unexpected result");
+                // This is some abomination.
+                PyStringData::Ucs2(&[56548, 56504, 56493, 56550, 56470, 56455]) => {
+                    if !cfg!(target_family = "unix") {
+                        panic!("Unexpected result");
+                    }
                 }
+                value => panic!("unexpected string data: {:?}", value),
             }
-            value => panic!("unexpected string data: {:?}", value),
-        }
+        });
     }
 
     #[test]
@@ -510,22 +519,23 @@ rusty_fork_test! {
         config.argv.as_mut().unwrap().push(get_unicode_argument());
         set_sys_paths(&mut config);
 
-        let mut interp = MainPythonInterpreter::new(config).unwrap();
+        let interp = MainPythonInterpreter::new(config).unwrap();
 
-        let py = interp.acquire_gil();
-        let sys = py.import("sys").unwrap();
+        interp.with_gil(|py| {
+            let sys = py.import("sys").unwrap();
 
-        let argv_raw = sys.getattr("argv").unwrap();
-        let argv = argv_raw.cast_as::<PyList>().unwrap();
-        assert_eq!(argv.len(), 2);
+            let argv_raw = sys.getattr("argv").unwrap();
+            let argv = argv_raw.cast_as::<PyList>().unwrap();
+            assert_eq!(argv.len(), 2);
 
-        let value_raw = argv.get_item(1).unwrap();
-        let value_string = value_raw.cast_as::<PyString>().unwrap();
+            let value_raw = argv.get_item(1).unwrap();
+            let value_string = value_raw.cast_as::<PyString>().unwrap();
 
-        match unsafe { value_string.data().unwrap() } {
-            PyStringData::Ucs2(&[20013, 25991]) => {},
-            value => panic!("unexpected string data: {:?}", value),
-        }
+            match unsafe { value_string.data().unwrap() } {
+                PyStringData::Ucs2(&[20013, 25991]) => {},
+                value => panic!("unexpected string data: {:?}", value),
+            }
+        });
     }
 
     #[test]
@@ -550,13 +560,14 @@ rusty_fork_test! {
         let mut config = default_interpreter_config();
         config.interpreter_config.development_mode = Some(true);
 
-        let mut interp = MainPythonInterpreter::new(config).unwrap();
+        let interp = MainPythonInterpreter::new(config).unwrap();
 
-        let py = interp.acquire_gil();
-        let sys = py.import("sys").unwrap();
+        interp.with_gil(|py| {
+            let sys = py.import("sys").unwrap();
 
-        let flags = sys.getattr("flags").unwrap();
-        assert!(flags.getattr("dev_mode").unwrap().extract::<bool>().unwrap());
+            let flags = sys.getattr("flags").unwrap();
+            assert!(flags.getattr("dev_mode").unwrap().extract::<bool>().unwrap());
+        });
     }
 
     #[test]
@@ -565,13 +576,14 @@ rusty_fork_test! {
         config.interpreter_config.use_environment = Some(false);
         set_sys_paths(&mut config);
 
-        let mut interp = MainPythonInterpreter::new(config).unwrap();
+        let interp = MainPythonInterpreter::new(config).unwrap();
 
-        let py = interp.acquire_gil();
-        let sys = py.import("sys").unwrap();
+        interp.with_gil(|py| {
+            let sys = py.import("sys").unwrap();
 
-        let flags = sys.getattr("flags").unwrap();
-        assert_eq!(flags.getattr("ignore_environment").unwrap().extract::<i64>().unwrap(), 1);
+            let flags = sys.getattr("flags").unwrap();
+            assert_eq!(flags.getattr("ignore_environment").unwrap().extract::<i64>().unwrap(), 1);
+        });
     }
 
     #[test]
@@ -579,13 +591,14 @@ rusty_fork_test! {
         let mut config = default_interpreter_config();
         config.interpreter_config.utf8_mode = Some(true);
 
-        let mut interp = MainPythonInterpreter::new(config).unwrap();
+        let interp = MainPythonInterpreter::new(config).unwrap();
 
-        let py = interp.acquire_gil();
-        let sys = py.import("sys").unwrap();
+        interp.with_gil(|py| {
+            let sys = py.import("sys").unwrap();
 
-        let flags = sys.getattr("flags").unwrap();
-        assert_eq!(flags.getattr("utf8_mode").unwrap().extract::<i64>().unwrap(), 1);
+            let flags = sys.getattr("flags").unwrap();
+            assert_eq!(flags.getattr("utf8_mode").unwrap().extract::<i64>().unwrap(), 1);
+        });
     }
 
     #[test]
@@ -593,13 +606,14 @@ rusty_fork_test! {
         let mut config = default_interpreter_config();
         config.interpreter_config.bytes_warning = Some(BytesWarning::Warn);
 
-        let mut interp = MainPythonInterpreter::new(config).unwrap();
+        let interp = MainPythonInterpreter::new(config).unwrap();
 
-        let py = interp.acquire_gil();
-        let sys = py.import("sys").unwrap();
+        interp.with_gil(|py| {
+            let sys = py.import("sys").unwrap();
 
-        let flags = sys.getattr("flags").unwrap();
-        assert_eq!(flags.getattr("bytes_warning").unwrap().extract::<i64>().unwrap(), 1);
+            let flags = sys.getattr("flags").unwrap();
+            assert_eq!(flags.getattr("bytes_warning").unwrap().extract::<i64>().unwrap(), 1);
+        });
     }
 
     #[test]
@@ -607,13 +621,14 @@ rusty_fork_test! {
         let mut config = default_interpreter_config();
         config.interpreter_config.bytes_warning = Some(BytesWarning::Raise);
 
-        let mut interp = MainPythonInterpreter::new(config).unwrap();
+        let interp = MainPythonInterpreter::new(config).unwrap();
 
-        let py = interp.acquire_gil();
-        let sys = py.import("sys").unwrap();
+        interp.with_gil(|py| {
+            let sys = py.import("sys").unwrap();
 
-        let flags = sys.getattr("flags").unwrap();
-        assert_eq!(flags.getattr("bytes_warning").unwrap().extract::<i64>().unwrap(), 2);
+            let flags = sys.getattr("flags").unwrap();
+            assert_eq!(flags.getattr("bytes_warning").unwrap().extract::<i64>().unwrap(), 2);
+        });
     }
 
     #[test]
@@ -621,13 +636,14 @@ rusty_fork_test! {
         let mut config = default_interpreter_config();
         config.interpreter_config.optimization_level = Some(BytecodeOptimizationLevel::One);
 
-        let mut interp = MainPythonInterpreter::new(config).unwrap();
+        let interp = MainPythonInterpreter::new(config).unwrap();
 
-        let py = interp.acquire_gil();
-        let sys = py.import("sys").unwrap();
+        interp.with_gil(|py| {
+            let sys = py.import("sys").unwrap();
 
-        let flags = sys.getattr("flags").unwrap();
-        assert_eq!(flags.getattr("optimize").unwrap().extract::<i64>().unwrap(), 1);
+            let flags = sys.getattr("flags").unwrap();
+            assert_eq!(flags.getattr("optimize").unwrap().extract::<i64>().unwrap(), 1);
+        });
     }
 
     #[test]
@@ -635,13 +651,14 @@ rusty_fork_test! {
         let mut config = default_interpreter_config();
         config.interpreter_config.optimization_level = Some(BytecodeOptimizationLevel::Two);
 
-        let mut interp = MainPythonInterpreter::new(config).unwrap();
+        let interp = MainPythonInterpreter::new(config).unwrap();
 
-        let py = interp.acquire_gil();
-        let sys = py.import("sys").unwrap();
+        interp.with_gil(|py| {
+            let sys = py.import("sys").unwrap();
 
-        let flags = sys.getattr("flags").unwrap();
-        assert_eq!(flags.getattr("optimize").unwrap().extract::<i64>().unwrap(), 2);
+            let flags = sys.getattr("flags").unwrap();
+            assert_eq!(flags.getattr("optimize").unwrap().extract::<i64>().unwrap(), 2);
+        });
     }
 
     #[test]
@@ -649,13 +666,14 @@ rusty_fork_test! {
         let mut config = default_interpreter_config();
         config.interpreter_config.inspect = Some(true);
 
-        let mut interp = MainPythonInterpreter::new(config).unwrap();
+        let interp = MainPythonInterpreter::new(config).unwrap();
 
-        let py = interp.acquire_gil();
-        let sys = py.import("sys").unwrap();
+        interp.with_gil(|py| {
+            let sys = py.import("sys").unwrap();
 
-        let flags = sys.getattr("flags").unwrap();
-        assert_eq!(flags.getattr("inspect").unwrap().extract::<i64>().unwrap(), 1);
+            let flags = sys.getattr("flags").unwrap();
+            assert_eq!(flags.getattr("inspect").unwrap().extract::<i64>().unwrap(), 1);
+        });
     }
 
     #[test]
@@ -663,13 +681,14 @@ rusty_fork_test! {
         let mut config = default_interpreter_config();
         config.interpreter_config.interactive = Some(true);
 
-        let mut interp = MainPythonInterpreter::new(config).unwrap();
+        let interp = MainPythonInterpreter::new(config).unwrap();
 
-        let py = interp.acquire_gil();
-        let sys = py.import("sys").unwrap();
+        interp.with_gil(|py| {
+            let sys = py.import("sys").unwrap();
 
-        let flags = sys.getattr("flags").unwrap();
-        assert_eq!(flags.getattr("interactive").unwrap().extract::<i64>().unwrap(), 1);
+            let flags = sys.getattr("flags").unwrap();
+            assert_eq!(flags.getattr("interactive").unwrap().extract::<i64>().unwrap(), 1);
+        });
     }
 
     #[test]
@@ -677,13 +696,14 @@ rusty_fork_test! {
         let mut config = default_interpreter_config();
         config.interpreter_config.quiet = Some(true);
 
-        let mut interp = MainPythonInterpreter::new(config).unwrap();
+        let interp = MainPythonInterpreter::new(config).unwrap();
 
-        let py = interp.acquire_gil();
-        let sys = py.import("sys").unwrap();
+        interp.with_gil(|py| {
+            let sys = py.import("sys").unwrap();
 
-        let flags = sys.getattr("flags").unwrap();
-        assert_eq!(flags.getattr("quiet").unwrap().extract::<i64>().unwrap(), 1);
+            let flags = sys.getattr("flags").unwrap();
+            assert_eq!(flags.getattr("quiet").unwrap().extract::<i64>().unwrap(), 1);
+        });
     }
 
     #[test]
@@ -691,26 +711,28 @@ rusty_fork_test! {
         let mut config = default_interpreter_config();
         config.interpreter_config.site_import = Some(false);
 
-        let mut interp = MainPythonInterpreter::new(config).unwrap();
+        let interp = MainPythonInterpreter::new(config).unwrap();
 
-        let py = interp.acquire_gil();
-        let sys = py.import("sys").unwrap();
+        interp.with_gil(|py| {
+            let sys = py.import("sys").unwrap();
 
-        let flags = sys.getattr("flags").unwrap();
-        assert_eq!(flags.getattr("no_site").unwrap().extract::<i64>().unwrap(), 1);
+            let flags = sys.getattr("flags").unwrap();
+            assert_eq!(flags.getattr("no_site").unwrap().extract::<i64>().unwrap(), 1);
+        });
     }
 
     #[test]
     fn test_site_import_true() {
         let mut config = default_interpreter_config();
         config.interpreter_config.site_import = Some(true);
-        let mut interp = MainPythonInterpreter::new(config).unwrap();
+        let interp = MainPythonInterpreter::new(config).unwrap();
 
-        let py = interp.acquire_gil();
-        let sys = py.import("sys").unwrap();
+        interp.with_gil(|py| {
+            let sys = py.import("sys").unwrap();
 
-        let flags = sys.getattr("flags").unwrap();
-        assert_eq!(flags.getattr("no_site").unwrap().extract::<i64>().unwrap(), 0);
+            let flags = sys.getattr("flags").unwrap();
+            assert_eq!(flags.getattr("no_site").unwrap().extract::<i64>().unwrap(), 0);
+        });
     }
 
     #[test]
@@ -718,14 +740,14 @@ rusty_fork_test! {
         let mut config = default_interpreter_config();
         config.interpreter_config.user_site_directory = Some(false);
 
-        let mut interp = MainPythonInterpreter::new(config).unwrap();
+        let interp = MainPythonInterpreter::new(config).unwrap();
 
-        let py = interp.acquire_gil();
-        let sys = py.import("sys").unwrap();
+        interp.with_gil(|py| {
+            let sys = py.import("sys").unwrap();
 
-        let flags = sys.getattr("flags").unwrap();
-        assert_eq!(flags.getattr("no_user_site").unwrap().extract::<i64>().unwrap(), 1);
-
+            let flags = sys.getattr("flags").unwrap();
+            assert_eq!(flags.getattr("no_user_site").unwrap().extract::<i64>().unwrap(), 1);
+        });
     }
 
     #[test]
@@ -733,13 +755,14 @@ rusty_fork_test! {
         let mut config = default_interpreter_config();
         config.interpreter_config.user_site_directory = Some(true);
 
-        let mut interp = MainPythonInterpreter::new(config).unwrap();
+        let interp = MainPythonInterpreter::new(config).unwrap();
 
-        let py = interp.acquire_gil();
-        let sys = py.import("sys").unwrap();
+        interp.with_gil(|py| {
+            let sys = py.import("sys").unwrap();
 
-        let flags = sys.getattr("flags").unwrap();
-        assert_eq!(flags.getattr("no_user_site").unwrap().extract::<i64>().unwrap(), 0);
+            let flags = sys.getattr("flags").unwrap();
+            assert_eq!(flags.getattr("no_user_site").unwrap().extract::<i64>().unwrap(), 0);
+        });
     }
 
     #[test]
@@ -747,12 +770,13 @@ rusty_fork_test! {
         let mut config = default_interpreter_config();
         config.interpreter_config.write_bytecode = Some(false);
 
-        let mut interp = MainPythonInterpreter::new(config).unwrap();
+        let interp = MainPythonInterpreter::new(config).unwrap();
 
-        let py = interp.acquire_gil();
-        let sys = py.import("sys").unwrap();
+        interp.with_gil(|py| {
+            let sys = py.import("sys").unwrap();
 
-        let flags = sys.getattr("flags").unwrap();
-        assert_eq!(flags.getattr("dont_write_bytecode").unwrap().extract::<i64>().unwrap(), 1);
+            let flags = sys.getattr("flags").unwrap();
+            assert_eq!(flags.getattr("dont_write_bytecode").unwrap().extract::<i64>().unwrap(), 1);
+        });
     }
 }

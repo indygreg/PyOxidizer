@@ -46,6 +46,43 @@ static GLOBAL_INTERPRETER_GUARD: Lazy<std::sync::Mutex<()>> =
 /// This type and its various functionality is a glorified wrapper around the
 /// Python C API. But there's a lot of added functionality on top of what the C
 /// API provides.
+///
+/// # Usage
+///
+/// Construct instances via [MainPythonInterpreter::new()]. This will acquire
+/// a global lock and initialize the main Python interpreter in the current
+/// process.
+///
+/// Python code can then be executed in the interpreter in any number of
+/// different ways.
+///
+/// If you want to run whatever was configured to run via the
+/// [OxidizedPythonInterpreterConfig] used to construct the instance, call
+/// [MainPythonInterpreter::run()] or [MainPythonInterpreter::py_runmain()].
+/// The former will honor "multiprocessing worker" and is necessary for
+/// `multiprocessing` to work. [MainPythonInterpreter::py_runmain()] bypasses
+/// multiprocessing mode checks.
+///
+/// If you want to execute arbitrary Python code or want to run Rust code
+/// with the GIL held, call [MainPythonInterpreter::with_gil()]. The provided
+/// function will be provided a [pyo3::Python], which represents a handle on
+/// the Python interpreter. This function is just a wrapper around
+/// [pyo3::Python::with_gil()]. But since the function holds a reference to
+/// self, it prevents [MainPythonInterpreter] from being dropped prematurely.
+///
+/// # Safety
+///
+/// Dropping a [MainPythonInterpreter] instance will call `Py_FinalizeEx()` to
+/// finalize the Python interpreter and prevent it from running any more Python
+/// code.
+///
+/// If a Python C API is called after interpreter finalization, a segfault can
+/// ensure.
+///
+/// If you use pyo3 APIs like [Python::with_gil()] directly, you may
+/// inadvertently attempt to operate on a finalized interpreter. Therefore
+/// it is recommended to always go through a method on an [MainPythonInterpreter]
+/// instance in order to interact with the Python interpreter.
 pub struct MainPythonInterpreter<'interpreter, 'resources: 'interpreter> {
     // It is possible to have a use-after-free if config is dropped before the
     // interpreter is finalized/dropped.
@@ -195,7 +232,10 @@ impl<'interpreter, 'resources> MainPythonInterpreter<'interpreter, 'resources> {
             ));
         }
 
-        Python::with_gil(|py| self.init_post_main(py, oxidized_finder_loaded))
+        self.write_modules_path =
+            self.with_gil(|py| self.init_post_main(py, oxidized_finder_loaded))?;
+
+        Ok(())
     }
 
     /// Inject OxidizedFinder into Python's importing mechanism.
@@ -261,10 +301,10 @@ impl<'interpreter, 'resources> MainPythonInterpreter<'interpreter, 'resources> {
 
     /// Performs interpreter configuration after main interpreter initialization.
     fn init_post_main(
-        &mut self,
+        &self,
         py: Python,
         oxidized_finder_loaded: bool,
-    ) -> Result<(), NewInterpreterError> {
+    ) -> Result<Option<PathBuf>, NewInterpreterError> {
         let sys_module = py
             .import("sys")
             .map_err(|e| NewInterpreterError::new_from_pyerr(py, e, "obtaining sys module"))?;
@@ -381,7 +421,7 @@ impl<'interpreter, 'resources> MainPythonInterpreter<'interpreter, 'resources> {
             }
         }
 
-        if let Some(key) = &self.config.write_modules_directory_env {
+        let write_modules_path = if let Some(key) = &self.config.write_modules_directory_env {
             if let Ok(path) = std::env::var(key) {
                 let path = PathBuf::from(path);
 
@@ -410,11 +450,15 @@ impl<'interpreter, 'resources> MainPythonInterpreter<'interpreter, 'resources> {
                     })?
                     .to_string();
 
-                self.write_modules_path = Some(path.join(format!("modules-{}", uuid_str)));
+                Some(path.join(format!("modules-{}", uuid_str)))
+            } else {
+                None
             }
-        }
+        } else {
+            None
+        };
 
-        Ok(())
+        Ok(write_modules_path)
     }
 
     /// Ensure the Python GIL is released.
@@ -430,6 +474,18 @@ impl<'interpreter, 'resources> MainPythonInterpreter<'interpreter, 'resources> {
     /// where the returned `Python` outlives `self`.
     pub fn acquire_gil(&mut self) -> Python<'_> {
         self.gil.get_or_insert_with(Python::acquire_gil).python()
+    }
+
+    /// Proxy for [Python::with_gil()].
+    ///
+    /// This allows running Python code via the PyO3 Rust APIs. Alternatively,
+    /// this can be used to run code when the Python GIL is held.
+    #[inline]
+    pub fn with_gil<F, R>(&self, f: F) -> R
+    where
+        F: for<'py> FnOnce(Python<'py>) -> R,
+    {
+        Python::with_gil(f)
     }
 
     /// Runs `Py_RunMain()` and finalizes the interpreter.
@@ -451,7 +507,7 @@ impl<'interpreter, 'resources> MainPythonInterpreter<'interpreter, 'resources> {
     /// This should be called when `sys.argv[1] == "--multiprocessing-fork"`. It
     /// will parse arguments for the worker from `sys.argv` and call into the
     /// `multiprocessing` module to perform work.
-    pub fn run_multiprocessing(&mut self) -> PyResult<i32> {
+    pub fn run_multiprocessing(&self) -> PyResult<i32> {
         // This code effectively reimplements multiprocessing.spawn.freeze_support(),
         // except entirely in the Rust domain. This function effectively verifies
         // `sys.argv[1] == "--multiprocessing-fork"` then parsed key=value arguments
@@ -465,41 +521,42 @@ impl<'interpreter, 'resources> MainPythonInterpreter<'interpreter, 'resources> {
             panic!("run_multiprocessing() called prematurely; sys.argv does not indicate multiprocessing mode");
         }
 
-        let py = self.acquire_gil();
-        let kwargs = PyDict::new(py);
+        self.with_gil(|py| {
+            let kwargs = PyDict::new(py);
 
-        for arg in argv.iter().skip(2) {
-            let arg = arg.to_string_lossy();
+            for arg in argv.iter().skip(2) {
+                let arg = arg.to_string_lossy();
 
-            let mut parts = arg.splitn(2, '=');
+                let mut parts = arg.splitn(2, '=');
 
-            let key = parts
-                .next()
-                .ok_or_else(|| PyRuntimeError::new_err("invalid multiprocessing argument"))?;
-            let value = parts
-                .next()
-                .ok_or_else(|| PyRuntimeError::new_err("invalid multiprocessing argument"))?;
+                let key = parts
+                    .next()
+                    .ok_or_else(|| PyRuntimeError::new_err("invalid multiprocessing argument"))?;
+                let value = parts
+                    .next()
+                    .ok_or_else(|| PyRuntimeError::new_err("invalid multiprocessing argument"))?;
 
-            let value = if value == "None" {
-                py.None()
-            } else {
-                let v = value.parse::<isize>().map_err(|e| {
-                    PyRuntimeError::new_err(format!(
-                        "unable to convert multiprocessing argument to integer: {}",
-                        e
-                    ))
-                })?;
+                let value = if value == "None" {
+                    py.None()
+                } else {
+                    let v = value.parse::<isize>().map_err(|e| {
+                        PyRuntimeError::new_err(format!(
+                            "unable to convert multiprocessing argument to integer: {}",
+                            e
+                        ))
+                    })?;
 
-                v.into_py(py)
-            };
+                    v.into_py(py)
+                };
 
-            kwargs.set_item(key, value)?;
-        }
+                kwargs.set_item(key, value)?;
+            }
 
-        let spawn_module = py.import("multiprocessing.spawn")?;
-        spawn_module.getattr("spawn_main")?.call1((kwargs,))?;
+            let spawn_module = py.import("multiprocessing.spawn")?;
+            spawn_module.getattr("spawn_main")?.call1((kwargs,))?;
 
-        Ok(0)
+            Ok(0)
+        })
     }
 
     /// Whether the Python interpreter is in "multiprocessing worker" mode.
@@ -520,13 +577,15 @@ impl<'interpreter, 'resources> MainPythonInterpreter<'interpreter, 'resources> {
     /// and dispatch to multiprocessing accordingly.
     ///
     /// Otherwise, this delegates to [Self::py_runmain].
-    pub fn run(mut self) -> i32 {
+    pub fn run(self) -> i32 {
         if self.config.multiprocessing_auto_dispatch && self.is_multiprocessing() {
             match self.run_multiprocessing() {
                 Ok(code) => code,
                 Err(e) => {
-                    let py = self.acquire_gil();
-                    e.print(py);
+                    self.with_gil(|py| {
+                        e.print(py);
+                    });
+
                     1
                 }
             }

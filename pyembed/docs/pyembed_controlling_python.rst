@@ -20,18 +20,19 @@ Using a Python Interpreter
 ==========================
 
 Once you've constructed a ``pyembed::MainPythonInterpreter`` instance, you
-can obtain a ``cpython::Python`` instance via ``.acquire_gil()`` and then
+can obtain a ``pyo3::Python`` instance via ``.with_gil()`` and then
 use it:
 
 .. code-block:: rust
 
    fn do_it(interpreter: &MainPythonInterpreter) -> {
-       let py = interpreter.acquire_gil();
+       interpreter.with_gil(|py| {
+            match py.eval("print('hello, world')") {
+               Ok(_) => print("python code executed successfully"),
+               Err(e) => print("python error: {:?}", e),
+           }
+       });
 
-       match py.eval("print('hello, world')") {
-           Ok(_) => print("python code executed successfully"),
-           Err(e) => print("python error: {:?}", e),
-       }
    }
 
 Since CPython's API relies on static variables (sadly), if you really wanted

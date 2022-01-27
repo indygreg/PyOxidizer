@@ -112,13 +112,14 @@ rusty_fork_test! {
     #[test]
     fn py_temp_dir_lifetimes() {
         let path = {
-            let mut interp = get_interpreter();
-            let py = interp.acquire_gil();
-            let temp_dir = PyTempDir::new(py).unwrap();
-            #[allow(clippy::drop_copy)]
-            drop(py); // PyTempDir::drop reacquires the GIL for itself
-            assert!(temp_dir.path().is_dir());
-            temp_dir.path().to_path_buf()
+            let interp = get_interpreter();
+            interp.with_gil(|py| {
+                let temp_dir = PyTempDir::new(py).unwrap();
+                #[allow(clippy::drop_copy)]
+                drop(py); // PyTempDir::drop reacquires the GIL for itself
+                assert!(temp_dir.path().is_dir());
+                temp_dir.path().to_path_buf()
+            })
         };
         assert!(!path.is_dir());
     }

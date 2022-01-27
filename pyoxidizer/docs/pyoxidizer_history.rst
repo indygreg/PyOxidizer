@@ -47,6 +47,13 @@ Bug Fixes
   This fixes a regression to the error handling introduced by the port to PyO3
   in version 0.18.0. (#481)
 
+Backwards Compatibility Notes
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+* The ``pyembed::MainPythonInterpreter`` Rust API for controlling embedded
+  Python interpreters has been refactored. Various methods now take
+  `&self` instead of `&mut self`.
+
 New Features
 ^^^^^^^^^^^^
 
@@ -54,6 +61,8 @@ New Features
   still the default Python version. Target Python 3.10 by passing
   ``python_version = "3.10"`` to the :py:func:`default_python_distribution`
   Starlark function.
+* The ``pyembed::MainPythonInterpreter`` Rust struct has gained a
+  ``with_gil()`` function for executing a function with the Python GIL held.
 
 Other Relevant Changes
 ^^^^^^^^^^^^^^^^^^^^^^

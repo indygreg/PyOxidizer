@@ -12,9 +12,10 @@ rusty_fork_test! {
     #[test]
     fn test_instantiate_interpreter() {
         let config = default_interpreter_config();
-        let mut interp = MainPythonInterpreter::new(config).unwrap();
-        let py = interp.acquire_gil();
-        py.import("sys").unwrap();
+        let interp = MainPythonInterpreter::new(config).unwrap();
+        interp.with_gil(|py| {
+            py.import("sys").unwrap();
+        });
     }
 
     #[test]

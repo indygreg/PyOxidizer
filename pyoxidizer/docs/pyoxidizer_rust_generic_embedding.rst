@@ -234,10 +234,13 @@ And define a ``src/main.rs``:
         // Get config from default_python_config.rs.
         let config = default_python_config();
 
-        let mut interp = pyembed::MainPythonInterpreter::new(config).unwrap();
+        let interp = pyembed::MainPythonInterpreter::new(config).unwrap();
 
-        let py = interp.acquire_gil();
-        py.run("print('hello, world')", None, None).unwrap();
+        // `py` is a `pyo3::Python` instance.
+        interp.with_gil(|py| {
+            py.run("print('hello, world')", None, None).unwrap();
+        });
+
     }
 
 Now use ``pyoxidizer`` to generate the Python embedding artifacts::
