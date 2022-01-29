@@ -46,6 +46,10 @@ Bug Fixes
 * The ``pyembed`` crate better handles errors during interpreter initialization.
   This fixes a regression to the error handling introduced by the port to PyO3
   in version 0.18.0. (#481)
+* The ``pyembed::MainPythonInterpreter`` type is now more resilient against
+  calling into a finalized Python interpreter. Before, calling ``py_runmain()``
+  (possibly via ``run()``) could result in a segfault in the type's ``Drop``
+  implementation.
 
 Backwards Compatibility Notes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -53,7 +57,12 @@ Backwards Compatibility Notes
 * The ``pyembed::MainPythonInterpreter`` Rust API for controlling embedded
   Python interpreters has been refactored. Various methods now take
   ``&self`` instead of ``&mut self``. ``acquire_gil()`` and ``release_gil()``
-  have been removed (use ``with_gil()`` instead).
+  have been removed (use ``with_gil()`` instead). ``MainPythonInterpreter``
+  instances now release the GIL after initialization. Before, the GIL would be
+  perpetually held by the instance. Consumers that were calling
+  ``PyEval_SaveThread()`` to release the GIL to work around this should delete
+  calls to that function, as the GIL is now released automatically. APIs on
+  ``MainPythonInterpreter`` will acquire the GIL as necessary. (#500)
 
 New Features
 ^^^^^^^^^^^^

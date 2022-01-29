@@ -77,7 +77,7 @@ static GLOBAL_INTERPRETER_GUARD: Lazy<std::sync::Mutex<()>> =
 /// code.
 ///
 /// If a Python C API is called after interpreter finalization, a segfault can
-/// ensure.
+/// occur.
 ///
 /// If you use pyo3 APIs like [Python::with_gil()] directly, you may
 /// inadvertently attempt to operate on a finalized interpreter. Therefore
@@ -137,7 +137,7 @@ impl<'interpreter, 'resources> MainPythonInterpreter<'interpreter, 'resources> {
     /// If called more than once, the function is a no-op from the perspective
     /// of interpreter initialization.
     ///
-    /// Returns a Python instance which has the GIL acquired.
+    /// The GIL is not held after the interpreter is initialized.
     fn init(&mut self) -> Result<(), NewInterpreterError> {
         assert!(self.interpreter_guard.is_none());
         self.interpreter_guard = Some(GLOBAL_INTERPRETER_GUARD.lock().map_err(|_| {
@@ -222,6 +222,9 @@ impl<'interpreter, 'resources> MainPythonInterpreter<'interpreter, 'resources> {
         let oxidized_finder_loaded =
             unsafe { Python::with_gil_unchecked(|py| self.inject_oxidized_importer(py))? };
 
+        // The GIL is still held after calling into PyO3.
+        debug_assert_eq!(unsafe { pyffi::PyGILState_Check() }, 1);
+
         // Now proceed with the Python main initialization. This will initialize
         // importlib. And if the custom importlib bytecode was registered above,
         // our extension module will get imported and initialized.
@@ -233,12 +236,19 @@ impl<'interpreter, 'resources> MainPythonInterpreter<'interpreter, 'resources> {
             ));
         }
 
+        // The GIL is held after finishing initialization.
         debug_assert_eq!(unsafe { pyffi::PyGILState_Check() }, 1);
+
+        // We release the GIL so we can have pyo3's GIL handling take over from
+        // an "empty" state. This mirrors what pyo3's prepare_freethreaded_python() does.
+        unsafe {
+            pyffi::PyEval_SaveThread();
+        }
 
         self.write_modules_path =
             self.with_gil(|py| self.init_post_main(py, oxidized_finder_loaded))?;
 
-        debug_assert_eq!(unsafe { pyffi::PyGILState_Check() }, 1);
+        debug_assert_eq!(unsafe { pyffi::PyGILState_Check() }, 0);
 
         Ok(())
     }
@@ -489,7 +499,13 @@ impl<'interpreter, 'resources> MainPythonInterpreter<'interpreter, 'resources> {
     /// the evaluation result, consider calling a function on the interpreter handle
     /// that executes code.
     pub fn py_runmain(self) -> i32 {
-        unsafe { pyffi::Py_RunMain() }
+        unsafe {
+            // GIL must be acquired before calling Py_RunMain(). And Py_RunMain()
+            // finalizes the interpreter. So we don't need to release the GIL
+            // afterwards.
+            pyffi::PyGILState_Ensure();
+            pyffi::Py_RunMain()
+        }
     }
 
     /// Run in "multiprocessing worker" mode.
@@ -697,6 +713,14 @@ fn write_modules_to_path(py: Python, path: &Path) -> Result<(), &'static str> {
 
 impl<'interpreter, 'resources> Drop for MainPythonInterpreter<'interpreter, 'resources> {
     fn drop(&mut self) {
+        // Interpreter may have been finalized already. Possibly through our invocation
+        // of Py_RunMain(). Possibly something out-of-band beyond our control. We don't
+        // muck with the interpreter after finalization because this will likely result
+        // in a segfault.
+        if unsafe { pyffi::Py_IsInitialized() } == 0 {
+            return;
+        }
+
         if let Some(path) = self.write_modules_path.as_ref() {
             match self.with_gil(|py| write_modules_to_path(py, path)) {
                 Ok(_) => {}
@@ -706,6 +730,9 @@ impl<'interpreter, 'resources> Drop for MainPythonInterpreter<'interpreter, 'res
             }
         }
 
-        let _ = unsafe { pyffi::Py_FinalizeEx() };
+        unsafe {
+            pyffi::PyGILState_Ensure();
+            pyffi::Py_FinalizeEx();
+        }
     }
 }

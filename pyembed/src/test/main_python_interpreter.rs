@@ -24,13 +24,13 @@ rusty_fork_test! {
         let config = default_interpreter_config();
         let interp = MainPythonInterpreter::new(config).unwrap();
 
-        assert_eq!(unsafe { pyffi::PyGILState_Check() }, 1);
+        assert_eq!(unsafe { pyffi::PyGILState_Check() }, 0);
 
         interp.with_gil(|_| {
             assert_eq!(unsafe { pyffi::PyGILState_Check() }, 1);
         });
 
-        assert_eq!(unsafe { pyffi::PyGILState_Check() }, 1);
+        assert_eq!(unsafe { pyffi::PyGILState_Check() }, 0);
 
         std::mem::drop(interp);
     }
