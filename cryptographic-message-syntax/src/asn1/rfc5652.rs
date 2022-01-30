@@ -1363,7 +1363,7 @@ impl Time {
             Ok(Self::UtcTime(utc))
         } else if let Some(generalized) = cons
             .take_opt_primitive_if(Tag::GENERALIZED_TIME, |prim| {
-                GeneralizedTime::from_primitive(prim)
+                GeneralizedTime::from_primitive_no_fractional_or_timezone_offsets(prim)
             })?
         {
             Ok(Self::GeneralizedTime(generalized))

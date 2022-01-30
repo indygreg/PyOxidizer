@@ -43,7 +43,9 @@ impl Time {
     pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, S::Err> {
         cons.take_primitive(|tag, prim| match tag {
             Tag::UTC_TIME => Ok(Self::UtcTime(UtcTime::from_primitive(prim)?)),
-            Tag::GENERALIZED_TIME => Ok(Self::GeneralTime(GeneralizedTime::from_primitive(prim)?)),
+            Tag::GENERALIZED_TIME => Ok(Self::GeneralTime(
+                GeneralizedTime::from_primitive_no_fractional_or_timezone_offsets(prim)?,
+            )),
             _ => Err(Malformed.into()),
         })
     }
@@ -85,11 +87,17 @@ pub struct GeneralizedTime {
 }
 
 impl GeneralizedTime {
-    pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, S::Err> {
-        cons.take_primitive_if(Tag::GENERALIZED_TIME, |prim| Self::from_primitive(prim))
+    /// Take a value, not allowing fractional seconds and requiring the `Z` timezone identifier.
+    pub fn take_from_no_fractional_z<S: Source>(cons: &mut Constructed<S>) -> Result<Self, S::Err> {
+        cons.take_primitive_if(Tag::GENERALIZED_TIME, |prim| {
+            Self::from_primitive_no_fractional_or_timezone_offsets(prim)
+        })
     }
 
-    pub fn from_primitive<S: Source>(prim: &mut Primitive<S>) -> Result<Self, S::Err> {
+    /// Parse a [GeneralizedTime] from a primitive string and don't allow fractional seconds or timezone offsets.
+    pub fn from_primitive_no_fractional_or_timezone_offsets<S: Source>(
+        prim: &mut Primitive<S>,
+    ) -> Result<Self, S::Err> {
         let data = prim.take_all()?;
 
         Self::parse(data.as_ref(), false, GeneralizedTimeAllowedTimezone::Z).map_err(|e| e.into())
