@@ -11,7 +11,11 @@ use {
         Mode, Tag,
     },
     chrono::{Datelike, TimeZone, Timelike},
-    std::{io::Write, ops::Deref, str::FromStr},
+    std::{
+        io::Write,
+        ops::{Add, Deref},
+        str::FromStr,
+    },
 };
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -45,15 +49,8 @@ impl From<chrono::DateTime<chrono::Utc>> for Time {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct GeneralizedTime {
-    time: chrono::DateTime<chrono::Utc>,
-}
-
-impl Deref for GeneralizedTime {
-    type Target = chrono::DateTime<chrono::Utc>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.time
-    }
+    time: chrono::NaiveDateTime,
+    offset: chrono::FixedOffset,
 }
 
 impl GeneralizedTime {
@@ -92,7 +89,10 @@ impl GeneralizedTime {
 
         if let chrono::LocalResult::Single(dt) = chrono::Utc.ymd_opt(year, month, day) {
             if let Some(dt) = dt.and_hms_opt(hour, minute, second) {
-                Ok(Self { time: dt })
+                Ok(Self {
+                    time: dt.naive_utc(),
+                    offset: chrono::FixedOffset::east(0),
+                })
             } else {
                 Err(Malformed)
             }
@@ -113,6 +113,12 @@ impl ToString for GeneralizedTime {
             self.time.minute(),
             self.time.second()
         )
+    }
+}
+
+impl From<GeneralizedTime> for chrono::DateTime<chrono::Utc> {
+    fn from(gt: GeneralizedTime) -> Self {
+        chrono::DateTime::<chrono::Utc>::from_utc(gt.time.add(gt.offset), chrono::Utc)
     }
 }
 
@@ -221,14 +227,14 @@ mod test {
     #[test]
     fn generalized_time() -> Result<(), bcder::decode::Error> {
         let gt = GeneralizedTime::parse(b"20220129133742Z")?;
-        assert_eq!(gt.year(), 2022);
-        assert_eq!(gt.month(), 1);
-        assert_eq!(gt.day(), 29);
-        assert_eq!(gt.hour(), 13);
-        assert_eq!(gt.minute(), 37);
-        assert_eq!(gt.second(), 42);
-        assert_eq!(gt.nanosecond(), 0);
-        assert_eq!(gt.timezone(), chrono::Utc);
+        assert_eq!(gt.time.year(), 2022);
+        assert_eq!(gt.time.month(), 1);
+        assert_eq!(gt.time.day(), 29);
+        assert_eq!(gt.time.hour(), 13);
+        assert_eq!(gt.time.minute(), 37);
+        assert_eq!(gt.time.second(), 42);
+        assert_eq!(gt.time.nanosecond(), 0);
+        assert_eq!(format!("{:?}", gt.offset), "+00:00");
 
         assert_eq!(gt.to_string(), "20220129133742Z");
 

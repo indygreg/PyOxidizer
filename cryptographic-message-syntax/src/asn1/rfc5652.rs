@@ -1377,7 +1377,7 @@ impl From<Time> for chrono::DateTime<chrono::Utc> {
     fn from(t: Time) -> Self {
         match t {
             Time::UtcTime(utc) => *utc,
-            Time::GeneralizedTime(gt) => *gt,
+            Time::GeneralizedTime(gt) => gt.into(),
         }
     }
 }
