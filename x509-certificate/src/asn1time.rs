@@ -175,16 +175,7 @@ impl GeneralizedTime {
 
 impl ToString for GeneralizedTime {
     fn to_string(&self) -> String {
-        format!(
-            "{:04}{:02}{:02}{:02}{:02}{:02}{}",
-            self.time.year(),
-            self.time.month(),
-            self.time.day(),
-            self.time.hour(),
-            self.time.minute(),
-            self.time.second(),
-            self.timezone,
-        )
+        format!("{}{}", self.time.format("%Y%m%d%H%M%S"), self.timezone)
     }
 }
 
