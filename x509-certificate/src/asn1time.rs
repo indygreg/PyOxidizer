@@ -71,8 +71,13 @@ impl GeneralizedTime {
     pub fn from_primitive<S: Source>(prim: &mut Primitive<S>) -> Result<Self, S::Err> {
         let data = prim.take_all()?;
 
+        Self::parse(data.as_ref()).map_err(|e| e.into())
+    }
+
+    /// Parse GeneralizedTime string data.
+    pub fn parse(data: &[u8]) -> Result<Self, bcder::decode::Error> {
         if data.len() != "YYYYMMDDHHMMSSZ".len() {
-            return Err(Malformed.into());
+            return Err(Malformed);
         }
 
         let year = i32::from_str(std::str::from_utf8(&data[0..4]).map_err(|_| Malformed)?)
@@ -89,17 +94,17 @@ impl GeneralizedTime {
             .map_err(|_| Malformed)?;
 
         if data[14] != b'Z' {
-            return Err(Malformed.into());
+            return Err(Malformed);
         }
 
         if let chrono::LocalResult::Single(dt) = chrono::Utc.ymd_opt(year, month, day) {
             if let Some(dt) = dt.and_hms_opt(hour, minute, second) {
                 Ok(Self(dt))
             } else {
-                Err(Malformed.into())
+                Err(Malformed)
             }
         } else {
-            Err(Malformed.into())
+            Err(Malformed)
         }
     }
 }
@@ -213,5 +218,37 @@ impl PrimitiveContent for UtcTime {
 
     fn write_encoded<W: Write>(&self, _: Mode, target: &mut W) -> Result<(), std::io::Error> {
         target.write_all(self.to_string().as_bytes())
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn generalized_time() -> Result<(), bcder::decode::Error> {
+        let gt = GeneralizedTime::parse(b"20220129133742Z")?;
+        assert_eq!(gt.year(), 2022);
+        assert_eq!(gt.month(), 1);
+        assert_eq!(gt.day(), 29);
+        assert_eq!(gt.hour(), 13);
+        assert_eq!(gt.minute(), 37);
+        assert_eq!(gt.second(), 42);
+        assert_eq!(gt.nanosecond(), 0);
+        assert_eq!(gt.timezone(), chrono::Utc);
+
+        assert_eq!(gt.to_string(), "20220129133742Z");
+
+        // TODO support fractional seconds.
+        assert!(GeneralizedTime::parse(b"20220129133742.333Z").is_err());
+
+        // TODO support timezone offset.
+        assert!(GeneralizedTime::parse(b"20220129133742-0800").is_err());
+        assert!(GeneralizedTime::parse(b"20220129133742+1000").is_err());
+
+        // TODO support fractional seconds with timezone offset.
+        assert!(GeneralizedTime::parse(b"20220129133742.333-0800").is_err());
+
+        Ok(())
     }
 }
