@@ -37,15 +37,6 @@ impl Time {
     }
 }
 
-impl AsRef<chrono::DateTime<chrono::Utc>> for Time {
-    fn as_ref(&self) -> &chrono::DateTime<chrono::Utc> {
-        match self {
-            Self::UtcTime(dt) => dt.deref(),
-            Self::GeneralTime(dt) => dt.deref(),
-        }
-    }
-}
-
 impl From<chrono::DateTime<chrono::Utc>> for Time {
     fn from(t: chrono::DateTime<chrono::Utc>) -> Self {
         Self::UtcTime(UtcTime(t))
