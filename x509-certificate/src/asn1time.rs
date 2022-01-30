@@ -374,6 +374,18 @@ mod test {
             GeneralizedTime::parse(b"20220130123015", GeneralizedTimeAllowedTimezone::Any).is_err()
         );
         assert!(
+            GeneralizedTime::parse(b"20220130123015.", GeneralizedTimeAllowedTimezone::Any)
+                .is_err()
+        );
+        assert!(
+            GeneralizedTime::parse(b"20220130123015.a", GeneralizedTimeAllowedTimezone::Any)
+                .is_err()
+        );
+        assert!(
+            GeneralizedTime::parse(b"20220130123015.0a", GeneralizedTimeAllowedTimezone::Any)
+                .is_err()
+        );
+        assert!(
             GeneralizedTime::parse(b"20220130123015a", GeneralizedTimeAllowedTimezone::Any)
                 .is_err()
         );
