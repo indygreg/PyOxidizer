@@ -53,13 +53,15 @@ impl From<chrono::DateTime<chrono::Utc>> for Time {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct GeneralizedTime(chrono::DateTime<chrono::Utc>);
+pub struct GeneralizedTime {
+    time: chrono::DateTime<chrono::Utc>,
+}
 
 impl Deref for GeneralizedTime {
     type Target = chrono::DateTime<chrono::Utc>;
 
     fn deref(&self) -> &Self::Target {
-        &self.0
+        &self.time
     }
 }
 
@@ -99,7 +101,7 @@ impl GeneralizedTime {
 
         if let chrono::LocalResult::Single(dt) = chrono::Utc.ymd_opt(year, month, day) {
             if let Some(dt) = dt.and_hms_opt(hour, minute, second) {
-                Ok(Self(dt))
+                Ok(Self { time: dt })
             } else {
                 Err(Malformed)
             }
@@ -113,12 +115,12 @@ impl ToString for GeneralizedTime {
     fn to_string(&self) -> String {
         format!(
             "{:04}{:02}{:02}{:02}{:02}{:02}Z",
-            self.0.year(),
-            self.0.month(),
-            self.0.day(),
-            self.0.hour(),
-            self.0.minute(),
-            self.0.second()
+            self.time.year(),
+            self.time.month(),
+            self.time.day(),
+            self.time.hour(),
+            self.time.minute(),
+            self.time.second()
         )
     }
 }
