@@ -290,4 +290,24 @@ mod test {
 
         Ok(())
     }
+
+    #[test]
+    fn generalized_time_invalid() {
+        assert!(GeneralizedTime::parse(b"").is_err());
+        assert!(GeneralizedTime::parse(b"abcd").is_err());
+        assert!(GeneralizedTime::parse(b"2022").is_err());
+        assert!(GeneralizedTime::parse(b"202201").is_err());
+        assert!(GeneralizedTime::parse(b"20220130").is_err());
+        assert!(GeneralizedTime::parse(b"2022013012").is_err());
+        assert!(GeneralizedTime::parse(b"202201301230").is_err());
+        assert!(GeneralizedTime::parse(b"20220130123015").is_err());
+        assert!(GeneralizedTime::parse(b"20220130123015a").is_err());
+        assert!(GeneralizedTime::parse(b"20220130123015-").is_err());
+        assert!(GeneralizedTime::parse(b"20220130123015+").is_err());
+        assert!(GeneralizedTime::parse(b"20220130123015+01").is_err());
+        assert!(GeneralizedTime::parse(b"20220130123015+01000").is_err());
+        assert!(GeneralizedTime::parse(b"20220130123015+0100a").is_err());
+        assert!(GeneralizedTime::parse(b"20220130123015-01000").is_err());
+        assert!(GeneralizedTime::parse(b"20220130123015-0100a").is_err());
+    }
 }
