@@ -19,6 +19,19 @@ use {
     },
 };
 
+/// Timezone formats of [GeneralizedTime] to allow.
+///
+/// X.690 allows [GeneralizedTime] to have multiple timezone formats. However,
+/// various RFCs restrict which formats are allowed. This enumeration exists to
+/// express which formats should be allowed by a parser.
+pub enum GeneralizedTimeAllowedTimezone {
+    /// Allow either `Z` or timezone offset formats.
+    Any,
+
+    /// `Z` timezone identifier only.
+    Z,
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Time {
     UtcTime(UtcTime),
@@ -77,12 +90,15 @@ impl GeneralizedTime {
     pub fn from_primitive<S: Source>(prim: &mut Primitive<S>) -> Result<Self, S::Err> {
         let data = prim.take_all()?;
 
-        Self::parse(data.as_ref()).map_err(|e| e.into())
+        Self::parse(data.as_ref(), GeneralizedTimeAllowedTimezone::Z).map_err(|e| e.into())
     }
 
     /// Parse GeneralizedTime string data.
-    pub fn parse(data: &[u8]) -> Result<Self, bcder::decode::Error> {
-        if data.len() != "YYYYMMDDHHMMSSZ".len() {
+    pub fn parse(
+        data: &[u8],
+        tz: GeneralizedTimeAllowedTimezone,
+    ) -> Result<Self, bcder::decode::Error> {
+        if data.len() < 15 {
             return Err(Malformed);
         }
 
@@ -99,15 +115,54 @@ impl GeneralizedTime {
         let second = u32::from_str(std::str::from_utf8(&data[12..14]).map_err(|_| Malformed)?)
             .map_err(|_| Malformed)?;
 
-        if data[14] != b'Z' {
-            return Err(Malformed);
-        }
+        let remaining = &data[14..];
+
+        let timezone = match tz {
+            GeneralizedTimeAllowedTimezone::Z => {
+                if remaining != b"Z" {
+                    return Err(Malformed);
+                }
+
+                Zone::Utc
+            }
+            GeneralizedTimeAllowedTimezone::Any => {
+                if remaining == b"Z" {
+                    Zone::Utc
+                } else {
+                    if remaining.len() != 5 {
+                        return Err(Malformed);
+                    }
+
+                    let east = match remaining[0] {
+                        b'+' => true,
+                        b'-' => false,
+                        _ => return Err(Malformed),
+                    };
+
+                    let offset_hours = u32::from_str(
+                        std::str::from_utf8(&remaining[1..3]).map_err(|_| Malformed)?,
+                    )
+                    .map_err(|_| Malformed)?;
+                    let offset_minutes =
+                        u32::from_str(std::str::from_utf8(&remaining[3..]).map_err(|_| Malformed)?)
+                            .map_err(|_| Malformed)?;
+
+                    let offset_seconds = (offset_hours * 3600 + offset_minutes * 60) as i32;
+
+                    Zone::Offset(if east {
+                        chrono::FixedOffset::east(offset_seconds)
+                    } else {
+                        chrono::FixedOffset::west(offset_seconds)
+                    })
+                }
+            }
+        };
 
         if let chrono::LocalResult::Single(dt) = chrono::Utc.ymd_opt(year, month, day) {
             if let Some(dt) = dt.and_hms_opt(hour, minute, second) {
                 Ok(Self {
                     time: dt.naive_utc(),
-                    timezone: Zone::Utc,
+                    timezone,
                 })
             } else {
                 Err(Malformed)
@@ -266,7 +321,7 @@ mod test {
         };
         assert_eq!(gt.to_string(), "20220130024612-0200");
 
-        let gt = GeneralizedTime::parse(b"20220129133742Z")?;
+        let gt = GeneralizedTime::parse(b"20220129133742Z", GeneralizedTimeAllowedTimezone::Z)?;
         assert_eq!(gt.time.year(), 2022);
         assert_eq!(gt.time.month(), 1);
         assert_eq!(gt.time.day(), 29);
@@ -279,35 +334,80 @@ mod test {
         assert_eq!(gt.to_string(), "20220129133742Z");
 
         // TODO support fractional seconds.
-        assert!(GeneralizedTime::parse(b"20220129133742.333Z").is_err());
+        assert!(
+            GeneralizedTime::parse(b"20220129133742.333Z", GeneralizedTimeAllowedTimezone::Z)
+                .is_err()
+        );
 
-        // TODO support timezone offset.
-        assert!(GeneralizedTime::parse(b"20220129133742-0800").is_err());
-        assert!(GeneralizedTime::parse(b"20220129133742+1000").is_err());
+        let gt =
+            GeneralizedTime::parse(b"20220129133742-0800", GeneralizedTimeAllowedTimezone::Any)?;
+        assert_eq!(format!("{}", gt.timezone), "-0800");
+
+        let gt =
+            GeneralizedTime::parse(b"20220129133742+1000", GeneralizedTimeAllowedTimezone::Any)?;
+        assert_eq!(format!("{}", gt.timezone), "+1000");
 
         // TODO support fractional seconds with timezone offset.
-        assert!(GeneralizedTime::parse(b"20220129133742.333-0800").is_err());
+        assert!(GeneralizedTime::parse(
+            b"20220129133742.333-0800",
+            GeneralizedTimeAllowedTimezone::Z
+        )
+        .is_err());
 
         Ok(())
     }
 
     #[test]
     fn generalized_time_invalid() {
-        assert!(GeneralizedTime::parse(b"").is_err());
-        assert!(GeneralizedTime::parse(b"abcd").is_err());
-        assert!(GeneralizedTime::parse(b"2022").is_err());
-        assert!(GeneralizedTime::parse(b"202201").is_err());
-        assert!(GeneralizedTime::parse(b"20220130").is_err());
-        assert!(GeneralizedTime::parse(b"2022013012").is_err());
-        assert!(GeneralizedTime::parse(b"202201301230").is_err());
-        assert!(GeneralizedTime::parse(b"20220130123015").is_err());
-        assert!(GeneralizedTime::parse(b"20220130123015a").is_err());
-        assert!(GeneralizedTime::parse(b"20220130123015-").is_err());
-        assert!(GeneralizedTime::parse(b"20220130123015+").is_err());
-        assert!(GeneralizedTime::parse(b"20220130123015+01").is_err());
-        assert!(GeneralizedTime::parse(b"20220130123015+01000").is_err());
-        assert!(GeneralizedTime::parse(b"20220130123015+0100a").is_err());
-        assert!(GeneralizedTime::parse(b"20220130123015-01000").is_err());
-        assert!(GeneralizedTime::parse(b"20220130123015-0100a").is_err());
+        assert!(GeneralizedTime::parse(b"", GeneralizedTimeAllowedTimezone::Any).is_err());
+        assert!(GeneralizedTime::parse(b"abcd", GeneralizedTimeAllowedTimezone::Any).is_err());
+        assert!(GeneralizedTime::parse(b"2022", GeneralizedTimeAllowedTimezone::Any).is_err());
+        assert!(GeneralizedTime::parse(b"202201", GeneralizedTimeAllowedTimezone::Any).is_err());
+        assert!(GeneralizedTime::parse(b"20220130", GeneralizedTimeAllowedTimezone::Any).is_err());
+        assert!(
+            GeneralizedTime::parse(b"2022013012", GeneralizedTimeAllowedTimezone::Any).is_err()
+        );
+        assert!(
+            GeneralizedTime::parse(b"202201301230", GeneralizedTimeAllowedTimezone::Any).is_err()
+        );
+        assert!(
+            GeneralizedTime::parse(b"20220130123015", GeneralizedTimeAllowedTimezone::Any).is_err()
+        );
+        assert!(
+            GeneralizedTime::parse(b"20220130123015a", GeneralizedTimeAllowedTimezone::Any)
+                .is_err()
+        );
+        assert!(
+            GeneralizedTime::parse(b"20220130123015-", GeneralizedTimeAllowedTimezone::Any)
+                .is_err()
+        );
+        assert!(
+            GeneralizedTime::parse(b"20220130123015+", GeneralizedTimeAllowedTimezone::Any)
+                .is_err()
+        );
+        assert!(
+            GeneralizedTime::parse(b"20220130123015+01", GeneralizedTimeAllowedTimezone::Any)
+                .is_err()
+        );
+        assert!(GeneralizedTime::parse(
+            b"20220130123015+01000",
+            GeneralizedTimeAllowedTimezone::Any
+        )
+        .is_err());
+        assert!(GeneralizedTime::parse(
+            b"20220130123015+0100a",
+            GeneralizedTimeAllowedTimezone::Any
+        )
+        .is_err());
+        assert!(GeneralizedTime::parse(
+            b"20220130123015-01000",
+            GeneralizedTimeAllowedTimezone::Any
+        )
+        .is_err());
+        assert!(GeneralizedTime::parse(
+            b"20220130123015-0100a",
+            GeneralizedTimeAllowedTimezone::Any
+        )
+        .is_err());
     }
 }
