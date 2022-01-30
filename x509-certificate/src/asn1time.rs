@@ -94,6 +94,18 @@ impl GeneralizedTime {
         })
     }
 
+    /// Take a value, allowing fractional seconds and requiring the `Z` timezone identifier.
+    pub fn take_from_allow_fractional_z<S: Source>(
+        cons: &mut Constructed<S>,
+    ) -> Result<Self, S::Err> {
+        cons.take_primitive_if(Tag::GENERALIZED_TIME, |prim| {
+            let data = prim.take_all()?;
+
+            Self::parse(data.as_ref(), true, GeneralizedTimeAllowedTimezone::Z)
+                .map_err(|e| e.into())
+        })
+    }
+
     /// Parse a [GeneralizedTime] from a primitive string and don't allow fractional seconds or timezone offsets.
     pub fn from_primitive_no_fractional_or_timezone_offsets<S: Source>(
         prim: &mut Primitive<S>,
@@ -373,7 +385,7 @@ mod test {
         assert_eq!(gt.to_string(), "20220130024612-0200");
 
         let gt =
-            GeneralizedTime::parse(b"20220129133742Z", false, GeneralizedTimeAllowedTimezone::Z)?;
+            GeneralizedTime::parse(b"20220129133742Z", true, GeneralizedTimeAllowedTimezone::Z)?;
         assert_eq!(gt.time.year(), 2022);
         assert_eq!(gt.time.month(), 1);
         assert_eq!(gt.time.day(), 29);

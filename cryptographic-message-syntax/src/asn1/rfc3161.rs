@@ -392,7 +392,7 @@ impl TstInfo {
             let policy = TsaPolicyId::take_from(cons)?;
             let message_imprint = MessageImprint::take_from(cons)?;
             let serial_number = Integer::take_from(cons)?;
-            let gen_time = GeneralizedTime::take_from_no_fractional_z(cons)?;
+            let gen_time = GeneralizedTime::take_from_allow_fractional_z(cons)?;
             let accuracy = Accuracy::take_opt_from(cons)?;
             let ordering = cons.take_opt_bool()?;
             let nonce =
