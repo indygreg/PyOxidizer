@@ -12,6 +12,7 @@ use {
     },
     chrono::{Datelike, TimeZone, Timelike},
     std::{
+        fmt::{Display, Formatter},
         io::Write,
         ops::{Add, Deref},
         str::FromStr,
@@ -48,9 +49,24 @@ impl From<chrono::DateTime<chrono::Utc>> for Time {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
+enum Zone {
+    Utc,
+    Offset(chrono::FixedOffset),
+}
+
+impl Display for Zone {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Utc => f.write_str("Z"),
+            Self::Offset(offset) => f.write_str(format!("{}", offset).replace(":", "").as_str()),
+        }
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct GeneralizedTime {
     time: chrono::NaiveDateTime,
-    offset: chrono::FixedOffset,
+    timezone: Zone,
 }
 
 impl GeneralizedTime {
@@ -91,7 +107,7 @@ impl GeneralizedTime {
             if let Some(dt) = dt.and_hms_opt(hour, minute, second) {
                 Ok(Self {
                     time: dt.naive_utc(),
-                    offset: chrono::FixedOffset::east(0),
+                    timezone: Zone::Utc,
                 })
             } else {
                 Err(Malformed)
@@ -105,20 +121,26 @@ impl GeneralizedTime {
 impl ToString for GeneralizedTime {
     fn to_string(&self) -> String {
         format!(
-            "{:04}{:02}{:02}{:02}{:02}{:02}Z",
+            "{:04}{:02}{:02}{:02}{:02}{:02}{}",
             self.time.year(),
             self.time.month(),
             self.time.day(),
             self.time.hour(),
             self.time.minute(),
-            self.time.second()
+            self.time.second(),
+            self.timezone,
         )
     }
 }
 
 impl From<GeneralizedTime> for chrono::DateTime<chrono::Utc> {
     fn from(gt: GeneralizedTime) -> Self {
-        chrono::DateTime::<chrono::Utc>::from_utc(gt.time.add(gt.offset), chrono::Utc)
+        match gt.timezone {
+            Zone::Utc => chrono::DateTime::<chrono::Utc>::from_utc(gt.time, chrono::Utc),
+            Zone::Offset(offset) => {
+                chrono::DateTime::<chrono::Utc>::from_utc(gt.time.add(offset), chrono::Utc)
+            }
+        }
     }
 }
 
@@ -226,6 +248,24 @@ mod test {
 
     #[test]
     fn generalized_time() -> Result<(), bcder::decode::Error> {
+        let gt = GeneralizedTime {
+            time: chrono::NaiveDateTime::from_timestamp(1643510772, 0),
+            timezone: Zone::Utc,
+        };
+        assert_eq!(gt.to_string(), "20220130024612Z");
+
+        let gt = GeneralizedTime {
+            time: chrono::NaiveDateTime::from_timestamp(1643510772, 0),
+            timezone: Zone::Offset(chrono::FixedOffset::east(3600)),
+        };
+        assert_eq!(gt.to_string(), "20220130024612+0100");
+
+        let gt = GeneralizedTime {
+            time: chrono::NaiveDateTime::from_timestamp(1643510772, 0),
+            timezone: Zone::Offset(chrono::FixedOffset::west(7200)),
+        };
+        assert_eq!(gt.to_string(), "20220130024612-0200");
+
         let gt = GeneralizedTime::parse(b"20220129133742Z")?;
         assert_eq!(gt.time.year(), 2022);
         assert_eq!(gt.time.month(), 1);
@@ -234,7 +274,7 @@ mod test {
         assert_eq!(gt.time.minute(), 37);
         assert_eq!(gt.time.second(), 42);
         assert_eq!(gt.time.nanosecond(), 0);
-        assert_eq!(format!("{:?}", gt.offset), "+00:00");
+        assert_eq!(format!("{}", gt.timezone), "Z");
 
         assert_eq!(gt.to_string(), "20220129133742Z");
 
