@@ -3710,8 +3710,7 @@ dependencies = [
 [[package]]
 name = "rpm-rs"
 version = "0.8.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9a6df13051e4e96d62585a7f03ddf00e8d98b91c5ce9ebbf68d50215e6b2cd4e"
+source = "git+https://github.com/Richterrettich/rpm-rs#faa1b1ea7dd3f034c4fbc47bc43fc1fbe319a3c3"
 dependencies = [
  "chrono",
  "cpio",
