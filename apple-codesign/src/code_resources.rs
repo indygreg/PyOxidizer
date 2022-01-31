@@ -555,30 +555,35 @@ impl CodeResourcesRule {
     ///
     /// Exclusion rules are internal to the builder and not materialized in the
     /// `CodeResources` file.
+    #[must_use]
     pub fn exclude(mut self) -> Self {
         self.exclude = true;
         self
     }
 
     /// Mark the rule as nested.
+    #[must_use]
     pub fn nested(mut self) -> Self {
         self.nested = true;
         self
     }
 
     /// Set the omit field.
+    #[must_use]
     pub fn omit(mut self) -> Self {
         self.omit = true;
         self
     }
 
     /// Mark the files matched by this rule are optional.
+    #[must_use]
     pub fn optional(mut self) -> Self {
         self.optional = true;
         self
     }
 
     /// Set the weight of this rule.
+    #[must_use]
     pub fn weight(mut self, v: u32) -> Self {
         self.weight = Some(v);
         self

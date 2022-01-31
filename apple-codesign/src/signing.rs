@@ -630,11 +630,13 @@ impl<'key> SigningSettings<'key> {
     }
 
     /// Convert this instance to settings appropriate for a nested bundle.
+    #[must_use]
     pub fn as_nested_bundle_settings(&self, bundle_path: &str) -> Self {
         self.clone_strip_prefix(bundle_path, format!("{}/", bundle_path))
     }
 
     /// Convert this instance to settings appropriate for a Mach-O binary in a bundle.
+    #[must_use]
     pub fn as_bundle_macho_settings(&self, path: &str) -> Self {
         self.clone_strip_prefix(path, path.to_string())
     }
@@ -644,6 +646,7 @@ impl<'key> SigningSettings<'key> {
     /// It is assumed the main scope of these settings is already targeted for
     /// a Mach-O binary. Any scoped settings for the Mach-O binary index and CPU type
     /// will be applied. CPU type settings take precedence over index scoped settings.
+    #[must_use]
     pub fn as_nested_macho_settings(&self, index: usize, cpu_type: CpuType) -> Self {
         self.clone_with_filter_map(|key| {
             if key == SettingsScope::Main
