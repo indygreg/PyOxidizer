@@ -98,6 +98,32 @@ class TestImporterMetadata(unittest.TestCase):
         self.assertIsInstance(dist, OxidizedDistribution)
         self.assertEqual(dist.version, "1.0")
 
+    def test_find_distributions_case_sensitivity(self):
+        pkginfo_path = self.td / "OneTwo-1.0.egg-info" / "PKG-INFO"
+        pkginfo_path.parent.mkdir()
+
+        with pkginfo_path.open("w", encoding="utf-8") as fh:
+            fh.write("Name: OneTwo\n")
+            fh.write("Version: 1.0\n")
+
+        f = self._finder_from_td()
+
+        dists = list(
+            f.find_distributions(
+                importlib.metadata.DistributionFinder.Context(name="onetwo")
+            )
+        )
+        # TODO should be 1
+        self.assertEqual(len(dists), 0)
+
+        dists = list(
+            f.find_distributions(
+                importlib.metadata.DistributionFinder.Context(name="OneTwo")
+            )
+        )
+        # TODO should be 1
+        self.assertEqual(len(dists), 0)
+
     def test_read_text(self):
         self._write_metadata()
         f = self._finder_from_td()
