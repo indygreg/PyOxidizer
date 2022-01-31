@@ -50,6 +50,12 @@ Bug Fixes
   calling into a finalized Python interpreter. Before, calling ``py_runmain()``
   (possibly via ``run()``) could result in a segfault in the type's ``Drop``
   implementation.
+* ``oxidized_importer.OxidizedFinder.find_distributions()`` now properly
+  normalizes names when performing comparisons. Previously, the specified
+  ``name`` was properly normalized but it was compared against un-normalized
+  strings. Both the search and candidate names are now normalized when performing
+  a comparison. This should fix cases where case and other special character
+  differences could result in a distribution not being found. (#488)
 
 Backwards Compatibility Notes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

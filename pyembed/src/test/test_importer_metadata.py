@@ -113,16 +113,14 @@ class TestImporterMetadata(unittest.TestCase):
                 importlib.metadata.DistributionFinder.Context(name="onetwo")
             )
         )
-        # TODO should be 1
-        self.assertEqual(len(dists), 0)
+        self.assertEqual(len(dists), 1)
 
         dists = list(
             f.find_distributions(
                 importlib.metadata.DistributionFinder.Context(name="OneTwo")
             )
         )
-        # TODO should be 1
-        self.assertEqual(len(dists), 0)
+        self.assertEqual(len(dists), 1)
 
     def test_read_text(self):
         self._write_metadata()

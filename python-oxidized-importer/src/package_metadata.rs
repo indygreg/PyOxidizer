@@ -245,6 +245,8 @@ pub(crate) fn find_distributions<'p>(
                 let name = name.to_string();
                 let name = name.to_lowercase().replace('-', "_");
 
+                let match_name = match_name.to_lowercase().replace('-', "_");
+
                 match_name == name
             } else {
                 true
