@@ -3709,7 +3709,7 @@ dependencies = [
 [[package]]
 name = "rpm-rs"
 version = "0.8.1"
-source = "git+https://github.com/Richterrettich/rpm-rs#faa1b1ea7dd3f034c4fbc47bc43fc1fbe319a3c3"
+source = "git+https://github.com/Richterrettich/rpm-rs?rev=faa1b1ea7dd3f034c4fbc47bc43fc1fbe319a3c3#faa1b1ea7dd3f034c4fbc47bc43fc1fbe319a3c3"
 dependencies = [
  "chrono",
  "cpio",

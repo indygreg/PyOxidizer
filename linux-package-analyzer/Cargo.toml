@@ -43,4 +43,4 @@ path = "../rpm-repository"
 
 [dependencies.rpm-rs]
 git = "https://github.com/Richterrettich/rpm-rs"
-commit = "faa1b1ea7dd3f034c4fbc47bc43fc1fbe319a3c3"
+rev = "faa1b1ea7dd3f034c4fbc47bc43fc1fbe319a3c3"
