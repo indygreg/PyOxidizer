@@ -75,57 +75,68 @@ impl EvaluationContextBuilder {
         EvaluationContext::from_builder(self)
     }
 
+    #[must_use]
     pub fn config_path(mut self, value: impl AsRef<Path>) -> Self {
         self.config_path = value.as_ref().to_path_buf();
         self
     }
 
+    #[must_use]
     pub fn build_target_triple(mut self, value: impl ToString) -> Self {
         self.build_target_triple = value.to_string();
         self
     }
 
+    #[must_use]
     pub fn release(mut self, value: bool) -> Self {
         self.release = value;
         self
     }
 
+    #[must_use]
     pub fn verbose(mut self, value: bool) -> Self {
         self.verbose = value;
         self
     }
 
+    #[must_use]
     pub fn resolve_targets_optional(mut self, targets: Option<Vec<impl ToString>>) -> Self {
         self.resolve_targets =
             targets.map(|targets| targets.iter().map(|x| x.to_string()).collect());
         self
     }
 
+    #[must_use]
     pub fn resolve_targets(mut self, targets: Vec<String>) -> Self {
         self.resolve_targets = Some(targets);
         self
     }
 
+    #[must_use]
     pub fn resolve_target_optional(mut self, target: Option<impl ToString>) -> Self {
         self.resolve_targets = target.map(|target| vec![target.to_string()]);
         self
     }
 
+    #[must_use]
     pub fn resolve_target(mut self, target: impl ToString) -> Self {
         self.resolve_targets = Some(vec![target.to_string()]);
         self
     }
 
+    #[must_use]
     pub fn build_script_mode(mut self, value: bool) -> Self {
         self.build_script_mode = value;
         self
     }
 
+    #[must_use]
     pub fn distribution_cache(mut self, cache: Arc<DistributionCache>) -> Self {
         self.distribution_cache = Some(cache);
         self
     }
 
+    #[must_use]
     pub fn extra_vars(mut self, extra_vars: HashMap<String, Option<String>>) -> Self {
         self.extra_vars = extra_vars;
         self
