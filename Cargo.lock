@@ -3582,7 +3582,7 @@ dependencies = [
  "anyhow",
  "cargo-lock",
  "cargo_toml",
- "clap 2.34.0",
+ "clap 3.0.13",
  "duct",
  "git2",
  "once_cell",

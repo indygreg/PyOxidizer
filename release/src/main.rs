@@ -5,7 +5,7 @@
 use {
     anyhow::{anyhow, Context, Result},
     cargo_toml::Manifest,
-    clap::{App, AppSettings, Arg, ArgMatches, SubCommand},
+    clap::{App, AppSettings, Arg, ArgMatches},
     duct::cmd,
     git2::{Repository, Status},
     once_cell::sync::Lazy,
@@ -1291,52 +1291,47 @@ fn main_impl() -> Result<()> {
         .author("Gregory Szorc <gregory.szorc@gmail.com>")
         .about("Perform releases from the PyOxidizer repository")
         .subcommand(
-            SubCommand::with_name("generate-new-project-cargo-lock")
+            App::new("generate-new-project-cargo-lock")
                 .about("Emit a Cargo.lock file for the pyembed crate"),
         )
         .subcommand(
-            SubCommand::with_name("generate-pyembed-license")
+            App::new("generate-pyembed-license")
                 .about("Emit license information for the pyembed crate"),
         )
         .subcommand(
-            SubCommand::with_name("release")
+            App::new("release")
                 .about("Perform release actions")
                 .arg(
-                    Arg::with_name("no_publish")
+                    Arg::new("no_publish")
                         .long("no-publish")
                         .help("Do not publish release"),
                 )
+                .arg(Arg::new("patch").help("Bump the patch version instead of the minor version"))
                 .arg(
-                    Arg::with_name("patch")
-                        .help("Bump the patch version instead of the minor version"),
-                )
-                .arg(
-                    Arg::with_name("start_at")
+                    Arg::new("start_at")
                         .long("start-at")
                         .takes_value(true)
                         .help("Where to resume the release process"),
                 )
                 .arg(
-                    Arg::with_name("up_to")
+                    Arg::new("up_to")
                         .long("up-to")
                         .takes_value(true)
                         .help("Name of final package to release"),
                 ),
         )
-        .subcommand(
-            SubCommand::with_name("synchronize-generated-files").about("Write out generated files"),
-        )
+        .subcommand(App::new("synchronize-generated-files").about("Write out generated files"))
         .get_matches();
 
     match matches.subcommand() {
-        ("release", Some(args)) => command_release(repo_root, args, &repo),
-        ("generate-new-project-cargo-lock", Some(args)) => {
+        Some(("release", args)) => command_release(repo_root, args, &repo),
+        Some(("generate-new-project-cargo-lock", args)) => {
             command_generate_new_project_cargo_lock(repo_root, args)
         }
-        ("generate-pyembed-license", Some(args)) => {
+        Some(("generate-pyembed-license", args)) => {
             command_generate_pyembed_license(repo_root, args)
         }
-        ("synchronize-generated-files", Some(_)) => command_synchronize_generated_files(repo_root),
+        Some(("synchronize-generated-files", _)) => command_synchronize_generated_files(repo_root),
         _ => Err(anyhow!("invalid sub-command")),
     }
 }
