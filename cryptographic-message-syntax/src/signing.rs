@@ -94,18 +94,21 @@ impl<'a> SignerBuilder<'a> {
     /// embedded within the generated message is used. However, some users
     /// omit storing the data inline and instead use a `message-id` digest
     /// calculated from a different source. This defines that different source.
+    #[must_use]
     pub fn message_id_content(mut self, data: Vec<u8>) -> Self {
         self.message_id_content = Some(data);
         self
     }
 
     /// Define the content type of the signed content.
+    #[must_use]
     pub fn content_type(mut self, oid: Oid) -> Self {
         self.content_type = oid;
         self
     }
 
     /// Add an additional attribute to sign.
+    #[must_use]
     pub fn signed_attribute(mut self, typ: Oid, values: Vec<AttributeValue>) -> Self {
         self.extra_signed_attributes.push(Attribute { typ, values });
         self
@@ -115,6 +118,7 @@ impl<'a> SignerBuilder<'a> {
     ///
     /// This is a helper for converting a byte slice to an OctetString and AttributeValue
     /// without having to go through low-level ASN.1 code.
+    #[must_use]
     pub fn signed_attribute_octet_string(self, typ: Oid, data: &[u8]) -> Self {
         self.signed_attribute(
             typ,
@@ -173,6 +177,7 @@ impl<'a> SignedDataBuilder<'a> {
     /// Define the content to sign.
     ///
     /// This content will be embedded in the generated payload.
+    #[must_use]
     pub fn signed_content(mut self, data: Vec<u8>) -> Self {
         self.signed_content = Some(data);
         self
@@ -182,12 +187,14 @@ impl<'a> SignedDataBuilder<'a> {
     ///
     /// The signer is the thing generating the cryptographic signature over
     /// data to be signed.
+    #[must_use]
     pub fn signer(mut self, signer: SignerBuilder<'a>) -> Self {
         self.signers.push(signer);
         self
     }
 
     /// Add a certificate defined by our crate's Certificate type.
+    #[must_use]
     pub fn certificate(mut self, cert: CapturedX509Certificate) -> Self {
         if !self.certificates.iter().any(|x| x == &cert) {
             self.certificates.push(cert);
@@ -197,6 +204,7 @@ impl<'a> SignedDataBuilder<'a> {
     }
 
     /// Add multiple certificates to the certificates chain.
+    #[must_use]
     pub fn certificates(mut self, certs: impl Iterator<Item = CapturedX509Certificate>) -> Self {
         for cert in certs {
             if !self.certificates.iter().any(|x| x == &cert) {
@@ -208,6 +216,7 @@ impl<'a> SignedDataBuilder<'a> {
     }
 
     /// Force the OID for the `ContentInfo.contentType` field.
+    #[must_use]
     pub fn content_type(mut self, oid: Oid) -> Self {
         self.content_type = oid;
         self
