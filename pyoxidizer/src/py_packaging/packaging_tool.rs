@@ -540,7 +540,7 @@ mod tests {
                 &*target_dist,
                 &policy,
                 false,
-                &["numpy==1.21.3".to_string()],
+                &["numpy==1.22.1".to_string()],
             );
 
             // numpy wheel not available for 3.10 win32.
