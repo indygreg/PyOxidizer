@@ -68,6 +68,7 @@ impl<'a> SnapcraftBuilder<'a> {
     }
 
     /// Register a new `snapcraft` invocation to run during the build.
+    #[must_use]
     pub fn add_invocation(mut self, invocation: SnapcraftInvocation) -> Self {
         self.invocations.push(invocation);
         self
@@ -77,6 +78,7 @@ impl<'a> SnapcraftBuilder<'a> {
     ///
     /// The first registered invocation will purge the build path by
     /// default.
+    #[must_use]
     pub fn add_invocation_args(mut self, args: &[impl AsRef<str>]) -> Self {
         self.invocations.push(SnapcraftInvocation {
             args: args

@@ -120,42 +120,49 @@ impl WiXSimpleMsiBuilder {
     /// Set the `<Product UpgradeCode` attribute value.
     ///
     /// If not called, a deterministic value will be derived from the product name.
+    #[must_use]
     pub fn upgrade_code(mut self, value: String) -> Self {
         self.upgrade_code = Some(value);
         self
     }
 
     /// Set the `<Package Keywords` attribute value.
+    #[must_use]
     pub fn package_keywords(mut self, value: String) -> Self {
         self.package_keywords = Some(value);
         self
     }
 
     /// Set the `<Package Description` attribute value.
+    #[must_use]
     pub fn package_description(mut self, value: String) -> Self {
         self.package_description = Some(value);
         self
     }
 
     /// Set the path to the file containing the license for this application.
+    #[must_use]
     pub fn license_path<P: AsRef<Path>>(mut self, path: P) -> Self {
         self.license_source = Some(path.as_ref().to_path_buf());
         self
     }
 
     /// Set the path to the file containing the icon for this installer.
+    #[must_use]
     pub fn product_icon_path<P: AsRef<Path>>(mut self, path: P) -> Self {
         self.product_icon = Some(path.as_ref().to_path_buf());
         self
     }
 
     /// Set the help URL for this application.
+    #[must_use]
     pub fn help_url(mut self, value: String) -> Self {
         self.help_url = Some(value);
         self
     }
 
     /// Set the path to an rtf file containing the end user license agreement.
+    #[must_use]
     pub fn eula_rtf_path<P: AsRef<Path>>(mut self, path: P) -> Self {
         self.eula_rtf = Some(path.as_ref().to_path_buf());
         self
@@ -164,6 +171,7 @@ impl WiXSimpleMsiBuilder {
     /// Set the path to a bmp file containing a banner to use for install.
     ///
     /// The dimensions of the banner should be 493 x 58.
+    #[must_use]
     pub fn banner_bmp_path<P: AsRef<Path>>(mut self, path: P) -> Self {
         self.banner_bmp = Some(path.as_ref().to_path_buf());
         self
@@ -172,6 +180,7 @@ impl WiXSimpleMsiBuilder {
     /// Set the path to a bmp file containing an image for the install dialog.
     ///
     /// The dimensions of the image should be 493 x 312.
+    #[must_use]
     pub fn dialog_bmp_path<P: AsRef<Path>>(mut self, path: P) -> Self {
         self.dialog_bmp = Some(path.as_ref().to_path_buf());
         self
@@ -181,6 +190,7 @@ impl WiXSimpleMsiBuilder {
     ///
     /// This will automatically sign all installed binaries as well as the
     /// generated installer.
+    #[must_use]
     pub fn auto_sign_signtool(mut self, settings: SigntoolSign) -> Self {
         self.auto_sign_signtool_settings = Some(settings);
         self

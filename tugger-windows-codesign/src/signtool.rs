@@ -82,6 +82,7 @@ impl SigntoolSign {
     }
 
     /// Clone this instance, but not the list of files to sign.
+    #[must_use]
     pub fn clone_settings(&self) -> Self {
         Self {
             certificate: self.certificate.clone(),
