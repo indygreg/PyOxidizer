@@ -3265,7 +3265,7 @@ dependencies = [
  "assert_fs",
  "cargo-lock",
  "cc",
- "clap 2.34.0",
+ "clap 3.0.13",
  "codemap",
  "codemap-diagnostic",
  "dirs",

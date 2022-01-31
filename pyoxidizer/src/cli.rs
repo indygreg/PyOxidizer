@@ -8,7 +8,7 @@ use {
         logging, project_building, projectmgmt,
     },
     anyhow::{anyhow, Context, Result},
-    clap::{App, AppSettings, Arg, ArgMatches, SubCommand},
+    clap::{App, AppSettings, Arg, ArgMatches},
     std::{
         collections::HashMap,
         path::{Path, PathBuf},
@@ -128,42 +128,44 @@ be `None` instead of a `string`.
 If a Starlark variable is defined multiple times, an error occurs.
 ";
 
-fn add_env_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
+fn add_env_args(app: App) -> App {
     app.arg(
-        Arg::with_name("vars")
+        Arg::new("vars")
             .long("var")
             .value_names(&["name", "value"])
-            .multiple(true)
+            .multiple_occurrences(true)
+            .multiple_values(true)
             .help("Define a variable in Starlark environment")
             .long_help(VAR_HELP),
     )
     .arg(
-        Arg::with_name("vars_env")
+        Arg::new("vars_env")
             .long("var-env")
             .value_names(&["name", "env"])
-            .multiple(true)
+            .multiple_occurrences(true)
+            .multiple_values(true)
             .help("Define an environment variable in Starlark environment")
             .long_help(ENV_VAR_HELP),
     )
 }
 
-fn add_python_distribution_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
+fn add_python_distribution_args(app: App) -> App {
     app.arg(
-        Arg::with_name("target_triple")
+        Arg::new("target_triple")
             .long("--target-triple")
             .help("Rust target triple being targeted")
             .takes_value(true)
             .default_value(default_target_triple()),
     )
     .arg(
-        Arg::with_name("flavor")
+        Arg::new("flavor")
             .long("--flavor")
             .help("Python distribution flavor")
             .takes_value(true)
             .default_value("standalone"),
     )
     .arg(
-        Arg::with_name("python_version")
+        Arg::new("python_version")
             .long("--python-version")
             .help("Python version (X.Y) to use")
             .takes_value(true),
@@ -208,43 +210,43 @@ pub fn run_cli() -> Result<()> {
         .author("Gregory Szorc <gregory.szorc@gmail.com>")
         .long_about("Build and distribute Python applications")
         .arg(
-            Arg::with_name("system_rust")
+            Arg::new("system_rust")
                 .long("--system-rust")
                 .global(true)
                 .help("Use a system install of Rust instead of a self-managed Rust installation"),
         )
         .arg(
-            Arg::with_name("verbose")
+            Arg::new("verbose")
                 .long("verbose")
                 .global(true)
                 .help("Enable verbose output"),
         );
 
     let app = app.subcommand(
-        SubCommand::with_name("analyze")
+        App::new("analyze")
             .about("Analyze a built binary")
             .setting(AppSettings::ArgRequiredElseHelp)
-            .arg(Arg::with_name("path").help("Path to executable to analyze")),
+            .arg(Arg::new("path").help("Path to executable to analyze")),
     );
 
     let app = app.subcommand(add_env_args(
-        SubCommand::with_name("build")
+        App::new("build")
             .setting(AppSettings::ArgRequiredElseHelp)
             .about("Build a PyOxidizer enabled project")
             .long_about(BUILD_ABOUT)
             .arg(
-                Arg::with_name("target_triple")
+                Arg::new("target_triple")
                     .long("target-triple")
                     .takes_value(true)
                     .help("Rust target triple to build for"),
             )
             .arg(
-                Arg::with_name("release")
+                Arg::new("release")
                     .long("release")
                     .help("Build a release binary"),
             )
             .arg(
-                Arg::with_name("path")
+                Arg::new("path")
                     .long("path")
                     .takes_value(true)
                     .default_value(".")
@@ -252,62 +254,62 @@ pub fn run_cli() -> Result<()> {
                     .help("Directory containing project to build"),
             )
             .arg(
-                Arg::with_name("targets")
+                Arg::new("targets")
                     .value_name("TARGET")
-                    .multiple(true)
+                    .multiple_occurrences(true)
+                    .multiple_values(true)
                     .help("Target to resolve"),
             ),
     ));
 
-    let app = app.subcommand(
-        SubCommand::with_name("cache-clear").about("Clear PyOxidizer's user-specific cache"),
-    );
+    let app =
+        app.subcommand(App::new("cache-clear").about("Clear PyOxidizer's user-specific cache"));
 
     let app = app.subcommand(
-        SubCommand::with_name("find-resources")
+        App::new("find-resources")
             .about("Find resources in a file or directory")
             .long_about(RESOURCES_SCAN_ABOUT)
             .setting(AppSettings::ArgRequiredElseHelp)
             .arg(
-                Arg::with_name("distributions_dir")
+                Arg::new("distributions_dir")
                     .long("distributions-dir")
                     .takes_value(true)
                     .value_name("PATH")
                     .help("Directory to extract downloaded Python distributions into"),
             )
             .arg(
-                Arg::with_name("scan_distribution")
+                Arg::new("scan_distribution")
                     .long("--scan-distribution")
                     .help("Scan the Python distribution instead of a path"),
             )
             .arg(
-                Arg::with_name("target_triple")
+                Arg::new("target_triple")
                     .long("target-triple")
                     .takes_value(true)
                     .default_value(default_target_triple())
                     .help("Target triple of Python distribution to use"),
             )
             .arg(
-                Arg::with_name("no_classify_files")
+                Arg::new("no_classify_files")
                     .long("no-classify-files")
                     .help("Whether to skip classifying files as typed resources"),
             )
             .arg(
-                Arg::with_name("no_emit_files")
+                Arg::new("no_emit_files")
                     .long("no-emit-files")
                     .help("Whether to skip emitting File resources"),
             )
-            .arg(Arg::with_name("path").value_name("PATH").help(
+            .arg(Arg::new("path").value_name("PATH").help(
                 "Filesystem path to scan for resources. Must be a directory or Python wheel",
             )),
     );
 
     let app = app.subcommand(add_python_distribution_args(
-        SubCommand::with_name("generate-python-embedding-artifacts")
+        App::new("generate-python-embedding-artifacts")
             .about("Generate files useful for embedding Python in a [Rust] binary")
             .long_about(GENERATE_PYTHON_EMBEDDING_ARTIFACTS_ABOUT)
             .arg(
-                Arg::with_name("dest_path")
+                Arg::new("dest_path")
                     .value_name("DESTINATION_PATH")
                     .required(true)
                     .help("Output directory for written files"),
@@ -315,25 +317,26 @@ pub fn run_cli() -> Result<()> {
     ));
 
     let app = app.subcommand(
-        SubCommand::with_name("init-config-file")
+        App::new("init-config-file")
             .setting(AppSettings::ArgRequiredElseHelp)
             .about("Create a new PyOxidizer configuration file.")
             .arg(
-                Arg::with_name("python-code")
+                Arg::new("python-code")
                     .long("python-code")
                     .takes_value(true)
                     .help("Default Python code to execute in built executable"),
             )
             .arg(
-                Arg::with_name("pip-install")
+                Arg::new("pip-install")
                     .long("pip-install")
                     .takes_value(true)
-                    .multiple(true)
+                    .multiple_occurrences(true)
+                    .multiple_values(true)
                     .number_of_values(1)
                     .help("Python package to install via `pip install`"),
             )
             .arg(
-                Arg::with_name("path")
+                Arg::new("path")
                     .required(true)
                     .value_name("PATH")
                     .help("Directory where configuration file should be created"),
@@ -341,12 +344,12 @@ pub fn run_cli() -> Result<()> {
     );
 
     let app = app.subcommand(
-        SubCommand::with_name("init-rust-project")
+        App::new("init-rust-project")
             .setting(AppSettings::ArgRequiredElseHelp)
             .about("Create a new Rust project embedding a Python interpreter")
             .long_about(INIT_RUST_PROJECT_ABOUT)
             .arg(
-                Arg::with_name("path")
+                Arg::new("path")
                     .required(true)
                     .value_name("PATH")
                     .help("Path of project directory to create"),
@@ -354,11 +357,11 @@ pub fn run_cli() -> Result<()> {
     );
 
     let app = app.subcommand(
-        SubCommand::with_name("list-targets")
+        App::new("list-targets")
             .setting(AppSettings::ArgRequiredElseHelp)
             .about("List targets available to resolve in a configuration file")
             .arg(
-                Arg::with_name("path")
+                Arg::new("path")
                     .default_value(".")
                     .value_name("PATH")
                     .help("Path to project to evaluate"),
@@ -366,21 +369,21 @@ pub fn run_cli() -> Result<()> {
     );
 
     let app = app.subcommand(
-        SubCommand::with_name("python-distribution-extract")
+        App::new("python-distribution-extract")
             .about("Extract a Python distribution archive to a directory")
             .arg(
-                Arg::with_name("download-default")
+                Arg::new("download-default")
                     .long("--download-default")
                     .help("Download and extract the default distribution for this platform"),
             )
             .arg(
-                Arg::with_name("archive-path")
+                Arg::new("archive-path")
                     .long("--archive-path")
                     .value_name("DISTRIBUTION_PATH")
                     .help("Path to a Python distribution archive"),
             )
             .arg(
-                Arg::with_name("dest_path")
+                Arg::new("dest_path")
                     .required(true)
                     .value_name("DESTINATION_PATH")
                     .help("Path to directory where distribution should be extracted"),
@@ -388,10 +391,10 @@ pub fn run_cli() -> Result<()> {
     );
 
     let app = app.subcommand(
-        SubCommand::with_name("python-distribution-info")
+        App::new("python-distribution-info")
             .about("Show information about a Python distribution archive")
             .arg(
-                Arg::with_name("path")
+                Arg::new("path")
                     .required(true)
                     .value_name("PATH")
                     .help("Path to Python distribution archive to analyze"),
@@ -399,10 +402,10 @@ pub fn run_cli() -> Result<()> {
     );
 
     let app = app.subcommand(
-        SubCommand::with_name("python-distribution-licenses")
+        App::new("python-distribution-licenses")
             .about("Show licenses for a given Python distribution")
             .arg(
-                Arg::with_name("path")
+                Arg::new("path")
                     .required(true)
                     .value_name("PATH")
                     .help("Path to Python distribution to analyze"),
@@ -410,17 +413,17 @@ pub fn run_cli() -> Result<()> {
     );
 
     let app = app.subcommand(add_env_args(
-        SubCommand::with_name("run-build-script")
+        App::new("run-build-script")
             .setting(AppSettings::ArgRequiredElseHelp)
             .about("Run functionality that a build script would perform")
             .long_about(RUN_BUILD_SCRIPT_ABOUT)
             .arg(
-                Arg::with_name("build-script-name")
+                Arg::new("build-script-name")
                     .required(true)
                     .help("Value to use for Rust build script"),
             )
             .arg(
-                Arg::with_name("target")
+                Arg::new("target")
                     .long("target")
                     .takes_value(true)
                     .help("The config file target to resolve"),
@@ -428,34 +431,38 @@ pub fn run_cli() -> Result<()> {
     ));
 
     let app = app.subcommand(add_env_args(
-        SubCommand::with_name("run")
+        App::new("run")
             .setting(AppSettings::TrailingVarArg)
             .about("Run a target in a PyOxidizer configuration file")
             .arg(
-                Arg::with_name("target_triple")
+                Arg::new("target_triple")
                     .long("target-triple")
                     .takes_value(true)
                     .help("Rust target triple to build for"),
             )
             .arg(
-                Arg::with_name("release")
+                Arg::new("release")
                     .long("release")
                     .help("Run a release binary"),
             )
             .arg(
-                Arg::with_name("path")
+                Arg::new("path")
                     .long("path")
                     .default_value(".")
                     .value_name("PATH")
                     .help("Directory containing project to build"),
             )
             .arg(
-                Arg::with_name("target")
+                Arg::new("target")
                     .long("target")
                     .takes_value(true)
                     .help("Build target to run"),
             )
-            .arg(Arg::with_name("extra").multiple(true)),
+            .arg(
+                Arg::new("extra")
+                    .multiple_occurrences(true)
+                    .multiple_values(true),
+            ),
     ));
 
     let matches = app.get_matches();
@@ -474,8 +481,12 @@ pub fn run_cli() -> Result<()> {
         env.unmanage_rust().context("unmanaging Rust")?;
     }
 
-    match matches.subcommand() {
-        ("analyze", Some(args)) => {
+    let (command, args) = matches
+        .subcommand()
+        .ok_or_else(|| anyhow!("invalid sub-command"))?;
+
+    match command {
+        "analyze" => {
             let path = args.value_of("path").unwrap();
             let path = PathBuf::from(path);
             tugger_binary_analysis::analyze_file(path);
@@ -483,7 +494,7 @@ pub fn run_cli() -> Result<()> {
             Ok(())
         }
 
-        ("build", Some(args)) => {
+        "build" => {
             let starlark_vars = starlark_vars(args)?;
             let release = args.is_present("release");
             let target_triple = args.value_of("target_triple");
@@ -504,9 +515,9 @@ pub fn run_cli() -> Result<()> {
             )
         }
 
-        ("cache-clear", Some(_)) => projectmgmt::cache_clear(&env),
+        "cache-clear" => projectmgmt::cache_clear(&env),
 
-        ("find-resources", Some(args)) => {
+        "find-resources" => {
             let path = args.value_of("path").map(Path::new);
             let distributions_dir = args.value_of("distributions_dir").map(Path::new);
             let scan_distribution = args.is_present("scan_distribution");
@@ -529,7 +540,7 @@ pub fn run_cli() -> Result<()> {
             }
         }
 
-        ("generate-python-embedding-artifacts", Some(args)) => {
+        "generate-python-embedding-artifacts" => {
             let target_triple = args
                 .value_of("target_triple")
                 .expect("target_triple should have default");
@@ -550,7 +561,7 @@ pub fn run_cli() -> Result<()> {
             )
         }
 
-        ("init-config-file", Some(args)) => {
+        "init-config-file" => {
             let code = args.value_of("python-code");
             let pip_install = if args.is_present("pip-install") {
                 args.values_of("pip-install").unwrap().collect()
@@ -563,20 +574,20 @@ pub fn run_cli() -> Result<()> {
             projectmgmt::init_config_file(&env.pyoxidizer_source, config_path, code, &pip_install)
         }
 
-        ("list-targets", Some(args)) => {
+        "list-targets" => {
             let path = args.value_of("path").unwrap();
 
             projectmgmt::list_targets(&env, &logger_context.logger, Path::new(path))
         }
 
-        ("init-rust-project", Some(args)) => {
+        "init-rust-project" => {
             let path = args.value_of("path").unwrap();
             let project_path = Path::new(path);
 
             projectmgmt::init_rust_project(&env, &logger_context.logger, project_path)
         }
 
-        ("python-distribution-extract", Some(args)) => {
+        "python-distribution-extract" => {
             let download_default = args.is_present("download-default");
             let archive_path = args.value_of("archive-path");
             let dest_path = args.value_of("dest_path").unwrap();
@@ -592,19 +603,19 @@ pub fn run_cli() -> Result<()> {
             }
         }
 
-        ("python-distribution-info", Some(args)) => {
+        "python-distribution-info" => {
             let dist_path = args.value_of("path").unwrap();
 
             projectmgmt::python_distribution_info(dist_path)
         }
 
-        ("python-distribution-licenses", Some(args)) => {
+        "python-distribution-licenses" => {
             let path = args.value_of("path").unwrap();
 
             projectmgmt::python_distribution_licenses(path)
         }
 
-        ("run-build-script", Some(args)) => {
+        "run-build-script" => {
             let starlark_vars = starlark_vars(args)?;
             let build_script = args.value_of("build-script-name").unwrap();
             let target = args.value_of("target");
@@ -618,7 +629,7 @@ pub fn run_cli() -> Result<()> {
             )
         }
 
-        ("run", Some(args)) => {
+        "run" => {
             let starlark_vars = starlark_vars(args)?;
             let target_triple = args.value_of("target_triple");
             let release = args.is_present("release");
