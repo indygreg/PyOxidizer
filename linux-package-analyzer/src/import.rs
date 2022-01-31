@@ -357,10 +357,9 @@ async fn process_rpm_package(
             break;
         }
 
-        let mut data = Vec::with_capacity(reader.entry().file_size() as _);
-        unsafe {
-            data.set_len(data.capacity());
-        }
+        let mut data = std::iter::repeat(0u8)
+            .take(reader.entry().file_size() as _)
+            .collect::<Vec<_>>();
         reader.read_exact(&mut data)?;
 
         let path = PathBuf::from(reader.entry().name());
