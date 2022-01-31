@@ -639,8 +639,7 @@ impl<'cf> RepositoryBuilder<'cf> {
     /// Obtain [IndexFileReader] for each logical `Packages` file.
     pub fn binary_packages_index_readers(&self) -> impl Iterator<Item = IndexFileReader<'_>> + '_ {
         self.binary_packages
-            .keys()
-            .map(move |(component, architecture)| {
+            .keys().flat_map(move |(component, architecture)| {
                 self.index_file_compressions
                     .iter()
                     .map(move |compression| IndexFileReader {
@@ -654,7 +653,6 @@ impl<'cf> RepositoryBuilder<'cf> {
                         filename: "Packages".to_string(),
                     })
             })
-            .flatten()
     }
 
     /// Obtain all [IndexFileReader] to be published.
@@ -669,11 +667,9 @@ impl<'cf> RepositoryBuilder<'cf> {
         &self,
     ) -> impl Iterator<Item = Result<BinaryPackagePoolArtifact<'_>>> + '_ {
         self.binary_packages
-            .keys()
-            .map(move |(component, architecture)| {
+            .keys().flat_map(move |(component, architecture)| {
                 self.iter_component_binary_package_pool_artifacts(component, architecture)
             })
-            .flatten()
     }
 
     /// Publish artifacts to the *pool*.
