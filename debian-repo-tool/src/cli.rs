@@ -3,7 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    clap::{value_t, App, AppSettings, Arg, ArgMatches, SubCommand},
+    clap::{App, AppSettings, Arg, ArgMatches},
     debian_packaging::{
         error::DebianError,
         repository::{
@@ -183,7 +183,7 @@ pub async fn run_cli() -> Result<()> {
         .about("Interface with Debian Repositories");
 
     let app = app.arg(
-        Arg::with_name("max-parallel-io")
+        Arg::new("max-parallel-io")
             .long("--max-parallel-io")
             .takes_value(true)
             .default_value(&default_threads)
@@ -192,36 +192,40 @@ pub async fn run_cli() -> Result<()> {
     );
 
     let app = app.subcommand(
-        SubCommand::with_name("copy-repository")
+        App::new("copy-repository")
             .about("Copy a Debian repository between locations")
             .long_about(COPY_REPOSITORY_ABOUT)
             .arg(
-                Arg::with_name("yaml-config")
+                Arg::new("yaml-config")
                     .long("--yaml-config")
                     .takes_value(true)
                     .required(true)
+                    .allow_invalid_utf8(true)
                     .help("Path to a YAML file defining the copy configuration"),
             ),
     );
 
-    let app = app.subcommand(
-        SubCommand::with_name("urls").about("Print documentation about repository URLs"),
-    );
+    let mut app =
+        app.subcommand(App::new("urls").about("Print documentation about repository URLs"));
 
-    let matches = app.get_matches();
+    let matches = app.clone().get_matches();
 
     match matches.subcommand() {
-        ("copy-repository", Some(args)) => command_copy_repository(args).await,
-        ("urls", _) => {
+        Some(("copy-repository", args)) => command_copy_repository(args).await,
+        Some(("urls", _)) => {
             println!("{}", URLS_ABOUT);
             Ok(())
         }
-        (command, _) => Err(DrtError::InvalidSubCommand(command.to_string())),
+        Some((command, _)) => Err(DrtError::InvalidSubCommand(command.to_string())),
+        None => {
+            app.print_help()?;
+            Ok(())
+        }
     }
 }
 
-async fn command_copy_repository(args: &ArgMatches<'_>) -> Result<()> {
-    let max_parallel_io = value_t!(args.value_of("max-parallel-io"), usize)?;
+async fn command_copy_repository(args: &ArgMatches) -> Result<()> {
+    let max_parallel_io = args.value_of_t::<usize>("max-parallel-io")?;
 
     let yaml_path = args
         .value_of_os("yaml-config")

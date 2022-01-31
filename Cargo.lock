@@ -1139,7 +1139,7 @@ dependencies = [
 name = "debian-repo-tool"
 version = "0.3.0-pre"
 dependencies = [
- "clap 2.34.0",
+ "clap 3.0.13",
  "debian-packaging",
  "num_cpus",
  "pbr",
