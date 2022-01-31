@@ -59,9 +59,7 @@ impl X86InstructionCounts {
     pub fn cpuid_features(&self) -> HashSet<&'static iced_x86::CpuidFeature> {
         HashSet::from_iter(
             self.inner
-                .keys()
-                .map(|instruction| instruction.cpuid_features())
-                .flatten(),
+                .keys().flat_map(|instruction| instruction.cpuid_features()),
         )
     }
 
