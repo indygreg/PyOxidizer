@@ -160,15 +160,18 @@ fn load_dynamic_library(
         py_module
     };
 
+    // The initialization function will return a new/owned reference for single-phase initialization
+    // and a borrowed reference for multi-phase initialization. Since we don't know which form
+    // we're using until later, we need to be very careful about handling py_module here! Note
+    // that it may be possible to leak an owned reference in the error handling below. This
+    // code mimics what CPython does and the leak, if any, likely occurs there as well.
+
     if py_module.is_null() && unsafe { pyffi::PyErr_Occurred().is_null() } {
         return Err(PySystemError::new_err(format!(
             "initialization of {} failed without raising an exception",
             name
         )));
     }
-
-    // Cast to owned type to help prevent refcount/memory leaks.
-    let py_module = unsafe { PyObject::from_owned_ptr(py, py_module) };
 
     if !unsafe { pyffi::PyErr_Occurred().is_null() } {
         unsafe {
@@ -180,20 +183,20 @@ fn load_dynamic_library(
         )));
     }
 
-    if unsafe { pyffi::Py_TYPE(py_module.as_ptr()) }.is_null() {
+    if unsafe { pyffi::Py_TYPE(py_module) }.is_null() {
         return Err(PySystemError::new_err(format!(
             "init function of {} returned uninitialized object",
             name
         )));
     }
 
-    // If initialization returned a `PyModuleDef`, construct a module from it.
-    if unsafe { pyffi::PyObject_TypeCheck(py_module.as_ptr(), &mut pyffi::PyModuleDef_Type) } != 0 {
+    // If initialization returned a `PyModuleDef`, this is multi-phase initialization. Construct a
+    // module by calling PyModule_FromDefAndSpec(). py_module is a borrowed reference. And
+    // PyModule_FromDefAndSpec() returns a new reference. So we don't need to worry about refcounts
+    // of py_module.
+    if unsafe { pyffi::PyObject_TypeCheck(py_module, &mut pyffi::PyModuleDef_Type) } != 0 {
         let py_module = unsafe {
-            pyffi::PyModule_FromDefAndSpec(
-                py_module.as_ptr() as *mut pyffi::PyModuleDef,
-                spec.as_ptr(),
-            )
+            pyffi::PyModule_FromDefAndSpec(py_module as *mut pyffi::PyModuleDef, spec.as_ptr())
         };
 
         return if py_module.is_null() {
@@ -203,7 +206,10 @@ fn load_dynamic_library(
         };
     }
 
-    // Else fall back to single-phase init mechanism.
+    // This is the single-phase initialization mechanism. Construct a module by calling
+    // PyModule_GetDef(). py_module is a new reference. So we capture it to make sure we don't
+    // leak it.
+    let py_module = unsafe { PyObject::from_owned_ptr(py, py_module) };
 
     let mut module_def = unsafe { pyffi::PyModule_GetDef(py_module.as_ptr()) };
     if module_def.is_null() {

@@ -56,6 +56,9 @@ Bug Fixes
   strings. Both the search and candidate names are now normalized when performing
   a comparison. This should fix cases where case and other special character
   differences could result in a distribution not being found. (#488)
+* A potential crash when importing extension modules from memory on Windows was
+  fixed. The crash could occur due to discrepancy in Python reference counting when
+  multi-phase initialization was used. (#490)
 
 Backwards Compatibility Notes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
