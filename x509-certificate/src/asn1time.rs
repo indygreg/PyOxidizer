@@ -74,7 +74,7 @@ impl Display for Zone {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Utc => f.write_str("Z"),
-            Self::Offset(offset) => f.write_str(format!("{}", offset).replace(":", "").as_str()),
+            Self::Offset(offset) => f.write_str(format!("{}", offset).replace(':', "").as_str()),
         }
     }
 }
