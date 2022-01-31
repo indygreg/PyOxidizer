@@ -53,7 +53,7 @@ use {
         macho_signing::MachOSigner,
         signing::{SettingsScope, SigningSettings},
     },
-    clap::{App, AppSettings, Arg, ArgMatches, SubCommand},
+    clap::{App, AppSettings, Arg, ArgMatches},
     cryptographic_message_syntax::SignedData,
     goblin::mach::{Mach, MachO},
     slog::{error, o, warn, Drain},
@@ -374,28 +374,29 @@ fn get_macho_from_data(data: &[u8], universal_index: usize) -> Result<MachO, App
     }
 }
 
-fn add_certificate_source_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
+fn add_certificate_source_args(app: App) -> App {
     app.arg(
-        Arg::with_name("pem_source")
+        Arg::new("pem_source")
             .long("pem-source")
             .takes_value(true)
-            .multiple(true)
+            .multiple_occurrences(true)
+            .multiple_values(true)
             .help("Path to file containing PEM encoded certificate/key data"),
     )
     .arg(
-        Arg::with_name("pfx_path")
+        Arg::new("pfx_path")
             .long("--pfx-file")
             .takes_value(true)
             .help("Path to a PFX file containing a certificate key pair"),
     )
     .arg(
-        Arg::with_name("pfx_password")
+        Arg::new("pfx_password")
             .long("--pfx-password")
             .takes_value(true)
             .help("The password to use to open the --pfx-file file"),
     )
     .arg(
-        Arg::with_name("pfx_password_file")
+        Arg::new("pfx_password_file")
             .long("--pfx-password-file")
             .conflicts_with("pfx_password")
             .takes_value(true)
@@ -1507,28 +1508,29 @@ fn main_impl() -> Result<(), AppleCodesignError> {
         .about("Do things related to code signing of Apple binaries");
 
     let app = app.subcommand(add_certificate_source_args(
-        SubCommand::with_name("analyze-certificate")
+        App::new("analyze-certificate")
             .about("Analyze an X.509 certificate for Apple code signing properties")
             .long_about(ANALYZE_CERTIFICATE_ABOUT)
             .arg(
-                Arg::with_name("der_source")
+                Arg::new("der_source")
                     .long("der-source")
                     .takes_value(true)
-                    .multiple(true)
+                    .multiple_occurrences(true)
+                    .multiple_values(true)
                     .help("Path to files containing DER encoded certificate data"),
             ),
     ));
 
     let app = app.subcommand(
-        SubCommand::with_name("compute-code-hashes")
+        App::new("compute-code-hashes")
             .about("Compute code hashes for a binary")
             .arg(
-                Arg::with_name("path")
+                Arg::new("path")
                     .required(true)
                     .help("path to Mach-O binary to examine"),
             )
             .arg(
-                Arg::with_name("hash")
+                Arg::new("hash")
                     .long("hash")
                     .takes_value(true)
                     .possible_values(SUPPORTED_HASHES)
@@ -1536,13 +1538,13 @@ fn main_impl() -> Result<(), AppleCodesignError> {
                     .help("Hashing algorithm to use"),
             )
             .arg(
-                Arg::with_name("page_size")
+                Arg::new("page_size")
                     .long("page-size")
                     .takes_value(true)
                     .help("Chunk size to digest over"),
             )
             .arg(
-                Arg::with_name("universal_index")
+                Arg::new("universal_index")
                     .long("universal-index")
                     .takes_value(true)
                     .default_value("0")
@@ -1551,16 +1553,16 @@ fn main_impl() -> Result<(), AppleCodesignError> {
     );
 
     let app = app.subcommand(
-        SubCommand::with_name("extract")
+        App::new("extract")
             .about("Extracts code signature data from a Mach-O binary")
             .long_about(EXTRACT_ABOUT)
             .arg(
-                Arg::with_name("path")
+                Arg::new("path")
                     .required(true)
                     .help("Path to Mach-O binary to examine"),
             )
             .arg(
-                Arg::with_name("data")
+                Arg::new("data")
                     .long("data")
                     .takes_value(true)
                     .possible_values(&[
@@ -1589,7 +1591,7 @@ fn main_impl() -> Result<(), AppleCodesignError> {
                     .help("Which data to extract and how to format it"),
             )
             .arg(
-                Arg::with_name("universal_index")
+                Arg::new("universal_index")
                     .long("universal-index")
                     .takes_value(true)
                     .default_value("0")
@@ -1598,11 +1600,11 @@ fn main_impl() -> Result<(), AppleCodesignError> {
     );
 
     let app = app.subcommand(
-        SubCommand::with_name("generate-self-signed-certificate")
+        App::new("generate-self-signed-certificate")
             .about("Generate a self-signed certificate for code signing")
             .long_about(GENERATE_SELF_SIGNED_CERTIFICATE_ABOUT)
             .arg(
-                Arg::with_name("algorithm")
+                Arg::new("algorithm")
                     .long("algorithm")
                     .takes_value(true)
                     .possible_values(&["ecdsa", "ed25519"])
@@ -1610,14 +1612,14 @@ fn main_impl() -> Result<(), AppleCodesignError> {
                     .help("Which key type to use"),
             )
             .arg(
-                Arg::with_name("profile")
+                Arg::new("profile")
                     .long("profile")
                     .takes_value(true)
                     .possible_values(CertificateProfile::str_names())
                     .default_value("apple-development"),
             )
             .arg(
-                Arg::with_name("team_id")
+                Arg::new("team_id")
                     .long("team-id")
                     .takes_value(true)
                     .default_value("unset")
@@ -1626,28 +1628,28 @@ fn main_impl() -> Result<(), AppleCodesignError> {
                     ),
             )
             .arg(
-                Arg::with_name("person_name")
+                Arg::new("person_name")
                     .long("person-name")
                     .takes_value(true)
                     .required(true)
                     .help("The name of the person this certificate is for"),
             )
             .arg(
-                Arg::with_name("country_name")
+                Arg::new("country_name")
                     .long("country-name")
                     .takes_value(true)
                     .default_value("XX")
                     .help("Country Name (C) value for certificate identifier"),
             )
             .arg(
-                Arg::with_name("validity_days")
+                Arg::new("validity_days")
                     .long("validity-days")
                     .takes_value(true)
                     .default_value("365")
                     .help("How many days the certificate should be valid for"),
             )
             .arg(
-                Arg::with_name("pem_filename")
+                Arg::new("pem_filename")
                     .long("pem-filename")
                     .takes_value(true)
                     .help("Base name of files to write PEM encoded certificate to"),
@@ -1655,35 +1657,35 @@ fn main_impl() -> Result<(), AppleCodesignError> {
     );
 
     let app = app.
-        subcommand(SubCommand::with_name("keychain-export-certificate-chain")
+        subcommand(App::new("keychain-export-certificate-chain")
             .about("Export Apple CA certificates from the macOS Keychain")
             .arg(
-                Arg::with_name("domain")
+                Arg::new("domain")
                     .long("--domain")
                     .possible_values(&["user", "system", "common", "dynamic"])
                     .default_value("user")
                     .help("Keychain domain to operate on")
             )
             .arg(
-                Arg::with_name("password")
+                Arg::new("password")
                     .long("--password")
                     .takes_value(true)
                     .help("Password to unlock the Keychain")
             )
             .arg(
-                Arg::with_name("password_file")
+                Arg::new("password_file")
                     .long("--password-file")
                     .takes_value(true)
                     .conflicts_with("password")
                     .help("File containing password to use to unlock the Keychain")
             )
            .arg(
-                Arg::with_name("no_print_self")
+                Arg::new("no_print_self")
                     .long("--no-print-self")
                     .help("Print only the issuing certificate chain, not the subject certificate")
            )
            .arg(
-               Arg::with_name("user_id")
+               Arg::new("user_id")
                     .long("--user-id")
                     .takes_value(true)
                     .required(true)
@@ -1692,11 +1694,11 @@ fn main_impl() -> Result<(), AppleCodesignError> {
         );
 
     let app = app.subcommand(
-        SubCommand::with_name("parse-code-signing-requirement")
+        App::new("parse-code-signing-requirement")
             .about("Parse binary Code Signing Requirement data into a human readable string")
             .long_about(PARSE_CODE_SIGNING_REQUIREMENT_ABOUT)
             .arg(
-                Arg::with_name("format")
+                Arg::new("format")
                     .long("--format")
                     .required(true)
                     .possible_values(&["csrl", "expression-tree"])
@@ -1704,7 +1706,7 @@ fn main_impl() -> Result<(), AppleCodesignError> {
                     .help("Output format"),
             )
             .arg(
-                Arg::with_name("input_path")
+                Arg::new("input_path")
                     .required(true)
                     .help("Path to file to parse"),
             ),
@@ -1712,41 +1714,44 @@ fn main_impl() -> Result<(), AppleCodesignError> {
 
     let app = app
         .subcommand(
-            add_certificate_source_args(SubCommand::with_name("sign")
+            add_certificate_source_args(App::new("sign")
                 .about("Sign a Mach-O binary or bundle")
                 .long_about(SIGN_ABOUT)
                 .arg(
-                    Arg::with_name("binary_identifier")
+                    Arg::new("binary_identifier")
                         .long("binary-identifier")
                         .takes_value(true)
-                        .multiple(true)
+                        .multiple_occurrences(true)
+                        .multiple_values(true)
                         .number_of_values(1)
                         .help("Identifier string for binary. The value normally used by CFBundleIdentifier")
                 )
                 .arg(
-                    Arg::with_name("code_requirements_path")
+                    Arg::new("code_requirements_path")
                         .long("code-requirements-path")
                         .takes_value(true)
-                        .multiple(true)
+                        .multiple_occurrences(true)
+                        .multiple_values(true)
                         .number_of_values(1)
                         .help("Path to a file containing binary code requirements data to be used as designated requirements")
                 )
                 .arg(
-                    Arg::with_name("code_resources")
+                    Arg::new("code_resources")
                         .long("code-resources-path")
                         .takes_value(true)
-                        .multiple(true)
+                        .multiple_occurrences(true)
+                        .multiple_values(true)
                         .number_of_values(1)
                         .help("Path to an XML plist file containing code resources"),
                 )
                 .arg(
-                    Arg::with_name("code_signature_flags_set")
+                    Arg::new("code_signature_flags_set")
                         .long("code-signature-flags")
                         .takes_value(true)
                         .help("Code signature flags to set")
                 )
                 .arg(
-                    Arg::with_name("digest")
+                    Arg::new("digest")
                         .long("digest")
                         .possible_values(SUPPORTED_HASHES)
                         .takes_value(true)
@@ -1754,28 +1759,29 @@ fn main_impl() -> Result<(), AppleCodesignError> {
                         .help("Digest algorithm to use")
                 )
                 .arg(
-                    Arg::with_name("entitlements_xml_path")
+                    Arg::new("entitlements_xml_path")
                         .long("entitlements-xml-path")
-                        .short("e")
+                        .short('e')
                         .takes_value(true)
-                        .multiple(true)
+                        .multiple_occurrences(true)
+                        .multiple_values(true)
                         .number_of_values(1)
                         .help("Path to a plist file containing entitlements"),
                 )
                 .arg(
-                    Arg::with_name("executable_segment_flags_set")
+                    Arg::new("executable_segment_flags_set")
                         .long("executable-segment-flags")
                         .takes_value(true)
                         .help("Executable segment flags to set")
                 )
                 .arg(
-                    Arg::with_name("info_plist_path")
+                    Arg::new("info_plist_path")
                         .long("info-plist-path")
                         .takes_value(true)
                         .help("Path to an Info.plist file whose digest to include in Mach-O signature")
                 )
                 .arg(
-                    Arg::with_name(
+                    Arg::new(
                         "team_name")
                         .long("team-name")
                         .takes_value(true)
@@ -1783,7 +1789,7 @@ fn main_impl() -> Result<(), AppleCodesignError> {
                     )
                 )
                 .arg(
-                    Arg::with_name("timestamp_url")
+                    Arg::new("timestamp_url")
                         .long("timestamp-url")
                         .takes_value(true)
                         .default_value(APPLE_TIMESTAMP_URL)
@@ -1792,50 +1798,50 @@ fn main_impl() -> Result<(), AppleCodesignError> {
                         ),
                 )
                 .arg(
-                    Arg::with_name("input_path")
+                    Arg::new("input_path")
                         .required(true)
                         .help("Path to Mach-O binary to sign"),
                 )
                 .arg(
-                    Arg::with_name("output_path")
+                    Arg::new("output_path")
                         .required(true)
                         .help("Path to signed Mach-O binary to write"),
                 ),
         ));
 
     let app = app.subcommand(
-        SubCommand::with_name("verify")
+        App::new("verify")
             .about("Verifies code signature data")
             .arg(
-                Arg::with_name("path")
+                Arg::new("path")
                     .required(true)
                     .help("Path of Mach-O binary to examine"),
             ),
     );
 
     let app = app.subcommand(
-        SubCommand::with_name("x509-oids")
+        App::new("x509-oids")
             .about("Print information about X.509 OIDs related to Apple code signing"),
     );
 
     let matches = app.get_matches();
 
     match matches.subcommand() {
-        ("analyze-certificate", Some(args)) => command_analyze_certificate(args),
-        ("compute-code-hashes", Some(args)) => command_compute_code_hashes(args),
-        ("extract", Some(args)) => command_extract(args),
-        ("generate-self-signed-certificate", Some(args)) => {
+        Some(("analyze-certificate", args)) => command_analyze_certificate(args),
+        Some(("compute-code-hashes", args)) => command_compute_code_hashes(args),
+        Some(("extract", args)) => command_extract(args),
+        Some(("generate-self-signed-certificate", args)) => {
             command_generate_self_signed_certificate(args)
         }
-        ("keychain-export-certificate-chain", Some(args)) => {
+        Some(("keychain-export-certificate-chain", args)) => {
             command_keychain_export_certificate_chain(args)
         }
-        ("parse-code-signing-requirement", Some(args)) => {
+        Some(("parse-code-signing-requirement", args)) => {
             command_parse_code_signing_requirement(args)
         }
-        ("sign", Some(args)) => command_sign(args),
-        ("verify", Some(args)) => command_verify(args),
-        ("x509-oids", Some(args)) => command_x509_oids(args),
+        Some(("sign", args)) => command_sign(args),
+        Some(("verify", args)) => command_verify(args),
+        Some(("x509-oids", args)) => command_x509_oids(args),
         _ => Err(AppleCodesignError::CliUnknownCommand),
     }
 }

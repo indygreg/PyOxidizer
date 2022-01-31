@@ -101,7 +101,7 @@ dependencies = [
  "bitflags",
  "bytes",
  "chrono",
- "clap 2.34.0",
+ "clap 3.0.13",
  "cryptographic-message-syntax",
  "goblin",
  "hex",
