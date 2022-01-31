@@ -42,6 +42,7 @@ impl<'control> DebBuilder<'control> {
     /// Set the compression format to use.
     ///
     /// Not all compression formats are supported by all Linux distributions.
+    #[must_use]
     pub fn set_compression(mut self, compression: DebCompression) -> Self {
         self.compression = compression;
         self
@@ -61,6 +62,7 @@ impl<'control> DebBuilder<'control> {
     /// to make archive content deterministic.
     ///
     /// If not called, the current time will be used.
+    #[must_use]
     pub fn set_mtime(mut self, time: Option<SystemTime>) -> Self {
         self.mtime = time;
         self.control_builder = self.control_builder.set_mtime(time);
@@ -305,6 +307,7 @@ impl<'a> ControlTarBuilder<'a> {
             .as_secs()
     }
 
+    #[must_use]
     pub fn set_mtime(mut self, time: Option<SystemTime>) -> Self {
         self.mtime = time;
         self

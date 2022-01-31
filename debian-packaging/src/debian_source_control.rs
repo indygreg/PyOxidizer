@@ -168,6 +168,7 @@ impl<'a> DebianSourceControlFile<'a> {
     }
 
     /// Clone without preserving signatures data.
+    #[must_use]
     pub fn clone_no_signatures(&self) -> Self {
         Self {
             paragraph: self.paragraph.clone(),
