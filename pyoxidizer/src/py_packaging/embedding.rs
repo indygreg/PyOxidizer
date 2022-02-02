@@ -349,6 +349,28 @@ impl<'a> EmbeddedPythonContext<'a> {
         Ok(())
     }
 
+    /// Write an archive containing extra files.
+    pub fn write_extra_files(&self, dest_dir: impl AsRef<Path>) -> Result<()> {
+        let mut fh = std::fs::File::create(dest_dir.as_ref().join("extra_files.tar.zstd"))?;
+        let mut ar = tar::Builder::new(zstd::Encoder::new(fh, 0)?);
+        ar.mode(tar::HeaderMode::Deterministic);
+        for (path, e) in self.extra_files.iter_entries() {
+            if let Some(src) = e.file_data().backing_path() {
+                ar.append_path_with_name(src, path)?;
+                continue;
+            }
+            let b = e.resolve_content()?;
+            let mut h = tar::Header::new_gnu();
+            h.set_size(b.len() as u64);
+            h.set_mode(if e.is_executable() { 0o755 } else { 0o644 });
+            h.set_uid(0);
+            h.set_gid(0);
+            h.set_mtime(1153704088);
+            ar.append_data(&mut h, path, b.as_slice())?;
+        }
+        Ok(ar.into_inner()?.finish()?.sync_data()?)
+    }
+
     /// Write out files needed to build a binary against our configuration.
     pub fn write_files(&self, dest_dir: &Path) -> Result<()> {
         self.write_packed_resources(&dest_dir)
