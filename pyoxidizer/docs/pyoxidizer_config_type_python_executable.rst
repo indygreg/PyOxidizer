@@ -281,7 +281,7 @@
         This method is identical to :py:meth:`add_python_resource` except the argument is
         an iterable of resources. All other arguments are identical.
 
-    .. py:method:: filter_from_files(files: list[str], glob_files: list[str])
+    .. py:method:: filter_resources_from_files(files: list[str], glob_files: list[str])
 
         This method filters all embedded resources (source modules, bytecode modules,
         and resource names) currently present on the instance through a set of
