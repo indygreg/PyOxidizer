@@ -41,7 +41,11 @@ use {
 pub fn default_target() -> Result<String> {
     // TODO derive these more intelligently.
     if cfg!(target_os = "linux") {
-        Ok("x86_64-unknown-linux-gnu".to_string())
+        if cfg!(target_arch = "aarch64") {
+            Ok("aarch64-unknown-linux-gnu".to_string())
+        } else {
+            Ok("x86_64-unknown-linux-gnu".to_string())
+        }
     } else if cfg!(target_os = "windows") {
         Ok("x86_64-pc-windows-msvc".to_string())
     } else if cfg!(target_os = "macos") {
