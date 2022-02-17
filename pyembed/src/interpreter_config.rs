@@ -16,21 +16,14 @@ use {
         ffi::{CString, OsString},
         path::Path,
     },
+    libc::wchar_t,
 };
 
 #[cfg(target_family = "unix")]
 use std::{ffi::NulError, os::unix::ffi::OsStrExt};
 
-#[allow(non_camel_case_types)]
-#[cfg(target_family = "unix")]
-type wchar_t = i32;
-
 #[cfg(target_family = "windows")]
 use std::os::windows::prelude::OsStrExt;
-
-#[allow(non_camel_case_types)]
-#[cfg(target_family = "windows")]
-type wchar_t = u16;
 
 /// Set a PyConfig string value from a str.
 fn set_config_string_from_str(

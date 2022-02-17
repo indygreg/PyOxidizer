@@ -7,6 +7,7 @@
 use pyo3::{ffi as pyffi, prelude::*};
 
 use std::ffi::OsString;
+use std::os::raw::c_char;
 
 #[cfg(target_family = "unix")]
 use std::os::unix::ffi::OsStrExt;
@@ -18,7 +19,7 @@ use std::os::windows::prelude::OsStrExt;
 pub fn osstring_to_bytes(py: Python, s: OsString) -> &PyAny {
     let b = s.as_bytes();
     unsafe {
-        let o = pyffi::PyBytes_FromStringAndSize(b.as_ptr() as *const i8, b.len() as isize);
+        let o = pyffi::PyBytes_FromStringAndSize(b.as_ptr() as *const c_char, b.len() as isize);
         PyObject::from_owned_ptr(py, o).into_ref(py)
     }
 }
@@ -27,7 +28,7 @@ pub fn osstring_to_bytes(py: Python, s: OsString) -> &PyAny {
 pub fn osstring_to_bytes(py: Python, s: OsString) -> &PyAny {
     let w: Vec<u16> = s.encode_wide().collect();
     unsafe {
-        let o = pyffi::PyBytes_FromStringAndSize(w.as_ptr() as *const i8, w.len() as isize * 2);
+        let o = pyffi::PyBytes_FromStringAndSize(w.as_ptr() as *const c_char, w.len() as isize * 2);
         PyObject::from_owned_ptr(py, o).into_ref(py)
     }
 }
