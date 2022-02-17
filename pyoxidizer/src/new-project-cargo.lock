@@ -319,6 +319,7 @@ dependencies = [
  "anyhow",
  "dunce",
  "jemalloc-sys",
+ "libc",
  "libmimalloc-sys",
  "once_cell",
  "pyo3",
