@@ -540,23 +540,8 @@ impl<'a> CodeDirectoryBlob<'a> {
     pub fn adjust_version(&mut self) -> u32 {
         let old_version = self.version;
 
-        let mut minimum_version = CodeDirectoryVersion::Initial;
+        let mut minimum_version = CodeDirectoryVersion::SupportsExecutableSegment;
 
-        if self.scatter_offset.is_some() {
-            minimum_version = CodeDirectoryVersion::SupportsScatter;
-        }
-        if self.team_name.is_some() {
-            minimum_version = CodeDirectoryVersion::SupportsTeamId;
-        }
-        if self.spare3.is_some() || self.code_limit_64.is_some() {
-            minimum_version = CodeDirectoryVersion::SupportsCodeLimit64;
-        }
-        if self.exec_seg_base.is_some()
-            || self.exec_seg_limit.is_some()
-            || self.exec_seg_flags.is_some()
-        {
-            minimum_version = CodeDirectoryVersion::SupportsExecutableSegment;
-        }
         if self.runtime.is_some() || self.pre_encrypt_offset.is_some() {
             minimum_version = CodeDirectoryVersion::SupportsRuntime;
         }
