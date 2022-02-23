@@ -94,6 +94,9 @@ pub enum AppleCodesignError {
     #[error("entitlements data not valid UTF-8: {0}")]
     EntitlementsBadUtf8(std::str::Utf8Error),
 
+    #[error("entitlements data invalid")]
+    EntitlementsInvalid,
+
     #[error("unknown executable segment flag: {0}")]
     ExecutableSegmentUnknownFlag(String),
 

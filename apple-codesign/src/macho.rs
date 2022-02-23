@@ -1135,6 +1135,85 @@ impl<'a> std::fmt::Display for EntitlementsBlob<'a> {
     }
 }
 
+/// Represents a DER encoded Entitlements blob.
+///
+/// A DER entitlements blob contains a DER encoded plist with a dict.
+#[derive(Debug)]
+pub struct EntitlementsDerBlob<'a> {
+    der: Cow<'a, [u8]>,
+}
+
+impl<'a> Blob<'a> for EntitlementsDerBlob<'a> {
+    fn magic() -> u32 {
+        u32::from(CodeSigningMagic::EntitlementsDer)
+    }
+
+    fn from_blob_bytes(data: &'a [u8]) -> Result<Self, AppleCodesignError> {
+        let data = read_and_validate_blob_header(data, Self::magic(), "entitlements der blob")?;
+        Ok(Self { der: data.into() })
+    }
+
+    fn serialize_payload(&self) -> Result<Vec<u8>, AppleCodesignError> {
+        Ok(self.der.to_vec())
+    }
+}
+
+impl<'a> EntitlementsDerBlob<'a> {
+    /// Construct an instance using any plist as the payload.
+    pub fn from_string(s: &(impl ToString + ?Sized)) -> Result<Self, AppleCodesignError> {
+        use plist::Value;
+        use rasn::ber::enc::{Encoder as DerEncoder, Error as DerError};
+        use rasn::prelude::*;
+        use std::collections::BTreeMap;
+        fn der_encode_value(encoder: &mut DerEncoder, value: &Value) -> Result<(), DerError> {
+            match value {
+                Value::Array(array) => encoder.encode_sequence(Tag::SEQUENCE, |encoder| {
+                    for v in array {
+                        der_encode_value(encoder, v)?;
+                    }
+                    Ok(())
+                }),
+                Value::Dictionary(dict) => {
+                    // make sure it's sorted alphabetically
+                    let map = dict.into_iter().collect::<BTreeMap<_, _>>();
+                    encoder.encode_sequence(Tag::new(Class::Context, 16), |encoder| {
+                        for (k, v) in map {
+                            encoder.encode_sequence(Tag::SEQUENCE, |encoder| {
+                                encoder.encode_utf8_string(Tag::UTF8_STRING, k)?;
+                                der_encode_value(encoder, v)?;
+                                Ok(())
+                            })?;
+                        }
+                        Ok(())
+                    })
+                }
+                Value::Boolean(boolean) => encoder.encode_bool(Tag::BOOL, *boolean),
+                Value::Data(data) => encoder.encode_octet_string(Tag::OCTET_STRING, data),
+                Value::Integer(integer) => {
+                    let integer = Integer::from(integer.as_signed().unwrap());
+                    encoder.encode_integer(Tag::INTEGER, &integer)
+                }
+                Value::String(string) => encoder.encode_utf8_string(Tag::UTF8_STRING, string),
+                _ => {
+                    // non exhaustive enum
+                    unimplemented!()
+                }
+            }
+        }
+        let plist: plist::Value = plist::from_bytes(s.to_string().as_bytes())
+            .map_err(|_err| AppleCodesignError::EntitlementsInvalid)?;
+        let der = rasn::der::encode_scope(|encoder| {
+            encoder.encode_sequence(Tag::new(Class::Application, 16), |encoder| {
+                encoder.encode_integer(Tag::INTEGER, &Integer::from(1))?;
+                der_encode_value(encoder, &plist)?;
+                Ok(())
+            })
+        })
+        .map_err(|_err| AppleCodesignError::EntitlementsInvalid)?;
+        Ok(Self { der: der.into() })
+    }
+}
+
 /// A detached signature.
 #[derive(Debug)]
 pub struct DetachedSignatureBlob<'a> {

@@ -15,7 +15,7 @@ use {
         macho::{
             create_superblob, AppleSignable, Blob, BlobWrapperBlob, CodeSigningMagic,
             CodeSigningSlot, Digest, DigestType, EmbeddedSignature, EntitlementsBlob,
-            RequirementSetBlob, RequirementType,
+            EntitlementsDerBlob, RequirementSetBlob, RequirementType,
         },
         policy::derive_designated_requirements,
         signing::{DesignatedRequirementMode, SettingsScope, SigningSettings},
@@ -756,8 +756,10 @@ impl<'data> MachOSigner<'data> {
         }
 
         if let Some(entitlements) = settings.entitlements_xml(SettingsScope::Main) {
-            let blob = EntitlementsBlob::from_string(entitlements);
+            let blob = EntitlementsDerBlob::from_string(&entitlements)?;
+            res.push((CodeSigningSlot::SecuritySettings, blob.to_blob_bytes()?));
 
+            let blob = EntitlementsBlob::from_string(entitlements);
             res.push((CodeSigningSlot::Entitlements, blob.to_blob_bytes()?));
         }
 

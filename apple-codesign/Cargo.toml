@@ -36,6 +36,7 @@ slog = "2.7"
 slog-term = "2.8"
 thiserror = "1.0"
 yasna = "0.5"
+rasn = "0.5.0"
 
 [dependencies.apple-bundles]
 path = "../apple-bundles"
