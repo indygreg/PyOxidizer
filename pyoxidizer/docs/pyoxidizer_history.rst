@@ -87,6 +87,11 @@ New Features
   still the default Python version. Target Python 3.10 by passing
   ``python_version = "3.10"`` to the :py:func:`default_python_distribution`
   Starlark function.
+* Default Python distributions upgraded from 3.9.7 to 3.9.10. Various library
+  dependencies have also been upgraded. See
+  https://github.com/indygreg/python-build-standalone/releases/tag/20211017 and
+  https://github.com/indygreg/python-build-standalone/releases/tag/20220222 for
+  the full list of changes.
 * The ``pyembed::MainPythonInterpreter`` Rust struct has gained a
   ``with_gil()`` function for executing a function with the Python GIL held.
 
