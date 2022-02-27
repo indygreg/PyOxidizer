@@ -59,6 +59,8 @@ Bug Fixes
 * A potential crash when importing extension modules from memory on Windows was
   fixed. The crash could occur due to discrepancy in Python reference counting when
   multi-phase initialization was used. (#490)
+* Our patched ``distutils`` only sets ``Py_BUILD_CORE_BUILTIN`` on Windows. This
+  fixes errors building at least the ``grpcio`` package outside of Windows.
 
 Backwards Compatibility Notes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
