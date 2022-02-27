@@ -61,6 +61,11 @@ Bug Fixes
   multi-phase initialization was used. (#490)
 * Our patched ``distutils`` only sets ``Py_BUILD_CORE_BUILTIN`` on Windows. This
   fixes errors building at least the ``grpcio`` package outside of Windows.
+* When using a modified ``distutils`` to install Python packages, the
+  ``SETUPTOOLS_USE_DISTUTILS=stdlib`` environment variable is now set. This
+  prevents ``setuptools`` from using its vendored copy of ``distutils`` and
+  ignoring our modifications. Before this change, packages with extension
+  modules may not have built correctly, resulting in build or run-time errors.
 
 Backwards Compatibility Notes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

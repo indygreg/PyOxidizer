@@ -112,6 +112,15 @@ pub fn prepare_hacked_distutils(
     );
     res.insert("PYOXIDIZER".to_string(), "1".to_string());
 
+    // Modern versions of setuptools vendor their own copy of distutils
+    // and use it by default. Since our standalone distributions contain
+    // distutils, it is safe to use it by default. Furthermore, setuptools
+    // distutils would ignore the hacks we performed above. So we need to
+    // tell setuptools to not load its own distutils. The actual value
+    // of the environment variable doesn't matter as long as it isn't "local".
+    // However, the docs suggest using "stdlib."
+    res.insert("SETUPTOOLS_USE_DISTUTILS".to_string(), "stdlib".to_string());
+
     Ok(res)
 }
 
