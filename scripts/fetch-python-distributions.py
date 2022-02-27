@@ -59,19 +59,22 @@ def main():
     for asset in release.get_assets():
         name = asset.name
         url = asset.browser_download_url
+
+        if not name.startswith("cpython-") or not name.endswith("-full.tar.zst"):
+            continue
+
         sha256 = download_and_hash(url)
 
-        # cpython-3.8.6-i686-pc-windows-msvc-shared-pgo-20201021T0032.tar.zst
-
-        assert name.startswith("cpython-")
-        assert name.endswith((".tar.zst", ".tar.gz"))
+        # cpython-3.8.6+20220227-i686-pc-windows-msvc-shared-pgo-full.tar.zst
 
         parts = name.split("-")
 
         parts = parts[:-1]
 
         _python_flavor = parts.pop(0)
-        major_minor = parts.pop(0).rsplit(".", 1)[0]
+        version = parts.pop(0)
+        python_version, tag = version.split('+', 1)
+        major_minor = python_version.rsplit(".", 1)[0]
 
         if parts[-2] in ("shared", "static"):
             target_triple = "-".join(parts[0:-2])
