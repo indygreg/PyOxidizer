@@ -330,7 +330,7 @@ jobs:
         id: cache-sccache
         uses: actions/cache@v2
         with:
-          path: C:/Rust/.cargo/bin/sccache.exe
+          path: C:/Users/runneradmin/.cargo/bin/sccache.exe
           key: ${{ runner.os }}-sccache-0
 
       - name: Install sccache build dependencies
