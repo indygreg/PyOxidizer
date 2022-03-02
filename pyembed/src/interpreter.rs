@@ -27,8 +27,8 @@ use {
         collections::BTreeSet,
         env, fs,
         io::Write,
-        path::{Path, PathBuf},
         os::raw::c_char,
+        path::{Path, PathBuf},
     },
 };
 

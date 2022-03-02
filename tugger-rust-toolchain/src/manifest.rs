@@ -151,7 +151,14 @@ impl Package {
                         }
                     }
 
-                    targets.insert(k.clone(), ManifestTargetedPackage { name: k, available, urls });
+                    targets.insert(
+                        k.clone(),
+                        ManifestTargetedPackage {
+                            name: k,
+                            available,
+                            urls,
+                        },
+                    );
                 }
             }
 

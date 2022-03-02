@@ -96,7 +96,8 @@ impl<'file, 'data: 'file> BinaryPackageAlternativesResolution<'file, 'data> {
     ) -> impl Iterator<Item = (&'_ SingleDependency, &'file BinaryPackageControlFile<'data>)> + '_
     {
         self.alternatives
-            .iter().flat_map(|alt| alt.packages_with_expression())
+            .iter()
+            .flat_map(|alt| alt.packages_with_expression())
     }
 
     /// Prune empty alternatives from this data structure.
@@ -133,7 +134,8 @@ impl<'file, 'data: 'file> BinaryPackageDependenciesResolution<'file, 'data> {
     ) -> impl Iterator<Item = (&'_ SingleDependency, &'file BinaryPackageControlFile<'data>)> + '_
     {
         self.parts
-            .iter().flat_map(|req| req.packages_with_expression())
+            .iter()
+            .flat_map(|req| req.packages_with_expression())
     }
 
     /// Iterate over dependency alternates that have no satisfying packages.

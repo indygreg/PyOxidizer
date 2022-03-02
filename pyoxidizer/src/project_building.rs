@@ -449,18 +449,14 @@ pub fn build_pyembed_artifacts(
         return Ok(());
     }
 
-    let mut context: EvaluationContext = EvaluationContextBuilder::new(
-        env,
-        logger.clone(),
-        config_path,
-        target_triple.to_string(),
-    )
-    .extra_vars(extra_vars)
-    .release(release)
-    .verbose(verbose)
-    .resolve_target_optional(resolve_target)
-    .build_script_mode(true)
-    .try_into()?;
+    let mut context: EvaluationContext =
+        EvaluationContextBuilder::new(env, logger.clone(), config_path, target_triple.to_string())
+            .extra_vars(extra_vars)
+            .release(release)
+            .verbose(verbose)
+            .resolve_target_optional(resolve_target)
+            .build_script_mode(true)
+            .try_into()?;
 
     context.evaluate_file(config_path)?;
 

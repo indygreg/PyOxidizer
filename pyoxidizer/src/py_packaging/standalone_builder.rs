@@ -721,7 +721,8 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
                         source.top_level_package(),
                         core_component
                             .spdx_expression()
-                            .ok_or_else(|| anyhow!("should have resolved SPDX expression"))?.as_ref(),
+                            .ok_or_else(|| anyhow!("should have resolved SPDX expression"))?
+                            .as_ref(),
                     )?;
                     component.set_flavor(ComponentFlavor::PythonPackage);
 

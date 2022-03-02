@@ -146,7 +146,8 @@ mod tests {
         // Actions. That gives us extreme test coverage of real world .tbd files.
         let mut sdks = find_system_xcode_developer_directories()
             .unwrap()
-            .into_iter().flat_map(|p| find_developer_sdks(&p).unwrap())
+            .into_iter()
+            .flat_map(|p| find_developer_sdks(&p).unwrap())
             .collect::<Vec<_>>();
 
         if let Some(extra) = find_command_line_tools_sdks().unwrap() {

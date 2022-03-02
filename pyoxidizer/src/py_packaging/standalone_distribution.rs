@@ -806,9 +806,9 @@ impl StandaloneDistribution {
                 } else if let Some(core) = &core_license {
                     LicensedComponent::new_spdx(
                         module,
-                        core
-                            .spdx_expression()
-                            .ok_or_else(|| anyhow!("could not resolve SPDX license for core"))?.as_ref(),
+                        core.spdx_expression()
+                            .ok_or_else(|| anyhow!("could not resolve SPDX license for core"))?
+                            .as_ref(),
                     )?
                 } else {
                     LicensedComponent::new_none(module)
@@ -1334,7 +1334,8 @@ impl PythonDistribution for StandaloneDistribution {
     fn python_resources<'a>(&self) -> Vec<PythonResource<'a>> {
         let extension_modules = self
             .extension_modules
-            .iter().flat_map(|(_, exts)| exts.iter().map(|e| PythonResource::from(e.to_owned())));
+            .iter()
+            .flat_map(|(_, exts)| exts.iter().map(|e| PythonResource::from(e.to_owned())));
 
         let module_sources = self.py_modules.iter().map(|(name, path)| {
             PythonResource::from(PythonModuleSource {
@@ -1347,19 +1348,17 @@ impl PythonDistribution for StandaloneDistribution {
             })
         });
 
-        let resource_datas = self
-            .resources
-            .iter().flat_map(|(package, inner)| {
-                inner.iter().map(move |(name, path)| {
-                    PythonResource::from(PythonPackageResource {
-                        leaf_package: package.clone(),
-                        relative_name: name.clone(),
-                        data: FileData::Path(path.clone()),
-                        is_stdlib: true,
-                        is_test: self.is_stdlib_test_package(package),
-                    })
+        let resource_datas = self.resources.iter().flat_map(|(package, inner)| {
+            inner.iter().map(move |(name, path)| {
+                PythonResource::from(PythonPackageResource {
+                    leaf_package: package.clone(),
+                    relative_name: name.clone(),
+                    data: FileData::Path(path.clone()),
+                    is_stdlib: true,
+                    is_test: self.is_stdlib_test_package(package),
                 })
-            });
+            })
+        });
 
         extension_modules
             .chain(module_sources)

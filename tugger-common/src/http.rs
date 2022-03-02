@@ -64,13 +64,16 @@ pub fn get_http_client() -> reqwest::Result<reqwest::blocking::Client> {
 
 /// Fetch a URL and verify its SHA-256 matches expectations.
 pub fn download_and_verify(logger: &slog::Logger, entry: &RemoteContent) -> Result<Vec<u8>> {
-    let url = std::env::var(format!("{}_URL", &entry.name)).unwrap_or_else(|_err| entry.url.to_string());
+    let url =
+        std::env::var(format!("{}_URL", &entry.name)).unwrap_or_else(|_err| entry.url.to_string());
     warn!(logger, "downloading {}", url);
     let url = Url::parse(&url)?;
     let client = get_http_client()?;
     let mut data: Vec<u8> = Vec::new();
     if url.scheme() == "file" {
-        let file_path = url.to_file_path().map_err(|_err: ()| anyhow!("bad url for {}: {}", entry.name, url))?;
+        let file_path = url
+            .to_file_path()
+            .map_err(|_err: ()| anyhow!("bad url for {}: {}", entry.name, url))?;
         let mut file = File::open(&file_path)?;
         file.read_to_end(&mut data)?;
     } else {

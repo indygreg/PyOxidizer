@@ -242,12 +242,7 @@ impl TypedValue for PythonPackagingPolicyValue {
                             ValueError::from(RuntimeError {
                                 code: "PYOXIDIZER_BUILD",
                                 message: e,
-                                label: format!(
-                                    "{}.{} = {}",
-                                    Self::TYPE,
-                                    attribute,
-                                    value
-                                ),
+                                label: format!("{}.{} = {}", Self::TYPE, attribute, value),
                             })
                         },
                     )?,
@@ -263,12 +258,7 @@ impl TypedValue for PythonPackagingPolicyValue {
                                 ValueError::from(RuntimeError {
                                     code: "PYOXIDIZER_BUILD",
                                     message: e,
-                                    label: format!(
-                                        "{}.{} = {}",
-                                        Self::TYPE,
-                                        attribute,
-                                        value
-                                    ),
+                                    label: format!("{}.{} = {}", Self::TYPE, attribute, value),
                                 })
                             },
                         )?,

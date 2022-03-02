@@ -6,6 +6,7 @@
 
 use {
     crate::{config::ResolvedOxidizedPythonInterpreterConfig, NewInterpreterError},
+    libc::wchar_t,
     pyo3::ffi as pyffi,
     python_packaging::{
         interpreter::{CheckHashPycsMode, PythonInterpreterConfig, PythonInterpreterProfile},
@@ -16,7 +17,6 @@ use {
         ffi::{CString, OsString},
         path::Path,
     },
-    libc::wchar_t,
 };
 
 #[cfg(target_family = "unix")]
