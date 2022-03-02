@@ -73,7 +73,7 @@ def main():
 
         _python_flavor = parts.pop(0)
         version = parts.pop(0)
-        python_version, tag = version.split('+', 1)
+        python_version, tag = version.split("+", 1)
         major_minor = python_version.rsplit(".", 1)[0]
 
         if parts[-2] in ("shared", "static"):
@@ -104,12 +104,20 @@ def main():
         "// Linux glibc linked.",
         ENTRY.format(**records["3.8-x86_64-unknown-linux-gnu-pgo"]),
         ENTRY.format(**records["3.9-x86_64-unknown-linux-gnu-pgo"]),
+        ENTRY.format(**records["3.9-x86_64_v2-unknown-linux-gnu-pgo"]),
+        ENTRY.format(**records["3.9-x86_64_v3-unknown-linux-gnu-pgo"]),
         ENTRY.format(**records["3.10-x86_64-unknown-linux-gnu-pgo"]),
+        ENTRY.format(**records["3.10-x86_64_v2-unknown-linux-gnu-pgo"]),
+        ENTRY.format(**records["3.10-x86_64_v3-unknown-linux-gnu-pgo"]),
         "",
         "// Linux musl.",
         ENTRY.format(**records["3.8-x86_64-unknown-linux-musl-noopt"]),
         ENTRY.format(**records["3.9-x86_64-unknown-linux-musl-noopt"]),
+        ENTRY.format(**records["3.9-x86_64_v2-unknown-linux-musl-noopt"]),
+        ENTRY.format(**records["3.9-x86_64_v3-unknown-linux-musl-noopt"]),
         ENTRY.format(**records["3.10-x86_64-unknown-linux-musl-noopt"]),
+        ENTRY.format(**records["3.10-x86_64_v2-unknown-linux-musl-noopt"]),
+        ENTRY.format(**records["3.10-x86_64_v3-unknown-linux-musl-noopt"]),
         "",
         "// The order here is important because we will choose the",
         "// first one. We prefer shared distributions on Windows because",

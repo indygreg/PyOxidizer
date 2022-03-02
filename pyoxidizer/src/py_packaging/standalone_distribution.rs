@@ -1557,7 +1557,11 @@ pub mod tests {
                 dist.target_triple(),
             ) {
                 (_, "x86_64-unknown-linux-gnu") => (linux_dropped.clone(), linux_added.clone()),
+                (_, "x86_64_v2-unknown-linux-gnu") => (linux_dropped.clone(), linux_added.clone()),
+                (_, "x86_64_v3-unknown-linux-gnu") => (linux_dropped.clone(), linux_added.clone()),
                 (_, "x86_64-unknown-linux-musl") => (linux_dropped.clone(), linux_added.clone()),
+                (_, "x86_64_v2-unknown-linux-musl") => (linux_dropped.clone(), linux_added.clone()),
+                (_, "x86_64_v3-unknown-linux-musl") => (linux_dropped.clone(), linux_added.clone()),
                 (_, "i686-pc-windows-msvc") => (vec![], vec![]),
                 (_, "x86_64-pc-windows-msvc") => (vec![], vec![]),
                 (_, "aarch64-apple-darwin") => (vec![], vec![]),

@@ -83,12 +83,48 @@ pub static PYTHON_DISTRIBUTIONS: Lazy<PythonDistributionCollection> = Lazy::new(
             supports_prebuilt_extension_modules: true,
         },
         PythonDistributionRecord {
+            python_major_minor_version: "3.9".to_string(),
+            location: PythonDistributionLocation::Url {
+                url: "https://github.com/indygreg/python-build-standalone/releases/download/20220227/cpython-3.9.10%2B20220227-x86_64_v2-unknown-linux-gnu-pgo-full.tar.zst".to_string(),
+                sha256: "7125392d62a32146ba30c0b09e8900481ce7066230946c54cf8ff704cfa6a0ba".to_string(),
+            },
+            target_triple: "x86_64_v2-unknown-linux-gnu".to_string(),
+            supports_prebuilt_extension_modules: true,
+        },
+        PythonDistributionRecord {
+            python_major_minor_version: "3.9".to_string(),
+            location: PythonDistributionLocation::Url {
+                url: "https://github.com/indygreg/python-build-standalone/releases/download/20220227/cpython-3.9.10%2B20220227-x86_64_v3-unknown-linux-gnu-pgo-full.tar.zst".to_string(),
+                sha256: "39e3eddef8449b30d5f99c646a79454a2484d6060b8f3102a3def16330e2d2dc".to_string(),
+            },
+            target_triple: "x86_64_v3-unknown-linux-gnu".to_string(),
+            supports_prebuilt_extension_modules: true,
+        },
+        PythonDistributionRecord {
             python_major_minor_version: "3.10".to_string(),
             location: PythonDistributionLocation::Url {
                 url: "https://github.com/indygreg/python-build-standalone/releases/download/20220227/cpython-3.10.2%2B20220227-x86_64-unknown-linux-gnu-pgo-full.tar.zst".to_string(),
                 sha256: "28ded83c1742870fe0633619ec43f9b3a693078bf7da1e2afb81a543517e032d".to_string(),
             },
             target_triple: "x86_64-unknown-linux-gnu".to_string(),
+            supports_prebuilt_extension_modules: true,
+        },
+        PythonDistributionRecord {
+            python_major_minor_version: "3.10".to_string(),
+            location: PythonDistributionLocation::Url {
+                url: "https://github.com/indygreg/python-build-standalone/releases/download/20220227/cpython-3.10.2%2B20220227-x86_64_v2-unknown-linux-gnu-pgo-full.tar.zst".to_string(),
+                sha256: "8fec24e349ea0cac99e7c3a25616040601a278d85bc5f38cbf5f0ad4b3cef40c".to_string(),
+            },
+            target_triple: "x86_64_v2-unknown-linux-gnu".to_string(),
+            supports_prebuilt_extension_modules: true,
+        },
+        PythonDistributionRecord {
+            python_major_minor_version: "3.10".to_string(),
+            location: PythonDistributionLocation::Url {
+                url: "https://github.com/indygreg/python-build-standalone/releases/download/20220227/cpython-3.10.2%2B20220227-x86_64_v3-unknown-linux-gnu-pgo-full.tar.zst".to_string(),
+                sha256: "39e894485840df5c8468771414751d534059b2c2e4c7f81a46e7c8af858e297e".to_string(),
+            },
+            target_triple: "x86_64_v3-unknown-linux-gnu".to_string(),
             supports_prebuilt_extension_modules: true,
         },
 
@@ -112,6 +148,24 @@ pub static PYTHON_DISTRIBUTIONS: Lazy<PythonDistributionCollection> = Lazy::new(
             supports_prebuilt_extension_modules: false,
         },
         PythonDistributionRecord {
+            python_major_minor_version: "3.9".to_string(),
+            location: PythonDistributionLocation::Url {
+                url: "https://github.com/indygreg/python-build-standalone/releases/download/20220227/cpython-3.9.10%2B20220227-x86_64_v2-unknown-linux-musl-noopt-full.tar.zst".to_string(),
+                sha256: "c46c555d1214596a0acc57eecd25297405309f02dd2c68a29ab0cf85f05168e8".to_string(),
+            },
+            target_triple: "x86_64_v2-unknown-linux-musl".to_string(),
+            supports_prebuilt_extension_modules: true,
+        },
+        PythonDistributionRecord {
+            python_major_minor_version: "3.9".to_string(),
+            location: PythonDistributionLocation::Url {
+                url: "https://github.com/indygreg/python-build-standalone/releases/download/20220227/cpython-3.9.10%2B20220227-x86_64_v3-unknown-linux-musl-noopt-full.tar.zst".to_string(),
+                sha256: "f9f7b9224876af9cbf7d87580d0c6765f6db838ea28d2b0117b75163d6b0f1df".to_string(),
+            },
+            target_triple: "x86_64_v3-unknown-linux-musl".to_string(),
+            supports_prebuilt_extension_modules: true,
+        },
+        PythonDistributionRecord {
             python_major_minor_version: "3.10".to_string(),
             location: PythonDistributionLocation::Url {
                 url: "https://github.com/indygreg/python-build-standalone/releases/download/20220227/cpython-3.10.2%2B20220227-x86_64-unknown-linux-musl-noopt-full.tar.zst".to_string(),
@@ -119,6 +173,24 @@ pub static PYTHON_DISTRIBUTIONS: Lazy<PythonDistributionCollection> = Lazy::new(
             },
             target_triple: "x86_64-unknown-linux-musl".to_string(),
             supports_prebuilt_extension_modules: false,
+        },
+        PythonDistributionRecord {
+            python_major_minor_version: "3.10".to_string(),
+            location: PythonDistributionLocation::Url {
+                url: "https://github.com/indygreg/python-build-standalone/releases/download/20220227/cpython-3.10.2%2B20220227-x86_64_v2-unknown-linux-musl-noopt-full.tar.zst".to_string(),
+                sha256: "65b7d9a23a1656512f67a7f1e85b2834137335cfa23588b330a9bba1e402c153".to_string(),
+            },
+            target_triple: "x86_64_v2-unknown-linux-musl".to_string(),
+            supports_prebuilt_extension_modules: true,
+        },
+        PythonDistributionRecord {
+            python_major_minor_version: "3.10".to_string(),
+            location: PythonDistributionLocation::Url {
+                url: "https://github.com/indygreg/python-build-standalone/releases/download/20220227/cpython-3.10.2%2B20220227-x86_64_v3-unknown-linux-musl-noopt-full.tar.zst".to_string(),
+                sha256: "c62132b7cd27225d3d9822f4bcf06eff817b4f91d9a586371a8b0b3f5a254e3b".to_string(),
+            },
+            target_triple: "x86_64_v3-unknown-linux-musl".to_string(),
+            supports_prebuilt_extension_modules: true,
         },
 
         // The order here is important because we will choose the
@@ -308,6 +380,10 @@ mod tests {
                 "x86_64-pc-windows-msvc",
                 "x86_64-unknown-linux-gnu",
                 "x86_64-unknown-linux-musl",
+                "x86_64_v2-unknown-linux-gnu",
+                "x86_64_v2-unknown-linux-musl",
+                "x86_64_v3-unknown-linux-gnu",
+                "x86_64_v3-unknown-linux-musl",
             ]
         );
     }
