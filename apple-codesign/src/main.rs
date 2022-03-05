@@ -905,12 +905,13 @@ fn command_extract(args: &ArgMatches) -> Result<(), AppleCodesignError> {
                 let sections = segment.sections()?;
 
                 println!(
-                    "segment #{}; {}; offsets=0x{:x}-0x{:x}; size {}; section count {}",
+                    "segment #{}; {}; offsets=0x{:x}-0x{:x}; vm/file size {}/{}; section count {}",
                     segment_index,
                     segment.name()?,
                     segment.fileoff,
                     segment.fileoff as usize + segment.data.len(),
-                    segment.data.len(),
+                    segment.vmsize,
+                    segment.filesize,
                     sections.len()
                 );
                 for (section_index, (section, _)) in sections.into_iter().enumerate() {
