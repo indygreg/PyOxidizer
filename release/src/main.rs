@@ -5,7 +5,7 @@
 use {
     anyhow::{anyhow, Context, Result},
     cargo_toml::Manifest,
-    clap::{App, AppSettings, Arg, ArgMatches},
+    clap::{Arg, ArgMatches, Command},
     duct::cmd,
     git2::{Repository, Status},
     once_cell::sync::Lazy,
@@ -1285,21 +1285,21 @@ fn main_impl() -> Result<()> {
         .workdir()
         .ok_or_else(|| anyhow!("unable to resolve working directory"))?;
 
-    let matches = App::new("PyOxidizer Releaser")
-        .setting(AppSettings::ArgRequiredElseHelp)
+    let matches = Command::new("PyOxidizer Releaser")
         .version("0.1")
         .author("Gregory Szorc <gregory.szorc@gmail.com>")
         .about("Perform releases from the PyOxidizer repository")
+        .arg_required_else_help(true)
         .subcommand(
-            App::new("generate-new-project-cargo-lock")
+            Command::new("generate-new-project-cargo-lock")
                 .about("Emit a Cargo.lock file for the pyembed crate"),
         )
         .subcommand(
-            App::new("generate-pyembed-license")
+            Command::new("generate-pyembed-license")
                 .about("Emit license information for the pyembed crate"),
         )
         .subcommand(
-            App::new("release")
+            Command::new("release")
                 .about("Perform release actions")
                 .arg(
                     Arg::new("no_publish")
@@ -1320,7 +1320,7 @@ fn main_impl() -> Result<()> {
                         .help("Name of final package to release"),
                 ),
         )
-        .subcommand(App::new("synchronize-generated-files").about("Write out generated files"))
+        .subcommand(Command::new("synchronize-generated-files").about("Write out generated files"))
         .get_matches();
 
     match matches.subcommand() {
