@@ -4,7 +4,7 @@
 
 use {
     anyhow::{anyhow, Result},
-    clap::{App, AppSettings, Arg, ArgMatches},
+    clap::{Arg, ArgMatches, Command},
     rpm_repository::RepositoryRootReader,
     std::collections::{HashMap, HashSet},
 };
@@ -36,12 +36,12 @@ values include:
 pub async fn run() -> Result<()> {
     let default_threads = format!("{}", num_cpus::get());
 
-    let app = App::new("Linux Package Analyzer")
-        .setting(AppSettings::ArgRequiredElseHelp)
+    let app = Command::new("Linux Package Analyzer")
         .version(env!("CARGO_PKG_VERSION"))
         .author("Gregory Szorc <gregory.szorc@gmail.com>")
         .about("Analyze the content of Linux packages")
-        .long_about(ABOUT);
+        .long_about(ABOUT)
+        .arg_required_else_help(true);
 
     let app = app.arg(
         Arg::new("db_path")
@@ -63,7 +63,7 @@ pub async fn run() -> Result<()> {
     );
 
     let app = app.subcommand(
-        App::new("import-debian-deb")
+        Command::new("import-debian-deb")
             .about("Import a Debian .deb package given a filesystem path")
             .arg(
                 Arg::new("path")
@@ -73,7 +73,7 @@ pub async fn run() -> Result<()> {
     );
 
     let app = app.subcommand(
-        App::new("import-debian-repository")
+        Command::new("import-debian-repository")
             .about("Import the contents of a Debian repository")
             .long_about(IMPORT_DEBIAN_REPOSITORY_ABOUT)
             .arg(
@@ -103,7 +103,7 @@ pub async fn run() -> Result<()> {
     );
 
     let app = app.subcommand(
-        App::new("import-rpm-repository")
+        Command::new("import-rpm-repository")
             .about("Import the contents of an RPM repository")
             .arg(
                 Arg::new("url")
@@ -113,14 +113,14 @@ pub async fn run() -> Result<()> {
     );
 
     let app = app.subcommand(
-        App::new("cpuid-features-by-package-count")
+        Command::new("cpuid-features-by-package-count")
             .about("Print CPUID features and counts of packages having instructions with them"),
     );
 
-    let app = app.subcommand(App::new("elf-files").about("Print known ELF files"));
+    let app = app.subcommand(Command::new("elf-files").about("Print known ELF files"));
 
     let app = app.subcommand(
-        App::new("elf-files-defining-symbol")
+        Command::new("elf-files-defining-symbol")
             .about("Print ELF files defining a named symbol")
             .arg(
                 Arg::new("symbol")
@@ -131,7 +131,7 @@ pub async fn run() -> Result<()> {
     );
 
     let app = app.subcommand(
-        App::new("elf-files-importing-symbol")
+        Command::new("elf-files-importing-symbol")
             .about("Print ELF files importing a specified named symbol")
             .arg(
                 Arg::new("symbol")
@@ -141,12 +141,12 @@ pub async fn run() -> Result<()> {
     );
 
     let app = app.subcommand(
-        App::new("elf-files-with-ifunc")
+        Command::new("elf-files-with-ifunc")
             .about("Print ELF files that leverage IFUNC for dynamic dispatch"),
     );
 
     let app = app.subcommand(
-        App::new("elf-file-total-x86-instruction-counts")
+        Command::new("elf-file-total-x86-instruction-counts")
             .about("Print the total number of instructions in all ELF files")
             .arg(
                 Arg::new("instruction")
@@ -157,11 +157,11 @@ pub async fn run() -> Result<()> {
     );
 
     let app = app.subcommand(
-        App::new("elf-section-name-counts").about("Print counts of section names in ELF files"),
+        Command::new("elf-section-name-counts").about("Print counts of section names in ELF files"),
     );
 
     let app = app.subcommand(
-        App::new("packages-with-cpuid-feature")
+        Command::new("packages-with-cpuid-feature")
             .about("Print packages having instructions with a given CPUID feature")
             .arg(
                 Arg::new("feature")
@@ -173,7 +173,7 @@ pub async fn run() -> Result<()> {
     );
 
     let app = app.subcommand(
-        App::new("packages-with-filename")
+        Command::new("packages-with-filename")
             .about("Print packages having a file with the specified name")
             .arg(
                 Arg::new("filename")
@@ -184,11 +184,11 @@ pub async fn run() -> Result<()> {
     );
 
     let app = app.subcommand(
-        App::new("x86-instruction-counts").about("Print global counts of x86 instructions"),
+        Command::new("x86-instruction-counts").about("Print global counts of x86 instructions"),
     );
 
     let app = app.subcommand(
-        App::new("x86-register-usage-counts")
+        Command::new("x86-register-usage-counts")
             .about("Print counts of how many x86 instructions use known registers")
             .arg(
                 Arg::new("base")
@@ -198,15 +198,16 @@ pub async fn run() -> Result<()> {
     );
 
     let app = app.subcommand(
-        App::new("reference-x86-cpuid-features").about("Print a list of known x86 CPUID features"),
+        Command::new("reference-x86-cpuid-features")
+            .about("Print a list of known x86 CPUID features"),
     );
 
     let app = app.subcommand(
-        App::new("reference-x86-instructions").about("Print a list of known x86 instructions"),
+        Command::new("reference-x86-instructions").about("Print a list of known x86 instructions"),
     );
 
     let app = app.subcommand(
-        App::new("reference-x86-registers").about("Print a list of known x86 registers"),
+        Command::new("reference-x86-registers").about("Print a list of known x86 registers"),
     );
 
     let matches = app.get_matches();
