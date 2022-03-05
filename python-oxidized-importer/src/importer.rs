@@ -972,11 +972,11 @@ impl OxidizedFinder {
         Self::path_hook_inner(slf, path).map_err(|inner| {
             let err = PyImportError::new_err("error running OxidizedFinder.path_hook");
 
-            if let Err(err) = err.instance(slf.py()).setattr("__suppress_context__", true) {
+            if let Err(err) = err.value(slf.py()).setattr("__suppress_context__", true) {
                 err
             } else if let Err(err) = err
-                .instance(slf.py())
-                .setattr("__cause__", inner.instance(slf.py()))
+                .value(slf.py())
+                .setattr("__cause__", inner.value(slf.py()))
             {
                 err
             } else {
