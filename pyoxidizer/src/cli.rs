@@ -8,7 +8,7 @@ use {
         logging, project_building, projectmgmt,
     },
     anyhow::{anyhow, Context, Result},
-    clap::{App, AppSettings, Arg, ArgMatches},
+    clap::{Arg, ArgMatches, Command},
     std::{
         collections::HashMap,
         path::{Path, PathBuf},
@@ -128,7 +128,7 @@ be `None` instead of a `string`.
 If a Starlark variable is defined multiple times, an error occurs.
 ";
 
-fn add_env_args(app: App) -> App {
+fn add_env_args(app: Command) -> Command {
     app.arg(
         Arg::new("vars")
             .long("var")
@@ -149,7 +149,7 @@ fn add_env_args(app: App) -> App {
     )
 }
 
-fn add_python_distribution_args(app: App) -> App {
+fn add_python_distribution_args(app: Command) -> Command {
     app.arg(
         Arg::new("target_triple")
             .long("--target-triple")
@@ -203,12 +203,12 @@ pub fn run_cli() -> Result<()> {
 
     let version = env.pyoxidizer_source.version_long();
 
-    let app = App::new("PyOxidizer")
-        .setting(AppSettings::ArgRequiredElseHelp)
+    let app = Command::new("PyOxidizer")
         .version(PYOXIDIZER_VERSION)
         .long_version(version.as_str())
         .author("Gregory Szorc <gregory.szorc@gmail.com>")
         .long_about("Build and distribute Python applications")
+        .arg_required_else_help(true)
         .arg(
             Arg::new("system_rust")
                 .long("--system-rust")
@@ -223,17 +223,17 @@ pub fn run_cli() -> Result<()> {
         );
 
     let app = app.subcommand(
-        App::new("analyze")
+        Command::new("analyze")
             .about("Analyze a built binary")
-            .setting(AppSettings::ArgRequiredElseHelp)
+            .arg_required_else_help(true)
             .arg(Arg::new("path").help("Path to executable to analyze")),
     );
 
     let app = app.subcommand(add_env_args(
-        App::new("build")
-            .setting(AppSettings::ArgRequiredElseHelp)
+        Command::new("build")
             .about("Build a PyOxidizer enabled project")
             .long_about(BUILD_ABOUT)
+            .arg_required_else_help(true)
             .arg(
                 Arg::new("target_triple")
                     .long("target-triple")
@@ -263,13 +263,13 @@ pub fn run_cli() -> Result<()> {
     ));
 
     let app =
-        app.subcommand(App::new("cache-clear").about("Clear PyOxidizer's user-specific cache"));
+        app.subcommand(Command::new("cache-clear").about("Clear PyOxidizer's user-specific cache"));
 
     let app = app.subcommand(
-        App::new("find-resources")
+        Command::new("find-resources")
             .about("Find resources in a file or directory")
             .long_about(RESOURCES_SCAN_ABOUT)
-            .setting(AppSettings::ArgRequiredElseHelp)
+            .arg_required_else_help(true)
             .arg(
                 Arg::new("distributions_dir")
                     .long("distributions-dir")
@@ -305,7 +305,7 @@ pub fn run_cli() -> Result<()> {
     );
 
     let app = app.subcommand(add_python_distribution_args(
-        App::new("generate-python-embedding-artifacts")
+        Command::new("generate-python-embedding-artifacts")
             .about("Generate files useful for embedding Python in a [Rust] binary")
             .long_about(GENERATE_PYTHON_EMBEDDING_ARTIFACTS_ABOUT)
             .arg(
@@ -317,8 +317,8 @@ pub fn run_cli() -> Result<()> {
     ));
 
     let app = app.subcommand(
-        App::new("init-config-file")
-            .setting(AppSettings::ArgRequiredElseHelp)
+        Command::new("init-config-file")
+            .arg_required_else_help(true)
             .about("Create a new PyOxidizer configuration file.")
             .arg(
                 Arg::new("python-code")
@@ -344,10 +344,10 @@ pub fn run_cli() -> Result<()> {
     );
 
     let app = app.subcommand(
-        App::new("init-rust-project")
-            .setting(AppSettings::ArgRequiredElseHelp)
+        Command::new("init-rust-project")
             .about("Create a new Rust project embedding a Python interpreter")
             .long_about(INIT_RUST_PROJECT_ABOUT)
+            .arg_required_else_help(true)
             .arg(
                 Arg::new("path")
                     .required(true)
@@ -357,9 +357,9 @@ pub fn run_cli() -> Result<()> {
     );
 
     let app = app.subcommand(
-        App::new("list-targets")
-            .setting(AppSettings::ArgRequiredElseHelp)
+        Command::new("list-targets")
             .about("List targets available to resolve in a configuration file")
+            .arg_required_else_help(true)
             .arg(
                 Arg::new("path")
                     .default_value(".")
@@ -369,7 +369,7 @@ pub fn run_cli() -> Result<()> {
     );
 
     let app = app.subcommand(
-        App::new("python-distribution-extract")
+        Command::new("python-distribution-extract")
             .about("Extract a Python distribution archive to a directory")
             .arg(
                 Arg::new("download-default")
@@ -391,7 +391,7 @@ pub fn run_cli() -> Result<()> {
     );
 
     let app = app.subcommand(
-        App::new("python-distribution-info")
+        Command::new("python-distribution-info")
             .about("Show information about a Python distribution archive")
             .arg(
                 Arg::new("path")
@@ -402,7 +402,7 @@ pub fn run_cli() -> Result<()> {
     );
 
     let app = app.subcommand(
-        App::new("python-distribution-licenses")
+        Command::new("python-distribution-licenses")
             .about("Show licenses for a given Python distribution")
             .arg(
                 Arg::new("path")
@@ -413,10 +413,10 @@ pub fn run_cli() -> Result<()> {
     );
 
     let app = app.subcommand(add_env_args(
-        App::new("run-build-script")
-            .setting(AppSettings::ArgRequiredElseHelp)
+        Command::new("run-build-script")
             .about("Run functionality that a build script would perform")
             .long_about(RUN_BUILD_SCRIPT_ABOUT)
+            .arg_required_else_help(true)
             .arg(
                 Arg::new("build-script-name")
                     .required(true)
@@ -431,9 +431,9 @@ pub fn run_cli() -> Result<()> {
     ));
 
     let app = app.subcommand(add_env_args(
-        App::new("run")
-            .setting(AppSettings::TrailingVarArg)
+        Command::new("run")
             .about("Run a target in a PyOxidizer configuration file")
+            .trailing_var_arg(true)
             .arg(
                 Arg::new("target_triple")
                     .long("target-triple")

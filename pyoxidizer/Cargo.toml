@@ -29,7 +29,7 @@ git2 = { version = "0.13", default-features = false }
 anyhow = "1.0"
 cargo-lock = "7.0"
 cc = "1.0"
-clap = "3.0"
+clap = "3.1"
 codemap = "0.1"
 codemap-diagnostic = "0.1"
 dirs = "4.0"
