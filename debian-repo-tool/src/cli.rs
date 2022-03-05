@@ -3,7 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    clap::{App, AppSettings, Arg, ArgMatches},
+    clap::{Arg, ArgMatches, Command},
     debian_packaging::{
         error::DebianError,
         repository::{
@@ -176,11 +176,11 @@ pub type Result<T> = std::result::Result<T, DrtError>;
 pub async fn run_cli() -> Result<()> {
     let default_threads = format!("{}", num_cpus::get());
 
-    let app = App::new("Debian Repository Tool")
-        .setting(AppSettings::ArgRequiredElseHelp)
+    let app = Command::new("Debian Repository Tool")
         .version("0.1")
         .author("Gregory Szorc <gregory.szorc@gmail.com>")
-        .about("Interface with Debian Repositories");
+        .about("Interface with Debian Repositories")
+        .arg_required_else_help(true);
 
     let app = app.arg(
         Arg::new("max-parallel-io")
@@ -192,7 +192,7 @@ pub async fn run_cli() -> Result<()> {
     );
 
     let app = app.subcommand(
-        App::new("copy-repository")
+        Command::new("copy-repository")
             .about("Copy a Debian repository between locations")
             .long_about(COPY_REPOSITORY_ABOUT)
             .arg(
@@ -206,7 +206,7 @@ pub async fn run_cli() -> Result<()> {
     );
 
     let mut app =
-        app.subcommand(App::new("urls").about("Print documentation about repository URLs"));
+        app.subcommand(Command::new("urls").about("Print documentation about repository URLs"));
 
     let matches = app.clone().get_matches();
 
