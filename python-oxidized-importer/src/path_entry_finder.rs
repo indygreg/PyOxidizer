@@ -7,14 +7,14 @@ use {
     pyo3::{
         prelude::*,
         types::{PyList, PyString},
-        PyGCProtocol, PyTraverseError, PyVisit,
+        PyTraverseError, PyVisit,
     },
 };
 
 /// A (mostly compliant) `importlib.abc.PathEntryFinder` that delegates paths
 /// within the current executable to the `OxidizedFinder` whose `path_hook`
 /// method created it.
-#[pyclass(module = "oxidized_importer", gc)]
+#[pyclass(module = "oxidized_importer")]
 pub(crate) struct OxidizedPathEntryFinder {
     /// A clone of the meta path finder from which we came.
     pub(crate) finder: Py<OxidizedFinder>,
@@ -42,19 +42,14 @@ impl OxidizedPathEntryFinder {
     }
 }
 
-#[pyproto]
-impl PyGCProtocol for OxidizedPathEntryFinder {
+#[pymethods]
+impl OxidizedPathEntryFinder {
     fn __traverse__(&self, visit: PyVisit) -> Result<(), PyTraverseError> {
         visit.call(&self.finder)?;
 
         Ok(())
     }
 
-    fn __clear__(&mut self) {}
-}
-
-#[pymethods]
-impl OxidizedPathEntryFinder {
     #[args(target = "None")]
     fn find_spec(
         &self,

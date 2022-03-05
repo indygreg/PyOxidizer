@@ -32,7 +32,7 @@ use {
         ffi as pyffi,
         prelude::*,
         types::{PyBytes, PyDict, PyList, PyString, PyTuple},
-        AsPyPointer, FromPyPointer, PyGCProtocol, PyNativeType, PyTraverseError, PyVisit,
+        AsPyPointer, FromPyPointer, PyNativeType, PyTraverseError, PyVisit,
     },
     python_packaging::resource::BytecodeOptimizationLevel,
     std::sync::Arc,
@@ -468,7 +468,7 @@ impl Drop for ImporterState {
 /// This type implements the importlib.abc.MetaPathFinder interface for
 /// finding/loading modules. It supports loading various flavors of modules,
 /// allowing it to be the only registered sys.meta_path importer.
-#[pyclass(module = "oxidized_importer", gc)]
+#[pyclass(module = "oxidized_importer")]
 pub struct OxidizedFinder {
     pub(crate) state: Arc<ImporterState>,
 }
@@ -506,17 +506,12 @@ impl OxidizedFinder {
     }
 }
 
-#[pyproto]
-impl PyGCProtocol for OxidizedFinder {
+#[pymethods]
+impl OxidizedFinder {
     fn __traverse__(&self, visit: PyVisit) -> Result<(), PyTraverseError> {
         self.state.gc_traverse(visit)
     }
 
-    fn __clear__(&mut self) {}
-}
-
-#[pymethods]
-impl OxidizedFinder {
     // Start of importlib.abc.MetaPathFinder interface.
 
     #[args(target = "None")]

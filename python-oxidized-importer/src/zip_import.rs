@@ -13,7 +13,7 @@ use {
         ffi as pyffi,
         prelude::*,
         types::{PyBytes, PyDict, PyType},
-        PyGCProtocol, PyNativeType, PyTraverseError, PyVisit,
+        PyNativeType, PyTraverseError, PyVisit,
     },
     std::{
         collections::HashMap,
@@ -171,7 +171,7 @@ impl SeekableReader for BufReader<std::fs::File> {}
 /// * ResourceReader interface not implemented.
 /// * ResourceLoader interface not implemented.
 /// * Bytecode isn't validated.
-#[pyclass(module = "oxidized_importer", gc)]
+#[pyclass(module = "oxidized_importer")]
 pub struct OxidizedZipFinder {
     /// A PyObject backing storage of data.
     ///
@@ -304,8 +304,8 @@ impl OxidizedZipFinder {
     }
 }
 
-#[pyproto]
-impl PyGCProtocol for OxidizedZipFinder {
+#[pymethods]
+impl OxidizedZipFinder {
     fn __traverse__(&self, visit: PyVisit) -> Result<(), PyTraverseError> {
         if let Some(o) = &self.backing_pyobject {
             visit.call(o)?;
@@ -320,11 +320,6 @@ impl PyGCProtocol for OxidizedZipFinder {
         Ok(())
     }
 
-    fn __clear__(&mut self) {}
-}
-
-#[pymethods]
-impl OxidizedZipFinder {
     #[classmethod]
     #[allow(unused)]
     fn from_path(cls: &PyType, py: Python, path: &PyAny) -> PyResult<Self> {
