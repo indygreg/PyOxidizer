@@ -28,5 +28,5 @@ version = "0.8.0-pre"
 path = "../tugger-windows"
 
 [dev-dependencies]
-der-parser = "6"
-x509-parser = "0.12"
+der-parser = "7.0"
+x509-parser = "0.13"
