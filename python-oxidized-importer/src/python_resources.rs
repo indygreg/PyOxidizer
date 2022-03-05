@@ -20,7 +20,6 @@ use {
         prelude::*,
         type_object::PyTypeObject,
         types::{PyBytes, PyDict, PyList, PyString, PyTuple},
-        PyObjectProtocol,
     },
     python_packaging::resource::BytecodeOptimizationLevel,
     python_packed_resources::Resource,
@@ -1284,18 +1283,15 @@ pub(crate) struct OxidizedResource {
     resource: RefCell<Resource<'static, u8>>,
 }
 
-#[pyproto]
-impl PyObjectProtocol for OxidizedResource {
+#[pymethods]
+impl OxidizedResource {
     fn __repr__(&self) -> String {
         format!(
             "<OxidizedResource name=\"{}\">",
             self.resource.borrow().name
         )
     }
-}
 
-#[pymethods]
-impl OxidizedResource {
     #[new]
     fn new() -> PyResult<Self> {
         Ok(Self {

@@ -10,7 +10,6 @@ use {
         exceptions::{PyTypeError, PyValueError},
         prelude::*,
         types::PyBytes,
-        PyObjectProtocol,
     },
     python_packaging::resource::{
         BytecodeOptimizationLevel, PythonExtensionModule as RawPythonExtensionModule,
@@ -43,18 +42,15 @@ impl PythonModuleSource {
     }
 }
 
-#[pyproto]
-impl PyObjectProtocol for PythonModuleSource {
+#[pymethods]
+impl PythonModuleSource {
     fn __repr__(&self) -> String {
         format!(
             "<PythonModuleSource module=\"{}\">",
             self.resource.borrow().name
         )
     }
-}
 
-#[pymethods]
-impl PythonModuleSource {
     #[getter]
     fn get_module(&self) -> PyResult<String> {
         Ok(self.resource.borrow().name.to_string())
@@ -131,18 +127,15 @@ impl PythonModuleBytecode {
     }
 }
 
-#[pyproto]
-impl PyObjectProtocol for PythonModuleBytecode {
+#[pymethods]
+impl PythonModuleBytecode {
     fn __repr__(&self) -> String {
         format!(
             "<PythonModuleBytecode module=\"{}\">",
             self.resource.borrow().name
         )
     }
-}
 
-#[pymethods]
-impl PythonModuleBytecode {
     #[getter]
     fn get_module(&self) -> String {
         self.resource.borrow().name.to_string()
@@ -239,8 +232,8 @@ impl PythonPackageResource {
     }
 }
 
-#[pyproto]
-impl PyObjectProtocol for PythonPackageResource {
+#[pymethods]
+impl PythonPackageResource {
     fn __repr__(&self) -> String {
         let resource = self.resource.borrow();
         format!(
@@ -248,10 +241,7 @@ impl PyObjectProtocol for PythonPackageResource {
             resource.leaf_package, resource.relative_name
         )
     }
-}
 
-#[pymethods]
-impl PythonPackageResource {
     #[getter]
     fn get_package(&self) -> String {
         self.resource.borrow().leaf_package.clone()
@@ -331,8 +321,8 @@ impl PythonPackageDistributionResource {
     }
 }
 
-#[pyproto]
-impl PyObjectProtocol for PythonPackageDistributionResource {
+#[pymethods]
+impl PythonPackageDistributionResource {
     fn __repr__(&self) -> String {
         let resource = self.resource.borrow();
         format!(
@@ -340,10 +330,7 @@ impl PyObjectProtocol for PythonPackageDistributionResource {
             resource.package, resource.name
         )
     }
-}
 
-#[pymethods]
-impl PythonPackageDistributionResource {
     #[getter]
     fn get_package(&self) -> String {
         self.resource.borrow().package.clone()
@@ -436,18 +423,15 @@ impl PythonExtensionModule {
     }
 }
 
-#[pyproto]
-impl PyObjectProtocol for PythonExtensionModule {
+#[pymethods]
+impl PythonExtensionModule {
     fn __repr__(&self) -> String {
         format!(
             "<PythonExtensionModule module=\"{}\">",
             self.resource.borrow().name
         )
     }
-}
 
-#[pymethods]
-impl PythonExtensionModule {
     #[getter]
     fn name(&self) -> String {
         self.resource.borrow().name.clone()

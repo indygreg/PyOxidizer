@@ -19,7 +19,7 @@ use {
         ffi as pyffi,
         prelude::*,
         types::{PyBytes, PyList, PyTuple},
-        AsPyPointer, PyObjectProtocol,
+        AsPyPointer,
     },
     python_packaging::{
         bytecode::BytecodeCompiler,
@@ -72,15 +72,12 @@ pub(crate) struct OxidizedResourceCollector {
     collector: RefCell<PythonResourceCollector>,
 }
 
-#[pyproto]
-impl PyObjectProtocol for OxidizedResourceCollector {
+#[pymethods]
+impl OxidizedResourceCollector {
     fn __repr__(&self) -> &'static str {
         "<OxidizedResourceCollector>"
     }
-}
 
-#[pymethods]
-impl OxidizedResourceCollector {
     #[new]
     fn new(allowed_locations: Vec<String>) -> PyResult<Self> {
         let allowed_locations = allowed_locations
