@@ -32,7 +32,7 @@ impl OxidizedPkgResourcesProvider {
 
         let loader_type = loader.get_type();
 
-        if loader_type != py.get_type::<OxidizedFinder>() {
+        if !loader_type.is(py.get_type::<OxidizedFinder>()) {
             return Err(PyTypeError::new_err("__loader__ is not an OxidizedFinder"));
         }
 
@@ -215,7 +215,7 @@ pub(crate) fn pkg_resources_find_distributions<'p>(
 
     // This shouldn't happen since that path hook type is mapped to this function.
     // But you never know.
-    if importer_type != py.get_type::<OxidizedPathEntryFinder>() {
+    if !importer_type.is(py.get_type::<OxidizedPathEntryFinder>()) {
         return Ok(PyList::empty(py));
     }
 

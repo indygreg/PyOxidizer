@@ -1364,10 +1364,14 @@ pub fn remove_external_importers(sys_module: &PyModule) -> PyResult<()> {
     while index < path_hooks.len() {
         let entry = path_hooks.get_item(index as _)?;
 
-        if oxidized_path_hooks
-            .iter()
-            .any(|candidate| candidate == &entry)
-        {
+        let mut found = false;
+        for candidate in oxidized_path_hooks.iter() {
+            if candidate.eq(entry)? {
+                found = true;
+                break;
+            }
+        }
+        if found {
             index += 1;
         } else {
             path_hooks.call_method1("pop", (index,))?;

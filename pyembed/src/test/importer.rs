@@ -66,18 +66,14 @@ rusty_fork_test! {
         let importer = get_importer(&interp).unwrap();
 
         interp.with_gil(|py| {
-            assert_eq!(
-                importer
-                    .call_method(py, "find_spec", ("missing_package", py.None()), None)
-                    .unwrap(),
-                py.None()
-            );
-            assert_eq!(
-                importer
-                    .call_method(py, "find_spec", ("foo.bar", py.None()), None)
-                    .unwrap(),
-                py.None()
-            );
+            assert!(importer
+                .call_method(py, "find_spec", ("missing_package", py.None()), None)
+                .unwrap()
+                .is_none(py));
+            assert!(importer
+                .call_method(py, "find_spec", ("foo.bar", py.None()), None)
+                .unwrap()
+                .is_none(py));
         });
     }
 

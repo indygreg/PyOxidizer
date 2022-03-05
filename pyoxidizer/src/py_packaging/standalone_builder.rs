@@ -1061,9 +1061,6 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
             python_build_flags.0.insert(BuildFlag::COUNT_ALLOCS);
         }
 
-        // WITH_THREAD is always enabled on Python 3.7+.
-        python_build_flags.0.insert(BuildFlag::WITH_THREAD);
-
         Ok(EmbeddedPythonContext {
             config,
             link_settings,
