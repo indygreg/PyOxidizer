@@ -53,7 +53,7 @@ use {
         macho_signing::MachOSigner,
         signing::{SettingsScope, SigningSettings},
     },
-    clap::{App, AppSettings, Arg, ArgMatches},
+    clap::{Arg, ArgMatches, Command},
     cryptographic_message_syntax::SignedData,
     goblin::mach::{Mach, MachO},
     slog::{error, o, warn, Drain},
@@ -374,7 +374,7 @@ fn get_macho_from_data(data: &[u8], universal_index: usize) -> Result<MachO, App
     }
 }
 
-fn add_certificate_source_args(app: App) -> App {
+fn add_certificate_source_args(app: Command) -> Command {
     app.arg(
         Arg::new("pem_source")
             .long("pem-source")
@@ -1501,14 +1501,14 @@ fn command_x509_oids(_args: &ArgMatches) -> Result<(), AppleCodesignError> {
 }
 
 fn main_impl() -> Result<(), AppleCodesignError> {
-    let app = App::new("Oxidized Apple Codesigning")
-        .setting(AppSettings::ArgRequiredElseHelp)
+    let app = Command::new("Oxidized Apple Codesigning")
         .version("0.1")
         .author("Gregory Szorc <gregory.szorc@gmail.com>")
-        .about("Do things related to code signing of Apple binaries");
+        .about("Do things related to code signing of Apple binaries")
+        .arg_required_else_help(true);
 
     let app = app.subcommand(add_certificate_source_args(
-        App::new("analyze-certificate")
+        Command::new("analyze-certificate")
             .about("Analyze an X.509 certificate for Apple code signing properties")
             .long_about(ANALYZE_CERTIFICATE_ABOUT)
             .arg(
@@ -1522,7 +1522,7 @@ fn main_impl() -> Result<(), AppleCodesignError> {
     ));
 
     let app = app.subcommand(
-        App::new("compute-code-hashes")
+        Command::new("compute-code-hashes")
             .about("Compute code hashes for a binary")
             .arg(
                 Arg::new("path")
@@ -1553,7 +1553,7 @@ fn main_impl() -> Result<(), AppleCodesignError> {
     );
 
     let app = app.subcommand(
-        App::new("extract")
+        Command::new("extract")
             .about("Extracts code signature data from a Mach-O binary")
             .long_about(EXTRACT_ABOUT)
             .arg(
@@ -1600,7 +1600,7 @@ fn main_impl() -> Result<(), AppleCodesignError> {
     );
 
     let app = app.subcommand(
-        App::new("generate-self-signed-certificate")
+        Command::new("generate-self-signed-certificate")
             .about("Generate a self-signed certificate for code signing")
             .long_about(GENERATE_SELF_SIGNED_CERTIFICATE_ABOUT)
             .arg(
@@ -1657,7 +1657,7 @@ fn main_impl() -> Result<(), AppleCodesignError> {
     );
 
     let app = app.
-        subcommand(App::new("keychain-export-certificate-chain")
+        subcommand(Command::new("keychain-export-certificate-chain")
             .about("Export Apple CA certificates from the macOS Keychain")
             .arg(
                 Arg::new("domain")
@@ -1694,7 +1694,7 @@ fn main_impl() -> Result<(), AppleCodesignError> {
         );
 
     let app = app.subcommand(
-        App::new("parse-code-signing-requirement")
+        Command::new("parse-code-signing-requirement")
             .about("Parse binary Code Signing Requirement data into a human readable string")
             .long_about(PARSE_CODE_SIGNING_REQUIREMENT_ABOUT)
             .arg(
@@ -1714,7 +1714,7 @@ fn main_impl() -> Result<(), AppleCodesignError> {
 
     let app = app
         .subcommand(
-            add_certificate_source_args(App::new("sign")
+            add_certificate_source_args(Command::new("sign")
                 .about("Sign a Mach-O binary or bundle")
                 .long_about(SIGN_ABOUT)
                 .arg(
@@ -1810,7 +1810,7 @@ fn main_impl() -> Result<(), AppleCodesignError> {
         ));
 
     let app = app.subcommand(
-        App::new("verify")
+        Command::new("verify")
             .about("Verifies code signature data")
             .arg(
                 Arg::new("path")
@@ -1820,7 +1820,7 @@ fn main_impl() -> Result<(), AppleCodesignError> {
     );
 
     let app = app.subcommand(
-        App::new("x509-oids")
+        Command::new("x509-oids")
             .about("Print information about X.509 OIDs related to Apple code signing"),
     );
 
