@@ -7,7 +7,6 @@
 use {
     crate::SystemStore,
     anyhow::{anyhow, Result},
-    chrono::SubsecRound,
     std::{
         io::Read,
         path::{Path, PathBuf},
@@ -100,10 +99,9 @@ pub fn create_self_signed_code_signing_certificate_params(
         .push(rcgen::ExtendedKeyUsagePurpose::CodeSigning);
     params.is_ca = rcgen::IsCa::Ca(rcgen::BasicConstraints::Unconstrained);
     // The default is thousands of years in the future. Let's use something more reasonable.
-    params.not_after = chrono::Utc::now()
-        .checked_add_signed(chrono::Duration::days(365))
-        .unwrap()
-        .trunc_subsecs(0);
+    params.not_after = time::OffsetDateTime::now_utc()
+        .checked_add(time::Duration::days(365))
+        .unwrap();
 
     // KeyUsage(KeyUsage { flags: 1 })
     let mut key_usage =
