@@ -4864,7 +4864,7 @@ version = "0.5.0-pre"
 dependencies = [
  "anyhow",
  "byteorder",
- "goblin 0.4.3",
+ "goblin 0.5.1",
  "once_cell",
  "version-compare",
 ]
