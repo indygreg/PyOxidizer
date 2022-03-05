@@ -5,7 +5,7 @@
 use {
     crate::{interpreter::run_python, yaml::run_yaml_path},
     anyhow::{anyhow, Context, Result},
-    clap::{App, AppSettings, Arg},
+    clap::{Arg, Command},
     std::path::{Path, PathBuf},
 };
 
@@ -26,13 +26,13 @@ pub fn run() -> Result<i32> {
 }
 
 fn run_normal(exe: &Path) -> Result<i32> {
-    let app = App::new("pyoxy")
-        .setting(AppSettings::ArgRequiredElseHelp)
+    let app = Command::new("pyoxy")
         .version(PYOXY_VERSION)
-        .author("Gregory Szorc <gregory.szorc@gmail.com>");
+        .author("Gregory Szorc <gregory.szorc@gmail.com>")
+        .arg_required_else_help(true);
 
     let app = app.subcommand(
-        App::new("run-python")
+        Command::new("run-python")
             .about("Make the executable behave like a `python` executable")
             .arg(
                 Arg::new("args")
@@ -45,9 +45,9 @@ fn run_normal(exe: &Path) -> Result<i32> {
     );
 
     let app = app.subcommand(
-        App::new("run-yaml")
+        Command::new("run-yaml")
             .about("Run a Python interpreter defined via a YAML file")
-            .setting(AppSettings::ArgRequiredElseHelp)
+            .arg_required_else_help(true)
             .arg(
                 Arg::new("yaml_path")
                     .value_name("FILE")
