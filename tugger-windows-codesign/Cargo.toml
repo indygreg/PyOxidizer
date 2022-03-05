@@ -14,10 +14,10 @@ readme = "README.md"
 anyhow = "1.0"
 chrono = "0.4"
 duct = "0.13"
-p12 = "0.4"
+p12 = "0.6"
 rcgen = "0.8"
 slog = "2.7"
-yasna = "0.4"
+yasna = "0.5"
 
 [dependencies.tugger-common]
 version = "0.7.0-pre"

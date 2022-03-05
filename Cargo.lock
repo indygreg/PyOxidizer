@@ -110,7 +110,7 @@ dependencies = [
  "thiserror",
  "tugger-apple",
  "x509-certificate",
- "yasna",
+ "yasna 0.5.0",
 ]
 
 [[package]]
@@ -459,16 +459,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "block-modes"
-version = "0.8.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2cb03d1bed155d89dce0f845b7899b18a9a163e148fd004e1c28421a783e2d8e"
-dependencies = [
- "block-padding 0.2.1",
- "cipher 0.3.0",
-]
-
-[[package]]
 name = "block-padding"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -482,6 +472,15 @@ name = "block-padding"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8d696c370c750c948ada61c69a0ee2cbbb9c50b1019ddb86d9317157a99c2cae"
+
+[[package]]
+name = "block-padding"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5808df4b2412175c4db3afb115c83d8d0cd26ca4f30a042026cddef8580e526a"
+dependencies = [
+ "generic-array 0.14.5",
+]
 
 [[package]]
 name = "blocking"
@@ -625,6 +624,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "cbc"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a2c68b1d4a461fc5641967e1b255c976579a87ef000c043850ca1aff89faa128"
+dependencies = [
+ "cipher 0.4.3",
+]
+
+[[package]]
 name = "cc"
 version = "1.0.73"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -699,11 +707,12 @@ dependencies = [
 
 [[package]]
 name = "cipher"
-version = "0.3.0"
+version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7ee52072ec15386f770805afd189a01c8841be8696bed250fa2f13c4c0d6dfb7"
+checksum = "d1873270f8f7942c191139cb8a40fd228da6c3fd2fc376d7e92d47aa14aeb59e"
 dependencies = [
- "generic-array 0.14.5",
+ "crypto-common",
+ "inout",
 ]
 
 [[package]]
@@ -1210,13 +1219,11 @@ dependencies = [
 
 [[package]]
 name = "des"
-version = "0.7.0"
+version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ac41dd49fb554432020d52c875fc290e110113f864c6b1b525cd62c7e7747a5d"
+checksum = "ffdd80ce8ce993de27e9f063a444a4d53ce8e8db4c1f00cc03af5ad5a9867a1e"
 dependencies = [
- "byteorder",
- "cipher 0.3.0",
- "opaque-debug 0.3.0",
+ "cipher 0.4.3",
 ]
 
 [[package]]
@@ -2089,6 +2096,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "inout"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9e1f03d4ab4d5dc9ec2d219f86c15d2a15fc08239d1cd3b2d6a19717c0a2f443"
+dependencies = [
+ "block-padding 0.3.1",
+ "generic-array 0.14.5",
+]
+
+[[package]]
 name = "instant"
 version = "0.1.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2757,18 +2774,19 @@ dependencies = [
 
 [[package]]
 name = "p12"
-version = "0.4.1"
+version = "0.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "79772115e8ed1bd4e466105212189433409be03c7339092314cc0e4b6f92e79f"
+checksum = "d4873306de53fe82e7e484df31e1e947d61514b6ea2ed6cd7b45d63006fd9224"
 dependencies = [
- "block-modes 0.8.1",
- "des 0.7.0",
+ "cbc",
+ "cipher 0.4.3",
+ "des 0.8.1",
  "getrandom 0.2.5",
  "hmac 0.12.1",
  "lazy_static",
  "rc2",
  "sha1 0.10.1",
- "yasna",
+ "yasna 0.5.0",
 ]
 
 [[package]]
@@ -2959,7 +2977,7 @@ dependencies = [
  "aes",
  "base64 0.12.3",
  "bitfield",
- "block-modes 0.6.1",
+ "block-modes",
  "block-padding 0.2.1",
  "blowfish",
  "buf_redux",
@@ -3518,12 +3536,11 @@ dependencies = [
 
 [[package]]
 name = "rc2"
-version = "0.7.0"
+version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "48f197c283075d1345c20d5ad172526a7837882cdc998b1fcd2b2f3cfff1cb94"
+checksum = "62c64daa8e9438b84aaae55010a93f396f8e60e3911590fcba770d04643fc1dd"
 dependencies = [
- "cipher 0.3.0",
- "opaque-debug 0.3.0",
+ "cipher 0.4.3",
 ]
 
 [[package]]
@@ -3535,7 +3552,7 @@ dependencies = [
  "chrono",
  "pem 1.0.2",
  "ring",
- "yasna",
+ "yasna 0.4.0",
 ]
 
 [[package]]
@@ -4887,7 +4904,7 @@ dependencies = [
  "tugger-file-manifest",
  "tugger-windows-codesign",
  "x509-certificate",
- "yasna",
+ "yasna 0.5.0",
 ]
 
 [[package]]
@@ -4998,7 +5015,7 @@ dependencies = [
  "tugger-common",
  "tugger-windows",
  "x509-parser",
- "yasna",
+ "yasna 0.5.0",
 ]
 
 [[package]]
@@ -5492,6 +5509,12 @@ checksum = "e262a29d0e61ccf2b6190d7050d4b237535fc76ce4c1210d9caa316f71dffa75"
 dependencies = [
  "chrono",
 ]
+
+[[package]]
+name = "yasna"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "346d34a236c9d3e5f3b9b74563f238f955bbd05fa0b8b4efa53c130c43982f4c"
 
 [[package]]
 name = "zeroize"
