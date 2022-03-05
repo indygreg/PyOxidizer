@@ -74,7 +74,7 @@ impl OxidizedDistribution {
 
         let package_not_found_error = importlib_metadata.getattr("PackageNotFoundError")?;
 
-        Err(PyErr::from_instance(
+        Err(PyErr::from_value(
             package_not_found_error.call((name,), None)?,
         ))
     }
