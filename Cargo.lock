@@ -3243,7 +3243,7 @@ dependencies = [
 
 [[package]]
 name = "pyembed"
-version = "0.20.0"
+version = "0.21.0-pre"
 dependencies = [
  "anyhow",
  "dunce",
