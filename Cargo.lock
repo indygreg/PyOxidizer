@@ -1238,7 +1238,7 @@ dependencies = [
 
 [[package]]
 name = "debian-repo-tool"
-version = "0.3.0"
+version = "0.4.0-pre"
 dependencies = [
  "clap 3.1.5",
  "debian-packaging",
