@@ -106,8 +106,8 @@ version = "0.9.0-pre"
 path = "../tugger-windows"
 
 [dependencies.tugger-wix]
-version = "0.12.0"
-# path = "../tugger-wix"
+version = "0.13.0-pre"
+path = "../tugger-wix"
 
 [dependencies.tugger]
 version = "0.14.0"

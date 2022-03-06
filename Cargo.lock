@@ -3388,7 +3388,7 @@ dependencies = [
  "tugger-licensing 0.7.0-pre",
  "tugger-rust-toolchain 0.7.0-pre",
  "tugger-windows 0.9.0-pre",
- "tugger-wix 0.12.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-wix 0.13.0-pre",
  "url",
  "uuid",
  "version-compare",
@@ -3445,7 +3445,7 @@ dependencies = [
  "tugger-licensing 0.6.0",
  "tugger-rust-toolchain 0.6.0",
  "tugger-windows 0.8.0",
- "tugger-wix 0.12.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-wix 0.12.0",
  "url",
  "uuid",
  "version-compare",
@@ -5009,7 +5009,7 @@ dependencies = [
  "tugger-snapcraft 0.9.0-pre",
  "tugger-windows 0.9.0-pre",
  "tugger-windows-codesign 0.8.0-pre",
- "tugger-wix 0.12.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-wix 0.13.0-pre",
  "walkdir",
  "x509-certificate 0.8.0-pre",
 ]
@@ -5042,7 +5042,7 @@ dependencies = [
  "tugger-file-manifest 0.6.0",
  "tugger-snapcraft 0.8.0",
  "tugger-windows 0.8.0",
- "tugger-wix 0.12.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-wix 0.12.0",
  "walkdir",
 ]
 
@@ -5366,25 +5366,6 @@ dependencies = [
 [[package]]
 name = "tugger-wix"
 version = "0.12.0"
-dependencies = [
- "anyhow",
- "duct",
- "msi",
- "once_cell",
- "slog",
- "tempfile",
- "tugger-common 0.8.0-pre",
- "tugger-file-manifest 0.7.0-pre",
- "tugger-windows 0.9.0-pre",
- "tugger-windows-codesign 0.8.0-pre",
- "url",
- "uuid",
- "xml-rs",
-]
-
-[[package]]
-name = "tugger-wix"
-version = "0.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cc186fcd4ebac66a1f92edeb9072c64a1c9e03a7b144384623609d64cd9dd8a3"
 dependencies = [
@@ -5396,6 +5377,25 @@ dependencies = [
  "tugger-file-manifest 0.6.0",
  "tugger-windows 0.8.0",
  "tugger-windows-codesign 0.7.0",
+ "url",
+ "uuid",
+ "xml-rs",
+]
+
+[[package]]
+name = "tugger-wix"
+version = "0.13.0-pre"
+dependencies = [
+ "anyhow",
+ "duct",
+ "msi",
+ "once_cell",
+ "slog",
+ "tempfile",
+ "tugger-common 0.8.0-pre",
+ "tugger-file-manifest 0.7.0-pre",
+ "tugger-windows 0.9.0-pre",
+ "tugger-windows-codesign 0.8.0-pre",
  "url",
  "uuid",
  "xml-rs",
