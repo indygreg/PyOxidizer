@@ -22,5 +22,5 @@ semver = "1.0"
 winapi = { version = "0.3", features = ["combaseapi", "knownfolders", "shlobj", "shtypes"] }
 
 [dependencies.tugger-common]
-version = "0.7.0"
-# path = "../tugger-common"
+version = "0.8.0-pre"
+path = "../tugger-common"
