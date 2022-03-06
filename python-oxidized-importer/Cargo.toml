@@ -30,8 +30,8 @@ version = "0.16.1"
 features = ["macros"]
 
 [dependencies.tugger-file-manifest]
-version = "0.6.0"
-# path = "../tugger-file-manifest"
+version = "0.7.0-pre"
+path = "../tugger-file-manifest"
 
 [dependencies.zip]
 version = "0.5"

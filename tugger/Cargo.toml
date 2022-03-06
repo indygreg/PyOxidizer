@@ -68,8 +68,8 @@ version = "0.12.0"
 # path = "../tugger-wix"
 
 [dependencies.tugger-file-manifest]
-version = "0.6.0"
-# path = "../tugger-file-manifest"
+version = "0.7.0-pre"
+path = "../tugger-file-manifest"
 
 [dev-dependencies]
 chrono = "0.4"
