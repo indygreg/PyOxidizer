@@ -3445,7 +3445,7 @@ dependencies = [
  "tugger-file-manifest 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-licensing 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-rust-toolchain 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "tugger-windows",
+ "tugger-windows 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-wix",
  "url",
  "uuid",
@@ -4977,7 +4977,7 @@ dependencies = [
  "tugger-common 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-file-manifest 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-snapcraft 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "tugger-windows",
+ "tugger-windows 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-windows-codesign",
  "tugger-wix",
  "walkdir",
@@ -5216,7 +5216,23 @@ dependencies = [
 
 [[package]]
 name = "tugger-windows"
-version = "0.8.0-pre"
+version = "0.8.0"
+dependencies = [
+ "anyhow",
+ "duct",
+ "find-winsdk",
+ "glob",
+ "once_cell",
+ "semver",
+ "tugger-common 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "winapi",
+]
+
+[[package]]
+name = "tugger-windows"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bdf33811120cf85d93d7664daf27539ea15ad2a0c1d27d4f06bbf17302f29255"
 dependencies = [
  "anyhow",
  "duct",
@@ -5240,7 +5256,7 @@ dependencies = [
  "slog",
  "time 0.3.7",
  "tugger-common 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "tugger-windows",
+ "tugger-windows 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "x509-parser",
  "yasna",
 ]
@@ -5257,7 +5273,7 @@ dependencies = [
  "tempfile",
  "tugger-common 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-file-manifest 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "tugger-windows",
+ "tugger-windows 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-windows-codesign",
  "url",
  "uuid",
