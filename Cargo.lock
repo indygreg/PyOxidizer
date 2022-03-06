@@ -3314,7 +3314,7 @@ dependencies = [
  "pyo3-build-config",
  "python-oxidized-importer",
  "python-packaging",
- "python-packed-resources",
+ "python-packed-resources 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rusty-fork",
  "serde",
  "snmalloc-sys",
@@ -3332,7 +3332,7 @@ dependencies = [
  "pyoxidizer",
  "python-oxidized-importer",
  "python-packaging",
- "python-packed-resources",
+ "python-packed-resources 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "slog",
  "tempfile",
  "zip",
@@ -3425,7 +3425,7 @@ dependencies = [
  "predicates",
  "pyo3-build-config",
  "python-packaging",
- "python-packed-resources",
+ "python-packed-resources 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "remove_dir_all 0.7.0",
  "rustc_version",
  "semver",
@@ -3481,7 +3481,7 @@ dependencies = [
  "once_cell",
  "pyo3",
  "python-packaging",
- "python-packed-resources",
+ "python-packed-resources 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-file-manifest 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "winapi",
  "zip",
@@ -3498,7 +3498,7 @@ dependencies = [
  "itertools",
  "mailparse",
  "once_cell",
- "python-packed-resources",
+ "python-packed-resources 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "regex",
  "serde",
  "sha2 0.10.2",
@@ -3513,7 +3513,17 @@ dependencies = [
 
 [[package]]
 name = "python-packed-resources"
-version = "0.9.0-pre"
+version = "0.8.0"
+dependencies = [
+ "anyhow",
+ "byteorder",
+]
+
+[[package]]
+name = "python-packed-resources"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d17894ea05afa755a5113b9dcdee666b31ccdaa38f592b99f5e6d9a2ff22e54a"
 dependencies = [
  "anyhow",
  "byteorder",
