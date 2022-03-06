@@ -96,38 +96,6 @@ dependencies = [
 [[package]]
 name = "apple-codesign"
 version = "0.8.0"
-dependencies = [
- "anyhow",
- "apple-bundles 0.7.0-pre",
- "base64 0.13.0",
- "bcder",
- "bitflags",
- "bytes",
- "chrono",
- "clap 3.1.5",
- "cryptographic-message-syntax 0.9.0-pre",
- "goblin",
- "hex",
- "once_cell",
- "p12",
- "pem 1.0.2",
- "plist",
- "regex",
- "reqwest",
- "ring",
- "scroll",
- "security-framework",
- "slog",
- "slog-term",
- "thiserror",
- "tugger-apple 0.7.0-pre",
- "x509-certificate 0.8.0-pre",
- "yasna",
-]
-
-[[package]]
-name = "apple-codesign"
-version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b16907b9a85da5e02c5c76097ccff1b04a0259c39016784432e486ab129775d0"
 dependencies = [
@@ -156,6 +124,38 @@ dependencies = [
  "thiserror",
  "tugger-apple 0.6.0",
  "x509-certificate 0.7.0",
+ "yasna",
+]
+
+[[package]]
+name = "apple-codesign"
+version = "0.9.0-pre"
+dependencies = [
+ "anyhow",
+ "apple-bundles 0.7.0-pre",
+ "base64 0.13.0",
+ "bcder",
+ "bitflags",
+ "bytes",
+ "chrono",
+ "clap 3.1.5",
+ "cryptographic-message-syntax 0.9.0-pre",
+ "goblin",
+ "hex",
+ "once_cell",
+ "p12",
+ "pem 1.0.2",
+ "plist",
+ "regex",
+ "reqwest",
+ "ring",
+ "scroll",
+ "security-framework",
+ "slog",
+ "slog-term",
+ "thiserror",
+ "tugger-apple 0.7.0-pre",
+ "x509-certificate 0.8.0-pre",
  "yasna",
 ]
 
@@ -4986,7 +4986,7 @@ version = "0.14.0"
 dependencies = [
  "anyhow",
  "apple-bundles 0.7.0-pre",
- "apple-codesign 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "apple-codesign 0.9.0-pre",
  "atty",
  "chrono",
  "codemap",
@@ -5108,7 +5108,7 @@ version = "0.6.0"
 dependencies = [
  "anyhow",
  "apple-bundles 0.7.0-pre",
- "apple-codesign 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "apple-codesign 0.9.0-pre",
  "bcder",
  "cryptographic-message-syntax 0.9.0-pre",
  "goblin",
@@ -5131,7 +5131,7 @@ checksum = "dd47230f925d676da5a886aa075f9e21f4515b648bb341b76483308b7c0ee1b0"
 dependencies = [
  "anyhow",
  "apple-bundles 0.6.0",
- "apple-codesign 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "apple-codesign 0.8.0",
  "bcder",
  "cryptographic-message-syntax 0.8.0",
  "goblin",
