@@ -105,7 +105,7 @@ dependencies = [
  "bytes",
  "chrono",
  "clap 3.1.5",
- "cryptographic-message-syntax 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cryptographic-message-syntax 0.9.0-pre",
  "goblin",
  "hex",
  "once_cell",
@@ -139,7 +139,7 @@ dependencies = [
  "bytes",
  "chrono",
  "clap 3.1.5",
- "cryptographic-message-syntax 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cryptographic-message-syntax 0.8.0",
  "goblin",
  "hex",
  "once_cell",
@@ -1065,20 +1065,6 @@ dependencies = [
 [[package]]
 name = "cryptographic-message-syntax"
 version = "0.8.0"
-dependencies = [
- "bcder",
- "bytes",
- "chrono",
- "hex",
- "pem 1.0.2",
- "reqwest",
- "ring",
- "x509-certificate 0.8.0-pre",
-]
-
-[[package]]
-name = "cryptographic-message-syntax"
-version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dfa1e62084140682dacceaab6f9fabf7115730a540216d639091e62a948f13f1"
 dependencies = [
@@ -1090,6 +1076,20 @@ dependencies = [
  "reqwest",
  "ring",
  "x509-certificate 0.7.0",
+]
+
+[[package]]
+name = "cryptographic-message-syntax"
+version = "0.9.0-pre"
+dependencies = [
+ "bcder",
+ "bytes",
+ "chrono",
+ "hex",
+ "pem 1.0.2",
+ "reqwest",
+ "ring",
+ "x509-certificate 0.8.0-pre",
 ]
 
 [[package]]
@@ -5189,7 +5189,7 @@ dependencies = [
  "apple-bundles 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "apple-codesign 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "bcder",
- "cryptographic-message-syntax 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cryptographic-message-syntax 0.9.0-pre",
  "goblin",
  "p12",
  "reqwest",
@@ -5212,7 +5212,7 @@ dependencies = [
  "apple-bundles 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "apple-codesign 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "bcder",
- "cryptographic-message-syntax 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cryptographic-message-syntax 0.8.0",
  "goblin",
  "p12",
  "reqwest",
