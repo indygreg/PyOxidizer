@@ -31,7 +31,7 @@ Version History
 0.20.0
 ------
 
-Not yet released.
+Released March 6, 2022.
 
 Bug Fixes
 ^^^^^^^^^
