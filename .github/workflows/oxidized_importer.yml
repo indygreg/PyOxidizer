@@ -52,8 +52,8 @@ jobs:
               sudo apt install -y qemu binfmt-support qemu-user-static
           fi
 
-          python3 -m pip install --upgrade pip==21.2.4
-          python3 -m pip install cibuildwheel==2.2.2
+          python3 -m pip install --upgrade pip==22.0.3
+          python3 -m pip install cibuildwheel==2.3.1
           python3 -m cibuildwheel --output-dir wheelhouse .
 
       - name: Upload wheels
@@ -86,8 +86,8 @@ jobs:
           python-version: 3.9
       - name: Run cibuildwheel
         run: |
-          python3 -m pip install --upgrade pip==21.2.4
-          python3 -m pip install cibuildwheel==2.2.2
+          python3 -m pip install --upgrade pip==22.0.3
+          python3 -m pip install cibuildwheel==2.3.1
           python3 -m cibuildwheel --output-dir wheelhouse .
 
       - name: Upload wheels
@@ -120,8 +120,8 @@ jobs:
           python-version: 3.9
       - name: Run cibuildwheel
         run: |
-          python -m pip install --upgrade pip==21.2.4
-          python -m pip install cibuildwheel==2.2.2
+          python -m pip install --upgrade pip==22.0.3
+          python -m pip install cibuildwheel==2.3.1
           python -m cibuildwheel --output-dir wheelhouse .
 
       - name: Upload wheels
