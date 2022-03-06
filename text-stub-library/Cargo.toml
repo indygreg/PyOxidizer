@@ -21,5 +21,5 @@ rayon = "1.5"
 walkdir = "2.3"
 
 [dev-dependencies.tugger-apple]
-version = "0.6.0-pre"
-path = "../tugger-apple"
+version = "0.6.0"
+# path = "../tugger-apple"
