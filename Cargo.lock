@@ -1195,7 +1195,7 @@ checksum = "3ee2393c4a91429dffb4bedf19f4d6abf27d8a732c8ce4980305d782e5426d57"
 
 [[package]]
 name = "debian-packaging"
-version = "0.11.0"
+version = "0.12.0-pre"
 dependencies = [
  "ar",
  "async-compression",
@@ -1215,7 +1215,7 @@ dependencies = [
  "once_cell",
  "os_str_bytes",
  "pgp",
- "pgp-cleartext 0.2.0-pre",
+ "pgp-cleartext",
  "pin-project",
  "regex",
  "reqwest",
@@ -1237,54 +1237,11 @@ dependencies = [
 ]
 
 [[package]]
-name = "debian-packaging"
-version = "0.11.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "364d9980f33707cbd1b3b346ee5106a9e93bea5701f29439446a9bfaee32fe91"
-dependencies = [
- "ar",
- "async-compression",
- "async-std",
- "async-tar",
- "async-trait",
- "bytes",
- "chrono",
- "digest 0.10.3",
- "futures",
- "hex",
- "libflate",
- "mailparse",
- "md-5 0.10.1",
- "once_cell",
- "os_str_bytes",
- "pgp",
- "pgp-cleartext 0.1.0",
- "pin-project",
- "regex",
- "reqwest",
- "rusoto_core",
- "rusoto_s3",
- "serde",
- "sha-1 0.10.0",
- "sha2 0.10.2",
- "smallvec",
- "strum",
- "strum_macros",
- "tar",
- "thiserror",
- "tokio",
- "tugger-file-manifest 0.6.0",
- "url",
- "xz2",
- "zstd",
-]
-
-[[package]]
 name = "debian-repo-tool"
 version = "0.3.0"
 dependencies = [
  "clap 3.1.5",
- "debian-packaging 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "debian-packaging",
  "num_cpus",
  "pbr",
  "serde_yaml",
@@ -2441,7 +2398,7 @@ dependencies = [
  "anyhow",
  "clap 3.1.5",
  "cpio",
- "debian-packaging 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "debian-packaging",
  "futures",
  "futures-util",
  "iced-x86",
@@ -3104,21 +3061,6 @@ dependencies = [
  "twofish",
  "x25519-dalek",
  "zeroize",
-]
-
-[[package]]
-name = "pgp-cleartext"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "23d4dd74a6589d7a8a96b2fbf7b76ff15bf90ae52f751152c2952eb4cd22da52"
-dependencies = [
- "chrono",
- "digest 0.10.3",
- "md-5 0.10.1",
- "pgp",
- "sha-1 0.10.0",
- "sha2 0.10.2",
- "smallvec",
 ]
 
 [[package]]
