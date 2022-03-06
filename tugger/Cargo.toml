@@ -80,5 +80,5 @@ version = "0.7.0-pre"
 path = "../tugger-windows-codesign"
 
 [dev-dependencies.x509-certificate]
-version = "0.7.0-pre"
-path = "../x509-certificate"
+version = "0.7.0"
+# path = "../x509-certificate"
