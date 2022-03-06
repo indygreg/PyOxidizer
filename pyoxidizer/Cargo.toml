@@ -82,8 +82,8 @@ version = "0.6.0-pre"
 path = "../tugger-binary-analysis"
 
 [dependencies.tugger-code-signing]
-version = "0.6.0"
-# path = "../tugger-code-signing"
+version = "0.7.0-pre"
+path = "../tugger-code-signing"
 
 [dependencies.tugger-common]
 version = "0.8.0-pre"
