@@ -102,8 +102,13 @@ fn create_macho_with_signature(
 
     // `codesign` rounds up the segment's vmsize to the nearest 16kb boundary.
     // We emulate that behavior.
-    let new_linkedit_segment_vmsize =
-        new_linkedit_segment_size + 16384 - new_linkedit_segment_size % 16384;
+    let remainder = new_linkedit_segment_size % 16384;
+    let new_linkedit_segment_vmsize = if remainder == 0 {
+        new_linkedit_segment_size
+    } else {
+        new_linkedit_segment_size + 16384 - remainder
+    };
+
     assert!(new_linkedit_segment_vmsize >= new_linkedit_segment_size);
     assert_eq!(new_linkedit_segment_vmsize % 16384, 0);
 
