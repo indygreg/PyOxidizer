@@ -1215,7 +1215,7 @@ dependencies = [
  "once_cell",
  "os_str_bytes",
  "pgp",
- "pgp-cleartext 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "pgp-cleartext 0.2.0-pre",
  "pin-project",
  "regex",
  "reqwest",
@@ -1258,7 +1258,7 @@ dependencies = [
  "once_cell",
  "os_str_bytes",
  "pgp",
- "pgp-cleartext 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "pgp-cleartext 0.1.0",
  "pin-project",
  "regex",
  "reqwest",
@@ -3109,6 +3109,8 @@ dependencies = [
 [[package]]
 name = "pgp-cleartext"
 version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "23d4dd74a6589d7a8a96b2fbf7b76ff15bf90ae52f751152c2952eb4cd22da52"
 dependencies = [
  "chrono",
  "digest 0.10.3",
@@ -3121,9 +3123,7 @@ dependencies = [
 
 [[package]]
 name = "pgp-cleartext"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "23d4dd74a6589d7a8a96b2fbf7b76ff15bf90ae52f751152c2952eb4cd22da52"
+version = "0.2.0-pre"
 dependencies = [
  "chrono",
  "digest 0.10.3",
@@ -4538,9 +4538,9 @@ dependencies = [
 
 [[package]]
 name = "siphasher"
-version = "0.3.9"
+version = "0.3.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a86232ab60fa71287d7f2ddae4a7073f6b7aac33631c3015abb556f08c6d0a3e"
+checksum = "7bd3e3206899af3f8b12af284fafc038cc1dc2b41d1b89dd17297221c5d225de"
 
 [[package]]
 name = "slab"
