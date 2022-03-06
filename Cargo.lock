@@ -3254,7 +3254,7 @@ dependencies = [
  "pathdiff",
  "pyo3",
  "pyo3-build-config",
- "python-oxidized-importer 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "python-oxidized-importer",
  "python-packaging 0.13.0-pre",
  "python-packed-resources 0.9.0-pre",
  "rusty-fork",
@@ -3272,7 +3272,7 @@ dependencies = [
  "pyembed",
  "pyo3",
  "pyoxidizer 0.20.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "python-oxidized-importer 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "python-oxidized-importer",
  "python-packaging 0.13.0-pre",
  "python-packed-resources 0.9.0-pre",
  "slog",
@@ -3471,7 +3471,7 @@ dependencies = [
 
 [[package]]
 name = "python-oxidized-importer"
-version = "0.5.0"
+version = "0.6.0-pre"
 dependencies = [
  "anyhow",
  "memmap2",
@@ -3481,24 +3481,6 @@ dependencies = [
  "python-packaging 0.13.0-pre",
  "python-packed-resources 0.9.0-pre",
  "tugger-file-manifest 0.7.0-pre",
- "winapi",
- "zip",
-]
-
-[[package]]
-name = "python-oxidized-importer"
-version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "401db8e5cd762950747b3f55a2bfc3589fc707874456c01a1eb569623b616aeb"
-dependencies = [
- "anyhow",
- "memmap2",
- "memory-module-sys",
- "once_cell",
- "pyo3",
- "python-packaging 0.12.0",
- "python-packed-resources 0.8.0",
- "tugger-file-manifest 0.6.0",
  "winapi",
  "zip",
 ]
