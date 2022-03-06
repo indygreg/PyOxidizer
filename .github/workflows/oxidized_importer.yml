@@ -48,6 +48,7 @@ jobs:
       - name: Run cibuildwheel
         run: |
           if [ "${CIBW_ARCHS}" = "aarch64" ]; then
+              sudo apt update
               sudo apt install -y qemu binfmt-support qemu-user-static
           fi
 
