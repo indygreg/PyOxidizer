@@ -23,8 +23,8 @@ default-features = false
 features = ["zipimport"]
 
 [dependencies.pyoxidizer]
-version = "0.20.0-pre"
-path = "../pyoxidizer"
+version = "0.20.0"
+# path = "../pyoxidizer"
 
 [dependencies.python-oxidized-importer]
 version = "0.5.0"
