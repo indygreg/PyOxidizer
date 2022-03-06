@@ -95,7 +95,41 @@ dependencies = [
 
 [[package]]
 name = "apple-codesign"
-version = "0.8.0-pre"
+version = "0.8.0"
+dependencies = [
+ "anyhow",
+ "apple-bundles 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "base64 0.13.0",
+ "bcder",
+ "bitflags",
+ "bytes",
+ "chrono",
+ "clap 3.1.5",
+ "cryptographic-message-syntax 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "goblin",
+ "hex",
+ "once_cell",
+ "p12",
+ "pem 1.0.2",
+ "plist",
+ "regex",
+ "reqwest",
+ "ring",
+ "scroll",
+ "security-framework",
+ "slog",
+ "slog-term",
+ "thiserror",
+ "tugger-apple 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "x509-certificate 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "yasna",
+]
+
+[[package]]
+name = "apple-codesign"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b16907b9a85da5e02c5c76097ccff1b04a0259c39016784432e486ab129775d0"
 dependencies = [
  "anyhow",
  "apple-bundles 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -4922,7 +4956,7 @@ version = "0.14.0-pre"
 dependencies = [
  "anyhow",
  "apple-bundles 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "apple-codesign",
+ "apple-codesign 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "atty",
  "chrono",
  "codemap",
@@ -5012,7 +5046,7 @@ version = "0.6.0-pre"
 dependencies = [
  "anyhow",
  "apple-bundles 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "apple-codesign",
+ "apple-codesign 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "bcder",
  "cryptographic-message-syntax 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "goblin",
