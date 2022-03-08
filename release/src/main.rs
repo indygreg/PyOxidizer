@@ -1362,6 +1362,25 @@ fn main_impl() -> Result<()> {
                     Arg::new("dry_run")
                         .long("dry-run")
                         .help("Do not actually upload artifacts"),
+                )
+                .arg(
+                    Arg::new("pypi_registry")
+                        .long("pypi-registry")
+                        .takes_value(true)
+                        .default_value("https://upload.pypi.org/legacy/")
+                        .help("URL of PyPI registry to publish to"),
+                )
+                .arg(
+                    Arg::new("pypi_username")
+                        .long("pypi-username")
+                        .takes_value(true)
+                        .help("PyPI username to use to upload"),
+                )
+                .arg(
+                    Arg::new("pypi_password")
+                        .long("pypi-password")
+                        .takes_value(true)
+                        .help("PyPI password to use to upload"),
                 ),
         )
         .get_matches();

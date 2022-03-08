@@ -96,6 +96,11 @@ pub async fn command_upload_release_artifacts(args: &ArgMatches) -> Result<()> {
         .value_of("commit")
         .expect("commit argument is required");
     let dry_run = args.is_present("dry_run");
+    let pypi_registry = args
+        .value_of("pypi_registry")
+        .expect("pypi_registry should have default value");
+    let pypi_username = args.value_of("pypi_username");
+    let pypi_password = args.value_of("pypi_password");
 
     let home = dirs::home_dir().expect("unable to resolve home directory");
     let token_path = home.join(".github-token");
@@ -269,7 +274,7 @@ pub async fn command_upload_release_artifacts(args: &ArgMatches) -> Result<()> {
 
         digests.insert(name.clone(), digest.clone());
 
-        upload_release_artifact(&client, &release, &name, data, dry_run).await?;
+        upload_release_artifact(&client, &release, &name, data.clone(), dry_run).await?;
         upload_release_artifact(
             &client,
             &release,
@@ -278,6 +283,33 @@ pub async fn command_upload_release_artifacts(args: &ArgMatches) -> Result<()> {
             dry_run,
         )
         .await?;
+
+        if name.ends_with(".whl") {
+            if let (Some(username), Some(password)) = (pypi_username, pypi_password) {
+                println!("uploading {} to PyPI", name);
+
+                let td = tempfile::tempdir()?;
+
+                let path = td.path().join(&name);
+                std::fs::write(&path, &data)?;
+
+                let registry = maturin::Registry {
+                    url: pypi_registry.to_string(),
+                    username: username.to_string(),
+                    password: password.to_string(),
+                };
+
+                match maturin::upload(&registry, &path) {
+                    Ok(_) => {
+                        println!("uploaded {} to PyPI", name);
+                    }
+                    Err(maturin::UploadError::FileExistsError(_)) => {
+                        println!("{} already exists in PyPI", name);
+                    }
+                    Err(err) => return Err(anyhow!("PyPI upload error: {:?}", err)),
+                }
+            }
+        }
     }
 
     let shasums = digests
