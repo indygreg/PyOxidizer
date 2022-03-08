@@ -19,6 +19,8 @@ use {
     },
 };
 
+pub mod release;
+
 const CARGO_LOCKFILE_NAME: &str = "new-project-cargo.lock";
 
 /// Packages in the workspace we should ignore.
@@ -1327,6 +1329,41 @@ fn main_impl() -> Result<()> {
                 ),
         )
         .subcommand(Command::new("synchronize-generated-files").about("Write out generated files"))
+        .subcommand(
+            Command::new("upload-release-artifacts")
+                .about("Upload release artifacts to GitHub")
+                .arg(
+                    Arg::new("organization")
+                        .long("organization")
+                        .takes_value(true)
+                        .default_value("indygreg"),
+                )
+                .arg(
+                    Arg::new("repo")
+                        .long("repo")
+                        .takes_value(true)
+                        .default_value("PyOxidizer"),
+                )
+                .arg(
+                    Arg::new("commit")
+                        .long("commit")
+                        .takes_value(true)
+                        .required(true)
+                        .help("Git commit to grab release artifacts from"),
+                )
+                .arg(
+                    Arg::new("version")
+                        .long("version")
+                        .required(true)
+                        .takes_value(true)
+                        .help("PyOxidizer version to release"),
+                )
+                .arg(
+                    Arg::new("dry_run")
+                        .long("dry-run")
+                        .help("Do not actually upload artifacts"),
+                ),
+        )
         .get_matches();
 
     match matches.subcommand() {
@@ -1338,6 +1375,11 @@ fn main_impl() -> Result<()> {
             command_generate_pyembed_license(repo_root, args)
         }
         Some(("synchronize-generated-files", _)) => command_synchronize_generated_files(repo_root),
+        Some(("upload-release-artifacts", args)) => tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .unwrap()
+            .block_on(crate::release::command_upload_release_artifacts(args)),
         _ => Err(anyhow!("invalid sub-command")),
     }
 }
