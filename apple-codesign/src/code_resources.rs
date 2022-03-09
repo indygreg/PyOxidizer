@@ -895,7 +895,7 @@ impl CodeResourcesBuilder {
         );
 
         slf.add_rule2(CodeResourcesRule::new("^.*")?);
-        slf.add_rule2(CodeResourcesRule::new("^[^/]+$")?.nested().weight(10));
+        //slf.add_rule2(CodeResourcesRule::new("^[^/]+$")?.nested().weight(10));
         slf.add_rule2(CodeResourcesRule::new("^(Frameworks|SharedFrameworks|PlugIns|Plug-ins|XPCServices|Helpers|MacOS|Library/(Automator|Spotlight|LoginItems))/")?
                          .nested().weight(10));
         slf.add_rule2(CodeResourcesRule::new(".*\\.dSYM($|/)")?.weight(11));
