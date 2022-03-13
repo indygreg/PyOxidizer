@@ -1,6 +1,6 @@
 [package]
 name = "tugger-apple-codesign"
-version = "0.7.0"
+version = "0.8.0"
 authors = ["Gregory Szorc <gregory.szorc@gmail.com>"]
 edition = "2021"
 license = "MPL-2.0"
@@ -13,45 +13,3 @@ readme = "README.md"
 [[bin]]
 name = "rcodesign"
 path = "src/main.rs"
-
-[dependencies]
-anyhow = "1.0"
-base64 = "0.13"
-bcder = "0.6"
-bitflags = "1.2"
-bytes = "1.0"
-clap = "2.33"
-chrono = "0.4"
-goblin = "0.4"
-hex = "0.4"
-once_cell = "1.7"
-p12 = "0.3"
-pem = "1.0"
-plist = "1.2"
-regex = "1.5"
-reqwest = { version = "0.11", default-features = false, features = ["blocking", "rustls-tls"] }
-ring = "0.16"
-scroll = "0.10"
-slog = "2.7"
-slog-term = "2.8"
-thiserror = "1.0"
-yasna = "0.4"
-
-[dependencies.apple-bundles]
-# path = "../apple-bundles"
-version = "0.6.0"
-
-[dependencies.cryptographic-message-syntax]
-# path = "../cryptographic-message-syntax"
-version = "0.5.0"
-
-[dependencies.tugger-apple]
-# path = "../tugger-apple"
-version = "0.5.0"
-
-[dependencies.x509-certificate]
-# path = "../x509-certificate"
-version = "0.4.0"
-
-[target.'cfg(target_os = "macos")'.dependencies]
-security-framework = { version = "2.2", features = ["OSX_10_12"] }

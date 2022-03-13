@@ -3743,7 +3743,7 @@ dependencies = [
  "tempfile",
  "time 0.3.4",
  "tugger-apple 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "tugger-apple-codesign 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-apple-codesign 0.7.0",
  "tugger-code-signing",
  "tugger-common 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-file-manifest 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3790,6 +3790,8 @@ dependencies = [
 [[package]]
 name = "tugger-apple-codesign"
 version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ce68bc66d6e5025f354e0966fc33d9485d9402540495e88fa8f89db737d67362"
 dependencies = [
  "anyhow",
  "apple-bundles 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3821,37 +3823,7 @@ dependencies = [
 
 [[package]]
 name = "tugger-apple-codesign"
-version = "0.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ce68bc66d6e5025f354e0966fc33d9485d9402540495e88fa8f89db737d67362"
-dependencies = [
- "anyhow",
- "apple-bundles 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "base64 0.13.0",
- "bcder",
- "bitflags",
- "bytes",
- "chrono",
- "clap",
- "cryptographic-message-syntax 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "goblin",
- "hex",
- "once_cell",
- "p12",
- "pem 1.0.1",
- "plist",
- "regex",
- "reqwest",
- "ring",
- "scroll",
- "security-framework",
- "slog",
- "slog-term",
- "thiserror",
- "tugger-apple 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "x509-certificate 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "yasna",
-]
+version = "0.8.0"
 
 [[package]]
 name = "tugger-binary-analysis"
@@ -3891,7 +3863,7 @@ dependencies = [
  "slog",
  "tempfile",
  "thiserror",
- "tugger-apple-codesign 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-apple-codesign 0.7.0",
  "tugger-file-manifest 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-windows-codesign",
  "x509-certificate 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
