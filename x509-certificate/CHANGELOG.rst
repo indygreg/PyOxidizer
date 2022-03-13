@@ -2,6 +2,13 @@
 ``x509-certificate`` History
 ============================
 
+0.8.0
+=====
+
+* Properly parse ``TbsCertificate`` that is missing a ``version`` field.
+  Before, we'd get a ``Malformed`` error if this optional field was missing.
+  Now, we correctly interpret a missing field as version 1. (#521)
+
 0.7.0
 =====
 

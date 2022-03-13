@@ -1058,4 +1058,9 @@ mod tests {
             }
         }
     }
+
+    #[test]
+    fn parse_no_certificate_version() {
+        SignedData::parse_ber(include_bytes!("testdata/no-cert-version.ber")).unwrap();
+    }
 }
