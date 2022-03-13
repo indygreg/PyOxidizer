@@ -2,6 +2,18 @@
 `apple-codesign` History
 ========================
 
+0.9.0
+=====
+
+* Imported new Apple certificates. ``Developer ID - G2 (Expiring 09/17/2031 00:00:00 UTC)``,
+  ``Worldwide Developer Relations - G4 (Expiring 12/10/2030 00:00:00 UTC)``,
+  ``Worldwide Developer Relations - G5 (Expiring 12/10/2030 00:00:00 UTC)``,
+  and ``Worldwide Developer Relations - G6 (Expiring 03/19/2036 00:00:00 UTC)``.
+* Changed names of enum variants on ``apple_codesign::apple_certificates::KnownCertificate``
+  to reflect latest naming from https://www.apple.com/certificateauthority/.
+* Refreshed content of Apple certificates ``AppleAAICA.cer``, ``AppleISTCA8G1.cer``, and
+  ``AppleTimestampCA.cer``.
+
 0.8.0
 =====
 

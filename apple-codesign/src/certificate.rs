@@ -1506,7 +1506,7 @@ mod tests {
         assert_eq!(
             cert.apple_issuing_chain(),
             vec![
-                KnownCertificate::Wwdr2030,
+                KnownCertificate::WwdrG3,
                 KnownCertificate::AppleRootCa,
                 KnownCertificate::AppleComputerIncRoot
             ]
@@ -1516,7 +1516,7 @@ mod tests {
             cert.apple_root_certificate_chain(),
             Some(vec![
                 cert.clone(),
-                (*KnownCertificate::Wwdr2030).clone(),
+                (*KnownCertificate::WwdrG3).clone(),
                 (*KnownCertificate::AppleRootCa).clone()
             ])
         );
@@ -1566,7 +1566,7 @@ mod tests {
         assert_eq!(
             cert.apple_issuing_chain(),
             vec![
-                KnownCertificate::Wwdr2030,
+                KnownCertificate::WwdrG3,
                 KnownCertificate::AppleRootCa,
                 KnownCertificate::AppleComputerIncRoot
             ],
@@ -1576,7 +1576,7 @@ mod tests {
             cert.apple_root_certificate_chain(),
             Some(vec![
                 cert.clone(),
-                (*KnownCertificate::Wwdr2030).clone(),
+                (*KnownCertificate::WwdrG3).clone(),
                 (*KnownCertificate::AppleRootCa).clone()
             ])
         );
@@ -1626,7 +1626,7 @@ mod tests {
         assert_eq!(
             cert.apple_issuing_chain(),
             vec![
-                KnownCertificate::Wwdr2030,
+                KnownCertificate::WwdrG3,
                 KnownCertificate::AppleRootCa,
                 KnownCertificate::AppleComputerIncRoot
             ],
@@ -1636,7 +1636,7 @@ mod tests {
             cert.apple_root_certificate_chain(),
             Some(vec![
                 cert.clone(),
-                (*KnownCertificate::Wwdr2030).clone(),
+                (*KnownCertificate::WwdrG3).clone(),
                 (*KnownCertificate::AppleRootCa).clone()
             ])
         );
@@ -1686,7 +1686,7 @@ mod tests {
         assert_eq!(
             cert.apple_issuing_chain(),
             vec![
-                KnownCertificate::DeveloperId,
+                KnownCertificate::DeveloperIdG1,
                 KnownCertificate::AppleRootCa,
                 KnownCertificate::AppleComputerIncRoot
             ]
@@ -1696,7 +1696,7 @@ mod tests {
             cert.apple_root_certificate_chain(),
             Some(vec![
                 cert.clone(),
-                (*KnownCertificate::DeveloperId).clone(),
+                (*KnownCertificate::DeveloperIdG1).clone(),
                 (*KnownCertificate::AppleRootCa).clone()
             ])
         );
@@ -1750,7 +1750,7 @@ mod tests {
         assert_eq!(
             cert.apple_issuing_chain(),
             vec![
-                KnownCertificate::DeveloperId,
+                KnownCertificate::DeveloperIdG1,
                 KnownCertificate::AppleRootCa,
                 KnownCertificate::AppleComputerIncRoot
             ]
@@ -1760,7 +1760,7 @@ mod tests {
             cert.apple_root_certificate_chain(),
             Some(vec![
                 cert.clone(),
-                (*KnownCertificate::DeveloperId).clone(),
+                (*KnownCertificate::DeveloperIdG1).clone(),
                 (*KnownCertificate::AppleRootCa).clone()
             ])
         );
