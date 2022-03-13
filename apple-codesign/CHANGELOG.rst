@@ -13,6 +13,8 @@
   to reflect latest naming from https://www.apple.com/certificateauthority/.
 * Refreshed content of Apple certificates ``AppleAAICA.cer``, ``AppleISTCA8G1.cer``, and
   ``AppleTimestampCA.cer``.
+* Renamed ``apple_codesign::macho::CodeSigningSlot::SecuritySettings`` to
+  ``EntitlementsDer``.
 
 0.8.0
 =====
