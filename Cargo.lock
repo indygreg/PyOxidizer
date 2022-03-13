@@ -102,7 +102,7 @@ dependencies = [
  "bytes",
  "chrono",
  "clap 3.1.6",
- "cryptographic-message-syntax 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cryptographic-message-syntax",
  "goblin",
  "hex",
  "once_cell",
@@ -118,7 +118,7 @@ dependencies = [
  "slog-term",
  "thiserror",
  "tugger-apple",
- "x509-certificate 0.9.0-pre",
+ "x509-certificate",
  "yasna",
 ]
 
@@ -1169,7 +1169,7 @@ dependencies = [
 
 [[package]]
 name = "cryptographic-message-syntax"
-version = "0.9.0"
+version = "0.10.0-pre"
 dependencies = [
  "bcder",
  "bytes",
@@ -1178,23 +1178,7 @@ dependencies = [
  "pem 1.0.2",
  "reqwest",
  "ring",
- "x509-certificate 0.9.0-pre",
-]
-
-[[package]]
-name = "cryptographic-message-syntax"
-version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6dde5c130700462c1ae5cb1dce01ecd59a4619e7967dc03ba110202f9f1ef080"
-dependencies = [
- "bcder",
- "bytes",
- "chrono",
- "hex",
- "pem 1.0.2",
- "reqwest",
- "ring",
- "x509-certificate 0.8.0",
+ "x509-certificate",
 ]
 
 [[package]]
@@ -5386,7 +5370,7 @@ dependencies = [
  "tugger-windows-codesign",
  "tugger-wix",
  "walkdir",
- "x509-certificate 0.9.0-pre",
+ "x509-certificate",
 ]
 
 [[package]]
@@ -5423,7 +5407,7 @@ dependencies = [
  "apple-bundles",
  "apple-codesign",
  "bcder",
- "cryptographic-message-syntax 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cryptographic-message-syntax",
  "goblin",
  "p12",
  "reqwest",
@@ -5432,7 +5416,7 @@ dependencies = [
  "thiserror",
  "tugger-file-manifest",
  "tugger-windows-codesign",
- "x509-certificate 0.9.0-pre",
+ "x509-certificate",
  "yasna",
 ]
 
@@ -6007,21 +5991,6 @@ dependencies = [
  "curve25519-dalek",
  "rand_core 0.5.1",
  "zeroize",
-]
-
-[[package]]
-name = "x509-certificate"
-version = "0.8.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bb459ff4bcde6507cb7962b7b15bb467368bc243f87f4397fbab8e2bc1b38f35"
-dependencies = [
- "bcder",
- "bytes",
- "chrono",
- "hex",
- "pem 1.0.2",
- "ring",
- "thiserror",
 ]
 
 [[package]]
