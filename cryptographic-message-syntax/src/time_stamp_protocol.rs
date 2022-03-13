@@ -236,7 +236,7 @@ mod test {
     #[test]
     fn verify_static() {
         let signed_data =
-            crate::SignedData::parse_ber(include_bytes!("tsp-signed-data.der")).unwrap();
+            crate::SignedData::parse_ber(include_bytes!("testdata/tsp-signed-data.der")).unwrap();
 
         for signer in signed_data.signers() {
             signer

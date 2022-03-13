@@ -1004,9 +1004,9 @@ mod tests {
 
     // This signature was extracted from the Firefox.app/Contents/MacOS/firefox
     // Mach-O executable on a aarch64 machine.
-    const FIREFOX_SIGNATURE: &[u8] = include_bytes!("firefox.ber");
+    const FIREFOX_SIGNATURE: &[u8] = include_bytes!("testdata/firefox.ber");
 
-    const FIREFOX_CODE_DIRECTORY: &[u8] = include_bytes!("firefox-code-directory");
+    const FIREFOX_CODE_DIRECTORY: &[u8] = include_bytes!("testdata/firefox-code-directory");
 
     #[test]
     fn parse_firefox() {
