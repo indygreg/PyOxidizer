@@ -9,10 +9,11 @@ use {
         error::AppleCodesignError,
         macho::{
             read_and_validate_blob_header, Blob, CodeSigningMagic, CodeSigningSlot, Digest,
-            DigestType,
+            DigestType, MachoTarget, Platform,
         },
     },
     scroll::{IOwrite, Pread},
+    semver::Version,
     std::{borrow::Cow, collections::HashMap, io::Write, str::FromStr},
 };
 
@@ -537,7 +538,7 @@ impl<'a> CodeDirectoryBlob<'a> {
     /// Adjust the version of the data structure according to what fields are set.
     ///
     /// Returns the old version.
-    pub fn adjust_version(&mut self) -> u32 {
+    pub fn adjust_version(&mut self, target: Option<MachoTarget>) -> u32 {
         let old_version = self.version;
 
         let mut minimum_version = CodeDirectoryVersion::Initial;
@@ -567,6 +568,34 @@ impl<'a> CodeDirectoryBlob<'a> {
             || self.linkage_size.is_some()
         {
             minimum_version = CodeDirectoryVersion::SupportsLinkage;
+        }
+
+        // Some platforms have hard requirements for the minimum version. If
+        // targeting settings are in effect, we raise the minimum version accordingly.
+        if let Some(target) = target {
+            let target_minimum = match target.platform {
+                // iOS >= 15 requires a modern code signature format.
+                Platform::IOs | Platform::IosSimulator => {
+                    if target.minimum_os_version >= Version::new(15, 0, 0) {
+                        CodeDirectoryVersion::SupportsExecutableSegment
+                    } else {
+                        CodeDirectoryVersion::Initial
+                    }
+                }
+                // Let's bump the minimum version for macOS 12 out of principle.
+                Platform::MacOs => {
+                    if target.minimum_os_version >= Version::new(12, 0, 0) {
+                        CodeDirectoryVersion::SupportsExecutableSegment
+                    } else {
+                        CodeDirectoryVersion::Initial
+                    }
+                }
+                _ => CodeDirectoryVersion::Initial,
+            };
+
+            if target_minimum as u32 > minimum_version as u32 {
+                minimum_version = target_minimum;
+            }
         }
 
         self.version = minimum_version as u32;

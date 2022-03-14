@@ -13,9 +13,9 @@ use {
         code_requirement::{CodeRequirementExpression, CodeRequirements},
         error::AppleCodesignError,
         macho::{
-            create_superblob, AppleSignable, Blob, BlobWrapperBlob, CodeSigningMagic,
-            CodeSigningSlot, Digest, DigestType, EmbeddedSignature, EntitlementsBlob,
-            RequirementSetBlob, RequirementType,
+            create_superblob, find_macho_targeting, AppleSignable, Blob, BlobWrapperBlob,
+            CodeSigningMagic, CodeSigningSlot, Digest, DigestType, EmbeddedSignature,
+            EntitlementsBlob, RequirementSetBlob, RequirementType,
         },
         policy::derive_designated_requirements,
         signing::{DesignatedRequirementMode, SettingsScope, SigningSettings},
@@ -339,6 +339,7 @@ impl<'data> MachOSigner<'data> {
 
                 let mut signature_data = self.create_superblob(
                     &settings,
+                    self.macho_data(index),
                     &intermediate_macho,
                     original_macho.code_signature()?.as_ref(),
                 )?;
@@ -403,10 +404,12 @@ impl<'data> MachOSigner<'data> {
     pub fn create_superblob(
         &self,
         settings: &SigningSettings,
+        macho_data: &[u8],
         macho: &MachO,
         previous_signature: Option<&EmbeddedSignature>,
     ) -> Result<Vec<u8>, AppleCodesignError> {
-        let code_directory = self.create_code_directory(settings, macho, previous_signature)?;
+        let code_directory =
+            self.create_code_directory(settings, macho_data, macho, previous_signature)?;
 
         // By convention, the Code Directory goes first.
         let mut blobs = vec![(
@@ -535,6 +538,7 @@ impl<'data> MachOSigner<'data> {
     pub fn create_code_directory(
         &self,
         settings: &SigningSettings,
+        macho_data: &[u8],
         macho: &MachO,
         previous_signature: Option<&EmbeddedSignature>,
     ) -> Result<CodeDirectoryBlob<'static>, AppleCodesignError> {
@@ -706,7 +710,7 @@ impl<'data> MachOSigner<'data> {
             special_hashes,
         };
 
-        cd.adjust_version();
+        cd.adjust_version(find_macho_targeting(macho_data, macho)?);
         cd.clear_newer_fields();
 
         Ok(cd)

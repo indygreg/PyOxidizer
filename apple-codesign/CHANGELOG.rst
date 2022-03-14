@@ -18,6 +18,10 @@
 * Add ``apple_codesign::macho::CodeSigningSlot::RepSpecific``.
 * ``rcodesign extract`` has learned a ``macho-target`` output to display information
   about targeting settings of a Mach-O binary.
+* The code signature data structure version is now automatically modernized when
+  signing a Mach-O binary targeting iOS >= 15 or macOS >= 12. This fixes an issue
+  where signatures of iOS 15+ binaries didn't meet Apple's requirements for this
+  platform.
 
 0.8.0
 =====
