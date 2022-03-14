@@ -16,6 +16,8 @@
 * Renamed ``apple_codesign::macho::CodeSigningSlot::SecuritySettings`` to
   ``EntitlementsDer``.
 * Add ``apple_codesign::macho::CodeSigningSlot::RepSpecific``.
+* ``rcodesign extract`` has learned a ``macho-target`` output to display information
+  about targeting settings of a Mach-O binary.
 
 0.8.0
 =====

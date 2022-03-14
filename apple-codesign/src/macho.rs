@@ -47,8 +47,10 @@ use {
     cryptographic_message_syntax::time_stamp_message_http,
     goblin::mach::{
         constants::{SEG_LINKEDIT, SEG_PAGEZERO, SEG_TEXT},
-        load_command::{CommandVariant, LinkeditDataCommand, SIZEOF_LINKEDIT_DATA_COMMAND},
-        MachO,
+        load_command::{
+            CommandVariant, LinkeditDataCommand, LC_BUILD_VERSION, SIZEOF_LINKEDIT_DATA_COMMAND,
+        },
+        parse_magic_and_ctx, MachO,
     },
     scroll::{IOwrite, Pread},
     std::{borrow::Cow, cmp::Ordering, collections::HashMap, io::Write},
@@ -1598,6 +1600,141 @@ pub fn find_signature_data<'a>(
     } else {
         Ok(None)
     }
+}
+
+/// Content of an `LC_BUILD_VERSION` load command.
+#[derive(Clone, Debug, Pread)]
+pub struct BuildVersionCommand {
+    /// LC_BUILD_VERSION
+    pub cmd: u32,
+    /// Size of load command data.
+    ///
+    /// sizeof(self) + self.ntools * sizeof(BuildToolsVersion)
+    pub cmdsize: u32,
+    /// Platform identifier.
+    pub platform: u32,
+    /// Minimum operating system version.
+    ///
+    /// X.Y.Z encoded in nibbles as xxxx.yy.zz.
+    pub minos: u32,
+    /// SDK version.
+    ///
+    /// X.Y.Z encoded in nibbles as xxxx.yy.zz.
+    pub sdk: u32,
+    /// Number of tools entries following this structure.
+    pub ntools: u32,
+}
+
+/// Represents `PLATFORM_` mach-o constants.
+pub enum Platform {
+    MacOs,
+    IOs,
+    TvOs,
+    WatchOs,
+    BridgeOs,
+    MacCatalyst,
+    IosSimulator,
+    TvOsSimulator,
+    WatchOsSimulator,
+    DriverKit,
+    Unknown(u32),
+}
+
+impl std::fmt::Display for Platform {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::MacOs => f.write_str("macOS"),
+            Self::IOs => f.write_str("iOS"),
+            Self::TvOs => f.write_str("tvOS"),
+            Self::WatchOs => f.write_str("watchOS"),
+            Self::BridgeOs => f.write_str("bridgeOS"),
+            Self::MacCatalyst => f.write_str("macCatalyst"),
+            Self::IosSimulator => f.write_str("iOSSimulator"),
+            Self::TvOsSimulator => f.write_str("tvOSSimulator"),
+            Self::WatchOsSimulator => f.write_str("watchOSSimulator"),
+            Self::DriverKit => f.write_str("driverKit"),
+            Self::Unknown(v) => f.write_fmt(format_args!("Unknown ({})", v)),
+        }
+    }
+}
+
+impl From<u32> for Platform {
+    fn from(v: u32) -> Self {
+        match v {
+            1 => Self::MacOs,
+            2 => Self::IOs,
+            3 => Self::TvOs,
+            4 => Self::WatchOs,
+            5 => Self::BridgeOs,
+            6 => Self::MacCatalyst,
+            7 => Self::IosSimulator,
+            8 => Self::TvOsSimulator,
+            9 => Self::WatchOsSimulator,
+            10 => Self::DriverKit,
+            _ => Self::Unknown(v),
+        }
+    }
+}
+
+/// Targeting settings for a Mach-O binary.
+pub struct MachoTarget {
+    /// The OS/platform being targeted.
+    pub platform: Platform,
+    /// Minimum required OS version.
+    pub minimum_os_version: semver::Version,
+    /// SDK version targeting.
+    pub sdk_version: semver::Version,
+}
+
+/// Parses and integer with nibbles xxxx.yy.zz into a [semver::Version].
+pub fn parse_version_nibbles(v: u32) -> semver::Version {
+    let major = v >> 16;
+    let minor = v << 16 >> 24;
+    let patch = v & 0x255;
+
+    semver::Version::new(major as _, minor as _, patch as _)
+}
+
+/// Attempt to resolve the mach-o targeting settings for a mach-o binary.
+pub fn find_macho_targeting(
+    macho_data: &[u8],
+    macho: &MachO,
+) -> Result<Option<MachoTarget>, AppleCodesignError> {
+    let ctx = parse_magic_and_ctx(macho_data, 0)?
+        .1
+        .expect("context should have been parsed before");
+
+    for lc in &macho.load_commands {
+        if lc.command.cmd() == LC_BUILD_VERSION {
+            let build_version = macho_data.pread_with::<BuildVersionCommand>(lc.offset, ctx.le)?;
+
+            return Ok(Some(MachoTarget {
+                platform: build_version.platform.into(),
+                minimum_os_version: parse_version_nibbles(build_version.minos),
+                sdk_version: parse_version_nibbles(build_version.sdk),
+            }));
+        }
+    }
+
+    for lc in &macho.load_commands {
+        let command = match lc.command {
+            CommandVariant::VersionMinMacosx(c) => Some((c, Platform::MacOs)),
+            CommandVariant::VersionMinIphoneos(c) => Some((c, Platform::IOs)),
+            CommandVariant::VersionMinTvos(c) => Some((c, Platform::TvOs)),
+            CommandVariant::VersionMinWatchos(c) => Some((c, Platform::WatchOs)),
+            _ => None,
+        };
+
+        if let Some((command, platform)) = command {
+            return Ok(Some(MachoTarget {
+                platform,
+                minimum_os_version: parse_version_nibbles(command.version),
+                sdk_version: parse_version_nibbles(command.sdk),
+            }));
+        }
+    }
+
+    Ok(None)
 }
 
 #[cfg(test)]

@@ -47,8 +47,8 @@ use {
         code_requirement::CodeRequirements,
         error::AppleCodesignError,
         macho::{
-            find_signature_data, AppleSignable, Blob, CodeSigningSlot, DigestType,
-            RequirementSetBlob,
+            find_macho_targeting, find_signature_data, AppleSignable, Blob, CodeSigningSlot,
+            DigestType, RequirementSetBlob,
         },
         macho_signing::MachOSigner,
         signing::{SettingsScope, SigningSettings},
@@ -115,6 +115,8 @@ macho-load-commands
    Print information about mach-o load commands in the binary.
 macho-segments
    Print information about mach-o segments in the binary.
+macho-target
+   Print mach-o targeting info (platform and OS/SDK versions).
 requirements-raw
    Raw binary data composing the requirements blob/slot.
 requirements
@@ -927,6 +929,15 @@ fn command_extract(args: &ArgMatches) -> Result<(), AppleCodesignError> {
                 }
             }
         }
+        "macho-target" => {
+            if let Some(target) = find_macho_targeting(&data, &macho)? {
+                println!("Platform: {}", target.platform);
+                println!("Minimum OS: {}", target.minimum_os_version);
+                println!("SDK: {}", target.sdk_version);
+            } else {
+                println!("Unable to resolve Mach-O targeting from load commands");
+            }
+        }
         "requirements-raw" => {
             let embedded = macho
                 .code_signature()?
@@ -1580,6 +1591,7 @@ fn main_impl() -> Result<(), AppleCodesignError> {
                         "linkedit-segment-raw",
                         "macho-load-commands",
                         "macho-segments",
+                        "macho-target",
                         "requirements-raw",
                         "requirements-rust",
                         "requirements-serialized-raw",

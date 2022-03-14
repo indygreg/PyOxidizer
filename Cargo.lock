@@ -114,6 +114,7 @@ dependencies = [
  "ring",
  "scroll",
  "security-framework",
+ "semver",
  "slog",
  "slog-term",
  "thiserror",
