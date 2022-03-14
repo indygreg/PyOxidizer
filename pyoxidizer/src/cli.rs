@@ -469,6 +469,13 @@ pub fn run_cli() -> Result<()> {
 
     let verbose = matches.is_present("verbose");
 
+    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or(if verbose {
+        "info"
+    } else {
+        "warning"
+    }))
+    .init();
+
     let log_level = if verbose {
         slog::Level::Info
     } else {

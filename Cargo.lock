@@ -3751,6 +3751,7 @@ dependencies = [
  "codemap-diagnostic",
  "dirs",
  "duct",
+ "env_logger 0.9.0",
  "fs2",
  "fs_extra",
  "git2",
