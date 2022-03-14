@@ -15,6 +15,7 @@
   ``AppleTimestampCA.cer``.
 * Renamed ``apple_codesign::macho::CodeSigningSlot::SecuritySettings`` to
   ``EntitlementsDer``.
+* Add ``apple_codesign::macho::CodeSigningSlot::RepSpecific``.
 
 0.8.0
 =====

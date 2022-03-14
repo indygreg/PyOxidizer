@@ -64,6 +64,7 @@ pub enum CodeSigningSlot {
     ResourceDir,
     Application,
     Entitlements,
+    RepSpecific,
     EntitlementsDer,
     AlternateCodeDirectory0,
     AlternateCodeDirectory1,
@@ -89,6 +90,7 @@ impl std::fmt::Debug for CodeSigningSlot {
             Self::ResourceDir => f.write_fmt(format_args!("Resources ({})", u32::from(*self))),
             Self::Application => f.write_fmt(format_args!("Application ({})", u32::from(*self))),
             Self::Entitlements => f.write_fmt(format_args!("Entitlements ({})", u32::from(*self))),
+            Self::RepSpecific => f.write_fmt(format_args!("Rep Specific ({})", u32::from(*self))),
             Self::EntitlementsDer => {
                 f.write_fmt(format_args!("DER Entitlements ({})", u32::from(*self)))
             }
@@ -131,6 +133,7 @@ impl From<u32> for CodeSigningSlot {
             3 => Self::ResourceDir,
             4 => Self::Application,
             5 => Self::Entitlements,
+            6 => Self::RepSpecific,
             7 => Self::EntitlementsDer,
             0x1000 => Self::AlternateCodeDirectory0,
             0x1001 => Self::AlternateCodeDirectory1,
@@ -154,6 +157,7 @@ impl From<CodeSigningSlot> for u32 {
             CodeSigningSlot::ResourceDir => 3,
             CodeSigningSlot::Application => 4,
             CodeSigningSlot::Entitlements => 5,
+            CodeSigningSlot::RepSpecific => 6,
             CodeSigningSlot::EntitlementsDer => 7,
             CodeSigningSlot::AlternateCodeDirectory0 => 0x1000,
             CodeSigningSlot::AlternateCodeDirectory1 => 0x1001,
