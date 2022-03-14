@@ -32,6 +32,7 @@ use {
         parse_magic_and_ctx, Mach, MachO,
     },
     scroll::{ctx::SizeWith, IOwrite},
+    slog::{info, warn, Logger},
     std::{borrow::Cow, cmp::Ordering, collections::HashMap, io::Write},
     tugger_apple::create_universal_macho,
     x509_certificate::{rfc5652::AttributeValue, DigestAlgorithm},
@@ -307,6 +308,7 @@ impl<'data> MachOSigner<'data> {
     /// Write signed Mach-O data to the given writer using signing settings.
     pub fn write_signed_binary(
         &self,
+        log: &Logger,
         settings: &SigningSettings,
         writer: &mut impl Write,
     ) -> Result<(), AppleCodesignError> {
@@ -319,6 +321,7 @@ impl<'data> MachOSigner<'data> {
             .iter()
             .enumerate()
             .map(|(index, original_macho)| {
+                info!(log, "signing Mach-O binary at index {}", index);
                 let settings =
                     settings.as_nested_macho_settings(index, original_macho.header.cputype());
 
@@ -338,11 +341,13 @@ impl<'data> MachOSigner<'data> {
                 let intermediate_macho = MachO::parse(&intermediate_macho_data, 0)?;
 
                 let mut signature_data = self.create_superblob(
+                    log,
                     &settings,
                     self.macho_data(index),
                     &intermediate_macho,
                     original_macho.code_signature()?.as_ref(),
                 )?;
+                info!(log, "total signature size: {} bytes", signature_data.len());
 
                 // The Mach-O writer adjusts load commands based on the signature length. So pad
                 // with NULLs to get to our placeholder length.
@@ -403,27 +408,33 @@ impl<'data> MachOSigner<'data> {
     /// in [MachOSigner] for details.
     pub fn create_superblob(
         &self,
+        log: &Logger,
         settings: &SigningSettings,
         macho_data: &[u8],
         macho: &MachO,
         previous_signature: Option<&EmbeddedSignature>,
     ) -> Result<Vec<u8>, AppleCodesignError> {
         let code_directory =
-            self.create_code_directory(settings, macho_data, macho, previous_signature)?;
+            self.create_code_directory(log, settings, macho_data, macho, previous_signature)?;
+        info!(log, "code directory version: {}", code_directory.version);
 
         // By convention, the Code Directory goes first.
         let mut blobs = vec![(
             CodeSigningSlot::CodeDirectory,
             code_directory.to_blob_bytes()?,
         )];
-        blobs.extend(self.create_special_blobs(settings, previous_signature)?);
+        blobs.extend(self.create_special_blobs(log, settings, previous_signature)?);
 
         // And the CMS signature goes last.
         if settings.signing_key().is_some() {
             blobs.push((
                 CodeSigningSlot::Signature,
-                BlobWrapperBlob::from_data(&self.create_cms_signature(settings, &code_directory)?)
-                    .to_blob_bytes()?,
+                BlobWrapperBlob::from_data(&self.create_cms_signature(
+                    log,
+                    settings,
+                    &code_directory,
+                )?)
+                .to_blob_bytes()?,
             ));
         }
 
@@ -441,12 +452,20 @@ impl<'data> MachOSigner<'data> {
     /// in [MachOSigner] for details.
     pub fn create_cms_signature(
         &self,
+        log: &Logger,
         settings: &SigningSettings,
         code_directory: &CodeDirectoryBlob,
     ) -> Result<Vec<u8>, AppleCodesignError> {
         let (signing_key, signing_cert) = settings
             .signing_key()
             .ok_or(AppleCodesignError::NoSigningCertificate)?;
+
+        if let Some(cn) = signing_cert.subject_common_name() {
+            warn!(
+                log,
+                "creating cryptographic signature with certificate {}", cn
+            );
+        }
 
         // We need the blob serialized content of the code directory to compute
         // the message digest using alternate data.
@@ -489,6 +508,7 @@ impl<'data> MachOSigner<'data> {
         };
 
         let signer = if let Some(time_stamp_url) = settings.time_stamp_url() {
+            info!(log, "Using time-stamp server {}", time_stamp_url);
             signer.time_stamp_url(time_stamp_url.clone())?
         } else {
             signer
@@ -537,6 +557,7 @@ impl<'data> MachOSigner<'data> {
     /// in [MachOSigner] for details.
     pub fn create_code_directory(
         &self,
+        log: &Logger,
         settings: &SigningSettings,
         macho_data: &[u8],
         macho: &MachO,
@@ -544,6 +565,18 @@ impl<'data> MachOSigner<'data> {
     ) -> Result<CodeDirectoryBlob<'static>, AppleCodesignError> {
         // TODO support defining or filling in proper values for fields with
         // static values.
+
+        let target = find_macho_targeting(macho_data, macho)?;
+
+        if let Some(target) = &target {
+            info!(
+                log,
+                "binary targets {} >= {} with SDK {}",
+                target.platform,
+                target.minimum_os_version,
+                target.sdk_version,
+            );
+        }
 
         let previous_cd =
             previous_signature.and_then(|signature| signature.code_directory().unwrap_or(None));
@@ -561,6 +594,7 @@ impl<'data> MachOSigner<'data> {
 
         // The adhoc flag is set when there is no CMS signature.
         if settings.signing_key().is_none() {
+            info!(log, "creating ad-hoc signature");
             flags |= CodeSignatureFlags::ADHOC;
         } else {
             flags -= CodeSignatureFlags::ADHOC;
@@ -587,11 +621,20 @@ impl<'data> MachOSigner<'data> {
 
         match settings.executable_segment_flags(SettingsScope::Main) {
             Some(flags) => {
+                info!(
+                    log,
+                    "using executable segment flags from signing settings ({:?})", flags
+                );
                 exec_seg_flags = Some(flags);
             }
             None => {
                 if let Some(previous_cd) = &previous_cd {
                     if let Some(flags) = previous_cd.exec_seg_flags {
+                        info!(
+                            log,
+                            "using executable segment flags from previous code directory ({:?})",
+                            flags
+                        );
                         exec_seg_flags = Some(flags);
                     }
                 }
@@ -610,7 +653,7 @@ impl<'data> MachOSigner<'data> {
                 .collect::<Vec<_>>();
 
         let mut special_hashes = self
-            .create_special_blobs(settings, previous_signature)?
+            .create_special_blobs(log, settings, previous_signature)?
             .into_iter()
             .map(|(slot, data)| {
                 Ok((
@@ -710,7 +753,7 @@ impl<'data> MachOSigner<'data> {
             special_hashes,
         };
 
-        cd.adjust_version(find_macho_targeting(macho_data, macho)?);
+        cd.adjust_version(target);
         cd.clear_newer_fields();
 
         Ok(cd)
@@ -725,6 +768,7 @@ impl<'data> MachOSigner<'data> {
     /// a `CodeDirectory`, which requires hashing blobs.
     pub fn create_special_blobs(
         &self,
+        log: &Logger,
         settings: &SigningSettings,
         previous_signature: Option<&EmbeddedSignature>,
     ) -> Result<Vec<(CodeSigningSlot, Vec<u8>)>, AppleCodesignError> {
@@ -753,6 +797,8 @@ impl<'data> MachOSigner<'data> {
         }
 
         if !requirements.is_empty() {
+            info!(log, "code requirements: {}", requirements);
+
             let mut blob = RequirementSetBlob::default();
             requirements.add_to_requirement_set(&mut blob, RequirementType::Designated)?;
 

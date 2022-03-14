@@ -270,7 +270,7 @@ impl<'a, 'key> BundleFileHandler for SingleBundleHandler<'a, 'key> {
         settings.set_binary_identifier(SettingsScope::Main, identifier);
 
         let mut new_data = Vec::<u8>::with_capacity(macho_data.len() + 2_usize.pow(17));
-        signer.write_signed_binary(&settings, &mut new_data)?;
+        signer.write_signed_binary(log, &settings, &mut new_data)?;
 
         let dest_path = self.dest_dir.join(file.relative_path());
 
@@ -427,7 +427,7 @@ impl SingleBundleSigner {
             }
 
             let mut new_data = Vec::<u8>::with_capacity(macho_data.len() + 2_usize.pow(17));
-            signer.write_signed_binary(&settings, &mut new_data)?;
+            signer.write_signed_binary(log, &settings, &mut new_data)?;
 
             let dest_path = dest_dir_root.join(exe.relative_path());
 

@@ -1456,7 +1456,7 @@ fn command_sign(args: &ArgMatches) -> Result<(), AppleCodesignError> {
 
         warn!(&log, "writing {}", output_path);
         let mut fh = std::fs::File::create(output_path)?;
-        signer.write_signed_binary(&settings, &mut fh)?;
+        signer.write_signed_binary(&log, &settings, &mut fh)?;
     } else {
         warn!(&log, "signing {} as a bundle", input_path.display());
 

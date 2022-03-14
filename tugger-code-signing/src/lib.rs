@@ -1243,7 +1243,7 @@ impl<'a> SignableSigner<'a> {
 
                 let mut dest = Vec::<u8>::with_capacity(macho_data.len() + 2_usize.pow(17));
                 signer
-                    .write_signed_binary(&settings, &mut dest)
+                    .write_signed_binary(logger, &settings, &mut dest)
                     .map_err(SigningError::MachOSigningError)?;
 
                 match destination {
@@ -1275,7 +1275,7 @@ impl<'a> SignableSigner<'a> {
 
                 let mut dest = Vec::<u8>::with_capacity(macho_data.len() + 2_usize.pow(17));
                 signer
-                    .write_signed_binary(&settings, &mut dest)
+                    .write_signed_binary(logger, &settings, &mut dest)
                     .map_err(SigningError::MachOSigningError)?;
 
                 match destination {

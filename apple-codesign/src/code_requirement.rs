@@ -36,6 +36,7 @@ use {
     scroll::{IOwrite, Pread},
     std::{
         borrow::Cow,
+        fmt::{Debug, Display},
         io::Write,
         ops::{Deref, DerefMut},
     },
@@ -136,7 +137,7 @@ impl<'a> From<String> for CodeRequirementValue<'static> {
     }
 }
 
-impl<'a> std::fmt::Display for CodeRequirementValue<'a> {
+impl<'a> Display for CodeRequirementValue<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::String(s) => f.write_str(s),
@@ -596,7 +597,7 @@ pub enum CodeRequirementExpression<'a> {
     LegacyDeveloperId,
 }
 
-impl<'a> std::fmt::Display for CodeRequirementExpression<'a> {
+impl<'a> Display for CodeRequirementExpression<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::False => f.write_str("never"),
@@ -1067,7 +1068,7 @@ pub enum CodeRequirementMatchExpression<'a> {
     Absent,
 }
 
-impl<'a> std::fmt::Display for CodeRequirementMatchExpression<'a> {
+impl<'a> Display for CodeRequirementMatchExpression<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Exists => f.write_str("/* exists */"),
@@ -1164,6 +1165,12 @@ impl<'a> Deref for CodeRequirements<'a> {
 impl<'a> DerefMut for CodeRequirements<'a> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
+    }
+}
+
+impl<'a> Display for CodeRequirements<'a> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
     }
 }
 
