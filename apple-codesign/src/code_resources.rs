@@ -22,8 +22,8 @@ use {
         macho::DigestType,
     },
     apple_bundles::DirectoryBundleFile,
+    log::{debug, info},
     plist::{Dictionary, Value},
-    slog::{debug, info, Logger},
     std::{cmp::Ordering, collections::BTreeMap, io::Write},
 };
 
@@ -1057,7 +1057,6 @@ impl CodeResourcesBuilder {
     /// file and takes actions to process it, if necessary.
     pub fn process_file(
         &mut self,
-        log: &Logger,
         file: &DirectoryBundleFile,
         file_handler: &dyn BundleFileHandler,
     ) -> Result<(), AppleCodesignError> {
@@ -1071,12 +1070,11 @@ impl CodeResourcesBuilder {
             .unwrap_or(&relative_path)
             .to_string();
 
-        info!(log, "processing {}", relative_path);
+        info!("processing {}", relative_path);
 
         let rule = match self.find_rule(relative_path.as_ref()) {
             Some(rule) => {
                 debug!(
-                    log,
                     "{} matches {} rule {}",
                     relative_path,
                     if rule.exclude || rule.omit {
@@ -1092,13 +1090,13 @@ impl CodeResourcesBuilder {
                     return Ok(());
                 // Omitted files aren't sealed. But they are installed.
                 } else if rule.omit {
-                    return file_handler.install_file(log, file);
+                    return file_handler.install_file(file);
                 }
 
                 rule
             }
             None => {
-                debug!(log, "{} doesn't match any rule; processing", relative_path);
+                debug!("{} doesn't match any rule; processing", relative_path);
                 return Ok(());
             }
         };
@@ -1109,23 +1107,23 @@ impl CodeResourcesBuilder {
         {
             let target = target.to_string_lossy().replace('\\', "/");
 
-            info!(log, "sealing symlink {} -> {}", relative_path, target);
+            info!("sealing symlink {} -> {}", relative_path, target);
             self.resources.seal_symlink(relative_path, target);
-            file_handler.install_file(log, file)?;
+            file_handler.install_file(file)?;
         } else {
             let data = std::fs::read(file.absolute_path())?;
 
             // If nested bit is set, treat as Mach-O binary to be signed.
             if rule.nested {
-                let macho_info = file_handler.sign_and_install_macho(log, file)?;
-                info!(log, "sealing Mach-O file {}", relative_path);
+                let macho_info = file_handler.sign_and_install_macho(file)?;
+                info!("sealing Mach-O file {}", relative_path);
                 self.resources
                     .seal_macho(relative_path, &macho_info, rule.optional)?;
             } else {
-                info!(log, "sealing regular file {}", relative_path);
+                info!("sealing regular file {}", relative_path);
                 self.resources
                     .seal_regular_file(relative_path, data, rule.optional)?;
-                file_handler.install_file(log, file)?;
+                file_handler.install_file(file)?;
             }
         }
 

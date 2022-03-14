@@ -56,7 +56,7 @@ use {
     clap::{Arg, ArgMatches, Command},
     cryptographic_message_syntax::SignedData,
     goblin::mach::{Mach, MachO},
-    slog::{error, o, warn, Drain},
+    log::{error, warn},
     std::{io::Write, path::PathBuf, str::FromStr},
     x509_certificate::{CapturedX509Certificate, EcdsaCurve, InMemorySigningKeyPair, KeyAlgorithm},
 };
@@ -342,14 +342,6 @@ const SUPPORTED_HASHES: &[&str; 6] = &[
     "sha512",
 ];
 
-fn get_logger() -> slog::Logger {
-    let decorator = slog_term::TermDecorator::new().build();
-    let drain = slog_term::CompactFormat::new(decorator).build();
-    let drain = std::sync::Mutex::new(drain).fuse();
-
-    slog::Logger::root(drain, o!())
-}
-
 fn parse_scoped_value(s: &str) -> Result<(SettingsScope, &str), AppleCodesignError> {
     let parts = s.splitn(2, ':').collect::<Vec<_>>();
 
@@ -407,8 +399,6 @@ fn add_certificate_source_args(app: Command) -> Command {
 }
 
 fn command_analyze_certificate(args: &ArgMatches) -> Result<(), AppleCodesignError> {
-    let log = get_logger();
-
     let mut certs = vec![];
 
     if let Some(pfx_path) = args.value_of("pfx_path") {
@@ -423,10 +413,7 @@ fn command_analyze_certificate(args: &ArgMatches) -> Result<(), AppleCodesignErr
                 .expect("should get a single line")
                 .to_string()
         } else {
-            error!(
-                &log,
-                "--pfx-password or --pfx-password-file must be specified"
-            );
+            error!("--pfx-password or --pfx-password-file must be specified");
             return Err(AppleCodesignError::CliBadArgument);
         };
 
@@ -435,7 +422,7 @@ fn command_analyze_certificate(args: &ArgMatches) -> Result<(), AppleCodesignErr
 
     if let Some(values) = args.values_of("der_source") {
         for der_source in values {
-            warn!(&log, "reading DER file {}", der_source);
+            warn!("reading DER file {}", der_source);
             let der_data = std::fs::read(der_source)?;
 
             certs.push(CapturedX509Certificate::from_der(der_data)?);
@@ -444,14 +431,14 @@ fn command_analyze_certificate(args: &ArgMatches) -> Result<(), AppleCodesignErr
 
     if let Some(values) = args.values_of("pem_source") {
         for pem_source in values {
-            warn!(&log, "reading PEM file {}", pem_source);
+            warn!("reading PEM file {}", pem_source);
             let pem_data = std::fs::read(pem_source)?;
 
             for pem in pem::parse_many(&pem_data).map_err(AppleCodesignError::CertificatePem)? {
                 if matches!(pem.tag.as_str(), "CERTIFICATE") {
                     certs.push(CapturedX509Certificate::from_der(pem.contents)?);
                 } else {
-                    warn!(&log, "(unhandled PEM tag {}; ignoring)", pem.tag)
+                    warn!("(unhandled PEM tag {}; ignoring)", pem.tag)
                 }
             }
         }
@@ -1231,8 +1218,6 @@ fn command_parse_code_signing_requirement(args: &ArgMatches) -> Result<(), Apple
 }
 
 fn command_sign(args: &ArgMatches) -> Result<(), AppleCodesignError> {
-    let log = get_logger();
-
     let mut settings = SigningSettings::default();
 
     let mut private_keys = vec![];
@@ -1250,10 +1235,7 @@ fn command_sign(args: &ArgMatches) -> Result<(), AppleCodesignError> {
                 .expect("should get a single line")
                 .to_string()
         } else {
-            error!(
-                &log,
-                "--pfx-password or --pfx-password-file must be specified"
-            );
+            error!("--pfx-password or --pfx-password-file must be specified");
             return Err(AppleCodesignError::CliBadArgument);
         };
 
@@ -1265,7 +1247,7 @@ fn command_sign(args: &ArgMatches) -> Result<(), AppleCodesignError> {
 
     if let Some(values) = args.values_of("pem_source") {
         for pem_source in values {
-            warn!(&log, "reading PEM data from {}", pem_source);
+            warn!("reading PEM data from {}", pem_source);
             let pem_data = std::fs::read(pem_source)?;
 
             for pem in pem::parse_many(&pem_data).map_err(AppleCodesignError::CertificatePem)? {
@@ -1276,14 +1258,14 @@ fn command_sign(args: &ArgMatches) -> Result<(), AppleCodesignError> {
                     "PRIVATE KEY" => {
                         private_keys.push(InMemorySigningKeyPair::from_pkcs8_der(&pem.contents)?)
                     }
-                    tag => warn!(&log, "(unhandled PEM tag {}; ignoring)", tag),
+                    tag => warn!("(unhandled PEM tag {}; ignoring)", tag),
                 }
             }
         }
     }
 
     if private_keys.len() > 1 {
-        error!(&log, "at most 1 PRIVATE KEY can be present; aborting");
+        error!("at most 1 PRIVATE KEY can be present; aborting");
         return Err(AppleCodesignError::CliBadArgument);
     }
 
@@ -1295,21 +1277,17 @@ fn command_sign(args: &ArgMatches) -> Result<(), AppleCodesignError> {
 
     if let Some(signing_key) = &private {
         if public_certificates.is_empty() {
-            error!(
-                &log,
-                "a PRIVATE KEY requires a corresponding CERTIFICATE to pair with it"
-            );
+            error!("a PRIVATE KEY requires a corresponding CERTIFICATE to pair with it");
             return Err(AppleCodesignError::CliBadArgument);
         }
 
         let cert = public_certificates.remove(0);
 
-        warn!(&log, "registering signing key");
+        warn!("registering signing key");
         settings.set_signing_key(signing_key, cert);
         if let Some(certs) = settings.chain_apple_certificates() {
             for cert in certs {
                 warn!(
-                    &log,
                     "automatically registered Apple CA certificate: {}",
                     cert.subject_common_name()
                         .unwrap_or_else(|| "default".into())
@@ -1319,14 +1297,14 @@ fn command_sign(args: &ArgMatches) -> Result<(), AppleCodesignError> {
 
         if let Some(timestamp_url) = args.value_of("timestamp_url") {
             if timestamp_url != "none" {
-                warn!(&log, "using time-stamp protocol server {}", timestamp_url);
+                warn!("using time-stamp protocol server {}", timestamp_url);
                 settings.set_time_stamp_url(timestamp_url)?;
             }
         }
     }
 
     for cert in public_certificates {
-        warn!(&log, "registering extra X.509 certificate");
+        warn!("registering extra X.509 certificate");
         settings.chain_certificate(cert);
     }
 
@@ -1354,8 +1332,8 @@ fn command_sign(args: &ArgMatches) -> Result<(), AppleCodesignError> {
             let reqs = CodeRequirements::parse_blob(&code_requirements_data)?.0;
             for expr in reqs.iter() {
                 warn!(
-                    &log,
-                    "setting designated code requirements for {}: {}", scope, expr
+                    "setting designated code requirements for {}: {}",
+                    scope, expr
                 );
                 settings.set_designated_requirement_expression(scope.clone(), expr)?;
             }
@@ -1367,8 +1345,8 @@ fn command_sign(args: &ArgMatches) -> Result<(), AppleCodesignError> {
             let (scope, path) = parse_scoped_value(value)?;
 
             warn!(
-                &log,
-                "setting code resources data for {} from path {}", scope, path
+                "setting code resources data for {} from path {}",
+                scope, path
             );
             let code_resources_data = std::fs::read(path)?;
             settings.set_code_resources_data(scope, code_resources_data);
@@ -1388,10 +1366,7 @@ fn command_sign(args: &ArgMatches) -> Result<(), AppleCodesignError> {
         for value in values {
             let (scope, path) = parse_scoped_value(value)?;
 
-            warn!(
-                &log,
-                "setting entitlments XML for {} from path {}", scope, path
-            );
+            warn!("setting entitlments XML for {} from path {}", scope, path);
             let entitlements_data = std::fs::read_to_string(path)?;
             settings.set_entitlements_xml(scope, entitlements_data);
         }
@@ -1434,7 +1409,7 @@ fn command_sign(args: &ArgMatches) -> Result<(), AppleCodesignError> {
                 })?
                 .to_string_lossy();
 
-            warn!(&log, "setting binary identifier to {}", identifier);
+            warn!("setting binary identifier to {}", identifier);
             settings.set_binary_identifier(SettingsScope::Main, identifier);
         }
 
@@ -1448,21 +1423,21 @@ fn command_sign(args: &ArgMatches) -> Result<(), AppleCodesignError> {
             );
         }
 
-        warn!(&log, "signing {} as a Mach-O binary", input_path.display());
+        warn!("signing {} as a Mach-O binary", input_path.display());
         let macho_data = std::fs::read(input_path)?;
 
-        warn!(&log, "parsing Mach-O");
+        warn!("parsing Mach-O");
         let signer = MachOSigner::new(&macho_data)?;
 
-        warn!(&log, "writing {}", output_path);
+        warn!("writing {}", output_path);
         let mut fh = std::fs::File::create(output_path)?;
-        signer.write_signed_binary(&log, &settings, &mut fh)?;
+        signer.write_signed_binary(&settings, &mut fh)?;
     } else {
-        warn!(&log, "signing {} as a bundle", input_path.display());
+        warn!("signing {} as a bundle", input_path.display());
 
         let signer = BundleSigner::new_from_path(&input_path)?;
 
-        signer.write_signed_bundle(&log, &output_path, &settings)?;
+        signer.write_signed_bundle(&output_path, &settings)?;
     }
 
     Ok(())
@@ -1513,6 +1488,8 @@ fn command_x509_oids(_args: &ArgMatches) -> Result<(), AppleCodesignError> {
 }
 
 fn main_impl() -> Result<(), AppleCodesignError> {
+    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
+
     let app = Command::new("Oxidized Apple Codesigning")
         .version("0.1")
         .author("Gregory Szorc <gregory.szorc@gmail.com>")

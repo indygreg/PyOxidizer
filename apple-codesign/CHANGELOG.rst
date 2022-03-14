@@ -22,6 +22,8 @@
   signing a Mach-O binary targeting iOS >= 15 or macOS >= 12. This fixes an issue
   where signatures of iOS 15+ binaries didn't meet Apple's requirements for this
   platform.
+* Logging switched to ``log`` crate. This changes program output slightly and removed
+  an ``&slog::Logger`` argument from various functions.
 
 0.8.0
 =====

@@ -14,7 +14,7 @@ use {
     },
     apple_bundles::{DirectoryBundle, DirectoryBundleFile},
     goblin::mach::Mach,
-    slog::{info, warn, Logger},
+    log::{info, warn},
     std::{
         collections::BTreeMap,
         io::Write,
@@ -61,7 +61,6 @@ impl BundleSigner {
     /// may be left in an inconsistent or corrupted state and may not be usable.
     pub fn write_signed_bundle(
         &self,
-        log: &Logger,
         dest_dir: impl AsRef<Path>,
         settings: &SigningSettings,
     ) -> Result<DirectoryBundle, AppleCodesignError> {
@@ -74,12 +73,10 @@ impl BundleSigner {
                 Some(rel) => {
                     let nested_dest_dir = dest_dir.join(rel);
                     info!(
-                        log,
                         "entering nested bundle {}",
                         nested.bundle.root_dir().display(),
                     );
                     let signed_bundle = nested.write_signed_bundle(
-                        log,
                         nested_dest_dir,
                         &settings.as_nested_bundle_settings(rel),
                         &[],
@@ -104,7 +101,6 @@ impl BundleSigner {
                     }
 
                     info!(
-                        log,
                         "leaving nested bundle {}",
                         nested.bundle.root_dir().display()
                     );
@@ -118,7 +114,7 @@ impl BundleSigner {
             .get(&None)
             .expect("main bundle should have a key");
 
-        main.write_signed_bundle(log, dest_dir, settings, &additional_files)
+        main.write_signed_bundle(dest_dir, settings, &additional_files)
     }
 }
 
@@ -188,11 +184,7 @@ impl SignedMachOInfo {
 /// installation of files into a new bundle.
 pub trait BundleFileHandler {
     /// Ensures a file (regular or symlink) is installed.
-    fn install_file(
-        &self,
-        log: &Logger,
-        file: &DirectoryBundleFile,
-    ) -> Result<(), AppleCodesignError>;
+    fn install_file(&self, file: &DirectoryBundleFile) -> Result<(), AppleCodesignError>;
 
     /// Sign a Mach-O file and ensure its new content is installed.
     ///
@@ -200,7 +192,6 @@ pub trait BundleFileHandler {
     /// [crate::code_resources::CodeResources].
     fn sign_and_install_macho(
         &self,
-        log: &Logger,
         file: &DirectoryBundleFile,
     ) -> Result<SignedMachOInfo, AppleCodesignError>;
 }
@@ -211,17 +202,12 @@ struct SingleBundleHandler<'a, 'key> {
 }
 
 impl<'a, 'key> BundleFileHandler for SingleBundleHandler<'a, 'key> {
-    fn install_file(
-        &self,
-        log: &Logger,
-        file: &DirectoryBundleFile,
-    ) -> Result<(), AppleCodesignError> {
+    fn install_file(&self, file: &DirectoryBundleFile) -> Result<(), AppleCodesignError> {
         let source_path = file.absolute_path();
         let dest_path = self.dest_dir.join(file.relative_path());
 
         if source_path != dest_path {
             info!(
-                log,
                 "copying file {} -> {}",
                 source_path.display(),
                 dest_path.display()
@@ -239,14 +225,9 @@ impl<'a, 'key> BundleFileHandler for SingleBundleHandler<'a, 'key> {
 
     fn sign_and_install_macho(
         &self,
-        log: &Logger,
         file: &DirectoryBundleFile,
     ) -> Result<SignedMachOInfo, AppleCodesignError> {
-        info!(
-            log,
-            "signing Mach-O file {}",
-            file.relative_path().display()
-        );
+        info!("signing Mach-O file {}", file.relative_path().display());
 
         let macho_data = std::fs::read(file.absolute_path())?;
         let signer = MachOSigner::new(&macho_data)?;
@@ -270,7 +251,7 @@ impl<'a, 'key> BundleFileHandler for SingleBundleHandler<'a, 'key> {
         settings.set_binary_identifier(SettingsScope::Main, identifier);
 
         let mut new_data = Vec::<u8>::with_capacity(macho_data.len() + 2_usize.pow(17));
-        signer.write_signed_binary(log, &settings, &mut new_data)?;
+        signer.write_signed_binary(&settings, &mut new_data)?;
 
         let dest_path = self.dest_dir.join(file.relative_path());
 
@@ -311,7 +292,6 @@ impl SingleBundleSigner {
     /// Write a signed bundle to the given directory.
     pub fn write_signed_bundle(
         &self,
-        log: &Logger,
         dest_dir: impl AsRef<Path>,
         settings: &SigningSettings,
         additional_macho_files: &[(String, SignedMachOInfo)],
@@ -319,7 +299,6 @@ impl SingleBundleSigner {
         let dest_dir = dest_dir.as_ref();
 
         warn!(
-            log,
             "signing bundle at {} into {}",
             self.bundle.root_dir().display(),
             dest_dir.display()
@@ -338,7 +317,7 @@ impl SingleBundleSigner {
             .map_err(AppleCodesignError::DirectoryBundle)?
             .ok_or_else(|| AppleCodesignError::BundleNoIdentifier(self.bundle.info_plist_path()))?;
 
-        warn!(&log, "collecting code resources files");
+        warn!("collecting code resources files");
         let mut resources_builder = CodeResourcesBuilder::default_resources_rules()?;
         // Exclude code signature files we'll write.
         resources_builder.add_exclusion_rule(CodeResourcesRule::new("^_CodeSignature/")?.exclude());
@@ -369,10 +348,10 @@ impl SingleBundleSigner {
                 main_exe = Some(file);
             // The Info.plist is digested specially.
             } else if file.is_info_plist() {
-                handler.install_file(log, &file)?;
+                handler.install_file(&file)?;
                 info_plist_data = Some(std::fs::read(file.absolute_path())?);
             } else {
-                resources_builder.process_file(log, &file, &handler)?;
+                resources_builder.process_file(&file, &handler)?;
             }
         }
 
@@ -385,7 +364,6 @@ impl SingleBundleSigner {
         // The resources are now sealed. Write out that XML file.
         let code_resources_path = dest_dir.join("_CodeSignature").join("CodeResources");
         warn!(
-            &log,
             "writing sealed resources to {}",
             code_resources_path.display()
         );
@@ -400,11 +378,7 @@ impl SingleBundleSigner {
 
         // Seal the main executable.
         if let Some(exe) = main_exe {
-            warn!(
-                log,
-                "signing main executable {}",
-                exe.relative_path().display()
-            );
+            warn!("signing main executable {}", exe.relative_path().display());
 
             let macho_data = std::fs::read(exe.absolute_path())?;
             let signer = MachOSigner::new(&macho_data)?;
@@ -427,7 +401,7 @@ impl SingleBundleSigner {
             }
 
             let mut new_data = Vec::<u8>::with_capacity(macho_data.len() + 2_usize.pow(17));
-            signer.write_signed_binary(log, &settings, &mut new_data)?;
+            signer.write_signed_binary(&settings, &mut new_data)?;
 
             let dest_path = dest_dir_root.join(exe.relative_path());
 

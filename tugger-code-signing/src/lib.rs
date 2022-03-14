@@ -1243,7 +1243,7 @@ impl<'a> SignableSigner<'a> {
 
                 let mut dest = Vec::<u8>::with_capacity(macho_data.len() + 2_usize.pow(17));
                 signer
-                    .write_signed_binary(logger, &settings, &mut dest)
+                    .write_signed_binary(&settings, &mut dest)
                     .map_err(SigningError::MachOSigningError)?;
 
                 match destination {
@@ -1275,7 +1275,7 @@ impl<'a> SignableSigner<'a> {
 
                 let mut dest = Vec::<u8>::with_capacity(macho_data.len() + 2_usize.pow(17));
                 signer
-                    .write_signed_binary(logger, &settings, &mut dest)
+                    .write_signed_binary(&settings, &mut dest)
                     .map_err(SigningError::MachOSigningError)?;
 
                 match destination {
@@ -1317,7 +1317,7 @@ impl<'a> SignableSigner<'a> {
                     .map_err(SigningError::AppleBundleSigningError)?;
 
                 signer
-                    .write_signed_bundle(logger, dest_dir, &settings)
+                    .write_signed_bundle(dest_dir, &settings)
                     .map_err(SigningError::AppleBundleSigningError)?;
 
                 Ok(SignedOutput::Directory(dest_dir.clone()))
