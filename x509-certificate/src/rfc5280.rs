@@ -239,7 +239,7 @@ impl Certificate {
 /// ```
 #[derive(Clone, Eq, PartialEq)]
 pub struct TbsCertificate {
-    pub version: Version,
+    pub version: Option<Version>,
     pub serial_number: CertificateSerialNumber,
     pub signature: AlgorithmIdentifier,
     pub issuer: Name,
@@ -286,13 +286,7 @@ impl TbsCertificate {
 
         let captured = cons.capture(|cons| {
             cons.take_sequence(|cons| {
-                let version = if let Some(version) =
-                    cons.take_opt_constructed_if(Tag::CTX_0, Version::take_from)?
-                {
-                    version
-                } else {
-                    Version::V1
-                };
+                let version = cons.take_opt_constructed_if(Tag::CTX_0, Version::take_from)?;
                 let serial_number = CertificateSerialNumber::take_from(cons)?;
                 let signature = AlgorithmIdentifier::take_from(cons)?;
                 let issuer = Name::take_from(cons)?;
@@ -334,7 +328,9 @@ impl TbsCertificate {
 
     pub fn encode_ref(&self) -> impl Values + '_ {
         encode::sequence((
-            encode::Constructed::new(Tag::CTX_0, u8::from(self.version).encode()),
+            self.version
+                .as_ref()
+                .map(|v| encode::Constructed::new(Tag::CTX_0, u8::from(*v).encode())),
             (&self.serial_number).encode(),
             &self.signature,
             self.issuer.encode_ref(),

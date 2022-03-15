@@ -1061,6 +1061,14 @@ mod tests {
 
     #[test]
     fn parse_no_certificate_version() {
-        SignedData::parse_ber(include_bytes!("testdata/no-cert-version.ber")).unwrap();
+        let signed = SignedData::parse_ber(include_bytes!("testdata/no-cert-version.ber")).unwrap();
+
+        let cert_orig = signed.certificates().collect::<Vec<_>>()[0].clone();
+        let cert = CapturedX509Certificate::from_der(cert_orig.encode_ber().unwrap()).unwrap();
+
+        assert_eq!(
+            hex::encode(cert.sha256_fingerprint().unwrap()),
+            "b7c2eefd8dac7806af67dfcd92eb18126bc08312a7f2d6f3862e46013c7a6135"
+        );
     }
 }

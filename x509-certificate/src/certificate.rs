@@ -914,7 +914,7 @@ impl X509CertificateBuilder {
         };
 
         let tbs_certificate = rfc5280::TbsCertificate {
-            version: rfc5280::Version::V3,
+            version: Some(rfc5280::Version::V3),
             serial_number: self.serial_number.into(),
             signature: key_pair_signature_algorithm.into(),
             issuer: issuer.clone(),
