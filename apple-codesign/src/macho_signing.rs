@@ -788,8 +788,8 @@ impl<'data> MachOSigner<'data> {
             res.push((CodeSigningSlot::RequirementSet, blob.to_blob_bytes()?));
         }
 
-        if let Some(entitlements) = settings.entitlements_xml(SettingsScope::Main) {
-            let blob = EntitlementsBlob::from_string(entitlements);
+        if let Some(entitlements) = settings.entitlements_xml(SettingsScope::Main)? {
+            let blob = EntitlementsBlob::from_string(&entitlements);
 
             res.push((CodeSigningSlot::Entitlements, blob.to_blob_bytes()?));
         }

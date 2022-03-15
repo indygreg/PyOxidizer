@@ -73,6 +73,12 @@ pub enum AppleCodesignError {
     #[error("data structure parse error: {0}")]
     Scroll(#[from] scroll::Error),
 
+    #[error("error parsing plist XML: {0}")]
+    PlistParseXml(plist::Error),
+
+    #[error("error serializing plist to XML: {0}")]
+    PlistSerializeXml(plist::Error),
+
     #[error("malformed identifier string in code directory")]
     CodeDirectoryMalformedIdentifier,
 

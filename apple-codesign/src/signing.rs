@@ -261,7 +261,7 @@ pub struct SigningSettings<'key> {
     // These are BTreeMap so when we filter the keys, keys with higher precedence come
     // last and last write wins.
     identifiers: BTreeMap<SettingsScope, String>,
-    entitlements: BTreeMap<SettingsScope, String>,
+    entitlements: BTreeMap<SettingsScope, plist::Value>,
     designated_requirement: BTreeMap<SettingsScope, DesignatedRequirementMode>,
     code_signature_flags: BTreeMap<SettingsScope, CodeSignatureFlags>,
     executable_segment_flags: BTreeMap<SettingsScope, ExecutableSegmentFlags>,
@@ -419,16 +419,49 @@ impl<'key> SigningSettings<'key> {
         self.identifiers.insert(scope, value.to_string());
     }
 
+    /// Obtain the entitlements plist as a [plist::Value].
+    ///
+    /// The value should be a [plist::Value::Dictionary] variant.
+    pub fn entitlements_plist(&self, scope: impl AsRef<SettingsScope>) -> Option<&plist::Value> {
+        self.entitlements.get(scope.as_ref())
+    }
+
     /// Obtain the entitlements XML string for a given scope.
-    pub fn entitlements_xml(&self, scope: impl AsRef<SettingsScope>) -> Option<&str> {
-        self.entitlements.get(scope.as_ref()).map(|s| s.as_str())
+    pub fn entitlements_xml(
+        &self,
+        scope: impl AsRef<SettingsScope>,
+    ) -> Result<Option<String>, AppleCodesignError> {
+        if let Some(value) = self.entitlements_plist(scope) {
+            let mut buffer = vec![];
+            let writer = std::io::Cursor::new(&mut buffer);
+            value
+                .to_writer_xml(writer)
+                .map_err(AppleCodesignError::PlistSerializeXml)?;
+
+            Ok(Some(
+                String::from_utf8(buffer).expect("plist XML serialization should produce UTF-8"),
+            ))
+        } else {
+            Ok(None)
+        }
     }
 
     /// Set the entitlements to sign via an XML string.
     ///
-    /// The value should be an XML plist. The value is not validated.
-    pub fn set_entitlements_xml(&mut self, scope: SettingsScope, value: impl ToString) {
-        self.entitlements.insert(scope, value.to_string());
+    /// The value should be an XML plist. The value is parsed and stored as
+    /// a native plist value.
+    pub fn set_entitlements_xml(
+        &mut self,
+        scope: SettingsScope,
+        value: impl ToString,
+    ) -> Result<(), AppleCodesignError> {
+        let cursor = std::io::Cursor::new(value.to_string().into_bytes());
+        let value =
+            plist::Value::from_reader_xml(cursor).map_err(AppleCodesignError::PlistParseXml)?;
+
+        self.entitlements.insert(scope, value);
+
+        Ok(())
     }
 
     /// Obtain the designated requirements for a given scope.
@@ -754,7 +787,20 @@ impl<'key> SigningSettings<'key> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use {super::*, indoc::indoc};
+
+    const ENTITLEMENTS_XML: &str = indoc! {r#"
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+        <plist version="1.0">
+        <dict>
+            <key>application-identifier</key>
+            <string>appid</string>
+            <key>com.apple.developer.team-identifier</key>
+            <string>ABCDEF</string>
+        </dict>
+        </plist>
+    "#};
 
     #[test]
     fn parse_settings_scope() {
@@ -975,5 +1021,16 @@ mod tests {
             .cloned()
             .collect::<BTreeMap<SettingsScope, Vec<u8>>>()
         );
+    }
+
+    #[test]
+    fn entitlements_handling() -> Result<(), AppleCodesignError> {
+        let mut settings = SigningSettings::default();
+        settings.set_entitlements_xml(SettingsScope::Main, ENTITLEMENTS_XML)?;
+
+        let s = settings.entitlements_xml(SettingsScope::Main)?;
+        assert_eq!(s, Some("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n<dict>\n\t<key>application-identifier</key>\n\t<string>appid</string>\n\t<key>com.apple.developer.team-identifier</key>\n\t<string>ABCDEF</string>\n</dict>\n</plist>".into()));
+
+        Ok(())
     }
 }

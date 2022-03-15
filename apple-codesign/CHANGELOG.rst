@@ -24,6 +24,16 @@
   platform.
 * Logging switched to ``log`` crate. This changes program output slightly and removed
   an ``&slog::Logger`` argument from various functions.
+* ``SigningSettings`` now internally stores entitlements as a parsed plist. Its
+  ``set_entitlements_xml()`` now returns ``Result<()>`` in order to reflect errors
+  parsing plist XML. Its ``entitlements_xml()`` now returns ``Result<Option<String>>``
+  instead of ``Option<&str>`` because XML serialization is fallible and the resulting
+  XML is owned instead of a reference to a stored value. As a result of this change,
+  the embedded entitlements XML specified via ``rcodesign sign --entitlement-xml-path``
+  may be encoded differently than it was previously. Before, the content of the
+  specified file was embedded verbatim. After, the file is parsed as plist XML and
+  re-serialized to XML. This can result in encoding differences of the XML. This
+  should hopefully not matter, as valid XML should be valid XML.
 
 0.8.0
 =====

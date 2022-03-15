@@ -56,3 +56,6 @@ version = "0.10.0-pre"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 security-framework = { version = "2.2", features = ["OSX_10_12"] }
+
+[dev-dependencies]
+indoc = "1.0"
