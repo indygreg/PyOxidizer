@@ -223,17 +223,17 @@ pub fn run_cli() -> Result<()> {
         );
 
     let app = app.subcommand(
-        Command::new("analyze")
-            .about("Analyze a built binary")
-            .arg_required_else_help(true)
-            .arg(Arg::new("path").help("Path to executable to analyze")),
+        Command::new("analyze").about("Analyze a built binary").arg(
+            Arg::new("path")
+                .required(true)
+                .help("Path to executable to analyze"),
+        ),
     );
 
     let app = app.subcommand(add_env_args(
         Command::new("build")
             .about("Build a PyOxidizer enabled project")
             .long_about(BUILD_ABOUT)
-            .arg_required_else_help(true)
             .arg(
                 Arg::new("target_triple")
                     .long("target-triple")
@@ -269,7 +269,6 @@ pub fn run_cli() -> Result<()> {
         Command::new("find-resources")
             .about("Find resources in a file or directory")
             .long_about(RESOURCES_SCAN_ABOUT)
-            .arg_required_else_help(true)
             .arg(
                 Arg::new("distributions_dir")
                     .long("distributions-dir")
@@ -299,7 +298,7 @@ pub fn run_cli() -> Result<()> {
                     .long("no-emit-files")
                     .help("Whether to skip emitting File resources"),
             )
-            .arg(Arg::new("path").value_name("PATH").help(
+            .arg(Arg::new("path").value_name("PATH").required(true).help(
                 "Filesystem path to scan for resources. Must be a directory or Python wheel",
             )),
     );
@@ -318,7 +317,6 @@ pub fn run_cli() -> Result<()> {
 
     let app = app.subcommand(
         Command::new("init-config-file")
-            .arg_required_else_help(true)
             .about("Create a new PyOxidizer configuration file.")
             .arg(
                 Arg::new("python-code")
@@ -347,7 +345,6 @@ pub fn run_cli() -> Result<()> {
         Command::new("init-rust-project")
             .about("Create a new Rust project embedding a Python interpreter")
             .long_about(INIT_RUST_PROJECT_ABOUT)
-            .arg_required_else_help(true)
             .arg(
                 Arg::new("path")
                     .required(true)
@@ -359,7 +356,6 @@ pub fn run_cli() -> Result<()> {
     let app = app.subcommand(
         Command::new("list-targets")
             .about("List targets available to resolve in a configuration file")
-            .arg_required_else_help(true)
             .arg(
                 Arg::new("path")
                     .default_value(".")
@@ -416,7 +412,6 @@ pub fn run_cli() -> Result<()> {
         Command::new("run-build-script")
             .about("Run functionality that a build script would perform")
             .long_about(RUN_BUILD_SCRIPT_ABOUT)
-            .arg_required_else_help(true)
             .arg(
                 Arg::new("build-script-name")
                     .required(true)

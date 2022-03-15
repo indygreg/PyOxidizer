@@ -33,6 +33,14 @@ Version History
 
 Not yet released.
 
+Bug Fixes
+^^^^^^^^^
+
+* Fixed regression in the behavior of various ``pyoxidizer`` commands which
+  prevented them from working without specifying any arguments. This regression
+  was introduced in 0.20 with the upgrade of the ``clap`` crate to version 3.1.
+  (#523)
+
 Other Relevant Changes
 ^^^^^^^^^^^^^^^^^^^^^^
 
