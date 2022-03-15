@@ -102,7 +102,7 @@ dependencies = [
  "bytes",
  "chrono",
  "clap 3.1.6",
- "cryptographic-message-syntax",
+ "cryptographic-message-syntax 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "env_logger 0.9.0",
  "goblin",
  "hex",
@@ -1170,7 +1170,23 @@ dependencies = [
 
 [[package]]
 name = "cryptographic-message-syntax"
-version = "0.10.0-pre"
+version = "0.10.0"
+dependencies = [
+ "bcder",
+ "bytes",
+ "chrono",
+ "hex",
+ "pem 1.0.2",
+ "reqwest",
+ "ring",
+ "x509-certificate 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "cryptographic-message-syntax"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d60918c291a44cef9397b991be9239bb0b556d6c7629e479fe639e94caaaf243"
 dependencies = [
  "bcder",
  "bytes",
@@ -5429,7 +5445,7 @@ dependencies = [
  "apple-bundles",
  "apple-codesign",
  "bcder",
- "cryptographic-message-syntax",
+ "cryptographic-message-syntax 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "goblin",
  "p12",
  "reqwest",
