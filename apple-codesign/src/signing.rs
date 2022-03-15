@@ -819,10 +819,10 @@ mod tests {
             SettingsScope::MultiArchCpuType(CPU_TYPE_X86_64),
             CodeSignatureFlags::RESTRICT,
         );
-        main_settings.set_entitlements_xml(SettingsScope::MultiArchIndex(0), "index_0");
-        main_settings.set_entitlements_xml(
+        main_settings.set_info_plist_data(SettingsScope::MultiArchIndex(0), b"index_0".to_vec());
+        main_settings.set_info_plist_data(
             SettingsScope::MultiArchCpuType(CPU_TYPE_X86_64),
-            "cpu_x86_64",
+            b"cpu_x86_64".to_vec(),
         );
 
         let macho_settings = main_settings.as_nested_macho_settings(0, CPU_TYPE_ARM64);
@@ -835,8 +835,8 @@ mod tests {
             Some(CodeSignatureFlags::FORCE_HARD)
         );
         assert_eq!(
-            macho_settings.entitlements_xml(SettingsScope::Main),
-            Some("index_0")
+            macho_settings.info_plist_data(SettingsScope::Main),
+            Some(b"index_0".as_slice())
         );
 
         let macho_settings = main_settings.as_nested_macho_settings(0, CPU_TYPE_X86_64);
@@ -849,128 +849,131 @@ mod tests {
             Some(CodeSignatureFlags::RESTRICT)
         );
         assert_eq!(
-            macho_settings.entitlements_xml(SettingsScope::Main),
-            Some("cpu_x86_64")
+            macho_settings.info_plist_data(SettingsScope::Main),
+            Some(b"cpu_x86_64".as_slice())
         );
     }
 
     #[test]
     fn as_bundle_macho_settings() {
         let mut main_settings = SigningSettings::default();
-        main_settings.set_entitlements_xml(SettingsScope::Main, "main");
-        main_settings.set_entitlements_xml(
+        main_settings.set_info_plist_data(SettingsScope::Main, b"main".to_vec());
+        main_settings.set_info_plist_data(
             SettingsScope::Path("Contents/MacOS/main".into()),
-            "main_exe",
+            b"main_exe".to_vec(),
         );
-        main_settings.set_entitlements_xml(
+        main_settings.set_info_plist_data(
             SettingsScope::PathMultiArchIndex("Contents/MacOS/main".into(), 0),
-            "main_exe_index_0",
+            b"main_exe_index_0".to_vec(),
         );
-        main_settings.set_entitlements_xml(
+        main_settings.set_info_plist_data(
             SettingsScope::PathMultiArchCpuType("Contents/MacOS/main".into(), CPU_TYPE_X86_64),
-            "main_exe_x86_64",
+            b"main_exe_x86_64".to_vec(),
         );
 
         let macho_settings = main_settings.as_bundle_macho_settings("Contents/MacOS/main");
         assert_eq!(
-            macho_settings.entitlements_xml(SettingsScope::Main),
-            Some("main_exe")
+            macho_settings.info_plist_data(SettingsScope::Main),
+            Some(b"main_exe".as_slice())
         );
         assert_eq!(
-            macho_settings.entitlements,
+            macho_settings.info_plist_data,
             [
-                (SettingsScope::Main, "main_exe".into()),
-                (SettingsScope::MultiArchIndex(0), "main_exe_index_0".into()),
+                (SettingsScope::Main, b"main_exe".to_vec()),
+                (
+                    SettingsScope::MultiArchIndex(0),
+                    b"main_exe_index_0".to_vec()
+                ),
                 (
                     SettingsScope::MultiArchCpuType(CPU_TYPE_X86_64),
-                    "main_exe_x86_64".into()
+                    b"main_exe_x86_64".to_vec()
                 ),
             ]
             .iter()
             .cloned()
-            .collect::<BTreeMap<SettingsScope, String>>()
+            .collect::<BTreeMap<SettingsScope, Vec<u8>>>()
         );
     }
 
     #[test]
     fn as_nested_bundle_settings() {
         let mut main_settings = SigningSettings::default();
-        main_settings.set_entitlements_xml(SettingsScope::Main, "main");
-        main_settings.set_entitlements_xml(
+        main_settings.set_info_plist_data(SettingsScope::Main, b"main".to_vec());
+        main_settings.set_info_plist_data(
             SettingsScope::Path("Contents/MacOS/main".into()),
-            "main_exe",
+            b"main_exe".to_vec(),
         );
-        main_settings.set_entitlements_xml(
+        main_settings.set_info_plist_data(
             SettingsScope::Path("Contents/MacOS/nested.app".into()),
-            "bundle",
+            b"bundle".to_vec(),
         );
-        main_settings.set_entitlements_xml(
+        main_settings.set_info_plist_data(
             SettingsScope::PathMultiArchIndex("Contents/MacOS/nested.app".into(), 0),
-            "bundle_index_0",
+            b"bundle_index_0".to_vec(),
         );
-        main_settings.set_entitlements_xml(
+        main_settings.set_info_plist_data(
             SettingsScope::PathMultiArchCpuType(
                 "Contents/MacOS/nested.app".into(),
                 CPU_TYPE_X86_64,
             ),
-            "bundle_x86_64",
+            b"bundle_x86_64".to_vec(),
         );
-        main_settings.set_entitlements_xml(
+        main_settings.set_info_plist_data(
             SettingsScope::Path("Contents/MacOS/nested.app/Contents/MacOS/nested".into()),
-            "nested_main_exe",
+            b"nested_main_exe".to_vec(),
         );
-        main_settings.set_entitlements_xml(
+        main_settings.set_info_plist_data(
             SettingsScope::PathMultiArchIndex(
                 "Contents/MacOS/nested.app/Contents/MacOS/nested".into(),
                 0,
             ),
-            "nested_main_exe_index_0",
+            b"nested_main_exe_index_0".to_vec(),
         );
-        main_settings.set_entitlements_xml(
+        main_settings.set_info_plist_data(
             SettingsScope::PathMultiArchCpuType(
                 "Contents/MacOS/nested.app/Contents/MacOS/nested".into(),
                 CPU_TYPE_X86_64,
             ),
-            "nested_main_exe_x86_64",
+            b"nested_main_exe_x86_64".to_vec(),
         );
 
         let bundle_settings = main_settings.as_nested_bundle_settings("Contents/MacOS/nested.app");
         assert_eq!(
-            bundle_settings.entitlements_xml(SettingsScope::Main),
-            Some("bundle")
+            bundle_settings.info_plist_data(SettingsScope::Main),
+            Some(b"bundle".as_slice())
         );
         assert_eq!(
-            bundle_settings.entitlements_xml(SettingsScope::Path("Contents/MacOS/nested".into())),
-            Some("nested_main_exe")
+            bundle_settings.info_plist_data(SettingsScope::Path("Contents/MacOS/nested".into())),
+            Some(b"nested_main_exe".as_slice())
         );
         assert_eq!(
-            bundle_settings.entitlements,
+            bundle_settings.info_plist_data,
             [
-                (SettingsScope::Main, "bundle".into()),
-                (SettingsScope::MultiArchIndex(0), "bundle_index_0".into()),
+                (SettingsScope::Main, b"bundle".to_vec()),
+                (SettingsScope::MultiArchIndex(0), b"bundle_index_0".to_vec()),
                 (
                     SettingsScope::MultiArchCpuType(CPU_TYPE_X86_64),
-                    "bundle_x86_64".into()
+                    b"bundle_x86_64".to_vec()
                 ),
                 (
                     SettingsScope::Path("Contents/MacOS/nested".into()),
-                    "nested_main_exe".into()
+                    b"nested_main_exe".to_vec()
                 ),
                 (
                     SettingsScope::PathMultiArchIndex("Contents/MacOS/nested".into(), 0),
-                    "nested_main_exe_index_0".into()
+                    b"nested_main_exe_index_0".to_vec()
                 ),
                 (
                     SettingsScope::PathMultiArchCpuType(
                         "Contents/MacOS/nested".into(),
                         CPU_TYPE_X86_64
                     ),
-                    "nested_main_exe_x86_64".into()
+                    b"nested_main_exe_x86_64".to_vec()
                 ),
             ]
             .iter()
             .cloned()
-            .collect::<BTreeMap<SettingsScope, String>>()
+            .collect::<BTreeMap<SettingsScope, Vec<u8>>>()
         );
     }
 }
