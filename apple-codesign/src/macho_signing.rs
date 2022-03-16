@@ -764,6 +764,7 @@ impl<'data> MachOSigner<'data> {
                 // If we are using an Apple-issued cert, this should automatically
                 // derive appropriate designated requirements.
                 if let Some((_, cert)) = settings.signing_key() {
+                    info!("attempting to derive code requirements from signing certificate");
                     let identifier =
                         Some(self.get_binary_identifier(settings, previous_signature)?);
 
@@ -773,6 +774,7 @@ impl<'data> MachOSigner<'data> {
                 }
             }
             DesignatedRequirementMode::Explicit(exprs) => {
+                info!("using provided code requirements");
                 for expr in exprs {
                     requirements.push(CodeRequirementExpression::from_bytes(expr)?.0);
                 }
@@ -789,6 +791,7 @@ impl<'data> MachOSigner<'data> {
         }
 
         if let Some(entitlements) = settings.entitlements_xml(SettingsScope::Main)? {
+            info!("adding entitlements XML");
             let blob = EntitlementsBlob::from_string(&entitlements);
 
             res.push((CodeSigningSlot::Entitlements, blob.to_blob_bytes()?));
