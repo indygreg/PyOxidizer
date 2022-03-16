@@ -501,7 +501,13 @@ impl CapturedX509Certificate {
         self.verify_signed_by_public_key(public_key)
     }
 
-    /// Verify a signature over signed data perportedly signed by this certificate.
+    /// Verify a signature over signed data purportedly signed by this certificate.
+    ///
+    /// This is a wrapper to [Self::verify_signed_data_with_algorithm()] that will derive
+    /// the verification algorithm from the public key type type and the signature algorithm
+    /// indicated in this certificate. Typically these align. However, it is possible for
+    /// a signature to be produced with a different digest algorithm from that indicated
+    /// in this certificate.
     pub fn verify_signed_data(
         &self,
         signed_data: impl AsRef<[u8]>,
@@ -511,6 +517,20 @@ impl CapturedX509Certificate {
         let signature_algorithm = SignatureAlgorithm::try_from(self.signature_algorithm_oid())?;
         let verify_algorithm = signature_algorithm.resolve_verification_algorithm(key_algorithm)?;
 
+        self.verify_signed_data_with_algorithm(signed_data, signature, verify_algorithm)
+    }
+
+    /// Verify a signature over signed data using an explicit verification algorithm.
+    ///
+    /// This is like [Self::verify_signed_data()] except the verification algorithm to use
+    /// is passed in instead of derived from the default algorithm for the signing key's
+    /// type.
+    pub fn verify_signed_data_with_algorithm(
+        &self,
+        signed_data: impl AsRef<[u8]>,
+        signature: impl AsRef<[u8]>,
+        verify_algorithm: &'static dyn signature::VerificationAlgorithm,
+    ) -> Result<(), Error> {
         let public_key =
             signature::UnparsedPublicKey::new(verify_algorithm, self.public_key_data());
 

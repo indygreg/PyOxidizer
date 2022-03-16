@@ -2,6 +2,15 @@
 ``x509-certificate`` History
 ============================
 
+0.10.0
+======
+
+* ``CapturedX509Certificate`` has gained a ``verify_signed_data_with_algorithm()``
+  method that uses an explicit ``ring::signature::VerificationAlgorithm`` for
+  verification. The new method allows verifying when using an alternative
+  verification algorithm. ``verify_signed_data()`` now internally calls into the
+  new function.
+
 0.9.0
 =====
 

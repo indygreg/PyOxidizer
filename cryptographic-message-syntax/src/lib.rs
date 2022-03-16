@@ -583,7 +583,7 @@ impl SignerInfo {
         }
     }
 
-    /// Verifies the migest digest stored in signed attributes using explicit encapsulated content.
+    /// Verifies the message digest stored in signed attributes using explicit encapsulated content.
     ///
     /// Typically, the digest is computed over content stored in the [SignedData] instance.
     /// However, it is possible for the signed content to be external. This function
@@ -1070,5 +1070,50 @@ mod tests {
             hex::encode(cert.sha256_fingerprint().unwrap()),
             "b7c2eefd8dac7806af67dfcd92eb18126bc08312a7f2d6f3862e46013c7a6135"
         );
+    }
+
+    #[test]
+    fn verify_izzysoft() {
+        let signed = SignedData::parse_ber(include_bytes!("testdata/izzysoft-signeddata")).unwrap();
+        let data = include_bytes!("testdata/izzysoft-data").as_slice();
+        let cert = signed.certificates().next().unwrap();
+
+        for signer in signed.signers() {
+            // The signed data is external. So this method will fail since it isn't looking at
+            // the correct source data.
+            assert!(matches!(
+                signer.verify_signature_with_signed_data(&signed),
+                Err(CmsError::SignatureVerificationError)
+            ));
+
+            // There are no signed attributes. So this should error for that reason.
+            assert!(matches!(
+                signer.verify_message_digest_with_signed_data(&signed),
+                Err(CmsError::NoSignedAttributes)
+            ));
+
+            assert!(matches!(
+                signer.verify_message_digest_with_signed_data(&signed),
+                Err(CmsError::NoSignedAttributes)
+            ));
+
+            // The certificate advertises SHA-256 for digests but the signature was made with
+            // SHA-1. So the default algorithm choice will fail.
+            assert!(matches!(
+                cert.verify_signed_data(data, signer.signature()),
+                Err(X509CertificateError::CertificateSignatureVerificationFailed)
+            ));
+
+            // But it verifies when SHA-1 digests are forced!
+            cert.verify_signed_data_with_algorithm(
+                data,
+                signer.signature(),
+                &ring::signature::RSA_PKCS1_2048_8192_SHA1_FOR_LEGACY_USE_ONLY,
+            )
+            .unwrap();
+
+            let verifier = signer.signature_verifier(signed.certificates()).unwrap();
+            verifier.verify(data, signer.signature()).unwrap();
+        }
     }
 }
