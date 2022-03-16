@@ -509,7 +509,7 @@ impl SignerInfo {
         self.unsigned_attributes.as_ref()
     }
 
-    /// Verifies the signature defined by this signer given a `SignedData` instance.
+    /// Verifies the signature defined by this signer given a [SignedData] instance.
     ///
     /// This function will perform cryptographic verification that the signature
     /// contained within this `SignerInfo` instance is valid for the content that
@@ -531,12 +531,30 @@ impl SignerInfo {
         &self,
         signed_data: &SignedData,
     ) -> Result<(), CmsError> {
-        let verifier = self.signature_verifier(signed_data.certificates())?;
         let signed_content = self.signed_content_with_signed_data(signed_data);
+
+        self.verify_signature_with_signed_data_and_content(signed_data, &signed_content)
+    }
+
+    /// Verifies the signature defined by this signer given a [SignedData] and signed content.
+    ///
+    /// This function will perform cryptographic verification that the signature contained within
+    /// this [SignerInfo] is valid for `signed_content`. Unlike
+    /// [Self::verify_signature_with_signed_data()], the content that was signed is passed in
+    /// explicitly instead of derived from [SignedData].
+    ///
+    /// This method only performs cryptographic signature verification. It is therefore subject
+    /// to the same limitations as [Self::verify_signature_with_signed_data()].
+    pub fn verify_signature_with_signed_data_and_content(
+        &self,
+        signed_data: &SignedData,
+        signed_content: &[u8],
+    ) -> Result<(), CmsError> {
+        let verifier = self.signature_verifier(signed_data.certificates())?;
         let signature = self.signature();
 
         verifier
-            .verify(&signed_content, signature)
+            .verify(signed_content, signature)
             .map_err(|_| CmsError::SignatureVerificationError)
     }
 
@@ -1111,6 +1129,10 @@ mod tests {
                 &ring::signature::RSA_PKCS1_2048_8192_SHA1_FOR_LEGACY_USE_ONLY,
             )
             .unwrap();
+
+            signer
+                .verify_signature_with_signed_data_and_content(&signed, data)
+                .unwrap();
 
             let verifier = signer.signature_verifier(signed.certificates()).unwrap();
             verifier.verify(data, signer.signature()).unwrap();
