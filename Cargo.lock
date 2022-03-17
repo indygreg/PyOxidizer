@@ -102,7 +102,7 @@ dependencies = [
  "bytes",
  "chrono",
  "clap 3.1.6",
- "cryptographic-message-syntax 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cryptographic-message-syntax",
  "env_logger 0.9.0",
  "goblin",
  "hex",
@@ -120,7 +120,7 @@ dependencies = [
  "semver",
  "thiserror",
  "tugger-apple",
- "x509-certificate 0.11.0-pre",
+ "x509-certificate",
  "yasna",
 ]
 
@@ -1182,7 +1182,7 @@ dependencies = [
 
 [[package]]
 name = "cryptographic-message-syntax"
-version = "0.11.0"
+version = "0.12.0-pre"
 dependencies = [
  "bcder",
  "bytes",
@@ -1191,23 +1191,7 @@ dependencies = [
  "pem 1.0.2",
  "reqwest",
  "ring",
- "x509-certificate 0.11.0-pre",
-]
-
-[[package]]
-name = "cryptographic-message-syntax"
-version = "0.11.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "15b6189e41eb4dd489f035016c9baafa4b1c8ccfc53edb81819b3d053eb4dfb7"
-dependencies = [
- "bcder",
- "bytes",
- "chrono",
- "hex",
- "pem 1.0.2",
- "reqwest",
- "ring",
- "x509-certificate 0.10.0",
+ "x509-certificate",
 ]
 
 [[package]]
@@ -5427,7 +5411,7 @@ dependencies = [
  "tugger-windows-codesign",
  "tugger-wix",
  "walkdir",
- "x509-certificate 0.11.0-pre",
+ "x509-certificate",
 ]
 
 [[package]]
@@ -5464,7 +5448,7 @@ dependencies = [
  "apple-bundles",
  "apple-codesign",
  "bcder",
- "cryptographic-message-syntax 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cryptographic-message-syntax",
  "goblin",
  "p12",
  "reqwest",
@@ -5473,7 +5457,7 @@ dependencies = [
  "thiserror",
  "tugger-file-manifest",
  "tugger-windows-codesign",
- "x509-certificate 0.11.0-pre",
+ "x509-certificate",
  "yasna",
 ]
 
@@ -6048,21 +6032,6 @@ dependencies = [
  "curve25519-dalek",
  "rand_core 0.5.1",
  "zeroize",
-]
-
-[[package]]
-name = "x509-certificate"
-version = "0.10.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "835d97de4badde1d127b457d0e083df5ec34d8ea04168efa1d2c9dedf8b4aeef"
-dependencies = [
- "bcder",
- "bytes",
- "chrono",
- "hex",
- "pem 1.0.2",
- "ring",
- "thiserror",
 ]
 
 [[package]]
