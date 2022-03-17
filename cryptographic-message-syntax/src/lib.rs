@@ -1090,10 +1090,12 @@ mod tests {
         );
     }
 
+    const IZZYSOFT_SIGNED_DATA: &[u8] = include_bytes!("testdata/izzysoft-signeddata");
+    const IZZYSOFT_DATA: &[u8] = include_bytes!("testdata/izzysoft-data");
+
     #[test]
     fn verify_izzysoft() {
-        let signed = SignedData::parse_ber(include_bytes!("testdata/izzysoft-signeddata")).unwrap();
-        let data = include_bytes!("testdata/izzysoft-data").as_slice();
+        let signed = SignedData::parse_ber(IZZYSOFT_SIGNED_DATA).unwrap();
         let cert = signed.certificates().next().unwrap();
 
         for signer in signed.signers() {
@@ -1118,24 +1120,24 @@ mod tests {
             // The certificate advertises SHA-256 for digests but the signature was made with
             // SHA-1. So the default algorithm choice will fail.
             assert!(matches!(
-                cert.verify_signed_data(data, signer.signature()),
+                cert.verify_signed_data(IZZYSOFT_DATA, signer.signature()),
                 Err(X509CertificateError::CertificateSignatureVerificationFailed)
             ));
 
             // But it verifies when SHA-1 digests are forced!
             cert.verify_signed_data_with_algorithm(
-                data,
+                IZZYSOFT_DATA,
                 signer.signature(),
                 &ring::signature::RSA_PKCS1_2048_8192_SHA1_FOR_LEGACY_USE_ONLY,
             )
             .unwrap();
 
             signer
-                .verify_signature_with_signed_data_and_content(&signed, data)
+                .verify_signature_with_signed_data_and_content(&signed, IZZYSOFT_DATA)
                 .unwrap();
 
             let verifier = signer.signature_verifier(signed.certificates()).unwrap();
-            verifier.verify(data, signer.signature()).unwrap();
+            verifier.verify(IZZYSOFT_DATA, signer.signature()).unwrap();
         }
     }
 }
