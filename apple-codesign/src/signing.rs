@@ -882,7 +882,7 @@ mod tests {
         );
         assert_eq!(
             macho_settings.info_plist_data(SettingsScope::Main),
-            Some(b"index_0".as_slice())
+            Some(b"index_0".as_ref())
         );
 
         let macho_settings = main_settings.as_nested_macho_settings(0, CPU_TYPE_X86_64);
@@ -896,7 +896,7 @@ mod tests {
         );
         assert_eq!(
             macho_settings.info_plist_data(SettingsScope::Main),
-            Some(b"cpu_x86_64".as_slice())
+            Some(b"cpu_x86_64".as_ref())
         );
     }
 
@@ -920,7 +920,7 @@ mod tests {
         let macho_settings = main_settings.as_bundle_macho_settings("Contents/MacOS/main");
         assert_eq!(
             macho_settings.info_plist_data(SettingsScope::Main),
-            Some(b"main_exe".as_slice())
+            Some(b"main_exe".as_ref())
         );
         assert_eq!(
             macho_settings.info_plist_data,
@@ -986,11 +986,11 @@ mod tests {
         let bundle_settings = main_settings.as_nested_bundle_settings("Contents/MacOS/nested.app");
         assert_eq!(
             bundle_settings.info_plist_data(SettingsScope::Main),
-            Some(b"bundle".as_slice())
+            Some(b"bundle".as_ref())
         );
         assert_eq!(
             bundle_settings.info_plist_data(SettingsScope::Path("Contents/MacOS/nested".into())),
-            Some(b"nested_main_exe".as_slice())
+            Some(b"nested_main_exe".as_ref())
         );
         assert_eq!(
             bundle_settings.info_plist_data,
