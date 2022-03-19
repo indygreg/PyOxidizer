@@ -45,6 +45,10 @@
   to the code directory's executable segment flags. Previously, no such propagation
   occurred and special entitlements would not be fully reflected in the code
   signature. The new behavior matches that of ``codesign``.
+* Fixed a bug in ``rcodesign verify`` where code directory verification was
+  complaining about ``slot digest contains digest for slot not in signature``
+  for the ``Info (1)`` and ``Resources (3)`` slots. The condition it was
+  complaining about was actually valid. (#512)
 
 0.8.0
 =====

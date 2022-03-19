@@ -532,9 +532,13 @@ fn verify_code_directory(
                 }
             },
             None => {
+                // Some slots have external provided from somewhere that isn't a blob.
+                if slot.has_external_content() {
+                    // TODO need to validate this external content somewhere.
+                }
                 // But slots with a null digest (all 0s) exist as placeholders when there
                 // is a higher numbered slot present.
-                if u32::from(*slot) >= max_slot || cd_digest.to_vec() != null_digest {
+                else if u32::from(*slot) >= max_slot || cd_digest.to_vec() != null_digest {
                     problems.push(VerificationProblem {
                         context: context.clone(),
                         problem: VerificationProblemType::ExtraSlotDigest(

@@ -668,6 +668,8 @@ impl<'data> MachOSigner<'data> {
             })
             .collect::<Result<HashMap<_, _>, AppleCodesignError>>()?;
 
+        // There is no corresponding blob for the info plist data since it is provided
+        // externally to the embedded signature.
         match settings.info_plist_data(SettingsScope::Main) {
             Some(data) => {
                 special_hashes.insert(
@@ -688,6 +690,8 @@ impl<'data> MachOSigner<'data> {
             }
         }
 
+        // There is no corresponding blob for resources data since it is provided
+        // externally to the embedded signature.
         match settings.code_resources_data(SettingsScope::Main) {
             Some(data) => {
                 special_hashes.insert(

@@ -174,6 +174,13 @@ impl From<CodeSigningSlot> for u32 {
     }
 }
 
+impl CodeSigningSlot {
+    /// Whether this slot has external data (as opposed to provided via a blob).
+    pub fn has_external_content(&self) -> bool {
+        matches!(self, Self::Info | Self::ResourceDir)
+    }
+}
+
 /// Defines header magic for various payloads.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum CodeSigningMagic {
