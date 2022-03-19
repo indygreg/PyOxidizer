@@ -70,6 +70,7 @@ pub fn der_encode_entitlements_plist(value: &Value) -> Result<Vec<u8>, AppleCode
 
 #[cfg(test)]
 mod test {
+    use crate::Blob;
     use {
         super::*,
         crate::{AppleSignable, CodeSigningSlot},
@@ -178,11 +179,12 @@ mod test {
             .find_slot(CodeSigningSlot::EntitlementsDer)
             .expect("unable to find der entitlements blob");
 
-        if slot.data.len() < 9 {
-            return Err(anyhow!("blob is too short"));
+        match slot.clone().into_parsed_blob()?.blob {
+            crate::macho::BlobData::EntitlementsDer(der) => Ok(der.serialize_payload()?),
+            _ => Err(anyhow!(
+                "failed to obtain entitlements DER (this should never happen)"
+            )),
         }
-
-        Ok(slot.payload()?.to_vec())
     }
 
     #[test]

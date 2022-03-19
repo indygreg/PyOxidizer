@@ -719,6 +719,7 @@ pub enum BlobData<'a> {
     EmbeddedSignature(Box<EmbeddedSignatureBlob<'a>>),
     EmbeddedSignatureOld(Box<EmbeddedSignatureOldBlob<'a>>),
     Entitlements(Box<EntitlementsBlob<'a>>),
+    EntitlementsDer(Box<EntitlementsDerBlob<'a>>),
     DetachedSignature(Box<DetachedSignatureBlob<'a>>),
     BlobWrapper(Box<BlobWrapperBlob<'a>>),
     Other(Box<OtherBlob<'a>>),
@@ -758,6 +759,9 @@ impl<'a> Blob<'a> for BlobData<'a> {
             CodeSigningMagic::Entitlements => {
                 Self::Entitlements(Box::new(EntitlementsBlob::from_blob_bytes(data)?))
             }
+            CodeSigningMagic::EntitlementsDer => {
+                Self::EntitlementsDer(Box::new(EntitlementsDerBlob::from_blob_bytes(data)?))
+            }
             CodeSigningMagic::DetachedSignature => {
                 Self::DetachedSignature(Box::new(DetachedSignatureBlob::from_blob_bytes(data)?))
             }
@@ -776,6 +780,7 @@ impl<'a> Blob<'a> for BlobData<'a> {
             Self::EmbeddedSignature(b) => b.serialize_payload(),
             Self::EmbeddedSignatureOld(b) => b.serialize_payload(),
             Self::Entitlements(b) => b.serialize_payload(),
+            Self::EntitlementsDer(b) => b.serialize_payload(),
             Self::DetachedSignature(b) => b.serialize_payload(),
             Self::BlobWrapper(b) => b.serialize_payload(),
             Self::Other(b) => b.serialize_payload(),
@@ -790,6 +795,7 @@ impl<'a> Blob<'a> for BlobData<'a> {
             Self::EmbeddedSignature(b) => b.to_blob_bytes(),
             Self::EmbeddedSignatureOld(b) => b.to_blob_bytes(),
             Self::Entitlements(b) => b.to_blob_bytes(),
+            Self::EntitlementsDer(b) => b.to_blob_bytes(),
             Self::DetachedSignature(b) => b.to_blob_bytes(),
             Self::BlobWrapper(b) => b.to_blob_bytes(),
             Self::Other(b) => b.to_blob_bytes(),
@@ -1145,6 +1151,42 @@ impl<'a> EntitlementsBlob<'a> {
 impl<'a> std::fmt::Display for EntitlementsBlob<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(&self.plist)
+    }
+}
+
+#[derive(Debug)]
+pub struct EntitlementsDerBlob<'a> {
+    der: Cow<'a, [u8]>,
+}
+
+impl<'a> Blob<'a> for EntitlementsDerBlob<'a> {
+    fn magic() -> u32 {
+        u32::from(CodeSigningMagic::EntitlementsDer)
+    }
+
+    fn from_blob_bytes(data: &'a [u8]) -> Result<Self, AppleCodesignError> {
+        let der = read_and_validate_blob_header(data, Self::magic(), "DER entitlements blob")?;
+
+        Ok(Self { der: der.into() })
+    }
+
+    fn serialize_payload(&self) -> Result<Vec<u8>, AppleCodesignError> {
+        Ok(self.der.to_vec())
+    }
+}
+
+impl<'a> EntitlementsDerBlob<'a> {
+    /// Construct an instance from a [plist::Value].
+    ///
+    /// Not all plists can be encoded to this blob as not all plist value types can
+    /// be encoded to DER. If a plist with an illegal value is passed in, this
+    /// function will error, as DER encoding is performed immediately.
+    ///
+    /// The outermost plist value should be a dictionary.
+    pub fn from_plist(v: &plist::Value) -> Result<Self, AppleCodesignError> {
+        let der = crate::entitlements::der_encode_entitlements_plist(v)?;
+
+        Ok(Self { der: der.into() })
     }
 }
 
