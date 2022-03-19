@@ -41,6 +41,14 @@ Bug Fixes
   was introduced in 0.20 with the upgrade of the ``clap`` crate to version 3.1.
   (#523)
 
+New Features
+^^^^^^^^^^^^
+
+* Default CPython distributions upgraded from 3.8.12, 3.9.10, and 3.10.2
+  to 3.8.13, 3.9.11, and 3.10.3, respectively. See additional changes in
+  these distributions at
+  https://github.com/indygreg/python-build-standalone/releases/tag/20220318.
+
 Other Relevant Changes
 ^^^^^^^^^^^^^^^^^^^^^^
 
