@@ -4,14 +4,79 @@
 
 /*! Code entitlements handling. */
 
+use {
+    crate::AppleCodesignError,
+    plist::Value,
+    rasn::{
+        ber::enc::{Encoder as DerEncoder, Error as DerError},
+        enc::Error,
+        types::{Class, Tag},
+        Encoder,
+    },
+    std::collections::BTreeMap,
+};
+
+/// Encode a [Value] to DER, writing to an encoder.
+fn der_encode_value(encoder: &mut DerEncoder, value: &Value) -> Result<(), DerError> {
+    match value {
+        Value::Boolean(v) => encoder.encode_bool(Tag::BOOL, *v),
+        Value::Integer(v) => {
+            let integer = rasn::types::Integer::from(v.as_signed().unwrap());
+            encoder.encode_integer(Tag::INTEGER, &integer)
+        }
+        Value::String(string) => encoder.encode_utf8_string(Tag::UTF8_STRING, string),
+        Value::Array(array) => encoder.encode_sequence(Tag::SEQUENCE, |encoder| {
+            for v in array {
+                der_encode_value(encoder, v)?;
+            }
+            Ok(())
+        }),
+        Value::Dictionary(dict) => {
+            // make sure it's sorted alphabetically
+            let map = dict.into_iter().collect::<BTreeMap<_, _>>();
+            encoder.encode_sequence(Tag::new(Class::Context, 16), |encoder| {
+                for (k, v) in map {
+                    encoder.encode_sequence(Tag::SEQUENCE, |encoder| {
+                        encoder.encode_utf8_string(Tag::UTF8_STRING, k)?;
+                        der_encode_value(encoder, v)?;
+                        Ok(())
+                    })?;
+                }
+                Ok(())
+            })
+        }
+
+        Value::Data(_) => Err(DerError::custom("encoding of data values not supported")),
+        Value::Date(_) => Err(DerError::custom("encoding of date values not supported")),
+        Value::Real(_) => Err(DerError::custom("encoding of real values not supported")),
+        Value::Uid(_) => Err(DerError::custom("encoding of uid values not supported")),
+        _ => Err(DerError::custom(
+            "encoding of unknown value type not supported",
+        )),
+    }
+}
+
+/// Encode an entitlements plist to DER.
+pub fn der_encode_entitlements_plist(value: &Value) -> Result<Vec<u8>, AppleCodesignError> {
+    rasn::der::encode_scope(|encoder| {
+        encoder.encode_sequence(Tag::new(Class::Application, 16), |encoder| {
+            encoder.encode_integer(Tag::INTEGER, &rasn::types::Integer::from(1))?;
+            der_encode_value(encoder, value)?;
+            Ok(())
+        })
+    })
+    .map_err(|e| AppleCodesignError::EntitlementsDerEncode(format!("{}", e)))
+}
+
 #[cfg(test)]
 mod test {
     use {
+        super::*,
         crate::{AppleSignable, CodeSigningSlot},
         anyhow::anyhow,
         anyhow::Result,
         goblin::mach::Mach,
-        plist::{Date, Uid, Value},
+        plist::{Date, Uid},
         std::{
             process::Command,
             time::{Duration, SystemTime},
@@ -65,6 +130,7 @@ mod test {
     ///
     /// This uses Apple's `codesign` executable to sign the current binary then uses
     /// our library for extracting the entitlements DER that it generated.
+    #[allow(unused)]
     fn sign_and_get_entitlements_der(value: &Value) -> Result<Vec<u8>> {
         let this_exe = std::env::current_exe()?;
 
@@ -261,6 +327,176 @@ mod test {
         d.insert("key3".into(), Value::Integer(42i32.into()));
         assert_eq!(
             sign_and_get_entitlements_der(&Value::Dictionary(d.clone()))?,
+            DER_MULTIPLE_KEYS
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn der_encoding() -> Result<()> {
+        let mut d = plist::Dictionary::new();
+
+        assert_eq!(
+            der_encode_entitlements_plist(&Value::Dictionary(d.clone()))?,
+            DER_EMPTY_DICT
+        );
+
+        d.insert("key".into(), Value::Boolean(false));
+        assert_eq!(
+            der_encode_entitlements_plist(&Value::Dictionary(d.clone()))?,
+            DER_BOOL_FALSE
+        );
+
+        d.insert("key".into(), Value::Boolean(true));
+        assert_eq!(
+            der_encode_entitlements_plist(&Value::Dictionary(d.clone()))?,
+            DER_BOOL_TRUE
+        );
+
+        d.insert("key".into(), Value::Integer(0u32.into()));
+        assert_eq!(
+            der_encode_entitlements_plist(&Value::Dictionary(d.clone()))?,
+            DER_INTEGER_0
+        );
+
+        d.insert("key".into(), Value::Integer((-1i32).into()));
+        assert_eq!(
+            der_encode_entitlements_plist(&Value::Dictionary(d.clone()))?,
+            DER_INTEGER_NEG1
+        );
+
+        d.insert("key".into(), Value::Integer(1u32.into()));
+        assert_eq!(
+            der_encode_entitlements_plist(&Value::Dictionary(d.clone()))?,
+            DER_INTEGER_1
+        );
+
+        d.insert("key".into(), Value::Integer(42u32.into()));
+        assert_eq!(
+            der_encode_entitlements_plist(&Value::Dictionary(d.clone()))?,
+            DER_INTEGER_42
+        );
+
+        d.insert("key".into(), Value::Real(0.0f32.into()));
+        assert!(matches!(
+            der_encode_entitlements_plist(&Value::Dictionary(d.clone())),
+            Err(AppleCodesignError::EntitlementsDerEncode(_))
+        ));
+
+        d.insert("key".into(), Value::Real((-1.0f32).into()));
+        assert!(matches!(
+            der_encode_entitlements_plist(&Value::Dictionary(d.clone())),
+            Err(AppleCodesignError::EntitlementsDerEncode(_))
+        ));
+
+        d.insert("key".into(), Value::Real(1.0f32.into()));
+        assert!(matches!(
+            der_encode_entitlements_plist(&Value::Dictionary(d.clone())),
+            Err(AppleCodesignError::EntitlementsDerEncode(_))
+        ));
+
+        d.insert("key".into(), Value::String("".into()));
+        assert_eq!(
+            der_encode_entitlements_plist(&Value::Dictionary(d.clone()))?,
+            DER_STRING_EMPTY
+        );
+
+        d.insert("key".into(), Value::String("value".into()));
+        assert_eq!(
+            der_encode_entitlements_plist(&Value::Dictionary(d.clone()))?,
+            DER_STRING_VALUE
+        );
+
+        d.insert("key".into(), Value::Uid(Uid::new(0)));
+        assert!(matches!(
+            der_encode_entitlements_plist(&Value::Dictionary(d.clone())),
+            Err(AppleCodesignError::EntitlementsDerEncode(_))
+        ));
+
+        d.insert("key".into(), Value::Uid(Uid::new(1)));
+        assert!(matches!(
+            der_encode_entitlements_plist(&Value::Dictionary(d.clone())),
+            Err(AppleCodesignError::EntitlementsDerEncode(_))
+        ));
+
+        d.insert("key".into(), Value::Uid(Uid::new(42)));
+        assert!(matches!(
+            der_encode_entitlements_plist(&Value::Dictionary(d.clone())),
+            Err(AppleCodesignError::EntitlementsDerEncode(_))
+        ));
+
+        d.insert(
+            "key".into(),
+            Value::Date(Date::from(SystemTime::UNIX_EPOCH)),
+        );
+        assert!(matches!(
+            der_encode_entitlements_plist(&Value::Dictionary(d.clone())),
+            Err(AppleCodesignError::EntitlementsDerEncode(_))
+        ));
+        d.insert(
+            "key".into(),
+            Value::Date(Date::from(
+                SystemTime::UNIX_EPOCH + Duration::from_secs(86400 * 365 * 30),
+            )),
+        );
+        assert!(matches!(
+            der_encode_entitlements_plist(&Value::Dictionary(d.clone())),
+            Err(AppleCodesignError::EntitlementsDerEncode(_))
+        ));
+
+        // Data fails to encode to DER with `unknown exception`.
+        d.insert("key".into(), Value::Data(vec![]));
+        assert!(matches!(
+            der_encode_entitlements_plist(&Value::Dictionary(d.clone())),
+            Err(AppleCodesignError::EntitlementsDerEncode(_))
+        ));
+        d.insert("key".into(), Value::Data(b"foo".to_vec()));
+        assert!(matches!(
+            der_encode_entitlements_plist(&Value::Dictionary(d.clone())),
+            Err(AppleCodesignError::EntitlementsDerEncode(_))
+        ));
+
+        d.insert("key".into(), Value::Array(vec![]));
+        assert_eq!(
+            der_encode_entitlements_plist(&Value::Dictionary(d.clone()))?,
+            DER_ARRAY_EMPTY
+        );
+
+        d.insert("key".into(), Value::Array(vec![Value::Boolean(false)]));
+        assert_eq!(
+            der_encode_entitlements_plist(&Value::Dictionary(d.clone()))?,
+            DER_ARRAY_FALSE
+        );
+
+        d.insert(
+            "key".into(),
+            Value::Array(vec![Value::Boolean(true), Value::String("foo".into())]),
+        );
+        assert_eq!(
+            der_encode_entitlements_plist(&Value::Dictionary(d.clone()))?,
+            DER_ARRAY_TRUE_FOO
+        );
+
+        let mut inner = plist::Dictionary::new();
+        d.insert("key".into(), Value::Dictionary(inner.clone()));
+        assert_eq!(
+            der_encode_entitlements_plist(&Value::Dictionary(d.clone()))?,
+            DER_DICT_EMPTY
+        );
+
+        inner.insert("inner".into(), Value::Boolean(false));
+        d.insert("key".into(), Value::Dictionary(inner.clone()));
+        assert_eq!(
+            der_encode_entitlements_plist(&Value::Dictionary(d.clone()))?,
+            DER_DICT_BOOL
+        );
+
+        d.insert("key".into(), Value::Boolean(false));
+        d.insert("key2".into(), Value::Boolean(true));
+        d.insert("key3".into(), Value::Integer(42i32.into()));
+        assert_eq!(
+            der_encode_entitlements_plist(&Value::Dictionary(d.clone()))?,
             DER_MULTIPLE_KEYS
         );
 

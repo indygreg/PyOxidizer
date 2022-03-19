@@ -100,6 +100,9 @@ pub enum AppleCodesignError {
     #[error("entitlements data not valid UTF-8: {0}")]
     EntitlementsBadUtf8(std::str::Utf8Error),
 
+    #[error("error when encoding entitlements to DER: {0}")]
+    EntitlementsDerEncode(String),
+
     #[error("unknown executable segment flag: {0}")]
     ExecutableSegmentUnknownFlag(String),
 
