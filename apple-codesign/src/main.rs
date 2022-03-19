@@ -16,6 +16,8 @@ mod code_hash;
 mod code_requirement;
 #[allow(unused)]
 mod code_resources;
+#[allow(unused)]
+mod entitlements;
 mod error;
 #[allow(unused)]
 mod macho;

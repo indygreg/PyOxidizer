@@ -59,3 +59,4 @@ security-framework = { version = "2.2", features = ["OSX_10_12"] }
 
 [dev-dependencies]
 indoc = "1.0"
+tempfile = "3.3"

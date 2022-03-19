@@ -127,6 +127,7 @@ dependencies = [
  "scroll",
  "security-framework",
  "semver",
+ "tempfile",
  "thiserror",
  "tugger-apple",
  "x509-certificate",

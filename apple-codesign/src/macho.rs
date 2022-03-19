@@ -623,6 +623,13 @@ impl<'a> BlobEntry<'a> {
         self.try_into()
     }
 
+    /// Obtain the payload of this blob.
+    ///
+    /// This is the data in the blob without the blob header.
+    pub fn payload(&self) -> Result<&'a [u8], AppleCodesignError> {
+        Ok(read_blob_header(self.data)?.2)
+    }
+
     /// Compute the content digest of this blob using the specified hash type.
     pub fn digest_with(&self, hash: DigestType) -> Result<Vec<u8>, AppleCodesignError> {
         hash.digest(self.data)
