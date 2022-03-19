@@ -15,7 +15,7 @@ use {
         macho::{
             create_superblob, find_macho_targeting, AppleSignable, Blob, BlobWrapperBlob,
             CodeSigningMagic, CodeSigningSlot, Digest, DigestType, EmbeddedSignature,
-            EntitlementsBlob, RequirementSetBlob, RequirementType,
+            EntitlementsBlob, EntitlementsDerBlob, RequirementSetBlob, RequirementType,
         },
         policy::derive_designated_requirements,
         signing::{DesignatedRequirementMode, SettingsScope, SigningSettings},
@@ -795,6 +795,18 @@ impl<'data> MachOSigner<'data> {
             let blob = EntitlementsBlob::from_string(&entitlements);
 
             res.push((CodeSigningSlot::Entitlements, blob.to_blob_bytes()?));
+        }
+
+        // The DER encoded entitlements weren't always present in the signature. The feature
+        // appears to have been introduced in macOS 10.14 and is the default behavior as of
+        // macOS 12 "when signing for all platforms." Since `codesign` appears to always add
+        // this blob when entitlements are present, we mimic the behavior. But there may be
+        // scenarios where we want to omit this.
+        if let Some(value) = settings.entitlements_plist(SettingsScope::Main) {
+            info!("adding entitlements DER");
+            let blob = EntitlementsDerBlob::from_plist(value)?;
+
+            res.push((CodeSigningSlot::EntitlementsDer, blob.to_blob_bytes()?));
         }
 
         Ok(res)

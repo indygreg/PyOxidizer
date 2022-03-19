@@ -34,6 +34,11 @@
   specified file was embedded verbatim. After, the file is parsed as plist XML and
   re-serialized to XML. This can result in encoding differences of the XML. This
   should hopefully not matter, as valid XML should be valid XML.
+* Support for DER encoded entitlements in code signatures. Apple code signatures
+  encode entitlements both in plist XML form and DER. Previously, we only supported
+  the former. Now, if entitlements are being written, they are written in both XML
+  and DER. This should match the default behavior of `codesign` as of macOS 12.
+  (#513, #515)
 
 0.8.0
 =====
