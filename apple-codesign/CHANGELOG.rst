@@ -39,6 +39,12 @@
   the former. Now, if entitlements are being written, they are written in both XML
   and DER. This should match the default behavior of `codesign` as of macOS 12.
   (#513, #515)
+* When signing, the entitlements plist associated with the signing operation
+  is now parsed and keys like ``get-task-allow`` and
+  ``com.apple.private.skip-library-validation`` are now automatically propagated
+  to the code directory's executable segment flags. Previously, no such propagation
+  occurred and special entitlements would not be fully reflected in the code
+  signature. The new behavior matches that of ``codesign``.
 
 0.8.0
 =====

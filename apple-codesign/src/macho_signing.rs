@@ -11,6 +11,7 @@ use {
         code_directory::{CodeDirectoryBlob, CodeSignatureFlags},
         code_hash::compute_code_hashes,
         code_requirement::{CodeRequirementExpression, CodeRequirements},
+        entitlements::plist_to_executable_segment_flags,
         error::AppleCodesignError,
         macho::{
             create_superblob, find_macho_targeting, AppleSignable, Blob, BlobWrapperBlob,
@@ -19,6 +20,7 @@ use {
         },
         policy::derive_designated_requirements,
         signing::{DesignatedRequirementMode, SettingsScope, SigningSettings},
+        ExecutableSegmentFlags,
     },
     bcder::{encode::PrimitiveContent, Oid},
     bytes::Bytes,
@@ -622,6 +624,23 @@ impl<'data> MachOSigner<'data> {
                         exec_seg_flags = Some(flags);
                     }
                 }
+            }
+        }
+
+        // Entitlements can influence the executable segment flags. So make sure
+        // flags derived from entitlements are always set.
+        if let Some(entitlements) = settings.entitlements_plist(SettingsScope::Main) {
+            let implied_flags = plist_to_executable_segment_flags(entitlements);
+
+            if !implied_flags.is_empty() {
+                info!(
+                    "entitlements imply executable segment flags: {:?}",
+                    implied_flags
+                );
+
+                exec_seg_flags = Some(
+                    exec_seg_flags.unwrap_or_else(ExecutableSegmentFlags::empty) | implied_flags,
+                );
             }
         }
 
