@@ -40,6 +40,9 @@ pub enum AppleCodesignError {
     #[error("CMS error: {0}")]
     Cms(#[from] CmsError),
 
+    #[error("JSON serialization error: {0}")]
+    SerdeJson(#[from] serde_json::Error),
+
     #[error("problems reported during verification")]
     VerificationProblems,
 
@@ -214,4 +217,19 @@ pub enum AppleCodesignError {
 
     #[error("error producing universal Mach-O binary: {0}")]
     UniversalMachO(#[from] UniversalMachOError),
+
+    #[error("notarization record not in response: {0}")]
+    NotarizationRecordNotInResponse(String),
+
+    #[error("signed ticket data not found in ticket lookup response (this should not happen)")]
+    NotarizationRecordNoSignedTicket,
+
+    #[error("signedTicket in notarization ticket lookup response is not BYTES: {0}")]
+    NotarizationRecordSignedTicketNotBytes(String),
+
+    #[error("notarization ticket lookup failure: {0}: {1}")]
+    NotarizationLookupFailure(String, String),
+
+    #[error("error decoding base64 in notarization ticket: {0}")]
+    NotarizationRecordDecodeFailure(base64::DecodeError),
 }

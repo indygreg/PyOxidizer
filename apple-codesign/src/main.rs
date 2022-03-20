@@ -36,6 +36,8 @@ mod signing;
 #[allow(unused)]
 mod specification;
 #[allow(unused)]
+mod ticket_lookup;
+#[allow(unused)]
 mod tutorial;
 #[allow(unused)]
 mod verify;

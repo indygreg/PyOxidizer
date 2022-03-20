@@ -128,6 +128,8 @@ dependencies = [
  "scroll",
  "security-framework",
  "semver",
+ "serde",
+ "serde_json",
  "tempfile",
  "thiserror",
  "tugger-apple",

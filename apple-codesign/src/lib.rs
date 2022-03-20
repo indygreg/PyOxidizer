@@ -141,6 +141,7 @@ pub use policy::*;
 mod signing;
 pub use signing::*;
 pub mod specification;
+pub mod ticket_lookup;
 pub mod tutorial;
 mod verify;
 pub use verify::*;
