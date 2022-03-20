@@ -26,6 +26,7 @@ mod macho_signing;
 #[allow(non_upper_case_globals, unused)]
 #[cfg(target_os = "macos")]
 mod macos;
+mod notarization;
 #[allow(unused)]
 mod policy;
 #[allow(unused)]
@@ -1070,6 +1071,32 @@ fn command_extract(args: &ArgMatches) -> Result<(), AppleCodesignError> {
     Ok(())
 }
 
+fn command_find_transporter() -> Result<(), AppleCodesignError> {
+    if let Some(path) = crate::notarization::find_transporter_exe() {
+        println!("{}", path.display())
+    } else {
+        indoc::eprintdoc! {"
+            Apple Transporter not found.
+
+            This executable is needed to perform notarization.
+
+            Instructions for installing the application are available at
+            https://help.apple.com/itc/transporteruserguide/#/apdAbeb95d60
+
+            We looked in PATH and in common install locations but could not find
+            transporter.
+
+            To force usage of a specific executable, set the {env}
+            environment variable to the path of the executable to use.
+        ",
+            env=crate::notarization::TRANSPORTER_PATH_ENV_VARIABLE
+        };
+        std::process::exit(1);
+    }
+
+    Ok(())
+}
+
 fn command_generate_self_signed_certificate(args: &ArgMatches) -> Result<(), AppleCodesignError> {
     let algorithm = match args
         .value_of("algorithm")
@@ -1608,6 +1635,10 @@ fn main_impl() -> Result<(), AppleCodesignError> {
     );
 
     let app = app.subcommand(
+        Command::new("find-transporter").about("Find the path to Apple's transporter executable"),
+    );
+
+    let app = app.subcommand(
         Command::new("generate-self-signed-certificate")
             .about("Generate a self-signed certificate for code signing")
             .long_about(GENERATE_SELF_SIGNED_CERTIFICATE_ABOUT)
@@ -1843,6 +1874,7 @@ fn main_impl() -> Result<(), AppleCodesignError> {
         Some(("analyze-certificate", args)) => command_analyze_certificate(args),
         Some(("compute-code-hashes", args)) => command_compute_code_hashes(args),
         Some(("extract", args)) => command_extract(args),
+        Some(("find-transporter", _)) => command_find_transporter(),
         Some(("generate-self-signed-certificate", args)) => {
             command_generate_self_signed_certificate(args)
         }

@@ -63,6 +63,8 @@
   code requirements language rather than using Rust's default serialization.
 * ``rcodesign sign`` will now automatically set the team ID when the signing
   certificate contains one.
+* Added the ``rcodesign find-transporter`` command for finding the path to
+  Apple's *Transporter* program (which is used for notarization).
 
 0.8.0
 =====

@@ -131,6 +131,7 @@ dependencies = [
  "tempfile",
  "thiserror",
  "tugger-apple",
+ "which",
  "x509-certificate",
  "yasna",
 ]

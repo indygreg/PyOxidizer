@@ -133,6 +133,8 @@ mod macos;
 pub use macos::*;
 mod macho_signing;
 pub use macho_signing::*;
+pub mod notarization;
+pub use notarization::*;
 mod policy;
 pub use policy::*;
 mod signing;
