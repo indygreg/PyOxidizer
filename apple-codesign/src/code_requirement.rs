@@ -1170,7 +1170,11 @@ impl<'a> DerefMut for CodeRequirements<'a> {
 
 impl<'a> Display for CodeRequirements<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.0.fmt(f)
+        for (i, expr) in self.0.iter().enumerate() {
+            f.write_fmt(format_args!("{}: {};", i, expr))?;
+        }
+
+        Ok(())
     }
 }
 

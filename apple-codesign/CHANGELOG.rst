@@ -59,6 +59,8 @@
   of the Apple SDK used to build the binary. This matches the behavior of
   ``codesign``. There is also a new ``--runtime-version`` argument to
   ``rcodesign sign`` that can be used to override the runtime version.
+* When signing, code requirements are now printed in their human friendly
+  code requirements language rather than using Rust's default serialization.
 
 0.8.0
 =====
