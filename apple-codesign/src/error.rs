@@ -232,4 +232,13 @@ pub enum AppleCodesignError {
 
     #[error("error decoding base64 in notarization ticket: {0}")]
     NotarizationRecordDecodeFailure(base64::DecodeError),
+
+    #[error("do not support stapling {0:?} bundles")]
+    StapleUnsupportedBundleType(apple_bundles::BundlePackageType),
+
+    #[error("failed to find main executable in bundle")]
+    StapleMainExecutableNotFound,
+
+    #[error("do not know how to staple {0}")]
+    StapleUnsupportedPath(PathBuf),
 }

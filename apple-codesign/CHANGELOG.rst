@@ -65,6 +65,11 @@
   certificate contains one.
 * Added the ``rcodesign find-transporter`` command for finding the path to
   Apple's *Transporter* program (which is used for notarization).
+* Initial support for stapling. The ``rcodesign staple`` command can be used
+  to staple a notarization ticket to an entity. It currently only supports
+  stapling app bundles (``.app`` directories). The command will automatically
+  contact Apple's servers to obtain a notarization ticket and then staple
+  any found ticket to the requested entity.
 
 0.8.0
 =====

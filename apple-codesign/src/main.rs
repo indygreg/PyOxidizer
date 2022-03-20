@@ -36,6 +36,8 @@ mod signing;
 #[allow(unused)]
 mod specification;
 #[allow(unused)]
+mod stapling;
+#[allow(unused)]
 mod ticket_lookup;
 #[allow(unused)]
 mod tutorial;
@@ -1492,6 +1494,17 @@ fn command_sign(args: &ArgMatches) -> Result<(), AppleCodesignError> {
     Ok(())
 }
 
+fn command_staple(args: &ArgMatches) -> Result<(), AppleCodesignError> {
+    let path = args
+        .value_of("path")
+        .ok_or(AppleCodesignError::CliBadArgument)?;
+
+    let stapler = crate::stapling::Stapler::new()?;
+    stapler.staple_path(path)?;
+
+    Ok(())
+}
+
 fn command_verify(args: &ArgMatches) -> Result<(), AppleCodesignError> {
     let path = args
         .value_of("path")
@@ -1858,6 +1871,16 @@ fn main_impl() -> Result<(), AppleCodesignError> {
         ));
 
     let app = app.subcommand(
+        Command::new("staple")
+            .about("Staples a notarization ticket to an entity")
+            .arg(
+                Arg::new("path")
+                    .required(true)
+                    .help("Path to entity to attempt to staple"),
+            ),
+    );
+
+    let app = app.subcommand(
         Command::new("verify")
             .about("Verifies code signature data")
             .arg(
@@ -1889,6 +1912,7 @@ fn main_impl() -> Result<(), AppleCodesignError> {
             command_parse_code_signing_requirement(args)
         }
         Some(("sign", args)) => command_sign(args),
+        Some(("staple", args)) => command_staple(args),
         Some(("verify", args)) => command_verify(args),
         Some(("x509-oids", args)) => command_x509_oids(args),
         _ => Err(AppleCodesignError::CliUnknownCommand),

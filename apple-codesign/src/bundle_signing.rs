@@ -6,9 +6,10 @@
 
 use {
     crate::{
+        code_directory::CodeDirectoryBlob,
         code_resources::{CodeResourcesBuilder, CodeResourcesRule},
         error::AppleCodesignError,
-        macho::{AppleSignable, CodeSigningSlot, RequirementType},
+        macho::{AppleSignable, Blob, BlobData, CodeSigningSlot, RequirementType},
         macho_signing::MachOSigner,
         signing::{SettingsScope, SigningSettings},
     },
@@ -133,7 +134,7 @@ pub struct SignedMachOInfo {
 
     /// Designated code requirements string.
     ///
-    /// Typically pccupies a `<key>requirement</key>` in a
+    /// Typically occupies a `<key>requirement</key>` in a
     /// [crate::code_resources::CodeResources] file.
     pub designated_code_requirement: Option<String>,
 }
@@ -175,6 +176,34 @@ impl SignedMachOInfo {
             code_directory_blob,
             designated_code_requirement,
         })
+    }
+
+    /// Resolve the parsed code directory from stored data.
+    pub fn code_directory(&self) -> Result<Box<CodeDirectoryBlob<'_>>, AppleCodesignError> {
+        let blob = BlobData::from_blob_bytes(&self.code_directory_blob)?;
+
+        if let BlobData::CodeDirectory(cd) = blob {
+            Ok(cd)
+        } else {
+            Err(AppleCodesignError::BinaryNoCodeSignature)
+        }
+    }
+
+    /// Resolve the notarization ticket record name for this Mach-O file.
+    pub fn notarization_ticket_record_name(&self) -> Result<String, AppleCodesignError> {
+        let cd = self.code_directory()?;
+
+        let digest_type: u8 = cd.hash_type.into();
+
+        let mut digest = cd.digest_with(cd.hash_type)?;
+
+        // Digests appear to be truncated at 20 bytes / 40 characters.
+        digest.truncate(20);
+
+        let digest = hex::encode(digest);
+
+        // Unsure what the leading `2/` means.
+        Ok(format!("2/{}/{}", digest_type, digest))
     }
 }
 
