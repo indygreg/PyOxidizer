@@ -1746,9 +1746,18 @@ pub struct MachoTarget {
 pub fn parse_version_nibbles(v: u32) -> semver::Version {
     let major = v >> 16;
     let minor = v << 16 >> 24;
-    let patch = v & 0x255;
+    let patch = v & 0xff;
 
     semver::Version::new(major as _, minor as _, patch as _)
+}
+
+/// Convert a [semver::Version] to a u32 with nibble encoding used by Mach-O.
+pub fn semver_to_macho_target_version(version: &semver::Version) -> u32 {
+    let major = version.major as u32;
+    let minor = version.minor as u32;
+    let patch = version.patch as u32;
+
+    (major << 16) | ((minor & 0xff) << 8) | (patch & 0xff)
 }
 
 /// Attempt to resolve the mach-o targeting settings for a mach-o binary.
@@ -1959,5 +1968,21 @@ mod tests {
                 validate_macho_in_dir(&dir);
             }
         }
+    }
+
+    #[test]
+    fn version_nibbles() {
+        assert_eq!(
+            parse_version_nibbles(12 << 16 | 1 << 8 | 2),
+            semver::Version::new(12, 1, 2)
+        );
+        assert_eq!(
+            parse_version_nibbles(11 << 16 | 10 << 8 | 15),
+            semver::Version::new(11, 10, 15)
+        );
+        assert_eq!(
+            semver_to_macho_target_version(&semver::Version::new(12, 1, 2)),
+            12 << 16 | 1 << 8 | 2
+        );
     }
 }
