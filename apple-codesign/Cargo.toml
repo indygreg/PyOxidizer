@@ -39,6 +39,7 @@ scroll = "0.11"
 semver = "1.0"
 thiserror = "1.0"
 which = "4.2"
+xml-rs = "0.8"
 yasna = "0.5"
 
 [dependencies.apple-bundles]

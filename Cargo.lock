@@ -133,6 +133,7 @@ dependencies = [
  "tugger-apple",
  "which",
  "x509-certificate",
+ "xml-rs",
  "yasna",
 ]
 
