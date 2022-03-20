@@ -270,6 +270,11 @@ impl FileEntry {
         self.link.as_deref()
     }
 
+    /// Set the target of a link.
+    pub fn set_link_target(&mut self, target: PathBuf) {
+        self.link = Some(target);
+    }
+
     /// Obtain a new instance guaranteed to have file data stored in memory.
     pub fn to_memory(&self) -> Result<Self, std::io::Error> {
         Ok(Self {

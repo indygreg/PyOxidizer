@@ -8,6 +8,7 @@ use {
     crate::BundlePackageType,
     anyhow::{anyhow, Context, Result},
     std::path::{Path, PathBuf},
+    tugger_file_manifest::{is_executable, FileEntry, FileManifest},
 };
 
 /// An Apple bundle backed by a filesystem/directory.
@@ -248,6 +249,17 @@ impl DirectoryBundle {
             .collect::<Vec<_>>())
     }
 
+    /// Obtain all files in this bundle as a [FileManifest].
+    pub fn files_manifest(&self, traverse_nested: bool) -> Result<FileManifest> {
+        let mut m = FileManifest::default();
+
+        for f in self.files(traverse_nested)? {
+            m.add_file_entry(f.relative_path(), f.as_file_entry()?)?;
+        }
+
+        Ok(m)
+    }
+
     /// Obtain all nested bundles within this one.
     ///
     /// This walks the directory tree for directories that can be parsed
@@ -348,12 +360,30 @@ impl<'a> DirectoryBundleFile<'a> {
     ///
     /// If `None`, the file is not a symlink.
     pub fn symlink_target(&self) -> Result<Option<PathBuf>> {
-        let metadata = self.absolute_path.metadata()?;
+        let metadata = self.metadata()?;
 
         if metadata.file_type().is_symlink() {
             Ok(Some(std::fs::read_link(&self.absolute_path)?))
         } else {
             Ok(None)
         }
+    }
+
+    /// Obtain metadata for this file.
+    pub fn metadata(&self) -> Result<std::fs::Metadata> {
+        Ok(self.absolute_path.metadata()?)
+    }
+
+    /// Convert this instance to a [FileEntry].
+    pub fn as_file_entry(&self) -> Result<FileEntry> {
+        let metadata = self.metadata()?;
+
+        let mut entry = FileEntry::new_from_path(self.absolute_path(), is_executable(&metadata));
+
+        if let Some(target) = self.symlink_target()? {
+            entry.set_link_target(target);
+        }
+
+        Ok(entry)
     }
 }
