@@ -61,6 +61,8 @@
   ``rcodesign sign`` that can be used to override the runtime version.
 * When signing, code requirements are now printed in their human friendly
   code requirements language rather than using Rust's default serialization.
+* ``rcodesign sign`` will now automatically set the team ID when the signing
+  certificate contains one.
 
 0.8.0
 =====

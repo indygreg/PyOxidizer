@@ -1305,6 +1305,13 @@ fn command_sign(args: &ArgMatches) -> Result<(), AppleCodesignError> {
         }
     }
 
+    if let Some(team_id) = settings.set_team_id_from_signing_certificate() {
+        warn!(
+            "automatically setting team ID from signing certificate: {}",
+            team_id
+        );
+    }
+
     for cert in public_certificates {
         warn!("registering extra X.509 certificate");
         settings.chain_certificate(cert);

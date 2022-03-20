@@ -402,6 +402,35 @@ impl<'key> SigningSettings<'key> {
         self.team_id = Some(value.to_string());
     }
 
+    /// Attempt to set the team ID from the signing certificate.
+    ///
+    /// Apple signing certificates have the team ID embedded within the certificate.
+    /// By calling this method, the team ID embedded within the certificate will
+    /// be propagated to the code signature.
+    ///
+    /// Callers will typically want to call this after registering the signing
+    /// certificate with [Self::set_signing_key()] but before specifying an explicit
+    /// team ID via [Self::set_team_id()].
+    ///
+    /// Calling this will replace a registered team IDs if the signing
+    /// certificate contains a team ID. If no signing certificate is registered or
+    /// it doesn't contain a team ID, no changes will be made.
+    ///
+    /// Returns `Some` if a team ID was set from the signing certificate or `None`
+    /// otherwise.
+    pub fn set_team_id_from_signing_certificate(&mut self) -> Option<&str> {
+        if let Some((_, cert)) = &self.signing_key {
+            if let Some(team_id) = cert.apple_team_id() {
+                self.set_team_id(team_id);
+                Some(self.team_id.as_ref().expect("we just set a team id"))
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    }
+
     /// Obtain the binary identifier string for a given scope.
     pub fn binary_identifier(&self, scope: impl AsRef<SettingsScope>) -> Option<&str> {
         self.identifiers.get(scope.as_ref()).map(|s| s.as_str())
