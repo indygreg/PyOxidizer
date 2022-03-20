@@ -265,6 +265,7 @@ pub struct SigningSettings<'key> {
     designated_requirement: BTreeMap<SettingsScope, DesignatedRequirementMode>,
     code_signature_flags: BTreeMap<SettingsScope, CodeSignatureFlags>,
     executable_segment_flags: BTreeMap<SettingsScope, ExecutableSegmentFlags>,
+    runtime_version: BTreeMap<SettingsScope, semver::Version>,
     info_plist_data: BTreeMap<SettingsScope, Vec<u8>>,
     code_resources_data: BTreeMap<SettingsScope, Vec<u8>>,
 }
@@ -618,6 +619,21 @@ impl<'key> SigningSettings<'key> {
             .map(|x| x.as_slice())
     }
 
+    /// Obtain the runtime version for a given scope.
+    ///
+    /// The runtime version represents an OS version.
+    pub fn runtime_version(&self, scope: impl AsRef<SettingsScope>) -> Option<&semver::Version> {
+        self.runtime_version.get(scope.as_ref())
+    }
+
+    /// Set the runtime version to use in the code directory for a given scope.
+    ///
+    /// The runtime version corresponds to an OS version. The runtime version is usually
+    /// derived from the SDK version used to build the binary.
+    pub fn set_runtime_version(&mut self, scope: SettingsScope, version: semver::Version) {
+        self.runtime_version.insert(scope, version);
+    }
+
     /// Define the `Info.plist` content.
     ///
     /// Signatures can reference the digest of an external `Info.plist` file in
@@ -765,6 +781,12 @@ impl<'key> SigningSettings<'key> {
                 .collect::<BTreeMap<_, _>>(),
             executable_segment_flags: self
                 .executable_segment_flags
+                .clone()
+                .into_iter()
+                .filter_map(|(key, value)| key_map(key).map(|key| (key, value)))
+                .collect::<BTreeMap<_, _>>(),
+            runtime_version: self
+                .runtime_version
                 .clone()
                 .into_iter()
                 .filter_map(|(key, value)| key_map(key).map(|key| (key, value)))

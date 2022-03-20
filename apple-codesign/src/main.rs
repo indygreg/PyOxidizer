@@ -1383,6 +1383,15 @@ fn command_sign(args: &ArgMatches) -> Result<(), AppleCodesignError> {
         }
     }
 
+    if let Some(values) = args.values_of("runtime_version") {
+        for value in values {
+            let (scope, value) = parse_scoped_value(value)?;
+
+            let version = semver::Version::parse(value)?;
+            settings.set_runtime_version(scope, version);
+        }
+    }
+
     if let Some(values) = args.values_of("info_plist_path") {
         for value in values {
             let (scope, value) = parse_scoped_value(value)?;
@@ -1766,6 +1775,11 @@ fn main_impl() -> Result<(), AppleCodesignError> {
                         .takes_value(true)
                         .help("Executable segment flags to set")
                 )
+                .arg(
+                    Arg::new("runtime_version")
+                        .long("runtime-version")
+                        .takes_value(true)
+                        .help("Hardened runtime version to use (defaults to SDK version used to build binary)"))
                 .arg(
                     Arg::new("info_plist_path")
                         .long("info-plist-path")

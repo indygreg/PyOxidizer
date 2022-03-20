@@ -61,6 +61,9 @@ pub enum AppleCodesignError {
     #[error("bad string value in certificate: {0:?}")]
     CertificateCharset(bcder::string::CharSetError),
 
+    #[error("error parsing version string: {0}")]
+    VersionParse(#[from] semver::Error),
+
     #[error("unable to locate __TEXT segment")]
     MissingText,
 

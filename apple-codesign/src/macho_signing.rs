@@ -14,9 +14,10 @@ use {
         entitlements::plist_to_executable_segment_flags,
         error::AppleCodesignError,
         macho::{
-            create_superblob, find_macho_targeting, AppleSignable, Blob, BlobWrapperBlob,
-            CodeSigningMagic, CodeSigningSlot, Digest, DigestType, EmbeddedSignature,
-            EntitlementsBlob, EntitlementsDerBlob, RequirementSetBlob, RequirementType,
+            create_superblob, find_macho_targeting, parse_version_nibbles,
+            semver_to_macho_target_version, AppleSignable, Blob, BlobWrapperBlob, CodeSigningMagic,
+            CodeSigningSlot, Digest, DigestType, EmbeddedSignature, EntitlementsBlob,
+            EntitlementsDerBlob, RequirementSetBlob, RequirementType,
         },
         policy::derive_designated_requirements,
         signing::{DesignatedRequirementMode, SettingsScope, SigningSettings},
@@ -571,9 +572,19 @@ impl<'data> MachOSigner<'data> {
         let mut flags = CodeSignatureFlags::empty();
 
         match settings.code_signature_flags(SettingsScope::Main) {
-            Some(additional) => flags |= additional,
+            Some(additional) => {
+                info!(
+                    "adding code signature flags from signing settings: {:?}",
+                    additional
+                );
+                flags |= additional
+            }
             None => {
                 if let Some(previous_cd) = &previous_cd {
+                    info!(
+                        "copying code signature flags from previous code directory: {:?}",
+                        previous_cd.flags
+                    );
                     flags |= previous_cd.flags;
                 }
             }
@@ -583,12 +594,16 @@ impl<'data> MachOSigner<'data> {
         if settings.signing_key().is_none() {
             info!("creating ad-hoc signature");
             flags |= CodeSignatureFlags::ADHOC;
-        } else {
+        } else if flags.contains(CodeSignatureFlags::ADHOC) {
+            info!("removing ad-hoc code signature flag");
             flags -= CodeSignatureFlags::ADHOC;
         }
 
         // Remove linker signed flag because we're not a linker.
-        flags -= CodeSignatureFlags::LINKER_SIGNED;
+        if flags.contains(CodeSignatureFlags::LINKER_SIGNED) {
+            info!("removing linker signed flag from code signature (we're not a linker)");
+            flags -= CodeSignatureFlags::LINKER_SIGNED;
+        }
 
         // Code limit fields hold the file offset at which code digests stop. This
         // is the file offset in the `__LINKEDIT` segment when the embedded signature
@@ -644,9 +659,52 @@ impl<'data> MachOSigner<'data> {
             }
         }
 
+        // The runtime version is the SDK version from the targeting loader commands. Same
+        // u32 with nibbles encoding the version.
+        //
+        // If the runtime code signature flag is set, we also need to set the runtime version
+        // or else the activation of the hardened runtime is incomplete.
+
+        // First default to the existing runtime version, if present.
         let runtime = match &previous_cd {
-            Some(previous_cd) => previous_cd.runtime,
+            Some(previous_cd) => {
+                if let Some(version) = previous_cd.runtime {
+                    info!(
+                        "copying hardened runtime version {} from previous code directory",
+                        parse_version_nibbles(version)
+                    );
+                }
+                previous_cd.runtime
+            }
             None => None,
+        };
+
+        // If the settings defines a runtime version override, use it.
+        let runtime = match settings.runtime_version(SettingsScope::Main) {
+            Some(version) => {
+                info!(
+                    "using hardened runtime version {} from signing settings",
+                    version
+                );
+                Some(semver_to_macho_target_version(version))
+            }
+            None => runtime,
+        };
+
+        // If we still don't have a runtime but need one, derive from the target SDK.
+        let runtime = if runtime.is_none() && flags.contains(CodeSignatureFlags::RUNTIME) {
+            if let Some(target) = &target {
+                info!(
+                    "using hardened runtime version {} derived from SDK version",
+                    target.sdk_version
+                );
+                Some(semver_to_macho_target_version(&target.sdk_version))
+            } else {
+                warn!("hardened runtime version required but unable to derive suitable version; signature will likely fail Apple checks");
+                None
+            }
+        } else {
+            runtime
         };
 
         let code_hashes =

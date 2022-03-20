@@ -49,6 +49,16 @@
   complaining about ``slot digest contains digest for slot not in signature``
   for the ``Info (1)`` and ``Resources (3)`` slots. The condition it was
   complaining about was actually valid. (#512)
+* Better supported for setting the hardened runtime version. Previously, we
+  only set the hardened runtime version in a code signature if it was present
+  in the prior code signature. When signing unsigned binaries, this could
+  result in the hardened runtime version not being set, which would cause
+  Apple tools to complain about the hardened runtime not being enabled. Now,
+  if the ``runtime`` code signature flag is set on the signing operation and
+  no runtime version is present, we derive the runtime version from the version
+  of the Apple SDK used to build the binary. This matches the behavior of
+  ``codesign``. There is also a new ``--runtime-version`` argument to
+  ``rcodesign sign`` that can be used to override the runtime version.
 
 0.8.0
 =====
