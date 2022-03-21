@@ -407,6 +407,23 @@ fn add_certificate_source_args(app: Command) -> Command {
     )
 }
 
+fn add_notarization_upload_args(app: Command) -> Command {
+    app.arg(
+        Arg::new("api_issuer")
+            .long("api-issuer")
+            .takes_value(true)
+            .requires("api_key")
+            .help("App Store Connect Issuer ID (likely a UUID)"),
+    )
+    .arg(
+        Arg::new("api_key")
+            .long("api-key")
+            .takes_value(true)
+            .requires("api_issuer")
+            .help("App Store Connect API Key ID"),
+    )
+}
+
 fn command_analyze_certificate(args: &ArgMatches) -> Result<(), AppleCodesignError> {
     let mut certs = vec![];
 
@@ -1225,6 +1242,23 @@ fn command_keychain_export_certificate_chain(_args: &ArgMatches) -> Result<(), A
     ))
 }
 
+fn command_notarize_upload(args: &ArgMatches) -> Result<(), AppleCodesignError> {
+    let path = PathBuf::from(
+        args.value_of("path")
+            .expect("clap should have validated arguments"),
+    );
+    let api_issuer = args.value_of("api_issuer");
+    let api_key = args.value_of("api_key");
+
+    let mut notarizer = crate::notarization::Notarizer::new()?;
+
+    if let (Some(issuer), Some(key)) = (api_issuer, api_key) {
+        notarizer.set_api_key(issuer, key);
+    }
+
+    notarizer.notarize_path(&path)
+}
+
 fn command_parse_code_signing_requirement(args: &ArgMatches) -> Result<(), AppleCodesignError> {
     let path = args
         .value_of("input_path")
@@ -1749,6 +1783,17 @@ fn main_impl() -> Result<(), AppleCodesignError> {
            ),
         );
 
+    let app = app.subcommand(add_notarization_upload_args(
+        Command::new("notarize-upload")
+            .about("Upload an asset to Apple for notarization")
+            .arg(
+                Arg::new("path")
+                    .takes_value(true)
+                    .required(true)
+                    .help("Path to asset to upload"),
+            ),
+    ));
+
     let app = app.subcommand(
         Command::new("parse-code-signing-requirement")
             .about("Parse binary Code Signing Requirement data into a human readable string")
@@ -1908,6 +1953,7 @@ fn main_impl() -> Result<(), AppleCodesignError> {
         Some(("keychain-export-certificate-chain", args)) => {
             command_keychain_export_certificate_chain(args)
         }
+        Some(("notarize-upload", args)) => command_notarize_upload(args),
         Some(("parse-code-signing-requirement", args)) => {
             command_parse_code_signing_requirement(args)
         }

@@ -407,4 +407,26 @@ extensions and other fields against those produced via `Keychain Access` to
 make sure they align. It is unknown how much Apple's operating systems
 enforce requirements on the X.509 certificates. But it is a good idea to
 keep things as similar as possible.
-*/
+
+# Notarizing
+
+Notarization refers to the process of uploading content to Apple, waiting for Apple to
+inspect that upload and issue a signed notarization *ticket*, and then incorporating
+that ticket into the entity being signed.
+
+The presence of Apple notarization confers additional trust on the thing being signed.
+And various Apple operating systems impose varying requirements of notarization.
+
+In order to notarize with this project, you'll need to have a few things in place.
+
+1. Install Apple Transporter using the instructions at
+   https://help.apple.com/itc/transporteruserguide/#/apdAbeb95d60. Transporter is a
+   (Java) tool for speaking to Apple's servers. We currently use this tool because it
+   is readily available, supported, and easy-to-use.
+2. An App Store Connect API Key. Generate one at https://appstoreconnect.apple.com/access/api.
+   This requires an Apple Developer account, which requires paying money. You may need to
+   click around in the App Store Connect web UI to enable the API keys feature. Transporter
+   looks in various locations for the API Key. Run `iTMSTransporter -help upload` and read
+   the docs for the `-apiKey` argument. We recommend putting the keys in
+   `~/.appstoreconnect/private_keys/` because that is a descriptive directory name.
+ */

@@ -218,6 +218,21 @@ pub enum AppleCodesignError {
     #[error("error producing universal Mach-O binary: {0}")]
     UniversalMachO(#[from] UniversalMachOError),
 
+    #[error("zip error: {0}")]
+    ZipError(#[from] zip::result::ZipError),
+
+    #[error("error writing app metadata XML: {0}")]
+    AppMetadataXml(xml::writer::Error),
+
+    #[error("Apple Transporter executable not found")]
+    TransporterNotFound,
+
+    #[error("do not know how to notarize {0}")]
+    NotarizeUnsupportedPath(PathBuf),
+
+    #[error("failure when performing transporter upload (see logs)")]
+    NotarizeUploadFailure,
+
     #[error("notarization record not in response: {0}")]
     NotarizationRecordNotInResponse(String),
 
@@ -232,6 +247,9 @@ pub enum AppleCodesignError {
 
     #[error("error decoding base64 in notarization ticket: {0}")]
     NotarizationRecordDecodeFailure(base64::DecodeError),
+
+    #[error("unable to determine app platform from bundle")]
+    BundleUnknownAppPlatform,
 
     #[error("do not support stapling {0:?} bundles")]
     StapleUnsupportedBundleType(apple_bundles::BundlePackageType),

@@ -70,6 +70,9 @@
   stapling app bundles (``.app`` directories). The command will automatically
   contact Apple's servers to obtain a notarization ticket and then staple
   any found ticket to the requested entity.
+* Initial support for notarizing. The ``rcodesign notarize-upload`` command can
+  be used to upload an entity to Apple. It currently only supports macOS app
+  bundles (``.app`` directories).
 
 0.8.0
 =====
