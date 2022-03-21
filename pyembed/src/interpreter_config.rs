@@ -496,6 +496,21 @@ pub fn python_interpreter_config_to_py_config(
                 "setting module_search_paths",
             )?;
         }
+
+        // Make sure to append `$PYTHONPATH` if the current profile is not isolated since setting
+        // `module_search_paths_set` to 1 means that Python will not expand and add it to
+        // `sys.path` for us.
+        if let PythonInterpreterProfile::Python = value.profile {
+            if let Ok(path) = std::env::var("PYTHONPATH") {
+                for path in std::env::split_paths(&path) {
+                    append_wide_string_list_from_path(
+                        &mut config.module_search_paths,
+                        &path,
+                        "setting module_search_paths",
+                    )?;
+                }
+            }
+        }
     }
     if let Some(executable) = &value.executable {
         set_config_string_from_path(
