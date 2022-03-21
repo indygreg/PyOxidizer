@@ -67,6 +67,9 @@ pub enum AppleCodesignError {
     #[error("error parsing version string: {0}")]
     VersionParse(#[from] semver::Error),
 
+    #[error("JWT error: {0}")]
+    Jwt(#[from] jsonwebtoken::errors::Error),
+
     #[error("unable to locate __TEXT segment")]
     MissingText,
 

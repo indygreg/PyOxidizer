@@ -5,6 +5,8 @@
 #[allow(unused)]
 mod app_metadata;
 #[allow(unused)]
+mod app_store_connect;
+#[allow(unused)]
 mod apple_certificates;
 #[allow(unused)]
 mod bundle_signing;

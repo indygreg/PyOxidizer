@@ -117,6 +117,7 @@ dependencies = [
  "goblin",
  "hex",
  "indoc",
+ "jsonwebtoken 8.0.1",
  "log",
  "md-5 0.10.1",
  "once_cell",
@@ -2520,7 +2521,21 @@ dependencies = [
  "ring",
  "serde",
  "serde_json",
- "simple_asn1",
+ "simple_asn1 0.4.1",
+]
+
+[[package]]
+name = "jsonwebtoken"
+version = "8.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "012bb02250fdd38faa5feee63235f7a459974440b9b57593822414c31f92839e"
+dependencies = [
+ "base64 0.13.0",
+ "pem 1.0.2",
+ "ring",
+ "serde",
+ "serde_json",
+ "simple_asn1 0.6.1",
 ]
 
 [[package]]
@@ -3222,7 +3237,7 @@ dependencies = [
  "bytes",
  "chrono",
  "hyperx",
- "jsonwebtoken",
+ "jsonwebtoken 7.2.0",
  "once_cell",
  "reqwest",
  "serde",
@@ -4013,6 +4028,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a993555f31e5a609f617c12db6250dedcac1b0a85076912c436e6fc9b2c8e6a3"
 
 [[package]]
+name = "quickcheck"
+version = "1.0.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "588f6378e4dd99458b60ec275b4477add41ce4fa9f64dcba6f15adccb19b50d6"
+dependencies = [
+ "rand 0.8.5",
+]
+
+[[package]]
 name = "quote"
 version = "1.0.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4426,7 +4450,7 @@ dependencies = [
  "pem 0.8.3",
  "rand 0.7.3",
  "sha2 0.9.9",
- "simple_asn1",
+ "simple_asn1 0.4.1",
  "subtle",
  "thiserror",
  "zeroize",
@@ -4963,6 +4987,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "simple_asn1"
+version = "0.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4a762b1c38b9b990c694b9c2f8abe3372ce6a9ceaae6bca39cfc46e054f45745"
+dependencies = [
+ "num-bigint 0.4.3",
+ "num-traits",
+ "thiserror",
+ "time 0.3.7",
+]
+
+[[package]]
 name = "siphasher"
 version = "0.3.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5374,6 +5410,7 @@ dependencies = [
  "itoa 1.0.1",
  "libc",
  "num_threads",
+ "quickcheck",
  "time-macros",
 ]
 
