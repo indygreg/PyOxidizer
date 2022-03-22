@@ -171,6 +171,62 @@ certificate pair to a pair of files. The destination files will have
 When the certificate is written to a file, it isn't printed to stdout.
 ";
 
+const NOTARIZE_ABOUT: &str = "\
+Submit a notarization request to Apple.
+
+This command is used to submit an asset to Apple for notarization. Given
+a path to an asset with a code signature, this command will invoke Apple's
+Transporter tool to upload the asset to Apple for them to notarize. *Notarize*
+just means that Apple inspects the uploaded asset and if it validates their
+requirements they will issue a *notarization ticket* that is proof that they
+approved of it. This ticket is then added to the uploaded asset in a process
+called *stapling*.
+
+# Use of Apple Transporter
+
+Upload to Apple requires Apple's Transporter program. This is a Java program
+that does the heavy lifting of sending data to Apple. The program is available
+for Linux, Windows, and macOS and instructions for downloading it can be found
+at https://help.apple.com/itc/transporteruserguide/#/.
+
+This command will look for the executable in the following locations:
+
+1) `APPLE_CODESIGN_TRANSPORTER_EXE` environment variable.
+2) An `iTMSTransporter` executable in PATH
+3) In the default install locations used by Apple's installation docs
+   (e.g. `/usr/local/itms/bin/iTMSTransporter` and
+   `%ProgramFiles%/itms/iTMSTransporter.cmd`).
+
+# App Store Connect API Key
+
+In order to communicate with Apple's servers, you need an App Store Connect
+API Key. This requires an Apple Developer account. You can generate an
+API Key at https://appstoreconnect.apple.com/access/api.
+
+You will need an API Key `AuthKey_<ID>.p8` file on disk in one of the
+default locations used by Apple Transporter. These are
+`$(pwd)/private_keys/`, `~/private_keys/`, `~/.private_keys/`, and
+`~/.appstoreconnect/private_keys/`.
+
+You need to provide both the Key ID and IssuerID when invoking this command.
+Both can be found at https://appstoreconnect.apple.com/access/api.
+
+# Modes of Operation
+
+By default, the `notarize` command will initiate an upload to Apple and exit
+once the upload is complete.
+
+Once an upload is performed, Apple will asynchronously process the uploaded
+content. This can take seconds to minutes.
+
+To poll Apple's servers and wait on the server-side processing to finish,
+specify `--wait`. This will query the state of the processing every few seconds
+until it is finished, the max wait time is reached, or an error occurs.
+
+To automatically staple an asset after server-side processing has finished,
+specify `--staple`. This implies `--wait`.
+";
+
 const PARSE_CODE_SIGNING_REQUIREMENT_ABOUT: &str = "\
 Parse code signing requirement data into human readable text.
 
@@ -1816,6 +1872,7 @@ fn main_impl() -> Result<(), AppleCodesignError> {
         app.subcommand(add_notarization_upload_args(
             Command::new("notarize")
                 .about("Upload an asset to Apple for notarization and possibly staple it")
+                .long_about(NOTARIZE_ABOUT)
                 .arg(
                     Arg::new("wait")
                         .long("wait")
