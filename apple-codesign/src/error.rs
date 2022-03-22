@@ -245,6 +245,12 @@ pub enum AppleCodesignError {
     #[error("reached time limit waiting for notarization to complete")]
     NotarizeWaitLimitReached,
 
+    #[error("notarization rejected: StatusCode={0}; StatusMessage={1}")]
+    NotarizeRejected(i64, String),
+
+    #[error("notarization is incomplete (no status code and message)")]
+    NotarizeIncomplete,
+
     #[error("no log file URL in notarization status")]
     NotarizeNoLogUrl,
 

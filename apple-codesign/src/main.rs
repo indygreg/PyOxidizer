@@ -1244,14 +1244,15 @@ fn command_keychain_export_certificate_chain(_args: &ArgMatches) -> Result<(), A
     ))
 }
 
-fn command_notarize_upload(args: &ArgMatches) -> Result<(), AppleCodesignError> {
+fn command_notarize(args: &ArgMatches) -> Result<(), AppleCodesignError> {
     let path = PathBuf::from(
         args.value_of("path")
             .expect("clap should have validated arguments"),
     );
     let api_issuer = args.value_of("api_issuer");
     let api_key = args.value_of("api_key");
-    let wait = args.is_present("wait");
+    let staple = args.is_present("staple");
+    let wait = args.is_present("wait") || staple;
     let max_wait_seconds = args
         .value_of("max_wait_seconds")
         .expect("argument should have default value");
@@ -1268,7 +1269,21 @@ fn command_notarize_upload(args: &ArgMatches) -> Result<(), AppleCodesignError> 
         notarizer.set_api_key(issuer, key)?;
     }
 
-    notarizer.notarize_path(&path, wait_limit)?;
+    let upload = notarizer.notarize_path(&path, wait_limit)?;
+
+    if staple {
+        match upload {
+            crate::notarization::NotarizationUpload::UploadId(_) => {
+                panic!(
+                    "NotarizationUpload::UploadId should not be returned if we waited successfully"
+                );
+            }
+            crate::notarization::NotarizationUpload::DevIdResponse(_) => {
+                let stapler = crate::stapling::Stapler::new()?;
+                stapler.staple_path(&path)?;
+            }
+        }
+    }
 
     Ok(())
 }
@@ -1797,28 +1812,32 @@ fn main_impl() -> Result<(), AppleCodesignError> {
            ),
         );
 
-    let app = app.subcommand(add_notarization_upload_args(
-        Command::new("notarize-upload")
-            .about("Upload an asset to Apple for notarization")
-            .arg(
-                Arg::new("wait")
-                    .long("wait")
-                    .help("Whether to wait for upload processing to complete"),
-            )
-            .arg(
-                Arg::new("max_wait_seconds")
-                    .long("max-wait-seconds")
-                    .takes_value(true)
-                    .default_value("600")
-                    .help("Maximum time in seconds to wait for the upload result"),
-            )
-            .arg(
-                Arg::new("path")
-                    .takes_value(true)
-                    .required(true)
-                    .help("Path to asset to upload"),
-            ),
-    ));
+    let app =
+        app.subcommand(add_notarization_upload_args(
+            Command::new("notarize")
+                .about("Upload an asset to Apple for notarization and possibly staple it")
+                .arg(
+                    Arg::new("wait")
+                        .long("wait")
+                        .help("Whether to wait for upload processing to complete"),
+                )
+                .arg(
+                    Arg::new("max_wait_seconds")
+                        .long("max-wait-seconds")
+                        .takes_value(true)
+                        .default_value("600")
+                        .help("Maximum time in seconds to wait for the upload result"),
+                )
+                .arg(Arg::new("staple").long("staple").help(
+                    "Staple the notarization ticket after successful upload (implies --wait)",
+                ))
+                .arg(
+                    Arg::new("path")
+                        .takes_value(true)
+                        .required(true)
+                        .help("Path to asset to upload"),
+                ),
+        ));
 
     let app = app.subcommand(
         Command::new("parse-code-signing-requirement")
@@ -1979,7 +1998,7 @@ fn main_impl() -> Result<(), AppleCodesignError> {
         Some(("keychain-export-certificate-chain", args)) => {
             command_keychain_export_certificate_chain(args)
         }
-        Some(("notarize-upload", args)) => command_notarize_upload(args),
+        Some(("notarize", args)) => command_notarize(args),
         Some(("parse-code-signing-requirement", args)) => {
             command_parse_code_signing_requirement(args)
         }

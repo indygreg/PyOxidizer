@@ -176,6 +176,24 @@ impl DevIdPlusInfoResponse {
     pub fn is_done(&self) -> bool {
         self.dev_id_plus.status_code.is_some() && self.dev_id_plus.log_file_url.is_some()
     }
+
+    /// Convert the instance into a [Result].
+    ///
+    /// Will yield [Err] if the notarization/upload was not successful.
+    pub fn into_result(self) -> Result<Self, AppleCodesignError> {
+        if let (Some(code), Some(message)) = (
+            self.dev_id_plus.status_code,
+            &self.dev_id_plus.status_message,
+        ) {
+            if code == 0 {
+                Ok(self)
+            } else {
+                Err(AppleCodesignError::NotarizeRejected(code, message.clone()))
+            }
+        } else {
+            Err(AppleCodesignError::NotarizeIncomplete)
+        }
+    }
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -188,7 +206,7 @@ pub struct DevIdPlus {
     pub request_status: u64,
     #[serde(rename = "RequestUUID")]
     pub request_uuid: String,
-    pub status_code: Option<u64>,
+    pub status_code: Option<i64>,
     pub status_message: Option<String>,
 }
 

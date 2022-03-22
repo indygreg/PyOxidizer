@@ -447,6 +447,9 @@ impl Notarizer {
             return Ok(NotarizationUpload::UploadId(upload_id));
         };
 
+        // Make sure notarization was successful.
+        let status = status.into_result()?;
+
         Ok(NotarizationUpload::DevIdResponse(status))
     }
 
