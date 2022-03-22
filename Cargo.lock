@@ -92,16 +92,6 @@ checksum = "4361135be9122e0870de935d7c439aef945b9f9ddd4199a553b5270b49c82a27"
 [[package]]
 name = "apple-bundles"
 version = "0.7.0"
-dependencies = [
- "anyhow",
- "plist",
- "tugger-file-manifest 0.8.0-pre",
- "walkdir",
-]
-
-[[package]]
-name = "apple-bundles"
-version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9028cd015adf1bcc3fe29abd6cb66fe20ad9b26bdeb8794be9f17685c0142495"
 dependencies = [
@@ -112,11 +102,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "apple-bundles"
+version = "0.8.0-pre"
+dependencies = [
+ "anyhow",
+ "plist",
+ "tugger-file-manifest 0.8.0-pre",
+ "walkdir",
+]
+
+[[package]]
 name = "apple-codesign"
 version = "0.9.0"
 dependencies = [
  "anyhow",
- "apple-bundles 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "apple-bundles 0.8.0-pre",
  "base64 0.13.0",
  "bcder",
  "bitflags",
@@ -164,7 +164,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f3256d2339960f23441ad3d7d6e85511f6d7412670304227cede2ebd35b29ec0"
 dependencies = [
  "anyhow",
- "apple-bundles 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "apple-bundles 0.7.0",
  "base64 0.13.0",
  "bcder",
  "bitflags",
@@ -5746,7 +5746,7 @@ name = "tugger"
 version = "0.15.0-pre"
 dependencies = [
  "anyhow",
- "apple-bundles 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "apple-bundles 0.8.0-pre",
  "apple-codesign 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "atty",
  "chrono",
@@ -5836,7 +5836,7 @@ name = "tugger-code-signing"
 version = "0.7.0-pre"
 dependencies = [
  "anyhow",
- "apple-bundles 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "apple-bundles 0.8.0-pre",
  "apple-codesign 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "bcder",
  "cryptographic-message-syntax 0.13.0-pre",

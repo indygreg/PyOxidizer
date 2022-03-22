@@ -52,8 +52,8 @@ yasna = "0.5"
 zip = "0.5"
 
 [dependencies.apple-bundles]
-# path = "../apple-bundles"
-version = "0.7.0"
+path = "../apple-bundles"
+version = "0.8.0-pre"
 
 [dependencies.cryptographic-message-syntax]
 path = "../cryptographic-message-syntax"
