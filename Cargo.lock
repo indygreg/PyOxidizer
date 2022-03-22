@@ -151,7 +151,7 @@ dependencies = [
  "tugger-apple 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "uuid",
  "which",
- "x509-certificate 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "x509-certificate 0.11.0-pre",
  "xml-rs",
  "yasna",
  "zip",
@@ -199,7 +199,7 @@ dependencies = [
  "tugger-apple 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "uuid",
  "which",
- "x509-certificate 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "x509-certificate 0.10.0",
  "xml-rs",
  "yasna",
  "zip",
@@ -1309,7 +1309,7 @@ dependencies = [
  "pem 1.0.2",
  "reqwest",
  "ring",
- "x509-certificate 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "x509-certificate 0.11.0-pre",
 ]
 
 [[package]]
@@ -1325,7 +1325,7 @@ dependencies = [
  "pem 1.0.2",
  "reqwest",
  "ring",
- "x509-certificate 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "x509-certificate 0.10.0",
 ]
 
 [[package]]
@@ -5787,7 +5787,7 @@ dependencies = [
  "tugger-windows-codesign",
  "tugger-wix",
  "walkdir",
- "x509-certificate 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "x509-certificate 0.11.0-pre",
 ]
 
 [[package]]
@@ -5863,7 +5863,7 @@ dependencies = [
  "thiserror",
  "tugger-file-manifest 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-windows-codesign",
- "x509-certificate 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "x509-certificate 0.11.0-pre",
  "yasna",
 ]
 
@@ -6531,6 +6531,8 @@ dependencies = [
 [[package]]
 name = "x509-certificate"
 version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "835d97de4badde1d127b457d0e083df5ec34d8ea04168efa1d2c9dedf8b4aeef"
 dependencies = [
  "bcder",
  "bytes",
@@ -6543,9 +6545,7 @@ dependencies = [
 
 [[package]]
 name = "x509-certificate"
-version = "0.10.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "835d97de4badde1d127b457d0e083df5ec34d8ea04168efa1d2c9dedf8b4aeef"
+version = "0.11.0-pre"
 dependencies = [
  "bcder",
  "bytes",
