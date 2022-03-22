@@ -95,7 +95,7 @@ version = "0.7.0-pre"
 dependencies = [
  "anyhow",
  "plist",
- "tugger-file-manifest",
+ "tugger-file-manifest 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "walkdir",
 ]
 
@@ -1074,7 +1074,7 @@ dependencies = [
  "chrono",
  "is_executable",
  "thiserror",
- "tugger-file-manifest",
+ "tugger-file-manifest 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -1406,7 +1406,7 @@ dependencies = [
  "tar",
  "thiserror",
  "tokio",
- "tugger-file-manifest",
+ "tugger-file-manifest 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "url",
  "xz2",
  "zstd",
@@ -3945,7 +3945,7 @@ dependencies = [
  "tugger-binary-analysis",
  "tugger-code-signing",
  "tugger-common 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "tugger-file-manifest",
+ "tugger-file-manifest 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-licensing",
  "tugger-rust-toolchain",
  "tugger-windows",
@@ -3996,7 +3996,7 @@ dependencies = [
  "pyo3",
  "python-packaging",
  "python-packed-resources",
- "tugger-file-manifest",
+ "tugger-file-manifest 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "winapi",
  "zip",
 ]
@@ -4019,7 +4019,7 @@ dependencies = [
  "spdx",
  "tempfile",
  "time 0.3.7",
- "tugger-file-manifest",
+ "tugger-file-manifest 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-licensing",
  "walkdir",
  "zip",
@@ -5657,7 +5657,7 @@ dependencies = [
  "tugger-apple",
  "tugger-code-signing",
  "tugger-common 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "tugger-file-manifest",
+ "tugger-file-manifest 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-snapcraft",
  "tugger-windows",
  "tugger-windows-codesign",
@@ -5707,7 +5707,7 @@ dependencies = [
  "slog",
  "tempfile",
  "thiserror",
- "tugger-file-manifest",
+ "tugger-file-manifest 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-windows-codesign",
  "x509-certificate 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "yasna",
@@ -5751,10 +5751,16 @@ dependencies = [
 
 [[package]]
 name = "tugger-file-manifest"
-version = "0.7.0-pre"
+version = "0.7.0"
 dependencies = [
  "tempfile",
 ]
+
+[[package]]
+name = "tugger-file-manifest"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e842a6da11d7941277dbbe727745db0d86cb5b36f3028635524ecf30b4c12983"
 
 [[package]]
 name = "tugger-licensing"
@@ -5793,7 +5799,7 @@ dependencies = [
  "tempfile",
  "toml",
  "tugger-common 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "tugger-file-manifest",
+ "tugger-file-manifest 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "xz2",
  "zstd",
 ]
@@ -5809,7 +5815,7 @@ dependencies = [
  "serde_yaml",
  "slog",
  "tugger-common 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "tugger-file-manifest",
+ "tugger-file-manifest 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -5854,7 +5860,7 @@ dependencies = [
  "slog",
  "tempfile",
  "tugger-common 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "tugger-file-manifest",
+ "tugger-file-manifest 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-windows",
  "tugger-windows-codesign",
  "url",

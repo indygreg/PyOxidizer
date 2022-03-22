@@ -493,7 +493,7 @@ dependencies = [
 
 [[package]]
 name = "tugger-file-manifest"
-version = "0.7.0-pre"
+version = "0.7.0"
 
 [[package]]
 name = "tugger-licensing"
