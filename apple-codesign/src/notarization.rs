@@ -36,7 +36,7 @@ const TRANSPORTER_DEFAULT_PATH_POSIX: &str = "/usr/local/itms/bin/iTMSTransporte
 
 /// Find the transporter executable to use for notarization.
 ///
-/// See https://help.apple.com/itc/transporteruserguide/#/apdAbeb95d60 for instructions
+/// See <https://help.apple.com/itc/transporteruserguide/#/apdAbeb95d60> for instructions
 /// on installing Transporter and where default installs are often located.
 pub fn find_transporter_exe() -> Option<PathBuf> {
     if let Some(path) = std::env::var_os(TRANSPORTER_PATH_ENV_VARIABLE) {
@@ -418,7 +418,7 @@ impl Notarizer {
 
     /// Attempt to notarize an on-disk bundle.
     ///
-    /// If [wait_limit] is provided, we will wait for the upload to finish processing.
+    /// If `wait_limit` is provided, we will wait for the upload to finish processing.
     /// Otherwise, this returns as soon as the upload is performed.
     pub fn notarize_bundle(
         &self,
@@ -545,10 +545,9 @@ impl Notarizer {
 
     /// Wait on the upload of an app store package to complete.
     ///
-    /// This will sit in a loop and poll Apple every [Self::wait_poll_interval]
-    /// until the upload processing appears to complete.
+    /// This will sit in a loop and poll Apple until the upload processing appears to complete.
     ///
-    /// It will poll for up to [wait_limit] before returning `Err` if nothing
+    /// It will poll for up to `wait_limit` before returning `Err` if nothing
     /// happens in time.
     pub fn wait_on_app_store_package_upload(
         &self,

@@ -5,7 +5,7 @@
 /*! App metadata profiles
 
 This module provides definitions of the App Metadata Profile data format.
-See also https://help.apple.com/asc/appsspec/#/itc5c07bfa5b.
+See also <https://help.apple.com/asc/appsspec/#/itc5c07bfa5b>.
 
 Apple's official documentation can be a bit lacking in specifics. You
 can find the templates that Apple's own tools use within the

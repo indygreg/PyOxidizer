@@ -420,10 +420,10 @@ And various Apple operating systems impose varying requirements of notarization.
 In order to notarize with this project, you'll need to have a few things in place.
 
 1. Install Apple Transporter using the instructions at
-   https://help.apple.com/itc/transporteruserguide/#/apdAbeb95d60. Transporter is a
+   <https://help.apple.com/itc/transporteruserguide/#/apdAbeb95d60>. Transporter is a
    (Java) tool for speaking to Apple's servers. We currently use this tool because it
    is readily available, supported, and easy-to-use.
-2. An App Store Connect API Key. Generate one at https://appstoreconnect.apple.com/access/api.
+2. An App Store Connect API Key. Generate one at <https://appstoreconnect.apple.com/access/api>.
    This requires an Apple Developer account, which requires paying money. You may need to
    click around in the App Store Connect web UI to enable the API keys feature. Transporter
    looks in various locations for the API Key. Run `iTMSTransporter -help upload` and read
