@@ -1,10 +1,11 @@
 # apple-codesign
 
 `apple-codesign` is a crate implementing functionality related to code signing
-on Apple platforms in pure Rust (no use of `codesign` or other proprietary
-Apple tools).
+on Apple platforms. Where possible, functionality is implemented in pure Rust
+and doesn't rely on `codesign` or other proprietary Apple tools.
 
-See the crate documentation for more.
+See the crate documentation at https://docs.rs/apple-codesign/latest/apple_codesign/
+for more.
 
 # `rcodesign` CLI
 

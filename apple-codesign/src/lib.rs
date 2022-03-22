@@ -4,16 +4,16 @@
 
 //! Binary code signing for Apple platforms.
 //!
-//! This crate provides a pure Rust implementation of binary code signing
-//! for Apple operating systems (like macOS and iOS). A goal of this crate
-//! is to facilitate reimplementing functionality from Apple's `codesign`
-//! and other similar tools without a dependency on an Apple machine or
-//! operating system: you should be able to sign Apple binaries from Linux
-//! or Windows if you wanted to.
+//! This crate implements application code signing for Apple operating systems
+//! (like macOS and iOS). A goal of this crate is to serve as a stand-in
+//! replacement for Apple's `codesign` (and similar tools) without a dependency
+//! on an Apple hardware device or operating system: you should be able to
+//! sign and release Apple binaries from Linux, Windows, or other non-Apple
+//! environments if you want to.
 //!
-//! **This crate is in its early stages of development and there are many
-//! rough edges. Use at your own risk. Always validate signed binaries
-//! with Apple's `codesign` tool to ensure correctness.**
+//! Apple code signing is complex and there are likely several areas where
+//! this crate and Apple's implementations don't align. It is highly recommended
+//! to validate output against what Apple's official tools produce.
 //!
 //! # Features and Capabilities
 //!
@@ -41,6 +41,10 @@
 //!   Mach-O binaries outside the main executable will also be signed. Non
 //!   Mach-O/code files will be digested. A `CodeResources` XML file will be
 //!   produced.
+//! * Submit notarization requests to Apple and query notarization status. (Only
+//!   macOS `.app` bundles are currently supported.)
+//! * Retrieve notarization tickets from Apple and staple. (Only bundles are currently
+//!   supported.)
 //!
 //! There are a number of missing features and capabilities from this crate
 //! that we hope are eventually implemented:
@@ -58,10 +62,8 @@
 //!   based stores (such as Yubikeys). We also don't look for necessary X.509
 //!   certificate extensions that Apple's verification likely mandates, which we should
 //!   do and enforce.
-//! * Notarization support. The notarization ticket appears to be part of the embedded
-//!   signature data. We don't support parsing this blob. It should be possible to
-//!   coerce this crate into emitting a notarization blob in the signature data. But
-//!   this isn't currently implemented as part of our high-level signing primitives.
+//! * Not all signable formats can be notarized. Support for `.dmg` files is a major
+//!   limitation.
 //!
 //! There is missing features and functionality that will likely never be implemented:
 //!
