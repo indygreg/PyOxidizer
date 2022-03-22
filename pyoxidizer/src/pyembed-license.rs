@@ -134,6 +134,11 @@ pub fn pyembed_licenses() -> anyhow::Result<Vec<tugger_licensing::LicensedCompon
     res.push(component);
 
     let mut component =
+        tugger_licensing::LicensedComponent::new_spdx("getrandom", "Apache-2.0 OR MIT")?;
+    component.set_flavor(tugger_licensing::ComponentFlavor::RustCrate);
+    res.push(component);
+
+    let mut component =
         tugger_licensing::LicensedComponent::new_spdx("indoc", "Apache-2.0 OR MIT")?;
     component.set_flavor(tugger_licensing::ComponentFlavor::RustCrate);
     res.push(component);
@@ -229,6 +234,11 @@ pub fn pyembed_licenses() -> anyhow::Result<Vec<tugger_licensing::LicensedCompon
     res.push(component);
 
     let mut component =
+        tugger_licensing::LicensedComponent::new_spdx("ppv-lite86", "Apache-2.0 OR MIT")?;
+    component.set_flavor(tugger_licensing::ComponentFlavor::RustCrate);
+    res.push(component);
+
+    let mut component =
         tugger_licensing::LicensedComponent::new_spdx("proc-macro2", "Apache-2.0 OR MIT")?;
     component.set_flavor(tugger_licensing::ComponentFlavor::RustCrate);
     res.push(component);
@@ -283,11 +293,30 @@ pub fn pyembed_licenses() -> anyhow::Result<Vec<tugger_licensing::LicensedCompon
     res.push(component);
 
     let mut component =
+        tugger_licensing::LicensedComponent::new_spdx("quickcheck", "MIT OR Unlicense")?;
+    component.set_flavor(tugger_licensing::ComponentFlavor::RustCrate);
+    res.push(component);
+
+    let mut component =
         tugger_licensing::LicensedComponent::new_spdx("quote", "Apache-2.0 OR MIT")?;
     component.set_flavor(tugger_licensing::ComponentFlavor::RustCrate);
     res.push(component);
 
     let mut component = tugger_licensing::LicensedComponent::new_spdx("quoted_printable", "0BSD")?;
+    component.set_flavor(tugger_licensing::ComponentFlavor::RustCrate);
+    res.push(component);
+
+    let mut component = tugger_licensing::LicensedComponent::new_spdx("rand", "Apache-2.0 OR MIT")?;
+    component.set_flavor(tugger_licensing::ComponentFlavor::RustCrate);
+    res.push(component);
+
+    let mut component =
+        tugger_licensing::LicensedComponent::new_spdx("rand_chacha", "Apache-2.0 OR MIT")?;
+    component.set_flavor(tugger_licensing::ComponentFlavor::RustCrate);
+    res.push(component);
+
+    let mut component =
+        tugger_licensing::LicensedComponent::new_spdx("rand_core", "Apache-2.0 OR MIT")?;
     component.set_flavor(tugger_licensing::ComponentFlavor::RustCrate);
     res.push(component);
 
@@ -421,6 +450,13 @@ pub fn pyembed_licenses() -> anyhow::Result<Vec<tugger_licensing::LicensedCompon
 
     let mut component =
         tugger_licensing::LicensedComponent::new_spdx("walkdir", "MIT OR Unlicense")?;
+    component.set_flavor(tugger_licensing::ComponentFlavor::RustCrate);
+    res.push(component);
+
+    let mut component = tugger_licensing::LicensedComponent::new_spdx(
+        "wasi",
+        "Apache-2.0 OR Apache-2.0 WITH LLVM-exception OR MIT",
+    )?;
     component.set_flavor(tugger_licensing::ComponentFlavor::RustCrate);
     res.push(component);
 
