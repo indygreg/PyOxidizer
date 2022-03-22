@@ -60,8 +60,8 @@ path = "../cryptographic-message-syntax"
 version = "0.13.0-pre"
 
 [dependencies.tugger-apple]
-# path = "../tugger-apple"
-version = "0.6.0"
+path = "../tugger-apple"
+version = "0.7.0-pre"
 
 [dependencies.x509-certificate]
 path = "../x509-certificate"
