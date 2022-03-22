@@ -1,6 +1,6 @@
 [package]
 name = "apple-codesign"
-version = "0.9.0"
+version = "0.10.0-pre"
 authors = ["Gregory Szorc <gregory.szorc@gmail.com>"]
 edition = "2021"
 license = "MPL-2.0"
