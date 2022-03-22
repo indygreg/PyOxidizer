@@ -230,11 +230,23 @@ pub enum AppleCodesignError {
     #[error("Apple Transporter executable not found")]
     TransporterNotFound,
 
+    #[error("Could not find App Store Connect API key in default search locations")]
+    AppStoreConnectApiKeyNotFound,
+
     #[error("do not know how to notarize {0}")]
     NotarizeUnsupportedPath(PathBuf),
 
     #[error("failure when performing transporter upload (see logs)")]
     NotarizeUploadFailure,
+
+    #[error("no authentication credentials to perform notarization request")]
+    NotarizeNoAuthCredentials,
+
+    #[error("reached time limit waiting for notarization to complete")]
+    NotarizeWaitLimitReached,
+
+    #[error("no log file URL in notarization status")]
+    NotarizeNoLogUrl,
 
     #[error("notarization record not in response: {0}")]
     NotarizationRecordNotInResponse(String),

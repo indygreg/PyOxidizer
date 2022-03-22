@@ -22,6 +22,7 @@ struct ConnectTokenRequest {
 }
 
 /// An authentication token for the App Store Connect API.
+#[derive(Clone)]
 pub struct ConnectToken {
     key_id: String,
     issuer_id: String,
@@ -51,6 +52,35 @@ impl ConnectToken {
         let data = std::fs::read(path.as_ref())?;
 
         Self::from_pkcs8_ec(&data, key_id, issuer_id)
+    }
+
+    /// Attempt to construct in instance from an API Key ID.
+    ///
+    /// e.g. `DEADBEEF42`. This looks for an `AuthKey_<id>.p8` file in default search
+    /// locations like `~/.appstoreconnect/private_keys`.
+    pub fn from_api_key_id(key_id: String, issuer_id: String) -> Result<Self, AppleCodesignError> {
+        let mut search_paths = vec![std::env::current_dir()?.join("private_keys")];
+
+        if let Some(home) = dirs::home_dir() {
+            search_paths.extend([
+                home.join("private_keys"),
+                home.join(".private_keys"),
+                home.join(".appstoreconnect").join("private_keys"),
+            ]);
+        }
+
+        // AuthKey_<apiKey>.p8
+        let filename = format!("AuthKey_{}.p8", key_id);
+
+        for path in search_paths {
+            let candidate = path.join(&filename);
+
+            if candidate.exists() {
+                return Self::from_path(candidate, key_id, issuer_id);
+            }
+        }
+
+        Err(AppleCodesignError::AppStoreConnectApiKeyNotFound)
     }
 
     pub fn new_token(&self, duration: u64) -> Result<String, AppleCodesignError> {
@@ -105,10 +135,47 @@ pub struct DevIdPlusInfoRequest {
     pub request_uuid: String,
 }
 
+/// The response to a `developerIDPlusInfoForPackageWithArguments` RPC method.
+///
+/// As of March 2022, the `developerIDPlusInfoForPackageWithArguments` RPC response appears
+/// to go through the following states as time passes:
+///
+/// 1) Initial. State is like `DevIdPlusInfoResponse { dev_id_plus: DevIdPlus { date_str: "...", log_file_url: None, more_info: None, request_status: 1, request_uuid: "...", status_code: Some(0), status_message: None } }`.
+/// 2) `more_info` key appears. Its `hash` key is still absent or set to null.
+/// 3) `more_info.hash` value appears with the code directory hash value.
+/// 4) `status_code` and `status_message` appear.
+/// 5) `log_file_url` appears.
+///
+/// Transition 1 -> 2 occurs after 1-2s. 2 -> 3 takes several seconds. Might be
+/// proportional to size of upload or backlog on Apple's servers. 3 -> 4 also takes
+/// several seconds. Finally, 4 -> 5 shows up a few seconds after status reflection.
 #[derive(Clone, Debug, Deserialize)]
 pub struct DevIdPlusInfoResponse {
     #[serde(rename = "DevIDPlus")]
     pub dev_id_plus: DevIdPlus,
+}
+
+impl DevIdPlusInfoResponse {
+    pub fn state_str(&self) -> String {
+        if self.dev_id_plus.log_file_url.is_some() {
+            "5/5 have log URL; operation complete".into()
+        } else if let Some(code) = self.dev_id_plus.status_code {
+            format!("4/5 have status code ({}); waiting on log URL", code)
+        } else if let Some(more_info) = &self.dev_id_plus.more_info {
+            if let Some(hash) = &more_info.hash {
+                format!("3/5 have hash ({}); waiting on status code", hash)
+            } else {
+                "2/5 some metadata; waiting on hash to appear".into()
+            }
+        } else {
+            "1/5 initial state; waiting on initial metadata".into()
+        }
+    }
+
+    /// Whether it appears the server is done processing the request.
+    pub fn is_done(&self) -> bool {
+        self.dev_id_plus.status_code.is_some() && self.dev_id_plus.log_file_url.is_some()
+    }
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -116,19 +183,19 @@ pub struct DevIdPlusInfoResponse {
 pub struct DevIdPlus {
     pub date_str: String,
     #[serde(rename = "LogFileURL")]
-    pub log_file_url: String,
-    pub more_info: MoreInfo,
+    pub log_file_url: Option<String>,
+    pub more_info: Option<MoreInfo>,
     pub request_status: u64,
     #[serde(rename = "RequestUUID")]
     pub request_uuid: String,
-    pub status_code: u64,
-    pub status_message: String,
+    pub status_code: Option<u64>,
+    pub status_message: Option<String>,
 }
 
 #[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "PascalCase")]
 pub struct MoreInfo {
-    pub hash: String,
+    pub hash: Option<String>,
 }
 
 /// A client for App Store Connect API.

@@ -1251,14 +1251,26 @@ fn command_notarize_upload(args: &ArgMatches) -> Result<(), AppleCodesignError> 
     );
     let api_issuer = args.value_of("api_issuer");
     let api_key = args.value_of("api_key");
+    let wait = args.is_present("wait");
+    let max_wait_seconds = args
+        .value_of("max_wait_seconds")
+        .expect("argument should have default value");
+    let max_wait_seconds =
+        u64::from_str(max_wait_seconds).map_err(|_| AppleCodesignError::CliBadArgument)?;
+
+    let wait_duration = std::time::Duration::from_secs(max_wait_seconds);
+
+    let wait_limit = if wait { Some(wait_duration) } else { None };
 
     let mut notarizer = crate::notarization::Notarizer::new()?;
 
     if let (Some(issuer), Some(key)) = (api_issuer, api_key) {
-        notarizer.set_api_key(issuer, key);
+        notarizer.set_api_key(issuer, key)?;
     }
 
-    notarizer.notarize_path(&path)
+    notarizer.notarize_path(&path, wait_limit)?;
+
+    Ok(())
 }
 
 fn command_parse_code_signing_requirement(args: &ArgMatches) -> Result<(), AppleCodesignError> {
@@ -1788,6 +1800,18 @@ fn main_impl() -> Result<(), AppleCodesignError> {
     let app = app.subcommand(add_notarization_upload_args(
         Command::new("notarize-upload")
             .about("Upload an asset to Apple for notarization")
+            .arg(
+                Arg::new("wait")
+                    .long("wait")
+                    .help("Whether to wait for upload processing to complete"),
+            )
+            .arg(
+                Arg::new("max_wait_seconds")
+                    .long("max-wait-seconds")
+                    .takes_value(true)
+                    .default_value("600")
+                    .help("Maximum time in seconds to wait for the upload result"),
+            )
             .arg(
                 Arg::new("path")
                     .takes_value(true)

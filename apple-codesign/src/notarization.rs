@@ -16,6 +16,7 @@ and waiting on the availability of a notarization ticket.
 use {
     crate::{
         app_metadata::{Asset, DataFile, Package, SoftwareAssets},
+        app_store_connect::{AppStoreConnectClient, ConnectToken, DevIdPlusInfoResponse},
         AppleCodesignError,
     },
     apple_bundles::DirectoryBundle,
@@ -24,6 +25,7 @@ use {
     std::{
         io::{BufRead, Write},
         path::{Path, PathBuf},
+        time::Duration,
     },
 };
 
@@ -62,6 +64,7 @@ pub fn find_transporter_exe() -> Option<PathBuf> {
     }
 }
 
+#[allow(unused)]
 #[derive(Clone, Copy, Debug)]
 pub enum UploadDistribution {
     AppStore,
@@ -80,6 +83,7 @@ impl ToString for UploadDistribution {
 
 #[derive(Clone, Copy, Debug)]
 pub enum VerifyProgress {
+    #[allow(unused)]
     Text,
     Json,
 }
@@ -341,16 +345,29 @@ fn upload_id_from_json_str(s: &str) -> Result<Option<String>, AppleCodesignError
     }
 }
 
+/// Represents the result of a notarization upload.
+pub enum NotarizationUpload {
+    /// We performed the upload and only have the upload ID / UUID for it.
+    ///
+    /// (We probably didn't wait for the upload to finish processing.)
+    UploadId(String),
+
+    /// We performed an upload and have upload state from the server.
+    DevIdResponse(DevIdPlusInfoResponse),
+}
+
 /// An entity for performing notarizations.
 ///
 /// Notarization works by uploading content to Apple, waiting for Apple to inspect
 /// and react to that upload, then downloading a notarization "ticket" from Apple
 /// and incorporating it into the entity being signed.
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct Notarizer {
     transporter_exe: PathBuf,
-    api_issuer: Option<String>,
-    api_key: Option<String>,
+    auth: Option<(String, String, ConnectToken)>,
+
+    /// How long to wait between polling the server for upload status.
+    wait_poll_interval: Duration,
 }
 
 impl Notarizer {
@@ -359,25 +376,39 @@ impl Notarizer {
         Ok(Self {
             transporter_exe: find_transporter_exe()
                 .ok_or(AppleCodesignError::TransporterNotFound)?,
-            api_issuer: None,
-            api_key: None,
+            auth: None,
+            wait_poll_interval: Duration::from_secs(3),
         })
     }
 
     /// Set the API key used to upload.
     ///
     /// The API issuer is required when using an API key.
-    pub fn set_api_key(&mut self, api_issuer: impl ToString, api_key: impl ToString) {
-        self.api_issuer = Some(api_issuer.to_string());
-        self.api_key = Some(api_key.to_string());
+    pub fn set_api_key(
+        &mut self,
+        api_issuer: impl ToString,
+        api_key: impl ToString,
+    ) -> Result<(), AppleCodesignError> {
+        let api_key = api_key.to_string();
+        let api_issuer = api_issuer.to_string();
+
+        let token = ConnectToken::from_api_key_id(api_key.clone(), api_issuer.clone())?;
+
+        self.auth = Some((api_issuer, api_key, token));
+
+        Ok(())
     }
 
     /// Attempt to notarize an asset defined by a filesystem path.
     ///
     /// The type of path is sniffed out and the appropriate notarization routine is called.
-    pub fn notarize_path(&self, path: &Path) -> Result<(), AppleCodesignError> {
+    pub fn notarize_path(
+        &self,
+        path: &Path,
+        wait_limit: Option<Duration>,
+    ) -> Result<NotarizationUpload, AppleCodesignError> {
         if let Ok(bundle) = DirectoryBundle::new_from_path(path) {
-            self.notarize_bundle(&bundle)
+            self.notarize_bundle(&bundle, wait_limit)
         } else {
             Err(AppleCodesignError::NotarizeUnsupportedPath(
                 path.to_path_buf(),
@@ -386,7 +417,14 @@ impl Notarizer {
     }
 
     /// Attempt to notarize an on-disk bundle.
-    pub fn notarize_bundle(&self, bundle: &DirectoryBundle) -> Result<(), AppleCodesignError> {
+    ///
+    /// If [wait_limit] is provided, we will wait for the upload to finish processing.
+    /// Otherwise, this returns as soon as the upload is performed.
+    pub fn notarize_bundle(
+        &self,
+        bundle: &DirectoryBundle,
+        wait_limit: Option<Duration>,
+    ) -> Result<NotarizationUpload, AppleCodesignError> {
         let temp_dir = tempfile::Builder::new()
             .prefix("apple-codesign-")
             .tempdir()?;
@@ -401,15 +439,27 @@ impl Notarizer {
 
         write_bundle_to_app_store_package(bundle, &dest_dir)?;
 
-        self.upload_app_store_package(&dest_dir)?;
+        let upload_id = self.upload_app_store_package(&dest_dir)?;
 
-        Ok(())
+        let status = if let Some(wait_limit) = wait_limit {
+            self.wait_on_app_store_package_upload_and_fetch_log(&upload_id, wait_limit)?
+        } else {
+            return Ok(NotarizationUpload::UploadId(upload_id));
+        };
+
+        Ok(NotarizationUpload::DevIdResponse(status))
     }
 
     pub fn as_upload_command(&self) -> TransporterUploadCommand {
+        let (api_issuer, api_key) = if let Some((issuer, key, _)) = &self.auth {
+            (Some(issuer.clone()), Some(key.clone()))
+        } else {
+            (None, None)
+        };
+
         TransporterUploadCommand {
-            api_issuer: self.api_issuer.clone(),
-            api_key: self.api_key.clone(),
+            api_issuer,
+            api_key,
             ..Default::default()
         }
     }
@@ -418,7 +468,11 @@ impl Notarizer {
     ///
     /// This will invoke Transporter in upload mode to send the contents of a `.itmsp`
     /// directory to Apple.
-    pub fn upload_app_store_package(&self, path: &Path) -> Result<(), AppleCodesignError> {
+    ///
+    /// Returns the UUID of the upload.
+    ///
+    /// This does NOT wait on the server to process the upload.
+    pub fn upload_app_store_package(&self, path: &Path) -> Result<String, AppleCodesignError> {
         let mut command = self.as_upload_command();
         command.verify_progress = Some(VerifyProgress::Json);
         command.source = Some(path.to_path_buf());
@@ -453,16 +507,117 @@ impl Notarizer {
             if let (Some(start), Some(end)) = (line.find("JSON-START>>"), line.find("<<JSON-END")) {
                 let json_data = &line[start + "JSON-START>>".len()..end];
 
-                if let Some(id) = upload_id_from_json_str(&json_data)? {
+                if let Some(id) = upload_id_from_json_str(json_data)? {
                     upload_id = Some(id);
                 }
             }
         }
 
-        if let Some(id) = &upload_id {
-            warn!("transporter upload ID: {}", id);
+        match upload_id {
+            Some(id) => {
+                warn!("transporter upload ID: {}", id);
+                Ok(id)
+            }
+            None => Err(AppleCodesignError::NotarizeUploadFailure),
+        }
+    }
+
+    /// Get the status of the upload.
+    ///
+    /// This queries Apple's servers to retrieve the state of a previously performed
+    /// upload.
+    pub fn get_upload_status(
+        &self,
+        upload_id: &str,
+    ) -> Result<DevIdPlusInfoResponse, AppleCodesignError> {
+        let client = match &self.auth {
+            Some((_, _, token)) => Ok(AppStoreConnectClient::new(token.clone())?),
+            None => Err(AppleCodesignError::NotarizeNoAuthCredentials),
+        }?;
+
+        let status = client.developer_id_plus_info_for_package_with_arguments(upload_id)?;
+
+        Ok(status)
+    }
+
+    /// Wait on the upload of an app store package to complete.
+    ///
+    /// This will sit in a loop and poll Apple every [Self::wait_poll_interval]
+    /// until the upload processing appears to complete.
+    ///
+    /// It will poll for up to [wait_limit] before returning `Err` if nothing
+    /// happens in time.
+    pub fn wait_on_app_store_package_upload(
+        &self,
+        upload_id: &str,
+        wait_limit: Duration,
+    ) -> Result<DevIdPlusInfoResponse, AppleCodesignError> {
+        warn!(
+            "waiting up to {}s for package upload {} to finish processing",
+            wait_limit.as_secs(),
+            upload_id
+        );
+
+        let start_time = std::time::Instant::now();
+
+        loop {
+            let status = self.get_upload_status(upload_id)?;
+
+            let elapsed = start_time.elapsed();
+
+            info!(
+                "poll state after {}s: {}",
+                elapsed.as_secs(),
+                status.state_str()
+            );
+
+            if status.is_done() {
+                warn!("upload operation complete");
+
+                return Ok(status);
+            }
+
+            if elapsed >= wait_limit {
+                warn!("reached wait limit after {}s", elapsed.as_secs());
+                return Err(AppleCodesignError::NotarizeWaitLimitReached);
+            }
+
+            std::thread::sleep(self.wait_poll_interval);
+        }
+    }
+
+    /// Obtain the processing log from an upload.
+    pub fn fetch_upload_log(
+        &self,
+        response: &DevIdPlusInfoResponse,
+    ) -> Result<String, AppleCodesignError> {
+        if let Some(url) = &response.dev_id_plus.log_file_url {
+            let client = crate::ticket_lookup::default_client()?;
+
+            let response = client.get(url).send()?;
+
+            Ok(String::from_utf8_lossy(&response.bytes()?).to_string())
+        } else {
+            Err(AppleCodesignError::NotarizeNoLogUrl)
+        }
+    }
+
+    /// Waits on an app store package upload and fetches and logs the upload log.
+    ///
+    /// This is just a convenience around [Self::wait_on_app_store_package_upload()] and
+    /// [Self::fetch_upload_log()].
+    pub fn wait_on_app_store_package_upload_and_fetch_log(
+        &self,
+        upload_id: &str,
+        wait_limit: Duration,
+    ) -> Result<DevIdPlusInfoResponse, AppleCodesignError> {
+        let status = self.wait_on_app_store_package_upload(upload_id, wait_limit)?;
+
+        let log = self.fetch_upload_log(&status)?;
+        for line in log.lines() {
+            warn!("upload log> {}", line);
         }
 
-        Ok(())
+        Ok(status)
     }
 }
