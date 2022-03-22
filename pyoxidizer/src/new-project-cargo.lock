@@ -497,9 +497,7 @@ version = "0.8.0-pre"
 
 [[package]]
 name = "tugger-licensing"
-version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b7b6ca380c52f5c4ecbc693177ea16cc0835d2c26713de3648f3ee2e2c3a595a"
+version = "0.7.0-pre"
 dependencies = [
  "anyhow",
  "spdx",
