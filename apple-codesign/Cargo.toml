@@ -55,6 +55,10 @@ zip = "0.5"
 path = "../apple-bundles"
 version = "0.8.0-pre"
 
+[dependencies.apple-flat-package]
+path = "../apple-flat-package"
+version = "0.1.0-pre"
+
 [dependencies.apple-xar]
 path = "../apple-xar"
 version = "0.1.0-pre"

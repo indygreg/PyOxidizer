@@ -20,10 +20,13 @@ use {
         AppleCodesignError,
     },
     apple_bundles::DirectoryBundle,
+    apple_flat_package::PkgReader,
     log::{error, info, warn},
     md5::Digest,
     std::{
-        io::{BufRead, Write},
+        fmt::Debug,
+        fs::OpenOptions,
+        io::{BufRead, Read, Seek, SeekFrom, Write},
         path::{Path, PathBuf},
         time::Duration,
     },
@@ -327,6 +330,112 @@ pub fn write_bundle_to_app_store_package(
     Ok(())
 }
 
+/// Write a flat package (usually a `.pkg` file) to an `.itmsp` directory.
+pub fn write_flat_package_to_app_store_package<F: Read + Seek + Debug>(
+    mut pkg: PkgReader<F>,
+    dest_dir: &Path,
+) -> Result<(), AppleCodesignError> {
+    let primary_bundle_identifier = if let Some(distribution) = pkg.distribution()? {
+        warn!("notarizing a product installer");
+
+        // We need to extract the primary bundle identifier from the `Distribution` XML.
+        // We should probably honor the settings in the XML (this logic would belong in
+        // the apple-flat-package crate). But for now we just pick the first bundle ID
+        // we see.
+        let id = if let Some(id) = distribution.pkg_ref.iter().find_map(|x| {
+            if let Some(bv) = &x.bundle_version {
+                bv.bundle.iter().next().map(|bundle| bundle.id.clone())
+            } else {
+                None
+            }
+        }) {
+            id
+        } else {
+            error!("unable to find bundle identifier in flat package (please report this bug)");
+            return Err(AppleCodesignError::NotarizeFlatPackageParse);
+        };
+
+        id
+    } else if let Some(component) = pkg.root_component()? {
+        warn!("notarizing a component installer");
+
+        error!("support for notarizing a component installer is not yet implemented");
+        return Err(AppleCodesignError::NotarizeFlatPackageParse);
+    } else {
+        error!("do not know how to extract bundle identifier from package installer");
+        error!("please report this bug");
+
+        return Err(AppleCodesignError::NotarizeFlatPackageParse);
+    };
+
+    warn!(
+        "resolved primary bundle identifier to {}",
+        primary_bundle_identifier
+    );
+
+    // Are flat packages supported on other platforms?
+    let app_platform = "osx".to_string();
+    let asset_type = "developer-id-package".to_string();
+
+    // This doesn't appear to matter?
+    let file_name = "installer.pkg".to_string();
+
+    // In order to compute the digest we'll need access to the raw reader.
+    let mut fh = pkg.into_inner().into_inner();
+    fh.seek(SeekFrom::Start(0))?;
+
+    let checksum_type = "md5".to_string();
+    let mut h = md5::Md5::new();
+    let mut size = 0;
+    loop {
+        let mut buffer = [0u8; 16384];
+        let count = fh.read(&mut buffer)?;
+
+        size += count;
+        h.update(&buffer[0..count]);
+
+        if count < buffer.len() {
+            break;
+        }
+    }
+    let checksum_digest = hex::encode(h.finalize());
+
+    let package = Package {
+        software_assets: SoftwareAssets {
+            app_platform,
+            device_id: None,
+            primary_bundle_identifier,
+            asset: Asset {
+                typ: asset_type,
+                data_files: vec![DataFile {
+                    file_name: file_name.clone(),
+                    checksum_type,
+                    checksum_digest,
+                    size: size as _,
+                }],
+            },
+        },
+    };
+
+    let metadata_xml = package
+        .to_xml()
+        .map_err(AppleCodesignError::AppMetadataXml)?;
+
+    let pkg_path = dest_dir.join(&file_name);
+    info!("writing {}", pkg_path.display());
+    fh.seek(SeekFrom::Start(0))?;
+    {
+        let mut ofh = std::fs::File::create(&pkg_path)?;
+        std::io::copy(&mut fh, &mut ofh)?;
+    }
+
+    let metadata_path = dest_dir.join("metadata.xml");
+    info!("writing {}", metadata_path.display());
+    std::fs::write(&metadata_path, &metadata_xml)?;
+
+    Ok(())
+}
+
 fn upload_id_from_json_str(s: &str) -> Result<Option<String>, AppleCodesignError> {
     let value = serde_json::from_str::<serde_json::Value>(s)?;
 
@@ -343,6 +452,21 @@ fn upload_id_from_json_str(s: &str) -> Result<Option<String>, AppleCodesignError
     } else {
         Ok(None)
     }
+}
+
+fn create_itmsp_temp_dir() -> Result<(tempfile::TempDir, PathBuf), AppleCodesignError> {
+    let temp_dir = tempfile::Builder::new()
+        .prefix("apple-codesign-")
+        .tempdir()?;
+
+    let id = uuid::Uuid::new_v4().to_string();
+
+    let itmsp = format!("{}.itmsp", id);
+
+    let dest_dir = temp_dir.path().join(&itmsp);
+    std::fs::create_dir_all(&dest_dir)?;
+
+    Ok((temp_dir, dest_dir))
 }
 
 /// Represents the result of a notarization upload.
@@ -409,6 +533,14 @@ impl Notarizer {
     ) -> Result<NotarizationUpload, AppleCodesignError> {
         if let Ok(bundle) = DirectoryBundle::new_from_path(path) {
             self.notarize_bundle(&bundle, wait_limit)
+        } else if let Ok(fh) = OpenOptions::new().read(true).write(true).open(path) {
+            if let Ok(pkg) = PkgReader::new(fh) {
+                self.notarize_flat_package(pkg, wait_limit)
+            } else {
+                Err(AppleCodesignError::NotarizeUnsupportedPath(
+                    path.to_path_buf(),
+                ))
+            }
         } else {
             Err(AppleCodesignError::NotarizeUnsupportedPath(
                 path.to_path_buf(),
@@ -425,21 +557,34 @@ impl Notarizer {
         bundle: &DirectoryBundle,
         wait_limit: Option<Duration>,
     ) -> Result<NotarizationUpload, AppleCodesignError> {
-        let temp_dir = tempfile::Builder::new()
-            .prefix("apple-codesign-")
-            .tempdir()?;
-
-        let id = uuid::Uuid::new_v4().to_string();
-
-        let itmsp = format!("{}.itmsp", id);
-
-        let dest_dir = temp_dir.path().join(&itmsp);
-        std::fs::create_dir_all(&dest_dir)?;
+        let (_temp_dir, dest_dir) = create_itmsp_temp_dir()?;
         warn!("writing App Store Package to {}", dest_dir.display());
 
         write_bundle_to_app_store_package(bundle, &dest_dir)?;
 
-        let upload_id = self.upload_app_store_package(&dest_dir)?;
+        self.upload_directory_and_maybe_wait(&dest_dir, wait_limit)
+    }
+
+    /// Attempt to notarize a flat package (`.pkg`) installer.
+    pub fn notarize_flat_package<F: Read + Write + Seek + Sized + Debug>(
+        &self,
+        pkg: PkgReader<F>,
+        wait_limit: Option<Duration>,
+    ) -> Result<NotarizationUpload, AppleCodesignError> {
+        let (_temp_dir, dest_dir) = create_itmsp_temp_dir()?;
+        warn!("writing XAR to {}", dest_dir.display());
+
+        write_flat_package_to_app_store_package(pkg, &dest_dir)?;
+
+        self.upload_directory_and_maybe_wait(&dest_dir, wait_limit)
+    }
+
+    fn upload_directory_and_maybe_wait(
+        &self,
+        upload_dir: &Path,
+        wait_limit: Option<Duration>,
+    ) -> Result<NotarizationUpload, AppleCodesignError> {
+        let upload_id = self.upload_app_store_package(upload_dir)?;
 
         let status = if let Some(wait_limit) = wait_limit {
             self.wait_on_app_store_package_upload_and_fetch_log(&upload_id, wait_limit)?

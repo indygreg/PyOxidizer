@@ -73,6 +73,9 @@ pub enum AppleCodesignError {
     #[error("XAR error: {0}")]
     Xar(#[from] apple_xar::Error),
 
+    #[error("Apple flat package error: {0}")]
+    FlatPackage(#[from] apple_flat_package::Error),
+
     #[error("unable to locate __TEXT segment")]
     MissingText,
 
@@ -238,6 +241,9 @@ pub enum AppleCodesignError {
 
     #[error("do not know how to notarize {0}")]
     NotarizeUnsupportedPath(PathBuf),
+
+    #[error("error parsing metadata from flat package")]
+    NotarizeFlatPackageParse,
 
     #[error("failure when performing transporter upload (see logs)")]
     NotarizeUploadFailure,
