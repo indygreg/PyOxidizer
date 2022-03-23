@@ -106,7 +106,7 @@ dependencies = [
  "anyhow",
  "apple-bundles",
  "apple-flat-package 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "apple-xar 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "apple-xar 0.2.0-pre",
  "base64 0.13.0",
  "bcder",
  "bitflags",
@@ -151,7 +151,7 @@ dependencies = [
 name = "apple-flat-package"
 version = "0.1.0"
 dependencies = [
- "apple-xar 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "apple-xar 0.2.0-pre",
  "cpio-archive 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "flate2",
  "scroll",
@@ -166,29 +166,13 @@ version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b2a36188baf898948a9ce69a427873648967af79249631f4a998bc51779ae2ea"
 dependencies = [
- "apple-xar 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "apple-xar 0.1.0",
  "cpio-archive 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "flate2",
  "scroll",
  "serde",
  "serde-xml-rs",
  "thiserror",
-]
-
-[[package]]
-name = "apple-xar"
-version = "0.1.0"
-dependencies = [
- "bzip2",
- "chrono",
- "cryptographic-message-syntax 0.13.0-pre",
- "flate2",
- "scroll",
- "serde",
- "serde-xml-rs",
- "thiserror",
- "x509-certificate 0.11.0-pre",
- "xz2",
 ]
 
 [[package]]
@@ -206,6 +190,22 @@ dependencies = [
  "serde-xml-rs",
  "thiserror",
  "x509-certificate 0.10.0",
+ "xz2",
+]
+
+[[package]]
+name = "apple-xar"
+version = "0.2.0-pre"
+dependencies = [
+ "bzip2",
+ "chrono",
+ "cryptographic-message-syntax 0.13.0-pre",
+ "flate2",
+ "scroll",
+ "serde",
+ "serde-xml-rs",
+ "thiserror",
+ "x509-certificate 0.11.0-pre",
  "xz2",
 ]
 
