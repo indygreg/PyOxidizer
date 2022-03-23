@@ -105,6 +105,7 @@ version = "0.10.0-pre"
 dependencies = [
  "anyhow",
  "apple-bundles",
+ "apple-xar",
  "base64 0.13.0",
  "bcder",
  "bitflags",

@@ -44,6 +44,7 @@ use {
         code_directory::CodeDirectoryBlob, code_hash::compute_code_hashes,
         code_requirement::CodeRequirements, error::AppleCodesignError, signing::SigningSettings,
     },
+    apple_xar::table_of_contents::ChecksumType as XarChecksumType,
     cryptographic_message_syntax::time_stamp_message_http,
     goblin::mach::{
         constants::{SEG_LINKEDIT, SEG_PAGEZERO, SEG_TEXT},
@@ -1003,6 +1004,20 @@ impl TryFrom<&str> for DigestType {
             "sha384" => Ok(Self::Sha384),
             "sha512" => Ok(Self::Sha512),
             _ => Err(AppleCodesignError::DigestUnknownAlgorithm),
+        }
+    }
+}
+
+impl TryFrom<XarChecksumType> for DigestType {
+    type Error = AppleCodesignError;
+
+    fn try_from(c: XarChecksumType) -> Result<Self, Self::Error> {
+        match c {
+            XarChecksumType::None => Ok(Self::None),
+            XarChecksumType::Sha1 => Ok(Self::Sha1),
+            XarChecksumType::Sha256 => Ok(Self::Sha256),
+            XarChecksumType::Sha512 => Ok(Self::Sha512),
+            XarChecksumType::Md5 => Err(AppleCodesignError::DigestUnsupportedAlgorithm),
         }
     }
 }

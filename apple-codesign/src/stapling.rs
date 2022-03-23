@@ -15,12 +15,18 @@ use {
     crate::{
         bundle_signing::SignedMachOInfo,
         ticket_lookup::{default_client, lookup_notarization_ticket},
-        AppleCodesignError,
+        AppleCodesignError, DigestType,
     },
     apple_bundles::{BundlePackageType, DirectoryBundle},
+    apple_xar::reader::XarReader,
     log::{info, warn},
     reqwest::blocking::Client,
-    std::path::Path,
+    scroll::{IOread, IOwrite, Pread, Pwrite, SizeWith},
+    std::{
+        fmt::Debug,
+        io::{Read, Seek, SeekFrom, Write},
+        path::Path,
+    },
 };
 
 /// Resolve the notarization ticket record name from a bundle.
@@ -65,10 +71,64 @@ pub fn staple_ticket_to_bundle(
 ) -> Result<(), AppleCodesignError> {
     let path = bundle.resolve_path("CodeResources");
 
-    warn!("writing notarizsation ticket to {}", path.display());
+    warn!("writing notarization ticket to {}", path.display());
     std::fs::write(&path, ticket_data)?;
 
     Ok(())
+}
+
+/// Magic header for xar trailer struct.
+///
+/// `t8lr`.
+const XAR_NOTARIZATION_TRAILER_MAGIC: [u8; 4] = [0x74, 0x38, 0x6c, 0x72];
+
+#[derive(Clone, Copy, Debug, IOread, IOwrite, Pread, Pwrite, SizeWith)]
+pub struct XarNotarizationTrailer {
+    /// "t8lr"
+    pub magic: [u8; 4],
+    pub version: u16,
+    pub typ: u16,
+    pub length: u32,
+    pub unused: u32,
+}
+
+#[derive(Clone, Copy, Debug)]
+#[repr(u16)]
+pub enum XarNotarizationTrailerType {
+    Invalid = 0,
+    Terminator = 1,
+    Ticket = 2,
+}
+
+/// Obtain the notarization trailer data for a XAR archive.
+///
+/// The trailer data consists of a [XarNotarizationTrailer] of type `Terminator`
+/// to denote the end of XAR content followed by the raw ticket data followed by a
+/// [XarNotarizationTrailer] with type `Ticket`. Essentially, a reader can look for
+/// a ticket trailer at the end of the file then quickly seek to the beginning of
+/// ticket data.
+pub fn xar_notarization_trailer(ticket_data: &[u8]) -> Result<Vec<u8>, AppleCodesignError> {
+    let terminator = XarNotarizationTrailer {
+        magic: XAR_NOTARIZATION_TRAILER_MAGIC,
+        version: 1,
+        typ: XarNotarizationTrailerType::Terminator as u16,
+        length: 0,
+        unused: 0,
+    };
+    let ticket = XarNotarizationTrailer {
+        magic: XAR_NOTARIZATION_TRAILER_MAGIC,
+        version: 1,
+        typ: XarNotarizationTrailerType::Ticket as u16,
+        length: ticket_data.len() as _,
+        unused: 0,
+    };
+
+    let mut cursor = std::io::Cursor::new(Vec::new());
+    cursor.iowrite_with(terminator, scroll::LE)?;
+    cursor.write_all(ticket_data)?;
+    cursor.iowrite_with(ticket, scroll::LE)?;
+
+    Ok(cursor.into_inner())
 }
 
 /// Handles stapling operations.
@@ -123,7 +183,76 @@ impl Stapler {
         Ok(())
     }
 
+    /// Lookup ticket data for a XAR archive (e.g. a `.pkg` file).
+    pub fn lookup_ticket_for_xar<R: Read + Seek + Sized + Debug>(
+        &self,
+        reader: &mut XarReader<R>,
+    ) -> Result<Vec<u8>, AppleCodesignError> {
+        let mut digest = reader.checksum_data()?;
+        digest.truncate(20);
+        let digest = hex::encode(digest);
+
+        let digest_type = DigestType::try_from(reader.table_of_contents().checksum.style)?;
+        let digest_type: u8 = digest_type.into();
+
+        let record_name = format!("2/{}/{}", digest_type, digest);
+
+        let response = lookup_notarization_ticket(&self.client, &record_name)?;
+
+        response.signed_ticket(&record_name)
+    }
+
+    /// Staple a XAR archive.
+    ///
+    /// Takes the handle to a readable, writable, and seekable object.
+    ///
+    /// The stream will be opened as a XAR file. If a ticket is found, that ticket
+    /// will be appended to the end of the file.
+    pub fn staple_xar<F: Read + Write + Seek + Sized + Debug>(
+        &self,
+        mut xar: XarReader<F>,
+    ) -> Result<(), AppleCodesignError> {
+        let ticket_data = self.lookup_ticket_for_xar(&mut xar)?;
+
+        warn!("found notarization ticket; proceeding with stapling");
+
+        let mut fh = xar.into_inner();
+
+        // As a convenience, we look for an existing ticket trailer so we can tell
+        // the user we're effectively overwriting it. We could potentially try to
+        // delete or overwrite the old trailer. BUt it is just easier to append,
+        // as a writer likely only looks for the ticket trailer at the tail end
+        // of the file.
+        let trailer_size = 16;
+        fh.seek(SeekFrom::End(-1 * trailer_size))?;
+
+        let trailer = fh.ioread_with::<XarNotarizationTrailer>(scroll::LE)?;
+        if trailer.magic == XAR_NOTARIZATION_TRAILER_MAGIC {
+            let trailer_type = match trailer.typ {
+                x if x == XarNotarizationTrailerType::Invalid as u16 => "invalid",
+                x if x == XarNotarizationTrailerType::Ticket as u16 => "ticket",
+                x if x == XarNotarizationTrailerType::Terminator as u16 => "terminator",
+                _ => "unknown",
+            };
+
+            warn!("found an existing XAR trailer of type {}", trailer_type);
+            warn!("this existing trailer will be preserved and will likely be ignored");
+        }
+
+        let trailer = xar_notarization_trailer(&ticket_data)?;
+
+        warn!(
+            "stapling notarization ticket trailer ({} bytes) to end of XAR",
+            trailer.len()
+        );
+        fh.write_all(&trailer)?;
+
+        Ok(())
+    }
+
     /// Attempt to staple an entity at a given filesystem path.
+    ///
+    /// The path will be modified on successful stapling operation.
     pub fn staple_path(&self, path: impl AsRef<Path>) -> Result<(), AppleCodesignError> {
         let path = path.as_ref();
         warn!("attempting to staple {}", path.display());
@@ -131,6 +260,19 @@ impl Stapler {
         if let Ok(bundle) = DirectoryBundle::new_from_path(path) {
             warn!("activating bundle stapling mode");
             self.staple_bundle(&bundle)
+        } else if let Ok(fh) = std::fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .open(path)
+        {
+            if let Ok(xar) = XarReader::new(fh) {
+                warn!("activating XAR stapling mode");
+                self.staple_xar(xar)
+            } else {
+                Err(AppleCodesignError::StapleUnsupportedPath(
+                    path.to_path_buf(),
+                ))
+            }
         } else {
             Err(AppleCodesignError::StapleUnsupportedPath(
                 path.to_path_buf(),

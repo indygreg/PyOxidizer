@@ -2,6 +2,12 @@
 `apple-codesign` History
 ========================
 
+0.10.0
+======
+
+* Support for stapling XAR archives (``.pkg`` files). (There is still no support for
+  signing XAR archives.)
+
 0.9.0
 =====
 

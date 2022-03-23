@@ -63,6 +63,11 @@ impl<R: Read + Seek + Sized + Debug> XarReader<R> {
         })
     }
 
+    /// Obtain the inner reader.
+    pub fn into_inner(self) -> R {
+        self.reader
+    }
+
     /// Obtain the table of contents for this archive.
     pub fn table_of_contents(&self) -> &TableOfContents {
         &self.toc

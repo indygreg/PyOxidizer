@@ -70,6 +70,9 @@ pub enum AppleCodesignError {
     #[error("JWT error: {0}")]
     Jwt(#[from] jsonwebtoken::errors::Error),
 
+    #[error("XAR error: {0}")]
+    Xar(#[from] apple_xar::Error),
+
     #[error("unable to locate __TEXT segment")]
     MissingText,
 
@@ -274,6 +277,9 @@ pub enum AppleCodesignError {
 
     #[error("do not support stapling {0:?} bundles")]
     StapleUnsupportedBundleType(apple_bundles::BundlePackageType),
+
+    #[error("XAR file is malformed; cannot staple")]
+    StapleMalformedXar,
 
     #[error("failed to find main executable in bundle")]
     StapleMainExecutableNotFound,
