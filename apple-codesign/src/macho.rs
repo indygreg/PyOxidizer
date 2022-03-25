@@ -45,7 +45,7 @@ use {
         code_requirement::CodeRequirements, error::AppleCodesignError, signing::SigningSettings,
     },
     apple_xar::table_of_contents::ChecksumType as XarChecksumType,
-    cryptographic_message_syntax::time_stamp_message_http,
+    cryptographic_message_syntax::{time_stamp_message_http, SignedData},
     goblin::mach::{
         constants::{SEG_LINKEDIT, SEG_PAGEZERO, SEG_TEXT},
         load_command::{
@@ -576,6 +576,17 @@ impl<'a> EmbeddedSignature<'a> {
             } else {
                 Err(AppleCodesignError::BadMagic("signature blob"))
             }
+        } else {
+            Ok(None)
+        }
+    }
+
+    /// Obtain the parsed CMS [SignedData].
+    pub fn signed_data(&self) -> Result<Option<SignedData>, AppleCodesignError> {
+        if let Some(data) = self.signature_data()? {
+            let signed_data = SignedData::parse_ber(data)?;
+
+            Ok(Some(signed_data))
         } else {
             Ok(None)
         }
@@ -1821,7 +1832,6 @@ pub fn find_macho_targeting(
 mod tests {
     use {
         super::*,
-        cryptographic_message_syntax::SignedData,
         std::{
             io::Read,
             path::{Path, PathBuf},
@@ -1908,9 +1918,9 @@ mod tests {
             }
 
             // Found a CMS signed data blob.
-            if let Ok(Some(cms)) = signature.signature_data() {
-                match SignedData::parse_ber(cms) {
-                    Ok(signed_data) => {
+            if matches!(signature.signature_data(), Ok(Some(_))) {
+                match signature.signed_data() {
+                    Ok(Some(signed_data)) => {
                         for signer in signed_data.signers() {
                             if let Err(e) = signer.verify_signature_with_signed_data(&signed_data) {
                                 println!(
@@ -1929,6 +1939,9 @@ mod tests {
                                 );
                             }
                         }
+                    }
+                    Ok(None) => {
+                        panic!("this shouln't happen (validated signature data is present");
                     }
                     Err(e) => {
                         println!("error performing CMS parse of {}: {:?}", path.display(), e);

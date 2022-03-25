@@ -867,9 +867,7 @@ fn command_extract(args: &ArgMatches) -> Result<(), AppleCodesignError> {
                 .code_signature()?
                 .ok_or(AppleCodesignError::BinaryNoCodeSignature)?;
 
-            if let Some(cms) = embedded.signature_data()? {
-                let signed_data = SignedData::parse_ber(cms)?;
-
+            if let Some(signed_data) = embedded.signed_data()? {
                 println!("{:#?}", signed_data);
             } else {
                 eprintln!("no CMS data");
