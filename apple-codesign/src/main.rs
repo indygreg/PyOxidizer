@@ -23,6 +23,8 @@ mod code_resources;
 #[allow(unused)]
 mod embedded_signature;
 #[allow(unused)]
+mod embedded_signature_builder;
+#[allow(unused)]
 mod entitlements;
 mod error;
 #[allow(unused)]

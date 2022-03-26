@@ -160,6 +160,9 @@ pub enum AppleCodesignError {
     #[error("signature data too large (please report this issue)")]
     SignatureDataTooLarge,
 
+    #[error("invalid builder operation: {0}")]
+    SignatureBuilder(&'static str),
+
     #[error("HTTP error: {0}")]
     Reqwest(#[from] reqwest::Error),
 

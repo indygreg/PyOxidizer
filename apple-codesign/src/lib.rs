@@ -127,6 +127,8 @@ mod code_resources;
 pub use code_resources::*;
 pub mod embedded_signature;
 pub use embedded_signature::*;
+pub mod embedded_signature_builder;
+pub use embedded_signature_builder::*;
 pub mod entitlements;
 mod error;
 pub use error::*;

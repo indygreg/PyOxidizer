@@ -2,9 +2,9 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-//! Signing binaries.
+//! Signing mach-o binaries.
 //!
-//! This module contains code for signing binaries.
+//! This module contains code for signing mach-o binaries.
 
 use {
     crate::{
@@ -12,10 +12,10 @@ use {
         code_hash::compute_code_hashes,
         code_requirement::{CodeRequirementExpression, CodeRequirements, RequirementType},
         embedded_signature::{
-            create_superblob, Blob, BlobWrapperBlob, CodeSigningMagic, CodeSigningSlot, Digest,
-            DigestType, EmbeddedSignature, EntitlementsBlob, EntitlementsDerBlob,
-            RequirementSetBlob,
+            Blob, BlobData, CodeSigningSlot, Digest, DigestType, EmbeddedSignature,
+            EntitlementsBlob, EntitlementsDerBlob, RequirementSetBlob,
         },
+        embedded_signature_builder::EmbeddedSignatureBuilder,
         entitlements::plist_to_executable_segment_flags,
         error::AppleCodesignError,
         macho::{
@@ -417,29 +417,24 @@ impl<'data> MachOSigner<'data> {
         macho: &MachO,
         previous_signature: Option<&EmbeddedSignature>,
     ) -> Result<Vec<u8>, AppleCodesignError> {
+        let mut builder = EmbeddedSignatureBuilder::default();
+
+        for (slot, blob) in self.create_special_blobs(settings, previous_signature)? {
+            builder.add_blob(slot, blob)?;
+        }
+
         let code_directory =
             self.create_code_directory(settings, macho_data, macho, previous_signature)?;
         info!("code directory version: {}", code_directory.version);
 
-        // By convention, the Code Directory goes first.
-        let mut blobs = vec![(
-            CodeSigningSlot::CodeDirectory,
-            code_directory.to_blob_bytes()?,
-        )];
-        blobs.extend(self.create_special_blobs(settings, previous_signature)?);
+        let code_directory = builder.add_code_directory(code_directory)?;
 
-        // And the CMS signature goes last.
         if settings.signing_key().is_some() {
-            blobs.push((
-                CodeSigningSlot::Signature,
-                BlobWrapperBlob::from_data_borrowed(
-                    &self.create_cms_signature(settings, &code_directory)?,
-                )
-                .to_blob_bytes()?,
-            ));
+            let cms_data = self.create_cms_signature(settings, code_directory)?;
+            builder.add_cms_signature(cms_data)?;
         }
 
-        create_superblob(CodeSigningMagic::EmbeddedSignature, blobs.iter())
+        builder.create_superblob()
     }
 
     /// Create a CMS `SignedData` structure containing a cryptographic signature.
@@ -718,18 +713,7 @@ impl<'data> MachOSigner<'data> {
                 .map(|v| Digest { data: v.into() })
                 .collect::<Vec<_>>();
 
-        let mut special_hashes = self
-            .create_special_blobs(settings, previous_signature)?
-            .into_iter()
-            .map(|(slot, data)| {
-                Ok((
-                    slot,
-                    Digest {
-                        data: settings.digest_type().digest(&data)?.into(),
-                    },
-                ))
-            })
-            .collect::<Result<HashMap<_, _>, AppleCodesignError>>()?;
+        let mut special_hashes = HashMap::new();
 
         // There is no corresponding blob for the info plist data since it is provided
         // externally to the embedded signature.
@@ -840,7 +824,7 @@ impl<'data> MachOSigner<'data> {
         &self,
         settings: &SigningSettings,
         previous_signature: Option<&EmbeddedSignature>,
-    ) -> Result<Vec<(CodeSigningSlot, Vec<u8>)>, AppleCodesignError> {
+    ) -> Result<Vec<(CodeSigningSlot, BlobData<'static>)>, AppleCodesignError> {
         let mut res = Vec::new();
 
         let mut requirements = CodeRequirements::default();
@@ -873,14 +857,14 @@ impl<'data> MachOSigner<'data> {
             let mut blob = RequirementSetBlob::default();
             requirements.add_to_requirement_set(&mut blob, RequirementType::Designated)?;
 
-            res.push((CodeSigningSlot::RequirementSet, blob.to_blob_bytes()?));
+            res.push((CodeSigningSlot::RequirementSet, blob.into()));
         }
 
         if let Some(entitlements) = settings.entitlements_xml(SettingsScope::Main)? {
             info!("adding entitlements XML");
             let blob = EntitlementsBlob::from_string(&entitlements);
 
-            res.push((CodeSigningSlot::Entitlements, blob.to_blob_bytes()?));
+            res.push((CodeSigningSlot::Entitlements, blob.into()));
         }
 
         // The DER encoded entitlements weren't always present in the signature. The feature
@@ -892,7 +876,7 @@ impl<'data> MachOSigner<'data> {
             info!("adding entitlements DER");
             let blob = EntitlementsDerBlob::from_plist(value)?;
 
-            res.push((CodeSigningSlot::EntitlementsDer, blob.to_blob_bytes()?));
+            res.push((CodeSigningSlot::EntitlementsDer, blob.into()));
         }
 
         Ok(res)

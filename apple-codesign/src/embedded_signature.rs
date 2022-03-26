@@ -230,6 +230,18 @@ impl From<CodeSigningSlot> for u32 {
     }
 }
 
+impl PartialOrd for CodeSigningSlot {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        u32::from(*self).partial_cmp(&u32::from(*other))
+    }
+}
+
+impl Ord for CodeSigningSlot {
+    fn cmp(&self, other: &Self) -> Ordering {
+        u32::from(*self).cmp(&u32::from(*other))
+    }
+}
+
 impl CodeSigningSlot {
     /// Whether this slot has external data (as opposed to provided via a blob).
     pub fn has_external_content(&self) -> bool {
@@ -391,6 +403,12 @@ impl<'a> Digest<'a> {
 impl<'a> std::fmt::Debug for Digest<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(&hex::encode(&self.data))
+    }
+}
+
+impl<'a> From<Vec<u8>> for Digest<'a> {
+    fn from(v: Vec<u8>) -> Self {
+        Self { data: v.into() }
     }
 }
 
@@ -1023,6 +1041,66 @@ impl<'a> Blob<'a> for BlobData<'a> {
             Self::BlobWrapper(b) => b.to_blob_bytes(),
             Self::Other(b) => b.to_blob_bytes(),
         }
+    }
+}
+
+impl<'a> From<RequirementBlob<'a>> for BlobData<'a> {
+    fn from(b: RequirementBlob<'a>) -> Self {
+        Self::Requirement(Box::new(b))
+    }
+}
+
+impl<'a> From<RequirementSetBlob<'a>> for BlobData<'a> {
+    fn from(b: RequirementSetBlob<'a>) -> Self {
+        Self::RequirementSet(Box::new(b))
+    }
+}
+
+impl<'a> From<CodeDirectoryBlob<'a>> for BlobData<'a> {
+    fn from(b: CodeDirectoryBlob<'a>) -> Self {
+        Self::CodeDirectory(Box::new(b))
+    }
+}
+
+impl<'a> From<EmbeddedSignatureBlob<'a>> for BlobData<'a> {
+    fn from(b: EmbeddedSignatureBlob<'a>) -> Self {
+        Self::EmbeddedSignature(Box::new(b))
+    }
+}
+
+impl<'a> From<EmbeddedSignatureOldBlob<'a>> for BlobData<'a> {
+    fn from(b: EmbeddedSignatureOldBlob<'a>) -> Self {
+        Self::EmbeddedSignatureOld(Box::new(b))
+    }
+}
+
+impl<'a> From<EntitlementsBlob<'a>> for BlobData<'a> {
+    fn from(b: EntitlementsBlob<'a>) -> Self {
+        Self::Entitlements(Box::new(b))
+    }
+}
+
+impl<'a> From<EntitlementsDerBlob<'a>> for BlobData<'a> {
+    fn from(b: EntitlementsDerBlob<'a>) -> Self {
+        Self::EntitlementsDer(Box::new(b))
+    }
+}
+
+impl<'a> From<DetachedSignatureBlob<'a>> for BlobData<'a> {
+    fn from(b: DetachedSignatureBlob<'a>) -> Self {
+        Self::DetachedSignature(Box::new(b))
+    }
+}
+
+impl<'a> From<BlobWrapperBlob<'a>> for BlobData<'a> {
+    fn from(b: BlobWrapperBlob<'a>) -> Self {
+        Self::BlobWrapper(Box::new(b))
+    }
+}
+
+impl<'a> From<OtherBlob<'a>> for BlobData<'a> {
+    fn from(b: OtherBlob<'a>) -> Self {
+        Self::Other(Box::new(b))
     }
 }
 
