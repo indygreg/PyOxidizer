@@ -39,6 +39,7 @@ mod macos;
 mod notarization;
 #[allow(unused)]
 mod policy;
+mod signing;
 #[allow(unused)]
 mod signing_settings;
 #[allow(unused)]
@@ -54,7 +55,6 @@ mod verify;
 
 use {
     crate::{
-        bundle_signing::BundleSigner,
         certificate::{
             create_self_signed_code_signing_certificate, parse_pfx_data, AppleCertificate,
             CertificateProfile,
@@ -65,7 +65,7 @@ use {
         embedded_signature::{Blob, CodeSigningSlot, DigestType, RequirementSetBlob},
         error::AppleCodesignError,
         macho::{find_macho_targeting, find_signature_data, AppleSignable},
-        macho_signing::MachOSigner,
+        signing::UnifiedSigner,
         signing_settings::{SettingsScope, SigningSettings},
     },
     clap::{Arg, ArgMatches, Command},
@@ -1570,47 +1570,8 @@ fn command_sign(args: &ArgMatches) -> Result<(), AppleCodesignError> {
         .value_of("output_path")
         .expect("output_path presence should have been validated by clap");
 
-    if input_path.is_file() {
-        if settings.binary_identifier(SettingsScope::Main).is_none() {
-            let identifier = input_path
-                .file_name()
-                .ok_or_else(|| {
-                    AppleCodesignError::CliGeneralError(
-                        "unable to resolve file name of binary".into(),
-                    )
-                })?
-                .to_string_lossy();
-
-            warn!("setting binary identifier to {}", identifier);
-            settings.set_binary_identifier(SettingsScope::Main, identifier);
-        }
-
-        if settings
-            .executable_segment_flags(SettingsScope::Main)
-            .is_none()
-        {
-            settings.set_executable_segment_flags(
-                SettingsScope::Main,
-                ExecutableSegmentFlags::MAIN_BINARY,
-            );
-        }
-
-        warn!("signing {} as a Mach-O binary", input_path.display());
-        let macho_data = std::fs::read(input_path)?;
-
-        warn!("parsing Mach-O");
-        let signer = MachOSigner::new(&macho_data)?;
-
-        warn!("writing {}", output_path);
-        let mut fh = std::fs::File::create(output_path)?;
-        signer.write_signed_binary(&settings, &mut fh)?;
-    } else {
-        warn!("signing {} as a bundle", input_path.display());
-
-        let signer = BundleSigner::new_from_path(&input_path)?;
-
-        signer.write_signed_bundle(&output_path, &settings)?;
-    }
+    let signer = UnifiedSigner::new(settings);
+    signer.sign_path(input_path, output_path)?;
 
     Ok(())
 }

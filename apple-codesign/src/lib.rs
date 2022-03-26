@@ -82,21 +82,21 @@
 //!
 //! # Getting Started
 //!
-//! This crate is still in early phases of development. Until things are more mature,
-//! a good place to start with the source code is `main.rs` to get a feel for what
-//! CLI commands do.
+//! The [UnifiedSigner] type is a good place to start to see how the high level API for
+//! signing is implemented.
 //!
-//! The [MachOSigner] type is your gateway to how code signing
-//! is performed.
+//! To learn about the low-level data structures in embedded code signatures, read
+//! [specification]. Or look at the code in [embedded_signature] and
+//! [embedded_signature_builder].
 //!
-//! The [AppleSignable] trait extends the [goblin::mach::MachO] type with code
-//! signing functionality.
+//! [MachOSigner] is the type responsible for signing Mach-O files.
 //!
-//! The [EmbeddedSignature] type describes existing code signatures on Mach-O
-//! binaries.
+//! [BundleSigner] is the type responsible for signing bundles.
 //!
-//! If you'd like to learn about the technical underpinnings of code signing on Apple
-//! platforms, see [specification].
+//! [dmg::DmgSigner] signs DMG files.
+//!
+//! The [EmbeddedSignature] represents a parsed Apple code signature and provides API
+//! for data retrieval.
 //!
 //! # Accessing Apple Code Signing Certificates
 //!
@@ -148,6 +148,8 @@ mod policy;
 pub use policy::*;
 mod signing_settings;
 pub use signing_settings::*;
+mod signing;
+pub use signing::*;
 pub mod specification;
 pub mod stapling;
 pub mod ticket_lookup;
