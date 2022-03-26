@@ -1566,12 +1566,17 @@ fn command_sign(args: &ArgMatches) -> Result<(), AppleCodesignError> {
         args.value_of("input_path")
             .expect("input_path presence should have been validated by clap"),
     );
-    let output_path = args
-        .value_of("output_path")
-        .expect("output_path presence should have been validated by clap");
+    let output_path = args.value_of("output_path");
 
     let signer = UnifiedSigner::new(settings);
-    signer.sign_path(input_path, output_path)?;
+
+    if let Some(output_path) = output_path {
+        warn!("signing {} to {}", input_path.display(), output_path);
+        signer.sign_path(input_path, output_path)?;
+    } else {
+        warn!("signing {} in place", input_path.display());
+        signer.sign_path_in_place(input_path)?;
+    }
 
     Ok(())
 }
@@ -1975,7 +1980,6 @@ fn main_impl() -> Result<(), AppleCodesignError> {
                 )
                 .arg(
                     Arg::new("output_path")
-                        .required(true)
                         .help("Path to signed Mach-O binary to write"),
                 ),
         ));

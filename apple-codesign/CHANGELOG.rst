@@ -11,6 +11,8 @@
   ``macho`` module to the new ``embedded_signature`` module.
 * Signing settings types have been moved from the ``signing`` module to the new
   ``signing_settings`` module.
+* ``rcodesign sign`` no longer requires an output path and will now sign an entity
+  in place if only a single positional argument is given.
 
 0.9.0
 =====
