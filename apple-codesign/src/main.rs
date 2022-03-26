@@ -21,6 +21,8 @@ mod code_requirement;
 #[allow(unused)]
 mod code_resources;
 #[allow(unused)]
+mod dmg;
+#[allow(unused)]
 mod embedded_signature;
 #[allow(unused)]
 mod embedded_signature_builder;

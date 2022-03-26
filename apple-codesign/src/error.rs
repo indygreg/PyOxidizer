@@ -295,4 +295,7 @@ pub enum AppleCodesignError {
 
     #[error("do not know how to staple {0}")]
     StapleUnsupportedPath(PathBuf),
+
+    #[error("bad header magic in DMG; not a DMG file?")]
+    DmgBadMagic,
 }

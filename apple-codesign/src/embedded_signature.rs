@@ -1327,9 +1327,15 @@ impl<'a> EmbeddedSignature<'a> {
     /// Obtain the parsed CMS [SignedData].
     pub fn signed_data(&self) -> Result<Option<SignedData>, AppleCodesignError> {
         if let Some(data) = self.signature_data()? {
-            let signed_data = SignedData::parse_ber(data)?;
+            // Sometime we get an empty data slice. This has been observed on DMG signatures.
+            // In that scenario, pretend there is no CMS data at all.
+            if data.is_empty() {
+                Ok(None)
+            } else {
+                let signed_data = SignedData::parse_ber(data)?;
 
-            Ok(Some(signed_data))
+                Ok(Some(signed_data))
+            }
         } else {
             Ok(None)
         }
