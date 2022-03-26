@@ -1153,14 +1153,14 @@ impl<'a> EmbeddedSignature<'a> {
     }
 
     /// Find the first occurrence of the specified slot.
-    pub fn find_slot(&self, slot: CodeSigningSlot) -> Option<&BlobEntry> {
+    pub fn find_slot(&self, slot: CodeSigningSlot) -> Option<&BlobEntry<'a>> {
         self.blobs.iter().find(|e| e.slot == slot)
     }
 
     pub fn find_slot_parsed(
         &self,
         slot: CodeSigningSlot,
-    ) -> Result<Option<ParsedBlob<'_>>, AppleCodesignError> {
+    ) -> Result<Option<ParsedBlob<'a>>, AppleCodesignError> {
         if let Some(entry) = self.find_slot(slot) {
             Ok(Some(entry.clone().into_parsed_blob()?))
         } else {
@@ -1174,7 +1174,7 @@ impl<'a> EmbeddedSignature<'a> {
     /// directory.
     ///
     /// Returns `Ok(None)` if there is no code directory slot.
-    pub fn code_directory(&self) -> Result<Option<Box<CodeDirectoryBlob<'_>>>, AppleCodesignError> {
+    pub fn code_directory(&self) -> Result<Option<Box<CodeDirectoryBlob<'a>>>, AppleCodesignError> {
         if let Some(parsed) = self.find_slot_parsed(CodeSigningSlot::CodeDirectory)? {
             if let BlobData::CodeDirectory(cd) = parsed.blob {
                 Ok(Some(cd))
@@ -1192,7 +1192,7 @@ impl<'a> EmbeddedSignature<'a> {
     /// blob.
     ///
     /// Returns `Ok(None)` if there is no entitlements slot.
-    pub fn entitlements(&self) -> Result<Option<Box<EntitlementsBlob<'_>>>, AppleCodesignError> {
+    pub fn entitlements(&self) -> Result<Option<Box<EntitlementsBlob<'a>>>, AppleCodesignError> {
         if let Some(parsed) = self.find_slot_parsed(CodeSigningSlot::Entitlements)? {
             if let BlobData::Entitlements(entitlements) = parsed.blob {
                 Ok(Some(entitlements))
@@ -1212,7 +1212,7 @@ impl<'a> EmbeddedSignature<'a> {
     /// Returns `Ok(None)` if there is no requirements slot.
     pub fn code_requirements(
         &self,
-    ) -> Result<Option<Box<RequirementSetBlob<'_>>>, AppleCodesignError> {
+    ) -> Result<Option<Box<RequirementSetBlob<'a>>>, AppleCodesignError> {
         if let Some(parsed) = self.find_slot_parsed(CodeSigningSlot::RequirementSet)? {
             if let BlobData::RequirementSet(reqs) = parsed.blob {
                 Ok(Some(reqs))
@@ -1228,7 +1228,7 @@ impl<'a> EmbeddedSignature<'a> {
     ///
     /// The returned data is likely DER PKCS#7 with the root object
     /// pkcs7-signedData (1.2.840.113549.1.7.2).
-    pub fn signature_data(&self) -> Result<Option<&'_ [u8]>, AppleCodesignError> {
+    pub fn signature_data(&self) -> Result<Option<&'a [u8]>, AppleCodesignError> {
         if let Some(parsed) = self.find_slot_parsed(CodeSigningSlot::Signature)? {
             if let BlobData::BlobWrapper(blob) = parsed.blob {
                 Ok(Some(blob.data))
