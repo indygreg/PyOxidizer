@@ -432,8 +432,10 @@ impl<'data> MachOSigner<'data> {
         if settings.signing_key().is_some() {
             blobs.push((
                 CodeSigningSlot::Signature,
-                BlobWrapperBlob::from_data(&self.create_cms_signature(settings, &code_directory)?)
-                    .to_blob_bytes()?,
+                BlobWrapperBlob::from_data_borrowed(
+                    &self.create_cms_signature(settings, &code_directory)?,
+                )
+                .to_blob_bytes()?,
             ));
         }
 

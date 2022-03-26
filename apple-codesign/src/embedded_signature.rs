@@ -853,7 +853,7 @@ impl<'a> Blob<'a> for DetachedSignatureBlob<'a> {
 
 /// Represents a generic blob wrapper.
 pub struct BlobWrapperBlob<'a> {
-    data: &'a [u8],
+    data: Cow<'a, [u8]>,
 }
 
 impl<'a> Blob<'a> for BlobWrapperBlob<'a> {
@@ -863,7 +863,7 @@ impl<'a> Blob<'a> for BlobWrapperBlob<'a> {
 
     fn from_blob_bytes(data: &'a [u8]) -> Result<Self, AppleCodesignError> {
         Ok(Self {
-            data: read_and_validate_blob_header(data, Self::magic(), "blob wrapper blob")?,
+            data: read_and_validate_blob_header(data, Self::magic(), "blob wrapper blob")?.into(),
         })
     }
 
@@ -874,14 +874,21 @@ impl<'a> Blob<'a> for BlobWrapperBlob<'a> {
 
 impl<'a> std::fmt::Debug for BlobWrapperBlob<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!("{}", hex::encode(self.data)))
+        f.write_fmt(format_args!("{}", hex::encode(&self.data)))
     }
 }
 
 impl<'a> BlobWrapperBlob<'a> {
     /// Construct an instance where the payload (post blob header) is given data.
-    pub fn from_data(data: &'a [u8]) -> BlobWrapperBlob<'a> {
-        Self { data }
+    pub fn from_data_borrowed(data: &'a [u8]) -> BlobWrapperBlob<'a> {
+        Self { data: data.into() }
+    }
+}
+
+impl<'a> BlobWrapperBlob<'static> {
+    /// Construct an instance with payload data.
+    pub fn from_data_owned(data: Vec<u8>) -> BlobWrapperBlob<'static> {
+        Self { data: data.into() }
     }
 }
 
@@ -1229,12 +1236,11 @@ impl<'a> EmbeddedSignature<'a> {
     /// The returned data is likely DER PKCS#7 with the root object
     /// pkcs7-signedData (1.2.840.113549.1.7.2).
     pub fn signature_data(&self) -> Result<Option<&'a [u8]>, AppleCodesignError> {
-        if let Some(parsed) = self.find_slot_parsed(CodeSigningSlot::Signature)? {
-            if let BlobData::BlobWrapper(blob) = parsed.blob {
-                Ok(Some(blob.data))
-            } else {
-                Err(AppleCodesignError::BadMagic("signature blob"))
-            }
+        if let Some(parsed) = self.find_slot(CodeSigningSlot::Signature) {
+            // Make sure it validates.
+            ParsedBlob::try_from(parsed.clone())?;
+
+            Ok(Some(parsed.payload()?))
         } else {
             Ok(None)
         }
