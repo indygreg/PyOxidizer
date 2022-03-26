@@ -6,11 +6,12 @@
 
 use {
     crate::{
-        error::AppleCodesignError,
-        macho::{
+        embedded_signature::{
             read_and_validate_blob_header, Blob, CodeSigningMagic, CodeSigningSlot, Digest,
-            DigestType, MachoTarget, Platform,
+            DigestType,
         },
+        error::AppleCodesignError,
+        macho::{MachoTarget, Platform},
     },
     scroll::{IOwrite, Pread},
     semver::Version,
@@ -128,6 +129,18 @@ pub enum CodeDirectoryVersion {
     SupportsExecutableSegment = 0x20400,
     SupportsRuntime = 0x20500,
     SupportsLinkage = 0x20600,
+}
+
+#[repr(C)]
+pub struct Scatter {
+    /// Number of pages. 0 for sentinel only.
+    count: u32,
+    /// First page number.
+    base: u32,
+    /// Offset in target.
+    target_offset: u64,
+    /// Reserved.
+    spare: u64,
 }
 
 fn get_hashes(data: &[u8], offset: usize, count: usize, hash_size: usize) -> Vec<Digest<'_>> {

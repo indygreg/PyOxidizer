@@ -21,6 +21,8 @@ mod code_requirement;
 #[allow(unused)]
 mod code_resources;
 #[allow(unused)]
+mod embedded_signature;
+#[allow(unused)]
 mod entitlements;
 mod error;
 #[allow(unused)]
@@ -56,11 +58,9 @@ use {
         code_directory::{CodeDirectoryBlob, CodeSignatureFlags, ExecutableSegmentFlags},
         code_hash::compute_code_hashes,
         code_requirement::CodeRequirements,
+        embedded_signature::{Blob, CodeSigningSlot, DigestType, RequirementSetBlob},
         error::AppleCodesignError,
-        macho::{
-            find_macho_targeting, find_signature_data, AppleSignable, Blob, CodeSigningSlot,
-            DigestType, RequirementSetBlob,
-        },
+        macho::{find_macho_targeting, find_signature_data, AppleSignable},
         macho_signing::MachOSigner,
         signing::{SettingsScope, SigningSettings},
     },

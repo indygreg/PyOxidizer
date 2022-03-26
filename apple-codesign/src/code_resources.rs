@@ -18,8 +18,8 @@
 use {
     crate::{
         bundle_signing::{BundleFileHandler, SignedMachOInfo},
+        embedded_signature::DigestType,
         error::AppleCodesignError,
-        macho::DigestType,
     },
     apple_bundles::DirectoryBundleFile,
     log::{debug, info},

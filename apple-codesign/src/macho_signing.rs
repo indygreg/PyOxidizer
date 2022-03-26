@@ -10,14 +10,17 @@ use {
     crate::{
         code_directory::{CodeDirectoryBlob, CodeSignatureFlags},
         code_hash::compute_code_hashes,
-        code_requirement::{CodeRequirementExpression, CodeRequirements},
+        code_requirement::{CodeRequirementExpression, CodeRequirements, RequirementType},
+        embedded_signature::{
+            create_superblob, Blob, BlobWrapperBlob, CodeSigningMagic, CodeSigningSlot, Digest,
+            DigestType, EmbeddedSignature, EntitlementsBlob, EntitlementsDerBlob,
+            RequirementSetBlob,
+        },
         entitlements::plist_to_executable_segment_flags,
         error::AppleCodesignError,
         macho::{
-            create_superblob, find_macho_targeting, parse_version_nibbles,
-            semver_to_macho_target_version, AppleSignable, Blob, BlobWrapperBlob, CodeSigningMagic,
-            CodeSigningSlot, Digest, DigestType, EmbeddedSignature, EntitlementsBlob,
-            EntitlementsDerBlob, RequirementSetBlob, RequirementType,
+            find_macho_targeting, parse_version_nibbles, semver_to_macho_target_version,
+            AppleSignable,
         },
         policy::derive_designated_requirements,
         signing::{DesignatedRequirementMode, SettingsScope, SigningSettings},

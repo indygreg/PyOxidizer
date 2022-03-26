@@ -7,9 +7,11 @@
 use {
     crate::{
         code_directory::CodeDirectoryBlob,
+        code_requirement::RequirementType,
         code_resources::{CodeResourcesBuilder, CodeResourcesRule},
+        embedded_signature::{Blob, BlobData, CodeSigningSlot},
         error::AppleCodesignError,
-        macho::{AppleSignable, Blob, BlobData, CodeSigningSlot, RequirementType},
+        macho::AppleSignable,
         macho_signing::MachOSigner,
         signing::{SettingsScope, SigningSettings},
     },

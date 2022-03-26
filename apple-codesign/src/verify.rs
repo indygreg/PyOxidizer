@@ -25,10 +25,9 @@ use {
     crate::{
         code_directory::CodeDirectoryBlob,
         code_hash::compute_code_hashes,
+        embedded_signature::{CodeSigningSlot, DigestType, EmbeddedSignature},
         error::AppleCodesignError,
-        macho::{
-            find_signature_data, AppleSignable, CodeSigningSlot, DigestType, EmbeddedSignature,
-        },
+        macho::{find_signature_data, AppleSignable},
     },
     cryptographic_message_syntax::{CmsError, SignedData},
     goblin::mach::{Mach, MachO},

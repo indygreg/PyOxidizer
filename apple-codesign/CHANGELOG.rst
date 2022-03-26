@@ -7,6 +7,8 @@
 
 * Support for notarizing and stapling flat packages (``.pkg`` installers). (There
   is still no support for signing flat packages.)
+* Various symbols related to common code signature data structures have been moved from the
+  ``macho`` module to the new ``embedded_signature`` module.
 
 0.9.0
 =====

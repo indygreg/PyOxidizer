@@ -116,10 +116,12 @@ pub fn plist_to_executable_segment_flags(value: &Value) -> ExecutableSegmentFlag
 
 #[cfg(test)]
 mod test {
-    use crate::Blob;
     use {
         super::*,
-        crate::{AppleSignable, CodeSigningSlot},
+        crate::{
+            embedded_signature::{Blob, CodeSigningSlot},
+            AppleSignable,
+        },
         anyhow::anyhow,
         anyhow::Result,
         goblin::mach::Mach,
@@ -226,7 +228,9 @@ mod test {
             .expect("unable to find der entitlements blob");
 
         match slot.clone().into_parsed_blob()?.blob {
-            crate::macho::BlobData::EntitlementsDer(der) => Ok(der.serialize_payload()?),
+            crate::embedded_signature::BlobData::EntitlementsDer(der) => {
+                Ok(der.serialize_payload()?)
+            }
             _ => Err(anyhow!(
                 "failed to obtain entitlements DER (this should never happen)"
             )),

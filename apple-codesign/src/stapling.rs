@@ -14,8 +14,9 @@ from Apple and attaching it to something else.
 use {
     crate::{
         bundle_signing::SignedMachOInfo,
+        embedded_signature::DigestType,
         ticket_lookup::{default_client, lookup_notarization_ticket},
-        AppleCodesignError, DigestType,
+        AppleCodesignError,
     },
     apple_bundles::{BundlePackageType, DirectoryBundle},
     apple_xar::reader::XarReader,

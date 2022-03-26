@@ -19,10 +19,7 @@ This module contains code related to reading and writing these so-called
 */
 
 use {
-    crate::{
-        error::AppleCodesignError,
-        macho::{AppleSignable, DigestType},
-    },
+    crate::{embedded_signature::DigestType, error::AppleCodesignError, macho::AppleSignable},
     goblin::mach::MachO,
 };
 

@@ -25,11 +25,10 @@ on 4 byte boundaries.
 
 use {
     crate::{
-        error::AppleCodesignError,
-        macho::{
+        embedded_signature::{
             read_and_validate_blob_header, CodeSigningMagic, RequirementBlob, RequirementSetBlob,
-            RequirementType,
         },
+        error::AppleCodesignError,
     },
     bcder::Oid,
     chrono::TimeZone,
@@ -52,6 +51,63 @@ const OPCODE_FLAG_DEFAULT_FALSE: u32 = 0x80000000;
 /// Opcode flag meaning has size field, skip and continue.
 #[allow(unused)]
 const OPCODE_FLAG_SKIP: u32 = 0x40000000;
+
+/// Denotes type of code requirements.
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+#[repr(u32)]
+pub enum RequirementType {
+    /// What hosts may run on us.
+    Host,
+    /// What guests we may run.
+    Guest,
+    /// Designated requirement.
+    Designated,
+    /// What libraries we may link against.
+    Library,
+    /// What plug-ins we may load.
+    Plugin,
+    /// Unknown requirement type.
+    Unknown(u32),
+}
+
+impl From<u32> for RequirementType {
+    fn from(v: u32) -> Self {
+        match v {
+            1 => Self::Host,
+            2 => Self::Guest,
+            3 => Self::Designated,
+            4 => Self::Library,
+            5 => Self::Plugin,
+            _ => Self::Unknown(v),
+        }
+    }
+}
+
+impl From<RequirementType> for u32 {
+    fn from(t: RequirementType) -> Self {
+        match t {
+            RequirementType::Host => 1,
+            RequirementType::Guest => 2,
+            RequirementType::Designated => 3,
+            RequirementType::Library => 4,
+            RequirementType::Plugin => 5,
+            RequirementType::Unknown(v) => v,
+        }
+    }
+}
+
+impl std::fmt::Display for RequirementType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Host => f.write_str("host(1)"),
+            Self::Guest => f.write_str("guest(2)"),
+            Self::Designated => f.write_str("designated(3)"),
+            Self::Library => f.write_str("library(4)"),
+            Self::Plugin => f.write_str("plugin(5)"),
+            Self::Unknown(v) => f.write_fmt(format_args!("unknown({})", v)),
+        }
+    }
+}
 
 fn read_data(data: &[u8]) -> Result<(&[u8], &[u8]), AppleCodesignError> {
     let length = data.pread_with::<u32>(0, scroll::BE)?;

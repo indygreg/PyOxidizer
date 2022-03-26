@@ -9,8 +9,8 @@ use {
         certificate::AppleCertificate,
         code_directory::{CodeSignatureFlags, ExecutableSegmentFlags},
         code_requirement::CodeRequirementExpression,
+        embedded_signature::{Blob, DigestType, RequirementBlob},
         error::AppleCodesignError,
-        macho::{Blob, DigestType, RequirementBlob},
     },
     goblin::mach::cputype::{
         CpuType, CPU_TYPE_ARM, CPU_TYPE_ARM64, CPU_TYPE_ARM64_32, CPU_TYPE_X86_64,
