@@ -323,7 +323,17 @@ impl DmgSigner {
     ) -> Result<CodeDirectoryBlob<'static>, AppleCodesignError> {
         let reader = DmgReader::new(fh)?;
 
-        let flags = CodeSignatureFlags::ADHOC;
+        let mut flags = settings
+            .code_signature_flags(SettingsScope::Main)
+            .unwrap_or_else(CodeSignatureFlags::empty);
+
+        if settings.signing_key().is_some() {
+            flags -= CodeSignatureFlags::ADHOC;
+        } else {
+            flags |= CodeSignatureFlags::ADHOC;
+        }
+
+        warn!("using code signature flags: {:?}", flags);
 
         let ident = Cow::Owned(
             settings

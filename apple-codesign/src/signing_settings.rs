@@ -578,7 +578,7 @@ impl<'key> SigningSettings<'key> {
         self.code_signature_flags.insert(scope, flags);
     }
 
-    /// Add code signature flags for signed Mach-O binaries.
+    /// Add code signature flags.
     ///
     /// The incoming flags will be ORd with any existing flags for the path
     /// specified. The new flags will be returned.
@@ -600,7 +600,7 @@ impl<'key> SigningSettings<'key> {
         new
     }
 
-    /// Remove code signature flags for signed Mach-O binaries.
+    /// Remove code signature flags.
     ///
     /// The incoming flags will be removed from any existing flags for the path
     /// specified. The new flags will be returned.
