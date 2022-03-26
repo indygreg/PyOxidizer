@@ -8,11 +8,12 @@ use {
     crate::{
         bundle_signing::BundleSigner,
         code_directory::ExecutableSegmentFlags,
+        dmg::{path_is_dmg, DmgSigner},
         error::AppleCodesignError,
         macho_signing::MachOSigner,
         signing_settings::{SettingsScope, SigningSettings},
     },
-    log::warn,
+    log::{info, warn},
     std::path::Path,
 };
 
@@ -36,7 +37,11 @@ impl<'key> UnifiedSigner<'key> {
         let input_path = input_path.as_ref();
 
         if input_path.is_file() {
-            self.sign_macho(input_path, output_path)
+            if path_is_dmg(input_path)? {
+                self.sign_dmg(input_path, output_path)
+            } else {
+                self.sign_macho(input_path, output_path)
+            }
         } else {
             self.sign_bundle(input_path, output_path)
         }
@@ -52,7 +57,8 @@ impl<'key> UnifiedSigner<'key> {
         self.sign_path(path, path)
     }
 
-    fn sign_macho(
+    /// Sign a Mach-O binary.
+    pub fn sign_macho(
         &self,
         input_path: impl AsRef<Path>,
         output_path: impl AsRef<Path>,
@@ -99,7 +105,65 @@ impl<'key> UnifiedSigner<'key> {
         Ok(())
     }
 
-    fn sign_bundle(
+    /// Sign a `.dmg` file.
+    pub fn sign_dmg(
+        &self,
+        input_path: impl AsRef<Path>,
+        output_path: impl AsRef<Path>,
+    ) -> Result<(), AppleCodesignError> {
+        let input_path = input_path.as_ref();
+        let output_path = output_path.as_ref();
+
+        warn!("signing {} as a DMG", input_path.display());
+
+        // There must be a binary identifier on the DMG. So try to derive one
+        // from the filename if one isn't present in the settings.
+        let mut settings = self.settings.clone();
+
+        if settings.binary_identifier(SettingsScope::Main).is_none() {
+            let file_name = input_path
+                .file_stem()
+                .ok_or_else(|| {
+                    AppleCodesignError::CliGeneralError("unable to resolve file name of DMG".into())
+                })?
+                .to_string_lossy();
+
+            warn!(
+                "setting binary identifier to {} (derived from file name)",
+                file_name
+            );
+            settings.set_binary_identifier(SettingsScope::Main, file_name);
+        }
+
+        // The DMG signer signs in place because it needs a `File` handle. So if
+        // the output path is different, copy the DMG first.
+
+        // This is not robust same file detection.
+        if input_path != output_path {
+            info!(
+                "copying {} to {} in preparation for signing",
+                input_path.display(),
+                output_path.display()
+            );
+            if let Some(parent) = output_path.parent() {
+                std::fs::create_dir_all(parent)?;
+            }
+
+            std::fs::copy(input_path, output_path)?;
+        }
+
+        let signer = DmgSigner::default();
+        let mut fh = std::fs::File::options()
+            .read(true)
+            .write(true)
+            .open(output_path)?;
+        signer.sign_file(&settings, &mut fh)?;
+
+        Ok(())
+    }
+
+    /// Sign a bundle.
+    pub fn sign_bundle(
         &self,
         input_path: impl AsRef<Path>,
         output_path: impl AsRef<Path>,

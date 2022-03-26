@@ -54,6 +54,7 @@ use {
         collections::HashMap,
         fs::File,
         io::{Read, Seek, SeekFrom, Write},
+        path::Path,
     },
 };
 
@@ -235,6 +236,15 @@ impl DmgReader {
             self.digest_slice_with(digest, reader, 0, size)
         }
     }
+}
+
+/// Determines whether a filesystem path is a DMG.
+///
+/// Returns true if the path has a DMG trailer.
+pub fn path_is_dmg(path: impl AsRef<Path>) -> Result<bool, AppleCodesignError> {
+    let mut fh = File::open(path.as_ref())?;
+
+    Ok(KolyTrailer::read_from(&mut fh).is_ok())
 }
 
 /// Entity for signing DMG files.
