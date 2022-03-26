@@ -6,7 +6,8 @@
 
 use {
     crate::rfc4519::{
-        OID_COMMON_NAME, OID_COUNTRY_NAME, OID_ORGANIZATIONAL_UNIT_NAME, OID_ORGANIZATION_NAME,
+        OID_COMMON_NAME, OID_COUNTRY_NAME, OID_LOCALITY_NAME, OID_ORGANIZATIONAL_UNIT_NAME,
+        OID_ORGANIZATION_NAME, OID_STATE_PROVINCE_NAME,
     },
     bcder::{
         decode::{Constructed, Error::Malformed, Error::Unimplemented, Source},
@@ -402,6 +403,16 @@ impl Name {
         self.iter_by_oid(Oid(OID_COUNTRY_NAME.as_ref().into()))
     }
 
+    /// Iterate over all Locality Name (L) attributes.
+    pub fn iter_locality(&self) -> impl Iterator<Item = &AttributeTypeAndValue> {
+        self.iter_by_oid(Oid(OID_LOCALITY_NAME.as_ref().into()))
+    }
+
+    /// Iterate over all State or Province attributes.
+    pub fn iter_state_province(&self) -> impl Iterator<Item = &AttributeTypeAndValue> {
+        self.iter_by_oid(Oid(OID_STATE_PROVINCE_NAME.as_ref().into()))
+    }
+
     /// Iterate over all Organization (O) attributes.
     pub fn iter_organization(&self) -> impl Iterator<Item = &AttributeTypeAndValue> {
         self.iter_by_oid(Oid(OID_ORGANIZATION_NAME.as_ref().into()))
@@ -427,6 +438,38 @@ impl Name {
         } else {
             Ok(None)
         }
+    }
+
+    /// Obtain a user friendly string representation of this instance.
+    ///
+    /// This prints common OIDs like common name and organization unit in a way
+    /// that is similar to how tools like OpenSSL render certificates.
+    ///
+    /// Not all attributes are printed. Do not compare the output of this
+    /// function to test equality.
+    pub fn user_friendly_str(&self) -> Result<String, bcder::decode::Error> {
+        let mut fields = vec![];
+
+        for cn in self.iter_common_name() {
+            fields.push(format!("CN={}", cn.to_string()?));
+        }
+        for ou in self.iter_organizational_unit() {
+            fields.push(format!("OU={}", ou.to_string()?));
+        }
+        for o in self.iter_organization() {
+            fields.push(format!("O={}", o.to_string()?));
+        }
+        for l in self.iter_locality() {
+            fields.push(format!("L={}", l.to_string()?));
+        }
+        for state in self.iter_state_province() {
+            fields.push(format!("S={}", state.to_string()?));
+        }
+        for c in self.iter_country() {
+            fields.push(format!("C={}", c.to_string()?));
+        }
+
+        Ok(fields.join(", "))
     }
 
     /// Appends a PrintableString value for the given OID.

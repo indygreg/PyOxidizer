@@ -16,6 +16,16 @@ pub const OID_COMMON_NAME: ConstOid = Oid(&[85, 4, 3]);
 /// 2.5.4.6
 pub const OID_COUNTRY_NAME: ConstOid = Oid(&[85, 4, 6]);
 
+/// Locality Name (L)
+///
+/// 2.5.4.7
+pub const OID_LOCALITY_NAME: ConstOid = Oid(&[85, 4, 7]);
+
+/// State or Province Name
+///
+/// 2.5.4.8
+pub const OID_STATE_PROVINCE_NAME: ConstOid = Oid(&[85, 4, 8]);
+
 /// Organization Name (O)
 ///
 /// 2.5.4.10

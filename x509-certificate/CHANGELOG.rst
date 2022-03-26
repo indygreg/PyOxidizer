@@ -2,6 +2,13 @@
 ``x509-certificate`` History
 ============================
 
+0.11.0
+======
+
+* Add some APIs on ``Name`` to retrieve additional well-known fields.
+* Add ``Name::user_friendly_str()`` for obtaining a user-friendly string
+  from a series of attributes.
+
 0.10.0
 ======
 
