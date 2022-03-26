@@ -13,7 +13,7 @@ use {
         error::AppleCodesignError,
         macho::AppleSignable,
         macho_signing::MachOSigner,
-        signing::{SettingsScope, SigningSettings},
+        signing_settings::{SettingsScope, SigningSettings},
     },
     apple_bundles::{DirectoryBundle, DirectoryBundleFile},
     goblin::mach::Mach,

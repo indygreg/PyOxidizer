@@ -15,7 +15,7 @@ data.
 use {
     crate::{
         code_hash::compute_code_hashes, embedded_signature::EmbeddedSignature,
-        error::AppleCodesignError, signing::SigningSettings,
+        error::AppleCodesignError, signing_settings::SigningSettings,
     },
     cryptographic_message_syntax::time_stamp_message_http,
     goblin::mach::{

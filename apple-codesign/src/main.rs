@@ -40,7 +40,7 @@ mod notarization;
 #[allow(unused)]
 mod policy;
 #[allow(unused)]
-mod signing;
+mod signing_settings;
 #[allow(unused)]
 mod specification;
 #[allow(unused)]
@@ -66,7 +66,7 @@ use {
         error::AppleCodesignError,
         macho::{find_macho_targeting, find_signature_data, AppleSignable},
         macho_signing::MachOSigner,
-        signing::{SettingsScope, SigningSettings},
+        signing_settings::{SettingsScope, SigningSettings},
     },
     clap::{Arg, ArgMatches, Command},
     cryptographic_message_syntax::SignedData,

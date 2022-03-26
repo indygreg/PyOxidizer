@@ -23,7 +23,7 @@ use {
             AppleSignable,
         },
         policy::derive_designated_requirements,
-        signing::{DesignatedRequirementMode, SettingsScope, SigningSettings},
+        signing_settings::{DesignatedRequirementMode, SettingsScope, SigningSettings},
         ExecutableSegmentFlags,
     },
     goblin::mach::{
