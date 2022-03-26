@@ -12,8 +12,8 @@ use {
         code_hash::compute_code_hashes,
         code_requirement::{CodeRequirementExpression, CodeRequirements, RequirementType},
         embedded_signature::{
-            Blob, BlobData, CodeSigningSlot, Digest, DigestType, EmbeddedSignature,
-            EntitlementsBlob, EntitlementsDerBlob, RequirementSetBlob,
+            BlobData, CodeSigningSlot, Digest, EmbeddedSignature, EntitlementsBlob,
+            EntitlementsDerBlob, RequirementSetBlob,
         },
         embedded_signature_builder::EmbeddedSignatureBuilder,
         entitlements::plist_to_executable_segment_flags,
@@ -26,9 +26,6 @@ use {
         signing::{DesignatedRequirementMode, SettingsScope, SigningSettings},
         ExecutableSegmentFlags,
     },
-    bcder::{encode::PrimitiveContent, Oid},
-    bytes::Bytes,
-    cryptographic_message_syntax::{asn1::rfc5652::OID_ID_DATA, SignedDataBuilder, SignerBuilder},
     goblin::mach::{
         constants::{SEG_LINKEDIT, SEG_PAGEZERO},
         load_command::{
@@ -41,52 +38,7 @@ use {
     scroll::{ctx::SizeWith, IOwrite},
     std::{borrow::Cow, cmp::Ordering, collections::HashMap, io::Write},
     tugger_apple::create_universal_macho,
-    x509_certificate::{rfc5652::AttributeValue, DigestAlgorithm},
 };
-
-/// OID for signed attribute containing plist of code directory hashes.
-///
-/// 1.2.840.113635.100.9.1.
-const CDHASH_PLIST_OID: bcder::ConstOid = Oid(&[42, 134, 72, 134, 247, 99, 100, 9, 1]);
-
-/// OID for signed attribute containing the SHA-256 of code directory digests.
-///
-/// 1.2.840.113635.100.9.2
-const CDHASH_SHA256_OID: bcder::ConstOid = Oid(&[42, 134, 72, 134, 247, 99, 100, 9, 2]);
-
-/// Obtain the XML plist containing code directory hashes.
-///
-/// This plist is embedded as a signed attribute in the CMS signature.
-pub fn create_code_directory_hashes_plist<'a>(
-    code_directories: impl Iterator<Item = &'a CodeDirectoryBlob<'a>>,
-    digest_type: DigestType,
-) -> Result<Vec<u8>, AppleCodesignError> {
-    let hashes = code_directories
-        .map(|cd| {
-            let mut digest = cd.digest_with(digest_type)?;
-
-            // While we may use stronger digests, it appears that the XML in the
-            // signed attribute is always truncated so it is the length of a SHA-1
-            // digest.
-            digest.truncate(20);
-
-            Ok(plist::Value::Data(digest))
-        })
-        .collect::<Result<Vec<_>, AppleCodesignError>>()?;
-
-    let mut plist = plist::Dictionary::new();
-    plist.insert("cdhashes".to_string(), plist::Value::Array(hashes));
-
-    let mut buffer = Vec::<u8>::new();
-    plist::Value::from(plist)
-        .to_writer_xml(&mut buffer)
-        .map_err(AppleCodesignError::CodeDirectoryPlist)?;
-    // We also need to include a trailing newline to conform with Apple's XML
-    // writer.
-    buffer.push(b'\n');
-
-    Ok(buffer)
-}
 
 /// Derive a new Mach-O binary with new signature data.
 fn create_macho_with_signature(
@@ -427,95 +379,18 @@ impl<'data> MachOSigner<'data> {
             self.create_code_directory(settings, macho_data, macho, previous_signature)?;
         info!("code directory version: {}", code_directory.version);
 
-        let code_directory = builder.add_code_directory(code_directory)?;
+        builder.add_code_directory(code_directory)?;
 
-        if settings.signing_key().is_some() {
-            let cms_data = self.create_cms_signature(settings, code_directory)?;
-            builder.add_cms_signature(cms_data)?;
+        if let Some((signing_key, signing_cert)) = settings.signing_key() {
+            builder.create_cms_signature(
+                signing_key,
+                signing_cert,
+                settings.time_stamp_url(),
+                settings.certificate_chain().iter().cloned(),
+            )?;
         }
 
         builder.create_superblob()
-    }
-
-    /// Create a CMS `SignedData` structure containing a cryptographic signature.
-    ///
-    /// This becomes the content of the `EmbeddedSignature` blob in the `Signature` slot.
-    ///
-    /// This function will error if a signing key has not been specified.
-    ///
-    /// This takes an explicit Mach-O to operate on due to a circular dependency
-    /// between writing out the Mach-O and digesting its content. See the note
-    /// in [MachOSigner] for details.
-    pub fn create_cms_signature(
-        &self,
-        settings: &SigningSettings,
-        code_directory: &CodeDirectoryBlob,
-    ) -> Result<Vec<u8>, AppleCodesignError> {
-        let (signing_key, signing_cert) = settings
-            .signing_key()
-            .ok_or(AppleCodesignError::NoSigningCertificate)?;
-
-        if let Some(cn) = signing_cert.subject_common_name() {
-            warn!("creating cryptographic signature with certificate {}", cn);
-        }
-
-        // We need the blob serialized content of the code directory to compute
-        // the message digest using alternate data.
-        let code_directory_raw = code_directory.to_blob_bytes()?;
-
-        // We need an XML plist containing code directory hashes to include as a signed
-        // attribute.
-        let code_directories = vec![code_directory];
-        let code_directory_hashes_plist = create_code_directory_hashes_plist(
-            code_directories.into_iter(),
-            code_directory.hash_type,
-        )?;
-
-        let signer = SignerBuilder::new(signing_key, signing_cert.clone())
-            .message_id_content(code_directory_raw)
-            .signed_attribute_octet_string(
-                Oid(Bytes::copy_from_slice(CDHASH_PLIST_OID.as_ref())),
-                &code_directory_hashes_plist,
-            );
-
-        // If we're using a digest beyond SHA-1, that digest is included as an additional
-        // signed attribute. However, Apple is using unregistered OIDs here. We only know about
-        // the SHA-256 one. It exists as an `(OID, OCTET STRING)` value where the OID
-        // is 2.16.840.1.101.3.4.2.1, which is registered.
-        let signer = if code_directory.hash_type == DigestType::Sha256 {
-            let digest = code_directory.digest_with(DigestType::Sha256)?;
-
-            signer.signed_attribute(
-                Oid(CDHASH_SHA256_OID.as_ref().into()),
-                vec![AttributeValue::new(bcder::Captured::from_values(
-                    bcder::Mode::Der,
-                    bcder::encode::sequence((
-                        Oid::from(DigestAlgorithm::Sha256).encode_ref(),
-                        bcder::OctetString::new(digest.into()).encode_ref(),
-                    )),
-                ))],
-            )
-        } else {
-            signer
-        };
-
-        let signer = if let Some(time_stamp_url) = settings.time_stamp_url() {
-            info!("Using time-stamp server {}", time_stamp_url);
-            signer.time_stamp_url(time_stamp_url.clone())?
-        } else {
-            signer
-        };
-
-        let der = SignedDataBuilder::default()
-            // The default is `signed-data`. But Apple appears to use the `data` content-type,
-            // in violation of RFC 5652 Section 5, which says `signed-data` should be
-            // used when there are signatures.
-            .content_type(Oid(OID_ID_DATA.as_ref().into()))
-            .signer(signer)
-            .certificates(settings.certificate_chain().iter().cloned())
-            .build_der()?;
-
-        Ok(der)
     }
 
     /// Attempt to resolve the binary identifier to use.
