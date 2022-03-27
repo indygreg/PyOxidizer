@@ -17,6 +17,10 @@
 * The new ``rcodesign print-signature-info`` command prints out easy-to-read YAML
   describing code signatures detected in a given path. Just point it at a file with
   code signatures and it can print out details about the code signatures within.
+* The new ``rcodesign diff-signatures`` command prints a diff of the signature content
+  of 2 filesystem paths. It is essentially a built-in diffing mechanism for the output
+  of ``rcodesign print-signature-info``. The intended use of the command is to aid
+  in debugging differences between this tool and Apple's canonical tools.
 
 0.9.0
 =====

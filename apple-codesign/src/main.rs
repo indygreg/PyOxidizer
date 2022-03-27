@@ -72,6 +72,7 @@ use {
     },
     clap::{Arg, ArgMatches, Command},
     cryptographic_message_syntax::SignedData,
+    difference::{Changeset, Difference},
     goblin::mach::{Mach, MachO},
     log::{error, warn},
     std::{io::Write, path::PathBuf, str::FromStr},
@@ -632,6 +633,49 @@ fn command_compute_code_hashes(args: &ArgMatches) -> Result<(), AppleCodesignErr
 
     for hash in hashes {
         println!("{}", hex::encode(hash));
+    }
+
+    Ok(())
+}
+
+fn command_diff_signatures(args: &ArgMatches) -> Result<(), AppleCodesignError> {
+    let path0 = args
+        .value_of("path0")
+        .ok_or(AppleCodesignError::CliBadArgument)?;
+    let path1 = args
+        .value_of("path1")
+        .ok_or(AppleCodesignError::CliBadArgument)?;
+
+    let reader = SignatureReader::from_path(path0)?;
+
+    let a_entities = reader.iter_entities().collect::<Result<Vec<_>, _>>()?;
+
+    let reader = SignatureReader::from_path(path1)?;
+    let b_entities = reader.iter_entities().collect::<Result<Vec<_>, _>>()?;
+
+    let a = serde_yaml::to_string(&a_entities)?;
+    let b = serde_yaml::to_string(&b_entities)?;
+
+    let Changeset { diffs, .. } = Changeset::new(&a, &b, "\n");
+
+    for i in 0..diffs.len() {
+        match diffs[i] {
+            Difference::Same(ref x) => {
+                for line in x.lines() {
+                    println!(" {}", line);
+                }
+            }
+            Difference::Add(ref x) => {
+                for line in x.lines() {
+                    println!("+{}", line);
+                }
+            }
+            Difference::Rem(ref x) => {
+                for line in x.lines() {
+                    println!("-{}", line);
+                }
+            }
+        }
     }
 
     Ok(())
@@ -1708,6 +1752,21 @@ fn main_impl() -> Result<(), AppleCodesignError> {
     );
 
     let app = app.subcommand(
+        Command::new("diff-signatures")
+            .about("Print a diff between the signature content of two paths")
+            .arg(
+                Arg::new("path0")
+                    .required(true)
+                    .help("The first path to compare"),
+            )
+            .arg(
+                Arg::new("path1")
+                    .required(true)
+                    .help("The second path to compare"),
+            ),
+    );
+
+    let app = app.subcommand(
         Command::new("extract")
             .about("Extracts code signature data from a Mach-O binary")
             .long_about(EXTRACT_ABOUT)
@@ -2041,6 +2100,7 @@ fn main_impl() -> Result<(), AppleCodesignError> {
     match matches.subcommand() {
         Some(("analyze-certificate", args)) => command_analyze_certificate(args),
         Some(("compute-code-hashes", args)) => command_compute_code_hashes(args),
+        Some(("diff-signatures", args)) => command_diff_signatures(args),
         Some(("extract", args)) => command_extract(args),
         Some(("find-transporter", _)) => command_find_transporter(),
         Some(("generate-self-signed-certificate", args)) => {
