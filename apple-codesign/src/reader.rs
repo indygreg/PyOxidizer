@@ -16,7 +16,11 @@ use {
     cryptographic_message_syntax::{SignedData, SignerInfo},
     goblin::mach::{fat::FAT_MAGIC, parse_magic_and_ctx, Mach, MachO},
     serde::Serialize,
-    std::{fs::File, io::Read, path::Path},
+    std::{
+        fs::File,
+        io::Read,
+        path::{Path, PathBuf},
+    },
     x509_certificate::CapturedX509Certificate,
 };
 
@@ -381,15 +385,21 @@ pub struct DmgEntity {
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum SignatureEntity {
-    MachMachO(usize, MachOEntity),
     MachO(MachOEntity),
     Dmg(DmgEntity),
 }
 
+#[derive(Clone, Debug, Serialize)]
+pub struct FileEntity {
+    pub path: PathBuf,
+    pub index: Option<usize>,
+    pub entity: SignatureEntity,
+}
+
 /// Entity for reading Apple code signature data.
 pub enum SignatureReader {
-    Dmg(Box<DmgReader>),
-    MachO(Vec<u8>),
+    Dmg(PathBuf, Box<DmgReader>),
+    MachO(PathBuf, Vec<u8>),
     Bundle(Box<DirectoryBundle>),
 }
 
@@ -404,13 +414,16 @@ impl SignatureReader {
             ))),
             PathType::Dmg => {
                 let mut fh = File::open(path)?;
-                Ok(Self::Dmg(Box::new(DmgReader::new(&mut fh)?)))
+                Ok(Self::Dmg(
+                    path.to_path_buf(),
+                    Box::new(DmgReader::new(&mut fh)?),
+                ))
             }
             PathType::MachO => {
                 let data = std::fs::read(path)?;
                 Mach::parse(&data)?;
 
-                Ok(Self::MachO(data))
+                Ok(Self::MachO(path.to_path_buf(), data))
             }
             PathType::Other => Err(AppleCodesignError::UnrecognizedPathType),
         }
@@ -419,23 +432,38 @@ impl SignatureReader {
     /// Iterate over entities related to code signing.
     pub fn iter_entities(
         &self,
-    ) -> Box<dyn Iterator<Item = Result<SignatureEntity, AppleCodesignError>> + '_> {
+    ) -> Box<dyn Iterator<Item = Result<FileEntity, AppleCodesignError>> + '_> {
         match self {
-            Self::Dmg(dmg) => Box::new(std::iter::once(
-                Self::resolve_dmg_entity(dmg).map(SignatureEntity::Dmg),
-            )),
-            Self::MachO(data) => match Mach::parse(data) {
+            Self::Dmg(path, dmg) => Box::new(std::iter::once(Self::resolve_dmg_entity(dmg).map(
+                |entity| FileEntity {
+                    path: path.to_path_buf(),
+                    index: None,
+                    entity: SignatureEntity::Dmg(entity),
+                },
+            ))),
+            Self::MachO(path, data) => match Mach::parse(data) {
                 Ok(mach) => match mach {
                     Mach::Binary(macho) => Box::new(std::iter::once(
-                        Self::resolve_macho_entity(macho).map(SignatureEntity::MachO),
+                        Self::resolve_macho_entity(macho).map(|entity| FileEntity {
+                            path: path.to_path_buf(),
+                            index: None,
+                            entity: SignatureEntity::MachO(entity),
+                        }),
                     )),
-                    Mach::Fat(multiarch) => Box::new((0..multiarch.narches).map(move |index| {
-                        match multiarch.get(index) {
-                            Ok(macho) => Self::resolve_macho_entity(macho)
-                                .map(|x| SignatureEntity::MachMachO(index, x)),
-                            Err(err) => Err(err.into()),
-                        }
-                    })),
+                    Mach::Fat(multiarch) => {
+                        Box::new((0..multiarch.narches).map(
+                            move |index| match multiarch.get(index) {
+                                Ok(macho) => {
+                                    Self::resolve_macho_entity(macho).map(|entity| FileEntity {
+                                        path: path.clone(),
+                                        index: Some(index),
+                                        entity: SignatureEntity::MachO(entity),
+                                    })
+                                }
+                                Err(err) => Err(err.into()),
+                            },
+                        ))
+                    }
                 },
                 Err(err) => Box::new(std::iter::once(Err(err.into()))),
             },

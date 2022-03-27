@@ -1426,10 +1426,8 @@ fn command_print_signature_info(args: &ArgMatches) -> Result<(), AppleCodesignEr
 
     let reader = SignatureReader::from_path(path)?;
 
-    for entity in reader.iter_entities() {
-        let entity = entity?;
-        print!("{}", serde_yaml::to_string(&entity)?);
-    }
+    let entities = reader.iter_entities().collect::<Result<Vec<_>, _>>()?;
+    serde_yaml::to_writer(std::io::stdout(), &entities)?;
 
     Ok(())
 }
