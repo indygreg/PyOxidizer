@@ -15,16 +15,18 @@ use {
     crate::{
         bundle_signing::SignedMachOInfo,
         embedded_signature::DigestType,
+        reader::PathType,
         ticket_lookup::{default_client, lookup_notarization_ticket},
         AppleCodesignError,
     },
     apple_bundles::{BundlePackageType, DirectoryBundle},
     apple_xar::reader::XarReader,
-    log::{info, warn},
+    log::{error, info, warn},
     reqwest::blocking::Client,
     scroll::{IOread, IOwrite, Pread, Pwrite, SizeWith},
     std::{
         fmt::Debug,
+        fs::File,
         io::{Read, Seek, SeekFrom, Write},
         path::Path,
     },
@@ -258,26 +260,28 @@ impl Stapler {
         let path = path.as_ref();
         warn!("attempting to staple {}", path.display());
 
-        if let Ok(bundle) = DirectoryBundle::new_from_path(path) {
-            warn!("activating bundle stapling mode");
-            self.staple_bundle(&bundle)
-        } else if let Ok(fh) = std::fs::OpenOptions::new()
-            .read(true)
-            .write(true)
-            .open(path)
-        {
-            if let Ok(xar) = XarReader::new(fh) {
-                warn!("activating XAR stapling mode");
-                self.staple_xar(xar)
-            } else {
+        match PathType::from_path(path)? {
+            PathType::MachO => {
+                error!("cannot staple Mach-O binaries");
                 Err(AppleCodesignError::StapleUnsupportedPath(
                     path.to_path_buf(),
                 ))
             }
-        } else {
-            Err(AppleCodesignError::StapleUnsupportedPath(
+            PathType::Dmg => Err(AppleCodesignError::Unimplemented("DMG stapling")),
+            PathType::Bundle => {
+                warn!("activating bundle stapling mode");
+                let bundle = DirectoryBundle::new_from_path(path)
+                    .map_err(AppleCodesignError::DirectoryBundle)?;
+                self.staple_bundle(&bundle)
+            }
+            PathType::Xar => {
+                warn!("activating XAR stapling mode");
+                let xar = XarReader::new(File::options().read(true).write(true).open(path)?)?;
+                self.staple_xar(xar)
+            }
+            PathType::Other => Err(AppleCodesignError::StapleUnsupportedPath(
                 path.to_path_buf(),
-            ))
+            )),
         }
     }
 }
