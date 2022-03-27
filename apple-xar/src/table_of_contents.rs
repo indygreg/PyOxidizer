@@ -68,7 +68,7 @@ impl TableOfContents {
 
 /// The main data structure inside a table of contents.
 #[derive(Clone, Debug, Deserialize, Serialize)]
-#[serde(rename_all = "kebab-case")]
+#[serde(deny_unknown_fields, rename_all = "kebab-case")]
 pub struct XarToC {
     pub creation_time: String,
     pub checksum: Checksum,
@@ -99,6 +99,7 @@ impl XarToC {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct Checksum {
     /// The digest format used.
     pub style: ChecksumType,
@@ -133,6 +134,7 @@ impl Display for ChecksumType {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct File {
     pub id: u64,
     pub ctime: Option<DateTime<Utc>>,
@@ -207,7 +209,7 @@ impl Display for FileType {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
-#[serde(rename_all = "kebab-case")]
+#[serde(deny_unknown_fields, rename_all = "kebab-case")]
 pub struct FileData {
     pub offset: u64,
     pub size: u64,
@@ -218,6 +220,7 @@ pub struct FileData {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct FileChecksum {
     pub style: ChecksumType,
     #[serde(rename = "$value")]
@@ -225,12 +228,13 @@ pub struct FileChecksum {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct FileEncoding {
     pub style: String,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
-#[serde(rename_all = "kebab-case")]
+#[serde(deny_unknown_fields, rename_all = "kebab-case")]
 pub struct Ea {
     pub name: String,
     pub offset: u64,
@@ -242,12 +246,14 @@ pub struct Ea {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct FinderCreateTime {
     pub nanoseconds: u64,
     pub time: String,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct Signature {
     pub style: SignatureStyle,
     pub offset: u64,
@@ -283,6 +289,7 @@ impl Display for SignatureStyle {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct KeyInfo {
     #[serde(rename = "X509Data")]
     pub x509_data: X509Data,
@@ -296,6 +303,7 @@ impl KeyInfo {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct X509Data {
     #[serde(rename = "X509Certificate")]
     pub x509_certificate: Vec<String>,
