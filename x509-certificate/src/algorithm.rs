@@ -11,6 +11,7 @@ use {
     },
     bcder::{ConstOid, Oid},
     ring::{digest, signature},
+    std::fmt::{Display, Formatter},
 };
 
 /// SHA-1 digest algorithm.
@@ -124,6 +125,17 @@ pub enum DigestAlgorithm {
     ///
     /// Corresponds to OID 2.16.840.1.101.3.4.2.3.
     Sha512,
+}
+
+impl Display for DigestAlgorithm {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            DigestAlgorithm::Sha1 => f.write_str("SHA-1"),
+            DigestAlgorithm::Sha256 => f.write_str("SHA-256"),
+            DigestAlgorithm::Sha384 => f.write_str("SHA-384"),
+            DigestAlgorithm::Sha512 => f.write_str("SHA-512"),
+        }
+    }
 }
 
 impl From<DigestAlgorithm> for Oid {
@@ -322,6 +334,20 @@ impl SignatureAlgorithm {
     }
 }
 
+impl Display for SignatureAlgorithm {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            SignatureAlgorithm::RsaSha1 => f.write_str("SHA-1 with RSA encryption"),
+            SignatureAlgorithm::RsaSha256 => f.write_str("SHA-256 with RSA encryption"),
+            SignatureAlgorithm::RsaSha384 => f.write_str("SHA-384 with RSA encryption"),
+            SignatureAlgorithm::RsaSha512 => f.write_str("SHA-512 with RSA encryption"),
+            SignatureAlgorithm::EcdsaSha256 => f.write_str("ECDSA with SHA-256"),
+            SignatureAlgorithm::EcdsaSha384 => f.write_str("ECDSA with SHA-384"),
+            SignatureAlgorithm::Ed25519 => f.write_str("ED25519"),
+        }
+    }
+}
+
 impl From<SignatureAlgorithm> for Oid {
     fn from(alg: SignatureAlgorithm) -> Self {
         Oid(match alg {
@@ -441,6 +467,16 @@ pub enum KeyAlgorithm {
 
     /// Corresponds to OID 1.3.101.110
     Ed25519,
+}
+
+impl Display for KeyAlgorithm {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Rsa => f.write_str("RSA"),
+            Self::Ecdsa(_) => f.write_str("ECDSA"),
+            Self::Ed25519 => f.write_str("ED25519"),
+        }
+    }
 }
 
 impl TryFrom<&Oid> for KeyAlgorithm {
