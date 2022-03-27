@@ -201,6 +201,29 @@ impl DigestAlgorithm {
     pub fn digester(&self) -> digest::Context {
         digest::Context::from(*self)
     }
+
+    /// Digest content from a reader.
+    pub fn digest_reader<R: std::io::Read>(&self, fh: &mut R) -> Result<Vec<u8>, std::io::Error> {
+        let mut h = self.digester();
+
+        loop {
+            let mut buffer = [0u8; 16384];
+            let count = fh.read(&mut buffer)?;
+
+            h.update(&buffer[0..count]);
+
+            if count < buffer.len() {
+                break;
+            }
+        }
+
+        Ok(h.finish().as_ref().to_vec())
+    }
+
+    /// Digest the content of a path.
+    pub fn digest_path(&self, path: &std::path::Path) -> Result<Vec<u8>, std::io::Error> {
+        self.digest_reader(&mut std::fs::File::open(path)?)
+    }
 }
 
 /// An algorithm used to digitally sign content.
