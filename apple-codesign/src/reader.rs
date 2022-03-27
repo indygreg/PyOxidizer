@@ -448,7 +448,9 @@ impl XarTableOfContents {
 #[derive(Clone, Debug, Serialize)]
 pub struct XarSignature {
     pub style: String,
+    pub offset: u64,
     pub size: u64,
+    pub end_offset: u64,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub certificates: Vec<CertificateInfo>,
 }
@@ -459,7 +461,9 @@ impl TryFrom<&XarTocSignature> for XarSignature {
     fn try_from(sig: &XarTocSignature) -> Result<Self, Self::Error> {
         Ok(Self {
             style: sig.style.to_string(),
+            offset: sig.offset,
             size: sig.size,
+            end_offset: sig.offset + sig.size,
             certificates: sig
                 .x509_certificates()?
                 .into_iter()
@@ -476,6 +480,7 @@ pub struct XarFile {
     pub data_offset: Option<u64>,
     pub data_size: Option<u64>,
     pub data_length: Option<u64>,
+    pub data_end_offset: Option<u64>,
     pub data_extracted_checksum: Option<String>,
     pub data_archived_checksum: Option<String>,
     pub data_encoding: Option<String>,
@@ -504,6 +509,7 @@ impl XarFile {
         self.data_offset = Some(data.offset);
         self.data_size = Some(data.size);
         self.data_length = Some(data.length);
+        self.data_end_offset = Some(data.offset + data.length);
         self.data_extracted_checksum = Some(format!(
             "{}:{}",
             data.extracted_checksum.style, data.extracted_checksum.checksum
