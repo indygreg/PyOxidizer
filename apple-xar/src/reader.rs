@@ -25,6 +25,9 @@ pub struct XarReader<R: Read + Seek + Sized + Debug> {
     /// Reader of raw XAR archive content.
     reader: R,
 
+    /// Parsed file header.
+    header: XarHeader,
+
     /// Parsed table of contents.
     toc: TableOfContents,
 
@@ -58,6 +61,7 @@ impl<R: Read + Seek + Sized + Debug> XarReader<R> {
 
         Ok(Self {
             reader,
+            header,
             toc,
             heap_start_offset,
         })
@@ -66,6 +70,16 @@ impl<R: Read + Seek + Sized + Debug> XarReader<R> {
     /// Obtain the inner reader.
     pub fn into_inner(self) -> R {
         self.reader
+    }
+
+    /// Obtain the parsed [XarHeader] file header.
+    pub fn header(&self) -> &XarHeader {
+        &self.header
+    }
+
+    /// The start offset of the heap.
+    pub fn heap_start_offset(&self) -> u64 {
+        self.heap_start_offset
     }
 
     /// Obtain the table of contents for this archive.

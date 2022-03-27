@@ -2,7 +2,10 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use scroll::{IOread, Pread, SizeWith};
+use {
+    scroll::{IOread, Pread, SizeWith},
+    std::fmt::{Display, Formatter},
+};
 
 /// A XAR archive header.
 ///
@@ -48,6 +51,19 @@ impl From<u32> for XarChecksum {
             3 => Self::Sha256,
             4 => Self::Sha512,
             _ => Self::Other(i),
+        }
+    }
+}
+
+impl Display for XarChecksum {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            XarChecksum::None => f.write_str("none"),
+            XarChecksum::Sha1 => f.write_str("SHA-1"),
+            XarChecksum::Md5 => f.write_str("MD5"),
+            XarChecksum::Sha256 => f.write_str("SHA-256"),
+            XarChecksum::Sha512 => f.write_str("SHA-512"),
+            XarChecksum::Other(v) => f.write_fmt(format_args!("unknown ({})", v)),
         }
     }
 }

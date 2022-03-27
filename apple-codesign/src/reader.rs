@@ -413,8 +413,13 @@ pub enum CodeSignatureFile {
 
 #[derive(Clone, Debug, Serialize)]
 pub struct XarTableOfContents {
+    pub toc_length_compressed: u64,
+    pub toc_length_uncompressed: u64,
+    pub checksum_type: String,
+    pub toc_start_offset: u16,
+    pub heap_start_offset: u64,
     pub creation_time: String,
-    pub checksum: String,
+    pub toc_checksum: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub signature: Option<XarSignature>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -426,11 +431,18 @@ impl XarTableOfContents {
         xar: &mut XarReader<R>,
     ) -> Result<Self, AppleCodesignError> {
         let (digest_type, digest) = xar.checksum()?;
+        let header = xar.header();
         let toc = xar.table_of_contents();
 
         Ok(Self {
+            toc_length_compressed: header.toc_length_compressed,
+            toc_length_uncompressed: header.toc_length_uncompressed,
+            checksum_type: apple_xar::format::XarChecksum::from(header.checksum_algorithm_id)
+                .to_string(),
+            toc_start_offset: header.size,
+            heap_start_offset: xar.heap_start_offset(),
             creation_time: toc.creation_time.clone(),
-            checksum: format!("{}:{}", digest_type, hex::encode(digest)),
+            toc_checksum: format!("{}:{}", digest_type, hex::encode(digest)),
             signature: if let Some(sig) = &toc.signature {
                 Some(sig.try_into()?)
             } else {
