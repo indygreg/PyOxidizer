@@ -439,6 +439,8 @@ pub enum CodeSignatureFile {
 pub struct XarTableOfContents {
     pub toc_length_compressed: u64,
     pub toc_length_uncompressed: u64,
+    pub checksum_offset: u64,
+    pub checksum_size: u64,
     pub checksum_type: String,
     pub toc_start_offset: u16,
     pub heap_start_offset: u64,
@@ -489,6 +491,8 @@ impl XarTableOfContents {
 
         let header = xar.header();
         let toc = xar.table_of_contents();
+        let checksum_offset = toc.checksum.offset;
+        let checksum_size = toc.checksum.size;
 
         // This can be useful for debugging.
         //String::from_utf8_lossy(&pretty_print_xml(&xml)?)
@@ -500,6 +504,8 @@ impl XarTableOfContents {
         Ok(Self {
             toc_length_compressed: header.toc_length_compressed,
             toc_length_uncompressed: header.toc_length_uncompressed,
+            checksum_offset,
+            checksum_size,
             checksum_type: apple_xar::format::XarChecksum::from(header.checksum_algorithm_id)
                 .to_string(),
             toc_start_offset: header.size,
