@@ -451,6 +451,7 @@ pub struct XarTableOfContents {
     pub toc_checksum_reported_sha256_digest: String,
     pub toc_checksum_actual_sha1: String,
     pub toc_checksum_actual_sha256: String,
+    pub checksum_verifies: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub signature: Option<XarSignature>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -495,6 +496,8 @@ impl XarTableOfContents {
         let toc_checksum_actual_sha1 = xar.digest_table_of_contents_with(XarChecksum::Sha1)?;
         let toc_checksum_actual_sha256 = xar.digest_table_of_contents_with(XarChecksum::Sha256)?;
 
+        let checksum_verifies = xar.verify_table_of_contents_checksum().unwrap_or(false);
+
         let header = xar.header();
         let toc = xar.table_of_contents();
         let checksum_offset = toc.checksum.offset;
@@ -524,6 +527,7 @@ impl XarTableOfContents {
             ),
             toc_checksum_actual_sha1: hex::encode(&toc_checksum_actual_sha1),
             toc_checksum_actual_sha256: hex::encode(&toc_checksum_actual_sha256),
+            checksum_verifies,
             signature: if let Some(sig) = &toc.signature {
                 Some(sig.try_into()?)
             } else {

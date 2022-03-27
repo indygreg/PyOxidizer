@@ -312,6 +312,18 @@ impl<R: Read + Seek + Sized + Debug> XarReader<R> {
         Ok((self.toc.checksum.style, data))
     }
 
+    /// Validate the recorded checksum of the table of contents matches actual file state.
+    ///
+    /// Will `Err` if an error occurs obtaining or computing the checksums. Returns Ok
+    /// with a bool indicating if the checksums matched.
+    pub fn verify_table_of_contents_checksum(&mut self) -> XarResult<bool> {
+        let format = XarChecksum::from(self.header.checksum_algorithm_id);
+        let actual_digest = self.digest_table_of_contents_with(format)?;
+        let recorded_digest = self.checksum()?.1;
+
+        Ok(actual_digest == recorded_digest)
+    }
+
     /// Obtain RSA signature data from this archive.
     ///
     /// The returned tuple contains the raw signature data and the embedded X.509 certificates.
