@@ -444,6 +444,8 @@ pub struct XarTableOfContents {
     pub heap_start_offset: u64,
     pub creation_time: String,
     pub toc_checksum: String,
+    pub toc_checksum_sha1: String,
+    pub toc_checksum_sha256: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub signature: Option<XarSignature>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -488,7 +490,9 @@ impl XarTableOfContents {
             toc_start_offset: header.size,
             heap_start_offset: xar.heap_start_offset(),
             creation_time: toc.creation_time.clone(),
-            toc_checksum: format!("{}:{}", digest_type, hex::encode(digest)),
+            toc_checksum: format!("{}:{}", digest_type, hex::encode(&digest)),
+            toc_checksum_sha1: hex::encode(DigestType::Sha1.digest_data(&digest)?),
+            toc_checksum_sha256: hex::encode(DigestType::Sha256.digest_data(&digest)?),
             signature: if let Some(sig) = &toc.signature {
                 Some(sig.try_into()?)
             } else {
