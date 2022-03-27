@@ -349,6 +349,16 @@ impl<'a> DirectoryBundleFile<'a> {
         }
     }
 
+    /// Whether this is the `_CodeSignature/CodeResources` XML plist file.
+    pub fn is_code_resources_xml_plist(&self) -> bool {
+        self.absolute_path == self.bundle.resolve_path("_CodeSignature/CodeResources")
+    }
+
+    /// Whether this is the `CodeResources` file holding the notarization ticket.
+    pub fn is_notarization_ticket(&self) -> bool {
+        self.absolute_path == self.bundle.resolve_path("CodeResources")
+    }
+
     /// Whether this file is in the code signature directory.
     pub fn is_in_code_signature_directory(&self) -> bool {
         let prefix = self.bundle.resolve_path("_CodeSignature");
