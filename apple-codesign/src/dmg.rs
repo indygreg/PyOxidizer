@@ -36,6 +36,11 @@ the code signature and trailer will be ignored or corrupt one of the data
 structures.
 
 The Code Directory version is 0x20100.
+
+DMGs are stapled by adding an additional ticket slot to the superblob. However,
+this slot's digest is not recorded in the code directory, as stapling occurs
+after signing and modifying the code directory would modify the code directory
+and invalidate prior signatures.
 */
 
 use {
@@ -265,13 +270,45 @@ impl DmgSigner {
     ) -> Result<(), AppleCodesignError> {
         warn!("signing DMG");
 
-        let mut koly = DmgReader::new(fh)?.koly().clone();
-
+        let koly = DmgReader::new(fh)?.koly().clone();
         let signature = self.create_superblob(settings, fh)?;
 
+        Self::write_embedded_signature(fh, koly, &signature)
+    }
+
+    /// Staple a notarization ticket to a DMG.
+    pub fn staple_file(
+        &self,
+        fh: &mut File,
+        ticket_data: Vec<u8>,
+    ) -> Result<(), AppleCodesignError> {
+        warn!(
+            "stapling DMG with {} byte notarization ticket",
+            ticket_data.len()
+        );
+
+        let reader = DmgReader::new(fh)?;
+        let koly = reader.koly().clone();
+        let signature = reader
+            .embedded_signature()?
+            .ok_or(AppleCodesignError::DmgStapleNoSignature)?;
+
+        let mut builder = EmbeddedSignatureBuilder::new_for_stapling(signature)?;
+        builder.add_notarization_ticket(ticket_data)?;
+
+        let signature = builder.create_superblob()?;
+
+        Self::write_embedded_signature(fh, koly, &signature)
+    }
+
+    fn write_embedded_signature(
+        fh: &mut File,
+        mut koly: KolyTrailer,
+        signature: &[u8],
+    ) -> Result<(), AppleCodesignError> {
         warn!("writing {} byte signature", signature.len());
         fh.seek(SeekFrom::Start(koly.offset_after_plist()))?;
-        fh.write_all(&signature)?;
+        fh.write_all(signature)?;
 
         koly.code_signature_offset = koly.offset_after_plist();
         koly.code_signature_size = signature.len() as _;

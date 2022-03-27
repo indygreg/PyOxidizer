@@ -304,4 +304,7 @@ pub enum AppleCodesignError {
 
     #[error("bad header magic in DMG; not a DMG file?")]
     DmgBadMagic,
+
+    #[error("cannot staple DMG without an embedded signature")]
+    DmgStapleNoSignature,
 }

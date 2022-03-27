@@ -9,7 +9,7 @@ use {
         code_directory::CodeDirectoryBlob,
         embedded_signature::{
             create_superblob, Blob, BlobData, BlobWrapperBlob, CodeSigningMagic, CodeSigningSlot,
-            DigestType,
+            DigestType, EmbeddedSignature,
         },
         error::AppleCodesignError,
     },
@@ -74,6 +74,7 @@ enum BlobsState {
     SpecialAdded,
     CodeDirectoryAdded,
     SignatureAdded,
+    TicketAdded,
 }
 
 impl Default for BlobsState {
@@ -92,6 +93,28 @@ pub struct EmbeddedSignatureBuilder<'a> {
 }
 
 impl<'a> EmbeddedSignatureBuilder<'a> {
+    /// Create a new instance suitable for stapling a notarization ticket.
+    ///
+    /// This starts with an existing [EmbeddedSignature] / superblob because stapling
+    /// a notarization ticket just adds a new ticket slot without modifying existing
+    /// slots.
+    pub fn new_for_stapling(signature: EmbeddedSignature<'a>) -> Result<Self, AppleCodesignError> {
+        let blobs = signature
+            .blobs
+            .into_iter()
+            .map(|blob| {
+                let parsed = blob.into_parsed_blob()?;
+
+                Ok((parsed.blob_entry.slot, parsed.blob))
+            })
+            .collect::<Result<BTreeMap<_, _>, AppleCodesignError>>()?;
+
+        Ok(Self {
+            state: BlobsState::CodeDirectoryAdded,
+            blobs,
+        })
+    }
+
     /// Obtain the code directory registered with this instance.
     pub fn code_directory(&self) -> Option<&CodeDirectoryBlob> {
         self.blobs.get(&CodeSigningSlot::CodeDirectory).map(|blob| {
@@ -118,7 +141,9 @@ impl<'a> EmbeddedSignatureBuilder<'a> {
     ) -> Result<(), AppleCodesignError> {
         match self.state {
             BlobsState::Empty | BlobsState::SpecialAdded => {}
-            BlobsState::CodeDirectoryAdded | BlobsState::SignatureAdded => {
+            BlobsState::CodeDirectoryAdded
+            | BlobsState::SignatureAdded
+            | BlobsState::TicketAdded => {
                 return Err(AppleCodesignError::SignatureBuilder(
                     "cannot add blobs after code directory or signature is registered",
                 ));
@@ -262,6 +287,22 @@ impl<'a> EmbeddedSignatureBuilder<'a> {
             BlobData::BlobWrapper(Box::new(BlobWrapperBlob::from_data_owned(der))),
         );
         self.state = BlobsState::SignatureAdded;
+
+        Ok(())
+    }
+
+    /// Add notarization ticket data.
+    ///
+    /// This will register a new ticket slot holding the notarization ticket data.
+    pub fn add_notarization_ticket(
+        &mut self,
+        ticket_data: Vec<u8>,
+    ) -> Result<(), AppleCodesignError> {
+        self.blobs.insert(
+            CodeSigningSlot::Ticket,
+            BlobData::BlobWrapper(Box::new(BlobWrapperBlob::from_data_owned(ticket_data))),
+        );
+        self.state = BlobsState::TicketAdded;
 
         Ok(())
     }

@@ -14,7 +14,8 @@ from Apple and attaching it to something else.
 use {
     crate::{
         bundle_signing::SignedMachOInfo,
-        embedded_signature::DigestType,
+        dmg::{DmgReader, DmgSigner},
+        embedded_signature::{Blob, DigestType},
         reader::PathType,
         ticket_lookup::{default_client, lookup_notarization_ticket},
         AppleCodesignError,
@@ -186,6 +187,49 @@ impl Stapler {
         Ok(())
     }
 
+    /// Look up ticket data for DMG file.
+    pub fn lookup_ticket_for_dmg(&self, dmg: &DmgReader) -> Result<Vec<u8>, AppleCodesignError> {
+        // The ticket is derived from the code directory digest from the signature in the
+        // DMG.
+        let signature = dmg
+            .embedded_signature()?
+            .ok_or(AppleCodesignError::DmgStapleNoSignature)?;
+        let cd = signature
+            .code_directory()?
+            .ok_or(AppleCodesignError::DmgStapleNoSignature)?;
+
+        let mut digest = cd.digest_with(cd.hash_type)?;
+        digest.truncate(20);
+        let digest = hex::encode(digest);
+
+        let digest_type: u8 = cd.hash_type.into();
+
+        let record_name = format!("2/{}/{}", digest_type, digest);
+
+        let response = lookup_notarization_ticket(&self.client, &record_name)?;
+
+        response.signed_ticket(&record_name)
+    }
+
+    /// Attempt to staple a DMG by obtaining a notarization ticket automatically.
+    pub fn staple_dmg(&self, path: &Path) -> Result<(), AppleCodesignError> {
+        let mut fh = File::options().read(true).write(true).open(path)?;
+
+        warn!(
+            "attempting to find notarization ticket for DMG at {}",
+            path.display()
+        );
+        let reader = DmgReader::new(&mut fh)?;
+
+        let ticket_data = self.lookup_ticket_for_dmg(&reader)?;
+        warn!("found notarization ticket; proceeding with stapling");
+
+        let signer = DmgSigner::default();
+        signer.staple_file(&mut fh, ticket_data)?;
+
+        Ok(())
+    }
+
     /// Lookup ticket data for a XAR archive (e.g. a `.pkg` file).
     pub fn lookup_ticket_for_xar<R: Read + Seek + Sized + Debug>(
         &self,
@@ -267,7 +311,10 @@ impl Stapler {
                     path.to_path_buf(),
                 ))
             }
-            PathType::Dmg => Err(AppleCodesignError::Unimplemented("DMG stapling")),
+            PathType::Dmg => {
+                warn!("activating DMG stapling mode");
+                self.staple_dmg(path)
+            }
             PathType::Bundle => {
                 warn!("activating bundle stapling mode");
                 let bundle = DirectoryBundle::new_from_path(path)
