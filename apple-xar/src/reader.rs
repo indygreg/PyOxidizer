@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        format::XarHeader,
+        format::{XarChecksum, XarHeader},
         table_of_contents::{ChecksumType, File, FileType, SignatureStyle, TableOfContents},
         Error, XarResult,
     },
@@ -13,7 +13,7 @@ use {
     std::{
         cmp::min,
         fmt::Debug,
-        io::{Read, Seek, SeekFrom, Write},
+        io::{Cursor, Read, Seek, SeekFrom, Write},
         path::Path,
     },
     x509_certificate::CapturedX509Certificate,
@@ -110,6 +110,18 @@ impl<R: Read + Seek + Sized + Debug> XarReader<R> {
         )?;
 
         Ok(buf)
+    }
+
+    /// Digest the table of contents content with the specified algorithm.
+    pub fn digest_table_of_contents_with(&mut self, checksum: XarChecksum) -> XarResult<Vec<u8>> {
+        let mut writer = Cursor::new(vec![]);
+        self.write_file_slice(
+            self.header.size as _,
+            self.header.toc_length_compressed as _,
+            &mut writer,
+        )?;
+
+        checksum.digest_data(&writer.into_inner())
     }
 
     /// Obtain the file entries in this archive.

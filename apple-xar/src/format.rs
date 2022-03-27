@@ -3,6 +3,8 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
+    crate::{Error, XarResult},
+    digest::DynDigest,
     scroll::{IOread, Pread, SizeWith},
     std::fmt::{Display, Formatter},
 };
@@ -65,5 +67,25 @@ impl Display for XarChecksum {
             XarChecksum::Sha512 => f.write_str("SHA-512"),
             XarChecksum::Other(v) => f.write_fmt(format_args!("unknown ({})", v)),
         }
+    }
+}
+
+impl XarChecksum {
+    /// Digest a slice of data.
+    pub fn digest_data(&self, data: &[u8]) -> XarResult<Vec<u8>> {
+        let mut h: Box<dyn DynDigest> = match self {
+            Self::None => return Err(Error::Unsupported("cannot digest None checksum")),
+            Self::Md5 => Box::new(md5::Md5::default()),
+            Self::Sha1 => Box::new(sha1::Sha1::default()),
+            Self::Sha256 => Box::new(sha2::Sha256::default()),
+            Self::Sha512 => Box::new(sha2::Sha512::default()),
+            Self::Other(_) => {
+                return Err(Error::Unsupported("encountered unknown digest algorithm"))
+            }
+        };
+
+        h.update(data);
+
+        Ok(h.finalize().to_vec())
     }
 }

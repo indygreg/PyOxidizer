@@ -13,10 +13,14 @@ readme = "README.md"
 [dependencies]
 bzip2 = "0.4"
 chrono = { version = "0.4", features = ["serde"] }
+digest = "0.10"
+md-5 = "0.10"
 flate2 = "1.0"
 scroll = { version = "0.11", features = ["derive"] }
 serde-xml-rs = "0.5"
 serde = { version = "1.0", features = ["derive"] }
+sha1 = "0.10"
+sha2 = "0.10"
 thiserror = "1.0"
 xz2 = "0.1"
 

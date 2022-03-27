@@ -14,6 +14,7 @@ use {
     },
     apple_bundles::{DirectoryBundle, DirectoryBundleFile},
     apple_xar::{
+        format::XarChecksum,
         reader::XarReader,
         table_of_contents::{File as XarTocFile, Signature as XarTocSignature},
     },
@@ -445,9 +446,11 @@ pub struct XarTableOfContents {
     pub toc_start_offset: u16,
     pub heap_start_offset: u64,
     pub creation_time: String,
-    pub toc_checksum: String,
-    pub toc_checksum_sha1: String,
-    pub toc_checksum_sha256: String,
+    pub toc_checksum_reported: String,
+    pub toc_checksum_reported_sha1_digest: String,
+    pub toc_checksum_reported_sha256_digest: String,
+    pub toc_checksum_actual_sha1: String,
+    pub toc_checksum_actual_sha256: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub signature: Option<XarSignature>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -489,6 +492,9 @@ impl XarTableOfContents {
                 (None, None)
             };
 
+        let toc_checksum_actual_sha1 = xar.digest_table_of_contents_with(XarChecksum::Sha1)?;
+        let toc_checksum_actual_sha256 = xar.digest_table_of_contents_with(XarChecksum::Sha256)?;
+
         let header = xar.header();
         let toc = xar.table_of_contents();
         let checksum_offset = toc.checksum.offset;
@@ -511,9 +517,13 @@ impl XarTableOfContents {
             toc_start_offset: header.size,
             heap_start_offset: xar.heap_start_offset(),
             creation_time: toc.creation_time.clone(),
-            toc_checksum: format!("{}:{}", digest_type, hex::encode(&digest)),
-            toc_checksum_sha1: hex::encode(DigestType::Sha1.digest_data(&digest)?),
-            toc_checksum_sha256: hex::encode(DigestType::Sha256.digest_data(&digest)?),
+            toc_checksum_reported: format!("{}:{}", digest_type, hex::encode(&digest)),
+            toc_checksum_reported_sha1_digest: hex::encode(DigestType::Sha1.digest_data(&digest)?),
+            toc_checksum_reported_sha256_digest: hex::encode(
+                DigestType::Sha256.digest_data(&digest)?,
+            ),
+            toc_checksum_actual_sha1: hex::encode(&toc_checksum_actual_sha1),
+            toc_checksum_actual_sha256: hex::encode(&toc_checksum_actual_sha256),
             signature: if let Some(sig) = &toc.signature {
                 Some(sig.try_into()?)
             } else {
