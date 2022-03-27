@@ -12,7 +12,7 @@ use {
         error::AppleCodesignError,
         macho::AppleSignable,
     },
-    apple_bundles::DirectoryBundle,
+    apple_bundles::{DirectoryBundle, DirectoryBundleFile},
     cryptographic_message_syntax::{SignedData, SignerInfo},
     goblin::mach::{fat::FAT_MAGIC, parse_magic_and_ctx, Mach, MachO},
     serde::Serialize,
@@ -383,15 +383,24 @@ pub struct DmgEntity {
 }
 
 #[derive(Clone, Debug, Serialize)]
+pub enum CodeSignatureFile {
+    ResourcesXml(Vec<String>),
+    NotarizationTicket(u64),
+    Other,
+}
+
+#[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum SignatureEntity {
     MachO(MachOEntity),
     Dmg(DmgEntity),
+    BundleCodeSignatureFile(CodeSignatureFile),
 }
 
 #[derive(Clone, Debug, Serialize)]
 pub struct FileEntity {
     pub path: PathBuf,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub index: Option<usize>,
     pub entity: SignatureEntity,
 }
@@ -441,35 +450,8 @@ impl SignatureReader {
                     entity: SignatureEntity::Dmg(entity),
                 },
             ))),
-            Self::MachO(path, data) => match Mach::parse(data) {
-                Ok(mach) => match mach {
-                    Mach::Binary(macho) => Box::new(std::iter::once(
-                        Self::resolve_macho_entity(macho).map(|entity| FileEntity {
-                            path: path.to_path_buf(),
-                            index: None,
-                            entity: SignatureEntity::MachO(entity),
-                        }),
-                    )),
-                    Mach::Fat(multiarch) => {
-                        Box::new((0..multiarch.narches).map(
-                            move |index| match multiarch.get(index) {
-                                Ok(macho) => {
-                                    Self::resolve_macho_entity(macho).map(|entity| FileEntity {
-                                        path: path.clone(),
-                                        index: Some(index),
-                                        entity: SignatureEntity::MachO(entity),
-                                    })
-                                }
-                                Err(err) => Err(err.into()),
-                            },
-                        ))
-                    }
-                },
-                Err(err) => Box::new(std::iter::once(Err(err.into()))),
-            },
-            Self::Bundle(_) => Box::new(std::iter::once(Err(AppleCodesignError::Unimplemented(
-                "reading of certificate data from bundles",
-            )))),
+            Self::MachO(path, data) => Self::resolve_macho_entities_from_data(path, data),
+            Self::Bundle(bundle) => Self::resolve_bundle_entities(bundle),
         }
     }
 
@@ -487,6 +469,38 @@ impl SignatureReader {
         })
     }
 
+    fn resolve_macho_entities_from_data<'a>(
+        path: &'a Path,
+        data: &'a [u8],
+    ) -> Box<dyn Iterator<Item = Result<FileEntity, AppleCodesignError>> + 'a> {
+        match Mach::parse(data) {
+            Ok(mach) => match mach {
+                Mach::Binary(macho) => Box::new(std::iter::once(
+                    Self::resolve_macho_entity(macho).map(|entity| FileEntity {
+                        path: path.to_path_buf(),
+                        index: None,
+                        entity: SignatureEntity::MachO(entity),
+                    }),
+                )),
+                Mach::Fat(multiarch) => {
+                    Box::new(
+                        (0..multiarch.narches).map(move |index| match multiarch.get(index) {
+                            Ok(macho) => {
+                                Self::resolve_macho_entity(macho).map(|entity| FileEntity {
+                                    path: path.to_path_buf(),
+                                    index: Some(index),
+                                    entity: SignatureEntity::MachO(entity),
+                                })
+                            }
+                            Err(err) => Err(err.into()),
+                        }),
+                    )
+                }
+            },
+            Err(err) => Box::new(std::iter::once(Err(err.into()))),
+        }
+    }
+
     fn resolve_macho_entity(macho: MachO) -> Result<MachOEntity, AppleCodesignError> {
         let signature = if let Some(sig) = macho.code_signature()? {
             Some(sig.try_into()?)
@@ -495,5 +509,78 @@ impl SignatureReader {
         };
 
         Ok(MachOEntity { signature })
+    }
+
+    fn resolve_bundle_entities(
+        bundle: &DirectoryBundle,
+    ) -> Box<dyn Iterator<Item = Result<FileEntity, AppleCodesignError>> + '_> {
+        match bundle.files(true) {
+            Ok(files) => Box::new(files.into_iter().flat_map(|file| {
+                Self::resolve_bundle_file_entity(bundle.root_dir().to_path_buf(), file)
+            })),
+            Err(err) => Box::new(std::iter::once(Err(AppleCodesignError::DirectoryBundle(
+                err,
+            )))),
+        }
+    }
+
+    fn resolve_bundle_file_entity(
+        base_path: PathBuf,
+        file: DirectoryBundleFile,
+    ) -> Box<dyn Iterator<Item = Result<FileEntity, AppleCodesignError>> + '_> {
+        let main_relative_path = match file.absolute_path().strip_prefix(&base_path) {
+            Ok(path) => path.to_path_buf(),
+            Err(_) => file.absolute_path().to_path_buf(),
+        };
+
+        if matches!(file.is_main_executable(), Ok(true)) {
+            match std::fs::read(file.absolute_path()) {
+                Ok(data) => {
+                    let entities =
+                        Self::resolve_macho_entities_from_data(&main_relative_path, &data)
+                            .collect::<Vec<_>>();
+
+                    Box::new(entities.into_iter())
+                }
+                Err(err) => Box::new(std::iter::once(Err(err.into()))),
+            }
+        } else if file.is_code_resources_xml_plist() {
+            match std::fs::read(file.absolute_path()) {
+                Ok(xml) => Box::new(std::iter::once(Ok(FileEntity {
+                    path: main_relative_path,
+                    index: None,
+                    entity: SignatureEntity::BundleCodeSignatureFile(
+                        CodeSignatureFile::ResourcesXml(
+                            String::from_utf8_lossy(&xml)
+                                .split('\n')
+                                .map(|x| x.replace('\t', "  "))
+                                .collect::<Vec<_>>(),
+                        ),
+                    ),
+                }))),
+                Err(err) => Box::new(std::iter::once(Err(err.into()))),
+            }
+        } else if file.is_notarization_ticket() {
+            match file.metadata() {
+                Ok(metadata) => Box::new(std::iter::once(Ok(FileEntity {
+                    path: main_relative_path,
+                    index: None,
+                    entity: SignatureEntity::BundleCodeSignatureFile(
+                        CodeSignatureFile::NotarizationTicket(metadata.len()),
+                    ),
+                }))),
+                Err(err) => Box::new(std::iter::once(Err(AppleCodesignError::DirectoryBundle(
+                    err,
+                )))),
+            }
+        } else if file.is_in_code_signature_directory() {
+            Box::new(std::iter::once(Ok(FileEntity {
+                path: main_relative_path,
+                index: None,
+                entity: SignatureEntity::BundleCodeSignatureFile(CodeSignatureFile::Other),
+            })))
+        } else {
+            Box::new(std::iter::empty())
+        }
     }
 }
