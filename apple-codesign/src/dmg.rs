@@ -142,7 +142,7 @@ impl KolyTrailer {
         let mut buf = [0u8; KOLY_SIZE as usize];
         buf.pwrite_with(koly, 0, scroll::BE)?;
 
-        digest.digest(&buf)
+        digest.digest_data(&buf)
     }
 }
 

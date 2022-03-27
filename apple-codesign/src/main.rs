@@ -708,22 +708,22 @@ fn print_signed_data(
         println!(
             "{}signed content SHA-1:   {}",
             prefix,
-            hex::encode(DigestType::Sha1.digest(content)?)
+            hex::encode(DigestType::Sha1.digest_data(content)?)
         );
         println!(
             "{}signed content SHA-256: {}",
             prefix,
-            hex::encode(DigestType::Sha256.digest(content)?)
+            hex::encode(DigestType::Sha256.digest_data(content)?)
         );
         println!(
             "{}signed content SHA-384: {}",
             prefix,
-            hex::encode(DigestType::Sha384.digest(content)?)
+            hex::encode(DigestType::Sha384.digest_data(content)?)
         );
         println!(
             "{}signed content SHA-512: {}",
             prefix,
-            hex::encode(DigestType::Sha512.digest(content)?)
+            hex::encode(DigestType::Sha512.digest_data(content)?)
         );
     }
     println!(
@@ -783,25 +783,25 @@ fn print_signed_data(
             "{}signer #{}: signature content SHA-1:   {}",
             prefix,
             i,
-            hex::encode(DigestType::Sha1.digest(&digested_data)?)
+            hex::encode(DigestType::Sha1.digest_data(&digested_data)?)
         );
         println!(
             "{}signer #{}: signature content SHA-256: {}",
             prefix,
             i,
-            hex::encode(DigestType::Sha256.digest(&digested_data)?)
+            hex::encode(DigestType::Sha256.digest_data(&digested_data)?)
         );
         println!(
             "{}signer #{}: signature content SHA-384: {}",
             prefix,
             i,
-            hex::encode(DigestType::Sha384.digest(&digested_data)?)
+            hex::encode(DigestType::Sha384.digest_data(&digested_data)?)
         );
         println!(
             "{}signer #{}: signature content SHA-512: {}",
             prefix,
             i,
-            hex::encode(DigestType::Sha512.digest(&digested_data)?)
+            hex::encode(DigestType::Sha512.digest_data(&digested_data)?)
         );
 
         if signed_data.signed_content().is_some() {

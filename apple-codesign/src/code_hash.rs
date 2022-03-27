@@ -36,7 +36,7 @@ pub fn compute_paged_hashes(
     page_size: usize,
 ) -> Result<Vec<Vec<u8>>, AppleCodesignError> {
     data.chunks(page_size)
-        .map(|chunk| hash.digest(chunk))
+        .map(|chunk| hash.digest_data(chunk))
         .collect::<Result<Vec<_>, AppleCodesignError>>()
 }
 

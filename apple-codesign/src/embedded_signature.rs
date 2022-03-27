@@ -365,7 +365,7 @@ impl TryFrom<XarChecksumType> for DigestType {
 impl DigestType {
     /// Obtain the size of hashes for this hash type.
     pub fn hash_len(&self) -> Result<usize, AppleCodesignError> {
-        Ok(self.digest(&[])?.len())
+        Ok(self.digest_data(&[])?.len())
     }
 
     /// Obtain a hasher for this digest type.
@@ -385,7 +385,7 @@ impl DigestType {
     }
 
     /// Digest data given the configured hasher.
-    pub fn digest(&self, data: &[u8]) -> Result<Vec<u8>, AppleCodesignError> {
+    pub fn digest_data(&self, data: &[u8]) -> Result<Vec<u8>, AppleCodesignError> {
         let mut hasher = self.as_hasher()?;
 
         hasher.update(data);
@@ -561,7 +561,7 @@ impl<'a> BlobEntry<'a> {
 
     /// Compute the content digest of this blob using the specified hash type.
     pub fn digest_with(&self, hash: DigestType) -> Result<Vec<u8>, AppleCodesignError> {
-        hash.digest(self.data)
+        hash.digest_data(self.data)
     }
 }
 
@@ -606,7 +606,7 @@ where
     /// Default implementation calls [Blob::to_blob_bytes] and digests that, which
     /// should always be correct.
     fn digest_with(&self, hash_type: DigestType) -> Result<Vec<u8>, AppleCodesignError> {
-        hash_type.digest(&self.to_blob_bytes()?)
+        hash_type.digest_data(&self.to_blob_bytes()?)
     }
 }
 
@@ -1146,7 +1146,7 @@ pub struct ParsedBlob<'a> {
 impl<'a> ParsedBlob<'a> {
     /// Compute the content digest of this blob using the specified hash type.
     pub fn digest_with(&self, hash: DigestType) -> Result<Vec<u8>, AppleCodesignError> {
-        hash.digest(self.blob_entry.data)
+        hash.digest_data(self.blob_entry.data)
     }
 }
 

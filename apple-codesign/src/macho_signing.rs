@@ -597,7 +597,7 @@ impl<'data> MachOSigner<'data> {
                 special_hashes.insert(
                     CodeSigningSlot::Info,
                     Digest {
-                        data: settings.digest_type().digest(data)?.into(),
+                        data: settings.digest_type().digest_data(data)?.into(),
                     },
                 );
             }
@@ -619,7 +619,7 @@ impl<'data> MachOSigner<'data> {
                 special_hashes.insert(
                     CodeSigningSlot::ResourceDir,
                     Digest {
-                        data: settings.digest_type().digest(data)?.into(),
+                        data: settings.digest_type().digest_data(data)?.into(),
                     }
                     .to_owned(),
                 );

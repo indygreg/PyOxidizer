@@ -745,8 +745,8 @@ impl CodeResources {
         content: impl AsRef<[u8]>,
         optional: bool,
     ) -> Result<(), AppleCodesignError> {
-        let sha1 = DigestType::Sha1.digest(content.as_ref())?;
-        let sha256 = DigestType::Sha256.digest(content.as_ref())?;
+        let sha1 = DigestType::Sha1.digest_data(content.as_ref())?;
+        let sha256 = DigestType::Sha256.digest_data(content.as_ref())?;
 
         let path = path.to_string();
 
@@ -800,7 +800,7 @@ impl CodeResources {
         self.files2.insert(
             path.to_string(),
             Files2Value {
-                cdhash: Some(DigestType::Sha256Truncated.digest(&info.code_directory_blob)?),
+                cdhash: Some(DigestType::Sha256Truncated.digest_data(&info.code_directory_blob)?),
                 hash2: None,
                 optional: if optional { Some(true) } else { None },
                 requirement: info.designated_code_requirement.clone(),
