@@ -4,6 +4,7 @@
 
 //! XAR XML table of contents data structure.
 
+use crate::Error;
 use {
     crate::XarResult,
     chrono::{DateTime, Utc},
@@ -48,17 +49,20 @@ impl TableOfContents {
     /// Files are sorted by their numerical ID, which should hopefully also
     /// be the order that file data occurs in the heap. Each elements consists of
     /// the full filename and the <file> record.
-    pub fn files(&self) -> Vec<(String, File)> {
+    pub fn files(&self) -> XarResult<Vec<(String, File)>> {
         let mut files = self
             .toc
             .files
             .iter()
-            .flat_map(|f| f.files(None))
+            .map(|f| f.files(None))
+            .collect::<XarResult<Vec<_>>>()?
+            .into_iter()
+            .flat_map(|x| x.into_iter())
             .collect::<Vec<_>>();
 
         files.sort_by(|a, b| a.1.id.cmp(&b.1.id));
 
-        files
+        Ok(files)
     }
 }
 
@@ -134,7 +138,12 @@ pub struct File {
     pub ctime: Option<DateTime<Utc>>,
     pub mtime: Option<DateTime<Utc>>,
     pub atime: Option<DateTime<Utc>>,
-    pub name: String,
+    /// Filename.
+    ///
+    /// There should only be a single element. However, some Apple tools can
+    /// emit multiple <name> elements.
+    #[serde(rename = "name")]
+    pub names: Vec<String>,
     #[serde(rename = "type")]
     pub file_type: FileType,
     pub mode: Option<u32>,
@@ -154,20 +163,26 @@ pub struct File {
 }
 
 impl File {
-    pub fn files(&self, directory: Option<&str>) -> Vec<(String, File)> {
+    pub fn files(&self, directory: Option<&str>) -> XarResult<Vec<(String, File)>> {
+        let name = self
+            .names
+            .iter()
+            .last()
+            .ok_or(Error::TableOfContentsCorrupted("missing file name"))?;
+
         let full_path = if let Some(d) = directory {
-            format!("{}/{}", d, self.name)
+            format!("{}/{}", d, name)
         } else {
-            self.name.clone()
+            name.clone()
         };
 
         let mut files = vec![(full_path.clone(), self.clone())];
 
         for f in &self.files {
-            files.extend(f.files(Some(&full_path)));
+            files.extend(f.files(Some(&full_path))?);
         }
 
-        files
+        Ok(files)
     }
 }
 

@@ -746,7 +746,7 @@ impl SignatureReader {
         entities.push(entity);
 
         // Now emit entries for all files in table of contents.
-        for (name, file) in xar.files() {
+        for (name, file) in xar.files()? {
             let mut entity = default_entity.clone();
             entity.sub_path = Some(name);
             entity.entity = SignatureEntity::XarMember(XarFile::try_from(&file)?);

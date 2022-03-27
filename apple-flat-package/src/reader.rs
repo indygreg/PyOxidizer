@@ -43,7 +43,7 @@ impl<R: Read + Seek + Sized + Debug> PkgReader<R> {
     pub fn new(reader: R) -> PkgResult<Self> {
         let xar = XarReader::new(reader)?;
 
-        let flavor = if xar.find_file("Distribution").is_some() {
+        let flavor = if xar.find_file("Distribution")?.is_some() {
             PkgFlavor::Product
         } else {
             PkgFlavor::Component
@@ -98,7 +98,7 @@ impl<R: Read + Seek + Sized + Debug> PkgReader<R> {
 
         for (filename, file) in self
             .xar
-            .files()
+            .files()?
             .into_iter()
             .filter(|(filename, _)| filename.starts_with(&prefix))
         {
@@ -160,7 +160,7 @@ impl<R: Read + Seek + Sized + Debug> PkgReader<R> {
         // TODO obtain instances from Distribution XML instead of scanning filenames.
         let components = self
             .xar
-            .files()
+            .files()?
             .into_iter()
             .filter_map(|(filename, _)| {
                 if filename.ends_with(".pkg") && !filename.contains('/') {

@@ -28,6 +28,9 @@ pub enum Error {
     #[error("Invalid file ID")]
     InvalidFileId,
 
+    #[error("table of contents is corrupted: {0}")]
+    TableOfContentsCorrupted(&'static str),
+
     #[error("File has no data")]
     FileNoData,
 

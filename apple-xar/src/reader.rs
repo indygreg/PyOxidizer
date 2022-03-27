@@ -87,16 +87,17 @@ impl<R: Read + Seek + Sized + Debug> XarReader<R> {
     }
 
     /// Obtain the file entries in this archive.
-    pub fn files(&self) -> Vec<(String, File)> {
+    pub fn files(&self) -> XarResult<Vec<(String, File)>> {
         self.toc.files()
     }
 
     /// Attempt to find the [File] entry for a given path in the archive.
-    pub fn find_file(&self, filename: &str) -> Option<File> {
-        self.toc
-            .files()
+    pub fn find_file(&self, filename: &str) -> XarResult<Option<File>> {
+        Ok(self
+            .toc
+            .files()?
             .into_iter()
-            .find_map(|(path, file)| if path == filename { Some(file) } else { None })
+            .find_map(|(path, file)| if path == filename { Some(file) } else { None }))
     }
 
     /// Write a slice of the heap to a writer.
@@ -155,7 +156,7 @@ impl<R: Read + Seek + Sized + Debug> XarReader<R> {
     ) -> XarResult<usize> {
         let file = self
             .toc
-            .files()
+            .files()?
             .into_iter()
             .find(|(_, f)| f.id == id)
             .ok_or(Error::InvalidFileId)?
@@ -204,7 +205,7 @@ impl<R: Read + Seek + Sized + Debug> XarReader<R> {
     ) -> XarResult<usize> {
         let file = self
             .toc
-            .files()
+            .files()?
             .into_iter()
             .find(|(_, f)| f.id == id)
             .ok_or(Error::InvalidFileId)?
@@ -215,7 +216,7 @@ impl<R: Read + Seek + Sized + Debug> XarReader<R> {
 
     /// Resolve data for a given path.
     pub fn get_file_data_from_path(&mut self, path: &str) -> XarResult<Option<Vec<u8>>> {
-        if let Some(file) = self.find_file(path) {
+        if let Some(file) = self.find_file(path)? {
             let mut buffer = Vec::<u8>::with_capacity(file.size.unwrap_or(0) as _);
             self.write_file_data_decoded_from_file(&file, &mut buffer)?;
 
@@ -229,7 +230,7 @@ impl<R: Read + Seek + Sized + Debug> XarReader<R> {
     pub fn unpack(&mut self, dest_dir: impl AsRef<Path>) -> XarResult<()> {
         let dest_dir = dest_dir.as_ref();
 
-        for (path, file) in self.toc.files() {
+        for (path, file) in self.toc.files()? {
             let dest_path = dest_dir.join(path);
 
             match file.file_type {
