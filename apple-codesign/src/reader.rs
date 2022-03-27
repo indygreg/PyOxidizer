@@ -450,6 +450,10 @@ pub struct XarTableOfContents {
     pub x_signature: Option<XarSignature>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub xml: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub rsa_signature: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cms_signature: Option<CmsSignature>,
 }
 
 impl XarTableOfContents {
@@ -458,6 +462,14 @@ impl XarTableOfContents {
     ) -> Result<Self, AppleCodesignError> {
         let (digest_type, digest) = xar.checksum()?;
         let _xml = xar.table_of_contents_decoded_data()?;
+
+        let rsa_signature = xar.rsa_signature()?.map(|x| hex::encode(x.0));
+        let cms_signature = if let Some(signed_data) = xar.cms_signature()? {
+            Some(CmsSignature::try_from(signed_data)?)
+        } else {
+            None
+        };
+
         let header = xar.header();
         let toc = xar.table_of_contents();
 
@@ -488,6 +500,8 @@ impl XarTableOfContents {
                 None
             },
             xml,
+            rsa_signature,
+            cms_signature,
         })
     }
 }
