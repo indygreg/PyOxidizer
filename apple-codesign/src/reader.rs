@@ -13,6 +13,7 @@ use {
         macho::AppleSignable,
     },
     apple_bundles::{DirectoryBundle, DirectoryBundleFile},
+    apple_xar::reader::XarReader,
     cryptographic_message_syntax::{SignedData, SignerInfo},
     goblin::mach::{fat::FAT_MAGIC, parse_magic_and_ctx, Mach, MachO},
     serde::Serialize,
@@ -50,6 +51,20 @@ impl MachOType {
     }
 }
 
+/// Test whether a given path is likely a XAR file.
+pub fn path_is_xar(path: impl AsRef<Path>) -> Result<bool, AppleCodesignError> {
+    let mut fh = File::open(path.as_ref())?;
+
+    let mut header = [0u8; 4];
+
+    let count = fh.read(&mut header)?;
+    if count < 4 {
+        Ok(false)
+    } else {
+        Ok(header.as_ref() == b"xar!")
+    }
+}
+
 /// Describes the type of entity at a path.
 ///
 /// This represents a best guess.
@@ -57,6 +72,7 @@ pub enum PathType {
     MachO,
     Dmg,
     Bundle,
+    Xar,
     Other,
 }
 
@@ -68,6 +84,8 @@ impl PathType {
         if path.is_file() {
             if path_is_dmg(path)? {
                 Ok(PathType::Dmg)
+            } else if path_is_xar(path)? {
+                Ok(PathType::Xar)
             } else {
                 match MachOType::from_path(path)? {
                     Some(MachOType::Mach | MachOType::MachO) => Ok(Self::MachO),
@@ -433,6 +451,11 @@ impl SignatureReader {
                 Mach::parse(&data)?;
 
                 Ok(Self::MachO(path.to_path_buf(), data))
+            }
+            PathType::Xar => {
+                XarReader::new(File::open(path)?)?;
+
+                Err(AppleCodesignError::Unimplemented("XAR signature reading"))
             }
             PathType::Other => Err(AppleCodesignError::UnrecognizedPathType),
         }

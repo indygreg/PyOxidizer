@@ -41,6 +41,9 @@ impl<'key> UnifiedSigner<'key> {
             PathType::Bundle => self.sign_bundle(input_path, output_path),
             PathType::Dmg => self.sign_dmg(input_path, output_path),
             PathType::MachO => self.sign_macho(input_path, output_path),
+            PathType::Xar => Err(AppleCodesignError::Unimplemented(
+                "XAR / flat package signing",
+            )),
             PathType::Other => Err(AppleCodesignError::UnrecognizedPathType),
         }
     }
