@@ -26,7 +26,7 @@ use {
     std::{
         fmt::Debug,
         fs::OpenOptions,
-        io::{BufRead, Read, Seek, SeekFrom, Write},
+        io::{BufRead, Cursor, Read, Seek, SeekFrom, Write},
         path::{Path, PathBuf},
         time::Duration,
     },
@@ -207,6 +207,25 @@ impl TransporterUploadCommand {
     }
 }
 
+fn digest_md5<R: Read>(reader: &mut R) -> Result<(u64, Vec<u8>), AppleCodesignError> {
+    let mut hasher = md5::Md5::new();
+    let mut size = 0;
+
+    loop {
+        let mut buffer = [0u8; 16384];
+        let count = reader.read(&mut buffer)?;
+
+        size += count as u64;
+        hasher.update(&buffer[0..count]);
+
+        if count < buffer.len() {
+            break;
+        }
+    }
+
+    Ok((size, hasher.finalize().to_vec()))
+}
+
 /// Produce zip file data from a [DirectoryBundle].
 ///
 /// The built zip file will contain all the files from the bundle under a directory
@@ -291,9 +310,7 @@ pub fn write_bundle_to_app_store_package(
 
     // MD5 is always used for the digest.
     let checksum_type = "md5".to_string();
-    let mut h = md5::Md5::new();
-    h.update(&bundle_zip);
-    let checksum_digest = hex::encode(h.finalize());
+    let checksum_digest = hex::encode(digest_md5(&mut Cursor::new(&bundle_zip))?.1);
 
     let file_name = format!("{}.zip", bundle.name());
 
@@ -385,20 +402,8 @@ pub fn write_flat_package_to_app_store_package<F: Read + Seek + Debug>(
     fh.seek(SeekFrom::Start(0))?;
 
     let checksum_type = "md5".to_string();
-    let mut h = md5::Md5::new();
-    let mut size = 0;
-    loop {
-        let mut buffer = [0u8; 16384];
-        let count = fh.read(&mut buffer)?;
-
-        size += count;
-        h.update(&buffer[0..count]);
-
-        if count < buffer.len() {
-            break;
-        }
-    }
-    let checksum_digest = hex::encode(h.finalize());
+    let (size, checksum_digest) = digest_md5(&mut fh)?;
+    let checksum_digest = hex::encode(checksum_digest);
 
     let package = Package {
         software_assets: SoftwareAssets {
@@ -411,7 +416,7 @@ pub fn write_flat_package_to_app_store_package<F: Read + Seek + Debug>(
                     file_name: file_name.clone(),
                     checksum_type,
                     checksum_digest,
-                    size: size as _,
+                    size,
                 }],
             },
         },
