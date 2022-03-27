@@ -5,9 +5,9 @@
 0.10.0
 ======
 
+* Support for signing, notarizing, and stapling ``.dmg`` files.
 * Support for notarizing and stapling flat packages (``.pkg`` installers). (There
   is still no support for signing flat packages.)
-* Support for signing and stapling ``.dmg`` files.
 * Various symbols related to common code signature data structures have been moved from the
   ``macho`` module to the new ``embedded_signature`` module.
 * Signing settings types have been moved from the ``signing`` module to the new

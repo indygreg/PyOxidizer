@@ -17,6 +17,7 @@ use {
     crate::{
         app_metadata::{Asset, DataFile, Package, SoftwareAssets},
         app_store_connect::{AppStoreConnectClient, ConnectToken, DevIdPlusInfoResponse},
+        dmg::DmgReader,
         reader::PathType,
         AppleCodesignError,
     },
@@ -348,6 +349,64 @@ pub fn write_bundle_to_app_store_package(
     Ok(())
 }
 
+/// Write a DMG to an `.itmsp` directory.
+pub fn write_dmg_to_app_store_package(
+    source_path: &Path,
+    dmg: &DmgReader,
+    dest_dir: &Path,
+) -> Result<(), AppleCodesignError> {
+    let signature = dmg
+        .embedded_signature()?
+        .ok_or(AppleCodesignError::DmgNotarizeNoSignature)?;
+    let cd = signature
+        .code_directory()?
+        .ok_or(AppleCodesignError::DmgNotarizeNoSignature)?;
+
+    let primary_bundle_identifier = cd.ident.to_string();
+    info!("primary bundle identifier: {}", primary_bundle_identifier);
+
+    let app_platform = "osx".to_string();
+    let asset_type = "developer-id-package".to_string();
+    let file_name = source_path
+        .file_name()
+        .map(|x| x.to_string_lossy().to_string())
+        .unwrap_or_else(|| "image.dmg".to_string());
+    let checksum_type = "md5".to_string();
+    let (size, checksum_digest) = digest_md5(&mut File::open(source_path)?)?;
+    let checksum_digest = hex::encode(checksum_digest);
+
+    let package = Package {
+        software_assets: SoftwareAssets {
+            app_platform,
+            device_id: None,
+            primary_bundle_identifier,
+            asset: Asset {
+                typ: asset_type,
+                data_files: vec![DataFile {
+                    file_name: file_name.clone(),
+                    checksum_type,
+                    checksum_digest,
+                    size,
+                }],
+            },
+        },
+    };
+
+    let metadata_xml = package
+        .to_xml()
+        .map_err(AppleCodesignError::AppMetadataXml)?;
+
+    let dmg_path = dest_dir.join(&file_name);
+    info!("writing {}", dmg_path.display());
+    std::fs::copy(source_path, &dmg_path)?;
+
+    let metadata_path = dest_dir.join("metadata.xml");
+    info!("writing {}", metadata_path.display());
+    std::fs::write(&metadata_path, &metadata_xml)?;
+
+    Ok(())
+}
+
 /// Write a flat package (usually a `.pkg` file) to an `.itmsp` directory.
 pub fn write_flat_package_to_app_store_package<F: Read + Seek + Debug>(
     mut pkg: PkgReader<F>,
@@ -548,10 +607,14 @@ impl Notarizer {
                 let pkg = PkgReader::new(fh)?;
                 self.notarize_flat_package(pkg, wait_limit)
             }
-
-            PathType::MachO | PathType::Dmg | PathType::Other => Err(
-                AppleCodesignError::NotarizeUnsupportedPath(path.to_path_buf()),
-            ),
+            PathType::Dmg => {
+                let mut fh = File::open(path)?;
+                let reader = DmgReader::new(&mut fh)?;
+                self.notarize_dmg(path, &reader, wait_limit)
+            }
+            PathType::MachO | PathType::Other => Err(AppleCodesignError::NotarizeUnsupportedPath(
+                path.to_path_buf(),
+            )),
         }
     }
 
@@ -568,6 +631,21 @@ impl Notarizer {
         warn!("writing App Store Package to {}", dest_dir.display());
 
         write_bundle_to_app_store_package(bundle, &dest_dir)?;
+
+        self.upload_directory_and_maybe_wait(&dest_dir, wait_limit)
+    }
+
+    /// Attempt to notarize a DMG file.
+    pub fn notarize_dmg(
+        &self,
+        dmg_path: &Path,
+        dmg: &DmgReader,
+        wait_limit: Option<Duration>,
+    ) -> Result<NotarizationUpload, AppleCodesignError> {
+        let (_temp_dir, dest_dir) = create_itmsp_temp_dir()?;
+        warn!("writing App Store Package to {}", dest_dir.display());
+
+        write_dmg_to_app_store_package(dmg_path, dmg, &dest_dir)?;
 
         self.upload_directory_and_maybe_wait(&dest_dir, wait_limit)
     }
