@@ -43,6 +43,9 @@ pub enum AppleCodesignError {
     #[error("JSON serialization error: {0}")]
     SerdeJson(#[from] serde_json::Error),
 
+    #[error("YAML serialization error: {0}")]
+    SerdeYaml(#[from] serde_yaml::Error),
+
     #[error("problems reported during verification")]
     VerificationProblems,
 
@@ -105,6 +108,9 @@ pub enum AppleCodesignError {
 
     #[error("SuperBlob data is malformed")]
     SuperblobMalformed,
+
+    #[error("specified path is not of a recognized type")]
+    UnrecognizedPathType,
 
     #[error("functionality not implemented: {0}")]
     Unimplemented(&'static str),

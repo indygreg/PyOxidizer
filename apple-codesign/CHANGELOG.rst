@@ -14,6 +14,9 @@
   ``signing_settings`` module.
 * ``rcodesign sign`` no longer requires an output path and will now sign an entity
   in place if only a single positional argument is given.
+* The new ``rcodesign print-signature-info`` command prints out easy-to-read YAML
+  describing code signatures detected in a given path. Just point it at a file with
+  code signatures and it can print out details about the code signatures within.
 
 0.9.0
 =====

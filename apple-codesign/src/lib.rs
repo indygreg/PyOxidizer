@@ -146,6 +146,8 @@ pub mod notarization;
 pub use notarization::*;
 mod policy;
 pub use policy::*;
+mod reader;
+pub use reader::*;
 mod signing_settings;
 pub use signing_settings::*;
 mod signing;

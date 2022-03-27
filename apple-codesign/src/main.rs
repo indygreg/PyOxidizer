@@ -39,6 +39,7 @@ mod macos;
 mod notarization;
 #[allow(unused)]
 mod policy;
+mod reader;
 mod signing;
 #[allow(unused)]
 mod signing_settings;
@@ -65,6 +66,7 @@ use {
         embedded_signature::{Blob, CodeSigningSlot, DigestType, RequirementSetBlob},
         error::AppleCodesignError,
         macho::{find_macho_targeting, find_signature_data, AppleSignable},
+        reader::SignatureReader,
         signing::UnifiedSigner,
         signing_settings::{SettingsScope, SigningSettings},
     },
@@ -1373,6 +1375,21 @@ fn command_parse_code_signing_requirement(args: &ArgMatches) -> Result<(), Apple
     Ok(())
 }
 
+fn command_print_signature_info(args: &ArgMatches) -> Result<(), AppleCodesignError> {
+    let path = args
+        .value_of("path")
+        .expect("clap should have validated argument");
+
+    let reader = SignatureReader::from_path(path)?;
+
+    for entity in reader.iter_entities() {
+        let entity = entity?;
+        print!("{}", serde_yaml::to_string(&entity)?);
+    }
+
+    Ok(())
+}
+
 fn command_sign(args: &ArgMatches) -> Result<(), AppleCodesignError> {
     let mut settings = SigningSettings::default();
 
@@ -1883,6 +1900,16 @@ fn main_impl() -> Result<(), AppleCodesignError> {
             ),
     );
 
+    let app = app.subcommand(
+        Command::new("print-signature-info")
+            .about("Print signature information for a filesystem path")
+            .arg(
+                Arg::new("path")
+                    .required(true)
+                    .help("Filesystem path to entity whose info to print"),
+            ),
+    );
+
     let app = app
         .subcommand(
             add_certificate_source_args(Command::new("sign")
@@ -2026,6 +2053,7 @@ fn main_impl() -> Result<(), AppleCodesignError> {
         Some(("parse-code-signing-requirement", args)) => {
             command_parse_code_signing_requirement(args)
         }
+        Some(("print-signature-info", args)) => command_print_signature_info(args),
         Some(("sign", args)) => command_sign(args),
         Some(("staple", args)) => command_staple(args),
         Some(("verify", args)) => command_verify(args),

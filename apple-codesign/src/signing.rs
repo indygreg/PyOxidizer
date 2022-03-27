@@ -8,9 +8,10 @@ use {
     crate::{
         bundle_signing::BundleSigner,
         code_directory::ExecutableSegmentFlags,
-        dmg::{path_is_dmg, DmgSigner},
+        dmg::DmgSigner,
         error::AppleCodesignError,
         macho_signing::MachOSigner,
+        reader::PathType,
         signing_settings::{SettingsScope, SigningSettings},
     },
     log::{info, warn},
@@ -36,14 +37,11 @@ impl<'key> UnifiedSigner<'key> {
     ) -> Result<(), AppleCodesignError> {
         let input_path = input_path.as_ref();
 
-        if input_path.is_file() {
-            if path_is_dmg(input_path)? {
-                self.sign_dmg(input_path, output_path)
-            } else {
-                self.sign_macho(input_path, output_path)
-            }
-        } else {
-            self.sign_bundle(input_path, output_path)
+        match PathType::from_path(input_path)? {
+            PathType::Bundle => self.sign_bundle(input_path, output_path),
+            PathType::Dmg => self.sign_dmg(input_path, output_path),
+            PathType::MachO => self.sign_macho(input_path, output_path),
+            PathType::Other => Err(AppleCodesignError::UnrecognizedPathType),
         }
     }
 

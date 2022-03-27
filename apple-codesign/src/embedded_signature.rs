@@ -47,7 +47,13 @@ use {
     apple_xar::table_of_contents::ChecksumType as XarChecksumType,
     cryptographic_message_syntax::SignedData,
     scroll::{IOwrite, Pread},
-    std::{borrow::Cow, cmp::Ordering, collections::HashMap, io::Write},
+    std::{
+        borrow::Cow,
+        cmp::Ordering,
+        collections::HashMap,
+        fmt::{Display, Formatter},
+        io::Write,
+    },
 };
 
 /// Defines header magic for various payloads.
@@ -312,6 +318,20 @@ impl From<DigestType> for u8 {
     }
 }
 
+impl Display for DigestType {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            DigestType::None => f.write_str("none"),
+            DigestType::Sha1 => f.write_str("sha1"),
+            DigestType::Sha256 => f.write_str("sha256"),
+            DigestType::Sha256Truncated => f.write_str("sha256-truncated"),
+            DigestType::Sha384 => f.write_str("sha384"),
+            DigestType::Sha512 => f.write_str("sha512"),
+            DigestType::Unknown(v) => f.write_fmt(format_args!("unknown: {}", v)),
+        }
+    }
+}
+
 impl TryFrom<&str> for DigestType {
     type Error = AppleCodesignError;
 
@@ -397,6 +417,10 @@ impl<'a> Digest<'a> {
         Digest {
             data: Cow::Owned(self.data.clone().into_owned()),
         }
+    }
+
+    pub fn as_hex(&self) -> String {
+        hex::encode(&self.data)
     }
 }
 
@@ -802,6 +826,11 @@ impl<'a> EntitlementsBlob<'a> {
         Self {
             plist: s.to_string().into(),
         }
+    }
+
+    /// Obtain the plist representation as a string.
+    pub fn as_str(&self) -> &str {
+        &self.plist
     }
 }
 
