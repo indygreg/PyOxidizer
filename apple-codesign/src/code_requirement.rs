@@ -35,6 +35,7 @@ use {
     scroll::{IOwrite, Pread},
     std::{
         borrow::Cow,
+        cmp::Ordering,
         fmt::{Debug, Display},
         io::Write,
         ops::{Deref, DerefMut},
@@ -93,6 +94,18 @@ impl From<RequirementType> for u32 {
             RequirementType::Plugin => 5,
             RequirementType::Unknown(v) => v,
         }
+    }
+}
+
+impl PartialOrd for RequirementType {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        u32::from(*self).partial_cmp(&u32::from(*other))
+    }
+}
+
+impl Ord for RequirementType {
+    fn cmp(&self, other: &Self) -> Ordering {
+        u32::from(*self).cmp(&u32::from(*other))
     }
 }
 
