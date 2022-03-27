@@ -202,6 +202,13 @@ impl DigestAlgorithm {
         digest::Context::from(*self)
     }
 
+    /// Digest a slice of data.
+    pub fn digest_data(&self, data: &[u8]) -> Vec<u8> {
+        let mut h = self.digester();
+        h.update(data);
+        h.finish().as_ref().to_vec()
+    }
+
     /// Digest content from a reader.
     pub fn digest_reader<R: std::io::Read>(&self, fh: &mut R) -> Result<Vec<u8>, std::io::Error> {
         let mut h = self.digester();
