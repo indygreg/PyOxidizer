@@ -36,7 +36,7 @@ Not yet released.
 Backwards Compatibility Notes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-* The minimum Rust version has been changed from 1.56 to 1.57 to facilitate
+* The minimum Rust version has been changed from 1.56 to 1.58 to facilitate
   use of features required by some Rust crates.
 
 Bug Fixes
