@@ -17,6 +17,7 @@ use {
     crate::{
         app_metadata::{Asset, DataFile, Package, SoftwareAssets},
         app_store_connect::{AppStoreConnectClient, ConnectToken, DevIdPlusInfoResponse},
+        reader::PathType,
         AppleCodesignError,
     },
     apple_bundles::DirectoryBundle,
@@ -25,7 +26,7 @@ use {
     md5::Digest,
     std::{
         fmt::Debug,
-        fs::OpenOptions,
+        fs::File,
         io::{BufRead, Cursor, Read, Seek, SeekFrom, Write},
         path::{Path, PathBuf},
         time::Duration,
@@ -536,20 +537,21 @@ impl Notarizer {
         path: &Path,
         wait_limit: Option<Duration>,
     ) -> Result<NotarizationUpload, AppleCodesignError> {
-        if let Ok(bundle) = DirectoryBundle::new_from_path(path) {
-            self.notarize_bundle(&bundle, wait_limit)
-        } else if let Ok(fh) = OpenOptions::new().read(true).write(true).open(path) {
-            if let Ok(pkg) = PkgReader::new(fh) {
-                self.notarize_flat_package(pkg, wait_limit)
-            } else {
-                Err(AppleCodesignError::NotarizeUnsupportedPath(
-                    path.to_path_buf(),
-                ))
+        match PathType::from_path(path)? {
+            PathType::Bundle => {
+                let bundle = DirectoryBundle::new_from_path(path)
+                    .map_err(AppleCodesignError::DirectoryBundle)?;
+                self.notarize_bundle(&bundle, wait_limit)
             }
-        } else {
-            Err(AppleCodesignError::NotarizeUnsupportedPath(
-                path.to_path_buf(),
-            ))
+            PathType::Xar => {
+                let fh = File::options().read(true).write(true).open(path)?;
+                let pkg = PkgReader::new(fh)?;
+                self.notarize_flat_package(pkg, wait_limit)
+            }
+
+            PathType::MachO | PathType::Dmg | PathType::Other => Err(
+                AppleCodesignError::NotarizeUnsupportedPath(path.to_path_buf()),
+            ),
         }
     }
 
