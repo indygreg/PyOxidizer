@@ -23,7 +23,7 @@ use {
     std::{
         fmt::Debug,
         fs::File,
-        io::{Read, Seek},
+        io::{BufWriter, Cursor, Read, Seek},
         path::{Path, PathBuf},
     },
     x509_certificate::{CapturedX509Certificate, DigestAlgorithm},
@@ -102,6 +102,30 @@ impl PathType {
             Ok(PathType::Other)
         }
     }
+}
+
+#[allow(unused)]
+fn pretty_print_xml(xml: &[u8]) -> Result<Vec<u8>, AppleCodesignError> {
+    let mut reader = xml::reader::EventReader::new(Cursor::new(xml));
+    let mut emitter = xml::EmitterConfig::new()
+        .perform_indent(true)
+        .create_writer(BufWriter::new(Vec::with_capacity(xml.len() * 2)));
+
+    while let Ok(event) = reader.next() {
+        if matches!(event, xml::reader::XmlEvent::EndDocument) {
+            break;
+        }
+
+        if let Some(event) = event.as_writer_event() {
+            emitter.write(event).map_err(AppleCodesignError::XmlWrite)?;
+        }
+    }
+
+    let xml = emitter.into_inner().into_inner().map_err(|e| {
+        AppleCodesignError::Io(std::io::Error::new(std::io::ErrorKind::BrokenPipe, e))
+    })?;
+
+    Ok(xml)
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -424,6 +448,8 @@ pub struct XarTableOfContents {
     pub signature: Option<XarSignature>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub x_signature: Option<XarSignature>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub xml: Vec<String>,
 }
 
 impl XarTableOfContents {
@@ -431,8 +457,16 @@ impl XarTableOfContents {
         xar: &mut XarReader<R>,
     ) -> Result<Self, AppleCodesignError> {
         let (digest_type, digest) = xar.checksum()?;
+        let _xml = xar.table_of_contents_decoded_data()?;
         let header = xar.header();
         let toc = xar.table_of_contents();
+
+        // This can be useful for debugging.
+        //String::from_utf8_lossy(&pretty_print_xml(&xml)?)
+        //    .lines()
+        //    .map(|x| x.to_string())
+        //    .collect::<Vec<_>>();
+        let xml = vec![];
 
         Ok(Self {
             toc_length_compressed: header.toc_length_compressed,
@@ -453,6 +487,7 @@ impl XarTableOfContents {
             } else {
                 None
             },
+            xml,
         })
     }
 }

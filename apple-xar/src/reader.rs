@@ -87,6 +87,18 @@ impl<R: Read + Seek + Sized + Debug> XarReader<R> {
         &self.toc
     }
 
+    /// Obtain the decoded content of the table of contents.
+    pub fn table_of_contents_decoded_data(&mut self) -> XarResult<Vec<u8>> {
+        let mut writer = flate2::write::ZlibDecoder::new(vec![]);
+        self.write_file_slice(
+            self.header.size as _,
+            self.header.toc_length_compressed as _,
+            &mut writer,
+        )?;
+
+        Ok(writer.finish()?)
+    }
+
     /// Obtain the raw bytes holding the checksum.
     pub fn checksum_data(&mut self) -> XarResult<Vec<u8>> {
         let mut buf = Vec::with_capacity(self.toc.checksum.size as _);
@@ -114,15 +126,16 @@ impl<R: Read + Seek + Sized + Debug> XarReader<R> {
             .find_map(|(path, file)| if path == filename { Some(file) } else { None }))
     }
 
-    /// Write a slice of the heap to a writer.
-    fn write_heap_slice(
+    /// Write a slice of the file to a writer.
+    ///
+    /// Offsets are relative from beginning of the file.
+    fn write_file_slice(
         &mut self,
         offset: u64,
         size: usize,
         writer: &mut impl Write,
     ) -> XarResult<()> {
-        self.reader
-            .seek(SeekFrom::Start(self.heap_start_offset + offset))?;
+        self.reader.seek(SeekFrom::Start(offset))?;
 
         let mut remaining = size;
         let mut buffer = Vec::with_capacity(32768);
@@ -139,6 +152,16 @@ impl<R: Read + Seek + Sized + Debug> XarReader<R> {
         }
 
         Ok(())
+    }
+
+    /// Write a slice of the heap to a writer.
+    fn write_heap_slice(
+        &mut self,
+        offset: u64,
+        size: usize,
+        writer: &mut impl Write,
+    ) -> XarResult<()> {
+        self.write_file_slice(self.heap_start_offset + offset, size, writer)
     }
 
     /// Write heap file data for a given file record to a writer.

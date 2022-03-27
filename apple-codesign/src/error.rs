@@ -242,6 +242,9 @@ pub enum AppleCodesignError {
     #[error("error writing app metadata XML: {0}")]
     AppMetadataXml(xml::writer::Error),
 
+    #[error("error writing XML: {0}")]
+    XmlWrite(xml::writer::Error),
+
     #[error("Apple Transporter executable not found")]
     TransporterNotFound,
 
