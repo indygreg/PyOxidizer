@@ -22,7 +22,7 @@ use {
         io::Read,
         path::{Path, PathBuf},
     },
-    x509_certificate::CapturedX509Certificate,
+    x509_certificate::{CapturedX509Certificate, DigestAlgorithm},
 };
 
 enum MachOType {
@@ -403,7 +403,7 @@ pub struct DmgEntity {
 #[derive(Clone, Debug, Serialize)]
 pub enum CodeSignatureFile {
     ResourcesXml(Vec<String>),
-    NotarizationTicket(u64),
+    NotarizationTicket,
     Other,
 }
 
@@ -419,6 +419,8 @@ pub enum SignatureEntity {
 #[derive(Clone, Debug, Serialize)]
 pub struct FileEntity {
     pub path: PathBuf,
+    pub file_size: u64,
+    pub file_sha256: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub sub_path: Option<String>,
     pub entity: SignatureEntity,
@@ -426,9 +428,19 @@ pub struct FileEntity {
 
 impl FileEntity {
     /// Construct an instance from a [Path].
-    pub fn from_path(path: &Path) -> Result<Self, AppleCodesignError> {
+    pub fn from_path(path: &Path, report_path: Option<&Path>) -> Result<Self, AppleCodesignError> {
+        let metadata = std::fs::symlink_metadata(path)?;
+
+        let report_path = if let Some(p) = report_path {
+            p.to_path_buf()
+        } else {
+            path.to_path_buf()
+        };
+
         Ok(Self {
-            path: path.to_path_buf(),
+            path: report_path,
+            file_size: metadata.len(),
+            file_sha256: hex::encode(DigestAlgorithm::Sha256.digest_path(path)?),
             sub_path: None,
             entity: SignatureEntity::Other,
         })
@@ -477,12 +489,12 @@ impl SignatureReader {
     pub fn entities(&self) -> Result<Vec<FileEntity>, AppleCodesignError> {
         match self {
             Self::Dmg(path, dmg) => {
-                let mut entity = FileEntity::from_path(path)?;
+                let mut entity = FileEntity::from_path(path, None)?;
                 entity.entity = SignatureEntity::Dmg(Self::resolve_dmg_entity(dmg)?);
 
                 Ok(vec![entity])
             }
-            Self::MachO(path, data) => Self::resolve_macho_entities_from_data(path, data),
+            Self::MachO(path, data) => Self::resolve_macho_entities_from_data(path, data, None),
             Self::Bundle(bundle) => Self::resolve_bundle_entities(bundle),
         }
     }
@@ -504,8 +516,9 @@ impl SignatureReader {
     fn resolve_macho_entities_from_data(
         path: &Path,
         data: &[u8],
+        report_path: Option<&Path>,
     ) -> Result<Vec<FileEntity>, AppleCodesignError> {
-        let mut entity = FileEntity::from_path(path)?;
+        let mut entity = FileEntity::from_path(path, report_path)?;
 
         match Mach::parse(data)? {
             Mach::Binary(macho) => {
@@ -570,8 +583,8 @@ impl SignatureReader {
 
         let mut entities = vec![];
 
-        let mut default_entity = FileEntity::from_path(&file.absolute_path())?;
-        default_entity.path = main_relative_path.clone();
+        let mut default_entity =
+            FileEntity::from_path(file.absolute_path(), Some(&main_relative_path))?;
 
         if file
             .is_main_executable()
@@ -579,14 +592,14 @@ impl SignatureReader {
         {
             let data = std::fs::read(file.absolute_path())?;
             entities.extend(Self::resolve_macho_entities_from_data(
-                &main_relative_path,
+                file.absolute_path(),
                 &data,
+                Some(&main_relative_path),
             )?);
         } else if file.is_code_resources_xml_plist() {
             let data = std::fs::read(file.absolute_path())?;
 
-            let mut entity = default_entity.clone();
-            entity.entity =
+            default_entity.entity =
                 SignatureEntity::BundleCodeSignatureFile(CodeSignatureFile::ResourcesXml(
                     String::from_utf8_lossy(&data)
                         .split('\n')
@@ -594,22 +607,17 @@ impl SignatureReader {
                         .collect::<Vec<_>>(),
                 ));
 
-            entities.push(entity);
+            entities.push(default_entity);
         } else if file.is_notarization_ticket() {
-            let mut entity = default_entity.clone();
-            let metadata = file
-                .metadata()
-                .map_err(AppleCodesignError::DirectoryBundle)?;
-            entity.entity = SignatureEntity::BundleCodeSignatureFile(
-                CodeSignatureFile::NotarizationTicket(metadata.len()),
-            );
+            default_entity.entity =
+                SignatureEntity::BundleCodeSignatureFile(CodeSignatureFile::NotarizationTicket);
 
-            entities.push(entity);
+            entities.push(default_entity);
         } else if file.is_in_code_signature_directory() {
-            let mut entity = default_entity.clone();
-            entity.entity = SignatureEntity::BundleCodeSignatureFile(CodeSignatureFile::Other);
+            default_entity.entity =
+                SignatureEntity::BundleCodeSignatureFile(CodeSignatureFile::Other);
 
-            entities.push(entity);
+            entities.push(default_entity);
         }
 
         Ok(entities)
