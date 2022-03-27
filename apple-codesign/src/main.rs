@@ -658,8 +658,8 @@ fn command_diff_signatures(args: &ArgMatches) -> Result<(), AppleCodesignError> 
 
     let Changeset { diffs, .. } = Changeset::new(&a, &b, "\n");
 
-    for i in 0..diffs.len() {
-        match diffs[i] {
+    for item in diffs {
+        match item {
             Difference::Same(ref x) => {
                 for line in x.lines() {
                     println!(" {}", line);

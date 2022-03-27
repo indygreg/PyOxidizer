@@ -192,7 +192,7 @@ impl CmsSigner {
             content_type = Some(sa.content_type().to_string());
             message_digest = Some(hex::encode(sa.message_digest()));
             if let Some(t) = sa.signing_time() {
-                signing_time = Some(t.clone());
+                signing_time = Some(*t);
             }
         }
 
@@ -424,7 +424,7 @@ impl SignatureReader {
             Self::Dmg(dmg) => Box::new(std::iter::once(
                 Self::resolve_dmg_entity(dmg).map(SignatureEntity::Dmg),
             )),
-            Self::MachO(data) => match Mach::parse(&data) {
+            Self::MachO(data) => match Mach::parse(data) {
                 Ok(mach) => match mach {
                     Mach::Binary(macho) => Box::new(std::iter::once(
                         Self::resolve_macho_entity(macho).map(SignatureEntity::MachO),

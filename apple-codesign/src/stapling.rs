@@ -225,7 +225,7 @@ impl Stapler {
         // as a writer likely only looks for the ticket trailer at the tail end
         // of the file.
         let trailer_size = 16;
-        fh.seek(SeekFrom::End(-1 * trailer_size))?;
+        fh.seek(SeekFrom::End(-trailer_size))?;
 
         let trailer = fh.ioread_with::<XarNotarizationTrailer>(scroll::LE)?;
         if trailer.magic == XAR_NOTARIZATION_TRAILER_MAGIC {

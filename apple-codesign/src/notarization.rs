@@ -344,7 +344,7 @@ pub fn write_flat_package_to_app_store_package<F: Read + Seek + Debug>(
         // we see.
         let id = if let Some(id) = distribution.pkg_ref.iter().find_map(|x| {
             if let Some(bv) = &x.bundle_version {
-                bv.bundle.iter().next().map(|bundle| bundle.id.clone())
+                bv.bundle.get(0).map(|bundle| bundle.id.clone())
             } else {
                 None
             }
@@ -356,7 +356,7 @@ pub fn write_flat_package_to_app_store_package<F: Read + Seek + Debug>(
         };
 
         id
-    } else if let Some(component) = pkg.root_component()? {
+    } else if let Some(_component) = pkg.root_component()? {
         warn!("notarizing a component installer");
 
         error!("support for notarizing a component installer is not yet implemented");
