@@ -13,13 +13,17 @@ use {
         macho::AppleSignable,
     },
     apple_bundles::{DirectoryBundle, DirectoryBundleFile},
-    apple_xar::reader::XarReader,
+    apple_xar::{
+        reader::XarReader,
+        table_of_contents::{File as XarTocFile, Signature as XarTocSignature},
+    },
     cryptographic_message_syntax::{SignedData, SignerInfo},
     goblin::mach::{fat::FAT_MAGIC, parse_magic_and_ctx, Mach, MachO},
     serde::Serialize,
     std::{
+        fmt::Debug,
         fs::File,
-        io::Read,
+        io::{Read, Seek},
         path::{Path, PathBuf},
     },
     x509_certificate::{CapturedX509Certificate, DigestAlgorithm},
@@ -408,11 +412,118 @@ pub enum CodeSignatureFile {
 }
 
 #[derive(Clone, Debug, Serialize)]
+pub struct XarTableOfContents {
+    pub creation_time: String,
+    pub checksum: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub signature: Option<XarSignature>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub x_signature: Option<XarSignature>,
+}
+
+impl XarTableOfContents {
+    pub fn from_xar<R: Read + Seek + Sized + Debug>(
+        xar: &mut XarReader<R>,
+    ) -> Result<Self, AppleCodesignError> {
+        let (digest_type, digest) = xar.checksum()?;
+        let toc = xar.table_of_contents();
+
+        Ok(Self {
+            creation_time: toc.creation_time.clone(),
+            checksum: format!("{}:{}", digest_type, hex::encode(digest)),
+            signature: if let Some(sig) = &toc.signature {
+                Some(sig.try_into()?)
+            } else {
+                None
+            },
+            x_signature: if let Some(sig) = &toc.x_signature {
+                Some(sig.try_into()?)
+            } else {
+                None
+            },
+        })
+    }
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub struct XarSignature {
+    pub style: String,
+    pub size: u64,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub certificates: Vec<CertificateInfo>,
+}
+
+impl TryFrom<&XarTocSignature> for XarSignature {
+    type Error = AppleCodesignError;
+
+    fn try_from(sig: &XarTocSignature) -> Result<Self, Self::Error> {
+        Ok(Self {
+            style: sig.style.to_string(),
+            size: sig.size,
+            certificates: sig
+                .x509_certificates()?
+                .into_iter()
+                .map(|cert| CertificateInfo::try_from(&cert))
+                .collect::<Result<Vec<_>, AppleCodesignError>>()?,
+        })
+    }
+}
+
+#[derive(Clone, Debug, Default, Serialize)]
+pub struct XarFile {
+    pub id: u64,
+    pub file_type: String,
+    pub data_offset: Option<u64>,
+    pub data_size: Option<u64>,
+    pub data_length: Option<u64>,
+    pub data_extracted_checksum: Option<String>,
+    pub data_archived_checksum: Option<String>,
+    pub data_encoding: Option<String>,
+}
+
+impl TryFrom<&XarTocFile> for XarFile {
+    type Error = AppleCodesignError;
+
+    fn try_from(file: &XarTocFile) -> Result<Self, Self::Error> {
+        let mut v = Self {
+            id: file.id,
+            file_type: file.file_type.to_string(),
+            ..Default::default()
+        };
+
+        if let Some(data) = &file.data {
+            v.populate_data(data);
+        }
+
+        Ok(v)
+    }
+}
+
+impl XarFile {
+    pub fn populate_data(&mut self, data: &apple_xar::table_of_contents::FileData) {
+        self.data_offset = Some(data.offset);
+        self.data_size = Some(data.size);
+        self.data_length = Some(data.length);
+        self.data_extracted_checksum = Some(format!(
+            "{}:{}",
+            data.extracted_checksum.style, data.extracted_checksum.checksum
+        ));
+        self.data_archived_checksum = Some(format!(
+            "{}:{}",
+            data.archived_checksum.style, data.archived_checksum.checksum
+        ));
+        self.data_encoding = Some(data.encoding.style.clone());
+    }
+}
+
+#[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum SignatureEntity {
     MachO(MachOEntity),
     Dmg(DmgEntity),
     BundleCodeSignatureFile(CodeSignatureFile),
+    XarTableOfContents(XarTableOfContents),
+    XarMember(XarFile),
     Other,
 }
 
@@ -452,6 +563,7 @@ pub enum SignatureReader {
     Dmg(PathBuf, Box<DmgReader>),
     MachO(PathBuf, Vec<u8>),
     Bundle(Box<DirectoryBundle>),
+    FlatPackage(PathBuf),
 }
 
 impl SignatureReader {
@@ -476,11 +588,7 @@ impl SignatureReader {
 
                 Ok(Self::MachO(path.to_path_buf(), data))
             }
-            PathType::Xar => {
-                XarReader::new(File::open(path)?)?;
-
-                Err(AppleCodesignError::Unimplemented("XAR signature reading"))
-            }
+            PathType::Xar => Ok(Self::FlatPackage(path.to_path_buf())),
             PathType::Other => Err(AppleCodesignError::UnrecognizedPathType),
         }
     }
@@ -496,6 +604,7 @@ impl SignatureReader {
             }
             Self::MachO(path, data) => Self::resolve_macho_entities_from_data(path, data, None),
             Self::Bundle(bundle) => Self::resolve_bundle_entities(bundle),
+            Self::FlatPackage(path) => Self::resolve_flat_package_entities(path),
         }
     }
 
@@ -618,6 +727,30 @@ impl SignatureReader {
                 SignatureEntity::BundleCodeSignatureFile(CodeSignatureFile::Other);
 
             entities.push(default_entity);
+        }
+
+        Ok(entities)
+    }
+
+    fn resolve_flat_package_entities(path: &Path) -> Result<Vec<FileEntity>, AppleCodesignError> {
+        let mut xar = XarReader::new(File::open(path)?)?;
+
+        let default_entity = FileEntity::from_path(path, None)?;
+
+        let mut entities = vec![];
+
+        let mut entity = default_entity.clone();
+        entity.sub_path = Some("toc".to_string());
+        entity.entity =
+            SignatureEntity::XarTableOfContents(XarTableOfContents::from_xar(&mut xar)?);
+        entities.push(entity);
+
+        // Now emit entries for all files in table of contents.
+        for (name, file) in xar.files() {
+            let mut entity = default_entity.clone();
+            entity.sub_path = Some(name);
+            entity.entity = SignatureEntity::XarMember(XarFile::try_from(&file)?);
+            entities.push(entity);
         }
 
         Ok(entities)
