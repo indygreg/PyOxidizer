@@ -9,6 +9,7 @@ use {
     chrono::{DateTime, Utc},
     serde::{Deserialize, Serialize},
     std::{
+        fmt::{Display, Formatter},
         io::Read,
         ops::{Deref, DerefMut},
     },
@@ -115,6 +116,18 @@ pub enum ChecksumType {
     Md5,
 }
 
+impl Display for ChecksumType {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::None => f.write_str("none"),
+            Self::Sha1 => f.write_str("SHA-1"),
+            Self::Sha256 => f.write_str("SHA-256"),
+            Self::Sha512 => f.write_str("SHA-512"),
+            Self::Md5 => f.write_str("MD5"),
+        }
+    }
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct File {
     pub id: u64,
@@ -165,6 +178,17 @@ pub enum FileType {
     Directory,
     HardLink,
     Link,
+}
+
+impl Display for FileType {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            FileType::File => f.write_str("file"),
+            FileType::Directory => f.write_str("directory"),
+            FileType::HardLink => f.write_str("hardlink"),
+            FileType::Link => f.write_str("symlink"),
+        }
+    }
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -232,6 +256,15 @@ pub enum SignatureStyle {
 
     /// RSA signature.
     Rsa,
+}
+
+impl Display for SignatureStyle {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Cms => f.write_str("CMS"),
+            Self::Rsa => f.write_str("RSA"),
+        }
+    }
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
