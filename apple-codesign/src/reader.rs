@@ -413,6 +413,7 @@ pub enum SignatureEntity {
     MachO(MachOEntity),
     Dmg(DmgEntity),
     BundleCodeSignatureFile(CodeSignatureFile),
+    Other,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -421,6 +422,17 @@ pub struct FileEntity {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub sub_path: Option<String>,
     pub entity: SignatureEntity,
+}
+
+impl FileEntity {
+    /// Construct an instance from a [Path].
+    pub fn from_path(path: &Path) -> Result<Self, AppleCodesignError> {
+        Ok(Self {
+            path: path.to_path_buf(),
+            sub_path: None,
+            entity: SignatureEntity::Other,
+        })
+    }
 }
 
 /// Entity for reading Apple code signature data.
@@ -461,18 +473,15 @@ impl SignatureReader {
         }
     }
 
-    /// Iterate over entities related to code signing.
-    pub fn iter_entities(
-        &self,
-    ) -> Box<dyn Iterator<Item = Result<FileEntity, AppleCodesignError>> + '_> {
+    /// Obtain entities that are possibly relevant to code signing.
+    pub fn entities(&self) -> Result<Vec<FileEntity>, AppleCodesignError> {
         match self {
-            Self::Dmg(path, dmg) => Box::new(std::iter::once(Self::resolve_dmg_entity(dmg).map(
-                |entity| FileEntity {
-                    path: path.to_path_buf(),
-                    sub_path: None,
-                    entity: SignatureEntity::Dmg(entity),
-                },
-            ))),
+            Self::Dmg(path, dmg) => {
+                let mut entity = FileEntity::from_path(path)?;
+                entity.entity = SignatureEntity::Dmg(Self::resolve_dmg_entity(dmg)?);
+
+                Ok(vec![entity])
+            }
             Self::MachO(path, data) => Self::resolve_macho_entities_from_data(path, data),
             Self::Bundle(bundle) => Self::resolve_bundle_entities(bundle),
         }
@@ -492,35 +501,33 @@ impl SignatureReader {
         })
     }
 
-    fn resolve_macho_entities_from_data<'a>(
-        path: &'a Path,
-        data: &'a [u8],
-    ) -> Box<dyn Iterator<Item = Result<FileEntity, AppleCodesignError>> + 'a> {
-        match Mach::parse(data) {
-            Ok(mach) => match mach {
-                Mach::Binary(macho) => Box::new(std::iter::once(
-                    Self::resolve_macho_entity(macho).map(|entity| FileEntity {
-                        path: path.to_path_buf(),
-                        sub_path: None,
-                        entity: SignatureEntity::MachO(entity),
-                    }),
-                )),
-                Mach::Fat(multiarch) => {
-                    Box::new(
-                        (0..multiarch.narches).map(move |index| match multiarch.get(index) {
-                            Ok(macho) => {
-                                Self::resolve_macho_entity(macho).map(|entity| FileEntity {
-                                    path: path.to_path_buf(),
-                                    sub_path: Some(format!("macho-index:{}", index)),
-                                    entity: SignatureEntity::MachO(entity),
-                                })
-                            }
-                            Err(err) => Err(err.into()),
-                        }),
-                    )
+    fn resolve_macho_entities_from_data(
+        path: &Path,
+        data: &[u8],
+    ) -> Result<Vec<FileEntity>, AppleCodesignError> {
+        let mut entity = FileEntity::from_path(path)?;
+
+        match Mach::parse(data)? {
+            Mach::Binary(macho) => {
+                entity.entity = SignatureEntity::MachO(Self::resolve_macho_entity(macho)?);
+
+                Ok(vec![entity])
+            }
+            Mach::Fat(multiarch) => {
+                let mut entities = vec![];
+
+                for index in 0..multiarch.narches {
+                    let macho = multiarch.get(index)?;
+
+                    let mut entity = entity.clone();
+                    entity.sub_path = Some(format!("macho-index:{}", index));
+                    entity.entity = SignatureEntity::MachO(Self::resolve_macho_entity(macho)?);
+
+                    entities.push(entity);
                 }
-            },
-            Err(err) => Box::new(std::iter::once(Err(err.into()))),
+
+                Ok(entities)
+            }
         }
     }
 
@@ -536,74 +543,75 @@ impl SignatureReader {
 
     fn resolve_bundle_entities(
         bundle: &DirectoryBundle,
-    ) -> Box<dyn Iterator<Item = Result<FileEntity, AppleCodesignError>> + '_> {
-        match bundle.files(true) {
-            Ok(files) => Box::new(files.into_iter().flat_map(|file| {
-                Self::resolve_bundle_file_entity(bundle.root_dir().to_path_buf(), file)
-            })),
-            Err(err) => Box::new(std::iter::once(Err(AppleCodesignError::DirectoryBundle(
-                err,
-            )))),
+    ) -> Result<Vec<FileEntity>, AppleCodesignError> {
+        let mut entities = vec![];
+
+        for file in bundle
+            .files(true)
+            .map_err(AppleCodesignError::DirectoryBundle)?
+        {
+            entities.extend(
+                Self::resolve_bundle_file_entity(bundle.root_dir().to_path_buf(), file)?
+                    .into_iter(),
+            );
         }
+
+        Ok(entities)
     }
 
     fn resolve_bundle_file_entity(
         base_path: PathBuf,
         file: DirectoryBundleFile,
-    ) -> Box<dyn Iterator<Item = Result<FileEntity, AppleCodesignError>> + '_> {
+    ) -> Result<Vec<FileEntity>, AppleCodesignError> {
         let main_relative_path = match file.absolute_path().strip_prefix(&base_path) {
             Ok(path) => path.to_path_buf(),
             Err(_) => file.absolute_path().to_path_buf(),
         };
 
-        if matches!(file.is_main_executable(), Ok(true)) {
-            match std::fs::read(file.absolute_path()) {
-                Ok(data) => {
-                    let entities =
-                        Self::resolve_macho_entities_from_data(&main_relative_path, &data)
-                            .collect::<Vec<_>>();
+        let mut entities = vec![];
 
-                    Box::new(entities.into_iter())
-                }
-                Err(err) => Box::new(std::iter::once(Err(err.into()))),
-            }
+        let mut default_entity = FileEntity::from_path(&file.absolute_path())?;
+        default_entity.path = main_relative_path.clone();
+
+        if file
+            .is_main_executable()
+            .map_err(AppleCodesignError::DirectoryBundle)?
+        {
+            let data = std::fs::read(file.absolute_path())?;
+            entities.extend(Self::resolve_macho_entities_from_data(
+                &main_relative_path,
+                &data,
+            )?);
         } else if file.is_code_resources_xml_plist() {
-            match std::fs::read(file.absolute_path()) {
-                Ok(xml) => Box::new(std::iter::once(Ok(FileEntity {
-                    path: main_relative_path,
-                    sub_path: None,
-                    entity: SignatureEntity::BundleCodeSignatureFile(
-                        CodeSignatureFile::ResourcesXml(
-                            String::from_utf8_lossy(&xml)
-                                .split('\n')
-                                .map(|x| x.replace('\t', "  "))
-                                .collect::<Vec<_>>(),
-                        ),
-                    ),
-                }))),
-                Err(err) => Box::new(std::iter::once(Err(err.into()))),
-            }
+            let data = std::fs::read(file.absolute_path())?;
+
+            let mut entity = default_entity.clone();
+            entity.entity =
+                SignatureEntity::BundleCodeSignatureFile(CodeSignatureFile::ResourcesXml(
+                    String::from_utf8_lossy(&data)
+                        .split('\n')
+                        .map(|x| x.replace('\t', "  "))
+                        .collect::<Vec<_>>(),
+                ));
+
+            entities.push(entity);
         } else if file.is_notarization_ticket() {
-            match file.metadata() {
-                Ok(metadata) => Box::new(std::iter::once(Ok(FileEntity {
-                    path: main_relative_path,
-                    sub_path: None,
-                    entity: SignatureEntity::BundleCodeSignatureFile(
-                        CodeSignatureFile::NotarizationTicket(metadata.len()),
-                    ),
-                }))),
-                Err(err) => Box::new(std::iter::once(Err(AppleCodesignError::DirectoryBundle(
-                    err,
-                )))),
-            }
+            let mut entity = default_entity.clone();
+            let metadata = file
+                .metadata()
+                .map_err(AppleCodesignError::DirectoryBundle)?;
+            entity.entity = SignatureEntity::BundleCodeSignatureFile(
+                CodeSignatureFile::NotarizationTicket(metadata.len()),
+            );
+
+            entities.push(entity);
         } else if file.is_in_code_signature_directory() {
-            Box::new(std::iter::once(Ok(FileEntity {
-                path: main_relative_path,
-                sub_path: None,
-                entity: SignatureEntity::BundleCodeSignatureFile(CodeSignatureFile::Other),
-            })))
-        } else {
-            Box::new(std::iter::empty())
+            let mut entity = default_entity.clone();
+            entity.entity = SignatureEntity::BundleCodeSignatureFile(CodeSignatureFile::Other);
+
+            entities.push(entity);
         }
+
+        Ok(entities)
     }
 }

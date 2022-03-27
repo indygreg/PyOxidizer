@@ -648,10 +648,10 @@ fn command_diff_signatures(args: &ArgMatches) -> Result<(), AppleCodesignError> 
 
     let reader = SignatureReader::from_path(path0)?;
 
-    let a_entities = reader.iter_entities().collect::<Result<Vec<_>, _>>()?;
+    let a_entities = reader.entities()?;
 
     let reader = SignatureReader::from_path(path1)?;
-    let b_entities = reader.iter_entities().collect::<Result<Vec<_>, _>>()?;
+    let b_entities = reader.entities()?;
 
     let a = serde_yaml::to_string(&a_entities)?;
     let b = serde_yaml::to_string(&b_entities)?;
@@ -1426,7 +1426,7 @@ fn command_print_signature_info(args: &ArgMatches) -> Result<(), AppleCodesignEr
 
     let reader = SignatureReader::from_path(path)?;
 
-    let entities = reader.iter_entities().collect::<Result<Vec<_>, _>>()?;
+    let entities = reader.entities()?;
     serde_yaml::to_writer(std::io::stdout(), &entities)?;
 
     Ok(())
