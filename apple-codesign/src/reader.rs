@@ -30,7 +30,11 @@ impl MachOType {
         let mut fh = File::open(path.as_ref())?;
 
         let mut header = vec![0u8; 4];
-        fh.read(&mut header)?;
+        let count = fh.read(&mut header)?;
+
+        if count < 4 {
+            return Ok(None);
+        }
 
         let magic = goblin::mach::peek(&header, 0)?;
 
