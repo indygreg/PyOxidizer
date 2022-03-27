@@ -419,7 +419,7 @@ pub enum SignatureEntity {
 pub struct FileEntity {
     pub path: PathBuf,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub index: Option<usize>,
+    pub sub_path: Option<String>,
     pub entity: SignatureEntity,
 }
 
@@ -469,7 +469,7 @@ impl SignatureReader {
             Self::Dmg(path, dmg) => Box::new(std::iter::once(Self::resolve_dmg_entity(dmg).map(
                 |entity| FileEntity {
                     path: path.to_path_buf(),
-                    index: None,
+                    sub_path: None,
                     entity: SignatureEntity::Dmg(entity),
                 },
             ))),
@@ -501,7 +501,7 @@ impl SignatureReader {
                 Mach::Binary(macho) => Box::new(std::iter::once(
                     Self::resolve_macho_entity(macho).map(|entity| FileEntity {
                         path: path.to_path_buf(),
-                        index: None,
+                        sub_path: None,
                         entity: SignatureEntity::MachO(entity),
                     }),
                 )),
@@ -511,7 +511,7 @@ impl SignatureReader {
                             Ok(macho) => {
                                 Self::resolve_macho_entity(macho).map(|entity| FileEntity {
                                     path: path.to_path_buf(),
-                                    index: Some(index),
+                                    sub_path: Some(format!("macho-index:{}", index)),
                                     entity: SignatureEntity::MachO(entity),
                                 })
                             }
@@ -571,7 +571,7 @@ impl SignatureReader {
             match std::fs::read(file.absolute_path()) {
                 Ok(xml) => Box::new(std::iter::once(Ok(FileEntity {
                     path: main_relative_path,
-                    index: None,
+                    sub_path: None,
                     entity: SignatureEntity::BundleCodeSignatureFile(
                         CodeSignatureFile::ResourcesXml(
                             String::from_utf8_lossy(&xml)
@@ -587,7 +587,7 @@ impl SignatureReader {
             match file.metadata() {
                 Ok(metadata) => Box::new(std::iter::once(Ok(FileEntity {
                     path: main_relative_path,
-                    index: None,
+                    sub_path: None,
                     entity: SignatureEntity::BundleCodeSignatureFile(
                         CodeSignatureFile::NotarizationTicket(metadata.len()),
                     ),
@@ -599,7 +599,7 @@ impl SignatureReader {
         } else if file.is_in_code_signature_directory() {
             Box::new(std::iter::once(Ok(FileEntity {
                 path: main_relative_path,
-                index: None,
+                sub_path: None,
                 entity: SignatureEntity::BundleCodeSignatureFile(CodeSignatureFile::Other),
             })))
         } else {
