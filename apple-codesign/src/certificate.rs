@@ -11,7 +11,10 @@ use {
         ConstOid, Oid,
     },
     bytes::Bytes,
-    std::str::FromStr,
+    std::{
+        fmt::{Display, Formatter},
+        str::FromStr,
+    },
     x509_certificate::{
         certificate::KeyUsage, rfc4519::OID_COUNTRY_NAME, CapturedX509Certificate,
         InMemorySigningKeyPair, KeyAlgorithm, X509CertificateBuilder,
@@ -307,6 +310,19 @@ impl ExtendedKeyUsagePurpose {
     }
 }
 
+impl Display for ExtendedKeyUsagePurpose {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ExtendedKeyUsagePurpose::CodeSigning => f.write_str("Code Signing"),
+            ExtendedKeyUsagePurpose::SafariDeveloper => f.write_str("Safari Developer"),
+            ExtendedKeyUsagePurpose::ThirdPartyMacDeveloperInstaller => {
+                f.write_str("3rd Party Mac Developer Installer Packaging Signing")
+            }
+            ExtendedKeyUsagePurpose::DeveloperIdInstaller => f.write_str("Developer ID Installer"),
+        }
+    }
+}
+
 impl TryFrom<&Oid> for ExtendedKeyUsagePurpose {
     type Error = AppleCodesignError;
 
@@ -448,6 +464,55 @@ impl CodeSigningCertificateExtension {
     }
 }
 
+impl Display for CodeSigningCertificateExtension {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            CodeSigningCertificateExtension::AppleSigning => f.write_str("Apple Signing"),
+            CodeSigningCertificateExtension::IPhoneDeveloper => f.write_str("iPhone Developer"),
+            CodeSigningCertificateExtension::IPhoneOsApplicationSigning => {
+                f.write_str("Apple iPhone OS Application Signing")
+            }
+            CodeSigningCertificateExtension::AppleDeveloperCertificateSubmission => {
+                f.write_str("Apple Developer Certificate (Submission)")
+            }
+            CodeSigningCertificateExtension::SafariDeveloper => f.write_str("Safari Developer"),
+            CodeSigningCertificateExtension::IPhoneOsVpnSigning => {
+                f.write_str("Apple iPhone OS VPN Signing")
+            }
+            CodeSigningCertificateExtension::AppleMacAppSigningDevelopment => {
+                f.write_str("Apple Mac App Signing (Development)")
+            }
+            CodeSigningCertificateExtension::AppleMacAppSigningSubmission => {
+                f.write_str("Apple Mac App Signing Submission")
+            }
+            CodeSigningCertificateExtension::AppleMacAppStoreCodeSigning => {
+                f.write_str("Mac App Store Code Signing")
+            }
+            CodeSigningCertificateExtension::AppleMacAppStoreInstallerSigning => {
+                f.write_str("Mac App Store Installer Signing")
+            }
+            CodeSigningCertificateExtension::MacDeveloper => f.write_str("Mac Developer"),
+            CodeSigningCertificateExtension::DeveloperIdApplication => {
+                f.write_str("Developer ID Application")
+            }
+            CodeSigningCertificateExtension::DeveloperIdDate => f.write_str("Developer ID Date"),
+            CodeSigningCertificateExtension::DeveloperIdInstaller => {
+                f.write_str("Developer ID Installer")
+            }
+            CodeSigningCertificateExtension::ApplePayPassbookSigning => {
+                f.write_str("Apple Pay Passbook Signing")
+            }
+            CodeSigningCertificateExtension::WebsitePushNotificationSigning => {
+                f.write_str("Web Site Push Notifications Signing")
+            }
+            CodeSigningCertificateExtension::DeveloperIdKernel => {
+                f.write_str("Developer ID Kernel")
+            }
+            CodeSigningCertificateExtension::TestFlight => f.write_str("TestFlight"),
+        }
+    }
+}
+
 impl TryFrom<&Oid> for CodeSigningCertificateExtension {
     type Error = AppleCodesignError;
 
@@ -572,6 +637,35 @@ impl CertificateAuthorityExtension {
     }
 }
 
+impl Display for CertificateAuthorityExtension {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            CertificateAuthorityExtension::AppleWorldwideDeveloperRelations => {
+                f.write_str("Apple Worldwide Developer Relations")
+            }
+            CertificateAuthorityExtension::AppleApplicationIntegration => {
+                f.write_str("Apple Application Integration")
+            }
+            CertificateAuthorityExtension::DeveloperId => {
+                f.write_str("Developer ID Certification Authority")
+            }
+            CertificateAuthorityExtension::AppleTimestamp => f.write_str("Apple Timestamp"),
+            CertificateAuthorityExtension::DeveloperAuthentication => {
+                f.write_str("Developer Authentication Certification Authority")
+            }
+            CertificateAuthorityExtension::AppleApplicationIntegrationG3 => {
+                f.write_str("Application Application Integration CA - G3")
+            }
+            CertificateAuthorityExtension::AppleWorldwideDeveloperRelationsG2 => {
+                f.write_str("Apple Worldwide Developer Relations CA - G2")
+            }
+            CertificateAuthorityExtension::AppleSoftwareUpdateCertification => {
+                f.write_str("Apple Software Update Certification")
+            }
+        }
+    }
+}
+
 impl TryFrom<&Oid> for CertificateAuthorityExtension {
     type Error = AppleCodesignError;
 
@@ -679,6 +773,20 @@ impl CertificateProfile {
             "developer-id-application",
             "developer-id-installer",
         ]
+    }
+}
+
+impl Display for CertificateProfile {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            CertificateProfile::MacInstallerDistribution => {
+                f.write_str("mac-installer-distribution")
+            }
+            CertificateProfile::AppleDistribution => f.write_str("apple-distribution"),
+            CertificateProfile::AppleDevelopment => f.write_str("apple-development"),
+            CertificateProfile::DeveloperIdApplication => f.write_str("developer-id-application"),
+            CertificateProfile::DeveloperIdInstaller => f.write_str("developer-id-installer"),
+        }
     }
 }
 
