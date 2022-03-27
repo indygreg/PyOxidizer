@@ -455,7 +455,11 @@ pub struct XarTableOfContents {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub rsa_signature: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub rsa_signature_verifies: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub cms_signature: Option<CmsSignature>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cms_signature_verifies: Option<bool>,
 }
 
 impl XarTableOfContents {
@@ -465,12 +469,23 @@ impl XarTableOfContents {
         let (digest_type, digest) = xar.checksum()?;
         let _xml = xar.table_of_contents_decoded_data()?;
 
-        let rsa_signature = xar.rsa_signature()?.map(|x| hex::encode(x.0));
-        let cms_signature = if let Some(signed_data) = xar.cms_signature()? {
-            Some(CmsSignature::try_from(signed_data)?)
+        let (rsa_signature, rsa_signature_verifies) = if let Some(sig) = xar.rsa_signature()? {
+            (
+                Some(hex::encode(&sig.0)),
+                Some(xar.verify_rsa_checksum_signature().unwrap_or(false)),
+            )
         } else {
-            None
+            (None, None)
         };
+        let (cms_signature, cms_signature_verifies) =
+            if let Some(signed_data) = xar.cms_signature()? {
+                (
+                    Some(CmsSignature::try_from(signed_data)?),
+                    Some(xar.verify_cms_signature().unwrap_or(false)),
+                )
+            } else {
+                (None, None)
+            };
 
         let header = xar.header();
         let toc = xar.table_of_contents();
@@ -505,7 +520,9 @@ impl XarTableOfContents {
             },
             xml,
             rsa_signature,
+            rsa_signature_verifies,
             cms_signature,
+            cms_signature_verifies,
         })
     }
 }
