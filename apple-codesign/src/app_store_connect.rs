@@ -203,7 +203,7 @@ pub struct DevIdPlus {
     #[serde(rename = "LogFileURL")]
     pub log_file_url: Option<String>,
     pub more_info: Option<MoreInfo>,
-    pub request_status: u64,
+    pub request_status: i64,
     #[serde(rename = "RequestUUID")]
     pub request_uuid: String,
     pub status_code: Option<i64>,

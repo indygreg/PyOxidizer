@@ -824,6 +824,7 @@ impl Notarizer {
         response: &DevIdPlusInfoResponse,
     ) -> Result<String, AppleCodesignError> {
         if let Some(url) = &response.dev_id_plus.log_file_url {
+            info!("fetching log from {}", url);
             let client = crate::ticket_lookup::default_client()?;
 
             let response = client.get(url).send()?;
