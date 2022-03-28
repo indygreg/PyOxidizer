@@ -230,7 +230,7 @@ pub struct PkgRef {
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Product {
     pub id: String,
-    pub version: String,
+    pub version: Option<String>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
