@@ -113,12 +113,16 @@ fn pretty_print_xml(xml: &[u8]) -> Result<Vec<u8>, AppleCodesignError> {
         .create_writer(BufWriter::new(Vec::with_capacity(xml.len() * 2)));
 
     while let Ok(event) = reader.next() {
-        if matches!(event, xml::reader::XmlEvent::EndDocument) {
-            break;
-        }
-
-        if let Some(event) = event.as_writer_event() {
-            emitter.write(event).map_err(AppleCodesignError::XmlWrite)?;
+        match event {
+            xml::reader::XmlEvent::EndDocument => {
+                break;
+            }
+            xml::reader::XmlEvent::Whitespace(_) => {}
+            event => {
+                if let Some(event) = event.as_writer_event() {
+                    emitter.write(event).map_err(AppleCodesignError::XmlWrite)?;
+                }
+            }
         }
     }
 
