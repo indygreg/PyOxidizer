@@ -155,7 +155,7 @@ dependencies = [
  "tugger-apple 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "uuid",
  "which",
- "x509-certificate 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "x509-certificate 0.12.0-pre",
  "xml-rs",
  "yasna",
  "zip 0.5.13",
@@ -207,7 +207,7 @@ dependencies = [
  "tugger-apple 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "uuid",
  "which",
- "x509-certificate 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "x509-certificate 0.11.0",
  "xml-rs",
  "yasna",
  "zip 0.5.13",
@@ -263,7 +263,7 @@ dependencies = [
  "sha2 0.10.2",
  "thiserror",
  "url",
- "x509-certificate 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "x509-certificate 0.12.0-pre",
  "xml-rs",
  "xz2",
 ]
@@ -292,7 +292,7 @@ dependencies = [
  "sha2 0.10.2",
  "thiserror",
  "url",
- "x509-certificate 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "x509-certificate 0.11.0",
  "xml-rs",
  "xz2",
 ]
@@ -1413,7 +1413,7 @@ dependencies = [
  "pem 1.0.2",
  "reqwest",
  "ring",
- "x509-certificate 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "x509-certificate 0.12.0-pre",
 ]
 
 [[package]]
@@ -1429,7 +1429,7 @@ dependencies = [
  "pem 1.0.2",
  "reqwest",
  "ring",
- "x509-certificate 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "x509-certificate 0.11.0",
 ]
 
 [[package]]
@@ -5897,7 +5897,7 @@ dependencies = [
  "tugger-windows-codesign",
  "tugger-wix",
  "walkdir",
- "x509-certificate 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "x509-certificate 0.12.0-pre",
 ]
 
 [[package]]
@@ -5973,7 +5973,7 @@ dependencies = [
  "thiserror",
  "tugger-file-manifest 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-windows-codesign",
- "x509-certificate 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "x509-certificate 0.12.0-pre",
  "yasna",
 ]
 
@@ -6641,6 +6641,8 @@ dependencies = [
 [[package]]
 name = "x509-certificate"
 version = "0.11.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9fe57f5b1eb1747fc1797f1b99fa2127c416d924bb4353008a9f30515e4de482"
 dependencies = [
  "bcder",
  "bytes",
@@ -6653,9 +6655,7 @@ dependencies = [
 
 [[package]]
 name = "x509-certificate"
-version = "0.11.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9fe57f5b1eb1747fc1797f1b99fa2127c416d924bb4353008a9f30515e4de482"
+version = "0.12.0-pre"
 dependencies = [
  "bcder",
  "bytes",
