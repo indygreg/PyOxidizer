@@ -54,8 +54,8 @@ yasna = "0.5"
 zip = "0.5"
 
 [dependencies.apple-bundles]
-path = "../apple-bundles"
-version = "0.8.0-pre"
+# path = "../apple-bundles"
+version = "0.8.0"
 
 [dependencies.apple-flat-package]
 # path = "../apple-flat-package"
