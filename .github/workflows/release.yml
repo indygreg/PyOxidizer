@@ -16,60 +16,30 @@ on:
   schedule:
     - cron: '13 15 * * *'
 jobs:
-  pyoxidizer-linux-x86_64-bin:
-    runs-on: 'ubuntu-20.04'
-    env:
+  pyoxidizer-exes:
+    uses: ./.github/workflows/build-exe.yml
+    with:
+      bin: pyoxidizer
+    secrets:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      SCCACHE_BUCKET: 'pyoxidizer-sccache'
-      SCCACHE_S3_USE_SSL: '1'
+
+  pyoxidizer-linux-x86_64-wheel:
+    needs:
+      - pyoxidizer-exes
+    runs-on: 'ubuntu-20.04'
     steps:
-      - name: Install system packages
-        run: |
-          sudo apt install -y --no-install-recommends musl-tools
-
       - uses: actions/checkout@v2
+
+      - name: Download Executable
+        uses: actions/download-artifact@v2
         with:
-          # Needed by build.rs, which needs to walk the Git history to find the
-          # root commit. Without this, a shallow clone (depth=1) is performed.
-          fetch-depth: 0
-
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          default: true
-          profile: minimal
-          target: x86_64-unknown-linux-musl
-
-      - name: Install sccache
-        run: |
-          wget -O sccache.tar.gz --progress dot:mega https://github.com/mozilla/sccache/releases/download/v0.2.15/sccache-v0.2.15-x86_64-unknown-linux-musl.tar.gz
-          tar -xvzf sccache.tar.gz
-          mv sccache-*/sccache /home/runner/.cargo/bin/sccache
-          chmod +x /home/runner/.cargo/bin/sccache
-          sccache --start-server
-
-      - name: Build pyoxidizer Executable
-        env:
-          PYOXIDIZER_BUILD_FORCE_GIT_SOURCE: '1'
-          RUSTC_WRAPPER: sccache
-        run: |
-          rustc --version
-          cargo build --target x86_64-unknown-linux-musl --release --bin pyoxidizer
-
-      - name: Stop sccache
-        continue-on-error: true
-        run: |
-          sccache --stop-server
-
-      - name: Upload Binary
-        uses: actions/upload-artifact@v2
-        with:
-          name: pyoxidizer-linux-x86_64-bin
-          path: target/x86_64-unknown-linux-musl/release/pyoxidizer
+          name: exe-pyoxidizer-x86_64-unknown-linux-musl
+          path: target/x86_64-unknown-linux-musl/release/
 
       - name: Build Wheel
         run: |
+          chmod +x target/x86_64-unknown-linux-musl/release/pyoxidizer
           target/x86_64-unknown-linux-musl/release/pyoxidizer build --release wheel_linux
           mkdir -p wheelhouse
           mv build/*/*/*/*.whl wheelhouse/
@@ -82,17 +52,17 @@ jobs:
 
   pyoxidizer-linux-x86_64-bin-check:
     needs:
-      - 'pyoxidizer-linux-x86_64-bin'
+      - pyoxidizer-exes
     runs-on: 'ubuntu-20.04'
     steps:
       - name: Install musl compiler
         run: |
           sudo apt install -y --no-install-recommends musl-tools
 
-      - name: Download Linux Executable
+      - name: Download Executable
         uses: actions/download-artifact@v2
         with:
-          name: pyoxidizer-linux-x86_64-bin
+          name: exe-pyoxidizer-x86_64-unknown-linux-musl
 
       - name: Spot Test (Native Build)
         run: |
@@ -106,64 +76,21 @@ jobs:
       #    ./pyoxidizer build --path myapp --target-triple x86_64-unknown-linux-musl
 
   pyoxidizer-macos-exe:
+    needs:
+      - pyoxidizer-exes
     strategy:
       fail-fast: false
       matrix:
         target_triple:
           - 'aarch64-apple-darwin'
           - 'x86_64-apple-darwin'
-    runs-on: 'macos-10.15'
-    env:
-      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      SCCACHE_BUCKET: 'pyoxidizer-sccache'
-      SCCACHE_S3_USE_SSL: '1'
+    runs-on: 'ubuntu-20.04'
     steps:
-      - uses: actions/checkout@v2
+      - name: Download Executable
+        uses: actions/download-artifact@v2
         with:
-          # Needed by build.rs, which needs to walk the Git history to find the
-          # root commit. Without this, a shallow clone (depth=1) is performed.
-          fetch-depth: 0
-
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          default: true
-          profile: minimal
-          target: ${{ matrix.target_triple }}
-
-      - name: Install sccache
-        run: |
-          wget -O sccache.tar.gz --progress dot:mega https://github.com/mozilla/sccache/releases/download/v0.2.15/sccache-v0.2.15-x86_64-apple-darwin.tar.gz
-          tar -xvzf sccache.tar.gz
-          mv sccache-*/sccache /Users/runner/.cargo/bin/sccache
-          chmod +x /Users/runner/.cargo/bin/sccache
-          sccache --start-server
-
-      - name: Build pyoxidizer Executable
-        env:
-          PYOXIDIZER_BUILD_FORCE_GIT_SOURCE: '1'
-          RUSTC_WRAPPER: sccache
-        run: |
-          case "${{ matrix.target_triple }}" in
-            aarch64-apple-darwin)
-              export SDKROOT=/Applications/Xcode_12.4.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX11.1.sdk
-              export OSX_DEPLOYMENT_TARGET=11.0
-              ;;
-            x86_64-apple-darwin)
-              export OSX_DEPLOYMENT_TARGET=10.9
-              ;;
-            *)
-              echo "unhandled target triple: ${{ matrix.target_triple }}"
-              exit 1
-              ;;
-          esac
-
-          rustc --version
-          cargo build --target ${{ matrix.target_triple }} --release --bin pyoxidizer
-
-          mkdir -p dist/${{ matrix.target_triple }}
-          mv target/${{ matrix.target_triple }}/release/pyoxidizer dist/${{ matrix.target_triple }}/
+          name: exe-pyoxidizer-${{ matrix.target_triple }}
+          path: dist/${{ matrix.target_triple }}/
 
       - name: Upload Executable
         uses: actions/upload-artifact@v2
@@ -184,30 +111,26 @@ jobs:
           - target_triple: 'x86_64-apple-darwin'
             wheel_target: 'wheel_macos_x86_64'
     needs:
-      - pyoxidizer-linux-x86_64-bin
-      - pyoxidizer-macos-exe
+      - pyoxidizer-exes
     runs-on: 'ubuntu-20.04'
     steps:
       - uses: actions/checkout@v2
 
       - name: Download Linux exe
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
-          name: pyoxidizer-linux-x86_64-bin
+          name: exe-pyoxidizer-x86_64-unknown-linux-musl
           path: dist
 
       - name: Download macOS Exes
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
-          name: pyoxidizer-macos_exes
-          path: dist
+          name: exe-pyoxidizer-${{ matrix.config.target_triple }}
+          path: target/${{ matrix.config.target_triple }}/release/
 
       - name: Build Wheel
         run: |
-          mkdir -p target/${{ matrix.config.target_triple }}/release
-          mv dist/${{ matrix.config.target_triple }}/pyoxidizer target/${{ matrix.config.target_triple}}/release/
-
-          chmod +x dist/pyoxidizer dist/*/pyoxidizer
+          chmod +x dist/pyoxidizer
           dist/pyoxidizer build --release ${{ matrix.config.wheel_target }}
 
           mkdir wheelhouse
@@ -219,42 +142,20 @@ jobs:
           name: pyoxidizer-wheels
           path: wheelhouse
 
-  pyoxidizer-macos-universal-exe:
-    needs:
-      - pyoxidizer-macos-exe
-    runs-on: 'macos-10.15'
-    steps:
-      - name: Download CLI exes
-        uses: actions/download-artifact@v2
-        with:
-          name: pyoxidizer-macos_exes
-          path: inputs
-
-      - name: Produce Universal Binary
-        run: |
-          mkdir -p dist/macos-universal
-          lipo inputs/*/pyoxidizer -create -output dist/macos-universal/pyoxidizer
-          chmod +x dist/macos-universal/pyoxidizer
-          lipo dist/macos-universal/pyoxidizer -info
-
-      - name: Upload Universal Executable
-        uses: actions/upload-artifact@v2
-        with:
-          name: pyoxidizer-macos_universal_exe
-          path: dist/*/pyoxidizer
-
   pyoxidizer-macos-universal-exe-check:
     needs:
-      - pyoxidizer-macos-universal-exe
+      - pyoxidizer-exes
     runs-on: 'macos-10.15'
     steps:
       - name: Download macOS Executable
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
-          name: pyoxidizer-macos_universal_exe
+          name: exe-pyoxidizer-macos-universal
+          path: macos-universal
 
       - name: Spot Test (Native Build)
         run: |
+          find . -type f
           mv macos-universal/pyoxidizer .
           chmod +x pyoxidizer
           ./pyoxidizer init-config-file myapp
@@ -278,7 +179,7 @@ jobs:
       - uses: actions/checkout@v2
 
       - name: Download CLI exes
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: pyoxidizer-macos_exes
           path: dist
@@ -288,13 +189,15 @@ jobs:
           scripts/make-dmg.sh
 
       - name: Upload DMG
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: pyoxidizer-macos_dmg
           path: |
             PyOxidizer.dmg
 
-  pyoxidizer-windows-exe:
+  pyoxidizer-windows-wheel:
+    needs:
+      - pyoxidizer-exes
     strategy:
       fail-fast: false
       matrix:
@@ -303,78 +206,24 @@ jobs:
             wheel_target: 'wheel_windows_x86'
           - target_triple: 'x86_64-pc-windows-msvc'
             wheel_target: 'wheel_windows_x86_64'
-    runs-on: 'windows-2019'
-    env:
-      IN_CI: '1'
-      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      SCCACHE_BUCKET: 'pyoxidizer-sccache'
-      SCCACHE_S3_USE_SSL: '1'
-      # Prevent sccache server from stopping due to inactivity.
-      SCCACHE_IDLE_TIMEOUT: '0'
+    runs-on: 'windows-2022'
     steps:
       - uses: actions/checkout@v2
+
+      - name: Download Executable
+        uses: actions/download-artifact@v3
         with:
-          # Needed by build.rs, which needs to walk the Git history to find the
-          # root commit. Without this, a shallow clone (depth=1) is performed.
-          fetch-depth: 0
-
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          default: true
-          profile: minimal
-          target: ${{ matrix.config.target_triple }}
-
-      - name: Cache sccache (Windows)
-        id: cache-sccache
-        uses: actions/cache@v2
-        with:
-          path: C:/Users/runneradmin/.cargo/bin/sccache.exe
-          key: ${{ runner.os }}-sccache-0
-
-      - name: Install sccache build dependencies
-        if: steps.cache-sccache.outputs.cache-hit != 'true'
-        run: |
-          vcpkg integrate install
-          vcpkg install openssl:x64-windows
-
-      - name: Install sccache (Windows)
-        if: steps.cache-sccache.outputs.cache-hit != 'true'
-        run: |
-          cargo install --features 's3' sccache
-
-      - name: Start sccache
-        run: |
-          sccache --start-server
-
-      - name: Build Executable
-        env:
-          PYOXIDIZER_BUILD_FORCE_GIT_SOURCE: '1'
-          RUSTC_WRAPPER: sccache
-        run: |
-          rustc --version
-          cargo build --target ${{ matrix.config.target_triple }} --release --bin pyoxidizer
-
-          New-Item -ItemType "directory" -Name "dist/${{ matrix.config.target_triple}}"
-          copy target/${{ matrix.config.target_triple }}/release/pyoxidizer.exe dist/${{ matrix.config.target_triple }}
-
-      - name: Upload Executable
-        uses: actions/upload-artifact@v2
-        with:
-          name: pyoxidizer-windows_exes
-          path: |
-            dist/*/*
+          name: exe-pyoxidizer-${{ matrix.config.target_triple }}
+          path: target/${{ matrix.config.target_triple }}/release/
 
       - name: Build Wheel
         run: |
-          target/${{ matrix.config.target_triple}}/release/pyoxidizer.exe build --release ${{ matrix.config.wheel_target }}
-
+          target/${{ matrix.config.target_triple }}/release/pyoxidizer.exe build --release ${{ matrix.config.wheel_target }}
           New-Item -ItemType "directory" -Name "wheelhouse"
           move build/*/*/*/*.whl wheelhouse/
 
       - name: Upload Wheel
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: pyoxidizer-wheels
           path: wheelhouse
@@ -389,13 +238,20 @@ jobs:
           - host_triple: 'x86_64-pc-windows-msvc'
             target_triple: 'i686-pc-windows-msvc'
     needs:
-      - pyoxidizer-windows-exe
+      - pyoxidizer-exes
     runs-on: 'windows-2019'
     steps:
       - name: Download Windows Executable
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
-          name: pyoxidizer-windows_exes
+          name: exe-pyoxidizer-i686-pc-windows-msvc
+          path: i686-pc-windows-msvc/
+
+      - name: Download Windows Executable
+        uses: actions/download-artifact@v3
+        with:
+          name: exe-pyoxidizer-x86_64-pc-windows-msvc
+          path: x86_64-pc-windows-msvc/
 
       - name: Spot Test (Native Build)
         run: |
@@ -408,18 +264,24 @@ jobs:
 
   pyoxidizer-windows-installer:
     needs:
-      - pyoxidizer-windows-exe
+      - pyoxidizer-exes
     runs-on: 'windows-2019'
     env:
       IN_CI: '1'
     steps:
       - uses: actions/checkout@v2
 
-      - name: Download CLI exes
-        uses: actions/download-artifact@v2
+      - name: Download Windows Executable
+        uses: actions/download-artifact@v3
         with:
-          name: pyoxidizer-windows_exes
-          path: dist
+          name: exe-pyoxidizer-i686-pc-windows-msvc
+          path: dist/i686-pc-windows-msvc/
+
+      - name: Download Windows Executable
+        uses: actions/download-artifact@v3
+        with:
+          name: exe-pyoxidizer-x86_64-pc-windows-msvc
+          path: dist/x86_64-pc-windows-msvc/
 
       # We can use the built/downloaded pyoxidizer.exe to package itself. Nice.
       # Building the exe installer will build the MSI installers. 2 birds 1 stone.
@@ -430,7 +292,7 @@ jobs:
           move build/x86_64-pc-windows-msvc/release/*/*.exe .
 
       - name: Upload installers
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: pyoxidizer-windows_installers
           path: |
@@ -466,23 +328,23 @@ jobs:
           pip3 install maturin==0.10.4
           maturin build -m pyoxidizer/Cargo.toml -b bin --no-sdist --release -o dist --target ${{ matrix.platform.target }} --manylinux ${{ matrix.platform.manylinux }}
       - name: Upload wheels
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: pyoxidizer-wheels
           path: dist
 
   pyoxy-linux-x86_64-bin:
     needs:
-      - 'pyoxidizer-linux-x86_64-bin'
+      - pyoxidizer-exes
     runs-on: 'ubuntu-20.04'
     steps:
       - uses: actions/checkout@v2
 
       - name: Download PyOxidizer Linux Executable
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
-          name: pyoxidizer-linux-x86_64-bin
-          path: /usr/local/bin
+          name: exe-pyoxidizer-x86_64-unknown-linux-musl
+          path: /usr/local/bin/
 
       - name: Restore Docker Image Cache
         id: cache-image
@@ -515,7 +377,7 @@ jobs:
           cp target/release/pyoxy dist/x86_64-unknown-linux-gnu/
 
       - name: Upload Executable
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: pyoxy-linux-bin
           path: |
@@ -579,7 +441,7 @@ jobs:
           mv target/${{ matrix.target_triple }}/release/pyoxy dist/${{ matrix.target_triple }}/
 
       - name: Upload Executable
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: pyoxy-macos_exes
           path: |
@@ -591,7 +453,7 @@ jobs:
     runs-on: 'macos-11'
     steps:
       - name: Download CLI exes
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: pyoxy-macos_exes
           path: inputs
@@ -604,7 +466,7 @@ jobs:
           lipo dist/macos-universal/pyoxy -info
 
       - name: Upload Universal Executable
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: pyoxy-macos_universal_exe
           path: dist/*/pyoxy
