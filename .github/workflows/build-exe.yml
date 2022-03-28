@@ -26,6 +26,8 @@ jobs:
           - os: 'macos-11.0'
             triple: 'x86_64-apple-darwin'
           - os: 'windows-2022'
+            triple: 'i686-pc-windows-msvc'
+          - os: 'windows-2022'
             triple: 'x86_64-pc-windows-msvc'
     runs-on: ${{ matrix.target.os }}
     env:
