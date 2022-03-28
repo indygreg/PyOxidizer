@@ -5,9 +5,17 @@ import os
 import pathlib
 import re
 
-EXTERNAL_PREFIXES = ("oxidized_importer", "pyembed", "pyoxidizer", "pyoxy", "tugger")
+EXTERNAL_PREFIXES = (
+    "apple_codesign",
+    "oxidized_importer",
+    "pyembed",
+    "pyoxidizer",
+    "pyoxy",
+    "tugger",
+)
 
 EXTERNAL_SOURCE_DIRS = (
+    pathlib.Path("apple-codesign") / "docs",
     pathlib.Path("pyembed") / "docs",
     pathlib.Path("pyoxidizer") / "docs",
     pathlib.Path("pyoxy") / "docs",

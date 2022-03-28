@@ -154,6 +154,5 @@ pub use signing::*;
 pub mod specification;
 pub mod stapling;
 pub mod ticket_lookup;
-pub mod tutorial;
 mod verify;
 pub use verify::*;

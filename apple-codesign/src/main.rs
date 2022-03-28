@@ -50,8 +50,6 @@ mod stapling;
 #[allow(unused)]
 mod ticket_lookup;
 #[allow(unused)]
-mod tutorial;
-#[allow(unused)]
 mod verify;
 
 use {

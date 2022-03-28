@@ -25,6 +25,18 @@ The PyOxidizer Project is comprised of discrete pieces of software developed
 in the same repository. Major pieces of user-facing software have their own
 documentation, each described in the following sections.
 
+Apple Code Signing
+------------------
+
+The ``apple-codesign`` Rust crate and ``rcodesign`` CLI tool implement
+Apple code signing to enable developers to sign, notarize, and staple software
+without having to use Apple hardware or macOS.
+
+.. toctree::
+   :maxdepth: 2
+
+   apple_codesign
+
 oxidized_importer
 -----------------
 

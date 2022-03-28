@@ -1,5 +1,7 @@
 .idea/
+apple-codesign/docs/_build/
 docs/_build/
+docs/apple_codesign*
 docs/oxidized_importer*
 docs/pyembed*
 docs/pyoxidizer*
