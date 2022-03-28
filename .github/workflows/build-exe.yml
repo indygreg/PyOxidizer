@@ -1,0 +1,98 @@
+name: Build a binary
+
+on:
+  workflow_call:
+    inputs:
+      bin:
+        description: Name of binary to build
+        required: true
+        type: string
+    secrets:
+      AWS_ACCESS_KEY_ID:
+        required: true
+      AWS_SECRET_ACCESS_KEY:
+        required: true
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - os: 'ubuntu-20.04'
+            triple: 'x86_64-unknown-linux-musl'
+          - os: 'macos-11.0'
+            triple: 'aarch64-apple-darwin'
+          - os: 'macos-11.0'
+            triple: 'x86_64-apple-darwin'
+          - os: 'windows-2022'
+            triple: 'x86_64-pc-windows-msvc'
+    runs-on: ${{ matrix.target.os }}
+    env:
+      IN_CI: '1'
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      SCCACHE_BUCKET: 'pyoxidizer-sccache'
+      SCCACHE_S3_USE_SSL: '1'
+      # Prevent sccache server from stopping due to inactivity.
+      SCCACHE_IDLE_TIMEOUT: '0'
+      RUSTC_WRAPPER: sccache
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - uses: ./.github/actions/rust-bootstrap
+        with:
+          rust_toolchain: stable
+
+      - name: Build
+        run: |
+          just actions-build-exe ${{ inputs.bin }} ${{ matrix.target.triple }}
+
+      - name: Upload (non-Windows)
+        if: runner.os != 'Windows'
+        uses: actions/upload-artifact@v3
+        with:
+          name: exe-${{ inputs.bin }}-${{ matrix.target.triple }}
+          path: upload/${{ inputs.bin }}
+
+      - name: Upload (Windows)
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v3
+        with:
+          name: exe-${{ inputs.bin }}-${{ matrix.target.triple }}
+          path: upload/${{ inputs.bin }}.exe
+
+  macos-universal:
+    needs:
+      - build
+    runs-on: 'macos-11'
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - uses: ./.github/actions/install-just
+
+      - name: Download aarch64 executable
+        uses: actions/download-artifact@v3
+        with:
+          name: exe-${{ inputs.bin }}-aarch64-apple-darwin
+          path: ${{ inputs.bin }}-aarch64
+
+      - name: Download x86-64 executable
+        uses: actions/download-artifact@v3
+        with:
+          name: exe-${{ inputs.bin }}-x86_64-apple-darwin
+          path: ${{ inputs.bin }}-x86-64
+
+      - name: Produce Universal Binary
+        run: |
+          just actions-macos-universal ${{ inputs.bin }}
+
+      - name: Upload Universal Executable
+        uses: actions/upload-artifact@v2
+        with:
+          name: exe-${{ inputs.bin }}-macos-universal
+          path: uploads/${{ inputs.bin }}

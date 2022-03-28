@@ -24,6 +24,13 @@ runs:
         profile: minimal
         target: x86_64-unknown-linux-musl
 
+    - uses: actions-rs/toolchain@v1
+      if: runner.os == 'macOS'
+      with:
+        toolchain: ${{ inputs.rust_toolchain }}
+        profile: minimal
+        target: aarch64-apple-darwin
+
     - name: Bootstrap Environment (Linux)
       if: runner.os == 'Linux'
       shell: bash

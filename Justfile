@@ -1,6 +1,18 @@
 default:
   cargo build
 
+exe_suffix := if os() == "windows" { ".exe" } else { "" }
+
+macosx_deployment_target := if os() == "macos" {
+  if arch() == "arm" {
+    "11.0"
+  } else {
+    "10.9"
+  }
+} else {
+  ""
+}
+
 actions-install-sccache-linux:
   python3 scripts/secure_download.py \
     https://github.com/mozilla/sccache/releases/download/v0.2.15/sccache-v0.2.15-x86_64-unknown-linux-musl.tar.gz \
@@ -27,5 +39,19 @@ actions-install-sccache-windows:
   cargo install --features s3 --version 0.2.15 sccache
 
 actions-bootstrap-rust-linux: actions-install-sccache-linux
+  sudo apt install -y --no-install-recommends musl-tools
 
 actions-bootstrap-rust-macos: actions-install-sccache-macos
+
+actions-build-exe bin triple:
+  export MACOSX_DEPLOYMENT_TARGET={{macosx_deployment_target}}
+  cargo build --release --bin {{bin}} --target {{triple}}
+  mkdir upload
+  cp target/{{triple}}/release/{{bin}}{{exe_suffix}} upload/{{bin}}{{exe_suffix}}
+  sccache --stop-server
+
+actions-macos-universal exe:
+  mkdir -p uploads
+  lipo {{exe}}-x86-64/{{exe}} {{exe}}-aarch64/{{exe}} -create -output uploads/{{exe}}
+  chmod +x uploads/{{exe}}
+  lipo uploads/{{exe}} -info
