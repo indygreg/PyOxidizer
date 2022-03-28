@@ -1,0 +1,56 @@
+name: Bootstrap Rust Building
+description: Configures the system environment for building Rust
+inputs:
+  rust_toolchain:
+    description: rustup toolchain to install
+    default: stable
+    required: false
+runs:
+  using: composite
+  steps:
+    - uses: ./.github/actions/install-just
+
+    - uses: actions-rs/toolchain@v1
+      with:
+        toolchain: ${{ inputs.rust_toolchain }}
+        default: true
+        profile: minimal
+        components: clippy
+
+    - uses: actions-rs/toolchain@v1
+      if: runner.os == 'Linux'
+      with:
+        toolchain: ${{ inputs.rust_toolchain }}
+        profile: minimal
+        target: x86_64-unknown-linux-musl
+
+    - name: Bootstrap Environment (Linux)
+      if: runner.os == 'Linux'
+      shell: bash
+      run: |
+        just actions-bootstrap-rust-linux
+
+    - name: Bootstrap Environment (macOS)
+      if: runner.os == 'macOS'
+      shell: bash
+      run: |
+        just actions-bootstrap-rust-macos
+
+    - name: Cache sccache (Windows)
+      id: cache-sccache-windows
+      if: runner.os == 'Windows'
+      uses: actions/cache@v2
+      with:
+        path: C:/Users/runneradmin/.cargo/bin/sccache.exe
+        key: ${{ runner.os }}-sccache-0.2.15-0
+
+    - name: Install sccache (Windows)
+      if: runner.os == 'Windows' && steps.cache-sccache-windows.outputs.cache-hit != 'true'
+      shell: pwsh
+      run: |
+        just actions-install-sccache-windows
+
+    - name: Start sccache
+      shell: bash
+      run: |
+        sccache --start-server

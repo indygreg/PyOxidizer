@@ -42,58 +42,9 @@ jobs:
           # root commit. Without this, a shallow clone (depth=1) is performed.
           fetch-depth: 0
 
-      - uses: actions-rs/toolchain@v1
+      - uses: ./.github/actions/rust-bootstrap
         with:
-          toolchain: ${{ matrix.rust_toolchain }}
-          default: true
-          profile: minimal
-          components: clippy
-
-      - uses: actions-rs/toolchain@v1
-        if: runner.os == 'Linux'
-        with:
-          toolchain: ${{ matrix.rust_toolchain }}
-          profile: minimal
-          target: x86_64-unknown-linux-musl
-
-      - name: Cache sccache (Windows)
-        id: cache-sccache-windows
-        if: runner.os == 'Windows'
-        uses: actions/cache@v2
-        with:
-          path: C:/Users/runneradmin/.cargo/bin/sccache.exe
-          key: ${{ runner.os }}-sccache-0.2.15-0
-
-      - name: Install sccache build dependencies (Windows)
-        if: runner.os == 'Windows' && steps.cache-sccache-windows.outputs.cache-hit != 'true'
-        run: |
-          vcpkg integrate install
-          vcpkg install openssl:x64-windows
-
-      - name: Install sccache (Linux)
-        if: runner.os == 'Linux'
-        run: |
-          wget -O sccache.tar.gz --progress dot:mega https://github.com/mozilla/sccache/releases/download/v0.2.15/sccache-v0.2.15-x86_64-unknown-linux-musl.tar.gz
-          tar -xvzf sccache.tar.gz
-          mv sccache-v0.2.15-x86_64-unknown-linux-musl/sccache /home/runner/.cargo/bin/sccache
-          chmod +x /home/runner/.cargo/bin/sccache
-
-      - name: Install sccache (macOS)
-        if: runner.os == 'macOS'
-        run: |
-          wget -O sccache.tar.gz --progress dot:mega https://github.com/mozilla/sccache/releases/download/v0.2.15/sccache-v0.2.15-x86_64-apple-darwin.tar.gz
-          tar -xvzf sccache.tar.gz
-          mv sccache-v0.2.15-x86_64-apple-darwin/sccache /Users/runner/.cargo/bin/sccache
-          chmod +x /Users/runner/.cargo/bin/sccache
-
-      - name: Install sccache (Windows)
-        if: steps.cache-sccache-windows.outputs.cache-hit != 'true' && runner.os == 'Windows'
-        run: |
-          cargo install --features 's3' --version 0.2.15 sccache
-
-      - name: Start sccache
-        run: |
-          sccache --start-server
+          rust_toolchain: ${{ matrix.rust_toolchain }}
 
       - name: Build Workspace
         env:

@@ -1,0 +1,36 @@
+name: Install Just
+description: Installs the Just CLI tool
+runs:
+  using: composite
+  steps:
+    - name: Install Linux
+      if: runner.os == 'Linux'
+      shell: bash
+      run: |
+        python3 scripts/secure_download.py \
+          https://github.com/casey/just/releases/download/1.1.1/just-1.1.1-x86_64-unknown-linux-musl.tar.gz \
+          ee7bf76941e8d7a41bab6716390a293e381a4a32bc46ad4d9d112f540aad34ba \
+          just.tar.gz
+        tar -xzf just.tar.gz just
+        mv just /usr/local/bin/just
+        rm just*
+
+    - name: Install macOS
+      if: runner.os == 'macOS'
+      shell: bash
+      run: |
+        python3 scripts/secure_download.py \
+          https://github.com/casey/just/releases/download/1.1.1/just-1.1.1-x86_64-apple-darwin.tar.gz \
+          afdc9eed21fdc3eedc6e853715232b982cd167d63b741afaf47462e7c61bfd83 \
+          just.tar.gz
+        tar -xzf just.tar.gz just
+        mv just /usr/local/bin/just
+        rm just*
+
+    - name: Install Windows
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        python3 scripts/secure_download.py https://github.com/casey/just/releases/download/1.1.1/just-1.1.1-x86_64-pc-windows-msvc.zip 446e6091b2aa2b40bc57857f1104cfe4153e757379141ae5ded1dec3da59c10b just.zip
+        Expand-Archive -Path just.zip -DestinationPath c:/temp
+        Move-Item c:/temp/just.exe c:/Windows/just.exe
