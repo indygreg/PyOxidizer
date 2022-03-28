@@ -34,8 +34,8 @@ version = "0.14.0-pre"
 path = "../cryptographic-message-syntax"
 
 [dependencies.tugger-file-manifest]
-version = "0.7.0"
-# path = "../tugger-file-manifest"
+version = "0.8.0-pre"
+path = "../tugger-file-manifest"
 
 [dependencies.tugger-windows-codesign]
 version = "0.8.0-pre"
