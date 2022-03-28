@@ -58,8 +58,8 @@ zip = "0.5"
 version = "0.8.0"
 
 [dependencies.apple-flat-package]
-# path = "../apple-flat-package"
-version = "0.2.0"
+path = "../apple-flat-package"
+version = "0.3.0-pre"
 
 [dependencies.apple-xar]
 path = "../apple-xar"
