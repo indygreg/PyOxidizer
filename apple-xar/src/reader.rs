@@ -113,7 +113,7 @@ impl<R: Read + Seek + Sized + Debug> XarReader<R> {
     }
 
     /// Digest the table of contents content with the specified algorithm.
-    pub fn digest_table_of_contents_with(&mut self, checksum: XarChecksum) -> XarResult<Vec<u8>> {
+    pub fn digest_table_of_contents_with(&mut self, checksum: ChecksumType) -> XarResult<Vec<u8>> {
         let mut writer = Cursor::new(vec![]);
         self.write_file_slice(
             self.header.size as _,
@@ -317,7 +317,7 @@ impl<R: Read + Seek + Sized + Debug> XarReader<R> {
     /// Will `Err` if an error occurs obtaining or computing the checksums. Returns Ok
     /// with a bool indicating if the checksums matched.
     pub fn verify_table_of_contents_checksum(&mut self) -> XarResult<bool> {
-        let format = XarChecksum::from(self.header.checksum_algorithm_id);
+        let format = ChecksumType::try_from(XarChecksum::from(self.header.checksum_algorithm_id))?;
         let actual_digest = self.digest_table_of_contents_with(format)?;
         let recorded_digest = self.checksum()?.1;
 

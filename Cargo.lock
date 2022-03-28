@@ -166,19 +166,26 @@ dependencies = [
 name = "apple-xar"
 version = "0.2.0-pre"
 dependencies = [
+ "base64 0.13.0",
+ "bcder",
  "bzip2",
  "chrono",
  "cryptographic-message-syntax",
  "digest 0.10.3",
  "flate2",
+ "log",
  "md-5 0.10.1",
+ "rand 0.8.5",
+ "reqwest",
  "scroll",
  "serde",
  "serde-xml-rs",
  "sha1 0.10.1",
  "sha2 0.10.2",
  "thiserror",
+ "url",
  "x509-certificate",
+ "xml-rs",
  "xz2",
 ]
 

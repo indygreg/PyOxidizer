@@ -4,21 +4,24 @@
 
 //! XAR XML table of contents data structure.
 
-use crate::Error;
 use {
-    crate::XarResult,
-    chrono::{DateTime, Utc},
-    serde::{Deserialize, Serialize},
+    crate::{format::XarChecksum, Error, XarResult},
+    digest::DynDigest,
+    serde::Deserialize,
     std::{
         fmt::{Display, Formatter},
-        io::Read,
+        io::{Read, Write},
         ops::{Deref, DerefMut},
     },
     x509_certificate::{CapturedX509Certificate, X509CertificateError},
+    xml::{
+        common::XmlVersion,
+        writer::{EmitterConfig, EventWriter, XmlEvent},
+    },
 };
 
 /// An XML table of contents in a XAR file.
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct TableOfContents {
     toc: XarToC,
@@ -64,10 +67,53 @@ impl TableOfContents {
 
         Ok(files)
     }
+
+    pub fn to_xml(&self) -> XarResult<Vec<u8>> {
+        let mut emitter = EmitterConfig::new().create_writer(std::io::BufWriter::new(vec![]));
+        self.write_xml(&mut emitter)?;
+
+        emitter
+            .into_inner()
+            .into_inner()
+            .map_err(|e| Error::Io(std::io::Error::new(std::io::ErrorKind::Other, e)))
+    }
+
+    pub fn write_xml<W: Write>(&self, writer: &mut EventWriter<W>) -> XarResult<()> {
+        writer.write(XmlEvent::StartDocument {
+            version: XmlVersion::Version10,
+            encoding: Some("UTF-8"),
+            standalone: None,
+        })?;
+
+        writer.write(XmlEvent::start_element("xar"))?;
+        writer.write(XmlEvent::start_element("toc"))?;
+
+        writer.write(XmlEvent::start_element("creation-time"))?;
+        writer.write(XmlEvent::characters(&self.creation_time))?;
+        writer.write(XmlEvent::end_element())?;
+
+        self.checksum.write_xml(writer)?;
+
+        if let Some(sig) = &self.signature {
+            sig.write_xml(writer, "signature")?;
+        }
+        if let Some(sig) = &self.x_signature {
+            sig.write_xml(writer, "x-signature")?;
+        }
+
+        for file in &self.files {
+            file.write_xml(writer)?;
+        }
+
+        writer.write(XmlEvent::end_element().name("toc"))?;
+        writer.write(XmlEvent::end_element().name("xar"))?;
+
+        Ok(())
+    }
 }
 
 /// The main data structure inside a table of contents.
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "kebab-case")]
 pub struct XarToC {
     pub creation_time: String,
@@ -96,9 +142,16 @@ impl XarToC {
     pub fn find_signature(&self, style: SignatureStyle) -> Option<&Signature> {
         self.signatures().into_iter().find(|sig| sig.style == style)
     }
+
+    pub fn visit_files_mut(&mut self, cb: &dyn Fn(&mut File)) {
+        for file in self.files.iter_mut() {
+            cb(file);
+            file.visit_files_mut(cb);
+        }
+    }
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Checksum {
     /// The digest format used.
@@ -111,7 +164,22 @@ pub struct Checksum {
     pub size: u64,
 }
 
-#[derive(Clone, Copy, Debug, Deserialize, Serialize)]
+impl Checksum {
+    pub fn write_xml<W: Write>(&self, writer: &mut EventWriter<W>) -> XarResult<()> {
+        writer.write(XmlEvent::start_element("checksum").attr("style", &self.style.to_string()))?;
+        writer.write(XmlEvent::start_element("offset"))?;
+        writer.write(XmlEvent::characters(&format!("{}", self.offset)))?;
+        writer.write(XmlEvent::end_element())?;
+        writer.write(XmlEvent::start_element("size"))?;
+        writer.write(XmlEvent::characters(&format!("{}", self.size)))?;
+        writer.write(XmlEvent::end_element())?;
+        writer.write(XmlEvent::end_element().name("checksum"))?;
+
+        Ok(())
+    }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum ChecksumType {
     None,
@@ -125,21 +193,65 @@ impl Display for ChecksumType {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::None => f.write_str("none"),
-            Self::Sha1 => f.write_str("SHA-1"),
-            Self::Sha256 => f.write_str("SHA-256"),
-            Self::Sha512 => f.write_str("SHA-512"),
-            Self::Md5 => f.write_str("MD5"),
+            Self::Sha1 => f.write_str("sha1"),
+            Self::Sha256 => f.write_str("sha256"),
+            Self::Sha512 => f.write_str("sha512"),
+            Self::Md5 => f.write_str("md5"),
         }
     }
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+impl TryFrom<XarChecksum> for ChecksumType {
+    type Error = Error;
+
+    fn try_from(v: XarChecksum) -> Result<Self, Self::Error> {
+        match v {
+            XarChecksum::None => Ok(Self::None),
+            XarChecksum::Sha1 => Ok(Self::Sha1),
+            XarChecksum::Md5 => Ok(Self::Md5),
+            XarChecksum::Sha256 => Ok(Self::Sha256),
+            XarChecksum::Sha512 => Ok(Self::Sha512),
+            XarChecksum::Other(_) => Err(Error::Unsupported("unknown checksum type")),
+        }
+    }
+}
+
+impl From<ChecksumType> for XarChecksum {
+    fn from(v: ChecksumType) -> Self {
+        match v {
+            ChecksumType::None => Self::None,
+            ChecksumType::Sha1 => Self::Sha1,
+            ChecksumType::Sha256 => Self::Sha256,
+            ChecksumType::Sha512 => Self::Sha512,
+            ChecksumType::Md5 => Self::Md5,
+        }
+    }
+}
+
+impl ChecksumType {
+    /// Digest a slice of data.
+    pub fn digest_data(&self, data: &[u8]) -> XarResult<Vec<u8>> {
+        let mut h: Box<dyn DynDigest> = match self {
+            Self::None => return Err(Error::Unsupported("cannot digest None checksum")),
+            Self::Md5 => Box::new(md5::Md5::default()),
+            Self::Sha1 => Box::new(sha1::Sha1::default()),
+            Self::Sha256 => Box::new(sha2::Sha256::default()),
+            Self::Sha512 => Box::new(sha2::Sha512::default()),
+        };
+
+        h.update(data);
+
+        Ok(h.finalize().to_vec())
+    }
+}
+
+#[derive(Clone, Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct File {
     pub id: u64,
-    pub ctime: Option<DateTime<Utc>>,
-    pub mtime: Option<DateTime<Utc>>,
-    pub atime: Option<DateTime<Utc>>,
+    pub ctime: Option<String>,
+    pub mtime: Option<String>,
+    pub atime: Option<String>,
     /// Filename.
     ///
     /// There should only be a single element. However, some Apple tools can
@@ -148,7 +260,7 @@ pub struct File {
     pub names: Vec<String>,
     #[serde(rename = "type")]
     pub file_type: FileType,
-    pub mode: Option<u32>,
+    pub mode: Option<String>,
     pub deviceno: Option<u32>,
     pub inode: Option<u64>,
     pub uid: Option<u32>,
@@ -186,9 +298,120 @@ impl File {
 
         Ok(files)
     }
+
+    pub fn visit_files_mut(&mut self, cb: &dyn Fn(&mut File)) {
+        for f in self.files.iter_mut() {
+            cb(f);
+            f.visit_files_mut(cb)
+        }
+    }
+
+    pub fn write_xml<W: Write>(&self, writer: &mut EventWriter<W>) -> XarResult<()> {
+        writer.write(XmlEvent::start_element("file").attr("id", &format!("{}", self.id)))?;
+
+        if let Some(data) = &self.data {
+            data.write_xml(writer)?;
+        }
+
+        if let Some(fct) = &self.finder_create_time {
+            writer.write(XmlEvent::start_element("FinderCreateTime"))?;
+
+            writer.write(XmlEvent::start_element("nanoseconds"))?;
+            writer.write(XmlEvent::characters(&format!("{}", fct.nanoseconds)))?;
+            writer.write(XmlEvent::end_element())?;
+
+            writer.write(XmlEvent::start_element("time"))?;
+            writer.write(XmlEvent::characters(&fct.time))?;
+            writer.write(XmlEvent::end_element())?;
+
+            writer.write(XmlEvent::end_element())?;
+        }
+
+        if let Some(time) = &self.ctime {
+            writer.write(XmlEvent::start_element("ctime"))?;
+            writer.write(XmlEvent::characters(time))?;
+            writer.write(XmlEvent::end_element())?;
+        }
+
+        if let Some(time) = &self.mtime {
+            writer.write(XmlEvent::start_element("mtime"))?;
+            writer.write(XmlEvent::characters(time))?;
+            writer.write(XmlEvent::end_element())?;
+        }
+
+        if let Some(time) = &self.atime {
+            writer.write(XmlEvent::start_element("atime"))?;
+            writer.write(XmlEvent::characters(time))?;
+            writer.write(XmlEvent::end_element())?;
+        }
+
+        if let Some(v) = &self.group {
+            writer.write(XmlEvent::start_element("group"))?;
+            writer.write(XmlEvent::characters(v))?;
+            writer.write(XmlEvent::end_element())?;
+        }
+
+        if let Some(v) = &self.gid {
+            writer.write(XmlEvent::start_element("gid"))?;
+            writer.write(XmlEvent::characters(&format!("{}", v)))?;
+            writer.write(XmlEvent::end_element())?;
+        }
+
+        if let Some(v) = &self.user {
+            writer.write(XmlEvent::start_element("user"))?;
+            writer.write(XmlEvent::characters(v))?;
+            writer.write(XmlEvent::end_element())?;
+        }
+
+        if let Some(v) = &self.uid {
+            writer.write(XmlEvent::start_element("uid"))?;
+            writer.write(XmlEvent::characters(&format!("{}", v)))?;
+            writer.write(XmlEvent::end_element())?;
+        }
+
+        if let Some(v) = &self.mode {
+            writer.write(XmlEvent::start_element("mode"))?;
+            writer.write(XmlEvent::characters(v))?;
+            writer.write(XmlEvent::end_element())?;
+        }
+
+        if let Some(v) = &self.deviceno {
+            writer.write(XmlEvent::start_element("deviceno"))?;
+            writer.write(XmlEvent::characters(&format!("{}", v)))?;
+            writer.write(XmlEvent::end_element())?;
+        }
+
+        if let Some(v) = &self.inode {
+            writer.write(XmlEvent::start_element("inode"))?;
+            writer.write(XmlEvent::characters(&format!("{}", v)))?;
+            writer.write(XmlEvent::end_element())?;
+        }
+
+        if let Some(ea) = &self.ea {
+            ea.write_xml(writer)?;
+        }
+
+        writer.write(XmlEvent::start_element("type"))?;
+        writer.write(XmlEvent::characters(&self.file_type.to_string()))?;
+        writer.write(XmlEvent::end_element())?;
+
+        for name in &self.names {
+            writer.write(XmlEvent::start_element("name"))?;
+            writer.write(XmlEvent::characters(name))?;
+            writer.write(XmlEvent::end_element())?;
+        }
+
+        for file in &self.files {
+            file.write_xml(writer)?;
+        }
+
+        writer.write(XmlEvent::end_element().name("file"))?;
+
+        Ok(())
+    }
 }
 
-#[derive(Clone, Copy, Debug, Deserialize, Serialize)]
+#[derive(Clone, Copy, Debug, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum FileType {
     File,
@@ -208,7 +431,7 @@ impl Display for FileType {
     }
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "kebab-case")]
 pub struct FileData {
     pub offset: u64,
@@ -219,7 +442,37 @@ pub struct FileData {
     pub encoding: FileEncoding,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+impl FileData {
+    pub fn write_xml<W: Write>(&self, writer: &mut EventWriter<W>) -> XarResult<()> {
+        writer.write(XmlEvent::start_element("data"))?;
+
+        writer.write(XmlEvent::start_element("length"))?;
+        writer.write(XmlEvent::characters(&format!("{}", self.length)))?;
+        writer.write(XmlEvent::end_element())?;
+
+        writer.write(XmlEvent::start_element("offset"))?;
+        writer.write(XmlEvent::characters(&format!("{}", self.offset)))?;
+        writer.write(XmlEvent::end_element())?;
+
+        writer.write(XmlEvent::start_element("size"))?;
+        writer.write(XmlEvent::characters(&format!("{}", self.size)))?;
+        writer.write(XmlEvent::end_element())?;
+
+        writer.write(XmlEvent::start_element("encoding").attr("style", &self.encoding.style))?;
+        writer.write(XmlEvent::end_element())?;
+
+        self.extracted_checksum
+            .write_xml(writer, "extracted-checksum")?;
+        self.archived_checksum
+            .write_xml(writer, "archived-checksum")?;
+
+        writer.write(XmlEvent::end_element().name("data"))?;
+
+        Ok(())
+    }
+}
+
+#[derive(Clone, Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct FileChecksum {
     pub style: ChecksumType,
@@ -227,13 +480,23 @@ pub struct FileChecksum {
     pub checksum: String,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+impl FileChecksum {
+    pub fn write_xml<W: Write>(&self, writer: &mut EventWriter<W>, name: &str) -> XarResult<()> {
+        writer.write(XmlEvent::start_element(name).attr("style", &self.style.to_string()))?;
+        writer.write(XmlEvent::characters(&self.checksum))?;
+        writer.write(XmlEvent::end_element())?;
+
+        Ok(())
+    }
+}
+
+#[derive(Clone, Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct FileEncoding {
     pub style: String,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "kebab-case")]
 pub struct Ea {
     pub name: String,
@@ -245,14 +508,48 @@ pub struct Ea {
     pub encoding: FileEncoding,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+impl Ea {
+    pub fn write_xml<W: Write>(&self, writer: &mut EventWriter<W>) -> XarResult<()> {
+        writer.write(XmlEvent::start_element("ea"))?;
+
+        writer.write(XmlEvent::start_element("name"))?;
+        writer.write(XmlEvent::characters(&self.name))?;
+        writer.write(XmlEvent::end_element())?;
+
+        writer.write(XmlEvent::start_element("offset"))?;
+        writer.write(XmlEvent::characters(&format!("{}", self.offset)))?;
+        writer.write(XmlEvent::end_element())?;
+
+        writer.write(XmlEvent::start_element("size"))?;
+        writer.write(XmlEvent::characters(&format!("{}", self.size)))?;
+        writer.write(XmlEvent::end_element())?;
+
+        writer.write(XmlEvent::start_element("length"))?;
+        writer.write(XmlEvent::characters(&format!("{}", self.length)))?;
+        writer.write(XmlEvent::end_element())?;
+
+        self.extracted_checksum
+            .write_xml(writer, "extracted-checksum")?;
+        self.archived_checksum
+            .write_xml(writer, "archived-checksum")?;
+
+        writer.write(XmlEvent::start_element("encoding").attr("style", &self.encoding.style))?;
+        writer.write(XmlEvent::end_element())?;
+
+        writer.write(XmlEvent::end_element())?;
+
+        Ok(())
+    }
+}
+
+#[derive(Clone, Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct FinderCreateTime {
     pub nanoseconds: u64,
     pub time: String,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Signature {
     pub style: SignatureStyle,
@@ -267,9 +564,39 @@ impl Signature {
     pub fn x509_certificates(&self) -> XarResult<Vec<CapturedX509Certificate>> {
         self.key_info.x509_certificates()
     }
+
+    pub fn write_xml<W: Write>(&self, writer: &mut EventWriter<W>, name: &str) -> XarResult<()> {
+        writer.write(XmlEvent::start_element(name).attr("style", &self.style.to_string()))?;
+
+        writer.write(XmlEvent::start_element("offset"))?;
+        writer.write(XmlEvent::characters(&format!("{}", &self.offset)))?;
+        writer.write(XmlEvent::end_element())?;
+
+        writer.write(XmlEvent::start_element("size"))?;
+        writer.write(XmlEvent::characters(&format!("{}", &self.size)))?;
+        writer.write(XmlEvent::end_element())?;
+
+        writer.write(
+            XmlEvent::start_element("KeyInfo").ns("", "http://www.w3.org/2000/09/xmldsig#"),
+        )?;
+        writer.write(XmlEvent::start_element("X509Data"))?;
+
+        for cert in &self.key_info.x509_data.x509_certificate {
+            writer.write(XmlEvent::start_element("X509Certificate"))?;
+            writer.write(XmlEvent::characters(cert))?;
+            writer.write(XmlEvent::end_element())?;
+        }
+
+        writer.write(XmlEvent::end_element().name("X509Data"))?;
+        writer.write(XmlEvent::end_element().name("KeyInfo"))?;
+
+        writer.write(XmlEvent::end_element().name(name))?;
+
+        Ok(())
+    }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Deserialize, Serialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Deserialize)]
 #[serde(rename_all = "UPPERCASE")]
 pub enum SignatureStyle {
     /// Cryptographic message syntax.
@@ -288,7 +615,7 @@ impl Display for SignatureStyle {
     }
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct KeyInfo {
     #[serde(rename = "X509Data")]
@@ -296,13 +623,46 @@ pub struct KeyInfo {
 }
 
 impl KeyInfo {
+    /// Construct an instance from an iterable of certificates.
+    pub fn from_certificates<'a>(
+        certs: impl Iterator<Item = &'a CapturedX509Certificate>,
+    ) -> XarResult<Self> {
+        Ok(Self {
+            x509_data: X509Data {
+                x509_certificate: certs
+                    .map(|cert| {
+                        let der = cert.encode_der()?;
+                        let s = base64::encode(der);
+
+                        let mut lines = vec![];
+
+                        let mut remaining = s.as_str();
+
+                        loop {
+                            if remaining.len() > 72 {
+                                let res = remaining.split_at(72);
+                                lines.push(res.0);
+                                remaining = res.1;
+                            } else {
+                                lines.push(remaining);
+                                break;
+                            }
+                        }
+
+                        Ok(lines.join("\n"))
+                    })
+                    .collect::<XarResult<Vec<_>>>()?,
+            },
+        })
+    }
+
     /// Obtain parsed X.509 certificates.
     pub fn x509_certificates(&self) -> XarResult<Vec<CapturedX509Certificate>> {
         self.x509_data.x509_certificates()
     }
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct X509Data {
     #[serde(rename = "X509Certificate")]

@@ -37,6 +37,7 @@ use {
 ///
 /// Instances will be attached to `SignedDataBuilder` instances where they
 /// will sign data using configured settings.
+#[derive(Clone)]
 pub struct SignerBuilder<'a> {
     /// The cryptographic key pair used for signing content.
     signing_key: &'a InMemorySigningKeyPair,

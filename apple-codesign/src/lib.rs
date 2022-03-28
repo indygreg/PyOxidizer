@@ -41,15 +41,14 @@
 //!   Mach-O binaries outside the main executable will also be signed. Non
 //!   Mach-O/code files will be digested. A `CodeResources` XML file will be
 //!   produced.
-//! * Submit notarization requests to Apple and query notarization status. (Only
-//!   macOS `.app` bundles are currently supported.)
-//! * Retrieve notarization tickets from Apple and staple. (Only bundles are currently
-//!   supported.)
+//! * Submit notarization requests to Apple and query notarization status. (Bundles,
+//!   DMGs, and `.pkg` installers are all supported.)
+//! * Retrieve notarization tickets from Apple and staple. All formats supporting
+//!   notarization can be stapled.
 //!
 //! There are a number of missing features and capabilities from this crate
 //! that we hope are eventually implemented:
 //!
-//! * Only embedded signatures are supported. (No support for detached signatures.)
 //! * No parsing of the Code Signing Requirements DSL. We support parsing the binary
 //!   requirements to Rust structs, serializing back to binary, and rendering to the
 //!   human friendly DSL. You will need to use the `csreq` tool to compile an
@@ -62,8 +61,8 @@
 //!   based stores (such as Yubikeys). We also don't look for necessary X.509
 //!   certificate extensions that Apple's verification likely mandates, which we should
 //!   do and enforce.
-//! * Not all signable formats can be notarized. Support for `.dmg` files is a major
-//!   limitation.
+//! * Some more advanced bundles or `.pkg` files may not sign, notarize, or staple
+//!   correctly. Problems here are considered bugs and should be reported.
 //!
 //! There is missing features and functionality that will likely never be implemented:
 //!

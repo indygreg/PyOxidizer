@@ -245,6 +245,9 @@ pub enum AppleCodesignError {
     #[error("error writing XML: {0}")]
     XmlWrite(xml::writer::Error),
 
+    #[error("signing XAR archives requires a signing certificate")]
+    XarNoAdhoc,
+
     #[error("Apple Transporter executable not found")]
     TransporterNotFound,
 

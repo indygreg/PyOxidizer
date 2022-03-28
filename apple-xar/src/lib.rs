@@ -6,6 +6,7 @@
 
 pub mod format;
 pub mod reader;
+pub mod signing;
 pub mod table_of_contents;
 
 #[derive(Debug, thiserror::Error)]
@@ -24,6 +25,9 @@ pub enum Error {
 
     #[error("XML error: {0}")]
     SerdeXml(#[from] serde_xml_rs::Error),
+
+    #[error("XML write error: {0}")]
+    XmlWrite(#[from] xml::writer::Error),
 
     #[error("Invalid file ID")]
     InvalidFileId,
@@ -45,6 +49,9 @@ pub enum Error {
 
     #[error("CMS error: {0}")]
     Cms(#[from] cryptographic_message_syntax::CmsError),
+
+    #[error("HTTP error: {0}")]
+    Reqwest(#[from] reqwest::Error),
 }
 
 pub type XarResult<T> = std::result::Result<T, Error>;

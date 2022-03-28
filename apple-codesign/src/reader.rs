@@ -14,9 +14,10 @@ use {
     },
     apple_bundles::{DirectoryBundle, DirectoryBundleFile},
     apple_xar::{
-        format::XarChecksum,
         reader::XarReader,
-        table_of_contents::{File as XarTocFile, Signature as XarTocSignature},
+        table_of_contents::{
+            ChecksumType as XarChecksumType, File as XarTocFile, Signature as XarTocSignature,
+        },
     },
     cryptographic_message_syntax::{SignedData, SignerInfo},
     goblin::mach::{fat::FAT_MAGIC, parse_magic_and_ctx, Mach, MachO},
@@ -497,8 +498,9 @@ impl XarTableOfContents {
                 (None, None)
             };
 
-        let toc_checksum_actual_sha1 = xar.digest_table_of_contents_with(XarChecksum::Sha1)?;
-        let toc_checksum_actual_sha256 = xar.digest_table_of_contents_with(XarChecksum::Sha256)?;
+        let toc_checksum_actual_sha1 = xar.digest_table_of_contents_with(XarChecksumType::Sha1)?;
+        let toc_checksum_actual_sha256 =
+            xar.digest_table_of_contents_with(XarChecksumType::Sha256)?;
 
         let checksum_verifies = xar.verify_table_of_contents_checksum().unwrap_or(false);
 
@@ -508,7 +510,7 @@ impl XarTableOfContents {
         let checksum_size = toc.checksum.size;
 
         // This can be useful for debugging.
-        //String::from_utf8_lossy(&pretty_print_xml(&xml)?)
+        //let xml = String::from_utf8_lossy(&pretty_print_xml(&xml)?)
         //    .lines()
         //    .map(|x| x.to_string())
         //    .collect::<Vec<_>>();

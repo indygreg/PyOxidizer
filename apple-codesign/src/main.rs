@@ -261,6 +261,8 @@ This command can sign the following entities:
 
 * A single Mach-O binary (specified by its file path)
 * A bundle (specified by its directory path)
+* A DMG disk image (specified by its path)
+* A XAR archive (commonly a .pkg installer file)
 
 If the input is Mach-O binary, it can be a single or multiple/fat/universal
 Mach-O binary. If a fat binary is given, each Mach-O within that binary will

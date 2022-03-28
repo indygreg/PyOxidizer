@@ -1,8 +1,25 @@
 # apple-codesign
 
 `apple-codesign` is a crate implementing functionality related to code signing
-on Apple platforms. Where possible, functionality is implemented in pure Rust
-and doesn't rely on `codesign` or other proprietary Apple tools.
+on Apple platforms.
+
+Nearly all functionality is implemented in pure Rust: the only 3rd party tool
+dependency is [Apple Transporter](https://help.apple.com/itc/transporteruserguide/),
+which is used for uploading files to Apple for notarization. (Apple makes this tool
+available on macOS, Windows, and Linux.) Signing and stapling are implemented in Rust
+and do not require any 3rd party tools.
+
+We believe this crate provides the most comprehensive implementation of Apple
+code signing outside the canonical Apple tools. We have support for the following
+features:
+
+* Signing Mach-O binaries (the executable file format on Apple operating systems).
+* Signing, notarizing, and stapling directory bundles (e.g. `.app` directories).
+* Signing, notarizing, and stapling XAR archives / `.pkg` installers.
+* Signing, notarizing, and stapling DMG disk images.
+
+What this all means is that you can sign, notarize, and release Apple software
+from Linux and Windows without needing access to proprietary Apple software.
 
 See the crate documentation at https://docs.rs/apple-codesign/latest/apple_codesign/
 for more.

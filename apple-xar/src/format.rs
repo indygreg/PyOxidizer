@@ -3,9 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    crate::{Error, XarResult},
-    digest::DynDigest,
-    scroll::{IOread, Pread, SizeWith},
+    scroll::{IOread, IOwrite, Pread, SizeWith},
     std::fmt::{Display, Formatter},
 };
 
@@ -13,7 +11,7 @@ use {
 ///
 /// The header effectively defines a table of contents, which
 /// holds information about the content of the archive.
-#[derive(Clone, Copy, Debug, IOread, Pread, SizeWith)]
+#[derive(Clone, Copy, Debug, IOread, IOwrite, Pread, SizeWith)]
 pub struct XarHeader {
     /// File magic. `xar!`.
     pub magic: u32,
@@ -57,6 +55,19 @@ impl From<u32> for XarChecksum {
     }
 }
 
+impl Into<u32> for XarChecksum {
+    fn into(self) -> u32 {
+        match self {
+            Self::None => 0,
+            Self::Sha1 => 1,
+            Self::Md5 => 2,
+            Self::Sha256 => 3,
+            Self::Sha512 => 4,
+            Self::Other(v) => v,
+        }
+    }
+}
+
 impl Display for XarChecksum {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -67,25 +78,5 @@ impl Display for XarChecksum {
             XarChecksum::Sha512 => f.write_str("SHA-512"),
             XarChecksum::Other(v) => f.write_fmt(format_args!("unknown ({})", v)),
         }
-    }
-}
-
-impl XarChecksum {
-    /// Digest a slice of data.
-    pub fn digest_data(&self, data: &[u8]) -> XarResult<Vec<u8>> {
-        let mut h: Box<dyn DynDigest> = match self {
-            Self::None => return Err(Error::Unsupported("cannot digest None checksum")),
-            Self::Md5 => Box::new(md5::Md5::default()),
-            Self::Sha1 => Box::new(sha1::Sha1::default()),
-            Self::Sha256 => Box::new(sha2::Sha256::default()),
-            Self::Sha512 => Box::new(sha2::Sha512::default()),
-            Self::Other(_) => {
-                return Err(Error::Unsupported("encountered unknown digest algorithm"))
-            }
-        };
-
-        h.update(data);
-
-        Ok(h.finalize().to_vec())
     }
 }

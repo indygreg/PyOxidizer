@@ -14,8 +14,9 @@ use {
         reader::PathType,
         signing_settings::{SettingsScope, SigningSettings},
     },
+    apple_xar::{reader::XarReader, signing::XarSigner},
     log::{info, warn},
-    std::path::Path,
+    std::{fs::File, path::Path},
 };
 
 /// An entity for performing signing that is able to handle all supported target types.
@@ -41,9 +42,7 @@ impl<'key> UnifiedSigner<'key> {
             PathType::Bundle => self.sign_bundle(input_path, output_path),
             PathType::Dmg => self.sign_dmg(input_path, output_path),
             PathType::MachO => self.sign_macho(input_path, output_path),
-            PathType::Xar => Err(AppleCodesignError::Unimplemented(
-                "XAR / flat package signing",
-            )),
+            PathType::Xar => self.sign_xar(input_path, output_path),
             PathType::Other => Err(AppleCodesignError::UnrecognizedPathType),
         }
     }
@@ -174,6 +173,39 @@ impl<'key> UnifiedSigner<'key> {
 
         let signer = BundleSigner::new_from_path(input_path)?;
         signer.write_signed_bundle(output_path, &self.settings)?;
+
+        Ok(())
+    }
+
+    pub fn sign_xar(
+        &self,
+        input_path: impl AsRef<Path>,
+        output_path: impl AsRef<Path>,
+    ) -> Result<(), AppleCodesignError> {
+        let input_path = input_path.as_ref();
+        let output_path = output_path.as_ref();
+        warn!(
+            "signing XAR pkg installer at {} to {}",
+            input_path.display(),
+            output_path.display()
+        );
+
+        let (signing_key, signing_cert) = self
+            .settings
+            .signing_key()
+            .ok_or(AppleCodesignError::XarNoAdhoc)?;
+
+        let reader = XarReader::new(File::open(input_path)?)?;
+        let mut signer = XarSigner::new(reader);
+
+        let mut fh = File::create(output_path)?;
+        signer.sign(
+            &mut fh,
+            signing_key,
+            signing_cert,
+            self.settings.time_stamp_url(),
+            self.settings.certificate_chain().iter().cloned(),
+        )?;
 
         Ok(())
     }
