@@ -382,7 +382,14 @@ fn run_cargo_update_package(root: &Path, package: &str) -> Result<i32> {
         "{}: running cargo update to ensure proper version string reflected",
         package
     );
-    run_cmd(package, root, "cargo", vec!["update"], vec![]).context("running cargo update")
+    run_cmd(
+        package,
+        root,
+        "cargo",
+        vec!["update", "-p", package],
+        vec![],
+    )
+    .context("running cargo update")
 }
 
 fn release_package(
