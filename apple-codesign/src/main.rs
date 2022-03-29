@@ -463,6 +463,14 @@ fn add_certificate_source_args(app: Command) -> Command {
             .help("Path to file containing PEM encoded certificate/key data"),
     )
     .arg(
+        Arg::new("der_source")
+            .long("der-source")
+            .takes_value(true)
+            .multiple_occurrences(true)
+            .multiple_values(true)
+            .help("Path to file containing DER encoded certificate data"),
+    )
+    .arg(
         Arg::new("p12_path")
             .long("p12-file")
             .alias("pfx-file")
@@ -484,6 +492,69 @@ fn add_certificate_source_args(app: Command) -> Command {
             .takes_value(true)
             .help("Path to file containing password for opening --p12-file file"),
     )
+}
+
+fn collect_certificates_from_args(
+    args: &ArgMatches,
+) -> Result<(Vec<Box<dyn Sign>>, Vec<CapturedX509Certificate>), AppleCodesignError> {
+    let mut keys: Vec<Box<dyn Sign>> = vec![];
+    let mut certs = vec![];
+
+    if let Some(p12_path) = args.value_of("p12_path") {
+        let p12_data = std::fs::read(p12_path)?;
+
+        let p12_password = if let Some(password) = args.value_of("p12_password") {
+            password.to_string()
+        } else if let Some(path) = args.value_of("p12_password_file") {
+            std::fs::read_to_string(path)?
+                .lines()
+                .next()
+                .expect("should get a single line")
+                .to_string()
+        } else {
+            error!("--p12-password or --p12-password-file must be specified");
+            return Err(AppleCodesignError::CliBadArgument);
+        };
+
+        let (cert, key) = parse_pfx_data(&p12_data, &p12_password)?;
+
+        keys.push(Box::new(key));
+        certs.push(cert);
+    }
+
+    if let Some(values) = args.values_of("pem_source") {
+        for pem_source in values {
+            warn!("reading PEM data from {}", pem_source);
+            let pem_data = std::fs::read(pem_source)?;
+
+            for pem in pem::parse_many(&pem_data).map_err(AppleCodesignError::CertificatePem)? {
+                match pem.tag.as_str() {
+                    "CERTIFICATE" => {
+                        certs.push(CapturedX509Certificate::from_der(pem.contents)?);
+                    }
+                    "PRIVATE KEY" => keys.push(Box::new(InMemorySigningKeyPair::from_pkcs8_der(
+                        &pem.contents,
+                    )?)),
+                    tag => warn!("(unhandled PEM tag {}; ignoring)", tag),
+                }
+            }
+        }
+    }
+
+    if let Some(values) = args.values_of("der_source") {
+        for der_source in values {
+            warn!("reading DER file {}", der_source);
+            let der_data = std::fs::read(der_source)?;
+
+            certs.push(CapturedX509Certificate::from_der(der_data)?);
+        }
+    }
+
+    if let Some(slot) = args.value_of("smartcard_slot") {
+        handle_smartcard_sign_slot(slot, &mut keys, &mut certs)?;
+    }
+
+    Ok((keys, certs))
 }
 
 fn add_notarization_upload_args(app: Command) -> Command {
@@ -620,50 +691,7 @@ fn handle_smartcard_sign_slot(
 }
 
 fn command_analyze_certificate(args: &ArgMatches) -> Result<(), AppleCodesignError> {
-    let mut certs = vec![];
-
-    if let Some(p12_path) = args.value_of("p12_path") {
-        let p12_data = std::fs::read(p12_path)?;
-
-        let p12_password = if let Some(password) = args.value_of("p12_password") {
-            password.to_string()
-        } else if let Some(path) = args.value_of("p12_password_file") {
-            std::fs::read_to_string(path)?
-                .lines()
-                .next()
-                .expect("should get a single line")
-                .to_string()
-        } else {
-            error!("--p12-password or --p12-password-file must be specified");
-            return Err(AppleCodesignError::CliBadArgument);
-        };
-
-        certs.push(parse_pfx_data(&p12_data, &p12_password)?.0);
-    }
-
-    if let Some(values) = args.values_of("der_source") {
-        for der_source in values {
-            warn!("reading DER file {}", der_source);
-            let der_data = std::fs::read(der_source)?;
-
-            certs.push(CapturedX509Certificate::from_der(der_data)?);
-        }
-    }
-
-    if let Some(values) = args.values_of("pem_source") {
-        for pem_source in values {
-            warn!("reading PEM file {}", pem_source);
-            let pem_data = std::fs::read(pem_source)?;
-
-            for pem in pem::parse_many(&pem_data).map_err(AppleCodesignError::CertificatePem)? {
-                if matches!(pem.tag.as_str(), "CERTIFICATE") {
-                    certs.push(CapturedX509Certificate::from_der(pem.contents)?);
-                } else {
-                    warn!("(unhandled PEM tag {}; ignoring)", pem.tag)
-                }
-            }
-        }
-    }
+    let certs = collect_certificates_from_args(args)?.1;
 
     for (i, cert) in certs.into_iter().enumerate() {
         println!("# Certificate {}", i);
@@ -1497,53 +1525,7 @@ fn command_print_signature_info(args: &ArgMatches) -> Result<(), AppleCodesignEr
 fn command_sign(args: &ArgMatches) -> Result<(), AppleCodesignError> {
     let mut settings = SigningSettings::default();
 
-    let mut private_keys: Vec<Box<dyn Sign>> = vec![];
-    let mut public_certificates = vec![];
-
-    if let Some(p12_path) = args.value_of("p12_path") {
-        let p12_data = std::fs::read(p12_path)?;
-
-        let p12_password = if let Some(password) = args.value_of("p12_password") {
-            password.to_string()
-        } else if let Some(path) = args.value_of("p12_password_file") {
-            std::fs::read_to_string(path)?
-                .lines()
-                .next()
-                .expect("should get a single line")
-                .to_string()
-        } else {
-            error!("--p12-password or --p12-password-file must be specified");
-            return Err(AppleCodesignError::CliBadArgument);
-        };
-
-        let (cert, key) = parse_pfx_data(&p12_data, &p12_password)?;
-
-        private_keys.push(Box::new(key));
-        public_certificates.push(cert);
-    }
-
-    if let Some(values) = args.values_of("pem_source") {
-        for pem_source in values {
-            warn!("reading PEM data from {}", pem_source);
-            let pem_data = std::fs::read(pem_source)?;
-
-            for pem in pem::parse_many(&pem_data).map_err(AppleCodesignError::CertificatePem)? {
-                match pem.tag.as_str() {
-                    "CERTIFICATE" => {
-                        public_certificates.push(CapturedX509Certificate::from_der(pem.contents)?);
-                    }
-                    "PRIVATE KEY" => private_keys.push(Box::new(
-                        InMemorySigningKeyPair::from_pkcs8_der(&pem.contents)?,
-                    )),
-                    tag => warn!("(unhandled PEM tag {}; ignoring)", tag),
-                }
-            }
-        }
-    }
-
-    if let Some(slot) = args.value_of("smartcard_slot") {
-        handle_smartcard_sign_slot(slot, &mut private_keys, &mut public_certificates)?;
-    }
+    let (private_keys, mut public_certificates) = collect_certificates_from_args(args)?;
 
     if private_keys.len() > 1 {
         error!("at most 1 PRIVATE KEY can be present; aborting");
@@ -1807,15 +1789,7 @@ fn main_impl() -> Result<(), AppleCodesignError> {
     let app = app.subcommand(add_certificate_source_args(
         Command::new("analyze-certificate")
             .about("Analyze an X.509 certificate for Apple code signing properties")
-            .long_about(ANALYZE_CERTIFICATE_ABOUT)
-            .arg(
-                Arg::new("der_source")
-                    .long("der-source")
-                    .takes_value(true)
-                    .multiple_occurrences(true)
-                    .multiple_values(true)
-                    .help("Path to files containing DER encoded certificate data"),
-            ),
+            .long_about(ANALYZE_CERTIFICATE_ABOUT),
     ));
 
     let app = app.subcommand(
