@@ -11,7 +11,7 @@
   continue to work.
 * Initial support for using smartcards for signing. Smartcard integration may only
   work with YubiKeys due to how the integration is implemented.
-* A new ``rcodesign scan-smartcards`` command can be used to scan attached
+* A new ``rcodesign smartcard-scan`` command can be used to scan attached
   smartcards and certificates they have available for code signing.
 * ``rcodesign sign`` now accepts a ``--smartcard-slot`` argument to specify the
   slot number of a certificate to use when code signing.

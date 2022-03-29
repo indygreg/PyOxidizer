@@ -129,7 +129,7 @@ hardware integration is currently implemented using the
 
 To see if your smartcard device is recognized and certificates can be found::
 
-    rcodesign scan-smartcards
+    rcodesign smartcard-scan
     Device 0: Yubico YubiKey OTP+FIDO+CCID 0
     Device 0: Serial: 12345678
     Device 0: Version: 5.2.7

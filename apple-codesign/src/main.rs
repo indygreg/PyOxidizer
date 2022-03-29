@@ -1494,40 +1494,6 @@ fn command_print_signature_info(args: &ArgMatches) -> Result<(), AppleCodesignEr
     Ok(())
 }
 
-#[cfg(feature = "yubikey")]
-fn command_scan_smartcards(_args: &ArgMatches) -> Result<(), AppleCodesignError> {
-    let mut ctx = ::yubikey::reader::Context::open()?;
-    for (index, reader) in ctx.iter()?.enumerate() {
-        println!("Device {}: {}", index, reader.name());
-
-        if let Ok(yk) = reader.open() {
-            let mut yk = yubikey::YubiKey::from(yk);
-            println!("Device {}: Serial: {}", index, yk.inner()?.serial());
-            println!("Device {}: Version: {}", index, yk.inner()?.version());
-
-            for (slot, cert) in yk.find_certificates()? {
-                println!(
-                    "Device {}: Certificate in slot {:?} / {}",
-                    index,
-                    slot,
-                    hex::encode(&[u8::from(slot)])
-                );
-                print_certificate_info(&cert)?;
-                println!();
-            }
-        }
-    }
-
-    Ok(())
-}
-
-#[cfg(not(feature = "yubikey"))]
-fn command_scan_smartcards(_args: &ArgMatches) -> Result<(), AppleCodesignError> {
-    eprintln!("smartcard reading requires the `yubikey` crate feature, which isn't enabled.");
-    eprintln!("recompile the crate with `cargo build --features yubikey` to enable support");
-    std::process::exit(1);
-}
-
 fn command_sign(args: &ArgMatches) -> Result<(), AppleCodesignError> {
     let mut settings = SigningSettings::default();
 
@@ -1738,6 +1704,40 @@ fn command_sign(args: &ArgMatches) -> Result<(), AppleCodesignError> {
     }
 
     Ok(())
+}
+
+#[cfg(feature = "yubikey")]
+fn command_smartcard_scan(_args: &ArgMatches) -> Result<(), AppleCodesignError> {
+    let mut ctx = ::yubikey::reader::Context::open()?;
+    for (index, reader) in ctx.iter()?.enumerate() {
+        println!("Device {}: {}", index, reader.name());
+
+        if let Ok(yk) = reader.open() {
+            let mut yk = yubikey::YubiKey::from(yk);
+            println!("Device {}: Serial: {}", index, yk.inner()?.serial());
+            println!("Device {}: Version: {}", index, yk.inner()?.version());
+
+            for (slot, cert) in yk.find_certificates()? {
+                println!(
+                    "Device {}: Certificate in slot {:?} / {}",
+                    index,
+                    slot,
+                    hex::encode(&[u8::from(slot)])
+                );
+                print_certificate_info(&cert)?;
+                println!();
+            }
+        }
+    }
+
+    Ok(())
+}
+
+#[cfg(not(feature = "yubikey"))]
+fn command_smartcard_scan(_args: &ArgMatches) -> Result<(), AppleCodesignError> {
+    eprintln!("smartcard reading requires the `yubikey` crate feature, which isn't enabled.");
+    eprintln!("recompile the crate with `cargo build --features yubikey` to enable support");
+    std::process::exit(1);
 }
 
 fn command_staple(args: &ArgMatches) -> Result<(), AppleCodesignError> {
@@ -2069,7 +2069,7 @@ fn main_impl() -> Result<(), AppleCodesignError> {
 
     if cfg!(feature = "yubikey") {
         app = app.subcommand(
-            Command::new("scan-smartcards")
+            Command::new("smartcard-scan")
                 .about("Show information about available smartcard (SC) devices"),
         );
     }
@@ -2219,8 +2219,8 @@ fn main_impl() -> Result<(), AppleCodesignError> {
             command_parse_code_signing_requirement(args)
         }
         Some(("print-signature-info", args)) => command_print_signature_info(args),
-        Some(("scan-smartcards", args)) => command_scan_smartcards(args),
         Some(("sign", args)) => command_sign(args),
+        Some(("smartcard-scan", args)) => command_smartcard_scan(args),
         Some(("staple", args)) => command_staple(args),
         Some(("verify", args)) => command_verify(args),
         Some(("x509-oids", args)) => command_x509_oids(args),
