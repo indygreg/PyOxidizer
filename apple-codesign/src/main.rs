@@ -77,7 +77,9 @@ use {
     goblin::mach::{Mach, MachO},
     log::{error, warn},
     std::{io::Write, path::PathBuf, str::FromStr},
-    x509_certificate::{CapturedX509Certificate, EcdsaCurve, InMemorySigningKeyPair, KeyAlgorithm},
+    x509_certificate::{
+        CapturedX509Certificate, EcdsaCurve, InMemorySigningKeyPair, KeyAlgorithm, Sign,
+    },
 };
 
 #[cfg(target_os = "macos")]
@@ -1481,7 +1483,7 @@ fn command_scan_smartcards(_args: &ArgMatches) -> Result<(), AppleCodesignError>
 fn command_sign(args: &ArgMatches) -> Result<(), AppleCodesignError> {
     let mut settings = SigningSettings::default();
 
-    let mut private_keys = vec![];
+    let mut private_keys: Vec<Box<dyn Sign>> = vec![];
     let mut public_certificates = vec![];
 
     if let Some(p12_path) = args.value_of("p12_path") {
@@ -1502,7 +1504,7 @@ fn command_sign(args: &ArgMatches) -> Result<(), AppleCodesignError> {
 
         let (cert, key) = parse_pfx_data(&p12_data, &p12_password)?;
 
-        private_keys.push(key);
+        private_keys.push(Box::new(key));
         public_certificates.push(cert);
     }
 
@@ -1516,9 +1518,9 @@ fn command_sign(args: &ArgMatches) -> Result<(), AppleCodesignError> {
                     "CERTIFICATE" => {
                         public_certificates.push(CapturedX509Certificate::from_der(pem.contents)?);
                     }
-                    "PRIVATE KEY" => {
-                        private_keys.push(InMemorySigningKeyPair::from_pkcs8_der(&pem.contents)?)
-                    }
+                    "PRIVATE KEY" => private_keys.push(Box::new(
+                        InMemorySigningKeyPair::from_pkcs8_der(&pem.contents)?,
+                    )),
                     tag => warn!("(unhandled PEM tag {}; ignoring)", tag),
                 }
             }
@@ -1545,7 +1547,7 @@ fn command_sign(args: &ArgMatches) -> Result<(), AppleCodesignError> {
         let cert = public_certificates.remove(0);
 
         warn!("registering signing key");
-        settings.set_signing_key(*signing_key, cert);
+        settings.set_signing_key(signing_key.as_ref() as &dyn Sign, cert);
         if let Some(certs) = settings.chain_apple_certificates() {
             for cert in certs {
                 warn!(
