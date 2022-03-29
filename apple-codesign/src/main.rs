@@ -370,21 +370,21 @@ To use a code signing key/certificate to derive a cryptographic signature,
 you must specify a source certificate to use. This can be done in the following
 ways:
 
-* The --pfx-file denotes the location to a PFX formatted file. These are
-  often .pfx or .p12 files. If you use PFX files, remember to specify
-  --pfx-password or --pfx-password-path so an appropriate password is
+* The --p12-file denotes the location to a PFX formatted file. These are
+  often .pfx or .p12 files. Remember to specify --p12-password or
+  --p12-password-path so an appropriate password is
   used to read the PFX file.
 * The --pem-source argument defines paths to files containing PEM encoded
   certificate/key data. (e.g. files with \"===== BEGIN CERTIFICATE =====\").
 
 If you export a code signing certificate from the macOS keychain via the
 `Keychain Access` application as a .p12 file, we should be able to read these
-files via --pfx-file.
+files via --p12-file.
 
 When using --pem-source, certificates and public keys are parsed from
 `BEGIN CERTIFICATE` and `BEGIN PRIVATE KEY` sections in the files.
 
-The way certificate discovery works is that --pfx-file is read followed by
+The way certificate discovery works is that --p12-file is read followed by
 all values to --pem-source. The seen signing keys and certificates are
 collected. After collection, there must be 0 or 1 signing keys present, or
 an error occurs. The first encountered public certificate is assigned
@@ -452,23 +452,26 @@ fn add_certificate_source_args(app: Command) -> Command {
             .help("Path to file containing PEM encoded certificate/key data"),
     )
     .arg(
-        Arg::new("pfx_path")
-            .long("--pfx-file")
+        Arg::new("p12_path")
+            .long("p12-file")
+            .alias("pfx-file")
             .takes_value(true)
-            .help("Path to a PFX file containing a certificate key pair"),
+            .help("Path to a .p12/PFX file containing a certificate key pair"),
     )
     .arg(
-        Arg::new("pfx_password")
-            .long("--pfx-password")
+        Arg::new("p12_password")
+            .long("p12-password")
+            .alias("pfx-password")
             .takes_value(true)
-            .help("The password to use to open the --pfx-file file"),
+            .help("The password to use to open the --p12-file file"),
     )
     .arg(
-        Arg::new("pfx_password_file")
-            .long("--pfx-password-file")
-            .conflicts_with("pfx_password")
+        Arg::new("p12_password_file")
+            .long("p12-password-file")
+            .alias("pfx-password-file")
+            .conflicts_with("p12_password")
             .takes_value(true)
-            .help("Path to file containing password for opening --pfx-file file"),
+            .help("Path to file containing password for opening --p12-file file"),
     )
 }
 
@@ -492,23 +495,23 @@ fn add_notarization_upload_args(app: Command) -> Command {
 fn command_analyze_certificate(args: &ArgMatches) -> Result<(), AppleCodesignError> {
     let mut certs = vec![];
 
-    if let Some(pfx_path) = args.value_of("pfx_path") {
-        let pfx_data = std::fs::read(pfx_path)?;
+    if let Some(p12_path) = args.value_of("p12_path") {
+        let p12_data = std::fs::read(p12_path)?;
 
-        let pfx_password = if let Some(password) = args.value_of("pfx_password") {
+        let p12_password = if let Some(password) = args.value_of("p12_password") {
             password.to_string()
-        } else if let Some(path) = args.value_of("pfx_password_file") {
+        } else if let Some(path) = args.value_of("p12_password_file") {
             std::fs::read_to_string(path)?
                 .lines()
                 .next()
                 .expect("should get a single line")
                 .to_string()
         } else {
-            error!("--pfx-password or --pfx-password-file must be specified");
+            error!("--p12-password or --p12-password-file must be specified");
             return Err(AppleCodesignError::CliBadArgument);
         };
 
-        certs.push(parse_pfx_data(&pfx_data, &pfx_password)?.0);
+        certs.push(parse_pfx_data(&p12_data, &p12_password)?.0);
     }
 
     if let Some(values) = args.values_of("der_source") {
@@ -1438,23 +1441,23 @@ fn command_sign(args: &ArgMatches) -> Result<(), AppleCodesignError> {
     let mut private_keys = vec![];
     let mut public_certificates = vec![];
 
-    if let Some(pfx_path) = args.value_of("pfx_path") {
-        let pfx_data = std::fs::read(pfx_path)?;
+    if let Some(p12_path) = args.value_of("p12_path") {
+        let p12_data = std::fs::read(p12_path)?;
 
-        let pfx_password = if let Some(password) = args.value_of("pfx_password") {
+        let p12_password = if let Some(password) = args.value_of("p12_password") {
             password.to_string()
-        } else if let Some(path) = args.value_of("pfx_password_file") {
+        } else if let Some(path) = args.value_of("p12_password_file") {
             std::fs::read_to_string(path)?
                 .lines()
                 .next()
                 .expect("should get a single line")
                 .to_string()
         } else {
-            error!("--pfx-password or --pfx-password-file must be specified");
+            error!("--p12-password or --p12-password-file must be specified");
             return Err(AppleCodesignError::CliBadArgument);
         };
 
-        let (cert, key) = parse_pfx_data(&pfx_data, &pfx_password)?;
+        let (cert, key) = parse_pfx_data(&p12_data, &p12_password)?;
 
         private_keys.push(key);
         public_certificates.push(cert);

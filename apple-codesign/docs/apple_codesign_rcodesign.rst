@@ -19,26 +19,26 @@ need to tell this command what code signing certificate to use.
 To sign a Mach-O executable::
 
     rcodesign sign \
-      --pfx-file developer-id.p12 --pfx-password-file ~/.certificate-password \
+      --p12-file developer-id.p12 --p12-password-file ~/.certificate-password \
       --code-signature-flags runtime \
       path/to/executable
 
 To sign an ``.app`` bundle (and all Mach-O binaries inside)::
 
    rcodesign sign \
-     --pfx-file developer-id.p12 --pfx-password-file ~/.certificate-password \
+     --p12-file developer-id.p12 --p12-password-file ~/.certificate-password \
      path/to/My.app
 
 To sign a DMG image:
 
    rcodesign sign \
-     --pfx-file developer-id.p12 --pfx-password-file ~/.certificate-password \
+     --p12-file developer-id.p12 --p12-password-file ~/.certificate-password \
      path/to/app.dmg
 
 To sign a ``.pkg`` installer::
 
    rcodesign sign \
-    --pfx-file developer-id-installer.p12 --pfx-password-file ~/.certificate-password \
+    --p12-file developer-id-installer.p12 --p12-password-file ~/.certificate-password \
     path/to/installer.pkg
 
 Notarizing and Stapling

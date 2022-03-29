@@ -2,6 +2,14 @@
 `apple-codesign` History
 ========================
 
+0.11.0
+======
+
+* The ``--pfx-file``, ``--pfx-password``, and ``--pfx-password-file`` arguments
+  have been renamed to ``--p12-file``, ``--p12-password``, and
+  ``--p12-password-file``, respectively. The old names are aliases and should
+  continue to work.
+
 0.10.0
 ======
 
