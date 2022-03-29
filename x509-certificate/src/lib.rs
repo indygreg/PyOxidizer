@@ -73,6 +73,7 @@ pub use certificate::{
     CapturedX509Certificate, MutableX509Certificate, X509Certificate, X509CertificateBuilder,
 };
 pub mod rfc3280;
+pub mod rfc3447;
 pub mod rfc4519;
 pub mod rfc5280;
 pub mod rfc5480;
@@ -131,6 +132,12 @@ pub enum X509CertificateError {
 
     #[error("RSA key generation is not supported")]
     RsaKeyGenerationNotSupported,
+
+    #[error("target length for PKCS#1 padding to too short")]
+    PkcsEncodeTooShort,
+
+    #[error("unhandled error: {0}")]
+    Other(String),
 }
 
 impl From<ring::error::KeyRejected> for X509CertificateError {

@@ -6,10 +6,11 @@
 
 use {
     crate::{
+        rfc3447::DigestInfo,
         rfc5280::{AlgorithmIdentifier, AlgorithmParameter},
         X509CertificateError as Error,
     },
-    bcder::{ConstOid, Oid},
+    bcder::{encode::Values, ConstOid, OctetString, Oid},
     ring::{digest, signature},
     std::fmt::{Display, Formatter},
 };
@@ -230,6 +231,54 @@ impl DigestAlgorithm {
     /// Digest the content of a path.
     pub fn digest_path(&self, path: &std::path::Path) -> Result<Vec<u8>, std::io::Error> {
         self.digest_reader(&mut std::fs::File::open(path)?)
+    }
+
+    /// EMSA-PKCS1-v1_5 padding procedure.
+    ///
+    /// As defined by https://tools.ietf.org/html/rfc3447#section-9.2.
+    ///
+    /// `message` is the message to digest and encode.
+    ///
+    /// `target_length_in_bytes` is the target length of the padding. This should match the RSA
+    /// key length. e.g. 2048 bit keys are length 256.
+    pub fn rsa_pkcs1_encode(
+        &self,
+        message: &[u8],
+        target_length_in_bytes: usize,
+    ) -> Result<Vec<u8>, Error> {
+        let digest = self.digest_data(message);
+
+        let digest_info = DigestInfo {
+            algorithm: (*self).into(),
+            digest: OctetString::new(digest.clone().into()),
+        };
+        let mut digest_info_der = vec![];
+        digest_info.write_encoded(bcder::Mode::Der, &mut digest_info_der)?;
+
+        let encoded_digest_len = digest_info_der.len();
+
+        // At least 8 bytes of padding are required. And there's a 2 byte header plus NULL
+        // termination of the padding. So the target length must be 11+ bytes longer than
+        // the encoded digest.
+        if encoded_digest_len + 11 > target_length_in_bytes {
+            return Err(Error::PkcsEncodeTooShort);
+        }
+
+        let pad_len = target_length_in_bytes - encoded_digest_len - 3;
+
+        let mut res = vec![0xff; target_length_in_bytes];
+        // Constant header.
+        res[0] = 0x00;
+        // Private key block type.
+        res[1] = 0x01;
+        // Padding bytes are already filled in.
+        // NULL terminate padding.
+        res[2 + pad_len] = 0x00;
+
+        let digest_destination = &mut res[3 + pad_len..];
+        digest_destination.copy_from_slice(&digest_info_der);
+
+        Ok(res)
     }
 }
 
@@ -608,5 +657,23 @@ impl From<KeyAlgorithm> for AlgorithmIdentifier {
             algorithm: alg.into(),
             parameters,
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn digest_pkcs1() -> Result<(), Error> {
+        let message = b"deadbeef";
+        let raw_digest = DigestAlgorithm::Sha256.digest_data(message);
+
+        // RSA 1024.
+        let encoded = DigestAlgorithm::Sha256.rsa_pkcs1_encode(message, 128)?;
+        assert_eq!(&encoded[0..3], &[0x00, 0x01, 0xff]);
+        assert_eq!(&encoded[96..], &raw_digest);
+
+        Ok(())
     }
 }
