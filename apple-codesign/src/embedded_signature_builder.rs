@@ -19,9 +19,7 @@ use {
     log::{info, warn},
     reqwest::Url,
     std::collections::BTreeMap,
-    x509_certificate::{
-        rfc5652::AttributeValue, CapturedX509Certificate, DigestAlgorithm, InMemorySigningKeyPair,
-    },
+    x509_certificate::{rfc5652::AttributeValue, CapturedX509Certificate, DigestAlgorithm, Sign},
 };
 
 /// OID for signed attribute containing plist of code directory hashes.
@@ -211,7 +209,7 @@ impl<'a> EmbeddedSignatureBuilder<'a> {
     /// This method errors if called before a code directory is registered.
     pub fn create_cms_signature(
         &mut self,
-        signing_key: &InMemorySigningKeyPair,
+        signing_key: &dyn Sign,
         signing_cert: &CapturedX509Certificate,
         time_stamp_url: Option<&Url>,
         certificates: impl Iterator<Item = CapturedX509Certificate>,

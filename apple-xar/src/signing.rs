@@ -35,7 +35,7 @@ use {
         io::{Read, Seek, Write},
     },
     url::Url,
-    x509_certificate::{CapturedX509Certificate, InMemorySigningKeyPair, Sign},
+    x509_certificate::{CapturedX509Certificate, Sign},
 };
 
 /// Entity for signing a XAR file.
@@ -64,7 +64,7 @@ impl<R: Read + Seek + Sized + Debug> XarSigner<R> {
     pub fn sign<W: Write>(
         &mut self,
         writer: &mut W,
-        signing_key: &InMemorySigningKeyPair,
+        signing_key: &dyn Sign,
         signing_cert: &CapturedX509Certificate,
         time_stamp_url: Option<&Url>,
         certificates: impl Iterator<Item = CapturedX509Certificate>,

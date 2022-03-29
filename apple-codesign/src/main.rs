@@ -1545,7 +1545,7 @@ fn command_sign(args: &ArgMatches) -> Result<(), AppleCodesignError> {
         let cert = public_certificates.remove(0);
 
         warn!("registering signing key");
-        settings.set_signing_key(signing_key, cert);
+        settings.set_signing_key(*signing_key, cert);
         if let Some(certs) = settings.chain_apple_certificates() {
             for cert in certs {
                 warn!(

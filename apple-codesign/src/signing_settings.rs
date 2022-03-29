@@ -17,7 +17,7 @@ use {
     },
     reqwest::{IntoUrl, Url},
     std::{collections::BTreeMap, fmt::Formatter},
-    x509_certificate::{CapturedX509Certificate, InMemorySigningKeyPair},
+    x509_certificate::{CapturedX509Certificate, Sign},
 };
 
 /// Denotes the scope for a setting.
@@ -248,10 +248,10 @@ pub enum DesignatedRequirementMode {
 /// over which signing settings apply to which entity and enables a signing
 /// operation over a complex primitive to be configured/performed via a single
 /// [SigningSettings] and signing operation.
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Default)]
 pub struct SigningSettings<'key> {
     // Global settings.
-    signing_key: Option<(&'key InMemorySigningKeyPair, CapturedX509Certificate)>,
+    signing_key: Option<(&'key dyn Sign, CapturedX509Certificate)>,
     certificates: Vec<CapturedX509Certificate>,
     time_stamp_url: Option<Url>,
     team_id: Option<String>,
@@ -286,8 +286,8 @@ impl<'key> SigningSettings<'key> {
     }
 
     /// Obtain the signing key to use.
-    pub fn signing_key(&self) -> Option<&(&'key InMemorySigningKeyPair, CapturedX509Certificate)> {
-        self.signing_key.as_ref()
+    pub fn signing_key(&self) -> Option<(&'key dyn Sign, &CapturedX509Certificate)> {
+        self.signing_key.as_ref().map(|(key, cert)| (*key, cert))
     }
 
     /// Set the signing key-pair for producing a cryptographic signature over code.
@@ -296,11 +296,7 @@ impl<'key> SigningSettings<'key> {
     /// contain digests of content. This is known as "ad-hoc" mode. Binaries lacking a
     /// cryptographic signature or signed without a key-pair issued/signed by Apple may
     /// not run in all environments.
-    pub fn set_signing_key(
-        &mut self,
-        private: &'key InMemorySigningKeyPair,
-        public: CapturedX509Certificate,
-    ) {
+    pub fn set_signing_key(&mut self, private: &'key dyn Sign, public: CapturedX509Certificate) {
         self.signing_key = Some((private, public));
     }
 
