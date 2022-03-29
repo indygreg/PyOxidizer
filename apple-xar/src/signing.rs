@@ -35,7 +35,7 @@ use {
         io::{Read, Seek, Write},
     },
     url::Url,
-    x509_certificate::{CapturedX509Certificate, InMemorySigningKeyPair},
+    x509_certificate::{CapturedX509Certificate, InMemorySigningKeyPair, Sign},
 };
 
 /// Entity for signing a XAR file.

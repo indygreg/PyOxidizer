@@ -81,7 +81,7 @@ pub mod rfc5915;
 pub mod rfc5958;
 pub mod rfc8017;
 pub mod signing;
-pub use signing::InMemorySigningKeyPair;
+pub use signing::{InMemorySigningKeyPair, Sign};
 #[cfg(any(feature = "test", test))]
 pub mod testutil;
 

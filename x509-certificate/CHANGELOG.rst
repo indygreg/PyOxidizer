@@ -2,6 +2,13 @@
 ``x509-certificate`` History
 ============================
 
+0.12.0
+======
+
+* Defined a new ``Sign`` trait to indicate support for cryptographic signing.
+  ``InMemorySigningKeyPair`` implements this trait and callers may need to
+  ``use x509_certificate::Sign`` to pull the trait into scope.
+
 0.11.0
 ======
 

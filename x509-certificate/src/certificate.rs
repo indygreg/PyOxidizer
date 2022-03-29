@@ -6,8 +6,8 @@
 
 use {
     crate::{
-        algorithm::DigestAlgorithm, asn1time::Time, rfc3280::Name, rfc5280, InMemorySigningKeyPair,
-        KeyAlgorithm, SignatureAlgorithm, X509CertificateError as Error,
+        algorithm::DigestAlgorithm, asn1time::Time, rfc3280::Name, rfc5280, signing::Sign,
+        InMemorySigningKeyPair, KeyAlgorithm, SignatureAlgorithm, X509CertificateError as Error,
     },
     bcder::{
         decode::Constructed,

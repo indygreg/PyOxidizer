@@ -29,7 +29,7 @@ use {
     x509_certificate::{
         asn1time::UtcTime,
         rfc5652::{Attribute, AttributeValue},
-        CapturedX509Certificate, DigestAlgorithm, InMemorySigningKeyPair, SignatureAlgorithm,
+        CapturedX509Certificate, DigestAlgorithm, InMemorySigningKeyPair, Sign, SignatureAlgorithm,
     },
 };
 

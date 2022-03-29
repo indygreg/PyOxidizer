@@ -14,6 +14,18 @@ use {
     },
 };
 
+/// Signifies that an entity is capable of producing cryptographic signatures.
+pub trait Sign {
+    /// Create a cyrptographic signature over a message.
+    ///
+    /// Takes the message to be signed, which will be digested by the implementation.
+    ///
+    /// Returns the raw bytes constituting the signature and which signature algorithm
+    /// was used. The returned [SignatureAlgorithm] can be serialized into an
+    /// ASN.1 `AlgorithmIdentifier` via `.into()`.
+    fn sign(&self, message: &[u8]) -> Result<(Vec<u8>, SignatureAlgorithm), Error>;
+}
+
 /// Represents a key pair that exists in memory and can be used to create cryptographic signatures.
 ///
 /// This is a wrapper around ring's various key pair types. It provides
@@ -28,6 +40,43 @@ pub enum InMemorySigningKeyPair {
 
     /// RSA key pair.
     Rsa(signature::RsaKeyPair),
+}
+
+impl Sign for InMemorySigningKeyPair {
+    /// This will use a new instance of ring's SystemRandom. The RSA
+    /// padding algorithm is hard-coded to RSA_PCS1_SHA256.
+    ///
+    /// If you want total control over signing parameters, obtain the
+    /// underlying ring keypair and call its `.sign()`.
+    fn sign(&self, message: &[u8]) -> Result<(Vec<u8>, SignatureAlgorithm), Error> {
+        match self {
+            Self::Rsa(key) => {
+                let mut signature = vec![0; key.public_modulus_len()];
+
+                key.sign(
+                    &ring::signature::RSA_PKCS1_SHA256,
+                    &ring::rand::SystemRandom::new(),
+                    message.as_ref(),
+                    &mut signature,
+                )
+                .map_err(|_| Error::SignatureCreationInMemoryKey)?;
+
+                Ok((signature, self.signature_algorithm()))
+            }
+            Self::Ecdsa(key, _) => {
+                let signature = key
+                    .sign(&ring::rand::SystemRandom::new(), message.as_ref())
+                    .map_err(|_| Error::SignatureCreationInMemoryKey)?;
+
+                Ok((signature.as_ref().to_vec(), self.signature_algorithm()))
+            }
+            Self::Ed25519(key) => {
+                let signature = key.sign(message.as_ref());
+
+                Ok((signature.as_ref().to_vec(), self.signature_algorithm()))
+            }
+        }
+    }
 }
 
 impl InMemorySigningKeyPair {
@@ -140,47 +189,6 @@ impl InMemorySigningKeyPair {
             .resolve_verification_algorithm(self.key_algorithm()).expect(
             "illegal combination of key algorithm in signature algorithm: this should not occur"
         )
-    }
-
-    /// Sign a message using this signing key.
-    ///
-    /// Returns the raw bytes constituting the signature and which signature
-    /// algorithm was used. The returned [SignatureAlgorithm] can be serialized
-    /// into an ASN.1 `AlgorithmIdentifier` via `.into()`.
-    ///
-    /// This will use a new instance of ring's SystemRandom. The RSA
-    /// padding algorithm is hard-coded to RSA_PCS1_SHA256.
-    ///
-    /// If you want total control over signing parameters, obtain the
-    /// underlying ring keypair and call its `.sign()`.
-    pub fn sign(&self, message: impl AsRef<[u8]>) -> Result<(Vec<u8>, SignatureAlgorithm), Error> {
-        match self {
-            Self::Rsa(key) => {
-                let mut signature = vec![0; key.public_modulus_len()];
-
-                key.sign(
-                    &ring::signature::RSA_PKCS1_SHA256,
-                    &ring::rand::SystemRandom::new(),
-                    message.as_ref(),
-                    &mut signature,
-                )
-                .map_err(|_| Error::SignatureCreationInMemoryKey)?;
-
-                Ok((signature, self.signature_algorithm()))
-            }
-            Self::Ecdsa(key, _) => {
-                let signature = key
-                    .sign(&ring::rand::SystemRandom::new(), message.as_ref())
-                    .map_err(|_| Error::SignatureCreationInMemoryKey)?;
-
-                Ok((signature.as_ref().to_vec(), self.signature_algorithm()))
-            }
-            Self::Ed25519(key) => {
-                let signature = key.sign(message.as_ref());
-
-                Ok((signature.as_ref().to_vec(), self.signature_algorithm()))
-            }
-        }
     }
 }
 
