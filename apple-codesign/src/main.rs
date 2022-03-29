@@ -449,6 +449,12 @@ fn get_macho_from_data(data: &[u8], universal_index: usize) -> Result<MachO, App
 
 fn add_certificate_source_args(app: Command) -> Command {
     app.arg(
+        Arg::new("smartcard_slot")
+            .long("smartcard-slot")
+            .takes_value(true)
+            .help("Smart card slot number of signing certificate to use (9c is common)"),
+    )
+    .arg(
         Arg::new("pem_source")
             .long("pem-source")
             .takes_value(true)
@@ -567,6 +573,48 @@ fn print_certificate_info(cert: &CapturedX509Certificate) -> Result<(), AppleCod
     for ext in cert.apple_code_signing_extensions() {
         println!("  - {} ({:?})", ext.as_oid(), ext);
     }
+
+    Ok(())
+}
+
+#[allow(unused)]
+fn prompt_smartcard_pin() -> Result<Vec<u8>, AppleCodesignError> {
+    let pin = dialoguer::Password::new()
+        .with_prompt("Please enter device PIN")
+        .interact()?;
+
+    Ok(pin.as_bytes().to_vec())
+}
+
+#[cfg(feature = "yubikey")]
+fn handle_smartcard_sign_slot(
+    slot: &str,
+    private_keys: &mut Vec<Box<dyn Sign>>,
+    public_certificates: &mut Vec<CapturedX509Certificate>,
+) -> Result<(), AppleCodesignError> {
+    let slot_id = ::yubikey::piv::SlotId::from_str(slot)?;
+    let formatted = hex::encode([u8::from(slot_id)]);
+    let mut yk = yubikey::YubiKey::from(::yubikey::YubiKey::open()?);
+
+    if let Some(mut cert) = yk.get_certificate_signer(slot_id)? {
+        warn!("using certificate in smartcard slot {}", formatted);
+        cert.set_pin_callback(Box::new(prompt_smartcard_pin));
+        public_certificates.push(cert.certificate().clone());
+        private_keys.push(Box::new(cert));
+
+        Ok(())
+    } else {
+        Err(AppleCodesignError::SmartcardNoCertificate(formatted))
+    }
+}
+
+#[cfg(not(feature = "yubikey"))]
+fn handle_smartcard_sign_slot(
+    _slot: &str,
+    _private_keys: &mut Vec<Box<dyn Sign>>,
+    _public_certificates: &mut Vec<CapturedX509Certificate>,
+) -> Result<(), AppleCodesignError> {
+    error!("smartcard support not available; ignoring --smartcard-slot");
 
     Ok(())
 }
@@ -1454,8 +1502,8 @@ fn command_scan_smartcards(_args: &ArgMatches) -> Result<(), AppleCodesignError>
 
         if let Ok(yk) = reader.open() {
             let mut yk = yubikey::YubiKey::from(yk);
-            println!("Device {}: Serial: {}", index, yk.serial());
-            println!("Device {}: Version: {}", index, yk.version());
+            println!("Device {}: Serial: {}", index, yk.inner()?.serial());
+            println!("Device {}: Version: {}", index, yk.inner()?.version());
 
             for (slot, cert) in yk.find_certificates()? {
                 println!(
@@ -1525,6 +1573,10 @@ fn command_sign(args: &ArgMatches) -> Result<(), AppleCodesignError> {
                 }
             }
         }
+    }
+
+    if let Some(slot) = args.value_of("smartcard_slot") {
+        handle_smartcard_sign_slot(slot, &mut private_keys, &mut public_certificates)?;
     }
 
     if private_keys.len() > 1 {

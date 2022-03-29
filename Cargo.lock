@@ -114,6 +114,7 @@ dependencies = [
  "chrono",
  "clap 3.1.6",
  "cryptographic-message-syntax",
+ "dialoguer",
  "difference",
  "dirs",
  "duct",
@@ -147,6 +148,7 @@ dependencies = [
  "xml-rs",
  "yasna",
  "yubikey",
+ "zeroize",
  "zip 0.5.13",
 ]
 

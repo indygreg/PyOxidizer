@@ -317,7 +317,13 @@ pub enum AppleCodesignError {
     #[error("cannot staple DMG without an embedded signature")]
     DmgStapleNoSignature,
 
+    #[error("failed to find certificate in smartcard slot {0}")]
+    SmartcardNoCertificate(String),
+
     #[cfg(feature = "yubikey")]
     #[error("YubiKey error: {0}")]
     YubiKey(#[from] yubikey::Error),
+
+    #[error("poisoned lock")]
+    PoisonedLock,
 }

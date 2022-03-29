@@ -9,9 +9,12 @@
   have been renamed to ``--p12-file``, ``--p12-password``, and
   ``--p12-password-file``, respectively. The old names are aliases and should
   continue to work.
+* Initial support for using smartcards for signing. Smartcard integration may only
+  work with YubiKeys due to how the integration is implemented.
 * A new ``rcodesign scan-smartcards`` command can be used to scan attached
-  smartcards and certificates they have available for code signing. Support for
-  signing with a smartcard is not yet implemented.
+  smartcards and certificates they have available for code signing.
+* ``rcodesign sign`` now accepts a ``--smartcard-slot`` argument to specify the
+  slot number of a certificate to use when code signing.
 
 0.10.0
 ======
