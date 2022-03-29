@@ -29,7 +29,7 @@ use {
     x509_certificate::{
         asn1time::UtcTime,
         rfc5652::{Attribute, AttributeValue},
-        CapturedX509Certificate, DigestAlgorithm, InMemorySigningKeyPair, Sign, SignatureAlgorithm,
+        CapturedX509Certificate, DigestAlgorithm, Sign, SignatureAlgorithm,
     },
 };
 
@@ -40,7 +40,7 @@ use {
 #[derive(Clone)]
 pub struct SignerBuilder<'a> {
     /// The cryptographic key pair used for signing content.
-    signing_key: &'a InMemorySigningKeyPair,
+    signing_key: &'a dyn Sign,
 
     /// X.509 certificate used for signing.
     signing_certificate: CapturedX509Certificate,
@@ -69,10 +69,7 @@ impl<'a> SignerBuilder<'a> {
     /// Construct a new entity that will sign content.
     ///
     /// An entity is constructed from a signing key, which is mandatory.
-    pub fn new(
-        signing_key: &'a InMemorySigningKeyPair,
-        signing_certificate: CapturedX509Certificate,
-    ) -> Self {
+    pub fn new(signing_key: &'a dyn Sign, signing_certificate: CapturedX509Certificate) -> Self {
         Self {
             signing_key,
             signing_certificate,

@@ -24,6 +24,12 @@ pub trait Sign {
     /// was used. The returned [SignatureAlgorithm] can be serialized into an
     /// ASN.1 `AlgorithmIdentifier` via `.into()`.
     fn sign(&self, message: &[u8]) -> Result<(Vec<u8>, SignatureAlgorithm), Error>;
+
+    /// Obtain the [SignatureAlgorithm] that this signer will use.
+    ///
+    /// Instances can be coerced into the ASN.1 `AlgorithmIdentifier` via `.into()`
+    /// for easy inclusion in ASN.1 structures.
+    fn signature_algorithm(&self) -> SignatureAlgorithm;
 }
 
 /// Represents a key pair that exists in memory and can be used to create cryptographic signatures.
@@ -75,6 +81,22 @@ impl Sign for InMemorySigningKeyPair {
 
                 Ok((signature.as_ref().to_vec(), self.signature_algorithm()))
             }
+        }
+    }
+
+    fn signature_algorithm(&self) -> SignatureAlgorithm {
+        match self {
+            Self::Rsa(_) => SignatureAlgorithm::RsaSha256,
+            Self::Ecdsa(_, curve) => {
+                // ring refuses to mix and match the bitness of curves and signature
+                // algorithms. e.g. it can't pair secp256r1 with SHA-384. It chooses
+                // signatures on its own. We reimplement that logic here.
+                match curve {
+                    EcdsaCurve::Secp256r1 => SignatureAlgorithm::EcdsaSha256,
+                    EcdsaCurve::Secp384r1 => SignatureAlgorithm::EcdsaSha384,
+                }
+            }
+            Self::Ed25519(_) => SignatureAlgorithm::Ed25519,
         }
     }
 }
@@ -155,26 +177,6 @@ impl InMemorySigningKeyPair {
             Self::Rsa(_) => KeyAlgorithm::Rsa,
             Self::Ed25519(_) => KeyAlgorithm::Ed25519,
             Self::Ecdsa(_, curve) => KeyAlgorithm::Ecdsa(*curve),
-        }
-    }
-
-    /// Obtain the [SignatureAlgorithm] that this key pair will use.
-    ///
-    /// Instances can be coerced into the ASN.1 `AlgorithmIdentifier` via `.into()`
-    /// for easy inclusion in ASN.1 structures.
-    pub fn signature_algorithm(&self) -> SignatureAlgorithm {
-        match self {
-            Self::Rsa(_) => SignatureAlgorithm::RsaSha256,
-            Self::Ecdsa(_, curve) => {
-                // ring refuses to mix and match the bitness of curves and signature
-                // algorithms. e.g. it can't pair secp256r1 with SHA-384. It chooses
-                // signatures on its own. We reimplement that logic here.
-                match curve {
-                    EcdsaCurve::Secp256r1 => SignatureAlgorithm::EcdsaSha256,
-                    EcdsaCurve::Secp384r1 => SignatureAlgorithm::EcdsaSha384,
-                }
-            }
-            Self::Ed25519(_) => SignatureAlgorithm::Ed25519,
         }
     }
 
