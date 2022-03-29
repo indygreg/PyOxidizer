@@ -7,7 +7,7 @@
 use bcder::{
     decode::{Constructed, Source},
     encode::{self, PrimitiveContent, Values},
-    Integer,
+    Unsigned,
 };
 
 /// RSA Public Key.
@@ -20,15 +20,15 @@ use bcder::{
 /// ```
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct RsaPublicKey {
-    pub modulus: Integer,
-    pub public_exponent: Integer,
+    pub modulus: Unsigned,
+    pub public_exponent: Unsigned,
 }
 
 impl RsaPublicKey {
     pub fn take_from<S: Source>(cons: &mut Constructed<S>) -> Result<Self, S::Err> {
         cons.take_sequence(|cons| {
-            let modulus = Integer::take_from(cons)?;
-            let public_exponent = Integer::take_from(cons)?;
+            let modulus = Unsigned::take_from(cons)?;
+            let public_exponent = Unsigned::take_from(cons)?;
 
             Ok(Self {
                 modulus,
