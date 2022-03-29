@@ -51,6 +51,9 @@ mod stapling;
 mod ticket_lookup;
 #[allow(unused)]
 mod verify;
+#[cfg(feature = "yubikey")]
+#[allow(unused)]
+mod yubikey;
 
 use {
     crate::{
@@ -492,6 +495,80 @@ fn add_notarization_upload_args(app: Command) -> Command {
     )
 }
 
+fn print_certificate_info(cert: &CapturedX509Certificate) -> Result<(), AppleCodesignError> {
+    println!(
+        "Subject CN:                  {}",
+        cert.subject_common_name()
+            .unwrap_or_else(|| "<missing>".to_string())
+    );
+    println!(
+        "Issuer CN:                   {}",
+        cert.issuer_common_name()
+            .unwrap_or_else(|| "<missing>".to_string())
+    );
+    println!("Subject is Issuer?:          {}", cert.subject_is_issuer());
+    println!(
+        "Team ID:                     {}",
+        cert.apple_team_id()
+            .unwrap_or_else(|| "<missing>".to_string())
+    );
+    println!(
+        "SHA-1 fingerprint:           {}",
+        hex::encode(cert.sha1_fingerprint()?)
+    );
+    println!(
+        "SHA-256 fingerprint:         {}",
+        hex::encode(cert.sha256_fingerprint()?)
+    );
+    println!(
+        "Signed by Apple?:            {}",
+        cert.chains_to_apple_root_ca()
+    );
+    if cert.chains_to_apple_root_ca() {
+        println!("Apple Issuing Chain:");
+        for signer in cert.apple_issuing_chain() {
+            println!(
+                "  - {}",
+                signer
+                    .subject_common_name()
+                    .unwrap_or_else(|| "<unknown>".to_string())
+            );
+        }
+    }
+
+    println!(
+        "Guessed Certificate Profile: {}",
+        if let Some(profile) = cert.apple_guess_profile() {
+            format!("{:?}", profile)
+        } else {
+            "none".to_string()
+        }
+    );
+    println!("Is Apple Root CA?:           {}", cert.is_apple_root_ca());
+    println!(
+        "Is Apple Intermediate CA?:   {}",
+        cert.is_apple_intermediate_ca()
+    );
+    println!(
+        "Apple CA Extension:          {}",
+        if let Some(ext) = cert.apple_ca_extension() {
+            format!("{} ({:?})", ext.as_oid(), ext)
+        } else {
+            "none".to_string()
+        }
+    );
+    println!("Apple Extended Key Usage Purpose Extensions:");
+    for purpose in cert.apple_extended_key_usage_purposes() {
+        println!("  - {} ({:?})", purpose.as_oid(), purpose);
+    }
+    println!("Apple Code Signing Extensions:");
+    for ext in cert.apple_code_signing_extensions() {
+        println!("  - {} ({:?})", ext.as_oid(), ext);
+    }
+
+    Ok(())
+}
+
 fn command_analyze_certificate(args: &ArgMatches) -> Result<(), AppleCodesignError> {
     let mut certs = vec![];
 
@@ -541,75 +618,7 @@ fn command_analyze_certificate(args: &ArgMatches) -> Result<(), AppleCodesignErr
     for (i, cert) in certs.into_iter().enumerate() {
         println!("# Certificate {}", i);
         println!();
-        println!(
-            "Subject CN:                  {}",
-            cert.subject_common_name()
-                .unwrap_or_else(|| "<missing>".to_string())
-        );
-        println!(
-            "Issuer CN:                   {}",
-            cert.issuer_common_name()
-                .unwrap_or_else(|| "<missing>".to_string())
-        );
-        println!("Subject is Issuer?:          {}", cert.subject_is_issuer());
-        println!(
-            "Team ID:                     {}",
-            cert.apple_team_id()
-                .unwrap_or_else(|| "<missing>".to_string())
-        );
-        println!(
-            "SHA-1 fingerprint:           {}",
-            hex::encode(cert.sha1_fingerprint()?)
-        );
-        println!(
-            "SHA-256 fingerprint:         {}",
-            hex::encode(cert.sha256_fingerprint()?)
-        );
-        println!(
-            "Signed by Apple?:            {}",
-            cert.chains_to_apple_root_ca()
-        );
-        if cert.chains_to_apple_root_ca() {
-            println!("Apple Issuing Chain:");
-            for signer in cert.apple_issuing_chain() {
-                println!(
-                    "  - {}",
-                    signer
-                        .subject_common_name()
-                        .unwrap_or_else(|| "<unknown>".to_string())
-                );
-            }
-        }
-
-        println!(
-            "Guessed Certificate Profile: {}",
-            if let Some(profile) = cert.apple_guess_profile() {
-                format!("{:?}", profile)
-            } else {
-                "none".to_string()
-            }
-        );
-        println!("Is Apple Root CA?:           {}", cert.is_apple_root_ca());
-        println!(
-            "Is Apple Intermediate CA?:   {}",
-            cert.is_apple_intermediate_ca()
-        );
-        println!(
-            "Apple CA Extension:          {}",
-            if let Some(ext) = cert.apple_ca_extension() {
-                format!("{} ({:?})", ext.as_oid(), ext)
-            } else {
-                "none".to_string()
-            }
-        );
-        println!("Apple Extended Key Usage Purpose Extensions:");
-        for purpose in cert.apple_extended_key_usage_purposes() {
-            println!("  - {} ({:?})", purpose.as_oid(), purpose);
-        }
-        println!("Apple Code Signing Extensions:");
-        for ext in cert.apple_code_signing_extensions() {
-            println!("  - {} ({:?})", ext.as_oid(), ext);
-        }
+        print_certificate_info(&cert)?;
         println!();
     }
 
@@ -1435,6 +1444,40 @@ fn command_print_signature_info(args: &ArgMatches) -> Result<(), AppleCodesignEr
     Ok(())
 }
 
+#[cfg(feature = "yubikey")]
+fn command_scan_smartcards(_args: &ArgMatches) -> Result<(), AppleCodesignError> {
+    let mut ctx = ::yubikey::reader::Context::open()?;
+    for (index, reader) in ctx.iter()?.enumerate() {
+        println!("Device {}: {}", index, reader.name());
+
+        if let Ok(yk) = reader.open() {
+            let mut yk = yubikey::YubiKey::from(yk);
+            println!("Device {}: Serial: {}", index, yk.serial());
+            println!("Device {}: Version: {}", index, yk.version());
+
+            for (slot, cert) in yk.find_certificates()? {
+                println!(
+                    "Device {}: Certificate in slot {:?} / {}",
+                    index,
+                    slot,
+                    hex::encode(&[u8::from(slot)])
+                );
+                print_certificate_info(&cert)?;
+                println!();
+            }
+        }
+    }
+
+    Ok(())
+}
+
+#[cfg(not(feature = "yubikey"))]
+fn command_scan_smartcards(_args: &ArgMatches) -> Result<(), AppleCodesignError> {
+    eprintln!("smartcard reading requires the `yubikey` crate feature, which isn't enabled.");
+    eprintln!("recompile the crate with `cargo build --features yubikey` to enable support");
+    std::process::exit(1);
+}
+
 fn command_sign(args: &ArgMatches) -> Result<(), AppleCodesignError> {
     let mut settings = SigningSettings::default();
 
@@ -1960,7 +2003,7 @@ fn main_impl() -> Result<(), AppleCodesignError> {
             ),
     );
 
-    let app = app.subcommand(
+    let mut app = app.subcommand(
         Command::new("print-signature-info")
             .about("Print signature information for a filesystem path")
             .arg(
@@ -1969,6 +2012,13 @@ fn main_impl() -> Result<(), AppleCodesignError> {
                     .help("Filesystem path to entity whose info to print"),
             ),
     );
+
+    if cfg!(feature = "yubikey") {
+        app = app.subcommand(
+            Command::new("scan-smartcards")
+                .about("Show information about available smartcard (SC) devices"),
+        );
+    }
 
     let app = app
         .subcommand(
@@ -2115,6 +2165,7 @@ fn main_impl() -> Result<(), AppleCodesignError> {
             command_parse_code_signing_requirement(args)
         }
         Some(("print-signature-info", args)) => command_print_signature_info(args),
+        Some(("scan-smartcards", args)) => command_scan_smartcards(args),
         Some(("sign", args)) => command_sign(args),
         Some(("staple", args)) => command_staple(args),
         Some(("verify", args)) => command_verify(args),

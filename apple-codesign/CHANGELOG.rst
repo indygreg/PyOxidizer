@@ -9,6 +9,9 @@
   have been renamed to ``--p12-file``, ``--p12-password``, and
   ``--p12-password-file``, respectively. The old names are aliases and should
   continue to work.
+* A new ``rcodesign scan-smartcards`` command can be used to scan attached
+  smartcards and certificates they have available for code signing. Support for
+  signing with a smartcard is not yet implemented.
 
 0.10.0
 ======

@@ -156,3 +156,5 @@ pub mod stapling;
 pub mod ticket_lookup;
 mod verify;
 pub use verify::*;
+#[cfg(feature = "yubikey")]
+pub mod yubikey;

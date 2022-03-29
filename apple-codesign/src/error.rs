@@ -316,4 +316,8 @@ pub enum AppleCodesignError {
 
     #[error("cannot staple DMG without an embedded signature")]
     DmgStapleNoSignature,
+
+    #[cfg(feature = "yubikey")]
+    #[error("YubiKey error: {0}")]
+    YubiKey(#[from] yubikey::Error),
 }
