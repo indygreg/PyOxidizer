@@ -6,8 +6,9 @@
 
 use {
     crate::{
-        algorithm::DigestAlgorithm, asn1time::Time, rfc3280::Name, rfc5280, signing::Sign,
-        InMemorySigningKeyPair, KeyAlgorithm, SignatureAlgorithm, X509CertificateError as Error,
+        algorithm::DigestAlgorithm, asn1time::Time, rfc3280::Name, rfc5280, rfc8017::RsaPublicKey,
+        signing::Sign, InMemorySigningKeyPair, KeyAlgorithm, SignatureAlgorithm,
+        X509CertificateError as Error,
     },
     bcder::{
         decode::Constructed,
@@ -268,6 +269,21 @@ impl X509Certificate {
             .subject_public_key_info
             .subject_public_key
             .octet_bytes()
+    }
+
+    /// Attempt to parse the public key data as [RsaPublicKey] parameters.
+    ///
+    /// Note that the raw integer value for modulus has a leading 0 byte. So its
+    /// raw length will be 1 greater than key length. e.g. an RSA 2048 key will
+    /// have `value.modulus.as_slice().len() == 257` instead of `256`.
+    pub fn rsa_public_key_data(&self) -> Result<RsaPublicKey, Error> {
+        let der = self.public_key_data();
+
+        Ok(Constructed::decode(
+            der.as_ref(),
+            Mode::Der,
+            RsaPublicKey::take_from,
+        )?)
     }
 
     /// Compare 2 instances, sorting them so the issuer comes before the issued.
