@@ -29,7 +29,7 @@ pub trait Sign {
     ///
     /// Instances can be coerced into the ASN.1 `AlgorithmIdentifier` via `.into()`
     /// for easy inclusion in ASN.1 structures.
-    fn signature_algorithm(&self) -> SignatureAlgorithm;
+    fn signature_algorithm(&self) -> Result<SignatureAlgorithm, Error>;
 }
 
 /// Represents a key pair that exists in memory and can be used to create cryptographic signatures.
@@ -67,25 +67,25 @@ impl Sign for InMemorySigningKeyPair {
                 )
                 .map_err(|_| Error::SignatureCreationInMemoryKey)?;
 
-                Ok((signature, self.signature_algorithm()))
+                Ok((signature, self.signature_algorithm()?))
             }
             Self::Ecdsa(key, _) => {
                 let signature = key
                     .sign(&ring::rand::SystemRandom::new(), message.as_ref())
                     .map_err(|_| Error::SignatureCreationInMemoryKey)?;
 
-                Ok((signature.as_ref().to_vec(), self.signature_algorithm()))
+                Ok((signature.as_ref().to_vec(), self.signature_algorithm()?))
             }
             Self::Ed25519(key) => {
                 let signature = key.sign(message.as_ref());
 
-                Ok((signature.as_ref().to_vec(), self.signature_algorithm()))
+                Ok((signature.as_ref().to_vec(), self.signature_algorithm()?))
             }
         }
     }
 
-    fn signature_algorithm(&self) -> SignatureAlgorithm {
-        match self {
+    fn signature_algorithm(&self) -> Result<SignatureAlgorithm, Error> {
+        Ok(match self {
             Self::Rsa(_) => SignatureAlgorithm::RsaSha256,
             Self::Ecdsa(_, curve) => {
                 // ring refuses to mix and match the bitness of curves and signature
@@ -97,7 +97,7 @@ impl Sign for InMemorySigningKeyPair {
                 }
             }
             Self::Ed25519(_) => SignatureAlgorithm::Ed25519,
-        }
+        })
     }
 }
 
@@ -186,11 +186,13 @@ impl InMemorySigningKeyPair {
     /// with our bound [KeyAlgorithm]. However, since there are no parameters
     /// that can result in wrong choices, this is guaranteed to always work
     /// and doesn't require `Result`.
-    pub fn verification_algorithm(&self) -> &'static dyn signature::VerificationAlgorithm {
-        self.signature_algorithm()
+    pub fn verification_algorithm(
+        &self,
+    ) -> Result<&'static dyn signature::VerificationAlgorithm, Error> {
+        Ok(self.signature_algorithm()?
             .resolve_verification_algorithm(self.key_algorithm()).expect(
             "illegal combination of key algorithm in signature algorithm: this should not occur"
-        )
+        ))
     }
 }
 
@@ -378,8 +380,10 @@ mod test {
 
         let (signature, _) = key.sign(message).unwrap();
 
-        let public_key =
-            UnparsedPublicKey::new(key.verification_algorithm(), cert.public_key_data());
+        let public_key = UnparsedPublicKey::new(
+            key.verification_algorithm().unwrap(),
+            cert.public_key_data(),
+        );
 
         public_key.verify(message, &signature).unwrap();
     }

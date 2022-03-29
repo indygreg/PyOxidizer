@@ -8,6 +8,7 @@
 * Defined a new ``Sign`` trait to indicate support for cryptographic signing.
   ``InMemorySigningKeyPair`` implements this trait and callers may need to
   ``use x509_certificate::Sign`` to pull the trait into scope.
+* Some functions for resolving algorithm identifiers now return ``Result``.
 
 0.11.0
 ======

@@ -82,8 +82,8 @@ impl<'a> SignerBuilder<'a> {
     }
 
     /// Obtain the signature algorithm used by the signing key.
-    pub fn signature_algorithm(&self) -> SignatureAlgorithm {
-        self.signing_key.signature_algorithm()
+    pub fn signature_algorithm(&self) -> Result<SignatureAlgorithm, CmsError> {
+        Ok(self.signing_key.signature_algorithm()?)
     }
 
     /// Define the content to use to calculate the `message-id` attribute.
@@ -300,7 +300,7 @@ impl<'a> SignedDataBuilder<'a> {
 
             let signed_attributes = Some(signed_attributes);
 
-            let signature_algorithm = signer.signature_algorithm().into();
+            let signature_algorithm = signer.signature_algorithm()?.into();
 
             // The function for computing the signed attributes digested content
             // is on SignerInfo. So construct an instance so we can compute the
