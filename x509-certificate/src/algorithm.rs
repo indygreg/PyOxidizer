@@ -362,6 +362,20 @@ impl SignatureAlgorithm {
             },
         }
     }
+
+    /// Resolve the [DigestAlgorithm] for this signature algorithm.
+    pub fn digest_algorithm(&self) -> Option<DigestAlgorithm> {
+        match self {
+            SignatureAlgorithm::RsaSha1 => Some(DigestAlgorithm::Sha1),
+            SignatureAlgorithm::RsaSha256 => Some(DigestAlgorithm::Sha256),
+            SignatureAlgorithm::RsaSha384 => Some(DigestAlgorithm::Sha384),
+            SignatureAlgorithm::RsaSha512 => Some(DigestAlgorithm::Sha512),
+            SignatureAlgorithm::EcdsaSha256 => Some(DigestAlgorithm::Sha256),
+            SignatureAlgorithm::EcdsaSha384 => Some(DigestAlgorithm::Sha384),
+            // TODO there's got to be a digest algorithm, right?
+            SignatureAlgorithm::Ed25519 => None,
+        }
+    }
 }
 
 impl Display for SignatureAlgorithm {
