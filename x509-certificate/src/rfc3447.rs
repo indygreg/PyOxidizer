@@ -68,7 +68,7 @@ impl Values for DigestInfo {
 ///     coefficient       INTEGER   -- ti
 /// }
 /// ```
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct OtherPrimeInfo {
     pub ri: Unsigned,
     pub di: Unsigned,
@@ -110,7 +110,7 @@ impl Values for OtherPrimeInfo {
 /// ```asn.1
 /// OtherPrimeInfos ::= SEQUENCE SIZE(1..MAX) OF OtherPrimeInfo
 /// ```
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct OtherPrimeInfos(Vec<OtherPrimeInfo>);
 
 impl Deref for OtherPrimeInfos {
@@ -177,7 +177,7 @@ impl Values for OtherPrimeInfos {
 ///     otherPrimeInfos   OtherPrimeInfos OPTIONAL
 /// }
 /// ```
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct RsaPrivateKey {
     pub version: Unsigned,
     pub n: Unsigned,

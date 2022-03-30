@@ -59,9 +59,7 @@ const X509_CERTIFICATE: &str = "-----BEGIN CERTIFICATE-----\n\
 pub fn rsa_private_key() -> InMemorySigningKeyPair {
     let key_der = pem::parse(RSA_PRIVATE_KEY.as_bytes()).unwrap();
 
-    InMemorySigningKeyPair::from(
-        ring::signature::RsaKeyPair::from_pkcs8(&key_der.contents).unwrap(),
-    )
+    InMemorySigningKeyPair::from_pkcs8_der(&key_der.contents).unwrap()
 }
 
 pub fn rsa_cert() -> CapturedX509Certificate {

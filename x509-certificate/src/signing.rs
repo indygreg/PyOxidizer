@@ -4,8 +4,8 @@
 
 use {
     crate::{
-        rfc5958::OneAsymmetricKey, EcdsaCurve, KeyAlgorithm, SignatureAlgorithm,
-        X509CertificateError as Error,
+        rfc3447::RsaPrivateKey, rfc5958::OneAsymmetricKey, EcdsaCurve, KeyAlgorithm,
+        SignatureAlgorithm, X509CertificateError as Error,
     },
     bcder::decode::Constructed,
     ring::{
@@ -45,7 +45,7 @@ pub enum InMemorySigningKeyPair {
     Ed25519(signature::Ed25519KeyPair),
 
     /// RSA key pair.
-    Rsa(signature::RsaKeyPair),
+    Rsa(signature::RsaKeyPair, RsaPrivateKey),
 }
 
 impl Sign for InMemorySigningKeyPair {
@@ -56,7 +56,7 @@ impl Sign for InMemorySigningKeyPair {
     /// underlying ring keypair and call its `.sign()`.
     fn sign(&self, message: &[u8]) -> Result<(Vec<u8>, SignatureAlgorithm), Error> {
         match self {
-            Self::Rsa(key) => {
+            Self::Rsa(key, _) => {
                 let mut signature = vec![0; key.public_modulus_len()];
 
                 key.sign(
@@ -86,7 +86,7 @@ impl Sign for InMemorySigningKeyPair {
 
     fn signature_algorithm(&self) -> Result<SignatureAlgorithm, Error> {
         Ok(match self {
-            Self::Rsa(_) => SignatureAlgorithm::RsaSha256,
+            Self::Rsa(_, _) => SignatureAlgorithm::RsaSha256,
             Self::Ecdsa(_, curve) => {
                 // ring refuses to mix and match the bitness of curves and signature
                 // algorithms. e.g. it can't pair secp256r1 with SHA-384. It chooses
@@ -116,7 +116,17 @@ impl InMemorySigningKeyPair {
         // self.key_algorithm() assumes a 1:1 mapping between KeyAlgorithm and our enum
         // variants. If you change this, change that function as well.
         match algorithm {
-            KeyAlgorithm::Rsa => Ok(Self::Rsa(signature::RsaKeyPair::from_pkcs8(data.as_ref())?)),
+            KeyAlgorithm::Rsa => {
+                let pair = signature::RsaKeyPair::from_pkcs8(data.as_ref())?;
+
+                let private_key = Constructed::decode(
+                    key.private_key.into_bytes().as_ref(),
+                    bcder::Mode::Der,
+                    |cons| RsaPrivateKey::take_from(cons),
+                )?;
+
+                Ok(Self::Rsa(pair, private_key))
+            }
             KeyAlgorithm::Ecdsa(curve) => Ok(Self::Ecdsa(
                 signature::EcdsaKeyPair::from_pkcs8(curve.into(), data.as_ref())?,
                 curve,
@@ -165,7 +175,7 @@ impl InMemorySigningKeyPair {
     /// Obtain the raw bytes constituting the key pair's public key.
     pub fn public_key_data(&self) -> &[u8] {
         match self {
-            Self::Rsa(key) => key.public_key().as_ref(),
+            Self::Rsa(key, _) => key.public_key().as_ref(),
             Self::Ecdsa(key, _) => key.public_key().as_ref(),
             Self::Ed25519(key) => key.public_key().as_ref(),
         }
@@ -174,7 +184,7 @@ impl InMemorySigningKeyPair {
     /// Obtain the [KeyAlgorithm] in use by this instance.
     pub fn key_algorithm(&self) -> KeyAlgorithm {
         match self {
-            Self::Rsa(_) => KeyAlgorithm::Rsa,
+            Self::Rsa(_, _) => KeyAlgorithm::Rsa,
             Self::Ed25519(_) => KeyAlgorithm::Ed25519,
             Self::Ecdsa(_, curve) => KeyAlgorithm::Ecdsa(*curve),
         }
@@ -205,16 +215,10 @@ impl From<signature::Ed25519KeyPair> for InMemorySigningKeyPair {
     }
 }
 
-impl From<signature::RsaKeyPair> for InMemorySigningKeyPair {
-    fn from(key: signature::RsaKeyPair) -> Self {
-        Self::Rsa(key)
-    }
-}
-
 impl From<&InMemorySigningKeyPair> for KeyAlgorithm {
     fn from(key: &InMemorySigningKeyPair) -> Self {
         match key {
-            InMemorySigningKeyPair::Rsa(_) => KeyAlgorithm::Rsa,
+            InMemorySigningKeyPair::Rsa(_, _) => KeyAlgorithm::Rsa,
             InMemorySigningKeyPair::Ecdsa(_, curve) => KeyAlgorithm::Ecdsa(*curve),
             InMemorySigningKeyPair::Ed25519(_) => KeyAlgorithm::Ed25519,
         }
