@@ -21,6 +21,59 @@ use {
     zeroize::Zeroizing,
 };
 
+/// A function that will attempt to resolve the PIN to unlock a YubiKey.
+pub type PinCallback = fn() -> Result<Vec<u8>, AppleCodesignError>;
+
+fn attempt_authenticated_operation<T>(
+    yk: &mut RawYubiKey,
+    op: impl Fn(&mut RawYubiKey) -> Result<T, AppleCodesignError>,
+    get_device_pin: Option<&PinCallback>,
+) -> Result<T, AppleCodesignError> {
+    const MAX_ATTEMPTS: u8 = 3;
+
+    for attempt in 1..MAX_ATTEMPTS + 1 {
+        warn!("attempt {}/{}", attempt, MAX_ATTEMPTS);
+
+        match op(yk) {
+            Ok(x) => {
+                return Ok(x);
+            }
+            Err(AppleCodesignError::YubiKey(YkError::AuthenticationError)) => {
+                // This was our last attempt. Give up now.
+                if attempt == MAX_ATTEMPTS {
+                    return Err(AppleCodesignError::SmartcardFailedAuthentication);
+                }
+
+                warn!("device refused to sign due to authentication error");
+
+                if let Some(pin_cb) = get_device_pin {
+                    let pin = Zeroizing::new(pin_cb().map_err(|e| {
+                        X509CertificateError::Other(format!("error retrieving device pin: {}", e))
+                    })?);
+
+                    match yk.verify_pin(&pin) {
+                        Ok(()) => {
+                            warn!("pin verification successful");
+                        }
+                        Err(e) => {
+                            warn!("pin verification failure: {}", e);
+                            continue;
+                        }
+                    }
+                } else {
+                    warn!("unable to retrieve device pin; future attempts will fail; giving up");
+                    return Err(AppleCodesignError::SmartcardFailedAuthentication);
+                }
+            }
+            Err(e) => {
+                return Err(e);
+            }
+        }
+    }
+
+    Err(AppleCodesignError::SmartcardFailedAuthentication)
+}
+
 /// Represents a connection to a yubikey device.
 pub struct YubiKey {
     yk: Arc<Mutex<RawYubiKey>>,
@@ -95,7 +148,7 @@ pub struct CertificateSigner {
     yk: Arc<Mutex<RawYubiKey>>,
     slot: SlotId,
     cert: CapturedX509Certificate,
-    get_device_pin: Option<Box<dyn Fn() -> Result<Vec<u8>, AppleCodesignError>>>,
+    get_device_pin: Option<PinCallback>,
 }
 
 impl Sign for CertificateSigner {
@@ -159,69 +212,19 @@ impl Sign for CertificateSigner {
 
         let yk = guard.deref_mut();
 
-        const SIGN_ATTEMPTS: u8 = 3;
+        warn!("initial signing attempt may fail if the certificate requires a pin to unlock");
 
-        for attempt in 1..SIGN_ATTEMPTS + 1 {
-            warn!("sign attempt {}/{}", attempt, SIGN_ATTEMPTS);
-            if attempt == 1 {
-                warn!(
-                    "initial signing attempt may fail if the certificate requires a pin to unlock"
-                );
-            }
+        attempt_authenticated_operation(
+            yk,
+            |yk| {
+                let signature = ::yubikey::piv::sign_data(yk, &digest, algorithm_id, self.slot)
+                    .map_err(AppleCodesignError::YubiKey)?;
 
-            match ::yubikey::piv::sign_data(yk, &digest, algorithm_id, self.slot) {
-                Ok(signature) => {
-                    warn!("successful signature from YubiKey");
-                    return Ok((signature.to_vec(), signature_algorithm));
-                }
-                Err(YkError::AuthenticationError) => {
-                    // This was our last attempt. Give up now.
-                    if attempt == SIGN_ATTEMPTS {
-                        return Err(X509CertificateError::Other(
-                            "failed to authenticate with YubiKey".into(),
-                        ));
-                    }
-
-                    warn!("device refused to sign due to authentication error");
-
-                    if let Some(cb) = &self.get_device_pin {
-                        let pin = Zeroizing::new(cb.as_ref()().map_err(|e| {
-                            X509CertificateError::Other(format!(
-                                "error retrieving device pin: {}",
-                                e
-                            ))
-                        })?);
-
-                        match yk.verify_pin(&pin) {
-                            Ok(()) => {
-                                warn!("pin verification successful");
-                            }
-                            Err(e) => {
-                                warn!("pin verification failure: {}", e);
-                                continue;
-                            }
-                        }
-                    } else {
-                        warn!(
-                            "unable to retrieve device pin; future attempts will fail; giving up"
-                        );
-                        return Err(X509CertificateError::Other(
-                            "unable to authenticate with YubiKey".into(),
-                        ));
-                    }
-                }
-                Err(e) => {
-                    return Err(X509CertificateError::Other(format!(
-                        "YubiKey signing failure: {}",
-                        e
-                    )));
-                }
-            }
-        }
-
-        Err(X509CertificateError::Other(
-            "could not complete signing operation using smartcard".into(),
-        ))
+                Ok((signature.to_vec(), signature_algorithm))
+            },
+            self.get_device_pin.as_ref(),
+        )
+        .map_err(|e| X509CertificateError::Other(format!("code sign error: {:?}", e)))
     }
 
     fn signature_algorithm(&self) -> Result<SignatureAlgorithm, X509CertificateError> {
@@ -235,7 +238,7 @@ impl Sign for CertificateSigner {
 }
 
 impl CertificateSigner {
-    pub fn set_pin_callback(&mut self, cb: Box<dyn Fn() -> Result<Vec<u8>, AppleCodesignError>>) {
+    pub fn set_pin_callback(&mut self, cb: PinCallback) {
         self.get_device_pin = Some(cb);
     }
 

@@ -669,7 +669,7 @@ fn handle_smartcard_sign_slot(
 
     if let Some(mut cert) = yk.get_certificate_signer(slot_id)? {
         warn!("using certificate in smartcard slot {}", formatted);
-        cert.set_pin_callback(Box::new(prompt_smartcard_pin));
+        cert.set_pin_callback(prompt_smartcard_pin);
         public_certificates.push(cert.certificate().clone());
         private_keys.push(Box::new(cert));
 

@@ -320,6 +320,9 @@ pub enum AppleCodesignError {
     #[error("failed to find certificate in smartcard slot {0}")]
     SmartcardNoCertificate(String),
 
+    #[error("failed to authenticate with smartcard device")]
+    SmartcardFailedAuthentication,
+
     #[cfg(feature = "yubikey")]
     #[error("YubiKey error: {0}")]
     YubiKey(#[from] yubikey::Error),
