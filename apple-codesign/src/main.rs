@@ -82,6 +82,9 @@ use {
     },
 };
 
+#[cfg(feature = "yubikey")]
+use crate::yubikey::YubiKey;
+
 #[cfg(target_os = "macos")]
 use crate::macos::{macos_keychain_find_certificate_chain, KeychainDomain};
 
@@ -665,7 +668,7 @@ fn handle_smartcard_sign_slot(
 ) -> Result<(), AppleCodesignError> {
     let slot_id = ::yubikey::piv::SlotId::from_str(slot)?;
     let formatted = hex::encode([u8::from(slot_id)]);
-    let mut yk = yubikey::YubiKey::from(::yubikey::YubiKey::open()?);
+    let mut yk = YubiKey::new()?;
     yk.set_pin_callback(prompt_smartcard_pin);
 
     if let Some(cert) = yk.get_certificate_signer(slot_id)? {

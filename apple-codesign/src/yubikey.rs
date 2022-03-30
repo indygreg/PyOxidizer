@@ -90,6 +90,16 @@ impl From<RawYubiKey> for YubiKey {
 }
 
 impl YubiKey {
+    /// Construct a new instance.
+    pub fn new() -> Result<Self, AppleCodesignError> {
+        let yk = Arc::new(Mutex::new(RawYubiKey::open()?));
+
+        Ok(Self {
+            yk,
+            pin_callback: None,
+        })
+    }
+
     /// Set a callback function to be used for retrieving the PIN.
     pub fn set_pin_callback(&mut self, cb: PinCallback) {
         self.pin_callback = Some(cb);
