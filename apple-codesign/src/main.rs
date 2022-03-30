@@ -382,11 +382,15 @@ you must specify a source certificate to use. This can be done in the following
 ways:
 
 * The --p12-file denotes the location to a PFX formatted file. These are
-  often .pfx or .p12 files. Remember to specify --p12-password or
-  --p12-password-path so an appropriate password is
-  used to read the PFX file.
+  often .pfx or .p12 files. A password is required to open these files.
+  Specify one via --p12-password or --p12-password-file or enter a password
+  when prompted.
 * The --pem-source argument defines paths to files containing PEM encoded
   certificate/key data. (e.g. files with \"===== BEGIN CERTIFICATE =====\").
+* The --source-source argument defines paths to files containiner DER
+  encoded certificate/key data.
+* The --smartcard-slot argument defines the name of a slot in a connected
+  smartcard device to read from. `9c` is common.
 
 If you export a code signing certificate from the macOS keychain via the
 `Keychain Access` application as a .p12 file, we should be able to read these
@@ -519,8 +523,9 @@ fn collect_certificates_from_args(
                 .expect("should get a single line")
                 .to_string()
         } else {
-            error!("--p12-password or --p12-password-file must be specified");
-            return Err(AppleCodesignError::CliBadArgument);
+            dialoguer::Password::new()
+                .with_prompt("Please enter password for p12 file")
+                .interact()?
         };
 
         let (cert, key) = parse_pfx_data(&p12_data, &p12_password)?;
