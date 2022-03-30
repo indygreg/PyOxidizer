@@ -30,6 +30,12 @@ pub trait Sign {
     /// Instances can be coerced into the ASN.1 `AlgorithmIdentifier` via `.into()`
     /// for easy inclusion in ASN.1 structures.
     fn signature_algorithm(&self) -> Result<SignatureAlgorithm, Error>;
+
+    /// Obtain the raw private key data.
+    fn private_key_data(&self) -> Option<&[u8]>;
+
+    /// Obtain RSA key primes p and q, if available.
+    fn rsa_primes(&self) -> Result<Option<(Vec<u8>, Vec<u8>)>, Error>;
 }
 
 /// Represents a key pair that exists in memory and can be used to create cryptographic signatures.
@@ -39,13 +45,13 @@ pub trait Sign {
 #[derive(Debug)]
 pub enum InMemorySigningKeyPair {
     /// ECDSA key pair.
-    Ecdsa(signature::EcdsaKeyPair, EcdsaCurve),
+    Ecdsa(signature::EcdsaKeyPair, EcdsaCurve, Vec<u8>),
 
     /// ED25519 key pair.
     Ed25519(signature::Ed25519KeyPair),
 
     /// RSA key pair.
-    Rsa(signature::RsaKeyPair, RsaPrivateKey),
+    Rsa(signature::RsaKeyPair, Vec<u8>),
 }
 
 impl Sign for InMemorySigningKeyPair {
@@ -69,7 +75,7 @@ impl Sign for InMemorySigningKeyPair {
 
                 Ok((signature, self.signature_algorithm()?))
             }
-            Self::Ecdsa(key, _) => {
+            Self::Ecdsa(key, _, _) => {
                 let signature = key
                     .sign(&ring::rand::SystemRandom::new(), message.as_ref())
                     .map_err(|_| Error::SignatureCreationInMemoryKey)?;
@@ -87,7 +93,7 @@ impl Sign for InMemorySigningKeyPair {
     fn signature_algorithm(&self) -> Result<SignatureAlgorithm, Error> {
         Ok(match self {
             Self::Rsa(_, _) => SignatureAlgorithm::RsaSha256,
-            Self::Ecdsa(_, curve) => {
+            Self::Ecdsa(_, curve, _) => {
                 // ring refuses to mix and match the bitness of curves and signature
                 // algorithms. e.g. it can't pair secp256r1 with SHA-384. It chooses
                 // signatures on its own. We reimplement that logic here.
@@ -98,6 +104,28 @@ impl Sign for InMemorySigningKeyPair {
             }
             Self::Ed25519(_) => SignatureAlgorithm::Ed25519,
         })
+    }
+
+    fn private_key_data(&self) -> Option<&[u8]> {
+        match self {
+            Self::Rsa(_, data) => Some(data),
+            Self::Ecdsa(_, _, data) => Some(data),
+            Self::Ed25519(_) => None,
+        }
+    }
+
+    fn rsa_primes(&self) -> Result<Option<(Vec<u8>, Vec<u8>)>, Error> {
+        match self {
+            Self::Rsa(_, data) => {
+                let key = Constructed::decode(data.as_ref(), bcder::Mode::Der, |cons| {
+                    RsaPrivateKey::take_from(cons)
+                })?;
+
+                Ok(Some((key.p.as_slice().to_vec(), key.q.as_slice().to_vec())))
+            }
+            Self::Ecdsa(..) => Ok(None),
+            Self::Ed25519(_) => Ok(None),
+        }
     }
 }
 
@@ -119,18 +147,13 @@ impl InMemorySigningKeyPair {
             KeyAlgorithm::Rsa => {
                 let pair = signature::RsaKeyPair::from_pkcs8(data.as_ref())?;
 
-                let private_key = Constructed::decode(
-                    key.private_key.into_bytes().as_ref(),
-                    bcder::Mode::Der,
-                    |cons| RsaPrivateKey::take_from(cons),
-                )?;
-
-                Ok(Self::Rsa(pair, private_key))
+                Ok(Self::Rsa(pair, key.private_key.into_bytes().to_vec()))
             }
-            KeyAlgorithm::Ecdsa(curve) => Ok(Self::Ecdsa(
-                signature::EcdsaKeyPair::from_pkcs8(curve.into(), data.as_ref())?,
-                curve,
-            )),
+            KeyAlgorithm::Ecdsa(curve) => {
+                let pair = signature::EcdsaKeyPair::from_pkcs8(curve.into(), data.as_ref())?;
+
+                Ok(Self::Ecdsa(pair, curve, data.as_ref().to_vec()))
+            }
             KeyAlgorithm::Ed25519 => Ok(Self::Ed25519(signature::Ed25519KeyPair::from_pkcs8(
                 data.as_ref(),
             )?)),
@@ -176,7 +199,7 @@ impl InMemorySigningKeyPair {
     pub fn public_key_data(&self) -> &[u8] {
         match self {
             Self::Rsa(key, _) => key.public_key().as_ref(),
-            Self::Ecdsa(key, _) => key.public_key().as_ref(),
+            Self::Ecdsa(key, _, _) => key.public_key().as_ref(),
             Self::Ed25519(key) => key.public_key().as_ref(),
         }
     }
@@ -186,7 +209,7 @@ impl InMemorySigningKeyPair {
         match self {
             Self::Rsa(_, _) => KeyAlgorithm::Rsa,
             Self::Ed25519(_) => KeyAlgorithm::Ed25519,
-            Self::Ecdsa(_, curve) => KeyAlgorithm::Ecdsa(*curve),
+            Self::Ecdsa(_, curve, _) => KeyAlgorithm::Ecdsa(*curve),
         }
     }
 
@@ -219,7 +242,7 @@ impl From<&InMemorySigningKeyPair> for KeyAlgorithm {
     fn from(key: &InMemorySigningKeyPair) -> Self {
         match key {
             InMemorySigningKeyPair::Rsa(_, _) => KeyAlgorithm::Rsa,
-            InMemorySigningKeyPair::Ecdsa(_, curve) => KeyAlgorithm::Ecdsa(*curve),
+            InMemorySigningKeyPair::Ecdsa(_, curve, _) => KeyAlgorithm::Ecdsa(*curve),
             InMemorySigningKeyPair::Ed25519(_) => KeyAlgorithm::Ed25519,
         }
     }
@@ -257,7 +280,10 @@ mod test {
             let doc = ring::signature::EcdsaKeyPair::generate_pkcs8(alg, &rng).unwrap();
 
             let signing_key = InMemorySigningKeyPair::from_pkcs8_der(doc.as_ref()).unwrap();
-            assert!(matches!(signing_key, InMemorySigningKeyPair::Ecdsa(_, _)));
+            assert!(matches!(
+                signing_key,
+                InMemorySigningKeyPair::Ecdsa(_, _, _)
+            ));
 
             let pem_data = pem::encode(&pem::Pem {
                 tag: "PRIVATE KEY".to_string(),
@@ -265,7 +291,10 @@ mod test {
             });
 
             let signing_key = InMemorySigningKeyPair::from_pkcs8_pem(pem_data.as_bytes()).unwrap();
-            assert!(matches!(signing_key, InMemorySigningKeyPair::Ecdsa(_, _)));
+            assert!(matches!(
+                signing_key,
+                InMemorySigningKeyPair::Ecdsa(_, _, _)
+            ));
 
             let key_pair_asn1 = Constructed::decode(doc.as_ref(), bcder::Mode::Der, |cons| {
                 OneAsymmetricKey::take_from(cons)

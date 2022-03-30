@@ -83,7 +83,10 @@ use {
 };
 
 #[cfg(feature = "yubikey")]
-use crate::yubikey::YubiKey;
+use {
+    crate::yubikey::YubiKey,
+    ::yubikey::{PinPolicy, TouchPolicy},
+};
 
 #[cfg(target_os = "macos")]
 use crate::macos::{macos_keychain_find_certificate_chain, KeychainDomain};
@@ -499,6 +502,7 @@ fn add_certificate_source_args(app: Command) -> Command {
 
 fn collect_certificates_from_args(
     args: &ArgMatches,
+    scan_smartcard: bool,
 ) -> Result<(Vec<Box<dyn Sign>>, Vec<CapturedX509Certificate>), AppleCodesignError> {
     let mut keys: Vec<Box<dyn Sign>> = vec![];
     let mut certs = vec![];
@@ -553,8 +557,10 @@ fn collect_certificates_from_args(
         }
     }
 
-    if let Some(slot) = args.value_of("smartcard_slot") {
-        handle_smartcard_sign_slot(slot, &mut keys, &mut certs)?;
+    if scan_smartcard {
+        if let Some(slot) = args.value_of("smartcard_slot") {
+            handle_smartcard_sign_slot(slot, &mut keys, &mut certs)?;
+        }
     }
 
     Ok((keys, certs))
@@ -575,6 +581,46 @@ fn add_notarization_upload_args(app: Command) -> Command {
             .requires("api_issuer")
             .help("App Store Connect API Key ID"),
     )
+}
+
+fn add_yubikey_policy_args(app: Command) -> Command {
+    app.arg(
+        Arg::new("touch_policy")
+            .long("touch-policy")
+            .takes_value(true)
+            .possible_values(["default", "always", "never", "cached"])
+            .default_value("default")
+            .help("Smartcard touch policy to protect key access"),
+    )
+    .arg(
+        Arg::new("pin_policy")
+            .long("pin-policy")
+            .takes_value(true)
+            .possible_values(["default", "never", "once", "always"])
+            .default_value("default")
+            .help("Smartcard pin prompt policy to protect key access"),
+    )
+}
+
+#[cfg(feature = "yubikey")]
+fn str_to_touch_policy(s: &str) -> Result<TouchPolicy, AppleCodesignError> {
+    match s {
+        "default" => Ok(TouchPolicy::Default),
+        "never" => Ok(TouchPolicy::Never),
+        "always" => Ok(TouchPolicy::Always),
+        "cached" => Ok(TouchPolicy::Cached),
+        _ => Err(AppleCodesignError::CliBadArgument),
+    }
+}
+
+fn str_to_pin_policy(s: &str) -> Result<PinPolicy, AppleCodesignError> {
+    match s {
+        "default" => Ok(PinPolicy::Default),
+        "never" => Ok(PinPolicy::Never),
+        "once" => Ok(PinPolicy::Once),
+        "always" => Ok(PinPolicy::Always),
+        _ => Err(AppleCodesignError::CliBadArgument),
+    }
 }
 
 fn print_certificate_info(cert: &CapturedX509Certificate) -> Result<(), AppleCodesignError> {
@@ -694,7 +740,7 @@ fn handle_smartcard_sign_slot(
 }
 
 fn command_analyze_certificate(args: &ArgMatches) -> Result<(), AppleCodesignError> {
-    let certs = collect_certificates_from_args(args)?.1;
+    let certs = collect_certificates_from_args(args, true)?.1;
 
     for (i, cert) in certs.into_iter().enumerate() {
         println!("# Certificate {}", i);
@@ -1528,7 +1574,7 @@ fn command_print_signature_info(args: &ArgMatches) -> Result<(), AppleCodesignEr
 fn command_sign(args: &ArgMatches) -> Result<(), AppleCodesignError> {
     let mut settings = SigningSettings::default();
 
-    let (private_keys, mut public_certificates) = collect_certificates_from_args(args)?;
+    let (private_keys, mut public_certificates) = collect_certificates_from_args(args, true)?;
 
     if private_keys.len() > 1 {
         error!("at most 1 PRIVATE KEY can be present; aborting");
@@ -1550,7 +1596,7 @@ fn command_sign(args: &ArgMatches) -> Result<(), AppleCodesignError> {
         let cert = public_certificates.remove(0);
 
         warn!("registering signing key");
-        settings.set_signing_key(signing_key.as_ref() as &dyn Sign, cert);
+        settings.set_signing_key(signing_key.as_ref(), cert);
         if let Some(certs) = settings.chain_apple_certificates() {
             for cert in certs {
                 warn!(
@@ -1721,6 +1767,66 @@ fn command_smartcard_scan(_args: &ArgMatches) -> Result<(), AppleCodesignError> 
 #[cfg(not(feature = "yubikey"))]
 fn command_smartcard_scan(_args: &ArgMatches) -> Result<(), AppleCodesignError> {
     eprintln!("smartcard reading requires the `yubikey` crate feature, which isn't enabled.");
+    eprintln!("recompile the crate with `cargo build --features yubikey` to enable support");
+    std::process::exit(1);
+}
+
+#[cfg(feature = "yubikey")]
+fn command_smartcard_import(args: &ArgMatches) -> Result<(), AppleCodesignError> {
+    let (keys, certs) = collect_certificates_from_args(args, false)?;
+
+    let slot_id =
+        ::yubikey::piv::SlotId::from_str(args.value_of("smartcard_slot").ok_or_else(|| {
+            error!("--smartcard-slot is required");
+            AppleCodesignError::CliBadArgument
+        })?)?;
+
+    let touch_policy = str_to_touch_policy(
+        args.value_of("touch_policy")
+            .expect("touch_policy argument is required"),
+    )?;
+    let pin_policy = str_to_pin_policy(
+        args.value_of("pin_policy")
+            .expect("pin_policy argument is required"),
+    )?;
+
+    println!(
+        "found {} private keys and {} public certificates",
+        keys.len(),
+        certs.len()
+    );
+
+    let key = keys.into_iter().next().ok_or_else(|| {
+        println!("no private key found");
+        AppleCodesignError::CliBadArgument
+    })?;
+    let cert = certs.into_iter().next().ok_or_else(|| {
+        println!("no public certificates found");
+        AppleCodesignError::CliBadArgument
+    })?;
+
+    println!(
+        "Will import the following certificate into slot {}",
+        hex::encode([u8::from(slot_id)])
+    );
+    print_certificate_info(&cert)?;
+
+    let mut yk = YubiKey::new()?;
+    yk.set_pin_callback(prompt_smartcard_pin);
+
+    if args.is_present("dry_run") {
+        println!("dry run mode enabled; stopping");
+        return Ok(());
+    }
+
+    yk.import_key(slot_id, key.as_ref(), &cert, touch_policy, pin_policy)?;
+
+    Ok(())
+}
+
+#[cfg(not(feature = "yubikey"))]
+fn command_smartcard_import(_args: &ArgMatches) -> Result<(), AppleCodesignError> {
+    eprintln!("smartcard import requires `yubikey` crate feature, which isn't enabled.");
     eprintln!("recompile the crate with `cargo build --features yubikey` to enable support");
     std::process::exit(1);
 }
@@ -2049,6 +2155,16 @@ fn main_impl() -> Result<(), AppleCodesignError> {
             Command::new("smartcard-scan")
                 .about("Show information about available smartcard (SC) devices"),
         );
+
+        app = app.subcommand(add_yubikey_policy_args(add_certificate_source_args(
+            Command::new("smartcard-import")
+                .about("Import a code signing certificate and key into a smartcard")
+                .arg(
+                    Arg::new("dry_run")
+                        .long("dry-run")
+                        .help("Don't actually perform the import"),
+                ),
+        )));
     }
 
     let app = app
@@ -2198,6 +2314,7 @@ fn main_impl() -> Result<(), AppleCodesignError> {
         Some(("print-signature-info", args)) => command_print_signature_info(args),
         Some(("sign", args)) => command_sign(args),
         Some(("smartcard-scan", args)) => command_smartcard_scan(args),
+        Some(("smartcard-import", args)) => command_smartcard_import(args),
         Some(("staple", args)) => command_staple(args),
         Some(("verify", args)) => command_verify(args),
         Some(("x509-oids", args)) => command_x509_oids(args),

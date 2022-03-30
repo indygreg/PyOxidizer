@@ -10,9 +10,8 @@
   ``use x509_certificate::Sign`` to pull the trait into scope.
 * Some functions for resolving algorithm identifiers now return ``Result``.
 * Defined RFC 3447 ASN.1 types for representing RSA private keys.
-* ``InMemorySigningKeyPair::Rsa`` now holds the parsed RSA private key in
-  addition to ring's keypair. This allows you to gain access to private key
-  fields, such as the prime numbers used.
+* ``InMemorySigningKeyPair`` now holds the the raw private key data. This
+  enables the content to be retrieved later.
 
 0.11.0
 ======

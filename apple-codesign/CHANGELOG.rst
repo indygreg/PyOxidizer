@@ -15,6 +15,8 @@
   smartcards and certificates they have available for code signing.
 * ``rcodesign sign`` now accepts a ``--smartcard-slot`` argument to specify the
   slot number of a certificate to use when code signing.
+* A new ``rcodesign smartcard-import`` command can be used to import a code signing
+  certificate into a smartcard.
 
 0.10.0
 ======

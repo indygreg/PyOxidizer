@@ -52,7 +52,7 @@ uuid = { version = "0.8", features = ["v4"] }
 which = "4.2"
 xml-rs = "0.8"
 yasna = "0.5"
-yubikey = { version = "0.4", optional = true }
+yubikey = { version = "0.4", optional = true, features = ["untested"] }
 zeroize = "1.3"
 zip = "0.5"
 

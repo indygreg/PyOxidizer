@@ -24,6 +24,7 @@ from Linux and Windows without needing access to proprietary Apple software.
 
    apple_codesign_getting_started
    apple_codesign_rcodesign
+   apple_codesign_smartcard
    apple_codesign_concepts
    apple_codesign_gatekeeper
    apple_codesign_custom_assessment_policies
