@@ -17,6 +17,8 @@
   slot number of a certificate to use when code signing.
 * A new ``rcodesign smartcard-import`` command can be used to import a code signing
   certificate into a smartcard.
+* Fixed bug where ``--code-signature-flags``, `--executable-segment-flags``,
+  ``--runtime-version``, and ``--info-plist-path`` could only be specified once.
 
 0.10.0
 ======
