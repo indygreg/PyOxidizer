@@ -77,17 +77,24 @@ fn attempt_authenticated_operation<T>(
 /// Represents a connection to a yubikey device.
 pub struct YubiKey {
     yk: Arc<Mutex<RawYubiKey>>,
+    pin_callback: Option<PinCallback>,
 }
 
 impl From<RawYubiKey> for YubiKey {
     fn from(yk: RawYubiKey) -> Self {
         Self {
             yk: Arc::new(Mutex::new(yk)),
+            pin_callback: None,
         }
     }
 }
 
 impl YubiKey {
+    /// Set a callback function to be used for retrieving the PIN.
+    pub fn set_pin_callback(&mut self, cb: PinCallback) {
+        self.pin_callback = Some(cb);
+    }
+
     pub fn inner(&self) -> Result<MutexGuard<RawYubiKey>, AppleCodesignError> {
         self.yk.lock().map_err(|_| AppleCodesignError::PoisonedLock)
     }
@@ -132,7 +139,7 @@ impl YubiKey {
                         yk: self.yk.clone(),
                         slot: slot_id,
                         cert,
-                        get_device_pin: None,
+                        pin_callback: self.pin_callback.clone(),
                     })
                 } else {
                     None
@@ -148,7 +155,7 @@ pub struct CertificateSigner {
     yk: Arc<Mutex<RawYubiKey>>,
     slot: SlotId,
     cert: CapturedX509Certificate,
-    get_device_pin: Option<PinCallback>,
+    pin_callback: Option<PinCallback>,
 }
 
 impl Sign for CertificateSigner {
@@ -222,7 +229,7 @@ impl Sign for CertificateSigner {
 
                 Ok((signature.to_vec(), signature_algorithm))
             },
-            self.get_device_pin.as_ref(),
+            self.pin_callback.as_ref(),
         )
         .map_err(|e| X509CertificateError::Other(format!("code sign error: {:?}", e)))
     }
@@ -238,10 +245,6 @@ impl Sign for CertificateSigner {
 }
 
 impl CertificateSigner {
-    pub fn set_pin_callback(&mut self, cb: PinCallback) {
-        self.get_device_pin = Some(cb);
-    }
-
     pub fn slot(&self) -> SlotId {
         self.slot
     }

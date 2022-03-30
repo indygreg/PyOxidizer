@@ -666,10 +666,10 @@ fn handle_smartcard_sign_slot(
     let slot_id = ::yubikey::piv::SlotId::from_str(slot)?;
     let formatted = hex::encode([u8::from(slot_id)]);
     let mut yk = yubikey::YubiKey::from(::yubikey::YubiKey::open()?);
+    yk.set_pin_callback(prompt_smartcard_pin);
 
-    if let Some(mut cert) = yk.get_certificate_signer(slot_id)? {
+    if let Some(cert) = yk.get_certificate_signer(slot_id)? {
         warn!("using certificate in smartcard slot {}", formatted);
-        cert.set_pin_callback(prompt_smartcard_pin);
         public_certificates.push(cert.certificate().clone());
         private_keys.push(Box::new(cert));
 
