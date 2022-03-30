@@ -534,6 +534,10 @@ impl<'data> MachOSigner<'data> {
             }
         }
 
+        if let Some(flags) = exec_seg_flags {
+            info!("final executable segment flags: {:?}", flags);
+        }
+
         // The runtime version is the SDK version from the targeting loader commands. Same
         // u32 with nibbles encoding the version.
         //
