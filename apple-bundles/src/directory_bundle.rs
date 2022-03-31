@@ -225,7 +225,7 @@ impl DirectoryBundle {
             .collect::<Vec<_>>();
 
         Ok(walkdir::WalkDir::new(&self.root)
-            .sort_by(|a, b| a.file_name().cmp(b.file_name()))
+            .sort_by_file_name()
             .into_iter()
             .map(|entry| {
                 let entry = entry?;
@@ -269,7 +269,7 @@ impl DirectoryBundle {
     /// traversing directories when we encounter a bundle.
     pub fn nested_bundles(&self) -> Result<Vec<(String, Self)>> {
         Ok(walkdir::WalkDir::new(&self.root)
-            .sort_by(|a, b| a.file_name().cmp(b.file_name()))
+            .sort_by_file_name()
             .into_iter()
             .map(|entry| {
                 let entry = entry?;
