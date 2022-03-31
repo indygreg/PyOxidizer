@@ -19,6 +19,10 @@
   certificate into a smartcard.
 * Fixed bug where ``--code-signature-flags``, `--executable-segment-flags``,
   ``--runtime-version``, and ``--info-plist-path`` could only be specified once.
+* Resource files within shallow app bundles should now be handled correctly.
+  Previously, the rules applied when signing shallow app bundles (app bundles without
+  a ``Contents/`` directory) would be wrong and the produced signature would be
+  invalid. (#536)
 
 0.10.0
 ======
