@@ -585,10 +585,8 @@ impl TryFrom<&XarTocSignature> for XarSignature {
 pub struct XarFile {
     pub id: u64,
     pub file_type: String,
-    pub data_offset: Option<u64>,
     pub data_size: Option<u64>,
     pub data_length: Option<u64>,
-    pub data_end_offset: Option<u64>,
     pub data_extracted_checksum: Option<String>,
     pub data_archived_checksum: Option<String>,
     pub data_encoding: Option<String>,
@@ -614,10 +612,8 @@ impl TryFrom<&XarTocFile> for XarFile {
 
 impl XarFile {
     pub fn populate_data(&mut self, data: &apple_xar::table_of_contents::FileData) {
-        self.data_offset = Some(data.offset);
         self.data_size = Some(data.size);
         self.data_length = Some(data.length);
-        self.data_end_offset = Some(data.offset + data.length);
         self.data_extracted_checksum = Some(format!(
             "{}:{}",
             data.extracted_checksum.style, data.extracted_checksum.checksum
