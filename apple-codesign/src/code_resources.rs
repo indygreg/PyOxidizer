@@ -1070,8 +1070,6 @@ impl CodeResourcesBuilder {
             .unwrap_or(&relative_path)
             .to_string();
 
-        info!("processing {}", relative_path);
-
         let rule = match self.find_rule(relative_path.as_ref()) {
             Some(rule) => {
                 debug!(

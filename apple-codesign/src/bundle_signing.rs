@@ -376,9 +376,17 @@ impl SingleBundleSigner {
                 .is_main_executable()
                 .map_err(AppleCodesignError::DirectoryBundle)?
             {
+                info!(
+                    "{} is identified as the main executable; saving it for later",
+                    file.relative_path().display()
+                );
                 main_exe = Some(file);
             // The Info.plist is digested specially.
             } else if file.is_info_plist() {
+                info!(
+                    "{} is the Info.plist file; handling specially",
+                    file.relative_path().display()
+                );
                 handler.install_file(&file)?;
                 info_plist_data = Some(std::fs::read(file.absolute_path())?);
             } else {
@@ -389,6 +397,7 @@ impl SingleBundleSigner {
         // Add in any additional signed Mach-O files. This is likely used for nested
         // bundles.
         for (path, info) in additional_macho_files {
+            info!("registering {} as an additional Mach-O file", path);
             resources_builder.add_signed_macho_file(path, info)?;
         }
 
@@ -422,7 +431,10 @@ impl SingleBundleSigner {
                 .identifier()
                 .map_err(AppleCodesignError::DirectoryBundle)?
             {
+                info!("setting main executable binary identifier to {} (derived from CFBundleIdentifier in Info.plist)", ident);
                 settings.set_binary_identifier(SettingsScope::Main, ident);
+            } else {
+                info!("unable to determine binary identifier from bundle's Info.plist (CFBundleIdentifier not set?)");
             }
 
             settings.set_code_resources_data(SettingsScope::Main, resources_data);
@@ -435,6 +447,7 @@ impl SingleBundleSigner {
             signer.write_signed_binary(&settings, &mut new_data)?;
 
             let dest_path = dest_dir_root.join(exe.relative_path());
+            info!("writing signed main executable to {}", dest_path.display());
 
             let permissions = std::fs::metadata(exe.absolute_path())?.permissions();
             std::fs::create_dir_all(
@@ -447,6 +460,8 @@ impl SingleBundleSigner {
                 fh.write_all(&new_data)?;
             }
             std::fs::set_permissions(&dest_path, permissions)?;
+        } else {
+            warn!("bundle has no main executable to sign specially");
         }
 
         DirectoryBundle::new_from_path(&dest_dir_root).map_err(AppleCodesignError::DirectoryBundle)
