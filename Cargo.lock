@@ -95,6 +95,7 @@ version = "0.9.0-pre"
 dependencies = [
  "anyhow",
  "plist",
+ "tempfile",
  "tugger-file-manifest",
  "walkdir",
 ]
