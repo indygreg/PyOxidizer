@@ -294,20 +294,37 @@ impl DirectoryBundle {
             })
             .collect::<Result<Vec<_>>>()?
             .into_iter()
-            .filter_map(|p| {
-                let file_name = p.file_name().map(|x| x.to_string_lossy());
+            // A nested bundle must be a directory.
+            .filter(|p| p.is_dir())
+            // That isn't self.
+            .filter(|p| p != &self.root)
+            // Some bundle types have known child directories that themselves
+            // can't be bundles. Exclude those from the search.
+            .filter(|p| {
+                if let Some(file_name) = p.file_name() {
+                    let file_name = file_name.to_string_lossy();
 
-                if p.is_dir() && file_name != Some("Contents".into()) && p != self.root {
-                    if let Ok(bundle) = Self::new_from_path(&p) {
-                        let rel = bundle
-                            .root
-                            .strip_prefix(&self.root)
-                            .expect("nested bundle should be in sub-directory of main");
-
-                        Some((rel.to_string_lossy().to_string(), bundle))
-                    } else {
-                        None
+                    match self.package_type {
+                        BundlePackageType::Framework => {
+                            // Resources and Versions are known directories under frameworks.
+                            // They can't be bundles.
+                            !matches!(file_name.as_ref(), "Resources" | "Versions")
+                        }
+                        _ => file_name != "Contents",
                     }
+                } else {
+                    false
+                }
+            })
+            .filter_map(|p| {
+                // If we got here, test for bundle-ness by using our constructor.
+                if let Ok(bundle) = Self::new_from_path(&p) {
+                    let rel = bundle
+                        .root
+                        .strip_prefix(&self.root)
+                        .expect("nested bundle should be in sub-directory of main");
+
+                    Some((rel.to_string_lossy().to_string(), bundle))
                 } else {
                     None
                 }
@@ -488,8 +505,7 @@ mod test {
         assert_eq!(bundle.name(), "MyFramework.framework");
         assert!(bundle.shallow());
         assert_eq!(bundle.identifier()?, None);
-        // TODO bug
-        assert_eq!(bundle.nested_bundles()?.len(), 1);
+        assert!(bundle.nested_bundles()?.is_empty());
 
         Ok(())
     }
