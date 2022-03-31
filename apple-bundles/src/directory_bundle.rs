@@ -64,21 +64,37 @@ impl DirectoryBundle {
 
         let framework_plist = directory.join("Resources").join("Info.plist");
 
-        let (package_type, info_plist_path) = if app_plist.is_file() {
-            if root_name.ends_with(".app") {
-                (BundlePackageType::App, app_plist)
-            } else {
-                (BundlePackageType::Bundle, app_plist)
-            }
-        } else if framework_plist.is_file() {
-            if root_name.ends_with(".framework") {
+        // Shallow bundles make it very easy to mis-identify a directory as a bundle.
+        // The the following iOS app bundle directory structure:
+        //
+        //   MyApp.app
+        //     MyApp
+        //     Info.plist
+        //
+        // And take this framework directory structure:
+        //
+        //   MyFramework.framework
+        //     MyFramework -> Versions/Current/MyFramework
+        //     Resources/
+        //       Info.plist
+        //
+        // Depending on how we probe the directories, `MyFramework.framework/Resources`
+        // looks like a shallow app bundle!
+
+        // Frameworks must have a `Resources/Info.plist` and end in `.framework`.
+        let (package_type, info_plist_path) =
+            if root_name.ends_with(".framework") && framework_plist.is_file() {
                 (BundlePackageType::Framework, framework_plist)
+            } else if app_plist.is_file() {
+                if root_name.ends_with(".app") {
+                    (BundlePackageType::App, app_plist)
+                } else {
+                    // This can definitely lead to false positives.
+                    (BundlePackageType::Bundle, app_plist)
+                }
             } else {
-                (BundlePackageType::Bundle, framework_plist)
-            }
-        } else {
-            return Err(anyhow!("Info.plist not found; not a valid bundle"));
-        };
+                return Err(anyhow!("Info.plist not found; not a valid bundle"));
+            };
 
         let info_plist_data = std::fs::read(&info_plist_path)?;
         let cursor = std::io::Cursor::new(info_plist_data);
