@@ -349,7 +349,11 @@ impl SingleBundleSigner {
             .ok_or_else(|| AppleCodesignError::BundleNoIdentifier(self.bundle.info_plist_path()))?;
 
         warn!("collecting code resources files");
-        let mut resources_builder = CodeResourcesBuilder::default_resources_rules()?;
+        let mut resources_builder = if self.bundle.shallow() {
+            CodeResourcesBuilder::default_no_resources_rules()?
+        } else {
+            CodeResourcesBuilder::default_resources_rules()?
+        };
         // Exclude code signature files we'll write.
         resources_builder.add_exclusion_rule(CodeResourcesRule::new("^_CodeSignature/")?.exclude());
         // Ignore notarization ticket.
