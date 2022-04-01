@@ -39,7 +39,7 @@ actions-install-sccache-windows:
   cargo install --features s3 --version 0.2.15 sccache
 
 actions-bootstrap-rust-linux: actions-install-sccache-linux
-  sudo apt install -y --no-install-recommends libpcsclite libpcsclite-dev musl-tools
+  sudo apt install -y --no-install-recommends libpcsclite-dev musl-tools
 
 actions-bootstrap-rust-macos: actions-install-sccache-macos
 
