@@ -618,6 +618,7 @@ fn str_to_touch_policy(s: &str) -> Result<TouchPolicy, AppleCodesignError> {
     }
 }
 
+#[cfg(feature = "yubikey")]
 fn str_to_pin_policy(s: &str) -> Result<PinPolicy, AppleCodesignError> {
     match s {
         "default" => Ok(PinPolicy::Default),
