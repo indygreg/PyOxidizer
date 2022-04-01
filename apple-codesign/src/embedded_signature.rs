@@ -253,6 +253,18 @@ impl CodeSigningSlot {
     pub fn has_external_content(&self) -> bool {
         matches!(self, Self::Info | Self::ResourceDir)
     }
+
+    /// Whether this slot is for holding an alternative code directory.
+    pub fn is_alternative_code_directory(&self) -> bool {
+        matches!(
+            self,
+            CodeSigningSlot::AlternateCodeDirectory0
+                | CodeSigningSlot::AlternateCodeDirectory1
+                | CodeSigningSlot::AlternateCodeDirectory2
+                | CodeSigningSlot::AlternateCodeDirectory3
+                | CodeSigningSlot::AlternateCodeDirectory4
+        )
+    }
 }
 
 #[repr(C)]
@@ -1298,6 +1310,38 @@ impl<'a> EmbeddedSignature<'a> {
         } else {
             Ok(None)
         }
+    }
+
+    /// Obtain code directories occupying alternative slots.
+    ///
+    /// Embedded signatures set aside a few slots for alternate code directory data structures.
+    /// This method will resolve any that are present.
+    pub fn alternate_code_directories(
+        &self,
+    ) -> Result<Vec<(CodeSigningSlot, Box<CodeDirectoryBlob<'a>>)>, AppleCodesignError> {
+        let slots = [
+            CodeSigningSlot::AlternateCodeDirectory0,
+            CodeSigningSlot::AlternateCodeDirectory1,
+            CodeSigningSlot::AlternateCodeDirectory2,
+            CodeSigningSlot::AlternateCodeDirectory3,
+            CodeSigningSlot::AlternateCodeDirectory4,
+        ];
+
+        let mut res = vec![];
+
+        for slot in slots {
+            if let Some(parsed) = self.find_slot_parsed(slot)? {
+                if let BlobData::CodeDirectory(cd) = parsed.blob {
+                    res.push((slot, cd));
+                } else {
+                    return Err(AppleCodesignError::BadMagic(
+                        "wrong blob magic in alternative code directory slot",
+                    ));
+                }
+            }
+        }
+
+        Ok(res)
     }
 
     /// Attempt to resolve a parsed [EntitlementsBlob] for this signature data.

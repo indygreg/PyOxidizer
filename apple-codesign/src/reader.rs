@@ -7,6 +7,7 @@
 use {
     crate::{
         certificate::AppleCertificate,
+        code_directory::CodeDirectoryBlob,
         dmg::{path_is_dmg, DmgReader},
         embedded_signature::{BlobEntry, DigestType, EmbeddedSignature},
         error::AppleCodesignError,
@@ -307,6 +308,50 @@ impl TryFrom<SignedData> for CmsSignature {
     }
 }
 
+#[derive(Clone, Debug, Serialize)]
+pub struct CodeDirectory {
+    pub version: u32,
+    pub flags: String,
+    pub identifier: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub team_name: Option<String>,
+    pub digest_type: String,
+    pub signed_entity_size: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub executable_segment_flags: Option<String>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub slot_digests: Vec<String>,
+}
+
+impl<'a> TryFrom<CodeDirectoryBlob<'a>> for CodeDirectory {
+    type Error = AppleCodesignError;
+
+    fn try_from(cd: CodeDirectoryBlob<'a>) -> Result<Self, Self::Error> {
+        let mut temp = cd
+            .special_hashes
+            .into_iter()
+            .map(|(slot, digest)| (slot, digest.as_hex()))
+            .collect::<Vec<_>>();
+        temp.sort_by(|(a, _), (b, _)| a.cmp(b));
+
+        let slot_digests = temp
+            .into_iter()
+            .map(|(slot, digest)| format!("{:?}: {}", slot, digest))
+            .collect::<Vec<_>>();
+
+        Ok(Self {
+            version: cd.version,
+            flags: format!("{:?}", cd.flags),
+            identifier: cd.ident.to_string(),
+            team_name: cd.team_name.map(|x| x.to_string()),
+            signed_entity_size: cd.code_limit as _,
+            digest_type: format!("{}", cd.hash_type),
+            executable_segment_flags: cd.exec_seg_flags.map(|x| format!("{:?}", x)),
+            slot_digests,
+        })
+    }
+}
+
 /// High level representation of a code signature.
 #[derive(Clone, Debug, Serialize)]
 pub struct CodeSignature {
@@ -315,22 +360,9 @@ pub struct CodeSignature {
     pub blob_count: u32,
     pub blobs: Vec<BlobDescription>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub version: Option<u32>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub flags: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub identifier: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub team_name: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub digest_type: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub signed_entity_size: Option<u64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub executable_segment_flags: Option<String>,
+    pub code_directory: Option<CodeDirectory>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
-    pub slot_digests: Vec<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    pub alternative_code_directories: Vec<(String, CodeDirectory)>,
     pub entitlements_plist: Option<String>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub code_requirements: Vec<String>,
@@ -341,39 +373,21 @@ impl<'a> TryFrom<EmbeddedSignature<'a>> for CodeSignature {
     type Error = AppleCodesignError;
 
     fn try_from(sig: EmbeddedSignature<'a>) -> Result<Self, Self::Error> {
-        let mut version = None;
-        let mut flags = None;
-        let mut identifier = None;
-        let mut team_name = None;
-        let mut signed_entity_size = None;
-        let mut digest_type = None;
-        let mut executable_segment_flags = None;
-        let mut slot_digests = vec![];
         let mut entitlements_plist = None;
         let mut code_requirements = vec![];
         let mut cms = None;
 
-        if let Some(cd) = sig.code_directory()? {
-            version = Some(cd.version);
-            flags = Some(format!("{:?}", cd.flags));
-            identifier = Some(cd.ident.to_string());
-            team_name = cd.team_name.map(|x| x.to_string());
-            signed_entity_size = Some(cd.code_limit as _);
-            digest_type = Some(format!("{}", cd.hash_type));
-            executable_segment_flags = cd.exec_seg_flags.map(|x| format!("{:?}", x));
+        let code_directory = if let Some(cd) = sig.code_directory()? {
+            Some(CodeDirectory::try_from(*cd)?)
+        } else {
+            None
+        };
 
-            let mut temp = cd
-                .special_hashes
-                .into_iter()
-                .map(|(slot, digest)| (slot, digest.as_hex()))
-                .collect::<Vec<_>>();
-            temp.sort_by(|(a, _), (b, _)| a.cmp(b));
-
-            slot_digests = temp
-                .into_iter()
-                .map(|(slot, digest)| format!("{:?}: {}", slot, digest))
-                .collect::<Vec<_>>();
-        }
+        let alternative_code_directories = sig
+            .alternate_code_directories()?
+            .into_iter()
+            .map(|(slot, cd)| Ok((format!("{:?}", slot), CodeDirectory::try_from(*cd)?)))
+            .collect::<Result<Vec<_>, AppleCodesignError>>()?;
 
         if let Some(blob) = sig.entitlements()? {
             entitlements_plist = Some(blob.as_str().to_string());
@@ -407,14 +421,8 @@ impl<'a> TryFrom<EmbeddedSignature<'a>> for CodeSignature {
                 .iter()
                 .map(BlobDescription::from)
                 .collect::<Vec<_>>(),
-            version,
-            flags,
-            identifier,
-            team_name,
-            digest_type,
-            signed_entity_size,
-            executable_segment_flags,
-            slot_digests,
+            code_directory,
+            alternative_code_directories,
             entitlements_plist,
             code_requirements,
             cms,
