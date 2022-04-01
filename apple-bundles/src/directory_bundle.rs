@@ -284,52 +284,61 @@ impl DirectoryBundle {
     /// This will descend infinitely into nested bundles. i.e. we don't stop
     /// traversing directories when we encounter a bundle.
     pub fn nested_bundles(&self) -> Result<Vec<(String, Self)>> {
-        Ok(walkdir::WalkDir::new(&self.root)
-            .sort_by_file_name()
-            .into_iter()
-            .map(|entry| {
-                let entry = entry?;
+        let mut bundles = vec![];
 
-                Ok(entry.path().to_path_buf())
-            })
-            .collect::<Result<Vec<_>>>()?
-            .into_iter()
+        for entry in walkdir::WalkDir::new(&self.root).sort_by_file_name() {
+            let entry = entry?;
+
+            let path = entry.path();
+
+            // Ignore self.
+            if path == self.root {
+                continue;
+            }
+
             // A nested bundle must be a directory.
-            .filter(|p| p.is_dir())
-            // That isn't self.
-            .filter(|p| p != &self.root)
+            if !path.is_dir() {
+                continue;
+            }
+
             // Some bundle types have known child directories that themselves
             // can't be bundles. Exclude those from the search.
-            .filter(|p| {
-                if let Some(file_name) = p.file_name() {
-                    let file_name = file_name.to_string_lossy();
+            if let Some(file_name) = path.file_name() {
+                let file_name = file_name.to_string_lossy();
 
-                    match self.package_type {
-                        BundlePackageType::Framework => {
-                            // Resources and Versions are known directories under frameworks.
-                            // They can't be bundles.
-                            !matches!(file_name.as_ref(), "Resources" | "Versions")
+                match self.package_type {
+                    BundlePackageType::Framework => {
+                        // Resources and Versions are known directories under frameworks.
+                        // They can't be bundles.
+                        if matches!(file_name.as_ref(), "Resources" | "Versions") {
+                            continue;
                         }
-                        _ => file_name != "Contents",
                     }
-                } else {
-                    false
+                    _ => {
+                        if file_name == "Contents" {
+                            continue;
+                        }
+                    }
                 }
-            })
-            .filter_map(|p| {
-                // If we got here, test for bundle-ness by using our constructor.
-                if let Ok(bundle) = Self::new_from_path(&p) {
-                    let rel = bundle
-                        .root
-                        .strip_prefix(&self.root)
-                        .expect("nested bundle should be in sub-directory of main");
+            }
 
-                    Some((rel.to_string_lossy().to_string(), bundle))
-                } else {
-                    None
+            // If we got here, test for bundle-ness by using our constructor.
+            let bundle = match Self::new_from_path(path) {
+                Ok(bundle) => bundle,
+                Err(_) => {
+                    continue;
                 }
-            })
-            .collect::<Vec<_>>())
+            };
+
+            let rel = bundle
+                .root
+                .strip_prefix(&self.root)
+                .expect("nested bundle should be in sub-directory of main");
+
+            bundles.push((rel.to_string_lossy().to_string(), bundle));
+        }
+
+        Ok(bundles)
     }
 }
 
