@@ -7,7 +7,10 @@
 use {
     crate::BundlePackageType,
     anyhow::{anyhow, Context, Result},
-    std::path::{Path, PathBuf},
+    std::{
+        collections::HashSet,
+        path::{Path, PathBuf},
+    },
     tugger_file_manifest::{is_executable, FileEntry, FileManifest},
 };
 
@@ -15,6 +18,7 @@ use {
 ///
 /// Instances represent a type-agnostic bundle (macOS application bundle, iOS
 /// application bundle, framework bundles, etc).
+#[derive(Clone, Debug)]
 pub struct DirectoryBundle {
     /// Root directory of this bundle.
     root: PathBuf,
@@ -286,6 +290,8 @@ impl DirectoryBundle {
     pub fn nested_bundles(&self) -> Result<Vec<(String, Self)>> {
         let mut bundles = vec![];
 
+        let mut poisoned_prefixes = HashSet::new();
+
         for entry in walkdir::WalkDir::new(&self.root).sort_by_file_name() {
             let entry = entry?;
 
@@ -301,23 +307,30 @@ impl DirectoryBundle {
                 continue;
             }
 
+            // This directory is inside a directory that has already been searched for
+            // nested bundles. So stop.
+            if poisoned_prefixes
+                .iter()
+                .any(|prefix| path.strip_prefix(prefix).is_ok())
+            {
+                break;
+            }
+
+            let root_relative = path.strip_prefix(&self.root)?.to_string_lossy();
+
             // Some bundle types have known child directories that themselves
             // can't be bundles. Exclude those from the search.
-            if let Some(file_name) = path.file_name() {
-                let file_name = file_name.to_string_lossy();
-
-                match self.package_type {
-                    BundlePackageType::Framework => {
-                        // Resources and Versions are known directories under frameworks.
-                        // They can't be bundles.
-                        if matches!(file_name.as_ref(), "Resources" | "Versions") {
-                            continue;
-                        }
+            match self.package_type {
+                BundlePackageType::Framework => {
+                    // Resources and Versions are known directories under frameworks.
+                    // They can't be bundles.
+                    if matches!(root_relative.as_ref(), "Resources" | "Versions") {
+                        continue;
                     }
-                    _ => {
-                        if file_name == "Contents" {
-                            continue;
-                        }
+                }
+                _ => {
+                    if root_relative == "Contents" {
+                        continue;
                     }
                 }
             }
@@ -330,12 +343,9 @@ impl DirectoryBundle {
                 }
             };
 
-            let rel = bundle
-                .root
-                .strip_prefix(&self.root)
-                .expect("nested bundle should be in sub-directory of main");
-
-            bundles.push((rel.to_string_lossy().to_string(), bundle));
+            bundles.push((root_relative.to_string(), bundle.clone()));
+            bundles.extend(bundle.nested_bundles()?);
+            poisoned_prefixes.insert(path.to_path_buf());
         }
 
         Ok(bundles)
@@ -531,7 +541,7 @@ mod test {
         let empty = plist::Value::Dictionary(plist::Dictionary::new());
         empty.to_file_xml(&app_info_plist)?;
 
-        let frameworks = contents.join("Contents");
+        let frameworks = contents.join("Frameworks");
         let framework = frameworks.join("MyFramework.framework");
         let resources = framework.join("Resources");
         create_dir_all(&resources)?;
@@ -548,8 +558,8 @@ mod test {
         let bundle = DirectoryBundle::new_from_path(&root)?;
 
         let nested = bundle.nested_bundles()?;
-        // TODO bug
-        assert_eq!(nested.len(), 2);
+        assert_eq!(nested.len(), 1);
+        assert_eq!(nested[0].0, "Contents/Frameworks/MyFramework.framework");
 
         Ok(())
     }
