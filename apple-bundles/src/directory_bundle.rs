@@ -350,6 +350,31 @@ impl DirectoryBundle {
 
         Ok(bundles)
     }
+
+    /// Resolve the versions present within a framework.
+    ///
+    /// Does not emit versions that are symlinks.
+    pub fn framework_versions(&self) -> Result<Vec<String>> {
+        if self.package_type != BundlePackageType::Framework {
+            return Ok(vec![]);
+        }
+
+        let mut res = vec![];
+
+        for entry in std::fs::read_dir(self.root.join("Versions"))? {
+            let entry = entry?;
+            let metadata = entry.metadata()?;
+
+            if metadata.is_dir() && !metadata.is_symlink() {
+                res.push(entry.file_name().to_string_lossy().to_string());
+            }
+        }
+
+        // Be deterministic.
+        res.sort();
+
+        Ok(res)
+    }
 }
 
 /// Represents a file in a [DirectoryBundle].
@@ -545,6 +570,8 @@ mod test {
         let framework = frameworks.join("MyFramework.framework");
         let resources = framework.join("Resources");
         create_dir_all(&resources)?;
+        let versions = framework.join("Versions");
+        create_dir_all(&versions)?;
         let framework_info_plist = resources.join("Info.plist");
         empty.to_file_xml(&framework_info_plist)?;
         let framework_resource_file_root = resources.join("root00.txt");
@@ -560,6 +587,10 @@ mod test {
         let nested = bundle.nested_bundles()?;
         assert_eq!(nested.len(), 1);
         assert_eq!(nested[0].0, "Contents/Frameworks/MyFramework.framework");
+
+        create_dir_all(versions.join("A"))?;
+        create_dir_all(versions.join("B"))?;
+        assert_eq!(nested[0].1.framework_versions()?, vec!["A", "B"]);
 
         Ok(())
     }
