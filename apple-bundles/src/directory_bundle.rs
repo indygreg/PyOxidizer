@@ -66,7 +66,11 @@ impl DirectoryBundle {
             contents.join("Info.plist")
         };
 
-        let framework_plist = directory.join("Resources").join("Info.plist");
+        let framework_plist = if shallow {
+            directory.join("Info.plist")
+        } else {
+            directory.join("Resources").join("Info.plist")
+        };
 
         // Shallow bundles make it very easy to mis-identify a directory as a bundle.
         // The the following iOS app bundle directory structure:
@@ -313,7 +317,7 @@ impl DirectoryBundle {
                 .iter()
                 .any(|prefix| path.strip_prefix(prefix).is_ok())
             {
-                break;
+                continue;
             }
 
             let root_relative = path.strip_prefix(&self.root)?.to_string_lossy();
