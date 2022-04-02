@@ -138,6 +138,7 @@ impl From<&FilesValue> for Value {
 #[derive(Clone, PartialEq)]
 struct Files2Value {
     cdhash: Option<Vec<u8>>,
+    hash: Option<Vec<u8>>,
     hash2: Option<Vec<u8>>,
     optional: Option<bool>,
     requirement: Option<String>,
@@ -150,6 +151,10 @@ impl std::fmt::Debug for Files2Value {
             .field(
                 "cdhash",
                 &format_args!("{:?}", self.cdhash.as_ref().map(hex::encode)),
+            )
+            .field(
+                "hash",
+                &format_args!("{:?}", self.hash.as_ref().map(hex::encode)),
             )
             .field(
                 "hash2",
@@ -170,6 +175,7 @@ impl TryFrom<&Value> for Files2Value {
             AppleCodesignError::ResourcesPlistParse("files2 value should be a dict".to_string())
         })?;
 
+        let mut hash = None;
         let mut hash2 = None;
         let mut cdhash = None;
         let mut optional = None;
@@ -188,10 +194,20 @@ impl TryFrom<&Value> for Files2Value {
 
                     cdhash = Some(data.to_vec());
                 }
-                "hash2" => {
+                "hash" => {
                     let data = value.as_data().ok_or_else(|| {
                         AppleCodesignError::ResourcesPlistParse(format!(
                             "expected <data> for files2 hash entry, got {:?}",
+                            value
+                        ))
+                    })?;
+
+                    hash = Some(data.to_vec());
+                }
+                "hash2" => {
+                    let data = value.as_data().ok_or_else(|| {
+                        AppleCodesignError::ResourcesPlistParse(format!(
+                            "expected <data> for files2 hash2 entry, got {:?}",
                             value
                         ))
                     })?;
@@ -242,6 +258,7 @@ impl TryFrom<&Value> for Files2Value {
 
         Ok(Self {
             cdhash,
+            hash,
             hash2,
             optional,
             requirement,
@@ -256,6 +273,10 @@ impl From<&Files2Value> for Value {
 
         if let Some(cdhash) = &v.cdhash {
             dict.insert("cdhash".to_string(), Value::Data(cdhash.to_vec()));
+        }
+
+        if let Some(hash) = &v.hash {
+            dict.insert("hash".to_string(), Value::Data(hash.to_vec()));
         }
 
         if let Some(hash2) = &v.hash2 {
@@ -753,15 +774,16 @@ impl CodeResources {
         self.files.insert(
             path.clone(),
             if optional {
-                FilesValue::Optional(sha1)
+                FilesValue::Optional(sha1.clone())
             } else {
-                FilesValue::Required(sha1)
+                FilesValue::Required(sha1.clone())
             },
         );
         self.files2.insert(
             path,
             Files2Value {
                 cdhash: None,
+                hash: Some(sha1),
                 hash2: Some(sha256),
                 optional: if optional { Some(true) } else { None },
                 requirement: None,
@@ -780,6 +802,7 @@ impl CodeResources {
             path.to_string(),
             Files2Value {
                 cdhash: None,
+                hash: None,
                 hash2: None,
                 optional: None,
                 requirement: None,
@@ -801,6 +824,7 @@ impl CodeResources {
             path.to_string(),
             Files2Value {
                 cdhash: Some(DigestType::Sha256Truncated.digest_data(&info.code_directory_blob)?),
+                hash: None,
                 hash2: None,
                 optional: if optional { Some(true) } else { None },
                 requirement: info.designated_code_requirement.clone(),
