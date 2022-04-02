@@ -12,6 +12,9 @@
 * Defined RFC 3447 ASN.1 types for representing RSA private keys.
 * ``InMemorySigningKeyPair`` now holds the the raw private key data. This
   enables the content to be retrieved later.
+* Added certificate signing request ASN.1 types to the new ``rfc2986`` module.
+* ``X509CertificateBuilder`` has a new ``create_certificate_signing_request()``
+  method to create a certificate signing request (CSR).
 
 0.11.0
 ======

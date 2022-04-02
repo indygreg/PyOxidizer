@@ -6,9 +6,9 @@
 
 use {
     crate::{
-        algorithm::DigestAlgorithm, asn1time::Time, rfc3280::Name, rfc5280, rfc8017::RsaPublicKey,
-        signing::Sign, InMemorySigningKeyPair, KeyAlgorithm, SignatureAlgorithm,
-        X509CertificateError as Error,
+        algorithm::DigestAlgorithm, asn1time::Time, rfc2986, rfc3280::Name, rfc5280, rfc5652,
+        rfc5958::Attributes, rfc8017::RsaPublicKey, signing::Sign, InMemorySigningKeyPair,
+        KeyAlgorithm, SignatureAlgorithm, X509CertificateError as Error,
     },
     bcder::{
         decode::Constructed,
@@ -838,6 +838,9 @@ impl From<KeyUsage> for u8 {
 /// * There is no issuer. If no attempt is made to define an issuer,
 ///   the subject will be copied to the issuer field and this will be
 ///   a self-signed certificate.
+///
+/// This type can also be used to produce certificate signing requests. In this mode,
+/// only the subject value and additional registered attributes are meaningful.
 pub struct X509CertificateBuilder {
     key_algorithm: KeyAlgorithm,
     subject: Name,
@@ -846,6 +849,7 @@ pub struct X509CertificateBuilder {
     serial_number: i64,
     not_before: chrono::DateTime<Utc>,
     not_after: chrono::DateTime<Utc>,
+    csr_attributes: Attributes,
 }
 
 impl X509CertificateBuilder {
@@ -861,6 +865,7 @@ impl X509CertificateBuilder {
             serial_number: 1,
             not_before,
             not_after,
+            csr_attributes: Attributes::default(),
         }
     }
 
@@ -926,6 +931,14 @@ impl X509CertificateBuilder {
             // Value is a bit string. We just encode it manually since it is easy.
             value: OctetString::new(Bytes::copy_from_slice(&[3, 2, 7, 128 | value])),
         });
+    }
+
+    /// Add an [Attribute] to a future certificate signing requests.
+    ///
+    /// Has no effect on regular certificate creation: only if creating certificate
+    /// signing requests.
+    pub fn add_csr_attribute(&mut self, attribute: rfc5652::Attribute) {
+        self.csr_attributes.push(attribute);
     }
 
     /// Create a new certificate given settings, using a randomly generated key pair.
@@ -998,6 +1011,49 @@ impl X509CertificateBuilder {
 
         Ok((cert, key_pair, document))
     }
+
+    /// Create a new certificate signing request (CSR).
+    ///
+    /// The CSR is derived according to the process defined in RFC 2986 Section 3.
+    /// Essentially, we collect metadata about the request, sign that metadata using
+    /// a provided signing/private key, then attach the signature to form a complete
+    /// certification request.
+    pub fn create_certificate_signing_request(
+        &self,
+        signer: &dyn Sign,
+    ) -> Result<rfc2986::CertificationRequest, Error> {
+        let info = rfc2986::CertificationRequestInfo {
+            version: rfc2986::Version::V1,
+            subject: self.subject.clone(),
+            subject_public_key_info: rfc5280::SubjectPublicKeyInfo {
+                algorithm: signer
+                    .key_algorithm()
+                    .ok_or_else(|| {
+                        Error::UnknownKeyAlgorithm(
+                            "OID not available due to API limitations".into(),
+                        )
+                    })?
+                    .into(),
+                subject_public_key: BitString::new(0, signer.public_key_data()),
+            },
+            attributes: self.csr_attributes.clone(),
+        };
+
+        // The signature is produced over the DER encoding of CertificationRequestInfo
+        // per RFC 2986 Section 4.2.
+        let mut info_der = vec![];
+        info.write_encoded(Mode::Der, &mut info_der)?;
+
+        let (signature, signature_algorithm) = signer.sign(&info_der)?;
+
+        let request = rfc2986::CertificationRequest {
+            certificate_request_info: info,
+            signature_algorithm: signature_algorithm.into(),
+            signature: BitString::new(0, signature.into()),
+        };
+
+        Ok(request)
+    }
 }
 
 #[cfg(test)]
@@ -1033,6 +1089,28 @@ mod test {
             .unwrap();
 
         builder.create_with_random_keypair().unwrap();
+    }
+
+    #[test]
+    fn builder_csr_ecdsa() -> Result<(), Error> {
+        for curve in EcdsaCurve::all() {
+            let key_algorithm = KeyAlgorithm::Ecdsa(*curve);
+
+            let key = InMemorySigningKeyPair::generate_random(key_algorithm)?.0;
+
+            let builder = X509CertificateBuilder::new(key_algorithm);
+
+            let csr = builder.create_certificate_signing_request(&key)?;
+
+            assert_eq!(
+                csr.certificate_request_info
+                    .subject_public_key_info
+                    .algorithm,
+                key_algorithm.into()
+            );
+        }
+
+        Ok(())
     }
 
     #[test]

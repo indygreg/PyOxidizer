@@ -72,6 +72,7 @@ pub mod certificate;
 pub use certificate::{
     CapturedX509Certificate, MutableX509Certificate, X509Certificate, X509CertificateBuilder,
 };
+pub mod rfc2986;
 pub mod rfc3280;
 pub mod rfc3447;
 pub mod rfc4519;
