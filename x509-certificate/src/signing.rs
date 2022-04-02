@@ -8,6 +8,7 @@ use {
         SignatureAlgorithm, X509CertificateError as Error,
     },
     bcder::decode::Constructed,
+    bytes::Bytes,
     ring::{
         rand::SystemRandom,
         signature::{self, KeyPair},
@@ -24,6 +25,17 @@ pub trait Sign {
     /// was used. The returned [SignatureAlgorithm] can be serialized into an
     /// ASN.1 `AlgorithmIdentifier` via `.into()`.
     fn sign(&self, message: &[u8]) -> Result<(Vec<u8>, SignatureAlgorithm), Error>;
+
+    /// Obtain the algorithm of the private key.
+    ///
+    /// If we can't coerce the key algorithm to [KeyAlgorithm], None is returned.
+    fn key_algorithm(&self) -> Option<KeyAlgorithm>;
+
+    /// Obtain the raw bytes constituting the public key of the signing certificate.
+    ///
+    /// This will be `.tbs_certificate.subject_public_key_info.subject_public_key` of a parsed
+    /// X.509 public certificate.
+    fn public_key_data(&self) -> Bytes;
 
     /// Obtain the [SignatureAlgorithm] that this signer will use.
     ///
@@ -87,6 +99,22 @@ impl Sign for InMemorySigningKeyPair {
 
                 Ok((signature.as_ref().to_vec(), self.signature_algorithm()?))
             }
+        }
+    }
+
+    fn key_algorithm(&self) -> Option<KeyAlgorithm> {
+        Some(match self {
+            Self::Rsa(_, _) => KeyAlgorithm::Rsa,
+            Self::Ed25519(_) => KeyAlgorithm::Ed25519,
+            Self::Ecdsa(_, curve, _) => KeyAlgorithm::Ecdsa(*curve),
+        })
+    }
+
+    fn public_key_data(&self) -> Bytes {
+        match self {
+            Self::Rsa(key, _) => Bytes::copy_from_slice(key.public_key().as_ref()),
+            Self::Ecdsa(key, _, _) => Bytes::copy_from_slice(key.public_key().as_ref()),
+            Self::Ed25519(key) => Bytes::copy_from_slice(key.public_key().as_ref()),
         }
     }
 
@@ -195,24 +223,6 @@ impl InMemorySigningKeyPair {
         Ok((key_pair, document))
     }
 
-    /// Obtain the raw bytes constituting the key pair's public key.
-    pub fn public_key_data(&self) -> &[u8] {
-        match self {
-            Self::Rsa(key, _) => key.public_key().as_ref(),
-            Self::Ecdsa(key, _, _) => key.public_key().as_ref(),
-            Self::Ed25519(key) => key.public_key().as_ref(),
-        }
-    }
-
-    /// Obtain the [KeyAlgorithm] in use by this instance.
-    pub fn key_algorithm(&self) -> KeyAlgorithm {
-        match self {
-            Self::Rsa(_, _) => KeyAlgorithm::Rsa,
-            Self::Ed25519(_) => KeyAlgorithm::Ed25519,
-            Self::Ecdsa(_, curve, _) => KeyAlgorithm::Ecdsa(*curve),
-        }
-    }
-
     /// Attempt to resolve a verification algorithm for this key pair.
     ///
     /// This is a wrapper around [SignatureAlgorithm::resolve_verification_algorithm()]
@@ -223,7 +233,7 @@ impl InMemorySigningKeyPair {
         &self,
     ) -> Result<&'static dyn signature::VerificationAlgorithm, Error> {
         Ok(self.signature_algorithm()?
-            .resolve_verification_algorithm(self.key_algorithm()).expect(
+            .resolve_verification_algorithm(self.key_algorithm().expect("key algorithm should be known for InMemorySigningKeyPair")).expect(
             "illegal combination of key algorithm in signature algorithm: this should not occur"
         ))
     }

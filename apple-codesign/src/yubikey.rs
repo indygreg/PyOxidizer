@@ -6,6 +6,7 @@
 
 use {
     crate::AppleCodesignError,
+    bytes::Bytes,
     log::{error, warn},
     std::ops::DerefMut,
     std::sync::{Arc, Mutex, MutexGuard},
@@ -431,6 +432,14 @@ impl Sign for CertificateSigner {
             self.pin_callback.as_ref(),
         )
         .map_err(|e| X509CertificateError::Other(format!("code sign error: {:?}", e)))
+    }
+
+    fn key_algorithm(&self) -> Option<KeyAlgorithm> {
+        self.cert.key_algorithm()
+    }
+
+    fn public_key_data(&self) -> Bytes {
+        self.cert.public_key_data()
     }
 
     fn signature_algorithm(&self) -> Result<SignatureAlgorithm, X509CertificateError> {

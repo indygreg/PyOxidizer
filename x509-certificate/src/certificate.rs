@@ -960,11 +960,11 @@ impl X509CertificateBuilder {
             },
             subject: self.subject.clone(),
             subject_public_key_info: rfc5280::SubjectPublicKeyInfo {
-                algorithm: key_pair.key_algorithm().into(),
-                subject_public_key: BitString::new(
-                    0,
-                    Bytes::copy_from_slice(key_pair.public_key_data()),
-                ),
+                algorithm: key_pair
+                    .key_algorithm()
+                    .expect("InMemorySigningKeyPair always has known key algorithm")
+                    .into(),
+                subject_public_key: BitString::new(0, key_pair.public_key_data()),
             },
             issuer_unique_id: None,
             subject_unique_id: None,
