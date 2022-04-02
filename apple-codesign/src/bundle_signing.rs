@@ -411,7 +411,10 @@ impl SingleBundleSigner {
             .ok_or_else(|| AppleCodesignError::BundleNoIdentifier(self.bundle.info_plist_path()))?;
 
         warn!("collecting code resources files");
-        let mut resources_builder = if self.bundle.root_dir().join("Resources").is_dir() {
+        // We need to respect whether the bundle is shallow or not because `Resources/` will be
+        // in the root directory for non-shallow bundles like frameworks and `Contents/Resources`
+        // for non-shallow app bundles.
+        let mut resources_builder = if self.bundle.resolve_path("Resources").is_dir() {
             CodeResourcesBuilder::default_resources_rules()?
         } else {
             CodeResourcesBuilder::default_no_resources_rules()?
