@@ -862,6 +862,9 @@ impl SignatureReader {
                 SignatureEntity::BundleCodeSignatureFile(CodeSignatureFile::Other);
 
             entities.push(default_entity);
+        } else {
+            // Just some extra file.
+            entities.push(default_entity);
         }
 
         Ok(entities)
