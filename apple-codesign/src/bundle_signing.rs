@@ -495,9 +495,14 @@ impl SingleBundleSigner {
 
             // Framework bundles appear to use SHA-1 as the digest in the primary code directory
             // and SHA-256 in the code directory at the 1st alternative code directory slot.
+            // Hardcoding the digest types here is likely subtly wrong...
             if self.bundle.package_type() == BundlePackageType::Framework {
                 settings.set_digest_type(DigestType::Sha1);
-                // TODO add alternative code directory.
+                settings.set_alternative_code_directory(
+                    SettingsScope::Main,
+                    CodeSigningSlot::AlternateCodeDirectory0,
+                    DigestType::Sha256,
+                );
             }
 
             // The identifier for the main executable is defined in the bundle's Info.plist.

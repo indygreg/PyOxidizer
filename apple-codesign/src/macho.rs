@@ -14,8 +14,10 @@ data.
 
 use {
     crate::{
-        code_hash::compute_code_hashes, embedded_signature::EmbeddedSignature,
-        error::AppleCodesignError, signing_settings::SigningSettings,
+        code_hash::compute_code_hashes,
+        embedded_signature::EmbeddedSignature,
+        error::AppleCodesignError,
+        signing_settings::{SettingsScope, SigningSettings},
     },
     cryptographic_message_syntax::time_stamp_message_http,
     goblin::mach::{
@@ -244,8 +246,13 @@ impl<'a> AppleSignable for MachO<'a> {
         &self,
         settings: &SigningSettings,
     ) -> Result<usize, AppleCodesignError> {
+        let code_directory_count = 1 + settings
+            .alternative_code_directories(SettingsScope::Main)
+            .map(|x| x.len())
+            .unwrap_or_default();
+
         // Assume the common data structures are 1024 bytes.
-        let mut size = 1024;
+        let mut size = 1024 * code_directory_count;
 
         // Reserve room for the code digests, which are proportional to binary size.
         // We could avoid doing the actual digesting work here. But until people
@@ -254,6 +261,15 @@ impl<'a> AppleSignable for MachO<'a> {
             .into_iter()
             .map(|x| x.len())
             .sum::<usize>();
+
+        if let Some(alt_cds) = settings.alternative_code_directories(SettingsScope::Main) {
+            for digest in alt_cds.values() {
+                size += compute_code_hashes(self, *digest, None)?
+                    .into_iter()
+                    .map(|x| x.len())
+                    .sum::<usize>();
+            }
+        }
 
         // Assume the CMS data will take a fixed size.
         if settings.signing_key().is_some() {

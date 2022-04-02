@@ -379,7 +379,26 @@ impl<'data> MachOSigner<'data> {
             self.create_code_directory(settings, macho_data, macho, previous_signature)?;
         info!("code directory version: {}", code_directory.version);
 
-        builder.add_code_directory(code_directory)?;
+        builder.add_code_directory(CodeSigningSlot::CodeDirectory, code_directory)?;
+
+        if let Some(alternative_cds) = settings.alternative_code_directories(SettingsScope::Main) {
+            for (slot, digest_type) in alternative_cds {
+                // Since everything consults settings for the digest to use, just make a new settings
+                // with a different digest.
+                let mut alt_settings = settings.clone();
+                alt_settings.set_digest_type(*digest_type);
+
+                info!("adding code directory at slot {:?}", *slot);
+                let cd = self.create_code_directory(
+                    &alt_settings,
+                    macho_data,
+                    macho,
+                    previous_signature,
+                )?;
+
+                builder.add_code_directory(*slot, cd.into())?;
+            }
+        }
 
         if let Some((signing_key, signing_cert)) = settings.signing_key() {
             builder.create_cms_signature(

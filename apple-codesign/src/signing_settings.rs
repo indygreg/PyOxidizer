@@ -9,7 +9,7 @@ use {
         certificate::AppleCertificate,
         code_directory::{CodeSignatureFlags, ExecutableSegmentFlags},
         code_requirement::CodeRequirementExpression,
-        embedded_signature::{Blob, DigestType, RequirementBlob},
+        embedded_signature::{Blob, CodeSigningSlot, DigestType, RequirementBlob},
         error::AppleCodesignError,
     },
     goblin::mach::cputype::{
@@ -268,6 +268,7 @@ pub struct SigningSettings<'key> {
     runtime_version: BTreeMap<SettingsScope, semver::Version>,
     info_plist_data: BTreeMap<SettingsScope, Vec<u8>>,
     code_resources_data: BTreeMap<SettingsScope, Vec<u8>>,
+    alternative_code_directories: BTreeMap<SettingsScope, BTreeMap<CodeSigningSlot, DigestType>>,
 }
 
 impl<'key> SigningSettings<'key> {
@@ -703,6 +704,31 @@ impl<'key> SigningSettings<'key> {
         self.code_resources_data.insert(scope, data);
     }
 
+    /// Obtain alternative code directories for a scope.
+    pub fn alternative_code_directories(
+        &self,
+        scope: impl AsRef<SettingsScope>,
+    ) -> Option<&BTreeMap<CodeSigningSlot, DigestType>> {
+        self.alternative_code_directories.get(scope.as_ref())
+    }
+
+    /// Indicate that an alternative code directory should be generated for the given scope.
+    ///
+    /// The caller passes the code directory slot and the digest type for the code
+    /// directory. (Alternative code directory slots appear to be used to allow storing
+    /// code directories with different digest schemes.)
+    pub fn set_alternative_code_directory(
+        &mut self,
+        scope: SettingsScope,
+        slot: CodeSigningSlot,
+        digest_type: DigestType,
+    ) {
+        self.alternative_code_directories
+            .entry(scope)
+            .or_default()
+            .insert(slot, digest_type);
+    }
+
     /// Convert this instance to settings appropriate for a nested bundle.
     #[must_use]
     pub fn as_nested_bundle_settings(&self, bundle_path: &str) -> Self {
@@ -824,6 +850,12 @@ impl<'key> SigningSettings<'key> {
                 .collect::<BTreeMap<_, _>>(),
             code_resources_data: self
                 .code_resources_data
+                .clone()
+                .into_iter()
+                .filter_map(|(key, value)| key_map(key).map(|key| (key, value)))
+                .collect::<BTreeMap<_, _>>(),
+            alternative_code_directories: self
+                .alternative_code_directories
                 .clone()
                 .into_iter()
                 .filter_map(|(key, value)| key_map(key).map(|key| (key, value)))

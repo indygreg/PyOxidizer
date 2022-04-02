@@ -174,8 +174,12 @@ impl<'a> EmbeddedSignatureBuilder<'a> {
     /// of previously registered blobs/slots are present in the code directory. This
     /// removes the burden from callers of having to keep the code directory in sync with
     /// other registered blobs.
+    ///
+    /// This function accepts the slot to add the code directory to because alternative
+    /// slots can be registered.
     pub fn add_code_directory(
         &mut self,
+        cd_slot: CodeSigningSlot,
         mut cd: CodeDirectoryBlob<'a>,
     ) -> Result<&CodeDirectoryBlob, AppleCodesignError> {
         if matches!(self.state, BlobsState::SignatureAdded) {
@@ -195,7 +199,7 @@ impl<'a> EmbeddedSignatureBuilder<'a> {
             cd.special_hashes.insert(*slot, digest);
         }
 
-        self.blobs.insert(CodeSigningSlot::CodeDirectory, cd.into());
+        self.blobs.insert(cd_slot, cd.into());
         self.state = BlobsState::CodeDirectoryAdded;
 
         Ok(self.code_directory().expect("we just inserted this key"))

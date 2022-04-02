@@ -335,7 +335,10 @@ impl DmgSigner {
             builder.add_blob(slot, blob)?;
         }
 
-        builder.add_code_directory(self.create_code_directory(settings, fh)?)?;
+        builder.add_code_directory(
+            CodeSigningSlot::CodeDirectory,
+            self.create_code_directory(settings, fh)?,
+        )?;
 
         if let Some((signing_key, signing_cert)) = settings.signing_key() {
             builder.create_cms_signature(
