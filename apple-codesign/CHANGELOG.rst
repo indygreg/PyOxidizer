@@ -28,6 +28,9 @@
 * ``rcodesign sign`` now accepts an ``--extra-digest`` argument to provide an
   extra digest type to include in signatures. This facilitates signing with
   multiple digest types via e.g. ``--digest sha1 --extra-digest sha256``.
+* A new ``rcodesign generate-certificate-signing-request`` command can be used
+  to generate a Certificate Signing Request (CSR) which can be uploaded to Apple
+  and exchanged for a code signing certificate signed by Apple.
 
 0.10.0
 ======

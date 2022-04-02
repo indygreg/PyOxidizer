@@ -79,6 +79,7 @@ use {
     std::{io::Write, path::PathBuf, str::FromStr},
     x509_certificate::{
         CapturedX509Certificate, EcdsaCurve, InMemorySigningKeyPair, KeyAlgorithm, Sign,
+        X509CertificateBuilder,
     },
 };
 
@@ -1371,6 +1372,56 @@ fn command_find_transporter() -> Result<(), AppleCodesignError> {
     Ok(())
 }
 
+fn command_generate_certificate_signing_request(
+    args: &ArgMatches,
+) -> Result<(), AppleCodesignError> {
+    let csr_pem_path = args.value_of("csr_pem_path").map(PathBuf::from);
+
+    let (private_keys, _) = collect_certificates_from_args(args, true)?;
+
+    if private_keys.is_empty() {
+        error!("no private keys found; a private key is required to sign a certificate signing request");
+        return Err(AppleCodesignError::CliBadArgument);
+    } else if private_keys.len() > 1 {
+        error!(
+            "at most 1 private key can be present (found {}); aborting",
+            private_keys.len()
+        );
+        return Err(AppleCodesignError::CliBadArgument);
+    }
+
+    let private_key = &private_keys[0];
+
+    let key_algorithm = private_key.key_algorithm().ok_or_else(|| {
+        error!("unable to determine key algorithm of private key (please report this issue)");
+        AppleCodesignError::CliBadArgument
+    })?;
+
+    let mut builder = X509CertificateBuilder::new(key_algorithm);
+    builder
+        .subject()
+        .append_common_name_utf8_string("Apple Code Signing CSR")
+        .map_err(|e| AppleCodesignError::CertificateBuildError(format!("{:?}", e)))?;
+
+    warn!("generating CSR; you may be prompted to enter credentials to unlock the signing key");
+    let pem = builder
+        .create_certificate_signing_request(private_key.as_ref())?
+        .encode_pem()?;
+
+    if let Some(dest_path) = csr_pem_path {
+        if let Some(parent) = dest_path.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+
+        warn!("writing PEM encoded CSR to {}", dest_path.display());
+        std::fs::write(&dest_path, pem.as_bytes())?;
+    }
+
+    print!("{}", pem);
+
+    Ok(())
+}
+
 fn command_generate_self_signed_certificate(args: &ArgMatches) -> Result<(), AppleCodesignError> {
     let algorithm = match args
         .value_of("algorithm")
@@ -2014,6 +2065,17 @@ fn main_impl() -> Result<(), AppleCodesignError> {
     );
 
     let app = app.subcommand(
+        add_certificate_source_args(Command::new("generate-certificate-signing-request")
+            .about("Generates a certificate signing request that can be sent to Apple and exchanged for a signing certificate")
+            .arg(
+                Arg::new("csr_pem_path")
+                    .long("csr-pem-path")
+                    .takes_value(true)
+                    .help("Path to file to write PEM encoded CSR to")
+            )
+    ));
+
+    let app = app.subcommand(
         Command::new("generate-self-signed-certificate")
             .about("Generate a self-signed certificate for code signing")
             .long_about(GENERATE_SELF_SIGNED_CERTIFICATE_ABOUT)
@@ -2335,6 +2397,9 @@ fn main_impl() -> Result<(), AppleCodesignError> {
         Some(("diff-signatures", args)) => command_diff_signatures(args),
         Some(("extract", args)) => command_extract(args),
         Some(("find-transporter", _)) => command_find_transporter(),
+        Some(("generate-certificate-signing-request", args)) => {
+            command_generate_certificate_signing_request(args)
+        }
         Some(("generate-self-signed-certificate", args)) => {
             command_generate_self_signed_certificate(args)
         }
