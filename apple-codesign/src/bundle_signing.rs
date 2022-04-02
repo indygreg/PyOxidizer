@@ -9,7 +9,7 @@ use {
         code_directory::CodeDirectoryBlob,
         code_requirement::RequirementType,
         code_resources::{CodeResourcesBuilder, CodeResourcesRule},
-        embedded_signature::{Blob, BlobData, CodeSigningSlot},
+        embedded_signature::{Blob, BlobData, CodeSigningSlot, DigestType},
         error::AppleCodesignError,
         macho::AppleSignable,
         macho_signing::MachOSigner,
@@ -492,6 +492,13 @@ impl SingleBundleSigner {
             let signer = MachOSigner::new(&macho_data)?;
 
             let mut settings = settings.clone();
+
+            // Framework bundles appear to use SHA-1 as the digest in the primary code directory
+            // and SHA-256 in the code directory at the 1st alternative code directory slot.
+            if self.bundle.package_type() == BundlePackageType::Framework {
+                settings.set_digest_type(DigestType::Sha1);
+                // TODO add alternative code directory.
+            }
 
             // The identifier for the main executable is defined in the bundle's Info.plist.
             if let Some(ident) = self
