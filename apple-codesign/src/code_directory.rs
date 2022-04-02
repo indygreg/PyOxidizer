@@ -509,7 +509,15 @@ impl<'a> Blob<'a> for CodeDirectoryBlob<'a> {
         // The boundary conditions are a bit wonky here. We want to go from greatest
         // to smallest, not writing index 0 because that's the first code digest.
         for slot_index in (1..highest_slot + 1).rev() {
-            if let Some(hash) = self.special_hashes.get(&CodeSigningSlot::from(slot_index)) {
+            // .special_hashes is public and not all values are allowed. So check for
+            // garbage.
+            let slot = CodeSigningSlot::from(slot_index);
+            assert!(
+                slot.is_code_directory_specials_expressible(),
+                "slot is expressible in code directory special digests"
+            );
+
+            if let Some(hash) = self.special_hashes.get(&slot) {
                 cursor.write_all(&hash.data)?;
             } else {
                 cursor.write_all(&b"\0".repeat(self.hash_size as usize))?;

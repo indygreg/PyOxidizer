@@ -185,6 +185,11 @@ impl<'a> EmbeddedSignatureBuilder<'a> {
         }
 
         for (slot, blob) in &self.blobs {
+            // Not all slots are expressible in the cd specials list!
+            if !slot.is_code_directory_specials_expressible() {
+                continue;
+            }
+
             let digest = blob.digest_with(cd.hash_type)?.into();
 
             cd.special_hashes.insert(*slot, digest);

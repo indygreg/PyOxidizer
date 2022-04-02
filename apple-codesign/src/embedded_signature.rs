@@ -123,20 +123,35 @@ impl From<CodeSigningMagic> for u32 {
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub enum CodeSigningSlot {
     CodeDirectory,
+    /// Info.plist.
     Info,
+    /// Designated requirements.
     RequirementSet,
+    /// Digest of `CodeRequirements` file (used in bundles).
     ResourceDir,
+    /// Application specific slot.
     Application,
+    /// Entitlements XML plist.
     Entitlements,
+    /// Reserved for disk images.
     RepSpecific,
+    /// Entitlements DER encoded plist.
     EntitlementsDer,
+    // Everything from here is a slot not encoded in the code directory hashes list.
+    // REMEMBER TO UPDATE is_code_directory_specials_expressible() if adding a new slot
+    // here!
+    /// Alternative code directory slot #0.
+    ///
+    /// Used for expressing a code directory using an alternate digest type.
     AlternateCodeDirectory0,
     AlternateCodeDirectory1,
     AlternateCodeDirectory2,
     AlternateCodeDirectory3,
     AlternateCodeDirectory4,
+    /// CMS signature.
     Signature,
     Identification,
+    /// Notarization ticket.
     Ticket,
     Unknown(u32),
 }
@@ -264,6 +279,11 @@ impl CodeSigningSlot {
                 | CodeSigningSlot::AlternateCodeDirectory3
                 | CodeSigningSlot::AlternateCodeDirectory4
         )
+    }
+
+    /// Whether this slot's digest is expressed in code directories list of special slot digests.
+    pub fn is_code_directory_specials_expressible(&self) -> bool {
+        *self <= Self::EntitlementsDer
     }
 }
 
