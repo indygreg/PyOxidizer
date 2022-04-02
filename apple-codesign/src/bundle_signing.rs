@@ -15,7 +15,7 @@ use {
         macho_signing::MachOSigner,
         signing_settings::{SettingsScope, SigningSettings},
     },
-    apple_bundles::{DirectoryBundle, DirectoryBundleFile},
+    apple_bundles::{BundlePackageType, DirectoryBundle, DirectoryBundleFile},
     goblin::mach::Mach,
     log::{info, warn},
     std::{
@@ -355,6 +355,47 @@ impl SingleBundleSigner {
             self.bundle.root_dir().display(),
             dest_dir.display()
         );
+
+        // Frameworks are a bit special.
+        //
+        // Modern frameworks typically have a `Versions/` directory containing directories
+        // with the actual frameworks. These are the actual directories that are signed - not
+        // the top-most directory. In fact, the top-most `.framework` directory doesn't have any
+        // code signature elements at all and can effectively be ignored as far as signing
+        // is concerned.
+        //
+        // But even if there is a `Versions/` directory with nested bundles to sign, the top-level
+        // directory may have some symlinks. And those need to be preserved. In addition, there
+        // may be symlinks in `Versions/`. `Versions/Current` is common.
+        //
+        // Of course, if there is no `Versions/` directory, the top-level directory could be
+        // a valid framework warranting signing.
+        if self.bundle.package_type() == BundlePackageType::Framework {
+            if self.bundle.root_dir().join("Versions").is_dir() {
+                warn!("found a versioned framework; each version will be signed as its own bundle");
+
+                // But we still need to preserve files (hopefully just symlinks) outside the
+                // nested bundles under `Versions/`. Since we don't nest into child bundles
+                // here, it should be safe to handle each encountered file.
+                let handler = SingleBundleHandler {
+                    dest_dir: dest_dir.to_path_buf(),
+                    settings,
+                };
+
+                for file in self
+                    .bundle
+                    .files(false)
+                    .map_err(AppleCodesignError::DirectoryBundle)?
+                {
+                    handler.install_file(&file)?;
+                }
+
+                return DirectoryBundle::new_from_path(dest_dir)
+                    .map_err(AppleCodesignError::DirectoryBundle);
+            } else {
+                warn!("found an unversioned framework; signing like normal");
+            }
+        }
 
         let dest_dir_root = dest_dir.to_path_buf();
 
