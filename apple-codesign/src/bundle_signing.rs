@@ -447,13 +447,15 @@ impl SingleBundleSigner {
                     file.relative_path().display()
                 );
                 main_exe = Some(file);
-            // The Info.plist is digested specially.
             } else if file.is_info_plist() {
+                // The Info.plist is digested specially. But it may also be handled by
+                // the resources handler. So always feed it through.
+
                 info!(
                     "{} is the Info.plist file; handling specially",
                     file.relative_path().display()
                 );
-                handler.install_file(&file)?;
+                resources_builder.process_file(&file, &handler)?;
                 info_plist_data = Some(std::fs::read(file.absolute_path())?);
             } else {
                 resources_builder.process_file(&file, &handler)?;
