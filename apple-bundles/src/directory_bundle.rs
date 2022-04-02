@@ -308,12 +308,12 @@ impl DirectoryBundle {
             }
 
             // This directory is inside a directory that has already been searched for
-            // nested bundles. So stop.
+            // nested bundles. So ignore.
             if poisoned_prefixes
                 .iter()
                 .any(|prefix| path.strip_prefix(prefix).is_ok())
             {
-                break;
+                continue;
             }
 
             let root_relative = path.strip_prefix(&self.root)?.to_string_lossy();
