@@ -72,45 +72,52 @@ impl BundleSigner {
 
         let mut additional_files = Vec::new();
 
-        for (rel, nested) in &self.bundles {
-            match rel {
-                Some(rel) => {
-                    let nested_dest_dir = dest_dir.join(rel);
-                    info!(
-                        "entering nested bundle {}",
-                        nested.bundle.root_dir().display(),
-                    );
-                    let signed_bundle = nested.write_signed_bundle(
-                        nested_dest_dir,
-                        &settings.as_nested_bundle_settings(rel),
-                        &[],
-                    )?;
+        // We need to sign the leaf-most bundles first since a parent bundle may need
+        // to record information about the child in its signature.
+        let mut bundles = self
+            .bundles
+            .iter()
+            .filter_map(|(rel, bundle)| rel.as_ref().map(|rel| (rel, bundle)))
+            .collect::<Vec<_>>();
 
-                    // The main bundle's CodeResources file contains references to metadata about
-                    // nested bundles' main executables. So we capture that here.
-                    let main_exe = signed_bundle
-                        .files(false)
-                        .map_err(AppleCodesignError::DirectoryBundle)?
-                        .into_iter()
-                        .find(|file| matches!(file.is_main_executable(), Ok(true)));
+        // This won't preserve alphabetical order. But since the input was stable, output
+        // should be deterministic.
+        bundles.sort_by(|(a, _), (b, _)| b.len().cmp(&a.len()));
 
-                    if let Some(main_exe) = main_exe {
-                        let macho_data = std::fs::read(main_exe.absolute_path())?;
-                        let macho_info = SignedMachOInfo::parse_data(&macho_data)?;
+        for (rel, nested) in bundles {
+            let nested_dest_dir = dest_dir.join(rel);
+            info!(
+                "entering nested bundle {}",
+                nested.bundle.root_dir().display(),
+            );
+            let signed_bundle = nested.write_signed_bundle(
+                nested_dest_dir,
+                &settings.as_nested_bundle_settings(rel),
+                &[],
+            )?;
 
-                        let path = rel.replace('\\', "/");
-                        let path = path.strip_prefix("Contents/").unwrap_or(&path).to_string();
+            // The main bundle's CodeResources file contains references to metadata about
+            // nested bundles' main executables. So we capture that here.
+            let main_exe = signed_bundle
+                .files(false)
+                .map_err(AppleCodesignError::DirectoryBundle)?
+                .into_iter()
+                .find(|file| matches!(file.is_main_executable(), Ok(true)));
 
-                        additional_files.push((path, macho_info));
-                    }
+            if let Some(main_exe) = main_exe {
+                let macho_data = std::fs::read(main_exe.absolute_path())?;
+                let macho_info = SignedMachOInfo::parse_data(&macho_data)?;
 
-                    info!(
-                        "leaving nested bundle {}",
-                        nested.bundle.root_dir().display()
-                    );
-                }
-                None => {}
+                let path = rel.replace('\\', "/");
+                let path = path.strip_prefix("Contents/").unwrap_or(&path).to_string();
+
+                additional_files.push((path, macho_info));
             }
+
+            info!(
+                "leaving nested bundle {}",
+                nested.bundle.root_dir().display()
+            );
         }
 
         let main = self
