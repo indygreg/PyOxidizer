@@ -269,19 +269,20 @@ impl DirectoryBundle {
             .collect::<Result<Vec<_>>>()?
             .into_iter()
             .filter_map(|path| {
-                // Symlinks are emitted as files. It is up to callers to see they are
-                // symlinks and not actual directories.
-                if path.is_dir() && path.is_symlink() {
-                    Some(DirectoryBundleFile::new(self, path))
-                } else if path.is_dir()
-                    || (!traverse_nested
-                        && nested_dirs
-                            .iter()
-                            .any(|prefix| path.strip_prefix(prefix).is_ok()))
+                // This path is part of a known nested bundle and we're not in traversal mode.
+                // Stop immediately.
+                if !traverse_nested
+                    && nested_dirs
+                        .iter()
+                        .any(|prefix| path.strip_prefix(prefix).is_ok())
                 {
                     None
-                } else {
+                // Symlinks are emitted as files, even if they point to a directory. It is
+                // up to callers to handle symlinks correctly.
+                } else if path.is_symlink() || !path.is_dir() {
                     Some(DirectoryBundleFile::new(self, path))
+                } else {
+                    None
                 }
             })
             .collect::<Vec<_>>())
