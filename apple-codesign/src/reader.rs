@@ -828,43 +828,60 @@ impl SignatureReader {
         let mut default_entity =
             FileEntity::from_path(file.absolute_path(), Some(&main_relative_path))?;
 
+        let file_name = file
+            .absolute_path()
+            .file_name()
+            .expect("path should have file name")
+            .to_string_lossy();
+        let parent_dir = file
+            .absolute_path()
+            .parent()
+            .expect("path should have parent directory");
+
+        // There may be bugs in the code identifying the role of files in bundles.
+        // So rely on our own heuristics to detect and report on the file type.
         if default_entity.symlink_target.is_some() {
             entities.push(default_entity);
-        } else if file
-            .is_main_executable()
-            .map_err(AppleCodesignError::DirectoryBundle)?
-        {
-            let data = std::fs::read(file.absolute_path())?;
-            entities.extend(Self::resolve_macho_entities_from_data(
-                file.absolute_path(),
-                &data,
-                Some(&main_relative_path),
-            )?);
-        } else if file.is_code_resources_xml_plist() {
-            let data = std::fs::read(file.absolute_path())?;
+        } else if parent_dir.ends_with("_CodeSignature") {
+            if file_name == "CodeResources" {
+                let data = std::fs::read(file.absolute_path())?;
 
-            default_entity.entity =
-                SignatureEntity::BundleCodeSignatureFile(CodeSignatureFile::ResourcesXml(
-                    String::from_utf8_lossy(&data)
-                        .split('\n')
-                        .map(|x| x.replace('\t', "  "))
-                        .collect::<Vec<_>>(),
-                ));
+                default_entity.entity =
+                    SignatureEntity::BundleCodeSignatureFile(CodeSignatureFile::ResourcesXml(
+                        String::from_utf8_lossy(&data)
+                            .split('\n')
+                            .map(|x| x.replace('\t', "  "))
+                            .collect::<Vec<_>>(),
+                    ));
 
-            entities.push(default_entity);
-        } else if file.is_notarization_ticket() {
+                entities.push(default_entity);
+            } else {
+                default_entity.entity =
+                    SignatureEntity::BundleCodeSignatureFile(CodeSignatureFile::Other);
+
+                entities.push(default_entity);
+            }
+        } else if file_name == "CodeResources" {
             default_entity.entity =
                 SignatureEntity::BundleCodeSignatureFile(CodeSignatureFile::NotarizationTicket);
 
             entities.push(default_entity);
-        } else if file.is_in_code_signature_directory() {
-            default_entity.entity =
-                SignatureEntity::BundleCodeSignatureFile(CodeSignatureFile::Other);
-
-            entities.push(default_entity);
         } else {
-            // Just some extra file.
-            entities.push(default_entity);
+            let data = std::fs::read(file.absolute_path())?;
+
+            match Self::resolve_macho_entities_from_data(
+                file.absolute_path(),
+                &data,
+                Some(&main_relative_path),
+            ) {
+                Ok(extra) => {
+                    entities.extend(extra);
+                }
+                Err(_) => {
+                    // Just some extra file.
+                    entities.push(default_entity);
+                }
+            }
         }
 
         Ok(entities)
