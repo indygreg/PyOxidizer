@@ -20,6 +20,10 @@ opt-level = 3
 opt-level = 3
 [profile.test.package.crc32fast]
 opt-level = 3
+[profile.dev.package.difference]
+opt-level = 3
+[profile.test.package.difference]
+opt-level = 3
 [profile.dev.package.flate2]
 opt-level = 3
 [profile.test.package.flate2]
