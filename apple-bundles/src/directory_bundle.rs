@@ -84,21 +84,35 @@ impl DirectoryBundle {
         //
         // Depending on how we probe the directories, `MyFramework.framework/Resources`
         // looks like a shallow app bundle!
+        //
+        // Frameworks are also an interesting use case. Frameworks often have a `Versions/`
+        // where there may exist multiple versions of the framework. Each directory under
+        // `Versions` is itself a valid framework!
+        //
+        //   MyFramework.framework
+        //     MyFramework -> Versions/Current/MyFramework
+        //     Resources -> Versions/Current/Resources
+        //     Versions/
+        //       A/
+        //         MyFramework
+        //         Resources/
+        //           Info.plist
+        //       Current -> A
 
-        // Frameworks must have a `Resources/Info.plist` and end in `.framework`.
-        let (package_type, info_plist_path) =
-            if root_name.ends_with(".framework") && framework_plist.is_file() {
-                (BundlePackageType::Framework, framework_plist)
-            } else if app_plist.is_file() {
-                if root_name.ends_with(".app") {
-                    (BundlePackageType::App, app_plist)
-                } else {
-                    // This can definitely lead to false positives.
-                    (BundlePackageType::Bundle, app_plist)
-                }
+        // Frameworks must have a `Resources/Info.plist`. It is tempting to look for the
+        // `.framework` extension as well. However
+        let (package_type, info_plist_path) = if framework_plist.is_file() {
+            (BundlePackageType::Framework, framework_plist)
+        } else if app_plist.is_file() {
+            if root_name.ends_with(".app") {
+                (BundlePackageType::App, app_plist)
             } else {
-                return Err(anyhow!("Info.plist not found; not a valid bundle"));
-            };
+                // This can definitely lead to false positives.
+                (BundlePackageType::Bundle, app_plist)
+            }
+        } else {
+            return Err(anyhow!("Info.plist not found; not a valid bundle"));
+        };
 
         let info_plist_data = std::fs::read(&info_plist_path)?;
         let cursor = std::io::Cursor::new(info_plist_data);
@@ -344,7 +358,11 @@ impl DirectoryBundle {
             };
 
             bundles.push((root_relative.to_string(), bundle.clone()));
-            bundles.extend(bundle.nested_bundles()?);
+
+            for (path, nested) in bundle.nested_bundles()? {
+                bundles.push((format!("{}/{}", root_relative, path), nested));
+            }
+
             poisoned_prefixes.insert(path.to_path_buf());
         }
 
@@ -582,14 +600,31 @@ mod test {
         let framework_resource_file_child = framework_child.join("child00.txt");
         std::fs::write(&framework_resource_file_child, &[])?;
 
+        let a_resources = versions.join("A").join("Resources");
+        create_dir_all(&a_resources)?;
+        let b_resources = versions.join("B").join("Resources");
+        create_dir_all(&b_resources)?;
+        let a_plist = a_resources.join("Info.plist");
+        empty.to_file_xml(&a_plist)?;
+        let b_plist = b_resources.join("Info.plist");
+        empty.to_file_xml(&b_plist)?;
+
         let bundle = DirectoryBundle::new_from_path(&root)?;
 
         let nested = bundle.nested_bundles()?;
-        assert_eq!(nested.len(), 1);
-        assert_eq!(nested[0].0, "Contents/Frameworks/MyFramework.framework");
+        assert_eq!(nested.len(), 3);
+        assert_eq!(
+            nested
+                .iter()
+                .map(|x| x.0.replace("\\", "/"))
+                .collect::<Vec<_>>(),
+            vec![
+                "Contents/Frameworks/MyFramework.framework",
+                "Contents/Frameworks/MyFramework.framework/Versions/A",
+                "Contents/Frameworks/MyFramework.framework/Versions/B",
+            ]
+        );
 
-        create_dir_all(versions.join("A"))?;
-        create_dir_all(versions.join("B"))?;
         assert_eq!(nested[0].1.framework_versions()?, vec!["A", "B"]);
 
         Ok(())
