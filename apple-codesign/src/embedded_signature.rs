@@ -283,7 +283,7 @@ impl CodeSigningSlot {
 
     /// Whether this slot's digest is expressed in code directories list of special slot digests.
     pub fn is_code_directory_specials_expressible(&self) -> bool {
-        *self <= Self::EntitlementsDer
+        *self >= Self::Info && *self <= Self::EntitlementsDer
     }
 }
 
