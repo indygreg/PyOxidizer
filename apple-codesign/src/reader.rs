@@ -648,8 +648,12 @@ pub enum SignatureEntity {
 #[derive(Clone, Debug, Serialize)]
 pub struct FileEntity {
     pub path: PathBuf,
-    pub file_size: u64,
-    pub file_sha256: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub file_size: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub file_sha256: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub symlink_target: Option<PathBuf>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub sub_path: Option<String>,
     pub entity: SignatureEntity,
@@ -666,10 +670,21 @@ impl FileEntity {
             path.to_path_buf()
         };
 
+        let (file_size, file_sha256, symlink_target) = if metadata.is_symlink() {
+            (None, None, Some(std::fs::read_link(path)?))
+        } else {
+            (
+                Some(metadata.len()),
+                Some(hex::encode(DigestAlgorithm::Sha256.digest_path(path)?)),
+                None,
+            )
+        };
+
         Ok(Self {
             path: report_path,
-            file_size: metadata.len(),
-            file_sha256: hex::encode(DigestAlgorithm::Sha256.digest_path(path)?),
+            file_size,
+            file_sha256,
+            symlink_target,
             sub_path: None,
             entity: SignatureEntity::Other,
         })
@@ -813,7 +828,9 @@ impl SignatureReader {
         let mut default_entity =
             FileEntity::from_path(file.absolute_path(), Some(&main_relative_path))?;
 
-        if file
+        if default_entity.symlink_target.is_some() {
+            entities.push(default_entity);
+        } else if file
             .is_main_executable()
             .map_err(AppleCodesignError::DirectoryBundle)?
         {
