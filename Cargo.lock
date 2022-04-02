@@ -143,6 +143,7 @@ dependencies = [
  "tempfile",
  "thiserror",
  "tugger-apple",
+ "tugger-file-manifest",
  "uuid",
  "which",
  "x509-certificate",

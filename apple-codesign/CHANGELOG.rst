@@ -23,6 +23,8 @@
   Previously, the rules applied when signing shallow app bundles (app bundles without
   a ``Contents/`` directory) would be wrong and the produced signature would be
   invalid. (#536)
+* Bundle signing should now preserve symlinks when writing the output bundle.
+  Before, symlinks within bundles would be converted to regular files.
 
 0.10.0
 ======

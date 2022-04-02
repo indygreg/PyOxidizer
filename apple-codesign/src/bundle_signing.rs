@@ -23,6 +23,7 @@ use {
         io::Write,
         path::{Path, PathBuf},
     },
+    tugger_file_manifest::create_symlink,
 };
 
 /// A primitive for signing an Apple bundle.
@@ -238,17 +239,30 @@ impl<'a, 'key> BundleFileHandler for SingleBundleHandler<'a, 'key> {
         let dest_path = self.dest_dir.join(file.relative_path());
 
         if source_path != dest_path {
-            info!(
-                "copying file {} -> {}",
-                source_path.display(),
-                dest_path.display()
-            );
             std::fs::create_dir_all(
                 dest_path
                     .parent()
                     .expect("parent directory should be available"),
             )?;
-            std::fs::copy(source_path, dest_path)?;
+
+            if let Some(target) = file
+                .symlink_target()
+                .map_err(AppleCodesignError::DirectoryBundle)?
+            {
+                info!(
+                    "replicating symlink {} -> {}",
+                    dest_path.display(),
+                    target.display()
+                );
+                create_symlink(&dest_path, target)?;
+            } else {
+                info!(
+                    "copying file {} -> {}",
+                    source_path.display(),
+                    dest_path.display()
+                );
+                std::fs::copy(source_path, dest_path)?;
+            }
         }
 
         Ok(())

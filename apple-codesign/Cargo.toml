@@ -76,6 +76,10 @@ version = "0.14.0-pre"
 path = "../tugger-apple"
 version = "0.7.0-pre"
 
+[dependencies.tugger-file-manifest]
+path = "../tugger-file-manifest"
+version = "0.8.0-pre"
+
 [dependencies.x509-certificate]
 path = "../x509-certificate"
 version = "0.12.0-pre"
