@@ -205,6 +205,31 @@ impl<'a> EmbeddedSignatureBuilder<'a> {
         Ok(self.code_directory().expect("we just inserted this key"))
     }
 
+    /// Add an alternative code directory.
+    ///
+    /// This is a wrapper for [Self::add_code_directory()] that has logic for determining the
+    /// appropriate slot for the code directory.
+    pub fn add_alternative_code_directory(
+        &mut self,
+        cd: CodeDirectoryBlob<'a>,
+    ) -> Result<&CodeDirectoryBlob, AppleCodesignError> {
+        let mut our_slot = CodeSigningSlot::AlternateCodeDirectory0;
+
+        for slot in self.blobs.keys() {
+            if slot.is_alternative_code_directory() {
+                our_slot = CodeSigningSlot::from(u32::from(*slot) + 1);
+
+                if !our_slot.is_alternative_code_directory() {
+                    return Err(AppleCodesignError::SignatureBuilder(
+                        "no more available alternative code directory slots",
+                    ));
+                }
+            }
+        }
+
+        self.add_code_directory(our_slot, cd)
+    }
+
     /// The a CMS signature and register its signature blob.
     ///
     /// `signing_key` and `signing_cert` denote the keypair being used to produce a

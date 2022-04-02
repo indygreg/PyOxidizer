@@ -501,11 +501,7 @@ impl SingleBundleSigner {
             // Hardcoding the digest types here is likely subtly wrong...
             if self.bundle.package_type() == BundlePackageType::Framework {
                 settings.set_digest_type(DigestType::Sha1);
-                settings.set_alternative_code_directory(
-                    SettingsScope::Main,
-                    CodeSigningSlot::AlternateCodeDirectory0,
-                    DigestType::Sha256,
-                );
+                settings.add_extra_digest(SettingsScope::Main, DigestType::Sha256);
             }
 
             // The identifier for the main executable is defined in the bundle's Info.plist.

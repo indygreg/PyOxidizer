@@ -350,6 +350,18 @@ impl From<DigestType> for u8 {
     }
 }
 
+impl PartialOrd for DigestType {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        u8::from(*self).partial_cmp(&u8::from(*other))
+    }
+}
+
+impl Ord for DigestType {
+    fn cmp(&self, other: &Self) -> Ordering {
+        u8::from(*self).cmp(&u8::from(*other))
+    }
+}
+
 impl Display for DigestType {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {

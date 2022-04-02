@@ -247,7 +247,7 @@ impl<'a> AppleSignable for MachO<'a> {
         settings: &SigningSettings,
     ) -> Result<usize, AppleCodesignError> {
         let code_directory_count = 1 + settings
-            .alternative_code_directories(SettingsScope::Main)
+            .extra_digests(SettingsScope::Main)
             .map(|x| x.len())
             .unwrap_or_default();
 
@@ -262,8 +262,8 @@ impl<'a> AppleSignable for MachO<'a> {
             .map(|x| x.len())
             .sum::<usize>();
 
-        if let Some(alt_cds) = settings.alternative_code_directories(SettingsScope::Main) {
-            for digest in alt_cds.values() {
+        if let Some(digests) = settings.extra_digests(SettingsScope::Main) {
+            for digest in digests {
                 size += compute_code_hashes(self, *digest, None)?
                     .into_iter()
                     .map(|x| x.len())

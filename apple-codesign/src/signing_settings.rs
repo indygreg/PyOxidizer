@@ -9,14 +9,17 @@ use {
         certificate::AppleCertificate,
         code_directory::{CodeSignatureFlags, ExecutableSegmentFlags},
         code_requirement::CodeRequirementExpression,
-        embedded_signature::{Blob, CodeSigningSlot, DigestType, RequirementBlob},
+        embedded_signature::{Blob, DigestType, RequirementBlob},
         error::AppleCodesignError,
     },
     goblin::mach::cputype::{
         CpuType, CPU_TYPE_ARM, CPU_TYPE_ARM64, CPU_TYPE_ARM64_32, CPU_TYPE_X86_64,
     },
     reqwest::{IntoUrl, Url},
-    std::{collections::BTreeMap, fmt::Formatter},
+    std::{
+        collections::{BTreeMap, BTreeSet},
+        fmt::Formatter,
+    },
     x509_certificate::{CapturedX509Certificate, Sign},
 };
 
@@ -268,7 +271,7 @@ pub struct SigningSettings<'key> {
     runtime_version: BTreeMap<SettingsScope, semver::Version>,
     info_plist_data: BTreeMap<SettingsScope, Vec<u8>>,
     code_resources_data: BTreeMap<SettingsScope, Vec<u8>>,
-    alternative_code_directories: BTreeMap<SettingsScope, BTreeMap<CodeSigningSlot, DigestType>>,
+    extra_digests: BTreeMap<SettingsScope, BTreeSet<DigestType>>,
 }
 
 impl<'key> SigningSettings<'key> {
@@ -704,29 +707,25 @@ impl<'key> SigningSettings<'key> {
         self.code_resources_data.insert(scope, data);
     }
 
-    /// Obtain alternative code directories for a scope.
-    pub fn alternative_code_directories(
-        &self,
-        scope: impl AsRef<SettingsScope>,
-    ) -> Option<&BTreeMap<CodeSigningSlot, DigestType>> {
-        self.alternative_code_directories.get(scope.as_ref())
+    /// Obtain extra digests to include in signatures.
+    pub fn extra_digests(&self, scope: impl AsRef<SettingsScope>) -> Option<&BTreeSet<DigestType>> {
+        self.extra_digests.get(scope.as_ref())
     }
 
-    /// Indicate that an alternative code directory should be generated for the given scope.
+    /// Register an addition content digest to use in signatures.
     ///
-    /// The caller passes the code directory slot and the digest type for the code
-    /// directory. (Alternative code directory slots appear to be used to allow storing
-    /// code directories with different digest schemes.)
-    pub fn set_alternative_code_directory(
-        &mut self,
-        scope: SettingsScope,
-        slot: CodeSigningSlot,
-        digest_type: DigestType,
-    ) {
-        self.alternative_code_directories
+    /// Extra digests supplement the primary registered digest when the signer supports
+    /// it. Calling this likely results in an additional code directory being included
+    /// in embedded signatures.
+    ///
+    /// A common use case for this is to have the primary digest contain a legacy
+    /// digest type (namely SHA-1) but include stronger digests as well. This enables
+    /// signatures to have compatibility with older operating systems but still be modern.
+    pub fn add_extra_digest(&mut self, scope: SettingsScope, digest_type: DigestType) {
+        self.extra_digests
             .entry(scope)
             .or_default()
-            .insert(slot, digest_type);
+            .insert(digest_type);
     }
 
     /// Convert this instance to settings appropriate for a nested bundle.
@@ -854,8 +853,8 @@ impl<'key> SigningSettings<'key> {
                 .into_iter()
                 .filter_map(|(key, value)| key_map(key).map(|key| (key, value)))
                 .collect::<BTreeMap<_, _>>(),
-            alternative_code_directories: self
-                .alternative_code_directories
+            extra_digests: self
+                .extra_digests
                 .clone()
                 .into_iter()
                 .filter_map(|(key, value)| key_map(key).map(|key| (key, value)))
