@@ -269,7 +269,11 @@ impl DirectoryBundle {
             .collect::<Result<Vec<_>>>()?
             .into_iter()
             .filter_map(|path| {
-                if path.is_dir()
+                // Symlinks are emitted as files. It is up to callers to see they are
+                // symlinks and not actual directories.
+                if path.is_dir() && path.is_symlink() {
+                    Some(DirectoryBundleFile::new(self, path))
+                } else if path.is_dir()
                     || (!traverse_nested
                         && nested_dirs
                             .iter()
@@ -317,7 +321,7 @@ impl DirectoryBundle {
             }
 
             // A nested bundle must be a directory.
-            if !path.is_dir() {
+            if !path.is_dir() || path.is_symlink() {
                 continue;
             }
 
@@ -475,8 +479,10 @@ impl<'a> DirectoryBundleFile<'a> {
     }
 
     /// Obtain metadata for this file.
+    ///
+    /// Does not follow symlinks.
     pub fn metadata(&self) -> Result<std::fs::Metadata> {
-        Ok(self.absolute_path.metadata()?)
+        Ok(self.absolute_path.symlink_metadata()?)
     }
 
     /// Convert this instance to a [FileEntry].
