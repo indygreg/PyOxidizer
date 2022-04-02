@@ -25,6 +25,9 @@
   invalid. (#536)
 * Bundle signing should now preserve symlinks when writing the output bundle.
   Before, symlinks within bundles would be converted to regular files.
+* ``rcodesign sign`` now accepts an ``--extra-digest`` argument to provide an
+  extra digest type to include in signatures. This facilitates signing with
+  multiple digest types via e.g. ``--digest sha1 --extra-digest sha256``.
 
 0.10.0
 ======

@@ -1642,6 +1642,14 @@ fn command_sign(args: &ArgMatches) -> Result<(), AppleCodesignError> {
         settings.set_digest_type(digest_type);
     }
 
+    if let Some(values) = args.values_of("extra_digest") {
+        for value in values {
+            let (scope, digest_type) = parse_scoped_value(value)?;
+            let digest_type = DigestType::try_from(digest_type)?;
+            settings.add_extra_digest(scope, digest_type);
+        }
+    }
+
     if let Some(values) = args.values_of("binary_identifier") {
         for value in values {
             let (scope, identifier) = parse_scoped_value(value)?;
@@ -2221,6 +2229,14 @@ fn main_impl() -> Result<(), AppleCodesignError> {
                         .takes_value(true)
                         .default_value("sha256")
                         .help("Digest algorithm to use")
+                )
+                .arg(Arg::new("extra_digest")
+                    .long("extra-digest")
+                    .possible_values(SUPPORTED_HASHES)
+                    .takes_value(true)
+                    .multiple_occurrences(true)
+                    .multiple_values(true)
+                    .number_of_values(1).help("Extra digests to include in signatures")
                 )
                 .arg(
                     Arg::new("entitlements_xml_path")
