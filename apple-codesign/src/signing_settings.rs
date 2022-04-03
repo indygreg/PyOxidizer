@@ -11,10 +11,12 @@ use {
         code_requirement::CodeRequirementExpression,
         embedded_signature::{Blob, DigestType, RequirementBlob},
         error::AppleCodesignError,
+        macho::{iter_macho, AppleSignable},
     },
     goblin::mach::cputype::{
         CpuType, CPU_TYPE_ARM, CPU_TYPE_ARM64, CPU_TYPE_ARM64_32, CPU_TYPE_X86_64,
     },
+    log::info,
     reqwest::{IntoUrl, Url},
     std::{
         collections::{BTreeMap, BTreeSet},
@@ -474,6 +476,41 @@ impl<'key> SigningSettings<'key> {
         } else {
             Ok(None)
         }
+    }
+
+    /// Import existing entitlements from Mach-O data.
+    ///
+    /// This will synchronize the signing settings with the state in the Mach-O file.
+    ///
+    /// If existing settings are explicitly set, they will be honored. Otherwise the state from
+    /// the Mach-O is imported into the settings.
+    pub fn import_entitlements_from_macho(
+        &mut self,
+        macho_data: &[u8],
+    ) -> Result<(), AppleCodesignError> {
+        for (index, macho) in iter_macho(&macho_data)?.enumerate() {
+            if let Some(sig) = macho.code_signature()? {
+                if let Some(entitlements) = sig.entitlements()? {
+                    let settings_index =
+                        self.entitlements_plist(SettingsScope::MultiArchIndex(index));
+                    let settings_arch = self.entitlements_plist(SettingsScope::MultiArchCpuType(
+                        macho.header.cputype(),
+                    ));
+
+                    if settings_index.is_some() || settings_arch.is_some() {
+                        info!("using entitlements from settings");
+                    } else {
+                        info!("preserving existing entitlements in Mach-O");
+                        self.set_entitlements_xml(
+                            SettingsScope::MultiArchIndex(index),
+                            entitlements.as_str(),
+                        )?;
+                    }
+                }
+            }
+        }
+
+        Ok(())
     }
 
     /// Set the entitlements to sign via an XML string.

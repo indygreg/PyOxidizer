@@ -11,7 +11,7 @@ use {
         code_resources::{CodeResourcesBuilder, CodeResourcesRule},
         embedded_signature::{Blob, BlobData, CodeSigningSlot},
         error::AppleCodesignError,
-        macho::{iter_macho, AppleSignable},
+        macho::AppleSignable,
         macho_signing::MachOSigner,
         signing_settings::{SettingsScope, SigningSettings},
     },
@@ -286,6 +286,8 @@ impl<'a, 'key> BundleFileHandler for SingleBundleHandler<'a, 'key> {
             .unwrap_or_else(|| identifier.as_ref());
         settings.set_binary_identifier(SettingsScope::Main, identifier);
 
+        settings.import_entitlements_from_macho(&macho_data)?;
+
         let mut new_data = Vec::<u8>::with_capacity(macho_data.len() + 2_usize.pow(17));
         signer.write_signed_binary(&settings, &mut new_data)?;
 
@@ -510,28 +512,7 @@ impl SingleBundleSigner {
                 settings.set_info_plist_data(SettingsScope::Main, info_plist_data);
             }
 
-            // Preserve embedded entitlements.
-            for (index, macho) in iter_macho(&macho_data)?.enumerate() {
-                if let Some(sig) = macho.code_signature()? {
-                    if let Some(entitlements) = sig.entitlements()? {
-                        let settings_index =
-                            settings.entitlements_plist(SettingsScope::MultiArchIndex(index));
-                        let settings_arch = settings.entitlements_plist(
-                            SettingsScope::MultiArchCpuType(macho.header.cputype()),
-                        );
-
-                        if settings_index.is_some() || settings_arch.is_some() {
-                            info!("using entitlements from settings");
-                        } else {
-                            info!("preserving existing entitlements in Mach-O");
-                            settings.set_entitlements_xml(
-                                SettingsScope::MultiArchIndex(index),
-                                entitlements.as_str(),
-                            )?;
-                        }
-                    }
-                }
-            }
+            settings.import_entitlements_from_macho(&macho_data)?;
 
             let mut new_data = Vec::<u8>::with_capacity(macho_data.len() + 2_usize.pow(17));
             signer.write_signed_binary(&settings, &mut new_data)?;
