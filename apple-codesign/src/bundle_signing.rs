@@ -19,7 +19,7 @@ use {
     goblin::mach::Mach,
     log::{info, warn},
     std::{
-        collections::{BTreeMap, HashMap},
+        collections::BTreeMap,
         io::Write,
         path::{Path, PathBuf},
     },
@@ -70,11 +70,6 @@ impl BundleSigner {
     ) -> Result<DirectoryBundle, AppleCodesignError> {
         let dest_dir = dest_dir.as_ref();
 
-        // Mapping of parent bundle's path to additional metadata about Mach-O signatures
-        // in child bundles which need to be captured in the parent's CodeResources.
-        let mut child_seals: HashMap<Option<String>, Vec<(String, SignedMachOInfo)>> =
-            HashMap::new();
-
         // We need to sign the leaf-most bundles first since a parent bundle may need
         // to record information about the child in its signature.
         let mut bundles = self
@@ -101,43 +96,8 @@ impl BundleSigner {
                 "entering nested bundle {}",
                 nested.bundle.root_dir().display(),
             );
-
-            let signed_bundle = nested.write_signed_bundle(
-                nested_dest_dir,
-                &settings.as_nested_bundle_settings(rel),
-                if let Some(seals) = child_seals.get(&Some(rel.to_string())) {
-                    seals
-                } else {
-                    &[]
-                },
-            )?;
-
-            // The parent bundle's CodeResources file contains the code directory digest of
-            // the main executable of child bundles. Capture that here.
-
-            // But don't do it for bundles representing a single version within a framework
-            // because the main framework bundle is the only thing that matters.
-            if !signed_bundle.is_framework_version() {
-                let main_exe = signed_bundle
-                    .files(false)
-                    .map_err(AppleCodesignError::DirectoryBundle)?
-                    .into_iter()
-                    .find(|file| matches!(file.is_main_executable(), Ok(true)));
-
-                if let Some(main_exe) = main_exe {
-                    let macho_data = std::fs::read(main_exe.absolute_path())?;
-                    let macho_info = SignedMachOInfo::parse_data(&macho_data)?;
-
-                    let path = rel.replace('\\', "/");
-                    let path = path.strip_prefix("Contents/").unwrap_or(&path).to_string();
-
-                    child_seals
-                        .entry(self.bundle_parent_path(rel))
-                        .or_insert(vec![])
-                        .push((path, macho_info));
-                }
-            }
-
+            nested
+                .write_signed_bundle(nested_dest_dir, &settings.as_nested_bundle_settings(rel))?;
             info!(
                 "leaving nested bundle {}",
                 nested.bundle.root_dir().display()
@@ -149,32 +109,7 @@ impl BundleSigner {
             .get(&None)
             .expect("main bundle should have a key");
 
-        main.write_signed_bundle(
-            dest_dir,
-            settings,
-            if let Some(seals) = child_seals.get(&None) {
-                seals
-            } else {
-                &[]
-            },
-        )
-    }
-
-    fn bundle_parent_path(&self, child_rel_path: &str) -> Option<String> {
-        let mut test_path = Path::new(child_rel_path);
-
-        while let Some(parent) = test_path.parent() {
-            let parent_str = parent.to_string_lossy().to_string();
-
-            if self.bundles.contains_key(&Some(parent_str.clone())) {
-                return Some(parent_str);
-            }
-
-            test_path = parent;
-        }
-
-        // If we exhausted the relative path, we must have arrived at the root bundle.
-        None
+        main.write_signed_bundle(dest_dir, settings)
     }
 }
 
@@ -395,7 +330,6 @@ impl SingleBundleSigner {
         &self,
         dest_dir: impl AsRef<Path>,
         settings: &SigningSettings,
-        additional_macho_files: &[(String, SignedMachOInfo)],
     ) -> Result<DirectoryBundle, AppleCodesignError> {
         let dest_dir = dest_dir.as_ref();
 
@@ -524,11 +458,26 @@ impl SingleBundleSigner {
             }
         }
 
-        // Add in any additional signed Mach-O files. This is likely used for nested
-        // bundles.
-        for (path, info) in additional_macho_files {
-            info!("registering {} as an additional Mach-O file", path);
-            resources_builder.add_signed_macho_file(path, info)?;
+        // Seal code directory digests of any nested bundles. This is done by finding the main
+        // executable and taking the code directory digest of the first Mach-O within.
+        for (rel_path, nested_bundle) in self
+            .bundle
+            .nested_bundles(false)
+            .map_err(AppleCodesignError::DirectoryBundle)?
+        {
+            let nested_main_exe = nested_bundle
+                .files(false)
+                .map_err(AppleCodesignError::DirectoryBundle)?
+                .into_iter()
+                .find(|file| matches!(file.is_main_executable(), Ok(true)));
+
+            if let Some(file) = nested_main_exe {
+                let macho_data = std::fs::read(file.absolute_path())?;
+                let macho_info = SignedMachOInfo::parse_data(&macho_data)?;
+
+                info!("sealing nested bundle {}", rel_path);
+                resources_builder.process_nested_macho(&rel_path, &macho_info)?;
+            }
         }
 
         // The resources are now sealed. Write out that XML file.

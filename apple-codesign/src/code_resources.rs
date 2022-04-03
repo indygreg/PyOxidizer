@@ -1305,12 +1305,20 @@ impl CodeResourcesBuilder {
     /// This is likely used to register the metadata of a nested bundle. The
     /// metadata likely comes from the first Mach-O binary in the nested bundle's
     /// main executable.
-    pub fn add_signed_macho_file(
+    pub fn process_nested_macho(
         &mut self,
-        path: &str,
+        relative_path: &str,
         info: &SignedMachOInfo,
     ) -> Result<(), AppleCodesignError> {
-        self.resources.seal_macho(path, info, false)
+        // TODO use normal rules processing here.
+        let relative_path = relative_path.replace('\\', "/");
+
+        let relative_path = relative_path
+            .strip_prefix("Contents/")
+            .unwrap_or(&relative_path)
+            .to_string();
+
+        self.resources.seal_macho(relative_path, info, false)
     }
 
     /// Write CodeResources XML content to a writer.
