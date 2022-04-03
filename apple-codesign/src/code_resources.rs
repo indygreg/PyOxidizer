@@ -1200,8 +1200,6 @@ impl CodeResourcesBuilder {
                     self.resources.seal_symlink(relative_path, target);
                     file_handler.install_file(file)?;
                 } else {
-                    let data = std::fs::read(file.absolute_path())?;
-
                     // If nested bit is set, treat as Mach-O binary to be signed.
                     if rule.nested {
                         let macho_info = file_handler.sign_and_install_macho(file)?;
@@ -1210,6 +1208,7 @@ impl CodeResourcesBuilder {
                             .seal_macho(relative_path, &macho_info, rule.optional)?;
                     } else {
                         info!("sealing regular file {}", relative_path);
+                        let data = std::fs::read(file.absolute_path())?;
                         self.resources.seal_regular_file(
                             relative_path,
                             data,
