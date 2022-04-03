@@ -465,19 +465,7 @@ impl SingleBundleSigner {
             .nested_bundles(false)
             .map_err(AppleCodesignError::DirectoryBundle)?
         {
-            let nested_main_exe = nested_bundle
-                .files(false)
-                .map_err(AppleCodesignError::DirectoryBundle)?
-                .into_iter()
-                .find(|file| matches!(file.is_main_executable(), Ok(true)));
-
-            if let Some(file) = nested_main_exe {
-                let macho_data = std::fs::read(file.absolute_path())?;
-                let macho_info = SignedMachOInfo::parse_data(&macho_data)?;
-
-                info!("sealing nested bundle {}", rel_path);
-                resources_builder.process_nested_macho(&rel_path, &macho_info)?;
-            }
+            resources_builder.process_nested_bundle(&rel_path, &nested_bundle)?;
         }
 
         // The resources are now sealed. Write out that XML file.

@@ -21,8 +21,8 @@ use {
         embedded_signature::DigestType,
         error::AppleCodesignError,
     },
-    apple_bundles::DirectoryBundleFile,
-    log::{debug, info},
+    apple_bundles::{DirectoryBundle, DirectoryBundleFile},
+    log::{debug, info, warn},
     plist::{Dictionary, Value},
     std::{cmp::Ordering, collections::BTreeMap, io::Write},
 };
@@ -1300,16 +1300,35 @@ impl CodeResourcesBuilder {
         self.process_file_rules(file)
     }
 
-    /// Add metadata for an additional signed Mach-O file.
+    /// Process a nested bundle for inclusion in resource handling.
     ///
-    /// This is likely used to register the metadata of a nested bundle. The
-    /// metadata likely comes from the first Mach-O binary in the nested bundle's
-    /// main executable.
-    pub fn process_nested_macho(
+    /// This will attempt to seal the main digest of the bundle into this resources file.
+    pub fn process_nested_bundle(
         &mut self,
         relative_path: &str,
-        info: &SignedMachOInfo,
+        bundle: &DirectoryBundle,
     ) -> Result<(), AppleCodesignError> {
+        let main_exe = match bundle
+            .files(false)
+            .map_err(AppleCodesignError::DirectoryBundle)?
+            .into_iter()
+            .find(|file| matches!(file.is_main_executable(), Ok(true)))
+        {
+            Some(path) => path,
+            None => {
+                warn!(
+                    "nested bundle at {} does not have main executable; nothing to seal",
+                    relative_path
+                );
+                return Ok(());
+            }
+        };
+
+        let macho_data = std::fs::read(main_exe.absolute_path())?;
+        let macho_info = SignedMachOInfo::parse_data(&macho_data)?;
+
+        info!("sealing nested bundle at {}", relative_path);
+
         // TODO use normal rules processing here.
         let relative_path = relative_path.replace('\\', "/");
 
@@ -1318,7 +1337,7 @@ impl CodeResourcesBuilder {
             .unwrap_or(&relative_path)
             .to_string();
 
-        self.resources.seal_macho(relative_path, info, false)
+        self.resources.seal_macho(relative_path, &macho_info, false)
     }
 
     /// Write CodeResources XML content to a writer.
