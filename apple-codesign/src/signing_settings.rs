@@ -728,6 +728,17 @@ impl<'key> SigningSettings<'key> {
             .insert(digest_type);
     }
 
+    /// Obtain all configured digests for a scope.
+    pub fn all_digests(&self, scope: SettingsScope) -> Vec<DigestType> {
+        let mut res = vec![self.digest_type];
+
+        if let Some(extra) = self.extra_digests(scope) {
+            res.extend(extra.into_iter());
+        }
+
+        res
+    }
+
     /// Convert this instance to settings appropriate for a nested bundle.
     #[must_use]
     pub fn as_nested_bundle_settings(&self, bundle_path: &str) -> Self {

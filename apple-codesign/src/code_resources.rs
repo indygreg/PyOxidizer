@@ -765,9 +765,23 @@ impl CodeResources {
         path: impl ToString,
         content: impl AsRef<[u8]>,
         optional: bool,
+        seal_digests: &[DigestType],
     ) -> Result<(), AppleCodesignError> {
+        // We always need SHA-1 digests for files entries. But we may not record the
+        // digest in files2!
         let sha1 = DigestType::Sha1.digest_data(content.as_ref())?;
-        let sha256 = DigestType::Sha256.digest_data(content.as_ref())?;
+
+        let hash = if seal_digests.contains(&DigestType::Sha1) {
+            Some(sha1.clone())
+        } else {
+            None
+        };
+
+        let hash2 = if seal_digests.contains(&DigestType::Sha256) {
+            Some(DigestType::Sha256.digest_data(content.as_ref())?)
+        } else {
+            None
+        };
 
         let path = path.to_string();
 
@@ -783,8 +797,8 @@ impl CodeResources {
             path,
             Files2Value {
                 cdhash: None,
-                hash: Some(sha1),
-                hash2: Some(sha256),
+                hash,
+                hash2,
                 optional: if optional { Some(true) } else { None },
                 requirement: None,
                 symlink: None,
@@ -893,10 +907,21 @@ impl From<&CodeResources> for Value {
 /// This type is used during bundle signing to construct a `CodeResources` instance.
 /// It contains logic for validating a file against registered processing rules and
 /// handling it accordingly.
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug)]
 pub struct CodeResourcesBuilder {
     rules: Vec<CodeResourcesRule>,
     resources: CodeResources,
+    digests: Vec<DigestType>,
+}
+
+impl Default for CodeResourcesBuilder {
+    fn default() -> Self {
+        Self {
+            rules: vec![],
+            resources: CodeResources::default(),
+            digests: vec![DigestType::Sha256],
+        }
+    }
 }
 
 impl CodeResourcesBuilder {
@@ -989,6 +1014,11 @@ impl CodeResourcesBuilder {
         );
 
         Ok(slf)
+    }
+
+    /// Set the digests to record in this instance.
+    pub fn set_digests(&mut self, digests: impl Iterator<Item = DigestType>) {
+        self.digests = digests.collect::<Vec<_>>();
     }
 
     /// Add a rule to this instance in the `<rules>` section.
@@ -1143,8 +1173,12 @@ impl CodeResourcesBuilder {
                     .seal_macho(relative_path, &macho_info, rule.optional)?;
             } else {
                 info!("sealing regular file {}", relative_path);
-                self.resources
-                    .seal_regular_file(relative_path, data, rule.optional)?;
+                self.resources.seal_regular_file(
+                    relative_path,
+                    data,
+                    rule.optional,
+                    &self.digests,
+                )?;
                 file_handler.install_file(file)?;
             }
         }

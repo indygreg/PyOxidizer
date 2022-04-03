@@ -419,6 +419,10 @@ impl SingleBundleSigner {
         } else {
             CodeResourcesBuilder::default_no_resources_rules()?
         };
+
+        // Ensure emitted digests match what we're configured to emit.
+        resources_builder.set_digests(settings.all_digests(SettingsScope::Main).into_iter());
+
         // Exclude code signature files we'll write.
         resources_builder.add_exclusion_rule(CodeResourcesRule::new("^_CodeSignature/")?.exclude());
         // Ignore notarization ticket.
