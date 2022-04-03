@@ -19,7 +19,7 @@ use {
     goblin::mach::Mach,
     log::{info, warn},
     std::{
-        collections::BTreeMap,
+        collections::{BTreeMap, HashMap},
         io::Write,
         path::{Path, PathBuf},
     },
@@ -70,7 +70,10 @@ impl BundleSigner {
     ) -> Result<DirectoryBundle, AppleCodesignError> {
         let dest_dir = dest_dir.as_ref();
 
-        let mut additional_files = Vec::new();
+        // Mapping of parent bundle's path to additional metadata about Mach-O signatures
+        // in child bundles which need to be captured in the parent's CodeResources.
+        let mut child_seals: HashMap<Option<String>, Vec<(String, SignedMachOInfo)>> =
+            HashMap::new();
 
         // We need to sign the leaf-most bundles first since a parent bundle may need
         // to record information about the child in its signature.
@@ -98,10 +101,15 @@ impl BundleSigner {
                 "entering nested bundle {}",
                 nested.bundle.root_dir().display(),
             );
+
             let signed_bundle = nested.write_signed_bundle(
                 nested_dest_dir,
                 &settings.as_nested_bundle_settings(rel),
-                &[],
+                if let Some(seals) = child_seals.get(&Some(rel.to_string())) {
+                    seals
+                } else {
+                    &[]
+                },
             )?;
 
             // The parent bundle's CodeResources file contains the code directory digest of
@@ -123,7 +131,10 @@ impl BundleSigner {
                     let path = rel.replace('\\', "/");
                     let path = path.strip_prefix("Contents/").unwrap_or(&path).to_string();
 
-                    additional_files.push((path, macho_info));
+                    child_seals
+                        .entry(self.bundle_parent_path(rel))
+                        .or_insert(vec![])
+                        .push((path, macho_info));
                 }
             }
 
@@ -138,7 +149,32 @@ impl BundleSigner {
             .get(&None)
             .expect("main bundle should have a key");
 
-        main.write_signed_bundle(dest_dir, settings, &additional_files)
+        main.write_signed_bundle(
+            dest_dir,
+            settings,
+            if let Some(seals) = child_seals.get(&None) {
+                seals
+            } else {
+                &[]
+            },
+        )
+    }
+
+    fn bundle_parent_path(&self, child_rel_path: &str) -> Option<String> {
+        let mut test_path = Path::new(child_rel_path);
+
+        while let Some(parent) = test_path.parent() {
+            let parent_str = parent.to_string_lossy().to_string();
+
+            if self.bundles.contains_key(&Some(parent_str.clone())) {
+                return Some(parent_str);
+            }
+
+            test_path = parent;
+        }
+
+        // If we exhausted the relative path, we must have arrived at the root bundle.
+        None
     }
 }
 
