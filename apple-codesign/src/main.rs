@@ -419,6 +419,50 @@ certificates constituting the signing chain in a separate PEM file.
 When using a code signing key/certificate, a Time-Stamp Protocol server URL
 can be specified via --timestamp-url. By default, Apple's server is used. The
 special value \"none\" can disable using a timestamp server.
+
+# Selecting What to Sign
+
+By default, this command attempts to recursively sign everything in the source
+path. This applies to:
+
+* Bundles. If the specified bundle has nested bundles, those nested bundles
+  will be signed automatically.
+
+It is possible to exclude nested items from signing using --exclude. This
+argument takes a glob expression that matches *relative paths* from the
+source path. Glob expressions can be literal string compares. Or the
+following special syntax is recognized:
+
+* `?` matches any single character.
+* `*` matches any (possibly empty) sequence of characters.
+* `**` matches the current directory and arbitrary subdirectories. This sequence
+  must form a single path component, so both **a and b** are invalid and will
+  result in an error. A sequence of more than two consecutive * characters is
+  also invalid.
+* `[...]` matches any character inside the brackets. Character sequences can also
+  specify ranges of characters, as ordered by Unicode, so e.g. [0-9] specifies any
+  character between 0 and 9 inclusive. An unclosed bracket is invalid.
+* `[!...]` is the negation of `[...]`, i.e. it matches any characters not in the
+  brackets.
+* The metacharacters `?`, `*`, `[`, `]` can be matched by using brackets (e.g.
+  `[?]`). When a `]` occurs immediately following `[` or `[!` then it is
+  interpreted as being part of, rather then ending, the character set, so `]` and
+  `NOT ]` can be matched by `[]]` and `[!]]` respectively. The `-` character can
+  be specified inside a character sequence pattern by placing it at the start or
+  the end, e.g. `[abc-]`.
+
+Currently, --exclude only applies to the relative path of nested bundles within
+the main bundle to sign. e.g. if you sign `MyApp.app` and it has a
+`Contents/Frameworks/MyFramework.framework` that you wish to exclude, you would
+`--exclude Contents/Frameworks/MyFramework.framework` or even
+`--exclude Contents/Frameworks/**` to exclude the entire directory tree.
+
+Exclusions will still be copied and parents that need to reference exclude
+entities will continue to do so. If you wish to make a file or directory
+disappear, create a new directory without the file(s) and sign that.
+
+To exclude all nested bundles from being signed and only sign the main bundle
+(the default behavior of ``codesign`` without ``--deep``), use `--exclude '**'`.
 ";
 
 const APPLE_TIMESTAMP_URL: &str = "http://timestamp.apple.com/ts01";
@@ -1701,6 +1745,12 @@ fn command_sign(args: &ArgMatches) -> Result<(), AppleCodesignError> {
         }
     }
 
+    if let Some(values) = args.values_of("exclude") {
+        for pattern in values {
+            settings.add_path_exclusion(pattern)?;
+        }
+    }
+
     if let Some(values) = args.values_of("binary_identifier") {
         for value in values {
             let (scope, identifier) = parse_scoped_value(value)?;
@@ -2419,6 +2469,15 @@ fn main_impl() -> Result<(), AppleCodesignError> {
                         .help(
                             "URL of timestamp server to use to obtain a token of the CMS signature",
                         ),
+                )
+                .arg(
+                    Arg::new("exclude")
+                        .long("exclude")
+                        .takes_value(true)
+                        .multiple_occurrences(true)
+                        .multiple_values(true)
+                        .number_of_values(1)
+                        .help("Glob expression of paths to exclude from signing")
                 )
                 .arg(
                     Arg::new("input_path")

@@ -35,6 +35,8 @@
   correct order; entitlements in Mach-O binaries weren't preserved during
   signing; ``CodeResources`` files had extra entries in ``<files>`` that shouldn't
   have been there, and likely a few more.
+* Add ``--exclude`` argument to ``rcodesign sign`` to allow excluding nested
+  bundles from signing.
 
 0.10.0
 ======

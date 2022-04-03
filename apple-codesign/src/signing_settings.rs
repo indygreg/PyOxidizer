@@ -13,6 +13,7 @@ use {
         error::AppleCodesignError,
         macho::{iter_macho, AppleSignable},
     },
+    glob::Pattern,
     goblin::mach::cputype::{
         CpuType, CPU_TYPE_ARM, CPU_TYPE_ARM64, CPU_TYPE_ARM64_32, CPU_TYPE_X86_64,
     },
@@ -261,6 +262,7 @@ pub struct SigningSettings<'key> {
     time_stamp_url: Option<Url>,
     team_id: Option<String>,
     digest_type: DigestType,
+    path_exclusion_patterns: Vec<Pattern>,
 
     // Scope-specific settings.
     // These are BTreeMap so when we filter the keys, keys with higher precedence come
@@ -431,6 +433,19 @@ impl<'key> SigningSettings<'key> {
         } else {
             None
         }
+    }
+
+    /// Return relative paths that should be excluded from signing.
+    ///
+    /// Values are glob pattern matches as defined the by `glob` crate.
+    pub fn path_exclusion_patterns(&self) -> &[Pattern] {
+        &self.path_exclusion_patterns
+    }
+
+    /// Add a path to the exclusions list.
+    pub fn add_path_exclusion(&mut self, v: &str) -> Result<(), AppleCodesignError> {
+        self.path_exclusion_patterns.push(Pattern::new(v)?);
+        Ok(())
     }
 
     /// Obtain the binary identifier string for a given scope.
@@ -853,6 +868,7 @@ impl<'key> SigningSettings<'key> {
             time_stamp_url: self.time_stamp_url.clone(),
             team_id: self.team_id.clone(),
             digest_type: self.digest_type,
+            path_exclusion_patterns: self.path_exclusion_patterns.clone(),
             identifiers: self
                 .identifiers
                 .clone()

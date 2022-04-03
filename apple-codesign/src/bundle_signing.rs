@@ -26,6 +26,25 @@ use {
     tugger_file_manifest::create_symlink,
 };
 
+/// Copy a bundle's contents to a destination directory.
+pub fn copy_bundle(bundle: &DirectoryBundle, dest_dir: &Path) -> Result<(), AppleCodesignError> {
+    let settings = SigningSettings::default();
+
+    let handler = SingleBundleHandler {
+        dest_dir: dest_dir.to_path_buf(),
+        settings: &settings,
+    };
+
+    for file in bundle
+        .files(false)
+        .map_err(AppleCodesignError::DirectoryBundle)?
+    {
+        handler.install_file(&file)?;
+    }
+
+    Ok(())
+}
+
 /// A primitive for signing an Apple bundle.
 ///
 /// This type handles the high-level logic of signing an Apple bundle (e.g.
@@ -96,8 +115,22 @@ impl BundleSigner {
                 "entering nested bundle {}",
                 nested.bundle.root_dir().display(),
             );
-            nested
-                .write_signed_bundle(nested_dest_dir, &settings.as_nested_bundle_settings(rel))?;
+
+            // If we excluded this bundle from signing, just copy all the files.
+            if settings
+                .path_exclusion_patterns()
+                .iter()
+                .any(|pattern| pattern.matches(rel))
+            {
+                warn!("bundle is in exclusion list; it will be copied instead of signed");
+                copy_bundle(&nested.bundle, &nested_dest_dir)?;
+            } else {
+                nested.write_signed_bundle(
+                    nested_dest_dir,
+                    &settings.as_nested_bundle_settings(rel),
+                )?;
+            }
+
             info!(
                 "leaving nested bundle {}",
                 nested.bundle.root_dir().display()

@@ -46,6 +46,9 @@ pub enum AppleCodesignError {
     #[error("YAML serialization error: {0}")]
     SerdeYaml(#[from] serde_yaml::Error),
 
+    #[error("glob error: {0}")]
+    GlobPattern(#[from] glob::PatternError),
+
     #[error("problems reported during verification")]
     VerificationProblems,
 
