@@ -909,6 +909,7 @@ impl From<&CodeResources> for Value {
 /// handling it accordingly.
 #[derive(Clone, Debug)]
 pub struct CodeResourcesBuilder {
+    rules: Vec<CodeResourcesRule>,
     rules2: Vec<CodeResourcesRule>,
     resources: CodeResources,
     digests: Vec<DigestType>,
@@ -917,6 +918,7 @@ pub struct CodeResourcesBuilder {
 impl Default for CodeResourcesBuilder {
     fn default() -> Self {
         Self {
+            rules: vec![],
             rules2: vec![],
             resources: CodeResources::default(),
             digests: vec![DigestType::Sha256],
@@ -1023,7 +1025,8 @@ impl CodeResourcesBuilder {
 
     /// Add a rule to this instance in the `<rules>` section.
     pub fn add_rule(&mut self, rule: CodeResourcesRule) {
-        // Don't set internal rules because we only operate in a v2 world.
+        self.rules.push(rule.clone());
+        self.rules.sort();
         self.resources.add_rule(rule);
     }
 
@@ -1039,6 +1042,8 @@ impl CodeResourcesBuilder {
     /// Exclusion rules are not added to the [CodeResources] because they are
     /// for building only.
     pub fn add_exclusion_rule(&mut self, rule: CodeResourcesRule) {
+        self.rules.push(rule.clone());
+        self.rules.sort();
         self.rules2.push(rule);
         self.rules2.sort();
     }
@@ -1057,12 +1062,12 @@ impl CodeResourcesBuilder {
     /// However, our bundle scanning code already filters out nested bundles automatically,
     /// so these rules shouldn't be relevant to us. But we handle them anyway, just in
     /// case. These rules take precedence over directory exclusion rules.
-    fn find_rule(&self, path: &str) -> Option<CodeResourcesRule> {
+    fn find_rule(rules: &[CodeResourcesRule], path: &str) -> Option<CodeResourcesRule> {
         let parts = path.split('/').collect::<Vec<_>>();
 
         let mut exclude_override = false;
 
-        let rule = self.rules2.iter().find(|rule| {
+        let rule = rules.iter().find(|rule| {
             // Nested rules matching leaf-most directory with `.` result in match.
             // But we treat as exclusion, as these are treated as nested bundles,
             // which are handled externally.
@@ -1124,7 +1129,7 @@ impl CodeResourcesBuilder {
             .unwrap_or(&relative_path)
             .to_string();
 
-        let rule = match self.find_rule(relative_path.as_ref()) {
+        let rule = match Self::find_rule(&self.rules2, relative_path.as_ref()) {
             Some(rule) => {
                 debug!(
                     "{} matches {} rule {}",
