@@ -193,6 +193,11 @@ pub enum AppleCodesignError {
     #[error("bundle Info.plist does not define CFBundleExecutable: {0}")]
     BundleNoMainExecutable(PathBuf),
 
+    #[error(
+        "unexpected resource rule evaluation when signing nested bundle (please report this issue)"
+    )]
+    BundleUnexpectedResourceRuleResult,
+
     #[error("unable to parse settings scope: {0}")]
     ParseSettingsScope(String),
 

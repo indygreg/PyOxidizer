@@ -930,6 +930,7 @@ impl From<&CodeResources> for Value {
     }
 }
 
+#[derive(Clone, Debug)]
 enum RulesEvaluation {
     /// File should be ignored completely.
     Exclude,
@@ -1336,20 +1337,29 @@ impl CodeResourcesBuilder {
             }
         };
 
+        let (relative_path, optional) =
+            match Self::evaluate_rules(&self.rules2, relative_path, None)? {
+                RulesEvaluation::SealRegularFile(relative_path, optional) => {
+                    (relative_path, optional)
+                }
+                RulesEvaluation::SealNested(relative_path, optional) => (relative_path, optional),
+                res => {
+                    warn!(
+                        "unexpected resource rules evaluation result for nested bundle {}: {:?}",
+                        relative_path, res
+                    );
+                    return Err(AppleCodesignError::BundleUnexpectedResourceRuleResult);
+                }
+            };
+
         let macho_data = std::fs::read(main_exe.absolute_path())?;
         let macho_info = SignedMachOInfo::parse_data(&macho_data)?;
 
         info!("sealing nested bundle at {}", relative_path);
+        self.resources
+            .seal_macho(relative_path, &macho_info, optional)?;
 
-        // TODO use normal rules processing here.
-        let relative_path = relative_path.replace('\\', "/");
-
-        let relative_path = relative_path
-            .strip_prefix("Contents/")
-            .unwrap_or(&relative_path)
-            .to_string();
-
-        self.resources.seal_macho(relative_path, &macho_info, false)
+        Ok(())
     }
 
     /// Write CodeResources XML content to a writer.
