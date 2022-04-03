@@ -902,6 +902,20 @@ impl From<&CodeResources> for Value {
     }
 }
 
+enum RulesEvaluation {
+    /// File should be ignored completely.
+    Exclude,
+
+    /// File isn't sealed but it is installed.
+    Omit,
+
+    /// File should be sealed.
+    Seal(String, CodeResourcesRule),
+
+    /// File doesn't match any rules.
+    NoRule,
+}
+
 /// Interface for constructing a `CodeResources` instance.
 ///
 /// This type is used during bundle signing to construct a `CodeResources` instance.
@@ -1110,15 +1124,10 @@ impl CodeResourcesBuilder {
         }
     }
 
-    /// Process a file for resource handling.
-    ///
-    /// This determines whether a file is relevant for inclusion in the CodeResources
-    /// file and takes actions to process it, if necessary.
-    pub fn process_file(
-        &mut self,
+    fn evaluate_rules(
+        rules: &[CodeResourcesRule],
         file: &DirectoryBundleFile,
-        file_handler: &dyn BundleFileHandler,
-    ) -> Result<(), AppleCodesignError> {
+    ) -> Result<RulesEvaluation, AppleCodesignError> {
         // Always use UNIX style directory separators.
         let relative_path = file.relative_path().to_string_lossy().replace('\\', "/");
 
@@ -1129,7 +1138,7 @@ impl CodeResourcesBuilder {
             .unwrap_or(&relative_path)
             .to_string();
 
-        let rule = match Self::find_rule(&self.rules2, relative_path.as_ref()) {
+        match Self::find_rule(rules, relative_path.as_ref()) {
             Some(rule) => {
                 debug!(
                     "{} matches {} rule {}",
@@ -1142,53 +1151,78 @@ impl CodeResourcesBuilder {
                     rule.pattern
                 );
 
-                // Excluded files are hard ignored (our caller will handle them if necessary).
                 if rule.exclude {
-                    return Ok(());
-                // Omitted files aren't sealed. But they are installed.
+                    Ok(RulesEvaluation::Exclude)
                 } else if rule.omit {
-                    return file_handler.install_file(file);
+                    Ok(RulesEvaluation::Omit)
+                } else {
+                    Ok(RulesEvaluation::Seal(relative_path, rule))
                 }
-
-                rule
             }
             None => {
-                debug!("{} doesn't match any rule; processing", relative_path);
-                return Ok(());
-            }
-        };
-
-        if let Some(target) = file
-            .symlink_target()
-            .map_err(AppleCodesignError::DirectoryBundle)?
-        {
-            let target = target.to_string_lossy().replace('\\', "/");
-
-            info!("sealing symlink {} -> {}", relative_path, target);
-            self.resources.seal_symlink(relative_path, target);
-            file_handler.install_file(file)?;
-        } else {
-            let data = std::fs::read(file.absolute_path())?;
-
-            // If nested bit is set, treat as Mach-O binary to be signed.
-            if rule.nested {
-                let macho_info = file_handler.sign_and_install_macho(file)?;
-                info!("sealing Mach-O file {}", relative_path);
-                self.resources
-                    .seal_macho(relative_path, &macho_info, rule.optional)?;
-            } else {
-                info!("sealing regular file {}", relative_path);
-                self.resources.seal_regular_file(
-                    relative_path,
-                    data,
-                    rule.optional,
-                    &self.digests,
-                )?;
-                file_handler.install_file(file)?;
+                debug!("{} doesn't match any rule", relative_path);
+                Ok(RulesEvaluation::NoRule)
             }
         }
+    }
 
-        Ok(())
+    /// Process a file for resource handling.
+    ///
+    /// This determines whether a file is relevant for inclusion in the CodeResources
+    /// file and takes actions to process it, if necessary.
+    pub fn process_file(
+        &mut self,
+        file: &DirectoryBundleFile,
+        file_handler: &dyn BundleFileHandler,
+    ) -> Result<(), AppleCodesignError> {
+        match Self::evaluate_rules(&self.rules2, file)? {
+            RulesEvaluation::Exclude => {
+                // Excluded files are hard ignored. These files are likely handled out-of-band
+                // from this builder.
+                Ok(())
+            }
+            RulesEvaluation::Omit => {
+                // Omitted files aren't sealed. But they are installed.
+                file_handler.install_file(file)
+            }
+            RulesEvaluation::NoRule => {
+                // No rule match is assumed to mean full ignore.
+                Ok(())
+            }
+            RulesEvaluation::Seal(relative_path, rule) => {
+                if let Some(target) = file
+                    .symlink_target()
+                    .map_err(AppleCodesignError::DirectoryBundle)?
+                {
+                    let target = target.to_string_lossy().replace('\\', "/");
+
+                    info!("sealing symlink {} -> {}", relative_path, target);
+                    self.resources.seal_symlink(relative_path, target);
+                    file_handler.install_file(file)?;
+                } else {
+                    let data = std::fs::read(file.absolute_path())?;
+
+                    // If nested bit is set, treat as Mach-O binary to be signed.
+                    if rule.nested {
+                        let macho_info = file_handler.sign_and_install_macho(file)?;
+                        info!("sealing Mach-O file {}", relative_path);
+                        self.resources
+                            .seal_macho(relative_path, &macho_info, rule.optional)?;
+                    } else {
+                        info!("sealing regular file {}", relative_path);
+                        self.resources.seal_regular_file(
+                            relative_path,
+                            data,
+                            rule.optional,
+                            &self.digests,
+                        )?;
+                        file_handler.install_file(file)?;
+                    }
+                }
+
+                Ok(())
+            }
+        }
     }
 
     /// Add metadata for an additional signed Mach-O file.
