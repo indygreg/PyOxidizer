@@ -11,7 +11,7 @@ use {
         code_resources::{CodeResourcesBuilder, CodeResourcesRule},
         embedded_signature::{Blob, BlobData, CodeSigningSlot},
         error::AppleCodesignError,
-        macho::AppleSignable,
+        macho::{iter_macho, AppleSignable},
         macho_signing::MachOSigner,
         signing_settings::{SettingsScope, SigningSettings},
     },
@@ -524,6 +524,29 @@ impl SingleBundleSigner {
 
             if let Some(info_plist_data) = info_plist_data {
                 settings.set_info_plist_data(SettingsScope::Main, info_plist_data);
+            }
+
+            // Preserve embedded entitlements.
+            for (index, macho) in iter_macho(&macho_data)?.enumerate() {
+                if let Some(sig) = macho.code_signature()? {
+                    if let Some(entitlements) = sig.entitlements()? {
+                        let settings_index =
+                            settings.entitlements_plist(SettingsScope::MultiArchIndex(index));
+                        let settings_arch = settings.entitlements_plist(
+                            SettingsScope::MultiArchCpuType(macho.header.cputype()),
+                        );
+
+                        if settings_index.is_some() || settings_arch.is_some() {
+                            info!("using entitlements from settings");
+                        } else {
+                            info!("preserving existing entitlements in Mach-O");
+                            settings.set_entitlements_xml(
+                                SettingsScope::MultiArchIndex(index),
+                                entitlements.as_str(),
+                            )?;
+                        }
+                    }
+                }
             }
 
             let mut new_data = Vec::<u8>::with_capacity(macho_data.len() + 2_usize.pow(17));

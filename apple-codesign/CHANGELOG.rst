@@ -32,7 +32,8 @@
   broken in several ways before: resource files in shallow app bundles (e.g. iOS
   app bundles) weren't handled correctly; symlinks weren't preserved correctly;
   framework signing was completely busted; nested bundles weren't signed in the
-  correct order; and likely a few more.
+  correct order; entitlements in Mach-O binaries weren't preserved during
+  signing; and likely a few more.
 
 0.10.0
 ======
