@@ -24,7 +24,12 @@ use {
     apple_bundles::{DirectoryBundle, DirectoryBundleFile},
     log::{debug, info, warn},
     plist::{Dictionary, Value},
-    std::{cmp::Ordering, collections::BTreeMap, io::Write},
+    std::{
+        cmp::Ordering,
+        collections::BTreeMap,
+        io::Write,
+        path::{Path, PathBuf},
+    },
 };
 
 #[derive(Clone, PartialEq)]
@@ -1159,10 +1164,11 @@ impl CodeResourcesBuilder {
 
     fn evaluate_rules(
         rules: &[CodeResourcesRule],
-        file: &DirectoryBundleFile,
+        relative_path: impl AsRef<Path>,
+        symlink_target: Option<PathBuf>,
     ) -> Result<RulesEvaluation, AppleCodesignError> {
         // Always use UNIX style directory separators.
-        let relative_path = file.relative_path().to_string_lossy().replace('\\', "/");
+        let relative_path = relative_path.as_ref().to_string_lossy().replace('\\', "/");
 
         // The Contents/ prefix is also removed for pattern matching and references in the
         // resources file.
@@ -1183,10 +1189,6 @@ impl CodeResourcesBuilder {
                     },
                     rule.pattern
                 );
-
-                let symlink_target = file
-                    .symlink_target()
-                    .map_err(AppleCodesignError::DirectoryBundle)?;
 
                 if rule.exclude {
                     Ok(RulesEvaluation::Exclude)
@@ -1222,7 +1224,12 @@ impl CodeResourcesBuilder {
         file: &DirectoryBundleFile,
         file_handler: &dyn BundleFileHandler,
     ) -> Result<(), AppleCodesignError> {
-        match Self::evaluate_rules(&self.rules2, file)? {
+        match Self::evaluate_rules(
+            &self.rules2,
+            file.relative_path(),
+            file.symlink_target()
+                .map_err(AppleCodesignError::DirectoryBundle)?,
+        )? {
             RulesEvaluation::Exclude => {
                 // Excluded files are hard ignored. These files are likely handled out-of-band
                 // from this builder.
@@ -1272,7 +1279,12 @@ impl CodeResourcesBuilder {
     /// handler is to record the SHA-1 seals in `<files>`. Keep in mind that `<files>` can't
     /// handle symlinks or nested Mach-O binaries. So we only care about regular files here.
     fn process_file_rules(&mut self, file: &DirectoryBundleFile) -> Result<(), AppleCodesignError> {
-        match Self::evaluate_rules(&self.rules, file)? {
+        match Self::evaluate_rules(
+            &self.rules,
+            file.relative_path(),
+            file.symlink_target()
+                .map_err(AppleCodesignError::DirectoryBundle)?,
+        )? {
             RulesEvaluation::Exclude
             | RulesEvaluation::Omit
             | RulesEvaluation::NoRule
