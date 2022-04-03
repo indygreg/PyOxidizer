@@ -909,8 +909,20 @@ enum RulesEvaluation {
     /// File isn't sealed but it is installed.
     Omit,
 
-    /// File should be sealed.
-    Seal(String, CodeResourcesRule),
+    /// Seal a symlink.
+    ///
+    /// Members are the relative path and the target path.
+    SealSymlink(String, String),
+
+    /// Seal a nested Mach-O binary.
+    ///
+    /// Members are the relative path and whether the rule is optional.
+    SealNested(String, bool),
+
+    /// Seal a regular file.
+    ///
+    /// Members are the relative path and whether the rule is optional.
+    SealRegularFile(String, bool),
 
     /// File doesn't match any rules.
     NoRule,
@@ -1155,8 +1167,20 @@ impl CodeResourcesBuilder {
                     Ok(RulesEvaluation::Exclude)
                 } else if rule.omit {
                     Ok(RulesEvaluation::Omit)
+                } else if let Some(target) = file
+                    .symlink_target()
+                    .map_err(AppleCodesignError::DirectoryBundle)?
+                {
+                    let target = target.to_string_lossy().replace('\\', "/");
+
+                    Ok(RulesEvaluation::SealSymlink(relative_path, target))
+                } else if rule.nested {
+                    Ok(RulesEvaluation::SealNested(relative_path, rule.optional))
                 } else {
-                    Ok(RulesEvaluation::Seal(relative_path, rule))
+                    Ok(RulesEvaluation::SealRegularFile(
+                        relative_path,
+                        rule.optional,
+                    ))
                 }
             }
             None => {
@@ -1189,37 +1213,24 @@ impl CodeResourcesBuilder {
                 // No rule match is assumed to mean full ignore.
                 Ok(())
             }
-            RulesEvaluation::Seal(relative_path, rule) => {
-                if let Some(target) = file
-                    .symlink_target()
-                    .map_err(AppleCodesignError::DirectoryBundle)?
-                {
-                    let target = target.to_string_lossy().replace('\\', "/");
+            RulesEvaluation::SealSymlink(relative_path, target) => {
+                info!("sealing symlink {} -> {}", relative_path, target);
+                self.resources.seal_symlink(relative_path, target);
+                file_handler.install_file(file)
+            }
+            RulesEvaluation::SealNested(relative_path, optional) => {
+                info!("sealing Mach-O file {}", relative_path);
+                let macho_info = file_handler.sign_and_install_macho(file)?;
 
-                    info!("sealing symlink {} -> {}", relative_path, target);
-                    self.resources.seal_symlink(relative_path, target);
-                    file_handler.install_file(file)?;
-                } else {
-                    // If nested bit is set, treat as Mach-O binary to be signed.
-                    if rule.nested {
-                        let macho_info = file_handler.sign_and_install_macho(file)?;
-                        info!("sealing Mach-O file {}", relative_path);
-                        self.resources
-                            .seal_macho(relative_path, &macho_info, rule.optional)?;
-                    } else {
-                        info!("sealing regular file {}", relative_path);
-                        let data = std::fs::read(file.absolute_path())?;
-                        self.resources.seal_regular_file(
-                            relative_path,
-                            data,
-                            rule.optional,
-                            &self.digests,
-                        )?;
-                        file_handler.install_file(file)?;
-                    }
-                }
-
-                Ok(())
+                self.resources
+                    .seal_macho(relative_path, &macho_info, optional)
+            }
+            RulesEvaluation::SealRegularFile(relative_path, optional) => {
+                info!("sealing regular file {}", relative_path);
+                let data = std::fs::read(file.absolute_path())?;
+                self.resources
+                    .seal_regular_file(relative_path, data, optional, &self.digests)?;
+                file_handler.install_file(file)
             }
         }
     }
