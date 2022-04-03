@@ -126,6 +126,8 @@ They take the form of ``.pkg`` files, which are actually XAR archives
 (a tar-like format for storing content for multiple files within a single
 file).
 
+.. _apple_codesign_code_signing_certificate:
+
 Code Signing Certificate
 ========================
 
