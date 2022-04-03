@@ -487,10 +487,17 @@ impl SingleBundleSigner {
 
         // Iterate files in this bundle and register as code resources.
         //
-        // Encountered Mach-O binaries will need to be signed.
+        // Traversing into nested bundles seems wrong but it is correct. The resources builder
+        // has rules to determine whether to process a path and assuming the rules and evaluation
+        // of them is correct, it is able to decide for itself how to handle a path.
+        //
+        // Furthermore, this behavior is needed as bundles can encapsulate signatures for nested
+        // bundles. For example, you could have a framework bundle with an embedded app bundle in
+        // `Resources/MyApp.app`! In this case, the framework's CodeResources encapsulates the
+        // content of `Resources/My.app` per the processing rules.
         for file in self
             .bundle
-            .files(false)
+            .files(true)
             .map_err(AppleCodesignError::DirectoryBundle)?
         {
             // The main executable is special and handled below.
@@ -506,7 +513,6 @@ impl SingleBundleSigner {
             } else if file.is_info_plist() {
                 // The Info.plist is digested specially. But it may also be handled by
                 // the resources handler. So always feed it through.
-
                 info!(
                     "{} is the Info.plist file; handling specially",
                     file.relative_path().display()

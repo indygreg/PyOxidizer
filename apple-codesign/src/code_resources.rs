@@ -1108,9 +1108,7 @@ impl CodeResourcesBuilder {
     ///
     /// Directories are special. If an exclusion rule matches a directory, that directory
     /// tree should be ignored. There are also default rules for handling nested bundles.
-    /// However, our bundle scanning code already filters out nested bundles automatically,
-    /// so these rules shouldn't be relevant to us. But we handle them anyway, just in
-    /// case. These rules take precedence over directory exclusion rules.
+    /// These rules take precedence over directory exclusion rules.
     fn find_rule(rules: &[CodeResourcesRule], path: &str) -> Option<CodeResourcesRule> {
         let parts = path.split('/').collect::<Vec<_>>();
 
@@ -1244,6 +1242,7 @@ impl CodeResourcesBuilder {
                 file_handler.install_file(file)
             }
             RulesEvaluation::SealNested(relative_path, optional) => {
+                // The assumption that a nested match means Mach-O may not be correct.
                 info!("sealing Mach-O file {}", relative_path);
                 let macho_info = file_handler.sign_and_install_macho(file)?;
 
