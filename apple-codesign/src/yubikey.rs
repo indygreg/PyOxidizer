@@ -6,13 +6,15 @@
 
 use {
     crate::AppleCodesignError,
+    bcder::encode::Values,
     bytes::Bytes,
     log::{error, warn},
     std::ops::DerefMut,
     std::sync::{Arc, Mutex, MutexGuard},
+    x509::SubjectPublicKeyInfo,
     x509_certificate::{
-        CapturedX509Certificate, EcdsaCurve, KeyAlgorithm, Sign, SignatureAlgorithm,
-        X509CertificateError,
+        asn1time, rfc3280, rfc5280, CapturedX509Certificate, EcdsaCurve, KeyAlgorithm, Sign,
+        SignatureAlgorithm, X509CertificateError,
     },
     yubikey::{
         certificate::{CertInfo, Certificate as YkCertificate},
@@ -320,8 +322,6 @@ impl YubiKey {
     ) -> Result<(), AppleCodesignError> {
         let slot_pretty = hex::encode([u8::from(slot)]);
 
-        let certificate = YkCertificate::from_bytes(cert.encode_der()?)?;
-
         match cert.key_algorithm() {
             Some(KeyAlgorithm::Rsa) => {
                 let (p, q) = key.rsa_primes()?.ok_or_else(|| {
@@ -354,21 +354,161 @@ impl YubiKey {
             slot_pretty
         );
 
+        // The key is imported! Now try to write the public certificate next to it.
+        self.import_certificate(slot, cert)?;
+
+        warn!("successfully wrote certificate to slot {}", slot_pretty);
+
+        Ok(())
+    }
+
+    /// Generate a new private key in the specified slot.
+    pub fn generate_key(
+        &mut self,
+        slot: SlotId,
+        touch_policy: TouchPolicy,
+        pin_policy: PinPolicy,
+    ) -> Result<(), AppleCodesignError> {
+        let slot_pretty = hex::encode([u8::from(slot)]);
+
         let mut yk = self.inner()?;
 
-        // The key is imported! Now try to write the public certificate next to it.
+        // Apple seems to require RSA 2048 in their CSR requests. So hardcode until we
+        // have a reason to support others.
+        let algorithm = AlgorithmId::Rsa2048;
+        let key_algorithm = KeyAlgorithm::Rsa;
+        let signature_algorithm = SignatureAlgorithm::RsaSha256;
+
+        // There's unfortunately some hackiness here.
+        //
+        // We don't have an API to access the public key info for a slot containing a private key
+        // and no certificate. In order to get around this limitation and allow our signer
+        // implementation to work (which is needed in order to issue a CSR with the new key),
+        // we import a fake certificate into the slot. The certificate has the signature and
+        // public key info of a "real" certificate. This enables us to sign using the private key.
+        // We don't even bother with self signing the certificate because we don't even want to
+        // give the illusion that the certificate is proper.
+
+        warn!(
+            "attempting to generate {:?} key in slot {}",
+            algorithm, slot_pretty,
+        );
+
+        // Any existing certificate would stop working once its private key changes.
+        // So delete the certificate first to avoid false promises of a working certificate
+        // in the slot.
         attempt_authenticated_operation(
             yk.deref_mut(),
             |yk| {
-                certificate.write(yk, slot, CertInfo::Uncompressed)?;
-
-                Ok(())
+                warn!("ensuring slot doesn't contain a certificate");
+                Ok(YkCertificate::delete(yk, slot)?)
             },
             RequiredAuthentication::ManagementKeyAndPin,
             self.pin_callback.as_ref(),
         )?;
 
-        warn!("successfully wrote certificate to slot {}", slot_pretty);
+        let key_info = attempt_authenticated_operation(
+            yk.deref_mut(),
+            |yk| {
+                warn!("generating new key on device...");
+                Ok(yubikey::piv::generate(
+                    yk,
+                    slot,
+                    algorithm,
+                    pin_policy,
+                    touch_policy,
+                )?)
+            },
+            RequiredAuthentication::ManagementKeyAndPin,
+            self.pin_callback.as_ref(),
+        )?;
+
+        warn!("private key successfully generated");
+
+        let mut subject = rfc3280::Name::default();
+        subject
+            .append_common_name_utf8_string("unusable placeholder certificate")
+            .map_err(|e| AppleCodesignError::CertificateBuildError(format!("{:?}", e)))?;
+
+        // We don't have an API to access the public key info for a slot containing a private key
+        // and no certificate. So we write a placeholder self-signed certificate to allow future
+        // operations to have access to public key metadata.
+        let tbs_certificate = rfc5280::TbsCertificate {
+            version: Some(rfc5280::Version::V3),
+            serial_number: 1.into(),
+            signature: signature_algorithm.into(),
+            issuer: subject.clone(),
+            validity: rfc5280::Validity {
+                not_before: asn1time::Time::UtcTime(asn1time::UtcTime::now()),
+                not_after: asn1time::Time::UtcTime(asn1time::UtcTime::now()),
+            },
+            subject,
+            subject_public_key_info: rfc5280::SubjectPublicKeyInfo {
+                algorithm: key_algorithm.into(),
+                subject_public_key: bcder::BitString::new(0, key_info.public_key().into()),
+            },
+            issuer_unique_id: None,
+            subject_unique_id: None,
+            extensions: None,
+            raw_data: None,
+        };
+
+        // It appears the hardware doesn't validate the signature. That makes things
+        // easier!
+
+        let temp_cert = rfc5280::Certificate {
+            tbs_certificate,
+            signature_algorithm: signature_algorithm.into(),
+            signature: bcder::BitString::new(0, Bytes::new()),
+        };
+
+        let mut temp_cert_der = vec![];
+        temp_cert
+            .encode_ref()
+            .write_encoded(bcder::Mode::Der, &mut temp_cert_der)?;
+
+        let fake_cert = YkCertificate::from_bytes(temp_cert_der)?;
+
+        attempt_authenticated_operation(
+            yk.deref_mut(),
+            |yk| {
+                warn!("writing temp cert");
+                Ok(fake_cert.write(yk, slot, CertInfo::Uncompressed)?)
+            },
+            RequiredAuthentication::ManagementKeyAndPin,
+            self.pin_callback.as_ref(),
+        )?;
+
+        Ok(())
+    }
+
+    /// Import a certificate into a PIV slot.
+    ///
+    /// This imports the public certificate only: the existing private key is untouched.
+    ///
+    /// No validation that the certificate matches the existing key is performed.
+    pub fn import_certificate(
+        &mut self,
+        slot: SlotId,
+        cert: &CapturedX509Certificate,
+    ) -> Result<(), AppleCodesignError> {
+        let slot_pretty = hex::encode([u8::from(slot)]);
+
+        let cert = YkCertificate::from_bytes(cert.encode_der()?)?;
+
+        let mut yk = self.inner()?;
+
+        attempt_authenticated_operation(
+            yk.deref_mut(),
+            |yk| {
+                warn!("writing certificate to slot {}", slot_pretty);
+                Ok(cert.write(yk, slot, CertInfo::Uncompressed)?)
+            },
+            RequiredAuthentication::ManagementKeyAndPin,
+            self.pin_callback.as_ref(),
+        )?;
+
+        warn!("certificate import successful");
 
         Ok(())
     }

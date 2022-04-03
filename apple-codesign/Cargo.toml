@@ -50,6 +50,7 @@ tempfile = "3.3"
 thiserror = "1.0"
 uuid = { version = "0.8", features = ["v4"] }
 which = "4.2"
+x509 = "0.2"
 xml-rs = "0.8"
 yasna = "0.5"
 yubikey = { version = "0.4", optional = true, features = ["untested"] }

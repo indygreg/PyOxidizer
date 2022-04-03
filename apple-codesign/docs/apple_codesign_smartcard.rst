@@ -108,3 +108,41 @@ the following::
       - 1.2.840.113635.100.6.1.33 (DeveloperIdDate)
       - 1.2.840.113635.100.6.1.13 (DeveloperIdApplication)
 
+Creating a Certificate with a Private Key Exclusive to the Smart Card
+=====================================================================
+
+It is possible to generate a private key directly on the smart card and create
+a code signing certificate derived from this private key.
+
+Code signing certificates created this way are theoretically much more secure
+than other private key generation methods because most smart cards never allow the
+private key content to be exported/viewed. Assuming operations involving the
+private key are protected with the appropriate access protections (like pin or
+touch policies), compromise of the machine or even the smart key itself may not
+result in unwanted access to the private key.
+
+To create a code signing certificate whose private key has never left the
+smart card device itself, do something like the following.
+
+First, generate a new private key on the smart card::
+
+    rcodesign smartcard-generate-key --smartcard-slot 9c
+
+Then create a certificate signing request (CSR)::
+
+    rcodesign generate-certificate-signing-request \
+        --smartcard-slot 9c \
+        --csr-pem-path csr.pem
+
+Then follow the instructions at :ref:`apple_codesign_exchange_csr` to submit the
+CSR file to Apple and obtain a *public certificate*.
+
+Finally, import the Apple-issued public certificate into the smart card::
+
+    rcodesign smartcard-import \
+        --der-source developerID_application.cer \
+        --smartcard-slot 9c
+
+At this point, the smart card is ready to sign using an Apple issued certificate
+and the private key never has - and probably never will - leave the smart card
+itself.

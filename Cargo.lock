@@ -146,6 +146,7 @@ dependencies = [
  "tugger-file-manifest",
  "uuid",
  "which",
+ "x509",
  "x509-certificate",
  "xml-rs",
  "yasna",
