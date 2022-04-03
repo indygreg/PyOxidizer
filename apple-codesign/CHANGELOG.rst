@@ -33,7 +33,8 @@
   app bundles) weren't handled correctly; symlinks weren't preserved correctly;
   framework signing was completely busted; nested bundles weren't signed in the
   correct order; entitlements in Mach-O binaries weren't preserved during
-  signing; and likely a few more.
+  signing; ``CodeResources`` files had extra entries in ``<files>`` that shouldn't
+  have been there, and likely a few more.
 
 0.10.0
 ======

@@ -611,6 +611,17 @@ impl CodeResourcesRule {
     }
 }
 
+/// Which files section we are operating on and how to digest.
+#[derive(Clone, Copy, Debug)]
+pub enum FilesFlavor {
+    /// `<rules>`.
+    Rules,
+    /// `<rules2>`.
+    Rules2,
+    /// `<rules2>` and also include the SHA-1 digest.
+    Rules2WithSha1,
+}
+
 /// Represents a `_CodeSignature/CodeResources` XML plist.
 ///
 /// This file/type represents a collection of file-based resources whose
@@ -756,56 +767,68 @@ impl CodeResources {
 
     /// Seal a regular file.
     ///
-    /// This will digest the content specified and record that digest in the files list.
+    /// This will digest the content specified and record that digest in the files or
+    /// files2 list.
     ///
     /// To seal a symlink, call [CodeResources::seal_symlink] instead. If the file
     /// is a Mach-O file, call [CodeResources::seal_macho] instead.
     pub fn seal_regular_file(
         &mut self,
+        files_flavor: FilesFlavor,
         path: impl ToString,
         content: impl AsRef<[u8]>,
         optional: bool,
-        seal_digests: &[DigestType],
     ) -> Result<(), AppleCodesignError> {
-        // We always need SHA-1 digests for files entries. But we may not record the
-        // digest in files2!
-        let sha1 = DigestType::Sha1.digest_data(content.as_ref())?;
+        match files_flavor {
+            FilesFlavor::Rules => {
+                let digest = DigestType::Sha1.digest_data(content.as_ref())?;
+                self.files.insert(
+                    path.to_string(),
+                    if optional {
+                        FilesValue::Optional(digest)
+                    } else {
+                        FilesValue::Required(digest)
+                    },
+                );
 
-        let hash = if seal_digests.contains(&DigestType::Sha1) {
-            Some(sha1.clone())
-        } else {
-            None
-        };
+                Ok(())
+            }
+            FilesFlavor::Rules2 => {
+                let hash2 = Some(DigestType::Sha256.digest_data(content.as_ref())?);
 
-        let hash2 = if seal_digests.contains(&DigestType::Sha256) {
-            Some(DigestType::Sha256.digest_data(content.as_ref())?)
-        } else {
-            None
-        };
+                self.files2.insert(
+                    path.to_string(),
+                    Files2Value {
+                        cdhash: None,
+                        hash: None,
+                        hash2,
+                        optional: if optional { Some(true) } else { None },
+                        requirement: None,
+                        symlink: None,
+                    },
+                );
 
-        let path = path.to_string();
+                Ok(())
+            }
+            FilesFlavor::Rules2WithSha1 => {
+                let hash = Some(DigestType::Sha1.digest_data(content.as_ref())?);
+                let hash2 = Some(DigestType::Sha256.digest_data(content.as_ref())?);
 
-        self.files.insert(
-            path.clone(),
-            if optional {
-                FilesValue::Optional(sha1.clone())
-            } else {
-                FilesValue::Required(sha1.clone())
-            },
-        );
-        self.files2.insert(
-            path,
-            Files2Value {
-                cdhash: None,
-                hash,
-                hash2,
-                optional: if optional { Some(true) } else { None },
-                requirement: None,
-                symlink: None,
-            },
-        );
+                self.files2.insert(
+                    path.to_string(),
+                    Files2Value {
+                        cdhash: None,
+                        hash,
+                        hash2,
+                        optional: if optional { Some(true) } else { None },
+                        requirement: None,
+                        symlink: None,
+                    },
+                );
 
-        Ok(())
+                Ok(())
+            }
+        }
     }
 
     /// Seal a symlink file.
@@ -1190,11 +1213,8 @@ impl CodeResourcesBuilder {
         }
     }
 
-    /// Process a file for resource handling.
-    ///
-    /// This determines whether a file is relevant for inclusion in the CodeResources
-    /// file and takes actions to process it, if necessary.
-    pub fn process_file(
+    /// Process the `<rules2>` set for a given file.
+    fn process_file_rules2(
         &mut self,
         file: &DirectoryBundleFile,
         file_handler: &dyn BundleFileHandler,
@@ -1228,11 +1248,52 @@ impl CodeResourcesBuilder {
             RulesEvaluation::SealRegularFile(relative_path, optional) => {
                 info!("sealing regular file {}", relative_path);
                 let data = std::fs::read(file.absolute_path())?;
+
+                let flavor = if self.digests.contains(&DigestType::Sha1) {
+                    FilesFlavor::Rules2WithSha1
+                } else {
+                    FilesFlavor::Rules2
+                };
+
                 self.resources
-                    .seal_regular_file(relative_path, data, optional, &self.digests)?;
+                    .seal_regular_file(flavor, relative_path, data, optional)?;
                 file_handler.install_file(file)
             }
         }
+    }
+
+    /// Process the `<rules>` set for a given file.
+    ///
+    /// Since `<rules2>` handling actually does the file installs, the only role of this
+    /// handler is to record the SHA-1 seals in `<files>`. Keep in mind that `<files>` can't
+    /// handle symlinks or nested Mach-O binaries. So we only care about regular files here.
+    fn process_file_rules(&mut self, file: &DirectoryBundleFile) -> Result<(), AppleCodesignError> {
+        match Self::evaluate_rules(&self.rules, file)? {
+            RulesEvaluation::Exclude
+            | RulesEvaluation::Omit
+            | RulesEvaluation::NoRule
+            | RulesEvaluation::SealSymlink(..)
+            | RulesEvaluation::SealNested(..) => Ok(()),
+            RulesEvaluation::SealRegularFile(relative_path, optional) => {
+                let data = std::fs::read(file.absolute_path())?;
+
+                self.resources
+                    .seal_regular_file(FilesFlavor::Rules, relative_path, data, optional)
+            }
+        }
+    }
+
+    /// Process a file for resource handling.
+    ///
+    /// This determines whether a file is relevant for inclusion in the CodeResources
+    /// file and takes actions to process it, if necessary.
+    pub fn process_file(
+        &mut self,
+        file: &DirectoryBundleFile,
+        file_handler: &dyn BundleFileHandler,
+    ) -> Result<(), AppleCodesignError> {
+        self.process_file_rules2(file, file_handler)?;
+        self.process_file_rules(file)
     }
 
     /// Add metadata for an additional signed Mach-O file.
