@@ -47,7 +47,7 @@ impl BundleSigner {
             .map_err(AppleCodesignError::DirectoryBundle)?;
 
         let mut bundles = main_bundle
-            .nested_bundles()
+            .nested_bundles(true)
             .map_err(AppleCodesignError::DirectoryBundle)?
             .into_iter()
             .map(|(k, bundle)| (Some(k), SingleBundleSigner::new(bundle)))

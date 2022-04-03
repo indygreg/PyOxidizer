@@ -253,7 +253,7 @@ impl DirectoryBundle {
     /// `traverse_nested` defines whether to traverse into nested bundles.
     pub fn files(&self, traverse_nested: bool) -> Result<Vec<DirectoryBundleFile<'_>>> {
         let nested_dirs = self
-            .nested_bundles()?
+            .nested_bundles(true)?
             .into_iter()
             .map(|(_, bundle)| bundle.root_dir().to_path_buf())
             .collect::<Vec<_>>();
@@ -304,9 +304,9 @@ impl DirectoryBundle {
     /// This walks the directory tree for directories that can be parsed
     /// as bundles.
     ///
-    /// This will descend infinitely into nested bundles. i.e. we don't stop
-    /// traversing directories when we encounter a bundle.
-    pub fn nested_bundles(&self) -> Result<Vec<(String, Self)>> {
+    /// If `descend` is true, we will descend into nested bundles and recursively emit nested
+    /// bundles. Otherwise we stop traversal once a bundle is encountered.
+    pub fn nested_bundles(&self, descend: bool) -> Result<Vec<(String, Self)>> {
         let mut bundles = vec![];
 
         let mut poisoned_prefixes = HashSet::new();
@@ -364,8 +364,10 @@ impl DirectoryBundle {
 
             bundles.push((root_relative.to_string(), bundle.clone()));
 
-            for (path, nested) in bundle.nested_bundles()? {
-                bundles.push((format!("{}/{}", root_relative, path), nested));
+            if descend {
+                for (path, nested) in bundle.nested_bundles(true)? {
+                    bundles.push((format!("{}/{}", root_relative, path), nested));
+                }
             }
 
             poisoned_prefixes.insert(path.to_path_buf());
@@ -560,7 +562,7 @@ mod test {
         assert_eq!(bundle.name(), "MyApp.app");
         assert!(!bundle.shallow());
         assert_eq!(bundle.identifier()?, None);
-        assert!(bundle.nested_bundles()?.is_empty());
+        assert!(bundle.nested_bundles(true)?.is_empty());
 
         Ok(())
     }
@@ -593,7 +595,7 @@ mod test {
         assert_eq!(bundle.name(), "MyFramework.framework");
         assert!(bundle.shallow());
         assert_eq!(bundle.identifier()?, None);
-        assert!(bundle.nested_bundles()?.is_empty());
+        assert!(bundle.nested_bundles(true)?.is_empty());
 
         Ok(())
     }
@@ -637,7 +639,7 @@ mod test {
 
         let bundle = DirectoryBundle::new_from_path(&root)?;
 
-        let nested = bundle.nested_bundles()?;
+        let nested = bundle.nested_bundles(true)?;
         assert_eq!(nested.len(), 3);
         assert_eq!(
             nested
