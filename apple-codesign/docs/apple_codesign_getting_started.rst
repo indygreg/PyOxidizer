@@ -14,6 +14,12 @@ To install the latest release version of the ``rcodesign`` executable using Carg
 
     cargo install apple-codesign
 
+To enable smart card integration:
+
+.. code-block:: bash
+
+    cargo install --features smartcard apple-codesign
+
 To compile and run from a Git checkout of its canonical repository (developer mode):
 
 .. code-block:: bash

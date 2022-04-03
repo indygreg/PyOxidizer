@@ -77,7 +77,9 @@
 //!
 //! # End-User Documentation
 //!
-//! See [tutorial] for end-user documentation showing how this crate can be used.
+//! The end-user documentation is maintained as a Sphinx docs tree in the `docs`
+//! directory. The latest version of the documentation is published at
+//! <https://pyoxidizer.readthedocs.io/en/latest/apple_codesign.html>.
 //!
 //! # Getting Started
 //!

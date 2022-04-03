@@ -12,6 +12,19 @@ Certificates stored this way are more secure, as it typically requires
 that a physical device be unlocked in order to use the private key. And
 access to the raw private key matter is typically not allowed.
 
+Cargo Feature
+=============
+
+Smart card integration requires the optional and disabled-by-default
+``smartcard`` Cargo feature to be enabled.
+
+On macOS and Windows, this feature should *just work*.
+
+On Linux, you'll need a package providing ``pcsclite`` installed or you may
+get a cryptic build error due to missing dependencies. On Debian based distros,
+you want to ``apt install libpcsclite1 libpcsclite-dev`` (or something of that
+nature).
+
 Limitations
 ===========
 

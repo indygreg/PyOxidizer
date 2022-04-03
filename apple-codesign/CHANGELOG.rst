@@ -16,21 +16,23 @@
 * ``rcodesign sign`` now accepts a ``--smartcard-slot`` argument to specify the
   slot number of a certificate to use when code signing.
 * A new ``rcodesign smartcard-import`` command can be used to import a code signing
-  certificate into a smartcard.
-* Fixed bug where ``--code-signature-flags``, `--executable-segment-flags``,
-  ``--runtime-version``, and ``--info-plist-path`` could only be specified once.
-* Resource files within shallow app bundles should now be handled correctly.
-  Previously, the rules applied when signing shallow app bundles (app bundles without
-  a ``Contents/`` directory) would be wrong and the produced signature would be
-  invalid. (#536)
-* Bundle signing should now preserve symlinks when writing the output bundle.
-  Before, symlinks within bundles would be converted to regular files.
-* ``rcodesign sign`` now accepts an ``--extra-digest`` argument to provide an
-  extra digest type to include in signatures. This facilitates signing with
-  multiple digest types via e.g. ``--digest sha1 --extra-digest sha256``.
+  certificate into a smartcard. It can import private-public key pair or just import
+  a public certificate (and use an existing private key on the smartcard device).
 * A new ``rcodesign generate-certificate-signing-request`` command can be used
   to generate a Certificate Signing Request (CSR) which can be uploaded to Apple
   and exchanged for a code signing certificate signed by Apple.
+* A new ``rcodesign smartcard-generate-key`` command for generating a new private
+  key on a smartcard.
+* Fixed bug where ``--code-signature-flags``, `--executable-segment-flags``,
+  ``--runtime-version``, and ``--info-plist-path`` could only be specified once.
+* ``rcodesign sign`` now accepts an ``--extra-digest`` argument to provide an
+  extra digest type to include in signatures. This facilitates signing with
+  multiple digest types via e.g. ``--digest sha1 --extra-digest sha256``.
+* Fixed an embarrassing number of bugs in bundle signing. Bundle signing was
+  broken in several ways before: resource files in shallow app bundles (e.g. iOS
+  app bundles) weren't handled correctly; symlinks weren't preserved correctly;
+  framework signing was completely busted; nested bundles weren't signed in the
+  correct order; and likely a few more.
 
 0.10.0
 ======
