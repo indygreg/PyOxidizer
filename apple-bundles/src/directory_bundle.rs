@@ -398,6 +398,25 @@ impl DirectoryBundle {
 
         Ok(res)
     }
+
+    /// Whether this bundle is a version within a framework bundle.
+    ///
+    /// This is true if we are a framework bundle under a `Versions` directory.
+    pub fn is_framework_version(&self) -> bool {
+        if self.package_type == BundlePackageType::Framework {
+            if let Some(parent) = self.root.parent() {
+                if let Some(file_name) = parent.file_name() {
+                    file_name == "Versions"
+                } else {
+                    false
+                }
+            } else {
+                false
+            }
+        } else {
+            false
+        }
+    }
 }
 
 /// Represents a file in a [DirectoryBundle].

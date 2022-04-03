@@ -104,22 +104,27 @@ impl BundleSigner {
                 &[],
             )?;
 
-            // The main bundle's CodeResources file contains references to metadata about
-            // nested bundles' main executables. So we capture that here.
-            let main_exe = signed_bundle
-                .files(false)
-                .map_err(AppleCodesignError::DirectoryBundle)?
-                .into_iter()
-                .find(|file| matches!(file.is_main_executable(), Ok(true)));
+            // The parent bundle's CodeResources file contains the code directory digest of
+            // the main executable of child bundles. Capture that here.
 
-            if let Some(main_exe) = main_exe {
-                let macho_data = std::fs::read(main_exe.absolute_path())?;
-                let macho_info = SignedMachOInfo::parse_data(&macho_data)?;
+            // But don't do it for bundles representing a single version within a framework
+            // because the main framework bundle is the only thing that matters.
+            if !signed_bundle.is_framework_version() {
+                let main_exe = signed_bundle
+                    .files(false)
+                    .map_err(AppleCodesignError::DirectoryBundle)?
+                    .into_iter()
+                    .find(|file| matches!(file.is_main_executable(), Ok(true)));
 
-                let path = rel.replace('\\', "/");
-                let path = path.strip_prefix("Contents/").unwrap_or(&path).to_string();
+                if let Some(main_exe) = main_exe {
+                    let macho_data = std::fs::read(main_exe.absolute_path())?;
+                    let macho_info = SignedMachOInfo::parse_data(&macho_data)?;
 
-                additional_files.push((path, macho_info));
+                    let path = rel.replace('\\', "/");
+                    let path = path.strip_prefix("Contents/").unwrap_or(&path).to_string();
+
+                    additional_files.push((path, macho_info));
+                }
             }
 
             info!(
