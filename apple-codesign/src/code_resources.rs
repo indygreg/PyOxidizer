@@ -1186,14 +1186,19 @@ impl CodeResourcesBuilder {
                     rule.pattern
                 );
 
+                let symlink_target = file
+                    .symlink_target()
+                    .map_err(AppleCodesignError::DirectoryBundle)?;
+
                 if rule.exclude {
                     Ok(RulesEvaluation::Exclude)
                 } else if rule.omit {
                     Ok(RulesEvaluation::Omit)
-                } else if let Some(target) = file
-                    .symlink_target()
-                    .map_err(AppleCodesignError::DirectoryBundle)?
-                {
+                } else if rule.nested && symlink_target.is_some() {
+                    // Symlinks in nested bundles can be excluded since they should have
+                    // been processed by the nested bundle.
+                    Ok(RulesEvaluation::Exclude)
+                } else if let Some(target) = symlink_target {
                     let target = target.to_string_lossy().replace('\\', "/");
 
                     Ok(RulesEvaluation::SealSymlink(relative_path, target))
