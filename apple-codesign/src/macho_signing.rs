@@ -19,8 +19,8 @@ use {
         entitlements::plist_to_executable_segment_flags,
         error::AppleCodesignError,
         macho::{
-            find_macho_targeting, parse_version_nibbles, semver_to_macho_target_version,
-            AppleSignable,
+            find_macho_targeting, iter_macho, parse_version_nibbles,
+            semver_to_macho_target_version, AppleSignable,
         },
         policy::derive_designated_requirements,
         signing_settings::{DesignatedRequirementMode, SettingsScope, SigningSettings},
@@ -238,27 +238,7 @@ impl<'data> MachOSigner<'data> {
     /// The data will be parsed as a Mach-O binary (either single arch or fat/universal)
     /// and validated that we are capable of signing it.
     pub fn new(macho_data: &'data [u8]) -> Result<Self, AppleCodesignError> {
-        let mach = Mach::parse(macho_data)?;
-
-        let machos = match mach {
-            Mach::Binary(macho) => {
-                macho.check_signing_capability()?;
-
-                vec![macho]
-            }
-            Mach::Fat(multiarch) => {
-                let mut machos = vec![];
-
-                for index in 0..multiarch.narches {
-                    let macho = multiarch.get(index)?;
-                    macho.check_signing_capability()?;
-
-                    machos.push(macho);
-                }
-
-                machos
-            }
-        };
+        let machos = iter_macho(macho_data)?.collect::<Vec<_>>();
 
         Ok(Self { macho_data, machos })
     }

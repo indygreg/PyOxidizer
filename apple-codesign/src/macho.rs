@@ -25,7 +25,7 @@ use {
         load_command::{
             CommandVariant, LinkeditDataCommand, LC_BUILD_VERSION, SIZEOF_LINKEDIT_DATA_COMMAND,
         },
-        parse_magic_and_ctx, MachO,
+        parse_magic_and_ctx, Mach, MachO,
     },
     scroll::Pread,
     x509_certificate::DigestAlgorithm,
@@ -309,6 +309,31 @@ impl<'a> AppleSignable for MachO<'a> {
 
         Ok(size)
     }
+}
+
+/// Iterate [MachO] instances from file data.
+pub fn iter_macho(
+    macho_data: &[u8],
+) -> Result<impl Iterator<Item = MachO<'_>>, AppleCodesignError> {
+    let mach = Mach::parse(macho_data)?;
+
+    let machos = match mach {
+        Mach::Binary(macho) => {
+            vec![macho]
+        }
+        Mach::Fat(multiarch) => {
+            let mut machos = vec![];
+
+            for index in 0..multiarch.narches {
+                let macho = multiarch.get(index)?;
+                machos.push(macho);
+            }
+
+            machos
+        }
+    };
+
+    Ok(machos.into_iter())
 }
 
 /// Describes signature data embedded within a Mach-O binary.
