@@ -909,7 +909,7 @@ impl From<&CodeResources> for Value {
 /// handling it accordingly.
 #[derive(Clone, Debug)]
 pub struct CodeResourcesBuilder {
-    rules: Vec<CodeResourcesRule>,
+    rules2: Vec<CodeResourcesRule>,
     resources: CodeResources,
     digests: Vec<DigestType>,
 }
@@ -917,7 +917,7 @@ pub struct CodeResourcesBuilder {
 impl Default for CodeResourcesBuilder {
     fn default() -> Self {
         Self {
-            rules: vec![],
+            rules2: vec![],
             resources: CodeResources::default(),
             digests: vec![DigestType::Sha256],
         }
@@ -1029,8 +1029,8 @@ impl CodeResourcesBuilder {
 
     /// Add a rule to this instance in the `<rules2>` section.
     pub fn add_rule2(&mut self, rule: CodeResourcesRule) {
-        self.rules.push(rule.clone());
-        self.rules.sort();
+        self.rules2.push(rule.clone());
+        self.rules2.sort();
         self.resources.add_rule2(rule);
     }
 
@@ -1039,8 +1039,8 @@ impl CodeResourcesBuilder {
     /// Exclusion rules are not added to the [CodeResources] because they are
     /// for building only.
     pub fn add_exclusion_rule(&mut self, rule: CodeResourcesRule) {
-        self.rules.push(rule);
-        self.rules.sort();
+        self.rules2.push(rule);
+        self.rules2.sort();
     }
 
     /// Find the first rule matching a given path.
@@ -1062,7 +1062,7 @@ impl CodeResourcesBuilder {
 
         let mut exclude_override = false;
 
-        let rule = self.rules.iter().find(|rule| {
+        let rule = self.rules2.iter().find(|rule| {
             // Nested rules matching leaf-most directory with `.` result in match.
             // But we treat as exclusion, as these are treated as nested bundles,
             // which are handled externally.
