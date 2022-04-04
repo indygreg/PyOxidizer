@@ -37,6 +37,9 @@
   have been there, and likely a few more.
 * Add ``--exclude`` argument to ``rcodesign sign`` to allow excluding nested
   bundles from signing.
+* Notarizing bundles containing symlinks no longer fails with a cryptic I/O
+  error message. We now produce zip files with symlink entries. However, there
+  may still be issues getting Apple to notarize bundles with symlinks.
 
 0.10.0
 ======

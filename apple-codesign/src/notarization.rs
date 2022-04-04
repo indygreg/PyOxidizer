@@ -244,18 +244,32 @@ pub fn bundle_to_zip(bundle: &DirectoryBundle) -> Result<Vec<u8>, AppleCodesignE
             .as_file_entry()
             .map_err(AppleCodesignError::DirectoryBundle)?;
 
-        let options =
-            zip::write::FileOptions::default().unix_permissions(if entry.is_executable() {
-                0o0755
-            } else {
-                0o0644
-            });
+        let permissions = if entry.is_executable() {
+            0o0755
+        } else {
+            0o0644
+        };
+
+        let permissions = if entry.link_target().is_some() {
+            // S_IFLINK.
+            permissions | 0xa00
+        } else {
+            permissions
+        };
+
+        let options = zip::write::FileOptions::default().unix_permissions(permissions);
 
         zf.start_file(
             format!("{}/{}", bundle.name(), file.relative_path().display()),
             options,
         )?;
-        zf.write_all(&entry.resolve_content()?)?;
+
+        if let Some(target) = entry.link_target() {
+            // For symlinks the target is the content.
+            zf.write_all(target.to_string_lossy().as_bytes())?;
+        } else {
+            zf.write_all(&entry.resolve_content()?)?;
+        }
     }
 
     let writer = zf.finish()?;
