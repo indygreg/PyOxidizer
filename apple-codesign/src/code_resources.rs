@@ -1343,6 +1343,13 @@ impl CodeResourcesBuilder {
                     (relative_path, optional)
                 }
                 RulesEvaluation::SealNested(relative_path, optional) => (relative_path, optional),
+                RulesEvaluation::Exclude => {
+                    info!(
+                        "excluding signing nested bundle {} because of matched resources rule",
+                        relative_path
+                    );
+                    return Ok(());
+                }
                 res => {
                     warn!(
                         "unexpected resource rules evaluation result for nested bundle {}: {:?}",
