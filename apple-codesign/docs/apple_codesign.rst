@@ -46,5 +46,6 @@ to be used as a standalone project.
    apple_codesign_smartcard
    apple_codesign_concepts
    apple_codesign_quirks
+   apple_codesign_debugging
    apple_codesign_gatekeeper
    apple_codesign_custom_assessment_policies
