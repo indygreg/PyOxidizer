@@ -79,8 +79,8 @@ version = "0.15.0-pre"
 version = "0.6.0"
 
 [dependencies.tugger-file-manifest]
-# path = "../tugger-file-manifest"
-version = "0.7.0"
+path = "../tugger-file-manifest"
+version = "0.8.0-pre"
 
 [dependencies.x509-certificate]
 path = "../x509-certificate"
