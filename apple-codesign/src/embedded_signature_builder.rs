@@ -194,9 +194,9 @@ impl<'a> EmbeddedSignatureBuilder<'a> {
                 continue;
             }
 
-            let digest = blob.digest_with(cd.digest_type)?.into();
+            let digest = blob.digest_with(cd.digest_type)?;
 
-            cd.special_digests.insert(*slot, digest);
+            cd.set_slot_digest(*slot, digest)?;
         }
 
         self.blobs.insert(cd_slot, cd.into());

@@ -337,4 +337,7 @@ pub enum AppleCodesignError {
 
     #[error("poisoned lock")]
     PoisonedLock,
+
+    #[error("internal API / logic error: {0}")]
+    LogicError(String),
 }

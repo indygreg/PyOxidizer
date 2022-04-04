@@ -609,7 +609,7 @@ impl<'data> MachOSigner<'data> {
             }
             None => {
                 if let Some(previous_cd) = &previous_cd {
-                    if let Some(digest) = previous_cd.special_digests.get(&CodeSigningSlot::Info) {
+                    if let Some(digest) = previous_cd.slot_digest(CodeSigningSlot::Info) {
                         if !digest.is_null() {
                             special_hashes.insert(CodeSigningSlot::Info, digest.to_owned());
                         }
@@ -632,10 +632,7 @@ impl<'data> MachOSigner<'data> {
             }
             None => {
                 if let Some(previous_cd) = &previous_cd {
-                    if let Some(digest) = previous_cd
-                        .special_digests
-                        .get(&CodeSigningSlot::ResourceDir)
-                    {
+                    if let Some(digest) = previous_cd.slot_digest(CodeSigningSlot::ResourceDir) {
                         if !digest.is_null() {
                             special_hashes.insert(CodeSigningSlot::ResourceDir, digest.to_owned());
                         }

@@ -509,8 +509,6 @@ impl<'a> Blob<'a> for CodeDirectoryBlob<'a> {
         // The boundary conditions are a bit wonky here. We want to go from greatest
         // to smallest, not writing index 0 because that's the first code digest.
         for slot_index in (1..highest_slot + 1).rev() {
-            // .special_digests is public and not all values are allowed. So check for
-            // garbage.
             let slot = CodeSigningSlot::from(slot_index);
             assert!(
                 slot.is_code_directory_specials_expressible(),
@@ -561,6 +559,44 @@ impl<'a> Blob<'a> for CodeDirectoryBlob<'a> {
 }
 
 impl<'a> CodeDirectoryBlob<'a> {
+    /// Obtain the mapping of slots to digests.
+    pub fn slot_digests(&self) -> &HashMap<CodeSigningSlot, Digest<'a>> {
+        &self.special_digests
+    }
+
+    /// Obtain the recorded digest for a given [CodeSigningSlot].
+    pub fn slot_digest(&self, slot: CodeSigningSlot) -> Option<&Digest<'a>> {
+        self.special_digests.get(&slot)
+    }
+
+    /// Set the digest for a given slot.
+    pub fn set_slot_digest(
+        &mut self,
+        slot: CodeSigningSlot,
+        digest: impl Into<Digest<'a>>,
+    ) -> Result<(), AppleCodesignError> {
+        if !slot.is_code_directory_specials_expressible() {
+            return Err(AppleCodesignError::LogicError(format!(
+                "slot {:?} cannot have its digest expressed on code directories",
+                slot
+            )));
+        }
+
+        let digest = digest.into();
+
+        if digest.data.len() != self.digest_size as usize {
+            return Err(AppleCodesignError::LogicError(format!(
+                "attempt to assign digest for slot {:?} whose length {} does not match code directory digest length {}",
+                slot, digest.data.len(), self.digest_size
+
+            )));
+        }
+
+        self.special_digests.insert(slot, digest);
+
+        Ok(())
+    }
+
     /// Adjust the version of the data structure according to what fields are set.
     ///
     /// Returns the old version.

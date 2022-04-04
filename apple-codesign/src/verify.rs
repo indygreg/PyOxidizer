@@ -487,7 +487,7 @@ fn verify_code_directory(
         let slot = blob.slot;
 
         if u32::from(slot) < 32
-            && !cd.special_digests.contains_key(&slot)
+            && !cd.slot_digests().contains_key(&slot)
             && slot != CodeSigningSlot::CodeDirectory
         {
             problems.push(VerificationProblem {
@@ -498,7 +498,7 @@ fn verify_code_directory(
     }
 
     let max_slot = cd
-        .special_digests
+        .slot_digests()
         .keys()
         .map(|slot| u32::from(*slot))
         .filter(|slot| *slot < 32)
@@ -508,7 +508,7 @@ fn verify_code_directory(
     let null_digest = b"\0".repeat(cd.digest_size as usize);
 
     // Verify the special/slot digests we do have match reality.
-    for (slot, cd_digest) in cd.special_digests.iter() {
+    for (slot, cd_digest) in cd.slot_digests().iter() {
         match signature.find_slot(*slot) {
             Some(entry) => match entry.digest_with(cd.digest_type) {
                 Ok(actual_digest) => {
