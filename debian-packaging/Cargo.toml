@@ -68,8 +68,8 @@ default-features = false
 features = ["rustls"]
 
 [dependencies.tugger-file-manifest]
-version = "0.7.0"
-# path = "../tugger-file-manifest"
+version = "0.8.0-pre"
+path = "../tugger-file-manifest"
 
 [dev-dependencies]
 glob = "0.3"
