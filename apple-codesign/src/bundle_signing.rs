@@ -429,14 +429,19 @@ impl SingleBundleSigner {
             .ok_or_else(|| AppleCodesignError::BundleNoIdentifier(self.bundle.info_plist_path()))?;
 
         warn!("collecting code resources files");
-        // We need to respect whether the bundle is shallow or not because `Resources/` will be
-        // in the root directory for non-shallow bundles like frameworks and `Contents/Resources`
-        // for non-shallow app bundles.
-        let mut resources_builder = if self.bundle.resolve_path("Resources").is_dir() {
-            CodeResourcesBuilder::default_resources_rules()?
-        } else {
-            CodeResourcesBuilder::default_no_resources_rules()?
-        };
+
+        // The set of rules to use is determined by whether the bundle *can* have a
+        // `Resources/`, not whether it necessarily does. The exact rules for this are not
+        // known. Essentially we want to test for the result of CFBundleCopyResourcesDirectoryURL().
+        // We assume that we can use the resources rules when there is a `Resources` directory
+        // (this seems obvious!) or when the bundle isn't shallow, as a non-shallow bundle should
+        // be an app bundle and app bundles can always have resources (we think).
+        let mut resources_builder =
+            if self.bundle.resolve_path("Resources").is_dir() || !self.bundle.shallow() {
+                CodeResourcesBuilder::default_resources_rules()?
+            } else {
+                CodeResourcesBuilder::default_no_resources_rules()?
+            };
 
         // Ensure emitted digests match what we're configured to emit.
         resources_builder.set_digests(settings.all_digests(SettingsScope::Main).into_iter());
