@@ -59,8 +59,8 @@ zeroize = "1.3"
 zip = "0.5"
 
 [dependencies.apple-bundles]
-path = "../apple-bundles"
-version = "0.9.0-pre"
+# path = "../apple-bundles"
+version = "0.9.0"
 
 [dependencies.apple-flat-package]
 # path = "../apple-flat-package"
