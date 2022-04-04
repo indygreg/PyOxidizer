@@ -71,8 +71,8 @@ path = "../apple-xar"
 version = "0.4.0-pre"
 
 [dependencies.cryptographic-message-syntax]
-path = "../cryptographic-message-syntax"
-version = "0.15.0-pre"
+# path = "../cryptographic-message-syntax"
+version = "0.14.0"
 
 [dependencies.tugger-apple]
 path = "../tugger-apple"
