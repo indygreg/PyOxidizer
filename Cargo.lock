@@ -114,7 +114,7 @@ dependencies = [
 
 [[package]]
 name = "apple-codesign"
-version = "0.11.0-pre"
+version = "0.11.0"
 dependencies = [
  "anyhow",
  "apple-bundles 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
