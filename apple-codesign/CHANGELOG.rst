@@ -8,6 +8,10 @@
 * Binary identifier strings are now always enclosed in double quotes when
   serializing code requirements expressions to strings. Previously, the lack of
   double quotes could result in malformed strings that might fail to parse.
+* Fixed a bundle signing bug where the digests of nested bundles were taken from the
+  source directory and not the destination directory. This would result in digests
+  of nested bundles being incorrect if signing bundles to a different output directory
+  than from the input.
 
 0.11.0
 ======
