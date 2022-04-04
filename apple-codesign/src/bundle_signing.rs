@@ -305,21 +305,7 @@ impl<'a, 'key> BundleFileHandler for SingleBundleHandler<'a, 'key> {
             .settings
             .as_bundle_macho_settings(file.relative_path().to_string_lossy().as_ref());
 
-        // The identifier string for a Mach-O that isn't the main executable is the
-        // file name, without a `.dylib` extension.
-        // TODO consider adding logic to SigningSettings?
-        let identifier = file
-            .relative_path()
-            .file_name()
-            .expect("failure to extract filename (this should never happen)")
-            .to_string_lossy();
-
-        let identifier = identifier
-            .strip_suffix(".dylib")
-            .unwrap_or_else(|| identifier.as_ref());
-        settings.set_binary_identifier(SettingsScope::Main, identifier);
-
-        settings.import_entitlements_from_macho(&macho_data)?;
+        settings.import_settings_from_macho(&macho_data)?;
 
         let mut new_data = Vec::<u8>::with_capacity(macho_data.len() + 2_usize.pow(17));
         signer.write_signed_binary(&settings, &mut new_data)?;
@@ -532,6 +518,8 @@ impl SingleBundleSigner {
 
             let mut settings = settings.clone();
 
+            settings.import_settings_from_macho(&macho_data)?;
+
             // The identifier for the main executable is defined in the bundle's Info.plist.
             if let Some(ident) = self
                 .bundle
@@ -549,8 +537,6 @@ impl SingleBundleSigner {
             if let Some(info_plist_data) = info_plist_data {
                 settings.set_info_plist_data(SettingsScope::Main, info_plist_data);
             }
-
-            settings.import_entitlements_from_macho(&macho_data)?;
 
             let mut new_data = Vec::<u8>::with_capacity(macho_data.len() + 2_usize.pow(17));
             signer.write_signed_binary(&settings, &mut new_data)?;

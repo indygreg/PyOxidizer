@@ -493,26 +493,36 @@ impl<'key> SigningSettings<'key> {
         }
     }
 
-    /// Import existing entitlements from Mach-O data.
+    /// Import existing state from Mach-O data.
     ///
     /// This will synchronize the signing settings with the state in the Mach-O file.
     ///
     /// If existing settings are explicitly set, they will be honored. Otherwise the state from
     /// the Mach-O is imported into the settings.
-    pub fn import_entitlements_from_macho(
+    pub fn import_settings_from_macho(
         &mut self,
         macho_data: &[u8],
     ) -> Result<(), AppleCodesignError> {
-        for (index, macho) in iter_macho(&macho_data)?.enumerate() {
-            if let Some(sig) = macho.code_signature()? {
-                if let Some(entitlements) = sig.entitlements()? {
-                    let settings_index =
-                        self.entitlements_plist(SettingsScope::MultiArchIndex(index));
-                    let settings_arch = self.entitlements_plist(SettingsScope::MultiArchCpuType(
-                        macho.header.cputype(),
-                    ));
+        for (index, macho) in iter_macho(macho_data)?.enumerate() {
+            let scope_index = SettingsScope::MultiArchIndex(index);
+            let scope_arch = SettingsScope::MultiArchCpuType(macho.header.cputype());
 
-                    if settings_index.is_some() || settings_arch.is_some() {
+            if let Some(sig) = macho.code_signature()? {
+                if let Some(cd) = sig.code_directory()? {
+                    if self.binary_identifier(&scope_index).is_some()
+                        || self.binary_identifier(&scope_arch).is_some()
+                    {
+                        info!("using binary identifier from settings");
+                    } else {
+                        info!("preserving existing binary identifier in Mach-O");
+                        self.set_binary_identifier(scope_index.clone(), cd.ident);
+                    }
+                }
+
+                if let Some(entitlements) = sig.entitlements()? {
+                    if self.entitlements_plist(&scope_index).is_some()
+                        || self.entitlements_plist(&scope_arch).is_some()
+                    {
                         info!("using entitlements from settings");
                     } else {
                         info!("preserving existing entitlements in Mach-O");
