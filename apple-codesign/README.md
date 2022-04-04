@@ -22,7 +22,8 @@ What this all means is that you can sign, notarize, and release Apple software
 from Linux and Windows without needing access to proprietary Apple software.
 
 See the crate documentation at https://docs.rs/apple-codesign/latest/apple_codesign/
-for more.
+and the end-user documentation at
+https://pyoxidizer.readthedocs.io/en/latest/apple_codesign.html for more.
 
 # `rcodesign` CLI
 
