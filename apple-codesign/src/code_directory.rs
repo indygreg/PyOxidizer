@@ -164,7 +164,7 @@ pub struct CodeDirectoryBlob<'a> {
     pub version: u32,
     /// Setup and mode flags.
     pub flags: CodeSignatureFlags,
-    // hash_offset, ident_offset, n_special_slots, and n_code_slots not stored
+    // digest_offset, ident_offset, n_special_slots, and n_code_slots not stored
     // explicitly because they are redundant with derived fields.
     /// Limit to main image signature range.
     ///
@@ -172,10 +172,10 @@ pub struct CodeDirectoryBlob<'a> {
     /// It likely corresponds to the file-offset offset where the
     /// embedded signature data starts in the `__LINKEDIT` segment.
     pub code_limit: u32,
-    /// Size of each hash in bytes.
-    pub hash_size: u8,
-    /// Type of hash.
-    pub hash_type: DigestType,
+    /// Size of each slot/code digest in bytes.
+    pub digest_size: u8,
+    /// Type of content digest being used.
+    pub digest_type: DigestType,
     /// Platform identifier. 0 if not platform binary.
     pub platform: u8,
     /// Page size in bytes. (stored as log u8)
@@ -212,8 +212,8 @@ pub struct CodeDirectoryBlob<'a> {
     // End of blob header data / start of derived data.
     pub ident: Cow<'a, str>,
     pub team_name: Option<Cow<'a, str>>,
-    pub code_hashes: Vec<Digest<'a>>,
-    pub special_hashes: HashMap<CodeSigningSlot, Digest<'a>>,
+    pub code_digests: Vec<Digest<'a>>,
+    pub special_digests: HashMap<CodeSigningSlot, Digest<'a>>,
 }
 
 impl<'a> Blob<'a> for CodeDirectoryBlob<'a> {
@@ -230,14 +230,14 @@ impl<'a> Blob<'a> for CodeDirectoryBlob<'a> {
         let flags = data.gread_with::<u32>(offset, scroll::BE)?;
         let flags = unsafe { CodeSignatureFlags::from_bits_unchecked(flags) };
         assert_eq!(*offset, 0x10);
-        let hash_offset = data.gread_with::<u32>(offset, scroll::BE)?;
+        let digest_offset = data.gread_with::<u32>(offset, scroll::BE)?;
         let ident_offset = data.gread_with::<u32>(offset, scroll::BE)?;
         let n_special_slots = data.gread_with::<u32>(offset, scroll::BE)?;
         let n_code_slots = data.gread_with::<u32>(offset, scroll::BE)?;
         assert_eq!(*offset, 0x20);
         let code_limit = data.gread_with(offset, scroll::BE)?;
-        let hash_size = data.gread_with(offset, scroll::BE)?;
-        let hash_type = data.gread_with::<u8>(offset, scroll::BE)?.into();
+        let digest_size = data.gread_with(offset, scroll::BE)?;
+        let digest_type = data.gread_with::<u8>(offset, scroll::BE)?.into();
         let platform = data.gread_with(offset, scroll::BE)?;
         let page_size = data.gread_with::<u8>(offset, scroll::BE)?;
         let page_size = 2u32.pow(page_size as u32);
@@ -350,18 +350,18 @@ impl<'a> Blob<'a> for CodeDirectoryBlob<'a> {
             None
         };
 
-        let code_hashes = get_hashes(
+        let code_digests = get_hashes(
             data,
-            hash_offset as usize,
+            digest_offset as usize,
             n_code_slots as usize,
-            hash_size as usize,
+            digest_size as usize,
         );
 
-        let special_hashes = get_hashes(
+        let special_digests = get_hashes(
             data,
-            (hash_offset - (hash_size as u32 * n_special_slots)) as usize,
+            (digest_offset - (digest_size as u32 * n_special_slots)) as usize,
             n_special_slots as usize,
-            hash_size as usize,
+            digest_size as usize,
         )
         .into_iter()
         .enumerate()
@@ -372,8 +372,8 @@ impl<'a> Blob<'a> for CodeDirectoryBlob<'a> {
             version,
             flags,
             code_limit,
-            hash_size,
-            hash_type,
+            digest_size,
+            digest_type,
             platform,
             page_size,
             spare2,
@@ -392,8 +392,8 @@ impl<'a> Blob<'a> for CodeDirectoryBlob<'a> {
             linkage_size,
             ident,
             team_name,
-            code_hashes,
-            special_hashes,
+            code_digests,
+            special_digests,
         })
     }
 
@@ -405,32 +405,32 @@ impl<'a> Blob<'a> for CodeDirectoryBlob<'a> {
 
         cursor.iowrite_with(self.version, scroll::BE)?;
         cursor.iowrite_with(self.flags.bits, scroll::BE)?;
-        let hash_offset_cursor_position = cursor.position();
+        let digest_offset_cursor_position = cursor.position();
         cursor.iowrite_with(0u32, scroll::BE)?;
         let ident_offset_cursor_position = cursor.position();
         cursor.iowrite_with(0u32, scroll::BE)?;
         assert_eq!(cursor.position(), 0x10);
 
-        // Hash offsets and counts are wonky. The recorded hash offset is the beginning
-        // of code hashes and special hashes are in "negative" indices before
-        // that offset. Hashes are also at the index of their CodeSigningSlot constant.
+        // Digest offsets and counts are wonky. The recorded digest offset is the beginning
+        // of code digests and special digests are in "negative" indices before
+        // that offset. Digests are also at the index of their CodeSigningSlot constant.
         // e.g. Code Directory is the first element in the specials array because
-        // it is slot 0. This means we need to write out empty hashes for missing
+        // it is slot 0. This means we need to write out empty digests for missing
         // special slots. Our local specials HashMap may not have all entries. So compute
         // how many specials there should be and write that here. We'll insert placeholder
         // digests later.
         let highest_slot = self
-            .special_hashes
+            .special_digests
             .keys()
             .map(|slot| u32::from(*slot))
             .max()
             .unwrap_or(0);
 
         cursor.iowrite_with(highest_slot as u32, scroll::BE)?;
-        cursor.iowrite_with(self.code_hashes.len() as u32, scroll::BE)?;
+        cursor.iowrite_with(self.code_digests.len() as u32, scroll::BE)?;
         cursor.iowrite_with(self.code_limit, scroll::BE)?;
-        cursor.iowrite_with(self.hash_size, scroll::BE)?;
-        cursor.iowrite_with(u8::from(self.hash_type), scroll::BE)?;
+        cursor.iowrite_with(self.digest_size, scroll::BE)?;
+        cursor.iowrite_with(u8::from(self.digest_type), scroll::BE)?;
         cursor.iowrite_with(self.platform, scroll::BE)?;
         cursor.iowrite_with(self.page_size.trailing_zeros() as u8, scroll::BE)?;
         assert_eq!(cursor.position(), 0x20);
@@ -509,7 +509,7 @@ impl<'a> Blob<'a> for CodeDirectoryBlob<'a> {
         // The boundary conditions are a bit wonky here. We want to go from greatest
         // to smallest, not writing index 0 because that's the first code digest.
         for slot_index in (1..highest_slot + 1).rev() {
-            // .special_hashes is public and not all values are allowed. So check for
+            // .special_digests is public and not all values are allowed. So check for
             // garbage.
             let slot = CodeSigningSlot::from(slot_index);
             assert!(
@@ -517,30 +517,30 @@ impl<'a> Blob<'a> for CodeDirectoryBlob<'a> {
                 "slot is expressible in code directory special digests"
             );
 
-            if let Some(hash) = self.special_hashes.get(&slot) {
+            if let Some(digest) = self.special_digests.get(&slot) {
                 assert_eq!(
-                    hash.data.len(),
-                    self.hash_size as usize,
+                    digest.data.len(),
+                    self.digest_size as usize,
                     "special slot digest length matches expected length"
                 );
-                cursor.write_all(&hash.data)?;
+                cursor.write_all(&digest.data)?;
             } else {
-                cursor.write_all(&b"\0".repeat(self.hash_size as usize))?;
+                cursor.write_all(&b"\0".repeat(self.digest_size as usize))?;
             }
         }
 
-        let code_hashes_start_offset = cursor.position();
+        let code_digests_start_offset = cursor.position();
 
-        for hash in &self.code_hashes {
-            cursor.write_all(&hash.data)?;
+        for digest in &self.code_digests {
+            cursor.write_all(&digest.data)?;
         }
 
         // TODO write out scatter vector.
 
         // Now go back and update the placeholder offsets. We need to add 8 to account
         // for the blob header, which isn't present in this buffer.
-        cursor.set_position(hash_offset_cursor_position);
-        cursor.iowrite_with(code_hashes_start_offset as u32 + 8, scroll::BE)?;
+        cursor.set_position(digest_offset_cursor_position);
+        cursor.iowrite_with(code_digests_start_offset as u32 + 8, scroll::BE)?;
 
         cursor.set_position(ident_offset_cursor_position);
         cursor.iowrite_with(identity_offset as u32 + 8, scroll::BE)?;
@@ -672,8 +672,8 @@ impl<'a> CodeDirectoryBlob<'a> {
             version: self.version,
             flags: self.flags,
             code_limit: self.code_limit,
-            hash_size: self.hash_size,
-            hash_type: self.hash_type,
+            digest_size: self.digest_size,
+            digest_type: self.digest_type,
             platform: self.platform,
             page_size: self.page_size,
             spare2: self.spare2,
@@ -695,13 +695,13 @@ impl<'a> CodeDirectoryBlob<'a> {
                 .team_name
                 .as_ref()
                 .map(|x| Cow::Owned(x.clone().into_owned())),
-            code_hashes: self
-                .code_hashes
+            code_digests: self
+                .code_digests
                 .iter()
                 .map(|h| h.to_owned())
                 .collect::<Vec<_>>(),
-            special_hashes: self
-                .special_hashes
+            special_digests: self
+                .special_digests
                 .iter()
                 .map(|(k, v)| (k.to_owned(), v.to_owned()))
                 .collect::<HashMap<_, _>>(),

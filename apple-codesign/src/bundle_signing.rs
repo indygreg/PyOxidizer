@@ -220,9 +220,9 @@ impl SignedMachOInfo {
     pub fn notarization_ticket_record_name(&self) -> Result<String, AppleCodesignError> {
         let cd = self.code_directory()?;
 
-        let digest_type: u8 = cd.hash_type.into();
+        let digest_type: u8 = cd.digest_type.into();
 
-        let mut digest = cd.digest_with(cd.hash_type)?;
+        let mut digest = cd.digest_with(cd.digest_type)?;
 
         // Digests appear to be truncated at 20 bytes / 40 characters.
         digest.truncate(20);

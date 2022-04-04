@@ -194,9 +194,9 @@ impl<'a> EmbeddedSignatureBuilder<'a> {
                 continue;
             }
 
-            let digest = blob.digest_with(cd.hash_type)?.into();
+            let digest = blob.digest_with(cd.digest_type)?.into();
 
-            cd.special_hashes.insert(*slot, digest);
+            cd.special_digests.insert(*slot, digest);
         }
 
         self.blobs.insert(cd_slot, cd.into());
@@ -267,7 +267,7 @@ impl<'a> EmbeddedSignatureBuilder<'a> {
         let code_directories = vec![code_directory];
         let code_directory_hashes_plist = create_code_directory_hashes_plist(
             code_directories.into_iter(),
-            code_directory.hash_type,
+            code_directory.digest_type,
         )?;
 
         let signer = SignerBuilder::new(signing_key, signing_cert.clone())
@@ -281,7 +281,7 @@ impl<'a> EmbeddedSignatureBuilder<'a> {
         // signed attribute. However, Apple is using unregistered OIDs here. We only know about
         // the SHA-256 one. It exists as an `(OID, OCTET STRING)` value where the OID
         // is 2.16.840.1.101.3.4.2.1, which is registered.
-        let signer = if code_directory.hash_type == DigestType::Sha256 {
+        let signer = if code_directory.digest_type == DigestType::Sha256 {
             let digest = code_directory.digest_with(DigestType::Sha256)?;
 
             signer.signed_attribute(

@@ -418,7 +418,7 @@ fn verify_code_directory(
 ) -> Vec<VerificationProblem> {
     let mut problems = vec![];
 
-    match cd.hash_type {
+    match cd.digest_type {
         DigestType::Sha256 | DigestType::Sha384 => {}
         hash_type => problems.push(VerificationProblem {
             context: context.clone(),
@@ -426,9 +426,9 @@ fn verify_code_directory(
         }),
     }
 
-    match compute_code_hashes(macho, cd.hash_type, Some(cd.page_size as usize)) {
+    match compute_code_hashes(macho, cd.digest_type, Some(cd.page_size as usize)) {
         Ok(digests) => {
-            let mut cd_iter = cd.code_hashes.iter().enumerate();
+            let mut cd_iter = cd.code_digests.iter().enumerate();
             let mut actual_iter = digests.iter().enumerate();
 
             loop {
@@ -487,7 +487,7 @@ fn verify_code_directory(
         let slot = blob.slot;
 
         if u32::from(slot) < 32
-            && !cd.special_hashes.contains_key(&slot)
+            && !cd.special_digests.contains_key(&slot)
             && slot != CodeSigningSlot::CodeDirectory
         {
             problems.push(VerificationProblem {
@@ -498,19 +498,19 @@ fn verify_code_directory(
     }
 
     let max_slot = cd
-        .special_hashes
+        .special_digests
         .keys()
         .map(|slot| u32::from(*slot))
         .filter(|slot| *slot < 32)
         .max()
         .unwrap_or(0);
 
-    let null_digest = b"\0".repeat(cd.hash_size as usize);
+    let null_digest = b"\0".repeat(cd.digest_size as usize);
 
     // Verify the special/slot digests we do have match reality.
-    for (slot, cd_digest) in cd.special_hashes.iter() {
+    for (slot, cd_digest) in cd.special_digests.iter() {
         match signature.find_slot(*slot) {
-            Some(entry) => match entry.digest_with(cd.hash_type) {
+            Some(entry) => match entry.digest_with(cd.digest_type) {
                 Ok(actual_digest) => {
                     if actual_digest != cd_digest.to_vec() {
                         problems.push(VerificationProblem {

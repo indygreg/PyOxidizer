@@ -397,8 +397,8 @@ impl DmgSigner {
             version: 0x20100,
             flags,
             code_limit: reader.koly().offset_after_plist() as u32,
-            hash_size: settings.digest_type().hash_len()? as u8,
-            hash_type: *settings.digest_type(),
+            digest_size: settings.digest_type().hash_len()? as u8,
+            digest_type: *settings.digest_type(),
             platform: 0,
             page_size: 1,
             spare2: 0,
@@ -417,8 +417,8 @@ impl DmgSigner {
             linkage_size: None,
             ident,
             team_name: None,
-            code_hashes,
-            special_hashes,
+            code_digests: code_hashes,
+            special_digests: special_hashes,
         };
 
         Ok(cd)

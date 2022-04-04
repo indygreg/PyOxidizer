@@ -328,7 +328,7 @@ impl<'a> TryFrom<CodeDirectoryBlob<'a>> for CodeDirectory {
 
     fn try_from(cd: CodeDirectoryBlob<'a>) -> Result<Self, Self::Error> {
         let mut temp = cd
-            .special_hashes
+            .special_digests
             .into_iter()
             .map(|(slot, digest)| (slot, digest.as_hex()))
             .collect::<Vec<_>>();
@@ -345,7 +345,7 @@ impl<'a> TryFrom<CodeDirectoryBlob<'a>> for CodeDirectory {
             identifier: cd.ident.to_string(),
             team_name: cd.team_name.map(|x| x.to_string()),
             signed_entity_size: cd.code_limit as _,
-            digest_type: format!("{}", cd.hash_type),
+            digest_type: format!("{}", cd.digest_type),
             executable_segment_flags: cd.exec_seg_flags.map(|x| format!("{:?}", x)),
             slot_digests,
         })

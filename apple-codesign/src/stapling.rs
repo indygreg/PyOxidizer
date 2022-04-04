@@ -198,11 +198,11 @@ impl Stapler {
             .code_directory()?
             .ok_or(AppleCodesignError::DmgStapleNoSignature)?;
 
-        let mut digest = cd.digest_with(cd.hash_type)?;
+        let mut digest = cd.digest_with(cd.digest_type)?;
         digest.truncate(20);
         let digest = hex::encode(digest);
 
-        let digest_type: u8 = cd.hash_type.into();
+        let digest_type: u8 = cd.digest_type.into();
 
         let record_name = format!("2/{}/{}", digest_type, digest);
 

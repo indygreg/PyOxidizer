@@ -609,7 +609,7 @@ impl<'data> MachOSigner<'data> {
             }
             None => {
                 if let Some(previous_cd) = &previous_cd {
-                    if let Some(digest) = previous_cd.special_hashes.get(&CodeSigningSlot::Info) {
+                    if let Some(digest) = previous_cd.special_digests.get(&CodeSigningSlot::Info) {
                         if !digest.is_null() {
                             special_hashes.insert(CodeSigningSlot::Info, digest.to_owned());
                         }
@@ -633,7 +633,7 @@ impl<'data> MachOSigner<'data> {
             None => {
                 if let Some(previous_cd) = &previous_cd {
                     if let Some(digest) = previous_cd
-                        .special_hashes
+                        .special_digests
                         .get(&CodeSigningSlot::ResourceDir)
                     {
                         if !digest.is_null() {
@@ -664,8 +664,8 @@ impl<'data> MachOSigner<'data> {
             version: 0,
             flags,
             code_limit,
-            hash_size: settings.digest_type().hash_len()? as u8,
-            hash_type: *settings.digest_type(),
+            digest_size: settings.digest_type().hash_len()? as u8,
+            digest_type: *settings.digest_type(),
             platform,
             page_size,
             spare2: 0,
@@ -684,8 +684,8 @@ impl<'data> MachOSigner<'data> {
             linkage_size: None,
             ident,
             team_name,
-            code_hashes,
-            special_hashes,
+            code_digests: code_hashes,
+            special_digests: special_hashes,
         };
 
         cd.adjust_version(target);
