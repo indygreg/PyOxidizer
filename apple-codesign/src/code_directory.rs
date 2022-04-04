@@ -518,6 +518,11 @@ impl<'a> Blob<'a> for CodeDirectoryBlob<'a> {
             );
 
             if let Some(hash) = self.special_hashes.get(&slot) {
+                assert_eq!(
+                    hash.data.len(),
+                    self.hash_size as usize,
+                    "special slot digest length matches expected length"
+                );
                 cursor.write_all(&hash.data)?;
             } else {
                 cursor.write_all(&b"\0".repeat(self.hash_size as usize))?;
