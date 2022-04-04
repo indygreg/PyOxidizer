@@ -484,14 +484,20 @@ impl SingleBundleSigner {
             }
         }
 
-        // Seal code directory digests of any nested bundles. This is done by finding the main
-        // executable and taking the code directory digest of the first Mach-O within.
-        for (rel_path, nested_bundle) in self
-            .bundle
-            .nested_bundles(false)
-            .map_err(AppleCodesignError::DirectoryBundle)?
-        {
-            resources_builder.process_nested_bundle(&rel_path, &nested_bundle)?;
+        // Seal code directory digests of any nested bundles.
+        //
+        // Apple's tooling seems to only do this for some bundle type combinations. I'm
+        // not yet sure what the complete heuristic is. But we observed that frameworks
+        // don't appear to include digests of any nested app bundles. So we add that
+        // exclusion. We should figure out what the actual rules here...
+        if self.bundle.package_type() != BundlePackageType::Framework {
+            for (rel_path, nested_bundle) in self
+                .bundle
+                .nested_bundles(false)
+                .map_err(AppleCodesignError::DirectoryBundle)?
+            {
+                resources_builder.process_nested_bundle(&rel_path, &nested_bundle)?;
+            }
         }
 
         // The resources are now sealed. Write out that XML file.
