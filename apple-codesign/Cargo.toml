@@ -63,8 +63,8 @@ path = "../apple-bundles"
 version = "0.9.0-pre"
 
 [dependencies.apple-flat-package]
-path = "../apple-flat-package"
-version = "0.3.0-pre"
+# path = "../apple-flat-package"
+version = "0.3.0"
 
 [dependencies.apple-xar]
 # path = "../apple-xar"
