@@ -443,8 +443,11 @@ impl<'data> MachOSigner<'data> {
             );
         }
 
-        let previous_cd =
-            previous_signature.and_then(|signature| signature.code_directory().unwrap_or(None));
+        let previous_cd = previous_signature.and_then(|signature| {
+            signature
+                .code_directory_for_digest(*settings.digest_type())
+                .unwrap_or(None)
+        });
 
         let mut flags = CodeSignatureFlags::empty();
 

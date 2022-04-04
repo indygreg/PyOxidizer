@@ -1326,7 +1326,7 @@ impl<'a> EmbeddedSignature<'a> {
         }
     }
 
-    /// Attempt to resolve a parsed `CodeDirectoryBlob` for this signature data.
+    /// Attempt to resolve the primary `CodeDirectoryBlob` for this signature data.
     ///
     /// Returns Err on data parsing error or if the blob slot didn't contain a code
     /// directory.
@@ -1374,6 +1374,35 @@ impl<'a> EmbeddedSignature<'a> {
         }
 
         Ok(res)
+    }
+
+    /// Resolve all code directories in this signature.
+    pub fn all_code_directories(
+        &self,
+    ) -> Result<Vec<(CodeSigningSlot, Box<CodeDirectoryBlob<'a>>)>, AppleCodesignError> {
+        let mut res = vec![];
+
+        if let Some(cd) = self.code_directory()? {
+            res.push((CodeSigningSlot::CodeDirectory, cd));
+        }
+
+        res.extend(self.alternate_code_directories()?);
+
+        Ok(res)
+    }
+
+    /// Attempt to resolve a code directory containing digests of the specified type.
+    pub fn code_directory_for_digest(
+        &self,
+        digest: DigestType,
+    ) -> Result<Option<Box<CodeDirectoryBlob<'a>>>, AppleCodesignError> {
+        for (_, cd) in self.all_code_directories()? {
+            if cd.digest_type == digest {
+                return Ok(Some(cd));
+            }
+        }
+
+        Ok(None)
     }
 
     /// Attempt to resolve a parsed [EntitlementsBlob] for this signature data.

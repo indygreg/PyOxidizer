@@ -40,6 +40,13 @@
 * Notarizing bundles containing symlinks no longer fails with a cryptic I/O
   error message. We now produce zip files with symlink entries. However, there
   may still be issues getting Apple to notarize bundles with symlinks.
+* Fixed a bug where we could silently write a softly corrupt code signature
+  by copying digests that were too short. Previously, if you attempted to re-sign
+  a Mach-O having SHA-1 digests, those SHA-1 digests could get copied to the
+  new signature using SHA-256 digests and the bytes belonging to each digest
+  would get mangled and wouldn't be correct. We now prevent writing digests
+  that don't match the expected digest length and when copying digests we
+  look for alternate code directories having the digest of the new signature.
 
 0.10.0
 ======
