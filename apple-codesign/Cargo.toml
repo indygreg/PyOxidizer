@@ -67,8 +67,8 @@ path = "../apple-flat-package"
 version = "0.4.0-pre"
 
 [dependencies.apple-xar]
-path = "../apple-xar"
-version = "0.4.0-pre"
+# path = "../apple-xar"
+version = "0.3.0"
 
 [dependencies.cryptographic-message-syntax]
 # path = "../cryptographic-message-syntax"
