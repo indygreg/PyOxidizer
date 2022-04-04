@@ -672,9 +672,12 @@ impl<'data> MachOSigner<'data> {
             ident,
             team_name,
             code_digests: code_hashes,
-            special_digests: special_hashes,
             ..Default::default()
         };
+
+        for (slot, digest) in special_hashes {
+            cd.set_slot_digest(slot, digest)?;
+        }
 
         cd.adjust_version(target);
         cd.clear_newer_fields();

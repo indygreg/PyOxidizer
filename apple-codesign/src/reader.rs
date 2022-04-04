@@ -320,7 +320,7 @@ pub struct CodeDirectory {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub executable_segment_flags: Option<String>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
-    pub slot_digests: Vec<String>,
+    slot_digests: Vec<String>,
 }
 
 impl<'a> TryFrom<CodeDirectoryBlob<'a>> for CodeDirectory {

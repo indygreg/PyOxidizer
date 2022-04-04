@@ -56,7 +56,6 @@ use {
     scroll::{Pread, Pwrite, SizeWith},
     std::{
         borrow::Cow,
-        collections::HashMap,
         fs::File,
         io::{Read, Seek, SeekFrom, Write},
         path::Path,
@@ -390,10 +389,7 @@ impl DmgSigner {
             .koly()
             .digest_for_code_directory(*settings.digest_type())?;
 
-        let mut special_hashes = HashMap::new();
-        special_hashes.insert(CodeSigningSlot::RepSpecific, koly_digest.into());
-
-        let cd = CodeDirectoryBlob {
+        let mut cd = CodeDirectoryBlob {
             version: 0x20100,
             flags,
             code_limit: reader.koly().offset_after_plist() as u32,
@@ -402,9 +398,10 @@ impl DmgSigner {
             page_size: 1,
             ident,
             code_digests: code_hashes,
-            special_digests: special_hashes,
             ..Default::default()
         };
+
+        cd.set_slot_digest(CodeSigningSlot::RepSpecific, koly_digest)?;
 
         Ok(cd)
     }
