@@ -23,6 +23,7 @@ bitflags::bitflags! {
     ///
     /// These flags are embedded in the Code Directory and govern use of the embedded
     /// signature.
+    #[derive(Default)]
     pub struct CodeSignatureFlags: u32 {
         /// Code may act as a host that controls and supervises guest code.
         const HOST = 0x0001;
@@ -81,6 +82,7 @@ impl CodeSignatureFlags {
 
 bitflags::bitflags! {
     /// Flags that influence behavior of executable segment.
+    #[derive(Default)]
     pub struct ExecutableSegmentFlags: u64 {
         /// Executable segment belongs to main binary.
         const MAIN_BINARY = 0x0001;
@@ -158,7 +160,7 @@ fn get_hashes(data: &[u8], offset: usize, count: usize, hash_size: usize) -> Vec
 ///
 /// The parser will set `Option<T>` fields to `None` for instances
 /// where the version is lower than the version that field was introduced in.
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct CodeDirectoryBlob<'a> {
     /// Compatibility version.
     pub version: u32,

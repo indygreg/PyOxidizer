@@ -399,26 +399,11 @@ impl DmgSigner {
             code_limit: reader.koly().offset_after_plist() as u32,
             digest_size: settings.digest_type().hash_len()? as u8,
             digest_type: *settings.digest_type(),
-            platform: 0,
             page_size: 1,
-            spare2: 0,
-            scatter_offset: None,
-            spare3: None,
-            code_limit_64: None,
-            exec_seg_base: None,
-            exec_seg_limit: None,
-            exec_seg_flags: None,
-            runtime: None,
-            pre_encrypt_offset: None,
-            linkage_hash_type: None,
-            linkage_truncated: None,
-            spare4: None,
-            linkage_offset: None,
-            linkage_size: None,
             ident,
-            team_name: None,
             code_digests: code_hashes,
             special_digests: special_hashes,
+            ..Default::default()
         };
 
         Ok(cd)
