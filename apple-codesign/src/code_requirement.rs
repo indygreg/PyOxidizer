@@ -671,7 +671,7 @@ impl<'a> Display for CodeRequirementExpression<'a> {
         match self {
             Self::False => f.write_str("never"),
             Self::True => f.write_str("always"),
-            Self::Identifier(value) => f.write_fmt(format_args!("identifier {}", value)),
+            Self::Identifier(value) => f.write_fmt(format_args!("identifier \"{}\"", value)),
             Self::AnchorApple => f.write_str("anchor apple"),
             Self::AnchorCertificateHash(slot, digest) => {
                 f.write_fmt(format_args!("anchor {} H\"{}\"", slot, hex::encode(digest)))

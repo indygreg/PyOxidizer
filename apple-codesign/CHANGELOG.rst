@@ -2,6 +2,13 @@
 `apple-codesign` History
 ========================
 
+0.12.0
+======
+
+* Binary identifier strings are now always enclosed in double quotes when
+  serializing code requirements expressions to strings. Previously, the lack of
+  double quotes could result in malformed strings that might fail to parse.
+
 0.11.0
 ======
 
