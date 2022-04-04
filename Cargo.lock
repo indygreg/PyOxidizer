@@ -118,15 +118,15 @@ version = "0.12.0"
 dependencies = [
  "anyhow",
  "apple-bundles 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "apple-flat-package 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "apple-xar 0.4.0-pre",
+ "apple-flat-package",
+ "apple-xar",
  "base64 0.13.0",
  "bcder",
  "bitflags",
  "bytes",
  "chrono",
  "clap 3.1.8",
- "cryptographic-message-syntax 0.15.0-pre",
+ "cryptographic-message-syntax",
  "dialoguer",
  "difference",
  "dirs",
@@ -160,7 +160,7 @@ dependencies = [
  "uuid",
  "which",
  "x509",
- "x509-certificate 0.13.0-pre",
+ "x509-certificate",
  "xml-rs",
  "yasna",
  "yubikey",
@@ -170,59 +170,15 @@ dependencies = [
 
 [[package]]
 name = "apple-flat-package"
-version = "0.3.0"
+version = "0.4.0-pre"
 dependencies = [
- "apple-xar 0.4.0-pre",
- "cpio-archive 0.4.0-pre",
+ "apple-xar",
+ "cpio-archive",
  "flate2",
  "scroll",
  "serde",
  "serde-xml-rs",
  "thiserror",
-]
-
-[[package]]
-name = "apple-flat-package"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1943e798a3f553607d21228a86e3862795a463c88dc272feb99a94a081fcf754"
-dependencies = [
- "apple-xar 0.3.0",
- "cpio-archive 0.3.0",
- "flate2",
- "scroll",
- "serde",
- "serde-xml-rs",
- "thiserror",
-]
-
-[[package]]
-name = "apple-xar"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f89b9d6a1151a169af72d89292d4a0cc6e16c97a2af9c8734cb345ce7ac8b6b7"
-dependencies = [
- "base64 0.13.0",
- "bcder",
- "bzip2",
- "chrono",
- "cryptographic-message-syntax 0.14.0",
- "digest 0.10.3",
- "flate2",
- "log",
- "md-5 0.10.1",
- "rand 0.8.5",
- "reqwest",
- "scroll",
- "serde",
- "serde-xml-rs",
- "sha1 0.10.1",
- "sha2 0.10.2",
- "thiserror",
- "url",
- "x509-certificate 0.12.0",
- "xml-rs",
- "xz2",
 ]
 
 [[package]]
@@ -233,7 +189,7 @@ dependencies = [
  "bcder",
  "bzip2",
  "chrono",
- "cryptographic-message-syntax 0.15.0-pre",
+ "cryptographic-message-syntax",
  "digest 0.10.3",
  "flate2",
  "log",
@@ -247,7 +203,7 @@ dependencies = [
  "sha2 0.10.2",
  "thiserror",
  "url",
- "x509-certificate 0.13.0-pre",
+ "x509-certificate",
  "xml-rs",
  "xz2",
 ]
@@ -1215,18 +1171,6 @@ checksum = "ebd1e700d20da5cc95f5bde94323a72a4081cc1e6764bdc31262cc0f173662a8"
 
 [[package]]
 name = "cpio-archive"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "047d4ce97aa1bcfd4e0f45cee29033644ea6647dc0c0150a4518b745296012ce"
-dependencies = [
- "chrono",
- "is_executable",
- "thiserror",
- "tugger-file-manifest 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "cpio-archive"
 version = "0.4.0-pre"
 dependencies = [
  "chrono",
@@ -1410,22 +1354,6 @@ dependencies = [
 
 [[package]]
 name = "cryptographic-message-syntax"
-version = "0.14.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "01e307f5291eefb5f33e22fed6511669f02e7cec9ceb91f355310676578fd8a6"
-dependencies = [
- "bcder",
- "bytes",
- "chrono",
- "hex",
- "pem 1.0.2",
- "reqwest",
- "ring",
- "x509-certificate 0.12.0",
-]
-
-[[package]]
-name = "cryptographic-message-syntax"
 version = "0.15.0-pre"
 dependencies = [
  "bcder",
@@ -1435,7 +1363,7 @@ dependencies = [
  "pem 1.0.2",
  "reqwest",
  "ring",
- "x509-certificate 0.13.0-pre",
+ "x509-certificate",
 ]
 
 [[package]]
@@ -6222,7 +6150,7 @@ dependencies = [
  "tugger-windows-codesign",
  "tugger-wix",
  "walkdir",
- "x509-certificate 0.13.0-pre",
+ "x509-certificate",
 ]
 
 [[package]]
@@ -6289,7 +6217,7 @@ dependencies = [
  "apple-bundles 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "apple-codesign",
  "bcder",
- "cryptographic-message-syntax 0.15.0-pre",
+ "cryptographic-message-syntax",
  "goblin",
  "p12",
  "reqwest",
@@ -6298,7 +6226,7 @@ dependencies = [
  "thiserror",
  "tugger-file-manifest 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-windows-codesign",
- "x509-certificate 0.13.0-pre",
+ "x509-certificate",
  "yasna",
 ]
 
@@ -6977,21 +6905,6 @@ checksum = "ca3cec94c3999f31341553f358ef55f65fc031291a022cd42ec0ce7219560c76"
 dependencies = [
  "chrono",
  "cookie-factory",
-]
-
-[[package]]
-name = "x509-certificate"
-version = "0.12.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ecce82ba1a532273edf6cd88d1efca9b3417fd24abe81baf143657909f7c12a8"
-dependencies = [
- "bcder",
- "bytes",
- "chrono",
- "hex",
- "pem 1.0.2",
- "ring",
- "thiserror",
 ]
 
 [[package]]
