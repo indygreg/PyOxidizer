@@ -160,7 +160,7 @@ dependencies = [
  "uuid",
  "which",
  "x509",
- "x509-certificate 0.12.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "x509-certificate 0.13.0-pre",
  "xml-rs",
  "yasna",
  "yubikey",
@@ -218,7 +218,7 @@ dependencies = [
  "sha2 0.10.2",
  "thiserror",
  "url",
- "x509-certificate 0.12.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "x509-certificate 0.13.0-pre",
  "xml-rs",
  "xz2",
 ]
@@ -247,7 +247,7 @@ dependencies = [
  "sha2 0.10.2",
  "thiserror",
  "url",
- "x509-certificate 0.12.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "x509-certificate 0.12.0",
  "xml-rs",
  "xz2",
 ]
@@ -1419,7 +1419,7 @@ dependencies = [
  "pem 1.0.2",
  "reqwest",
  "ring",
- "x509-certificate 0.12.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "x509-certificate 0.13.0-pre",
 ]
 
 [[package]]
@@ -1435,7 +1435,7 @@ dependencies = [
  "pem 1.0.2",
  "reqwest",
  "ring",
- "x509-certificate 0.12.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "x509-certificate 0.12.0",
 ]
 
 [[package]]
@@ -6222,7 +6222,7 @@ dependencies = [
  "tugger-windows-codesign",
  "tugger-wix",
  "walkdir",
- "x509-certificate 0.12.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "x509-certificate 0.13.0-pre",
 ]
 
 [[package]]
@@ -6298,7 +6298,7 @@ dependencies = [
  "thiserror",
  "tugger-file-manifest 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-windows-codesign",
- "x509-certificate 0.12.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "x509-certificate 0.13.0-pre",
  "yasna",
 ]
 
@@ -6982,6 +6982,8 @@ dependencies = [
 [[package]]
 name = "x509-certificate"
 version = "0.12.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ecce82ba1a532273edf6cd88d1efca9b3417fd24abe81baf143657909f7c12a8"
 dependencies = [
  "bcder",
  "bytes",
@@ -6994,9 +6996,7 @@ dependencies = [
 
 [[package]]
 name = "x509-certificate"
-version = "0.12.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ecce82ba1a532273edf6cd88d1efca9b3417fd24abe81baf143657909f7c12a8"
+version = "0.13.0-pre"
 dependencies = [
  "bcder",
  "bytes",
