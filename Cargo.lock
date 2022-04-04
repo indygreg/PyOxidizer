@@ -4305,7 +4305,7 @@ dependencies = [
  "tugger-apple 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-binary-analysis 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-code-signing",
- "tugger-common 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-common 0.8.0-pre",
  "tugger-file-manifest 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-licensing 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-rust-toolchain 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -6128,7 +6128,7 @@ dependencies = [
  "time 0.3.9",
  "tugger-apple 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-code-signing",
- "tugger-common 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-common 0.8.0-pre",
  "tugger-file-manifest 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-snapcraft 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-windows",
@@ -6218,6 +6218,8 @@ dependencies = [
 [[package]]
 name = "tugger-common"
 version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e217b5709a03f50e01c9f96866b5bd06d38683e050a052a0d02ae9a0196b7a98"
 dependencies = [
  "anyhow",
  "fs2",
@@ -6234,9 +6236,7 @@ dependencies = [
 
 [[package]]
 name = "tugger-common"
-version = "0.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e217b5709a03f50e01c9f96866b5bd06d38683e050a052a0d02ae9a0196b7a98"
+version = "0.8.0-pre"
 dependencies = [
  "anyhow",
  "fs2",
@@ -6289,7 +6289,7 @@ dependencies = [
  "anyhow",
  "reqwest",
  "spdx",
- "tugger-common 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-common 0.8.0-pre",
  "tugger-licensing 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "url",
 ]
@@ -6310,7 +6310,7 @@ dependencies = [
  "tar",
  "tempfile",
  "toml",
- "tugger-common 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-common 0.8.0-pre",
  "tugger-file-manifest 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "xz2",
  "zstd",
@@ -6332,7 +6332,7 @@ dependencies = [
  "slog",
  "tar",
  "toml",
- "tugger-common 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-common 0.7.0",
  "tugger-file-manifest 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "xz2",
  "zstd",
@@ -6348,7 +6348,7 @@ dependencies = [
  "serde",
  "serde_yaml",
  "slog",
- "tugger-common 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-common 0.8.0-pre",
  "tugger-file-manifest 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -6364,7 +6364,7 @@ dependencies = [
  "serde",
  "serde_yaml",
  "slog",
- "tugger-common 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-common 0.7.0",
  "tugger-file-manifest 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -6378,7 +6378,7 @@ dependencies = [
  "glob",
  "once_cell",
  "semver",
- "tugger-common 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-common 0.8.0-pre",
  "winapi",
 ]
 
@@ -6393,7 +6393,7 @@ dependencies = [
  "rcgen",
  "slog",
  "time 0.3.9",
- "tugger-common 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-common 0.8.0-pre",
  "tugger-windows",
  "x509-parser 0.13.1",
  "yasna",
@@ -6409,7 +6409,7 @@ dependencies = [
  "once_cell",
  "slog",
  "tempfile",
- "tugger-common 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-common 0.8.0-pre",
  "tugger-file-manifest 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tugger-windows",
  "tugger-windows-codesign",
