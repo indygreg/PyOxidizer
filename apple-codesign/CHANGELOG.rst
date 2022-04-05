@@ -2,6 +2,14 @@
 `apple-codesign` History
 ========================
 
+0.13.0
+======
+
+* Restores behavior of <= 0.10.0 where the binary identifier of non main
+  executable Mach-O files in bundles is automatically derived from the file name
+  if the Mach-O doesn't already have a binary identifier. This fixes a regression
+  in 0.11 and 0.12.
+
 0.12.0
 ======
 

@@ -307,6 +307,27 @@ impl<'a, 'key> BundleFileHandler for SingleBundleHandler<'a, 'key> {
 
         settings.import_settings_from_macho(&macho_data)?;
 
+        // If there isn't a defined binary identifier, derive one from the file name so one is set
+        // and we avoid a signing error due to missing identifier.
+        // TODO do we need to check the nested Mach-O settings?
+        if settings.binary_identifier(SettingsScope::Main).is_none() {
+            let identifier = file
+                .relative_path()
+                .file_name()
+                .expect("failure to extract filename (this should never happen)")
+                .to_string_lossy();
+
+            let identifier = identifier
+                .strip_suffix(".dylib")
+                .unwrap_or_else(|| identifier.as_ref());
+
+            info!(
+                "Mach-O is missing binary identifier; setting to {} based on file name",
+                identifier
+            );
+            settings.set_binary_identifier(SettingsScope::Main, identifier);
+        }
+
         let mut new_data = Vec::<u8>::with_capacity(macho_data.len() + 2_usize.pow(17));
         signer.write_signed_binary(&settings, &mut new_data)?;
 
