@@ -466,25 +466,12 @@ impl<'data> MachOSigner<'data> {
 
         let mut exec_seg_flags = None;
 
-        match settings.executable_segment_flags(SettingsScope::Main) {
-            Some(flags) => {
-                info!(
-                    "using executable segment flags from signing settings ({:?})",
-                    flags
-                );
-                exec_seg_flags = Some(flags);
-            }
-            None => {
-                if let Some(previous_cd) = &previous_cd {
-                    if let Some(flags) = previous_cd.exec_seg_flags {
-                        info!(
-                            "using executable segment flags from previous code directory ({:?})",
-                            flags
-                        );
-                        exec_seg_flags = Some(flags);
-                    }
-                }
-            }
+        if let Some(flags) = settings.executable_segment_flags(SettingsScope::Main) {
+            info!(
+                "using executable segment flags from signing settings ({:?})",
+                flags
+            );
+            exec_seg_flags = Some(flags);
         }
 
         // Entitlements can influence the executable segment flags. So make sure

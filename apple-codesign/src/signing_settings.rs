@@ -545,6 +545,20 @@ impl<'key> SigningSettings<'key> {
                         info!("preserving code signature flags in existing Mach-O signature");
                         self.set_code_signature_flags(scope_index.clone(), cd.flags);
                     }
+
+                    if self.executable_segment_flags(&scope_main).is_some()
+                        || self.executable_segment_flags(&scope_index).is_some()
+                        || self.executable_segment_flags(&scope_arch).is_some()
+                    {
+                        info!("using executable segment flags from settings");
+                    } else if let Some(flags) = cd.exec_seg_flags {
+                        if !flags.is_empty() {
+                            info!(
+                                "preserving executable segment flags in existing Mach-O signature"
+                            );
+                            self.set_executable_segment_flags(scope_index.clone(), flags);
+                        }
+                    }
                 }
 
                 if let Some(entitlements) = sig.entitlements()? {
