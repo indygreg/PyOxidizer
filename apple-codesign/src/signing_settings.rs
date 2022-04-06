@@ -260,13 +260,13 @@ pub struct SigningSettings<'key> {
     signing_key: Option<(&'key dyn Sign, CapturedX509Certificate)>,
     certificates: Vec<CapturedX509Certificate>,
     time_stamp_url: Option<Url>,
-    team_id: Option<String>,
     digest_type: DigestType,
     path_exclusion_patterns: Vec<Pattern>,
 
     // Scope-specific settings.
     // These are BTreeMap so when we filter the keys, keys with higher precedence come
     // last and last write wins.
+    team_id: BTreeMap<SettingsScope, String>,
     identifiers: BTreeMap<SettingsScope, String>,
     entitlements: BTreeMap<SettingsScope, plist::Value>,
     designated_requirement: BTreeMap<SettingsScope, DesignatedRequirementMode>,
@@ -398,12 +398,12 @@ impl<'key> SigningSettings<'key> {
 
     /// Obtain the team identifier for signed binaries.
     pub fn team_id(&self) -> Option<&str> {
-        self.team_id.as_deref()
+        self.team_id.get(&SettingsScope::Main).map(|x| x.as_str())
     }
 
     /// Set the team identifier for signed binaries.
     pub fn set_team_id(&mut self, value: impl ToString) {
-        self.team_id = Some(value.to_string());
+        self.team_id.insert(SettingsScope::Main, value.to_string());
     }
 
     /// Attempt to set the team ID from the signing certificate.
@@ -426,7 +426,11 @@ impl<'key> SigningSettings<'key> {
         if let Some((_, cert)) = &self.signing_key {
             if let Some(team_id) = cert.apple_team_id() {
                 self.set_team_id(team_id);
-                Some(self.team_id.as_ref().expect("we just set a team id"))
+                Some(
+                    self.team_id
+                        .get(&SettingsScope::Main)
+                        .expect("we just set a team id"),
+                )
             } else {
                 None
             }
