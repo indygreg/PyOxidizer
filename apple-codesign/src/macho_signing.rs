@@ -395,30 +395,6 @@ impl<'data> MachOSigner<'data> {
         builder.create_superblob()
     }
 
-    /// Attempt to resolve the binary identifier to use.
-    ///
-    /// If signing settings have defined one, use it. Otherwise use the last
-    /// identifier on the binary, if present. Otherwise error.
-    fn get_binary_identifier(
-        &self,
-        settings: &SigningSettings,
-        previous_signature: Option<&EmbeddedSignature>,
-    ) -> Result<String, AppleCodesignError> {
-        let previous_cd =
-            previous_signature.and_then(|signature| signature.code_directory().unwrap_or(None));
-
-        match settings.binary_identifier(SettingsScope::Main) {
-            Some(ident) => Ok(ident.to_string()),
-            None => {
-                if let Some(previous_cd) = &previous_cd {
-                    Ok(previous_cd.ident.to_string())
-                } else {
-                    Err(AppleCodesignError::NoIdentifier)
-                }
-            }
-        }
-    }
-
     /// Create the `CodeDirectory` for the current configuration.
     ///
     /// This takes an explicit Mach-O to operate on due to a circular dependency
@@ -633,7 +609,12 @@ impl<'data> MachOSigner<'data> {
             }
         }
 
-        let ident = Cow::Owned(self.get_binary_identifier(settings, previous_signature)?);
+        let ident = Cow::Owned(
+            settings
+                .binary_identifier(SettingsScope::Main)
+                .ok_or(AppleCodesignError::NoIdentifier)?
+                .to_string(),
+        );
 
         let team_name = match settings.team_id() {
             Some(team_name) => Some(Cow::Owned(team_name.to_string())),
@@ -699,8 +680,12 @@ impl<'data> MachOSigner<'data> {
                 // derive appropriate designated requirements.
                 if let Some((_, cert)) = settings.signing_key() {
                     info!("attempting to derive code requirements from signing certificate");
-                    let identifier =
-                        Some(self.get_binary_identifier(settings, previous_signature)?);
+                    let identifier = Some(
+                        settings
+                            .binary_identifier(SettingsScope::Main)
+                            .ok_or(AppleCodesignError::NoIdentifier)?
+                            .to_string(),
+                    );
 
                     if let Some(expr) = derive_designated_requirements(cert, identifier)? {
                         requirements.push(expr);
