@@ -9,6 +9,8 @@
   executable Mach-O files in bundles is automatically derived from the file name
   if the Mach-O doesn't already have a binary identifier. This fixes a regression
   in 0.11 and 0.12.
+* When signing a Mach-O, ``Info.plist`` data embedded in the Mach-O is now
+  automatically used when no ``Info.plist`` data is provided externally.
 
 0.12.0
 ======

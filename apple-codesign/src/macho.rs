@@ -65,6 +65,9 @@ pub trait AppleSignable {
     /// Resolve the load command for the code signature.
     fn code_signature_load_command(&self) -> Option<LinkeditDataCommand>;
 
+    /// Attempt to locate embedded Info.plist data.
+    fn embedded_info_plist(&self) -> Result<Option<Vec<u8>>, AppleCodesignError>;
+
     /// Determines whether this crate is capable of signing a given Mach-O binary.
     ///
     /// Code in this crate is limited in the amount of Mach-O binary manipulation
@@ -183,6 +186,22 @@ impl<'a> AppleSignable for MachO<'a> {
                 None
             }
         })
+    }
+
+    fn embedded_info_plist(&self) -> Result<Option<Vec<u8>>, AppleCodesignError> {
+        // Mach-O binaries can have the Info.plist data in an `__info_plist` section
+        // within the __TEXT segment.
+        for segment in &self.segments {
+            if matches!(segment.name(), Ok(SEG_TEXT)) {
+                for (section, data) in segment.sections()? {
+                    if matches!(section.name(), Ok("__info_plist")) {
+                        return Ok(Some(data.to_vec()));
+                    }
+                }
+            }
+        }
+
+        Ok(None)
     }
 
     fn check_signing_capability(&self) -> Result<(), AppleCodesignError> {

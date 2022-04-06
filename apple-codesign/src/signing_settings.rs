@@ -503,9 +503,24 @@ impl<'key> SigningSettings<'key> {
         &mut self,
         macho_data: &[u8],
     ) -> Result<(), AppleCodesignError> {
+        info!("inferring default signing settings from Mach-O binary");
+
         for (index, macho) in iter_macho(macho_data)?.enumerate() {
             let scope_index = SettingsScope::MultiArchIndex(index);
             let scope_arch = SettingsScope::MultiArchCpuType(macho.header.cputype());
+
+            // The Mach-O can have embedded Info.plist data. Use it if available and not
+            // already defined in settings.
+            if let Some(info_plist) = macho.embedded_info_plist()? {
+                if self.info_plist_data(&scope_index).is_some()
+                    || self.info_plist_data(&scope_arch).is_some()
+                {
+                    info!("using Info.plist data from settings");
+                } else {
+                    info!("preserving Info.plist data already present in Mach-O");
+                    self.set_info_plist_data(scope_index.clone(), info_plist);
+                }
+            }
 
             if let Some(sig) = macho.code_signature()? {
                 if let Some(cd) = sig.code_directory()? {
