@@ -506,13 +506,15 @@ impl<'key> SigningSettings<'key> {
         info!("inferring default signing settings from Mach-O binary");
 
         for (index, macho) in iter_macho(macho_data)?.enumerate() {
+            let scope_main = SettingsScope::Main;
             let scope_index = SettingsScope::MultiArchIndex(index);
             let scope_arch = SettingsScope::MultiArchCpuType(macho.header.cputype());
 
             // The Mach-O can have embedded Info.plist data. Use it if available and not
             // already defined in settings.
             if let Some(info_plist) = macho.embedded_info_plist()? {
-                if self.info_plist_data(&scope_index).is_some()
+                if self.info_plist_data(&scope_main).is_some()
+                    || self.info_plist_data(&scope_index).is_some()
                     || self.info_plist_data(&scope_arch).is_some()
                 {
                     info!("using Info.plist data from settings");
@@ -524,7 +526,8 @@ impl<'key> SigningSettings<'key> {
 
             if let Some(sig) = macho.code_signature()? {
                 if let Some(cd) = sig.code_directory()? {
-                    if self.binary_identifier(&scope_index).is_some()
+                    if self.binary_identifier(&scope_main).is_some()
+                        || self.binary_identifier(&scope_index).is_some()
                         || self.binary_identifier(&scope_arch).is_some()
                     {
                         info!("using binary identifier from settings");
@@ -535,7 +538,8 @@ impl<'key> SigningSettings<'key> {
                 }
 
                 if let Some(entitlements) = sig.entitlements()? {
-                    if self.entitlements_plist(&scope_index).is_some()
+                    if self.entitlements_plist(&scope_main).is_some()
+                        || self.entitlements_plist(&scope_index).is_some()
                         || self.entitlements_plist(&scope_arch).is_some()
                     {
                         info!("using entitlements from settings");
