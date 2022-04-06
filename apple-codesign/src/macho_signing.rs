@@ -12,16 +12,13 @@ use {
         code_hash::compute_code_hashes,
         code_requirement::{CodeRequirementExpression, CodeRequirements, RequirementType},
         embedded_signature::{
-            BlobData, CodeSigningSlot, Digest, EmbeddedSignature, EntitlementsBlob,
-            EntitlementsDerBlob, RequirementSetBlob,
+            BlobData, CodeSigningSlot, Digest, EntitlementsBlob, EntitlementsDerBlob,
+            RequirementSetBlob,
         },
         embedded_signature_builder::EmbeddedSignatureBuilder,
         entitlements::plist_to_executable_segment_flags,
         error::AppleCodesignError,
-        macho::{
-            find_macho_targeting, iter_macho, parse_version_nibbles,
-            semver_to_macho_target_version, AppleSignable,
-        },
+        macho::{find_macho_targeting, iter_macho, semver_to_macho_target_version, AppleSignable},
         policy::derive_designated_requirements,
         signing_settings::{DesignatedRequirementMode, SettingsScope, SigningSettings},
         ExecutableSegmentFlags,
@@ -277,12 +274,8 @@ impl<'data> MachOSigner<'data> {
                 // A nice side-effect of this is that it catches bugs if we write malformed Mach-O!
                 let intermediate_macho = MachO::parse(&intermediate_macho_data, 0)?;
 
-                let mut signature_data = self.create_superblob(
-                    &settings,
-                    self.macho_data(index),
-                    &intermediate_macho,
-                    original_macho.code_signature()?.as_ref(),
-                )?;
+                let mut signature_data =
+                    self.create_superblob(&settings, self.macho_data(index), &intermediate_macho)?;
                 info!("total signature size: {} bytes", signature_data.len());
 
                 // The Mach-O writer adjusts load commands based on the signature length. So pad
@@ -347,7 +340,6 @@ impl<'data> MachOSigner<'data> {
         settings: &SigningSettings,
         macho_data: &[u8],
         macho: &MachO,
-        previous_signature: Option<&EmbeddedSignature>,
     ) -> Result<Vec<u8>, AppleCodesignError> {
         let mut builder = EmbeddedSignatureBuilder::default();
 
@@ -355,8 +347,7 @@ impl<'data> MachOSigner<'data> {
             builder.add_blob(slot, blob)?;
         }
 
-        let code_directory =
-            self.create_code_directory(settings, macho_data, macho, previous_signature)?;
+        let code_directory = self.create_code_directory(settings, macho_data, macho)?;
         info!("code directory version: {}", code_directory.version);
 
         builder.add_code_directory(CodeSigningSlot::CodeDirectory, code_directory)?;
@@ -372,12 +363,7 @@ impl<'data> MachOSigner<'data> {
                     "adding alternative code directory using digest {:?}",
                     digest_type
                 );
-                let cd = self.create_code_directory(
-                    &alt_settings,
-                    macho_data,
-                    macho,
-                    previous_signature,
-                )?;
+                let cd = self.create_code_directory(&alt_settings, macho_data, macho)?;
 
                 builder.add_alternative_code_directory(cd.into())?;
             }
@@ -405,7 +391,6 @@ impl<'data> MachOSigner<'data> {
         settings: &SigningSettings,
         macho_data: &[u8],
         macho: &MachO,
-        previous_signature: Option<&EmbeddedSignature>,
     ) -> Result<CodeDirectoryBlob<'static>, AppleCodesignError> {
         // TODO support defining or filling in proper values for fields with
         // static values.
@@ -418,12 +403,6 @@ impl<'data> MachOSigner<'data> {
                 target.platform, target.minimum_os_version, target.sdk_version,
             );
         }
-
-        let previous_cd = previous_signature.and_then(|signature| {
-            signature
-                .code_directory_for_digest(*settings.digest_type())
-                .unwrap_or(None)
-        });
 
         let mut flags = CodeSignatureFlags::empty();
 
@@ -501,20 +480,6 @@ impl<'data> MachOSigner<'data> {
         // If the runtime code signature flag is set, we also need to set the runtime version
         // or else the activation of the hardened runtime is incomplete.
 
-        // First default to the existing runtime version, if present.
-        let runtime = match &previous_cd {
-            Some(previous_cd) => {
-                if let Some(version) = previous_cd.runtime {
-                    info!(
-                        "copying hardened runtime version {} from previous code directory",
-                        parse_version_nibbles(version)
-                    );
-                }
-                previous_cd.runtime
-            }
-            None => None,
-        };
-
         // If the settings defines a runtime version override, use it.
         let runtime = match settings.runtime_version(SettingsScope::Main) {
             Some(version) => {
@@ -524,7 +489,7 @@ impl<'data> MachOSigner<'data> {
                 );
                 Some(semver_to_macho_target_version(version))
             }
-            None => runtime,
+            None => None,
         };
 
         // If we still don't have a runtime but need one, derive from the target SDK.

@@ -11,7 +11,7 @@ use {
         code_requirement::CodeRequirementExpression,
         embedded_signature::{Blob, DigestType, RequirementBlob},
         error::AppleCodesignError,
-        macho::{iter_macho, AppleSignable},
+        macho::{iter_macho, parse_version_nibbles, AppleSignable},
     },
     glob::Pattern,
     goblin::mach::cputype::{
@@ -573,6 +573,19 @@ impl<'key> SigningSettings<'key> {
                             );
                             self.set_executable_segment_flags(scope_index.clone(), flags);
                         }
+                    }
+
+                    if self.runtime_version(&scope_main).is_some()
+                        || self.runtime_version(&scope_index).is_some()
+                        || self.runtime_version(&scope_arch).is_some()
+                    {
+                        info!("using runtime version from settings");
+                    } else if let Some(version) = cd.runtime {
+                        info!("preserving runtime version in existing Mach-O signature");
+                        self.set_runtime_version(
+                            scope_index.clone(),
+                            parse_version_nibbles(version),
+                        );
                     }
                 }
 
