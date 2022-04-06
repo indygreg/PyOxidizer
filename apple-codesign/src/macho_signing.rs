@@ -351,7 +351,7 @@ impl<'data> MachOSigner<'data> {
     ) -> Result<Vec<u8>, AppleCodesignError> {
         let mut builder = EmbeddedSignatureBuilder::default();
 
-        for (slot, blob) in self.create_special_blobs(settings, previous_signature)? {
+        for (slot, blob) in self.create_special_blobs(settings)? {
             builder.add_blob(slot, blob)?;
         }
 
@@ -633,7 +633,6 @@ impl<'data> MachOSigner<'data> {
     pub fn create_special_blobs(
         &self,
         settings: &SigningSettings,
-        previous_signature: Option<&EmbeddedSignature>,
     ) -> Result<Vec<(CodeSigningSlot, BlobData<'static>)>, AppleCodesignError> {
         let mut res = Vec::new();
 
