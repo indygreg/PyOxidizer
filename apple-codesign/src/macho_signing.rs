@@ -601,24 +601,13 @@ impl<'data> MachOSigner<'data> {
 
         // There is no corresponding blob for the info plist data since it is provided
         // externally to the embedded signature.
-        match settings.info_plist_data(SettingsScope::Main) {
-            Some(data) => {
-                special_hashes.insert(
-                    CodeSigningSlot::Info,
-                    Digest {
-                        data: settings.digest_type().digest_data(data)?.into(),
-                    },
-                );
-            }
-            None => {
-                if let Some(previous_cd) = &previous_cd {
-                    if let Some(digest) = previous_cd.slot_digest(CodeSigningSlot::Info) {
-                        if !digest.is_null() {
-                            special_hashes.insert(CodeSigningSlot::Info, digest.to_owned());
-                        }
-                    }
-                }
-            }
+        if let Some(data) = settings.info_plist_data(SettingsScope::Main) {
+            special_hashes.insert(
+                CodeSigningSlot::Info,
+                Digest {
+                    data: settings.digest_type().digest_data(data)?.into(),
+                },
+            );
         }
 
         // There is no corresponding blob for resources data since it is provided

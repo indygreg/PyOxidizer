@@ -66,7 +66,12 @@ impl<'key> UnifiedSigner<'key> {
         let input_path = input_path.as_ref();
         let output_path = output_path.as_ref();
 
+        warn!("signing {} as a Mach-O binary", input_path.display());
+        let macho_data = std::fs::read(input_path)?;
+
         let mut settings = self.settings.clone();
+
+        settings.import_settings_from_macho(&macho_data)?;
 
         if settings.binary_identifier(SettingsScope::Main).is_none() {
             let identifier = input_path
@@ -91,9 +96,6 @@ impl<'key> UnifiedSigner<'key> {
                 ExecutableSegmentFlags::MAIN_BINARY,
             );
         }
-
-        warn!("signing {} as a Mach-O binary", input_path.display());
-        let macho_data = std::fs::read(input_path)?;
 
         warn!("parsing Mach-O");
         let signer = MachOSigner::new(&macho_data)?;
