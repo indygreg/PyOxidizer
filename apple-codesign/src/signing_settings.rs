@@ -535,6 +535,16 @@ impl<'key> SigningSettings<'key> {
                         info!("preserving existing binary identifier in Mach-O");
                         self.set_binary_identifier(scope_index.clone(), cd.ident);
                     }
+
+                    if self.code_signature_flags(&scope_main).is_some()
+                        || self.code_signature_flags(&scope_index).is_some()
+                        || self.code_signature_flags(&scope_arch).is_some()
+                    {
+                        info!("using code signature flags from settings");
+                    } else if !cd.flags.is_empty() {
+                        info!("preserving code signature flags in existing Mach-O signature");
+                        self.set_code_signature_flags(scope_index.clone(), cd.flags);
+                    }
                 }
 
                 if let Some(entitlements) = sig.entitlements()? {

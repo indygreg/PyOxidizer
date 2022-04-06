@@ -427,23 +427,12 @@ impl<'data> MachOSigner<'data> {
 
         let mut flags = CodeSignatureFlags::empty();
 
-        match settings.code_signature_flags(SettingsScope::Main) {
-            Some(additional) => {
-                info!(
-                    "adding code signature flags from signing settings: {:?}",
-                    additional
-                );
-                flags |= additional
-            }
-            None => {
-                if let Some(previous_cd) = &previous_cd {
-                    info!(
-                        "copying code signature flags from previous code directory: {:?}",
-                        previous_cd.flags
-                    );
-                    flags |= previous_cd.flags;
-                }
-            }
+        if let Some(additional) = settings.code_signature_flags(SettingsScope::Main) {
+            info!(
+                "adding code signature flags from signing settings: {:?}",
+                additional
+            );
+            flags |= additional;
         }
 
         // The adhoc flag is set when there is no CMS signature.
