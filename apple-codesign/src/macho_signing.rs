@@ -564,25 +564,14 @@ impl<'data> MachOSigner<'data> {
 
         // There is no corresponding blob for resources data since it is provided
         // externally to the embedded signature.
-        match settings.code_resources_data(SettingsScope::Main) {
-            Some(data) => {
-                special_hashes.insert(
-                    CodeSigningSlot::ResourceDir,
-                    Digest {
-                        data: settings.digest_type().digest_data(data)?.into(),
-                    }
-                    .to_owned(),
-                );
-            }
-            None => {
-                if let Some(previous_cd) = &previous_cd {
-                    if let Some(digest) = previous_cd.slot_digest(CodeSigningSlot::ResourceDir) {
-                        if !digest.is_null() {
-                            special_hashes.insert(CodeSigningSlot::ResourceDir, digest.to_owned());
-                        }
-                    }
+        if let Some(data) = settings.code_resources_data(SettingsScope::Main) {
+            special_hashes.insert(
+                CodeSigningSlot::ResourceDir,
+                Digest {
+                    data: settings.digest_type().digest_data(data)?.into(),
                 }
-            }
+                .to_owned(),
+            );
         }
 
         let ident = Cow::Owned(
