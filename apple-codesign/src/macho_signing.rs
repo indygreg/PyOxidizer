@@ -581,19 +581,7 @@ impl<'data> MachOSigner<'data> {
                 .to_string(),
         );
 
-        let team_name = match settings.team_id() {
-            Some(team_name) => Some(Cow::Owned(team_name.to_string())),
-            None => {
-                if let Some(previous_cd) = &previous_cd {
-                    previous_cd
-                        .team_name
-                        .as_ref()
-                        .map(|name| Cow::Owned(name.clone().into_owned()))
-                } else {
-                    None
-                }
-            }
-        };
+        let team_name = settings.team_id().map(|x| Cow::Owned(x.to_string()));
 
         let mut cd = CodeDirectoryBlob {
             flags,

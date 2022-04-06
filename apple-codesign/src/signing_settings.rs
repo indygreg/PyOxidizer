@@ -540,6 +540,17 @@ impl<'key> SigningSettings<'key> {
                         self.set_binary_identifier(scope_index.clone(), cd.ident);
                     }
 
+                    if self.team_id.contains_key(&scope_main)
+                        || self.team_id.contains_key(&scope_index)
+                        || self.team_id.contains_key(&scope_arch)
+                    {
+                        info!("using team ID from settings");
+                    } else if let Some(team_id) = cd.team_name {
+                        info!("preserving team ID in existing Mach-O signature");
+                        self.team_id
+                            .insert(scope_index.clone(), team_id.to_string());
+                    }
+
                     if self.code_signature_flags(&scope_main).is_some()
                         || self.code_signature_flags(&scope_index).is_some()
                         || self.code_signature_flags(&scope_arch).is_some()
