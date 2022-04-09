@@ -810,11 +810,11 @@ fn command_compute_code_hashes(args: &ArgMatches) -> Result<(), AppleCodesignErr
     let index = args.value_of("universal_index").unwrap();
     let index = usize::from_str(index).map_err(|_| AppleCodesignError::CliBadArgument)?;
     let hash_type = DigestType::try_from(args.value_of("hash").unwrap())?;
-    let page_size = if let Some(page_size) = args.value_of("page_size") {
-        Some(usize::from_str(page_size).map_err(|_| AppleCodesignError::CliBadArgument)?)
-    } else {
-        None
-    };
+    let page_size = usize::from_str(
+        args.value_of("page_size")
+            .expect("page_size should have default value"),
+    )
+    .map_err(|_| AppleCodesignError::CliBadArgument)?;
 
     let data = std::fs::read(path)?;
     let macho = get_macho_from_data(&data, index)?;
@@ -2086,6 +2086,7 @@ fn main_impl() -> Result<(), AppleCodesignError> {
                 Arg::new("page_size")
                     .long("page-size")
                     .takes_value(true)
+                    .default_value("4096")
                     .help("Chunk size to digest over"),
             )
             .arg(

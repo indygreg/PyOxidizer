@@ -276,14 +276,14 @@ impl<'a> AppleSignable for MachO<'a> {
         // Reserve room for the code digests, which are proportional to binary size.
         // We could avoid doing the actual digesting work here. But until people
         // complain, don't worry about it.
-        size += compute_code_hashes(self, *settings.digest_type(), None)?
+        size += compute_code_hashes(self, *settings.digest_type(), 4096)?
             .into_iter()
             .map(|x| x.len())
             .sum::<usize>();
 
         if let Some(digests) = settings.extra_digests(SettingsScope::Main) {
             for digest in digests {
-                size += compute_code_hashes(self, *digest, None)?
+                size += compute_code_hashes(self, *digest, 4096)?
                     .into_iter()
                     .map(|x| x.len())
                     .sum::<usize>();

@@ -508,11 +508,10 @@ impl<'data> MachOSigner<'data> {
             runtime
         };
 
-        let code_hashes =
-            compute_code_hashes(macho, *settings.digest_type(), Some(page_size as usize))?
-                .into_iter()
-                .map(|v| Digest { data: v.into() })
-                .collect::<Vec<_>>();
+        let code_hashes = compute_code_hashes(macho, *settings.digest_type(), page_size as _)?
+            .into_iter()
+            .map(|v| Digest { data: v.into() })
+            .collect::<Vec<_>>();
 
         let mut special_hashes = HashMap::new();
 

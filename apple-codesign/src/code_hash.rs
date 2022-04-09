@@ -44,11 +44,8 @@ pub fn compute_paged_hashes(
 pub fn compute_code_hashes(
     macho: &MachO,
     hash_type: DigestType,
-    page_size: Option<usize>,
+    page_size: usize,
 ) -> Result<Vec<Vec<u8>>, AppleCodesignError> {
-    // TODO validate size.
-    let page_size = page_size.unwrap_or(4096);
-
     Ok(macho
         .digestable_segment_data()
         .into_iter()
