@@ -11,6 +11,12 @@
   in 0.11 and 0.12.
 * When signing a Mach-O, ``Info.plist`` data embedded in the Mach-O is now
   automatically used when no ``Info.plist`` data is provided externally.
+* The handling of preserving metadata from previous Mach-O signatures has been
+  refactored. In the new world, existing Mach-O state is imported into the
+  signing settings data structure at signing time and the signing operation
+  largely uses the settings data structure as the canonical source for state.
+  Explicitly set signing settings should take precedence over a previous Mach-O
+  signature.
 
 0.12.0
 ======
