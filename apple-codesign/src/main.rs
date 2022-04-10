@@ -61,7 +61,7 @@ use {
             create_self_signed_code_signing_certificate, parse_pfx_data, AppleCertificate,
             CertificateProfile,
         },
-        code_directory::{CodeDirectoryBlob, CodeSignatureFlags, ExecutableSegmentFlags},
+        code_directory::{CodeDirectoryBlob, CodeSignatureFlags},
         code_hash::compute_code_hashes,
         code_requirement::CodeRequirements,
         embedded_signature::{Blob, CodeSigningSlot, DigestType, RequirementSetBlob},
@@ -299,7 +299,6 @@ entities:
 * --code-resources-path
 * --code-signature-flags
 * --entitlements-xml-path
-* --executable-segment-flags
 * --info-plist-path
 
 Scoped settings take the form <value> or <scope>:<value>. If the 2nd form
@@ -1807,15 +1806,6 @@ fn command_sign(args: &ArgMatches) -> Result<(), AppleCodesignError> {
         }
     }
 
-    if let Some(values) = args.values_of("executable_segment_flags_set") {
-        for value in values {
-            let (scope, value) = parse_scoped_value(value)?;
-
-            let flags = ExecutableSegmentFlags::from_str(value)?;
-            settings.set_executable_segment_flags(scope, flags);
-        }
-    }
-
     if let Some(values) = args.values_of("runtime_version") {
         for value in values {
             let (scope, value) = parse_scoped_value(value)?;
@@ -2428,15 +2418,6 @@ fn main_impl() -> Result<(), AppleCodesignError> {
                         .multiple_values(true)
                         .number_of_values(1)
                         .help("Path to a plist file containing entitlements"),
-                )
-                .arg(
-                    Arg::new("executable_segment_flags_set")
-                        .long("executable-segment-flags")
-                        .takes_value(true)
-                        .multiple_occurrences(true)
-                        .multiple_values(true)
-                        .number_of_values(1)
-                        .help("Executable segment flags to set")
                 )
                 .arg(
                     Arg::new("runtime_version")

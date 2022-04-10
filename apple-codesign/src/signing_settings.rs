@@ -7,7 +7,7 @@
 use {
     crate::{
         certificate::AppleCertificate,
-        code_directory::{CodeSignatureFlags, ExecutableSegmentFlags},
+        code_directory::CodeSignatureFlags,
         code_requirement::CodeRequirementExpression,
         embedded_signature::{Blob, DigestType, RequirementBlob},
         error::AppleCodesignError,
@@ -271,7 +271,6 @@ pub struct SigningSettings<'key> {
     entitlements: BTreeMap<SettingsScope, plist::Value>,
     designated_requirement: BTreeMap<SettingsScope, DesignatedRequirementMode>,
     code_signature_flags: BTreeMap<SettingsScope, CodeSignatureFlags>,
-    executable_segment_flags: BTreeMap<SettingsScope, ExecutableSegmentFlags>,
     runtime_version: BTreeMap<SettingsScope, semver::Version>,
     info_plist_data: BTreeMap<SettingsScope, Vec<u8>>,
     code_resources_data: BTreeMap<SettingsScope, Vec<u8>>,
@@ -585,20 +584,6 @@ impl<'key> SigningSettings<'key> {
                         self.set_code_signature_flags(scope_index.clone(), cd.flags);
                     }
 
-                    if self.executable_segment_flags(&scope_main).is_some()
-                        || self.executable_segment_flags(&scope_index).is_some()
-                        || self.executable_segment_flags(&scope_arch).is_some()
-                    {
-                        info!("using executable segment flags from settings");
-                    } else if let Some(flags) = cd.exec_seg_flags {
-                        if !flags.is_empty() {
-                            info!(
-                                "preserving executable segment flags in existing Mach-O signature"
-                            );
-                            self.set_executable_segment_flags(scope_index.clone(), flags);
-                        }
-                    }
-
                     if self.runtime_version(&scope_main).is_some()
                         || self.runtime_version(&scope_index).is_some()
                         || self.runtime_version(&scope_arch).is_some()
@@ -777,25 +762,6 @@ impl<'key> SigningSettings<'key> {
         self.code_signature_flags.insert(scope, new);
 
         new
-    }
-
-    /// Obtain the executable segment flags for a given scope.
-    pub fn executable_segment_flags(
-        &self,
-        scope: impl AsRef<SettingsScope>,
-    ) -> Option<ExecutableSegmentFlags> {
-        self.executable_segment_flags.get(scope.as_ref()).copied()
-    }
-
-    /// Set executable segment flags for Mach-O binaries.
-    ///
-    /// The incoming flags will replace any already defined flags for the path.
-    pub fn set_executable_segment_flags(
-        &mut self,
-        scope: SettingsScope,
-        flags: ExecutableSegmentFlags,
-    ) {
-        self.executable_segment_flags.insert(scope, flags);
     }
 
     /// Obtain the `Info.plist` data registered to a given scope.
@@ -994,12 +960,6 @@ impl<'key> SigningSettings<'key> {
                 .collect::<BTreeMap<_, _>>(),
             code_signature_flags: self
                 .code_signature_flags
-                .clone()
-                .into_iter()
-                .filter_map(|(key, value)| key_map(key).map(|key| (key, value)))
-                .collect::<BTreeMap<_, _>>(),
-            executable_segment_flags: self
-                .executable_segment_flags
                 .clone()
                 .into_iter()
                 .filter_map(|(key, value)| key_map(key).map(|key| (key, value)))

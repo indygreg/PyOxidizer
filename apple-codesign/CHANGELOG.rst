@@ -36,6 +36,11 @@
   Previously, we added DER encoded entitlements whenever entitlements data
   was present. It appears DER encoded entitlements are only written on Mach-O
   binaries that are executables.
+* Executable segment flags are now derived from the Mach-O file type and
+  entitlements plist data. We no longer blindly copy executable segment flags
+  from previous signatures. We no longer have CLI arguments to define executable
+  segment flags. This ensures that the entitlements plist and executable
+  segment flags are always in sync.
 
 0.12.0
 ======

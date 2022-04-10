@@ -8,7 +8,7 @@
 
 use {
     crate::{
-        code_directory::{CodeDirectoryBlob, CodeSignatureFlags},
+        code_directory::{CodeDirectoryBlob, CodeSignatureFlags, ExecutableSegmentFlags},
         code_hash::compute_code_hashes,
         code_requirement::{CodeRequirementExpression, CodeRequirements, RequirementType},
         embedded_signature::{
@@ -21,7 +21,6 @@ use {
         macho::{find_macho_targeting, iter_macho, semver_to_macho_target_version, AppleSignable},
         policy::derive_designated_requirements,
         signing_settings::{DesignatedRequirementMode, SettingsScope, SigningSettings},
-        ExecutableSegmentFlags,
     },
     goblin::mach::{
         constants::{SEG_LINKEDIT, SEG_PAGEZERO},
@@ -450,36 +449,28 @@ impl<'data> MachOSigner<'data> {
         let (exec_seg_base, exec_seg_limit) = macho.executable_segment_boundary()?;
         let (exec_seg_base, exec_seg_limit) = (Some(exec_seg_base), Some(exec_seg_limit));
 
-        let mut exec_seg_flags = None;
+        // Executable segment flags are wonky.
+        //
+        // Foremost, these flags are only present if the Mach-O binary is an executable. So not
+        // matter what the settings say, we don't set these flags unless the Mach-O file type
+        // is proper.
+        //
+        // Executable segment flags are also derived from an associated entitlements plist.
+        let exec_seg_flags = if macho.is_executable() {
+            if let Some(entitlements) = settings.entitlements_plist(SettingsScope::Main) {
+                let flags = plist_to_executable_segment_flags(entitlements);
 
-        if let Some(flags) = settings.executable_segment_flags(SettingsScope::Main) {
-            info!(
-                "using executable segment flags from signing settings ({:?})",
-                flags
-            );
-            exec_seg_flags = Some(flags);
-        }
+                if !flags.is_empty() {
+                    info!("entitlements imply executable segment flags: {:?}", flags);
+                }
 
-        // Entitlements can influence the executable segment flags. So make sure
-        // flags derived from entitlements are always set.
-        if let Some(entitlements) = settings.entitlements_plist(SettingsScope::Main) {
-            let implied_flags = plist_to_executable_segment_flags(entitlements);
-
-            if !implied_flags.is_empty() {
-                info!(
-                    "entitlements imply executable segment flags: {:?}",
-                    implied_flags
-                );
-
-                exec_seg_flags = Some(
-                    exec_seg_flags.unwrap_or_else(ExecutableSegmentFlags::empty) | implied_flags,
-                );
+                Some(flags | ExecutableSegmentFlags::MAIN_BINARY)
+            } else {
+                Some(ExecutableSegmentFlags::MAIN_BINARY)
             }
-        }
-
-        if let Some(flags) = exec_seg_flags {
-            info!("final executable segment flags: {:?}", flags);
-        }
+        } else {
+            None
+        };
 
         // The runtime version is the SDK version from the targeting loader commands. Same
         // u32 with nibbles encoding the version.

@@ -7,7 +7,6 @@
 use {
     crate::{
         bundle_signing::BundleSigner,
-        code_directory::ExecutableSegmentFlags,
         dmg::DmgSigner,
         error::AppleCodesignError,
         macho_signing::MachOSigner,
@@ -85,16 +84,6 @@ impl<'key> UnifiedSigner<'key> {
 
             warn!("setting binary identifier to {}", identifier);
             settings.set_binary_identifier(SettingsScope::Main, identifier);
-        }
-
-        if settings
-            .executable_segment_flags(SettingsScope::Main)
-            .is_none()
-        {
-            settings.set_executable_segment_flags(
-                SettingsScope::Main,
-                ExecutableSegmentFlags::MAIN_BINARY,
-            );
         }
 
         warn!("parsing Mach-O");

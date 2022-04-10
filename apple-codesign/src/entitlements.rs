@@ -5,7 +5,7 @@
 /*! Code entitlements handling. */
 
 use {
-    crate::{AppleCodesignError, ExecutableSegmentFlags},
+    crate::{code_directory::ExecutableSegmentFlags, AppleCodesignError},
     plist::Value,
     rasn::{
         ber::enc::{Encoder as DerEncoder, Error as DerError},
