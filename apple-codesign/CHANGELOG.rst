@@ -19,11 +19,19 @@
   signature.
 * Fixed a bug where empty Mach-O segments could result in an error when writing
   signed Mach-O files. (#544)
-* Mach-O signing now automatically takes the binary's OS targeting information
-  into account when determining whether to use SHA-1 vs SHA-256 digests. Since
-  only modern versions of Apple operating systems support SHA-256 signatures,
-  we now automatically use SHA-1 as the primary and SHA-256 as an extra digest
-  type when encountering a binary that targets an older OS version.
+* Mach-O and bundle signing now automatically use OS targeting metadata embedded
+  in Mach-O binaries to activate SHA-1 + SHA-256 digests when necessary. If a
+  Mach-O binary indicates it targets an older OS version that lacks support for
+  SHA-256 digests (e.g. macOS <10.11.4), we will automatically use SHA-1 as the
+  primary digest method and include SHA-256 digests for modern operating systems.
+  As a result of this change, binaries and bundles that were targeting macOS
+  <10.11.4, iOS/tvOS <11, and watchOS now properly contain SHA-1 digests as the
+  primary digest type.
+* In bundle signing, ``CodeResources`` files now capture the ``cdhash`` of the
+  SHA-256 code directory. Before, they would always use the primary code
+  directory, which might be using SHA-1. The ``cdhash`` value must be from the
+  SHA-256 code directory to be valid. This change should result in more bundles
+  having working signatures.
 
 0.12.0
 ======

@@ -9,9 +9,9 @@ use {
         code_directory::CodeDirectoryBlob,
         code_requirement::RequirementType,
         code_resources::{CodeResourcesBuilder, CodeResourcesRule},
-        embedded_signature::{Blob, BlobData, CodeSigningSlot},
+        embedded_signature::{Blob, BlobData, DigestType},
         error::AppleCodesignError,
-        macho::AppleSignable,
+        macho::{find_macho_targeting, iter_macho, AppleSignable},
         macho_signing::MachOSigner,
         signing_settings::{SettingsScope, SigningSettings},
     },
@@ -179,11 +179,20 @@ impl SignedMachOInfo {
             .code_signature()?
             .ok_or(AppleCodesignError::BinaryNoCodeSignature)?;
 
-        let cd = signature
-            .find_slot(CodeSigningSlot::CodeDirectory)
-            .ok_or(AppleCodesignError::BinaryNoCodeSignature)?;
+        // Usually this type is used to chain content digests in the context of bundle signing /
+        // code resources files. In that context, SHA-256 digests are preferred and might even
+        // be the only supported digests. So, prefer a SHA-256 code directory over SHA-1.
+        let cd = if let Some(cd) = signature.code_directory_for_digest(DigestType::Sha256)? {
+            cd
+        } else if let Some(cd) = signature.code_directory_for_digest(DigestType::Sha1)? {
+            cd
+        } else if let Some(cd) = signature.code_directory()? {
+            cd
+        } else {
+            return Err(AppleCodesignError::BinaryNoCodeSignature);
+        };
 
-        let code_directory_blob = cd.data.to_vec();
+        let code_directory_blob = cd.to_blob_bytes()?;
 
         let designated_code_requirement = if let Some(requirements) =
             signature.code_requirements()?
@@ -435,6 +444,36 @@ impl SingleBundleSigner {
             .map_err(AppleCodesignError::DirectoryBundle)?
             .ok_or_else(|| AppleCodesignError::BundleNoIdentifier(self.bundle.info_plist_path()))?;
 
+        let mut resources_digests = settings.all_digests(SettingsScope::Main);
+
+        // State in the main executable can influence signing settings of the bundle. So examine
+        // it first.
+
+        let main_exe = self
+            .bundle
+            .files(false)
+            .map_err(AppleCodesignError::DirectoryBundle)?
+            .into_iter()
+            .find(|f| matches!(f.is_main_executable(), Ok(true)));
+
+        if let Some(exe) = &main_exe {
+            let macho_data = std::fs::read(exe.absolute_path())?;
+
+            for (macho, macho_data) in iter_macho(&macho_data)? {
+                if let Some(targeting) = find_macho_targeting(macho_data, &macho)? {
+                    let sha256_version = targeting.platform.sha256_digest_support()?;
+
+                    if !sha256_version.matches(&targeting.minimum_os_version)
+                        && resources_digests != vec![DigestType::Sha1, DigestType::Sha256]
+                    {
+                        info!("main executable targets OS requiring SHA-1 signatures; activating SHA-1 + SHA-256 signing");
+                        resources_digests = vec![DigestType::Sha1, DigestType::Sha256];
+                        break;
+                    }
+                }
+            }
+        }
+
         warn!("collecting code resources files");
 
         // The set of rules to use is determined by whether the bundle *can* have a
@@ -451,7 +490,7 @@ impl SingleBundleSigner {
             };
 
         // Ensure emitted digests match what we're configured to emit.
-        resources_builder.set_digests(settings.all_digests(SettingsScope::Main).into_iter());
+        resources_builder.set_digests(resources_digests.into_iter());
 
         // Exclude code signature files we'll write.
         resources_builder.add_exclusion_rule(CodeResourcesRule::new("^_CodeSignature/")?.exclude());
@@ -463,7 +502,6 @@ impl SingleBundleSigner {
             settings,
         };
 
-        let mut main_exe = None;
         let mut info_plist_data = None;
 
         // Iterate files in this bundle and register as code resources.
@@ -486,11 +524,7 @@ impl SingleBundleSigner {
                 .is_main_executable()
                 .map_err(AppleCodesignError::DirectoryBundle)?
             {
-                info!(
-                    "{} is identified as the main executable; saving it for later",
-                    file.relative_path().display()
-                );
-                main_exe = Some(file);
+                continue;
             } else if file.is_info_plist() {
                 // The Info.plist is digested specially. But it may also be handled by
                 // the resources handler. So always feed it through.
