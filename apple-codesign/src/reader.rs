@@ -316,6 +316,7 @@ pub struct CodeDirectory {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub team_name: Option<String>,
     pub digest_type: String,
+    pub platform: u8,
     pub signed_entity_size: u64,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub executable_segment_flags: Option<String>,
@@ -348,6 +349,7 @@ impl<'a> TryFrom<CodeDirectoryBlob<'a>> for CodeDirectory {
             team_name: cd.team_name.map(|x| x.to_string()),
             signed_entity_size: cd.code_limit as _,
             digest_type: format!("{}", cd.digest_type),
+            platform: cd.platform,
             executable_segment_flags: cd.exec_seg_flags.map(|x| format!("{:?}", x)),
             runtime_version: cd.runtime.map(crate::macho::parse_version_nibbles),
             slot_digests,
