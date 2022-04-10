@@ -187,6 +187,9 @@ fn create_macho_with_signature(
                 // overlapping with already written data. So only write segment
                 // data new to the writer.
                 if segment.fileoff < cursor.position() {
+                    if segment.data.is_empty() {
+                        continue;
+                    }
                     let remaining =
                         &segment.data[cursor.position() as usize..segment.filesize as usize];
                     cursor.write_all(remaining)?;

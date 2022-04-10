@@ -17,6 +17,8 @@
   largely uses the settings data structure as the canonical source for state.
   Explicitly set signing settings should take precedence over a previous Mach-O
   signature.
+* Fixed a bug where empty Mach-O segments could result in an error when writing
+  signed Mach-O files. (#544)
 
 0.12.0
 ======
