@@ -5,7 +5,11 @@
 //! Yubikey interaction.
 
 use {
-    crate::{cryptography::PrivateKey, AppleCodesignError},
+    crate::{
+        cryptography::{rsa_oaep_post_decrypt_decode, PrivateKey},
+        remote_signing::{session_negotiation::PublicKeyPeerDecrypt, RemoteSignError},
+        AppleCodesignError,
+    },
     bcder::encode::Values,
     bytes::Bytes,
     log::{error, warn},
@@ -620,9 +624,76 @@ impl Sign for CertificateSigner {
 
 impl KeyInfoSigner for CertificateSigner {}
 
+impl PublicKeyPeerDecrypt for CertificateSigner {
+    fn decrypt(&self, ciphertext: &[u8]) -> Result<Vec<u8>, RemoteSignError> {
+        let mut guard = self
+            .yk
+            .lock()
+            .map_err(|_| RemoteSignError::Crypto("unable to acquire lock on YubiKey".into()))?;
+
+        let yk = guard.deref_mut();
+
+        let algorithm_id = algorithm_from_certificate(&self.cert)?;
+
+        // The YubiKey's decrypt primitive is super low level. So we need to undo OAEP
+        // padding on RSA keys first.
+
+        attempt_authenticated_operation(
+            yk,
+            |yk| {
+                let plaintext =
+                    ::yubikey::piv::decrypt_data(yk, ciphertext, algorithm_id, self.slot)?;
+
+                let rsa_modulus_length = match algorithm_id {
+                    AlgorithmId::Rsa1024 => Some(1024 / 8),
+                    AlgorithmId::Rsa2048 => Some(2048 / 8),
+                    AlgorithmId::EccP256 | AlgorithmId::EccP384 => None,
+                };
+
+                let plaintext = match algorithm_id {
+                    // The YubiKey only does RSA decrypt without padding awareness. So we need to decode
+                    // padding ourselves.
+                    AlgorithmId::Rsa1024 | AlgorithmId::Rsa2048 => {
+                        let mut digest = sha2::Sha256::default();
+                        let mut mgf_digest = sha2::Sha256::default();
+
+                        rsa_oaep_post_decrypt_decode(
+                            rsa_modulus_length.unwrap(),
+                            plaintext.to_vec(),
+                            &mut digest,
+                            &mut mgf_digest,
+                            None,
+                        )
+                        .map_err(|e| {
+                            RemoteSignError::Crypto(format!("error during OAEP decoding: {}", e))
+                        })?
+                    }
+
+                    AlgorithmId::EccP256 | AlgorithmId::EccP384 => plaintext.to_vec(),
+                };
+
+                Ok(plaintext)
+            },
+            RequiredAuthentication::Pin,
+            self.pin_callback.as_ref(),
+        )
+        .map_err(|e| RemoteSignError::Crypto(format!("failed to decrypt using YubiKey: {}", e)))
+    }
+}
+
 impl PrivateKey for CertificateSigner {
     fn as_key_info_signer(&self) -> &dyn KeyInfoSigner {
         self
+    }
+
+    fn to_public_key_peer_decrypt(
+        &self,
+    ) -> Result<Box<dyn PublicKeyPeerDecrypt>, AppleCodesignError> {
+        Ok(Box::new(self.clone()))
+    }
+
+    fn finish(&self) -> Result<(), AppleCodesignError> {
+        Ok(())
     }
 }
 

@@ -23,6 +23,11 @@ Other features include:
 
 * Built-in support for using smart cards (e.g. YubiKeys) for signing and
   key/certificate management.
+* A *remote signing* mode that enables you to delegate just the low-level
+  cryptographic signature generation to a remote machine. This allows you to
+  do things like have a CI job initiate signing but use a YubiKey on a remote
+  machine to create cryptographic signatures. See
+  :ref:`apple_codesign_remote_signing` for more.
 * Certificate Signing Request (CSR) support to enable arbitrary private keys
   (including those generated on smart card devices) to be easily exchanged for
   Apple-issued code signing certificates.
@@ -47,5 +52,8 @@ to be used as a standalone project.
    apple_codesign_concepts
    apple_codesign_quirks
    apple_codesign_debugging
+   apple_codesign_remote_signing
+   apple_codesign_remote_signing_protocol
+   apple_codesign_remote_signing_design
    apple_codesign_gatekeeper
    apple_codesign_custom_assessment_policies

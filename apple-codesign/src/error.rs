@@ -3,6 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
+    crate::remote_signing::RemoteSignError,
     cryptographic_message_syntax::CmsError,
     std::path::PathBuf,
     thiserror::Error,
@@ -346,4 +347,7 @@ pub enum AppleCodesignError {
 
     #[error("zip structs error: {0}")]
     ZipStructs(#[from] zip_structs::zip_error::ZipReadError),
+
+    #[error("remote signing error: {0}")]
+    RemoteSign(#[from] RemoteSignError),
 }

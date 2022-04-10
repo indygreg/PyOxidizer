@@ -12,6 +12,14 @@
   correctly.
 * The filename used in notarization uploads is now normalized to avoid
   rejection due to spaces and colons.
+* Support for remote signing. The feature is documented extensively in the
+  Sphinx documentation. Essentially, 2 independent machines communicate with
+  each other with end-to-end encrypted messages via a websocket bridged through
+  a central server. Signing requests are sent to a remote machine which is in
+  possession of the signing key. Signatures are made on the remote machine and
+  transmitted back to the originating machine. Remote signing enables signing
+  to be performed more securely by facilitating signing without having to give
+  the initiating machine access to the signing key.
 
 0.13.0
 ======

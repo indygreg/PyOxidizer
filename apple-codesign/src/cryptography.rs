@@ -5,7 +5,10 @@
 //! Common cryptography primitives.
 
 use {
-    crate::AppleCodesignError,
+    crate::{
+        remote_signing::{session_negotiation::PublicKeyPeerDecrypt, RemoteSignError},
+        AppleCodesignError,
+    },
     bytes::Bytes,
     der::{asn1, Document, Encodable},
     elliptic_curve::{
@@ -22,8 +25,12 @@ use {
         PrivateKeyDocument, PrivateKeyInfo,
     },
     ring::signature::{EcdsaKeyPair, Ed25519KeyPair, KeyPair, RsaKeyPair},
-    rsa::{BigUint, RsaPrivateKey as RsaConstructedKey},
+    rsa::{
+        algorithms::mgf1_xor, pkcs1::FromRsaPrivateKey, BigUint, PaddingScheme,
+        RsaPrivateKey as RsaConstructedKey,
+    },
     signature::Signer,
+    subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption},
     x509_certificate::{
         CapturedX509Certificate, EcdsaCurve, InMemorySigningKeyPair, KeyAlgorithm, KeyInfoSigner,
         Sign, Signature, SignatureAlgorithm, X509CertificateError,
@@ -31,9 +38,19 @@ use {
     zeroize::Zeroizing,
 };
 
-/// A supertrait generically describing a private key capable of signing.
+/// A supertrait generically describing a private key capable of signing and possibly decryption.
 pub trait PrivateKey: KeyInfoSigner {
     fn as_key_info_signer(&self) -> &dyn KeyInfoSigner;
+
+    fn to_public_key_peer_decrypt(
+        &self,
+    ) -> Result<Box<dyn PublicKeyPeerDecrypt>, AppleCodesignError>;
+
+    /// Signals the end of operations on the private key.
+    ///
+    /// Implementations can use this to do things like destroy private key matter, disconnect
+    /// from a hardware device, etc.
+    fn finish(&self) -> Result<(), AppleCodesignError>;
 }
 
 #[derive(Clone, Debug)]
@@ -77,6 +94,21 @@ impl TryFrom<InMemoryRsaKey> for InMemorySigningKeyPair {
 impl EncodePrivateKey for InMemoryRsaKey {
     fn to_pkcs8_der(&self) -> pkcs8::Result<PrivateKeyDocument> {
         PrivateKeyInfo::new(pkcs1::ALGORITHM_ID, self.private_key.as_der()).to_der()
+    }
+}
+
+impl PublicKeyPeerDecrypt for InMemoryRsaKey {
+    fn decrypt(&self, ciphertext: &[u8]) -> Result<Vec<u8>, RemoteSignError> {
+        let key = RsaConstructedKey::from_pkcs1_der(self.private_key.as_der())
+            .map_err(|e| RemoteSignError::Crypto(format!("failed to parse RSA key: {}", e)))?;
+
+        let padding = PaddingScheme::new_oaep::<sha2::Sha256>();
+
+        let plaintext = key
+            .decrypt(padding, ciphertext)
+            .map_err(|e| RemoteSignError::Crypto(format!("RSA decryption failure: {}", e)))?;
+
+        Ok(plaintext)
     }
 }
 
@@ -160,6 +192,19 @@ where
     }
 }
 
+impl<C> PublicKeyPeerDecrypt for InMemoryEcdsaKey<C>
+where
+    C: Curve + ProjectiveArithmetic,
+    AffinePoint<C>: FromEncodedPoint<C> + ToEncodedPoint<C>,
+    FieldSize<C>: ModulusSize,
+{
+    fn decrypt(&self, _ciphertext: &[u8]) -> Result<Vec<u8>, RemoteSignError> {
+        Err(RemoteSignError::Crypto(
+            "decryption using ECDSA keys is not yet implemented".into(),
+        ))
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct InMemoryEd25519Key {
     private_key: Zeroizing<Vec<u8>>,
@@ -191,6 +236,14 @@ impl EncodePrivateKey for InMemoryEd25519Key {
         let value = Zeroizing::new(asn1::OctetString::new(self.private_key.as_ref())?.to_vec()?);
 
         PrivateKeyInfo::new(algorithm, value.as_ref()).try_into()
+    }
+}
+
+impl PublicKeyPeerDecrypt for InMemoryEd25519Key {
+    fn decrypt(&self, _ciphertext: &[u8]) -> Result<Vec<u8>, RemoteSignError> {
+        Err(RemoteSignError::Crypto(
+            "decryption using ED25519 keys is not yet implemented".into(),
+        ))
     }
 }
 
@@ -345,9 +398,29 @@ impl Sign for InMemoryPrivateKey {
 
 impl KeyInfoSigner for InMemoryPrivateKey {}
 
+impl PublicKeyPeerDecrypt for InMemoryPrivateKey {
+    fn decrypt(&self, ciphertext: &[u8]) -> Result<Vec<u8>, RemoteSignError> {
+        match self {
+            Self::Rsa(key) => key.decrypt(ciphertext),
+            Self::EcdsaP256(key) => key.decrypt(ciphertext),
+            Self::Ed25519(key) => key.decrypt(ciphertext),
+        }
+    }
+}
+
 impl PrivateKey for InMemoryPrivateKey {
     fn as_key_info_signer(&self) -> &dyn KeyInfoSigner {
         self
+    }
+
+    fn to_public_key_peer_decrypt(
+        &self,
+    ) -> Result<Box<dyn PublicKeyPeerDecrypt>, AppleCodesignError> {
+        Ok(Box::new(self.clone()))
+    }
+
+    fn finish(&self) -> Result<(), AppleCodesignError> {
+        Ok(())
     }
 }
 
@@ -491,6 +564,81 @@ pub fn parse_pfx_data(
             "failed to find signing key in PFX data".to_string(),
         )),
     }
+}
+
+/// RSA OAEP post decrypt depadding.
+///
+/// This implements the procedure described by RFC 3447 Section 7.1.2
+/// starting at Step 3 (after the ciphertext has been fed into the low-level
+/// RSA decryption.
+///
+/// This implementation has NOT been audited and shouldn't be used. It only
+/// exists here because we need it to support RSA decryption using YubiKeys.
+/// https://github.com/RustCrypto/RSA/issues/159 is fixed to hopefully get this
+/// exposed as an API on the rsa crate.
+pub(crate) fn rsa_oaep_post_decrypt_decode(
+    modulus_length_bytes: usize,
+    mut em: Vec<u8>,
+    digest: &mut dyn digest::DynDigest,
+    mgf_digest: &mut dyn digest::DynDigest,
+    label: Option<String>,
+) -> Result<Vec<u8>, rsa::errors::Error> {
+    let k = modulus_length_bytes;
+    let digest_len = digest.output_size();
+
+    // 3. EME_OAEP decoding.
+
+    // 3a.
+    let label = label.unwrap_or_default();
+    digest.update(label.as_bytes());
+    let label_digest = digest.finalize_reset();
+
+    // 3b.
+    let (y, remaining) = em.split_at_mut(1);
+    let (masked_seed, masked_db) = remaining.split_at_mut(digest_len);
+
+    if masked_seed.len() != digest_len || masked_db.len() != k - digest_len - 1 {
+        return Err(rsa::errors::Error::Decryption);
+    }
+
+    // 3c - 3f.
+    mgf1_xor(masked_seed, mgf_digest, masked_db);
+    mgf1_xor(masked_db, mgf_digest, masked_seed);
+
+    // 3g.
+    //
+    // We need to split into padding string (all zeroes) and message M with a
+    // 0x01 between them. The padding string should be all zeroes. And this should
+    // execute in constant time, which makes it tricky.
+
+    let digests_equivalent = masked_db[0..digest_len].ct_eq(label_digest.as_ref());
+
+    let mut looking_for_index = Choice::from(1u8);
+    let mut index = 0u32;
+    let mut padding_invalid = Choice::from(0u8);
+
+    for (i, value) in masked_db.iter().skip(digest_len).enumerate() {
+        let is_zero = value.ct_eq(&0u8);
+        let is_one = value.ct_eq(&1u8);
+
+        index.conditional_assign(&(i as u32), looking_for_index & is_one);
+        looking_for_index &= !is_one;
+        padding_invalid |= looking_for_index & !is_zero;
+    }
+
+    let y_is_zero = y[0].ct_eq(&0u8);
+
+    let valid = y_is_zero & digests_equivalent & !padding_invalid & !looking_for_index;
+
+    let res = CtOption::new((em, index + 2 + (digest_len * 2) as u32), valid);
+
+    if res.is_none().into() {
+        return Err(rsa::errors::Error::Decryption);
+    }
+
+    let (out, index) = res.unwrap();
+
+    Ok(out[index as usize..].to_vec())
 }
 
 #[cfg(test)]

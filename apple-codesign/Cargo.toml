@@ -25,6 +25,7 @@ chrono = "0.4"
 der = "0.5"
 dialoguer = "0.10"
 difference = "2.0"
+digest = "0.9"
 dirs = "4.0"
 duct = "0.13"
 elliptic-curve = { version = "0.11", features = ["arithmetic", "pkcs8"] }
@@ -37,6 +38,7 @@ indoc = "1.0"
 jsonwebtoken = "8"
 log = "0.4"
 md-5 = "0.10"
+minicbor = { version = "0.15", features = ["derive", "std"] }
 oid-registry = "0.5"
 once_cell = "1.7"
 p12 = "0.6"
@@ -45,20 +47,25 @@ pem = "1.0"
 pkcs1 = { version = "0.3", features = ["alloc", "std"] }
 pkcs8 = { version = "0.8", features = ["alloc", "std"] }
 plist = "1.2"
+rand = "0.8"
 rasn = "0.5"
 regex = "1.5"
 reqwest = { version = "0.11", default-features = false, features = ["blocking", "json", "rustls-tls"] }
 ring = "0.16"
 rsa = "0.5"
 scroll = "0.11"
+sha2 = "0.9"
 semver = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_yaml = "0.8"
 signature = "1.3"
+spake2 = "0.3"
 spki = { version = "0.5", features = ["pem"] }
+subtle = "2.4"
 tempfile = "3.3"
 thiserror = "1.0"
+tungstenite = { version = "0.17", features = ["rustls-tls-native-roots"] }
 uuid = { version = "0.8", features = ["v4"] }
 which = "4.2"
 x509 = "0.2"

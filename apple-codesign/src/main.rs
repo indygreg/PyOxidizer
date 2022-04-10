@@ -42,6 +42,7 @@ mod notarization;
 #[allow(unused)]
 mod policy;
 mod reader;
+mod remote_signing;
 mod signing;
 #[allow(unused)]
 mod signing_settings;
@@ -70,10 +71,17 @@ use {
         error::AppleCodesignError,
         macho::{find_macho_targeting, find_signature_data, AppleSignable},
         reader::SignatureReader,
+        remote_signing::{
+            session_negotiation::{
+                create_session_joiner, PublicKeyInitiator, SessionInitiatePeer, SessionJoinState,
+                SharedSecretInitiator,
+            },
+            RemoteSignError, UnjoinedSigningClient,
+        },
         signing::UnifiedSigner,
         signing_settings::{SettingsScope, SigningSettings},
     },
-    clap::{Arg, ArgMatches, Command},
+    clap::{Arg, ArgGroup, ArgMatches, Command},
     cryptographic_message_syntax::SignedData,
     difference::{Changeset, Difference},
     goblin::mach::{Mach, MachO},
@@ -502,6 +510,18 @@ fn get_macho_from_data(data: &[u8], universal_index: usize) -> Result<MachO, App
     }
 }
 
+fn remote_initialization_args(own: Option<&str>) -> Vec<&'static str> {
+    [
+        "remote_public_key",
+        "remote_public_key_pem_file",
+        "remote_shared_secret",
+        "remote_shared_secret_env",
+    ]
+    .into_iter()
+    .filter(|x| own != Some(*x))
+    .collect::<Vec<_>>()
+}
+
 fn add_certificate_source_args(app: Command) -> Command {
     app.arg(
         Arg::new("smartcard_slot")
@@ -547,6 +567,107 @@ fn add_certificate_source_args(app: Command) -> Command {
             .takes_value(true)
             .help("Path to file containing password for opening --p12-file file"),
     )
+    .arg(
+        Arg::new("remote_signer")
+            .long("remote-signer")
+            .requires("remote_initialization")
+            .help("Send signing requests to a remote server"),
+    )
+    .arg(
+        Arg::new("remote_public_key")
+            .long("remote-public-key")
+            .takes_value(true)
+            .conflicts_with_all(&remote_initialization_args(Some("remote_public_key")))
+            .help("Base64 encoded public key data describing the signer"),
+    )
+    .arg(
+        Arg::new("remote_public_key_pem_file")
+            .long("remote-public-key-pem-file")
+            .takes_value(true)
+            .conflicts_with_all(&remote_initialization_args(Some(
+                "remote_public_key_pem_file",
+            )))
+            .help("PEM encoded public key data describing the signer"),
+    )
+    .arg(
+        Arg::new("remote_shared_secret")
+            .long("remote-shared-secret")
+            .conflicts_with_all(&remote_initialization_args(Some("remote_shared_secret")))
+            .takes_value(true)
+            .help("Shared secret used for remote signing"),
+    )
+    .arg(
+        Arg::new("remote_shared_secret_env")
+            .long("remote-shared-secret-env")
+            .conflicts_with_all(&remote_initialization_args(Some(
+                "remote_shared_secret_env",
+            )))
+            .takes_value(true)
+            .help("Environment variable holding the shared secret used for remote signing"),
+    )
+    .arg(
+        Arg::new("remote_signing_url")
+            .long("remote-signing-url")
+            .takes_value(true)
+            .default_value(crate::remote_signing::DEFAULT_SERVER_URL)
+            .help("URL of a remote code signing server"),
+    )
+    .group(ArgGroup::new("remote_initialization").args(&remote_initialization_args(None)))
+}
+
+fn get_remote_signing_initiator(
+    args: &ArgMatches,
+) -> Result<Box<dyn SessionInitiatePeer>, RemoteSignError> {
+    let server_url = args.value_of("remote_signing_url").map(|x| x.to_string());
+
+    if let Some(public_key_data) = args.value_of("remote_public_key") {
+        let public_key_data = base64::decode(public_key_data)?;
+
+        Ok(Box::new(PublicKeyInitiator::new(
+            public_key_data,
+            server_url,
+        )?))
+    } else if let Some(path) = args.value_of("remote_public_key_pem_file") {
+        let pem_data = std::fs::read(path)?;
+        let doc = pem::parse(pem_data)?;
+
+        let spki_der = match doc.tag.as_str() {
+            "PUBLIC KEY" => doc.contents,
+            "CERTIFICATE" => {
+                let cert = CapturedX509Certificate::from_der(doc.contents)?;
+                cert.to_public_key_der()?.as_ref().to_vec()
+            }
+            tag => {
+                error!(
+                    "unknown PEM format: {}; only `PUBLIC KEY` and `CERTIFICATE` are parsed",
+                    tag
+                );
+                return Err(RemoteSignError::Crypto("invalid public key data".into()));
+            }
+        };
+
+        Ok(Box::new(PublicKeyInitiator::new(spki_der, server_url)?))
+    } else if let Some(env) = args.value_of("remote_shared_secret_env") {
+        let secret = std::env::var(env).map_err(|_| {
+            RemoteSignError::ClientState("failed reading from shared secret environment variable")
+        })?;
+
+        Ok(Box::new(SharedSecretInitiator::new(
+            secret.as_bytes().to_vec(),
+        )?))
+    } else if let Some(value) = args.value_of("remote_shared_secret") {
+        Ok(Box::new(SharedSecretInitiator::new(
+            value.as_bytes().to_vec(),
+        )?))
+    } else {
+        error!("no arguments provided to establish session with remote signer");
+        error!(
+            "specify --remote-public-key, --remote-shared-secret-env, or --remote-shared-secret"
+        );
+        Err(RemoteSignError::ClientState(
+            "unable to initiate remote signing",
+        ))
+    }
 }
 
 fn collect_certificates_from_args(
@@ -611,6 +732,37 @@ fn collect_certificates_from_args(
         if let Some(slot) = args.value_of("smartcard_slot") {
             handle_smartcard_sign_slot(slot, &mut keys, &mut certs)?;
         }
+    }
+
+    let remote_signing_url = if args.is_present("remote_signer") {
+        args.value_of("remote_signing_url")
+    } else {
+        None
+    };
+
+    if let Some(remote_signing_url) = remote_signing_url {
+        let initiator = get_remote_signing_initiator(args)?;
+
+        let client = UnjoinedSigningClient::new_initiator(
+            remote_signing_url,
+            initiator,
+            Some(print_session_join),
+        )?;
+
+        // As part of the handshake we obtained the public certificates from the signer.
+        // So make them the canonical set.
+        if !certs.is_empty() {
+            warn!(
+                "ignoring {} local certificates and using remote signer's certificate(s)",
+                certs.len()
+            );
+        }
+
+        certs = vec![client.signing_certificate().clone()];
+        certs.extend(client.certificate_chain().iter().cloned());
+
+        // The client implements Sign, so we just use it as the private key.
+        keys = vec![Box::new(client)];
     }
 
     Ok((keys, certs))
@@ -769,6 +921,17 @@ fn print_certificate_info(cert: &CapturedX509Certificate) -> Result<(), AppleCod
             )))?
     );
     print!("\n{}", cert.encode_pem());
+
+    Ok(())
+}
+
+fn print_session_join(sjs: &str) -> Result<(), RemoteSignError> {
+    warn!("");
+    warn!("Run the following command to join this signing session:");
+    warn!("");
+    warn!("    rcodesign remote-sign {}", sjs);
+    warn!("");
+    warn!("(waiting for remote signer to join)");
 
     Ok(())
 }
@@ -1448,7 +1611,7 @@ fn command_generate_certificate_signing_request(
 
     let (private_keys, _) = collect_certificates_from_args(args, true)?;
 
-    if private_keys.is_empty() {
+    let private_key = if private_keys.is_empty() {
         error!("no private keys found; a private key is required to sign a certificate signing request");
         return Err(AppleCodesignError::CliBadArgument);
     } else if private_keys.len() > 1 {
@@ -1457,9 +1620,9 @@ fn command_generate_certificate_signing_request(
             private_keys.len()
         );
         return Err(AppleCodesignError::CliBadArgument);
-    }
-
-    let private_key = &private_keys[0];
+    } else {
+        private_keys.into_iter().next().expect("checked size above")
+    };
 
     let key_algorithm = private_key.key_algorithm().ok_or_else(|| {
         error!("unable to determine key algorithm of private key (please report this issue)");
@@ -1697,6 +1860,55 @@ fn command_print_signature_info(args: &ArgMatches) -> Result<(), AppleCodesignEr
     Ok(())
 }
 
+fn command_remote_sign(args: &ArgMatches) -> Result<(), AppleCodesignError> {
+    let session_join_string = args
+        .value_of("session_join_string")
+        .expect("session_join_string argument is required");
+    let remote_url = args
+        .value_of("remote_signing_url")
+        .expect("remote signing URL should always be present");
+
+    let mut joiner = create_session_joiner(session_join_string)?;
+
+    if let Some(env) = args.value_of("remote_shared_secret_env") {
+        let secret = std::env::var(env).map_err(|_| AppleCodesignError::CliBadArgument)?;
+        joiner.register_state(SessionJoinState::SharedSecret(secret.as_bytes().to_vec()))?;
+    } else if let Some(secret) = args.value_of("remote_shared_secret") {
+        joiner.register_state(SessionJoinState::SharedSecret(secret.as_bytes().to_vec()))?;
+    }
+
+    let (private_keys, mut public_certificates) = collect_certificates_from_args(args, true)?;
+
+    let private = private_keys
+        .into_iter()
+        .next()
+        .ok_or(AppleCodesignError::NoSigningCertificate)?;
+
+    let cert = public_certificates.remove(0);
+
+    let certificates = if let Some(chain) = cert.apple_root_certificate_chain() {
+        // The chain starts with self.
+        chain.into_iter().skip(1).collect::<Vec<_>>()
+    } else {
+        public_certificates
+    };
+
+    joiner.register_state(SessionJoinState::PublicKeyDecrypt(
+        private.to_public_key_peer_decrypt()?,
+    ))?;
+
+    let client = UnjoinedSigningClient::new_signer(
+        joiner,
+        private.as_key_info_signer(),
+        cert,
+        certificates,
+        remote_url.to_string(),
+    )?;
+    client.run()?;
+
+    Ok(())
+}
+
 fn command_sign(args: &ArgMatches) -> Result<(), AppleCodesignError> {
     let mut settings = SigningSettings::default();
 
@@ -1863,6 +2075,10 @@ fn command_sign(args: &ArgMatches) -> Result<(), AppleCodesignError> {
     } else {
         warn!("signing {} in place", input_path.display());
         signer.sign_path_in_place(input_path)?;
+    }
+
+    if let Some(private) = &private {
+        private.finish()?;
     }
 
     Ok(())
@@ -2383,6 +2599,17 @@ fn main_impl() -> Result<(), AppleCodesignError> {
         )));
     }
 
+    let app = app.subcommand(add_certificate_source_args(
+        Command::new("remote-sign")
+            .about("Create signatures initiated from a remote signing operation")
+            .arg(
+                Arg::new("session_join_string")
+                    .takes_value(true)
+                    .required(true)
+                    .help("Session join string (provided by the signing initiator)"),
+            ),
+    ));
+
     let app = app
         .subcommand(
             add_certificate_source_args(Command::new("sign")
@@ -2551,6 +2778,7 @@ fn main_impl() -> Result<(), AppleCodesignError> {
             command_parse_code_signing_requirement(args)
         }
         Some(("print-signature-info", args)) => command_print_signature_info(args),
+        Some(("remote-sign", args)) => command_remote_sign(args),
         Some(("sign", args)) => command_sign(args),
         Some(("smartcard-generate-key", args)) => command_smartcard_generate_key(args),
         Some(("smartcard-import", args)) => command_smartcard_import(args),

@@ -1,0 +1,64 @@
+name: Remotely code sign an Apple executable
+on:
+  workflow_dispatch:
+    inputs:
+      workflow:
+        description: 'Workflow file name or ID'
+        required: true
+        type: string
+      run_id:
+        description: 'Workflow run ID to use'
+        required: true
+        type: string
+      artifact:
+        description: 'Name of artifact to download'
+        required: true
+        type: string
+      exe_name:
+        description: 'Name of executable file to sign'
+        required: true
+        type: string
+
+jobs:
+  sign:
+    runs-on: 'ubuntu-20.04'
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Download rcodesign Linux executable
+        uses: dawidd6/action-download-artifact@9662f5cf4983f094c5b142e8fec9ddea560ca302
+        with:
+          repo: ${{github.repository}}
+          workflow: '.github/workflows/rcodesign.yml'
+          workflow_conclusion: success
+          branch: main
+          event: push
+          name: exe-rcodesign-x86_64-unknown-linux-musl
+          path: bins/
+
+      - name: Download artifact to sign
+        uses: dawidd6/action-download-artifact@9662f5cf4983f094c5b142e8fec9ddea560ca302
+        with:
+          repo: ${{github.repository}}
+          workflow: ${{inputs.workflow}}
+          run_id: ${{inputs.run_id}}
+          workflow_conclusion: completed
+          name: ${{inputs.artifact}}
+          path: dist/input
+
+      - name: Perform remote code signing
+        run: |
+          chmod +x bins/rcodesign
+          mkdir dist/output
+
+          bins/rcodesign sign \
+              --remote-signer \
+              --remote-public-key-pem-file ci/developer-id.pem \
+              dist/input/${{inputs.exe_name}} \
+              dist/output/${{inputs.exe_name}}
+
+      - name: Upload
+        uses: actions/upload-artifact@v3
+        with:
+          name: exe-${{inputs.exe_name}}
+          path: dist/output/${{inputs.exe_name}}

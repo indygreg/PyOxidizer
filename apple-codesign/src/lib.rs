@@ -150,6 +150,7 @@ mod policy;
 pub use policy::*;
 mod reader;
 pub use reader::*;
+pub mod remote_signing;
 mod signing_settings;
 pub use signing_settings::*;
 mod signing;
