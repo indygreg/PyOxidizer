@@ -310,7 +310,7 @@ impl TryFrom<SignedData> for CmsSignature {
 
 #[derive(Clone, Debug, Serialize)]
 pub struct CodeDirectory {
-    pub version: u32,
+    pub version: String,
     pub flags: String,
     pub identifier: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -343,7 +343,7 @@ impl<'a> TryFrom<CodeDirectoryBlob<'a>> for CodeDirectory {
             .collect::<Vec<_>>();
 
         Ok(Self {
-            version: cd.version,
+            version: format!("0x{:X}", cd.version),
             flags: format!("{:?}", cd.flags),
             identifier: cd.ident.to_string(),
             team_name: cd.team_name.map(|x| x.to_string()),
