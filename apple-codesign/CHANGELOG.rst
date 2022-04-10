@@ -19,6 +19,11 @@
   signature.
 * Fixed a bug where empty Mach-O segments could result in an error when writing
   signed Mach-O files. (#544)
+* Mach-O signing now automatically takes the binary's OS targeting information
+  into account when determining whether to use SHA-1 vs SHA-256 digests. Since
+  only modern versions of Apple operating systems support SHA-256 signatures,
+  we now automatically use SHA-1 as the primary and SHA-256 as an extra digest
+  type when encountering a binary that targets an older OS version.
 
 0.12.0
 ======

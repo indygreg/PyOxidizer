@@ -354,6 +354,7 @@ settings ignored include (but may not be limited to):
 * --code-resources-path. The code resources data will be computed automatically
   as part of signing the bundle.
 * --info-plist-path. The `Info.plist` from the bundle will be used instead.
+* --digest and --extra-digest
 
 # Designated Code Requirements
 

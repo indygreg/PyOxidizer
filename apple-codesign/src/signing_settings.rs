@@ -11,7 +11,7 @@ use {
         code_requirement::CodeRequirementExpression,
         embedded_signature::{Blob, DigestType, RequirementBlob},
         error::AppleCodesignError,
-        macho::{iter_macho, parse_version_nibbles, AppleSignable},
+        macho::{find_macho_targeting, iter_macho, parse_version_nibbles, AppleSignable},
     },
     glob::Pattern,
     goblin::mach::cputype::{
@@ -509,10 +509,34 @@ impl<'key> SigningSettings<'key> {
     ) -> Result<(), AppleCodesignError> {
         info!("inferring default signing settings from Mach-O binary");
 
-        for (index, (macho, _)) in iter_macho(macho_data)?.enumerate() {
+        for (index, (macho, macho_data)) in iter_macho(macho_data)?.enumerate() {
             let scope_main = SettingsScope::Main;
             let scope_index = SettingsScope::MultiArchIndex(index);
             let scope_arch = SettingsScope::MultiArchCpuType(macho.header.cputype());
+
+            // Older operating system versions don't have support for SHA-256 in
+            // signatures. If the minimum version targeting in the binary doesn't
+            // support SHA-256, we automatically change the digest targeting settings
+            // so the binary will be signed correctly.
+            if let Some(targeting) = find_macho_targeting(macho_data, &macho)? {
+                let sha256_version = targeting.platform.sha256_digest_support()?;
+
+                if !sha256_version.matches(&targeting.minimum_os_version) {
+                    info!(
+                        "activating SHA-1 digests because minimum OS target {} is not {}",
+                        targeting.minimum_os_version, sha256_version
+                    );
+
+                    // This logic is a bit wonky. We want SHA-1 to be present on all binaries
+                    // within a fat binary. So if we need SHA-1 mode, we set the setting on the
+                    // main scope and then clear any overrides on fat binary scopes so our
+                    // settings are canonical.
+                    self.set_digest_type(DigestType::Sha1);
+                    self.add_extra_digest(scope_main.clone(), DigestType::Sha256);
+                    self.extra_digests.remove(&scope_arch);
+                    self.extra_digests.remove(&scope_index);
+                }
+            }
 
             // The Mach-O can have embedded Info.plist data. Use it if available and not
             // already defined in settings.

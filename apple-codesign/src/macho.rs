@@ -517,6 +517,26 @@ impl From<u32> for Platform {
     }
 }
 
+impl Platform {
+    /// Resolve SHA-256 digest/signatures support for a given platform type.
+    pub fn sha256_digest_support(&self) -> Result<semver::VersionReq, AppleCodesignError> {
+        let version = match self {
+            // macOS 10.11.4 introduced support for SHA-256.
+            Self::MacOs => ">=10.11.4",
+            // 11.0+ support SHA-256.
+            Self::IOs | Self::TvOs => ">=11.0.0",
+            // WatchOS always uses SHA-1 it appears.
+            Self::WatchOs => ">9999",
+            // Assume no platform needs SHA-1.
+            Self::Unknown(0) => ">9999",
+            // Assume everything else is new and supports SHA-256.
+            _ => "*",
+        };
+
+        Ok(semver::VersionReq::parse(version)?)
+    }
+}
+
 /// Targeting settings for a Mach-O binary.
 pub struct MachoTarget {
     /// The OS/platform being targeted.
