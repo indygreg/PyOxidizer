@@ -123,11 +123,31 @@ impl Default for PackageInfo {
     fn default() -> Self {
         Self {
             auth: "none".into(),
+            delete_obsolete_languages: None,
+            follow_symlinks: None,
             format_version: 2,
             generator_version: Some("rust-apple-flat-package".to_string()),
             identifier: "".to_string(),
+            install_location: None,
+            minimum_system_version: None,
+            overwrite_permissions: None,
+            postinstall_action: None,
+            preserve_xattr: None,
+            relocatable: None,
+            use_hfs_plus_compression: None,
             version: 0,
-            ..Default::default()
+            atomic_update_bundle: vec![],
+            bundle: vec![],
+            bundle_version: vec![],
+            dont_obsolete: vec![],
+            install_at_startup: vec![],
+            patch: vec![],
+            payload: None,
+            relocate: vec![],
+            scripts: vec![],
+            strict_identifiers: vec![],
+            update_bundle: vec![],
+            upgrade_bundle: vec![],
         }
     }
 }
