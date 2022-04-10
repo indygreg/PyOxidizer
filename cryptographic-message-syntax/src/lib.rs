@@ -921,6 +921,7 @@ impl TryFrom<&crate::asn1::rfc5652::SignerInfo> for SignerInfo {
                 content_type,
                 message_digest,
                 signing_time,
+                raw: attributes.clone(),
             })
         } else {
             None
@@ -978,6 +979,9 @@ pub struct SignedAttributes {
 
     /// The time the signature was created.
     signing_time: Option<chrono::DateTime<chrono::Utc>>,
+
+    /// The raw ASN.1 signed attributes.
+    raw: crate::asn1::rfc5652::SignedAttributes,
 }
 
 impl SignedAttributes {
@@ -991,6 +995,10 @@ impl SignedAttributes {
 
     pub fn signing_time(&self) -> Option<&chrono::DateTime<chrono::Utc>> {
         self.signing_time.as_ref()
+    }
+
+    pub fn attributes(&self) -> &crate::asn1::rfc5652::SignedAttributes {
+        &self.raw
     }
 }
 
