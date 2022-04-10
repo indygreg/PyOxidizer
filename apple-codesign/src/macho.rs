@@ -333,19 +333,19 @@ impl<'a> AppleSignable for MachO<'a> {
 /// Iterate [MachO] instances from file data.
 pub fn iter_macho(
     macho_data: &[u8],
-) -> Result<impl Iterator<Item = MachO<'_>>, AppleCodesignError> {
+) -> Result<impl Iterator<Item = (MachO<'_>, &'_ [u8])>, AppleCodesignError> {
     let mach = Mach::parse(macho_data)?;
 
     let machos = match mach {
         Mach::Binary(macho) => {
-            vec![macho]
+            vec![(macho, macho_data)]
         }
         Mach::Fat(multiarch) => {
             let mut machos = vec![];
 
-            for index in 0..multiarch.narches {
+            for (index, arch) in multiarch.arches()?.into_iter().enumerate() {
                 let macho = multiarch.get(index)?;
-                machos.push(macho);
+                machos.push((macho, arch.slice(macho_data)));
             }
 
             machos

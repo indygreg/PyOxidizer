@@ -238,7 +238,11 @@ impl<'data> MachOSigner<'data> {
     /// The data will be parsed as a Mach-O binary (either single arch or fat/universal)
     /// and validated that we are capable of signing it.
     pub fn new(macho_data: &'data [u8]) -> Result<Self, AppleCodesignError> {
-        let machos = iter_macho(macho_data)?.collect::<Vec<_>>();
+        let machos = iter_macho(macho_data)?
+            .collect::<Vec<_>>()
+            .into_iter()
+            .map(|(x, _)| x)
+            .collect::<Vec<_>>();
 
         Ok(Self { macho_data, machos })
     }
