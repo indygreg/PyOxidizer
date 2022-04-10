@@ -350,7 +350,7 @@ impl<'data> MachOSigner<'data> {
     ) -> Result<Vec<u8>, AppleCodesignError> {
         let mut builder = EmbeddedSignatureBuilder::default();
 
-        for (slot, blob) in self.create_special_blobs(settings)? {
+        for (slot, blob) in self.create_special_blobs(settings, macho.is_executable())? {
             builder.add_blob(slot, blob)?;
         }
 
@@ -592,6 +592,7 @@ impl<'data> MachOSigner<'data> {
     pub fn create_special_blobs(
         &self,
         settings: &SigningSettings,
+        is_executable: bool,
     ) -> Result<Vec<(CodeSigningSlot, BlobData<'static>)>, AppleCodesignError> {
         let mut res = Vec::new();
 
@@ -641,14 +642,16 @@ impl<'data> MachOSigner<'data> {
 
         // The DER encoded entitlements weren't always present in the signature. The feature
         // appears to have been introduced in macOS 10.14 and is the default behavior as of
-        // macOS 12 "when signing for all platforms." Since `codesign` appears to always add
-        // this blob when entitlements are present, we mimic the behavior. But there may be
-        // scenarios where we want to omit this.
-        if let Some(value) = settings.entitlements_plist(SettingsScope::Main) {
-            info!("adding entitlements DER");
-            let blob = EntitlementsDerBlob::from_plist(value)?;
+        // macOS 12 "when signing for all platforms." `codesign` appears to add the DER
+        // representation whenever entitlements are present, but only if the current binary is
+        // an executable (.filetype == MH_EXECUTE).
+        if is_executable {
+            if let Some(value) = settings.entitlements_plist(SettingsScope::Main) {
+                info!("adding entitlements DER");
+                let blob = EntitlementsDerBlob::from_plist(value)?;
 
-            res.push((CodeSigningSlot::EntitlementsDer, blob.into()));
+                res.push((CodeSigningSlot::EntitlementsDer, blob.into()));
+            }
         }
 
         Ok(res)

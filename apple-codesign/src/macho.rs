@@ -22,6 +22,7 @@ use {
     cryptographic_message_syntax::time_stamp_message_http,
     goblin::mach::{
         constants::{SEG_LINKEDIT, SEG_PAGEZERO, SEG_TEXT},
+        header::MH_EXECUTE,
         load_command::{
             CommandVariant, LinkeditDataCommand, LC_BUILD_VERSION, SIZEOF_LINKEDIT_DATA_COMMAND,
         },
@@ -40,6 +41,9 @@ pub trait AppleSignable {
 
     /// Determine the start and end offset of the executable segment of a binary.
     fn executable_segment_boundary(&self) -> Result<(u64, u64), AppleCodesignError>;
+
+    /// Whether this is an executable Mach-O file.
+    fn is_executable(&self) -> bool;
 
     /// The start offset of the code signature data within the __LINKEDIT segment.
     fn code_signature_linkedit_start_offset(&self) -> Option<u32>;
@@ -108,6 +112,10 @@ impl<'a> AppleSignable for MachO<'a> {
             .ok_or_else(|| AppleCodesignError::InvalidBinary("no __TEXT segment".into()))?;
 
         Ok((segment.fileoff, segment.fileoff + segment.data.len() as u64))
+    }
+
+    fn is_executable(&self) -> bool {
+        self.header.filetype == MH_EXECUTE
     }
 
     fn code_signature_linkedit_start_offset(&self) -> Option<u32> {

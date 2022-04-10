@@ -32,6 +32,10 @@
   directory, which might be using SHA-1. The ``cdhash`` value must be from the
   SHA-256 code directory to be valid. This change should result in more bundles
   having working signatures.
+* DER encoded entitlements are now only added when signing executable files.
+  Previously, we added DER encoded entitlements whenever entitlements data
+  was present. It appears DER encoded entitlements are only written on Mach-O
+  binaries that are executables.
 
 0.12.0
 ======
