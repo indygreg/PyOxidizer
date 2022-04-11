@@ -54,6 +54,7 @@ use {
         fmt::{Display, Formatter},
         io::Write,
     },
+    x509_certificate::DigestAlgorithm,
 };
 
 /// Defines header magic for various payloads.
@@ -346,6 +347,22 @@ impl From<DigestType> for u8 {
             DigestType::Sha384 => 4,
             DigestType::Sha512 => 5,
             DigestType::Unknown(v) => v,
+        }
+    }
+}
+
+impl TryFrom<DigestType> for DigestAlgorithm {
+    type Error = AppleCodesignError;
+
+    fn try_from(value: DigestType) -> Result<DigestAlgorithm, Self::Error> {
+        match value {
+            DigestType::Sha1 => Ok(DigestAlgorithm::Sha1),
+            DigestType::Sha256 => Ok(DigestAlgorithm::Sha256),
+            DigestType::Sha256Truncated => Ok(DigestAlgorithm::Sha256),
+            DigestType::Sha384 => Ok(DigestAlgorithm::Sha384),
+            DigestType::Sha512 => Ok(DigestAlgorithm::Sha512),
+            DigestType::Unknown(_) => Err(AppleCodesignError::DigestUnknownAlgorithm),
+            DigestType::None => Err(AppleCodesignError::DigestUnsupportedAlgorithm),
         }
     }
 }

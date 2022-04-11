@@ -10,7 +10,7 @@ use {
         code_directory::CodeDirectoryBlob,
         dmg::{path_is_dmg, DmgReader},
         embedded_signature::{BlobEntry, DigestType, EmbeddedSignature},
-        embedded_signature_builder::{CDHASH_PLIST_OID, CDHASH_SHA256_OID},
+        embedded_signature_builder::{CD_DIGESTS_OID, CD_DIGESTS_PLIST_OID},
         error::AppleCodesignError,
         macho::AppleSignable,
     },
@@ -271,7 +271,7 @@ impl CmsSigner {
             for attr in sa.attributes().iter() {
                 attributes.push(format!("{}", attr.typ));
 
-                if attr.typ == CDHASH_PLIST_OID {
+                if attr.typ == CD_DIGESTS_PLIST_OID {
                     if let Some(data) = attr.values.get(0) {
                         let data = data.deref().clone();
 
@@ -288,7 +288,7 @@ impl CmsSigner {
                             .map(|x| x.to_string())
                             .collect::<Vec<_>>();
                     }
-                } else if attr.typ == CDHASH_SHA256_OID {
+                } else if attr.typ == CD_DIGESTS_OID {
                     for value in &attr.values {
                         // Each value is a SEQUENECE of (OID, OctetString).
                         let data = value.deref().clone();

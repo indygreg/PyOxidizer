@@ -41,6 +41,10 @@
   from previous signatures. We no longer have CLI arguments to define executable
   segment flags. This ensures that the entitlements plist and executable
   segment flags are always in sync.
+* CMS signatures are now properly constructed when there are multiple code
+  directories. Before, the CMS signed attributes didn't capture all code
+  directories and the signatures would be incomplete. This resulted in Apple's
+  tooling rejecting the CMS signatures as invalid.
 
 0.12.0
 ======

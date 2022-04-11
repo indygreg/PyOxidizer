@@ -9,7 +9,7 @@ use {
         code_directory::CodeDirectoryBlob,
         embedded_signature::{
             create_superblob, Blob, BlobData, BlobWrapperBlob, CodeSigningMagic, CodeSigningSlot,
-            DigestType, EmbeddedSignature,
+            EmbeddedSignature,
         },
         error::AppleCodesignError,
     },
@@ -22,49 +22,15 @@ use {
     x509_certificate::{rfc5652::AttributeValue, CapturedX509Certificate, DigestAlgorithm, Sign},
 };
 
-/// OID for signed attribute containing plist of code directory hashes.
+/// OID for signed attribute containing plist of code directory digests.
 ///
 /// 1.2.840.113635.100.9.1.
-pub const CDHASH_PLIST_OID: bcder::ConstOid = Oid(&[42, 134, 72, 134, 247, 99, 100, 9, 1]);
+pub const CD_DIGESTS_PLIST_OID: bcder::ConstOid = Oid(&[42, 134, 72, 134, 247, 99, 100, 9, 1]);
 
-/// OID for signed attribute containing the SHA-256 of code directory digests.
+/// OID for signed attribute containing the digests of code directories.
 ///
 /// 1.2.840.113635.100.9.2
-pub const CDHASH_SHA256_OID: bcder::ConstOid = Oid(&[42, 134, 72, 134, 247, 99, 100, 9, 2]);
-
-/// Obtain the XML plist containing code directory hashes.
-///
-/// This plist is embedded as a signed attribute in the CMS signature.
-pub fn create_code_directory_hashes_plist<'a>(
-    code_directories: impl Iterator<Item = &'a CodeDirectoryBlob<'a>>,
-    digest_type: DigestType,
-) -> Result<Vec<u8>, AppleCodesignError> {
-    let hashes = code_directories
-        .map(|cd| {
-            let mut digest = cd.digest_with(digest_type)?;
-
-            // While we may use stronger digests, it appears that the XML in the
-            // signed attribute is always truncated so it is the length of a SHA-1
-            // digest.
-            digest.truncate(20);
-
-            Ok(plist::Value::Data(digest))
-        })
-        .collect::<Result<Vec<_>, AppleCodesignError>>()?;
-
-    let mut plist = plist::Dictionary::new();
-    plist.insert("cdhashes".to_string(), plist::Value::Array(hashes));
-
-    let mut buffer = Vec::<u8>::new();
-    plist::Value::from(plist)
-        .to_writer_xml(&mut buffer)
-        .map_err(AppleCodesignError::CodeDirectoryPlist)?;
-    // We also need to include a trailing newline to conform with Apple's XML
-    // writer.
-    buffer.push(b'\n');
-
-    Ok(buffer)
-}
+pub const CD_DIGESTS_OID: bcder::ConstOid = Oid(&[42, 134, 72, 134, 247, 99, 100, 9, 2]);
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 enum BlobsState {
@@ -248,7 +214,7 @@ impl<'a> EmbeddedSignatureBuilder<'a> {
         time_stamp_url: Option<&Url>,
         certificates: impl Iterator<Item = CapturedX509Certificate>,
     ) -> Result<(), AppleCodesignError> {
-        let code_directory = self
+        let main_cd = self
             .code_directory()
             .ok_or(AppleCodesignError::SignatureBuilder(
                 "cannot create CMS signature unless code directory is present",
@@ -258,45 +224,57 @@ impl<'a> EmbeddedSignatureBuilder<'a> {
             warn!("creating cryptographic signature with certificate {}", cn);
         }
 
-        // We need the blob serialized content of the code directory to compute
-        // the message digest using alternate data.
-        let code_directory_raw = code_directory.to_blob_bytes()?;
+        let mut cdhashes = vec![];
+        let mut attributes = vec![];
 
-        // We need an XML plist containing code directory hashes to include as a signed
-        // attribute.
-        let code_directories = vec![code_directory];
-        let code_directory_hashes_plist = create_code_directory_hashes_plist(
-            code_directories.into_iter(),
-            code_directory.digest_type,
-        )?;
+        for (slot, blob) in &self.blobs {
+            if *slot == CodeSigningSlot::CodeDirectory || slot.is_alternative_code_directory() {
+                if let BlobData::CodeDirectory(cd) = blob {
+                    // plist digests use the native digest of the code directory but always
+                    // truncated at 20 bytes.
+                    let mut digest = cd.digest_with(cd.digest_type)?;
+                    digest.truncate(20);
+                    cdhashes.push(plist::Value::Data(digest));
+
+                    // ASN.1 values are a SEQUENCE of (OID, OctetString) with the native
+                    // digest.
+                    let digest = cd.digest_with(cd.digest_type)?;
+                    let alg = DigestAlgorithm::try_from(cd.digest_type)?;
+
+                    attributes.push(AttributeValue::new(bcder::Captured::from_values(
+                        bcder::Mode::Der,
+                        bcder::encode::sequence((
+                            Oid::from(alg).encode_ref(),
+                            bcder::OctetString::new(digest.into()).encode_ref(),
+                        )),
+                    )));
+                } else {
+                    return Err(AppleCodesignError::SignatureBuilder(
+                        "unexpected blob type in code directory slot",
+                    ));
+                }
+            }
+        }
+
+        let mut plist_dict = plist::Dictionary::new();
+        plist_dict.insert("cdhashes".to_string(), plist::Value::Array(cdhashes));
+
+        let mut plist_xml = vec![];
+        plist::Value::from(plist_dict)
+            .to_writer_xml(&mut plist_xml)
+            .map_err(AppleCodesignError::CodeDirectoryPlist)?;
+        // We also need to include a trailing newline to conform with Apple's XML
+        // writer.
+        plist_xml.push(b'\n');
 
         let signer = SignerBuilder::new(signing_key, signing_cert.clone())
-            .message_id_content(code_directory_raw)
+            .message_id_content(main_cd.to_blob_bytes()?)
             .signed_attribute_octet_string(
-                Oid(Bytes::copy_from_slice(CDHASH_PLIST_OID.as_ref())),
-                &code_directory_hashes_plist,
+                Oid(Bytes::copy_from_slice(CD_DIGESTS_PLIST_OID.as_ref())),
+                &plist_xml,
             );
 
-        // If we're using a digest beyond SHA-1, that digest is included as an additional
-        // signed attribute. However, Apple is using unregistered OIDs here. We only know about
-        // the SHA-256 one. It exists as an `(OID, OCTET STRING)` value where the OID
-        // is 2.16.840.1.101.3.4.2.1, which is registered.
-        let signer = if code_directory.digest_type == DigestType::Sha256 {
-            let digest = code_directory.digest_with(DigestType::Sha256)?;
-
-            signer.signed_attribute(
-                Oid(CDHASH_SHA256_OID.as_ref().into()),
-                vec![AttributeValue::new(bcder::Captured::from_values(
-                    bcder::Mode::Der,
-                    bcder::encode::sequence((
-                        Oid::from(DigestAlgorithm::Sha256).encode_ref(),
-                        bcder::OctetString::new(digest.into()).encode_ref(),
-                    )),
-                ))],
-            )
-        } else {
-            signer
-        };
+        let signer = signer.signed_attribute(Oid(CD_DIGESTS_OID.as_ref().into()), attributes);
 
         let signer = if let Some(time_stamp_url) = time_stamp_url {
             info!("Using time-stamp server {}", time_stamp_url);
