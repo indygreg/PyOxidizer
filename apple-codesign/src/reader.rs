@@ -10,6 +10,7 @@ use {
         code_directory::CodeDirectoryBlob,
         dmg::{path_is_dmg, DmgReader},
         embedded_signature::{BlobEntry, DigestType, EmbeddedSignature},
+        embedded_signature_builder::{CDHASH_PLIST_OID, CDHASH_SHA256_OID},
         error::AppleCodesignError,
         macho::AppleSignable,
     },
@@ -27,6 +28,7 @@ use {
         fmt::Debug,
         fs::File,
         io::{BufWriter, Cursor, Read, Seek},
+        ops::Deref,
         path::{Path, PathBuf},
     },
     x509_certificate::{CapturedX509Certificate, DigestAlgorithm},
@@ -107,7 +109,6 @@ impl PathType {
     }
 }
 
-#[allow(unused)]
 fn pretty_print_xml(xml: &[u8]) -> Result<Vec<u8>, AppleCodesignError> {
     let mut reader = xml::reader::EventReader::new(Cursor::new(xml));
     let mut emitter = xml::EmitterConfig::new()
@@ -140,6 +141,7 @@ pub struct BlobDescription {
     pub slot: String,
     pub magic: String,
     pub length: u32,
+    pub sha1: String,
     pub sha256: String,
 }
 
@@ -149,6 +151,11 @@ impl<'a> From<&BlobEntry<'a>> for BlobDescription {
             slot: format!("{:?}", entry.slot),
             magic: format!("{:x}", u32::from(entry.magic)),
             length: entry.length as _,
+            sha1: hex::encode(
+                entry
+                    .digest_with(DigestType::Sha1)
+                    .expect("sha-1 digest should always work"),
+            ),
             sha256: hex::encode(
                 entry
                     .digest_with(DigestType::Sha256)
@@ -224,12 +231,18 @@ pub struct CmsSigner {
     pub issuer: String,
     pub digest_algorithm: String,
     pub signature_algorithm: String,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub attributes: Vec<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub content_type: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub message_digest: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub signing_time: Option<chrono::DateTime<chrono::Utc>>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub cdhash_plist: Vec<String>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub cdhash_digests: Vec<(String, String)>,
     pub signature_verifies: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub time_stamp_token: Option<CmsSignature>,
@@ -240,10 +253,13 @@ impl CmsSigner {
         signer_info: &SignerInfo,
         signed_data: &SignedData,
     ) -> Result<Self, AppleCodesignError> {
+        let mut attributes = vec![];
         let mut content_type = None;
         let mut message_digest = None;
         let mut signing_time = None;
         let mut time_stamp_token = None;
+        let mut cdhash_plist = vec![];
+        let mut cdhash_digests = vec![];
 
         if let Some(sa) = signer_info.signed_attributes() {
             content_type = Some(sa.content_type().to_string());
@@ -251,7 +267,54 @@ impl CmsSigner {
             if let Some(t) = sa.signing_time() {
                 signing_time = Some(*t);
             }
+
+            for attr in sa.attributes().iter() {
+                attributes.push(format!("{}", attr.typ));
+
+                if attr.typ == CDHASH_PLIST_OID {
+                    if let Some(data) = attr.values.get(0) {
+                        let data = data.deref().clone();
+
+                        let plist = data
+                            .decode(|cons| {
+                                let v = bcder::OctetString::take_from(cons)?;
+
+                                Ok(v.into_bytes())
+                            })
+                            .map_err(|e| AppleCodesignError::Cms(e.into()))?;
+
+                        cdhash_plist = String::from_utf8_lossy(&pretty_print_xml(&plist)?)
+                            .lines()
+                            .map(|x| x.to_string())
+                            .collect::<Vec<_>>();
+                    }
+                } else if attr.typ == CDHASH_SHA256_OID {
+                    for value in &attr.values {
+                        // Each value is a SEQUENECE of (OID, OctetString).
+                        let data = value.deref().clone();
+
+                        data.decode(|cons| {
+                            while let Some(_) = cons.take_opt_sequence(|cons| {
+                                let oid = bcder::Oid::take_from(cons)?;
+                                let value = bcder::OctetString::take_from(cons)?;
+
+                                cdhash_digests
+                                    .push((format!("{}", oid), hex::encode(value.into_bytes())));
+
+                                Ok(())
+                            })? {}
+
+                            Ok(())
+                        })
+                        .map_err(|e| AppleCodesignError::Cms(e.into()))?;
+                    }
+                }
+            }
         }
+
+        // The order should matter per RFC 5652 but Apple's CMS implementation doesn't
+        // conform to spec.
+        attributes.sort();
 
         if let Some(tsk) = signer_info.time_stamp_token_signed_data()? {
             time_stamp_token = Some(tsk.try_into()?);
@@ -266,9 +329,12 @@ impl CmsSigner {
                 .map_err(AppleCodesignError::CertificateDecode)?,
             digest_algorithm: signer_info.digest_algorithm().to_string(),
             signature_algorithm: signer_info.signature_algorithm().to_string(),
+            attributes,
             content_type,
             message_digest,
             signing_time,
+            cdhash_plist,
+            cdhash_digests,
             signature_verifies: signer_info
                 .verify_signature_with_signed_data(signed_data)
                 .is_ok(),

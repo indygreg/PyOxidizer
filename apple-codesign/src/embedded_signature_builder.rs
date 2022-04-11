@@ -25,12 +25,12 @@ use {
 /// OID for signed attribute containing plist of code directory hashes.
 ///
 /// 1.2.840.113635.100.9.1.
-const CDHASH_PLIST_OID: bcder::ConstOid = Oid(&[42, 134, 72, 134, 247, 99, 100, 9, 1]);
+pub const CDHASH_PLIST_OID: bcder::ConstOid = Oid(&[42, 134, 72, 134, 247, 99, 100, 9, 1]);
 
 /// OID for signed attribute containing the SHA-256 of code directory digests.
 ///
 /// 1.2.840.113635.100.9.2
-const CDHASH_SHA256_OID: bcder::ConstOid = Oid(&[42, 134, 72, 134, 247, 99, 100, 9, 2]);
+pub const CDHASH_SHA256_OID: bcder::ConstOid = Oid(&[42, 134, 72, 134, 247, 99, 100, 9, 2]);
 
 /// Obtain the XML plist containing code directory hashes.
 ///
