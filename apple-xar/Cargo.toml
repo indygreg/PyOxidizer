@@ -32,8 +32,8 @@ xml-rs = "0.8"
 xz2 = "0.1"
 
 [dependencies.cryptographic-message-syntax]
-path = "../cryptographic-message-syntax"
-version = "0.15.0-pre"
+# path = "../cryptographic-message-syntax"
+version = "0.15.0"
 
 [dependencies.x509-certificate]
 # path = "../x509-certificate"
