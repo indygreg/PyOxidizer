@@ -21,8 +21,8 @@ uuid = { version = "0.8", features = ["v4", "v5"] }
 xml-rs = "0.8"
 
 [dependencies.tugger-common]
-version = "0.7.0"
-# path = "../tugger-common"
+version = "0.8.0-pre"
+path = "../tugger-common"
 
 [dependencies.tugger-windows-codesign]
 version = "0.8.0-pre"
