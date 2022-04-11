@@ -119,7 +119,7 @@ dependencies = [
  "anyhow",
  "apple-bundles 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "apple-flat-package 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "apple-xar 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "apple-xar 0.5.0-pre",
  "base64 0.13.0",
  "bcder",
  "bitflags",
@@ -177,7 +177,7 @@ dependencies = [
  "anyhow",
  "apple-bundles 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "apple-flat-package 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "apple-xar 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "apple-xar 0.4.0",
  "base64 0.13.0",
  "bcder",
  "bitflags",
@@ -229,7 +229,7 @@ dependencies = [
 name = "apple-flat-package"
 version = "0.4.0"
 dependencies = [
- "apple-xar 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "apple-xar 0.5.0-pre",
  "cpio-archive 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "flate2",
  "scroll",
@@ -244,40 +244,13 @@ version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d55389ea6d7a43507c0de1286d24219aa164d9495489ae90e9e522fce9d97648"
 dependencies = [
- "apple-xar 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "apple-xar 0.4.0",
  "cpio-archive 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "flate2",
  "scroll",
  "serde",
  "serde-xml-rs",
  "thiserror",
-]
-
-[[package]]
-name = "apple-xar"
-version = "0.4.0"
-dependencies = [
- "base64 0.13.0",
- "bcder",
- "bzip2",
- "chrono",
- "cryptographic-message-syntax 0.16.0-pre",
- "digest 0.10.3",
- "flate2",
- "log",
- "md-5 0.10.1",
- "rand 0.8.5",
- "reqwest",
- "scroll",
- "serde",
- "serde-xml-rs",
- "sha1 0.10.1",
- "sha2 0.10.2",
- "thiserror",
- "url",
- "x509-certificate 0.13.0-pre",
- "xml-rs",
- "xz2",
 ]
 
 [[package]]
@@ -305,6 +278,33 @@ dependencies = [
  "thiserror",
  "url",
  "x509-certificate 0.12.0",
+ "xml-rs",
+ "xz2",
+]
+
+[[package]]
+name = "apple-xar"
+version = "0.5.0-pre"
+dependencies = [
+ "base64 0.13.0",
+ "bcder",
+ "bzip2",
+ "chrono",
+ "cryptographic-message-syntax 0.16.0-pre",
+ "digest 0.10.3",
+ "flate2",
+ "log",
+ "md-5 0.10.1",
+ "rand 0.8.5",
+ "reqwest",
+ "scroll",
+ "serde",
+ "serde-xml-rs",
+ "sha1 0.10.1",
+ "sha2 0.10.2",
+ "thiserror",
+ "url",
+ "x509-certificate 0.13.0-pre",
  "xml-rs",
  "xz2",
 ]
