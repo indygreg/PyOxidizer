@@ -6288,7 +6288,7 @@ dependencies = [
 
 [[package]]
 name = "tugger-licensing-net"
-version = "0.7.0"
+version = "0.8.0-pre"
 dependencies = [
  "anyhow",
  "reqwest",
