@@ -278,6 +278,9 @@ impl<'a, 'key> BundleFileHandler for SingleBundleHandler<'a, 'key> {
                     .expect("parent directory should be available"),
             )?;
 
+            let metadata = source_path.symlink_metadata()?;
+            let mtime = filetime::FileTime::from_last_modification_time(&metadata);
+
             if let Some(target) = file
                 .symlink_target()
                 .map_err(AppleCodesignError::DirectoryBundle)?
@@ -288,13 +291,19 @@ impl<'a, 'key> BundleFileHandler for SingleBundleHandler<'a, 'key> {
                     target.display()
                 );
                 create_symlink(&dest_path, target)?;
+                filetime::set_symlink_file_times(
+                    &dest_path,
+                    filetime::FileTime::from_last_access_time(&metadata),
+                    mtime,
+                )?;
             } else {
                 info!(
                     "copying file {} -> {}",
                     source_path.display(),
                     dest_path.display()
                 );
-                std::fs::copy(source_path, dest_path)?;
+                std::fs::copy(&source_path, &dest_path)?;
+                filetime::set_file_mtime(&dest_path, mtime)?;
             }
         }
 

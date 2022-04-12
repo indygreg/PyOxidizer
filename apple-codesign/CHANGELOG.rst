@@ -2,8 +2,15 @@
 `apple-codesign` History
 ========================
 
+0.14.0
+======
+
+(Not yet released)
+
 0.13.0
 ======
+
+(Released 2022-04-10)
 
 * Restores behavior of <= 0.10.0 where the binary identifier of non main
   executable Mach-O files in bundles is automatically derived from the file name
