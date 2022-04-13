@@ -496,128 +496,6 @@ impl<'key> SigningSettings<'key> {
         }
     }
 
-    /// Import existing state from Mach-O data.
-    ///
-    /// This will synchronize the signing settings with the state in the Mach-O file.
-    ///
-    /// If existing settings are explicitly set, they will be honored. Otherwise the state from
-    /// the Mach-O is imported into the settings.
-    pub fn import_settings_from_macho(
-        &mut self,
-        macho_data: &[u8],
-    ) -> Result<(), AppleCodesignError> {
-        info!("inferring default signing settings from Mach-O binary");
-
-        for (index, (macho, macho_data)) in iter_macho(macho_data)?.enumerate() {
-            let scope_main = SettingsScope::Main;
-            let scope_index = SettingsScope::MultiArchIndex(index);
-            let scope_arch = SettingsScope::MultiArchCpuType(macho.header.cputype());
-
-            // Older operating system versions don't have support for SHA-256 in
-            // signatures. If the minimum version targeting in the binary doesn't
-            // support SHA-256, we automatically change the digest targeting settings
-            // so the binary will be signed correctly.
-            if let Some(targeting) = find_macho_targeting(macho_data, &macho)? {
-                let sha256_version = targeting.platform.sha256_digest_support()?;
-
-                if !sha256_version.matches(&targeting.minimum_os_version) {
-                    info!(
-                        "activating SHA-1 digests because minimum OS target {} is not {}",
-                        targeting.minimum_os_version, sha256_version
-                    );
-
-                    // This logic is a bit wonky. We want SHA-1 to be present on all binaries
-                    // within a fat binary. So if we need SHA-1 mode, we set the setting on the
-                    // main scope and then clear any overrides on fat binary scopes so our
-                    // settings are canonical.
-                    self.set_digest_type(DigestType::Sha1);
-                    self.add_extra_digest(scope_main.clone(), DigestType::Sha256);
-                    self.extra_digests.remove(&scope_arch);
-                    self.extra_digests.remove(&scope_index);
-                }
-            }
-
-            // The Mach-O can have embedded Info.plist data. Use it if available and not
-            // already defined in settings.
-            if let Some(info_plist) = macho.embedded_info_plist()? {
-                if self.info_plist_data(&scope_main).is_some()
-                    || self.info_plist_data(&scope_index).is_some()
-                    || self.info_plist_data(&scope_arch).is_some()
-                {
-                    info!("using Info.plist data from settings");
-                } else {
-                    info!("preserving Info.plist data already present in Mach-O");
-                    self.set_info_plist_data(scope_index.clone(), info_plist);
-                }
-            }
-
-            if let Some(sig) = macho.code_signature()? {
-                if let Some(cd) = sig.code_directory()? {
-                    if self.binary_identifier(&scope_main).is_some()
-                        || self.binary_identifier(&scope_index).is_some()
-                        || self.binary_identifier(&scope_arch).is_some()
-                    {
-                        info!("using binary identifier from settings");
-                    } else {
-                        info!("preserving existing binary identifier in Mach-O");
-                        self.set_binary_identifier(scope_index.clone(), cd.ident);
-                    }
-
-                    if self.team_id.contains_key(&scope_main)
-                        || self.team_id.contains_key(&scope_index)
-                        || self.team_id.contains_key(&scope_arch)
-                    {
-                        info!("using team ID from settings");
-                    } else if let Some(team_id) = cd.team_name {
-                        info!("preserving team ID in existing Mach-O signature");
-                        self.team_id
-                            .insert(scope_index.clone(), team_id.to_string());
-                    }
-
-                    if self.code_signature_flags(&scope_main).is_some()
-                        || self.code_signature_flags(&scope_index).is_some()
-                        || self.code_signature_flags(&scope_arch).is_some()
-                    {
-                        info!("using code signature flags from settings");
-                    } else if !cd.flags.is_empty() {
-                        info!("preserving code signature flags in existing Mach-O signature");
-                        self.set_code_signature_flags(scope_index.clone(), cd.flags);
-                    }
-
-                    if self.runtime_version(&scope_main).is_some()
-                        || self.runtime_version(&scope_index).is_some()
-                        || self.runtime_version(&scope_arch).is_some()
-                    {
-                        info!("using runtime version from settings");
-                    } else if let Some(version) = cd.runtime {
-                        info!("preserving runtime version in existing Mach-O signature");
-                        self.set_runtime_version(
-                            scope_index.clone(),
-                            parse_version_nibbles(version),
-                        );
-                    }
-                }
-
-                if let Some(entitlements) = sig.entitlements()? {
-                    if self.entitlements_plist(&scope_main).is_some()
-                        || self.entitlements_plist(&scope_index).is_some()
-                        || self.entitlements_plist(&scope_arch).is_some()
-                    {
-                        info!("using entitlements from settings");
-                    } else {
-                        info!("preserving existing entitlements in Mach-O");
-                        self.set_entitlements_xml(
-                            SettingsScope::MultiArchIndex(index),
-                            entitlements.as_str(),
-                        )?;
-                    }
-                }
-            }
-        }
-
-        Ok(())
-    }
-
     /// Set the entitlements to sign via an XML string.
     ///
     /// The value should be an XML plist. The value is parsed and stored as
@@ -860,6 +738,128 @@ impl<'key> SigningSettings<'key> {
         }
 
         res
+    }
+
+    /// Import existing state from Mach-O data.
+    ///
+    /// This will synchronize the signing settings with the state in the Mach-O file.
+    ///
+    /// If existing settings are explicitly set, they will be honored. Otherwise the state from
+    /// the Mach-O is imported into the settings.
+    pub fn import_settings_from_macho(
+        &mut self,
+        macho_data: &[u8],
+    ) -> Result<(), AppleCodesignError> {
+        info!("inferring default signing settings from Mach-O binary");
+
+        for (index, (macho, macho_data)) in iter_macho(macho_data)?.enumerate() {
+            let scope_main = SettingsScope::Main;
+            let scope_index = SettingsScope::MultiArchIndex(index);
+            let scope_arch = SettingsScope::MultiArchCpuType(macho.header.cputype());
+
+            // Older operating system versions don't have support for SHA-256 in
+            // signatures. If the minimum version targeting in the binary doesn't
+            // support SHA-256, we automatically change the digest targeting settings
+            // so the binary will be signed correctly.
+            if let Some(targeting) = find_macho_targeting(macho_data, &macho)? {
+                let sha256_version = targeting.platform.sha256_digest_support()?;
+
+                if !sha256_version.matches(&targeting.minimum_os_version) {
+                    info!(
+                        "activating SHA-1 digests because minimum OS target {} is not {}",
+                        targeting.minimum_os_version, sha256_version
+                    );
+
+                    // This logic is a bit wonky. We want SHA-1 to be present on all binaries
+                    // within a fat binary. So if we need SHA-1 mode, we set the setting on the
+                    // main scope and then clear any overrides on fat binary scopes so our
+                    // settings are canonical.
+                    self.set_digest_type(DigestType::Sha1);
+                    self.add_extra_digest(scope_main.clone(), DigestType::Sha256);
+                    self.extra_digests.remove(&scope_arch);
+                    self.extra_digests.remove(&scope_index);
+                }
+            }
+
+            // The Mach-O can have embedded Info.plist data. Use it if available and not
+            // already defined in settings.
+            if let Some(info_plist) = macho.embedded_info_plist()? {
+                if self.info_plist_data(&scope_main).is_some()
+                    || self.info_plist_data(&scope_index).is_some()
+                    || self.info_plist_data(&scope_arch).is_some()
+                {
+                    info!("using Info.plist data from settings");
+                } else {
+                    info!("preserving Info.plist data already present in Mach-O");
+                    self.set_info_plist_data(scope_index.clone(), info_plist);
+                }
+            }
+
+            if let Some(sig) = macho.code_signature()? {
+                if let Some(cd) = sig.code_directory()? {
+                    if self.binary_identifier(&scope_main).is_some()
+                        || self.binary_identifier(&scope_index).is_some()
+                        || self.binary_identifier(&scope_arch).is_some()
+                    {
+                        info!("using binary identifier from settings");
+                    } else {
+                        info!("preserving existing binary identifier in Mach-O");
+                        self.set_binary_identifier(scope_index.clone(), cd.ident);
+                    }
+
+                    if self.team_id.contains_key(&scope_main)
+                        || self.team_id.contains_key(&scope_index)
+                        || self.team_id.contains_key(&scope_arch)
+                    {
+                        info!("using team ID from settings");
+                    } else if let Some(team_id) = cd.team_name {
+                        info!("preserving team ID in existing Mach-O signature");
+                        self.team_id
+                            .insert(scope_index.clone(), team_id.to_string());
+                    }
+
+                    if self.code_signature_flags(&scope_main).is_some()
+                        || self.code_signature_flags(&scope_index).is_some()
+                        || self.code_signature_flags(&scope_arch).is_some()
+                    {
+                        info!("using code signature flags from settings");
+                    } else if !cd.flags.is_empty() {
+                        info!("preserving code signature flags in existing Mach-O signature");
+                        self.set_code_signature_flags(scope_index.clone(), cd.flags);
+                    }
+
+                    if self.runtime_version(&scope_main).is_some()
+                        || self.runtime_version(&scope_index).is_some()
+                        || self.runtime_version(&scope_arch).is_some()
+                    {
+                        info!("using runtime version from settings");
+                    } else if let Some(version) = cd.runtime {
+                        info!("preserving runtime version in existing Mach-O signature");
+                        self.set_runtime_version(
+                            scope_index.clone(),
+                            parse_version_nibbles(version),
+                        );
+                    }
+                }
+
+                if let Some(entitlements) = sig.entitlements()? {
+                    if self.entitlements_plist(&scope_main).is_some()
+                        || self.entitlements_plist(&scope_index).is_some()
+                        || self.entitlements_plist(&scope_arch).is_some()
+                    {
+                        info!("using entitlements from settings");
+                    } else {
+                        info!("preserving existing entitlements in Mach-O");
+                        self.set_entitlements_xml(
+                            SettingsScope::MultiArchIndex(index),
+                            entitlements.as_str(),
+                        )?;
+                    }
+                }
+            }
+        }
+
+        Ok(())
     }
 
     /// Convert this instance to settings appropriate for a nested bundle.
