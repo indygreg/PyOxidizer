@@ -236,6 +236,8 @@ fn digest_md5<R: Read>(reader: &mut R) -> Result<(u64, Vec<u8>), AppleCodesignEr
 pub fn bundle_to_zip(bundle: &DirectoryBundle) -> Result<Vec<u8>, AppleCodesignError> {
     let mut zf = zip::ZipWriter::new(std::io::Cursor::new(vec![]));
 
+    let mut symlinks = vec![];
+
     for file in bundle
         .files(true)
         .map_err(AppleCodesignError::DirectoryBundle)?
@@ -244,35 +246,46 @@ pub fn bundle_to_zip(bundle: &DirectoryBundle) -> Result<Vec<u8>, AppleCodesignE
             .as_file_entry()
             .map_err(AppleCodesignError::DirectoryBundle)?;
 
-        let permissions = if entry.is_executable() {
-            0o0755
+        let name =
+            format!("{}/{}", bundle.name(), file.relative_path().display()).replace('\\', "/");
+
+        let options = zip::write::FileOptions::default();
+
+        let options = if entry.link_target().is_some() {
+            symlinks.push(name.as_bytes().to_vec());
+            options.compression_method(zip::CompressionMethod::Stored)
+        } else if entry.is_executable() {
+            options.unix_permissions(0o755)
         } else {
-            0o0644
+            options.unix_permissions(0o644)
         };
 
-        let permissions = if entry.link_target().is_some() {
-            // S_IFLINK.
-            permissions | 0xa00
-        } else {
-            permissions
-        };
-
-        let options = zip::write::FileOptions::default().unix_permissions(permissions);
-
-        zf.start_file(
-            format!("{}/{}", bundle.name(), file.relative_path().display()),
-            options,
-        )?;
+        zf.start_file(name, options)?;
 
         if let Some(target) = entry.link_target() {
-            // For symlinks the target is the content.
-            zf.write_all(target.to_string_lossy().as_bytes())?;
+            zf.write_all(target.to_string_lossy().replace('\\', "/").as_bytes())?;
         } else {
             zf.write_all(&entry.resolve_content()?)?;
         }
     }
 
-    let writer = zf.finish()?;
+    let mut writer = zf.finish()?;
+
+    // Current versions of the zip crate don't support writing symlinks. We
+    // added that support upstream but it isn't released yet.
+    // TODO remove this hackery once we upgrade the zip crate.
+    let eocd = zip_structs::zip_eocd::ZipEOCD::from_reader(&mut writer)?;
+    let cd_entries =
+        zip_structs::zip_central_directory::ZipCDEntry::all_from_eocd(&mut writer, &eocd)?;
+
+    for mut cd in cd_entries {
+        if symlinks.contains(&cd.file_name_raw) {
+            cd.external_file_attributes =
+                (0o120777 << 16) | (cd.external_file_attributes & 0x0000ffff);
+            writer.seek(SeekFrom::Start(cd.starting_position_with_signature))?;
+            cd.write(&mut writer)?;
+        }
+    }
 
     Ok(writer.into_inner())
 }

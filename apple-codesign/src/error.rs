@@ -340,4 +340,7 @@ pub enum AppleCodesignError {
 
     #[error("internal API / logic error: {0}")]
     LogicError(String),
+
+    #[error("zip structs error: {0}")]
+    ZipStructs(#[from] zip_structs::zip_error::ZipReadError),
 }

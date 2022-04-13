@@ -7,6 +7,10 @@
 
 (Not yet released)
 
+* Fixed a bug where symlinks weren't been written in notarization zip file
+  files properly. This prevented bundles containing symlinks from notarizing
+  correctly.
+
 0.13.0
 ======
 
