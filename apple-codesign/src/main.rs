@@ -699,6 +699,12 @@ fn print_certificate_info(cert: &CapturedX509Certificate) -> Result<(), AppleCod
         "SHA-256 fingerprint:         {}",
         hex::encode(cert.sha256_fingerprint()?)
     );
+    if let Some(alg) = cert.key_algorithm() {
+        println!("Key Algorithm:               {}", alg);
+    }
+    if let Some(alg) = cert.signature_algorithm() {
+        println!("Signature Algorithm:         {}", alg);
+    }
     println!(
         "Signed by Apple?:            {}",
         cert.chains_to_apple_root_ca()
