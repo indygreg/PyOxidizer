@@ -76,6 +76,7 @@ use {
     difference::{Changeset, Difference},
     goblin::mach::{Mach, MachO},
     log::{error, warn},
+    spki::EncodePublicKey,
     std::{io::Write, path::PathBuf, str::FromStr},
     x509_certificate::{
         CapturedX509Certificate, EcdsaCurve, InMemorySigningKeyPair, KeyAlgorithm, Sign,
@@ -705,6 +706,16 @@ fn print_certificate_info(cert: &CapturedX509Certificate) -> Result<(), AppleCod
     if let Some(alg) = cert.signature_algorithm() {
         println!("Signature Algorithm:         {}", alg);
     }
+    println!(
+        "Public Key Data:             {}",
+        base64::encode(
+            cert.to_public_key_der()
+                .map_err(|e| AppleCodesignError::X509Parse(format!(
+                    "error constructing SPKI: {}",
+                    e
+                )))?
+        )
+    );
     println!(
         "Signed by Apple?:            {}",
         cert.chains_to_apple_root_ca()

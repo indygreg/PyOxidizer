@@ -142,6 +142,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_yaml",
+ "spki 0.5.4",
  "tempfile",
  "thiserror",
  "tugger-apple",
