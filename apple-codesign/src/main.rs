@@ -750,6 +750,7 @@ fn print_certificate_info(cert: &CapturedX509Certificate) -> Result<(), AppleCod
     for ext in cert.apple_code_signing_extensions() {
         println!("  - {} ({:?})", ext.as_oid(), ext);
     }
+    print!("\n{}", cert.encode_pem());
 
     Ok(())
 }
