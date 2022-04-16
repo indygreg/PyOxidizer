@@ -19,7 +19,9 @@ use {
     },
     bytes::Bytes,
     chrono::{Duration, Utc},
+    der::Document,
     ring::signature,
+    spki::{EncodePublicKey, PublicKeyDocument},
     std::{
         cmp::Ordering,
         collections::HashSet,
@@ -367,6 +369,21 @@ impl AsRef<rfc5280::Certificate> for X509Certificate {
 impl AsMut<rfc5280::Certificate> for X509Certificate {
     fn as_mut(&mut self) -> &mut rfc5280::Certificate {
         &mut self.0
+    }
+}
+
+impl EncodePublicKey for X509Certificate {
+    fn to_public_key_der(&self) -> spki::Result<PublicKeyDocument> {
+        let mut data = vec![];
+
+        self.0
+            .tbs_certificate
+            .subject_public_key_info
+            .encode_ref()
+            .write_encoded(Mode::Der, &mut data)
+            .map_err(|_| spki::Error::Asn1(der::Error::new(der::ErrorKind::Failed, 0u8.into())))?;
+
+        PublicKeyDocument::from_der(&data).map_err(spki::Error::Asn1)
     }
 }
 
@@ -1119,6 +1136,8 @@ mod test {
 
         let cert = CapturedX509Certificate::from_der(der.to_vec()).unwrap();
         cert.verify_signed_by_certificate(&cert).unwrap();
+
+        cert.to_public_key_der().unwrap();
     }
 
     #[test]
@@ -1127,6 +1146,7 @@ mod test {
 
         let cert = CapturedX509Certificate::from_der(der.to_vec()).unwrap();
         cert.verify_signed_by_certificate(&cert).unwrap();
+        cert.to_public_key_der().unwrap();
     }
 
     #[test]
@@ -1136,6 +1156,7 @@ mod test {
         // We can parse this. But we don't support secp512 elliptic curves because ring
         // doesn't support it.
         let cert = CapturedX509Certificate::from_der(der.to_vec()).unwrap();
+        cert.to_public_key_der().unwrap();
 
         assert!(matches!(
             cert.verify_signed_by_certificate(&cert),

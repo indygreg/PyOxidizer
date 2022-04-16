@@ -12,6 +12,7 @@ use {
     },
     bcder::{encode::Values, ConstOid, OctetString, Oid},
     ring::{digest, signature},
+    spki::ObjectIdentifier,
     std::fmt::{Display, Formatter},
 };
 
@@ -591,6 +592,24 @@ impl TryFrom<&Oid> for KeyAlgorithm {
     }
 }
 
+impl TryFrom<&ObjectIdentifier> for KeyAlgorithm {
+    type Error = Error;
+
+    fn try_from(v: &ObjectIdentifier) -> Result<Self, Self::Error> {
+        // Similar implementation as above.
+        match v.as_bytes() {
+            x if x == OID_RSA.as_ref() => Ok(Self::Rsa),
+            x if x == OID_EC_PUBLIC_KEY.as_ref() => Ok(Self::Ecdsa(EcdsaCurve::Secp384r1)),
+            x if x == OID_ED25519_KEY_AGREEMENT.as_ref()
+                || x == OID_ED25519_SIGNATURE_ALGORITHM.as_ref() =>
+            {
+                Ok(Self::Ed25519)
+            }
+            _ => Err(Error::UnknownKeyAlgorithm(v.to_string())),
+        }
+    }
+}
+
 impl From<KeyAlgorithm> for Oid {
     fn from(alg: KeyAlgorithm) -> Self {
         Oid(match alg {
@@ -599,6 +618,18 @@ impl From<KeyAlgorithm> for Oid {
             KeyAlgorithm::Ed25519 => OID_ED25519_KEY_AGREEMENT.as_ref(),
         }
         .into())
+    }
+}
+
+impl From<KeyAlgorithm> for ObjectIdentifier {
+    fn from(alg: KeyAlgorithm) -> Self {
+        let bytes = match alg {
+            KeyAlgorithm::Rsa => OID_RSA.as_ref(),
+            KeyAlgorithm::Ecdsa(_) => OID_EC_PUBLIC_KEY.as_ref(),
+            KeyAlgorithm::Ed25519 => OID_ED25519_KEY_AGREEMENT.as_ref(),
+        };
+
+        ObjectIdentifier::from_bytes(bytes).expect("OID bytes should be valid")
     }
 }
 
@@ -673,6 +704,29 @@ mod test {
         let encoded = DigestAlgorithm::Sha256.rsa_pkcs1_encode(message, 128)?;
         assert_eq!(&encoded[0..3], &[0x00, 0x01, 0xff]);
         assert_eq!(&encoded[96..], &raw_digest);
+
+        Ok(())
+    }
+
+    #[test]
+    fn key_algorithm_oids() -> Result<(), Error> {
+        let oid = ObjectIdentifier::from(KeyAlgorithm::Rsa);
+        assert_eq!(oid.to_string(), "1.2.840.113549.1.1.1");
+        let oid = ObjectIdentifier::new("1.2.840.113549.1.1.1");
+        assert_eq!(KeyAlgorithm::try_from(&oid)?, KeyAlgorithm::Rsa);
+
+        let oid = ObjectIdentifier::from(KeyAlgorithm::Ecdsa(EcdsaCurve::Secp256r1));
+        assert_eq!(oid.to_string(), "1.2.840.10045.2.1");
+        let oid = ObjectIdentifier::new("1.2.840.10045.2.1");
+        assert_eq!(
+            KeyAlgorithm::try_from(&oid)?,
+            KeyAlgorithm::Ecdsa(EcdsaCurve::Secp384r1)
+        );
+
+        let oid = ObjectIdentifier::from(KeyAlgorithm::Ed25519);
+        assert_eq!(oid.to_string(), "1.3.101.110");
+        let oid = ObjectIdentifier::new("1.3.101.110");
+        assert_eq!(KeyAlgorithm::try_from(&oid)?, KeyAlgorithm::Ed25519);
 
         Ok(())
     }

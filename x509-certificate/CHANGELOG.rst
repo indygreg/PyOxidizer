@@ -2,6 +2,16 @@
 ``x509-certificate`` History
 ============================
 
+0.13.0
+======
+
+* ``X509Certificate`` now implements the ``spki::EncodePublicKey`` trait.
+  This change marks the beginning of a shift/intent to converge this crate
+  onto the interfaces defined by crates under the
+  `RustCrypto <https://github.com/RustCrypto>`_ umbrella for better interop
+  with the rest of the Rust ecosystem.
+* ``KeyAlgorithm`` now implements conversion from/to ``spki::ObjectIdentifier``.
+
 0.12.0
 ======
 

@@ -17,7 +17,9 @@ test = []
 bcder = "0.6"
 bytes = "1.0"
 chrono = "0.4"
+der = "0.5"
 hex = "0.4"
 pem = "1.0"
 ring = "0.16"
+spki = { version = "0.5", features = ["alloc"] }
 thiserror = "1.0"
