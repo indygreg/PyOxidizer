@@ -14,7 +14,7 @@ once_cell = "1.8"
 pyo3 = "0.16.2"
 slog = "2.7"
 tempfile = "3.2"
-zip = "0.5"
+zip = { version = "0.6", default-features = false, features = ["deflate"] }
 
 [dependencies.pyembed]
 version = "0.21.0-pre"

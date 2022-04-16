@@ -21,4 +21,4 @@ sha2 = "0.10"
 slog = "2.7"
 tempfile = "3.2"
 url = "2.2"
-zip = "0.5"
+zip = { version = "0.6", default-features = false, features = ["deflate"] }

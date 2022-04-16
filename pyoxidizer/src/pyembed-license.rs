@@ -85,6 +85,11 @@ pub fn pyembed_licenses() -> anyhow::Result<Vec<tugger_licensing::LicensedCompon
     res.push(component);
 
     let mut component =
+        tugger_licensing::LicensedComponent::new_spdx("crossbeam-utils", "Apache-2.0 OR MIT")?;
+    component.set_flavor(tugger_licensing::ComponentFlavor::RustCrate);
+    res.push(component);
+
+    let mut component =
         tugger_licensing::LicensedComponent::new_spdx("crypto-common", "Apache-2.0 OR MIT")?;
     component.set_flavor(tugger_licensing::ComponentFlavor::RustCrate);
     res.push(component);
@@ -170,6 +175,11 @@ pub fn pyembed_licenses() -> anyhow::Result<Vec<tugger_licensing::LicensedCompon
 
     let mut component =
         tugger_licensing::LicensedComponent::new_spdx("jobserver", "Apache-2.0 OR MIT")?;
+    component.set_flavor(tugger_licensing::ComponentFlavor::RustCrate);
+    res.push(component);
+
+    let mut component =
+        tugger_licensing::LicensedComponent::new_spdx("lazy_static", "Apache-2.0 OR MIT")?;
     component.set_flavor(tugger_licensing::ComponentFlavor::RustCrate);
     res.push(component);
 
@@ -388,6 +398,10 @@ pub fn pyembed_licenses() -> anyhow::Result<Vec<tugger_licensing::LicensedCompon
     component.set_flavor(tugger_licensing::ComponentFlavor::RustCrate);
     res.push(component);
 
+    let mut component = tugger_licensing::LicensedComponent::new_spdx("spin", "MIT")?;
+    component.set_flavor(tugger_licensing::ComponentFlavor::RustCrate);
+    res.push(component);
+
     let mut component = tugger_licensing::LicensedComponent::new_spdx("subtle", "BSD-3-Clause")?;
     component.set_flavor(tugger_licensing::ComponentFlavor::RustCrate);
     res.push(component);
@@ -405,16 +419,6 @@ pub fn pyembed_licenses() -> anyhow::Result<Vec<tugger_licensing::LicensedCompon
 
     let mut component =
         tugger_licensing::LicensedComponent::new_spdx("tempfile", "Apache-2.0 OR MIT")?;
-    component.set_flavor(tugger_licensing::ComponentFlavor::RustCrate);
-    res.push(component);
-
-    let mut component =
-        tugger_licensing::LicensedComponent::new_spdx("thiserror", "Apache-2.0 OR MIT")?;
-    component.set_flavor(tugger_licensing::ComponentFlavor::RustCrate);
-    res.push(component);
-
-    let mut component =
-        tugger_licensing::LicensedComponent::new_spdx("thiserror-impl", "Apache-2.0 OR MIT")?;
     component.set_flavor(tugger_licensing::ComponentFlavor::RustCrate);
     res.push(component);
 

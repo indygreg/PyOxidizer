@@ -154,7 +154,7 @@ dependencies = [
  "yasna",
  "yubikey",
  "zeroize",
- "zip 0.5.13",
+ "zip",
  "zip_structs",
 ]
 
@@ -3102,7 +3102,7 @@ dependencies = [
  "thiserror",
  "toml_edit",
  "ureq",
- "zip 0.6.2",
+ "zip",
 ]
 
 [[package]]
@@ -4124,7 +4124,7 @@ dependencies = [
  "python-packed-resources",
  "slog",
  "tempfile",
- "zip 0.5.13",
+ "zip",
 ]
 
 [[package]]
@@ -4285,7 +4285,7 @@ dependencies = [
  "python-packed-resources",
  "tugger-file-manifest",
  "winapi",
- "zip 0.5.13",
+ "zip",
 ]
 
 [[package]]
@@ -4309,7 +4309,7 @@ dependencies = [
  "tugger-file-manifest",
  "tugger-licensing",
  "walkdir",
- "zip 0.5.13",
+ "zip",
 ]
 
 [[package]]
@@ -4332,7 +4332,7 @@ dependencies = [
  "rfc2047-decoder",
  "tar",
  "thiserror",
- "zip 0.6.2",
+ "zip",
 ]
 
 [[package]]
@@ -4597,7 +4597,7 @@ dependencies = [
  "tokio",
  "toml",
  "url",
- "zip 0.5.13",
+ "zip",
 ]
 
 [[package]]
@@ -6104,7 +6104,7 @@ dependencies = [
  "slog",
  "tempfile",
  "url",
- "zip 0.5.13",
+ "zip",
 ]
 
 [[package]]
@@ -6838,20 +6838,6 @@ dependencies = [
  "quote",
  "syn",
  "synstructure",
-]
-
-[[package]]
-name = "zip"
-version = "0.5.13"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "93ab48844d61251bb3835145c521d88aa4031d7139e8485990f60ca911fa0815"
-dependencies = [
- "byteorder",
- "bzip2",
- "crc32fast",
- "flate2",
- "thiserror",
- "time 0.1.43",
 ]
 
 [[package]]
