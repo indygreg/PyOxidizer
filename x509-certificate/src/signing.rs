@@ -44,7 +44,7 @@ pub trait Sign {
     fn signature_algorithm(&self) -> Result<SignatureAlgorithm, Error>;
 
     /// Obtain the raw private key data.
-    fn private_key_data(&self) -> Option<&[u8]>;
+    fn private_key_data(&self) -> Option<Vec<u8>>;
 
     /// Obtain RSA key primes p and q, if available.
     fn rsa_primes(&self) -> Result<Option<(Vec<u8>, Vec<u8>)>, Error>;
@@ -134,10 +134,10 @@ impl Sign for InMemorySigningKeyPair {
         })
     }
 
-    fn private_key_data(&self) -> Option<&[u8]> {
+    fn private_key_data(&self) -> Option<Vec<u8>> {
         match self {
-            Self::Rsa(_, data) => Some(data),
-            Self::Ecdsa(_, _, data) => Some(data),
+            Self::Rsa(_, data) => Some(data.clone()),
+            Self::Ecdsa(_, _, data) => Some(data.clone()),
             Self::Ed25519(_) => None,
         }
     }
