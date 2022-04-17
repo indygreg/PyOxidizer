@@ -626,7 +626,7 @@ impl SigningCertificate {
         let data = std::fs::read(path.as_ref())?;
 
         // Validate the certificate is valid.
-        let (cert, key) = apple_codesign::parse_pfx_data(&data, password)
+        let (cert, key) = apple_codesign::cryptography::parse_pfx_data(&data, password)
             .map_err(|e| SigningError::PfxRead(format!("{:?}", e)))?;
 
         Ok(Self::PfxFile(
@@ -647,7 +647,7 @@ impl SigningCertificate {
     /// password was provided to create the data, this password may be the
     /// empty string.
     pub fn from_pfx_data(data: &[u8], password: &str) -> Result<Self, SigningError> {
-        let (cert, key) = apple_codesign::parse_pfx_data(data, password)
+        let (cert, key) = apple_codesign::cryptography::parse_pfx_data(data, password)
             .map_err(|e| SigningError::PfxRead(format!("{:?}", e)))?;
 
         Ok(Self::Memory(cert, key))

@@ -21,6 +21,8 @@ mod code_requirement;
 #[allow(unused)]
 mod code_resources;
 #[allow(unused)]
+mod cryptography;
+#[allow(unused)]
 mod dmg;
 #[allow(unused)]
 mod embedded_signature;
@@ -58,12 +60,12 @@ mod yubikey;
 use {
     crate::{
         certificate::{
-            create_self_signed_code_signing_certificate, parse_pfx_data, AppleCertificate,
-            CertificateProfile,
+            create_self_signed_code_signing_certificate, AppleCertificate, CertificateProfile,
         },
         code_directory::{CodeDirectoryBlob, CodeSignatureFlags},
         code_hash::compute_code_hashes,
         code_requirement::CodeRequirements,
+        cryptography::parse_pfx_data,
         embedded_signature::{Blob, CodeSigningSlot, DigestType, RequirementSetBlob},
         error::AppleCodesignError,
         macho::{find_macho_targeting, find_signature_data, AppleSignable},
