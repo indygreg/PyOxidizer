@@ -52,6 +52,9 @@ pub enum AppleCodesignError {
     #[error("problems reported during verification")]
     VerificationProblems,
 
+    #[error("certificate error: {0}")]
+    CertificateGeneric(String),
+
     #[error("certificate decode error: {0}")]
     CertificateDecode(bcder::decode::Error),
 

@@ -22,10 +22,12 @@ bitflags = "1.2"
 bytes = "1.0"
 clap = "3.1"
 chrono = "0.4"
+der = "0.5"
 dialoguer = "0.10"
 difference = "2.0"
 dirs = "4.0"
 duct = "0.13"
+elliptic-curve = { version = "0.11", features = ["arithmetic", "pkcs8"] }
 env_logger = "0.9"
 filetime = "0.2"
 glob = "0.3"
@@ -35,14 +37,19 @@ indoc = "1.0"
 jsonwebtoken = "8"
 log = "0.4"
 md-5 = "0.10"
+oid-registry = "0.5"
 once_cell = "1.7"
 p12 = "0.6"
+p256 = "0.10"
 pem = "1.0"
+pkcs1 = { version = "0.3", features = ["alloc", "std"] }
+pkcs8 = { version = "0.8", features = ["alloc", "std"] }
 plist = "1.2"
 rasn = "0.5"
 regex = "1.5"
 reqwest = { version = "0.11", default-features = false, features = ["blocking", "json", "rustls-tls"] }
 ring = "0.16"
+rsa = "0.5"
 scroll = "0.11"
 semver = "1.0"
 serde = { version = "1.0", features = ["derive"] }
@@ -57,7 +64,7 @@ x509 = "0.2"
 xml-rs = "0.8"
 yasna = "0.5"
 yubikey = { version = "0.4", optional = true, features = ["untested"] }
-zeroize = "1.3"
+zeroize = { version = "1.3", features = ["zeroize_derive"] }
 zip = { version = "0.6", default-features = false, features = ["deflate"] }
 zip_structs = "0.2"
 
