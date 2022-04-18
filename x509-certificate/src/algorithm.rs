@@ -251,7 +251,7 @@ impl DigestAlgorithm {
 
         let digest_info = DigestInfo {
             algorithm: (*self).into(),
-            digest: OctetString::new(digest.clone().into()),
+            digest: OctetString::new(digest.into()),
         };
         let mut digest_info_der = vec![];
         digest_info.write_encoded(bcder::Mode::Der, &mut digest_info_der)?;

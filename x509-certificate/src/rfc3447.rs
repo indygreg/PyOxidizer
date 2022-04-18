@@ -231,11 +231,7 @@ impl RsaPrivateKey {
             self.dp.encode(),
             self.dq.encode(),
             self.q_inv.encode(),
-            if let Some(others) = &self.other_prime_infos {
-                Some(others.encode_ref())
-            } else {
-                None
-            },
+            self.other_prime_infos.as_ref().map(|x| x.encode_ref()),
         ))
     }
 }
