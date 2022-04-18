@@ -143,33 +143,9 @@ impl Sign for InMemorySigningKeyPair {
     /// If you want total control over signing parameters, obtain the
     /// underlying ring keypair and call its `.sign()`.
     fn sign(&self, message: &[u8]) -> Result<(Vec<u8>, SignatureAlgorithm), Error> {
-        match self {
-            Self::Rsa(key, _) => {
-                let mut signature = vec![0; key.public_modulus_len()];
+        let algorithm = self.signature_algorithm()?;
 
-                key.sign(
-                    &ringsig::RSA_PKCS1_SHA256,
-                    &ring::rand::SystemRandom::new(),
-                    message.as_ref(),
-                    &mut signature,
-                )
-                .map_err(|_| Error::SignatureCreationInMemoryKey)?;
-
-                Ok((signature, self.signature_algorithm()?))
-            }
-            Self::Ecdsa(key, _, _) => {
-                let signature = key
-                    .sign(&ring::rand::SystemRandom::new(), message.as_ref())
-                    .map_err(|_| Error::SignatureCreationInMemoryKey)?;
-
-                Ok((signature.as_ref().to_vec(), self.signature_algorithm()?))
-            }
-            Self::Ed25519(key) => {
-                let signature = key.sign(message.as_ref());
-
-                Ok((signature.as_ref().to_vec(), self.signature_algorithm()?))
-            }
-        }
+        Ok((self.try_sign(message)?.into(), algorithm))
     }
 
     fn key_algorithm(&self) -> Option<KeyAlgorithm> {
