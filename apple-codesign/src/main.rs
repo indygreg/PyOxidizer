@@ -65,7 +65,7 @@ use {
         code_directory::{CodeDirectoryBlob, CodeSignatureFlags},
         code_hash::compute_code_hashes,
         code_requirement::CodeRequirements,
-        cryptography::parse_pfx_data,
+        cryptography::{parse_pfx_data, InMemoryPrivateKey},
         embedded_signature::{Blob, CodeSigningSlot, DigestType, RequirementSetBlob},
         error::AppleCodesignError,
         macho::{find_macho_targeting, find_signature_data, AppleSignable},
@@ -81,8 +81,7 @@ use {
     spki::EncodePublicKey,
     std::{io::Write, path::PathBuf, str::FromStr},
     x509_certificate::{
-        CapturedX509Certificate, EcdsaCurve, InMemorySigningKeyPair, KeyAlgorithm, Sign,
-        X509CertificateBuilder,
+        CapturedX509Certificate, EcdsaCurve, KeyAlgorithm, Sign, X509CertificateBuilder,
     },
 };
 
@@ -592,9 +591,9 @@ fn collect_certificates_from_args(
                     "CERTIFICATE" => {
                         certs.push(CapturedX509Certificate::from_der(pem.contents)?);
                     }
-                    "PRIVATE KEY" => keys.push(Box::new(InMemorySigningKeyPair::from_pkcs8_der(
-                        &pem.contents,
-                    )?)),
+                    "PRIVATE KEY" => {
+                        keys.push(Box::new(InMemoryPrivateKey::from_pkcs8_der(&pem.contents)?))
+                    }
                     tag => warn!("(unhandled PEM tag {}; ignoring)", tag),
                 }
             }
