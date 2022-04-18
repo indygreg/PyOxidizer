@@ -11,7 +11,7 @@ use {
     bytes::Bytes,
     ring::{
         rand::SystemRandom,
-        signature::{self, KeyPair},
+        signature::{self as ringsig, KeyPair},
     },
 };
 
@@ -57,13 +57,13 @@ pub trait Sign {
 #[derive(Debug)]
 pub enum InMemorySigningKeyPair {
     /// ECDSA key pair.
-    Ecdsa(signature::EcdsaKeyPair, EcdsaCurve, Vec<u8>),
+    Ecdsa(ringsig::EcdsaKeyPair, EcdsaCurve, Vec<u8>),
 
     /// ED25519 key pair.
-    Ed25519(signature::Ed25519KeyPair),
+    Ed25519(ringsig::Ed25519KeyPair),
 
     /// RSA key pair.
-    Rsa(signature::RsaKeyPair, Vec<u8>),
+    Rsa(ringsig::RsaKeyPair, Vec<u8>),
 }
 
 impl Sign for InMemorySigningKeyPair {
@@ -78,7 +78,7 @@ impl Sign for InMemorySigningKeyPair {
                 let mut signature = vec![0; key.public_modulus_len()];
 
                 key.sign(
-                    &ring::signature::RSA_PKCS1_SHA256,
+                    &ringsig::RSA_PKCS1_SHA256,
                     &ring::rand::SystemRandom::new(),
                     message.as_ref(),
                     &mut signature,
@@ -173,16 +173,16 @@ impl InMemorySigningKeyPair {
         // variants. If you change this, change that function as well.
         match algorithm {
             KeyAlgorithm::Rsa => {
-                let pair = signature::RsaKeyPair::from_pkcs8(data.as_ref())?;
+                let pair = ringsig::RsaKeyPair::from_pkcs8(data.as_ref())?;
 
                 Ok(Self::Rsa(pair, key.private_key.into_bytes().to_vec()))
             }
             KeyAlgorithm::Ecdsa(curve) => {
-                let pair = signature::EcdsaKeyPair::from_pkcs8(curve.into(), data.as_ref())?;
+                let pair = ringsig::EcdsaKeyPair::from_pkcs8(curve.into(), data.as_ref())?;
 
                 Ok(Self::Ecdsa(pair, curve, data.as_ref().to_vec()))
             }
-            KeyAlgorithm::Ed25519 => Ok(Self::Ed25519(signature::Ed25519KeyPair::from_pkcs8(
+            KeyAlgorithm::Ed25519 => Ok(Self::Ed25519(ringsig::Ed25519KeyPair::from_pkcs8(
                 data.as_ref(),
             )?)),
         }
@@ -209,12 +209,10 @@ impl InMemorySigningKeyPair {
         let rng = SystemRandom::new();
 
         let document = match key_algorithm {
-            KeyAlgorithm::Ed25519 => signature::Ed25519KeyPair::generate_pkcs8(&rng)
+            KeyAlgorithm::Ed25519 => ringsig::Ed25519KeyPair::generate_pkcs8(&rng)
                 .map_err(|_| Error::KeyPairGenerationError),
-            KeyAlgorithm::Ecdsa(curve) => {
-                signature::EcdsaKeyPair::generate_pkcs8(curve.into(), &rng)
-                    .map_err(|_| Error::KeyPairGenerationError)
-            }
+            KeyAlgorithm::Ecdsa(curve) => ringsig::EcdsaKeyPair::generate_pkcs8(curve.into(), &rng)
+                .map_err(|_| Error::KeyPairGenerationError),
             KeyAlgorithm::Rsa => Err(Error::RsaKeyGenerationNotSupported),
         }?;
 
@@ -231,7 +229,7 @@ impl InMemorySigningKeyPair {
     /// and doesn't require `Result`.
     pub fn verification_algorithm(
         &self,
-    ) -> Result<&'static dyn signature::VerificationAlgorithm, Error> {
+    ) -> Result<&'static dyn ringsig::VerificationAlgorithm, Error> {
         Ok(self.signature_algorithm()?
             .resolve_verification_algorithm(self.key_algorithm().expect("key algorithm should be known for InMemorySigningKeyPair")).expect(
             "illegal combination of key algorithm in signature algorithm: this should not occur"
@@ -242,8 +240,8 @@ impl InMemorySigningKeyPair {
 // We don't support coercing from EcdsaKeyPair because we don't know what the
 // elliptic curve is since ring doesn't expose it.
 
-impl From<signature::Ed25519KeyPair> for InMemorySigningKeyPair {
-    fn from(key: signature::Ed25519KeyPair) -> Self {
+impl From<ringsig::Ed25519KeyPair> for InMemorySigningKeyPair {
+    fn from(key: ringsig::Ed25519KeyPair) -> Self {
         Self::Ed25519(key)
     }
 }
@@ -260,7 +258,7 @@ impl From<&InMemorySigningKeyPair> for KeyAlgorithm {
 
 #[cfg(test)]
 mod test {
-    use {super::*, crate::rfc5280, crate::testutil::*, ring::signature::UnparsedPublicKey};
+    use {super::*, crate::rfc5280, crate::testutil::*, ringsig::UnparsedPublicKey};
 
     #[test]
     fn generate_random_ecdsa() {
@@ -284,10 +282,10 @@ mod test {
         let rng = ring::rand::SystemRandom::new();
 
         for alg in &[
-            &signature::ECDSA_P256_SHA256_ASN1_SIGNING,
-            &signature::ECDSA_P384_SHA384_ASN1_SIGNING,
+            &ringsig::ECDSA_P256_SHA256_ASN1_SIGNING,
+            &ringsig::ECDSA_P384_SHA384_ASN1_SIGNING,
         ] {
-            let doc = ring::signature::EcdsaKeyPair::generate_pkcs8(alg, &rng).unwrap();
+            let doc = ringsig::EcdsaKeyPair::generate_pkcs8(alg, &rng).unwrap();
 
             let signing_key = InMemorySigningKeyPair::from_pkcs8_der(doc.as_ref()).unwrap();
             assert!(matches!(
@@ -316,9 +314,9 @@ mod test {
                 KeyAlgorithm::Ecdsa(EcdsaCurve::Secp256r1).into()
             );
 
-            let expected = if *alg == &signature::ECDSA_P256_SHA256_ASN1_SIGNING {
+            let expected = if *alg == &ringsig::ECDSA_P256_SHA256_ASN1_SIGNING {
                 EcdsaCurve::Secp256r1
-            } else if *alg == &signature::ECDSA_P384_SHA384_ASN1_SIGNING {
+            } else if *alg == &ringsig::ECDSA_P384_SHA384_ASN1_SIGNING {
                 EcdsaCurve::Secp384r1
             } else {
                 panic!("unhandled test case");
@@ -340,7 +338,7 @@ mod test {
     fn signing_key_from_ed25519_pkcs8() {
         let rng = ring::rand::SystemRandom::new();
 
-        let doc = ring::signature::Ed25519KeyPair::generate_pkcs8(&rng).unwrap();
+        let doc = ringsig::Ed25519KeyPair::generate_pkcs8(&rng).unwrap();
 
         let signing_key = InMemorySigningKeyPair::from_pkcs8_der(doc.as_ref()).unwrap();
         assert!(matches!(signing_key, InMemorySigningKeyPair::Ed25519(_)));

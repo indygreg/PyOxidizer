@@ -20,7 +20,7 @@ use {
     bytes::Bytes,
     chrono::{Duration, Utc},
     der::Document,
-    ring::signature,
+    ring::signature as ringsig,
     spki::{EncodePublicKey, PublicKeyDocument},
     std::{
         cmp::Ordering,
@@ -562,10 +562,9 @@ impl CapturedX509Certificate {
         &self,
         signed_data: impl AsRef<[u8]>,
         signature: impl AsRef<[u8]>,
-        verify_algorithm: &'static dyn signature::VerificationAlgorithm,
+        verify_algorithm: &'static dyn ringsig::VerificationAlgorithm,
     ) -> Result<(), Error> {
-        let public_key =
-            signature::UnparsedPublicKey::new(verify_algorithm, self.public_key_data());
+        let public_key = ringsig::UnparsedPublicKey::new(verify_algorithm, self.public_key_data());
 
         public_key
             .verify(signed_data.as_ref(), signature.as_ref())
@@ -614,7 +613,7 @@ impl CapturedX509Certificate {
 
         let verify_algorithm = signature_algorithm.resolve_verification_algorithm(key_algorithm)?;
 
-        let public_key = signature::UnparsedPublicKey::new(verify_algorithm, public_key_data);
+        let public_key = ringsig::UnparsedPublicKey::new(verify_algorithm, public_key_data);
 
         public_key
             .verify(signed_data, &signature)
