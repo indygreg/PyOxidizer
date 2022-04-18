@@ -11,6 +11,11 @@
   `RustCrypto <https://github.com/RustCrypto>`_ umbrella for better interop
   with the rest of the Rust ecosystem.
 * ``KeyAlgorithm`` now implements conversion from/to ``spki::ObjectIdentifier``.
+* ``InMemorySigningKeyPair`` now implements ``signature::Signer``. This means
+  there are now 2 implementations of ``sign()`` on this type. So if both traits
+  are in scope you will need to disambiguate the call.
+* The ``Sign::sign()`` trait method is now marked as deprecated. Please switch
+  to the ``signature::Signer`` trait.
 
 0.12.0
 ======

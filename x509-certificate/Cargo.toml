@@ -21,5 +21,6 @@ der = "0.5"
 hex = "0.4"
 pem = "1.0"
 ring = "0.16"
+signature = "1.3"
 spki = { version = "0.5", features = ["alloc"] }
 thiserror = "1.0"

@@ -6952,6 +6952,7 @@ dependencies = [
  "hex",
  "pem 1.0.2",
  "ring",
+ "signature",
  "spki 0.5.4",
  "thiserror",
 ]

@@ -83,11 +83,13 @@ pub mod rfc5915;
 pub mod rfc5958;
 pub mod rfc8017;
 pub mod signing;
-pub use signing::{InMemorySigningKeyPair, Sign};
+pub use signing::{InMemorySigningKeyPair, Sign, Signature};
 #[cfg(any(feature = "test", test))]
 pub mod testutil;
 
 use thiserror::Error;
+
+pub use signature::Signer;
 
 /// Errors related to X.509 certificate handling.
 #[derive(Debug, Error)]

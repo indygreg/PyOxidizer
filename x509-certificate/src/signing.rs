@@ -13,6 +13,7 @@ use {
         rand::SystemRandom,
         signature::{self as ringsig, KeyPair},
     },
+    signature::{Signature as SignatureTrait, Signer},
 };
 
 /// Signifies that an entity is capable of producing cryptographic signatures.
@@ -24,6 +25,7 @@ pub trait Sign {
     /// Returns the raw bytes constituting the signature and which signature algorithm
     /// was used. The returned [SignatureAlgorithm] can be serialized into an
     /// ASN.1 `AlgorithmIdentifier` via `.into()`.
+    #[deprecated(since = "0.13.0", note = "use the signature::Signer trait instead")]
     fn sign(&self, message: &[u8]) -> Result<(Vec<u8>, SignatureAlgorithm), Error>;
 
     /// Obtain the algorithm of the private key.
@@ -50,6 +52,27 @@ pub trait Sign {
     fn rsa_primes(&self) -> Result<Option<(Vec<u8>, Vec<u8>)>, Error>;
 }
 
+#[derive(Debug)]
+pub struct Signature(Vec<u8>);
+
+impl From<Vec<u8>> for Signature {
+    fn from(v: Vec<u8>) -> Self {
+        Self(v)
+    }
+}
+
+impl AsRef<[u8]> for Signature {
+    fn as_ref(&self) -> &[u8] {
+        &self.0
+    }
+}
+
+impl SignatureTrait for Signature {
+    fn from_bytes(bytes: &[u8]) -> Result<Self, signature::Error> {
+        Ok(Self(bytes.to_vec()))
+    }
+}
+
 /// Represents a key pair that exists in memory and can be used to create cryptographic signatures.
 ///
 /// This is a wrapper around ring's various key pair types. It provides
@@ -64,6 +87,38 @@ pub enum InMemorySigningKeyPair {
 
     /// RSA key pair.
     Rsa(ringsig::RsaKeyPair, Vec<u8>),
+}
+
+impl Signer<Signature> for InMemorySigningKeyPair {
+    fn try_sign(&self, msg: &[u8]) -> Result<Signature, signature::Error> {
+        match self {
+            Self::Rsa(key, _) => {
+                let mut signature = vec![0; key.public_modulus_len()];
+
+                key.sign(
+                    &ringsig::RSA_PKCS1_SHA256,
+                    &ring::rand::SystemRandom::new(),
+                    msg,
+                    &mut signature,
+                )
+                .map_err(|_| signature::Error::new())?;
+
+                Ok(signature.into())
+            }
+            Self::Ecdsa(key, _, _) => {
+                let signature = key
+                    .sign(&ring::rand::SystemRandom::new(), msg)
+                    .map_err(|_| signature::Error::new())?;
+
+                Signature::from_bytes(signature.as_ref())
+            }
+            Self::Ed25519(key) => {
+                let signature = key.sign(msg);
+
+                Signature::from_bytes(signature.as_ref())
+            }
+        }
+    }
 }
 
 impl Sign for InMemorySigningKeyPair {
@@ -419,7 +474,7 @@ mod test {
         let cert = rsa_cert();
         let message = b"hello, world";
 
-        let (signature, _) = key.sign(message).unwrap();
+        let (signature, _) = Sign::sign(&key, message).unwrap();
 
         let public_key = UnparsedPublicKey::new(
             key.verification_algorithm().unwrap(),
