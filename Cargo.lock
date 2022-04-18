@@ -149,6 +149,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_yaml",
+ "signature",
  "spki 0.5.4",
  "tempfile",
  "thiserror",
@@ -199,6 +200,7 @@ dependencies = [
  "serde-xml-rs",
  "sha1 0.10.1",
  "sha2 0.10.2",
+ "signature",
  "thiserror",
  "url",
  "x509-certificate",
@@ -1437,6 +1439,7 @@ dependencies = [
  "pem 1.0.2",
  "reqwest",
  "ring",
+ "signature",
  "x509-certificate",
 ]
 

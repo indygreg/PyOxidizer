@@ -8,7 +8,7 @@ use {
     crate::{
         algorithm::DigestAlgorithm, asn1time::Time, rfc2986, rfc3280::Name, rfc5280, rfc5652,
         rfc5958::Attributes, rfc8017::RsaPublicKey, signing::Sign, InMemorySigningKeyPair,
-        KeyAlgorithm, SignatureAlgorithm, X509CertificateError as Error,
+        KeyAlgorithm, KeyInfoSigner, SignatureAlgorithm, X509CertificateError as Error,
     },
     bcder::{
         decode::Constructed,
@@ -21,6 +21,7 @@ use {
     chrono::{Duration, Utc},
     der::Document,
     ring::signature as ringsig,
+    signature::Signer,
     spki::{EncodePublicKey, PublicKeyDocument},
     std::{
         cmp::Ordering,
@@ -1012,7 +1013,8 @@ impl X509CertificateBuilder {
             .encode_ref()
             .write_encoded(Mode::Der, &mut tbs_der)?;
 
-        let (signature, signature_algorithm) = key_pair.sign(&tbs_der)?;
+        let signature = key_pair.try_sign(&tbs_der)?;
+        let signature_algorithm = key_pair.signature_algorithm()?;
 
         let cert = rfc5280::Certificate {
             tbs_certificate,
@@ -1036,7 +1038,7 @@ impl X509CertificateBuilder {
     /// certification request.
     pub fn create_certificate_signing_request(
         &self,
-        signer: &dyn Sign,
+        signer: &dyn KeyInfoSigner,
     ) -> Result<rfc2986::CertificationRequest, Error> {
         let info = rfc2986::CertificationRequestInfo {
             version: rfc2986::Version::V1,
@@ -1060,7 +1062,8 @@ impl X509CertificateBuilder {
         let mut info_der = vec![];
         info.write_encoded(Mode::Der, &mut info_der)?;
 
-        let (signature, signature_algorithm) = signer.sign(&info_der)?;
+        let signature = signer.try_sign(&info_der)?;
+        let signature_algorithm = signer.signature_algorithm()?;
 
         let request = rfc2986::CertificationRequest {
             certificate_request_info: info,

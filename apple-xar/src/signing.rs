@@ -35,7 +35,7 @@ use {
         io::{Read, Seek, Write},
     },
     url::Url,
-    x509_certificate::{CapturedX509Certificate, Sign},
+    x509_certificate::{CapturedX509Certificate, KeyInfoSigner},
 };
 
 /// Entity for signing a XAR file.
@@ -64,7 +64,7 @@ impl<R: Read + Seek + Sized + Debug> XarSigner<R> {
     pub fn sign<W: Write>(
         &mut self,
         writer: &mut W,
-        signing_key: &dyn Sign,
+        signing_key: &dyn KeyInfoSigner,
         signing_cert: &CapturedX509Certificate,
         time_stamp_url: Option<&Url>,
         certificates: impl Iterator<Item = CapturedX509Certificate>,
@@ -84,7 +84,7 @@ impl<R: Read + Seek + Sized + Debug> XarSigner<R> {
         let digest_size = empty_digest.len() as u64;
 
         info!("performing empty RSA signature to calculate signature length");
-        let rsa_signature_len = signing_key.sign(&empty_digest)?.0.len();
+        let rsa_signature_len = signing_key.try_sign(&empty_digest)?.as_ref().len();
 
         info!("performing empty CMS signature to calculate data length");
         let signer =
@@ -169,7 +169,7 @@ impl<R: Read + Seek + Sized + Debug> XarSigner<R> {
         let toc_digest = self.checksum_type.digest_data(&toc_compressed)?;
 
         // Sign it for real.
-        let rsa_signature = signing_key.sign(&toc_digest)?.0;
+        let rsa_signature = signing_key.try_sign(&toc_digest)?;
 
         let mut cms_signature = SignedDataBuilder::default()
             .content_type(Oid(OID_ID_DATA.as_ref().into()))
@@ -198,7 +198,7 @@ impl<R: Read + Seek + Sized + Debug> XarSigner<R> {
         writer.iowrite_with(header, scroll::BE)?;
         writer.write_all(&toc_compressed)?;
         writer.write_all(&toc_digest)?;
-        writer.write_all(&rsa_signature)?;
+        writer.write_all(rsa_signature.as_ref())?;
         writer.write_all(&cms_signature)?;
 
         // And write all the files to the heap.

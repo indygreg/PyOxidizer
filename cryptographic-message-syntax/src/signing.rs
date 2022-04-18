@@ -29,7 +29,7 @@ use {
     x509_certificate::{
         asn1time::UtcTime,
         rfc5652::{Attribute, AttributeValue},
-        CapturedX509Certificate, DigestAlgorithm, Sign, SignatureAlgorithm,
+        CapturedX509Certificate, DigestAlgorithm, KeyInfoSigner, SignatureAlgorithm,
     },
 };
 
@@ -40,7 +40,7 @@ use {
 #[derive(Clone)]
 pub struct SignerBuilder<'a> {
     /// The cryptographic key pair used for signing content.
-    signing_key: &'a dyn Sign,
+    signing_key: &'a dyn KeyInfoSigner,
 
     /// X.509 certificate used for signing.
     signing_certificate: CapturedX509Certificate,
@@ -69,7 +69,10 @@ impl<'a> SignerBuilder<'a> {
     /// Construct a new entity that will sign content.
     ///
     /// An entity is constructed from a signing key, which is mandatory.
-    pub fn new(signing_key: &'a dyn Sign, signing_certificate: CapturedX509Certificate) -> Self {
+    pub fn new(
+        signing_key: &'a dyn KeyInfoSigner,
+        signing_certificate: CapturedX509Certificate,
+    ) -> Self {
         Self {
             signing_key,
             signing_certificate,
@@ -323,15 +326,19 @@ impl<'a> SignedDataBuilder<'a> {
                 .signed_attributes_digested_content()?
                 .expect("presence of signed attributes should ensure this is Some(T)");
 
-            let (signature, signature_algorithm) = signer.signing_key.sign(&signed_content)?;
+            let signature = signer.signing_key.try_sign(&signed_content)?;
+            let signature_algorithm = signer.signing_key.signature_algorithm()?;
 
             signer_info.signature = SignatureValue::new(Bytes::from(signature.clone()));
             signer_info.signature_algorithm = signature_algorithm.into();
 
             if let Some(url) = &signer.time_stamp_url {
                 // The message sent to the TSA (via a digest) is the signature of the signed data.
-                let res =
-                    time_stamp_message_http(url.clone(), &signature, signer.digest_algorithm)?;
+                let res = time_stamp_message_http(
+                    url.clone(),
+                    signature.as_ref(),
+                    signer.digest_algorithm,
+                )?;
 
                 if !res.is_success() {
                     return Err(TimeStampError::Unsuccessful(res.clone()).into());

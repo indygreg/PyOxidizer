@@ -81,7 +81,7 @@ use {
     spki::EncodePublicKey,
     std::{io::Write, path::PathBuf, str::FromStr},
     x509_certificate::{
-        CapturedX509Certificate, EcdsaCurve, KeyAlgorithm, Sign, X509CertificateBuilder,
+        CapturedX509Certificate, EcdsaCurve, KeyAlgorithm, KeyInfoSigner, X509CertificateBuilder,
     },
 };
 
@@ -554,8 +554,8 @@ fn add_certificate_source_args(app: Command) -> Command {
 fn collect_certificates_from_args(
     args: &ArgMatches,
     scan_smartcard: bool,
-) -> Result<(Vec<Box<dyn Sign>>, Vec<CapturedX509Certificate>), AppleCodesignError> {
-    let mut keys: Vec<Box<dyn Sign>> = vec![];
+) -> Result<(Vec<Box<dyn KeyInfoSigner>>, Vec<CapturedX509Certificate>), AppleCodesignError> {
+    let mut keys: Vec<Box<dyn KeyInfoSigner>> = vec![];
     let mut certs = vec![];
 
     if let Some(p12_path) = args.value_of("p12_path") {
@@ -779,7 +779,7 @@ fn prompt_smartcard_pin() -> Result<Vec<u8>, AppleCodesignError> {
 #[cfg(feature = "yubikey")]
 fn handle_smartcard_sign_slot(
     slot: &str,
-    private_keys: &mut Vec<Box<dyn Sign>>,
+    private_keys: &mut Vec<Box<dyn KeyInfoSigner>>,
     public_certificates: &mut Vec<CapturedX509Certificate>,
 ) -> Result<(), AppleCodesignError> {
     let slot_id = ::yubikey::piv::SlotId::from_str(slot)?;
@@ -801,7 +801,7 @@ fn handle_smartcard_sign_slot(
 #[cfg(not(feature = "yubikey"))]
 fn handle_smartcard_sign_slot(
     _slot: &str,
-    _private_keys: &mut Vec<Box<dyn Sign>>,
+    _private_keys: &mut Vec<Box<dyn KeyInfoSigner>>,
     _public_certificates: &mut Vec<CapturedX509Certificate>,
 ) -> Result<(), AppleCodesignError> {
     error!("smartcard support not available; ignoring --smartcard-slot");

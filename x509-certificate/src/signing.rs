@@ -52,12 +52,27 @@ pub trait Sign {
     fn rsa_primes(&self) -> Result<Option<(Vec<u8>, Vec<u8>)>, Error>;
 }
 
-#[derive(Debug)]
+/// A superset of [Signer] and [Sign].
+pub trait KeyInfoSigner: Signer<Signature> + Sign {}
+
+#[derive(Clone, Debug)]
 pub struct Signature(Vec<u8>);
 
 impl From<Vec<u8>> for Signature {
     fn from(v: Vec<u8>) -> Self {
         Self(v)
+    }
+}
+
+impl From<Signature> for Vec<u8> {
+    fn from(v: Signature) -> Vec<u8> {
+        v.0
+    }
+}
+
+impl From<Signature> for Bytes {
+    fn from(v: Signature) -> Self {
+        Self::copy_from_slice(&v.0)
     }
 }
 
@@ -211,6 +226,8 @@ impl Sign for InMemorySigningKeyPair {
         }
     }
 }
+
+impl KeyInfoSigner for InMemorySigningKeyPair {}
 
 impl InMemorySigningKeyPair {
     /// Attempt to instantiate an instance from PKCS#8 DER data.
@@ -474,13 +491,13 @@ mod test {
         let cert = rsa_cert();
         let message = b"hello, world";
 
-        let (signature, _) = Sign::sign(&key, message).unwrap();
+        let signature = Signer::try_sign(&key, message).unwrap();
 
         let public_key = UnparsedPublicKey::new(
             key.verification_algorithm().unwrap(),
             cert.public_key_data(),
         );
 
-        public_key.verify(message, &signature).unwrap();
+        public_key.verify(message, signature.as_ref()).unwrap();
     }
 }

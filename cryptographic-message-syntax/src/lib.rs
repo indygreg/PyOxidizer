@@ -159,7 +159,7 @@ pub enum CmsError {
     Pem(PemError),
 
     /// Error occurred when creating a signature.
-    SignatureCreation,
+    SignatureCreation(signature::Error),
 
     /// Attempted to use a `Certificate` but we couldn't find the backing data for it.
     CertificateMissingData,
@@ -217,7 +217,9 @@ impl Display for CmsError {
             Self::NoSignedAttributes => f.write_str("SignedAttributes structure is missing"),
             Self::DigestNotEqual => f.write_str("digests not equivalent"),
             Self::Pem(e) => f.write_fmt(format_args!("PEM error: {}", e)),
-            Self::SignatureCreation => f.write_str("error during signature creation"),
+            Self::SignatureCreation(e) => {
+                f.write_fmt(format_args!("error during signature creation: {}", e))
+            }
             Self::CertificateMissingData => f.write_str("certificate data not available"),
             Self::DistinguishedNameParseError => {
                 f.write_str("could not parse distinguished name data")
@@ -253,6 +255,12 @@ impl From<PemError> for CmsError {
 impl From<TimeStampError> for CmsError {
     fn from(e: TimeStampError) -> Self {
         Self::TimeStampProtocol(e)
+    }
+}
+
+impl From<signature::Error> for CmsError {
+    fn from(e: signature::Error) -> Self {
+        Self::SignatureCreation(e)
     }
 }
 

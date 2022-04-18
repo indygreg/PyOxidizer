@@ -23,9 +23,10 @@ use {
     },
     ring::signature::{EcdsaKeyPair, Ed25519KeyPair, KeyPair, RsaKeyPair},
     rsa::{BigUint, RsaPrivateKey as RsaConstructedKey},
+    signature::Signer,
     x509_certificate::{
-        CapturedX509Certificate, EcdsaCurve, InMemorySigningKeyPair, KeyAlgorithm, Sign,
-        SignatureAlgorithm, X509CertificateError,
+        CapturedX509Certificate, EcdsaCurve, InMemorySigningKeyPair, KeyAlgorithm, KeyInfoSigner,
+        Sign, Signature, SignatureAlgorithm, X509CertificateError,
     },
     zeroize::Zeroizing,
 };
@@ -259,12 +260,20 @@ impl EncodePrivateKey for InMemoryPrivateKey {
     }
 }
 
+impl Signer<Signature> for InMemoryPrivateKey {
+    fn try_sign(&self, msg: &[u8]) -> Result<Signature, signature::Error> {
+        let key_pair = InMemorySigningKeyPair::try_from(self.clone())
+            .map_err(signature::Error::from_source)?;
+
+        key_pair.try_sign(msg)
+    }
+}
+
 impl Sign for InMemoryPrivateKey {
     fn sign(&self, message: &[u8]) -> Result<(Vec<u8>, SignatureAlgorithm), X509CertificateError> {
-        let key_pair = InMemorySigningKeyPair::try_from(self.clone())
-            .map_err(|e| X509CertificateError::Other(format!("error converting key: {}", e)))?;
+        let algorithm = self.signature_algorithm()?;
 
-        key_pair.sign(message)
+        Ok((self.try_sign(message)?.into(), algorithm))
     }
 
     fn key_algorithm(&self) -> Option<KeyAlgorithm> {
@@ -328,6 +337,8 @@ impl Sign for InMemoryPrivateKey {
         }
     }
 }
+
+impl KeyInfoSigner for InMemoryPrivateKey {}
 
 impl InMemoryPrivateKey {
     /// Construct an instance by parsing PKCS#8 DER data.

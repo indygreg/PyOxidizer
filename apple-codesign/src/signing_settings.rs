@@ -23,7 +23,7 @@ use {
         collections::{BTreeMap, BTreeSet},
         fmt::Formatter,
     },
-    x509_certificate::{CapturedX509Certificate, Sign},
+    x509_certificate::{CapturedX509Certificate, KeyInfoSigner},
 };
 
 /// Denotes the scope for a setting.
@@ -257,7 +257,7 @@ pub enum DesignatedRequirementMode {
 #[derive(Clone, Default)]
 pub struct SigningSettings<'key> {
     // Global settings.
-    signing_key: Option<(&'key dyn Sign, CapturedX509Certificate)>,
+    signing_key: Option<(&'key dyn KeyInfoSigner, CapturedX509Certificate)>,
     certificates: Vec<CapturedX509Certificate>,
     time_stamp_url: Option<Url>,
     digest_type: DigestType,
@@ -293,7 +293,7 @@ impl<'key> SigningSettings<'key> {
     }
 
     /// Obtain the signing key to use.
-    pub fn signing_key(&self) -> Option<(&'key dyn Sign, &CapturedX509Certificate)> {
+    pub fn signing_key(&self) -> Option<(&'key dyn KeyInfoSigner, &CapturedX509Certificate)> {
         self.signing_key.as_ref().map(|(key, cert)| (*key, cert))
     }
 
@@ -303,7 +303,11 @@ impl<'key> SigningSettings<'key> {
     /// contain digests of content. This is known as "ad-hoc" mode. Binaries lacking a
     /// cryptographic signature or signed without a key-pair issued/signed by Apple may
     /// not run in all environments.
-    pub fn set_signing_key(&mut self, private: &'key dyn Sign, public: CapturedX509Certificate) {
+    pub fn set_signing_key(
+        &mut self,
+        private: &'key dyn KeyInfoSigner,
+        public: CapturedX509Certificate,
+    ) {
         self.signing_key = Some((private, public));
     }
 

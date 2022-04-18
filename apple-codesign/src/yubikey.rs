@@ -315,7 +315,7 @@ impl YubiKey {
     pub fn import_key(
         &mut self,
         slot: SlotId,
-        key: &dyn Sign,
+        key: &dyn KeyInfoSigner,
         cert: &CapturedX509Certificate,
         touch_policy: TouchPolicy,
         pin_policy: PinPolicy,
