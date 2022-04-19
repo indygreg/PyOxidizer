@@ -1077,7 +1077,10 @@ impl X509CertificateBuilder {
 
 #[cfg(test)]
 mod test {
-    use {super::*, crate::EcdsaCurve};
+    use {
+        super::*,
+        crate::{EcdsaCurve, X509CertificateError},
+    };
 
     #[test]
     fn builder_ed25519_default() {
@@ -1164,5 +1167,19 @@ mod test {
             cert.verify_signed_by_certificate(&cert),
             Err(Error::UnknownEllipticCurve(_))
         ));
+    }
+
+    #[test]
+    fn ecdsa_prime256v1_cert_validation() -> Result<(), X509CertificateError> {
+        let root = include_bytes!("testdata/ecdsa-prime256v1-root.der");
+        let signed = include_bytes!("testdata/ecdsa-prime256v1-signed.der");
+
+        let root = CapturedX509Certificate::from_der(root.as_ref())?;
+        let signed = CapturedX509Certificate::from_der(signed.as_ref())?;
+
+        root.verify_signed_by_certificate(&root)?;
+        signed.verify_signed_by_certificate(&root)?;
+
+        Ok(())
     }
 }
