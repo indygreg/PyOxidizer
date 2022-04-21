@@ -116,7 +116,7 @@ impl DirectoryBundle {
 
         let info_plist_data = std::fs::read(&info_plist_path)?;
         let cursor = std::io::Cursor::new(info_plist_data);
-        let value = plist::Value::from_reader_xml(cursor).context("parsing Info.plist XML")?;
+        let value = plist::Value::from_reader(cursor).context("parsing Info.plist")?;
         let info_plist = value
             .into_dictionary()
             .ok_or_else(|| anyhow!("{} is not a dictionary", info_plist_path.display()))?;
