@@ -10,6 +10,8 @@
 * Fixed a bug where symlinks weren't been written in notarization zip file
   files properly. This prevented bundles containing symlinks from notarizing
   correctly.
+* The filename used in notarization uploads is now normalized to avoid
+  rejection due to spaces and colons.
 
 0.13.0
 ======

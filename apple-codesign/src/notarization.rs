@@ -341,7 +341,9 @@ pub fn write_bundle_to_app_store_package(
     let checksum_type = "md5".to_string();
     let checksum_digest = hex::encode(digest_md5(&mut Cursor::new(&bundle_zip))?.1);
 
-    let file_name = format!("{}.zip", bundle.name());
+    // Notarization rejects spaces and colons in the asset name. So
+    // normalize accordingly.
+    let file_name = format!("{}.zip", bundle.name().replace(' ', "_").replace(':', "_"));
 
     // Produce the metadata.xml file content.
     let package = Package {
