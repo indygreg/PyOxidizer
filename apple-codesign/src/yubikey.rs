@@ -9,12 +9,13 @@ use {
     bcder::encode::Values,
     bytes::Bytes,
     log::{error, warn},
+    signature::Signer,
     std::ops::DerefMut,
     std::sync::{Arc, Mutex, MutexGuard},
     x509::SubjectPublicKeyInfo,
     x509_certificate::{
-        asn1time, rfc3280, rfc5280, CapturedX509Certificate, EcdsaCurve, KeyAlgorithm, Sign,
-        SignatureAlgorithm, X509CertificateError,
+        asn1time, rfc3280, rfc5280, CapturedX509Certificate, EcdsaCurve, KeyAlgorithm,
+        KeyInfoSigner, Sign, Signature, SignatureAlgorithm, X509CertificateError,
     },
     yubikey::{
         certificate::{CertInfo, Certificate as YkCertificate},
@@ -524,29 +525,36 @@ pub struct CertificateSigner {
     pin_callback: Option<PinCallback>,
 }
 
-impl Sign for CertificateSigner {
-    fn sign(&self, message: &[u8]) -> Result<(Vec<u8>, SignatureAlgorithm), X509CertificateError> {
-        let algorithm_id = algorithm_from_certificate(&self.cert)?;
+impl Signer<Signature> for CertificateSigner {
+    fn try_sign(&self, message: &[u8]) -> Result<Signature, signature::Error> {
+        let algorithm_id =
+            algorithm_from_certificate(&self.cert).map_err(signature::Error::from_source)?;
 
-        let signature_algorithm =
-            self.cert
-                .signature_algorithm()
-                .ok_or(X509CertificateError::UnknownDigestAlgorithm(
-                    "failed to resolve digest algorithm for certificate".into(),
-                ))?;
+        let signature_algorithm = self
+            .cert
+            .signature_algorithm()
+            .ok_or(X509CertificateError::UnknownDigestAlgorithm(
+                "failed to resolve digest algorithm for certificate".into(),
+            ))
+            .map_err(signature::Error::from_source)?;
 
         // We need to feed the digest into the signing api, not the data to be
         // digested.
-        let digest_algorithm = signature_algorithm.digest_algorithm().ok_or(
-            X509CertificateError::UnknownDigestAlgorithm(
+        let digest_algorithm = signature_algorithm
+            .digest_algorithm()
+            .ok_or(X509CertificateError::UnknownDigestAlgorithm(
                 "unable to resolve digest algorithm from signature algorithm".into(),
-            ),
-        )?;
+            ))
+            .map_err(signature::Error::from_source)?;
 
         // Need to apply PKCS#1 padding for RSA.
         let digest = match algorithm_id {
-            AlgorithmId::Rsa1024 => digest_algorithm.rsa_pkcs1_encode(&message, 1024 / 8)?,
-            AlgorithmId::Rsa2048 => digest_algorithm.rsa_pkcs1_encode(&message, 2048 / 8)?,
+            AlgorithmId::Rsa1024 => digest_algorithm
+                .rsa_pkcs1_encode(&message, 1024 / 8)
+                .map_err(signature::Error::from_source)?,
+            AlgorithmId::Rsa2048 => digest_algorithm
+                .rsa_pkcs1_encode(&message, 2048 / 8)
+                .map_err(signature::Error::from_source)?,
             AlgorithmId::EccP256 => digest_algorithm.digest_data(&message),
             AlgorithmId::EccP384 => digest_algorithm.digest_data(&message),
         };
@@ -554,7 +562,7 @@ impl Sign for CertificateSigner {
         let mut guard = self
             .yk
             .lock()
-            .map_err(|_| X509CertificateError::Other("poisoned lock".into()))?;
+            .map_err(|_| signature::Error::from_source("unable to acquire lock on YubiKey"))?;
 
         let yk = guard.deref_mut();
 
@@ -566,12 +574,20 @@ impl Sign for CertificateSigner {
                 let signature = ::yubikey::piv::sign_data(yk, &digest, algorithm_id, self.slot)
                     .map_err(AppleCodesignError::YubiKey)?;
 
-                Ok((signature.to_vec(), signature_algorithm))
+                Ok(Signature::from(signature.to_vec()))
             },
             RequiredAuthentication::Pin,
             self.pin_callback.as_ref(),
         )
-        .map_err(|e| X509CertificateError::Other(format!("code sign error: {:?}", e)))
+        .map_err(signature::Error::from_source)
+    }
+}
+
+impl Sign for CertificateSigner {
+    fn sign(&self, message: &[u8]) -> Result<(Vec<u8>, SignatureAlgorithm), X509CertificateError> {
+        let algorithm = self.signature_algorithm()?;
+
+        Ok((self.try_sign(message)?.into(), algorithm))
     }
 
     fn key_algorithm(&self) -> Option<KeyAlgorithm> {
@@ -591,7 +607,7 @@ impl Sign for CertificateSigner {
         )?)
     }
 
-    fn private_key_data(&self) -> Option<&[u8]> {
+    fn private_key_data(&self) -> Option<Vec<u8>> {
         // We never have access to private keys stored on hardware devices.
         None
     }
@@ -600,6 +616,8 @@ impl Sign for CertificateSigner {
         Ok(None)
     }
 }
+
+impl KeyInfoSigner for CertificateSigner {}
 
 impl CertificateSigner {
     pub fn slot(&self) -> SlotId {
