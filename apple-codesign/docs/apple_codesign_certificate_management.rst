@@ -119,7 +119,7 @@ Then once you have a private key, we can generate a CSR using ``rcodesign``::
     rcodesign generate-certificate-signing-request --p12-file key.p12
 
     # Smart cards require generating a new key then creating a CSR from that key.
-    rcodesign generate-generate-key --smartcard-slot 9c
+    rcodesign smartcard-generate-key --smartcard-slot 9c
     rcodesign generate-certificate-signing-request --smartcard-slot 9c
 
 This command will print the CSR to stdout. e.g.::
