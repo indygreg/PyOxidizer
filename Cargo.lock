@@ -1627,6 +1627,7 @@ checksum = "6919815d73839e7ad218de758883aae3a257ba6759ce7a9992501efbb53d705c"
 dependencies = [
  "const-oid 0.7.1",
  "crypto-bigint 0.3.2",
+ "pem-rfc7468 0.3.1",
 ]
 
 [[package]]
@@ -3908,6 +3909,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "pem-rfc7468"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "01de5d978f34aa4b2296576379fcc416034702fd94117c56ffd8a1a767cefb30"
+dependencies = [
+ "base64ct",
+]
+
+[[package]]
 name = "percent-encoding"
 version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4083,7 +4093,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "116bee8279d783c0cf370efa1a94632f2108e5ef0bb32df31f051647810a4e2c"
 dependencies = [
  "der 0.4.5",
- "pem-rfc7468",
+ "pem-rfc7468 0.2.4",
  "zeroize",
 ]
 
@@ -4105,7 +4115,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ee3ef9b64d26bad0536099c816c6734379e45bbd5f14798def6809e5cc350447"
 dependencies = [
  "der 0.4.5",
- "pem-rfc7468",
+ "pem-rfc7468 0.2.4",
  "pkcs1 0.2.4",
  "spki 0.4.1",
  "zeroize",

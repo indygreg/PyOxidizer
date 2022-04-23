@@ -760,6 +760,14 @@ fn print_certificate_info(cert: &CapturedX509Certificate) -> Result<(), AppleCod
     for ext in cert.apple_code_signing_extensions() {
         println!("  - {} ({:?})", ext.as_oid(), ext);
     }
+    print!(
+        "\n{}",
+        cert.to_public_key_pem(Default::default())
+            .map_err(|e| AppleCodesignError::X509Parse(format!(
+                "error constructing SPKI: {}",
+                e
+            )))?
+    );
     print!("\n{}", cert.encode_pem());
 
     Ok(())
