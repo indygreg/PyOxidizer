@@ -65,7 +65,7 @@ use {
         code_directory::{CodeDirectoryBlob, CodeSignatureFlags},
         code_hash::compute_code_hashes,
         code_requirement::CodeRequirements,
-        cryptography::{parse_pfx_data, InMemoryPrivateKey},
+        cryptography::{parse_pfx_data, InMemoryPrivateKey, PrivateKey},
         embedded_signature::{Blob, CodeSigningSlot, DigestType, RequirementSetBlob},
         error::AppleCodesignError,
         macho::{find_macho_targeting, find_signature_data, AppleSignable},
@@ -80,9 +80,7 @@ use {
     log::{error, warn},
     spki::EncodePublicKey,
     std::{io::Write, path::PathBuf, str::FromStr},
-    x509_certificate::{
-        CapturedX509Certificate, EcdsaCurve, KeyAlgorithm, KeyInfoSigner, X509CertificateBuilder,
-    },
+    x509_certificate::{CapturedX509Certificate, EcdsaCurve, KeyAlgorithm, X509CertificateBuilder},
 };
 
 #[cfg(feature = "yubikey")]
@@ -554,8 +552,8 @@ fn add_certificate_source_args(app: Command) -> Command {
 fn collect_certificates_from_args(
     args: &ArgMatches,
     scan_smartcard: bool,
-) -> Result<(Vec<Box<dyn KeyInfoSigner>>, Vec<CapturedX509Certificate>), AppleCodesignError> {
-    let mut keys: Vec<Box<dyn KeyInfoSigner>> = vec![];
+) -> Result<(Vec<Box<dyn PrivateKey>>, Vec<CapturedX509Certificate>), AppleCodesignError> {
+    let mut keys: Vec<Box<dyn PrivateKey>> = vec![];
     let mut certs = vec![];
 
     if let Some(p12_path) = args.value_of("p12_path") {
@@ -779,7 +777,7 @@ fn prompt_smartcard_pin() -> Result<Vec<u8>, AppleCodesignError> {
 #[cfg(feature = "yubikey")]
 fn handle_smartcard_sign_slot(
     slot: &str,
-    private_keys: &mut Vec<Box<dyn KeyInfoSigner>>,
+    private_keys: &mut Vec<Box<dyn PrivateKey>>,
     public_certificates: &mut Vec<CapturedX509Certificate>,
 ) -> Result<(), AppleCodesignError> {
     let slot_id = ::yubikey::piv::SlotId::from_str(slot)?;
@@ -801,7 +799,7 @@ fn handle_smartcard_sign_slot(
 #[cfg(not(feature = "yubikey"))]
 fn handle_smartcard_sign_slot(
     _slot: &str,
-    _private_keys: &mut Vec<Box<dyn KeyInfoSigner>>,
+    _private_keys: &mut Vec<Box<dyn PrivateKey>>,
     _public_certificates: &mut Vec<CapturedX509Certificate>,
 ) -> Result<(), AppleCodesignError> {
     error!("smartcard support not available; ignoring --smartcard-slot");
@@ -1468,7 +1466,7 @@ fn command_generate_certificate_signing_request(
 
     warn!("generating CSR; you may be prompted to enter credentials to unlock the signing key");
     let pem = builder
-        .create_certificate_signing_request(private_key.as_ref())?
+        .create_certificate_signing_request(private_key.as_key_info_signer())?
         .encode_pem()?;
 
     if let Some(dest_path) = csr_pem_path {
@@ -1716,7 +1714,7 @@ fn command_sign(args: &ArgMatches) -> Result<(), AppleCodesignError> {
         let cert = public_certificates.remove(0);
 
         warn!("registering signing key");
-        settings.set_signing_key(signing_key.as_ref(), cert);
+        settings.set_signing_key(signing_key.as_key_info_signer(), cert);
         if let Some(certs) = settings.chain_apple_certificates() {
             for cert in certs {
                 warn!(
@@ -1991,7 +1989,13 @@ fn command_smartcard_import(args: &ArgMatches) -> Result<(), AppleCodesignError>
     }
 
     if let Some(key) = key {
-        yk.import_key(slot_id, key.as_ref(), &cert, touch_policy, pin_policy)?;
+        yk.import_key(
+            slot_id,
+            key.as_key_info_signer(),
+            &cert,
+            touch_policy,
+            pin_policy,
+        )?;
     } else {
         yk.import_certificate(slot_id, &cert)?;
     }

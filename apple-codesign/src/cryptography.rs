@@ -31,6 +31,11 @@ use {
     zeroize::Zeroizing,
 };
 
+/// A supertrait generically describing a private key capable of signing.
+pub trait PrivateKey: KeyInfoSigner {
+    fn as_key_info_signer(&self) -> &dyn KeyInfoSigner;
+}
+
 #[derive(Clone, Debug)]
 pub struct InMemoryRsaKey {
     private_key: RsaPrivateKeyDocument,
@@ -339,6 +344,12 @@ impl Sign for InMemoryPrivateKey {
 }
 
 impl KeyInfoSigner for InMemoryPrivateKey {}
+
+impl PrivateKey for InMemoryPrivateKey {
+    fn as_key_info_signer(&self) -> &dyn KeyInfoSigner {
+        self
+    }
+}
 
 impl InMemoryPrivateKey {
     /// Construct an instance by parsing PKCS#8 DER data.

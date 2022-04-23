@@ -5,7 +5,7 @@
 //! Yubikey interaction.
 
 use {
-    crate::AppleCodesignError,
+    crate::{cryptography::PrivateKey, AppleCodesignError},
     bcder::encode::Values,
     bytes::Bytes,
     log::{error, warn},
@@ -518,6 +518,7 @@ impl YubiKey {
 /// Entity for creating signatures using a certificate in a given PIV slot.
 ///
 /// This needs to be its own type so we can implement [Sign].
+#[derive(Clone)]
 pub struct CertificateSigner {
     yk: Arc<Mutex<RawYubiKey>>,
     slot: SlotId,
@@ -618,6 +619,12 @@ impl Sign for CertificateSigner {
 }
 
 impl KeyInfoSigner for CertificateSigner {}
+
+impl PrivateKey for CertificateSigner {
+    fn as_key_info_signer(&self) -> &dyn KeyInfoSigner {
+        self
+    }
+}
 
 impl CertificateSigner {
     pub fn slot(&self) -> SlotId {
