@@ -63,7 +63,7 @@
 //! [SignedOutput] describing where the signed content lives.
 
 use {
-    apple_codesign::{AppleCodesignError, MachOSigner},
+    apple_codesign::{cryptography::InMemoryPrivateKey, AppleCodesignError, MachOSigner},
     cryptographic_message_syntax::CmsError,
     reqwest::{IntoUrl, Url},
     slog::warn,
@@ -78,7 +78,7 @@ use {
     tugger_windows_codesign::{
         CodeSigningCertificate, FileBasedCodeSigningCertificate, SystemStore,
     },
-    x509_certificate::{CapturedX509Certificate, InMemorySigningKeyPair, X509CertificateError},
+    x509_certificate::{CapturedX509Certificate, X509CertificateError},
     yasna::ASN1Error,
 };
 
@@ -581,17 +581,12 @@ pub enum SigningCertificate {
     /// A parsed certificate and signing key stored in memory.
     ///
     /// The private key is managed by the `ring` crate.
-    Memory(CapturedX509Certificate, InMemorySigningKeyPair),
+    Memory(CapturedX509Certificate, InMemoryPrivateKey),
 
     /// A PFX file containing validated certificate data.
     ///
     /// The password to open the file is also tracked.
-    PfxFile(
-        PathBuf,
-        String,
-        CapturedX509Certificate,
-        InMemorySigningKeyPair,
-    ),
+    PfxFile(PathBuf, String, CapturedX509Certificate, InMemoryPrivateKey),
 
     /// Use an automatically chosen certificate in the Windows certificate store.
     WindowsStoreAuto,

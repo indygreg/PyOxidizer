@@ -31,7 +31,7 @@ use {
     zeroize::Zeroizing,
 };
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct InMemoryRsaKey {
     private_key: RsaPrivateKeyDocument,
 }
@@ -75,7 +75,7 @@ impl EncodePrivateKey for InMemoryRsaKey {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct InMemoryEcdsaKey<C>
 where
     C: Curve + ProjectiveArithmetic,
@@ -155,7 +155,7 @@ where
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct InMemoryEd25519Key {
     private_key: Zeroizing<Vec<u8>>,
 }
@@ -190,7 +190,7 @@ impl EncodePrivateKey for InMemoryEd25519Key {
 }
 
 /// Holds a private key in memory.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum InMemoryPrivateKey {
     /// ECDSA private key using Nist P256 curve.
     EcdsaP256(InMemoryEcdsaKey<NistP256>),
@@ -381,7 +381,7 @@ fn bmp_string(s: &str) -> Vec<u8> {
 pub fn parse_pfx_data(
     data: &[u8],
     password: &str,
-) -> Result<(CapturedX509Certificate, InMemorySigningKeyPair), AppleCodesignError> {
+) -> Result<(CapturedX509Certificate, InMemoryPrivateKey), AppleCodesignError> {
     let pfx = p12::PFX::parse(data).map_err(|e| {
         AppleCodesignError::PfxParseError(format!("data does not appear to be PFX: {:?}", e))
     })?;
@@ -460,7 +460,7 @@ pub fn parse_pfx_data(
                         )
                     })?;
 
-                    signing_key = Some(InMemorySigningKeyPair::from_pkcs8_der(&decrypted)?);
+                    signing_key = Some(InMemoryPrivateKey::from_pkcs8_der(&decrypted)?);
                 }
                 p12::SafeBagKind::OtherBagKind(_) => {
                     return Err(AppleCodesignError::PfxParseError(
