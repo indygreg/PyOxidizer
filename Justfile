@@ -55,3 +55,15 @@ actions-macos-universal exe:
   lipo {{exe}}-x86-64/{{exe}} {{exe}}-aarch64/{{exe}} -create -output uploads/{{exe}}
   chmod +x uploads/{{exe}}
   lipo uploads/{{exe}} -info
+
+_remote-sign-exe ref workflow run_id artifact exe_name rcodesign_branch="main":
+  gh workflow run sign-apple-exe.yml \
+    --ref {{ref}} \
+    -f workflow={{workflow}} \
+    -f run_id={{run_id}} \
+    -f artifact={{artifact}} \
+    -f exe_name={{exe_name}} \
+    -f rcodesign_branch={{rcodesign_branch}}
+
+# Trigger remote code signing workflow for rcodesign executable.
+remote-sign-rcodesign ref run_id rcodesign_branch="main": (_remote-sign-exe ref "rcodesign.yml" run_id "exe-rcodesign-macos-universal" "rcodesign" rcodesign_branch)

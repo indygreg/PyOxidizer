@@ -18,10 +18,15 @@ on:
         description: 'Name of executable file to sign'
         required: true
         type: string
+      rcodesign_branch:
+        description: 'Name of branch to obtain rcodesign executable from'
+        required: false
+        default: main
 
 jobs:
   sign:
     runs-on: 'ubuntu-20.04'
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v2
 
@@ -31,7 +36,7 @@ jobs:
           repo: ${{github.repository}}
           workflow: '.github/workflows/rcodesign.yml'
           workflow_conclusion: success
-          branch: main
+          branch: ${{ github.event.inputs.rcodesign_branch }}
           event: push
           name: exe-rcodesign-x86_64-unknown-linux-musl
           path: bins/
@@ -39,11 +44,11 @@ jobs:
       - name: Download artifact to sign
         uses: dawidd6/action-download-artifact@9662f5cf4983f094c5b142e8fec9ddea560ca302
         with:
-          repo: ${{github.repository}}
-          workflow: ${{inputs.workflow}}
-          run_id: ${{inputs.run_id}}
+          repo: ${{ github.repository }}
+          workflow: ${{ github.event.inputs.workflow }}
+          run_id: ${{ github.event.inputs.run_id }}
           workflow_conclusion: completed
-          name: ${{inputs.artifact}}
+          name: ${{ github.event.inputs.artifact }}
           path: dist/input
 
       - name: Perform remote code signing
@@ -54,11 +59,11 @@ jobs:
           bins/rcodesign sign \
               --remote-signer \
               --remote-public-key-pem-file ci/developer-id.pem \
-              dist/input/${{inputs.exe_name}} \
-              dist/output/${{inputs.exe_name}}
+              dist/input/${{ github.event.inputs.exe_name }} \
+              dist/output/${{ github.event.inputs.exe_name }}
 
       - name: Upload
         uses: actions/upload-artifact@v3
         with:
           name: exe-${{inputs.exe_name}}
-          path: dist/output/${{inputs.exe_name}}
+          path: dist/output/${{ github.event.inputs.exe_name }}
