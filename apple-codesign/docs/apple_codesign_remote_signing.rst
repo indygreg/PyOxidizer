@@ -227,3 +227,126 @@ parties, and the process for generating it are not well defined, the overall
 security of this solution is not as strong as the preferred *public key
 agreement* method. However, this method is easier to use and may be preferred
 by some users.
+
+.. _apple_codesign_remote_signing_github_actions:
+
+Using with GitHub Actions
+=========================
+
+It is pretty simple to initiate remote code signing from GitHub Actions! In
+fact, this scenario is one of the primary use cases for the design of the
+feature.
+
+.. note::
+
+   `Issue #553 <https://github.com/indygreg/PyOxidizer/issues/553>`_ tracks
+   publishing a canonical GitHub Action that formalizes the steps in this
+   documentation. Assistance in building that would be greatly appreciated!
+
+Here are the general steps.
+
+Configuring a Workflow / Actions
+--------------------------------
+
+First, export the public key data of the signing certificate to a file
+checked into source control. Use ``rcodesign analyze-certificate`` and
+copy the ``-----BEGIN PUBLIC KEY----`` block to a file in your
+repository. e.g. https://github.com/indygreg/PyOxidizer/blob/main/ci/developer-id-application.pem
+defines the ``Developer ID Application`` public key data for the maintainer
+of this project.
+
+.. note::
+
+   The public key data is included in the code signatures embedded in signed
+   artifacts so there is generally not a concern with making the public key
+   data widely available in the repository.
+
+Next, create a GitHub workflow or action that invokes ``rcodesign sign``.
+https://github.com/indygreg/PyOxidizer/blob/main/.github/workflows/sign-apple-exe.yml
+is an example of such a workflow. This particular workflow is using
+``on.workflow_dispatch`` so the workflow is only triggered manually. See
+the `workflow_dispatch documentation <https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#workflow_dispatch>`_
+and `Manually running a workflow <https://docs.github.com/en/actions/managing-workflow-runs/manually-running-a-workflow>`_
+docs for more.
+
+.. important::
+
+   A manually triggered workflow is strongly recommended because a signer must
+   take manual action to perform remote signing and an automated trigger will
+   likely hang unless a person is around to attend to it.
+
+.. important::
+
+   For security reasons, you should set ``timeout-minutes`` on either the job
+   or step initiating remote signing to limit how long a signer will wait.
+
+The important steps in a remote signing action/workflow are:
+
+1. Securely obtain ``rcodesign``. We recommend downloading a release artifact
+   from https://github.com/indygreg/PyOxidizer/releases and pinning/verifying
+   the SHA-256 digest on download.
+2. Download the artifact you want signed. The
+   `Download workflow artifact <https://github.com/marketplace/actions/download-workflow-artifact>`_
+   action can be useful for downloading artifacts from other workflows in the
+   current repository (since the official ``download-artifact`` action limits
+   you to artifacts in the current workflow).
+3. Invoke ``rcodesign sign --remote-signer
+   --remote-public-key-pem-file path/to/public_key.pem``.
+4. Do something with the signed result (like upload it as an artifact).
+
+Running the Workflow / Action
+-----------------------------
+
+Now that you have a GitHub workflow or action in place, here's how you use it.
+
+If you followed the recommendations from above, the workflow is manually
+triggered via ``on.workflow_dispatch``. You can trigger the workflow via
+the GitHub web UI or via API. For API, the path of least resistance is likely
+the ``gh`` `GitHub CLI <https://cli.github.com/>`_ tool. e.g.::
+
+    gh workflow run sign-apple-exe.yml \
+      --ref ci-main \
+      -f workflow=rcodesign.yml \
+      -f run_id=2214520041 \
+      -f artifact=exe-rcodesign-macos-universal \
+      -f exe_name=rcodesign
+
+If your workflow is highly parameterized (like this one), you may want to
+script its invocation to make it more turnkey.
+
+When ``rcodesign sign --remote-signer`` runs in GitHub Actions, it will print
+instructions on how to join the signing session. You will need to follow
+these instructions in a timely manner to complete the code signing operation.
+
+Here is what you are looking for in the job output:
+
+.. image:: apple_codesign_actions_sjs_join.png
+   :alt: Screenshot of GitHub Actions run showing session join string
+
+Then, simply follow instructions on the machine with the signing key
+to commence signing!
+
+.. important::
+
+   When you view the logs of a running GitHub Actions job, only the output
+   from after the point you started viewing them is visible. This means that
+   if you are *too late* you may not see the printed instructions for joining
+   the signing session!
+
+   There are definitely some mitigations we can take for this. For the moment,
+   you need to be quick to open the job output in your browser. Or you can do
+   things like add a ``sleep`` before running ``rcodesign sign``.
+
+If all goes according to plan, you should see progress being printed
+both in the signing process and from the near real time output from
+GitHub Actions.
+
+Here is the output from the GitHub Actions (Linux) machine:
+
+.. image:: apple_codesign_actions_initiator_output.png
+   :alt: Signing output from GitHub Actions worker
+
+And from the signing Windows machine using a YubiKey for signing:
+
+.. image:: apple_codesign_actions_signer_output.png
+   :alt: Signing output from signing machine

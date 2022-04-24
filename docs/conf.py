@@ -61,7 +61,7 @@ for d in EXTERNAL_SOURCE_DIRS:
     source_dir = ROOT / d
 
     for f in os.listdir(source_dir):
-        if not f.endswith("rst") or not f.startswith(EXTERNAL_PREFIXES):
+        if not f.endswith(("rst", "png")) or not f.startswith(EXTERNAL_PREFIXES):
             continue
 
         source_path = source_dir / f

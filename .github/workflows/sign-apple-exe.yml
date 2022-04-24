@@ -25,6 +25,7 @@ on:
 
 jobs:
   sign:
+    name: Sign ${{ github.event.inputs.exe_name }}
     runs-on: 'ubuntu-20.04'
     timeout-minutes: 10
     steps:
@@ -58,7 +59,7 @@ jobs:
 
           bins/rcodesign sign \
               --remote-signer \
-              --remote-public-key-pem-file ci/developer-id.pem \
+              --remote-public-key-pem-file ci/developer-id-application.pem \
               dist/input/${{ github.event.inputs.exe_name }} \
               dist/output/${{ github.event.inputs.exe_name }}
 
