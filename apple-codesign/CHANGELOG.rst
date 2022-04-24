@@ -26,6 +26,8 @@
   printing of the prefixes. This crate uses
   :ref:`env_logger <https://crates.io/crates/env_logger>`_, so it is possible
   to customize default behavior via environment variables.
+* The possible values for the ``--code-signature-flags`` are now advertised in
+  help output.
 
 0.13.0
 ======

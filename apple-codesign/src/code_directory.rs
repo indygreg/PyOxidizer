@@ -68,6 +68,21 @@ impl FromStr for CodeSignatureFlags {
 }
 
 impl CodeSignatureFlags {
+    /// Obtain all flags that can be set by the user.
+    ///
+    /// Maps to variants that have a `from_str()` implementation.
+    pub fn all_user_configurable() -> Vec<&'static str> {
+        vec![
+            "host",
+            "hard",
+            "kill",
+            "expires",
+            "library",
+            "runtime",
+            "linker-signed",
+        ]
+    }
+
     /// Attempt to convert a series of strings into a [CodeSignatureFlags].
     pub fn from_strs(s: &[&str]) -> Result<CodeSignatureFlags, AppleCodesignError> {
         let mut flags = CodeSignatureFlags::empty();

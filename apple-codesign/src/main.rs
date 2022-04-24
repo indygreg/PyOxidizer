@@ -2709,6 +2709,7 @@ fn main_impl() -> Result<(), AppleCodesignError> {
                         .multiple_occurrences(true)
                         .multiple_values(true)
                         .number_of_values(1)
+                        .possible_values(CodeSignatureFlags::all_user_configurable())
                         .help("Code signature flags to set")
                 )
                 .arg(
