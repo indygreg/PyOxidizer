@@ -80,6 +80,62 @@ pre-existing trust anchor. A malicious 3rd party would need access to data
 never transmitted in plaintext through the server in order to decrypt messages
 or issue fake/malicious messages.
 
+Security Analysis in the Bigger Picture
+=======================================
+
+When considering the overall security of remote code signing, we have to
+consider the broader ecosystem in which it exists.
+
+Without remote code signing, the following are all commonly true:
+
+* Signing keys are copied to multiple machines to make it easier to access
+  them.
+* Signing keys are made available as secrets on CI workers.
+* Access to perform operations on the signing key is always on. e.g.
+  anybody who can talk to the HSM can create a signature.
+* Security conscious people (those who want to minimize risk for private
+  keys) need to impose a more complicated release pipeline - one that
+  typically entails copying assets to a separate machine, signing them,
+  then copying elsewhere. These steps are often tedious and effectively
+  constitute a barrier to good security hygiene.
+
+There are general principles of private key management:
+
+* You should have as few copies of the private key as possible. Ideally 1.
+* Keys should be as short lived as possible or access to them should be
+  limited in time duration.
+
+Traditional solutions to code signing violate these principles because
+there's not an easy-to-use / viable alternative. So in the absence of
+remote code signing, commonly practiced code signing key management is
+generally not great.
+
+We believe that our design of remote code signing is intrinsically more
+secure than what is commonly practiced because:
+
+* The signer in possession of the private key must be present. There is
+  no unlimited access to the private key outside an active signing session.
+* You can have exactly 1 copy of the private key without compromising on
+  usability. The urge to make copies to streamline CI/CD is largely mitigated
+  via an easy-to-use remote signing UI.
+
+In addition, the design and implementation of the relay server further
+bolsters security by:
+
+* Purging sessions after a maximum time to live (measured in minutes).
+* Refusing to allow N>2 peers from sending messages to a session.
+* Requiring active presence for message exchange. The server doesn't store
+  a copy of relayed signing messages so there isn't a potential for someone
+  to deposit a malicious message for later retrieval.
+
+And these security properties are delivered without even factoring in
+end-to-end message encryption! The end-to-end encryption is effectively
+protections against a malicious server or man-in-the-middle. These are
+arguably necessary protections - especially when using a server hosted by
+an (untrusted) 3rd party. But for scenarios where you run your own server
+and you trust the network, end-to-end encryption isn't buying you much beyond
+what signer presence requirements and server design already deliver.
+
 Default Remote Code Signing Server
 ==================================
 
