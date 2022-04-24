@@ -28,6 +28,9 @@
   to customize default behavior via environment variables.
 * The possible values for the ``--code-signature-flags`` are now advertised in
   help output.
+* Written Mach-O files should now always have their filesystem permissions
+  preserved. Before, we may not have preserved file permissions in all code
+  paths writing Mach-O files.
 
 0.13.0
 ======

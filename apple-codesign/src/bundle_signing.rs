@@ -12,7 +12,7 @@ use {
         embedded_signature::{Blob, BlobData, DigestType},
         error::AppleCodesignError,
         macho::{find_macho_targeting, iter_macho, AppleSignable},
-        macho_signing::MachOSigner,
+        macho_signing::{write_macho_file, MachOSigner},
         signing_settings::{SettingsScope, SigningSettings},
     },
     apple_bundles::{BundlePackageType, DirectoryBundle, DirectoryBundleFile},
@@ -351,18 +351,8 @@ impl<'a, 'key> BundleFileHandler for SingleBundleHandler<'a, 'key> {
 
         let dest_path = self.dest_dir.join(file.relative_path());
 
-        // Read permissions first in case we overwrite the original file.
-        let permissions = std::fs::metadata(file.absolute_path())?.permissions();
-        std::fs::create_dir_all(
-            dest_path
-                .parent()
-                .expect("parent directory should be available"),
-        )?;
-        {
-            let mut fh = std::fs::File::create(&dest_path)?;
-            fh.write_all(&new_data)?;
-        }
-        std::fs::set_permissions(&dest_path, permissions)?;
+        info!("writing Mach-O to {}", dest_path.display());
+        write_macho_file(file.absolute_path(), &dest_path, &new_data)?;
 
         SignedMachOInfo::parse_data(&new_data)
     }
@@ -615,18 +605,7 @@ impl SingleBundleSigner {
 
             let dest_path = dest_dir_root.join(exe.relative_path());
             info!("writing signed main executable to {}", dest_path.display());
-
-            let permissions = std::fs::metadata(exe.absolute_path())?.permissions();
-            std::fs::create_dir_all(
-                dest_path
-                    .parent()
-                    .expect("parent directory should be available"),
-            )?;
-            {
-                let mut fh = std::fs::File::create(&dest_path)?;
-                fh.write_all(&new_data)?;
-            }
-            std::fs::set_permissions(&dest_path, permissions)?;
+            write_macho_file(exe.absolute_path(), &dest_path, &new_data)?;
         } else {
             warn!("bundle has no main executable to sign specially");
         }

@@ -54,8 +54,8 @@ jobs:
 
       - name: Perform remote code signing
         run: |
+          # Just in case.
           chmod +x bins/rcodesign
-          mkdir dist/output
 
           bins/rcodesign sign \
               --remote-signer \

@@ -32,7 +32,7 @@ use {
     },
     log::{info, warn},
     scroll::{ctx::SizeWith, IOwrite},
-    std::{borrow::Cow, cmp::Ordering, collections::HashMap, io::Write},
+    std::{borrow::Cow, cmp::Ordering, collections::HashMap, io::Write, path::Path},
     tugger_apple::create_universal_macho,
 };
 
@@ -200,6 +200,29 @@ fn create_macho_with_signature(
     }
 
     Ok(cursor.into_inner())
+}
+
+/// Write Mach-O file content to an output file.
+pub fn write_macho_file(
+    input_path: &Path,
+    output_path: &Path,
+    macho_data: &[u8],
+) -> Result<(), AppleCodesignError> {
+    // Read permissions first in case we overwrite the original file.
+    let permissions = std::fs::metadata(input_path)?.permissions();
+
+    if let Some(parent) = output_path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+
+    {
+        let mut fh = std::fs::File::create(output_path)?;
+        fh.write_all(macho_data)?;
+    }
+
+    std::fs::set_permissions(output_path, permissions)?;
+
+    Ok(())
 }
 
 /// Mach-O binary signer.

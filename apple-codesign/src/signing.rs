@@ -9,7 +9,7 @@ use {
         bundle_signing::BundleSigner,
         dmg::DmgSigner,
         error::AppleCodesignError,
-        macho_signing::MachOSigner,
+        macho_signing::{write_macho_file, MachOSigner},
         reader::PathType,
         signing_settings::{SettingsScope, SigningSettings},
     },
@@ -89,9 +89,10 @@ impl<'key> UnifiedSigner<'key> {
         warn!("parsing Mach-O");
         let signer = MachOSigner::new(&macho_data)?;
 
-        warn!("writing {}", output_path.display());
-        let mut fh = std::fs::File::create(output_path)?;
-        signer.write_signed_binary(&settings, &mut fh)?;
+        let mut macho_data = vec![];
+        signer.write_signed_binary(&settings, &mut macho_data)?;
+        warn!("writing Mach-O to {}", output_path.display());
+        write_macho_file(input_path, output_path, &macho_data)?;
 
         Ok(())
     }
