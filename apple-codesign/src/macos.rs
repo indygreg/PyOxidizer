@@ -8,6 +8,7 @@ use {
     crate::{certificate::OID_USER_ID, error::AppleCodesignError},
     bcder::Oid,
     security_framework::{
+        certificate::SecCertificate,
         item::{ItemClass, ItemSearchOptions, Reference, SearchResult},
         os::macos::{
             item::ItemSearchOptionsExt,
@@ -56,9 +57,15 @@ impl TryFrom<&str> for KeychainDomain {
     }
 }
 
+/// A certificate in a keychain.
+struct KeychainCertificate {
+    sec_cert: SecCertificate,
+    captured: CapturedX509Certificate,
+}
+
 fn find_certificates(
     keychains: &[SecKeychain],
-) -> Result<Vec<CapturedX509Certificate>, AppleCodesignError> {
+) -> Result<Vec<KeychainCertificate>, AppleCodesignError> {
     let mut search = ItemSearchOptions::default();
     search.keychains(keychains);
     search.class(ItemClass::certificate());
@@ -70,8 +77,11 @@ fn find_certificates(
         match item {
             SearchResult::Ref(reference) => match reference {
                 Reference::Certificate(cert) => {
-                    if let Ok(c) = CapturedX509Certificate::from_der(cert.to_der()) {
-                        certs.push(c);
+                    if let Ok(captured) = CapturedX509Certificate::from_der(cert.to_der()) {
+                        certs.push(KeychainCertificate {
+                            sec_cert: cert,
+                            captured,
+                        });
                     }
                 }
 
@@ -122,14 +132,19 @@ pub fn macos_keychain_find_certificate_chain(
     // we get to a self-signed certificate.
     let start_cert: &CapturedX509Certificate = certs
         .iter()
-        .find(|cert| {
+        .find_map(|cert| {
             if let Ok(Some(value)) = cert
+                .captured
                 .subject_name()
                 .find_first_attribute_string(Oid(OID_USER_ID.as_ref().into()))
             {
-                value == user_id
+                if value == user_id {
+                    Some(&cert.captured)
+                } else {
+                    None
+                }
             } else {
-                false
+                None
             }
         })
         .ok_or_else(|| AppleCodesignError::CertificateNotFound(format!("UID={}", user_id)))?;
@@ -138,9 +153,13 @@ pub fn macos_keychain_find_certificate_chain(
     let mut last_issuer_name = start_cert.issuer_name();
 
     loop {
-        let issuer = certs
-            .iter()
-            .find(|cert| cert.subject_name() == last_issuer_name);
+        let issuer = certs.iter().find_map(|cert| {
+            if cert.captured.subject_name() == last_issuer_name {
+                Some(&cert.captured)
+            } else {
+                None
+            }
+        });
 
         if let Some(issuer) = issuer {
             chain.push(issuer.clone());
