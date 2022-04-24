@@ -576,6 +576,7 @@ pub fn parse_pfx_data(
 /// exists here because we need it to support RSA decryption using YubiKeys.
 /// https://github.com/RustCrypto/RSA/issues/159 is fixed to hopefully get this
 /// exposed as an API on the rsa crate.
+#[allow(unused)]
 pub(crate) fn rsa_oaep_post_decrypt_decode(
     modulus_length_bytes: usize,
     mut em: Vec<u8>,
