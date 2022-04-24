@@ -357,7 +357,7 @@ enum ServerResponse {
 }
 
 /// A function that receives session information.
-pub type SessionInfoCallback = fn(session_join_string: &str) -> Result<(), RemoteSignError>;
+pub type SessionInfoCallback = fn(sjs_base64: &str, sjs_pem: &str) -> Result<(), RemoteSignError>;
 
 fn create_websocket(
     req: impl IntoClientRequest,
@@ -510,13 +510,14 @@ impl UnjoinedSigningClient {
             }),
         )?;
 
-        let sjs = initiator.session_join_string()?;
+        let sjs_base64 = initiator.session_join_string_base64()?;
+        let sjs_pem = initiator.session_join_string_pem()?;
 
         wait_for_expected_server_message(&mut self.ws, ServerMessageType::SessionCreated)?;
         warn!("session successfully created on server");
 
         if let Some(cb) = session_info_cb {
-            cb(&sjs)?;
+            cb(&sjs_base64, &sjs_pem)?;
         }
 
         let res = wait_for_expected_server_message(&mut self.ws, ServerMessageType::SessionJoined)?;

@@ -125,12 +125,19 @@ designed the mechanism to be extensible.
 Generically, the mechanism to join a session is expressed through a
 **session join string**, or SJS.
 
-To end-users, a SJS is an opaque UTF-8 string.
+The SJS is ultimately a CBOR encoded array of length 2. The array's elements
+are:
 
-To machines, the SJS is Base64 using the RFC 3548 *URL safe* character set with
-optional (``=``) padding. The encoded value is a CBOR array of length 2. The
-array's elements are a string denoting the scheme and a variable type value
-holding the payload for that scheme.
+* (string) The scheme being used.
+* (varied) The payload for that scheme.
+
+But to end-users it is an opaque string.
+
+The SJS can be encoded as:
+
+* Base64 using the RFC 3548 *URL safe* character set with optional ``=``
+  padding.
+* PEM using ``SESSION JOIN STRING`` as the armoring tag.
 
 In general, the *session join string* is shared out-of-band with the other
 peer, who uses it to join the session.

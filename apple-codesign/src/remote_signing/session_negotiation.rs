@@ -215,16 +215,10 @@ pub trait SessionJoinString<'de>: Decode<'de> + Encode {
     /// This is advertised as the first component in the encoded SJS.
     fn scheme() -> &'static str;
 
-    /// Produce the sharable Session Join String (SJS).
-    ///
-    /// The SJS is just the base64 encoding of a CBOR array containing the
-    /// scheme and payload.
-    fn to_session_join_string(&self) -> Result<String> {
-        let data = encode_sjs(Self::scheme(), &self).map_err(|e| {
-            RemoteSignError::SessionJoinString(format!("CBOR encoding error: {}", e))
-        })?;
-
-        Ok(base64::encode_config(data, base64::URL_SAFE_NO_PAD))
+    /// Obtain the raw bytes constituting the session join string.
+    fn to_bytes(&self) -> Result<Vec<u8>> {
+        encode_sjs(Self::scheme(), &self)
+            .map_err(|e| RemoteSignError::SessionJoinString(format!("CBOR encoding error: {}", e)))
     }
 }
 
@@ -332,8 +326,24 @@ pub trait SessionInitiatePeer {
     /// This context will be sent to the peer when it joins.
     fn session_create_context(&self) -> Option<Vec<u8>>;
 
-    /// Obtain the encoded session join string (SJS) to be shared with the future peer.
-    fn session_join_string(&self) -> Result<String>;
+    /// Obtain the raw bytes constituting the session join string.
+    fn session_join_string_bytes(&self) -> Result<Vec<u8>>;
+
+    /// Obtain the base 64 encoded session join string.
+    fn session_join_string_base64(&self) -> Result<String> {
+        Ok(base64::encode_config(
+            self.session_join_string_bytes()?,
+            base64::URL_SAFE_NO_PAD,
+        ))
+    }
+
+    /// Obtain the PEM encoded session join string.
+    fn session_join_string_pem(&self) -> Result<String> {
+        Ok(pem::encode(&pem::Pem {
+            tag: "SESSION JOIN STRING".to_string(),
+            contents: self.session_join_string_bytes()?,
+        }))
+    }
 
     /// Finalize a peer joined session using optional context provided by the peer.
     ///
@@ -419,8 +429,8 @@ impl SessionInitiatePeer for PublicKeyInitiator {
         None
     }
 
-    fn session_join_string(&self) -> Result<String> {
-        self.sjs.to_session_join_string()
+    fn session_join_string_bytes(&self) -> Result<Vec<u8>> {
+        self.sjs.to_bytes()
     }
 
     fn negotiate_session(self: Box<Self>, peer_context: Option<Vec<u8>>) -> Result<PeerKeys> {
@@ -681,8 +691,8 @@ impl SessionInitiatePeer for SharedSecretInitiator {
         None
     }
 
-    fn session_join_string(&self) -> Result<String> {
-        self.sjs.to_session_join_string()
+    fn session_join_string_bytes(&self) -> Result<Vec<u8>> {
+        self.sjs.to_bytes()
     }
 
     fn negotiate_session(self: Box<Self>, peer_context: Option<Vec<u8>>) -> Result<PeerKeys> {
@@ -815,7 +825,30 @@ impl SessionJoinPeerHandshake for SharedSecretHandshakePeer {
 pub fn create_session_joiner(
     session_join_string: impl ToString,
 ) -> Result<Box<dyn SessionJoinPeerPreJoin>> {
-    let sjs = base64::decode_config(session_join_string.to_string(), base64::URL_SAFE_NO_PAD)?;
+    let input = session_join_string.to_string();
+
+    let trimmed = input.trim();
+
+    // Multiline is assumed to be PEM.
+    let sjs = if trimmed.contains('\n') {
+        let no_comments = trimmed
+            .lines()
+            .filter(|line| !line.starts_with('#'))
+            .collect::<Vec<_>>()
+            .join("\n");
+
+        let doc = pem::parse(no_comments.as_bytes())?;
+
+        if doc.tag == "SESSION JOIN STRING" {
+            doc.contents
+        } else {
+            return Err(RemoteSignError::SessionJoinString(
+                "PEM does not define a SESSION JOIN STRING".into(),
+            ));
+        }
+    } else {
+        base64::decode_config(trimmed.as_bytes(), base64::URL_SAFE_NO_PAD)?
+    };
 
     let mut decoder = Decoder::new(&sjs);
     if !matches!(

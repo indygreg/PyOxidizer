@@ -925,13 +925,27 @@ fn print_certificate_info(cert: &CapturedX509Certificate) -> Result<(), AppleCod
     Ok(())
 }
 
-fn print_session_join(sjs: &str) -> Result<(), RemoteSignError> {
-    warn!("");
-    warn!("Run the following command to join this signing session:");
-    warn!("");
-    warn!("    rcodesign remote-sign {}", sjs);
-    warn!("");
-    warn!("(waiting for remote signer to join)");
+fn print_session_join(sjs_base64: &str, sjs_pem: &str) -> Result<(), RemoteSignError> {
+    error!("");
+    error!("Run the following command to join this signing session:");
+    error!("");
+    error!("    rcodesign remote-sign {}", sjs_base64);
+    error!("");
+    error!("Or if this output is too long, paste the following output:");
+    error!("");
+    for line in sjs_pem.lines() {
+        error!("{}", line);
+    }
+    error!("");
+    error!("Into an interactive editor using:");
+    error!("");
+    error!("    rcodesign remote-sign --editor");
+    error!("");
+    error!("Or into a new file whose path you define with:");
+    error!("");
+    error!("    rcodesign remote-sign --sjs-path /path/to/file/you/just/saved");
+    error!("");
+    error!("(waiting for remote signer to join)");
 
     Ok(())
 }
@@ -1861,12 +1875,35 @@ fn command_print_signature_info(args: &ArgMatches) -> Result<(), AppleCodesignEr
 }
 
 fn command_remote_sign(args: &ArgMatches) -> Result<(), AppleCodesignError> {
-    let session_join_string = args
-        .value_of("session_join_string")
-        .expect("session_join_string argument is required");
     let remote_url = args
         .value_of("remote_signing_url")
         .expect("remote signing URL should always be present");
+
+    let session_join_string = if args.is_present("session_join_string_editor") {
+        let mut value = None;
+
+        for _ in 0..3 {
+            if let Some(content) = dialoguer::Editor::new()
+                .require_save(true)
+                .edit("# Please enter the -----BEGIN SESSION JOIN STRING---- content below.\n# Remember to save the file!")?
+            {
+                value = Some(content);
+                break;
+            }
+        }
+
+        value.ok_or_else(|| {
+            AppleCodesignError::CliGeneralError("session join string not entered in editor".into())
+        })?
+    } else if let Some(path) = args.value_of("session_join_string_path") {
+        std::fs::read_to_string(path)?
+    } else if let Some(value) = args.value_of("session_join_string") {
+        value.to_string()
+    } else {
+        return Err(AppleCodesignError::CliGeneralError(
+            "session join string argument parsing failure".into(),
+        ));
+    };
 
     let mut joiner = create_session_joiner(session_join_string)?;
 
@@ -2609,10 +2646,27 @@ fn main_impl() -> Result<(), AppleCodesignError> {
         Command::new("remote-sign")
             .about("Create signatures initiated from a remote signing operation")
             .arg(
+                Arg::new("session_join_string_editor")
+                    .long("editor")
+                    .help("Open an editor to input the session join string"),
+            )
+            .arg(
+                Arg::new("session_join_string_path")
+                    .long("sjs-path")
+                    .takes_value(true)
+                    .help("Path to file containing session join string"),
+            )
+            .arg(
                 Arg::new("session_join_string")
                     .takes_value(true)
-                    .required(true)
                     .help("Session join string (provided by the signing initiator)"),
+            )
+            .group(
+                ArgGroup::new("session_join_string_source")
+                    .arg("session_join_string_editor")
+                    .arg("session_join_string_path")
+                    .arg("session_join_string")
+                    .required(true),
             ),
     ));
 
