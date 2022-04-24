@@ -98,7 +98,9 @@ use {
 };
 
 #[cfg(target_os = "macos")]
-use crate::macos::{macos_keychain_find_certificate_chain, KeychainDomain};
+use crate::macos::{
+    keychain_find_code_signing_certificates, macos_keychain_find_certificate_chain, KeychainDomain,
+};
 
 const ANALYZE_CERTIFICATE_ABOUT: &str = "\
 Analyze an X.509 certificate for Apple code signing properties.
@@ -1790,6 +1792,34 @@ fn command_keychain_export_certificate_chain(_args: &ArgMatches) -> Result<(), A
     ))
 }
 
+#[cfg(target_os = "macos")]
+fn command_keychain_print_certificates(args: &ArgMatches) -> Result<(), AppleCodesignError> {
+    let domain = args
+        .value_of("domain")
+        .expect("clap should have added default value");
+
+    let domain =
+        KeychainDomain::try_from(domain).expect("clap should have validated domain values");
+
+    let certs = keychain_find_code_signing_certificates(domain, None)?;
+
+    for (i, cert) in certs.into_iter().enumerate() {
+        println!("# Certificate {}", i);
+        println!();
+        print_certificate_info(&cert)?;
+        println!();
+    }
+
+    Ok(())
+}
+
+#[cfg(not(target_os = "macos"))]
+fn command_keychain_print_certificates(_args: &ArgMatches) -> Result<(), AppleCodesignError> {
+    Err(AppleCodesignError::CliGeneralError(
+        "macOS Keychain integration supported on macOS".to_string(),
+    ))
+}
+
 fn command_notarize(args: &ArgMatches) -> Result<(), AppleCodesignError> {
     let path = PathBuf::from(
         args.value_of("path")
@@ -2551,6 +2581,18 @@ fn main_impl() -> Result<(), AppleCodesignError> {
            ),
         );
 
+    let app = app.subcommand(
+        Command::new("keychain-print-certificates")
+            .about("Print information about certificates in the macOS keychain")
+            .arg(
+                Arg::new("domain")
+                    .long("--domain")
+                    .possible_values(&["user", "system", "common", "dynamic"])
+                    .default_value("user")
+                    .help("Keychain domain to operate on"),
+            ),
+    );
+
     let app =
         app.subcommand(add_notarization_upload_args(
             Command::new("notarize")
@@ -2860,6 +2902,7 @@ fn main_impl() -> Result<(), AppleCodesignError> {
         Some(("keychain-export-certificate-chain", args)) => {
             command_keychain_export_certificate_chain(args)
         }
+        Some(("keychain-print-certificates", args)) => command_keychain_print_certificates(args),
         Some(("notarize", args)) => command_notarize(args),
         Some(("parse-code-signing-requirement", args)) => {
             command_parse_code_signing_requirement(args)

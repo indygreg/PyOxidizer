@@ -5,7 +5,10 @@
 //! Functionality that only works on macOS.
 
 use {
-    crate::{certificate::OID_USER_ID, error::AppleCodesignError},
+    crate::{
+        certificate::{AppleCertificate, OID_USER_ID},
+        error::AppleCodesignError,
+    },
     bcder::Oid,
     security_framework::{
         certificate::SecCertificate,
@@ -15,6 +18,7 @@ use {
             keychain::{SecKeychain, SecPreferencesDomain},
         },
     },
+    std::ops::Deref,
     x509_certificate::CapturedX509Certificate,
 };
 
@@ -58,9 +62,17 @@ impl TryFrom<&str> for KeychainDomain {
 }
 
 /// A certificate in a keychain.
-struct KeychainCertificate {
+pub struct KeychainCertificate {
     sec_cert: SecCertificate,
     captured: CapturedX509Certificate,
+}
+
+impl Deref for KeychainCertificate {
+    type Target = CapturedX509Certificate;
+
+    fn deref(&self) -> &Self::Target {
+        &self.captured
+    }
 }
 
 fn find_certificates(
@@ -102,6 +114,24 @@ fn find_certificates(
     }
 
     Ok(certs)
+}
+
+/// Locate code signing certificates in the macOS keychain.
+pub fn keychain_find_code_signing_certificates(
+    domain: KeychainDomain,
+    password: Option<&str>,
+) -> Result<Vec<KeychainCertificate>, AppleCodesignError> {
+    let mut keychain = SecKeychain::default_for_domain(domain.into())?;
+    if password.is_some() {
+        keychain.unlock(password)?;
+    }
+
+    let certs = find_certificates(&[keychain])?;
+
+    Ok(certs
+        .into_iter()
+        .filter(|cert| !cert.captured.apple_code_signing_extensions().is_empty())
+        .collect::<Vec<_>>())
 }
 
 /// Find the x509 certificate chain for a certificate given search parameters.

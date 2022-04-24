@@ -31,6 +31,8 @@
 * Written Mach-O files should now always have their filesystem permissions
   preserved. Before, we may not have preserved file permissions in all code
   paths writing Mach-O files.
+* A new ``keychain-print-certificates`` command can be used to print
+  certificates available in macOS keychains.
 
 0.13.0
 ======
