@@ -105,7 +105,7 @@ path = "../x509-certificate"
 version = "0.13.0-pre"
 
 [target.'cfg(target_os = "macos")'.dependencies]
-security-framework = { version = "2.2", features = ["OSX_10_12"] }
+security-framework = { version = "2.6", features = ["OSX_10_12"] }
 
 [dev-dependencies]
 indoc = "1.0"
