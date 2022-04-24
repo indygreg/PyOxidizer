@@ -85,7 +85,7 @@ use {
     cryptographic_message_syntax::SignedData,
     difference::{Changeset, Difference},
     goblin::mach::{Mach, MachO},
-    log::{error, warn},
+    log::{error, warn, LevelFilter},
     spki::EncodePublicKey,
     std::{io::Write, path::PathBuf, str::FromStr},
     x509_certificate::{CapturedX509Certificate, EcdsaCurve, KeyAlgorithm, X509CertificateBuilder},
@@ -2290,13 +2290,19 @@ fn command_x509_oids(_args: &ArgMatches) -> Result<(), AppleCodesignError> {
 }
 
 fn main_impl() -> Result<(), AppleCodesignError> {
-    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
-
     let app = Command::new("Oxidized Apple Codesigning")
         .version("0.1")
         .author("Gregory Szorc <gregory.szorc@gmail.com>")
         .about("Do things related to code signing of Apple binaries")
-        .arg_required_else_help(true);
+        .arg_required_else_help(true)
+        .arg(
+            Arg::new("verbose")
+                .long("verbose")
+                .short('v')
+                .global(true)
+                .multiple_occurrences(true)
+                .help("Increase logging verbosity. Can be specified multiple times."),
+        );
 
     let app = app.subcommand(add_certificate_source_args(
         Command::new("analyze-certificate")
@@ -2757,6 +2763,32 @@ fn main_impl() -> Result<(), AppleCodesignError> {
     );
 
     let matches = app.get_matches();
+
+    // TODO make default log level warn once we audit logging sites.
+    let log_level = match matches.occurrences_of("verbose") {
+        0 => LevelFilter::Info,
+        1 => LevelFilter::Debug,
+        _ => LevelFilter::Trace,
+    };
+
+    let mut builder = env_logger::Builder::from_env(
+        env_logger::Env::default().default_filter_or(log_level.as_str()),
+    );
+
+    // Disable log context except at higher log levels.
+    if log_level <= LevelFilter::Info {
+        builder
+            .format_timestamp(None)
+            .format_level(false)
+            .format_target(false);
+    }
+
+    // This spews unwanted output at default level. Nerf it by default.
+    if log_level == LevelFilter::Info {
+        builder.filter_module("rustls", LevelFilter::Error);
+    }
+
+    builder.init();
 
     match matches.subcommand() {
         Some(("analyze-certificate", args)) => command_analyze_certificate(args),

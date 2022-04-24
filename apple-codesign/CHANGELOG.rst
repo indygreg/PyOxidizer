@@ -20,6 +20,12 @@
   transmitted back to the originating machine. Remote signing enables signing
   to be performed more securely by facilitating signing without having to give
   the initiating machine access to the signing key.
+* Default log output format has changed. Lines are no longer prefixed with the
+  time, log level, or logging module by default. A ``-v/--verbose`` global flag
+  has been added to increase the verbosity of logging. This can restore the
+  printing of the prefixes. This crate uses
+  :ref:`env_logger <https://crates.io/crates/env_logger>`_, so it is possible
+  to customize default behavior via environment variables.
 
 0.13.0
 ======
