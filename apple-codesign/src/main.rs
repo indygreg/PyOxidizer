@@ -2290,10 +2290,10 @@ fn command_x509_oids(_args: &ArgMatches) -> Result<(), AppleCodesignError> {
 }
 
 fn main_impl() -> Result<(), AppleCodesignError> {
-    let app = Command::new("Oxidized Apple Codesigning")
-        .version("0.1")
+    let app = Command::new("Cross platform Apple code signing in pure Rust")
+        .version(env!("CARGO_PKG_VERSION"))
         .author("Gregory Szorc <gregory.szorc@gmail.com>")
-        .about("Do things related to code signing of Apple binaries")
+        .about("Sign and notarize Apple programs. See https://pyoxidizer.readthedocs.io/en/latest/apple_codesign.html for more docs.")
         .arg_required_else_help(true)
         .arg(
             Arg::new("verbose")
