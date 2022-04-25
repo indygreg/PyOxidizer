@@ -1639,7 +1639,7 @@ checksum = "3ee2393c4a91429dffb4bedf19f4d6abf27d8a732c8ce4980305d782e5426d57"
 
 [[package]]
 name = "debian-packaging"
-version = "0.13.0-pre"
+version = "0.12.0"
 dependencies = [
  "ar",
  "async-compression",
@@ -1681,11 +1681,54 @@ dependencies = [
 ]
 
 [[package]]
+name = "debian-packaging"
+version = "0.12.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3a5c979923c9e644bfe0b2389ab55bc52e8051e904435c3ebcae3fdcd930f79c"
+dependencies = [
+ "ar",
+ "async-compression",
+ "async-std",
+ "async-tar",
+ "async-trait",
+ "bytes",
+ "chrono",
+ "digest 0.10.3",
+ "futures",
+ "hex",
+ "libflate",
+ "mailparse",
+ "md-5 0.10.1",
+ "once_cell",
+ "os_str_bytes",
+ "pgp",
+ "pgp-cleartext 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "pin-project",
+ "regex",
+ "reqwest",
+ "rusoto_core",
+ "rusoto_s3",
+ "serde",
+ "sha-1 0.10.0",
+ "sha2 0.10.2",
+ "smallvec",
+ "strum",
+ "strum_macros",
+ "tar",
+ "thiserror",
+ "tokio",
+ "tugger-file-manifest 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "url",
+ "xz2",
+ "zstd",
+]
+
+[[package]]
 name = "debian-repo-tool"
 version = "0.5.0-pre"
 dependencies = [
  "clap 3.1.12",
- "debian-packaging",
+ "debian-packaging 0.12.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "num_cpus",
  "pbr",
  "serde_yaml",
@@ -2815,7 +2858,7 @@ version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5617e92fc2f2501c3e2bc6ce547cad841adba2bae5b921c7e52510beca6d084c"
 dependencies = [
- "base64 0.12.3",
+ "base64 0.13.0",
  "bytes",
  "http",
  "httpdate",
@@ -3213,7 +3256,7 @@ dependencies = [
  "anyhow",
  "clap 3.1.12",
  "cpio",
- "debian-packaging",
+ "debian-packaging 0.12.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures",
  "futures-util",
  "iced-x86",
