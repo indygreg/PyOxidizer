@@ -85,9 +85,9 @@ dependencies = [
 
 [[package]]
 name = "anyhow"
-version = "1.0.56"
+version = "1.0.57"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4361135be9122e0870de935d7c439aef945b9f9ddd4199a553b5270b49c82a27"
+checksum = "08f9b8508dccb7687a1d6c4ce66b2b0ecef467c94667de27d8d7fe1f8d2a9cdc"
 
 [[package]]
 name = "apple-bundles"
@@ -113,7 +113,7 @@ dependencies = [
  "bitflags",
  "bytes",
  "chrono",
- "clap 3.1.9",
+ "clap 3.1.12",
  "cryptographic-message-syntax",
  "der 0.5.1",
  "dialoguer",
@@ -541,16 +541,16 @@ checksum = "d468802bab17cbc0cc575e9b053f41e72aa36bfa6b7f55e3529ffa43161b97fa"
 
 [[package]]
 name = "backtrace"
-version = "0.3.64"
+version = "0.3.65"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5e121dee8023ce33ab248d9ce1493df03c3b38a659b240096fcbd7048ff9c31f"
+checksum = "11a17d453482a265fd5f8479f2a3f405566e6ca627837aaddb85af8b1ab8ef61"
 dependencies = [
  "addr2line",
  "cc",
  "cfg-if 1.0.0",
  "libc",
- "miniz_oxide 0.4.4",
- "object 0.27.1",
+ "miniz_oxide",
+ "object",
  "rustc-demangle",
 ]
 
@@ -828,9 +828,9 @@ dependencies = [
 
 [[package]]
 name = "cargo-lock"
-version = "7.0.1"
+version = "7.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7fb04b88bd5b2036e30704f95c6ee16f3b5ca3b4ca307da2889d9006648e5c88"
+checksum = "6c408da54db4c50d4693f7e649c299bc9de9c23ead86249e5368830bb32a734b"
 dependencies = [
  "semver",
  "serde",
@@ -844,7 +844,7 @@ version = "0.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "68dacdf12b405b432ddcb94aa5edef0766daf8cb781f484e56b518305afd45ba"
 dependencies = [
- "clap 3.1.9",
+ "clap 3.1.12",
 ]
 
 [[package]]
@@ -858,14 +858,14 @@ dependencies = [
 
 [[package]]
 name = "cargo-zigbuild"
-version = "0.8.4"
+version = "0.8.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f936f57aeb3d779e714edf47217aef514f4fc283550c1f2600d334c5ebe49eb5"
+checksum = "ba1735482294621dd295daa2353e7fd324fd9fd12bae601aba9577ccf93b7aa5"
 dependencies = [
  "anyhow",
  "cargo-options",
  "cargo_metadata",
- "clap 3.1.9",
+ "clap 3.1.12",
  "dirs",
  "fs-err",
  "path-slash",
@@ -1068,9 +1068,9 @@ dependencies = [
 
 [[package]]
 name = "clap"
-version = "3.1.9"
+version = "3.1.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6aad2534fad53df1cc12519c5cda696dd3e20e6118a027e24054aea14a0bdcbe"
+checksum = "7c167e37342afc5f33fd87bbc870cedd020d2a6dffa05d45ccd9241fbdd146db"
 dependencies = [
  "atty",
  "bitflags",
@@ -1086,20 +1086,20 @@ dependencies = [
 
 [[package]]
 name = "clap_complete"
-version = "3.1.1"
+version = "3.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "df6f3613c0a3cddfd78b41b10203eb322cb29b600cbdf808a7d3db95691b8e25"
+checksum = "1506b87ee866f7a53a5131f7b31fba656170d797e873d0609884cfd56b8bbda8"
 dependencies = [
- "clap 3.1.9",
+ "clap 3.1.12",
 ]
 
 [[package]]
 name = "clap_complete_fig"
-version = "3.1.4"
+version = "3.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "690eb5abb7a98df1a64a3028beaf95af7e0ceb13da3186e6d0a86161af76309e"
+checksum = "3918ed0e233c37ab6055a2dc4b2bad2e113d44f56675e0140936b9bd253e4505"
 dependencies = [
- "clap 3.1.9",
+ "clap 3.1.12",
  "clap_complete",
 ]
 
@@ -1598,7 +1598,7 @@ dependencies = [
 name = "debian-repo-tool"
 version = "0.5.0-pre"
 dependencies = [
- "clap 3.1.9",
+ "clap 3.1.12",
  "debian-packaging",
  "num_cpus",
  "pbr",
@@ -2189,7 +2189,7 @@ dependencies = [
  "cfg-if 1.0.0",
  "crc32fast",
  "libc",
- "miniz_oxide 0.5.1",
+ "miniz_oxide",
 ]
 
 [[package]]
@@ -3018,9 +3018,9 @@ dependencies = [
 
 [[package]]
 name = "libc"
-version = "0.2.123"
+version = "0.2.124"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cb691a747a7ab48abc15c5b42066eaafde10dc427e3b6ee2a1cf43db04c763bd"
+checksum = "21a41fed9d98f27ab1c6d161da622a4fa35e8a54a8adc24bbf3ddd0ef70b0e50"
 
 [[package]]
 name = "libflate"
@@ -3125,7 +3125,7 @@ name = "linux-package-analyzer"
 version = "0.2.0-pre"
 dependencies = [
  "anyhow",
- "clap 3.1.9",
+ "clap 3.1.12",
  "cpio",
  "debian-packaging",
  "futures",
@@ -3133,7 +3133,7 @@ dependencies = [
  "iced-x86",
  "indoc",
  "num_cpus",
- "object 0.28.3",
+ "object",
  "once_cell",
  "pbr",
  "rpm-repository",
@@ -3213,7 +3213,7 @@ dependencies = [
  "cargo_metadata",
  "cbindgen",
  "cc",
- "clap 3.1.9",
+ "clap 3.1.12",
  "clap_complete",
  "clap_complete_fig",
  "configparser",
@@ -3363,16 +3363,6 @@ name = "minimal-lexical"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "68354c5c6bd36d73ff3feceb05efa59b6acb7626617f4962be322a825e61f79a"
-
-[[package]]
-name = "miniz_oxide"
-version = "0.4.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a92518e98c078586bc6c934028adcca4c92a53d6a958196de835170a01d84e4b"
-dependencies = [
- "adler",
- "autocfg 1.1.0",
-]
 
 [[package]]
 name = "miniz_oxide"
@@ -3648,15 +3638,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "aba1801fb138d8e85e11d0fc70baf4fe1cdfffda7c6cd34a854905df588e5ed0"
 dependencies = [
  "libc",
-]
-
-[[package]]
-name = "object"
-version = "0.27.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "67ac1d3f9a1d3616fd9a60c8d74296f22406a238b6a72f5cc1e6f314df4ffbf9"
-dependencies = [
- "memchr",
 ]
 
 [[package]]
@@ -4437,7 +4418,7 @@ dependencies = [
  "assert_fs",
  "cargo-lock",
  "cc",
- "clap 3.1.9",
+ "clap 3.1.12",
  "codemap",
  "codemap-diagnostic",
  "dirs",
@@ -4494,7 +4475,7 @@ version = "0.1.0-pre"
 dependencies = [
  "anyhow",
  "assert_cmd",
- "clap 3.1.9",
+ "clap 3.1.12",
  "glob",
  "libtest-mimic",
  "predicates",
@@ -4821,7 +4802,7 @@ dependencies = [
  "bytes",
  "cargo-lock",
  "cargo_toml",
- "clap 3.1.9",
+ "clap 3.1.12",
  "dirs",
  "duct",
  "futures",
