@@ -114,7 +114,7 @@ dependencies = [
 
 [[package]]
 name = "apple-codesign"
-version = "0.14.0-pre"
+version = "0.14.0"
 dependencies = [
  "anyhow",
  "apple-bundles 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -181,6 +181,81 @@ dependencies = [
  "xml-rs",
  "yasna",
  "yubikey",
+ "zeroize",
+ "zip",
+ "zip_structs",
+]
+
+[[package]]
+name = "apple-codesign"
+version = "0.14.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2011a5f1d93e47240e836c0b0acb10bcb33218374638a2d2a9d098f2b41f1b5e"
+dependencies = [
+ "anyhow",
+ "apple-bundles 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "apple-flat-package 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "apple-xar 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "base64 0.13.0",
+ "bcder",
+ "bitflags",
+ "bytes",
+ "chrono",
+ "clap 3.1.12",
+ "cryptographic-message-syntax 0.16.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "der 0.5.1",
+ "dialoguer",
+ "difference",
+ "digest 0.9.0",
+ "dirs",
+ "duct",
+ "elliptic-curve 0.11.12",
+ "env_logger 0.9.0",
+ "filetime",
+ "glob",
+ "goblin",
+ "hex",
+ "indoc",
+ "jsonwebtoken 8.1.0",
+ "log",
+ "md-5 0.10.1",
+ "minicbor",
+ "oid-registry 0.5.0",
+ "once_cell",
+ "p12",
+ "p256 0.10.1",
+ "pem 1.0.2",
+ "pkcs1 0.3.3",
+ "pkcs8 0.8.0",
+ "plist",
+ "rand 0.8.5",
+ "rasn",
+ "regex",
+ "reqwest",
+ "ring",
+ "rsa 0.5.0",
+ "scroll",
+ "security-framework",
+ "semver",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "sha2 0.9.9",
+ "signature",
+ "spake2",
+ "spki 0.5.4",
+ "subtle",
+ "tempfile",
+ "thiserror",
+ "tugger-apple 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tugger-file-manifest 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tungstenite",
+ "uuid",
+ "which",
+ "x509",
+ "x509-certificate 0.13.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "xml-rs",
+ "yasna",
  "zeroize",
  "zip",
  "zip_structs",
@@ -2858,7 +2933,7 @@ version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5617e92fc2f2501c3e2bc6ce547cad841adba2bae5b921c7e52510beca6d084c"
 dependencies = [
- "base64 0.13.0",
+ "base64 0.12.3",
  "bytes",
  "http",
  "httpdate",
@@ -6505,7 +6580,7 @@ version = "0.15.0-pre"
 dependencies = [
  "anyhow",
  "apple-bundles 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "apple-codesign",
+ "apple-codesign 0.14.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "atty",
  "chrono",
  "codemap",
@@ -6595,7 +6670,7 @@ version = "0.7.0-pre"
 dependencies = [
  "anyhow",
  "apple-bundles 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "apple-codesign",
+ "apple-codesign 0.14.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "bcder",
  "cryptographic-message-syntax 0.16.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "goblin",
