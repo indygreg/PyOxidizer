@@ -18,8 +18,8 @@ serde = { version = "1.0", features = ["derive"] }
 thiserror = "1.0"
 
 [dependencies.apple-xar]
-# path = "../apple-xar"
-version = "0.5.0"
+path = "../apple-xar"
+version = "0.6.0-pre"
 
 [dependencies.cpio-archive]
 # path = "../cpio-archive"
