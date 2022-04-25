@@ -37,5 +37,5 @@ xz2 = "0.1"
 version = "0.16.0"
 
 [dependencies.x509-certificate]
-# path = "../x509-certificate"
-version = "0.13.0"
+path = "../x509-certificate"
+version = "0.14.0-pre"
