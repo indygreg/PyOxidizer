@@ -81,8 +81,8 @@ zip_structs = "0.2"
 version = "0.10.0"
 
 [dependencies.apple-flat-package]
-# path = "../apple-flat-package"
-version = "0.5.0"
+path = "../apple-flat-package"
+version = "0.6.0-pre"
 
 [dependencies.apple-xar]
 path = "../apple-xar"
