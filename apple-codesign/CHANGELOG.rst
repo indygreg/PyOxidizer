@@ -5,7 +5,7 @@
 0.14.0
 ======
 
-(Not yet released)
+(Released 2022-04-24)
 
 * Fixed a bug where symlinks weren't been written in notarization zip file
   files properly. This prevented bundles containing symlinks from notarizing
