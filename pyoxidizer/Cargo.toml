@@ -95,8 +95,8 @@ version = "0.7.0"
 # path = "../tugger-file-manifest"
 
 [dependencies.tugger-licensing]
-version = "0.7.0-pre"
-path = "../tugger-licensing"
+version = "0.6.0"
+# path = "../tugger-licensing"
 
 [dependencies.tugger-rust-toolchain]
 version = "0.8.0"
