@@ -400,8 +400,15 @@ ways:
   certificate/key data. (e.g. files with \"===== BEGIN CERTIFICATE =====\").
 * The --source-source argument defines paths to files containiner DER
   encoded certificate/key data.
+* The --keychain-domain and --keychain-fingerprint arguments can be used to
+  load code signing certificates from macOS keychains. These arguments are
+  ignored on non-macOS platforms.
 * The --smartcard-slot argument defines the name of a slot in a connected
   smartcard device to read from. `9c` is common.
+* Arguments beginning with --remote activate *remote signing mode* and can
+  be used to delegate cryptographic signing operations to a separate machine.
+  It is strongly advised to read the user documentation on remote signing
+  mode at https://pyoxidizer.readthedocs.io/en/latest/apple_codesign.html.
 
 If you export a code signing certificate from the macOS keychain via the
 `Keychain Access` application as a .p12 file, we should be able to read these
@@ -532,6 +539,21 @@ fn add_certificate_source_args(app: Command) -> Command {
             .help("Smartcard slot number of signing certificate to use (9c is common)"),
     )
     .arg(
+        Arg::new("keychain_domain")
+            .long("keychain-domain")
+            .takes_value(true)
+            .possible_values(&["user", "system", "common", "dynamic"])
+            .multiple_occurrences(true)
+            .multiple_values(true)
+            .help("(macOS only) Keychain domain to operate on"),
+    )
+    .arg(
+        Arg::new("keychain_fingerprint")
+            .long("keychain-fingerprint")
+            .takes_value(true)
+            .help("(macOS only) SHA-256 fingerprint of certificate in Keychain to use"),
+    )
+    .arg(
         Arg::new("pem_source")
             .long("pem-source")
             .takes_value(true)
@@ -614,6 +636,7 @@ fn add_certificate_source_args(app: Command) -> Command {
             .default_value(crate::remote_signing::DEFAULT_SERVER_URL)
             .help("URL of a remote code signing server"),
     )
+    .group(ArgGroup::new("keychain").args(&["keychain_domain", "keychain_fingerprint"]))
     .group(ArgGroup::new("remote_initialization").args(&remote_initialization_args(None)))
 }
 
@@ -729,6 +752,8 @@ fn collect_certificates_from_args(
             certs.push(CapturedX509Certificate::from_der(der_data)?);
         }
     }
+
+    find_certificates_in_keychain(args, &mut keys, &mut certs)?;
 
     if scan_smartcard {
         if let Some(slot) = args.value_of("smartcard_slot") {
@@ -990,6 +1015,73 @@ fn handle_smartcard_sign_slot(
     _public_certificates: &mut Vec<CapturedX509Certificate>,
 ) -> Result<(), AppleCodesignError> {
     error!("smartcard support not available; ignoring --smartcard-slot");
+
+    Ok(())
+}
+
+#[cfg(target_os = "macos")]
+fn find_certificates_in_keychain(
+    args: &ArgMatches,
+    private_keys: &mut Vec<Box<dyn PrivateKey>>,
+    public_certificates: &mut Vec<CapturedX509Certificate>,
+) -> Result<(), AppleCodesignError> {
+    // No arguments pertinent to keychains. Don't even speak to the
+    // keychain API since this could only error.
+    if args.occurrences_of("keychain") == 0 {
+        return Ok(());
+    }
+
+    // Collect all the keychain domains to search.
+    let domains = if let Some(domains) = args.values_of("keychain_domain") {
+        domains
+            .into_iter()
+            .map(|x| x.to_string())
+            .collect::<Vec<_>>()
+    } else {
+        vec!["user".to_string()]
+    };
+
+    let domains = domains
+        .into_iter()
+        .map(|domain| {
+            KeychainDomain::try_from(domain.as_str())
+                .expect("clap should have validated domain values")
+        })
+        .collect::<Vec<_>>();
+
+    // Now iterate all the keychains and try to find requested certificates.
+
+    for domain in domains {
+        for cert in keychain_find_code_signing_certificates(domain, None)? {
+            let matches = if let Some(wanted_fingerprint) = args.value_of("keychain_fingerprint") {
+                let got_fingerprint = hex::encode(cert.sha256_fingerprint()?.as_ref());
+
+                wanted_fingerprint.to_ascii_lowercase() == got_fingerprint.to_ascii_lowercase()
+            } else {
+                false
+            };
+
+            if matches {
+                public_certificates.push(cert.as_captured_x509_certificate());
+                private_keys.push(Box::new(cert));
+            }
+        }
+    }
+
+    Ok(())
+}
+
+#[cfg(not(target_os = "macos"))]
+fn find_certificates_in_keychain(
+    args: &ArgMatches,
+    _private_keys: &mut Vec<Box<dyn PrivateKey>>,
+    _public_certificates: &mut Vec<CapturedX509Certificate>,
+) -> Result<(), AppleCodesignError> {
+    if args.occurrences_of("keychain") > 0 {
+        error!(
+            "--keychain* arguments only supported on macOS and will be ignored on this platform"
+        );
+    }
 
     Ok(())
 }
@@ -2549,7 +2641,7 @@ fn main_impl() -> Result<(), AppleCodesignError> {
             .about("Export Apple CA certificates from the macOS Keychain")
             .arg(
                 Arg::new("domain")
-                    .long("--domain")
+                    .long("domain")
                     .possible_values(&["user", "system", "common", "dynamic"])
                     .default_value("user")
                     .help("Keychain domain to operate on")

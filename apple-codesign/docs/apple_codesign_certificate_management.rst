@@ -171,6 +171,17 @@ your code signing certificate exist as a file.
 Use the instructions in one of the following sections to export a code signing
 certificate.
 
+.. danger::
+
+   It is generally accepted that private keys stored in files are less
+   secure than stored in special operating system enclaves like keychains.
+   This is because the operating system has protections around accessing
+   the private keys and these protections are often much stronger than
+   those on a file on the filesystem.
+
+   This tool has support for using certificates / keys directly from
+   macOS keychains. So exporting to a file is not always necessary.
+
 Using Keychain Access
 ---------------------
 

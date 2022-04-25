@@ -24,7 +24,7 @@
   time, log level, or logging module by default. A ``-v/--verbose`` global flag
   has been added to increase the verbosity of logging. This can restore the
   printing of the prefixes. This crate uses
-  :ref:`env_logger <https://crates.io/crates/env_logger>`_, so it is possible
+  `env_logger <https://crates.io/crates/env_logger>`_, so it is possible
   to customize default behavior via environment variables.
 * The possible values for the ``--code-signature-flags`` are now advertised in
   help output.
@@ -33,6 +33,15 @@
   paths writing Mach-O files.
 * A new ``keychain-print-certificates`` command can be used to print
   certificates available in macOS keychains.
+* Initial support for using macOS keychain certificates for code signing.
+  Previously, we required that certificates be exported from keychain in
+  order to sign. We now support signing using SecurityFramework APIs so
+  keys don't have to leave the keychain. Due to a limitation in the Rust
+  bindings to SecurityFramework, decryption using keychain keys is not
+  supported. So the *public key agreement* method of remote code signing
+  will not yet work with keychain-based keys. The new ``--keychain-domain``
+  and ``--keychain-fingerprint`` arguments can be used to specify how to
+  search for and use keychain hosted keys.
 
 0.13.0
 ======
