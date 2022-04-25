@@ -126,7 +126,7 @@ dependencies = [
  "bytes",
  "chrono",
  "clap 3.1.12",
- "cryptographic-message-syntax 0.16.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cryptographic-message-syntax 0.17.0-pre",
  "der 0.5.1",
  "dialoguer",
  "difference",
@@ -202,7 +202,7 @@ dependencies = [
  "bytes",
  "chrono",
  "clap 3.1.12",
- "cryptographic-message-syntax 0.16.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cryptographic-message-syntax 0.16.0",
  "der 0.5.1",
  "dialoguer",
  "difference",
@@ -297,7 +297,7 @@ dependencies = [
  "bcder",
  "bzip2",
  "chrono",
- "cryptographic-message-syntax 0.16.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cryptographic-message-syntax 0.17.0-pre",
  "digest 0.10.3",
  "flate2",
  "log",
@@ -327,7 +327,7 @@ dependencies = [
  "bcder",
  "bzip2",
  "chrono",
- "cryptographic-message-syntax 0.16.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cryptographic-message-syntax 0.16.0",
  "digest 0.10.3",
  "flate2",
  "log",
@@ -1582,21 +1582,6 @@ dependencies = [
 [[package]]
 name = "cryptographic-message-syntax"
 version = "0.16.0"
-dependencies = [
- "bcder",
- "bytes",
- "chrono",
- "hex",
- "pem 1.0.2",
- "reqwest",
- "ring",
- "signature",
- "x509-certificate 0.14.0-pre",
-]
-
-[[package]]
-name = "cryptographic-message-syntax"
-version = "0.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8b13001442078f90b36648351515450e7c12f04982705226cbf3b2e164518fd5"
 dependencies = [
@@ -1609,6 +1594,21 @@ dependencies = [
  "ring",
  "signature",
  "x509-certificate 0.13.0",
+]
+
+[[package]]
+name = "cryptographic-message-syntax"
+version = "0.17.0-pre"
+dependencies = [
+ "bcder",
+ "bytes",
+ "chrono",
+ "hex",
+ "pem 1.0.2",
+ "reqwest",
+ "ring",
+ "signature",
+ "x509-certificate 0.14.0-pre",
 ]
 
 [[package]]
@@ -6672,7 +6672,7 @@ dependencies = [
  "apple-bundles 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "apple-codesign 0.14.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "bcder",
- "cryptographic-message-syntax 0.16.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cryptographic-message-syntax 0.17.0-pre",
  "goblin",
  "p12",
  "reqwest",
