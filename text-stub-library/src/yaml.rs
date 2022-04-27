@@ -188,9 +188,11 @@ pub struct TbdVersion2 {
     pub parent_umbrella: Option<String>,
 
     /// Export sections.
+    #[serde(default)]
     pub exports: Vec<TbdVersion12ExportSection>,
 
     /// Undefineds sections.
+    #[serde(default)]
     pub undefineds: Vec<TbdVersion2UndefinedsSection>,
 }
 
