@@ -47,36 +47,36 @@ pub struct TbdVersion1 {
     /// The list of architecture slices that are supported by this file.
     ///
     /// armv7, arm64, etc.
-    archs: Vec<String>,
+    pub archs: Vec<String>,
 
     /// Specifies the platform (macosx, ios, etc).
-    platform: String,
+    pub platform: String,
 
     /// Path of installed library.
-    install_name: String,
+    pub install_name: String,
 
     /// Current version of library.
     ///
     /// Defaults to `1.0`.
-    current_version: Option<String>,
+    pub current_version: Option<String>,
 
     /// Compatibility version of library.
     ///
     /// Defaults to `1.0`.
-    compatibility_version: Option<String>,
+    pub compatibility_version: Option<String>,
 
     /// Swift version of library.
     ///
     /// Defaults to `0`.
-    swift_version: Option<String>,
+    pub swift_version: Option<String>,
 
     /// Objective-C constraint.
     ///
     /// Defaults to `none`.
-    objc_constraint: Option<String>,
+    pub objc_constraint: Option<String>,
 
     /// Export sections.
-    exports: Vec<TbdVersion12ExportSection>,
+    pub exports: Vec<TbdVersion12ExportSection>,
 }
 
 /// Export section in a TBD version 1 or 2 structure.
