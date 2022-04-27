@@ -471,7 +471,9 @@ pub struct TbdVersion4 {
     pub exports: Vec<TbdVersion4ExportSection>,
 
     /// Reexport sections.
-    #[serde(default)]
+    ///
+    /// Version 11.0+ of the macOS SDKs renamed the field from `re-exports` to `reexports`.
+    #[serde(default, alias = "reexports")]
     pub re_exports: Vec<TbdVersion4ExportSection>,
 
     /// Undefineds sections.
