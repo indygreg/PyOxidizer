@@ -109,19 +109,28 @@ impl AppleSdk {
 
         let is_symlink = metadata.file_type().is_symlink();
 
-        let settings_path = path.join("SDKSettings.json");
+        let json_path = path.join("SDKSettings.json");
+        let plist_path = path.join("SDKSettings.plist");
 
-        let json_data = std::fs::read(&settings_path)
-            .with_context(|| format!("reading {}", settings_path.display()))?;
+        if json_path.exists() {
+            let json_data = std::fs::read(&json_path)
+                .with_context(|| format!("reading {}", json_path.display()))?;
 
-        let settings_json: SdkSettingsJson = serde_json::from_slice(&json_data)
-            .with_context(|| format!("parsing {}", settings_path.display()))?;
+            let settings_json: SdkSettingsJson = serde_json::from_slice(&json_data)
+                .with_context(|| format!("parsing {}", json_path.display()))?;
 
-        Ok(Self::from_json(
-            path.to_path_buf(),
-            is_symlink,
-            settings_json,
-        ))
+            Ok(Self::from_json(
+                path.to_path_buf(),
+                is_symlink,
+                settings_json,
+            ))
+        } else if plist_path.exists() {
+            let value = plist::Value::from_file(&plist_path)?;
+
+            Self::from_plist(path.to_path_buf(), is_symlink, value)
+        } else {
+            Err(anyhow!("no SDKSettings JSON or plist file found"))
+        }
     }
 
     /// Attempt to create a new instance from deserialized JSON.
@@ -139,6 +148,53 @@ impl AppleSdk {
             supported_targets: value.supported_targets,
             version: value.version,
         }
+    }
+
+    fn from_plist(path: PathBuf, is_symlink: bool, value: plist::Value) -> Result<Self> {
+        let value = value
+            .into_dictionary()
+            .ok_or_else(|| anyhow!("plist is not a dictionary"))?;
+
+        let get_string = |dict: &plist::Dictionary, key: &str| -> Result<String> {
+            Ok(dict
+                .get(key)
+                .ok_or_else(|| anyhow!("{} not available", key))?
+                .as_string()
+                .ok_or_else(|| anyhow!("{} not a string", key))?
+                .to_string())
+        };
+
+        let name = get_string(&value, "CanonicalName")?;
+        let display_name = get_string(&value, "DisplayName")?;
+        let maximum_deployment_target = get_string(&value, "MaximumDeploymentTarget")?;
+        let minimal_display_name = get_string(&value, "MinimalDisplayName")?;
+        let version = get_string(&value, "Version")?;
+
+        let props = value
+            .get("DefaultProperties")
+            .ok_or_else(|| anyhow!("DefaultProperties not available"))?
+            .as_dictionary()
+            .ok_or_else(|| anyhow!("DefaultProperties not a dictionary"))?;
+
+        let platform_name = get_string(props, "PLATFORM_NAME")?;
+        let default_deployment_target = get_string(
+            props,
+            &format!("{}_DEPLOYMENT_TARGET", platform_name.to_ascii_uppercase()),
+        )?;
+
+        Ok(Self {
+            path,
+            is_symlink,
+            platform_name,
+            name,
+            default_deployment_target,
+            default_variant: None,
+            display_name,
+            maximum_deployment_target,
+            minimal_display_name,
+            supported_targets: HashMap::new(),
+            version,
+        })
     }
 
     /// Convert the version string to a `semver::Version`.
@@ -341,13 +397,9 @@ pub fn find_sdks_in_directory(root: &Path) -> Result<Vec<AppleSdk>> {
     for entry in dir {
         let entry = entry.context("reading directory entry")?;
 
-        let settings_path = entry.path().join("SDKSettings.json");
-
-        if !settings_path.exists() {
-            continue;
+        if let Ok(sdk) = AppleSdk::from_directory(&entry.path()) {
+            res.push(sdk);
         }
-
-        res.push(AppleSdk::from_directory(&entry.path())?);
     }
 
     Ok(res)

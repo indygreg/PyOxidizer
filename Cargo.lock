@@ -6361,6 +6361,7 @@ dependencies = [
  "duct",
  "goblin",
  "once_cell",
+ "plist",
  "scroll",
  "semver",
  "serde",
