@@ -74,6 +74,7 @@ path = "../tugger-file-manifest"
 [dev-dependencies]
 glob = "0.3"
 indoc = "1.0"
+tempfile = "3.3"
 
 [features]
 default = ["http", "s3"]

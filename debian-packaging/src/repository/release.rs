@@ -727,6 +727,7 @@ impl<'a> TryFrom<ReleaseFileEntry<'a>> for FileManifestEntry<'a> {
 }
 
 /// A `[In]Release` file entry cast to its stronger type, if possible.
+#[derive(Debug)]
 pub enum ClassifiedReleaseFileEntry<'a> {
     /// A `Contents` file.
     Contents(ContentsFileEntry<'a>),

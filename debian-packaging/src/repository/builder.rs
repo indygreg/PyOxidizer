@@ -35,6 +35,13 @@ use {
     },
 };
 
+/// Pre-defined progress callback that is empty.
+pub const NO_PROGRESS_CB: Option<fn(PublishEvent)> = None;
+
+/// Pre-defined signing key argument that is empty.
+#[allow(clippy::type_complexity)]
+pub const NO_SIGNING_KEY: Option<(&pgp::SignedSecretKey, fn() -> String)> = None;
+
 /// Describes the layout of the `pool` part of the repository.
 ///
 /// This type effectively controls where `.deb` files will be placed under the repository root.
@@ -250,6 +257,14 @@ type ComponentBinaryPackages<'a> = BTreeMap<(String, String), IndexedBinaryPacka
 /// [crate::io::PathMappingDataResolver] and call
 /// [crate::io::PathMappingDataResolver::add_path_map()] with the result from
 /// [Self::add_binary_deb()] (and similar function) to install a path mapping.
+///
+/// After pool content is written, indices files are derived and written. To publish these
+/// files, call [Self::publish_indices()]. This step uses an optional signing key to
+/// PGP sign the indices files.
+///
+/// For convenience, the [Self::publish()] method exists to perform both pool and indices
+/// publishing. It is strongly recommended to call this method instead of the lower-level
+/// methods for writing out content.
 #[derive(Debug, Default)]
 pub struct RepositoryBuilder<'cf> {
     // Release file fields.
@@ -639,7 +654,8 @@ impl<'cf> RepositoryBuilder<'cf> {
     /// Obtain [IndexFileReader] for each logical `Packages` file.
     pub fn binary_packages_index_readers(&self) -> impl Iterator<Item = IndexFileReader<'_>> + '_ {
         self.binary_packages
-            .keys().flat_map(move |(component, architecture)| {
+            .keys()
+            .flat_map(move |(component, architecture)| {
                 self.index_file_compressions
                     .iter()
                     .map(move |compression| IndexFileReader {
@@ -667,7 +683,8 @@ impl<'cf> RepositoryBuilder<'cf> {
         &self,
     ) -> impl Iterator<Item = Result<BinaryPackagePoolArtifact<'_>>> + '_ {
         self.binary_packages
-            .keys().flat_map(move |(component, architecture)| {
+            .keys()
+            .flat_map(move |(component, architecture)| {
                 self.iter_component_binary_package_pool_artifacts(component, architecture)
             })
     }
@@ -875,9 +892,11 @@ impl<'cf> RepositoryBuilder<'cf> {
         }
 
         for checksum in self.checksums.iter() {
+            // We can have no entries if there were no indices.
+            let default = BTreeMap::new();
             let entries = digests_by_field
                 .get(checksum.field_name())
-                .expect("digest field should be populated");
+                .unwrap_or(&default);
 
             let longest_path = entries.keys().map(|x| x.len()).max().unwrap_or_default();
             let longest_size = entries
@@ -1058,6 +1077,12 @@ impl<'cf> RepositoryBuilder<'cf> {
     /// `progress_cb` provides an optional function to receive progress updates.
     /// `signing_key` provides a signing key for PGP signing and an optional function to
     /// obtain the password to unlock that key.
+    ///
+    /// To set `progress_cb` or `signing_key` to `None`, you'll need to use the turbofish
+    /// operator to specify the type. e.g. `&Option<fn(PublishEvent)>::None` for `progress_cb`
+    /// and `Option::<(&pgp::SignedSecretKey, fn() -> String)>::None` for `signing_key`.
+    /// Alternatively, use the `NO_PROGRESS_CB` or `NO_SIGNING_KEY` module constants to avoid
+    /// some typing.
     pub async fn publish<F, PW>(
         &self,
         writer: &impl RepositoryWriter,
@@ -1289,6 +1314,65 @@ mod test {
         );
 
         signatures.verify(&signed_secret_key).unwrap();
+
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use {
+        super::*,
+        crate::{
+            repository::{filesystem::FilesystemRepositoryWriter, reader_from_str},
+            signing_key::{create_self_signed_key, signing_secret_key_params_builder},
+        },
+        tempfile::TempDir,
+    };
+
+    fn temp_dir() -> Result<TempDir> {
+        Ok(tempfile::Builder::new()
+            .prefix("debian-packaging-test-")
+            .tempdir()?)
+    }
+
+    #[tokio::test]
+    async fn publish_empty() -> Result<()> {
+        let td = temp_dir()?;
+
+        let mut builder = RepositoryBuilder::new_recommended(
+            ["amd64"].into_iter(),
+            ["main"].into_iter(),
+            "suite",
+            "codename",
+        );
+
+        builder.set_description("description");
+        builder.set_version("1");
+
+        let writer = FilesystemRepositoryWriter::new(td.path());
+
+        let key_params = signing_secret_key_params_builder("someone@example.com")
+            .build()
+            .unwrap();
+        let key = create_self_signed_key(key_params, String::new)?.0;
+
+        builder
+            .publish_indices(
+                &writer,
+                Some("dists/dist"),
+                1,
+                &NO_PROGRESS_CB,
+                Some((&key, String::new)),
+            )
+            .await?;
+
+        let reader = reader_from_str(format!("file://{}", td.path().display()))?;
+
+        let release_reader = reader.release_reader("dist").await?;
+
+        let indices = release_reader.classified_indices_entries()?;
+        assert!(indices.is_empty());
 
         Ok(())
     }
