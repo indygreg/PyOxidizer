@@ -1,6 +1,6 @@
 [package]
 name = "pyoxy"
-version = "0.1.0-pre"
+version = "0.1.0"
 authors = ["Gregory Szorc <gregory.szorc@gmail.com>"]
 license = "MPL-2.0"
 description = "Self-contained Python distribution and application runner."
