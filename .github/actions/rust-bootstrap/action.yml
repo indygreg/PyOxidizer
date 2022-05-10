@@ -43,19 +43,11 @@ runs:
       run: |
         just actions-bootstrap-rust-macos
 
-    - name: Cache sccache (Windows)
-      id: cache-sccache-windows
+    - name: Bootstrap Environment (Windows)
       if: runner.os == 'Windows'
-      uses: actions/cache@v2
-      with:
-        path: C:/Users/runneradmin/.cargo/bin/sccache.exe
-        key: ${{ runner.os }}-sccache-0.2.15-0
-
-    - name: Install sccache (Windows)
-      if: runner.os == 'Windows' && steps.cache-sccache-windows.outputs.cache-hit != 'true'
       shell: pwsh
       run: |
-        just actions-install-sccache-windows
+        just actions-bootstrap-rust-windows
 
     - name: Start sccache
       shell: bash

@@ -23,33 +23,38 @@ rcodesign_extra_build_flags := if os() == "windows" {
 
 actions-install-sccache-linux:
   python3 scripts/secure_download.py \
-    https://github.com/mozilla/sccache/releases/download/v0.2.15/sccache-v0.2.15-x86_64-unknown-linux-musl.tar.gz \
-    e5d03a9aa3b9fac7e490391bbe22d4f42c840d31ef9eaf127a03101930cbb7ca \
+    https://github.com/mozilla/sccache/releases/download/v0.3.0/sccache-v0.3.0-x86_64-unknown-linux-musl.tar.gz \
+    e6cd8485f93d683a49c83796b9986f090901765aa4feb40d191b03ea770311d8 \
     sccache.tar.gz
   tar -xvzf sccache.tar.gz
-  mv sccache-v0.2.15-x86_64-unknown-linux-musl/sccache /home/runner/.cargo/bin/sccache
+  mv sccache-v0.3.0-x86_64-unknown-linux-musl/sccache /home/runner/.cargo/bin/sccache
   rm -rf sccache*
   chmod +x /home/runner/.cargo/bin/sccache
 
 actions-install-sccache-macos:
   python3 scripts/secure_download.py \
-    https://github.com/mozilla/sccache/releases/download/v0.2.15/sccache-v0.2.15-x86_64-apple-darwin.tar.gz \
-    908e939ea3513b52af03878753a58e7c09898991905b1ae3c137bb8f10fa1be2 \
+    https://github.com/mozilla/sccache/releases/download/v0.3.0/sccache-v0.3.0-x86_64-apple-darwin.tar.gz \
+    61c16fd36e32cdc923b66e4f95cb367494702f60f6d90659af1af84c3efb11eb \
     sccache.tar.gz
   tar -xvzf sccache.tar.gz
-  mv sccache-v0.2.15-x86_64-apple-darwin/sccache /Users/runner/.cargo/bin/sccache
+  mv sccache-v0.3.0-x86_64-apple-darwin/sccache /Users/runner/.cargo/bin/sccache
   rm -rf sccache*
   chmod +x /Users/runner/.cargo/bin/sccache
 
 actions-install-sccache-windows:
-  vcpkg integrate install
-  vcpkg install openssl:x64-windows
-  cargo install --features s3 --version 0.2.15 sccache
+  python3 scripts/secure_download.py \
+    https://github.com/mozilla/sccache/releases/download/v0.3.0/sccache-v0.3.0-x86_64-pc-windows-msvc.tar.gz \
+    f25e927584d79d0d5ad489e04ef01b058dad47ef2c1633a13d4c69dfb83ba2be \
+    sccache.tar.gz
+  tar -xvzf sccache.tar.gz
+  mv sccache-v0.3.0-x86_64-pc-windows-msvc/sccache.exe C:/Users/runneradmin/.cargo/bin/sccache.exe
 
 actions-bootstrap-rust-linux: actions-install-sccache-linux
   sudo apt install -y --no-install-recommends libpcsclite-dev musl-tools
 
 actions-bootstrap-rust-macos: actions-install-sccache-macos
+
+actions-bootstrap-rust-windows: actions-install-sccache-windows
 
 actions-build-exe bin triple:
   export MACOSX_DEPLOYMENT_TARGET={{macosx_deployment_target}}

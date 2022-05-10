@@ -397,6 +397,8 @@ jobs:
       SCCACHE_BUCKET: 'pyoxidizer-sccache'
       SCCACHE_S3_USE_SSL: '1'
     steps:
+      - uses: ./.github/actions/install-just
+
       - uses: actions/checkout@v2
 
       - uses: actions-rs/toolchain@v1
@@ -408,10 +410,7 @@ jobs:
 
       - name: Install sccache
         run: |
-          wget -O sccache.tar.gz --progress dot:mega https://github.com/mozilla/sccache/releases/download/v0.2.15/sccache-v0.2.15-x86_64-apple-darwin.tar.gz
-          tar -xvzf sccache.tar.gz
-          mv sccache-*/sccache /Users/runner/.cargo/bin/sccache
-          chmod +x /Users/runner/.cargo/bin/sccache
+          just actions-install-sccache-macos
           sccache --start-server
 
       - name: Build pyoxy Executable
