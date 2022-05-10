@@ -1,0 +1,114 @@
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: '13 15 * * *'
+jobs:
+  build-linux:
+    runs-on: 'ubuntu-20.04'
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: ./.github/actions/rust-bootstrap
+        with:
+          rust_toolchain: stable
+
+      - name: Restore Docker Image Cache
+        id: cache-image
+        uses: actions/cache@v2
+        with:
+          path: ~/image.tar
+          key: ${{ runner.os }}-${{ hashFiles('ci/linux-portable-binary.Dockerfile') }}
+
+      - name: Build Docker Image
+        if: steps.cache-image.outputs.cache-hit != 'true'
+        run: |
+          cd ci
+          docker build -f linux-portable-binary.Dockerfile -t pyoxidizer:build .
+          docker save -o ~/image.tar pyoxidizer:build
+
+      - name: Load Docker Image
+        if: steps.cache-image.outputs.cache-hit == 'true'
+        run: |
+          docker load -i ~/image.tar
+
+      - name: Build pyoxy Linux Executable
+        run: |
+          just actions-build-pyoxy-linux
+
+      - name: Upload
+        uses: actions/upload-artifact@v3
+        with:
+          name: exe-pyoxy-x86_64-unknown-linux-gnu
+          path: upload/pyoxy
+
+  # This is nearly identical to build-exe.yml and could likely be consolidated
+  # with some additional parameters to that workflow.
+  build-macos:
+    strategy:
+      fail-fast: false
+      matrix:
+        target_triple:
+          - 'aarch64-apple-darwin'
+          - 'x86_64-apple-darwin'
+    runs-on: 'macos-11'
+    env:
+      IN_CI: '1'
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      SCCACHE_BUCKET: 'pyoxidizer-sccache'
+      SCCACHE_S3_USE_SSL: '1'
+      # Prevent sccache server from stopping due to inactivity.
+      SCCACHE_IDLE_TIMEOUT: '0'
+      RUSTC_WRAPPER: sccache
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - uses: ./.github/actions/rust-bootstrap
+        with:
+          rust_toolchain: stable
+
+      - name: Build
+        run: |
+          just actions-build-pyoxy-macos ${{ matrix.target_triple }}
+
+      - name: Upload
+        uses: actions/upload-artifact@v3
+        with:
+          name: exe-pyoxy-${{ matrix.target_triple }}
+          path: upload/pyoxy
+
+  macos-universal:
+    needs:
+      - build-macos
+    runs-on: 'macos-11'
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - uses: ./.github/actions/install-just
+
+      - name: Download aarch64 executable
+        uses: actions/download-artifact@v3
+        with:
+          name: exe-pyoxy-aarch64-apple-darwin
+          path: pyoxy-aarch64
+
+      - name: Download x86-64 executable
+        uses: actions/download-artifact@v3
+        with:
+          name: exe-pyoxy-x86_64-apple-darwin
+          path: pyoxy-x86-64
+
+      - name: Produce Universal Binary
+        run: |
+          just actions-macos-universal pyoxy
+
+      - name: Upload Universal Executable
+        uses: actions/upload-artifact@v3
+        with:
+          name: exe-pyoxy-macos-universal
+          path: uploads/pyoxy

@@ -57,6 +57,9 @@ actions-bootstrap-rust-macos: actions-install-sccache-macos
 actions-bootstrap-rust-windows: actions-install-sccache-windows
 
 actions-build-exe bin triple:
+  #!/usr/bin/env bash
+  set -euxo pipefail
+
   export MACOSX_DEPLOYMENT_TARGET={{macosx_deployment_target}}
   cargo build --release --bin {{bin}} --target {{triple}} {{ if bin == "rcodesign" { rcodesign_extra_build_flags } else { "" } }}
   mkdir upload
@@ -68,6 +71,30 @@ actions-macos-universal exe:
   lipo {{exe}}-x86-64/{{exe}} {{exe}}-aarch64/{{exe}} -create -output uploads/{{exe}}
   chmod +x uploads/{{exe}}
   lipo uploads/{{exe}} -info
+
+actions-build-pyoxy-linux:
+  cargo build --bin pyoxidizer --target x86_64-unknown-linux-musl
+  cp target/x86_64-unknown-linux-musl/debug/pyoxidizer /usr/local/bin/pyoxidizer
+
+  mkdir -p pyoxy/build target
+  chmod 777 pyoxy/build target
+  docker run --rm -v $(pwd):/pyoxidizer -v /usr/local/bin:/opt/bin pyoxidizer:build /pyoxidizer/ci/build-pyoxy-linux.sh
+
+  mkdir upload
+  cp target/release/pyoxy upload/
+
+actions-build-pyoxy-macos triple:
+  #!/usr/bin/env bash
+  set -euxo pipefail
+
+  export SDKROOT=/Applications/Xcode_13.2.1.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX12.1.sdk
+  export MACOSX_DEPLOYMENT_TARGET={{macosx_deployment_target}}
+  cargo run --bin pyoxidizer -- build --release --target-triple {{triple}} --path pyoxy
+  PYO3_CONFIG_FILE=$(pwd)/pyoxy/build/{{triple}}/release/resources/pyo3-build-config-file.txt cargo build --bin pyoxy --target {{triple}} --release
+
+  mkdir upload
+  cp target/{{triple}}/release/pyoxy upload/
+  sccache --stop-server
 
 _remote-sign-exe ref workflow run_id artifact exe_name rcodesign_branch="main":
   gh workflow run sign-apple-exe.yml \
