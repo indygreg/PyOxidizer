@@ -16,5 +16,6 @@ PyOxidizer project, leveraging much of its *technology*.
    :maxdepth: 2
 
    pyoxy_overview
+   pyoxy_installing
    pyoxy_yaml
    pyoxy_developing
