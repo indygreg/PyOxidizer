@@ -74,11 +74,15 @@ actions-macos-universal exe:
 
 actions-build-pyoxy-linux:
   cargo build --bin pyoxidizer --target x86_64-unknown-linux-musl
-  cp target/x86_64-unknown-linux-musl/debug/pyoxidizer /usr/local/bin/pyoxidizer
 
   mkdir -p pyoxy/build target
   chmod 777 pyoxy/build target
-  docker run --rm -v $(pwd):/pyoxidizer -v /usr/local/bin:/opt/bin pyoxidizer:build /pyoxidizer/ci/build-pyoxy-linux.sh
+  docker run \
+    --rm \
+    -v $(pwd):/pyoxidizer \
+    -v $(pwd)/target/x86_64-unknown-linux-musl/debug/pyoxidizer:/opt/bin/pyoxidizer \
+    pyoxidizer:build \
+    /pyoxidizer/ci/build-pyoxy-linux.sh
 
   mkdir upload
   cp target/release/pyoxy upload/
