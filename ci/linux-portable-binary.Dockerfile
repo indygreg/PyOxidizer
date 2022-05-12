@@ -66,8 +66,8 @@ RUN curl --insecure https://raw.githubusercontent.com/rust-lang/rustup/ce5817a94
   chmod +x rustup-init.sh && \
   ./rustup-init.sh -y --default-toolchain 1.60.0 --profile minimal
 
-RUN curl --insecure -L https://github.com/indygreg/python-build-standalone/releases/download/20210724/cpython-3.9.6-x86_64-unknown-linux-gnu-install_only-20210724T1424.tar.gz > python.tar.gz && \
-  echo 'a5e1f952a50a3a660922a7b558911d56c4d046078c67a83ec048f81ee4d3b8bd  python.tar.gz' | sha256sum -c - && \
+RUN curl --insecure -L https://github.com/indygreg/python-build-standalone/releases/download/20220502/cpython-3.9.12+20220502-x86_64-unknown-linux-gnu-install_only.tar.gz > python.tar.gz && \
+  echo 'ccca12f698b3b810d79c52f007078f520d588232a36bc12ede944ec3ea417816  python.tar.gz' | sha256sum -c - && \
   tar -xf python.tar.gz && \
   rm python.tar.gz && \
   echo 'export PATH="$HOME/python/bin:$PATH"' >> ~/.bashrc
