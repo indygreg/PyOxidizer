@@ -1,0 +1,71 @@
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: '13 15 * * *'
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - 'ubuntu-20.04'
+          - 'macos-11.0'
+          - 'windows-2019'
+        python_version:
+          - '3.8'
+          - '3.9'
+          - '3.10'
+
+    runs-on: ${{ matrix.os }}
+    env:
+      IN_CI: '1'
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      SCCACHE_BUCKET: 'pyoxidizer-sccache'
+      SCCACHE_S3_USE_SSL: '1'
+      # Prevent sccache server from stopping due to inactivity.
+      SCCACHE_IDLE_TIMEOUT: '0'
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          # Needed by build.rs, which needs to walk the Git history to find the
+          # root commit. Without this, a shallow clone (depth=1) is performed.
+          fetch-depth: 0
+
+      - uses: ./.github/actions/rust-bootstrap
+        with:
+          rust_toolchain: stable
+
+      # To minimize potential for Python interference, we delay install Python
+      # until we need it for python-oxidized-importer/pyembed.
+      - uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python_version }}
+
+      - name: Test pyembed
+        # There is a known crash on Python 3.10.
+        if: matrix.python_version != '3.10'
+        env:
+          RUSTC_WRAPPER: sccache
+        run: |
+          python scripts/run-pyembed-tests.py pyembed
+
+      - name: Test PyOxy
+        # PyOxy not yet supported on Windows.
+        # There is a known crash on Python 3.10.
+        if: runner.os != 'Windows' && matrix.python_version != '3.10'
+        env:
+          RUSTC_WRAPPER: sccache
+        run: |
+          python scripts/run-pyembed-tests.py pyoxy
+
+      - name: Test python-oxidized-importer
+        env:
+          RUSTC_WRAPPER: sccache
+        run: |
+          python scripts/run-pyembed-tests.py python-oxidized-importer
+
+      - name: Stop sccache
+        run: |
+          sccache --stop-server

@@ -4,7 +4,7 @@ on:
   schedule:
     - cron: '13 15 * * *'
 jobs:
-  pyoxidizer:
+  build-and-test:
     strategy:
       fail-fast: false
       matrix:
@@ -36,7 +36,7 @@ jobs:
         run: |
           sudo apt-get install -y libyaml-dev snapcraft
 
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           # Needed by build.rs, which needs to walk the Git history to find the
           # root commit. Without this, a shallow clone (depth=1) is performed.
@@ -59,26 +59,6 @@ jobs:
           RUSTC_WRAPPER: sccache
         run: |
           cargo test --workspace --exclude pyembed --exclude pyembed-bench --exclude pyoxy --exclude python-oxidized-importer
-
-      # To minimize potential for Python interference, we delay install Python
-      # until we need it for python-oxidized-importer/pyembed.
-      - uses: actions/setup-python@v2
-        with:
-          python-version: '3.9'
-
-      - name: Test Python Crates
-        env:
-          RUSTC_WRAPPER: sccache
-        run: |
-          python scripts/run-pyembed-tests.py python-oxidized-importer
-          python scripts/run-pyembed-tests.py pyembed
-
-      - name: Test PyOxy
-        env:
-          RUSTC_WRAPPER: sccache
-        if: runner.os != 'Windows'
-        run: |
-          python scripts/run-pyembed-tests.py pyoxy
 
       - uses: actions-rs/clippy@master
         if: ${{ matrix.rust_toolchain == 'stable' || matrix.rust_toolchain == 'beta' }}
