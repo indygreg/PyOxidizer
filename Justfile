@@ -72,28 +72,26 @@ actions-macos-universal exe:
   chmod +x uploads/{{exe}}
   lipo uploads/{{exe}} -info
 
-actions-build-pyoxy-linux:
-  cargo build --bin pyoxidizer --target x86_64-unknown-linux-musl
-
+actions-build-pyoxy-linux target_triple python_version:
   mkdir -p pyoxy/build target
   chmod 777 pyoxy/build target
   docker run \
     --rm \
     -v $(pwd):/pyoxidizer \
-    -v $(pwd)/target/x86_64-unknown-linux-musl/debug/pyoxidizer:/opt/bin/pyoxidizer \
+    -v /usr/local/bin/pyoxidizer:/usr/bin/pyoxidizer \
     pyoxidizer:build \
-    /pyoxidizer/ci/build-pyoxy-linux.sh
+    /pyoxidizer/ci/build-pyoxy-linux.sh {{target_triple}} {{python_version}}
 
   mkdir upload
-  cp target/release/pyoxy upload/
+  cp target/{{target_triple}}/release/pyoxy upload/
 
-actions-build-pyoxy-macos triple:
+actions-build-pyoxy-macos triple python_version:
   #!/usr/bin/env bash
   set -euxo pipefail
 
   export SDKROOT=/Applications/Xcode_13.2.1.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX12.1.sdk
   export MACOSX_DEPLOYMENT_TARGET={{macosx_deployment_target}}
-  cargo run --bin pyoxidizer -- build --release --target-triple {{triple}} --path pyoxy
+  pyoxidizer build --release --target-triple {{triple}} --path pyoxy --var PYTHON_VERSION {{python_version}}
   PYO3_CONFIG_FILE=$(pwd)/pyoxy/build/{{triple}}/release/resources/pyo3-build-config-file.txt cargo build --bin pyoxy --target {{triple}} --release
 
   mkdir upload

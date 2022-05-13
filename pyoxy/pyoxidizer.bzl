@@ -1,9 +1,11 @@
 # This PyOxidizer configuration file when built will emit files that will
 # enable us to link Python into a new binary.
 
+PYTHON_VERSION = VARS.get("PYTHON_VERSION", "3.9")
+
 
 def make_resources():
-    dist = default_python_distribution()
+    dist = default_python_distribution(python_version=PYTHON_VERSION)
 
     policy = dist.make_python_packaging_policy()
 
