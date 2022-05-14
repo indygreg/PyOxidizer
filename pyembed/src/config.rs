@@ -377,9 +377,9 @@ pub struct OxidizedPythonInterpreterConfig<'a> {
     /// Environment variable holding the directory to write a loaded modules file.
     ///
     /// If this value is set and the environment it refers to is set,
-    /// on interpreter shutdown, we will write a ``modules-<random>`` file to
-    /// the directory specified containing a ``\n`` delimited list of modules
-    /// loaded in ``sys.modules``.
+    /// on interpreter shutdown, we will write a `modules-<random>` file to
+    /// the directory specified containing a `\n` delimited list of modules
+    /// loaded in `sys.modules`.
     ///
     /// Default value: [None]
     pub write_modules_directory_env: Option<String>,
