@@ -121,6 +121,7 @@ impl OxidizedDistribution {
         PyList::new(py, &distributions).call_method0("__iter__")
     }
 
+    /// Attempt to load metadata file given by the filename.
     fn read_text<'p>(&self, py: Python<'p>, filename: String) -> PyResult<&'p PyAny> {
         let resources_state = self.state.get_resources_state();
 
@@ -171,7 +172,15 @@ impl OxidizedDistribution {
         let data = PyBytes::new(py, &data);
         let email = py.import("email")?;
 
-        email.getattr("message_from_bytes")?.call((data,), None)
+        let message = email.getattr("message_from_bytes")?.call((data,), None)?;
+
+        // Python 3.10+ has an adapter class for the raw email Message.
+        if let Ok(adapters) = py.import("importlib.metadata._adapters") {
+            let adapter_cls = adapters.getattr("Message")?;
+            adapter_cls.call1((message,))
+        } else {
+            Ok(message)
+        }
     }
 
     #[getter]

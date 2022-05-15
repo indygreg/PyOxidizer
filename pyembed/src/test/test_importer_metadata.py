@@ -148,6 +148,15 @@ class TestImporterMetadata(unittest.TestCase):
 
         metadata = dists[0].metadata
         self.assertIsInstance(metadata, email.message.Message)
+
+        # On Python 3.10+, there is an adapter class.
+        try:
+            from importlib.metadata._adapters import Message as Adapter
+
+            self.assertIsInstance(metadata, Adapter)
+        except ImportError:
+            pass
+
         self.assertEqual(metadata["Name"], "my_package")
         self.assertEqual(metadata["Version"], "1.0")
 
