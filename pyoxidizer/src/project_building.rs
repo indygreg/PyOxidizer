@@ -365,7 +365,8 @@ pub fn build_executable_with_rust_project<'a>(
     })
 }
 
-/// Build a Python executable using a temporary Rust project.
+/// Build a Python executable using a temporary Rust project, or
+/// the one specified by the PYOXIDIZER_CRATE_FOLDER env var.
 ///
 /// Returns the binary data constituting the built executable.
 pub fn build_python_executable<'a>(
@@ -377,30 +378,43 @@ pub fn build_python_executable<'a>(
     opt_level: &str,
     release: bool,
 ) -> Result<BuiltExecutable<'a>> {
-    let cargo_exe = env
-        .ensure_rust_toolchain(logger, Some(target_triple))
-        .context("resolving Rust toolchain")?
-        .cargo_exe;
+    let temp_dir: tempfile::TempDir;
+    let project_path: PathBuf;
 
-    let temp_dir = tempfile::Builder::new()
-        .prefix("pyoxidizer")
-        .tempdir()
-        .context("creating temp directory")?;
+    // Existing Rust project provided?
+    let root = if let Ok(folder) = std::env::var("PYOXIDIZER_CRATE_FOLDER") {
+        project_path = PathBuf::from(folder);
+        &project_path
+    } else {
+        // No existing project, we'll need to create a temporary one.
+        let cargo_exe = env
+            .ensure_rust_toolchain(logger, Some(target_triple))
+            .context("resolving Rust toolchain")?
+            .cargo_exe;
 
-    // Directory needs to have name of project.
-    let project_path = temp_dir.path().join(bin_name);
-    let build_path = temp_dir.path().join("build");
-    let artifacts_path = temp_dir.path().join("artifacts");
+        temp_dir = tempfile::Builder::new()
+            .prefix("pyoxidizer")
+            .tempdir()
+            .context("creating temp directory")?;
 
-    initialize_project(
-        &env.pyoxidizer_source,
-        &project_path,
-        &cargo_exe,
-        None,
-        &[],
-        exe.windows_subsystem(),
-    )
-    .context("initializing project")?;
+        // Directory needs to have name of project.
+        project_path = temp_dir.path().join(bin_name);
+
+        initialize_project(
+            &env.pyoxidizer_source,
+            &project_path,
+            &cargo_exe,
+            None,
+            &[],
+            exe.windows_subsystem(),
+        )
+        .context("initializing project")?;
+
+        temp_dir.path()
+    };
+
+    let build_path = root.join("build");
+    let artifacts_path = root.join("artifacts");
 
     let mut build = build_executable_with_rust_project(
         env,
