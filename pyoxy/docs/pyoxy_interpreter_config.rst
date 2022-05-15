@@ -1,3 +1,5 @@
+.. _pyoxy_interpreter_config:
+
 ================================================
 Python Interpreter Configuration Data Structures
 ================================================
@@ -312,6 +314,17 @@ resources from the filesystem).
 Also controls whether to add ``OxidizedFinder``'s path hook to
 ``sys.path_hooks``.
 
+Due to lack of control over low-level Python interpreter initialization,
+the standard library ``PathFinder`` will be registered on ``sys.meta_path``
+and ``sys.path_hooks`` for a brief moment when the interpreter is initialized.
+If ``sys.path`` contains valid entries that would be serviced by this finder
+and ``oxidized_importer`` isn't able to service imports, it is possible for the
+path-based finder to be used to import some Python modules needed to initialize
+the Python interpreter. In many cases, this behavior is harmless. In all cases,
+the path-based importer is removed after Python interpreter initialization, so
+future imports won't be serviced by this path-based importer if it is disabled
+by this flag.
+
 Default value: ``true``
 
 Interpreter initialization behavior: If false, path-based finders are removed
@@ -393,6 +406,14 @@ Whether to set ``sys.argvb`` with bytes versions of process arguments.
 On Windows, bytes will be UTF-16. On POSIX, bytes will be raw char*
 values passed to ``int main()``.
 
+Enabling this feature will give Python applications access to the raw
+``bytes`` values of raw argument data passed into the executable. The single
+or double width bytes nature of the data is preserved.
+
+Unlike ``sys.argv`` which may chomp off leading argument depending on the
+Python execution mode, ``sys.argvb`` has all the arguments used to initialize
+the process. i.e. the first argument is always the executable.
+
 Default value: ``false``
 
 Interpreter initialization behavior: ``sys.argvb`` will be set to a
@@ -412,6 +433,9 @@ If set, ``crate::MainPythonInterpreter::run()`` will detect when the invoked
 interpreter looks like it is supposed to be a ``multiprocessing`` worker and
 will automatically call into the ``multiprocessing`` module instead of running
 the configured code.
+
+Enabling this has the same effect as calling ``multiprocessing.freeze_support()``
+in your application code's ``__main__`` and replaces the need to do so.
 
 Default value: ``true``
 
@@ -457,7 +481,9 @@ Type: ``bool``
 Whether to set sys._MEIPASS to the directory of the executable.
 
 Setting this will enable Python to emulate PyInstaller's behavior
-of setting this attribute.
+of setting this attribute. This could potentially help with self-contained
+application compatibility by masquerading as PyInstaller and causing code
+to activate *PyInstaller mode*.
 
 Default value: ``false``
 
@@ -479,6 +505,9 @@ Default value: ``TerminfoResolution::Dynamic``
 Interpreter initialization behavior: the ``TERMINFO_DIRS`` environment
 variable may be set for this process depending on what ``TerminfoResolution``
 instructs to do.
+
+``terminfo`` is not used on Windows and this setting is ignored on that
+platform.
 
 Type: ``TerminfoResolution``
 

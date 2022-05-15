@@ -277,6 +277,8 @@ pub fn generate_sphinx_files(repo_root: &Path) -> Result<()> {
 
     for prefix in ["pyembed", "pyoxy"] {
         let mut lines = vec![
+            format!(".. _{}_interpreter_config:", prefix),
+            "".to_string(),
             "================================================".to_string(),
             "Python Interpreter Configuration Data Structures".to_string(),
             "================================================".to_string(),
