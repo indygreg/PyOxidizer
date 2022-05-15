@@ -25,3 +25,4 @@ documentation is available at https://docs.rs/pyembed.
    pyembed_building
    pyembed_controlling_python
    pyembed_extension_modules
+   pyembed_interpreter_config

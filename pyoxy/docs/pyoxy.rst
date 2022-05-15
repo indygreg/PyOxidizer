@@ -18,5 +18,6 @@ PyOxidizer project, leveraging much of its *technology*.
    pyoxy_overview
    pyoxy_installing
    pyoxy_yaml
+   pyoxy_interpreter_config
    pyoxy_developing
    pyoxy_history

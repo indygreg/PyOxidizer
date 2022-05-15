@@ -19,6 +19,7 @@ use {
     },
 };
 
+pub mod documentation;
 pub mod release;
 
 const CARGO_LOCKFILE_NAME: &str = "new-project-cargo.lock";
@@ -328,7 +329,7 @@ fn reflect_package_version_change(
     Ok(())
 }
 
-fn run_cmd<S>(
+pub fn run_cmd<S>(
     package: &str,
     dir: &Path,
     program: &str,
@@ -1274,6 +1275,7 @@ fn command_generate_pyembed_license(repo_root: &Path, _args: &ArgMatches) -> Res
 fn command_synchronize_generated_files(repo_root: &Path) -> Result<()> {
     let cargo_lock = generate_new_project_cargo_lock(repo_root, false)?;
     let pyembed_license = generate_pyembed_license(repo_root)?;
+    crate::documentation::generate_sphinx_files(repo_root)?;
 
     let pyoxidizer_src_path = repo_root.join("pyoxidizer").join("src");
     let lock_path = pyoxidizer_src_path.join("new-project-cargo.lock");

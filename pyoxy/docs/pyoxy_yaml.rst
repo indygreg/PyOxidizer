@@ -39,13 +39,8 @@ YAML Configuration
 ==================
 
 The YAML document attempts to deserialize to a ``pyembed::OxidizedPythonInterpreterConfig``
-Rust struct. This type and its fields are extensively documented in the Rust
-code and will not be duplicated here for fear of the documentation getting
-out of sync.
-
-If you have a Git checkout of this repository, you can view the docs by running
-``cargo doc -p pyembed --open``. Otherwise, you can view the docs on crates.io.
-e.g. at https://docs.rs/pyembed/0.17.0/pyembed/struct.OxidizedPythonInterpreterConfig.html.
+Rust struct. This type and its fields are extensively documented at
+:ref:`pyoxy_struct_OxidizedPythonInterpreterConfig`.
 
 Some of the most important fields in the configuration data structure define
 what to run when the interpreter starts. e.g.

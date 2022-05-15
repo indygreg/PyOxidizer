@@ -71,6 +71,10 @@ pub struct ExtensionModule {
 /// understand how they interact. Since [PythonInterpreterConfig] is defined
 /// in a different crate, its docs are not aware of the existence of
 /// this crate/type.
+///
+/// This struct implements `Deserialize` and `Serialize` and therefore can be
+/// serialized to any format supported by the `serde` crate. This feature is
+/// used by `pyoxy` to allow YAML-based configuration of Python interpreters.
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "serialization", derive(Deserialize, Serialize))]
 #[cfg_attr(feature = "serialization", serde(default))]
@@ -270,6 +274,8 @@ pub struct OxidizedPythonInterpreterConfig<'a> {
     /// [Self::resolve()] behavior: [PackedResourcesSource::MemoryMappedPath] members
     /// have the special string `$ORIGIN` expanded to the string value that
     /// [Self::origin] resolves to.
+    ///
+    /// This field is ignored during serialization.
     #[cfg_attr(feature = "serialization", serde(skip))]
     pub packed_resources: Vec<PackedResourcesSource<'a>>,
 
@@ -282,6 +288,8 @@ pub struct OxidizedPythonInterpreterConfig<'a> {
     /// Interpreter initialization behavior: `PyImport_Inittab` will be extended
     /// with entries from this list. This makes the extensions available as
     /// built-in extension modules.
+    ///
+    /// This field is ignored during serialization.
     #[cfg_attr(feature = "serialization", serde(skip))]
     pub extra_extension_modules: Option<Vec<ExtensionModule>>,
 
