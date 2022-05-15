@@ -381,6 +381,9 @@ pub struct OxidizedPythonInterpreterConfig<'a> {
     /// the directory specified containing a `\n` delimited list of modules
     /// loaded in `sys.modules`.
     ///
+    /// This setting is useful to record which modules are loaded during the execution
+    /// of a Python interpreter.
+    ///
     /// Default value: [None]
     pub write_modules_directory_env: Option<String>,
 }

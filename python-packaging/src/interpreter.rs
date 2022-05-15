@@ -13,6 +13,11 @@ use {
 use serde::{Deserialize, Serialize};
 
 /// Defines the profile to use to configure a Python interpreter.
+///
+/// This effectively provides a template for seeding the initial values of
+/// `PyPreConfig` and `PyConfig` C structs.
+///
+/// Serialization type: `string`.
 #[derive(Clone, Copy, Debug, PartialEq)]
 #[cfg_attr(feature = "serialization", derive(Deserialize, Serialize))]
 #[cfg_attr(feature = "serialization", serde(try_from = "String", into = "String"))]
@@ -20,11 +25,15 @@ pub enum PythonInterpreterProfile {
     /// Python is isolated from the system.
     ///
     /// See <https://docs.python.org/3/c-api/init_config.html#isolated-configuration>.
+    ///
+    /// Serialized value: `isolated`
     Isolated,
 
     /// Python interpreter behaves like `python`.
     ///
     /// See <https://docs.python.org/3/c-api/init_config.html#python-configuration>.
+    ///
+    /// Serialized value: `python`
     Python,
 }
 
@@ -73,16 +82,52 @@ impl TryFrom<String> for PythonInterpreterProfile {
     }
 }
 
-/// Defines `terminfo`` database resolution semantics.
+/// Defines `terminfo` database resolution semantics.
+///
+/// Python links against libraries like `readline`, `libedit`, and `ncurses`
+/// which need to utilize a `terminfo` database (a set of files defining
+/// terminals and their capabilities) in order to work properly.
+///
+/// The absolute path to the terminfo database is typically compiled into these
+/// libraries at build time. If the compiled path on the building machine doesn't
+/// match the path on the runtime machine, these libraries cannot find the terminfo
+/// database and terminal interactions won't work correctly because these libraries
+/// don't know how to resolve terminal features. This can result in quirks like
+/// the backspace key not working in prompts.
+///
+/// The `pyembed` Rust crate is able to point libraries at a terminfo database
+/// at runtime, overriding the compiled-in default path. This enum is used
+/// to control that behavior.
+///
+/// Serialization type: `string`.
 #[derive(Clone, Debug, PartialEq)]
 #[cfg_attr(feature = "serialization", derive(Deserialize, Serialize))]
 #[cfg_attr(feature = "serialization", serde(try_from = "String", into = "String"))]
 pub enum TerminfoResolution {
     /// Resolve `terminfo` database using appropriate behavior for current OS.
+    ///
+    /// We will look for the terminfo database in paths that are common for the
+    /// current OS / distribution. The terminfo database is present in most systems
+    /// (except the most barebones containers or sandboxes) and this method is
+    /// usually successfully in locating the terminfo database.
+    ///
+    /// Serialized value: `dynamic`
     Dynamic,
+
     /// Do not attempt to resolve the `terminfo` database. Basically a no-op.
+    ///
+    /// This is what should be used for applications that don't interact with the
+    /// terminal. Using this option will prevent some I/O syscalls that would
+    /// be incurred by `dynamic`.
+    ///
+    /// Serialized value: `none`
     None,
+
     /// Use a specified string as the `TERMINFO_DIRS` value.
+    ///
+    /// Serialized value: `static:<path>`
+    ///
+    /// e.g. `static:/usr/share/terminfo`.
     Static(String),
 }
 
@@ -130,19 +175,57 @@ impl TryFrom<String> for TerminfoResolution {
 }
 
 /// Defines a backend for a memory allocator.
+///
+/// This says which memory allocator API / library to configure the Python
+/// interpreter to use.
+///
+/// Not all allocators are available in all program builds.
+///
+/// Serialization type: `string`
 #[derive(Clone, Copy, Debug, PartialEq)]
 #[cfg_attr(feature = "serialization", derive(Deserialize, Serialize))]
 #[cfg_attr(feature = "serialization", serde(try_from = "String", into = "String"))]
 pub enum MemoryAllocatorBackend {
     /// The default allocator as configured by Python.
+    ///
+    /// This likely utilizes the system default allocator, normally the
+    /// `malloc()`, `free()`, etc functions from the libc implementation being
+    /// linked against.
+    ///
+    /// Serialized value: `default`
     Default,
-    /// Use jemalloc.
+
+    /// Use the jemalloc allocator.
+    ///
+    /// Requires the binary to be built with jemalloc support.
+    ///
+    /// Never available on Windows.
+    ///
+    /// Serialized value: `jemalloc`
     Jemalloc,
-    /// Use Mimalloc.
+
+    /// Use the mimalloc allocator (<https://github.com/microsoft/mimalloc>).
+    ///
+    /// Requires the binary to be built with mimalloc support.
+    ///
+    /// Serialized value: `mimalloc`
     Mimalloc,
-    /// Use Snmalloc.
+
+    /// Use the snmalloc allocator (<https://github.com/microsoft/snmalloc>).
+    ///
+    /// Not always available.
+    ///
+    /// Serialized value: `snmalloc`
     Snmalloc,
+
     /// Use Rust's global allocator.
+    ///
+    /// The Rust allocator is less efficient than other allocators because of
+    /// overhead tracking allocations. For optimal performance, use the default
+    /// allocator. Or if Rust is using a custom global allocator, use the enum
+    /// variant corresponding to that allocator.
+    ///
+    /// Serialized value: `rust`
     Rust,
 }
 
@@ -198,15 +281,24 @@ impl TryFrom<String> for MemoryAllocatorBackend {
     }
 }
 
-/// Holds values for coerce_c_locale.
+/// Holds values for `coerce_c_locale`.
 ///
 /// See <https://docs.python.org/3/c-api/init_config.html#c.PyPreConfig.coerce_c_locale>.
+///
+/// Serialization type: `string`
 #[derive(Clone, Copy, Debug, PartialEq)]
 #[cfg_attr(feature = "serialization", derive(Deserialize, Serialize))]
 #[cfg_attr(feature = "serialization", serde(try_from = "String", into = "String"))]
 pub enum CoerceCLocale {
+    /// Read the LC_CTYPE locale to decide if it should be coerced.
+    ///
+    /// Serialized value: `LC_CTYPE`
     #[allow(clippy::upper_case_acronyms)]
     LCCtype = 1,
+
+    /// Coerce the C locale.
+    ///
+    /// Serialized value: `C`
     C = 2,
 }
 
@@ -246,15 +338,28 @@ impl TryFrom<String> for CoerceCLocale {
     }
 }
 
-/// Defines what to do when comparing bytes with str.
+/// Defines what to do when comparing `bytes` or `bytesarray` with `str` or comparing `bytes` with `int`.
 ///
 /// See <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.bytes_warning>.
+///
+/// Serialization type: `string`
 #[derive(Clone, Copy, Debug, PartialEq)]
 #[cfg_attr(feature = "serialization", derive(Deserialize, Serialize))]
 #[cfg_attr(feature = "serialization", serde(try_from = "String", into = "String"))]
 pub enum BytesWarning {
+    /// Do nothing.
+    ///
+    /// Serialization value: `none`
     None = 0,
+
+    /// Issue a warning.
+    ///
+    /// Serialization value: `warn`
     Warn = 1,
+
+    /// Raise a `BytesWarning`.
+    ///
+    /// Serialization value: `raise`
     Raise = 2,
 }
 
@@ -306,13 +411,28 @@ impl From<i32> for BytesWarning {
     }
 }
 
+/// Control the validation behavior of hash-based .pyc files.
+///
 /// See <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.check_hash_pycs_mode>.
+///
+/// Serialization type: `string`
 #[derive(Clone, Copy, Debug, PartialEq)]
 #[cfg_attr(feature = "serialization", derive(Deserialize, Serialize))]
 #[cfg_attr(feature = "serialization", serde(try_from = "String", into = "String"))]
 pub enum CheckHashPycsMode {
+    /// Hash the source file for invalidation regardless of value of the `check_source` flag.
+    ///
+    /// Serialized value: `always`
     Always,
+
+    /// Assume that hash-based pycs always are valid.
+    ///
+    /// Serialized value: `never`
     Never,
+
+    /// The `check_source` flag in hash-based pycs determines invalidation.
+    ///
+    /// Serialized value: `default`
     Default,
 }
 
@@ -357,17 +477,48 @@ impl TryFrom<String> for CheckHashPycsMode {
     }
 }
 
+/// Name of the Python memory allocators.
+///
 /// See <https://docs.python.org/3/c-api/init_config.html#c.PyPreConfig.allocator>.
+///
+/// Serialization type: `string`
 #[derive(Clone, Copy, Debug, PartialEq)]
 #[cfg_attr(feature = "serialization", derive(Deserialize, Serialize))]
 #[cfg_attr(feature = "serialization", serde(try_from = "String", into = "String"))]
 pub enum Allocator {
+    /// Don’t change memory allocators (use defaults).
+    ///
+    /// Serialized value: `not-set`
     NotSet = 0,
+
+    /// Default memory allocators.
+    ///
+    /// Serialized value: `default`
     Default = 1,
+
+    /// Default memory allocators with debug hooks.
+    ///
+    /// Serialized value: `debug`
     Debug = 2,
+
+    /// Use `malloc()` from the C library.
+    ///
+    /// Serialized value: `malloc`
     Malloc = 3,
+
+    /// Force usage of `malloc()` with debug hooks.
+    ///
+    /// Serialized value: `malloc-debug`
     MallocDebug = 4,
+
+    /// Python `pymalloc` allocator.
+    ///
+    /// Serialized value: `py-malloc`
     PyMalloc = 5,
+
+    /// Python `pymalloc` allocator with debug hooks.
+    ///
+    /// Serialized value: `py-malloc-debug`
     PyMallocDebug = 6,
 }
 
@@ -418,19 +569,46 @@ impl TryFrom<String> for Allocator {
 }
 
 /// Defines how to call `multiprocessing.set_start_method()` when `multiprocessing` is imported.
+///
+/// When set to a value that is not `none`, when `oxidized_importer.OxidizedFinder` services
+/// an import of the `multiprocessing` module, it will automatically call
+/// `multiprocessing.set_start_method()` to configure how worker processes are created.
+///
+/// If the `multiprocessing` module is not imported by `oxidized_importer.OxidizedFinder`,
+/// this setting has no effect.
+///
+/// Serialization type: `string`
 #[derive(Clone, Debug, PartialEq)]
 #[cfg_attr(feature = "serialization", derive(Deserialize, Serialize))]
 #[cfg_attr(feature = "serialization", serde(try_from = "String", into = "String"))]
 pub enum MultiprocessingStartMethod {
     /// Do not call `multiprocessing.set_start_method()`.
+    ///
+    /// This mode is what Python programs do by default.
+    ///
+    /// Serialized value: `none`
     None,
+
     /// Call with value `fork`.
+    ///
+    /// Serialized value: `fork`
     Fork,
+
     /// Call with value `forkserver`
+    ///
+    /// Serialized value: `forkserver`
     ForkServer,
+
     /// Call with value `spawn`
+    ///
+    /// Serialized value: `spawn`
     Spawn,
+
     /// Call with a valid appropriate for the given environment.
+    ///
+    /// This likely maps to `spawn` on Windows and `fork` on non-Windows.
+    ///
+    /// Serialized value: `auto`
     Auto,
 }
 
@@ -665,11 +843,21 @@ pub struct PythonInterpreterConfig {
     /// Defines `sys.path`.
     ///
     /// See <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.module_search_paths>.
+    ///
+    /// This value effectively controls the initial value of `sys.path`.
+    ///
+    /// The special string `$ORIGIN` in values will be expanded to the absolute path of the
+    /// directory of the executable at run-time. For example, if the executable is
+    /// `/opt/my-application/pyapp`, `$ORIGIN` will expand to `/opt/my-application` and the
+    /// value `$ORIGIN/lib` will expand to `/opt/my-application/lib`.
     pub module_search_paths: Option<Vec<PathBuf>>,
 
     /// Bytecode optimization level.
     ///
     /// See <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.optimization_level>.
+    ///
+    /// This setting is only relevant if `write_bytecode` is true and Python modules are
+    /// being imported from the filesystem using Python’s standard filesystem importer.
     pub optimization_level: Option<BytecodeOptimizationLevel>,
 
     /// Parser debug mode.
@@ -734,6 +922,9 @@ pub struct PythonInterpreterConfig {
     /// Whether to import the `site` module at startup.
     ///
     /// See <https://docs.python.org/3/c-api/init_config.html#c.PyConfig.site_import>.
+    ///
+    /// The `site` module is typically not needed for standalone applications and disabling
+    /// it can reduce application startup time.
     pub site_import: Option<bool>,
 
     /// Whether to skip the first line of [Self::run_filename].

@@ -25,13 +25,26 @@ use {
 use serde::{Deserialize, Serialize};
 
 /// An optimization level for Python bytecode.
+///
+/// Serialization type: `int`
 #[derive(Clone, Copy, Debug, PartialEq)]
 #[cfg_attr(feature = "serialization", derive(Deserialize, Serialize))]
 pub enum BytecodeOptimizationLevel {
+    /// Optimization level 0.
+    ///
+    /// Serialized value: `0`
     #[cfg_attr(feature = "serialization", serde(rename = "0"))]
     Zero,
+
+    /// Optimization level 1.
+    ///
+    /// Serialized value: `1`
     #[cfg_attr(feature = "serialization", serde(rename = "1"))]
     One,
+
+    /// Optimization level 2.
+    ///
+    /// Serialized value: `2`
     #[cfg_attr(feature = "serialization", serde(rename = "2"))]
     Two,
 }
