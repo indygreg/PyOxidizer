@@ -148,7 +148,7 @@ fn struct_to_rst(docs: &Crate, path: Vec<String>, rst_prefix: &str) -> Result<Ve
                 rst_prefix, struct_name, field_name
             ));
             lines.push("".to_string());
-            lines.push(format!("``{}`` Field", field_name.to_string()));
+            lines.push(format!("``{}`` Field", field_name));
             lines.push("-".repeat(field_name.len() + 4 + 6));
             lines.push("".to_string());
 
