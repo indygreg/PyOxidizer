@@ -23,3 +23,5 @@ Changelog
   Previously, the implementation of this method didn't work properly on 3.10+.
 * Added ``name`` property to :py:class:`OxidizedDistribution`.
 * Added ``_normalized_name`` property to :py:class:`OxidizedDistribution`.
+* PyO3 Rust crate upgraded to 0.16.5. This gets us better compatibility with
+  Python 3.10.

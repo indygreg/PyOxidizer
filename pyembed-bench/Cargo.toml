@@ -11,7 +11,7 @@ repository = "https://github.com/indygreg/PyOxidizer.git"
 [dependencies]
 anyhow = "1.0"
 once_cell = "1.8"
-pyo3 = "0.16.4"
+pyo3 = "0.16.5"
 slog = "2.7"
 tempfile = "3.2"
 zip = { version = "0.6", default-features = false, features = ["deflate"] }

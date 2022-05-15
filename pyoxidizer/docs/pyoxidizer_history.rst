@@ -46,6 +46,9 @@ Bug Fixes
   prevented them from working without specifying any arguments. This regression
   was introduced in 0.20 with the upgrade of the ``clap`` crate to version 3.1.
   (#523)
+* PyO3 Rust crates upgraded from 0.16.4 to 0.16.5. The upgrade fixes compatibility
+  issues with Python 3.10 that could lead to runtime crashes or incorrect behavior
+  in many configurations.
 
 New Features
 ^^^^^^^^^^^^
