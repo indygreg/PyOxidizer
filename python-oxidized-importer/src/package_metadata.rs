@@ -191,14 +191,18 @@ impl OxidizedDistribution {
     }
 
     #[getter]
-    fn entry_points<'p>(&self, py: Python<'p>) -> PyResult<&'p PyAny> {
+    fn entry_points<'p>(self_: PyRef<Self>, py: Python<'p>) -> PyResult<&'p PyAny> {
         let importlib_metadata = py.import("importlib.metadata")?;
 
-        let entry_point = importlib_metadata.getattr("EntryPoint")?;
+        let text = self_.read_text(py, "entry_points.txt".into())?;
 
-        let text = self.read_text(py, "entry_points.txt".into())?;
+        if let Ok(entry_points) = importlib_metadata.getattr("EntryPoints") {
+            entry_points.call_method("_from_text_for", (text, self_), None)
+        } else {
+            let entry_point = importlib_metadata.getattr("EntryPoint")?;
 
-        entry_point.call_method("_from_text", (text,), None)
+            entry_point.call_method("_from_text", (text,), None)
+        }
     }
 
     #[getter]

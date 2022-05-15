@@ -17,3 +17,7 @@ Changelog
 * Added missing API docs for :py:class:`OxidizedDistribution`.
 * ``OxidizedDistribution.metadata`` now returns an
   ``importlib.metadata._adapters.Message`` instance on Python 3.10+.
+* ``OxidizedDistribution.entry_points`` now calls
+  ``importlib.metadata.EntryPoint._from_text_for`` on Python 3.10+.
+  ``importlib.metadata.EntryPoints._from_text_for`` on Python 3.10+.
+  Previously, the implementation of this method didn't work properly on 3.10+.
