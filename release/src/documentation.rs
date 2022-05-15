@@ -65,21 +65,21 @@ fn docstring_to_rst(docs: &str) -> Result<Vec<String>> {
             }
             MarkdownEvent::Text(s) => match s.as_ref() {
                 "[" | "]" => {
-                    line.extend("``".chars());
+                    line.push_str("``");
                 }
                 _ => {
-                    line.extend(s.chars());
+                    line.push_str(&s);
                 }
             },
             MarkdownEvent::Code(s) => {
-                line.extend(format!("``{}``", s).chars());
+                line.push_str(&format!("``{}``", s));
             }
             MarkdownEvent::SoftBreak => {
                 lines.push(line.clone());
                 line = "".to_string();
             }
             MarkdownEvent::Start(Tag::Emphasis) | MarkdownEvent::End(Tag::Emphasis) => {
-                line.extend("*".chars());
+                line.push_str("*");
             }
 
             MarkdownEvent::Start(Tag::Link(LinkType::Autolink, ..)) => {}
