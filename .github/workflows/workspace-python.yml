@@ -44,8 +44,6 @@ jobs:
           python-version: ${{ matrix.python_version }}
 
       - name: Test pyembed
-        # There is a known crash on Python 3.10.
-        if: matrix.python_version != '3.10'
         env:
           RUSTC_WRAPPER: sccache
         run: |
@@ -53,8 +51,7 @@ jobs:
 
       - name: Test PyOxy
         # PyOxy not yet supported on Windows.
-        # There is a known crash on Python 3.10.
-        if: runner.os != 'Windows' && matrix.python_version != '3.10'
+        if: runner.os != 'Windows'
         env:
           RUSTC_WRAPPER: sccache
         run: |

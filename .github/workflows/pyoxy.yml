@@ -51,7 +51,7 @@ jobs:
         python_version:
           - '3.8'
           - '3.9'
-          # Known crasher on Python 3.10
+          - '3.10'
         target_triple:
           - 'x86_64-unknown-linux-gnu'
           # Not yet working due to rust config issues.
@@ -111,7 +111,7 @@ jobs:
         python_version:
           - '3.8'
           - '3.9'
-          # There is a known crasher on Python 3.10.
+          - '3.10'
         target_triple:
           - 'aarch64-apple-darwin'
           - 'x86_64-apple-darwin'
@@ -163,7 +163,7 @@ jobs:
       matrix:
         python_version:
           - '3.9'
-          # There is a known crasher on Python 3.10.
+          - '3.10'
     runs-on: 'macos-11'
     steps:
       - uses: actions/checkout@v3

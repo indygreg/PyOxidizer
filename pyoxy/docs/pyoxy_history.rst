@@ -17,8 +17,8 @@ Changelog
 
 Not yet released.
 
-* Official release artifacts now contain Python 3.8 variants. Previously, only
-  Python 3.9 was provided.
+* Official release artifacts now contain Python 3.8 and 3.10 variants.
+  Previously, only Python 3.9 was provided.
 * The Sphinx documentation now contains extensive documentation for the
   Python interpreter configuration structs and enums. The content is derived
   from the canonical Rust source code. This should make it easier to
