@@ -245,6 +245,55 @@ The ``OxidizedFinder`` Class
         should have ``.__cause__`` set to an inner exception with more details on why
         the path was rejected.
 
+The ``OxidizedDistribution`` Class
+==================================
+
+.. py:class:: OxidizedDistribution
+
+   Represents the metadata of a Python package. Comparable to
+   ``importlib.metadata.Distribution``. Instances of this type are emitted by
+   ``OxidizedFinder.find_distributions``.
+
+   .. py:method:: from_name(cls, name: str) -> OxidizedDistribution
+
+      :classmethod:
+
+      Resolve the instance for the given package name.
+
+   .. py:method:: discover(cls, **kwargs) -> list[OxidizedDistribution]
+
+      :classmethod:
+
+      Resolve instances for all known packages.
+
+   .. py:method:: read_text(filename) -> str
+
+      Attempt to read metadata file given its filename.
+
+   .. py:property:: metadata
+
+      :type: email.message.EmailMessage
+
+      Return the parsed metadata for this distribution.
+
+   .. py:property:: version
+
+      :type: str
+
+      Return the ``Version`` metadata for this distribution package.
+
+   .. py:property:: entry_points
+
+     Resolve entry points for this distribution package.
+
+   .. py:property:: files
+
+      Not implemented. Always raises when called.
+
+   .. py:property:: requires
+
+      Generated requirements specified for this distribution.
+
 The ``OxidizedResourceReader`` Class
 ====================================
 
