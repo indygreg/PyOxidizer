@@ -191,6 +191,20 @@ class TestImporterMetadata(unittest.TestCase):
         dists = list(f.find_distributions())
         self.assertEqual(dists[0].name, "my_package")
 
+    def test_normalized_name(self):
+        metadata_path = self.td / "my_package-1.0.dist-info" / "METADATA"
+        metadata_path.parent.mkdir()
+
+        with metadata_path.open("w", encoding="utf-8") as fh:
+            fh.write("Name: my-package\n")
+            fh.write("Version: 1.0\n")
+
+        f = self._finder_from_td()
+
+        dists = list(f.find_distributions())
+        self.assertEqual(dists[0].name, "my-package")
+        self.assertEqual(dists[0]._normalized_name, "my_package")
+
     def test_version(self):
         self._write_metadata()
         f = self._finder_from_td()

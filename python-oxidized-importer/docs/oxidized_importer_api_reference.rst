@@ -282,6 +282,12 @@ The ``OxidizedDistribution`` Class
 
       Return the ``Name`` metadata for this distribution package.
 
+   .. py:property:: _normalized_name
+
+      :type: str
+
+      Return the normalized version of the ``Name``.
+
    .. py:property:: version
 
       :type: str

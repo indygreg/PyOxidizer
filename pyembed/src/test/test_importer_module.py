@@ -6,6 +6,7 @@ import unittest
 
 SYMBOL_ATTRIBUTES = {
     "OxidizedDistribution": {
+        "_normalized_name",
         "discover",
         "entry_points",
         "files",

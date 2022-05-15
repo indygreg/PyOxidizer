@@ -191,6 +191,20 @@ impl OxidizedDistribution {
         metadata.get_item("Name")
     }
 
+    /// Return a normalized version of the name.
+    #[getter]
+    fn _normalized_name<'p>(&self, py: Python<'p>) -> PyResult<&'p PyAny> {
+        let name = self.name(py)?;
+        let re = py.import("re")?;
+
+        // PEP 503 normalization plus dashes as underscores.
+        let value = re.call_method("sub", ("[-_.]+", "-", name), None)?;
+        let value = value.call_method0("lower")?;
+        let value = value.call_method("replace", ("-", "_"), None)?;
+
+        Ok(value)
+    }
+
     #[getter]
     fn version<'p>(self_: PyRef<Self>, py: Python<'p>) -> PyResult<&'p PyAny> {
         let metadata = self_.metadata(py)?;
