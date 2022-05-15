@@ -522,3 +522,37 @@ offer the older ``.tar.gz`` distribution format.
 We would like to see a concerted effort to push harder for the
 presence of wheels. For example, PyPI could encourage/nag package
 maintainers to upload wheels.
+
+No Way to Hook ``open()``
+-------------------------
+
+``oxidized_importer`` wants to load Python modules and resource data
+from memory, without using files.
+
+There is a convention of using virtual paths to express paths within
+some other entity. e.g. the zip importer uses ``/path/to/archive.zip/foo.py``
+refers to the path ``foo.py`` within the ``/path/to/archive.zip`` zip file.
+It is also common to use the current executable's path to refer to
+entities within the current executable. e.g. ``/path/to/myapp/foo.py``
+would refer to a ``foo.py`` somehow embedded in the ``/path/to/myapp``
+executable.
+
+These virtual paths are a great idea. You can even implement ``pathlib.Path``
+around these paths and have a custom ``Path.open()`` that does custom I/O.
+However, it is really easy for these paths to *leak* and to get fed in to
+``io.open()`` or similar APIs for operating on filesystem paths. For example,
+someone does ``open(foo.__path__, "rb")`` instead of ``foo.__path__.open("rb")``.
+If this happens, you'll likely get an I/O error since virtual paths aren't
+real filesystem paths.
+
+It would be really nice if Python had some abstraction around filesystem
+I/O that allowed custom paths to be registered. This is what schemes in URIs
+and URLs are for. e.g. ``file:///path/to/file``. However, schemes aren't
+paths per se. So if we want to preserve compatibility with a path based
+API and allow ``io.open()`` to work with virtual paths, we need a mechanism
+to register a hook to intercept ``io.open()`` (and possibly other I/O
+operations like ``stat()``) so we can plumb in a custom I/O implementation.
+
+PEP 578 almost does this with ``PyFile_SetOpenCodeHook()`` and the
+``io.open_code()`` mechanism. But ``io.open_code()`` is only for a limited
+use case and isn't generally usable.
