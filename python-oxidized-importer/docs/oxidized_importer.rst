@@ -41,3 +41,4 @@ used with regular Python installs.
    oxidized_importer_security
    oxidized_importer_api_reference
    oxidized_importer_packed_resources
+   oxidized_importer_history
