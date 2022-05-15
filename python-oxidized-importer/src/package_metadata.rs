@@ -183,6 +183,14 @@ impl OxidizedDistribution {
         }
     }
 
+    /// Return the `Name` metadata for the distribution package.
+    #[getter]
+    fn name<'p>(&self, py: Python<'p>) -> PyResult<&'p PyAny> {
+        let metadata = self.metadata(py)?;
+
+        metadata.get_item("Name")
+    }
+
     #[getter]
     fn version<'p>(self_: PyRef<Self>, py: Python<'p>) -> PyResult<&'p PyAny> {
         let metadata = self_.metadata(py)?;

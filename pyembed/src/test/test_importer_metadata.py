@@ -184,6 +184,13 @@ class TestImporterMetadata(unittest.TestCase):
         self.assertEqual(metadata["Name"], "my_package")
         self.assertEqual(metadata["Version"], "1.0")
 
+    def test_name(self):
+        self._write_metadata()
+        f = self._finder_from_td()
+
+        dists = list(f.find_distributions())
+        self.assertEqual(dists[0].name, "my_package")
+
     def test_version(self):
         self._write_metadata()
         f = self._finder_from_td()

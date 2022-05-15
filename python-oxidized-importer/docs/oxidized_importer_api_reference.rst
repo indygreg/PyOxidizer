@@ -276,6 +276,12 @@ The ``OxidizedDistribution`` Class
 
       Return the parsed metadata for this distribution.
 
+   .. py:property:: name
+
+      :type: str
+
+      Return the ``Name`` metadata for this distribution package.
+
    .. py:property:: version
 
       :type: str

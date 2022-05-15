@@ -21,3 +21,4 @@ Changelog
   ``importlib.metadata.EntryPoint._from_text_for`` on Python 3.10+.
   ``importlib.metadata.EntryPoints._from_text_for`` on Python 3.10+.
   Previously, the implementation of this method didn't work properly on 3.10+.
+* Added ``name`` property to :py:class:`OxidizedDistribution`.

@@ -11,6 +11,7 @@ SYMBOL_ATTRIBUTES = {
         "files",
         "from_name",
         "metadata",
+        "name",
         "read_text",
         "requires",
         "version",
