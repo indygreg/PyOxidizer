@@ -8,14 +8,13 @@ Functionality for defining how Python resources should be packaged.
 
 use {
     crate::{
-        licensing::SAFE_SYSTEM_LIBRARIES,
+        licensing::{LicenseFlavor, SAFE_SYSTEM_LIBRARIES},
         location::ConcreteResourceLocation,
         resource::{PythonExtensionModule, PythonExtensionModuleVariants, PythonResource},
         resource_collection::PythonResourceAddCollectionContext,
     },
     anyhow::Result,
     std::collections::{HashMap, HashSet},
-    tugger_licensing::LicenseFlavor,
 };
 
 /// Denotes methods to filter extension modules.

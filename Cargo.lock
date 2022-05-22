@@ -4550,7 +4550,6 @@ dependencies = [
  "tugger-code-signing",
  "tugger-common",
  "tugger-file-manifest",
- "tugger-licensing",
  "tugger-rust-toolchain",
  "tugger-windows",
  "tugger-wix",
@@ -4624,7 +4623,6 @@ dependencies = [
  "tempfile",
  "time 0.3.9",
  "tugger-file-manifest",
- "tugger-licensing",
  "walkdir",
  "zip",
 ]
@@ -6560,22 +6558,14 @@ dependencies = [
 ]
 
 [[package]]
-name = "tugger-licensing"
-version = "0.7.0-pre"
-dependencies = [
- "anyhow",
- "spdx",
-]
-
-[[package]]
 name = "tugger-licensing-net"
 version = "0.9.0-pre"
 dependencies = [
  "anyhow",
+ "python-packaging",
  "reqwest",
  "spdx",
  "tugger-common",
- "tugger-licensing",
  "url",
 ]
 

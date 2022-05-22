@@ -33,10 +33,6 @@ path = "../python-packed-resources"
 version = "0.8.0-pre"
 path = "../tugger-file-manifest"
 
-[dependencies.tugger-licensing]
-version = "0.7.0-pre"
-path = "../tugger-licensing"
-
 [dependencies.zip]
 version = "0.6"
 optional = true

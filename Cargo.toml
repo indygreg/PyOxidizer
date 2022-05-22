@@ -27,7 +27,6 @@ members = [
     'tugger-code-signing',
     'tugger-common',
     'tugger-file-manifest',
-    'tugger-licensing',
     'tugger-licensing-net',
     'tugger-rust-toolchain',
     'tugger-snapcraft',

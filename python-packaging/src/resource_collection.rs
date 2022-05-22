@@ -10,6 +10,7 @@ use {
             compute_bytecode_header, BytecodeHeaderMode, CompileMode, PythonBytecodeCompiler,
         },
         libpython::LibPythonBuildContext,
+        licensing::{ComponentFlavor, LicensedComponent, LicensedComponents},
         location::{AbstractResourceLocation, ConcreteResourceLocation},
         module_util::{packages_from_module_name, resolve_path_for_module},
         python_source::has_dunder_file,
@@ -27,7 +28,6 @@ use {
         path::PathBuf,
     },
     tugger_file_manifest::{File, FileData, FileEntry, FileManifest},
-    tugger_licensing::{ComponentFlavor, LicensedComponent, LicensedComponents},
 };
 
 /// Represents a single file install.

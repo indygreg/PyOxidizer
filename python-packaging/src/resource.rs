@@ -7,6 +7,7 @@
 use {
     crate::{
         bytecode::{CompileMode, PythonBytecodeCompiler},
+        licensing::LicensedComponent,
         module_util::{is_package_from_path, packages_from_module_name, resolve_path_for_module},
         python_source::has_dunder_file,
     },
@@ -18,7 +19,6 @@ use {
         path::{Path, PathBuf},
     },
     tugger_file_manifest::{File, FileData},
-    tugger_licensing::LicensedComponent,
 };
 
 #[cfg(feature = "serialization")]

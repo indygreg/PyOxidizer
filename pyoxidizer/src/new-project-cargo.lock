@@ -373,7 +373,6 @@ dependencies = [
  "regex",
  "spdx",
  "tugger-file-manifest",
- "tugger-licensing",
  "walkdir",
 ]
 
@@ -525,14 +524,6 @@ dependencies = [
 [[package]]
 name = "tugger-file-manifest"
 version = "0.8.0-pre"
-
-[[package]]
-name = "tugger-licensing"
-version = "0.7.0-pre"
-dependencies = [
- "anyhow",
- "spdx",
-]
 
 [[package]]
 name = "unicode-ident"

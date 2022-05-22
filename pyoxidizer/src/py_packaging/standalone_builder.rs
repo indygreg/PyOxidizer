@@ -30,7 +30,7 @@ use {
         bytecode::BytecodeCompiler,
         interpreter::MemoryAllocatorBackend,
         libpython::LibPythonBuildContext,
-        licensing::derive_package_license_infos,
+        licensing::{derive_package_license_infos, ComponentFlavor, LicensedComponent},
         location::AbstractResourceLocation,
         policy::PythonPackagingPolicy,
         resource::{
@@ -49,7 +49,6 @@ use {
         sync::Arc,
     },
     tugger_file_manifest::{File, FileData, FileEntry, FileManifest},
-    tugger_licensing::{ComponentFlavor, LicensedComponent},
     tugger_windows::{find_visual_cpp_redistributable, VcRedistributablePlatform},
 };
 
@@ -1056,9 +1055,11 @@ pub mod tests {
             testutil::*,
         },
         once_cell::sync::Lazy,
-        python_packaging::{location::ConcreteResourceLocation, policy::ExtensionModuleFilter},
+        python_packaging::{
+            licensing::LicensedComponents, location::ConcreteResourceLocation,
+            policy::ExtensionModuleFilter,
+        },
         std::ops::DerefMut,
-        tugger_licensing::LicensedComponents,
     };
 
     #[cfg(target_os = "linux")]

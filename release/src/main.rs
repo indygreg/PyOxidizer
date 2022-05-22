@@ -53,7 +53,6 @@ static RELEASE_ORDER: Lazy<Vec<&'static str>> = Lazy::new(|| {
         //"linux-package-analyzer",
         "tugger-rust-toolchain",
         "tugger-binary-analysis",
-        "tugger-licensing",
         "tugger-licensing-net",
         //"tugger-rpm",
         "tugger-snapcraft",
@@ -1107,7 +1106,7 @@ fn generate_pyembed_license(repo_root: &Path) -> Result<String> {
 
     writeln!(
         &mut text,
-        "pub fn pyembed_licenses() -> anyhow::Result<Vec<tugger_licensing::LicensedComponent>> {{"
+        "pub fn pyembed_licenses() -> anyhow::Result<Vec<python_packaging::licensing::LicensedComponent>> {{"
     )?;
     writeln!(&mut text, "    let mut res = vec![];")?;
     writeln!(&mut text)?;
@@ -1117,12 +1116,12 @@ fn generate_pyembed_license(repo_root: &Path) -> Result<String> {
 
         writeln!(
             &mut text,
-            "    let mut component = tugger_licensing::LicensedComponent::new_spdx(\"{}\", \"{}\")?;",
+            "    let mut component = python_packaging::licensing::LicensedComponent::new_spdx(\"{}\", \"{}\")?;",
             crate_name, expression
         )?;
         writeln!(
             &mut text,
-            "    component.set_flavor(tugger_licensing::ComponentFlavor::RustCrate);"
+            "    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);"
         )?;
         writeln!(&mut text, "    res.push(component);")?;
         writeln!(&mut text)?;

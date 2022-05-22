@@ -5,12 +5,12 @@
 /*! Functionality for building a library containing Python */
 
 use {
+    crate::licensing::LicensedComponents,
     std::{
         collections::{BTreeMap, BTreeSet},
         path::PathBuf,
     },
     tugger_file_manifest::FileData,
-    tugger_licensing::LicensedComponents,
 };
 
 /// Holds state necessary to build and link a libpython.

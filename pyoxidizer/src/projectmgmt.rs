@@ -21,6 +21,7 @@ use {
         starlark::eval::EvaluationContextBuilder,
     },
     anyhow::{anyhow, Context, Result},
+    python_packaging::licensing::LicenseFlavor,
     python_packaging::{
         filesystem_scanning::find_python_resources,
         interpreter::{MemoryAllocatorBackend, PythonInterpreterProfile},
@@ -34,7 +35,6 @@ use {
         path::{Path, PathBuf},
     },
     tugger_file_manifest::{FileData, FileManifest},
-    tugger_licensing::LicenseFlavor,
 };
 
 /// Attempt to resolve the default Rust target for a build.

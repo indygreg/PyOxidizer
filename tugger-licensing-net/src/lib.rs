@@ -4,9 +4,11 @@
 
 use {
     anyhow::{anyhow, Result},
+    python_packaging::licensing::{
+        ComponentFlavor, LicenseFlavor, LicensedComponent, SourceLocation,
+    },
     spdx::LicenseReq,
     std::{fmt::Write, io::Read},
-    tugger_licensing::{ComponentFlavor, LicenseFlavor, LicensedComponent, SourceLocation},
     url::Url,
 };
 
@@ -163,7 +165,7 @@ pub fn generate_aggregate_license_text<'a>(
 
 #[cfg(test)]
 mod tests {
-    use {super::*, tugger_licensing::LicensedComponents};
+    use {super::*, python_packaging::licensing::LicensedComponents};
 
     #[test]
     fn test_spdx_license_texts() -> Result<()> {

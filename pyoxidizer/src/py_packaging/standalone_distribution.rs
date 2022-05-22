@@ -25,6 +25,7 @@ use {
         bytecode::{BytecodeCompiler, PythonBytecodeCompiler},
         filesystem_scanning::{find_python_resources, walk_tree_files},
         interpreter::{PythonInterpreterConfig, PythonInterpreterProfile, TerminfoResolution},
+        licensing::{ComponentFlavor, LicensedComponent},
         location::ConcreteResourceLocation,
         module_util::{is_package_from_path, PythonModuleSuffixes},
         policy::PythonPackagingPolicy,
@@ -41,7 +42,6 @@ use {
         sync::Arc,
     },
     tugger_file_manifest::{FileData, FileEntry},
-    tugger_licensing::{ComponentFlavor, LicensedComponent},
 };
 
 // This needs to be kept in sync with *compiler.py
