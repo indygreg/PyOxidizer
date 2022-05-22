@@ -12,7 +12,6 @@ This library exposes that functionality to other tools.
 */
 
 pub mod environment;
-pub mod logging;
 pub mod project_building;
 pub mod project_layout;
 pub mod projectmgmt;

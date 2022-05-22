@@ -7,37 +7,12 @@ use {
     anyhow::{anyhow, Result},
     codemap::CodeMap,
     codemap_diagnostic::{Diagnostic, Emitter},
-    slog::Drain,
     starlark::{
         environment::{Environment, TypeValues},
         syntax::dialect::Dialect,
         values::Value,
     },
 };
-
-/// A slog Drain that uses println!.
-pub struct PrintlnDrain {
-    /// Minimum logging level that we're emitting.
-    pub min_level: slog::Level,
-}
-
-/// slog Drain that uses println!.
-impl slog::Drain for PrintlnDrain {
-    type Ok = ();
-    type Err = std::io::Error;
-
-    fn log(
-        &self,
-        record: &slog::Record,
-        _values: &slog::OwnedKVList,
-    ) -> Result<Self::Ok, Self::Err> {
-        if record.level().is_at_least(self.min_level) {
-            println!("{}", record.msg());
-        }
-
-        Ok(())
-    }
-}
 
 /// A Starlark execution environment.
 ///
@@ -49,17 +24,9 @@ pub struct StarlarkEnvironment {
 
 impl StarlarkEnvironment {
     pub fn new() -> Result<Self> {
-        let logger = slog::Logger::root(
-            PrintlnDrain {
-                min_level: slog::Level::Info,
-            }
-            .fuse(),
-            slog::o!(),
-        );
-
         let cwd = std::env::current_dir()?;
 
-        let context = EnvironmentContext::new(&logger, cwd);
+        let context = EnvironmentContext::new(cwd);
 
         let (mut env, mut type_values) = starlark::stdlib::global_environment();
         register_starlark_dialect(&mut env, &mut type_values)

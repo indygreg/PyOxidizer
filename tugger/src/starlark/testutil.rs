@@ -13,7 +13,6 @@ use {
         values::Value,
     },
     starlark_dialect_build_targets::EnvironmentContext,
-    tugger_common::testutil::get_logger,
 };
 
 /// A Starlark execution environment.
@@ -26,11 +25,10 @@ pub struct StarlarkEnvironment {
 
 impl StarlarkEnvironment {
     pub fn new() -> Result<Self> {
-        let logger = get_logger()?;
         let cwd = std::env::current_dir()?;
 
-        let target_context = EnvironmentContext::new(&logger, cwd);
-        let mut tugger_context = TuggerContext::new(logger.clone());
+        let target_context = EnvironmentContext::new(cwd);
+        let mut tugger_context = TuggerContext::new();
 
         // Always disable interaction in tests, otherwise reading from stdin can
         // cause hangs.

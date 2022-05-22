@@ -5,7 +5,7 @@
 use {
     crate::{
         environment::{default_target_triple, PYOXIDIZER_VERSION},
-        logging, project_building, projectmgmt,
+        project_building, projectmgmt,
     },
     anyhow::{anyhow, Context, Result},
     clap::{Arg, ArgMatches, Command},
@@ -471,14 +471,6 @@ pub fn run_cli() -> Result<()> {
     }))
     .init();
 
-    let log_level = if verbose {
-        slog::Level::Info
-    } else {
-        slog::Level::Warning
-    };
-
-    let logger_context = logging::logger_from_env(log_level);
-
     if matches.is_present("system_rust") {
         env.unmanage_rust().context("unmanaging Rust")?;
     }
@@ -507,7 +499,6 @@ pub fn run_cli() -> Result<()> {
 
             projectmgmt::build(
                 &env,
-                &logger_context.logger,
                 Path::new(path),
                 target_triple,
                 resolve_targets,
@@ -577,7 +568,7 @@ pub fn run_cli() -> Result<()> {
         "list-targets" => {
             let path = args.value_of("path").unwrap();
 
-            projectmgmt::list_targets(&env, &logger_context.logger, Path::new(path))
+            projectmgmt::list_targets(&env, Path::new(path))
         }
 
         "init-rust-project" => {
@@ -620,13 +611,7 @@ pub fn run_cli() -> Result<()> {
             let build_script = args.value_of("build-script-name").unwrap();
             let target = args.value_of("target");
 
-            project_building::run_from_build(
-                &env,
-                &logger_context.logger,
-                build_script,
-                target,
-                starlark_vars,
-            )
+            project_building::run_from_build(&env, build_script, target, starlark_vars)
         }
 
         "run" => {
@@ -639,7 +624,6 @@ pub fn run_cli() -> Result<()> {
 
             projectmgmt::run(
                 &env,
-                &logger_context.logger,
                 Path::new(path),
                 target_triple,
                 release,

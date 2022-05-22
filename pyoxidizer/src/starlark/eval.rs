@@ -37,7 +37,6 @@ use {
 /// Builder type to construct `EvaluationContext` instances.
 pub struct EvaluationContextBuilder {
     env: crate::environment::Environment,
-    logger: slog::Logger,
     config_path: PathBuf,
     build_target_triple: String,
     release: bool,
@@ -52,13 +51,11 @@ pub struct EvaluationContextBuilder {
 impl EvaluationContextBuilder {
     pub fn new(
         env: &crate::environment::Environment,
-        logger: slog::Logger,
         config_path: impl AsRef<Path>,
         build_target_triple: impl ToString,
     ) -> Self {
         Self {
             env: env.clone(),
-            logger,
             config_path: config_path.as_ref().to_path_buf(),
             build_target_triple: build_target_triple.to_string(),
             release: false,
@@ -169,7 +166,6 @@ impl EvaluationContext {
     pub fn from_builder(builder: EvaluationContextBuilder) -> Result<Self> {
         let context = PyOxidizerEnvironmentContext::new(
             &builder.env,
-            builder.logger,
             builder.verbose,
             &builder.config_path,
             default_target_triple(),
@@ -229,19 +225,14 @@ impl EvaluationContext {
             file_loader_env,
         )
         .map_err(|e| {
-            if let Ok(raw_context) = self.build_targets_context_value() {
-                if let Some(context) = raw_context.downcast_ref::<EnvironmentContext>() {
-                    let mut msg = Vec::new();
-                    let raw_map = map.lock().unwrap();
-                    {
-                        let mut emitter =
-                            codemap_diagnostic::Emitter::vec(&mut msg, Some(&raw_map));
-                        emitter.emit(&[e.clone()]);
-                    }
-
-                    error!("{}", String::from_utf8_lossy(&msg));
-                }
+            let mut msg = Vec::new();
+            let raw_map = map.lock().unwrap();
+            {
+                let mut emitter = codemap_diagnostic::Emitter::vec(&mut msg, Some(&raw_map));
+                emitter.emit(&[e.clone()]);
             }
+
+            error!("{}", String::from_utf8_lossy(&msg));
 
             e
         })?;
@@ -400,7 +391,6 @@ mod tests {
             .prefix("pyoxidizer-test")
             .tempdir()?;
         let env = get_env()?;
-        let logger = get_logger()?;
 
         let load_path = temp_dir.path().join("load.bzl");
         std::fs::write(
@@ -420,7 +410,6 @@ mod tests {
 
         let mut context = EvaluationContextBuilder::new(
             &env,
-            logger,
             main_path.clone(),
             default_target_triple().to_string(),
         )
@@ -437,14 +426,12 @@ mod tests {
             .prefix("pyoxidizer-test")
             .tempdir()?;
         let env = get_env()?;
-        let logger = get_logger()?;
 
         let config_path = temp_dir.path().join("pyoxidizer.bzl");
         std::fs::write(&config_path, "def make_dist():\n    return default_python_distribution()\nregister_target('dist', make_dist)\n".as_bytes())?;
 
         let mut context: EvaluationContext = EvaluationContextBuilder::new(
             &env,
-            logger,
             config_path.clone(),
             default_target_triple().to_string(),
         )
@@ -461,7 +448,6 @@ mod tests {
             .prefix("pyoxidizer-test")
             .tempdir()?;
         let env = get_env()?;
-        let logger = get_logger()?;
 
         let config_path = temp_dir.path().join("pyoxidizer.bzl");
         std::fs::write(&config_path, "my_var_copy = my_var\nempty_copy = empty\n")?;
@@ -470,14 +456,10 @@ mod tests {
         extra_vars.insert("my_var".to_string(), Some("my_value".to_string()));
         extra_vars.insert("empty".to_string(), None);
 
-        let context = EvaluationContextBuilder::new(
-            &env,
-            logger,
-            config_path,
-            default_target_triple().to_string(),
-        )
-        .extra_vars(extra_vars)
-        .into_context()?;
+        let context =
+            EvaluationContextBuilder::new(&env, config_path, default_target_triple().to_string())
+                .extra_vars(extra_vars)
+                .into_context()?;
 
         let vars_value = context.get_var("VARS").unwrap();
         assert_eq!(vars_value.get_type(), "dict");

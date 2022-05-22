@@ -4,7 +4,7 @@
 
 use {
     anyhow::Result,
-    slog::warn,
+    log::warn,
     std::{io::Write, path::Path},
     tar,
 };
@@ -13,7 +13,6 @@ use {
 ///
 /// The uncompressed tar contents will be emitted to the passed writer.
 pub fn write_tarball_from_directory<W: Write, P: AsRef<Path>>(
-    logger: &slog::Logger,
     fh: &mut W,
     source_path: P,
     archive_prefix: Option<P>,
@@ -44,12 +43,7 @@ pub fn write_tarball_from_directory<W: Write, P: AsRef<Path>>(
             rel_path.to_path_buf()
         };
 
-        warn!(
-            logger,
-            "adding {} as {}",
-            path.display(),
-            archive_path.display()
-        );
+        warn!("adding {} as {}", path.display(), archive_path.display());
         builder.append_path_with_name(path, &archive_path)?;
     }
 

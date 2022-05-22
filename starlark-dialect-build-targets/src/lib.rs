@@ -108,8 +108,6 @@ pub struct Target {
 /// Holds execution context for a Starlark environment.
 #[derive(Debug)]
 pub struct EnvironmentContext {
-    logger: slog::Logger,
-
     /// Current working directory.
     cwd: PathBuf,
 
@@ -144,11 +142,10 @@ pub struct EnvironmentContext {
 }
 
 impl EnvironmentContext {
-    pub fn new(logger: &slog::Logger, cwd: PathBuf) -> Self {
+    pub fn new(cwd: PathBuf) -> Self {
         let build_path = cwd.join("build");
 
         Self {
-            logger: logger.clone(),
             cwd,
             build_path,
             target_build_path_prefix: None,
@@ -159,11 +156,6 @@ impl EnvironmentContext {
             default_build_script_target: None,
             build_script_mode: false,
         }
-    }
-
-    /// Obtain a logger for this instance.
-    pub fn logger(&self) -> &slog::Logger {
-        &self.logger
     }
 
     /// Obtain the current working directory for this context.
@@ -754,12 +746,7 @@ pub fn get_context_value(type_values: &TypeValues) -> ValueResult {
 }
 
 /// print(*args)
-fn starlark_print(type_values: &TypeValues, args: &[Value]) -> ValueResult {
-    let raw_context = get_context_value(type_values)?;
-    let context = raw_context
-        .downcast_ref::<EnvironmentContext>()
-        .ok_or(ValueError::IncorrectParameterType)?;
-
+fn starlark_print(args: &[Value]) -> ValueResult {
     let mut parts = Vec::new();
     let mut first = true;
     for arg in args {
@@ -943,8 +930,8 @@ fn starlark_set_build_path(type_values: &TypeValues, path: String) -> ValueResul
 }
 
 starlark_module! { build_targets_module =>
-    print(env env, *args) {
-        starlark_print(env, &args)
+    print(*args) {
+        starlark_print(&args)
     }
 
     register_target(

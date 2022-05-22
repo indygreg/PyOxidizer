@@ -67,7 +67,7 @@ pub fn resolve_target(target: Option<&str>) -> Result<String> {
     }
 }
 
-pub fn list_targets(env: &Environment, logger: &slog::Logger, project_path: &Path) -> Result<()> {
+pub fn list_targets(env: &Environment, project_path: &Path) -> Result<()> {
     let config_path = find_pyoxidizer_config_file_env(project_path).ok_or_else(|| {
         anyhow!(
             "unable to find PyOxidizder config file at {}",
@@ -77,10 +77,9 @@ pub fn list_targets(env: &Environment, logger: &slog::Logger, project_path: &Pat
 
     let target_triple = default_target()?;
 
-    let mut context =
-        EvaluationContextBuilder::new(env, logger.clone(), config_path.clone(), target_triple)
-            .resolve_targets(vec![])
-            .into_context()?;
+    let mut context = EvaluationContextBuilder::new(env, config_path.clone(), target_triple)
+        .resolve_targets(vec![])
+        .into_context()?;
 
     context.evaluate_file(&config_path)?;
 
@@ -108,7 +107,6 @@ pub fn list_targets(env: &Environment, logger: &slog::Logger, project_path: &Pat
 #[allow(clippy::too_many_arguments)]
 pub fn build(
     env: &Environment,
-    logger: &slog::Logger,
     project_path: &Path,
     target_triple: Option<&str>,
     resolve_targets: Option<Vec<String>>,
@@ -124,13 +122,12 @@ pub fn build(
     })?;
     let target_triple = resolve_target(target_triple)?;
 
-    let mut context =
-        EvaluationContextBuilder::new(env, logger.clone(), config_path.clone(), target_triple)
-            .extra_vars(extra_vars)
-            .release(release)
-            .verbose(verbose)
-            .resolve_targets_optional(resolve_targets)
-            .into_context()?;
+    let mut context = EvaluationContextBuilder::new(env, config_path.clone(), target_triple)
+        .extra_vars(extra_vars)
+        .release(release)
+        .verbose(verbose)
+        .resolve_targets_optional(resolve_targets)
+        .into_context()?;
 
     context.evaluate_file(&config_path)?;
 
@@ -144,7 +141,6 @@ pub fn build(
 #[allow(clippy::too_many_arguments)]
 pub fn run(
     env: &Environment,
-    logger: &slog::Logger,
     project_path: &Path,
     target_triple: Option<&str>,
     release: bool,
@@ -161,13 +157,12 @@ pub fn run(
     })?;
     let target_triple = resolve_target(target_triple)?;
 
-    let mut context =
-        EvaluationContextBuilder::new(env, logger.clone(), config_path.clone(), target_triple)
-            .extra_vars(extra_vars)
-            .release(release)
-            .verbose(verbose)
-            .resolve_target_optional(target)
-            .into_context()?;
+    let mut context = EvaluationContextBuilder::new(env, config_path.clone(), target_triple)
+        .extra_vars(extra_vars)
+        .release(release)
+        .verbose(verbose)
+        .resolve_target_optional(target)
+        .into_context()?;
 
     context.evaluate_file(&config_path)?;
 

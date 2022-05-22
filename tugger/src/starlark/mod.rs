@@ -37,7 +37,6 @@ use {
 
 /// Holds global context for Tugger Starlark evaluation.
 pub struct TuggerContext {
-    pub logger: slog::Logger,
     pub term_stdout: Term,
     pub term_stderr: Term,
     pub code_signers: Vec<Value>,
@@ -48,9 +47,8 @@ pub struct TuggerContext {
 }
 
 impl TuggerContext {
-    pub fn new(logger: slog::Logger) -> Self {
+    pub fn new() -> Self {
         Self {
-            logger,
             // Hard-coded to stdout for now. We'll probably want to make this configurable
             // to facilitate testing.
             term_stdout: Term::stdout(),

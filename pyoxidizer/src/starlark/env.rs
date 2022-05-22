@@ -28,8 +28,6 @@ pub struct PyOxidizerEnvironmentContext {
     /// PyOxidizer's run-time environment.
     env: crate::environment::Environment,
 
-    logger: slog::Logger,
-
     /// Whether executing in verbose mode.
     pub verbose: bool,
 
@@ -67,7 +65,6 @@ impl PyOxidizerEnvironmentContext {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         env: &crate::environment::Environment,
-        logger: slog::Logger,
         verbose: bool,
         config_path: &Path,
         build_host_triple: &str,
@@ -95,7 +92,6 @@ impl PyOxidizerEnvironmentContext {
 
         Ok(PyOxidizerEnvironmentContext {
             env: env.clone(),
-            logger,
             verbose,
             cwd: parent,
             config_path: config_path.to_path_buf(),
@@ -110,10 +106,6 @@ impl PyOxidizerEnvironmentContext {
 
     pub fn env(&self) -> &crate::environment::Environment {
         &self.env
-    }
-
-    pub fn logger(&self) -> &slog::Logger {
-        &self.logger
     }
 
     pub fn build_path(&self, type_values: &TypeValues) -> Result<PathBuf, ValueError> {
@@ -201,7 +193,7 @@ pub fn populate_environment(
     resolve_targets: Option<Vec<String>>,
     build_script_mode: bool,
 ) -> Result<(), EnvironmentError> {
-    let mut build_targets_context = EnvironmentContext::new(context.logger(), context.cwd.clone());
+    let mut build_targets_context = EnvironmentContext::new(context.cwd.clone());
 
     if let Some(targets) = resolve_targets {
         build_targets_context.set_resolve_targets(targets);
@@ -217,7 +209,7 @@ pub fn populate_environment(
         }),
     ));
 
-    let tugger_context = TuggerContext::new(context.logger.clone());
+    let tugger_context = TuggerContext::new();
 
     starlark_dialect_build_targets::populate_environment(env, type_values, build_targets_context)?;
     tugger::starlark::populate_environment(env, type_values, tugger_context)?;

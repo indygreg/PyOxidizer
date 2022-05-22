@@ -427,7 +427,6 @@ pub fn build_python_executable<'a>(
 #[allow(clippy::too_many_arguments)]
 pub fn build_pyembed_artifacts(
     env: &Environment,
-    logger: &slog::Logger,
     config_path: &Path,
     artifacts_path: &Path,
     resolve_target: Option<&str>,
@@ -445,7 +444,7 @@ pub fn build_pyembed_artifacts(
     }
 
     let mut context: EvaluationContext =
-        EvaluationContextBuilder::new(env, logger.clone(), config_path, target_triple.to_string())
+        EvaluationContextBuilder::new(env, config_path, target_triple.to_string())
             .extra_vars(extra_vars)
             .release(release)
             .verbose(verbose)
@@ -512,7 +511,6 @@ pub fn build_pyembed_artifacts(
 /// return a `PythonEmbeddeResources` starlark type.
 pub fn run_from_build(
     env: &Environment,
-    logger: &slog::Logger,
     build_script: &str,
     resolve_target: Option<&str>,
     extra_vars: HashMap<String, Option<String>>,
@@ -550,7 +548,6 @@ pub fn run_from_build(
 
     build_pyembed_artifacts(
         env,
-        logger,
         &config_path,
         &dest_dir,
         resolve_target,

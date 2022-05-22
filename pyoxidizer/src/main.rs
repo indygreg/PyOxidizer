@@ -29,7 +29,6 @@ a rather effective and powerful tool.
 
 mod cli;
 mod environment;
-mod logging;
 mod project_building;
 mod project_layout;
 mod projectmgmt;

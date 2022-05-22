@@ -6,7 +6,6 @@ use crate::py_packaging::distribution::PythonDistribution;
 use {
     crate::{
         environment::{default_target_triple, Environment},
-        logging::PrintlnDrain,
         py_packaging::distribution::{
             DistributionCache, DistributionFlavor, PythonDistributionLocation,
         },
@@ -15,7 +14,6 @@ use {
     },
     anyhow::{anyhow, Result},
     once_cell::sync::Lazy,
-    slog::{Drain, Logger},
     std::sync::Arc,
 };
 
@@ -29,16 +27,6 @@ pub fn get_env() -> Result<Environment> {
         .try_init();
 
     Ok(ENVIRONMENT.clone())
-}
-
-pub fn get_logger() -> Result<slog::Logger> {
-    Ok(Logger::root(
-        PrintlnDrain {
-            min_level: slog::Level::Warning,
-        }
-        .fuse(),
-        slog::o!(),
-    ))
 }
 
 pub static DISTRIBUTION_CACHE: Lazy<Arc<DistributionCache>> = Lazy::new(|| {
