@@ -219,7 +219,8 @@ pub fn run_cli() -> Result<()> {
             Arg::new("verbose")
                 .long("verbose")
                 .global(true)
-                .help("Enable verbose output"),
+                .multiple_occurrences(true)
+                .help("Increase logging verbosity. Can be specified multiple times"),
         );
 
     let app = app.subcommand(
@@ -464,12 +465,23 @@ pub fn run_cli() -> Result<()> {
 
     let verbose = matches.is_present("verbose");
 
-    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or(if verbose {
-        "info"
-    } else {
-        "warning"
-    }))
-    .init();
+    let log_level = match matches.occurrences_of("verbose") {
+        0 => log::LevelFilter::Warn,
+        1 => log::LevelFilter::Info,
+        2 => log::LevelFilter::Debug,
+        _ => log::LevelFilter::Trace,
+    };
+
+    let mut builder = env_logger::Builder::from_env(
+        env_logger::Env::default().default_filter_or(log_level.as_str()),
+    );
+
+    builder
+        .format_timestamp(None)
+        .format_level(false)
+        .format_target(false);
+
+    builder.init();
 
     if matches.is_present("system_rust") {
         env.unmanage_rust().context("unmanaging Rust")?;
