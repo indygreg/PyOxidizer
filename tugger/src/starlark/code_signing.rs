@@ -6,7 +6,7 @@ use {
     crate::starlark::{get_context_value, TuggerContextValue},
     anyhow::{anyhow, Context, Result},
     linked_hash_map::LinkedHashMap,
-    slog::{debug, info, warn},
+    log::{debug, info, warn},
     starlark::{
         environment::TypeValues,
         eval::call_stack::CallStack,
@@ -410,7 +410,6 @@ pub fn handle_signable_event(
 
     // We can't hold the reference to the context due to re-entrancy. So get the
     // values we need from it and release.
-    let logger = context.logger.clone();
     let signers = context.code_signers.clone();
     drop(context);
 
@@ -428,11 +427,11 @@ pub fn handle_signable_event(
         ..Default::default()
     };
 
-    info!(logger, "processing signing request {}", request);
+    info!("processing signing request {}", request);
 
     for (i, signer_raw) in signers.into_iter().enumerate() {
         response.signers_consulted += 1;
-        debug!(logger, "consulting CodeSigner #{}", i);
+        debug!("consulting CodeSigner #{}", i);
 
         let signer_value = signer_raw
             .downcast_ref::<CodeSignerValue>()
@@ -443,10 +442,7 @@ pub fn handle_signable_event(
         if let Some(signable_signer) = error_context(request_context.label, || {
             Ok(signer.resolve_signer(request_context.candidate)?)
         })? {
-            info!(
-                logger,
-                "CodeSigner #{} is capable of signing {}", i, request
-            );
+            info!("CodeSigner #{} is capable of signing {}", i, request);
 
             // Call registered callback to give an opportunity to influence.
             // There is a potential for deadlock here, as we have the Signer lock held.
@@ -461,8 +457,8 @@ pub fn handle_signable_event(
             if settings.prevent_signing {
                 response.prevented_index = Some(i);
                 warn!(
-                    logger,
-                    "callback for CodeSigner #{} prevented signing of {}", i, request
+                    "callback for CodeSigner #{} prevented signing of {}",
+                    i, request
                 );
                 break;
             }
@@ -470,8 +466,8 @@ pub fn handle_signable_event(
             if settings.defer {
                 response.defer_count += 1;
                 info!(
-                    logger,
-                    "callback for CodeSigner #{0} deferred signing of {}", request
+                    "callback for CodeSigner #{0} deferred signing of {}",
+                    request
                 );
                 continue;
             }
@@ -481,7 +477,6 @@ pub fn handle_signable_event(
                 .unwrap_or_else(|| signable_signer.in_place_destination());
 
             warn!(
-                logger,
                 "CodeSigner #{} attempting to sign {} to {}",
                 i,
                 request,
@@ -506,7 +501,7 @@ pub fn handle_signable_event(
             response.output = Some(output);
             break;
         } else {
-            info!(logger, "CodeSigner isn't compatible with {}", request);
+            info!("CodeSigner isn't compatible with {}", request);
         }
     }
 

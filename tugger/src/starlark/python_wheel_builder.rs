@@ -5,8 +5,8 @@
 use {
     crate::starlark::file_content::{FileContentValue, FileContentWrapper},
     anyhow::{anyhow, Context},
+    log::warn,
     python_packaging::wheel_builder::WheelBuilder,
-    slog::warn,
     starlark::{
         environment::TypeValues,
         values::{
@@ -331,11 +331,7 @@ impl PythonWheelBuilderValue {
         let output_directory = context.target_build_path(&target);
 
         let wheel_path = error_context(LABEL, || {
-            warn!(
-                context.logger(),
-                "writing wheel to {}",
-                output_directory.display()
-            );
+            warn!("writing wheel to {}", output_directory.display());
 
             std::fs::create_dir_all(&output_directory)
                 .with_context(|| format!("creating directory {}", output_directory.display()))?;
@@ -345,7 +341,7 @@ impl PythonWheelBuilderValue {
                 .context("writing wheel to directory")
         })?;
 
-        warn!(context.logger(), "wrote wheel {}", wheel_path.display());
+        warn!("wrote wheel {}", wheel_path.display());
 
         Ok(Value::new(ResolvedTargetValue {
             inner: ResolvedTarget {

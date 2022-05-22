@@ -8,7 +8,7 @@ use {
         file_content::{FileContentValue, FileContentWrapper},
     },
     anyhow::anyhow,
-    slog::warn,
+    log::warn,
     starlark::{
         environment::TypeValues,
         eval::call_stack::CallStack,
@@ -134,11 +134,7 @@ impl FileManifestValue {
         let inner = self.inner(LABEL)?;
 
         let installed_paths = error_context(LABEL, || {
-            warn!(
-                context.logger(),
-                "installing files to {}",
-                output_path.display()
-            );
+            warn!("installing files to {}", output_path.display());
             inner
                 .materialize_files_with_replace(&output_path)
                 .map_err(anyhow::Error::new)

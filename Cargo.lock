@@ -6474,6 +6474,7 @@ dependencies = [
  "console",
  "dialoguer",
  "linked-hash-map",
+ "log",
  "plist",
  "python-packaging",
  "slog",
