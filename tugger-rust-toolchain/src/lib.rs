@@ -19,10 +19,10 @@ use {
     },
     anyhow::{anyhow, Context, Result},
     fs2::FileExt,
+    log::warn,
     once_cell::sync::Lazy,
     pgp::{Deserializable, SignedPublicKey, StandaloneSignature},
     sha2::Digest,
-    slog::warn,
     std::{
         io::{Cursor, Read},
         path::{Path, PathBuf},
@@ -41,14 +41,14 @@ static GPG_SIGNING_KEY: Lazy<SignedPublicKey> = Lazy::new(|| {
 /// Fetch, verify, and parse a Rust toolchain manifest for a named channel.
 ///
 /// Returns the verified and parsed manifest.
-pub fn fetch_channel_manifest(logger: &slog::Logger, channel: &str) -> Result<Manifest> {
+pub fn fetch_channel_manifest(channel: &str) -> Result<Manifest> {
     let manifest_url = format!("{}channel-rust-{}.toml", URL_PREFIX, channel);
     let signature_url = format!("{}.asc", manifest_url);
     let sha256_url = format!("{}.sha256", manifest_url);
 
     let client = get_http_client()?;
 
-    warn!(logger, "fetching {}", sha256_url);
+    warn!("fetching {}", sha256_url);
     let mut response = client.get(&sha256_url).send()?;
     let mut sha256_data = vec![];
     response.read_to_end(&mut sha256_data)?;
@@ -60,12 +60,12 @@ pub fn fetch_channel_manifest(logger: &slog::Logger, channel: &str) -> Result<Ma
         .ok_or_else(|| anyhow!("failed parsing SHA-256 manifest"))?
         .to_string();
 
-    warn!(logger, "fetching {}", manifest_url);
+    warn!("fetching {}", manifest_url);
     let mut response = client.get(&manifest_url).send()?;
     let mut manifest_data = vec![];
     response.read_to_end(&mut manifest_data)?;
 
-    warn!(logger, "fetching {}", signature_url);
+    warn!("fetching {}", signature_url);
     let mut response = client.get(&signature_url).send()?;
     let mut signature_data = vec![];
     response.read_to_end(&mut signature_data)?;
@@ -84,7 +84,7 @@ pub fn fetch_channel_manifest(logger: &slog::Logger, channel: &str) -> Result<Ma
         ));
     }
 
-    warn!(logger, "verified SHA-256 digest for {}", manifest_url);
+    warn!("verified SHA-256 digest for {}", manifest_url);
 
     let (signatures, _) = StandaloneSignature::from_armor_many(Cursor::new(&signature_data))
         .with_context(|| format!("parsing {} armored signature data", signature_url))?;
@@ -95,7 +95,7 @@ pub fn fetch_channel_manifest(logger: &slog::Logger, channel: &str) -> Result<Ma
         signature
             .verify(&*GPG_SIGNING_KEY, &manifest_data)
             .context("verifying pgp signature of manifest")?;
-        warn!(logger, "verified PGP signature for {}", manifest_url);
+        warn!("verified PGP signature for {}", manifest_url);
     }
 
     let manifest = Manifest::from_toml_bytes(&manifest_data).context("parsing manifest TOML")?;
@@ -107,7 +107,6 @@ pub fn fetch_channel_manifest(logger: &slog::Logger, channel: &str) -> Result<Ma
 ///
 /// This is safe to call concurrently from different threads or processes.
 pub fn resolve_package_archive(
-    logger: &slog::Logger,
     manifest: &Manifest,
     package: &str,
     target_triple: &str,
@@ -124,8 +123,8 @@ pub fn resolve_package_archive(
         })?;
 
     warn!(
-        logger,
-        "found Rust package {} version {} for {}", package, version, target_triple
+        "found Rust package {} version {} for {}",
+        package, version, target_triple
     );
 
     let (compression_format, remote_content) = target.download_info().ok_or_else(|| {
@@ -246,14 +245,13 @@ fn package_is_fresh(install_dir: &Path, package: &str, triple: &str) -> Result<b
 /// `host_triple` denotes the host triple of the toolchain to fetch.
 /// `extra_target_triples` denotes extra triples for targets we are building for.
 pub fn install_rust_toolchain(
-    logger: &slog::Logger,
     toolchain: &str,
     host_triple: &str,
     extra_target_triples: &[&str],
     install_root_dir: &Path,
     download_cache_dir: Option<&Path>,
 ) -> Result<InstalledToolchain> {
-    let manifest = fetch_channel_manifest(logger, toolchain).context("fetching manifest")?;
+    let manifest = fetch_channel_manifest(toolchain).context("fetching manifest")?;
 
     // The actual install directory is composed of the toolchain name and the
     // host triple.
@@ -282,7 +280,6 @@ pub fn install_rust_toolchain(
     for (triple, package) in installs {
         if package_is_fresh(&install_dir, package, triple)? {
             warn!(
-                logger,
                 "{} for {} in {} is up-to-date",
                 package,
                 triple,
@@ -290,14 +287,12 @@ pub fn install_rust_toolchain(
             );
         } else {
             warn!(
-                logger,
                 "extracting {} for {} to {}",
                 package,
                 triple,
                 install_dir.display()
             );
-            let archive =
-                resolve_package_archive(logger, &manifest, package, triple, download_cache_dir)?;
+            let archive = resolve_package_archive(&manifest, package, triple, download_cache_dir)?;
             materialize_archive(&archive, package, triple, &install_dir)?;
         }
     }
@@ -320,7 +315,7 @@ pub fn install_rust_toolchain(
 
 #[cfg(test)]
 mod tests {
-    use {super::*, tugger_common::testutil::get_logger};
+    use super::*;
 
     static CACHE_DIR: Lazy<PathBuf> = Lazy::new(|| {
         dirs::cache_dir()
@@ -330,14 +325,11 @@ mod tests {
     });
 
     fn do_triple_test(target_triple: &str) -> Result<()> {
-        let logger = get_logger()?;
-
         let temp_dir = tempfile::Builder::new()
             .prefix("tugger-rust-toolchain-test")
             .tempdir()?;
 
         let toolchain = install_rust_toolchain(
-            &logger,
             "stable",
             target_triple,
             &[],
@@ -352,7 +344,6 @@ mod tests {
 
         // Doing it again should no-op.
         install_rust_toolchain(
-            &logger,
             "stable",
             target_triple,
             &[],
@@ -365,9 +356,7 @@ mod tests {
 
     #[test]
     fn fetch_stable() -> Result<()> {
-        let logger = get_logger()?;
-
-        fetch_channel_manifest(&logger, "stable")?;
+        fetch_channel_manifest("stable")?;
 
         Ok(())
     }

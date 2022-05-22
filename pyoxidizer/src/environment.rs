@@ -334,7 +334,6 @@ impl Environment {
                 let target_triple = target_triple.unwrap_or_else(|| default_target_triple());
 
                 let toolchain = install_rust_toolchain(
-                    logger,
                     RUST_TOOLCHAIN_VERSION,
                     default_target_triple(),
                     &[target_triple],
