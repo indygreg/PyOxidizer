@@ -14,6 +14,7 @@ use {
     anyhow::{anyhow, Result},
     codemap::CodeMap,
     codemap_diagnostic::{Diagnostic, Emitter},
+    log::error,
     starlark::{
         environment::{Environment, EnvironmentError, TypeValues},
         eval::call_stack::CallStack,
@@ -238,7 +239,7 @@ impl EvaluationContext {
                         emitter.emit(&[e.clone()]);
                     }
 
-                    slog::error!(context.logger(), "{}", String::from_utf8_lossy(&msg));
+                    error!("{}", String::from_utf8_lossy(&msg));
                 }
             }
 

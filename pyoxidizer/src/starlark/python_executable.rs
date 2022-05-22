@@ -22,8 +22,8 @@ use {
     },
     anyhow::{anyhow, Context, Result},
     linked_hash_map::LinkedHashMap,
+    log::{info, warn},
     python_packaging::resource::PythonModuleSource,
-    slog::{info, warn},
     starlark::{
         environment::TypeValues,
         eval::call_stack::CallStack,
@@ -84,7 +84,6 @@ pub fn build_internal(
     // and building it.
     let build = build_python_executable(
         context.env(),
-        context.logger(),
         &exe.name(),
         &**exe,
         &context.build_target_triple,
@@ -100,11 +99,7 @@ pub fn build_internal(
         .with_context(|| format!("creating output directory {}", output_path.display()))?;
 
     let dest_path = output_path.join(build.exe_name);
-    warn!(
-        context.logger(),
-        "writing executable to {}",
-        dest_path.display()
-    );
+    warn!("writing executable to {}", dest_path.display());
     let mut fh =
         std::fs::File::create(&dest_path).context(format!("creating {}", dest_path.display()))?;
     fh.write_all(&build.exe_data)
@@ -361,11 +356,7 @@ impl PythonExecutableValue {
         let mut exe = self.inner(LABEL)?;
 
         let resources = error_context("PythonExecutable.pip_download()", || {
-            exe.pip_download(
-                pyoxidizer_context.logger(),
-                pyoxidizer_context.verbose,
-                &args,
-            )
+            exe.pip_download(pyoxidizer_context.verbose, &args)
         })?;
 
         let resources = resources
@@ -424,12 +415,7 @@ impl PythonExecutableValue {
         let mut exe = self.inner(LABEL)?;
 
         let resources = error_context(LABEL, || {
-            exe.pip_install(
-                pyoxidizer_context.logger(),
-                pyoxidizer_context.verbose,
-                &args,
-                &extra_envs,
-            )
+            exe.pip_install(pyoxidizer_context.verbose, &args, &extra_envs)
         })?;
 
         let resources = resources
@@ -467,18 +453,12 @@ impl PythonExecutableValue {
             .map(|x| x.to_string())
             .collect::<Vec<String>>();
 
-        let pyoxidizer_context_value = get_context(type_values)?;
-        let pyoxidizer_context = pyoxidizer_context_value
-            .downcast_ref::<PyOxidizerEnvironmentContext>()
-            .ok_or(ValueError::IncorrectParameterType)?;
-
         let python_packaging_policy = self.python_packaging_policy();
 
         let mut exe = self.inner(LABEL)?;
 
-        let resources = error_context(LABEL, || {
-            exe.read_package_root(pyoxidizer_context.logger(), Path::new(&path), &packages)
-        })?;
+        let resources =
+            error_context(LABEL, || exe.read_package_root(Path::new(&path), &packages))?;
 
         let resources = resources
             .iter()
@@ -506,18 +486,11 @@ impl PythonExecutableValue {
     ) -> ValueResult {
         const LABEL: &str = "PythonExecutable.read_virtualenv()";
 
-        let pyoxidizer_context_value = get_context(type_values)?;
-        let pyoxidizer_context = pyoxidizer_context_value
-            .downcast_ref::<PyOxidizerEnvironmentContext>()
-            .ok_or(ValueError::IncorrectParameterType)?;
-
         let python_packaging_policy = self.python_packaging_policy();
 
         let mut exe = self.inner(LABEL)?;
 
-        let resources = error_context(LABEL, || {
-            exe.read_virtualenv(pyoxidizer_context.logger(), Path::new(&path))
-        })?;
+        let resources = error_context(LABEL, || exe.read_virtualenv(Path::new(&path)))?;
 
         let resources = resources
             .iter()
@@ -592,7 +565,6 @@ impl PythonExecutableValue {
 
         let resources = error_context(LABEL, || {
             exe.setup_py_install(
-                pyoxidizer_context.logger(),
                 &package_path,
                 pyoxidizer_context.verbose,
                 &extra_envs,
@@ -615,7 +587,6 @@ impl PythonExecutableValue {
             .collect::<Result<Vec<Value>, ValueError>>()?;
 
         warn!(
-            pyoxidizer_context.logger(),
             "collected {} resources from setup.py install",
             resources.len()
         );
@@ -625,7 +596,6 @@ impl PythonExecutableValue {
 
     pub fn add_python_module_source(
         &mut self,
-        context: &PyOxidizerEnvironmentContext,
         label: &str,
         module: &PythonModuleSourceValue,
     ) -> ValueResult {
@@ -638,7 +608,7 @@ impl PythonExecutableValue {
                 .add_python_module_source(&inner.m, inner.add_context.clone())
                 .with_context(|| format!("adding {}", module.to_repr()))?
             {
-                info!(context.logger(), "{}", action.to_string());
+                info!("{}", action.to_string());
             }
 
             Ok(())
@@ -649,7 +619,6 @@ impl PythonExecutableValue {
 
     pub fn add_python_package_resource(
         &mut self,
-        context: &PyOxidizerEnvironmentContext,
         label: &str,
         resource: &PythonPackageResourceValue,
     ) -> ValueResult {
@@ -662,7 +631,7 @@ impl PythonExecutableValue {
                 .add_python_package_resource(&inner.r, inner.add_context.clone())
                 .with_context(|| format!("adding {}", resource.to_repr()))?
             {
-                info!(context.logger(), "{}", action.to_string());
+                info!("{}", action.to_string());
             }
 
             Ok(())
@@ -673,7 +642,6 @@ impl PythonExecutableValue {
 
     pub fn add_python_package_distribution_resource(
         &mut self,
-        context: &PyOxidizerEnvironmentContext,
         label: &str,
         resource: &PythonPackageDistributionResourceValue,
     ) -> ValueResult {
@@ -686,7 +654,7 @@ impl PythonExecutableValue {
                 .add_python_package_distribution_resource(&inner.r, inner.add_context.clone())
                 .with_context(|| format!("adding {}", resource.to_repr()))?
             {
-                info!(context.logger(), "{}", action.to_string());
+                info!("{}", action.to_string());
             }
 
             Ok(())
@@ -697,7 +665,6 @@ impl PythonExecutableValue {
 
     pub fn add_python_extension_module(
         &mut self,
-        context: &PyOxidizerEnvironmentContext,
         label: &str,
         module: &PythonExtensionModuleValue,
     ) -> ValueResult {
@@ -710,7 +677,7 @@ impl PythonExecutableValue {
                 .add_python_extension_module(&inner.em, inner.add_context.clone())
                 .with_context(|| format!("adding {}", module.to_repr()))?
             {
-                info!(context.logger(), "{}", action.to_string());
+                info!("{}", action.to_string());
             }
 
             Ok(())
@@ -719,12 +686,7 @@ impl PythonExecutableValue {
         Ok(Value::new(NoneType::None))
     }
 
-    pub fn add_file_data(
-        &mut self,
-        context: &PyOxidizerEnvironmentContext,
-        label: &str,
-        file: &FileValue,
-    ) -> ValueResult {
+    pub fn add_file_data(&mut self, label: &str, file: &FileValue) -> ValueResult {
         let inner = file.inner(label)?;
 
         let mut exe = self.inner(label)?;
@@ -734,7 +696,7 @@ impl PythonExecutableValue {
                 .add_file_data(&inner.file, inner.add_context.clone())
                 .with_context(|| format!("adding {}", file.to_repr()))?
             {
-                info!(context.logger(), "{}", action.to_string());
+                info!("{}", action.to_string());
             }
 
             Ok(())
@@ -744,47 +706,33 @@ impl PythonExecutableValue {
     }
 
     /// PythonExecutable.add_python_resource(resource)
-    pub fn add_python_resource(
-        &mut self,
-        type_values: &TypeValues,
-        resource: &Value,
-        label: &str,
-    ) -> ValueResult {
-        let pyoxidizer_context_value = get_context(type_values)?;
-        let pyoxidizer_context = pyoxidizer_context_value
-            .downcast_ref::<PyOxidizerEnvironmentContext>()
-            .ok_or(ValueError::IncorrectParameterType)?;
-
+    pub fn add_python_resource(&mut self, resource: &Value, label: &str) -> ValueResult {
         match resource.get_type() {
             FileValue::TYPE => {
                 let file = resource.downcast_ref::<FileValue>().unwrap();
-                self.add_file_data(pyoxidizer_context.deref(), label, file.deref())
+                self.add_file_data(label, file.deref())
             }
             PythonModuleSourceValue::TYPE => {
                 let module = resource.downcast_ref::<PythonModuleSourceValue>().unwrap();
-                self.add_python_module_source(pyoxidizer_context.deref(), label, module.deref())
+                self.add_python_module_source(label, module.deref())
             }
             PythonPackageResourceValue::TYPE => {
                 let r = resource
                     .downcast_ref::<PythonPackageResourceValue>()
                     .unwrap();
-                self.add_python_package_resource(pyoxidizer_context.deref(), label, r.deref())
+                self.add_python_package_resource(label, r.deref())
             }
             PythonPackageDistributionResourceValue::TYPE => {
                 let r = resource
                     .downcast_ref::<PythonPackageDistributionResourceValue>()
                     .unwrap();
-                self.add_python_package_distribution_resource(
-                    pyoxidizer_context.deref(),
-                    label,
-                    r.deref(),
-                )
+                self.add_python_package_distribution_resource(label, r.deref())
             }
             PythonExtensionModuleValue::TYPE => {
                 let module = resource
                     .downcast_ref::<PythonExtensionModuleValue>()
                     .unwrap();
-                self.add_python_extension_module(pyoxidizer_context.deref(), label, module.deref())
+                self.add_python_extension_module(label, module.deref())
             }
             _ => Err(ValueError::from(RuntimeError {
                 code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
@@ -795,13 +743,9 @@ impl PythonExecutableValue {
     }
 
     /// PythonExecutable.add_python_resources(resources)
-    pub fn add_python_resources(
-        &mut self,
-        type_values: &TypeValues,
-        resources: &Value,
-    ) -> ValueResult {
+    pub fn add_python_resources(&mut self, resources: &Value) -> ValueResult {
         for resource in &resources.iter()? {
-            self.add_python_resource(type_values, &resource, "add_python_resources()")?;
+            self.add_python_resource(&resource, "add_python_resources()")?;
         }
 
         Ok(Value::new(NoneType::None))
@@ -837,7 +781,6 @@ impl PythonExecutableValue {
             file_manifest_add_python_executable(
                 &mut manifest,
                 pyoxidizer_context.env(),
-                pyoxidizer_context.logger(),
                 &prefix,
                 &**exe,
                 &pyoxidizer_context.build_target_triple,
@@ -961,7 +904,6 @@ impl PythonExecutableValue {
     /// PythonExecutable.filter_resources_from_files(files=None, glob_files=None)
     pub fn filter_resources_from_files(
         &mut self,
-        type_values: &TypeValues,
         files: &Value,
         glob_files: &Value,
     ) -> ValueResult {
@@ -989,19 +931,10 @@ impl PythonExecutableValue {
         let files_refs = files.iter().map(|x| x.as_ref()).collect::<Vec<&Path>>();
         let glob_files_refs = glob_files.iter().map(|x| x.as_ref()).collect::<Vec<&str>>();
 
-        let pyoxidizer_context_value = get_context(type_values)?;
-        let pyoxidizer_context = pyoxidizer_context_value
-            .downcast_ref::<PyOxidizerEnvironmentContext>()
-            .ok_or(ValueError::IncorrectParameterType)?;
-
         let mut exe = self.inner(LABEL)?;
 
         error_context(LABEL, || {
-            exe.filter_resources_from_files(
-                pyoxidizer_context.logger(),
-                &files_refs,
-                &glob_files_refs,
-            )
+            exe.filter_resources_from_files(&files_refs, &glob_files_refs)
         })?;
 
         Ok(Value::new(NoneType::None))
@@ -1081,38 +1014,33 @@ starlark_module! { python_executable_env =>
     }
 
     PythonExecutable.add_python_resource(
-        env env,
         this,
         resource
     ) {
         let mut this = this.downcast_mut::<PythonExecutableValue>().unwrap().unwrap();
         this.add_python_resource(
-            env,
             &resource,
             "add_python_resource",
         )
     }
 
     PythonExecutable.add_python_resources(
-        env env,
         this,
         resources
     ) {
         let mut this = this.downcast_mut::<PythonExecutableValue>().unwrap().unwrap();
         this.add_python_resources(
-            env,
             &resources,
         )
     }
 
     PythonExecutable.filter_resources_from_files(
-        env env,
         this,
         files=NoneType::None,
         glob_files=NoneType::None)
     {
         let mut this = this.downcast_mut::<PythonExecutableValue>().unwrap().unwrap();
-        this.filter_resources_from_files(env, &files, &glob_files)
+        this.filter_resources_from_files(&files, &glob_files)
     }
 
     PythonExecutable.to_embedded_resources(this) {

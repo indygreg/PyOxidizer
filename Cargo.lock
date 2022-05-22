@@ -4440,7 +4440,6 @@ dependencies = [
  "python-oxidized-importer",
  "python-packaging",
  "python-packed-resources",
- "slog",
  "tempfile",
  "zip",
 ]
@@ -4528,6 +4527,7 @@ dependencies = [
  "indoc",
  "itertools",
  "linked-hash-map",
+ "log",
  "once_cell",
  "path-dedot",
  "predicates",

@@ -15,7 +15,7 @@ use {
     },
     anyhow::{anyhow, Context, Result},
     duct::cmd,
-    slog::warn,
+    log::warn,
     starlark_dialect_build_targets::ResolvedTarget,
     std::{
         collections::HashMap,
@@ -56,17 +56,17 @@ pub fn find_pyoxidizer_config_file(start_dir: &Path) -> Option<PathBuf> {
 ///
 /// If none of the above find a config file, we fall back to traversing ancestors
 /// of `start_dir`.
-pub fn find_pyoxidizer_config_file_env(logger: &slog::Logger, start_dir: &Path) -> Option<PathBuf> {
+pub fn find_pyoxidizer_config_file_env(start_dir: &Path) -> Option<PathBuf> {
     if let Ok(path) = std::env::var("PYOXIDIZER_CONFIG") {
         warn!(
-            logger,
-            "using PyOxidizer config file from PYOXIDIZER_CONFIG: {}", path
+            "using PyOxidizer config file from PYOXIDIZER_CONFIG: {}",
+            path
         );
         return Some(PathBuf::from(path));
     }
 
     if let Ok(path) = std::env::var("OUT_DIR") {
-        warn!(logger, "looking for config file in ancestry of {}", path);
+        warn!("looking for config file in ancestry of {}", path);
         let res = find_pyoxidizer_config_file(Path::new(&path));
         if res.is_some() {
             return res;
@@ -93,7 +93,6 @@ impl BuildEnvironment {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         env: &Environment,
-        logger: &slog::Logger,
         target_triple: &str,
         artifacts_path: &Path,
         pyo3_config_path: impl AsRef<Path>,
@@ -101,7 +100,7 @@ impl BuildEnvironment {
         apple_sdk_info: Option<&AppleSdkInfo>,
     ) -> Result<Self> {
         let rust_environment = env
-            .ensure_rust_toolchain(logger, Some(target_triple))
+            .ensure_rust_toolchain(Some(target_triple))
             .context("ensuring Rust toolchain available")?;
 
         let mut envs = std::env::vars().collect::<HashMap<_, _>>();
@@ -143,14 +142,14 @@ impl BuildEnvironment {
             })?;
 
             let sdk = env
-                .resolve_apple_sdk(logger, sdk_info)
+                .resolve_apple_sdk(sdk_info)
                 .context("resolving Apple SDK")?;
 
             let deployment_target_name = sdk.supported_targets.get(&sdk_info.platform).ok_or_else(|| {
                 anyhow!("could not find settings for target {} (this shouldn't happen)", &sdk_info.platform)
             })?.deployment_target_setting_name.clone().unwrap_or_else(|| {
-                warn!(logger, "Apple SDK does not define deployment target name; assuming MACOSX_DEPLOYMENT_TARGET");
-                warn!(logger, "(If you see this message, the SDK you are attempting to use may be too old and build failures may occur.)");
+                warn!("Apple SDK does not define deployment target name; assuming MACOSX_DEPLOYMENT_TARGET");
+                warn!("(If you see this message, the SDK you are attempting to use may be too old and build failures may occur.)");
                 "MACOSX_DEPLOYMENT_TARGET".to_string()
             });
 
@@ -237,7 +236,6 @@ pub struct BuiltExecutable<'a> {
 #[allow(clippy::too_many_arguments)]
 pub fn build_executable_with_rust_project<'a>(
     env: &Environment,
-    logger: &slog::Logger,
     project_path: &Path,
     bin_name: &str,
     exe: &'a (dyn PythonBinaryBuilder + 'a),
@@ -252,7 +250,7 @@ pub fn build_executable_with_rust_project<'a>(
 
     // Derive and write the artifacts needed to build a binary embedding Python.
     let embedded_data = exe
-        .to_embedded_python_context(logger, env, opt_level)
+        .to_embedded_python_context(env, opt_level)
         .context("obtaining embedded python context")?;
     embedded_data
         .write_files(artifacts_path)
@@ -260,7 +258,6 @@ pub fn build_executable_with_rust_project<'a>(
 
     let build_env = BuildEnvironment::new(
         env,
-        logger,
         exe.target_triple(),
         artifacts_path,
         embedded_data.pyo3_config_path(&artifacts_path),
@@ -270,8 +267,8 @@ pub fn build_executable_with_rust_project<'a>(
     .context("resolving build environment")?;
 
     warn!(
-        logger,
-        "building with Rust {}", build_env.rust_environment.rust_version.semver
+        "building with Rust {}",
+        build_env.rust_environment.rust_version.semver
     );
 
     let target_base_path = build_path.join("target");
@@ -330,7 +327,7 @@ pub fn build_executable_with_rust_project<'a>(
     {
         let reader = BufReader::new(&command);
         for line in reader.lines() {
-            warn!(logger, "{}", line.context("reading cargo output")?);
+            warn!("{}", line.context("reading cargo output")?);
         }
     }
     let output = command
@@ -370,7 +367,6 @@ pub fn build_executable_with_rust_project<'a>(
 /// Returns the binary data constituting the built executable.
 pub fn build_python_executable<'a>(
     env: &Environment,
-    logger: &slog::Logger,
     bin_name: &str,
     exe: &'a (dyn PythonBinaryBuilder + 'a),
     target_triple: &str,
@@ -378,7 +374,7 @@ pub fn build_python_executable<'a>(
     release: bool,
 ) -> Result<BuiltExecutable<'a>> {
     let cargo_exe = env
-        .ensure_rust_toolchain(logger, Some(target_triple))
+        .ensure_rust_toolchain(Some(target_triple))
         .context("resolving Rust toolchain")?
         .cargo_exe;
 
@@ -404,7 +400,6 @@ pub fn build_python_executable<'a>(
 
     let mut build = build_executable_with_rust_project(
         env,
-        logger,
         &project_path,
         bin_name,
         exe,
@@ -445,7 +440,7 @@ pub fn build_pyembed_artifacts(
 
     let artifacts_path = canonicalize_path(artifacts_path)?;
 
-    if artifacts_current(logger, config_path, &artifacts_path) {
+    if artifacts_current(config_path, &artifacts_path) {
         return Ok(());
     }
 
@@ -537,7 +532,7 @@ pub fn run_from_build(
 
     //let project_path = PathBuf::from(&manifest_dir);
 
-    let config_path = match find_pyoxidizer_config_file_env(logger, &PathBuf::from(manifest_dir)) {
+    let config_path = match find_pyoxidizer_config_file_env(&PathBuf::from(manifest_dir)) {
         Some(v) => v,
         None => panic!("Could not find PyOxidizer config file"),
     };
@@ -574,43 +569,35 @@ pub fn run_from_build(
     Ok(())
 }
 
-fn dependency_current(
-    logger: &slog::Logger,
-    path: &Path,
-    built_time: std::time::SystemTime,
-) -> bool {
+fn dependency_current(path: &Path, built_time: std::time::SystemTime) -> bool {
     match path.metadata() {
         Ok(md) => match md.modified() {
             Ok(t) => {
                 if t > built_time {
-                    warn!(
-                        logger,
-                        "building artifacts because {} changed",
-                        path.display()
-                    );
+                    warn!("building artifacts because {} changed", path.display());
                     false
                 } else {
                     true
                 }
             }
             Err(_) => {
-                warn!(logger, "error resolving mtime of {}", path.display());
+                warn!("error resolving mtime of {}", path.display());
                 false
             }
         },
         Err(_) => {
-            warn!(logger, "error resolving metadata of {}", path.display());
+            warn!("error resolving metadata of {}", path.display());
             false
         }
     }
 }
 
 /// Determines whether PyOxidizer artifacts are current.
-fn artifacts_current(logger: &slog::Logger, config_path: &Path, artifacts_path: &Path) -> bool {
+fn artifacts_current(config_path: &Path, artifacts_path: &Path) -> bool {
     let python_config_path = artifacts_path.join(DEFAULT_PYTHON_CONFIG_FILENAME);
 
     if !python_config_path.exists() {
-        warn!(logger, "no existing PyOxidizer artifacts found");
+        warn!("no existing PyOxidizer artifacts found");
         return false;
     }
 
@@ -621,7 +608,6 @@ fn artifacts_current(logger: &slog::Logger, config_path: &Path, artifacts_path: 
             Ok(t) => t,
             Err(_) => {
                 warn!(
-                    logger,
                     "error determining mtime of {}",
                     python_config_path.display()
                 );
@@ -630,7 +616,6 @@ fn artifacts_current(logger: &slog::Logger, config_path: &Path, artifacts_path: 
         },
         Err(_) => {
             warn!(
-                logger,
                 "error resolving metadata of {}",
                 python_config_path.display()
             );
@@ -639,11 +624,11 @@ fn artifacts_current(logger: &slog::Logger, config_path: &Path, artifacts_path: 
     };
 
     let current_exe = std::env::current_exe().expect("unable to determine current exe");
-    if !dependency_current(logger, &current_exe, built_time) {
+    if !dependency_current(&current_exe, built_time) {
         return false;
     }
 
-    if !dependency_current(logger, config_path, built_time) {
+    if !dependency_current(config_path, built_time) {
         return false;
     }
 
@@ -669,13 +654,11 @@ mod tests {
     #[test]
     fn test_empty_project() -> Result<()> {
         let env = get_env()?;
-        let logger = get_logger()?;
         let options = StandalonePythonExecutableBuilderOptions::default();
         let pre_built = options.new_builder()?;
 
         build_python_executable(
             &env,
-            &logger,
             "myapp",
             pre_built.as_ref(),
             default_target_triple(),
@@ -691,7 +674,6 @@ mod tests {
     #[test]
     fn test_empty_project_python_38() -> Result<()> {
         let env = get_env()?;
-        let logger = get_logger()?;
         let options = StandalonePythonExecutableBuilderOptions {
             distribution_version: Some("3.8".to_string()),
             ..Default::default()
@@ -700,7 +682,6 @@ mod tests {
 
         build_python_executable(
             &env,
-            &logger,
             "myapp",
             pre_built.as_ref(),
             default_target_triple(),
@@ -714,7 +695,6 @@ mod tests {
     #[test]
     fn test_empty_project_python_310() -> Result<()> {
         let env = get_env()?;
-        let logger = get_logger()?;
         let options = StandalonePythonExecutableBuilderOptions {
             distribution_version: Some("3.10".to_string()),
             ..Default::default()
@@ -723,7 +703,6 @@ mod tests {
 
         build_python_executable(
             &env,
-            &logger,
             "myapp",
             pre_built.as_ref(),
             default_target_triple(),
@@ -738,13 +717,11 @@ mod tests {
     fn test_empty_project_system_rust() -> Result<()> {
         let mut env = get_env()?;
         env.unmanage_rust()?;
-        let logger = get_logger()?;
         let options = StandalonePythonExecutableBuilderOptions::default();
         let pre_built = options.new_builder()?;
 
         build_python_executable(
             &env,
-            &logger,
             "myapp",
             pre_built.as_ref(),
             default_target_triple(),
@@ -759,7 +736,6 @@ mod tests {
     #[cfg(target_env = "msvc")]
     fn test_empty_project_standalone_static() -> Result<()> {
         let env = get_env()?;
-        let logger = get_logger()?;
         let options = StandalonePythonExecutableBuilderOptions {
             distribution_flavor: DistributionFlavor::StandaloneStatic,
             ..Default::default()
@@ -768,7 +744,6 @@ mod tests {
 
         build_python_executable(
             &env,
-            &logger,
             "myapp",
             pre_built.as_ref(),
             default_target_triple(),
@@ -783,7 +758,6 @@ mod tests {
     #[cfg(target_env = "msvc")]
     fn test_empty_project_standalone_static_38() -> Result<()> {
         let env = get_env()?;
-        let logger = get_logger()?;
         let options = StandalonePythonExecutableBuilderOptions {
             distribution_version: Some("3.8".to_string()),
             distribution_flavor: DistributionFlavor::StandaloneStatic,
@@ -793,7 +767,6 @@ mod tests {
 
         build_python_executable(
             &env,
-            &logger,
             "myapp",
             pre_built.as_ref(),
             default_target_triple(),
@@ -808,7 +781,6 @@ mod tests {
     #[cfg(target_env = "msvc")]
     fn test_empty_project_standalone_static_310() -> Result<()> {
         let env = get_env()?;
-        let logger = get_logger()?;
         let options = StandalonePythonExecutableBuilderOptions {
             distribution_version: Some("3.10".to_string()),
             distribution_flavor: DistributionFlavor::StandaloneStatic,
@@ -818,7 +790,6 @@ mod tests {
 
         build_python_executable(
             &env,
-            &logger,
             "myapp",
             pre_built.as_ref(),
             default_target_triple(),
@@ -834,7 +805,6 @@ mod tests {
     #[cfg(not(target_env = "msvc"))]
     fn test_allocator_jemalloc() -> Result<()> {
         let env = get_env()?;
-        let logger = get_logger()?;
 
         let mut options = StandalonePythonExecutableBuilderOptions::default();
         options.config.allocator_backend = MemoryAllocatorBackend::Jemalloc;
@@ -843,7 +813,6 @@ mod tests {
 
         build_python_executable(
             &env,
-            &logger,
             "myapp",
             pre_built.as_ref(),
             default_target_triple(),
@@ -863,7 +832,6 @@ mod tests {
         }
 
         let env = get_env()?;
-        let logger = get_logger()?;
 
         let mut options = StandalonePythonExecutableBuilderOptions::default();
         options.config.allocator_backend = MemoryAllocatorBackend::Mimalloc;
@@ -872,7 +840,6 @@ mod tests {
 
         build_python_executable(
             &env,
-            &logger,
             "myapp",
             pre_built.as_ref(),
             default_target_triple(),
@@ -892,7 +859,6 @@ mod tests {
         }
 
         let env = get_env()?;
-        let logger = get_logger()?;
 
         let mut options = StandalonePythonExecutableBuilderOptions::default();
         options.config.allocator_backend = MemoryAllocatorBackend::Snmalloc;
@@ -901,7 +867,6 @@ mod tests {
 
         build_python_executable(
             &env,
-            &logger,
             "myapp",
             pre_built.as_ref(),
             default_target_triple(),

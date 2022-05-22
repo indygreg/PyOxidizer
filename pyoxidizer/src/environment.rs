@@ -7,9 +7,9 @@
 use {
     crate::{project_layout::PyembedLocation, py_packaging::distribution::AppleSdkInfo},
     anyhow::{anyhow, Context, Result},
+    log::{info, warn},
     once_cell::sync::Lazy,
     semver::Version,
-    slog::{info, warn},
     std::{
         env,
         ops::Deref,
@@ -312,11 +312,7 @@ impl Environment {
     }
 
     /// Ensure a Rust toolchain suitable for building is available.
-    pub fn ensure_rust_toolchain(
-        &self,
-        logger: &slog::Logger,
-        target_triple: Option<&str>,
-    ) -> Result<RustEnvironment> {
+    pub fn ensure_rust_toolchain(&self, target_triple: Option<&str>) -> Result<RustEnvironment> {
         let mut cached = self
             .rust_environment
             .write()
@@ -324,8 +320,8 @@ impl Environment {
 
         if cached.is_none() {
             warn!(
-                logger,
-                "ensuring Rust toolchain {} is available", RUST_TOOLCHAIN_VERSION,
+                "ensuring Rust toolchain {} is available",
+                RUST_TOOLCHAIN_VERSION,
             );
 
             let rust_env = if self.managed_rust {
@@ -427,17 +423,13 @@ impl Environment {
     }
 
     /// Attempt to resolve an appropriate Apple SDK to use given settings.
-    pub fn resolve_apple_sdk(
-        &self,
-        logger: &slog::Logger,
-        sdk_info: &AppleSdkInfo,
-    ) -> Result<AppleSdk> {
+    pub fn resolve_apple_sdk(&self, sdk_info: &AppleSdkInfo) -> Result<AppleSdk> {
         let platform = &sdk_info.platform;
         let minimum_version = &sdk_info.version;
         let deployment_target = &sdk_info.deployment_target;
 
         let sdk = if let Ok(sdk_root) = std::env::var("SDKROOT") {
-            warn!(logger, "SDKROOT defined; using Apple SDK at {}", &sdk_root);
+            warn!("SDKROOT defined; using Apple SDK at {}", &sdk_root);
 
             let sdk = AppleSdk::from_directory(&PathBuf::from(&sdk_root)).with_context(|| {
                 format!("resolving Apple SDK at {} as defined by SDKROOT", sdk_root)
@@ -480,7 +472,6 @@ impl Environment {
                 < minimum_semver
             {
                 warn!(
-                    logger,
                     "WARNING: SDKROOT defined Apple SDK does not meet minimum version requirement of {}; build errors or unexpected behavior may occur",
                     minimum_version
                 );
@@ -489,20 +480,15 @@ impl Environment {
             sdk
         } else {
             warn!(
-                logger,
                 "locating Apple SDK {}{}+ supporting {}{}",
-                platform,
-                minimum_version,
-                platform,
-                deployment_target
+                platform, minimum_version, platform, deployment_target
             );
 
-            resolve_apple_sdk(logger, platform, minimum_version, deployment_target)
+            resolve_apple_sdk(platform, minimum_version, deployment_target)
                 .context("resolving Apple SDK")?
         };
 
         warn!(
-            logger,
             "using SDK {} ({} targeting {}{})",
             sdk.path.display(),
             sdk.name,
@@ -533,7 +519,6 @@ pub struct RustEnvironment {
 /// `minimum_version` and supports targeting `deployment_target`, which is likely
 /// an OS version string.
 pub fn resolve_apple_sdk(
-    logger: &slog::Logger,
     platform: &str,
     minimum_version: &str,
     deployment_target: &str,
@@ -561,7 +546,6 @@ pub fn resolve_apple_sdk(
         .collect::<Vec<_>>();
 
     info!(
-        logger,
         "found {} total Apple SDKs; {} support {}",
         sdks.len(),
         target_sdks.len(),
@@ -578,7 +562,6 @@ pub fn resolve_apple_sdk(
 
             if version < minimum_semver {
                 info!(
-                    logger,
                     "ignoring SDK {} because it is too old ({} < {})",
                     sdk.path.display(),
                     sdk.version,
@@ -595,7 +578,6 @@ pub fn resolve_apple_sdk(
                 .contains(&deployment_target.to_string())
             {
                 info!(
-                    logger,
                     "ignoring SDK {} because it doesn't support deployment target {}",
                     sdk.path.display(),
                     deployment_target
@@ -621,7 +603,6 @@ pub fn resolve_apple_sdk(
         ))
     } else {
         info!(
-            logger,
             "found {} suitable Apple SDKs ({})",
             candidate_sdks.len(),
             candidate_sdks

@@ -531,7 +531,6 @@ pub fn run_cli() -> Result<()> {
                 Err(anyhow!("must specify a path or --scan-distribution"))
             } else {
                 projectmgmt::find_resources(
-                    &logger_context.logger,
                     path,
                     distributions_dir,
                     scan_distribution,
@@ -555,7 +554,6 @@ pub fn run_cli() -> Result<()> {
 
             projectmgmt::generate_python_embedding_artifacts(
                 &env,
-                &logger_context.logger,
                 target_triple,
                 flavor,
                 python_version,
@@ -586,7 +584,7 @@ pub fn run_cli() -> Result<()> {
             let path = args.value_of("path").unwrap();
             let project_path = Path::new(path);
 
-            projectmgmt::init_rust_project(&env, &logger_context.logger, project_path)
+            projectmgmt::init_rust_project(&env, project_path)
         }
 
         "python-distribution-extract" => {

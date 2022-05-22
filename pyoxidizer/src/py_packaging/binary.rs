@@ -252,19 +252,13 @@ pub trait PythonBinaryBuilder {
     /// Runs `pip download` using the binary builder's settings.
     ///
     /// Returns resources discovered from the Python packages downloaded.
-    fn pip_download(
-        &mut self,
-        logger: &slog::Logger,
-        verbose: bool,
-        args: &[String],
-    ) -> Result<Vec<PythonResource>>;
+    fn pip_download(&mut self, verbose: bool, args: &[String]) -> Result<Vec<PythonResource>>;
 
     /// Runs `pip install` using the binary builder's settings.
     ///
     /// Returns resources discovered as part of performing an install.
     fn pip_install(
         &mut self,
-        logger: &slog::Logger,
         verbose: bool,
         install_args: &[String],
         extra_envs: &HashMap<String, String>,
@@ -273,24 +267,18 @@ pub trait PythonBinaryBuilder {
     /// Reads Python resources from the filesystem.
     fn read_package_root(
         &mut self,
-        logger: &slog::Logger,
         path: &Path,
         packages: &[String],
     ) -> Result<Vec<PythonResource>>;
 
     /// Read Python resources from a populated virtualenv directory.
-    fn read_virtualenv(
-        &mut self,
-        logger: &slog::Logger,
-        path: &Path,
-    ) -> Result<Vec<PythonResource>>;
+    fn read_virtualenv(&mut self, path: &Path) -> Result<Vec<PythonResource>>;
 
     /// Runs `python setup.py install` using the binary builder's settings.
     ///
     /// Returns resources discovered as part of performing an install.
     fn setup_py_install(
         &mut self,
-        logger: &slog::Logger,
         package_path: &Path,
         verbose: bool,
         extra_envs: &HashMap<String, String>,
@@ -380,7 +368,6 @@ pub trait PythonBinaryBuilder {
     /// `glob_patterns` is file patterns of files to read names from.
     fn filter_resources_from_files(
         &mut self,
-        logger: &slog::Logger,
         files: &[&Path],
         glob_patterns: &[&str],
     ) -> Result<()>;
@@ -397,7 +384,6 @@ pub trait PythonBinaryBuilder {
     /// Obtain an `EmbeddedPythonContext` instance from this one.
     fn to_embedded_python_context(
         &self,
-        logger: &slog::Logger,
         env: &Environment,
         opt_level: &str,
     ) -> Result<EmbeddedPythonContext>;

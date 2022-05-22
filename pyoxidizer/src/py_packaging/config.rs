@@ -520,7 +520,6 @@ mod tests {
     #[ignore]
     fn test_build_all_fields() -> Result<()> {
         let env = get_env()?;
-        let logger = get_logger()?;
         let dist = get_default_distribution(None)?;
         let policy = dist.create_packaging_policy()?;
 
@@ -609,7 +608,6 @@ mod tests {
         };
 
         let builder = dist.as_python_executable_builder(
-            &logger,
             default_target_triple(),
             default_target_triple(),
             "all_config_fields",
@@ -621,7 +619,6 @@ mod tests {
 
         crate::project_building::build_python_executable(
             &env,
-            &logger,
             "all_config_fields",
             builder.as_ref(),
             default_target_triple(),

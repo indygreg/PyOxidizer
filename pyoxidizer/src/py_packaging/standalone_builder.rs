@@ -23,6 +23,7 @@ use {
     },
     crate::environment::Environment,
     anyhow::{anyhow, Context, Result},
+    log::warn,
     once_cell::sync::Lazy,
     pyo3_build_config::{BuildFlag, BuildFlags, PythonImplementation, PythonVersion},
     python_packaging::{
@@ -41,7 +42,6 @@ use {
             PythonResourceCollector,
         },
     },
-    slog::warn,
     std::{
         collections::{BTreeMap, BTreeSet, HashMap},
         path::{Path, PathBuf},
@@ -304,16 +304,12 @@ impl StandalonePythonExecutableBuilder {
     /// If we need to derive a custom libpython, a static library will be built.
     fn resolve_python_link_settings(
         &self,
-        logger: &slog::Logger,
         env: &Environment,
         opt_level: &str,
     ) -> Result<LibpythonLinkSettings> {
         match self.link_mode {
             LibpythonLinkMode::Static => {
-                warn!(
-                    logger,
-                    "generating custom link library containing Python..."
-                );
+                warn!("generating custom link library containing Python...");
 
                 let mut link_contexts = vec![&self.core_build_context];
                 for c in self.extension_build_contexts.values() {
@@ -321,7 +317,6 @@ impl StandalonePythonExecutableBuilder {
                 }
 
                 let library_info = link_libpython(
-                    logger,
                     env,
                     &LibPythonBuildContext::merge(&link_contexts),
                     &self.host_triple,
@@ -535,14 +530,8 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         Ok(())
     }
 
-    fn pip_download(
-        &mut self,
-        logger: &slog::Logger,
-        verbose: bool,
-        args: &[String],
-    ) -> Result<Vec<PythonResource>> {
+    fn pip_download(&mut self, verbose: bool, args: &[String]) -> Result<Vec<PythonResource>> {
         let resources = pip_download(
-            logger,
             &*self.host_distribution,
             &*self.target_distribution,
             self.python_packaging_policy(),
@@ -559,13 +548,11 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
 
     fn pip_install(
         &mut self,
-        logger: &slog::Logger,
         verbose: bool,
         install_args: &[String],
         extra_envs: &HashMap<String, String>,
     ) -> Result<Vec<PythonResource>> {
         let resources = pip_install(
-            logger,
             &*self.target_distribution,
             self.python_packaging_policy(),
             self.link_mode,
@@ -583,7 +570,6 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
 
     fn read_package_root(
         &mut self,
-        _logger: &slog::Logger,
         path: &Path,
         packages: &[String],
     ) -> Result<Vec<PythonResource>> {
@@ -610,11 +596,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         Ok(resources)
     }
 
-    fn read_virtualenv(
-        &mut self,
-        _logger: &slog::Logger,
-        path: &Path,
-    ) -> Result<Vec<PythonResource>> {
+    fn read_virtualenv(&mut self, path: &Path) -> Result<Vec<PythonResource>> {
         let resources = read_virtualenv(
             &*self.target_distribution,
             self.python_packaging_policy(),
@@ -630,14 +612,12 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
 
     fn setup_py_install(
         &mut self,
-        logger: &slog::Logger,
         package_path: &Path,
         verbose: bool,
         extra_envs: &HashMap<String, String>,
         extra_global_arguments: &[String],
     ) -> Result<Vec<PythonResource>> {
         let resources = setup_py_install(
-            logger,
             &*self.target_distribution,
             self.python_packaging_policy(),
             self.link_mode,
@@ -838,25 +818,24 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
 
     fn filter_resources_from_files(
         &mut self,
-        logger: &slog::Logger,
         files: &[&Path],
         glob_patterns: &[&str],
     ) -> Result<()> {
         let resource_names = resolve_resource_names_from_files(files, glob_patterns)?;
 
-        warn!(logger, "filtering module entries");
+        warn!("filtering module entries");
 
         self.resources_collector.filter_resources_mut(|resource| {
             if !resource_names.contains(&resource.name) {
-                warn!(logger, "removing {}", resource.name);
+                warn!("removing {}", resource.name);
                 false
             } else {
                 true
             }
         })?;
 
-        warn!(logger, "filtering embedded extension modules");
-        filter_btreemap(logger, &mut self.extension_build_contexts, &resource_names);
+        warn!("filtering embedded extension modules");
+        filter_btreemap(&mut self.extension_build_contexts, &resource_names);
 
         Ok(())
     }
@@ -875,34 +854,26 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
 
     fn to_embedded_python_context(
         &self,
-        logger: &slog::Logger,
         env: &Environment,
         opt_level: &str,
     ) -> Result<EmbeddedPythonContext> {
         let mut file_seen = false;
         for module in self.resources_collector.find_dunder_file()? {
             file_seen = true;
-            warn!(logger, "warning: {} contains __file__", module);
+            warn!("warning: {} contains __file__", module);
         }
 
         if file_seen {
-            warn!(logger, "__file__ was encountered in some embedded modules");
-            warn!(
-                logger,
-                "PyOxidizer does not set __file__ and this may create problems at run-time"
-            );
-            warn!(
-                logger,
-                "See https://github.com/indygreg/PyOxidizer/issues/69 for more"
-            );
+            warn!("__file__ was encountered in some embedded modules");
+            warn!("PyOxidizer does not set __file__ and this may create problems at run-time");
+            warn!("See https://github.com/indygreg/PyOxidizer/issues/69 for more");
         }
 
         let license_report = self.resources_collector.generate_license_report()?;
         if license_report.no_license_packages.is_empty() {
-            warn!(logger, "All Python packages have license metadata");
+            warn!("All Python packages have license metadata");
         } else {
             warn!(
-                logger,
                 "{} Python packages lack software licenses: {:?}",
                 license_report.no_license_packages.len(),
                 license_report.no_license_packages
@@ -910,25 +881,23 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         }
 
         if license_report.non_spdx_by_package.is_empty() {
-            warn!(logger, "No Python packages with non-SPDX licenses");
+            warn!("No Python packages with non-SPDX licenses");
         } else {
             warn!(
-                logger,
                 "{} non-SPDX licenses seen",
                 license_report.non_spdx_by_package.len()
             );
             for (license, packages) in &license_report.non_spdx_by_package {
-                warn!(logger, "license: {}; packages: {:?}", license, packages);
+                warn!("license: {}; packages: {:?}", license, packages);
             }
         }
 
         warn!(
-            logger,
             "{} SPDX licenses encountered:",
             license_report.spdx_by_package.len()
         );
         for (license, packages) in &license_report.spdx_by_package {
-            warn!(logger, "license: {}; packages: {:?}", license, packages);
+            warn!("license: {}; packages: {:?}", license, packages);
         }
 
         let compiled_resources = {
@@ -969,7 +938,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
             }
         }
 
-        let link_settings = self.resolve_python_link_settings(logger, env, opt_level)?;
+        let link_settings = self.resolve_python_link_settings(env, opt_level)?;
 
         if self.link_mode == LibpythonLinkMode::Dynamic {
             if let Some(p) = &self.target_distribution.libpython_shared_library {
@@ -1339,10 +1308,9 @@ pub mod tests {
 
     #[test]
     fn test_write_embedded_files() -> Result<()> {
-        let logger = get_logger()?;
         let options = StandalonePythonExecutableBuilderOptions::default();
         let exe = options.new_builder()?;
-        let embedded = exe.to_embedded_python_context(&logger, &get_env()?, "0")?;
+        let embedded = exe.to_embedded_python_context(&get_env()?, "0")?;
 
         let temp_dir = tempfile::Builder::new()
             .prefix("pyoxidizer-test")
@@ -1358,13 +1326,12 @@ pub mod tests {
 
     #[test]
     fn test_memory_mapped_file_resources() -> Result<()> {
-        let logger = get_logger()?;
         let options = StandalonePythonExecutableBuilderOptions::default();
         let mut exe = options.new_builder()?;
         exe.resources_load_mode =
             PackedResourcesLoadMode::BinaryRelativePathMemoryMapped("resources".into());
 
-        let embedded = exe.to_embedded_python_context(&logger, &get_env()?, "0")?;
+        let embedded = exe.to_embedded_python_context(&get_env()?, "0")?;
 
         assert_eq!(
             &embedded.config.packed_resources,
@@ -2964,14 +2931,9 @@ pub mod tests {
             };
 
             let mut builder = options.new_builder()?;
-            let logger = get_logger()?;
 
-            let resources = builder.pip_install(
-                &logger,
-                false,
-                &["pyyaml==5.3.1".to_string()],
-                &HashMap::new(),
-            )?;
+            let resources =
+                builder.pip_install(false, &["pyyaml==5.3.1".to_string()], &HashMap::new())?;
 
             let extensions = resources
                 .iter()

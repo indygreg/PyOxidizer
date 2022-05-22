@@ -53,11 +53,10 @@ pub fn get_distribution(
     location: &PythonDistributionLocation,
 ) -> Result<Arc<StandaloneDistribution>> {
     let env = get_env()?;
-    let logger = get_logger()?;
 
     let dest_path = env.cache_dir().join("python_distributions");
 
-    DISTRIBUTION_CACHE.resolve_distribution(&logger, location, Some(&dest_path))
+    DISTRIBUTION_CACHE.resolve_distribution(location, Some(&dest_path))
 }
 
 pub fn get_default_distribution(

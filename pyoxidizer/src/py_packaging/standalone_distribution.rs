@@ -18,6 +18,7 @@ use {
     crate::environment::{LINUX_TARGET_TRIPLES, MACOS_TARGET_TRIPLES},
     anyhow::{anyhow, Context, Result},
     duct::cmd,
+    log::{info, warn},
     once_cell::sync::Lazy,
     path_dedot::ParseDot,
     python_packaging::{
@@ -33,7 +34,6 @@ use {
         },
     },
     serde::Deserialize,
-    slog::{info, warn},
     std::{
         collections::{hash_map::RandomState, BTreeMap, HashMap},
         io::{BufRead, BufReader, Read},
@@ -318,20 +318,19 @@ pub fn resolve_python_paths(base: &Path, python_version: &str) -> PythonPaths {
     }
 }
 
-pub fn invoke_python(python_paths: &PythonPaths, logger: &slog::Logger, args: &[&str]) {
+pub fn invoke_python(python_paths: &PythonPaths, args: &[&str]) {
     let site_packages_s = python_paths.site_packages.display().to_string();
 
     if site_packages_s.starts_with("\\\\?\\") {
         panic!("Unexpected Windows UNC path in site-packages path");
     }
 
-    info!(logger, "setting PYTHONPATH {}", site_packages_s);
+    info!("setting PYTHONPATH {}", site_packages_s);
 
     let mut envs: HashMap<String, String, RandomState> = std::env::vars().collect();
     envs.insert("PYTHONPATH".to_string(), site_packages_s);
 
     info!(
-        logger,
         "running {} {}",
         python_paths.python_exe.display(),
         args.join(" ")
@@ -351,7 +350,7 @@ pub fn invoke_python(python_paths: &PythonPaths, logger: &slog::Logger, args: &[
     {
         let reader = BufReader::new(&command);
         for line in reader.lines() {
-            warn!(logger, "{}", line.unwrap());
+            warn!("{}", line.unwrap());
         }
     }
 }
@@ -495,24 +494,19 @@ pub struct StandaloneDistribution {
 
 impl StandaloneDistribution {
     pub fn from_location(
-        logger: &slog::Logger,
         location: &PythonDistributionLocation,
         distributions_dir: &Path,
     ) -> Result<Self> {
         let (archive_path, extract_path) =
-            resolve_python_distribution_from_location(logger, location, distributions_dir)?;
+            resolve_python_distribution_from_location(location, distributions_dir)?;
 
-        Self::from_tar_zst_file(logger, &archive_path, &extract_path)
+        Self::from_tar_zst_file(&archive_path, &extract_path)
     }
 
     /// Create an instance from a .tar.zst file.
     ///
     /// The distribution will be extracted to ``extract_dir`` if necessary.
-    pub fn from_tar_zst_file(
-        logger: &slog::Logger,
-        path: &Path,
-        extract_dir: &Path,
-    ) -> Result<Self> {
+    pub fn from_tar_zst_file(path: &Path, extract_dir: &Path) -> Result<Self> {
         let basename = path
             .file_name()
             .ok_or_else(|| anyhow!("unable to determine filename"))?
@@ -526,7 +520,7 @@ impl StandaloneDistribution {
             .with_context(|| format!("unable to open {}", path.display()))?;
 
         let reader = BufReader::new(fh);
-        warn!(logger, "reading data from Python distribution...");
+        warn!("reading data from Python distribution...");
 
         Self::from_tar_zst(reader, extract_dir)
     }
@@ -1023,7 +1017,7 @@ impl StandaloneDistribution {
 
     /// Duplicate the python distribution, with distutils hacked
     #[allow(unused)]
-    pub fn create_hacked_base(&self, logger: &slog::Logger) -> PythonPaths {
+    pub fn create_hacked_base(&self) -> PythonPaths {
         let venv_base = self.venv_base.clone();
 
         let venv_dir_s = self.venv_base.display().to_string();
@@ -1036,34 +1030,33 @@ impl StandaloneDistribution {
 
             let dist_prefix_s = dist_prefix.display().to_string();
             warn!(
-                logger,
-                "copied {} to create hacked base {}", dist_prefix_s, venv_dir_s
+                "copied {} to create hacked base {}",
+                dist_prefix_s, venv_dir_s
             );
         }
 
         let python_paths = resolve_python_paths(&venv_base, &self.version);
 
-        invoke_python(&python_paths, logger, &["-m", "ensurepip"]);
+        invoke_python(&python_paths, &["-m", "ensurepip"]);
 
-        prepare_hacked_distutils(logger, &self.stdlib_path.join("distutils"), &venv_base, &[])
-            .unwrap();
+        prepare_hacked_distutils(&self.stdlib_path.join("distutils"), &venv_base, &[]).unwrap();
 
         python_paths
     }
 
     /// Create a venv from the distribution at path.
     #[allow(unused)]
-    pub fn create_venv(&self, logger: &slog::Logger, path: &Path) -> PythonPaths {
+    pub fn create_venv(&self, path: &Path) -> PythonPaths {
         let venv_dir_s = path.display().to_string();
 
         // This will recreate it, if it was deleted
-        let python_paths = self.create_hacked_base(logger);
+        let python_paths = self.create_hacked_base();
 
         if path.exists() {
-            warn!(logger, "re-using {} {}", "venv", venv_dir_s);
+            warn!("re-using {} {}", "venv", venv_dir_s);
         } else {
-            warn!(logger, "creating {} {}", "venv", venv_dir_s);
-            invoke_python(&python_paths, logger, &["-m", "venv", venv_dir_s.as_str()]);
+            warn!("creating {} {}", "venv", venv_dir_s);
+            invoke_python(&python_paths, &["-m", "venv", venv_dir_s.as_str()]);
         }
 
         resolve_python_paths(path, &self.version)
@@ -1073,10 +1066,9 @@ impl StandaloneDistribution {
     #[allow(unused)]
     pub fn prepare_venv(
         &self,
-        logger: &slog::Logger,
         venv_dir_path: &Path,
     ) -> Result<(PythonPaths, HashMap<String, String>)> {
-        let python_paths = self.create_venv(logger, venv_dir_path);
+        let python_paths = self.create_venv(venv_dir_path);
 
         let mut extra_envs = HashMap::new();
 
@@ -1303,7 +1295,6 @@ impl PythonDistribution for StandaloneDistribution {
 
     fn as_python_executable_builder(
         &self,
-        _logger: &slog::Logger,
         host_triple: &str,
         target_triple: &str,
         name: &str,
@@ -1367,15 +1358,15 @@ impl PythonDistribution for StandaloneDistribution {
     }
 
     /// Ensure pip is available to run in the distribution.
-    fn ensure_pip(&self, logger: &slog::Logger) -> Result<PathBuf> {
+    fn ensure_pip(&self) -> Result<PathBuf> {
         let dist_prefix = self.base_dir.join("python").join("install");
         let python_paths = resolve_python_paths(&dist_prefix, &self.version);
 
         let pip_path = python_paths.bin_dir.join(PIP_EXE_BASENAME);
 
         if !pip_path.exists() {
-            warn!(logger, "{} doesnt exist", pip_path.display().to_string());
-            invoke_python(&python_paths, logger, &["-m", "ensurepip"]);
+            warn!("{} doesnt exist", pip_path.display().to_string());
+            invoke_python(&python_paths, &["-m", "ensurepip"]);
         }
 
         Ok(pip_path)
@@ -1383,7 +1374,6 @@ impl PythonDistribution for StandaloneDistribution {
 
     fn resolve_distutils(
         &self,
-        logger: &slog::Logger,
         libpython_link_mode: LibpythonLinkMode,
         dest_dir: &Path,
         extra_python_paths: &[&Path],
@@ -1391,7 +1381,6 @@ impl PythonDistribution for StandaloneDistribution {
         match libpython_link_mode {
             // We need to patch distutils if the distribution is statically linked.
             LibpythonLinkMode::Static => prepare_hacked_distutils(
-                logger,
                 &self.stdlib_path.join("distutils"),
                 dest_dir,
                 extra_python_paths,

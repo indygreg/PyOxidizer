@@ -9,7 +9,6 @@ use {
     pyo3::{prelude::*, types::PyBytes},
     pyoxidizerlib::{
         environment::{default_target_triple, Environment},
-        logging::PrintlnDrain,
         py_packaging::{
             distribution::{DistributionCache, DistributionFlavor, PythonDistribution},
             standalone_distribution::StandaloneDistribution,
@@ -22,7 +21,6 @@ use {
         resource::{BytecodeOptimizationLevel, PythonResource},
         resource_collection::PythonResourceCollector,
     },
-    slog::{Drain, Logger},
     std::{path::Path, sync::Arc},
 };
 
@@ -35,19 +33,7 @@ static DISTRIBUTION_CACHE: Lazy<Arc<DistributionCache>> = Lazy::new(|| {
     )))
 });
 
-fn get_logger() -> Result<Logger> {
-    Ok(Logger::root(
-        PrintlnDrain {
-            min_level: slog::Level::Warning,
-        }
-        .fuse(),
-        slog::o!(),
-    ))
-}
-
 pub fn get_python_distribution() -> Result<Arc<StandaloneDistribution>> {
-    let logger = get_logger()?;
-
     let record = PYTHON_DISTRIBUTIONS
         .find_distribution(
             default_target_triple(),
@@ -57,7 +43,6 @@ pub fn get_python_distribution() -> Result<Arc<StandaloneDistribution>> {
         .ok_or_else(|| anyhow!("unable to find distribution"))?;
 
     DISTRIBUTION_CACHE.resolve_distribution(
-        &logger,
         &record.location,
         Some(&ENVIRONMENT.cache_dir().join("python_distributions")),
     )

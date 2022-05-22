@@ -15,12 +15,12 @@ use {
     crate::python_distributions::PYTHON_DISTRIBUTIONS,
     anyhow::{anyhow, Context, Result},
     fs2::FileExt,
+    log::warn,
     python_packaging::{
         bytecode::PythonBytecodeCompiler, module_util::PythonModuleSuffixes,
         policy::PythonPackagingPolicy, resource::PythonResource,
     },
     sha2::{Digest, Sha256},
-    slog::warn,
     std::{
         collections::HashMap,
         fs,
@@ -175,7 +175,6 @@ pub trait PythonDistribution {
     #[allow(clippy::too_many_arguments)]
     fn as_python_executable_builder(
         &self,
-        logger: &slog::Logger,
         host_triple: &str,
         target_triple: &str,
         name: &str,
@@ -191,7 +190,7 @@ pub trait PythonDistribution {
     /// Ensure pip is available to run in the distribution.
     ///
     /// Returns the path to a `pip` executable.
-    fn ensure_pip(&self, logger: &slog::Logger) -> Result<PathBuf>;
+    fn ensure_pip(&self) -> Result<PathBuf>;
 
     /// Resolve a `distutils` installation used for building Python packages.
     ///
@@ -205,7 +204,6 @@ pub trait PythonDistribution {
     /// The return is a map of environment variables to set in the build environment.
     fn resolve_distutils(
         &self,
-        logger: &slog::Logger,
         libpython_link_mode: LibpythonLinkMode,
         dest_dir: &Path,
         extra_python_paths: &[&Path],
@@ -414,17 +412,12 @@ pub fn resolve_python_distribution_archive(
 ///
 /// Returns a tuple of (archive path, extract directory).
 pub fn resolve_python_distribution_from_location(
-    logger: &slog::Logger,
     location: &PythonDistributionLocation,
     distributions_dir: &Path,
 ) -> Result<(PathBuf, PathBuf)> {
-    warn!(logger, "resolving Python distribution {}", location);
+    warn!("resolving Python distribution {}", location);
     let path = resolve_python_distribution_archive(location, distributions_dir)?;
-    warn!(
-        logger,
-        "Python distribution available at {}",
-        path.display()
-    );
+    warn!("Python distribution available at {}", path.display());
 
     let distribution_hash = match location {
         PythonDistributionLocation::Local { sha256, .. } => sha256,
@@ -490,7 +483,6 @@ impl DistributionCache {
     /// Resolve a `PythonDistribution` given its source and storage locations.
     pub fn resolve_distribution(
         &self,
-        logger: &slog::Logger,
         location: &PythonDistributionLocation,
         dest_dir: Option<&Path>,
     ) -> Result<Arc<StandaloneDistribution>> {
@@ -561,9 +553,7 @@ impl DistributionCache {
         if let Some(dist) = value {
             Ok(dist.clone())
         } else {
-            let dist = Arc::new(StandaloneDistribution::from_location(
-                logger, location, dest_dir,
-            )?);
+            let dist = Arc::new(StandaloneDistribution::from_location(location, dest_dir)?);
 
             lock.replace(dist.clone());
 
@@ -574,7 +564,6 @@ impl DistributionCache {
     /// Resolve a Python distribution that runs on the current machine.
     pub fn host_distribution(
         &self,
-        logger: &slog::Logger,
         python_major_minor_version: Option<&str>,
         dest_dir: Option<&Path>,
     ) -> Result<Arc<StandaloneDistribution>> {
@@ -585,7 +574,7 @@ impl DistributionCache {
         )
         .context("resolving host distribution location")?;
 
-        self.resolve_distribution(logger, &location, dest_dir)
+        self.resolve_distribution(&location, dest_dir)
             .context("resolving host distribution from location")
     }
 }
@@ -595,13 +584,13 @@ impl DistributionCache {
 /// The distribution will be written to `dest_dir`.
 #[allow(unused)]
 pub fn resolve_distribution(
-    logger: &slog::Logger,
     location: &PythonDistributionLocation,
     dest_dir: &Path,
 ) -> Result<Box<dyn PythonDistribution>> {
-    Ok(Box::new(StandaloneDistribution::from_location(
-        logger, location, dest_dir,
-    )?) as Box<dyn PythonDistribution>)
+    Ok(
+        Box::new(StandaloneDistribution::from_location(location, dest_dir)?)
+            as Box<dyn PythonDistribution>,
+    )
 }
 
 /// Resolve the location of the default Python distribution of a given flavor and build target.

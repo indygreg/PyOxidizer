@@ -13,11 +13,11 @@ use {
     },
     anyhow::{anyhow, Result},
     duct::cmd,
+    log::warn,
     python_packaging::{
         filesystem_scanning::find_python_resources, policy::PythonPackagingPolicy,
         resource::PythonResource, wheel::WheelArchive,
     },
-    slog::warn,
     std::{
         collections::{hash_map::RandomState, HashMap},
         hash::BuildHasher,
@@ -83,7 +83,6 @@ pub fn find_resources<'a>(
 /// resolve resources for a non-native platform, which enables it to be used
 /// when cross-compiling.
 pub fn pip_download<'a>(
-    logger: &slog::Logger,
     host_dist: &dyn PythonDistribution,
     taget_dist: &dyn PythonDistribution,
     policy: &PythonPackagingPolicy,
@@ -94,11 +93,11 @@ pub fn pip_download<'a>(
         .prefix("pyoxidizer-pip-download")
         .tempdir()?;
 
-    host_dist.ensure_pip(logger)?;
+    host_dist.ensure_pip()?;
 
     let target_dir = temp_dir.path();
 
-    warn!(logger, "pip downloading to {}", target_dir.display());
+    warn!("pip downloading to {}", target_dir.display());
 
     let mut pip_args = vec![
         "-m".to_string(),
@@ -135,7 +134,7 @@ pub fn pip_download<'a>(
 
     pip_args.extend(args.iter().cloned());
 
-    warn!(logger, "running python {:?}", pip_args);
+    warn!("running python {:?}", pip_args);
 
     let command = cmd(host_dist.python_exe_path(), &pip_args)
         .stderr_to_stdout()
@@ -144,7 +143,7 @@ pub fn pip_download<'a>(
     {
         let reader = BufReader::new(&command);
         for line in reader.lines() {
-            warn!(logger, "{}", line?);
+            warn!("{}", line?);
         }
     }
 
@@ -183,7 +182,6 @@ pub fn pip_download<'a>(
 
 /// Run `pip install` and return found resources.
 pub fn pip_install<'a, S: BuildHasher>(
-    logger: &slog::Logger,
     dist: &dyn PythonDistribution,
     policy: &PythonPackagingPolicy,
     libpython_link_mode: LibpythonLinkMode,
@@ -195,10 +193,10 @@ pub fn pip_install<'a, S: BuildHasher>(
         .prefix("pyoxidizer-pip-install")
         .tempdir()?;
 
-    dist.ensure_pip(logger)?;
+    dist.ensure_pip()?;
 
     let mut env: HashMap<String, String, RandomState> = std::env::vars().collect();
-    for (k, v) in dist.resolve_distutils(logger, libpython_link_mode, temp_dir.path(), &[])? {
+    for (k, v) in dist.resolve_distutils(libpython_link_mode, temp_dir.path(), &[])? {
         env.insert(k, v);
     }
 
@@ -208,7 +206,7 @@ pub fn pip_install<'a, S: BuildHasher>(
 
     let target_dir = temp_dir.path().join("install");
 
-    warn!(logger, "pip installing to {}", target_dir.display());
+    warn!("pip installing to {}", target_dir.display());
 
     let mut pip_args: Vec<String> = vec![
         "-m".to_string(),
@@ -235,7 +233,7 @@ pub fn pip_install<'a, S: BuildHasher>(
     {
         let reader = BufReader::new(&command);
         for line in reader.lines() {
-            warn!(logger, "{}", line?);
+            warn!("{}", line?);
         }
     }
 
@@ -265,7 +263,6 @@ pub fn read_virtualenv<'a>(
 /// Run `setup.py install` against a path and return found resources.
 #[allow(clippy::too_many_arguments)]
 pub fn setup_py_install<'a, S: BuildHasher>(
-    logger: &slog::Logger,
     dist: &dyn PythonDistribution,
     policy: &PythonPackagingPolicy,
     libpython_link_mode: LibpythonLinkMode,
@@ -294,7 +291,6 @@ pub fn setup_py_install<'a, S: BuildHasher>(
 
     let mut envs: HashMap<String, String, RandomState> = std::env::vars().collect();
     for (k, v) in dist.resolve_distutils(
-        logger,
         libpython_link_mode,
         temp_dir.path(),
         &[&python_paths.site_packages, &python_paths.stdlib],
@@ -307,7 +303,6 @@ pub fn setup_py_install<'a, S: BuildHasher>(
     }
 
     warn!(
-        logger,
         "python setup.py installing {} to {}",
         package_path.display(),
         target_dir_s
@@ -333,7 +328,7 @@ pub fn setup_py_install<'a, S: BuildHasher>(
     {
         let reader = BufReader::new(&command);
         for line in reader.lines() {
-            warn!(logger, "{}", line.unwrap());
+            warn!("{}", line.unwrap());
         }
     }
 
@@ -348,7 +343,6 @@ pub fn setup_py_install<'a, S: BuildHasher>(
         .get("PYOXIDIZER_DISTUTILS_STATE_DIR")
         .map(PathBuf::from);
     warn!(
-        logger,
         "scanning {} for resources",
         python_paths.site_packages.display()
     );
@@ -365,11 +359,9 @@ mod tests {
 
     #[test]
     fn test_install_black() -> Result<()> {
-        let logger = get_logger()?;
         let distribution = get_default_distribution(None)?;
 
         let resources: Vec<PythonResource> = pip_install(
-            &logger,
             distribution.deref(),
             &distribution.create_packaging_policy()?,
             LibpythonLinkMode::Dynamic,
@@ -387,13 +379,10 @@ mod tests {
     #[test]
     #[cfg(windows)]
     fn test_install_cffi() -> Result<()> {
-        let logger = get_logger()?;
-
         let distribution = get_default_dynamic_distribution()?;
         let policy = distribution.create_packaging_policy()?;
 
         let resources: Vec<PythonResource> = pip_install(
-            &logger,
             distribution.deref(),
             &policy,
             LibpythonLinkMode::Dynamic,
@@ -415,8 +404,6 @@ mod tests {
 
     #[test]
     fn test_pip_download_zstandard() -> Result<()> {
-        let logger = get_logger()?;
-
         for target_dist in get_all_standalone_distributions()? {
             if target_dist.python_platform_compatibility_tag() == "none" {
                 continue;
@@ -425,7 +412,6 @@ mod tests {
             let host_dist = get_host_distribution_from_target(&target_dist)?;
 
             warn!(
-                logger,
                 "using distribution {}-{}-{}",
                 target_dist.python_implementation,
                 target_dist.python_platform_tag,
@@ -435,7 +421,6 @@ mod tests {
             let policy = target_dist.create_packaging_policy()?;
 
             let resources = pip_download(
-                &logger,
                 &*host_dist,
                 &*target_dist,
                 &policy,
@@ -513,8 +498,6 @@ mod tests {
 
     #[test]
     fn test_pip_download_numpy() -> Result<()> {
-        let logger = get_logger()?;
-
         for target_dist in get_all_standalone_distributions()? {
             if target_dist.python_platform_compatibility_tag() == "none" {
                 continue;
@@ -523,7 +506,6 @@ mod tests {
             let host_dist = get_host_distribution_from_target(&target_dist)?;
 
             warn!(
-                logger,
                 "using distribution {}-{}-{}",
                 target_dist.python_implementation,
                 target_dist.python_platform_tag,
@@ -535,7 +517,6 @@ mod tests {
             policy.set_file_scanner_classify_files(true);
 
             let res = pip_download(
-                &logger,
                 &*host_dist,
                 &*target_dist,
                 &policy,

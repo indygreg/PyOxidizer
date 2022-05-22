@@ -18,11 +18,11 @@ use {
         },
     },
     anyhow::{anyhow, Result},
+    log::info,
     python_packaging::{
         policy::PythonPackagingPolicy, resource::PythonResource,
         resource_collection::PythonResourceAddCollectionContext,
     },
-    slog::info,
     starlark::{
         environment::TypeValues,
         eval::call_stack::CallStack,
@@ -75,11 +75,7 @@ impl PythonDistributionValue {
             self.distribution = Some(
                 pyoxidizer_context
                     .distribution_cache
-                    .resolve_distribution(
-                        pyoxidizer_context.logger(),
-                        &self.source,
-                        Some(&dest_dir),
-                    )
+                    .resolve_distribution(&self.source, Some(&dest_dir))
                     .map_err(|e| {
                         ValueError::from(RuntimeError {
                             code: "PYOXIDIZER_BUILD",
@@ -298,7 +294,6 @@ impl PythonDistributionValue {
             let host_dist = pyoxidizer_context
                 .distribution_cache
                 .host_distribution(
-                    pyoxidizer_context.logger(),
                     Some(dist.python_major_minor_version().as_str()),
                     Some(&python_distributions_path),
                 )
@@ -315,7 +310,6 @@ impl PythonDistributionValue {
 
         let mut builder = dist
             .as_python_executable_builder(
-                pyoxidizer_context.logger(),
                 &pyoxidizer_context.build_host_triple,
                 &pyoxidizer_context.build_target_triple,
                 &name,
@@ -376,7 +370,7 @@ impl PythonDistributionValue {
                 })
             })?
         {
-            info!(pyoxidizer_context.logger(), "{}", action.to_string());
+            info!("{}", action.to_string());
         }
 
         Ok(Value::new(PythonExecutableValue::new(builder, policy)))

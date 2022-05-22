@@ -8,10 +8,10 @@ Interacting with distutils.
 
 use {
     anyhow::{Context, Result},
+    log::warn,
     once_cell::sync::Lazy,
     python_packaging::resource::{LibraryDependency, PythonExtensionModule},
     serde::Deserialize,
-    slog::warn,
     std::{
         collections::{BTreeMap, HashMap},
         fs::{create_dir_all, read_dir, read_to_string},
@@ -53,7 +53,6 @@ static MODIFIED_DISTUTILS_FILES: Lazy<BTreeMap<&'static str, &'static [u8]>> = L
 /// monkeypatch. People do weird things in setup.py scripts and we want to
 /// support as many as possible.
 pub fn prepare_hacked_distutils(
-    logger: &slog::Logger,
     orig_distutils_path: &Path,
     dest_dir: &Path,
     extra_python_paths: &[&Path],
@@ -61,7 +60,6 @@ pub fn prepare_hacked_distutils(
     let extra_sys_path = dest_dir.join("packages");
 
     warn!(
-        logger,
         "installing modified distutils to {}",
         extra_sys_path.display()
     );
@@ -89,7 +87,7 @@ pub fn prepare_hacked_distutils(
     for (path, data) in MODIFIED_DISTUTILS_FILES.iter() {
         let dest_path = dest_distutils_path.join(path);
 
-        warn!(logger, "modifying distutils/{} for oxidation", path);
+        warn!("modifying distutils/{} for oxidation", path);
         std::fs::write(&dest_path, data)
             .with_context(|| format!("writing {}", dest_path.display()))?;
     }

@@ -68,7 +68,7 @@ pub fn resolve_target(target: Option<&str>) -> Result<String> {
 }
 
 pub fn list_targets(env: &Environment, logger: &slog::Logger, project_path: &Path) -> Result<()> {
-    let config_path = find_pyoxidizer_config_file_env(logger, project_path).ok_or_else(|| {
+    let config_path = find_pyoxidizer_config_file_env(project_path).ok_or_else(|| {
         anyhow!(
             "unable to find PyOxidizder config file at {}",
             project_path.display()
@@ -116,7 +116,7 @@ pub fn build(
     release: bool,
     verbose: bool,
 ) -> Result<()> {
-    let config_path = find_pyoxidizer_config_file_env(logger, project_path).ok_or_else(|| {
+    let config_path = find_pyoxidizer_config_file_env(project_path).ok_or_else(|| {
         anyhow!(
             "unable to find PyOxidizer config file at {}",
             project_path.display()
@@ -153,7 +153,7 @@ pub fn run(
     _extra_args: &[&str],
     verbose: bool,
 ) -> Result<()> {
-    let config_path = find_pyoxidizer_config_file_env(logger, project_path).ok_or_else(|| {
+    let config_path = find_pyoxidizer_config_file_env(project_path).ok_or_else(|| {
         anyhow!(
             "unable to find PyOxidizer config file at {}",
             project_path.display()
@@ -185,7 +185,6 @@ pub fn cache_clear(env: &Environment) -> Result<()> {
 
 /// Find resources given a source path.
 pub fn find_resources(
-    logger: &slog::Logger,
     path: Option<&Path>,
     distributions_dir: Option<&Path>,
     scan_distribution: bool,
@@ -209,7 +208,7 @@ pub fn find_resources(
         temp_dir.as_ref().unwrap().path()
     };
 
-    let dist = resolve_distribution(logger, &distribution_location, extract_path)?;
+    let dist = resolve_distribution(&distribution_location, extract_path)?;
 
     if scan_distribution {
         println!("scanning distribution");
@@ -342,13 +341,9 @@ pub fn init_config_file(
 }
 
 /// Initialize a new Rust project with PyOxidizer support.
-pub fn init_rust_project(
-    env: &Environment,
-    logger: &slog::Logger,
-    project_path: &Path,
-) -> Result<()> {
+pub fn init_rust_project(env: &Environment, project_path: &Path) -> Result<()> {
     let cargo_exe = env
-        .ensure_rust_toolchain(logger, None)
+        .ensure_rust_toolchain(None)
         .context("resolving Rust environment")?
         .cargo_exe;
 
@@ -589,7 +584,6 @@ pub fn python_distribution_licenses(path: &str) -> Result<()> {
 /// Generate artifacts for embedding Python in a binary.
 pub fn generate_python_embedding_artifacts(
     env: &Environment,
-    logger: &slog::Logger,
     target_triple: &str,
     flavor: &str,
     python_version: Option<&str>,
@@ -609,15 +603,11 @@ pub fn generate_python_embedding_artifacts(
     let distribution_cache = DistributionCache::new(Some(&env.python_distributions_dir()));
 
     let dist = distribution_cache
-        .resolve_distribution(logger, &distribution_record.location, None)
+        .resolve_distribution(&distribution_record.location, None)
         .context("resolving Python distribution")?;
 
     let host_dist = distribution_cache
-        .host_distribution(
-            logger,
-            Some(dist.python_major_minor_version().as_str()),
-            None,
-        )
+        .host_distribution(Some(dist.python_major_minor_version().as_str()), None)
         .context("resolving host distribution")?;
 
     let policy = dist
@@ -632,7 +622,6 @@ pub fn generate_python_embedding_artifacts(
     interpreter_config.allocator_backend = MemoryAllocatorBackend::Default;
 
     let mut builder = dist.as_python_executable_builder(
-        logger,
         default_target_triple(),
         target_triple,
         "python",
@@ -649,7 +638,7 @@ pub fn generate_python_embedding_artifacts(
         .context("adding distribution resources")?;
 
     let embedded_context = builder
-        .to_embedded_python_context(logger, env, "1")
+        .to_embedded_python_context(env, "1")
         .context("resolving embedded context")?;
 
     embedded_context

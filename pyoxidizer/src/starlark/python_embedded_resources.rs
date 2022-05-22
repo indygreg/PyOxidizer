@@ -8,7 +8,7 @@ use {
         starlark::env::{get_context, PyOxidizerEnvironmentContext},
     },
     anyhow::{anyhow, Context, Result},
-    slog::warn,
+    log::warn,
     starlark::{
         environment::TypeValues,
         values::{
@@ -62,16 +62,13 @@ impl PythonEmbeddedResourcesValue {
             .map_err(|_| anyhow!("unable to resolve output path"))?;
 
         warn!(
-            context.logger(),
             "writing Python embedded artifacts to {}",
             output_path.display()
         );
 
-        let embedded = self.exe.to_embedded_python_context(
-            context.logger(),
-            context.env(),
-            &context.build_opt_level,
-        )?;
+        let embedded = self
+            .exe
+            .to_embedded_python_context(context.env(), &context.build_opt_level)?;
 
         std::fs::create_dir_all(&output_path)
             .with_context(|| format!("creating output directory: {}", output_path.display()))?;

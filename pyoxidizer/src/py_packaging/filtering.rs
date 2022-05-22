@@ -8,7 +8,7 @@ Utility code for filtering.
 
 use {
     anyhow::{anyhow, Result},
-    slog::warn,
+    log::warn,
     std::{
         collections::{BTreeMap, BTreeSet},
         fs::File,
@@ -65,16 +65,12 @@ pub fn resolve_resource_names_from_files(
     Ok(include_names)
 }
 
-pub fn filter_btreemap<V>(
-    logger: &slog::Logger,
-    m: &mut BTreeMap<String, V>,
-    f: &BTreeSet<String>,
-) {
+pub fn filter_btreemap<V>(m: &mut BTreeMap<String, V>, f: &BTreeSet<String>) {
     let keys: Vec<String> = m.keys().cloned().collect();
 
     for key in keys {
         if !f.contains(&key) {
-            warn!(logger, "removing {}", key);
+            warn!("removing {}", key);
             m.remove(&key);
         }
     }

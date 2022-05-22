@@ -4,7 +4,6 @@
 
 use {
     super::{
-        env::{get_context, PyOxidizerEnvironmentContext},
         python_executable::PythonExecutableValue,
         python_extension_module::PythonExtensionModuleValue,
         python_module_source::PythonModuleSourceValue,
@@ -16,7 +15,7 @@ use {
         py_packaging::{binary::PythonBinaryBuilder, resource::AddToFileManifest},
     },
     anyhow::{anyhow, Context, Result},
-    slog::warn,
+    log::warn,
     starlark::{
         environment::TypeValues,
         values::{
@@ -38,7 +37,6 @@ use {
 pub fn file_manifest_add_python_executable(
     manifest: &mut FileManifestValue,
     env: &crate::environment::Environment,
-    logger: &slog::Logger,
     prefix: &str,
     exe: &dyn PythonBinaryBuilder,
     target: &str,
@@ -47,7 +45,7 @@ pub fn file_manifest_add_python_executable(
 ) -> Result<()> {
     const LABEL: &str = "FileManifest.add_python_executable()";
 
-    let build = build_python_executable(env, logger, &exe.name(), exe, target, opt_level, release)
+    let build = build_python_executable(env, &exe.name(), exe, target, opt_level, release)
         .context("building Python executable")?;
 
     let content = FileEntry::new_from_data(build.exe_data.clone(), true);
@@ -64,7 +62,7 @@ pub fn file_manifest_add_python_executable(
     let mut extra_files = FileManifest::default();
 
     for (path, entry) in build.binary_data.extra_files.iter_entries() {
-        warn!(logger, "adding extra file {} to {}", path.display(), prefix);
+        warn!("adding extra file {} to {}", path.display(), prefix);
         extra_files.add_file_entry(&Path::new(use_prefix).join(path), entry.clone())?;
     }
 
@@ -86,21 +84,13 @@ pub fn file_manifest_add_python_resource(
 ) -> ValueResult {
     const LABEL: &str = "FileManifest.add_python_resource()";
 
-    let pyoxidizer_context_value = get_context(type_values)?;
-    let pyoxidizer_context = pyoxidizer_context_value
-        .downcast_ref::<PyOxidizerEnvironmentContext>()
-        .ok_or(ValueError::IncorrectParameterType)?;
-
     match resource.get_type() {
         "PythonModuleSource" => {
             let m = match resource.downcast_ref::<PythonModuleSourceValue>() {
                 Some(m) => Ok(m.inner(LABEL)?.m.clone()),
                 None => Err(ValueError::IncorrectParameterType),
             }?;
-            warn!(
-                pyoxidizer_context.logger(),
-                "adding source module {} to {}", m.name, prefix
-            );
+            warn!("adding source module {} to {}", m.name, prefix);
 
             m.add_to_file_manifest(manifest.inner(LABEL)?.deref_mut(), &prefix)
                 .map_err(|e| {
@@ -117,12 +107,7 @@ pub fn file_manifest_add_python_resource(
                 None => Err(ValueError::IncorrectParameterType),
             }?;
 
-            warn!(
-                pyoxidizer_context.logger(),
-                "adding resource file {} to {}",
-                m.symbolic_name(),
-                prefix
-            );
+            warn!("adding resource file {} to {}", m.symbolic_name(), prefix);
             m.add_to_file_manifest(manifest.inner(LABEL)?.deref_mut(), &prefix)
                 .map_err(|e| {
                     RuntimeError {
@@ -139,8 +124,8 @@ pub fn file_manifest_add_python_resource(
                 None => Err(ValueError::IncorrectParameterType),
             }?;
             warn!(
-                pyoxidizer_context.logger(),
-                "adding package distribution resource file {}:{} to {}", m.package, m.name, prefix
+                "adding package distribution resource file {}:{} to {}",
+                m.package, m.name, prefix
             );
             m.add_to_file_manifest(manifest.inner(LABEL)?.deref_mut(), &prefix)
                 .map_err(|e| {
@@ -157,10 +142,7 @@ pub fn file_manifest_add_python_resource(
                 None => Err(ValueError::IncorrectParameterType),
             }?;
 
-            warn!(
-                pyoxidizer_context.logger(),
-                "adding extension module {} to {}", extension.name, prefix
-            );
+            warn!("adding extension module {} to {}", extension.name, prefix);
             extension
                 .add_to_file_manifest(manifest.inner(LABEL)?.deref_mut(), &prefix)
                 .map_err(|e| {
@@ -175,7 +157,6 @@ pub fn file_manifest_add_python_resource(
         "PythonExecutable" => match resource.downcast_ref::<PythonExecutableValue>() {
             Some(exe) => {
                 warn!(
-                    pyoxidizer_context.logger(),
                     "adding Python executable {} to {}",
                     exe.inner(LABEL)?.name(),
                     prefix
