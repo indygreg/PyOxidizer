@@ -74,9 +74,6 @@ The following crates compose Tugger's crate *fleet*:
    are used throughout Tugger to represent a collection of files, their
    content, and file metadata.
 
-``tugger-licensing-net``
-   Functionality related to software licensing requiring network access.
-
 ``tugger-rpm``
    RPM packaging primitives.
 

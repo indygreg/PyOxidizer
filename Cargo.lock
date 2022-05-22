@@ -4628,6 +4628,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "python-packaging-net"
+version = "0.9.0-pre"
+dependencies = [
+ "anyhow",
+ "python-packaging",
+ "reqwest",
+ "spdx",
+ "tugger-common",
+ "url",
+]
+
+[[package]]
 name = "python-packed-resources"
 version = "0.9.0-pre"
 dependencies = [
@@ -6555,18 +6567,6 @@ name = "tugger-file-manifest"
 version = "0.8.0-pre"
 dependencies = [
  "tempfile",
-]
-
-[[package]]
-name = "tugger-licensing-net"
-version = "0.9.0-pre"
-dependencies = [
- "anyhow",
- "python-packaging",
- "reqwest",
- "spdx",
- "tugger-common",
- "url",
 ]
 
 [[package]]

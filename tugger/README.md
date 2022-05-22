@@ -7,7 +7,6 @@ Tugger implements its functionality across a series of crates:
 * `tugger-binary-analysis` - Analyze platform native binaries.
 * `tugger-common` - Shared functionality.
 * `tugger-file-manifest` - Represent a collection of files.
-* `tugger-licensing-net` - Software licensing functionality requiring network access.
 * `tugger-rpm` - RPM packaging.
 * `tugger-snapcraft` - Snapcraft packaging.
 * `tugger-windows` - Common Windows functionality (like binary signing).
