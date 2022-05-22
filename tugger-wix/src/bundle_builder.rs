@@ -104,7 +104,7 @@ impl<'a> WiXBundleInstallerBuilder<'a> {
             platform,
             dest_path.display()
         );
-        download_to_path(logger, entry, &dest_path).context("downloading VC++ Redistributable")?;
+        download_to_path(entry, &dest_path).context("downloading VC++ Redistributable")?;
 
         self.chain(
             ExePackage {

@@ -178,20 +178,15 @@ mod tests {
 
     #[test]
     fn test_vcredist_download() -> Result<()> {
-        let logger = get_logger()?;
-
         download_to_path(
-            &logger,
             &VC_REDIST_X86,
             &DEFAULT_DOWNLOAD_DIR.join("vc_redist.x86.exe"),
         )?;
         download_to_path(
-            &logger,
             &VC_REDIST_X64,
             &DEFAULT_DOWNLOAD_DIR.join("vc_redist.x64.exe"),
         )?;
         download_to_path(
-            &logger,
             &VC_REDIST_ARM64,
             &DEFAULT_DOWNLOAD_DIR.join("vc_redist.arm64.exe"),
         )?;

@@ -5,8 +5,8 @@
 use {
     anyhow::{anyhow, Context, Result},
     fs2::FileExt,
+    log::warn,
     sha2::Digest,
-    slog::warn,
     std::{fs::File, io::Read, path::Path},
     url::Url,
 };
@@ -63,10 +63,10 @@ pub fn get_http_client() -> reqwest::Result<reqwest::blocking::Client> {
 }
 
 /// Fetch a URL and verify its SHA-256 matches expectations.
-pub fn download_and_verify(logger: &slog::Logger, entry: &RemoteContent) -> Result<Vec<u8>> {
+pub fn download_and_verify(entry: &RemoteContent) -> Result<Vec<u8>> {
     let url =
         std::env::var(format!("{}_URL", &entry.name)).unwrap_or_else(|_err| entry.url.to_string());
-    warn!(logger, "downloading {}", url);
+    warn!("downloading {}", url);
     let url = Url::parse(&url)?;
     let client = get_http_client()?;
     let mut data: Vec<u8> = Vec::new();
@@ -88,7 +88,7 @@ pub fn download_and_verify(logger: &slog::Logger, entry: &RemoteContent) -> Resu
     let expected_hash = hex::decode(&entry.sha256)?;
 
     if expected_hash == url_hash {
-        warn!(logger, "verified SHA-256 is {}", entry.sha256);
+        warn!("verified SHA-256 is {}", entry.sha256);
         Ok(data)
     } else {
         Err(anyhow!("hash mismatch of downloaded file"))
@@ -96,11 +96,7 @@ pub fn download_and_verify(logger: &slog::Logger, entry: &RemoteContent) -> Resu
 }
 
 /// Ensure a URL with specified hash exists in a local filesystem path.
-pub fn download_to_path<P: AsRef<Path>>(
-    logger: &slog::Logger,
-    entry: &RemoteContent,
-    dest_path: P,
-) -> Result<()> {
+pub fn download_to_path<P: AsRef<Path>>(entry: &RemoteContent, dest_path: P) -> Result<()> {
     let dest_path = dest_path.as_ref();
 
     if let Some(dest_dir) = dest_path.parent() {
@@ -127,7 +123,7 @@ pub fn download_to_path<P: AsRef<Path>>(
         std::fs::remove_file(dest_path)?;
     }
 
-    let data = download_and_verify(logger, entry).context("downloading with verification")?;
+    let data = download_and_verify(entry).context("downloading with verification")?;
     let temp_path = dest_path.with_file_name(format!(
         "{}.tmp",
         dest_path

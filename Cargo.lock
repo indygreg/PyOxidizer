@@ -6550,6 +6550,7 @@ dependencies = [
  "fs2",
  "glob",
  "hex",
+ "log",
  "once_cell",
  "reqwest",
  "sha2 0.10.2",

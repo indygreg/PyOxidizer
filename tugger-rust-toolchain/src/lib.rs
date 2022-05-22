@@ -145,12 +145,12 @@ pub fn resolve_package_archive(
                 .expect("failed to parse URL"),
         );
 
-        download_to_path(logger, &remote_content, &dest_path)
+        download_to_path(&remote_content, &dest_path)
             .context("downloading file to cache directory")?;
 
         std::fs::read(&dest_path).context("reading downloaded file")?
     } else {
-        download_and_verify(logger, &remote_content)?
+        download_and_verify(&remote_content)?
     };
 
     PackageArchive::new(compression_format, tar_data).context("obtaining PackageArchive")

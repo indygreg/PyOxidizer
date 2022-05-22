@@ -440,7 +440,7 @@ pub(crate) fn extract_wix<P: AsRef<Path>>(logger: &slog::Logger, dest_dir: P) ->
     let extract_path = dest_dir.join(format!("wix-toolset.{}", &WIX_TOOLSET.sha256[0..16]));
 
     if !extract_path.exists() {
-        download_to_path(logger, &WIX_TOOLSET, &zip_path)
+        download_to_path(&WIX_TOOLSET, &zip_path)
             .with_context(|| format!("downloading to {}", zip_path.display()))?;
         let fh = std::fs::File::open(&zip_path)?;
         let cursor = std::io::BufReader::new(fh);
