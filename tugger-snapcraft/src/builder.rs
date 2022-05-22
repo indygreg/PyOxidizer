@@ -6,7 +6,7 @@ use {
     crate::yaml::Snapcraft,
     anyhow::{anyhow, Context, Result},
     duct::cmd,
-    slog::warn,
+    log::warn,
     std::{
         io::{BufRead, BufReader},
         path::Path,
@@ -116,9 +116,9 @@ impl<'a> SnapcraftBuilder<'a> {
     /// Invoke `snapcraft` with the given configuration.
     ///
     /// Registered files will be written to `build_path`.
-    pub fn build<P: AsRef<Path>>(&self, logger: &slog::Logger, build_path: P) -> Result<()> {
+    pub fn build<P: AsRef<Path>>(&self, build_path: P) -> Result<()> {
         for invocation in &self.invocations {
-            self.build_invocation(logger, build_path.as_ref(), invocation)?;
+            self.build_invocation(build_path.as_ref(), invocation)?;
         }
 
         Ok(())
@@ -134,14 +134,13 @@ impl<'a> SnapcraftBuilder<'a> {
     /// 4. Invoke `snapcraft` with the specified arguments.
     pub fn build_invocation<P: AsRef<Path>>(
         &self,
-        logger: &slog::Logger,
         build_path: P,
         invocation: &SnapcraftInvocation,
     ) -> Result<()> {
         let build_path = build_path.as_ref();
 
         if invocation.purge_build && build_path.exists() {
-            warn!(logger, "purging {}", build_path.display());
+            warn!("purging {}", build_path.display());
             remove_dir_all::remove_dir_all(build_path)
                 .with_context(|| format!("removing {}", build_path.display()))?;
         }
@@ -171,10 +170,7 @@ impl<'a> SnapcraftBuilder<'a> {
                 .context("serializing to snapcraft.yaml file")?;
         }
 
-        warn!(
-            logger,
-            "invoking snapcraft with args: {:?}", &invocation.args
-        );
+        warn!("invoking snapcraft with args: {:?}", &invocation.args);
         let command = cmd("snapcraft", &invocation.args)
             .dir(build_path)
             .stderr_to_stdout()
@@ -182,7 +178,7 @@ impl<'a> SnapcraftBuilder<'a> {
         {
             let reader = BufReader::new(&command);
             for line in reader.lines() {
-                warn!(logger, "{}", line?);
+                warn!("{}", line?);
             }
         }
 
@@ -223,7 +219,6 @@ mod tests {
             return Ok(());
         }
 
-        let logger = get_logger()?;
         let test_dir = DEFAULT_TEMP_DIR.path().join("test-build-rust-project");
         let project_path = test_dir.join("testapp");
 
@@ -291,7 +286,7 @@ mod tests {
             builder = builder.install_file(path, &project_path)?;
         }
 
-        builder.build(&logger, test_dir.join("build"))?;
+        builder.build(test_dir.join("build"))?;
 
         let dest_path = test_dir.join("build").join(snap_filename);
 

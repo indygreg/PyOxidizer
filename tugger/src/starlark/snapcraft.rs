@@ -744,15 +744,13 @@ impl SnapcraftBuilderValue<'static> {
 
         let output_path = context.target_build_path(&target);
 
-        self.inner
-            .build(context.logger(), &output_path)
-            .map_err(|e| {
-                ValueError::Runtime(RuntimeError {
-                    code: "TUGGER_SNAPCRAFT",
-                    message: format!("{:?}", e),
-                    label: "build()".to_string(),
-                })
-            })?;
+        self.inner.build(&output_path).map_err(|e| {
+            ValueError::Runtime(RuntimeError {
+                code: "TUGGER_SNAPCRAFT",
+                message: format!("{:?}", e),
+                label: "build()".to_string(),
+            })
+        })?;
 
         Ok(Value::new(ResolvedTargetValue {
             inner: ResolvedTarget {

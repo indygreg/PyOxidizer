@@ -6614,10 +6614,10 @@ version = "0.11.0-pre"
 dependencies = [
  "anyhow",
  "duct",
+ "log",
  "remove_dir_all 0.7.0",
  "serde",
  "serde_yaml",
- "slog",
  "tugger-common",
  "tugger-file-manifest",
 ]
