@@ -65,8 +65,8 @@
 use {
     apple_codesign::{cryptography::InMemoryPrivateKey, AppleCodesignError, MachOSigner},
     cryptographic_message_syntax::CmsError,
+    log::warn,
     reqwest::{IntoUrl, Url},
-    slog::warn,
     std::{
         borrow::Cow,
         ops::Deref,
@@ -1102,7 +1102,7 @@ impl<'a> SignableSigner<'a> {
     /// files as part of execution.
     pub fn sign(
         &self,
-        logger: &slog::Logger,
+
         temp_dir: Option<&Path>,
         destination: &SigningDestination,
     ) -> Result<SignedOutput, SigningError> {
@@ -1137,7 +1137,6 @@ impl<'a> SignableSigner<'a> {
 
                 let sign_path = td.join("sign_temp");
                 warn!(
-                    logger,
                     "writing signable Windows data to temporary file to sign: {}",
                     sign_path.display()
                 );
@@ -1148,19 +1147,18 @@ impl<'a> SignableSigner<'a> {
 
                 match destination {
                     SigningDestination::Memory => {
-                        warn!(logger, "signing success; reading signed file to memory");
+                        warn!("signing success; reading signed file to memory");
                         Ok(SignedOutput::Memory(std::fs::read(&sign_path)?))
                     }
                     SigningDestination::File(dest_path) => {
                         if copy_file_needed(dest_path, &sign_path)? {
                             warn!(
-                                logger,
                                 "signing success; copying signed file to {}",
                                 dest_path.display()
                             );
                             std::fs::copy(&sign_path, dest_path)?;
                         } else {
-                            warn!(logger, "signing success");
+                            warn!("signing success");
                         }
 
                         Ok(SignedOutput::File(dest_path.clone()))
@@ -1185,7 +1183,6 @@ impl<'a> SignableSigner<'a> {
 
                     let sign_path = temp_dir.join(filename);
                     warn!(
-                        logger,
                         "copying {} to {} to perform signing",
                         source_file.display(),
                         sign_path.display()
@@ -1194,7 +1191,7 @@ impl<'a> SignableSigner<'a> {
 
                     sign_path
                 } else {
-                    warn!(logger, "signing {}", source_file.display());
+                    warn!("signing {}", source_file.display());
                     source_file.clone()
                 };
 
@@ -1203,19 +1200,18 @@ impl<'a> SignableSigner<'a> {
 
                 match destination {
                     SigningDestination::Memory => {
-                        warn!(logger, "signing success; reading signed file to memory");
+                        warn!("signing success; reading signed file to memory");
                         Ok(SignedOutput::Memory(std::fs::read(&sign_path)?))
                     }
                     SigningDestination::File(dest_path) => {
                         if copy_file_needed(&sign_path, dest_path)? {
                             warn!(
-                                logger,
                                 "signing success; copying signed file to {}",
                                 dest_path.display()
                             );
                             std::fs::copy(&sign_path, dest_path)?;
                         } else {
-                            warn!(logger, "signing success");
+                            warn!("signing success");
                         }
 
                         Ok(SignedOutput::File(dest_path.clone()))
@@ -1227,7 +1223,6 @@ impl<'a> SignableSigner<'a> {
             }
             Signable::MachOData(macho_data) => {
                 warn!(
-                    logger,
                     "signing Mach-O binary from in-memory data of size {} bytes",
                     macho_data.len()
                 );
@@ -1243,15 +1238,11 @@ impl<'a> SignableSigner<'a> {
 
                 match destination {
                     SigningDestination::Memory => {
-                        warn!(logger, "Mach-O signing success; new size {}", dest.len());
+                        warn!("Mach-O signing success; new size {}", dest.len());
                         Ok(SignedOutput::Memory(dest))
                     }
                     SigningDestination::File(dest_file) => {
-                        warn!(
-                            logger,
-                            "Mach-O signing success; writing to {}",
-                            dest_file.display()
-                        );
+                        warn!("Mach-O signing success; writing to {}", dest_file.display());
                         std::fs::write(&dest_file, &dest)?;
                         Ok(SignedOutput::File(dest_file.clone()))
                     }
@@ -1263,7 +1254,7 @@ impl<'a> SignableSigner<'a> {
             Signable::MachOFile(source_file, macho_data) => {
                 let settings = self.as_apple_signing_settings()?;
 
-                warn!(logger, "signing {}", source_file.display());
+                warn!("signing {}", source_file.display());
 
                 let signer = apple_codesign::MachOSigner::new(macho_data)
                     .map_err(SigningError::MachOSigningError)?;
@@ -1275,15 +1266,11 @@ impl<'a> SignableSigner<'a> {
 
                 match destination {
                     SigningDestination::Memory => {
-                        warn!(logger, "Mach-O signing success; new size {}", dest.len());
+                        warn!("Mach-O signing success; new size {}", dest.len());
                         Ok(SignedOutput::Memory(dest))
                     }
                     SigningDestination::File(dest_file) => {
-                        warn!(
-                            logger,
-                            "Mach-O signing success; writing to {}",
-                            dest_file.display()
-                        );
+                        warn!("Mach-O signing success; writing to {}", dest_file.display());
                         std::fs::write(&dest_file, &dest)?;
                         Ok(SignedOutput::File(dest_file.clone()))
                     }
@@ -1302,7 +1289,6 @@ impl<'a> SignableSigner<'a> {
                 };
 
                 warn!(
-                    logger,
                     "signing Apple bundle at {} to {}",
                     source_dir.display(),
                     dest_dir.display()

@@ -498,7 +498,7 @@ pub fn handle_signable_event(
             } else {
                 error_context(request_context.label, || {
                     // TODO specify temp dir as build directory.
-                    Ok(signable_signer.sign(&logger, None, &destination)?)
+                    Ok(signable_signer.sign(None, &destination)?)
                 })
             }?;
 
