@@ -330,15 +330,6 @@ impl WiXInstallerValue {
         label: &'static str,
         dest_dir: &Path,
     ) -> Result<PathBuf, ValueError> {
-        let logger = {
-            let context_value = get_context_value(type_values)?;
-            let context = context_value
-                .downcast_ref::<EnvironmentContext>()
-                .ok_or(ValueError::IncorrectParameterType)?;
-
-            context.logger().clone()
-        };
-
         let installer_path = dest_dir.join(&self.filename);
 
         error_context(label, || {
@@ -351,9 +342,7 @@ impl WiXInstallerValue {
                 .add_files_manifest_wxs()
                 .context("generating install_files manifest wxs")?;
 
-            self.inner
-                .build(&logger, &installer_path)
-                .context("building")
+            self.inner.build(&installer_path).context("building")
         })?;
 
         let candidate = installer_path.as_path().into();

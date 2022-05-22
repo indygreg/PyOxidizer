@@ -221,9 +221,8 @@ impl WiXInstallerBuilder {
     ///
     /// The output could be an MSI, exe, or other file formats depending on what the
     /// wxs files define.
-    pub fn build<P: AsRef<Path>>(&self, logger: &slog::Logger, output_path: P) -> Result<()> {
-        let wix_toolset_path =
-            extract_wix(logger, &self.build_path).context("extracting WiX Toolset")?;
+    pub fn build<P: AsRef<Path>>(&self, output_path: P) -> Result<()> {
+        let wix_toolset_path = extract_wix(&self.build_path).context("extracting WiX Toolset")?;
 
         // Materialize FileManifest so we can reference files from WiX.
         let installed_files = self
@@ -268,7 +267,6 @@ impl WiXInstallerBuilder {
 
             wixobj_paths.push(
                 run_candle(
-                    logger,
                     &wix_toolset_path,
                     &dest_path,
                     &self.arch,
@@ -280,7 +278,6 @@ impl WiXInstallerBuilder {
         }
 
         run_light(
-            logger,
             &wix_toolset_path,
             &self.build_path,
             wixobj_paths.iter(),

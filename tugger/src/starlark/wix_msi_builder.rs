@@ -214,15 +214,6 @@ impl WiXMsiBuilderValue {
         label: &'static str,
         build_dir: &Path,
     ) -> Result<PathBuf, ValueError> {
-        let logger = {
-            let context_value = get_context_value(type_values)?;
-            let context = context_value
-                .downcast_ref::<EnvironmentContext>()
-                .ok_or(ValueError::IncorrectParameterType)?;
-
-            context.logger().clone()
-        };
-
         let msi_filename = self.msi_filename(label)?;
         let inner = self.inner(label)?;
 
@@ -235,7 +226,7 @@ impl WiXMsiBuilderValue {
             let msi_path = build_dir.join(&msi_filename);
 
             builder
-                .build(&logger, &msi_path)
+                .build(&msi_path)
                 .context("building WiXInstallerBuilder")?;
 
             Ok(msi_path)

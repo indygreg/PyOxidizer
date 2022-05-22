@@ -14,8 +14,8 @@ build = "build.rs"
 [dependencies]
 anyhow = "1.0"
 duct = "0.13"
+log = "0.4"
 once_cell = "1.7"
-slog = "2.7"
 url = "2.2"
 uuid = { version = "0.8", features = ["v4", "v5"] }
 xml-rs = "0.8"

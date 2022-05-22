@@ -102,7 +102,7 @@ impl<'a> WiXBundleBuilderValue<'a> {
                 .context("obtaining VcRedistributablePlatform from str")?;
 
             self.inner
-                .add_vc_redistributable(context.logger(), platform, context.build_path())
+                .add_vc_redistributable(platform, context.build_path())
                 .context("adding VC++ Redistributable to bundle builder")
         })?;
 
@@ -144,15 +144,6 @@ impl<'a> WiXBundleBuilderValue<'a> {
         label: &'static str,
         dest_dir: &Path,
     ) -> Result<(PathBuf, String), ValueError> {
-        let logger = {
-            let context_value = get_context_value(type_values)?;
-            let context = context_value
-                .downcast_ref::<EnvironmentContext>()
-                .ok_or(ValueError::IncorrectParameterType)?;
-
-            context.logger().clone()
-        };
-
         // We need to ensure dependent MSIs are built.
         for builder in self.build_msis.iter() {
             builder.materialize(type_values, call_stack, label, dest_dir)?;
@@ -169,7 +160,7 @@ impl<'a> WiXBundleBuilderValue<'a> {
 
         error_context(label, || {
             builder
-                .build(&logger, &exe_path)
+                .build(&exe_path)
                 .context("building WiXInstallerBuilder")
         })?;
 

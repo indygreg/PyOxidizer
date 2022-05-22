@@ -605,8 +605,6 @@ mod tests {
     fn test_simple_msi_builder_build() -> Result<()> {
         let temp_dir = tempfile::Builder::new().prefix("tugger-test").tempdir()?;
 
-        let logger = get_logger()?;
-
         let mut builder = WiXSimpleMsiBuilder::new("prefix", "testapp", "0.1", "author");
 
         let mut m = FileManifest::default();
@@ -634,7 +632,7 @@ mod tests {
 
         let output_path = temp_dir.path().join("test.msi");
 
-        builder.build(&logger, &output_path)?;
+        builder.build(&output_path)?;
 
         let package = msi::open(&output_path)?;
 

@@ -5,8 +5,8 @@
 use {
     anyhow::{anyhow, Context, Result},
     duct::cmd,
+    log::warn,
     once_cell::sync::Lazy,
-    slog::warn,
     std::{
         io::{BufRead, BufReader, Write},
         path::{Path, PathBuf},
@@ -283,7 +283,6 @@ pub fn target_triple_to_wix_arch(triple: &str) -> Option<&'static str> {
 /// `output_path` defines an optional output path. If not defined, a
 /// `.wixobj` will be generated in the directory of the source file.
 pub fn run_candle<P: AsRef<Path>, S: AsRef<str>>(
-    logger: &slog::Logger,
     wix_toolset_path: P,
     wxs_path: P,
     arch: &str,
@@ -324,7 +323,7 @@ pub fn run_candle<P: AsRef<Path>, S: AsRef<str>>(
 
     let candle_path = wix_toolset_path.as_ref().join("candle.exe");
 
-    warn!(logger, "running candle for {}", wxs_path.display());
+    warn!("running candle for {}", wxs_path.display());
 
     let command = cmd(candle_path, args)
         .dir(parent)
@@ -333,7 +332,7 @@ pub fn run_candle<P: AsRef<Path>, S: AsRef<str>>(
     {
         let reader = BufReader::new(&command);
         for line in reader.lines() {
-            warn!(logger, "{}", line?);
+            warn!("{}", line?);
         }
     }
 
@@ -368,7 +367,6 @@ pub fn run_light<
     P4: AsRef<Path>,
     S: AsRef<str>,
 >(
-    logger: &slog::Logger,
     wix_toolset_path: P1,
     build_path: P2,
     wixobjs: impl Iterator<Item = P3>,
@@ -402,7 +400,6 @@ pub fn run_light<
     }
 
     warn!(
-        logger,
         "running light to produce {}",
         output_path.as_ref().display()
     );
@@ -414,7 +411,7 @@ pub fn run_light<
     {
         let reader = BufReader::new(&command);
         for line in reader.lines() {
-            warn!(logger, "{}", line?);
+            warn!("{}", line?);
         }
     }
 
@@ -428,7 +425,7 @@ pub fn run_light<
     }
 }
 
-pub(crate) fn extract_wix<P: AsRef<Path>>(logger: &slog::Logger, dest_dir: P) -> Result<PathBuf> {
+pub(crate) fn extract_wix<P: AsRef<Path>>(dest_dir: P) -> Result<PathBuf> {
     let dest_dir = dest_dir.as_ref();
 
     if !dest_dir.exists() {
@@ -444,7 +441,7 @@ pub(crate) fn extract_wix<P: AsRef<Path>>(logger: &slog::Logger, dest_dir: P) ->
             .with_context(|| format!("downloading to {}", zip_path.display()))?;
         let fh = std::fs::File::open(&zip_path)?;
         let cursor = std::io::BufReader::new(fh);
-        warn!(logger, "extracting WiX...");
+        warn!("extracting WiX...");
         extract_zip(cursor, &extract_path)
             .with_context(|| format!("extracting zip to {}", extract_path.display()))?;
     }
@@ -463,9 +460,7 @@ mod tests {
 
     #[test]
     fn test_wix_download() -> Result<()> {
-        let logger = get_logger()?;
-
-        extract_wix(&logger, DEFAULT_DOWNLOAD_DIR.as_path())?;
+        extract_wix(DEFAULT_DOWNLOAD_DIR.as_path())?;
 
         Ok(())
     }

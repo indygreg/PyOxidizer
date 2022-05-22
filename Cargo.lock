@@ -6660,9 +6660,9 @@ version = "0.13.0-pre"
 dependencies = [
  "anyhow",
  "duct",
+ "log",
  "msi 0.4.0",
  "once_cell",
- "slog",
  "tempfile",
  "tugger-common",
  "tugger-file-manifest",

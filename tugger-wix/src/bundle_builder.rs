@@ -5,7 +5,7 @@
 use {
     crate::*,
     anyhow::{anyhow, Context, Result},
-    slog::warn,
+    log::warn,
     std::{borrow::Cow, collections::BTreeMap, io::Write, ops::Deref, path::Path},
     tugger_common::http::download_to_path,
     tugger_windows::{VcRedistributablePlatform, VC_REDIST_ARM64, VC_REDIST_X64, VC_REDIST_X86},
@@ -76,7 +76,6 @@ impl<'a> WiXBundleInstallerBuilder<'a> {
 
     pub fn add_vc_redistributable<P: AsRef<Path>>(
         &mut self,
-        logger: &slog::Logger,
         platform: VcRedistributablePlatform,
         download_path: P,
     ) -> Result<()> {
@@ -99,7 +98,6 @@ impl<'a> WiXBundleInstallerBuilder<'a> {
 
         let dest_path = download_path.as_ref().join(&filename);
         warn!(
-            logger,
             "fetching Visual C++ Redistributable ({}) to {}",
             platform,
             dest_path.display()
@@ -254,8 +252,6 @@ mod tests {
 
     #[test]
     fn test_add_vc_redistributable() -> Result<()> {
-        let logger = get_logger()?;
-
         let mut bundle = WiXBundleInstallerBuilder::new(
             "myapp".to_string(),
             "0.1".to_string(),
@@ -263,17 +259,14 @@ mod tests {
         );
 
         bundle.add_vc_redistributable(
-            &logger,
             VcRedistributablePlatform::X86,
             DEFAULT_DOWNLOAD_DIR.as_path(),
         )?;
         bundle.add_vc_redistributable(
-            &logger,
             VcRedistributablePlatform::X64,
             DEFAULT_DOWNLOAD_DIR.as_path(),
         )?;
         bundle.add_vc_redistributable(
-            &logger,
             VcRedistributablePlatform::Arm64,
             DEFAULT_DOWNLOAD_DIR.as_path(),
         )?;
@@ -285,7 +278,6 @@ mod tests {
     #[test]
     fn test_vc_redistributable_build() -> Result<()> {
         let temp_dir = tempfile::Builder::new().prefix("tugger-test").tempdir()?;
-        let logger = get_logger()?;
 
         let mut bundle = WiXBundleInstallerBuilder::new(
             "myapp".to_string(),
@@ -294,19 +286,17 @@ mod tests {
         );
 
         bundle.add_vc_redistributable(
-            &logger,
             VcRedistributablePlatform::X86,
             DEFAULT_DOWNLOAD_DIR.as_path(),
         )?;
         bundle.add_vc_redistributable(
-            &logger,
             VcRedistributablePlatform::X64,
             DEFAULT_DOWNLOAD_DIR.as_path(),
         )?;
 
         let builder = bundle.to_installer_builder("myapp", "x64", temp_dir.path())?;
         let output_path = temp_dir.path().join("myapp.exe");
-        builder.build(&logger, &output_path)?;
+        builder.build(&output_path)?;
 
         assert!(output_path.exists());
 
