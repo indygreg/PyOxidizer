@@ -7,7 +7,7 @@
 use {
     crate::signing::CodeSigningCertificate,
     anyhow::{anyhow, Context, Result},
-    slog::warn,
+    log::warn,
     std::{
         io::{BufRead, BufReader},
         path::{Path, PathBuf},
@@ -150,7 +150,7 @@ impl SigntoolSign {
     }
 
     /// Run `signtool sign` with requested options.
-    pub fn run(&self, logger: &slog::Logger) -> Result<()> {
+    pub fn run(&self) -> Result<()> {
         let signtool = find_signtool().context("locating signtool.exe")?;
 
         let mut args = vec!["sign".to_string()];
@@ -223,7 +223,7 @@ impl SigntoolSign {
         {
             let reader = BufReader::new(&command);
             for line in reader.lines() {
-                warn!(logger, "{}", line?);
+                warn!("{}", line?);
             }
         }
 
@@ -270,7 +270,6 @@ mod tests {
             return Ok(());
         }
 
-        let logger = get_logger()?;
         let temp_path = DEFAULT_TEMP_DIR.path().join("test_sign_executable");
         std::fs::create_dir(&temp_path)?;
 
@@ -294,7 +293,7 @@ mod tests {
             .description("tugger test executable")
             .file_digest_algorithm("sha256")
             .sign_file(&sign_path)
-            .run(&logger)?;
+            .run()?;
 
         Ok(())
     }

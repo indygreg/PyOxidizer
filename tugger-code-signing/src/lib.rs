@@ -1144,7 +1144,7 @@ impl<'a> SignableSigner<'a> {
                 std::fs::write(&sign_path, data)?;
 
                 signer.sign_file(&sign_path);
-                signer.run(logger).map_err(SigningError::SigntoolError)?;
+                signer.run().map_err(SigningError::SigntoolError)?;
 
                 match destination {
                     SigningDestination::Memory => {
@@ -1199,7 +1199,7 @@ impl<'a> SignableSigner<'a> {
                 };
 
                 signer.sign_file(&sign_path);
-                signer.run(logger).map_err(SigningError::SigntoolError)?;
+                signer.run().map_err(SigningError::SigntoolError)?;
 
                 match destination {
                     SigningDestination::Memory => {

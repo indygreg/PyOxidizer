@@ -240,7 +240,7 @@ impl WiXInstallerBuilder {
                     signtool_settings
                         .clone_settings()
                         .sign_file(&path)
-                        .run(logger)
+                        .run()
                         .with_context(|| format!("signing {}", path.display()))?;
                 }
             }
@@ -294,7 +294,7 @@ impl WiXInstallerBuilder {
                 signtool_settings
                     .clone_settings()
                     .sign_file(output_path.as_ref())
-                    .run(logger)
+                    .run()
                     .with_context(|| format!("signing {}", output_path.as_ref().display()))?;
             }
         }
