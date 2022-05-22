@@ -7,8 +7,8 @@ pub mod testutil;
 use {
     anyhow::{anyhow, Result},
     linked_hash_map::LinkedHashMap,
+    log::warn,
     path_dedot::ParseDot,
-    slog::warn,
     starlark::{
         environment::{Environment, EnvironmentError, TypeValues},
         eval::call_stack::CallStack,
@@ -770,7 +770,7 @@ fn starlark_print(type_values: &TypeValues, args: &[Value]) -> ValueResult {
         parts.push(arg.to_string());
     }
 
-    warn!(context.logger(), "{}", parts.join(""));
+    warn!("{}", parts.join(""));
 
     Ok(Value::new(NoneType::None))
 }
@@ -834,7 +834,7 @@ fn starlark_resolve_target(
             return Ok(v);
         }
 
-        warn!(&context.logger, "resolving target {}", target);
+        warn!("resolving target {}", target);
 
         match context.get_target(&target) {
             Some(v) => Ok((*v).clone()),
@@ -905,7 +905,7 @@ fn starlark_resolve_targets(type_values: &TypeValues, call_stack: &mut CallStack
             .ok_or(ValueError::IncorrectParameterType)?;
 
         let targets = context.targets_to_resolve();
-        warn!(context.logger(), "resolving {} targets", targets.len());
+        warn!("resolving {} targets", targets.len());
 
         targets
     };

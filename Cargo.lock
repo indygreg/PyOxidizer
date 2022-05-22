@@ -5926,6 +5926,7 @@ dependencies = [
  "codemap",
  "codemap-diagnostic",
  "linked-hash-map",
+ "log",
  "path-dedot",
  "slog",
  "starlark",
