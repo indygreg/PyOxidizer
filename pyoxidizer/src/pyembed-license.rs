@@ -5,631 +5,553 @@
 pub fn pyembed_licenses() -> anyhow::Result<Vec<python_packaging::licensing::LicensedComponent>> {
     let mut res = vec![];
 
-    let mut component = python_packaging::licensing::LicensedComponent::new_spdx(
-        "adler",
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("adler".to_string()),
         "0BSD OR Apache-2.0 OR MIT",
-    )?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
+    )?);
 
-    let mut component = python_packaging::licensing::LicensedComponent::new_spdx(
-        "aho-corasick",
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("aho-corasick".to_string()),
         "MIT OR Unlicense",
-    )?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
+    )?);
 
-    let mut component =
-        python_packaging::licensing::LicensedComponent::new_spdx("anyhow", "Apache-2.0 OR MIT")?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
-
-    let mut component =
-        python_packaging::licensing::LicensedComponent::new_spdx("autocfg", "Apache-2.0 OR MIT")?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
-
-    let mut component =
-        python_packaging::licensing::LicensedComponent::new_spdx("base64", "Apache-2.0 OR MIT")?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
-
-    let mut component =
-        python_packaging::licensing::LicensedComponent::new_spdx("bitflags", "Apache-2.0 OR MIT")?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
-
-    let mut component = python_packaging::licensing::LicensedComponent::new_spdx(
-        "block-buffer",
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("anyhow".to_string()),
         "Apache-2.0 OR MIT",
-    )?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
+    )?);
 
-    let mut component =
-        python_packaging::licensing::LicensedComponent::new_spdx("byteorder", "MIT OR Unlicense")?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
-
-    let mut component =
-        python_packaging::licensing::LicensedComponent::new_spdx("bzip2", "Apache-2.0 OR MIT")?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
-
-    let mut component =
-        python_packaging::licensing::LicensedComponent::new_spdx("bzip2-sys", "Apache-2.0 OR MIT")?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
-
-    let mut component =
-        python_packaging::licensing::LicensedComponent::new_spdx("cc", "Apache-2.0 OR MIT")?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
-
-    let mut component =
-        python_packaging::licensing::LicensedComponent::new_spdx("cfg-if", "Apache-2.0 OR MIT")?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
-
-    let mut component =
-        python_packaging::licensing::LicensedComponent::new_spdx("charset", "Apache-2.0 OR MIT")?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
-
-    let mut component =
-        python_packaging::licensing::LicensedComponent::new_spdx("cmake", "Apache-2.0 OR MIT")?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
-
-    let mut component = python_packaging::licensing::LicensedComponent::new_spdx(
-        "cpufeatures",
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("autocfg".to_string()),
         "Apache-2.0 OR MIT",
-    )?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
+    )?);
 
-    let mut component =
-        python_packaging::licensing::LicensedComponent::new_spdx("crc32fast", "Apache-2.0 OR MIT")?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
-
-    let mut component = python_packaging::licensing::LicensedComponent::new_spdx(
-        "crossbeam-utils",
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("base64".to_string()),
         "Apache-2.0 OR MIT",
-    )?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
+    )?);
 
-    let mut component = python_packaging::licensing::LicensedComponent::new_spdx(
-        "crypto-common",
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("bitflags".to_string()),
         "Apache-2.0 OR MIT",
-    )?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
+    )?);
 
-    let mut component =
-        python_packaging::licensing::LicensedComponent::new_spdx("cty", "Apache-2.0 OR MIT")?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("block-buffer".to_string()),
+        "Apache-2.0 OR MIT",
+    )?);
 
-    let mut component =
-        python_packaging::licensing::LicensedComponent::new_spdx("data-encoding", "MIT")?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("byteorder".to_string()),
+        "MIT OR Unlicense",
+    )?);
 
-    let mut component =
-        python_packaging::licensing::LicensedComponent::new_spdx("digest", "Apache-2.0 OR MIT")?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("bzip2".to_string()),
+        "Apache-2.0 OR MIT",
+    )?);
 
-    let mut component =
-        python_packaging::licensing::LicensedComponent::new_spdx("dunce", "CC0-1.0")?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("bzip2-sys".to_string()),
+        "Apache-2.0 OR MIT",
+    )?);
 
-    let mut component =
-        python_packaging::licensing::LicensedComponent::new_spdx("either", "Apache-2.0 OR MIT")?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("cc".to_string()),
+        "Apache-2.0 OR MIT",
+    )?);
 
-    let mut component = python_packaging::licensing::LicensedComponent::new_spdx(
-        "encoding_rs",
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("cfg-if".to_string()),
+        "Apache-2.0 OR MIT",
+    )?);
+
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("charset".to_string()),
+        "Apache-2.0 OR MIT",
+    )?);
+
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("cmake".to_string()),
+        "Apache-2.0 OR MIT",
+    )?);
+
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("cpufeatures".to_string()),
+        "Apache-2.0 OR MIT",
+    )?);
+
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("crc32fast".to_string()),
+        "Apache-2.0 OR MIT",
+    )?);
+
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("crossbeam-utils".to_string()),
+        "Apache-2.0 OR MIT",
+    )?);
+
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("crypto-common".to_string()),
+        "Apache-2.0 OR MIT",
+    )?);
+
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("cty".to_string()),
+        "Apache-2.0 OR MIT",
+    )?);
+
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("data-encoding".to_string()),
+        "MIT",
+    )?);
+
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("digest".to_string()),
+        "Apache-2.0 OR MIT",
+    )?);
+
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("dunce".to_string()),
+        "CC0-1.0",
+    )?);
+
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("either".to_string()),
+        "Apache-2.0 OR MIT",
+    )?);
+
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("encoding_rs".to_string()),
         "Apache-2.0 OR BSD-3-Clause OR MIT",
-    )?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
+    )?);
 
-    let mut component =
-        python_packaging::licensing::LicensedComponent::new_spdx("fastrand", "Apache-2.0 OR MIT")?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
-
-    let mut component =
-        python_packaging::licensing::LicensedComponent::new_spdx("flate2", "Apache-2.0 OR MIT")?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
-
-    let mut component =
-        python_packaging::licensing::LicensedComponent::new_spdx("fnv", "Apache-2.0 OR MIT")?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
-
-    let mut component =
-        python_packaging::licensing::LicensedComponent::new_spdx("fs_extra", "MIT")?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
-
-    let mut component =
-        python_packaging::licensing::LicensedComponent::new_spdx("generic-array", "MIT")?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
-
-    let mut component =
-        python_packaging::licensing::LicensedComponent::new_spdx("getrandom", "Apache-2.0 OR MIT")?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
-
-    let mut component =
-        python_packaging::licensing::LicensedComponent::new_spdx("indoc", "Apache-2.0 OR MIT")?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
-
-    let mut component =
-        python_packaging::licensing::LicensedComponent::new_spdx("instant", "BSD-3-Clause")?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
-
-    let mut component =
-        python_packaging::licensing::LicensedComponent::new_spdx("itertools", "Apache-2.0 OR MIT")?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
-
-    let mut component =
-        python_packaging::licensing::LicensedComponent::new_spdx("itoa", "Apache-2.0 OR MIT")?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
-
-    let mut component = python_packaging::licensing::LicensedComponent::new_spdx(
-        "jemalloc-sys",
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("fastrand".to_string()),
         "Apache-2.0 OR MIT",
-    )?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
+    )?);
 
-    let mut component =
-        python_packaging::licensing::LicensedComponent::new_spdx("jobserver", "Apache-2.0 OR MIT")?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
-
-    let mut component = python_packaging::licensing::LicensedComponent::new_spdx(
-        "lazy_static",
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("flate2".to_string()),
         "Apache-2.0 OR MIT",
-    )?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
+    )?);
 
-    let mut component =
-        python_packaging::licensing::LicensedComponent::new_spdx("libc", "Apache-2.0 OR MIT")?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
-
-    let mut component =
-        python_packaging::licensing::LicensedComponent::new_spdx("libmimalloc-sys", "MIT")?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
-
-    let mut component =
-        python_packaging::licensing::LicensedComponent::new_spdx("lock_api", "Apache-2.0 OR MIT")?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
-
-    let mut component =
-        python_packaging::licensing::LicensedComponent::new_spdx("mailparse", "0BSD")?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
-
-    let mut component =
-        python_packaging::licensing::LicensedComponent::new_spdx("memchr", "MIT OR Unlicense")?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
-
-    let mut component =
-        python_packaging::licensing::LicensedComponent::new_spdx("memmap2", "Apache-2.0 OR MIT")?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
-
-    let mut component =
-        python_packaging::licensing::LicensedComponent::new_spdx("memory-module-sys", "MPL-2.0")?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
-
-    let mut component = python_packaging::licensing::LicensedComponent::new_spdx(
-        "miniz_oxide",
-        "Apache-2.0 OR MIT OR Zlib",
-    )?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
-
-    let mut component = python_packaging::licensing::LicensedComponent::new_spdx(
-        "num_threads",
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("fnv".to_string()),
         "Apache-2.0 OR MIT",
-    )?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
+    )?);
 
-    let mut component =
-        python_packaging::licensing::LicensedComponent::new_spdx("once_cell", "Apache-2.0 OR MIT")?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("fs_extra".to_string()),
+        "MIT",
+    )?);
 
-    let mut component = python_packaging::licensing::LicensedComponent::new_spdx(
-        "parking_lot",
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("generic-array".to_string()),
+        "MIT",
+    )?);
+
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("getrandom".to_string()),
         "Apache-2.0 OR MIT",
-    )?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
+    )?);
 
-    let mut component = python_packaging::licensing::LicensedComponent::new_spdx(
-        "parking_lot_core",
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("indoc".to_string()),
         "Apache-2.0 OR MIT",
-    )?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
+    )?);
 
-    let mut component =
-        python_packaging::licensing::LicensedComponent::new_spdx("pathdiff", "Apache-2.0 OR MIT")?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("instant".to_string()),
+        "BSD-3-Clause",
+    )?);
 
-    let mut component = python_packaging::licensing::LicensedComponent::new_spdx(
-        "pkg-config",
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("itertools".to_string()),
         "Apache-2.0 OR MIT",
-    )?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
+    )?);
 
-    let mut component = python_packaging::licensing::LicensedComponent::new_spdx(
-        "ppv-lite86",
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("itoa".to_string()),
         "Apache-2.0 OR MIT",
-    )?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
+    )?);
 
-    let mut component = python_packaging::licensing::LicensedComponent::new_spdx(
-        "proc-macro2",
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("jemalloc-sys".to_string()),
         "Apache-2.0 OR MIT",
-    )?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
+    )?);
 
-    let mut component = python_packaging::licensing::LicensedComponent::new_spdx(
-        "pyembed",
-        "MPL-2.0 OR Python-2.0",
-    )?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
-
-    let mut component =
-        python_packaging::licensing::LicensedComponent::new_spdx("pyo3", "Apache-2.0")?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
-
-    let mut component = python_packaging::licensing::LicensedComponent::new_spdx(
-        "pyo3-build-config",
-        "Apache-2.0",
-    )?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
-
-    let mut component =
-        python_packaging::licensing::LicensedComponent::new_spdx("pyo3-ffi", "Apache-2.0")?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
-
-    let mut component =
-        python_packaging::licensing::LicensedComponent::new_spdx("pyo3-macros", "Apache-2.0")?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
-
-    let mut component = python_packaging::licensing::LicensedComponent::new_spdx(
-        "pyo3-macros-backend",
-        "Apache-2.0",
-    )?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
-
-    let mut component = python_packaging::licensing::LicensedComponent::new_spdx(
-        "python-oxidized-importer",
-        "MPL-2.0 OR Python-2.0",
-    )?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
-
-    let mut component =
-        python_packaging::licensing::LicensedComponent::new_spdx("python-packaging", "MPL-2.0")?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
-
-    let mut component = python_packaging::licensing::LicensedComponent::new_spdx(
-        "python-packed-resources",
-        "MPL-2.0",
-    )?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
-
-    let mut component = python_packaging::licensing::LicensedComponent::new_spdx(
-        "quick-error",
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("jobserver".to_string()),
         "Apache-2.0 OR MIT",
-    )?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
+    )?);
 
-    let mut component =
-        python_packaging::licensing::LicensedComponent::new_spdx("quickcheck", "MIT OR Unlicense")?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
-
-    let mut component =
-        python_packaging::licensing::LicensedComponent::new_spdx("quote", "Apache-2.0 OR MIT")?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
-
-    let mut component =
-        python_packaging::licensing::LicensedComponent::new_spdx("quoted_printable", "0BSD")?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
-
-    let mut component =
-        python_packaging::licensing::LicensedComponent::new_spdx("rand", "Apache-2.0 OR MIT")?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
-
-    let mut component = python_packaging::licensing::LicensedComponent::new_spdx(
-        "rand_chacha",
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("lazy_static".to_string()),
         "Apache-2.0 OR MIT",
-    )?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
+    )?);
 
-    let mut component =
-        python_packaging::licensing::LicensedComponent::new_spdx("rand_core", "Apache-2.0 OR MIT")?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
-
-    let mut component =
-        python_packaging::licensing::LicensedComponent::new_spdx("redox_syscall", "MIT")?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
-
-    let mut component =
-        python_packaging::licensing::LicensedComponent::new_spdx("regex", "Apache-2.0 OR MIT")?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
-
-    let mut component = python_packaging::licensing::LicensedComponent::new_spdx(
-        "regex-syntax",
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("libc".to_string()),
         "Apache-2.0 OR MIT",
-    )?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
+    )?);
 
-    let mut component = python_packaging::licensing::LicensedComponent::new_spdx(
-        "remove_dir_all",
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("libmimalloc-sys".to_string()),
+        "MIT",
+    )?);
+
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("lock_api".to_string()),
         "Apache-2.0 OR MIT",
-    )?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
+    )?);
 
-    let mut component = python_packaging::licensing::LicensedComponent::new_spdx(
-        "rusty-fork",
-        "Apache-2.0 OR MIT",
-    )?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("mailparse".to_string()),
+        "0BSD",
+    )?);
 
-    let mut component =
-        python_packaging::licensing::LicensedComponent::new_spdx("same-file", "MIT OR Unlicense")?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
-
-    let mut component = python_packaging::licensing::LicensedComponent::new_spdx(
-        "scopeguard",
-        "Apache-2.0 OR MIT",
-    )?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
-
-    let mut component =
-        python_packaging::licensing::LicensedComponent::new_spdx("serde", "Apache-2.0 OR MIT")?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
-
-    let mut component = python_packaging::licensing::LicensedComponent::new_spdx(
-        "serde_derive",
-        "Apache-2.0 OR MIT",
-    )?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
-
-    let mut component =
-        python_packaging::licensing::LicensedComponent::new_spdx("sha2", "Apache-2.0 OR MIT")?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
-
-    let mut component =
-        python_packaging::licensing::LicensedComponent::new_spdx("smallvec", "Apache-2.0 OR MIT")?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
-
-    let mut component =
-        python_packaging::licensing::LicensedComponent::new_spdx("snmalloc-sys", "MIT")?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
-
-    let mut component =
-        python_packaging::licensing::LicensedComponent::new_spdx("spdx", "Apache-2.0 OR MIT")?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
-
-    let mut component = python_packaging::licensing::LicensedComponent::new_spdx("spin", "MIT")?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
-
-    let mut component =
-        python_packaging::licensing::LicensedComponent::new_spdx("subtle", "BSD-3-Clause")?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
-
-    let mut component =
-        python_packaging::licensing::LicensedComponent::new_spdx("syn", "Apache-2.0 OR MIT")?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
-
-    let mut component = python_packaging::licensing::LicensedComponent::new_spdx(
-        "target-lexicon",
-        "Apache-2.0 WITH LLVM-exception",
-    )?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
-
-    let mut component =
-        python_packaging::licensing::LicensedComponent::new_spdx("tempfile", "Apache-2.0 OR MIT")?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
-
-    let mut component =
-        python_packaging::licensing::LicensedComponent::new_spdx("time", "Apache-2.0 OR MIT")?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
-
-    let mut component = python_packaging::licensing::LicensedComponent::new_spdx(
-        "time-macros",
-        "Apache-2.0 OR MIT",
-    )?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
-
-    let mut component = python_packaging::licensing::LicensedComponent::new_spdx(
-        "tugger-file-manifest",
-        "MPL-2.0",
-    )?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
-
-    let mut component =
-        python_packaging::licensing::LicensedComponent::new_spdx("typenum", "Apache-2.0 OR MIT")?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
-
-    let mut component = python_packaging::licensing::LicensedComponent::new_spdx(
-        "unicode-ident",
-        "Apache-2.0 OR MIT",
-    )?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
-
-    let mut component =
-        python_packaging::licensing::LicensedComponent::new_spdx("unindent", "Apache-2.0 OR MIT")?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
-
-    let mut component = python_packaging::licensing::LicensedComponent::new_spdx(
-        "version_check",
-        "Apache-2.0 OR MIT",
-    )?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
-
-    let mut component = python_packaging::licensing::LicensedComponent::new_spdx(
-        "wait-timeout",
-        "Apache-2.0 OR MIT",
-    )?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
-
-    let mut component =
-        python_packaging::licensing::LicensedComponent::new_spdx("walkdir", "MIT OR Unlicense")?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
-
-    let mut component = python_packaging::licensing::LicensedComponent::new_spdx(
-        "wasi",
-        "Apache-2.0 OR Apache-2.0 WITH LLVM-exception OR MIT",
-    )?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
-
-    let mut component =
-        python_packaging::licensing::LicensedComponent::new_spdx("winapi", "Apache-2.0 OR MIT")?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
-
-    let mut component = python_packaging::licensing::LicensedComponent::new_spdx(
-        "winapi-i686-pc-windows-gnu",
-        "Apache-2.0 OR MIT",
-    )?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
-
-    let mut component = python_packaging::licensing::LicensedComponent::new_spdx(
-        "winapi-util",
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("memchr".to_string()),
         "MIT OR Unlicense",
-    )?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
+    )?);
 
-    let mut component = python_packaging::licensing::LicensedComponent::new_spdx(
-        "winapi-x86_64-pc-windows-gnu",
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("memmap2".to_string()),
         "Apache-2.0 OR MIT",
-    )?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
+    )?);
 
-    let mut component = python_packaging::licensing::LicensedComponent::new_spdx(
-        "windows-sys",
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("memory-module-sys".to_string()),
+        "MPL-2.0",
+    )?);
+
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("miniz_oxide".to_string()),
+        "Apache-2.0 OR MIT OR Zlib",
+    )?);
+
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("num_threads".to_string()),
         "Apache-2.0 OR MIT",
-    )?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
+    )?);
 
-    let mut component = python_packaging::licensing::LicensedComponent::new_spdx(
-        "windows_aarch64_msvc",
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("once_cell".to_string()),
         "Apache-2.0 OR MIT",
-    )?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
+    )?);
 
-    let mut component = python_packaging::licensing::LicensedComponent::new_spdx(
-        "windows_i686_gnu",
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("parking_lot".to_string()),
         "Apache-2.0 OR MIT",
-    )?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
+    )?);
 
-    let mut component = python_packaging::licensing::LicensedComponent::new_spdx(
-        "windows_i686_msvc",
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("parking_lot_core".to_string()),
         "Apache-2.0 OR MIT",
-    )?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
+    )?);
 
-    let mut component = python_packaging::licensing::LicensedComponent::new_spdx(
-        "windows_x86_64_gnu",
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("pathdiff".to_string()),
         "Apache-2.0 OR MIT",
-    )?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
+    )?);
 
-    let mut component = python_packaging::licensing::LicensedComponent::new_spdx(
-        "windows_x86_64_msvc",
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("pkg-config".to_string()),
         "Apache-2.0 OR MIT",
-    )?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
+    )?);
 
-    let mut component = python_packaging::licensing::LicensedComponent::new_spdx("zip", "MIT")?;
-    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);
-    res.push(component);
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("ppv-lite86".to_string()),
+        "Apache-2.0 OR MIT",
+    )?);
+
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("proc-macro2".to_string()),
+        "Apache-2.0 OR MIT",
+    )?);
+
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("pyembed".to_string()),
+        "MPL-2.0 OR Python-2.0",
+    )?);
+
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("pyo3".to_string()),
+        "Apache-2.0",
+    )?);
+
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("pyo3-build-config".to_string()),
+        "Apache-2.0",
+    )?);
+
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("pyo3-ffi".to_string()),
+        "Apache-2.0",
+    )?);
+
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("pyo3-macros".to_string()),
+        "Apache-2.0",
+    )?);
+
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("pyo3-macros-backend".to_string()),
+        "Apache-2.0",
+    )?);
+
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate(
+            "python-oxidized-importer".to_string(),
+        ),
+        "MPL-2.0 OR Python-2.0",
+    )?);
+
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("python-packaging".to_string()),
+        "MPL-2.0",
+    )?);
+
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate(
+            "python-packed-resources".to_string(),
+        ),
+        "MPL-2.0",
+    )?);
+
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("quick-error".to_string()),
+        "Apache-2.0 OR MIT",
+    )?);
+
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("quickcheck".to_string()),
+        "MIT OR Unlicense",
+    )?);
+
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("quote".to_string()),
+        "Apache-2.0 OR MIT",
+    )?);
+
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("quoted_printable".to_string()),
+        "0BSD",
+    )?);
+
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("rand".to_string()),
+        "Apache-2.0 OR MIT",
+    )?);
+
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("rand_chacha".to_string()),
+        "Apache-2.0 OR MIT",
+    )?);
+
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("rand_core".to_string()),
+        "Apache-2.0 OR MIT",
+    )?);
+
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("redox_syscall".to_string()),
+        "MIT",
+    )?);
+
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("regex".to_string()),
+        "Apache-2.0 OR MIT",
+    )?);
+
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("regex-syntax".to_string()),
+        "Apache-2.0 OR MIT",
+    )?);
+
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("remove_dir_all".to_string()),
+        "Apache-2.0 OR MIT",
+    )?);
+
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("rusty-fork".to_string()),
+        "Apache-2.0 OR MIT",
+    )?);
+
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("same-file".to_string()),
+        "MIT OR Unlicense",
+    )?);
+
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("scopeguard".to_string()),
+        "Apache-2.0 OR MIT",
+    )?);
+
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("serde".to_string()),
+        "Apache-2.0 OR MIT",
+    )?);
+
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("serde_derive".to_string()),
+        "Apache-2.0 OR MIT",
+    )?);
+
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("sha2".to_string()),
+        "Apache-2.0 OR MIT",
+    )?);
+
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("smallvec".to_string()),
+        "Apache-2.0 OR MIT",
+    )?);
+
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("snmalloc-sys".to_string()),
+        "MIT",
+    )?);
+
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("spdx".to_string()),
+        "Apache-2.0 OR MIT",
+    )?);
+
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("spin".to_string()),
+        "MIT",
+    )?);
+
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("subtle".to_string()),
+        "BSD-3-Clause",
+    )?);
+
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("syn".to_string()),
+        "Apache-2.0 OR MIT",
+    )?);
+
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("target-lexicon".to_string()),
+        "Apache-2.0 WITH LLVM-exception",
+    )?);
+
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("tempfile".to_string()),
+        "Apache-2.0 OR MIT",
+    )?);
+
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("time".to_string()),
+        "Apache-2.0 OR MIT",
+    )?);
+
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("time-macros".to_string()),
+        "Apache-2.0 OR MIT",
+    )?);
+
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("tugger-file-manifest".to_string()),
+        "MPL-2.0",
+    )?);
+
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("typenum".to_string()),
+        "Apache-2.0 OR MIT",
+    )?);
+
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("unicode-ident".to_string()),
+        "Apache-2.0 OR MIT",
+    )?);
+
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("unindent".to_string()),
+        "Apache-2.0 OR MIT",
+    )?);
+
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("version_check".to_string()),
+        "Apache-2.0 OR MIT",
+    )?);
+
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("wait-timeout".to_string()),
+        "Apache-2.0 OR MIT",
+    )?);
+
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("walkdir".to_string()),
+        "MIT OR Unlicense",
+    )?);
+
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("wasi".to_string()),
+        "Apache-2.0 OR Apache-2.0 WITH LLVM-exception OR MIT",
+    )?);
+
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("winapi".to_string()),
+        "Apache-2.0 OR MIT",
+    )?);
+
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate(
+            "winapi-i686-pc-windows-gnu".to_string(),
+        ),
+        "Apache-2.0 OR MIT",
+    )?);
+
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("winapi-util".to_string()),
+        "MIT OR Unlicense",
+    )?);
+
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate(
+            "winapi-x86_64-pc-windows-gnu".to_string(),
+        ),
+        "Apache-2.0 OR MIT",
+    )?);
+
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("windows-sys".to_string()),
+        "Apache-2.0 OR MIT",
+    )?);
+
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("windows_aarch64_msvc".to_string()),
+        "Apache-2.0 OR MIT",
+    )?);
+
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("windows_i686_gnu".to_string()),
+        "Apache-2.0 OR MIT",
+    )?);
+
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("windows_i686_msvc".to_string()),
+        "Apache-2.0 OR MIT",
+    )?);
+
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("windows_x86_64_gnu".to_string()),
+        "Apache-2.0 OR MIT",
+    )?);
+
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("windows_x86_64_msvc".to_string()),
+        "Apache-2.0 OR MIT",
+    )?);
+
+    res.push(python_packaging::licensing::LicensedComponent::new_spdx(
+        python_packaging::licensing::ComponentFlavor::RustCrate("zip".to_string()),
+        "MIT",
+    )?);
 
     Ok(res)
 }

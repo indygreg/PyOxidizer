@@ -639,14 +639,14 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
     ) -> Result<Vec<AddResourceAction>> {
         let mut actions = vec![];
 
-        let core_component = self
-            .target_distribution
-            .core_license
-            .clone()
-            .ok_or_else(|| anyhow!("could not resolve Python standard library license"))?;
-
-        self.resources_collector
-            .add_licensed_component(core_component.clone())?;
+        let core_license =
+            if let Some(core_license) = self.target_distribution.core_license.as_ref() {
+                self.resources_collector
+                    .add_licensed_component(core_license.clone())?;
+                core_license.clone()
+            } else {
+                return Err(anyhow!("could not resolve Python standard library license"));
+            };
 
         // TODO consolidate into loop below.
         for ext in self.packaging_policy.resolve_python_extension_modules(
@@ -696,16 +696,16 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
 
             match resource {
                 PythonResource::ModuleSource(source) => {
-                    let mut component = LicensedComponent::new_spdx(
-                        source.top_level_package(),
-                        core_component
-                            .spdx_expression()
-                            .ok_or_else(|| anyhow!("should have resolved SPDX expression"))?
-                            .as_ref(),
+                    self.resources_collector.add_licensed_component(
+                        LicensedComponent::new_spdx(
+                            ComponentFlavor::PythonStandardLibraryModule(source.name.to_string()),
+                            core_license
+                                .spdx_expression()
+                                .ok_or_else(|| anyhow!("should have resolved SPDX expression"))?
+                                .as_ref(),
+                        )?,
                     )?;
-                    component.set_flavor(ComponentFlavor::PythonPackage);
 
-                    self.resources_collector.add_licensed_component(component)?;
                     actions.extend(self.add_python_module_source(source, Some(add_context))?);
                 }
                 PythonResource::PackageResource(r) => {
@@ -869,34 +869,37 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         }
 
         let license_report = self.resources_collector.generate_license_report()?;
-        if license_report.no_license_packages.is_empty() {
-            warn!("All Python packages have license metadata");
-        } else {
-            warn!(
-                "{} Python packages lack software licenses: {:?}",
-                license_report.no_license_packages.len(),
-                license_report.no_license_packages
-            );
-        }
 
-        if license_report.non_spdx_by_package.is_empty() {
-            warn!("No Python packages with non-SPDX licenses");
-        } else {
-            warn!(
-                "{} non-SPDX licenses seen",
-                license_report.non_spdx_by_package.len()
-            );
-            for (license, packages) in &license_report.non_spdx_by_package {
-                warn!("license: {}; packages: {:?}", license, packages);
-            }
+        warn!(
+            "{} components lack software licenses",
+            license_report.no_license.len()
+        );
+        for component in license_report.no_license {
+            warn!("* {}", component.flavor());
         }
 
         warn!(
-            "{} SPDX licenses encountered:",
-            license_report.spdx_by_package.len()
+            "{} components lack SPDX annotated licenses",
+            license_report.non_spdx.len()
         );
-        for (license, packages) in &license_report.spdx_by_package {
-            warn!("license: {}; packages: {:?}", license, packages);
+        for component in license_report.non_spdx {
+            warn!("* {}", component.flavor());
+        }
+
+        warn!(
+            "{} components in the public domain",
+            license_report.public_domain.len()
+        );
+        for component in license_report.public_domain {
+            warn!("* {}", component.flavor());
+        }
+
+        warn!("{} SPDX licenses encountered", license_report.spdx.len());
+        for (license, components) in license_report.spdx {
+            warn!("License {}", license);
+            for component in components {
+                warn!("* {}", component.flavor());
+            }
         }
 
         let compiled_resources = {

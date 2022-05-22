@@ -25,7 +25,7 @@ use {
         bytecode::{BytecodeCompiler, PythonBytecodeCompiler},
         filesystem_scanning::{find_python_resources, walk_tree_files},
         interpreter::{PythonInterpreterConfig, PythonInterpreterProfile, TerminfoResolution},
-        licensing::{ComponentFlavor, LicensedComponent},
+        licensing::{ComponentFlavor, LicenseFlavor, LicensedComponent},
         location::ConcreteResourceLocation,
         module_util::{is_package_from_path, PythonModuleSuffixes},
         policy::PythonPackagingPolicy,
@@ -692,23 +692,23 @@ impl StandaloneDistribution {
 
         let pi = parse_python_json_from_distribution(dist_dir)?;
 
-        let mut core_license = None;
-
-        if let Some(ref python_license_path) = pi.license_path {
+        // Derive the distribution's license from a license file, if present.
+        let core_license = if let Some(ref python_license_path) = pi.license_path {
             let license_path = python_path.join(python_license_path);
             let license_text = std::fs::read_to_string(&license_path).with_context(|| {
                 format!("unable to read Python license {}", license_path.display())
             })?;
 
             let expression = pi.licenses.clone().unwrap().join(" OR ");
-            let mut component =
-                LicensedComponent::new_spdx(&pi.python_implementation_name, &expression)?;
 
-            component.set_flavor(ComponentFlavor::Library);
+            let mut component =
+                LicensedComponent::new_spdx(ComponentFlavor::PythonDistribution, &expression)?;
             component.add_license_text(license_text);
 
-            core_license.replace(component);
-        }
+            Some(component)
+        } else {
+            None
+        };
 
         // Collect object files for libpython.
         for obj in &pi.build_info.core.objs {
@@ -792,23 +792,24 @@ impl StandaloneDistribution {
                     links.push(depends);
                 }
 
+                let component_flavor =
+                    ComponentFlavor::PythonStandardLibraryExtensionModule(module.clone());
+
                 let mut license = if entry.license_public_domain.unwrap_or(false) {
-                    LicensedComponent::new_public_domain(module)
+                    LicensedComponent::new(component_flavor, LicenseFlavor::PublicDomain)
                 } else if let Some(licenses) = &entry.licenses {
                     let expression = licenses.join(" OR ");
-                    LicensedComponent::new_spdx(module, &expression)?
+                    LicensedComponent::new_spdx(component_flavor, &expression)?
                 } else if let Some(core) = &core_license {
                     LicensedComponent::new_spdx(
-                        module,
+                        component_flavor,
                         core.spdx_expression()
                             .ok_or_else(|| anyhow!("could not resolve SPDX license for core"))?
                             .as_ref(),
                     )?
                 } else {
-                    LicensedComponent::new_none(module)
+                    LicensedComponent::new(component_flavor, LicenseFlavor::None)
                 };
-
-                license.set_flavor(ComponentFlavor::PythonPackage);
 
                 if let Some(license_paths) = &entry.license_paths {
                     for path in license_paths {

@@ -4,9 +4,7 @@
 
 use {
     anyhow::{anyhow, Result},
-    python_packaging::licensing::{
-        ComponentFlavor, LicenseFlavor, LicensedComponent, SourceLocation,
-    },
+    python_packaging::licensing::{LicenseFlavor, LicensedComponent, SourceLocation},
     spdx::LicenseReq,
     std::{fmt::Write, io::Read},
     url::Url,
@@ -92,20 +90,14 @@ pub fn generate_aggregate_license_text<'a>(
     writeln!(&mut text)?;
 
     for component in components.filter(|c| !matches!(c.license(), LicenseFlavor::None)) {
-        let title = format!("{} License", component.name());
+        let title = format!("{} License", component.flavor());
         writeln!(&mut text, "{}", title)?;
         writeln!(&mut text, "{}", "=".repeat(title.len()))?;
         writeln!(&mut text)?;
         writeln!(
             &mut text,
-            "This product contains the {} {}.",
-            component.name(),
-            match component.flavor() {
-                ComponentFlavor::Generic => "software",
-                ComponentFlavor::Library => "library",
-                ComponentFlavor::RustCrate => "Rust crate",
-                ComponentFlavor::PythonPackage => "Python package",
-            }
+            "This product contains the {}.",
+            component.flavor(),
         )?;
         writeln!(&mut text)?;
         match component.source_location() {
@@ -114,7 +106,7 @@ pub fn generate_aggregate_license_text<'a>(
                 writeln!(
                     &mut text,
                     "The source code for {} can be found at\n{}",
-                    component.name(),
+                    component.flavor(),
                     url
                 )?;
                 writeln!(&mut text)?;
@@ -165,22 +157,37 @@ pub fn generate_aggregate_license_text<'a>(
 
 #[cfg(test)]
 mod tests {
-    use {super::*, python_packaging::licensing::LicensedComponents};
+    use {
+        super::*,
+        python_packaging::licensing::{ComponentFlavor, LicensedComponents},
+    };
 
     #[test]
     fn test_spdx_license_texts() -> Result<()> {
         let client = tugger_common::http::get_http_client()?;
 
-        let c = LicensedComponent::new_spdx("foo", "Apache-2.0")?;
+        let c = LicensedComponent::new_spdx(
+            ComponentFlavor::PythonModule("foo".to_string()),
+            "Apache-2.0",
+        )?;
         assert_eq!(licensed_component_spdx_license_texts(&c, &client)?.len(), 1);
 
-        let c = LicensedComponent::new_spdx("foo", "Apache-2.0 OR MPL-2.0")?;
+        let c = LicensedComponent::new_spdx(
+            ComponentFlavor::PythonModule("foo".to_string()),
+            "Apache-2.0 OR MPL-2.0",
+        )?;
         assert_eq!(licensed_component_spdx_license_texts(&c, &client)?.len(), 2);
 
-        let c = LicensedComponent::new_spdx("foo", "Apache-2.0 AND MPL-2.0")?;
+        let c = LicensedComponent::new_spdx(
+            ComponentFlavor::PythonModule("foo".to_string()),
+            "Apache-2.0 AND MPL-2.0",
+        )?;
         assert_eq!(licensed_component_spdx_license_texts(&c, &client)?.len(), 2);
 
-        let c = LicensedComponent::new_spdx("foo", "Apache-2.0 WITH LLVM-exception")?;
+        let c = LicensedComponent::new_spdx(
+            ComponentFlavor::PythonModule("foo".to_string()),
+            "Apache-2.0 WITH LLVM-exception",
+        )?;
         assert_eq!(licensed_component_spdx_license_texts(&c, &client)?.len(), 1);
 
         Ok(())
@@ -191,8 +198,14 @@ mod tests {
         let client = tugger_common::http::get_http_client()?;
 
         let mut c = LicensedComponents::default();
-        c.add_spdx_only_component(LicensedComponent::new_spdx("foo", "Apache-2.0")?)?;
-        c.add_spdx_only_component(LicensedComponent::new_spdx("bar", "MIT")?)?;
+        c.add_spdx_only_component(LicensedComponent::new_spdx(
+            ComponentFlavor::PythonModule("foo".to_string()),
+            "Apache-2.0",
+        )?)?;
+        c.add_spdx_only_component(LicensedComponent::new_spdx(
+            ComponentFlavor::PythonModule("bar".to_string()),
+            "MIT",
+        )?)?;
 
         generate_aggregate_license_text(c.iter_components(), &client, DEFAULT_LICENSE_PREAMBLE)?;
 

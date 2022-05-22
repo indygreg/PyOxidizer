@@ -1116,14 +1116,9 @@ fn generate_pyembed_license(repo_root: &Path) -> Result<String> {
 
         writeln!(
             &mut text,
-            "    let mut component = python_packaging::licensing::LicensedComponent::new_spdx(\"{}\", \"{}\")?;",
+            "    res.push(python_packaging::licensing::LicensedComponent::new_spdx(python_packaging::licensing::ComponentFlavor::RustCrate(\"{}\".to_string()), \"{}\")?);",
             crate_name, expression
         )?;
-        writeln!(
-            &mut text,
-            "    component.set_flavor(python_packaging::licensing::ComponentFlavor::RustCrate);"
-        )?;
-        writeln!(&mut text, "    res.push(component);")?;
         writeln!(&mut text)?;
     }
 

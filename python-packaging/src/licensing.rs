@@ -9,6 +9,7 @@ use {
     std::{
         cmp::Ordering,
         collections::{BTreeMap, BTreeSet},
+        fmt::{Display, Formatter},
     },
 };
 
@@ -39,23 +40,38 @@ pub enum LicenseFlavor {
 /// Describes the type of a software component.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ComponentFlavor {
-    /// No specific component type.
-    Generic,
+    /// A Python distribution.
+    PythonDistribution,
+    /// A Python module in the standard library.
+    PythonStandardLibraryModule(String),
+    /// A compiled Python extension module in the standard library.
+    PythonStandardLibraryExtensionModule(String),
+    /// A compiled Python extension module.
+    PythonExtensionModule(String),
+    /// A Python module.
+    PythonModule(String),
     /// A generic software library.
-    Library,
+    Library(String),
     /// A Rust crate.
-    RustCrate,
-    /// A Python package.
-    PythonPackage,
+    RustCrate(String),
 }
 
-impl ToString for ComponentFlavor {
-    fn to_string(&self) -> String {
+impl Display for ComponentFlavor {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Generic => "generic".to_string(),
-            Self::Library => "library".to_string(),
-            Self::RustCrate => "Rust crate".to_string(),
-            Self::PythonPackage => "Python package".to_string(),
+            Self::PythonDistribution => f.write_str("Python distribution"),
+            Self::PythonStandardLibraryModule(name) => {
+                f.write_fmt(format_args!("Python stdlib module {}", name))
+            }
+            Self::PythonStandardLibraryExtensionModule(name) => {
+                f.write_fmt(format_args!("Python stdlib extension {}", name))
+            }
+            Self::PythonExtensionModule(name) => {
+                f.write_fmt(format_args!("Python extension module {}", name))
+            }
+            Self::PythonModule(name) => f.write_fmt(format_args!("Python module {}", name)),
+            Self::Library(name) => f.write_fmt(format_args!("library {}", name)),
+            Self::RustCrate(name) => f.write_fmt(format_args!("Rust crate {}", name)),
         }
     }
 }
@@ -72,6 +88,18 @@ impl Ord for ComponentFlavor {
     }
 }
 
+impl ComponentFlavor {
+    /// Whether the component is part of a Python distribution.
+    pub fn is_python_distribution_component(&self) -> bool {
+        matches!(
+            self,
+            Self::PythonDistribution
+                | Self::PythonStandardLibraryModule(_)
+                | Self::PythonStandardLibraryExtensionModule(_)
+        )
+    }
+}
+
 /// Where source code for a component can be obtained from.
 #[derive(Clone, Debug, PartialEq)]
 pub enum SourceLocation {
@@ -82,11 +110,8 @@ pub enum SourceLocation {
 }
 
 /// Represents a software component with licensing information.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug)]
 pub struct LicensedComponent {
-    /// Name of this software component.
-    name: String,
-
     /// Type of component.
     flavor: ComponentFlavor,
 
@@ -102,19 +127,39 @@ pub struct LicensedComponent {
     license_texts: Vec<String>,
 }
 
+impl PartialEq for LicensedComponent {
+    fn eq(&self, other: &Self) -> bool {
+        self.flavor.eq(&other.flavor)
+    }
+}
+
+impl Eq for LicensedComponent {}
+
 impl PartialOrd for LicensedComponent {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        if self.name == other.name {
-            self.flavor.partial_cmp(&other.flavor)
-        } else {
-            self.name.partial_cmp(&other.name)
-        }
+        self.flavor.partial_cmp(&other.flavor)
+    }
+}
+
+impl Ord for LicensedComponent {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.flavor.cmp(&other.flavor)
     }
 }
 
 impl LicensedComponent {
+    /// Construct a new instance from parameters.
+    pub fn new(flavor: ComponentFlavor, license: LicenseFlavor) -> Self {
+        Self {
+            flavor,
+            license,
+            source_location: SourceLocation::NotSet,
+            license_texts: vec![],
+        }
+    }
+
     /// Construct a new instance from an SPDX expression.
-    pub fn new_spdx(name: &str, spdx_expression: &str) -> Result<Self> {
+    pub fn new_spdx(flavor: ComponentFlavor, spdx_expression: &str) -> Result<Self> {
         let spdx_expression = Expression::parse(spdx_expression).map_err(|e| anyhow!("{}", e))?;
 
         let license = if spdx_expression.evaluate(|req| req.license.id().is_some()) {
@@ -124,60 +169,16 @@ impl LicensedComponent {
         };
 
         Ok(Self {
-            name: name.to_string(),
-            flavor: ComponentFlavor::Generic,
+            flavor,
             license,
             source_location: SourceLocation::NotSet,
             license_texts: vec![],
         })
     }
 
-    /// Construct a new instance with no licensing defined.
-    pub fn new_none(name: &str) -> Self {
-        Self {
-            name: name.to_string(),
-            flavor: ComponentFlavor::Generic,
-            license: LicenseFlavor::None,
-            source_location: SourceLocation::NotSet,
-            license_texts: vec![],
-        }
-    }
-
-    /// Construct a new instance with a license in the public domain.
-    pub fn new_public_domain(name: &str) -> Self {
-        Self {
-            name: name.to_string(),
-            flavor: ComponentFlavor::Generic,
-            license: LicenseFlavor::PublicDomain,
-            source_location: SourceLocation::NotSet,
-            license_texts: vec![],
-        }
-    }
-
-    /// Construct a new instance with an unknown license.
-    pub fn new_unknown(name: &str, terms: Vec<String>) -> Self {
-        Self {
-            name: name.to_string(),
-            flavor: ComponentFlavor::Generic,
-            license: LicenseFlavor::Unknown(terms),
-            source_location: SourceLocation::NotSet,
-            license_texts: vec![],
-        }
-    }
-
-    /// Obtain the name of this software component.
-    pub fn name(&self) -> &str {
-        &self.name
-    }
-
     /// The type of this component.
     pub fn flavor(&self) -> &ComponentFlavor {
         &self.flavor
-    }
-
-    /// Set the flavor of this component.
-    pub fn set_flavor(&mut self, flavor: ComponentFlavor) {
-        self.flavor = flavor;
     }
 
     /// Obtain the flavor of license for this component.
@@ -254,8 +255,8 @@ impl LicensedComponent {
 /// A collection of licensed components.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct LicensedComponents {
-    /// The collection of components, indexed by name.
-    components: BTreeMap<(String, ComponentFlavor), LicensedComponent>,
+    /// The collection of components, indexed by its flavor.
+    components: BTreeMap<ComponentFlavor, LicensedComponent>,
 }
 
 impl LicensedComponents {
@@ -266,10 +267,7 @@ impl LicensedComponents {
 
     /// Add a component to this collection.
     pub fn add_component(&mut self, component: LicensedComponent) {
-        self.components.insert(
-            (component.name.clone(), component.flavor.clone()),
-            component,
-        );
+        self.components.insert(component.flavor.clone(), component);
     }
 
     /// Add a component to this collection, but only if it only contains SPDX license identifiers.
@@ -320,8 +318,10 @@ impl TryInto<LicensedComponent> for PackageLicenseInfo {
     type Error = anyhow::Error;
 
     fn try_into(self) -> Result<LicensedComponent, Self::Error> {
+        let component_flavor = ComponentFlavor::PythonModule(self.package.clone());
+
         let mut component = if self.is_public_domain {
-            LicensedComponent::new_public_domain(&self.package)
+            LicensedComponent::new(component_flavor, LicenseFlavor::PublicDomain)
         } else if !self.metadata_licenses.is_empty() || !self.classifier_licenses.is_empty() {
             let mut spdx_license_ids = BTreeSet::new();
             let mut non_spdx_licenses = BTreeSet::new();
@@ -350,18 +350,16 @@ impl TryInto<LicensedComponent> for PackageLicenseInfo {
                     .into_iter()
                     .collect::<Vec<_>>()
                     .join(" OR ");
-                LicensedComponent::new_spdx(&self.package, &expression)?
+                LicensedComponent::new_spdx(component_flavor, &expression)?
             } else {
-                LicensedComponent::new_unknown(
-                    &self.package,
-                    non_spdx_licenses.into_iter().collect::<Vec<_>>(),
+                LicensedComponent::new(
+                    component_flavor,
+                    LicenseFlavor::Unknown(non_spdx_licenses.into_iter().collect::<Vec<_>>()),
                 )
             }
         } else {
-            LicensedComponent::new_none(&self.package)
+            LicensedComponent::new(component_flavor, LicenseFlavor::None)
         };
-
-        component.set_flavor(ComponentFlavor::PythonPackage);
 
         for text in self
             .license_texts
@@ -479,10 +477,22 @@ mod tests {
 
     #[test]
     fn parse_advanced() -> Result<()> {
-        LicensedComponent::new_spdx("foo", "Apache-2.0 OR MPL-2.0 OR 0BSD")?;
-        LicensedComponent::new_spdx("foo", "Apache-2.0 AND MPL-2.0 AND 0BSD")?;
-        LicensedComponent::new_spdx("foo", "Apache-2.0 AND MPL-2.0 OR 0BSD")?;
-        LicensedComponent::new_spdx("foo", "MIT AND (LGPL-2.1-or-later OR BSD-3-Clause)")?;
+        LicensedComponent::new_spdx(
+            ComponentFlavor::PythonDistribution,
+            "Apache-2.0 OR MPL-2.0 OR 0BSD",
+        )?;
+        LicensedComponent::new_spdx(
+            ComponentFlavor::PythonDistribution,
+            "Apache-2.0 AND MPL-2.0 AND 0BSD",
+        )?;
+        LicensedComponent::new_spdx(
+            ComponentFlavor::PythonDistribution,
+            "Apache-2.0 AND MPL-2.0 OR 0BSD",
+        )?;
+        LicensedComponent::new_spdx(
+            ComponentFlavor::PythonDistribution,
+            "MIT AND (LGPL-2.1-or-later OR BSD-3-Clause)",
+        )?;
 
         Ok(())
     }
@@ -596,8 +606,10 @@ mod tests {
         };
 
         let c: LicensedComponent = li.try_into()?;
-        let mut wanted = LicensedComponent::new_none("foo");
-        wanted.set_flavor(ComponentFlavor::PythonPackage);
+        let wanted = LicensedComponent::new(
+            ComponentFlavor::PythonModule("foo".to_string()),
+            LicenseFlavor::None,
+        );
         assert_eq!(c, wanted);
 
         Ok(())
@@ -613,8 +625,8 @@ mod tests {
         };
 
         let c: LicensedComponent = li.try_into()?;
-        let mut wanted = LicensedComponent::new_spdx("foo", "MIT")?;
-        wanted.set_flavor(ComponentFlavor::PythonPackage);
+        let wanted =
+            LicensedComponent::new_spdx(ComponentFlavor::PythonModule("foo".to_string()), "MIT")?;
         assert_eq!(c, wanted);
 
         Ok(())
@@ -630,8 +642,10 @@ mod tests {
         };
 
         let c: LicensedComponent = li.try_into()?;
-        let mut wanted = LicensedComponent::new_spdx("foo", "Apache-2.0")?;
-        wanted.set_flavor(ComponentFlavor::PythonPackage);
+        let wanted = LicensedComponent::new_spdx(
+            ComponentFlavor::PythonModule("foo".to_string()),
+            "Apache-2.0",
+        )?;
         assert_eq!(c, wanted);
 
         Ok(())
@@ -647,8 +661,10 @@ mod tests {
         };
 
         let c: LicensedComponent = li.try_into()?;
-        let mut wanted = LicensedComponent::new_spdx("foo", "Apache-2.0 OR MIT")?;
-        wanted.set_flavor(ComponentFlavor::PythonPackage);
+        let wanted = LicensedComponent::new_spdx(
+            ComponentFlavor::PythonModule("foo".to_string()),
+            "Apache-2.0 OR MIT",
+        )?;
         assert_eq!(c, wanted);
 
         Ok(())
@@ -664,8 +680,10 @@ mod tests {
         };
 
         let c: LicensedComponent = li.try_into()?;
-        let mut wanted = LicensedComponent::new_spdx("foo", "Apache-2.0 OR MIT")?;
-        wanted.set_flavor(ComponentFlavor::PythonPackage);
+        let wanted = LicensedComponent::new_spdx(
+            ComponentFlavor::PythonModule("foo".to_string()),
+            "Apache-2.0 OR MIT",
+        )?;
         assert_eq!(c, wanted);
 
         Ok(())
@@ -681,8 +699,10 @@ mod tests {
         };
 
         let c: LicensedComponent = li.try_into()?;
-        let mut wanted = LicensedComponent::new_spdx("foo", "MIT OR Apache-2.0")?;
-        wanted.set_flavor(ComponentFlavor::PythonPackage);
+        let wanted = LicensedComponent::new_spdx(
+            ComponentFlavor::PythonModule("foo".to_string()),
+            "MIT OR Apache-2.0",
+        )?;
         assert_eq!(c, wanted);
 
         Ok(())
@@ -698,8 +718,8 @@ mod tests {
         };
 
         let c: LicensedComponent = li.try_into()?;
-        let mut wanted = LicensedComponent::new_spdx("foo", "MIT")?;
-        wanted.set_flavor(ComponentFlavor::PythonPackage);
+        let wanted =
+            LicensedComponent::new_spdx(ComponentFlavor::PythonModule("foo".to_string()), "MIT")?;
         assert_eq!(c, wanted);
 
         Ok(())
@@ -717,8 +737,10 @@ mod tests {
         };
 
         let c: LicensedComponent = li.try_into()?;
-        let mut wanted = LicensedComponent::new_unknown("foo", terms);
-        wanted.set_flavor(ComponentFlavor::PythonPackage);
+        let wanted = LicensedComponent::new(
+            ComponentFlavor::PythonModule("foo".to_string()),
+            LicenseFlavor::Unknown(terms),
+        );
         assert_eq!(c, wanted);
 
         Ok(())

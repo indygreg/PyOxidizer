@@ -10,7 +10,7 @@ use {
             compute_bytecode_header, BytecodeHeaderMode, CompileMode, PythonBytecodeCompiler,
         },
         libpython::LibPythonBuildContext,
-        licensing::{ComponentFlavor, LicensedComponent, LicensedComponents},
+        licensing::{ComponentFlavor, LicenseFlavor, LicensedComponent, LicensedComponents},
         location::{AbstractResourceLocation, ConcreteResourceLocation},
         module_util::{packages_from_module_name, resolve_path_for_module},
         python_source::has_dunder_file,
@@ -630,14 +630,19 @@ impl ToString for AddResourceAction {
 /// Describes the state of licensing for resources in a given resources collection.
 #[derive(Clone, Debug, Default)]
 pub struct ResourcesLicenseReport {
-    /// Packages without any licensing info.
-    pub no_license_packages: BTreeSet<String>,
+    /// Components missing license annotation.
+    pub no_license: BTreeSet<LicensedComponent>,
 
-    /// Packages using an SPDX license. Maps license to package names.
-    pub spdx_by_package: BTreeMap<String, BTreeSet<String>>,
+    /// Components having an SPDX license.
+    ///
+    /// Maps license name to components.
+    pub spdx: BTreeMap<String, BTreeSet<LicensedComponent>>,
 
-    /// Packages using non-SPDX license. Maps license to package names.
-    pub non_spdx_by_package: BTreeMap<String, BTreeSet<String>>,
+    /// Components not having an SPDX license.
+    pub non_spdx: BTreeSet<LicensedComponent>,
+
+    /// Components in the public domain.
+    pub public_domain: BTreeSet<LicensedComponent>,
 }
 
 /// Represents a finalized collection of Python resources.
@@ -820,43 +825,54 @@ impl PythonResourceCollector {
 
         let all_packages = self.all_top_level_module_names();
 
-        for package in &all_packages {
-            // Only care about top-level packages.
-            if package.contains('.') {
-                continue;
-            }
-
-            if !self
-                .licensed_components
-                .iter_components()
-                .any(|c| c.name() == package && c.flavor() == &ComponentFlavor::PythonPackage)
-            {
-                report.no_license_packages.insert(package.clone());
-            }
-        }
-
         for component in self.licensed_components.iter_components() {
-            // We don't care about license metadata belonging to packages not
-            // in our collection.
-            if !all_packages.contains(component.name()) {
-                continue;
+            let python_name = match component.flavor() {
+                ComponentFlavor::PythonStandardLibraryModule(name) => Some(name),
+                ComponentFlavor::PythonStandardLibraryExtensionModule(name) => Some(name),
+                ComponentFlavor::PythonModule(name) => Some(name),
+                ComponentFlavor::PythonExtensionModule(name) => Some(name),
+                ComponentFlavor::PythonDistribution => None,
+                ComponentFlavor::Library(_) => None,
+                ComponentFlavor::RustCrate(_) => None,
+            };
+
+            if let Some(name) = python_name {
+                // Only care about top-level packages.
+                if name.contains('.') {
+                    continue;
+                }
+
+                // We don't care about Python components that aren't in our resources
+                // collection.
+                if !all_packages.contains(name) {
+                    continue;
+                }
             }
 
-            if let Some(expression) = component.spdx_expression() {
-                for req in expression.requirements() {
-                    if let Some(id) = &req.req.license.id() {
-                        report
-                            .spdx_by_package
-                            .entry(id.name.to_string())
-                            .or_insert_with(BTreeSet::new)
-                            .insert(component.name().to_string());
-                    } else {
-                        report
-                            .non_spdx_by_package
-                            .entry(req.req.license.to_string())
-                            .or_insert_with(BTreeSet::new)
-                            .insert(component.name().to_string());
+            // This is a component relevant to this resources collection.
+            match component.license() {
+                LicenseFlavor::None => {
+                    report.no_license.insert(component.clone());
+                }
+                LicenseFlavor::Spdx(expr) | LicenseFlavor::OtherExpression(expr) => {
+                    for req in expr.requirements() {
+                        if let Some(id) = &req.req.license.id() {
+                            report
+                                .spdx
+                                .entry(id.name.to_string())
+                                .or_insert_with(BTreeSet::new)
+                                .insert(component.clone());
+                        } else {
+                            report.non_spdx.insert(component.clone());
+                        }
                     }
+                }
+
+                LicenseFlavor::PublicDomain => {
+                    report.public_domain.insert(component.clone());
+                }
+                LicenseFlavor::Unknown(_) => {
+                    report.non_spdx.insert(component.clone());
                 }
             }
         }
