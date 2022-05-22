@@ -1068,7 +1068,7 @@ fn generate_pyembed_license(repo_root: &Path) -> Result<String> {
             pyembed_manifest_path.display().to_string(),
             "list".to_string(),
             "-f".to_string(),
-            "Json".to_string(),
+            "json".to_string(),
         ],
     )
     .stdout_capture()
