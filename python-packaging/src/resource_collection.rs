@@ -823,6 +823,11 @@ impl PythonResourceCollector {
     pub fn generate_license_report(&self) -> Result<ResourcesLicenseReport> {
         let mut report = ResourcesLicenseReport::default();
 
+        let distribution = self
+            .licensed_components
+            .iter_components()
+            .find(|c| c.flavor() == &ComponentFlavor::PythonDistribution);
+
         // Process registered licensed components.
         for component in self.licensed_components.iter_components() {
             let python_name = match component.flavor() {
@@ -836,6 +841,14 @@ impl PythonResourceCollector {
             };
 
             if let Some(name) = python_name {
+                // We ignore standard library components whose license matches the Python
+                // distribution's. This cuts out a lot of redundancy from the report.
+                if let Some(distribution) = distribution {
+                    if distribution.license() == component.license() {
+                        continue;
+                    }
+                }
+
                 // Only care about top-level packages.
                 if name.contains('.') {
                     continue;
