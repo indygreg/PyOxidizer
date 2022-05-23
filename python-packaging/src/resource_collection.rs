@@ -823,8 +823,7 @@ impl PythonResourceCollector {
     pub fn generate_license_report(&self) -> Result<ResourcesLicenseReport> {
         let mut report = ResourcesLicenseReport::default();
 
-        let all_packages = self.all_top_level_module_names();
-
+        // Process registered licensed components.
         for component in self.licensed_components.iter_components() {
             let python_name = match component.flavor() {
                 ComponentFlavor::PythonStandardLibraryModule(name) => Some(name),
@@ -839,12 +838,6 @@ impl PythonResourceCollector {
             if let Some(name) = python_name {
                 // Only care about top-level packages.
                 if name.contains('.') {
-                    continue;
-                }
-
-                // We don't care about Python components that aren't in our resources
-                // collection.
-                if !all_packages.contains(name) {
                     continue;
                 }
             }
@@ -874,6 +867,16 @@ impl PythonResourceCollector {
                 LicenseFlavor::Unknown(_) => {
                     report.non_spdx.insert(component.clone());
                 }
+            }
+        }
+
+        // Find packages without licensed components and insert missing license entries.
+        for package in self.all_top_level_module_names() {
+            if !self.licensed_components.has_python_module(&package) {
+                report.no_license.insert(LicensedComponent::new(
+                    ComponentFlavor::PythonModule(package),
+                    LicenseFlavor::None,
+                ));
             }
         }
 

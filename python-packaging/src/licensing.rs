@@ -38,7 +38,7 @@ pub enum LicenseFlavor {
 }
 
 /// Describes the type of a software component.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug)]
 pub enum ComponentFlavor {
     /// A Python distribution.
     PythonDistribution,
@@ -76,9 +76,36 @@ impl Display for ComponentFlavor {
     }
 }
 
+impl PartialEq for ComponentFlavor {
+    fn eq(&self, other: &Self) -> bool {
+        // If both entities have a Python module name, equivalence is whether
+        // the module names agree, as there can only be a single entity for a given
+        // module name.
+        match (self.python_module_name(), other.python_module_name()) {
+            (Some(a), Some(b)) => a.eq(b),
+            // Comparing a module with a non-module is always not equivalent.
+            (Some(_), None) => false,
+            (None, Some(_)) => false,
+            (None, None) => match (self, other) {
+                (Self::PythonDistribution, Self::PythonDistribution) => true,
+                (Self::Library(a), Self::Library(b)) => a.eq(b),
+                (Self::RustCrate(a), Self::RustCrate(b)) => a.eq(b),
+                _ => false,
+            },
+        }
+    }
+}
+
+impl Eq for ComponentFlavor {}
+
 impl PartialOrd for ComponentFlavor {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        self.to_string().partial_cmp(&other.to_string())
+        match (self.python_module_name(), other.python_module_name()) {
+            (Some(a), Some(b)) => a.partial_cmp(b),
+            (Some(_), None) => Some(Ordering::Less),
+            (None, Some(_)) => Some(Ordering::Greater),
+            (None, None) => self.to_string().partial_cmp(&other.to_string()),
+        }
     }
 }
 
@@ -89,6 +116,18 @@ impl Ord for ComponentFlavor {
 }
 
 impl ComponentFlavor {
+    pub fn python_module_name(&self) -> Option<&str> {
+        match self {
+            ComponentFlavor::PythonDistribution => None,
+            ComponentFlavor::PythonStandardLibraryModule(name) => Some(name.as_str()),
+            ComponentFlavor::PythonStandardLibraryExtensionModule(name) => Some(name.as_str()),
+            ComponentFlavor::PythonExtensionModule(name) => Some(name.as_str()),
+            ComponentFlavor::PythonModule(name) => Some(name.as_str()),
+            ComponentFlavor::Library(_) => None,
+            ComponentFlavor::RustCrate(_) => None,
+        }
+    }
+
     /// Whether the component is part of a Python distribution.
     pub fn is_python_distribution_component(&self) -> bool {
         matches!(
@@ -278,6 +317,14 @@ impl LicensedComponents {
         } else {
             Err(anyhow!("component has non-SPDX license identifiers"))
         }
+    }
+
+    /// Whether a Python module exists in the collection.
+    pub fn has_python_module(&self, name: &str) -> bool {
+        // ComponentFlavor are equivalent if the Python module name is the same,
+        // even if the enum variant is different.
+        self.components
+            .contains_key(&ComponentFlavor::PythonModule(name.into()))
     }
 
     /// Obtain all SPDX license identifiers referenced by registered components.
@@ -474,6 +521,51 @@ mod tests {
         std::borrow::Cow,
         tugger_file_manifest::FileData,
     };
+
+    #[test]
+    fn component_flavor_equivalence() {
+        assert_eq!(
+            ComponentFlavor::PythonDistribution,
+            ComponentFlavor::PythonDistribution
+        );
+        assert_ne!(
+            ComponentFlavor::PythonDistribution,
+            ComponentFlavor::PythonStandardLibraryModule("foo".into())
+        );
+        assert_eq!(
+            ComponentFlavor::PythonStandardLibraryModule("foo".into()),
+            ComponentFlavor::PythonStandardLibraryModule("foo".into())
+        );
+        assert_eq!(
+            ComponentFlavor::PythonStandardLibraryModule("foo".into()),
+            ComponentFlavor::PythonStandardLibraryExtensionModule("foo".into())
+        );
+        assert_eq!(
+            ComponentFlavor::PythonStandardLibraryModule("foo".into()),
+            ComponentFlavor::PythonExtensionModule("foo".into())
+        );
+        assert_eq!(
+            ComponentFlavor::PythonStandardLibraryModule("foo".into()),
+            ComponentFlavor::PythonModule("foo".into())
+        );
+
+        assert_ne!(
+            ComponentFlavor::PythonStandardLibraryModule("foo".into()),
+            ComponentFlavor::PythonStandardLibraryModule("bar".into())
+        );
+        assert_ne!(
+            ComponentFlavor::PythonStandardLibraryModule("foo".into()),
+            ComponentFlavor::PythonStandardLibraryExtensionModule("bar".into())
+        );
+        assert_ne!(
+            ComponentFlavor::PythonStandardLibraryModule("foo".into()),
+            ComponentFlavor::PythonExtensionModule("bar".into())
+        );
+        assert_ne!(
+            ComponentFlavor::PythonStandardLibraryModule("foo".into()),
+            ComponentFlavor::PythonModule("bar".into())
+        );
+    }
 
     #[test]
     fn parse_advanced() -> Result<()> {
