@@ -62,7 +62,7 @@ New Features
 Other Relevant Changes
 ^^^^^^^^^^^^^^^^^^^^^^
 
-* Managed Rust toolchain upgraded from 1.56.1 to 1.59.0.
+* Managed Rust toolchain upgraded from 1.56.1 to 1.61.0.
 * Starlark :py:class:`PythonInterpreterConfig` documentation has been changed
   to refer to :ref:`pyembed_interpreter_config`. The latter is automatically
   derived from the canonical Rust source code. So the change effectively results
